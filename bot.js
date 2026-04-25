@@ -10,8 +10,7 @@ const BOT_USERNAME  = process.env.BOT_USERNAME  || 'CreatorBoostbot';
 const PORT          = process.env.PORT          || 3000;
 
 const fs = require('fs');
-const DATA_DIR = '/data';
-if (!fs.existsSync(DATA_DIR)) { try { fs.mkdirSync(DATA_DIR, {recursive:true}); } catch(e) {} }
+const DATA_DIR = fs.existsSync('/data') ? '/data' : __dirname;
 const SESSIONS_FILE = DATA_DIR + '/cb_sessions.json';
 
 // Sessions von Disk laden
