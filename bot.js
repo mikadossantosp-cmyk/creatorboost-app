@@ -1463,13 +1463,25 @@ async function submitPost() {
         const uid = path.replace('/profil/','');
         const u = d.users[uid];
         if (!u) return redirect('/feed');
+        const isFollowing = (d.users[myUid]?.following||[]).map(String).includes(String(uid));
+        const followerCount = (u.followers||[]).length;
         return html(`
 <div class="topbar">
-  <a href="/feed" class="icon-btn" style="font-size:22px">‹</a>
+  <a href="javascript:history.back()" class="icon-btn" style="font-size:22px">‹</a>
   <div style="font-size:15px;font-weight:600">${u.spitzname||u.name||'User'}</div>
-  <div style="width:36px"></div>
+  <button onclick="toggleFollow('${uid}',this)" style="background:${isFollowing?'var(--bg4)':'var(--accent)'};color:${isFollowing?'var(--muted)':'#fff'};border:1px solid var(--border);border-radius:20px;padding:6px 16px;font-size:13px;font-weight:600;cursor:pointer">${isFollowing?'Gefolgt':'Folgen'}</button>
 </div>
-${profileCard(uid, u, d, false, lang, adminIds)}`, 'feed');
+${profileCard(uid, u, d, false, lang, adminIds)}
+<script>
+async function toggleFollow(uid, btn) {
+    const isFollowing = btn.textContent.trim() === 'Gefolgt';
+    btn.textContent = isFollowing ? 'Folgen' : 'Gefolgt';
+    btn.style.background = isFollowing ? 'var(--accent)' : 'var(--bg4)';
+    btn.style.color = isFollowing ? '#fff' : 'var(--muted)';
+    await fetch('/api/follow', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({uid})});
+    toast(isFollowing ? 'Nicht mehr gefolgt' : '✅ Gefolgt!');
+}
+</script>`, 'feed');
     }
 
     // ── EINSTELLUNGEN ──
