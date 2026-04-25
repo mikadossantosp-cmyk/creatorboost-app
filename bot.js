@@ -378,6 +378,7 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
   </div>
   ${u.bio?`<div class="profile-bio">${u.bio}</div>`:''}
   ${u.nische?`<div style="font-size:12px;color:var(--accent);margin-top:4px">🎯 ${u.nische}</div>`:''}
+  ${u.website?`<a href="${u.website}" target="_blank" style="font-size:13px;color:var(--blue);margin-top:6px;display:block">🔗 ${u.website.replace('https://','').replace('http://','').slice(0,40)}</a>`:''}
   <div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap">
     <div class="profile-badge" style="background:${grad};color:#fff">${u.role||'🆕 New'}</div>
     ${rank>0?`<div style="font-size:12px;color:var(--muted)">Rang #${rank}</div>`:''}
