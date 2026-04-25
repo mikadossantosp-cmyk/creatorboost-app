@@ -631,7 +631,7 @@ document.getElementById('code-input').addEventListener('keypress', e => { if(e.k
         const body = await parseBody(req);
         const { postId, text } = body;
         if (!postId || !text?.trim()) return json({error:'Ungültig'},400);
-        const myName = d?.users?.[session.uid]?.spitzname || d?.users?.[session.uid]?.name || session.name;
+        const myName = session.name || 'User';
         await postBot('/comment-api', { uid: session.uid, name: myName, linkId: postId, text: text.trim().slice(0,200) });
         return json({ok:true});
     }
