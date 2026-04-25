@@ -336,9 +336,12 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[]) {
     const xp = u.xp||0;
     const nb = xpNext(xp);
     const grad = badgeGradient(u.role);
-    let banner = ladeBild(uid,'banner') || u.banner || 'linear-gradient(135deg,#1a1a2e,#16213e,#0f3460)';
-    if (banner.startsWith('/bild/')) banner = MAINBOT_URL + banner;
-    const bannerIsGrad = !banner.startsWith('data:image') && !banner.startsWith('http');
+    // Banner immer als URL laden - nie als inline Base64
+    const hasBannerOnDisk = fs.existsSync(DATA_DIR + '/bild_' + uid + '_banner.txt');
+    let banner = hasBannerOnDisk 
+        ? '/appbild/' + uid + '/banner'
+        : (u.banner || 'linear-gradient(135deg,#1a1a2e,#16213e,#0f3460)');
+    const bannerIsGrad = !banner.startsWith('/appbild/') && !banner.startsWith('data:image') && !banner.startsWith('http');
     const instaUrl = u.instagram ? `https://instagram.com/${u.instagram}` : null;
     const totalLinks = Object.values(d.links||{}).filter(l=>l.user_id===Number(uid)).length;
     const sorted = Object.entries(d.users||{}).filter(([,u])=>u.role!=='⚙️ Admin').sort((a,b)=>(b[1].xp||0)-(a[1].xp||0));
@@ -346,8 +349,8 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[]) {
     const rank = isAdmin ? 0 : sorted.findIndex(([id])=>id===uid)+1;
 
     return `
-<div class="profile-banner" style="${bannerIsGrad ? 'background:'+banner : 'background:#0a0a0a'}">
-  ${bannerIsGrad ? '' : '<img src="'+banner+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">'}
+<div class="profile-banner" style="${bannerIsGrad ? 'background:'+banner : ''}">
+  ${!bannerIsGrad ? '<img src="'+banner+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">' : ''}
   <div class="profile-banner-overlay"></div>
   <div class="profile-avatar-wrap">
     ${ladeBild(uid,'profilepic')
