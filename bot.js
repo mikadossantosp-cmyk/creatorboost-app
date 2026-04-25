@@ -736,6 +736,21 @@ document.getElementById('code-input').addEventListener('keypress', e => { if(e.k
         return json({ok:true});
     }
 
+
+    // ── INSTAGRAM THUMBNAIL ──
+    if (path === '/api/insta-thumb') {
+        const instaUrl = query.url || '';
+        // Instagram URL zu Media URL konvertieren
+        // https://www.instagram.com/reel/CODE/ -> thumbnail
+        const match = instaUrl.match(/instagram\.com\/(?:p|reel|tv)\/([A-Za-z0-9_-]+)/);
+        if (!match) { res.writeHead(404); return res.end(''); }
+        const code = match[1];
+        // Redirect zu Instagram thumbnail
+        const thumbUrl = 'https://www.instagram.com/p/' + code + '/media/?size=m';
+        res.writeHead(302, {'Location': thumbUrl, 'Cache-Control': 'public, max-age=3600'});
+        return res.end();
+    }
+
     // AUTH REQUIRED
     if (!session) return redirect('/');
 
@@ -842,18 +857,20 @@ document.getElementById('code-input').addEventListener('keypress', e => { if(e.k
     </div>
     <div class="post-time">${new Date(link.timestamp).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})}</div>
   </div>
-  <div class="post-link-preview" onclick="window.open('${link.text}','_blank')" style="cursor:pointer">
-    <div style="position:relative;width:48px;height:48px;flex-shrink:0;border-radius:8px;overflow:hidden;background:var(--bg4)">
-      <img src="https://www.instagram.com/oembed/?url=${encodeURIComponent(link.text)}&format=json" 
-           style="display:none" 
-           onerror="this.style.display='none'"
-           onload="this.style.display='block';this.style.width='100%';this.style.height='100%';this.style.objectFit='cover'"
+  <div onclick="window.open('${link.text}','_blank')" style="cursor:pointer;margin:0 16px;border-radius:12px;overflow:hidden;background:var(--bg4);border:1px solid var(--border2)">
+    <div style="position:relative;width:100%;padding-top:56.25%;background:var(--bg4);overflow:hidden">
+      <img src="/api/insta-thumb?url=${encodeURIComponent(link.text)}" 
+           style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"
+           onerror="this.parentElement.innerHTML='<div style=\"position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:36px\">📸</div>'"
            alt="">
-      <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:22px">📸</div>
     </div>
-    <div style="flex:1;min-width:0">
-      <div class="post-link-url">${link.text.replace('https://www.instagram.com/','instagram.com/').slice(0,50)}</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:2px">Instagram • Tippen zum Öffnen</div>
+    <div style="padding:10px 12px;display:flex;align-items:center;gap:8px">
+      <div style="font-size:18px">📸</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:11px;font-weight:600">Instagram</div>
+        <div style="font-size:10px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${link.text.replace('https://www.','').slice(0,45)}</div>
+      </div>
+      <div style="font-size:10px;color:var(--accent);font-weight:600">Öffnen →</div>
     </div>
   </div>
   <div class="post-actions">
@@ -1051,7 +1068,11 @@ ${sorted.map(([id,u],i)=>{
                 if(p.attachment && p.attachmentType==='image') attachHtml = '<img src="'+p.attachment+'" style="width:100%;max-height:300px;object-fit:cover;border-radius:8px;margin-top:8px" alt="">';
                 if(p.attachment && p.attachmentType==='audio') attachHtml = '<audio controls src="'+p.attachment+'" style="width:100%;margin-top:8px"></audio>';
                 const postComments = (d.comments&&d.comments[pid])||[];
-                const commentsHtml = postComments.map(c=>'<div style="display:flex;gap:8px;margin-top:6px"><span style="font-size:11px;font-weight:600">'+c.name+'</span><span style="font-size:11px;color:var(--muted)">'+c.text+'</span></div>').join('');
+                const commentsHtml = postComments.map((c,ci)=>'<div style="display:flex;gap:8px;margin-top:6px;align-items:center">'
+                    +'<span style="font-size:11px;font-weight:600">'+c.name+'</span>'
+                    +'<span style="font-size:11px;color:var(--muted);flex:1">'+c.text+'</span>'
+                    +(String(c.uid)===String(myUid)?'<button onclick="deleteComment(this)" data-pid="'+pid+'" data-idx="'+ci+'" style="background:none;border:none;color:var(--muted2);font-size:12px;cursor:pointer">✕</button>':'')
+                    +'</div>').join('');
                 return '<div style="padding:12px 16px;border-top:1px solid var(--border2)">'
                     +'<div style="display:flex;justify-content:space-between;align-items:start">'
                     +'<div style="font-size:13px;line-height:1.6;flex:1">'+p.text+'</div>'
@@ -1109,7 +1130,9 @@ async function deletePost(timestamp) {
     if (data.ok) { toast('✅ Gelöscht'); setTimeout(()=>location.reload(),500); }
     else toast('❌ Fehler');
 }
-async function deleteComment(postId, idx) {
+async function deleteComment(btn) {
+    const postId = btn.getAttribute("data-pid");
+    const idx = btn.getAttribute("data-idx");
     const res = await fetch('/api/delete-comment', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({postId, commentIdx: idx})});
     const data = await res.json();
     if (data.ok) { toast('✅ Kommentar gelöscht'); setTimeout(()=>location.reload(),500); }
