@@ -336,7 +336,7 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[]) {
     const xp = u.xp||0;
     const nb = xpNext(xp);
     const grad = badgeGradient(u.role);
-    let banner = u.banner || 'linear-gradient(135deg,#1a1a2e,#16213e,#0f3460)';
+    let banner = ladeBild(uid,'banner') || u.banner || 'linear-gradient(135deg,#1a1a2e,#16213e,#0f3460)';
     if (banner.startsWith('/bild/')) banner = MAINBOT_URL + banner;
     const bannerIsGrad = !banner.startsWith('data:image') && !banner.startsWith('http');
     const instaUrl = u.instagram ? `https://instagram.com/${u.instagram}` : null;
