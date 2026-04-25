@@ -397,15 +397,19 @@ document.getElementById('code-input').addEventListener('keypress', e => { if(e.k
         const code = (body.code||'').toLowerCase().trim();
         if (!code) return json({error:'Kein Code'},400);
 
-        // Code beim Main Bot prüfen
-        const authData = await fetchBot('/auth/code-check?code=' + encodeURIComponent(code));
-        if (!authData || !authData.ok) return json({error:'Ungültiger Code'},401);
+        // Daten vom Main Bot holen und Code prüfen
+        const botData = await fetchBot('/data');
+        if (!botData) return json({error:'Server nicht erreichbar'},503);
 
+        const found = Object.entries(botData.users||{}).find(([, u]) => u.appCode === code);
+        if (!found) return json({error:'Ungültiger Code'},401);
+
+        const [uid, u] = found;
         const sid = genSid();
         sessions.set(sid, {
-            uid: String(authData.uid),
-            name: authData.name,
-            username: authData.username||null,
+            uid: String(uid),
+            name: u.name,
+            username: u.username||null,
             theme: 'dark',
             lang: 'de',
             createdAt: Date.now()
