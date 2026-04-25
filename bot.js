@@ -402,7 +402,7 @@ document.getElementById('code-input').addEventListener('keypress', e => { if(e.k
             lang: 'de',
             createdAt: Date.now()
         });
-        setTimeout(()=>sessions.delete(sid), 30*24*60*60*1000);
+        // Session läuft nicht ab — User bleibt eingeloggt
         res.writeHead(302,{'Set-Cookie':`cbsid=${sid}; HttpOnly; Path=/; Max-Age=2592000`,'Location':'/feed'});
         return res.end();
     }
@@ -419,7 +419,7 @@ document.getElementById('code-input').addEventListener('keypress', e => { if(e.k
             lang: 'de',
             createdAt: Date.now()
         });
-        setTimeout(()=>sessions.delete(sid), 7*24*60*60*1000);
+        // Session läuft nicht ab
         res.writeHead(302,{'Set-Cookie':`cbsid=${sid}; HttpOnly; Path=/; Max-Age=604800`,'Location':'/feed'});
         return res.end();
     }
