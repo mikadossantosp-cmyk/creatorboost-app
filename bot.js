@@ -369,7 +369,13 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
     ${rank>0?`<div style="font-size:12px;color:var(--muted)">Rang #${rank}</div>`:''}
     ${instaUrl?`<a href="${instaUrl}" target="_blank" style="font-size:12px;color:var(--blue)">📸 @${u.instagram}</a>`:''}
   </div>
-  ${u.trophies&&u.trophies.length?`<div style="font-size:20px;margin-top:8px;display:flex;gap:4px">${u.trophies.map(t=>`<span>${t}</span>`).join('')}</div>`:''}
+  ${u.trophies&&u.trophies.length?`
+  <div style="margin-top:10px">
+    <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Trophäen</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      ${u.trophies.map(t=>`<span style="font-size:22px;background:var(--bg4);border-radius:8px;padding:4px 8px">${t}</span>`).join('')}
+    </div>
+  </div>`:''}
 </div>
 <div class="profile-stats">
   <div class="profile-stat"><div class="profile-stat-val">${xp}</div><div class="profile-stat-label">XP</div></div>
@@ -858,11 +864,19 @@ document.getElementById('code-input').addEventListener('keypress', e => { if(e.k
     <div class="post-time">${new Date(link.timestamp).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})}</div>
   </div>
   <div onclick="window.open('${link.text}','_blank')" style="cursor:pointer;margin:0 16px;border-radius:12px;overflow:hidden;background:var(--bg4);border:1px solid var(--border2)">
-    <div style="position:relative;width:100%;padding-top:56.25%;background:var(--bg4);overflow:hidden">
-      <img src="/api/insta-thumb?url=${encodeURIComponent(link.text)}" 
-           style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"
-           onerror="this.parentElement.innerHTML='<div style=\"position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:36px\">📸</div>'"
-           alt="">
+    <div style="position:relative;width:100%;height:140px;overflow:hidden">
+      ${poster.banner && !poster.banner.startsWith('linear') ? '<img src="'+MAINBOT_URL+'/bild/'+String(link.user_id)+'/banner" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" onerror="this.remove()" alt="">' : ''}
+      <div style="position:absolute;inset:0;background:${poster.banner&&!poster.banner.startsWith('data')&&!poster.banner.startsWith('/appbild')?poster.banner:'linear-gradient(135deg,#1a1a2e,#16213e,#0f3460)'}"></div>
+      <div style="position:absolute;inset:0;background:linear-gradient(to bottom,transparent 30%,rgba(0,0,0,.7))"></div>
+      <div style="position:absolute;bottom:12px;left:12px;display:flex;align-items:center;gap:10px">
+        <div style="width:48px;height:48px;border-radius:50%;border:2px solid rgba(255,255,255,.3);overflow:hidden;background:var(--bg4);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:#fff">
+          ${poster.instagram ? '<img src="https://unavatar.io/instagram/'+poster.instagram+'" style="width:100%;height:100%;object-fit:cover" onerror="this.remove()" alt="">' : (poster.name||'?').slice(0,2).toUpperCase()}
+        </div>
+        <div>
+          <div style="font-size:13px;font-weight:700;color:#fff">${poster.spitzname||poster.name||'User'}</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.7)">${poster.role||''} ${poster.trophies&&poster.trophies.length?poster.trophies.slice(0,3).join(' '):''}</div>
+        </div>
+      </div>
     </div>
     <div style="padding:10px 12px;display:flex;align-items:center;gap:8px">
       <div style="font-size:18px">📸</div>
