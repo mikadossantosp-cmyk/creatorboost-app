@@ -306,9 +306,11 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[]) {
   ${!bannerIsGrad?`<img src="${banner}" class="profile-banner-img" alt="">`:''}
   <div class="profile-banner-overlay"></div>
   <div class="profile-avatar-wrap">
-    ${instaUrl
-      ? `<img src="https://unavatar.io/instagram/${u.instagram}" class="profile-avatar" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt=""><div class="profile-avatar" style="display:none">${(u.name||'?').slice(0,2).toUpperCase()}</div>`
-      : `<div class="profile-avatar">${(u.name||'?').slice(0,2).toUpperCase()}</div>`}
+    ${u.profilePic
+      ? `<img src="${u.profilePic}" class="profile-avatar" onerror="this.outerHTML='<div class=\"profile-avatar\" style=\"display:flex\">${(u.name||'?').slice(0,2).toUpperCase()}</div>'" alt="">`
+      : instaUrl
+        ? `<img src="https://unavatar.io/instagram/${u.instagram}?fallback=https://ui-avatars.com/api/?name=${encodeURIComponent(u.name||'U')}&background=ff6b6b&color=fff" class="profile-avatar" onerror="this.outerHTML='<div class=\"profile-avatar\" style=\"display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:700;background:${grad};color:#fff\">${(u.name||'?').slice(0,2).toUpperCase()}</div>'" alt="">`
+        : `<div class="profile-avatar" style="display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:700;background:${grad};color:#fff">${(u.name||'?').slice(0,2).toUpperCase()}</div>`}
   </div>
   ${isOwn?`<a href="/einstellungen" style="position:absolute;bottom:12px;right:12px;background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.2);color:#fff;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;backdrop-filter:blur(8px)">✏️ Bearbeiten</a>`:''}
 </div>
@@ -328,6 +330,7 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[]) {
   <div class="profile-stat"><div class="profile-stat-val">${xp}</div><div class="profile-stat-label">XP</div></div>
   <div class="profile-stat"><div class="profile-stat-val">${u.links||0}</div><div class="profile-stat-label">Links</div></div>
   <div class="profile-stat"><div class="profile-stat-val">${u.totalLikes||0}</div><div class="profile-stat-label">Likes</div></div>
+  <div class="profile-stat"><div class="profile-stat-val">${(u.followers||[]).length}</div><div class="profile-stat-label">Follower</div></div>
 </div>
 ${nb?`
 <div class="profile-xp-bar"><div class="profile-xp-fill" style="width:${nb.pct}%;background:${grad}"></div></div>
@@ -501,6 +504,20 @@ document.getElementById('code-input').addEventListener('keypress', e => { if(e.k
     }
 
 
+    // ── PROFILBILD UPLOAD ──
+    if (path === '/api/upload-profilepic' && req.method === 'POST') {
+        const chunks = [];
+        for await (const chunk of req) chunks.push(chunk);
+        const body = Buffer.concat(chunks).toString();
+        try {
+            const { imageData } = JSON.parse(body);
+            if (!imageData || !imageData.startsWith('data:image/')) return json({error:'Ungültiges Bild'},400);
+            if (imageData.length > 2000000) return json({error:'Bild zu groß'},400);
+            await postBot('/update-profile-api', { uid: session.uid, profilePic: imageData });
+            return json({ok:true});
+        } catch(e) { return json({error:'Fehler'},500); }
+    }
+
     // ── BILD UPLOAD (Banner) ──
     if (path === '/api/upload-banner' && req.method === 'POST') {
         // Base64 Bild empfangen und als URL speichern
@@ -510,7 +527,7 @@ document.getElementById('code-input').addEventListener('keypress', e => { if(e.k
         try {
             const { imageData } = JSON.parse(body);
             if (!imageData || !imageData.startsWith('data:image/')) return json({error:'Ungültiges Bild'},400);
-            if (imageData.length > 500000) return json({error:'Bild zu groß (max 500KB)'},400);
+            if (imageData.length > 2000000) return json({error:'Bild zu groß (max 1.5MB)'},400);
 
             // Banner als Base64 beim Main Bot speichern
             await postBot('/update-profile-api', { uid: session.uid, banner: imageData });
@@ -972,6 +989,22 @@ ${profileCard(uid, u, d, false, lang, adminIds)}`, 'feed');
 </div>
 
 <div style="padding:16px;border-bottom:1px solid var(--border2)">
+  <div class="form-label">Profilbild</div>
+  <div style="display:flex;align-items:center;gap:16px;margin-top:8px">
+    <div style="width:72px;height:72px;border-radius:50%;overflow:hidden;background:var(--bg4);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700" id="pic-preview">
+      ${myUser?.profilePic ? `<img src="${myUser.profilePic}" style="width:100%;height:100%;object-fit:cover" alt="">` : (myUser?.instagram ? `<img src="https://unavatar.io/instagram/${myUser.instagram}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'" alt="">` : (myUser?.name||'?').slice(0,2).toUpperCase())}
+    </div>
+    <div style="flex:1">
+      <label style="display:inline-flex;align-items:center;gap:8px;background:var(--bg4);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;cursor:pointer;font-size:13px">
+        📷 Foto hochladen
+        <input type="file" accept="image/*" style="display:none" onchange="uploadProfilePic(this)">
+      </label>
+      <div style="font-size:10px;color:var(--muted2);margin-top:4px">Max 1.5MB · Wird als Profilbild gesetzt</div>
+    </div>
+  </div>
+</div>
+
+<div style="padding:16px;border-bottom:1px solid var(--border2)">
   <div class="form-label">Bio</div>
   <textarea class="form-input" id="inp-bio" placeholder="Schreib etwas über dich..." maxlength="100">${u.bio||''}</textarea>
   <div class="form-hint">${u.bio?.length||0}/100</div>
@@ -992,7 +1025,7 @@ ${profileCard(uid, u, d, false, lang, adminIds)}`, 'feed');
       <span>Eigenes Foto hochladen</span>
       <input type="file" accept="image/*" style="display:none" onchange="uploadBanner(this)">
     </label>
-    <div style="font-size:10px;color:var(--muted2);margin-top:4px">Max 500KB · JPG, PNG</div>
+    <div style="font-size:10px;color:var(--muted2);margin-top:4px">Max 1.5MB · JPG, PNG</div>
   </div>
 
   <!-- Gradient wählen -->
@@ -1054,10 +1087,33 @@ function toggleTheme(btn) {
     const isDark = btn.classList.toggle('on');
     setTheme(isDark?'dark':'light');
 }
+async function uploadProfilePic(input) {
+    const file = input.files[0];
+    if (!file) return;
+    if (file.size > 1500000) return toast('❌ Bild zu groß (max 1.5MB)');
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+        const imageData = e.target.result;
+        try {
+            const res = await fetch('/api/upload-profilepic', {
+                method:'POST',
+                headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({imageData})
+            });
+            const data = await res.json();
+            if (data.ok) {
+                document.getElementById('pic-preview').innerHTML = '<img src="'+imageData+'" style="width:100%;height:100%;object-fit:cover" alt="">';
+                toast('✅ Profilbild gesetzt!');
+            } else toast('❌ ' + (data.error||'Fehler'));
+        } catch(e) { toast('❌ Upload Fehler'); }
+    };
+    reader.readAsDataURL(file);
+}
+
 async function uploadBanner(input) {
     const file = input.files[0];
     if (!file) return;
-    if (file.size > 500000) return toast('❌ Bild zu groß (max 500KB)');
+    if (file.size > 1500000) return toast('❌ Bild zu groß (max 1.5MB)');
 
     const reader = new FileReader();
     reader.onload = async (e) => {
