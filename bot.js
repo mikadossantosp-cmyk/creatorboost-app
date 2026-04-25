@@ -589,16 +589,23 @@ async function installApp() {
     deferredPrompt = null;
     document.getElementById('install-wrap').style.display = 'none';
 }
-async function doLogin(){
-    const c=document.getElementById('code-input').value.trim().toLowerCase();
+function doLogin(){
+    var c=document.getElementById('code-input').value.trim().toLowerCase();
     if(!c)return;
-    const btn=document.querySelector('.login-btn');
+    var btn=document.querySelector('.login-btn');
     btn.textContent='⏳...';btn.disabled=true;
-    try{
-        const r=await fetch('/auth/code',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:c})});
-        if(r.redirected||r.ok){window.location.href='/feed';}
-        else{document.getElementById('err').style.display='block';btn.textContent='Einloggen →';btn.disabled=false;}
-    }catch(e){btn.textContent='Einloggen →';btn.disabled=false;}
+    var xhr=new XMLHttpRequest();
+    xhr.open('POST','/auth/code',true);
+    xhr.setRequestHeader('Content-Type','application/json');
+    xhr.onload=function(){
+        try{
+            var data=JSON.parse(xhr.responseText);
+            if(data.ok){window.location.href='/feed';}
+            else{document.getElementById('err').style.display='block';btn.textContent='Einloggen →';btn.disabled=false;}
+        }catch(e){btn.textContent='Einloggen →';btn.disabled=false;}
+    };
+    xhr.onerror=function(){btn.textContent='Einloggen →';btn.disabled=false;};
+    xhr.send(JSON.stringify({code:c}));
 }
 document.getElementById('code-input').addEventListener('keypress',e=>{if(e.key==='Enter')doLogin();});
 </script>
