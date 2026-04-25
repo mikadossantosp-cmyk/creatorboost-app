@@ -285,7 +285,7 @@ function setLang(l){fetch('/api/lang',{method:'POST',headers:{'Content-Type':'ap
 </body></html>`;
 }
 
-function profileCard(uid, u, d, isOwn=false, lang='de') {
+function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[]) {
     const xp = u.xp||0;
     const nb = xpNext(xp);
     const grad = badgeGradient(u.role);
@@ -685,7 +685,7 @@ ${sorted.map(([id,u],i)=>{
   <div class="topbar-logo">Profil</div>
   <a href="/einstellungen" class="icon-btn">⚙️</a>
 </div>
-${profileCard(myUid, myUser, d, true, lang)}`, 'profile');
+${profileCard(myUid, myUser, d, true, lang, adminIds)}`, 'profile');
     }
 
     // ── FREMDES PROFIL ──
@@ -699,7 +699,7 @@ ${profileCard(myUid, myUser, d, true, lang)}`, 'profile');
   <div style="font-size:15px;font-weight:600">${u.spitzname||u.name||'User'}</div>
   <div style="width:36px"></div>
 </div>
-${profileCard(uid, u, d, false, lang)}`, 'feed');
+${profileCard(uid, u, d, false, lang, adminIds)}`, 'feed');
     }
 
     // ── EINSTELLUNGEN ──
