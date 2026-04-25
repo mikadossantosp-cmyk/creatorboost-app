@@ -673,7 +673,8 @@ document.getElementById('code-input').addEventListener('keypress', e => { if(e.k
         const result = await postBot('/post-link-from-app', {
             uid: session.uid,
             name: session.name,
-            url: url.trim()
+            url: url.trim(),
+            caption: body.caption||''
         });
         
         if (!result) return json({error:'Fehler beim Senden'},500);
@@ -1137,6 +1138,7 @@ ${profileCard(myUid, myUser, d, true, lang, adminIds, myBannerData, myPicData)}
   <div style="padding:16px">
     <div style="font-size:13px;color:var(--muted);margin-bottom:12px">Teile deinen Instagram Link mit der Community — wird direkt in der Gruppe gepostet.</div>
     <input type="url" id="link-input" class="form-input" placeholder="https://www.instagram.com/reel/..." style="margin-bottom:8px">
+    <textarea id="link-caption" class="form-input" placeholder="Beschreibung (optional)..." maxlength="200" rows="2" style="margin-bottom:8px"></textarea>
     <button class="btn btn-primary btn-full" onclick="postLink()">📸 Link teilen</button>
     <div id="link-result" style="margin-top:8px;font-size:12px;text-align:center"></div>
   </div>
@@ -1193,10 +1195,11 @@ async function postLink() {
     const btn = document.querySelector('[onclick="postLink()"]');
     btn.disabled = true; btn.textContent = '⏳ Wird gesendet...';
     try {
+        const caption = document.getElementById('link-caption')?.value?.trim() || '';
         const res = await fetch('/api/post-link', {
             method:'POST',
             headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({url})
+            body:JSON.stringify({url, caption})
         });
         const data = await res.json();
         if (data.ok) {
