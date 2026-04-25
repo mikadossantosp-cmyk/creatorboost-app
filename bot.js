@@ -975,6 +975,7 @@ document.getElementById('code-input').addEventListener('keypress',e=>{if(e.key==
         if (body.tiktok !== undefined) updateData.tiktok = body.tiktok;
         if (body.youtube !== undefined) updateData.youtube = body.youtube;
         if (body.twitter !== undefined) updateData.twitter = body.twitter;
+        console.log('[SAVE] updateData:', JSON.stringify(updateData).slice(0,200));
         await postBot('/update-profile-api', updateData);
         if (session) {
             if (body.theme) session.theme = body.theme;
