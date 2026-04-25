@@ -540,8 +540,8 @@ document.getElementById('code-input').addEventListener('keypress', e => { if(e.k
         if (!msgId || !session) return json({error:'Ungültig'},400);
 
         // Like an Main Bot senden
-        await fetchBot('/like-from-app?uid=' + session.uid + '&msgId=' + encodeURIComponent(msgId));
-        return json({ok:true});
+        const result = await fetchBot('/like-from-app?uid=' + session.uid + '&msgId=' + encodeURIComponent(msgId));
+        return json({ok:true, liked: result?.liked, likes: result?.likes});
     }
 
 
@@ -883,19 +883,31 @@ setInterval(refreshLikes, 5000);
 async function likePost(msgId, btn) {
     const countEl = document.getElementById('likes-'+msgId);
     const wasLiked = btn.classList.contains('liked');
-    btn.classList.toggle('liked');
-    btn.querySelector('svg').setAttribute('fill', wasLiked?'none':'currentColor');
-    countEl.textContent = Number(countEl.textContent) + (wasLiked?-1:1);
+    if (wasLiked) return; // Kein Unlike möglich
+    btn.classList.add('liked');
+    btn.querySelector('svg').setAttribute('fill', 'currentColor');
+    countEl.textContent = Number(countEl.textContent) + 1;
     btn.style.animation='pulse .3s ease';
+    btn.disabled = true;
     setTimeout(()=>btn.style.animation='',300);
-    toast(wasLiked?'Like entfernt':'❤️ Geliked!');
     try {
-        await fetch('/api/like', {
+        const res = await fetch('/api/like', {
             method:'POST',
             headers:{'Content-Type':'application/json'},
             body:JSON.stringify({msgId})
         });
-    } catch(e) {}
+        const data = await res.json();
+        // Server Status übernehmen
+        if (data.ok) {
+            const isNowLiked = data.liked !== undefined ? data.liked : !wasLiked;
+            btn.classList.toggle('liked', isNowLiked);
+            btn.querySelector('svg').setAttribute('fill', isNowLiked ? 'currentColor' : 'none');
+            if (data.likes !== undefined) countEl.textContent = data.likes;
+            toast(isNowLiked ? '❤️ Geliked!' : 'Like entfernt');
+        }
+    } catch(e) {
+        toast(wasLiked ? 'Like entfernt' : '❤️ Geliked!');
+    }
 }
 </script>`, 'feed');
     }
