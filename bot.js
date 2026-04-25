@@ -444,6 +444,25 @@ document.getElementById('code-input').addEventListener('keypress', e => { if(e.k
         return res.end();
     }
 
+
+    // ── DEBUG ──
+    if (path === '/debug/test') {
+        const botData = await fetchBot('/data');
+        if (!botData) return json({error:'Main Bot nicht erreichbar', mainbotUrl: MAINBOT_URL});
+        const userCount = Object.keys(botData.users||{}).length;
+        const withCode = Object.values(botData.users||{}).filter(u=>u.appCode).length;
+        return json({ok:true, users: userCount, withCode, mainbotUrl: MAINBOT_URL});
+    }
+
+    // ── DEBUG CODE ──
+    if (path === '/debug/code') {
+        const code = (new url.URL('http://x' + req.url)).searchParams.get('c')||'';
+        const botData = await fetchBot('/data');
+        if (!botData) return json({error:'Main Bot nicht erreichbar'});
+        const found = Object.entries(botData.users||{}).find(([, u]) => u.appCode === code.toLowerCase().trim());
+        return json({found: !!found, code, users: Object.keys(botData.users||{}).length});
+    }
+
     // AUTH REQUIRED
     if (!session) return redirect('/');
 
