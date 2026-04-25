@@ -503,6 +503,12 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
     </a>
     <div class="tg-hint">Tritt zuerst der Gruppe bei um einen Code zu erhalten</div>
   </div>
+  <div class="tg-wrap" id="install-wrap" style="display:none">
+    <button onclick="installApp()" style="display:flex;align-items:center;justify-content:center;gap:10px;background:linear-gradient(135deg,#d4af37,#b8960c);color:#000;padding:14px;border-radius:14px;font-size:14px;font-weight:700;width:100%;border:none;cursor:pointer">
+      📱 App auf Homescreen speichern
+    </button>
+    <div style="font-size:11px;color:rgba(255,255,255,.35);text-align:center;margin-top:8px">Für schnelleren Zugriff</div>
+  </div>
   <div class="login-wrap">
     <div class="divider"><span>Bereits Mitglied?</span></div>
     <div class="code-hint">Tippe <b style="color:#d4af37">/mycode</b> im Bot und gib deinen Code ein</div>
@@ -515,6 +521,23 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
   </div>
 </div>
 <script>
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    document.getElementById('install-wrap').style.display = 'block';
+});
+window.addEventListener('appinstalled', () => {
+    document.getElementById('install-wrap').style.display = 'none';
+    deferredPrompt = null;
+});
+async function installApp() {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const result = await deferredPrompt.userChoice;
+    deferredPrompt = null;
+    document.getElementById('install-wrap').style.display = 'none';
+}
 function doLogin(){const c=document.getElementById('code-input').value.trim().toLowerCase();if(!c)return;document.getElementById('hidden-code').value=c;document.getElementById('login-form').submit();}
 document.getElementById('code-input').addEventListener('keypress',e=>{if(e.key==='Enter')doLogin();});
 </script>
