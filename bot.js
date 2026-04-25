@@ -248,6 +248,10 @@ function layout(content, session, page='feed', lang='de') {
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="theme-color" content="#ff6b6b">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/icon-192.png">
 <title>CreatorBoost</title>
 <style>${CSS}</style>
 </head>
@@ -290,7 +294,8 @@ function profileCard(uid, u, d, isOwn=false, lang='de') {
     const instaUrl = u.instagram ? `https://instagram.com/${u.instagram}` : null;
     const totalLinks = Object.values(d.links||{}).filter(l=>l.user_id===Number(uid)).length;
     const sorted = Object.entries(d.users||{}).filter(([,u])=>u.role!=='⚙️ Admin').sort((a,b)=>(b[1].xp||0)-(a[1].xp||0));
-    const rank = sorted.findIndex(([id])=>id===uid)+1;
+    const isAdmin = adminIds.includes(Number(uid));
+    const rank = isAdmin ? 0 : sorted.findIndex(([id])=>id===uid)+1;
 
     return `
 <div class="profile-banner" style="${bannerIsGrad?`background:${banner}`:''}">
@@ -310,7 +315,7 @@ function profileCard(uid, u, d, isOwn=false, lang='de') {
   ${u.bio?`<div class="profile-bio">${u.bio}</div>`:''}
   <div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap">
     <div class="profile-badge" style="background:${grad};color:#fff">${u.role||'🆕 New'}</div>
-    <div style="font-size:12px;color:var(--muted)">Rang #${rank}</div>
+    ${rank>0?`<div style="font-size:12px;color:var(--muted)">Rang #${rank}</div>`:''}
     ${instaUrl?`<a href="${instaUrl}" target="_blank" style="font-size:12px;color:var(--blue)">📸 @${u.instagram}</a>`:''}
   </div>
   ${u.trophies&&u.trophies.length?`<div style="font-size:20px;margin-top:8px;display:flex;gap:4px">${u.trophies.map(t=>`<span>${t}</span>`).join('')}</div>`:''}
@@ -451,6 +456,64 @@ document.getElementById('code-input').addEventListener('keypress', e => { if(e.k
         return json({found: !!found, code, users: Object.keys(botData.users||{}).length});
     }
 
+
+    // ── LIKE API ──
+    if (path === '/api/like' && req.method === 'POST') {
+        const body = await parseBody(req);
+        const { msgId } = body;
+        if (!msgId || !session) return json({error:'Ungültig'},400);
+
+        // Like an Main Bot senden
+        await fetchBot('/like-from-app?uid=' + session.uid + '&msgId=' + encodeURIComponent(msgId));
+        return json({ok:true});
+    }
+
+
+    // ── PWA MANIFEST ──
+    if (path === '/manifest.json') {
+        res.writeHead(200,{'Content-Type':'application/json'});
+        return res.end(JSON.stringify({
+            name: 'CreatorBoost',
+            short_name: 'CreatorBoost',
+            description: 'Die Community für Instagram Creator',
+            start_url: '/feed',
+            display: 'standalone',
+            background_color: '#000000',
+            theme_color: '#ff6b6b',
+            orientation: 'portrait',
+            icons: [
+                {src: '/icon-192.png', sizes: '192x192', type: 'image/png'},
+                {src: '/icon-512.png', sizes: '512x512', type: 'image/png'}
+            ]
+        }));
+    }
+
+    // ── PWA ICON (SVG als PNG Fallback) ──
+    if (path === '/icon-192.png' || path === '/icon-512.png') {
+        const size = path.includes('512') ? 512 : 192;
+        const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}"><rect width="${size}" height="${size}" rx="${size*0.2}" fill="#ff6b6b"/><text x="50%" y="55%" font-family="Arial" font-size="${size*0.4}" font-weight="bold" fill="white" text-anchor="middle" dominant-baseline="middle">CB</text></svg>`;
+        res.writeHead(200,{'Content-Type':'image/svg+xml'});
+        return res.end(svg);
+    }
+
+
+    // ── BILD UPLOAD (Banner) ──
+    if (path === '/api/upload-banner' && req.method === 'POST') {
+        // Base64 Bild empfangen und als URL speichern
+        const chunks = [];
+        for await (const chunk of req) chunks.push(chunk);
+        const body = Buffer.concat(chunks).toString();
+        try {
+            const { imageData } = JSON.parse(body);
+            if (!imageData || !imageData.startsWith('data:image/')) return json({error:'Ungültiges Bild'},400);
+            if (imageData.length > 500000) return json({error:'Bild zu groß (max 500KB)'},400);
+
+            // Banner als Base64 beim Main Bot speichern
+            await postBot('/update-profile-api', { uid: session.uid, banner: imageData });
+            return json({ok:true, banner: imageData});
+        } catch(e) { return json({error:'Fehler beim Upload'},500); }
+    }
+
     // AUTH REQUIRED
     if (!session) return redirect('/');
 
@@ -565,8 +628,14 @@ async function likePost(msgId, btn) {
     countEl.textContent = Number(countEl.textContent) + (wasLiked?-1:1);
     btn.style.animation='pulse .3s ease';
     setTimeout(()=>btn.style.animation='',300);
-    // TODO: Like API
     toast(wasLiked?'Like entfernt':'❤️ Geliked!');
+    try {
+        await fetch('/api/like', {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({msgId})
+        });
+    } catch(e) {}
 }
 </script>`, 'feed');
     }
@@ -578,7 +647,8 @@ async function likePost(msgId, btn) {
             .sort((a,b)=>(b[1].xp||0)-(a[1].xp||0));
 
         const medals = ['🥇','🥈','🥉'];
-        const myRank = sorted.findIndex(([id])=>id===myUid)+1;
+        const isAdminUser = adminIds.includes(Number(myUid));
+    const myRank = isAdminUser ? 0 : sorted.findIndex(([id])=>id===myUid)+1;
 
         return html(`
 <div class="topbar">
@@ -668,6 +738,19 @@ ${profileCard(uid, u, d, false, lang)}`, 'feed');
 
 <div style="padding:16px;border-bottom:1px solid var(--border2)">
   <div class="form-label">Banner</div>
+
+  <!-- Foto hochladen -->
+  <div style="margin-bottom:12px">
+    <label style="display:flex;align-items:center;gap:10px;background:var(--bg4);border:1px dashed var(--border);border-radius:var(--radius-sm);padding:12px;cursor:pointer;text-transform:none;font-size:13px;font-weight:500;letter-spacing:0">
+      <span style="font-size:20px">📷</span>
+      <span>Eigenes Foto hochladen</span>
+      <input type="file" accept="image/*" style="display:none" onchange="uploadBanner(this)">
+    </label>
+    <div style="font-size:10px;color:var(--muted2);margin-top:4px">Max 500KB · JPG, PNG</div>
+  </div>
+
+  <!-- Gradient wählen -->
+  <div style="font-size:10px;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">Oder Gradient wählen</div>
   <div class="gradient-grid" id="gradient-grid">
     ${gradients.map((g,i)=>`<div class="gradient-opt ${(u.banner||gradients[0])===g?'selected':''}" style="background:${g}" onclick="selectBanner('${g}',this)" data-val="${g}"></div>`).join('')}
   </div>
@@ -725,6 +808,34 @@ function toggleTheme(btn) {
     const isDark = btn.classList.toggle('on');
     setTheme(isDark?'dark':'light');
 }
+async function uploadBanner(input) {
+    const file = input.files[0];
+    if (!file) return;
+    if (file.size > 500000) return toast('❌ Bild zu groß (max 500KB)');
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+        const imageData = e.target.result;
+        try {
+            const res = await fetch('/api/upload-banner', {
+                method:'POST',
+                headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({imageData})
+            });
+            const data = await res.json();
+            if (data.ok) {
+                selectedBanner = imageData;
+                // Vorschau
+                document.querySelector('.gradient-opt.selected')?.classList.remove('selected');
+                toast('✅ Banner hochgeladen!');
+            } else {
+                toast('❌ ' + (data.error||'Fehler'));
+            }
+        } catch(e) { toast('❌ Upload Fehler'); }
+    };
+    reader.readAsDataURL(file);
+}
+
 async function saveProfile() {
     const bio = document.getElementById('inp-bio').value;
     const spitzname = document.getElementById('inp-spitzname').value;
