@@ -385,6 +385,21 @@ ${nb?`
 // ================================
 // SERVER
 // ================================
+// Hilfsfunktion für große Request Bodies
+async function readBody(req, maxBytes=25000000) {
+    return new Promise((resolve, reject) => {
+        const chunks = [];
+        let total = 0;
+        req.on('data', chunk => {
+            total += chunk.length;
+            if (total > maxBytes) { reject(new Error('Too large')); return; }
+            chunks.push(chunk);
+        });
+        req.on('end', () => resolve(Buffer.concat(chunks).toString()));
+        req.on('error', reject);
+    });
+}
+
 const server = http.createServer(async (req, res) => {
     const pu = url.parse(req.url, true);
     const path = pu.pathname;
@@ -618,12 +633,29 @@ document.getElementById('code-input').addEventListener('keypress', e => { if(e.k
 
     // ── POST ERSTELLEN ──
     if (path === '/api/post' && req.method === 'POST') {
-        const body = await parseBody(req);
-        const { text } = body;
-        if (!text || text.trim().length < 1) return json({error:'Kein Text'},400);
-        if (text.length > 300) return json({error:'Max 300 Zeichen'},400);
-        await postBot('/create-post-api', { uid: session.uid, text: text.trim() });
+        let body;
+        try { body = JSON.parse(await readBody(req, 25000000)); } catch(e) { return json({error:'Zu groß oder ungültig'},400); }
+        const { text, attachment, attachmentType } = body;
+        if (!text?.trim() && !attachment) return json({error:'Text oder Datei erforderlich'},400);
+        if (text && text.length > 300) return json({error:'Max 300 Zeichen'},400);
+        await postBot('/create-post-api', { uid: session.uid, text: (text||'').trim(), attachment, attachmentType });
         return json({ok:true});
+    }
+
+    // ── POST LÖSCHEN ──
+    if (path === '/api/delete-post' && req.method === 'POST') {
+        const body = await parseBody(req);
+        const { timestamp } = body;
+        const result = await postBot('/delete-post-api', { uid: session.uid, timestamp });
+        return json({ok: !!result});
+    }
+
+    // ── KOMMENTAR LÖSCHEN ──
+    if (path === '/api/delete-comment' && req.method === 'POST') {
+        const body = await parseBody(req);
+        const { postId, commentIdx } = body;
+        const result = await postBot('/delete-comment-api', { uid: session.uid, postId, commentIdx });
+        return json({ok: !!result});
     }
 
     // ── KOMMENTAR ──
@@ -1021,7 +1053,10 @@ ${sorted.map(([id,u],i)=>{
                 const postComments = (d.comments&&d.comments[pid])||[];
                 const commentsHtml = postComments.map(c=>'<div style="display:flex;gap:8px;margin-top:6px"><span style="font-size:11px;font-weight:600">'+c.name+'</span><span style="font-size:11px;color:var(--muted)">'+c.text+'</span></div>').join('');
                 return '<div style="padding:12px 16px;border-top:1px solid var(--border2)">'
-                    +'<div style="font-size:13px;line-height:1.6">'+p.text+'</div>'
+                    +'<div style="display:flex;justify-content:space-between;align-items:start">'
+                    +'<div style="font-size:13px;line-height:1.6;flex:1">'+p.text+'</div>'
+                    +'<button onclick="deletePost('+p.timestamp+')" style="background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;flex-shrink:0;padding:0 0 0 8px">🗑️</button>'
+                    +'</div>'
                     +attachHtml
                     +'<div style="font-size:11px;color:var(--muted);margin-top:6px">'+new Date(p.timestamp).toLocaleDateString('de-DE',{day:'2-digit',month:'short'})+'</div>'
                     +'<div style="margin-top:8px">'+commentsHtml+'</div>'
@@ -1067,6 +1102,18 @@ ${profileCard(myUid, myUser, d, true, lang, adminIds, myBannerData, myPicData)}
   ${Object.values(d.links||{}).filter(l=>l.user_id===Number(myUid)).sort((a,b)=>(b.timestamp||0)-(a.timestamp||0)).map(l=>'<div style="padding:12px 16px;border-top:1px solid var(--border2)"><a href="'+l.text+'" target="_blank" style="color:var(--blue);font-size:12px;word-break:break-all">'+l.text+'</a><div style="font-size:11px;color:var(--muted);margin-top:4px">❤️ '+(Array.isArray(l.likes)?l.likes.length:0)+' Likes · '+new Date(l.timestamp).toLocaleDateString('de-DE')+'</div></div>').join('') || '<div class="empty"><div class="empty-icon">🔗</div><div class="empty-text">Noch keine Links</div></div>'}
 </div>
 <script>
+async function deletePost(timestamp) {
+    if (!confirm('Post löschen?')) return;
+    const res = await fetch('/api/delete-post', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({timestamp})});
+    const data = await res.json();
+    if (data.ok) { toast('✅ Gelöscht'); setTimeout(()=>location.reload(),500); }
+    else toast('❌ Fehler');
+}
+async function deleteComment(postId, idx) {
+    const res = await fetch('/api/delete-comment', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({postId, commentIdx: idx})});
+    const data = await res.json();
+    if (data.ok) { toast('✅ Kommentar gelöscht'); setTimeout(()=>location.reload(),500); }
+}
 function showPTab(tab, el) {
     document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
     el.classList.add('active');
@@ -1130,10 +1177,11 @@ async function submitPost() {
     const btn = document.querySelector('[onclick="submitPost()"]');
     btn.disabled = true;
     btn.textContent = '⏳...';
+    const payload = JSON.stringify({text, attachment: attachedFile, attachmentType: attachedType});
     const res = await fetch('/api/post', {
         method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({text, attachment: attachedFile, attachmentType: attachedType})
+        headers:{'Content-Type':'application/json','Content-Length':payload.length},
+        body: payload
     });
     const data = await res.json();
     if (data.ok) { toast('✅ Post veröffentlicht!'); setTimeout(()=>location.reload(),1000); }
