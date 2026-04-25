@@ -328,7 +328,8 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[]) {
     const xp = u.xp||0;
     const nb = xpNext(xp);
     const grad = badgeGradient(u.role);
-    const banner = u.banner || 'linear-gradient(135deg,#1a1a2e,#16213e,#0f3460)';
+    let banner = u.banner || 'linear-gradient(135deg,#1a1a2e,#16213e,#0f3460)';
+    if (banner.startsWith('/bild/')) banner = MAINBOT_URL + banner;
     const bannerIsGrad = !banner.startsWith('data:image') && !banner.startsWith('http');
     const instaUrl = u.instagram ? `https://instagram.com/${u.instagram}` : null;
     const totalLinks = Object.values(d.links||{}).filter(l=>l.user_id===Number(uid)).length;
@@ -342,7 +343,7 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[]) {
   <div class="profile-banner-overlay"></div>
   <div class="profile-avatar-wrap">
     ${u.profilePic
-      ? `<img src="${u.profilePic}" class="profile-avatar" onerror="this.outerHTML='<div class=\"profile-avatar\" style=\"display:flex\">${(u.name||'?').slice(0,2).toUpperCase()}</div>'" alt="">`
+      ? `<img src="${u.profilePic.startsWith('/bild/')?MAINBOT_URL+u.profilePic:u.profilePic}" class="profile-avatar" onerror="this.outerHTML='<div class=\"profile-avatar\" style=\"display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:700\">${(u.name||'?').slice(0,2).toUpperCase()}</div>'" alt="">`
       : instaUrl
         ? `<img src="https://unavatar.io/instagram/${u.instagram}?fallback=https://ui-avatars.com/api/?name=${encodeURIComponent(u.name||'U')}&background=ff6b6b&color=fff" class="profile-avatar" onerror="this.outerHTML='<div class=\"profile-avatar\" style=\"display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:700;background:${grad};color:#fff\">${(u.name||'?').slice(0,2).toUpperCase()}</div>'" alt="">`
         : `<div class="profile-avatar" style="display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:700;background:${grad};color:#fff">${(u.name||'?').slice(0,2).toUpperCase()}</div>`}
