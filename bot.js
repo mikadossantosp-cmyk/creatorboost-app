@@ -10,7 +10,8 @@ const BOT_USERNAME  = process.env.BOT_USERNAME  || 'CreatorBoostbot';
 const PORT          = process.env.PORT          || 3000;
 
 const fs = require('fs');
-const DATA_DIR = fs.existsSync('/data') ? '/data' : __dirname;
+const DATA_DIR = '/data';
+if (!fs.existsSync(DATA_DIR)) { try { fs.mkdirSync(DATA_DIR, {recursive:true}); } catch(e) {} }
 const SESSIONS_FILE = DATA_DIR + '/cb_sessions.json';
 
 // Sessions von Disk laden
@@ -22,14 +23,25 @@ try {
         console.log('✅ Sessions geladen:', sessions.size);
     }
 } catch(e) { console.log('Sessions Ladefehler:', e.message); }
+// Fallback: lokale Datei
+const LOCAL_SESSIONS = __dirname + '/sessions.json';
+if (sessions.size === 0) {
+    try {
+        if (fs.existsSync(LOCAL_SESSIONS)) {
+            const raw = JSON.parse(fs.readFileSync(LOCAL_SESSIONS, 'utf8'));
+            for (const [k,v] of Object.entries(raw)) sessions.set(k, v);
+            console.log('✅ Sessions (lokal) geladen:', sessions.size);
+        }
+    } catch(e) {}
+}
 
 // Sessions auf Disk speichern
 function saveSessions() {
-    try {
-        const obj = {};
-        for (const [k,v] of sessions.entries()) obj[k] = v;
-        fs.writeFileSync(SESSIONS_FILE, JSON.stringify(obj));
-    } catch(e) { console.log('Sessions Speicherfehler:', e.message); }
+    const obj = {};
+    for (const [k,v] of sessions.entries()) obj[k] = v;
+    const data = JSON.stringify(obj);
+    try { fs.writeFileSync(SESSIONS_FILE, data); } catch(e) {}
+    try { fs.writeFileSync(LOCAL_SESSIONS, data); } catch(e) {}
 }
 setInterval(saveSessions, 60000);
 
@@ -325,8 +337,8 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[]) {
     const rank = isAdmin ? 0 : sorted.findIndex(([id])=>id===uid)+1;
 
     return `
-<div class="profile-banner" style="${bannerIsGrad?`background:${banner}`:''}">
-  ${!bannerIsGrad?`<img src="${banner}" class="profile-banner-img" style="width:100%;height:100%;object-fit:cover" alt="">`:''}
+<div class="profile-banner" style="${bannerIsGrad ? 'background:'+banner : 'background:#0a0a0a'}">
+  ${bannerIsGrad ? '' : '<img src="'+banner+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">'}
   <div class="profile-banner-overlay"></div>
   <div class="profile-avatar-wrap">
     ${u.profilePic
@@ -552,13 +564,13 @@ document.getElementById('code-input').addEventListener('keypress', e => { if(e.k
             if (!imageData || !imageData.startsWith('data:image/')) return json({error:'Ungültiges Bild'},400);
             if (imageData.length > 2000000) return json({error:'Bild zu groß (max 1.5MB)'},400);
 
-            // Banner beim Main Bot speichern
+            console.log('[BANNER] Uploading für uid:', session.uid, 'size:', imageData.length);
             const result = await postBot('/update-profile-api', { uid: session.uid, banner: imageData });
-            console.log('Banner Upload Result:', result);
+            console.log('[BANNER] Result:', result);
             return json({ok:true});
         } catch(e) { 
-            console.log('Banner Upload Fehler:', e.message);
-            return json({error:'Fehler beim Upload'},500); 
+            console.log('[BANNER] Fehler:', e.message);
+            return json({error: e.message},500); 
         }
     }
 
