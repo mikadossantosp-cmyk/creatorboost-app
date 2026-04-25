@@ -331,16 +331,13 @@ function ladeBild(uid, type) {
     return null;
 }
 
-function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[]) {
+function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=null, picData=null) {
     const xp = u.xp||0;
     const nb = xpNext(xp);
     const grad = badgeGradient(u.role);
     // Banner immer als URL laden - nie als inline Base64
-    const hasBannerOnDisk = fs.existsSync(DATA_DIR + '/bild_' + uid + '_banner.txt');
-    let banner = hasBannerOnDisk 
-        ? '/appbild/' + uid + '/banner'
-        : (u.banner || 'linear-gradient(135deg,#1a1a2e,#16213e,#0f3460)');
-    const bannerIsGrad = !banner.startsWith('/appbild/') && !banner.startsWith('data:image') && !banner.startsWith('http');
+    let banner = bannerData || ladeBild(uid, 'banner') || u.banner || 'linear-gradient(135deg,#1a1a2e,#16213e,#0f3460)';
+    const bannerIsGrad = !banner.startsWith('data:image') && !banner.startsWith('http');
     const instaUrl = u.instagram ? `https://instagram.com/${u.instagram}` : null;
     const totalLinks = Object.values(d.links||{}).filter(l=>l.user_id===Number(uid)).length;
     const sorted = Object.entries(d.users||{}).filter(([,u])=>u.role!=='⚙️ Admin').sort((a,b)=>(b[1].xp||0)-(a[1].xp||0));
@@ -352,8 +349,8 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[]) {
   ${!bannerIsGrad ? '<img src="'+banner+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">' : ''}
   <div class="profile-banner-overlay"></div>
   <div class="profile-avatar-wrap">
-    ${ladeBild(uid,'profilepic')
-      ? `<img src="${ladeBild(uid,'profilepic')}" class="profile-avatar" onerror="this.style.display='none'" alt="">`
+    ${(picData||ladeBild(uid,'profilepic'))
+      ? `<img src="${picData||ladeBild(uid,'profilepic')}" class="profile-avatar" onerror="this.style.display='none'" alt="">`
       : u.instagram
       ? `<img src="https://unavatar.io/instagram/${u.instagram}" class="profile-avatar" onerror="this.style.display='none'" alt="">`
       : instaUrl
@@ -392,6 +389,30 @@ const server = http.createServer(async (req, res) => {
     const pu = url.parse(req.url, true);
     const path = pu.pathname;
     const query = pu.query;
+
+    // ── APP BILD ENDPOINT (kein Auth nötig) ──
+    if (path.startsWith('/appbild/')) {
+        const parts = path.split('/');
+        const buid = parts[2];
+        const btype = parts[3];
+        const bildFile = DATA_DIR + '/bild_' + buid + '_' + btype + '.txt';
+        try {
+            if (!fs.existsSync(bildFile)) {
+                res.writeHead(404);
+                return res.end('not found');
+            }
+            const data = fs.readFileSync(bildFile, 'utf8');
+            const mime = data.split(';')[0].replace('data:','');
+            const base64 = data.split(',')[1];
+            res.writeHead(200, {'Content-Type': mime, 'Cache-Control': 'public, max-age=3600'});
+            return res.end(Buffer.from(base64, 'base64'));
+        } catch(e) {
+            res.writeHead(500);
+            return res.end('error: ' + e.message);
+        }
+    }
+
+
     const session = getSession(req);
     const lang = session?.lang || 'de';
 
@@ -564,23 +585,6 @@ document.getElementById('code-input').addEventListener('keypress', e => { if(e.k
             await postBot('/update-profile-api', { uid: session.uid, profilePic: imageData });
             return json({ok:true});
         } catch(e) { return json({error:'Fehler'},500); }
-    }
-
-
-    // ── APP BILD ENDPOINT ──
-    if (path.startsWith('/appbild/')) {
-        const parts = path.split('/');
-        const buid = parts[2];
-        const btype = parts[3];
-        try {
-            const bildFile = DATA_DIR + '/bild_' + buid + '_' + btype + '.txt';
-            if (!fs.existsSync(bildFile)) { res.writeHead(404); return res.end(''); }
-            const data = fs.readFileSync(bildFile, 'utf8');
-            const mime = data.split(';')[0].replace('data:','');
-            const base64 = data.split(',')[1];
-            res.writeHead(200, {'Content-Type': mime, 'Cache-Control': 'public, max-age=3600'});
-            return res.end(Buffer.from(base64, 'base64'));
-        } catch(e) { res.writeHead(500); return res.end(''); }
     }
 
     // ── BILD UPLOAD (Banner) ──
@@ -991,12 +995,15 @@ ${sorted.map(([id,u],i)=>{
         const myPostsHtml = myPosts.length
             ? myPosts.slice().reverse().map(p=>'<div style="padding:12px 16px;border-top:1px solid var(--border2)"><div style="font-size:13px;line-height:1.6">'+p.text+'</div><div style="font-size:11px;color:var(--muted);margin-top:6px">'+new Date(p.timestamp).toLocaleDateString('de-DE',{day:'2-digit',month:'short'})+'</div></div>').join('')
             : '<div class="empty"><div class="empty-icon">📝</div><div class="empty-text">Noch keine Posts</div><div class="empty-sub">Teile deine Gedanken!</div></div>';
+        // Banner und Profilbild aus Session oder Disk laden
+        const myBannerData = session.bannerData || ladeBild(myUid, 'banner');
+        const myPicData = session.profilePicData || ladeBild(myUid, 'profilepic');
         return html(`
 <div class="topbar">
   <div class="topbar-logo">Profil</div>
   <a href="/einstellungen" class="icon-btn">⚙️</a>
 </div>
-${profileCard(myUid, myUser, d, true, lang, adminIds)}
+${profileCard(myUid, myUser, d, true, lang, adminIds, myBannerData, myPicData)}
 <div class="tabs" style="margin-top:8px">
   <div class="tab active" onclick="showPTab('posts',this)">📝 Posts</div>
   <div class="tab" onclick="showPTab('links',this)">🔗 Links</div>
