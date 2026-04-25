@@ -629,9 +629,10 @@ document.getElementById('code-input').addEventListener('keypress', e => { if(e.k
     // ── KOMMENTAR ──
     if (path === '/api/comment' && req.method === 'POST') {
         const body = await parseBody(req);
-        const { linkId, text } = body;
-        if (!linkId || !text) return json({error:'Ungültig'},400);
-        await postBot('/comment-api', { uid: session.uid, name: session.name, linkId, text: text.trim().slice(0,200) });
+        const { postId, text } = body;
+        if (!postId || !text?.trim()) return json({error:'Ungültig'},400);
+        const myName = d?.users?.[session.uid]?.spitzname || d?.users?.[session.uid]?.name || session.name;
+        await postBot('/comment-api', { uid: session.uid, name: myName, linkId: postId, text: text.trim().slice(0,200) });
         return json({ok:true});
     }
 
@@ -809,16 +810,25 @@ document.getElementById('code-input').addEventListener('keypress', e => { if(e.k
     </div>
     <div class="post-time">${new Date(link.timestamp).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})}</div>
   </div>
-  <div class="post-link-preview">
-    <div class="post-link-icon">📸</div>
-    <div class="post-link-url">${link.text}</div>
-    <a href="${link.text}" target="_blank" class="post-link-open">Öffnen</a>
+  <div class="post-link-preview" onclick="window.open('${link.text}','_blank')" style="cursor:pointer">
+    <div style="position:relative;width:48px;height:48px;flex-shrink:0;border-radius:8px;overflow:hidden;background:var(--bg4)">
+      <img src="https://www.instagram.com/oembed/?url=${encodeURIComponent(link.text)}&format=json" 
+           style="display:none" 
+           onerror="this.style.display='none'"
+           onload="this.style.display='block';this.style.width='100%';this.style.height='100%';this.style.objectFit='cover'"
+           alt="">
+      <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:22px">📸</div>
+    </div>
+    <div style="flex:1;min-width:0">
+      <div class="post-link-url">${link.text.replace('https://www.instagram.com/','instagram.com/').slice(0,50)}</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:2px">Instagram • Tippen zum Öffnen</div>
+    </div>
   </div>
   <div class="post-actions">
-    <button class="post-action-btn ${hasLiked?'liked':''}" onclick="likePost('${link.counter_msg_id||msgId}',this)" data-msgid="${link.counter_msg_id||msgId}">
+    ${String(link.user_id) === String(myUid) ? '<div style="font-size:12px;color:var(--muted);padding:7px 12px">👤 Dein Link</div>' : `<button class="post-action-btn ${hasLiked?'liked':''}" onclick="likePost('${link.counter_msg_id||msgId}',this)" data-msgid="${link.counter_msg_id||msgId}" ${hasLiked?'disabled':''}>` }
       <svg viewBox="0 0 24 24" fill="${hasLiked?'currentColor':'none'}" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
       <span id="likes-${link.counter_msg_id||msgId}" class="like-count">${likes.length}</span>
-    </button>
+    ${String(link.user_id) !== String(myUid) ? '</button>' : ''}
   </div>
   ${likes.length>0?`<div class="post-likers"><span>${likerNames.join(', ')}</span>${likes.length>2?` und ${likes.length-2} weitere`:''} haben geliked</div>`:''}
 </div>`;
@@ -1003,7 +1013,24 @@ ${sorted.map(([id,u],i)=>{
         if (!myUser) return redirect('/');
         const myPosts = (d.posts||{})[myUid] || [];
         const myPostsHtml = myPosts.length
-            ? myPosts.slice().reverse().map(p=>'<div style="padding:12px 16px;border-top:1px solid var(--border2)"><div style="font-size:13px;line-height:1.6">'+p.text+'</div><div style="font-size:11px;color:var(--muted);margin-top:6px">'+new Date(p.timestamp).toLocaleDateString('de-DE',{day:'2-digit',month:'short'})+'</div></div>').join('')
+            ? myPosts.slice().reverse().map((p,i)=>{
+                const pid = myUid+'_'+p.timestamp;
+                let attachHtml = '';
+                if(p.attachment && p.attachmentType==='image') attachHtml = '<img src="'+p.attachment+'" style="width:100%;max-height:300px;object-fit:cover;border-radius:8px;margin-top:8px" alt="">';
+                if(p.attachment && p.attachmentType==='audio') attachHtml = '<audio controls src="'+p.attachment+'" style="width:100%;margin-top:8px"></audio>';
+                const postComments = (d.comments&&d.comments[pid])||[];
+                const commentsHtml = postComments.map(c=>'<div style="display:flex;gap:8px;margin-top:6px"><span style="font-size:11px;font-weight:600">'+c.name+'</span><span style="font-size:11px;color:var(--muted)">'+c.text+'</span></div>').join('');
+                return '<div style="padding:12px 16px;border-top:1px solid var(--border2)">'
+                    +'<div style="font-size:13px;line-height:1.6">'+p.text+'</div>'
+                    +attachHtml
+                    +'<div style="font-size:11px;color:var(--muted);margin-top:6px">'+new Date(p.timestamp).toLocaleDateString('de-DE',{day:'2-digit',month:'short'})+'</div>'
+                    +'<div style="margin-top:8px">'+commentsHtml+'</div>'
+                    +'<div style="display:flex;gap:8px;margin-top:8px">'
+                    +'<input type="text" placeholder="Kommentar..." style="flex:1;background:var(--bg4);border:1px solid var(--border);border-radius:20px;padding:6px 12px;font-size:12px;color:var(--text);outline:none" id="comment-'+pid+'">'
+                    +'<button onclick="document.getElementById(\'comment-\'+this.dataset.pid).value&&sendComment(this)" data-pid="'+pid+'" style="background:var(--accent);color:#fff;border:none;border-radius:20px;padding:6px 14px;font-size:12px;cursor:pointer">Senden</button>'
+                    +'</div>'
+                    +'</div>';
+            }).join('')
             : '<div class="empty"><div class="empty-icon">📝</div><div class="empty-text">Noch keine Posts</div><div class="empty-sub">Teile deine Gedanken!</div></div>';
         // Banner und Profilbild aus Session oder Disk laden
         const myBannerData = session.bannerData || ladeBild(myUid, 'banner');
@@ -1021,6 +1048,17 @@ ${profileCard(myUid, myUser, d, true, lang, adminIds, myBannerData, myPicData)}
 <div id="ptab-posts">
   <div style="padding:12px 16px">
     <textarea id="new-post" class="form-input" placeholder="Was denkst du gerade? (max 300 Zeichen)" maxlength="300" rows="3"></textarea>
+    <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+      <label style="display:flex;align-items:center;gap:6px;background:var(--bg4);border:1px solid var(--border);border-radius:8px;padding:8px 12px;cursor:pointer;font-size:12px;flex:1">
+        🖼️ Bild
+        <input type="file" accept="image/*" style="display:none" onchange="attachFile(this,'image')">
+      </label>
+      <label style="display:flex;align-items:center;gap:6px;background:var(--bg4);border:1px solid var(--border);border-radius:8px;padding:8px 12px;cursor:pointer;font-size:12px;flex:1">
+        🎵 Musik (max 20MB)
+        <input type="file" accept="audio/*,audio/mp3,audio/mpeg,audio/wav,audio/ogg" style="display:none" onchange="attachFile(this,'audio')">
+      </label>
+    </div>
+    <div id="attachment-preview" style="margin-top:8px;display:none"></div>
     <button class="btn btn-primary btn-full" style="margin-top:8px" onclick="submitPost()">📝 Posten</button>
   </div>
   ${myPostsHtml}
@@ -1035,13 +1073,71 @@ function showPTab(tab, el) {
     document.getElementById('ptab-posts').style.display = tab==='posts'?'block':'none';
     document.getElementById('ptab-links').style.display = tab==='links'?'block':'none';
 }
+async function sendComment(btn) {
+    const postId = btn.getAttribute('data-pid');
+    const input = document.getElementById('comment-'+postId);
+    if (!input || !input.value.trim()) return;
+    const text = input.value.trim();
+    input.value = '';
+    try {
+        await fetch('/api/comment', {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({postId, text})
+        });
+        toast('✅ Kommentar gesendet');
+        setTimeout(()=>location.reload(), 800);
+    } catch(e) { toast('❌ Fehler'); }
+}
+let attachedFile = null;
+let attachedType = null;
+
+function attachFile(input, type) {
+    const file = input.files[0];
+    if (!file) return;
+    const maxSize = type === 'audio' ? 20000000 : 5000000;
+    const maxLabel = type === 'audio' ? '20MB' : '5MB';
+    if (file.size > maxSize) return toast('❌ Max ' + maxLabel + ' für ' + (type==='audio'?'Musik':'Bilder'));
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        attachedFile = e.target.result;
+        attachedType = type;
+        const preview = document.getElementById('attachment-preview');
+        preview.style.display = 'block';
+        if (type === 'image') {
+            preview.innerHTML = '<img src="'+attachedFile+'" style="max-height:120px;border-radius:8px;object-fit:cover" alt=""><button onclick="removeAttachment()" style="position:absolute;top:4px;right:4px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:50%;width:24px;height:24px;cursor:pointer">×</button>';
+            preview.style.position = 'relative';
+        } else if (type === 'audio') {
+            preview.innerHTML = '<audio controls src="'+attachedFile+'" style="width:100%;border-radius:8px"></audio>';
+        } else {
+            preview.innerHTML = '<div style="background:var(--bg4);padding:8px 12px;border-radius:8px;font-size:12px">📎 '+file.name+'</div>';
+        }
+    };
+    reader.readAsDataURL(file);
+}
+
+function removeAttachment() {
+    attachedFile = null;
+    attachedType = null;
+    const preview = document.getElementById('attachment-preview');
+    preview.style.display = 'none';
+    preview.innerHTML = '';
+}
+
 async function submitPost() {
     const text = document.getElementById('new-post').value.trim();
-    if (!text) return;
-    const res = await fetch('/api/post', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});
+    if (!text && !attachedFile) return toast('❌ Text oder Datei erforderlich');
+    const btn = document.querySelector('[onclick="submitPost()"]');
+    btn.disabled = true;
+    btn.textContent = '⏳...';
+    const res = await fetch('/api/post', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({text, attachment: attachedFile, attachmentType: attachedType})
+    });
     const data = await res.json();
     if (data.ok) { toast('✅ Post veröffentlicht!'); setTimeout(()=>location.reload(),1000); }
-    else toast('❌ ' + (data.error||'Fehler'));
+    else { toast('❌ ' + (data.error||'Fehler')); btn.disabled=false; btn.textContent='📝 Posten'; }
 }
 </script>`, 'profile');
     }
