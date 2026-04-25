@@ -580,7 +580,12 @@ document.getElementById('code-input').addEventListener('keypress', e => { if(e.k
             .filter(([,l]) => new Date(l.timestamp).toDateString() === today)
             .map(([id,l]) => ({
                 id: String(l.counter_msg_id || id),
-                likes: Array.isArray(l.likes) ? l.likes.length : 0
+                mapKey: id,
+                likes: Array.isArray(l.likes) ? l.likes.length : 0,
+                likerNames: Array.isArray(l.likes) ? l.likes.slice(0,2).map(lid=>{
+                    const u=botData.users[String(lid)];
+                    return u?.spitzname||u?.name||'User';
+                }) : []
             }));
         return json({links});
     }
@@ -621,6 +626,14 @@ document.getElementById('code-input').addEventListener('keypress', e => { if(e.k
         const todayLinks = Object.entries(d.links||{})
             .filter(([,l]) => new Date(l.timestamp).toDateString()===today)
             .sort((a,b)=>(b[1].timestamp||0)-(a[1].timestamp||0));
+        // Deduplizieren - gleiche counter_msg_id nur einmal zeigen
+        const seenMsgIds = new Set();
+        const dedupLinks = todayLinks.filter(([id,l]) => {
+            const key = String(l.counter_msg_id||id);
+            if (seenMsgIds.has(key)) return false;
+            seenMsgIds.add(key);
+            return true;
+        });
 
         const topUsers = Object.entries(d.users||{})
             .filter(([id,u])=>!adminIds.includes(Number(id))&&u.started&&u.inGruppe!==false)
@@ -646,11 +659,16 @@ document.getElementById('code-input').addEventListener('keypress', e => { if(e.k
 
         const postsHtml = todayLinks.length === 0
             ? `<div class="empty" style="margin-top:60px"><div class="empty-icon">📭</div><div class="empty-text">Noch keine Links heute</div><div class="empty-sub">Sei der Erste!</div></div>`
-            : todayLinks.map(([msgId, link])=>{
+            : dedupLinks.map(([msgId, link])=>{
                 const poster = d.users[String(link.user_id)]||{};
-                const likes = Array.isArray(link.likes)?link.likes:[];
+                const likes = Array.isArray(link.likes)?link.likes:(link.likes instanceof Object?Object.keys(link.likes).map(Number):[]);
                 const hasLiked = likes.includes(Number(myUid));
-                const likerNames = likes.slice(0,2).map(lid=>{const u=d.users[String(lid)];return u?.name||'User';});
+                const likerNames = likes.slice(0,2).map(lid=>{
+                    const likerName = link.likerNames?.[lid];
+                    if(likerName) return likerName.name||'User';
+                    const u=d.users[String(lid)];
+                    return u?.name||'User';
+                });
                 const insta = poster.instagram;
                 const grad = badgeGradient(poster.role);
                 return `<div class="post fade-up" id="post-${msgId}">
@@ -699,7 +717,12 @@ async function refreshLikes() {
         if (data.links) {
             data.links.forEach(l => {
                 const countEl = document.getElementById('likes-' + l.id);
-                if (countEl) countEl.textContent = l.likes;
+                if (countEl && countEl.textContent !== String(l.likes)) {
+                    countEl.textContent = l.likes;
+                    // Heart rot wenn likes > 0
+                    const btn = countEl.closest('.post-action-btn');
+                    if (btn && l.likes > 0) btn.querySelector('svg')?.setAttribute('fill','currentColor');
+                }
             });
         }
     } catch(e) {}
