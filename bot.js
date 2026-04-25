@@ -9,7 +9,30 @@ const BOT_TOKEN     = process.env.BOT_TOKEN     || '';
 const BOT_USERNAME  = process.env.BOT_USERNAME  || 'CreatorBoostbot';
 const PORT          = process.env.PORT          || 3000;
 
+const fs = require('fs');
+const DATA_DIR = fs.existsSync('/data') ? '/data' : __dirname;
+const SESSIONS_FILE = DATA_DIR + '/cb_sessions.json';
+
+// Sessions von Disk laden
 const sessions = new Map();
+try {
+    if (fs.existsSync(SESSIONS_FILE)) {
+        const raw = JSON.parse(fs.readFileSync(SESSIONS_FILE, 'utf8'));
+        for (const [k,v] of Object.entries(raw)) sessions.set(k, v);
+        console.log('✅ Sessions geladen:', sessions.size);
+    }
+} catch(e) { console.log('Sessions Ladefehler:', e.message); }
+
+// Sessions auf Disk speichern
+function saveSessions() {
+    try {
+        const obj = {};
+        for (const [k,v] of sessions.entries()) obj[k] = v;
+        fs.writeFileSync(SESSIONS_FILE, JSON.stringify(obj));
+    } catch(e) { console.log('Sessions Speicherfehler:', e.message); }
+}
+setInterval(saveSessions, 60000);
+
 function genSid() { return crypto.randomBytes(32).toString('hex'); }
 function getSession(req) { const m=(req.headers.cookie||'').match(/cbsid=([^;]+)/); return m?sessions.get(m[1]):null; }
 function getSid(req) { const m=(req.headers.cookie||'').match(/cbsid=([^;]+)/); return m?m[1]:null; }
@@ -294,7 +317,7 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[]) {
     const nb = xpNext(xp);
     const grad = badgeGradient(u.role);
     const banner = u.banner || 'linear-gradient(135deg,#1a1a2e,#16213e,#0f3460)';
-    const bannerIsGrad = !banner.startsWith('http');
+    const bannerIsGrad = !banner.startsWith('data:image') && !banner.startsWith('http');
     const instaUrl = u.instagram ? `https://instagram.com/${u.instagram}` : null;
     const totalLinks = Object.values(d.links||{}).filter(l=>l.user_id===Number(uid)).length;
     const sorted = Object.entries(d.users||{}).filter(([,u])=>u.role!=='⚙️ Admin').sort((a,b)=>(b[1].xp||0)-(a[1].xp||0));
@@ -303,7 +326,7 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[]) {
 
     return `
 <div class="profile-banner" style="${bannerIsGrad?`background:${banner}`:''}">
-  ${!bannerIsGrad?`<img src="${banner}" class="profile-banner-img" alt="">`:''}
+  ${!bannerIsGrad?`<img src="${banner}" class="profile-banner-img" style="width:100%;height:100%;object-fit:cover" alt="">`:''}
   <div class="profile-banner-overlay"></div>
   <div class="profile-avatar-wrap">
     ${u.profilePic
@@ -439,7 +462,7 @@ document.getElementById('code-input').addEventListener('keypress', e => { if(e.k
     // ── LOGOUT ──
     if (path === '/logout') {
         const sid = getSid(req);
-        if(sid) sessions.delete(sid);
+        if(sid) { sessions.delete(sid); saveSessions(); }
         res.writeHead(302,{'Set-Cookie':'cbsid=; HttpOnly; Path=/; Max-Age=0','Location':'/'});
         return res.end();
     }
@@ -529,10 +552,14 @@ document.getElementById('code-input').addEventListener('keypress', e => { if(e.k
             if (!imageData || !imageData.startsWith('data:image/')) return json({error:'Ungültiges Bild'},400);
             if (imageData.length > 2000000) return json({error:'Bild zu groß (max 1.5MB)'},400);
 
-            // Banner als Base64 beim Main Bot speichern
-            await postBot('/update-profile-api', { uid: session.uid, banner: imageData });
-            return json({ok:true, banner: imageData});
-        } catch(e) { return json({error:'Fehler beim Upload'},500); }
+            // Banner beim Main Bot speichern
+            const result = await postBot('/update-profile-api', { uid: session.uid, banner: imageData });
+            console.log('Banner Upload Result:', result);
+            return json({ok:true});
+        } catch(e) { 
+            console.log('Banner Upload Fehler:', e.message);
+            return json({error:'Fehler beim Upload'},500); 
+        }
     }
 
 
@@ -649,17 +676,30 @@ document.getElementById('code-input').addEventListener('keypress', e => { if(e.k
     // ── API ENDPOINTS ──
     if (path === '/api/theme' && req.method === 'POST') {
         const body = await parseBody(req);
-        if(session) session.theme = body.theme||'dark';
+        if(session) { session.theme = body.theme||'dark'; saveSessions(); }
         return json({ok:true});
     }
     if (path === '/api/lang' && req.method === 'POST') {
         const body = await parseBody(req);
-        if(session) session.lang = body.lang||'de';
+        if(session) { session.lang = body.lang||'de'; saveSessions(); }
         return json({ok:true});
     }
     if (path === '/api/save-profile' && req.method === 'POST') {
         const body = await parseBody(req);
-        await postBot('/update-profile-api', { uid: myUid, bio: body.bio, spitzname: body.spitzname, banner: body.banner, accentColor: body.accentColor });
+        const result = await postBot('/update-profile-api', { 
+            uid: myUid, 
+            bio: body.bio, 
+            spitzname: body.spitzname, 
+            banner: body.banner, 
+            accentColor: body.accentColor 
+        });
+        // Theme und Lang in Session speichern
+        if (session) {
+            if (body.theme) session.theme = body.theme;
+            if (body.lang) session.lang = body.lang;
+            saveSessions();
+        }
+        console.log('save-profile Result:', result);
         return json({ok:true});
     }
 
@@ -1141,10 +1181,22 @@ async function uploadBanner(input) {
 async function saveProfile() {
     const bio = document.getElementById('inp-bio').value;
     const spitzname = document.getElementById('inp-spitzname').value;
-    const res = await fetch('/api/save-profile', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({bio,spitzname,banner:selectedBanner,accentColor:selectedAccent})});
-    const data = await res.json();
-    if(data.ok) toast('✅ Gespeichert!');
-    else toast('❌ Fehler beim Speichern');
+    const theme = document.getElementById('theme-toggle').classList.contains('on') ? 'dark' : 'light';
+    const btn = document.querySelector('[onclick="saveProfile()"]');
+    btn.textContent = '⏳ Speichern...';
+    btn.disabled = true;
+    try {
+        const res = await fetch('/api/save-profile', {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({bio, spitzname, banner: selectedBanner, accentColor: selectedAccent, theme})
+        });
+        const data = await res.json();
+        if(data.ok) { toast('✅ Gespeichert!'); setTimeout(()=>location.reload(), 1000); }
+        else toast('❌ Fehler beim Speichern');
+    } catch(e) { toast('❌ Netzwerkfehler'); }
+    btn.textContent = '💾 Speichern';
+    btn.disabled = false;
 }
 document.getElementById('inp-bio').addEventListener('input', function() {
     this.nextElementSibling.textContent = this.value.length + '/100';
