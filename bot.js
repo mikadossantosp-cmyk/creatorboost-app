@@ -717,7 +717,25 @@ async function refreshLikes() {
         if (data.links) {
             data.links.forEach(l => {
                 // Versuche beide mögliche IDs
+                // Suche nach counter_msg_id und mapKey
                 const ids = [l.id, l.mapKey, 'B_'+l.id, 'C_'+l.id];
+                // Auch alle Buttons mit data-mapkey prüfen
+                document.querySelectorAll('[data-mapkey]').forEach(btn => {
+                    const mapkey = btn.getAttribute('data-mapkey');
+                    if (mapkey === l.mapKey || mapkey === 'B_'+l.id || mapkey === 'C_'+l.id) {
+                        const msgid = btn.getAttribute('data-msgid');
+                        if (msgid) {
+                            const countEl = document.getElementById('likes-' + msgid);
+                            if (countEl && countEl.textContent !== String(l.likes)) {
+                                countEl.textContent = l.likes;
+                                if (l.likes > 0) {
+                                    btn.classList.add('liked');
+                                    btn.querySelector('svg')?.setAttribute('fill','currentColor');
+                                }
+                            }
+                        }
+                    }
+                });
                 ids.forEach(tryId => {
                     const countEl = document.getElementById('likes-' + tryId);
                     if (countEl && countEl.textContent !== String(l.likes)) {
