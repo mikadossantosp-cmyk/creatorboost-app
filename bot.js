@@ -268,6 +268,10 @@ ${session ? `
     <svg viewBox="0 0 24 24" fill="${page==='ranking'?'currentColor':'none'}" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
     ${page==='ranking'?'<div class="nav-dot"></div>':''}
   </a>
+  <a href="/suche" class="nav-item ${page==='search'?'active':''}">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    ${page==='search'?'<div class="nav-dot"></div>':''}
+  </a>
   <a href="/profil" class="nav-item ${page==='profile'?'active':''}">
     <svg viewBox="0 0 24 24" fill="${page==='profile'?'currentColor':'none'}" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
     ${page==='profile'?'<div class="nav-dot"></div>':''}
@@ -514,6 +518,58 @@ document.getElementById('code-input').addEventListener('keypress', e => { if(e.k
         } catch(e) { return json({error:'Fehler beim Upload'},500); }
     }
 
+
+    // ── FOLGEN ──
+    if (path === '/api/follow' && req.method === 'POST') {
+        const body = await parseBody(req);
+        const targetUid = body.uid;
+        if (!targetUid || targetUid === session.uid) return json({error:'Ungültig'},400);
+        await postBot('/follow-api', { followerUid: session.uid, targetUid });
+        return json({ok:true});
+    }
+
+    // ── POST ERSTELLEN ──
+    if (path === '/api/post' && req.method === 'POST') {
+        const body = await parseBody(req);
+        const { text } = body;
+        if (!text || text.trim().length < 1) return json({error:'Kein Text'},400);
+        if (text.length > 300) return json({error:'Max 300 Zeichen'},400);
+        await postBot('/create-post-api', { uid: session.uid, text: text.trim() });
+        return json({ok:true});
+    }
+
+    // ── KOMMENTAR ──
+    if (path === '/api/comment' && req.method === 'POST') {
+        const body = await parseBody(req);
+        const { linkId, text } = body;
+        if (!linkId || !text) return json({error:'Ungültig'},400);
+        await postBot('/comment-api', { uid: session.uid, name: session.name, linkId, text: text.trim().slice(0,200) });
+        return json({ok:true});
+    }
+
+    // ── SUCHE ──
+    if (path === '/api/search') {
+        const q = (query.q||'').toLowerCase().trim();
+        if (!q) return json({users:[], links:[]});
+        const botData = await fetchBot('/data');
+        if (!botData) return json({users:[], links:[]});
+        const users = Object.entries(botData.users||{})
+            .filter(([,u])=>u.started && u.inGruppe!==false && (
+                (u.name||'').toLowerCase().includes(q) ||
+                (u.username||'').toLowerCase().includes(q) ||
+                (u.instagram||'').toLowerCase().includes(q) ||
+                (u.spitzname||'').toLowerCase().includes(q)
+            ))
+            .slice(0,10)
+            .map(([id,u])=>({id, name:u.name, spitzname:u.spitzname, username:u.username, instagram:u.instagram, role:u.role, xp:u.xp}));
+        const links = Object.entries(botData.links||{})
+            .filter(([,l])=>(l.text||'').toLowerCase().includes(q)||(l.user_name||'').toLowerCase().includes(q))
+            .sort((a,b)=>(b[1].timestamp||0)-(a[1].timestamp||0))
+            .slice(0,5)
+            .map(([id,l])=>({id, text:l.text, user_name:l.user_name, likes:Array.isArray(l.likes)?l.likes.length:0}));
+        return json({users, links});
+    }
+
     // AUTH REQUIRED
     if (!session) return redirect('/');
 
@@ -640,6 +696,55 @@ async function likePost(msgId, btn) {
 </script>`, 'feed');
     }
 
+    // ── SUCHE ──
+    if (path === '/suche') {
+        return html(`
+<div class="topbar">
+  <div class="topbar-logo">Suche</div>
+</div>
+<div style="padding:12px 16px">
+  <div style="position:relative">
+    <input type="text" id="search-input" class="form-input" placeholder="🔍 User oder Link suchen..." oninput="doSearch(this.value)" autocomplete="off" style="padding-left:14px">
+  </div>
+</div>
+<div id="search-results" style="padding:0 16px"></div>
+<script>
+let searchTimer;
+async function doSearch(q) {
+    clearTimeout(searchTimer);
+    if (!q.trim()) { document.getElementById('search-results').innerHTML=''; return; }
+    searchTimer = setTimeout(async () => {
+        const res = await fetch('/api/search?q='+encodeURIComponent(q));
+        const data = await res.json();
+        let html = '';
+        if (data.users.length) {
+            html += '<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin:12px 0 8px">👥 User</div>';
+            html += data.users.map(u=>\`<a href="/profil/\${u.id}" style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border2)">
+                <div style="width:40px;height:40px;border-radius:50%;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0">\${(u.name||'?').slice(0,2).toUpperCase()}</div>
+                <div style="flex:1;min-width:0">
+                    <div style="font-size:13px;font-weight:600">\${u.spitzname||u.name||'?'}</div>
+                    <div style="font-size:11px;color:var(--muted)">\${u.role||''} · \${u.xp||0} XP</div>
+                </div>
+            </a>\`).join('');
+        }
+        if (data.links.length) {
+            html += '<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin:16px 0 8px">🔗 Links</div>';
+            html += data.links.map(l=>\`<a href="\${l.text}" target="_blank" style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border2)">
+                <div style="font-size:24px;flex-shrink:0">📸</div>
+                <div style="flex:1;min-width:0">
+                    <div style="font-size:11px;color:var(--blue);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">\${l.text}</div>
+                    <div style="font-size:11px;color:var(--muted)">👤 \${l.user_name} · ❤️ \${l.likes}</div>
+                </div>
+            </a>\`).join('');
+        }
+        if (!data.users.length && !data.links.length) html = '<div class="empty"><div class="empty-icon">🔍</div><div class="empty-text">Nichts gefunden</div></div>';
+        document.getElementById('search-results').innerHTML = html;
+    }, 300);
+}
+document.getElementById('search-input').focus();
+</script>`, 'search');
+    }
+
     // ── RANKING ──
     if (path === '/ranking') {
         const sorted = Object.entries(d.users||{})
@@ -680,12 +785,53 @@ ${sorted.map(([id,u],i)=>{
     // ── EIGENES PROFIL ──
     if (path === '/profil') {
         if (!myUser) return redirect('/');
+        const myPosts = (d.posts||{})[myUid] || [];
         return html(`
 <div class="topbar">
   <div class="topbar-logo">Profil</div>
   <a href="/einstellungen" class="icon-btn">⚙️</a>
 </div>
-${profileCard(myUid, myUser, d, true, lang, adminIds)}`, 'profile');
+${profileCard(myUid, myUser, d, true, lang, adminIds)}
+<div class="tabs" style="margin-top:8px">
+  <div class="tab active" onclick="showPTab('posts',this)">📝 Posts</div>
+  <div class="tab" onclick="showPTab('links',this)">🔗 Links</div>
+</div>
+<div id="ptab-posts">
+  <div style="padding:12px 16px">
+    <textarea id="new-post" class="form-input" placeholder="Was denkst du gerade? (max 300 Zeichen)" maxlength="300" rows="3"></textarea>
+    <button class="btn btn-primary btn-full" style="margin-top:8px" onclick="submitPost()">📝 Posten</button>
+  </div>
+  ${myPosts.length ? myPosts.slice().reverse().map(p=>\`
+    <div style="padding:12px 16px;border-top:1px solid var(--border2)">
+      <div style="font-size:13px;line-height:1.6">\${p.text}</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:6px">\${new Date(p.timestamp).toLocaleDateString('de-DE',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}</div>
+    </div>
+  \`).join('') : '<div class="empty"><div class="empty-icon">📝</div><div class="empty-text">Noch keine Posts</div><div class="empty-sub">Teile deine Gedanken!</div></div>'}
+</div>
+<div id="ptab-links" style="display:none">
+  ${Object.values(d.links||{}).filter(l=>l.user_id===Number(myUid)).sort((a,b)=>(b.timestamp||0)-(a.timestamp||0)).map(l=>\`
+    <div style="padding:12px 16px;border-top:1px solid var(--border2)">
+      <a href="\${l.text}" target="_blank" style="color:var(--blue);font-size:12px;word-break:break-all">\${l.text}</a>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px">❤️ \${Array.isArray(l.likes)?l.likes.length:0} Likes · \${new Date(l.timestamp).toLocaleDateString('de-DE')}</div>
+    </div>
+  \`).join('') || '<div class="empty"><div class="empty-icon">🔗</div><div class="empty-text">Noch keine Links</div></div>'}
+</div>
+<script>
+function showPTab(tab, el) {
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    el.classList.add('active');
+    document.getElementById('ptab-posts').style.display = tab==='posts'?'block':'none';
+    document.getElementById('ptab-links').style.display = tab==='links'?'block':'none';
+}
+async function submitPost() {
+    const text = document.getElementById('new-post').value.trim();
+    if (!text) return;
+    const res = await fetch('/api/post', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});
+    const data = await res.json();
+    if (data.ok) { toast('✅ Post veröffentlicht!'); setTimeout(()=>location.reload(),1000); }
+    else toast('❌ ' + (data.error||'Fehler'));
+}
+</script>`, 'profile');
     }
 
     // ── FREMDES PROFIL ──
