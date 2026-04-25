@@ -589,7 +589,17 @@ async function installApp() {
     deferredPrompt = null;
     document.getElementById('install-wrap').style.display = 'none';
 }
-function doLogin(){const c=document.getElementById('code-input').value.trim().toLowerCase();if(!c)return;document.getElementById('hidden-code').value=c;document.getElementById('login-form').submit();}
+async function doLogin(){
+    const c=document.getElementById('code-input').value.trim().toLowerCase();
+    if(!c)return;
+    const btn=document.querySelector('.login-btn');
+    btn.textContent='⏳...';btn.disabled=true;
+    try{
+        const r=await fetch('/auth/code',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:c})});
+        if(r.redirected||r.ok){window.location.href='/feed';}
+        else{document.getElementById('err').style.display='block';btn.textContent='Einloggen →';btn.disabled=false;}
+    }catch(e){btn.textContent='Einloggen →';btn.disabled=false;}
+}
 document.getElementById('code-input').addEventListener('keypress',e=>{if(e.key==='Enter')doLogin();});
 </script>
 </body></html>`);
