@@ -343,7 +343,12 @@ const server = http.createServer(async (req, res) => {
     if (path === '/' || path === '') {
         if (session) return redirect('/feed');
         res.writeHead(200,{'Content-Type':'text/html; charset=utf-8'});
-        return res.end(`<!DOCTYPE html><html lang="de" data-theme="dark"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>CreatorBoost</title><style>${CSS}</style></head><body>
+        return res.end(`<!DOCTYPE html><html lang="de" data-theme="dark"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>CreatorBoost</title><style>${CSS}
+.code-input{width:100%;background:rgba(255,255,255,.05);border:2px solid rgba(255,255,255,.1);color:#fff;border-radius:14px;padding:16px;font-size:20px;font-family:monospace;text-align:center;outline:none;letter-spacing:4px;max-width:320px;transition:border-color .2s}
+.code-input:focus{border-color:var(--accent)}
+.login-btn{background:linear-gradient(135deg,#ff6b6b,#ffa500);color:#fff;border:none;border-radius:14px;padding:16px 32px;font-size:16px;font-weight:700;width:100%;max-width:320px;cursor:pointer;margin-top:12px;font-family:var(--font)}
+.error-msg{color:#ff6b6b;font-size:13px;margin-top:8px;display:none}
+</style></head><body>
 <div class="landing">
   <div class="landing-logo">CreatorBoost</div>
   <div class="landing-tag">Die Community für Instagram Creator 🚀</div>
@@ -352,13 +357,65 @@ const server = http.createServer(async (req, res) => {
     <div class="landing-feature"><div class="landing-feature-icon">🏆</div><div><div class="landing-feature-title">Rangliste</div><div class="landing-feature-sub">Zeig was du drauf hast</div></div></div>
     <div class="landing-feature"><div class="landing-feature-icon">👤</div><div><div class="landing-feature-title">Dein Profil</div><div class="landing-feature-sub">Personalisiere dein Profil mit Banner & Farben</div></div></div>
   </div>
-  <script async src="https://telegram.org/js/telegram-widget.js?22" data-telegram-login="${BOT_USERNAME}" data-size="large" data-auth-url="/auth/telegram" data-request-access="write"></script>
-  <div style="margin-top:12px;font-size:12px;color:var(--muted2)">Mit deinem Telegram Account einloggen</div>
+  <div style="width:100%;max-width:320px;text-align:center">
+    <div style="font-size:13px;color:var(--muted);margin-bottom:12px">Tippe <b>/mycode</b> im Telegram Bot um deinen Code zu erhalten</div>
+    <input type="text" class="code-input" id="code-input" placeholder="Dein Code" autocomplete="off" autocorrect="off" autocapitalize="off">
+    <div class="error-msg" id="error-msg">❌ Ungültiger Code. Versuche es erneut.</div>
+    <button class="login-btn" onclick="doLogin()">🚀 Einloggen</button>
+  </div>
 </div>
+<script>
+async function doLogin() {
+    const code = document.getElementById('code-input').value.trim().toLowerCase();
+    if (!code) return;
+    const btn = document.querySelector('.login-btn');
+    btn.textContent = '⏳ Wird geprüft...';
+    btn.disabled = true;
+    try {
+        const res = await fetch('/auth/code', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code})});
+        const data = await res.json();
+        if (data.ok) {
+            window.location.href = '/feed';
+        } else {
+            document.getElementById('error-msg').style.display = 'block';
+            btn.textContent = '🚀 Einloggen';
+            btn.disabled = false;
+        }
+    } catch(e) {
+        btn.textContent = '🚀 Einloggen';
+        btn.disabled = false;
+    }
+}
+document.getElementById('code-input').addEventListener('keypress', e => { if(e.key==='Enter') doLogin(); });
+</script>
 </body></html>`);
     }
 
-    // ── TELEGRAM AUTH ──
+    // ── CODE AUTH ──
+    if (path === '/auth/code' && req.method === 'POST') {
+        const body = await parseBody(req);
+        const code = (body.code||'').toLowerCase().trim();
+        if (!code) return json({error:'Kein Code'},400);
+
+        // Code beim Main Bot prüfen
+        const authData = await fetchBot('/auth/code-check?code=' + encodeURIComponent(code));
+        if (!authData || !authData.ok) return json({error:'Ungültiger Code'},401);
+
+        const sid = genSid();
+        sessions.set(sid, {
+            uid: String(authData.uid),
+            name: authData.name,
+            username: authData.username||null,
+            theme: 'dark',
+            lang: 'de',
+            createdAt: Date.now()
+        });
+        setTimeout(()=>sessions.delete(sid), 30*24*60*60*1000);
+        res.writeHead(200,{'Content-Type':'application/json','Set-Cookie':`cbsid=${sid}; HttpOnly; Path=/; Max-Age=2592000`});
+        return res.end(JSON.stringify({ok:true}));
+    }
+
+    // ── TELEGRAM AUTH (legacy) ──
     if (path === '/auth/telegram') {
         if (!verifyTelegramLogin(query)) return redirect('/?error=auth');
         const sid = genSid();
@@ -366,7 +423,6 @@ const server = http.createServer(async (req, res) => {
             uid: query.id,
             name: query.first_name,
             username: query.username||null,
-            photo: query.photo_url||null,
             theme: 'dark',
             lang: 'de',
             createdAt: Date.now()
@@ -676,4 +732,3 @@ document.getElementById('inp-bio').addEventListener('input', function() {
 });
 
 server.listen(PORT, () => console.log('🌐 CreatorBoost App läuft auf Port ' + PORT));
-
