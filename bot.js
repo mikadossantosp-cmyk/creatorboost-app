@@ -522,6 +522,20 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
 </div>
 <script>
 let deferredPrompt;
+
+// iPhone Safari Erkennung
+const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+const isInStandaloneMode = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+
+if (isIOS && !isInStandaloneMode) {
+    setTimeout(() => {
+        const banner = document.createElement('div');
+        banner.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:#1a1a1a;border-top:1px solid rgba(212,175,55,.3);padding:16px;z-index:9999;display:flex;gap:12px;align-items:center';
+        banner.innerHTML = '<div style="font-size:28px">📱</div><div style="flex:1"><div style="font-size:13px;font-weight:600;color:#fff">App installieren</div><div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:2px">Tippe <b style="color:#d4af37">Teilen</b> → <b style="color:#d4af37">Zum Home-Bildschirm</b></div></div><button onclick="this.parentElement.remove()" style="background:none;border:none;color:rgba(255,255,255,.4);font-size:20px;cursor:pointer">✕</button>';
+        document.body.appendChild(banner);
+    }, 2000);
+}
+
 window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     deferredPrompt = e;
