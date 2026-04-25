@@ -576,18 +576,43 @@ document.getElementById('code-input').addEventListener('keypress', e => { if(e.k
         const botData = await fetchBot('/data');
         if (!botData) return json({links:[]});
         const today = new Date().toDateString();
-        const links = Object.entries(botData.links||{})
-            .filter(([,l]) => new Date(l.timestamp).toDateString() === today)
-            .map(([id,l]) => ({
-                id: String(l.counter_msg_id || id),
-                mapKey: id,
-                likes: Array.isArray(l.likes) ? l.likes.length : 0,
-                likerNames: Array.isArray(l.likes) ? l.likes.slice(0,2).map(lid=>{
+
+        // Alle heutigen Links - gruppiert nach URL (text) um Duplikate zusammenzuführen
+        const byUrl = {};
+        Object.entries(botData.links||{}).forEach(([id,l]) => {
+            if (!l.text || new Date(l.timestamp).toDateString() !== today) return;
+            const url = l.text.trim();
+            if (!byUrl[url]) byUrl[url] = {likes:0, ids:[], likerNames:[]};
+            const lkCount = Array.isArray(l.likes) ? l.likes.length : 0;
+            // Behalte die höchste Likes-Anzahl
+            if (lkCount > byUrl[url].likes) {
+                byUrl[url].likes = lkCount;
+                byUrl[url].likerNames = Array.isArray(l.likes) ? l.likes.slice(0,2).map(lid=>{
                     const u=botData.users[String(lid)];
                     return u?.spitzname||u?.name||'User';
-                }) : []
-            }));
+                }) : [];
+            }
+            byUrl[url].ids.push(String(l.counter_msg_id||id));
+            byUrl[url].ids.push(id);
+        });
+
+        const links = Object.entries(byUrl).map(([url,data]) => ({
+            url,
+            ids: [...new Set(data.ids)],
+            likes: data.likes,
+            likerNames: data.likerNames
+        }));
+
         return json({links});
+    }
+
+
+    // ── BRIDGE LIKE SYNC (vom Bridge Bot) ──
+    if (path === '/bridge-like-sync' && req.method === 'POST') {
+        const body = await parseBody(req);
+        // Wird vom Bridge Bot aufgerufen wenn jemand liked
+        // Kein Auth nötig da intern
+        return json({ok:true});
     }
 
     // AUTH REQUIRED
@@ -661,17 +686,21 @@ document.getElementById('code-input').addEventListener('keypress', e => { if(e.k
             ? `<div class="empty" style="margin-top:60px"><div class="empty-icon">📭</div><div class="empty-text">Noch keine Links heute</div><div class="empty-sub">Sei der Erste!</div></div>`
             : dedupLinks.map(([msgId, link])=>{
                 const poster = d.users[String(link.user_id)]||{};
-                const likes = Array.isArray(link.likes)?link.likes:(link.likes instanceof Object?Object.keys(link.likes).map(Number):[]);
-                const hasLiked = likes.includes(Number(myUid));
-                const likerNames = likes.slice(0,2).map(lid=>{
-                    const likerName = link.likerNames?.[lid];
-                    if(likerName) return likerName.name||'User';
-                    const u=d.users[String(lid)];
-                    return u?.name||'User';
-                });
+                // Alle Likes aus URL-Gruppe zusammenführen
+            const allLinksForUrl = Object.values(d.links||{}).filter(l=>l.text===link.text);
+            const allLikes = new Set();
+            allLinksForUrl.forEach(l => { (Array.isArray(l.likes)?l.likes:[]).forEach(id=>allLikes.add(id)); });
+            const likes = [...allLikes];
+            const hasLiked = likes.includes(Number(myUid));
+            const likerNames = likes.slice(0,2).map(lid=>{
+                const likerName = link.likerNames?.[lid];
+                if(likerName) return likerName.name||'User';
+                const u=d.users[String(lid)];
+                return u?.spitzname||u?.name||'User';
+            });
                 const insta = poster.instagram;
                 const grad = badgeGradient(poster.role);
-                return `<div class="post fade-up" id="post-${msgId}">
+                return `<div class="post fade-up" id="post-${msgId}" data-url="${link.text}">
   <div class="post-header">
     <div style="width:40px;height:40px;border-radius:50%;overflow:hidden;background:var(--bg4);display:flex;align-items:center;justify-content:center;flex-shrink:0;${insta?'':`background:${grad}`}">
       ${insta?`<img src="https://unavatar.io/instagram/${insta}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.fontSize='16px';this.style.display='none'" alt="">`:''}
@@ -691,7 +720,7 @@ document.getElementById('code-input').addEventListener('keypress', e => { if(e.k
   <div class="post-actions">
     <button class="post-action-btn ${hasLiked?'liked':''}" onclick="likePost('${link.counter_msg_id||msgId}',this)" data-msgid="${link.counter_msg_id||msgId}">
       <svg viewBox="0 0 24 24" fill="${hasLiked?'currentColor':'none'}" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
-      <span id="likes-${link.counter_msg_id||msgId}">${likes.length}</span>
+      <span id="likes-${link.counter_msg_id||msgId}" class="like-count">${likes.length}</span>
     </button>
   </div>
   ${likes.length>0?`<div class="post-likers"><span>${likerNames.join(', ')}</span>${likes.length>2?` und ${likes.length-2} weitere`:''} haben geliked</div>`:''}
