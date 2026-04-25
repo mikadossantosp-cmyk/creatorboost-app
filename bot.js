@@ -865,12 +865,12 @@ document.getElementById('code-input').addEventListener('keypress', e => { if(e.k
   </div>
   <div onclick="window.open('${link.text}','_blank')" style="cursor:pointer;margin:0 16px;border-radius:12px;overflow:hidden;background:var(--bg4);border:1px solid var(--border2)">
     <div style="position:relative;width:100%;height:140px;overflow:hidden">
-      ${poster.banner && !poster.banner.startsWith('linear') ? '<img src="'+MAINBOT_URL+'/bild/'+String(link.user_id)+'/banner" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" onerror="this.remove()" alt="">' : ''}
-      <div style="position:absolute;inset:0;background:${poster.banner&&!poster.banner.startsWith('data')&&!poster.banner.startsWith('/appbild')?poster.banner:'linear-gradient(135deg,#1a1a2e,#16213e,#0f3460)'}"></div>
+      <div style="position:absolute;inset:0;background:${ladeBild(String(link.user_id),'banner')?'#000':'linear-gradient(135deg,#1a1a2e,#16213e,#0f3460)'}"></div>
+      ${ladeBild(String(link.user_id),'banner') ? '<img src="/appbild/'+String(link.user_id)+'/banner" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" onerror="this.remove()" alt="">' : ''}
       <div style="position:absolute;inset:0;background:linear-gradient(to bottom,transparent 30%,rgba(0,0,0,.7))"></div>
       <div style="position:absolute;bottom:12px;left:12px;display:flex;align-items:center;gap:10px">
         <div style="width:48px;height:48px;border-radius:50%;border:2px solid rgba(255,255,255,.3);overflow:hidden;background:var(--bg4);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:#fff">
-          ${poster.instagram ? '<img src="https://unavatar.io/instagram/'+poster.instagram+'" style="width:100%;height:100%;object-fit:cover" onerror="this.remove()" alt="">' : (poster.name||'?').slice(0,2).toUpperCase()}
+          ${ladeBild(String(link.user_id),'profilepic') ? '<img src="/appbild/'+String(link.user_id)+'/profilepic" style="width:100%;height:100%;object-fit:cover" onerror="this.remove()" alt="">' : poster.instagram ? '<img src="https://unavatar.io/instagram/'+poster.instagram+'" style="width:100%;height:100%;object-fit:cover" onerror="this.remove()" alt="">' : (poster.name||'?').slice(0,2).toUpperCase()}
         </div>
         <div>
           <div style="font-size:13px;font-weight:700;color:#fff">${poster.spitzname||poster.name||'User'}</div>
@@ -889,7 +889,7 @@ document.getElementById('code-input').addEventListener('keypress', e => { if(e.k
   </div>
   <div class="post-actions">
     ${String(link.user_id) === String(myUid) ? '<div style="font-size:12px;color:var(--muted);padding:7px 12px">👤 Dein Link</div>' : `<button class="post-action-btn ${hasLiked?'liked':''}" onclick="likePost('${link.counter_msg_id||msgId}',this)" data-msgid="${link.counter_msg_id||msgId}" ${hasLiked?'disabled':''}>` }
-      <svg viewBox="0 0 24 24" fill="${hasLiked?'currentColor':'none'}" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="${hasLiked?'currentColor':'none'}" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
       <span id="likes-${link.counter_msg_id||msgId}" class="like-count">${likes.length}</span>
     ${String(link.user_id) !== String(myUid) ? '</button>' : ''}
   </div>
