@@ -570,6 +570,21 @@ document.getElementById('code-input').addEventListener('keypress', e => { if(e.k
         return json({users, links});
     }
 
+
+    // ── LIKES UPDATE API ──
+    if (path === '/api/likes-update') {
+        const botData = await fetchBot('/data');
+        if (!botData) return json({links:[]});
+        const today = new Date().toDateString();
+        const links = Object.entries(botData.links||{})
+            .filter(([,l]) => new Date(l.timestamp).toDateString() === today)
+            .map(([id,l]) => ({
+                id: String(l.counter_msg_id || id),
+                likes: Array.isArray(l.likes) ? l.likes.length : 0
+            }));
+        return json({links});
+    }
+
     // AUTH REQUIRED
     if (!session) return redirect('/');
 
@@ -676,6 +691,21 @@ ${storiesHtml}
 <div style="height:1px;background:var(--border2)"></div>
 ${postsHtml}
 <script>
+// Auto-refresh Like Counter alle 10 Sekunden
+async function refreshLikes() {
+    try {
+        const res = await fetch('/api/likes-update');
+        const data = await res.json();
+        if (data.links) {
+            data.links.forEach(l => {
+                const countEl = document.getElementById('likes-' + l.id);
+                if (countEl) countEl.textContent = l.likes;
+            });
+        }
+    } catch(e) {}
+}
+setInterval(refreshLikes, 10000);
+
 async function likePost(msgId, btn) {
     const countEl = document.getElementById('likes-'+msgId);
     const wasLiked = btn.classList.contains('liked');
