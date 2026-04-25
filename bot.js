@@ -580,11 +580,13 @@ document.getElementById('code-input').addEventListener('keypress', e => { if(e.k
         const body = Buffer.concat(chunks).toString();
         try {
             const { imageData } = JSON.parse(body);
-            if (!imageData || !imageData.startsWith('data:image/')) return json({error:'Ungültiges Bild'},400);
-            if (imageData.length > 2000000) return json({error:'Bild zu groß'},400);
-            await postBot('/update-profile-api', { uid: session.uid, profilePic: imageData });
+            if (!imageData?.startsWith('data:image/')) return json({error:'Kein Bild'},400);
+            if (imageData.length > 3000000) return json({error:'Max 2MB'},400);
+            session.profilePicData = imageData;
+            saveSessions();
+            try { fs.writeFileSync(DATA_DIR + '/bild_' + session.uid + '_profilepic.txt', imageData); } catch(e) {}
             return json({ok:true});
-        } catch(e) { return json({error:'Fehler'},500); }
+        } catch(e) { return json({error:e.message},500); }
     }
 
     // ── BILD UPLOAD (Banner) ──
