@@ -667,7 +667,7 @@ document.getElementById('code-input').addEventListener('keypress', e => { if(e.k
     // ── LINK POSTEN ──
     if (path === '/api/post-link' && req.method === 'POST') {
         const body = await parseBody(req);
-        const { url } = body;
+        const { url, caption } = body;
         if (!url || !url.includes('instagram.com')) return json({error:'Nur Instagram Links'},400);
         
         const result = await postBot('/post-link-from-app', {
