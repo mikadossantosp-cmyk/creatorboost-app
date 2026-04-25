@@ -786,6 +786,9 @@ ${sorted.map(([id,u],i)=>{
     if (path === '/profil') {
         if (!myUser) return redirect('/');
         const myPosts = (d.posts||{})[myUid] || [];
+        const myPostsHtml = myPosts.length
+            ? myPosts.slice().reverse().map(p=>'<div style="padding:12px 16px;border-top:1px solid var(--border2)"><div style="font-size:13px;line-height:1.6">'+p.text+'</div><div style="font-size:11px;color:var(--muted);margin-top:6px">'+new Date(p.timestamp).toLocaleDateString('de-DE',{day:'2-digit',month:'short'})+'</div></div>').join('')
+            : '<div class="empty"><div class="empty-icon">📝</div><div class="empty-text">Noch keine Posts</div><div class="empty-sub">Teile deine Gedanken!</div></div>';
         return html(`
 <div class="topbar">
   <div class="topbar-logo">Profil</div>
@@ -801,20 +804,10 @@ ${profileCard(myUid, myUser, d, true, lang, adminIds)}
     <textarea id="new-post" class="form-input" placeholder="Was denkst du gerade? (max 300 Zeichen)" maxlength="300" rows="3"></textarea>
     <button class="btn btn-primary btn-full" style="margin-top:8px" onclick="submitPost()">📝 Posten</button>
   </div>
-  ${myPosts.length ? myPosts.slice().reverse().map(p=>\`
-    <div style="padding:12px 16px;border-top:1px solid var(--border2)">
-      <div style="font-size:13px;line-height:1.6">\${p.text}</div>
-      <div style="font-size:11px;color:var(--muted);margin-top:6px">\${new Date(p.timestamp).toLocaleDateString('de-DE',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}</div>
-    </div>
-  \`).join('') : '<div class="empty"><div class="empty-icon">📝</div><div class="empty-text">Noch keine Posts</div><div class="empty-sub">Teile deine Gedanken!</div></div>'}
+  ${myPostsHtml}
 </div>
 <div id="ptab-links" style="display:none">
-  ${Object.values(d.links||{}).filter(l=>l.user_id===Number(myUid)).sort((a,b)=>(b.timestamp||0)-(a.timestamp||0)).map(l=>\`
-    <div style="padding:12px 16px;border-top:1px solid var(--border2)">
-      <a href="\${l.text}" target="_blank" style="color:var(--blue);font-size:12px;word-break:break-all">\${l.text}</a>
-      <div style="font-size:11px;color:var(--muted);margin-top:4px">❤️ \${Array.isArray(l.likes)?l.likes.length:0} Likes · \${new Date(l.timestamp).toLocaleDateString('de-DE')}</div>
-    </div>
-  \`).join('') || '<div class="empty"><div class="empty-icon">🔗</div><div class="empty-text">Noch keine Links</div></div>'}
+  ${Object.values(d.links||{}).filter(l=>l.user_id===Number(myUid)).sort((a,b)=>(b.timestamp||0)-(a.timestamp||0)).map(l=>'<div style="padding:12px 16px;border-top:1px solid var(--border2)"><a href="'+l.text+'" target="_blank" style="color:var(--blue);font-size:12px;word-break:break-all">'+l.text+'</a><div style="font-size:11px;color:var(--muted);margin-top:4px">❤️ '+(Array.isArray(l.likes)?l.likes.length:0)+' Likes · '+new Date(l.timestamp).toLocaleDateString('de-DE')+'</div></div>').join('') || '<div class="empty"><div class="empty-icon">🔗</div><div class="empty-text">Noch keine Links</div></div>'}
 </div>
 <script>
 function showPTab(tab, el) {
