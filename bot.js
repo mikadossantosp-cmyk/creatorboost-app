@@ -664,6 +664,23 @@ document.getElementById('code-input').addEventListener('keypress', e => { if(e.k
         return json({ok: !!result});
     }
 
+    // ── LINK POSTEN ──
+    if (path === '/api/post-link' && req.method === 'POST') {
+        const body = await parseBody(req);
+        const { url } = body;
+        if (!url || !url.includes('instagram.com')) return json({error:'Nur Instagram Links'},400);
+        
+        const result = await postBot('/post-link-from-app', {
+            uid: session.uid,
+            name: session.name,
+            url: url.trim()
+        });
+        
+        if (!result) return json({error:'Fehler beim Senden'},500);
+        if (result.error) return json({error: result.error});
+        return json({ok:true});
+    }
+
     // ── KOMMENTAR ──
     if (path === '/api/comment' && req.method === 'POST') {
         const body = await parseBody(req);
@@ -1114,6 +1131,15 @@ ${profileCard(myUid, myUser, d, true, lang, adminIds, myBannerData, myPicData)}
 <div class="tabs" style="margin-top:8px">
   <div class="tab active" onclick="showPTab('posts',this)">📝 Posts</div>
   <div class="tab" onclick="showPTab('links',this)">🔗 Links</div>
+  <div class="tab" onclick="showPTab('postlink',this)">📸 Link teilen</div>
+</div>
+<div id="ptab-postlink" style="display:none">
+  <div style="padding:16px">
+    <div style="font-size:13px;color:var(--muted);margin-bottom:12px">Teile deinen Instagram Link mit der Community — wird direkt in der Gruppe gepostet.</div>
+    <input type="url" id="link-input" class="form-input" placeholder="https://www.instagram.com/reel/..." style="margin-bottom:8px">
+    <button class="btn btn-primary btn-full" onclick="postLink()">📸 Link teilen</button>
+    <div id="link-result" style="margin-top:8px;font-size:12px;text-align:center"></div>
+  </div>
 </div>
 <div id="ptab-posts">
   <div style="padding:12px 16px">
@@ -1156,6 +1182,33 @@ function showPTab(tab, el) {
     el.classList.add('active');
     document.getElementById('ptab-posts').style.display = tab==='posts'?'block':'none';
     document.getElementById('ptab-links').style.display = tab==='links'?'block':'none';
+    const pl = document.getElementById('ptab-postlink');
+    if(pl) pl.style.display = tab==='postlink'?'block':'none';
+}
+async function postLink() {
+    const url = document.getElementById('link-input')?.value?.trim();
+    const result = document.getElementById('link-result');
+    if (!url) return;
+    if (!url.includes('instagram.com')) { result.style.color='var(--rd)'; result.textContent='❌ Nur Instagram Links erlaubt'; return; }
+    const btn = document.querySelector('[onclick="postLink()"]');
+    btn.disabled = true; btn.textContent = '⏳ Wird gesendet...';
+    try {
+        const res = await fetch('/api/post-link', {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({url})
+        });
+        const data = await res.json();
+        if (data.ok) {
+            result.style.color='var(--gr)';
+            result.textContent='✅ Link erfolgreich geteilt!';
+            document.getElementById('link-input').value='';
+        } else {
+            result.style.color='var(--rd)';
+            result.textContent='❌ '+(data.error||'Fehler');
+        }
+    } catch(e) { result.style.color='var(--rd)'; result.textContent='❌ Netzwerkfehler'; }
+    btn.disabled=false; btn.textContent='📸 Link teilen';
 }
 async function sendComment(btn) {
     const postId = btn.getAttribute('data-pid');
