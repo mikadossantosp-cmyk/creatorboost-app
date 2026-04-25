@@ -453,7 +453,6 @@ const server = http.createServer(async (req, res) => {
     if (path === '/' || path === '') {
         if (session) return redirect('/feed');
         res.writeHead(200,{'Content-Type':'text/html; charset=utf-8'});
-        const logoSrc = '/logo';
         return res.end(`<!DOCTYPE html><html lang="de"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>CreatorBoost</title>
@@ -488,7 +487,6 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
 <div class="bg"></div>
 <div class="hero">
   <div class="logo-wrap">
-    <img src="${logoSrc}" class="logo-img" alt="">
     <div class="logo-title">CreatorBoost</div>
     <div class="logo-sub">Creator Community</div>
   </div>
