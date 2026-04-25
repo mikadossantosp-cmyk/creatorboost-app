@@ -716,18 +716,25 @@ async function refreshLikes() {
         const data = await res.json();
         if (data.links) {
             data.links.forEach(l => {
-                const countEl = document.getElementById('likes-' + l.id);
-                if (countEl && countEl.textContent !== String(l.likes)) {
-                    countEl.textContent = l.likes;
-                    // Heart rot wenn likes > 0
-                    const btn = countEl.closest('.post-action-btn');
-                    if (btn && l.likes > 0) btn.querySelector('svg')?.setAttribute('fill','currentColor');
-                }
+                // Versuche beide mögliche IDs
+                const ids = [l.id, l.mapKey, 'B_'+l.id, 'C_'+l.id];
+                ids.forEach(tryId => {
+                    const countEl = document.getElementById('likes-' + tryId);
+                    if (countEl && countEl.textContent !== String(l.likes)) {
+                        countEl.textContent = l.likes;
+                        const btn = countEl.closest('.post-action-btn');
+                        if (btn && l.likes > 0) {
+                            btn.classList.add('liked');
+                            btn.querySelector('svg')?.setAttribute('fill','currentColor');
+                        }
+                    }
+                });
             });
         }
     } catch(e) {}
 }
-setInterval(refreshLikes, 10000);
+setInterval(refreshLikes, 5000);
+
 
 async function likePost(msgId, btn) {
     const countEl = document.getElementById('likes-'+msgId);
