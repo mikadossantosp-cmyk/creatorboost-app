@@ -538,18 +538,39 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
 </div>
 <script>
 let deferredPrompt;
-
-// iPhone Safari Erkennung
+const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
 const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
-const isInStandaloneMode = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
 
-if (isIOS && !isInStandaloneMode) {
-    setTimeout(() => {
-        const banner = document.createElement('div');
-        banner.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:#1a1a1a;border-top:1px solid rgba(212,175,55,.3);padding:16px;z-index:9999;display:flex;gap:12px;align-items:center';
-        banner.innerHTML = '<div style="font-size:28px">📱</div><div style="flex:1"><div style="font-size:13px;font-weight:600;color:#fff">App installieren</div><div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:2px">Tippe <b style="color:#d4af37">Teilen</b> → <b style="color:#d4af37">Zum Home-Bildschirm</b></div></div><button onclick="this.parentElement.remove()" style="background:none;border:none;color:rgba(255,255,255,.4);font-size:20px;cursor:pointer">✕</button>';
-        document.body.appendChild(banner);
-    }, 2000);
+function showInstallBanner(type) {
+    if (isStandalone) return;
+    const banner = document.createElement('div');
+    banner.id = 'install-banner';
+    banner.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:#111;border-top:2px solid rgba(212,175,55,.4);padding:16px 20px;z-index:9999;display:flex;gap:12px;align-items:center;animation:slideUp .3s ease';
+    if (type === 'ios') {
+        banner.innerHTML = '<div style="font-size:28px">📱</div><div style="flex:1"><div style="font-size:13px;font-weight:700;color:#fff">App installieren</div><div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:3px">Tippe <b style="color:#d4af37">Teilen ↑</b> dann <b style="color:#d4af37">Zum Home-Bildschirm</b></div></div><button onclick="document.getElementById('install-banner').remove()" style="background:none;border:none;color:rgba(255,255,255,.4);font-size:22px;cursor:pointer;padding:4px">✕</button>';
+    } else {
+        banner.innerHTML = '<div style="font-size:28px">📱</div><div style="flex:1"><div style="font-size:13px;font-weight:700;color:#fff">App installieren</div><div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:3px">Speichere die App auf deinem Homescreen</div></div><button onclick="installApp()" style="background:linear-gradient(135deg,#d4af37,#b8960c);color:#000;border:none;border-radius:10px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer">Installieren</button>';
+    }
+    document.body.appendChild(banner);
+}
+
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    showInstallBanner('android');
+});
+
+async function installApp() {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    await deferredPrompt.userChoice;
+    deferredPrompt = null;
+    const b = document.getElementById('install-banner');
+    if (b) b.remove();
+}
+
+if (isIOS && !isStandalone) {
+    setTimeout(() => showInstallBanner('ios'), 2500);
 }
 
 window.addEventListener('beforeinstallprompt', (e) => {
