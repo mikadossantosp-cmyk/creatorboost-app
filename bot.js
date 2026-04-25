@@ -350,8 +350,10 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[]) {
   ${bannerIsGrad ? '' : '<img src="'+banner+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">'}
   <div class="profile-banner-overlay"></div>
   <div class="profile-avatar-wrap">
-    ${(ladeBild(uid,'profilepic')||u.profilePic)
-      ? `<img src="${ladeBild(uid,'profilepic')||u.profilePic}" class="profile-avatar" onerror="this.style.display='none'" alt="">`
+    ${ladeBild(uid,'profilepic')
+      ? `<img src="${ladeBild(uid,'profilepic')}" class="profile-avatar" onerror="this.style.display='none'" alt="">`
+      : u.instagram
+      ? `<img src="https://unavatar.io/instagram/${u.instagram}" class="profile-avatar" onerror="this.style.display='none'" alt="">`
       : instaUrl
         ? `<img src="https://unavatar.io/instagram/${u.instagram}?fallback=https://ui-avatars.com/api/?name=${encodeURIComponent(u.name||'U')}&background=ff6b6b&color=fff" class="profile-avatar" onerror="this.outerHTML='<div class=\"profile-avatar\" style=\"display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:700;background:${grad};color:#fff\">${(u.name||'?').slice(0,2).toUpperCase()}</div>'" alt="">`
         : `<div class="profile-avatar" style="display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:700;background:${grad};color:#fff">${(u.name||'?').slice(0,2).toUpperCase()}</div>`}
@@ -562,6 +564,23 @@ document.getElementById('code-input').addEventListener('keypress', e => { if(e.k
         } catch(e) { return json({error:'Fehler'},500); }
     }
 
+
+    // ── APP BILD ENDPOINT ──
+    if (path.startsWith('/appbild/')) {
+        const parts = path.split('/');
+        const buid = parts[2];
+        const btype = parts[3];
+        try {
+            const bildFile = DATA_DIR + '/bild_' + buid + '_' + btype + '.txt';
+            if (!fs.existsSync(bildFile)) { res.writeHead(404); return res.end(''); }
+            const data = fs.readFileSync(bildFile, 'utf8');
+            const mime = data.split(';')[0].replace('data:','');
+            const base64 = data.split(',')[1];
+            res.writeHead(200, {'Content-Type': mime, 'Cache-Control': 'public, max-age=3600'});
+            return res.end(Buffer.from(base64, 'base64'));
+        } catch(e) { res.writeHead(500); return res.end(''); }
+    }
+
     // ── BILD UPLOAD (Banner) ──
     if (path === '/api/upload-banner' && req.method === 'POST') {
         // Base64 Bild empfangen und als URL speichern
@@ -707,23 +726,17 @@ document.getElementById('code-input').addEventListener('keypress', e => { if(e.k
     }
     if (path === '/api/save-profile' && req.method === 'POST') {
         const body = await parseBody(req);
-        console.log('[SAVE-PROFILE] uid:', myUid, 'bio:', body.bio?.slice(0,20), 'spitzname:', body.spitzname, 'hasBanner:', !!body.banner);
-        
         const updateData = { uid: myUid };
         if (body.bio !== undefined) updateData.bio = body.bio;
         if (body.spitzname !== undefined) updateData.spitzname = body.spitzname;
-        if (body.banner) updateData.banner = body.banner;
         if (body.accentColor) updateData.accentColor = body.accentColor;
-
-        const result = await postBot('/update-profile-api', updateData);
-        console.log('[SAVE-PROFILE] Result:', result);
-        
+        await postBot('/update-profile-api', updateData);
         if (session) {
-            if (body.theme) { session.theme = body.theme; }
-            if (body.lang) { session.lang = body.lang; }
+            if (body.theme) session.theme = body.theme;
+            if (body.lang) session.lang = body.lang;
             saveSessions();
         }
-        return json({ok: !!result});
+        return json({ok:true});
     }
 
     // ── FEED ──
