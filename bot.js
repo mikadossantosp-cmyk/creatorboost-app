@@ -368,7 +368,16 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
   <div class="profile-name">${u.spitzname||u.name||'User'}</div>
   ${u.spitzname?`<div class="profile-username">${u.name||''}</div>`:''}
   ${u.username?`<div class="profile-username">@${u.username}</div>`:''}
+  <div style="display:flex;align-items:center;gap:6px;margin-top:4px">
+    ${(()=>{
+      // Prüfe ob User Session aktiv (online in letzten 5 Min)
+      const userSession = [...sessions.values()].find(s=>String(s.uid)===String(uid));
+      const isOnline = userSession && (Date.now()-userSession.lastSeen)<300000;
+      return isOnline ? '<span style="width:8px;height:8px;border-radius:50%;background:#00c851;display:inline-block"></span><span style="font-size:11px;color:#00c851">Online</span>' : '<span style="width:8px;height:8px;border-radius:50%;background:var(--muted2);display:inline-block"></span><span style="font-size:11px;color:var(--muted2)">Offline</span>';
+    })()}
+  </div>
   ${u.bio?`<div class="profile-bio">${u.bio}</div>`:''}
+  ${u.nische?`<div style="font-size:12px;color:var(--accent);margin-top:4px">🎯 ${u.nische}</div>`:''}
   <div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap">
     <div class="profile-badge" style="background:${grad};color:#fff">${u.role||'🆕 New'}</div>
     ${rank>0?`<div style="font-size:12px;color:var(--muted)">Rang #${rank}</div>`:''}
@@ -460,6 +469,8 @@ self.addEventListener('fetch', e => e.respondWith(fetch(e.request).catch(() => n
 
     const session = getSession(req);
     const lang = session?.lang || 'de';
+    // Online Status tracken
+    if (session) { session.lastSeen = Date.now(); }
 
     function redirect(to) { res.writeHead(302,{'Location':to}); res.end(); }
     function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8'}); res.end(layout(content,session,page,lang)); }
@@ -825,6 +836,13 @@ document.getElementById('code-input').addEventListener('keypress',e=>{if(e.key==
         
         if (!result) return json({error:'Fehler beim Senden'},500);
         if (result.error) return json({error: result.error});
+        return json({ok:true});
+    }
+
+    // ── POST PINNEN ──
+    if (path === '/api/pin-post' && req.method === 'POST') {
+        const body = await parseBody(req);
+        await postBot('/pin-post-api', { uid: session.uid, timestamp: body.timestamp });
         return json({ok:true});
     }
 
@@ -1410,6 +1428,10 @@ function removeAttachment() {
     preview.innerHTML = '';
 }
 
+async function pinPost(timestamp) {
+    await fetch('/api/pin-post', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({timestamp})});
+    location.reload();
+}
 async function submitPost() {
     const text = document.getElementById('new-post').value.trim();
     if (!text && !attachedFile) return toast('❌ Text oder Datei erforderlich');
@@ -1491,6 +1513,20 @@ ${profileCard(uid, u, d, false, lang, adminIds)}`, 'feed');
 <div style="padding:16px;border-bottom:1px solid var(--border2)">
   <div class="form-label">Spitzname</div>
   <input type="text" class="form-input" id="inp-spitzname" placeholder="Dein Spitzname" maxlength="30" value="${u.spitzname||''}">
+</div>
+<div style="padding:16px;border-bottom:1px solid var(--border2)">
+  <div class="form-label">Nische</div>
+  <input type="text" class="form-input" id="inp-nische" placeholder="z.B. Fitness, Food, Travel..." maxlength="50" value="${u.nische||''}">
+</div>
+<div style="padding:16px;border-bottom:1px solid var(--border2)">
+  <div class="form-label">Persönlicher Link</div>
+  <input type="url" class="form-input" id="inp-website" placeholder="https://deine-website.de" maxlength="100" value="${u.website||''}">
+</div>
+<div style="padding:16px;border-bottom:1px solid var(--border2)">
+  <div class="form-label">Social Links</div>
+  <input type="text" class="form-input" id="inp-tiktok" placeholder="TikTok @username" maxlength="50" value="${u.tiktok||''}" style="margin-bottom:8px">
+  <input type="text" class="form-input" id="inp-youtube" placeholder="YouTube @channel" maxlength="50" value="${u.youtube||''}" style="margin-bottom:8px">
+  <input type="text" class="form-input" id="inp-twitter" placeholder="Twitter/X @username" maxlength="50" value="${u.twitter||''}">
 </div>
 
 <div style="padding:16px;border-bottom:1px solid var(--border2)">
@@ -1623,7 +1659,12 @@ async function saveProfile() {
     const btn = document.querySelector('.btn-primary');
     if(btn) { btn.textContent = '⏳ Speichern...'; btn.disabled = true; }
     try {
-        const payload = {bio, spitzname, accentColor: selectedAccent, theme};
+        const nische = document.getElementById('inp-nische')?.value?.trim()||'';
+        const website = document.getElementById('inp-website')?.value?.trim()||'';
+        const tiktok = document.getElementById('inp-tiktok')?.value?.trim().replace('@','')||'';
+        const youtube = document.getElementById('inp-youtube')?.value?.trim().replace('@','')||'';
+        const twitter = document.getElementById('inp-twitter')?.value?.trim().replace('@','')||'';
+        const payload = {bio, spitzname, accentColor: selectedAccent, theme, nische, website, tiktok, youtube, twitter};
         if (selectedBanner) payload.banner = selectedBanner;
         const res = await fetch('/api/save-profile', {
             method:'POST',
