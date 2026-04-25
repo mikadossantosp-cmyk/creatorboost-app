@@ -970,6 +970,11 @@ document.getElementById('code-input').addEventListener('keypress',e=>{if(e.key==
         if (body.bio !== undefined) updateData.bio = body.bio;
         if (body.spitzname !== undefined) updateData.spitzname = body.spitzname;
         if (body.accentColor) updateData.accentColor = body.accentColor;
+        if (body.nische !== undefined) updateData.nische = body.nische;
+        if (body.website !== undefined) updateData.website = body.website;
+        if (body.tiktok !== undefined) updateData.tiktok = body.tiktok;
+        if (body.youtube !== undefined) updateData.youtube = body.youtube;
+        if (body.twitter !== undefined) updateData.twitter = body.twitter;
         await postBot('/update-profile-api', updateData);
         if (session) {
             if (body.theme) session.theme = body.theme;
