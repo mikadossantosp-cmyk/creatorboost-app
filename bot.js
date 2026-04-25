@@ -359,32 +359,20 @@ const server = http.createServer(async (req, res) => {
   </div>
   <div style="width:100%;max-width:320px;text-align:center">
     <div style="font-size:13px;color:var(--muted);margin-bottom:12px">Tippe <b>/mycode</b> im Telegram Bot um deinen Code zu erhalten</div>
-    <input type="text" class="code-input" id="code-input" placeholder="Dein Code" autocomplete="off" autocorrect="off" autocapitalize="off">
-    <div class="error-msg" id="error-msg">❌ Ungültiger Code. Versuche es erneut.</div>
+    <input type="text" class="code-input" id="code-input" placeholder="Dein Code" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false">
+    <div class="error-msg" id="error-msg" style="display:${(new url.URL('http://x'+(req?req.url:''))).searchParams.get('error')?'block':'none'}">❌ Ungültiger Code. Versuche es erneut.</div>
+    <form id="login-form" method="POST" action="/auth/code" style="display:none">
+      <input type="hidden" name="code" id="hidden-code">
+    </form>
     <button class="login-btn" onclick="doLogin()">🚀 Einloggen</button>
   </div>
 </div>
 <script>
-async function doLogin() {
+function doLogin() {
     const code = document.getElementById('code-input').value.trim().toLowerCase();
     if (!code) return;
-    const btn = document.querySelector('.login-btn');
-    btn.textContent = '⏳ Wird geprüft...';
-    btn.disabled = true;
-    try {
-        const res = await fetch('/auth/code', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code})});
-        const data = await res.json();
-        if (data.ok) {
-            window.location.href = '/feed';
-        } else {
-            document.getElementById('error-msg').style.display = 'block';
-            btn.textContent = '🚀 Einloggen';
-            btn.disabled = false;
-        }
-    } catch(e) {
-        btn.textContent = '🚀 Einloggen';
-        btn.disabled = false;
-    }
+    document.getElementById('hidden-code').value = code;
+    document.getElementById('login-form').submit();
 }
 document.getElementById('code-input').addEventListener('keypress', e => { if(e.key==='Enter') doLogin(); });
 </script>
@@ -402,7 +390,7 @@ document.getElementById('code-input').addEventListener('keypress', e => { if(e.k
         if (!botData) return json({error:'Server nicht erreichbar'},503);
 
         const found = Object.entries(botData.users||{}).find(([, u]) => u.appCode === code);
-        if (!found) return json({error:'Ungültiger Code'},401);
+        if (!found) { res.writeHead(302,{'Location':'/?error=1'}); return res.end(); }
 
         const [uid, u] = found;
         const sid = genSid();
@@ -415,8 +403,8 @@ document.getElementById('code-input').addEventListener('keypress', e => { if(e.k
             createdAt: Date.now()
         });
         setTimeout(()=>sessions.delete(sid), 30*24*60*60*1000);
-        res.writeHead(200,{'Content-Type':'application/json','Set-Cookie':`cbsid=${sid}; HttpOnly; Path=/; Max-Age=2592000`});
-        return res.end(JSON.stringify({ok:true}));
+        res.writeHead(302,{'Set-Cookie':`cbsid=${sid}; HttpOnly; Path=/; Max-Age=2592000`,'Location':'/feed'});
+        return res.end();
     }
 
     // ── TELEGRAM AUTH (legacy) ──
