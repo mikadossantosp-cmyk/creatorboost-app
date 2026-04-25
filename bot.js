@@ -324,6 +324,14 @@ function setLang(l){fetch('/api/lang',{method:'POST',headers:{'Content-Type':'ap
 </body></html>`;
 }
 
+function ladeBild(uid, type) {
+    try {
+        const f = DATA_DIR + '/bild_' + uid + '_' + type + '.txt';
+        if (fs.existsSync(f)) return fs.readFileSync(f, 'utf8');
+    } catch(e) {}
+    return null;
+}
+
 function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[]) {
     const xp = u.xp||0;
     const nb = xpNext(xp);
@@ -342,8 +350,8 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[]) {
   ${bannerIsGrad ? '' : '<img src="'+banner+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">'}
   <div class="profile-banner-overlay"></div>
   <div class="profile-avatar-wrap">
-    ${u.profilePic
-      ? `<img src="${u.profilePic.startsWith('/bild/')?MAINBOT_URL+u.profilePic:u.profilePic}" class="profile-avatar" onerror="this.outerHTML='<div class=\"profile-avatar\" style=\"display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:700\">${(u.name||'?').slice(0,2).toUpperCase()}</div>'" alt="">`
+    ${(ladeBild(uid,'profilepic')||u.profilePic)
+      ? `<img src="${ladeBild(uid,'profilepic')||u.profilePic}" class="profile-avatar" onerror="this.style.display='none'" alt="">`
       : instaUrl
         ? `<img src="https://unavatar.io/instagram/${u.instagram}?fallback=https://ui-avatars.com/api/?name=${encodeURIComponent(u.name||'U')}&background=ff6b6b&color=fff" class="profile-avatar" onerror="this.outerHTML='<div class=\"profile-avatar\" style=\"display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:700;background:${grad};color:#fff\">${(u.name||'?').slice(0,2).toUpperCase()}</div>'" alt="">`
         : `<div class="profile-avatar" style="display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:700;background:${grad};color:#fff">${(u.name||'?').slice(0,2).toUpperCase()}</div>`}
