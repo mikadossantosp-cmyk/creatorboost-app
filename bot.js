@@ -686,21 +686,23 @@ document.getElementById('code-input').addEventListener('keypress', e => { if(e.k
     }
     if (path === '/api/save-profile' && req.method === 'POST') {
         const body = await parseBody(req);
-        const result = await postBot('/update-profile-api', { 
-            uid: myUid, 
-            bio: body.bio, 
-            spitzname: body.spitzname, 
-            banner: body.banner, 
-            accentColor: body.accentColor 
-        });
-        // Theme und Lang in Session speichern
+        console.log('[SAVE-PROFILE] uid:', myUid, 'bio:', body.bio?.slice(0,20), 'spitzname:', body.spitzname, 'hasBanner:', !!body.banner);
+        
+        const updateData = { uid: myUid };
+        if (body.bio !== undefined) updateData.bio = body.bio;
+        if (body.spitzname !== undefined) updateData.spitzname = body.spitzname;
+        if (body.banner) updateData.banner = body.banner;
+        if (body.accentColor) updateData.accentColor = body.accentColor;
+
+        const result = await postBot('/update-profile-api', updateData);
+        console.log('[SAVE-PROFILE] Result:', result);
+        
         if (session) {
-            if (body.theme) session.theme = body.theme;
-            if (body.lang) session.lang = body.lang;
+            if (body.theme) { session.theme = body.theme; }
+            if (body.lang) { session.lang = body.lang; }
             saveSessions();
         }
-        console.log('save-profile Result:', result);
-        return json({ok:true});
+        return json({ok: !!result});
     }
 
     // ── FEED ──
@@ -1107,8 +1109,9 @@ ${profileCard(uid, u, d, false, lang, adminIds)}`, 'feed');
 </div>
 
 <script>
-let selectedBanner = '${u.banner||gradients[0]}';
+let selectedBanner = '${(u.banner||gradients[0]).replace(/'/g,"\\'")}';
 let selectedAccent = '${u.accentColor||'#ff6b6b'}';
+console.log('Banner init:', selectedBanner.slice(0,30));
 
 function selectBanner(val, el) {
     document.querySelectorAll('.gradient-opt').forEach(e=>e.classList.remove('selected'));
@@ -1179,24 +1182,32 @@ async function uploadBanner(input) {
 }
 
 async function saveProfile() {
-    const bio = document.getElementById('inp-bio').value;
-    const spitzname = document.getElementById('inp-spitzname').value;
-    const theme = document.getElementById('theme-toggle').classList.contains('on') ? 'dark' : 'light';
-    const btn = document.querySelector('[onclick="saveProfile()"]');
-    btn.textContent = '⏳ Speichern...';
-    btn.disabled = true;
+    const bio = document.getElementById('inp-bio')?.value || '';
+    const spitzname = document.getElementById('inp-spitzname')?.value || '';
+    const themeToggle = document.getElementById('theme-toggle');
+    const theme = themeToggle?.classList.contains('on') ? 'dark' : 'light';
+    const btn = document.querySelector('.btn-primary');
+    if(btn) { btn.textContent = '⏳ Speichern...'; btn.disabled = true; }
     try {
+        const payload = {bio, spitzname, accentColor: selectedAccent, theme};
+        if (selectedBanner) payload.banner = selectedBanner;
         const res = await fetch('/api/save-profile', {
             method:'POST',
             headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({bio, spitzname, banner: selectedBanner, accentColor: selectedAccent, theme})
+            body:JSON.stringify(payload)
         });
         const data = await res.json();
-        if(data.ok) { toast('✅ Gespeichert!'); setTimeout(()=>location.reload(), 1000); }
-        else toast('❌ Fehler beim Speichern');
-    } catch(e) { toast('❌ Netzwerkfehler'); }
-    btn.textContent = '💾 Speichern';
-    btn.disabled = false;
+        if(data.ok) { 
+            toast('✅ Gespeichert!'); 
+            setTimeout(()=>location.reload(), 1200); 
+        } else { 
+            toast('❌ Fehler: ' + (data.error||'Unbekannt')); 
+        }
+    } catch(e) { 
+        console.error('Save error:', e);
+        toast('❌ Netzwerkfehler'); 
+    }
+    if(btn) { btn.textContent = '💾 Speichern'; btn.disabled = false; }
 }
 document.getElementById('inp-bio').addEventListener('input', function() {
     this.nextElementSibling.textContent = this.value.length + '/100';
