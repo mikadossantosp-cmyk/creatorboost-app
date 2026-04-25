@@ -528,12 +528,10 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
   <div class="login-wrap">
     <div class="divider"><span>Bereits Mitglied?</span></div>
     <div class="code-hint">Tippe <b style="color:#d4af37">/mycode</b> im Bot und gib deinen Code ein</div>
-    <input type="text" class="code-input" id="code-input" placeholder="Dein Code" autocomplete="off" autocapitalize="none" spellcheck="false">
-    <div class="err" id="err">❌ Ungültiger Code. Versuche es erneut.</div>
-    <form id="login-form" method="POST" action="/auth/code" style="display:none">
-      <input type="hidden" name="code" id="hidden-code">
+    <form method="POST" action="/auth/code-form">
+      <input type="text" name="code" class="code-input" placeholder="Dein Code" autocomplete="off" autocapitalize="none" spellcheck="false" required>
+      <button type="submit" class="login-btn" style="margin-top:10px">Einloggen →</button>
     </form>
-    <button class="login-btn" onclick="doLogin()">Einloggen →</button>
   </div>
 </div>
 <script>
@@ -610,6 +608,23 @@ function doLogin(){
 document.getElementById('code-input').addEventListener('keypress',e=>{if(e.key==='Enter')doLogin();});
 </script>
 </body></html>`);
+    }
+
+    // ── CODE AUTH (Form POST) ──
+    if (path === '/auth/code-form' && req.method === 'POST') {
+        const body = await parseBody(req);
+        const code = (body.code||'').toLowerCase().trim();
+        if (!code) { res.writeHead(302,{'Location':'/?error=1'}); return res.end(); }
+        const botData = await fetchBot('/data');
+        if (!botData) { res.writeHead(302,{'Location':'/?error=1'}); return res.end(); }
+        const found = Object.entries(botData.users||{}).find(([,u]) => u.appCode === code);
+        if (!found) { res.writeHead(302,{'Location':'/?error=1'}); return res.end(); }
+        const [uid, u] = found;
+        const sid = genSid();
+        sessions.set(sid, { uid: String(uid), name: u.name, username: u.username||null, theme: 'dark', lang: 'de', createdAt: Date.now() });
+        saveSessions();
+        res.writeHead(302,{'Set-Cookie':'cbsid='+sid+'; HttpOnly; Path=/; Max-Age=2592000','Location':'/feed'});
+        return res.end();
     }
 
     // ── CODE AUTH ──
