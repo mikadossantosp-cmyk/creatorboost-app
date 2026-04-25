@@ -336,7 +336,7 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
     const nb = xpNext(xp);
     const grad = badgeGradient(u.role);
     // Banner immer als URL laden - nie als inline Base64
-    let banner = bannerData || ladeBild(uid, 'banner') || u.banner || 'linear-gradient(135deg,#1a1a2e,#16213e,#0f3460)';
+    const banner = bannerData || u.banner || 'linear-gradient(135deg,#1a1a2e,#16213e,#0f3460)';
     const bannerIsGrad = !banner.startsWith('data:image') && !banner.startsWith('http');
     const instaUrl = u.instagram ? `https://instagram.com/${u.instagram}` : null;
     const totalLinks = Object.values(d.links||{}).filter(l=>l.user_id===Number(uid)).length;
@@ -589,23 +589,19 @@ document.getElementById('code-input').addEventListener('keypress', e => { if(e.k
 
     // ── BILD UPLOAD (Banner) ──
     if (path === '/api/upload-banner' && req.method === 'POST') {
-        // Base64 Bild empfangen und als URL speichern
         const chunks = [];
         for await (const chunk of req) chunks.push(chunk);
-        const body = Buffer.concat(chunks).toString();
         try {
-            const { imageData } = JSON.parse(body);
-            if (!imageData || !imageData.startsWith('data:image/')) return json({error:'Ungültiges Bild'},400);
-            if (imageData.length > 2000000) return json({error:'Bild zu groß (max 1.5MB)'},400);
-
-            console.log('[BANNER] Uploading für uid:', session.uid, 'size:', imageData.length);
-            const result = await postBot('/update-profile-api', { uid: session.uid, banner: imageData });
-            console.log('[BANNER] Result:', result);
+            const { imageData } = JSON.parse(Buffer.concat(chunks).toString());
+            if (!imageData?.startsWith('data:image/')) return json({error:'Kein Bild'},400);
+            if (imageData.length > 3000000) return json({error:'Max 2MB'},400);
+            // In Session speichern
+            session.bannerData = imageData;
+            saveSessions();
+            // Auf Disk speichern
+            try { fs.writeFileSync(DATA_DIR + '/bild_' + session.uid + '_banner.txt', imageData); } catch(e) {}
             return json({ok:true});
-        } catch(e) { 
-            console.log('[BANNER] Fehler:', e.message);
-            return json({error: e.message},500); 
-        }
+        } catch(e) { return json({error:e.message},500); }
     }
 
 
@@ -1212,10 +1208,8 @@ async function uploadBanner(input) {
             });
             const data = await res.json();
             if (data.ok) {
-                selectedBanner = imageData;
-                // Vorschau
-                document.querySelector('.gradient-opt.selected')?.classList.remove('selected');
-                toast('✅ Banner hochgeladen!');
+                toast('✅ Banner gespeichert!');
+                setTimeout(() => location.href = '/profil', 1000);
             } else {
                 toast('❌ ' + (data.error||'Fehler'));
             }
