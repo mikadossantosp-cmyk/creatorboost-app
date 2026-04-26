@@ -157,10 +157,10 @@ button{cursor:pointer;border:none;outline:none;font-family:var(--font)}
 .stories{display:flex;gap:12px;padding:12px 16px;overflow-x:auto;scrollbar-width:none}
 .stories::-webkit-scrollbar{display:none}
 .story-item{display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;width:76px}
-.story-ring{width:62px;height:62px;border-radius:50%;padding:2px;background:linear-gradient(135deg,#f9a825,#e91e63,#9c27b0)}
+.story-ring{width:62px;height:62px;border-radius:50%;padding:2px;background:linear-gradient(135deg,#f9a825,#e91e63,#9c27b0);position:relative}
 .story-ring.seen{background:var(--bg4)}
 .story-inner{width:100%;height:100%;border-radius:50%;border:2px solid var(--bg);overflow:hidden;position:relative;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:22px}
-.story-name{font-size:11px;color:var(--muted);max-width:76px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:4px}
+.story-name{font-size:11px;color:var(--muted);max-width:76px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 /* POST CARD */
 .post{margin-bottom:1px;background:var(--bg3)}
@@ -1092,8 +1092,8 @@ fetch('/api/notifications')
     const hasLink = Object.values(d.links||{}).some(l=>l.user_id===Number(id)&&new Date(l.timestamp).toDateString()===today);
     return `<a href="/profil/${id}" class="story-item">
       <div class="story-ring ${hasLink?'':'seen'}">
-        <div class="story-inner" style="position:relative">
-          ${ladeBild(id,'profilepic')?`<img src="/appbild/${id}/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" onerror="this.remove()" alt="">`:insta?`<img src="https://unavatar.io/instagram/${insta}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" onerror="this.remove()" alt="">`:''}  
+        <div class="story-inner" style="width:100%;height:100%;border-radius:50%;overflow:hidden;position:relative;display:flex;align-items:center;justify-content:center;background:var(--bg4)">
+          ${ladeBild(id,'profilepic')?`<img src="/appbild/${id}/profilepic" style="width:100%;height:100%;object-fit:cover;position:absolute;top:0;left:0" onerror="this.remove()" alt="">`:insta?`<img src="https://unavatar.io/instagram/${insta}" style="width:100%;height:100%;object-fit:cover;position:absolute;top:0;left:0" onerror="this.remove()" alt="">`:''}  
           <span style="font-size:18px">${(u.name||'?').slice(0,1)}</span>
       </div>
       <div class="story-name">${u.spitzname||u.name||'?'}</div>
