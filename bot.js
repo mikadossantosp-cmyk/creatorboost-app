@@ -1100,13 +1100,10 @@ fetch('/api/notifications')
   }).join('')}
 </div>`;
 
-        const postsHtml = todayLinks.length === 0
-            ? `<div class="empty" style="margin-top:60px"><div class="empty-icon">📭</div><div class="empty-text">Noch keine Links heute</div><div class="empty-sub">Sei der Erste!</div></div>`
-            : (()=>{
-                const todayStr = new Date().toDateString();
-                const heuteLinks = dedupLinks.filter(([,l])=>new Date(l.timestamp||0).toDateString()===todayStr);
-                const aelterLinks = dedupLinks.filter(([,l])=>new Date(l.timestamp||0).toDateString()!==todayStr);
-                const renderLink = ([msgId, link])=>{
+        const todayStr = new Date().toDateString();
+        const heuteLinks = dedupLinks.filter(([,l])=>new Date(l.timestamp||0).toDateString()===todayStr);
+        const aelterLinks = dedupLinks.filter(([,l])=>new Date(l.timestamp||0).toDateString()!==todayStr);
+        function renderLink([msgId, link]){
                 const poster = d.users[String(link.user_id)]||{};
                 // Alle Likes aus URL-Gruppe zusammenführen
             const allLinksForUrl = Object.values(d.links||{}).filter(l=>l.text===link.text);
@@ -1165,12 +1162,10 @@ fetch('/api/notifications')
     ${String(link.user_id) !== String(myUid) ? '</button>' : ''}
   </div>
   ${likes.length>0?`<div class="post-likers"><span>${likerNames.join(', ')}</span>${likes.length>2?` und ${likes.length-2} weitere`:''} haben geliked</div>`:''}
-</div>`;
-                };
-                const heuteHtml = heuteLinks.map(renderLink).join('');
-                const aelterHtml = aelterLinks.map(renderLink).join('');
-                return (heuteHtml||'<div class="empty"><div class="empty-icon">📅</div><div class="empty-text">Noch keine Links heute</div></div>') + '</div><div id="feed-aelter" style="padding:8px 0 80px;display:none">' + (aelterHtml||'<div class="empty"><div class="empty-icon">🕐</div><div class="empty-text">Keine älteren Links</div></div>');
-              })()
+</div>`;}
+        const heuteHtml = heuteLinks.length ? heuteLinks.map(([a,b])=>renderLink([a,b])).join('') : '<div class="empty" style="margin-top:40px"><div class="empty-icon">📅</div><div class="empty-text">Noch keine Links heute</div></div>';
+        const aelterHtml = aelterLinks.length ? aelterLinks.map(([a,b])=>renderLink([a,b])).join('') : '<div class="empty" style="margin-top:40px"><div class="empty-icon">🕐</div><div class="empty-text">Keine älteren Links</div></div>';
+        const postsHtml = '<div id="feed-heute" style="padding:8px 0 80px">' + heuteHtml + '</div><div id="feed-aelter" style="padding:8px 0 80px;display:none">' + aelterHtml + '</div>';
         return html(`
 <div class="topbar">
   <div class="topbar-logo">CreatorBoost</div>
@@ -1180,6 +1175,10 @@ fetch('/api/notifications')
 </div>
 ${storiesHtml}
 <div style="height:1px;background:var(--border2)"></div>
+<div style="display:flex;gap:0;margin:8px 16px 0;border-bottom:2px solid var(--border2)">
+  <button id="tab-heute" onclick="switchFeedTab('heute')" style="flex:1;padding:10px;font-size:13px;font-weight:700;border:none;background:none;color:var(--accent);border-bottom:3px solid var(--accent);margin-bottom:-2px;cursor:pointer">📅 Heute</button>
+  <button id="tab-aelter" onclick="switchFeedTab('aelter')" style="flex:1;padding:10px;font-size:13px;font-weight:700;border:none;background:none;color:var(--muted);border-bottom:3px solid transparent;margin-bottom:-2px;cursor:pointer">🕐 Älter</button>
+</div>
 ${postsHtml}
 <script>
 // Auto-refresh Like Counter alle 10 Sekunden
