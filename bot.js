@@ -1166,7 +1166,10 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
         : ''}
     </div>
     <div class="post-user-info">
-      <div class="post-name">${poster.spitzname||poster.name||'User'}</div>
+      <div class="post-name" style="display:flex;align-items:center;gap:5px">
+        ${poster.spitzname||poster.name||'User'}
+        ${(()=>{const ps=[...sessions.values()].find(s=>String(s.uid)===String(link.user_id));return ps&&(Date.now()-ps.lastSeen)<300000?'<span style="width:7px;height:7px;border-radius:50%;background:#00c851;display:inline-block;flex-shrink:0" title="Online"></span>':''})()}
+      </div>
       <div class="post-badge">${poster.role||''} ${insta?`· 📸 @${poster.instagram}`:''}</div>
     </div>
     <div class="post-time">${new Date(link.timestamp).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})}</div>
@@ -1204,7 +1207,18 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
       <span id="likes-${link.counter_msg_id||msgId}">${likes.length}</span>
     ${String(link.user_id) !== String(myUid) ? '</button>' : ''}
   </div>
-  ${likes.length>0?`<div class="post-likers"><span>${likerNames.join(', ')}</span>${likes.length>2?` und ${likes.length-2} weitere`:''} haben geliked</div>`:''}
+  ${likes.length>0?`
+  <div style="padding:0 16px 10px">
+    <button onclick="toggleLikers('${link.counter_msg_id||msgId}')" style="background:none;border:none;color:var(--muted);font-size:12px;cursor:pointer;padding:0;display:flex;align-items:center;gap:6px">
+      <div style="display:flex">
+        ${likes.slice(0,3).map(lid=>{const lu=d.users[String(lid)];const lg=badgeGradient(lu?.role);return `<div style="width:20px;height:20px;border-radius:50%;background:${lg};border:1.5px solid var(--bg3);display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:#fff;margin-left:-5px;position:relative">${(lu?.name||'?')[0]}</div>`;}).join('')}
+      </div>
+      <span id="likers-label-${link.counter_msg_id||msgId}">❤️ ${likes.length} ${likes.length===1?'Like':'Likes'} · Wer?</span>
+    </button>
+    <div id="likers-box-${link.counter_msg_id||msgId}" style="display:none;margin-top:8px;display:none">
+      ${likes.map(lid=>{const lu=d.users[String(lid)];const lg=badgeGradient(lu?.role);return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border2)"><div style="position:relative;width:28px;height:28px;border-radius:50%;background:${lg};flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff"><span style="position:absolute">${(lu?.name||'?')[0]}</span>${ladeBild(String(lid),'profilepic')?`<img src="/appbild/${lid}/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">`:lu?.instagram?`<img src="https://unavatar.io/instagram/${lu.instagram}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">`:''}</div><a href="/profil/${lid}" style="font-size:12px;font-weight:600;color:var(--text)">${lu?.spitzname||lu?.name||'User'}</a><span style="font-size:10px;color:var(--muted);margin-left:auto">${lu?.role||''}</span></div>`;}).join('')}
+    </div>
+  </div>`:''}
 </div>`;}
 
         const heuteHtml = heuteLinks.length ? heuteLinks.map(renderLink).join('') : `
@@ -1225,6 +1239,25 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
   </div>
 </div>
 <div style="width:100%">${storiesHtml}</div>
+${(()=>{
+  const todayLiked = Object.values(d.links||{}).some(l=>Array.isArray(l.likes)&&l.likes.includes(Number(myUid))&&new Date(l.timestamp).toDateString()===today);
+  const todayTotal = dedupLinks.filter(([,l])=>new Date(l.timestamp||0).toDateString()===today).length;
+  const myTodayLikes = Object.values(d.links||{}).filter(l=>Array.isArray(l.likes)&&l.likes.includes(Number(myUid))&&new Date(l.timestamp).toDateString()===today).length;
+  const remaining = Math.max(0, todayTotal - myTodayLikes);
+  if (remaining > 0 && !todayLiked) {
+    return `<div style="margin:8px 16px;padding:10px 14px;background:linear-gradient(135deg,rgba(255,107,107,.15),rgba(255,165,0,.1));border:1px solid rgba(255,107,107,.3);border-radius:12px;display:flex;align-items:center;gap:10px">
+      <div style="font-size:22px">⚡</div>
+      <div style="flex:1"><div style="font-size:13px;font-weight:700">Du hast heute noch ${remaining} Link${remaining!==1?'s':''} zum Liken!</div><div style="font-size:11px;color:var(--muted);margin-top:2px">Jeder Like gibt dir XP 🏆</div></div>
+    </div>`;
+  }
+  if (todayLiked && myTodayLikes >= todayTotal && todayTotal > 0) {
+    return `<div style="margin:8px 16px;padding:10px 14px;background:rgba(0,200,81,.1);border:1px solid rgba(0,200,81,.25);border-radius:12px;display:flex;align-items:center;gap:10px">
+      <div style="font-size:22px">✅</div>
+      <div style="flex:1"><div style="font-size:13px;font-weight:700">Alle Links für heute geliked!</div><div style="font-size:11px;color:var(--muted);margin-top:2px">Komm morgen wieder 💪</div></div>
+    </div>`;
+  }
+  return '';
+})()}
 <div style="display:flex;border-bottom:2px solid var(--border2);width:100%">
   <a href="/feed?tab=heute" style="flex:1;padding:10px;font-size:13px;font-weight:700;text-align:center;text-decoration:none;display:block;border-bottom:3px solid ${tab==='aelter'?'transparent':'var(--accent)'};margin-bottom:-2px;color:${tab==='aelter'?'var(--muted)':'var(--accent)'}">📅 Heute</a>
   <a href="/feed?tab=aelter" style="flex:1;padding:10px;font-size:13px;font-weight:700;text-align:center;text-decoration:none;display:block;border-bottom:3px solid ${tab==='aelter'?'var(--accent)':'transparent'};margin-bottom:-2px;color:${tab==='aelter'?'var(--accent)':'var(--muted)'}">🕐 Älter</a>
@@ -1268,6 +1301,15 @@ async function refreshLikes() {
 setInterval(refreshLikes, 5000);
 // Onboarding beim ersten Besuch
 if (!localStorage.getItem('cb_onboarded')) { window.location.href = '/onboarding'; }
+
+function toggleLikers(msgId) {
+    const box = document.getElementById('likers-box-' + msgId);
+    const label = document.getElementById('likers-label-' + msgId);
+    if (!box) return;
+    const isOpen = box.style.display !== 'none';
+    box.style.display = isOpen ? 'none' : 'block';
+    if (label) label.textContent = isOpen ? '❤️ ' + box.querySelectorAll('[style*="border-bottom"]').length + ' Likes · Wer?' : '🔼 Zuklappen';
+}
 </script>`, 'feed');
     }
 
@@ -1490,6 +1532,61 @@ ${sorted.map(([id,u],i)=>{
   </div>
 </div>
 ${profileCard(myUid, myUser, d, true, lang, adminIds, myBannerData, myPicData)}
+${(()=>{
+  const fields = [
+    [myUser?.bio, 'Bio hinzufügen'],
+    [myUser?.instagram, 'Instagram verknüpfen'],
+    [myBannerData || myUser?.banner, 'Banner hochladen'],
+    [myPicData || myUser?.profilePic || myUser?.instagram, 'Profilbild setzen'],
+    [myUser?.nische, 'Nische eintragen'],
+  ];
+  const done = fields.filter(([v])=>v).length;
+  const total = fields.length;
+  const pct = Math.round(done/total*100);
+  if (pct === 100) return '';
+  const missing = fields.filter(([v])=>!v).map(([,l])=>l);
+  return `<div style="margin:12px 16px;padding:12px 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:14px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div style="font-size:13px;font-weight:700">Profil zu ${pct}% vollständig</div>
+      <div style="font-size:12px;color:var(--muted)">${done}/${total}</div>
+    </div>
+    <div style="height:6px;background:var(--bg4);border-radius:3px;overflow:hidden;margin-bottom:10px">
+      <div style="height:100%;width:${pct}%;background:linear-gradient(135deg,#ff6b6b,#ffa500);border-radius:3px;transition:width .5s"></div>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px">
+      ${missing.map(m=>`<a href="/einstellungen" style="font-size:11px;background:rgba(255,107,107,.1);border:1px solid rgba(255,107,107,.25);color:var(--accent);padding:4px 10px;border-radius:20px;text-decoration:none">+ ${m}</a>`).join('')}
+    </div>
+  </div>`;
+})()}
+${(()=>{
+  const u = myUser || {};
+  const checks = [
+    [!!u.bio, 'Bio hinzufügen', '/einstellungen'],
+    [!!(myPicData||ladeBild(myUid,'profilepic')), 'Profilbild hochladen', '/einstellungen'],
+    [!!u.instagram, 'Instagram verknüpft', null],
+    [!!u.nische, 'Nische ausfüllen', '/einstellungen'],
+    [!!(session.bannerData||ladeBild(myUid,'banner')), 'Banner hochladen', '/einstellungen'],
+  ];
+  const done = checks.filter(c=>c[0]).length;
+  const pct = Math.round(done/checks.length*100);
+  if (pct === 100) return '';
+  const next = checks.find(c=>!c[0]);
+  return `<div style="margin:12px 16px;padding:12px 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:14px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <div style="font-size:13px;font-weight:700">Profil vervollständigen</div>
+      <div style="font-size:12px;font-weight:700;color:var(--accent)">${done}/${checks.length}</div>
+    </div>
+    <div style="background:var(--bg4);border-radius:4px;height:6px;overflow:hidden;margin-bottom:10px">
+      <div style="height:100%;width:${pct}%;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:4px;transition:width .6s ease"></div>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">
+      ${checks.map(([done,label])=>`<div style="display:flex;align-items:center;gap:4px;font-size:11px;color:${done?'var(--green)':'var(--muted)'}">
+        ${done?'✅':'⬜'} ${label}
+      </div>`).join('')}
+    </div>
+    ${next&&next[2]?`<a href="${next[2]}" style="display:inline-flex;align-items:center;gap:6px;background:var(--accent);color:#fff;padding:7px 14px;border-radius:10px;font-size:12px;font-weight:700;text-decoration:none">➕ ${next[1]}</a>`:''}
+  </div>`;
+})()}
 <div class="tabs" style="margin-top:8px;position:sticky;top:57px;z-index:50;background:var(--bg)">
   <div class="tab active" onclick="showPTab('posts',this)">📝 Posts</div>
   <div class="tab" onclick="showPTab('links',this)">🔗 Links</div>
