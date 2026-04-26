@@ -1065,8 +1065,9 @@ fetch('/api/notifications')
 
     // ── FEED ──
     if (path === '/feed') {
+        const twoDaysAgo = Date.now() - 2 * 24 * 60 * 60 * 1000;
         const todayLinks = Object.entries(d.links||{})
-            .filter(([,l]) => new Date(l.timestamp).toDateString()===today)
+            .filter(([,l]) => l.timestamp && l.timestamp >= twoDaysAgo)
             .sort((a,b)=>(b[1].timestamp||0)-(a[1].timestamp||0));
         // Deduplizieren - gleiche counter_msg_id nur einmal zeigen
         const seenMsgIds = new Set();
@@ -1219,7 +1220,31 @@ async function refreshLikes() {
 setInterval(refreshLikes, 5000);
 
 
-async function likePost(msgId, btn) {
+async // Feed Trennlinien
+(function(){
+    const todayStr = new Date().toDateString();
+    let addedToday = false, addedOlder = false;
+    document.querySelectorAll('.post-card[data-ts]').forEach(card => {
+        const ts = Number(card.getAttribute('data-ts'));
+        const isToday = new Date(ts).toDateString() === todayStr;
+        if (isToday && !addedToday) {
+            addedToday = true;
+            const h = document.createElement('div');
+            h.style.cssText = 'padding:10px 16px 6px;font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px';
+            h.textContent = '📅 Heute';
+            card.parentNode.insertBefore(h, card);
+        }
+        if (!isToday && !addedOlder) {
+            addedOlder = true;
+            const h = document.createElement('div');
+            h.style.cssText = 'padding:10px 16px 6px;font-size:11px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:1px;margin-top:4px';
+            h.textContent = '🕐 Ältere Links';
+            card.parentNode.insertBefore(h, card);
+        }
+    });
+})();
+
+function likePost(msgId, btn) {
     const countEl = document.getElementById('likes-'+msgId);
     const wasLiked = btn.classList.contains('liked');
     if (wasLiked) return; // Kein Unlike möglich
