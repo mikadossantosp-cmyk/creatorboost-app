@@ -1226,14 +1226,23 @@ async function refreshLikes() {
 setInterval(refreshLikes, 5000);
 
 
-async function switchFeedTab(tab, el) {
-    ['tab-heute','tab-aelter'].forEach(id=>{
-        const btn = document.getElementById(id);
-        if(!btn) return;
-        const isActive = btn === el;
-        btn.style.color = isActive ? 'var(--accent)' : 'var(--muted)';
-        btn.style.borderBottom = isActive ? '2px solid var(--accent)' : '2px solid transparent';
-    });
+async function switchFeedTab(tab) {
+    const heute = document.getElementById('feed-heute');
+    const aelter = document.getElementById('feed-aelter');
+    const btnH = document.getElementById('tab-heute');
+    const btnA = document.getElementById('tab-aelter');
+    if(!heute||!aelter||!btnH||!btnA) return;
+    if(tab==='heute') {
+        heute.style.display='block'; aelter.style.display='none';
+        btnH.style.color='var(--accent)'; btnH.style.borderBottom='3px solid var(--accent)';
+        btnA.style.color='var(--muted)'; btnA.style.borderBottom='3px solid transparent';
+    } else {
+        heute.style.display='none'; aelter.style.display='block';
+        btnA.style.color='var(--accent)'; btnA.style.borderBottom='3px solid var(--accent)';
+        btnH.style.color='var(--muted)'; btnH.style.borderBottom='3px solid transparent';
+    }
+}
+function _old_switch_unused(tab, el) {
     const todayStr = new Date().toDateString();
     document.querySelectorAll('#feed-list .post[data-ts]').forEach(post => {
         const isToday = new Date(Number(post.getAttribute('data-ts'))).toDateString() === todayStr;
