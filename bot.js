@@ -1174,8 +1174,8 @@ fetch('/api/notifications')
   </div>
 </div>
 <div style="display:flex;border-bottom:2px solid var(--border2)">
-  <button id="tab-heute" onclick="switchFeedTab('heute')" style="flex:1;padding:10px;font-size:13px;font-weight:700;border:none;background:none;color:var(--accent);border-bottom:3px solid var(--accent);margin-bottom:-2px;cursor:pointer">📅 Heute</button>
-  <button id="tab-aelter" onclick="switchFeedTab('aelter')" style="flex:1;padding:10px;font-size:13px;font-weight:700;border:none;background:none;color:var(--muted);border-bottom:3px solid transparent;margin-bottom:-2px;cursor:pointer">🕐 Älter</button>
+  <div id="tab-heute" ontouchstart="switchFeedTab('heute')" onclick="switchFeedTab('heute')" style="flex:1;padding:10px;font-size:13px;font-weight:700;text-align:center;color:var(--accent);border-bottom:3px solid var(--accent);margin-bottom:-2px;cursor:pointer;user-select:none;-webkit-tap-highlight-color:rgba(0,0,0,0)">📅 Heute</div>
+  <div id="tab-aelter" ontouchstart="switchFeedTab('aelter')" onclick="switchFeedTab('aelter')" style="flex:1;padding:10px;font-size:13px;font-weight:700;text-align:center;color:var(--muted);border-bottom:3px solid transparent;margin-bottom:-2px;cursor:pointer;user-select:none;-webkit-tap-highlight-color:rgba(0,0,0,0)">🕐 Älter</div>
 </div>
 ${storiesHtml}
 <div style="height:1px;background:var(--border2)"></div>
