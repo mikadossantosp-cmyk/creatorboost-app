@@ -256,28 +256,13 @@ ${session ? `
     <svg viewBox="0 0 24 24" fill="${page==='ranking'?'currentColor':'none'}" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
     ${page==='ranking'?'<div class="nav-dot"></div>':''}
   </a>
-  <a href="/suche" class="nav-item ${page==='search'?'active':''}">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-    ${page==='search'?'<div class="nav-dot"></div>':''}
-  </a>
-  <a href="/profil" class="nav-item ${page==='profile'?'active':''}">
-    <svg viewBox="0 0 24 24" fill="${page==='profile'?'currentColor':'none'}" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-    ${page==='profile'?'<div class="nav-dot"></div>':''}
-  </a>
   <a href="/nachrichten" class="nav-item ${page==='messages'?'active':''}">
     <svg viewBox="0 0 24 24" fill="${page==='messages'?'currentColor':'none'}" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
     ${page==='messages'?'<div class="nav-dot"></div>':''}
   </a>
-  <a href="/benachrichtigungen" class="nav-item ${page==='notif'?'active':''}" id="notif-tab">
-    <div style="position:relative">
-      <svg viewBox="0 0 24 24" fill="${page==='notif'?'currentColor':'none'}" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-      <span id="notif-badge" style="display:none;position:absolute;top:-4px;right:-4px;background:var(--accent);color:#fff;font-size:9px;font-weight:700;border-radius:50%;width:16px;height:16px;align-items:center;justify-content:center"></span>
-    </div>
-    ${page==='notif'?'<div class="nav-dot"></div>':''}
-  </a>
-  <a href="/einstellungen" class="nav-item ${page==='settings'?'active':''}">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
-    ${page==='settings'?'<div class="nav-dot"></div>':''}
+  <a href="/profil" class="nav-item ${page==='profile'?'active':''}">
+    <svg viewBox="0 0 24 24" fill="${page==='profile'?'currentColor':'none'}" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    ${page==='profile'?'<div class="nav-dot"></div>':''}
   </a>
 </nav>` : ''}
 <script>
@@ -364,6 +349,329 @@ ${nb?`
 <div class="profile-xp-info"><span>Noch ${nb.fehlend} XP bis ${nb.ziel}</span><span>${nb.pct}%</span></div>`:'<div style="padding:12px 16px;font-size:12px;color:var(--gold)">👑 Maximales Level erreicht!</div>'}`;
 }
 
+// ================================
+// ONBOARDING
+// ================================
+function onboardingHTML(isPreview = false) {
+    const finishAction = isPreview
+        ? "window.location.href='/einstellungen';"
+        : "localStorage.setItem('cb_onboarded','1');window.location.href='/feed';";
+
+    return `<!DOCTYPE html><html lang="de" data-theme="dark"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>CreatorBoost — Willkommen</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:#0a0a0a;color:#fff;min-height:100vh;max-width:480px;margin:0 auto;overflow:hidden}
+.ob-wrap{position:fixed;inset:0;max-width:480px;margin:0 auto;display:flex;flex-direction:column;background:#0a0a0a}
+.ob-top{padding:14px 20px 0;display:flex;justify-content:space-between;align-items:center;flex-shrink:0}
+.ob-logo{font-family:'Syne',sans-serif;font-size:17px;font-weight:800;background:linear-gradient(135deg,#ff6b6b,#ffa500);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.ob-skip-top{font-size:13px;color:rgba(255,255,255,.35);cursor:pointer;padding:4px 8px}
+.ob-slides{flex:1;position:relative;overflow:hidden}
+.ob-slide{position:absolute;inset:0;display:flex;flex-direction:column;padding:12px 20px 0;opacity:0;transform:translateX(100%);transition:all .45s cubic-bezier(.4,0,.2,1)}
+.ob-slide.active{opacity:1;transform:translateX(0)}
+.ob-slide.prev{opacity:0;transform:translateX(-100%)}
+.ob-label{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;color:var(--c,#ff6b6b)}
+.ob-title{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;line-height:1.2;margin-bottom:4px}
+.ob-sub{font-size:12px;color:rgba(255,255,255,.5);margin-bottom:10px;line-height:1.5}
+.ob-phone{flex:1;background:#111;border-radius:18px 18px 0 0;border:1.5px solid rgba(255,255,255,.08);border-bottom:none;overflow:hidden;position:relative}
+/* callout bubble */
+.tip{position:absolute;z-index:10;background:#ff6b6b;color:#fff;font-size:10px;font-weight:700;padding:5px 10px;border-radius:10px;white-space:nowrap;box-shadow:0 4px 16px rgba(255,107,107,.4)}
+.tip::after{content:'';position:absolute;border:5px solid transparent}
+.tip.down::after{border-top-color:#ff6b6b;top:100%;left:50%;transform:translateX(-50%)}
+.tip.up::after{border-bottom-color:#ff6b6b;bottom:100%;left:50%;transform:translateX(-50%)}
+.tip.left::after{border-right-color:#ff6b6b;right:100%;top:50%;transform:translateY(-50%)}
+.tip.right::after{border-left-color:#ff6b6b;left:100%;top:50%;transform:translateY(-50%)}
+/* highlight ring */
+.hl{position:absolute;z-index:9;border:2px solid #ff6b6b;border-radius:50%;animation:pulse-ring 1.5s ease infinite}
+.hl-rect{position:absolute;z-index:9;border:2px solid #ff6b6b;border-radius:8px;animation:pulse-ring 1.5s ease infinite}
+@keyframes pulse-ring{0%,100%{box-shadow:0 0 0 0 rgba(255,107,107,.5)}50%{box-shadow:0 0 0 6px rgba(255,107,107,0)}}
+/* mock ui */
+.mock-topbar{background:#000;border-bottom:1px solid rgba(255,255,255,.06);padding:9px 12px;display:flex;align-items:center;justify-content:space-between}
+.mock-logo{font-family:'Syne',sans-serif;font-size:15px;font-weight:800;background:linear-gradient(135deg,#ff6b6b,#ffa500);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.mock-nav{display:flex;justify-content:space-around;padding:8px 0;background:#000;border-top:1px solid rgba(255,255,255,.06)}
+.mock-nav-item{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:8px;color:rgba(255,255,255,.35);padding:2px 10px}
+.mock-nav-item.act{color:#fff}
+.mock-nav-dot{width:3px;height:3px;border-radius:50%;background:#ff6b6b}
+.mock-post{background:#1a1a1a;border-radius:10px;overflow:hidden;border:1px solid rgba(255,255,255,.06);margin:6px 10px}
+.mock-post-hd{display:flex;align-items:center;gap:7px;padding:7px 9px}
+.mock-av{width:28px;height:28px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff}
+.mock-banner{height:60px;position:relative;overflow:hidden;background:linear-gradient(135deg,#1a1a2e,#16213e)}
+.mock-xp-bar{height:3px;background:#222;border-radius:2px;margin:4px 10px;overflow:hidden}
+.mock-xp-fill{height:100%;background:linear-gradient(135deg,#ff6b6b,#ffa500);border-radius:2px}
+.mock-rank-item{display:flex;align-items:center;gap:7px;padding:7px 10px;border-bottom:1px solid rgba(255,255,255,.05)}
+.mock-tab-row{display:flex;border-bottom:1px solid rgba(255,255,255,.08)}
+.mock-tab{flex:1;text-align:center;padding:8px 0;font-size:10px;font-weight:600;color:rgba(255,255,255,.35)}
+.mock-tab.act{color:#fff;border-bottom:2px solid #ff6b6b}
+.mock-input-area{background:#1a1a1a;border-radius:10px;padding:8px 10px;margin:8px 10px;font-size:10px;color:rgba(255,255,255,.3);border:1px solid rgba(255,255,255,.08)}
+.mock-btn{background:linear-gradient(135deg,#ff6b6b,#ffa500);color:#fff;border-radius:10px;padding:8px;margin:0 10px;font-size:11px;font-weight:700;text-align:center}
+.ob-bottom{padding:10px 20px calc(16px + env(safe-area-inset-bottom,0px));flex-shrink:0}
+.ob-dots{display:flex;justify-content:center;gap:6px;margin-bottom:10px}
+.ob-dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.2);transition:all .3s;cursor:pointer}
+.ob-dot.active{width:20px;border-radius:3px;background:#ff6b6b}
+.ob-next{width:100%;padding:14px;border-radius:14px;border:none;color:#fff;font-size:15px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;background:linear-gradient(135deg,#ff6b6b,#ffa500);transition:opacity .2s}
+${isPreview ? '.ob-badge{position:fixed;top:8px;left:50%;transform:translateX(-50%);background:rgba(255,107,107,.95);color:#fff;padding:5px 14px;border-radius:20px;font-size:11px;font-weight:700;z-index:999;white-space:nowrap;backdrop-filter:blur(8px)}' : ''}
+</style></head><body>
+${isPreview ? '<div class="ob-badge">👀 Admin Vorschau &nbsp;·&nbsp; <a href="/einstellungen" style="color:rgba(255,255,255,.8)">← Zurück</a></div>' : ''}
+<div class="ob-wrap">
+  <div class="ob-top">
+    <div class="ob-logo">CreatorBoost</div>
+    <span class="ob-skip-top" onclick="finish()">Überspringen</span>
+  </div>
+  <div class="ob-slides" id="slides">
+
+    <!-- SLIDE 1: WILLKOMMEN & FEED -->
+    <div class="ob-slide active" id="slide-0">
+      <div class="ob-label" style="--c:#ff6b6b">Schritt 1 von 5</div>
+      <div class="ob-title">Dein täglicher Feed 📱</div>
+      <div class="ob-sub">Hier siehst du alle Instagram Links der Community. Scrolle durch und like die Posts deiner Mitglieder.</div>
+      <div class="ob-phone" style="position:relative">
+        <div class="mock-topbar">
+          <div class="mock-logo">CreatorBoost</div>
+          <div style="font-size:14px">⚡</div>
+        </div>
+        <div style="display:flex;gap:8px;padding:8px 10px;overflow:hidden">
+          ${['MK','SL','JB','KR'].map((n,i)=>`<div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex-shrink:0">
+            <div style="width:40px;height:40px;border-radius:50%;padding:2px;background:linear-gradient(135deg,#f9a825,#e91e63)">
+              <div style="width:100%;height:100%;border-radius:50%;background:#${['ff6b6b','4dabf7','cc5de8','ffd43b'][i]}44;border:2px solid #111;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700">${n}</div>
+            </div>
+            <div style="font-size:8px;color:rgba(255,255,255,.4)">${n}</div>
+          </div>`).join('')}
+        </div>
+        <div class="mock-post">
+          <div class="mock-post-hd">
+            <div class="mock-av" style="background:linear-gradient(135deg,#ff6b6b,#ffa500)">MK</div>
+            <div style="flex:1"><div style="font-size:10px;font-weight:600">Max K.</div><div style="font-size:8px;color:rgba(255,255,255,.4)">⬆️ Aufsteiger · @maxk.ig</div></div>
+            <div style="font-size:8px;color:rgba(255,255,255,.3)">14:32</div>
+          </div>
+          <div class="mock-banner">
+            <div style="position:absolute;inset:0;background:linear-gradient(to bottom,transparent,rgba(0,0,0,.7))"></div>
+            <div style="position:absolute;bottom:5px;left:8px;font-size:10px;font-weight:700;color:#fff">Max K. <span style="opacity:.6;font-size:8px">⬆️</span></div>
+            <div style="position:absolute;bottom:5px;right:8px;font-size:9px;color:#ff6b6b;font-weight:700">Öffnen →</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;padding:5px 9px">
+            <div style="font-size:11px;color:#ff6b6b;display:flex;align-items:center;gap:3px">❤️ <span style="font-size:10px">12 Likes</span></div>
+          </div>
+        </div>
+        <!-- Highlight: Like Button -->
+        <div class="hl" style="width:26px;height:26px;top:152px;left:17px"></div>
+        <div class="tip up" style="bottom:82px;left:8px">❤️ Hier liken!</div>
+        <div style="position:absolute;bottom:0;left:0;right:0">
+          <div class="mock-nav">
+            <div class="mock-nav-item act">🏠<div class="mock-nav-dot"></div></div>
+            <div class="mock-nav-item">📊</div>
+            <div class="mock-nav-item">💬</div>
+            <div class="mock-nav-item">👤</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 2: LINK POSTEN -->
+    <div class="ob-slide" id="slide-1">
+      <div class="ob-label" style="--c:#ffa500">Schritt 2 von 5</div>
+      <div class="ob-title">So postest du deinen Link 🔗</div>
+      <div class="ob-sub">Geh auf <b style="color:#fff">Profil → "📸 Link teilen"</b> Tab. Füge deinen Instagram Link ein und teile ihn mit der Community.</div>
+      <div class="ob-phone" style="position:relative">
+        <div class="mock-topbar">
+          <div style="font-size:13px;font-weight:700">Profil</div>
+          <div style="display:flex;gap:6px;font-size:13px">🔍 🔔 ⚙️</div>
+        </div>
+        <div style="height:50px;background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);position:relative">
+          <div style="position:absolute;inset:0;background:linear-gradient(to bottom,transparent,#111)"></div>
+          <div style="position:absolute;bottom:-14px;left:10px;width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#ff6b6b,#ffa500);border:2px solid #111;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700">Du</div>
+        </div>
+        <div style="padding:18px 10px 6px">
+          <div style="font-size:12px;font-weight:700">Dein Name</div>
+          <div style="font-size:9px;color:rgba(255,255,255,.4)">⬆️ Aufsteiger · 890 XP</div>
+        </div>
+        <div class="mock-tab-row">
+          <div class="mock-tab">📝 Posts</div>
+          <div class="mock-tab">🔗 Links</div>
+          <div class="mock-tab act">📸 Link teilen</div>
+        </div>
+        <!-- Highlight: Link teilen tab -->
+        <div class="hl-rect" style="top:118px;right:2px;width:96px;height:24px;border-radius:6px"></div>
+        <div class="tip down" style="top:85px;right:4px">👆 Hier tippen</div>
+        <div style="padding:8px 0">
+          <div class="mock-input-area">🔗 https://www.instagram.com/reel/...</div>
+          <div class="mock-input-area" style="margin-top:4px">Beschreibung (optional)...</div>
+          <div class="mock-btn" style="margin-top:6px">📸 Link teilen</div>
+        </div>
+        <div style="position:absolute;bottom:0;left:0;right:0">
+          <div class="mock-nav">
+            <div class="mock-nav-item">🏠</div>
+            <div class="mock-nav-item">📊</div>
+            <div class="mock-nav-item">💬</div>
+            <div class="mock-nav-item act">👤<div class="mock-nav-dot"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 3: RANKING & XP -->
+    <div class="ob-slide" id="slide-2">
+      <div class="ob-label" style="--c:#ffd43b">Schritt 3 von 5</div>
+      <div class="ob-title">XP & Rangliste 🏆</div>
+      <div class="ob-sub">Jeder Link den du likest gibt dir XP. Je mehr du anderen hilfst, desto höher steigst du auf. Tippe auf <b style="color:#fff">📊</b> in der Navigation.</div>
+      <div class="ob-phone" style="position:relative">
+        <div class="mock-topbar">
+          <div style="font-size:13px;font-weight:700">Rangliste</div>
+          <div style="font-size:10px;color:rgba(255,255,255,.4)">Dein Rang: #4</div>
+        </div>
+        <div style="padding:4px 0">
+          ${[['🥇','Alex K.','👑 Elite Creator','4.200',false],['🥈','Maria L.','🏅 Erfahrene','2.850',false],['🥉','Jonas B.','🏅 Erfahrene','1.940',false],['4','Du','⬆️ Aufsteiger','890',true],['5','Kim R.','📘 Anfänger','340',false]].map(([pos,name,role,xp,isMe])=>`
+          <div class="mock-rank-item" style="${isMe?'background:rgba(255,107,107,.08);border-left:2px solid #ff6b6b':''}">
+            <div style="width:22px;font-size:14px;flex-shrink:0;text-align:center">${pos}</div>
+            <div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#${isMe?'ff6b6b,#ffa500':'4dabf7,#cc5de8'});display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0">${name.split(' ').map(w=>w[0]).join('')}</div>
+            <div style="flex:1;min-width:0"><div style="font-size:11px;font-weight:${isMe?'700':'600'}">${isMe?'Du ('+name+')':name}</div><div style="font-size:8px;color:rgba(255,255,255,.4)">${role}</div></div>
+            <div style="font-size:11px;font-weight:700;color:#ffd43b">${xp} XP</div>
+          </div>`).join('')}
+        </div>
+        <div style="padding:6px 10px 4px">
+          <div style="font-size:9px;color:rgba(255,255,255,.4);margin-bottom:3px">Noch 110 XP bis 🏅 Erfahrene</div>
+          <div class="mock-xp-bar"><div class="mock-xp-fill" style="width:72%"></div></div>
+        </div>
+        <!-- Highlight: ranking nav -->
+        <div class="hl" style="width:26px;height:26px;bottom:14px;left:calc(25% - 13px)"></div>
+        <div class="tip up" style="bottom:48px;left:14px">📊 Rangliste</div>
+        <div style="position:absolute;bottom:0;left:0;right:0">
+          <div class="mock-nav">
+            <div class="mock-nav-item">🏠</div>
+            <div class="mock-nav-item act">📊<div class="mock-nav-dot"></div></div>
+            <div class="mock-nav-item">💬</div>
+            <div class="mock-nav-item">👤</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 4: NACHRICHTEN -->
+    <div class="ob-slide" id="slide-3">
+      <div class="ob-label" style="--c:#4dabf7">Schritt 4 von 5</div>
+      <div class="ob-title">Nachrichten 💬</div>
+      <div class="ob-sub">Schreib jedem in der Community direkt. Tippe auf <b style="color:#fff">💬</b> unten oder auf ein Profil → "💬" Button.</div>
+      <div class="ob-phone" style="position:relative">
+        <div class="mock-topbar"><div style="font-size:13px;font-weight:700">Nachrichten</div></div>
+        ${[['MK','Max K.','Danke für den Like! 🙏','linear-gradient(135deg,#ff6b6b,#ffa500)',2],['SL','Sara L.','Cooles Reel! Hab ich geliked 👍','linear-gradient(135deg,#4dabf7,#cc5de8)',0],['JB','Jonas B.','Welche App nutzt du?','linear-gradient(135deg,#3b82f6,#06b6d4)',1]].map(([init,name,msg,grad,unread])=>`
+        <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.05)">
+          <div style="width:36px;height:36px;border-radius:50%;background:${grad};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">${init}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:11px;font-weight:600">${name}</div>
+            <div style="font-size:9px;color:rgba(255,255,255,.4);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${msg}</div>
+          </div>
+          ${unread>0?`<div style="background:#ff6b6b;color:#fff;border-radius:50%;width:16px;height:16px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0">${unread}</div>`:''}
+        </div>`).join('')}
+        <div style="margin:8px 10px;background:#1a1a1a;border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,.06)">
+          <div style="padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.06);font-size:10px;font-weight:600;display:flex;align-items:center;gap:6px">
+            <div style="width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,#ff6b6b,#ffa500);display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700">MK</div>
+            Max K.
+          </div>
+          <div style="padding:6px 8px;background:#2a2a2a;border-radius:10px;margin:5px 8px;font-size:10px;color:rgba(255,255,255,.7)">Danke für den Like! 🙏</div>
+          <div style="padding:6px 8px;background:#ff6b6b;border-radius:10px;margin:4px 8px;font-size:10px;color:#fff;align-self:flex-end;text-align:right">Klar, tolles Reel! 💪</div>
+          <div style="display:flex;gap:5px;padding:6px 8px;background:rgba(0,0,0,.3)">
+            <div style="flex:1;background:#222;border-radius:14px;padding:5px 8px;font-size:9px;color:rgba(255,255,255,.3)">Nachricht...</div>
+            <div style="background:#ff6b6b;border-radius:14px;padding:5px 10px;font-size:10px;color:#fff;font-weight:700">➤</div>
+          </div>
+        </div>
+        <!-- Highlight: messages nav -->
+        <div class="hl" style="width:26px;height:26px;bottom:14px;left:calc(50% + 25% - 13px)"></div>
+        <div class="tip up" style="bottom:48px;right:14px">💬 Nachrichten</div>
+        <div style="position:absolute;bottom:0;left:0;right:0">
+          <div class="mock-nav">
+            <div class="mock-nav-item">🏠</div>
+            <div class="mock-nav-item">📊</div>
+            <div class="mock-nav-item act">💬<div class="mock-nav-dot"></div></div>
+            <div class="mock-nav-item">👤</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 5: EINSTELLUNGEN & PROFIL -->
+    <div class="ob-slide" id="slide-4">
+      <div class="ob-label" style="--c:#00c851">Schritt 5 von 5</div>
+      <div class="ob-title">Profil & Einstellungen ⚙️</div>
+      <div class="ob-sub">Richte dein Profil ein! Geh auf <b style="color:#fff">👤 Profil</b> → tippe <b style="color:#fff">⚙️</b> oben rechts für Foto, Bio, Banner & mehr.</div>
+      <div class="ob-phone" style="position:relative">
+        <div class="mock-topbar">
+          <div style="font-size:13px;font-weight:700">Profil</div>
+          <div style="display:flex;gap:5px;align-items:center">
+            <div style="width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;font-size:12px">🔍</div>
+            <div style="width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;font-size:12px">🔔</div>
+            <div style="width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;font-size:12px">⚙️</div>
+          </div>
+        </div>
+        <!-- Highlight: settings icon -->
+        <div class="hl" style="width:32px;height:32px;top:5px;right:4px"></div>
+        <div class="tip down" style="top:40px;right:4px">⚙️ Einstellungen</div>
+        <div style="height:55px;background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);position:relative">
+          <div style="position:absolute;inset:0;background:linear-gradient(to bottom,transparent,#111)"></div>
+          <div style="position:absolute;bottom:-14px;left:10px;width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,#ff6b6b,#ffa500);border:2px solid #111;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700">Du</div>
+        </div>
+        <div style="padding:20px 10px 6px">
+          <div style="font-size:13px;font-weight:700">Dein Name</div>
+          <div style="font-size:9px;color:rgba(255,255,255,.4);margin-top:2px">@dein.instagram · ⬆️ Aufsteiger</div>
+          <div style="font-size:9px;color:rgba(255,255,255,.3);margin-top:4px;line-height:1.4">✏️ Hier kannst du Bio, Spitzname,<br>Profilbild & Banner ändern</div>
+        </div>
+        <div style="display:flex;border-top:1px solid rgba(255,255,255,.06);border-bottom:1px solid rgba(255,255,255,.06)">
+          ${[['890','XP'],['12','Links'],['47','Likes'],['3','Follower']].map(([v,l])=>`<div style="flex:1;text-align:center;padding:8px 0;border-right:1px solid rgba(255,255,255,.06)"><div style="font-size:13px;font-weight:700">${v}</div><div style="font-size:8px;color:rgba(255,255,255,.4)">${l}</div></div>`).join('')}
+        </div>
+        <div style="padding:6px 10px">
+          <div style="font-size:9px;color:rgba(255,255,255,.4);margin-bottom:3px">Noch 110 XP bis 🏅 Erfahrene</div>
+          <div class="mock-xp-bar"><div class="mock-xp-fill" style="width:72%"></div></div>
+        </div>
+        <div class="mock-tab-row">
+          <div class="mock-tab act">📝 Posts</div>
+          <div class="mock-tab">🔗 Links</div>
+          <div class="mock-tab">📸 Link teilen</div>
+        </div>
+        <!-- Highlight: profile nav -->
+        <div class="hl" style="width:26px;height:26px;bottom:14px;right:calc(0% + 25% - 13px)"></div>
+        <div style="position:absolute;bottom:0;left:0;right:0">
+          <div class="mock-nav">
+            <div class="mock-nav-item">🏠</div>
+            <div class="mock-nav-item">📊</div>
+            <div class="mock-nav-item">💬</div>
+            <div class="mock-nav-item act">👤<div class="mock-nav-dot"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  <div class="ob-bottom">
+    <div class="ob-dots" id="dots">
+      ${[0,1,2,3,4].map(i=>`<div class="ob-dot ${i===0?'active':''}" onclick="goTo(${i})"></div>`).join('')}
+    </div>
+    <button class="ob-next" id="next-btn" onclick="next()">Weiter →</button>
+  </div>
+</div>
+<script>
+const TOTAL = 5;
+const COLORS = ['linear-gradient(135deg,#ff6b6b,#ffa500)','linear-gradient(135deg,#ffa500,#ffd43b)','linear-gradient(135deg,#ffd43b,#ffa500)','linear-gradient(135deg,#4dabf7,#00c851)','linear-gradient(135deg,#00c851,#4dabf7)'];
+let cur = 0;
+function goTo(i) {
+    const prev = cur; cur = i;
+    document.querySelectorAll('.ob-slide').forEach((s,j)=>{s.classList.remove('active','prev');if(j===cur)s.classList.add('active');else if(j===prev)s.classList.add('prev');});
+    document.querySelectorAll('.ob-dot').forEach((d,j)=>d.classList.toggle('active',j===cur));
+    const nb=document.getElementById('next-btn');
+    nb.style.background=COLORS[cur];
+    nb.textContent = cur===TOTAL-1 ? '🚀 Los gehts!' : 'Weiter →';
+}
+function next(){cur<TOTAL-1?goTo(cur+1):finish();}
+function finish(){${finishAction}}
+let sx=0;
+document.getElementById('slides').addEventListener('touchstart',e=>sx=e.touches[0].clientX,{passive:true});
+document.getElementById('slides').addEventListener('touchend',e=>{const d=sx-e.changedTouches[0].clientX;if(Math.abs(d)>50){if(d>0&&cur<TOTAL-1)next();else if(d<0&&cur>0)goTo(cur-1);}},{passive:true});
+</script></body></html>`;
+}
+
+// ================================
+// SERVER
+// ================================
 async function readBody(req, maxBytes=25000000) {
     return new Promise((resolve, reject) => {
         const chunks = [];
@@ -595,7 +903,16 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
                 (u.spitzname||'').toLowerCase().includes(q)
             ))
             .slice(0,10)
-            .map(([id,u])=>({id, name:u.name, spitzname:u.spitzname, username:u.username, instagram:u.instagram, role:u.role, xp:u.xp}));
+            .map(([id,u])=>({
+                id,
+                name: u.name,
+                spitzname: u.spitzname,
+                username: u.username,
+                instagram: u.instagram,
+                role: u.role,
+                xp: u.xp,
+                pic: ladeBild(id,'profilepic') ? `/appbild/${id}/profilepic` : u.instagram ? `https://unavatar.io/instagram/${u.instagram}` : null
+            }));
         const links = Object.entries(botData.links||{})
             .filter(([,l])=>(l.text||'').toLowerCase().includes(q)||(l.user_name||'').toLowerCase().includes(q))
             .sort((a,b)=>(b[1].timestamp||0)-(a[1].timestamp||0))
@@ -644,14 +961,18 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
     // ── FIX 1: NACHRICHT SENDEN — myUid definiert ──
     if (path === '/api/send-message' && req.method === 'POST') {
         if (!session) return json({error:'Nicht eingeloggt'}, 401);
-        const myUid = String(session.uid); // FIX: war undefined
-        const body = await parseBody(req);
-        const { to, text } = body;
-        if (!to || !text?.trim()) return json({error:'Ungültig'}, 400);
+        const myUid = String(session.uid);
+        let body;
+        try { body = JSON.parse(await readBody(req, 10000000)); } catch(e) { return json({error:'Ungültig'},400); }
+        const { to, text, image, audio } = body;
+        if (!to || (!text?.trim() && !image && !audio)) return json({error:'Ungültig'}, 400);
         const result = await postBot('/send-message-api', {
             from: myUid,
             to,
-            text: text.trim().slice(0, 500)
+            text: text?.trim().slice(0, 500) || '',
+            image: image || null,
+            audio: audio || null,
+            timestamp: Date.now()
         });
         return json({ok: !!result});
     }
@@ -674,6 +995,20 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
         const body = await parseBody(req);
         await postBot('/mark-messages-read', { uid: myUid, chatKey: body.chatKey });
         return json({ok: true});
+    }
+
+    // ── ONBOARDING ──
+    if (path === '/onboarding') {
+        if (!session) return redirect('/');
+        res.writeHead(200, {'Content-Type':'text/html; charset=utf-8'});
+        return res.end(onboardingHTML(false));
+    }
+
+    // ── ONBOARDING PREVIEW (Admin) ──
+    if (path === '/onboarding-preview') {
+        if (!session) return redirect('/');
+        res.writeHead(200, {'Content-Type':'text/html; charset=utf-8'});
+        return res.end(onboardingHTML(true));
     }
 
     // ── AUTH REQUIRED ──
@@ -818,44 +1153,148 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
             const poster = d.users[String(link.user_id)]||{};
             const allLinksForUrl = Object.values(d.links||{}).filter(l=>l.text===link.text);
             const allLikes = new Set();
-            allLinksForUrl.forEach(l => { (Array.isArray(l.likes)?l.likes:[]).forEach(id=>allLikes.add(id)); });
+            allLinksForUrl.forEach(l=>{(Array.isArray(l.likes)?l.likes:[]).forEach(id=>allLikes.add(id));});
             const likes = [...allLikes];
             const hasLiked = likes.includes(Number(myUid));
-            const likerNames = likes.slice(0,2).map(lid=>{const u=d.users[String(lid)];return u?.spitzname||u?.name||'User';});
             const insta = poster.instagram;
             const grad = badgeGradient(poster.role);
-            return `<div class="post fade-up" id="post-${msgId}" data-url="${link.text}" data-ts="${link.timestamp||0}">
-  <div class="post-header">
-    <div style="width:40px;height:40px;border-radius:50%;overflow:hidden;background:${insta?'var(--bg4)':grad};display:flex;align-items:center;justify-content:center;flex-shrink:0">
-      ${insta?`<img src="https://unavatar.io/instagram/${insta}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'" alt="">`:''}
-      <span style="font-size:16px;${insta?'display:none':''};color:#fff">${(poster.name||'?').slice(0,1)}</span>
-    </div>
-    <div class="post-user-info">
-      <div class="post-name">${poster.spitzname||poster.name||'User'}</div>
-      <div class="post-badge">${poster.role||''} ${insta?`· 📸 @${poster.instagram}`:''}</div>
-    </div>
-    <div class="post-time">${new Date(link.timestamp).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})}</div>
-  </div>
-  <div onclick="window.open('${link.text}','_blank')" style="cursor:pointer;margin:0 16px;border-radius:12px;overflow:hidden;background:var(--bg4);border:1px solid var(--border2)">
-    <div style="padding:10px 12px;display:flex;align-items:center;gap:8px">
-      <div style="font-size:18px">📸</div>
-      <div style="flex:1;min-width:0">
-        <div style="font-size:11px;font-weight:600">Instagram</div>
-        <div style="font-size:10px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${link.text.replace('https://www.','').slice(0,45)}</div>
-      </div>
-      <div style="font-size:10px;color:var(--accent);font-weight:600">Öffnen →</div>
-    </div>
-  </div>
-  <div class="post-actions">
-    ${String(link.user_id) === String(myUid) ? '<div style="font-size:12px;color:var(--muted);padding:7px 12px">👤 Dein Link</div>' : `<button class="post-action-btn ${hasLiked?'liked':''}" onclick="likePost('${link.counter_msg_id||msgId}',this)" data-msgid="${link.counter_msg_id||msgId}" ${hasLiked?'disabled':''}>`}
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="${hasLiked?'currentColor':'none'}" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
-      <span id="likes-${link.counter_msg_id||msgId}">${likes.length}</span>
-    ${String(link.user_id) !== String(myUid) ? '</button>' : ''}
-  </div>
-  ${likes.length>0?`<div class="post-likers"><span>${likerNames.join(', ')}</span>${likes.length>2?` und ${likes.length-2} weitere`:''} haben geliked</div>`:''}
-</div>`;}
+            const lid1 = String(link.counter_msg_id||msgId);
 
-        const heuteHtml = heuteLinks.length ? heuteLinks.map(renderLink).join('') : '<div class="empty" style="margin-top:40px"><div class="empty-icon">📅</div><div class="empty-text">Noch keine Links heute</div></div>';
+            // Online check
+            const ps = [...sessions.values()].find(s=>String(s.uid)===String(link.user_id));
+            const isOnline = ps && (Date.now()-ps.lastSeen)<300000;
+
+            // Banner
+            const bannerBg = (poster.banner && !poster.banner.startsWith('data:')) ? '#000' : (poster.banner || 'linear-gradient(135deg,#1a1a2e,#16213e,#0f3460)');
+            const bannerFile = ladeBild(String(link.user_id),'banner');
+            const bannerImg = bannerFile ? '<img src="/appbild/'+String(link.user_id)+'/banner" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" onerror="this.remove()" alt="">' : '';
+
+            // Profile pic (small, in header)
+            const picFile = ladeBild(String(link.user_id),'profilepic');
+            const avatarSmall = picFile
+                ? '<img src="/appbild/'+String(link.user_id)+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">'
+                : insta ? '<img src="https://unavatar.io/instagram/'+insta+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">' : '';
+
+            // Profile pic (large, on banner)
+            const profPic = picFile
+                ? '<img src="/appbild/'+String(link.user_id)+'/profilepic" style="width:100%;height:100%;object-fit:cover" alt="">'
+                : insta ? '<img src="https://unavatar.io/instagram/'+insta+'" style="width:100%;height:100%;object-fit:cover" onerror="this.remove()" alt="">'
+                : (poster.name||'?').slice(0,2).toUpperCase();
+
+            // Liker avatar stack
+            const likerAvatars = likes.slice(0,4).map(lid=>{
+                const lu=d.users[String(lid)]; const lg=badgeGradient(lu&&lu.role);
+                const lf=ladeBild(String(lid),'profilepic');
+                const li=lu&&lu.instagram;
+                const limg=lf?'<img src="/appbild/'+lid+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">':li?'<img src="https://unavatar.io/instagram/'+li+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">':'';
+                return '<div style="position:relative;width:24px;height:24px;border-radius:50%;background:'+lg+';border:2px solid var(--bg4);overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;margin-left:-6px;flex-shrink:0"><span style="position:absolute">'+(lu&&lu.name||'?')[0]+'</span>'+limg+'</div>';
+            }).join('');
+
+            // Liker rows
+            const likerRows = likes.map((lid,i)=>{
+                const lu=d.users[String(lid)]; const lg=badgeGradient(lu&&lu.role);
+                const lf=ladeBild(String(lid),'profilepic'); const li=lu&&lu.instagram;
+                const limg=lf?'<img src="/appbild/'+lid+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">':li?'<img src="https://unavatar.io/instagram/'+li+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">':'';
+                return '<a href="/profil/'+lid+'" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--border2);text-decoration:none;background:'+(i%2===0?'transparent':'rgba(255,255,255,.02)')+'"><div style="position:relative;width:34px;height:34px;border-radius:50%;background:'+lg+';flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff"><span style="position:absolute">'+(lu&&lu.name||'?')[0]+'</span>'+limg+'</div><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:var(--text)">'+(lu&&(lu.spitzname||lu.name)||'User')+'</div><div style="font-size:10px;color:var(--muted)">'+(lu&&lu.role||'')+'</div></div><div style="font-size:11px;color:var(--accent)">→</div></a>';
+            }).join('');
+
+            // Comments
+            const allComments = (d.comments&&d.comments[lid1])||(d.comments&&d.comments[msgId])||[];
+            const commentCount = allComments.length;
+            const commentRows = commentCount===0
+                ? '<div style="padding:12px;font-size:12px;color:var(--muted);text-align:center">Noch keine Kommentare</div>'
+                : allComments.map(c=>{
+                    const cu=d.users[String(c.uid)]||{}; const cg=badgeGradient(cu.role);
+                    const cf=ladeBild(String(c.uid),'profilepic'); const ci=cu.instagram;
+                    const cimg=cf?'<img src="/appbild/'+c.uid+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">':ci?'<img src="https://unavatar.io/instagram/'+ci+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">':'';
+                    const ct=new Date(c.timestamp||0).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
+                    return '<div style="display:flex;gap:8px;padding:8px 12px;border-bottom:1px solid var(--border2)"><div style="position:relative;width:28px;height:28px;border-radius:50%;background:'+cg+';flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff"><span style="position:absolute">'+(cu.name||'?')[0]+'</span>'+cimg+'</div><div style="flex:1;min-width:0"><div style="font-size:11px;font-weight:700">'+(cu.spitzname||cu.name||'User')+' <span style="font-size:10px;color:var(--muted);font-weight:400">'+ct+'</span></div><div style="font-size:12px;color:var(--text);margin-top:2px">'+c.text+'</div></div></div>';
+                }).join('');
+
+            // Like button HTML
+            const likeBtn = String(link.user_id)===String(myUid)
+                ? '<div style="font-size:12px;color:var(--muted);padding:7px 12px">👤 Dein Link</div>'
+                : '<button class="post-action-btn '+(hasLiked?'liked':'')+'" onclick="likePost(\''+lid1+'\',this)" data-msgid="'+lid1+'" '+(hasLiked?'disabled':'')+'>'+
+                  '<svg width="20" height="20" viewBox="0 0 24 24" fill="'+(hasLiked?'currentColor':'none')+'" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>'+
+                  '<span id="likes-'+lid1+'">'+likes.length+'</span>'+
+                  '</button>';
+
+            // Likes box HTML
+            const likesBox = likes.length===0 ? '' :
+                '<div style="margin:0 16px 8px;border:1px solid var(--border2);border-radius:12px;overflow:hidden">'+
+                '<button onclick="toggleLikers(\''+lid1+'\')" style="width:100%;background:var(--bg4);border:none;padding:10px 12px;display:flex;align-items:center;gap:8px;cursor:pointer;text-align:left">'+
+                '<div style="display:flex;align-items:center">'+likerAvatars+'</div>'+
+                '<span style="flex:1;font-size:12px;font-weight:700;color:var(--text)">❤️ '+likes.length+' '+(likes.length===1?'Person hat':'Personen haben')+' geliked</span>'+
+                '<span id="likers-arrow-'+lid1+'" style="font-size:12px;color:var(--muted);transition:transform .2s">▼</span>'+
+                '</button>'+
+                '<div id="likers-box-'+lid1+'" style="display:none"><div style="padding:4px 0">'+likerRows+'</div></div>'+
+                '</div>';
+
+            // Comments box HTML
+            const commentsBox =
+                '<div style="margin:0 16px 12px">'+
+                '<button onclick="toggleComments(\''+lid1+'\')" style="background:none;border:none;color:var(--muted);font-size:12px;cursor:pointer;padding:0 0 6px 0">'+
+                '💬 '+(commentCount>0?commentCount+' ':'')+( commentCount===1?'Kommentar':'Kommentare')+
+                '</button>'+
+                '<div id="comments-box-'+lid1+'" style="display:none;border:1px solid var(--border2);border-radius:12px;overflow:hidden;background:var(--bg3);margin-top:4px">'+
+                '<div style="padding:8px 12px;border-bottom:1px solid var(--border2);font-size:11px;font-weight:700;color:var(--muted);display:flex;justify-content:space-between">'+
+                '<span>💬 Kommentare</span>'+
+                '<button onclick="toggleComments(\''+lid1+'\')" style="background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer">✕</button>'+
+                '</div>'+
+                '<div style="max-height:200px;overflow-y:auto">'+commentRows+'</div>'+
+                '<div style="display:flex;gap:6px;padding:8px 10px;border-top:1px solid var(--border2)">'+
+                '<input type="text" id="comment-input-'+lid1+'" placeholder="Kommentieren..." style="flex:1;background:var(--bg4);border:1px solid var(--border);color:var(--text);border-radius:20px;padding:7px 12px;font-size:12px;outline:none" onkeypress="if(event.key===\'Enter\')submitComment(\''+lid1+'\')">'+
+                '<button onclick="submitComment(\''+lid1+'\')" style="background:var(--accent);color:#fff;border:none;border-radius:20px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer">→</button>'+
+                '</div>'+
+                '</div>'+
+                '</div>';
+
+            return '<div class="post fade-up" id="post-'+msgId+'" data-url="'+link.text+'" data-ts="'+(link.timestamp||0)+'">\n'+
+'  <div class="post-header">\n'+
+'    <div style="position:relative;width:40px;height:40px;border-radius:50%;overflow:hidden;background:'+grad+';flex-shrink:0;display:flex;align-items:center;justify-content:center">\n'+
+'      <span style="color:#fff;font-weight:700;font-size:15px;position:absolute">'+(poster.name||'?').slice(0,1)+'</span>\n'+
+'      '+avatarSmall+'\n'+
+'    </div>\n'+
+'    <div class="post-user-info">\n'+
+'      <div class="post-name" style="display:flex;align-items:center;gap:5px">\n'+
+'        '+(poster.spitzname||poster.name||'User')+'\n'+
+'        '+(isOnline?'<span style="width:7px;height:7px;border-radius:50%;background:#00c851;display:inline-block;flex-shrink:0"></span>':'')+'\n'+
+'      </div>\n'+
+'      <div class="post-badge">'+(poster.role||'')+' '+(insta?'· 📸 @'+poster.instagram:'')+' </div>\n'+
+'    </div>\n'+
+'    <div class="post-time">'+new Date(link.timestamp).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})+'</div>\n'+
+'  </div>\n'+
+'  <div onclick="window.open(\''+link.text+'\',\'_blank\')" style="cursor:pointer;margin:0 16px;border-radius:12px;overflow:hidden;background:var(--bg4);border:1px solid var(--border2)">\n'+
+'    <div style="position:relative;width:100%;height:130px;overflow:hidden">\n'+
+'      <div style="position:absolute;inset:0;background:'+bannerBg+'"></div>\n'+
+'      '+bannerImg+'\n'+
+'      <div style="position:absolute;inset:0;background:linear-gradient(to bottom,transparent 20%,rgba(0,0,0,.75))"></div>\n'+
+'      <div style="position:absolute;bottom:10px;left:12px;display:flex;align-items:center;gap:10px">\n'+
+'        <div style="width:44px;height:44px;border-radius:50%;border:2px solid rgba(255,255,255,.4);overflow:hidden;background:'+grad+';display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff;flex-shrink:0">'+profPic+'</div>\n'+
+'        <div>\n'+
+'          <div style="font-size:13px;font-weight:700;color:#fff">'+(poster.spitzname||poster.name||'User')+'</div>\n'+
+'          <div style="font-size:11px;color:rgba(255,255,255,.7)">'+(poster.role||'')+'</div>\n'+
+'        </div>\n'+
+'      </div>\n'+
+'    </div>\n'+
+'    <div style="padding:8px 12px;display:flex;align-items:center;gap:8px">\n'+
+'      <div style="font-size:16px">📸</div>\n'+
+'      <div style="flex:1;min-width:0"><div style="font-size:10px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+link.text.replace('https://www.','').slice(0,45)+'</div></div>\n'+
+'      <div style="font-size:10px;color:var(--accent);font-weight:600">Öffnen →</div>\n'+
+'    </div>\n'+
+'  </div>\n'+
+'  <div class="post-actions">'+likeBtn+'</div>\n'+
+likesBox+
+commentsBox+
+'</div>';}
+
+        const heuteHtml = heuteLinks.length ? heuteLinks.map(renderLink).join('') : `
+<div style="text-align:center;padding:48px 24px">
+  <div style="font-size:56px;margin-bottom:16px">📸</div>
+  <div style="font-size:17px;font-weight:700;margin-bottom:8px">Noch keine Links heute</div>
+  <div style="font-size:13px;color:var(--muted);margin-bottom:24px">Sei der Erste! Teile deinen Instagram Link mit der Community.</div>
+  <a href="/profil" onclick="setTimeout(()=>{document.querySelector('[onclick*=postlink]')?.click()},300)" style="display:inline-flex;align-items:center;gap:8px;background:var(--accent);color:#fff;padding:12px 24px;border-radius:12px;font-size:14px;font-weight:700;text-decoration:none">📸 Jetzt Link teilen</a>
+</div>`;
         const aelterHtml = aelterLinks.length ? aelterLinks.map(renderLink).join('') : '<div class="empty" style="margin-top:40px"><div class="empty-icon">🕐</div><div class="empty-text">Keine älteren Links</div></div>';
         const postsHtml = tab === 'aelter' ? '<div style="padding:8px 0 80px">'+aelterHtml+'</div>' : '<div style="padding:8px 0 80px">'+heuteHtml+'</div>';
 
@@ -867,6 +1306,25 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
   </div>
 </div>
 <div style="width:100%">${storiesHtml}</div>
+${(()=>{
+  const todayLiked = Object.values(d.links||{}).some(l=>Array.isArray(l.likes)&&l.likes.includes(Number(myUid))&&new Date(l.timestamp).toDateString()===today);
+  const todayTotal = dedupLinks.filter(([,l])=>new Date(l.timestamp||0).toDateString()===today).length;
+  const myTodayLikes = Object.values(d.links||{}).filter(l=>Array.isArray(l.likes)&&l.likes.includes(Number(myUid))&&new Date(l.timestamp).toDateString()===today).length;
+  const remaining = Math.max(0, todayTotal - myTodayLikes);
+  if (remaining > 0 && !todayLiked) {
+    return `<div style="margin:8px 16px;padding:10px 14px;background:linear-gradient(135deg,rgba(255,107,107,.15),rgba(255,165,0,.1));border:1px solid rgba(255,107,107,.3);border-radius:12px;display:flex;align-items:center;gap:10px">
+      <div style="font-size:22px">⚡</div>
+      <div style="flex:1"><div style="font-size:13px;font-weight:700">Du hast heute noch ${remaining} Link${remaining!==1?'s':''} zum Liken!</div><div style="font-size:11px;color:var(--muted);margin-top:2px">Jeder Like gibt dir XP 🏆</div></div>
+    </div>`;
+  }
+  if (todayLiked && myTodayLikes >= todayTotal && todayTotal > 0) {
+    return `<div style="margin:8px 16px;padding:10px 14px;background:rgba(0,200,81,.1);border:1px solid rgba(0,200,81,.25);border-radius:12px;display:flex;align-items:center;gap:10px">
+      <div style="font-size:22px">✅</div>
+      <div style="flex:1"><div style="font-size:13px;font-weight:700">Alle Links für heute geliked!</div><div style="font-size:11px;color:var(--muted);margin-top:2px">Komm morgen wieder 💪</div></div>
+    </div>`;
+  }
+  return '';
+})()}
 <div style="display:flex;border-bottom:2px solid var(--border2);width:100%">
   <a href="/feed?tab=heute" style="flex:1;padding:10px;font-size:13px;font-weight:700;text-align:center;text-decoration:none;display:block;border-bottom:3px solid ${tab==='aelter'?'transparent':'var(--accent)'};margin-bottom:-2px;color:${tab==='aelter'?'var(--muted)':'var(--accent)'}">📅 Heute</a>
   <a href="/feed?tab=aelter" style="flex:1;padding:10px;font-size:13px;font-weight:700;text-align:center;text-decoration:none;display:block;border-bottom:3px solid ${tab==='aelter'?'var(--accent)':'transparent'};margin-bottom:-2px;color:${tab==='aelter'?'var(--accent)':'var(--muted)'}">🕐 Älter</a>
@@ -908,6 +1366,35 @@ async function refreshLikes() {
     } catch(e) {}
 }
 setInterval(refreshLikes, 5000);
+// Onboarding beim ersten Besuch
+if (!localStorage.getItem('cb_onboarded')) { window.location.href = '/onboarding'; }
+
+function toggleComments(msgId) {
+    const box = document.getElementById('comments-box-' + msgId);
+    if (!box) return;
+    const isOpen = box.style.display !== 'none';
+    box.style.display = isOpen ? 'none' : 'block';
+    if (!isOpen) setTimeout(() => { const i = document.getElementById('comment-input-'+msgId); if(i) i.focus(); }, 100);
+}
+async function submitComment(linkId, fallbackId) {
+    const id = linkId || fallbackId;
+    const input = document.getElementById('comment-input-' + id);
+    if (!input || !input.value.trim()) return;
+    const text = input.value.trim();
+    input.value = '';
+    const res = await fetch('/api/comment', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({postId:id,text})});
+    const data = await res.json();
+    if (data.ok) { toast('💬 Kommentar gesendet!'); setTimeout(()=>location.reload(),600); }
+    else toast('❌ Fehler');
+}
+function toggleLikers(msgId) {
+    const box = document.getElementById('likers-box-' + msgId);
+    const arrow = document.getElementById('likers-arrow-' + msgId);
+    if (!box) return;
+    const isOpen = box.style.display !== 'none';
+    box.style.display = isOpen ? 'none' : 'block';
+    if (arrow) arrow.style.transform = isOpen ? '' : 'rotate(180deg)';
+}
 </script>`, 'feed');
     }
 
@@ -921,35 +1408,204 @@ setInterval(refreshLikes, 5000);
         const chatKey = [myUid, otherUid].sort().join('_');
         const msgs = (botData.messages?.[chatKey] || []);
         await postBot('/mark-messages-read', { uid: myUid, chatKey });
-        const msgsHtml = msgs.map(m => `
-<div style="display:flex;flex-direction:column;align-items:${m.from === myUid ? 'flex-end' : 'flex-start'};margin-bottom:8px;padding:0 16px">
-  <div style="max-width:75%;background:${m.from === myUid ? 'var(--accent)' : 'var(--bg4)'};color:${m.from === myUid ? '#fff' : 'var(--text)'};padding:10px 14px;border-radius:${m.from === myUid ? '18px 18px 4px 18px' : '18px 18px 18px 4px'};font-size:14px;line-height:1.4">${m.text}</div>
-  <div style="font-size:10px;color:var(--muted);margin-top:3px">${new Date(m.timestamp).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})}</div>
-</div>`).join('');
+        const msgsHtml = msgs.map(m => {
+            const isMe = m.from === myUid;
+            const align = isMe ? 'flex-end' : 'flex-start';
+            const bg = isMe ? 'var(--accent)' : 'var(--bg4)';
+            const col = isMe ? '#fff' : 'var(--text)';
+            const radius = isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px';
+            const time = new Date(m.timestamp).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
+            let bubble = '';
+            if (m.image) {
+                bubble = `<div style="max-width:75%;border-radius:${radius};overflow:hidden;cursor:pointer" onclick="window.open('${m.image}','_blank')">
+                    <img src="${m.image}" style="width:100%;max-width:240px;display:block;border-radius:${radius}" alt="">
+                    ${m.text ? `<div style="background:${bg};color:${col};padding:8px 12px;font-size:13px">${m.text}</div>` : ''}
+                </div>`;
+            } else if (m.audio) {
+                bubble = `<div style="max-width:75%;background:${bg};padding:10px 12px;border-radius:${radius};display:flex;align-items:center;gap:8px">
+                    <button onclick="toggleAudio(this)" data-src="${m.audio}" style="width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.2);border:none;color:${col};font-size:14px;cursor:pointer;flex-shrink:0">▶</button>
+                    <div style="flex:1">
+                        <div style="height:3px;background:rgba(255,255,255,.3);border-radius:2px;position:relative">
+                            <div class="audio-prog" style="height:100%;width:0%;background:${col};border-radius:2px;transition:width .1s"></div>
+                        </div>
+                        <div style="font-size:10px;color:${isMe?'rgba(255,255,255,.7)':'var(--muted)'};margin-top:4px" class="audio-dur">🎤 Sprachnachricht</div>
+                    </div>
+                </div>`;
+            } else {
+                bubble = `<div style="max-width:75%;background:${bg};color:${col};padding:10px 14px;border-radius:${radius};font-size:14px;line-height:1.4">${m.text}</div>`;
+            }
+            return `<div style="display:flex;flex-direction:column;align-items:${align};margin-bottom:8px;padding:0 16px">
+                ${bubble}
+                <div style="font-size:10px;color:var(--muted);margin-top:3px">${time}</div>
+            </div>`;
+        }).join('');
         return html(`
 <div class="topbar">
   <a href="/nachrichten" class="icon-btn" style="font-size:22px">‹</a>
-  <a href="/profil/${otherUid}" style="font-size:15px;font-weight:600;color:var(--text);text-decoration:none">${otherName}</a>
+  <a href="/profil/${otherUid}" style="display:flex;align-items:center;gap:8px;text-decoration:none">
+    <div style="position:relative;width:32px;height:32px;border-radius:50%;overflow:hidden;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0">
+      <span style="position:absolute">${otherName[0]}</span>
+      ${ladeBild(otherUid,'profilepic')
+        ? `<img src="/appbild/${otherUid}/profilepic" style="width:100%;height:100%;object-fit:cover" alt="">`
+        : otherUser.instagram
+        ? `<img src="https://unavatar.io/instagram/${otherUser.instagram}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">`
+        : ''}
+    </div>
+    <span style="font-size:15px;font-weight:600;color:var(--text)">${otherName}</span>
+  </a>
   <div style="width:36px"></div>
 </div>
 <div id="chat-msgs" style="padding:12px 0 140px;display:flex;flex-direction:column">
   ${msgsHtml || '<div class="empty" style="margin-top:60px"><div class="empty-icon">👋</div><div class="empty-text">Schreib eine Nachricht!</div></div>'}
 </div>
-<div style="position:fixed;bottom:60px;left:0;right:0;background:var(--bg);border-top:1px solid var(--border2);padding:12px 16px;display:flex;gap:8px;z-index:100">
+<div id="img-preview-wrap" style="display:none;position:fixed;bottom:120px;left:16px;right:16px;z-index:101">
+  <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:12px;padding:8px;display:flex;align-items:center;gap:8px">
+    <img id="img-preview" style="height:60px;border-radius:8px;object-fit:cover" alt="">
+    <div style="flex:1;font-size:12px;color:var(--muted)">Bild ausgewählt</div>
+    <button onclick="clearImage()" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer">✕</button>
+  </div>
+</div>
+<div id="recording-bar" style="display:none;position:fixed;bottom:120px;left:16px;right:16px;z-index:101">
+  <div style="background:rgba(255,107,107,.15);border:1px solid rgba(255,107,107,.4);border-radius:12px;padding:10px 14px;display:flex;align-items:center;gap:10px">
+    <div style="width:10px;height:10px;border-radius:50%;background:#ff6b6b;animation:pulse-red 1s ease infinite;flex-shrink:0"></div>
+    <div style="flex:1;font-size:13px;font-weight:600">Aufnahme läuft... <span id="rec-timer">0:00</span></div>
+    <button onclick="cancelRecording()" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer">✕</button>
+    <button onclick="stopRecording()" style="background:#ff6b6b;border:none;color:#fff;border-radius:20px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer">Senden ✓</button>
+  </div>
+</div>
+<style>@keyframes pulse-red{0%,100%{opacity:1}50%{opacity:.3}}</style>
+<div style="position:fixed;bottom:60px;left:0;right:0;background:var(--bg);border-top:1px solid var(--border2);padding:10px 12px;display:flex;gap:8px;align-items:center;z-index:100">
+  <label style="width:36px;height:36px;border-radius:50%;background:var(--bg4);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-size:16px">
+    🖼
+    <input type="file" accept="image/*" style="display:none" onchange="selectImage(this)">
+  </label>
+  <button id="mic-btn" onclick="toggleRecording()" style="width:36px;height:36px;border-radius:50%;background:var(--bg4);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-size:16px">🎤</button>
   <input type="text" id="msg-input" class="form-input" placeholder="Nachricht..." style="flex:1;margin:0" onkeypress="if(event.key==='Enter')sendMsg()">
-  <button onclick="sendMsg()" style="background:var(--accent);color:#fff;border:none;border-radius:12px;padding:10px 16px;font-size:14px;cursor:pointer">➤</button>
+  <button onclick="sendMsg()" style="width:36px;height:36px;border-radius:50%;background:var(--accent);border:none;color:#fff;font-size:16px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center">➤</button>
 </div>
 <script>
 document.getElementById('msg-input').focus();
 window.scrollTo(0, document.body.scrollHeight);
+
+let selectedImage = null;
+let mediaRecorder = null;
+let audioChunks = [];
+let recInterval = null;
+let recSeconds = 0;
+
+function selectImage(input) {
+    const file = input.files[0];
+    if (!file) return;
+    if (file.size > 5000000) { alert('Max 5MB'); return; }
+    const reader = new FileReader();
+    reader.onload = e => {
+        selectedImage = e.target.result;
+        document.getElementById('img-preview').src = selectedImage;
+        document.getElementById('img-preview-wrap').style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+}
+
+function clearImage() {
+    selectedImage = null;
+    document.getElementById('img-preview-wrap').style.display = 'none';
+}
+
+async function toggleRecording() {
+    if (mediaRecorder && mediaRecorder.state === 'recording') {
+        stopRecording();
+    } else {
+        startRecording();
+    }
+}
+
+async function startRecording() {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+        audioChunks = [];
+        mediaRecorder = new MediaRecorder(stream);
+        mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+        mediaRecorder.start();
+        document.getElementById('recording-bar').style.display = 'block';
+        document.getElementById('mic-btn').style.background = '#ff6b6b';
+        recSeconds = 0;
+        recInterval = setInterval(() => {
+            recSeconds++;
+            const m = Math.floor(recSeconds/60);
+            const s = recSeconds%60;
+            document.getElementById('rec-timer').textContent = m+':'+(s<10?'0':'')+s;
+            if (recSeconds >= 60) stopRecording();
+        }, 1000);
+    } catch(e) { alert('Mikrofon nicht verfügbar'); }
+}
+
+function stopRecording() {
+    if (!mediaRecorder) return;
+    mediaRecorder.onstop = async () => {
+        const blob = new Blob(audioChunks, {type:'audio/webm'});
+        const reader = new FileReader();
+        reader.onload = async e => {
+            await sendMessage(null, e.target.result);
+        };
+        reader.readAsDataURL(blob);
+        mediaRecorder.stream.getTracks().forEach(t=>t.stop());
+    };
+    mediaRecorder.stop();
+    clearInterval(recInterval);
+    document.getElementById('recording-bar').style.display = 'none';
+    document.getElementById('mic-btn').style.background = 'var(--bg4)';
+}
+
+function cancelRecording() {
+    if (mediaRecorder) {
+        mediaRecorder.stream.getTracks().forEach(t=>t.stop());
+        mediaRecorder = null;
+    }
+    clearInterval(recInterval);
+    document.getElementById('recording-bar').style.display = 'none';
+    document.getElementById('mic-btn').style.background = 'var(--bg4)';
+}
+
 async function sendMsg() {
     const input = document.getElementById('msg-input');
     const text = input.value.trim();
-    if (!text) return;
+    if (!text && !selectedImage) return;
     input.value = '';
-    const res = await fetch('/api/send-message', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:'${otherUid}',text})});
+    await sendMessage(selectedImage ? selectedImage : null, null, text);
+    clearImage();
+}
+
+async function sendMessage(image, audio, text='') {
+    const res = await fetch('/api/send-message', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({to:'${otherUid}', text, image: image||null, audio: audio||null})
+    });
     if ((await res.json()).ok) location.reload();
 }
+
+// Audio Player
+function toggleAudio(btn) {
+    const src = btn.getAttribute('data-src');
+    let audio = btn._audio;
+    if (!audio) {
+        audio = new Audio(src);
+        btn._audio = audio;
+        const prog = btn.parentElement.querySelector('.audio-prog');
+        const dur = btn.parentElement.querySelector('.audio-dur');
+        audio.ontimeupdate = () => {
+            if (audio.duration) prog.style.width = (audio.currentTime/audio.duration*100)+'%';
+        };
+        audio.onloadedmetadata = () => {
+            const s = Math.round(audio.duration);
+            dur.textContent = Math.floor(s/60)+':'+(s%60<10?'0':'')+s%60;
+        };
+        audio.onended = () => { btn.textContent='▶'; prog.style.width='0%'; };
+    }
+    if (audio.paused) { audio.play(); btn.textContent='⏸'; }
+    else { audio.pause(); btn.textContent='▶'; }
+}
+
 setInterval(async () => {
     const r = await fetch('/api/messages/${otherUid}');
     const data = await r.json();
@@ -974,7 +1630,10 @@ setInterval(async () => {
             .sort((a, b) => (b.lastMsg?.timestamp||0)-(a.lastMsg?.timestamp||0));
         const convHtml = myConvos.length ? myConvos.map(c => `
 <a href="/nachrichten/${c.otherUid}" style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border2);text-decoration:none">
-  <div style="width:48px;height:48px;border-radius:50%;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;flex-shrink:0">${c.otherName[0]}</div>
+  <div style="position:relative;width:48px;height:48px;border-radius:50%;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;flex-shrink:0;overflow:hidden">
+    <span style="position:absolute">${c.otherName[0]}</span>
+    ${(()=>{const ou=botData.users?.[c.otherUid]||{};const pic=ladeBild(c.otherUid,'profilepic');const insta=ou.instagram;if(pic)return`<img src="/appbild/${c.otherUid}/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">`;if(insta)return`<img src="https://unavatar.io/instagram/${insta}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">`;return'';})()}
+  </div>
   <div style="flex:1;min-width:0">
     <div style="font-size:14px;font-weight:600;color:var(--text)">${c.otherName}</div>
     <div style="font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.lastMsg?.text?.slice(0,40)||''}</div>
@@ -1027,10 +1686,13 @@ async function doSearch(q) {
         let html = '';
         if (data.users.length) {
             html += '<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin:12px 0 8px">👥 User</div>';
-            html += data.users.map(u=>\`<a href="/profil/\${u.id}" style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border2)">
-                <div style="width:40px;height:40px;border-radius:50%;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0">\${(u.name||'?').slice(0,2).toUpperCase()}</div>
-                <div><div style="font-size:13px;font-weight:600">\${u.spitzname||u.name||'?'}</div><div style="font-size:11px;color:var(--muted)">\${u.role||''} · \${u.xp||0} XP</div></div>
-            </a>\`).join('');
+            html += data.users.map(u=>'<a href="/profil/'+u.id+'" style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border2)">'
+                +'<div style="position:relative;width:44px;height:44px;border-radius:50%;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;overflow:hidden">'
+                +'<span style="position:absolute;font-size:15px;color:var(--text)">'+(u.name||'?').slice(0,2).toUpperCase()+'</span>'
+                +(u.pic ? '<img src="'+u.pic+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">' : '')
+                +'</div>'
+                +'<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600">'+(u.spitzname||u.name||'?')+'</div><div style="font-size:11px;color:var(--muted)">'+(u.role||'')+' · '+(u.xp||0)+' XP</div></div>'
+                +'</a>').join('');
         }
         if (!data.users.length && !data.links.length) html = '<div class="empty"><div class="empty-icon">🔍</div><div class="empty-text">Nichts gefunden</div></div>';
         document.getElementById('search-results').innerHTML = html;
@@ -1060,9 +1722,13 @@ ${sorted.map(([id,u],i)=>{
     const grad = badgeGradient(u.role);
     return `<a href="/profil/${id}" class="rank-item ${isMe?'rank-me':''}">
     <div class="rank-pos">${i<3?medals[i]:`<span class="rank-num">${i+1}</span>`}</div>
-    <div style="width:40px;height:40px;border-radius:50%;overflow:hidden;background:${grad};display:flex;align-items:center;justify-content:center;flex-shrink:0">
-      ${insta?`<img src="https://unavatar.io/instagram/${insta}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'" alt="">`:'' }
-      <span style="color:#fff;font-weight:700;font-size:14px">${(u.name||'?').slice(0,2).toUpperCase()}</span>
+    <div style="position:relative;width:40px;height:40px;border-radius:50%;overflow:hidden;background:${grad};flex-shrink:0;display:flex;align-items:center;justify-content:center">
+      <span style="color:#fff;font-weight:700;font-size:14px;position:absolute">${(u.name||'?').slice(0,2).toUpperCase()}</span>
+      ${ladeBild(id,'profilepic')
+        ? `<img src="/appbild/${id}/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">`
+        : insta
+        ? `<img src="https://unavatar.io/instagram/${insta}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">`
+        : ''}
     </div>
     <div class="rank-info">
       <div class="rank-name">${u.spitzname||u.name||'User'}${isMe?' (Du)':''}</div>
@@ -1098,15 +1764,79 @@ ${sorted.map(([id,u],i)=>{
         return html(`
 <div class="topbar">
   <div class="topbar-logo">Profil</div>
-  <a href="/einstellungen" class="icon-btn">⚙️</a>
+  <div style="display:flex;gap:6px;align-items:center">
+    <a href="/suche" class="icon-btn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    </a>
+    <a href="/benachrichtigungen" class="icon-btn" style="position:relative">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      <span id="notif-badge-profil" style="display:none;position:absolute;top:0;right:0;background:var(--accent);color:#fff;font-size:9px;font-weight:700;border-radius:50%;width:14px;height:14px;align-items:center;justify-content:center;line-height:14px;text-align:center"></span>
+    </a>
+    <a href="/einstellungen" class="icon-btn">⚙️</a>
+  </div>
 </div>
 ${profileCard(myUid, myUser, d, true, lang, adminIds, myBannerData, myPicData)}
-<div class="tabs" style="margin-top:8px">
+${(()=>{
+  const fields = [
+    [myUser?.bio, 'Bio hinzufügen'],
+    [myUser?.instagram, 'Instagram verknüpfen'],
+    [myBannerData || myUser?.banner, 'Banner hochladen'],
+    [myPicData || myUser?.profilePic || myUser?.instagram, 'Profilbild setzen'],
+    [myUser?.nische, 'Nische eintragen'],
+  ];
+  const done = fields.filter(([v])=>v).length;
+  const total = fields.length;
+  const pct = Math.round(done/total*100);
+  if (pct === 100) return '';
+  const missing = fields.filter(([v])=>!v).map(([,l])=>l);
+  return `<div style="margin:12px 16px;padding:12px 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:14px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div style="font-size:13px;font-weight:700">Profil zu ${pct}% vollständig</div>
+      <div style="font-size:12px;color:var(--muted)">${done}/${total}</div>
+    </div>
+    <div style="height:6px;background:var(--bg4);border-radius:3px;overflow:hidden;margin-bottom:10px">
+      <div style="height:100%;width:${pct}%;background:linear-gradient(135deg,#ff6b6b,#ffa500);border-radius:3px;transition:width .5s"></div>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px">
+      ${missing.map(m=>`<a href="/einstellungen" style="font-size:11px;background:rgba(255,107,107,.1);border:1px solid rgba(255,107,107,.25);color:var(--accent);padding:4px 10px;border-radius:20px;text-decoration:none">+ ${m}</a>`).join('')}
+    </div>
+  </div>`;
+})()}
+${(()=>{
+  const u = myUser || {};
+  const checks = [
+    [!!u.bio, 'Bio hinzufügen', '/einstellungen'],
+    [!!(myPicData||ladeBild(myUid,'profilepic')), 'Profilbild hochladen', '/einstellungen'],
+    [!!u.instagram, 'Instagram verknüpft', null],
+    [!!u.nische, 'Nische ausfüllen', '/einstellungen'],
+    [!!(session.bannerData||ladeBild(myUid,'banner')), 'Banner hochladen', '/einstellungen'],
+  ];
+  const done = checks.filter(c=>c[0]).length;
+  const pct = Math.round(done/checks.length*100);
+  if (pct === 100) return '';
+  const next = checks.find(c=>!c[0]);
+  return `<div style="margin:12px 16px;padding:12px 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:14px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <div style="font-size:13px;font-weight:700">Profil vervollständigen</div>
+      <div style="font-size:12px;font-weight:700;color:var(--accent)">${done}/${checks.length}</div>
+    </div>
+    <div style="background:var(--bg4);border-radius:4px;height:6px;overflow:hidden;margin-bottom:10px">
+      <div style="height:100%;width:${pct}%;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:4px;transition:width .6s ease"></div>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">
+      ${checks.map(([done,label])=>`<div style="display:flex;align-items:center;gap:4px;font-size:11px;color:${done?'var(--green)':'var(--muted)'}">
+        ${done?'✅':'⬜'} ${label}
+      </div>`).join('')}
+    </div>
+    ${next&&next[2]?`<a href="${next[2]}" style="display:inline-flex;align-items:center;gap:6px;background:var(--accent);color:#fff;padding:7px 14px;border-radius:10px;font-size:12px;font-weight:700;text-decoration:none">➕ ${next[1]}</a>`:''}
+  </div>`;
+})()}
+<div class="tabs" style="margin-top:8px;position:sticky;top:57px;z-index:50;background:var(--bg)">
   <div class="tab active" onclick="showPTab('posts',this)">📝 Posts</div>
   <div class="tab" onclick="showPTab('links',this)">🔗 Links</div>
   <div class="tab" onclick="showPTab('postlink',this)">📸 Link teilen</div>
 </div>
-<div id="ptab-postlink" style="display:none">
+<div id="ptab-postlink" style="display:none;padding-bottom:100px">
   <div style="padding:16px">
     <input type="url" id="link-input" class="form-input" placeholder="https://www.instagram.com/reel/..." style="margin-bottom:8px">
     <textarea id="link-caption" class="form-input" placeholder="Beschreibung (optional)..." maxlength="200" rows="2" style="margin-bottom:8px"></textarea>
@@ -1114,14 +1844,14 @@ ${profileCard(myUid, myUser, d, true, lang, adminIds, myBannerData, myPicData)}
     <div id="link-result" style="margin-top:8px;font-size:12px;text-align:center"></div>
   </div>
 </div>
-<div id="ptab-posts">
+<div id="ptab-posts" style="padding-bottom:100px">
   <div style="padding:12px 16px">
     <textarea id="new-post" class="form-input" placeholder="Was denkst du gerade? (max 300 Zeichen)" maxlength="300" rows="3"></textarea>
     <button class="btn btn-primary btn-full" style="margin-top:8px" onclick="submitPost()">📝 Posten</button>
   </div>
   ${myPostsHtml}
 </div>
-<div id="ptab-links" style="display:none">
+<div id="ptab-links" style="display:none;padding-bottom:100px">
   ${Object.values(d.links||{}).filter(l=>l.user_id===Number(myUid)).sort((a,b)=>(b.timestamp||0)-(a.timestamp||0)).map(l=>'<div style="padding:12px 16px;border-top:1px solid var(--border2)"><a href="'+l.text+'" target="_blank" style="color:var(--blue);font-size:12px;word-break:break-all">'+l.text+'</a><div style="font-size:11px;color:var(--muted);margin-top:4px">❤️ '+(Array.isArray(l.likes)?l.likes.length:0)+' Likes · '+new Date(l.timestamp).toLocaleDateString('de-DE')+'</div></div>').join('')||'<div class="empty"><div class="empty-icon">🔗</div><div class="empty-text">Noch keine Links</div></div>'}
 </div>
 <script>
@@ -1133,6 +1863,8 @@ function showPTab(tab, el) {
     const pl = document.getElementById('ptab-postlink');
     if(pl) pl.style.display = tab==='postlink'?'block':'none';
 }
+// Notification badge
+(async()=>{try{const r=await fetch('/api/notifications/count');const d=await r.json();const b=document.getElementById('notif-badge-profil');if(b&&d.count>0){b.textContent=d.count>9?'9+':d.count;b.style.display='flex';}}catch(e){}})();
 async function deletePost(timestamp) {
     if (!confirm('Post löschen?')) return;
     const res = await fetch('/api/delete-post', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({timestamp})});
@@ -1276,6 +2008,11 @@ async function toggleFollow(uid, btn) {
 <div style="padding:16px;border-bottom:1px solid var(--border2)">
   <button class="btn btn-primary btn-full" onclick="saveProfile()">💾 Speichern</button>
 </div>
+${adminIds.includes(Number(myUid)) ? `
+<div style="padding:16px;border-bottom:1px solid var(--border2)">
+  <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">⚙️ Admin Tools</div>
+  <a href="/onboarding-preview" class="btn btn-outline btn-full" style="margin-bottom:8px;display:flex">👀 Onboarding Vorschau</a>
+</div>` : ''}
 <div style="padding:16px">
   <a href="/logout" class="btn btn-outline btn-full" style="color:var(--accent)">🚪 Ausloggen</a>
 </div>
