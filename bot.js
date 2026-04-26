@@ -1065,6 +1065,7 @@ fetch('/api/notifications')
 
     // ── FEED ──
     if (path === '/feed') {
+        const tab = query.tab || 'heute';
         const twoDaysAgo = Date.now() - 2 * 24 * 60 * 60 * 1000;
         const todayLinks = Object.entries(d.links||{})
             .filter(([,l]) => l.timestamp && l.timestamp >= twoDaysAgo)
@@ -1165,7 +1166,9 @@ fetch('/api/notifications')
 </div>`;}
         const heuteHtml = heuteLinks.length ? heuteLinks.map(([a,b])=>renderLink([a,b])).join('') : '<div class="empty" style="margin-top:40px"><div class="empty-icon">📅</div><div class="empty-text">Noch keine Links heute</div></div>';
         const aelterHtml = aelterLinks.length ? aelterLinks.map(([a,b])=>renderLink([a,b])).join('') : '<div class="empty" style="margin-top:40px"><div class="empty-icon">🕐</div><div class="empty-text">Keine älteren Links</div></div>';
-        const postsHtml = '<div id="feed-heute" style="padding:8px 0 80px">' + heuteHtml + '</div><div id="feed-aelter" style="padding:8px 0 80px;display:none">' + aelterHtml + '</div>';
+        const postsHtml = tab === 'aelter'
+            ? '<div style="padding:8px 0 80px">' + aelterHtml + '</div>'
+            : '<div style="padding:8px 0 80px">' + heuteHtml + '</div>';
         return html(`
 <div class="topbar">
   <div class="topbar-logo">CreatorBoost</div>
@@ -1174,8 +1177,8 @@ fetch('/api/notifications')
   </div>
 </div>
 <div style="display:flex;border-bottom:2px solid var(--border2)">
-  <div id="tab-heute" ontouchstart="switchFeedTab('heute')" onclick="switchFeedTab('heute')" style="flex:1;padding:10px;font-size:13px;font-weight:700;text-align:center;color:var(--accent);border-bottom:3px solid var(--accent);margin-bottom:-2px;cursor:pointer;user-select:none;-webkit-tap-highlight-color:rgba(0,0,0,0)">📅 Heute</div>
-  <div id="tab-aelter" ontouchstart="switchFeedTab('aelter')" onclick="switchFeedTab('aelter')" style="flex:1;padding:10px;font-size:13px;font-weight:700;text-align:center;color:var(--muted);border-bottom:3px solid transparent;margin-bottom:-2px;cursor:pointer;user-select:none;-webkit-tap-highlight-color:rgba(0,0,0,0)">🕐 Älter</div>
+  <a href="/feed?tab=heute" style="flex:1;padding:10px;font-size:13px;font-weight:700;text-align:center;text-decoration:none;display:block;border-bottom:3px solid ${tab==='aelter'?'transparent':'var(--accent)'};margin-bottom:-2px;color:${tab==='aelter'?'var(--muted)':'var(--accent)'}">📅 Heute</a>
+  <a href="/feed?tab=aelter" style="flex:1;padding:10px;font-size:13px;font-weight:700;text-align:center;text-decoration:none;display:block;border-bottom:3px solid ${tab==='aelter'?'var(--accent)':'transparent'};margin-bottom:-2px;color:${tab==='aelter'?'var(--accent)':'var(--muted)'}">🕐 Älter</a>
 </div>
 ${storiesHtml}
 <div style="height:1px;background:var(--border2)"></div>
