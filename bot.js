@@ -883,217 +883,6 @@ document.getElementById('code-input').addEventListener('keypress',e=>{if(e.key==
         return json({ok:true});
     }
 
-    // ── CHAT ──
-    if (path.startsWith('/nachrichten/')) {
-        const otherUid = path.replace('/nachrichten/', '');
-        const botData = await fetchBot('/data');
-        if (!botData) return redirect('/nachrichten');
-        const otherUser = botData.users?.[otherUid] || {};
-        const otherName = otherUser.spitzname || otherUser.name || 'User';
-        
-        const chatKey = [myUid, otherUid].sort().join('_');
-        const msgs = (botData.messages?.[chatKey] || []);
-        
-        // Als gelesen markieren
-        await postBot('/mark-messages-read', { uid: myUid, chatKey });
-        
-        const msgsHtml = msgs.map(m => `
-<div style="display:flex;flex-direction:column;align-items:${m.from === myUid ? 'flex-end' : 'flex-start'};margin-bottom:8px;padding:0 16px">
-  <div style="max-width:75%;background:${m.from === myUid ? 'var(--accent)' : 'var(--bg4)'};color:${m.from === myUid ? '#fff' : 'var(--text)'};padding:10px 14px;border-radius:${m.from === myUid ? '18px 18px 4px 18px' : '18px 18px 18px 4px'};font-size:14px;line-height:1.4">${m.text}</div>
-  <div style="font-size:10px;color:var(--muted);margin-top:3px">${new Date(m.timestamp).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})}</div>
-</div>`).join('');
-
-        return html(`
-<div class="topbar">
-  <a href="/nachrichten" class="icon-btn" style="font-size:22px">‹</a>
-  <a href="/profil/${otherUid}" style="font-size:15px;font-weight:600;color:var(--text);text-decoration:none">${otherName}</a>
-  <div style="width:36px"></div>
-</div>
-<div id="chat-msgs" style="padding:12px 0 140px;display:flex;flex-direction:column">
-  ${msgsHtml || '<div class="empty" style="margin-top:60px"><div class="empty-icon">👋</div><div class="empty-text">Schreib eine Nachricht!</div></div>'}
-</div>
-<div style="position:fixed;bottom:60px;left:0;right:0;background:var(--bg);border-top:1px solid var(--border2);padding:12px 16px;display:flex;gap:8px;z-index:100">
-  <input type="text" id="msg-input" class="form-input" placeholder="Nachricht..." style="flex:1;margin:0" onkeypress="if(event.key==='Enter')sendMsg()">
-  <button onclick="sendMsg()" style="background:var(--accent);color:#fff;border:none;border-radius:12px;padding:10px 16px;font-size:14px;cursor:pointer">➤</button>
-</div>
-<script>
-const chatKey = '${chatKey}';
-const otherUid = '${otherUid}';
-document.getElementById('msg-input').focus();
-// Auto scroll nach unten
-window.scrollTo(0, document.body.scrollHeight);
-
-async function sendMsg() {
-    const input = document.getElementById('msg-input');
-    const text = input.value.trim();
-    if (!text) return;
-    input.value = '';
-    const res = await fetch('/api/send-message', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({to: otherUid, text})
-    });
-    if ((await res.json()).ok) location.reload();
-}
-
-// Neue Nachrichten alle 5 Sekunden laden
-setInterval(async () => {
-    const r = await fetch('/api/messages/' + otherUid);
-    const data = await r.json();
-    if (data.count !== ${msgs.length}) location.reload();
-}, 5000);
-</script>`, 'messages');
-    }
-
-    // ── NACHRICHTEN ÜBERSICHT ──
-    if (path === '/nachrichten') {
-        const botData = await fetchBot('/data');
-        if (!botData) return redirect('/feed');
-        
-        // Alle Konversationen des Users finden
-        const convos = botData.messages || {};
-        const myConvos = Object.entries(convos)
-            .filter(([key]) => key.includes('_' + myUid + '_') || key.includes('_' + myUid) || key.startsWith(myUid + '_'))
-            .map(([key, msgs]) => {
-                const otherUid = key.replace(myUid + '_', '').replace('_' + myUid, '');
-                const otherUser = botData.users?.[otherUid] || {};
-                const lastMsg = msgs[msgs.length - 1];
-                return { key, otherUid, otherName: otherUser.spitzname || otherUser.name || 'User', lastMsg, unread: msgs.filter(m => m.to === myUid && !m.read).length };
-            })
-            .sort((a, b) => (b.lastMsg?.timestamp || 0) - (a.lastMsg?.timestamp || 0));
-
-        const convHtml = myConvos.length ? myConvos.map(c => `
-<a href="/nachrichten/${c.otherUid}" style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border2);text-decoration:none">
-  <div style="width:48px;height:48px;border-radius:50%;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;flex-shrink:0">${c.otherName[0]}</div>
-  <div style="flex:1;min-width:0">
-    <div style="font-size:14px;font-weight:600;color:var(--text)">${c.otherName}</div>
-    <div style="font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.lastMsg?.text?.slice(0,40) || ''}</div>
-  </div>
-  ${c.unread > 0 ? `<div style="background:var(--accent);color:#fff;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700">${c.unread}</div>` : ''}
-</a>`).join('') : '<div class="empty"><div class="empty-icon">💬</div><div class="empty-text">Keine Nachrichten</div><div class="empty-sub">Schreibe jemandem!</div></div>';
-
-        return html(`
-<div class="topbar">
-  <div class="topbar-logo">Nachrichten</div>
-</div>
-<div style="padding-bottom:80px">${convHtml}</div>`, 'messages');
-    }
-
-    // ── BENACHRICHTIGUNGEN ──
-    if (path === '/benachrichtigungen') {
-        return html(`
-<div class="topbar">
-  <div class="topbar-logo">Benachrichtigungen</div>
-</div>
-<div id="notif-list" style="padding:8px 0">
-  <div class="empty"><div class="empty-icon">🔔</div><div class="empty-text">Lädt...</div></div>
-</div>
-<script>
-fetch('/api/notifications')
-  .then(r=>r.json())
-  .then(data=>{
-    const list = document.getElementById('notif-list');
-    if(!data.notifications||!data.notifications.length){
-      list.innerHTML='<div class="empty"><div class="empty-icon">🔔</div><div class="empty-text">Keine Benachrichtigungen</div></div>';
-      return;
-    }
-    list.innerHTML = data.notifications.map(n=>\`
-      <div style="padding:14px 16px;border-bottom:1px solid var(--border2);display:flex;gap:12px;align-items:center;\${n.read?'':'background:rgba(255,107,107,.05)'}">
-        <div style="font-size:24px;flex-shrink:0">\${n.icon||'🔔'}</div>
-        <div style="flex:1">
-          <div style="font-size:13px">\${n.text}</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:2px">\${new Date(n.timestamp).toLocaleDateString('de-DE',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}</div>
-        </div>
-      </div>
-    \`).join('');
-  });
-</script>`, 'notif');
-    }
-
-    // ── SUCHE ──
-    if (path === '/api/search') {
-        const q = (query.q||'').toLowerCase().trim();
-        if (!q) return json({users:[], links:[]});
-        const botData = await fetchBot('/data');
-        if (!botData) return json({users:[], links:[]});
-        const users = Object.entries(botData.users||{})
-            .filter(([,u])=>u.started && u.inGruppe!==false && (
-                (u.name||'').toLowerCase().includes(q) ||
-                (u.username||'').toLowerCase().includes(q) ||
-                (u.instagram||'').toLowerCase().includes(q) ||
-                (u.spitzname||'').toLowerCase().includes(q)
-            ))
-            .slice(0,10)
-            .map(([id,u])=>({id, name:u.name, spitzname:u.spitzname, username:u.username, instagram:u.instagram, role:u.role, xp:u.xp}));
-        const links = Object.entries(botData.links||{})
-            .filter(([,l])=>(l.text||'').toLowerCase().includes(q)||(l.user_name||'').toLowerCase().includes(q))
-            .sort((a,b)=>(b[1].timestamp||0)-(a[1].timestamp||0))
-            .slice(0,5)
-            .map(([id,l])=>({id, text:l.text, user_name:l.user_name, likes:Array.isArray(l.likes)?l.likes.length:0}));
-        return json({users, links});
-    }
-
-
-    // ── LIKES UPDATE API ──
-    if (path === '/api/likes-update') {
-        const botData = await fetchBot('/data');
-        if (!botData) return json({links:[]});
-        const today = new Date().toDateString();
-
-        // Alle heutigen Links - gruppiert nach URL (text) um Duplikate zusammenzuführen
-        const byUrl = {};
-        Object.entries(botData.links||{}).forEach(([id,l]) => {
-            if (!l.text || new Date(l.timestamp).toDateString() !== today) return;
-            const url = l.text.trim();
-            if (!byUrl[url]) byUrl[url] = {likes:0, ids:[], likerNames:[]};
-            const lkCount = Array.isArray(l.likes) ? l.likes.length : 0;
-            // Behalte die höchste Likes-Anzahl
-            if (lkCount > byUrl[url].likes) {
-                byUrl[url].likes = lkCount;
-                byUrl[url].likerNames = Array.isArray(l.likes) ? l.likes.slice(0,2).map(lid=>{
-                    const u=botData.users[String(lid)];
-                    return u?.spitzname||u?.name||'User';
-                }) : [];
-            }
-            byUrl[url].ids.push(String(l.counter_msg_id||id));
-            byUrl[url].ids.push(id);
-        });
-
-        const links = Object.entries(byUrl).map(([url,data]) => ({
-            url,
-            ids: [...new Set(data.ids)],
-            likes: data.likes,
-            likerNames: data.likerNames
-        }));
-
-        return json({links});
-    }
-
-
-    // ── BRIDGE LIKE SYNC (vom Bridge Bot) ──
-    if (path === '/bridge-like-sync' && req.method === 'POST') {
-        const body = await parseBody(req);
-        // Wird vom Bridge Bot aufgerufen wenn jemand liked
-        // Kein Auth nötig da intern
-        return json({ok:true});
-    }
-
-
-    // ── INSTAGRAM THUMBNAIL ──
-    if (path === '/api/insta-thumb') {
-        const instaUrl = query.url || '';
-        // Instagram URL zu Media URL konvertieren
-        // https://www.instagram.com/reel/CODE/ -> thumbnail
-        const match = instaUrl.match(/instagram\.com\/(?:p|reel|tv)\/([A-Za-z0-9_-]+)/);
-        if (!match) { res.writeHead(404); return res.end(''); }
-        const code = match[1];
-        // Redirect zu Instagram thumbnail
-        const thumbUrl = 'https://www.instagram.com/p/' + code + '/media/?size=m';
-        res.writeHead(302, {'Location': thumbUrl, 'Cache-Control': 'public, max-age=3600'});
-        return res.end();
-    }
-
-
     // ── BENACHRICHTIGUNGEN ──
     if (path === '/api/notifications') {
         const botData = await fetchBot('/data');
@@ -1120,6 +909,7 @@ fetch('/api/notifications')
 
     // ── NACHRICHT SENDEN ──
     if (path === '/api/send-message' && req.method === 'POST') {
+        if (!session) return json({error:'Nicht eingeloggt'}, 401);
         const body = await parseBody(req);
         const { to, text } = body;
         if (!to || !text?.trim()) return json({error:'Ungültig'}, 400);
@@ -1133,6 +923,7 @@ fetch('/api/notifications')
 
     // ── NACHRICHTEN LADEN ──
     if (path.startsWith('/api/messages/')) {
+        if (!session) return json({error:'Nicht eingeloggt'}, 401);
         const otherUid = path.replace('/api/messages/', '');
         const botData = await fetchBot('/data');
         const chatKey = [myUid, otherUid].sort().join('_');
@@ -1142,6 +933,7 @@ fetch('/api/notifications')
 
     // ── NACHRICHTEN GELESEN ──
     if (path === '/api/mark-messages-read' && req.method === 'POST') {
+        if (!session) return json({error:'Nicht eingeloggt'}, 401);
         const body = await parseBody(req);
         await postBot('/mark-messages-read', { uid: myUid, chatKey: body.chatKey });
         return json({ok: true});
@@ -1384,7 +1176,7 @@ function _old_switch_unused(tab, el) {
 // Standard Tab beim Laden
 setTimeout(()=>switchFeedTab('heute', document.getElementById('tab-heute')), 50);
 
-function likePost(msgId, btn) {
+async function likePost(msgId, btn) {
     const countEl = document.getElementById('likes-'+msgId);
     const wasLiked = btn.classList.contains('liked');
     if (wasLiked) return; // Kein Unlike möglich
