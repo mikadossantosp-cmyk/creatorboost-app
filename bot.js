@@ -1092,7 +1092,7 @@ fetch('/api/notifications')
     const hasLink = Object.values(d.links||{}).some(l=>l.user_id===Number(id)&&new Date(l.timestamp).toDateString()===today);
     return `<a href="/profil/${id}" class="story-item">
       <div class="story-ring ${hasLink?'':'seen'}">
-        <div class="story-inner" style="width:100%;height:100%;border-radius:50%;overflow:hidden;position:relative;display:flex;align-items:center;justify-content:center;background:var(--bg4)">
+        <div class="story-inner">
           ${ladeBild(id,'profilepic')?`<img src="/appbild/${id}/profilepic" style="width:100%;height:100%;object-fit:cover;position:absolute;top:0;left:0" onerror="this.remove()" alt="">`:insta?`<img src="https://unavatar.io/instagram/${insta}" style="width:100%;height:100%;object-fit:cover;position:absolute;top:0;left:0" onerror="this.remove()" alt="">`:''}  
           <span style="font-size:18px">${(u.name||'?').slice(0,1)}</span>
       </div>
