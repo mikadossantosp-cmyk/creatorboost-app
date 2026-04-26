@@ -256,28 +256,13 @@ ${session ? `
     <svg viewBox="0 0 24 24" fill="${page==='ranking'?'currentColor':'none'}" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
     ${page==='ranking'?'<div class="nav-dot"></div>':''}
   </a>
-  <a href="/suche" class="nav-item ${page==='search'?'active':''}">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-    ${page==='search'?'<div class="nav-dot"></div>':''}
-  </a>
-  <a href="/profil" class="nav-item ${page==='profile'?'active':''}">
-    <svg viewBox="0 0 24 24" fill="${page==='profile'?'currentColor':'none'}" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-    ${page==='profile'?'<div class="nav-dot"></div>':''}
-  </a>
   <a href="/nachrichten" class="nav-item ${page==='messages'?'active':''}">
     <svg viewBox="0 0 24 24" fill="${page==='messages'?'currentColor':'none'}" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
     ${page==='messages'?'<div class="nav-dot"></div>':''}
   </a>
-  <a href="/benachrichtigungen" class="nav-item ${page==='notif'?'active':''}" id="notif-tab">
-    <div style="position:relative">
-      <svg viewBox="0 0 24 24" fill="${page==='notif'?'currentColor':'none'}" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-      <span id="notif-badge" style="display:none;position:absolute;top:-4px;right:-4px;background:var(--accent);color:#fff;font-size:9px;font-weight:700;border-radius:50%;width:16px;height:16px;align-items:center;justify-content:center"></span>
-    </div>
-    ${page==='notif'?'<div class="nav-dot"></div>':''}
-  </a>
-  <a href="/einstellungen" class="nav-item ${page==='settings'?'active':''}">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
-    ${page==='settings'?'<div class="nav-dot"></div>':''}
+  <a href="/profil" class="nav-item ${page==='profile'?'active':''}">
+    <svg viewBox="0 0 24 24" fill="${page==='profile'?'currentColor':'none'}" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    ${page==='profile'?'<div class="nav-dot"></div>':''}
   </a>
 </nav>` : ''}
 <script>
@@ -826,9 +811,13 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
             const grad = badgeGradient(poster.role);
             return `<div class="post fade-up" id="post-${msgId}" data-url="${link.text}" data-ts="${link.timestamp||0}">
   <div class="post-header">
-    <div style="width:40px;height:40px;border-radius:50%;overflow:hidden;background:${insta?'var(--bg4)':grad};display:flex;align-items:center;justify-content:center;flex-shrink:0">
-      ${insta?`<img src="https://unavatar.io/instagram/${insta}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'" alt="">`:''}
-      <span style="font-size:16px;${insta?'display:none':''};color:#fff">${(poster.name||'?').slice(0,1)}</span>
+    <div style="position:relative;width:40px;height:40px;border-radius:50%;overflow:hidden;background:${grad};flex-shrink:0;display:flex;align-items:center;justify-content:center">
+      <span style="color:#fff;font-weight:700;font-size:15px;position:absolute">${(poster.name||'?').slice(0,1)}</span>
+      ${ladeBild(String(link.user_id),'profilepic')
+        ? `<img src="/appbild/${String(link.user_id)}/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">`
+        : insta
+        ? `<img src="https://unavatar.io/instagram/${insta}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">`
+        : ''}
     </div>
     <div class="post-user-info">
       <div class="post-name">${poster.spitzname||poster.name||'User'}</div>
@@ -837,10 +826,27 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
     <div class="post-time">${new Date(link.timestamp).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})}</div>
   </div>
   <div onclick="window.open('${link.text}','_blank')" style="cursor:pointer;margin:0 16px;border-radius:12px;overflow:hidden;background:var(--bg4);border:1px solid var(--border2)">
-    <div style="padding:10px 12px;display:flex;align-items:center;gap:8px">
-      <div style="font-size:18px">📸</div>
+    <div style="position:relative;width:100%;height:130px;overflow:hidden">
+      <div style="position:absolute;inset:0;background:${poster.banner&&!poster.banner.startsWith('data:')?'#000':poster.banner||'linear-gradient(135deg,#1a1a2e,#16213e,#0f3460)'}"></div>
+      ${ladeBild(String(link.user_id),'banner') ? `<img src="/appbild/${String(link.user_id)}/banner" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" onerror="this.remove()" alt="">` : ''}
+      <div style="position:absolute;inset:0;background:linear-gradient(to bottom,transparent 20%,rgba(0,0,0,.75))"></div>
+      <div style="position:absolute;bottom:10px;left:12px;display:flex;align-items:center;gap:10px">
+        <div style="width:44px;height:44px;border-radius:50%;border:2px solid rgba(255,255,255,.4);overflow:hidden;background:${grad};display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff;flex-shrink:0">
+          ${ladeBild(String(link.user_id),'profilepic')
+            ? `<img src="/appbild/${String(link.user_id)}/profilepic" style="width:100%;height:100%;object-fit:cover" alt="">`
+            : insta
+            ? `<img src="https://unavatar.io/instagram/${insta}" style="width:100%;height:100%;object-fit:cover" onerror="this.remove()" alt="">`
+            : (poster.name||'?').slice(0,2).toUpperCase()}
+        </div>
+        <div>
+          <div style="font-size:13px;font-weight:700;color:#fff">${poster.spitzname||poster.name||'User'}</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.7)">${poster.role||''}</div>
+        </div>
+      </div>
+    </div>
+    <div style="padding:8px 12px;display:flex;align-items:center;gap:8px">
+      <div style="font-size:16px">📸</div>
       <div style="flex:1;min-width:0">
-        <div style="font-size:11px;font-weight:600">Instagram</div>
         <div style="font-size:10px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${link.text.replace('https://www.','').slice(0,45)}</div>
       </div>
       <div style="font-size:10px;color:var(--accent);font-weight:600">Öffnen →</div>
@@ -929,7 +935,17 @@ setInterval(refreshLikes, 5000);
         return html(`
 <div class="topbar">
   <a href="/nachrichten" class="icon-btn" style="font-size:22px">‹</a>
-  <a href="/profil/${otherUid}" style="font-size:15px;font-weight:600;color:var(--text);text-decoration:none">${otherName}</a>
+  <a href="/profil/${otherUid}" style="display:flex;align-items:center;gap:8px;text-decoration:none">
+    <div style="position:relative;width:32px;height:32px;border-radius:50%;overflow:hidden;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0">
+      <span style="position:absolute">${otherName[0]}</span>
+      ${ladeBild(otherUid,'profilepic')
+        ? `<img src="/appbild/${otherUid}/profilepic" style="width:100%;height:100%;object-fit:cover" alt="">`
+        : otherUser.instagram
+        ? `<img src="https://unavatar.io/instagram/${otherUser.instagram}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">`
+        : ''}
+    </div>
+    <span style="font-size:15px;font-weight:600;color:var(--text)">${otherName}</span>
+  </a>
   <div style="width:36px"></div>
 </div>
 <div id="chat-msgs" style="padding:12px 0 140px;display:flex;flex-direction:column">
@@ -974,7 +990,10 @@ setInterval(async () => {
             .sort((a, b) => (b.lastMsg?.timestamp||0)-(a.lastMsg?.timestamp||0));
         const convHtml = myConvos.length ? myConvos.map(c => `
 <a href="/nachrichten/${c.otherUid}" style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border2);text-decoration:none">
-  <div style="width:48px;height:48px;border-radius:50%;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;flex-shrink:0">${c.otherName[0]}</div>
+  <div style="position:relative;width:48px;height:48px;border-radius:50%;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;flex-shrink:0;overflow:hidden">
+    <span style="position:absolute">${c.otherName[0]}</span>
+    ${(()=>{const ou=botData.users?.[c.otherUid]||{};const pic=ladeBild(c.otherUid,'profilepic');const insta=ou.instagram;if(pic)return`<img src="/appbild/${c.otherUid}/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">`;if(insta)return`<img src="https://unavatar.io/instagram/${insta}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">`;return'';})()}
+  </div>
   <div style="flex:1;min-width:0">
     <div style="font-size:14px;font-weight:600;color:var(--text)">${c.otherName}</div>
     <div style="font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.lastMsg?.text?.slice(0,40)||''}</div>
@@ -1060,9 +1079,13 @@ ${sorted.map(([id,u],i)=>{
     const grad = badgeGradient(u.role);
     return `<a href="/profil/${id}" class="rank-item ${isMe?'rank-me':''}">
     <div class="rank-pos">${i<3?medals[i]:`<span class="rank-num">${i+1}</span>`}</div>
-    <div style="width:40px;height:40px;border-radius:50%;overflow:hidden;background:${grad};display:flex;align-items:center;justify-content:center;flex-shrink:0">
-      ${insta?`<img src="https://unavatar.io/instagram/${insta}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'" alt="">`:'' }
-      <span style="color:#fff;font-weight:700;font-size:14px">${(u.name||'?').slice(0,2).toUpperCase()}</span>
+    <div style="position:relative;width:40px;height:40px;border-radius:50%;overflow:hidden;background:${grad};flex-shrink:0;display:flex;align-items:center;justify-content:center">
+      <span style="color:#fff;font-weight:700;font-size:14px;position:absolute">${(u.name||'?').slice(0,2).toUpperCase()}</span>
+      ${ladeBild(id,'profilepic')
+        ? `<img src="/appbild/${id}/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">`
+        : insta
+        ? `<img src="https://unavatar.io/instagram/${insta}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">`
+        : ''}
     </div>
     <div class="rank-info">
       <div class="rank-name">${u.spitzname||u.name||'User'}${isMe?' (Du)':''}</div>
@@ -1098,15 +1121,24 @@ ${sorted.map(([id,u],i)=>{
         return html(`
 <div class="topbar">
   <div class="topbar-logo">Profil</div>
-  <a href="/einstellungen" class="icon-btn">⚙️</a>
+  <div style="display:flex;gap:6px;align-items:center">
+    <a href="/suche" class="icon-btn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    </a>
+    <a href="/benachrichtigungen" class="icon-btn" style="position:relative">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      <span id="notif-badge-profil" style="display:none;position:absolute;top:0;right:0;background:var(--accent);color:#fff;font-size:9px;font-weight:700;border-radius:50%;width:14px;height:14px;align-items:center;justify-content:center;line-height:14px;text-align:center"></span>
+    </a>
+    <a href="/einstellungen" class="icon-btn">⚙️</a>
+  </div>
 </div>
 ${profileCard(myUid, myUser, d, true, lang, adminIds, myBannerData, myPicData)}
-<div class="tabs" style="margin-top:8px">
+<div class="tabs" style="margin-top:8px;position:sticky;top:57px;z-index:50;background:var(--bg)">
   <div class="tab active" onclick="showPTab('posts',this)">📝 Posts</div>
   <div class="tab" onclick="showPTab('links',this)">🔗 Links</div>
   <div class="tab" onclick="showPTab('postlink',this)">📸 Link teilen</div>
 </div>
-<div id="ptab-postlink" style="display:none">
+<div id="ptab-postlink" style="display:none;padding-bottom:100px">
   <div style="padding:16px">
     <input type="url" id="link-input" class="form-input" placeholder="https://www.instagram.com/reel/..." style="margin-bottom:8px">
     <textarea id="link-caption" class="form-input" placeholder="Beschreibung (optional)..." maxlength="200" rows="2" style="margin-bottom:8px"></textarea>
@@ -1114,14 +1146,14 @@ ${profileCard(myUid, myUser, d, true, lang, adminIds, myBannerData, myPicData)}
     <div id="link-result" style="margin-top:8px;font-size:12px;text-align:center"></div>
   </div>
 </div>
-<div id="ptab-posts">
+<div id="ptab-posts" style="padding-bottom:100px">
   <div style="padding:12px 16px">
     <textarea id="new-post" class="form-input" placeholder="Was denkst du gerade? (max 300 Zeichen)" maxlength="300" rows="3"></textarea>
     <button class="btn btn-primary btn-full" style="margin-top:8px" onclick="submitPost()">📝 Posten</button>
   </div>
   ${myPostsHtml}
 </div>
-<div id="ptab-links" style="display:none">
+<div id="ptab-links" style="display:none;padding-bottom:100px">
   ${Object.values(d.links||{}).filter(l=>l.user_id===Number(myUid)).sort((a,b)=>(b.timestamp||0)-(a.timestamp||0)).map(l=>'<div style="padding:12px 16px;border-top:1px solid var(--border2)"><a href="'+l.text+'" target="_blank" style="color:var(--blue);font-size:12px;word-break:break-all">'+l.text+'</a><div style="font-size:11px;color:var(--muted);margin-top:4px">❤️ '+(Array.isArray(l.likes)?l.likes.length:0)+' Likes · '+new Date(l.timestamp).toLocaleDateString('de-DE')+'</div></div>').join('')||'<div class="empty"><div class="empty-icon">🔗</div><div class="empty-text">Noch keine Links</div></div>'}
 </div>
 <script>
@@ -1133,6 +1165,8 @@ function showPTab(tab, el) {
     const pl = document.getElementById('ptab-postlink');
     if(pl) pl.style.display = tab==='postlink'?'block':'none';
 }
+// Notification badge
+(async()=>{try{const r=await fetch('/api/notifications/count');const d=await r.json();const b=document.getElementById('notif-badge-profil');if(b&&d.count>0){b.textContent=d.count>9?'9+':d.count;b.style.display='flex';}}catch(e){}})();
 async function deletePost(timestamp) {
     if (!confirm('Post löschen?')) return;
     const res = await fetch('/api/delete-post', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({timestamp})});
