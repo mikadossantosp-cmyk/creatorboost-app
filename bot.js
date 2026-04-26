@@ -1220,29 +1220,17 @@ async function refreshLikes() {
 setInterval(refreshLikes, 5000);
 
 
-async // Feed Trennlinien
-(function(){
+async function switchFeedTab(tab, el) {
+    document.querySelectorAll('.tabs .tab').forEach(t=>t.classList.remove('active'));
+    el.classList.add('active');
     const todayStr = new Date().toDateString();
-    let addedToday = false, addedOlder = false;
-    document.querySelectorAll('.post[data-ts]').forEach(card => {
-        const ts = Number(card.getAttribute('data-ts'));
-        const isToday = new Date(ts).toDateString() === todayStr;
-        if (isToday && !addedToday) {
-            addedToday = true;
-            const h = document.createElement('div');
-            h.style.cssText = 'padding:10px 16px 6px;font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px';
-            h.textContent = '📅 Heute';
-            card.parentNode.insertBefore(h, card);
-        }
-        if (!isToday && !addedOlder) {
-            addedOlder = true;
-            const h = document.createElement('div');
-            h.style.cssText = 'padding:10px 16px 6px;font-size:11px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:1px;margin-top:4px';
-            h.textContent = '🕐 Ältere Links';
-            card.parentNode.insertBefore(h, card);
-        }
+    document.querySelectorAll('#feed-list .post[data-ts]').forEach(post => {
+        const isToday = new Date(Number(post.getAttribute('data-ts'))).toDateString() === todayStr;
+        post.style.display = (tab==='heute' ? isToday : !isToday) ? 'block' : 'none';
     });
-})();
+}
+// Standard Tab beim Laden
+window.addEventListener('DOMContentLoaded', ()=>switchFeedTab('heute', document.getElementById('tab-heute')));
 
 function likePost(msgId, btn) {
     const countEl = document.getElementById('likes-'+msgId);
