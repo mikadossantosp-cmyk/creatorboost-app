@@ -1175,9 +1175,9 @@ fetch('/api/notifications')
 </div>
 ${storiesHtml}
 <div style="height:1px;background:var(--border2)"></div>
-<div style="display:flex;gap:0;margin:8px 16px 0;border-bottom:2px solid var(--border2)">
-  <button id="tab-heute" onclick="switchFeedTab('heute')" style="flex:1;padding:10px;font-size:13px;font-weight:700;border:none;background:none;color:var(--accent);border-bottom:3px solid var(--accent);margin-bottom:-2px;cursor:pointer">📅 Heute</button>
-  <button id="tab-aelter" onclick="switchFeedTab('aelter')" style="flex:1;padding:10px;font-size:13px;font-weight:700;border:none;background:none;color:var(--muted);border-bottom:3px solid transparent;margin-bottom:-2px;cursor:pointer">🕐 Älter</button>
+<div style="display:flex;gap:0;margin:8px 16px 0;border-bottom:2px solid var(--border2);position:relative;z-index:10">
+  <button id="tab-heute" onclick="switchFeedTab('heute')" style="flex:1;padding:10px;font-size:13px;font-weight:700;border:none;background:none;color:var(--accent);border-bottom:3px solid var(--accent);margin-bottom:-2px;cursor:pointer;position:relative;z-index:10">📅 Heute</button>
+  <button id="tab-aelter" onclick="switchFeedTab('aelter')" style="flex:1;padding:10px;font-size:13px;font-weight:700;border:none;background:none;color:var(--muted);border-bottom:3px solid transparent;margin-bottom:-2px;cursor:pointer;position:relative;z-index:10">🕐 Älter</button>
 </div>
 ${postsHtml}
 <script>
