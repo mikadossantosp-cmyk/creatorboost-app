@@ -310,6 +310,10 @@ ${session ? `
     <svg viewBox="0 0 24 24" fill="${page==='profile'?'currentColor':'none'}" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
     ${page==='profile'?'<div class="nav-dot"></div>':''}
   </a>
+  <a href="/nachrichten" class="nav-item ${page==='messages'?'active':''}">
+    <svg viewBox="0 0 24 24" fill="${page==='messages'?'currentColor':'none'}" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    ${page==='messages'?'<div class="nav-dot"></div>':''}
+  </a>
   <a href="/benachrichtigungen" class="nav-item ${page==='notif'?'active':''}" id="notif-tab">
     <div style="position:relative">
       <svg viewBox="0 0 24 24" fill="${page==='notif'?'currentColor':'none'}" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
@@ -879,6 +883,102 @@ document.getElementById('code-input').addEventListener('keypress',e=>{if(e.key==
         return json({ok:true});
     }
 
+    // ── CHAT ──
+    if (path.startsWith('/nachrichten/')) {
+        const otherUid = path.replace('/nachrichten/', '');
+        const botData = await fetchBot('/data');
+        if (!botData) return redirect('/nachrichten');
+        const otherUser = botData.users?.[otherUid] || {};
+        const otherName = otherUser.spitzname || otherUser.name || 'User';
+        
+        const chatKey = [myUid, otherUid].sort().join('_');
+        const msgs = (botData.messages?.[chatKey] || []);
+        
+        // Als gelesen markieren
+        await postBot('/mark-messages-read', { uid: myUid, chatKey });
+        
+        const msgsHtml = msgs.map(m => `
+<div style="display:flex;flex-direction:column;align-items:${m.from === myUid ? 'flex-end' : 'flex-start'};margin-bottom:8px;padding:0 16px">
+  <div style="max-width:75%;background:${m.from === myUid ? 'var(--accent)' : 'var(--bg4)'};color:${m.from === myUid ? '#fff' : 'var(--text)'};padding:10px 14px;border-radius:${m.from === myUid ? '18px 18px 4px 18px' : '18px 18px 18px 4px'};font-size:14px;line-height:1.4">${m.text}</div>
+  <div style="font-size:10px;color:var(--muted);margin-top:3px">${new Date(m.timestamp).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})}</div>
+</div>`).join('');
+
+        return html(`
+<div class="topbar">
+  <a href="/nachrichten" class="icon-btn" style="font-size:22px">‹</a>
+  <a href="/profil/${otherUid}" style="font-size:15px;font-weight:600;color:var(--text);text-decoration:none">${otherName}</a>
+  <div style="width:36px"></div>
+</div>
+<div id="chat-msgs" style="padding:12px 0 140px;display:flex;flex-direction:column">
+  ${msgsHtml || '<div class="empty" style="margin-top:60px"><div class="empty-icon">👋</div><div class="empty-text">Schreib eine Nachricht!</div></div>'}
+</div>
+<div style="position:fixed;bottom:60px;left:0;right:0;background:var(--bg);border-top:1px solid var(--border2);padding:12px 16px;display:flex;gap:8px;z-index:100">
+  <input type="text" id="msg-input" class="form-input" placeholder="Nachricht..." style="flex:1;margin:0" onkeypress="if(event.key==='Enter')sendMsg()">
+  <button onclick="sendMsg()" style="background:var(--accent);color:#fff;border:none;border-radius:12px;padding:10px 16px;font-size:14px;cursor:pointer">➤</button>
+</div>
+<script>
+const chatKey = '${chatKey}';
+const otherUid = '${otherUid}';
+document.getElementById('msg-input').focus();
+// Auto scroll nach unten
+window.scrollTo(0, document.body.scrollHeight);
+
+async function sendMsg() {
+    const input = document.getElementById('msg-input');
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = '';
+    const res = await fetch('/api/send-message', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({to: otherUid, text})
+    });
+    if ((await res.json()).ok) location.reload();
+}
+
+// Neue Nachrichten alle 5 Sekunden laden
+setInterval(async () => {
+    const r = await fetch('/api/messages/' + otherUid);
+    const data = await r.json();
+    if (data.count !== ${msgs.length}) location.reload();
+}, 5000);
+</script>`, 'messages');
+    }
+
+    // ── NACHRICHTEN ÜBERSICHT ──
+    if (path === '/nachrichten') {
+        const botData = await fetchBot('/data');
+        if (!botData) return redirect('/feed');
+        
+        // Alle Konversationen des Users finden
+        const convos = botData.messages || {};
+        const myConvos = Object.entries(convos)
+            .filter(([key]) => key.includes('_' + myUid + '_') || key.includes('_' + myUid) || key.startsWith(myUid + '_'))
+            .map(([key, msgs]) => {
+                const otherUid = key.replace(myUid + '_', '').replace('_' + myUid, '');
+                const otherUser = botData.users?.[otherUid] || {};
+                const lastMsg = msgs[msgs.length - 1];
+                return { key, otherUid, otherName: otherUser.spitzname || otherUser.name || 'User', lastMsg, unread: msgs.filter(m => m.to === myUid && !m.read).length };
+            })
+            .sort((a, b) => (b.lastMsg?.timestamp || 0) - (a.lastMsg?.timestamp || 0));
+
+        const convHtml = myConvos.length ? myConvos.map(c => `
+<a href="/nachrichten/${c.otherUid}" style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border2);text-decoration:none">
+  <div style="width:48px;height:48px;border-radius:50%;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;flex-shrink:0">${c.otherName[0]}</div>
+  <div style="flex:1;min-width:0">
+    <div style="font-size:14px;font-weight:600;color:var(--text)">${c.otherName}</div>
+    <div style="font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.lastMsg?.text?.slice(0,40) || ''}</div>
+  </div>
+  ${c.unread > 0 ? `<div style="background:var(--accent);color:#fff;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700">${c.unread}</div>` : ''}
+</a>`).join('') : '<div class="empty"><div class="empty-icon">💬</div><div class="empty-text">Keine Nachrichten</div><div class="empty-sub">Schreibe jemandem!</div></div>';
+
+        return html(`
+<div class="topbar">
+  <div class="topbar-logo">Nachrichten</div>
+</div>
+<div style="padding-bottom:80px">${convHtml}</div>`, 'messages');
+    }
+
     // ── BENACHRICHTIGUNGEN ──
     if (path === '/benachrichtigungen') {
         return html(`
@@ -1015,6 +1115,36 @@ fetch('/api/notifications')
         if (!botData) return json({count:0});
         const unread = (botData.notifications?.[session.uid] || []).filter(n => !n.read).length;
         return json({count: unread});
+    }
+
+
+    // ── NACHRICHT SENDEN ──
+    if (path === '/api/send-message' && req.method === 'POST') {
+        const body = await parseBody(req);
+        const { to, text } = body;
+        if (!to || !text?.trim()) return json({error:'Ungültig'}, 400);
+        const result = await postBot('/send-message-api', {
+            from: myUid,
+            to,
+            text: text.trim().slice(0, 500)
+        });
+        return json({ok: !!result?.ok});
+    }
+
+    // ── NACHRICHTEN LADEN ──
+    if (path.startsWith('/api/messages/')) {
+        const otherUid = path.replace('/api/messages/', '');
+        const botData = await fetchBot('/data');
+        const chatKey = [myUid, otherUid].sort().join('_');
+        const msgs = botData?.messages?.[chatKey] || [];
+        return json({count: msgs.length, messages: msgs});
+    }
+
+    // ── NACHRICHTEN GELESEN ──
+    if (path === '/api/mark-messages-read' && req.method === 'POST') {
+        const body = await parseBody(req);
+        await postBot('/mark-messages-read', { uid: myUid, chatKey: body.chatKey });
+        return json({ok: true});
     }
 
     // AUTH REQUIRED
@@ -1284,6 +1414,102 @@ function likePost(msgId, btn) {
     }
 }
 </script>`, 'feed');
+    }
+
+    // ── CHAT ──
+    if (path.startsWith('/nachrichten/')) {
+        const otherUid = path.replace('/nachrichten/', '');
+        const botData = await fetchBot('/data');
+        if (!botData) return redirect('/nachrichten');
+        const otherUser = botData.users?.[otherUid] || {};
+        const otherName = otherUser.spitzname || otherUser.name || 'User';
+        
+        const chatKey = [myUid, otherUid].sort().join('_');
+        const msgs = (botData.messages?.[chatKey] || []);
+        
+        // Als gelesen markieren
+        await postBot('/mark-messages-read', { uid: myUid, chatKey });
+        
+        const msgsHtml = msgs.map(m => `
+<div style="display:flex;flex-direction:column;align-items:${m.from === myUid ? 'flex-end' : 'flex-start'};margin-bottom:8px;padding:0 16px">
+  <div style="max-width:75%;background:${m.from === myUid ? 'var(--accent)' : 'var(--bg4)'};color:${m.from === myUid ? '#fff' : 'var(--text)'};padding:10px 14px;border-radius:${m.from === myUid ? '18px 18px 4px 18px' : '18px 18px 18px 4px'};font-size:14px;line-height:1.4">${m.text}</div>
+  <div style="font-size:10px;color:var(--muted);margin-top:3px">${new Date(m.timestamp).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})}</div>
+</div>`).join('');
+
+        return html(`
+<div class="topbar">
+  <a href="/nachrichten" class="icon-btn" style="font-size:22px">‹</a>
+  <a href="/profil/${otherUid}" style="font-size:15px;font-weight:600;color:var(--text);text-decoration:none">${otherName}</a>
+  <div style="width:36px"></div>
+</div>
+<div id="chat-msgs" style="padding:12px 0 140px;display:flex;flex-direction:column">
+  ${msgsHtml || '<div class="empty" style="margin-top:60px"><div class="empty-icon">👋</div><div class="empty-text">Schreib eine Nachricht!</div></div>'}
+</div>
+<div style="position:fixed;bottom:60px;left:0;right:0;background:var(--bg);border-top:1px solid var(--border2);padding:12px 16px;display:flex;gap:8px;z-index:100">
+  <input type="text" id="msg-input" class="form-input" placeholder="Nachricht..." style="flex:1;margin:0" onkeypress="if(event.key==='Enter')sendMsg()">
+  <button onclick="sendMsg()" style="background:var(--accent);color:#fff;border:none;border-radius:12px;padding:10px 16px;font-size:14px;cursor:pointer">➤</button>
+</div>
+<script>
+const chatKey = '${chatKey}';
+const otherUid = '${otherUid}';
+document.getElementById('msg-input').focus();
+// Auto scroll nach unten
+window.scrollTo(0, document.body.scrollHeight);
+
+async function sendMsg() {
+    const input = document.getElementById('msg-input');
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = '';
+    const res = await fetch('/api/send-message', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({to: otherUid, text})
+    });
+    if ((await res.json()).ok) location.reload();
+}
+
+// Neue Nachrichten alle 5 Sekunden laden
+setInterval(async () => {
+    const r = await fetch('/api/messages/' + otherUid);
+    const data = await r.json();
+    if (data.count !== ${msgs.length}) location.reload();
+}, 5000);
+</script>`, 'messages');
+    }
+
+    // ── NACHRICHTEN ÜBERSICHT ──
+    if (path === '/nachrichten') {
+        const botData = await fetchBot('/data');
+        if (!botData) return redirect('/feed');
+        
+        // Alle Konversationen des Users finden
+        const convos = botData.messages || {};
+        const myConvos = Object.entries(convos)
+            .filter(([key]) => key.includes('_' + myUid + '_') || key.includes('_' + myUid) || key.startsWith(myUid + '_'))
+            .map(([key, msgs]) => {
+                const otherUid = key.replace(myUid + '_', '').replace('_' + myUid, '');
+                const otherUser = botData.users?.[otherUid] || {};
+                const lastMsg = msgs[msgs.length - 1];
+                return { key, otherUid, otherName: otherUser.spitzname || otherUser.name || 'User', lastMsg, unread: msgs.filter(m => m.to === myUid && !m.read).length };
+            })
+            .sort((a, b) => (b.lastMsg?.timestamp || 0) - (a.lastMsg?.timestamp || 0));
+
+        const convHtml = myConvos.length ? myConvos.map(c => `
+<a href="/nachrichten/${c.otherUid}" style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border2);text-decoration:none">
+  <div style="width:48px;height:48px;border-radius:50%;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;flex-shrink:0">${c.otherName[0]}</div>
+  <div style="flex:1;min-width:0">
+    <div style="font-size:14px;font-weight:600;color:var(--text)">${c.otherName}</div>
+    <div style="font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.lastMsg?.text?.slice(0,40) || ''}</div>
+  </div>
+  ${c.unread > 0 ? `<div style="background:var(--accent);color:#fff;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700">${c.unread}</div>` : ''}
+</a>`).join('') : '<div class="empty"><div class="empty-icon">💬</div><div class="empty-text">Keine Nachrichten</div><div class="empty-sub">Schreibe jemandem!</div></div>';
+
+        return html(`
+<div class="topbar">
+  <div class="topbar-logo">Nachrichten</div>
+</div>
+<div style="padding-bottom:80px">${convHtml}</div>`, 'messages');
     }
 
     // ── BENACHRICHTIGUNGEN ──
