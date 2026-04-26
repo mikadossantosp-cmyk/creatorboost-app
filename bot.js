@@ -1221,8 +1221,13 @@ setInterval(refreshLikes, 5000);
 
 
 async function switchFeedTab(tab, el) {
-    document.querySelectorAll('.tabs .tab').forEach(t=>t.classList.remove('active'));
-    el.classList.add('active');
+    ['tab-heute','tab-aelter'].forEach(id=>{
+        const btn = document.getElementById(id);
+        if(!btn) return;
+        const isActive = btn === el;
+        btn.style.color = isActive ? 'var(--accent)' : 'var(--muted)';
+        btn.style.borderBottom = isActive ? '2px solid var(--accent)' : '2px solid transparent';
+    });
     const todayStr = new Date().toDateString();
     document.querySelectorAll('#feed-list .post[data-ts]').forEach(post => {
         const isToday = new Date(Number(post.getAttribute('data-ts'))).toDateString() === todayStr;
@@ -1230,7 +1235,7 @@ async function switchFeedTab(tab, el) {
     });
 }
 // Standard Tab beim Laden
-window.addEventListener('DOMContentLoaded', ()=>switchFeedTab('heute', document.getElementById('tab-heute')));
+setTimeout(()=>switchFeedTab('heute', document.getElementById('tab-heute')), 50);
 
 function likePost(msgId, btn) {
     const countEl = document.getElementById('likes-'+msgId);
