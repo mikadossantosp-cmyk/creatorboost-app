@@ -1093,9 +1093,8 @@ fetch('/api/notifications')
     return `<a href="/profil/${id}" class="story-item">
       <div class="story-ring ${hasLink?'':'seen'}">
         <div class="story-inner">
-          ${insta?`<img src="https://unavatar.io/instagram/${insta}" style="width:100%;height:100%;object-fit:cover;border-radius:50%" onerror="this.style.display='none'" alt="">`:''}
-          <span style="${insta?'display:none':''}font-size:18px">${(u.name||'?').slice(0,1)}</span>
-        </div>
+          ${ladeBild(id,'profilepic')?`<img src="/appbild/${id}/profilepic" style="width:100%;height:100%;object-fit:cover;border-radius:50%" onerror="this.remove()" alt="">`:insta?`<img src="https://unavatar.io/instagram/${insta}" style="width:100%;height:100%;object-fit:cover;border-radius:50%" onerror="this.remove()" alt="">`:''}
+          <span style="font-size:18px">${(u.name||'?').slice(0,1)}</span>
       </div>
       <div class="story-name">${u.spitzname||u.name||'?'}</div>
     </a>`;
