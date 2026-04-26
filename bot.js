@@ -349,6 +349,86 @@ ${nb?`
 <div class="profile-xp-info"><span>Noch ${nb.fehlend} XP bis ${nb.ziel}</span><span>${nb.pct}%</span></div>`:'<div style="padding:12px 16px;font-size:12px;color:var(--gold)">👑 Maximales Level erreicht!</div>'}`;
 }
 
+// ================================
+// ONBOARDING
+// ================================
+function onboardingHTML(isPreview = false) {
+    const slides = [
+        { icon: '🚀', title: 'Willkommen bei CreatorBoost!', text: 'Die Community für Instagram Creator. Hier wächst du mit echten Menschen — kein Fake, kein Algorithmus.', color: 'linear-gradient(135deg,#ff6b6b,#ffa500)' },
+        { icon: '📸', title: 'Teile deinen Link', text: 'Poste täglich deinen Instagram Link im Feed. Andere Creator liken ihn — du likest zurück. Echtes Engagement.', color: 'linear-gradient(135deg,#4dabf7,#9c27b0)' },
+        { icon: '❤️', title: 'Liken & geliked werden', text: 'Jeder Like zählt! Du sammelst XP und steigst im Ranking auf. Je aktiver du bist, desto mehr wächst du.', color: 'linear-gradient(135deg,#ff6b6b,#cc5de8)' },
+        { icon: '🏆', title: 'Rangliste & Badges', text: 'Steig von 🆕 Neuling bis zur 👑 Elite auf. Zeige allen wo du stehst — wer die aktivsten Creator sind.', color: 'linear-gradient(135deg,#ffd43b,#ffa500)' },
+        { icon: '💬', title: 'Community & Nachrichten', text: 'Schreib anderen Creatorn direkt. Tausch dich aus, wachst zusammen. Du bist nicht allein.', color: 'linear-gradient(135deg,#00c851,#4dabf7)' }
+    ];
+    return `<!DOCTYPE html><html lang="de" data-theme="dark"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>CreatorBoost — Willkommen</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100vh;max-width:480px;margin:0 auto;overflow:hidden}
+.ob-wrap{position:fixed;inset:0;max-width:480px;margin:0 auto;display:flex;flex-direction:column}
+.ob-slides{flex:1;position:relative;overflow:hidden}
+.ob-slide{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 32px;text-align:center;opacity:0;transform:translateX(100%);transition:all .4s cubic-bezier(.4,0,.2,1)}
+.ob-slide.active{opacity:1;transform:translateX(0)}
+.ob-slide.prev{opacity:0;transform:translateX(-100%)}
+.ob-icon-wrap{width:120px;height:120px;border-radius:32px;display:flex;align-items:center;justify-content:center;font-size:56px;margin-bottom:32px;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.ob-title{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;margin-bottom:16px;line-height:1.2}
+.ob-text{font-size:15px;color:rgba(255,255,255,.7);line-height:1.6;max-width:300px}
+.ob-bottom{padding:24px 32px calc(32px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:16px}
+.ob-dots{display:flex;justify-content:center;gap:8px}
+.ob-dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.25);transition:all .3s;cursor:pointer}
+.ob-dot.active{width:24px;border-radius:4px;background:#fff}
+.ob-actions{display:flex;gap:12px}
+.ob-skip{flex:1;padding:14px;border-radius:14px;background:rgba(255,255,255,.08);border:none;color:rgba(255,255,255,.6);font-size:14px;font-family:'DM Sans',sans-serif;cursor:pointer}
+.ob-next{flex:2;padding:14px;border-radius:14px;border:none;color:#fff;font-size:15px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;transition:opacity .2s}
+.ob-progress{height:3px;background:rgba(255,255,255,.1);border-radius:2px;overflow:hidden}
+.ob-progress-fill{height:100%;border-radius:2px;background:#fff;transition:width .4s ease}
+${isPreview ? '.ob-badge{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:rgba(255,107,107,.9);color:#fff;padding:6px 18px;border-radius:20px;font-size:12px;font-weight:700;z-index:99}' : ''}
+</style></head><body>
+${isPreview ? '<div class="ob-badge">👀 Admin Vorschau — <a href="/profil" style="color:#fff">← Zurück</a></div>' : ''}
+<div class="ob-wrap">
+  <div class="ob-slides" id="slides">
+    ${slides.map((s,i) => `<div class="ob-slide ${i===0?'active':''}" id="slide-${i}">
+      <div class="ob-icon-wrap" style="background:${s.color}">${s.icon}</div>
+      <div class="ob-title">${s.title}</div>
+      <div class="ob-text">${s.text}</div>
+    </div>`).join('')}
+  </div>
+  <div class="ob-bottom">
+    <div class="ob-progress"><div class="ob-progress-fill" id="prog" style="width:${Math.round(100/slides.length)}%"></div></div>
+    <div class="ob-dots">${slides.map((_,i)=>`<div class="ob-dot ${i===0?'active':''}" onclick="goTo(${i})"></div>`).join('')}</div>
+    <div class="ob-actions">
+      <button class="ob-skip" id="skip-btn" onclick="finish()">Überspringen</button>
+      <button class="ob-next" id="next-btn" style="background:${slides[0].color}" onclick="next()">Weiter →</button>
+    </div>
+  </div>
+</div>
+<script>
+const SLIDES = ${JSON.stringify(slides)};
+let cur = 0;
+function goTo(i) {
+    const prev = cur; cur = i;
+    document.querySelectorAll('.ob-slide').forEach((s,j)=>{s.classList.remove('active','prev');if(j===cur)s.classList.add('active');else if(j===prev)s.classList.add('prev');});
+    document.querySelectorAll('.ob-dot').forEach((d,j)=>d.classList.toggle('active',j===cur));
+    document.getElementById('prog').style.width=((cur+1)/SLIDES.length*100)+'%';
+    const nb=document.getElementById('next-btn');
+    nb.style.background=SLIDES[cur].color;
+    if(cur===SLIDES.length-1){nb.textContent='🚀 Los gehts!';document.getElementById('skip-btn').style.display='none';}
+    else{nb.textContent='Weiter →';document.getElementById('skip-btn').style.display='';}
+}
+function next(){cur<SLIDES.length-1?goTo(cur+1):finish();}
+function finish(){${isPreview?"window.location.href='/profil'":"localStorage.setItem('cb_onboarded','1');window.location.href='/feed';"}}
+let sx=0;
+document.getElementById('slides').addEventListener('touchstart',e=>sx=e.touches[0].clientX,{passive:true});
+document.getElementById('slides').addEventListener('touchend',e=>{const d=sx-e.changedTouches[0].clientX;if(Math.abs(d)>50){if(d>0&&cur<SLIDES.length-1)next();else if(d<0&&cur>0)goTo(cur-1);}},{passive:true});
+</script></body></html>`;
+}
+
+// ================================
+// SERVER
+// ================================
 async function readBody(req, maxBytes=25000000) {
     return new Promise((resolve, reject) => {
         const chunks = [];
@@ -670,6 +750,20 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
         return json({ok: true});
     }
 
+    // ── ONBOARDING ──
+    if (path === '/onboarding') {
+        if (!session) return redirect('/');
+        res.writeHead(200, {'Content-Type':'text/html; charset=utf-8'});
+        return res.end(onboardingHTML(false));
+    }
+
+    // ── ONBOARDING PREVIEW (Admin) ──
+    if (path === '/onboarding-preview') {
+        if (!session) return redirect('/');
+        res.writeHead(200, {'Content-Type':'text/html; charset=utf-8'});
+        return res.end(onboardingHTML(true));
+    }
+
     // ── AUTH REQUIRED ──
     if (!session) return redirect('/');
 
@@ -870,7 +964,13 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
   ${likes.length>0?`<div class="post-likers"><span>${likerNames.join(', ')}</span>${likes.length>2?` und ${likes.length-2} weitere`:''} haben geliked</div>`:''}
 </div>`;}
 
-        const heuteHtml = heuteLinks.length ? heuteLinks.map(renderLink).join('') : '<div class="empty" style="margin-top:40px"><div class="empty-icon">📅</div><div class="empty-text">Noch keine Links heute</div></div>';
+        const heuteHtml = heuteLinks.length ? heuteLinks.map(renderLink).join('') : `
+<div style="text-align:center;padding:48px 24px">
+  <div style="font-size:56px;margin-bottom:16px">📸</div>
+  <div style="font-size:17px;font-weight:700;margin-bottom:8px">Noch keine Links heute</div>
+  <div style="font-size:13px;color:var(--muted);margin-bottom:24px">Sei der Erste! Teile deinen Instagram Link mit der Community.</div>
+  <a href="/profil" onclick="setTimeout(()=>{document.querySelector('[onclick*=postlink]')?.click()},300)" style="display:inline-flex;align-items:center;gap:8px;background:var(--accent);color:#fff;padding:12px 24px;border-radius:12px;font-size:14px;font-weight:700;text-decoration:none">📸 Jetzt Link teilen</a>
+</div>`;
         const aelterHtml = aelterLinks.length ? aelterLinks.map(renderLink).join('') : '<div class="empty" style="margin-top:40px"><div class="empty-icon">🕐</div><div class="empty-text">Keine älteren Links</div></div>';
         const postsHtml = tab === 'aelter' ? '<div style="padding:8px 0 80px">'+aelterHtml+'</div>' : '<div style="padding:8px 0 80px">'+heuteHtml+'</div>';
 
@@ -923,6 +1023,8 @@ async function refreshLikes() {
     } catch(e) {}
 }
 setInterval(refreshLikes, 5000);
+// Onboarding beim ersten Besuch
+if (!localStorage.getItem('cb_onboarded')) { window.location.href = '/onboarding'; }
 </script>`, 'feed');
     }
 
@@ -1322,6 +1424,11 @@ async function toggleFollow(uid, btn) {
 <div style="padding:16px;border-bottom:1px solid var(--border2)">
   <button class="btn btn-primary btn-full" onclick="saveProfile()">💾 Speichern</button>
 </div>
+${adminIds.includes(Number(myUid)) ? `
+<div style="padding:16px;border-bottom:1px solid var(--border2)">
+  <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">⚙️ Admin Tools</div>
+  <a href="/onboarding-preview" class="btn btn-outline btn-full" style="margin-bottom:8px;display:flex">👀 Onboarding Vorschau</a>
+</div>` : ''}
 <div style="padding:16px">
   <a href="/logout" class="btn btn-outline btn-full" style="color:var(--accent)">🚪 Ausloggen</a>
 </div>
