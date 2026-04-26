@@ -999,12 +999,12 @@ fetch('/api/notifications')
         const botData = await fetchBot('/data');
         if (!botData) return json({notifications:[]});
         
-        const notifs = (botData.notifications?.[myUid] || [])
+        const notifs = (botData.notifications?.[session.uid] || [])
             .slice(-20)
             .reverse();
         
         // Als gelesen markieren
-        await postBot('/mark-notifications-read', { uid: myUid });
+        await postBot('/mark-notifications-read', { uid: session.uid });
         
         return json({notifications: notifs});
     }
@@ -1013,7 +1013,7 @@ fetch('/api/notifications')
     if (path === '/api/notifications/count') {
         const botData = await fetchBot('/data');
         if (!botData) return json({count:0});
-        const unread = (botData.notifications?.[myUid] || []).filter(n => !n.read).length;
+        const unread = (botData.notifications?.[session.uid] || []).filter(n => !n.read).length;
         return json({count: unread});
     }
 
