@@ -1118,7 +1118,7 @@ fetch('/api/notifications')
             });
                 const insta = poster.instagram;
                 const grad = badgeGradient(poster.role);
-                return `<div class="post fade-up" id="post-${msgId}" data-url="${link.text}">
+                return `<div class="post fade-up" id="post-${msgId}" data-url="${link.text}" data-ts="${link.timestamp||0}">
   <div class="post-header">
     <div style="width:40px;height:40px;border-radius:50%;overflow:hidden;background:var(--bg4);display:flex;align-items:center;justify-content:center;flex-shrink:0;${insta?'':`background:${grad}`}">
       ${insta?`<img src="https://unavatar.io/instagram/${insta}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.fontSize='16px';this.style.display='none'" alt="">`:''}
@@ -1224,7 +1224,7 @@ async // Feed Trennlinien
 (function(){
     const todayStr = new Date().toDateString();
     let addedToday = false, addedOlder = false;
-    document.querySelectorAll('.post-card[data-ts]').forEach(card => {
+    document.querySelectorAll('.post[data-ts]').forEach(card => {
         const ts = Number(card.getAttribute('data-ts'));
         const isToday = new Date(ts).toDateString() === todayStr;
         if (isToday && !addedToday) {
