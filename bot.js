@@ -156,11 +156,11 @@ button{cursor:pointer;border:none;outline:none;font-family:var(--font)}
 /* STORIES BAR */
 .stories{display:flex;gap:12px;padding:12px 16px;overflow-x:auto;scrollbar-width:none}
 .stories::-webkit-scrollbar{display:none}
-.story-item{display:flex;flex-direction:column;align-items:center;gap:6px;flex-shrink:0}
-.story-ring{width:60px;height:60px;border-radius:50%;padding:2px;background:linear-gradient(135deg,#f9a825,#e91e63,#9c27b0)}
+.story-item{display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;width:76px}
+.story-ring{width:62px;height:62px;border-radius:50%;padding:2px;background:linear-gradient(135deg,#f9a825,#e91e63,#9c27b0)}
 .story-ring.seen{background:var(--bg4)}
 .story-inner{width:100%;height:100%;border-radius:50%;border:2px solid var(--bg);overflow:hidden;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:22px}
-.story-name{font-size:11px;color:var(--muted);max-width:64px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.story-name{font-size:11px;color:var(--muted);max-width:76px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 /* POST CARD */
 .post{margin-bottom:1px;background:var(--bg3)}
