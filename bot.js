@@ -1838,7 +1838,10 @@ async function submitPost() {
 <div class="topbar">
   <a href="javascript:history.back()" class="icon-btn" style="font-size:22px">‹</a>
   <div style="font-size:15px;font-weight:600">${u.spitzname||u.name||'User'}</div>
-  <button onclick="toggleFollow('${uid}',this)" style="background:${isFollowing?'var(--bg4)':'var(--accent)'};color:${isFollowing?'var(--muted)':'#fff'};border:1px solid var(--border);border-radius:20px;padding:6px 16px;font-size:13px;font-weight:600;cursor:pointer">${isFollowing?'Gefolgt':'Folgen'}</button>
+  <div style="display:flex;gap:8px">
+    <button onclick="toggleFollow('${uid}',this)" style="background:${isFollowing?'var(--bg4)':'var(--accent)'};color:${isFollowing?'var(--muted)':'#fff'};border:1px solid var(--border);border-radius:20px;padding:6px 16px;font-size:13px;font-weight:600;cursor:pointer">${isFollowing?'Gefolgt':'Folgen'}</button>
+    <a href="/nachrichten/${uid}" style="background:var(--bg4);border:1px solid var(--border);border-radius:20px;padding:6px 14px;font-size:13px;font-weight:600;color:var(--text);text-decoration:none">💬</a>
+  </div>
 </div>
 ${profileCard(uid, u, d, false, lang, adminIds)}
 <script>
