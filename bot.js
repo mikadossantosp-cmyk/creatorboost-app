@@ -515,7 +515,7 @@ ${isPreview ? '<div class="ob-badge">👀 Admin Vorschau &nbsp;·&nbsp; <a href=
     <div class="ob-slide" id="slide-2">
       <div class="ob-label" style="--c:#ffd43b">Schritt 3 von 5</div>
       <div class="ob-title">XP & Rangliste 🏆</div>
-      <div class="ob-sub">Jeder Like den du bekommst gibt dir XP. Je mehr XP, desto höher dein Rang. Tippe auf <b style="color:#fff">📊</b> in der Navigation.</div>
+      <div class="ob-sub">Jeder Link den du likest gibt dir XP. Je mehr du anderen hilfst, desto höher steigst du auf. Tippe auf <b style="color:#fff">📊</b> in der Navigation.</div>
       <div class="ob-phone" style="position:relative">
         <div class="mock-topbar">
           <div style="font-size:13px;font-weight:700">Rangliste</div>
