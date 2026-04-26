@@ -156,11 +156,11 @@ button{cursor:pointer;border:none;outline:none;font-family:var(--font)}
 /* STORIES BAR */
 .stories{display:flex;gap:12px;padding:12px 16px;overflow-x:auto;scrollbar-width:none}
 .stories::-webkit-scrollbar{display:none}
-.story-item{display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;width:76px}
+.story-item{display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;width:80px}
 .story-ring{width:62px;height:62px;border-radius:50%;padding:2px;background:linear-gradient(135deg,#f9a825,#e91e63,#9c27b0);position:relative}
 .story-ring.seen{background:var(--bg4)}
 .story-inner{width:100%;height:100%;border-radius:50%;border:2px solid var(--bg);overflow:hidden;position:relative;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:22px}
-.story-name{font-size:11px;color:var(--muted);max-width:76px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.story-name{font-size:11px;color:var(--muted);max-width:80px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 /* POST CARD */
 .post{margin-bottom:1px;background:var(--bg3)}
@@ -1092,9 +1092,9 @@ fetch('/api/notifications')
     const hasLink = Object.values(d.links||{}).some(l=>l.user_id===Number(id)&&new Date(l.timestamp).toDateString()===today);
     return `<a href="/profil/${id}" class="story-item">
       <div class="story-ring ${hasLink?'':'seen'}">
-        <div class="story-inner">
-          ${ladeBild(id,'profilepic')?`<img src="/appbild/${id}/profilepic" style="width:58px;height:58px;object-fit:cover;border-radius:50%;display:block" onerror="this.remove()" alt="">`:insta?`<img src="https://unavatar.io/instagram/${insta}" style="width:58px;height:58px;object-fit:cover;border-radius:50%;display:block" onerror="this.remove()" alt="">`:''}  
-          <span style="font-size:18px">${(u.name||'?').slice(0,1)}</span>
+        <div style="width:58px;height:58px;border-radius:50%;overflow:hidden;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:#fff;border:2px solid var(--bg)">
+          ${(ladeBild(id,"profilepic")||insta)?`<img src="${ladeBild(id,"profilepic")?"/appbild/"+id+"/profilepic":"https://unavatar.io/instagram/"+insta}" style="width:100%;height:100%;object-fit:cover" onerror="this.parentElement.innerHTML='<span style=font-size:20px>${(u.name||"?")[0]}</span>'" alt="">`:`<span>${(u.name||"?")[0]}</span>`}
+        </div>
       </div>
       <div class="story-name">${u.spitzname||u.name||'?'}</div>
     </a>`;
