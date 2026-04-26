@@ -310,12 +310,34 @@ ${session ? `
     <svg viewBox="0 0 24 24" fill="${page==='profile'?'currentColor':'none'}" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
     ${page==='profile'?'<div class="nav-dot"></div>':''}
   </a>
+  <a href="/benachrichtigungen" class="nav-item ${page==='notif'?'active':''}" id="notif-tab">
+    <div style="position:relative">
+      <svg viewBox="0 0 24 24" fill="${page==='notif'?'currentColor':'none'}" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      <span id="notif-badge" style="display:none;position:absolute;top:-4px;right:-4px;background:var(--accent);color:#fff;font-size:9px;font-weight:700;border-radius:50%;width:16px;height:16px;align-items:center;justify-content:center"></span>
+    </div>
+    ${page==='notif'?'<div class="nav-dot"></div>':''}
+  </a>
   <a href="/einstellungen" class="nav-item ${page==='settings'?'active':''}">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
     ${page==='settings'?'<div class="nav-dot"></div>':''}
   </a>
 </nav>` : ''}
 <script>
+// Benachrichtigungen Badge
+async function checkNotifBadge(){
+    try {
+        const r = await fetch('/api/notifications/count');
+        const d = await r.json();
+        const badge = document.getElementById('notif-badge');
+        if(badge){
+            if(d.count>0){badge.textContent=d.count>9?'9+':d.count;badge.style.display='flex';}
+            else badge.style.display='none';
+        }
+    } catch(e){}
+}
+checkNotifBadge();
+setInterval(checkNotifBadge, 30000);
+
 function toast(msg,dur=2500){const t=document.getElementById('toast');if(!t)return;t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),dur);}
 function setTheme(t){document.documentElement.setAttribute('data-theme',t);fetch('/api/theme',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({theme:t})});}
 function setLang(l){fetch('/api/lang',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lang:l})}).then(()=>location.reload());}
@@ -857,6 +879,37 @@ document.getElementById('code-input').addEventListener('keypress',e=>{if(e.key==
         return json({ok:true});
     }
 
+    // ── BENACHRICHTIGUNGEN ──
+    if (path === '/benachrichtigungen') {
+        return html(`
+<div class="topbar">
+  <div class="topbar-logo">Benachrichtigungen</div>
+</div>
+<div id="notif-list" style="padding:8px 0">
+  <div class="empty"><div class="empty-icon">🔔</div><div class="empty-text">Lädt...</div></div>
+</div>
+<script>
+fetch('/api/notifications')
+  .then(r=>r.json())
+  .then(data=>{
+    const list = document.getElementById('notif-list');
+    if(!data.notifications||!data.notifications.length){
+      list.innerHTML='<div class="empty"><div class="empty-icon">🔔</div><div class="empty-text">Keine Benachrichtigungen</div></div>';
+      return;
+    }
+    list.innerHTML = data.notifications.map(n=>\`
+      <div style="padding:14px 16px;border-bottom:1px solid var(--border2);display:flex;gap:12px;align-items:center;\${n.read?'':'background:rgba(255,107,107,.05)'}">
+        <div style="font-size:24px;flex-shrink:0">\${n.icon||'🔔'}</div>
+        <div style="flex:1">
+          <div style="font-size:13px">\${n.text}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">\${new Date(n.timestamp).toLocaleDateString('de-DE',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}</div>
+        </div>
+      </div>
+    \`).join('');
+  });
+</script>`, 'notif');
+    }
+
     // ── SUCHE ──
     if (path === '/api/search') {
         const q = (query.q||'').toLowerCase().trim();
@@ -938,6 +991,30 @@ document.getElementById('code-input').addEventListener('keypress',e=>{if(e.key==
         const thumbUrl = 'https://www.instagram.com/p/' + code + '/media/?size=m';
         res.writeHead(302, {'Location': thumbUrl, 'Cache-Control': 'public, max-age=3600'});
         return res.end();
+    }
+
+
+    // ── BENACHRICHTIGUNGEN ──
+    if (path === '/api/notifications') {
+        const botData = await fetchBot('/data');
+        if (!botData) return json({notifications:[]});
+        
+        const notifs = (botData.notifications?.[myUid] || [])
+            .slice(-20)
+            .reverse();
+        
+        // Als gelesen markieren
+        await postBot('/mark-notifications-read', { uid: myUid });
+        
+        return json({notifications: notifs});
+    }
+
+    // ── UNGELESENE BENACHRICHTIGUNGEN ZÄHLEN ──
+    if (path === '/api/notifications/count') {
+        const botData = await fetchBot('/data');
+        if (!botData) return json({count:0});
+        const unread = (botData.notifications?.[myUid] || []).filter(n => !n.read).length;
+        return json({count: unread});
     }
 
     // AUTH REQUIRED
@@ -1172,6 +1249,37 @@ async function likePost(msgId, btn) {
     }
 }
 </script>`, 'feed');
+    }
+
+    // ── BENACHRICHTIGUNGEN ──
+    if (path === '/benachrichtigungen') {
+        return html(`
+<div class="topbar">
+  <div class="topbar-logo">Benachrichtigungen</div>
+</div>
+<div id="notif-list" style="padding:8px 0">
+  <div class="empty"><div class="empty-icon">🔔</div><div class="empty-text">Lädt...</div></div>
+</div>
+<script>
+fetch('/api/notifications')
+  .then(r=>r.json())
+  .then(data=>{
+    const list = document.getElementById('notif-list');
+    if(!data.notifications||!data.notifications.length){
+      list.innerHTML='<div class="empty"><div class="empty-icon">🔔</div><div class="empty-text">Keine Benachrichtigungen</div></div>';
+      return;
+    }
+    list.innerHTML = data.notifications.map(n=>\`
+      <div style="padding:14px 16px;border-bottom:1px solid var(--border2);display:flex;gap:12px;align-items:center;\${n.read?'':'background:rgba(255,107,107,.05)'}">
+        <div style="font-size:24px;flex-shrink:0">\${n.icon||'🔔'}</div>
+        <div style="flex:1">
+          <div style="font-size:13px">\${n.text}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">\${new Date(n.timestamp).toLocaleDateString('de-DE',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}</div>
+        </div>
+      </div>
+    \`).join('');
+  });
+</script>`, 'notif');
     }
 
     // ── SUCHE ──
