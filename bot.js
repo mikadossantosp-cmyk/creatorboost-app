@@ -1079,8 +1079,9 @@ fetch('/api/notifications')
             return true;
         });
 
+        const myFollowing = (d.users[myUid]?.following||[]).map(String);
         const topUsers = Object.entries(d.users||{})
-            .filter(([id,u])=>!adminIds.includes(Number(id))&&u.started&&u.inGruppe!==false)
+            .filter(([id,u])=>!adminIds.includes(Number(id))&&u.started&&u.inGruppe!==false&&(myFollowing.includes(String(id))||String(id)===String(myUid)))
             .sort((a,b)=>(b[1].xp||0)-(a[1].xp||0))
             .slice(0,10);
 
@@ -1176,12 +1177,11 @@ fetch('/api/notifications')
     <button class="icon-btn" onclick="setTheme(document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark')">⚡</button>
   </div>
 </div>
+${storiesHtml}
 <div style="display:flex;border-bottom:2px solid var(--border2)">
   <a href="/feed?tab=heute" style="flex:1;padding:10px;font-size:13px;font-weight:700;text-align:center;text-decoration:none;display:block;border-bottom:3px solid ${tab==='aelter'?'transparent':'var(--accent)'};margin-bottom:-2px;color:${tab==='aelter'?'var(--muted)':'var(--accent)'}">📅 Heute</a>
   <a href="/feed?tab=aelter" style="flex:1;padding:10px;font-size:13px;font-weight:700;text-align:center;text-decoration:none;display:block;border-bottom:3px solid ${tab==='aelter'?'var(--accent)':'transparent'};margin-bottom:-2px;color:${tab==='aelter'?'var(--accent)':'var(--muted)'}">🕐 Älter</a>
 </div>
-${storiesHtml}
-<div style="height:1px;background:var(--border2)"></div>
 ${postsHtml}
 <script>
 // Auto-refresh Like Counter alle 10 Sekunden
