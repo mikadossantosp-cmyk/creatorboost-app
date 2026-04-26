@@ -580,7 +580,16 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
                 (u.spitzname||'').toLowerCase().includes(q)
             ))
             .slice(0,10)
-            .map(([id,u])=>({id, name:u.name, spitzname:u.spitzname, username:u.username, instagram:u.instagram, role:u.role, xp:u.xp}));
+            .map(([id,u])=>({
+                id,
+                name: u.name,
+                spitzname: u.spitzname,
+                username: u.username,
+                instagram: u.instagram,
+                role: u.role,
+                xp: u.xp,
+                pic: ladeBild(id,'profilepic') ? `/appbild/${id}/profilepic` : u.instagram ? `https://unavatar.io/instagram/${u.instagram}` : null
+            }));
         const links = Object.entries(botData.links||{})
             .filter(([,l])=>(l.text||'').toLowerCase().includes(q)||(l.user_name||'').toLowerCase().includes(q))
             .sort((a,b)=>(b[1].timestamp||0)-(a[1].timestamp||0))
@@ -1046,10 +1055,13 @@ async function doSearch(q) {
         let html = '';
         if (data.users.length) {
             html += '<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin:12px 0 8px">👥 User</div>';
-            html += data.users.map(u=>\`<a href="/profil/\${u.id}" style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border2)">
-                <div style="width:40px;height:40px;border-radius:50%;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0">\${(u.name||'?').slice(0,2).toUpperCase()}</div>
-                <div><div style="font-size:13px;font-weight:600">\${u.spitzname||u.name||'?'}</div><div style="font-size:11px;color:var(--muted)">\${u.role||''} · \${u.xp||0} XP</div></div>
-            </a>\`).join('');
+            html += data.users.map(u=>'<a href="/profil/'+u.id+'" style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border2)">'
+                +'<div style="position:relative;width:44px;height:44px;border-radius:50%;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;overflow:hidden">'
+                +'<span style="position:absolute;font-size:15px;color:var(--text)">'+(u.name||'?').slice(0,2).toUpperCase()+'</span>'
+                +(u.pic ? '<img src="'+u.pic+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">' : '')
+                +'</div>'
+                +'<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600">'+(u.spitzname||u.name||'?')+'</div><div style="font-size:11px;color:var(--muted)">'+(u.role||'')+' · '+(u.xp||0)+' XP</div></div>'
+                +'</a>').join('');
         }
         if (!data.users.length && !data.links.length) html = '<div class="empty"><div class="empty-icon">🔍</div><div class="empty-text">Nichts gefunden</div></div>';
         document.getElementById('search-results').innerHTML = html;
