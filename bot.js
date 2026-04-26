@@ -1102,7 +1102,11 @@ fetch('/api/notifications')
 
         const postsHtml = todayLinks.length === 0
             ? `<div class="empty" style="margin-top:60px"><div class="empty-icon">📭</div><div class="empty-text">Noch keine Links heute</div><div class="empty-sub">Sei der Erste!</div></div>`
-            : dedupLinks.map(([msgId, link])=>{
+            : (()=>{
+                const todayStr = new Date().toDateString();
+                const heuteLinks = dedupLinks.filter(([,l])=>new Date(l.timestamp||0).toDateString()===todayStr);
+                const aelterLinks = dedupLinks.filter(([,l])=>new Date(l.timestamp||0).toDateString()!==todayStr);
+                const renderLink = ([msgId, link])=>{
                 const poster = d.users[String(link.user_id)]||{};
                 // Alle Likes aus URL-Gruppe zusammenführen
             const allLinksForUrl = Object.values(d.links||{}).filter(l=>l.text===link.text);
@@ -1162,8 +1166,11 @@ fetch('/api/notifications')
   </div>
   ${likes.length>0?`<div class="post-likers"><span>${likerNames.join(', ')}</span>${likes.length>2?` und ${likes.length-2} weitere`:''} haben geliked</div>`:''}
 </div>`;
-            }).join('');
-
+                };
+                const heuteHtml = heuteLinks.map(renderLink).join('');
+                const aelterHtml = aelterLinks.map(renderLink).join('');
+                return (heuteHtml||'<div class="empty"><div class="empty-icon">📅</div><div class="empty-text">Noch keine Links heute</div></div>') + '</div><div id="feed-aelter" style="padding:8px 0 80px;display:none">' + (aelterHtml||'<div class="empty"><div class="empty-icon">🕐</div><div class="empty-text">Keine älteren Links</div></div>');
+              })()
         return html(`
 <div class="topbar">
   <div class="topbar-logo">CreatorBoost</div>
