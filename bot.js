@@ -826,13 +826,12 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
             const grad = badgeGradient(poster.role);
             return `<div class="post fade-up" id="post-${msgId}" data-url="${link.text}" data-ts="${link.timestamp||0}">
   <div class="post-header">
-    <div style="width:40px;height:40px;border-radius:50%;overflow:hidden;background:${insta?'var(--bg4)':grad};display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative">
+    <div style="width:40px;height:40px;border-radius:50%;overflow:hidden;background:${grad};display:flex;align-items:center;justify-content:center;flex-shrink:0">
       ${ladeBild(String(link.user_id),'profilepic')
-        ? `<img src="/appbild/${String(link.user_id)}/profilepic" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0" alt="">`
+        ? `<img src="/appbild/${String(link.user_id)}/profilepic" style="width:100%;height:100%;object-fit:cover" alt="">`
         : insta
-        ? `<img src="https://unavatar.io/instagram/${insta}" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0" onerror="this.remove()" alt="">`
-        : ''}
-      <span style="font-size:16px;color:#fff;position:relative">${(poster.name||'?').slice(0,1)}</span>
+        ? `<img src="https://unavatar.io/instagram/${insta}" style="width:100%;height:100%;object-fit:cover" onerror="this.outerHTML='<span style=color:#fff;font-size:16px>${(poster.name||'?').slice(0,1)}</span>'" alt="">`
+        : `<span style="font-size:16px;color:#fff">${(poster.name||'?').slice(0,1)}</span>`}
     </div>
     <div class="post-user-info">
       <div class="post-name">${poster.spitzname||poster.name||'User'}</div>
@@ -934,13 +933,12 @@ setInterval(refreshLikes, 5000);
 <div class="topbar">
   <a href="/nachrichten" class="icon-btn" style="font-size:22px">‹</a>
   <a href="/profil/${otherUid}" style="display:flex;align-items:center;gap:8px;text-decoration:none">
-    <div style="width:32px;height:32px;border-radius:50%;overflow:hidden;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0;position:relative">
+    <div style="width:32px;height:32px;border-radius:50%;overflow:hidden;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0">
       ${ladeBild(otherUid,'profilepic')
-        ? `<img src="/appbild/${otherUid}/profilepic" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0" alt="">`
+        ? `<img src="/appbild/${otherUid}/profilepic" style="width:100%;height:100%;object-fit:cover" alt="">`
         : otherUser.instagram
-        ? `<img src="https://unavatar.io/instagram/${otherUser.instagram}" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0" onerror="this.remove()" alt="">`
-        : ''}
-      <span style="position:relative">${otherName[0]}</span>
+        ? `<img src="https://unavatar.io/instagram/${otherUser.instagram}" style="width:100%;height:100%;object-fit:cover" onerror="this.outerHTML='${otherName[0]}'" alt="">`
+        : otherName[0]}
     </div>
     <span style="font-size:15px;font-weight:600;color:var(--text)">${otherName}</span>
   </a>
@@ -988,9 +986,8 @@ setInterval(async () => {
             .sort((a, b) => (b.lastMsg?.timestamp||0)-(a.lastMsg?.timestamp||0));
         const convHtml = myConvos.length ? myConvos.map(c => `
 <a href="/nachrichten/${c.otherUid}" style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border2);text-decoration:none">
-  <div style="width:48px;height:48px;border-radius:50%;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;flex-shrink:0;overflow:hidden;position:relative">
-    ${(()=>{const ou=botData.users?.[c.otherUid]||{};const pic=ladeBild(c.otherUid,'profilepic');const insta=ou.instagram;if(pic)return`<img src="/appbild/${c.otherUid}/profilepic" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0" alt="">`;if(insta)return`<img src="https://unavatar.io/instagram/${insta}" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0" onerror="this.remove()" alt="">`;return'';})()}
-    <span style="position:relative">${c.otherName[0]}</span>
+  <div style="width:48px;height:48px;border-radius:50%;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;flex-shrink:0;overflow:hidden">
+    ${(()=>{const ou=botData.users?.[c.otherUid]||{};const pic=ladeBild(c.otherUid,'profilepic');const insta=ou.instagram;if(pic)return`<img src="/appbild/${c.otherUid}/profilepic" style="width:100%;height:100%;object-fit:cover" alt="">`;if(insta)return`<img src="https://unavatar.io/instagram/${insta}" style="width:100%;height:100%;object-fit:cover" onerror="this.outerHTML='${c.otherName[0]}'" alt="">`;return c.otherName[0];})()}
   </div>
   <div style="flex:1;min-width:0">
     <div style="font-size:14px;font-weight:600;color:var(--text)">${c.otherName}</div>
@@ -1077,13 +1074,12 @@ ${sorted.map(([id,u],i)=>{
     const grad = badgeGradient(u.role);
     return `<a href="/profil/${id}" class="rank-item ${isMe?'rank-me':''}">
     <div class="rank-pos">${i<3?medals[i]:`<span class="rank-num">${i+1}</span>`}</div>
-    <div style="width:40px;height:40px;border-radius:50%;overflow:hidden;background:${grad};display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative">
+    <div style="width:40px;height:40px;border-radius:50%;overflow:hidden;background:${grad};display:flex;align-items:center;justify-content:center;flex-shrink:0">
       ${ladeBild(id,'profilepic')
-        ? `<img src="/appbild/${id}/profilepic" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0" alt="">`
+        ? `<img src="/appbild/${id}/profilepic" style="width:100%;height:100%;object-fit:cover" alt="">`
         : insta
-        ? `<img src="https://unavatar.io/instagram/${insta}" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0" onerror="this.remove()" alt="">`
-        : ''}
-      <span style="color:#fff;font-weight:700;font-size:14px">${(u.name||'?').slice(0,2).toUpperCase()}</span>
+        ? `<img src="https://unavatar.io/instagram/${insta}" style="width:100%;height:100%;object-fit:cover" onerror="this.outerHTML='<span style=color:#fff;font-weight:700;font-size:14px>${(u.name||'?').slice(0,2).toUpperCase()}</span>'" alt="">`
+        : `<span style="color:#fff;font-weight:700;font-size:14px">${(u.name||'?').slice(0,2).toUpperCase()}</span>`}
     </div>
     <div class="rank-info">
       <div class="rank-name">${u.spitzname||u.name||'User'}${isMe?' (Du)':''}</div>
