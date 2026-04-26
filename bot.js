@@ -1208,15 +1208,30 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
     ${String(link.user_id) !== String(myUid) ? '</button>' : ''}
   </div>
   ${likes.length>0?`
-  <div style="padding:0 16px 10px">
-    <button onclick="toggleLikers('${link.counter_msg_id||msgId}')" style="background:none;border:none;color:var(--muted);font-size:12px;cursor:pointer;padding:0;display:flex;align-items:center;gap:6px">
-      <div style="display:flex">
-        ${likes.slice(0,3).map(lid=>{const lu=d.users[String(lid)];const lg=badgeGradient(lu?.role);return `<div style="width:20px;height:20px;border-radius:50%;background:${lg};border:1.5px solid var(--bg3);display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:#fff;margin-left:-5px;position:relative">${(lu?.name||'?')[0]}</div>`;}).join('')}
+  <div style="margin:0 16px 12px;border:1px solid var(--border2);border-radius:12px;overflow:hidden">
+    <button onclick="toggleLikers('${link.counter_msg_id||msgId}')" style="width:100%;background:var(--bg4);border:none;padding:10px 12px;display:flex;align-items:center;gap:8px;cursor:pointer;text-align:left">
+      <div style="display:flex;align-items:center">
+        ${likes.slice(0,4).map(lid=>{const lu=d.users[String(lid)];const lg=badgeGradient(lu?.role);return `<div style="position:relative;width:24px;height:24px;border-radius:50%;background:${lg};border:2px solid var(--bg4);overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;margin-left:-6px;flex-shrink:0"><span style="position:absolute">${(lu?.name||'?')[0]}</span>${ladeBild(String(lid),'profilepic')?`<img src="/appbild/${lid}/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">`:lu?.instagram?`<img src="https://unavatar.io/instagram/${lu.instagram}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">`:''}</div>`;}).join('')}
       </div>
-      <span id="likers-label-${link.counter_msg_id||msgId}">❤️ ${likes.length} ${likes.length===1?'Like':'Likes'} · Wer?</span>
+      <div style="flex:1;min-width:0">
+        <span style="font-size:12px;font-weight:700;color:var(--text)">❤️ ${likes.length} ${likes.length===1?'Person hat':'Personen haben'} geliked</span>
+      </div>
+      <span id="likers-arrow-${link.counter_msg_id||msgId}" style="font-size:12px;color:var(--muted);transition:transform .2s">▼</span>
     </button>
-    <div id="likers-box-${link.counter_msg_id||msgId}" style="display:none;margin-top:8px;display:none">
-      ${likes.map(lid=>{const lu=d.users[String(lid)];const lg=badgeGradient(lu?.role);return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border2)"><div style="position:relative;width:28px;height:28px;border-radius:50%;background:${lg};flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff"><span style="position:absolute">${(lu?.name||'?')[0]}</span>${ladeBild(String(lid),'profilepic')?`<img src="/appbild/${lid}/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">`:lu?.instagram?`<img src="https://unavatar.io/instagram/${lu.instagram}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">`:''}</div><a href="/profil/${lid}" style="font-size:12px;font-weight:600;color:var(--text)">${lu?.spitzname||lu?.name||'User'}</a><span style="font-size:10px;color:var(--muted);margin-left:auto">${lu?.role||''}</span></div>`;}).join('')}
+    <div id="likers-box-${link.counter_msg_id||msgId}" style="display:none">
+      <div style="padding:4px 0">
+        ${likes.map((lid,i)=>{const lu=d.users[String(lid)];const lg=badgeGradient(lu?.role);return `<a href="/profil/${lid}" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--border2);text-decoration:none;background:${i%2===0?'transparent':'rgba(255,255,255,.02)'}">
+          <div style="position:relative;width:34px;height:34px;border-radius:50%;background:${lg};flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff">
+            <span style="position:absolute">${(lu?.name||'?')[0]}</span>
+            ${ladeBild(String(lid),'profilepic')?`<img src="/appbild/${lid}/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">`:lu?.instagram?`<img src="https://unavatar.io/instagram/${lu.instagram}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">`:''} 
+          </div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:600;color:var(--text)">${lu?.spitzname||lu?.name||'User'}</div>
+            <div style="font-size:10px;color:var(--muted)">${lu?.role||''}</div>
+          </div>
+          <div style="font-size:11px;color:var(--accent)">→</div>
+        </a>`;}).join('')}
+      </div>
     </div>
   </div>`:''}
 </div>`;}
@@ -1304,11 +1319,11 @@ if (!localStorage.getItem('cb_onboarded')) { window.location.href = '/onboarding
 
 function toggleLikers(msgId) {
     const box = document.getElementById('likers-box-' + msgId);
-    const label = document.getElementById('likers-label-' + msgId);
+    const arrow = document.getElementById('likers-arrow-' + msgId);
     if (!box) return;
     const isOpen = box.style.display !== 'none';
     box.style.display = isOpen ? 'none' : 'block';
-    if (label) label.textContent = isOpen ? '❤️ ' + box.querySelectorAll('[style*="border-bottom"]').length + ' Likes · Wer?' : '🔼 Zuklappen';
+    if (arrow) arrow.style.transform = isOpen ? '' : 'rotate(180deg)';
 }
 </script>`, 'feed');
     }
