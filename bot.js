@@ -354,7 +354,7 @@ ${nb?`
 // ================================
 function onboardingHTML(isPreview = false) {
     const finishAction = isPreview
-        ? "window.location.href='/profil';"
+        ? "window.location.href='/einstellungen';"
         : "localStorage.setItem('cb_onboarded','1');window.location.href='/feed';";
 
     return `<!DOCTYPE html><html lang="de" data-theme="dark"><head>
@@ -366,57 +366,55 @@ function onboardingHTML(isPreview = false) {
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'DM Sans',sans-serif;background:#0a0a0a;color:#fff;min-height:100vh;max-width:480px;margin:0 auto;overflow:hidden}
 .ob-wrap{position:fixed;inset:0;max-width:480px;margin:0 auto;display:flex;flex-direction:column;background:#0a0a0a}
-.ob-top{padding:16px 20px 0;display:flex;justify-content:space-between;align-items:center;flex-shrink:0}
-.ob-logo{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;background:linear-gradient(135deg,#ff6b6b,#ffa500);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.ob-skip-top{font-size:13px;color:rgba(255,255,255,.4);cursor:pointer;padding:4px 8px}
+.ob-top{padding:14px 20px 0;display:flex;justify-content:space-between;align-items:center;flex-shrink:0}
+.ob-logo{font-family:'Syne',sans-serif;font-size:17px;font-weight:800;background:linear-gradient(135deg,#ff6b6b,#ffa500);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.ob-skip-top{font-size:13px;color:rgba(255,255,255,.35);cursor:pointer;padding:4px 8px}
 .ob-slides{flex:1;position:relative;overflow:hidden}
-.ob-slide{position:absolute;inset:0;display:flex;flex-direction:column;padding:16px 20px 0;opacity:0;transform:translateX(100%);transition:all .45s cubic-bezier(.4,0,.2,1)}
+.ob-slide{position:absolute;inset:0;display:flex;flex-direction:column;padding:12px 20px 0;opacity:0;transform:translateX(100%);transition:all .45s cubic-bezier(.4,0,.2,1)}
 .ob-slide.active{opacity:1;transform:translateX(0)}
 .ob-slide.prev{opacity:0;transform:translateX(-100%)}
-.ob-label{font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;color:var(--c,#ff6b6b)}
-.ob-title{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;line-height:1.2;margin-bottom:6px}
-.ob-sub{font-size:13px;color:rgba(255,255,255,.5);margin-bottom:14px;line-height:1.5}
-.ob-phone{flex:1;background:#111;border-radius:20px 20px 0 0;border:1.5px solid rgba(255,255,255,.08);border-bottom:none;overflow:hidden;position:relative;box-shadow:0 -8px 40px rgba(0,0,0,.6)}
-.mock-topbar{background:#000;border-bottom:1px solid rgba(255,255,255,.06);padding:10px 14px;display:flex;align-items:center;justify-content:space-between}
-.mock-logo{font-family:'Syne',sans-serif;font-size:16px;font-weight:800;background:linear-gradient(135deg,#ff6b6b,#ffa500);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.mock-body{padding:10px 12px;display:flex;flex-direction:column;gap:8px}
-.mock-post{background:#1a1a1a;border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,.06)}
-.mock-post-hd{display:flex;align-items:center;gap:8px;padding:8px 10px}
-.mock-av{width:32px;height:32px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff}
-.mock-banner{height:70px;position:relative;overflow:hidden}
-.mock-actions{display:flex;align-items:center;gap:4px;padding:6px 10px}
-.mock-like{display:flex;align-items:center;gap:4px;font-size:11px;color:rgba(255,255,255,.5)}
-.mock-liked{color:#ff6b6b}
-.mock-story-row{display:flex;gap:10px;padding:8px 12px;overflow:hidden}
-.mock-story{display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0}
-.mock-story-ring{width:46px;height:46px;border-radius:50%;padding:2px;background:linear-gradient(135deg,#f9a825,#e91e63)}
-.mock-story-inner{width:100%;height:100%;border-radius:50%;background:#333;border:2px solid #111}
-.mock-story-name{font-size:9px;color:rgba(255,255,255,.5);max-width:46px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.mock-rank-item{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid rgba(255,255,255,.05)}
-.mock-rank-pos{font-size:16px;width:24px;flex-shrink:0}
-.mock-rank-av{width:36px;height:36px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700}
-.mock-rank-name{flex:1;font-size:12px;font-weight:600}
-.mock-rank-xp{font-size:11px;font-weight:700;color:#ffd43b}
-.mock-msg{padding:8px 12px;display:flex;align-items:center;gap:8px;border-bottom:1px solid rgba(255,255,255,.05)}
-.mock-msg-av{width:40px;height:40px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700}
-.mock-msg-bubble{background:#2a2a2a;border-radius:18px 18px 18px 4px;padding:8px 12px;font-size:12px;color:rgba(255,255,255,.8);max-width:70%;margin:4px 12px}
-.mock-msg-bubble-me{background:#ff6b6b;border-radius:18px 18px 4px 18px;padding:8px 12px;font-size:12px;color:#fff;max-width:70%;margin:4px 12px;align-self:flex-end}
-.mock-input-row{display:flex;gap:6px;padding:8px 12px;background:#111;border-top:1px solid rgba(255,255,255,.06)}
-.mock-input{flex:1;background:#222;border-radius:20px;padding:8px 12px;font-size:11px;color:rgba(255,255,255,.4)}
-.mock-send{background:#ff6b6b;border-radius:20px;padding:8px 12px;font-size:11px;color:#fff;font-weight:700}
-.mock-notif{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.05);display:flex;gap:8px;align-items:center}
-.mock-notif-dot{width:8px;height:8px;border-radius:50%;background:#ff6b6b;flex-shrink:0}
-.mock-xp-bar{height:4px;background:#222;border-radius:2px;margin:4px 12px 8px;overflow:hidden}
+.ob-label{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;color:var(--c,#ff6b6b)}
+.ob-title{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;line-height:1.2;margin-bottom:4px}
+.ob-sub{font-size:12px;color:rgba(255,255,255,.5);margin-bottom:10px;line-height:1.5}
+.ob-phone{flex:1;background:#111;border-radius:18px 18px 0 0;border:1.5px solid rgba(255,255,255,.08);border-bottom:none;overflow:hidden;position:relative}
+/* callout bubble */
+.tip{position:absolute;z-index:10;background:#ff6b6b;color:#fff;font-size:10px;font-weight:700;padding:5px 10px;border-radius:10px;white-space:nowrap;box-shadow:0 4px 16px rgba(255,107,107,.4)}
+.tip::after{content:'';position:absolute;border:5px solid transparent}
+.tip.down::after{border-top-color:#ff6b6b;top:100%;left:50%;transform:translateX(-50%)}
+.tip.up::after{border-bottom-color:#ff6b6b;bottom:100%;left:50%;transform:translateX(-50%)}
+.tip.left::after{border-right-color:#ff6b6b;right:100%;top:50%;transform:translateY(-50%)}
+.tip.right::after{border-left-color:#ff6b6b;left:100%;top:50%;transform:translateY(-50%)}
+/* highlight ring */
+.hl{position:absolute;z-index:9;border:2px solid #ff6b6b;border-radius:50%;animation:pulse-ring 1.5s ease infinite}
+.hl-rect{position:absolute;z-index:9;border:2px solid #ff6b6b;border-radius:8px;animation:pulse-ring 1.5s ease infinite}
+@keyframes pulse-ring{0%,100%{box-shadow:0 0 0 0 rgba(255,107,107,.5)}50%{box-shadow:0 0 0 6px rgba(255,107,107,0)}}
+/* mock ui */
+.mock-topbar{background:#000;border-bottom:1px solid rgba(255,255,255,.06);padding:9px 12px;display:flex;align-items:center;justify-content:space-between}
+.mock-logo{font-family:'Syne',sans-serif;font-size:15px;font-weight:800;background:linear-gradient(135deg,#ff6b6b,#ffa500);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.mock-nav{display:flex;justify-content:space-around;padding:8px 0;background:#000;border-top:1px solid rgba(255,255,255,.06)}
+.mock-nav-item{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:8px;color:rgba(255,255,255,.35);padding:2px 10px}
+.mock-nav-item.act{color:#fff}
+.mock-nav-dot{width:3px;height:3px;border-radius:50%;background:#ff6b6b}
+.mock-post{background:#1a1a1a;border-radius:10px;overflow:hidden;border:1px solid rgba(255,255,255,.06);margin:6px 10px}
+.mock-post-hd{display:flex;align-items:center;gap:7px;padding:7px 9px}
+.mock-av{width:28px;height:28px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff}
+.mock-banner{height:60px;position:relative;overflow:hidden;background:linear-gradient(135deg,#1a1a2e,#16213e)}
+.mock-xp-bar{height:3px;background:#222;border-radius:2px;margin:4px 10px;overflow:hidden}
 .mock-xp-fill{height:100%;background:linear-gradient(135deg,#ff6b6b,#ffa500);border-radius:2px}
-.mock-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:10px;font-size:10px;font-weight:700;margin:0 12px 8px}
-.ob-bottom{padding:12px 20px calc(20px + env(safe-area-inset-bottom,0px));flex-shrink:0}
-.ob-dots{display:flex;justify-content:center;gap:6px;margin-bottom:12px}
+.mock-rank-item{display:flex;align-items:center;gap:7px;padding:7px 10px;border-bottom:1px solid rgba(255,255,255,.05)}
+.mock-tab-row{display:flex;border-bottom:1px solid rgba(255,255,255,.08)}
+.mock-tab{flex:1;text-align:center;padding:8px 0;font-size:10px;font-weight:600;color:rgba(255,255,255,.35)}
+.mock-tab.act{color:#fff;border-bottom:2px solid #ff6b6b}
+.mock-input-area{background:#1a1a1a;border-radius:10px;padding:8px 10px;margin:8px 10px;font-size:10px;color:rgba(255,255,255,.3);border:1px solid rgba(255,255,255,.08)}
+.mock-btn{background:linear-gradient(135deg,#ff6b6b,#ffa500);color:#fff;border-radius:10px;padding:8px;margin:0 10px;font-size:11px;font-weight:700;text-align:center}
+.ob-bottom{padding:10px 20px calc(16px + env(safe-area-inset-bottom,0px));flex-shrink:0}
+.ob-dots{display:flex;justify-content:center;gap:6px;margin-bottom:10px}
 .ob-dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.2);transition:all .3s;cursor:pointer}
 .ob-dot.active{width:20px;border-radius:3px;background:#ff6b6b}
-.ob-next{width:100%;padding:15px;border-radius:14px;border:none;color:#fff;font-size:15px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;background:linear-gradient(135deg,#ff6b6b,#ffa500)}
-${isPreview ? '.ob-badge{position:fixed;top:8px;left:50%;transform:translateX(-50%);background:rgba(255,107,107,.9);color:#fff;padding:5px 14px;border-radius:20px;font-size:11px;font-weight:700;z-index:99;white-space:nowrap}' : ''}
+.ob-next{width:100%;padding:14px;border-radius:14px;border:none;color:#fff;font-size:15px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;background:linear-gradient(135deg,#ff6b6b,#ffa500);transition:opacity .2s}
+${isPreview ? '.ob-badge{position:fixed;top:8px;left:50%;transform:translateX(-50%);background:rgba(255,107,107,.95);color:#fff;padding:5px 14px;border-radius:20px;font-size:11px;font-weight:700;z-index:999;white-space:nowrap;backdrop-filter:blur(8px)}' : ''}
 </style></head><body>
-${isPreview ? '<div class="ob-badge">👀 Admin Vorschau — <a href="/einstellungen" style="color:#fff">← Zurück</a></div>' : ''}
+${isPreview ? '<div class="ob-badge">👀 Admin Vorschau &nbsp;·&nbsp; <a href="/einstellungen" style="color:rgba(255,255,255,.8)">← Zurück</a></div>' : ''}
 <div class="ob-wrap">
   <div class="ob-top">
     <div class="ob-logo">CreatorBoost</div>
@@ -424,153 +422,221 @@ ${isPreview ? '<div class="ob-badge">👀 Admin Vorschau — <a href="/einstellu
   </div>
   <div class="ob-slides" id="slides">
 
-    <!-- SLIDE 1: FEED -->
+    <!-- SLIDE 1: WILLKOMMEN & FEED -->
     <div class="ob-slide active" id="slide-0">
-      <div class="ob-label" style="--c:#ff6b6b">Feed</div>
-      <div class="ob-title">Dein täglicher<br>Creator Feed</div>
-      <div class="ob-sub">Sieh was andere posten — like ihre Links, sie liken zurück.</div>
-      <div class="ob-phone">
-        <div class="mock-topbar"><div class="mock-logo">CreatorBoost</div><div style="font-size:18px">⚡</div></div>
-        <div class="mock-story-row">
-          ${['🌟','🔥','💫','⚡','🎯'].map((e,i)=>`<div class="mock-story"><div class="mock-story-ring"><div class="mock-story-inner" style="background:linear-gradient(135deg,#${['ff6b6b','ffa500','cc5de8','4dabf7','00c851'][i]}55,#${['ffa500','ff6b6b','4dabf7','cc5de8','ffd43b'][i]}55);display:flex;align-items:center;justify-content:center;font-size:18px">${e}</div></div><div class="mock-story-name">User ${i+1}</div></div>`).join('')}
+      <div class="ob-label" style="--c:#ff6b6b">Schritt 1 von 5</div>
+      <div class="ob-title">Dein täglicher Feed 📱</div>
+      <div class="ob-sub">Hier siehst du alle Instagram Links der Community. Scrolle durch und like die Posts deiner Mitglieder.</div>
+      <div class="ob-phone" style="position:relative">
+        <div class="mock-topbar">
+          <div class="mock-logo">CreatorBoost</div>
+          <div style="font-size:14px">⚡</div>
         </div>
-        <div class="mock-body">
-          <div class="mock-post">
-            <div class="mock-post-hd">
-              <div class="mock-av" style="background:linear-gradient(135deg,#ff6b6b,#ffa500)">MK</div>
-              <div style="flex:1"><div style="font-size:11px;font-weight:600">Max K.</div><div style="font-size:9px;color:rgba(255,255,255,.4)">⬆️ Aufsteiger · 📸 @maxk</div></div>
-              <div style="font-size:9px;color:rgba(255,255,255,.3)">14:32</div>
+        <div style="display:flex;gap:8px;padding:8px 10px;overflow:hidden">
+          ${['MK','SL','JB','KR'].map((n,i)=>`<div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex-shrink:0">
+            <div style="width:40px;height:40px;border-radius:50%;padding:2px;background:linear-gradient(135deg,#f9a825,#e91e63)">
+              <div style="width:100%;height:100%;border-radius:50%;background:#${['ff6b6b','4dabf7','cc5de8','ffd43b'][i]}44;border:2px solid #111;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700">${n}</div>
             </div>
-            <div class="mock-banner" style="background:linear-gradient(135deg,#1a1a2e,#16213e)">
-              <div style="position:absolute;inset:0;background:linear-gradient(to bottom,transparent 20%,rgba(0,0,0,.7))"></div>
-              <div style="position:absolute;bottom:6px;left:8px;display:flex;align-items:center;gap:6px">
-                <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#ff6b6b,#ffa500);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;border:1px solid rgba(255,255,255,.3)">MK</div>
-                <div style="font-size:10px;font-weight:700;color:#fff">Max K. <span style="font-size:8px;opacity:.6">⬆️</span></div>
-              </div>
-              <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:#ff6b6b;font-weight:700">Öffnen →</div>
-            </div>
-            <div class="mock-actions">
-              <div class="mock-like mock-liked">❤️ 12</div>
-              <div style="flex:1"></div>
-            </div>
-          </div>
-          <div class="mock-post">
-            <div class="mock-post-hd">
-              <div class="mock-av" style="background:linear-gradient(135deg,#4dabf7,#cc5de8)">SL</div>
-              <div style="flex:1"><div style="font-size:11px;font-weight:600">Sara L.</div><div style="font-size:9px;color:rgba(255,255,255,.4)">🏅 Erfahrene · 📸 @saral</div></div>
-              <div style="font-size:9px;color:rgba(255,255,255,.3)">13:17</div>
-            </div>
-            <div class="mock-banner" style="background:linear-gradient(135deg,#0d0d0d,#1a0a2e)">
-              <div style="position:absolute;inset:0;background:linear-gradient(to bottom,transparent 20%,rgba(0,0,0,.7))"></div>
-              <div style="position:absolute;bottom:6px;left:8px;font-size:10px;font-weight:700;color:#fff">Sara L. <span style="font-size:8px;opacity:.6">🏅</span></div>
-            </div>
-            <div class="mock-actions">
-              <div class="mock-like">🤍 5</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- SLIDE 2: RANKING -->
-    <div class="ob-slide" id="slide-1">
-      <div class="ob-label" style="--c:#ffd43b">Rangliste</div>
-      <div class="ob-title">Steig auf &<br>werde Elite</div>
-      <div class="ob-sub">XP sammeln durch Likes und tägliche Links — von Neuling bis 👑 Elite Creator.</div>
-      <div class="ob-phone">
-        <div class="mock-topbar"><div style="font-size:14px;font-weight:700">Rangliste</div><div style="font-size:11px;color:rgba(255,255,255,.4)">Dein Rang: #4</div></div>
-        <div style="padding:8px 0">
-          ${[['🥇','AK','👑 Elite',4200,'linear-gradient(135deg,#f59e0b,#ef4444)'],['🥈','ML','🏅 Erfahrene',2850,'linear-gradient(135deg,#8b5cf6,#3b82f6)'],['🥉','JB','🏅 Erfahrene',1940,'linear-gradient(135deg,#3b82f6,#06b6d4)'],['4','Du','⬆️ Aufsteiger',890,'linear-gradient(135deg,#ff6b6b,#ffa500)'],['5','KR','📘 Anfänger',340,'linear-gradient(135deg,#10b981,#3b82f6)']].map(([pos,name,role,xp,grad],i)=>`
-          <div class="mock-rank-item" style="${i===3?'background:rgba(255,107,107,.08);border-left:2px solid #ff6b6b':''}">
-            <div class="mock-rank-pos">${pos}</div>
-            <div class="mock-rank-av" style="background:${grad};color:#fff">${name}</div>
-            <div style="flex:1"><div class="mock-rank-name">${name==='Du'?'<b>Du</b>':name}</div><div style="font-size:9px;color:rgba(255,255,255,.4)">${role}</div></div>
-            <div class="mock-rank-xp">${xp} XP</div>
+            <div style="font-size:8px;color:rgba(255,255,255,.4)">${n}</div>
           </div>`).join('')}
         </div>
-        <div style="padding:8px 12px">
-          <div style="font-size:10px;color:rgba(255,255,255,.4);margin-bottom:4px">Nächstes Level: noch 110 XP bis 🏅</div>
-          <div class="mock-xp-bar"><div class="mock-xp-fill" style="width:72%"></div></div>
+        <div class="mock-post">
+          <div class="mock-post-hd">
+            <div class="mock-av" style="background:linear-gradient(135deg,#ff6b6b,#ffa500)">MK</div>
+            <div style="flex:1"><div style="font-size:10px;font-weight:600">Max K.</div><div style="font-size:8px;color:rgba(255,255,255,.4)">⬆️ Aufsteiger · @maxk.ig</div></div>
+            <div style="font-size:8px;color:rgba(255,255,255,.3)">14:32</div>
+          </div>
+          <div class="mock-banner">
+            <div style="position:absolute;inset:0;background:linear-gradient(to bottom,transparent,rgba(0,0,0,.7))"></div>
+            <div style="position:absolute;bottom:5px;left:8px;font-size:10px;font-weight:700;color:#fff">Max K. <span style="opacity:.6;font-size:8px">⬆️</span></div>
+            <div style="position:absolute;bottom:5px;right:8px;font-size:9px;color:#ff6b6b;font-weight:700">Öffnen →</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;padding:5px 9px">
+            <div style="font-size:11px;color:#ff6b6b;display:flex;align-items:center;gap:3px">❤️ <span style="font-size:10px">12 Likes</span></div>
+          </div>
+        </div>
+        <!-- Highlight: Like Button -->
+        <div class="hl" style="width:26px;height:26px;top:152px;left:17px"></div>
+        <div class="tip up" style="bottom:82px;left:8px">❤️ Hier liken!</div>
+        <div style="position:absolute;bottom:0;left:0;right:0">
+          <div class="mock-nav">
+            <div class="mock-nav-item act">🏠<div class="mock-nav-dot"></div></div>
+            <div class="mock-nav-item">📊</div>
+            <div class="mock-nav-item">💬</div>
+            <div class="mock-nav-item">👤</div>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- SLIDE 3: PROFIL -->
+    <!-- SLIDE 2: LINK POSTEN -->
+    <div class="ob-slide" id="slide-1">
+      <div class="ob-label" style="--c:#ffa500">Schritt 2 von 5</div>
+      <div class="ob-title">So postest du deinen Link 🔗</div>
+      <div class="ob-sub">Geh auf <b style="color:#fff">Profil → "📸 Link teilen"</b> Tab. Füge deinen Instagram Link ein und teile ihn mit der Community.</div>
+      <div class="ob-phone" style="position:relative">
+        <div class="mock-topbar">
+          <div style="font-size:13px;font-weight:700">Profil</div>
+          <div style="display:flex;gap:6px;font-size:13px">🔍 🔔 ⚙️</div>
+        </div>
+        <div style="height:50px;background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);position:relative">
+          <div style="position:absolute;inset:0;background:linear-gradient(to bottom,transparent,#111)"></div>
+          <div style="position:absolute;bottom:-14px;left:10px;width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#ff6b6b,#ffa500);border:2px solid #111;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700">Du</div>
+        </div>
+        <div style="padding:18px 10px 6px">
+          <div style="font-size:12px;font-weight:700">Dein Name</div>
+          <div style="font-size:9px;color:rgba(255,255,255,.4)">⬆️ Aufsteiger · 890 XP</div>
+        </div>
+        <div class="mock-tab-row">
+          <div class="mock-tab">📝 Posts</div>
+          <div class="mock-tab">🔗 Links</div>
+          <div class="mock-tab act">📸 Link teilen</div>
+        </div>
+        <!-- Highlight: Link teilen tab -->
+        <div class="hl-rect" style="top:118px;right:2px;width:96px;height:24px;border-radius:6px"></div>
+        <div class="tip down" style="top:85px;right:4px">👆 Hier tippen</div>
+        <div style="padding:8px 0">
+          <div class="mock-input-area">🔗 https://www.instagram.com/reel/...</div>
+          <div class="mock-input-area" style="margin-top:4px">Beschreibung (optional)...</div>
+          <div class="mock-btn" style="margin-top:6px">📸 Link teilen</div>
+        </div>
+        <div style="position:absolute;bottom:0;left:0;right:0">
+          <div class="mock-nav">
+            <div class="mock-nav-item">🏠</div>
+            <div class="mock-nav-item">📊</div>
+            <div class="mock-nav-item">💬</div>
+            <div class="mock-nav-item act">👤<div class="mock-nav-dot"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 3: RANKING & XP -->
     <div class="ob-slide" id="slide-2">
-      <div class="ob-label" style="--c:#cc5de8">Profil</div>
-      <div class="ob-title">Dein Creator<br>Profil</div>
-      <div class="ob-sub">Banner, Bio, Stats und deine Posts — zeig der Community wer du bist.</div>
-      <div class="ob-phone">
-        <div style="height:80px;background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);position:relative">
-          <div style="position:absolute;inset:0;background:linear-gradient(to bottom,transparent 40%,#111)"></div>
-          <div style="position:absolute;bottom:-18px;left:12px;width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#ff6b6b,#ffa500);border:2px solid #111;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:#fff">Du</div>
+      <div class="ob-label" style="--c:#ffd43b">Schritt 3 von 5</div>
+      <div class="ob-title">XP & Rangliste 🏆</div>
+      <div class="ob-sub">Jeder Like den du bekommst gibt dir XP. Je mehr XP, desto höher dein Rang. Tippe auf <b style="color:#fff">📊</b> in der Navigation.</div>
+      <div class="ob-phone" style="position:relative">
+        <div class="mock-topbar">
+          <div style="font-size:13px;font-weight:700">Rangliste</div>
+          <div style="font-size:10px;color:rgba(255,255,255,.4)">Dein Rang: #4</div>
         </div>
-        <div style="padding:24px 12px 8px">
-          <div style="font-size:15px;font-weight:700">Dein Name</div>
-          <div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:2px">@dein.instagram</div>
-          <div class="mock-badge" style="background:linear-gradient(135deg,#ff6b6b,#ffa500);color:#fff;margin:6px 0 0">⬆️ Aufsteiger</div>
+        <div style="padding:4px 0">
+          ${[['🥇','Alex K.','👑 Elite Creator','4.200',false],['🥈','Maria L.','🏅 Erfahrene','2.850',false],['🥉','Jonas B.','🏅 Erfahrene','1.940',false],['4','Du','⬆️ Aufsteiger','890',true],['5','Kim R.','📘 Anfänger','340',false]].map(([pos,name,role,xp,isMe])=>`
+          <div class="mock-rank-item" style="${isMe?'background:rgba(255,107,107,.08);border-left:2px solid #ff6b6b':''}">
+            <div style="width:22px;font-size:14px;flex-shrink:0;text-align:center">${pos}</div>
+            <div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#${isMe?'ff6b6b,#ffa500':'4dabf7,#cc5de8'});display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0">${name.split(' ').map(w=>w[0]).join('')}</div>
+            <div style="flex:1;min-width:0"><div style="font-size:11px;font-weight:${isMe?'700':'600'}">${isMe?'Du ('+name+')':name}</div><div style="font-size:8px;color:rgba(255,255,255,.4)">${role}</div></div>
+            <div style="font-size:11px;font-weight:700;color:#ffd43b">${xp} XP</div>
+          </div>`).join('')}
         </div>
-        <div style="display:flex;border-top:1px solid rgba(255,255,255,.06);border-bottom:1px solid rgba(255,255,255,.06)">
-          ${[['890','XP'],['12','Links'],['47','Likes'],['3','Follower']].map(([v,l])=>`<div style="flex:1;text-align:center;padding:10px 0;border-right:1px solid rgba(255,255,255,.06)"><div style="font-size:14px;font-weight:700">${v}</div><div style="font-size:9px;color:rgba(255,255,255,.4)">${l}</div></div>`).join('')}
+        <div style="padding:6px 10px 4px">
+          <div style="font-size:9px;color:rgba(255,255,255,.4);margin-bottom:3px">Noch 110 XP bis 🏅 Erfahrene</div>
+          <div class="mock-xp-bar"><div class="mock-xp-fill" style="width:72%"></div></div>
         </div>
-        <div style="padding:8px 12px">
-          <div class="mock-xp-bar" style="margin:0 0 4px"><div class="mock-xp-fill" style="width:72%"></div></div>
-          <div style="font-size:9px;color:rgba(255,255,255,.4)">Noch 110 XP bis 🏅 Erfahrene</div>
-        </div>
-        <div style="display:flex;border-bottom:1px solid rgba(255,255,255,.08)">
-          ${['📝 Posts','🔗 Links','📸 Link teilen'].map((t,i)=>`<div style="flex:1;text-align:center;padding:10px 0;font-size:11px;font-weight:600;${i===0?'color:#fff;border-bottom:2px solid #ff6b6b':'color:rgba(255,255,255,.4)'}">${t}</div>`).join('')}
+        <!-- Highlight: ranking nav -->
+        <div class="hl" style="width:26px;height:26px;bottom:14px;left:calc(25% - 13px)"></div>
+        <div class="tip up" style="bottom:48px;left:14px">📊 Rangliste</div>
+        <div style="position:absolute;bottom:0;left:0;right:0">
+          <div class="mock-nav">
+            <div class="mock-nav-item">🏠</div>
+            <div class="mock-nav-item act">📊<div class="mock-nav-dot"></div></div>
+            <div class="mock-nav-item">💬</div>
+            <div class="mock-nav-item">👤</div>
+          </div>
         </div>
       </div>
     </div>
 
     <!-- SLIDE 4: NACHRICHTEN -->
     <div class="ob-slide" id="slide-3">
-      <div class="ob-label" style="--c:#4dabf7">Nachrichten</div>
-      <div class="ob-title">Direkt mit<br>Creatorn chatten</div>
-      <div class="ob-sub">Schreib jedem in der Community — gib Feedback, tausch dich aus, wachst zusammen.</div>
-      <div class="ob-phone">
-        <div class="mock-topbar"><div style="font-size:14px;font-weight:700">Nachrichten</div></div>
-        ${[['MK','Max K.','Danke für den Like! 🙏','linear-gradient(135deg,#ff6b6b,#ffa500)',2],['SL','Sara L.','Cooles Reel! Hab ich geliked','linear-gradient(135deg,#4dabf7,#cc5de8)',0],['JB','Jonas B.','Welche App nutzt du zum Schneiden?','linear-gradient(135deg,#3b82f6,#06b6d4)',1]].map(([init,name,msg,grad,unread])=>`
-        <div class="mock-msg">
-          <div class="mock-msg-av" style="background:${grad};color:#fff">${init}</div>
+      <div class="ob-label" style="--c:#4dabf7">Schritt 4 von 5</div>
+      <div class="ob-title">Nachrichten 💬</div>
+      <div class="ob-sub">Schreib jedem in der Community direkt. Tippe auf <b style="color:#fff">💬</b> unten oder auf ein Profil → "💬" Button.</div>
+      <div class="ob-phone" style="position:relative">
+        <div class="mock-topbar"><div style="font-size:13px;font-weight:700">Nachrichten</div></div>
+        ${[['MK','Max K.','Danke für den Like! 🙏','linear-gradient(135deg,#ff6b6b,#ffa500)',2],['SL','Sara L.','Cooles Reel! Hab ich geliked 👍','linear-gradient(135deg,#4dabf7,#cc5de8)',0],['JB','Jonas B.','Welche App nutzt du?','linear-gradient(135deg,#3b82f6,#06b6d4)',1]].map(([init,name,msg,grad,unread])=>`
+        <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.05)">
+          <div style="width:36px;height:36px;border-radius:50%;background:${grad};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">${init}</div>
           <div style="flex:1;min-width:0">
-            <div style="font-size:12px;font-weight:600">${name}</div>
-            <div style="font-size:10px;color:rgba(255,255,255,.4);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${msg}</div>
+            <div style="font-size:11px;font-weight:600">${name}</div>
+            <div style="font-size:9px;color:rgba(255,255,255,.4);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${msg}</div>
           </div>
-          ${unread>0?`<div style="background:#ff6b6b;color:#fff;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0">${unread}</div>`:''}
+          ${unread>0?`<div style="background:#ff6b6b;color:#fff;border-radius:50%;width:16px;height:16px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0">${unread}</div>`:''}
         </div>`).join('')}
-        <div style="margin:10px 12px;background:#1a1a1a;border-radius:14px;overflow:hidden">
-          <div style="padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.06);display:flex;align-items:center;gap:6px">
-            <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#ff6b6b,#ffa500);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700">MK</div>
-            <div style="font-size:12px;font-weight:600">Max K.</div>
+        <div style="margin:8px 10px;background:#1a1a1a;border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,.06)">
+          <div style="padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.06);font-size:10px;font-weight:600;display:flex;align-items:center;gap:6px">
+            <div style="width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,#ff6b6b,#ffa500);display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700">MK</div>
+            Max K.
           </div>
-          <div class="mock-msg-bubble">Danke für den Like! 🙏</div>
-          <div class="mock-msg-bubble-me">Klar, tolles Reel! 💪</div>
-          <div class="mock-input-row">
-            <div class="mock-input">Nachricht...</div>
-            <div class="mock-send">➤</div>
+          <div style="padding:6px 8px;background:#2a2a2a;border-radius:10px;margin:5px 8px;font-size:10px;color:rgba(255,255,255,.7)">Danke für den Like! 🙏</div>
+          <div style="padding:6px 8px;background:#ff6b6b;border-radius:10px;margin:4px 8px;font-size:10px;color:#fff;align-self:flex-end;text-align:right">Klar, tolles Reel! 💪</div>
+          <div style="display:flex;gap:5px;padding:6px 8px;background:rgba(0,0,0,.3)">
+            <div style="flex:1;background:#222;border-radius:14px;padding:5px 8px;font-size:9px;color:rgba(255,255,255,.3)">Nachricht...</div>
+            <div style="background:#ff6b6b;border-radius:14px;padding:5px 10px;font-size:10px;color:#fff;font-weight:700">➤</div>
+          </div>
+        </div>
+        <!-- Highlight: messages nav -->
+        <div class="hl" style="width:26px;height:26px;bottom:14px;left:calc(50% + 25% - 13px)"></div>
+        <div class="tip up" style="bottom:48px;right:14px">💬 Nachrichten</div>
+        <div style="position:absolute;bottom:0;left:0;right:0">
+          <div class="mock-nav">
+            <div class="mock-nav-item">🏠</div>
+            <div class="mock-nav-item">📊</div>
+            <div class="mock-nav-item act">💬<div class="mock-nav-dot"></div></div>
+            <div class="mock-nav-item">👤</div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- SLIDE 5: BENACHRICHTIGUNGEN & COMMUNITY -->
+    <!-- SLIDE 5: EINSTELLUNGEN & PROFIL -->
     <div class="ob-slide" id="slide-4">
-      <div class="ob-label" style="--c:#00c851">Bereit!</div>
-      <div class="ob-title">Du bist Teil der<br>Community 🎉</div>
-      <div class="ob-sub">Poste täglich, like konsequent — und watch dein Instagram wachsen.</div>
-      <div class="ob-phone">
-        <div class="mock-topbar"><div style="font-size:14px;font-weight:700">Benachrichtigungen</div></div>
-        <div style="padding:4px 0">
-          ${[['❤️','Max K. hat deinen Link geliked','vor 5 min',true],['🆙','Du bist aufgestiegen: ⬆️ Aufsteiger!','vor 1 Std',true],['💬','Sara L. hat dir geschrieben','vor 2 Std',false],['🏆','Neue Woche — du bist auf Rang #4!','gestern',false],['❤️','Jonas B. hat deinen Link geliked','gestern',false]].map(([icon,text,time,unread])=>`
-          <div class="mock-notif" style="${unread?'background:rgba(255,107,107,.05)':''}">
-            ${unread?'<div class="mock-notif-dot"></div>':'<div style="width:8px;flex-shrink:0"></div>'}
-            <div style="font-size:18px;flex-shrink:0">${icon}</div>
-            <div style="flex:1;min-width:0">
-              <div style="font-size:11px;line-height:1.4">${text}</div>
-              <div style="font-size:9px;color:rgba(255,255,255,.3);margin-top:2px">${time}</div>
-            </div>
-          </div>`).join('')}
+      <div class="ob-label" style="--c:#00c851">Schritt 5 von 5</div>
+      <div class="ob-title">Profil & Einstellungen ⚙️</div>
+      <div class="ob-sub">Richte dein Profil ein! Geh auf <b style="color:#fff">👤 Profil</b> → tippe <b style="color:#fff">⚙️</b> oben rechts für Foto, Bio, Banner & mehr.</div>
+      <div class="ob-phone" style="position:relative">
+        <div class="mock-topbar">
+          <div style="font-size:13px;font-weight:700">Profil</div>
+          <div style="display:flex;gap:5px;align-items:center">
+            <div style="width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;font-size:12px">🔍</div>
+            <div style="width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;font-size:12px">🔔</div>
+            <div style="width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;font-size:12px">⚙️</div>
+          </div>
+        </div>
+        <!-- Highlight: settings icon -->
+        <div class="hl" style="width:32px;height:32px;top:5px;right:4px"></div>
+        <div class="tip down" style="top:40px;right:4px">⚙️ Einstellungen</div>
+        <div style="height:55px;background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);position:relative">
+          <div style="position:absolute;inset:0;background:linear-gradient(to bottom,transparent,#111)"></div>
+          <div style="position:absolute;bottom:-14px;left:10px;width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,#ff6b6b,#ffa500);border:2px solid #111;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700">Du</div>
+        </div>
+        <div style="padding:20px 10px 6px">
+          <div style="font-size:13px;font-weight:700">Dein Name</div>
+          <div style="font-size:9px;color:rgba(255,255,255,.4);margin-top:2px">@dein.instagram · ⬆️ Aufsteiger</div>
+          <div style="font-size:9px;color:rgba(255,255,255,.3);margin-top:4px;line-height:1.4">✏️ Hier kannst du Bio, Spitzname,<br>Profilbild & Banner ändern</div>
+        </div>
+        <div style="display:flex;border-top:1px solid rgba(255,255,255,.06);border-bottom:1px solid rgba(255,255,255,.06)">
+          ${[['890','XP'],['12','Links'],['47','Likes'],['3','Follower']].map(([v,l])=>`<div style="flex:1;text-align:center;padding:8px 0;border-right:1px solid rgba(255,255,255,.06)"><div style="font-size:13px;font-weight:700">${v}</div><div style="font-size:8px;color:rgba(255,255,255,.4)">${l}</div></div>`).join('')}
+        </div>
+        <div style="padding:6px 10px">
+          <div style="font-size:9px;color:rgba(255,255,255,.4);margin-bottom:3px">Noch 110 XP bis 🏅 Erfahrene</div>
+          <div class="mock-xp-bar"><div class="mock-xp-fill" style="width:72%"></div></div>
+        </div>
+        <div class="mock-tab-row">
+          <div class="mock-tab act">📝 Posts</div>
+          <div class="mock-tab">🔗 Links</div>
+          <div class="mock-tab">📸 Link teilen</div>
+        </div>
+        <!-- Highlight: profile nav -->
+        <div class="hl" style="width:26px;height:26px;bottom:14px;right:calc(0% + 25% - 13px)"></div>
+        <div style="position:absolute;bottom:0;left:0;right:0">
+          <div class="mock-nav">
+            <div class="mock-nav-item">🏠</div>
+            <div class="mock-nav-item">📊</div>
+            <div class="mock-nav-item">💬</div>
+            <div class="mock-nav-item act">👤<div class="mock-nav-dot"></div></div>
+          </div>
         </div>
       </div>
     </div>
@@ -585,16 +651,15 @@ ${isPreview ? '<div class="ob-badge">👀 Admin Vorschau — <a href="/einstellu
 </div>
 <script>
 const TOTAL = 5;
+const COLORS = ['linear-gradient(135deg,#ff6b6b,#ffa500)','linear-gradient(135deg,#ffa500,#ffd43b)','linear-gradient(135deg,#ffd43b,#ffa500)','linear-gradient(135deg,#4dabf7,#00c851)','linear-gradient(135deg,#00c851,#4dabf7)'];
 let cur = 0;
-const COLORS = ['linear-gradient(135deg,#ff6b6b,#ffa500)','linear-gradient(135deg,#ffd43b,#ffa500)','linear-gradient(135deg,#cc5de8,#4dabf7)','linear-gradient(135deg,#4dabf7,#00c851)','linear-gradient(135deg,#00c851,#4dabf7)'];
 function goTo(i) {
     const prev = cur; cur = i;
     document.querySelectorAll('.ob-slide').forEach((s,j)=>{s.classList.remove('active','prev');if(j===cur)s.classList.add('active');else if(j===prev)s.classList.add('prev');});
     document.querySelectorAll('.ob-dot').forEach((d,j)=>d.classList.toggle('active',j===cur));
     const nb=document.getElementById('next-btn');
     nb.style.background=COLORS[cur];
-    if(cur===TOTAL-1){nb.textContent='🚀 Los gehts!';}
-    else{nb.textContent='Weiter →';}
+    nb.textContent = cur===TOTAL-1 ? '🚀 Los gehts!' : 'Weiter →';
 }
 function next(){cur<TOTAL-1?goTo(cur+1):finish();}
 function finish(){${finishAction}}
