@@ -204,13 +204,14 @@ img, video {
 }
 
 @media (min-width: 768px) {
+
   .profile {
     display: flex;
     gap: 20px;
   }
 
   .profile-left {
-    width: 250px;
+    width: 220px;
   }
 
   .profile-right {
@@ -218,13 +219,31 @@ img, video {
   }
 
   .profile-banner {
-    height: 260px;
+    height: 240px;
     border-radius: 12px;
   }
+
+  .profile-avatar {
+    width: 90px;
+    height: 90px;
+    font-size: 36px;
+  }
+
 }
 .profile-banner-overlay{position:absolute;inset:0;background:linear-gradient(to bottom,transparent 40%,var(--bg3))}
 .profile-avatar-wrap{position:absolute;bottom:-30px;left:16px}
-.profile-avatar{width:88px;height:88px;border-radius:50%;border:3px solid var(--bg3);background:var(--bg4);object-fit:cover;display:flex;align-items:center;justify-content:center;font-size:36px}
+.profile-avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 3px solid var(--bg3);
+  background: var(--bg4);
+  object-fit: cover;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 30px;
+}
 .profile-info{padding:40px 16px 16px}
 .profile-name{font-family:var(--font-display);font-size:22px;font-weight:700}
 .profile-username{font-size:13px;color:var(--muted);margin-top:2px}
