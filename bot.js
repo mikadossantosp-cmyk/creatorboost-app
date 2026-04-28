@@ -168,82 +168,12 @@ button{cursor:pointer;border:none;outline:none;font-family:var(--font)}
 .post-action-btn svg{width:20px;height:20px}
 .post-likers{padding:0 16px 4px;font-size:12px;color:var(--muted)}
 .post-likers span{color:var(--text);font-weight:600}
- .profile-banner {
-  width: 100%;
-  height: 180px;
-  position: relative;
-  overflow: hidden;
-  background-size: cover;
-  background-position: center;
-}
-
-.profile-banner img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.profile-banner-overlay {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(to bottom, transparent 40%, var(--bg3));
-}
-
-/* =========================
-   PC VERSION FIX
-   ========================= */
-.container {
-  max-width: 900px;
-  margin: 0 auto;
-  padding: 20px;
-}
-
-img, video {
-  max-width: 100%;
-  height: auto;
-}
-
-@media (min-width: 768px) {
-
-  .profile {
-    display: flex;
-    gap: 20px;
-  }
-
-  .profile-left {
-    width: 220px;
-  }
-
-  .profile-right {
-    flex: 1;
-  }
-
-  .profile-banner {
-    height: 240px;
-    border-radius: 12px;
-  }
-
-  .profile-avatar {
-    width: 90px;
-    height: 90px;
-    font-size: 36px;
-  }
-
-}
+ .profile-banner{width:100%;height:140px;position:relative;overflow:hidden;background-size:cover;background-position:center}
+.profile-banner img{width:100%;height:100%;object-fit:cover}
 .profile-banner-overlay{position:absolute;inset:0;background:linear-gradient(to bottom,transparent 40%,var(--bg3))}
-.profile-avatar-wrap{position:absolute;bottom:-30px;left:16px}
-.profile-avatar {
-  width: 72px;
-  height: 72px;
-  border-radius: 50%;
-  border: 3px solid var(--bg3);
-  background: var(--bg4);
-  object-fit: cover;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 30px;
-}
+.profile-avatar-wrap{position:absolute;bottom:-25px;left:16px}
+.profile-avatar{width:60px;height:60px;border-radius:50%;border:2px solid var(--bg3);background:var(--bg4);object-fit:cover;display:flex;align-items:center;justify-content:center;font-size:24px}
+@media (min-width:768px){.profile-banner{height:180px}.profile-avatar{width:70px;height:70px}}
 .profile-info{padding:40px 16px 16px}
 .profile-name{font-family:var(--font-display);font-size:22px;font-weight:700}
 .profile-username{font-size:13px;color:var(--muted);margin-top:2px}
