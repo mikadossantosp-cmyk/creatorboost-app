@@ -230,8 +230,8 @@ textarea.form-input{resize:none;min-height:80px}
 .toggle::after{content:'';position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .2s}
 .toggle.on::after{transform:translateX(20px)}
 /*=========================
-   PC VERSION FIX
-   ========================= */
+   PC + BANNER + PROFIL FIX
+=========================*/
 
 .container {
   max-width: 900px;
@@ -242,18 +242,46 @@ textarea.form-input{resize:none;min-height:80px}
 img, video {
   max-width: 100%;
   height: auto;
+  display: block;
 }
 
+/* BANNER */
 .banner {
   width: 100%;
-  height: 200px;
+  height: 180px;
+  object-fit: cover;
+  border-radius: 0;
+}
+
+/* PROFILBILD */
+.avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
   object-fit: cover;
 }
 
+/* PC VERSION */
 @media (min-width: 768px) {
+
+  .container {
+    max-width: 1100px;
+  }
+
+  .banner {
+    height: 260px;
+    border-radius: 12px;
+  }
+
+  .avatar {
+    width: 120px;
+    height: 120px;
+  }
+
   .profile {
     display: flex;
     gap: 20px;
+    align-items: flex-start;
   }
 
   .profile-left {
