@@ -168,12 +168,10 @@ button{cursor:pointer;border:none;outline:none;font-family:var(--font)}
 .post-action-btn svg{width:20px;height:20px}
 .post-likers{padding:0 16px 4px;font-size:12px;color:var(--muted)}
 .post-likers span{color:var(--text);font-weight:600}
- .profile-banner{width:100%;height:140px;position:relative;overflow:hidden;background-size:cover;background-position:center}
-.profile-banner img{width:100%;height:100%;object-fit:cover}
+.profile-banner{height:160px;position:relative;overflow:hidden}
 .profile-banner-overlay{position:absolute;inset:0;background:linear-gradient(to bottom,transparent 40%,var(--bg3))}
-.profile-avatar-wrap{position:absolute;bottom:-25px;left:16px}
-.profile-avatar{width:60px;height:60px;border-radius:50%;border:2px solid var(--bg3);background:var(--bg4);object-fit:cover;display:flex;align-items:center;justify-content:center;font-size:24px}
-@media (min-width:768px){.profile-banner{height:180px}.profile-avatar{width:70px;height:70px}}
+.profile-avatar-wrap{position:absolute;bottom:-30px;left:16px}
+.profile-avatar{width:88px;height:88px;border-radius:50%;border:3px solid var(--bg3);background:var(--bg4);object-fit:cover;display:flex;align-items:center;justify-content:center;font-size:36px}
 .profile-info{padding:40px 16px 16px}
 .profile-name{font-family:var(--font-display);font-size:22px;font-weight:700}
 .profile-username{font-size:13px;color:var(--muted);margin-top:2px}
