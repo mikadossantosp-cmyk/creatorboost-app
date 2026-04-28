@@ -229,6 +229,41 @@ textarea.form-input{resize:none;min-height:80px}
 .toggle.on{background:var(--accent)}
 .toggle::after{content:'';position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .2s}
 .toggle.on::after{transform:translateX(20px)}
+/*=========================
+   PC VERSION FIX
+   ========================= */
+
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+img, video {
+  max-width: 100%;
+  height: auto;
+}
+
+.banner {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+}
+
+@media (min-width: 768px) {
+  .profile {
+    display: flex;
+    gap: 20px;
+  }
+
+  .profile-left {
+    width: 250px;
+  }
+
+  .profile-right {
+    flex: 1;
+  }
+}
 `;
 
 function layout(content, session, page='feed', lang='de') {
