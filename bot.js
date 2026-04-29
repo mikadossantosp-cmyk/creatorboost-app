@@ -233,63 +233,68 @@ textarea.form-input{resize:none;min-height:80px}
    PC + BANNER + PROFIL FIX
 =========================*/
 
-.container {
-  max-width: 900px;
-  margin: 0 auto;
-  padding: 20px;
-}
-
-img, video {
-  max-width: 100%;
-  height: auto;
-  display: block;
-}
-
-/* BANNER */
-.banner {
-  width: 100%;
-  height: 180px;
-  object-fit: cover;
-  border-radius: 0;
-}
-
-/* PROFILBILD */
-.avatar {
-  width: 80px;
-  height: 80px;
-  border-radius: 50%;
-  object-fit: cover;
-}
-
-/* PC VERSION */
 @media (min-width: 768px) {
-
-  .container {
-    max-width: 1100px;
+  body {
+    max-width: 860px;
+    padding-bottom: 80px;
   }
 
-  .banner {
-    height: 260px;
-    border-radius: 12px;
+  .bottom-nav {
+    max-width: 860px;
   }
 
-  .avatar {
+  /* BANNER auf PC */
+  .profile-banner {
+    height: 280px;
+    border-radius: 0;
+  }
+
+  /* Avatar-Wrapper auf PC */
+  .profile-avatar-wrap {
+    bottom: -44px;
+    left: 28px;
+  }
+
+  /* Profilbild auf PC */
+  .profile-avatar {
     width: 120px;
     height: 120px;
+    border-width: 4px;
+    font-size: 48px;
   }
 
-  .profile {
-    display: flex;
-    gap: 20px;
-    align-items: flex-start;
+  /* Mehr Platz nach oben wegen größerem Avatar */
+  .profile-info {
+    padding: 58px 28px 20px;
   }
 
-  .profile-left {
-    width: 250px;
+  .profile-name {
+    font-size: 28px;
   }
 
-  .profile-right {
-    flex: 1;
+  .profile-username {
+    font-size: 15px;
+  }
+
+  .profile-bio {
+    font-size: 14px;
+  }
+
+  .profile-stat-val {
+    font-size: 22px;
+  }
+
+  .profile-stat {
+    padding: 18px 0;
+  }
+
+  .profile-xp-bar {
+    margin: 20px 28px 0;
+  }
+
+  .profile-xp-info {
+    margin: 4px 28px 20px;
+    font-size: 12px;
   }
 }
 `;
