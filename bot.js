@@ -114,6 +114,14 @@ function ladeBild(uid, type) {
     return null;
 }
 
+function ladePinnedLink(uid) {
+    try {
+        const f = DATA_DIR + '/pinnedlink_' + uid + '.txt';
+        if (fs.existsSync(f)) return fs.readFileSync(f, 'utf8').trim();
+    } catch(e) {}
+    return null;
+}
+
 const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap');
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -305,6 +313,35 @@ textarea.form-input{resize:none;min-height:80px}
 .liker-modal.open{opacity:1;pointer-events:all}
 .liker-modal-sheet{width:100%;max-width:480px;background:var(--bg3);border-radius:20px 20px 0 0;max-height:70vh;overflow-y:auto;transform:translateY(100%);transition:transform .3s cubic-bezier(.4,0,.2,1)}
 .liker-modal.open .liker-modal-sheet{transform:translateY(0)}
+/* ── EXPLORE ── */
+.explore-tabs{display:flex;gap:8px;padding:8px 16px 12px;overflow-x:auto;scrollbar-width:none}
+.explore-tabs::-webkit-scrollbar{display:none}
+.explore-tab{flex-shrink:0;padding:7px 16px;border-radius:20px;font-size:12px;font-weight:700;background:var(--bg4);color:var(--muted);border:none;cursor:pointer;transition:all .2s;font-family:var(--font)}
+.explore-tab.active{background:var(--accent);color:#fff;box-shadow:0 0 14px rgba(255,107,107,.35)}
+.explore-welcome{margin:0 16px 16px;border-radius:16px;overflow:hidden;position:relative;height:180px;background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460)}
+.highlight-card{background:var(--bg3);border:1px solid var(--border2);border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:12px;margin-bottom:8px;text-decoration:none;color:var(--text)}
+.highlight-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.creator-scroll{display:flex;gap:12px;padding:0 16px 12px;overflow-x:auto;scrollbar-width:none}
+.creator-scroll::-webkit-scrollbar{display:none}
+.creator-card{flex-shrink:0;width:140px;background:var(--bg3);border:1px solid var(--border2);border-radius:16px;overflow:hidden;text-decoration:none;color:var(--text)}
+.creator-card-banner{height:50px;position:relative;overflow:hidden;background:var(--bg4)}
+.creator-card-avatar{width:44px;height:44px;border-radius:50%;border:3px solid var(--bg3);margin:-22px auto 0;position:relative;overflow:hidden;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff}
+.creator-card-info{padding:6px 10px 10px;text-align:center}
+.creator-card-name{font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.creator-card-xp{font-size:11px;color:var(--gold);font-weight:700;margin-top:2px}
+.action-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;padding:0 16px;margin-bottom:100px}
+.action-card{background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:16px 14px;text-decoration:none;color:var(--text);display:block}
+.action-card-icon{font-size:26px;margin-bottom:6px}
+.action-card-title{font-size:13px;font-weight:700}
+.action-card-sub{font-size:11px;color:var(--muted);margin-top:2px}
+/* ── PLUS SHEET ── */
+.plus-sheet{position:fixed;inset:0;z-index:500;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.55);backdrop-filter:blur(4px);opacity:0;pointer-events:none;transition:opacity .25s}
+.plus-sheet.open{opacity:1;pointer-events:all}
+.plus-sheet-inner{width:100%;max-width:480px;background:var(--bg3);border-radius:20px 20px 0 0;padding:20px 20px 40px;transform:translateY(100%);transition:transform .3s cubic-bezier(.4,0,.2,1)}
+.plus-sheet.open .plus-sheet-inner{transform:translateY(0)}
+/* 5-item nav fit */
+.nav-item{padding:4px 6px}
+.nav-plus{width:32px;height:32px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;color:#fff;border:none;cursor:pointer;align-self:center;margin-top:-2px;flex-shrink:0}
 `;
 
 function layout(content, session, page='feed', lang='de') {
@@ -321,6 +358,19 @@ function layout(content, session, page='feed', lang='de') {
 </head>
 <body>
 <div class="toast" id="toast"></div>
+<div class="plus-sheet" id="plus-sheet" onclick="if(event.target===this)closePlusSheet()">
+  <div class="plus-sheet-inner">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <span style="font-size:16px;font-weight:700">📸 Reel Link teilen</span>
+      <button onclick="closePlusSheet()" style="background:var(--bg4);border:none;color:var(--text);border-radius:50%;width:28px;height:28px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>
+    </div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:12px">Teile deinen Instagram Reel Link mit der Community und sammle XP durch Likes.</div>
+    <input type="url" id="plus-link-input" class="form-input" placeholder="https://www.instagram.com/reel/..." style="margin-bottom:8px">
+    <textarea id="plus-link-caption" class="form-input" placeholder="Beschreibung (optional)..." maxlength="200" rows="2" style="margin-bottom:12px"></textarea>
+    <button class="btn btn-primary btn-full" onclick="plusPostLink()">📸 Link teilen</button>
+    <div id="plus-link-result" style="margin-top:8px;font-size:12px;text-align:center;color:var(--muted)"></div>
+  </div>
+</div>
 <div class="liker-modal" id="liker-modal" onclick="if(event.target===this)closeLikerModal()">
   <div class="liker-modal-sheet">
     <div style="padding:14px 16px;border-bottom:1px solid var(--border2);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--bg3);z-index:1">
@@ -340,10 +390,13 @@ ${session ? `
     <svg viewBox="0 0 24 24" fill="${page==='feed'?'currentColor':'none'}" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
     ${page==='feed'?'<div class="nav-dot"></div>':''}
   </a>
-  <a href="/ranking" class="nav-item ${page==='ranking'?'active':''}">
-    <svg viewBox="0 0 24 24" fill="${page==='ranking'?'currentColor':'none'}" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-    ${page==='ranking'?'<div class="nav-dot"></div>':''}
+  <a href="/explore" class="nav-item ${page==='explore'?'active':''}">
+    <svg viewBox="0 0 24 24" fill="${page==='explore'?'currentColor':'none'}" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    ${page==='explore'?'<div class="nav-dot"></div>':''}
   </a>
+  <button class="nav-plus" onclick="openPlusSheet()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="18" height="18"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+  </button>
   <a href="/nachrichten" class="nav-item ${page==='messages'?'active':''}">
     <svg viewBox="0 0 24 24" fill="${page==='messages'?'currentColor':'none'}" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
     ${page==='messages'?'<div class="nav-dot"></div>':''}
@@ -370,6 +423,24 @@ setInterval(checkNotifBadge, 30000);
 function toast(msg,dur=2500){const t=document.getElementById('toast');if(!t)return;t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),dur);}
 function setTheme(t){document.documentElement.setAttribute('data-theme',t);fetch('/api/theme',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({theme:t})});}
 function setLang(l){fetch('/api/lang',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lang:l})}).then(()=>location.reload());}
+function openPlusSheet(){const s=document.getElementById('plus-sheet');if(s){s.classList.add('open');document.body.style.overflow='hidden';const i=document.getElementById('plus-link-input');if(i)setTimeout(()=>i.focus(),300);}}
+function closePlusSheet(){const s=document.getElementById('plus-sheet');if(s){s.classList.remove('open');document.body.style.overflow='';}}
+async function plusPostLink(){
+  const url=(document.getElementById('plus-link-input')?.value||'').trim();
+  const result=document.getElementById('plus-link-result');
+  if(!url){result.textContent='❌ Bitte Link eingeben';return;}
+  if(!url.includes('instagram.com')){result.textContent='❌ Nur Instagram Links erlaubt';return;}
+  const btn=document.querySelector('[onclick="plusPostLink()"]');
+  btn.disabled=true;btn.textContent='⏳ Wird gesendet...';
+  try{
+    const caption=(document.getElementById('plus-link-caption')?.value||'').trim();
+    const res=await fetch('/api/post-link',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url,caption})});
+    const data=await res.json();
+    if(data.ok){result.textContent='✅ Link erfolgreich geteilt!';document.getElementById('plus-link-input').value='';document.getElementById('plus-link-caption').value='';setTimeout(()=>closePlusSheet(),1500);}
+    else result.textContent='❌ '+(data.error||'Fehler');
+  }catch(e){result.textContent='❌ Netzwerkfehler';}
+  btn.disabled=false;btn.textContent='📸 Link teilen';
+}
 function showLikerModal(msgId){const modal=document.getElementById('liker-modal');const content=document.getElementById('liker-modal-content');const rows=document.getElementById('liker-rows-'+msgId);if(!modal||!rows)return;content.innerHTML=rows.innerHTML||'<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">Noch niemand geliked</div>';modal.classList.add('open');document.body.style.overflow='hidden';}
 function closeLikerModal(){const modal=document.getElementById('liker-modal');if(modal){modal.classList.remove('open');document.body.style.overflow='';} }
 </script>
@@ -979,6 +1050,22 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
         } catch(e) { return json({error:e.message},500); }
     }
 
+    if (path === '/api/set-pinned-link' && req.method === 'POST') {
+        if (!session) return json({error:'Nicht eingeloggt'},401);
+        const body = await parseBody(req);
+        const url = (body.url||'').trim();
+        if (url && !url.includes('instagram.com')) return json({error:'Nur Instagram Links'},400);
+        try {
+            if (url) {
+                fs.writeFileSync(DATA_DIR + '/pinnedlink_' + session.uid + '.txt', url);
+            } else {
+                const f = DATA_DIR + '/pinnedlink_' + session.uid + '.txt';
+                if (fs.existsSync(f)) fs.unlinkSync(f);
+            }
+            return json({ok:true});
+        } catch(e) { return json({error:e.message},500); }
+    }
+
     // ── SEARCH API ──
     if (path === '/api/search') {
         const q = (query.q||'').toLowerCase().trim();
@@ -1402,7 +1489,7 @@ commentsBox+
   <div style="font-size:56px;margin-bottom:16px">📸</div>
   <div style="font-size:17px;font-weight:700;margin-bottom:8px">Noch keine Links heute</div>
   <div style="font-size:13px;color:var(--muted);margin-bottom:24px">Sei der Erste! Teile deinen Instagram Link mit der Community.</div>
-  <a href="/profil" onclick="setTimeout(()=>{document.querySelector('[onclick*=postlink]')?.click()},300)" style="display:inline-flex;align-items:center;gap:8px;background:var(--accent);color:#fff;padding:12px 24px;border-radius:12px;font-size:14px;font-weight:700;text-decoration:none">📸 Jetzt Link teilen</a>
+  <button onclick="openPlusSheet()" style="display:inline-flex;align-items:center;gap:8px;background:var(--accent);color:#fff;padding:12px 24px;border-radius:12px;font-size:14px;font-weight:700;border:none;cursor:pointer;font-family:var(--font)">📸 Jetzt Link teilen</button>
 </div>`;
         const aelterHtml = aelterLinks.length ? aelterLinks.map(renderLink).join('') : '<div class="empty" style="margin-top:40px"><div class="empty-icon">🕐</div><div class="empty-text">Keine älteren Links</div></div>';
         const postsHtml = tab === 'aelter' ? '<div style="padding:8px 0 80px">'+aelterHtml+'</div>' : '<div style="padding:8px 0 80px">'+heuteHtml+'</div>';
@@ -1811,6 +1898,170 @@ document.getElementById('search-input').focus();
 </script>`, 'search');
     }
 
+    // ── EXPLORE ──
+    if (path === '/explore') {
+        const tab = query.tab || 'allgemein';
+        const sorted = Object.entries(d.users||{})
+            .filter(([id,u])=>!adminIds.includes(Number(id))&&u.started&&u.inGruppe!==false)
+            .sort((a,b)=>(b[1].xp||0)-(a[1].xp||0));
+        const medals = ['🥇','🥈','🥉'];
+        const myRank = adminIds.includes(Number(myUid)) ? 0 : sorted.findIndex(([id])=>id===myUid)+1;
+
+        // Top 8 creators for Allgemein tab
+        const topCreators = sorted.slice(0,8).map(([id,u],i)=>{
+            const grad = badgeGradient(u.role);
+            const picFile = ladeBild(id,'profilepic');
+            const bannerFile = ladeBild(id,'banner');
+            const bannerIsGrad = !bannerFile && (!u.banner||!u.banner.startsWith('data:image')&&!u.banner.startsWith('http'));
+            const bannerBg = bannerFile ? '' : (u.banner && !u.banner.startsWith('data:') ? '#000' : (u.banner || grad));
+            const pinnedLink = ladePinnedLink(id);
+            const insta = u.instagram;
+            return `<a href="/profil/${id}" class="creator-card">
+  <div class="creator-card-banner" style="${bannerIsGrad?'background:'+bannerBg:'background:#000'}">
+    ${bannerFile?`<img src="/appbild/${id}/banner" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">`:''}
+    <div style="position:absolute;top:5px;left:8px;font-size:14px">${i<3?medals[i]:''}</div>
+  </div>
+  <div class="creator-card-avatar" style="background:${grad}">
+    <span style="position:absolute;z-index:0">${(u.name||'?').slice(0,1)}</span>
+    ${picFile?`<img src="/appbild/${id}/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1" alt="">`:insta?`<img src="https://unavatar.io/instagram/${insta}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1" alt="">`:''}
+  </div>
+  <div class="creator-card-info">
+    <div class="creator-card-name">${u.spitzname||u.name||'User'}</div>
+    ${insta?`<div style="font-size:10px;color:var(--blue);margin-top:1px">@${insta}</div>`:''}
+    <div class="creator-card-xp">⚡ ${u.xp||0} XP</div>
+    ${pinnedLink?`<a href="${pinnedLink}" target="_blank" onclick="event.stopPropagation()" style="display:block;font-size:10px;color:var(--accent);margin-top:4px;padding:2px 6px;background:rgba(255,107,107,.12);border-radius:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📌 Reel ansehen</a>`:''}
+  </div>
+</a>`;
+        }).join('');
+
+        // Ranking rows (reused in Ranking tab)
+        const rankingRows = sorted.map(([id,u],i)=>{
+            const isMe = id===myUid;
+            const insta = u.instagram;
+            const grad = badgeGradient(u.role);
+            return `<a href="/profil/${id}" class="rank-item ${isMe?'rank-me':''}">
+    <div class="rank-pos">${i<3?medals[i]:`<span class="rank-num">${i+1}</span>`}</div>
+    <div style="position:relative;width:40px;height:40px;border-radius:50%;overflow:hidden;background:${grad};flex-shrink:0;display:flex;align-items:center;justify-content:center">
+      <span style="color:#fff;font-weight:700;font-size:14px;position:absolute">${(u.name||'?').slice(0,2).toUpperCase()}</span>
+      ${ladeBild(id,'profilepic')?`<img src="/appbild/${id}/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">`:insta?`<img src="https://unavatar.io/instagram/${insta}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">`:''}
+    </div>
+    <div class="rank-info">
+      <div class="rank-name">${u.spitzname||u.name||'User'}${isMe?' (Du)':''}</div>
+      <div class="rank-badge">${u.role||''}</div>
+    </div>
+    <div class="rank-xp">${u.xp||0} XP</div>
+  </a>`;
+        }).join('');
+
+        const tabContent = {
+            allgemein: `
+<div class="explore-welcome">
+  <div style="position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,107,107,.25),rgba(100,50,200,.4))"></div>
+  <div style="position:absolute;inset:0;padding:20px;display:flex;flex-direction:column;justify-content:flex-end">
+    <div style="font-size:11px;font-weight:700;letter-spacing:1px;color:rgba(255,255,255,.7);text-transform:uppercase;margin-bottom:6px">Community Hub</div>
+    <div style="font-size:20px;font-weight:800;color:#fff;font-family:var(--font-display);line-height:1.2">Willkommen bei<br>CreatorBoost</div>
+    <div style="font-size:12px;color:rgba(255,255,255,.7);margin-top:6px;margin-bottom:12px">Deine Plattform für Wachstum, Reichweite und Community</div>
+    <a href="/feed" style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.15);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.25);color:#fff;padding:7px 16px;border-radius:20px;font-size:12px;font-weight:700;text-decoration:none;align-self:flex-start">Zum Feed →</a>
+  </div>
+</div>
+<div style="padding:0 16px 12px">
+  <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">⚡ Aktuelle Highlights</div>
+  <a href="/explore?tab=ranking" class="highlight-card">
+    <div class="highlight-icon" style="background:rgba(255,214,0,.12)">🏆</div>
+    <div><div style="font-size:13px;font-weight:700">Rangliste aktualisiert</div><div style="font-size:11px;color:var(--muted);margin-top:2px">Schau wer gerade vorne liegt</div></div>
+  </a>
+  <a href="/feed" class="highlight-card">
+    <div class="highlight-icon" style="background:rgba(255,107,107,.12)">📸</div>
+    <div><div style="font-size:13px;font-weight:700">Community Feed</div><div style="font-size:11px;color:var(--muted);margin-top:2px">Entdecke neue Reels der Community</div></div>
+  </a>
+  <div class="highlight-card" style="cursor:default">
+    <div class="highlight-icon" style="background:rgba(100,200,100,.12)">🎁</div>
+    <div><div style="font-size:13px;font-weight:700">XP Shop — Coming Soon</div><div style="font-size:11px;color:var(--muted);margin-top:2px">Tausche XP gegen Vorteile</div></div>
+  </div>
+</div>
+<div style="padding:0 16px;margin-bottom:12px">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+    <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">⭐ Top Creator</div>
+    <a href="/explore?tab=ranking" style="font-size:11px;color:var(--accent)">Alle anzeigen →</a>
+  </div>
+</div>
+<div class="creator-scroll">${topCreators||'<div style="color:var(--muted);font-size:13px;padding:0 16px">Noch keine Creator</div>'}</div>
+<div style="padding:16px 16px 12px">
+  <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px">🚀 Was möchtest du tun?</div>
+</div>
+<div class="action-grid">
+  <a href="/explore?tab=ranking" class="action-card">
+    <div class="action-card-icon">🏆</div>
+    <div class="action-card-title">Ranking ansehen</div>
+    <div class="action-card-sub">Dein Rang: ${myRank>0?'#'+myRank:'Admin'}</div>
+  </a>
+  <a href="/explore?tab=tipps" class="action-card">
+    <div class="action-card-icon">💡</div>
+    <div class="action-card-title">Tipps entdecken</div>
+    <div class="action-card-sub">Wachse als Creator</div>
+  </a>
+  <a href="/explore?tab=regeln" class="action-card">
+    <div class="action-card-icon">📋</div>
+    <div class="action-card-title">Regeln lesen</div>
+    <div class="action-card-sub">Community Guidelines</div>
+  </a>
+  <a href="/explore?tab=shop" class="action-card">
+    <div class="action-card-icon">🛍️</div>
+    <div class="action-card-title">XP Shop</div>
+    <div class="action-card-sub">Coming Soon</div>
+  </a>
+  <a href="/explore?tab=newsletter" class="action-card">
+    <div class="action-card-icon">📩</div>
+    <div class="action-card-title">Newsletter</div>
+    <div class="action-card-sub">Bleib informiert</div>
+  </a>
+  <a href="/einstellungen" class="action-card">
+    <div class="action-card-icon">📌</div>
+    <div class="action-card-title">Reel anpinnen</div>
+    <div class="action-card-sub">Zeig deinen besten Reel</div>
+  </a>
+</div>`,
+            ranking: `
+<div style="padding:12px 16px 4px;display:flex;align-items:center;justify-content:space-between">
+  <div style="font-size:13px;font-weight:700">⭐ Rangliste</div>
+  <div style="font-size:12px;color:var(--muted)">Dein Rang: ${myRank>0?'#'+myRank:adminIds.includes(Number(myUid))?'👑 Admin':'–'}</div>
+</div>
+<div style="padding-bottom:100px">${rankingRows}</div>`,
+            tipps: `<div style="padding:48px 24px;text-align:center"><div style="font-size:48px;margin-bottom:16px">💡</div><div style="font-size:17px;font-weight:700;margin-bottom:8px">Tipps & Tricks</div><div style="font-size:13px;color:var(--muted)">🔧 In Bearbeitung — Inhalte folgen bald!</div></div>`,
+            regeln: `<div style="padding:48px 24px;text-align:center"><div style="font-size:48px;margin-bottom:16px">📋</div><div style="font-size:17px;font-weight:700;margin-bottom:8px">Community Regeln</div><div style="font-size:13px;color:var(--muted)">🔧 In Bearbeitung — Inhalte folgen bald!</div></div>`,
+            shop: `<div style="padding:48px 24px;text-align:center"><div style="font-size:48px;margin-bottom:16px">🛍️</div><div style="font-size:17px;font-weight:700;margin-bottom:8px">XP Shop</div><div style="font-size:13px;color:var(--muted)">🔧 In Bearbeitung — Kommt bald!</div></div>`,
+            newsletter: `<div style="padding:48px 24px;text-align:center"><div style="font-size:48px;margin-bottom:16px">📩</div><div style="font-size:17px;font-weight:700;margin-bottom:8px">Newsletter</div><div style="font-size:13px;color:var(--muted)">🔧 In Bearbeitung — Inhalte folgen bald!</div></div>`,
+        };
+
+        const tabs = [
+            {id:'allgemein',label:'Allgemein'},
+            {id:'ranking',label:'🏆 Ranking'},
+            {id:'tipps',label:'💡 Tipps'},
+            {id:'regeln',label:'📋 Regeln'},
+            {id:'shop',label:'🛍️ Shop'},
+            {id:'newsletter',label:'📩 Newsletter'},
+        ];
+
+        return html(`
+<div class="topbar">
+  <div class="topbar-logo">CreatorBoost</div>
+  <div class="topbar-actions">
+    <button class="icon-btn" onclick="setTheme(document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark')">⚡</button>
+  </div>
+</div>
+<div style="padding:16px 16px 4px">
+  <div style="font-size:26px;font-weight:800;font-family:var(--font-display);letter-spacing:-.5px">EXPLORE</div>
+  <div style="font-size:13px;color:var(--muted);margin-top:2px">Entdecke, lerne und wachse als Creator</div>
+</div>
+<div class="explore-tabs">
+  ${tabs.map(t=>`<button class="explore-tab${tab===t.id?' active':''}" onclick="location.href='/explore?tab=${t.id}'">${t.label}</button>`).join('')}
+</div>
+<div id="explore-content" style="padding-bottom:${tab==='allgemein'?'0':'80px'}">
+  ${tabContent[tab]||tabContent.allgemein}
+</div>
+`, 'explore');
+    }
+
     // ── RANKING ──
     if (path === '/ranking') {
         const sorted = Object.entries(d.users||{})
@@ -1943,15 +2194,6 @@ ${(()=>{
 <div class="tabs" style="margin-top:8px;position:sticky;top:57px;z-index:50;background:var(--bg)">
   <div class="tab active" onclick="showPTab('posts',this)">📝 Posts</div>
   <div class="tab" onclick="showPTab('links',this)">🔗 Links</div>
-  <div class="tab" onclick="showPTab('postlink',this)">📸 Link teilen</div>
-</div>
-<div id="ptab-postlink" style="display:none;padding-bottom:100px">
-  <div style="padding:16px">
-    <input type="url" id="link-input" class="form-input" placeholder="https://www.instagram.com/reel/..." style="margin-bottom:8px">
-    <textarea id="link-caption" class="form-input" placeholder="Beschreibung (optional)..." maxlength="200" rows="2" style="margin-bottom:8px"></textarea>
-    <button class="btn btn-primary btn-full" onclick="postLink()">📸 Link teilen</button>
-    <div id="link-result" style="margin-top:8px;font-size:12px;text-align:center"></div>
-  </div>
 </div>
 <div id="ptab-posts" style="padding-bottom:100px">
   <div style="padding:12px 16px">
@@ -1969,8 +2211,6 @@ function showPTab(tab, el) {
     el.classList.add('active');
     document.getElementById('ptab-posts').style.display = tab==='posts'?'block':'none';
     document.getElementById('ptab-links').style.display = tab==='links'?'block':'none';
-    const pl = document.getElementById('ptab-postlink');
-    if(pl) pl.style.display = tab==='postlink'?'block':'none';
 }
 // Notification badge
 (async()=>{try{const r=await fetch('/api/notifications/count');const d=await r.json();const b=document.getElementById('notif-badge-profil');if(b&&d.count>0){b.textContent=d.count>9?'9+':d.count;b.style.display='flex';}}catch(e){}})();
@@ -1980,22 +2220,6 @@ async function deletePost(timestamp) {
     const data = await res.json();
     if (data.ok) { toast('✅ Gelöscht'); setTimeout(()=>location.reload(),500); }
     else toast('❌ Fehler');
-}
-async function postLink() {
-    const url = document.getElementById('link-input')?.value?.trim();
-    const result = document.getElementById('link-result');
-    if (!url) return;
-    if (!url.includes('instagram.com')) { result.textContent='❌ Nur Instagram Links erlaubt'; return; }
-    const btn = document.querySelector('[onclick="postLink()"]');
-    btn.disabled = true; btn.textContent = '⏳ Wird gesendet...';
-    try {
-        const caption = document.getElementById('link-caption')?.value?.trim() || '';
-        const res = await fetch('/api/post-link', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url, caption})});
-        const data = await res.json();
-        if (data.ok) { result.textContent='✅ Link erfolgreich geteilt!'; document.getElementById('link-input').value=''; }
-        else { result.textContent='❌ '+(data.error||'Fehler'); }
-    } catch(e) { result.textContent='❌ Netzwerkfehler'; }
-    btn.disabled=false; btn.textContent='📸 Link teilen';
 }
 async function submitPost() {
     const text = document.getElementById('new-post').value.trim();
@@ -2041,6 +2265,12 @@ async function toggleFollow(uid, btn) {
     // ── EINSTELLUNGEN ──
     if (path === '/einstellungen') {
         const u = myUser || {};
+        const currentPinnedLink = ladePinnedLink(myUid) || '';
+        const myRecentLinks = Object.values(d.links||{})
+            .filter(l=>String(l.user_id)===String(myUid)&&l.text&&l.text.includes('instagram.com'))
+            .sort((a,b)=>(b.timestamp||0)-(a.timestamp||0))
+            .slice(0,5)
+            .map(l=>l.text);
         const gradients = [
             'linear-gradient(135deg,#1a1a2e,#16213e,#0f3460)',
             'linear-gradient(135deg,#0d0d0d,#1a0a00,#3d1f00)',
@@ -2089,6 +2319,20 @@ async function toggleFollow(uid, btn) {
 <div style="padding:16px;border-bottom:1px solid var(--border2)">
   <div class="form-label">Persönlicher Link</div>
   <input type="url" class="form-input" id="inp-website" placeholder="https://deine-website.de" maxlength="100" value="${u.website||''}">
+</div>
+<div style="padding:16px;border-bottom:1px solid var(--border2)">
+  <div class="form-label">📌 Pinned Reel Link</div>
+  <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Dieser Reel wird auf der Explore-Seite bei deiner Creator-Karte angezeigt.</div>
+  <input type="url" class="form-input" id="inp-pinned-link" placeholder="https://www.instagram.com/reel/..." value="${currentPinnedLink}">
+  ${myRecentLinks.length ? `
+  <div style="margin-top:8px">
+    <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Letzte Links:</div>
+    <div style="display:flex;flex-direction:column;gap:4px">
+      ${myRecentLinks.map(l=>`<button onclick="document.getElementById('inp-pinned-link').value='${l.replace(/'/g,"\\'")}" style="background:var(--bg4);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:5px 10px;font-size:11px;text-align:left;cursor:pointer;font-family:var(--font);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${l.replace('https://www.instagram.com/','ig.com/')}</button>`).join('')}
+    </div>
+  </div>` : ''}
+  <button class="btn btn-outline btn-full" style="margin-top:10px;font-size:13px" onclick="savePinnedLink()">📌 Reel anpinnen</button>
+  ${currentPinnedLink ? `<button onclick="removePinnedLink()" style="background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;margin-top:6px;display:block">🗑️ Pin entfernen</button>` : ''}
 </div>
 <div style="padding:16px;border-bottom:1px solid var(--border2)">
   <div class="form-label">Banner</div>
@@ -2196,6 +2440,18 @@ async function saveProfile() {
 document.getElementById('inp-bio').addEventListener('input', function() {
     this.nextElementSibling.textContent = this.value.length + '/100';
 });
+async function savePinnedLink() {
+    const url = document.getElementById('inp-pinned-link')?.value?.trim() || '';
+    if (url && !url.includes('instagram.com')) { toast('❌ Nur Instagram Links erlaubt'); return; }
+    const res = await fetch('/api/set-pinned-link', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url})});
+    const data = await res.json();
+    if (data.ok) { toast(url ? '📌 Reel angepeint!' : '🗑️ Pin entfernt!'); setTimeout(()=>location.reload(),1000); }
+    else toast('❌ ' + (data.error||'Fehler'));
+}
+async function removePinnedLink() {
+    document.getElementById('inp-pinned-link').value = '';
+    await savePinnedLink();
+}
 </script>`, 'settings');
     }
 
