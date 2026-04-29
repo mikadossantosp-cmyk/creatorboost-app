@@ -1996,7 +1996,7 @@ async function createThread(){
   ${isAdmin ? `<a href="/nachrichten/gruppe/neu" style="padding:8px;color:#fff;text-decoration:none;font-size:22px;line-height:1">+</a>` : '<div style="width:36px"></div>'}
 </div>
 <div style="padding:12px 12px 100px">
-  ${threads.length ? `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">${threadCards}</div>` : '<div style="text-align:center;color:var(--muted);padding:60px 20px;font-size:14px">Keine Threads gefunden.<br><span style="font-size:12px;opacity:0.6">Stelle sicher dass GROUP_B_ID gesetzt ist.</span></div>'}
+  ${threads.length ? `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">${threadCards}</div>` : !topicsData ? '<div style="text-align:center;padding:60px 20px"><div style="font-size:36px;margin-bottom:12px">🔌</div><div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:6px">Bot nicht erreichbar</div><div style="font-size:12px;color:var(--muted)">Stelle sicher dass der Telegram-Bot läuft.</div></div>' : '<div style="text-align:center;padding:60px 20px"><div style="font-size:36px;margin-bottom:12px">✈️</div><div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:6px">Keine Threads gefunden</div><div style="font-size:12px;color:var(--muted);line-height:1.6">1. Telegram-Bot neu starten<br>2. Gruppe → Bearbeiten → <b>Topics aktivieren</b><br>3. Seite neu laden</div><button onclick="location.reload()" style="margin-top:16px;padding:10px 24px;background:#0088cc;color:#fff;border:none;border-radius:10px;font-size:14px;cursor:pointer">🔄 Neu laden</button></div>'}
 </div>
 <script>
 (function(){
