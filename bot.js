@@ -297,6 +297,14 @@ textarea.form-input{resize:none;min-height:80px}
     font-size: 12px;
   }
 }
+.post-category-label{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;padding:3px 10px;border-radius:20px;color:#fff}
+.post-likes-row{display:flex;align-items:center;gap:14px;padding:10px 16px 4px}
+.post-like-count{font-size:22px;font-weight:800;display:flex;align-items:center;gap:4px;color:var(--text)}
+.post-xp-pill{font-size:12px;font-weight:700;color:var(--gold);background:rgba(255,214,0,.12);padding:3px 10px;border-radius:20px}
+.liker-modal{position:fixed;inset:0;z-index:500;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.55);backdrop-filter:blur(4px);opacity:0;pointer-events:none;transition:opacity .25s}
+.liker-modal.open{opacity:1;pointer-events:all}
+.liker-modal-sheet{width:100%;max-width:480px;background:var(--bg3);border-radius:20px 20px 0 0;max-height:70vh;overflow-y:auto;transform:translateY(100%);transition:transform .3s cubic-bezier(.4,0,.2,1)}
+.liker-modal.open .liker-modal-sheet{transform:translateY(0)}
 `;
 
 function layout(content, session, page='feed', lang='de') {
@@ -313,6 +321,18 @@ function layout(content, session, page='feed', lang='de') {
 </head>
 <body>
 <div class="toast" id="toast"></div>
+<div class="liker-modal" id="liker-modal" onclick="if(event.target===this)closeLikerModal()">
+  <div class="liker-modal-sheet">
+    <div style="padding:14px 16px;border-bottom:1px solid var(--border2);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--bg3);z-index:1">
+      <span style="font-size:14px;font-weight:700">❤️ Wer hat geliked?</span>
+      <button onclick="closeLikerModal()" style="background:var(--bg4);border:none;color:var(--text);border-radius:50%;width:28px;height:28px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>
+    </div>
+    <div id="liker-modal-content" style="padding:4px 0"></div>
+    <div style="padding:12px 16px 28px">
+      <button onclick="closeLikerModal()" style="width:100%;background:var(--bg4);border:none;color:var(--text);border-radius:12px;padding:12px;font-size:14px;font-weight:600;cursor:pointer;font-family:var(--font)">Schließen</button>
+    </div>
+  </div>
+</div>
 ${content}
 ${session ? `
 <nav class="bottom-nav">
@@ -350,6 +370,8 @@ setInterval(checkNotifBadge, 30000);
 function toast(msg,dur=2500){const t=document.getElementById('toast');if(!t)return;t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),dur);}
 function setTheme(t){document.documentElement.setAttribute('data-theme',t);fetch('/api/theme',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({theme:t})});}
 function setLang(l){fetch('/api/lang',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lang:l})}).then(()=>location.reload());}
+function showLikerModal(msgId){const modal=document.getElementById('liker-modal');const content=document.getElementById('liker-modal-content');const rows=document.getElementById('liker-rows-'+msgId);if(!modal||!rows)return;content.innerHTML=rows.innerHTML||'<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">Noch niemand geliked</div>';modal.classList.add('open');document.body.style.overflow='hidden';}
+function closeLikerModal(){const modal=document.getElementById('liker-modal');if(modal){modal.classList.remove('open');document.body.style.overflow='';} }
 </script>
 <script>if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/sw.js').catch(()=>{}); }</script>
 </body></html>`;
@@ -1279,24 +1301,28 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
                     return '<div style="display:flex;gap:8px;padding:8px 12px;border-bottom:1px solid var(--border2)"><div style="position:relative;width:28px;height:28px;border-radius:50%;background:'+cg+';flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff"><span style="position:absolute">'+(cu.name||'?')[0]+'</span>'+cimg+'</div><div style="flex:1;min-width:0"><div style="font-size:11px;font-weight:700">'+(cu.spitzname||cu.name||'User')+' <span style="font-size:10px;color:var(--muted);font-weight:400">'+ct+'</span></div><div style="font-size:12px;color:var(--text);margin-top:2px">'+c.text+'</div></div></div>';
                 }).join('');
 
-            // Like button HTML
-            const likeBtn = String(link.user_id)===String(myUid)
-                ? '<div style="font-size:12px;color:var(--muted);padding:7px 12px">👤 Dein Link</div>'
-                : '<button class="post-action-btn '+(hasLiked?'liked':'')+'" onclick="likePost(\''+lid1+'\',this)" data-msgid="'+lid1+'" '+(hasLiked?'disabled':'')+'>'+
-                  '<svg width="20" height="20" viewBox="0 0 24 24" fill="'+(hasLiked?'currentColor':'none')+'" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>'+
-                  '<span id="likes-'+lid1+'">'+likes.length+'</span>'+
+            // Liker names text ("Gefällt X, Y und Z weiteren")
+            const likerNamesList=likes.slice(0,3).map(lid=>{const lu=d.users[String(lid)];return lu&&(lu.spitzname||lu.name)||'?';});
+            let likersNameText='';
+            if(likes.length===1) likersNameText='Gefällt <span>'+likerNamesList[0]+'</span>';
+            else if(likes.length===2) likersNameText='Gefällt <span>'+likerNamesList[0]+'</span> und <span>'+likerNamesList[1]+'</span>';
+            else if(likes.length>=3) likersNameText='Gefällt <span>'+likerNamesList[0]+'</span>, <span>'+likerNamesList[1]+'</span> und '+(likes.length-2)+' weiteren';
+
+            // Like button
+            const isOwnPost = String(link.user_id)===String(myUid);
+            const likeBtn = isOwnPost
+                ? '<div style="font-size:12px;color:var(--muted);padding:7px 0">👤 Dein Link</div>'
+                : '<button class="post-action-btn '+(hasLiked?'liked':'')+'" onclick="likePost(\''+lid1+'\',this)" data-msgid="'+lid1+'" '+(hasLiked?'disabled':'')+' style="border:1px solid '+(hasLiked?'var(--accent)':'var(--border)')+';border-radius:12px;padding:9px 20px;font-size:14px;font-weight:700;gap:6px">'+
+                  '<svg width="18" height="18" viewBox="0 0 24 24" fill="'+(hasLiked?'currentColor':'none')+'" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>'+
+                  'Like <span id="likes-'+lid1+'">'+likes.length+'</span>'+
                   '</button>';
 
-            // Likes box HTML
-            const likesBox = likes.length===0 ? '' :
-                '<div style="margin:0 16px 8px;border:1px solid var(--border2);border-radius:12px;overflow:hidden">'+
-                '<button onclick="toggleLikers(\''+lid1+'\')" style="width:100%;background:var(--bg4);border:none;padding:10px 12px;display:flex;align-items:center;gap:8px;cursor:pointer;text-align:left">'+
-                '<div style="display:flex;align-items:center">'+likerAvatars+'</div>'+
-                '<span style="flex:1;font-size:12px;font-weight:700;color:var(--text)">❤️ '+likes.length+' '+(likes.length===1?'Person hat':'Personen haben')+' geliked</span>'+
-                '<span id="likers-arrow-'+lid1+'" style="font-size:12px;color:var(--muted);transition:transform .2s">▼</span>'+
-                '</button>'+
-                '<div id="likers-box-'+lid1+'" style="display:none"><div style="padding:4px 0">'+likerRows+'</div></div>'+
-                '</div>';
+            // "Wer hat geliked?" button — only shown when there are likes
+            const whoLikedBtn = likes.length>0
+                ? '<button class="post-action-btn" onclick="showLikerModal(\''+lid1+'\')" style="border:1px solid var(--border);border-radius:12px;padding:9px 20px;font-size:14px;font-weight:700;gap:6px">'+
+                  '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>'+
+                  'Wer hat geliked?</button>'
+                : '';
 
             // Comments box HTML
             const commentsBox =
@@ -1318,7 +1344,13 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
                 '</div>';
 
             return '<div class="post fade-up" id="post-'+msgId+'" data-url="'+link.text+'" data-ts="'+(link.timestamp||0)+'">\n'+
-'  <div class="post-header">\n'+
+// Category badge + timestamp row
+'  <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px 0">\n'+
+'    <span class="post-category-label" style="background:linear-gradient(135deg,var(--accent),var(--accent2))">📸 Neuer Instagram Link</span>\n'+
+'    <span class="post-time">'+new Date(link.timestamp).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})+'</span>\n'+
+'  </div>\n'+
+// Post header
+'  <div class="post-header" style="padding-top:8px">\n'+
 '    <div style="position:relative;width:40px;height:40px;border-radius:50%;overflow:hidden;background:'+grad+';flex-shrink:0;display:flex;align-items:center;justify-content:center">\n'+
 '      <span style="color:#fff;font-weight:700;font-size:15px;position:absolute">'+(poster.name||'?').slice(0,1)+'</span>\n'+
 '      '+avatarSmall+'\n'+
@@ -1328,10 +1360,10 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
 '        '+(poster.spitzname||poster.name||'User')+'\n'+
 '        '+(isOnline?'<span style="width:7px;height:7px;border-radius:50%;background:#00c851;display:inline-block;flex-shrink:0"></span>':'')+'\n'+
 '      </div>\n'+
-'      <div class="post-badge">'+(poster.role||'')+' '+(insta?'· 📸 @'+poster.instagram:'')+' </div>\n'+
+'      <div class="post-badge">'+(poster.role||'')+(insta?'<span style="color:var(--muted2)"> · @'+poster.instagram+'</span>':'')+'</div>\n'+
 '    </div>\n'+
-'    <div class="post-time">'+new Date(link.timestamp).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})+'</div>\n'+
 '  </div>\n'+
+// Link preview card
 '  <div onclick="window.open(\''+link.text+'\',\'_blank\')" style="cursor:pointer;margin:0 16px;border-radius:12px;overflow:hidden;background:var(--bg4);border:1px solid var(--border2)">\n'+
 '    <div style="position:relative;width:100%;height:130px;overflow:hidden">\n'+
 '      <div style="position:absolute;inset:0;background:'+bannerBg+'"></div>\n'+
@@ -1351,8 +1383,17 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
 '      <div style="font-size:10px;color:var(--accent);font-weight:600">Öffnen →</div>\n'+
 '    </div>\n'+
 '  </div>\n'+
-'  <div class="post-actions">'+likeBtn+'</div>\n'+
-likesBox+
+// Likes counter + XP badge
+'  <div class="post-likes-row">\n'+
+'    <span class="post-like-count">❤️ <span id="likes-'+lid1+'">'+likes.length+'</span></span>\n'+
+'    <span class="post-xp-pill">⚡ '+(poster.xp||0)+' XP</span>\n'+
+'  </div>\n'+
+// "Gefällt X und Y" text
+(likersNameText?'  <div class="post-likers">'+likersNameText+'</div>\n':'')+
+// Hidden liker rows for modal
+'<div id="liker-rows-'+lid1+'" style="display:none">'+likerRows+'</div>\n'+
+// Action buttons: Like + Wer hat geliked?
+'  <div class="post-actions" style="gap:8px;padding:8px 16px 12px">'+likeBtn+whoLikedBtn+'</div>\n'+
 commentsBox+
 '</div>';}
 

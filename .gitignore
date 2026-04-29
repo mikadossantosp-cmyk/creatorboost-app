@@ -1,0 +1,4 @@
+node_modules/
+sessions.json
+cb_sessions.json
+*.session
