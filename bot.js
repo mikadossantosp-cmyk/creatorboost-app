@@ -1972,15 +1972,15 @@ async function createThread(){
             const lastMsg = thr.last_msg;
             const lastMsgText = lastMsg ? (lastMsg.type === 'photo' ? '📷 Foto' : lastMsg.type === 'video' ? '🎬 Video' : lastMsg.type === 'sticker' ? '🎭 Sticker' : (lastMsg.text || '').slice(0, 45)) : 'Noch keine Nachrichten';
             const lastMsgName = lastMsg ? (lastMsg.name || '') : '';
-            return \`<a href="/nachrichten/gruppe/\${thr.id}" style="text-decoration:none;display:block">
+            return `<a href="/nachrichten/gruppe/${thr.id}" style="text-decoration:none;display:block">
   <div style="background:var(--bg2);border-radius:16px;padding:16px;position:relative;border:1px solid var(--border2);transition:transform 0.15s" onmousedown="this.style.transform='scale(0.97)'" onmouseup="this.style.transform=''" onmouseleave="this.style.transform=''">
-    \${unread>0?'<div style="position:absolute;top:10px;right:10px;background:#0088cc;color:#fff;border-radius:50%;min-width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;padding:0 4px">'+unread+'</div>':''}
-    <div style="width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#0088cc22,#006699aa);border:2px solid #0088cc44;display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 10px">\${thr.emoji}</div>
-    <div style="font-size:14px;font-weight:700;color:var(--text);text-align:center;margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">\${thr.name}</div>
-    <div style="font-size:11px;color:var(--muted);text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">\${lastMsgName?lastMsgName+': ':''}\${lastMsgText}</div>
-    <div style="text-align:center;margin-top:6px;font-size:10px;color:#0088cc88">\${thr.msg_count||0} Nachrichten</div>
+    ${unread>0?'<div style="position:absolute;top:10px;right:10px;background:#0088cc;color:#fff;border-radius:50%;min-width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;padding:0 4px">'+unread+'</div>':''}
+    <div style="width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#0088cc22,#006699aa);border:2px solid #0088cc44;display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 10px">${thr.emoji}</div>
+    <div style="font-size:14px;font-weight:700;color:var(--text);text-align:center;margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${thr.name}</div>
+    <div style="font-size:11px;color:var(--muted);text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${lastMsgName?lastMsgName+': ':''}${lastMsgText}</div>
+    <div style="text-align:center;margin-top:6px;font-size:10px;color:#0088cc88">${thr.msg_count||0} Nachrichten</div>
   </div>
-</a>\`;
+</a>`;
         }).join('');
         return html(`
 <div class="topbar" style="position:sticky;top:0;z-index:10;background:linear-gradient(135deg,#0088cc,#006699)">
