@@ -1830,21 +1830,14 @@ setInterval(async () => {
 
     // ── NEUER THREAD (ADMIN) ──
     if (path === '/nachrichten/gruppe/neu') {
-        const isAdmin = session?.role === '⚙️ Admin' || (session?.uid && require && false);
-        const botData = await fetchBot('/data');
-        const adminCheck = botData?.users?.[myUid];
-        const canCreate = adminCheck && (String(adminCheck.role || '').includes('Admin') || String(adminCheck.xp) && ADMIN_IDS_CB.includes(String(myUid)));
         return html(`
-<div class="topbar" style="position:sticky;top:0;z-index:10;background:linear-gradient(135deg,#0088cc,#006699)">
-  <a href="/nachrichten/gruppe" style="padding:8px;color:#fff;display:flex;align-items:center;text-decoration:none">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20"><polyline points="15 18 9 12 15 6"/></svg>
-  </a>
+<div class="topbar" style="background:linear-gradient(135deg,#0088cc,#006699)">
+  <a href="/nachrichten/gruppe" style="padding:8px;color:#fff;display:flex;align-items:center;text-decoration:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20"><polyline points="15 18 9 12 15 6"/></svg></a>
   <div style="flex:1;text-align:center;font-weight:800;font-size:15px;color:#fff">Neuen Thread erstellen</div>
   <div style="width:36px"></div>
 </div>
 <div style="padding:24px 16px 100px">
-  <div style="background:var(--bg2);border-radius:16px;padding:20px;max-width:500px;margin:0 auto">
-    <div style="font-size:14px;color:var(--muted);margin-bottom:16px">Erstelle einen neuen Thread in der Telegram Gruppe</div>
+  <div style="background:var(--bg2);border-radius:16px;padding:20px">
     <div style="margin-bottom:16px">
       <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">EMOJI</label>
       <input id="neu-emoji" maxlength="2" value="💬" style="width:60px;font-size:24px;text-align:center;background:var(--bg4);border:1px solid var(--border);border-radius:10px;padding:8px;color:var(--text);outline:none">
@@ -1861,164 +1854,140 @@ setInterval(async () => {
 async function createThread(){
   const name=document.getElementById('neu-name').value.trim();
   const emoji=document.getElementById('neu-emoji').value.trim()||'💬';
-  if(!name){document.getElementById('neu-status').textContent='Bitte einen Namen eingeben';return;}
+  if(!name)return;
   document.getElementById('neu-status').textContent='Erstelle...';
-  try{
-    const r=await fetch('/api/create-thread',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,emoji})});
-    const d=await r.json();
-    if(d.ok){document.getElementById('neu-status').textContent='✅ Thread erstellt!';setTimeout(()=>location.href='/nachrichten/gruppe',1200);}
-    else document.getElementById('neu-status').textContent='❌ '+d.error;
-  }catch(e){document.getElementById('neu-status').textContent='❌ Fehler';}
+  const r=await fetch('/api/create-thread',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,emoji})});
+  const d=await r.json();
+  if(d.ok){setTimeout(()=>location.href='/nachrichten/gruppe',800);}
+  else document.getElementById('neu-status').textContent='❌ '+(d.error||'Fehler');
 }
 </script>`, 'messages');
     }
 
     // ── THREAD DETAIL ──
-    if (path.startsWith('/nachrichten/gruppe/') && path !== '/nachrichten/gruppe/') {
-        const threadId = path.split('/nachrichten/gruppe/')[1]?.split('?')[0];
-        if (!threadId) return redirect('/nachrichten/gruppe');
-        const topicsData = await fetchBot('/forum-topics');
-        const threads = topicsData?.threads || [];
-        const thr = threads.find(t => String(t.id) === threadId) || { id: threadId, name: threadId === 'general' ? 'Allgemein' : 'Thread', emoji: '💬' };
+    if (path.startsWith('/nachrichten/gruppe/') && path.length > '/nachrichten/gruppe/'.length) {
+        const threadId = decodeURIComponent(path.slice('/nachrichten/gruppe/'.length).split('?')[0]);
         const botData = await fetchBot('/data');
-        const adminUser = botData?.users?.[myUid];
-        const isAdmin = adminUser && String(adminUser.role || '').includes('Admin');
+        if (!botData) return redirect('/nachrichten/gruppe');
         // Mark as read
         await postBot('/mark-read', { uid: myUid, thread_id: threadId });
+        const thrInfo = (botData.threads||[]).find(t=>String(t.id)===threadId) || { name: threadId==='general'?'Allgemein':'Thread '+threadId, emoji: threadId==='general'?'💬':'📌' };
+        // Get messages: general uses communityFeed as fallback
+        let msgs = (botData.threadMessages||{})[threadId] || [];
+        if (!msgs.length && threadId==='general' && botData.communityFeed?.length) {
+            msgs = botData.communityFeed.map(m=>({ uid:'', tgName:m.username||null, name:m.name||m.username||'User', role:null, type:'text', text:m.text||'', mediaId:null, timestamp:m.timestamp, msg_id:m.msg_id }));
+        }
+        const msgsJson = JSON.stringify(msgs);
+        const isAdmin = (botData.users?.[myUid]) && String(botData.users[myUid].role||'').includes('Admin');
         return html(`
 <div class="topbar" style="position:sticky;top:0;z-index:10;background:linear-gradient(135deg,#0088cc,#006699)">
-  <a href="/nachrichten/gruppe" style="padding:8px;color:#fff;display:flex;align-items:center;text-decoration:none">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20"><polyline points="15 18 9 12 15 6"/></svg>
-  </a>
+  <a href="/nachrichten/gruppe" style="padding:8px;color:#fff;display:flex;align-items:center;text-decoration:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20"><polyline points="15 18 9 12 15 6"/></svg></a>
   <div style="flex:1;text-align:center">
-    <div style="font-weight:800;font-size:15px;color:#fff">${thr.emoji} ${thr.name}</div>
-    <div style="font-size:11px;color:rgba(255,255,255,0.7);display:flex;align-items:center;justify-content:center;gap:4px">
-      <span style="width:5px;height:5px;border-radius:50%;background:#4fff91;animation:pulse-dot 1.5s infinite;display:inline-block"></span>Live
-    </div>
+    <div style="font-weight:800;font-size:15px;color:#fff">${thrInfo.emoji} ${thrInfo.name}</div>
+    <div style="font-size:11px;color:rgba(255,255,255,0.7)">Live ●</div>
   </div>
   <div style="width:36px"></div>
 </div>
-<div id="thread-msgs" style="padding:8px 12px 160px;display:flex;flex-direction:column;gap:12px">
-  <div style="text-align:center;color:rgba(255,255,255,0.5);padding:40px 0;font-size:13px">Lädt...</div>
-</div>
+<div id="msgs" style="padding:12px 12px 160px;display:flex;flex-direction:column;gap:10px"></div>
 <div style="position:fixed;bottom:calc(60px + var(--safe-bottom));left:0;right:0;padding:10px 12px;background:var(--bg2);border-top:1px solid var(--border);display:flex;gap:8px;align-items:flex-end;z-index:5">
-  <textarea id="thread-input" placeholder="Schreibe in ${thr.name}..." rows="1"
-    style="flex:1;background:var(--bg4);border:1px solid #0088cc44;border-radius:20px;padding:10px 16px;color:var(--text);font-family:var(--font);font-size:14px;resize:none;outline:none;line-height:1.4;max-height:120px;overflow-y:auto"
-    oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px'"
-    onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMsg();}"></textarea>
-  <button onclick="sendMsg()" style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#0088cc,#006699);border:none;color:#fff;font-size:18px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center">✈️</button>
+  <textarea id="inp" placeholder="Schreibe etwas..." rows="1" style="flex:1;background:var(--bg4);border:1px solid #0088cc44;border-radius:20px;padding:10px 16px;color:var(--text);font-size:14px;resize:none;outline:none;line-height:1.4;max-height:120px" oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px'" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();send();}"></textarea>
+  <button onclick="send()" style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#0088cc,#006699);border:none;color:#fff;font-size:18px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center">✈️</button>
 </div>
 <script>
 (function(){
-  const THREAD_ID='${threadId}';
-  const MY_UID='${myUid}';
-  function timeStr(ts){const d=new Date(ts);const h=String(d.getHours()).padStart(2,'0');const m=String(d.getMinutes()).padStart(2,'0');return h+':'+m;}
-  function initial(n){return(n||'?').replace(/^@/,'').slice(0,1).toUpperCase();}
-  const COLORS=['#ff6b6b','#cc5de8','#4dabf7','#ffd43b','#00c851','#ff9f43','#0088cc','#e64980'];
-  function color(n){return COLORS[(n||'?').charCodeAt(0)%COLORS.length];}
-  let lastCount=0;
+  const TID='${threadId}';
+  const COLORS=['#ff6b6b','#cc5de8','#4dabf7','#ffd43b','#00c851','#ff9f43','#0088cc'];
+  function col(n){return COLORS[((n||'').charCodeAt(0)||0)%COLORS.length];}
+  function ini(n){return((n||'?').replace(/^@/,'')||'?')[0].toUpperCase();}
+  function t(ts){const d=new Date(ts);return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');}
+  let known=0;
   function render(msgs){
-    const el=document.getElementById('thread-msgs');
-    if(!el)return;
-    if(!msgs||!msgs.length){el.innerHTML='<div style="text-align:center;color:var(--muted);padding:40px 0;font-size:13px">Noch keine Nachrichten — schreib etwas!</div>';return;}
-    if(msgs.length===lastCount)return;
-    const atBottom=window.innerHeight+window.scrollY>=document.body.scrollHeight-60;
-    lastCount=msgs.length;
+    const el=document.getElementById('msgs');
+    if(!el||msgs.length===known)return;
+    const atBottom=window.innerHeight+window.scrollY>=document.body.scrollHeight-80;
+    known=msgs.length;
     el.innerHTML=[...msgs].reverse().map(m=>{
-      const c=color(m.name||'?');
-      const nameHtml=m.uid?'<a href="/profil/'+m.uid+'" style="font-size:12px;font-weight:700;color:'+c+';text-decoration:none;margin-bottom:3px;display:inline-block">'+(m.role?m.role+' ':'')+m.name+'</a>':'<span style="font-size:12px;font-weight:700;color:'+c+';margin-bottom:3px;display:inline-block">'+(m.role?m.role+' ':'')+m.name+'</span>';
-      let mediaHtml='';
-      if(m.type==='photo'&&m.mediaId)mediaHtml='<img src="/api/tg-file/'+m.mediaId+'" style="max-width:100%;border-radius:10px;margin-bottom:4px;display:block" loading="lazy">';
-      else if(m.type==='sticker'&&m.mediaId)mediaHtml='<img src="/api/tg-file/'+m.mediaId+'" style="width:80px;height:80px;object-fit:contain;margin-bottom:4px;display:block" loading="lazy">';
-      else if(m.type==='video')mediaHtml='<div style="background:rgba(0,0,0,0.3);border-radius:10px;padding:10px 14px;margin-bottom:4px;font-size:12px;color:var(--muted)">🎬 Ein Video wurde gesendet. Videos können hier nicht abgespielt werden — um dieses zu sehen, besuche bitte die Gruppe auf Telegram.</div>';
-      const textHtml=m.text?'<div style="font-size:13px;line-height:1.5;word-break:break-word">'+m.text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</div>':'';
-      return '<div style="display:flex;gap:10px;align-items:flex-start"><div style="width:36px;height:36px;border-radius:50%;background:'+c+';display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;flex-shrink:0">'+initial(m.name)+'</div><div style="flex:1;min-width:0"><div style="display:flex;align-items:baseline;gap:8px;margin-bottom:4px">'+nameHtml+'<span style="font-size:10px;color:var(--muted)">'+timeStr(m.timestamp)+'</span></div>'+mediaHtml+textHtml+'</div></div>';
+      const c=col(m.name);
+      const nameEl=m.uid?'<a href="/profil/'+m.uid+'" style="font-size:12px;font-weight:700;color:'+c+';text-decoration:none">'+(m.role?m.role+' ':'')+m.name+'</a>':'<span style="font-size:12px;font-weight:700;color:'+c+'">'+(m.role?m.role+' ':'')+m.name+'</span>';
+      let body='';
+      if(m.type==='photo'&&m.mediaId)body='<img src="/api/tg-file/'+m.mediaId+'" style="max-width:100%;border-radius:10px;margin-top:4px;display:block" loading="lazy">';
+      else if(m.type==='sticker'&&m.mediaId)body='<img src="/api/tg-file/'+m.mediaId+'" style="width:80px;height:80px;object-fit:contain;display:block;margin-top:4px" loading="lazy">';
+      else if(m.type==='video')body='<div style="background:rgba(0,0,0,.3);border-radius:10px;padding:8px 12px;font-size:12px;color:var(--muted);margin-top:4px">🎬 Video — öffne Telegram zum Ansehen</div>';
+      if(m.text)body+='<div style="font-size:13px;line-height:1.5;margin-top:2px;word-break:break-word">'+m.text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</div>';
+      return '<div style="display:flex;gap:10px;align-items:flex-start"><div style="width:36px;height:36px;border-radius:50%;background:'+c+';display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;flex-shrink:0">'+ini(m.name)+'</div><div style="flex:1;min-width:0"><div style="display:flex;align-items:baseline;gap:8px;margin-bottom:2px">'+nameEl+'<span style="font-size:10px;color:var(--muted)">'+t(m.timestamp)+'</span></div>'+body+'</div></div>';
     }).join('');
     if(atBottom)window.scrollTo(0,document.body.scrollHeight);
   }
+  // Initial render with server data
+  render(${msgsJson});
   async function load(){
-    try{const r=await fetch('/api/thread-messages/'+THREAD_ID);if(r.ok){const d=await r.json();render(d.messages||[]);}}catch(e){}
-  }
-  window.sendMsg=async function(){
-    const el=document.getElementById('thread-input');
-    const text=el.value.trim();if(!text)return;
-    el.value='';el.style.height='auto';
     try{
-      const r=await fetch('/api/send-thread-message',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,thread_id:THREAD_ID})});
-      const d=await r.json();if(!d.ok){el.value=text;alert(d.error||'Fehler');}
-    }catch(e){el.value=text;}
-    setTimeout(load,800);
+      const r=await fetch('/api/thread-messages/'+encodeURIComponent(TID));
+      if(r.ok){const d=await r.json();if(d.messages?.length)render(d.messages);}
+    }catch(e){}
+  }
+  window.send=async function(){
+    const el=document.getElementById('inp');const text=el.value.trim();if(!text)return;
+    el.value='';el.style.height='auto';
+    const r=await fetch('/api/send-thread-message',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,thread_id:TID})});
+    const d=await r.json();
+    if(!d.ok){el.value=text;alert(d.error||'Fehler');}
+    else setTimeout(load,1500);
   };
-  load();setInterval(load,10000);
+  setInterval(load,10000);
 })();
 </script>`, 'messages');
     }
 
     // ── TELEGRAM GRUPPE THREAD-LISTE ──
     if (path === '/nachrichten/gruppe') {
-        const topicsData = await fetchBot('/forum-topics');
         const botData = await fetchBot('/data');
-        const adminUser = botData?.users?.[myUid];
-        const isAdmin = adminUser && String(adminUser.role || '').includes('Admin');
-        const lastRead = botData?.threadLastRead?.[myUid] || {};
-        // Build thread list: from /forum-topics OR directly from /data threadMessages
-        let threads = topicsData?.threads || [];
-        if (!threads.length && botData?.threadMessages) {
-            threads = Object.keys(botData.threadMessages).map(tid => ({
-                id: tid, name: tid === 'general' ? 'Allgemein' : `Thread ${tid}`,
-                emoji: tid === 'general' ? '💬' : '📌',
-                last_msg: botData.threadMessages[tid]?.[0] || null,
-                msg_count: botData.threadMessages[tid]?.length || 0
-            }));
+        if (!botData) return html('<div style="padding:40px;text-align:center;color:var(--muted)">Bot nicht erreichbar</div>', 'messages');
+        const adminUser = botData.users?.[myUid];
+        const isAdmin = adminUser && String(adminUser.role||'').includes('Admin');
+        const lastRead = botData.threadLastRead?.[myUid] || {};
+        const threadMsgs = botData.threadMessages || {};
+        const communityFeed = botData.communityFeed || [];
+        // Build thread list
+        let threads = botData.threads || [];
+        if (!threads.length) {
+            threads = Object.keys(threadMsgs).map(tid => ({ id:tid, name:tid==='general'?'Allgemein':'Thread '+tid, emoji:tid==='general'?'💬':'📌', last_msg:threadMsgs[tid]?.[0]||null, msg_count:threadMsgs[tid]?.length||0 }));
         }
-        if (!threads.length) threads = [{ id: 'general', name: 'Allgemein', emoji: '💬', last_msg: botData?.communityFeed?.[0] ? { text: botData.communityFeed[0].text, name: botData.communityFeed[0].name } : null, msg_count: botData?.communityFeed?.length || 0 }];
-        const threadCards = threads.map(thr => {
-            const lastReadTs = lastRead[String(thr.id)] || 0;
-            const msgs = (botData?.threadMessages?.[String(thr.id)] || []);
-            const unread = msgs.filter(m => m.timestamp > lastReadTs).length;
-            const lastMsg = thr.last_msg;
-            const lastMsgText = lastMsg ? (lastMsg.type === 'photo' ? '📷 Foto' : lastMsg.type === 'video' ? '🎬 Video' : lastMsg.type === 'sticker' ? '🎭 Sticker' : (lastMsg.text || '').slice(0, 45)) : 'Noch keine Nachrichten';
-            const lastMsgName = lastMsg ? (lastMsg.name || '') : '';
+        if (!threads.find(t=>String(t.id)==='general')) {
+            const lastCF = communityFeed[0];
+            threads.unshift({ id:'general', name:'Allgemein', emoji:'💬', last_msg:lastCF?{text:lastCF.text,name:lastCF.name||lastCF.username}:null, msg_count:Math.max(communityFeed.length, threadMsgs['general']?.length||0) });
+        }
+        const cards = threads.map(thr => {
+            const tid = String(thr.id);
+            const lastReadTs = lastRead[tid]||0;
+            const msgs = threadMsgs[tid]||(tid==='general'?communityFeed:[]);
+            const unread = msgs.filter(m=>m.timestamp>lastReadTs).length;
+            const lm = thr.last_msg;
+            const preview = lm?(lm.type==='photo'?'📷 Foto':lm.type==='video'?'🎬 Video':lm.type==='sticker'?'🎭 Sticker':(lm.text||'').slice(0,40)):'Noch keine Nachrichten';
+            const who = lm?.name||'';
             return `<a href="/nachrichten/gruppe/${thr.id}" style="text-decoration:none;display:block">
-  <div style="background:var(--bg2);border-radius:16px;padding:16px;position:relative;border:1px solid var(--border2);transition:transform 0.15s" onmousedown="this.style.transform='scale(0.97)'" onmouseup="this.style.transform=''" onmouseleave="this.style.transform=''">
-    ${unread>0?'<div style="position:absolute;top:10px;right:10px;background:#0088cc;color:#fff;border-radius:50%;min-width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;padding:0 4px">'+unread+'</div>':''}
+  <div style="background:var(--bg2);border-radius:16px;padding:16px;position:relative;border:1px solid var(--border2);" onmousedown="this.style.opacity='.7'" onmouseup="this.style.opacity='1'" onmouseleave="this.style.opacity='1'">
+    ${unread>0?`<div style="position:absolute;top:10px;right:10px;background:#0088cc;color:#fff;border-radius:50%;min-width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;padding:0 4px">${unread}</div>`:''}
     <div style="width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#0088cc22,#006699aa);border:2px solid #0088cc44;display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 10px">${thr.emoji}</div>
-    <div style="font-size:14px;font-weight:700;color:var(--text);text-align:center;margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${thr.name}</div>
-    <div style="font-size:11px;color:var(--muted);text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${lastMsgName?lastMsgName+': ':''}${lastMsgText}</div>
+    <div style="font-size:14px;font-weight:700;color:var(--text);text-align:center;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${thr.name}</div>
+    <div style="font-size:11px;color:var(--muted);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${who?who+': ':''}${preview}</div>
     <div style="text-align:center;margin-top:6px;font-size:10px;color:#0088cc88">${thr.msg_count||0} Nachrichten</div>
   </div>
 </a>`;
         }).join('');
         return html(`
 <div class="topbar" style="position:sticky;top:0;z-index:10;background:linear-gradient(135deg,#0088cc,#006699)">
-  <a href="/nachrichten" style="padding:8px;color:#fff;display:flex;align-items:center;text-decoration:none">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20"><polyline points="15 18 9 12 15 6"/></svg>
-  </a>
+  <a href="/nachrichten" style="padding:8px;color:#fff;display:flex;align-items:center;text-decoration:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20"><polyline points="15 18 9 12 15 6"/></svg></a>
   <div style="flex:1;text-align:center">
     <div style="font-weight:800;font-size:15px;color:#fff">✈️ Telegram Gruppe</div>
-    <div style="font-size:11px;color:rgba(255,255,255,0.7);display:flex;align-items:center;justify-content:center;gap:4px">
-      <span style="width:5px;height:5px;border-radius:50%;background:#4fff91;animation:pulse-dot 1.5s infinite;display:inline-block"></span>Live
-    </div>
+    <div style="font-size:11px;color:rgba(255,255,255,0.7)">Live ●</div>
   </div>
-  ${isAdmin ? `<a href="/nachrichten/gruppe/neu" style="padding:8px;color:#fff;text-decoration:none;font-size:22px;line-height:1">+</a>` : '<div style="width:36px"></div>'}
+  ${isAdmin?'<a href="/nachrichten/gruppe/neu" style="padding:8px 12px;color:#fff;text-decoration:none;font-size:22px;font-weight:300">+</a>':'<div style="width:44px"></div>'}
 </div>
-<div style="padding:12px 12px 100px">
-  ${threads.length ? `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">${threadCards}</div>` : !topicsData ? '<div style="text-align:center;padding:60px 20px"><div style="font-size:36px;margin-bottom:12px">🔌</div><div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:6px">Bot nicht erreichbar</div><div style="font-size:12px;color:var(--muted)">Stelle sicher dass der Telegram-Bot läuft.</div></div>' : '<div style="text-align:center;padding:60px 20px"><div style="font-size:36px;margin-bottom:12px">✈️</div><div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:6px">Keine Threads gefunden</div><div style="font-size:12px;color:var(--muted);line-height:1.6">1. Telegram-Bot neu starten<br>2. Gruppe → Bearbeiten → <b>Topics aktivieren</b><br>3. Seite neu laden</div><button onclick="location.reload()" style="margin-top:16px;padding:10px 24px;background:#0088cc;color:#fff;border:none;border-radius:10px;font-size:14px;cursor:pointer">🔄 Neu laden</button></div>'}
-</div>
-<script>
-(function(){
-  async function refresh(){
-    try{
-      const r=await fetch('/api/forum-topics');
-      if(!r.ok)return;
-      const d=await r.json();
-      if(d.threads&&d.threads.length)location.reload();
-    }catch(e){}
-  }
-  setInterval(refresh,10000);
-})();
-</script>`, 'messages');
+<div style="padding:12px 12px 100px;display:grid;grid-template-columns:1fr 1fr;gap:10px">${cards}</div>
+<script>setTimeout(()=>location.reload(),10000);</script>`, 'messages');
     }
+
 
 
     if (path === '/nachrichten') {
