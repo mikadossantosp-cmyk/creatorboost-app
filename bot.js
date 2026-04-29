@@ -273,7 +273,7 @@ textarea.form-input{resize:none;min-height:80px}
 
   /* Mehr Platz nach oben wegen größerem Avatar */
   .profile-info {
-    padding: 58px 28px 20px;
+    padding: 68px 28px 20px;
   }
 
   .profile-name {
@@ -324,7 +324,7 @@ textarea.form-input{resize:none;min-height:80px}
 .highlight-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
 .creator-scroll{display:flex;gap:12px;padding:0 16px 12px;overflow-x:auto;scrollbar-width:none}
 .creator-scroll::-webkit-scrollbar{display:none}
-.creator-card{flex-shrink:0;width:140px;background:var(--bg3);border:1px solid var(--border2);border-radius:16px;overflow:hidden;text-decoration:none;color:var(--text)}
+.creator-card{flex-shrink:0;width:140px;background:var(--bg3);border:1px solid var(--border2);border-radius:16px;overflow:hidden;text-decoration:none;color:var(--text);display:block}
 .creator-card-banner{height:50px;position:relative;overflow:hidden;background:var(--bg4)}
 .creator-card-avatar{width:44px;height:44px;border-radius:50%;border:3px solid var(--bg3);margin:-22px auto 0;position:relative;overflow:hidden;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff}
 .creator-card-info{padding:6px 10px 10px;text-align:center}
@@ -462,9 +462,12 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
     const rank = isAdmin ? 0 : sorted.findIndex(([id])=>id===uid)+1;
 
     return `
-<div class="profile-banner" style="${bannerIsGrad ? 'background:'+banner : ''}">
-  ${!bannerIsGrad ? '<img src="'+banner+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">' : ''}
-  <div class="profile-banner-overlay"></div>
+<div style="position:relative">
+  <div class="profile-banner" style="${bannerIsGrad ? 'background:'+banner : ''}">
+    ${!bannerIsGrad ? '<img src="'+banner+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">' : ''}
+    <div class="profile-banner-overlay"></div>
+    ${isOwn?`<a href="/einstellungen" style="position:absolute;bottom:12px;right:12px;background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.2);color:#fff;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;backdrop-filter:blur(8px)">✏️ Bearbeiten</a>`:''}
+  </div>
   <div class="profile-avatar-wrap">
     ${(picData||ladeBild(uid,'profilepic'))
       ? `<img src="${picData||ladeBild(uid,'profilepic')}" class="profile-avatar" onerror="this.style.display='none'" alt="">`
@@ -472,7 +475,6 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
       ? `<img src="https://unavatar.io/instagram/${u.instagram}" class="profile-avatar" onerror="this.style.display='none'" alt="">`
       : `<div class="profile-avatar" style="display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:700;background:${grad};color:#fff">${(u.name||'?').slice(0,2).toUpperCase()}</div>`}
   </div>
-  ${isOwn?`<a href="/einstellungen" style="position:absolute;bottom:12px;right:12px;background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.2);color:#fff;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;backdrop-filter:blur(8px)">✏️ Bearbeiten</a>`:''}
 </div>
 <div class="profile-info">
   <div class="profile-name">${u.spitzname||u.name||'User'}</div>
