@@ -319,8 +319,9 @@ textarea.form-input{resize:none;min-height:80px}
 .explore-tab{flex-shrink:0;padding:7px 16px;border-radius:20px;font-size:12px;font-weight:700;background:var(--bg4);color:var(--muted);border:none;cursor:pointer;transition:all .2s;font-family:var(--font)}
 .explore-tab.active{background:var(--accent);color:#fff;box-shadow:0 0 14px rgba(255,107,107,.35)}
 .explore-welcome{margin:0 16px 16px;border-radius:16px;overflow:hidden;position:relative;height:180px;background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460)}
-.highlight-card{background:var(--bg3);border:1px solid var(--border2);border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:12px;margin-bottom:8px;text-decoration:none;color:var(--text)}
-.highlight-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.highlight-card{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:14px;display:flex;align-items:center;gap:12px;margin-bottom:8px;text-decoration:none;color:var(--text);transition:background .2s}
+.highlight-card:active{background:rgba(255,255,255,.08)}
+.highlight-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
 .creator-scroll{display:flex;gap:12px;padding:0 16px 12px;overflow-x:auto;scrollbar-width:none}
 .creator-scroll::-webkit-scrollbar{display:none}
 .creator-card{flex-shrink:0;width:140px;background:var(--bg3);border:1px solid var(--border2);border-radius:16px;overflow:hidden;text-decoration:none;color:var(--text)}
@@ -330,10 +331,11 @@ textarea.form-input{resize:none;min-height:80px}
 .creator-card-name{font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .creator-card-xp{font-size:11px;color:var(--gold);font-weight:700;margin-top:2px}
 .action-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;padding:0 16px;margin-bottom:100px}
-.action-card{background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:16px 14px;text-decoration:none;color:var(--text);display:block}
-.action-card-icon{font-size:26px;margin-bottom:6px}
+.action-card{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:16px 14px;text-decoration:none;color:var(--text);display:block;transition:background .2s}
+.action-card:active{background:rgba(255,255,255,.09)}
+.action-card-icon{width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;margin-bottom:10px}
 .action-card-title{font-size:13px;font-weight:700}
-.action-card-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.action-card-sub{font-size:11px;color:var(--muted);margin-top:3px}
 /* ── PLUS SHEET ── */
 .plus-sheet{position:fixed;inset:0;z-index:500;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.55);backdrop-filter:blur(4px);opacity:0;pointer-events:none;transition:opacity .25s}
 .plus-sheet.open{opacity:1;pointer-events:all}
@@ -1917,19 +1919,20 @@ document.getElementById('search-input').focus();
             const pinnedLink = ladePinnedLink(id);
             const insta = u.instagram;
             return `<a href="/profil/${id}" class="creator-card">
-  <div class="creator-card-banner" style="${bannerIsGrad?'background:'+bannerBg:'background:#000'}">
+  <div class="creator-card-banner" style="background:${bannerIsGrad?grad:'#000'}">
     ${bannerFile?`<img src="/appbild/${id}/banner" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">`:''}
-    <div style="position:absolute;top:5px;left:8px;font-size:14px">${i<3?medals[i]:''}</div>
+    <div style="position:absolute;inset:0;background:linear-gradient(to bottom,transparent 40%,rgba(0,0,0,.5))"></div>
+    ${i<3?`<div style="position:absolute;top:6px;left:8px;font-size:15px;filter:drop-shadow(0 1px 3px rgba(0,0,0,.5))">${medals[i]}</div>`:''}
   </div>
   <div class="creator-card-avatar" style="background:${grad}">
-    <span style="position:absolute;z-index:0">${(u.name||'?').slice(0,1)}</span>
-    ${picFile?`<img src="/appbild/${id}/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1" alt="">`:insta?`<img src="https://unavatar.io/instagram/${insta}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1" alt="">`:''}
+    <span style="position:absolute;z-index:0;font-size:16px;font-weight:800">${(u.name||'?').slice(0,1)}</span>
+    ${picFile?`<img src="/appbild/${id}/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1" alt="">`:insta?`<img src="https://unavatar.io/instagram/${insta}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1" onerror="this.style.display='none'" alt="">`:''}
   </div>
   <div class="creator-card-info">
-    <div class="creator-card-name">${u.spitzname||u.name||'User'}</div>
-    ${insta?`<div style="font-size:10px;color:var(--blue);margin-top:1px">@${insta}</div>`:''}
+    <div class="creator-card-name" style="margin-top:4px">${u.spitzname||u.name||'User'}</div>
+    ${insta?`<a href="https://instagram.com/${insta}" target="_blank" onclick="event.stopPropagation()" style="font-size:10px;color:#4dabf7;margin-top:2px;display:block;text-decoration:none">@${insta}</a>`:''}
     <div class="creator-card-xp">⚡ ${u.xp||0} XP</div>
-    ${pinnedLink?`<a href="${pinnedLink}" target="_blank" onclick="event.stopPropagation()" style="display:block;font-size:10px;color:var(--accent);margin-top:4px;padding:2px 6px;background:rgba(255,107,107,.12);border-radius:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📌 Reel ansehen</a>`:''}
+    ${pinnedLink?`<a href="${pinnedLink}" target="_blank" onclick="event.stopPropagation()" style="display:block;font-size:10px;color:var(--accent);margin-top:5px;padding:3px 8px;background:rgba(255,107,107,.15);border:1px solid rgba(255,107,107,.2);border-radius:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-decoration:none">📌 Reel ansehen</a>`:''}
   </div>
 </a>`;
         }).join('');
@@ -1955,68 +1958,79 @@ document.getElementById('search-input').focus();
 
         const tabContent = {
             allgemein: `
-<div class="explore-welcome">
-  <div style="position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,107,107,.25),rgba(100,50,200,.4))"></div>
-  <div style="position:absolute;inset:0;padding:20px;display:flex;flex-direction:column;justify-content:flex-end">
-    <div style="font-size:11px;font-weight:700;letter-spacing:1px;color:rgba(255,255,255,.7);text-transform:uppercase;margin-bottom:6px">Community Hub</div>
-    <div style="font-size:20px;font-weight:800;color:#fff;font-family:var(--font-display);line-height:1.2">Willkommen bei<br>CreatorBoost</div>
-    <div style="font-size:12px;color:rgba(255,255,255,.7);margin-top:6px;margin-bottom:12px">Deine Plattform für Wachstum, Reichweite und Community</div>
-    <a href="/feed" style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.15);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.25);color:#fff;padding:7px 16px;border-radius:20px;font-size:12px;font-weight:700;text-decoration:none;align-self:flex-start">Zum Feed →</a>
+<div class="explore-welcome" style="margin:0 16px 20px">
+  <div style="position:absolute;inset:0;background:linear-gradient(135deg,#1a0533,#0d1b4b,#1a2a6c)"></div>
+  <div style="position:absolute;inset:0;background:radial-gradient(ellipse at top right,rgba(139,92,246,.35),transparent 60%),radial-gradient(ellipse at bottom left,rgba(255,107,107,.2),transparent 60%)"></div>
+  <div style="position:absolute;inset:0;padding:22px;display:flex;flex-direction:column;justify-content:flex-end">
+    <div style="font-size:10px;font-weight:700;letter-spacing:2px;color:rgba(255,255,255,.5);text-transform:uppercase;margin-bottom:8px">✦ Community Hub</div>
+    <div style="font-size:22px;font-weight:800;color:#fff;font-family:var(--font-display);line-height:1.15">Willkommen bei<br><span style="background:linear-gradient(90deg,#ff6b6b,#cc5de8);-webkit-background-clip:text;-webkit-text-fill-color:transparent">CreatorBoost</span></div>
+    <div style="font-size:12px;color:rgba(255,255,255,.6);margin-top:8px;margin-bottom:16px;line-height:1.5">Deine Plattform für Wachstum,<br>Reichweite und Community</div>
+    <a href="/feed" style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.12);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.2);color:#fff;padding:8px 18px;border-radius:20px;font-size:12px;font-weight:700;text-decoration:none;align-self:flex-start">Zum Feed →</a>
   </div>
 </div>
-<div style="padding:0 16px 12px">
-  <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">⚡ Aktuelle Highlights</div>
+<div style="padding:0 16px 14px">
+  <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">⚡ Aktuelle Highlights</div>
   <a href="/explore?tab=ranking" class="highlight-card">
-    <div class="highlight-icon" style="background:rgba(255,214,0,.12)">🏆</div>
-    <div><div style="font-size:13px;font-weight:700">Rangliste aktualisiert</div><div style="font-size:11px;color:var(--muted);margin-top:2px">Schau wer gerade vorne liegt</div></div>
+    <div class="highlight-icon" style="background:linear-gradient(135deg,rgba(255,214,0,.25),rgba(255,170,0,.15))">🏆</div>
+    <div style="flex:1;min-width:0">
+      <div style="font-size:13px;font-weight:700">Rangliste aktualisiert</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:3px">Schau wer gerade vorne liegt</div>
+    </div>
+    <div style="font-size:16px;color:rgba(255,255,255,.2)">›</div>
   </a>
   <a href="/feed" class="highlight-card">
-    <div class="highlight-icon" style="background:rgba(255,107,107,.12)">📸</div>
-    <div><div style="font-size:13px;font-weight:700">Community Feed</div><div style="font-size:11px;color:var(--muted);margin-top:2px">Entdecke neue Reels der Community</div></div>
+    <div class="highlight-icon" style="background:linear-gradient(135deg,rgba(255,107,107,.25),rgba(204,93,232,.15))">📸</div>
+    <div style="flex:1;min-width:0">
+      <div style="font-size:13px;font-weight:700">Community Feed</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:3px">Entdecke neue Reels der Community</div>
+    </div>
+    <div style="font-size:16px;color:rgba(255,255,255,.2)">›</div>
   </a>
-  <div class="highlight-card" style="cursor:default">
-    <div class="highlight-icon" style="background:rgba(100,200,100,.12)">🎁</div>
-    <div><div style="font-size:13px;font-weight:700">XP Shop — Coming Soon</div><div style="font-size:11px;color:var(--muted);margin-top:2px">Tausche XP gegen Vorteile</div></div>
+  <div class="highlight-card">
+    <div class="highlight-icon" style="background:linear-gradient(135deg,rgba(0,200,130,.25),rgba(0,150,100,.15))">🎁</div>
+    <div style="flex:1;min-width:0">
+      <div style="font-size:13px;font-weight:700">XP Shop — Coming Soon</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:3px">Tausche XP gegen Vorteile</div>
+    </div>
+    <div style="font-size:10px;color:var(--accent);font-weight:700;background:rgba(255,107,107,.12);padding:2px 8px;border-radius:10px;white-space:nowrap">Bald</div>
   </div>
 </div>
-<div style="padding:0 16px;margin-bottom:12px">
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-    <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">⭐ Top Creator</div>
-    <a href="/explore?tab=ranking" style="font-size:11px;color:var(--accent)">Alle anzeigen →</a>
-  </div>
+<div style="padding:0 16px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between">
+  <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:1px">⭐ Top Creator</div>
+  <a href="/explore?tab=ranking" style="font-size:12px;color:var(--accent);font-weight:600">Alle →</a>
 </div>
-<div class="creator-scroll">${topCreators||'<div style="color:var(--muted);font-size:13px;padding:0 16px">Noch keine Creator</div>'}</div>
-<div style="padding:16px 16px 12px">
-  <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px">🚀 Was möchtest du tun?</div>
+<div class="creator-scroll" style="padding-bottom:4px">${topCreators||'<div style="color:var(--muted);font-size:13px;padding:0 16px">Noch keine Creator</div>'}</div>
+<div style="padding:20px 16px 12px">
+  <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:1px;margin-bottom:14px">🚀 Was möchtest du tun?</div>
 </div>
 <div class="action-grid">
   <a href="/explore?tab=ranking" class="action-card">
-    <div class="action-card-icon">🏆</div>
+    <div class="action-card-icon" style="background:linear-gradient(135deg,rgba(255,214,0,.2),rgba(255,170,0,.1))">🏆</div>
     <div class="action-card-title">Ranking ansehen</div>
-    <div class="action-card-sub">Dein Rang: ${myRank>0?'#'+myRank:'Admin'}</div>
+    <div class="action-card-sub">Rang: ${myRank>0?'#'+myRank:'👑 Admin'}</div>
   </a>
   <a href="/explore?tab=tipps" class="action-card">
-    <div class="action-card-icon">💡</div>
+    <div class="action-card-icon" style="background:linear-gradient(135deg,rgba(100,180,255,.2),rgba(60,130,255,.1))">💡</div>
     <div class="action-card-title">Tipps entdecken</div>
     <div class="action-card-sub">Wachse als Creator</div>
   </a>
   <a href="/explore?tab=regeln" class="action-card">
-    <div class="action-card-icon">📋</div>
+    <div class="action-card-icon" style="background:linear-gradient(135deg,rgba(150,100,255,.2),rgba(100,60,200,.1))">📋</div>
     <div class="action-card-title">Regeln lesen</div>
     <div class="action-card-sub">Community Guidelines</div>
   </a>
   <a href="/explore?tab=shop" class="action-card">
-    <div class="action-card-icon">🛍️</div>
+    <div class="action-card-icon" style="background:linear-gradient(135deg,rgba(0,200,130,.2),rgba(0,150,100,.1))">🛍️</div>
     <div class="action-card-title">XP Shop</div>
     <div class="action-card-sub">Coming Soon</div>
   </a>
   <a href="/explore?tab=newsletter" class="action-card">
-    <div class="action-card-icon">📩</div>
+    <div class="action-card-icon" style="background:linear-gradient(135deg,rgba(255,165,0,.2),rgba(255,130,0,.1))">📩</div>
     <div class="action-card-title">Newsletter</div>
     <div class="action-card-sub">Bleib informiert</div>
   </a>
   <a href="/einstellungen" class="action-card">
-    <div class="action-card-icon">📌</div>
+    <div class="action-card-icon" style="background:linear-gradient(135deg,rgba(255,107,107,.2),rgba(204,93,232,.1))">📌</div>
     <div class="action-card-title">Reel anpinnen</div>
     <div class="action-card-sub">Zeig deinen besten Reel</div>
   </a>
@@ -2050,8 +2064,8 @@ document.getElementById('search-input').focus();
   </div>
 </div>
 <div style="padding:16px 16px 4px">
-  <div style="font-size:26px;font-weight:800;font-family:var(--font-display);letter-spacing:-.5px">EXPLORE</div>
-  <div style="font-size:13px;color:var(--muted);margin-top:2px">Entdecke, lerne und wachse als Creator</div>
+  <div style="font-size:28px;font-weight:800;font-family:var(--font-display);letter-spacing:-.5px;background:linear-gradient(90deg,var(--text),rgba(255,255,255,.6));-webkit-background-clip:text;-webkit-text-fill-color:transparent">EXPLORE</div>
+  <div style="font-size:13px;color:var(--muted);margin-top:3px">Entdecke, lerne und wachse als Creator</div>
 </div>
 <div class="explore-tabs">
   ${tabs.map(t=>`<button class="explore-tab${tab===t.id?' active':''}" onclick="location.href='/explore?tab=${t.id}'">${t.label}</button>`).join('')}
