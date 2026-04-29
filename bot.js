@@ -313,6 +313,22 @@ textarea.form-input{resize:none;min-height:80px}
 .liker-modal.open{opacity:1;pointer-events:all}
 .liker-modal-sheet{width:100%;max-width:480px;background:var(--bg3);border-radius:20px 20px 0 0;max-height:70vh;overflow-y:auto;transform:translateY(100%);transition:transform .3s cubic-bezier(.4,0,.2,1)}
 .liker-modal.open .liker-modal-sheet{transform:translateY(0)}
+/* ── COMMUNITY FEED ── */
+.comm-feed{padding:12px 16px 80px}
+.comm-msg{background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:14px 16px;margin-bottom:10px;transition:background .2s}
+.comm-msg:active{background:var(--bg4)}
+.comm-msg-header{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.comm-avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--purple));display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#fff;flex-shrink:0}
+.comm-username{font-size:13px;font-weight:700;color:var(--text)}
+.comm-time{font-size:11px;color:var(--muted);margin-left:auto}
+.comm-text{font-size:14px;color:var(--text);line-height:1.55;word-break:break-word}
+.comm-empty{padding:60px 24px;text-align:center;color:var(--muted)}
+.comm-empty-icon{font-size:48px;margin-bottom:12px}
+.comm-header{padding:12px 16px 4px;display:flex;align-items:center;justify-content:space-between}
+.comm-title{font-size:18px;font-weight:800}
+.comm-live{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:var(--green)}
+.comm-live-dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse-dot 1.5s ease-in-out infinite}
+@keyframes pulse-dot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.85)}}
 /* ── EXPLORE ── */
 .explore-tabs{display:flex;gap:8px;padding:8px 16px 12px;overflow-x:auto;scrollbar-width:none}
 .explore-tabs::-webkit-scrollbar{display:none}
@@ -2047,6 +2063,50 @@ document.getElementById('search-input').focus();
             regeln: `<div style="padding:48px 24px;text-align:center"><div style="font-size:48px;margin-bottom:16px">📋</div><div style="font-size:17px;font-weight:700;margin-bottom:8px">Community Regeln</div><div style="font-size:13px;color:var(--muted)">🔧 In Bearbeitung — Inhalte folgen bald!</div></div>`,
             shop: `<div style="padding:48px 24px;text-align:center"><div style="font-size:48px;margin-bottom:16px">🛍️</div><div style="font-size:17px;font-weight:700;margin-bottom:8px">XP Shop</div><div style="font-size:13px;color:var(--muted)">🔧 In Bearbeitung — Kommt bald!</div></div>`,
             newsletter: `<div style="padding:48px 24px;text-align:center"><div style="font-size:48px;margin-bottom:16px">📩</div><div style="font-size:17px;font-weight:700;margin-bottom:8px">Newsletter</div><div style="font-size:13px;color:var(--muted)">🔧 In Bearbeitung — Inhalte folgen bald!</div></div>`,
+            community: `
+<div class="comm-header">
+  <div class="comm-title">Telegram Community</div>
+  <div class="comm-live"><div class="comm-live-dot"></div>Live</div>
+</div>
+<div class="comm-feed" id="comm-feed-list">
+  <div class="comm-empty"><div class="comm-empty-icon">💬</div><div style="font-size:15px;font-weight:700;margin-bottom:6px">Lade Nachrichten...</div></div>
+</div>
+<script>
+(function(){
+  function timeAgo(ts) {
+    const d = Math.floor((Date.now() - ts) / 1000);
+    if (d < 60) return 'Gerade eben';
+    if (d < 3600) return Math.floor(d/60) + ' Min.';
+    if (d < 86400) return Math.floor(d/3600) + ' Std.';
+    return new Date(ts).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'});
+  }
+  function initial(name) {
+    return (name||'?').replace(/^@/,'').slice(0,1).toUpperCase();
+  }
+  function renderFeed(msgs) {
+    const el = document.getElementById('comm-feed-list');
+    if (!el) return;
+    if (!msgs || msgs.length === 0) {
+      el.innerHTML = '<div class="comm-empty"><div class="comm-empty-icon">💬</div><div style="font-size:15px;font-weight:700;margin-bottom:6px">Noch keine Nachrichten</div><div style="font-size:13px">Sei der Erste in der Community!</div></div>';
+      return;
+    }
+    el.innerHTML = msgs.map(m => {
+      const display = m.username || m.name || 'Unbekannt';
+      return '<div class="comm-msg"><div class="comm-msg-header"><div class="comm-avatar">'+initial(display)+'</div><div><div class="comm-username">'+display+'</div></div><div class="comm-time">'+timeAgo(m.timestamp)+'</div></div><div class="comm-text">'+m.text.replace(/</g,\'&lt;\').replace(/>/g,\'&gt;\')+'</div></div>';
+    }).join('');
+  }
+  async function loadFeed() {
+    try {
+      const r = await fetch('/api/telegram-feed');
+      if (!r.ok) return;
+      const data = await r.json();
+      renderFeed(data.messages || []);
+    } catch(e) {}
+  }
+  loadFeed();
+  setInterval(loadFeed, 10000);
+})();
+</script>`
         };
 
         const tabs = [
@@ -2056,6 +2116,7 @@ document.getElementById('search-input').focus();
             {id:'regeln',label:'📋 Regeln'},
             {id:'shop',label:'🛍️ Shop'},
             {id:'newsletter',label:'📩 Newsletter'},
+            {id:'community',label:'💬 Community'},
         ];
 
         return html(`
@@ -2469,6 +2530,12 @@ async function removePinnedLink() {
     await savePinnedLink();
 }
 </script>`, 'settings');
+    }
+
+    if (path === '/api/telegram-feed') {
+        const data = await fetchBot('/telegram-feed');
+        if (!data) return json({ messages: [] });
+        return json(data);
     }
 
     redirect('/feed');
