@@ -1957,11 +1957,21 @@ async function createThread(){
     // ── TELEGRAM GRUPPE THREAD-LISTE ──
     if (path === '/nachrichten/gruppe') {
         const topicsData = await fetchBot('/forum-topics');
-        const threads = topicsData?.threads || [];
         const botData = await fetchBot('/data');
         const adminUser = botData?.users?.[myUid];
         const isAdmin = adminUser && String(adminUser.role || '').includes('Admin');
         const lastRead = botData?.threadLastRead?.[myUid] || {};
+        // Build thread list: from /forum-topics OR directly from /data threadMessages
+        let threads = topicsData?.threads || [];
+        if (!threads.length && botData?.threadMessages) {
+            threads = Object.keys(botData.threadMessages).map(tid => ({
+                id: tid, name: tid === 'general' ? 'Allgemein' : `Thread ${tid}`,
+                emoji: tid === 'general' ? '💬' : '📌',
+                last_msg: botData.threadMessages[tid]?.[0] || null,
+                msg_count: botData.threadMessages[tid]?.length || 0
+            }));
+        }
+        if (!threads.length) threads = [{ id: 'general', name: 'Allgemein', emoji: '💬', last_msg: botData?.communityFeed?.[0] ? { text: botData.communityFeed[0].text, name: botData.communityFeed[0].name } : null, msg_count: botData?.communityFeed?.length || 0 }];
         const threadCards = threads.map(thr => {
             const lastReadTs = lastRead[String(thr.id)] || 0;
             const msgs = (botData?.threadMessages?.[String(thr.id)] || []);
