@@ -1830,6 +1830,76 @@ setInterval(async () => {
 </script>`, 'messages');
     }
 
+
+    // ── TELEGRAM GRUPPE CHAT ──
+    if (path === '/nachrichten/gruppe') {
+        return html(`
+<div class="topbar" style="position:sticky;top:0;z-index:10">
+  <a href="/nachrichten" style="padding:8px;color:var(--text);display:flex;align-items:center;text-decoration:none">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20"><polyline points="15 18 9 12 15 6"/></svg>
+  </a>
+  <div style="flex:1;text-align:center">
+    <div style="font-weight:800;font-size:15px">Telegram Gruppe</div>
+    <div style="font-size:11px;color:var(--green);display:flex;align-items:center;justify-content:center;gap:4px"><span style="width:6px;height:6px;border-radius:50%;background:var(--green);display:inline-block"></span>Live</div>
+  </div>
+  <div style="width:36px"></div>
+</div>
+<div id="gruppe-msgs" style="padding:8px 12px 160px;display:flex;flex-direction:column;gap:8px">
+  <div style="text-align:center;color:var(--muted);padding:40px 0;font-size:13px">Lädt...</div>
+</div>
+<div style="position:fixed;bottom:calc(60px + var(--safe-bottom));left:0;right:0;padding:10px 12px;background:var(--bg2);border-top:1px solid var(--border);display:flex;gap:8px;align-items:flex-end;z-index:10">
+  <textarea id="gruppe-input" placeholder="Schreibe in die Gruppe..." rows="1"
+    style="flex:1;background:var(--bg4);border:1px solid var(--border);border-radius:20px;padding:10px 16px;color:var(--text);font-family:var(--font);font-size:14px;resize:none;outline:none;line-height:1.4;max-height:120px;overflow-y:auto"
+    oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px'"
+    onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendGruppeMsg();}"></textarea>
+  <button onclick="sendGruppeMsg()" style="width:40px;height:40px;border-radius:50%;background:var(--accent);border:none;color:#fff;font-size:18px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center">➤</button>
+</div>
+<script>
+(function(){
+  function timeAgo(ts){const d=Math.floor((Date.now()-ts)/1000);if(d<60)return'Gerade eben';if(d<3600)return Math.floor(d/60)+' Min.';if(d<86400)return Math.floor(d/3600)+' Std.';return new Date(ts).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'});}
+  function initial(n){return(n||'?').replace(/^@/,'').slice(0,1).toUpperCase();}
+  let lastCount=0;
+  function render(msgs){
+    const el=document.getElementById('gruppe-msgs');
+    if(!el)return;
+    if(!msgs||!msgs.length){el.innerHTML='<div style="text-align:center;color:var(--muted);padding:40px 0;font-size:13px">Noch keine Nachrichten</div>';return;}
+    if(msgs.length===lastCount)return;
+    const atBottom=window.innerHeight+window.scrollY>=document.body.scrollHeight-50;
+    lastCount=msgs.length;
+    el.innerHTML=[...msgs].reverse().map(m=>{
+      const disp=m.username||m.name||'?';
+      const colors=['#ff6b6b','#cc5de8','#4dabf7','#ffd43b','#00c851','#ff9f43'];
+      const color=colors[disp.charCodeAt(0)%colors.length];
+      return \`<div style="display:flex;gap:8px;align-items:flex-start">
+        <div style="width:32px;height:32px;border-radius:50%;background:\${color};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;flex-shrink:0">\${initial(disp)}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12px;font-weight:700;color:\${color};margin-bottom:3px">\${disp}</div>
+          <div style="background:var(--bg3);border-radius:4px 16px 16px 16px;padding:8px 12px;font-size:13px;line-height:1.5;word-break:break-word">\${m.text.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:3px">\${timeAgo(m.timestamp)}</div>
+        </div>
+      </div>\`;
+    }).join('');
+    if(atBottom)window.scrollTo(0,document.body.scrollHeight);
+  }
+  async function load(){try{const r=await fetch('/api/telegram-feed');if(r.ok){const d=await r.json();render(d.messages||[]);}}catch(e){}}
+  window.sendGruppeMsg=async function(){
+    const el=document.getElementById('gruppe-input');
+    const text=el.value.trim();
+    if(!text)return;
+    el.value='';el.style.height='auto';
+    try{
+      const r=await fetch('/api/send-group-message',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});
+      const d=await r.json();
+      if(!d.ok)el.value=text;
+    }catch(e){el.value=text;}
+    setTimeout(load,800);
+  };
+  load();
+  setInterval(load,8000);
+})();
+</script>`, 'messages');
+    }
+
     // ── NACHRICHTEN ÜBERSICHT ──
     if (path === '/nachrichten') {
         const botData = await fetchBot('/data');
@@ -1844,7 +1914,16 @@ setInterval(async () => {
                 return { key, otherUid, otherName: otherUser.spitzname||otherUser.name||'User', lastMsg, unread: msgs.filter(m=>m.to===myUid&&!m.read).length };
             })
             .sort((a, b) => (b.lastMsg?.timestamp||0)-(a.lastMsg?.timestamp||0));
-        const convHtml = myConvos.length ? myConvos.map(c => `
+        const feedPreview = (await (async()=>{try{const r=await fetchBot('/telegram-feed');return r?.messages?.[0]?.text?.slice(0,40)||'Live Telegram Nachrichten';}catch(e){return 'Live Telegram Nachrichten';}})());
+        const convHtml = `
+<a href="/nachrichten/gruppe" style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border2);text-decoration:none;background:rgba(0,200,130,.04)">
+  <div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#0088cc,#00c6ff);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">✈️</div>
+  <div style="flex:1;min-width:0">
+    <div style="font-size:14px;font-weight:700;color:var(--text)">Telegram Gruppe</div>
+    <div style="font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${feedPreview}</div>
+  </div>
+  <div style="width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulse-dot 1.5s infinite"></div>
+</a>` + (myConvos.length ? myConvos.map(c => `
 <a href="/nachrichten/${c.otherUid}" style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border2);text-decoration:none">
   <div style="position:relative;width:48px;height:48px;border-radius:50%;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;flex-shrink:0;overflow:hidden">
     <span style="position:absolute">${c.otherName[0]}</span>
@@ -1855,7 +1934,7 @@ setInterval(async () => {
     <div style="font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.lastMsg?.text?.slice(0,40)||''}</div>
   </div>
   ${c.unread>0?`<div style="background:var(--accent);color:#fff;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700">${c.unread}</div>`:''}
-</a>`).join('') : '<div class="empty"><div class="empty-icon">💬</div><div class="empty-text">Keine Nachrichten</div><div class="empty-sub">Schreibe jemandem!</div></div>';
+</a>`).join('') : '<div class="empty"><div class="empty-icon">💬</div><div class="empty-text">Keine Nachrichten</div><div class="empty-sub">Schreibe jemandem!</div></div>`) : '');
         return html(`<div class="topbar"><div class="topbar-logo">Nachrichten</div></div><div style="padding-bottom:80px">${convHtml}</div>`, 'messages');
     }
 
@@ -1948,7 +2027,7 @@ document.getElementById('search-input').focus();
   </div>
   <div class="creator-card-info">
     <div class="creator-card-name" style="margin-top:4px">${u.spitzname||u.name||'User'}</div>
-    ${insta?`<a href="https://instagram.com/${insta}" target="_blank" onclick="event.stopPropagation()" style="font-size:10px;color:#4dabf7;margin-top:2px;display:block;text-decoration:none">@${insta}</a>`:''}
+    ${insta?`<span onclick="event.stopPropagation();window.open('https://instagram.com/${insta}','_blank')" style="font-size:10px;color:#4dabf7;margin-top:2px;display:block;cursor:pointer">@${insta}</span>`:''}
     <div class="creator-card-xp">⚡ ${u.xp||0} XP</div>
     ${pinnedLink?`<a href="${pinnedLink}" target="_blank" onclick="event.stopPropagation()" style="display:block;font-size:10px;color:var(--accent);margin-top:5px;padding:3px 8px;background:rgba(255,107,107,.15);border:1px solid rgba(255,107,107,.2);border-radius:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-decoration:none">📌 Reel ansehen</a>`:''}
   </div>
@@ -2062,51 +2141,7 @@ document.getElementById('search-input').focus();
             tipps: `<div style="padding:48px 24px;text-align:center"><div style="font-size:48px;margin-bottom:16px">💡</div><div style="font-size:17px;font-weight:700;margin-bottom:8px">Tipps & Tricks</div><div style="font-size:13px;color:var(--muted)">🔧 In Bearbeitung — Inhalte folgen bald!</div></div>`,
             regeln: `<div style="padding:48px 24px;text-align:center"><div style="font-size:48px;margin-bottom:16px">📋</div><div style="font-size:17px;font-weight:700;margin-bottom:8px">Community Regeln</div><div style="font-size:13px;color:var(--muted)">🔧 In Bearbeitung — Inhalte folgen bald!</div></div>`,
             shop: `<div style="padding:48px 24px;text-align:center"><div style="font-size:48px;margin-bottom:16px">🛍️</div><div style="font-size:17px;font-weight:700;margin-bottom:8px">XP Shop</div><div style="font-size:13px;color:var(--muted)">🔧 In Bearbeitung — Kommt bald!</div></div>`,
-            newsletter: `<div style="padding:48px 24px;text-align:center"><div style="font-size:48px;margin-bottom:16px">📩</div><div style="font-size:17px;font-weight:700;margin-bottom:8px">Newsletter</div><div style="font-size:13px;color:var(--muted)">🔧 In Bearbeitung — Inhalte folgen bald!</div></div>`,
-            community: `
-<div class="comm-header">
-  <div class="comm-title">Telegram Community</div>
-  <div class="comm-live"><div class="comm-live-dot"></div>Live</div>
-</div>
-<div class="comm-feed" id="comm-feed-list">
-  <div class="comm-empty"><div class="comm-empty-icon">💬</div><div style="font-size:15px;font-weight:700;margin-bottom:6px">Lade Nachrichten...</div></div>
-</div>
-<script>
-(function(){
-  function timeAgo(ts) {
-    const d = Math.floor((Date.now() - ts) / 1000);
-    if (d < 60) return 'Gerade eben';
-    if (d < 3600) return Math.floor(d/60) + ' Min.';
-    if (d < 86400) return Math.floor(d/3600) + ' Std.';
-    return new Date(ts).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'});
-  }
-  function initial(name) {
-    return (name||'?').replace(/^@/,'').slice(0,1).toUpperCase();
-  }
-  function renderFeed(msgs) {
-    const el = document.getElementById('comm-feed-list');
-    if (!el) return;
-    if (!msgs || msgs.length === 0) {
-      el.innerHTML = '<div class="comm-empty"><div class="comm-empty-icon">💬</div><div style="font-size:15px;font-weight:700;margin-bottom:6px">Noch keine Nachrichten</div><div style="font-size:13px">Sei der Erste in der Community!</div></div>';
-      return;
-    }
-    el.innerHTML = msgs.map(m => {
-      const display = m.username || m.name || 'Unbekannt';
-      return '<div class="comm-msg"><div class="comm-msg-header"><div class="comm-avatar">'+initial(display)+'</div><div><div class="comm-username">'+display+'</div></div><div class="comm-time">'+timeAgo(m.timestamp)+'</div></div><div class="comm-text">'+m.text.replace(/</g,\'&lt;\').replace(/>/g,\'&gt;\')+'</div></div>';
-    }).join('');
-  }
-  async function loadFeed() {
-    try {
-      const r = await fetch('/api/telegram-feed');
-      if (!r.ok) return;
-      const data = await r.json();
-      renderFeed(data.messages || []);
-    } catch(e) {}
-  }
-  loadFeed();
-  setInterval(loadFeed, 10000);
-})();
-</script>`
+            newsletter: `<div style="padding:48px 24px;text-align:center"><div style="font-size:48px;margin-bottom:16px">📩</div><div style="font-size:17px;font-weight:700;margin-bottom:8px">Newsletter</div><div style="font-size:13px;color:var(--muted)">🔧 In Bearbeitung — Inhalte folgen bald!</div></div>`
         };
 
         const tabs = [
@@ -2116,7 +2151,6 @@ document.getElementById('search-input').focus();
             {id:'regeln',label:'📋 Regeln'},
             {id:'shop',label:'🛍️ Shop'},
             {id:'newsletter',label:'📩 Newsletter'},
-            {id:'community',label:'💬 Community'},
         ];
 
         return html(`
@@ -2530,6 +2564,14 @@ async function removePinnedLink() {
     await savePinnedLink();
 }
 </script>`, 'settings');
+    }
+
+    if (path === '/api/send-group-message' && req.method === 'POST') {
+        const body = await parseBody(req);
+        const { text } = body;
+        if (!text?.trim()) return json({ ok: false });
+        const ok = await postBot('/send-group-message', { uid: myUid, text });
+        return json({ ok: !!ok });
     }
 
     if (path === '/api/telegram-feed') {
