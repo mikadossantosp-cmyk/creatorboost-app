@@ -3010,17 +3010,10 @@ async function submitPost(){
         const theirProjects = u.projects || [];
         const theirPosts = (d.posts||{})[uid] || [];
         const theirPinnedLink = ladePinnedLink(uid);
-        const theirAlreadyEngaged = (d.pinnedEngages?.[uid]||[]).includes(myUid);
         const theirPinnedHtml = theirPinnedLink
             ? '<div style="padding:12px 16px;border-bottom:2px solid var(--accent);background:linear-gradient(135deg,rgba(255,107,107,.08),rgba(255,165,0,.04));margin-bottom:4px">'
-              +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'
-              +'<span style="font-size:11px;font-weight:700;color:var(--accent);background:rgba(255,107,107,.15);padding:3px 10px;border-radius:20px">📌 Wichtigster Post</span>'
-              +(theirAlreadyEngaged
-                ? '<span style="font-size:11px;color:var(--muted)">✅ Engagiert</span>'
-                : '<button id="engage-btn" onclick="engagePost(\''+uid+'\')" style="background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;border:none;border-radius:20px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer">💫 Engagieren</button>')
-              +'</div>'
-              +'<a href="'+theirPinnedLink+'" target="_blank" style="display:block;font-size:13px;color:var(--blue);word-break:break-all;margin-bottom:8px">'+theirPinnedLink.replace('https://www.instagram.com/','ig.com/').slice(0,60)+'...</a>'
-              +'<div style="font-size:12px;color:var(--muted)">Engagiere diesen Post und unterstütze den Creator 💎</div>'
+              +'<span style="font-size:11px;font-weight:700;color:var(--accent);background:rgba(255,107,107,.15);padding:3px 10px;border-radius:20px;display:inline-block;margin-bottom:8px">📌 Wichtigster Post</span>'
+              +'<a href="'+theirPinnedLink+'" target="_blank" style="display:block;font-size:13px;color:var(--blue);word-break:break-all">'+theirPinnedLink.replace('https://www.instagram.com/','ig.com/')+'</a>'
               +'</div>'
             : '';
 
@@ -3128,15 +3121,6 @@ function openTProjDetail(idx){
   document.getElementById('tproj-detail-modal').classList.add('open');
 }
 function closeTProj(){document.getElementById('tproj-detail-modal').classList.remove('open');}
-async function engagePost(ownerUid){
-  const btn=document.getElementById('engage-btn');
-  if(btn){btn.disabled=true;btn.textContent='⏳...';}
-  const r=await fetch('/api/engage-pinned-post',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ownerUid})});
-  const d=await r.json();
-  if(d.ok){toast('💎 Post engagiert! Creator bekommt einen Diamanten!');if(btn){btn.textContent='✅ Engagiert';btn.style.background='var(--bg4)';btn.style.color='var(--muted)';}}
-  else if(d.alreadyDone){toast('Du hast diesen Post bereits engagiert');if(btn)btn.textContent='✅ Engagiert';}
-  else{toast('❌ Fehler');if(btn){btn.disabled=false;btn.textContent='💫 Engagieren';}}
-}
 async function toggleFollow(uid,btn){
   const isFollowing=btn.textContent.trim()==='Gefolgt';
   btn.textContent=isFollowing?'Folgen':'Gefolgt';
