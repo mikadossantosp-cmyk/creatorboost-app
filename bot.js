@@ -434,6 +434,22 @@ function layout(content, session, page='feed', lang='de') {
     </div>
   </div>
 </div>
+<div id="crop-overlay" style="position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.93);display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s;padding:16px">
+  <div style="width:100%;max-width:380px">
+    <div style="text-align:center;font-size:15px;font-weight:700;color:#fff;margin-bottom:16px">Bild positionieren</div>
+    <div id="crop-vp" style="position:relative;overflow:hidden;background:#111;border-radius:12px;border:2px solid rgba(255,255,255,.15);cursor:grab;touch-action:none;user-select:none;width:100%;aspect-ratio:1">
+      <img id="crop-img" style="position:absolute;transform-origin:0 0;max-width:none;pointer-events:none;user-select:none" src="" alt="">
+    </div>
+    <div style="margin-top:12px;display:flex;flex-direction:column;gap:4px">
+      <div style="font-size:11px;color:rgba(255,255,255,.5);text-align:center">Zoom</div>
+      <input type="range" id="crop-zoom" style="width:100%;accent-color:var(--accent)" min="0.1" max="3" step="0.001" value="1" oninput="setCropZoom(parseFloat(this.value))">
+    </div>
+    <div style="margin-top:14px;display:flex;gap:8px">
+      <button onclick="closeCropModal()" style="flex:1;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:#fff;border-radius:12px;padding:12px;font-size:14px;font-weight:600;cursor:pointer;font-family:var(--font)">Abbrechen</button>
+      <button onclick="confirmCrop()" style="flex:2;background:var(--accent);border:none;color:#fff;border-radius:12px;padding:12px;font-size:14px;font-weight:600;cursor:pointer;font-family:var(--font)">✅ Übernehmen</button>
+    </div>
+  </div>
+</div>
 ${content}
 ${session ? `
 <nav class="bottom-nav">
@@ -505,6 +521,47 @@ async function plusPostLink(){
 }
 function showLikerModal(msgId){const modal=document.getElementById('liker-modal');const content=document.getElementById('liker-modal-content');const rows=document.getElementById('liker-rows-'+msgId);if(!modal||!rows)return;content.innerHTML=rows.innerHTML||'<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">Noch niemand geliked</div>';modal.classList.add('open');document.body.style.overflow='hidden';}
 function closeLikerModal(){const modal=document.getElementById('liker-modal');if(modal){modal.classList.remove('open');document.body.style.overflow='';} }
+// ── CROP MODAL ──
+let _cropCb=null,_cropDrag={on:false,sx:0,sy:0,ox:0,oy:0},_cropPinch=0;
+let _cs={x:0,y:0,z:1,vpW:0,vpH:0,nw:0,nh:0};
+function openCropModal(dataUrl,mode,cb){
+  _cropCb=cb;
+  const vp=document.getElementById('crop-vp'),img=document.getElementById('crop-img'),sl=document.getElementById('crop-zoom');
+  const size=Math.min(window.innerWidth-32,360);
+  vp.style.width=size+'px';
+  if(mode==='banner'){vp.style.height=Math.round(size/3.5)+'px';vp.style.borderRadius='12px';vp.style.aspectRatio='';}
+  else{vp.style.height=size+'px';vp.style.borderRadius=mode==='circle'?'50%':'12px';vp.style.aspectRatio='';}
+  img.src=dataUrl;
+  img.onload=function(){
+    _cs.nw=img.naturalWidth;_cs.nh=img.naturalHeight;
+    _cs.vpW=size;_cs.vpH=parseInt(vp.style.height);
+    const minZ=Math.max(_cs.vpW/_cs.nw,_cs.vpH/_cs.nh);
+    _cs.z=minZ;sl.min=(minZ*0.9).toFixed(3);sl.max=(minZ*4).toFixed(3);sl.value=minZ;
+    _cs.x=(_cs.vpW-_cs.nw*_cs.z)/2;_cs.y=(_cs.vpH-_cs.nh*_cs.z)/2;
+    _updateCropImg();
+  };
+  const ov=document.getElementById('crop-overlay');ov.style.opacity='1';ov.style.pointerEvents='all';
+}
+function closeCropModal(){const ov=document.getElementById('crop-overlay');ov.style.opacity='0';ov.style.pointerEvents='none';}
+function _updateCropImg(){const img=document.getElementById('crop-img');img.style.width=(_cs.nw*_cs.z)+'px';img.style.height=(_cs.nh*_cs.z)+'px';img.style.left=_cs.x+'px';img.style.top=_cs.y+'px';}
+function setCropZoom(nz){const cx=_cs.vpW/2,cy=_cs.vpH/2,r=nz/_cs.z;_cs.x=cx-(cx-_cs.x)*r;_cs.y=cy-(cy-_cs.y)*r;_cs.z=nz;_updateCropImg();}
+function confirmCrop(){
+  const img=document.getElementById('crop-img');
+  const srcX=(-_cs.x)/_cs.z,srcY=(-_cs.y)/_cs.z,srcW=_cs.vpW/_cs.z,srcH=_cs.vpH/_cs.z;
+  const outW=Math.min(1200,_cs.vpW*2),outH=Math.round(outW*(_cs.vpH/_cs.vpW));
+  const canvas=document.createElement('canvas');canvas.width=outW;canvas.height=outH;
+  canvas.getContext('2d').drawImage(img,srcX,srcY,srcW,srcH,0,0,outW,outH);
+  closeCropModal();if(_cropCb)_cropCb(canvas.toDataURL('image/jpeg',0.92));
+}
+(function(){
+  const vp=document.getElementById('crop-vp');if(!vp)return;
+  vp.addEventListener('pointerdown',e=>{_cropDrag.on=true;_cropDrag.sx=e.clientX;_cropDrag.sy=e.clientY;_cropDrag.ox=_cs.x;_cropDrag.oy=_cs.y;vp.setPointerCapture(e.pointerId);e.preventDefault();});
+  vp.addEventListener('pointermove',e=>{if(!_cropDrag.on)return;_cs.x=_cropDrag.ox+(e.clientX-_cropDrag.sx);_cs.y=_cropDrag.oy+(e.clientY-_cropDrag.sy);_updateCropImg();});
+  vp.addEventListener('pointerup',()=>{_cropDrag.on=false;});vp.addEventListener('pointercancel',()=>{_cropDrag.on=false;});
+  vp.addEventListener('wheel',e=>{e.preventDefault();const sl=document.getElementById('crop-zoom');const nz=Math.max(parseFloat(sl.min),Math.min(parseFloat(sl.max),_cs.z*(1-e.deltaY*0.001)));setCropZoom(nz);sl.value=nz;},{passive:false});
+  vp.addEventListener('touchstart',e=>{if(e.touches.length===2)_cropPinch=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);},{passive:true});
+  vp.addEventListener('touchmove',e=>{if(e.touches.length===2){e.preventDefault();const sl=document.getElementById('crop-zoom');const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);const nz=Math.max(parseFloat(sl.min),Math.min(parseFloat(sl.max),_cs.z*(d/_cropPinch)));setCropZoom(nz);sl.value=nz;_cropPinch=d;}},{passive:false});
+})();
 </script>
 <script>if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/sw.js').catch(()=>{}); }</script>
 </body></html>`;
@@ -1434,7 +1491,7 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
         const tab = query.tab || 'heute';
         const twoDaysAgo = Date.now() - 2 * 24 * 60 * 60 * 1000;
         const todayLinks = Object.entries(d.links||{})
-            .filter(([,l]) => l.timestamp && l.timestamp >= twoDaysAgo)
+            .filter(([,l]) => l.timestamp && l.timestamp >= twoDaysAgo && l.text && l.text.includes('instagram.com'))
             .sort((a,b)=>(b[1].timestamp||0)-(a[1].timestamp||0));
         const seenMsgIds = new Set();
         const dedupLinks = todayLinks.filter(([id,l]) => {
@@ -1600,13 +1657,13 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
 '      <div style="position:absolute;inset:0;background:'+bannerBg+'"></div>\n'+
 '      '+bannerImg+'\n'+
 '      <div style="position:absolute;inset:0;background:linear-gradient(to bottom,transparent 20%,rgba(0,0,0,.75))"></div>\n'+
-'      <div style="position:absolute;bottom:10px;left:12px;display:flex;align-items:center;gap:10px">\n'+
+'      <a href="/profil/'+link.user_id+'" onclick="event.stopPropagation()" style="position:absolute;bottom:10px;left:12px;display:flex;align-items:center;gap:10px;text-decoration:none;z-index:1">\n'+
 '        <div style="width:44px;height:44px;border-radius:50%;border:2px solid rgba(255,255,255,.4);overflow:hidden;background:'+grad+';display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff;flex-shrink:0">'+profPic+'</div>\n'+
 '        <div>\n'+
 '          <div style="font-size:13px;font-weight:700;color:#fff">'+(poster.spitzname||poster.name||'User')+'</div>\n'+
 '          <div style="font-size:11px;color:rgba(255,255,255,.7)">'+(poster.role||'')+'</div>\n'+
 '        </div>\n'+
-'      </div>\n'+
+'      </a>\n'+
 '    </div>\n'+
 '    <div style="padding:8px 12px;display:flex;align-items:center;gap:8px">\n'+
 '      <div style="font-size:16px">📸</div>\n'+
@@ -2565,8 +2622,7 @@ ${sorted.map(([id,u],i)=>{
   </div>
 </div>
 ${profileCard(myUid, myUser, d, true, lang, adminIds, myBannerData, myPicData)}
-${completionHtml}
-<div class="tabs" style="margin-top:8px;position:sticky;top:57px;z-index:50;background:var(--bg)">
+<div class="tabs" style="position:sticky;top:57px;z-index:50;background:var(--bg)">
   <div class="tab active" onclick="showPTab('posts',this)">📝 Posts</div>
   <div class="tab" onclick="showPTab('projekte',this)">🚀 Projekte</div>
   <div class="tab" onclick="showPTab('links',this)">🔗 Links</div>
@@ -2650,7 +2706,7 @@ function showPTab(tab,el){
 function openProjDetail(idx){
   const p=PROJECTS[idx]; if(!p) return; _curProjIdx=idx;
   document.getElementById('proj-detail-title').textContent=p.title;
-  document.getElementById('proj-detail-img-wrap').innerHTML=p.img?'<img src="'+p.img+'" style="width:100%;max-height:300px;object-fit:cover" alt="">':'';
+  document.getElementById('proj-detail-img-wrap').innerHTML=p.img?'<img src="'+p.img+'" style="width:100%;object-fit:contain;display:block;background:#0a0a0a" alt="">':'';
   document.getElementById('proj-detail-desc').textContent=p.description||'';
   document.getElementById('proj-detail-link').innerHTML=p.link?'<a href="'+p.link+'" target="_blank" style="color:var(--blue);font-size:13px;word-break:break-all">🔗 '+p.link+'</a>':'';
   document.getElementById('proj-detail-delete').onclick=()=>deleteProj(p.id);
@@ -2663,9 +2719,11 @@ function previewProjImg(input){
   const file=input.files[0]; if(!file) return;
   const reader=new FileReader();
   reader.onload=e=>{
-    const prev=document.getElementById('proj-img-preview');
-    prev.innerHTML='<img src="'+e.target.result+'" style="width:100%;height:100%;object-fit:cover">';
-    prev._data=e.target.result;
+    openCropModal(e.target.result,'square',(croppedData)=>{
+      const prev=document.getElementById('proj-img-preview');
+      prev.innerHTML='<img src="'+croppedData+'" style="width:100%;height:100%;object-fit:cover">';
+      prev._data=croppedData;
+    });
   };
   reader.readAsDataURL(file);
 }
@@ -2961,30 +3019,32 @@ function toggleTheme(btn) {
 async function uploadProfilePic(input) {
     const file = input.files[0];
     if (!file) return;
-    if (file.size > 1500000) return toast('❌ Bild zu groß (max 1.5MB)');
     const reader = new FileReader();
-    reader.onload = async (e) => {
-        try {
-            const res = await fetch('/api/upload-profilepic', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({imageData:e.target.result})});
-            const data = await res.json();
-            if (data.ok) { document.getElementById('pic-preview').innerHTML = '<img src="'+e.target.result+'" style="width:100%;height:100%;object-fit:cover" alt="">'; toast('✅ Profilbild gesetzt!'); }
-            else toast('❌ ' + (data.error||'Fehler'));
-        } catch(e) { toast('❌ Upload Fehler'); }
+    reader.onload = (e) => {
+        openCropModal(e.target.result, 'circle', async (croppedData) => {
+            try {
+                const res = await fetch('/api/upload-profilepic', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({imageData:croppedData})});
+                const data = await res.json();
+                if (data.ok) { document.getElementById('pic-preview').innerHTML = '<img src="'+croppedData+'" style="width:100%;height:100%;object-fit:cover" alt="">'; toast('✅ Profilbild gesetzt!'); }
+                else toast('❌ ' + (data.error||'Fehler'));
+            } catch(e) { toast('❌ Upload Fehler'); }
+        });
     };
     reader.readAsDataURL(file);
 }
 async function uploadBanner(input) {
     const file = input.files[0];
     if (!file) return;
-    if (file.size > 1500000) return toast('❌ Bild zu groß (max 1.5MB)');
     const reader = new FileReader();
-    reader.onload = async (e) => {
-        try {
-            const res = await fetch('/api/upload-banner', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({imageData:e.target.result})});
-            const data = await res.json();
-            if (data.ok) { toast('✅ Banner gespeichert!'); setTimeout(()=>location.href='/profil',1000); }
-            else toast('❌ ' + (data.error||'Fehler'));
-        } catch(e) { toast('❌ Upload Fehler'); }
+    reader.onload = (e) => {
+        openCropModal(e.target.result, 'banner', async (croppedData) => {
+            try {
+                const res = await fetch('/api/upload-banner', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({imageData:croppedData})});
+                const data = await res.json();
+                if (data.ok) { toast('✅ Banner gespeichert!'); setTimeout(()=>location.href='/profil',1000); }
+                else toast('❌ ' + (data.error||'Fehler'));
+            } catch(e) { toast('❌ Upload Fehler'); }
+        });
     };
     reader.readAsDataURL(file);
 }
