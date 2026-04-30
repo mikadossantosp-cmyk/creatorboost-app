@@ -1906,6 +1906,71 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
 commentsBox+
 '</div>';}
 
+        // Superlink week key (Berlin time)
+        const _bNow = new Date(new Date().toLocaleString('en-US', {timeZone:'Europe/Berlin'}));
+        const _bDay = _bNow.getDay();
+        const _bOff = _bDay === 0 ? -6 : 1 - _bDay;
+        const _bMon = new Date(_bNow); _bMon.setDate(_bNow.getDate() + _bOff);
+        const slWeekKey = _bMon.toISOString().slice(0,10);
+        const myWeekSuperlink = Object.values(d.superlinks||{}).find(s=>s.uid===myUid&&s.week===slWeekKey);
+        const slAvailable = myWeekSuperlink ? 0 : 1;
+
+        function renderSuperLink(sl) {
+            const poster = d.users[String(sl.uid)]||{};
+            const likes = Array.isArray(sl.likes) ? sl.likes : [];
+            const hasLiked = likes.includes(myUid);
+            const isOwnPost = String(sl.uid) === String(myUid);
+            const insta = poster.instagram;
+            const grad = badgeGradient(poster.role);
+            const picFile = ladeBild(String(sl.uid),'profilepic');
+            const avatarSmall = picFile
+                ? '<img src="/appbild/'+String(sl.uid)+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">'
+                : insta ? '<img src="https://unavatar.io/instagram/'+insta+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">' : '';
+            const likerRows = likes.map(lid=>{
+                const lu=d.users[String(lid)]; const lg=badgeGradient(lu&&lu.role);
+                const lf=ladeBild(String(lid),'profilepic'); const li=lu&&lu.instagram;
+                const limg=lf?'<img src="/appbild/'+lid+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">':li?'<img src="https://unavatar.io/instagram/'+li+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">':'';
+                const rName = ((lu&&(lu.spitzname||lu.name))||'User').replace(/'/g,'&#39;');
+                const reportBtn = isOwnPost ? '<button onclick="reportNonEngager(\''+sl.id+'\',\''+lid+'\',\''+rName+'\')" style="background:none;border:1px solid rgba(255,59,48,.5);color:rgba(255,59,48,.8);border-radius:8px;padding:3px 8px;font-size:10px;font-weight:600;cursor:pointer;flex-shrink:0">Melden</button>' : '';
+                return '<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--border2)"><div style="position:relative;width:34px;height:34px;border-radius:50%;background:'+lg+';flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff"><span style="position:absolute">'+(lu&&lu.name||'?')[0]+'</span>'+limg+'</div><div style="flex:1;min-width:0;font-size:13px;font-weight:600;color:var(--text)">'+(lu&&(lu.spitzname||lu.name)||'User')+'</div>'+reportBtn+'</div>';
+            }).join('');
+            const likeBtn = isOwnPost
+                ? '<div style="font-size:12px;color:var(--muted);padding:7px 0">👤 Dein Superlink</div>'
+                : '<button class="post-action-btn '+(hasLiked?'liked':'')+'" onclick="likeSuperLink(\''+sl.id+'\',this)" '+(hasLiked?'disabled':'')+' style="border:1px solid '+(hasLiked?'var(--accent)':'var(--border)')+';border-radius:12px;padding:9px 18px;font-size:14px;font-weight:700;gap:6px"><svg width="18" height="18" viewBox="0 0 24 24" fill="'+(hasLiked?'currentColor':'none')+'" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>Like <span id="sl-likes-'+sl.id+'">'+likes.length+'</span></button>';
+            const whoLikedBtn = '<button class="post-action-btn" onclick="showSLLikerModal(\''+sl.id+'\')" style="border:1px solid var(--border);border-radius:12px;padding:9px 14px;font-size:13px;font-weight:700;gap:5px">👁 Wer hat geliked?</button>';
+            const time = new Date(sl.timestamp).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
+            const dateStr = new Date(sl.timestamp).toLocaleDateString('de-DE',{day:'2-digit',month:'short'});
+            return '<div class="post fade-up" id="sl-post-'+sl.id+'">\n'
+                +'<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px 0">\n'
+                +'<span class="post-category-label" style="background:linear-gradient(135deg,#f59e0b,#a78bfa)">⭐ SUPERLINK</span>\n'
+                +'<span class="post-time">'+dateStr+' '+time+'</span>\n'
+                +'</div>\n'
+                +'<div class="post-header" style="padding-top:8px">\n'
+                +'<div style="position:relative;width:40px;height:40px;border-radius:50%;overflow:hidden;background:'+grad+';flex-shrink:0;display:flex;align-items:center;justify-content:center">\n'
+                +'<span style="color:#fff;font-weight:700;font-size:15px;position:absolute">'+(poster.name||'?')[0]+'</span>\n'
+                +avatarSmall+'\n</div>\n'
+                +'<div class="post-user-info">\n'
+                +'<div class="post-name">'+(poster.spitzname||poster.name||'User')+'</div>\n'
+                +'<div class="post-badge">'+(poster.role||'')+(insta?'<span style="color:var(--muted2)"> · @'+insta+'</span>':'')+'</div>\n'
+                +'</div>\n</div>\n'
+                +'<div style="margin:8px 16px;padding:8px 12px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:10px;font-size:11px;color:rgba(245,158,11,.9);font-weight:600">🔄 Bitte Liken, Kommentieren, Teilen und Speichern</div>\n'
+                +'<div style="margin:0 16px 8px;border-radius:14px;overflow:hidden;background:var(--bg3);border:1px solid rgba(255,255,255,.08)">\n'
+                +'<a href="'+sl.url+'" target="_blank" style="display:block;padding:12px 14px;text-decoration:none">\n'
+                +'<div style="font-size:13px;color:var(--blue);word-break:break-all;margin-bottom:4px">'+sl.url.replace('https://www.','').replace('https://','').slice(0,60)+'</div>\n'
+                +(sl.caption?'<div style="font-size:12px;color:var(--muted);margin-top:4px">'+String(sl.caption).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</div>':'')+'\n'
+                +'<div style="font-size:11px;color:var(--accent);font-weight:700;margin-top:6px">Ansehen →</div>\n'
+                +'</a></div>\n'
+                +'<div class="post-likes-row"><span class="post-like-count">❤️ <span id="sl-likes-'+sl.id+'">'+likes.length+'</span></span></div>\n'
+                +'<div id="sl-liker-rows-'+sl.id+'" style="display:none">'+likerRows+'</div>\n'
+                +'<div class="post-actions" style="gap:8px;padding:8px 16px 12px">'+likeBtn+whoLikedBtn+'</div>\n'
+                +'</div>';
+        }
+
+        const allSuperLinks = Object.values(d.superlinks||{}).sort((a,b)=>b.timestamp-a.timestamp);
+        const engagementHtml = allSuperLinks.length
+            ? '<div style="padding:8px 0 80px">'+allSuperLinks.map(renderSuperLink).join('')+'</div>'
+            : '<div style="text-align:center;padding:48px 24px;padding-bottom:80px"><div style="font-size:56px;margin-bottom:16px">⭐</div><div style="font-size:17px;font-weight:700;margin-bottom:8px">Noch keine Superlinks</div><div style="font-size:13px;color:var(--muted);margin-bottom:24px">Teile deinen Instagram-Link für maximales Engagement mit der Community.</div></div>';
+
         const heuteHtml = heuteLinks.length ? heuteLinks.map(renderLink).join('') : `
 <div style="text-align:center;padding:48px 24px">
   <div style="font-size:56px;margin-bottom:16px">📸</div>
@@ -1914,7 +1979,9 @@ commentsBox+
   <button onclick="openPlusSheet()" style="display:inline-flex;align-items:center;gap:8px;background:var(--accent);color:#fff;padding:12px 24px;border-radius:12px;font-size:14px;font-weight:700;border:none;cursor:pointer;font-family:var(--font)">📸 Jetzt Link teilen</button>
 </div>`;
         const aelterHtml = aelterLinks.length ? aelterLinks.map(renderLink).join('') : '<div class="empty" style="margin-top:40px"><div class="empty-icon">🕐</div><div class="empty-text">Keine älteren Links</div></div>';
-        const postsHtml = tab === 'aelter' ? '<div style="padding:8px 0 80px">'+aelterHtml+'</div>' : '<div style="padding:8px 0 80px">'+heuteHtml+'</div>';
+        const postsHtml = tab === 'aelter' ? '<div style="padding:8px 0 80px">'+aelterHtml+'</div>'
+            : tab === 'engagement' ? engagementHtml
+            : '<div style="padding:8px 0 80px">'+heuteHtml+'</div>';
 
         return html(`
 <div class="topbar">
@@ -1944,9 +2011,16 @@ ${(()=>{
   return '';
 })()}
 <div style="display:flex;border-bottom:2px solid var(--border2);width:100%">
-  <a href="/feed?tab=heute" style="flex:1;padding:10px;font-size:13px;font-weight:700;text-align:center;text-decoration:none;display:block;border-bottom:3px solid ${tab==='aelter'?'transparent':'var(--accent)'};margin-bottom:-2px;color:${tab==='aelter'?'var(--muted)':'var(--accent)'}">📅 Heute</a>
-  <a href="/feed?tab=aelter" style="flex:1;padding:10px;font-size:13px;font-weight:700;text-align:center;text-decoration:none;display:block;border-bottom:3px solid ${tab==='aelter'?'var(--accent)':'transparent'};margin-bottom:-2px;color:${tab==='aelter'?'var(--accent)':'var(--muted)'}">🕐 Älter</a>
+  <a href="/feed?tab=heute" style="flex:1;padding:9px 4px;font-size:12px;font-weight:700;text-align:center;text-decoration:none;display:block;border-bottom:3px solid ${tab==='heute'?'var(--accent)':'transparent'};margin-bottom:-2px;color:${tab==='heute'?'var(--accent)':'var(--muted)'}">📅 Heute</a>
+  <a href="/feed?tab=aelter" style="flex:1;padding:9px 4px;font-size:12px;font-weight:700;text-align:center;text-decoration:none;display:block;border-bottom:3px solid ${tab==='aelter'?'var(--accent)':'transparent'};margin-bottom:-2px;color:${tab==='aelter'?'var(--accent)':'var(--muted)'}">🕐 Älter</a>
+  <a href="/feed?tab=engagement" style="flex:1;padding:9px 4px;font-size:12px;font-weight:700;text-align:center;text-decoration:none;display:block;border-bottom:3px solid ${tab==='engagement'?'var(--accent)':'transparent'};margin-bottom:-2px;color:${tab==='engagement'?'var(--accent)':'var(--muted)'}">⭐ Engagement</a>
 </div>
+${tab==='engagement' ? `<div style="padding:12px 16px 4px">
+  ${slAvailable > 0
+    ? `<button onclick="openSLSheet()" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;background:linear-gradient(135deg,#f59e0b,#a78bfa);color:#fff;border:none;border-radius:14px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font)">⭐ Superlink teilen (${slAvailable} verfügbar)</button>`
+    : `<div style="padding:12px;background:var(--bg3);border:1px solid var(--border2);border-radius:14px;font-size:12px;color:var(--muted);text-align:center">✅ Du hast diese Woche bereits einen Superlink gepostet</div>`
+  }
+</div>` : ''}
 ${postsHtml}
 <script>
 async function likePost(msgId, btn) {
@@ -2033,7 +2107,102 @@ function toggleLikers(msgId) {
     box.style.display = isOpen ? 'none' : 'block';
     if (arrow) arrow.style.transform = isOpen ? '' : 'rotate(180deg)';
 }
-</script>`, 'feed');
+
+// ── SUPERLINK ──
+async function likeSuperLink(slId, btn) {
+    if (btn.disabled) return;
+    btn.disabled = true;
+    try {
+        const res = await fetch('/api/like-superlink',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({slId})});
+        const data = await res.json();
+        if (data.ok) {
+            btn.classList.add('liked');
+            btn.querySelector('svg')?.setAttribute('fill','currentColor');
+            btn.style.borderColor='var(--accent)';
+            document.querySelectorAll('#sl-likes-'+slId).forEach(el=>el.textContent=data.likes);
+            toast('❤️ Geliked!');
+        } else { btn.disabled=false; toast('❌ '+(data.error||'Fehler')); }
+    } catch(e) { btn.disabled=false; toast('❌ Netzwerkfehler'); }
+}
+function showSLLikerModal(slId) {
+    const modal=document.getElementById('sl-liker-modal');
+    const content=document.getElementById('sl-liker-modal-content');
+    const rows=document.getElementById('sl-liker-rows-'+slId);
+    if(!modal)return;
+    content.innerHTML=rows?(rows.innerHTML||'<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">Noch niemand geliked</div>'):'<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">Noch niemand geliked</div>';
+    modal.classList.add('open');document.body.style.overflow='hidden';
+}
+function closeSLLikerModal(){const m=document.getElementById('sl-liker-modal');if(m){m.classList.remove('open');document.body.style.overflow='';}}
+async function reportNonEngager(slId,likerUid,likerName){
+    if(!confirm('Möchtest du '+likerName+' wegen mangelndem Engagement melden?'))return;
+    const res=await fetch('/api/report-nonengager',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({slId,likerUid})});
+    const data=await res.json();
+    toast(data.ok?'✅ Gemeldet!':'❌ '+(data.error||'Fehler'));
+}
+function openSLSheet(){document.getElementById('sl-sheet').classList.add('open');document.body.style.overflow='hidden';}
+function closeSLSheet(){document.getElementById('sl-sheet').classList.remove('open');document.body.style.overflow='';}
+async function submitSuperLink(){
+    const url=document.getElementById('sl-url-input').value.trim();
+    const caption=document.getElementById('sl-caption-input').value.trim();
+    const btn=document.getElementById('sl-submit-btn');
+    const result=document.getElementById('sl-result');
+    if(!url){result.textContent='❌ Bitte gib einen Instagram-Link ein';return;}
+    if(!url.includes('instagram.com')){result.textContent='❌ Nur Instagram-Links erlaubt';return;}
+    btn.disabled=true;btn.textContent='...';
+    try{
+        const res=await fetch('/api/post-superlink',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url,caption})});
+        const data=await res.json();
+        if(data.ok){
+            closeSLSheet();
+            document.getElementById('sl-popup').style.display='flex';
+            let secs=10;const countEl=document.getElementById('sl-popup-count');
+            if(countEl)countEl.textContent=secs;
+            const iv=setInterval(()=>{secs--;if(countEl)countEl.textContent=secs;if(secs<=0)clearInterval(iv);},1000);
+            setTimeout(()=>{document.getElementById('sl-popup').style.display='none';location.href='/feed?tab=engagement';},10000);
+        } else { result.textContent='❌ '+(data.error||'Fehler');btn.disabled=false;btn.textContent='⭐ Superlink posten'; }
+    }catch(e){result.textContent='❌ Netzwerkfehler';btn.disabled=false;btn.textContent='⭐ Superlink posten';}
+}
+</script>
+
+<!-- Superlink liker modal -->
+<div class="liker-modal" id="sl-liker-modal" onclick="if(event.target===this)closeSLLikerModal()">
+  <div class="liker-modal-sheet">
+    <div style="padding:14px 16px;border-bottom:1px solid var(--border2);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--bg3);z-index:1">
+      <span style="font-size:14px;font-weight:700">❤️ Wer hat geliked?</span>
+      <button onclick="closeSLLikerModal()" style="background:var(--bg4);border:none;color:var(--text);border-radius:50%;width:28px;height:28px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>
+    </div>
+    <div id="sl-liker-modal-content" style="padding:4px 0"></div>
+    <div style="padding:12px 16px 28px">
+      <button onclick="closeSLLikerModal()" style="width:100%;background:var(--bg4);border:none;color:var(--text);border-radius:12px;padding:12px;font-size:14px;font-weight:600;cursor:pointer;font-family:var(--font)">Schließen</button>
+    </div>
+  </div>
+</div>
+
+<!-- Superlink posting sheet -->
+<div class="plus-sheet" id="sl-sheet" onclick="if(event.target===this)closeSLSheet()">
+  <div class="plus-sheet-inner">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div style="font-size:16px;font-weight:700">⭐ Superlink teilen</div>
+      <button onclick="closeSLSheet()" style="background:var(--bg4);border:none;color:var(--muted);width:30px;height:30px;border-radius:50%;font-size:18px;cursor:pointer">✕</button>
+    </div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.5;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:10px;padding:10px">⚠️ 1 Superlink pro Woche (Mo–Sa). Du verpflichtest dich, alle anderen Superlinks dieser Woche zu liken, kommentieren, teilen und speichern.</div>
+    <input type="url" id="sl-url-input" class="form-input" placeholder="Instagram-Link einfügen..." style="margin-bottom:8px">
+    <textarea id="sl-caption-input" class="form-input" placeholder="Beschreibung (optional)" rows="2" maxlength="200" style="margin-bottom:12px"></textarea>
+    <button id="sl-submit-btn" class="btn btn-primary btn-full" onclick="submitSuperLink()">⭐ Superlink posten</button>
+    <div id="sl-result" style="font-size:12px;color:var(--accent);margin-top:8px;text-align:center"></div>
+  </div>
+</div>
+
+<!-- 10-second popup after posting superlink -->
+<div id="sl-popup" style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,.85);align-items:center;justify-content:center;padding:24px">
+  <div style="background:var(--bg2);border-radius:20px;padding:28px 24px;max-width:360px;width:100%;text-align:center">
+    <div style="font-size:48px;margin-bottom:12px">⭐</div>
+    <div style="font-size:18px;font-weight:700;margin-bottom:8px">Superlink gepostet!</div>
+    <div style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:20px">Superlinks können 1× pro Woche gepostet werden. Du hast dich damit verpflichtet, <strong style="color:var(--text)">alle anderen Superlinks diese Woche zu liken, kommentieren, teilen und speichern</strong>. Sonst gibt es am Sonntag um 23:59 Uhr −50 XP.</div>
+    <div style="font-size:13px;color:var(--muted)">Weiterleitung in <span id="sl-popup-count">10</span> Sekunden...</div>
+  </div>
+</div>
+`, 'feed');
     }
 
     // ── CHAT ──
@@ -3058,6 +3227,19 @@ ${sorted.map(([id,u],i)=>{
             +'<div style="display:inline-flex;align-items:center;padding:4px 12px;border-radius:20px;background:'+badgeGradient(myUser?.role)+';color:#fff;font-size:12px;font-weight:700">'+( myUser?.role||'🆕 New')+'</div>'
             +(myUser?.trophies&&myUser.trophies.length?'<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px">'+myUser.trophies.map(t=>'<span style="font-size:22px;background:var(--bg4);border-radius:8px;padding:4px 8px">'+t+'</span>').join('')+'</div>':'')
             +'</div>'
+            +(()=>{
+                const bNow2 = new Date(new Date().toLocaleString('en-US',{timeZone:'Europe/Berlin'}));
+                const bDay2 = bNow2.getDay(); const bOff2 = bDay2===0?-6:1-bDay2;
+                const bMon2 = new Date(bNow2); bMon2.setDate(bNow2.getDate()+bOff2);
+                const wKey2 = bMon2.toISOString().slice(0,10);
+                const hasSL = Object.values(d.superlinks||{}).some(s=>s.uid===myUid&&s.week===wKey2);
+                const myBonusLinksProf = d.bonusLinks?.[myUid]||0;
+                return '<div style="background:var(--bg3);border-radius:14px;padding:14px 16px"><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Verfügbarkeit</div>'
+                    +'<div style="display:flex;gap:8px;flex-wrap:wrap">'
+                    +'<div style="background:var(--bg4);border-radius:10px;padding:8px 12px;font-size:12px;font-weight:600">⭐ Superlink: '+(hasSL?'<span style="color:var(--muted)">0 verfügbar</span>':'<span style="color:#22c55e">1 verfügbar</span>')+'</div>'
+                    +'<div style="background:var(--bg4);border-radius:10px;padding:8px 12px;font-size:12px;font-weight:600">🔗 Extra-Links: <span style="color:var(--accent)">'+myBonusLinksProf+'</span></div>'
+                    +'</div></div>';
+            })()
             +'<a href="/einstellungen" style="display:flex;align-items:center;justify-content:center;gap:8px;background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:14px;font-size:14px;font-weight:600;color:var(--text);text-decoration:none">✏️ Profil bearbeiten</a>'
             +'</div>';
 
@@ -3755,6 +3937,39 @@ async function setRing(ringId) {
     if (path === '/api/forum-debug') {
         const data = await fetchBot('/forum-debug');
         return json(data || { error: 'Bot nicht erreichbar' });
+    }
+
+    if (path === '/api/superlinks') {
+        const data = await fetchBot('/superlinks');
+        if (!data) return json({ superlinks: [] });
+        return json(data);
+    }
+
+    if (path === '/api/like-superlink' && req.method === 'POST') {
+        if (!session) return json({error:'Nicht eingeloggt'}, 401);
+        const body = await parseBody(req);
+        const { slId } = body;
+        if (!slId) return json({ok:false});
+        const result = await postBot('/like-superlink-api', { uid: myUid, slId });
+        return json(result || {ok:false});
+    }
+
+    if (path === '/api/post-superlink' && req.method === 'POST') {
+        if (!session) return json({error:'Nicht eingeloggt'}, 401);
+        const body = await parseBody(req);
+        const { url, caption } = body;
+        if (!url) return json({ok:false, error:'URL fehlt'});
+        const result = await postBot('/post-superlink-api', { uid: myUid, url, caption: caption||'' });
+        return json(result || {ok:false});
+    }
+
+    if (path === '/api/report-nonengager' && req.method === 'POST') {
+        if (!session) return json({error:'Nicht eingeloggt'}, 401);
+        const body = await parseBody(req);
+        const { likerUid, slId } = body;
+        if (!likerUid || !slId) return json({ok:false});
+        const result = await postBot('/report-nonengager-api', { reporterUid: myUid, likerUid, slId });
+        return json(result || {ok:false});
     }
 
     redirect('/feed');
