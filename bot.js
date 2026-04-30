@@ -420,8 +420,9 @@ ${session ? `
   <button class="nav-plus" onclick="openPlusSheet()">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="18" height="18"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
   </button>
-  <a href="/nachrichten" class="nav-item ${page==='messages'?'active':''}">
+  <a href="/nachrichten" class="nav-item ${page==='messages'?'active':''}" style="position:relative">
     <svg viewBox="0 0 24 24" fill="${page==='messages'?'currentColor':'none'}" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    <div id="msg-badge" style="display:none;position:absolute;top:0;right:0;background:#ff6b6b;color:#fff;border-radius:50%;min-width:16px;height:16px;font-size:9px;font-weight:700;align-items:center;justify-content:center;padding:0 3px;line-height:16px;text-align:center"></div>
     ${page==='messages'?'<div class="nav-dot"></div>':''}
   </a>
   <a href="/profil" class="nav-item ${page==='profile'?'active':''}">
@@ -443,6 +444,16 @@ async function checkNotifBadge(){
 }
 checkNotifBadge();
 setInterval(checkNotifBadge, 30000);
+async function checkMsgBadge(){
+    try{
+        const r=await fetch('/api/messages-count');
+        const d=await r.json();
+        const b=document.getElementById('msg-badge');
+        if(b){if(d.count>0){b.textContent=d.count>9?'9+':d.count;b.style.display='flex';}else b.style.display='none';}
+    }catch(e){}
+}
+checkMsgBadge();
+setInterval(checkMsgBadge,15000);
 function toast(msg,dur=2500){const t=document.getElementById('toast');if(!t)return;t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),dur);}
 function setTheme(t){document.documentElement.setAttribute('data-theme',t);fetch('/api/theme',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({theme:t})});}
 function setLang(l){fetch('/api/lang',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lang:l})}).then(()=>location.reload());}
@@ -1150,6 +1161,30 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
         const notifs = (botData.notifications?.[session.uid] || []).slice(-20).reverse();
         await postBot('/mark-notifications-read', { uid: session.uid });
         return json({notifications: notifs});
+    }
+
+    if (path === '/api/messages-count') {
+        const botData = await fetchBot('/data');
+        if (!botData) return json({count:0});
+        // Count unread DMs
+        const convos = botData.messages || {};
+        let unreadDMs = 0;
+        Object.entries(convos).forEach(([key, msgs]) => {
+            if (key.includes('_'+myUid+'_') || key.includes('_'+myUid) || key.startsWith(myUid+'_'))
+                unreadDMs += msgs.filter(m=>m.to===myUid&&!m.read).length;
+        });
+        // Count unread thread messages
+        const thrMsgs = botData.threadMessages || {};
+        const lastRead = botData.threadLastRead?.[myUid] || {};
+        const cf = botData.communityFeed || [];
+        let unreadThreads = 0;
+        const glr = lastRead['general'] || 0;
+        const gm = thrMsgs['general']?.length ? thrMsgs['general'] : cf;
+        unreadThreads += gm.filter(m=>(m.timestamp||0)>glr).length;
+        Object.keys(thrMsgs).forEach(tid => {
+            if (tid !== 'general') unreadThreads += (thrMsgs[tid]||[]).filter(m=>(m.timestamp||0)>(lastRead[tid]||0)).length;
+        });
+        return json({count: unreadDMs + unreadThreads, dms: unreadDMs, threads: unreadThreads});
     }
 
     if (path === '/api/notifications/count') {
@@ -2035,14 +2070,27 @@ async function renameThread(tid,current){
             })
             .sort((a, b) => (b.lastMsg?.timestamp||0)-(a.lastMsg?.timestamp||0));
         const feedPreview = (await (async()=>{try{const r=await fetchBot('/telegram-feed');return r?.messages?.[0]?.text?.slice(0,40)||'Live Telegram Nachrichten';}catch(e){return 'Live Telegram Nachrichten';}})());
+        // Count unread thread messages
+        const thrMsgsAll = botData.threadMessages || {};
+        const lastReadAll = botData.threadLastRead?.[myUid] || {};
+        const cfeed = botData.communityFeed || [];
+        let totalThreadUnread = 0;
+        const genLastRead = lastReadAll['general'] || 0;
+        const genMsgs = thrMsgsAll['general']?.length ? thrMsgsAll['general'] : cfeed;
+        totalThreadUnread += genMsgs.filter(m => (m.timestamp||0) > genLastRead).length;
+        Object.keys(thrMsgsAll).forEach(tid => {
+            if (tid !== 'general') totalThreadUnread += (thrMsgsAll[tid]||[]).filter(m=>(m.timestamp||0)>(lastReadAll[tid]||0)).length;
+        });
         const convHtml = `
-<a href="/nachrichten/gruppe" style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border2);text-decoration:none;background:rgba(0,200,130,.04)">
+<a href="/nachrichten/gruppe" style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border2);text-decoration:none;background:rgba(0,136,204,.06)">
   <div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#0088cc,#00c6ff);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">✈️</div>
   <div style="flex:1;min-width:0">
     <div style="font-size:14px;font-weight:700;color:var(--text)">Telegram Gruppe</div>
     <div style="font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${feedPreview}</div>
   </div>
-  <div style="width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulse-dot 1.5s infinite"></div>
+  ${totalThreadUnread > 0
+    ? `<div style="background:#0088cc;color:#fff;border-radius:50%;min-width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;padding:0 4px">${totalThreadUnread > 9 ? '9+' : totalThreadUnread}</div>`
+    : '<div style="width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulse-dot 1.5s infinite"></div>'}
 </a>` + (myConvos.length ? myConvos.map(c => `
 <a href="/nachrichten/${c.otherUid}" style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border2);text-decoration:none">
   <div style="position:relative;width:48px;height:48px;border-radius:50%;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;flex-shrink:0;overflow:hidden">
