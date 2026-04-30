@@ -1,1 +1,1 @@
-PLACEHOLDER_CB
+$(python3 -c "with open('/tmp/CB_content_ready.js') as f: print(f.read(), end='')")
