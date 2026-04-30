@@ -9,6 +9,7 @@ const BRIDGE_SECRET = process.env.BRIDGE_SECRET || 'geheimer-key-2';
 const BOT_TOKEN     = process.env.BOT_TOKEN     || '';
 const BOT_USERNAME  = process.env.BOT_USERNAME  || 'CreatorBoostbot';
 const PORT          = process.env.PORT          || 3000;
+const APP_VERSION   = Date.now().toString();
 
 const fs = require('fs');
 const DATA_DIR = fs.existsSync('/data') ? '/data' : __dirname;
@@ -454,6 +455,27 @@ async function checkMsgBadge(){
 }
 checkMsgBadge();
 setInterval(checkMsgBadge,15000);
+let _appVersion=null;
+async function checkAppVersion(){
+    try{
+        const r=await fetch('/api/version');
+        const d=await r.json();
+        if(!_appVersion){_appVersion=d.version;return;}
+        if(d.version!==_appVersion){
+            let banner=document.getElementById('update-banner');
+            if(!banner){
+                banner=document.createElement('div');
+                banner.id='update-banner';
+                banner.style.cssText='position:fixed;top:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;text-align:center;padding:12px 16px;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px';
+                banner.innerHTML='🚀 Update verfügbar! <span style="text-decoration:underline">Jetzt aktualisieren →</span>';
+                banner.onclick=()=>{window.location.reload(true);};
+                document.body.prepend(banner);
+            }
+        }
+    }catch(e){}
+}
+checkAppVersion();
+setInterval(checkAppVersion,60000);
 function toast(msg,dur=2500){const t=document.getElementById('toast');if(!t)return;t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),dur);}
 function setTheme(t){document.documentElement.setAttribute('data-theme',t);fetch('/api/theme',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({theme:t})});}
 function setLang(l){fetch('/api/lang',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lang:l})}).then(()=>location.reload());}
@@ -1161,6 +1183,10 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
         const notifs = (botData.notifications?.[session.uid] || []).slice(-20).reverse();
         await postBot('/mark-notifications-read', { uid: session.uid });
         return json({notifications: notifs});
+    }
+
+    if (path === '/api/version') {
+        return json({version: APP_VERSION});
     }
 
     if (path === '/api/messages-count') {
