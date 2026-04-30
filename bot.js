@@ -743,7 +743,10 @@ ${isPreview ? '<div class="ob-badge">👀 Admin Vorschau &nbsp;·&nbsp; <a href=
         <div class="mock-topbar"><div style="font-size:13px;font-weight:700">Nachrichten</div></div>
         ${[['MK','Max K.','Danke für den Like! 🙏','linear-gradient(135deg,#ff6b6b,#ffa500)',2],['SL','Sara L.','Cooles Reel! Hab ich geliked 👍','linear-gradient(135deg,#4dabf7,#cc5de8)',0],['JB','Jonas B.','Welche App nutzt du?','linear-gradient(135deg,#3b82f6,#06b6d4)',1]].map(([init,name,msg,grad,unread])=>`
         <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.05)">
-          <div style="width:36px;height:36px;border-radius:50%;background:${grad};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">${init}</div>
+          <div style="width:36px;height:36px;border-radius:50%;background:${grad};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;position:relative;overflow:hidden">
+  <span style="position:relative;z-index:0">${init}</span>
+  ${ladeBild(c.otherUid,'profilepic')?`<img src="/appbild/${c.otherUid}/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1" onerror="this.remove()" alt="">`:botData.users?.[c.otherUid]?.instagram?`<img src="https://unavatar.io/instagram/${botData.users[c.otherUid].instagram}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1" onerror="this.remove()" alt="">`:''}
+</div>
           <div style="flex:1;min-width:0">
             <div style="font-size:11px;font-weight:600">${name}</div>
             <div style="font-size:9px;color:rgba(255,255,255,.4);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${msg}</div>
@@ -1662,11 +1665,11 @@ function toggleLikers(msgId) {
   <a href="/nachrichten" class="icon-btn" style="font-size:22px">‹</a>
   <a href="/profil/${otherUid}" style="display:flex;align-items:center;gap:8px;text-decoration:none">
     <div style="position:relative;width:32px;height:32px;border-radius:50%;overflow:hidden;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0">
-      <span style="position:absolute">${otherName[0]}</span>
+      <span style="position:absolute;z-index:0">${otherName[0]}</span>
       ${ladeBild(otherUid,'profilepic')
-        ? `<img src="/appbild/${otherUid}/profilepic" style="width:100%;height:100%;object-fit:cover" alt="">`
+        ? `<img src="/appbild/${otherUid}/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1" alt="">`
         : otherUser.instagram
-        ? `<img src="https://unavatar.io/instagram/${otherUser.instagram}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">`
+        ? `<img src="https://unavatar.io/instagram/${otherUser.instagram}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1" onerror="this.remove()" alt="">`
         : ''}
     </div>
     <span style="font-size:15px;font-weight:600;color:var(--text)">${otherName}</span>
@@ -1919,7 +1922,7 @@ async function createThread(){
       else if(m.type==='sticker'&&m.mediaId)body='<img src="/api/tg-file/'+m.mediaId+'" style="width:80px;height:80px;object-fit:contain;display:block;margin-top:4px" loading="lazy">';
       else if(m.type==='video')body='<div style="background:rgba(0,0,0,.3);border-radius:10px;padding:8px 12px;font-size:12px;color:var(--muted);margin-top:4px">🎬 Video — öffne Telegram zum Ansehen</div>';
       if(m.text)body+='<div style="font-size:13px;line-height:1.5;margin-top:2px;word-break:break-word">'+m.text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</div>';
-      return '<div style="display:flex;gap:10px;align-items:flex-start"><div style="width:36px;height:36px;border-radius:50%;background:'+c+';display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;flex-shrink:0">'+ini(m.name)+'</div><div style="flex:1;min-width:0"><div style="display:flex;align-items:baseline;gap:8px;margin-bottom:2px">'+nameEl+'<span style="font-size:10px;color:var(--muted)">'+t(m.timestamp)+'</span></div>'+body+'</div></div>';
+      return '<div style="display:flex;gap:10px;align-items:flex-start"><div style="width:36px;height:36px;border-radius:50%;background:'+c+';display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;flex-shrink:0;position:relative;overflow:hidden">'+ini(m.name)+(m.uid?'<img src="/appbild/'+m.uid+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" onerror="this.remove()" loading="lazy">':'')+'</div><div style="flex:1;min-width:0"><div style="display:flex;align-items:baseline;gap:8px;margin-bottom:2px">'+nameEl+'<span style="font-size:10px;color:var(--muted)">'+t(m.timestamp)+'</span></div>'+body+'</div></div>';
     }).join('');
     if(atBottom)window.scrollTo(0,document.body.scrollHeight);
   }
