@@ -1319,6 +1319,24 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
         return json({ok: !!result});
     }
 
+    if (path === '/api/delete-thread-msg' && req.method === 'POST') {
+        const body = await parseBody(req);
+        const { threadId, timestamp, msgId } = body;
+        if (!threadId || !timestamp) return json({error:'Ungültig'}, 400);
+        const result = await postBot('/delete-thread-msg-api', { threadId, timestamp: Number(timestamp), msgId, uid: myUid });
+        return json({ok: !!result});
+    }
+
+    if (path === '/api/delete-dm' && req.method === 'POST') {
+        const body = await parseBody(req);
+        const { chatKey, timestamp } = body;
+        if (!chatKey || !timestamp) return json({error:'Ungültig'}, 400);
+        const [a, b] = chatKey.split('_');
+        if (a !== myUid && b !== myUid) return json({error:'Kein Zugriff'}, 403);
+        const result = await postBot('/delete-dm-api', { chatKey, timestamp: Number(timestamp), uid: myUid });
+        return json({ok: !!result});
+    }
+
     if (path === '/api/delete-comment' && req.method === 'POST') {
         const body = await parseBody(req);
         const result = await postBot('/delete-comment-api', { uid: myUid, postId: body.postId, commentIdx: body.commentIdx });
