@@ -240,7 +240,7 @@ textarea.form-input{resize:none;min-height:80px}
 .gradient-opt{height:50px;border-radius:var(--radius-xs);cursor:pointer;border:2px solid transparent;transition:all .15s}
 .gradient-opt.selected{border-color:var(--text)}
 .tabs{display:flex;border-bottom:1px solid var(--border2)}
-.tab{flex:1;text-align:center;padding:12px;font-size:13px;font-weight:600;color:var(--muted);border-bottom:2px solid transparent;transition:all .2s}
+.tab{flex:1;text-align:center;padding:10px 4px;font-size:12px;font-weight:600;color:var(--muted);border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tab.active{color:var(--text);border-bottom-color:var(--text)}
 .empty{text-align:center;padding:48px 24px;color:var(--muted)}
 .empty-icon{font-size:48px;margin-bottom:12px}
@@ -2174,8 +2174,8 @@ async function createThread(){
   </div>
   <div style="width:36px"></div>
 </div>
-<div id="msgs" style="padding:12px 12px 160px;display:flex;flex-direction:column;gap:10px"></div>
-<div style="position:fixed;bottom:calc(60px + var(--safe-bottom));left:0;right:0;padding:10px 12px;background:var(--bg2);border-top:1px solid var(--border);display:flex;gap:8px;align-items:flex-end;z-index:5">
+<div id="msgs" style="padding:12px 12px 160px;display:flex;flex-direction:column;gap:10px;overflow-x:hidden;min-width:0;width:100%"></div>
+<div style="position:fixed;bottom:calc(60px + var(--safe-bottom));left:0;right:0;padding:10px 12px;background:var(--bg2);border-top:1px solid var(--border);display:flex;gap:8px;align-items:flex-end;z-index:5;box-sizing:border-box;max-width:100vw">
   <textarea id="inp" placeholder="Schreibe etwas..." rows="1" style="flex:1;background:var(--bg4);border:1px solid #0088cc44;border-radius:20px;padding:10px 16px;color:var(--text);font-size:14px;resize:none;outline:none;line-height:1.4;max-height:120px" oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px'" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();send();}"></textarea>
   <button onclick="send()" style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#0088cc,#006699);border:none;color:#fff;font-size:18px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center">✈️</button>
 </div>
@@ -2252,14 +2252,17 @@ async function createThread(){
         } catch(e) {}
         // Build thread list
         let threads = botData.threads || [];
+        const threadEmojiPalette = ['🎯','🚀','💡','📊','🎨','🔥','⚡','🌟','📝','🎭','🏆','🎵','🧠','💎','🌈','🎮','📣','🛠️','🌍','🎬'];
+        function threadEmoji(tid) { let h=0;for(const c of String(tid))h=(h*31+c.charCodeAt(0))>>>0;return threadEmojiPalette[h%threadEmojiPalette.length]; }
         if (!threads.length) {
-            threads = Object.keys(threadMsgs).map(tid => ({ id:tid, name:tid==='general'?'Allgemein':'Thread '+tid, emoji:tid==='general'?'💬':'📌', last_msg:threadMsgs[tid]?.[0]||null, msg_count:threadMsgs[tid]?.length||0 }));
+            threads = Object.keys(threadMsgs).map(tid => ({ id:tid, name:tid==='general'?'Allgemein':'Thread '+tid, emoji:tid==='general'?'💬':threadEmoji(tid), last_msg:threadMsgs[tid]?.[0]||null, msg_count:threadMsgs[tid]?.length||0 }));
         }
         // Merge real names from Telegram API
         threads = threads.map(t => {
             const api = apiTopics[String(t.id)];
-            if (api?.name) return {...t, name: api.name, emoji: api.emoji || t.emoji};
-            return t;
+            const fallbackEmoji = String(t.id)==='general' ? '💬' : (t.emoji && t.emoji!=='📌' ? t.emoji : threadEmoji(t.id));
+            if (api?.name) return {...t, name: api.name, emoji: api.emoji || fallbackEmoji};
+            return {...t, emoji: fallbackEmoji};
         });
         if (!threads.find(t=>String(t.id)==='general')) {
             const lastCF = communityFeed[0];
@@ -2743,7 +2746,7 @@ ${sorted.map(([id,u],i)=>{
               +'<span style="font-size:11px;font-weight:700;color:var(--accent);background:rgba(255,107,107,.15);padding:3px 10px;border-radius:20px">📌 Angepinnter Post</span>'
               +'</div>'
               +'<a href="'+myPinnedLink+'" target="_blank" style="display:block;font-size:13px;color:var(--blue);word-break:break-all;margin-bottom:8px">'+myPinnedLink.replace('https://www.instagram.com/','ig.com/').slice(0,60)+'...</a>'
-              +'<div style="font-size:12px;color:var(--muted)">💫 Andere können diesen Post engagieren und du bekommst Diamanten</div>'
+              +'<div style="font-size:12px;color:var(--muted)">Dies ist mein wichtigster Beitrag. Danke für deine Unterstützung 🙏</div>'
               +'</div>'
             : '';
 
