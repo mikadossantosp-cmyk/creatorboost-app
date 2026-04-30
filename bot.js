@@ -43,6 +43,17 @@ function saveSessions() {
 }
 setInterval(saveSessions, 60000);
 
+// Web Push
+let webpush;
+try { webpush = require('web-push'); } catch(e) {}
+const VAPID_PUBLIC = 'BF3FxtRYkoHBCgfG0U1o9UIeib81WmArYdKWJZQWMbCwdd2cvivmAB9TNjY3p-XdkGjQux1OZZR-m3iwjBvCyKg';
+const VAPID_PRIVATE = 'ViWUilwaJSHAmfWLyIfCyvJVWnOFirq3Dn1HTGfIaoQ';
+const PUSH_SUBS_FILE = DATA_DIR + '/push_subscriptions.json';
+let pushSubs = {};
+try { if (fs.existsSync(PUSH_SUBS_FILE)) pushSubs = JSON.parse(fs.readFileSync(PUSH_SUBS_FILE, 'utf8')); } catch(e) {}
+function savePushSubs() { try { fs.writeFileSync(PUSH_SUBS_FILE, JSON.stringify(pushSubs)); } catch(e) {} }
+if (webpush) webpush.setVapidDetails('mailto:admin@creatorx.app', VAPID_PUBLIC, VAPID_PRIVATE);
+
 function genSid() { return crypto.randomBytes(32).toString('hex'); }
 function getSession(req) { const m=(req.headers.cookie||'').match(/cbsid=([^;]+)/); return m?sessions.get(m[1]):null; }
 function getSid(req) { const m=(req.headers.cookie||'').match(/cbsid=([^;]+)/); return m?m[1]:null; }
@@ -402,6 +413,11 @@ textarea.form-input{resize:none;min-height:80px}
 /* 5-item nav fit */
 .nav-item{padding:4px 6px}
 .nav-plus{width:32px;height:32px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;color:#fff;border:none;cursor:pointer;align-self:center;margin-top:-2px;flex-shrink:0}
+@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+.skeleton{background:linear-gradient(90deg,var(--bg3) 25%,var(--bg4) 50%,var(--bg3) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:8px}
+.fade-in{animation:fadeIn .35s ease forwards}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.page-transition{animation:fadeIn .25s ease forwards}
 `;
 
 function layout(content, session, page='feed', lang='de') {
@@ -583,7 +599,23 @@ function confirmCrop(){
   vp.addEventListener('touchmove',e=>{if(e.touches.length===2){e.preventDefault();const sl=document.getElementById('crop-zoom');const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);const nz=Math.max(parseFloat(sl.min),Math.min(parseFloat(sl.max),_cs.z*(d/_cropPinch)));setCropZoom(nz);sl.value=nz;_cropPinch=d;}},{passive:false});
 })();
 </script>
-<script>if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/sw.js').catch(()=>{}); }</script>
+<script>
+(function(){
+  if(!('serviceWorker' in navigator))return;
+  navigator.serviceWorker.register('/sw.js').then(async reg=>{
+    if(!('PushManager' in window))return;
+    try{
+      const kr=await fetch('/api/vapid-public-key');const {key}=await kr.json();
+      const raw=key.replace(/-/g,'+').replace(/_/g,'/');
+      const pad=raw+'='.repeat((4-raw.length%4)%4);
+      const bytes=Uint8Array.from(atob(pad),c=>c.charCodeAt(0));
+      const existing=await reg.pushManager.getSubscription();
+      const sub=existing||await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:bytes});
+      await fetch('/api/push-subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sub:sub.toJSON()})});
+    }catch(e){}
+  }).catch(()=>{});
+})();
+</script>
 </body></html>`;
 }
 
@@ -999,8 +1031,30 @@ const server = http.createServer(async (req, res) => {
 
     // ── SERVICE WORKER ──
     if (path === '/sw.js') {
-        res.writeHead(200, {'Content-Type':'application/javascript'});
-        return res.end(`self.addEventListener('install',e=>self.skipWaiting());self.addEventListener('activate',e=>clients.claim());self.addEventListener('fetch',e=>e.respondWith(fetch(e.request).catch(()=>new Response('offline'))));`);
+        res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/'});
+        return res.end(`
+self.addEventListener('install',()=>self.skipWaiting());
+self.addEventListener('activate',e=>e.waitUntil(clients.claim()));
+self.addEventListener('fetch',e=>{
+  if(e.request.mode==='navigate'){e.respondWith(fetch(e.request).catch(()=>new Response('<html><body style="font-family:sans-serif;background:#000;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center"><div><div style="font-size:48px;margin-bottom:16px">📡</div><div style="font-size:18px;font-weight:700">Offline</div><div style="font-size:13px;color:#999;margin-top:8px">Bitte Internetverbindung prüfen</div></div></body></html>',{headers:{'Content-Type':'text/html'}})));return;}
+  e.respondWith(fetch(e.request).catch(()=>new Response('',{status:503})));
+});
+self.addEventListener('push',e=>{
+  const data=e.data?.json()||{title:'CreatorX',body:'Neue Aktivität!'};
+  e.waitUntil(self.registration.showNotification(data.title,{
+    body:data.body,icon:'/icon.jpg',badge:'/icon.jpg',
+    data:{url:data.url||'/feed'},vibrate:[200,100,200],
+    actions:[{action:'open',title:'Öffnen'}]
+  }));
+});
+self.addEventListener('notificationclick',e=>{
+  e.notification.close();
+  e.waitUntil(clients.matchAll({type:'window',includeUncontrolled:true}).then(cs=>{
+    const c=cs.find(c=>'focus' in c);
+    if(c){c.focus();if('navigate' in c)c.navigate(e.notification.data?.url||'/feed');}
+    else clients.openWindow(e.notification.data?.url||'/feed');
+  }));
+});`);
     }
 
     // ── APP BILD ENDPOINT ──
@@ -1153,7 +1207,12 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
     // ── PWA MANIFEST ──
     if (path === '/manifest.json') {
         res.writeHead(200,{'Content-Type':'application/json'});
-        return res.end(JSON.stringify({name:'CreatorX',short_name:'CreatorX',start_url:'/feed',display:'standalone',background_color:'#000000',theme_color:'#ff6b6b',icons:[{src:'/icon.jpg?v=5',sizes:'192x192',type:'image/png',purpose:'any maskable'},{src:'/icon.jpg?v=5',sizes:'512x512',type:'image/png',purpose:'any maskable'}]}));
+        return res.end(JSON.stringify({name:'CreatorX',short_name:'CreatorX',start_url:'/feed',display:'standalone',background_color:'#000000',theme_color:'#ff6b6b',description:'Die kreative Community für Instagram Creators',orientation:'portrait',categories:['social','lifestyle'],icons:[{src:'/icon.jpg?v=5',sizes:'192x192',type:'image/png',purpose:'any maskable'},{src:'/icon.jpg?v=5',sizes:'512x512',type:'image/png',purpose:'any maskable'}]}));
+    }
+
+    if (path === '/api/vapid-public-key') {
+        res.writeHead(200,{'Content-Type':'application/json','Cache-Control':'public,max-age=3600'});
+        return res.end(JSON.stringify({key:VAPID_PUBLIC}));
     }
 
     if (path === '/icon-192.png' || path === '/icon-512.png' || path === '/apple-touch-icon.png' || path === '/icon.jpg') {
@@ -1453,6 +1512,16 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
     const adminIds = Object.entries(d.users).filter(([,u])=>u.role==='⚙️ Admin').map(([id])=>Number(id));
 
     // ── API ENDPOINTS ──
+    if (path === '/api/push-subscribe' && req.method === 'POST') {
+        const body = await parseBody(req);
+        const { sub } = body;
+        if (!sub?.endpoint) return json({ok:false});
+        const hash = crypto.createHash('sha256').update(sub.endpoint).digest('hex').slice(0,16);
+        pushSubs[hash] = { uid: myUid, sub };
+        savePushSubs();
+        return json({ok:true});
+    }
+
     if (path === '/api/theme' && req.method === 'POST') {
         const body = await parseBody(req);
         if(session) { session.theme = body.theme||'dark'; saveSessions(); }
@@ -1479,6 +1548,19 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
             if (body.theme) session.theme = body.theme;
             if (body.lang) session.lang = body.lang;
             saveSessions();
+        }
+        // Check profile completion for diamond reward
+        const freshData = await fetchBot('/data');
+        if (freshData) {
+            const fu = freshData.users?.[myUid];
+            if (fu && !fu.profileCompletionRewarded) {
+                const hasPicNow = !!(session.profilePicData || ladeBild(myUid,'profilepic'));
+                const hasBannerNow = !!(session.bannerData || ladeBild(myUid,'banner'));
+                const allDone = hasPicNow && hasBannerNow && !!(fu.bio?.trim()) && !!(fu.nische?.trim());
+                if (allDone) {
+                    await postBot('/complete-profile-api', { uid: myUid });
+                }
+            }
         }
         return json({ok:true});
     }
@@ -1537,6 +1619,15 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
         if (!linkUrl || !linkUrl.includes('instagram.com')) return json({error:'Nur Instagram Links'},400);
         const result = await postBot('/post-link-from-app', { uid: myUid, name: session.name, url: linkUrl.trim(), caption: body.caption||'' });
         if (!result) return json({error:'Fehler beim Senden'},500);
+        if (result.ok !== false && webpush) {
+            const posterName = session.name || 'Jemand';
+            const payload = JSON.stringify({title:'🔥 Neuer Reel-Link!',body:posterName+' hat einen Link in CreatorX geteilt',url:'/feed'});
+            for (const [hash, {uid, sub}] of Object.entries(pushSubs)) {
+                if (uid === myUid) continue;
+                webpush.sendNotification(sub, payload).catch(e=>{if(e.statusCode===410||e.statusCode===404){delete pushSubs[hash];}});
+            }
+            savePushSubs();
+        }
         return json({ok:true});
     }
 
@@ -1733,6 +1824,9 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
                 '</div>'+
                 '</div>';
 
+            // Extract Instagram shortcode for reel embed
+            const instaShortcode = (()=>{ const m=(link.text||'').match(/instagram\.com\/(?:reel|p|tv)\/([A-Za-z0-9_-]+)/); return m?m[1]:null; })();
+
             return '<div class="post fade-up" id="post-'+msgId+'" data-url="'+link.text+'" data-ts="'+(link.timestamp||0)+'">\n'+
 // Category badge + timestamp row
 '  <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px 0">\n'+
@@ -1753,24 +1847,30 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
 '      <div class="post-badge">'+(poster.role||'')+(insta?'<span style="color:var(--muted2)"> · @'+poster.instagram+'</span>':'')+'</div>\n'+
 '    </div>\n'+
 '  </div>\n'+
-// Link preview card
-'  <div onclick="window.open(\''+link.text+'\',\'_blank\')" style="cursor:pointer;margin:0 16px;border-radius:12px;overflow:hidden;background:var(--bg4);border:1px solid var(--border2)">\n'+
-'    <div style="position:relative;width:100%;height:130px;overflow:hidden">\n'+
-'      <div style="position:absolute;inset:0;background:'+bannerBg+'"></div>\n'+
-'      '+bannerImg+'\n'+
-'      <div style="position:absolute;inset:0;background:linear-gradient(to bottom,transparent 20%,rgba(0,0,0,.75))"></div>\n'+
-'      <a href="/profil/'+link.user_id+'" onclick="event.stopPropagation()" style="position:absolute;bottom:10px;left:12px;display:flex;align-items:center;gap:10px;text-decoration:none;z-index:1">\n'+
-'        <div style="width:44px;height:44px;border-radius:50%;border:2px solid rgba(255,255,255,.4);overflow:hidden;background:'+grad+';display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff;flex-shrink:0">'+profPic+'</div>\n'+
-'        <div>\n'+
-'          <div style="font-size:13px;font-weight:700;color:#fff">'+(poster.spitzname||poster.name||'User')+'</div>\n'+
-'          <div style="font-size:11px;color:rgba(255,255,255,.7)">'+(poster.role||'')+'</div>\n'+
+// Reel video preview card
+'  <div style="margin:0 16px;border-radius:14px;overflow:hidden;background:#000;border:1px solid rgba(255,255,255,.08);cursor:pointer" onclick="window.open(\''+link.text+'\',\'_blank\')">\n'+
+'    <div style="position:relative;width:100%;padding-top:62%;background:'+bannerBg+';overflow:hidden">\n'+
+'      '+bannerImg.replace('position:absolute;inset:0;','position:absolute;inset:0;')+'\n'+
+'      <div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.1) 0%,rgba(0,0,0,.55) 100%)"></div>\n'+
+'      <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none">\n'+
+'        <div style="width:54px;height:54px;border-radius:50%;background:rgba(255,255,255,.92);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 16px rgba(0,0,0,.35)">\n'+
+'          <div style="width:0;height:0;border-style:solid;border-width:11px 0 11px 20px;border-color:transparent transparent transparent #000;margin-left:4px"></div>\n'+
 '        </div>\n'+
-'      </a>\n'+
+'      </div>\n'+
+'      <div style="position:absolute;top:10px;left:12px;background:rgba(0,0,0,.55);border-radius:8px;padding:4px 9px;display:flex;align-items:center;gap:5px;backdrop-filter:blur(4px)">\n'+
+'        <span style="font-size:13px">📸</span><span style="font-size:11px;color:#fff;font-weight:600">Instagram Reel</span>\n'+
+'      </div>\n'+
+'      <div style="position:absolute;bottom:0;left:0;right:0;padding:10px 12px">\n'+
+'        <a href="/profil/'+link.user_id+'" onclick="event.stopPropagation()" style="display:flex;align-items:center;gap:8px;text-decoration:none">\n'+
+'          <div style="width:32px;height:32px;border-radius:50%;border:2px solid rgba(255,255,255,.5);overflow:hidden;background:'+grad+';flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff">'+profPic+'</div>\n'+
+'          <div style="font-size:12px;font-weight:700;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.6)">'+(poster.spitzname||poster.name||'User')+'</div>\n'+
+'        </a>\n'+
+'      </div>\n'+
 '    </div>\n'+
-'    <div style="padding:8px 12px;display:flex;align-items:center;gap:8px">\n'+
-'      <div style="font-size:16px">📸</div>\n'+
-'      <div style="flex:1;min-width:0"><div style="font-size:10px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+link.text.replace('https://www.','').slice(0,45)+'</div></div>\n'+
-'      <div style="font-size:10px;color:var(--accent);font-weight:600">Öffnen →</div>\n'+
+(link.caption?'    <div style="padding:8px 12px;font-size:12px;color:var(--muted);line-height:1.4;border-top:1px solid rgba(255,255,255,.06)">'+String(link.caption).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</div>\n':'')+
+'    <div style="padding:6px 12px 8px;display:flex;align-items:center;gap:6px">\n'+
+'      <div style="font-size:10px;color:var(--muted2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+link.text.replace('https://www.','').replace('https://','').slice(0,50)+'</div>\n'+
+'      <div style="font-size:10px;color:var(--accent);font-weight:700">Ansehen →</div>\n'+
 '    </div>\n'+
 '  </div>\n'+
 // Likes counter + XP badge
@@ -1867,6 +1967,26 @@ async function refreshLikes() {
 setInterval(refreshLikes, 5000);
 // Onboarding beim ersten Besuch
 if (!localStorage.getItem('cb_onboarded')) { window.location.href = '/onboarding'; }
+
+// Pull-to-refresh
+(function(){
+  let startY=0,pulling=false;
+  const ind=document.createElement('div');
+  ind.id='ptr-ind';
+  ind.style.cssText='position:fixed;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,var(--accent),var(--accent2));transform:scaleX(0);transform-origin:left;transition:transform .2s;z-index:200';
+  document.body.prepend(ind);
+  document.addEventListener('touchstart',e=>{if(window.scrollY===0)startY=e.touches[0].clientY;},{passive:true});
+  document.addEventListener('touchmove',e=>{
+    if(!startY||window.scrollY>0)return;
+    const dy=e.touches[0].clientY-startY;
+    if(dy>0){pulling=true;ind.style.transform='scaleX('+Math.min(dy/120,1)+')';}
+  },{passive:true});
+  document.addEventListener('touchend',()=>{
+    if(pulling&&window.scrollY===0){ind.style.transform='scaleX(1)';setTimeout(()=>location.reload(),200);}
+    else{ind.style.transform='scaleX(0)';}
+    startY=0;pulling=false;
+  });
+})();
 
 function toggleComments(msgId) {
     const box = document.getElementById('comments-box-' + msgId);
@@ -2177,8 +2297,19 @@ async function createThread(){
   </div>
   <div style="width:36px"></div>
 </div>
-<div id="msgs" style="padding:12px 12px 160px;display:flex;flex-direction:column;gap:10px;overflow-x:hidden;min-width:0;width:100%"></div>
-<div style="position:fixed;bottom:calc(60px + var(--safe-bottom));left:0;right:0;padding:10px 12px;background:var(--bg2);border-top:1px solid var(--border);display:flex;gap:8px;align-items:flex-end;z-index:5;box-sizing:border-box;max-width:100vw">
+<div id="msgs" style="padding:12px 12px 165px;display:flex;flex-direction:column;gap:10px;overflow-x:hidden;min-width:0;width:100%"></div>
+<div id="reply-bar" style="display:none;position:fixed;bottom:calc(108px + var(--safe-bottom));left:0;right:0;padding:7px 12px;background:rgba(0,136,204,.15);border-top:1px solid rgba(0,136,204,.3);align-items:center;gap:8px;z-index:6;box-sizing:border-box">
+  <div style="width:3px;height:32px;background:#0088cc;border-radius:2px;flex-shrink:0"></div>
+  <div style="flex:1;min-width:0"><span id="reply-name" style="font-size:11px;font-weight:700;color:#0088cc;display:block"></span><span id="reply-text" style="font-size:11px;color:var(--muted);display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:calc(100vw - 80px)"></span></div>
+  <button onclick="cancelReply()" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;flex-shrink:0;padding:4px">✕</button>
+</div>
+<div id="react-picker" style="display:none;position:fixed;bottom:calc(112px + var(--safe-bottom));left:50%;transform:translateX(-50%);background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:10px 14px;z-index:10;box-shadow:0 4px 24px rgba(0,0,0,.5)">
+  <div style="display:flex;gap:6px;align-items:center">
+    ${['👍','❤️','😂','😮','🔥','💎'].map(e=>`<button onclick="pickReact('${e}')" style="background:none;border:none;font-size:24px;cursor:pointer;padding:4px;border-radius:10px;transition:transform .15s" onmouseenter="this.style.transform='scale(1.3)'" onmouseleave="this.style.transform=''">${e}</button>`).join('')}
+    <button onclick="closeReactPicker()" style="background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer;padding:4px 8px;margin-left:4px">✕</button>
+  </div>
+</div>
+<div style="position:fixed;bottom:calc(60px + var(--safe-bottom));left:0;right:0;padding:8px 12px;background:var(--bg2);border-top:1px solid var(--border);display:flex;gap:8px;align-items:flex-end;z-index:5;box-sizing:border-box;max-width:100vw">
   <textarea id="inp" placeholder="Schreibe etwas..." rows="1" style="flex:1;background:var(--bg4);border:1px solid #0088cc44;border-radius:20px;padding:10px 16px;color:var(--text);font-size:14px;resize:none;outline:none;line-height:1.4;max-height:120px" oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px'" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();send();}"></textarea>
   <button onclick="send()" style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#0088cc,#006699);border:none;color:#fff;font-size:18px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center">✈️</button>
 </div>
@@ -2191,27 +2322,36 @@ async function createThread(){
   function col(n){return COLORS[((n||'').charCodeAt(0)||0)%COLORS.length];}
   function ini(n){return((n||'?').replace(/^@/,'')||'?')[0].toUpperCase();}
   function t(ts){const d=new Date(ts);return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');}
-  let known=0;
+  function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+  let knownHash='';
+  let replyState=null;
+  window._lastMsgs=[];
+  function msgHash(msgs){return msgs.reduce((a,m)=>a+'|'+m.timestamp+(m.reactions?JSON.stringify(m.reactions):''),'')}
   function render(msgs){
     const el=document.getElementById('msgs');
-    if(!el||msgs.length===known)return;
+    if(!el)return;
+    const h=msgHash(msgs);
+    if(h===knownHash)return;
     const atBottom=window.innerHeight+window.scrollY>=document.body.scrollHeight-80;
-    known=msgs.length;
+    knownHash=h;
+    window._lastMsgs=msgs;
     el.innerHTML=[...msgs].reverse().map(m=>{
       const c=col(m.name);
-      const nameEl=m.uid?'<a href="/profil/'+m.uid+'" style="font-size:12px;font-weight:700;color:'+c+';text-decoration:none">'+(m.role?m.role+' ':'')+m.name+'</a>':'<span style="font-size:12px;font-weight:700;color:'+c+'">'+(m.role?m.role+' ':'')+m.name+'</span>';
+      const nameEl=m.uid?'<a href="/profil/'+m.uid+'" style="font-size:12px;font-weight:700;color:'+c+';text-decoration:none">'+(m.role?m.role+' ':'')+esc(m.name)+'</a>':'<span style="font-size:12px;font-weight:700;color:'+c+'">'+(m.role?m.role+' ':'')+esc(m.name)+'</span>';
       let body='';
-      if(m.type==='photo'&&m.mediaId)body='<img src="/api/tg-file/'+m.mediaId+'" style="max-width:100%;border-radius:10px;margin-top:4px;display:block" loading="lazy">';
-      else if(m.type==='sticker'&&m.mediaId)body='<img src="/api/tg-file/'+m.mediaId+'" style="width:80px;height:80px;object-fit:contain;display:block;margin-top:4px" loading="lazy">';
-      else if(m.type==='video')body='<div style="background:rgba(0,0,0,.3);border-radius:10px;padding:8px 12px;font-size:12px;color:var(--muted);margin-top:4px">🎬 Video — öffne Telegram zum Ansehen</div>';
-      if(m.text)body+='<div style="font-size:13px;line-height:1.5;margin-top:2px;word-break:break-word">'+m.text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</div>';
+      if(m.replyTo){body+='<div style="background:rgba(0,136,204,.12);border-left:3px solid #0088cc;border-radius:6px;padding:4px 8px;margin-bottom:4px;font-size:11px;color:var(--muted);overflow:hidden;max-height:38px"><span style="color:#0088cc;font-weight:700">'+esc(m.replyTo.name||'?')+'</span> · '+esc((m.replyTo.text||'').slice(0,60))+'</div>';}
+      if(m.type==='photo'&&m.mediaId)body+='<img src="/api/tg-file/'+m.mediaId+'" style="max-width:100%;border-radius:10px;margin-top:4px;display:block" loading="lazy">';
+      else if(m.type==='sticker'&&m.mediaId)body+='<img src="/api/tg-file/'+m.mediaId+'" style="width:80px;height:80px;object-fit:contain;display:block;margin-top:4px" loading="lazy">';
+      else if(m.type==='video')body+='<div style="background:rgba(0,0,0,.3);border-radius:10px;padding:8px 12px;font-size:12px;color:var(--muted);margin-top:4px">🎬 Video — öffne Telegram zum Ansehen</div>';
+      if(m.text)body+='<div style="font-size:13px;line-height:1.5;margin-top:2px;word-break:break-word">'+esc(m.text)+'</div>';
       const canDel=(m.uid&&m.uid===MY_UID)||IS_ADMIN;
       const delBtn=canDel?'<button onclick="deleteMsg('+m.timestamp+','+(m.msg_id||0)+')" style="background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;padding:2px 4px;margin-left:auto;opacity:.55;flex-shrink:0">🗑️</button>':'';
-      return '<div style="display:flex;gap:10px;align-items:flex-start"><div style="width:36px;height:36px;border-radius:50%;background:'+c+';display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;flex-shrink:0;position:relative;overflow:hidden">'+ini(m.name)+(m.uid?'<img src="/appbild/'+m.uid+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" onerror="this.remove()" loading="lazy">':'')+'</div><div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">'+nameEl+'<span style="font-size:10px;color:var(--muted)">'+t(m.timestamp)+'</span>'+delBtn+'</div>'+body+'</div></div>';
+      const reactBadges=m.reactions&&Object.keys(m.reactions).length?'<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:5px">'+Object.entries(m.reactions).map(([em,uids])=>'<button onclick="react('+m.timestamp+',\''+em+'\')" style="background:'+(uids.includes(MY_UID)?'rgba(0,136,204,.25)':'rgba(255,255,255,.07)')+';border:1px solid rgba(255,255,255,.15);border-radius:20px;padding:2px 7px;font-size:12px;cursor:pointer;color:var(--text)">'+em+' '+uids.length+'</button>').join('')+'</div>':'';
+      const actBar='<div style="display:flex;gap:2px;margin-top:3px"><button onclick="setReply('+m.timestamp+')" style="background:none;border:none;color:var(--muted2);font-size:11px;cursor:pointer;padding:2px 5px;border-radius:6px" title="Antworten">↩ Antworten</button><button onclick="openReact('+m.timestamp+')" style="background:none;border:none;color:var(--muted2);font-size:12px;cursor:pointer;padding:2px 5px;border-radius:6px" title="Reagieren">😊</button></div>';
+      return '<div class="fade-in" style="display:flex;gap:10px;align-items:flex-start"><div style="width:36px;height:36px;border-radius:50%;background:'+c+';display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;flex-shrink:0;position:relative;overflow:hidden">'+ini(m.name)+(m.uid?'<img src="/appbild/'+m.uid+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" onerror="this.remove()" loading="lazy">':'')+'</div><div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">'+nameEl+'<span style="font-size:10px;color:var(--muted)">'+t(m.timestamp)+'</span>'+delBtn+'</div>'+body+reactBadges+actBar+'</div></div>';
     }).join('');
     if(atBottom)window.scrollTo(0,document.body.scrollHeight);
   }
-  // Initial render with server data
   render(${msgsJson});
   async function load(){
     try{
@@ -2222,17 +2362,49 @@ async function createThread(){
   window.send=async function(){
     const el=document.getElementById('inp');const text=el.value.trim();if(!text)return;
     el.value='';el.style.height='auto';
-    const r=await fetch('/api/send-thread-message',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,thread_id:TID})});
+    const body={text,thread_id:TID};
+    if(replyState)body.replyTo=replyState;
+    const r=await fetch('/api/send-thread-message',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     const d=await r.json();
-    if(!d.ok){el.value=text;alert(d.error||'Fehler');}
-    else setTimeout(load,1500);
+    if(!d.ok){el.value=text;toast('❌ '+(d.error||'Fehler'));}
+    else{cancelReply();setTimeout(load,1200);}
   };
   window.deleteMsg=async function(ts,msgId){
     if(!confirm('Nachricht löschen?'))return;
     const r=await fetch('/api/delete-thread-msg',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({threadId:TID,timestamp:ts,msgId:msgId||null})});
     const d=await r.json();
-    if(d.ok){known=0;await load();toast('✅ Gelöscht');}else toast('❌ '+(d.error||'Fehler'));
+    if(d.ok){knownHash='';await load();toast('✅ Gelöscht');}else toast('❌ '+(d.error||'Fehler'));
   };
+  window.setReply=function(ts){
+    const m=(window._lastMsgs||[]).find(m=>m.timestamp===ts);
+    if(!m)return;
+    replyState={ts:m.timestamp,msgId:m.msg_id||0,name:m.name||'?',text:m.text||''};
+    const bar=document.getElementById('reply-bar');
+    bar.style.display='flex';
+    document.getElementById('reply-name').textContent=m.name||'?';
+    document.getElementById('reply-text').textContent=(m.text||'').slice(0,60);
+    document.getElementById('inp').focus();
+  };
+  window.cancelReply=function(){
+    replyState=null;
+    document.getElementById('reply-bar').style.display='none';
+  };
+  window.react=async function(ts,emoji){
+    knownHash='';
+    await fetch('/api/react-thread-msg',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({threadId:TID,timestamp:ts,emoji})});
+    await load();
+  };
+  window.openReact=function(ts){
+    const p=document.getElementById('react-picker');
+    p.dataset.ts=ts;p.style.display='flex';
+  };
+  window.pickReact=async function(emoji){
+    const ts=Number(document.getElementById('react-picker').dataset.ts);
+    closeReactPicker();
+    await react(ts,emoji);
+  };
+  window.closeReactPicker=function(){document.getElementById('react-picker').style.display='none';};
+  document.addEventListener('click',e=>{const p=document.getElementById('react-picker');if(p&&p.style.display!=='none'&&!p.contains(e.target))p.style.display='none';});
   setInterval(load,10000);
 })();
 </script>`, 'messages');
@@ -2717,28 +2889,37 @@ ${sorted.map(([id,u],i)=>{
             ? '<div class="proj-add-card" onclick="openAddProj()"><div style="font-size:28px;line-height:1">+</div><div style="font-size:12px;font-weight:600">Projekt hinzufügen</div></div>'
             : '';
 
+        const hasPic = !!(myPicData||ladeBild(myUid,'profilepic'));
+        const hasBanner = !!(session.bannerData||ladeBild(myUid,'banner'));
+        const completionChecks = [
+            [hasPic, 'Profilbild', '/einstellungen'],
+            [hasBanner, 'Banner', '/einstellungen'],
+            [!!(myUser?.bio?.trim()), 'Bio', '/einstellungen'],
+            [!!(myUser?.nische?.trim()), 'Nische', '/einstellungen'],
+        ];
+        const completionDone = completionChecks.filter(c=>c[0]).length;
+        const completionPct = Math.round(completionDone/completionChecks.length*100);
         const completionHtml = (()=>{
-            const checks = [
-                [!!myUser?.bio, 'Bio hinzufügen', '/einstellungen'],
-                [!!(myPicData||ladeBild(myUid,'profilepic')), 'Profilbild hochladen', '/einstellungen'],
-                [!!myUser?.instagram, 'Instagram verknüpft', null],
-                [!!myUser?.nische, 'Nische ausfüllen', '/einstellungen'],
-                [!!(session.bannerData||ladeBild(myUid,'banner')), 'Banner hochladen', '/einstellungen'],
-            ];
-            const done = checks.filter(c=>c[0]).length;
-            const pct = Math.round(done/checks.length*100);
-            if (pct === 100) return '';
-            const next = checks.find(c=>!c[0]);
+            if (completionPct === 100) {
+                const alreadyRewarded = myUser?.profileCompletionRewarded;
+                return '<div class="fade-in" style="margin:12px 16px;padding:12px 14px;background:linear-gradient(135deg,rgba(0,200,81,.12),rgba(0,200,81,.06));border:1px solid rgba(0,200,81,.35);border-radius:14px;display:flex;align-items:center;gap:12px">'
+                    +'<div style="font-size:28px">🏆</div>'
+                    +'<div style="flex:1"><div style="font-size:13px;font-weight:700;color:var(--green)">Profil 100% vollständig!</div>'
+                    +'<div style="font-size:11px;color:var(--muted);margin-top:2px">'+(alreadyRewarded?'Belohnung bereits erhalten':'💎 +1 Diamant erhalten!')+'</div></div>'
+                    +'<div style="font-size:11px;font-weight:700;color:var(--green)">100%</div>'
+                    +'</div>';
+            }
+            const next = completionChecks.find(c=>!c[0]);
             return '<div style="margin:12px 16px;padding:12px 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:14px">'
-                +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'
+                +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">'
                 +'<div style="font-size:13px;font-weight:700">Profil vervollständigen</div>'
-                +'<div style="font-size:12px;font-weight:700;color:var(--accent)">'+done+'/'+checks.length+'</div></div>'
+                +'<div style="font-size:12px;font-weight:700;color:var(--accent)">'+completionPct+'%</div></div>'
                 +'<div style="background:var(--bg4);border-radius:4px;height:6px;overflow:hidden;margin-bottom:10px">'
-                +'<div style="height:100%;width:'+pct+'%;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:4px;transition:width .6s ease"></div></div>'
-                +'<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">'
-                +checks.map(([isDone,label])=>'<div style="display:flex;align-items:center;gap:4px;font-size:11px;color:'+(isDone?'var(--green)':'var(--muted)')+'">'+( isDone?'✅':'⬜')+' '+label+'</div>').join('')
+                +'<div style="height:100%;width:'+completionPct+'%;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:4px;transition:width .6s ease"></div></div>'
+                +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 8px;margin-bottom:10px">'
+                +completionChecks.map(([isDone,label,href])=>'<a href="'+(href||'#')+'" style="display:flex;align-items:center;gap:4px;font-size:11px;color:'+(isDone?'var(--green)':'var(--muted)')+';text-decoration:none">'+(isDone?'✅':'⬜')+' '+label+'</a>').join('')
                 +'</div>'
-                +(next&&next[2]?'<a href="'+next[2]+'" style="display:inline-flex;align-items:center;gap:6px;background:var(--accent);color:#fff;padding:7px 14px;border-radius:10px;font-size:12px;font-weight:700;text-decoration:none">➕ '+next[1]+'</a>':'')
+                +(next&&next[2]?'<a href="'+next[2]+'" style="display:inline-flex;align-items:center;gap:6px;background:var(--accent);color:#fff;padding:7px 14px;border-radius:10px;font-size:12px;font-weight:700;text-decoration:none">✏️ '+next[1]+' hinzufügen</a>':'')
                 +'</div>';
         })();
 
@@ -2793,6 +2974,7 @@ ${sorted.map(([id,u],i)=>{
   </div>
 </div>
 ${profileCard(myUid, myUser, d, true, lang, adminIds, myBannerData, myPicData)}
+${completionHtml}
 <div class="tabs" style="position:sticky;top:57px;z-index:50;background:var(--bg)">
   <div class="tab active" onclick="showPTab('posts',this)">📝 Posts</div>
   <div class="tab" onclick="showPTab('links',this)">🔗 Links</div>
@@ -3362,10 +3544,18 @@ async function removePinnedLink() {
 
     if (path === '/api/send-thread-message' && req.method === 'POST') {
         const body = await parseBody(req);
-        const { text, thread_id } = body;
+        const { text, thread_id, replyTo } = body;
         if (!text?.trim()) return json({ ok: false });
-        const ok = await postBot('/send-thread-message', { uid: myUid, text, thread_id });
+        const ok = await postBot('/send-thread-message', { uid: myUid, text, thread_id, replyTo: replyTo||null });
         return json(ok || { ok: false });
+    }
+
+    if (path === '/api/react-thread-msg' && req.method === 'POST') {
+        const body = await parseBody(req);
+        const { threadId, timestamp, emoji } = body;
+        if (!threadId || !timestamp || !emoji) return json({ok:false});
+        const result = await postBot('/react-thread-msg-api', { threadId, timestamp: Number(timestamp), emoji, uid: myUid });
+        return json(result || {ok:false});
     }
 
     if (path === '/api/create-thread' && req.method === 'POST') {

@@ -4,5 +4,7 @@
   "scripts": {
     "start": "node bot.js"
   },
-  "dependencies": {}
+  "dependencies": {
+    "web-push": "^3.6.7"
+  }
 }
