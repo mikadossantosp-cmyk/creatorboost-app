@@ -54,7 +54,36 @@ try { if (fs.existsSync(PUSH_SUBS_FILE)) pushSubs = JSON.parse(fs.readFileSync(P
 function savePushSubs() { try { fs.writeFileSync(PUSH_SUBS_FILE, JSON.stringify(pushSubs)); } catch(e) {} }
 if (webpush) webpush.setVapidDetails('mailto:admin@creatorx.app', VAPID_PUBLIC, VAPID_PRIVATE);
 
+const RING_ITEMS = [
+    { id: 'ring_flame',   name: 'Flame Ring',   emoji: '🔥', price: 8,  shadow: '0 0 0 3px #ff9a3c, 0 0 0 6px #ff3900',   gradient: 'linear-gradient(135deg,#ff3900,#ff9a3c)', desc: 'Heißes Feuer-Glühen' },
+    { id: 'ring_ocean',   name: 'Ocean Ring',   emoji: '🌊', price: 8,  shadow: '0 0 0 3px #00c9ff, 0 0 0 6px #0088cc',   gradient: 'linear-gradient(135deg,#0088cc,#00c9ff)', desc: 'Tiefblaues Meeresleuchten' },
+    { id: 'ring_gold',    name: 'Gold Ring',    emoji: '✨', price: 10, shadow: '0 0 0 3px #FFD700, 0 0 0 6px #B8860B',   gradient: 'linear-gradient(135deg,#B8860B,#FFD700)', desc: 'Goldener Glanz' },
+    { id: 'ring_purple',  name: 'Cosmic Ring',  emoji: '🔮', price: 12, shadow: '0 0 0 3px #e040fb, 0 0 0 6px #9c27b0',   gradient: 'linear-gradient(135deg,#9c27b0,#e040fb)', desc: 'Mystisches Kosmosleuchten' },
+    { id: 'ring_rainbow', name: 'Rainbow Ring', emoji: '🌈', price: 15, shadow: '0 0 0 3px #ff9900, 0 0 0 6px #cc5de8',   gradient: 'linear-gradient(135deg,#ff0000,#ff9900,#00cc00,#0000ff,#cc5de8)', desc: 'Buntes Regenbogenleuchten' },
+    { id: 'ring_diamond', name: 'Diamond Ring', emoji: '💎', price: 20, shadow: '0 0 0 3px #b9f2ff, 0 0 0 6px #a78bfa',   gradient: 'linear-gradient(135deg,#a78bfa,#b9f2ff,#ffffff)', desc: 'Funkelnder Diamantglanz' },
+];
+
+function getRingBoxShadow(userData) {
+    const ring = userData?.activeRing;
+    if (!ring) return '';
+    const item = RING_ITEMS.find(r=>r.id===ring);
+    return item ? `;box-shadow:${item.shadow}` : '';
+}
+
 function genSid() { return crypto.randomBytes(32).toString('hex'); }
+
+async function checkProfileCompletion(uid, session) {
+    try {
+        const fresh = await fetchBot('/data');
+        if (!fresh) return;
+        const fu = fresh.users?.[String(uid)];
+        if (!fu || fu.profileCompletionRewarded) return;
+        const hasPic = !!(session?.profilePicData || ladeBild(String(uid),'profilepic'));
+        const hasBanner = !!(session?.bannerData || ladeBild(String(uid),'banner'));
+        const allDone = hasPic && hasBanner && !!(fu.bio?.trim()) && !!(fu.nische?.trim());
+        if (allDone) await postBot('/complete-profile-api', { uid: String(uid) });
+    } catch(e) {}
+}
 function getSession(req) { const m=(req.headers.cookie||'').match(/cbsid=([^;]+)/); return m?sessions.get(m[1]):null; }
 function getSid(req) { const m=(req.headers.cookie||'').match(/cbsid=([^;]+)/); return m?m[1]:null; }
 
@@ -637,12 +666,12 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
     <div class="profile-banner-overlay"></div>
     ${isOwn?`<a href="/einstellungen" style="position:absolute;bottom:12px;right:12px;background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.2);color:#fff;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;backdrop-filter:blur(8px)">✏️ Bearbeiten</a>`:''}
   </div>
-  <div class="profile-avatar-wrap">
+  <div class="profile-avatar-wrap" style="position:relative">
     ${(picData||ladeBild(uid,'profilepic'))
-      ? `<img src="${picData||ladeBild(uid,'profilepic')}" class="profile-avatar" onerror="this.style.display='none'" alt="">`
+      ? `<img src="${picData||ladeBild(uid,'profilepic')}" class="profile-avatar" style="${getRingBoxShadow(u)}" onerror="this.style.display='none'" alt="">`
       : u.instagram
-      ? `<img src="https://unavatar.io/instagram/${u.instagram}" class="profile-avatar" onerror="this.style.display='none'" alt="">`
-      : `<div class="profile-avatar" style="display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:700;background:${grad};color:#fff">${(u.name||'?').slice(0,2).toUpperCase()}</div>`}
+      ? `<img src="https://unavatar.io/instagram/${u.instagram}" class="profile-avatar" style="${getRingBoxShadow(u)}" onerror="this.style.display='none'" alt="">`
+      : `<div class="profile-avatar" style="display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:700;background:${grad};color:#fff${getRingBoxShadow(u)}">${(u.name||'?').slice(0,2).toUpperCase()}</div>`}
   </div>
 </div>
 <div class="profile-info">
@@ -892,7 +921,7 @@ ${isPreview ? '<div class="ob-badge">👀 Admin Vorschau &nbsp;·&nbsp; <a href=
         <div class="mock-topbar"><div style="font-size:13px;font-weight:700">Nachrichten</div></div>
         ${[['MK','Max K.','Danke für den Like! 🙏','linear-gradient(135deg,#ff6b6b,#ffa500)',2],['SL','Sara L.','Cooles Reel! Hab ich geliked 👍','linear-gradient(135deg,#4dabf7,#cc5de8)',0],['JB','Jonas B.','Welche App nutzt du?','linear-gradient(135deg,#3b82f6,#06b6d4)',1]].map(([init,name,msg,grad,unread])=>`
         <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.05)">
-          <div style="width:36px;height:36px;border-radius:50%;background:${grad};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;position:relative;overflow:hidden">
+          <div style="width:36px;height:36px;border-radius:50%;background:${grad};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;position:relative;overflow:hidden${getRingBoxShadow(botData.users?.[c.otherUid])}">
   <span style="position:relative;z-index:0">${init}</span>
   ${ladeBild(c.otherUid,'profilepic')?`<img src="/appbild/${c.otherUid}/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1" onerror="this.remove()" alt="">`:botData.users?.[c.otherUid]?.instagram?`<img src="https://unavatar.io/instagram/${botData.users[c.otherUid].instagram}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1" onerror="this.remove()" alt="">`:''}
 </div>
@@ -1231,6 +1260,7 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
             session.profilePicData = imageData;
             saveSessions();
             try { fs.writeFileSync(DATA_DIR + '/bild_' + session.uid + '_profilepic.txt', imageData); } catch(e) {}
+            checkProfileCompletion(myUid, session);
             return json({ok:true});
         } catch(e) { return json({error:e.message},500); }
     }
@@ -1247,6 +1277,7 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
             session.bannerData = imageData;
             saveSessions();
             try { fs.writeFileSync(DATA_DIR + '/bild_' + session.uid + '_banner.txt', imageData); } catch(e) {}
+            checkProfileCompletion(myUid, session);
             return json({ok:true});
         } catch(e) { return json({error:e.message},500); }
     }
@@ -1549,19 +1580,7 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
             if (body.lang) session.lang = body.lang;
             saveSessions();
         }
-        // Check profile completion for diamond reward
-        const freshData = await fetchBot('/data');
-        if (freshData) {
-            const fu = freshData.users?.[myUid];
-            if (fu && !fu.profileCompletionRewarded) {
-                const hasPicNow = !!(session.profilePicData || ladeBild(myUid,'profilepic'));
-                const hasBannerNow = !!(session.bannerData || ladeBild(myUid,'banner'));
-                const allDone = hasPicNow && hasBannerNow && !!(fu.bio?.trim()) && !!(fu.nische?.trim());
-                if (allDone) {
-                    await postBot('/complete-profile-api', { uid: myUid });
-                }
-            }
-        }
+        await checkProfileCompletion(myUid, session);
         return json({ok:true});
     }
 
@@ -2286,8 +2305,11 @@ async function createThread(){
         if (!msgs.length && threadId==='general' && botData.communityFeed?.length) {
             msgs = botData.communityFeed.map(m=>({ uid:'', tgName:m.username||null, name:m.name||m.username||'User', role:null, type:'text', text:m.text||'', mediaId:null, timestamp:m.timestamp, msg_id:m.msg_id }));
         }
-        const msgsJson = JSON.stringify(msgs);
+        const msgsJson = JSON.stringify(msgs).replace(/<\/script>/gi, '<\\/script>');
         const isAdmin = (botData.users?.[myUid]) && String(botData.users[myUid].role||'').includes('Admin');
+        const ringMap = {};
+        Object.entries(botData.users||{}).forEach(([uid, u]) => { const s=getRingBoxShadow(u); if(s) ringMap[uid]=s; });
+        const ringMapJson = JSON.stringify(ringMap);
         return html(`
 <div class="topbar" style="position:sticky;top:0;z-index:10;background:linear-gradient(135deg,#0088cc,#006699)">
   <a href="/nachrichten/gruppe" style="padding:8px;color:#fff;display:flex;align-items:center;text-decoration:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20"><polyline points="15 18 9 12 15 6"/></svg></a>
@@ -2318,6 +2340,7 @@ async function createThread(){
   const TID='${threadId}';
   const MY_UID='${myUid}';
   const IS_ADMIN=${isAdmin};
+  const RING_MAP=${ringMapJson};
   const COLORS=['#ff6b6b','#cc5de8','#4dabf7','#ffd43b','#00c851','#ff9f43','#0088cc'];
   function col(n){return COLORS[((n||'').charCodeAt(0)||0)%COLORS.length];}
   function ini(n){return((n||'?').replace(/^@/,'')||'?')[0].toUpperCase();}
@@ -2348,7 +2371,8 @@ async function createThread(){
       const delBtn=canDel?'<button onclick="deleteMsg('+m.timestamp+','+(m.msg_id||0)+')" style="background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;padding:2px 4px;margin-left:auto;opacity:.55;flex-shrink:0">🗑️</button>':'';
       const reactBadges=m.reactions&&Object.keys(m.reactions).length?'<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:5px">'+Object.entries(m.reactions).map(([em,uids])=>'<button onclick="react('+m.timestamp+',\''+em+'\')" style="background:'+(uids.includes(MY_UID)?'rgba(0,136,204,.25)':'rgba(255,255,255,.07)')+';border:1px solid rgba(255,255,255,.15);border-radius:20px;padding:2px 7px;font-size:12px;cursor:pointer;color:var(--text)">'+em+' '+uids.length+'</button>').join('')+'</div>':'';
       const actBar='<div style="display:flex;gap:2px;margin-top:3px"><button onclick="setReply('+m.timestamp+')" style="background:none;border:none;color:var(--muted2);font-size:11px;cursor:pointer;padding:2px 5px;border-radius:6px" title="Antworten">↩ Antworten</button><button onclick="openReact('+m.timestamp+')" style="background:none;border:none;color:var(--muted2);font-size:12px;cursor:pointer;padding:2px 5px;border-radius:6px" title="Reagieren">😊</button></div>';
-      return '<div class="fade-in" style="display:flex;gap:10px;align-items:flex-start"><div style="width:36px;height:36px;border-radius:50%;background:'+c+';display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;flex-shrink:0;position:relative;overflow:hidden">'+ini(m.name)+(m.uid?'<img src="/appbild/'+m.uid+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" onerror="this.remove()" loading="lazy">':'')+'</div><div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">'+nameEl+'<span style="font-size:10px;color:var(--muted)">'+t(m.timestamp)+'</span>'+delBtn+'</div>'+body+reactBadges+actBar+'</div></div>';
+      const ring=m.uid&&RING_MAP[m.uid]?RING_MAP[m.uid]:'';
+      return '<div class="fade-in" style="display:flex;gap:10px;align-items:flex-start"><div style="width:36px;height:36px;border-radius:50%;background:'+c+';display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;flex-shrink:0;position:relative;overflow:hidden'+ring+'">'+ini(m.name)+(m.uid?'<img src="/appbild/'+m.uid+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" onerror="this.remove()" loading="lazy">':'')+'</div><div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">'+nameEl+'<span style="font-size:10px;color:var(--muted)">'+t(m.timestamp)+'</span>'+delBtn+'</div>'+body+reactBadges+actBar+'</div></div>';
     }).join('');
     if(atBottom)window.scrollTo(0,document.body.scrollHeight);
   }
@@ -2620,7 +2644,7 @@ document.getElementById('search-input').focus();
     <div style="position:absolute;inset:0;background:linear-gradient(to bottom,transparent 40%,rgba(0,0,0,.5))"></div>
     ${i<3?`<div style="position:absolute;top:6px;left:8px;font-size:15px;filter:drop-shadow(0 1px 3px rgba(0,0,0,.5))">${medals[i]}</div>`:''}
   </div>
-  <div class="creator-card-avatar" style="background:${grad}">
+  <div class="creator-card-avatar" style="background:${grad}${getRingBoxShadow(u)}">
     <span style="position:absolute;z-index:0;font-size:16px;font-weight:800">${(u.name||'?').slice(0,1)}</span>
     ${picFile?`<img src="/appbild/${id}/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1" alt="">`:insta?`<img src="https://unavatar.io/instagram/${insta}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1" onerror="this.style.display='none'" alt="">`:''}
   </div>
@@ -2640,7 +2664,7 @@ document.getElementById('search-input').focus();
             const grad = badgeGradient(u.role);
             return `<a href="/profil/${id}" class="rank-item ${isMe?'rank-me':''}">
     <div class="rank-pos">${i<3?medals[i]:`<span class="rank-num">${i+1}</span>`}</div>
-    <div style="position:relative;width:40px;height:40px;border-radius:50%;overflow:hidden;background:${grad};flex-shrink:0;display:flex;align-items:center;justify-content:center">
+    <div style="position:relative;width:40px;height:40px;border-radius:50%;overflow:hidden;background:${grad};flex-shrink:0;display:flex;align-items:center;justify-content:center${getRingBoxShadow(u)}">
       <span style="color:#fff;font-weight:700;font-size:14px;position:absolute">${(u.name||'?').slice(0,2).toUpperCase()}</span>
       ${ladeBild(id,'profilepic')?`<img src="/appbild/${id}/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">`:insta?`<img src="https://unavatar.io/instagram/${insta}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">`:''}
     </div>
@@ -2685,10 +2709,10 @@ document.getElementById('search-input').focus();
   <div class="highlight-card">
     <div class="highlight-icon" style="background:linear-gradient(135deg,rgba(0,200,130,.25),rgba(0,150,100,.15))">🎁</div>
     <div style="flex:1;min-width:0">
-      <div style="font-size:13px;font-weight:700">💎 Diamant Shop — Coming Soon</div>
-      <div style="font-size:11px;color:var(--muted);margin-top:3px">Tausche XP gegen Vorteile</div>
+      <div style="font-size:13px;font-weight:700">💎 Diamant Shop</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:3px">Tausche Diamanten gegen Vorteile</div>
     </div>
-    <div style="font-size:10px;color:var(--accent);font-weight:700;background:rgba(255,107,107,.12);padding:2px 8px;border-radius:10px;white-space:nowrap">Bald</div>
+    <div style="font-size:10px;color:#a78bfa;font-weight:700;background:rgba(167,139,250,.12);padding:2px 8px;border-radius:10px;white-space:nowrap">💎 ${d.users[myUid]?.diamonds||0}</div>
   </div>
 </div>
 <div style="padding:0 16px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between">
@@ -2718,7 +2742,7 @@ document.getElementById('search-input').focus();
   <a href="/explore?tab=shop" class="action-card">
     <div class="action-card-icon" style="background:linear-gradient(135deg,rgba(100,180,255,.2),rgba(60,130,255,.1))">💎</div>
     <div class="action-card-title">Diamant Shop</div>
-    <div class="action-card-sub">Coming Soon</div>
+    <div class="action-card-sub">💎 ${d.users[myUid]?.diamonds||0} Diamanten</div>
   </a>
   <a href="/explore?tab=newsletter" class="action-card">
     <div class="action-card-icon" style="background:linear-gradient(135deg,rgba(255,165,0,.2),rgba(255,130,0,.1))">📩</div>
@@ -2734,7 +2758,90 @@ document.getElementById('search-input').focus();
 <div style="padding-bottom:100px">${rankingRows}</div>`,
             tipps: `<div style="padding:48px 24px;text-align:center"><div style="font-size:48px;margin-bottom:16px">💡</div><div style="font-size:17px;font-weight:700;margin-bottom:8px">Tipps & Tricks</div><div style="font-size:13px;color:var(--muted)">🔧 In Bearbeitung — Inhalte folgen bald!</div></div>`,
             regeln: `<div style="padding:48px 24px;text-align:center"><div style="font-size:48px;margin-bottom:16px">📋</div><div style="font-size:17px;font-weight:700;margin-bottom:8px">Community Regeln</div><div style="font-size:13px;color:var(--muted)">🔧 In Bearbeitung — Inhalte folgen bald!</div></div>`,
-            shop: `<div style="padding:48px 24px;text-align:center"><div style="font-size:48px;margin-bottom:16px">💎</div><div style="font-size:17px;font-weight:700;margin-bottom:8px">Diamant Shop</div><div style="font-size:13px;color:var(--muted)">🔧 In Bearbeitung — Kommt bald!</div></div>`,
+            shop: (()=>{
+                const myDiamonds = d.users[myUid]?.diamonds || 0;
+                const myBonusLinks = d.bonusLinks?.[myUid] || 0;
+                const myInventory = d.users[myUid]?.inventory || [];
+                const ringsHtml = RING_ITEMS.map(item => {
+                    const owned = myInventory.includes(item.id);
+                    const canAfford = myDiamonds >= item.price;
+                    return `<div style="background:var(--bg3);border:1px solid var(--border2);border-radius:16px;padding:14px;margin-bottom:10px">
+    <div style="display:flex;align-items:center;gap:14px">
+      <div style="width:52px;height:52px;border-radius:50%;background:${item.gradient};flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:24px">${item.emoji}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:14px;font-weight:700;margin-bottom:2px">${item.name}</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:8px">${item.desc}</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+          <div style="font-size:13px;font-weight:800;color:#a78bfa">💎 ${item.price}</div>
+          ${owned
+            ? `<div style="font-size:12px;color:#22c55e;font-weight:700">✓ Besessen</div>`
+            : `<button onclick="buyItem('${item.id}')" data-item="${item.id}" style="background:${canAfford?'linear-gradient(135deg,#a78bfa,#7c3aed)':'var(--bg4)'};color:${canAfford?'#fff':'var(--muted)'};border:none;border-radius:10px;padding:6px 16px;font-size:12px;font-weight:700;cursor:${canAfford?'pointer':'not-allowed'}" ${canAfford?'':'disabled'}>Kaufen</button>`
+          }
+        </div>
+      </div>
+    </div>
+  </div>`;
+                }).join('');
+                return `
+<div style="padding:16px 16px 4px;display:flex;align-items:center;justify-content:space-between">
+  <div style="font-size:13px;font-weight:700">💎 Diamant Shop</div>
+  <div style="font-size:13px;font-weight:700;color:#a78bfa">💎 ${myDiamonds} Diamanten</div>
+</div>
+<div style="padding:4px 16px 16px;font-size:12px;color:var(--muted)">Tausche Diamanten gegen Vorteile</div>
+<div style="padding:0 16px 100px">
+  <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">🔗 Links</div>
+  <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:16px;padding:16px;margin-bottom:16px">
+    <div style="display:flex;align-items:flex-start;gap:14px">
+      <div style="font-size:36px;flex-shrink:0">🔗</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:15px;font-weight:700;margin-bottom:4px">Extra-Link für heute</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.5">Poste einen zusätzlichen Reel-Link heute — verfügbar im Web und in der Telegram-Gruppe. Bonus-Links: <b style="color:var(--text)">${myBonusLinks}</b></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+          <div style="font-size:14px;font-weight:800;color:#a78bfa">💎 5 Diamanten</div>
+          <button onclick="buyExtraLink()" id="buy-extralink-btn" style="background:${myDiamonds>=5?'linear-gradient(135deg,#a78bfa,#7c3aed)':'var(--bg4)'};color:${myDiamonds>=5?'#fff':'var(--muted)'};border:none;border-radius:12px;padding:8px 20px;font-size:13px;font-weight:700;cursor:${myDiamonds>=5?'pointer':'not-allowed'}" ${myDiamonds<5?'disabled':''}>Kaufen</button>
+        </div>
+        ${myDiamonds<5?`<div style="font-size:11px;color:rgba(255,59,48,.8);margin-top:8px">Nicht genug Diamanten (benötigt: 5, vorhanden: ${myDiamonds})</div>`:''}
+      </div>
+    </div>
+  </div>
+  <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">🪄 Profilring</div>
+  ${ringsHtml}
+</div>
+<script>
+async function buyExtraLink(){
+  const btn=document.getElementById('buy-extralink-btn');
+  if(!btn||btn.disabled)return;
+  btn.disabled=true;btn.textContent='...';
+  try{
+    const r=await fetch('/api/buy-extralink',{method:'POST',headers:{'Content-Type':'application/json'}});
+    const data=await r.json();
+    if(data.ok){
+      btn.textContent='✓ Gekauft!';
+      btn.style.background='linear-gradient(135deg,#22c55e,#16a34a)';
+      setTimeout(()=>location.reload(),1200);
+    } else {
+      btn.disabled=false;
+      btn.textContent='Kaufen';
+      alert(data.error||'Fehler beim Kauf');
+    }
+  }catch(e){btn.disabled=false;btn.textContent='Kaufen';}
+}
+async function buyItem(itemId){
+  const btn=document.querySelector('[data-item="'+itemId+'"]');
+  if(btn){btn.disabled=true;btn.textContent='...';}
+  try{
+    const r=await fetch('/api/buy-item',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({itemId})});
+    const data=await r.json();
+    if(data.ok){
+      setTimeout(()=>location.reload(),800);
+    } else {
+      if(btn){btn.disabled=false;btn.textContent='Kaufen';}
+      alert(data.error||'Fehler beim Kauf');
+    }
+  }catch(e){if(btn){btn.disabled=false;btn.textContent='Kaufen';}}
+}
+</script>`;
+            })(),
             newsletter: (()=>{
                 const isAdminNL = adminIds.includes(Number(myUid));
                 const entries = (d.newsletter||[]).slice().reverse();
@@ -3323,6 +3430,8 @@ async function toggleFollow(uid,btn){
     // ── EINSTELLUNGEN ──
     if (path === '/einstellungen') {
         const u = myUser || {};
+        const myInventory = u.inventory || [];
+        const myActiveRing = u.activeRing || null;
         const currentPinnedLink = ladePinnedLink(myUid) || '';
         const myRecentLinks = Object.values(d.links||{})
             .filter(l=>String(l.user_id)===String(myUid)&&l.text&&l.text.includes('instagram.com'))
@@ -3419,6 +3528,23 @@ async function toggleFollow(uid,btn){
 <div style="padding:16px;border-bottom:1px solid var(--border2)">
   <button class="btn btn-primary btn-full" onclick="saveProfile()">💾 Speichern</button>
 </div>
+${myInventory.length > 0 ? `
+<div style="padding:16px;border-bottom:1px solid var(--border2)">
+  <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">🎒 Meine Items</div>
+  <div style="display:flex;flex-direction:column;gap:10px">
+    ${RING_ITEMS.filter(r=>myInventory.includes(r.id)).map(item=>{
+        const isActive = myActiveRing === item.id;
+        return `<div style="background:var(--bg3);border:1px solid ${isActive?'rgba(167,139,250,.5)':'var(--border2)'};border-radius:14px;padding:12px;display:flex;align-items:center;gap:12px">
+      <div style="width:44px;height:44px;border-radius:50%;background:${item.gradient};flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:20px">${item.emoji}</div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:700">${item.name} ${isActive?'<span style="font-size:10px;color:#a78bfa;font-weight:600">● Aktiv</span>':''}</div>
+        <div style="font-size:11px;color:var(--muted)">${item.desc}</div>
+      </div>
+      <button onclick="setRing('${isActive?'':item.id}')" style="background:${isActive?'rgba(167,139,250,.2)':'var(--bg4)'};border:1px solid ${isActive?'rgba(167,139,250,.4)':'var(--border)'};color:${isActive?'#a78bfa':'var(--text)'};border-radius:10px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer">${isActive?'Deaktivieren':'Aktivieren'}</button>
+    </div>`;
+    }).join('')}
+  </div>
+</div>` : ''}
 ${adminIds.includes(Number(myUid)) ? `
 <div style="padding:16px;border-bottom:1px solid var(--border2)">
   <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">⚙️ Admin Tools</div>
@@ -3512,6 +3638,12 @@ async function removePinnedLink() {
     document.getElementById('inp-pinned-link').value = '';
     await savePinnedLink();
 }
+async function setRing(ringId) {
+    const res = await fetch('/api/set-active-ring', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ringId:ringId||null})});
+    const data = await res.json();
+    if (data.ok) { toast(ringId ? '🪄 Ring aktiviert!' : '🔘 Ring deaktiviert'); setTimeout(()=>location.reload(),800); }
+    else toast('❌ ' + (data.error||'Fehler'));
+}
 </script>`, 'settings');
     }
 
@@ -3556,6 +3688,27 @@ async function removePinnedLink() {
         if (!threadId || !timestamp || !emoji) return json({ok:false});
         const result = await postBot('/react-thread-msg-api', { threadId, timestamp: Number(timestamp), emoji, uid: myUid });
         return json(result || {ok:false});
+    }
+
+    if (path === '/api/buy-extralink' && req.method === 'POST') {
+        if (!session) return json({error:'Nicht eingeloggt'},401);
+        const result = await postBot('/buy-extralink-api', { uid: myUid });
+        return json(result || {ok:false, error:'Fehler'});
+    }
+
+    if (path === '/api/buy-item' && req.method === 'POST') {
+        const body = await parseBody(req);
+        const { itemId } = body;
+        if (!itemId || !RING_ITEMS.find(r=>r.id===itemId)) return json({ok:false, error:'Unbekanntes Item'});
+        const result = await postBot('/buy-item-api', { uid: myUid, itemId });
+        return json(result || {ok:false, error:'Fehler'});
+    }
+
+    if (path === '/api/set-active-ring' && req.method === 'POST') {
+        const body = await parseBody(req);
+        const { ringId } = body;
+        const result = await postBot('/set-active-ring-api', { uid: myUid, ringId: ringId || null });
+        return json(result || {ok:false, error:'Fehler'});
     }
 
     if (path === '/api/create-thread' && req.method === 'POST') {
