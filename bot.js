@@ -119,6 +119,14 @@ function ladeBild(uid, type) {
     return null;
 }
 
+function ladeProjectBild(uid, projectId) {
+    try {
+        const f = DATA_DIR + '/bild_' + uid + '_proj_' + projectId + '.txt';
+        if (fs.existsSync(f)) return fs.readFileSync(f, 'utf8');
+    } catch(e) {}
+    return null;
+}
+
 function ladePinnedLink(uid) {
     try {
         const f = DATA_DIR + '/pinnedlink_' + uid + '.txt';
@@ -242,6 +250,26 @@ textarea.form-input{resize:none;min-height:80px}
 .toggle.on{background:var(--accent)}
 .toggle::after{content:'';position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .2s}
 .toggle.on::after{transform:translateX(20px)}
+.proj-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;padding:16px}
+@media(min-width:480px){.proj-grid{grid-template-columns:repeat(3,1fr)}}
+@media(min-width:768px){.proj-grid{grid-template-columns:repeat(4,1fr)}}
+.proj-card{background:var(--bg3);border:1px solid var(--border2);border-radius:14px;overflow:hidden;cursor:pointer;transition:transform .15s,border-color .15s}
+.proj-card:hover{transform:translateY(-2px);border-color:var(--border)}
+.proj-card-img{width:100%;aspect-ratio:1;object-fit:cover}
+.proj-card-placeholder{width:100%;aspect-ratio:1;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:32px}
+.proj-card-body{padding:10px}
+.proj-card-title{font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.proj-card-desc{font-size:11px;color:var(--muted);margin-top:3px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.proj-add-card{background:var(--bg3);border:2px dashed var(--border);border-radius:14px;cursor:pointer;transition:border-color .15s,color .15s;color:var(--muted);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:24px 0}
+.proj-add-card:hover{border-color:var(--accent);color:var(--accent)}
+.proj-modal-overlay{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.75);display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s}
+.proj-modal-overlay.open{opacity:1;pointer-events:all}
+.proj-modal-sheet{background:var(--bg2);border-radius:24px 24px 0 0;width:100%;max-width:480px;max-height:85vh;overflow-y:auto;transform:translateY(100%);transition:transform .3s cubic-bezier(.32,1.25,.68,1)}
+.proj-modal-overlay.open .proj-modal-sheet{transform:translateY(0)}
+.proj-add-overlay{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s;padding:16px}
+.proj-add-overlay.open{opacity:1;pointer-events:all}
+.proj-add-sheet{background:var(--bg2);border-radius:var(--radius);width:100%;max-width:440px;max-height:90vh;overflow-y:auto;transform:scale(.95);transition:transform .25s}
+.proj-add-overlay.open .proj-add-sheet{transform:scale(1)}
 /*=========================
    PC + BANNER + PROFIL FIX
 =========================*/
@@ -537,8 +565,8 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
 </div>
 <div class="profile-stats">
   ${!isAdmin?'<div class="profile-stat"><div class="profile-stat-val">'+xp+'</div><div class="profile-stat-label">XP</div></div>':''}
+  <div class="profile-stat"><div class="profile-stat-val">${(u.projects||[]).length}</div><div class="profile-stat-label">Projekte</div></div>
   <div class="profile-stat"><div class="profile-stat-val">${u.links||0}</div><div class="profile-stat-label">Links</div></div>
-  <div class="profile-stat"><div class="profile-stat-val">${u.totalLikes||0}</div><div class="profile-stat-label">Likes</div></div>
   <div class="profile-stat"><div class="profile-stat-val">${(u.followers||[]).length}</div><div class="profile-stat-label">Follower</div></div>
 </div>
 ${nb?`
@@ -1084,6 +1112,41 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
             try { fs.writeFileSync(DATA_DIR + '/bild_' + session.uid + '_banner.txt', imageData); } catch(e) {}
             return json({ok:true});
         } catch(e) { return json({error:e.message},500); }
+    }
+
+    if (path === '/api/add-project' && req.method === 'POST') {
+        if (!session) return json({error:'Nicht eingeloggt'}, 401);
+        const chunks = [];
+        for await (const chunk of req) chunks.push(chunk);
+        try {
+            const { imageData, title, description, link } = JSON.parse(Buffer.concat(chunks).toString());
+            if (!title?.trim()) return json({error:'Titel fehlt'}, 400);
+            const botData = await fetchBot('/data');
+            const userProjs = botData?.users?.[session.uid]?.projects || [];
+            if (userProjs.length >= 2) return json({error:'Max 2 Projekte erlaubt'}, 400);
+            const projectId = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+            if (imageData) {
+                if (!imageData.startsWith('data:image/')) return json({error:'Kein Bild'}, 400);
+                if (imageData.length > 5000000) return json({error:'Max 4MB'}, 400);
+                try { fs.writeFileSync(DATA_DIR + '/bild_' + session.uid + '_proj_' + projectId + '.txt', imageData); } catch(e) {}
+            }
+            const result = await postBot('/add-project-api', { uid: session.uid, projectId, title: title.trim(), description: (description||'').trim(), link: (link||'').trim() });
+            if (!result?.ok) return json({error: result?.error || 'Fehler'}, 400);
+            return json({ok: true, projectId});
+        } catch(e) { return json({error: e.message}, 500); }
+    }
+
+    if (path === '/api/delete-project' && req.method === 'POST') {
+        if (!session) return json({error:'Nicht eingeloggt'}, 401);
+        const body = await parseBody(req);
+        const { projectId } = body;
+        if (!projectId) return json({error:'Fehlend'}, 400);
+        try {
+            const f = DATA_DIR + '/bild_' + session.uid + '_proj_' + projectId + '.txt';
+            if (fs.existsSync(f)) fs.unlinkSync(f);
+        } catch(e) {}
+        const result = await postBot('/delete-project-api', { uid: session.uid, projectId });
+        return json({ok: !!result?.ok});
     }
 
     if (path === '/api/set-pinned-link' && req.method === 'POST') {
@@ -2405,9 +2468,10 @@ ${sorted.map(([id,u],i)=>{
         const myBannerData = session.bannerData || ladeBild(myUid, 'banner');
         const myPicData = session.profilePicData || ladeBild(myUid, 'profilepic');
         const myPosts = (d.posts||{})[myUid] || [];
+        const myProjects = myUser.projects || [];
+
         const myPostsHtml = myPosts.length
             ? myPosts.slice().reverse().map((p)=>{
-                const pid = myUid+'_'+p.timestamp;
                 let attachHtml = '';
                 if(p.attachment && p.attachmentType==='image') attachHtml = '<img src="'+p.attachment+'" style="width:100%;max-height:300px;object-fit:cover;border-radius:8px;margin-top:8px" alt="">';
                 if(p.attachment && p.attachmentType==='audio') attachHtml = '<audio controls src="'+p.attachment+'" style="width:100%;margin-top:8px"></audio>';
@@ -2421,9 +2485,74 @@ ${sorted.map(([id,u],i)=>{
                     +'</div>';
             }).join('')
             : '<div class="empty"><div class="empty-icon">📝</div><div class="empty-text">Noch keine Posts</div></div>';
+
+        const canAddProject = myProjects.length < 2;
+        const projCardsHtml = myProjects.map((proj, i) => {
+            const projImg = ladeProjectBild(myUid, proj.id);
+            return '<div class="proj-card" onclick="openProjDetail('+i+')">'
+                +(projImg ? '<img class="proj-card-img" src="'+projImg+'" alt="">' : '<div class="proj-card-placeholder">🚀</div>')
+                +'<div class="proj-card-body">'
+                +'<div class="proj-card-title">'+proj.title+'</div>'
+                +(proj.description?'<div class="proj-card-desc">'+proj.description+'</div>':'')
+                +'</div></div>';
+        }).join('');
+        const addCardHtml = canAddProject
+            ? '<div class="proj-add-card" onclick="openAddProj()"><div style="font-size:28px;line-height:1">+</div><div style="font-size:12px;font-weight:600">Projekt hinzufügen</div></div>'
+            : '';
+
+        const completionHtml = (()=>{
+            const checks = [
+                [!!myUser?.bio, 'Bio hinzufügen', '/einstellungen'],
+                [!!(myPicData||ladeBild(myUid,'profilepic')), 'Profilbild hochladen', '/einstellungen'],
+                [!!myUser?.instagram, 'Instagram verknüpft', null],
+                [!!myUser?.nische, 'Nische ausfüllen', '/einstellungen'],
+                [!!(session.bannerData||ladeBild(myUid,'banner')), 'Banner hochladen', '/einstellungen'],
+            ];
+            const done = checks.filter(c=>c[0]).length;
+            const pct = Math.round(done/checks.length*100);
+            if (pct === 100) return '';
+            const next = checks.find(c=>!c[0]);
+            return '<div style="margin:12px 16px;padding:12px 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:14px">'
+                +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'
+                +'<div style="font-size:13px;font-weight:700">Profil vervollständigen</div>'
+                +'<div style="font-size:12px;font-weight:700;color:var(--accent)">'+done+'/'+checks.length+'</div></div>'
+                +'<div style="background:var(--bg4);border-radius:4px;height:6px;overflow:hidden;margin-bottom:10px">'
+                +'<div style="height:100%;width:'+pct+'%;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:4px;transition:width .6s ease"></div></div>'
+                +'<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">'
+                +checks.map(([isDone,label])=>'<div style="display:flex;align-items:center;gap:4px;font-size:11px;color:'+(isDone?'var(--green)':'var(--muted)')+'">'+( isDone?'✅':'⬜')+' '+label+'</div>').join('')
+                +'</div>'
+                +(next&&next[2]?'<a href="'+next[2]+'" style="display:inline-flex;align-items:center;gap:6px;background:var(--accent);color:#fff;padding:7px 14px;border-radius:10px;font-size:12px;font-weight:700;text-decoration:none">➕ '+next[1]+'</a>':'')
+                +'</div>';
+        })();
+
+        const linksHtml = Object.values(d.links||{}).filter(l=>l.user_id===Number(myUid)).sort((a,b)=>(b.timestamp||0)-(a.timestamp||0))
+            .map(l=>'<div style="padding:12px 16px;border-top:1px solid var(--border2)"><a href="'+l.text+'" target="_blank" style="color:var(--blue);font-size:12px;word-break:break-all">'+l.text+'</a><div style="font-size:11px;color:var(--muted);margin-top:4px">❤️ '+(Array.isArray(l.likes)?l.likes.length:0)+' Likes · '+new Date(l.timestamp).toLocaleDateString('de-DE')+'</div></div>').join('')
+            || '<div class="empty"><div class="empty-icon">🔗</div><div class="empty-text">Noch keine Links</div></div>';
+
+        const aboutHtml = '<div style="padding:16px;display:flex;flex-direction:column;gap:12px;padding-bottom:100px">'
+            +(myUser?.bio?'<div style="background:var(--bg3);border-radius:14px;padding:14px 16px"><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Bio</div><div style="font-size:14px;line-height:1.6">'+myUser.bio+'</div></div>':'')
+            +(myUser?.nische?'<div style="background:var(--bg3);border-radius:14px;padding:14px 16px"><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Nische</div><div style="font-size:14px;color:var(--accent)">🎯 '+myUser.nische+'</div></div>':'')
+            +'<div style="background:var(--bg3);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:10px">'
+            +'<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:2px">Social &amp; Links</div>'
+            +(myUser?.instagram?'<a href="https://instagram.com/'+myUser.instagram+'" target="_blank" style="display:flex;align-items:center;gap:10px;text-decoration:none"><span style="font-size:20px">📸</span><span style="color:var(--blue);font-size:14px">@'+myUser.instagram+'</span></a>':'<div style="font-size:13px;color:var(--muted)">Noch kein Instagram verknüpft</div>')
+            +(myUser?.website?'<a href="'+myUser.website+'" target="_blank" style="display:flex;align-items:center;gap:10px;text-decoration:none"><span style="font-size:20px">🔗</span><span style="color:var(--blue);font-size:14px">'+myUser.website.replace('https://','').replace('http://','').slice(0,40)+'</span></a>':'')
+            +'</div>'
+            +'<div style="background:var(--bg3);border-radius:14px;padding:14px 16px">'
+            +'<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Status</div>'
+            +'<div style="display:inline-flex;align-items:center;padding:4px 12px;border-radius:20px;background:'+badgeGradient(myUser?.role)+';color:#fff;font-size:12px;font-weight:700">'+( myUser?.role||'🆕 New')+'</div>'
+            +(myUser?.trophies&&myUser.trophies.length?'<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px">'+myUser.trophies.map(t=>'<span style="font-size:22px;background:var(--bg4);border-radius:8px;padding:4px 8px">'+t+'</span>').join('')+'</div>':'')
+            +'</div>'
+            +'<a href="/einstellungen" style="display:flex;align-items:center;justify-content:center;gap:8px;background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:14px;font-size:14px;font-weight:600;color:var(--text);text-decoration:none">✏️ Profil bearbeiten</a>'
+            +'</div>';
+
+        const projDataJson = JSON.stringify(myProjects.map(p => ({
+            id: p.id, title: p.title, description: p.description||'', link: p.link||'',
+            img: ladeProjectBild(myUid, p.id) || ''
+        })));
+
         return html(`
 <div class="topbar">
-  <div class="topbar-logo">Profil</div>
+  <div class="topbar-logo">Creator Hub</div>
   <div style="display:flex;gap:6px;align-items:center">
     <a href="/suche" class="icon-btn">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -2436,64 +2565,12 @@ ${sorted.map(([id,u],i)=>{
   </div>
 </div>
 ${profileCard(myUid, myUser, d, true, lang, adminIds, myBannerData, myPicData)}
-${(()=>{
-  const fields = [
-    [myUser?.bio, 'Bio hinzufügen'],
-    [myUser?.instagram, 'Instagram verknüpfen'],
-    [myBannerData || myUser?.banner, 'Banner hochladen'],
-    [myPicData || myUser?.profilePic || myUser?.instagram, 'Profilbild setzen'],
-    [myUser?.nische, 'Nische eintragen'],
-  ];
-  const done = fields.filter(([v])=>v).length;
-  const total = fields.length;
-  const pct = Math.round(done/total*100);
-  if (pct === 100) return '';
-  const missing = fields.filter(([v])=>!v).map(([,l])=>l);
-  return `<div style="margin:12px 16px;padding:12px 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:14px">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-      <div style="font-size:13px;font-weight:700">Profil zu ${pct}% vollständig</div>
-      <div style="font-size:12px;color:var(--muted)">${done}/${total}</div>
-    </div>
-    <div style="height:6px;background:var(--bg4);border-radius:3px;overflow:hidden;margin-bottom:10px">
-      <div style="height:100%;width:${pct}%;background:linear-gradient(135deg,#ff6b6b,#ffa500);border-radius:3px;transition:width .5s"></div>
-    </div>
-    <div style="display:flex;flex-wrap:wrap;gap:6px">
-      ${missing.map(m=>`<a href="/einstellungen" style="font-size:11px;background:rgba(255,107,107,.1);border:1px solid rgba(255,107,107,.25);color:var(--accent);padding:4px 10px;border-radius:20px;text-decoration:none">+ ${m}</a>`).join('')}
-    </div>
-  </div>`;
-})()}
-${(()=>{
-  const u = myUser || {};
-  const checks = [
-    [!!u.bio, 'Bio hinzufügen', '/einstellungen'],
-    [!!(myPicData||ladeBild(myUid,'profilepic')), 'Profilbild hochladen', '/einstellungen'],
-    [!!u.instagram, 'Instagram verknüpft', null],
-    [!!u.nische, 'Nische ausfüllen', '/einstellungen'],
-    [!!(session.bannerData||ladeBild(myUid,'banner')), 'Banner hochladen', '/einstellungen'],
-  ];
-  const done = checks.filter(c=>c[0]).length;
-  const pct = Math.round(done/checks.length*100);
-  if (pct === 100) return '';
-  const next = checks.find(c=>!c[0]);
-  return `<div style="margin:12px 16px;padding:12px 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:14px">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-      <div style="font-size:13px;font-weight:700">Profil vervollständigen</div>
-      <div style="font-size:12px;font-weight:700;color:var(--accent)">${done}/${checks.length}</div>
-    </div>
-    <div style="background:var(--bg4);border-radius:4px;height:6px;overflow:hidden;margin-bottom:10px">
-      <div style="height:100%;width:${pct}%;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:4px;transition:width .6s ease"></div>
-    </div>
-    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">
-      ${checks.map(([done,label])=>`<div style="display:flex;align-items:center;gap:4px;font-size:11px;color:${done?'var(--green)':'var(--muted)'}">
-        ${done?'✅':'⬜'} ${label}
-      </div>`).join('')}
-    </div>
-    ${next&&next[2]?`<a href="${next[2]}" style="display:inline-flex;align-items:center;gap:6px;background:var(--accent);color:#fff;padding:7px 14px;border-radius:10px;font-size:12px;font-weight:700;text-decoration:none">➕ ${next[1]}</a>`:''}
-  </div>`;
-})()}
+${completionHtml}
 <div class="tabs" style="margin-top:8px;position:sticky;top:57px;z-index:50;background:var(--bg)">
   <div class="tab active" onclick="showPTab('posts',this)">📝 Posts</div>
+  <div class="tab" onclick="showPTab('projekte',this)">🚀 Projekte</div>
   <div class="tab" onclick="showPTab('links',this)">🔗 Links</div>
+  <div class="tab" onclick="showPTab('about',this)">👤 About</div>
 </div>
 <div id="ptab-posts" style="padding-bottom:100px">
   <div style="padding:12px 16px">
@@ -2502,34 +2579,137 @@ ${(()=>{
   </div>
   ${myPostsHtml}
 </div>
-<div id="ptab-links" style="display:none;padding-bottom:100px">
-  ${Object.values(d.links||{}).filter(l=>l.user_id===Number(myUid)).sort((a,b)=>(b.timestamp||0)-(a.timestamp||0)).map(l=>'<div style="padding:12px 16px;border-top:1px solid var(--border2)"><a href="'+l.text+'" target="_blank" style="color:var(--blue);font-size:12px;word-break:break-all">'+l.text+'</a><div style="font-size:11px;color:var(--muted);margin-top:4px">❤️ '+(Array.isArray(l.likes)?l.likes.length:0)+' Likes · '+new Date(l.timestamp).toLocaleDateString('de-DE')+'</div></div>').join('')||'<div class="empty"><div class="empty-icon">🔗</div><div class="empty-text">Noch keine Links</div></div>'}
+<div id="ptab-projekte" style="display:none;padding-bottom:100px">
+  <div class="proj-grid">${projCardsHtml}${addCardHtml}</div>
+  ${myProjects.length===0?'<div style="padding:4px 16px 32px;text-align:center;font-size:12px;color:var(--muted)">Zeig der Community, woran du arbeitest</div>':''}
 </div>
+<div id="ptab-links" style="display:none;padding-bottom:100px">
+  ${linksHtml}
+</div>
+<div id="ptab-about" style="display:none">
+  ${aboutHtml}
+</div>
+
+<div id="proj-detail-modal" class="proj-modal-overlay" onclick="if(event.target===this)closeProjDetail()">
+  <div class="proj-modal-sheet">
+    <div style="padding:20px 20px 8px;display:flex;justify-content:space-between;align-items:center">
+      <div id="proj-detail-title" style="font-family:var(--font-display);font-size:18px;font-weight:700"></div>
+      <button onclick="closeProjDetail()" style="background:var(--bg4);border:none;color:var(--muted);width:32px;height:32px;border-radius:50%;font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer">×</button>
+    </div>
+    <div id="proj-detail-img-wrap"></div>
+    <div style="padding:12px 20px 8px">
+      <div id="proj-detail-desc" style="font-size:14px;color:var(--muted);line-height:1.6"></div>
+      <div id="proj-detail-link" style="margin-top:10px"></div>
+    </div>
+    <div style="padding:12px 20px 40px">
+      <button id="proj-detail-delete" style="width:100%;background:rgba(255,59,48,.1);border:1px solid rgba(255,59,48,.3);color:#ff3b30;border-radius:var(--radius-sm);padding:11px;font-size:13px;font-weight:600;cursor:pointer">🗑️ Projekt löschen</button>
+    </div>
+  </div>
+</div>
+
+<div id="proj-add-overlay" class="proj-add-overlay" onclick="if(event.target===this)closeAddProj()">
+  <div class="proj-add-sheet">
+    <div style="padding:20px 20px 8px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border2)">
+      <div style="font-family:var(--font-display);font-size:16px;font-weight:700">Projekt hinzufügen</div>
+      <button onclick="closeAddProj()" style="background:var(--bg4);border:none;color:var(--muted);width:32px;height:32px;border-radius:50%;font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer">×</button>
+    </div>
+    <div style="padding:16px;display:flex;flex-direction:column;gap:14px">
+      <div>
+        <div class="form-label">Projektbild</div>
+        <label style="display:flex;align-items:center;gap:12px;background:var(--bg4);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;cursor:pointer">
+          <div id="proj-img-preview" style="width:52px;height:52px;border-radius:10px;overflow:hidden;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">📷</div>
+          <div><div style="font-size:13px;font-weight:600">Bild auswählen</div><div style="font-size:11px;color:var(--muted);margin-top:2px">Alle Bildformate · max 4MB</div></div>
+          <input type="file" id="proj-img-input" accept="image/*" style="display:none" onchange="previewProjImg(this)">
+        </label>
+      </div>
+      <div>
+        <div class="form-label">Titel *</div>
+        <input type="text" id="proj-title" class="form-input" placeholder="z.B. Mein YouTube Kanal" maxlength="50">
+      </div>
+      <div>
+        <div class="form-label">Beschreibung</div>
+        <textarea id="proj-desc" class="form-input" placeholder="Kurze Beschreibung deines Projekts..." maxlength="200" rows="3"></textarea>
+      </div>
+      <div>
+        <div class="form-label">Link (optional)</div>
+        <input type="url" id="proj-link" class="form-input" placeholder="https://...">
+      </div>
+      <button class="btn btn-primary btn-full" onclick="submitAddProj()" id="proj-submit-btn">✅ Projekt speichern</button>
+    </div>
+  </div>
+</div>
+
 <script>
-function showPTab(tab, el) {
-    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-    el.classList.add('active');
-    document.getElementById('ptab-posts').style.display = tab==='posts'?'block':'none';
-    document.getElementById('ptab-links').style.display = tab==='links'?'block':'none';
+const PROJECTS = ${projDataJson};
+let _curProjIdx = -1;
+function showPTab(tab,el){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  ['posts','projekte','links','about'].forEach(t=>{const e=document.getElementById('ptab-'+t);if(e)e.style.display=t===tab?'block':'none';});
 }
-// Notification badge
+function openProjDetail(idx){
+  const p=PROJECTS[idx]; if(!p) return; _curProjIdx=idx;
+  document.getElementById('proj-detail-title').textContent=p.title;
+  document.getElementById('proj-detail-img-wrap').innerHTML=p.img?'<img src="'+p.img+'" style="width:100%;max-height:300px;object-fit:cover" alt="">':'';
+  document.getElementById('proj-detail-desc').textContent=p.description||'';
+  document.getElementById('proj-detail-link').innerHTML=p.link?'<a href="'+p.link+'" target="_blank" style="color:var(--blue);font-size:13px;word-break:break-all">🔗 '+p.link+'</a>':'';
+  document.getElementById('proj-detail-delete').onclick=()=>deleteProj(p.id);
+  document.getElementById('proj-detail-modal').classList.add('open');
+}
+function closeProjDetail(){document.getElementById('proj-detail-modal').classList.remove('open');}
+function openAddProj(){document.getElementById('proj-add-overlay').classList.add('open');}
+function closeAddProj(){document.getElementById('proj-add-overlay').classList.remove('open');}
+function previewProjImg(input){
+  const file=input.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const prev=document.getElementById('proj-img-preview');
+    prev.innerHTML='<img src="'+e.target.result+'" style="width:100%;height:100%;object-fit:cover">';
+    prev._data=e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+async function submitAddProj(){
+  const title=document.getElementById('proj-title').value.trim();
+  if(!title) return toast('❌ Titel ist Pflicht');
+  const desc=document.getElementById('proj-desc').value.trim();
+  const link=document.getElementById('proj-link').value.trim();
+  const imgPrev=document.getElementById('proj-img-preview');
+  const imageData=imgPrev._data||null;
+  const btn=document.getElementById('proj-submit-btn');
+  btn.disabled=true; btn.textContent='⏳...';
+  try{
+    const res=await fetch('/api/add-project',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title,description:desc,link,imageData})});
+    const data=await res.json();
+    if(data.ok){toast('✅ Projekt gespeichert!');setTimeout(()=>location.reload(),800);}
+    else{toast('❌ '+(data.error||'Fehler'));btn.disabled=false;btn.textContent='✅ Projekt speichern';}
+  }catch(e){toast('❌ Fehler');btn.disabled=false;btn.textContent='✅ Projekt speichern';}
+}
+async function deleteProj(projectId){
+  if(!confirm('Projekt löschen?')) return;
+  closeProjDetail();
+  const res=await fetch('/api/delete-project',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({projectId})});
+  const data=await res.json();
+  if(data.ok){toast('✅ Gelöscht');setTimeout(()=>location.reload(),600);}
+  else toast('❌ Fehler');
+}
 (async()=>{try{const r=await fetch('/api/notifications/count');const d=await r.json();const b=document.getElementById('notif-badge-profil');if(b&&d.count>0){b.textContent=d.count>9?'9+':d.count;b.style.display='flex';}}catch(e){}})();
-async function deletePost(timestamp) {
-    if (!confirm('Post löschen?')) return;
-    const res = await fetch('/api/delete-post', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({timestamp})});
-    const data = await res.json();
-    if (data.ok) { toast('✅ Gelöscht'); setTimeout(()=>location.reload(),500); }
-    else toast('❌ Fehler');
+async function deletePost(timestamp){
+  if(!confirm('Post löschen?')) return;
+  const res=await fetch('/api/delete-post',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({timestamp})});
+  const data=await res.json();
+  if(data.ok){toast('✅ Gelöscht');setTimeout(()=>location.reload(),500);}
+  else toast('❌ Fehler');
 }
-async function submitPost() {
-    const text = document.getElementById('new-post').value.trim();
-    if (!text) return toast('❌ Text erforderlich');
-    const btn = document.querySelector('[onclick="submitPost()"]');
-    btn.disabled = true; btn.textContent = '⏳...';
-    const res = await fetch('/api/post', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});
-    const data = await res.json();
-    if (data.ok) { toast('✅ Post veröffentlicht!'); setTimeout(()=>location.reload(),1000); }
-    else { toast('❌ ' + (data.error||'Fehler')); btn.disabled=false; btn.textContent='📝 Posten'; }
+async function submitPost(){
+  const text=document.getElementById('new-post').value.trim();
+  if(!text) return toast('❌ Text erforderlich');
+  const btn=document.querySelector('[onclick="submitPost()"]');
+  btn.disabled=true; btn.textContent='⏳...';
+  const res=await fetch('/api/post',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});
+  const data=await res.json();
+  if(data.ok){toast('✅ Post veröffentlicht!');setTimeout(()=>location.reload(),1000);}
+  else{toast('❌ '+(data.error||'Fehler'));btn.disabled=false;btn.textContent='📝 Posten';}
 }
 </script>`, 'profile');
     }
@@ -2540,6 +2720,55 @@ async function submitPost() {
         const u = d.users[uid];
         if (!u) return redirect('/feed');
         const isFollowing = (d.users[myUid]?.following||[]).map(String).includes(String(uid));
+        const theirProjects = u.projects || [];
+        const theirPosts = (d.posts||{})[uid] || [];
+
+        const theirPostsHtml = theirPosts.length
+            ? theirPosts.slice().reverse().map(p=>{
+                let attachHtml='';
+                if(p.attachment&&p.attachmentType==='image') attachHtml='<img src="'+p.attachment+'" style="width:100%;max-height:300px;object-fit:cover;border-radius:8px;margin-top:8px" alt="">';
+                if(p.attachment&&p.attachmentType==='audio') attachHtml='<audio controls src="'+p.attachment+'" style="width:100%;margin-top:8px"></audio>';
+                return '<div style="padding:12px 16px;border-top:1px solid var(--border2)">'
+                    +'<div style="font-size:13px;line-height:1.6">'+p.text+'</div>'
+                    +attachHtml
+                    +'<div style="font-size:11px;color:var(--muted);margin-top:6px">'+new Date(p.timestamp).toLocaleDateString('de-DE',{day:'2-digit',month:'short'})+'</div>'
+                    +'</div>';
+            }).join('')
+            : '<div class="empty"><div class="empty-icon">📝</div><div class="empty-text">Noch keine Posts</div></div>';
+
+        const theirProjCardsHtml = theirProjects.map((proj, i) => {
+            const projImg = ladeProjectBild(uid, proj.id);
+            return '<div class="proj-card" onclick="openTProjDetail('+i+')">'
+                +(projImg?'<img class="proj-card-img" src="'+projImg+'" alt="">':'<div class="proj-card-placeholder">🚀</div>')
+                +'<div class="proj-card-body">'
+                +'<div class="proj-card-title">'+proj.title+'</div>'
+                +(proj.description?'<div class="proj-card-desc">'+proj.description+'</div>':'')
+                +'</div></div>';
+        }).join('');
+
+        const theirLinksHtml = Object.values(d.links||{}).filter(l=>l.user_id===Number(uid)).sort((a,b)=>(b.timestamp||0)-(a.timestamp||0))
+            .map(l=>'<div style="padding:12px 16px;border-top:1px solid var(--border2)"><a href="'+l.text+'" target="_blank" style="color:var(--blue);font-size:12px;word-break:break-all">'+l.text+'</a><div style="font-size:11px;color:var(--muted);margin-top:4px">❤️ '+(Array.isArray(l.likes)?l.likes.length:0)+' Likes · '+new Date(l.timestamp).toLocaleDateString('de-DE')+'</div></div>').join('')
+            || '<div class="empty"><div class="empty-icon">🔗</div><div class="empty-text">Noch keine Links</div></div>';
+
+        const theirAboutHtml = '<div style="padding:16px;display:flex;flex-direction:column;gap:12px;padding-bottom:100px">'
+            +(u?.bio?'<div style="background:var(--bg3);border-radius:14px;padding:14px 16px"><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Bio</div><div style="font-size:14px;line-height:1.6">'+u.bio+'</div></div>':'')
+            +(u?.nische?'<div style="background:var(--bg3);border-radius:14px;padding:14px 16px"><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Nische</div><div style="font-size:14px;color:var(--accent)">🎯 '+u.nische+'</div></div>':'')
+            +'<div style="background:var(--bg3);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:10px">'
+            +'<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:2px">Social &amp; Links</div>'
+            +(u?.instagram?'<a href="https://instagram.com/'+u.instagram+'" target="_blank" style="display:flex;align-items:center;gap:10px;text-decoration:none"><span style="font-size:20px">📸</span><span style="color:var(--blue);font-size:14px">@'+u.instagram+'</span></a>':'<div style="font-size:13px;color:var(--muted)">Kein Instagram verknüpft</div>')
+            +(u?.website?'<a href="'+u.website+'" target="_blank" style="display:flex;align-items:center;gap:10px;text-decoration:none"><span style="font-size:20px">🔗</span><span style="color:var(--blue);font-size:14px">'+u.website.replace('https://','').replace('http://','').slice(0,40)+'</span></a>':'')
+            +'</div>'
+            +'<div style="background:var(--bg3);border-radius:14px;padding:14px 16px">'
+            +'<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Status</div>'
+            +'<div style="display:inline-flex;align-items:center;padding:4px 12px;border-radius:20px;background:'+badgeGradient(u?.role)+';color:#fff;font-size:12px;font-weight:700">'+(u?.role||'🆕 New')+'</div>'
+            +(u?.trophies&&u.trophies.length?'<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px">'+u.trophies.map(t=>'<span style="font-size:22px;background:var(--bg4);border-radius:8px;padding:4px 8px">'+t+'</span>').join('')+'</div>':'')
+            +'</div></div>';
+
+        const theirProjDataJson = JSON.stringify(theirProjects.map(p => ({
+            id: p.id, title: p.title, description: p.description||'', link: p.link||'',
+            img: ladeProjectBild(uid, p.id) || ''
+        })));
+
         return html(`
 <div class="topbar">
   <a href="javascript:history.back()" class="icon-btn" style="font-size:22px">‹</a>
@@ -2550,14 +2779,55 @@ async function submitPost() {
   </div>
 </div>
 ${profileCard(uid, u, d, false, lang, adminIds)}
+<div class="tabs" style="margin-top:8px;position:sticky;top:57px;z-index:50;background:var(--bg)">
+  <div class="tab active" onclick="showTPTab('posts',this)">📝 Posts</div>
+  <div class="tab" onclick="showTPTab('projekte',this)">🚀 Projekte</div>
+  <div class="tab" onclick="showTPTab('links',this)">🔗 Links</div>
+  <div class="tab" onclick="showTPTab('about',this)">👤 About</div>
+</div>
+<div id="tptab-posts" style="padding-bottom:100px">${theirPostsHtml}</div>
+<div id="tptab-projekte" style="display:none;padding-bottom:100px">
+  ${theirProjects.length>0?'<div class="proj-grid">'+theirProjCardsHtml+'</div>':'<div class="empty"><div class="empty-icon">🚀</div><div class="empty-text">Noch keine Projekte</div></div>'}
+</div>
+<div id="tptab-links" style="display:none;padding-bottom:100px">${theirLinksHtml}</div>
+<div id="tptab-about" style="display:none">${theirAboutHtml}</div>
+
+<div id="tproj-detail-modal" class="proj-modal-overlay" onclick="if(event.target===this)closeTProj()">
+  <div class="proj-modal-sheet">
+    <div style="padding:20px 20px 8px;display:flex;justify-content:space-between;align-items:center">
+      <div id="tproj-title" style="font-family:var(--font-display);font-size:18px;font-weight:700"></div>
+      <button onclick="closeTProj()" style="background:var(--bg4);border:none;color:var(--muted);width:32px;height:32px;border-radius:50%;font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer">×</button>
+    </div>
+    <div id="tproj-img-wrap"></div>
+    <div style="padding:12px 20px 32px">
+      <div id="tproj-desc" style="font-size:14px;color:var(--muted);line-height:1.6"></div>
+      <div id="tproj-link" style="margin-top:10px"></div>
+    </div>
+  </div>
+</div>
 <script>
-async function toggleFollow(uid, btn) {
-    const isFollowing = btn.textContent.trim() === 'Gefolgt';
-    btn.textContent = isFollowing ? 'Folgen' : 'Gefolgt';
-    btn.style.background = isFollowing ? 'var(--accent)' : 'var(--bg4)';
-    btn.style.color = isFollowing ? '#fff' : 'var(--muted)';
-    await fetch('/api/follow', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({uid})});
-    toast(isFollowing ? 'Nicht mehr gefolgt' : '✅ Gefolgt!');
+const TPROJECTS=${theirProjDataJson};
+function showTPTab(tab,el){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  ['posts','projekte','links','about'].forEach(t=>{const e=document.getElementById('tptab-'+t);if(e)e.style.display=t===tab?'block':'none';});
+}
+function openTProjDetail(idx){
+  const p=TPROJECTS[idx]; if(!p) return;
+  document.getElementById('tproj-title').textContent=p.title;
+  document.getElementById('tproj-img-wrap').innerHTML=p.img?'<img src="'+p.img+'" style="width:100%;max-height:300px;object-fit:cover" alt="">':'';
+  document.getElementById('tproj-desc').textContent=p.description||'';
+  document.getElementById('tproj-link').innerHTML=p.link?'<a href="'+p.link+'" target="_blank" style="color:var(--blue);font-size:13px;word-break:break-all">🔗 '+p.link+'</a>':'';
+  document.getElementById('tproj-detail-modal').classList.add('open');
+}
+function closeTProj(){document.getElementById('tproj-detail-modal').classList.remove('open');}
+async function toggleFollow(uid,btn){
+  const isFollowing=btn.textContent.trim()==='Gefolgt';
+  btn.textContent=isFollowing?'Folgen':'Gefolgt';
+  btn.style.background=isFollowing?'var(--accent)':'var(--bg4)';
+  btn.style.color=isFollowing?'#fff':'var(--muted)';
+  await fetch('/api/follow',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({uid})});
+  toast(isFollowing?'Nicht mehr gefolgt':'✅ Gefolgt!');
 }
 </script>`, 'feed');
     }
