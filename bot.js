@@ -127,6 +127,14 @@ function ladeProjectBild(uid, projectId) {
     return null;
 }
 
+function ladeProjectDoc(uid, projectId) {
+    try {
+        const f = DATA_DIR + '/doc_' + uid + '_proj_' + projectId + '.txt';
+        if (fs.existsSync(f)) return fs.readFileSync(f, 'utf8');
+    } catch(e) {}
+    return null;
+}
+
 function ladePinnedLink(uid) {
     try {
         const f = DATA_DIR + '/pinnedlink_' + uid + '.txt';
@@ -1177,7 +1185,7 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
         const chunks = [];
         for await (const chunk of req) chunks.push(chunk);
         try {
-            const { imageData, title, description, link } = JSON.parse(Buffer.concat(chunks).toString());
+            const { imageData, title, description, link, docData, docName } = JSON.parse(Buffer.concat(chunks).toString());
             if (!title?.trim()) return json({error:'Titel fehlt'}, 400);
             const botData = await fetchBot('/data');
             const userProjs = botData?.users?.[session.uid]?.projects || [];
@@ -1188,9 +1196,35 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
                 if (imageData.length > 5000000) return json({error:'Max 4MB'}, 400);
                 try { fs.writeFileSync(DATA_DIR + '/bild_' + session.uid + '_proj_' + projectId + '.txt', imageData); } catch(e) {}
             }
-            const result = await postBot('/add-project-api', { uid: session.uid, projectId, title: title.trim(), description: (description||'').trim(), link: (link||'').trim() });
+            if (docData && docName) {
+                if (docData.length > 15000000) return json({error:'Max 10MB für Dokument'}, 400);
+                try { fs.writeFileSync(DATA_DIR + '/doc_' + session.uid + '_proj_' + projectId + '.txt', docData); } catch(e) {}
+            }
+            const result = await postBot('/add-project-api', { uid: session.uid, projectId, title: title.trim(), description: (description||'').trim(), link: (link||'').trim(), docName: docName||'' });
             if (!result?.ok) return json({error: result?.error || 'Fehler'}, 400);
             return json({ok: true, projectId});
+        } catch(e) { return json({error: e.message}, 500); }
+    }
+
+    if (path === '/api/update-project' && req.method === 'POST') {
+        if (!session) return json({error:'Nicht eingeloggt'}, 401);
+        const chunks = [];
+        for await (const chunk of req) chunks.push(chunk);
+        try {
+            const { projectId, title, description, link, imageData, docData, docName } = JSON.parse(Buffer.concat(chunks).toString());
+            if (!projectId || !title?.trim()) return json({error:'Titel fehlt'}, 400);
+            if (imageData) {
+                if (!imageData.startsWith('data:image/')) return json({error:'Kein Bild'}, 400);
+                if (imageData.length > 5000000) return json({error:'Max 4MB'}, 400);
+                try { fs.writeFileSync(DATA_DIR + '/bild_' + session.uid + '_proj_' + projectId + '.txt', imageData); } catch(e) {}
+            }
+            if (docData && docName) {
+                if (docData.length > 15000000) return json({error:'Max 10MB für Dokument'}, 400);
+                try { fs.writeFileSync(DATA_DIR + '/doc_' + session.uid + '_proj_' + projectId + '.txt', docData); } catch(e) {}
+            }
+            const result = await postBot('/update-project-api', { uid: session.uid, projectId, title: title.trim(), description: (description||'').trim(), link: (link||'').trim(), docName: docName||'' });
+            if (!result?.ok) return json({error: result?.error || 'Fehler'}, 400);
+            return json({ok: true});
         } catch(e) { return json({error: e.message}, 500); }
     }
 
@@ -1200,11 +1234,32 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
         const { projectId } = body;
         if (!projectId) return json({error:'Fehlend'}, 400);
         try {
-            const f = DATA_DIR + '/bild_' + session.uid + '_proj_' + projectId + '.txt';
-            if (fs.existsSync(f)) fs.unlinkSync(f);
+            const imgF = DATA_DIR + '/bild_' + session.uid + '_proj_' + projectId + '.txt';
+            if (fs.existsSync(imgF)) fs.unlinkSync(imgF);
+            const docF = DATA_DIR + '/doc_' + session.uid + '_proj_' + projectId + '.txt';
+            if (fs.existsSync(docF)) fs.unlinkSync(docF);
         } catch(e) {}
         const result = await postBot('/delete-project-api', { uid: session.uid, projectId });
         return json({ok: !!result?.ok});
+    }
+
+    if (path.startsWith('/api/download-project-doc/') && req.method === 'GET') {
+        const parts = path.replace('/api/download-project-doc/','').split('/');
+        const docUid = parts[0], docProjId = parts[1];
+        if (!docUid || !docProjId) return text('Nicht gefunden', 404);
+        const docBase64 = ladeProjectDoc(docUid, docProjId);
+        if (!docBase64) return text('Nicht gefunden', 404);
+        const botData = await fetchBot('/data');
+        const proj = (botData?.users?.[docUid]?.projects||[]).find(p=>p.id===docProjId);
+        const fileName = proj?.docName || 'dokument';
+        const ext = fileName.split('.').pop().toLowerCase();
+        const mimeMap = { docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document', pptx:'application/vnd.openxmlformats-officedocument.presentationml.presentation', pdf:'application/pdf' };
+        const mime = mimeMap[ext] || 'application/octet-stream';
+        const base64Data = docBase64.includes(',') ? docBase64.split(',')[1] : docBase64;
+        const buf = Buffer.from(base64Data, 'base64');
+        res.writeHead(200, {'Content-Type': mime, 'Content-Disposition': 'attachment; filename="'+fileName+'"', 'Content-Length': buf.length});
+        res.end(buf);
+        return;
     }
 
     if (path === '/api/set-pinned-link' && req.method === 'POST') {
@@ -2547,8 +2602,9 @@ ${sorted.map(([id,u],i)=>{
         const canAddProject = myProjects.length < 2;
         const projCardsHtml = myProjects.map((proj, i) => {
             const projImg = ladeProjectBild(myUid, proj.id);
+            const docIcon = proj.docName ? (proj.docName.endsWith('.pptx')?'📊':'📄') : null;
             return '<div class="proj-card" onclick="openProjDetail('+i+')">'
-                +(projImg ? '<img class="proj-card-img" src="'+projImg+'" alt="">' : '<div class="proj-card-placeholder">🚀</div>')
+                +(projImg ? '<img class="proj-card-img" src="'+projImg+'" alt="">' : '<div class="proj-card-placeholder">'+(docIcon||'🚀')+'</div>')
                 +'<div class="proj-card-body">'
                 +'<div class="proj-card-title">'+proj.title+'</div>'
                 +(proj.description?'<div class="proj-card-desc">'+proj.description+'</div>':'')
@@ -2605,7 +2661,7 @@ ${sorted.map(([id,u],i)=>{
 
         const projDataJson = JSON.stringify(myProjects.map(p => ({
             id: p.id, title: p.title, description: p.description||'', link: p.link||'',
-            img: ladeProjectBild(myUid, p.id) || ''
+            img: ladeProjectBild(myUid, p.id) || '', docName: p.docName||''
         })));
 
         return html(`
@@ -2624,19 +2680,19 @@ ${sorted.map(([id,u],i)=>{
 </div>
 ${profileCard(myUid, myUser, d, true, lang, adminIds, myBannerData, myPicData)}
 <div class="tabs" style="position:sticky;top:57px;z-index:50;background:var(--bg)">
-  <div class="tab active" onclick="showPTab('posts',this)">📝 Posts</div>
-  <div class="tab" onclick="showPTab('projekte',this)">🚀 Projekte</div>
+  <div class="tab active" onclick="showPTab('projekte',this)">🚀 Projekte</div>
+  <div class="tab" onclick="showPTab('posts',this)">📝 Posts</div>
   <div class="tab" onclick="showPTab('links',this)">🔗 Links</div>
   <div class="tab" onclick="showPTab('about',this)">👤 About</div>
 </div>
-<div id="ptab-posts" style="padding-bottom:100px">
+<div id="ptab-posts" style="display:none;padding-bottom:100px">
   <div style="padding:12px 16px">
     <textarea id="new-post" class="form-input" placeholder="Was denkst du gerade? (max 300 Zeichen)" maxlength="300" rows="3"></textarea>
     <button class="btn btn-primary btn-full" style="margin-top:8px" onclick="submitPost()">📝 Posten</button>
   </div>
   ${myPostsHtml}
 </div>
-<div id="ptab-projekte" style="display:none;padding-bottom:100px">
+<div id="ptab-projekte" style="padding-bottom:100px">
   <div class="proj-grid">${projCardsHtml}${addCardHtml}</div>
   ${myProjects.length===0?'<div style="padding:4px 16px 32px;text-align:center;font-size:12px;color:var(--muted)">Zeig der Community, woran du arbeitest</div>':''}
 </div>
@@ -2657,9 +2713,11 @@ ${profileCard(myUid, myUser, d, true, lang, adminIds, myBannerData, myPicData)}
     <div style="padding:12px 20px 8px">
       <div id="proj-detail-desc" style="font-size:14px;color:var(--muted);line-height:1.6"></div>
       <div id="proj-detail-link" style="margin-top:10px"></div>
+      <div id="proj-detail-doc" style="margin-top:10px"></div>
     </div>
-    <div style="padding:12px 20px 40px">
-      <button id="proj-detail-delete" style="width:100%;background:rgba(255,59,48,.1);border:1px solid rgba(255,59,48,.3);color:#ff3b30;border-radius:var(--radius-sm);padding:11px;font-size:13px;font-weight:600;cursor:pointer">🗑️ Projekt löschen</button>
+    <div style="padding:12px 20px 40px;display:flex;gap:10px">
+      <button id="proj-detail-edit" style="flex:1;background:var(--bg4);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:11px;font-size:13px;font-weight:600;cursor:pointer">✏️ Bearbeiten</button>
+      <button id="proj-detail-delete" style="flex:1;background:rgba(255,59,48,.1);border:1px solid rgba(255,59,48,.3);color:#ff3b30;border-radius:var(--radius-sm);padding:11px;font-size:13px;font-weight:600;cursor:pointer">🗑️ Löschen</button>
     </div>
   </div>
 </div>
@@ -2667,7 +2725,7 @@ ${profileCard(myUid, myUser, d, true, lang, adminIds, myBannerData, myPicData)}
 <div id="proj-add-overlay" class="proj-add-overlay" onclick="if(event.target===this)closeAddProj()">
   <div class="proj-add-sheet">
     <div style="padding:20px 20px 8px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border2)">
-      <div style="font-family:var(--font-display);font-size:16px;font-weight:700">Projekt hinzufügen</div>
+      <div id="proj-add-title" style="font-family:var(--font-display);font-size:16px;font-weight:700">Projekt hinzufügen</div>
       <button onclick="closeAddProj()" style="background:var(--bg4);border:none;color:var(--muted);width:32px;height:32px;border-radius:50%;font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer">×</button>
     </div>
     <div style="padding:16px;display:flex;flex-direction:column;gap:14px">
@@ -2677,6 +2735,14 @@ ${profileCard(myUid, myUser, d, true, lang, adminIds, myBannerData, myPicData)}
           <div id="proj-img-preview" style="width:52px;height:52px;border-radius:10px;overflow:hidden;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">📷</div>
           <div><div style="font-size:13px;font-weight:600">Bild auswählen</div><div style="font-size:11px;color:var(--muted);margin-top:2px">Alle Bildformate · max 4MB</div></div>
           <input type="file" id="proj-img-input" accept="image/*" style="display:none" onchange="previewProjImg(this)">
+        </label>
+      </div>
+      <div>
+        <div class="form-label">Dokument (optional)</div>
+        <label style="display:flex;align-items:center;gap:12px;background:var(--bg4);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;cursor:pointer">
+          <div id="proj-doc-preview" style="width:52px;height:52px;border-radius:10px;overflow:hidden;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">📎</div>
+          <div><div style="font-size:13px;font-weight:600">Word / PowerPoint</div><div id="proj-doc-name" style="font-size:11px;color:var(--muted);margin-top:2px">.docx oder .pptx · max 10MB</div></div>
+          <input type="file" id="proj-doc-input" accept=".docx,.pptx" style="display:none" onchange="previewProjDoc(this)">
         </label>
       </div>
       <div>
@@ -2698,7 +2764,8 @@ ${profileCard(myUid, myUser, d, true, lang, adminIds, myBannerData, myPicData)}
 
 <script>
 const PROJECTS = ${projDataJson};
-let _curProjIdx = -1;
+const _SESSION_UID = '${myUid}';
+let _curProjIdx=-1, _editMode=false, _editProjId=null;
 function showPTab(tab,el){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   el.classList.add('active');
@@ -2710,11 +2777,46 @@ function openProjDetail(idx){
   document.getElementById('proj-detail-img-wrap').innerHTML=p.img?'<img src="'+p.img+'" style="width:100%;object-fit:contain;display:block;background:#0a0a0a" alt="">':'';
   document.getElementById('proj-detail-desc').textContent=p.description||'';
   document.getElementById('proj-detail-link').innerHTML=p.link?'<a href="'+p.link+'" target="_blank" style="color:var(--blue);font-size:13px;word-break:break-all">🔗 '+p.link+'</a>':'';
+  const docEl=document.getElementById('proj-detail-doc');
+  if(p.docName){const icon=p.docName.endsWith('.pptx')?'📊':'📄';docEl.innerHTML='<a href="/api/download-project-doc/'+_SESSION_UID+'/'+p.id+'" style="display:inline-flex;align-items:center;gap:8px;background:var(--bg4);border:1px solid var(--border);border-radius:10px;padding:8px 14px;font-size:13px;font-weight:600;color:var(--text);text-decoration:none">'+icon+' '+p.docName+' herunterladen</a>';}
+  else docEl.innerHTML='';
+  document.getElementById('proj-detail-edit').onclick=()=>{closeProjDetail();openEditProj(idx);};
   document.getElementById('proj-detail-delete').onclick=()=>deleteProj(p.id);
   document.getElementById('proj-detail-modal').classList.add('open');
 }
 function closeProjDetail(){document.getElementById('proj-detail-modal').classList.remove('open');}
-function openAddProj(){document.getElementById('proj-add-overlay').classList.add('open');}
+function openAddProj(){
+  _editMode=false;_editProjId=null;
+  document.getElementById('proj-add-title').textContent='Projekt hinzufügen';
+  document.getElementById('proj-submit-btn').textContent='✅ Projekt speichern';
+  document.getElementById('proj-title').value='';
+  document.getElementById('proj-desc').value='';
+  document.getElementById('proj-link').value='';
+  document.getElementById('proj-img-preview').innerHTML='📷';
+  document.getElementById('proj-img-preview')._data=null;
+  document.getElementById('proj-doc-preview').innerHTML='📎';
+  document.getElementById('proj-doc-preview')._data=null;
+  document.getElementById('proj-doc-preview')._name=null;
+  document.getElementById('proj-doc-name').textContent='.docx oder .pptx · max 10MB';
+  document.getElementById('proj-add-overlay').classList.add('open');
+}
+function openEditProj(idx){
+  const p=PROJECTS[idx]; if(!p) return;
+  _editMode=true;_editProjId=p.id;
+  document.getElementById('proj-add-title').textContent='Projekt bearbeiten';
+  document.getElementById('proj-submit-btn').textContent='💾 Aktualisieren';
+  document.getElementById('proj-title').value=p.title||'';
+  document.getElementById('proj-desc').value=p.description||'';
+  document.getElementById('proj-link').value=p.link||'';
+  const imgPrev=document.getElementById('proj-img-preview');
+  if(p.img){imgPrev.innerHTML='<img src="'+p.img+'" style="width:100%;height:100%;object-fit:cover">';imgPrev._data=p.img;}
+  else{imgPrev.innerHTML='📷';imgPrev._data=null;}
+  const docPrev=document.getElementById('proj-doc-preview');
+  docPrev._data=null;docPrev._name=null;
+  if(p.docName){const icon=p.docName.endsWith('.pptx')?'📊':'📄';docPrev.innerHTML=icon;document.getElementById('proj-doc-name').textContent=p.docName;}
+  else{docPrev.innerHTML='📎';document.getElementById('proj-doc-name').textContent='.docx oder .pptx · max 10MB';}
+  document.getElementById('proj-add-overlay').classList.add('open');
+}
 function closeAddProj(){document.getElementById('proj-add-overlay').classList.remove('open');}
 function previewProjImg(input){
   const file=input.files[0]; if(!file) return;
@@ -2728,21 +2830,38 @@ function previewProjImg(input){
   };
   reader.readAsDataURL(file);
 }
+function previewProjDoc(input){
+  const file=input.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const prev=document.getElementById('proj-doc-preview');
+    const icon=file.name.endsWith('.pptx')?'📊':'📄';
+    prev.innerHTML=icon; prev._data=e.target.result; prev._name=file.name;
+    document.getElementById('proj-doc-name').textContent=file.name;
+  };
+  reader.readAsDataURL(file);
+}
 async function submitAddProj(){
   const title=document.getElementById('proj-title').value.trim();
   if(!title) return toast('❌ Titel ist Pflicht');
   const desc=document.getElementById('proj-desc').value.trim();
   const link=document.getElementById('proj-link').value.trim();
   const imgPrev=document.getElementById('proj-img-preview');
+  const docPrev=document.getElementById('proj-doc-preview');
   const imageData=imgPrev._data||null;
+  const docData=docPrev._data||null;
+  const docName=docPrev._name||null;
   const btn=document.getElementById('proj-submit-btn');
   btn.disabled=true; btn.textContent='⏳...';
   try{
-    const res=await fetch('/api/add-project',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title,description:desc,link,imageData})});
+    const endpoint=_editMode?'/api/update-project':'/api/add-project';
+    const body={title,description:desc,link,imageData,docData,docName};
+    if(_editMode) body.projectId=_editProjId;
+    const res=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     const data=await res.json();
-    if(data.ok){toast('✅ Projekt gespeichert!');setTimeout(()=>location.reload(),800);}
-    else{toast('❌ '+(data.error||'Fehler'));btn.disabled=false;btn.textContent='✅ Projekt speichern';}
-  }catch(e){toast('❌ Fehler');btn.disabled=false;btn.textContent='✅ Projekt speichern';}
+    if(data.ok){toast(_editMode?'✅ Aktualisiert!':'✅ Projekt gespeichert!');setTimeout(()=>location.reload(),800);}
+    else{toast('❌ '+(data.error||'Fehler'));btn.disabled=false;btn.textContent=_editMode?'💾 Aktualisieren':'✅ Projekt speichern';}
+  }catch(e){toast('❌ Fehler');btn.disabled=false;btn.textContent=_editMode?'💾 Aktualisieren':'✅ Projekt speichern';}
 }
 async function deleteProj(projectId){
   if(!confirm('Projekt löschen?')) return;
@@ -2797,8 +2916,9 @@ async function submitPost(){
 
         const theirProjCardsHtml = theirProjects.map((proj, i) => {
             const projImg = ladeProjectBild(uid, proj.id);
+            const docIcon = proj.docName ? (proj.docName.endsWith('.pptx')?'📊':'📄') : null;
             return '<div class="proj-card" onclick="openTProjDetail('+i+')">'
-                +(projImg?'<img class="proj-card-img" src="'+projImg+'" alt="">':'<div class="proj-card-placeholder">🚀</div>')
+                +(projImg?'<img class="proj-card-img" src="'+projImg+'" alt="">':'<div class="proj-card-placeholder">'+(docIcon||'🚀')+'</div>')
                 +'<div class="proj-card-body">'
                 +'<div class="proj-card-title">'+proj.title+'</div>'
                 +(proj.description?'<div class="proj-card-desc">'+proj.description+'</div>':'')
@@ -2825,7 +2945,7 @@ async function submitPost(){
 
         const theirProjDataJson = JSON.stringify(theirProjects.map(p => ({
             id: p.id, title: p.title, description: p.description||'', link: p.link||'',
-            img: ladeProjectBild(uid, p.id) || ''
+            img: ladeProjectBild(uid, p.id) || '', docName: p.docName||''
         })));
 
         return html(`
@@ -2838,14 +2958,14 @@ async function submitPost(){
   </div>
 </div>
 ${profileCard(uid, u, d, false, lang, adminIds)}
-<div class="tabs" style="margin-top:8px;position:sticky;top:57px;z-index:50;background:var(--bg)">
-  <div class="tab active" onclick="showTPTab('posts',this)">📝 Posts</div>
-  <div class="tab" onclick="showTPTab('projekte',this)">🚀 Projekte</div>
+<div class="tabs" style="position:sticky;top:57px;z-index:50;background:var(--bg)">
+  <div class="tab active" onclick="showTPTab('projekte',this)">🚀 Projekte</div>
+  <div class="tab" onclick="showTPTab('posts',this)">📝 Posts</div>
   <div class="tab" onclick="showTPTab('links',this)">🔗 Links</div>
   <div class="tab" onclick="showTPTab('about',this)">👤 About</div>
 </div>
-<div id="tptab-posts" style="padding-bottom:100px">${theirPostsHtml}</div>
-<div id="tptab-projekte" style="display:none;padding-bottom:100px">
+<div id="tptab-posts" style="display:none;padding-bottom:100px">${theirPostsHtml}</div>
+<div id="tptab-projekte" style="padding-bottom:100px">
   ${theirProjects.length>0?'<div class="proj-grid">'+theirProjCardsHtml+'</div>':'<div class="empty"><div class="empty-icon">🚀</div><div class="empty-text">Noch keine Projekte</div></div>'}
 </div>
 <div id="tptab-links" style="display:none;padding-bottom:100px">${theirLinksHtml}</div>
@@ -2861,11 +2981,13 @@ ${profileCard(uid, u, d, false, lang, adminIds)}
     <div style="padding:12px 20px 32px">
       <div id="tproj-desc" style="font-size:14px;color:var(--muted);line-height:1.6"></div>
       <div id="tproj-link" style="margin-top:10px"></div>
+      <div id="tproj-doc" style="margin-top:10px"></div>
     </div>
   </div>
 </div>
 <script>
 const TPROJECTS=${theirProjDataJson};
+const _TUID='${uid}';
 function showTPTab(tab,el){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   el.classList.add('active');
@@ -2874,9 +2996,12 @@ function showTPTab(tab,el){
 function openTProjDetail(idx){
   const p=TPROJECTS[idx]; if(!p) return;
   document.getElementById('tproj-title').textContent=p.title;
-  document.getElementById('tproj-img-wrap').innerHTML=p.img?'<img src="'+p.img+'" style="width:100%;max-height:300px;object-fit:cover" alt="">':'';
+  document.getElementById('tproj-img-wrap').innerHTML=p.img?'<img src="'+p.img+'" style="width:100%;object-fit:contain;display:block;background:#0a0a0a" alt="">':'';
   document.getElementById('tproj-desc').textContent=p.description||'';
   document.getElementById('tproj-link').innerHTML=p.link?'<a href="'+p.link+'" target="_blank" style="color:var(--blue);font-size:13px;word-break:break-all">🔗 '+p.link+'</a>':'';
+  const docEl=document.getElementById('tproj-doc');
+  if(p.docName){const icon=p.docName.endsWith('.pptx')?'📊':'📄';docEl.innerHTML='<a href="/api/download-project-doc/'+_TUID+'/'+p.id+'" style="display:inline-flex;align-items:center;gap:8px;background:var(--bg4);border:1px solid var(--border);border-radius:10px;padding:8px 14px;font-size:13px;font-weight:600;color:var(--text);text-decoration:none">'+icon+' '+p.docName+' herunterladen</a>';}
+  else docEl.innerHTML='';
   document.getElementById('tproj-detail-modal').classList.add('open');
 }
 function closeTProj(){document.getElementById('tproj-detail-modal').classList.remove('open');}
