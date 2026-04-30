@@ -189,7 +189,7 @@ button{cursor:pointer;border:none;outline:none;font-family:var(--font)}
 .post-action-btn svg{width:20px;height:20px}
 .post-likers{padding:0 16px 4px;font-size:12px;color:var(--muted)}
 .post-likers span{color:var(--text);font-weight:600}
-.profile-banner{height:160px;position:relative;overflow:hidden}
+.profile-banner{width:100%;aspect-ratio:3.5/1;position:relative;overflow:hidden}
 .profile-banner-overlay{position:absolute;inset:0;background:linear-gradient(to bottom,transparent 40%,var(--bg3))}
 .profile-avatar-wrap{position:absolute;bottom:-30px;left:16px}
 .profile-avatar{width:88px;height:88px;border-radius:50%;border:3px solid var(--bg3);background:var(--bg4);object-fit:cover;display:flex;align-items:center;justify-content:center;font-size:36px}
@@ -286,7 +286,8 @@ textarea.form-input{resize:none;min-height:80px}
 
   /* BANNER auf PC */
   .profile-banner {
-    height: 280px;
+    aspect-ratio: 3.5/1;
+    height: auto;
     border-radius: 0;
   }
 
@@ -581,7 +582,7 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
     return `
 <div style="position:relative">
   <div class="profile-banner" style="${bannerIsGrad ? 'background:'+banner : ''}">
-    ${!bannerIsGrad ? '<img src="'+banner+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">' : ''}
+    ${!bannerIsGrad ? '<img src="'+banner+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:fill" alt="">' : ''}
     <div class="profile-banner-overlay"></div>
     ${isOwn?`<a href="/einstellungen" style="position:absolute;bottom:12px;right:12px;background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.2);color:#fff;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;backdrop-filter:blur(8px)">✏️ Bearbeiten</a>`:''}
   </div>
