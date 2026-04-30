@@ -2157,7 +2157,10 @@ async function createThread(){
         if (!botData) return redirect('/nachrichten/gruppe');
         // Mark as read
         await postBot('/mark-read', { uid: myUid, thread_id: threadId });
-        const thrInfo = (botData.threads||[]).find(t=>String(t.id)===threadId) || { name: threadId==='general'?'Allgemein':'Thread '+threadId, emoji: threadId==='general'?'💬':'📌' };
+        const threadEmojiPaletteD = ['🎯','🚀','💡','📊','🎨','🔥','⚡','🌟','📝','🎭','🏆','🎵','🧠','💎','🌈','🎮','📣','🛠️','🌍','🎬'];
+        function threadEmojiD(tid){let h=0;for(const c of String(tid))h=(h*31+c.charCodeAt(0))>>>0;return threadEmojiPaletteD[h%threadEmojiPaletteD.length];}
+        const thrInfoRaw = (botData.threads||[]).find(t=>String(t.id)===threadId);
+        const thrInfo = { name: thrInfoRaw?.name||(threadId==='general'?'Allgemein':'Thread '+threadId), emoji: threadId==='general'?'💬':(thrInfoRaw?.emoji&&thrInfoRaw.emoji.length>1?thrInfoRaw.emoji:threadEmojiD(threadId)) };
         // Get messages: general uses communityFeed as fallback
         let msgs = (botData.threadMessages||{})[threadId] || [];
         if (!msgs.length && threadId==='general' && botData.communityFeed?.length) {
@@ -2260,9 +2263,9 @@ async function createThread(){
         // Merge real names from Telegram API
         threads = threads.map(t => {
             const api = apiTopics[String(t.id)];
-            const fallbackEmoji = String(t.id)==='general' ? '💬' : (t.emoji && t.emoji!=='📌' ? t.emoji : threadEmoji(t.id));
-            if (api?.name) return {...t, name: api.name, emoji: api.emoji || fallbackEmoji};
-            return {...t, emoji: fallbackEmoji};
+            const emoji = String(t.id)==='general' ? '💬' : (api?.emoji && api.emoji.length>1 ? api.emoji : threadEmoji(t.id));
+            if (api?.name) return {...t, name: api.name, emoji};
+            return {...t, emoji};
         });
         if (!threads.find(t=>String(t.id)==='general')) {
             const lastCF = communityFeed[0];
