@@ -376,7 +376,7 @@ function layout(content, session, page='feed', lang='de') {
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="theme-color" content="#ff6b6b">
 <link rel="manifest" href="/manifest.json">
-<link rel="apple-touch-icon" href="/icon.jpg?v=4">
+<link rel="apple-touch-icon" href="/icon.jpg?v=${APP_VERSION}">
 <title>CreatorX</title>
 <style>${CSS}</style>
 </head>
@@ -1069,7 +1069,7 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
     // ── PWA MANIFEST ──
     if (path === '/manifest.json') {
         res.writeHead(200,{'Content-Type':'application/json'});
-        return res.end(JSON.stringify({name:'CreatorX',short_name:'CreatorX',start_url:'/feed',display:'standalone',background_color:'#000000',theme_color:'#ff6b6b',icons:[{src:'/icon.jpg?v=5',sizes:'192x192',type:'image/png',purpose:'any maskable'},{src:'/icon.jpg?v=5',sizes:'512x512',type:'image/png',purpose:'any maskable'}]}));
+        return res.end(JSON.stringify({name:'CreatorX',short_name:'CreatorX',start_url:'/feed',display:'standalone',background_color:'#000000',theme_color:'#ff6b6b',icons:[{src:'/icon.jpg?v='+APP_VERSION,sizes:'192x192',type:'image/png',purpose:'any maskable'},{src:'/icon.jpg?v='+APP_VERSION,sizes:'512x512',type:'image/png',purpose:'any maskable'}]}));
     }
 
     if (path === '/icon-192.png' || path === '/icon-512.png' || path === '/apple-touch-icon.png' || path === '/icon.jpg') {
