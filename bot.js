@@ -426,7 +426,11 @@ function layout(content, session, page='feed', lang='de') {
     </div>
     <div style="font-size:12px;color:var(--muted);margin-bottom:12px">Teile deinen Instagram Reel Link mit der Community und sammle XP durch Likes.</div>
     <input type="url" id="plus-link-input" class="form-input" placeholder="https://www.instagram.com/reel/..." style="margin-bottom:8px">
-    <textarea id="plus-link-caption" class="form-input" placeholder="Beschreibung (optional)..." maxlength="200" rows="2" style="margin-bottom:12px"></textarea>
+    <textarea id="plus-link-caption" class="form-input" placeholder="Beschreibung (optional)..." maxlength="200" rows="2" style="margin-bottom:8px"></textarea>
+    <label style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--bg4);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;margin-bottom:12px">
+      <input type="checkbox" id="plus-pin-toggle" style="width:18px;height:18px;accent-color:var(--accent);cursor:pointer">
+      <div><div style="font-size:13px;font-weight:600">📌 Als angepinnten Post setzen</div><div style="font-size:11px;color:var(--muted);margin-top:2px">Erscheint oben im Profil · max 1 Pin</div></div>
+    </label>
     <button class="btn btn-primary btn-full" onclick="plusPostLink()">📸 Link teilen</button>
     <div id="plus-link-result" style="margin-top:8px;font-size:12px;text-align:center;color:var(--muted)"></div>
   </div>
@@ -521,10 +525,17 @@ async function plusPostLink(){
   btn.disabled=true;btn.textContent='⏳ Wird gesendet...';
   try{
     const caption=(document.getElementById('plus-link-caption')?.value||'').trim();
+    const pin=document.getElementById('plus-pin-toggle')?.checked||false;
     const res=await fetch('/api/post-link',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url,caption})});
     const data=await res.json();
-    if(data.ok){result.textContent='✅ Link erfolgreich geteilt!';document.getElementById('plus-link-input').value='';document.getElementById('plus-link-caption').value='';setTimeout(()=>closePlusSheet(),1500);}
-    else result.textContent='❌ '+(data.error||'Fehler');
+    if(data.ok){
+      if(pin){await fetch('/api/set-pinned-link',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url})});}
+      result.textContent=pin?'✅ Geteilt & angepinnt!':'✅ Link erfolgreich geteilt!';
+      document.getElementById('plus-link-input').value='';
+      document.getElementById('plus-link-caption').value='';
+      if(document.getElementById('plus-pin-toggle'))document.getElementById('plus-pin-toggle').checked=false;
+      setTimeout(()=>closePlusSheet(),1500);
+    } else result.textContent='❌ '+(data.error||'Fehler');
   }catch(e){result.textContent='❌ Netzwerkfehler';}
   btn.disabled=false;btn.textContent='📸 Link teilen';
 }
@@ -634,6 +645,7 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
   <div class="profile-stat"><div class="profile-stat-val">${(u.projects||[]).length}</div><div class="profile-stat-label">Projekte</div></div>
   <div class="profile-stat"><div class="profile-stat-val">${u.links||0}</div><div class="profile-stat-label">Links</div></div>
   <div class="profile-stat"><div class="profile-stat-val">${(u.followers||[]).length}</div><div class="profile-stat-label">Follower</div></div>
+  <div class="profile-stat"><div class="profile-stat-val">💎 ${u.diamonds||0}</div><div class="profile-stat-label">Diamanten</div></div>
 </div>
 ${nb?`
 <div class="profile-xp-bar"><div class="profile-xp-fill" style="width:${nb.pct}%;background:${grad}"></div></div>
@@ -1534,6 +1546,40 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
         return json({ok:true});
     }
 
+    if (path === '/api/engage-pinned-post' && req.method === 'POST') {
+        if (!session) return json({error:'Nicht eingeloggt'},401);
+        const body = await parseBody(req);
+        const ownerUid = String(body.ownerUid||'');
+        if (!ownerUid || ownerUid === myUid) return json({error:'Ungültig'},400);
+        const result = await postBot('/engage-pinned-post-api', { engagerUid: myUid, ownerUid });
+        return json({ok:!!result?.ok, alreadyDone: result?.alreadyDone||false});
+    }
+
+    if (path === '/api/newsletter-add' && req.method === 'POST') {
+        if (!session) return json({error:'Nicht eingeloggt'},401);
+        const chunks=[]; for await(const c of req) chunks.push(c);
+        const { title, content } = JSON.parse(Buffer.concat(chunks).toString());
+        if (!content?.trim()) return json({error:'Inhalt fehlt'},400);
+        const result = await postBot('/add-newsletter-api', { uid: myUid, title: (title||'').trim(), content: content.trim() });
+        return json({ok:!!result?.ok, error: result?.error});
+    }
+
+    if (path === '/api/newsletter-edit' && req.method === 'POST') {
+        if (!session) return json({error:'Nicht eingeloggt'},401);
+        const chunks=[]; for await(const c of req) chunks.push(c);
+        const { id, title, content } = JSON.parse(Buffer.concat(chunks).toString());
+        if (!id || !content?.trim()) return json({error:'Fehlend'},400);
+        const result = await postBot('/edit-newsletter-api', { uid: myUid, id, title: (title||'').trim(), content: content.trim() });
+        return json({ok:!!result?.ok, error: result?.error});
+    }
+
+    if (path === '/api/newsletter-delete' && req.method === 'POST') {
+        if (!session) return json({error:'Nicht eingeloggt'},401);
+        const body = await parseBody(req);
+        const result = await postBot('/delete-newsletter-api', { uid: myUid, id: body.id });
+        return json({ok:!!result?.ok});
+    }
+
     if (path === '/api/comment' && req.method === 'POST') {
         const body = await parseBody(req);
         const { postId, text } = body;
@@ -2136,6 +2182,8 @@ async function createThread(){
 <script>
 (function(){
   const TID='${threadId}';
+  const MY_UID='${myUid}';
+  const IS_ADMIN=${isAdmin};
   const COLORS=['#ff6b6b','#cc5de8','#4dabf7','#ffd43b','#00c851','#ff9f43','#0088cc'];
   function col(n){return COLORS[((n||'').charCodeAt(0)||0)%COLORS.length];}
   function ini(n){return((n||'?').replace(/^@/,'')||'?')[0].toUpperCase();}
@@ -2154,7 +2202,9 @@ async function createThread(){
       else if(m.type==='sticker'&&m.mediaId)body='<img src="/api/tg-file/'+m.mediaId+'" style="width:80px;height:80px;object-fit:contain;display:block;margin-top:4px" loading="lazy">';
       else if(m.type==='video')body='<div style="background:rgba(0,0,0,.3);border-radius:10px;padding:8px 12px;font-size:12px;color:var(--muted);margin-top:4px">🎬 Video — öffne Telegram zum Ansehen</div>';
       if(m.text)body+='<div style="font-size:13px;line-height:1.5;margin-top:2px;word-break:break-word">'+m.text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</div>';
-      return '<div style="display:flex;gap:10px;align-items:flex-start"><div style="width:36px;height:36px;border-radius:50%;background:'+c+';display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;flex-shrink:0;position:relative;overflow:hidden">'+ini(m.name)+(m.uid?'<img src="/appbild/'+m.uid+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" onerror="this.remove()" loading="lazy">':'')+'</div><div style="flex:1;min-width:0"><div style="display:flex;align-items:baseline;gap:8px;margin-bottom:2px">'+nameEl+'<span style="font-size:10px;color:var(--muted)">'+t(m.timestamp)+'</span></div>'+body+'</div></div>';
+      const canDel=(m.uid&&m.uid===MY_UID)||IS_ADMIN;
+      const delBtn=canDel?'<button onclick="deleteMsg('+m.timestamp+','+(m.msg_id||0)+')" style="background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;padding:2px 4px;margin-left:auto;opacity:.55;flex-shrink:0">🗑️</button>':'';
+      return '<div style="display:flex;gap:10px;align-items:flex-start"><div style="width:36px;height:36px;border-radius:50%;background:'+c+';display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;flex-shrink:0;position:relative;overflow:hidden">'+ini(m.name)+(m.uid?'<img src="/appbild/'+m.uid+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" onerror="this.remove()" loading="lazy">':'')+'</div><div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">'+nameEl+'<span style="font-size:10px;color:var(--muted)">'+t(m.timestamp)+'</span>'+delBtn+'</div>'+body+'</div></div>';
     }).join('');
     if(atBottom)window.scrollTo(0,document.body.scrollHeight);
   }
@@ -2173,6 +2223,12 @@ async function createThread(){
     const d=await r.json();
     if(!d.ok){el.value=text;alert(d.error||'Fehler');}
     else setTimeout(load,1500);
+  };
+  window.deleteMsg=async function(ts,msgId){
+    if(!confirm('Nachricht löschen?'))return;
+    const r=await fetch('/api/delete-thread-msg',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({threadId:TID,timestamp:ts,msgId:msgId||null})});
+    const d=await r.json();
+    if(d.ok){known=0;await load();toast('✅ Gelöscht');}else toast('❌ '+(d.error||'Fehler'));
   };
   setInterval(load,10000);
 })();
@@ -2451,7 +2507,7 @@ document.getElementById('search-input').focus();
   <div class="highlight-card">
     <div class="highlight-icon" style="background:linear-gradient(135deg,rgba(0,200,130,.25),rgba(0,150,100,.15))">🎁</div>
     <div style="flex:1;min-width:0">
-      <div style="font-size:13px;font-weight:700">XP Shop — Coming Soon</div>
+      <div style="font-size:13px;font-weight:700">💎 Diamant Shop — Coming Soon</div>
       <div style="font-size:11px;color:var(--muted);margin-top:3px">Tausche XP gegen Vorteile</div>
     </div>
     <div style="font-size:10px;color:var(--accent);font-weight:700;background:rgba(255,107,107,.12);padding:2px 8px;border-radius:10px;white-space:nowrap">Bald</div>
@@ -2482,19 +2538,14 @@ document.getElementById('search-input').focus();
     <div class="action-card-sub">Community Guidelines</div>
   </a>
   <a href="/explore?tab=shop" class="action-card">
-    <div class="action-card-icon" style="background:linear-gradient(135deg,rgba(0,200,130,.2),rgba(0,150,100,.1))">🛍️</div>
-    <div class="action-card-title">XP Shop</div>
+    <div class="action-card-icon" style="background:linear-gradient(135deg,rgba(100,180,255,.2),rgba(60,130,255,.1))">💎</div>
+    <div class="action-card-title">Diamant Shop</div>
     <div class="action-card-sub">Coming Soon</div>
   </a>
   <a href="/explore?tab=newsletter" class="action-card">
     <div class="action-card-icon" style="background:linear-gradient(135deg,rgba(255,165,0,.2),rgba(255,130,0,.1))">📩</div>
     <div class="action-card-title">Newsletter</div>
-    <div class="action-card-sub">Bleib informiert</div>
-  </a>
-  <a href="/einstellungen" class="action-card">
-    <div class="action-card-icon" style="background:linear-gradient(135deg,rgba(255,107,107,.2),rgba(204,93,232,.1))">📌</div>
-    <div class="action-card-title">Reel anpinnen</div>
-    <div class="action-card-sub">Zeig deinen besten Reel</div>
+    <div class="action-card-sub">Neuigkeiten & Updates</div>
   </a>
 </div>`,
             ranking: `
@@ -2505,8 +2556,54 @@ document.getElementById('search-input').focus();
 <div style="padding-bottom:100px">${rankingRows}</div>`,
             tipps: `<div style="padding:48px 24px;text-align:center"><div style="font-size:48px;margin-bottom:16px">💡</div><div style="font-size:17px;font-weight:700;margin-bottom:8px">Tipps & Tricks</div><div style="font-size:13px;color:var(--muted)">🔧 In Bearbeitung — Inhalte folgen bald!</div></div>`,
             regeln: `<div style="padding:48px 24px;text-align:center"><div style="font-size:48px;margin-bottom:16px">📋</div><div style="font-size:17px;font-weight:700;margin-bottom:8px">Community Regeln</div><div style="font-size:13px;color:var(--muted)">🔧 In Bearbeitung — Inhalte folgen bald!</div></div>`,
-            shop: `<div style="padding:48px 24px;text-align:center"><div style="font-size:48px;margin-bottom:16px">🛍️</div><div style="font-size:17px;font-weight:700;margin-bottom:8px">XP Shop</div><div style="font-size:13px;color:var(--muted)">🔧 In Bearbeitung — Kommt bald!</div></div>`,
-            newsletter: `<div style="padding:48px 24px;text-align:center"><div style="font-size:48px;margin-bottom:16px">📩</div><div style="font-size:17px;font-weight:700;margin-bottom:8px">Newsletter</div><div style="font-size:13px;color:var(--muted)">🔧 In Bearbeitung — Inhalte folgen bald!</div></div>`
+            shop: `<div style="padding:48px 24px;text-align:center"><div style="font-size:48px;margin-bottom:16px">💎</div><div style="font-size:17px;font-weight:700;margin-bottom:8px">Diamant Shop</div><div style="font-size:13px;color:var(--muted)">🔧 In Bearbeitung — Kommt bald!</div></div>`,
+            newsletter: (()=>{
+                const isAdminNL = adminIds.includes(Number(myUid));
+                const entries = (d.newsletter||[]).slice().reverse();
+                const entriesHtml = entries.length
+                    ? entries.map(e=>`
+<div class="nl-entry" data-id="${e.id}" style="padding:16px;border:1px solid var(--border2);border-radius:14px;background:var(--bg3);margin:0 16px 12px">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px">
+    ${e.title?`<div style="font-size:15px;font-weight:700;font-family:var(--font-display)">${e.title}</div>`:'<div></div>'}
+    ${isAdminNL?`<div style="display:flex;gap:6px;flex-shrink:0"><button onclick="nlEdit('${e.id}')" style="background:var(--bg4);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:4px 10px;font-size:12px;cursor:pointer">✏️</button><button onclick="nlDelete('${e.id}')" style="background:rgba(255,59,48,.1);border:1px solid rgba(255,59,48,.3);color:#ff3b30;border-radius:8px;padding:4px 10px;font-size:12px;cursor:pointer">🗑️</button></div>`:''}
+  </div>
+  <div style="font-size:13px;line-height:1.65;color:var(--text);white-space:pre-wrap">${e.content}</div>
+  <div style="font-size:11px;color:var(--muted);margin-top:10px">${new Date(e.timestamp).toLocaleDateString('de-DE',{day:'2-digit',month:'short',year:'numeric'})}</div>
+</div>`).join('')
+                    : '<div class="empty" style="padding:48px 24px;text-align:center"><div class="empty-icon">📩</div><div class="empty-text">Noch keine Newsletter-Einträge</div></div>';
+                const adminForm = isAdminNL ? `
+<div id="nl-form" style="display:none;margin:0 16px 16px;padding:16px;background:var(--bg3);border:1px solid var(--border2);border-radius:14px">
+  <input type="hidden" id="nl-edit-id">
+  <div class="form-label">Titel (optional)</div>
+  <input type="text" id="nl-title" class="form-input" placeholder="z.B. Update Mai 2026" style="margin-bottom:10px">
+  <div class="form-label">Inhalt *</div>
+  <textarea id="nl-content" class="form-input" rows="5" placeholder="Newsletter-Text..." style="margin-bottom:12px"></textarea>
+  <div style="display:flex;gap:8px">
+    <button onclick="nlSave()" class="btn btn-primary" style="flex:2">💾 Speichern</button>
+    <button onclick="nlCancel()" class="btn btn-outline" style="flex:1">Abbrechen</button>
+  </div>
+  <div id="nl-result" style="margin-top:8px;font-size:12px;color:var(--muted);text-align:center"></div>
+</div>` : '';
+                const adminBtn = isAdminNL ? `<button onclick="nlNew()" style="display:flex;align-items:center;gap:8px;background:var(--accent);color:#fff;border:none;border-radius:12px;padding:10px 18px;font-size:14px;font-weight:700;cursor:pointer;margin:16px 16px 12px">+ Neuer Eintrag</button>` : '';
+                return `
+<div style="padding-top:8px;padding-bottom:80px">
+  <div style="padding:0 16px 12px;display:flex;align-items:center;justify-content:space-between">
+    <div style="font-size:18px;font-weight:800;font-family:var(--font-display)">📩 Newsletter</div>
+  </div>
+  ${adminBtn}
+  ${adminForm}
+  ${entriesHtml}
+</div>
+<script>
+${isAdminNL?`
+function nlNew(){document.getElementById('nl-form').style.display='block';document.getElementById('nl-edit-id').value='';document.getElementById('nl-title').value='';document.getElementById('nl-content').value='';document.getElementById('nl-result').textContent='';}
+function nlCancel(){document.getElementById('nl-form').style.display='none';}
+function nlEdit(id){const el=document.querySelector('[data-id="'+id+'"]');if(!el)return;document.getElementById('nl-edit-id').value=id;document.getElementById('nl-title').value=el.querySelector('[style*="font-display"]')?.textContent||'';document.getElementById('nl-content').value=el.querySelector('[style*="pre-wrap"]')?.textContent||'';document.getElementById('nl-form').style.display='block';window.scrollTo({top:0,behavior:'smooth'});}
+async function nlSave(){const id=document.getElementById('nl-edit-id').value;const title=document.getElementById('nl-title').value.trim();const content=document.getElementById('nl-content').value.trim();if(!content)return;const ep=id?'/api/newsletter-edit':'/api/newsletter-add';const body=id?{id,title,content}:{title,content};const r=await fetch(ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const d=await r.json();if(d.ok){toast('✅ Gespeichert!');setTimeout(()=>location.reload(),800);}else document.getElementById('nl-result').textContent='❌ '+(d.error||'Fehler');}
+async function nlDelete(id){if(!confirm('Eintrag löschen?'))return;const r=await fetch('/api/newsletter-delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id})});const d=await r.json();if(d.ok){toast('✅ Gelöscht');setTimeout(()=>location.reload(),600);}else toast('❌ Fehler');}
+`:''}
+</script>`;
+            })()
         };
 
         const tabs = [
@@ -2514,7 +2611,7 @@ document.getElementById('search-input').focus();
             {id:'ranking',label:'🏆 Ranking'},
             {id:'tipps',label:'💡 Tipps'},
             {id:'regeln',label:'📋 Regeln'},
-            {id:'shop',label:'🛍️ Shop'},
+            {id:'shop',label:'💎 Shop'},
             {id:'newsletter',label:'📩 Newsletter'},
         ];
 
@@ -2639,6 +2736,17 @@ ${sorted.map(([id,u],i)=>{
                 +'</div>';
         })();
 
+        const myPinnedLink = ladePinnedLink(myUid);
+        const myPinnedHtml = myPinnedLink
+            ? '<div style="padding:12px 16px;border-bottom:2px solid var(--accent);background:linear-gradient(135deg,rgba(255,107,107,.08),rgba(255,165,0,.04));margin-bottom:4px">'
+              +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'
+              +'<span style="font-size:11px;font-weight:700;color:var(--accent);background:rgba(255,107,107,.15);padding:3px 10px;border-radius:20px">📌 Angepinnter Post</span>'
+              +'</div>'
+              +'<a href="'+myPinnedLink+'" target="_blank" style="display:block;font-size:13px;color:var(--blue);word-break:break-all;margin-bottom:8px">'+myPinnedLink.replace('https://www.instagram.com/','ig.com/').slice(0,60)+'...</a>'
+              +'<div style="font-size:12px;color:var(--muted)">💫 Andere können diesen Post engagieren und du bekommst Diamanten</div>'
+              +'</div>'
+            : '';
+
         const linksHtml = Object.values(d.links||{}).filter(l=>l.user_id===Number(myUid)).sort((a,b)=>(b.timestamp||0)-(a.timestamp||0))
             .map(l=>'<div style="padding:12px 16px;border-top:1px solid var(--border2)"><a href="'+l.text+'" target="_blank" style="color:var(--blue);font-size:12px;word-break:break-all">'+l.text+'</a><div style="font-size:11px;color:var(--muted);margin-top:4px">❤️ '+(Array.isArray(l.likes)?l.likes.length:0)+' Likes · '+new Date(l.timestamp).toLocaleDateString('de-DE')+'</div></div>').join('')
             || '<div class="empty"><div class="empty-icon">🔗</div><div class="empty-text">Noch keine Links</div></div>';
@@ -2680,19 +2788,20 @@ ${sorted.map(([id,u],i)=>{
 </div>
 ${profileCard(myUid, myUser, d, true, lang, adminIds, myBannerData, myPicData)}
 <div class="tabs" style="position:sticky;top:57px;z-index:50;background:var(--bg)">
-  <div class="tab active" onclick="showPTab('projekte',this)">🚀 Projekte</div>
-  <div class="tab" onclick="showPTab('posts',this)">📝 Posts</div>
+  <div class="tab active" onclick="showPTab('posts',this)">📝 Posts</div>
   <div class="tab" onclick="showPTab('links',this)">🔗 Links</div>
+  <div class="tab" onclick="showPTab('projekte',this)">🗂️ Projekte</div>
   <div class="tab" onclick="showPTab('about',this)">👤 About</div>
 </div>
-<div id="ptab-posts" style="display:none;padding-bottom:100px">
+<div id="ptab-posts" style="padding-bottom:100px">
   <div style="padding:12px 16px">
     <textarea id="new-post" class="form-input" placeholder="Was denkst du gerade? (max 300 Zeichen)" maxlength="300" rows="3"></textarea>
     <button class="btn btn-primary btn-full" style="margin-top:8px" onclick="submitPost()">📝 Posten</button>
   </div>
+  ${myPinnedHtml}
   ${myPostsHtml}
 </div>
-<div id="ptab-projekte" style="padding-bottom:100px">
+<div id="ptab-projekte" style="display:none;padding-bottom:100px">
   <div class="proj-grid">${projCardsHtml}${addCardHtml}</div>
   ${myProjects.length===0?'<div style="padding:4px 16px 32px;text-align:center;font-size:12px;color:var(--muted)">Zeig der Community, woran du arbeitest</div>':''}
 </div>
@@ -2900,6 +3009,20 @@ async function submitPost(){
         const isFollowing = (d.users[myUid]?.following||[]).map(String).includes(String(uid));
         const theirProjects = u.projects || [];
         const theirPosts = (d.posts||{})[uid] || [];
+        const theirPinnedLink = ladePinnedLink(uid);
+        const theirAlreadyEngaged = (d.pinnedEngages?.[uid]||[]).includes(myUid);
+        const theirPinnedHtml = theirPinnedLink
+            ? '<div style="padding:12px 16px;border-bottom:2px solid var(--accent);background:linear-gradient(135deg,rgba(255,107,107,.08),rgba(255,165,0,.04));margin-bottom:4px">'
+              +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'
+              +'<span style="font-size:11px;font-weight:700;color:var(--accent);background:rgba(255,107,107,.15);padding:3px 10px;border-radius:20px">📌 Wichtigster Post</span>'
+              +(theirAlreadyEngaged
+                ? '<span style="font-size:11px;color:var(--muted)">✅ Engagiert</span>'
+                : '<button id="engage-btn" onclick="engagePost(\''+uid+'\')" style="background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;border:none;border-radius:20px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer">💫 Engagieren</button>')
+              +'</div>'
+              +'<a href="'+theirPinnedLink+'" target="_blank" style="display:block;font-size:13px;color:var(--blue);word-break:break-all;margin-bottom:8px">'+theirPinnedLink.replace('https://www.instagram.com/','ig.com/').slice(0,60)+'...</a>'
+              +'<div style="font-size:12px;color:var(--muted)">Engagiere diesen Post und unterstütze den Creator 💎</div>'
+              +'</div>'
+            : '';
 
         const theirPostsHtml = theirPosts.length
             ? theirPosts.slice().reverse().map(p=>{
@@ -2959,13 +3082,13 @@ async function submitPost(){
 </div>
 ${profileCard(uid, u, d, false, lang, adminIds)}
 <div class="tabs" style="position:sticky;top:57px;z-index:50;background:var(--bg)">
-  <div class="tab active" onclick="showTPTab('projekte',this)">🚀 Projekte</div>
-  <div class="tab" onclick="showTPTab('posts',this)">📝 Posts</div>
+  <div class="tab active" onclick="showTPTab('posts',this)">📝 Posts</div>
   <div class="tab" onclick="showTPTab('links',this)">🔗 Links</div>
+  <div class="tab" onclick="showTPTab('projekte',this)">🗂️ Projekte</div>
   <div class="tab" onclick="showTPTab('about',this)">👤 About</div>
 </div>
-<div id="tptab-posts" style="display:none;padding-bottom:100px">${theirPostsHtml}</div>
-<div id="tptab-projekte" style="padding-bottom:100px">
+<div id="tptab-posts" style="padding-bottom:100px">${theirPinnedHtml}${theirPostsHtml}</div>
+<div id="tptab-projekte" style="display:none;padding-bottom:100px">
   ${theirProjects.length>0?'<div class="proj-grid">'+theirProjCardsHtml+'</div>':'<div class="empty"><div class="empty-icon">🚀</div><div class="empty-text">Noch keine Projekte</div></div>'}
 </div>
 <div id="tptab-links" style="display:none;padding-bottom:100px">${theirLinksHtml}</div>
@@ -3005,6 +3128,15 @@ function openTProjDetail(idx){
   document.getElementById('tproj-detail-modal').classList.add('open');
 }
 function closeTProj(){document.getElementById('tproj-detail-modal').classList.remove('open');}
+async function engagePost(ownerUid){
+  const btn=document.getElementById('engage-btn');
+  if(btn){btn.disabled=true;btn.textContent='⏳...';}
+  const r=await fetch('/api/engage-pinned-post',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ownerUid})});
+  const d=await r.json();
+  if(d.ok){toast('💎 Post engagiert! Creator bekommt einen Diamanten!');if(btn){btn.textContent='✅ Engagiert';btn.style.background='var(--bg4)';btn.style.color='var(--muted)';}}
+  else if(d.alreadyDone){toast('Du hast diesen Post bereits engagiert');if(btn)btn.textContent='✅ Engagiert';}
+  else{toast('❌ Fehler');if(btn){btn.disabled=false;btn.textContent='💫 Engagieren';}}
+}
 async function toggleFollow(uid,btn){
   const isFollowing=btn.textContent.trim()==='Gefolgt';
   btn.textContent=isFollowing?'Folgen':'Gefolgt';
