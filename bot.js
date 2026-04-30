@@ -1164,6 +1164,8 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
     }
 
     if (path === '/api/messages-count') {
+        if (!session) return json({count:0});
+        const myUid = String(session.uid);
         const botData = await fetchBot('/data');
         if (!botData) return json({count:0});
         // Count unread DMs
