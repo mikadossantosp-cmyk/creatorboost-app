@@ -2330,7 +2330,7 @@ p{line-height:1.65;color:var(--muted)}
         const { threadId, timestamp, msgId } = body;
         if (!threadId || !timestamp) return json({error:'Ungültig'}, 400);
         const result = await postBot('/delete-thread-msg-api', { threadId, timestamp: Number(timestamp), msgId, uid: myUid });
-        return json({ok: !!result});
+        return json({ok: result?.ok === true, error: result?.error || null});
     }
 
     if (path === '/api/delete-dm' && req.method === 'POST') {
