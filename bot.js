@@ -713,6 +713,7 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
       : u.instagram
       ? `<img src="https://unavatar.io/instagram/${u.instagram}" class="profile-avatar" style="${getRingBoxShadow(u)}" onerror="this.style.display='none'" alt="">`
       : `<div class="profile-avatar" style="display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:700;background:${grad};color:#fff${getRingBoxShadow(u)}">${(u.name||'?').slice(0,2).toUpperCase()}</div>`}
+    ${![...sessions.values()].some(s=>String(s.uid)===String(uid))?`<div style="position:absolute;bottom:6px;right:6px;background:rgba(15,15,15,.92);border:1.5px solid #555;border-radius:20px;padding:2px 7px;font-size:10px;color:#888;z-index:2;font-weight:600;white-space:nowrap">Kein Web</div>`:''}
   </div>
 </div>
 <div class="profile-info">
@@ -2909,6 +2910,8 @@ document.getElementById('search-input').focus();
         const medals = ['🥇','🥈','🥉'];
         const myRank = adminIds.includes(Number(myUid)) ? 0 : sorted.findIndex(([id])=>id===myUid)+1;
 
+        const webUserUids = new Set([...sessions.values()].map(s => String(s.uid)));
+
         // Top 8 creators for Allgemein tab
         const topCreators = sorted.slice(0,8).map(([id,u],i)=>{
             const grad = badgeGradient(u.role);
@@ -2927,6 +2930,7 @@ document.getElementById('search-input').focus();
   <div class="creator-card-avatar" style="background:${grad}${getRingBoxShadow(u)}">
     <span style="position:absolute;z-index:0;font-size:16px;font-weight:800">${(u.name||'?').slice(0,1)}</span>
     ${picFile?`<img src="/appbild/${id}/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1" alt="">`:insta?`<img src="https://unavatar.io/instagram/${insta}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1" onerror="this.style.display='none'" alt="">`:''}
+    ${!webUserUids.has(id)?`<div style="position:absolute;bottom:1px;right:1px;width:15px;height:15px;border-radius:50%;background:rgba(15,15,15,.95);border:1.5px solid #555;display:flex;align-items:center;justify-content:center;font-size:7px;color:#888;z-index:3;font-weight:700">T</div>`:''}
   </div>
   <div class="creator-card-info">
     <div class="creator-card-name" style="margin-top:4px">${u.spitzname||u.name||'User'}</div>
@@ -2947,6 +2951,7 @@ document.getElementById('search-input').focus();
     <div style="position:relative;width:40px;height:40px;border-radius:50%;overflow:hidden;background:${grad};flex-shrink:0;display:flex;align-items:center;justify-content:center${getRingBoxShadow(u)}">
       <span style="color:#fff;font-weight:700;font-size:14px;position:absolute">${(u.name||'?').slice(0,2).toUpperCase()}</span>
       ${ladeBild(id,'profilepic')?`<img src="/appbild/${id}/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">`:insta?`<img src="https://unavatar.io/instagram/${insta}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">`:''}
+      ${!webUserUids.has(id)?`<div style="position:absolute;bottom:0;right:0;width:13px;height:13px;border-radius:50%;background:rgba(15,15,15,.95);border:1.5px solid #555;display:flex;align-items:center;justify-content:center;font-size:6px;color:#888;z-index:3;font-weight:700">T</div>`:''}
     </div>
     <div class="rank-info">
       <div class="rank-name">${u.spitzname||u.name||'User'}${isMe?' (Du)':''}</div>
@@ -3051,7 +3056,7 @@ document.getElementById('search-input').focus();
                         : `<div style="font-size:13px;font-weight:800;color:#a78bfa">💎 ${item.price}</div>`;
                     return `<div style="background:var(--bg3);border:1px solid var(--border2);border-radius:16px;padding:14px;margin-bottom:10px">
     <div style="display:flex;align-items:center;gap:14px">
-      <div style="width:52px;height:52px;border-radius:50%;background:${item.gradient};flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:24px">${item.emoji}</div>
+      <div style="width:52px;height:52px;border-radius:50%;background:#1e1e1e;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:#fff;box-shadow:${item.shadow}">A</div>
       <div style="flex:1;min-width:0">
         <div style="font-size:14px;font-weight:700;margin-bottom:2px">${item.name}</div>
         <div style="font-size:11px;color:var(--muted);margin-bottom:8px">${item.desc}</div>
