@@ -64,18 +64,18 @@ const RING_ITEMS = [
 ];
 
 const BANNER_ITEMS = [
-    { id: 'banner_sunset',   name: 'Sunset',       emoji: '🌅', price: 1, gradient: 'linear-gradient(135deg,#ff6b6b,#ffa500,#ffd43b)', desc: 'Warmes Sonnenuntergangs-Glühen' },
-    { id: 'banner_ocean',    name: 'Ocean',         emoji: '🌊', price: 1, gradient: 'linear-gradient(135deg,#2193b0,#6dd5ed,#43b8f0)', desc: 'Frisches Meeresblau' },
-    { id: 'banner_forest',   name: 'Forest',        emoji: '🌿', price: 1, gradient: 'linear-gradient(135deg,#56ab2f,#a8e063,#56ab2f)', desc: 'Saftiges Waldgrün' },
-    { id: 'banner_candy',    name: 'Candy',         emoji: '🍭', price: 1, gradient: 'linear-gradient(135deg,#f857a6,#ff5858,#ff9a9e)', desc: 'Süßes Bonbonrosa' },
-    { id: 'banner_sky',      name: 'Sky Blue',      emoji: '☁️', price: 1, gradient: 'linear-gradient(135deg,#56ccf2,#2f80ed)', desc: 'Strahlend himmelsblau' },
-    { id: 'banner_lavender', name: 'Lavender',      emoji: '💜', price: 1, gradient: 'linear-gradient(135deg,#c084fc,#a855f7,#e8b4f8)', desc: 'Zarter Lavendelduft' },
-    { id: 'banner_mint',     name: 'Mint',          emoji: '🌱', price: 1, gradient: 'linear-gradient(135deg,#43e97b,#38f9d7)', desc: 'Erfrischend mintgrün' },
-    { id: 'banner_peach',    name: 'Peach',         emoji: '🍑', price: 1, gradient: 'linear-gradient(135deg,#fcb69f,#ffecd2,#ff9a9e)', desc: 'Sanftes Pfirsichrosa' },
-    { id: 'banner_gold',     name: 'Golden Hour',   emoji: '✨', price: 1, gradient: 'linear-gradient(135deg,#f7971e,#ffd200)', desc: 'Goldene Stunde' },
-    { id: 'banner_coral',    name: 'Coral',         emoji: '🪸', price: 1, gradient: 'linear-gradient(135deg,#f5576c,#f093fb)', desc: 'Lebendiges Korallenrot' },
-    { id: 'banner_aurora',   name: 'Aurora',        emoji: '🌌', price: 1, gradient: 'linear-gradient(135deg,#00c6ff,#0072ff,#a18cd1)', desc: 'Nordlicht-Effekt' },
-    { id: 'banner_rose',     name: 'Rose Gold',     emoji: '🌹', price: 1, gradient: 'linear-gradient(135deg,#f4a261,#e9c46a)', desc: 'Edles Roségold' },
+    { id: 'banner_sunset',   name: 'Sunset',       emoji: '🌅', price: 5,  tier: 'Bronze', gradient: 'linear-gradient(135deg,#ff6b6b,#ffa500,#ffd43b)', desc: 'Warmes Sonnenuntergangs-Glühen' },
+    { id: 'banner_peach',    name: 'Peach',         emoji: '🍑', price: 5,  tier: 'Bronze', gradient: 'linear-gradient(135deg,#fcb69f,#ffecd2,#ff9a9e)', desc: 'Sanftes Pfirsichrosa' },
+    { id: 'banner_mint',     name: 'Mint',          emoji: '🌱', price: 5,  tier: 'Bronze', gradient: 'linear-gradient(135deg,#43e97b,#38f9d7)', desc: 'Erfrischend mintgrün' },
+    { id: 'banner_forest',   name: 'Forest',        emoji: '🌿', price: 5,  tier: 'Bronze', gradient: 'linear-gradient(135deg,#56ab2f,#a8e063,#56ab2f)', desc: 'Saftiges Waldgrün' },
+    { id: 'banner_ocean',    name: 'Ocean',         emoji: '🌊', price: 7,  tier: 'Silber', gradient: 'linear-gradient(135deg,#2193b0,#6dd5ed,#43b8f0)', desc: 'Frisches Meeresblau' },
+    { id: 'banner_sky',      name: 'Sky Blue',      emoji: '☁️', price: 7,  tier: 'Silber', gradient: 'linear-gradient(135deg,#56ccf2,#2f80ed)', desc: 'Strahlend himmelsblau' },
+    { id: 'banner_lavender', name: 'Lavender',      emoji: '💜', price: 7,  tier: 'Silber', gradient: 'linear-gradient(135deg,#c084fc,#a855f7,#e8b4f8)', desc: 'Zarter Lavendelduft' },
+    { id: 'banner_rose',     name: 'Rose Gold',     emoji: '🌹', price: 7,  tier: 'Silber', gradient: 'linear-gradient(135deg,#f4a261,#e9c46a)', desc: 'Edles Roségold' },
+    { id: 'banner_gold',     name: 'Golden Hour',   emoji: '✨', price: 10, tier: 'Gold',   gradient: 'linear-gradient(135deg,#f7971e,#ffd200)', desc: 'Goldene Stunde' },
+    { id: 'banner_candy',    name: 'Candy',         emoji: '🍭', price: 10, tier: 'Gold',   gradient: 'linear-gradient(135deg,#f857a6,#ff5858,#ff9a9e)', desc: 'Süßes Bonbonrosa' },
+    { id: 'banner_coral',    name: 'Coral',         emoji: '🪸', price: 10, tier: 'Gold',   gradient: 'linear-gradient(135deg,#f5576c,#f093fb)', desc: 'Lebendiges Korallenrot' },
+    { id: 'banner_aurora',   name: 'Aurora',        emoji: '🌌', price: 10, tier: 'Gold',   gradient: 'linear-gradient(135deg,#00c6ff,#0072ff,#a18cd1)', desc: 'Nordlicht-Effekt' },
 ];
 
 function getRingBoxShadow(userData) {
@@ -742,7 +742,7 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
     const xp = u.xp||0;
     const nb = xpNext(xp);
     const grad = badgeGradient(u.role);
-    const banner = bannerData || ladeBild(uid, 'banner') || u.banner || 'linear-gradient(135deg,#1a1a2e,#16213e,#0f3460)';
+    const banner = bannerData || ladeBild(uid, 'banner') || u.banner || 'linear-gradient(135deg,#667eea,#764ba2)';
     const bannerIsGrad = !banner.startsWith('data:image') && !banner.startsWith('http');
     const instaUrl = u.instagram ? `https://instagram.com/${u.instagram}` : null;
     const sorted = Object.entries(d.users||{}).filter(([,u])=>u.role!=='⚙️ Admin').sort((a,b)=>(b[1].xp||0)-(a[1].xp||0));
@@ -756,7 +756,7 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
     <div class="profile-banner-overlay"></div>
     ${isOwn?`<a href="/einstellungen" style="position:absolute;bottom:12px;right:12px;background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.2);color:#fff;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;backdrop-filter:blur(8px)">✏️ Bearbeiten</a>`:''}
   </div>
-  <div class="profile-avatar-wrap" style="position:relative">
+  <div class="profile-avatar-wrap">
     ${(picData||ladeBild(uid,'profilepic'))
       ? `<img src="${picData||ladeBild(uid,'profilepic')}" class="profile-avatar" style="${getRingBoxShadow(u)}" onerror="this.style.display='none'" alt="">`
       : u.instagram
@@ -794,14 +794,25 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
 </div>
 <div class="profile-stats">
   ${!isAdmin?'<div class="profile-stat"><div class="profile-stat-val">'+xp+'</div><div class="profile-stat-label">XP</div></div>':''}
-  <div class="profile-stat"><div class="profile-stat-val">${(u.projects||[]).length}</div><div class="profile-stat-label">Projekte</div></div>
   <div class="profile-stat"><div class="profile-stat-val">${u.links||0}</div><div class="profile-stat-label">Links</div></div>
   <div class="profile-stat"><div class="profile-stat-val">${(u.followers||[]).length}</div><div class="profile-stat-label">Follower</div></div>
+  <div class="profile-stat"><div class="profile-stat-val">🔥 ${u.streak||0}</div><div class="profile-stat-label">Streak</div></div>
   <div class="profile-stat"><div class="profile-stat-val">💎 ${u.diamonds||0}</div><div class="profile-stat-label">Diamanten</div></div>
 </div>
 ${nb?`
 <div class="profile-xp-bar"><div class="profile-xp-fill" style="width:${nb.pct}%;background:${grad}"></div></div>
-<div class="profile-xp-info"><span>Noch ${nb.fehlend} XP bis ${nb.ziel}</span><span>${nb.pct}%</span></div>`:'<div style="padding:12px 16px;font-size:12px;color:var(--gold)">👑 Maximales Level erreicht!</div>'}`;
+<div class="profile-xp-info"><span>Noch ${nb.fehlend} XP bis ${nb.ziel}</span><span>${nb.pct}%</span></div>`:'<div style="padding:12px 16px;font-size:12px;color:var(--gold)">👑 Maximales Level erreicht!</div>'}
+${(()=>{
+  const weekKey = (() => { const n=new Date(); const d=n.getDay(); const mon=new Date(n); mon.setDate(n.getDate()-(d===0?6:d-1)); return mon.toISOString().slice(0,10); })();
+  const mySuperlink = Object.values(d.superlinks||{}).find(s=>s.uid===uid&&s.week===weekKey);
+  if (!mySuperlink) return '';
+  return `<div style="margin:0 16px 16px;background:var(--bg3);border:1px solid rgba(167,139,250,.3);border-radius:16px;padding:14px">
+  <div style="font-size:11px;font-weight:700;color:#a78bfa;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">⭐ Superlink dieser Woche</div>
+  <a href="${mySuperlink.url}" target="_blank" style="font-size:13px;color:#4dabf7;word-break:break-all;display:block;margin-bottom:6px;text-decoration:none">${mySuperlink.url.replace('https://www.instagram.com/','ig.com/').slice(0,50)}</a>
+  ${mySuperlink.caption?`<div style="font-size:12px;color:var(--muted)">${mySuperlink.caption.slice(0,80)}</div>`:''}
+  <div style="font-size:11px;color:var(--muted);margin-top:6px">❤️ ${mySuperlink.likes?.length||0} Likes</div>
+</div>`;
+})()}`;
 }
 
 // ================================
@@ -3560,11 +3571,12 @@ document.getElementById('search-input').focus();
 </a>`;
         }).join('');
 
-        // Ranking rows (reused in Ranking tab)
-        const rankingRows = sorted.map(([id,u],i)=>{
+        // Ranking rows helper
+        const makeRankRows = (entries, xpFn) => entries.map(([id,u],i)=>{
             const isMe = id===myUid;
             const insta = u.instagram;
             const grad = badgeGradient(u.role);
+            const xp = xpFn(id,u);
             return `<a href="/profil/${id}" class="rank-item ${isMe?'rank-me':''}">
     <div class="rank-pos">${i<3?medals[i]:`<span class="rank-num">${i+1}</span>`}</div>
     <div style="position:relative;width:40px;height:40px;border-radius:50%;overflow:hidden;background:${grad};flex-shrink:0;display:flex;align-items:center;justify-content:center${getRingBoxShadow(u)}">
@@ -3576,9 +3588,18 @@ document.getElementById('search-input').focus();
       <div class="rank-name">${u.spitzname||u.name||'User'}${isMe?' (Du)':''}</div>
       <div class="rank-badge">${u.role||''}</div>
     </div>
-    <div class="rank-xp">${u.xp||0} XP</div>
+    <div class="rank-xp">${xp} XP</div>
   </a>`;
         }).join('');
+        const rankingRows = makeRankRows(sorted, (_,u)=>u.xp||0);
+        const dailySorted = Object.entries(d.users||{})
+            .filter(([id,u])=>!adminIds.includes(Number(id))&&u.started&&(d.dailyXP[id]||0)>0)
+            .sort((a,b)=>(d.dailyXP[b[0]]||0)-(d.dailyXP[a[0]]||0));
+        const weeklySorted = Object.entries(d.users||{})
+            .filter(([id,u])=>!adminIds.includes(Number(id))&&u.started&&(d.weeklyXP[id]||0)>0)
+            .sort((a,b)=>(d.weeklyXP[b[0]]||0)-(d.weeklyXP[a[0]]||0));
+        const dailyRows = makeRankRows(dailySorted, (id)=>d.dailyXP[id]||0);
+        const weeklyRows = makeRankRows(weeklySorted, (id)=>d.weeklyXP[id]||0);
 
         const tabContent = {
             allgemein: `
@@ -3655,11 +3676,28 @@ document.getElementById('search-input').focus();
   </a>
 </div>`,
             ranking: `
-<div style="padding:12px 16px 4px;display:flex;align-items:center;justify-content:space-between">
+<div style="padding:12px 16px 8px;display:flex;align-items:center;justify-content:space-between">
   <div style="font-size:13px;font-weight:700">⭐ Rangliste</div>
-  <div style="font-size:12px;color:var(--muted)">Dein Rang: ${myRank>0?'#'+myRank:adminIds.includes(Number(myUid))?'👑 Admin':'–'}</div>
+  <div style="font-size:12px;color:var(--muted)">Rang: ${myRank>0?'#'+myRank:adminIds.includes(Number(myUid))?'👑 Admin':'–'}</div>
 </div>
-<div style="padding-bottom:100px">${rankingRows}</div>`,
+<div style="display:flex;gap:6px;padding:0 16px 12px">
+  <button onclick="switchRanking('gesamt',this)" id="rtab-gesamt" style="flex:1;background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;border:none;border-radius:10px;padding:7px;font-size:12px;font-weight:700;cursor:pointer">🏆 Gesamt</button>
+  <button onclick="switchRanking('daily',this)" id="rtab-daily" style="flex:1;background:var(--bg3);color:var(--muted);border:1px solid var(--border2);border-radius:10px;padding:7px;font-size:12px;font-weight:700;cursor:pointer">📅 Daily</button>
+  <button onclick="switchRanking('weekly',this)" id="rtab-weekly" style="flex:1;background:var(--bg3);color:var(--muted);border:1px solid var(--border2);border-radius:10px;padding:7px;font-size:12px;font-weight:700;cursor:pointer">📆 Woche</button>
+</div>
+<div id="rlist-gesamt" style="padding-bottom:100px">${rankingRows||'<div class="empty" style="padding:48px 24px;text-align:center"><div class="empty-icon">🏆</div><div class="empty-text">Noch keine Daten</div></div>'}</div>
+<div id="rlist-daily" style="display:none;padding-bottom:100px">${dailyRows||'<div class="empty" style="padding:48px 24px;text-align:center"><div class="empty-icon">📅</div><div class="empty-text">Heute noch keine XP</div></div>'}</div>
+<div id="rlist-weekly" style="display:none;padding-bottom:100px">${weeklyRows||'<div class="empty" style="padding:48px 24px;text-align:center"><div class="empty-icon">📆</div><div class="empty-text">Diese Woche noch keine XP</div></div>'}</div>
+<script>
+function switchRanking(tab, btn) {
+  ['gesamt','daily','weekly'].forEach(t=>{
+    document.getElementById('rlist-'+t).style.display=t===tab?'block':'none';
+    const b=document.getElementById('rtab-'+t);
+    if(t===tab){b.style.background='linear-gradient(135deg,#a78bfa,#7c3aed)';b.style.color='#fff';b.style.border='none';}
+    else{b.style.background='var(--bg3)';b.style.color='var(--muted)';b.style.border='1px solid var(--border2)';}
+  });
+}
+</script>`,
             tipps: `<div style="padding:48px 24px;text-align:center"><div style="font-size:48px;margin-bottom:16px">💡</div><div style="font-size:17px;font-weight:700;margin-bottom:8px">Tipps & Tricks</div><div style="font-size:13px;color:var(--muted)">🔧 In Bearbeitung — Inhalte folgen bald!</div></div>`,
             regeln: `<div style="padding:48px 24px;text-align:center"><div style="font-size:48px;margin-bottom:16px">📋</div><div style="font-size:17px;font-weight:700;margin-bottom:8px">Community Regeln</div><div style="font-size:13px;color:var(--muted)">🔧 In Bearbeitung — Inhalte folgen bald!</div></div>`,
             shop: (()=>{
@@ -3717,27 +3755,31 @@ document.getElementById('search-input').focus();
     </div>
   </div>
   <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">🖼️ Profilbanner</div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
-    ${BANNER_ITEMS.map(item => {
-        const owned = myInventory.includes(item.id);
-        const canAfford = isShopAdmin || myDiamonds >= item.price;
-        const priceHtml = isShopAdmin
-            ? `<span style="font-size:10px;color:#22c55e;font-weight:800">Gratis</span>`
-            : `<span style="font-size:10px;color:#a78bfa;font-weight:800">💎 ${item.price}</span>`;
-        return `<div style="background:var(--bg3);border:1px solid ${owned?'rgba(34,197,94,.4)':'var(--border2)'};border-radius:14px;overflow:hidden">
-  <div style="height:50px;background:${item.gradient}"></div>
-  <div style="padding:8px 10px">
-    <div style="font-size:12px;font-weight:700;margin-bottom:4px">${item.emoji} ${item.name}</div>
+  ${['Bronze','Silber','Gold'].map(tier => {
+    const tierColor = tier==='Bronze'?'#cd7f32':tier==='Silber'?'#a8a9ad':'#ffd700';
+    const tierItems = BANNER_ITEMS.filter(b=>b.tier===tier);
+    return `<div style="margin-bottom:14px">
+  <div style="font-size:10px;font-weight:700;color:${tierColor};letter-spacing:1px;margin-bottom:8px">${tier==='Bronze'?'🥉':tier==='Silber'?'🥈':'🥇'} ${tier} — 💎 ${tierItems[0].price}</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+    ${tierItems.map(item => {
+      const owned = myInventory.includes(item.id);
+      const canAfford = isShopAdmin || myDiamonds >= item.price;
+      return `<div style="background:var(--bg3);border:1px solid ${owned?'rgba(34,197,94,.4)':'var(--border2)'};border-radius:12px;overflow:hidden">
+  <div style="height:46px;background:${item.gradient}"></div>
+  <div style="padding:7px 10px">
+    <div style="font-size:11px;font-weight:700;margin-bottom:5px">${item.emoji} ${item.name}</div>
     <div style="display:flex;align-items:center;justify-content:space-between;gap:4px">
       ${owned
         ? `<span style="font-size:10px;color:#22c55e;font-weight:700">✓ Besessen</span><button onclick="applyBanner('${item.gradient}')" style="background:rgba(34,197,94,.15);color:#22c55e;border:1px solid rgba(34,197,94,.3);border-radius:8px;padding:3px 10px;font-size:10px;font-weight:700;cursor:pointer">Nutzen</button>`
-        : `${priceHtml}<button onclick="buyItem('${item.id}')" data-item="${item.id}" style="background:${canAfford?'linear-gradient(135deg,#a78bfa,#7c3aed)':'var(--bg4)'};color:${canAfford?'#fff':'var(--muted)'};border:none;border-radius:8px;padding:3px 10px;font-size:10px;font-weight:700;cursor:${canAfford?'pointer':'not-allowed'}" ${canAfford?'':'disabled'}>Kaufen</button>`
+        : `${isShopAdmin?`<span style="font-size:10px;color:#22c55e;font-weight:800">Gratis</span>`:`<span style="font-size:10px;color:${tierColor};font-weight:800">💎 ${item.price}</span>`}<button onclick="buyItem('${item.id}')" data-item="${item.id}" style="background:${canAfford?`linear-gradient(135deg,${tierColor},${tier==='Gold'?'#b8860b':tier==='Silber'?'#6b7280':'#7c3aed'})`:'var(--bg4)'};color:${canAfford?'#fff':'var(--muted)'};border:none;border-radius:8px;padding:3px 10px;font-size:10px;font-weight:700;cursor:${canAfford?'pointer':'not-allowed'}" ${canAfford?'':'disabled'}>Kaufen</button>`
       }
     </div>
   </div>
 </div>`;
     }).join('')}
   </div>
+</div>`;
+  }).join('')}
   <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">🪄 Profilring</div>
   ${ringsHtml}
 </div>
