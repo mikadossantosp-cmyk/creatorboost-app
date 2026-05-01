@@ -1100,6 +1100,33 @@ self.addEventListener('notificationclick',e=>{
         return;
     }
 
+    // ── IMPORT IMAGES FROM NORTHFLANK (manual trigger) ──
+    if (path === '/import-images') {
+        const key = qs.key || '';
+        if (key !== BRIDGE_SECRET) { res.writeHead(403); res.end('Forbidden'); return; }
+        const sourceUrl = qs.from || 'https://site--creatorboost-app--899dydmn7d7v.code.run';
+        try {
+            const resp = await fetch(`${sourceUrl}/export-images?key=${BRIDGE_SECRET}`);
+            if (!resp.ok) {
+                res.writeHead(502);
+                res.end(`Northflank antwortet nicht: HTTP ${resp.status}. Bitte zuerst Northflank starten!`);
+                return;
+            }
+            const images = await resp.json();
+            let count = 0;
+            for (const [filename, content] of Object.entries(images)) {
+                fs.writeFileSync(DATA_DIR + '/' + filename, content, 'utf8');
+                count++;
+            }
+            res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+            res.end(`<h2>✅ ${count} Bilder importiert!</h2><p>Alle Profilbilder und Banner wurden von Northflank geholt.</p>`);
+        } catch(e) {
+            res.writeHead(500);
+            res.end(`Fehler: ${e.message}<br><br>Northflank muss zuerst gestartet werden!`);
+        }
+        return;
+    }
+
     // ── APP BILD ENDPOINT ──
     if (path.startsWith('/appbild/')) {
         const parts = path.split('/');
