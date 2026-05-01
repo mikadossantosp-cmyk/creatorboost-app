@@ -5,7 +5,7 @@ const url = require('url');
 const crypto = require('crypto');
 
 const MAINBOT_URL   = process.env.MAINBOT_URL   || '';
-const BRIDGE_SECRET = process.env.BRIDGE_SECRET || 'geheimer-key-2';
+const BRIDGE_SECRET = process.env.BRIDGE_SECRET || 'geheimer-key';
 const BOT_TOKEN     = process.env.BOT_TOKEN     || '';
 const BOT_USERNAME  = process.env.BOT_USERNAME  || 'CreatorBoostbot';
 const PORT          = process.env.PORT          || 3000;
