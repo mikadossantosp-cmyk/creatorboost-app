@@ -2590,6 +2590,25 @@ async function createThread(){
         const ringMap = {};
         Object.entries(botData.users||{}).forEach(([uid, u]) => { const s=getRingBoxShadow(u); if(s) ringMap[uid]=s; });
         const ringMapJson = JSON.stringify(ringMap);
+        // Server-seitiges HTML-Rendering der Nachrichten (zuverlässig, kein JS nötig)
+        const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        const COLORS_SSR = ['#ff6b6b','#cc5de8','#4dabf7','#ffd43b','#00c851','#ff9f43','#0088cc'];
+        const colSSR = n => COLORS_SSR[((n||'').charCodeAt(0)||0)%COLORS_SSR.length];
+        const initialMsgsHtml = msgs.length
+            ? [...msgs].reverse().map(m => {
+                const c = colSSR(m.name);
+                const ini = ((m.name||'?').replace(/^@/,'')||'?')[0].toUpperCase();
+                const ring = m.uid && ringMap[m.uid] ? ringMap[m.uid] : '';
+                const nameHtml = m.uid
+                    ? `<a href="/profil/${esc(m.uid)}" style="font-size:12px;font-weight:700;color:${c};text-decoration:none">${m.role?esc(m.role)+' ':''}${esc(m.name)}</a>`
+                    : `<span style="font-size:12px;font-weight:700;color:${c}">${m.role?esc(m.role)+' ':''}${esc(m.name)}</span>`;
+                const ts = new Date(m.timestamp);
+                const timeStr = String(ts.getHours()).padStart(2,'0')+':'+String(ts.getMinutes()).padStart(2,'0');
+                const bodyHtml = m.text ? `<div style="font-size:13px;line-height:1.5;margin-top:2px;word-break:break-word">${esc(m.text)}</div>` : '';
+                return `<div style="display:flex;gap:10px;align-items:flex-start"><div style="width:36px;height:36px;border-radius:50%;background:${c};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;flex-shrink:0;position:relative;overflow:hidden${ring}">${ini}${m.uid?`<img src="/appbild/${esc(m.uid)}/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" onerror="this.remove()" loading="lazy">`:''}` +
+                    `</div><div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">${nameHtml}<span style="font-size:10px;color:var(--muted)">${timeStr}</span></div>${bodyHtml}</div></div>`;
+              }).join('')
+            : '<div style="text-align:center;padding:60px 20px;color:var(--muted)"><div style="font-size:40px;margin-bottom:12px">💬</div><div style="font-size:14px">Noch keine Nachrichten.<br>Schreib die erste!</div></div>';
         return html(`
 <div class="topbar" style="position:sticky;top:0;z-index:10;background:linear-gradient(135deg,#0088cc,#006699)">
   <a href="/nachrichten/gruppe" style="padding:8px;color:#fff;display:flex;align-items:center;text-decoration:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20"><polyline points="15 18 9 12 15 6"/></svg></a>
@@ -2599,7 +2618,7 @@ async function createThread(){
   </div>
   <div style="width:36px"></div>
 </div>
-<div id="msgs" style="padding:12px 12px 165px;display:flex;flex-direction:column;gap:10px;overflow-x:hidden;min-width:0;width:100%"></div>
+<div id="msgs" style="padding:12px 12px 165px;display:flex;flex-direction:column;gap:10px;overflow-x:hidden;min-width:0;width:100%">${initialMsgsHtml}</div>
 <div id="reply-bar" style="display:none;position:fixed;bottom:calc(108px + var(--safe-bottom));left:0;right:0;padding:7px 12px;background:rgba(0,136,204,.15);border-top:1px solid rgba(0,136,204,.3);align-items:center;gap:8px;z-index:6;box-sizing:border-box">
   <div style="width:3px;height:32px;background:#0088cc;border-radius:2px;flex-shrink:0"></div>
   <div style="flex:1;min-width:0"><span id="reply-name" style="font-size:11px;font-weight:700;color:#0088cc;display:block"></span><span id="reply-text" style="font-size:11px;color:var(--muted);display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:calc(100vw - 80px)"></span></div>
@@ -2657,7 +2676,10 @@ async function createThread(){
     }).join('');
     if(atBottom)window.scrollTo(0,document.body.scrollHeight);
   }
+  // Initial render already done server-side; set knownHash to avoid blank re-render
   render(${msgsJson});
+  // Scroll to bottom on load
+  window.scrollTo(0,document.body.scrollHeight);
   async function load(){
     try{
       const r=await fetch('/api/thread-messages/'+encodeURIComponent(TID));
