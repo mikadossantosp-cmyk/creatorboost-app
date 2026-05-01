@@ -98,14 +98,28 @@ function verifyTelegramLogin(data) {
     } catch(e) { return false; }
 }
 
+let _dataCache = null;
+let _dataCacheTime = 0;
+const DATA_CACHE_TTL = 4000; // 4 seconds
+
 async function fetchBot(path) {
+    if (path === '/data') {
+        const now = Date.now();
+        if (_dataCache && (now - _dataCacheTime) < DATA_CACHE_TTL) return _dataCache;
+    }
     return new Promise(resolve => {
         const fullUrl = MAINBOT_URL + path;
         const lib = fullUrl.startsWith('https')?https:http;
         const req = lib.get(fullUrl, {headers:{'x-bridge-secret':BRIDGE_SECRET}}, res => {
-            let data=''; res.on('data',c=>data+=c); res.on('end',()=>{try{resolve(JSON.parse(data));}catch(e){resolve(null);}});
+            let data=''; res.on('data',c=>data+=c); res.on('end',()=>{
+                try {
+                    const parsed = JSON.parse(data);
+                    if (path === '/data') { _dataCache = parsed; _dataCacheTime = Date.now(); }
+                    resolve(parsed);
+                } catch(e){resolve(null);}
+            });
         });
-        req.on('error',()=>resolve(null)); req.setTimeout(8000,()=>{req.destroy();resolve(null);});
+        req.on('error',()=>resolve(null)); req.setTimeout(4000,()=>{req.destroy();resolve(null);});
     });
 }
 
