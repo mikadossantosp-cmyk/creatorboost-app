@@ -767,298 +767,253 @@ function onboardingHTML(isPreview = false) {
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>CreatorX — Willkommen</title>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800;900&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'DM Sans',sans-serif;background:#0a0a0a;color:#fff;min-height:100vh;max-width:480px;margin:0 auto;overflow:hidden}
-.ob-wrap{position:fixed;inset:0;max-width:480px;margin:0 auto;display:flex;flex-direction:column;background:#0a0a0a}
-.ob-top{padding:14px 20px 0;display:flex;justify-content:space-between;align-items:center;flex-shrink:0}
-.ob-logo{font-family:'Syne',sans-serif;font-size:17px;font-weight:800;background:linear-gradient(135deg,#ff6b6b,#ffa500);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.ob-skip-top{font-size:13px;color:rgba(255,255,255,.35);cursor:pointer;padding:4px 8px}
+html,body{height:100%;overflow:hidden}
+body{font-family:'DM Sans',sans-serif;background:#080808;color:#fff;max-width:480px;margin:0 auto}
+.ob{position:fixed;inset:0;max-width:480px;margin:0 auto;display:flex;flex-direction:column;overflow:hidden;background:#080808}
+.ob-top{position:absolute;top:0;left:0;right:0;z-index:100;padding:env(safe-area-inset-top,14px) 20px 0;padding-top:calc(env(safe-area-inset-top,0px) + 14px);display:flex;justify-content:space-between;align-items:center}
+.ob-logo{font-family:'Syne',sans-serif;font-size:18px;font-weight:900;background:linear-gradient(135deg,#ff6b6b,#ffa500);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.ob-skip{font-size:13px;color:rgba(255,255,255,.45);cursor:pointer;padding:6px 14px;border-radius:20px;background:rgba(255,255,255,.07);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.08)}
 .ob-slides{flex:1;position:relative;overflow:hidden}
-.ob-slide{position:absolute;inset:0;display:flex;flex-direction:column;padding:12px 20px 0;opacity:0;transform:translateX(100%);transition:all .45s cubic-bezier(.4,0,.2,1)}
-.ob-slide.active{opacity:1;transform:translateX(0)}
-.ob-slide.prev{opacity:0;transform:translateX(-100%)}
-.ob-label{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;color:var(--c,#ff6b6b)}
-.ob-title{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;line-height:1.2;margin-bottom:4px}
-.ob-sub{font-size:12px;color:rgba(255,255,255,.5);margin-bottom:10px;line-height:1.5}
-.ob-phone{flex:1;background:#111;border-radius:18px 18px 0 0;border:1.5px solid rgba(255,255,255,.08);border-bottom:none;overflow:hidden;position:relative}
-/* callout bubble */
-.tip{position:absolute;z-index:10;background:#ff6b6b;color:#fff;font-size:10px;font-weight:700;padding:5px 10px;border-radius:10px;white-space:nowrap;box-shadow:0 4px 16px rgba(255,107,107,.4)}
-.tip::after{content:'';position:absolute;border:5px solid transparent}
-.tip.down::after{border-top-color:#ff6b6b;top:100%;left:50%;transform:translateX(-50%)}
-.tip.up::after{border-bottom-color:#ff6b6b;bottom:100%;left:50%;transform:translateX(-50%)}
-.tip.left::after{border-right-color:#ff6b6b;right:100%;top:50%;transform:translateY(-50%)}
-.tip.right::after{border-left-color:#ff6b6b;left:100%;top:50%;transform:translateY(-50%)}
-/* highlight ring */
-.hl{position:absolute;z-index:9;border:2px solid #ff6b6b;border-radius:50%;animation:pulse-ring 1.5s ease infinite}
-.hl-rect{position:absolute;z-index:9;border:2px solid #ff6b6b;border-radius:8px;animation:pulse-ring 1.5s ease infinite}
-@keyframes pulse-ring{0%,100%{box-shadow:0 0 0 0 rgba(255,107,107,.5)}50%{box-shadow:0 0 0 6px rgba(255,107,107,0)}}
-/* mock ui */
-.mock-topbar{background:#000;border-bottom:1px solid rgba(255,255,255,.06);padding:9px 12px;display:flex;align-items:center;justify-content:space-between}
-.mock-logo{font-family:'Syne',sans-serif;font-size:15px;font-weight:800;background:linear-gradient(135deg,#ff6b6b,#ffa500);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.mock-nav{display:flex;justify-content:space-around;padding:8px 0;background:#000;border-top:1px solid rgba(255,255,255,.06)}
-.mock-nav-item{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:8px;color:rgba(255,255,255,.35);padding:2px 10px}
-.mock-nav-item.act{color:#fff}
-.mock-nav-dot{width:3px;height:3px;border-radius:50%;background:#ff6b6b}
-.mock-post{background:#1a1a1a;border-radius:10px;overflow:hidden;border:1px solid rgba(255,255,255,.06);margin:6px 10px}
-.mock-post-hd{display:flex;align-items:center;gap:7px;padding:7px 9px}
-.mock-av{width:28px;height:28px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff}
-.mock-banner{height:60px;position:relative;overflow:hidden;background:linear-gradient(135deg,#1a1a2e,#16213e)}
-.mock-xp-bar{height:3px;background:#222;border-radius:2px;margin:4px 10px;overflow:hidden}
-.mock-xp-fill{height:100%;background:linear-gradient(135deg,#ff6b6b,#ffa500);border-radius:2px}
-.mock-rank-item{display:flex;align-items:center;gap:7px;padding:7px 10px;border-bottom:1px solid rgba(255,255,255,.05)}
-.mock-tab-row{display:flex;border-bottom:1px solid rgba(255,255,255,.08)}
-.mock-tab{flex:1;text-align:center;padding:8px 0;font-size:10px;font-weight:600;color:rgba(255,255,255,.35)}
-.mock-tab.act{color:#fff;border-bottom:2px solid #ff6b6b}
-.mock-input-area{background:#1a1a1a;border-radius:10px;padding:8px 10px;margin:8px 10px;font-size:10px;color:rgba(255,255,255,.3);border:1px solid rgba(255,255,255,.08)}
-.mock-btn{background:linear-gradient(135deg,#ff6b6b,#ffa500);color:#fff;border-radius:10px;padding:8px;margin:0 10px;font-size:11px;font-weight:700;text-align:center}
-.ob-bottom{padding:10px 20px calc(16px + env(safe-area-inset-bottom,0px));flex-shrink:0}
-.ob-dots{display:flex;justify-content:center;gap:6px;margin-bottom:10px}
-.ob-dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.2);transition:all .3s;cursor:pointer}
-.ob-dot.active{width:20px;border-radius:3px;background:#ff6b6b}
-.ob-next{width:100%;padding:14px;border-radius:14px;border:none;color:#fff;font-size:15px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;background:linear-gradient(135deg,#ff6b6b,#ffa500);transition:opacity .2s}
-${isPreview ? '.ob-badge{position:fixed;top:8px;left:50%;transform:translateX(-50%);background:rgba(255,107,107,.95);color:#fff;padding:5px 14px;border-radius:20px;font-size:11px;font-weight:700;z-index:999;white-space:nowrap;backdrop-filter:blur(8px)}' : ''}
+.ob-slide{position:absolute;inset:0;display:flex;flex-direction:column;opacity:0;transform:translateX(40px);transition:opacity .38s ease,transform .38s cubic-bezier(.4,0,.2,1);pointer-events:none}
+.ob-slide.active{opacity:1;transform:translateX(0);pointer-events:auto}
+.ob-slide.exit{opacity:0;transform:translateX(-40px);pointer-events:none}
+.ob-hero{height:56%;position:relative;overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.ob-hbg{position:absolute;inset:0}
+.ob-hbg::after{content:'';position:absolute;bottom:0;left:0;right:0;height:55%;background:linear-gradient(to bottom,transparent,#080808)}
+.ob-content{flex:1;padding:14px 24px 0;display:flex;flex-direction:column;overflow:hidden}
+.ob-step{font-size:10px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;margin-bottom:8px;opacity:.45}
+.ob-title{font-family:'Syne',sans-serif;font-size:26px;font-weight:900;line-height:1.12;margin-bottom:9px}
+.ob-desc{font-size:13px;color:rgba(255,255,255,.5);line-height:1.55;margin-bottom:12px}
+.ob-facts{display:flex;flex-direction:column;gap:7px;flex:1;min-height:0;overflow:hidden}
+.ob-fact{display:flex;align-items:flex-start;gap:10px;padding:10px 13px;background:rgba(255,255,255,.04);border-radius:13px;border:1px solid rgba(255,255,255,.07)}
+.ob-fact-i{font-size:16px;flex-shrink:0;line-height:1.1}
+.ob-fact-t{font-size:12px;color:rgba(255,255,255,.6);line-height:1.45}
+.ob-fact-t b{color:#fff;font-weight:600}
+.ob-bottom{padding:12px 22px calc(20px + env(safe-area-inset-bottom,0px));flex-shrink:0}
+.ob-prog{display:flex;gap:5px;justify-content:center;margin-bottom:13px;align-items:center}
+.ob-pd{height:4px;border-radius:3px;background:rgba(255,255,255,.14);transition:flex .35s ease,background .35s;cursor:pointer;flex:1}
+.ob-pd.cur{flex:2.5;background:var(--a,#ff6b6b)}
+.ob-pd.done{background:var(--a,#ff6b6b);opacity:.55}
+.ob-btn{width:100%;padding:17px;border-radius:16px;border:none;color:#fff;font-size:16px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;letter-spacing:.2px;transition:transform .12s,opacity .15s;-webkit-tap-highlight-color:transparent}
+.ob-btn:active{transform:scale(.97);opacity:.88}
+.glass{background:rgba(255,255,255,.05);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.09);border-radius:16px}
+${isPreview?'.ob-pb{position:fixed;top:10px;left:50%;transform:translateX(-50%);background:rgba(255,107,107,.92);color:#fff;padding:6px 18px;border-radius:20px;font-size:11px;font-weight:700;z-index:9999;backdrop-filter:blur(10px);white-space:nowrap;box-shadow:0 4px 20px rgba(255,107,107,.4)}':''}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
+@keyframes float2{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+@keyframes xp-bounce{0%,100%{transform:scale(1)}50%{transform:scale(1.12)}}
+@keyframes glow{0%,100%{box-shadow:0 0 30px rgba(255,107,107,.35),0 0 60px rgba(255,107,107,.12)}50%{box-shadow:0 0 50px rgba(255,107,107,.55),0 0 90px rgba(255,107,107,.22)}}
 </style></head><body>
-${isPreview ? '<div class="ob-badge">👀 Admin Vorschau &nbsp;·&nbsp; <a href="/einstellungen" style="color:rgba(255,255,255,.8)">← Zurück</a></div>' : ''}
-<div class="ob-wrap">
+${isPreview?'<div class="ob-pb">👀 Admin Vorschau &nbsp;·&nbsp; <a href="/einstellungen" style="color:rgba(255,255,255,.75)">← Zurück</a></div>':''}
+<div class="ob">
   <div class="ob-top">
     <div class="ob-logo">CreatorX</div>
-    <span class="ob-skip-top" onclick="finish()">Überspringen</span>
+    <span class="ob-skip" onclick="finish()">Überspringen</span>
   </div>
   <div class="ob-slides" id="slides">
 
-    <!-- SLIDE 1: WILLKOMMEN -->
+    <!-- ══════════════════════════════════════ SLIDE 1: WELCOME ══ -->
     <div class="ob-slide active" id="slide-0">
-      <div class="ob-label" style="--c:#ff6b6b">Schritt 1 von 5</div>
-      <div class="ob-title">Willkommen bei CreatorX! 🚀</div>
-      <div class="ob-sub">Deine Community für Instagram Creators. Hier helft ihr euch gegenseitig zu wachsen — durch echtes Engagement.</div>
-      <div class="ob-phone" style="position:relative">
-        <div class="mock-topbar">
-          <div class="mock-logo">CreatorX</div>
-          <div style="font-size:14px">⚡</div>
+      <div class="ob-hero">
+        <div class="ob-hbg" style="background:radial-gradient(ellipse at 50% 25%,rgba(255,107,107,.28) 0%,transparent 68%),linear-gradient(180deg,#150505 0%,#080808 100%)"></div>
+        <div style="position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;margin-top:50px">
+          <div style="width:96px;height:96px;border-radius:28px;background:linear-gradient(135deg,#ff6b6b,#ffa500);display:flex;align-items:center;justify-content:center;font-size:48px;animation:float 3s ease-in-out infinite,glow 3s ease-in-out infinite">🚀</div>
+          <div style="position:absolute;top:2px;right:-50px;background:rgba(255,215,0,.12);border:1px solid rgba(255,215,0,.3);border-radius:12px;padding:6px 10px;font-size:11px;font-weight:700;color:#ffd43b;animation:float2 3.6s ease-in-out infinite .4s;white-space:nowrap">+5 XP ⚡</div>
+          <div style="position:absolute;top:48px;left:-58px;background:rgba(255,107,107,.12);border:1px solid rgba(255,107,107,.3);border-radius:12px;padding:6px 10px;font-size:11px;font-weight:700;color:#ff6b6b;animation:float2 4.1s ease-in-out infinite 1.1s;white-space:nowrap">❤️ Liken</div>
+          <div style="position:absolute;bottom:-14px;right:-44px;background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.3);border-radius:12px;padding:6px 10px;font-size:11px;font-weight:700;color:#a78bfa;animation:float2 3.9s ease-in-out infinite .2s;white-space:nowrap">⭐ FE</div>
+          <div style="position:absolute;width:180px;height:180px;border-radius:50%;border:1px solid rgba(255,107,107,.12);top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none"></div>
+          <div style="position:absolute;width:260px;height:260px;border-radius:50%;border:1px solid rgba(255,107,107,.06);top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none"></div>
         </div>
-        <div style="display:flex;gap:8px;padding:8px 10px;overflow:hidden">
-          ${['MK','SL','JB','KR'].map((n,i)=>`<div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex-shrink:0">
-            <div style="width:40px;height:40px;border-radius:50%;padding:2px;background:linear-gradient(135deg,#f9a825,#e91e63)">
-              <div style="width:100%;height:100%;border-radius:50%;background:#${['ff6b6b','4dabf7','cc5de8','ffd43b'][i]}44;border:2px solid #111;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700">${n}</div>
-            </div>
-            <div style="font-size:8px;color:rgba(255,255,255,.4)">${n}</div>
-          </div>`).join('')}
-        </div>
-        <div class="mock-post">
-          <div class="mock-post-hd">
-            <div class="mock-av" style="background:linear-gradient(135deg,#ff6b6b,#ffa500)">MK</div>
-            <div style="flex:1"><div style="font-size:10px;font-weight:600">Max K.</div><div style="font-size:8px;color:rgba(255,255,255,.4)">⬆️ Aufsteiger · @maxk.ig</div></div>
-            <div style="font-size:8px;color:rgba(255,255,255,.3)">14:32</div>
-          </div>
-          <div class="mock-banner">
-            <div style="position:absolute;inset:0;background:linear-gradient(to bottom,transparent,rgba(0,0,0,.7))"></div>
-            <div style="position:absolute;bottom:5px;left:8px;font-size:10px;font-weight:700;color:#fff">Neues Reel 🎬</div>
-            <div style="position:absolute;bottom:5px;right:8px;font-size:9px;color:#ff6b6b;font-weight:700">Öffnen →</div>
-          </div>
-          <div style="display:flex;align-items:center;gap:6px;padding:5px 9px">
-            <div style="font-size:11px;color:#ff6b6b;display:flex;align-items:center;gap:3px">❤️ <span style="font-size:10px">12 Likes · +5 XP je Like</span></div>
-          </div>
-        </div>
-        <div style="margin:6px 10px;background:#1a1a1a;border-radius:10px;padding:8px 10px;border:1px solid rgba(255,107,107,.2)">
-          <div style="font-size:9px;font-weight:700;color:#ff6b6b;margin-bottom:4px">📋 Wie es funktioniert</div>
-          <div style="font-size:8px;color:rgba(255,255,255,.6);line-height:1.6">❤️ Andere liken → <b style="color:#fff">+5 XP</b><br>🔗 Deinen Link posten → Community sieht ihn<br>⭐ Superlink = gegenseitiges Engagement</div>
-        </div>
-        <div class="hl" style="width:26px;height:26px;top:152px;left:17px"></div>
-        <div class="tip up" style="bottom:82px;left:8px">❤️ Liken = XP!</div>
-        <div style="position:absolute;bottom:0;left:0;right:0">
-          <div class="mock-nav">
-            <div class="mock-nav-item act">🏠<div class="mock-nav-dot"></div></div>
-            <div class="mock-nav-item">📊</div>
-            <div class="mock-nav-item" style="position:relative"><div style="width:28px;height:28px;background:linear-gradient(135deg,#ff6b6b,#ffa500);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;font-weight:700">+</div></div>
-            <div class="mock-nav-item">💬</div>
-            <div class="mock-nav-item">👤</div>
-          </div>
+      </div>
+      <div class="ob-content">
+        <div class="ob-step" style="color:#ff6b6b">01 / 05</div>
+        <div class="ob-title">Willkommen bei<br><span style="background:linear-gradient(135deg,#ff6b6b,#ffa500);-webkit-background-clip:text;-webkit-text-fill-color:transparent">CreatorX!</span></div>
+        <div class="ob-desc">Deine Community für Instagram Creators — wo echtes Engagement zählt und jeder wächst.</div>
+        <div class="ob-facts">
+          <div class="ob-fact"><span class="ob-fact-i">❤️</span><div class="ob-fact-t"><b>XP-System</b> — Likes geben & erhalten bringt XP und Diamanten</div></div>
+          <div class="ob-fact"><span class="ob-fact-i">🔗</span><div class="ob-fact-t"><b>Links teilen</b> — dein Reel täglich in der Community sichtbar machen</div></div>
+          <div class="ob-fact"><span class="ob-fact-i">⭐</span><div class="ob-fact-t"><b>Full Engagement</b> — wöchentliches Pflicht-Engagement für alle</div></div>
         </div>
       </div>
     </div>
 
-    <!-- SLIDE 2: LINK POSTEN -->
+    <!-- ══════════════════════════════════════ SLIDE 2: FEED ══ -->
     <div class="ob-slide" id="slide-1">
-      <div class="ob-label" style="--c:#ffa500">Schritt 2 von 5</div>
-      <div class="ob-title">Deinen Link teilen 🔗</div>
-      <div class="ob-sub">Tippe auf den <b style="color:#ff6b6b">roten + Button</b> in der Mitte unten. Füge deinen Instagram Reel Link ein — 1 Link pro Tag kostenlos.</div>
-      <div class="ob-phone" style="position:relative">
-        <div class="mock-topbar">
-          <div class="mock-logo">CreatorX</div>
-          <div style="font-size:14px">⚡</div>
-        </div>
-        <div style="margin:8px 10px;background:#1a1a1a;border-radius:14px;border:1px solid rgba(255,255,255,.1);overflow:hidden">
-          <div style="padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.06);font-size:11px;font-weight:700;display:flex;align-items:center;gap:6px">
-            <div style="font-size:16px">📸</div> Reel Link teilen
-          </div>
-          <div style="padding:8px 10px">
-            <div class="mock-input-area" style="margin:0 0 6px">🔗 https://www.instagram.com/reel/...</div>
-            <div class="mock-input-area" style="margin:0 0 8px">Beschreibung (optional)...</div>
-            <div style="display:flex;align-items:center;gap:6px;padding:7px 8px;background:#111;border-radius:8px;margin-bottom:8px;border:1px solid rgba(255,255,255,.06)">
-              <div style="width:14px;height:14px;border:1.5px solid #ff6b6b;border-radius:3px"></div>
-              <div style="font-size:9px;font-weight:600">📌 Als angepinnten Post setzen</div>
+      <div class="ob-hero">
+        <div class="ob-hbg" style="background:radial-gradient(ellipse at 50% 20%,rgba(255,165,0,.22) 0%,transparent 65%),linear-gradient(180deg,#110900 0%,#080808 100%)"></div>
+        <div style="position:relative;z-index:2;width:100%;padding:54px 22px 0">
+          <div class="glass" style="border-radius:20px;overflow:hidden">
+            <div style="display:flex;align-items:center;gap:11px;padding:11px 14px 9px">
+              <div style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#ff6b6b,#ffa500);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;box-shadow:0 0 12px rgba(255,107,107,.35)">MK</div>
+              <div style="flex:1"><div style="font-size:13px;font-weight:700">Max K.</div><div style="font-size:10px;color:rgba(255,255,255,.4)">⬆️ Aufsteiger · vor 14 Min.</div></div>
+              <div style="font-size:10px;font-weight:700;color:#ff6b6b;background:rgba(255,107,107,.1);padding:4px 9px;border-radius:8px;border:1px solid rgba(255,107,107,.2)">Reel</div>
             </div>
-            <div class="mock-btn">📸 Link teilen</div>
+            <div style="height:86px;background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);position:relative;overflow:hidden">
+              <div style="position:absolute;inset:0;background:linear-gradient(120deg,rgba(255,107,107,.08),transparent 60%)"></div>
+              <div style="position:absolute;bottom:9px;left:13px;font-size:13px;font-weight:700">Neues Reel 🎬</div>
+              <div style="position:absolute;bottom:9px;right:11px;background:#ff6b6b;border-radius:8px;padding:4px 10px;font-size:10px;font-weight:700">Öffnen →</div>
+            </div>
+            <div style="padding:10px 14px;display:flex;align-items:center;justify-content:space-between">
+              <div style="display:flex;align-items:center;gap:16px">
+                <div style="display:flex;align-items:center;gap:6px">
+                  <div style="width:32px;height:32px;border-radius:50%;background:rgba(255,107,107,.14);border:1.5px solid rgba(255,107,107,.4);display:flex;align-items:center;justify-content:center;font-size:15px">❤️</div>
+                  <span style="font-size:13px;font-weight:700">12</span>
+                </div>
+                <div style="font-size:11px;color:rgba(255,255,255,.3)">👁️ 48 · 💬 3</div>
+              </div>
+              <div style="background:linear-gradient(135deg,#ffd43b,#ffa500);border-radius:10px;padding:6px 11px;font-size:12px;font-weight:800;color:#000;animation:xp-bounce 2.2s ease infinite">+5 XP ⚡</div>
+            </div>
+          </div>
+          <div class="glass" style="border-radius:20px;overflow:hidden;margin-top:9px;opacity:.45;transform:scale(.96);transform-origin:top center">
+            <div style="display:flex;align-items:center;gap:11px;padding:11px 14px">
+              <div style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#4dabf7,#cc5de8);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700">SL</div>
+              <div><div style="font-size:13px;font-weight:700">Sara L.</div><div style="font-size:10px;color:rgba(255,255,255,.4)">🏅 Erfahrene</div></div>
+            </div>
           </div>
         </div>
-        <div style="margin:4px 10px;padding:7px 10px;background:rgba(255,107,107,.08);border-radius:10px;border:1px solid rgba(255,107,107,.15)">
-          <div style="font-size:9px;color:rgba(255,255,255,.7);line-height:1.6">✅ <b style="color:#fff">1 Link/Tag</b> kostenlos<br>💎 Extra-Link im Shop kaufen<br>📌 Angepinnte Posts bleiben oben im Profil</div>
-        </div>
-        <!-- Highlight: + button -->
-        <div class="hl" style="width:34px;height:34px;bottom:8px;left:50%;transform:translateX(-50%)"></div>
-        <div class="tip up" style="bottom:50px;left:50%;transform:translateX(-50%)">+ Hier tippen!</div>
-        <div style="position:absolute;bottom:0;left:0;right:0">
-          <div class="mock-nav">
-            <div class="mock-nav-item">🏠</div>
-            <div class="mock-nav-item">📊</div>
-            <div class="mock-nav-item"><div style="width:28px;height:28px;background:linear-gradient(135deg,#ff6b6b,#ffa500);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;font-weight:700">+</div></div>
-            <div class="mock-nav-item">💬</div>
-            <div class="mock-nav-item">👤</div>
-          </div>
+      </div>
+      <div class="ob-content">
+        <div class="ob-step" style="color:#ffa500">02 / 05</div>
+        <div class="ob-title">Feed &amp; <span style="background:linear-gradient(135deg,#ffa500,#ffd43b);-webkit-background-clip:text;-webkit-text-fill-color:transparent">Liken</span></div>
+        <div class="ob-desc">Im Feed siehst du die Reels deiner Community. Jeder Like hilft dem Creator — und bringt dir XP.</div>
+        <div class="ob-facts">
+          <div class="ob-fact"><span class="ob-fact-i">⚡</span><div class="ob-fact-t">Anderen liken → <b>+5 XP</b> für dich · je aktiver, desto höher dein Rang</div></div>
+          <div class="ob-fact"><span class="ob-fact-i">📌</span><div class="ob-fact-t">Angepinnte Posts bleiben <b>dauerhaft ganz oben</b> im Profil</div></div>
         </div>
       </div>
     </div>
 
-    <!-- SLIDE 3: FULL ENGAGEMENT / SUPERLINKS -->
+    <!-- ══════════════════════════════════════ SLIDE 3: LINK TEILEN ══ -->
     <div class="ob-slide" id="slide-2">
-      <div class="ob-label" style="--c:#a78bfa">Schritt 3 von 5</div>
-      <div class="ob-title">Full Engagement ⭐</div>
-      <div class="ob-sub">Das Herzstück der Community! Jede Woche (Mo–Sa) postet jeder einen <b style="color:#fff">Superlink</b>. Alle müssen alle anderen <b style="color:#fff">liken, kommentieren, teilen & speichern</b>.</div>
-      <div class="ob-phone" style="position:relative">
-        <div style="background:linear-gradient(135deg,#1a1a2e,#2d1b69);padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.08)">
-          <div style="font-size:11px;font-weight:800;color:#a78bfa;margin-bottom:2px">⭐ Full Engagement Thread</div>
-          <div style="font-size:8px;color:rgba(255,255,255,.5)">Diese Woche · 3 Superlinks</div>
+      <div class="ob-hero">
+        <div class="ob-hbg" style="background:radial-gradient(ellipse at 50% 28%,rgba(124,58,237,.28) 0%,transparent 65%),linear-gradient(180deg,#0a0818 0%,#080808 100%)"></div>
+        <div style="position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;padding-top:48px;gap:18px">
+          <div style="width:82px;height:82px;border-radius:50%;background:linear-gradient(135deg,#ff6b6b,#ffa500);display:flex;align-items:center;justify-content:center;font-size:42px;font-weight:300;color:#fff;box-shadow:0 0 0 14px rgba(255,107,107,.13),0 0 0 28px rgba(255,107,107,.06),0 10px 40px rgba(255,107,107,.45);animation:float 3s ease-in-out infinite">+</div>
+          <div class="glass" style="width:calc(100% - 44px);border-radius:18px">
+            <div style="padding:11px 14px 9px;font-size:12px;font-weight:700;color:rgba(255,255,255,.6);border-bottom:1px solid rgba(255,255,255,.07);display:flex;align-items:center;gap:7px"><span>🔗</span> Link teilen</div>
+            <div style="padding:9px 13px 12px">
+              <div style="background:rgba(255,255,255,.05);border-radius:10px;padding:9px 11px;font-size:11px;color:rgba(255,255,255,.3);margin-bottom:6px;border:1px solid rgba(255,255,255,.07)">instagram.com/reel/...</div>
+              <div style="background:linear-gradient(135deg,#ff6b6b,#ffa500);border-radius:10px;padding:10px;font-size:12px;font-weight:700;text-align:center">📸 Jetzt teilen</div>
+            </div>
+          </div>
         </div>
-        ${[['SK','Sara K.','🏅','instagram.com/reel/abc123',8],['JB','Jonas B.','⬆️','instagram.com/reel/def456',5],['MR','Max R.','📘','instagram.com/reel/ghi789',3]].map(([init,name,role,url,likes])=>`
-        <div style="background:#1a1a1a;border-radius:10px;margin:5px 8px;border:1px solid rgba(167,139,250,.2);overflow:hidden">
-          <div style="padding:7px 9px;display:flex;align-items:center;gap:6px">
-            <div style="width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#a78bfa,#7c3aed);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700">${init}</div>
-            <div style="flex:1;min-width:0"><div style="font-size:10px;font-weight:600">${name}</div><div style="font-size:8px;color:rgba(255,255,255,.4)">${role} Creator</div></div>
-          </div>
-          <div style="padding:4px 9px 5px;font-size:9px;color:#a78bfa">🔗 ${url}</div>
-          <div style="padding:4px 9px 7px;display:flex;align-items:center;gap:8px">
-            <div style="font-size:9px;color:#ff6b6b">❤️ ${likes} Likes</div>
-            <div style="font-size:9px;color:rgba(255,255,255,.3)">Pflicht: liken · komm. · teilen · speichern</div>
-          </div>
-        </div>`).join('')}
-        <div style="margin:4px 10px 6px;padding:7px 10px;background:rgba(239,68,68,.08);border-radius:8px;border:1px solid rgba(239,68,68,.2)">
-          <div style="font-size:9px;color:rgba(255,255,255,.7)">⚠️ Nicht engagiert bis Sonntag = <b style="color:#ef4444">−50 XP</b></div>
+      </div>
+      <div class="ob-content">
+        <div class="ob-step" style="color:#a78bfa">03 / 05</div>
+        <div class="ob-title">Dein Link in<br><span style="background:linear-gradient(135deg,#a78bfa,#7c3aed);-webkit-background-clip:text;-webkit-text-fill-color:transparent">die Community</span></div>
+        <div class="ob-desc">Tippe auf den <b style="color:#ff6b6b">roten + Button</b> unten in der Mitte, füge deinen Reel Link ein — fertig.</div>
+        <div class="ob-facts">
+          <div class="ob-fact"><span class="ob-fact-i">🆓</span><div class="ob-fact-t"><b>1 Link pro Tag</b> kostenlos — täglich um Mitternacht erneuert</div></div>
+          <div class="ob-fact"><span class="ob-fact-i">💎</span><div class="ob-fact-t">Extra-Links im <b>Shop</b> mit Diamanten kaufen</div></div>
         </div>
       </div>
     </div>
 
-    <!-- SLIDE 4: RANKING & XP & DIAMANTEN -->
+    <!-- ══════════════════════════════════════ SLIDE 4: FULL ENGAGEMENT ══ -->
     <div class="ob-slide" id="slide-3">
-      <div class="ob-label" style="--c:#ffd43b">Schritt 4 von 5</div>
-      <div class="ob-title">XP, Badges & Diamanten 💎</div>
-      <div class="ob-sub">Je aktiver du bist, desto mehr XP und Diamanten sammelst du. Mit Diamanten kaufst du dir Profilrahmen und Extra-Links im <b style="color:#fff">💎 Shop</b>.</div>
-      <div class="ob-phone" style="position:relative">
-        <div class="mock-topbar">
-          <div style="font-size:13px;font-weight:700">Rangliste</div>
-          <div style="font-size:10px;color:rgba(255,255,255,.4)">Dein Rang: #4</div>
-        </div>
-        <div style="padding:4px 0">
-          ${[['🥇','Alex K.','👑 Elite','4.200 XP','💎 120'],['🥈','Maria L.','🏅 Erfahrene','2.850 XP','💎 85'],['🥉','Jonas B.','🏅 Erfahrene','1.940 XP','💎 52'],['4','Du','⬆️ Aufsteiger','890 XP','💎 18']].map(([pos,name,role,xp,dia],idx)=>`
-          <div class="mock-rank-item" style="${idx===3?'background:rgba(255,107,107,.08);border-left:2px solid #ff6b6b':''}">
-            <div style="width:22px;font-size:13px;flex-shrink:0;text-align:center">${pos}</div>
-            <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#${idx===3?'ff6b6b,#ffa500':'4dabf7,#cc5de8'});display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0">${name.split(' ').map(w=>w[0]).join('')}</div>
-            <div style="flex:1;min-width:0"><div style="font-size:10px;font-weight:${idx===3?'700':'600'}">${idx===3?'Du':name}</div><div style="font-size:8px;color:rgba(255,255,255,.4)">${role}</div></div>
-            <div style="text-align:right"><div style="font-size:10px;font-weight:700;color:#ffd43b">${xp}</div><div style="font-size:8px;color:#a78bfa">${dia}</div></div>
+      <div class="ob-hero">
+        <div class="ob-hbg" style="background:radial-gradient(ellipse at 50% 20%,rgba(245,158,11,.25) 0%,transparent 65%),linear-gradient(180deg,#110800 0%,#080808 100%)"></div>
+        <div style="position:relative;z-index:2;width:100%;padding:52px 22px 0">
+          <div style="background:linear-gradient(135deg,rgba(245,158,11,.18),rgba(239,68,68,.1));border:1px solid rgba(245,158,11,.28);border-radius:18px;padding:12px 16px;margin-bottom:10px;display:flex;align-items:center;gap:12px">
+            <div style="font-size:26px;animation:float 3s ease-in-out infinite">⭐</div>
+            <div style="flex:1">
+              <div style="font-size:14px;font-weight:800;color:#fbbf24">Full Engagement Thread</div>
+              <div style="font-size:10px;color:rgba(255,255,255,.4);margin-top:2px">Mo–Sa · Pflicht für alle Mitglieder</div>
+            </div>
+            <div style="font-size:10px;font-weight:700;color:#fbbf24;background:rgba(251,191,36,.12);padding:5px 9px;border-radius:8px;border:1px solid rgba(251,191,36,.22);flex-shrink:0">Aktiv</div>
+          </div>
+          ${[['MK','Max K.','instagram.com/reel/abc...',7],['SL','Sara L.','instagram.com/reel/def...',5]].map(([i,n,u,l])=>`
+          <div class="glass" style="border-radius:14px;padding:10px 13px;margin-bottom:8px;display:flex;align-items:center;gap:11px">
+            <div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#a78bfa,#7c3aed);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">${i}</div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:12px;font-weight:700">${n}</div>
+              <div style="font-size:10px;color:rgba(255,255,255,.35);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">🔗 ${u}</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:4px;font-size:12px;font-weight:700;color:#ff6b6b;flex-shrink:0">❤️ ${l}</div>
           </div>`).join('')}
         </div>
-        <div style="margin:4px 10px;display:flex;gap:6px">
-          ${[['🆕 New','0 XP'],['📘 Anfänger','50 XP'],['⬆️ Aufsteiger','500 XP'],['🏅 Erfahrene','1000 XP'],['👑 Elite','5000 XP']].map(([b,x])=>`<div style="flex:1;background:#1a1a1a;border-radius:8px;padding:5px 3px;text-align:center;border:1px solid rgba(255,255,255,.06)"><div style="font-size:9px">${b}</div><div style="font-size:7px;color:rgba(255,255,255,.3);margin-top:1px">${x}</div></div>`).join('')}
-        </div>
-        <div class="hl" style="width:26px;height:26px;bottom:14px;left:calc(25% - 13px)"></div>
-        <div class="tip up" style="bottom:48px;left:14px">📊 Rangliste</div>
-        <div style="position:absolute;bottom:0;left:0;right:0">
-          <div class="mock-nav">
-            <div class="mock-nav-item">🏠</div>
-            <div class="mock-nav-item act">📊<div class="mock-nav-dot"></div></div>
-            <div class="mock-nav-item"><div style="width:28px;height:28px;background:linear-gradient(135deg,#ff6b6b,#ffa500);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;font-weight:700">+</div></div>
-            <div class="mock-nav-item">💬</div>
-            <div class="mock-nav-item">👤</div>
-          </div>
+      </div>
+      <div class="ob-content">
+        <div class="ob-step" style="color:#fbbf24">04 / 05</div>
+        <div class="ob-title">Full <span style="background:linear-gradient(135deg,#fbbf24,#f59e0b);-webkit-background-clip:text;-webkit-text-fill-color:transparent">Engagement</span></div>
+        <div class="ob-desc">Jeden Monat postet jeder einen <b style="color:#fff">Superlink</b>. Alle liken, kommentieren, teilen &amp; speichern gegenseitig.</div>
+        <div class="ob-facts">
+          <div class="ob-fact"><span class="ob-fact-i">✅</span><div class="ob-fact-t">Mitmachen = <b>XP + Diamanten</b> für alle Beteiligten</div></div>
+          <div class="ob-fact" style="border-color:rgba(239,68,68,.2);background:rgba(239,68,68,.06)"><span class="ob-fact-i">⚠️</span><div class="ob-fact-t">Nicht dabei bis Sonntag = <b style="color:#ef4444">−50 XP</b> Strafe</div></div>
         </div>
       </div>
     </div>
 
-    <!-- SLIDE 5: PROFIL & SHOP & NACHRICHTEN -->
+    <!-- ══════════════════════════════════════ SLIDE 5: RANKING & START ══ -->
     <div class="ob-slide" id="slide-4">
-      <div class="ob-label" style="--c:#00c851">Schritt 5 von 5</div>
-      <div class="ob-title">Profil, Shop & Nachrichten 🎨</div>
-      <div class="ob-sub">Vervollständige dein Profil mit Foto, Bio & Instagram. Im <b style="color:#fff">💎 Shop</b> kaufst du Profilrahmen. Über <b style="color:#fff">💬</b> erreichst du alle direkt.</div>
-      <div class="ob-phone" style="position:relative">
-        <div class="mock-topbar">
-          <div style="font-size:13px;font-weight:700">Profil</div>
-          <div style="display:flex;gap:5px;align-items:center">
-            <div style="width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;font-size:11px">🔍</div>
-            <div style="width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;font-size:11px">🔔</div>
-            <div style="width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;font-size:11px">⚙️</div>
+      <div class="ob-hero">
+        <div class="ob-hbg" style="background:radial-gradient(ellipse at 50% 20%,rgba(0,200,81,.22) 0%,transparent 65%),linear-gradient(180deg,#001008 0%,#080808 100%)"></div>
+        <div style="position:relative;z-index:2;width:100%;padding:52px 22px 0">
+          <div style="display:flex;align-items:flex-end;justify-content:center;gap:10px;margin-bottom:14px">
+            ${[[2,'🥈','SK','2.850','#9ca3af,#6b7280',58],[1,'🥇','AK','4.200','#fbbf24,#f59e0b',80],[3,'🥉','JB','1.940','#cd7f32,#a0522d',42]].map(([pos,medal,init,xp,grad,h])=>`
+            <div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex:1">
+              <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,.45)">${xp} XP</div>
+              <div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#${grad});display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:#fff;box-shadow:0 4px 20px rgba(${pos===1?'251,191,36':'160,160,160'},.35)">${init}</div>
+              <div style="width:100%;height:${h}px;background:linear-gradient(180deg,rgba(${pos===1?'251,191,36':'160,160,160'},.2),rgba(${pos===1?'251,191,36':'160,160,160'},.06));border-radius:9px 9px 0 0;border-top:2px solid rgba(${pos===1?'251,191,36':'160,160,160'},.4);display:flex;align-items:flex-start;justify-content:center;padding-top:8px;font-size:20px">${medal}</div>
+            </div>`).join('')}
+          </div>
+          <div class="glass" style="border-radius:13px;padding:11px 15px;display:flex;align-items:center;gap:11px;border-color:rgba(255,107,107,.2)">
+            <div style="font-size:12px;font-weight:700;color:rgba(255,255,255,.35);width:20px">#4</div>
+            <div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#ff6b6b,#ffa500);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;box-shadow:0 0 14px rgba(255,107,107,.4)">Du</div>
+            <div style="flex:1"><div style="font-size:12px;font-weight:700">Dein Name</div><div style="font-size:10px;color:rgba(255,255,255,.35)">⬆️ Aufsteiger</div></div>
+            <div style="text-align:right"><div style="font-size:12px;font-weight:700;color:#ffd43b">890 XP</div><div style="font-size:10px;color:#a78bfa">💎 18</div></div>
           </div>
         </div>
-        <div class="hl" style="width:30px;height:30px;top:5px;right:4px"></div>
-        <div class="tip down" style="top:40px;right:4px">⚙️ Einstellungen</div>
-        <div style="height:45px;background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);position:relative">
-          <div style="position:absolute;inset:0;background:linear-gradient(to bottom,transparent,#111)"></div>
-          <div style="position:absolute;bottom:-12px;left:10px;width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#ff6b6b,#ffa500);border:2px solid #111;box-shadow:0 0 0 3px #FFD700,0 0 0 6px #B8860B;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700">Du</div>
-        </div>
-        <div style="padding:16px 10px 4px;display:flex;justify-content:space-between;align-items:flex-end">
-          <div><div style="font-size:11px;font-weight:700">Dein Name</div><div style="font-size:8px;color:rgba(255,255,255,.4)">@dein.instagram · ⬆️ Aufsteiger</div></div>
-          <div style="font-size:9px;color:#a78bfa;font-weight:700">💎 18 Dia</div>
-        </div>
-        <div style="display:flex;gap:5px;padding:5px 10px">
-          ${[['Profilbild','📸'],['Bio','✏️'],['Banner','🎨'],['Ring Shop','💎']].map(([l,e])=>`<div style="flex:1;background:#${l==='Ring Shop'?'2d1b69':'1a1a1a'};border-radius:8px;padding:5px 3px;text-align:center;border:1px solid rgba(${l==='Ring Shop'?'167,139,250':'255,255,255'},.15)"><div style="font-size:13px">${e}</div><div style="font-size:7px;color:rgba(255,255,255,.5);margin-top:1px">${l}</div></div>`).join('')}
-        </div>
-        <div style="margin:4px 10px;display:flex;gap:5px">
-          <div style="flex:1;background:#1a1a1a;border-radius:8px;padding:6px 8px;border:1px solid rgba(0,136,204,.2)">
-            <div style="font-size:9px;font-weight:700;color:#0088cc;margin-bottom:2px">💬 Nachrichten</div>
-            <div style="font-size:8px;color:rgba(255,255,255,.5)">DMs & Gruppen-Threads</div>
-          </div>
-          <div style="flex:1;background:#1a1a1a;border-radius:8px;padding:6px 8px;border:1px solid rgba(255,215,0,.2)">
-            <div style="font-size:9px;font-weight:700;color:#ffd43b;margin-bottom:2px">🔔 Benachrichtigungen</div>
-            <div style="font-size:8px;color:rgba(255,255,255,.5)">Likes, Follows & mehr</div>
-          </div>
-        </div>
-        <div style="position:absolute;bottom:0;left:0;right:0">
-          <div class="mock-nav">
-            <div class="mock-nav-item">🏠</div>
-            <div class="mock-nav-item">📊</div>
-            <div class="mock-nav-item"><div style="width:28px;height:28px;background:linear-gradient(135deg,#ff6b6b,#ffa500);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;font-weight:700">+</div></div>
-            <div class="mock-nav-item">💬</div>
-            <div class="mock-nav-item act">👤<div class="mock-nav-dot"></div></div>
-          </div>
+      </div>
+      <div class="ob-content">
+        <div class="ob-step" style="color:#00c851">05 / 05</div>
+        <div class="ob-title">XP, Diamanten<br>&amp; <span style="background:linear-gradient(135deg,#00c851,#4dabf7);-webkit-background-clip:text;-webkit-text-fill-color:transparent">Badges</span></div>
+        <div class="ob-desc">Sammle XP durch Aktivität. Mit Diamanten kaufst du Profilrahmen und Extra-Links im <b style="color:#fff">💎 Shop</b>.</div>
+        <div class="ob-facts">
+          <div class="ob-fact"><span class="ob-fact-i">🏅</span><div class="ob-fact-t">5 Stufen: 🆕 New → 📘 Anfänger → ⬆️ Aufsteiger → 🏅 Erfahrene → <b>👑 Elite</b></div></div>
+          <div class="ob-fact"><span class="ob-fact-i">🎨</span><div class="ob-fact-t">Profilrahmen mit <b>Glow-Effekt</b> im Shop freischalten</div></div>
         </div>
       </div>
     </div>
 
   </div>
+
   <div class="ob-bottom">
-    <div class="ob-dots" id="dots">
-      ${[0,1,2,3,4].map(i=>`<div class="ob-dot ${i===0?'active':''}" onclick="goTo(${i})"></div>`).join('')}
+    <div class="ob-prog" id="prog">
+      ${[0,1,2,3,4].map(i=>`<div class="ob-pd${i===0?' cur':''}" id="pd-${i}" onclick="goTo(${i})" style="--a:#ff6b6b"></div>`).join('')}
     </div>
-    <button class="ob-next" id="next-btn" onclick="next()">Weiter →</button>
+    <button class="ob-btn" id="ob-btn" onclick="next()" style="background:linear-gradient(135deg,#ff6b6b,#ffa500)">Weiter →</button>
   </div>
 </div>
 <script>
-const TOTAL = 5;
-const COLORS = ['linear-gradient(135deg,#ff6b6b,#ffa500)','linear-gradient(135deg,#ffa500,#ffd43b)','linear-gradient(135deg,#ffd43b,#ffa500)','linear-gradient(135deg,#4dabf7,#00c851)','linear-gradient(135deg,#00c851,#4dabf7)'];
-let cur = 0;
-function goTo(i) {
-    const prev = cur; cur = i;
-    document.querySelectorAll('.ob-slide').forEach((s,j)=>{s.classList.remove('active','prev');if(j===cur)s.classList.add('active');else if(j===prev)s.classList.add('prev');});
-    document.querySelectorAll('.ob-dot').forEach((d,j)=>d.classList.toggle('active',j===cur));
-    const nb=document.getElementById('next-btn');
-    nb.style.background=COLORS[cur];
-    nb.textContent = cur===TOTAL-1 ? '🚀 Los gehts!' : 'Weiter →';
+const TOTAL=5;
+const GRADS=['linear-gradient(135deg,#ff6b6b,#ffa500)','linear-gradient(135deg,#ffa500,#ffd43b)','linear-gradient(135deg,#a78bfa,#7c3aed)','linear-gradient(135deg,#fbbf24,#f59e0b)','linear-gradient(135deg,#00c851,#4dabf7)'];
+const ACCENTS=['#ff6b6b','#ffa500','#a78bfa','#fbbf24','#00c851'];
+let cur=0,busy=false;
+function goTo(i){
+  if(busy||i===cur)return;busy=true;
+  const prev=cur;cur=i;
+  const sl=document.querySelectorAll('.ob-slide');
+  sl[prev].classList.remove('active');sl[prev].classList.add('exit');
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{sl[cur].classList.add('active');}));
+  setTimeout(()=>{sl[prev].classList.remove('exit');},400);
+  document.querySelectorAll('.ob-pd').forEach((d,j)=>{
+    d.classList.toggle('cur',j===cur);d.classList.toggle('done',j<cur);
+    d.style.setProperty('--a',ACCENTS[cur]);
+  });
+  const btn=document.getElementById('ob-btn');
+  btn.style.background=GRADS[cur];
+  btn.textContent=cur===TOTAL-1?'🚀 Los geht\'s!':'Weiter →';
+  setTimeout(()=>busy=false,420);
 }
 function next(){cur<TOTAL-1?goTo(cur+1):finish();}
 function finish(){${finishAction}}
 let sx=0;
-document.getElementById('slides').addEventListener('touchstart',e=>sx=e.touches[0].clientX,{passive:true});
-document.getElementById('slides').addEventListener('touchend',e=>{const d=sx-e.changedTouches[0].clientX;if(Math.abs(d)>50){if(d>0&&cur<TOTAL-1)next();else if(d<0&&cur>0)goTo(cur-1);}},{passive:true});
+const sr=document.getElementById('slides');
+sr.addEventListener('touchstart',e=>{sx=e.touches[0].clientX},{passive:true});
+sr.addEventListener('touchend',e=>{const dx=sx-e.changedTouches[0].clientX;if(Math.abs(dx)>44){dx>0&&cur<TOTAL-1?next():dx<0&&cur>0?goTo(cur-1):null;}},{passive:true});
 </script></body></html>`;
 }
 
