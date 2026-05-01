@@ -116,24 +116,34 @@ async function fetchBotRaw(path) {
     });
 }
 
-async function fetchBot(path) {
-    if (path === '/data') {
-        const now = Date.now();
-        if (_dataCache && (now - _dataCacheTime) < DATA_CACHE_TTL) return _dataCache;
-        const parsed = await fetchBotRaw('/data');
-        if (parsed) { _dataCache = parsed; _dataCacheTime = Date.now(); }
-        return parsed;
-    }
-    return fetchBotRaw(path);
-}
-
-// Background refresh every 20 seconds
-setInterval(async () => {
+let _dataRefreshing = false;
+async function refreshDataCache() {
+    if (_dataRefreshing) return;
+    _dataRefreshing = true;
     try {
         const parsed = await fetchBotRaw('/data');
         if (parsed) { _dataCache = parsed; _dataCacheTime = Date.now(); }
     } catch(e) {}
-}, 20000);
+    _dataRefreshing = false;
+}
+
+async function fetchBot(path) {
+    if (path === '/data') {
+        const now = Date.now();
+        if (_dataCache) {
+            // Return cached data immediately (stale-while-revalidate)
+            if ((now - _dataCacheTime) > DATA_CACHE_TTL) refreshDataCache();
+            return _dataCache;
+        }
+        // No cache yet - must wait
+        await refreshDataCache();
+        return _dataCache;
+    }
+    return fetchBotRaw(path);
+}
+
+// Pre-warm cache on startup and refresh every 20 seconds
+setInterval(refreshDataCache, 20000);
 
 async function postBot(path, body) {
     return new Promise(resolve => {
@@ -4055,6 +4065,8 @@ const EXPORT_PATH = '/export-images';
 
 server.listen(PORT, async () => {
     console.log('🌐 CreatorX App läuft auf Port ' + PORT);
+    // Pre-warm data cache
+    refreshDataCache().then(() => console.log('✅ Data cache vorgewärmt'));
     // Auto-migrate images from Northflank if none exist locally
     const NORTHFLANK_URL = 'https://site--creatorboost-app--899dydmn7d7v.code.run';
     try {
