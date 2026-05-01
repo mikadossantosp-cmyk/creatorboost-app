@@ -1604,11 +1604,10 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
 
     if (path === '/newsletter') {
         const fs2 = require('fs');
-        const nlPath = require('path').join(__dirname, '../creatorx-newsletter.html');
-        const nlPath2 = '/home/user/creatorx-newsletter.html';
+        const nlPath = require('path').join(__dirname, 'newsletter.html');
         let html = '';
-        try { html = fs2.readFileSync(nlPath2, 'utf8'); } catch(e) { try { html = fs2.readFileSync(nlPath, 'utf8'); } catch(e2) { return res.end('Nicht gefunden'); } }
-        res.writeHead(200, {'Content-Type':'text/html; charset=utf-8','Content-Disposition':'inline; filename="creatorx-guide.html"'});
+        try { html = fs2.readFileSync(nlPath, 'utf8'); } catch(e) { return res.end('Nicht gefunden'); }
+        res.writeHead(200, {'Content-Type':'text/html; charset=utf-8'});
         return res.end(html);
     }
 

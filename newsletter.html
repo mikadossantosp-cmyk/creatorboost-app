@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CreatorX — So funktioniert die Community</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800;900&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --red:#ff6b6b;--orange:#ffa500;--purple:#a78bfa;--gold:#ffd43b;
+  --green:#00c851;--blue:#4dabf7;--bg:#080808;--bg2:#111;--bg3:#1a1a1a;
+  --border:rgba(255,255,255,.08);--muted:rgba(255,255,255,.45);
+}
+html{scroll-behavior:smooth}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:#fff;max-width:680px;margin:0 auto;overflow-x:hidden}
+
+/* ── TYPOGRAPHY ── */
+h1,h2,h3{font-family:'Syne',sans-serif;font-weight:900;line-height:1.1}
+p{line-height:1.65;color:var(--muted)}
+
+/* ── UTILS ── */
+.grad-text{background:linear-gradient(135deg,var(--red),var(--orange));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.grad-text-purple{background:linear-gradient(135deg,var(--purple),#7c3aed);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.grad-text-gold{background:linear-gradient(135deg,var(--gold),var(--orange));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.grad-text-green{background:linear-gradient(135deg,var(--green),var(--blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase}
+.divider{height:1px;background:var(--border);margin:0}
+
+/* ── HERO ── */
+.hero{padding:72px 32px 64px;text-align:center;position:relative;overflow:hidden}
+.hero-glow{position:absolute;width:500px;height:500px;border-radius:50%;background:radial-gradient(circle,rgba(255,107,107,.18) 0%,transparent 70%);top:50%;left:50%;transform:translate(-50%,-60%);pointer-events:none}
+.hero-logo{display:inline-flex;align-items:center;gap:10px;margin-bottom:32px}
+.hero-logo-icon{width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,var(--red),var(--orange));display:flex;align-items:center;justify-content:center;font-size:26px;box-shadow:0 0 30px rgba(255,107,107,.4)}
+.hero-logo-text{font-family:'Syne',sans-serif;font-size:26px;font-weight:900}
+.hero h1{font-size:clamp(36px,8vw,58px);margin-bottom:18px;line-height:1.05}
+.hero p{font-size:16px;max-width:440px;margin:0 auto 32px;color:rgba(255,255,255,.55);line-height:1.6}
+.hero-badges{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.hero-badge{padding:8px 16px;border-radius:30px;font-size:13px;font-weight:600;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);color:rgba(255,255,255,.7)}
+
+/* ── SECTION ── */
+.section{padding:60px 32px}
+.section-label{font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;margin-bottom:12px;opacity:.5}
+.section h2{font-size:clamp(26px,5vw,38px);margin-bottom:14px}
+.section p.lead{font-size:15px;color:rgba(255,255,255,.55);margin-bottom:32px;max-width:500px}
+
+/* ── FEATURE GRID ── */
+.feat-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.feat-card{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:20px;position:relative;overflow:hidden}
+.feat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--card-grad,linear-gradient(135deg,var(--red),var(--orange)))}
+.feat-icon{font-size:28px;margin-bottom:10px}
+.feat-card h3{font-size:14px;font-weight:700;margin-bottom:6px}
+.feat-card p{font-size:12px;color:var(--muted);line-height:1.5}
+
+/* ── XP BAR ── */
+.xp-demo{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:20px;margin-bottom:12px}
+.xp-bar-wrap{background:rgba(255,255,255,.07);border-radius:6px;height:8px;overflow:hidden;margin:10px 0 6px}
+.xp-bar-fill{height:100%;border-radius:6px;background:linear-gradient(135deg,var(--red),var(--orange))}
+
+/* ── STEP CARDS ── */
+.steps{display:flex;flex-direction:column;gap:12px}
+.step{display:flex;gap:16px;background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:20px;align-items:flex-start}
+.step-num{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--red),var(--orange));display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;flex-shrink:0;box-shadow:0 0 16px rgba(255,107,107,.35)}
+.step-body h3{font-size:14px;font-weight:700;margin-bottom:4px}
+.step-body p{font-size:12px;color:var(--muted);line-height:1.5}
+
+/* ── RANK TABLE ── */
+.rank-table{border-radius:16px;overflow:hidden;border:1px solid var(--border)}
+.rank-row{display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--border)}
+.rank-row:last-child{border-bottom:none}
+.rank-row.highlight{background:rgba(255,107,107,.07);border-left:3px solid var(--red)}
+.rank-pos{font-size:18px;width:28px;flex-shrink:0;text-align:center}
+.rank-av{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
+.rank-info{flex:1;min-width:0}
+.rank-name{font-size:13px;font-weight:700}
+.rank-role{font-size:11px;color:var(--muted)}
+.rank-xp{text-align:right}
+.rank-xp-val{font-size:13px;font-weight:700;color:var(--gold)}
+.rank-dia{font-size:11px;color:var(--purple)}
+
+/* ── BADGE ROW ── */
+.badge-row{display:flex;gap:8px;margin-top:20px;flex-wrap:wrap}
+.badge-item{flex:1;min-width:90px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:12px 10px;text-align:center}
+.badge-emoji{font-size:22px;display:block;margin-bottom:5px}
+.badge-name{font-size:10px;font-weight:700;color:rgba(255,255,255,.7)}
+.badge-xp{font-size:9px;color:var(--muted);margin-top:2px}
+
+/* ── FE CARD ── */
+.fe-header{background:linear-gradient(135deg,rgba(245,158,11,.2),rgba(167,139,250,.1));border:1px solid rgba(245,158,11,.3);border-radius:16px;padding:20px 22px;margin-bottom:12px;display:flex;align-items:center;gap:14px}
+.fe-icon{font-size:36px;flex-shrink:0}
+.fe-title{font-size:16px;font-weight:800;color:#fbbf24}
+.fe-sub{font-size:12px;color:var(--muted);margin-top:3px}
+.fe-item{background:var(--bg2);border:1px solid rgba(167,139,250,.2);border-radius:12px;padding:12px 16px;margin-bottom:8px;display:flex;align-items:center;gap:12px}
+.fe-av{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--purple),#7c3aed);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
+.fe-item-name{font-size:13px;font-weight:700}
+.fe-item-url{font-size:11px;color:var(--purple)}
+.fe-likes{font-size:12px;font-weight:700;color:var(--red);margin-left:auto;flex-shrink:0}
+.fe-warn{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:10px;padding:12px 16px;font-size:12px;color:rgba(239,68,68,.9);display:flex;align-items:center;gap:8px}
+
+/* ── DIAMOND WAYS ── */
+.dia-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.dia-card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px;display:flex;align-items:flex-start;gap:12px}
+.dia-icon{font-size:22px;flex-shrink:0;line-height:1}
+.dia-text h4{font-size:13px;font-weight:700;margin-bottom:3px}
+.dia-text p{font-size:11px;color:var(--muted)}
+.dia-badge{font-size:11px;font-weight:800;color:var(--purple);margin-top:5px}
+
+/* ── SHOP PREVIEW ── */
+.shop-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.shop-item{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px 12px;text-align:center}
+.shop-ring{width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#ff6b6b,#ffa500);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;margin:0 auto 10px}
+.shop-ring-name{font-size:11px;font-weight:700;margin-bottom:4px}
+.shop-ring-price{font-size:11px;color:var(--purple);font-weight:700}
+
+/* ── PROFILE PREVIEW ── */
+.profile-box{background:var(--bg2);border:1px solid var(--border);border-radius:16px;overflow:hidden}
+.profile-banner{height:80px;background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);position:relative}
+.profile-av-wrap{position:absolute;bottom:-18px;left:18px;width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,var(--red),var(--orange));border:2.5px solid var(--bg2);box-shadow:0 0 0 3px #FFD700,0 0 0 6px #B8860B;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800}
+.profile-info{padding:26px 18px 18px;display:flex;justify-content:space-between;align-items:flex-end}
+.profile-name{font-size:15px;font-weight:800}
+.profile-handle{font-size:11px;color:var(--muted);margin-top:2px}
+.profile-stats{display:flex;gap:16px;padding:0 18px 18px}
+.profile-stat{text-align:center}
+.profile-stat-val{font-size:16px;font-weight:800}
+.profile-stat-lbl{font-size:10px;color:var(--muted);margin-top:1px}
+
+/* ── CTA ── */
+.cta{padding:64px 32px;text-align:center;position:relative;overflow:hidden;background:linear-gradient(135deg,rgba(255,107,107,.08),rgba(255,165,0,.05))}
+.cta-glow{position:absolute;width:400px;height:400px;border-radius:50%;background:radial-gradient(circle,rgba(255,107,107,.12) 0%,transparent 70%);top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none}
+.cta h2{font-size:clamp(28px,6vw,42px);margin-bottom:14px}
+.cta p{font-size:15px;color:var(--muted);max-width:380px;margin:0 auto 32px}
+.cta-btn{display:inline-flex;align-items:center;gap:8px;padding:16px 36px;border-radius:16px;background:linear-gradient(135deg,var(--red),var(--orange));color:#fff;font-size:16px;font-weight:700;text-decoration:none;font-family:'DM Sans',sans-serif;box-shadow:0 8px 32px rgba(255,107,107,.35)}
+
+/* ── ACCENT SECTIONS ── */
+.section-red{background:linear-gradient(180deg,rgba(255,107,107,.05) 0%,transparent 100%)}
+.section-purple{background:linear-gradient(180deg,rgba(167,139,250,.05) 0%,transparent 100%)}
+.section-gold{background:linear-gradient(180deg,rgba(255,211,59,.05) 0%,transparent 100%)}
+.section-green{background:linear-gradient(180deg,rgba(0,200,81,.05) 0%,transparent 100%)}
+
+/* ── FOOTER ── */
+.footer{padding:40px 32px;text-align:center;border-top:1px solid var(--border)}
+.footer p{font-size:12px;color:rgba(255,255,255,.2)}
+
+/* ── RESPONSIVE ── */
+@media(max-width:480px){
+  .feat-grid{grid-template-columns:1fr}
+  .dia-grid{grid-template-columns:1fr}
+  .shop-grid{grid-template-columns:1fr 1fr}
+  .hero{padding:52px 20px 44px}
+  .section{padding:48px 20px}
+  .hero h1{font-size:32px}
+}
+</style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════ HERO ════ -->
+<div class="hero">
+  <div class="hero-glow"></div>
+  <div class="hero-logo">
+    <div class="hero-logo-icon">🚀</div>
+    <div class="hero-logo-text" style="background:linear-gradient(135deg,#ff6b6b,#ffa500);-webkit-background-clip:text;-webkit-text-fill-color:transparent">CreatorX</div>
+  </div>
+  <h1>So funktioniert<br><span class="grad-text">unsere Community</span></h1>
+  <p>Alles was du wissen musst — von XP über Diamanten bis zum Full Engagement. Dein kompletter Guide.</p>
+  <div class="hero-badges">
+    <div class="hero-badge">❤️ XP durch Likes</div>
+    <div class="hero-badge">💎 Diamanten System</div>
+    <div class="hero-badge">⭐ Full Engagement</div>
+    <div class="hero-badge">🏆 Rangliste</div>
+  </div>
+</div>
+<div class="divider"></div>
+
+<!-- ════════════════════════════════════════════ OVERVIEW ════ -->
+<div class="section">
+  <div class="section-label">Das Konzept</div>
+  <h2>Was ist <span class="grad-text">CreatorX?</span></h2>
+  <p class="lead">Eine geschlossene Community für Instagram Creators. Hier unterstützt ihr euch gegenseitig mit echtem Engagement — täglich, systematisch und fair.</p>
+  <div class="feat-grid">
+    <div class="feat-card" style="--card-grad:linear-gradient(135deg,#ff6b6b,#ffa500)">
+      <div class="feat-icon">❤️</div>
+      <h3>Gegenseitiges Liken</h3>
+      <p>Jeder liked die Reels aller anderen. Was du gibst, kommt zurück.</p>
+    </div>
+    <div class="feat-card" style="--card-grad:linear-gradient(135deg,#ffd43b,#ffa500)">
+      <div class="feat-icon">⚡</div>
+      <h3>XP-System</h3>
+      <p>Für jede Aktivität bekommst du XP. XP bestimmt deinen Rang und dein Badge.</p>
+    </div>
+    <div class="feat-card" style="--card-grad:linear-gradient(135deg,#a78bfa,#7c3aed)">
+      <div class="feat-icon">💎</div>
+      <h3>Diamanten</h3>
+      <p>Diamanten verdienst du durch Aktivität. Damit kaufst du Profilrahmen & Extra-Links.</p>
+    </div>
+    <div class="feat-card" style="--card-grad:linear-gradient(135deg,#00c851,#4dabf7)">
+      <div class="feat-icon">⭐</div>
+      <h3>Full Engagement</h3>
+      <p>Einmal im Monat postet jeder einen Superlink. Alle engagieren sich gegenseitig.</p>
+    </div>
+  </div>
+</div>
+<div class="divider"></div>
+
+<!-- ════════════════════════════════════════════ FEED & LIKEN ════ -->
+<div class="section section-red">
+  <div class="section-label">Schritt 1</div>
+  <h2>Feed &amp; <span class="grad-text">Liken</span></h2>
+  <p class="lead">Im Feed siehst du die aktuellen Reels aller Community-Mitglieder. Dein Job: liken, unterstützen, wachsen.</p>
+
+  <!-- XP Demo -->
+  <div class="xp-demo">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+      <span style="font-size:13px;font-weight:700">⬆️ Aufsteiger</span>
+      <span style="font-size:12px;color:var(--gold);font-weight:700">650 / 1.000 XP</span>
+    </div>
+    <div class="xp-bar-wrap"><div class="xp-bar-fill" style="width:65%"></div></div>
+    <div style="display:flex;justify-content:space-between">
+      <span style="font-size:10px;color:var(--muted)">Nächstes Badge: 🏅 Erfahrene</span>
+      <span style="font-size:10px;color:var(--muted)">+350 XP noch</span>
+    </div>
+  </div>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <h3>Feed öffnen</h3>
+        <p>Auf dem Startscreen siehst du alle aktuellen Reel-Links der Community — sortiert nach Zeit.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <h3>Reel öffnen & liken</h3>
+        <p>Tippe auf den Link, gehe auf Instagram und like das Reel. Dann zurück und ❤️ drücken.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <h3>+5 XP kassieren</h3>
+        <p>Jedes Like das du gibst bringt dir <strong style="color:#fff">+5 XP</strong>. Je mehr du likest, desto schneller steigst du auf.</p>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:20px">
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center">
+      <div style="font-size:24px;font-weight:800;color:var(--red)">+5</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:3px">XP pro Like</div>
+    </div>
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center">
+      <div style="font-size:24px;font-weight:800;color:var(--orange)">1×</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:3px">Like pro Link</div>
+    </div>
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center">
+      <div style="font-size:24px;font-weight:800;color:var(--gold)">3</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:3px">Tages-Missionen</div>
+    </div>
+  </div>
+</div>
+<div class="divider"></div>
+
+<!-- ════════════════════════════════════════════ LINK TEILEN ════ -->
+<div class="section">
+  <div class="section-label">Schritt 2</div>
+  <h2>Deinen Link <span class="grad-text">teilen</span></h2>
+  <p class="lead">Einmal täglich postest du deinen Instagram Reel Link in die Community. Der <strong style="color:#ff6b6b">rote + Button</strong> unten in der Mitte ist dein Freund.</p>
+
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;overflow:hidden;margin-bottom:20px">
+    <div style="padding:16px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px">
+      <div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--red),var(--orange));display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:300;box-shadow:0 0 16px rgba(255,107,107,.4)">+</div>
+      <div>
+        <div style="font-size:14px;font-weight:700">📸 Reel Link teilen</div>
+        <div style="font-size:11px;color:var(--muted)">Täglich um Mitternacht erneuert</div>
+      </div>
+    </div>
+    <div style="padding:16px 18px;display:flex;flex-direction:column;gap:8px">
+      <div style="background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:10px;padding:10px 13px;font-size:12px;color:var(--muted)">https://www.instagram.com/reel/...</div>
+      <div style="background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:10px;padding:10px 13px;font-size:12px;color:var(--muted)">Beschreibung (optional)...</div>
+      <div style="background:linear-gradient(135deg,var(--red),var(--orange));border-radius:10px;padding:12px;font-size:13px;font-weight:700;text-align:center">📸 Jetzt teilen</div>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:8px">
+    <div style="background:rgba(0,200,81,.08);border:1px solid rgba(0,200,81,.2);border-radius:12px;padding:12px 16px;font-size:13px;display:flex;align-items:center;gap:10px">
+      <span style="font-size:18px">🆓</span>
+      <div><strong style="color:#fff">1 kostenloser Link</strong> pro Tag — täglich automatisch erneuert</div>
+    </div>
+    <div style="background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.2);border-radius:12px;padding:12px 16px;font-size:13px;display:flex;align-items:center;gap:10px">
+      <span style="font-size:18px">💎</span>
+      <div><strong style="color:#fff">Extra-Links</strong> im Shop für 5 Diamanten kaufen</div>
+    </div>
+    <div style="background:rgba(255,215,0,.08);border:1px solid rgba(255,215,0,.2);border-radius:12px;padding:12px 16px;font-size:13px;display:flex;align-items:center;gap:10px">
+      <span style="font-size:18px">📌</span>
+      <div><strong style="color:#fff">Angepinnter Post</strong> — bleibt dauerhaft oben in deinem Profil</div>
+    </div>
+  </div>
+</div>
+<div class="divider"></div>
+
+<!-- ════════════════════════════════════════════ FULL ENGAGEMENT ════ -->
+<div class="section section-purple">
+  <div class="section-label">Das Herzstück</div>
+  <h2>Full <span class="grad-text-purple">Engagement</span></h2>
+  <p class="lead">Einmal im Monat postet jedes Mitglied einen Superlink. Danach muss jeder bei jedem anderen liken, kommentieren, teilen und speichern.</p>
+
+  <div class="fe-header">
+    <div class="fe-icon">⭐</div>
+    <div>
+      <div class="fe-title">Full Engagement Thread</div>
+      <div class="fe-sub">Monatlich · Pflicht für alle aktiven Mitglieder</div>
+    </div>
+  </div>
+
+  <div class="fe-item">
+    <div class="fe-av">SK</div>
+    <div style="flex:1;min-width:0">
+      <div class="fe-item-name">Sara K.</div>
+      <div class="fe-item-url">🔗 instagram.com/reel/abc123</div>
+    </div>
+    <div class="fe-likes">❤️ 8</div>
+  </div>
+  <div class="fe-item">
+    <div class="fe-av">JB</div>
+    <div style="flex:1;min-width:0">
+      <div class="fe-item-name">Jonas B.</div>
+      <div class="fe-item-url">🔗 instagram.com/reel/def456</div>
+    </div>
+    <div class="fe-likes">❤️ 6</div>
+  </div>
+  <div class="fe-item" style="opacity:.55">
+    <div class="fe-av">MR</div>
+    <div style="flex:1;min-width:0">
+      <div class="fe-item-name">Max R.</div>
+      <div class="fe-item-url">🔗 instagram.com/reel/ghi789</div>
+    </div>
+    <div class="fe-likes">❤️ 3</div>
+  </div>
+
+  <div class="fe-warn" style="margin-top:12px">
+    <span style="font-size:18px">⚠️</span>
+    <div>Wer bis <strong style="color:#ef4444">Sonntag nicht engaged</strong>, verliert <strong style="color:#ef4444">−50 XP</strong> Strafe</div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:20px">
+    <div style="background:rgba(167,139,250,.1);border:1px solid rgba(167,139,250,.2);border-radius:12px;padding:16px;text-align:center">
+      <div style="font-size:22px;margin-bottom:6px">✅</div>
+      <div style="font-size:13px;font-weight:700;color:#a78bfa">Dabei sein</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px">XP + Diamanten + Gemeinschaft</div>
+    </div>
+    <div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.15);border-radius:12px;padding:16px;text-align:center">
+      <div style="font-size:22px;margin-bottom:6px">❌</div>
+      <div style="font-size:13px;font-weight:700;color:#ef4444">Fehlen</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px">−50 XP Strafe</div>
+    </div>
+  </div>
+</div>
+<div class="divider"></div>
+
+<!-- ════════════════════════════════════════════ XP & RANKING ════ -->
+<div class="section section-gold">
+  <div class="section-label">Fortschritt</div>
+  <h2>XP, Ranking &amp; <span class="grad-text-gold">Badges</span></h2>
+  <p class="lead">Deine Aktivität wird gemessen und belohnt. Je mehr XP du sammelst, desto höher steigst du in der Community auf.</p>
+
+  <div class="rank-table" style="margin-bottom:24px">
+    <div class="rank-row">
+      <div class="rank-pos">🥇</div>
+      <div class="rank-av" style="background:linear-gradient(135deg,#ffd43b,#f59e0b);color:#000">AK</div>
+      <div class="rank-info"><div class="rank-name">Alex K.</div><div class="rank-role">👑 Elite Creator</div></div>
+      <div class="rank-xp"><div class="rank-xp-val">4.200 XP</div><div class="rank-dia">💎 120</div></div>
+    </div>
+    <div class="rank-row">
+      <div class="rank-pos">🥈</div>
+      <div class="rank-av" style="background:linear-gradient(135deg,#9ca3af,#6b7280)">ML</div>
+      <div class="rank-info"><div class="rank-name">Maria L.</div><div class="rank-role">🏅 Erfahrene</div></div>
+      <div class="rank-xp"><div class="rank-xp-val">2.850 XP</div><div class="rank-dia">💎 85</div></div>
+    </div>
+    <div class="rank-row">
+      <div class="rank-pos">🥉</div>
+      <div class="rank-av" style="background:linear-gradient(135deg,#cd7f32,#a0522d)">JB</div>
+      <div class="rank-info"><div class="rank-name">Jonas B.</div><div class="rank-role">🏅 Erfahrene</div></div>
+      <div class="rank-xp"><div class="rank-xp-val">1.940 XP</div><div class="rank-dia">💎 52</div></div>
+    </div>
+    <div class="rank-row highlight">
+      <div class="rank-pos" style="font-size:13px;font-weight:700;color:var(--muted)">#4</div>
+      <div class="rank-av" style="background:linear-gradient(135deg,var(--red),var(--orange));box-shadow:0 0 12px rgba(255,107,107,.4)">Du</div>
+      <div class="rank-info"><div class="rank-name" style="color:var(--red)">Dein Name</div><div class="rank-role">⬆️ Aufsteiger</div></div>
+      <div class="rank-xp"><div class="rank-xp-val">890 XP</div><div class="rank-dia">💎 18</div></div>
+    </div>
+  </div>
+
+  <h3 style="font-size:15px;font-weight:700;margin-bottom:4px">Die 5 Badge-Stufen</h3>
+  <p style="font-size:12px;color:var(--muted);margin-bottom:0">Von Einsteiger bis Elite — wo stehst du?</p>
+  <div class="badge-row">
+    <div class="badge-item">
+      <span class="badge-emoji">🆕</span>
+      <div class="badge-name">New</div>
+      <div class="badge-xp">0 XP</div>
+    </div>
+    <div class="badge-item">
+      <span class="badge-emoji">📘</span>
+      <div class="badge-name">Anfänger</div>
+      <div class="badge-xp">50 XP</div>
+    </div>
+    <div class="badge-item">
+      <span class="badge-emoji">⬆️</span>
+      <div class="badge-name">Aufsteiger</div>
+      <div class="badge-xp">500 XP</div>
+    </div>
+    <div class="badge-item">
+      <span class="badge-emoji">🏅</span>
+      <div class="badge-name">Erfahrene</div>
+      <div class="badge-xp">1.000 XP</div>
+    </div>
+    <div class="badge-item" style="border-color:rgba(255,215,0,.3);background:rgba(255,215,0,.05)">
+      <span class="badge-emoji">👑</span>
+      <div class="badge-name" style="color:var(--gold)">Elite</div>
+      <div class="badge-xp">5.000 XP</div>
+    </div>
+  </div>
+</div>
+<div class="divider"></div>
+
+<!-- ════════════════════════════════════════════ DIAMANTEN ════ -->
+<div class="section">
+  <div class="section-label">Währung</div>
+  <h2>Diamanten <span class="grad-text-purple">verdienen</span></h2>
+  <p class="lead">Diamanten sind die Währung der Community. Du verdienst sie durch Aktivität — und gibst sie im Shop aus.</p>
+
+  <div class="dia-grid">
+    <div class="dia-card">
+      <div class="dia-icon">🔑</div>
+      <div class="dia-text">
+        <h4>Täglich einloggen</h4>
+        <p>Einfach jeden Tag in der App erscheinen</p>
+        <div class="dia-badge">+1 💎 / Tag</div>
+      </div>
+    </div>
+    <div class="dia-card">
+      <div class="dia-icon">⭐</div>
+      <div class="dia-text">
+        <h4>Full Engagement</h4>
+        <p>Superlink posten + alle engagen</p>
+        <div class="dia-badge">+2 💎</div>
+      </div>
+    </div>
+    <div class="dia-card">
+      <div class="dia-icon">🎯</div>
+      <div class="dia-text">
+        <h4>Alle Missionen</h4>
+        <p>3 tägliche Missionen erfüllt</p>
+        <div class="dia-badge">+1 💎</div>
+      </div>
+    </div>
+    <div class="dia-card">
+      <div class="dia-icon">🏆</div>
+      <div class="dia-text">
+        <h4>Wöchentliches Ranking</h4>
+        <p>Top 3 am Ende der Woche</p>
+        <div class="dia-badge">+10 / +5 / +3 💎</div>
+      </div>
+    </div>
+    <div class="dia-card">
+      <div class="dia-icon">👤</div>
+      <div class="dia-text">
+        <h4>Profil vervollständigen</h4>
+        <p>Foto, Bio, Instagram & Banner</p>
+        <div class="dia-badge">+1 💎 (einmalig)</div>
+      </div>
+    </div>
+    <div class="dia-card">
+      <div class="dia-icon">🚀</div>
+      <div class="dia-text">
+        <h4>Badge-Aufstieg</h4>
+        <p>Wenn du eine neue Stufe erreichst</p>
+        <div class="dia-badge">+5 💎</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="background:linear-gradient(135deg,rgba(167,139,250,.12),rgba(124,58,237,.06));border:1px solid rgba(167,139,250,.25);border-radius:16px;padding:20px;margin-top:20px;display:flex;align-items:center;gap:16px">
+    <div style="font-size:36px">💎</div>
+    <div>
+      <div style="font-size:14px;font-weight:700;color:#a78bfa;margin-bottom:4px">Diamanten ausgeben im Shop</div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.5">Profilrahmen mit Glow-Effekt · Extra-Links (5 💎) · zukünftige Shop-Items</div>
+    </div>
+  </div>
+</div>
+<div class="divider"></div>
+
+<!-- ════════════════════════════════════════════ PROFIL & SHOP ════ -->
+<div class="section section-green">
+  <div class="section-label">Dein Auftritt</div>
+  <h2>Profil &amp; <span class="grad-text-green">Shop</span></h2>
+  <p class="lead">Dein Profil ist deine Visitenkarte in der Community. Mach es vollständig — und schmück es mit einem Profilrahmen aus dem Shop.</p>
+
+  <div class="profile-box" style="margin-bottom:20px">
+    <div class="profile-banner">
+      <div class="profile-av-wrap">Du</div>
+    </div>
+    <div class="profile-info">
+      <div>
+        <div class="profile-name">Dein Name</div>
+        <div class="profile-handle">@dein.instagram · ⬆️ Aufsteiger</div>
+      </div>
+      <div style="font-size:12px;font-weight:700;color:var(--purple)">💎 18</div>
+    </div>
+    <div class="profile-stats">
+      <div class="profile-stat"><div class="profile-stat-val">890</div><div class="profile-stat-lbl">XP</div></div>
+      <div class="profile-stat"><div class="profile-stat-val">24</div><div class="profile-stat-lbl">Links</div></div>
+      <div class="profile-stat"><div class="profile-stat-val">142</div><div class="profile-stat-lbl">Likes</div></div>
+      <div class="profile-stat"><div class="profile-stat-val">#4</div><div class="profile-stat-lbl">Rang</div></div>
+    </div>
+  </div>
+
+  <div class="shop-grid">
+    <div class="shop-item">
+      <div class="shop-ring" style="box-shadow:0 0 0 3px #ff6b6b,0 0 16px rgba(255,107,107,.4)">Du</div>
+      <div class="shop-ring-name">🔥 Flamme</div>
+      <div class="shop-ring-price">10 💎</div>
+    </div>
+    <div class="shop-item">
+      <div class="shop-ring" style="box-shadow:0 0 0 3px #ffd43b,0 0 16px rgba(255,215,0,.4)">Du</div>
+      <div class="shop-ring-name">👑 Gold</div>
+      <div class="shop-ring-price">25 💎</div>
+    </div>
+    <div class="shop-item">
+      <div class="shop-ring" style="box-shadow:0 0 0 3px #a78bfa,0 0 16px rgba(167,139,250,.4)">Du</div>
+      <div class="shop-ring-name">✨ Galaxis</div>
+      <div class="shop-ring-price">40 💎</div>
+    </div>
+  </div>
+</div>
+<div class="divider"></div>
+
+<!-- ════════════════════════════════════════════ NACHRICHTEN ════ -->
+<div class="section">
+  <div class="section-label">Community</div>
+  <h2>Nachrichten &amp; <span class="grad-text">Threads</span></h2>
+  <p class="lead">Die Community-Kommunikation läuft direkt in der App. DMs an einzelne Mitglieder oder Gruppen-Threads für alle.</p>
+
+  <div style="display:flex;flex-direction:column;gap:10px">
+    <div style="background:var(--bg2);border:1px solid rgba(0,136,204,.2);border-radius:14px;padding:16px 18px;display:flex;align-items:center;gap:14px">
+      <div style="width:44px;height:44px;border-radius:12px;background:rgba(0,136,204,.15);border:1px solid rgba(0,136,204,.3);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">💬</div>
+      <div>
+        <div style="font-size:14px;font-weight:700;margin-bottom:3px">Direkt-Nachrichten</div>
+        <div style="font-size:12px;color:var(--muted)">Schreib direkt mit jedem Mitglied — aus dem Profil oder Feed heraus</div>
+      </div>
+    </div>
+    <div style="background:var(--bg2);border:1px solid rgba(167,139,250,.2);border-radius:14px;padding:16px 18px;display:flex;align-items:center;gap:14px">
+      <div style="width:44px;height:44px;border-radius:12px;background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.25);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">🧵</div>
+      <div>
+        <div style="font-size:14px;font-weight:700;margin-bottom:3px">Community-Threads</div>
+        <div style="font-size:12px;color:var(--muted)">Themen-Chats für die ganze Gruppe — General, Full Engagement und mehr</div>
+      </div>
+    </div>
+    <div style="background:var(--bg2);border:1px solid rgba(255,215,0,.2);border-radius:14px;padding:16px 18px;display:flex;align-items:center;gap:14px">
+      <div style="width:44px;height:44px;border-radius:12px;background:rgba(255,215,0,.1);border:1px solid rgba(255,215,0,.25);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">🔔</div>
+      <div>
+        <div style="font-size:14px;font-weight:700;margin-bottom:3px">Push-Benachrichtigungen</div>
+        <div style="font-size:12px;color:var(--muted)">Likes, neue Links, DMs — bleib immer auf dem Laufenden</div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="divider"></div>
+
+<!-- ════════════════════════════════════════════ CTA ════ -->
+<div class="cta">
+  <div class="cta-glow"></div>
+  <h2>Bereit zum <span class="grad-text">Starten?</span></h2>
+  <p>Tritt der Gruppe bei, hol dir deinen Code und leg los. Die Community wartet.</p>
+  <div style="display:flex;flex-direction:column;align-items:center;gap:12px;position:relative;z-index:1">
+    <a href="https://t.me/+w-V2QL-igJw5YjY0" class="cta-btn">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.248l-1.97 9.269c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12L8.19 14.9l-2.965-.924c-.643-.203-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.631.686z"/></svg>
+      Telegram Gruppe beitreten
+    </a>
+    <div style="font-size:12px;color:rgba(255,255,255,.3)">Dann /mycode im Bot eingeben → App-Code erhalten → einloggen</div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════ FOOTER ════ -->
+<div class="footer">
+  <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:900;background:linear-gradient(135deg,#ff6b6b,#ffa500);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:8px">CreatorX</div>
+  <p style="font-size:12px;color:rgba(255,255,255,.2)">Die Community für Instagram Creators · Gemeinsam wachsen</p>
+</div>
+
+</body>
+</html>
