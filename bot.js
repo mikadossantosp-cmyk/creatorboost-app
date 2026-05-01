@@ -2635,8 +2635,10 @@ commentsBox+
         const _bOff = _bDay === 0 ? -6 : 1 - _bDay;
         const _bMon = new Date(_bNow); _bMon.setDate(_bNow.getDate() + _bOff);
         const slWeekKey = _bMon.toISOString().slice(0,10);
-        const myWeekSuperlink = Object.values(d.superlinks||{}).find(s=>s.uid===myUid&&s.week===slWeekKey);
-        const slAvailable = myWeekSuperlink ? 0 : 1;
+        const mySlMax = (d.users[myUid]?.role === '🌟 Elite+') ? 2 : 1;
+        const mySlCount = Object.values(d.superlinks||{}).filter(s=>s.uid===myUid&&s.week===slWeekKey).length;
+        const myWeekSuperlink = mySlCount > 0;
+        const slAvailable = Math.max(0, mySlMax - mySlCount);
 
         function renderSuperLink(sl) {
             const poster = d.users[String(sl.uid)]||{};
@@ -2910,7 +2912,7 @@ async function submitSuperLink(){
       <div style="font-size:16px;font-weight:700">⭐ Superlink teilen</div>
       <button onclick="closeSLSheet()" style="background:var(--bg4);border:none;color:var(--muted);width:30px;height:30px;border-radius:50%;font-size:18px;cursor:pointer">✕</button>
     </div>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.5;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:10px;padding:10px">⚠️ 1 Superlink pro Woche (Mo–Sa). Du verpflichtest dich, alle anderen Superlinks dieser Woche zu liken, kommentieren, teilen und speichern.</div>
+    <div id="sl-sheet-note" style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.5;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:10px;padding:10px">⚠️ 1–2 Superlinks pro Woche (Mo–Sa). Du verpflichtest dich, alle anderen Superlinks dieser Woche zu liken, kommentieren, teilen und speichern.</div>
     <input type="url" id="sl-url-input" class="form-input" placeholder="Instagram-Link einfügen..." style="margin-bottom:8px">
     <textarea id="sl-caption-input" class="form-input" placeholder="Beschreibung (optional)" rows="2" maxlength="200" style="margin-bottom:12px"></textarea>
     <button id="sl-submit-btn" class="btn btn-primary btn-full" onclick="submitSuperLink()">⭐ Superlink posten</button>
@@ -4053,11 +4055,13 @@ ${sorted.map(([id,u],i)=>{
                 const bDay2 = bNow2.getDay(); const bOff2 = bDay2===0?-6:1-bDay2;
                 const bMon2 = new Date(bNow2); bMon2.setDate(bNow2.getDate()+bOff2);
                 const wKey2 = bMon2.toISOString().slice(0,10);
-                const hasSL = Object.values(d.superlinks||{}).some(s=>s.uid===myUid&&s.week===wKey2);
+                const slMax2 = (d.users[myUid]?.role === '🌟 Elite+') ? 2 : 1;
+                const slCount2 = Object.values(d.superlinks||{}).filter(s=>s.uid===myUid&&s.week===wKey2).length;
+                const slLeft2 = Math.max(0, slMax2 - slCount2);
                 const myBonusLinksProf = d.bonusLinks?.[myUid]||0;
                 return '<div style="background:var(--bg3);border-radius:14px;padding:14px 16px"><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Verfügbarkeit</div>'
                     +'<div style="display:flex;gap:8px;flex-wrap:wrap">'
-                    +'<div style="background:var(--bg4);border-radius:10px;padding:8px 12px;font-size:12px;font-weight:600">⭐ Superlink: '+(hasSL?'<span style="color:var(--muted)">0 verfügbar</span>':'<span style="color:#22c55e">1 verfügbar</span>')+'</div>'
+                    +'<div style="background:var(--bg4);border-radius:10px;padding:8px 12px;font-size:12px;font-weight:600">⭐ Superlink: '+(slLeft2>0?'<span style="color:#22c55e">'+slLeft2+'/'+slMax2+' verfügbar</span>':'<span style="color:var(--muted)">0/'+slMax2+' verfügbar</span>')+'</div>'
                     +'<div style="background:var(--bg4);border-radius:10px;padding:8px 12px;font-size:12px;font-weight:600">🔗 Extra-Links: <span style="color:var(--accent)">'+myBonusLinksProf+'</span></div>'
                     +'</div></div>';
             })()
