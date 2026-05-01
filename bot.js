@@ -1052,7 +1052,14 @@ async function readBody(req, maxBytes=25000000) {
     });
 }
 
-const server = http.createServer(async (req, res) => {
+const server = http.createServer((req, res) => {
+    handleRequest(req, res).catch(e => {
+        console.error('Request error:', e.message);
+        if (!res.headersSent) { res.writeHead(500); res.end('Server Error'); }
+    });
+});
+
+async function handleRequest(req, res) {
     const pu = url.parse(req.url, true);
     const path = pu.pathname;
     const query = pu.query;
@@ -1087,7 +1094,7 @@ self.addEventListener('notificationclick',e=>{
 
     // ── EXPORT IMAGES ──
     if (path === '/export-images') {
-        const key = qs.key || '';
+        const key = query.key || '';
         if (key !== BRIDGE_SECRET) { res.writeHead(403); res.end('Forbidden'); return; }
         try {
             const files = {};
@@ -1102,9 +1109,9 @@ self.addEventListener('notificationclick',e=>{
 
     // ── IMPORT IMAGES FROM NORTHFLANK (manual trigger) ──
     if (path === '/import-images') {
-        const key = qs.key || '';
+        const key = query.key || '';
         if (key !== BRIDGE_SECRET) { res.writeHead(403); res.end('Forbidden'); return; }
-        const sourceUrl = qs.from || 'https://site--creatorboost-app--899dydmn7d7v.code.run';
+        const sourceUrl = query.from || 'https://site--creatorboost-app--899dydmn7d7v.code.run';
         try {
             const resp = await fetch(`${sourceUrl}/export-images?key=${BRIDGE_SECRET}`);
             if (!resp.ok) {
@@ -4014,7 +4021,7 @@ async function setRing(ringId) {
     }
 
     redirect('/feed');
-});
+}
 
 // Export all images as JSON (for migration)
 const EXPORT_PATH = '/export-images';
