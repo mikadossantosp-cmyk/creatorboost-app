@@ -719,7 +719,7 @@ ${nb?`
 function onboardingHTML(isPreview = false) {
     const finishAction = isPreview
         ? "window.location.href='/einstellungen';"
-        : "localStorage.setItem('cb_onboarded','1');window.location.href='/feed';";
+        : "try{localStorage.setItem('cb_onboarded','1');}catch(e){} fetch('/api/onboarding-done',{method:'POST'}).catch(()=>{}).finally(()=>{window.location.href='/feed';});";
 
     return `<!DOCTYPE html><html lang="de" data-theme="dark"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -1699,7 +1699,14 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
     }
 
     // ── FEED ──
+    if (path === '/api/onboarding-done' && req.method === 'POST') {
+        session.onboardingDone = true;
+        saveSessions();
+        return json({ok:true});
+    }
+
     if (path === '/feed') {
+        if (!session.onboardingDone) return redirect('/onboarding');
         const tab = query.tab || 'heute';
         const twoDaysAgo = Date.now() - 2 * 24 * 60 * 60 * 1000;
         const todayLinks = Object.entries(d.links||{})
