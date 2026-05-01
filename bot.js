@@ -514,6 +514,11 @@ function layout(content, session, page='feed', lang='de') {
     </label>
     <button class="btn btn-primary btn-full" onclick="plusPostLink()">📸 Link teilen</button>
     <div id="plus-link-result" style="margin-top:8px;font-size:12px;text-align:center;color:var(--muted)"></div>
+    <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border2)">
+      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Engagement</div>
+      <button class="btn btn-full" onclick="closePlusSheet();setTimeout(()=>{if(typeof openSLSheet==='function')openSLSheet();else location.href='/feed?tab=engagement&opensl=1';},200)" style="background:linear-gradient(135deg,rgba(245,158,11,.15),rgba(245,158,11,.05));border:1px solid rgba(245,158,11,.3);color:#f59e0b;font-weight:700">⭐ Superlink posten</button>
+      <div style="font-size:11px;color:var(--muted);margin-top:6px;text-align:center">Alle Mitglieder müssen deinen Link liken, kommentieren & teilen</div>
+    </div>
   </div>
 </div>
 <div class="liker-modal" id="liker-modal" onclick="if(event.target===this)closeLikerModal()">
@@ -2163,6 +2168,8 @@ async function refreshLikes() {
 setInterval(refreshLikes, 5000);
 // Onboarding beim ersten Besuch
 if (!localStorage.getItem('cb_onboarded')) { window.location.href = '/onboarding'; }
+// Auto-open superlink sheet if redirected from + button
+if (new URLSearchParams(window.location.search).get('opensl') === '1') { setTimeout(openSLSheet, 400); }
 
 // Pull-to-refresh
 (function(){
