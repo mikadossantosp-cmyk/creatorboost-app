@@ -501,18 +501,21 @@ function layout(content, session, page='feed', lang='de') {
 <div class="toast" id="toast"></div>
 <div class="plus-sheet" id="plus-sheet" onclick="if(event.target===this)closePlusSheet()">
   <div class="plus-sheet-inner">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
       <span style="font-size:16px;font-weight:700">📸 Reel Link teilen</span>
       <button onclick="closePlusSheet()" style="background:var(--bg4);border:none;color:var(--text);border-radius:50%;width:28px;height:28px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>
     </div>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:12px">Teile deinen Instagram Reel Link mit der Community und sammle XP durch Likes.</div>
+    <div id="plus-link-status" style="border-radius:10px;padding:10px 13px;margin-bottom:12px;font-size:12px;font-weight:600;display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08)">
+      <span id="plus-link-status-icon">⏳</span>
+      <span id="plus-link-status-text" style="color:var(--muted)">Wird geladen...</span>
+    </div>
     <input type="url" id="plus-link-input" class="form-input" placeholder="https://www.instagram.com/reel/..." style="margin-bottom:8px">
     <textarea id="plus-link-caption" class="form-input" placeholder="Beschreibung (optional)..." maxlength="200" rows="2" style="margin-bottom:8px"></textarea>
     <label style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--bg4);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;margin-bottom:12px">
       <input type="checkbox" id="plus-pin-toggle" style="width:18px;height:18px;accent-color:var(--accent);cursor:pointer">
       <div><div style="font-size:13px;font-weight:600">📌 Als angepinnten Post setzen</div><div style="font-size:11px;color:var(--muted);margin-top:2px">Erscheint oben im Profil · max 1 Pin</div></div>
     </label>
-    <button class="btn btn-primary btn-full" onclick="plusPostLink()">📸 Link teilen</button>
+    <button class="btn btn-primary btn-full" id="plus-post-btn" onclick="plusPostLink()">📸 Link teilen</button>
     <div id="plus-link-result" style="margin-top:8px;font-size:12px;text-align:center;color:var(--muted)"></div>
     <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border2)">
       <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Engagement</div>
@@ -600,15 +603,44 @@ setInterval(checkMsgBadge,15000);
 function toast(msg,dur=2500){const t=document.getElementById('toast');if(!t)return;t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),dur);}
 function setTheme(t){document.documentElement.setAttribute('data-theme',t);fetch('/api/theme',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({theme:t})});}
 function setLang(l){fetch('/api/lang',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lang:l})}).then(()=>location.reload());}
-function openPlusSheet(){const s=document.getElementById('plus-sheet');if(s){s.classList.add('open');document.body.style.overflow='hidden';const i=document.getElementById('plus-link-input');if(i)setTimeout(()=>i.focus(),300);}}
-function closePlusSheet(){const s=document.getElementById('plus-sheet');if(s){s.classList.remove('open');document.body.style.overflow='';}}
+async function openPlusSheet(){
+  const s=document.getElementById('plus-sheet');
+  if(!s)return;
+  s.classList.add('open');document.body.style.overflow='hidden';
+  const i=document.getElementById('plus-link-input');if(i)setTimeout(()=>i.focus(),300);
+  // Lade Link-Status
+  try{
+    const r=await fetch('/api/link-status');
+    const st=await r.json();
+    const icon=document.getElementById('plus-link-status-icon');
+    const txt=document.getElementById('plus-link-status-text');
+    const btn=document.getElementById('plus-post-btn');
+    if(st.isAdmin){
+      icon.textContent='👑';txt.textContent='Admin — unbegrenzte Links';txt.style.color='#ffd43b';
+      if(btn)btn.disabled=false;
+    } else if(st.canPost && st.todayCount===0){
+      icon.textContent='✅';txt.textContent='1 kostenloser Link heute verfügbar';txt.style.color='#00c851';
+      if(btn)btn.disabled=false;
+    } else if(st.canPost && st.bonusLinks>0){
+      icon.textContent='💎';txt.textContent=st.bonusLinks+' Extra-Link'+(st.bonusLinks>1?'s':'')+' verfügbar — wird nach dem Posten verbraucht';txt.style.color='#a78bfa';
+      if(btn)btn.disabled=false;
+    } else {
+      icon.textContent='❌';txt.textContent='Limit erreicht — kein Extra-Link vorhanden. Im Shop kaufen: 5 💎';txt.style.color='rgba(239,68,68,.9)';
+      if(btn){btn.disabled=true;btn.style.opacity='.45';}
+    }
+  }catch(e){
+    const txt=document.getElementById('plus-link-status-text');
+    if(txt){txt.textContent='Status nicht ladbar';txt.style.color='var(--muted)';}
+  }
+}
+function closePlusSheet(){const s=document.getElementById('plus-sheet');if(s){s.classList.remove('open');document.body.style.overflow='';const btn=document.getElementById('plus-post-btn');if(btn){btn.disabled=false;btn.style.opacity='';btn.textContent='📸 Link teilen';}}}
 async function plusPostLink(){
   const url=(document.getElementById('plus-link-input')?.value||'').trim();
   const result=document.getElementById('plus-link-result');
   if(!url){result.textContent='❌ Bitte Link eingeben';return;}
   if(!url.includes('instagram.com')){result.textContent='❌ Nur Instagram Links erlaubt';return;}
-  const btn=document.querySelector('[onclick="plusPostLink()"]');
-  btn.disabled=true;btn.textContent='⏳ Wird gesendet...';
+  const btn=document.getElementById('plus-post-btn');
+  if(btn){btn.disabled=true;btn.textContent='⏳ Wird gesendet...';}
   try{
     const caption=(document.getElementById('plus-link-caption')?.value||'').trim();
     const pin=document.getElementById('plus-pin-toggle')?.checked||false;
@@ -623,7 +655,7 @@ async function plusPostLink(){
       setTimeout(()=>closePlusSheet(),1500);
     } else result.textContent='❌ '+(data.error||'Fehler');
   }catch(e){result.textContent='❌ Netzwerkfehler';}
-  btn.disabled=false;btn.textContent='📸 Link teilen';
+  if(btn){btn.disabled=false;btn.style.opacity='';btn.textContent='📸 Link teilen';}
 }
 function showLikerModal(msgId){const modal=document.getElementById('liker-modal');const content=document.getElementById('liker-modal-content');const rows=document.getElementById('liker-rows-'+msgId);if(!modal||!rows)return;content.innerHTML=rows.innerHTML||'<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">Noch niemand geliked</div>';modal.classList.add('open');document.body.style.overflow='hidden';}
 function closeLikerModal(){const modal=document.getElementById('liker-modal');if(modal){modal.classList.remove('open');document.body.style.overflow='';} }
@@ -4008,6 +4040,12 @@ async function setRing(ringId) {
         if (!session) return json({error:'Nicht eingeloggt'},401);
         const result = await postBot('/buy-extralink-api', { uid: myUid });
         return json(result || {ok:false, error:'Fehler'});
+    }
+
+    if (path === '/api/link-status' && req.method === 'GET') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'},401);
+        const result = await fetchBot('/link-status-api?uid=' + myUid);
+        return json(result || {ok:false, canPost:false, todayCount:0, bonusLinks:0});
     }
 
     if (path === '/api/buy-item' && req.method === 'POST') {
