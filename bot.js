@@ -793,7 +793,7 @@ ${nb?`
 function onboardingHTML(isPreview = false) {
     const finishAction = isPreview
         ? "window.location.href='/einstellungen';"
-        : "localStorage.setItem('cb_onboarded','1');window.location.href='/feed';";
+        : "try{localStorage.setItem('cb_onboarded','1');}catch(e){} fetch('/api/onboarding-done',{method:'POST'}).catch(()=>{}).finally(()=>{window.location.href='/feed';});";
 
     return `<!DOCTYPE html><html lang="de" data-theme="dark"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -2380,7 +2380,14 @@ p{line-height:1.65;color:var(--muted)}
     }
 
     // ── FEED ──
+    if (path === '/api/onboarding-done' && req.method === 'POST') {
+        session.onboardingDone = true;
+        saveSessions();
+        return json({ok:true});
+    }
+
     if (path === '/feed') {
+        if (!session.onboardingDone) return redirect('/onboarding');
         const tab = query.tab || 'heute';
         const twoDaysAgo = Date.now() - 2 * 24 * 60 * 60 * 1000;
         const todayLinks = Object.entries(d.links||{})
@@ -3983,6 +3990,12 @@ ${sorted.map(([id,u],i)=>{
 </div>
 ${profileCard(myUid, myUser, d, true, lang, adminIds, myBannerData, myPicData)}
 ${completionHtml}
+<div id="mission-widget" style="margin:0 12px 4px">
+  <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:14px 16px;animation:shimmer 1.5s infinite">
+    <div style="height:12px;background:var(--bg4);border-radius:6px;width:60%;margin-bottom:8px"></div>
+    <div style="height:10px;background:var(--bg4);border-radius:6px;width:80%"></div>
+  </div>
+</div>
 <div class="tabs" style="position:sticky;top:57px;z-index:50;background:var(--bg)">
   <div class="tab active" onclick="showPTab('posts',this)">📝 Posts</div>
   <div class="tab" onclick="showPTab('links',this)">🔗 Links</div>
@@ -4194,6 +4207,52 @@ async function submitPost(){
   if(data.ok){toast('✅ Post veröffentlicht!');setTimeout(()=>location.reload(),1000);}
   else{toast('❌ '+(data.error||'Fehler'));btn.disabled=false;btn.textContent='📝 Posten';}
 }
+(async function loadMissionWidget(){
+  const w=document.getElementById('mission-widget');
+  if(!w)return;
+  try{
+    const r=await fetch('/api/mission-status');
+    const d=await r.json();
+    if(!d.ok){w.innerHTML='';return;}
+    const now=new Date();
+    const nextSettle=new Date();
+    nextSettle.setHours(12,0,0,0);
+    if(now>=nextSettle)nextSettle.setDate(nextSettle.getDate()+1);
+    const diff=nextSettle-now;
+    const hh=Math.floor(diff/3600000);const mm=Math.floor((diff%3600000)/60000);
+    const settleStr=hh+'h '+mm+'m';
+    const {daily,weekly}=d;
+    const bar=(val,max,col)=>'<div style="background:var(--bg4);border-radius:4px;height:5px;overflow:hidden;margin-top:4px"><div style="height:100%;width:'+Math.min(100,Math.round(val/max*100))+'%;background:'+col+';border-radius:4px;transition:width .5s ease"></div></div>';
+    const mChip=(done,label)=>'<div style="display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:'+(done?'#22c55e':'var(--muted)')+'">'+
+      '<span style="font-size:14px">'+(done?'✅':'⬜')+'</span>'+label+'</div>';
+    w.innerHTML='<div style="background:linear-gradient(135deg,rgba(167,139,250,.1),rgba(124,58,237,.07));border:1px solid rgba(167,139,250,.25);border-radius:14px;padding:14px 16px">'
+      +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'
+      +'<div style="font-size:13px;font-weight:700">🎯 Meine Missionen</div>'
+      +'<div style="font-size:10px;color:var(--muted);background:var(--bg4);padding:3px 8px;border-radius:8px">⏱ Abrechnung in '+settleStr+'</div>'
+      +'</div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">'
+      +'<div style="background:var(--bg3);border-radius:10px;padding:10px 12px">'
+      +'<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Heute</div>'
+      +mChip(daily.m1,'M1: '+daily.likesGegeben+'/5 geliked')
+      +bar(daily.likesGegeben,5,'#a78bfa')
+      +'<div style="margin-top:6px">'+mChip(daily.m2,'M2: '+daily.prozent+'% (≥80%)')+'</div>'
+      +bar(daily.prozent,100,'#818cf8')
+      +'<div style="margin-top:6px">'+mChip(daily.m3,'M3: '+(daily.gesamtLinks>0?daily.gelikedLinks+'/'+daily.gesamtLinks+' alle':'–'))+'</div>'
+      +(daily.m3?'<div style="font-size:10px;color:#a78bfa;margin-top:4px">+5 XP + 💎 1 Diamant bei Abrechnung</div>':'')
+      +'</div>'
+      +'<div style="background:var(--bg3);border-radius:10px;padding:10px 12px">'
+      +'<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Wöchentlich</div>'
+      +mChip(weekly.m1Tage>=7,'W-M1: '+weekly.m1Tage+'/7 Tage')
+      +bar(weekly.m1Tage,7,'#60a5fa')
+      +'<div style="margin-top:6px">'+mChip(weekly.m2Tage>=7,'W-M2: '+weekly.m2Tage+'/7 → 💎')+'</div>'
+      +bar(weekly.m2Tage,7,'#34d399')
+      +'<div style="margin-top:6px">'+mChip(weekly.m3Tage>=7,'W-M3: '+weekly.m3Tage+'/7 → 💎💎')+'</div>'
+      +bar(weekly.m3Tage,7,'#fbbf24')
+      +'</div>'
+      +'</div>'
+      +'</div>';
+  }catch(e){const w2=document.getElementById('mission-widget');if(w2)w2.innerHTML='';}
+})();
 </script>`, 'profile');
     }
 
@@ -4646,6 +4705,12 @@ async function setRing(ringId) {
         if (!session) return json({ok:false, error:'Nicht eingeloggt'},401);
         const result = await fetchBot('/link-status-api?uid=' + myUid);
         return json(result || {ok:false, canPost:false, todayCount:0, bonusLinks:0});
+    }
+
+    if (path === '/api/mission-status' && req.method === 'GET') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'},401);
+        const result = await fetchBot('/mission-status-api?uid=' + myUid);
+        return json(result || {ok:false});
     }
 
     if (path === '/api/buy-item' && req.method === 'POST') {
