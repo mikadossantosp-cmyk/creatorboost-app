@@ -2387,7 +2387,6 @@ p{line-height:1.65;color:var(--muted)}
     }
 
     if (path === '/feed') {
-        if (!session.onboardingDone) return redirect('/onboarding');
         const tab = query.tab || 'heute';
         const twoDaysAgo = Date.now() - 2 * 24 * 60 * 60 * 1000;
         const todayLinks = Object.entries(d.links||{})
@@ -2747,7 +2746,7 @@ async function refreshLikes() {
 }
 setInterval(refreshLikes, 5000);
 // Onboarding beim ersten Besuch
-if (!localStorage.getItem('cb_onboarded')) { window.location.href = '/onboarding'; }
+try{if(!localStorage.getItem('cb_onboarded')){window.location.href='/onboarding';}}catch(e){}
 // Auto-open superlink sheet if redirected from + button
 if (new URLSearchParams(window.location.search).get('opensl') === '1') { setTimeout(openSLSheet, 400); }
 
