@@ -63,6 +63,21 @@ const RING_ITEMS = [
     { id: 'ring_diamond', name: 'Diamond Ring', emoji: '💎', price: 20, shadow: '0 0 0 3px #b9f2ff, 0 0 0 6px #a78bfa',   gradient: 'linear-gradient(135deg,#a78bfa,#b9f2ff,#ffffff)', desc: 'Funkelnder Diamantglanz' },
 ];
 
+const BANNER_ITEMS = [
+    { id: 'banner_sunset',   name: 'Sunset',       emoji: '🌅', price: 1, gradient: 'linear-gradient(135deg,#ff6b6b,#ffa500,#ffd43b)', desc: 'Warmes Sonnenuntergangs-Glühen' },
+    { id: 'banner_ocean',    name: 'Ocean',         emoji: '🌊', price: 1, gradient: 'linear-gradient(135deg,#2193b0,#6dd5ed,#43b8f0)', desc: 'Frisches Meeresblau' },
+    { id: 'banner_forest',   name: 'Forest',        emoji: '🌿', price: 1, gradient: 'linear-gradient(135deg,#56ab2f,#a8e063,#56ab2f)', desc: 'Saftiges Waldgrün' },
+    { id: 'banner_candy',    name: 'Candy',         emoji: '🍭', price: 1, gradient: 'linear-gradient(135deg,#f857a6,#ff5858,#ff9a9e)', desc: 'Süßes Bonbonrosa' },
+    { id: 'banner_sky',      name: 'Sky Blue',      emoji: '☁️', price: 1, gradient: 'linear-gradient(135deg,#56ccf2,#2f80ed)', desc: 'Strahlend himmelsblau' },
+    { id: 'banner_lavender', name: 'Lavender',      emoji: '💜', price: 1, gradient: 'linear-gradient(135deg,#c084fc,#a855f7,#e8b4f8)', desc: 'Zarter Lavendelduft' },
+    { id: 'banner_mint',     name: 'Mint',          emoji: '🌱', price: 1, gradient: 'linear-gradient(135deg,#43e97b,#38f9d7)', desc: 'Erfrischend mintgrün' },
+    { id: 'banner_peach',    name: 'Peach',         emoji: '🍑', price: 1, gradient: 'linear-gradient(135deg,#fcb69f,#ffecd2,#ff9a9e)', desc: 'Sanftes Pfirsichrosa' },
+    { id: 'banner_gold',     name: 'Golden Hour',   emoji: '✨', price: 1, gradient: 'linear-gradient(135deg,#f7971e,#ffd200)', desc: 'Goldene Stunde' },
+    { id: 'banner_coral',    name: 'Coral',         emoji: '🪸', price: 1, gradient: 'linear-gradient(135deg,#f5576c,#f093fb)', desc: 'Lebendiges Korallenrot' },
+    { id: 'banner_aurora',   name: 'Aurora',        emoji: '🌌', price: 1, gradient: 'linear-gradient(135deg,#00c6ff,#0072ff,#a18cd1)', desc: 'Nordlicht-Effekt' },
+    { id: 'banner_rose',     name: 'Rose Gold',     emoji: '🌹', price: 1, gradient: 'linear-gradient(135deg,#f4a261,#e9c46a)', desc: 'Edles Roségold' },
+];
+
 function getRingBoxShadow(userData) {
     const ring = userData?.activeRing;
     if (!ring) return '';
@@ -2257,6 +2272,7 @@ p{line-height:1.65;color:var(--muted)}
         if (body.tiktok !== undefined) updateData.tiktok = body.tiktok;
         if (body.youtube !== undefined) updateData.youtube = body.youtube;
         if (body.twitter !== undefined) updateData.twitter = body.twitter;
+        if (body.banner !== undefined) updateData.banner = body.banner;
         await postBot('/update-profile-api', updateData);
         if (session) {
             if (body.theme) session.theme = body.theme;
@@ -3700,6 +3716,28 @@ document.getElementById('search-input').focus();
       </div>
     </div>
   </div>
+  <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">🖼️ Profilbanner</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+    ${BANNER_ITEMS.map(item => {
+        const owned = myInventory.includes(item.id);
+        const canAfford = isShopAdmin || myDiamonds >= item.price;
+        const priceHtml = isShopAdmin
+            ? `<span style="font-size:10px;color:#22c55e;font-weight:800">Gratis</span>`
+            : `<span style="font-size:10px;color:#a78bfa;font-weight:800">💎 ${item.price}</span>`;
+        return `<div style="background:var(--bg3);border:1px solid ${owned?'rgba(34,197,94,.4)':'var(--border2)'};border-radius:14px;overflow:hidden">
+  <div style="height:50px;background:${item.gradient}"></div>
+  <div style="padding:8px 10px">
+    <div style="font-size:12px;font-weight:700;margin-bottom:4px">${item.emoji} ${item.name}</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:4px">
+      ${owned
+        ? `<span style="font-size:10px;color:#22c55e;font-weight:700">✓ Besessen</span><button onclick="applyBanner('${item.gradient}')" style="background:rgba(34,197,94,.15);color:#22c55e;border:1px solid rgba(34,197,94,.3);border-radius:8px;padding:3px 10px;font-size:10px;font-weight:700;cursor:pointer">Nutzen</button>`
+        : `${priceHtml}<button onclick="buyItem('${item.id}')" data-item="${item.id}" style="background:${canAfford?'linear-gradient(135deg,#a78bfa,#7c3aed)':'var(--bg4)'};color:${canAfford?'#fff':'var(--muted)'};border:none;border-radius:8px;padding:3px 10px;font-size:10px;font-weight:700;cursor:${canAfford?'pointer':'not-allowed'}" ${canAfford?'':'disabled'}>Kaufen</button>`
+      }
+    </div>
+  </div>
+</div>`;
+    }).join('')}
+  </div>
   <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">🪄 Profilring</div>
   ${ringsHtml}
 </div>
@@ -3735,6 +3773,13 @@ async function buyItem(itemId){
       alert(data.error||'Fehler beim Kauf');
     }
   }catch(e){if(btn){btn.disabled=false;btn.textContent='Kaufen';}}
+}
+async function applyBanner(gradient){
+  try{
+    const r=await fetch('/api/save-profile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({banner:gradient})});
+    const data=await r.json();
+    if(data.ok){location.reload();}else{alert(data.error||'Fehler');}
+  }catch(e){alert('Fehler beim Setzen des Banners');}
 }
 </script>`;
             })(),
@@ -4400,15 +4445,15 @@ async function toggleFollow(uid,btn){
             .slice(0,5)
             .map(l=>l.text);
         const gradients = [
-            'linear-gradient(135deg,#1a1a2e,#16213e,#0f3460)',
-            'linear-gradient(135deg,#0d0d0d,#1a0a00,#3d1f00)',
-            'linear-gradient(135deg,#0a0a1a,#1a0a2e,#2e0a3d)',
-            'linear-gradient(135deg,#000428,#004e92)',
-            'linear-gradient(135deg,#1a0000,#3d0000,#1a0000)',
-            'linear-gradient(135deg,#0a2e0a,#1a3d1a,#0a1f0a)',
-            'linear-gradient(135deg,#2d1b69,#11998e)',
-            'linear-gradient(135deg,#fc4a1a,#f7b733)',
-            'linear-gradient(135deg,#141e30,#243b55)',
+            'linear-gradient(135deg,#667eea,#764ba2)',
+            'linear-gradient(135deg,#f093fb,#f5576c)',
+            'linear-gradient(135deg,#4facfe,#00f2fe)',
+            'linear-gradient(135deg,#43e97b,#38f9d7)',
+            'linear-gradient(135deg,#fa709a,#fee140)',
+            'linear-gradient(135deg,#a18cd1,#fbc2eb)',
+            'linear-gradient(135deg,#ffecd2,#fcb69f)',
+            'linear-gradient(135deg,#a1c4fd,#c2e9fb)',
+            'linear-gradient(135deg,#d4fc79,#96e6a1)',
         ];
         const accentColors = ['#ff6b6b','#ffa500','#00c851','#4dabf7','#cc5de8','#ffd43b','#ff8cc8','#20c997','#ff6348'];
         return html(`
@@ -4473,6 +4518,11 @@ async function toggleFollow(uid,btn){
   <div class="gradient-grid">
     ${gradients.map((g)=>`<div class="gradient-opt ${(u.banner||gradients[0])===g?'selected':''}" style="background:${g}" onclick="selectBanner('${g}',this)"></div>`).join('')}
   </div>
+  ${(() => {
+      const ownedBanners = BANNER_ITEMS.filter(b => myInventory.includes(b.id));
+      if (!ownedBanners.length) return `<div style="font-size:11px;color:var(--muted);margin-top:10px">🛍️ Premium-Banner im Shop kaufen — je 💎 1 Diamant</div>`;
+      return `<div style="margin-top:12px"><div style="font-size:11px;color:var(--muted);margin-bottom:6px">🛍️ Gekaufte Premium-Banner</div><div class="gradient-grid">${ownedBanners.map(b=>`<div class="gradient-opt ${(u.banner||'')===b.gradient?'selected':''}" style="background:${b.gradient}" title="${b.name}" onclick="selectBanner('${b.gradient}',this)"></div>`).join('')}</div></div>`;
+  })()}
 </div>
 <div style="padding:16px;border-bottom:1px solid var(--border2)">
   <div class="form-label">Akzentfarbe</div>
