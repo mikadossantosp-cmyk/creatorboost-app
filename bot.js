@@ -1176,14 +1176,33 @@ self.addEventListener('notificationclick',e=>{
         const buid = parts[2];
         const btype = parts[3];
         const bildFile = DATA_DIR + '/bild_' + buid + '_' + btype + '.txt';
-        try {
-            if (!fs.existsSync(bildFile)) { res.writeHead(404); return res.end('not found'); }
-            const data = fs.readFileSync(bildFile, 'utf8');
-            const mime = data.split(';')[0].replace('data:','');
-            const base64 = data.split(',')[1];
-            res.writeHead(200, {'Content-Type': mime, 'Cache-Control': 'public, max-age=3600'});
-            return res.end(Buffer.from(base64, 'base64'));
-        } catch(e) { res.writeHead(500); return res.end('error: ' + e.message); }
+        // Try local file first
+        if (fs.existsSync(bildFile)) {
+            try {
+                const data = fs.readFileSync(bildFile, 'utf8');
+                const mime = data.split(';')[0].replace('data:','');
+                const base64 = data.split(',')[1];
+                res.writeHead(200, {'Content-Type': mime, 'Cache-Control': 'public, max-age=3600'});
+                return res.end(Buffer.from(base64, 'base64'));
+            } catch(e) {}
+        }
+        // Proxy to telegram-bot (separate Railway volume)
+        if (MAINBOT_URL) {
+            const botUrl = MAINBOT_URL + '/bild/' + buid + '/' + btype;
+            return new Promise(resolve => {
+                const lib = botUrl.startsWith('https') ? https : http;
+                lib.get(botUrl, { headers: {'x-bridge-secret': BRIDGE_SECRET} }, (bres) => {
+                    if (bres.statusCode === 200) {
+                        res.writeHead(200, { 'Content-Type': bres.headers['content-type'] || 'image/jpeg', 'Cache-Control': 'public, max-age=3600' });
+                        bres.pipe(res);
+                    } else {
+                        res.writeHead(404); res.end('not found');
+                    }
+                    resolve();
+                }).on('error', () => { res.writeHead(404); res.end('not found'); resolve(); });
+            });
+        }
+        res.writeHead(404); return res.end('not found');
     }
 
     const session = getSession(req);
