@@ -100,28 +100,40 @@ function verifyTelegramLogin(data) {
 
 let _dataCache = null;
 let _dataCacheTime = 0;
-const DATA_CACHE_TTL = 4000; // 4 seconds
+const DATA_CACHE_TTL = 30000; // 30 seconds
+
+async function fetchBotRaw(path) {
+    return new Promise(resolve => {
+        const fullUrl = MAINBOT_URL + path;
+        if (!fullUrl.startsWith('http')) return resolve(null);
+        const lib = fullUrl.startsWith('https')?https:http;
+        const req = lib.get(fullUrl, {headers:{'x-bridge-secret':BRIDGE_SECRET}}, res => {
+            let data=''; res.on('data',c=>data+=c); res.on('end',()=>{
+                try { resolve(JSON.parse(data)); } catch(e){ resolve(null); }
+            });
+        });
+        req.on('error',()=>resolve(null)); req.setTimeout(3000,()=>{req.destroy();resolve(null);});
+    });
+}
 
 async function fetchBot(path) {
     if (path === '/data') {
         const now = Date.now();
         if (_dataCache && (now - _dataCacheTime) < DATA_CACHE_TTL) return _dataCache;
+        const parsed = await fetchBotRaw('/data');
+        if (parsed) { _dataCache = parsed; _dataCacheTime = Date.now(); }
+        return parsed;
     }
-    return new Promise(resolve => {
-        const fullUrl = MAINBOT_URL + path;
-        const lib = fullUrl.startsWith('https')?https:http;
-        const req = lib.get(fullUrl, {headers:{'x-bridge-secret':BRIDGE_SECRET}}, res => {
-            let data=''; res.on('data',c=>data+=c); res.on('end',()=>{
-                try {
-                    const parsed = JSON.parse(data);
-                    if (path === '/data') { _dataCache = parsed; _dataCacheTime = Date.now(); }
-                    resolve(parsed);
-                } catch(e){resolve(null);}
-            });
-        });
-        req.on('error',()=>resolve(null)); req.setTimeout(4000,()=>{req.destroy();resolve(null);});
-    });
+    return fetchBotRaw(path);
 }
+
+// Background refresh every 20 seconds
+setInterval(async () => {
+    try {
+        const parsed = await fetchBotRaw('/data');
+        if (parsed) { _dataCache = parsed; _dataCacheTime = Date.now(); }
+    } catch(e) {}
+}, 20000);
 
 async function postBot(path, body) {
     return new Promise(resolve => {
