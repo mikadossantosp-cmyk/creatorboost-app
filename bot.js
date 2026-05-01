@@ -3042,9 +3042,13 @@ document.getElementById('search-input').focus();
                 const myDiamonds = d.users[myUid]?.diamonds || 0;
                 const myBonusLinks = d.bonusLinks?.[myUid] || 0;
                 const myInventory = d.users[myUid]?.inventory || [];
+                const isShopAdmin = String(d.users[myUid]?.role||'').includes('Admin');
                 const ringsHtml = RING_ITEMS.map(item => {
                     const owned = myInventory.includes(item.id);
-                    const canAfford = myDiamonds >= item.price;
+                    const canAfford = isShopAdmin || myDiamonds >= item.price;
+                    const priceHtml = isShopAdmin
+                        ? `<div style="display:flex;align-items:center;gap:6px"><span style="font-size:13px;color:var(--muted);text-decoration:line-through">💎 ${item.price}</span><span style="font-size:12px;font-weight:800;color:#22c55e">Gratis</span></div>`
+                        : `<div style="font-size:13px;font-weight:800;color:#a78bfa">💎 ${item.price}</div>`;
                     return `<div style="background:var(--bg3);border:1px solid var(--border2);border-radius:16px;padding:14px;margin-bottom:10px">
     <div style="display:flex;align-items:center;gap:14px">
       <div style="width:52px;height:52px;border-radius:50%;background:${item.gradient};flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:24px">${item.emoji}</div>
@@ -3052,7 +3056,7 @@ document.getElementById('search-input').focus();
         <div style="font-size:14px;font-weight:700;margin-bottom:2px">${item.name}</div>
         <div style="font-size:11px;color:var(--muted);margin-bottom:8px">${item.desc}</div>
         <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
-          <div style="font-size:13px;font-weight:800;color:#a78bfa">💎 ${item.price}</div>
+          ${priceHtml}
           ${owned
             ? `<div style="font-size:12px;color:#22c55e;font-weight:700">✓ Besessen</div>`
             : `<button onclick="buyItem('${item.id}')" data-item="${item.id}" style="background:${canAfford?'linear-gradient(135deg,#a78bfa,#7c3aed)':'var(--bg4)'};color:${canAfford?'#fff':'var(--muted)'};border:none;border-radius:10px;padding:6px 16px;font-size:12px;font-weight:700;cursor:${canAfford?'pointer':'not-allowed'}" ${canAfford?'':'disabled'}>Kaufen</button>`
@@ -3062,6 +3066,10 @@ document.getElementById('search-input').focus();
     </div>
   </div>`;
                 }).join('');
+                const extraLinkPriceHtml = isShopAdmin
+                    ? `<div style="display:flex;align-items:center;gap:6px"><span style="font-size:14px;color:var(--muted);text-decoration:line-through">💎 5 Diamanten</span><span style="font-size:13px;font-weight:800;color:#22c55e">Gratis</span></div>`
+                    : `<div style="font-size:14px;font-weight:800;color:#a78bfa">💎 5 Diamanten</div>`;
+                const extraLinkCanBuy = isShopAdmin || myDiamonds >= 5;
                 return `
 <div style="padding:16px 16px 4px;display:flex;align-items:center;justify-content:space-between">
   <div style="font-size:13px;font-weight:700">💎 Diamant Shop</div>
@@ -3077,10 +3085,10 @@ document.getElementById('search-input').focus();
         <div style="font-size:15px;font-weight:700;margin-bottom:4px">Extra-Link für heute</div>
         <div style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.5">Poste einen zusätzlichen Reel-Link heute — verfügbar im Web und in der Telegram-Gruppe. Bonus-Links: <b style="color:var(--text)">${myBonusLinks}</b></div>
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
-          <div style="font-size:14px;font-weight:800;color:#a78bfa">💎 5 Diamanten</div>
-          <button onclick="buyExtraLink()" id="buy-extralink-btn" style="background:${myDiamonds>=5?'linear-gradient(135deg,#a78bfa,#7c3aed)':'var(--bg4)'};color:${myDiamonds>=5?'#fff':'var(--muted)'};border:none;border-radius:12px;padding:8px 20px;font-size:13px;font-weight:700;cursor:${myDiamonds>=5?'pointer':'not-allowed'}" ${myDiamonds<5?'disabled':''}>Kaufen</button>
+          ${extraLinkPriceHtml}
+          <button onclick="buyExtraLink()" id="buy-extralink-btn" style="background:${extraLinkCanBuy?'linear-gradient(135deg,#a78bfa,#7c3aed)':'var(--bg4)'};color:${extraLinkCanBuy?'#fff':'var(--muted)'};border:none;border-radius:12px;padding:8px 20px;font-size:13px;font-weight:700;cursor:${extraLinkCanBuy?'pointer':'not-allowed'}" ${extraLinkCanBuy?'':'disabled'}>Kaufen</button>
         </div>
-        ${myDiamonds<5?`<div style="font-size:11px;color:rgba(255,59,48,.8);margin-top:8px">Nicht genug Diamanten (benötigt: 5, vorhanden: ${myDiamonds})</div>`:''}
+        ${!extraLinkCanBuy?`<div style="font-size:11px;color:rgba(255,59,48,.8);margin-top:8px">Nicht genug Diamanten (benötigt: 5, vorhanden: ${myDiamonds})</div>`:''}
       </div>
     </div>
   </div>
