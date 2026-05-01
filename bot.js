@@ -3855,11 +3855,25 @@ ${adminIds.includes(Number(myUid)) ? `
 <div style="padding:16px;border-bottom:1px solid var(--border2)">
   <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">⚙️ Admin Tools</div>
   <a href="/onboarding-preview" class="btn btn-outline btn-full" style="margin-bottom:8px;display:flex">👀 Onboarding Vorschau</a>
+  <button onclick="createFeThread(this)" class="btn btn-outline btn-full" style="margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:8px">⭐ Full Engagement Thread erstellen</button>
+  <div id="fethread-result" style="display:none;font-size:12px;padding:8px;border-radius:8px;margin-top:4px"></div>
 </div>` : ''}
 <div style="padding:16px">
   <a href="/logout" class="btn btn-outline btn-full" style="color:var(--accent)">🚪 Ausloggen</a>
 </div>
 <script>
+async function createFeThread(btn){
+  btn.disabled=true;btn.textContent='⏳ Erstelle Thread...';
+  const r=document.getElementById('fethread-result');
+  try{
+    const res=await fetch('/api/admin/create-fethread',{method:'POST'});
+    const data=await res.json();
+    r.style.display='block';
+    if(data.ok){r.style.background='rgba(34,197,94,.15)';r.style.color='#22c55e';r.textContent='✅ Thread erstellt! ID: '+data.threadId;}
+    else{r.style.background='rgba(239,68,68,.15)';r.style.color='#ef4444';r.textContent='❌ '+data.error;}
+  }catch(e){r.style.display='block';r.style.color='#ef4444';r.textContent='❌ '+e.message;}
+  btn.disabled=false;btn.textContent='⭐ Full Engagement Thread erstellen';
+}
 let selectedBanner = '${(u.banner||gradients[0]).replace(/'/g,"\\'")}';
 let selectedAccent = '${u.accentColor||'#ff6b6b'}';
 function selectBanner(val, el) {
@@ -3994,6 +4008,15 @@ async function setRing(ringId) {
         if (!threadId || !timestamp || !emoji) return json({ok:false});
         const result = await postBot('/react-thread-msg-api', { threadId, timestamp: Number(timestamp), emoji, uid: myUid });
         return json(result || {ok:false});
+    }
+
+    if (path === '/api/admin/create-fethread' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        const botData = await fetchBot('/data');
+        const isAdminUser = botData && String(botData.users?.[myUid]?.role||'').includes('Admin');
+        if (!isAdminUser) return json({ok:false, error:'Kein Admin'}, 403);
+        const result = await postBot('/fethread-setup-api', {});
+        return json(result || {ok:false, error:'Bot nicht erreichbar'});
     }
 
     if (path === '/api/buy-extralink' && req.method === 'POST') {
