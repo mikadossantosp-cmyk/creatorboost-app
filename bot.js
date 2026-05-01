@@ -1085,6 +1085,21 @@ self.addEventListener('notificationclick',e=>{
 });`);
     }
 
+    // ── EXPORT IMAGES ──
+    if (path === '/export-images') {
+        const key = qs.key || '';
+        if (key !== BRIDGE_SECRET) { res.writeHead(403); res.end('Forbidden'); return; }
+        try {
+            const files = {};
+            fs.readdirSync(DATA_DIR).filter(f => f.startsWith('bild_')).forEach(f => {
+                try { files[f] = fs.readFileSync(DATA_DIR + '/' + f, 'utf8'); } catch(e) {}
+            });
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(files));
+        } catch(e) { res.writeHead(500); res.end(e.message); }
+        return;
+    }
+
     // ── APP BILD ENDPOINT ──
     if (path.startsWith('/appbild/')) {
         const parts = path.split('/');
@@ -3974,4 +3989,28 @@ async function setRing(ringId) {
     redirect('/feed');
 });
 
-server.listen(PORT, () => console.log('🌐 CreatorX App läuft auf Port ' + PORT));
+// Export all images as JSON (for migration)
+const EXPORT_PATH = '/export-images';
+// handled in request handler above via url routing - add inline:
+
+server.listen(PORT, async () => {
+    console.log('🌐 CreatorX App läuft auf Port ' + PORT);
+    // Auto-migrate images from Northflank if none exist locally
+    const NORTHFLANK_URL = 'https://site--creatorboost-app--899dydmn7d7v.code.run';
+    try {
+        const existing = fs.readdirSync(DATA_DIR).filter(f => f.startsWith('bild_'));
+        if (existing.length === 0) {
+            console.log('📥 Importiere Bilder von Northflank...');
+            const resp = await fetch(`${NORTHFLANK_URL}/export-images?key=${BRIDGE_SECRET}`);
+            if (resp.ok) {
+                const images = await resp.json();
+                let count = 0;
+                for (const [filename, content] of Object.entries(images)) {
+                    fs.writeFileSync(DATA_DIR + '/' + filename, content, 'utf8');
+                    count++;
+                }
+                console.log(`✅ ${count} Bilder importiert`);
+            }
+        }
+    } catch(e) { console.log('Image-Migration fehlgeschlagen:', e.message); }
+});
