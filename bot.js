@@ -2662,6 +2662,7 @@ async function createThread(){
       if(r.ok){const d=await r.json();if(d.messages?.length)render(d.messages);}
     }catch(e){}
   }
+  load();
   window.send=async function(){
     const el=document.getElementById('inp');const text=el.value.trim();if(!text)return;
     el.value='';el.style.height='auto';
