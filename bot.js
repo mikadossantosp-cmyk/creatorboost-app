@@ -1603,12 +1603,16 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
     }
 
     if (path === '/newsletter') {
-        const fs2 = require('fs');
-        const nlPath = require('path').join(__dirname, 'newsletter.html');
-        let html = '';
-        try { html = fs2.readFileSync(nlPath, 'utf8'); } catch(e) { return res.end('Nicht gefunden'); }
+        let nlHtml = '';
+        try { nlHtml = fs.readFileSync(__dirname + '/newsletter.html', 'utf8'); } catch(e) { res.writeHead(404); return res.end('newsletter.html nicht gefunden: ' + e.message); }
         res.writeHead(200, {'Content-Type':'text/html; charset=utf-8'});
-        return res.end(html);
+        return res.end(nlHtml);
+    }
+    if (path === '/newsletter/download') {
+        let nlHtml = '';
+        try { nlHtml = fs.readFileSync(__dirname + '/newsletter.html', 'utf8'); } catch(e) { res.writeHead(404); return res.end('Nicht gefunden'); }
+        res.writeHead(200, {'Content-Type':'text/html; charset=utf-8','Content-Disposition':'attachment; filename="creatorx-guide.html"'});
+        return res.end(nlHtml);
     }
 
     // ── ONBOARDING PREVIEW (Admin) ──
