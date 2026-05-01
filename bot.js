@@ -1037,7 +1037,7 @@ function goTo(i){
   });
   const btn=document.getElementById('ob-btn');
   btn.style.background=GRADS[cur];
-  btn.textContent=cur===TOTAL-1?'🚀 Los geht\'s!':'Weiter →';
+  btn.textContent=cur===TOTAL-1?"🚀 Los geht's!":'Weiter →';
   setTimeout(()=>busy=false,420);
 }
 function next(){cur<TOTAL-1?goTo(cur+1):finish();}
