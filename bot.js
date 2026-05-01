@@ -193,10 +193,12 @@ function xpNext(xp) {
     if(xp<500)return{ziel:'⬆️',fehlend:500-xp,pct:Math.round((xp-50)/450*100)};
     if(xp<1000)return{ziel:'🏅',fehlend:1000-xp,pct:Math.round((xp-500)/500*100)};
     if(xp<5000)return{ziel:'👑',fehlend:5000-xp,pct:Math.round((xp-1000)/4000*100)};
+    if(xp<10000)return{ziel:'🌟',fehlend:10000-xp,pct:Math.round((xp-5000)/5000*100)};
     return null;
 }
 
 function badgeGradient(role) {
+    if(role?.includes('Elite+')) return 'linear-gradient(135deg,#00b4db,#a855f7,#f59e0b)';
     if(role?.includes('Elite')) return 'linear-gradient(135deg,#f59e0b,#ef4444)';
     if(role?.includes('Erfahrener')) return 'linear-gradient(135deg,#8b5cf6,#3b82f6)';
     if(role?.includes('Aufsteiger')) return 'linear-gradient(135deg,#3b82f6,#06b6d4)';
@@ -1032,7 +1034,7 @@ ${isPreview?'<div class="ob-pb">👀 Admin Vorschau &nbsp;·&nbsp; <a href="/ein
         <div class="ob-title">XP, Diamanten<br>&amp; <span style="background:linear-gradient(135deg,#00c851,#4dabf7);-webkit-background-clip:text;-webkit-text-fill-color:transparent">Badges</span></div>
         <div class="ob-desc">Sammle XP durch Aktivität. Mit Diamanten kaufst du Profilrahmen und Extra-Links im <b style="color:#fff">💎 Shop</b>.</div>
         <div class="ob-facts">
-          <div class="ob-fact"><span class="ob-fact-i">🏅</span><div class="ob-fact-t">5 Stufen: 🆕 New → 📘 Anfänger → ⬆️ Aufsteiger → 🏅 Erfahrene → <b>👑 Elite</b></div></div>
+          <div class="ob-fact"><span class="ob-fact-i">🏅</span><div class="ob-fact-t">6 Stufen: 🆕 New → 📘 Anfänger → ⬆️ Aufsteiger → 🏅 Erfahrene → 👑 Elite → <b>🌟 Elite+</b></div></div>
           <div class="ob-fact"><span class="ob-fact-i">🎨</span><div class="ob-fact-t">Profilrahmen mit <b>Glow-Effekt</b> im Shop freischalten</div></div>
         </div>
       </div>
@@ -2026,8 +2028,8 @@ p{line-height:1.65;color:var(--muted)}
     </div>
   </div>
 
-  <h3 style="font-size:15px;font-weight:700;margin-bottom:4px">Die 5 Badge-Stufen</h3>
-  <p style="font-size:12px;color:var(--muted);margin-bottom:0">Von Einsteiger bis Elite — wo stehst du?</p>
+  <h3 style="font-size:15px;font-weight:700;margin-bottom:4px">Die 6 Badge-Stufen</h3>
+  <p style="font-size:12px;color:var(--muted);margin-bottom:0">Von Einsteiger bis Elite+ — wo stehst du?</p>
   <div class="badge-row">
     <div class="badge-item">
       <span class="badge-emoji">🆕</span>
@@ -2053,6 +2055,11 @@ p{line-height:1.65;color:var(--muted)}
       <span class="badge-emoji">👑</span>
       <div class="badge-name" style="color:var(--gold)">Elite</div>
       <div class="badge-xp">5.000 XP</div>
+    </div>
+    <div class="badge-item" style="border-color:rgba(168,85,247,.3);background:rgba(168,85,247,.05)">
+      <span class="badge-emoji">🌟</span>
+      <div class="badge-name" style="color:#a855f7">Elite+</div>
+      <div class="badge-xp">10.000 XP</div>
     </div>
   </div>
 </div>
