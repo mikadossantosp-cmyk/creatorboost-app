@@ -146,7 +146,7 @@ async function fetchBot(path) {
 setInterval(refreshDataCache, 20000);
 
 async function postBot(path, body) {
-    return new Promise(resolve => {
+    const result = await new Promise(resolve => {
         const fullUrl = MAINBOT_URL + path;
         const lib = fullUrl.startsWith('https')?https:http;
         const data = JSON.stringify(body);
@@ -159,6 +159,8 @@ async function postBot(path, body) {
         });
         req.on('error',()=>resolve(null)); req.write(data); req.end();
     });
+    _dataCacheTime = 0; // invalidate cache after any write
+    return result;
 }
 
 function parseBody(req) {
