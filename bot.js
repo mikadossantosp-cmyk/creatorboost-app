@@ -2638,6 +2638,7 @@ async function createThread(){
     const atBottom=window.innerHeight+window.scrollY>=document.body.scrollHeight-80;
     knownHash=h;
     window._lastMsgs=msgs;
+    if(!msgs.length){el.innerHTML='<div style="text-align:center;padding:60px 20px;color:var(--muted)"><div style="font-size:40px;margin-bottom:12px">💬</div><div style="font-size:14px">Noch keine Nachrichten.<br>Schreib die erste!</div></div>';return;}
     el.innerHTML=[...msgs].reverse().map(m=>{
       const c=col(m.name);
       const nameEl=m.uid?'<a href="/profil/'+m.uid+'" style="font-size:12px;font-weight:700;color:'+c+';text-decoration:none">'+(m.role?m.role+' ':'')+esc(m.name)+'</a>':'<span style="font-size:12px;font-weight:700;color:'+c+'">'+(m.role?m.role+' ':'')+esc(m.name)+'</span>';
@@ -3856,6 +3857,7 @@ ${adminIds.includes(Number(myUid)) ? `
   <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">⚙️ Admin Tools</div>
   <a href="/onboarding-preview" class="btn btn-outline btn-full" style="margin-bottom:8px;display:flex">👀 Onboarding Vorschau</a>
   <button onclick="createFeThread(this)" class="btn btn-outline btn-full" style="margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:8px">⭐ Full Engagement Thread erstellen</button>
+  <button onclick="announceFeThread(this)" class="btn btn-outline btn-full" style="margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:8px">📢 Ankündigung in FE-Thread senden</button>
   <div id="fethread-result" style="display:none;font-size:12px;padding:8px;border-radius:8px;margin-top:4px"></div>
 </div>` : ''}
 <div style="padding:16px">
@@ -3873,6 +3875,18 @@ async function createFeThread(btn){
     else{r.style.background='rgba(239,68,68,.15)';r.style.color='#ef4444';r.textContent='❌ '+data.error;}
   }catch(e){r.style.display='block';r.style.color='#ef4444';r.textContent='❌ '+e.message;}
   btn.disabled=false;btn.textContent='⭐ Full Engagement Thread erstellen';
+}
+async function announceFeThread(btn){
+  btn.disabled=true;btn.textContent='⏳ Sende...';
+  const r=document.getElementById('fethread-result');
+  try{
+    const res=await fetch('/api/admin/announce-fethread',{method:'POST'});
+    const data=await res.json();
+    r.style.display='block';
+    if(data.ok){r.style.background='rgba(34,197,94,.15)';r.style.color='#22c55e';r.textContent='✅ Ankündigung gesendet!';}
+    else{r.style.background='rgba(239,68,68,.15)';r.style.color='#ef4444';r.textContent='❌ '+data.error;}
+  }catch(e){r.style.display='block';r.style.color='#ef4444';r.textContent='❌ '+e.message;}
+  btn.disabled=false;btn.textContent='📢 Ankündigung in FE-Thread senden';
 }
 let selectedBanner = '${(u.banner||gradients[0]).replace(/'/g,"\\'")}';
 let selectedAccent = '${u.accentColor||'#ff6b6b'}';
@@ -4016,6 +4030,15 @@ async function setRing(ringId) {
         const isAdminUser = botData && String(botData.users?.[myUid]?.role||'').includes('Admin');
         if (!isAdminUser) return json({ok:false, error:'Kein Admin'}, 403);
         const result = await postBot('/fethread-setup-api', {});
+        return json(result || {ok:false, error:'Bot nicht erreichbar'});
+    }
+
+    if (path === '/api/admin/announce-fethread' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        const botData = await fetchBot('/data');
+        const isAdminUser = botData && String(botData.users?.[myUid]?.role||'').includes('Admin');
+        if (!isAdminUser) return json({ok:false, error:'Kein Admin'}, 403);
+        const result = await postBot('/fethread-announce-api', {});
         return json(result || {ok:false, error:'Bot nicht erreichbar'});
     }
 
