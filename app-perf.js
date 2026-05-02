@@ -1,4 +1,4 @@
-// app-perf.js v3 - JS-Fix nur fuer Topbar + Stories, Reactions via CSS
+// app-perf.js v4 - JS-Fix nur Topbar-Avatar (KEIN Online-Punkt mehr) + Stories
 
 module.exports = `
 <style>
@@ -67,7 +67,7 @@ module.exports = `
     if (document.hidden) sessionStorage.setItem('hiddenSince', String(Date.now()));
   });
 
-  // ── JS-FIX: Topbar Avatar nur wenn .chat-detail-page klasse oder profile link existiert ──
+  // ── JS-FIX: Topbar Avatar (KEIN Online-Punkt mehr - das gab False-Positives) ──
   function fixTopbarLayout() {
     const topbar = document.querySelector('.topbar');
     if (!topbar) return;
@@ -78,17 +78,15 @@ module.exports = `
     profileLink.style.cssText = 'display:flex !important;align-items:center !important;gap:10px !important;text-decoration:none !important;flex:1 !important;justify-content:flex-start !important;padding-left:6px !important;';
     const avatarDiv = profileLink.querySelector('div');
     if (avatarDiv) {
-      avatarDiv.style.cssText = 'position:relative !important;width:36px !important;height:36px !important;border-radius:50% !important;background:var(--bg4) !important;display:flex !important;align-items:center !important;justify-content:center !important;font-size:14px !important;font-weight:700 !important;flex-shrink:0 !important;overflow:visible !important;';
+      avatarDiv.style.cssText = 'position:relative !important;width:36px !important;height:36px !important;border-radius:50% !important;background:var(--bg4) !important;display:flex !important;align-items:center !important;justify-content:center !important;font-size:14px !important;font-weight:700 !important;flex-shrink:0 !important;overflow:hidden !important;';
       const img = avatarDiv.querySelector('img');
       if (img) {
         img.style.cssText = 'position:absolute !important;inset:0 !important;width:100% !important;height:100% !important;object-fit:cover !important;border-radius:50% !important;z-index:1 !important;';
       }
-      if (!avatarDiv.querySelector('.online-dot')) {
-        const dot = document.createElement('div');
-        dot.className = 'online-dot';
-        dot.style.cssText = 'position:absolute !important;bottom:-2px !important;right:-2px !important;width:11px !important;height:11px !important;border-radius:50% !important;background:#22c55e !important;border:2.5px solid var(--bg) !important;z-index:5 !important;pointer-events:none !important;';
-        avatarDiv.appendChild(dot);
-      }
+      // ENTFERNT: Online-Punkt einfuegen war Bug (false positive bei jedem User)
+      // Wenn echter Online-Status spaeter da ist: window.CHAT_USER_ONLINE === true checken
+      const oldDot = avatarDiv.querySelector('.online-dot');
+      if (oldDot) oldDot.remove();
     }
     const nameSpan = profileLink.querySelector('span:last-of-type');
     if (nameSpan) {
