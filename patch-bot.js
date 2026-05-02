@@ -6,6 +6,9 @@ const BOT = path.resolve(__dirname, 'bot.js');
 let src = fs.readFileSync(BOT, 'utf8');
 let changed = false;
 
+// Backtick char (avoids string-escape issues)
+const BT = String.fromCharCode(96);
+
 function tryPatch(name, regex, replacement, alreadyMarker) {
     if (alreadyMarker && src.includes(alreadyMarker)) {
         console.log('[patch-bot] ' + name + ' bereits gepatched');
@@ -189,18 +192,43 @@ if (versionBumps > 0) {
     changed = true;
 }
 
-// PATCH: app-perf.js GLOBAL einbinden in layout function (jeder page)
-if (src.includes('appperf-mounted-marker')) {
+// PATCH: app-perf.js GLOBAL einbinden in layout function
+// Marker fuer Idempotenz
+const PERF_MARKER = '<!--appperf-mounted-marker-->';
+if (src.includes(PERF_MARKER)) {
     console.log('[patch-bot] app-perf bereits global eingebunden');
 } else {
-    const layoutEnd = '</script>\n</body></html>`;\n}';
-    const newLayoutEnd = '</script>\n${require("./app-perf")}\n<!--appperf-mounted-marker-->\n</body></html>`;\n}';
-    if (src.includes(layoutEnd)) {
-        src = src.replace(layoutEnd, newLayoutEnd);
+    // Pattern: regex-based weil String-Escape mit Backtick tricky
+    // Match: </script>\n</body></html>`;\n}
+    const layoutEndRegex = /<\/script>\s*<\/body><\/html>`;(\s*})/;
+    if (layoutEndRegex.test(src)) {
+        // Inject app-perf VOR </body></html>
+        src = src.replace(layoutEndRegex, '</script>\n${require("./app-perf")}\n' + PERF_MARKER + '\n</body></html>' + BT + ';$1');
         console.log('[patch-bot] app-perf global in layout eingebunden');
         changed = true;
     } else {
-        console.warn('[patch-bot] WARNUNG: layout-end Pattern fuer app-perf nicht gefunden');
+        // Fallback: probiere verschiedene patterns
+        const patterns = [
+            { pat: /<\/script>\s*<\/body><\/html>`/g, desc: 'with backtick' },
+            { pat: /<\/body><\/html>`;\s*\}/g, desc: 'body close + backtick + brace' },
+        ];
+        let injected = false;
+        for (const p of patterns) {
+            if (p.pat.test(src)) {
+                src = src.replace(p.pat, (match) => {
+                    if (match.includes(PERF_MARKER)) return match;
+                    if (match.includes('${require("./app-perf")}')) return match;
+                    return '${require("./app-perf")}' + PERF_MARKER + match;
+                });
+                console.log('[patch-bot] app-perf global eingebunden (fallback: ' + p.desc + ')');
+                injected = true;
+                changed = true;
+                break;
+            }
+        }
+        if (!injected) {
+            console.warn('[patch-bot] WARNUNG: layout-end Pattern fuer app-perf nicht gefunden');
+        }
     }
 }
 
