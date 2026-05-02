@@ -1387,6 +1387,12 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
         return json({ok:true, liked: result?.liked, likes: result?.likes});
     }
 
+    // ── ASSETLINKS (für APK/TWA) ──
+    if (path === '/.well-known/assetlinks.json') {
+        res.writeHead(200,{'Content-Type':'application/json','Cache-Control':'no-cache'});
+        return res.end('[]');
+    }
+
     // ── PWA MANIFEST ──
     if (path === '/manifest.json') {
         res.writeHead(200,{'Content-Type':'application/manifest+json','Cache-Control':'no-store'});
