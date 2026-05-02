@@ -516,6 +516,7 @@ function layout(content, session, page='feed', lang='de') {
 <link rel="apple-touch-icon" sizes="512x512" href="/icon-512.png?v=22">
 <meta name="apple-mobile-web-app-title" content="CreatorX">
 <title>CreatorX</title>
+${session ? `<link rel="prefetch" href="/feed"><link rel="prefetch" href="/explore"><link rel="prefetch" href="/nachrichten"><link rel="prefetch" href="/profil">` : ''}
 <style>${CSS}</style>
 </head>
 <body>
@@ -1643,7 +1644,7 @@ self.addEventListener('notificationclick',e=>{
     if (session) { session.lastSeen = Date.now(); }
 
     function redirect(to) { res.writeHead(302,{'Location':to}); res.end(); }
-    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-cache, max-age=0, stale-while-revalidate=15','X-App-Version':'21'}); res.end(layout(content,session,page,lang)); }
+    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-cache, stale-while-revalidate=60','X-App-Version':'21'}); res.end(layout(content,session,page,lang)); }
     function json(data, status=200) { res.writeHead(status,{'Content-Type':'application/json'}); res.end(JSON.stringify(data)); }
 
     // ── LANDING ──
@@ -5139,7 +5140,7 @@ async function saveProfile() {
         if (selectedBanner) payload.banner = selectedBanner;
         const res = await fetch('/api/save-profile', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
         const data = await res.json();
-        if(data.ok) { toast('✅ Gespeichert!'); setTimeout(()=>location.reload(), 1200); }
+        if(data.ok) { toast('✅ Gespeichert!'); setTimeout(()=>location.reload(), 300); }
         else { toast('❌ Fehler: ' + (data.error||'Unbekannt')); }
     } catch(e) { toast('❌ Netzwerkfehler'); }
     if(btn) { btn.textContent = '💾 Speichern'; btn.disabled = false; }
