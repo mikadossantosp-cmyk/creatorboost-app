@@ -162,7 +162,6 @@ tryPatch(
     "postBot('/mark-messages-read', { uid: myUid, chatKey }).catch"
 );
 
-// PATCH ICON: Replace hardcoded base64 mit require zu app-icon.js
 if (src.includes("require('./app-icon')")) {
     console.log('[patch-bot] App-Icon bereits via require');
 } else if (/const buf = Buffer\.from\('[A-Za-z0-9+/=]{1000,}', 'base64'\);/.test(src)) {
@@ -174,7 +173,6 @@ if (src.includes("require('./app-icon')")) {
     changed = true;
 }
 
-// PATCH ICON CONTENT-TYPE: PNG -> JPEG
 tryPatch(
     'Icon Content-Type',
     /res\.writeHead\(200, \{ 'Content-Type': 'image\/png',/g,
@@ -182,14 +180,28 @@ tryPatch(
     null
 );
 
-// BUMP ICON VERSION 5 -> 11 (force browser cache refresh)
 let versionBumps = 0;
-src = src.replace(/icon\.jpg\?v=\d+/g, () => { versionBumps++; return 'icon.jpg?v=11'; });
-src = src.replace(/icon-192\.png\?v=\d+/g, 'icon-192.png?v=11');
-src = src.replace(/icon-512\.png\?v=\d+/g, 'icon-512.png?v=11');
+src = src.replace(/icon\.jpg\?v=\d+/g, () => { versionBumps++; return 'icon.jpg?v=12'; });
+src = src.replace(/icon-192\.png\?v=\d+/g, 'icon-192.png?v=12');
+src = src.replace(/icon-512\.png\?v=\d+/g, 'icon-512.png?v=12');
 if (versionBumps > 0) {
-    console.log('[patch-bot] Icon-Version gebumpt (v=11): ' + versionBumps + ' Stellen');
+    console.log('[patch-bot] Icon-Version gebumpt (v=12): ' + versionBumps + ' Stellen');
     changed = true;
+}
+
+// PATCH: app-perf.js GLOBAL einbinden in layout function (jeder page)
+if (src.includes('appperf-mounted-marker')) {
+    console.log('[patch-bot] app-perf bereits global eingebunden');
+} else {
+    const layoutEnd = '</script>\n</body></html>`;\n}';
+    const newLayoutEnd = '</script>\n${require("./app-perf")}\n<!--appperf-mounted-marker-->\n</body></html>`;\n}';
+    if (src.includes(layoutEnd)) {
+        src = src.replace(layoutEnd, newLayoutEnd);
+        console.log('[patch-bot] app-perf global in layout eingebunden');
+        changed = true;
+    } else {
+        console.warn('[patch-bot] WARNUNG: layout-end Pattern fuer app-perf nicht gefunden');
+    }
 }
 
 if (changed) {

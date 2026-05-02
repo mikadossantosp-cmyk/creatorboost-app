@@ -1,4 +1,4 @@
-// app-perf.js v6 - Update-Banner + Online-Status + Performance
+// app-perf.js v7 - Update-Banner v12 + Online-Status + Performance
 
 module.exports = `
 <style>
@@ -22,7 +22,6 @@ module.exports = `
   .topbar-online-status { font-size: 11px; color: #22c55e; font-weight: 600; margin-top: -2px; }
   .topbar-offline-status { font-size: 11px; color: var(--muted); font-weight: 500; margin-top: -2px; }
 
-  /* UPDATE-BANNER */
   #app-update-banner {
     position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
     background: linear-gradient(135deg, #a78bfa, #7c3aed);
@@ -34,61 +33,36 @@ module.exports = `
   }
   #app-update-banner.show { display: flex; }
   @keyframes banner-slide { from { transform: translateY(-100%); } to { transform: translateY(0); } }
-  #app-update-banner .upd-icon {
-    width: 36px; height: 36px; border-radius: 8px; flex-shrink: 0;
-    background: rgba(255,255,255,0.15); display: flex; align-items: center; justify-content: center;
-    overflow: hidden;
-  }
+  #app-update-banner .upd-icon { width: 36px; height: 36px; border-radius: 8px; flex-shrink: 0; background: rgba(255,255,255,0.15); display: flex; align-items: center; justify-content: center; overflow: hidden; }
   #app-update-banner .upd-icon img { width: 100%; height: 100%; object-fit: cover; border-radius: 8px; }
   #app-update-banner .upd-text { flex: 1; min-width: 0; line-height: 1.3; }
   #app-update-banner .upd-title { font-weight: 800; font-size: 14px; }
   #app-update-banner .upd-sub { font-size: 11.5px; opacity: 0.9; margin-top: 2px; }
-  #app-update-banner .upd-close {
-    width: 28px; height: 28px; border-radius: 50%; background: rgba(255,255,255,0.2);
-    border: none; color: #fff; font-size: 18px; cursor: pointer; flex-shrink: 0;
-    display: flex; align-items: center; justify-content: center;
-  }
+  #app-update-banner .upd-close { width: 28px; height: 28px; border-radius: 50%; background: rgba(255,255,255,0.2); border: none; color: #fff; font-size: 18px; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
   #app-update-banner .upd-close:active { transform: scale(0.85); background: rgba(255,255,255,0.3); }
 
-  /* UPDATE-MODAL */
-  #app-update-modal {
-    position: fixed; inset: 0; z-index: 1001;
-    background: rgba(0,0,0,0.7); backdrop-filter: blur(8px);
-    display: none; align-items: center; justify-content: center;
-    padding: 20px;
-  }
+  #app-update-modal { position: fixed; inset: 0; z-index: 1001; background: rgba(0,0,0,0.7); backdrop-filter: blur(8px); display: none; align-items: center; justify-content: center; padding: 20px; }
   #app-update-modal.show { display: flex; animation: modal-fade 0.2s ease-out; }
   @keyframes modal-fade { from { opacity: 0; } to { opacity: 1; } }
-  #app-update-modal .upd-card {
-    background: var(--bg2); border-radius: 24px; padding: 28px 24px;
-    max-width: 380px; width: 100%; text-align: center;
-    border: 1px solid rgba(255,255,255,0.1);
-    box-shadow: 0 24px 48px rgba(0,0,0,0.6);
-    animation: card-pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-  }
+  #app-update-modal .upd-card { background: var(--bg2); border-radius: 24px; padding: 28px 24px; max-width: 380px; width: 100%; text-align: center; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 24px 48px rgba(0,0,0,0.6); animation: card-pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
   @keyframes card-pop { from { transform: scale(0.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-  #app-update-modal .upd-card .upd-big-icon {
-    width: 96px; height: 96px; border-radius: 22px; margin: 0 auto 16px;
-    background: #000; overflow: hidden;
-    box-shadow: 0 12px 32px rgba(124,58,237,0.4);
-  }
+  #app-update-modal .upd-card .upd-big-icon { width: 96px; height: 96px; border-radius: 22px; margin: 0 auto 16px; background: #000; overflow: hidden; box-shadow: 0 12px 32px rgba(124,58,237,0.4); }
   #app-update-modal .upd-card .upd-big-icon img { width: 100%; height: 100%; object-fit: cover; }
   #app-update-modal .upd-card h2 { font-size: 18px; margin: 0 0 8px; color: var(--text); font-weight: 800; }
   #app-update-modal .upd-card p { font-size: 13.5px; color: var(--muted); line-height: 1.5; margin: 0 0 18px; }
   #app-update-modal .upd-card ol { text-align: left; padding-left: 24px; color: var(--text); font-size: 13px; line-height: 1.7; margin: 0 0 18px; }
   #app-update-modal .upd-card ol li { margin-bottom: 4px; }
   #app-update-modal .upd-card .upd-actions { display: flex; gap: 10px; }
-  #app-update-modal .upd-card button {
-    flex: 1; padding: 12px; border: none; border-radius: 14px;
-    font-size: 14px; font-weight: 700; cursor: pointer;
-    transition: transform 0.15s;
-  }
+  #app-update-modal .upd-card button { flex: 1; padding: 12px; border: none; border-radius: 14px; font-size: 14px; font-weight: 700; cursor: pointer; transition: transform 0.15s; }
   #app-update-modal .upd-card button:active { transform: scale(0.95); }
   #app-update-modal .upd-card .upd-btn-primary { background: linear-gradient(135deg, #a78bfa, #7c3aed); color: #fff; }
   #app-update-modal .upd-card .upd-btn-secondary { background: rgba(255,255,255,0.08); color: var(--text); }
 </style>
 <script>
 (function(){
+  if (window.__appPerfMounted) return;
+  window.__appPerfMounted = true;
+
   function ensureNavBar() {
     if (!document.getElementById('app-nav-loading')) {
       const bar = document.createElement('div'); bar.id = 'app-nav-loading'; document.body.appendChild(bar);
@@ -96,15 +70,13 @@ module.exports = `
   }
   if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', ensureNavBar); } else { ensureNavBar(); }
 
-  // ── UPDATE-BANNER (zeigt sich einmalig nach jedem App-Update) ──
-  const APP_VERSION = '11'; // Bump bei jedem visuellen Update
+  const APP_VERSION = '12';
   const UPDATE_KEY = 'app_update_seen_v' + APP_VERSION;
 
   function showUpdateBanner() {
     if (sessionStorage.getItem('upd_dismissed_session')) return;
     if (localStorage.getItem(UPDATE_KEY) === '1') return;
     if (document.getElementById('app-update-banner')) return;
-
     const banner = document.createElement('div');
     banner.id = 'app-update-banner';
     banner.innerHTML =
@@ -132,8 +104,8 @@ module.exports = `
         '<h2>Neues CX-Icon 👑</h2>' +
         '<p>Damit du das neue gold-silberne Icon auf deinem Home-Screen siehst:</p>' +
         '<ol>' +
-          '<li>Browser oder App-Tab schliessen</li>' +
-          '<li>Browser-Cache leeren (in den Einstellungen)</li>' +
+          '<li>Browser/App-Tab schliessen</li>' +
+          '<li>Browser-Cache leeren</li>' +
           '<li>App neu öffnen → "Zum Home-Screen hinzufügen"</li>' +
           '<li>Altes Icon vom Home-Screen löschen</li>' +
         '</ol>' +
@@ -147,14 +119,12 @@ module.exports = `
     requestAnimationFrame(() => modal.classList.add('show'));
   }
 
-  // Trigger banner nach kurzem Delay (App soll erst geladen sein)
   function maybeShowUpdate() {
     if (location.pathname === '/' || location.pathname === '/login' || location.pathname === '/register') return;
     setTimeout(showUpdateBanner, 1500);
   }
   if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', maybeShowUpdate); } else { maybeShowUpdate(); }
 
-  // ── PREFETCH ──
   const seen = new Set();
   function maybePrefetch(href) {
     if (!href || href.startsWith('#') || href.startsWith('javascript:') || href.startsWith('http')) return;
@@ -194,7 +164,6 @@ module.exports = `
     if (document.hidden) sessionStorage.setItem('hiddenSince', String(Date.now()));
   });
 
-  // ── Topbar Avatar + Online-Status ──
   function fixTopbarLayout() {
     const topbar = document.querySelector('.topbar');
     if (!topbar) return;
@@ -217,18 +186,10 @@ module.exports = `
         if (!dot) {
           dot = document.createElement('div');
           dot.className = 'online-dot';
-          dot.style.cssText = 'position:absolute !important;bottom:-2px !important;right:-2px !important;width:11px !important;height:11px !important;border-radius:50% !important;background:#22c55e !important;border:2.5px solid var(--bg) !important;z-index:5 !important;pointer-events:none !important;animation:online-pulse 2s ease-in-out infinite !important;';
+          dot.style.cssText = 'position:absolute !important;bottom:-2px !important;right:-2px !important;width:11px !important;height:11px !important;border-radius:50% !important;background:#22c55e !important;border:2.5px solid var(--bg) !important;z-index:5 !important;pointer-events:none !important;';
           avatarDiv.appendChild(dot);
-          if (!document.getElementById('online-pulse-style')) {
-            const styleEl = document.createElement('style');
-            styleEl.id = 'online-pulse-style';
-            styleEl.textContent = '@keyframes online-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(34,197,94,0.5); } 50% { box-shadow: 0 0 0 4px rgba(34,197,94,0); } }';
-            document.head.appendChild(styleEl);
-          }
         }
-      } else if (dot) {
-        dot.remove();
-      }
+      } else if (dot) { dot.remove(); }
     }
     const nameSpan = profileLink.querySelector('span:last-of-type');
     if (nameSpan && !nameSpan.dataset.wrapped) {
@@ -242,8 +203,7 @@ module.exports = `
       statusEl.className = window.CHAT_OTHER_ONLINE === true ? 'topbar-online-status' : 'topbar-offline-status';
       statusEl.textContent = window.CHAT_OTHER_ONLINE === true ? '● Online' : 'Offline';
       statusEl.dataset.statusText = '1';
-      wrap.appendChild(nameEl);
-      wrap.appendChild(statusEl);
+      wrap.appendChild(nameEl); wrap.appendChild(statusEl);
       nameSpan.replaceWith(wrap);
     } else {
       const existing = profileLink.querySelector('[data-status-text]');
