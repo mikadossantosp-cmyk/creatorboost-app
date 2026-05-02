@@ -63,7 +63,7 @@ tryPatch(
     "require('./chat-detail-render')"
 );
 
-// Patch 5: PERFORMANCE - sendMessage mit Optimistic UI
+// Patch 5: PERFORMANCE - Optimistic Send
 const OPTIMISTIC_SEND = "async function sendMessage(image, audio, text=''){" +
     "const tmpTs=Date.now();" +
     "insertOptimisticBubble(tmpTs,text,image,audio);" +
@@ -113,7 +113,7 @@ tryPatch(
     "insertOptimisticBubble"
 );
 
-// Patch 6: PERFORMANCE - Smart Polling (kein reload wenn optimistic pending)
+// Patch 6: PERFORMANCE - Smart Polling
 const SMART_POLL = "let chatKnownCount=${msgs.length};" +
 "setInterval(async()=>{" +
     "if(document.querySelector('[data-optimistic]'))return;" +
@@ -131,7 +131,7 @@ tryPatch(
     "chatKnownCount"
 );
 
-// Patch 7: PERFORMANCE - Smarter Send-Trigger (sofort focus zuruckgeben)
+// Patch 7: Smart Send-Click
 tryPatch(
     'Smart Send-Click',
     /async function sendMsg\(\) \{\s*const input = document\.getElementById\('msg-input'\);[\s\S]*?clearImage\(\);\s*\}/,
@@ -148,13 +148,20 @@ tryPatch(
     null
 );
 
-// Patch 8: PERFORMANCE - Smooth Back-Buttons (history.back wenn vorhanden)
-// Topbar Back-Buttons in /nachrichten/<uid>
+// Patch 8: Smooth Back-Button DM
 tryPatch(
     'Back-Button DM',
     /<a href="\/nachrichten" class="icon-btn" style="font-size:22px">‹<\/a>/,
     '<a href="/nachrichten" class="icon-btn" style="font-size:22px" onclick="if(history.length>1){event.preventDefault();history.back();}">‹</a>',
     'history.back()'
+);
+
+// Patch 9: PERFORMANCE - mark-messages-read non-blocking
+tryPatch(
+    'Mark-Read non-blocking',
+    /await postBot\('\/mark-messages-read', \{ uid: myUid, chatKey \}\);/,
+    "postBot('/mark-messages-read', { uid: myUid, chatKey }).catch(()=>{});",
+    "postBot('/mark-messages-read', { uid: myUid, chatKey }).catch"
 );
 
 if (changed) {

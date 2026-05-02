@@ -1,4 +1,4 @@
-// Chat-Detail Bubbles im Insta DM Style v3 - mit app-perf eingebunden
+// Chat-Detail Bubbles im Insta DM Style v4 - mit lokalen Reactions
 
 let appPerf = '';
 try { appPerf = require('./app-perf'); } catch(e) {}
@@ -82,18 +82,19 @@ module.exports = function renderChatBubbles(opts) {
             bubbleContent = '<div class="chat-text">' + esc(m.text || '') + '</div>';
         }
 
-        let reactionsHtml = '';
+        // Backend-Reactions (vom Server)
+        let backendReactions = {};
         if (m.reactions && Object.keys(m.reactions).length > 0) {
-            const counts = {};
             Object.values(m.reactions).forEach(emoji => {
-                counts[emoji] = (counts[emoji] || 0) + 1;
+                backendReactions[emoji] = (backendReactions[emoji] || 0) + 1;
             });
-            reactionsHtml = '<div class="chat-reactions">' +
-                Object.entries(counts).map(([emo, n]) =>
-                    '<span class="chat-reaction">' + emo + (n > 1 ? ' <b>' + n + '</b>' : '') + '</span>'
-                ).join('') +
-                '</div>';
         }
+        // reactions container - wird auch von client befuellt aus localStorage
+        const reactionsHtml = '<div class="chat-reactions" data-ts="' + ts + '" data-backend="' + esc(JSON.stringify(backendReactions)) + '">' +
+            Object.entries(backendReactions).map(([emo, n]) =>
+                '<span class="chat-reaction">' + emo + (n > 1 ? ' <b>' + n + '</b>' : '') + '</span>'
+            ).join('') +
+        '</div>';
 
         let statusHtml = '';
         if (isMe && isLastFromSender) {
@@ -118,7 +119,7 @@ module.exports = function renderChatBubbles(opts) {
         html += '<div class="chat-row ' + (isMe ? 'chat-row-me' : 'chat-row-other') + groupClass + lastClass + '" data-ts="' + ts + '">' +
             (!isMe ? avatarHtml : '') +
             '<div class="chat-bubble-wrap">' +
-                '<div class="chat-bubble" ' +
+                '<div class="chat-bubble" data-ts="' + ts + '" ' +
                     'ontouchstart="chatLongPress(event,this,' + ts + ')" ' +
                     'ontouchend="chatLongPressEnd()" ' +
                     'ontouchmove="chatLongPressEnd()" ' +
@@ -182,8 +183,10 @@ function getStyles() {
         '.chat-row-other .chat-audio-bar { background: rgba(255,255,255,0.1); }' +
         '.audio-prog { height: 100%; width: 0%; background: currentColor; transition: width 0.1s; }' +
         '.audio-dur { font-size: 11px; opacity: 0.7; margin-top: 5px; font-weight: 500; }' +
-        '.chat-reactions { display: flex; gap: 3px; margin-top: -6px; padding: 0 6px; flex-wrap: wrap; }' +
+        '.chat-reactions { display: flex; gap: 3px; margin-top: -6px; padding: 0 6px; flex-wrap: wrap; min-height: 0; }' +
+        '.chat-reactions:empty { display: none; }' +
         '.chat-reaction { background: var(--bg2); border: 2px solid var(--bg); padding: 3px 8px; border-radius: 999px; font-size: 13px; line-height: 1; box-shadow: 0 2px 6px rgba(0,0,0,0.3); animation: react-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }' +
+        '.chat-reaction.mine { background: linear-gradient(135deg,#a78bfa,#7c3aed); color: #fff; border-color: var(--bg2); }' +
         '.chat-reaction b { font-size: 11px; opacity: 0.8; margin-left: 2px; font-weight: 700; }' +
         '@keyframes react-pop { 0% { transform: scale(0); } 70% { transform: scale(1.15); } 100% { transform: scale(1); } }' +
         '.chat-status { font-size: 11px; color: var(--muted); margin-top: 4px; padding: 0 6px; font-weight: 500; }' +
@@ -217,7 +220,36 @@ function getReactionPicker() {
 }
 
 function getScripts(myUid, otherUid) {
+    const chatKey = String(myUid) < String(otherUid) ? myUid + '_' + otherUid : otherUid + '_' + myUid;
     return '<script>' +
+        'const CHAT_KEY = "' + esc(chatKey) + '";' +
+        'const REACT_STORAGE_KEY = "reactions_" + CHAT_KEY;' +
+
+        // localStorage Reactions laden + mergen mit backend
+        'function loadLocalReactions() {' +
+            'try { return JSON.parse(localStorage.getItem(REACT_STORAGE_KEY) || "{}"); }' +
+            'catch(e) { return {}; }' +
+        '}' +
+        'function saveLocalReactions(map) {' +
+            'try { localStorage.setItem(REACT_STORAGE_KEY, JSON.stringify(map)); } catch(e) {}' +
+        '}' +
+
+        // Reactions im DOM aktualisieren (merged backend + local)
+        'function renderAllReactions() {' +
+            'const local = loadLocalReactions();' +
+            'document.querySelectorAll(".chat-reactions").forEach(box => {' +
+                'const ts = box.dataset.ts;' +
+                'let counts = {};' +
+                'try { counts = JSON.parse(box.dataset.backend || "{}"); } catch(e) {}' +
+                'const myEmoji = local[ts];' +
+                'if (myEmoji) counts[myEmoji] = (counts[myEmoji] || 0) + 1;' +
+                'box.innerHTML = Object.entries(counts).map(([e, n]) => {' +
+                    'const isMine = (myEmoji === e);' +
+                    'return "<span class=\\"chat-reaction" + (isMine ? " mine" : "") + "\\">" + e + (n > 1 ? " <b>" + n + "</b>" : "") + "</span>";' +
+                '}).join("");' +
+            '});' +
+        '}' +
+
         'let chatPressTimer = null;' +
         'let chatActiveBubble = null;' +
         'let chatActiveTs = 0;' +
@@ -275,15 +307,28 @@ function getScripts(myUid, otherUid) {
             'const picker = document.getElementById("chat-react-picker");' +
             'if (picker && !picker.contains(e.target) && !e.target.closest(".chat-bubble")) chatHidePicker();' +
         '});' +
+
+        // Optimistic Reaction: sofort speichern + UI updaten, dann im Hintergrund fetch
         'async function chatPickReaction(emoji) {' +
             'if (!chatActiveTs) return;' +
-            'const ts = chatActiveTs;' +
+            'const ts = String(chatActiveTs);' +
             'chatHidePicker();' +
+            // Toggle: wenn schon mein emoji, entfernen
+            'const local = loadLocalReactions();' +
+            'if (local[ts] === emoji) { delete local[ts]; }' +
+            'else { local[ts] = emoji; }' +
+            'saveLocalReactions(local);' +
+            'renderAllReactions();' +
+            // Im Hintergrund senden (optional, falls API existiert)
             'try {' +
-                'await fetch("/api/react-message", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ chatKey: ["' + esc(myUid) + '", "' + esc(otherUid) + '"].sort().join("_"), timestamp: ts, emoji: emoji }) });' +
-                'setTimeout(() => location.reload(), 250);' +
-            '} catch (err) { console.error("react fail", err); }' +
+                'fetch("/api/react-message", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ chatKey: CHAT_KEY, timestamp: Number(ts), emoji: emoji }) }).catch(()=>{});' +
+            '} catch(e) {}' +
         '}' +
+
+        // Initial render der reactions aus localStorage
+        'renderAllReactions();' +
+
+        // Smooth scroll to bottom on load (instant)
         'requestAnimationFrame(() => {' +
             'window.scrollTo({ top: document.body.scrollHeight, behavior: "instant" });' +
         '});' +
