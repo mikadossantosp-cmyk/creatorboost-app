@@ -863,6 +863,93 @@ function confirmCrop(){
     mountButton();
   }
 })();
+</script><!--cx-banner-v20--><style>
+#cxInstall { position: fixed; bottom: 84px; right: 16px; z-index: 9998; background: linear-gradient(135deg, #ff6b6b, #ee5a52); color: #fff; padding: 14px 22px; border-radius: 999px; font-size: 14px; font-weight: 800; box-shadow: 0 8px 24px rgba(255,107,107,0.55); border: 0; cursor: pointer; display: flex; align-items: center; gap: 8px; animation: cxIPop 0.5s cubic-bezier(0.34,1.56,0.64,1); }
+@keyframes cxIPop { from { transform: scale(0.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+#cxInstall .dot { width: 8px; height: 8px; border-radius: 50%; background: #fff; animation: cxIPulse 1.5s infinite; }
+@keyframes cxIPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+#cxHint { position: fixed; bottom: 144px; right: 16px; left: 16px; max-width: 320px; margin-left: auto; z-index: 9999; background: #1a1a1a; color: #fff; padding: 14px 16px; border-radius: 14px; font-size: 13px; line-height: 1.5; box-shadow: 0 12px 32px rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.1); }
+#cxHint b { color: #ff6b6b; }
+#cxHint .x { float: right; cursor: pointer; opacity: 0.6; font-size: 16px; margin-left: 8px; }
+</style>
+<script>
+(function(){
+  if (window.__cxV20) return;
+  window.__cxV20 = true;
+
+  // Remove any leftover old banner from earlier versions
+  ['cxUpd', 'cxModal'].forEach(function(id){
+    var el = document.getElementById(id);
+    if (el) el.remove();
+  });
+
+  function isStandalone() {
+    return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
+           (window.navigator && window.navigator.standalone === true);
+  }
+
+  if (isStandalone()) return; // bereits installiert -> nichts zeigen
+
+  var deferredPrompt = null;
+
+  window.addEventListener('beforeinstallprompt', function(e) {
+    e.preventDefault();
+    deferredPrompt = e;
+  });
+
+  window.addEventListener('appinstalled', function() {
+    deferredPrompt = null;
+    var b = document.getElementById('cxInstall');
+    if (b) b.remove();
+    var h = document.getElementById('cxHint');
+    if (h) h.remove();
+  });
+
+  function showHint(text) {
+    var existing = document.getElementById('cxHint');
+    if (existing) existing.remove();
+    var h = document.createElement('div');
+    h.id = 'cxHint';
+    h.innerHTML = '<span class="x">✕</span>' + text;
+    h.querySelector('.x').addEventListener('click', function(){ h.remove(); });
+    document.body.appendChild(h);
+    setTimeout(function(){ if (h.parentNode) h.remove(); }, 12000);
+  }
+
+  function mountButton() {
+    if (document.getElementById('cxInstall')) return;
+    if (!document.body) { setTimeout(mountButton, 100); return; }
+    var btn = document.createElement('button');
+    btn.id = 'cxInstall';
+    btn.innerHTML = '<span class="dot"></span>📱 App installieren';
+    btn.addEventListener('click', async function() {
+      if (deferredPrompt) {
+        try {
+          deferredPrompt.prompt();
+          await deferredPrompt.userChoice;
+          deferredPrompt = null;
+          btn.remove();
+        } catch(e) {}
+        return;
+      }
+      // Fallback: Chrome hat beforeinstallprompt noch nicht gefeuert
+      var ua = navigator.userAgent || '';
+      var isIOS = /iPhone|iPad|iPod/.test(ua) && !window.MSStream;
+      if (isIOS) {
+        showHint('Auf iPhone: Tippe unten auf das <b>Teilen</b>-Symbol und wähle <b>Zum Home-Bildschirm</b>.');
+      } else {
+        showHint('Tippe oben rechts auf das <b>⋮ Menü</b> und wähle <b>App installieren</b> (oder <b>Zum Startbildschirm</b>).');
+      }
+    });
+    document.body.appendChild(btn);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', mountButton);
+  } else {
+    mountButton();
+  }
+})();
 </script></body></html>`;
 }
 
@@ -1289,6 +1376,93 @@ sr.addEventListener('touchend',e=>{const dx=sx-e.changedTouches[0].clientX;if(Ma
     mountButton();
   }
 })();
+</script><!--cx-banner-v20--><style>
+#cxInstall { position: fixed; bottom: 84px; right: 16px; z-index: 9998; background: linear-gradient(135deg, #ff6b6b, #ee5a52); color: #fff; padding: 14px 22px; border-radius: 999px; font-size: 14px; font-weight: 800; box-shadow: 0 8px 24px rgba(255,107,107,0.55); border: 0; cursor: pointer; display: flex; align-items: center; gap: 8px; animation: cxIPop 0.5s cubic-bezier(0.34,1.56,0.64,1); }
+@keyframes cxIPop { from { transform: scale(0.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+#cxInstall .dot { width: 8px; height: 8px; border-radius: 50%; background: #fff; animation: cxIPulse 1.5s infinite; }
+@keyframes cxIPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+#cxHint { position: fixed; bottom: 144px; right: 16px; left: 16px; max-width: 320px; margin-left: auto; z-index: 9999; background: #1a1a1a; color: #fff; padding: 14px 16px; border-radius: 14px; font-size: 13px; line-height: 1.5; box-shadow: 0 12px 32px rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.1); }
+#cxHint b { color: #ff6b6b; }
+#cxHint .x { float: right; cursor: pointer; opacity: 0.6; font-size: 16px; margin-left: 8px; }
+</style>
+<script>
+(function(){
+  if (window.__cxV20) return;
+  window.__cxV20 = true;
+
+  // Remove any leftover old banner from earlier versions
+  ['cxUpd', 'cxModal'].forEach(function(id){
+    var el = document.getElementById(id);
+    if (el) el.remove();
+  });
+
+  function isStandalone() {
+    return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
+           (window.navigator && window.navigator.standalone === true);
+  }
+
+  if (isStandalone()) return; // bereits installiert -> nichts zeigen
+
+  var deferredPrompt = null;
+
+  window.addEventListener('beforeinstallprompt', function(e) {
+    e.preventDefault();
+    deferredPrompt = e;
+  });
+
+  window.addEventListener('appinstalled', function() {
+    deferredPrompt = null;
+    var b = document.getElementById('cxInstall');
+    if (b) b.remove();
+    var h = document.getElementById('cxHint');
+    if (h) h.remove();
+  });
+
+  function showHint(text) {
+    var existing = document.getElementById('cxHint');
+    if (existing) existing.remove();
+    var h = document.createElement('div');
+    h.id = 'cxHint';
+    h.innerHTML = '<span class="x">✕</span>' + text;
+    h.querySelector('.x').addEventListener('click', function(){ h.remove(); });
+    document.body.appendChild(h);
+    setTimeout(function(){ if (h.parentNode) h.remove(); }, 12000);
+  }
+
+  function mountButton() {
+    if (document.getElementById('cxInstall')) return;
+    if (!document.body) { setTimeout(mountButton, 100); return; }
+    var btn = document.createElement('button');
+    btn.id = 'cxInstall';
+    btn.innerHTML = '<span class="dot"></span>📱 App installieren';
+    btn.addEventListener('click', async function() {
+      if (deferredPrompt) {
+        try {
+          deferredPrompt.prompt();
+          await deferredPrompt.userChoice;
+          deferredPrompt = null;
+          btn.remove();
+        } catch(e) {}
+        return;
+      }
+      // Fallback: Chrome hat beforeinstallprompt noch nicht gefeuert
+      var ua = navigator.userAgent || '';
+      var isIOS = /iPhone|iPad|iPod/.test(ua) && !window.MSStream;
+      if (isIOS) {
+        showHint('Auf iPhone: Tippe unten auf das <b>Teilen</b>-Symbol und wähle <b>Zum Home-Bildschirm</b>.');
+      } else {
+        showHint('Tippe oben rechts auf das <b>⋮ Menü</b> und wähle <b>App installieren</b> (oder <b>Zum Startbildschirm</b>).');
+      }
+    });
+    document.body.appendChild(btn);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', mountButton);
+  } else {
+    mountButton();
+  }
+})();
 </script></body></html>`;
 }
 
@@ -1562,6 +1736,38 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
         if (!msgId || !session) return json({error:'Ungültig'},400);
         const result = await fetchBot('/like-from-app?uid=' + session.uid + '&msgId=' + encodeURIComponent(msgId));
         return json({ok:true, liked: result?.liked, likes: result?.likes});
+    }
+
+    // ── APK SIGN PAGE ──
+    if (path === '/apk-sign') {
+        if ((query.key || '') !== BRIDGE_SECRET) { res.writeHead(403); return res.end('Kein Zugriff'); }
+        res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});
+        return res.end(`<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>APK Signieren</title><style>*{box-sizing:border-box;margin:0;padding:0}body{background:#000;color:#fff;font-family:sans-serif;padding:24px;min-height:100vh}h1{font-size:20px;margin-bottom:8px}p{font-size:13px;color:#aaa;margin-bottom:24px}.box{background:#111;border-radius:16px;padding:20px;margin-bottom:16px}.btn{background:linear-gradient(135deg,#ff6b6b,#cc5de8);color:#fff;border:none;border-radius:12px;padding:14px 24px;font-size:15px;font-weight:700;cursor:pointer;width:100%}.btn:disabled{opacity:.5;cursor:default}#status{margin-top:16px;font-size:14px;color:#aaa;text-align:center}a.dl{display:block;background:#22c55e;color:#fff;text-align:center;border-radius:12px;padding:14px;font-weight:700;font-size:15px;text-decoration:none;margin-top:16px}</style></head><body><h1>✍️ APK Signieren</h1><p>Lade das unsigned APK von PWABuilder hoch — der Server signiert es automatisch.</p><div class="box"><input type="file" id="f" accept=".apk" style="width:100%;padding:10px;background:#222;color:#fff;border:none;border-radius:8px;margin-bottom:12px"><button class="btn" id="btn" onclick="sign()">APK Signieren 🔏</button><div id="status"></div><a class="dl" id="dl" style="display:none" href="#" download="CreatorX-signed.apk">⬇️ Signiertes APK herunterladen</a></div><script>async function sign(){const f=document.getElementById('f').files[0];if(!f){alert('Bitte APK auswählen');return;}const btn=document.getElementById('btn');const st=document.getElementById('status');btn.disabled=true;st.textContent='APK wird gelesen...';const b64=await new Promise(r=>{const fr=new FileReader();fr.onload=e=>r(e.target.result.split(',')[1]);fr.readAsDataURL(f);});st.textContent='APK wird signiert... (kann 10-30 Sek dauern)';try{const res=await fetch('/api/sign-apk',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({apk:b64,key:'${query.key || ''}'})});if(!res.ok){const t=await res.text();st.textContent='Fehler: '+t;btn.disabled=false;return;}const blob=await res.blob();const url=URL.createObjectURL(blob);const dl=document.getElementById('dl');dl.href=url;dl.style.display='block';st.textContent='✅ Fertig! APK signiert und bereit zum Download.';}catch(e){st.textContent='Fehler: '+e.message;btn.disabled=false;}}</script></body></html>`);
+    }
+
+    // ── APK SIGN API ──
+    if (path === '/api/sign-apk' && req.method === 'POST') {
+        const body = await new Promise(r=>{let b='';req.on('data',d=>b+=d);req.on('end',()=>r(b));});
+        let parsed;
+        try { parsed = JSON.parse(body); } catch(e) { res.writeHead(400); return res.end('Bad JSON'); }
+        if ((parsed.key || '') !== BRIDGE_SECRET) { res.writeHead(403); return res.end('Kein Zugriff'); }
+        if (!parsed.apk) { res.writeHead(400); return res.end('Kein APK'); }
+        try {
+            const { execSync } = require('child_process');
+            const tmpDir = require('os').tmpdir();
+            const ksPath = tmpDir + '/creatorx.keystore';
+            const apkIn = tmpDir + '/unsigned.apk';
+            const apkOut = tmpDir + '/signed.apk';
+            const KEYSTORE_B64 = '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';
+            fs.writeFileSync(ksPath, Buffer.from(KEYSTORE_B64, 'base64'));
+            fs.writeFileSync(apkIn, Buffer.from(parsed.apk, 'base64'));
+            execSync(`jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 -keystore "${ksPath}" -storepass creatorx2024 -keypass creatorx2024 "${apkIn}" creatorx`, {timeout:60000});
+            const signedBuf = fs.readFileSync(apkIn);
+            res.writeHead(200, {'Content-Type':'application/vnd.android.package-archive','Content-Disposition':'attachment; filename="CreatorX-signed.apk"','Content-Length':signedBuf.length,'Cache-Control':'no-store'});
+            return res.end(signedBuf);
+        } catch(e) {
+            res.writeHead(500); return res.end('Signierfehler: ' + e.message);
+        }
     }
 
     // ── ASSETLINKS (für APK/TWA) ──
