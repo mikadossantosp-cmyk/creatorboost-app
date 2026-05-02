@@ -512,12 +512,14 @@ function layout(content, session, page='feed', lang='de') {
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="theme-color" content="#ff6b6b">
 <link rel="manifest" href="/manifest.json">
-<link rel="apple-touch-icon" href="/icon.jpg?v=4">
+<link rel="apple-touch-icon" href="/icon-512.png">
+<meta name="apple-mobile-web-app-title" content="CreatorX">
 <title>CreatorX</title>
 <style>${CSS}</style>
 </head>
 <body>
 <div class="toast" id="toast"></div>
+<div id="pwa-install-btn" onclick="installPWA()" style="display:none;position:fixed;bottom:calc(70px + var(--safe-bottom,0px));left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#ff6b6b,#cc5de8);color:#fff;border:none;border-radius:24px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;z-index:9998;gap:8px;align-items:center;box-shadow:0 4px 16px rgba(255,107,107,.4);white-space:nowrap">📲 App installieren</div>
 <div class="plus-sheet" id="plus-sheet" onclick="if(event.target===this)closePlusSheet()">
   <div class="plus-sheet-inner">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
@@ -735,6 +737,25 @@ function confirmCrop(){
       await fetch('/api/push-subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sub:sub.toJSON()})});
     }catch(e){}
   }).catch(()=>{});
+  let _installPrompt=null;
+  window.addEventListener('beforeinstallprompt',e=>{
+    e.preventDefault();
+    _installPrompt=e;
+    const b=document.getElementById('pwa-install-btn');
+    if(b)b.style.display='flex';
+  });
+  window.installPWA=async function(){
+    if(!_installPrompt)return;
+    _installPrompt.prompt();
+    const r=await _installPrompt.userChoice;
+    _installPrompt=null;
+    const b=document.getElementById('pwa-install-btn');
+    if(b)b.style.display='none';
+  };
+  window.addEventListener('appinstalled',()=>{
+    const b=document.getElementById('pwa-install-btn');
+    if(b)b.style.display='none';
+  });
 })();
 </script>
 </body></html>`;
@@ -1346,8 +1367,8 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
 
     // ── PWA MANIFEST ──
     if (path === '/manifest.json') {
-        res.writeHead(200,{'Content-Type':'application/json'});
-        return res.end(JSON.stringify({name:'CreatorX',short_name:'CreatorX',start_url:'/feed',display:'standalone',background_color:'#000000',theme_color:'#ff6b6b',description:'Die kreative Community für Instagram Creators',orientation:'portrait',categories:['social','lifestyle'],icons:[{src:'/icon.jpg?v=5',sizes:'192x192',type:'image/png',purpose:'any maskable'},{src:'/icon.jpg?v=5',sizes:'512x512',type:'image/png',purpose:'any maskable'}]}));
+        res.writeHead(200,{'Content-Type':'application/manifest+json','Cache-Control':'no-cache, no-store, must-revalidate'});
+        return res.end(JSON.stringify({id:'/feed',name:'CreatorX',short_name:'CreatorX',start_url:'/feed',scope:'/',display:'standalone',background_color:'#000000',theme_color:'#ff6b6b',description:'Die kreative Community für Instagram Creators',orientation:'portrait',categories:['social','lifestyle'],icons:[{src:'/icon-512.png',sizes:'512x512',type:'image/png',purpose:'any maskable'},{src:'/icon-512.png',sizes:'512x512',type:'image/png',purpose:'maskable'}]}));
     }
 
     if (path === '/api/vapid-public-key') {
