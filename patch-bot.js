@@ -21,7 +21,6 @@ function tryPatch(name, regex, replacement, alreadyMarker) {
     return false;
 }
 
-// Patch 1: Regeln-Tab
 if (!tryPatch(
     'Regeln-Tab',
     /regeln: `<div style="padding:48px[\s\S]*?`,/,
@@ -32,15 +31,13 @@ if (!tryPatch(
     process.exit(1);
 }
 
-// Patch 2: DM-Liste
 tryPatch(
     'DM-Liste',
     /const convHtml = `\s*\n<a href="\/nachrichten\/gruppe"[\s\S]*?<div class="empty-sub">Schreibe jemandem!<\/div><\/div>'\);/,
-    "const convHtml = require('./chat-list-render')({ myConvos, botData, myUid, feedPreview, totalThreadUnread, ladeBild, adminIds });",
+    "const convHtml = require('./chat-list-render')({ myConvos, botData, myUid, feedPreview, totalThreadUnread, ladeBild, adminIds, onlineUids: typeof sessions !== 'undefined' ? new Set([...sessions.values()].map(s => String(s.uid))) : new Set() });",
     "require('./chat-list-render')"
 );
 
-// Patch 3: Threads-Liste
 tryPatch(
     'Threads-Liste cards',
     /const cards = threads\.map\(thr => \{[\s\S]*?\}\)\.join\(''\);/,
@@ -55,15 +52,28 @@ tryPatch(
     null
 );
 
-// Patch 4: Chat-Detail Bubbles
-tryPatch(
-    'Chat-Detail Bubbles',
-    /const msgsHtml = msgs\.map\(m => \{[\s\S]*?\}\)\.join\(''\);/,
-    "const msgsHtml = require('./chat-detail-render')({ msgs, myUid, otherUid, otherUser, ladeBild });",
-    "require('./chat-detail-render')"
-);
+// Patch 4: Chat-Detail Bubbles - mit otherOnline status
+const CHAT_DETAIL_REPLACEMENT = "const msgsHtml = require('./chat-detail-render')({ msgs, myUid, otherUid, otherUser, ladeBild, otherOnline: typeof sessions !== 'undefined' ? [...sessions.values()].some(s => String(s.uid) === String(otherUid)) : false });";
+if (src.includes("otherOnline:")) {
+    console.log('[patch-bot] Chat-Detail mit otherOnline bereits gepatched');
+} else if (src.includes("require('./chat-detail-render')")) {
+    src = src.replace(
+        /const msgsHtml = require\('\.\/chat-detail-render'\)\([^;]*\);/,
+        CHAT_DETAIL_REPLACEMENT
+    );
+    console.log('[patch-bot] Chat-Detail upgraded mit otherOnline');
+    changed = true;
+} else if (/const msgsHtml = msgs\.map\(m => \{[\s\S]*?\}\)\.join\(''\);/.test(src)) {
+    src = src.replace(
+        /const msgsHtml = msgs\.map\(m => \{[\s\S]*?\}\)\.join\(''\);/,
+        CHAT_DETAIL_REPLACEMENT
+    );
+    console.log('[patch-bot] Chat-Detail initial gepatched mit otherOnline');
+    changed = true;
+} else {
+    console.warn('[patch-bot] WARNUNG: Chat-Detail Pattern nicht gefunden');
+}
 
-// Patch 5: PERFORMANCE - Optimistic Send
 const OPTIMISTIC_SEND = "async function sendMessage(image, audio, text=''){" +
     "const tmpTs=Date.now();" +
     "insertOptimisticBubble(tmpTs,text,image,audio);" +
@@ -113,10 +123,10 @@ tryPatch(
     "insertOptimisticBubble"
 );
 
-// Patch 6: PERFORMANCE - Smart Polling
 const SMART_POLL = "let chatKnownCount=${msgs.length};" +
 "setInterval(async()=>{" +
     "if(document.querySelector('[data-optimistic]'))return;" +
+    "if(document.hidden)return;" +
     "try{" +
         "const r=await fetch('/api/messages/${otherUid}');" +
         "const data=await r.json();" +
@@ -131,7 +141,6 @@ tryPatch(
     "chatKnownCount"
 );
 
-// Patch 7: Smart Send-Click
 tryPatch(
     'Smart Send-Click',
     /async function sendMsg\(\) \{\s*const input = document\.getElementById\('msg-input'\);[\s\S]*?clearImage\(\);\s*\}/,
@@ -148,7 +157,6 @@ tryPatch(
     null
 );
 
-// Patch 8: Smooth Back-Button DM
 tryPatch(
     'Back-Button DM',
     /<a href="\/nachrichten" class="icon-btn" style="font-size:22px">‹<\/a>/,
@@ -156,7 +164,6 @@ tryPatch(
     'history.back()'
 );
 
-// Patch 9: PERFORMANCE - mark-messages-read non-blocking
 tryPatch(
     'Mark-Read non-blocking',
     /await postBot\('\/mark-messages-read', \{ uid: myUid, chatKey \}\);/,

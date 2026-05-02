@@ -1,4 +1,4 @@
-// app-perf.js v4 - JS-Fix nur Topbar-Avatar (KEIN Online-Punkt mehr) + Stories
+// app-perf.js v5 - Online-Punkt nur wenn echt online (window.CHAT_OTHER_ONLINE)
 
 module.exports = `
 <style>
@@ -18,6 +18,10 @@ module.exports = `
   #app-nav-loading { position: fixed; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, transparent, #a78bfa, #7c3aed, #a78bfa, transparent); background-size: 200% 100%; z-index: 999; opacity: 0; transition: opacity 0.15s; pointer-events: none; animation: nav-loading-shimmer 1.2s linear infinite; }
   #app-nav-loading.show { opacity: 1; }
   @keyframes nav-loading-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+  /* Online-Status im Topbar (nur wenn .topbar-online-status gesetzt ist) */
+  .topbar-online-status { font-size: 11px; color: #22c55e; font-weight: 600; margin-top: -2px; }
+  .topbar-offline-status { font-size: 11px; color: var(--muted); font-weight: 500; margin-top: -2px; }
 </style>
 <script>
 (function(){
@@ -67,30 +71,67 @@ module.exports = `
     if (document.hidden) sessionStorage.setItem('hiddenSince', String(Date.now()));
   });
 
-  // ── JS-FIX: Topbar Avatar (KEIN Online-Punkt mehr - das gab False-Positives) ──
+  // ── JS-FIX: Topbar Avatar + Online-Status (nur wenn echt online) ──
   function fixTopbarLayout() {
     const topbar = document.querySelector('.topbar');
     if (!topbar) return;
     const profileLink = topbar.querySelector('a[href^="/profil/"]');
     if (!profileLink) return;
-    if (profileLink.dataset.fixed === '1') return;
-    profileLink.dataset.fixed = '1';
-    profileLink.style.cssText = 'display:flex !important;align-items:center !important;gap:10px !important;text-decoration:none !important;flex:1 !important;justify-content:flex-start !important;padding-left:6px !important;';
+    if (profileLink.dataset.fixed !== '1') {
+      profileLink.dataset.fixed = '1';
+      profileLink.style.cssText = 'display:flex !important;align-items:center !important;gap:10px !important;text-decoration:none !important;flex:1 !important;justify-content:flex-start !important;padding-left:6px !important;';
+    }
     const avatarDiv = profileLink.querySelector('div');
     if (avatarDiv) {
-      avatarDiv.style.cssText = 'position:relative !important;width:36px !important;height:36px !important;border-radius:50% !important;background:var(--bg4) !important;display:flex !important;align-items:center !important;justify-content:center !important;font-size:14px !important;font-weight:700 !important;flex-shrink:0 !important;overflow:hidden !important;';
+      avatarDiv.style.cssText = 'position:relative !important;width:36px !important;height:36px !important;border-radius:50% !important;background:var(--bg4) !important;display:flex !important;align-items:center !important;justify-content:center !important;font-size:14px !important;font-weight:700 !important;flex-shrink:0 !important;overflow:visible !important;';
       const img = avatarDiv.querySelector('img');
       if (img) {
         img.style.cssText = 'position:absolute !important;inset:0 !important;width:100% !important;height:100% !important;object-fit:cover !important;border-radius:50% !important;z-index:1 !important;';
       }
-      // ENTFERNT: Online-Punkt einfuegen war Bug (false positive bei jedem User)
-      // Wenn echter Online-Status spaeter da ist: window.CHAT_USER_ONLINE === true checken
-      const oldDot = avatarDiv.querySelector('.online-dot');
-      if (oldDot) oldDot.remove();
+      // Online-Punkt nur wenn echter online-Status
+      const isOnline = window.CHAT_OTHER_ONLINE === true;
+      let dot = avatarDiv.querySelector('.online-dot');
+      if (isOnline) {
+        if (!dot) {
+          dot = document.createElement('div');
+          dot.className = 'online-dot';
+          dot.style.cssText = 'position:absolute !important;bottom:-2px !important;right:-2px !important;width:11px !important;height:11px !important;border-radius:50% !important;background:#22c55e !important;border:2.5px solid var(--bg) !important;z-index:5 !important;pointer-events:none !important;animation:online-pulse 2s ease-in-out infinite !important;';
+          avatarDiv.appendChild(dot);
+          // Pulse animation einfuegen falls nicht da
+          if (!document.getElementById('online-pulse-style')) {
+            const styleEl = document.createElement('style');
+            styleEl.id = 'online-pulse-style';
+            styleEl.textContent = '@keyframes online-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(34,197,94,0.5); } 50% { box-shadow: 0 0 0 4px rgba(34,197,94,0); } }';
+            document.head.appendChild(styleEl);
+          }
+        }
+      } else if (dot) {
+        dot.remove();
+      }
     }
+    // Username + Status-Text
     const nameSpan = profileLink.querySelector('span:last-of-type');
-    if (nameSpan) {
-      nameSpan.style.cssText = 'font-size:15px !important;font-weight:700 !important;color:var(--text) !important;overflow:hidden !important;text-overflow:ellipsis !important;white-space:nowrap !important;';
+    if (nameSpan && !nameSpan.dataset.wrapped) {
+      nameSpan.dataset.wrapped = '1';
+      const wrap = document.createElement('div');
+      wrap.style.cssText = 'display:flex;flex-direction:column;align-items:flex-start;min-width:0;';
+      const nameEl = document.createElement('div');
+      nameEl.style.cssText = 'font-size:15px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.2;';
+      nameEl.textContent = nameSpan.textContent;
+      const statusEl = document.createElement('div');
+      statusEl.className = window.CHAT_OTHER_ONLINE === true ? 'topbar-online-status' : 'topbar-offline-status';
+      statusEl.textContent = window.CHAT_OTHER_ONLINE === true ? '● Online' : 'Offline';
+      statusEl.dataset.statusText = '1';
+      wrap.appendChild(nameEl);
+      wrap.appendChild(statusEl);
+      nameSpan.replaceWith(wrap);
+    } else {
+      // Update existing status text bei MutationObserver re-runs
+      const existing = profileLink.querySelector('[data-status-text]');
+      if (existing) {
+        existing.className = window.CHAT_OTHER_ONLINE === true ? 'topbar-online-status' : 'topbar-offline-status';
+        existing.textContent = window.CHAT_OTHER_ONLINE === true ? '● Online' : 'Offline';
+      }
     }
   }
 
@@ -102,9 +143,33 @@ module.exports = `
     });
   }
 
+  // ── Online-Dots in DM-Liste (nur fuer User mit aktiver Web-Session) ──
+  function fixDmListOnlineDots() {
+    const onlineSet = window.DM_ONLINE_UIDS;
+    if (!onlineSet || !Array.isArray(onlineSet)) return;
+    const onlineUids = new Set(onlineSet.map(String));
+    document.querySelectorAll('.dm-row[href^="/nachrichten/"]').forEach(row => {
+      if (row.dataset.onlineFixed === '1') return;
+      row.dataset.onlineFixed = '1';
+      const href = row.getAttribute('href') || '';
+      const m = href.match(/\\/nachrichten\\/([^/?#]+)/);
+      if (!m) return;
+      const uid = m[1];
+      if (uid === 'gruppe') return;
+      const avatar = row.querySelector('.dm-avatar');
+      if (!avatar) return;
+      if (onlineUids.has(uid)) {
+        avatar.classList.add('online');
+      } else {
+        avatar.classList.remove('online');
+      }
+    });
+  }
+
   function applyAllFixes() {
     try { fixTopbarLayout(); } catch(e) {}
     try { fixStoryRings(); } catch(e) {}
+    try { fixDmListOnlineDots(); } catch(e) {}
   }
 
   if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', applyAllFixes); } else { applyAllFixes(); }

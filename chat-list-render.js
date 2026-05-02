@@ -1,4 +1,4 @@
-// Instagram DM Style Threads-Liste v5 - Story Insta-Gradient + Suchleiste + Polish
+// chat-list-render.js v6 - mit onlineUids fuer DM-Liste online-status
 
 let appPerf = '';
 try { appPerf = require('./app-perf'); } catch(e) {}
@@ -27,8 +27,10 @@ function esc(s) {
 }
 
 module.exports = function renderChatList(opts) {
-    const { myConvos = [], botData = {}, myUid = '', feedPreview = '', totalThreadUnread = 0, ladeBild = () => null } = opts || {};
+    const { myConvos = [], botData = {}, myUid = '', feedPreview = '', totalThreadUnread = 0, ladeBild = () => null, onlineUids } = opts || {};
     const adminIds = (typeof opts.adminIds !== 'undefined') ? opts.adminIds : [];
+    const onlineSet = onlineUids instanceof Set ? onlineUids : (Array.isArray(onlineUids) ? new Set(onlineUids.map(String)) : new Set());
+    const onlineArr = [...onlineSet];
 
     let storiesArr = [];
     try {
@@ -48,11 +50,12 @@ module.exports = function renderChatList(opts) {
         const insta = u.instagram;
         const pic = ladeBild(id, 'profilepic');
         const name = u.spitzname || u.name || '?';
+        const isOnline = onlineSet.has(String(id));
         let avatarInner = '<span class="sa-fb">' + esc(name.slice(0, 1)) + '</span>';
         if (pic) avatarInner = '<img src="/appbild/' + id + '/profilepic" alt="" loading="lazy">';
         else if (insta) avatarInner = '<img src="https://unavatar.io/instagram/' + esc(insta) + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">';
         return '<a href="/profil/' + id + '" class="dm-story-item">' +
-            '<div class="dm-story-ring"><div class="dm-story-avatar">' + avatarInner + '</div></div>' +
+            '<div class="dm-story-ring' + (isOnline ? ' online' : '') + '"><div class="dm-story-avatar">' + avatarInner + '</div></div>' +
             '<div class="dm-story-name">' + esc(name.slice(0, 10)) + '</div>' +
             '</a>';
     }).join('');
@@ -78,6 +81,7 @@ module.exports = function renderChatList(opts) {
         const time = formatTime(c.lastMsg && c.lastMsg.timestamp);
         const preview = (c.lastMsg && c.lastMsg.text) || '';
         const previewText = (isOwn ? 'Du: ' : '') + preview.slice(0, 50);
+        const isOnline = onlineSet.has(String(c.otherUid));
 
         let avatarInner = '<span class="dm-avatar-fb">' + esc((c.otherName || '?').slice(0, 1)) + '</span>';
         if (pic) avatarInner = '<img src="/appbild/' + c.otherUid + '/profilepic" alt="" loading="lazy">';
@@ -88,7 +92,7 @@ module.exports = function renderChatList(opts) {
         const badgeHtml = c.unread > 0 ? '<div class="dm-badge">' + c.unread + '</div>' : '';
 
         return '<a href="/nachrichten/' + c.otherUid + '" class="dm-row' + unreadClass + '">' +
-            '<div class="dm-avatar">' + avatarInner + '</div>' +
+            '<div class="dm-avatar' + (isOnline ? ' online' : '') + '">' + avatarInner + '</div>' +
             '<div class="dm-content">' +
                 '<div class="dm-name">' + esc(c.otherName) + '</div>' +
                 '<div class="dm-preview">' + esc(previewText) + '</div>' +
@@ -108,41 +112,37 @@ module.exports = function renderChatList(opts) {
             '<div class="dm-empty-sub">Tippe auf einen Kreis oben um eine DM zu starten</div>' +
         '</div>' : '';
 
-    return appPerf + '<style>' +
-        '* { -webkit-tap-highlight-color: transparent; }' +
+    // Online-UIDs auch als window-Variable fuer JS-Zugriff
+    const onlineFlag = '<script>window.DM_ONLINE_UIDS = ' + JSON.stringify(onlineArr) + ';<\/script>';
 
-        // SUCHLEISTE oben
+    return onlineFlag + appPerf + '<style>' +
+        '* { -webkit-tap-highlight-color: transparent; }' +
         '.dm-search-wrap { padding: 10px 16px 12px; position: sticky; top: 0; background: var(--bg); z-index: 5; border-bottom: 0.5px solid rgba(255,255,255,0.05); }' +
         '.dm-search-input { width: 100%; box-sizing: border-box; background: rgba(255,255,255,0.06); border: 1.5px solid rgba(255,255,255,0.08); border-radius: 22px; padding: 9px 14px 9px 38px; color: var(--text); font-size: 14px; outline: none; transition: border-color 0.2s, background 0.2s; background-image: url("data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'16\' height=\'16\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%23999\' stroke-width=\'2.5\' stroke-linecap=\'round\'><circle cx=\'11\' cy=\'11\' r=\'8\'/><path d=\'M21 21l-4.35-4.35\'/></svg>"); background-repeat: no-repeat; background-position: 14px center; }' +
         '.dm-search-input:focus { border-color: rgba(167,139,250,0.4); background-color: rgba(255,255,255,0.08); }' +
         '.dm-search-results { padding: 4px 0; }' +
         '.dm-search-results:empty { display: none; }' +
-
-        // ── STORY-RINGE - SUPER aggressive Override mit hoher Spezifitaet ──
         '.dm-stories-section { padding: 14px 0 12px; border-bottom: 0.5px solid rgba(255,255,255,0.08); }' +
         '.dm-stories-section .dm-stories-wrap { display: flex !important; gap: 16px !important; overflow-x: auto !important; padding: 0 16px !important; scrollbar-width: none !important; -webkit-overflow-scrolling: touch !important; }' +
         '.dm-stories-section .dm-stories-wrap::-webkit-scrollbar { display: none !important; }' +
-        '.dm-stories-section .dm-story-item { flex-shrink: 0 !important; text-align: center !important; text-decoration: none !important; color: inherit !important; min-width: 68px !important; transition: transform 0.15s !important; outline: none !important; }' +
+        '.dm-stories-section .dm-story-item { flex-shrink: 0 !important; text-align: center !important; text-decoration: none !important; color: inherit !important; min-width: 68px !important; transition: transform 0.15s !important; outline: none !important; position: relative; }' +
         '.dm-stories-section .dm-story-item:active { transform: scale(0.93) !important; }' +
-
-        // INSTA GRADIENT FORCED via spezifischer selector + alle borders/outlines weg
-        '.dm-stories-section .dm-story-item .dm-story-ring { width: 64px !important; height: 64px !important; padding: 2.5px !important; border-radius: 50% !important; background: linear-gradient(135deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%) !important; margin: 0 auto !important; border: 0 !important; outline: 0 !important; box-shadow: none !important; }' +
+        '.dm-stories-section .dm-story-item .dm-story-ring { width: 64px !important; height: 64px !important; padding: 2.5px !important; border-radius: 50% !important; background: linear-gradient(135deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%) !important; margin: 0 auto !important; border: 0 !important; outline: 0 !important; box-shadow: none !important; position: relative; }' +
+        '.dm-stories-section .dm-story-item .dm-story-ring.online::after { content: "" !important; position: absolute !important; bottom: 0 !important; right: 0 !important; width: 14px !important; height: 14px !important; border-radius: 50% !important; background: #22c55e !important; border: 2.5px solid var(--bg) !important; z-index: 5 !important; }' +
         '.dm-stories-section .dm-story-item .dm-story-ring .dm-story-avatar { width: 100% !important; height: 100% !important; border-radius: 50% !important; background: var(--bg) !important; padding: 2.5px !important; display: block !important; position: relative !important; overflow: hidden !important; box-sizing: border-box !important; border: 0 !important; outline: 0 !important; }' +
         '.dm-stories-section .dm-story-item .dm-story-ring .dm-story-avatar > img { position: absolute !important; inset: 2.5px !important; width: calc(100% - 5px) !important; height: calc(100% - 5px) !important; border-radius: 50% !important; object-fit: cover !important; border: 0 !important; outline: 0 !important; }' +
         '.dm-stories-section .dm-story-item .dm-story-ring .dm-story-avatar .sa-fb { position: absolute !important; inset: 2.5px !important; border-radius: 50% !important; display: flex !important; align-items: center !important; justify-content: center !important; font-weight: 800 !important; color: #fff !important; font-size: 22px !important; background: linear-gradient(135deg, #a78bfa, #7c3aed) !important; }' +
         '.dm-stories-section .dm-story-item .dm-story-name { font-size: 11px !important; margin-top: 7px !important; color: var(--text) !important; overflow: hidden !important; text-overflow: ellipsis !important; white-space: nowrap !important; max-width: 70px !important; font-weight: 500 !important; }' +
-
-        // DM List
         '.dm-list { padding: 6px 0 90px; }' +
         '.dm-row { display: flex; align-items: center; gap: 13px; padding: 11px 16px; text-decoration: none; color: inherit; transition: background 0.15s; position: relative; }' +
         '.dm-row:active { background: rgba(255,255,255,0.04); }' +
         '.dm-row.unread .dm-name { font-weight: 800; color: var(--text); }' +
         '.dm-row.unread .dm-preview { color: var(--text); font-weight: 500; }' +
         '.dm-pinned { background: linear-gradient(90deg, rgba(0,136,204,0.04), transparent 70%); }' +
-        '.dm-avatar { position: relative; width: 56px; height: 56px; border-radius: 50%; flex-shrink: 0; background: var(--bg4); overflow: hidden; display: flex; align-items: center; justify-content: center; }' +
-        '.dm-avatar > img { width: 100%; height: 100%; object-fit: cover; }' +
-        '.dm-avatar-fb { font-weight: 800; font-size: 22px; color: #fff; background: linear-gradient(135deg, #a78bfa, #7c3aed); width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }' +
-        '.dm-avatar.online::after { content: ""; position: absolute; bottom: 1px; right: 1px; width: 14px; height: 14px; border-radius: 50%; background: #22c55e; border: 2.5px solid var(--bg); }' +
+        '.dm-avatar { position: relative; width: 56px; height: 56px; border-radius: 50%; flex-shrink: 0; background: var(--bg4); overflow: visible; display: flex; align-items: center; justify-content: center; }' +
+        '.dm-avatar > img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }' +
+        '.dm-avatar-fb { font-weight: 800; font-size: 22px; color: #fff; background: linear-gradient(135deg, #a78bfa, #7c3aed); width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; border-radius: 50%; }' +
+        '.dm-avatar.online::after { content: ""; position: absolute; bottom: 1px; right: 1px; width: 14px; height: 14px; border-radius: 50%; background: #22c55e; border: 2.5px solid var(--bg); z-index: 5; }' +
         '.dm-tg { background: linear-gradient(135deg, #0088cc, #00c6ff); color: #fff; font-size: 26px; font-weight: 600; }' +
         '.dm-content { flex: 1; min-width: 0; }' +
         '.dm-name { font-size: 14.5px; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: flex; align-items: center; gap: 6px; }' +
@@ -163,7 +163,6 @@ module.exports = function renderChatList(opts) {
         '.dm-empty-sub { font-size: 13px; color: var(--muted); line-height: 1.5; max-width: 240px; margin: 0 auto; }' +
         '</style>' +
 
-        // Suchleiste oben
         '<div class="dm-search-wrap">' +
             '<input type="text" class="dm-search-input" placeholder="Suche User..." oninput="dmSearch(this.value)" autocomplete="off">' +
             '<div id="dm-search-results" class="dm-search-results"></div>' +
