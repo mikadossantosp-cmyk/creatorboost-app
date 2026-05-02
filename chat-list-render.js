@@ -1,4 +1,4 @@
-// Instagram DM Style Threads-Liste v3 - mit app-perf eingebunden
+// Instagram DM Style Threads-Liste v4 - Story-Ringe mit Insta-Gradient FORCED
 
 let appPerf = '';
 try { appPerf = require('./app-perf'); } catch(e) {}
@@ -51,9 +51,9 @@ module.exports = function renderChatList(opts) {
         let avatarInner = '<span class="sa-fb">' + esc(name.slice(0, 1)) + '</span>';
         if (pic) avatarInner = '<img src="/appbild/' + id + '/profilepic" alt="" loading="lazy">';
         else if (insta) avatarInner = '<img src="https://unavatar.io/instagram/' + esc(insta) + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">';
-        return '<a href="/profil/' + id + '" class="story-item">' +
-            '<div class="story-ring"><div class="story-avatar">' + avatarInner + '</div></div>' +
-            '<div class="story-name">' + esc(name.slice(0, 10)) + '</div>' +
+        return '<a href="/profil/' + id + '" class="dm-story-item">' +
+            '<div class="dm-story-ring"><div class="dm-story-avatar">' + avatarInner + '</div></div>' +
+            '<div class="dm-story-name">' + esc(name.slice(0, 10)) + '</div>' +
             '</a>';
     }).join('');
 
@@ -110,16 +110,19 @@ module.exports = function renderChatList(opts) {
 
     return appPerf + '<style>' +
         '* { -webkit-tap-highlight-color: transparent; }' +
-        '.stories-section { padding: 16px 0 12px; border-bottom: 0.5px solid rgba(255,255,255,0.08); }' +
-        '.stories-wrap { display: flex; gap: 16px; overflow-x: auto; padding: 0 16px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }' +
-        '.stories-wrap::-webkit-scrollbar { display: none; }' +
-        '.story-item { flex-shrink: 0; text-align: center; text-decoration: none; color: inherit; min-width: 68px; transition: transform 0.15s; }' +
-        '.story-item:active { transform: scale(0.93); }' +
-        '.story-ring { width: 64px; height: 64px; padding: 2.5px; border-radius: 50%; background: linear-gradient(135deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); margin: 0 auto; }' +
-        '.story-avatar { width: 100%; height: 100%; border-radius: 50%; background: var(--bg); padding: 2.5px; display: block; position: relative; overflow: hidden; box-sizing: border-box; }' +
-        '.story-avatar > img { position: absolute; inset: 2.5px; width: calc(100% - 5px); height: calc(100% - 5px); border-radius: 50%; object-fit: cover; }' +
-        '.story-avatar .sa-fb { position: absolute; inset: 2.5px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; color: #fff; font-size: 22px; background: linear-gradient(135deg, #a78bfa, #7c3aed); }' +
-        '.story-name { font-size: 11px; margin-top: 7px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 70px; font-weight: 500; }' +
+        // Story Section - Klassen renamed: dm-story-* statt story-* (vermeidet bot.js Conflicts)
+        '.dm-stories-section { padding: 16px 0 12px; border-bottom: 0.5px solid rgba(255,255,255,0.08); }' +
+        '.dm-stories-wrap { display: flex; gap: 16px; overflow-x: auto; padding: 0 16px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }' +
+        '.dm-stories-wrap::-webkit-scrollbar { display: none; }' +
+        '.dm-story-item { flex-shrink: 0; text-align: center; text-decoration: none; color: inherit; min-width: 68px; transition: transform 0.15s; }' +
+        '.dm-story-item:active { transform: scale(0.93); }' +
+        // INSTA-GRADIENT mit !important damit nichts overridet
+        '.dm-story-ring { width: 64px !important; height: 64px !important; padding: 2.5px !important; border-radius: 50% !important; background: linear-gradient(135deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%) !important; margin: 0 auto !important; border: none !important; }' +
+        '.dm-story-avatar { width: 100% !important; height: 100% !important; border-radius: 50% !important; background: var(--bg) !important; padding: 2.5px !important; display: block !important; position: relative !important; overflow: hidden !important; box-sizing: border-box !important; border: none !important; }' +
+        '.dm-story-avatar > img { position: absolute !important; inset: 2.5px !important; width: calc(100% - 5px) !important; height: calc(100% - 5px) !important; border-radius: 50% !important; object-fit: cover !important; }' +
+        '.dm-story-avatar .sa-fb { position: absolute; inset: 2.5px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; color: #fff; font-size: 22px; background: linear-gradient(135deg, #a78bfa, #7c3aed); }' +
+        '.dm-story-name { font-size: 11px; margin-top: 7px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 70px; font-weight: 500; }' +
+        // DM List
         '.dm-list { padding: 6px 0 90px; }' +
         '.dm-row { display: flex; align-items: center; gap: 13px; padding: 11px 16px; text-decoration: none; color: inherit; transition: background 0.15s; position: relative; }' +
         '.dm-row:active { background: rgba(255,255,255,0.04); }' +
@@ -149,7 +152,7 @@ module.exports = function renderChatList(opts) {
         '.dm-empty-text { font-weight: 700; color: var(--text); margin-bottom: 6px; font-size: 15px; }' +
         '.dm-empty-sub { font-size: 13px; color: var(--muted); line-height: 1.5; max-width: 240px; margin: 0 auto; }' +
         '</style>' +
-        (storiesArr.length ? '<div class="stories-section"><div class="stories-wrap">' + storiesHtml + '</div></div>' : '') +
+        (storiesArr.length ? '<div class="dm-stories-section"><div class="dm-stories-wrap">' + storiesHtml + '</div></div>' : '') +
         '<div class="dm-list">' +
             telegramRow +
             dmRows +
