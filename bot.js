@@ -2951,18 +2951,18 @@ p{line-height:1.65;color:var(--muted)}
             // Banner
             const bannerBg = (poster.banner && !poster.banner.startsWith('data:')) ? '#000' : (poster.banner || 'linear-gradient(135deg,#1a1a2e,#16213e,#0f3460)');
             const bannerFile = ladeBild(String(link.user_id),'banner');
-            const bannerImg = bannerFile ? '<img src="/appbild/'+String(link.user_id)+'/banner" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" onerror="this.remove()" alt="">' : '';
+            const bannerImg = bannerFile ? '<img src="/appbild/'+String(link.user_id)+'/banner" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.remove()" alt="">' : '';
 
             // Profile pic (small, in header)
             const picFile = ladeBild(String(link.user_id),'profilepic');
             const avatarSmall = picFile
-                ? '<img src="/appbild/'+String(link.user_id)+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">'
-                : insta ? '<img src="https://unavatar.io/instagram/'+insta+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">' : '';
+                ? '<img src="/appbild/'+String(link.user_id)+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" alt="">'
+                : insta ? '<img src="https://unavatar.io/instagram/'+insta+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" alt="">' : '';
 
             // Profile pic (large, on banner)
             const profPic = picFile
-                ? '<img src="/appbild/'+String(link.user_id)+'/profilepic" style="width:100%;height:100%;object-fit:cover" alt="">'
-                : insta ? '<img src="https://unavatar.io/instagram/'+insta+'" style="width:100%;height:100%;object-fit:cover" onerror="this.remove()" alt="">'
+                ? '<img src="/appbild/'+String(link.user_id)+'/profilepic" style="width:100%;height:100%;object-fit:cover" loading="lazy" alt="">'
+                : insta ? '<img src="https://unavatar.io/instagram/'+insta+'" style="width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.remove()" alt="">'
                 : (poster.name||'?').slice(0,2).toUpperCase();
 
             // Liker avatar stack
@@ -2970,7 +2970,7 @@ p{line-height:1.65;color:var(--muted)}
                 const lu=d.users[String(lid)]; const lg=badgeGradient(lu&&lu.role);
                 const lf=ladeBild(String(lid),'profilepic');
                 const li=lu&&lu.instagram;
-                const limg=lf?'<img src="/appbild/'+lid+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">':li?'<img src="https://unavatar.io/instagram/'+li+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">':'';
+                const limg=lf?'<img src="/appbild/'+lid+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" alt="">':li?'<img src="https://unavatar.io/instagram/'+li+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" alt="">':'';
                 return '<div style="position:relative;width:24px;height:24px;border-radius:50%;background:'+lg+';border:2px solid var(--bg4);overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;margin-left:-6px;flex-shrink:0"><span style="position:absolute">'+(lu&&lu.name||'?')[0]+'</span>'+limg+'</div>';
             }).join('');
 
@@ -2978,7 +2978,7 @@ p{line-height:1.65;color:var(--muted)}
             const likerRows = likes.map((lid,i)=>{
                 const lu=d.users[String(lid)]; const lg=badgeGradient(lu&&lu.role);
                 const lf=ladeBild(String(lid),'profilepic'); const li=lu&&lu.instagram;
-                const limg=lf?'<img src="/appbild/'+lid+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">':li?'<img src="https://unavatar.io/instagram/'+li+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">':'';
+                const limg=lf?'<img src="/appbild/'+lid+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" alt="">':li?'<img src="https://unavatar.io/instagram/'+li+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" alt="">':'';
                 return '<a href="/profil/'+lid+'" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--border2);text-decoration:none;background:'+(i%2===0?'transparent':'rgba(255,255,255,.02)')+'"><div style="position:relative;width:34px;height:34px;border-radius:50%;background:'+lg+';flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff"><span style="position:absolute">'+(lu&&lu.name||'?')[0]+'</span>'+limg+'</div><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:var(--text)">'+(lu&&(lu.spitzname||lu.name)||'User')+'</div><div style="font-size:10px;color:var(--muted)">'+(lu&&lu.role||'')+'</div></div><div style="font-size:11px;color:var(--accent)">→</div></a>';
             }).join('');
 
@@ -2990,7 +2990,7 @@ p{line-height:1.65;color:var(--muted)}
                 : allComments.map(c=>{
                     const cu=d.users[String(c.uid)]||{}; const cg=badgeGradient(cu.role);
                     const cf=ladeBild(String(c.uid),'profilepic'); const ci=cu.instagram;
-                    const cimg=cf?'<img src="/appbild/'+c.uid+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">':ci?'<img src="https://unavatar.io/instagram/'+ci+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">':'';
+                    const cimg=cf?'<img src="/appbild/'+c.uid+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" alt="">':ci?'<img src="https://unavatar.io/instagram/'+ci+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" alt="">':'';
                     const ct=new Date(c.timestamp||0).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
                     return '<div style="display:flex;gap:8px;padding:8px 12px;border-bottom:1px solid var(--border2)"><div style="position:relative;width:28px;height:28px;border-radius:50%;background:'+cg+';flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff"><span style="position:absolute">'+(cu.name||'?')[0]+'</span>'+cimg+'</div><div style="flex:1;min-width:0"><div style="font-size:11px;font-weight:700">'+(cu.spitzname||cu.name||'User')+' <span style="font-size:10px;color:var(--muted);font-weight:400">'+ct+'</span></div><div style="font-size:12px;color:var(--text);margin-top:2px">'+c.text+'</div></div></div>';
                 }).join('');
@@ -3120,12 +3120,12 @@ commentsBox+
             const grad = badgeGradient(poster.role);
             const picFile = ladeBild(String(sl.uid),'profilepic');
             const avatarSmall = picFile
-                ? '<img src="/appbild/'+String(sl.uid)+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">'
-                : insta ? '<img src="https://unavatar.io/instagram/'+insta+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">' : '';
+                ? '<img src="/appbild/'+String(sl.uid)+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" alt="">'
+                : insta ? '<img src="https://unavatar.io/instagram/'+insta+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" alt="">' : '';
             const likerRows = likes.map(lid=>{
                 const lu=d.users[String(lid)]; const lg=badgeGradient(lu&&lu.role);
                 const lf=ladeBild(String(lid),'profilepic'); const li=lu&&lu.instagram;
-                const limg=lf?'<img src="/appbild/'+lid+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">':li?'<img src="https://unavatar.io/instagram/'+li+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">':'';
+                const limg=lf?'<img src="/appbild/'+lid+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" alt="">':li?'<img src="https://unavatar.io/instagram/'+li+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" alt="">':'';
                 const rName = ((lu&&(lu.spitzname||lu.name))||'User').replace(/'/g,'&#39;');
                 const reportBtn = isOwnPost ? '<button onclick="reportNonEngager(\''+sl.id+'\',\''+lid+'\',\''+rName+'\')" style="background:none;border:1px solid rgba(255,59,48,.5);color:rgba(255,59,48,.8);border-radius:8px;padding:3px 8px;font-size:10px;font-weight:600;cursor:pointer;flex-shrink:0">Melden</button>' : '';
                 return '<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--border2)"><div style="position:relative;width:34px;height:34px;border-radius:50%;background:'+lg+';flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff"><span style="position:absolute">'+(lu&&lu.name||'?')[0]+'</span>'+limg+'</div><div style="flex:1;min-width:0;font-size:13px;font-weight:600;color:var(--text)">'+(lu&&(lu.spitzname||lu.name)||'User')+'</div>'+reportBtn+'</div>';
@@ -3809,19 +3809,15 @@ async function createThread(){
 
     // ── TELEGRAM GRUPPE THREAD-LISTE ──
     if (path === '/nachrichten/gruppe') {
-        const botData = await fetchBot('/data');
+        const [botData, ftData] = await Promise.all([fetchBot('/data'), fetchBot('/forum-topics').catch(()=>null)]);
         if (!botData) return html('<div style="padding:40px;text-align:center;color:var(--muted)">Bot nicht erreichbar</div>', 'messages');
         const adminUser = botData.users?.[myUid];
         const isAdmin = adminUser && String(adminUser.role||'').includes('Admin');
         const lastRead = botData.threadLastRead?.[myUid] || {};
         const threadMsgs = botData.threadMessages || {};
         const communityFeed = botData.communityFeed || [];
-        // Try to get real topic names from Telegram API
         let apiTopics = {};
-        try {
-            const ft = await fetchBot('/forum-topics');
-            if (ft?.threads) ft.threads.forEach(t => { apiTopics[String(t.id)] = t; });
-        } catch(e) {}
+        try { if (ftData?.threads) ftData.threads.forEach(t => { apiTopics[String(t.id)] = t; }); } catch(e) {}
         // Build thread list
         let threads = botData.threads || [];
         const threadEmojiPalette = ['🎯','🚀','💡','📊','🎨','🔥','⚡','🌟','📝','🎭','🏆','🎵','🧠','💎','🌈','🎮','📣','🛠️','🌍','🎬'];
@@ -3941,7 +3937,7 @@ async function doSearch(q) {
             html += data.users.map(u=>'<a href="/profil/'+u.id+'" style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border2)">'
                 +'<div style="position:relative;width:44px;height:44px;border-radius:50%;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;overflow:hidden">'
                 +'<span style="position:absolute;font-size:15px;color:var(--text)">'+(u.name||'?').slice(0,2).toUpperCase()+'</span>'
-                +(u.pic ? '<img src="'+u.pic+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">' : '')
+                +(u.pic ? '<img src="'+u.pic+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" alt="">' : '')
                 +'</div>'
                 +'<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600">'+(u.spitzname||u.name||'?')+'</div><div style="font-size:11px;color:var(--muted)">'+(u.role||'')+' · '+(u.xp||0)+' XP</div></div>'
                 +'</a>').join('');
@@ -3976,13 +3972,13 @@ document.getElementById('search-input').focus();
             const insta = u.instagram;
             return `<a href="/profil/${id}" class="creator-card">
   <div class="creator-card-banner" style="background:${bannerIsGrad?grad:'#000'}">
-    ${bannerFile?`<img src="/appbild/${id}/banner" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">`:''}
+    ${bannerFile?`<img src="/appbild/${id}/banner" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" alt="">`:''}
     <div style="position:absolute;inset:0;background:linear-gradient(to bottom,transparent 40%,rgba(0,0,0,.5))"></div>
     ${i<3?`<div style="position:absolute;top:6px;left:8px;font-size:15px;filter:drop-shadow(0 1px 3px rgba(0,0,0,.5))">${medals[i]}</div>`:''}
   </div>
   <div class="creator-card-avatar" style="background:${grad}${getRingBoxShadow(u)}">
     <span style="position:absolute;z-index:0;font-size:16px;font-weight:800">${(u.name||'?').slice(0,1)}</span>
-    ${picFile?`<img src="/appbild/${id}/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1" alt="">`:insta?`<img src="https://unavatar.io/instagram/${insta}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1" onerror="this.style.display='none'" alt="">`:''}
+    ${picFile?`<img src="/appbild/${id}/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1" loading="lazy" alt="">`:insta?`<img src="https://unavatar.io/instagram/${insta}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1" loading="lazy" onerror="this.style.display='none'" alt="">`:''}
   </div>
   <div class="creator-card-info">
     <div class="creator-card-name" style="margin-top:4px">${u.spitzname||u.name||'User'}</div>
@@ -4003,7 +3999,7 @@ document.getElementById('search-input').focus();
     <div class="rank-pos">${i<3?medals[i]:`<span class="rank-num">${i+1}</span>`}</div>
     <div style="position:relative;width:40px;height:40px;border-radius:50%;overflow:hidden;background:${grad};flex-shrink:0;display:flex;align-items:center;justify-content:center${getRingBoxShadow(u)}">
       <span style="color:#fff;font-weight:700;font-size:14px;position:absolute">${(u.name||'?').slice(0,2).toUpperCase()}</span>
-      ${ladeBild(id,'profilepic')?`<img src="/appbild/${id}/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">`:insta?`<img src="https://unavatar.io/instagram/${insta}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">`:''}
+      ${ladeBild(id,'profilepic')?`<img src="/appbild/${id}/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" alt="">`:insta?`<img src="https://unavatar.io/instagram/${insta}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" alt="">`:''}
     </div>
     <div class="rank-info">
       <div class="rank-name">${u.spitzname||u.name||'User'}${isMe?' (Du)':''}</div>
@@ -4347,9 +4343,9 @@ ${sorted.map(([id,u],i)=>{
     <div style="position:relative;width:40px;height:40px;border-radius:50%;overflow:hidden;background:${grad};flex-shrink:0;display:flex;align-items:center;justify-content:center">
       <span style="color:#fff;font-weight:700;font-size:14px;position:absolute">${(u.name||'?').slice(0,2).toUpperCase()}</span>
       ${ladeBild(id,'profilepic')
-        ? `<img src="/appbild/${id}/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">`
+        ? `<img src="/appbild/${id}/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" alt="">`
         : insta
-        ? `<img src="https://unavatar.io/instagram/${insta}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">`
+        ? `<img src="https://unavatar.io/instagram/${insta}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" alt="">`
         : ''}
     </div>
     <div class="rank-info">
@@ -5144,7 +5140,7 @@ async function removePinnedLink() {
 async function setRing(ringId) {
     const res = await fetch('/api/set-active-ring', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ringId:ringId||null})});
     const data = await res.json();
-    if (data.ok) { toast(ringId ? '🪄 Ring aktiviert!' : '🔘 Ring deaktiviert'); setTimeout(()=>location.reload(),200); }
+    if (data.ok) { toast(ringId ? '🪄 Ring aktiviert!' : '🔘 Ring deaktiviert'); }
     else toast('❌ ' + (data.error||'Fehler'));
 }
 </script>`, 'settings');
