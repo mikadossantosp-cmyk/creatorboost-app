@@ -32,7 +32,7 @@ if (!tryPatch(
     process.exit(1);
 }
 
-// Patch 2: DM-Liste in /nachrichten - Instagram DM Style
+// Patch 2: DM-Liste in /nachrichten
 tryPatch(
     'DM-Liste',
     /const convHtml = `\s*\n<a href="\/nachrichten\/gruppe"[\s\S]*?<div class="empty-sub">Schreibe jemandem!<\/div><\/div>'\);/,
@@ -40,8 +40,7 @@ tryPatch(
     "require('./chat-list-render')"
 );
 
-// Patch 3: Telegram-Threads-Liste in /nachrichten/gruppe - vertikal mit smart icons
-// 3a: cards Variable durch require ersetzen
+// Patch 3: Telegram-Threads-Liste in /nachrichten/gruppe
 tryPatch(
     'Threads-Liste cards',
     /const cards = threads\.map\(thr => \{[\s\S]*?\}\)\.join\(''\);/,
@@ -49,12 +48,19 @@ tryPatch(
     "require('./thread-list-render')"
 );
 
-// 3b: 2-column Grid Container durch full-width Liste ersetzen
 tryPatch(
     'Threads-Liste Container',
     /<div style="padding:12px 12px 100px;display:grid;grid-template-columns:1fr 1fr;gap:10px">\$\{cards\}<\/div>/,
     '${cards}',
-    null  // Idempotent check schwierig - patch ist trivial wiederholbar
+    null
+);
+
+// Patch 4: Chat-Detail Bubbles - Insta DM Style
+tryPatch(
+    'Chat-Detail Bubbles',
+    /const msgsHtml = msgs\.map\(m => \{[\s\S]*?\}\)\.join\(''\);/,
+    "const msgsHtml = require('./chat-detail-render')({ msgs, myUid, otherUid, otherUser, ladeBild });",
+    "require('./chat-detail-render')"
 );
 
 if (changed) {
