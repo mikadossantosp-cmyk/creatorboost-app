@@ -33,7 +33,7 @@ tryPatch('Threads-Liste cards', /const cards = threads\.map\(thr => \{[\s\S]*?\}
 tryPatch('Threads-Liste Container', /<div style="padding:12px 12px 100px;display:grid;grid-template-columns:1fr 1fr;gap:10px">\$\{cards\}<\/div>/, '${cards}', null);
 
 const CHAT_DETAIL_REPLACEMENT = "const msgsHtml = require('./chat-detail-render')({ msgs, myUid, otherUid, otherUser, ladeBild, otherOnline: typeof sessions !== 'undefined' ? [...sessions.values()].some(s => String(s.uid) === String(otherUid)) : false });";
-if (src.includes("otherOnline:")) { console.log('[patch-bot] Chat-Detail bereits gepatched'); }
+if (src.includes("otherOnline:")) { console.log('[patch-bot] Chat-Detail bereits'); }
 else if (src.includes("require('./chat-detail-render')")) { src = src.replace(/const msgsHtml = require\('\.\/chat-detail-render'\)\([^;]*\);/, CHAT_DETAIL_REPLACEMENT); console.log('[patch-bot] Chat-Detail upgraded'); changed = true; }
 else if (/const msgsHtml = msgs\.map\(m => \{[\s\S]*?\}\)\.join\(''\);/.test(src)) { src = src.replace(/const msgsHtml = msgs\.map\(m => \{[\s\S]*?\}\)\.join\(''\);/, CHAT_DETAIL_REPLACEMENT); console.log('[patch-bot] Chat-Detail initial'); changed = true; }
 
@@ -58,23 +58,24 @@ if (src.includes("require('./app-icon')")) {
 
 tryPatch('Icon Content-Type', /res\.writeHead\(200, \{ 'Content-Type': 'image\/png',/g, "res.writeHead(200, { 'Content-Type': 'image/jpeg',", null);
 
-// KOMPLETTES MANIFEST ICONS ARRAY ERSETZEN (purpose:any maskable wird abgelehnt von Chrome)
-const MANIFEST_ICONS_FIX = "icons:[{src:'/icon.jpg?v=15',sizes:'192x192',type:'image/jpeg',purpose:'any'},{src:'/icon.jpg?v=15',sizes:'512x512',type:'image/jpeg',purpose:'any'}]";
-if (/icons:\[\{src:'\/icon\.jpg\?v=\d+',sizes:'192x192'[^\]]+\]/.test(src)) {
-    src = src.replace(/icons:\[\{src:'\/icon\.jpg\?v=\d+',sizes:'192x192'[^\]]+\]/, MANIFEST_ICONS_FIX);
-    console.log('[patch-bot] Manifest icons array ersetzt');
+// KOMPLETTES MANIFEST KOMPLETT NEU - replacing das ganze JSON.stringify({...})
+const NEW_MANIFEST_JSON = "res.end(JSON.stringify({name:'CreatorX',short_name:'CreatorX',start_url:'/feed',scope:'/',display:'standalone',background_color:'#000000',theme_color:'#ff6b6b',description:'CreatorX Community',orientation:'portrait',categories:['social','lifestyle'],icons:[{src:'/icon.jpg?v=20',sizes:'192x192',type:'image/jpeg',purpose:'any'},{src:'/icon.jpg?v=20',sizes:'512x512',type:'image/jpeg',purpose:'any'}]}));";
+
+if (src.includes("v=20") && src.includes("type:'image/jpeg',purpose:'any'")) {
+    console.log('[patch-bot] Manifest bereits v20');
+} else if (/res\.end\(JSON\.stringify\(\{name:'CreatorX'[^)]+\}\)\);/.test(src)) {
+    src = src.replace(/res\.end\(JSON\.stringify\(\{name:'CreatorX'[^)]+\}\)\);/, NEW_MANIFEST_JSON);
+    console.log('[patch-bot] Manifest komplett ersetzt v20');
     changed = true;
 } else {
-    console.warn('[patch-bot] WARNUNG: Manifest icons pattern nicht gefunden');
+    console.warn('[patch-bot] WARNUNG: Manifest pattern nicht gefunden');
 }
 
 let versionBumps = 0;
-src = src.replace(/icon\.jpg\?v=\d+/g, () => { versionBumps++; return 'icon.jpg?v=15'; });
-src = src.replace(/icon-192\.png\?v=\d+/g, 'icon-192.png?v=15');
-src = src.replace(/icon-512\.png\?v=\d+/g, 'icon-512.png?v=15');
-if (versionBumps > 0) { console.log('[patch-bot] Icon-Version v=15: ' + versionBumps); changed = true; }
+src = src.replace(/icon\.jpg\?v=\d+/g, () => { versionBumps++; return 'icon.jpg?v=20'; });
+if (versionBumps > 0) { console.log('[patch-bot] Icon-Version v=20: ' + versionBumps); changed = true; }
 
-tryPatch('HTML no-cache headers', /res\.writeHead\(200,\{'Content-Type':'text\/html; charset=utf-8'\}\);/g, "res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','Pragma':'no-cache','Expires':'0','X-App-Version':'15'});", "X-App-Version");
+tryPatch('HTML no-cache headers', /res\.writeHead\(200,\{'Content-Type':'text\/html; charset=utf-8'\}\);/g, "res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','Pragma':'no-cache','Expires':'0','X-App-Version':'20'});", "X-App-Version");
 
 if (!src.includes('self.skipWaiting()')) {
     if (/self\.addEventListener\(['"]install['"]/.test(src)) {
@@ -87,18 +88,18 @@ if (!src.includes('self.skipWaiting()')) {
     }
 }
 
-const BANNER_MARKER = '<!--cx-update-banner-v15-->';
+const BANNER_MARKER = '<!--cx-update-banner-v18-->';
 let INLINE_BANNER = '';
 try { INLINE_BANNER = require('./banner-html'); } catch (e) { console.error('banner-html fehlt:', e.message); }
 if (INLINE_BANNER) {
     if (src.includes(BANNER_MARKER)) {
-        console.log('[patch-bot] Banner v15 bereits drin');
+        console.log('[patch-bot] Banner v18 bereits drin');
     } else {
-        src = src.replace(/<!--cx-update-banner-v1[234]-->[\s\S]*?<\/script>/g, '');
+        src = src.replace(/<!--cx-update-banner-v1[234567]-->[\s\S]*?<\/script>/g, '');
         const layoutEndRegex = new RegExp('<\\/script>\\s*<\\/body><\\/html>' + BT + ';', 'g');
         if (layoutEndRegex.test(src)) {
             src = src.replace(layoutEndRegex, '</script>' + INLINE_BANNER + '</body></html>' + BT + ';');
-            console.log('[patch-bot] Banner v15 eingefuegt'); changed = true;
+            console.log('[patch-bot] Banner eingefuegt'); changed = true;
         }
     }
 }
