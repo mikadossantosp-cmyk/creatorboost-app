@@ -6,34 +6,56 @@ const BOT = path.resolve(__dirname, 'bot.js');
 let src = fs.readFileSync(BOT, 'utf8');
 let changed = false;
 
-// Patch 1: Regeln-Tab
-const REGELN_PATCH = /regeln: `<div style="padding:48px[\s\S]*?`,/;
-const REGELN_REPLACE = "regeln: require('./regeln-tab'),";
+function tryPatch(name, regex, replacement, alreadyMarker) {
+    if (alreadyMarker && src.includes(alreadyMarker)) {
+        console.log('[patch-bot] ' + name + ' bereits gepatched');
+        return true;
+    }
+    if (regex.test(src)) {
+        src = src.replace(regex, replacement);
+        console.log('[patch-bot] ' + name + ' gepatched');
+        changed = true;
+        return true;
+    }
+    console.warn('[patch-bot] WARNUNG: ' + name + ' Pattern nicht gefunden');
+    return false;
+}
 
-if (src.includes("regeln: require('./regeln-tab')")) {
-    console.log('[patch-bot] Regeln-Tab bereits gepatched');
-} else if (REGELN_PATCH.test(src)) {
-    src = src.replace(REGELN_PATCH, REGELN_REPLACE);
-    console.log('[patch-bot] Regeln-Tab gepatched');
-    changed = true;
-} else {
-    console.error('[patch-bot] FEHLER: regeln-Placeholder nicht gefunden');
+// Patch 1: Regeln-Tab
+if (!tryPatch(
+    'Regeln-Tab',
+    /regeln: `<div style="padding:48px[\s\S]*?`,/,
+    "regeln: require('./regeln-tab'),",
+    "regeln: require('./regeln-tab')"
+)) {
+    console.error('[patch-bot] FEHLER: Regeln-Patch erforderlich aber nicht gefunden');
     process.exit(1);
 }
 
-// Patch 2: Chat-Liste in /nachrichten - Instagram DM Style
-const DM_PATCH = /const convHtml = `\s*\n<a href="\/nachrichten\/gruppe"[\s\S]*?<div class="empty-sub">Schreibe jemandem!<\/div><\/div>'\);/;
-const DM_REPLACE = "const convHtml = require('./chat-list-render')({ myConvos, botData, myUid, feedPreview, totalThreadUnread, ladeBild, adminIds });";
+// Patch 2: DM-Liste in /nachrichten - Instagram DM Style
+tryPatch(
+    'DM-Liste',
+    /const convHtml = `\s*\n<a href="\/nachrichten\/gruppe"[\s\S]*?<div class="empty-sub">Schreibe jemandem!<\/div><\/div>'\);/,
+    "const convHtml = require('./chat-list-render')({ myConvos, botData, myUid, feedPreview, totalThreadUnread, ladeBild, adminIds });",
+    "require('./chat-list-render')"
+);
 
-if (src.includes("require('./chat-list-render')")) {
-    console.log('[patch-bot] DM-Liste bereits gepatched');
-} else if (DM_PATCH.test(src)) {
-    src = src.replace(DM_PATCH, DM_REPLACE);
-    console.log('[patch-bot] DM-Liste auf Insta-Style gepatched');
-    changed = true;
-} else {
-    console.warn('[patch-bot] WARNUNG: DM-Listen Pattern nicht gefunden - Style bleibt alt');
-}
+// Patch 3: Telegram-Threads-Liste in /nachrichten/gruppe - vertikal mit smart icons
+// 3a: cards Variable durch require ersetzen
+tryPatch(
+    'Threads-Liste cards',
+    /const cards = threads\.map\(thr => \{[\s\S]*?\}\)\.join\(''\);/,
+    "const cards = require('./thread-list-render')({ threads, threadMsgs, lastRead, communityFeed, isAdmin });",
+    "require('./thread-list-render')"
+);
+
+// 3b: 2-column Grid Container durch full-width Liste ersetzen
+tryPatch(
+    'Threads-Liste Container',
+    /<div style="padding:12px 12px 100px;display:grid;grid-template-columns:1fr 1fr;gap:10px">\$\{cards\}<\/div>/,
+    '${cards}',
+    null  // Idempotent check schwierig - patch ist trivial wiederholbar
+);
 
 if (changed) {
     fs.writeFileSync(BOT, src);
