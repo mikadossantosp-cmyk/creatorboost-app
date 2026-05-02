@@ -1,4 +1,4 @@
-// Instagram DM Style Threads-Liste v4 - Story-Ringe mit Insta-Gradient FORCED
+// Instagram DM Style Threads-Liste v5 - Story Insta-Gradient + Suchleiste + Polish
 
 let appPerf = '';
 try { appPerf = require('./app-perf'); } catch(e) {}
@@ -110,18 +110,28 @@ module.exports = function renderChatList(opts) {
 
     return appPerf + '<style>' +
         '* { -webkit-tap-highlight-color: transparent; }' +
-        // Story Section - Klassen renamed: dm-story-* statt story-* (vermeidet bot.js Conflicts)
-        '.dm-stories-section { padding: 16px 0 12px; border-bottom: 0.5px solid rgba(255,255,255,0.08); }' +
-        '.dm-stories-wrap { display: flex; gap: 16px; overflow-x: auto; padding: 0 16px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }' +
-        '.dm-stories-wrap::-webkit-scrollbar { display: none; }' +
-        '.dm-story-item { flex-shrink: 0; text-align: center; text-decoration: none; color: inherit; min-width: 68px; transition: transform 0.15s; }' +
-        '.dm-story-item:active { transform: scale(0.93); }' +
-        // INSTA-GRADIENT mit !important damit nichts overridet
-        '.dm-story-ring { width: 64px !important; height: 64px !important; padding: 2.5px !important; border-radius: 50% !important; background: linear-gradient(135deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%) !important; margin: 0 auto !important; border: none !important; }' +
-        '.dm-story-avatar { width: 100% !important; height: 100% !important; border-radius: 50% !important; background: var(--bg) !important; padding: 2.5px !important; display: block !important; position: relative !important; overflow: hidden !important; box-sizing: border-box !important; border: none !important; }' +
-        '.dm-story-avatar > img { position: absolute !important; inset: 2.5px !important; width: calc(100% - 5px) !important; height: calc(100% - 5px) !important; border-radius: 50% !important; object-fit: cover !important; }' +
-        '.dm-story-avatar .sa-fb { position: absolute; inset: 2.5px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; color: #fff; font-size: 22px; background: linear-gradient(135deg, #a78bfa, #7c3aed); }' +
-        '.dm-story-name { font-size: 11px; margin-top: 7px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 70px; font-weight: 500; }' +
+
+        // SUCHLEISTE oben
+        '.dm-search-wrap { padding: 10px 16px 12px; position: sticky; top: 0; background: var(--bg); z-index: 5; border-bottom: 0.5px solid rgba(255,255,255,0.05); }' +
+        '.dm-search-input { width: 100%; box-sizing: border-box; background: rgba(255,255,255,0.06); border: 1.5px solid rgba(255,255,255,0.08); border-radius: 22px; padding: 9px 14px 9px 38px; color: var(--text); font-size: 14px; outline: none; transition: border-color 0.2s, background 0.2s; background-image: url("data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'16\' height=\'16\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%23999\' stroke-width=\'2.5\' stroke-linecap=\'round\'><circle cx=\'11\' cy=\'11\' r=\'8\'/><path d=\'M21 21l-4.35-4.35\'/></svg>"); background-repeat: no-repeat; background-position: 14px center; }' +
+        '.dm-search-input:focus { border-color: rgba(167,139,250,0.4); background-color: rgba(255,255,255,0.08); }' +
+        '.dm-search-results { padding: 4px 0; }' +
+        '.dm-search-results:empty { display: none; }' +
+
+        // ── STORY-RINGE - SUPER aggressive Override mit hoher Spezifitaet ──
+        '.dm-stories-section { padding: 14px 0 12px; border-bottom: 0.5px solid rgba(255,255,255,0.08); }' +
+        '.dm-stories-section .dm-stories-wrap { display: flex !important; gap: 16px !important; overflow-x: auto !important; padding: 0 16px !important; scrollbar-width: none !important; -webkit-overflow-scrolling: touch !important; }' +
+        '.dm-stories-section .dm-stories-wrap::-webkit-scrollbar { display: none !important; }' +
+        '.dm-stories-section .dm-story-item { flex-shrink: 0 !important; text-align: center !important; text-decoration: none !important; color: inherit !important; min-width: 68px !important; transition: transform 0.15s !important; outline: none !important; }' +
+        '.dm-stories-section .dm-story-item:active { transform: scale(0.93) !important; }' +
+
+        // INSTA GRADIENT FORCED via spezifischer selector + alle borders/outlines weg
+        '.dm-stories-section .dm-story-item .dm-story-ring { width: 64px !important; height: 64px !important; padding: 2.5px !important; border-radius: 50% !important; background: linear-gradient(135deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%) !important; margin: 0 auto !important; border: 0 !important; outline: 0 !important; box-shadow: none !important; }' +
+        '.dm-stories-section .dm-story-item .dm-story-ring .dm-story-avatar { width: 100% !important; height: 100% !important; border-radius: 50% !important; background: var(--bg) !important; padding: 2.5px !important; display: block !important; position: relative !important; overflow: hidden !important; box-sizing: border-box !important; border: 0 !important; outline: 0 !important; }' +
+        '.dm-stories-section .dm-story-item .dm-story-ring .dm-story-avatar > img { position: absolute !important; inset: 2.5px !important; width: calc(100% - 5px) !important; height: calc(100% - 5px) !important; border-radius: 50% !important; object-fit: cover !important; border: 0 !important; outline: 0 !important; }' +
+        '.dm-stories-section .dm-story-item .dm-story-ring .dm-story-avatar .sa-fb { position: absolute !important; inset: 2.5px !important; border-radius: 50% !important; display: flex !important; align-items: center !important; justify-content: center !important; font-weight: 800 !important; color: #fff !important; font-size: 22px !important; background: linear-gradient(135deg, #a78bfa, #7c3aed) !important; }' +
+        '.dm-stories-section .dm-story-item .dm-story-name { font-size: 11px !important; margin-top: 7px !important; color: var(--text) !important; overflow: hidden !important; text-overflow: ellipsis !important; white-space: nowrap !important; max-width: 70px !important; font-weight: 500 !important; }' +
+
         // DM List
         '.dm-list { padding: 6px 0 90px; }' +
         '.dm-row { display: flex; align-items: center; gap: 13px; padding: 11px 16px; text-decoration: none; color: inherit; transition: background 0.15s; position: relative; }' +
@@ -152,10 +162,61 @@ module.exports = function renderChatList(opts) {
         '.dm-empty-text { font-weight: 700; color: var(--text); margin-bottom: 6px; font-size: 15px; }' +
         '.dm-empty-sub { font-size: 13px; color: var(--muted); line-height: 1.5; max-width: 240px; margin: 0 auto; }' +
         '</style>' +
+
+        // Suchleiste oben
+        '<div class="dm-search-wrap">' +
+            '<input type="text" class="dm-search-input" placeholder="Suche User..." oninput="dmSearch(this.value)" autocomplete="off">' +
+            '<div id="dm-search-results" class="dm-search-results"></div>' +
+        '</div>' +
+
         (storiesArr.length ? '<div class="dm-stories-section"><div class="dm-stories-wrap">' + storiesHtml + '</div></div>' : '') +
-        '<div class="dm-list">' +
+        '<div class="dm-list" id="dm-list-main">' +
             telegramRow +
             dmRows +
             emptyState +
-        '</div>';
+        '</div>' +
+
+        '<script>' +
+            'let dmSearchTimer = null;' +
+            'function dmSearch(q) {' +
+                'clearTimeout(dmSearchTimer);' +
+                'const results = document.getElementById("dm-search-results");' +
+                'const main = document.getElementById("dm-list-main");' +
+                'const stories = document.querySelector(".dm-stories-section");' +
+                'if (!q || !q.trim()) {' +
+                    'results.innerHTML = "";' +
+                    'main.style.display = "";' +
+                    'if (stories) stories.style.display = "";' +
+                    'return;' +
+                '}' +
+                'main.style.display = "none";' +
+                'if (stories) stories.style.display = "none";' +
+                'results.innerHTML = "<div style=\\"padding:40px 16px;text-align:center;color:var(--muted);font-size:13px\\">Suche...</div>";' +
+                'dmSearchTimer = setTimeout(async () => {' +
+                    'try {' +
+                        'const r = await fetch("/api/search?q=" + encodeURIComponent(q));' +
+                        'const data = await r.json();' +
+                        'const users = (data.users || []).slice(0, 20);' +
+                        'if (!users.length) {' +
+                            'results.innerHTML = "<div style=\\"padding:40px 16px;text-align:center;color:var(--muted);font-size:13px\\">Niemand gefunden 😔</div>";' +
+                            'return;' +
+                        '}' +
+                        'results.innerHTML = users.map(u => {' +
+                            'const name = u.spitzname || u.name || "User";' +
+                            'const initial = (name[0] || "?").toUpperCase();' +
+                            'const avatar = u.pic ? "<img src=\\"" + u.pic + "\\" alt=\\"\\" loading=\\"lazy\\">" : "<span class=\\"dm-avatar-fb\\">" + initial + "</span>";' +
+                            'return "<a href=\\"/nachrichten/" + u.id + "\\" class=\\"dm-row\\">" +' +
+                                '"<div class=\\"dm-avatar\\">" + avatar + "</div>" +' +
+                                '"<div class=\\"dm-content\\">" +' +
+                                    '"<div class=\\"dm-name\\">" + name + "</div>" +' +
+                                    '"<div class=\\"dm-preview\\">" + (u.role || "Nachricht senden") + " · " + (u.xp || 0) + " XP</div>" +' +
+                                '"</div>" +' +
+                            '"</a>";' +
+                        '}).join("");' +
+                    '} catch(e) {' +
+                        'results.innerHTML = "<div style=\\"padding:40px 16px;text-align:center;color:var(--muted);font-size:13px\\">Fehler bei der Suche</div>";' +
+                    '}' +
+                '}, 250);' +
+            '}' +
+        '<\/script>';
 };

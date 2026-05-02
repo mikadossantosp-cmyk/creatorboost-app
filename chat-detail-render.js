@@ -1,4 +1,4 @@
-// Chat-Detail v6 - Reactions NEBEN Bubble (Insta-Style)
+// Chat-Detail v7 - Aggressive Reactions Fix + Header Polish
 
 let appPerf = '';
 try { appPerf = require('./app-perf'); } catch(e) {}
@@ -146,18 +146,18 @@ function getStyles() {
         'html { scroll-behavior: smooth; }' +
         '#chat-msgs { padding: 16px 0 140px; display: flex; flex-direction: column; will-change: transform; }' +
 
-        // Topbar groesserer Avatar + Online-Punkt
-        '.topbar a[href^="/profil/"] { gap: 12px !important; }' +
-        '.topbar a[href^="/profil/"] > div { width: 40px !important; height: 40px !important; font-size: 16px !important; box-shadow: 0 2px 8px rgba(167,139,250,0.2) !important; }' +
-        '.topbar a[href^="/profil/"] > div::after { content: ""; position: absolute; bottom: -1px; right: -1px; width: 12px; height: 12px; border-radius: 50%; background: #22c55e; border: 2px solid var(--bg); z-index: 4; }' +
-        '.topbar a[href^="/profil/"] span:last-child { font-size: 16px !important; font-weight: 700 !important; }' +
+        // ── TOPBAR FIX (kleinerer Avatar 36px + Online-Punkt outside Image) ──
+        '.topbar > a[href^="/profil/"] { gap: 10px !important; }' +
+        '.topbar > a[href^="/profil/"] > div { width: 36px !important; height: 36px !important; font-size: 14px !important; box-shadow: 0 0 0 2.5px rgba(34,197,94,0.6) !important; position: relative !important; }' +
+        '.topbar > a[href^="/profil/"] > div::after { content: "" !important; position: absolute !important; bottom: -2px !important; right: -2px !important; width: 11px !important; height: 11px !important; border-radius: 50% !important; background: #22c55e !important; border: 2.5px solid var(--bg) !important; z-index: 5 !important; }' +
+        '.topbar > a[href^="/profil/"] > span:last-child { font-size: 15px !important; font-weight: 700 !important; }' +
 
-        // Send-Bar Insta-Style Pill + Lila Send
+        // Send-Bar Pill + Lila Send
         '#msg-input.form-input { background: rgba(255,255,255,0.06) !important; border: 1.5px solid rgba(255,255,255,0.08) !important; border-radius: 22px !important; padding: 10px 16px !important; transition: border-color 0.2s, background 0.2s !important; font-size: 14.5px !important; color: var(--text) !important; }' +
         '#msg-input.form-input::placeholder { color: rgba(255,255,255,0.4) !important; }' +
         '#msg-input.form-input:focus { border-color: rgba(167,139,250,0.5) !important; outline: none !important; background: rgba(255,255,255,0.08) !important; }' +
-        'button[onclick="sendMsg()"] { background: linear-gradient(135deg,#a78bfa,#7c3aed) !important; box-shadow: 0 4px 14px rgba(124,58,237,0.4) !important; transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.15s !important; }' +
-        'button[onclick="sendMsg()"]:active { transform: scale(0.85) !important; box-shadow: 0 2px 8px rgba(124,58,237,0.6) !important; }' +
+        'button[onclick="sendMsg()"] { background: linear-gradient(135deg,#a78bfa,#7c3aed) !important; box-shadow: 0 4px 14px rgba(124,58,237,0.4) !important; transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1) !important; }' +
+        'button[onclick="sendMsg()"]:active { transform: scale(0.85) !important; }' +
 
         // Date separator
         '.chat-date-sep { text-align: center; margin: 24px 0 12px; }' +
@@ -174,9 +174,8 @@ function getStyles() {
         '.chat-avatar-mini img { width: 100%; height: 100%; object-fit: cover; }' +
         '.chat-avatar-spacer { width: 28px; flex-shrink: 0; }' +
 
-        // Bubble wrap - WICHTIG: position relative + padding-bottom wenn reactions
-        '.chat-bubble-wrap { max-width: 75%; display: flex; flex-direction: column; position: relative; }' +
-        '.chat-bubble-wrap:has(.chat-reaction) { padding-bottom: 14px; }' +
+        // Bubble wrap - position relative for absolute reactions
+        '.chat-bubble-wrap { max-width: 75%; display: flex; flex-direction: column; position: relative !important; }' +
         '.chat-row-me .chat-bubble-wrap { align-items: flex-end; }' +
         '.chat-row-other .chat-bubble-wrap { align-items: flex-start; }' +
 
@@ -207,20 +206,20 @@ function getStyles() {
         '.audio-prog { height: 100%; width: 0%; background: currentColor; transition: width 0.1s; }' +
         '.audio-dur { font-size: 11px; opacity: 0.7; margin-top: 5px; font-weight: 500; }' +
 
-        // ── REACTIONS NEBEN BUBBLE (Insta-Style) ──
-        '.chat-reactions { display: flex; gap: 3px; flex-wrap: wrap; min-height: 0; padding: 0; margin: 0; }' +
-        '.chat-reactions:empty { display: none; }' +
-        '.chat-reactions:not(:empty) { position: absolute; bottom: -8px; z-index: 5; }' +
-        '.chat-row-me .chat-reactions:not(:empty) { right: 8px; }' +
-        '.chat-row-other .chat-reactions:not(:empty) { left: 8px; }' +
-        '.chat-reaction { background: var(--bg2); border: 2.5px solid var(--bg); padding: 3px 8px; border-radius: 999px; font-size: 13px; line-height: 1; box-shadow: 0 2px 8px rgba(0,0,0,0.4); animation: react-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }' +
-        '.chat-reaction.mine { background: linear-gradient(135deg,#a78bfa,#7c3aed); color: #fff; border-color: var(--bg); }' +
-        '.chat-reaction b { font-size: 11px; opacity: 0.8; margin-left: 2px; font-weight: 700; }' +
+        // ── REACTIONS - SUPER AGGRESSIVE OVERRIDE ──
+        '.chat-bubble-wrap > .chat-reactions { display: flex !important; gap: 2px !important; flex-wrap: wrap !important; padding: 0 !important; margin: 0 !important; min-height: 0 !important; }' +
+        '.chat-bubble-wrap > .chat-reactions:empty { display: none !important; }' +
+        '.chat-bubble-wrap > .chat-reactions:not(:empty) { position: absolute !important; bottom: -10px !important; z-index: 10 !important; pointer-events: auto !important; }' +
+        '.chat-row-me .chat-bubble-wrap > .chat-reactions:not(:empty) { right: 6px !important; left: auto !important; }' +
+        '.chat-row-other .chat-bubble-wrap > .chat-reactions:not(:empty) { left: 6px !important; right: auto !important; }' +
+        '.chat-bubble-wrap > .chat-reactions > .chat-reaction { display: inline-flex !important; align-items: center !important; background: var(--bg2) !important; border: 2.5px solid var(--bg) !important; padding: 2px 7px !important; border-radius: 999px !important; font-size: 13px !important; line-height: 1 !important; box-shadow: 0 2px 8px rgba(0,0,0,0.5) !important; max-width: none !important; width: auto !important; min-width: 0 !important; color: inherit !important; animation: react-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) !important; }' +
+        '.chat-bubble-wrap > .chat-reactions > .chat-reaction.mine { background: linear-gradient(135deg,#a78bfa,#7c3aed) !important; color: #fff !important; border-color: var(--bg) !important; }' +
+        '.chat-bubble-wrap > .chat-reactions > .chat-reaction > b { font-size: 11px !important; opacity: 0.8 !important; margin-left: 3px !important; font-weight: 700 !important; }' +
         '@keyframes react-pop { 0% { transform: scale(0); } 70% { transform: scale(1.15); } 100% { transform: scale(1); } }' +
 
-        // Status (push down wenn reactions present)
+        // Status (mehr margin wenn reactions)
         '.chat-status { font-size: 11px; color: var(--muted); margin-top: 4px; padding: 0 6px; font-weight: 500; }' +
-        '.chat-bubble-wrap:has(.chat-reaction) .chat-status { margin-top: 14px; }' +
+        '.chat-bubble-wrap:has(.chat-reaction) > .chat-status { margin-top: 16px !important; }' +
         '.chat-status.read { color: #4dabf7; }' +
         '.chat-status.pending { animation: pending-pulse 1.4s ease-in-out infinite; }' +
         '@keyframes pending-pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }' +
