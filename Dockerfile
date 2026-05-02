@@ -1,5 +1,8 @@
 FROM node:20-bookworm-slim
 
+# Java für APK-Signierung (jarsigner)
+RUN apt-get update && apt-get install -y --no-install-recommends default-jdk-headless && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
 # Dependencies installieren
