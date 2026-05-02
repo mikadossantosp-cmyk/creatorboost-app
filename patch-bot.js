@@ -1,4 +1,4 @@
-// patch-bot.js - Build-time Patches fur bot.js
+// patch-bot.js - Build-time Patches fur bot.js (build #2026-05-02-3)
 const fs = require('fs');
 const path = require('path');
 
@@ -49,10 +49,47 @@ tryPatch('Back-Button DM', /<a href="\/nachrichten" class="icon-btn" style="font
 
 tryPatch('Mark-Read non-blocking', /await postBot\('\/mark-messages-read', \{ uid: myUid, chatKey \}\);/, "postBot('/mark-messages-read', { uid: myUid, chatKey }).catch(()=>{});", "postBot('/mark-messages-read', { uid: myUid, chatKey }).catch");
 
-// App-Icon require und Content-Type Patches nur wenn alte single-route Logik vorhanden
+// === LIGHT THEME WHITE ===
+if (src.includes('LIGHT-THEME-WHITE-V2')) {
+    console.log('[patch-bot] Light theme already v2');
+} else if (/\[data-theme=light\]\{\s*--bg:#fafafa;--bg2:#f0f0f0;--bg3:#fff;--bg4:#e8e8e8;[\s\S]*?\}/.test(src)) {
+    src = src.replace(
+        /\[data-theme=light\]\{\s*--bg:#fafafa;--bg2:#f0f0f0;--bg3:#fff;--bg4:#e8e8e8;\s*--border:rgba\(0,0,0,\.1\);--border2:rgba\(0,0,0,\.06\);\s*--text:#111;--muted:#666;--muted2:#999;\s*\}/,
+        '/* LIGHT-THEME-WHITE-V2 */[data-theme=light]{--bg:#ffffff;--bg2:#ffffff;--bg3:#ffffff;--bg4:#f5f5f7;--border:rgba(0,0,0,.08);--border2:rgba(0,0,0,.05);--text:#111;--muted:#666;--muted2:#999;}html[data-theme=light],html[data-theme=light] body{background:#ffffff !important;color:#111 !important}'
+    );
+    console.log('[patch-bot] Light Theme White v2 gepatched');
+    changed = true;
+} else if (/\[data-theme=light\]\{\s*--bg:#fafafa;--bg2:#f0f0f0;--bg3:#fff;--bg4:#e8e8e8;/.test(src)) {
+    src = src.replace(
+        /\[data-theme=light\]\{\s*--bg:#fafafa;--bg2:#f0f0f0;--bg3:#fff;--bg4:#e8e8e8;/,
+        '/* LIGHT-THEME-WHITE-V2 */[data-theme=light]{--bg:#ffffff;--bg2:#ffffff;--bg3:#ffffff;--bg4:#f5f5f7;'
+    );
+    console.log('[patch-bot] Light Theme White v2 (fallback) gepatched');
+    changed = true;
+} else {
+    console.warn('[patch-bot] WARNUNG: Light Theme Pattern nicht gefunden');
+}
+
+// === DIAMANT SHOP CLICKABLE ===
+tryPatch('Diamant Shop Link',
+    /<div class="highlight-card">\s*<div class="highlight-icon" style="background:linear-gradient\(135deg,rgba\(0,200,130,\.25\),rgba\(0,150,100,\.15\)\)">🎁<\/div>\s*<div style="flex:1;min-width:0">\s*<div style="font-size:13px;font-weight:700">💎 Diamant Shop<\/div>\s*<div style="font-size:11px;color:var\(--muted\);margin-top:3px">Tausche Diamanten gegen Vorteile<\/div>\s*<\/div>\s*<div style="font-size:10px;color:#a78bfa;font-weight:700;background:rgba\(167,139,250,\.12\);padding:2px 8px;border-radius:10px;white-space:nowrap">💎 \$\{d\.users\[myUid\]\?\.diamonds\|\|0\}<\/div>\s*<\/div>/,
+    '<a href="/explore?tab=shop" class="highlight-card"><div class="highlight-icon" style="background:linear-gradient(135deg,rgba(0,200,130,.25),rgba(0,150,100,.15))">🎁</div><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700">💎 Diamant Shop</div><div style="font-size:11px;color:var(--muted);margin-top:3px">Tausche Diamanten gegen Vorteile</div></div><div style="font-size:10px;color:#a78bfa;font-weight:700;background:rgba(167,139,250,.12);padding:2px 8px;border-radius:10px;white-space:nowrap">💎 ${d.users[myUid]?.diamonds||0}</div></a>',
+    '<a href="/explore?tab=shop" class="highlight-card">'
+);
+
+// === /info ROUTE - serve praesentation.html ===
+if (src.includes("path === '/info'")) {
+    console.log('[patch-bot] /info Route bereits');
+} else if (src.includes("if (path === '/newsletter'")) {
+    const INFO_ROUTE = "if (path === '/info' || path === '/praesentation') { try { const html = require('fs').readFileSync(require('path').resolve(__dirname, 'praesentation.html'), 'utf8'); res.writeHead(200, {'Content-Type':'text/html; charset=utf-8','Cache-Control':'public, max-age=300'}); return res.end(html); } catch (e) { res.writeHead(404, {'Content-Type':'text/plain; charset=utf-8'}); return res.end('Praesentation nicht gefunden: ' + e.message); } }\n\n    ";
+    src = src.replace("if (path === '/newsletter'", INFO_ROUTE + "if (path === '/newsletter'");
+    console.log('[patch-bot] /info Route eingefuegt');
+    changed = true;
+}
+
 const hasNewIconRoutes = src.includes("if (path === '/icon-192.png')");
 if (hasNewIconRoutes) {
-    console.log('[patch-bot] Neue Icon-Routes erkannt - App-Icon und Content-Type Patches übersprungen');
+    console.log('[patch-bot] Neue Icon-Routes erkannt');
 } else if (src.includes("require('./app-icon')")) {
     console.log('[patch-bot] App-Icon bereits via require');
 } else if (/const buf = Buffer\.from\('[A-Za-z0-9+/=]{1000,}', 'base64'\);/.test(src)) {
@@ -61,7 +98,6 @@ if (hasNewIconRoutes) {
     tryPatch('Icon Content-Type', /res\.writeHead\(200, \{ 'Content-Type': 'image\/png',/g, "res.writeHead(200, { 'Content-Type': 'image/jpeg',", null);
 }
 
-// MANIFEST v23 - PNG icons, prefer_related_applications:false, start_url:'/'
 const NEW_MANIFEST_JSON = "res.end(JSON.stringify({name:'CreatorX',short_name:'CreatorX',description:'Die kreative Community für Instagram Creators',start_url:'/',scope:'/',display:'standalone',background_color:'#000000',theme_color:'#ff6b6b',orientation:'portrait',categories:['social','lifestyle'],prefer_related_applications:false,screenshots:[],icons:[{src:'/icon-192.png',sizes:'192x192',type:'image/png',purpose:'any'},{src:'/icon-512.png',sizes:'512x512',type:'image/png',purpose:'any maskable'}]}));";
 
 if (src.includes("prefer_related_applications:false")) {
@@ -74,7 +110,7 @@ if (src.includes("prefer_related_applications:false")) {
     console.warn('[patch-bot] WARNUNG: Manifest pattern nicht gefunden');
 }
 
-tryPatch('HTML no-cache headers', /res\.writeHead\(200,\{'Content-Type':'text\/html; charset=utf-8'\}\);/g, "res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-cache, stale-while-revalidate=60','X-App-Version':'21'});", "X-App-Version");
+tryPatch('HTML no-cache headers', /res\.writeHead\(200,\{'Content-Type':'text\/html; charset=utf-8'\}\);/g, "res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','Pragma':'no-cache','Expires':'0','X-App-Version':'21'});", "X-App-Version");
 
 if (!src.includes('self.skipWaiting()')) {
     if (/self\.addEventListener\(['"]install['"]/.test(src)) {
