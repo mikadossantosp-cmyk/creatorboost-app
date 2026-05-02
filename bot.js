@@ -3977,7 +3977,6 @@ document.getElementById('search-input').focus();
   <div class="creator-card-avatar" style="background:${grad}${getRingBoxShadow(u)}">
     <span style="position:absolute;z-index:0;font-size:16px;font-weight:800">${(u.name||'?').slice(0,1)}</span>
     ${picFile?`<img src="/appbild/${id}/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1" alt="">`:insta?`<img src="https://unavatar.io/instagram/${insta}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1" onerror="this.style.display='none'" alt="">`:''}
-    ${!webUserUids.has(id)?`<div style="position:absolute;bottom:1px;right:1px;width:15px;height:15px;border-radius:50%;background:rgba(15,15,15,.95);border:1.5px solid #555;display:flex;align-items:center;justify-content:center;font-size:7px;color:#888;z-index:3;font-weight:700">T</div>`:''}
   </div>
   <div class="creator-card-info">
     <div class="creator-card-name" style="margin-top:4px">${u.spitzname||u.name||'User'}</div>
@@ -3999,7 +3998,6 @@ document.getElementById('search-input').focus();
     <div style="position:relative;width:40px;height:40px;border-radius:50%;overflow:hidden;background:${grad};flex-shrink:0;display:flex;align-items:center;justify-content:center${getRingBoxShadow(u)}">
       <span style="color:#fff;font-weight:700;font-size:14px;position:absolute">${(u.name||'?').slice(0,2).toUpperCase()}</span>
       ${ladeBild(id,'profilepic')?`<img src="/appbild/${id}/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">`:insta?`<img src="https://unavatar.io/instagram/${insta}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">`:''}
-      ${!webUserUids.has(id)?`<div style="position:absolute;bottom:0;right:0;width:13px;height:13px;border-radius:50%;background:rgba(15,15,15,.95);border:1.5px solid #555;display:flex;align-items:center;justify-content:center;font-size:6px;color:#888;z-index:3;font-weight:700">T</div>`:''}
     </div>
     <div class="rank-info">
       <div class="rank-name">${u.spitzname||u.name||'User'}${isMe?' (Du)':''}</div>
