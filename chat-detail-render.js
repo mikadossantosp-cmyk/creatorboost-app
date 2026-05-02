@@ -1,4 +1,7 @@
-// Chat-Detail Bubbles im Insta DM Style v2 - Smoother & Cleaner
+// Chat-Detail Bubbles im Insta DM Style v3 - mit app-perf eingebunden
+
+let appPerf = '';
+try { appPerf = require('./app-perf'); } catch(e) {}
 
 function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -27,11 +30,11 @@ module.exports = function renderChatBubbles(opts) {
     const { msgs = [], myUid = '', otherUid = '', otherUser = {}, ladeBild = () => null } = opts || {};
 
     if (!msgs.length) {
-        return '<div class="chat-empty">' +
+        return appPerf + getStyles() + '<div class="chat-empty">' +
             '<div class="chat-empty-icon">👋</div>' +
             '<div class="chat-empty-text">Sag Hi!</div>' +
             '<div class="chat-empty-sub">Schreib die erste Nachricht und brich das Eis</div>' +
-            '</div>' + getStyles() + getScripts(myUid, otherUid);
+            '</div>' + getReactionPicker() + getScripts(myUid, otherUid);
     }
 
     const otherPic = ladeBild(otherUid, 'profilepic');
@@ -136,60 +139,40 @@ module.exports = function renderChatBubbles(opts) {
         lastTimestamp = ts;
     });
 
-    return getStyles() + html + getReactionPicker() + getScripts(myUid, otherUid);
+    return appPerf + getStyles() + html + getReactionPicker() + getScripts(myUid, otherUid);
 };
 
 function getStyles() {
     return '<style>' +
-        // Smooth global
         'html { scroll-behavior: smooth; }' +
         '#chat-msgs { padding: 16px 0 140px; display: flex; flex-direction: column; will-change: transform; }' +
-
-        // Date separator - subtiler
         '.chat-date-sep { text-align: center; margin: 24px 0 12px; }' +
         '.chat-date-sep span { display: inline-block; padding: 4px 14px; font-size: 11px; font-weight: 600; color: var(--muted); background: rgba(255,255,255,0.04); border-radius: 999px; letter-spacing: 0.3px; }' +
-
-        // Rows mit smoother spacing
         '.chat-row { display: flex; align-items: flex-end; gap: 8px; padding: 0 14px; margin-top: 12px; animation: msg-in 0.3s cubic-bezier(0.16, 1, 0.3, 1); }' +
         '.chat-row-grouped { margin-top: 2px; animation: none; }' +
         '@keyframes msg-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }' +
         '.chat-row-me { justify-content: flex-end; }' +
         '.chat-row-other { justify-content: flex-start; }' +
-
-        // Avatar mini cleaner
         '.chat-avatar-mini { width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0; overflow: hidden; background: linear-gradient(135deg,#a78bfa,#7c3aed); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; color: #fff; }' +
         '.chat-avatar-mini img { width: 100%; height: 100%; object-fit: cover; }' +
         '.chat-avatar-spacer { width: 28px; flex-shrink: 0; }' +
-
-        // Bubble wrapper
         '.chat-bubble-wrap { max-width: 75%; display: flex; flex-direction: column; position: relative; }' +
         '.chat-row-me .chat-bubble-wrap { align-items: flex-end; }' +
         '.chat-row-other .chat-bubble-wrap { align-items: flex-start; }' +
-
-        // Bubbles - softer Insta-look
         '.chat-bubble { padding: 9px 13px; border-radius: 22px; font-size: 14.5px; line-height: 1.38; word-break: break-word; user-select: none; -webkit-user-select: none; cursor: pointer; transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1); max-width: 100%; position: relative; }' +
         '.chat-bubble:active { transform: scale(0.96); }' +
-
-        // Eigene Bubbles - Insta gradient (warmer purple-pink)
         '.chat-row-me .chat-bubble { background: linear-gradient(135deg,#a78bfa 0%,#8b5cf6 50%,#7c3aed 100%); color: #fff; border-radius: 22px 22px 6px 22px; }' +
         '.chat-row-me.chat-row-grouped .chat-bubble { border-radius: 22px 6px 6px 22px; }' +
         '.chat-row-me.chat-row-last .chat-bubble { border-radius: 22px 22px 6px 22px; }' +
         '.chat-row-me.chat-row-grouped.chat-row-last .chat-bubble { border-radius: 22px 6px 6px 22px; }' +
-
-        // Other bubbles - softer dark
         '.chat-row-other .chat-bubble { background: rgba(255,255,255,0.07); color: var(--text); border-radius: 22px 22px 22px 6px; }' +
         '.chat-row-other.chat-row-grouped .chat-bubble { border-radius: 6px 22px 22px 6px; }' +
         '.chat-row-other.chat-row-last .chat-bubble { border-radius: 22px 22px 22px 6px; }' +
-
         '.chat-text { white-space: pre-wrap; }' +
-
-        // Bilder - rund mit padding
         '.chat-img-wrap { max-width: 260px; border-radius: inherit; overflow: hidden; cursor: pointer; }' +
         '.chat-img-wrap img { width: 100%; display: block; border-radius: inherit; transition: transform 0.3s; }' +
         '.chat-img-wrap:active img { transform: scale(0.97); }' +
         '.chat-img-caption { padding: 9px 13px; font-size: 13.5px; line-height: 1.4; }' +
-
-        // Audio
         '.chat-audio { display: flex; align-items: center; gap: 12px; min-width: 220px; padding: 4px 0; }' +
         '.chat-audio-btn { width: 36px; height: 36px; border-radius: 50%; background: rgba(255,255,255,0.25); border: none; color: inherit; font-size: 14px; cursor: pointer; flex-shrink: 0; transition: transform 0.15s; }' +
         '.chat-audio-btn:active { transform: scale(0.9); }' +
@@ -199,29 +182,21 @@ function getStyles() {
         '.chat-row-other .chat-audio-bar { background: rgba(255,255,255,0.1); }' +
         '.audio-prog { height: 100%; width: 0%; background: currentColor; transition: width 0.1s; }' +
         '.audio-dur { font-size: 11px; opacity: 0.7; margin-top: 5px; font-weight: 500; }' +
-
-        // Reactions Insta-style
         '.chat-reactions { display: flex; gap: 3px; margin-top: -6px; padding: 0 6px; flex-wrap: wrap; }' +
         '.chat-reaction { background: var(--bg2); border: 2px solid var(--bg); padding: 3px 8px; border-radius: 999px; font-size: 13px; line-height: 1; box-shadow: 0 2px 6px rgba(0,0,0,0.3); animation: react-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }' +
         '.chat-reaction b { font-size: 11px; opacity: 0.8; margin-left: 2px; font-weight: 700; }' +
         '@keyframes react-pop { 0% { transform: scale(0); } 70% { transform: scale(1.15); } 100% { transform: scale(1); } }' +
-
-        // Status - Insta style
         '.chat-status { font-size: 11px; color: var(--muted); margin-top: 4px; padding: 0 6px; font-weight: 500; }' +
         '.chat-status.read { color: #4dabf7; }' +
-
-        // Doppel-Tap Heart Animation - klassischer Insta Move
+        '.chat-status.pending { animation: pending-pulse 1.4s ease-in-out infinite; }' +
+        '@keyframes pending-pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }' +
         '.chat-heart-pop { position: absolute; pointer-events: none; font-size: 80px; opacity: 0; animation: heart-pop 1s ease-out forwards; z-index: 50; }' +
         '@keyframes heart-pop { 0% { opacity: 0; transform: translate(-50%, -50%) scale(0); } 20% { opacity: 1; transform: translate(-50%, -50%) scale(1.4); } 80% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; transform: translate(-50%, -150%) scale(1.2); } }' +
-
-        // Empty state
         '.chat-empty { padding: 100px 32px; text-align: center; }' +
         '.chat-empty-icon { font-size: 64px; margin-bottom: 18px; opacity: 0.5; animation: wave 2s ease-in-out infinite; transform-origin: 70% 70%; }' +
         '@keyframes wave { 0%, 100% { transform: rotate(0deg); } 25% { transform: rotate(-15deg); } 75% { transform: rotate(15deg); } }' +
         '.chat-empty-text { font-weight: 700; color: var(--text); margin-bottom: 6px; font-size: 17px; }' +
         '.chat-empty-sub { font-size: 13px; color: var(--muted); line-height: 1.5; max-width: 240px; margin: 0 auto; }' +
-
-        // Reaction picker - schoener
         '.chat-react-picker { position: fixed; z-index: 200; background: var(--bg2); border: 1px solid rgba(255,255,255,0.1); border-radius: 999px; padding: 6px 8px; box-shadow: 0 12px 32px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05); display: none; gap: 2px; backdrop-filter: blur(20px); }' +
         '.chat-react-picker.show { display: flex; animation: picker-pop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1); }' +
         '@keyframes picker-pop { from { transform: scale(0.5) translateY(12px); opacity: 0; } to { transform: scale(1) translateY(0); opacity: 1; } }' +
@@ -248,7 +223,6 @@ function getScripts(myUid, otherUid) {
         'let chatActiveTs = 0;' +
         'let chatLastTap = 0;' +
         'let chatLastTapBubble = null;' +
-
         'function chatLongPress(e, el, ts) {' +
             'chatPressTimer = setTimeout(() => {' +
                 'chatActiveBubble = el;' +
@@ -261,7 +235,6 @@ function getScripts(myUid, otherUid) {
             'if (chatPressTimer) clearTimeout(chatPressTimer);' +
             'chatPressTimer = null;' +
         '}' +
-        // Doppel-Tap = Heart-Animation (Insta-Style)
         'function chatDoubleTap(e, el, ts) {' +
             'const now = Date.now();' +
             'if (chatLastTapBubble === el && (now - chatLastTap) < 350) {' +
@@ -311,7 +284,6 @@ function getScripts(myUid, otherUid) {
                 'setTimeout(() => location.reload(), 250);' +
             '} catch (err) { console.error("react fail", err); }' +
         '}' +
-        // Smooth scroll to bottom on load
         'requestAnimationFrame(() => {' +
             'window.scrollTo({ top: document.body.scrollHeight, behavior: "instant" });' +
         '});' +

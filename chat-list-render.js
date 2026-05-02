@@ -1,4 +1,7 @@
-// Instagram DM Style Threads-Liste v2 - Smoother & Cleaner
+// Instagram DM Style Threads-Liste v3 - mit app-perf eingebunden
+
+let appPerf = '';
+try { appPerf = require('./app-perf'); } catch(e) {}
 
 function formatTime(ts) {
     if (!ts) return '';
@@ -105,10 +108,8 @@ module.exports = function renderChatList(opts) {
             '<div class="dm-empty-sub">Tippe auf einen Kreis oben um eine DM zu starten</div>' +
         '</div>' : '';
 
-    return '<style>' +
+    return appPerf + '<style>' +
         '* { -webkit-tap-highlight-color: transparent; }' +
-
-        // Stories - Insta Spacing
         '.stories-section { padding: 16px 0 12px; border-bottom: 0.5px solid rgba(255,255,255,0.08); }' +
         '.stories-wrap { display: flex; gap: 16px; overflow-x: auto; padding: 0 16px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }' +
         '.stories-wrap::-webkit-scrollbar { display: none; }' +
@@ -119,29 +120,21 @@ module.exports = function renderChatList(opts) {
         '.story-avatar > img { position: absolute; inset: 2.5px; width: calc(100% - 5px); height: calc(100% - 5px); border-radius: 50%; object-fit: cover; }' +
         '.story-avatar .sa-fb { position: absolute; inset: 2.5px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; color: #fff; font-size: 22px; background: linear-gradient(135deg, #a78bfa, #7c3aed); }' +
         '.story-name { font-size: 11px; margin-top: 7px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 70px; font-weight: 500; }' +
-
-        // DM Liste - mehr breathing
         '.dm-list { padding: 6px 0 90px; }' +
         '.dm-row { display: flex; align-items: center; gap: 13px; padding: 11px 16px; text-decoration: none; color: inherit; transition: background 0.15s; position: relative; }' +
         '.dm-row:active { background: rgba(255,255,255,0.04); }' +
         '.dm-row.unread .dm-name { font-weight: 800; color: var(--text); }' +
         '.dm-row.unread .dm-preview { color: var(--text); font-weight: 500; }' +
         '.dm-pinned { background: linear-gradient(90deg, rgba(0,136,204,0.04), transparent 70%); }' +
-
-        // Avatar - Insta-style mit white border online
         '.dm-avatar { position: relative; width: 56px; height: 56px; border-radius: 50%; flex-shrink: 0; background: var(--bg4); overflow: hidden; display: flex; align-items: center; justify-content: center; }' +
         '.dm-avatar > img { width: 100%; height: 100%; object-fit: cover; }' +
         '.dm-avatar-fb { font-weight: 800; font-size: 22px; color: #fff; background: linear-gradient(135deg, #a78bfa, #7c3aed); width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }' +
         '.dm-avatar.online::after { content: ""; position: absolute; bottom: 1px; right: 1px; width: 14px; height: 14px; border-radius: 50%; background: #22c55e; border: 2.5px solid var(--bg); }' +
         '.dm-tg { background: linear-gradient(135deg, #0088cc, #00c6ff); color: #fff; font-size: 26px; font-weight: 600; }' +
-
-        // Content
         '.dm-content { flex: 1; min-width: 0; }' +
         '.dm-name { font-size: 14.5px; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: flex; align-items: center; gap: 6px; }' +
         '.dm-pin-icon { font-size: 11px; opacity: 0.6; }' +
         '.dm-preview { font-size: 13px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 3px; line-height: 1.3; }' +
-
-        // Meta - cleaner
         '.dm-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; flex-shrink: 0; min-width: 38px; }' +
         '.dm-time { font-size: 11px; color: var(--muted); }' +
         '.dm-badge { background: linear-gradient(135deg, #a78bfa, #7c3aed); color: #fff; min-width: 20px; height: 20px; border-radius: 999px; font-size: 11px; font-weight: 700; padding: 0 6px; display: flex; align-items: center; justify-content: center; line-height: 1; }' +
@@ -150,14 +143,12 @@ module.exports = function renderChatList(opts) {
         '.dm-tick.read { color: #4dabf7; }' +
         '.dm-online-dot { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.2); animation: pulse-dot 1.6s infinite; }' +
         '@keyframes pulse-dot { 0%,100% { box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.2); } 50% { box-shadow: 0 0 0 6px rgba(34, 197, 94, 0); } }' +
-
         '.dm-empty { padding: 80px 28px; text-align: center; }' +
         '.dm-empty-icon { font-size: 56px; margin-bottom: 16px; opacity: 0.4; animation: empty-bounce 2s ease-in-out infinite; }' +
         '@keyframes empty-bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }' +
         '.dm-empty-text { font-weight: 700; color: var(--text); margin-bottom: 6px; font-size: 15px; }' +
         '.dm-empty-sub { font-size: 13px; color: var(--muted); line-height: 1.5; max-width: 240px; margin: 0 auto; }' +
         '</style>' +
-
         (storiesArr.length ? '<div class="stories-section"><div class="stories-wrap">' + storiesHtml + '</div></div>' : '') +
         '<div class="dm-list">' +
             telegramRow +

@@ -1,7 +1,8 @@
-// Telegram-Threads Liste - vertikale Cards mit smart Icons
-// Wird via require() in bot.js eingebunden (durch patch-bot.js)
+// Telegram-Threads Liste v2 - vertikale Cards mit smart Icons + app-perf
 
-// Smart-Icon Map: Keywords -> Icon + Gradient
+let appPerf = '';
+try { appPerf = require('./app-perf'); } catch(e) {}
+
 const ICON_MAP = [
     { kw: ['allgemein', 'general'],            icon: '💬', grad: 'linear-gradient(135deg,#0088cc,#00c6ff)' },
     { kw: ['abmeld', 'abwesend', 'pause'],     icon: '📤', grad: 'linear-gradient(135deg,#fb923c,#ea580c)' },
@@ -26,23 +27,15 @@ const ICON_MAP = [
     { kw: ['willkommen', 'welcome', 'intro'],  icon: '👋', grad: 'linear-gradient(135deg,#84cc16,#65a30d)' },
 ];
 
-// Fallback Gradients (12 farbige Varianten - basiert auf hash)
 const FALLBACK_GRADIENTS = [
-    'linear-gradient(135deg,#f43f5e,#be123c)',
-    'linear-gradient(135deg,#f97316,#c2410c)',
-    'linear-gradient(135deg,#eab308,#a16207)',
-    'linear-gradient(135deg,#84cc16,#4d7c0f)',
-    'linear-gradient(135deg,#22c55e,#15803d)',
-    'linear-gradient(135deg,#10b981,#047857)',
-    'linear-gradient(135deg,#06b6d4,#0e7490)',
-    'linear-gradient(135deg,#3b82f6,#1d4ed8)',
-    'linear-gradient(135deg,#6366f1,#4338ca)',
-    'linear-gradient(135deg,#a855f7,#7e22ce)',
-    'linear-gradient(135deg,#ec4899,#be185d)',
-    'linear-gradient(135deg,#f59e0b,#d97706)',
+    'linear-gradient(135deg,#f43f5e,#be123c)','linear-gradient(135deg,#f97316,#c2410c)',
+    'linear-gradient(135deg,#eab308,#a16207)','linear-gradient(135deg,#84cc16,#4d7c0f)',
+    'linear-gradient(135deg,#22c55e,#15803d)','linear-gradient(135deg,#10b981,#047857)',
+    'linear-gradient(135deg,#06b6d4,#0e7490)','linear-gradient(135deg,#3b82f6,#1d4ed8)',
+    'linear-gradient(135deg,#6366f1,#4338ca)','linear-gradient(135deg,#a855f7,#7e22ce)',
+    'linear-gradient(135deg,#ec4899,#be185d)','linear-gradient(135deg,#f59e0b,#d97706)',
 ];
 
-// Fallback Icons (20 Stueck wie original)
 const FALLBACK_ICONS = ['🎯','🚀','💡','📊','🎨','🔥','⚡','🌟','📝','🎭','🏆','🎵','🧠','💎','🌈','🎮','📣','🛠️','🌍','🎬'];
 
 function hashCode(str) {
@@ -135,7 +128,7 @@ module.exports = function renderThreadList(opts) {
 
         const { icon, grad } = smartIcon(thr.name, tid);
         const safeName = esc(thr.name || ('Thread ' + tid));
-        const isLive = (Date.now() - (lm && lm.timestamp || 0)) < 60000; // letzte Min
+        const isLive = (Date.now() - (lm && lm.timestamp || 0)) < 60000;
 
         const renameBtn = isAdmin ?
             '<span class="thr-rename" onclick="event.preventDefault();event.stopPropagation();renameThread(\'' + tid + '\',\'' + safeName.replace(/'/g, "\\'") + '\')">✏️</span>' : '';
@@ -166,5 +159,5 @@ module.exports = function renderThreadList(opts) {
         '</a>';
     }).join('');
 
-    return styles + '<div class="thr-list">' + cards + '</div>';
+    return appPerf + styles + '<div class="thr-list">' + cards + '</div>';
 };
