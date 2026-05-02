@@ -49,31 +49,30 @@ tryPatch('Back-Button DM', /<a href="\/nachrichten" class="icon-btn" style="font
 
 tryPatch('Mark-Read non-blocking', /await postBot\('\/mark-messages-read', \{ uid: myUid, chatKey \}\);/, "postBot('/mark-messages-read', { uid: myUid, chatKey }).catch(()=>{});", "postBot('/mark-messages-read', { uid: myUid, chatKey }).catch");
 
-if (src.includes("require('./app-icon')")) {
+// App-Icon require und Content-Type Patches nur wenn alte single-route Logik vorhanden
+const hasNewIconRoutes = src.includes("if (path === '/icon-192.png')");
+if (hasNewIconRoutes) {
+    console.log('[patch-bot] Neue Icon-Routes erkannt - App-Icon und Content-Type Patches übersprungen');
+} else if (src.includes("require('./app-icon')")) {
     console.log('[patch-bot] App-Icon bereits via require');
 } else if (/const buf = Buffer\.from\('[A-Za-z0-9+/=]{1000,}', 'base64'\);/.test(src)) {
     src = src.replace(/const buf = Buffer\.from\('[A-Za-z0-9+/=]+', 'base64'\);/, "const buf = Buffer.from(require('./app-icon').b64, 'base64');");
     console.log('[patch-bot] App-Icon auf require'); changed = true;
+    tryPatch('Icon Content-Type', /res\.writeHead\(200, \{ 'Content-Type': 'image\/png',/g, "res.writeHead(200, { 'Content-Type': 'image/jpeg',", null);
 }
 
-tryPatch('Icon Content-Type', /res\.writeHead\(200, \{ 'Content-Type': 'image\/png',/g, "res.writeHead(200, { 'Content-Type': 'image/jpeg',", null);
+// MANIFEST v23 - PNG icons, prefer_related_applications:false, start_url:'/'
+const NEW_MANIFEST_JSON = "res.end(JSON.stringify({name:'CreatorX',short_name:'CreatorX',description:'Die kreative Community für Instagram Creators',start_url:'/',scope:'/',display:'standalone',background_color:'#000000',theme_color:'#ff6b6b',orientation:'portrait',categories:['social','lifestyle'],prefer_related_applications:false,screenshots:[],icons:[{src:'/icon-192.png',sizes:'192x192',type:'image/png',purpose:'any'},{src:'/icon-512.png',sizes:'512x512',type:'image/png',purpose:'any maskable'}]}));";
 
-// KOMPLETTES MANIFEST KOMPLETT NEU - replacing das ganze JSON.stringify({...})
-const NEW_MANIFEST_JSON = "res.end(JSON.stringify({name:'CreatorX',short_name:'CreatorX',start_url:'/feed',scope:'/',display:'standalone',background_color:'#000000',theme_color:'#ff6b6b',description:'CreatorX Community',orientation:'portrait',categories:['social','lifestyle'],icons:[{src:'/icon.jpg?v=20',sizes:'192x192',type:'image/jpeg',purpose:'any'},{src:'/icon.jpg?v=20',sizes:'512x512',type:'image/jpeg',purpose:'any'}]}));";
-
-if (src.includes("v=20") && src.includes("type:'image/jpeg',purpose:'any'")) {
-    console.log('[patch-bot] Manifest bereits v20');
+if (src.includes("prefer_related_applications:false")) {
+    console.log('[patch-bot] Manifest bereits v23');
 } else if (/res\.end\(JSON\.stringify\(\{name:'CreatorX'[^)]+\}\)\);/.test(src)) {
     src = src.replace(/res\.end\(JSON\.stringify\(\{name:'CreatorX'[^)]+\}\)\);/, NEW_MANIFEST_JSON);
-    console.log('[patch-bot] Manifest komplett ersetzt v20');
+    console.log('[patch-bot] Manifest v23 gepatched');
     changed = true;
 } else {
     console.warn('[patch-bot] WARNUNG: Manifest pattern nicht gefunden');
 }
-
-let versionBumps = 0;
-src = src.replace(/icon\.jpg\?v=\d+/g, () => { versionBumps++; return 'icon.jpg?v=20'; });
-if (versionBumps > 0) { console.log('[patch-bot] Icon-Version v=20: ' + versionBumps); changed = true; }
 
 tryPatch('HTML no-cache headers', /res\.writeHead\(200,\{'Content-Type':'text\/html; charset=utf-8'\}\);/g, "res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','Pragma':'no-cache','Expires':'0','X-App-Version':'20'});", "X-App-Version");
 
