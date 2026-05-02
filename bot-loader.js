@@ -1,43 +1,34 @@
 // bot-loader.js
-// Startet bot.js mit Runtime-Patch fur den Regeln-Tab
-// Damit muss bot.js nicht geandert werden
+// Hookt Module._compile, patched bot.js zur Laufzeit, dann require() es.
+// Das ist der robuste Standard-Pattern fur Runtime-Code-Patching in Node.js.
 
-const fs = require('fs');
 const path = require('path');
 const Module = require('module');
 
-const BOT_PATH = path.join(__dirname, 'bot.js');
+const BOT_PATH = path.resolve(__dirname, 'bot.js');
 
-let src;
-try {
-    src = fs.readFileSync(BOT_PATH, 'utf8');
-} catch (e) {
-    console.error('[bot-loader] bot.js nicht lesbar:', e.message);
-    process.exit(1);
-}
-
-// Patch: regeln-Tab Placeholder durch require('./regeln-tab') ersetzen
-const PATCH_REGEX = /regeln: `<div style="padding:48px[^`]*`,/;
+const PATCH_REGEX = /regeln: `<div style="padding:48px[\s\S]*?`,/;
 const REPLACEMENT = "regeln: require('./regeln-tab'),";
 
-if (PATCH_REGEX.test(src)) {
-    src = src.replace(PATCH_REGEX, REPLACEMENT);
-    console.log('[bot-loader] Regeln-Tab Patch angewendet');
-} else if (src.includes("regeln: require('./regeln-tab')")) {
-    console.log('[bot-loader] Regeln-Tab bereits gepatched (skip)');
-} else {
-    console.log('[bot-loader] Regeln-Tab Placeholder nicht gefunden - fahre ohne Patch fort');
-}
+// _compile vor dem ersten require hooken
+const origCompile = Module.prototype._compile;
+Module.prototype._compile = function(content, filename) {
+    if (filename === BOT_PATH) {
+        if (content.includes("regeln: require('./regeln-tab')")) {
+            console.log('[bot-loader] bot.js bereits gepatched');
+        } else if (PATCH_REGEX.test(content)) {
+            content = content.replace(PATCH_REGEX, REPLACEMENT);
+            console.log('[bot-loader] bot.js Regeln-Tab gepatched');
+        } else {
+            console.log('[bot-loader] WARNUNG: regeln-Placeholder in bot.js nicht gefunden');
+        }
+    }
+    return origCompile.call(this, content, filename);
+};
 
-// Modifiziertes bot.js zur Laufzeit kompilieren und ausfuhren
-const m = new Module(BOT_PATH, module);
-m.filename = BOT_PATH;
-m.paths = Module._nodeModulePaths(path.dirname(BOT_PATH));
+// argv[1] auf bot.js setzen damit require.main === module-Check funktioniert
+process.argv[1] = BOT_PATH;
 
-try {
-    m._compile(src, BOT_PATH);
-    console.log('[bot-loader] bot.js gestartet');
-} catch (e) {
-    console.error('[bot-loader] Fehler beim Starten von bot.js:', e);
-    throw e;
-}
+// Jetzt bot.js normal laden - der Hook patcht es beim Compile
+console.log('[bot-loader] Starte bot.js...');
+require(BOT_PATH);
