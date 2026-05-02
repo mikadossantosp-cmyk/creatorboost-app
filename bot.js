@@ -2925,7 +2925,7 @@ async function submitSuperLink(){
   <div style="background:var(--bg2);border-radius:20px;padding:28px 24px;max-width:360px;width:100%;text-align:center">
     <div style="font-size:48px;margin-bottom:12px">⭐</div>
     <div style="font-size:18px;font-weight:700;margin-bottom:8px">Superlink gepostet!</div>
-    <div style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:20px">Superlinks können 1× pro Woche gepostet werden. Du hast dich damit verpflichtet, <strong style="color:var(--text)">alle anderen Superlinks diese Woche zu liken, kommentieren, teilen und speichern</strong>. Sonst gibt es am Sonntag um 23:59 Uhr −50 XP.</div>
+    <div style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:20px">Superlinks können 1–2× pro Woche gepostet werden (Elite+ = 2×). Du hast dich damit verpflichtet, <strong style="color:var(--text)">alle anderen Superlinks diese Woche zu liken, kommentieren, teilen und speichern</strong>. Sonst gibt es am Sonntag um 23:59 Uhr −50 XP.</div>
     <div style="font-size:13px;color:var(--muted)">Weiterleitung in <span id="sl-popup-count">10</span> Sekunden...</div>
   </div>
 </div>
