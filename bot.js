@@ -512,8 +512,8 @@ function layout(content, session, page='feed', lang='de') {
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="theme-color" content="#ff6b6b">
 <link rel="manifest" href="/manifest.json">
-<link rel="icon" type="image/png" href="/icon-512.png">
-<link rel="apple-touch-icon" sizes="512x512" href="/icon-512.png">
+<link rel="icon" type="image/png" href="/icon-512.png?v=22">
+<link rel="apple-touch-icon" sizes="512x512" href="/icon-512.png?v=22">
 <meta name="apple-mobile-web-app-title" content="CreatorX">
 <title>CreatorX</title>
 <style>${CSS}</style>
@@ -726,7 +726,12 @@ function confirmCrop(){
 <script>
 (function(){
   if(!('serviceWorker' in navigator))return;
+  // Alte SWs entfernen die noch gecacht haben
+  navigator.serviceWorker.getRegistrations().then(regs=>{
+    regs.forEach(r=>{if(r.active&&r.active.scriptURL&&!r.active.scriptURL.includes('/sw.js'))r.unregister();});
+  });
   navigator.serviceWorker.register('/sw.js').then(async reg=>{
+    reg.update();
     if(!('PushManager' in window))return;
     try{
       const kr=await fetch('/api/vapid-public-key');const {key}=await kr.json();
@@ -1385,7 +1390,7 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
     // ── PWA MANIFEST ──
     if (path === '/manifest.json') {
         res.writeHead(200,{'Content-Type':'application/manifest+json','Cache-Control':'no-cache, no-store, must-revalidate'});
-        return res.end(JSON.stringify({id:'/feed',name:'CreatorX',short_name:'CreatorX',start_url:'/feed',scope:'/',display:'standalone',background_color:'#000000',theme_color:'#ff6b6b',description:'Die kreative Community für Instagram Creators',orientation:'portrait',categories:['social','lifestyle'],icons:[{src:'/icon-512.png',sizes:'512x512',type:'image/png',purpose:'any maskable'},{src:'/icon-512.png',sizes:'512x512',type:'image/png',purpose:'maskable'}]}));
+        return res.end(JSON.stringify({id:'/feed',name:'CreatorX',short_name:'CreatorX',start_url:'/feed',scope:'/',display:'standalone',background_color:'#000000',theme_color:'#ff6b6b',description:'Die kreative Community für Instagram Creators',orientation:'portrait',categories:['social','lifestyle'],icons:[{src:'/icon-512.png?v=22',sizes:'512x512',type:'image/png',purpose:'any'},{src:'/icon-512.png?v=22',sizes:'512x512',type:'image/png',purpose:'maskable'}]}));
     }
 
     if (path === '/api/vapid-public-key') {
