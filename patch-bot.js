@@ -74,7 +74,7 @@ if (src.includes("prefer_related_applications:false")) {
     console.warn('[patch-bot] WARNUNG: Manifest pattern nicht gefunden');
 }
 
-tryPatch('HTML no-cache headers', /res\.writeHead\(200,\{'Content-Type':'text\/html; charset=utf-8'\}\);/g, "res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','Pragma':'no-cache','Expires':'0','X-App-Version':'20'});", "X-App-Version");
+tryPatch('HTML no-cache headers', /res\.writeHead\(200,\{'Content-Type':'text\/html; charset=utf-8'\}\);/g, "res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-cache, max-age=0, stale-while-revalidate=15','X-App-Version':'21'});", "X-App-Version");
 
 if (!src.includes('self.skipWaiting()')) {
     if (/self\.addEventListener\(['"]install['"]/.test(src)) {

@@ -600,6 +600,38 @@ ${session ? `
   </a>
 </nav>` : ''}
 <script>
+// Instant nav feedback + progress bar
+(function(){
+  var bar=document.createElement('div');
+  bar.id='nav-progress';
+  bar.style.cssText='position:fixed;top:0;left:0;height:2px;width:0;background:linear-gradient(90deg,#ff6b6b,#ff9f43);z-index:99999;transition:width .15s ease;pointer-events:none;opacity:0';
+  document.body.appendChild(bar);
+  var timer=null;
+  function startProgress(){
+    bar.style.transition='none';bar.style.width='0';bar.style.opacity='1';
+    requestAnimationFrame(function(){
+      bar.style.transition='width 8s cubic-bezier(.1,1,.9,1)';
+      bar.style.width='85%';
+    });
+  }
+  function endProgress(){
+    clearTimeout(timer);
+    bar.style.transition='width .1s ease';bar.style.width='100%';
+    timer=setTimeout(function(){bar.style.opacity='0';bar.style.width='0';},200);
+  }
+  document.querySelectorAll('.nav-item,.highlight-card,.action-card').forEach(function(el){
+    el.addEventListener('click',function(){
+      var href=el.getAttribute('href');
+      if(!href||href.startsWith('#'))return;
+      startProgress();
+      // Mark clicked nav item active immediately
+      document.querySelectorAll('.nav-item').forEach(function(n){n.classList.remove('active');});
+      if(el.classList.contains('nav-item'))el.classList.add('active');
+    });
+  });
+  window.addEventListener('pageshow',endProgress);
+  window.addEventListener('load',endProgress);
+})();
 async function checkNotifBadge(){
     try {
         const r = await fetch('/api/notifications/count');
@@ -1611,7 +1643,7 @@ self.addEventListener('notificationclick',e=>{
     if (session) { session.lastSeen = Date.now(); }
 
     function redirect(to) { res.writeHead(302,{'Location':to}); res.end(); }
-    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','Pragma':'no-cache','Expires':'0','X-App-Version':'20'}); res.end(layout(content,session,page,lang)); }
+    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-cache, max-age=0, stale-while-revalidate=15','X-App-Version':'21'}); res.end(layout(content,session,page,lang)); }
     function json(data, status=200) { res.writeHead(status,{'Content-Type':'application/json'}); res.end(JSON.stringify(data)); }
 
     // ── LANDING ──
@@ -4038,14 +4070,14 @@ document.getElementById('search-input').focus();
     </div>
     <div style="font-size:16px;color:rgba(255,255,255,.2)">›</div>
   </a>
-  <div class="highlight-card">
+  <a href="/explore?tab=shop" class="highlight-card">
     <div class="highlight-icon" style="background:linear-gradient(135deg,rgba(0,200,130,.25),rgba(0,150,100,.15))">🎁</div>
     <div style="flex:1;min-width:0">
       <div style="font-size:13px;font-weight:700">💎 Diamant Shop</div>
       <div style="font-size:11px;color:var(--muted);margin-top:3px">Tausche Diamanten gegen Vorteile</div>
     </div>
     <div style="font-size:10px;color:#a78bfa;font-weight:700;background:rgba(167,139,250,.12);padding:2px 8px;border-radius:10px;white-space:nowrap">💎 ${d.users[myUid]?.diamonds||0}</div>
-  </div>
+  </a>
 </div>
 <div style="padding:0 16px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between">
   <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:1px">⭐ Top Creator</div>
