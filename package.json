@@ -2,7 +2,10 @@
   "name": "creatorboost-app",
   "version": "1.0.0",
   "scripts": {
-    "start": "node bot-loader.js"
+    "start": "node bot.js"
+  },
+  "engines": {
+    "node": "20.x"
   },
   "dependencies": {
     "web-push": "^3.6.7"
