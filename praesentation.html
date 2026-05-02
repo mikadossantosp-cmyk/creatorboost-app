@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CreatorX — Was alles geht</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0a0a;--bg2:#141414;--bg3:#1a1a1a;--bg4:#222;
+  --text:#fff;--muted:#aaa;--muted2:#666;
+  --accent:#ff6b6b;--accent2:#ffa500;--gold:#ffd43b;
+  --green:#00c851;--purple:#a78bfa;--blue:#4dabf7;
+  --border:rgba(255,255,255,.1);--border2:rgba(255,255,255,.06);
+}
+html{scroll-behavior:smooth}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);line-height:1.6;overflow-x:hidden}
+.container{max-width:900px;margin:0 auto;padding:0 20px}
+.hero{padding:60px 20px;text-align:center;background:linear-gradient(180deg,#1a0a0a 0%,#0a0a0a 100%);border-bottom:1px solid var(--border)}
+.hero h1{font-size:clamp(36px,8vw,64px);font-weight:900;background:linear-gradient(135deg,var(--accent),var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-1px;margin-bottom:12px}
+.hero .tag{font-size:18px;color:var(--muted);max-width:600px;margin:0 auto}
+.hero .badge{display:inline-block;padding:6px 14px;border-radius:999px;background:rgba(255,107,107,.12);border:1px solid rgba(255,107,107,.3);color:var(--accent);font-size:12px;font-weight:700;margin-bottom:18px;letter-spacing:1px;text-transform:uppercase}
+.section{padding:60px 0;border-bottom:1px solid var(--border2)}
+.section h2{font-size:32px;font-weight:800;margin-bottom:8px;display:flex;align-items:center;gap:12px}
+.section .sub{font-size:14px;color:var(--muted);margin-bottom:32px;text-transform:uppercase;letter-spacing:1px}
+.section h3{font-size:20px;font-weight:700;margin:28px 0 14px;color:var(--accent2)}
+.section h4{font-size:16px;font-weight:700;margin:18px 0 10px;color:var(--text)}
+.section p{color:var(--muted);margin-bottom:14px}
+.section ul{list-style:none;padding-left:0;margin:10px 0}
+.section ul li{padding:8px 0 8px 28px;position:relative;color:var(--text)}
+.section ul li::before{content:"▸";position:absolute;left:8px;color:var(--accent)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin:18px 0}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px;transition:transform .2s,border-color .2s}
+.card:hover{transform:translateY(-2px);border-color:rgba(255,107,107,.4)}
+.card .icon{font-size:28px;margin-bottom:10px}
+.card .name{font-weight:700;font-size:15px;margin-bottom:6px}
+.card .desc{font-size:13px;color:var(--muted)}
+.cmd{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin:8px 0;display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap}
+.cmd code{background:rgba(255,107,107,.12);color:var(--accent);padding:4px 10px;border-radius:6px;font-family:'SF Mono',Menlo,monospace;font-size:13px;font-weight:600;white-space:nowrap}
+.cmd .desc{color:var(--muted);font-size:13px;flex:1;min-width:200px}
+.tag-admin{background:rgba(167,139,250,.15);color:var(--purple);padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;text-transform:uppercase}
+.row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border2);font-size:14px;flex-wrap:wrap;gap:8px}
+.row:last-child{border-bottom:0}
+.pill{font-size:11px;padding:4px 10px;border-radius:999px;font-weight:700}
+.p-xp{background:rgba(167,139,250,.15);color:var(--purple)}
+.p-block{background:rgba(239,68,68,.15);color:#ef4444}
+.p-warn{background:rgba(245,158,11,.15);color:#f59e0b}
+.p-trash{background:rgba(148,163,184,.15);color:#94a3b8}
+.p-ok{background:rgba(34,197,94,.15);color:#22c55e}
+.tier-bronze{color:#cd7f32}
+.tier-silber{color:#c0c0c0}
+.tier-gold{color:#ffd700}
+.why{background:rgba(167,139,250,.08);border-left:3px solid var(--purple);border-radius:8px;padding:14px 16px;margin:18px 0;font-size:14px;color:var(--muted)}
+.why strong{color:var(--text)}
+.toc{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:24px;margin:24px 0}
+.toc ol{padding-left:22px;line-height:2}
+.toc a{color:var(--accent);text-decoration:none;font-weight:600}
+.toc a:hover{text-decoration:underline}
+.shop-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:18px 0}
+.shop-card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:18px 14px;text-align:center}
+.shop-card .ring,.shop-card .banner{width:62px;height:62px;border-radius:50%;margin:0 auto 12px;display:flex;align-items:center;justify-content:center;font-size:24px}
+.shop-card .banner{width:80px;height:42px;border-radius:10px}
+.shop-card .name{font-size:13px;font-weight:700;margin-bottom:4px}
+.shop-card .price{font-size:12px;color:var(--purple);font-weight:700}
+.shop-card .tier-tag{font-size:10px;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:.5px}
+footer{padding:40px 20px;text-align:center;color:var(--muted);font-size:12px;background:#000;border-top:1px solid var(--border)}
+.warn-box{background:rgba(239,68,68,.08);border-left:3px solid #ef4444;border-radius:8px;padding:14px 16px;margin:14px 0;font-size:14px}
+.success-box{background:rgba(34,197,94,.08);border-left:3px solid #22c55e;border-radius:8px;padding:14px 16px;margin:14px 0;font-size:14px}
+@media(max-width:600px){.hero{padding:40px 16px}.section{padding:40px 0}.container{padding:0 16px}.section h2{font-size:24px}}
+</style>
+</head>
+<body>
+<header class="hero">
+<div class="badge">📚 Komplette Übersicht</div>
+<h1>CreatorX</h1>
+<p class="tag">Die Community-App, die Instagram-Creator gegenseitig pusht. Hier steht alles was die App kann, wie das XP-System funktioniert und welche Belohnungen du dir verdienen kannst.</p>
+</header>
+<div class="container">
+<div class="toc section" id="inhalt">
+<h2>📑 Inhalt</h2>
+<ol>
+<li><a href="#mission">Unsere Mission</a></li>
+<li><a href="#telegram">Telegram-Bot — alle Befehle</a></li>
+<li><a href="#webapp">Web-App / PWA</a></li>
+<li><a href="#xp">XP &amp; Badges</a></li>
+<li><a href="#missionen">Daily &amp; Weekly Missionen</a></li>
+<li><a href="#superlinks">Superlinks (Full Engagement)</a></li>
+<li><a href="#shop">💎 Diamant Shop</a></li>
+<li><a href="#regeln">Regeln &amp; Verwarnungen</a></li>
+<li><a href="#install">App installieren</a></li>
+</ol>
+</div>
+<section class="section" id="mission">
+<div class="sub">01 / Was ist das hier</div>
+<h2>🎯 Unsere Mission</h2>
+<p>CreatorX ist eine geschlossene Creator-Community, in der sich Mitglieder gegenseitig auf Instagram pushen — durch <strong>echte Likes, echte Kommentare und echtes Engagement</strong>. Kein Bot-Verhalten, keine künstlichen Wachstumsversprechen.</p>
+<ul>
+<li>Jeder hilft jedem — Engagement gegen Engagement</li>
+<li>Natürliches Verhalten, kein Auto-Liker</li>
+<li>Nachhaltiges Wachstum durch echte Interaktion</li>
+<li>Punkte (XP) für aktives Mitwirken, Belohnungen via Diamanten</li>
+</ul>
+<div class="why">💡 <strong>Warum gibt es Regeln?</strong> Damit das System für alle fair bleibt und Instagram die Aktivität nicht als Manipulation erkennt.</div>
+</section>
+<section class="section" id="telegram">
+<div class="sub">02 / Im Telegram</div>
+<h2>🤖 Telegram-Bot</h2>
+<p>Der CreatorX-Bot läuft direkt in Telegram. Alle Funktionen sind als Slash-Befehle erreichbar.</p>
+<h3>👤 Profil &amp; Account</h3>
+<div class="cmd"><code>/start</code><span class="desc">Bot starten, Account anlegen</span></div>
+<div class="cmd"><code>/profil</code><span class="desc">Eigenes Profil (XP, Level, Badge, Trophäen)</span></div>
+<div class="cmd"><code>/profil @user</code><span class="desc">Profil eines anderen Users</span></div>
+<div class="cmd"><code>/setbio</code><span class="desc">Bio-Text setzen</span></div>
+<div class="cmd"><code>/setspitzname</code><span class="desc">Eigenen Spitznamen festlegen</span></div>
+<div class="cmd"><code>/setinsta</code><span class="desc">Instagram-Account verknüpfen (Pflicht für Superlinks)</span></div>
+<h3>📊 Statistiken &amp; Rankings</h3>
+<div class="cmd"><code>/stats</code><span class="desc">Persönliche Statistik (Links, Likes, Streaks)</span></div>
+<div class="cmd"><code>/ranking</code><span class="desc">Gesamt-Rangliste (Top 10 nach XP)</span></div>
+<div class="cmd"><code>/dailyranking</code><span class="desc">Heutige Rangliste</span></div>
+<div class="cmd"><code>/weeklyranking</code><span class="desc">Wochen-Rangliste</span></div>
+<h3>🎯 Missionen &amp; Belohnungen</h3>
+<div class="cmd"><code>/missionen</code><span class="desc">Aktuelle Daily- &amp; Weekly-Missionen</span></div>
+<div class="cmd"><code>/daily</code><span class="desc">Täglicher XP-Bonus (10–30 XP)</span></div>
+<div class="cmd"><code>/superlink</code><span class="desc">Status &amp; Posten deines Wochen-Superlinks</span></div>
+<div class="cmd"><code>/shop</code><span class="desc">💎 Diamant-Shop</span></div>
+<div class="cmd"><code>/mycode</code><span class="desc">Persönlichen Einladungs-Code</span></div>
+<h3>💬 Chat &amp; Hilfe</h3>
+<div class="cmd"><code>/help</code><span class="desc">Komplette Hilfe-Übersicht</span></div>
+<div class="cmd"><code>/dm @user</code><span class="desc">Direktnachricht starten</span></div>
+<div class="cmd"><code>/chats</code><span class="desc">Liste deiner DMs</span></div>
+<div class="cmd"><code>/melden</code><span class="desc">Verstoß / User melden</span></div>
+<div class="cmd"><code>/dashboard</code><span class="desc">Link zur Web-App</span></div>
+<h3>⚙️ Admin-Befehle <span class="tag-admin">nur Admins</span></h3>
+<div class="cmd"><code>/warn</code><span class="desc">Verwarnung an User vergeben (per Reply)</span></div>
+<div class="cmd"><code>/unban</code><span class="desc">User entbannen</span></div>
+<div class="cmd"><code>/addxp 1000</code><span class="desc">User XP geben (auch /xpadd, /givexp)</span></div>
+<div class="cmd"><code>/extralink</code><span class="desc">Bonus-Link an User vergeben</span></div>
+<div class="cmd"><code>/fixlink</code><span class="desc">Falschen Link korrigieren</span></div>
+<div class="cmd"><code>/dellink</code><span class="desc">Link-Eintrag löschen</span></div>
+<div class="cmd"><code>/cleanlinks</code><span class="desc">Abgelaufene Links bereinigen</span></div>
+<div class="cmd"><code>/checkengagement</code><span class="desc">Engagement-Pflicht prüfen</span></div>
+<div class="cmd"><code>/checkmembers</code><span class="desc">Mitglieder-Status prüfen</span></div>
+<div class="cmd"><code>/remindinsta</code><span class="desc">User ohne Instagram erinnern</span></div>
+</section>
+<section class="section" id="webapp">
+<div class="sub">03 / Web-App</div>
+<h2>📱 CreatorX Web-App</h2>
+<p>Die Web-App ist eine vollwertige Progressive Web App (PWA) und kann als App auf dem Homescreen installiert oder per APK heruntergeladen werden. Sie ergänzt den Telegram-Bot um eine moderne Oberfläche mit Feed, Profilen, Chats und Shop.</p>
+<div class="grid">
+<div class="card"><div class="icon">🏠</div><div class="name">Feed</div><div class="desc">Tagesaktuelle Instagram-Links der Community. Sortiert nach Heute / Älter / Engagement. Likes &amp; XP direkt aus dem Feed.</div></div>
+<div class="card"><div class="icon">🔍</div><div class="name">Explore</div><div class="desc">Tabs: Allgemein, 🏆 Ranking (Gesamt/Daily/Weekly), 💡 Tipps, 📋 Regeln, 🛍️ Shop, 📩 Newsletter</div></div>
+<div class="card"><div class="icon">👤</div><div class="name">Profil</div><div class="desc">Banner, Avatar, Bio, Projekte, XP-Verlauf, aktiver Superlink, Streak, Mission-Widget</div></div>
+<div class="card"><div class="icon">💬</div><div class="name">Direktnachrichten</div><div class="desc">Instagram-DM-Style mit Stories, Reaktionen, Online-Status, optimistische UI, Smart-Polling</div></div>
+<div class="card"><div class="icon">🧵</div><div class="name">Threads</div><div class="desc">Themen-Threads (Diskussions-Boards) für Gruppenchat in der Community</div></div>
+<div class="card"><div class="icon">🔔</div><div class="name">Push-Notifications</div><div class="desc">Web-Push-Benachrichtigungen bei Likes, Kommentaren oder DMs (opt-in)</div></div>
+<div class="card"><div class="icon">🎨</div><div class="name">Theme &amp; Sprache</div><div class="desc">Dark Mode (Schwarz) &amp; Light Mode (Weiß), schaltbar per ⚡ in der Topbar</div></div>
+<div class="card"><div class="icon">📲</div><div class="name">PWA + APK</div><div class="desc">Als PWA installierbar oder als signierte Android-APK herunterladbar</div></div>
+</div>
+<h3>Bottom-Navigation (5 Tabs)</h3>
+<ul>
+<li><strong>🏠 Feed</strong> — Community-Links des Tages</li>
+<li><strong>🔍 Explore</strong> — Ranking, Shop, Regeln, Tipps</li>
+<li><strong>+</strong> — Schnellaktion (Link / Superlink posten)</li>
+<li><strong>💬 Nachrichten</strong> — DMs &amp; Threads</li>
+<li><strong>👤 Profil</strong> — Eigenes Profil &amp; Einstellungen</li>
+</ul>
+</section>
+<section class="section" id="xp">
+<div class="sub">04 / Punkte-System</div>
+<h2>📈 XP &amp; Badges</h2>
+<p>Du sammelst XP durch Aktivität in der Community. Mit XP steigst du in Levels und Badges auf — höhere Badges schalten Vorteile frei.</p>
+<h3>XP verdienen</h3>
+<div class="row"><span>Link posten</span><span class="pill p-xp">+1 XP</span></div>
+<div class="row"><span>Like geben</span><span class="pill p-xp">+5 XP</span></div>
+<div class="row"><span>Daily Login Bonus</span><span class="pill p-xp">+10 bis +30 XP</span></div>
+<div class="row"><span>Mission 1 (5 Links liken)</span><span class="pill p-xp">+5 XP</span></div>
+<div class="row"><span>Mission 2 (80% liken)</span><span class="pill p-xp">+5 XP</span></div>
+<div class="row"><span>Mission 3 (100% liken)</span><span class="pill p-xp">+5 XP + 💎</span></div>
+<div class="row"><span>Weekly Streak M2 (7×)</span><span class="pill p-xp">+15 XP + 💎</span></div>
+<div class="row"><span>Weekly Streak M3 (7×)</span><span class="pill p-xp">+20 XP + 2 💎</span></div>
+<p style="font-size:13px;color:var(--muted);margin-top:14px">📐 Level-Formel: <code style="background:var(--bg3);padding:2px 8px;border-radius:4px">Level = ⌊XP / 100⌋ + 1</code></p>
+<h3>Badge-Stufen</h3>
+<div class="row"><span>🆕 <strong>New</strong></span><span style="color:var(--muted)">0 — 49 XP</span></div>
+<div class="row"><span>📘 <strong>Anfänger</strong></span><span style="color:var(--muted)">50 — 499 XP</span></div>
+<div class="row"><span>⬆️ <strong>Aufsteiger</strong></span><span style="color:var(--muted)">500 — 999 XP</span></div>
+<div class="row"><span>🏅 <strong>Erfahrener</strong></span><span style="color:var(--muted)">1.000 — 4.999 XP <span class="pill p-ok">+1 Link/Tag</span></span></div>
+<div class="row"><span>👑 <strong>Elite</strong></span><span style="color:var(--muted)">5.000 — 9.999 XP <span class="pill p-ok">+1 Link + Mo-Bonus</span></span></div>
+<div class="row"><span>🌟 <strong>Elite+</strong></span><span style="color:var(--muted)">ab 10.000 XP <span class="pill p-ok">2 Superlinks/Woche</span></span></div>
+<div class="why">🏆 <strong>Trophäen:</strong> Bei jedem Badge-Aufstieg bekommst du eine Trophäe in dein Profil. Trophäen bleiben für immer.</div>
+</section>
+<section class="section" id="missionen">
+<div class="sub">05 / Tägliche Aufgaben</div>
+<h2>🎯 Missionen</h2>
+<h3>📅 Daily Missionen — Auswertung 12:00 Uhr</h3>
+<div class="row"><span><strong>M1</strong> — 5 Links liken</span><span class="pill p-xp">+5 XP</span></div>
+<div class="row"><span><strong>M2</strong> — 80% aller Links liken</span><span class="pill p-xp">+5 XP</span></div>
+<div class="row"><span><strong>M3</strong> — 100% aller Links liken</span><span class="pill p-xp">+5 XP + 💎</span></div>
+<div class="warn-box">⚠️ Wer einen Link postet, ohne mindestens M1 zu erfüllen, kassiert eine <strong>Verwarnung</strong>.</div>
+<h3>📆 Weekly Streaks — Reset Montag 00:05 Uhr</h3>
+<div class="row"><span><strong>M1 Streak</strong> — 7 Tage M1</span><span class="pill p-xp">+10 XP</span></div>
+<div class="row"><span><strong>M2 Streak</strong> — 7 Tage M2</span><span class="pill p-xp">+15 XP + 1 💎</span></div>
+<div class="row"><span><strong>M3 Streak</strong> — 7 Tage M3</span><span class="pill p-xp">+20 XP + 2 💎</span></div>
+<div class="why">💡 <strong>Warum Streaks?</strong> Engagement-Streaks belohnen Mitglieder, die kontinuierlich aktiv sind — nicht nur einmal die Woche.</div>
+</section>
+<section class="section" id="superlinks">
+<div class="sub">06 / Full Engagement</div>
+<h2>🌟 Superlinks</h2>
+<p>Ein Superlink ist ein Premium-Posting im Full-Engagement-Thread. Wer einen Superlink postet, kriegt von <strong>allen anderen</strong> Mitgliedern Likes, Kommentare, Saves &amp; Shares — die volle Reichweiten-Power der Community.</p>
+<ul>
+<li><strong>1 Superlink pro Woche</strong> für alle (Elite+: 2 pro Woche)</li>
+<li>Nur Montag bis Samstag möglich (Sonntag ist Auswertungstag)</li>
+<li>Instagram-Profil per <code>/setinsta</code> Pflicht</li>
+<li>Wer einen Superlink postet, <strong>MUSS</strong> alle anderen Superlinks der Woche liken</li>
+<li>Erinnerung Sonntag 21:00 · Auswertung Sonntag 23:59</li>
+</ul>
+<h3>Verstöße &amp; Konsequenzen</h3>
+<div class="row"><span>Engagement-Pflicht verletzt</span><span class="pill p-warn">−50 XP + ⚠️</span></div>
+<div class="row"><span>Posten ohne /setinsta</span><span class="pill p-block">❌ blockiert</span></div>
+<div class="row"><span>Mehrfach pro Woche</span><span class="pill p-block">❌ blockiert</span></div>
+<div class="why">💡 <strong>Wie posten?</strong> Mit <code>/superlink</code> im Bot oder über den +-Button in der App.</div>
+</section>
+<section class="section" id="shop">
+<div class="sub">07 / Premium</div>
+<h2>💎 Diamant-Shop</h2>
+<p>Diamanten verdienst du durch Mission-Streaks (M2/M3). Im Shop kannst du sie gegen kosmetische Items und Bonus-Funktionen eintauschen.</p>
+<h3>💎 Diamanten verdienen</h3>
+<ul>
+<li>Daily M3 (100% liken): <strong>+1 💎</strong></li>
+<li>Weekly M2 Streak: <strong>+1 💎</strong></li>
+<li>Weekly M3 Streak: <strong>+2 💎</strong></li>
+</ul>
+<h3>⚡ Bonus-Funktionen</h3>
+<div class="row"><span>Extra-Link (umgeht Tageslimit)</span><span class="pill p-xp">3 💎</span></div>
+<div class="row"><span>⭐ Superlink posten</span><span class="pill p-xp">10 💎</span></div>
+<h3>🔥 Avatar-Ringe (6 Stück)</h3>
+<div class="shop-grid">
+<div class="shop-card"><div class="ring" style="background:linear-gradient(135deg,#ff3900,#ff9a3c)">🔥</div><div class="name">Flame Ring</div><div class="price">8 💎</div></div>
+<div class="shop-card"><div class="ring" style="background:linear-gradient(135deg,#0088cc,#00c9ff)">🌊</div><div class="name">Ocean Ring</div><div class="price">8 💎</div></div>
+<div class="shop-card"><div class="ring" style="background:linear-gradient(135deg,#B8860B,#FFD700)">✨</div><div class="name">Gold Ring</div><div class="price">10 💎</div></div>
+<div class="shop-card"><div class="ring" style="background:linear-gradient(135deg,#9c27b0,#e040fb)">🔮</div><div class="name">Cosmic Ring</div><div class="price">12 💎</div></div>
+<div class="shop-card"><div class="ring" style="background:linear-gradient(135deg,#ff0000,#ff9900,#00cc00,#0000ff,#cc5de8)">🌈</div><div class="name">Rainbow Ring</div><div class="price">15 💎</div></div>
+<div class="shop-card"><div class="ring" style="background:linear-gradient(135deg,#a78bfa,#b9f2ff,#ffffff)">💎</div><div class="name">Diamond Ring</div><div class="price">20 💎</div></div>
+</div>
+<h3>🎨 Profil-Banner (12 Stück)</h3>
+<h4 class="tier-bronze">🥉 Bronze — je 5 💎</h4>
+<div class="shop-grid">
+<div class="shop-card"><div class="banner" style="background:linear-gradient(135deg,#ff6b6b,#ffa500,#ffd43b)">🌅</div><div class="name">Sunset</div><div class="tier-tag">Bronze</div></div>
+<div class="shop-card"><div class="banner" style="background:linear-gradient(135deg,#fcb69f,#ffecd2,#ff9a9e)">🍑</div><div class="name">Peach</div><div class="tier-tag">Bronze</div></div>
+<div class="shop-card"><div class="banner" style="background:linear-gradient(135deg,#43e97b,#38f9d7)">🌱</div><div class="name">Mint</div><div class="tier-tag">Bronze</div></div>
+<div class="shop-card"><div class="banner" style="background:linear-gradient(135deg,#56ab2f,#a8e063,#56ab2f)">🌿</div><div class="name">Forest</div><div class="tier-tag">Bronze</div></div>
+</div>
+<h4 class="tier-silber">🥈 Silber — je 7 💎</h4>
+<div class="shop-grid">
+<div class="shop-card"><div class="banner" style="background:linear-gradient(135deg,#2193b0,#6dd5ed,#43b8f0)">🌊</div><div class="name">Ocean</div><div class="tier-tag">Silber</div></div>
+<div class="shop-card"><div class="banner" style="background:linear-gradient(135deg,#56ccf2,#2f80ed)">☁️</div><div class="name">Sky Blue</div><div class="tier-tag">Silber</div></div>
+<div class="shop-card"><div class="banner" style="background:linear-gradient(135deg,#c084fc,#a855f7,#e8b4f8)">💜</div><div class="name">Lavender</div><div class="tier-tag">Silber</div></div>
+<div class="shop-card"><div class="banner" style="background:linear-gradient(135deg,#f4a261,#e9c46a)">🌹</div><div class="name">Rose Gold</div><div class="tier-tag">Silber</div></div>
+</div>
+<h4 class="tier-gold">🥇 Gold — je 10 💎</h4>
+<div class="shop-grid">
+<div class="shop-card"><div class="banner" style="background:linear-gradient(135deg,#f7971e,#ffd200)">✨</div><div class="name">Golden Hour</div><div class="tier-tag">Gold</div></div>
+<div class="shop-card"><div class="banner" style="background:linear-gradient(135deg,#f857a6,#ff5858,#ff9a9e)">🍭</div><div class="name">Candy</div><div class="tier-tag">Gold</div></div>
+<div class="shop-card"><div class="banner" style="background:linear-gradient(135deg,#f5576c,#f093fb)">🪸</div><div class="name">Coral</div><div class="tier-tag">Gold</div></div>
+<div class="shop-card"><div class="banner" style="background:linear-gradient(135deg,#00c6ff,#0072ff,#a18cd1)">🌌</div><div class="name">Aurora</div><div class="tier-tag">Gold</div></div>
+</div>
+</section>
+<section class="section" id="regeln">
+<div class="sub">08 / Spielregeln</div>
+<h2>📋 Regeln &amp; Verwarnungen</h2>
+<h3>🔗 Link-Regeln</h3>
+<div class="row"><span>1 Link pro Tag (außer Bonus-Links)</span><span class="pill p-block">❌ blockiert</span></div>
+<div class="row"><span>Nur Instagram-Links</span><span class="pill p-block">❌ blockiert</span></div>
+<div class="row"><span>Keine Duplikate</span><span class="pill p-warn">⚠️ Warnung</span></div>
+<div class="row"><span>Kein Self-Like</span><span class="pill p-warn">⚠️ Warnung</span></div>
+<div class="row"><span>Sperrzeit Sonntag 20:00 — Montag 06:00</span><span class="pill p-block">❌ blockiert</span></div>
+<div class="row"><span>Links älter als 48 Std.</span><span class="pill p-trash">🗑️ Auto-Löschung</span></div>
+<h4>✅ Erlaubte Link-Formate</h4>
+<ul>
+<li>Posts: <code>instagram.com/p/...</code></li>
+<li>Reels: <code>instagram.com/reel/...</code></li>
+<li>Profile: <code>instagram.com/dein.profil</code></li>
+</ul>
+<h4>❌ Nicht erlaubt</h4>
+<ul>
+<li>Story-Links (laufen nach 24h ab)</li>
+<li>TikTok, YouTube, Threads, andere Plattformen</li>
+<li>Verkürzte Links (bit.ly, t.co, ...)</li>
+</ul>
+<h3>🤝 Respekt &amp; Umgang</h3>
+<ul>
+<li>Sei respektvoll zu jedem Mitglied</li>
+<li>Kein Hate, keine Beleidigungen</li>
+<li>Keine Diskriminierung (Herkunft, Geschlecht, Religion, etc.)</li>
+<li>Kein Spam in Chats</li>
+<li>Keine Werbung für andere Plattformen oder Bots</li>
+<li>Konstruktives Feedback statt Kritik</li>
+<li>Bei Konflikten: Admin per DM</li>
+<li>Was im Chat passiert, bleibt im Chat</li>
+</ul>
+<h3>⚠️ Verwarnungs-System</h3>
+<div class="row"><span><strong>1 / 5</strong></span><span style="color:var(--muted)">Hinweis</span></div>
+<div class="row"><span><strong>2 / 5</strong></span><span style="color:var(--muted)">Hinweis</span></div>
+<div class="row"><span><strong>3 / 5</strong></span><span style="color:#f59e0b">Letzte Chance</span></div>
+<div class="row"><span><strong>4 / 5</strong></span><span style="color:#ef4444">Kritisch</span></div>
+<div class="row"><span><strong>5 / 5</strong></span><span class="pill p-block">🔨 Auto-Ban</span></div>
+<div class="success-box">🎁 <strong>Warn-Abbau:</strong> 5 Tage M1 in Folge → 1 Verwarnung wird gelöscht.</div>
+</section>
+<section class="section" id="install">
+<div class="sub">09 / App auf dem Handy</div>
+<h2>📲 App installieren</h2>
+<h3>Android (Chrome)</h3>
+<ol style="padding-left:22px;line-height:2;color:var(--text)">
+<li>App-URL in Chrome öffnen</li>
+<li>Auf den roten <strong>📱 App installieren</strong>-Button unten rechts tippen</li>
+<li>Im Chrome-Dialog <strong>"Installieren"</strong> wählen</li>
+<li>Fertig — App liegt auf dem Homescreen</li>
+</ol>
+<h3>iOS (Safari)</h3>
+<ol style="padding-left:22px;line-height:2;color:var(--text)">
+<li>App-URL in Safari öffnen</li>
+<li>Auf das <strong>Teilen</strong>-Symbol tippen (Quadrat mit Pfeil)</li>
+<li><strong>"Zum Home-Bildschirm"</strong> wählen</li>
+<li><strong>"Hinzufügen"</strong> bestätigen</li>
+</ol>
+<h3>Android (APK)</h3>
+<ol style="padding-left:22px;line-height:2;color:var(--text)">
+<li>APK aus Telegram-Channel herunterladen</li>
+<li>Bei Erstinstallation einmalig <strong>"Apps aus unbekannten Quellen"</strong> erlauben</li>
+<li>APK öffnen → installieren → fertig</li>
+<li>Updates kommen automatisch beim nächsten App-Öffnen</li>
+</ol>
+<div class="why">⚡ <strong>Auto-Update:</strong> Die App lädt Inhalte live vom Server. Bei jedem Öffnen siehst du den neuesten Stand. Bei Bugs: App komplett schließen → neu öffnen.</div>
+</section>
+<section class="section">
+<div class="sub">Letzter Tipp</div>
+<h2>🚀 Erster Tag</h2>
+<ol style="padding-left:22px;line-height:2;color:var(--text);font-size:15px">
+<li><strong>Bot starten</strong> mit <code>/start</code></li>
+<li><strong>Instagram verbinden</strong> per <code>/setinsta</code> deinprofil</li>
+<li><strong>Profilbild &amp; Spitzname</strong> in der App setzen</li>
+<li><strong>Ersten Link posten</strong></li>
+<li><strong>Mindestens 5 andere Links liken</strong> → Mission 1 erfüllt</li>
+</ol>
+<div class="success-box">🎉 Damit hast du am ersten Tag schon ~25 XP + Daily-Bonus + die ersten Trophäen.</div>
+</section>
+</div>
+<footer>
+CreatorX · Stand: 02.05.2026 · v1.1<br>
+Diese Übersicht basiert direkt auf dem aktuellen App-Code — alle Werte, Befehle &amp; Items sind real.<br>
+Fragen? <code>/help</code> im Bot oder Admin-DM.
+</footer>
+</body>
+</html>
