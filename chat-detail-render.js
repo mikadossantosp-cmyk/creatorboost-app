@@ -1,5 +1,4 @@
-// Chat-Detail Bubbles im Insta DM Style
-// Wird via require() in bot.js eingebunden (durch patch-bot.js)
+// Chat-Detail Bubbles im Insta DM Style v2 - Smoother & Cleaner
 
 function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -30,9 +29,9 @@ module.exports = function renderChatBubbles(opts) {
     if (!msgs.length) {
         return '<div class="chat-empty">' +
             '<div class="chat-empty-icon">👋</div>' +
-            '<div class="chat-empty-text">Noch keine Nachrichten</div>' +
-            '<div class="chat-empty-sub">Schreib die erste Nachricht!</div>' +
-            '</div>';
+            '<div class="chat-empty-text">Sag Hi!</div>' +
+            '<div class="chat-empty-sub">Schreib die erste Nachricht und brich das Eis</div>' +
+            '</div>' + getStyles() + getScripts(myUid, otherUid);
     }
 
     const otherPic = ladeBild(otherUid, 'profilepic');
@@ -52,7 +51,6 @@ module.exports = function renderChatBubbles(opts) {
         const ts = m.timestamp || 0;
         const next = msgs[idx + 1];
 
-        // Date-Header alle 24h oder bei neuem Tag
         const thisDate = new Date(ts).toDateString();
         if (thisDate !== lastDate) {
             html += '<div class="chat-date-sep"><span>' + formatDateHeader(ts) + '</span></div>';
@@ -60,15 +58,13 @@ module.exports = function renderChatBubbles(opts) {
             lastFrom = null;
         }
 
-        // Group: wenn von gleichem User UND innerhalb 5 Min
         const sameSender = lastFrom === m.from && (ts - lastTimestamp) < 5 * 60 * 1000;
         const isLastFromSender = !next || String(next.from) !== String(m.from) || ((next.timestamp || 0) - ts) > 5 * 60 * 1000;
 
-        // Bubble-Inhalt
         let bubbleContent = '';
         if (m.image) {
             bubbleContent = '<div class="chat-img-wrap" onclick="window.open(\'' + m.image + '\', \'_blank\')">' +
-                '<img src="' + m.image + '" alt="">' +
+                '<img src="' + m.image + '" alt="" loading="lazy">' +
                 (m.text ? '<div class="chat-img-caption">' + esc(m.text) + '</div>' : '') +
                 '</div>';
         } else if (m.audio) {
@@ -83,7 +79,6 @@ module.exports = function renderChatBubbles(opts) {
             bubbleContent = '<div class="chat-text">' + esc(m.text || '') + '</div>';
         }
 
-        // Reactions wenn vorhanden
         let reactionsHtml = '';
         if (m.reactions && Object.keys(m.reactions).length > 0) {
             const counts = {};
@@ -92,26 +87,24 @@ module.exports = function renderChatBubbles(opts) {
             });
             reactionsHtml = '<div class="chat-reactions">' +
                 Object.entries(counts).map(([emo, n]) =>
-                    '<span class="chat-reaction">' + emo + (n > 1 ? ' ' + n : '') + '</span>'
+                    '<span class="chat-reaction">' + emo + (n > 1 ? ' <b>' + n + '</b>' : '') + '</span>'
                 ).join('') +
                 '</div>';
         }
 
-        // Read-Status nur bei eigenen Messages und last group
         let statusHtml = '';
         if (isMe && isLastFromSender) {
             const isRead = m.read === true;
             statusHtml = '<div class="chat-status' + (isRead ? ' read' : '') + '">' +
-                (isRead ? 'Gesehen ' + formatTimeOnly(ts) : 'Gesendet ' + formatTimeOnly(ts)) +
+                (isRead ? 'Gesehen' : 'Gesendet') + ' · ' + formatTimeOnly(ts) +
                 '</div>';
         }
 
-        // Avatar (nur fuer den anderen User, beim letzten Message in Gruppe)
         const showAvatar = !isMe && isLastFromSender;
         const avatarHtml = showAvatar ?
             '<div class="chat-avatar-mini">' +
                 (otherAvatarSrc ?
-                    '<img src="' + otherAvatarSrc + '" alt="">' :
+                    '<img src="' + otherAvatarSrc + '" alt="" loading="lazy">' :
                     '<span>' + esc(otherName.slice(0, 1)) + '</span>') +
             '</div>' :
             '<div class="chat-avatar-spacer"></div>';
@@ -119,10 +112,19 @@ module.exports = function renderChatBubbles(opts) {
         const groupClass = sameSender ? ' chat-row-grouped' : '';
         const lastClass = isLastFromSender ? ' chat-row-last' : '';
 
-        html += '<div class="chat-row ' + (isMe ? 'chat-row-me' : 'chat-row-other') + groupClass + lastClass + '" data-ts="' + ts + '" data-mid="' + ts + '">' +
+        html += '<div class="chat-row ' + (isMe ? 'chat-row-me' : 'chat-row-other') + groupClass + lastClass + '" data-ts="' + ts + '">' +
             (!isMe ? avatarHtml : '') +
             '<div class="chat-bubble-wrap">' +
-                '<div class="chat-bubble" onpointerdown="chatLongPress(event, this, ' + ts + ')" onpointerup="chatLongPressEnd()" onpointerleave="chatLongPressEnd()" oncontextmenu="event.preventDefault(); chatShowReactions(this, ' + ts + ')">' +
+                '<div class="chat-bubble" ' +
+                    'ontouchstart="chatLongPress(event,this,' + ts + ')" ' +
+                    'ontouchend="chatLongPressEnd()" ' +
+                    'ontouchmove="chatLongPressEnd()" ' +
+                    'ontouchcancel="chatLongPressEnd()" ' +
+                    'onmousedown="chatLongPress(event,this,' + ts + ')" ' +
+                    'onmouseup="chatLongPressEnd()" ' +
+                    'onmouseleave="chatLongPressEnd()" ' +
+                    'onclick="chatDoubleTap(event,this,' + ts + ')" ' +
+                    'oncontextmenu="event.preventDefault(); chatShowReactions(this,' + ts + ')">' +
                     bubbleContent +
                 '</div>' +
                 reactionsHtml +
@@ -134,122 +136,184 @@ module.exports = function renderChatBubbles(opts) {
         lastTimestamp = ts;
     });
 
-    // CSS + Reaction-Picker
-    return '<style>' +
-        '#chat-msgs { padding: 12px 0 140px; display: flex; flex-direction: column; }' +
-        '.chat-date-sep { text-align: center; margin: 16px 0 12px; position: relative; }' +
-        '.chat-date-sep span { display: inline-block; padding: 4px 12px; font-size: 11px; font-weight: 700; color: var(--muted); background: var(--bg2); border-radius: 999px; text-transform: uppercase; letter-spacing: 0.5px; }' +
+    return getStyles() + html + getReactionPicker() + getScripts(myUid, otherUid);
+};
 
-        '.chat-row { display: flex; align-items: flex-end; gap: 6px; padding: 0 12px; margin-top: 8px; }' +
-        '.chat-row-grouped { margin-top: 2px; }' +
+function getStyles() {
+    return '<style>' +
+        // Smooth global
+        'html { scroll-behavior: smooth; }' +
+        '#chat-msgs { padding: 16px 0 140px; display: flex; flex-direction: column; will-change: transform; }' +
+
+        // Date separator - subtiler
+        '.chat-date-sep { text-align: center; margin: 24px 0 12px; }' +
+        '.chat-date-sep span { display: inline-block; padding: 4px 14px; font-size: 11px; font-weight: 600; color: var(--muted); background: rgba(255,255,255,0.04); border-radius: 999px; letter-spacing: 0.3px; }' +
+
+        // Rows mit smoother spacing
+        '.chat-row { display: flex; align-items: flex-end; gap: 8px; padding: 0 14px; margin-top: 12px; animation: msg-in 0.3s cubic-bezier(0.16, 1, 0.3, 1); }' +
+        '.chat-row-grouped { margin-top: 2px; animation: none; }' +
+        '@keyframes msg-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }' +
         '.chat-row-me { justify-content: flex-end; }' +
         '.chat-row-other { justify-content: flex-start; }' +
 
-        '.chat-avatar-mini { width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0; overflow: hidden; background: var(--bg4); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; color: #fff; }' +
+        // Avatar mini cleaner
+        '.chat-avatar-mini { width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0; overflow: hidden; background: linear-gradient(135deg,#a78bfa,#7c3aed); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; color: #fff; }' +
         '.chat-avatar-mini img { width: 100%; height: 100%; object-fit: cover; }' +
         '.chat-avatar-spacer { width: 28px; flex-shrink: 0; }' +
 
-        '.chat-bubble-wrap { max-width: 75%; display: flex; flex-direction: column; }' +
+        // Bubble wrapper
+        '.chat-bubble-wrap { max-width: 75%; display: flex; flex-direction: column; position: relative; }' +
         '.chat-row-me .chat-bubble-wrap { align-items: flex-end; }' +
         '.chat-row-other .chat-bubble-wrap { align-items: flex-start; }' +
 
-        '.chat-bubble { padding: 9px 14px; border-radius: 18px; font-size: 14.5px; line-height: 1.4; word-break: break-word; user-select: none; -webkit-user-select: none; touch-action: manipulation; cursor: pointer; transition: transform 0.1s; max-width: 100%; }' +
-        '.chat-bubble:active { transform: scale(0.98); }' +
-        '.chat-row-me .chat-bubble { background: linear-gradient(135deg, #a78bfa, #7c3aed); color: #fff; border-radius: 18px 18px 4px 18px; box-shadow: 0 2px 8px rgba(124, 58, 237, 0.25); }' +
-        '.chat-row-me.chat-row-grouped .chat-bubble { border-radius: 18px 4px 4px 18px; }' +
-        '.chat-row-me.chat-row-last .chat-bubble { border-radius: 18px 18px 4px 18px; }' +
-        '.chat-row-other .chat-bubble { background: var(--bg3); color: var(--text); border-radius: 18px 18px 18px 4px; }' +
-        '.chat-row-other.chat-row-grouped .chat-bubble { border-radius: 4px 18px 18px 4px; }' +
-        '.chat-row-other.chat-row-last .chat-bubble { border-radius: 18px 18px 18px 4px; }' +
+        // Bubbles - softer Insta-look
+        '.chat-bubble { padding: 9px 13px; border-radius: 22px; font-size: 14.5px; line-height: 1.38; word-break: break-word; user-select: none; -webkit-user-select: none; cursor: pointer; transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1); max-width: 100%; position: relative; }' +
+        '.chat-bubble:active { transform: scale(0.96); }' +
+
+        // Eigene Bubbles - Insta gradient (warmer purple-pink)
+        '.chat-row-me .chat-bubble { background: linear-gradient(135deg,#a78bfa 0%,#8b5cf6 50%,#7c3aed 100%); color: #fff; border-radius: 22px 22px 6px 22px; }' +
+        '.chat-row-me.chat-row-grouped .chat-bubble { border-radius: 22px 6px 6px 22px; }' +
+        '.chat-row-me.chat-row-last .chat-bubble { border-radius: 22px 22px 6px 22px; }' +
+        '.chat-row-me.chat-row-grouped.chat-row-last .chat-bubble { border-radius: 22px 6px 6px 22px; }' +
+
+        // Other bubbles - softer dark
+        '.chat-row-other .chat-bubble { background: rgba(255,255,255,0.07); color: var(--text); border-radius: 22px 22px 22px 6px; }' +
+        '.chat-row-other.chat-row-grouped .chat-bubble { border-radius: 6px 22px 22px 6px; }' +
+        '.chat-row-other.chat-row-last .chat-bubble { border-radius: 22px 22px 22px 6px; }' +
 
         '.chat-text { white-space: pre-wrap; }' +
-        '.chat-img-wrap { max-width: 240px; border-radius: inherit; overflow: hidden; cursor: pointer; }' +
-        '.chat-img-wrap img { width: 100%; display: block; border-radius: inherit; }' +
-        '.chat-img-caption { padding: 8px 12px; font-size: 13px; }' +
 
-        '.chat-audio { display: flex; align-items: center; gap: 10px; min-width: 200px; padding: 4px 0; }' +
-        '.chat-audio-btn { width: 34px; height: 34px; border-radius: 50%; background: rgba(255,255,255,0.25); border: none; color: inherit; font-size: 14px; cursor: pointer; flex-shrink: 0; }' +
-        '.chat-row-other .chat-audio-btn { background: var(--bg4); }' +
+        // Bilder - rund mit padding
+        '.chat-img-wrap { max-width: 260px; border-radius: inherit; overflow: hidden; cursor: pointer; }' +
+        '.chat-img-wrap img { width: 100%; display: block; border-radius: inherit; transition: transform 0.3s; }' +
+        '.chat-img-wrap:active img { transform: scale(0.97); }' +
+        '.chat-img-caption { padding: 9px 13px; font-size: 13.5px; line-height: 1.4; }' +
+
+        // Audio
+        '.chat-audio { display: flex; align-items: center; gap: 12px; min-width: 220px; padding: 4px 0; }' +
+        '.chat-audio-btn { width: 36px; height: 36px; border-radius: 50%; background: rgba(255,255,255,0.25); border: none; color: inherit; font-size: 14px; cursor: pointer; flex-shrink: 0; transition: transform 0.15s; }' +
+        '.chat-audio-btn:active { transform: scale(0.9); }' +
+        '.chat-row-other .chat-audio-btn { background: rgba(255,255,255,0.1); }' +
         '.chat-audio-info { flex: 1; min-width: 0; }' +
         '.chat-audio-bar { height: 3px; background: rgba(255,255,255,0.3); border-radius: 2px; overflow: hidden; }' +
-        '.chat-row-other .chat-audio-bar { background: var(--bg4); }' +
+        '.chat-row-other .chat-audio-bar { background: rgba(255,255,255,0.1); }' +
         '.audio-prog { height: 100%; width: 0%; background: currentColor; transition: width 0.1s; }' +
-        '.audio-dur { font-size: 10px; opacity: 0.8; margin-top: 4px; }' +
+        '.audio-dur { font-size: 11px; opacity: 0.7; margin-top: 5px; font-weight: 500; }' +
 
-        '.chat-reactions { display: flex; gap: 4px; margin-top: -6px; padding: 0 8px; }' +
-        '.chat-reaction { background: var(--bg2); border: 1px solid var(--border2); padding: 2px 7px; border-radius: 999px; font-size: 12px; font-weight: 600; box-shadow: 0 1px 3px rgba(0,0,0,0.2); animation: react-pop 0.3s; }' +
-        '@keyframes react-pop { from { transform: scale(0); } to { transform: scale(1); } }' +
+        // Reactions Insta-style
+        '.chat-reactions { display: flex; gap: 3px; margin-top: -6px; padding: 0 6px; flex-wrap: wrap; }' +
+        '.chat-reaction { background: var(--bg2); border: 2px solid var(--bg); padding: 3px 8px; border-radius: 999px; font-size: 13px; line-height: 1; box-shadow: 0 2px 6px rgba(0,0,0,0.3); animation: react-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }' +
+        '.chat-reaction b { font-size: 11px; opacity: 0.8; margin-left: 2px; font-weight: 700; }' +
+        '@keyframes react-pop { 0% { transform: scale(0); } 70% { transform: scale(1.15); } 100% { transform: scale(1); } }' +
 
-        '.chat-status { font-size: 10.5px; color: var(--muted); margin-top: 3px; padding: 0 4px; }' +
-        '.chat-status.read { color: #4dabf7; font-weight: 600; }' +
+        // Status - Insta style
+        '.chat-status { font-size: 11px; color: var(--muted); margin-top: 4px; padding: 0 6px; font-weight: 500; }' +
+        '.chat-status.read { color: #4dabf7; }' +
 
-        '.chat-empty { padding: 80px 24px; text-align: center; }' +
-        '.chat-empty-icon { font-size: 56px; margin-bottom: 16px; opacity: 0.4; }' +
-        '.chat-empty-text { font-weight: 700; color: var(--text); margin-bottom: 4px; font-size: 15px; }' +
-        '.chat-empty-sub { font-size: 13px; color: var(--muted); }' +
+        // Doppel-Tap Heart Animation - klassischer Insta Move
+        '.chat-heart-pop { position: absolute; pointer-events: none; font-size: 80px; opacity: 0; animation: heart-pop 1s ease-out forwards; z-index: 50; }' +
+        '@keyframes heart-pop { 0% { opacity: 0; transform: translate(-50%, -50%) scale(0); } 20% { opacity: 1; transform: translate(-50%, -50%) scale(1.4); } 80% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; transform: translate(-50%, -150%) scale(1.2); } }' +
 
-        '.chat-react-picker { position: fixed; z-index: 200; background: var(--bg2); border: 1px solid var(--border2); border-radius: 999px; padding: 6px 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); display: none; gap: 4px; }' +
-        '.chat-react-picker.show { display: flex; animation: picker-pop 0.2s; }' +
-        '@keyframes picker-pop { from { transform: scale(0.7) translateY(8px); opacity: 0; } to { transform: scale(1) translateY(0); opacity: 1; } }' +
-        '.chat-react-picker button { background: none; border: none; font-size: 26px; padding: 4px 6px; cursor: pointer; transition: transform 0.15s; }' +
-        '.chat-react-picker button:hover, .chat-react-picker button:active { transform: scale(1.4); }' +
+        // Empty state
+        '.chat-empty { padding: 100px 32px; text-align: center; }' +
+        '.chat-empty-icon { font-size: 64px; margin-bottom: 18px; opacity: 0.5; animation: wave 2s ease-in-out infinite; transform-origin: 70% 70%; }' +
+        '@keyframes wave { 0%, 100% { transform: rotate(0deg); } 25% { transform: rotate(-15deg); } 75% { transform: rotate(15deg); } }' +
+        '.chat-empty-text { font-weight: 700; color: var(--text); margin-bottom: 6px; font-size: 17px; }' +
+        '.chat-empty-sub { font-size: 13px; color: var(--muted); line-height: 1.5; max-width: 240px; margin: 0 auto; }' +
 
-        '.chat-typing-indicator { display: flex; align-items: center; gap: 4px; padding: 12px 18px; background: var(--bg3); border-radius: 18px 18px 18px 4px; width: fit-content; margin: 0 12px 8px 46px; }' +
-        '.chat-typing-indicator span { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); animation: typing-bounce 1.3s infinite; }' +
-        '.chat-typing-indicator span:nth-child(2) { animation-delay: 0.15s; }' +
-        '.chat-typing-indicator span:nth-child(3) { animation-delay: 0.3s; }' +
-        '@keyframes typing-bounce { 0%, 60%, 100% { transform: translateY(0); opacity: 0.4; } 30% { transform: translateY(-5px); opacity: 1; } }' +
-        '</style>' +
-        html +
-        '<div id="chat-react-picker" class="chat-react-picker">' +
-            '<button onclick="chatPickReaction(\'❤️\')">❤️</button>' +
-            '<button onclick="chatPickReaction(\'😂\')">😂</button>' +
-            '<button onclick="chatPickReaction(\'😮\')">😮</button>' +
-            '<button onclick="chatPickReaction(\'😢\')">😢</button>' +
-            '<button onclick="chatPickReaction(\'👏\')">👏</button>' +
-            '<button onclick="chatPickReaction(\'🔥\')">🔥</button>' +
-        '</div>' +
-        '<script>' +
-            'let chatPressTimer = null;' +
-            'let chatActiveBubble = null;' +
-            'let chatActiveTs = 0;' +
-            'function chatLongPress(e, el, ts) {' +
-                'chatPressTimer = setTimeout(() => {' +
-                    'chatActiveBubble = el;' +
-                    'chatActiveTs = ts;' +
-                    'chatShowReactions(el, ts);' +
-                    'if (navigator.vibrate) navigator.vibrate(20);' +
-                '}, 350);' +
-            '}' +
-            'function chatLongPressEnd() {' +
-                'if (chatPressTimer) clearTimeout(chatPressTimer);' +
-                'chatPressTimer = null;' +
-            '}' +
-            'function chatShowReactions(el, ts) {' +
-                'const picker = document.getElementById("chat-react-picker");' +
-                'const r = el.getBoundingClientRect();' +
-                'picker.style.left = Math.max(8, Math.min(window.innerWidth - 280, r.left + r.width/2 - 140)) + "px";' +
-                'picker.style.top = Math.max(60, r.top - 56) + "px";' +
-                'picker.classList.add("show");' +
+        // Reaction picker - schoener
+        '.chat-react-picker { position: fixed; z-index: 200; background: var(--bg2); border: 1px solid rgba(255,255,255,0.1); border-radius: 999px; padding: 6px 8px; box-shadow: 0 12px 32px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05); display: none; gap: 2px; backdrop-filter: blur(20px); }' +
+        '.chat-react-picker.show { display: flex; animation: picker-pop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1); }' +
+        '@keyframes picker-pop { from { transform: scale(0.5) translateY(12px); opacity: 0; } to { transform: scale(1) translateY(0); opacity: 1; } }' +
+        '.chat-react-picker button { background: none; border: none; font-size: 28px; padding: 6px 8px; cursor: pointer; transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1); border-radius: 50%; }' +
+        '.chat-react-picker button:hover, .chat-react-picker button:active { transform: scale(1.5); background: rgba(255,255,255,0.05); }' +
+        '</style>';
+}
+
+function getReactionPicker() {
+    return '<div id="chat-react-picker" class="chat-react-picker">' +
+        '<button onclick="chatPickReaction(\'❤️\')">❤️</button>' +
+        '<button onclick="chatPickReaction(\'😂\')">😂</button>' +
+        '<button onclick="chatPickReaction(\'😮\')">😮</button>' +
+        '<button onclick="chatPickReaction(\'😢\')">😢</button>' +
+        '<button onclick="chatPickReaction(\'👏\')">👏</button>' +
+        '<button onclick="chatPickReaction(\'🔥\')">🔥</button>' +
+        '</div>';
+}
+
+function getScripts(myUid, otherUid) {
+    return '<script>' +
+        'let chatPressTimer = null;' +
+        'let chatActiveBubble = null;' +
+        'let chatActiveTs = 0;' +
+        'let chatLastTap = 0;' +
+        'let chatLastTapBubble = null;' +
+
+        'function chatLongPress(e, el, ts) {' +
+            'chatPressTimer = setTimeout(() => {' +
                 'chatActiveBubble = el;' +
                 'chatActiveTs = ts;' +
+                'chatShowReactions(el, ts);' +
+                'if (navigator.vibrate) navigator.vibrate(15);' +
+            '}, 380);' +
+        '}' +
+        'function chatLongPressEnd() {' +
+            'if (chatPressTimer) clearTimeout(chatPressTimer);' +
+            'chatPressTimer = null;' +
+        '}' +
+        // Doppel-Tap = Heart-Animation (Insta-Style)
+        'function chatDoubleTap(e, el, ts) {' +
+            'const now = Date.now();' +
+            'if (chatLastTapBubble === el && (now - chatLastTap) < 350) {' +
+                'chatLastTap = 0;' +
+                'chatHeartPop(el);' +
+                'chatActiveTs = ts;' +
+                'chatPickReaction("❤️");' +
+            '} else {' +
+                'chatLastTap = now;' +
+                'chatLastTapBubble = el;' +
             '}' +
-            'function chatHidePicker() {' +
-                'document.getElementById("chat-react-picker").classList.remove("show");' +
-                'chatActiveBubble = null;' +
-            '}' +
-            'document.addEventListener("click", e => {' +
-                'const picker = document.getElementById("chat-react-picker");' +
-                'if (picker && !picker.contains(e.target) && !e.target.closest(".chat-bubble")) chatHidePicker();' +
-            '});' +
-            'async function chatPickReaction(emoji) {' +
-                'if (!chatActiveTs) return;' +
-                'const ts = chatActiveTs;' +
-                'chatHidePicker();' +
-                'try {' +
-                    'await fetch("/api/react-message", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ chatKey: ["' + esc(myUid) + '", "' + esc(otherUid) + '"].sort().join("_"), timestamp: ts, emoji: emoji }) });' +
-                    'setTimeout(() => location.reload(), 300);' +
-                '} catch(e) { console.error("react fail", e); }' +
-            '}' +
+        '}' +
+        'function chatHeartPop(el) {' +
+            'const heart = document.createElement("div");' +
+            'heart.className = "chat-heart-pop";' +
+            'heart.textContent = "❤️";' +
+            'const r = el.getBoundingClientRect();' +
+            'heart.style.left = (r.left + r.width / 2) + "px";' +
+            'heart.style.top = (r.top + r.height / 2) + "px";' +
+            'document.body.appendChild(heart);' +
+            'setTimeout(() => heart.remove(), 1000);' +
+            'if (navigator.vibrate) navigator.vibrate(10);' +
+        '}' +
+        'function chatShowReactions(el, ts) {' +
+            'const picker = document.getElementById("chat-react-picker");' +
+            'const r = el.getBoundingClientRect();' +
+            'picker.style.left = Math.max(8, Math.min(window.innerWidth - 280, r.left + r.width / 2 - 140)) + "px";' +
+            'picker.style.top = Math.max(60, r.top - 60) + "px";' +
+            'picker.classList.add("show");' +
+            'chatActiveBubble = el;' +
+            'chatActiveTs = ts;' +
+        '}' +
+        'function chatHidePicker() {' +
+            'document.getElementById("chat-react-picker").classList.remove("show");' +
+            'chatActiveBubble = null;' +
+        '}' +
+        'document.addEventListener("click", e => {' +
+            'const picker = document.getElementById("chat-react-picker");' +
+            'if (picker && !picker.contains(e.target) && !e.target.closest(".chat-bubble")) chatHidePicker();' +
+        '});' +
+        'async function chatPickReaction(emoji) {' +
+            'if (!chatActiveTs) return;' +
+            'const ts = chatActiveTs;' +
+            'chatHidePicker();' +
+            'try {' +
+                'await fetch("/api/react-message", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ chatKey: ["' + esc(myUid) + '", "' + esc(otherUid) + '"].sort().join("_"), timestamp: ts, emoji: emoji }) });' +
+                'setTimeout(() => location.reload(), 250);' +
+            '} catch (err) { console.error("react fail", err); }' +
+        '}' +
+        // Smooth scroll to bottom on load
+        'requestAnimationFrame(() => {' +
+            'window.scrollTo({ top: document.body.scrollHeight, behavior: "instant" });' +
+        '});' +
         '<\/script>';
-};
+}
