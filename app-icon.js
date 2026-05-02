@@ -1,10 +1,12 @@
-// app-icon.js - liest 6 chunks zusammen (umgeht push-Limit)
+// app-icon.js - liest nur die echten chunks (c1+c2)
 const fs = require('fs');
 const path = require('path');
-let b64 = '';
-for (let i = 1; i <= 6; i++) {
+function readChunk(name) {
     try {
-        b64 += fs.readFileSync(path.resolve(__dirname, 'icon-c' + i + '.txt'), 'utf8').trim();
-    } catch(e) { console.error('Missing chunk:', i); }
+        const data = fs.readFileSync(path.resolve(__dirname, name), 'utf8').trim();
+        if (data.includes('PLACEHOLDER')) return '';
+        return data;
+    } catch (e) { return ''; }
 }
+const b64 = readChunk('icon-c1.txt') + readChunk('icon-c2.txt');
 module.exports = { b64 };
