@@ -1,4 +1,4 @@
-// patch-bot.js - Build-time Patches fur bot.js (mit external banner)
+// patch-bot.js - Build-time Patches fur bot.js
 const fs = require('fs');
 const path = require('path');
 
@@ -123,19 +123,27 @@ tryPatch(
     null
 );
 
+// PATCH: Manifest icons MIME type (image/png -> image/jpeg)
+tryPatch(
+    'Manifest icons type',
+    /type:'image\/png',purpose:'any maskable'/g,
+    "type:'image/jpeg',purpose:'any maskable'",
+    null
+);
+
 let versionBumps = 0;
-src = src.replace(/icon\.jpg\?v=\d+/g, () => { versionBumps++; return 'icon.jpg?v=14'; });
-src = src.replace(/icon-192\.png\?v=\d+/g, 'icon-192.png?v=14');
-src = src.replace(/icon-512\.png\?v=\d+/g, 'icon-512.png?v=14');
+src = src.replace(/icon\.jpg\?v=\d+/g, () => { versionBumps++; return 'icon.jpg?v=15'; });
+src = src.replace(/icon-192\.png\?v=\d+/g, 'icon-192.png?v=15');
+src = src.replace(/icon-512\.png\?v=\d+/g, 'icon-512.png?v=15');
 if (versionBumps > 0) {
-    console.log('[patch-bot] Icon-Version v=14: ' + versionBumps + ' Stellen');
+    console.log('[patch-bot] Icon-Version v=15: ' + versionBumps + ' Stellen');
     changed = true;
 }
 
 tryPatch(
     'HTML no-cache headers',
     /res\.writeHead\(200,\{'Content-Type':'text\/html; charset=utf-8'\}\);/g,
-    "res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','Pragma':'no-cache','Expires':'0','X-App-Version':'14'});",
+    "res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','Pragma':'no-cache','Expires':'0','X-App-Version':'15'});",
     "X-App-Version"
 );
 
@@ -160,25 +168,19 @@ if (src.includes('self.skipWaiting()')) {
     }
 }
 
-// INLINE BANNER von external file (sicher escaped via template literal)
-const BANNER_MARKER = '<!--cx-update-banner-v14-->';
+const BANNER_MARKER = '<!--cx-update-banner-v15-->';
 let INLINE_BANNER = '';
-try {
-    INLINE_BANNER = require('./banner-html');
-} catch (e) {
-    console.error('[patch-bot] FEHLER: banner-html.js nicht gefunden:', e.message);
-}
+try { INLINE_BANNER = require('./banner-html'); } catch (e) { console.error('[patch-bot] FEHLER: banner-html.js nicht gefunden:', e.message); }
 
 if (INLINE_BANNER) {
     if (src.includes(BANNER_MARKER)) {
-        console.log('[patch-bot] Inline-Banner v14 bereits drin');
+        console.log('[patch-bot] Inline-Banner v15 bereits drin');
     } else {
-        // Remove old banner markers v12, v13
-        src = src.replace(/<!--cx-update-banner-v1[23]-->[\s\S]*?<\/script>/g, '');
+        src = src.replace(/<!--cx-update-banner-v1[234]-->[\s\S]*?<\/script>/g, '');
         const layoutEndRegex = new RegExp('<\\/script>\\s*<\\/body><\\/html>' + BT + ';', 'g');
         if (layoutEndRegex.test(src)) {
             src = src.replace(layoutEndRegex, '</script>' + INLINE_BANNER + '</body></html>' + BT + ';');
-            console.log('[patch-bot] Inline-Banner v14 in alle layouts eingefuegt');
+            console.log('[patch-bot] Inline-Banner v15 in alle layouts eingefuegt');
             changed = true;
         } else {
             console.warn('[patch-bot] WARNUNG: layout-end nicht gefunden fuer Banner');
