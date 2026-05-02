@@ -1627,7 +1627,7 @@ self.addEventListener('notificationclick',e=>{
     if (session) { session.lastSeen = Date.now(); }
 
     function redirect(to) { res.writeHead(302,{'Location':to}); res.end(); }
-    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-cache, stale-while-revalidate=60','X-App-Version':'21'}); res.end(layout(content,session,page,lang)); }
+    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'max-age=0, stale-while-revalidate=60','X-App-Version':'21'}); res.end(layout(content,session,page,lang)); }
     function json(data, status=200) { res.writeHead(status,{'Content-Type':'application/json'}); res.end(JSON.stringify(data)); }
 
     // ── LANDING ──
@@ -2725,7 +2725,7 @@ p{line-height:1.65;color:var(--muted)}
     }
 
     const myUid = String(session.uid);
-    const myUser = d.users[myUid];
+    const myUser = d.users?.[myUid];
     const today = new Date().toDateString();
     const adminIds = Object.entries(d.users).filter(([,u])=>u.role==='⚙️ Admin').map(([id])=>Number(id));
 
@@ -3580,11 +3580,12 @@ function toggleAudio(btn) {
     else { audio.pause(); btn.textContent='▶'; }
 }
 
-setInterval(async () => {
-    const r = await fetch('/api/messages/${otherUid}');
-    const data = await r.json();
-    if (data.count !== ${msgs.length}) location.reload();
-}, 5000);
+let chatKnownCount=${msgs.length};
+setInterval(async()=>{
+    if(document.querySelector('[data-optimistic]'))return;
+    if(document.hidden)return;
+    try{const r=await fetch('/api/messages/${otherUid}');const data=await r.json();if(data.count>chatKnownCount){chatKnownCount=data.count;location.reload();}}catch(e){}
+},3000);
 </script>`, 'messages');
     }
 
@@ -3869,10 +3870,11 @@ async function renameThread(tid,current){
         const myConvos = Object.entries(convos)
             .filter(([key]) => key.includes('_'+myUid+'_') || key.includes('_'+myUid) || key.startsWith(myUid+'_'))
             .map(([key, msgs]) => {
+                const msgsArr = Array.isArray(msgs) ? msgs : [];
                 const otherUid = key.replace(myUid+'_','').replace('_'+myUid,'');
                 const otherUser = botData.users?.[otherUid] || {};
-                const lastMsg = msgs[msgs.length - 1];
-                return { key, otherUid, otherName: otherUser.spitzname||otherUser.name||'User', lastMsg, unread: msgs.filter(m=>m.to===myUid&&!m.read).length };
+                const lastMsg = msgsArr[msgsArr.length - 1];
+                return { key, otherUid, otherName: otherUser.spitzname||otherUser.name||'User', lastMsg, unread: msgsArr.filter(m=>m.to===myUid&&!m.read).length };
             })
             .sort((a, b) => (b.lastMsg?.timestamp||0)-(a.lastMsg?.timestamp||0));
         const feedPreview = (await (async()=>{try{const r=await fetchBot('/telegram-feed');return r?.messages?.[0]?.text?.slice(0,40)||'Live Telegram Nachrichten';}catch(e){return 'Live Telegram Nachrichten';}})());

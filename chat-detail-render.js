@@ -239,7 +239,7 @@ function getScripts(myUid, otherUid) {
         'let chatLastTap = 0;' +
         'let chatLastTapBubble = null;' +
         'function chatLongPress(e, el, ts) {' +
-            'chatPressTimer = setTimeout(() => { chatActiveTs = ts; chatShowReactions(el, ts); if (navigator.vibrate) navigator.vibrate(15); }, 380);' +
+            'chatPressTimer = setTimeout(() => { chatActiveTs = ts; chatShowReactions(el, ts); if (navigator.vibrate) navigator.vibrate(15); }, 280);' +
         '}' +
         'function chatLongPressEnd() { if (chatPressTimer) clearTimeout(chatPressTimer); chatPressTimer = null; }' +
         'function chatDoubleTap(e, el, ts) {' +
@@ -258,13 +258,15 @@ function getScripts(myUid, otherUid) {
         '}' +
         'function chatShowReactions(el, ts) {' +
             'const picker = document.getElementById("chat-react-picker");' +
-            'const r = el.getBoundingClientRect();' +
-            'picker.style.left = Math.max(8, Math.min(window.innerWidth - 320, r.left + r.width / 2 - 160)) + "px";' +
-            'picker.style.top = Math.max(60, r.top - 64) + "px";' +
             'const isMyMsg = el.closest(".chat-row")?.classList.contains("chat-row-me");' +
             'const delBtn = document.getElementById("chat-del-btn");' +
             'if (delBtn) delBtn.style.display = isMyMsg ? "inline-flex" : "none";' +
             'picker.classList.add("show"); chatActiveTs = ts;' +
+            'const r = el.getBoundingClientRect();' +
+            'const pw = picker.offsetWidth || 260;' +
+            'const left = Math.max(8, Math.min(window.innerWidth - pw - 8, r.left + r.width / 2 - pw / 2));' +
+            'picker.style.left = left + "px";' +
+            'picker.style.top = Math.max(60, r.top - picker.offsetHeight - 8) + "px";' +
         '}' +
         'function chatHidePicker() { document.getElementById("chat-react-picker").classList.remove("show"); }' +
         'document.addEventListener("click", e => {' +

@@ -110,7 +110,8 @@ if (src.includes("prefer_related_applications:false")) {
     console.warn('[patch-bot] WARNUNG: Manifest pattern nicht gefunden');
 }
 
-tryPatch('HTML no-cache headers', /res\.writeHead\(200,\{'Content-Type':'text\/html; charset=utf-8'\}\);/g, "res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-cache, stale-while-revalidate=60','X-App-Version':'21'});", "X-App-Version");
+tryPatch('HTML no-cache headers', /res\.writeHead\(200,\{'Content-Type':'text\/html; charset=utf-8'\}\);/g, "res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'max-age=0, stale-while-revalidate=60','X-App-Version':'21'});", "X-App-Version");
+tryPatch('Smart Polling fix', /setInterval\(async \(\) => \{\s*const r = await fetch\('\/api\/messages\/\$\{otherUid\}'\);[\s\S]*?\}, 5000\);/, "let chatKnownCount=\${msgs.length};\nsetInterval(async()=>{\n    if(document.querySelector('[data-optimistic]'))return;\n    if(document.hidden)return;\n    try{const r=await fetch('/api/messages/\${otherUid}');const data=await r.json();if(data.count>chatKnownCount){chatKnownCount=data.count;location.reload();}}catch(e){}\n},3000);", "chatKnownCount");
 
 if (!src.includes('self.skipWaiting()')) {
     if (/self\.addEventListener\(['"]install['"]/.test(src)) {
