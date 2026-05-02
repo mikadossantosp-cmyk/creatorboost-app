@@ -520,7 +520,7 @@ function layout(content, session, page='feed', lang='de') {
 </head>
 <body>
 <div class="toast" id="toast"></div>
-<div id="pwa-install-btn" onclick="installPWA()" style="display:flex;position:fixed;bottom:calc(70px + var(--safe-bottom,0px));left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#ff6b6b,#cc5de8);color:#fff;border:none;border-radius:24px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;z-index:9998;gap:8px;align-items:center;box-shadow:0 4px 16px rgba(255,107,107,.4);white-space:nowrap">📲 App installieren</div>
+<div id="pwa-install-btn" onclick="installPWA()" style="display:none;position:fixed;bottom:calc(70px + var(--safe-bottom,0px));left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#ff6b6b,#cc5de8);color:#fff;border:none;border-radius:24px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;z-index:9998;gap:8px;align-items:center;box-shadow:0 4px 16px rgba(255,107,107,.4);white-space:nowrap">📲 App installieren</div>
 <div class="plus-sheet" id="plus-sheet" onclick="if(event.target===this)closePlusSheet()">
   <div class="plus-sheet-inner">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
@@ -742,47 +742,33 @@ function confirmCrop(){
   window.addEventListener('beforeinstallprompt',e=>{
     e.preventDefault();
     _installPrompt=e;
+    const b=document.getElementById('pwa-install-btn');
+    if(b)b.style.display='flex';
   });
   window.installPWA=async function(){
     if(_installPrompt){
       _installPrompt.prompt();
-      const r=await _installPrompt.userChoice;
+      await _installPrompt.userChoice;
       _installPrompt=null;
       const b=document.getElementById('pwa-install-btn');
       if(b)b.style.display='none';
     } else {
-      // Fallback: zeige Anleitung-Modal
-      let m=document.getElementById('install-guide-modal');
-      if(!m){
-        m=document.createElement('div');
-        m.id='install-guide-modal';
-        m.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.75);display:flex;align-items:flex-end;justify-content:center';
-        m.onclick=function(e){if(e.target===m)m.remove();};
-        document.body.appendChild(m);
-      }
-      const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent);
-      m.innerHTML='<div style="background:#1a1a2e;border-radius:24px 24px 0 0;padding:24px 20px 36px;width:100%;max-width:480px;border-top:3px solid #ff6b6b">'
-        +'<div style="width:36px;height:4px;background:#444;border-radius:4px;margin:0 auto 20px"></div>'
-        +'<div style="font-size:18px;font-weight:800;text-align:center;margin-bottom:6px">📲 App installieren</div>'
-        +'<div style="font-size:13px;color:#aaa;text-align:center;margin-bottom:22px">So fügst du CreatorX zum Startbildschirm hinzu:</div>'
-        +(isIOS
-          ? '<div style="display:flex;flex-direction:column;gap:14px">'
-            +'<div style="background:#fff1;border-radius:14px;padding:14px 16px;display:flex;gap:14px;align-items:center"><div style="font-size:28px">1️⃣</div><div><div style="font-weight:700;font-size:14px">Unten auf Teilen tippen</div><div style="font-size:12px;color:#aaa">Das Teilen-Symbol ⬆️ in der Mitte der unteren Leiste</div></div></div>'
-            +'<div style="background:#fff1;border-radius:14px;padding:14px 16px;display:flex;gap:14px;align-items:center"><div style="font-size:28px">2️⃣</div><div><div style="font-weight:700;font-size:14px">„Zum Home-Bildschirm" wählen</div><div style="font-size:12px;color:#aaa">Nach unten scrollen und antippen</div></div></div>'
-            +'<div style="background:#fff1;border-radius:14px;padding:14px 16px;display:flex;gap:14px;align-items:center"><div style="font-size:28px">3️⃣</div><div><div style="font-weight:700;font-size:14px">„Hinzufügen" drücken</div><div style="font-size:12px;color:#aaa">Die App erscheint dann auf deinem Homescreen</div></div></div>'
-            +'</div>'
-          : '<div style="display:flex;flex-direction:column;gap:14px">'
-            +'<div style="background:#fff1;border-radius:14px;padding:14px 16px;display:flex;gap:14px;align-items:center"><div style="font-size:28px">1️⃣</div><div><div style="font-weight:700;font-size:14px">Oben rechts auf ⋮ tippen</div><div style="font-size:12px;color:#aaa">Die drei Punkte oben rechts im Browser</div></div></div>'
-            +'<div style="background:#fff1;border-radius:14px;padding:14px 16px;display:flex;gap:14px;align-items:center"><div style="font-size:28px">2️⃣</div><div><div style="font-weight:700;font-size:14px">„App installieren" wählen</div><div style="font-size:12px;color:#aaa">Oder „Zum Startbildschirm hinzufügen"</div></div></div>'
-            +'<div style="background:#fff1;border-radius:14px;padding:14px 16px;display:flex;gap:14px;align-items:center"><div style="font-size:28px">3️⃣</div><div><div style="font-weight:700;font-size:14px">„Hinzufügen" bestätigen</div><div style="font-size:12px;color:#aaa">Die App erscheint dann auf deinem Homescreen</div></div></div>'
-            +'</div>')
-        +'<button onclick="document.getElementById(\'install-guide-modal\').remove()" style="margin-top:20px;width:100%;padding:14px;border-radius:14px;border:none;background:#ff6b6b;color:#fff;font-size:15px;font-weight:700;cursor:pointer">Verstanden ✓</button>'
-        +'</div>';
+      window.showInstallGuide();
     }
+  };
+  window.showInstallGuide=function(){
+    let m=document.getElementById('install-guide-modal');
+    if(!m){m=document.createElement('div');m.id='install-guide-modal';m.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.75);display:flex;align-items:flex-end;justify-content:center';m.onclick=function(e){if(e.target===m)m.remove();};document.body.appendChild(m);}
+    const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent);
+    m.innerHTML='<div style="background:#1a1a2e;border-radius:24px 24px 0 0;padding:24px 20px 40px;width:100%;max-width:480px;border-top:3px solid #ff6b6b"><div style="width:36px;height:4px;background:#444;border-radius:4px;margin:0 auto 20px"></div><div style="font-size:18px;font-weight:800;text-align:center;margin-bottom:6px">📲 App installieren</div><div style="font-size:13px;color:#aaa;text-align:center;margin-bottom:22px">So fügst du CreatorX zum Startbildschirm hinzu:</div>'
+      +(isIOS
+        ?'<div style="display:flex;flex-direction:column;gap:12px"><div style="background:#fff1;border-radius:14px;padding:14px 16px;display:flex;gap:14px;align-items:center"><div style="font-size:26px">1️⃣</div><div><div style="font-weight:700;font-size:14px">Teilen-Symbol tippen ⬆️</div><div style="font-size:12px;color:#aaa">Unten in der Mitte der Leiste</div></div></div><div style="background:#fff1;border-radius:14px;padding:14px 16px;display:flex;gap:14px;align-items:center"><div style="font-size:26px">2️⃣</div><div><div style="font-weight:700;font-size:14px">„Zum Home-Bildschirm"</div><div style="font-size:12px;color:#aaa">Nach unten scrollen, antippen</div></div></div><div style="background:#fff1;border-radius:14px;padding:14px 16px;display:flex;gap:14px;align-items:center"><div style="font-size:26px">3️⃣</div><div><div style="font-weight:700;font-size:14px">„Hinzufügen" drücken</div><div style="font-size:12px;color:#aaa">App erscheint auf dem Homescreen</div></div></div></div>'
+        :'<div style="display:flex;flex-direction:column;gap:12px"><div style="background:#fff1;border-radius:14px;padding:14px 16px;display:flex;gap:14px;align-items:center"><div style="font-size:26px">1️⃣</div><div><div style="font-weight:700;font-size:14px">Oben rechts ⋮ tippen</div><div style="font-size:12px;color:#aaa">Die drei Punkte im Browser-Menü</div></div></div><div style="background:#fff1;border-radius:14px;padding:14px 16px;display:flex;gap:14px;align-items:center"><div style="font-size:26px">2️⃣</div><div><div style="font-weight:700;font-size:14px">„App installieren" wählen</div><div style="font-size:12px;color:#aaa">Oder „Zum Startbildschirm hinzufügen"</div></div></div><div style="background:#fff1;border-radius:14px;padding:14px 16px;display:flex;gap:14px;align-items:center"><div style="font-size:26px">3️⃣</div><div><div style="font-weight:700;font-size:14px">„Hinzufügen" bestätigen ✓</div><div style="font-size:12px;color:#aaa">App erscheint auf dem Homescreen</div></div></div></div>')
+      +'<button onclick="document.getElementById(\'install-guide-modal\').remove()" style="margin-top:20px;width:100%;padding:14px;border-radius:14px;border:none;background:#ff6b6b;color:#fff;font-size:15px;font-weight:700;cursor:pointer">Verstanden ✓</button></div>';
   };
   window.addEventListener('appinstalled',()=>{
     const b=document.getElementById('pwa-install-btn');
-    if(b)b.style.display='none'; // hide after successful install
+    if(b)b.style.display='none';
   });
 })();
 </script>
@@ -1159,10 +1145,13 @@ async function handleRequest(req, res) {
 
     // ── SERVICE WORKER ──
     if (path === '/sw.js') {
-        res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/'});
+        res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
+const SW_VERSION='v21';
 self.addEventListener('install',()=>self.skipWaiting());
-self.addEventListener('activate',e=>e.waitUntil(clients.claim()));
+self.addEventListener('activate',e=>e.waitUntil(
+  caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
+));
 self.addEventListener('fetch',e=>{
   if(e.request.mode==='navigate'){e.respondWith(fetch(e.request).catch(()=>new Response('<html><body style="font-family:sans-serif;background:#000;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center"><div><div style="font-size:48px;margin-bottom:16px">📡</div><div style="font-size:18px;font-weight:700">Offline</div><div style="font-size:13px;color:#999;margin-top:8px">Bitte Internetverbindung prüfen</div></div></body></html>',{headers:{'Content-Type':'text/html'}})));return;}
   e.respondWith(fetch(e.request).catch(()=>new Response('',{status:503})));
