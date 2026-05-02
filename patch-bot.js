@@ -22,175 +22,85 @@ function tryPatch(name, regex, replacement, alreadyMarker) {
     return false;
 }
 
-if (!tryPatch(
-    'Regeln-Tab',
-    /regeln: `<div style="padding:48px[\s\S]*?`,/,
-    "regeln: require('./regeln-tab'),",
-    "regeln: require('./regeln-tab')"
-)) {
-    console.error('[patch-bot] FEHLER: Regeln-Patch erforderlich aber nicht gefunden');
-    process.exit(1);
+if (!tryPatch('Regeln-Tab', /regeln: `<div style="padding:48px[\s\S]*?`,/, "regeln: require('./regeln-tab'),", "regeln: require('./regeln-tab')")) {
+    console.error('[patch-bot] FEHLER: Regeln-Patch nicht gefunden'); process.exit(1);
 }
 
-tryPatch(
-    'DM-Liste',
-    /const convHtml = `\s*\n<a href="\/nachrichten\/gruppe"[\s\S]*?<div class="empty-sub">Schreibe jemandem!<\/div><\/div>'\);/,
-    "const convHtml = require('./chat-list-render')({ myConvos, botData, myUid, feedPreview, totalThreadUnread, ladeBild, adminIds, onlineUids: typeof sessions !== 'undefined' ? new Set([...sessions.values()].map(s => String(s.uid))) : new Set() });",
-    "require('./chat-list-render')"
-);
+tryPatch('DM-Liste', /const convHtml = `\s*\n<a href="\/nachrichten\/gruppe"[\s\S]*?<div class="empty-sub">Schreibe jemandem!<\/div><\/div>'\);/, "const convHtml = require('./chat-list-render')({ myConvos, botData, myUid, feedPreview, totalThreadUnread, ladeBild, adminIds, onlineUids: typeof sessions !== 'undefined' ? new Set([...sessions.values()].map(s => String(s.uid))) : new Set() });", "require('./chat-list-render')");
 
-tryPatch(
-    'Threads-Liste cards',
-    /const cards = threads\.map\(thr => \{[\s\S]*?\}\)\.join\(''\);/,
-    "const cards = require('./thread-list-render')({ threads, threadMsgs, lastRead, communityFeed, isAdmin });",
-    "require('./thread-list-render')"
-);
+tryPatch('Threads-Liste cards', /const cards = threads\.map\(thr => \{[\s\S]*?\}\)\.join\(''\);/, "const cards = require('./thread-list-render')({ threads, threadMsgs, lastRead, communityFeed, isAdmin });", "require('./thread-list-render')");
 
-tryPatch(
-    'Threads-Liste Container',
-    /<div style="padding:12px 12px 100px;display:grid;grid-template-columns:1fr 1fr;gap:10px">\$\{cards\}<\/div>/,
-    '${cards}',
-    null
-);
+tryPatch('Threads-Liste Container', /<div style="padding:12px 12px 100px;display:grid;grid-template-columns:1fr 1fr;gap:10px">\$\{cards\}<\/div>/, '${cards}', null);
 
 const CHAT_DETAIL_REPLACEMENT = "const msgsHtml = require('./chat-detail-render')({ msgs, myUid, otherUid, otherUser, ladeBild, otherOnline: typeof sessions !== 'undefined' ? [...sessions.values()].some(s => String(s.uid) === String(otherUid)) : false });";
-if (src.includes("otherOnline:")) {
-    console.log('[patch-bot] Chat-Detail mit otherOnline bereits gepatched');
-} else if (src.includes("require('./chat-detail-render')")) {
-    src = src.replace(/const msgsHtml = require\('\.\/chat-detail-render'\)\([^;]*\);/, CHAT_DETAIL_REPLACEMENT);
-    console.log('[patch-bot] Chat-Detail upgraded mit otherOnline');
-    changed = true;
-} else if (/const msgsHtml = msgs\.map\(m => \{[\s\S]*?\}\)\.join\(''\);/.test(src)) {
-    src = src.replace(/const msgsHtml = msgs\.map\(m => \{[\s\S]*?\}\)\.join\(''\);/, CHAT_DETAIL_REPLACEMENT);
-    console.log('[patch-bot] Chat-Detail initial gepatched mit otherOnline');
-    changed = true;
-}
+if (src.includes("otherOnline:")) { console.log('[patch-bot] Chat-Detail bereits gepatched'); }
+else if (src.includes("require('./chat-detail-render')")) { src = src.replace(/const msgsHtml = require\('\.\/chat-detail-render'\)\([^;]*\);/, CHAT_DETAIL_REPLACEMENT); console.log('[patch-bot] Chat-Detail upgraded'); changed = true; }
+else if (/const msgsHtml = msgs\.map\(m => \{[\s\S]*?\}\)\.join\(''\);/.test(src)) { src = src.replace(/const msgsHtml = msgs\.map\(m => \{[\s\S]*?\}\)\.join\(''\);/, CHAT_DETAIL_REPLACEMENT); console.log('[patch-bot] Chat-Detail initial'); changed = true; }
 
 const OPTIMISTIC_SEND = "async function sendMessage(image, audio, text=''){const tmpTs=Date.now();insertOptimisticBubble(tmpTs,text,image,audio);requestAnimationFrame(()=>window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'}));try{const res=await fetch('/api/send-message',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:'${otherUid}',text,image:image||null,audio:audio||null})});const data=await res.json();if(!data.ok){markBubbleFailed(tmpTs,text,image,audio);return;}markBubbleSent(tmpTs);}catch(e){markBubbleFailed(tmpTs,text,image,audio);}}function insertOptimisticBubble(ts,text,image,audio){const c=document.getElementById('chat-msgs');if(!c)return;const empty=c.querySelector('.chat-empty');if(empty)empty.remove();const div=document.createElement('div');div.className='chat-row chat-row-me chat-row-last';div.dataset.optimistic=ts;const escT=(text||'').replace(/[<>&]/g,c=>({\"<\":\"&lt;\",\">\":\"&gt;\",\"&\":\"&amp;\"}[c]));let inner='';if(image)inner='<div class=\"chat-img-wrap\"><img src=\"'+image+'\"></div>'+(text?'<div class=\"chat-img-caption\">'+escT+'</div>':'');else if(audio)inner='<div class=\"chat-audio\"><div class=\"chat-audio-info\"><div class=\"audio-dur\">🎤 Sprachnachricht</div></div></div>';else inner='<div class=\"chat-text\">'+escT+'</div>';div.innerHTML='<div class=\"chat-bubble-wrap\"><div class=\"chat-bubble\" style=\"opacity:.7\">'+inner+'</div><div class=\"chat-status pending\">Wird gesendet...</div></div>';c.appendChild(div);}function markBubbleSent(ts){const el=document.querySelector('[data-optimistic=\"'+ts+'\"]');if(!el)return;const bubble=el.querySelector('.chat-bubble');if(bubble)bubble.style.opacity='1';const status=el.querySelector('.chat-status');if(status){status.textContent='Gesendet · '+new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});status.classList.remove('pending');}}function markBubbleFailed(ts,text,image,audio){const el=document.querySelector('[data-optimistic=\"'+ts+'\"]');if(!el)return;const status=el.querySelector('.chat-status');if(status){status.textContent='❌ Fehler · Tippe um erneut zu senden';status.style.color='#ef4444';status.style.cursor='pointer';status.onclick=()=>{el.remove();sendMessage(image,audio,text);};}}";
 
-tryPatch(
-    'Optimistic Send',
-    /async function sendMessage\(image, audio, text=''\) \{\s*const res = await fetch\('\/api\/send-message'[\s\S]*?if \(\(await res\.json\(\)\)\.ok\) location\.reload\(\);\s*\}/,
-    OPTIMISTIC_SEND,
-    "insertOptimisticBubble"
-);
+tryPatch('Optimistic Send', /async function sendMessage\(image, audio, text=''\) \{\s*const res = await fetch\('\/api\/send-message'[\s\S]*?if \(\(await res\.json\(\)\)\.ok\) location\.reload\(\);\s*\}/, OPTIMISTIC_SEND, "insertOptimisticBubble");
 
-const SMART_POLL = "let chatKnownCount=${msgs.length};setInterval(async()=>{if(document.querySelector('[data-optimistic]'))return;if(document.hidden)return;try{const r=await fetch('/api/messages/${otherUid}');const data=await r.json();if(data.count>chatKnownCount){chatKnownCount=data.count;location.reload();}}catch(e){}},3000);";
+tryPatch('Smart Polling', /setInterval\(async \(\) => \{\s*const r = await fetch\(`\/api\/messages\/\$\{otherUid\}`\);[\s\S]*?\}, 5000\);/, "let chatKnownCount=${msgs.length};setInterval(async()=>{if(document.querySelector('[data-optimistic]'))return;if(document.hidden)return;try{const r=await fetch('/api/messages/${otherUid}');const data=await r.json();if(data.count>chatKnownCount){chatKnownCount=data.count;location.reload();}}catch(e){}},3000);", "chatKnownCount");
 
-tryPatch(
-    'Smart Polling',
-    /setInterval\(async \(\) => \{\s*const r = await fetch\(`\/api\/messages\/\$\{otherUid\}`\);[\s\S]*?\}, 5000\);/,
-    SMART_POLL,
-    "chatKnownCount"
-);
+tryPatch('Smart Send-Click', /async function sendMsg\(\) \{\s*const input = document\.getElementById\('msg-input'\);[\s\S]*?clearImage\(\);\s*\}/, "async function sendMsg(){const input=document.getElementById('msg-input');const text=input.value.trim();if(!text&&!selectedImage)return;input.value='';input.focus();const img=selectedImage;clearImage();sendMessage(img||null,null,text);}", null);
 
-tryPatch(
-    'Smart Send-Click',
-    /async function sendMsg\(\) \{\s*const input = document\.getElementById\('msg-input'\);[\s\S]*?clearImage\(\);\s*\}/,
-    "async function sendMsg(){const input=document.getElementById('msg-input');const text=input.value.trim();if(!text&&!selectedImage)return;input.value='';input.focus();const img=selectedImage;clearImage();sendMessage(img||null,null,text);}",
-    null
-);
+tryPatch('Back-Button DM', /<a href="\/nachrichten" class="icon-btn" style="font-size:22px">‹<\/a>/, '<a href="/nachrichten" class="icon-btn" style="font-size:22px" onclick="if(history.length>1){event.preventDefault();history.back();}">‹</a>', 'history.back()');
 
-tryPatch(
-    'Back-Button DM',
-    /<a href="\/nachrichten" class="icon-btn" style="font-size:22px">‹<\/a>/,
-    '<a href="/nachrichten" class="icon-btn" style="font-size:22px" onclick="if(history.length>1){event.preventDefault();history.back();}">‹</a>',
-    'history.back()'
-);
-
-tryPatch(
-    'Mark-Read non-blocking',
-    /await postBot\('\/mark-messages-read', \{ uid: myUid, chatKey \}\);/,
-    "postBot('/mark-messages-read', { uid: myUid, chatKey }).catch(()=>{});",
-    "postBot('/mark-messages-read', { uid: myUid, chatKey }).catch"
-);
+tryPatch('Mark-Read non-blocking', /await postBot\('\/mark-messages-read', \{ uid: myUid, chatKey \}\);/, "postBot('/mark-messages-read', { uid: myUid, chatKey }).catch(()=>{});", "postBot('/mark-messages-read', { uid: myUid, chatKey }).catch");
 
 if (src.includes("require('./app-icon')")) {
     console.log('[patch-bot] App-Icon bereits via require');
 } else if (/const buf = Buffer\.from\('[A-Za-z0-9+/=]{1000,}', 'base64'\);/.test(src)) {
-    src = src.replace(
-        /const buf = Buffer\.from\('[A-Za-z0-9+/=]+', 'base64'\);/,
-        "const buf = Buffer.from(require('./app-icon').b64, 'base64');"
-    );
-    console.log('[patch-bot] App-Icon auf require umgestellt');
-    changed = true;
+    src = src.replace(/const buf = Buffer\.from\('[A-Za-z0-9+/=]+', 'base64'\);/, "const buf = Buffer.from(require('./app-icon').b64, 'base64');");
+    console.log('[patch-bot] App-Icon auf require'); changed = true;
 }
 
-tryPatch(
-    'Icon Content-Type',
-    /res\.writeHead\(200, \{ 'Content-Type': 'image\/png',/g,
-    "res.writeHead(200, { 'Content-Type': 'image/jpeg',",
-    null
-);
+tryPatch('Icon Content-Type', /res\.writeHead\(200, \{ 'Content-Type': 'image\/png',/g, "res.writeHead(200, { 'Content-Type': 'image/jpeg',", null);
 
-// PATCH: Manifest icons MIME type (image/png -> image/jpeg)
-tryPatch(
-    'Manifest icons type',
-    /type:'image\/png',purpose:'any maskable'/g,
-    "type:'image/jpeg',purpose:'any maskable'",
-    null
-);
+// KOMPLETTES MANIFEST ICONS ARRAY ERSETZEN (purpose:any maskable wird abgelehnt von Chrome)
+const MANIFEST_ICONS_FIX = "icons:[{src:'/icon.jpg?v=15',sizes:'192x192',type:'image/jpeg',purpose:'any'},{src:'/icon.jpg?v=15',sizes:'512x512',type:'image/jpeg',purpose:'any'}]";
+if (/icons:\[\{src:'\/icon\.jpg\?v=\d+',sizes:'192x192'[^\]]+\]/.test(src)) {
+    src = src.replace(/icons:\[\{src:'\/icon\.jpg\?v=\d+',sizes:'192x192'[^\]]+\]/, MANIFEST_ICONS_FIX);
+    console.log('[patch-bot] Manifest icons array ersetzt');
+    changed = true;
+} else {
+    console.warn('[patch-bot] WARNUNG: Manifest icons pattern nicht gefunden');
+}
 
 let versionBumps = 0;
 src = src.replace(/icon\.jpg\?v=\d+/g, () => { versionBumps++; return 'icon.jpg?v=15'; });
 src = src.replace(/icon-192\.png\?v=\d+/g, 'icon-192.png?v=15');
 src = src.replace(/icon-512\.png\?v=\d+/g, 'icon-512.png?v=15');
-if (versionBumps > 0) {
-    console.log('[patch-bot] Icon-Version v=15: ' + versionBumps + ' Stellen');
-    changed = true;
-}
+if (versionBumps > 0) { console.log('[patch-bot] Icon-Version v=15: ' + versionBumps); changed = true; }
 
-tryPatch(
-    'HTML no-cache headers',
-    /res\.writeHead\(200,\{'Content-Type':'text\/html; charset=utf-8'\}\);/g,
-    "res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','Pragma':'no-cache','Expires':'0','X-App-Version':'15'});",
-    "X-App-Version"
-);
+tryPatch('HTML no-cache headers', /res\.writeHead\(200,\{'Content-Type':'text\/html; charset=utf-8'\}\);/g, "res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','Pragma':'no-cache','Expires':'0','X-App-Version':'15'});", "X-App-Version");
 
-if (src.includes('self.skipWaiting()')) {
-    console.log('[patch-bot] SW skipWaiting bereits drin');
-} else {
+if (!src.includes('self.skipWaiting()')) {
     if (/self\.addEventListener\(['"]install['"]/.test(src)) {
-        src = src.replace(
-            /self\.addEventListener\(['"]install['"], ?(?:function ?\(?e?\)?|e ?=>) ?\{/,
-            "self.addEventListener('install',e=>{self.skipWaiting();"
-        );
-        console.log('[patch-bot] SW install handler mit skipWaiting');
-        changed = true;
+        src = src.replace(/self\.addEventListener\(['"]install['"], ?(?:function ?\(?e?\)?|e ?=>) ?\{/, "self.addEventListener('install',e=>{self.skipWaiting();");
+        console.log('[patch-bot] SW skipWaiting'); changed = true;
     }
     if (/self\.addEventListener\(['"]activate['"]/.test(src)) {
-        src = src.replace(
-            /self\.addEventListener\(['"]activate['"], ?(?:function ?\(?e?\)?|e ?=>) ?\{/,
-            "self.addEventListener('activate',e=>{e.waitUntil(self.clients.claim());"
-        );
-        console.log('[patch-bot] SW activate handler mit clients.claim');
-        changed = true;
+        src = src.replace(/self\.addEventListener\(['"]activate['"], ?(?:function ?\(?e?\)?|e ?=>) ?\{/, "self.addEventListener('activate',e=>{e.waitUntil(self.clients.claim());");
+        console.log('[patch-bot] SW clients.claim'); changed = true;
     }
 }
 
 const BANNER_MARKER = '<!--cx-update-banner-v15-->';
 let INLINE_BANNER = '';
-try { INLINE_BANNER = require('./banner-html'); } catch (e) { console.error('[patch-bot] FEHLER: banner-html.js nicht gefunden:', e.message); }
-
+try { INLINE_BANNER = require('./banner-html'); } catch (e) { console.error('banner-html fehlt:', e.message); }
 if (INLINE_BANNER) {
     if (src.includes(BANNER_MARKER)) {
-        console.log('[patch-bot] Inline-Banner v15 bereits drin');
+        console.log('[patch-bot] Banner v15 bereits drin');
     } else {
         src = src.replace(/<!--cx-update-banner-v1[234]-->[\s\S]*?<\/script>/g, '');
         const layoutEndRegex = new RegExp('<\\/script>\\s*<\\/body><\\/html>' + BT + ';', 'g');
         if (layoutEndRegex.test(src)) {
             src = src.replace(layoutEndRegex, '</script>' + INLINE_BANNER + '</body></html>' + BT + ';');
-            console.log('[patch-bot] Inline-Banner v15 in alle layouts eingefuegt');
-            changed = true;
-        } else {
-            console.warn('[patch-bot] WARNUNG: layout-end nicht gefunden fuer Banner');
+            console.log('[patch-bot] Banner v15 eingefuegt'); changed = true;
         }
     }
 }
 
-if (changed) {
-    fs.writeFileSync(BOT, src);
-    console.log('[patch-bot] bot.js gespeichert');
-} else {
-    console.log('[patch-bot] keine Anderungen notig');
-}
+if (changed) { fs.writeFileSync(BOT, src); console.log('[patch-bot] bot.js gespeichert'); } else { console.log('[patch-bot] keine Anderungen'); }
