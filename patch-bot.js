@@ -52,26 +52,17 @@ tryPatch(
     null
 );
 
-// Patch 4: Chat-Detail Bubbles - mit otherOnline status
 const CHAT_DETAIL_REPLACEMENT = "const msgsHtml = require('./chat-detail-render')({ msgs, myUid, otherUid, otherUser, ladeBild, otherOnline: typeof sessions !== 'undefined' ? [...sessions.values()].some(s => String(s.uid) === String(otherUid)) : false });";
 if (src.includes("otherOnline:")) {
     console.log('[patch-bot] Chat-Detail mit otherOnline bereits gepatched');
 } else if (src.includes("require('./chat-detail-render')")) {
-    src = src.replace(
-        /const msgsHtml = require\('\.\/chat-detail-render'\)\([^;]*\);/,
-        CHAT_DETAIL_REPLACEMENT
-    );
+    src = src.replace(/const msgsHtml = require\('\.\/chat-detail-render'\)\([^;]*\);/, CHAT_DETAIL_REPLACEMENT);
     console.log('[patch-bot] Chat-Detail upgraded mit otherOnline');
     changed = true;
 } else if (/const msgsHtml = msgs\.map\(m => \{[\s\S]*?\}\)\.join\(''\);/.test(src)) {
-    src = src.replace(
-        /const msgsHtml = msgs\.map\(m => \{[\s\S]*?\}\)\.join\(''\);/,
-        CHAT_DETAIL_REPLACEMENT
-    );
+    src = src.replace(/const msgsHtml = msgs\.map\(m => \{[\s\S]*?\}\)\.join\(''\);/, CHAT_DETAIL_REPLACEMENT);
     console.log('[patch-bot] Chat-Detail initial gepatched mit otherOnline');
     changed = true;
-} else {
-    console.warn('[patch-bot] WARNUNG: Chat-Detail Pattern nicht gefunden');
 }
 
 const OPTIMISTIC_SEND = "async function sendMessage(image, audio, text=''){" +
@@ -170,6 +161,36 @@ tryPatch(
     "postBot('/mark-messages-read', { uid: myUid, chatKey }).catch(()=>{});",
     "postBot('/mark-messages-read', { uid: myUid, chatKey }).catch"
 );
+
+// PATCH ICON: Replace hardcoded base64 mit require zu app-icon.js
+if (src.includes("require('./app-icon')")) {
+    console.log('[patch-bot] App-Icon bereits via require');
+} else if (/const buf = Buffer\.from\('[A-Za-z0-9+/=]{1000,}', 'base64'\);/.test(src)) {
+    src = src.replace(
+        /const buf = Buffer\.from\('[A-Za-z0-9+/=]+', 'base64'\);/,
+        "const buf = Buffer.from(require('./app-icon').b64, 'base64');"
+    );
+    console.log('[patch-bot] App-Icon auf require umgestellt');
+    changed = true;
+}
+
+// PATCH ICON CONTENT-TYPE: PNG -> JPEG
+tryPatch(
+    'Icon Content-Type',
+    /res\.writeHead\(200, \{ 'Content-Type': 'image\/png',/g,
+    "res.writeHead(200, { 'Content-Type': 'image/jpeg',",
+    null
+);
+
+// BUMP ICON VERSION 5 -> 11 (force browser cache refresh)
+let versionBumps = 0;
+src = src.replace(/icon\.jpg\?v=\d+/g, () => { versionBumps++; return 'icon.jpg?v=11'; });
+src = src.replace(/icon-192\.png\?v=\d+/g, 'icon-192.png?v=11');
+src = src.replace(/icon-512\.png\?v=\d+/g, 'icon-512.png?v=11');
+if (versionBumps > 0) {
+    console.log('[patch-bot] Icon-Version gebumpt (v=11): ' + versionBumps + ' Stellen');
+    changed = true;
+}
 
 if (changed) {
     fs.writeFileSync(BOT, src);
