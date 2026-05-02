@@ -3278,7 +3278,20 @@ async function submitComment(linkId, fallbackId) {
     input.value = '';
     const res = await fetch('/api/comment', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({postId:id,text})});
     const data = await res.json();
-    if (data.ok) { toast('💬 Kommentar gesendet!'); setTimeout(()=>location.reload(),600); }
+    if (data.ok) {
+        toast('💬 Kommentar gesendet!');
+        const box = document.getElementById('comments-box-' + id);
+        if (box) {
+            const scrollDiv = box.querySelector('div[style*="max-height:200px"]');
+            if (scrollDiv) {
+                const el = document.createElement('div');
+                el.style.cssText = 'padding:6px 12px;border-bottom:1px solid var(--border2);font-size:12px';
+                el.innerHTML = '<span style="font-weight:700;color:var(--accent)">Du</span> <span style="color:var(--muted);font-size:10px">jetzt</span><div style="margin-top:2px">' + text.replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c])) + '</div>';
+                scrollDiv.appendChild(el);
+                scrollDiv.scrollTop = scrollDiv.scrollHeight;
+            }
+        }
+    }
     else toast('❌ Fehler');
 }
 function toggleLikers(msgId) {
@@ -3823,7 +3836,7 @@ async function createThread(){
 </div>
 ${cards}
 <script>
-setTimeout(()=>location.reload(),10000);
+setInterval(async()=>{try{const r=await fetch(location.href,{headers:{'X-Poll':'1'}});if(r.ok&&r.redirected)location.reload();}catch(e){}},15000);
 async function renameThread(tid,current){
   const name=prompt('Neuer Thread-Name:',current);
   if(!name||!name.trim())return;
@@ -4188,7 +4201,7 @@ async function buyExtraLink(){
     if(data.ok){
       btn.textContent='✓ Gekauft!';
       btn.style.background='linear-gradient(135deg,#22c55e,#16a34a)';
-      setTimeout(()=>location.reload(),1200);
+      setTimeout(()=>location.reload(),300);
     } else {
       btn.disabled=false;
       btn.textContent='Kaufen';
@@ -4203,7 +4216,7 @@ async function buyItem(itemId){
     const r=await fetch('/api/buy-item',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({itemId})});
     const data=await r.json();
     if(data.ok){
-      setTimeout(()=>location.reload(),800);
+      setTimeout(()=>location.reload(),200);
     } else {
       if(btn){btn.disabled=false;btn.textContent='Kaufen';}
       alert(data.error||'Fehler beim Kauf');
@@ -4261,8 +4274,8 @@ ${isAdminNL?`
 function nlNew(){document.getElementById('nl-form').style.display='block';document.getElementById('nl-edit-id').value='';document.getElementById('nl-title').value='';document.getElementById('nl-content').value='';document.getElementById('nl-result').textContent='';}
 function nlCancel(){document.getElementById('nl-form').style.display='none';}
 function nlEdit(id){const el=document.querySelector('[data-id="'+id+'"]');if(!el)return;document.getElementById('nl-edit-id').value=id;document.getElementById('nl-title').value=el.querySelector('[style*="font-display"]')?.textContent||'';document.getElementById('nl-content').value=el.querySelector('[style*="pre-wrap"]')?.textContent||'';document.getElementById('nl-form').style.display='block';window.scrollTo({top:0,behavior:'smooth'});}
-async function nlSave(){const id=document.getElementById('nl-edit-id').value;const title=document.getElementById('nl-title').value.trim();const content=document.getElementById('nl-content').value.trim();if(!content)return;const ep=id?'/api/newsletter-edit':'/api/newsletter-add';const body=id?{id,title,content}:{title,content};const r=await fetch(ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const d=await r.json();if(d.ok){toast('✅ Gespeichert!');setTimeout(()=>location.reload(),800);}else document.getElementById('nl-result').textContent='❌ '+(d.error||'Fehler');}
-async function nlDelete(id){if(!confirm('Eintrag löschen?'))return;const r=await fetch('/api/newsletter-delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id})});const d=await r.json();if(d.ok){toast('✅ Gelöscht');setTimeout(()=>location.reload(),600);}else toast('❌ Fehler');}
+async function nlSave(){const id=document.getElementById('nl-edit-id').value;const title=document.getElementById('nl-title').value.trim();const content=document.getElementById('nl-content').value.trim();if(!content)return;const ep=id?'/api/newsletter-edit':'/api/newsletter-add';const body=id?{id,title,content}:{title,content};const r=await fetch(ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const d=await r.json();if(d.ok){toast('✅ Gespeichert!');setTimeout(()=>location.reload(),200);}else document.getElementById('nl-result').textContent='❌ '+(d.error||'Fehler');}
+async function nlDelete(id){if(!confirm('Eintrag löschen?'))return;const r=await fetch('/api/newsletter-delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id})});const d=await r.json();if(d.ok){toast('✅ Gelöscht');setTimeout(()=>location.reload(),150);}else toast('❌ Fehler');}
 `:''}
 </script>`;
             })()
@@ -4661,7 +4674,7 @@ async function submitAddProj(){
     if(_editMode) body.projectId=_editProjId;
     const res=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     const data=await res.json();
-    if(data.ok){toast(_editMode?'✅ Aktualisiert!':'✅ Projekt gespeichert!');setTimeout(()=>location.reload(),800);}
+    if(data.ok){toast(_editMode?'✅ Aktualisiert!':'✅ Projekt gespeichert!');setTimeout(()=>location.reload(),200);}
     else{toast('❌ '+(data.error||'Fehler'));btn.disabled=false;btn.textContent=_editMode?'💾 Aktualisieren':'✅ Projekt speichern';}
   }catch(e){toast('❌ Fehler');btn.disabled=false;btn.textContent=_editMode?'💾 Aktualisieren':'✅ Projekt speichern';}
 }
@@ -4670,7 +4683,7 @@ async function deleteProj(projectId){
   closeProjDetail();
   const res=await fetch('/api/delete-project',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({projectId})});
   const data=await res.json();
-  if(data.ok){toast('✅ Gelöscht');setTimeout(()=>location.reload(),600);}
+  if(data.ok){toast('✅ Gelöscht');setTimeout(()=>location.reload(),150);}
   else toast('❌ Fehler');
 }
 (async()=>{try{const r=await fetch('/api/notifications/count');const d=await r.json();const b=document.getElementById('notif-badge-profil');if(b&&d.count>0){b.textContent=d.count>9?'9+':d.count;b.style.display='flex';}}catch(e){}})();
@@ -4678,17 +4691,17 @@ async function deletePost(timestamp){
   if(!confirm('Post löschen?')) return;
   const res=await fetch('/api/delete-post',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({timestamp})});
   const data=await res.json();
-  if(data.ok){toast('✅ Gelöscht');setTimeout(()=>location.reload(),500);}
+  if(data.ok){toast('✅ Gelöscht');setTimeout(()=>location.reload(),150);}
   else toast('❌ Fehler');
 }
-async function submitPost(){
+async function submitPost(){const _spBtn=document.querySelector('[onclick="submitPost()"]');if(_spBtn){_spBtn.disabled=true;_spBtn.style.opacity='0.6';}
   const text=document.getElementById('new-post').value.trim();
   if(!text) return toast('❌ Text erforderlich');
   const btn=document.querySelector('[onclick="submitPost()"]');
   btn.disabled=true; btn.textContent='⏳...';
   const res=await fetch('/api/post',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});
   const data=await res.json();
-  if(data.ok){toast('✅ Post veröffentlicht!');setTimeout(()=>location.reload(),1000);}
+  if(data.ok){toast('✅ Post veröffentlicht!');setTimeout(()=>location.reload(),250);}
   else{toast('❌ '+(data.error||'Fehler'));btn.disabled=false;btn.textContent='📝 Posten';}
 }
 (async function loadMissionWidget(){
@@ -5107,7 +5120,7 @@ async function savePinnedLink() {
     if (url && !url.includes('instagram.com')) { toast('❌ Nur Instagram Links erlaubt'); return; }
     const res = await fetch('/api/set-pinned-link', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url})});
     const data = await res.json();
-    if (data.ok) { toast(url ? '📌 Reel angepeint!' : '🗑️ Pin entfernt!'); setTimeout(()=>location.reload(),1000); }
+    if (data.ok) { toast(url ? '📌 Reel angepeint!' : '🗑️ Pin entfernt!'); setTimeout(()=>location.reload(),250); }
     else toast('❌ ' + (data.error||'Fehler'));
 }
 async function removePinnedLink() {
@@ -5117,7 +5130,7 @@ async function removePinnedLink() {
 async function setRing(ringId) {
     const res = await fetch('/api/set-active-ring', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ringId:ringId||null})});
     const data = await res.json();
-    if (data.ok) { toast(ringId ? '🪄 Ring aktiviert!' : '🔘 Ring deaktiviert'); setTimeout(()=>location.reload(),800); }
+    if (data.ok) { toast(ringId ? '🪄 Ring aktiviert!' : '🔘 Ring deaktiviert'); setTimeout(()=>location.reload(),200); }
     else toast('❌ ' + (data.error||'Fehler'));
 }
 </script>`, 'settings');
