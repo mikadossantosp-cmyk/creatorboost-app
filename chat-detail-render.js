@@ -209,6 +209,7 @@ function getReactionPicker() {
         '<button onclick="chatPickReaction(\'😢\')">😢</button>' +
         '<button onclick="chatPickReaction(\'👏\')">👏</button>' +
         '<button onclick="chatPickReaction(\'🔥\')">🔥</button>' +
+        '<button id="chat-del-btn" onclick="chatDeleteMsg()" style="display:none;font-size:20px;background:rgba(239,68,68,.15);border-radius:50%;border:none;width:44px;height:44px;cursor:pointer">🗑️</button>' +
         '</div>';
 }
 
@@ -258,8 +259,11 @@ function getScripts(myUid, otherUid) {
         'function chatShowReactions(el, ts) {' +
             'const picker = document.getElementById("chat-react-picker");' +
             'const r = el.getBoundingClientRect();' +
-            'picker.style.left = Math.max(8, Math.min(window.innerWidth - 280, r.left + r.width / 2 - 140)) + "px";' +
-            'picker.style.top = Math.max(60, r.top - 60) + "px";' +
+            'picker.style.left = Math.max(8, Math.min(window.innerWidth - 320, r.left + r.width / 2 - 160)) + "px";' +
+            'picker.style.top = Math.max(60, r.top - 64) + "px";' +
+            'const isMyMsg = el.closest(".chat-row")?.classList.contains("chat-row-me");' +
+            'const delBtn = document.getElementById("chat-del-btn");' +
+            'if (delBtn) delBtn.style.display = isMyMsg ? "inline-flex" : "none";' +
             'picker.classList.add("show"); chatActiveTs = ts;' +
         '}' +
         'function chatHidePicker() { document.getElementById("chat-react-picker").classList.remove("show"); }' +
@@ -276,6 +280,19 @@ function getScripts(myUid, otherUid) {
             'saveLocalReactions(local);' +
             'renderAllReactions();' +
             'try { fetch("/api/react-message", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ chatKey: CHAT_KEY, timestamp: Number(ts), emoji: emoji }) }).catch(()=>{}); } catch(e) {}' +
+        '}' +
+        'async function chatDeleteMsg() {' +
+            'chatHidePicker();' +
+            'if (!chatActiveTs) return;' +
+            'const ts = chatActiveTs;' +
+            'const row = document.querySelector(".chat-row[data-ts=\\"" + ts + "\\"]");' +
+            'if (row) row.style.opacity = "0.3";' +
+            'try {' +
+                'const r = await fetch("/api/delete-dm", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ chatKey: CHAT_KEY, timestamp: ts }) });' +
+                'const d = await r.json();' +
+                'if (d.ok || d.ok === undefined) { if (row) row.remove(); }' +
+                'else { if (row) row.style.opacity = "1"; }' +
+            '} catch(e) { if (row) row.style.opacity = "1"; }' +
         '}' +
         'renderAllReactions();' +
         'requestAnimationFrame(() => window.scrollTo({ top: document.body.scrollHeight, behavior: "instant" }));' +
