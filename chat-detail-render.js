@@ -1,4 +1,4 @@
-// Chat-Detail Bubbles im Insta DM Style v5 - Send-Bar + Header polish
+// Chat-Detail v6 - Reactions NEBEN Bubble (Insta-Style)
 
 let appPerf = '';
 try { appPerf = require('./app-perf'); } catch(e) {}
@@ -143,28 +143,21 @@ module.exports = function renderChatBubbles(opts) {
 
 function getStyles() {
     return '<style>' +
-        // Globals
         'html { scroll-behavior: smooth; }' +
         '#chat-msgs { padding: 16px 0 140px; display: flex; flex-direction: column; will-change: transform; }' +
 
-        // ── TOPBAR OVERRIDES (groesserer Avatar + Online-Punkt) ──
+        // Topbar groesserer Avatar + Online-Punkt
         '.topbar a[href^="/profil/"] { gap: 12px !important; }' +
         '.topbar a[href^="/profil/"] > div { width: 40px !important; height: 40px !important; font-size: 16px !important; box-shadow: 0 2px 8px rgba(167,139,250,0.2) !important; }' +
         '.topbar a[href^="/profil/"] > div::after { content: ""; position: absolute; bottom: -1px; right: -1px; width: 12px; height: 12px; border-radius: 50%; background: #22c55e; border: 2px solid var(--bg); z-index: 4; }' +
         '.topbar a[href^="/profil/"] span:last-child { font-size: 16px !important; font-weight: 700 !important; }' +
 
-        // ── SEND-BAR OVERRIDES (Insta-Style Pill + Lila Send) ──
+        // Send-Bar Insta-Style Pill + Lila Send
         '#msg-input.form-input { background: rgba(255,255,255,0.06) !important; border: 1.5px solid rgba(255,255,255,0.08) !important; border-radius: 22px !important; padding: 10px 16px !important; transition: border-color 0.2s, background 0.2s !important; font-size: 14.5px !important; color: var(--text) !important; }' +
         '#msg-input.form-input::placeholder { color: rgba(255,255,255,0.4) !important; }' +
         '#msg-input.form-input:focus { border-color: rgba(167,139,250,0.5) !important; outline: none !important; background: rgba(255,255,255,0.08) !important; }' +
-
-        // Send-Button als lila Gradient
         'button[onclick="sendMsg()"] { background: linear-gradient(135deg,#a78bfa,#7c3aed) !important; box-shadow: 0 4px 14px rgba(124,58,237,0.4) !important; transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.15s !important; }' +
         'button[onclick="sendMsg()"]:active { transform: scale(0.85) !important; box-shadow: 0 2px 8px rgba(124,58,237,0.6) !important; }' +
-
-        // Image + Mic buttons softer
-        '#mic-btn, label[for], label:has(input[type=file]) { background: rgba(255,255,255,0.06) !important; border-radius: 50% !important; transition: transform 0.15s !important; }' +
-        '#mic-btn:active, label:has(input[type=file]):active { transform: scale(0.85) !important; }' +
 
         // Date separator
         '.chat-date-sep { text-align: center; margin: 24px 0 12px; }' +
@@ -177,13 +170,13 @@ function getStyles() {
         '.chat-row-me { justify-content: flex-end; }' +
         '.chat-row-other { justify-content: flex-start; }' +
 
-        // Avatar mini
         '.chat-avatar-mini { width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0; overflow: hidden; background: linear-gradient(135deg,#a78bfa,#7c3aed); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; color: #fff; }' +
         '.chat-avatar-mini img { width: 100%; height: 100%; object-fit: cover; }' +
         '.chat-avatar-spacer { width: 28px; flex-shrink: 0; }' +
 
-        // Bubble wrapper
+        // Bubble wrap - WICHTIG: position relative + padding-bottom wenn reactions
         '.chat-bubble-wrap { max-width: 75%; display: flex; flex-direction: column; position: relative; }' +
+        '.chat-bubble-wrap:has(.chat-reaction) { padding-bottom: 14px; }' +
         '.chat-row-me .chat-bubble-wrap { align-items: flex-end; }' +
         '.chat-row-other .chat-bubble-wrap { align-items: flex-start; }' +
 
@@ -214,16 +207,20 @@ function getStyles() {
         '.audio-prog { height: 100%; width: 0%; background: currentColor; transition: width 0.1s; }' +
         '.audio-dur { font-size: 11px; opacity: 0.7; margin-top: 5px; font-weight: 500; }' +
 
-        // Reactions
-        '.chat-reactions { display: flex; gap: 3px; margin-top: -6px; padding: 0 6px; flex-wrap: wrap; min-height: 0; }' +
+        // ── REACTIONS NEBEN BUBBLE (Insta-Style) ──
+        '.chat-reactions { display: flex; gap: 3px; flex-wrap: wrap; min-height: 0; padding: 0; margin: 0; }' +
         '.chat-reactions:empty { display: none; }' +
-        '.chat-reaction { background: var(--bg2); border: 2px solid var(--bg); padding: 3px 8px; border-radius: 999px; font-size: 13px; line-height: 1; box-shadow: 0 2px 6px rgba(0,0,0,0.3); animation: react-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }' +
-        '.chat-reaction.mine { background: linear-gradient(135deg,#a78bfa,#7c3aed); color: #fff; border-color: var(--bg2); }' +
+        '.chat-reactions:not(:empty) { position: absolute; bottom: -8px; z-index: 5; }' +
+        '.chat-row-me .chat-reactions:not(:empty) { right: 8px; }' +
+        '.chat-row-other .chat-reactions:not(:empty) { left: 8px; }' +
+        '.chat-reaction { background: var(--bg2); border: 2.5px solid var(--bg); padding: 3px 8px; border-radius: 999px; font-size: 13px; line-height: 1; box-shadow: 0 2px 8px rgba(0,0,0,0.4); animation: react-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }' +
+        '.chat-reaction.mine { background: linear-gradient(135deg,#a78bfa,#7c3aed); color: #fff; border-color: var(--bg); }' +
         '.chat-reaction b { font-size: 11px; opacity: 0.8; margin-left: 2px; font-weight: 700; }' +
         '@keyframes react-pop { 0% { transform: scale(0); } 70% { transform: scale(1.15); } 100% { transform: scale(1); } }' +
 
-        // Status
+        // Status (push down wenn reactions present)
         '.chat-status { font-size: 11px; color: var(--muted); margin-top: 4px; padding: 0 6px; font-weight: 500; }' +
+        '.chat-bubble-wrap:has(.chat-reaction) .chat-status { margin-top: 14px; }' +
         '.chat-status.read { color: #4dabf7; }' +
         '.chat-status.pending { animation: pending-pulse 1.4s ease-in-out infinite; }' +
         '@keyframes pending-pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }' +
@@ -239,7 +236,7 @@ function getStyles() {
         '.chat-empty-text { font-weight: 700; color: var(--text); margin-bottom: 6px; font-size: 17px; }' +
         '.chat-empty-sub { font-size: 13px; color: var(--muted); line-height: 1.5; max-width: 240px; margin: 0 auto; }' +
 
-        // Reaction picker
+        // Picker
         '.chat-react-picker { position: fixed; z-index: 200; background: var(--bg2); border: 1px solid rgba(255,255,255,0.1); border-radius: 999px; padding: 6px 8px; box-shadow: 0 12px 32px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05); display: none; gap: 2px; backdrop-filter: blur(20px); }' +
         '.chat-react-picker.show { display: flex; animation: picker-pop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1); }' +
         '@keyframes picker-pop { from { transform: scale(0.5) translateY(12px); opacity: 0; } to { transform: scale(1) translateY(0); opacity: 1; } }' +
