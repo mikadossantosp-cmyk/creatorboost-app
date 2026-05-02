@@ -1271,6 +1271,10 @@ self.addEventListener('notificationclick',e=>{
         return res.end(`<!DOCTYPE html><html lang="de"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>CreatorX</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" type="image/png" href="/icon-512.png?v=22">
+<link rel="apple-touch-icon" href="/icon-512.png?v=22">
+<meta name="theme-color" content="#ff6b6b">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
