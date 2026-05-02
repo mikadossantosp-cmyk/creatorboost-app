@@ -1,4 +1,4 @@
-// Chat-Detail v7 - Aggressive Reactions Fix + Header Polish
+// Chat-Detail v8 - Reactions als STICKER unter bubble (margin-top negative)
 
 let appPerf = '';
 try { appPerf = require('./app-perf'); } catch(e) {}
@@ -40,8 +40,7 @@ module.exports = function renderChatBubbles(opts) {
     const otherPic = ladeBild(otherUid, 'profilepic');
     const otherInsta = otherUser.instagram;
     const otherName = otherUser.spitzname || otherUser.name || 'User';
-    const otherAvatarSrc = otherPic ?
-        '/appbild/' + otherUid + '/profilepic' :
+    const otherAvatarSrc = otherPic ? '/appbild/' + otherUid + '/profilepic' :
         (otherInsta ? 'https://unavatar.io/instagram/' + otherInsta : '');
 
     let html = '';
@@ -73,10 +72,7 @@ module.exports = function renderChatBubbles(opts) {
         } else if (m.audio) {
             bubbleContent = '<div class="chat-audio">' +
                 '<button class="chat-audio-btn" onclick="toggleAudio(this)" data-src="' + m.audio + '">▶</button>' +
-                '<div class="chat-audio-info">' +
-                    '<div class="chat-audio-bar"><div class="audio-prog"></div></div>' +
-                    '<div class="audio-dur">🎤 Sprachnachricht</div>' +
-                '</div>' +
+                '<div class="chat-audio-info"><div class="chat-audio-bar"><div class="audio-prog"></div></div><div class="audio-dur">🎤 Sprachnachricht</div></div>' +
                 '</div>';
         } else {
             bubbleContent = '<div class="chat-text">' + esc(m.text || '') + '</div>';
@@ -84,14 +80,10 @@ module.exports = function renderChatBubbles(opts) {
 
         let backendReactions = {};
         if (m.reactions && Object.keys(m.reactions).length > 0) {
-            Object.values(m.reactions).forEach(emoji => {
-                backendReactions[emoji] = (backendReactions[emoji] || 0) + 1;
-            });
+            Object.values(m.reactions).forEach(emoji => { backendReactions[emoji] = (backendReactions[emoji] || 0) + 1; });
         }
         const reactionsHtml = '<div class="chat-reactions" data-ts="' + ts + '" data-backend="' + esc(JSON.stringify(backendReactions)) + '">' +
-            Object.entries(backendReactions).map(([emo, n]) =>
-                '<span class="chat-reaction">' + emo + (n > 1 ? ' <b>' + n + '</b>' : '') + '</span>'
-            ).join('') +
+            Object.entries(backendReactions).map(([emo, n]) => '<span class="chat-reaction">' + emo + (n > 1 ? ' <b>' + n + '</b>' : '') + '</span>').join('') +
         '</div>';
 
         let statusHtml = '';
@@ -99,17 +91,14 @@ module.exports = function renderChatBubbles(opts) {
             const isRead = m.read === true;
             statusHtml = '<div class="chat-status' + (isRead ? ' read' : '') + '">' +
                 (isRead ? 'Gesehen' : 'Gesendet') + ' · ' + formatTimeOnly(ts) +
-                '</div>';
+            '</div>';
         }
 
         const showAvatar = !isMe && isLastFromSender;
         const avatarHtml = showAvatar ?
             '<div class="chat-avatar-mini">' +
-                (otherAvatarSrc ?
-                    '<img src="' + otherAvatarSrc + '" alt="" loading="lazy">' :
-                    '<span>' + esc(otherName.slice(0, 1)) + '</span>') +
-            '</div>' :
-            '<div class="chat-avatar-spacer"></div>';
+                (otherAvatarSrc ? '<img src="' + otherAvatarSrc + '" alt="" loading="lazy">' : '<span>' + esc(otherName.slice(0, 1)) + '</span>') +
+            '</div>' : '<div class="chat-avatar-spacer"></div>';
 
         const groupClass = sameSender ? ' chat-row-grouped' : '';
         const lastClass = isLastFromSender ? ' chat-row-last' : '';
@@ -119,14 +108,9 @@ module.exports = function renderChatBubbles(opts) {
             '<div class="chat-bubble-wrap">' +
                 '<div class="chat-bubble" data-ts="' + ts + '" ' +
                     'ontouchstart="chatLongPress(event,this,' + ts + ')" ' +
-                    'ontouchend="chatLongPressEnd()" ' +
-                    'ontouchmove="chatLongPressEnd()" ' +
-                    'ontouchcancel="chatLongPressEnd()" ' +
-                    'onmousedown="chatLongPress(event,this,' + ts + ')" ' +
-                    'onmouseup="chatLongPressEnd()" ' +
-                    'onmouseleave="chatLongPressEnd()" ' +
-                    'onclick="chatDoubleTap(event,this,' + ts + ')" ' +
-                    'oncontextmenu="event.preventDefault(); chatShowReactions(this,' + ts + ')">' +
+                    'ontouchend="chatLongPressEnd()" ontouchmove="chatLongPressEnd()" ontouchcancel="chatLongPressEnd()" ' +
+                    'onmousedown="chatLongPress(event,this,' + ts + ')" onmouseup="chatLongPressEnd()" onmouseleave="chatLongPressEnd()" ' +
+                    'onclick="chatDoubleTap(event,this,' + ts + ')" oncontextmenu="event.preventDefault(); chatShowReactions(this,' + ts + ')">' +
                     bubbleContent +
                 '</div>' +
                 reactionsHtml +
@@ -144,13 +128,7 @@ module.exports = function renderChatBubbles(opts) {
 function getStyles() {
     return '<style>' +
         'html { scroll-behavior: smooth; }' +
-        '#chat-msgs { padding: 16px 0 140px; display: flex; flex-direction: column; will-change: transform; }' +
-
-        // ── TOPBAR FIX (kleinerer Avatar 36px + Online-Punkt outside Image) ──
-        '.topbar > a[href^="/profil/"] { gap: 10px !important; }' +
-        '.topbar > a[href^="/profil/"] > div { width: 36px !important; height: 36px !important; font-size: 14px !important; box-shadow: 0 0 0 2.5px rgba(34,197,94,0.6) !important; position: relative !important; }' +
-        '.topbar > a[href^="/profil/"] > div::after { content: "" !important; position: absolute !important; bottom: -2px !important; right: -2px !important; width: 11px !important; height: 11px !important; border-radius: 50% !important; background: #22c55e !important; border: 2.5px solid var(--bg) !important; z-index: 5 !important; }' +
-        '.topbar > a[href^="/profil/"] > span:last-child { font-size: 15px !important; font-weight: 700 !important; }' +
+        '#chat-msgs { padding: 16px 0 140px; display: flex; flex-direction: column; }' +
 
         // Send-Bar Pill + Lila Send
         '#msg-input.form-input { background: rgba(255,255,255,0.06) !important; border: 1.5px solid rgba(255,255,255,0.08) !important; border-radius: 22px !important; padding: 10px 16px !important; transition: border-color 0.2s, background 0.2s !important; font-size: 14.5px !important; color: var(--text) !important; }' +
@@ -159,11 +137,9 @@ function getStyles() {
         'button[onclick="sendMsg()"] { background: linear-gradient(135deg,#a78bfa,#7c3aed) !important; box-shadow: 0 4px 14px rgba(124,58,237,0.4) !important; transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1) !important; }' +
         'button[onclick="sendMsg()"]:active { transform: scale(0.85) !important; }' +
 
-        // Date separator
         '.chat-date-sep { text-align: center; margin: 24px 0 12px; }' +
         '.chat-date-sep span { display: inline-block; padding: 4px 14px; font-size: 11px; font-weight: 600; color: var(--muted); background: rgba(255,255,255,0.04); border-radius: 999px; letter-spacing: 0.3px; }' +
 
-        // Rows
         '.chat-row { display: flex; align-items: flex-end; gap: 8px; padding: 0 14px; margin-top: 12px; animation: msg-in 0.3s cubic-bezier(0.16, 1, 0.3, 1); }' +
         '.chat-row-grouped { margin-top: 2px; animation: none; }' +
         '@keyframes msg-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }' +
@@ -174,12 +150,10 @@ function getStyles() {
         '.chat-avatar-mini img { width: 100%; height: 100%; object-fit: cover; }' +
         '.chat-avatar-spacer { width: 28px; flex-shrink: 0; }' +
 
-        // Bubble wrap - position relative for absolute reactions
-        '.chat-bubble-wrap { max-width: 75%; display: flex; flex-direction: column; position: relative !important; }' +
+        '.chat-bubble-wrap { max-width: 75%; display: flex; flex-direction: column; }' +
         '.chat-row-me .chat-bubble-wrap { align-items: flex-end; }' +
         '.chat-row-other .chat-bubble-wrap { align-items: flex-start; }' +
 
-        // Bubbles
         '.chat-bubble { padding: 9px 13px; border-radius: 22px; font-size: 14.5px; line-height: 1.38; word-break: break-word; user-select: none; -webkit-user-select: none; cursor: pointer; transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1); max-width: 100%; position: relative; }' +
         '.chat-bubble:active { transform: scale(0.96); }' +
         '.chat-row-me .chat-bubble { background: linear-gradient(135deg,#a78bfa 0%,#8b5cf6 50%,#7c3aed 100%); color: #fff; border-radius: 22px 22px 6px 22px; box-shadow: 0 2px 8px rgba(124,58,237,0.2); }' +
@@ -206,36 +180,33 @@ function getStyles() {
         '.audio-prog { height: 100%; width: 0%; background: currentColor; transition: width 0.1s; }' +
         '.audio-dur { font-size: 11px; opacity: 0.7; margin-top: 5px; font-weight: 500; }' +
 
-        // ── REACTIONS - SUPER AGGRESSIVE OVERRIDE ──
-        '.chat-bubble-wrap > .chat-reactions { display: flex !important; gap: 2px !important; flex-wrap: wrap !important; padding: 0 !important; margin: 0 !important; min-height: 0 !important; }' +
-        '.chat-bubble-wrap > .chat-reactions:empty { display: none !important; }' +
-        '.chat-bubble-wrap > .chat-reactions:not(:empty) { position: absolute !important; bottom: -10px !important; z-index: 10 !important; pointer-events: auto !important; }' +
-        '.chat-row-me .chat-bubble-wrap > .chat-reactions:not(:empty) { right: 6px !important; left: auto !important; }' +
-        '.chat-row-other .chat-bubble-wrap > .chat-reactions:not(:empty) { left: 6px !important; right: auto !important; }' +
-        '.chat-bubble-wrap > .chat-reactions > .chat-reaction { display: inline-flex !important; align-items: center !important; background: var(--bg2) !important; border: 2.5px solid var(--bg) !important; padding: 2px 7px !important; border-radius: 999px !important; font-size: 13px !important; line-height: 1 !important; box-shadow: 0 2px 8px rgba(0,0,0,0.5) !important; max-width: none !important; width: auto !important; min-width: 0 !important; color: inherit !important; animation: react-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) !important; }' +
-        '.chat-bubble-wrap > .chat-reactions > .chat-reaction.mine { background: linear-gradient(135deg,#a78bfa,#7c3aed) !important; color: #fff !important; border-color: var(--bg) !important; }' +
-        '.chat-bubble-wrap > .chat-reactions > .chat-reaction > b { font-size: 11px !important; opacity: 0.8 !important; margin-left: 3px !important; font-weight: 700 !important; }' +
-        '@keyframes react-pop { 0% { transform: scale(0); } 70% { transform: scale(1.15); } 100% { transform: scale(1); } }' +
+        // ── REACTIONS als STICKER auf Bubble-Ecke (Insta-Style) ──
+        '.chat-reactions { display: flex; gap: 2px; padding: 0; margin: -10px 0 0 0; z-index: 5; position: relative; pointer-events: auto; }' +
+        '.chat-reactions:empty { display: none; }' +
+        // Bei eigenen msgs (rechts ausgerichtet): reaction klebt UNTEN LINKS am bubble (nach aussen, weg von der msg-side)
+        '.chat-row-me .chat-reactions { align-self: flex-end; margin-right: 8px; }' +
+        // Bei anderen msgs (links ausgerichtet): reaction klebt UNTEN RECHTS
+        '.chat-row-other .chat-reactions { align-self: flex-start; margin-left: 8px; }' +
+        '.chat-reaction { display: inline-flex; align-items: center; background: var(--bg2); border: 2.5px solid var(--bg); padding: 3px 8px; border-radius: 999px; font-size: 13px; line-height: 1; box-shadow: 0 3px 10px rgba(0,0,0,0.5); animation: react-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }' +
+        '.chat-reaction.mine { background: linear-gradient(135deg,#a78bfa,#7c3aed); color: #fff; border-color: var(--bg); }' +
+        '.chat-reaction b { font-size: 11px; opacity: 0.85; margin-left: 3px; font-weight: 700; }' +
+        '@keyframes react-pop { 0% { transform: scale(0); } 70% { transform: scale(1.2); } 100% { transform: scale(1); } }' +
 
-        // Status (mehr margin wenn reactions)
         '.chat-status { font-size: 11px; color: var(--muted); margin-top: 4px; padding: 0 6px; font-weight: 500; }' +
-        '.chat-bubble-wrap:has(.chat-reaction) > .chat-status { margin-top: 16px !important; }' +
+        '.chat-bubble-wrap:has(.chat-reaction) .chat-status { margin-top: 12px; }' +
         '.chat-status.read { color: #4dabf7; }' +
         '.chat-status.pending { animation: pending-pulse 1.4s ease-in-out infinite; }' +
         '@keyframes pending-pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }' +
 
-        // Heart-Pop
         '.chat-heart-pop { position: absolute; pointer-events: none; font-size: 80px; opacity: 0; animation: heart-pop 1s ease-out forwards; z-index: 50; }' +
         '@keyframes heart-pop { 0% { opacity: 0; transform: translate(-50%, -50%) scale(0); } 20% { opacity: 1; transform: translate(-50%, -50%) scale(1.4); } 80% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; transform: translate(-50%, -150%) scale(1.2); } }' +
 
-        // Empty
         '.chat-empty { padding: 100px 32px; text-align: center; }' +
         '.chat-empty-icon { font-size: 64px; margin-bottom: 18px; opacity: 0.5; animation: wave 2s ease-in-out infinite; transform-origin: 70% 70%; }' +
         '@keyframes wave { 0%, 100% { transform: rotate(0deg); } 25% { transform: rotate(-15deg); } 75% { transform: rotate(15deg); } }' +
         '.chat-empty-text { font-weight: 700; color: var(--text); margin-bottom: 6px; font-size: 17px; }' +
         '.chat-empty-sub { font-size: 13px; color: var(--muted); line-height: 1.5; max-width: 240px; margin: 0 auto; }' +
 
-        // Picker
         '.chat-react-picker { position: fixed; z-index: 200; background: var(--bg2); border: 1px solid rgba(255,255,255,0.1); border-radius: 999px; padding: 6px 8px; box-shadow: 0 12px 32px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05); display: none; gap: 2px; backdrop-filter: blur(20px); }' +
         '.chat-react-picker.show { display: flex; animation: picker-pop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1); }' +
         '@keyframes picker-pop { from { transform: scale(0.5) translateY(12px); opacity: 0; } to { transform: scale(1) translateY(0); opacity: 1; } }' +
@@ -260,13 +231,8 @@ function getScripts(myUid, otherUid) {
     return '<script>' +
         'const CHAT_KEY = "' + esc(chatKey) + '";' +
         'const REACT_STORAGE_KEY = "reactions_" + CHAT_KEY;' +
-        'function loadLocalReactions() {' +
-            'try { return JSON.parse(localStorage.getItem(REACT_STORAGE_KEY) || "{}"); }' +
-            'catch(e) { return {}; }' +
-        '}' +
-        'function saveLocalReactions(map) {' +
-            'try { localStorage.setItem(REACT_STORAGE_KEY, JSON.stringify(map)); } catch(e) {}' +
-        '}' +
+        'function loadLocalReactions() { try { return JSON.parse(localStorage.getItem(REACT_STORAGE_KEY) || "{}"); } catch(e) { return {}; } }' +
+        'function saveLocalReactions(map) { try { localStorage.setItem(REACT_STORAGE_KEY, JSON.stringify(map)); } catch(e) {} }' +
         'function renderAllReactions() {' +
             'const local = loadLocalReactions();' +
             'document.querySelectorAll(".chat-reactions").forEach(box => {' +
@@ -282,41 +248,23 @@ function getScripts(myUid, otherUid) {
             '});' +
         '}' +
         'let chatPressTimer = null;' +
-        'let chatActiveBubble = null;' +
         'let chatActiveTs = 0;' +
         'let chatLastTap = 0;' +
         'let chatLastTapBubble = null;' +
         'function chatLongPress(e, el, ts) {' +
-            'chatPressTimer = setTimeout(() => {' +
-                'chatActiveBubble = el;' +
-                'chatActiveTs = ts;' +
-                'chatShowReactions(el, ts);' +
-                'if (navigator.vibrate) navigator.vibrate(15);' +
-            '}, 380);' +
+            'chatPressTimer = setTimeout(() => { chatActiveTs = ts; chatShowReactions(el, ts); if (navigator.vibrate) navigator.vibrate(15); }, 380);' +
         '}' +
-        'function chatLongPressEnd() {' +
-            'if (chatPressTimer) clearTimeout(chatPressTimer);' +
-            'chatPressTimer = null;' +
-        '}' +
+        'function chatLongPressEnd() { if (chatPressTimer) clearTimeout(chatPressTimer); chatPressTimer = null; }' +
         'function chatDoubleTap(e, el, ts) {' +
             'const now = Date.now();' +
             'if (chatLastTapBubble === el && (now - chatLastTap) < 350) {' +
-                'chatLastTap = 0;' +
-                'chatHeartPop(el);' +
-                'chatActiveTs = ts;' +
-                'chatPickReaction("❤️");' +
-            '} else {' +
-                'chatLastTap = now;' +
-                'chatLastTapBubble = el;' +
-            '}' +
+                'chatLastTap = 0; chatHeartPop(el); chatActiveTs = ts; chatPickReaction("❤️");' +
+            '} else { chatLastTap = now; chatLastTapBubble = el; }' +
         '}' +
         'function chatHeartPop(el) {' +
-            'const heart = document.createElement("div");' +
-            'heart.className = "chat-heart-pop";' +
-            'heart.textContent = "❤️";' +
+            'const heart = document.createElement("div"); heart.className = "chat-heart-pop"; heart.textContent = "❤️";' +
             'const r = el.getBoundingClientRect();' +
-            'heart.style.left = (r.left + r.width / 2) + "px";' +
-            'heart.style.top = (r.top + r.height / 2) + "px";' +
+            'heart.style.left = (r.left + r.width / 2) + "px"; heart.style.top = (r.top + r.height / 2) + "px";' +
             'document.body.appendChild(heart);' +
             'setTimeout(() => heart.remove(), 1000);' +
             'if (navigator.vibrate) navigator.vibrate(10);' +
@@ -326,14 +274,9 @@ function getScripts(myUid, otherUid) {
             'const r = el.getBoundingClientRect();' +
             'picker.style.left = Math.max(8, Math.min(window.innerWidth - 280, r.left + r.width / 2 - 140)) + "px";' +
             'picker.style.top = Math.max(60, r.top - 60) + "px";' +
-            'picker.classList.add("show");' +
-            'chatActiveBubble = el;' +
-            'chatActiveTs = ts;' +
+            'picker.classList.add("show"); chatActiveTs = ts;' +
         '}' +
-        'function chatHidePicker() {' +
-            'document.getElementById("chat-react-picker").classList.remove("show");' +
-            'chatActiveBubble = null;' +
-        '}' +
+        'function chatHidePicker() { document.getElementById("chat-react-picker").classList.remove("show"); }' +
         'document.addEventListener("click", e => {' +
             'const picker = document.getElementById("chat-react-picker");' +
             'if (picker && !picker.contains(e.target) && !e.target.closest(".chat-bubble")) chatHidePicker();' +
@@ -343,17 +286,12 @@ function getScripts(myUid, otherUid) {
             'const ts = String(chatActiveTs);' +
             'chatHidePicker();' +
             'const local = loadLocalReactions();' +
-            'if (local[ts] === emoji) { delete local[ts]; }' +
-            'else { local[ts] = emoji; }' +
+            'if (local[ts] === emoji) { delete local[ts]; } else { local[ts] = emoji; }' +
             'saveLocalReactions(local);' +
             'renderAllReactions();' +
-            'try {' +
-                'fetch("/api/react-message", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ chatKey: CHAT_KEY, timestamp: Number(ts), emoji: emoji }) }).catch(()=>{});' +
-            '} catch(e) {}' +
+            'try { fetch("/api/react-message", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ chatKey: CHAT_KEY, timestamp: Number(ts), emoji: emoji }) }).catch(()=>{}); } catch(e) {}' +
         '}' +
         'renderAllReactions();' +
-        'requestAnimationFrame(() => {' +
-            'window.scrollTo({ top: document.body.scrollHeight, behavior: "instant" });' +
-        '});' +
+        'requestAnimationFrame(() => window.scrollTo({ top: document.body.scrollHeight, behavior: "instant" }));' +
         '<\/script>';
 }
