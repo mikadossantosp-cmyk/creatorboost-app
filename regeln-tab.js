@@ -9,18 +9,21 @@ module.exports = `
   .regeln-meta { font-size:11px; color:var(--muted); }
   .regeln-tabnav { position:sticky; top:0; z-index:5; background:var(--bg); display:flex; gap:6px; overflow-x:auto; padding:10px 16px; border-bottom:1px solid var(--border2); -webkit-overflow-scrolling:touch; scrollbar-width:none; }
   .regeln-tabnav::-webkit-scrollbar { display:none; }
-  .regeln-tabnav a { flex-shrink:0; padding:7px 14px; border-radius:999px; background:var(--bg3); color:var(--muted); font-size:12px; font-weight:700; text-decoration:none; border:1px solid var(--border2); white-space:nowrap; transition:all .2s; }
-  .regeln-tabnav a:hover, .regeln-tabnav a.active { background:linear-gradient(135deg,#a78bfa,#7c3aed); color:#fff; border-color:transparent; }
-  .regeln-section { padding:18px 16px; scroll-margin-top:60px; }
+  .regeln-tabnav button { flex-shrink:0; padding:7px 14px; border-radius:999px; background:var(--bg3); color:var(--muted); font-size:12px; font-weight:700; border:1px solid var(--border2); white-space:nowrap; cursor:pointer; transition:all .2s; font-family:inherit; }
+  .regeln-tabnav button:hover { background:var(--bg4); color:var(--text); }
+  .regeln-tabnav button.active { background:linear-gradient(135deg,#a78bfa,#7c3aed); color:#fff; border-color:transparent; }
+  .regeln-section { display:none; padding:18px 16px; animation:fadeIn .25s ease; }
+  .regeln-section.active { display:block; }
+  @keyframes fadeIn { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:translateY(0); } }
   .regeln-card { background:var(--bg3); border:1px solid var(--border2); border-radius:16px; padding:18px; margin-bottom:14px; }
   .regeln-card h2 { font-size:15px; font-weight:800; margin:0 0 12px; display:flex; align-items:center; gap:8px; }
   .regeln-card h3 { font-size:13px; font-weight:700; color:#a78bfa; margin:14px 0 8px; text-transform:uppercase; letter-spacing:.5px; }
   .regeln-card p { font-size:13px; color:var(--text); line-height:1.6; margin:0 0 10px; }
   .regeln-card ul { padding-left:0; margin:6px 0 10px; list-style:none; }
   .regeln-card li { font-size:13px; line-height:1.7; padding-left:6px; }
-  .regeln-row { display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-bottom:1px dashed var(--border2); font-size:13px; }
+  .regeln-row { display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-bottom:1px dashed var(--border2); font-size:13px; gap:10px; }
   .regeln-row:last-child { border-bottom:0; }
-  .regeln-row .konsequenz { font-size:11px; padding:3px 9px; border-radius:999px; font-weight:700; }
+  .regeln-row .konsequenz { font-size:11px; padding:3px 9px; border-radius:999px; font-weight:700; flex-shrink:0; }
   .k-block { background:rgba(239,68,68,.15); color:#ef4444; }
   .k-warn { background:rgba(245,158,11,.15); color:#f59e0b; }
   .k-trash { background:rgba(148,163,184,.15); color:#94a3b8; }
@@ -31,7 +34,6 @@ module.exports = `
   .badge-row .b-xp { font-size:11px; color:var(--muted); }
   .badge-row .b-perk { font-size:11px; color:#a78bfa; font-weight:700; margin-left:8px; }
   .why-box { background:rgba(168,85,247,.08); border-left:3px solid #a78bfa; border-radius:8px; padding:10px 12px; margin-top:10px; font-size:12px; color:var(--muted); line-height:1.6; }
-  .ok-bad { display:grid; grid-template-columns:1fr; gap:10px; margin:10px 0; }
   .ok-card, .bad-card { padding:10px 12px; border-radius:10px; font-size:12px; line-height:1.7; }
   .ok-card { background:rgba(34,197,94,.1); border:1px solid rgba(34,197,94,.25); }
   .bad-card { background:rgba(239,68,68,.1); border:1px solid rgba(239,68,68,.25); }
@@ -45,19 +47,19 @@ module.exports = `
     <div class="regeln-meta">Stand 02.05.2026 · v1.1</div>
   </div>
 
-  <nav class="regeln-tabnav">
-    <a href="#r-mission">🎯 Mission</a>
-    <a href="#r-start">🚀 Start</a>
-    <a href="#r-links">🔗 Links</a>
-    <a href="#r-respekt">🤝 Respekt</a>
-    <a href="#r-missionen">🎯 Missionen</a>
-    <a href="#r-superlinks">🌟 Superlinks</a>
-    <a href="#r-warns">⚠️ Warns</a>
-    <a href="#r-xp">📈 XP</a>
-    <a href="#r-shop">💎 Shop</a>
+  <nav class="regeln-tabnav" id="regeln-tabs">
+    <button data-target="r-mission" class="active">🎯 Mission</button>
+    <button data-target="r-start">🚀 Start</button>
+    <button data-target="r-links">🔗 Links</button>
+    <button data-target="r-respekt">🤝 Respekt</button>
+    <button data-target="r-missionen">🎯 Missionen</button>
+    <button data-target="r-superlinks">🌟 Superlinks</button>
+    <button data-target="r-warns">⚠️ Warns</button>
+    <button data-target="r-xp">📈 XP</button>
+    <button data-target="r-shop">💎 Shop</button>
   </nav>
 
-  <section id="r-mission" class="regeln-section">
+  <section id="r-mission" class="regeln-section active">
     <div class="regeln-card">
       <h2>🎯 Unsere Mission</h2>
       <p>Wir sind eine Community, die sich gegenseitig auf Instagram pusht. Echte Likes, echte Kommentare, echtes Wachstum.</p>
@@ -214,28 +216,24 @@ module.exports = `
     </div>
   </section>
 
-  <div style="padding:16px;text-align:center;font-size:11px;color:var(--muted);border-top:1px solid var(--border2);margin-top:12px">
-    📅 Stand 02.05.2026 · v1.1<br>
-    ✏️ Neu: Elite+ Badge (ab 10.000 XP)<br>
-    💬 Fragen? /help oder Admin-DM
-  </div>
-
 </div>
+
 <script>
 (function(){
-  const tabs = document.querySelectorAll('.regeln-tabnav a');
-  function setActive(id){
-    tabs.forEach(t => t.classList.toggle('active', t.getAttribute('href') === '#' + id));
-  }
-  tabs.forEach(t => t.addEventListener('click', e => {
-    setActive(t.getAttribute('href').slice(1));
-  }));
-  if (tabs.length) setActive(tabs[0].getAttribute('href').slice(1));
-  const sections = document.querySelectorAll('.regeln-section');
-  const io = new IntersectionObserver(entries => {
-    entries.forEach(e => { if (e.isIntersecting) setActive(e.target.id); });
-  }, { rootMargin: '-20% 0% -70% 0%' });
-  sections.forEach(s => io.observe(s));
+  const nav = document.getElementById('regeln-tabs');
+  if (!nav) return;
+  const buttons = nav.querySelectorAll('button[data-target]');
+  buttons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const target = btn.getAttribute('data-target');
+      buttons.forEach(b => b.classList.toggle('active', b === btn));
+      document.querySelectorAll('.regeln-section').forEach(s => {
+        s.classList.toggle('active', s.id === target);
+      });
+      // Scroll Tab in Sicht falls abgeschnitten
+      btn.scrollIntoView({ behavior:'smooth', inline:'center', block:'nearest' });
+    });
+  });
 })();
 <\/script>
 `;
