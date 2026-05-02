@@ -520,6 +520,7 @@ function layout(content, session, page='feed', lang='de') {
 </head>
 <body>
 <div class="toast" id="toast"></div>
+<a href="/download-app" id="apk-download-btn" style="display:none;position:fixed;bottom:calc(120px + var(--safe-bottom,0px));left:50%;transform:translateX(-50%);background:#22c55e;color:#fff;border-radius:24px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;z-index:9997;text-decoration:none;white-space:nowrap;box-shadow:0 4px 16px rgba(34,197,94,.4)">📦 APK herunterladen</a>
 <div id="pwa-install-btn" onclick="installPWA()" style="display:none;position:fixed;bottom:calc(70px + var(--safe-bottom,0px));left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#ff6b6b,#cc5de8);color:#fff;border:none;border-radius:24px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;z-index:9998;gap:8px;align-items:center;box-shadow:0 4px 16px rgba(255,107,107,.4);white-space:nowrap">📲 App installieren</div>
 <div class="plus-sheet" id="plus-sheet" onclick="if(event.target===this)closePlusSheet()">
   <div class="plus-sheet-inner">
@@ -743,6 +744,8 @@ function confirmCrop(){
       await fetch('/api/push-subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sub:sub.toJSON()})});
     }catch(e){}
   }).catch(()=>{});
+  // APK-Download Button: nur auf Android anzeigen wenn APK vorhanden
+  if(/Android/i.test(navigator.userAgent)){fetch('/download-app',{method:'HEAD'}).then(r=>{if(r.ok){const b=document.getElementById('apk-download-btn');if(b)b.style.display='block';}}).catch(()=>{});}
   let _installPrompt=null;
   window.addEventListener('beforeinstallprompt',e=>{
     e.preventDefault();
@@ -1764,11 +1767,24 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
             fs.writeFileSync(apkIn, Buffer.from(parsed.apk, 'base64'));
             execSync(`apksigner sign --v4-signing-enabled false --min-sdk-version 21 --ks "${ksPath}" --ks-pass pass:creatorx2024 --key-pass pass:creatorx2024 --ks-key-alias creatorx --out "${apkOut}" "${apkIn}"`, {timeout:60000});
             const signedBuf = fs.readFileSync(apkOut);
+            try { fs.writeFileSync(DATA_DIR + '/CreatorX-signed.apk', signedBuf); } catch(e) {}
             res.writeHead(200, {'Content-Type':'application/vnd.android.package-archive','Content-Disposition':'attachment; filename="CreatorX-signed.apk"','Content-Length':signedBuf.length,'Cache-Control':'no-store'});
             return res.end(signedBuf);
         } catch(e) {
             res.writeHead(500); return res.end('Signierfehler: ' + e.message);
         }
+    }
+
+    // ── APK DOWNLOAD ──
+    if (path === '/download-app') {
+        const apkPath = DATA_DIR + '/CreatorX-signed.apk';
+        if (!fs.existsSync(apkPath)) {
+            res.writeHead(200,{'Content-Type':'text/html; charset=utf-8'});
+            return res.end('<html><body style="font-family:sans-serif;background:#000;color:#fff;text-align:center;padding:40px"><div style="font-size:48px;margin-bottom:16px">📱</div><div style="font-size:18px;font-weight:700">App-Download nicht verfügbar</div><div style="font-size:14px;color:#aaa;margin-top:8px">Bitte später versuchen</div></body></html>');
+        }
+        const apkBuf = fs.readFileSync(apkPath);
+        res.writeHead(200,{'Content-Type':'application/vnd.android.package-archive','Content-Disposition':'attachment; filename="CreatorX.apk"','Content-Length':apkBuf.length,'Cache-Control':'public, max-age=3600'});
+        return res.end(apkBuf);
     }
 
     // ── ASSETLINKS (für APK/TWA) ──
