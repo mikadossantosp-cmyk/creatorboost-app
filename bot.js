@@ -1389,8 +1389,8 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
 
     // ── PWA MANIFEST ──
     if (path === '/manifest.json') {
-        res.writeHead(200,{'Content-Type':'application/manifest+json','Cache-Control':'no-cache, no-store, must-revalidate'});
-        return res.end(JSON.stringify({id:'/feed',name:'CreatorX',short_name:'CreatorX',start_url:'/feed',scope:'/',display:'standalone',background_color:'#000000',theme_color:'#ff6b6b',description:'Die kreative Community für Instagram Creators',orientation:'portrait',categories:['social','lifestyle'],icons:[{src:'/icon-512.png?v=22',sizes:'512x512',type:'image/png',purpose:'any'},{src:'/icon-512.png?v=22',sizes:'512x512',type:'image/png',purpose:'maskable'}]}));
+        res.writeHead(200,{'Content-Type':'application/manifest+json','Cache-Control':'no-store'});
+        return res.end(JSON.stringify({name:'CreatorX',short_name:'CreatorX',start_url:'/feed',scope:'/',display:'standalone',background_color:'#000000',theme_color:'#ff6b6b',icons:[{src:'/icon-192.png?v=22',sizes:'192x192',type:'image/png',purpose:'any'},{src:'/icon-512.png?v=22',sizes:'512x512',type:'image/png',purpose:'any maskable'}]}));
     }
 
     if (path === '/api/vapid-public-key') {
