@@ -469,7 +469,7 @@ textarea.form-input{resize:none;min-height:80px}
 /* ── EXPLORE ── */
 .explore-tabs{display:flex;flex-wrap:wrap;gap:8px;padding:8px 16px 12px;overflow-x:hidden}
 
-.explore-tab{flex:1 1 calc(33.333% - 6px);min-width:0;padding:7px 4px;border-radius:20px;font-size:11px;font-weight:700;background:var(--bg4);color:var(--muted);border:none;cursor:pointer;transition:all .2s;font-family:var(--font);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+.explore-tab{flex:1 1 calc(33.333% - 6px);min-width:0;padding:7px 4px;border-radius:20px;font-size:11px;font-weight:700;background:var(--bg4);color:var(--muted);border:none;cursor:pointer;transition:all .2s;font-family:var(--font);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .explore-tab.active{background:var(--accent);color:#fff;box-shadow:0 0 14px rgba(255,107,107,.35)}
 .explore-welcome{margin:0 16px 16px;border-radius:16px;overflow:hidden;position:relative;min-height:220px;background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460)}
 .highlight-card{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:14px;display:flex;align-items:center;gap:12px;margin-bottom:8px;text-decoration:none;color:var(--text);transition:background .2s}
@@ -576,7 +576,7 @@ ${session ? `<link rel="prefetch" href="/feed"><link rel="prefetch" href="/explo
     </div>
   </div>
 </div>
-<div id="cx-page">${content}</div>
+${content}
 ${session ? `
 <nav class="bottom-nav">
   <a href="/feed" class="nav-item ${page==='feed'?'active':''}">
@@ -601,65 +601,14 @@ ${session ? `
   </a>
 </nav>` : ''}
 <script>
-// SPA client-side router — instant tab switching
+// Instant nav visual feedback
 (function(){
-  var bar=document.createElement('div');
-  bar.style.cssText='position:fixed;top:0;left:0;height:3px;width:0;background:linear-gradient(90deg,#ff6b6b,#ff9f43);z-index:99999;pointer-events:none;opacity:0;transition:none';
-  document.body.appendChild(bar);
-  var barTimer=null;
-  function startPrg(){clearTimeout(barTimer);bar.style.transition='none';bar.style.width='0';bar.style.opacity='1';requestAnimationFrame(function(){bar.style.transition='width 6s cubic-bezier(.05,1,.5,1)';bar.style.width='80%';});}
-  function endPrg(){clearTimeout(barTimer);bar.style.transition='width .12s ease';bar.style.width='100%';barTimer=setTimeout(function(){bar.style.opacity='0';bar.style.width='0';},150);}
-
-  var SPA=['feed','explore','nachrichten','profil'];
-  function isSpa(href){try{var u=new URL(href,location.href);if(u.host!==location.host)return false;var p=u.pathname.replace(/^\//,'').split('/')[0];return SPA.indexOf(p)>=0;}catch(e){return false;}}
-
-  function setActiveNav(pathname){
-    var base='/'+pathname.replace(/^\//,'').split('/')[0];
-    document.querySelectorAll('.nav-item').forEach(function(n){n.classList.toggle('active',n.getAttribute('href')===base);});
-  }
-
-  function runScripts(container){
-    container.querySelectorAll('script').forEach(function(old){
-      var s=document.createElement('script');
-      s.textContent=old.textContent;
-      old.parentNode.replaceChild(s,old);
-    });
-  }
-
-  var busy=false;
-  function navigate(href){
-    if(busy)return;
-    busy=true;
-    var u=new URL(href,location.href);
-    setActiveNav(u.pathname);
-    startPrg();
-    fetch(href,{headers:{'X-CX-Nav':'1'},credentials:'same-origin'})
-      .then(function(r){if(!r.ok)throw 0;return r.json();})
-      .then(function(data){
-        var pg=document.getElementById('cx-page');
-        if(pg){pg.innerHTML=data.html;runScripts(pg);}
-        history.pushState({spa:href},'',href);
-        window.scrollTo(0,0);
-        endPrg();
-        busy=false;
-      })
-      .catch(function(){busy=false;endPrg();location.href=href;});
-  }
-
   document.addEventListener('click',function(e){
-    var a=e.target.closest('a[href]');
+    var a=e.target.closest('a.nav-item');
     if(!a)return;
-    var href=a.getAttribute('href');
-    if(!href||href.charAt(0)==='#'||a.hasAttribute('download')||a.target==='_blank')return;
-    if(!isSpa(href))return;
-    e.preventDefault();
-    var u=new URL(href,location.href);
-    if(u.pathname===location.pathname&&u.search===location.search){window.scrollTo(0,0);return;}
-    navigate(href);
-  },true);
-
-  window.addEventListener('popstate',function(e){if(e.state&&e.state.spa)navigate(e.state.spa);});
-  window.addEventListener('pageshow',function(){busy=false;endPrg();});
+    document.querySelectorAll('.nav-item').forEach(function(n){n.classList.remove('active');});
+    a.classList.add('active');
+  });
 })();
 async function checkNotifBadge(){
     try {
@@ -1672,14 +1621,7 @@ self.addEventListener('notificationclick',e=>{
     if (session) { session.lastSeen = Date.now(); }
 
     function redirect(to) { res.writeHead(302,{'Location':to}); res.end(); }
-    function html(content, page) {
-        if (req.headers['x-cx-nav'] === '1') {
-            res.writeHead(200,{'Content-Type':'application/json','Cache-Control':'no-cache, stale-while-revalidate=60'});
-            return res.end(JSON.stringify({html: content, page}));
-        }
-        res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-cache, stale-while-revalidate=60','X-App-Version':'21'});
-        res.end(layout(content,session,page,lang));
-    }
+    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-cache, stale-while-revalidate=60','X-App-Version':'21'}); res.end(layout(content,session,page,lang)); }
     function json(data, status=200) { res.writeHead(status,{'Content-Type':'application/json'}); res.end(JSON.stringify(data)); }
 
     // ── LANDING ──
@@ -4370,7 +4312,7 @@ async function nlDelete(id){if(!confirm('Eintrag löschen?'))return;const r=awai
   <div style="font-size:13px;color:var(--muted);margin-top:3px">Entdecke, lerne und wachse als Creator</div>
 </div>
 <div class="explore-tabs">
-  ${tabs.map(t=>`<a href="/explore?tab=${t.id}" class="explore-tab${tab===t.id?' active':''}" style="text-decoration:none">${t.label}</a>`).join('')}
+  ${tabs.map(t=>`<button class="explore-tab${tab===t.id?' active':''}" onclick="location.href='/explore?tab=${t.id}'">${t.label}</button>`).join('')}
 </div>
 <div id="explore-content" style="padding-bottom:${tab==='allgemein'?'0':'80px'}">
   ${tabContent[tab]||tabContent.allgemein}
