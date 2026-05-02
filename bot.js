@@ -3221,8 +3221,10 @@ async function createThread(){
                 const ts = new Date(m.timestamp);
                 const timeStr = String(ts.getHours()).padStart(2,'0')+':'+String(ts.getMinutes()).padStart(2,'0');
                 const bodyHtml = m.text ? `<div style="font-size:13px;line-height:1.5;margin-top:2px;word-break:break-word">${esc(m.text)}</div>` : '';
+                const canDelSSR = (m.uid && m.uid === myUid) || isAdmin;
+                const delBtnSSR = canDelSSR ? `<button onclick="deleteMsg(${m.timestamp},${m.msg_id||0})" style="background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;padding:2px 4px;margin-left:auto;opacity:.55;flex-shrink:0">🗑️</button>` : '';
                 return `<div style="display:flex;gap:10px;align-items:flex-start"><div style="width:36px;height:36px;border-radius:50%;background:${c};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;flex-shrink:0;position:relative;overflow:hidden${ring}">${ini}${m.uid?`<img src="/appbild/${esc(m.uid)}/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" onerror="this.remove()" loading="lazy">`:''}` +
-                    `</div><div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">${nameHtml}<span style="font-size:10px;color:var(--muted)">${timeStr}</span></div>${bodyHtml}</div></div>`;
+                    `</div><div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">${nameHtml}<span style="font-size:10px;color:var(--muted)">${timeStr}</span>${delBtnSSR}</div>${bodyHtml}</div></div>`;
               }).join('')
             : '<div style="text-align:center;padding:60px 20px;color:var(--muted)"><div style="font-size:40px;margin-bottom:12px">💬</div><div style="font-size:14px">Noch keine Nachrichten.<br>Schreib die erste!</div></div>';
         return html(`
