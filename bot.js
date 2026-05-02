@@ -3315,11 +3315,22 @@ async function createThread(){
     if(!d.ok){el.value=text;toast('❌ '+(d.error||'Fehler'));}
     else{cancelReply();setTimeout(load,1200);}
   };
-  window.deleteMsg=async function(ts,msgId){
-    if(!confirm('Nachricht löschen?'))return;
-    const r=await fetch('/api/delete-thread-msg',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({threadId:TID,timestamp:ts,msgId:msgId||null})});
-    const d=await r.json();
-    if(d.ok){knownHash='';await load();toast('✅ Gelöscht');}else toast('❌ '+(d.error||'Fehler'));
+  window.deleteMsg=function(ts,msgId){
+    let modal=document.getElementById('del-modal');
+    if(!modal){
+      modal=document.createElement('div');
+      modal.id='del-modal';
+      modal.style.cssText='position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.6);display:flex;align-items:flex-end;justify-content:center;padding-bottom:calc(20px + var(--safe-bottom,0px))';
+      document.body.appendChild(modal);
+    }
+    modal.innerHTML='<div style="background:var(--bg3);border-radius:20px 20px 16px 16px;padding:20px 20px 12px;width:100%;max-width:420px;text-align:center"><div style="font-size:15px;font-weight:700;margin-bottom:6px">Nachricht löschen?</div><div style="font-size:13px;color:var(--muted);margin-bottom:18px">Diese Aktion kann nicht rückgängig gemacht werden.</div><div style="display:flex;gap:10px"><button onclick="document.getElementById(\'del-modal\').style.display=\'none\'" style="flex:1;padding:12px;border-radius:12px;border:1px solid var(--border2);background:var(--bg4);color:var(--text);font-size:14px;font-weight:600;cursor:pointer">Abbrechen</button><button id="del-confirm-btn" style="flex:1;padding:12px;border-radius:12px;border:none;background:#ef4444;color:#fff;font-size:14px;font-weight:700;cursor:pointer">🗑️ Löschen</button></div></div>';
+    modal.style.display='flex';
+    document.getElementById('del-confirm-btn').onclick=async function(){
+      modal.style.display='none';
+      const r=await fetch('/api/delete-thread-msg',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({threadId:TID,timestamp:ts,msgId:msgId||null})});
+      const d=await r.json();
+      if(d.ok){knownHash='';await load();toast('✅ Gelöscht');}else toast('❌ '+(d.error||'Fehler'));
+    };
   };
   window.setReply=function(ts){
     const m=(window._lastMsgs||[]).find(m=>m.timestamp===ts);
