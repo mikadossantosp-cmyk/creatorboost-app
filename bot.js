@@ -115,7 +115,7 @@ function verifyTelegramLogin(data) {
 
 let _dataCache = null;
 let _dataCacheTime = 0;
-const DATA_CACHE_TTL = 30000; // 30 seconds
+const DATA_CACHE_TTL = 60000; // 60 seconds
 
 async function fetchBotRaw(path) {
     return new Promise(resolve => {
@@ -157,8 +157,8 @@ async function fetchBot(path) {
     return fetchBotRaw(path);
 }
 
-// Pre-warm cache on startup and refresh every 20 seconds
-setInterval(refreshDataCache, 20000);
+// Pre-warm cache on startup and refresh every 45 seconds
+setInterval(refreshDataCache, 45000);
 
 async function postBot(path, body) {
     const result = await new Promise(resolve => {
@@ -206,12 +206,18 @@ function badgeGradient(role) {
     return 'linear-gradient(135deg,#64748b,#94a3b8)';
 }
 
+const _bildCache = new Map();
 function ladeBild(uid, type) {
+    const key = uid + '_' + type;
+    const hit = _bildCache.get(key);
+    if (hit !== undefined && Date.now() - hit.ts < 120000) return hit.v;
+    let v = null;
     try {
         const f = DATA_DIR + '/bild_' + uid + '_' + type + '.txt';
-        if (fs.existsSync(f)) return fs.readFileSync(f, 'utf8');
+        if (fs.existsSync(f)) v = fs.readFileSync(f, 'utf8');
     } catch(e) {}
-    return null;
+    _bildCache.set(key, {v, ts: Date.now()});
+    return v;
 }
 
 function ladeProjectBild(uid, projectId) {
@@ -239,7 +245,6 @@ function ladePinnedLink(uid) {
 }
 
 const CSS = `
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap');
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
 --bg:#000;--bg2:#0a0a0a;--bg3:#111;--bg4:#1a1a1a;
@@ -516,6 +521,9 @@ function layout(content, session, page='feed', lang='de') {
 <link rel="apple-touch-icon" sizes="512x512" href="/icon-512.png?v=22">
 <meta name="apple-mobile-web-app-title" content="CreatorX">
 <title>CreatorX</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" media="print" onload="this.media='all'">
 ${session ? `<link rel="prefetch" href="/feed"><link rel="prefetch" href="/explore"><link rel="prefetch" href="/nachrichten"><link rel="prefetch" href="/profil">` : ''}
 <style>${CSS}</style>
 </head>
@@ -622,7 +630,7 @@ async function checkNotifBadge(){
     } catch(e){}
 }
 checkNotifBadge();
-setInterval(checkNotifBadge, 30000);
+setInterval(checkNotifBadge, 60000);
 async function checkMsgBadge(){
     try{
         const r=await fetch('/api/messages-count');
@@ -632,7 +640,7 @@ async function checkMsgBadge(){
     }catch(e){}
 }
 checkMsgBadge();
-setInterval(checkMsgBadge,15000);
+setInterval(checkMsgBadge,30000);
 function toast(msg,dur=2500){const t=document.getElementById('toast');if(!t)return;t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),dur);}
 function setTheme(t){document.documentElement.setAttribute('data-theme',t);fetch('/api/theme',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({theme:t})});}
 function setLang(l){fetch('/api/lang',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lang:l})}).then(()=>location.reload());}
@@ -1588,15 +1596,13 @@ self.addEventListener('notificationclick',e=>{
         const btype = parts[3];
         const bildFile = DATA_DIR + '/bild_' + buid + '_' + btype + '.txt';
         // Try local file first
-        if (fs.existsSync(bildFile)) {
-            try {
-                const data = fs.readFileSync(bildFile, 'utf8');
-                const mime = data.split(';')[0].replace('data:','');
-                const base64 = data.split(',')[1];
-                res.writeHead(200, {'Content-Type': mime, 'Cache-Control': 'public, max-age=3600'});
-                return res.end(Buffer.from(base64, 'base64'));
-            } catch(e) {}
-        }
+        try {
+            const data = fs.readFileSync(bildFile, 'utf8');
+            const mime = data.split(';')[0].replace('data:','');
+            const base64 = data.split(',')[1];
+            res.writeHead(200, {'Content-Type': mime, 'Cache-Control': 'public, max-age=86400, immutable'});
+            return res.end(Buffer.from(base64, 'base64'));
+        } catch(e) {}
         // Proxy to telegram-bot (separate Railway volume)
         if (MAINBOT_URL) {
             const botUrl = MAINBOT_URL + '/bild/' + buid + '/' + btype;
@@ -3247,7 +3253,7 @@ async function refreshLikes() {
         }
     } catch(e) {}
 }
-setInterval(refreshLikes, 5000);
+setInterval(refreshLikes, 30000);
 // Onboarding beim ersten Besuch
 try{if(!localStorage.getItem('cb_onboarded')){window.location.href='/onboarding';}}catch(e){}
 // Auto-open superlink sheet if redirected from + button
