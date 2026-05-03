@@ -665,6 +665,9 @@ async function openPlusSheet(){
     } else if(st.canPost && st.bonusLinks>0){
       icon.textContent='💎';txt.textContent=st.bonusLinks+' Extra-Link'+(st.bonusLinks>1?'s':'')+' verfügbar — wird nach dem Posten verbraucht';txt.style.color='#a78bfa';
       if(btn)btn.disabled=false;
+    } else if(st.canPost && st.badgeBonus>0){
+      icon.textContent='🏅';txt.textContent='Erfahrener Extra-Link heute verfügbar';txt.style.color='#8b5cf6';
+      if(btn)btn.disabled=false;
     } else {
       icon.textContent='❌';txt.textContent='Limit erreicht — kein Extra-Link vorhanden. Im Shop kaufen: 5 💎';txt.style.color='rgba(239,68,68,.9)';
       if(btn){btn.disabled=true;btn.style.opacity='.45';}
