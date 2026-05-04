@@ -2754,6 +2754,46 @@ p{line-height:1.65;color:var(--muted)}
         return json({ok:true});
     }
 
+    // Server-to-server push (vom main bot getriggert) — komplett zusätzlich, ändert nichts Bestehendes
+    if (path === '/api/push-notify' && req.method === 'POST') {
+        if (req.headers['x-bridge-secret'] !== BRIDGE_SECRET) return json({ok:false, error:'Forbidden'}, 403);
+        if (!webpush) return json({ok:false, error:'web-push nicht verfügbar'});
+        const body = await parseBody(req);
+        const targetUid = String(body.uid||'');
+        const title = String(body.title||'CreatorX').slice(0,80);
+        const text = String(body.body||'').slice(0,180);
+        const targetUrl = String(body.url||'/feed').slice(0,200);
+        if (!targetUid || !text) return json({ok:false, error:'Fehlende Felder'});
+        const payload = JSON.stringify({title, body:text, url:targetUrl});
+        let sent = 0, failed = 0;
+        for (const [hash, {uid, sub}] of Object.entries(pushSubs)) {
+            if (String(uid) !== targetUid) continue;
+            try { await webpush.sendNotification(sub, payload); sent++; }
+            catch(e) { failed++; if (e.statusCode===410||e.statusCode===404) delete pushSubs[hash]; }
+        }
+        if (sent || failed) savePushSubs();
+        return json({ok:true, sent, failed});
+    }
+    if (path === '/api/push-broadcast' && req.method === 'POST') {
+        if (req.headers['x-bridge-secret'] !== BRIDGE_SECRET) return json({ok:false, error:'Forbidden'}, 403);
+        if (!webpush) return json({ok:false, error:'web-push nicht verfügbar'});
+        const body = await parseBody(req);
+        const title = String(body.title||'CreatorX').slice(0,80);
+        const text = String(body.body||'').slice(0,180);
+        const targetUrl = String(body.url||'/feed').slice(0,200);
+        const exceptUid = String(body.exceptUid||'');
+        if (!text) return json({ok:false, error:'Fehlende Felder'});
+        const payload = JSON.stringify({title, body:text, url:targetUrl});
+        let sent = 0, failed = 0;
+        for (const [hash, {uid, sub}] of Object.entries(pushSubs)) {
+            if (exceptUid && String(uid) === exceptUid) continue;
+            try { await webpush.sendNotification(sub, payload); sent++; }
+            catch(e) { failed++; if (e.statusCode===410||e.statusCode===404) delete pushSubs[hash]; }
+        }
+        if (sent || failed) savePushSubs();
+        return json({ok:true, sent, failed});
+    }
+
     if (path === '/api/theme' && req.method === 'POST') {
         const body = await parseBody(req);
         if(session) { session.theme = body.theme||'dark'; saveSessions(); }
