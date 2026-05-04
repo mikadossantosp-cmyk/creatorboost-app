@@ -247,9 +247,9 @@ function ladePinnedLink(uid) {
 const CSS = `
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
---bg:#000;--bg2:#0a0a0a;--bg3:#111;--bg4:#1a1a1a;
---border:rgba(255,255,255,.1);--border2:rgba(255,255,255,.06);
---text:#fff;--muted:#999;--muted2:#666;
+--bg:#f5f5f5;--bg2:#ececec;--bg3:#fff;--bg4:#e0e0e0;
+--border:rgba(0,0,0,.1);--border2:rgba(0,0,0,.06);
+--text:#111;--muted:#666;--muted2:#999;
 --accent:#ff6b6b;--accent2:#ffa500;
 --green:#00c851;--blue:#4dabf7;--purple:#cc5de8;--gold:#ffd43b;
 --radius:16px;--radius-sm:10px;--radius-xs:6px;
@@ -258,9 +258,14 @@ const CSS = `
 --safe-bottom:env(safe-area-inset-bottom,0px);
 }
 [data-theme=light]{
---bg:#fafafa;--bg2:#f0f0f0;--bg3:#fff;--bg4:#e8e8e8;
+--bg:#f5f5f5;--bg2:#ececec;--bg3:#fff;--bg4:#e0e0e0;
 --border:rgba(0,0,0,.1);--border2:rgba(0,0,0,.06);
 --text:#111;--muted:#666;--muted2:#999;
+}
+[data-theme=dark]{
+--bg:#000;--bg2:#0a0a0a;--bg3:#111;--bg4:#1a1a1a;
+--border:rgba(255,255,255,.1);--border2:rgba(255,255,255,.06);
+--text:#fff;--muted:#999;--muted2:#666;
 }
 html{scroll-behavior:smooth;-webkit-tap-highlight-color:transparent}
 body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;margin:0 auto;padding-bottom:calc(70px + var(--safe-bottom));overflow-x:hidden}
@@ -510,7 +515,7 @@ textarea.form-input{resize:none;min-height:80px}
 `;
 
 function layout(content, session, page='feed', lang='de') {
-    return `<!DOCTYPE html><html lang="${lang}" data-theme="${session?.theme||'dark'}">
+    return `<!DOCTYPE html><html lang="${lang}" data-theme="${session?.theme||'light'}">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1712,7 +1717,7 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
         if (!found) { res.writeHead(302,{'Location':'/?error=1'}); return res.end(); }
         const [uid, u] = found;
         const sid = genSid();
-        sessions.set(sid, { uid: String(uid), name: u.name, username: u.username||null, theme: 'dark', lang: 'de', createdAt: Date.now() });
+        sessions.set(sid, { uid: String(uid), name: u.name, username: u.username||null, theme: 'light', lang: 'de', createdAt: Date.now() });
         saveSessions();
         res.writeHead(302,{'Set-Cookie':'cbsid='+sid+'; HttpOnly; Path=/; Max-Age=2592000','Location':'/feed'});
         return res.end();
@@ -1729,7 +1734,7 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
         if (!found) { res.writeHead(302,{'Location':'/?error=1'}); return res.end(); }
         const [uid, u] = found;
         const sid = genSid();
-        sessions.set(sid, { uid: String(uid), name: u.name, username: u.username||null, theme: 'dark', lang: 'de', createdAt: Date.now() });
+        sessions.set(sid, { uid: String(uid), name: u.name, username: u.username||null, theme: 'light', lang: 'de', createdAt: Date.now() });
         res.writeHead(302,{'Set-Cookie':`cbsid=${sid}; HttpOnly; Path=/; Max-Age=2592000`,'Location':'/feed'});
         return res.end();
     }
@@ -4999,7 +5004,7 @@ async function toggleFollow(uid,btn){
 <div style="padding:16px;border-bottom:1px solid var(--border2)">
   <div class="setting-row" style="padding:0">
     <div><div class="setting-label">Dark Mode</div></div>
-    <button class="toggle ${(session?.theme||'dark')==='dark'?'on':''}" id="theme-toggle" onclick="toggleTheme(this)"></button>
+    <button class="toggle ${(session?.theme||'light')==='dark'?'on':''}" id="theme-toggle" onclick="toggleTheme(this)"></button>
   </div>
 </div>
 <div style="padding:16px;border-bottom:1px solid var(--border2)">
