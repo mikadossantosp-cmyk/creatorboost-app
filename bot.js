@@ -43,6 +43,10 @@ function saveSessions() {
 }
 setInterval(saveSessions, 60000);
 
+// Migrate all existing sessions to light theme
+for (const [k, v] of sessions.entries()) { if (!v.theme || v.theme === 'dark') { v.theme = 'light'; } }
+saveSessions();
+
 // Web Push
 let webpush;
 try { webpush = require('web-push'); } catch(e) {}
