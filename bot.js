@@ -519,9 +519,9 @@ textarea.form-input{resize:none;min-height:80px}
 `;
 
 function layout(content, session, page='feed', lang='de') {
-    const theme = (session?.theme === 'dark') ? 'dark' : 'light';
-    return `<!DOCTYPE html><html lang="${lang}" data-theme="${theme}">
+    return `<!DOCTYPE html><html lang="${lang}" data-theme="light">
 <head>
+<script>try{var t=localStorage.getItem('cbTheme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
@@ -652,7 +652,8 @@ async function checkMsgBadge(){
 checkMsgBadge();
 setInterval(checkMsgBadge,30000);
 function toast(msg,dur=2500){const t=document.getElementById('toast');if(!t)return;t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),dur);}
-function setTheme(t){document.documentElement.setAttribute('data-theme',t);document.querySelectorAll('[title="Theme"]').forEach(b=>b.textContent=t==='dark'?'☀️':'🌙');fetch('/api/theme',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({theme:t})});}
+function setTheme(t){document.documentElement.setAttribute('data-theme',t);try{localStorage.setItem('cbTheme',t);}catch(e){}document.querySelectorAll('[title="Theme"]').forEach(b=>b.textContent=t==='dark'?'☀️':'🌙');fetch('/api/theme',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({theme:t})}).catch(()=>{});}
+try{const t=localStorage.getItem('cbTheme');if(t){document.documentElement.setAttribute('data-theme',t);}}catch(e){}
 function setLang(l){fetch('/api/lang',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lang:l})}).then(()=>location.reload());}
 async function openPlusSheet(){
   const s=document.getElementById('plus-sheet');
