@@ -3908,11 +3908,12 @@ async function createThread(){
 <style>
 .thread-unread-divider{display:flex;align-items:center;justify-content:center;gap:6px;margin:14px 0 6px;padding:8px 12px;background:rgba(8,102,255,0.12);border:1px solid rgba(8,102,255,0.25);border-radius:12px;color:#4dabf7;font-size:12.5px;font-weight:700;letter-spacing:0.2px;cursor:pointer;transition:background 0.15s,transform 0.15s}
 .thread-unread-divider:active{background:rgba(8,102,255,0.18);transform:scale(0.98)}
-.thr-row{position:relative;overflow:visible}
+.thr-row{position:relative;overflow:visible;touch-action:pan-y}
 .thr-row .thr-row-inner{transition:transform 0.25s cubic-bezier(0.34,1.56,0.64,1);background:transparent}
 .thr-row.swiping .thr-row-inner{transition:none}
 .thr-swipe-trash{position:absolute;right:14px;top:50%;transform:translateY(-50%);width:42px;height:42px;border-radius:50%;background:rgba(239,68,68,0.15);border:1.5px solid rgba(239,68,68,0.4);color:#ef4444;font-size:20px;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.15s;z-index:1}
 .thr-row.swiping .thr-swipe-trash{opacity:var(--swop,1)}
+.thr-del-btn{display:none}
 </style>
 <div id="msgs" style="padding:12px 12px 165px;display:flex;flex-direction:column;gap:10px;overflow-x:hidden;min-width:0;width:100%">${initialMsgsHtml}</div>
 <script>
@@ -3940,17 +3941,17 @@ async function createThread(){
     if (!_sRow) return;
     const dx = e.touches[0].clientX - _sX0;
     const dy = Math.abs(e.touches[0].clientY - _sY0);
-    if (dy > 14) {
+    if (dy > 18 && Math.abs(dx) < 18) {
       _sRow.classList.remove('swiping');
       const tr = _sRow.querySelector('.thr-swipe-trash'); if (tr) tr.style.opacity = '0';
-      _sRow.querySelector('.thr-row-inner').style.transform=''; _sRow=null; return;
+      const inn = _sRow.querySelector('.thr-row-inner'); if (inn) inn.style.transform=''; _sRow=null; return;
     }
-    const cap = Math.max(-150, Math.min(0, dx));
-    if (cap < -8) {
+    const cap = Math.max(-180, Math.min(0, dx));
+    if (cap < -4) {
       _sActive = true; _sRow.classList.add('swiping');
-      _sRow.querySelector('.thr-row-inner').style.transform = 'translateX(' + cap + 'px)';
+      const inn = _sRow.querySelector('.thr-row-inner'); if (inn) inn.style.transform = 'translateX(' + cap + 'px)';
       const tr = _sRow.querySelector('.thr-swipe-trash');
-      if (tr) tr.style.opacity = String(Math.min(1, Math.abs(cap)/100));
+      if (tr) tr.style.opacity = String(Math.min(1, Math.abs(cap)/80));
     }
   }, { passive: true });
   document.addEventListener('touchend', () => {
@@ -3961,7 +3962,7 @@ async function createThread(){
     const dx = m ? Number(m[1]) : 0;
     inner.style.transition = 'transform 0.25s cubic-bezier(0.34,1.56,0.64,1)';
     console.log('[swipe] end dx=' + dx);
-    if (_sActive && dx <= -90) {
+    if (_sActive && dx <= -75) {
       const ts = _sRow.dataset.delTs, mid = _sRow.dataset.delMid || 0;
       const rowRef = _sRow;
       inner.style.transform = 'translateX(-100%)';
