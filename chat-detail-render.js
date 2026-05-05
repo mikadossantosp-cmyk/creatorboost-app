@@ -66,19 +66,28 @@ module.exports = function renderChatBubbles(opts) {
         const sameSender = lastFrom === m.from && (ts - lastTimestamp) < 5 * 60 * 1000;
         const isLastFromSender = !next || String(next.from) !== String(m.from) || ((next.timestamp || 0) - ts) > 5 * 60 * 1000;
 
+        // Reply-Quote oberhalb der Bubble (Instagram-Stil)
+        let replyHtml = '';
+        if (m.replyTo && (m.replyTo.text || m.replyTo.name)) {
+            replyHtml = '<div class="chat-reply-quote" onclick="chatJumpToMsg(' + (m.replyTo.ts||0) + ')">' +
+                '<div class="chat-reply-name">' + esc(m.replyTo.name||'?') + '</div>' +
+                '<div class="chat-reply-text">' + esc((m.replyTo.text||'').slice(0,80)) + '</div>' +
+                '</div>';
+        }
+
         let bubbleContent = '';
         if (m.image) {
-            bubbleContent = '<div class="chat-img-wrap" onclick="window.open(\'' + m.image + '\', \'_blank\')">' +
+            bubbleContent = replyHtml + '<div class="chat-img-wrap" onclick="window.open(\'' + m.image + '\', \'_blank\')">' +
                 '<img src="' + m.image + '" alt="" loading="lazy">' +
                 (m.text ? '<div class="chat-img-caption">' + esc(m.text) + '</div>' : '') +
                 '</div>';
         } else if (m.audio) {
-            bubbleContent = '<div class="chat-audio">' +
+            bubbleContent = replyHtml + '<div class="chat-audio">' +
                 '<button class="chat-audio-btn" onclick="toggleAudio(this)" data-src="' + m.audio + '">▶</button>' +
                 '<div class="chat-audio-info"><div class="chat-audio-bar"><div class="audio-prog"></div></div><div class="audio-dur">🎤 Sprachnachricht</div></div>' +
                 '</div>';
         } else {
-            bubbleContent = '<div class="chat-text">' + esc(m.text || '') + '</div>';
+            bubbleContent = replyHtml + '<div class="chat-text">' + esc(m.text || '') + '</div>';
         }
 
         let backendReactions = {};
@@ -188,6 +197,21 @@ function getStyles() {
         '@keyframes pending-pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }' +
         '.chat-heart-pop { position: absolute; pointer-events: none; font-size: 80px; opacity: 0; animation: heart-pop 1s ease-out forwards; z-index: 50; }' +
         '@keyframes heart-pop { 0% { opacity: 0; transform: translate(-50%, -50%) scale(0); } 20% { opacity: 1; transform: translate(-50%, -50%) scale(1.4); } 80% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; transform: translate(-50%, -150%) scale(1.2); } }' +
+        '.chat-reply-quote { background: rgba(255,255,255,0.1); border-left: 3px solid rgba(255,255,255,0.4); border-radius: 8px; padding: 5px 9px; margin: 0 0 6px 0; font-size: 12px; line-height: 1.35; cursor: pointer; }' +
+        '.chat-row-me .chat-reply-quote { background: rgba(255,255,255,0.18); border-left-color: rgba(255,255,255,0.6); }' +
+        '.chat-reply-quote .chat-reply-name { font-weight: 700; font-size: 11px; opacity: 0.9; margin-bottom: 1px; }' +
+        '.chat-reply-quote .chat-reply-text { opacity: 0.85; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }' +
+        '.chat-row.swiping .chat-bubble-wrap { transform: translateX(var(--swipe,0)); transition: none; }' +
+        '.chat-row .chat-bubble-wrap { transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1); position: relative; }' +
+        '.chat-row.swiping .chat-bubble-wrap::before { content: "↩️"; position: absolute; left: -42px; top: 50%; transform: translateY(-50%); font-size: 22px; opacity: var(--swipe-op,0); }' +
+        '.chat-row-me.swiping .chat-bubble-wrap::before { left: auto; right: -42px; }' +
+        '#reply-preview { display: none; position: fixed; bottom: var(--compose-bottom, 70px); left: 8px; right: 8px; background: var(--bg2); border: 1px solid rgba(255,255,255,0.12); border-left: 3px solid #a78bfa; border-radius: 12px; padding: 8px 12px; z-index: 50; backdrop-filter: blur(20px); box-shadow: 0 -4px 16px rgba(0,0,0,0.3); animation: rp-in 0.2s ease; }' +
+        '#reply-preview.show { display: flex; align-items: center; gap: 10px; }' +
+        '@keyframes rp-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }' +
+        '#reply-preview .rp-info { flex: 1; min-width: 0; }' +
+        '#reply-preview .rp-label { font-size: 11px; color: #a78bfa; font-weight: 700; }' +
+        '#reply-preview .rp-text { font-size: 12.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 1px; }' +
+        '#reply-preview .rp-close { width: 24px; height: 24px; border-radius: 50%; background: rgba(255,255,255,0.08); border: none; color: var(--text); font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }' +
         '.chat-empty { padding: 100px 32px; text-align: center; }' +
         '.chat-empty-icon { font-size: 64px; margin-bottom: 18px; opacity: 0.5; animation: wave 2s ease-in-out infinite; transform-origin: 70% 70%; }' +
         '@keyframes wave { 0%, 100% { transform: rotate(0deg); } 25% { transform: rotate(-15deg); } 75% { transform: rotate(15deg); } }' +
@@ -295,6 +319,97 @@ function getScripts(myUid, otherUid) {
                 'if (d.ok || d.ok === undefined) { if (row) row.remove(); }' +
                 'else { if (row) row.style.opacity = "1"; }' +
             '} catch(e) { if (row) row.style.opacity = "1"; }' +
+        '}' +
+        // ── Swipe-to-Reply (Instagram-style) ──
+        'const OTHER_NAME = "' + esc(otherUid) + '";' +
+        'let __replyState = null;' +
+        'function chatStartReply(ts, name, text){' +
+            '__replyState = { ts: Number(ts)||0, name: name||"?", text: (text||"").slice(0,140) };' +
+            'let prev = document.getElementById("reply-preview");' +
+            'if (!prev) { prev = document.createElement("div"); prev.id = "reply-preview"; document.body.appendChild(prev); }' +
+            'prev.innerHTML = "<div class=\\"rp-info\\"><div class=\\"rp-label\\">↩️ Antwort an " + (name||"User").replace(/[<>&]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;"}[c])) + "</div><div class=\\"rp-text\\">" + (text||"").replace(/[<>&]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;"}[c])) + "</div></div><button class=\\"rp-close\\" onclick=\\"chatCancelReply()\\">×</button>";' +
+            'prev.classList.add("show");' +
+            'document.getElementById("msg-input")?.focus();' +
+            'if (navigator.vibrate) navigator.vibrate(20);' +
+        '}' +
+        'function chatCancelReply(){' +
+            '__replyState = null;' +
+            'document.getElementById("reply-preview")?.classList.remove("show");' +
+        '}' +
+        // Patch sendMessage um replyTo mitzuschicken (überschreibt fetch-Body)
+        'if (typeof window.fetch === "function") {' +
+            'const origFetch = window.fetch.bind(window);' +
+            'window.fetch = function(u, opts){' +
+                'try {' +
+                    'if (typeof u === "string" && u.indexOf("/api/send-message") === 0 && opts && opts.body && __replyState) {' +
+                        'const body = JSON.parse(opts.body); body.replyTo = __replyState;' +
+                        'opts = Object.assign({}, opts, { body: JSON.stringify(body) });' +
+                        'setTimeout(chatCancelReply, 100);' +
+                    '}' +
+                '} catch(e){}' +
+                'return origFetch(u, opts);' +
+            '};' +
+        '}' +
+        // Touch-Swipe Handler auf .chat-row
+        'let __swipeRow = null, __swipeStartX = 0, __swipeStartY = 0, __swipeActive = false;' +
+        'document.addEventListener("touchstart", e => {' +
+            'const row = e.target.closest && e.target.closest(".chat-row"); if (!row) return;' +
+            '__swipeRow = row; __swipeActive = false;' +
+            '__swipeStartX = e.touches[0].clientX; __swipeStartY = e.touches[0].clientY;' +
+        '}, { passive: true });' +
+        'document.addEventListener("touchmove", e => {' +
+            'if (!__swipeRow) return;' +
+            'const dx = e.touches[0].clientX - __swipeStartX;' +
+            'const dy = Math.abs(e.touches[0].clientY - __swipeStartY);' +
+            'if (dy > 18) { __swipeRow.classList.remove("swiping"); __swipeRow = null; return; }' +
+            'const isMe = __swipeRow.classList.contains("chat-row-me");' +
+            'const adx = isMe ? Math.min(0, dx) : Math.max(0, dx);' +
+            'if (Math.abs(adx) > 6) {' +
+                '__swipeActive = true; __swipeRow.classList.add("swiping");' +
+                'const cap = Math.max(-90, Math.min(90, adx));' +
+                '__swipeRow.style.setProperty("--swipe", cap + "px");' +
+                '__swipeRow.style.setProperty("--swipe-op", Math.min(1, Math.abs(cap)/60));' +
+            '}' +
+        '}, { passive: true });' +
+        'document.addEventListener("touchend", e => {' +
+            'if (!__swipeRow) return;' +
+            'const cap = parseInt(__swipeRow.style.getPropertyValue("--swipe")||"0", 10);' +
+            'if (Math.abs(cap) >= 55 && __swipeActive) {' +
+                'const ts = __swipeRow.dataset.ts;' +
+                'const isMe = __swipeRow.classList.contains("chat-row-me");' +
+                'const name = isMe ? "Du" : (document.querySelector(".chat-header-name")?.innerText || "User").trim();' +
+                'const text = (__swipeRow.querySelector(".chat-text")?.innerText || __swipeRow.querySelector(".chat-img-caption")?.innerText || (__swipeRow.querySelector(".chat-img-wrap")?"📷 Foto":"") || (__swipeRow.querySelector(".chat-audio")?"🎤 Sprachnachricht":"") || "").trim();' +
+                'chatStartReply(ts, name, text);' +
+            '}' +
+            '__swipeRow.style.setProperty("--swipe", "0px");' +
+            '__swipeRow.style.setProperty("--swipe-op", "0");' +
+            '__swipeRow.classList.remove("swiping");' +
+            '__swipeRow = null; __swipeActive = false;' +
+        '}, { passive: true });' +
+        // Long-Press Picker erweitern um Reply-Button
+        'document.addEventListener("DOMContentLoaded", () => {' +
+            'const pk = document.getElementById("chat-react-picker");' +
+            'if (pk && !pk.querySelector(".chat-react-reply")) {' +
+                'const btn = document.createElement("button");' +
+                'btn.className = "chat-react-reply";' +
+                'btn.style.cssText = "background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;border:none;border-radius:18px;padding:6px 12px;font-size:12px;font-weight:700;margin-left:6px;cursor:pointer";' +
+                'btn.textContent = "↩️ Antworten";' +
+                'btn.onclick = function(){' +
+                    'if (!chatActiveTs) return;' +
+                    'const row = document.querySelector(".chat-row[data-ts=\\\""+chatActiveTs+"\\\"]");' +
+                    'if (!row) return;' +
+                    'const isMe = row.classList.contains("chat-row-me");' +
+                    'const name = isMe ? "Du" : (document.querySelector(".chat-header-name")?.innerText || "User").trim();' +
+                    'const text = (row.querySelector(".chat-text")?.innerText || row.querySelector(".chat-img-caption")?.innerText || (row.querySelector(".chat-img-wrap")?"📷 Foto":"") || (row.querySelector(".chat-audio")?"🎤 Sprachnachricht":"") || "").trim();' +
+                    'chatHidePicker();' +
+                    'chatStartReply(chatActiveTs, name, text);' +
+                '};' +
+                'pk.appendChild(btn);' +
+            '}' +
+        '});' +
+        'function chatJumpToMsg(ts){' +
+            'const el = document.querySelector(".chat-row[data-ts=\\\""+ts+"\\\"]");' +
+            'if (el) { el.scrollIntoView({ behavior: "smooth", block: "center" }); el.style.background = "rgba(167,139,250,0.18)"; setTimeout(()=>el.style.background = "", 1200); }' +
         '}' +
         'renderAllReactions();' +
         'requestAnimationFrame(() => window.scrollTo({ top: document.body.scrollHeight, behavior: "instant" }));' +

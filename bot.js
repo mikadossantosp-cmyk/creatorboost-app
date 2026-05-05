@@ -2077,7 +2077,7 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
         const myUid = String(session.uid);
         let body;
         try { body = JSON.parse(await readBody(req, 10000000)); } catch(e) { return json({error:'Ungültig'},400); }
-        const { to, text, image, audio } = body;
+        const { to, text, image, audio, replyTo } = body;
         if (!to || (!text?.trim() && !image && !audio)) return json({error:'Ungültig'}, 400);
         const result = await postBot('/send-message-api', {
             from: myUid,
@@ -2085,6 +2085,7 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
             text: text?.trim().slice(0, 500) || '',
             image: image || null,
             audio: audio || null,
+            replyTo: replyTo || null,
             timestamp: Date.now()
         });
         return json({ok: !!result});

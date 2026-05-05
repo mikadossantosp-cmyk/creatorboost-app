@@ -115,8 +115,18 @@ module.exports = function renderChatList(opts) {
     // Online-UIDs auch als window-Variable fuer JS-Zugriff
     const onlineFlag = '<script>window.DM_ONLINE_UIDS = ' + JSON.stringify(onlineArr) + ';<\/script>';
 
+    const totalUnread = (myConvos || []).reduce((s,c) => s + (c.unread || 0), 0) + (totalThreadUnread || 0);
+
     return onlineFlag + appPerf + '<style>' +
         '* { -webkit-tap-highlight-color: transparent; }' +
+        '.dm-tabs { display: flex; gap: 0; padding: 0 16px 8px; border-bottom: 0.5px solid rgba(255,255,255,0.05); background: var(--bg); position: sticky; top: 56px; z-index: 4; }' +
+        '.dm-tab { flex: 1; background: none; border: none; color: var(--muted); font-size: 13px; font-weight: 600; padding: 10px 6px; cursor: pointer; border-bottom: 2.5px solid transparent; transition: color 0.18s, border-color 0.18s; display: flex; align-items: center; justify-content: center; gap: 6px; }' +
+        '.dm-tab.active { color: var(--text); border-bottom-color: #a78bfa; }' +
+        '.dm-tab .dm-tab-count { background: rgba(167,139,250,0.18); color: #a78bfa; padding: 1px 7px; border-radius: 999px; font-size: 11px; font-weight: 800; }' +
+        '.dm-tab.active .dm-tab-count { background: #a78bfa; color: #fff; }' +
+        '.dm-fab { position: fixed; right: 18px; bottom: 78px; width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg,#a78bfa,#7c3aed); color: #fff; border: none; box-shadow: 0 8px 24px rgba(124,58,237,0.5); cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 50; transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1); }' +
+        '.dm-fab:active { transform: scale(0.9); }' +
+        '.dm-fab svg { width: 22px; height: 22px; }' +
         '.dm-search-wrap { padding: 10px 16px 12px; position: sticky; top: 0; background: var(--bg); z-index: 5; border-bottom: 0.5px solid rgba(255,255,255,0.05); }' +
         '.dm-search-input { width: 100%; box-sizing: border-box; background: rgba(255,255,255,0.06); border: 1.5px solid rgba(255,255,255,0.08); border-radius: 22px; padding: 9px 14px 9px 38px; color: var(--text); font-size: 14px; outline: none; transition: border-color 0.2s, background 0.2s; background-image: url("data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'16\' height=\'16\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%23999\' stroke-width=\'2.5\' stroke-linecap=\'round\'><circle cx=\'11\' cy=\'11\' r=\'8\'/><path d=\'M21 21l-4.35-4.35\'/></svg>"); background-repeat: no-repeat; background-position: 14px center; }' +
         '.dm-search-input:focus { border-color: rgba(167,139,250,0.4); background-color: rgba(255,255,255,0.08); }' +
@@ -169,11 +179,21 @@ module.exports = function renderChatList(opts) {
         '</div>' +
 
         (storiesArr.length ? '<div class="dm-stories-section"><div class="dm-stories-wrap">' + storiesHtml + '</div></div>' : '') +
+
+        '<div class="dm-tabs">' +
+            '<button class="dm-tab active" data-tab="all" onclick="dmSwitchTab(\'all\')">Alle</button>' +
+            '<button class="dm-tab" data-tab="unread" onclick="dmSwitchTab(\'unread\')">Ungelesen' + (totalUnread > 0 ? ' <span class="dm-tab-count">' + (totalUnread > 99 ? '99+' : totalUnread) + '</span>' : '') + '</button>' +
+        '</div>' +
+
         '<div class="dm-list" id="dm-list-main">' +
             telegramRow +
             dmRows +
             emptyState +
         '</div>' +
+
+        '<button class="dm-fab" onclick="dmFocusSearch()" title="Neue Nachricht" aria-label="Neue Nachricht">' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/><path d="M16 8l-3 3-1.5-1.5"/></svg>' +
+        '</button>' +
 
         '<script>' +
             'let dmSearchTimer = null;' +
@@ -217,5 +237,19 @@ module.exports = function renderChatList(opts) {
                     '}' +
                 '}, 250);' +
             '}' +
+            'function dmFocusSearch(){' +
+                'document.querySelector(".dm-search-input")?.focus();' +
+                'window.scrollTo({top:0,behavior:"smooth"});' +
+            '}' +
+            'function dmSwitchTab(t){' +
+                'document.querySelectorAll(".dm-tab").forEach(b => b.classList.toggle("active", b.dataset.tab === t));' +
+                'document.querySelectorAll("#dm-list-main .dm-row").forEach(r => {' +
+                    'const isUnread = r.classList.contains("unread");' +
+                    'const isPinned = r.classList.contains("dm-pinned");' +
+                    'r.style.display = (t === "all" || isUnread || isPinned) ? "" : "none";' +
+                '});' +
+                'try { localStorage.setItem("dmTab", t); } catch(e) {}' +
+            '}' +
+            'try { const saved = localStorage.getItem("dmTab"); if (saved) dmSwitchTab(saved); } catch(e) {}' +
         '<\/script>';
 };
