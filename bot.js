@@ -2753,7 +2753,7 @@ p{line-height:1.65;color:var(--muted)}
     const myUid = String(session.uid);
     const myUser = d.users?.[myUid];
     const today = new Date().toDateString();
-    const adminIds = Object.entries(d.users).filter(([,u])=>u.role==='⚙️ Admin').map(([id])=>Number(id));
+    const adminIds = (Array.isArray(d._adminIds) ? d._adminIds.map(Number) : Object.entries(d.users).filter(([,u])=>u.role==='⚙️ Admin').map(([id])=>Number(id)));
 
     // ── API ENDPOINTS ──
     if (path === '/api/push-subscribe' && req.method === 'POST') {
@@ -3709,7 +3709,8 @@ async function createThread(){
             msgs = botData.communityFeed.map(m=>({ uid:'', tgName:m.username||null, name:m.name||m.username||'User', role:null, type:'text', text:m.text||'', mediaId:null, timestamp:m.timestamp, msg_id:m.msg_id }));
         }
         const msgsJson = JSON.stringify(msgs).replace(/<\/script>/gi, '<\\/script>');
-        const isAdmin = (botData.users?.[myUid]) && String(botData.users[myUid].role||'').includes('Admin');
+        const _adminIdsList = Array.isArray(botData._adminIds) ? botData._adminIds.map(Number) : [];
+        const isAdmin = _adminIdsList.includes(Number(myUid)) || ((botData.users?.[myUid]) && String(botData.users[myUid].role||'').includes('Admin'));
         const ringMap = {};
         Object.entries(botData.users||{}).forEach(([uid, u]) => { const s=getRingBoxShadow(u); if(s) ringMap[uid]=s; });
         const ringMapJson = JSON.stringify(ringMap);
@@ -3879,7 +3880,8 @@ async function createThread(){
         const [botData, ftData] = await Promise.all([fetchBot('/data'), fetchBot('/forum-topics').catch(()=>null)]);
         if (!botData) return html('<div style="padding:40px;text-align:center;color:var(--muted)">Bot nicht erreichbar</div>', 'messages');
         const adminUser = botData.users?.[myUid];
-        const isAdmin = adminUser && String(adminUser.role||'').includes('Admin');
+        const _adm2 = Array.isArray(botData._adminIds) ? botData._adminIds.map(Number) : [];
+        const isAdmin = _adm2.includes(Number(myUid)) || (adminUser && String(adminUser.role||'').includes('Admin'));
         const lastRead = botData.threadLastRead?.[myUid] || {};
         const threadMsgs = botData.threadMessages || {};
         const communityFeed = botData.communityFeed || [];
