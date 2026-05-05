@@ -491,14 +491,18 @@ textarea.form-input{resize:none;min-height:80px}
 .highlight-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
 .creator-scroll{display:flex;gap:12px;padding:0 16px 12px;overflow-x:auto;scrollbar-width:none}
 .creator-scroll::-webkit-scrollbar{display:none}
-.sug-list{display:flex;flex-direction:column;gap:0;padding:0}
-.sug-card{display:flex;align-items:center;gap:12px;padding:10px 16px;background:transparent;transition:background 0.15s}
-.sug-card:active{background:rgba(255,255,255,0.04)}
-.sug-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
-.sug-meta{display:flex;align-items:center;flex-wrap:wrap;gap:0;margin-top:2px}
-.sug-btn{flex-shrink:0;background:#0866FF;color:#fff;border:none;border-radius:8px;padding:9px 14px;font-size:13.5px;font-weight:700;cursor:pointer;min-width:104px;transition:background 0.18s,transform 0.15s}
-.sug-btn:active{transform:scale(0.95)}
+.sug-list{display:flex;gap:12px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:4px 16px 8px;scroll-snap-type:x proximity}
+.sug-list::-webkit-scrollbar{display:none}
+.sug-card{flex:0 0 auto;width:160px;background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:14px 10px 12px;display:flex;flex-direction:column;align-items:center;text-align:center;scroll-snap-align:start;transition:transform 0.18s}
+.sug-card:active{transform:scale(0.97)}
+.sug-info{display:flex;flex-direction:column;align-items:center;gap:3px;width:100%;margin-top:8px}
+.sug-name{font-size:14px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;width:100%;text-decoration:none}
+.sug-meta{display:flex;align-items:center;justify-content:center;gap:0;margin-top:4px;min-height:20px}
+.sug-mutuals{font-size:11px;color:var(--muted);text-align:center;line-height:1.3;margin-top:2px}
+.sug-btn{width:100%;background:#0866FF;color:#fff;border:none;border-radius:8px;padding:8px 0;font-size:13px;font-weight:700;cursor:pointer;margin-top:10px;transition:background 0.18s,transform 0.15s;-webkit-tap-highlight-color:transparent}
+.sug-btn:active{transform:scale(0.95);background:#0653cc}
 .sug-btn.followed{background:#3a3b3c;color:#e4e6eb}
+.sug-x{position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,0.5);color:#fff;border:none;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:5}
 .creator-card{flex-shrink:0;width:140px;background:var(--bg3);border:1px solid var(--border2);border-radius:16px;overflow:hidden;text-decoration:none;color:var(--text);display:block}
 .creator-card-banner{height:50px;position:relative;overflow:hidden;background:var(--bg4)}
 .creator-card-avatar{width:44px;height:44px;border-radius:50%;border:3px solid var(--bg3);margin:-22px auto 0;position:relative;overflow:hidden;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff}
@@ -4243,26 +4247,30 @@ document.getElementById('search-input').focus();
             const insta = u.instagram;
             const pic = ladeBild(uid, 'profilepic');
             const name = u.spitzname || u.name || 'User';
-            const mAvatars = mutuals.slice(0, 3).map(mid => {
+            const mutualText = mutuals.length === 0
+                ? 'Vorschlag'
+                : mutuals.length + ' gemeinsame' + (mutuals.length === 1 ? 'r' : '');
+            const mAvatars = mutuals.slice(0, 3).map((mid, i) => {
                 const mu = d.users[mid] || {};
                 const mp = ladeBild(mid, 'profilepic');
                 const mInsta = mu.instagram;
-                return `<div style="width:18px;height:18px;border-radius:50%;background:${badgeGradient(mu.role)};border:2px solid var(--bg);overflow:hidden;flex-shrink:0">${mp?`<img src="/appbild/${mid}/profilepic" style="width:100%;height:100%;object-fit:cover" loading="lazy">`:mInsta?`<img src="https://unavatar.io/instagram/${mInsta}" style="width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.remove()">`:''}</div>`;
+                const left = i === 0 ? '0' : '-8px';
+                return `<div style="width:18px;height:18px;border-radius:50%;background:${badgeGradient(mu.role)};border:2px solid var(--bg3);overflow:hidden;flex-shrink:0;margin-left:${left};display:flex;align-items:center;justify-content:center">${mp?`<img src="/appbild/${mid}/profilepic" style="width:100%;height:100%;object-fit:cover" loading="lazy">`:mInsta?`<img src="https://unavatar.io/instagram/${mInsta}" style="width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.remove()">`:`<span style="color:#fff;font-size:9px;font-weight:700">${(mu.name||'?')[0]}</span>`}</div>`;
             }).join('');
-            const mutualText = mutuals.length === 0 ? 'Vorgeschlagen' : (mutuals.length + ' gemeinsame' + (mutuals.length===1 ? 'r Follower' : ' Follower'));
-            return `<div class="sug-card" data-uid="${uid}">
-  <a href="/profil/${uid}" class="sug-avatar-link" style="text-decoration:none;flex-shrink:0">
-    <div style="position:relative;width:64px;height:64px;border-radius:50%;background:${grad};overflow:hidden;display:flex;align-items:center;justify-content:center${getRingBoxShadow(u)}">
-      <span style="position:absolute;color:#fff;font-size:22px;font-weight:800">${name[0]}</span>
+            return `<div class="sug-card" data-uid="${uid}" style="position:relative">
+  <button class="sug-x" onclick="sugDismiss(this)" data-uid="${uid}" title="Ausblenden">×</button>
+  <a href="/profil/${uid}" style="text-decoration:none;display:block">
+    <div style="position:relative;width:88px;height:88px;border-radius:50%;background:${grad};overflow:hidden;display:flex;align-items:center;justify-content:center;margin:0 auto${getRingBoxShadow(u)}">
+      <span style="position:absolute;color:#fff;font-size:32px;font-weight:800">${name[0]}</span>
       ${pic?`<img src="/appbild/${uid}/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy">`:insta?`<img src="https://unavatar.io/instagram/${insta}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.remove()">`:''}
     </div>
   </a>
   <div class="sug-info">
-    <a href="/profil/${uid}" style="color:var(--text);text-decoration:none;font-size:15px;font-weight:700;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${name}</a>
-    ${insta ? `<a href="https://instagram.com/${insta}" target="_blank" onclick="event.stopPropagation()" style="font-size:11px;color:#e1306c;text-decoration:none">📸 @${insta}</a>` : ''}
-    <div class="sug-meta">${mAvatars ? `<div style="display:flex;margin-right:6px">${mAvatars.split('</div>').filter(x=>x).map((p,i)=>`<div style="margin-left:${i===0?'0':'-8px'}">${p}</div></div>`).join('')}</div>` : ''}<span style="font-size:11.5px;color:var(--muted)">${mutualText}</span></div>
+    <a href="/profil/${uid}" class="sug-name">${name}</a>
+    ${mAvatars ? `<div class="sug-meta"><div style="display:flex;align-items:center">${mAvatars}</div></div>` : ''}
+    <div class="sug-mutuals">${mutualText}</div>
   </div>
-  <button class="sug-btn" data-follow-uid="${uid}" onclick="sugFollow(this)">+ Folgen</button>
+  <button type="button" class="sug-btn" data-follow-uid="${uid}" onclick="event.preventDefault();event.stopPropagation();sugFollow(this);return false">+ Folgen</button>
 </div>`;
         }).join('');
 
@@ -4497,34 +4505,54 @@ async function applyBanner(gradient){
     if(data.ok){location.reload();}else{alert(data.error||'Fehler');}
   }catch(e){alert('Fehler beim Setzen des Banners');}
 }
-async function sugFollow(btn){
-  const uid = btn.dataset.followUid;
+window.sugFollow = async function(btn){
+  const uid = btn && btn.dataset ? btn.dataset.followUid : null;
   if (!uid || btn.disabled) return;
   btn.disabled = true;
   const orig = btn.textContent;
   btn.textContent = '...';
   try {
-    const r = await fetch('/api/follow', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({uid}) });
-    const d = await r.json();
-    if (d.ok !== false) {
+    const r = await fetch('/api/follow', { method: 'POST', headers: {'Content-Type':'application/json','Accept':'application/json'}, body: JSON.stringify({uid: String(uid)}) });
+    const data = await r.json().catch(()=>null);
+    if (data && data.ok !== false) {
       btn.textContent = '✓ Folge';
       btn.classList.add('followed');
       btn.disabled = false;
-      // Card nach 1.5s ausblenden
       setTimeout(() => {
         const card = btn.closest('.sug-card');
-        if (card) { card.style.transition='opacity 0.3s'; card.style.opacity='0'; setTimeout(()=>card.remove(), 300); }
-      }, 1500);
+        if (card) { card.style.transition='opacity 0.3s,transform 0.3s'; card.style.opacity='0'; card.style.transform='scale(0.85)'; setTimeout(()=>card.remove(), 300); }
+      }, 900);
     } else {
       btn.textContent = orig;
       btn.disabled = false;
-      alert('Fehler: ' + (d.error||'unbekannt'));
+      alert('❌ ' + (data && data.error ? data.error : 'Folgen fehlgeschlagen'));
     }
   } catch(e) {
     btn.textContent = orig;
     btn.disabled = false;
+    alert('Netzwerkfehler: ' + e.message);
   }
-}
+};
+window.sugDismiss = function(btn){
+  const card = btn.closest('.sug-card');
+  if (!card) return;
+  card.style.transition = 'opacity 0.25s,transform 0.25s';
+  card.style.opacity = '0';
+  card.style.transform = 'scale(0.85)';
+  setTimeout(() => card.remove(), 250);
+  // Optional: in localStorage merken damit es nicht wieder auftaucht
+  try {
+    const dismissed = JSON.parse(localStorage.getItem('sugDismissed')||'[]');
+    if (!dismissed.includes(btn.dataset.uid)) { dismissed.push(btn.dataset.uid); localStorage.setItem('sugDismissed', JSON.stringify(dismissed.slice(-100))); }
+  } catch(e) {}
+};
+// Beim Laden: localStorage-dismissed Karten ausblenden
+(function(){
+  try {
+    const dismissed = JSON.parse(localStorage.getItem('sugDismissed')||'[]');
+    document.querySelectorAll('.sug-card[data-uid]').forEach(c => { if (dismissed.includes(c.dataset.uid)) c.remove(); });
+  } catch(e) {}
+})();
 </script>`;
             })(),
             newsletter: (()=>{
