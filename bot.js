@@ -1590,7 +1590,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v23-fix';
+const SW_VERSION='v24-clear';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
@@ -3910,9 +3910,10 @@ async function createThread(){
 .thread-unread-divider:active{background:rgba(8,102,255,0.18);transform:scale(0.98)}
 .thr-row{position:relative;overflow:visible;touch-action:pan-y}
 .thr-row .thr-row-inner{transition:transform 0.25s cubic-bezier(0.34,1.56,0.64,1);background:transparent}
+.thr-row.swiping{background:rgba(239,68,68,0.05)}
 .thr-row.swiping .thr-row-inner{transition:none}
-.thr-swipe-trash{position:absolute;right:14px;top:50%;transform:translateY(-50%);width:42px;height:42px;border-radius:50%;background:rgba(239,68,68,0.15);border:1.5px solid rgba(239,68,68,0.4);color:#ef4444;font-size:20px;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.15s;z-index:1}
-.thr-row.swiping .thr-swipe-trash{opacity:var(--swop,1)}
+.thr-swipe-trash{position:absolute;right:14px;top:50%;transform:translateY(-50%);width:46px;height:46px;border-radius:50%;background:#ef4444;color:#fff;font-size:22px;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.15s,transform 0.15s;z-index:1;box-shadow:0 4px 14px rgba(239,68,68,0.4)}
+.thr-row.swiping .thr-swipe-trash{transform:translateY(-50%) scale(1.05)}
 .thr-del-btn{display:none}
 </style>
 <div id="msgs" style="padding:12px 12px 165px;display:flex;flex-direction:column;gap:10px;overflow-x:hidden;min-width:0;width:100%">${initialMsgsHtml}</div>
