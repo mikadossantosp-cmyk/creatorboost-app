@@ -1615,7 +1615,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v26-tg';
+const SW_VERSION='v27-bigger';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
@@ -3912,9 +3912,9 @@ async function createThread(){
                 const replyBlock = m.replyTo ? `<div style="background:rgba(0,0,0,0.18);border-left:3px solid ${c};padding:5px 9px;margin:0 0 5px 0;border-radius:0 6px 6px 0;font-size:12px;line-height:1.4;color:rgba(255,255,255,0.85)"><div style="font-weight:700;color:${c};font-size:11px">${esc(m.replyTo.name||'?')}</div><div style="opacity:0.85;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc((m.replyTo.text||'').slice(0,80))}</div></div>` : '';
                 // Bubble: alle dunkelgrau (Telegram-Style)
                 const nameInBubble = m.uid
-                    ? `<a href="/profil/${esc(m.uid)}" style="font-size:13px;font-weight:700;color:${c};text-decoration:none;display:block;margin-bottom:3px">${m.role?esc(m.role)+' ':''}${esc(m.name)}</a>`
-                    : `<div style="font-size:13px;font-weight:700;color:${c};margin-bottom:3px">${m.role?esc(m.role)+' ':''}${esc(m.name)}</div>`;
-                const textBody = m.text ? `<div style="font-size:15px;line-height:1.42;color:#e4e6eb;word-break:break-word">${esc(m.text)}</div>` : '';
+                    ? `<a href="/profil/${esc(m.uid)}" style="font-size:14.5px;font-weight:700;color:${c};text-decoration:none;display:block;margin-bottom:3px">${m.role?esc(m.role)+' ':''}${esc(m.name)}</a>`
+                    : `<div style="font-size:14.5px;font-weight:700;color:${c};margin-bottom:3px">${m.role?esc(m.role)+' ':''}${esc(m.name)}</div>`;
+                const textBody = m.text ? `<div style="font-size:16.5px;line-height:1.42;color:#e4e6eb;word-break:break-word">${esc(m.text)}</div>` : '';
                 const timeFooter = `<div style="font-size:10.5px;color:rgba(255,255,255,0.5);text-align:right;margin-top:3px;font-variant-numeric:tabular-nums">${timeStr}</div>`;
                 const canDelSSR = (m.uid && String(m.uid) === String(myUid)) || isAdmin;
                 const swipeAttrs = canDelSSR ? ` data-can-del="1" data-del-ts="${m.timestamp}" data-del-mid="${m.msg_id||0}"` : '';
@@ -4082,14 +4082,14 @@ async function createThread(){
       const isLastInSeries = !next || String(next.uid) !== String(m.uid) || ((next.timestamp||0) - (m.timestamp||0)) > 5*60*1000;
       const showAvatar = isLastInSeries;
       const nameInBubble = m.uid
-        ? '<a href="/profil/'+m.uid+'" style="font-size:13px;font-weight:700;color:'+c+';text-decoration:none;display:block;margin-bottom:3px">'+(m.role?esc(m.role)+' ':'')+esc(m.name)+'</a>'
-        : '<div style="font-size:13px;font-weight:700;color:'+c+';margin-bottom:3px">'+(m.role?esc(m.role)+' ':'')+esc(m.name)+'</div>';
+        ? '<a href="/profil/'+m.uid+'" style="font-size:14.5px;font-weight:700;color:'+c+';text-decoration:none;display:block;margin-bottom:3px">'+(m.role?esc(m.role)+' ':'')+esc(m.name)+'</a>'
+        : '<div style="font-size:14.5px;font-weight:700;color:'+c+';margin-bottom:3px">'+(m.role?esc(m.role)+' ':'')+esc(m.name)+'</div>';
       const replyBlock = m.replyTo ? '<div style="background:rgba(0,0,0,0.18);border-left:3px solid '+c+';padding:5px 9px;margin:0 0 5px 0;border-radius:0 6px 6px 0;font-size:12px;line-height:1.4;color:rgba(255,255,255,0.85)"><div style="font-weight:700;color:'+c+';font-size:11px">'+esc(m.replyTo.name||'?')+'</div><div style="opacity:0.85;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc((m.replyTo.text||'').slice(0,80))+'</div></div>' : '';
       let media='';
       if(m.type==='photo'&&m.mediaId)media='<img src="/api/tg-file/'+m.mediaId+'" style="max-width:100%;border-radius:10px;margin:0 0 5px;display:block" loading="lazy">';
       else if(m.type==='sticker'&&m.mediaId)media='<img src="/api/tg-file/'+m.mediaId+'" style="width:80px;height:80px;object-fit:contain;display:block;margin:0 0 5px" loading="lazy">';
       else if(m.type==='video')media='<div style="background:rgba(0,0,0,.3);border-radius:10px;padding:8px 12px;font-size:12px;color:var(--muted);margin:0 0 5px">🎬 Video — öffne Telegram zum Ansehen</div>';
-      const textBody = m.text ? '<div style="font-size:15px;line-height:1.42;color:#e4e6eb;word-break:break-word">'+esc(m.text)+'</div>' : '';
+      const textBody = m.text ? '<div style="font-size:16.5px;line-height:1.42;color:#e4e6eb;word-break:break-word">'+esc(m.text)+'</div>' : '';
       const timeFooter = '<div style="font-size:10.5px;color:rgba(255,255,255,0.5);text-align:right;margin-top:3px;font-variant-numeric:tabular-nums">'+ts+'</div>';
       const canDel=(m.uid&&String(m.uid)===String(MY_UID))||IS_ADMIN;
       const swipeAttrsJS = canDel ? ' data-can-del="1" data-del-ts="'+m.timestamp+'" data-del-mid="'+(m.msg_id||0)+'"' : '';
