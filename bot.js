@@ -3609,13 +3609,21 @@ async function submitSuperLink(){
 })();
 </script>
 <script>
-// Sofort nach unten scrollen + nochmal wenn Bilder geladen sind (sonst bleibt's mittendrin)
+// Initial-Scroll: zum Ungelesen-Banner wenn vorhanden, sonst nach unten
+function _chatInitialScroll(){
+  const unread = document.getElementById('unread-divider');
+  if (unread) {
+    unread.scrollIntoView({ behavior: 'instant', block: 'center' });
+  } else {
+    window.scrollTo({ top: document.body.scrollHeight });
+  }
+}
 function _chatScrollBottom(smooth){ const opts = smooth ? {top:document.body.scrollHeight,behavior:'smooth'} : {top:document.body.scrollHeight}; window.scrollTo(opts); }
-_chatScrollBottom(false);
-window.addEventListener('load', () => _chatScrollBottom(false));
-// Bilder-Load: bei jedem geladenen Bild nochmal nach unten scrollen
+_chatInitialScroll();
+window.addEventListener('load', () => _chatInitialScroll());
+// Bilder-Load: bei jedem geladenen Bild nochmal scrollen (zum Banner falls da, sonst Boden)
 document.querySelectorAll('#chat-msgs img').forEach(img => {
-  if (!img.complete) img.addEventListener('load', () => _chatScrollBottom(false), { once: true });
+  if (!img.complete) img.addEventListener('load', () => _chatInitialScroll(), { once: true });
 });
 // Sofort als gelesen markieren (chatKey wird vom SSR gesetzt)
 fetch('/api/mark-messages-read', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({chatKey: '${chatKey}'}) }).catch(()=>{});
@@ -3784,6 +3792,8 @@ async function createThread(){
         const threadId = decodeURIComponent(path.slice('/nachrichten/gruppe/'.length).split('?')[0]);
         const botData = await fetchBot('/data');
         if (!botData) return redirect('/nachrichten/gruppe');
+        // Letzten Lesestand SICHERN bevor wir mark-read aufrufen — für Ungelesen-Banner
+        const myLastReadTs = (botData.threadLastRead?.[myUid]?.[threadId]) || 0;
         // Mark as read
         await postBot('/mark-read', { uid: myUid, thread_id: threadId });
         const threadEmojiPaletteD = ['🎯','🚀','💡','📊','🎨','🔥','⚡','🌟','📝','🎭','🏆','🎵','🧠','💎','🌈','🎮','📣','🛠️','🌍','🎬'];
@@ -3805,6 +3815,7 @@ async function createThread(){
         const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
         const COLORS_SSR = ['#ff6b6b','#cc5de8','#4dabf7','#ffd43b','#00c851','#ff9f43','#0088cc'];
         const colSSR = n => COLORS_SSR[((n||'').charCodeAt(0)||0)%COLORS_SSR.length];
+        let unreadInsertedSSR = false;
         const initialMsgsHtml = msgs.length
             ? [...msgs].reverse().map(m => {
                 const c = colSSR(m.name);
@@ -3829,7 +3840,14 @@ async function createThread(){
                 const rowF = isMeS
                     ? 'display:flex;gap:8px;align-items:flex-end;flex-direction:row-reverse'
                     : 'display:flex;gap:10px;align-items:flex-start';
-                return `<div style="${rowF}">${isMeS?'':avatarHtml}<div style="flex:1;min-width:0;${isMeS?'text-align:right':'text-align:left'}">${headInfo}${bodyHtml}</div></div>`;
+                let bannerPrefix = '';
+                let firstUnreadId = '';
+                if (!unreadInsertedSSR && myLastReadTs > 0 && (m.timestamp||0) > myLastReadTs && !isMeS) {
+                    bannerPrefix = `<div id="unread-divider" class="thread-unread-divider" onclick="document.getElementById('first-unread')?.scrollIntoView({behavior:'smooth',block:'center'})"><span>Ungelesene Nachrichten</span><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg></div>`;
+                    firstUnreadId = ' id="first-unread"';
+                    unreadInsertedSSR = true;
+                }
+                return bannerPrefix + `<div style="${rowF}"${firstUnreadId}>${isMeS?'':avatarHtml}<div style="flex:1;min-width:0;${isMeS?'text-align:right':'text-align:left'}">${headInfo}${bodyHtml}</div></div>`;
               }).join('')
             : '<div style="text-align:center;padding:60px 20px;color:var(--muted)"><div style="font-size:40px;margin-bottom:12px">💬</div><div style="font-size:14px">Noch keine Nachrichten.<br>Schreib die erste!</div></div>';
         return html(`
@@ -3841,7 +3859,23 @@ async function createThread(){
   </div>
   <div style="width:36px"></div>
 </div>
+<style>
+.thread-unread-divider{display:flex;align-items:center;justify-content:center;gap:6px;margin:14px 0 6px;padding:8px 12px;background:rgba(8,102,255,0.12);border:1px solid rgba(8,102,255,0.25);border-radius:12px;color:#4dabf7;font-size:12.5px;font-weight:700;letter-spacing:0.2px;cursor:pointer;transition:background 0.15s,transform 0.15s}
+.thread-unread-divider:active{background:rgba(8,102,255,0.18);transform:scale(0.98)}
+</style>
 <div id="msgs" style="padding:12px 12px 165px;display:flex;flex-direction:column;gap:10px;overflow-x:hidden;min-width:0;width:100%">${initialMsgsHtml}</div>
+<script>
+(function(){
+  // Initial-Scroll: zum Ungelesen-Banner wenn vorhanden, sonst nach unten
+  function scrollInit(){
+    const ud=document.getElementById('unread-divider');
+    if(ud) ud.scrollIntoView({behavior:'instant',block:'center'});
+    else window.scrollTo(0,document.body.scrollHeight);
+  }
+  scrollInit();
+  window.addEventListener('load', scrollInit);
+})();
+</script>
 <div id="reply-bar" style="display:none;position:fixed;bottom:calc(108px + var(--safe-bottom));left:0;right:0;padding:7px 12px;background:rgba(0,136,204,.15);border-top:1px solid rgba(0,136,204,.3);align-items:center;gap:8px;z-index:6;box-sizing:border-box">
   <div style="width:3px;height:32px;background:#0088cc;border-radius:2px;flex-shrink:0"></div>
   <div style="flex:1;min-width:0"><span id="reply-name" style="font-size:11px;font-weight:700;color:#0088cc;display:block"></span><span id="reply-text" style="font-size:11px;color:var(--muted);display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:calc(100vw - 80px)"></span></div>
@@ -3861,6 +3895,7 @@ async function createThread(){
 (function(){
   const TID='${threadId}';
   const MY_UID='${myUid}';
+  const MY_LAST_READ=${myLastReadTs};
   const IS_ADMIN=${isAdmin};
   const RING_MAP=${ringMapJson};
   const COLORS=['#ff6b6b','#cc5de8','#4dabf7','#ffd43b','#00c851','#ff9f43','#0088cc'];
@@ -3881,6 +3916,7 @@ async function createThread(){
     knownHash=h;
     window._lastMsgs=msgs;
     if(!msgs.length){el.innerHTML='<div style="text-align:center;padding:60px 20px;color:var(--muted)"><div style="font-size:40px;margin-bottom:12px">💬</div><div style="font-size:14px">Noch keine Nachrichten.<br>Schreib die erste!</div></div>';return;}
+    let unreadInsertedJS=false;
     el.innerHTML=[...msgs].reverse().map(m=>{
       const c=col(m.name);
       const nameEl=m.uid?'<a href="/profil/'+m.uid+'" style="font-size:13.5px;font-weight:700;color:'+c+';text-decoration:none">'+(m.role?m.role+' ':'')+esc(m.name)+'</a>':'<span style="font-size:13.5px;font-weight:700;color:'+c+'">'+(m.role?m.role+' ':'')+esc(m.name)+'</span>';
@@ -3908,9 +3944,19 @@ async function createThread(){
       const rowFlex = isMe
         ? 'display:flex;gap:8px;align-items:flex-end;flex-direction:row-reverse'
         : 'display:flex;gap:10px;align-items:flex-start';
-      return '<div class="fade-in" style="'+rowFlex+'">'+(isMe?'':avatarHtml)+'<div style="flex:1;min-width:0;'+bodyAlign+'">'+headerInfo+body+reactBadges+actBar+'</div></div>';
+      let banner='', firstUnreadId='';
+      if (!unreadInsertedJS && MY_LAST_READ > 0 && (m.timestamp||0) > MY_LAST_READ && !isMe) {
+        banner = '<div id="unread-divider" class="thread-unread-divider" onclick="document.getElementById(\'first-unread\')?.scrollIntoView({behavior:\'smooth\',block:\'center\'})"><span>Ungelesene Nachrichten</span><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg></div>';
+        firstUnreadId=' id="first-unread"';
+        unreadInsertedJS=true;
+      }
+      return banner+'<div class="fade-in" style="'+rowFlex+'"'+firstUnreadId+'>'+(isMe?'':avatarHtml)+'<div style="flex:1;min-width:0;'+bodyAlign+'">'+headerInfo+body+reactBadges+actBar+'</div></div>';
     }).join('');
-    if(atBottom)window.scrollTo(0,document.body.scrollHeight);
+    if(atBottom){
+      const ud=document.getElementById('unread-divider');
+      if(ud&&!window._thrUnreadScrolled){ ud.scrollIntoView({behavior:'instant',block:'center'}); window._thrUnreadScrolled=true; }
+      else window.scrollTo(0,document.body.scrollHeight);
+    }
   }
   // ── Event-Delegation für Mülleimer-Button (robuster als inline onclick) ──
   document.addEventListener('click', function(ev){

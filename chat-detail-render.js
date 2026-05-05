@@ -48,6 +48,7 @@ module.exports = function renderChatBubbles(opts) {
 
     let html = '';
     let lastDate = null;
+    let unreadBannerInserted = false;
     let lastFrom = null;
     let lastTimestamp = 0;
 
@@ -55,6 +56,12 @@ module.exports = function renderChatBubbles(opts) {
         const isMe = String(m.from) === String(myUid);
         const ts = m.timestamp || 0;
         const next = msgs[idx + 1];
+
+        // ── Ungelesen-Banner vor der ersten ungelesenen Nachricht ──
+        if (!unreadBannerInserted && !isMe && m.read === false) {
+            html += '<div id="unread-divider" class="chat-unread-divider" onclick="document.getElementById(\'first-unread\')?.scrollIntoView({behavior:\'smooth\',block:\'center\'})"><span>Ungelesene Nachrichten</span><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg></div>';
+            unreadBannerInserted = true;
+        }
 
         const thisDate = new Date(ts).toDateString();
         if (thisDate !== lastDate) {
@@ -135,7 +142,8 @@ module.exports = function renderChatBubbles(opts) {
         const groupClass = sameSender ? ' chat-row-grouped' : '';
         const lastClass = isLastFromSender ? ' chat-row-last' : '';
 
-        html += '<div class="chat-row ' + (isMe ? 'chat-row-me' : 'chat-row-other') + groupClass + lastClass + '" data-ts="' + ts + '">' +
+        const isFirstUnread = !isMe && m.read === false && unreadBannerInserted && (idx === 0 || msgs[idx-1] && (String(msgs[idx-1].from) === String(myUid) || msgs[idx-1].read === true));
+        html += '<div class="chat-row ' + (isMe ? 'chat-row-me' : 'chat-row-other') + groupClass + lastClass + '" data-ts="' + ts + '"' + (isFirstUnread ? ' id="first-unread"' : '') + '>' +
             (!isMe ? avatarHtml : '') +
             '<div class="chat-bubble-wrap">' +
                 '<div class="chat-bubble" data-ts="' + ts + '" ' +
@@ -168,6 +176,8 @@ function getStyles() {
         'button[onclick="sendMsg()"]:active { transform: scale(0.85) !important; }' +
         '.chat-date-sep { text-align: center; margin: 24px 0 12px; }' +
         '.chat-date-sep span { display: inline-block; padding: 4px 14px; font-size: 11px; font-weight: 600; color: var(--muted); background: rgba(255,255,255,0.04); border-radius: 999px; letter-spacing: 0.3px; }' +
+        '.chat-unread-divider { display: flex; align-items: center; justify-content: center; gap: 6px; margin: 16px 14px 8px; padding: 8px 12px; background: rgba(8,102,255,0.12); border: 1px solid rgba(8,102,255,0.25); border-radius: 12px; color: #4dabf7; font-size: 12.5px; font-weight: 700; letter-spacing: 0.2px; cursor: pointer; transition: background 0.15s, transform 0.15s; }' +
+        '.chat-unread-divider:active { background: rgba(8,102,255,0.18); transform: scale(0.98); }' +
         '.chat-row { display: flex; align-items: flex-end; gap: 10px; padding: 0 14px; margin-top: 14px; animation: msg-in 0.3s cubic-bezier(0.16, 1, 0.3, 1); }' +
         '.chat-row-grouped { margin-top: 3px; animation: none; }' +
         '@keyframes msg-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }' +
