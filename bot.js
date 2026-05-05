@@ -3869,8 +3869,8 @@ async function createThread(){
                 const textBody = m.text ? `<div style="font-size:15px;line-height:1.42;color:#e4e6eb;word-break:break-word">${esc(m.text)}</div>` : '';
                 const timeFooter = `<div style="font-size:10.5px;color:rgba(255,255,255,0.5);text-align:right;margin-top:3px;font-variant-numeric:tabular-nums">${timeStr}</div>`;
                 const canDelSSR = (m.uid && String(m.uid) === String(myUid)) || isAdmin;
-                const delBtnSSR = canDelSSR ? `<button type="button" class="thr-trash" data-trash-ts="${m.timestamp}" data-trash-mid="${m.msg_id||0}" onclick="if(confirm('Nachricht löschen?')){fetch('/api/delete-thread-msg',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({threadId:'${threadId}',timestamp:${m.timestamp},msgId:${m.msg_id||0}})}).then(r=>r.json()).then(d=>{if(d.ok){this.closest('.thr-row').remove()}else{alert('Fehler: '+(d.error||'unbekannt'))}}).catch(e=>alert('Netzwerkfehler: '+e.message))}return false" style="position:absolute;top:4px;right:4px;z-index:100;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#ef4444;font-size:14px;cursor:pointer;padding:4px 7px;border-radius:8px;pointer-events:auto;touch-action:manipulation">🗑️</button>` : '';
-                const bubble = `<div class="thr-bubble" style="position:relative;display:inline-block;max-width:78%;background:#212121;border-radius:14px;padding:8px 12px 6px 12px;box-shadow:0 1px 2px rgba(0,0,0,0.3)">${nameInBubble}${replyBlock}${textBody}${timeFooter}${delBtnSSR}</div>`;
+                const swipeAttrs = canDelSSR ? ` data-can-del="1" data-del-ts="${m.timestamp}" data-del-mid="${m.msg_id||0}"` : '';
+                const bubble = `<div class="thr-bubble" style="position:relative;display:inline-block;max-width:78%;background:#212121;border-radius:14px;padding:8px 12px 6px 12px;box-shadow:0 1px 2px rgba(0,0,0,0.3)">${nameInBubble}${replyBlock}${textBody}${timeFooter}</div>`;
                 const avatarSlot = showAvatar
                     ? `<a href="/profil/${esc(m.uid)}" style="text-decoration:none;flex-shrink:0"><div style="width:30px;height:30px;border-radius:50%;background:${c};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;position:relative;overflow:hidden${ring}">${ini}${m.uid?`<img src="/appbild/${esc(m.uid)}/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" onerror="this.remove()" loading="lazy">`:''}</div></a>`
                     : `<div style="width:30px;flex-shrink:0"></div>`;
@@ -3880,7 +3880,7 @@ async function createThread(){
                     firstUnreadId = ' id="first-unread"';
                     unreadInsertedSSR = true;
                 }
-                return bannerPrefix + `<div class="thr-row" style="display:flex;gap:8px;align-items:flex-end${isLastInSeries?'':';margin-bottom:2px'}"${firstUnreadId}>${avatarSlot}<div style="flex:1;min-width:0;text-align:left">${bubble}</div></div>`;
+                return bannerPrefix + `<div class="thr-row"${swipeAttrs} style="display:flex;gap:8px;align-items:flex-end${isLastInSeries?'':';margin-bottom:2px'}"${firstUnreadId}>${avatarSlot}<div class="thr-row-inner" style="flex:1;min-width:0;text-align:left">${bubble}</div></div>`;
               }).join('')
             : '<div style="text-align:center;padding:60px 20px;color:var(--muted)"><div style="font-size:40px;margin-bottom:12px">💬</div><div style="font-size:14px">Noch keine Nachrichten.<br>Schreib die erste!</div></div>';
         return html(`
@@ -3888,13 +3888,18 @@ async function createThread(){
   <a href="/nachrichten/gruppe" style="padding:8px;color:#fff;display:flex;align-items:center;text-decoration:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20"><polyline points="15 18 9 12 15 6"/></svg></a>
   <div style="flex:1;text-align:center">
     <div style="font-weight:800;font-size:15px;color:#fff">${thrInfo.emoji} ${thrInfo.name}</div>
-    <div style="font-size:11px;color:rgba(255,255,255,0.7)">Live ●</div>
+    <div style="font-size:11px;color:rgba(255,255,255,0.7)">${msgs.length} Nachrichten</div>
   </div>
   <div style="width:36px"></div>
 </div>
 <style>
 .thread-unread-divider{display:flex;align-items:center;justify-content:center;gap:6px;margin:14px 0 6px;padding:8px 12px;background:rgba(8,102,255,0.12);border:1px solid rgba(8,102,255,0.25);border-radius:12px;color:#4dabf7;font-size:12.5px;font-weight:700;letter-spacing:0.2px;cursor:pointer;transition:background 0.15s,transform 0.15s}
 .thread-unread-divider:active{background:rgba(8,102,255,0.18);transform:scale(0.98)}
+.thr-row{position:relative;overflow:visible}
+.thr-row .thr-row-inner{transition:transform 0.25s cubic-bezier(0.34,1.56,0.64,1)}
+.thr-row.swiping .thr-row-inner{transition:none}
+.thr-row::after{content:"🗑️";position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:22px;opacity:0;pointer-events:none;transition:opacity 0.15s;color:#ef4444}
+.thr-row.swiping::after{opacity:var(--swop,1)}
 </style>
 <div id="msgs" style="padding:12px 12px 165px;display:flex;flex-direction:column;gap:10px;overflow-x:hidden;min-width:0;width:100%">${initialMsgsHtml}</div>
 <script>
@@ -3907,6 +3912,54 @@ async function createThread(){
   }
   scrollInit();
   window.addEventListener('load', scrollInit);
+  // Swipe-to-Delete für Admins/Owner: nur Rows mit data-can-del=1
+  let _sRow=null,_sX0=0,_sY0=0,_sActive=false;
+  document.addEventListener('touchstart', e => {
+    const row = e.target.closest && e.target.closest('.thr-row[data-can-del="1"]');
+    if (!row) return;
+    _sRow = row; _sActive = false;
+    _sX0 = e.touches[0].clientX; _sY0 = e.touches[0].clientY;
+    row.classList.remove('swiping');
+  }, { passive: true });
+  document.addEventListener('touchmove', e => {
+    if (!_sRow) return;
+    const dx = e.touches[0].clientX - _sX0;
+    const dy = Math.abs(e.touches[0].clientY - _sY0);
+    if (dy > 14) { _sRow.classList.remove('swiping'); _sRow.style.removeProperty('--swop'); _sRow.querySelector('.thr-row-inner').style.transform=''; _sRow=null; return; }
+    const cap = Math.max(-150, Math.min(0, dx));
+    if (cap < -8) {
+      _sActive = true; _sRow.classList.add('swiping');
+      _sRow.querySelector('.thr-row-inner').style.transform = 'translateX(' + cap + 'px)';
+      _sRow.style.setProperty('--swop', String(Math.min(1, Math.abs(cap)/100)));
+    }
+  }, { passive: true });
+  document.addEventListener('touchend', () => {
+    if (!_sRow) return;
+    const inner = _sRow.querySelector('.thr-row-inner');
+    const m = (inner.style.transform||'').match(/translateX\((-?\d+)px\)/);
+    const dx = m ? Number(m[1]) : 0;
+    inner.style.transition = 'transform 0.25s cubic-bezier(0.34,1.56,0.64,1)';
+    if (_sActive && dx <= -90) {
+      const ts = _sRow.dataset.delTs, mid = _sRow.dataset.delMid || 0;
+      inner.style.transform = 'translateX(-100%)';
+      if (navigator.vibrate) navigator.vibrate(20);
+      setTimeout(async () => {
+        if (!confirm('Nachricht löschen?')) { inner.style.transform=''; _sRow.classList.remove('swiping'); _sRow.style.removeProperty('--swop'); _sRow=null; return; }
+        try {
+          const r = await fetch('/api/delete-thread-msg', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({threadId: TID, timestamp: Number(ts), msgId: Number(mid)||null}) });
+          const d = await r.json();
+          if (d.ok) _sRow.remove();
+          else { inner.style.transform=''; _sRow.classList.remove('swiping'); _sRow.style.removeProperty('--swop'); alert('Fehler: '+(d.error||'unbekannt')); }
+        } catch(e2) { inner.style.transform=''; _sRow.classList.remove('swiping'); _sRow.style.removeProperty('--swop'); alert('Netzwerkfehler: '+e2.message); }
+        _sRow = null;
+      }, 250);
+    } else {
+      inner.style.transform = '';
+      _sRow.classList.remove('swiping'); _sRow.style.removeProperty('--swop');
+      _sRow = null;
+    }
+    _sActive = false;
+  });
 })();
 </script>
 <div id="reply-bar" style="display:none;position:fixed;bottom:calc(108px + var(--safe-bottom));left:0;right:0;padding:7px 12px;background:rgba(0,136,204,.15);border-top:1px solid rgba(0,136,204,.3);align-items:center;gap:8px;z-index:6;box-sizing:border-box">
@@ -3968,11 +4021,11 @@ async function createThread(){
       const textBody = m.text ? '<div style="font-size:15px;line-height:1.42;color:#e4e6eb;word-break:break-word">'+esc(m.text)+'</div>' : '';
       const timeFooter = '<div style="font-size:10.5px;color:rgba(255,255,255,0.5);text-align:right;margin-top:3px;font-variant-numeric:tabular-nums">'+ts+'</div>';
       const canDel=(m.uid&&String(m.uid)===String(MY_UID))||IS_ADMIN;
-      const delBtn=canDel?'<button type="button" class="thr-trash" data-trash-ts="'+m.timestamp+'" data-trash-mid="'+(m.msg_id||0)+'" onclick="if(confirm(\'Nachricht löschen?\')){fetch(\'/api/delete-thread-msg\',{method:\'POST\',headers:{\'Content-Type\':\'application/json\'},body:JSON.stringify({threadId:TID,timestamp:'+m.timestamp+',msgId:'+(m.msg_id||0)+'})}).then(r=>r.json()).then(d=>{if(d.ok){this.closest(\'.thr-row\').remove();}else{alert(\'Fehler: \'+(d.error||\'unbekannt\'))}}).catch(e=>alert(\'Netzwerkfehler: \'+e.message))}return false" style="position:absolute;top:4px;right:4px;z-index:100;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#ef4444;font-size:14px;cursor:pointer;padding:4px 7px;border-radius:8px;pointer-events:auto;touch-action:manipulation">🗑️</button>':'';
+      const swipeAttrsJS = canDel ? ' data-can-del="1" data-del-ts="'+m.timestamp+'" data-del-mid="'+(m.msg_id||0)+'"' : '';
       const reactBadges=m.reactions&&Object.keys(m.reactions).length?'<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:5px">'+Object.entries(m.reactions).map(([em,uids])=>'<button onclick="react('+m.timestamp+',\''+em+'\')" style="background:'+(uids.includes(MY_UID)?'rgba(0,136,204,.25)':'rgba(255,255,255,.07)')+';border:1px solid rgba(255,255,255,.15);border-radius:20px;padding:2px 7px;font-size:11px;cursor:pointer;color:var(--text)">'+em+' '+uids.length+'</button>').join('')+'</div>':'';
       const actBar='<div style="display:flex;gap:6px;margin-top:4px;font-size:11px"><button onclick="setReply('+m.timestamp+')" style="background:none;border:none;color:rgba(255,255,255,0.55);cursor:pointer;padding:2px 0">↩ Antworten</button><button onclick="openReact('+m.timestamp+')" style="background:none;border:none;color:rgba(255,255,255,0.55);cursor:pointer;padding:2px 0">😊 Reagieren</button></div>';
       const ring=m.uid&&RING_MAP[m.uid]?RING_MAP[m.uid]:'';
-      const bubble = '<div class="thr-bubble" style="position:relative;display:inline-block;max-width:78%;background:#212121;border-radius:14px;padding:8px 12px 6px 12px;box-shadow:0 1px 2px rgba(0,0,0,0.3)">'+nameInBubble+replyBlock+media+textBody+timeFooter+delBtn+'</div>';
+      const bubble = '<div class="thr-bubble" style="position:relative;display:inline-block;max-width:78%;background:#212121;border-radius:14px;padding:8px 12px 6px 12px;box-shadow:0 1px 2px rgba(0,0,0,0.3)">'+nameInBubble+replyBlock+media+textBody+timeFooter+'</div>';
       const avatarSlot = showAvatar
         ? '<a href="/profil/'+m.uid+'" style="text-decoration:none;flex-shrink:0"><div style="width:30px;height:30px;border-radius:50%;background:'+c+';display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;position:relative;overflow:hidden'+ring+'">'+ini(m.name)+(m.uid?'<img src="/appbild/'+m.uid+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" onerror="this.remove()" loading="lazy">':'')+'</div></a>'
         : '<div style="width:30px;flex-shrink:0"></div>';
@@ -3982,7 +4035,7 @@ async function createThread(){
         firstUnreadId=' id="first-unread"';
         unreadInsertedJS=true;
       }
-      return banner+'<div class="thr-row" style="display:flex;gap:8px;align-items:flex-end'+(isLastInSeries?'':';margin-bottom:2px')+'"'+firstUnreadId+'>'+avatarSlot+'<div style="flex:1;min-width:0;text-align:left">'+bubble+reactBadges+actBar+'</div></div>';
+      return banner+'<div class="thr-row"'+swipeAttrsJS+' style="display:flex;gap:8px;align-items:flex-end'+(isLastInSeries?'':';margin-bottom:2px')+'"'+firstUnreadId+'>'+avatarSlot+'<div class="thr-row-inner" style="flex:1;min-width:0;text-align:left">'+bubble+reactBadges+actBar+'</div></div>';
     }).join('');
     if(atBottom){
       const ud=document.getElementById('unread-divider');
@@ -4628,14 +4681,17 @@ async function applyBanner(gradient){
 // Globaler delegierter Handler für Folgen-Button (kann von keinem Parent geschluckt werden)
 async function sugDoFollow(btn){
   const uid = btn && btn.dataset ? btn.dataset.followUid : null;
-  if (!uid || btn.disabled) return;
+  if (!uid) { alert('🐛 Kein UID am Button'); return; }
+  if (btn.disabled) return;
   btn.disabled = true;
   const orig = btn.textContent;
   btn.textContent = '...';
   try {
     const r = await fetch('/api/follow', { method: 'POST', headers: {'Content-Type':'application/json','Accept':'application/json'}, body: JSON.stringify({uid: String(uid)}), credentials: 'same-origin' });
-    let data = null; try { data = await r.json(); } catch(e) {}
-    if (r.ok && data && data.ok !== false) {
+    let data = null; let raw = '';
+    try { raw = await r.text(); data = JSON.parse(raw); } catch(e) {}
+    console.log('[follow]', r.status, raw);
+    if (r.ok && data && data.ok === true) {
       btn.textContent = '✓ Folge';
       btn.classList.add('followed');
       btn.disabled = false;
@@ -4643,16 +4699,17 @@ async function sugDoFollow(btn){
         const card = btn.closest('.sug-card');
         if (card) { card.style.transition='opacity 0.3s,transform 0.3s'; card.style.opacity='0'; card.style.transform='scale(0.85)'; setTimeout(()=>card.remove(), 300); }
       }, 900);
+    } else if (r.status === 302 || r.redirected || (raw && raw.includes('<!DOCTYPE'))) {
+      btn.textContent = orig; btn.disabled = false;
+      alert('Du musst eingeloggt sein. Bitte App neu öffnen / einloggen.');
     } else {
-      btn.textContent = orig;
-      btn.disabled = false;
-      const msg = data && data.error ? data.error : ('HTTP ' + r.status);
-      alert('Folgen fehlgeschlagen: ' + msg);
+      btn.textContent = orig; btn.disabled = false;
+      const msg = (data && data.error) ? data.error : ('HTTP ' + r.status + (raw ? ' — ' + raw.slice(0,200) : ''));
+      alert('Folgen fehlgeschlagen:\n' + msg);
     }
   } catch(e) {
-    btn.textContent = orig;
-    btn.disabled = false;
-    alert('Netzwerkfehler beim Folgen: ' + e.message);
+    btn.textContent = orig; btn.disabled = false;
+    alert('Netzwerkfehler beim Folgen:\n' + e.message);
   }
 }
 window.sugDoFollow = sugDoFollow;
