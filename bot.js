@@ -1615,7 +1615,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v28-photo';
+const SW_VERSION='v29-camera-emoji';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
@@ -3640,7 +3640,7 @@ async function submitSuperLink(){
 <div style="position:fixed;bottom:60px;left:0;right:0;background:var(--bg);border-top:1px solid rgba(255,255,255,0.06);padding:8px 10px;display:flex;gap:6px;align-items:center;z-index:100">
   <label style="width:38px;height:38px;border-radius:50%;background:transparent;color:#0866FF;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0" title="Kamera">
     <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M9.4 10.5l4.77-8.26C13.47 2.09 12.75 2 12 2 9.53 2 7.29 2.99 5.64 4.59l3.74 5.91zm9.83-1.5c-.86-2.3-2.55-4.18-4.74-5.27L11.32 9h7.91zm.34 2H12v9.96c4.42-.32 8-3.99 8-8.46 0-.52-.05-1.02-.13-1.5zM4.41 4.59C2.93 6.16 2 8.27 2 10.6c0 .8.13 1.59.4 2.34l4-7.04L4.41 4.59zM2.81 12.59C3.97 16.5 7.65 19.5 12 19.96V12.59H2.81z"/></svg>
-    <input type="file" accept="image/*" capture="user" style="display:none" onchange="selectImage(this)">
+    <input type="file" accept="image/*" capture="environment" style="display:none" onchange="selectImage(this)">
   </label>
   <label style="width:38px;height:38px;border-radius:50%;background:transparent;color:#0866FF;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0" title="Galerie">
     <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
@@ -3717,19 +3717,43 @@ let recSeconds = 0;
 function selectImage(input) {
     const file = input.files[0];
     if (!file) return;
-    if (file.size > 5000000) { alert('Foto ist zu gross (max 5MB)'); return; }
+    // Hard-Cap: 25MB roh (Kamera-RAW > 25MB ist absurd, danach komprimieren wir eh)
+    if (file.size > 25 * 1024 * 1024) { alert('Foto ist zu gross (max 25 MB)'); input.value = ''; return; }
     const reader = new FileReader();
     reader.onload = e => {
-        selectedImage = e.target.result;
-        const prev = document.getElementById('img-preview');
-        const wrap = document.getElementById('img-preview-wrap');
-        if (prev) prev.src = selectedImage;
-        if (wrap) wrap.style.display = 'block';
-        if (typeof window._chatToggleSend === 'function') window._chatToggleSend();
+        const dataUrl = e.target.result;
+        // Komprimieren: max 1600px Kante, JPEG 0.85 — selbst 15MB-Fotos werden ~300KB
+        const img = new Image();
+        img.onload = () => {
+            try {
+                const MAX = 1600;
+                let w = img.naturalWidth || img.width;
+                let h = img.naturalHeight || img.height;
+                if (w > MAX || h > MAX) {
+                    if (w >= h) { h = Math.round(h * MAX / w); w = MAX; }
+                    else { w = Math.round(w * MAX / h); h = MAX; }
+                }
+                const canvas = document.createElement('canvas');
+                canvas.width = w; canvas.height = h;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, w, h);
+                selectedImage = canvas.toDataURL('image/jpeg', 0.85);
+            } catch(err) {
+                // Fallback: rohe DataURL nehmen wenn Canvas fehlschlägt
+                selectedImage = dataUrl;
+            }
+            const prev = document.getElementById('img-preview');
+            const wrap = document.getElementById('img-preview-wrap');
+            if (prev) prev.src = selectedImage;
+            if (wrap) wrap.style.display = 'block';
+            if (typeof window._chatToggleSend === 'function') window._chatToggleSend();
+        };
+        img.onerror = () => alert('Bild konnte nicht geladen werden');
+        img.src = dataUrl;
     };
     reader.onerror = () => alert('Foto konnte nicht gelesen werden');
     reader.readAsDataURL(file);
-    input.value = ''; // damit nächste Auswahl auch das gleiche Bild triggert
+    input.value = '';
 }
 
 function clearImage() {
@@ -3874,15 +3898,35 @@ async function createThread(){
         const myLastReadTs = (botData.threadLastRead?.[myUid]?.[threadId]) || 0;
         // Mark as read
         await postBot('/mark-read', { uid: myUid, thread_id: threadId });
-        const threadEmojiPaletteD = ['🎯','🚀','💡','📊','🎨','🔥','⚡','🌟','📝','🎭','🏆','🎵','🧠','💎','🌈','🎮','📣','🛠️','🌍','🎬'];
-        function threadEmojiD(tid){let h=0;for(const c of String(tid))h=(h*31+c.charCodeAt(0))>>>0;return threadEmojiPaletteD[h%threadEmojiPaletteD.length];}
-        const thrInfoRaw = (botData.threads||[]).find(t=>String(t.id)===threadId);
-        const _rawE = thrInfoRaw?.emoji;
-        // Custom-Emoji-IDs (numerisch) sind nicht renderbar → Hash-Fallback aus Thread-ID
-        const _isValidEmoji = _rawE && _rawE.length >= 1 && _rawE.length <= 4 && !/^\d+$/.test(_rawE);
+        const threadEmojiPaletteD = ['🎯','🚀','💡','📊','🎨','🔥','⚡','🌟','📝','🎭','🏆','🎵','🧠','💎','🌈','🎮','📣','🛠️','🌍','🎬','📚','🍕','☕','🌙','🎁','🌊','⚽','🚴','🍀','✨','📷','🦄','🪐','🍎','🛸','🎪','🪄','🎲','🛹','🧭'];
+        function _isValidEmojiD(e){ return e && e.length >= 1 && e.length <= 4 && !/^\d+$/.test(e); }
+        // Greedy unique emoji assignment über alle Threads, damit Header-Emoji mit Listen-Emoji übereinstimmt
+        const _allThreads = botData.threads || [];
+        const _thrUsedD = new Set();
+        const _thrEmojiMapD = new Map();
+        _allThreads.forEach(t => {
+            const id = String(t.id);
+            if (id === 'general') { _thrEmojiMapD.set(id, '💬'); _thrUsedD.add('💬'); return; }
+            if (_isValidEmojiD(t.emoji)) { _thrEmojiMapD.set(id, t.emoji); _thrUsedD.add(t.emoji); }
+        });
+        _allThreads.forEach(t => {
+            const id = String(t.id);
+            if (_thrEmojiMapD.has(id)) return;
+            let h = 0;
+            for (let i = 0; i < id.length; i++) h = (h*31 + id.charCodeAt(i)) >>> 0;
+            let emoji = null;
+            for (let i = 0; i < threadEmojiPaletteD.length; i++) {
+                const cand = threadEmojiPaletteD[(h + i) % threadEmojiPaletteD.length];
+                if (!_thrUsedD.has(cand)) { emoji = cand; break; }
+            }
+            if (!emoji) emoji = threadEmojiPaletteD[h % threadEmojiPaletteD.length];
+            _thrEmojiMapD.set(id, emoji);
+            _thrUsedD.add(emoji);
+        });
+        const thrInfoRaw = _allThreads.find(t=>String(t.id)===threadId);
         const thrInfo = {
             name: thrInfoRaw?.name || (threadId==='general' ? 'Allgemein' : 'Thread '+threadId),
-            emoji: threadId==='general' ? '💬' : (_isValidEmoji ? _rawE : threadEmojiD(threadId))
+            emoji: _thrEmojiMapD.get(threadId) || (threadId==='general' ? '💬' : threadEmojiPaletteD[0])
         };
         // Get messages: general uses communityFeed as fallback
         let msgs = (botData.threadMessages||{})[threadId] || [];

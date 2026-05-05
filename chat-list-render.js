@@ -117,14 +117,34 @@ module.exports = function renderChatList(opts) {
 
     const totalUnread = (myConvos || []).reduce((s,c) => s + (c.unread || 0), 0) + (totalThreadUnread || 0);
 
-    const THR_EMOJI_PALETTE = ['🎯','🚀','💡','📊','🎨','🔥','⚡','🌟','📝','🎭','🏆','🎵','🧠','💎','🌈','🎮','📣','🛠️','🌍','🎬'];
+    const THR_EMOJI_PALETTE = ['🎯','🚀','💡','📊','🎨','🔥','⚡','🌟','📝','🎭','🏆','🎵','🧠','💎','🌈','🎮','📣','🛠️','🌍','🎬','📚','🍕','☕','🌙','🎁','🌊','⚽','🚴','🍀','✨','📷','🦄','🪐','🍎','🛸','🎪','🪄','🎲','🛹','🧭'];
+    function isCustomEmoji(e){ return e && e.length >= 1 && e.length <= 4 && !/^\d+$/.test(e); }
     function thrEmojiFor(tid){let h=0;const s=String(tid);for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))>>>0;return THR_EMOJI_PALETTE[h%THR_EMOJI_PALETTE.length];}
-    function pickThrEmoji(t){
-        if (String(t.id) === 'general') return '💬';
-        const e = t.emoji;
-        if (e && e.length >= 1 && e.length <= 4 && !/^\d+$/.test(e)) return e;
-        return thrEmojiFor(t.id);
-    }
+    // Greedy: jeder Thread kriegt ein eindeutiges Emoji aus der Palette wenn möglich.
+    // Erst Threads mit explizitem (renderbaren) Emoji einsetzen, dann den Rest aus der Palette füllen ohne Doppelung.
+    const _thrUsed = new Set();
+    const _thrEmojiMap = new Map();
+    (threadsList || []).forEach(t => {
+        const id = String(t.id);
+        if (id === 'general') { _thrEmojiMap.set(id, '💬'); _thrUsed.add('💬'); return; }
+        if (isCustomEmoji(t.emoji)) { _thrEmojiMap.set(id, t.emoji); _thrUsed.add(t.emoji); }
+    });
+    (threadsList || []).forEach(t => {
+        const id = String(t.id);
+        if (_thrEmojiMap.has(id)) return;
+        // Hash als Start, dann lineares Probing um Kollisionen zu vermeiden
+        let h = 0;
+        for (let i = 0; i < id.length; i++) h = (h*31 + id.charCodeAt(i)) >>> 0;
+        let emoji = null;
+        for (let i = 0; i < THR_EMOJI_PALETTE.length; i++) {
+            const cand = THR_EMOJI_PALETTE[(h + i) % THR_EMOJI_PALETTE.length];
+            if (!_thrUsed.has(cand)) { emoji = cand; break; }
+        }
+        if (!emoji) emoji = THR_EMOJI_PALETTE[h % THR_EMOJI_PALETTE.length]; // Palette voll: fallback mit Doppelung
+        _thrEmojiMap.set(id, emoji);
+        _thrUsed.add(emoji);
+    });
+    function pickThrEmoji(t){ return _thrEmojiMap.get(String(t.id)) || thrEmojiFor(t.id); }
     // Threads-Liste rendern (für Tab 2)
     const threadsRows = (threadsList || []).map(t => {
         const tid = String(t.id);
