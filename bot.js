@@ -3955,6 +3955,7 @@ async function createThread(){
 <div id="msgs" style="padding:12px 12px 165px;display:flex;flex-direction:column;gap:10px;overflow-x:hidden;min-width:0;width:100%">${initialMsgsHtml}</div>
 <script>
 (function(){
+  const TID='${threadId}';
   function scrollInit(){
     const ud=document.getElementById('unread-divider');
     if(ud) ud.scrollIntoView({behavior:'instant',block:'center'});
