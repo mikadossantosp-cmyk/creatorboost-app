@@ -4095,7 +4095,18 @@ async function renameThread(tid,current){
         Object.keys(thrMsgsAll).forEach(tid => {
             if (tid !== 'general') totalThreadUnread += (thrMsgsAll[tid]||[]).filter(m=>(m.timestamp||0)>(lastReadAll[tid]||0)).length;
         });
-        const convHtml = require('./chat-list-render')({ myConvos, botData, myUid, feedPreview, totalThreadUnread, ladeBild, adminIds, onlineUids: typeof sessions !== 'undefined' ? new Set([...sessions.values()].map(s => String(s.uid))) : new Set() });
+        // Threads-Daten für den 2. Tab
+        const threadEmojiPalette = ['🎯','🚀','💡','📊','🎨','🔥','⚡','🌟','📝','🎭','🏆','🎵','🧠','💎','🌈','🎮','📣','🛠️','🌍','🎬'];
+        function threadEmoji(tid){let h=0;for(const c of String(tid))h=(h*31+c.charCodeAt(0))>>>0;return threadEmojiPalette[h%threadEmojiPalette.length];}
+        let threads = botData.threads || [];
+        if (!threads.length) {
+            threads = Object.keys(thrMsgsAll).map(tid => ({ id:tid, name:tid==='general'?'Allgemein':'Thread '+tid, emoji:tid==='general'?'💬':threadEmoji(tid), last_msg:thrMsgsAll[tid]?.[0]||null, msg_count:thrMsgsAll[tid]?.length||0 }));
+        }
+        if (!threads.find(t=>String(t.id)==='general')) {
+            const lastCF = cfeed[0];
+            threads.unshift({ id:'general', name:'Allgemein', emoji:'💬', last_msg:lastCF?{text:lastCF.text,name:lastCF.name||lastCF.username,timestamp:lastCF.timestamp}:null, msg_count:Math.max(cfeed.length, thrMsgsAll['general']?.length||0) });
+        }
+        const convHtml = require('./chat-list-render')({ myConvos, botData, myUid, feedPreview, totalThreadUnread, ladeBild, adminIds, onlineUids: typeof sessions !== 'undefined' ? new Set([...sessions.values()].map(s => String(s.uid))) : new Set(), threadsList: threads, threadLastRead: lastReadAll });
         return html(`<div class="topbar"><div class="topbar-logo">Nachrichten</div></div><div style="padding-bottom:80px">${convHtml}</div>`, 'messages');
     }
 

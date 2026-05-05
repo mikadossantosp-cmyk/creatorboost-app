@@ -27,7 +27,7 @@ function esc(s) {
 }
 
 module.exports = function renderChatList(opts) {
-    const { myConvos = [], botData = {}, myUid = '', feedPreview = '', totalThreadUnread = 0, ladeBild = () => null, onlineUids } = opts || {};
+    const { myConvos = [], botData = {}, myUid = '', feedPreview = '', totalThreadUnread = 0, ladeBild = () => null, onlineUids, threadsList = [], threadLastRead = {} } = opts || {};
     const adminIds = (typeof opts.adminIds !== 'undefined') ? opts.adminIds : [];
     const onlineSet = onlineUids instanceof Set ? onlineUids : (Array.isArray(onlineUids) ? new Set(onlineUids.map(String)) : new Set());
     const onlineArr = [...onlineSet];
@@ -117,6 +117,28 @@ module.exports = function renderChatList(opts) {
 
     const totalUnread = (myConvos || []).reduce((s,c) => s + (c.unread || 0), 0) + (totalThreadUnread || 0);
 
+    // Threads-Liste rendern (für Tab 2)
+    const threadsRows = (threadsList || []).map(t => {
+        const tid = String(t.id);
+        const lr = threadLastRead?.[tid] || 0;
+        const thrMsgs = botData.threadMessages?.[tid] || [];
+        const unread = thrMsgs.filter(m => (m.timestamp||0) > lr).length;
+        const last = t.last_msg || thrMsgs[0];
+        const lastTime = last?.timestamp ? formatTime(last.timestamp) : '';
+        const lastText = last ? ((last.name?last.name+': ':'') + (last.text||'').slice(0,50)) : 'Keine Nachrichten';
+        return '<a href="/nachrichten/gruppe/' + encodeURIComponent(tid) + '" class="dm-row' + (unread>0?' unread':'') + '">' +
+            '<div class="dm-avatar dm-tg" style="background:linear-gradient(135deg,#0088cc,#00c6ff);font-size:24px">' + (t.emoji || '💬') + '</div>' +
+            '<div class="dm-content">' +
+                '<div class="dm-name">' + esc(t.name||'Thread') + '</div>' +
+                '<div class="dm-preview">' + esc(lastText) + '</div>' +
+            '</div>' +
+            '<div class="dm-meta">' +
+                (lastTime ? '<div class="dm-time">' + lastTime + '</div>' : '') +
+                (unread > 0 ? '<div class="dm-badge dm-tg-badge">' + (unread>99?'99+':unread) + '</div>' : '') +
+            '</div>' +
+        '</a>';
+    }).join('');
+
     return onlineFlag + appPerf + '<style>' +
         '* { -webkit-tap-highlight-color: transparent; }' +
         '.dm-tabs { display: flex; gap: 0; padding: 0 16px 8px; border-bottom: 0.5px solid rgba(255,255,255,0.05); background: var(--bg); position: sticky; top: 56px; z-index: 4; }' +
@@ -191,14 +213,17 @@ module.exports = function renderChatList(opts) {
         (storiesArr.length ? '<div class="dm-stories-section"><div class="dm-stories-wrap">' + storiesHtml + '</div></div>' : '') +
 
         '<div class="dm-tabs">' +
-            '<button class="dm-tab active" data-tab="all" onclick="dmSwitchTab(\'all\')">Alle</button>' +
-            '<button class="dm-tab" data-tab="unread" onclick="dmSwitchTab(\'unread\')">Ungelesen' + (totalUnread > 0 ? ' <span class="dm-tab-count">' + (totalUnread > 99 ? '99+' : totalUnread) + '</span>' : '') + '</button>' +
+            '<button class="dm-tab active" data-tab="chats" onclick="dmSwitchTab(\'chats\')">💬 Chats' + ((myConvos||[]).reduce((s,c)=>s+(c.unread||0),0) > 0 ? ' <span class="dm-tab-count">' + Math.min(99,(myConvos||[]).reduce((s,c)=>s+(c.unread||0),0)) + '</span>' : '') + '</button>' +
+            '<button class="dm-tab" data-tab="threads" onclick="dmSwitchTab(\'threads\')">✈️ Telegram-Treads' + (totalThreadUnread > 0 ? ' <span class="dm-tab-count">' + (totalThreadUnread > 99 ? '99+' : totalThreadUnread) + '</span>' : '') + '</button>' +
         '</div>' +
 
-        '<div class="dm-list" id="dm-list-main">' +
-            telegramRow +
+        '<div class="dm-list" id="dm-list-chats">' +
             dmRows +
             emptyState +
+        '</div>' +
+
+        '<div class="dm-list" id="dm-list-threads" style="display:none">' +
+            (threadsRows || '<div class="dm-empty"><div class="dm-empty-icon">✈️</div><div class="dm-empty-text">Keine Telegram-Treads</div></div>') +
         '</div>' +
 
         '<button class="dm-fab" onclick="dmFocusSearch()" title="Neue Nachricht" aria-label="Neue Nachricht">' +
@@ -210,7 +235,7 @@ module.exports = function renderChatList(opts) {
             'function dmSearch(q) {' +
                 'clearTimeout(dmSearchTimer);' +
                 'const results = document.getElementById("dm-search-results");' +
-                'const main = document.getElementById("dm-list-main");' +
+                'const main = document.getElementById("dm-list-chats");' +
                 'const stories = document.querySelector(".dm-stories-section");' +
                 'if (!q || !q.trim()) {' +
                     'results.innerHTML = "";' +
@@ -253,28 +278,27 @@ module.exports = function renderChatList(opts) {
             '}' +
             'function dmSwitchTab(t){' +
                 'document.querySelectorAll(".dm-tab").forEach(b => b.classList.toggle("active", b.dataset.tab === t));' +
-                'document.querySelectorAll("#dm-list-main .dm-row").forEach(r => {' +
-                    'const isUnread = r.classList.contains("unread");' +
-                    'const isPinned = r.classList.contains("dm-pinned");' +
-                    'r.style.display = (t === "all" || isUnread || isPinned) ? "" : "none";' +
-                '});' +
+                'const c = document.getElementById("dm-list-chats");' +
+                'const th = document.getElementById("dm-list-threads");' +
+                'if (c) c.style.display = (t === "chats") ? "" : "none";' +
+                'if (th) th.style.display = (t === "threads") ? "" : "none";' +
                 'try { localStorage.setItem("dmTab", t); } catch(e) {}' +
             '}' +
-            'try { const saved = localStorage.getItem("dmTab"); if (saved) dmSwitchTab(saved); } catch(e) {}' +
+            'try { const saved = localStorage.getItem("dmTab"); if (saved && (saved === "chats" || saved === "threads")) dmSwitchTab(saved); } catch(e) {}' +
             // ── Pin/Mute Settings (localStorage) ──
             'function dmGetSettings(){ try { return JSON.parse(localStorage.getItem("dmSettings")||"{}"); } catch(e) { return {}; } }' +
             'function dmSaveSettings(s){ try { localStorage.setItem("dmSettings", JSON.stringify(s)); } catch(e) {} }' +
             'function dmApplySettings(){' +
                 'const s = dmGetSettings();' +
-                'const list = document.getElementById("dm-list-main"); if (!list) return;' +
-                'document.querySelectorAll("#dm-list-main .dm-row[data-uid]").forEach(r => {' +
+                'const list = document.getElementById("dm-list-chats"); if (!list) return;' +
+                'document.querySelectorAll("#dm-list-chats .dm-row[data-uid]").forEach(r => {' +
                     'const uid = r.dataset.uid;' +
                     'r.classList.toggle("is-pinned", !!s[uid]?.pinned);' +
                     'r.classList.toggle("is-muted", !!s[uid]?.muted);' +
                 '});' +
                 // Sortierung: Pinned nach oben (nach dem Telegram-Pinned)
-                'const tg = list.querySelector(".dm-pinned"); const pinned = [...list.querySelectorAll(".dm-row.is-pinned[data-uid]")];' +
-                'pinned.forEach(p => { if (tg) tg.after(p); });' +
+                'const pinned = [...list.querySelectorAll(".dm-row.is-pinned[data-uid]")];' +
+                'pinned.forEach(p => { list.insertBefore(p, list.firstChild); });' +
             '}' +
             'dmApplySettings();' +
             // Long-Press Context Menu
