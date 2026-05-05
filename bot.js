@@ -491,6 +491,14 @@ textarea.form-input{resize:none;min-height:80px}
 .highlight-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
 .creator-scroll{display:flex;gap:12px;padding:0 16px 12px;overflow-x:auto;scrollbar-width:none}
 .creator-scroll::-webkit-scrollbar{display:none}
+.sug-list{display:flex;flex-direction:column;gap:0;padding:0}
+.sug-card{display:flex;align-items:center;gap:12px;padding:10px 16px;background:transparent;transition:background 0.15s}
+.sug-card:active{background:rgba(255,255,255,0.04)}
+.sug-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.sug-meta{display:flex;align-items:center;flex-wrap:wrap;gap:0;margin-top:2px}
+.sug-btn{flex-shrink:0;background:#0866FF;color:#fff;border:none;border-radius:8px;padding:9px 14px;font-size:13.5px;font-weight:700;cursor:pointer;min-width:104px;transition:background 0.18s,transform 0.15s}
+.sug-btn:active{transform:scale(0.95)}
+.sug-btn.followed{background:#3a3b3c;color:#e4e6eb}
 .creator-card{flex-shrink:0;width:140px;background:var(--bg3);border:1px solid var(--border2);border-radius:16px;overflow:hidden;text-decoration:none;color:var(--text);display:block}
 .creator-card-banner{height:50px;position:relative;overflow:hidden;background:var(--bg4)}
 .creator-card-avatar{width:44px;height:44px;border-radius:50%;border:3px solid var(--bg3);margin:-22px auto 0;position:relative;overflow:hidden;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff}
@@ -4214,6 +4222,50 @@ document.getElementById('search-input').focus();
         const dailyRows = makeRankRows(dailySorted, (id)=>d.dailyXP[id]||0);
         const weeklyRows = makeRankRows(weeklySorted, (id)=>d.weeklyXP[id]||0);
 
+        // ── PERSONEN DIE DU KENNEN KÖNNTEST ──
+        const myFollowingSet = new Set((d.users[myUid]?.following||[]).map(String));
+        const suggestions = [];
+        for (const [uid, u] of Object.entries(d.users||{})) {
+            if (String(uid) === String(myUid)) continue;
+            if (adminIds.includes(Number(uid))) continue;
+            if (!u || !u.started || u.inGruppe === false) continue;
+            if (myFollowingSet.has(String(uid))) continue;
+            const theirFollowers = (u.followers||[]).map(String);
+            const mutuals = theirFollowers.filter(f => myFollowingSet.has(f));
+            // Score: mutuals zählen am meisten, fallback auf XP
+            const score = mutuals.length * 1000 + (u.xp || 0);
+            suggestions.push({ uid, u, mutuals, score });
+        }
+        suggestions.sort((a,b) => b.score - a.score);
+        const topSuggestions = suggestions.slice(0, 12);
+        const sugCards = topSuggestions.map(({uid, u, mutuals}) => {
+            const grad = badgeGradient(u.role);
+            const insta = u.instagram;
+            const pic = ladeBild(uid, 'profilepic');
+            const name = u.spitzname || u.name || 'User';
+            const mAvatars = mutuals.slice(0, 3).map(mid => {
+                const mu = d.users[mid] || {};
+                const mp = ladeBild(mid, 'profilepic');
+                const mInsta = mu.instagram;
+                return `<div style="width:18px;height:18px;border-radius:50%;background:${badgeGradient(mu.role)};border:2px solid var(--bg);overflow:hidden;flex-shrink:0">${mp?`<img src="/appbild/${mid}/profilepic" style="width:100%;height:100%;object-fit:cover" loading="lazy">`:mInsta?`<img src="https://unavatar.io/instagram/${mInsta}" style="width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.remove()">`:''}</div>`;
+            }).join('');
+            const mutualText = mutuals.length === 0 ? 'Vorgeschlagen' : (mutuals.length + ' gemeinsame' + (mutuals.length===1 ? 'r Follower' : ' Follower'));
+            return `<div class="sug-card" data-uid="${uid}">
+  <a href="/profil/${uid}" class="sug-avatar-link" style="text-decoration:none;flex-shrink:0">
+    <div style="position:relative;width:64px;height:64px;border-radius:50%;background:${grad};overflow:hidden;display:flex;align-items:center;justify-content:center${getRingBoxShadow(u)}">
+      <span style="position:absolute;color:#fff;font-size:22px;font-weight:800">${name[0]}</span>
+      ${pic?`<img src="/appbild/${uid}/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy">`:insta?`<img src="https://unavatar.io/instagram/${insta}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.remove()">`:''}
+    </div>
+  </a>
+  <div class="sug-info">
+    <a href="/profil/${uid}" style="color:var(--text);text-decoration:none;font-size:15px;font-weight:700;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${name}</a>
+    ${insta ? `<a href="https://instagram.com/${insta}" target="_blank" onclick="event.stopPropagation()" style="font-size:11px;color:#e1306c;text-decoration:none">📸 @${insta}</a>` : ''}
+    <div class="sug-meta">${mAvatars ? `<div style="display:flex;margin-right:6px">${mAvatars.split('</div>').filter(x=>x).map((p,i)=>`<div style="margin-left:${i===0?'0':'-8px'}">${p}</div></div>`).join('')}</div>` : ''}<span style="font-size:11.5px;color:var(--muted)">${mutualText}</span></div>
+  </div>
+  <button class="sug-btn" data-follow-uid="${uid}" onclick="sugFollow(this)">+ Folgen</button>
+</div>`;
+        }).join('');
+
         const tabContent = {
             allgemein: `
 <div class="explore-welcome" style="margin:0 16px 20px">
@@ -4226,6 +4278,15 @@ document.getElementById('search-input').focus();
     <a href="/feed" style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.12);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.2);color:#fff;padding:8px 18px;border-radius:20px;font-size:12px;font-weight:700;text-decoration:none;align-self:flex-start">Zum Feed →</a>
   </div>
 </div>
+${topSuggestions.length ? `
+<div style="margin:0 0 18px">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:0 16px 10px">
+    <h3 style="font-size:14px;font-weight:700;margin:0;color:var(--text)">Personen, die du kennen könntest</h3>
+    <span style="font-size:11px;color:var(--muted)">${topSuggestions.length}</span>
+  </div>
+  <div class="sug-list">${sugCards}</div>
+</div>
+` : ''}
 <div style="padding:0 16px 14px">
   <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">⚡ Aktuelle Highlights</div>
   <a href="/explore?tab=ranking" class="highlight-card">
@@ -4435,6 +4496,34 @@ async function applyBanner(gradient){
     const data=await r.json();
     if(data.ok){location.reload();}else{alert(data.error||'Fehler');}
   }catch(e){alert('Fehler beim Setzen des Banners');}
+}
+async function sugFollow(btn){
+  const uid = btn.dataset.followUid;
+  if (!uid || btn.disabled) return;
+  btn.disabled = true;
+  const orig = btn.textContent;
+  btn.textContent = '...';
+  try {
+    const r = await fetch('/api/follow', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({uid}) });
+    const d = await r.json();
+    if (d.ok !== false) {
+      btn.textContent = '✓ Folge';
+      btn.classList.add('followed');
+      btn.disabled = false;
+      // Card nach 1.5s ausblenden
+      setTimeout(() => {
+        const card = btn.closest('.sug-card');
+        if (card) { card.style.transition='opacity 0.3s'; card.style.opacity='0'; setTimeout(()=>card.remove(), 300); }
+      }, 1500);
+    } else {
+      btn.textContent = orig;
+      btn.disabled = false;
+      alert('Fehler: ' + (d.error||'unbekannt'));
+    }
+  } catch(e) {
+    btn.textContent = orig;
+    btn.disabled = false;
+  }
 }
 </script>`;
             })(),
