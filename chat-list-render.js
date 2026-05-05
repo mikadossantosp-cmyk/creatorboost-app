@@ -117,6 +117,14 @@ module.exports = function renderChatList(opts) {
 
     const totalUnread = (myConvos || []).reduce((s,c) => s + (c.unread || 0), 0) + (totalThreadUnread || 0);
 
+    const THR_EMOJI_PALETTE = ['🎯','🚀','💡','📊','🎨','🔥','⚡','🌟','📝','🎭','🏆','🎵','🧠','💎','🌈','🎮','📣','🛠️','🌍','🎬'];
+    function thrEmojiFor(tid){let h=0;const s=String(tid);for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))>>>0;return THR_EMOJI_PALETTE[h%THR_EMOJI_PALETTE.length];}
+    function pickThrEmoji(t){
+        if (String(t.id) === 'general') return '💬';
+        const e = t.emoji;
+        if (e && e.length >= 1 && e.length <= 4 && !/^\d+$/.test(e)) return e;
+        return thrEmojiFor(t.id);
+    }
     // Threads-Liste rendern (für Tab 2)
     const threadsRows = (threadsList || []).map(t => {
         const tid = String(t.id);
@@ -126,10 +134,11 @@ module.exports = function renderChatList(opts) {
         const last = t.last_msg || thrMsgs[0];
         const lastTime = last?.timestamp ? formatTime(last.timestamp) : '';
         const lastText = last ? ((last.name?last.name+': ':'') + (last.text||'').slice(0,50)) : 'Keine Nachrichten';
+        const tName = t.name && t.name !== ('Thread '+tid) ? t.name : (tid === 'general' ? 'Allgemein' : t.name || 'Thread');
         return '<a href="/nachrichten/gruppe/' + encodeURIComponent(tid) + '" class="dm-row' + (unread>0?' unread':'') + '">' +
-            '<div class="dm-avatar dm-tg" style="background:linear-gradient(135deg,#0088cc,#00c6ff);font-size:24px">' + (t.emoji || '💬') + '</div>' +
+            '<div class="dm-avatar dm-tg" style="background:linear-gradient(135deg,#0088cc,#00c6ff);font-size:24px">' + pickThrEmoji(t) + '</div>' +
             '<div class="dm-content">' +
-                '<div class="dm-name">' + esc(t.name||'Thread') + '</div>' +
+                '<div class="dm-name">' + esc(tName) + '</div>' +
                 '<div class="dm-preview">' + esc(lastText) + '</div>' +
             '</div>' +
             '<div class="dm-meta">' +

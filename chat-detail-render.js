@@ -100,13 +100,12 @@ module.exports = function renderChatBubbles(opts) {
             } catch(e) { return ''; }
         })() : '';
 
-        const editedTag = m.edited ? '<span class="chat-edited">bearbeitet</span>' : '';
-
+        const editedTag = '';
         let bubbleContent = '';
         if (m.image) {
             bubbleContent = replyHtml + '<div class="chat-img-wrap" onclick="window.open(\'' + m.image + '\', \'_blank\')">' +
                 '<img src="' + m.image + '" alt="" loading="lazy">' +
-                (m.text ? '<div class="chat-img-caption">' + esc(m.text) + editedTag + '</div>' : '') +
+                (m.text ? '<div class="chat-img-caption">' + esc(m.text) + '</div>' : '') +
                 '</div>';
         } else if (m.audio) {
             bubbleContent = replyHtml + '<div class="chat-audio">' +
@@ -114,7 +113,7 @@ module.exports = function renderChatBubbles(opts) {
                 '<div class="chat-audio-info"><div class="chat-audio-bar"><div class="audio-prog"></div></div><div class="audio-dur">🎤 Sprachnachricht</div></div>' +
                 '</div>';
         } else {
-            bubbleContent = replyHtml + '<div class="chat-text">' + esc(m.text || '') + editedTag + '</div>' + linkPreview;
+            bubbleContent = replyHtml + '<div class="chat-text">' + esc(m.text || '') + '</div>' + linkPreview;
         }
 
         let backendReactions = {};
@@ -125,12 +124,20 @@ module.exports = function renderChatBubbles(opts) {
             Object.entries(backendReactions).map(([emo, n]) => '<span class="chat-reaction">' + emo + (n > 1 ? ' <b>' + n + '</b>' : '') + '</span>').join('') +
         '</div>';
 
+        // Telegram-style Meta innerhalb der Bubble unten rechts: Zeit + ✓ / ✓✓
+        const timeStr = formatTimeOnly(ts);
+        let metaHtml = '';
+        if (isMe) {
+            const tick = m.read === true ? '<span class="chat-tick read">✓✓</span>' : '<span class="chat-tick">✓</span>';
+            metaHtml = '<span class="chat-meta">' + (m.edited ? '<span class="chat-edited-mini">bearbeitet </span>' : '') + '<span class="chat-time">' + timeStr + '</span>' + tick + '</span>';
+        } else {
+            metaHtml = '<span class="chat-meta"><span class="chat-time">' + timeStr + '</span></span>';
+        }
+        // Status-Zeile unterhalb nur bei eigener letzter Nachricht (kompakt)
         let statusHtml = '';
         if (isMe && isLastFromSender) {
             const isRead = m.read === true;
-            statusHtml = '<div class="chat-status' + (isRead ? ' read' : '') + '">' +
-                (isRead ? 'Gesehen' : 'Gesendet') + ' · ' + formatTimeOnly(ts) +
-            '</div>';
+            statusHtml = '<div class="chat-status' + (isRead ? ' read' : '') + '">' + (isRead ? 'Gesehen' : 'Gesendet') + '</div>';
         }
 
         const showAvatar = !isMe && isLastFromSender;
@@ -151,7 +158,7 @@ module.exports = function renderChatBubbles(opts) {
                     'ontouchend="chatLongPressEnd()" ontouchmove="chatLongPressEnd()" ontouchcancel="chatLongPressEnd()" ' +
                     'onmousedown="chatLongPress(event,this,' + ts + ')" onmouseup="chatLongPressEnd()" onmouseleave="chatLongPressEnd()" ' +
                     'onclick="chatDoubleTap(event,this,' + ts + ')" oncontextmenu="event.preventDefault(); chatShowReactions(this,' + ts + ')">' +
-                    bubbleContent +
+                    bubbleContent + metaHtml +
                 '</div>' +
                 reactionsHtml +
                 statusHtml +
@@ -162,7 +169,8 @@ module.exports = function renderChatBubbles(opts) {
         lastTimestamp = ts;
     });
 
-    return onlineFlag + appPerf + getStyles() + html + getReactionPicker() + getScripts(myUid, otherUid);
+    const scrollFab = '<button id="scroll-to-bottom" onclick="chatScrollToBottom()" aria-label="Nach unten"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg><span class="stb-badge" id="stb-badge"></span></button>';
+    return onlineFlag + appPerf + getStyles() + html + scrollFab + getReactionPicker() + getScripts(myUid, otherUid);
 };
 
 function getStyles() {
@@ -189,16 +197,30 @@ function getStyles() {
         '.chat-bubble-wrap { max-width: 78%; display: flex; flex-direction: column; }' +
         '.chat-row-me .chat-bubble-wrap { align-items: flex-end; }' +
         '.chat-row-other .chat-bubble-wrap { align-items: flex-start; }' +
-        '.chat-bubble { padding: 11px 16px; border-radius: 22px; font-size: 16px; line-height: 1.42; word-break: break-word; user-select: none; -webkit-user-select: none; cursor: pointer; transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1); max-width: 100%; position: relative; }' +
+        '.chat-bubble { padding: 7px 11px 6px; border-radius: 14px; font-size: 15.5px; line-height: 1.34; word-break: break-word; user-select: none; -webkit-user-select: none; cursor: pointer; transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1); max-width: 100%; position: relative; }' +
         '.chat-bubble:active { transform: scale(0.96); }' +
-        '.chat-row-me .chat-bubble { background: #0866FF; color: #fff; border-radius: 20px 20px 6px 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.3); }' +
-        '.chat-row-me.chat-row-grouped .chat-bubble { border-radius: 20px 6px 6px 20px; }' +
-        '.chat-row-me.chat-row-last .chat-bubble { border-radius: 20px 20px 6px 20px; }' +
-        '.chat-row-me.chat-row-grouped.chat-row-last .chat-bubble { border-radius: 20px 6px 6px 20px; }' +
-        '.chat-row-other .chat-bubble { background: #3a3b3c; color: #e4e6eb; border-radius: 20px 20px 20px 6px; }' +
-        '.chat-row-other.chat-row-grouped .chat-bubble { border-radius: 6px 20px 20px 6px; }' +
+        '.chat-row-me .chat-bubble { background: #2B5278; color: #fff; border-radius: 14px 14px 4px 14px; box-shadow: 0 1px 1px rgba(0,0,0,0.18); }' +
+        '.chat-row-me.chat-row-grouped .chat-bubble { border-radius: 14px 4px 4px 14px; }' +
+        '.chat-row-me.chat-row-last .chat-bubble { border-radius: 14px 14px 4px 14px; }' +
+        '.chat-row-me.chat-row-grouped.chat-row-last .chat-bubble { border-radius: 14px 4px 4px 14px; }' +
+        '.chat-row-other .chat-bubble { background: #182533; color: #e9edef; border-radius: 14px 14px 14px 4px; }' +
+        '.chat-row-other.chat-row-grouped .chat-bubble { border-radius: 4px 14px 14px 4px; }' +
         '.chat-row-other.chat-row-last .chat-bubble { border-radius: 20px 20px 20px 6px; }' +
-        '.chat-text { white-space: pre-wrap; }' +
+        '.chat-text { white-space: pre-wrap; padding-right: 56px; min-height: 18px; }' +
+        '.chat-meta { position: absolute; right: 9px; bottom: 4px; display: inline-flex; align-items: center; gap: 3px; font-size: 11px; line-height: 1; opacity: 0.78; pointer-events: none; }' +
+        '.chat-row-me .chat-meta { color: rgba(255,255,255,0.85); }' +
+        '.chat-row-other .chat-meta { color: rgba(233,237,239,0.6); }' +
+        '.chat-time { font-variant-numeric: tabular-nums; }' +
+        '.chat-tick { font-size: 11px; letter-spacing: -1px; margin-left: 1px; }' +
+        '.chat-tick.read { color: #6FB6F2; }' +
+        '.chat-edited-mini { font-style: italic; opacity: 0.7; margin-right: 4px; }' +
+        '.chat-img-caption { padding-right: 60px !important; min-height: 16px; }' +
+        '#scroll-to-bottom { position: fixed; right: 12px; bottom: 84px; z-index: 40; width: 46px; height: 46px; border-radius: 50%; background: rgba(15,15,15,0.92); border: 1px solid rgba(255,255,255,0.1); color: #fff; font-size: 22px; cursor: pointer; display: none; align-items: center; justify-content: center; box-shadow: 0 4px 14px rgba(0,0,0,0.5); backdrop-filter: blur(20px); transition: transform 0.2s, opacity 0.2s; }' +
+        '#scroll-to-bottom.show { display: flex; animation: stb-in 0.18s ease; }' +
+        '#scroll-to-bottom:active { transform: scale(0.9); }' +
+        '@keyframes stb-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }' +
+        '#scroll-to-bottom .stb-badge { position: absolute; top: -4px; right: -4px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: #229ED9; color: #fff; font-size: 11px; font-weight: 700; display: none; align-items: center; justify-content: center; line-height: 1; }' +
+        '#scroll-to-bottom .stb-badge.show { display: flex; }' +
         '.chat-img-wrap { max-width: 260px; border-radius: inherit; overflow: hidden; cursor: pointer; }' +
         '.chat-img-wrap img { width: 100%; display: block; border-radius: inherit; transition: transform 0.3s; }' +
         '.chat-img-wrap:active img { transform: scale(0.97); }' +
@@ -570,5 +592,19 @@ function getScripts(myUid, otherUid) {
         '}' +
         'renderAllReactions();' +
         'requestAnimationFrame(() => window.scrollTo({ top: document.body.scrollHeight, behavior: "instant" }));' +
+        // Scroll-to-Bottom FAB: zeigt sich wenn nicht am unteren Ende, mit Unread-Counter
+        'function chatScrollToBottom(){ window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" }); }' +
+        '(function(){' +
+            'const fab = document.getElementById("scroll-to-bottom");' +
+            'const badge = document.getElementById("stb-badge");' +
+            'if (!fab) return;' +
+            'let pendingNew = 0;' +
+            'function nearBottom(){ return (window.innerHeight + window.scrollY) >= document.body.scrollHeight - 120; }' +
+            'function refresh(){ if (nearBottom()) { fab.classList.remove("show"); pendingNew = 0; badge.classList.remove("show"); } else { fab.classList.add("show"); } }' +
+            'window.addEventListener("scroll", refresh, { passive: true });' +
+            'window.addEventListener("resize", refresh);' +
+            'refresh();' +
+            'window.chatNotifyNewMsg = function(){ if (!nearBottom()) { pendingNew++; badge.textContent = pendingNew > 9 ? "9+" : String(pendingNew); badge.classList.add("show"); fab.classList.add("show"); } };' +
+        '})();' +
         '<\/script>';
 }

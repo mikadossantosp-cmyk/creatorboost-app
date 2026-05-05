@@ -1615,7 +1615,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v25-pointer';
+const SW_VERSION='v26-tg';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
@@ -1722,7 +1722,10 @@ self.addEventListener('notificationclick',e=>{
 
     const session = getSession(req);
     const lang = session?.lang || 'de';
-    if (session) { session.lastSeen = Date.now(); }
+    // lastSeen nur bei echten Aktionen erneuern, nicht bei Hintergrund-Polling — sonst gilt User
+    // ewig als online, weil eigene Polls die eigene Session ständig refreshen.
+    const isPolling = /^\/api\/(notifications\/count|messages-count|likes-update|messages\/|push-broadcast|push-notify)/.test(path);
+    if (session && !isPolling) { session.lastSeen = Date.now(); }
 
     function redirect(to) { res.writeHead(302,{'Location':to}); res.end(); }
     function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'max-age=0, stale-while-revalidate=60','X-App-Version':'21'}); res.end(layout(content,session,page,lang)); }
@@ -3870,7 +3873,13 @@ async function createThread(){
         const threadEmojiPaletteD = ['🎯','🚀','💡','📊','🎨','🔥','⚡','🌟','📝','🎭','🏆','🎵','🧠','💎','🌈','🎮','📣','🛠️','🌍','🎬'];
         function threadEmojiD(tid){let h=0;for(const c of String(tid))h=(h*31+c.charCodeAt(0))>>>0;return threadEmojiPaletteD[h%threadEmojiPaletteD.length];}
         const thrInfoRaw = (botData.threads||[]).find(t=>String(t.id)===threadId);
-        const thrInfo = { name: thrInfoRaw?.name||(threadId==='general'?'Allgemein':'Thread '+threadId), emoji: threadId==='general'?'💬':(thrInfoRaw?.emoji&&thrInfoRaw.emoji.length>1?thrInfoRaw.emoji:threadEmojiD(threadId)) };
+        const _rawE = thrInfoRaw?.emoji;
+        // Custom-Emoji-IDs (numerisch) sind nicht renderbar → Hash-Fallback aus Thread-ID
+        const _isValidEmoji = _rawE && _rawE.length >= 1 && _rawE.length <= 4 && !/^\d+$/.test(_rawE);
+        const thrInfo = {
+            name: thrInfoRaw?.name || (threadId==='general' ? 'Allgemein' : 'Thread '+threadId),
+            emoji: threadId==='general' ? '💬' : (_isValidEmoji ? _rawE : threadEmojiD(threadId))
+        };
         // Get messages: general uses communityFeed as fallback
         let msgs = (botData.threadMessages||{})[threadId] || [];
         if (!msgs.length && threadId==='general' && botData.communityFeed?.length) {
