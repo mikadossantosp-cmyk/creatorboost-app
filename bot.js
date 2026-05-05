@@ -178,7 +178,9 @@ async function postBot(path, body) {
         });
         req.on('error',()=>resolve(null)); req.write(data); req.end();
     });
-    _dataCacheTime = 0; // invalidate cache after any write
+    // Komplettes Cache-Bust: nächster /data-Read holt frisch von Bot, sonst bleiben Folgen/Posts/etc 60s lang stale
+    _dataCache = null; _dataCacheTime = 0;
+    try { await refreshDataCache(); } catch(e) {}
     return result;
 }
 
@@ -1078,7 +1080,7 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
   <div style="display:flex;align-items:center;gap:6px;margin-top:4px">
     ${(()=>{
       const userSession = [...sessions.values()].find(s=>String(s.uid)===String(uid));
-      const isOnline = userSession && (Date.now()-userSession.lastSeen)<300000;
+      const isOnline = userSession && (Date.now()-(userSession.lastSeen||0))<60000;
       return isOnline ? '<span style="width:8px;height:8px;border-radius:50%;background:#00c851;display:inline-block"></span><span style="font-size:11px;color:#00c851">Online</span>' : '<span style="width:8px;height:8px;border-radius:50%;background:var(--muted2);display:inline-block"></span><span style="font-size:11px;color:var(--muted2)">Offline</span>';
     })()}
   </div>
@@ -1590,7 +1592,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v24-clear';
+const SW_VERSION='v25-pointer';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
@@ -2901,7 +2903,11 @@ p{line-height:1.65;color:var(--muted)}
         if (targetUid === myUid) return json({ok:false, error:'Kann dir nicht selbst folgen'},400);
         const result = await postBot('/follow-api', { followerUid: String(myUid), targetUid });
         console.log('[follow] me=' + myUid + ' → ' + targetUid + ' result=' + JSON.stringify(result));
-        if (result && result.ok === true) return json({ok:true, action: result.action});
+        if (result && result.ok === true) {
+            _dataCache = null; _dataCacheTime = 0;
+            refreshDataCache();
+            return json({ok:true, action: result.action});
+        }
         return json({ok:false, error: (result && result.error) ? result.error : 'Bot-API fehlgeschlagen'}, 500);
     }
     // Form-Submit Fallback: funktioniert IMMER auch wenn JS fehlschlägt
@@ -2912,6 +2918,7 @@ p{line-height:1.65;color:var(--muted)}
         if (targetUid && targetUid !== myUid) {
             const result = await postBot('/follow-api', { followerUid: String(myUid), targetUid });
             console.log('[follow-form] me=' + myUid + ' → ' + targetUid + ' result=' + JSON.stringify(result));
+            if (result && result.ok === true) { _dataCache = null; _dataCacheTime = 0; refreshDataCache(); }
         }
         res.writeHead(302, { 'Location': back || '/explore' });
         return res.end();
@@ -3083,7 +3090,7 @@ p{line-height:1.65;color:var(--muted)}
 
             // Online check
             const ps = [...sessions.values()].find(s=>String(s.uid)===String(link.user_id));
-            const isOnline = ps && (Date.now()-ps.lastSeen)<300000;
+            const isOnline = ps && (Date.now()-(ps.lastSeen||0))<60000;
 
             // Banner
             const bannerBg = (poster.banner && !poster.banner.startsWith('data:')) ? '#000' : (poster.banner || 'linear-gradient(135deg,#1a1a2e,#16213e,#0f3460)');
@@ -3563,7 +3570,8 @@ async function submitSuperLink(){
         const chatKey = [myUid, otherUid].sort().join('_');
         const msgs = (botData.messages?.[chatKey] || []);
         postBot('/mark-messages-read', { uid: myUid, chatKey }).catch(()=>{});
-        const msgsHtml = require('./chat-detail-render')({ msgs, myUid, otherUid, otherUser, ladeBild, otherOnline: typeof sessions !== 'undefined' ? [...sessions.values()].some(s => String(s.uid) === String(otherUid)) : false });
+        const _onlineNow = Date.now();
+        const msgsHtml = require('./chat-detail-render')({ msgs, myUid, otherUid, otherUser, ladeBild, otherOnline: typeof sessions !== 'undefined' ? [...sessions.values()].some(s => String(s.uid) === String(otherUid) && (_onlineNow - (s.lastSeen||0)) < 60000) : false });
         return html(`
 <div class="topbar" style="display:flex;align-items:center;gap:6px;padding:6px 10px">
   <a href="/nachrichten" class="icon-btn" style="font-size:24px;color:#0866FF;padding:6px 10px;text-decoration:none">‹</a>
@@ -3919,7 +3927,6 @@ async function createThread(){
 <div id="msgs" style="padding:12px 12px 165px;display:flex;flex-direction:column;gap:10px;overflow-x:hidden;min-width:0;width:100%">${initialMsgsHtml}</div>
 <script>
 (function(){
-  // Initial-Scroll: zum Ungelesen-Banner wenn vorhanden, sonst nach unten
   function scrollInit(){
     const ud=document.getElementById('unread-divider');
     if(ud) ud.scrollIntoView({behavior:'instant',block:'center'});
@@ -3927,65 +3934,89 @@ async function createThread(){
   }
   scrollInit();
   window.addEventListener('load', scrollInit);
-  // Swipe-to-Delete für Admins/Owner: nur Rows mit data-can-del=1
-  console.log('[swipe] handler installed; can-del rows: ' + document.querySelectorAll('.thr-row[data-can-del="1"]').length);
-  let _sRow=null,_sX0=0,_sY0=0,_sActive=false;
-  document.addEventListener('touchstart', e => {
+  // Long-Press → Bestätigung → Löschen. Funktioniert IMMER, unabhängig von Swipe-Quirks.
+  // Zusätzlich: Swipe nach links als Power-User-Geste (PointerEvents, robuster als Touch).
+  console.log('[delgest] installed; can-del rows: ' + document.querySelectorAll('.thr-row[data-can-del="1"]').length);
+  async function doDelete(row){
+    if (!row) return;
+    const ts = row.dataset.delTs, mid = row.dataset.delMid || 0;
+    if (!confirm('Nachricht löschen?')) return;
+    try {
+      const r = await fetch('/api/delete-thread-msg', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({threadId: TID, timestamp: Number(ts), msgId: Number(mid)||null}) });
+      const d = await r.json();
+      if (d.ok) { row.style.transition='all 0.2s'; row.style.opacity='0'; row.style.transform='translateX(-100%)'; setTimeout(()=>row.remove(),200); }
+      else alert('Fehler: '+(d.error||'unbekannt'));
+    } catch(e2) { alert('Netzwerkfehler: '+e2.message); }
+  }
+  // Long-Press (650ms): primärer, zuverlässiger Weg
+  let _lpRow=null, _lpTimer=null, _lpX=0, _lpY=0, _lpFired=false;
+  function clearLP(){ if(_lpTimer){clearTimeout(_lpTimer);_lpTimer=null;} _lpRow=null; _lpFired=false; }
+  document.addEventListener('pointerdown', e => {
+    if (e.pointerType==='mouse' && e.button!==0) return;
     const row = e.target.closest && e.target.closest('.thr-row[data-can-del="1"]');
     if (!row) return;
-    _sRow = row; _sActive = false;
-    _sX0 = e.touches[0].clientX; _sY0 = e.touches[0].clientY;
-    row.classList.remove('swiping');
-    console.log('[swipe] start on row ts=' + row.dataset.delTs);
+    _lpRow = row; _lpX = e.clientX; _lpY = e.clientY; _lpFired = false;
+    _lpTimer = setTimeout(() => {
+      _lpFired = true;
+      if (navigator.vibrate) navigator.vibrate(30);
+      row.style.transition='background 0.15s'; row.style.background='rgba(239,68,68,0.15)';
+      setTimeout(()=>{ row.style.background=''; },200);
+      doDelete(row);
+    }, 650);
   }, { passive: true });
-  document.addEventListener('touchmove', e => {
-    if (!_sRow) return;
-    const dx = e.touches[0].clientX - _sX0;
-    const dy = Math.abs(e.touches[0].clientY - _sY0);
-    if (dy > 18 && Math.abs(dx) < 18) {
-      _sRow.classList.remove('swiping');
-      const tr = _sRow.querySelector('.thr-swipe-trash'); if (tr) tr.style.opacity = '0';
-      const inn = _sRow.querySelector('.thr-row-inner'); if (inn) inn.style.transform=''; _sRow=null; return;
-    }
-    const cap = Math.max(-180, Math.min(0, dx));
-    if (cap < -4) {
-      _sActive = true; _sRow.classList.add('swiping');
-      const inn = _sRow.querySelector('.thr-row-inner'); if (inn) inn.style.transform = 'translateX(' + cap + 'px)';
-      const tr = _sRow.querySelector('.thr-swipe-trash');
-      if (tr) tr.style.opacity = String(Math.min(1, Math.abs(cap)/80));
-    }
+  document.addEventListener('pointermove', e => {
+    if (!_lpRow) return;
+    const dx = Math.abs(e.clientX - _lpX), dy = Math.abs(e.clientY - _lpY);
+    if (dx > 8 || dy > 8) clearLP();
   }, { passive: true });
-  document.addEventListener('touchend', () => {
+  ['pointerup','pointercancel','pointerleave'].forEach(ev => document.addEventListener(ev, clearLP, { passive: true }));
+  // Swipe nach links (Pointer-Events, capture-phase, ignoriert wenn Long-Press getriggert hat)
+  let _sRow=null,_sX0=0,_sY0=0,_sActive=false,_sPid=null;
+  function resetSwipe(commit){
     if (!_sRow) return;
     const inner = _sRow.querySelector('.thr-row-inner');
-    const trEl = _sRow.querySelector('.thr-swipe-trash');
-    const m = (inner.style.transform||'').match(/translateX\((-?\d+)px\)/);
-    const dx = m ? Number(m[1]) : 0;
-    inner.style.transition = 'transform 0.25s cubic-bezier(0.34,1.56,0.64,1)';
-    console.log('[swipe] end dx=' + dx);
-    if (_sActive && dx <= -75) {
-      const ts = _sRow.dataset.delTs, mid = _sRow.dataset.delMid || 0;
-      const rowRef = _sRow;
-      inner.style.transform = 'translateX(-100%)';
-      if (navigator.vibrate) navigator.vibrate(20);
-      setTimeout(async () => {
-        if (!confirm('Nachricht löschen?')) { inner.style.transform=''; rowRef.classList.remove('swiping'); if(trEl)trEl.style.opacity='0'; _sRow=null; return; }
-        try {
-          const r = await fetch('/api/delete-thread-msg', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({threadId: TID, timestamp: Number(ts), msgId: Number(mid)||null}) });
-          const d = await r.json();
-          if (d.ok) rowRef.remove();
-          else { inner.style.transform=''; rowRef.classList.remove('swiping'); if(trEl)trEl.style.opacity='0'; alert('Fehler: '+(d.error||'unbekannt')); }
-        } catch(e2) { inner.style.transform=''; rowRef.classList.remove('swiping'); if(trEl)trEl.style.opacity='0'; alert('Netzwerkfehler: '+e2.message); }
-        _sRow = null;
-      }, 250);
-    } else {
-      inner.style.transform = '';
-      _sRow.classList.remove('swiping');
-      if (trEl) trEl.style.opacity = '0';
-      _sRow = null;
+    const tr = _sRow.querySelector('.thr-swipe-trash');
+    if (inner) { inner.style.transition='transform 0.22s'; inner.style.transform = commit ? 'translateX(-100%)' : ''; }
+    if (tr) tr.style.opacity = '0';
+    _sRow.classList.remove('swiping');
+    _sRow = null; _sActive = false; _sPid = null;
+  }
+  document.addEventListener('pointerdown', e => {
+    if (e.pointerType==='mouse' && e.button!==0) return;
+    const row = e.target.closest && e.target.closest('.thr-row[data-can-del="1"]');
+    if (!row) return;
+    _sRow = row; _sX0 = e.clientX; _sY0 = e.clientY; _sActive = false; _sPid = e.pointerId;
+    const inner = row.querySelector('.thr-row-inner');
+    if (inner) inner.style.transition = 'none';
+  }, { passive: true, capture: true });
+  document.addEventListener('pointermove', e => {
+    if (!_sRow || e.pointerId !== _sPid) return;
+    const dx = e.clientX - _sX0, dy = e.clientY - _sY0;
+    if (!_sActive && Math.abs(dy) > 14 && Math.abs(dy) > Math.abs(dx)) { resetSwipe(false); return; }
+    if (dx < -6 && Math.abs(dx) > Math.abs(dy)) {
+      _sActive = true;
+      _sRow.classList.add('swiping');
+      const cap = Math.max(-180, dx);
+      const inner = _sRow.querySelector('.thr-row-inner');
+      if (inner) inner.style.transform = 'translateX(' + cap + 'px)';
+      const tr = _sRow.querySelector('.thr-swipe-trash');
+      if (tr) tr.style.opacity = String(Math.min(1, Math.abs(cap)/70));
     }
-    _sActive = false;
-  });
+  }, { passive: true, capture: true });
+  document.addEventListener('pointerup', e => {
+    if (!_sRow) return;
+    if (!_sActive) { resetSwipe(false); return; }
+    const dx = e.clientX - _sX0;
+    if (dx <= -60) {
+      const rowRef = _sRow;
+      resetSwipe(true);
+      if (navigator.vibrate) navigator.vibrate(20);
+      setTimeout(()=>doDelete(rowRef), 220);
+    } else {
+      resetSwipe(false);
+    }
+  }, { passive: true, capture: true });
+  document.addEventListener('pointercancel', () => resetSwipe(false), { passive: true });
 })();
 </script>
 <div id="reply-bar" style="display:none;position:fixed;bottom:calc(108px + var(--safe-bottom));left:0;right:0;padding:7px 12px;background:rgba(0,136,204,.15);border-top:1px solid rgba(0,136,204,.3);align-items:center;gap:8px;z-index:6;box-sizing:border-box">
@@ -4295,7 +4326,8 @@ async function renameThread(tid,current){
             const lastCF = cfeed[0];
             threads.unshift({ id:'general', name:'Allgemein', emoji:'💬', last_msg:lastCF?{text:lastCF.text,name:lastCF.name||lastCF.username,timestamp:lastCF.timestamp}:null, msg_count:Math.max(cfeed.length, thrMsgsAll['general']?.length||0) });
         }
-        const convHtml = require('./chat-list-render')({ myConvos, botData, myUid, feedPreview, totalThreadUnread, ladeBild, adminIds, onlineUids: typeof sessions !== 'undefined' ? new Set([...sessions.values()].map(s => String(s.uid))) : new Set(), threadsList: threads, threadLastRead: lastReadAll });
+        const _onlineNow2 = Date.now();
+        const convHtml = require('./chat-list-render')({ myConvos, botData, myUid, feedPreview, totalThreadUnread, ladeBild, adminIds, onlineUids: typeof sessions !== 'undefined' ? new Set([...sessions.values()].filter(s => (_onlineNow2 - (s.lastSeen||0)) < 60000).map(s => String(s.uid))) : new Set(), threadsList: threads, threadLastRead: lastReadAll });
         return html(`<div class="topbar"><div class="topbar-logo">Nachrichten</div></div><div style="padding-bottom:80px">${convHtml}</div>`, 'messages');
     }
 
