@@ -106,6 +106,22 @@ async function checkProfileCompletion(uid, session) {
 function getSession(req) { const m=(req.headers.cookie||'').match(/cbsid=([^;]+)/); return m?sessions.get(m[1]):null; }
 function getSid(req) { const m=(req.headers.cookie||'').match(/cbsid=([^;]+)/); return m?m[1]:null; }
 
+const ONLINE_WINDOW_MS = 60000;
+function isUidOnline(uid) {
+    const u = String(uid), now = Date.now();
+    for (const s of sessions.values()) {
+        if (String(s.uid) === u && (now - (s.lastSeen||0)) < ONLINE_WINDOW_MS) return true;
+    }
+    return false;
+}
+function getOnlineUids() {
+    const now = Date.now(), out = new Set();
+    for (const s of sessions.values()) {
+        if ((now - (s.lastSeen||0)) < ONLINE_WINDOW_MS) out.add(String(s.uid));
+    }
+    return out;
+}
+
 function verifyTelegramLogin(data) {
     try {
         const { hash, ...rest } = data;
@@ -135,15 +151,17 @@ async function fetchBotRaw(path) {
     });
 }
 
-let _dataRefreshing = false;
-async function refreshDataCache() {
-    if (_dataRefreshing) return;
-    _dataRefreshing = true;
-    try {
-        const parsed = await fetchBotRaw('/data');
-        if (parsed) { _dataCache = parsed; _dataCacheTime = Date.now(); }
-    } catch(e) {}
-    _dataRefreshing = false;
+let _refreshInFlight = null;
+function refreshDataCache() {
+    if (_refreshInFlight) return _refreshInFlight;
+    _refreshInFlight = (async () => {
+        try {
+            const parsed = await fetchBotRaw('/data');
+            if (parsed) { _dataCache = parsed; _dataCacheTime = Date.now(); }
+        } catch(e) {}
+        finally { _refreshInFlight = null; }
+    })();
+    return _refreshInFlight;
 }
 
 async function fetchBot(path) {
@@ -178,19 +196,28 @@ async function postBot(path, body) {
         });
         req.on('error',()=>resolve(null)); req.write(data); req.end();
     });
-    // Komplettes Cache-Bust: nächster /data-Read holt frisch von Bot, sonst bleiben Folgen/Posts/etc 60s lang stale
+    // Stale-while-revalidate: nächster Read wartet einmal auf frische Daten, blockt aber nicht den Write
     _dataCache = null; _dataCacheTime = 0;
-    try { await refreshDataCache(); } catch(e) {}
+    refreshDataCache().catch(()=>{});
     return result;
 }
 
+const PARSE_BODY_MAX = 1024 * 1024; // 1MB cap; uploads use readBody with explicit limits
 function parseBody(req) {
     return new Promise(resolve => {
-        let body=''; req.on('data',c=>body+=c); req.on('end',()=>{
+        let body=''; let abort=false;
+        req.on('data',c=>{
+            if (abort) return;
+            body += c;
+            if (body.length > PARSE_BODY_MAX) { abort = true; req.destroy(); resolve({}); }
+        });
+        req.on('end',()=>{
+            if (abort) return;
             try{resolve(JSON.parse(body));}catch(e){
                 const p={};body.split('&').forEach(kv=>{const[k,v]=kv.split('=');if(k)p[decodeURIComponent(k)]=decodeURIComponent((v||'').replace(/\+/g,' '));});resolve(p);
             }
         });
+        req.on('error', ()=>{ if(!abort){abort=true;resolve({});} });
     });
 }
 
@@ -1078,11 +1105,7 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
   ${u.spitzname?`<div class="profile-username">${u.name||''}</div>`:''}
   ${u.username?`<div class="profile-username">@${u.username}</div>`:''}
   <div style="display:flex;align-items:center;gap:6px;margin-top:4px">
-    ${(()=>{
-      const userSession = [...sessions.values()].find(s=>String(s.uid)===String(uid));
-      const isOnline = userSession && (Date.now()-(userSession.lastSeen||0))<60000;
-      return isOnline ? '<span style="width:8px;height:8px;border-radius:50%;background:#00c851;display:inline-block"></span><span style="font-size:11px;color:#00c851">Online</span>' : '<span style="width:8px;height:8px;border-radius:50%;background:var(--muted2);display:inline-block"></span><span style="font-size:11px;color:var(--muted2)">Offline</span>';
-    })()}
+    ${isUidOnline(uid) ? '<span style="width:8px;height:8px;border-radius:50%;background:#00c851;display:inline-block"></span><span style="font-size:11px;color:#00c851">Online</span>' : '<span style="width:8px;height:8px;border-radius:50%;background:var(--muted2);display:inline-block"></span><span style="font-size:11px;color:var(--muted2)">Offline</span>'}
   </div>
   ${u.bio?`<div class="profile-bio">${u.bio}</div>`:''}
   ${u.nische?`<div style="font-size:12px;color:var(--accent);margin-top:4px">🎯 ${u.nische}</div>`:''}
@@ -1666,6 +1689,9 @@ self.addEventListener('notificationclick',e=>{
         const parts = path.split('/');
         const buid = parts[2];
         const btype = parts[3];
+        if (!/^\d+$/.test(buid||'') || !/^(profilepic|banner)$/.test(btype||'')) {
+            res.writeHead(400); return res.end('bad request');
+        }
         const bildFile = DATA_DIR + '/bild_' + buid + '_' + btype + '.txt';
         // Try local file first
         try {
@@ -1914,7 +1940,7 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
             session.profilePicData = imageData;
             saveSessions();
             try { fs.writeFileSync(DATA_DIR + '/bild_' + session.uid + '_profilepic.txt', imageData); } catch(e) {}
-            checkProfileCompletion(myUid, session);
+            checkProfileCompletion(String(session.uid), session);
             return json({ok:true});
         } catch(e) { return json({error:e.message},500); }
     }
@@ -1931,7 +1957,7 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
             session.bannerData = imageData;
             saveSessions();
             try { fs.writeFileSync(DATA_DIR + '/bild_' + session.uid + '_banner.txt', imageData); } catch(e) {}
-            checkProfileCompletion(myUid, session);
+            checkProfileCompletion(String(session.uid), session);
             return json({ok:true});
         } catch(e) { return json({error:e.message},500); }
     }
@@ -2104,7 +2130,8 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
         const convos = botData.messages || {};
         let unreadDMs = 0;
         Object.entries(convos).forEach(([key, msgs]) => {
-            if (key.includes('_'+myUid+'_') || key.includes('_'+myUid) || key.startsWith(myUid+'_'))
+            const [a,b] = key.split('_');
+            if (a === myUid || b === myUid)
                 unreadDMs += msgs.filter(m=>m.to===myUid&&!m.read).length;
         });
         // Count unread thread messages
@@ -2835,13 +2862,14 @@ p{line-height:1.65;color:var(--muted)}
         const targetUrl = String(body.url||'/feed').slice(0,200);
         if (!targetUid || !text) return json({ok:false, error:'Fehlende Felder'});
         const payload = JSON.stringify({title, body:text, url:targetUrl});
-        let sent = 0, failed = 0;
-        for (const [hash, {uid, sub}] of Object.entries(pushSubs)) {
-            if (String(uid) !== targetUid) continue;
-            try { await webpush.sendNotification(sub, payload); sent++; }
-            catch(e) { failed++; if (e.statusCode===410||e.statusCode===404) delete pushSubs[hash]; }
-        }
-        if (sent || failed) savePushSubs();
+        const targets = Object.entries(pushSubs).filter(([,v]) => String(v.uid) === targetUid);
+        const results = await Promise.allSettled(targets.map(([,v]) => webpush.sendNotification(v.sub, payload)));
+        let sent = 0, failed = 0, dirty = false;
+        results.forEach((r,i) => {
+            if (r.status === 'fulfilled') sent++;
+            else { failed++; const sc = r.reason?.statusCode; if (sc===410||sc===404) { delete pushSubs[targets[i][0]]; dirty = true; } }
+        });
+        if (dirty || sent || failed) savePushSubs();
         return json({ok:true, sent, failed});
     }
     if (path === '/api/push-broadcast' && req.method === 'POST') {
@@ -2854,13 +2882,14 @@ p{line-height:1.65;color:var(--muted)}
         const exceptUid = String(body.exceptUid||'');
         if (!text) return json({ok:false, error:'Fehlende Felder'});
         const payload = JSON.stringify({title, body:text, url:targetUrl});
-        let sent = 0, failed = 0;
-        for (const [hash, {uid, sub}] of Object.entries(pushSubs)) {
-            if (exceptUid && String(uid) === exceptUid) continue;
-            try { await webpush.sendNotification(sub, payload); sent++; }
-            catch(e) { failed++; if (e.statusCode===410||e.statusCode===404) delete pushSubs[hash]; }
-        }
-        if (sent || failed) savePushSubs();
+        const targets = Object.entries(pushSubs).filter(([,v]) => !exceptUid || String(v.uid) !== exceptUid);
+        const results = await Promise.allSettled(targets.map(([,v]) => webpush.sendNotification(v.sub, payload)));
+        let sent = 0, failed = 0, dirty = false;
+        results.forEach((r,i) => {
+            if (r.status === 'fulfilled') sent++;
+            else { failed++; const sc = r.reason?.statusCode; if (sc===410||sc===404) { delete pushSubs[targets[i][0]]; dirty = true; } }
+        });
+        if (dirty || sent || failed) savePushSubs();
         return json({ok:true, sent, failed});
     }
 
@@ -2903,22 +2932,15 @@ p{line-height:1.65;color:var(--muted)}
         if (targetUid === myUid) return json({ok:false, error:'Kann dir nicht selbst folgen'},400);
         const result = await postBot('/follow-api', { followerUid: String(myUid), targetUid });
         console.log('[follow] me=' + myUid + ' → ' + targetUid + ' result=' + JSON.stringify(result));
-        if (result && result.ok === true) {
-            _dataCache = null; _dataCacheTime = 0;
-            refreshDataCache();
-            return json({ok:true, action: result.action});
-        }
+        if (result && result.ok === true) return json({ok:true, action: result.action});
         return json({ok:false, error: (result && result.error) ? result.error : 'Bot-API fehlgeschlagen'}, 500);
     }
-    // Form-Submit Fallback: funktioniert IMMER auch wenn JS fehlschlägt
     if (path === '/follow-form' && req.method === 'POST') {
         const body = await parseBody(req);
         const targetUid = body && body.uid ? String(body.uid) : '';
         const back = body && body.back ? String(body.back) : '/explore';
         if (targetUid && targetUid !== myUid) {
-            const result = await postBot('/follow-api', { followerUid: String(myUid), targetUid });
-            console.log('[follow-form] me=' + myUid + ' → ' + targetUid + ' result=' + JSON.stringify(result));
-            if (result && result.ok === true) { _dataCache = null; _dataCacheTime = 0; refreshDataCache(); }
+            await postBot('/follow-api', { followerUid: String(myUid), targetUid });
         }
         res.writeHead(302, { 'Location': back || '/explore' });
         return res.end();
@@ -3088,9 +3110,7 @@ p{line-height:1.65;color:var(--muted)}
             const grad = badgeGradient(poster.role);
             const lid1 = String(link.counter_msg_id||msgId);
 
-            // Online check
-            const ps = [...sessions.values()].find(s=>String(s.uid)===String(link.user_id));
-            const isOnline = ps && (Date.now()-(ps.lastSeen||0))<60000;
+            const isOnline = isUidOnline(link.user_id);
 
             // Banner
             const bannerBg = (poster.banner && !poster.banner.startsWith('data:')) ? '#000' : (poster.banner || 'linear-gradient(135deg,#1a1a2e,#16213e,#0f3460)');
@@ -3570,8 +3590,7 @@ async function submitSuperLink(){
         const chatKey = [myUid, otherUid].sort().join('_');
         const msgs = (botData.messages?.[chatKey] || []);
         postBot('/mark-messages-read', { uid: myUid, chatKey }).catch(()=>{});
-        const _onlineNow = Date.now();
-        const msgsHtml = require('./chat-detail-render')({ msgs, myUid, otherUid, otherUser, ladeBild, otherOnline: typeof sessions !== 'undefined' ? [...sessions.values()].some(s => String(s.uid) === String(otherUid) && (_onlineNow - (s.lastSeen||0)) < 60000) : false });
+        const msgsHtml = require('./chat-detail-render')({ msgs, myUid, otherUid, otherUser, ladeBild, otherOnline: isUidOnline(otherUid) });
         return html(`
 <div class="topbar" style="display:flex;align-items:center;gap:6px;padding:6px 10px">
   <a href="/nachrichten" class="icon-btn" style="font-size:24px;color:#0866FF;padding:6px 10px;text-decoration:none">‹</a>
@@ -3934,9 +3953,7 @@ async function createThread(){
   }
   scrollInit();
   window.addEventListener('load', scrollInit);
-  // Long-Press → Bestätigung → Löschen. Funktioniert IMMER, unabhängig von Swipe-Quirks.
-  // Zusätzlich: Swipe nach links als Power-User-Geste (PointerEvents, robuster als Touch).
-  console.log('[delgest] installed; can-del rows: ' + document.querySelectorAll('.thr-row[data-can-del="1"]').length);
+  const LONG_PRESS_MS=650, LP_ABORT_PX=8, SWIPE_START_PX=6, SWIPE_VERT_ABORT_PX=14, SWIPE_COMMIT_PX=60, SWIPE_CAP_PX=180;
   async function doDelete(row){
     if (!row) return;
     const ts = row.dataset.delTs, mid = row.dataset.delMid || 0;
@@ -3948,75 +3965,62 @@ async function createThread(){
       else alert('Fehler: '+(d.error||'unbekannt'));
     } catch(e2) { alert('Netzwerkfehler: '+e2.message); }
   }
-  // Long-Press (650ms): primärer, zuverlässiger Weg
-  let _lpRow=null, _lpTimer=null, _lpX=0, _lpY=0, _lpFired=false;
-  function clearLP(){ if(_lpTimer){clearTimeout(_lpTimer);_lpTimer=null;} _lpRow=null; _lpFired=false; }
-  document.addEventListener('pointerdown', e => {
-    if (e.pointerType==='mouse' && e.button!==0) return;
-    const row = e.target.closest && e.target.closest('.thr-row[data-can-del="1"]');
+  // Ein gemeinsamer Pointer-State für Long-Press UND Swipe — kein doppelter closest()-Walk, keine Race zw. den Gesten.
+  let row=null, x0=0, y0=0, pid=null, lpTimer=null, swiping=false, committed=false;
+  function reset(commit){
     if (!row) return;
-    _lpRow = row; _lpX = e.clientX; _lpY = e.clientY; _lpFired = false;
-    _lpTimer = setTimeout(() => {
-      _lpFired = true;
-      if (navigator.vibrate) navigator.vibrate(30);
-      row.style.transition='background 0.15s'; row.style.background='rgba(239,68,68,0.15)';
-      setTimeout(()=>{ row.style.background=''; },200);
-      doDelete(row);
-    }, 650);
-  }, { passive: true });
-  document.addEventListener('pointermove', e => {
-    if (!_lpRow) return;
-    const dx = Math.abs(e.clientX - _lpX), dy = Math.abs(e.clientY - _lpY);
-    if (dx > 8 || dy > 8) clearLP();
-  }, { passive: true });
-  ['pointerup','pointercancel','pointerleave'].forEach(ev => document.addEventListener(ev, clearLP, { passive: true }));
-  // Swipe nach links (Pointer-Events, capture-phase, ignoriert wenn Long-Press getriggert hat)
-  let _sRow=null,_sX0=0,_sY0=0,_sActive=false,_sPid=null;
-  function resetSwipe(commit){
-    if (!_sRow) return;
-    const inner = _sRow.querySelector('.thr-row-inner');
-    const tr = _sRow.querySelector('.thr-swipe-trash');
+    const inner = row.querySelector('.thr-row-inner'), tr = row.querySelector('.thr-swipe-trash');
     if (inner) { inner.style.transition='transform 0.22s'; inner.style.transform = commit ? 'translateX(-100%)' : ''; }
     if (tr) tr.style.opacity = '0';
-    _sRow.classList.remove('swiping');
-    _sRow = null; _sActive = false; _sPid = null;
+    row.classList.remove('swiping');
+    if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; }
+    row = null; pid = null; swiping = false; committed = false;
   }
   document.addEventListener('pointerdown', e => {
     if (e.pointerType==='mouse' && e.button!==0) return;
-    const row = e.target.closest && e.target.closest('.thr-row[data-can-del="1"]');
-    if (!row) return;
-    _sRow = row; _sX0 = e.clientX; _sY0 = e.clientY; _sActive = false; _sPid = e.pointerId;
-    const inner = row.querySelector('.thr-row-inner');
+    const r = e.target.closest && e.target.closest('.thr-row[data-can-del="1"]');
+    if (!r) return;
+    row = r; x0 = e.clientX; y0 = e.clientY; pid = e.pointerId; swiping = false; committed = false;
+    const inner = r.querySelector('.thr-row-inner');
     if (inner) inner.style.transition = 'none';
+    lpTimer = setTimeout(() => {
+      if (!row || swiping) return;
+      committed = true;
+      if (navigator.vibrate) navigator.vibrate(30);
+      const target = row;
+      target.style.transition='background 0.15s'; target.style.background='rgba(239,68,68,0.15)';
+      setTimeout(()=>{ target.style.background=''; },200);
+      doDelete(target);
+      reset(false);
+    }, LONG_PRESS_MS);
   }, { passive: true, capture: true });
   document.addEventListener('pointermove', e => {
-    if (!_sRow || e.pointerId !== _sPid) return;
-    const dx = e.clientX - _sX0, dy = e.clientY - _sY0;
-    if (!_sActive && Math.abs(dy) > 14 && Math.abs(dy) > Math.abs(dx)) { resetSwipe(false); return; }
-    if (dx < -6 && Math.abs(dx) > Math.abs(dy)) {
-      _sActive = true;
-      _sRow.classList.add('swiping');
-      const cap = Math.max(-180, dx);
-      const inner = _sRow.querySelector('.thr-row-inner');
+    if (!row || e.pointerId !== pid) return;
+    const dx = e.clientX - x0, dy = e.clientY - y0;
+    if (!swiping && (Math.abs(dx) > LP_ABORT_PX || Math.abs(dy) > LP_ABORT_PX) && lpTimer) { clearTimeout(lpTimer); lpTimer = null; }
+    if (!swiping && Math.abs(dy) > SWIPE_VERT_ABORT_PX && Math.abs(dy) > Math.abs(dx)) { reset(false); return; }
+    if (dx < -SWIPE_START_PX && Math.abs(dx) > Math.abs(dy)) {
+      swiping = true;
+      row.classList.add('swiping');
+      const cap = Math.max(-SWIPE_CAP_PX, dx);
+      const inner = row.querySelector('.thr-row-inner');
       if (inner) inner.style.transform = 'translateX(' + cap + 'px)';
-      const tr = _sRow.querySelector('.thr-swipe-trash');
+      const tr = row.querySelector('.thr-swipe-trash');
       if (tr) tr.style.opacity = String(Math.min(1, Math.abs(cap)/70));
     }
   }, { passive: true, capture: true });
   document.addEventListener('pointerup', e => {
-    if (!_sRow) return;
-    if (!_sActive) { resetSwipe(false); return; }
-    const dx = e.clientX - _sX0;
-    if (dx <= -60) {
-      const rowRef = _sRow;
-      resetSwipe(true);
+    if (!row || committed) return;
+    if (!swiping) { reset(false); return; }
+    const dx = e.clientX - x0;
+    if (dx <= -SWIPE_COMMIT_PX) {
+      const target = row;
+      reset(true);
       if (navigator.vibrate) navigator.vibrate(20);
-      setTimeout(()=>doDelete(rowRef), 220);
-    } else {
-      resetSwipe(false);
-    }
+      setTimeout(()=>doDelete(target), 220);
+    } else reset(false);
   }, { passive: true, capture: true });
-  document.addEventListener('pointercancel', () => resetSwipe(false), { passive: true });
+  document.addEventListener('pointercancel', () => reset(false), { passive: true });
 })();
 </script>
 <div id="reply-bar" style="display:none;position:fixed;bottom:calc(108px + var(--safe-bottom));left:0;right:0;padding:7px 12px;background:rgba(0,136,204,.15);border-top:1px solid rgba(0,136,204,.3);align-items:center;gap:8px;z-index:6;box-sizing:border-box">
@@ -4294,10 +4298,11 @@ async function renameThread(tid,current){
         if (!botData) return redirect('/feed');
         const convos = botData.messages || {};
         const myConvos = Object.entries(convos)
-            .filter(([key]) => key.includes('_'+myUid+'_') || key.includes('_'+myUid) || key.startsWith(myUid+'_'))
+            .filter(([key]) => { const [a,b] = key.split('_'); return a === myUid || b === myUid; })
             .map(([key, msgs]) => {
                 const msgsArr = Array.isArray(msgs) ? msgs : [];
-                const otherUid = key.replace(myUid+'_','').replace('_'+myUid,'');
+                const [a,b] = key.split('_');
+                const otherUid = a === myUid ? b : a;
                 const otherUser = botData.users?.[otherUid] || {};
                 const lastMsg = msgsArr[msgsArr.length - 1];
                 return { key, otherUid, otherName: otherUser.spitzname||otherUser.name||'User', lastMsg, unread: msgsArr.filter(m=>m.to===myUid&&!m.read).length };
@@ -4326,8 +4331,7 @@ async function renameThread(tid,current){
             const lastCF = cfeed[0];
             threads.unshift({ id:'general', name:'Allgemein', emoji:'💬', last_msg:lastCF?{text:lastCF.text,name:lastCF.name||lastCF.username,timestamp:lastCF.timestamp}:null, msg_count:Math.max(cfeed.length, thrMsgsAll['general']?.length||0) });
         }
-        const _onlineNow2 = Date.now();
-        const convHtml = require('./chat-list-render')({ myConvos, botData, myUid, feedPreview, totalThreadUnread, ladeBild, adminIds, onlineUids: typeof sessions !== 'undefined' ? new Set([...sessions.values()].filter(s => (_onlineNow2 - (s.lastSeen||0)) < 60000).map(s => String(s.uid))) : new Set(), threadsList: threads, threadLastRead: lastReadAll });
+        const convHtml = require('./chat-list-render')({ myConvos, botData, myUid, feedPreview, totalThreadUnread, ladeBild, adminIds, onlineUids: getOnlineUids(), threadsList: threads, threadLastRead: lastReadAll });
         return html(`<div class="topbar"><div class="topbar-logo">Nachrichten</div></div><div style="padding-bottom:80px">${convHtml}</div>`, 'messages');
     }
 
