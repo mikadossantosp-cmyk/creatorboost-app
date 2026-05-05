@@ -75,11 +75,31 @@ module.exports = function renderChatBubbles(opts) {
                 '</div>';
         }
 
+        // Auto Link-Preview Helper
+        const urlMatch = (m.text||'').match(/(https?:\/\/[^\s]+)/);
+        const linkPreview = urlMatch ? (() => {
+            try {
+                const u = new URL(urlMatch[1]);
+                let icon = '🔗';
+                if (/instagram\.com/.test(u.hostname)) icon = '📸';
+                else if (/youtube\.com|youtu\.be/.test(u.hostname)) icon = '▶️';
+                else if (/tiktok\.com/.test(u.hostname)) icon = '🎵';
+                else if (/twitter\.com|x\.com/.test(u.hostname)) icon = '🐦';
+                else if (/facebook\.com/.test(u.hostname)) icon = '👥';
+                return '<a href="' + esc(urlMatch[1]) + '" target="_blank" rel="noopener" class="chat-link-preview" onclick="event.stopPropagation()">' +
+                    '<div class="clp-icon">' + icon + '</div>' +
+                    '<div class="clp-info"><div class="clp-host">' + esc(u.hostname.replace(/^www\./,'')) + '</div><div class="clp-path">' + esc((u.pathname||'/').slice(0,40)) + '</div></div>' +
+                    '</a>';
+            } catch(e) { return ''; }
+        })() : '';
+
+        const editedTag = m.edited ? '<span class="chat-edited">bearbeitet</span>' : '';
+
         let bubbleContent = '';
         if (m.image) {
             bubbleContent = replyHtml + '<div class="chat-img-wrap" onclick="window.open(\'' + m.image + '\', \'_blank\')">' +
                 '<img src="' + m.image + '" alt="" loading="lazy">' +
-                (m.text ? '<div class="chat-img-caption">' + esc(m.text) + '</div>' : '') +
+                (m.text ? '<div class="chat-img-caption">' + esc(m.text) + editedTag + '</div>' : '') +
                 '</div>';
         } else if (m.audio) {
             bubbleContent = replyHtml + '<div class="chat-audio">' +
@@ -87,7 +107,7 @@ module.exports = function renderChatBubbles(opts) {
                 '<div class="chat-audio-info"><div class="chat-audio-bar"><div class="audio-prog"></div></div><div class="audio-dur">🎤 Sprachnachricht</div></div>' +
                 '</div>';
         } else {
-            bubbleContent = replyHtml + '<div class="chat-text">' + esc(m.text || '') + '</div>';
+            bubbleContent = replyHtml + '<div class="chat-text">' + esc(m.text || '') + editedTag + '</div>' + linkPreview;
         }
 
         let backendReactions = {};
@@ -212,6 +232,27 @@ function getStyles() {
         '#reply-preview .rp-label { font-size: 11px; color: #a78bfa; font-weight: 700; }' +
         '#reply-preview .rp-text { font-size: 12.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 1px; }' +
         '#reply-preview .rp-close { width: 24px; height: 24px; border-radius: 50%; background: rgba(255,255,255,0.08); border: none; color: var(--text); font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }' +
+        '.chat-link-preview { display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 8px 10px; margin-top: 7px; text-decoration: none; color: var(--text); transition: background 0.15s; }' +
+        '.chat-row-me .chat-link-preview { background: rgba(255,255,255,0.18); border-color: rgba(255,255,255,0.25); color: #fff; }' +
+        '.chat-link-preview:active { background: rgba(255,255,255,0.12); }' +
+        '.chat-link-preview .clp-icon { font-size: 22px; flex-shrink: 0; }' +
+        '.chat-link-preview .clp-info { flex: 1; min-width: 0; }' +
+        '.chat-link-preview .clp-host { font-size: 12px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }' +
+        '.chat-link-preview .clp-path { font-size: 10.5px; opacity: 0.7; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 1px; }' +
+        '.chat-edited { font-size: 9.5px; opacity: 0.65; margin-left: 6px; font-style: italic; }' +
+        '.smart-reply-bar { position: fixed; bottom: var(--compose-bottom, 64px); left: 0; right: 0; padding: 6px 12px; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; z-index: 49; pointer-events: auto; }' +
+        '.smart-reply-bar::-webkit-scrollbar { display: none; }' +
+        '.smart-chip { flex-shrink: 0; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); color: var(--text); border-radius: 999px; padding: 7px 14px; font-size: 13px; font-weight: 600; cursor: pointer; transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.15s; backdrop-filter: blur(8px); }' +
+        '.smart-chip:active { transform: scale(0.92); background: rgba(167,139,250,0.18); }' +
+        '.chat-search-bar { position: fixed; top: 56px; left: 0; right: 0; padding: 8px 12px; background: var(--bg2); border-bottom: 1px solid rgba(255,255,255,0.06); display: none; z-index: 60; }' +
+        '.chat-search-bar.show { display: flex; gap: 8px; align-items: center; animation: csb-in 0.18s ease; }' +
+        '@keyframes csb-in { from { transform: translateY(-30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }' +
+        '.chat-search-bar input { flex: 1; background: rgba(255,255,255,0.06); border: 1.5px solid rgba(255,255,255,0.1); color: var(--text); border-radius: 22px; padding: 9px 14px; font-size: 14px; outline: none; }' +
+        '.chat-search-bar input:focus { border-color: rgba(167,139,250,0.4); }' +
+        '.chat-search-bar .csb-close { background: rgba(255,255,255,0.08); border: none; color: var(--text); width: 36px; height: 36px; border-radius: 50%; font-size: 18px; cursor: pointer; }' +
+        '.chat-row.csb-hide { display: none; }' +
+        '.chat-row.csb-match { background: rgba(245,158,11,0.08); }' +
+        '.chat-edit-input { width: 100%; background: rgba(255,255,255,0.18); border: 1.5px solid rgba(255,255,255,0.3); color: inherit; border-radius: 12px; padding: 6px 9px; font-size: 14px; font-family: inherit; outline: none; }' +
         '.chat-empty { padding: 100px 32px; text-align: center; }' +
         '.chat-empty-icon { font-size: 64px; margin-bottom: 18px; opacity: 0.5; animation: wave 2s ease-in-out infinite; transform-origin: 70% 70%; }' +
         '@keyframes wave { 0%, 100% { transform: rotate(0deg); } 25% { transform: rotate(-15deg); } 75% { transform: rotate(15deg); } }' +
@@ -410,6 +451,112 @@ function getScripts(myUid, otherUid) {
         'function chatJumpToMsg(ts){' +
             'const el = document.querySelector(".chat-row[data-ts=\\\""+ts+"\\\"]");' +
             'if (el) { el.scrollIntoView({ behavior: "smooth", block: "center" }); el.style.background = "rgba(167,139,250,0.18)"; setTimeout(()=>el.style.background = "", 1200); }' +
+        '}' +
+        // ── Compose Draft persistieren ──
+        'const DRAFT_KEY = "draft_" + CHAT_KEY;' +
+        'document.addEventListener("DOMContentLoaded", () => {' +
+            'const inp = document.getElementById("msg-input"); if (!inp) return;' +
+            'try { const saved = localStorage.getItem(DRAFT_KEY); if (saved) inp.value = saved; } catch(e) {}' +
+            'inp.addEventListener("input", () => { try { if (inp.value) localStorage.setItem(DRAFT_KEY, inp.value); else localStorage.removeItem(DRAFT_KEY); } catch(e) {} });' +
+            'const origForm = inp.form; const clearDraft = () => { try { localStorage.removeItem(DRAFT_KEY); } catch(e) {} };' +
+            'document.querySelector("button[onclick=\\"sendMsg()\\"]")?.addEventListener("click", () => setTimeout(clearDraft, 50));' +
+            'inp.addEventListener("keypress", (e) => { if (e.key === "Enter") setTimeout(clearDraft, 50); });' +
+        '});' +
+        // ── Smart-Reply Chips über Compose ──
+        'document.addEventListener("DOMContentLoaded", () => {' +
+            'if (document.getElementById("smart-reply-bar")) return;' +
+            'const bar = document.createElement("div"); bar.id = "smart-reply-bar"; bar.className = "smart-reply-bar";' +
+            'const lastMsg = [...document.querySelectorAll(".chat-row-other .chat-text")].pop();' +
+            'const lastText = (lastMsg?.innerText || "").toLowerCase();' +
+            'let chips;' +
+            'if (/\\?$/.test(lastText.trim()) || /(was|wie|wann|warum|wo)/.test(lastText)) chips = ["👍 Ja klar!", "Hmm, lass mich überlegen", "Schreib ich später", "🤔"];' +
+            'else if (/(cool|gut|nice|toll|wow|stark)/i.test(lastText)) chips = ["🔥", "❤️", "Danke!", "Du auch!"];' +
+            'else if (/(danke|thanks|bitte|sorry)/i.test(lastText)) chips = ["Gern!", "❤️", "Kein Stress", "👍"];' +
+            'else chips = ["❤️", "🔥", "Danke!", "Mach ich", "👍"];' +
+            'bar.innerHTML = chips.map(c => "<button class=\\"smart-chip\\" onclick=\\"chatChip(this)\\">" + c.replace(/[<>&]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;"}[c])) + "</button>").join("");' +
+            'document.body.appendChild(bar);' +
+            'const compose = document.querySelector("[onclick=\\"sendMsg()\\"]")?.closest("div"); if (compose) bar.style.bottom = (compose.offsetHeight + 8) + "px";' +
+        '});' +
+        'function chatChip(btn){' +
+            'const inp = document.getElementById("msg-input"); if (!inp) return;' +
+            'inp.value = btn.innerText.trim(); inp.focus();' +
+            'if (typeof sendMsg === "function") sendMsg();' +
+        '}' +
+        // ── Search im Chat ──
+        'function chatToggleSearch(){' +
+            'let bar = document.getElementById("chat-search-bar");' +
+            'if (!bar) {' +
+                'bar = document.createElement("div"); bar.id = "chat-search-bar"; bar.className = "chat-search-bar";' +
+                'bar.innerHTML = "<input type=\\"text\\" placeholder=\\"In Chat suchen...\\" oninput=\\"chatDoSearch(this.value)\\" autofocus><button class=\\"csb-close\\" onclick=\\"chatToggleSearch()\\">×</button>";' +
+                'document.body.appendChild(bar);' +
+            '}' +
+            'const isShown = bar.classList.toggle("show");' +
+            'if (isShown) { setTimeout(()=>bar.querySelector("input")?.focus(), 50); }' +
+            'else { chatDoSearch(""); }' +
+        '}' +
+        'function chatDoSearch(q){' +
+            'const query = (q||"").toLowerCase().trim();' +
+            'document.querySelectorAll(".chat-row").forEach(r => {' +
+                'r.classList.remove("csb-hide", "csb-match");' +
+                'if (!query) return;' +
+                'const text = (r.innerText||"").toLowerCase();' +
+                'if (text.includes(query)) r.classList.add("csb-match"); else r.classList.add("csb-hide");' +
+            '});' +
+            'document.querySelectorAll(".chat-date-sep").forEach(s => { s.style.display = query ? "none" : ""; });' +
+        '}' +
+        // ── Edit + Copy in Long-Press Picker ──
+        'document.addEventListener("DOMContentLoaded", () => {' +
+            'const pk = document.getElementById("chat-react-picker"); if (!pk) return;' +
+            'if (!pk.querySelector(".chat-react-edit")) {' +
+                'const eb = document.createElement("button"); eb.className = "chat-react-edit chat-react-mineonly";' +
+                'eb.style.cssText = "background:rgba(255,255,255,0.1);color:var(--text);border:none;border-radius:18px;padding:6px 12px;font-size:12px;font-weight:600;margin-left:4px;cursor:pointer;display:none";' +
+                'eb.textContent = "✏️ Bearbeiten";' +
+                'eb.onclick = function(){ chatHidePicker(); chatEditMsg(chatActiveTs); };' +
+                'pk.appendChild(eb);' +
+            '}' +
+            'if (!pk.querySelector(".chat-react-copy")) {' +
+                'const cb = document.createElement("button"); cb.className = "chat-react-copy";' +
+                'cb.style.cssText = "background:rgba(255,255,255,0.08);color:var(--text);border:none;border-radius:18px;padding:6px 12px;font-size:12px;font-weight:600;margin-left:4px;cursor:pointer";' +
+                'cb.textContent = "📋 Kopieren";' +
+                'cb.onclick = function(){' +
+                    'const row = document.querySelector(".chat-row[data-ts=\\\""+chatActiveTs+"\\\"]");' +
+                    'const text = row?.querySelector(".chat-text")?.innerText || row?.querySelector(".chat-img-caption")?.innerText || "";' +
+                    'if (text) navigator.clipboard?.writeText(text);' +
+                    'chatHidePicker();' +
+                '};' +
+                'pk.appendChild(cb);' +
+            '}' +
+        '});' +
+        // Edit-Buttons sichtbar wenn eigene Nachricht (Hook in chatShowReactions)
+        'const _origShow = window.chatShowReactions; window.chatShowReactions = function(el, ts){' +
+            '_origShow.call(window, el, ts);' +
+            'const isMine = el.closest(".chat-row")?.classList.contains("chat-row-me");' +
+            'const within5min = (Date.now() - Number(ts)) < 5*60*1000;' +
+            'document.querySelectorAll(".chat-react-mineonly").forEach(b => { b.style.display = (isMine && within5min) ? "inline-flex" : "none"; });' +
+        '};' +
+        'async function chatEditMsg(ts){' +
+            'if (!ts) return;' +
+            'const row = document.querySelector(".chat-row[data-ts=\\\""+ts+"\\\"]");' +
+            'if (!row) return;' +
+            'const txtEl = row.querySelector(".chat-text"); if (!txtEl) return;' +
+            'const oldText = txtEl.innerText;' +
+            'const inp = document.createElement("textarea"); inp.className = "chat-edit-input"; inp.value = oldText; inp.rows = 1;' +
+            'inp.style.resize = "none";' +
+            'txtEl.replaceWith(inp); inp.focus();' +
+            'const finish = async (save) => {' +
+                'const newText = inp.value.trim();' +
+                'const newEl = document.createElement("div"); newEl.className = "chat-text";' +
+                'if (save && newText && newText !== oldText) {' +
+                    'newEl.innerText = newText;' +
+                    'newEl.appendChild(Object.assign(document.createElement("span"), { className:"chat-edited", innerText:"bearbeitet" }));' +
+                    'inp.replaceWith(newEl);' +
+                    'try {' +
+                        'await fetch("/api/edit-message", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ chatKey: CHAT_KEY, timestamp: Number(ts), newText }) });' +
+                    '} catch(e) {}' +
+                '} else { newEl.innerText = oldText; inp.replaceWith(newEl); }' +
+            '};' +
+            'inp.addEventListener("blur", () => finish(true));' +
+            'inp.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); inp.blur(); } if (e.key === "Escape") { e.preventDefault(); finish(false); } });' +
         '}' +
         'renderAllReactions();' +
         'requestAnimationFrame(() => window.scrollTo({ top: document.body.scrollHeight, behavior: "instant" }));' +

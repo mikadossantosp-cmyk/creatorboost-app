@@ -91,10 +91,10 @@ module.exports = function renderChatList(opts) {
         const tickHtml = (isOwn && !c.unread) ? '<div class="dm-tick' + (isRead ? ' read' : '') + '">' + (isRead ? '✓✓' : '✓') + '</div>' : '';
         const badgeHtml = c.unread > 0 ? '<div class="dm-badge">' + c.unread + '</div>' : '';
 
-        return '<a href="/nachrichten/' + c.otherUid + '" class="dm-row' + unreadClass + '">' +
+        return '<a href="/nachrichten/' + c.otherUid + '" class="dm-row' + unreadClass + '" data-uid="' + c.otherUid + '" data-name="' + esc(c.otherName) + '" oncontextmenu="event.preventDefault(); dmCtxMenu(event,this)" ontouchstart="dmCtxStart(event,this)" ontouchend="dmCtxEnd()" ontouchmove="dmCtxEnd()">' +
             '<div class="dm-avatar' + (isOnline ? ' online' : '') + '">' + avatarInner + '</div>' +
             '<div class="dm-content">' +
-                '<div class="dm-name">' + esc(c.otherName) + '</div>' +
+                '<div class="dm-name">' + esc(c.otherName) + '<span class="dm-pin-marker">📌</span></div>' +
                 '<div class="dm-preview">' + esc(previewText) + '</div>' +
             '</div>' +
             '<div class="dm-meta">' +
@@ -166,6 +166,16 @@ module.exports = function renderChatList(opts) {
         '.dm-tick.read { color: #4dabf7; }' +
         '.dm-online-dot { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.2); animation: pulse-dot 1.6s infinite; }' +
         '@keyframes pulse-dot { 0%,100% { box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.2); } 50% { box-shadow: 0 0 0 6px rgba(34, 197, 94, 0); } }' +
+        '.dm-row .dm-pin-marker { display: none; font-size: 11px; color: #a78bfa; margin-left: 4px; }' +
+        '.dm-row.is-pinned .dm-pin-marker { display: inline-flex; align-items: center; gap: 2px; }' +
+        '.dm-row.is-pinned { background: linear-gradient(90deg, rgba(167,139,250,0.05), transparent 60%); }' +
+        '.dm-row.is-muted .dm-time::after { content: "🔕"; margin-left: 4px; opacity: 0.7; }' +
+        '.dm-ctx-menu { position: fixed; background: var(--bg2); border: 1px solid rgba(255,255,255,0.12); border-radius: 14px; padding: 6px; box-shadow: 0 12px 36px rgba(0,0,0,0.5); z-index: 200; min-width: 200px; backdrop-filter: blur(20px); display: none; animation: ctx-pop 0.18s ease; }' +
+        '.dm-ctx-menu.show { display: block; }' +
+        '@keyframes ctx-pop { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: scale(1); } }' +
+        '.dm-ctx-menu .ctx-item { display: flex; align-items: center; gap: 10px; padding: 11px 14px; cursor: pointer; color: var(--text); font-size: 14px; border-radius: 10px; transition: background 0.12s; }' +
+        '.dm-ctx-menu .ctx-item:hover, .dm-ctx-menu .ctx-item:active { background: rgba(167,139,250,0.12); }' +
+        '.dm-ctx-menu .ctx-icon { font-size: 16px; width: 20px; text-align: center; }' +
         '.dm-empty { padding: 80px 28px; text-align: center; }' +
         '.dm-empty-icon { font-size: 56px; margin-bottom: 16px; opacity: 0.4; animation: empty-bounce 2s ease-in-out infinite; }' +
         '@keyframes empty-bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }' +
@@ -251,5 +261,46 @@ module.exports = function renderChatList(opts) {
                 'try { localStorage.setItem("dmTab", t); } catch(e) {}' +
             '}' +
             'try { const saved = localStorage.getItem("dmTab"); if (saved) dmSwitchTab(saved); } catch(e) {}' +
+            // ── Pin/Mute Settings (localStorage) ──
+            'function dmGetSettings(){ try { return JSON.parse(localStorage.getItem("dmSettings")||"{}"); } catch(e) { return {}; } }' +
+            'function dmSaveSettings(s){ try { localStorage.setItem("dmSettings", JSON.stringify(s)); } catch(e) {} }' +
+            'function dmApplySettings(){' +
+                'const s = dmGetSettings();' +
+                'const list = document.getElementById("dm-list-main"); if (!list) return;' +
+                'document.querySelectorAll("#dm-list-main .dm-row[data-uid]").forEach(r => {' +
+                    'const uid = r.dataset.uid;' +
+                    'r.classList.toggle("is-pinned", !!s[uid]?.pinned);' +
+                    'r.classList.toggle("is-muted", !!s[uid]?.muted);' +
+                '});' +
+                // Sortierung: Pinned nach oben (nach dem Telegram-Pinned)
+                'const tg = list.querySelector(".dm-pinned"); const pinned = [...list.querySelectorAll(".dm-row.is-pinned[data-uid]")];' +
+                'pinned.forEach(p => { if (tg) tg.after(p); });' +
+            '}' +
+            'dmApplySettings();' +
+            // Long-Press Context Menu
+            'let __dmPressTimer = null, __dmPressedRow = null;' +
+            'function dmCtxStart(e, row){ __dmPressedRow = row; __dmPressTimer = setTimeout(() => { dmCtxMenu({clientX: e.touches[0].clientX, clientY: e.touches[0].clientY, preventDefault:()=>{}}, row); if (navigator.vibrate) navigator.vibrate(15); }, 480); }' +
+            'function dmCtxEnd(){ if (__dmPressTimer) { clearTimeout(__dmPressTimer); __dmPressTimer = null; } }' +
+            'function dmCtxMenu(e, row){' +
+                'e.preventDefault && e.preventDefault();' +
+                'const uid = row.dataset.uid; const name = row.dataset.name || "";' +
+                'const s = dmGetSettings(); const cur = s[uid] || {};' +
+                'let menu = document.getElementById("dm-ctx-menu");' +
+                'if (!menu) { menu = document.createElement("div"); menu.id = "dm-ctx-menu"; menu.className = "dm-ctx-menu"; document.body.appendChild(menu); }' +
+                'menu.innerHTML = "" +' +
+                    '"<div class=\\"ctx-item\\" onclick=\\"dmTogglePin(\\\""+uid+"\\\")\\"><span class=\\"ctx-icon\\">"+(cur.pinned?"📍":"📌")+"</span>"+(cur.pinned?"Pin entfernen":"Pin oben")+"</div>" +' +
+                    '"<div class=\\"ctx-item\\" onclick=\\"dmToggleMute(\\\""+uid+"\\\")\\"><span class=\\"ctx-icon\\">"+(cur.muted?"🔔":"🔕")+"</span>"+(cur.muted?"Stummschalten aufheben":"Stummschalten")+"</div>" +' +
+                    '"<div class=\\"ctx-item\\" onclick=\\"window.location=\\\"/profil/"+uid+"\\\"\\"><span class=\\"ctx-icon\\">👤</span>Profil ansehen</div>" +' +
+                    '"<div class=\\"ctx-item\\" style=\\"color:#ef4444\\" onclick=\\"dmCtxClose()\\"><span class=\\"ctx-icon\\">✖</span>Schließen</div>";' +
+                'menu.classList.add("show");' +
+                'const W = window.innerWidth, H = window.innerHeight;' +
+                'const mw = menu.offsetWidth || 220, mh = menu.offsetHeight || 200;' +
+                'menu.style.left = Math.max(10, Math.min(W - mw - 10, e.clientX)) + "px";' +
+                'menu.style.top = Math.max(10, Math.min(H - mh - 10, e.clientY)) + "px";' +
+            '}' +
+            'function dmCtxClose(){ document.getElementById("dm-ctx-menu")?.classList.remove("show"); }' +
+            'document.addEventListener("click", e => { const m = document.getElementById("dm-ctx-menu"); if (m && !m.contains(e.target)) dmCtxClose(); });' +
+            'function dmTogglePin(uid){ const s = dmGetSettings(); s[uid] = s[uid] || {}; s[uid].pinned = !s[uid].pinned; dmSaveSettings(s); dmCtxClose(); dmApplySettings(); }' +
+            'function dmToggleMute(uid){ const s = dmGetSettings(); s[uid] = s[uid] || {}; s[uid].muted = !s[uid].muted; dmSaveSettings(s); dmCtxClose(); dmApplySettings(); }' +
         '<\/script>';
 };

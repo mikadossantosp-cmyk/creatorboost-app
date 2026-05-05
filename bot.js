@@ -2103,6 +2103,17 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
     }
 
     // ── FIX 3: NACHRICHTEN GELESEN — myUid definiert ──
+    if (path === '/api/edit-message' && req.method === 'POST') {
+        if (!session) return json({error:'Nicht eingeloggt'}, 401);
+        const myUid = String(session.uid);
+        let body;
+        try { body = JSON.parse(await readBody(req, 100000)); } catch(e) { return json({error:'Ungültig'},400); }
+        const { chatKey, timestamp, newText } = body;
+        if (!chatKey || !timestamp || typeof newText !== 'string') return json({error:'Ungültig'}, 400);
+        const result = await postBot('/edit-message-api', { uid: myUid, chatKey, timestamp, newText });
+        return json(result || {ok:false});
+    }
+
     if (path === '/api/mark-messages-read' && req.method === 'POST') {
         if (!session) return json({error:'Nicht eingeloggt'}, 401);
         const myUid = String(session.uid); // FIX: war undefined
