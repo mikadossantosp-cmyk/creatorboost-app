@@ -655,19 +655,48 @@ checkNotifBadge();
 setInterval(checkNotifBadge, 60000);
 
 // Bfcache-Fix: wenn der User von Instagram/anderer Seite zurückkommt
-// und der Browser die Seite aus dem Cache wiederherstellt, neu laden
-// damit kein weisser Bildschirm hängenbleibt.
 window.addEventListener('pageshow', function(ev){
   if (ev.persisted) { location.reload(); return; }
-  // Falls die Page komplett leer ist (gestrichener iframe etc.), auch reload
   if (!document.body || document.body.children.length < 2) location.reload();
 });
 document.addEventListener('visibilitychange', function(){
   if (!document.hidden) {
-    // Body unverhältnismäßig leer → reload
     if (document.body && document.body.children.length < 2) location.reload();
   }
 });
+
+// "Zurück zur App" Floating-Banner: wenn User auf externen Link klickt
+(function(){
+  let waitingReturn = false;
+  document.addEventListener('click', function(ev){
+    const a = ev.target.closest && ev.target.closest('a[href]');
+    if (!a) return;
+    const href = a.getAttribute('href') || '';
+    const isExternal = /^https?:\/\//i.test(href) && !href.includes(location.host);
+    if (!isExternal) return;
+    waitingReturn = true;
+  }, true);
+  function showBackBanner(){
+    if (!waitingReturn) return;
+    waitingReturn = false;
+    if (document.getElementById('back-to-app-banner')) return;
+    const b = document.createElement('div');
+    b.id = 'back-to-app-banner';
+    b.style.cssText = 'position:fixed;top:max(10px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#0866FF,#0653cc);color:#fff;padding:11px 18px;border-radius:999px;font-size:13.5px;font-weight:700;box-shadow:0 8px 24px rgba(8,102,255,0.4);z-index:9999;display:flex;align-items:center;gap:8px;cursor:pointer;animation:btb-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)';
+    b.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg> Zurück zur App';
+    b.onclick = () => b.remove();
+    document.body.appendChild(b);
+    setTimeout(() => { if (document.getElementById('back-to-app-banner')) b.remove(); }, 6000);
+    if (!document.getElementById('btb-style')) {
+      const st = document.createElement('style'); st.id = 'btb-style';
+      st.textContent = '@keyframes btb-in{from{opacity:0;transform:translate(-50%,-30px)}to{opacity:1;transform:translate(-50%,0)}}';
+      document.head.appendChild(st);
+    }
+  }
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) showBackBanner(); });
+  window.addEventListener('focus', showBackBanner);
+  window.addEventListener('pageshow', showBackBanner);
+})();
 async function checkMsgBadge(){
     try{
         const r=await fetch('/api/messages-count');
@@ -2867,10 +2896,13 @@ p{line-height:1.65;color:var(--muted)}
 
     if (path === '/api/follow' && req.method === 'POST') {
         const body = await parseBody(req);
-        const targetUid = body.uid;
-        if (!targetUid || targetUid === myUid) return json({error:'Ungültig'},400);
-        await postBot('/follow-api', { followerUid: myUid, targetUid });
-        return json({ok:true});
+        const targetUid = body && body.uid ? String(body.uid) : '';
+        if (!targetUid) return json({ok:false, error:'Fehlende targetUid'},400);
+        if (targetUid === myUid) return json({ok:false, error:'Kann dir nicht selbst folgen'},400);
+        const result = await postBot('/follow-api', { followerUid: String(myUid), targetUid });
+        console.log('[follow] me=' + myUid + ' → ' + targetUid + ' result=' + JSON.stringify(result));
+        if (result && result.ok === true) return json({ok:true});
+        return json({ok:false, error: (result && result.error) ? result.error : 'Bot-API fehlgeschlagen'}, 500);
     }
 
     if (path === '/api/post' && req.method === 'POST') {
@@ -3817,37 +3849,38 @@ async function createThread(){
         const colSSR = n => COLORS_SSR[((n||'').charCodeAt(0)||0)%COLORS_SSR.length];
         let unreadInsertedSSR = false;
         const initialMsgsHtml = msgs.length
-            ? [...msgs].reverse().map(m => {
+            ? [...msgs].reverse().map((m, mi, arr) => {
                 const c = colSSR(m.name);
                 const ini = ((m.name||'?').replace(/^@/,'')||'?')[0].toUpperCase();
                 const ring = m.uid && ringMap[m.uid] ? ringMap[m.uid] : '';
-                const nameHtml = m.uid
-                    ? `<a href="/profil/${esc(m.uid)}" style="font-size:12px;font-weight:700;color:${c};text-decoration:none">${m.role?esc(m.role)+' ':''}${esc(m.name)}</a>`
-                    : `<span style="font-size:12px;font-weight:700;color:${c}">${m.role?esc(m.role)+' ':''}${esc(m.name)}</span>`;
                 const ts = new Date(m.timestamp);
                 const timeStr = String(ts.getHours()).padStart(2,'0')+':'+String(ts.getMinutes()).padStart(2,'0');
                 const isMeS = m.uid && String(m.uid) === String(myUid);
-                const bubBgS = isMeS ? '#0866FF' : '#3a3b3c';
-                const bubColS = isMeS ? '#fff' : '#e4e6eb';
-                const bubRadS = isMeS ? '18px 18px 4px 18px' : '18px 18px 18px 4px';
-                const bodyHtml = m.text ? `<div style="display:inline-block;background:${bubBgS};color:${bubColS};border-radius:${bubRadS};padding:9px 13px;max-width:78%;font-size:15px;line-height:1.42;word-break:break-word;box-shadow:0 1px 2px rgba(0,0,0,0.2)">${esc(m.text)}</div>` : '';
+                // Avatar nur bei letzter Nachricht der Sender-Serie (Telegram-Style)
+                const next = arr[mi + 1];
+                const isLastInSeries = !next || String(next.uid) !== String(m.uid) || ((next.timestamp||0) - (m.timestamp||0)) > 5*60*1000;
+                const showAvatar = isLastInSeries;
+                // Reply-Quote
+                const replyBlock = m.replyTo ? `<div style="background:rgba(0,0,0,0.18);border-left:3px solid ${c};padding:5px 9px;margin:0 0 5px 0;border-radius:0 6px 6px 0;font-size:12px;line-height:1.4;color:rgba(255,255,255,0.85)"><div style="font-weight:700;color:${c};font-size:11px">${esc(m.replyTo.name||'?')}</div><div style="opacity:0.85;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc((m.replyTo.text||'').slice(0,80))}</div></div>` : '';
+                // Bubble: alle dunkelgrau (Telegram-Style)
+                const nameInBubble = m.uid
+                    ? `<a href="/profil/${esc(m.uid)}" style="font-size:13px;font-weight:700;color:${c};text-decoration:none;display:block;margin-bottom:3px">${m.role?esc(m.role)+' ':''}${esc(m.name)}</a>`
+                    : `<div style="font-size:13px;font-weight:700;color:${c};margin-bottom:3px">${m.role?esc(m.role)+' ':''}${esc(m.name)}</div>`;
+                const textBody = m.text ? `<div style="font-size:15px;line-height:1.42;color:#e4e6eb;word-break:break-word">${esc(m.text)}</div>` : '';
+                const timeFooter = `<div style="font-size:10.5px;color:rgba(255,255,255,0.5);text-align:right;margin-top:3px;font-variant-numeric:tabular-nums">${timeStr}</div>`;
                 const canDelSSR = (m.uid && String(m.uid) === String(myUid)) || isAdmin;
-                const delBtnSSR = canDelSSR ? `<button type="button" class="thr-trash" data-trash-ts="${m.timestamp}" data-trash-mid="${m.msg_id||0}" onclick="if(confirm('Nachricht löschen?')){fetch('/api/delete-thread-msg',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({threadId:'${threadId}',timestamp:${m.timestamp},msgId:${m.msg_id||0}})}).then(r=>r.json()).then(d=>{if(d.ok){this.closest('.fade-in,div').remove()}else{alert('Fehler: '+(d.error||'unbekannt'))}}).catch(e=>alert('Netzwerkfehler: '+e.message))}return false" style="position:relative;z-index:100;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#ef4444;font-size:18px;cursor:pointer;padding:8px 12px;margin-left:auto;flex-shrink:0;min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center;border-radius:10px;pointer-events:auto;touch-action:manipulation">🗑️</button>` : '';
-                const avatarHtml = `<div style="width:32px;height:32px;border-radius:50%;background:${c};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;flex-shrink:0;position:relative;overflow:hidden${ring}">${ini}${m.uid?`<img src="/appbild/${esc(m.uid)}/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" onerror="this.remove()" loading="lazy">`:''}</div>`;
-                const headInfo = isMeS
-                    ? `<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;justify-content:flex-end"><span style="font-size:10px;color:var(--muted)">${timeStr}</span>${delBtnSSR}</div>`
-                    : `<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">${nameHtml}<span style="font-size:10px;color:var(--muted)">${timeStr}</span>${delBtnSSR}</div>`;
-                const rowF = isMeS
-                    ? 'display:flex;gap:8px;align-items:flex-end;flex-direction:row-reverse'
-                    : 'display:flex;gap:10px;align-items:flex-start';
-                let bannerPrefix = '';
-                let firstUnreadId = '';
+                const delBtnSSR = canDelSSR ? `<button type="button" class="thr-trash" data-trash-ts="${m.timestamp}" data-trash-mid="${m.msg_id||0}" onclick="if(confirm('Nachricht löschen?')){fetch('/api/delete-thread-msg',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({threadId:'${threadId}',timestamp:${m.timestamp},msgId:${m.msg_id||0}})}).then(r=>r.json()).then(d=>{if(d.ok){this.closest('.thr-row').remove()}else{alert('Fehler: '+(d.error||'unbekannt'))}}).catch(e=>alert('Netzwerkfehler: '+e.message))}return false" style="position:absolute;top:4px;right:4px;z-index:100;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#ef4444;font-size:14px;cursor:pointer;padding:4px 7px;border-radius:8px;pointer-events:auto;touch-action:manipulation">🗑️</button>` : '';
+                const bubble = `<div class="thr-bubble" style="position:relative;display:inline-block;max-width:78%;background:#212121;border-radius:14px;padding:8px 12px 6px 12px;box-shadow:0 1px 2px rgba(0,0,0,0.3)">${nameInBubble}${replyBlock}${textBody}${timeFooter}${delBtnSSR}</div>`;
+                const avatarSlot = showAvatar
+                    ? `<a href="/profil/${esc(m.uid)}" style="text-decoration:none;flex-shrink:0"><div style="width:30px;height:30px;border-radius:50%;background:${c};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;position:relative;overflow:hidden${ring}">${ini}${m.uid?`<img src="/appbild/${esc(m.uid)}/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" onerror="this.remove()" loading="lazy">`:''}</div></a>`
+                    : `<div style="width:30px;flex-shrink:0"></div>`;
+                let bannerPrefix = '', firstUnreadId = '';
                 if (!unreadInsertedSSR && myLastReadTs > 0 && (m.timestamp||0) > myLastReadTs && !isMeS) {
                     bannerPrefix = `<div id="unread-divider" class="thread-unread-divider" onclick="document.getElementById('first-unread')?.scrollIntoView({behavior:'smooth',block:'center'})"><span>Ungelesene Nachrichten</span><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg></div>`;
                     firstUnreadId = ' id="first-unread"';
                     unreadInsertedSSR = true;
                 }
-                return bannerPrefix + `<div style="${rowF}"${firstUnreadId}>${isMeS?'':avatarHtml}<div style="flex:1;min-width:0;${isMeS?'text-align:right':'text-align:left'}">${headInfo}${bodyHtml}</div></div>`;
+                return bannerPrefix + `<div class="thr-row" style="display:flex;gap:8px;align-items:flex-end${isLastInSeries?'':';margin-bottom:2px'}"${firstUnreadId}>${avatarSlot}<div style="flex:1;min-width:0;text-align:left">${bubble}</div></div>`;
               }).join('')
             : '<div style="text-align:center;padding:60px 20px;color:var(--muted)"><div style="font-size:40px;margin-bottom:12px">💬</div><div style="font-size:14px">Noch keine Nachrichten.<br>Schreib die erste!</div></div>';
         return html(`
@@ -3917,40 +3950,39 @@ async function createThread(){
     window._lastMsgs=msgs;
     if(!msgs.length){el.innerHTML='<div style="text-align:center;padding:60px 20px;color:var(--muted)"><div style="font-size:40px;margin-bottom:12px">💬</div><div style="font-size:14px">Noch keine Nachrichten.<br>Schreib die erste!</div></div>';return;}
     let unreadInsertedJS=false;
-    el.innerHTML=[...msgs].reverse().map(m=>{
+    el.innerHTML=[...msgs].reverse().map((m, mi, arr)=>{
       const c=col(m.name);
-      const nameEl=m.uid?'<a href="/profil/'+m.uid+'" style="font-size:13.5px;font-weight:700;color:'+c+';text-decoration:none">'+(m.role?m.role+' ':'')+esc(m.name)+'</a>':'<span style="font-size:13.5px;font-weight:700;color:'+c+'">'+(m.role?m.role+' ':'')+esc(m.name)+'</span>';
-      let body='';
+      const ts=t(m.timestamp);
       const isMe = m.uid && String(m.uid) === String(MY_UID);
-      const bubBg = isMe ? '#0866FF' : '#3a3b3c';
-      const bubColor = isMe ? '#fff' : '#e4e6eb';
-      let inner='';
-      if(m.replyTo){inner+='<div style="background:'+(isMe?'rgba(255,255,255,.18)':'rgba(255,255,255,.06)')+';border-left:3px solid '+(isMe?'rgba(255,255,255,.6)':'#0866FF')+';border-radius:6px;padding:4px 8px;margin-bottom:5px;font-size:12px;opacity:.9;overflow:hidden;max-height:38px"><span style="font-weight:700">'+esc(m.replyTo.name||'?')+'</span> · '+esc((m.replyTo.text||'').slice(0,60))+'</div>';}
-      if(m.type==='photo'&&m.mediaId)inner+='<img src="/api/tg-file/'+m.mediaId+'" style="max-width:100%;border-radius:10px;margin:0;display:block" loading="lazy">';
-      else if(m.type==='sticker'&&m.mediaId)inner+='<img src="/api/tg-file/'+m.mediaId+'" style="width:80px;height:80px;object-fit:contain;display:block;margin:0" loading="lazy">';
-      else if(m.type==='video')inner+='<div style="background:rgba(0,0,0,.3);border-radius:10px;padding:8px 12px;font-size:12px;color:var(--muted);margin:0">🎬 Video — öffne Telegram zum Ansehen</div>';
-      if(m.text)inner+='<div style="font-size:15px;line-height:1.42;word-break:break-word">'+esc(m.text)+'</div>';
-      body = '<div style="display:inline-block;background:'+bubBg+';color:'+bubColor+';border-radius:'+(isMe?'18px 18px 4px 18px':'18px 18px 18px 4px')+';padding:9px 13px;max-width:78%;box-shadow:0 1px 2px rgba(0,0,0,0.2)">'+inner+'</div>';
+      const next = arr[mi + 1];
+      const isLastInSeries = !next || String(next.uid) !== String(m.uid) || ((next.timestamp||0) - (m.timestamp||0)) > 5*60*1000;
+      const showAvatar = isLastInSeries;
+      const nameInBubble = m.uid
+        ? '<a href="/profil/'+m.uid+'" style="font-size:13px;font-weight:700;color:'+c+';text-decoration:none;display:block;margin-bottom:3px">'+(m.role?esc(m.role)+' ':'')+esc(m.name)+'</a>'
+        : '<div style="font-size:13px;font-weight:700;color:'+c+';margin-bottom:3px">'+(m.role?esc(m.role)+' ':'')+esc(m.name)+'</div>';
+      const replyBlock = m.replyTo ? '<div style="background:rgba(0,0,0,0.18);border-left:3px solid '+c+';padding:5px 9px;margin:0 0 5px 0;border-radius:0 6px 6px 0;font-size:12px;line-height:1.4;color:rgba(255,255,255,0.85)"><div style="font-weight:700;color:'+c+';font-size:11px">'+esc(m.replyTo.name||'?')+'</div><div style="opacity:0.85;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc((m.replyTo.text||'').slice(0,80))+'</div></div>' : '';
+      let media='';
+      if(m.type==='photo'&&m.mediaId)media='<img src="/api/tg-file/'+m.mediaId+'" style="max-width:100%;border-radius:10px;margin:0 0 5px;display:block" loading="lazy">';
+      else if(m.type==='sticker'&&m.mediaId)media='<img src="/api/tg-file/'+m.mediaId+'" style="width:80px;height:80px;object-fit:contain;display:block;margin:0 0 5px" loading="lazy">';
+      else if(m.type==='video')media='<div style="background:rgba(0,0,0,.3);border-radius:10px;padding:8px 12px;font-size:12px;color:var(--muted);margin:0 0 5px">🎬 Video — öffne Telegram zum Ansehen</div>';
+      const textBody = m.text ? '<div style="font-size:15px;line-height:1.42;color:#e4e6eb;word-break:break-word">'+esc(m.text)+'</div>' : '';
+      const timeFooter = '<div style="font-size:10.5px;color:rgba(255,255,255,0.5);text-align:right;margin-top:3px;font-variant-numeric:tabular-nums">'+ts+'</div>';
       const canDel=(m.uid&&String(m.uid)===String(MY_UID))||IS_ADMIN;
-      const delBtn=canDel?'<button type="button" class="thr-trash" data-trash-ts="'+m.timestamp+'" data-trash-mid="'+(m.msg_id||0)+'" onclick="if(confirm(\'Nachricht löschen?\')){fetch(\'/api/delete-thread-msg\',{method:\'POST\',headers:{\'Content-Type\':\'application/json\'},body:JSON.stringify({threadId:TID,timestamp:'+m.timestamp+',msgId:'+(m.msg_id||0)+'})}).then(r=>r.json()).then(d=>{if(d.ok){this.closest(\'.fade-in\').remove();}else{alert(\'Fehler: \'+(d.error||\'unbekannt\'))}}).catch(e=>alert(\'Netzwerkfehler: \'+e.message))}return false" style="position:relative;z-index:100;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#ef4444;font-size:18px;cursor:pointer;padding:8px 12px;margin-left:auto;flex-shrink:0;min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center;border-radius:10px;pointer-events:auto;touch-action:manipulation">🗑️</button>':'';
-      const reactBadges=m.reactions&&Object.keys(m.reactions).length?'<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:5px">'+Object.entries(m.reactions).map(([em,uids])=>'<button onclick="react('+m.timestamp+',\''+em+'\')" style="background:'+(uids.includes(MY_UID)?'rgba(0,136,204,.25)':'rgba(255,255,255,.07)')+';border:1px solid rgba(255,255,255,.15);border-radius:20px;padding:2px 7px;font-size:12px;cursor:pointer;color:var(--text)">'+em+' '+uids.length+'</button>').join('')+'</div>':'';
-      const actBar='<div style="display:flex;gap:2px;margin-top:3px"><button onclick="setReply('+m.timestamp+')" style="background:none;border:none;color:var(--muted2);font-size:11px;cursor:pointer;padding:2px 5px;border-radius:6px" title="Antworten">↩ Antworten</button><button onclick="openReact('+m.timestamp+')" style="background:none;border:none;color:var(--muted2);font-size:12px;cursor:pointer;padding:2px 5px;border-radius:6px" title="Reagieren">😊</button></div>';
+      const delBtn=canDel?'<button type="button" class="thr-trash" data-trash-ts="'+m.timestamp+'" data-trash-mid="'+(m.msg_id||0)+'" onclick="if(confirm(\'Nachricht löschen?\')){fetch(\'/api/delete-thread-msg\',{method:\'POST\',headers:{\'Content-Type\':\'application/json\'},body:JSON.stringify({threadId:TID,timestamp:'+m.timestamp+',msgId:'+(m.msg_id||0)+'})}).then(r=>r.json()).then(d=>{if(d.ok){this.closest(\'.thr-row\').remove();}else{alert(\'Fehler: \'+(d.error||\'unbekannt\'))}}).catch(e=>alert(\'Netzwerkfehler: \'+e.message))}return false" style="position:absolute;top:4px;right:4px;z-index:100;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#ef4444;font-size:14px;cursor:pointer;padding:4px 7px;border-radius:8px;pointer-events:auto;touch-action:manipulation">🗑️</button>':'';
+      const reactBadges=m.reactions&&Object.keys(m.reactions).length?'<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:5px">'+Object.entries(m.reactions).map(([em,uids])=>'<button onclick="react('+m.timestamp+',\''+em+'\')" style="background:'+(uids.includes(MY_UID)?'rgba(0,136,204,.25)':'rgba(255,255,255,.07)')+';border:1px solid rgba(255,255,255,.15);border-radius:20px;padding:2px 7px;font-size:11px;cursor:pointer;color:var(--text)">'+em+' '+uids.length+'</button>').join('')+'</div>':'';
+      const actBar='<div style="display:flex;gap:6px;margin-top:4px;font-size:11px"><button onclick="setReply('+m.timestamp+')" style="background:none;border:none;color:rgba(255,255,255,0.55);cursor:pointer;padding:2px 0">↩ Antworten</button><button onclick="openReact('+m.timestamp+')" style="background:none;border:none;color:rgba(255,255,255,0.55);cursor:pointer;padding:2px 0">😊 Reagieren</button></div>';
       const ring=m.uid&&RING_MAP[m.uid]?RING_MAP[m.uid]:'';
-      const avatarHtml = '<div style="width:32px;height:32px;border-radius:50%;background:'+c+';display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;flex-shrink:0;position:relative;overflow:hidden'+ring+'">'+ini(m.name)+(m.uid?'<img src="/appbild/'+m.uid+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" onerror="this.remove()" loading="lazy">':'')+'</div>';
-      const headerInfo = isMe
-        ? '<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;justify-content:flex-end"><span style="font-size:10px;color:var(--muted)">'+t(m.timestamp)+'</span>'+delBtn+'</div>'
-        : '<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">'+nameEl+'<span style="font-size:10px;color:var(--muted)">'+t(m.timestamp)+'</span>'+delBtn+'</div>';
-      const bodyAlign = isMe ? 'text-align:right' : 'text-align:left';
-      const rowFlex = isMe
-        ? 'display:flex;gap:8px;align-items:flex-end;flex-direction:row-reverse'
-        : 'display:flex;gap:10px;align-items:flex-start';
+      const bubble = '<div class="thr-bubble" style="position:relative;display:inline-block;max-width:78%;background:#212121;border-radius:14px;padding:8px 12px 6px 12px;box-shadow:0 1px 2px rgba(0,0,0,0.3)">'+nameInBubble+replyBlock+media+textBody+timeFooter+delBtn+'</div>';
+      const avatarSlot = showAvatar
+        ? '<a href="/profil/'+m.uid+'" style="text-decoration:none;flex-shrink:0"><div style="width:30px;height:30px;border-radius:50%;background:'+c+';display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;position:relative;overflow:hidden'+ring+'">'+ini(m.name)+(m.uid?'<img src="/appbild/'+m.uid+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" onerror="this.remove()" loading="lazy">':'')+'</div></a>'
+        : '<div style="width:30px;flex-shrink:0"></div>';
       let banner='', firstUnreadId='';
       if (!unreadInsertedJS && MY_LAST_READ > 0 && (m.timestamp||0) > MY_LAST_READ && !isMe) {
         banner = '<div id="unread-divider" class="thread-unread-divider" onclick="document.getElementById(\'first-unread\')?.scrollIntoView({behavior:\'smooth\',block:\'center\'})"><span>Ungelesene Nachrichten</span><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg></div>';
         firstUnreadId=' id="first-unread"';
         unreadInsertedJS=true;
       }
-      return banner+'<div class="fade-in" style="'+rowFlex+'"'+firstUnreadId+'>'+(isMe?'':avatarHtml)+'<div style="flex:1;min-width:0;'+bodyAlign+'">'+headerInfo+body+reactBadges+actBar+'</div></div>';
+      return banner+'<div class="thr-row" style="display:flex;gap:8px;align-items:flex-end'+(isLastInSeries?'':';margin-bottom:2px')+'"'+firstUnreadId+'>'+avatarSlot+'<div style="flex:1;min-width:0;text-align:left">'+bubble+reactBadges+actBar+'</div></div>';
     }).join('');
     if(atBottom){
       const ud=document.getElementById('unread-divider');
