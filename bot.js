@@ -3926,6 +3926,7 @@ async function createThread(){
   scrollInit();
   window.addEventListener('load', scrollInit);
   // Swipe-to-Delete für Admins/Owner: nur Rows mit data-can-del=1
+  console.log('[swipe] handler installed; can-del rows: ' + document.querySelectorAll('.thr-row[data-can-del="1"]').length);
   let _sRow=null,_sX0=0,_sY0=0,_sActive=false;
   document.addEventListener('touchstart', e => {
     const row = e.target.closest && e.target.closest('.thr-row[data-can-del="1"]');
@@ -3933,42 +3934,52 @@ async function createThread(){
     _sRow = row; _sActive = false;
     _sX0 = e.touches[0].clientX; _sY0 = e.touches[0].clientY;
     row.classList.remove('swiping');
+    console.log('[swipe] start on row ts=' + row.dataset.delTs);
   }, { passive: true });
   document.addEventListener('touchmove', e => {
     if (!_sRow) return;
     const dx = e.touches[0].clientX - _sX0;
     const dy = Math.abs(e.touches[0].clientY - _sY0);
-    if (dy > 14) { _sRow.classList.remove('swiping'); _sRow.style.removeProperty('--swop'); _sRow.querySelector('.thr-row-inner').style.transform=''; _sRow=null; return; }
+    if (dy > 14) {
+      _sRow.classList.remove('swiping');
+      const tr = _sRow.querySelector('.thr-swipe-trash'); if (tr) tr.style.opacity = '0';
+      _sRow.querySelector('.thr-row-inner').style.transform=''; _sRow=null; return;
+    }
     const cap = Math.max(-150, Math.min(0, dx));
     if (cap < -8) {
       _sActive = true; _sRow.classList.add('swiping');
       _sRow.querySelector('.thr-row-inner').style.transform = 'translateX(' + cap + 'px)';
-      _sRow.style.setProperty('--swop', String(Math.min(1, Math.abs(cap)/100)));
+      const tr = _sRow.querySelector('.thr-swipe-trash');
+      if (tr) tr.style.opacity = String(Math.min(1, Math.abs(cap)/100));
     }
   }, { passive: true });
   document.addEventListener('touchend', () => {
     if (!_sRow) return;
     const inner = _sRow.querySelector('.thr-row-inner');
+    const trEl = _sRow.querySelector('.thr-swipe-trash');
     const m = (inner.style.transform||'').match(/translateX\((-?\d+)px\)/);
     const dx = m ? Number(m[1]) : 0;
     inner.style.transition = 'transform 0.25s cubic-bezier(0.34,1.56,0.64,1)';
+    console.log('[swipe] end dx=' + dx);
     if (_sActive && dx <= -90) {
       const ts = _sRow.dataset.delTs, mid = _sRow.dataset.delMid || 0;
+      const rowRef = _sRow;
       inner.style.transform = 'translateX(-100%)';
       if (navigator.vibrate) navigator.vibrate(20);
       setTimeout(async () => {
-        if (!confirm('Nachricht löschen?')) { inner.style.transform=''; _sRow.classList.remove('swiping'); _sRow.style.removeProperty('--swop'); _sRow=null; return; }
+        if (!confirm('Nachricht löschen?')) { inner.style.transform=''; rowRef.classList.remove('swiping'); if(trEl)trEl.style.opacity='0'; _sRow=null; return; }
         try {
           const r = await fetch('/api/delete-thread-msg', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({threadId: TID, timestamp: Number(ts), msgId: Number(mid)||null}) });
           const d = await r.json();
-          if (d.ok) _sRow.remove();
-          else { inner.style.transform=''; _sRow.classList.remove('swiping'); _sRow.style.removeProperty('--swop'); alert('Fehler: '+(d.error||'unbekannt')); }
-        } catch(e2) { inner.style.transform=''; _sRow.classList.remove('swiping'); _sRow.style.removeProperty('--swop'); alert('Netzwerkfehler: '+e2.message); }
+          if (d.ok) rowRef.remove();
+          else { inner.style.transform=''; rowRef.classList.remove('swiping'); if(trEl)trEl.style.opacity='0'; alert('Fehler: '+(d.error||'unbekannt')); }
+        } catch(e2) { inner.style.transform=''; rowRef.classList.remove('swiping'); if(trEl)trEl.style.opacity='0'; alert('Netzwerkfehler: '+e2.message); }
         _sRow = null;
       }, 250);
     } else {
       inner.style.transform = '';
-      _sRow.classList.remove('swiping'); _sRow.style.removeProperty('--swop');
+      _sRow.classList.remove('swiping');
+      if (trEl) trEl.style.opacity = '0';
       _sRow = null;
     }
     _sActive = false;
@@ -4445,7 +4456,7 @@ document.getElementById('search-input').focus();
                 return `<div style="width:18px;height:18px;border-radius:50%;background:${badgeGradient(mu.role)};border:2px solid var(--bg3);overflow:hidden;flex-shrink:0;margin-left:${left};display:flex;align-items:center;justify-content:center">${mp?`<img src="/appbild/${mid}/profilepic" style="width:100%;height:100%;object-fit:cover" loading="lazy">`:mInsta?`<img src="https://unavatar.io/instagram/${mInsta}" style="width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.remove()">`:`<span style="color:#fff;font-size:9px;font-weight:700">${(mu.name||'?')[0]}</span>`}</div>`;
             }).join('');
             return `<div class="sug-card" data-uid="${uid}" style="position:relative">
-  <button class="sug-x" onclick="sugDismiss(this)" data-uid="${uid}" title="Ausblenden">×</button>
+  <button type="button" class="sug-x" data-uid="${uid}" title="Ausblenden" onclick="event.preventDefault();event.stopPropagation();var btn=this;var u=btn.dataset.uid;var c=btn.closest('.sug-card');if(c){c.style.transition='opacity 0.25s,transform 0.25s';c.style.opacity='0';c.style.transform='scale(0.85)';setTimeout(function(){c.remove();},250);}try{var ds=JSON.parse(localStorage.getItem('sugDismissed')||'[]');if(!ds.includes(u)){ds.push(u);localStorage.setItem('sugDismissed',JSON.stringify(ds.slice(-100)));}}catch(e){}return false">×</button>
   <a href="/profil/${uid}" style="text-decoration:none;display:block">
     <div style="position:relative;width:88px;height:88px;border-radius:50%;background:${grad};overflow:hidden;display:flex;align-items:center;justify-content:center;margin:0 auto${getRingBoxShadow(u)}">
       <span style="position:absolute;color:#fff;font-size:32px;font-weight:800">${name[0]}</span>
