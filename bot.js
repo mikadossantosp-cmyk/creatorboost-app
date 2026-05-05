@@ -1590,7 +1590,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v21';
+const SW_VERSION='v23-fix';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
@@ -2901,8 +2901,20 @@ p{line-height:1.65;color:var(--muted)}
         if (targetUid === myUid) return json({ok:false, error:'Kann dir nicht selbst folgen'},400);
         const result = await postBot('/follow-api', { followerUid: String(myUid), targetUid });
         console.log('[follow] me=' + myUid + ' → ' + targetUid + ' result=' + JSON.stringify(result));
-        if (result && result.ok === true) return json({ok:true});
+        if (result && result.ok === true) return json({ok:true, action: result.action});
         return json({ok:false, error: (result && result.error) ? result.error : 'Bot-API fehlgeschlagen'}, 500);
+    }
+    // Form-Submit Fallback: funktioniert IMMER auch wenn JS fehlschlägt
+    if (path === '/follow-form' && req.method === 'POST') {
+        const body = await parseBody(req);
+        const targetUid = body && body.uid ? String(body.uid) : '';
+        const back = body && body.back ? String(body.back) : '/explore';
+        if (targetUid && targetUid !== myUid) {
+            const result = await postBot('/follow-api', { followerUid: String(myUid), targetUid });
+            console.log('[follow-form] me=' + myUid + ' → ' + targetUid + ' result=' + JSON.stringify(result));
+        }
+        res.writeHead(302, { 'Location': back || '/explore' });
+        return res.end();
     }
 
     if (path === '/api/post' && req.method === 'POST') {
@@ -3880,7 +3892,8 @@ async function createThread(){
                     firstUnreadId = ' id="first-unread"';
                     unreadInsertedSSR = true;
                 }
-                return bannerPrefix + `<div class="thr-row"${swipeAttrs} style="display:flex;gap:8px;align-items:flex-end${isLastInSeries?'':';margin-bottom:2px'}"${firstUnreadId}>${avatarSlot}<div class="thr-row-inner" style="flex:1;min-width:0;text-align:left">${bubble}</div></div>`;
+                const trashEl = canDelSSR ? '<div class="thr-swipe-trash" aria-hidden="true">🗑️</div>' : '';
+                return bannerPrefix + `<div class="thr-row"${swipeAttrs} style="display:flex;gap:8px;align-items:flex-end${isLastInSeries?'':';margin-bottom:2px'}"${firstUnreadId}>${avatarSlot}<div class="thr-row-inner" style="flex:1;min-width:0;text-align:left;display:flex">${bubble}</div>${trashEl}</div>`;
               }).join('')
             : '<div style="text-align:center;padding:60px 20px;color:var(--muted)"><div style="font-size:40px;margin-bottom:12px">💬</div><div style="font-size:14px">Noch keine Nachrichten.<br>Schreib die erste!</div></div>';
         return html(`
@@ -3896,10 +3909,10 @@ async function createThread(){
 .thread-unread-divider{display:flex;align-items:center;justify-content:center;gap:6px;margin:14px 0 6px;padding:8px 12px;background:rgba(8,102,255,0.12);border:1px solid rgba(8,102,255,0.25);border-radius:12px;color:#4dabf7;font-size:12.5px;font-weight:700;letter-spacing:0.2px;cursor:pointer;transition:background 0.15s,transform 0.15s}
 .thread-unread-divider:active{background:rgba(8,102,255,0.18);transform:scale(0.98)}
 .thr-row{position:relative;overflow:visible}
-.thr-row .thr-row-inner{transition:transform 0.25s cubic-bezier(0.34,1.56,0.64,1)}
+.thr-row .thr-row-inner{transition:transform 0.25s cubic-bezier(0.34,1.56,0.64,1);background:transparent}
 .thr-row.swiping .thr-row-inner{transition:none}
-.thr-row::after{content:"🗑️";position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:22px;opacity:0;pointer-events:none;transition:opacity 0.15s;color:#ef4444}
-.thr-row.swiping::after{opacity:var(--swop,1)}
+.thr-swipe-trash{position:absolute;right:14px;top:50%;transform:translateY(-50%);width:42px;height:42px;border-radius:50%;background:rgba(239,68,68,0.15);border:1.5px solid rgba(239,68,68,0.4);color:#ef4444;font-size:20px;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.15s;z-index:1}
+.thr-row.swiping .thr-swipe-trash{opacity:var(--swop,1)}
 </style>
 <div id="msgs" style="padding:12px 12px 165px;display:flex;flex-direction:column;gap:10px;overflow-x:hidden;min-width:0;width:100%">${initialMsgsHtml}</div>
 <script>
@@ -4035,7 +4048,8 @@ async function createThread(){
         firstUnreadId=' id="first-unread"';
         unreadInsertedJS=true;
       }
-      return banner+'<div class="thr-row"'+swipeAttrsJS+' style="display:flex;gap:8px;align-items:flex-end'+(isLastInSeries?'':';margin-bottom:2px')+'"'+firstUnreadId+'>'+avatarSlot+'<div class="thr-row-inner" style="flex:1;min-width:0;text-align:left">'+bubble+reactBadges+actBar+'</div></div>';
+      const trashElJS = canDel ? '<div class="thr-swipe-trash" aria-hidden="true">🗑️</div>' : '';
+      return banner+'<div class="thr-row"'+swipeAttrsJS+' style="display:flex;gap:8px;align-items:flex-end'+(isLastInSeries?'':';margin-bottom:2px')+'"'+firstUnreadId+'>'+avatarSlot+'<div class="thr-row-inner" style="flex:1;min-width:0;text-align:left">'+bubble+reactBadges+actBar+'</div>'+trashElJS+'</div>';
     }).join('');
     if(atBottom){
       const ud=document.getElementById('unread-divider');
@@ -4443,7 +4457,11 @@ document.getElementById('search-input').focus();
     ${mAvatars ? `<div class="sug-meta"><div style="display:flex;align-items:center">${mAvatars}</div></div>` : ''}
     <div class="sug-mutuals">${mutualText}</div>
   </div>
-  <button type="button" class="sug-btn" data-follow-uid="${uid}">+ Folgen</button>
+  <form method="POST" action="/follow-form" style="margin:10px 0 0;width:100%" onsubmit="return sugFormSubmit(this,event)">
+    <input type="hidden" name="uid" value="${uid}">
+    <input type="hidden" name="back" value="/explore">
+    <button type="submit" class="sug-btn" data-follow-uid="${uid}">+ Folgen</button>
+  </form>
 </div>`;
         }).join('');
 
@@ -4713,6 +4731,33 @@ async function sugDoFollow(btn){
   }
 }
 window.sugDoFollow = sugDoFollow;
+// Form-Hijack: per fetch senden, bei Erfolg ohne Page-Reload, sonst Form normal abschicken
+window.sugFormSubmit = function(form, ev){
+  try {
+    if (ev) { ev.preventDefault(); ev.stopPropagation(); }
+    const uid = form.querySelector('input[name="uid"]')?.value;
+    const btn = form.querySelector('.sug-btn');
+    if (!uid || !btn || btn.disabled) return false;
+    btn.disabled = true; const orig = btn.textContent; btn.textContent = '...';
+    fetch('/api/follow', { method: 'POST', headers: {'Content-Type':'application/json','Accept':'application/json'}, body: JSON.stringify({uid: String(uid)}), credentials: 'same-origin' })
+      .then(r => r.text().then(txt => ({status: r.status, txt})))
+      .then(({status, txt}) => {
+        let data = null; try { data = JSON.parse(txt); } catch(e) {}
+        if (status === 200 && data && data.ok === true) {
+          btn.textContent = '✓ Folge'; btn.classList.add('followed');
+          setTimeout(() => { const c = btn.closest('.sug-card'); if (c) { c.style.transition='opacity 0.3s,transform 0.3s'; c.style.opacity='0'; c.style.transform='scale(0.85)'; setTimeout(()=>c.remove(),300); } }, 800);
+        } else if (status === 401 || status === 302 || (txt && txt.indexOf('<!DOCTYPE')===0)) {
+          // Session weg → Form normal absenden, Server redirected zurück
+          btn.textContent = orig; form.submit();
+        } else {
+          btn.textContent = orig; btn.disabled = false;
+          alert('Folgen fehlgeschlagen:\n' + (data && data.error ? data.error : ('HTTP ' + status + (txt ? ' — ' + txt.slice(0,150) : ''))));
+        }
+      })
+      .catch(e => { btn.disabled = false; btn.textContent = orig; alert('Netzwerk: ' + e.message + '\nForm wird normal abgeschickt...'); form.submit(); });
+  } catch(e) { return true; /* normal submit als Fallback */ }
+  return false;
+};
 // Click + touchend Capture-Listener — wird IMMER getriggert, egal welche Wrapper drumherum
 ['click','touchend'].forEach(evt => {
   document.addEventListener(evt, function(ev){
