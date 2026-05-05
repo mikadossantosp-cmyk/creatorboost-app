@@ -3730,7 +3730,7 @@ async function createThread(){
                 const timeStr = String(ts.getHours()).padStart(2,'0')+':'+String(ts.getMinutes()).padStart(2,'0');
                 const bodyHtml = m.text ? `<div style="font-size:13px;line-height:1.5;margin-top:2px;word-break:break-word">${esc(m.text)}</div>` : '';
                 const canDelSSR = (m.uid && String(m.uid) === String(myUid)) || isAdmin;
-                const delBtnSSR = canDelSSR ? `<button type="button" onclick="event.preventDefault();event.stopPropagation();deleteMsg(${m.timestamp},${m.msg_id||0});return false" ontouchend="event.preventDefault();event.stopPropagation();deleteMsg(${m.timestamp},${m.msg_id||0});return false" style="position:relative;z-index:10;background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:10px 12px;margin-left:auto;opacity:.85;flex-shrink:0;min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center;pointer-events:auto;touch-action:manipulation">🗑️</button>` : '';
+                const delBtnSSR = canDelSSR ? `<button type="button" data-trash-ts="${m.timestamp}" data-trash-mid="${m.msg_id||0}" style="position:relative;z-index:10;background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:10px 12px;margin-left:auto;opacity:.85;flex-shrink:0;min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center;pointer-events:auto;touch-action:manipulation">🗑️</button>` : '';
                 return `<div style="display:flex;gap:10px;align-items:flex-start"><div style="width:36px;height:36px;border-radius:50%;background:${c};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;flex-shrink:0;position:relative;overflow:hidden${ring}">${ini}${m.uid?`<img src="/appbild/${esc(m.uid)}/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" onerror="this.remove()" loading="lazy">`:''}` +
                     `</div><div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">${nameHtml}<span style="font-size:10px;color:var(--muted)">${timeStr}</span>${delBtnSSR}</div>${bodyHtml}</div></div>`;
               }).join('')
@@ -3794,7 +3794,7 @@ async function createThread(){
       else if(m.type==='video')body+='<div style="background:rgba(0,0,0,.3);border-radius:10px;padding:8px 12px;font-size:12px;color:var(--muted);margin-top:4px">🎬 Video — öffne Telegram zum Ansehen</div>';
       if(m.text)body+='<div style="font-size:13px;line-height:1.5;margin-top:2px;word-break:break-word">'+esc(m.text)+'</div>';
       const canDel=(m.uid&&String(m.uid)===String(MY_UID))||IS_ADMIN;
-      const delBtn=canDel?'<button type="button" onclick="event.preventDefault();event.stopPropagation();deleteMsg('+m.timestamp+','+(m.msg_id||0)+');return false" ontouchend="event.preventDefault();event.stopPropagation();deleteMsg('+m.timestamp+','+(m.msg_id||0)+');return false" style="position:relative;z-index:10;background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:10px 12px;margin-left:auto;opacity:.85;flex-shrink:0;min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center;pointer-events:auto;touch-action:manipulation">🗑️</button>':'';
+      const delBtn=canDel?'<button type="button" data-trash-ts="'+m.timestamp+'" data-trash-mid="'+(m.msg_id||0)+'" style="position:relative;z-index:10;background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:10px 12px;margin-left:auto;opacity:.85;flex-shrink:0;min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center;pointer-events:auto;touch-action:manipulation">🗑️</button>':'';
       const reactBadges=m.reactions&&Object.keys(m.reactions).length?'<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:5px">'+Object.entries(m.reactions).map(([em,uids])=>'<button onclick="react('+m.timestamp+',\''+em+'\')" style="background:'+(uids.includes(MY_UID)?'rgba(0,136,204,.25)':'rgba(255,255,255,.07)')+';border:1px solid rgba(255,255,255,.15);border-radius:20px;padding:2px 7px;font-size:12px;cursor:pointer;color:var(--text)">'+em+' '+uids.length+'</button>').join('')+'</div>':'';
       const actBar='<div style="display:flex;gap:2px;margin-top:3px"><button onclick="setReply('+m.timestamp+')" style="background:none;border:none;color:var(--muted2);font-size:11px;cursor:pointer;padding:2px 5px;border-radius:6px" title="Antworten">↩ Antworten</button><button onclick="openReact('+m.timestamp+')" style="background:none;border:none;color:var(--muted2);font-size:12px;cursor:pointer;padding:2px 5px;border-radius:6px" title="Reagieren">😊</button></div>';
       const ring=m.uid&&RING_MAP[m.uid]?RING_MAP[m.uid]:'';
@@ -3802,6 +3802,65 @@ async function createThread(){
     }).join('');
     if(atBottom)window.scrollTo(0,document.body.scrollHeight);
   }
+  // ── Event-Delegation für Mülleimer-Button (robuster als inline onclick) ──
+  document.addEventListener('click', function(ev){
+    const btn = ev.target.closest && ev.target.closest('[data-trash-ts]');
+    if (!btn) return;
+    ev.preventDefault(); ev.stopPropagation();
+    const ts = Number(btn.dataset.trashTs); const mid = Number(btn.dataset.trashMid)||0;
+    if (typeof window.deleteMsg === 'function') window.deleteMsg(ts, mid);
+  }, true);
+  document.addEventListener('touchend', function(ev){
+    const btn = ev.target.closest && ev.target.closest('[data-trash-ts]');
+    if (!btn) return;
+    ev.preventDefault(); ev.stopPropagation();
+    const ts = Number(btn.dataset.trashTs); const mid = Number(btn.dataset.trashMid)||0;
+    if (typeof window.deleteMsg === 'function') window.deleteMsg(ts, mid);
+  }, { capture: true, passive: false });
+
+  // ── Swipe-to-Delete (für Admins, iOS-Style) ──
+  if (IS_ADMIN) {
+    let swRow = null, swStartX = 0, swStartY = 0, swActive = false, swMid = 0, swTs = 0;
+    document.addEventListener('touchstart', function(e){
+      const row = e.target.closest && e.target.closest('#msgs > div');
+      if (!row) return;
+      const btn = row.querySelector('[data-trash-ts]'); if (!btn) return;
+      swRow = row; swActive = false;
+      swStartX = e.touches[0].clientX; swStartY = e.touches[0].clientY;
+      swTs = Number(btn.dataset.trashTs); swMid = Number(btn.dataset.trashMid)||0;
+      row.style.transition = 'none';
+    }, { passive: true });
+    document.addEventListener('touchmove', function(e){
+      if (!swRow) return;
+      const dx = e.touches[0].clientX - swStartX;
+      const dy = Math.abs(e.touches[0].clientY - swStartY);
+      if (dy > 18) { swRow.style.transform = ''; swRow.style.background = ''; swRow = null; return; }
+      const cap = Math.max(-150, Math.min(0, dx));
+      if (cap < -8) {
+        swActive = true;
+        swRow.style.transform = 'translateX(' + cap + 'px)';
+        const intensity = Math.min(1, Math.abs(cap)/120);
+        swRow.style.background = 'linear-gradient(90deg, transparent ' + (100 - intensity*40) + '%, rgba(239,68,68,' + (intensity*0.6) + '))';
+      }
+    }, { passive: true });
+    document.addEventListener('touchend', function(){
+      if (!swRow) return;
+      const t = swRow.style.transform || '';
+      const m = t.match(/translateX\((-?\d+)px\)/);
+      const dx = m ? Number(m[1]) : 0;
+      swRow.style.transition = 'transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.2s';
+      if (swActive && dx <= -100 && swTs) {
+        swRow.style.transform = 'translateX(-100%)';
+        swRow.style.background = 'rgba(239,68,68,0.4)';
+        if (navigator.vibrate) navigator.vibrate(20);
+        setTimeout(() => { if (typeof window.deleteMsg === 'function') window.deleteMsg(swTs, swMid); }, 100);
+      } else {
+        swRow.style.transform = ''; swRow.style.background = '';
+      }
+      swRow = null; swActive = false;
+    });
+  }
+
   // Initial render already done server-side; set knownHash to avoid blank re-render
   render(${msgsJson});
   // Scroll to bottom on load
