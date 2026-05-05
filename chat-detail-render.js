@@ -181,13 +181,13 @@ function getStyles() {
         '.chat-row-other .chat-bubble-wrap { align-items: flex-start; }' +
         '.chat-bubble { padding: 11px 16px; border-radius: 22px; font-size: 16px; line-height: 1.42; word-break: break-word; user-select: none; -webkit-user-select: none; cursor: pointer; transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1); max-width: 100%; position: relative; }' +
         '.chat-bubble:active { transform: scale(0.96); }' +
-        '.chat-row-me .chat-bubble { background: linear-gradient(135deg,#a78bfa 0%,#8b5cf6 50%,#7c3aed 100%); color: #fff; border-radius: 22px 22px 6px 22px; box-shadow: 0 2px 8px rgba(124,58,237,0.2); }' +
-        '.chat-row-me.chat-row-grouped .chat-bubble { border-radius: 22px 6px 6px 22px; }' +
-        '.chat-row-me.chat-row-last .chat-bubble { border-radius: 22px 22px 6px 22px; }' +
-        '.chat-row-me.chat-row-grouped.chat-row-last .chat-bubble { border-radius: 22px 6px 6px 22px; }' +
-        '.chat-row-other .chat-bubble { background: rgba(255,255,255,0.07); color: var(--text); border-radius: 22px 22px 22px 6px; }' +
-        '.chat-row-other.chat-row-grouped .chat-bubble { border-radius: 6px 22px 22px 6px; }' +
-        '.chat-row-other.chat-row-last .chat-bubble { border-radius: 22px 22px 22px 6px; }' +
+        '.chat-row-me .chat-bubble { background: #0866FF; color: #fff; border-radius: 20px 20px 6px 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.3); }' +
+        '.chat-row-me.chat-row-grouped .chat-bubble { border-radius: 20px 6px 6px 20px; }' +
+        '.chat-row-me.chat-row-last .chat-bubble { border-radius: 20px 20px 6px 20px; }' +
+        '.chat-row-me.chat-row-grouped.chat-row-last .chat-bubble { border-radius: 20px 6px 6px 20px; }' +
+        '.chat-row-other .chat-bubble { background: #3a3b3c; color: #e4e6eb; border-radius: 20px 20px 20px 6px; }' +
+        '.chat-row-other.chat-row-grouped .chat-bubble { border-radius: 6px 20px 20px 6px; }' +
+        '.chat-row-other.chat-row-last .chat-bubble { border-radius: 20px 20px 20px 6px; }' +
         '.chat-text { white-space: pre-wrap; }' +
         '.chat-img-wrap { max-width: 260px; border-radius: inherit; overflow: hidden; cursor: pointer; }' +
         '.chat-img-wrap img { width: 100%; display: block; border-radius: inherit; transition: transform 0.3s; }' +

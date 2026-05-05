@@ -3494,20 +3494,28 @@ async function submitSuperLink(){
         postBot('/mark-messages-read', { uid: myUid, chatKey }).catch(()=>{});
         const msgsHtml = require('./chat-detail-render')({ msgs, myUid, otherUid, otherUser, ladeBild, otherOnline: typeof sessions !== 'undefined' ? [...sessions.values()].some(s => String(s.uid) === String(otherUid)) : false });
         return html(`
-<div class="topbar">
-  <a href="/nachrichten" class="icon-btn" style="font-size:22px">‹</a>
-  <a href="/profil/${otherUid}" style="display:flex;align-items:center;gap:8px;text-decoration:none">
-    <div style="position:relative;width:32px;height:32px;border-radius:50%;overflow:hidden;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0">
-      <span style="position:absolute;z-index:0">${otherName[0]}</span>
+<div class="topbar" style="display:flex;align-items:center;gap:6px;padding:6px 10px">
+  <a href="/nachrichten" class="icon-btn" style="font-size:24px;color:#0866FF;padding:6px 10px;text-decoration:none">‹</a>
+  <a href="/profil/${otherUid}" class="chat-header-link" style="display:flex;align-items:center;gap:10px;text-decoration:none;flex:1;min-width:0">
+    <div style="position:relative;width:36px;height:36px;border-radius:50%;overflow:hidden;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0">
+      <span style="position:absolute;z-index:0;color:#fff">${otherName[0]}</span>
       ${ladeBild(otherUid,'profilepic')
         ? `<img src="/appbild/${otherUid}/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1" alt="">`
         : otherUser.instagram
         ? `<img src="https://unavatar.io/instagram/${otherUser.instagram}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1" onerror="this.remove()" alt="">`
         : ''}
     </div>
-    <span style="font-size:15px;font-weight:600;color:var(--text)">${otherName}</span>
+    <span class="chat-header-name" style="font-size:16px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${otherName}</span>
   </a>
-  <div style="width:36px"></div>
+  <button onclick="alert('Sprachanruf folgt bald 📞')" style="background:none;border:none;color:#0866FF;width:40px;height:40px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0" title="Anrufen">
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M20 15.5c-1.25 0-2.45-.2-3.57-.57-.35-.11-.74-.03-1.02.24l-2.2 2.2c-2.83-1.44-5.15-3.75-6.59-6.58l2.2-2.21c.28-.27.36-.66.25-1.01C8.7 6.45 8.5 5.25 8.5 4c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1 0 9.39 7.61 17 17 17 .55 0 1-.45 1-1v-3.5c0-.55-.45-1-1-1z"/></svg>
+  </button>
+  <button onclick="alert('Videoanruf folgt bald 🎥')" style="background:none;border:none;color:#0866FF;width:40px;height:40px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0" title="Video">
+    <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg>
+  </button>
+  <a href="/profil/${otherUid}" style="background:none;border:none;color:#0866FF;width:40px;height:40px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;text-decoration:none" title="Info">
+    <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+  </a>
 </div>
 <div id="chat-msgs" style="padding:12px 0 140px;display:flex;flex-direction:column">
   ${msgsHtml || '<div class="empty" style="margin-top:60px"><div class="empty-icon">👋</div><div class="empty-text">Schreib eine Nachricht!</div></div>'}
@@ -3528,15 +3536,51 @@ async function submitSuperLink(){
   </div>
 </div>
 <style>@keyframes pulse-red{0%,100%{opacity:1}50%{opacity:.3}}</style>
-<div style="position:fixed;bottom:60px;left:0;right:0;background:var(--bg);border-top:1px solid var(--border2);padding:10px 12px;display:flex;gap:8px;align-items:center;z-index:100">
-  <label style="width:36px;height:36px;border-radius:50%;background:var(--bg4);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-size:16px">
-    🖼
+<div style="position:fixed;bottom:60px;left:0;right:0;background:var(--bg);border-top:1px solid rgba(255,255,255,0.06);padding:8px 10px;display:flex;gap:6px;align-items:center;z-index:100">
+  <button onclick="alert('Mehr Optionen folgen 📎')" style="width:38px;height:38px;border-radius:50%;background:#0866FF;border:none;color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0" title="Mehr">
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+  </button>
+  <label style="width:38px;height:38px;border-radius:50%;background:transparent;color:#0866FF;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0" title="Kamera">
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M9.4 10.5l4.77-8.26C13.47 2.09 12.75 2 12 2 9.53 2 7.29 2.99 5.64 4.59l3.74 5.91zm9.83-1.5c-.86-2.3-2.55-4.18-4.74-5.27L11.32 9h7.91zm.34 2H12v9.96c4.42-.32 8-3.99 8-8.46 0-.52-.05-1.02-.13-1.5zM4.41 4.59C2.93 6.16 2 8.27 2 10.6c0 .8.13 1.59.4 2.34l4-7.04L4.41 4.59zM2.81 12.59C3.97 16.5 7.65 19.5 12 19.96V12.59H2.81z"/></svg>
+    <input type="file" accept="image/*" capture="user" style="display:none" onchange="selectImage(this)">
+  </label>
+  <label style="width:38px;height:38px;border-radius:50%;background:transparent;color:#0866FF;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0" title="Galerie">
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
     <input type="file" accept="image/*" style="display:none" onchange="selectImage(this)">
   </label>
-  <button id="mic-btn" onclick="toggleRecording()" style="width:36px;height:36px;border-radius:50%;background:var(--bg4);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-size:16px">🎤</button>
-  <input type="text" id="msg-input" class="form-input" placeholder="Nachricht..." style="flex:1;margin:0" onkeypress="if(event.key==='Enter')sendMsg()">
-  <button onclick="sendMsg()" style="width:36px;height:36px;border-radius:50%;background:var(--accent);border:none;color:#fff;font-size:16px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center">➤</button>
+  <button id="mic-btn" onclick="toggleRecording()" style="width:38px;height:38px;border-radius:50%;background:transparent;color:#0866FF;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0" title="Aufnehmen">
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5-3c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
+  </button>
+  <div style="flex:1;background:#3a3b3c;border-radius:22px;display:flex;align-items:center;padding:4px 4px 4px 14px;gap:6px;min-width:0">
+    <input type="text" id="msg-input" placeholder="Nachricht senden..." style="flex:1;background:transparent;border:none;outline:none;color:#e4e6eb;font-size:15px;padding:8px 0;margin:0;min-width:0" onkeypress="if(event.key==='Enter')sendMsg()">
+    <button onclick="alert('Emoji-Picker folgt 😊')" style="background:none;border:none;color:#e4e6eb;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-size:20px" title="Emoji">😊</button>
+  </div>
+  <button id="send-btn" onclick="sendMsg()" style="width:38px;height:38px;border-radius:50%;background:transparent;color:#0866FF;border:none;font-size:22px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center" title="Senden">❤️</button>
 </div>
+<script>
+// Heart -> Plane wenn Text getippt wird (Messenger-Style)
+(function(){
+  const inp = document.getElementById('msg-input');
+  const btn = document.getElementById('send-btn');
+  if (!inp || !btn) return;
+  function toggleSend(){
+    const has = inp.value.trim().length > 0;
+    btn.innerHTML = has ? '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>' : '❤️';
+  }
+  inp.addEventListener('input', toggleSend);
+  toggleSend();
+  // Heart-Tap = sendet ❤️ als Schnell-Like
+  btn.addEventListener('click', function(e){
+    if (inp.value.trim().length === 0) {
+      e.preventDefault(); e.stopPropagation();
+      const tmpVal = inp.value;
+      inp.value = '❤️';
+      if (typeof sendMsg === 'function') sendMsg();
+      inp.value = tmpVal;
+    }
+  }, true);
+})();
+</script>
 <script>
 document.getElementById('msg-input').focus();
 window.scrollTo(0, document.body.scrollHeight);
@@ -3728,11 +3772,21 @@ async function createThread(){
                     : `<span style="font-size:12px;font-weight:700;color:${c}">${m.role?esc(m.role)+' ':''}${esc(m.name)}</span>`;
                 const ts = new Date(m.timestamp);
                 const timeStr = String(ts.getHours()).padStart(2,'0')+':'+String(ts.getMinutes()).padStart(2,'0');
-                const bodyHtml = m.text ? `<div style="font-size:15px;line-height:1.5;margin-top:3px;word-break:break-word">${esc(m.text)}</div>` : '';
+                const isMeS = m.uid && String(m.uid) === String(myUid);
+                const bubBgS = isMeS ? '#0866FF' : '#3a3b3c';
+                const bubColS = isMeS ? '#fff' : '#e4e6eb';
+                const bubRadS = isMeS ? '18px 18px 4px 18px' : '18px 18px 18px 4px';
+                const bodyHtml = m.text ? `<div style="display:inline-block;background:${bubBgS};color:${bubColS};border-radius:${bubRadS};padding:9px 13px;max-width:78%;font-size:15px;line-height:1.42;word-break:break-word;box-shadow:0 1px 2px rgba(0,0,0,0.2)">${esc(m.text)}</div>` : '';
                 const canDelSSR = (m.uid && String(m.uid) === String(myUid)) || isAdmin;
                 const delBtnSSR = canDelSSR ? `<button type="button" class="thr-trash" data-trash-ts="${m.timestamp}" data-trash-mid="${m.msg_id||0}" onclick="if(confirm('Nachricht löschen?')){fetch('/api/delete-thread-msg',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({threadId:'${threadId}',timestamp:${m.timestamp},msgId:${m.msg_id||0}})}).then(r=>r.json()).then(d=>{if(d.ok){this.closest('.fade-in,div').remove()}else{alert('Fehler: '+(d.error||'unbekannt'))}}).catch(e=>alert('Netzwerkfehler: '+e.message))}return false" style="position:relative;z-index:100;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#ef4444;font-size:18px;cursor:pointer;padding:8px 12px;margin-left:auto;flex-shrink:0;min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center;border-radius:10px;pointer-events:auto;touch-action:manipulation">🗑️</button>` : '';
-                return `<div style="display:flex;gap:10px;align-items:flex-start"><div style="width:36px;height:36px;border-radius:50%;background:${c};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;flex-shrink:0;position:relative;overflow:hidden${ring}">${ini}${m.uid?`<img src="/appbild/${esc(m.uid)}/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" onerror="this.remove()" loading="lazy">`:''}` +
-                    `</div><div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">${nameHtml}<span style="font-size:10px;color:var(--muted)">${timeStr}</span>${delBtnSSR}</div>${bodyHtml}</div></div>`;
+                const avatarHtml = `<div style="width:32px;height:32px;border-radius:50%;background:${c};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;flex-shrink:0;position:relative;overflow:hidden${ring}">${ini}${m.uid?`<img src="/appbild/${esc(m.uid)}/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" onerror="this.remove()" loading="lazy">`:''}</div>`;
+                const headInfo = isMeS
+                    ? `<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;justify-content:flex-end"><span style="font-size:10px;color:var(--muted)">${timeStr}</span>${delBtnSSR}</div>`
+                    : `<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">${nameHtml}<span style="font-size:10px;color:var(--muted)">${timeStr}</span>${delBtnSSR}</div>`;
+                const rowF = isMeS
+                    ? 'display:flex;gap:8px;align-items:flex-end;flex-direction:row-reverse'
+                    : 'display:flex;gap:10px;align-items:flex-start';
+                return `<div style="${rowF}">${isMeS?'':avatarHtml}<div style="flex:1;min-width:0;${isMeS?'text-align:right':'text-align:left'}">${headInfo}${bodyHtml}</div></div>`;
               }).join('')
             : '<div style="text-align:center;padding:60px 20px;color:var(--muted)"><div style="font-size:40px;margin-bottom:12px">💬</div><div style="font-size:14px">Noch keine Nachrichten.<br>Schreib die erste!</div></div>';
         return html(`
@@ -3788,17 +3842,30 @@ async function createThread(){
       const c=col(m.name);
       const nameEl=m.uid?'<a href="/profil/'+m.uid+'" style="font-size:13.5px;font-weight:700;color:'+c+';text-decoration:none">'+(m.role?m.role+' ':'')+esc(m.name)+'</a>':'<span style="font-size:13.5px;font-weight:700;color:'+c+'">'+(m.role?m.role+' ':'')+esc(m.name)+'</span>';
       let body='';
-      if(m.replyTo){body+='<div style="background:rgba(0,136,204,.12);border-left:3px solid #0088cc;border-radius:6px;padding:4px 8px;margin-bottom:4px;font-size:11px;color:var(--muted);overflow:hidden;max-height:38px"><span style="color:#0088cc;font-weight:700">'+esc(m.replyTo.name||'?')+'</span> · '+esc((m.replyTo.text||'').slice(0,60))+'</div>';}
-      if(m.type==='photo'&&m.mediaId)body+='<img src="/api/tg-file/'+m.mediaId+'" style="max-width:100%;border-radius:10px;margin-top:4px;display:block" loading="lazy">';
-      else if(m.type==='sticker'&&m.mediaId)body+='<img src="/api/tg-file/'+m.mediaId+'" style="width:80px;height:80px;object-fit:contain;display:block;margin-top:4px" loading="lazy">';
-      else if(m.type==='video')body+='<div style="background:rgba(0,0,0,.3);border-radius:10px;padding:8px 12px;font-size:12px;color:var(--muted);margin-top:4px">🎬 Video — öffne Telegram zum Ansehen</div>';
-      if(m.text)body+='<div style="font-size:15px;line-height:1.5;margin-top:3px;word-break:break-word">'+esc(m.text)+'</div>';
+      const isMe = m.uid && String(m.uid) === String(MY_UID);
+      const bubBg = isMe ? '#0866FF' : '#3a3b3c';
+      const bubColor = isMe ? '#fff' : '#e4e6eb';
+      let inner='';
+      if(m.replyTo){inner+='<div style="background:'+(isMe?'rgba(255,255,255,.18)':'rgba(255,255,255,.06)')+';border-left:3px solid '+(isMe?'rgba(255,255,255,.6)':'#0866FF')+';border-radius:6px;padding:4px 8px;margin-bottom:5px;font-size:12px;opacity:.9;overflow:hidden;max-height:38px"><span style="font-weight:700">'+esc(m.replyTo.name||'?')+'</span> · '+esc((m.replyTo.text||'').slice(0,60))+'</div>';}
+      if(m.type==='photo'&&m.mediaId)inner+='<img src="/api/tg-file/'+m.mediaId+'" style="max-width:100%;border-radius:10px;margin:0;display:block" loading="lazy">';
+      else if(m.type==='sticker'&&m.mediaId)inner+='<img src="/api/tg-file/'+m.mediaId+'" style="width:80px;height:80px;object-fit:contain;display:block;margin:0" loading="lazy">';
+      else if(m.type==='video')inner+='<div style="background:rgba(0,0,0,.3);border-radius:10px;padding:8px 12px;font-size:12px;color:var(--muted);margin:0">🎬 Video — öffne Telegram zum Ansehen</div>';
+      if(m.text)inner+='<div style="font-size:15px;line-height:1.42;word-break:break-word">'+esc(m.text)+'</div>';
+      body = '<div style="display:inline-block;background:'+bubBg+';color:'+bubColor+';border-radius:'+(isMe?'18px 18px 4px 18px':'18px 18px 18px 4px')+';padding:9px 13px;max-width:78%;box-shadow:0 1px 2px rgba(0,0,0,0.2)">'+inner+'</div>';
       const canDel=(m.uid&&String(m.uid)===String(MY_UID))||IS_ADMIN;
       const delBtn=canDel?'<button type="button" class="thr-trash" data-trash-ts="'+m.timestamp+'" data-trash-mid="'+(m.msg_id||0)+'" onclick="if(confirm(\'Nachricht löschen?\')){fetch(\'/api/delete-thread-msg\',{method:\'POST\',headers:{\'Content-Type\':\'application/json\'},body:JSON.stringify({threadId:TID,timestamp:'+m.timestamp+',msgId:'+(m.msg_id||0)+'})}).then(r=>r.json()).then(d=>{if(d.ok){this.closest(\'.fade-in\').remove();}else{alert(\'Fehler: \'+(d.error||\'unbekannt\'))}}).catch(e=>alert(\'Netzwerkfehler: \'+e.message))}return false" style="position:relative;z-index:100;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#ef4444;font-size:18px;cursor:pointer;padding:8px 12px;margin-left:auto;flex-shrink:0;min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center;border-radius:10px;pointer-events:auto;touch-action:manipulation">🗑️</button>':'';
       const reactBadges=m.reactions&&Object.keys(m.reactions).length?'<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:5px">'+Object.entries(m.reactions).map(([em,uids])=>'<button onclick="react('+m.timestamp+',\''+em+'\')" style="background:'+(uids.includes(MY_UID)?'rgba(0,136,204,.25)':'rgba(255,255,255,.07)')+';border:1px solid rgba(255,255,255,.15);border-radius:20px;padding:2px 7px;font-size:12px;cursor:pointer;color:var(--text)">'+em+' '+uids.length+'</button>').join('')+'</div>':'';
       const actBar='<div style="display:flex;gap:2px;margin-top:3px"><button onclick="setReply('+m.timestamp+')" style="background:none;border:none;color:var(--muted2);font-size:11px;cursor:pointer;padding:2px 5px;border-radius:6px" title="Antworten">↩ Antworten</button><button onclick="openReact('+m.timestamp+')" style="background:none;border:none;color:var(--muted2);font-size:12px;cursor:pointer;padding:2px 5px;border-radius:6px" title="Reagieren">😊</button></div>';
       const ring=m.uid&&RING_MAP[m.uid]?RING_MAP[m.uid]:'';
-      return '<div class="fade-in" style="display:flex;gap:10px;align-items:flex-start"><div style="width:36px;height:36px;border-radius:50%;background:'+c+';display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;flex-shrink:0;position:relative;overflow:hidden'+ring+'">'+ini(m.name)+(m.uid?'<img src="/appbild/'+m.uid+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" onerror="this.remove()" loading="lazy">':'')+'</div><div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">'+nameEl+'<span style="font-size:10px;color:var(--muted)">'+t(m.timestamp)+'</span>'+delBtn+'</div>'+body+reactBadges+actBar+'</div></div>';
+      const avatarHtml = '<div style="width:32px;height:32px;border-radius:50%;background:'+c+';display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;flex-shrink:0;position:relative;overflow:hidden'+ring+'">'+ini(m.name)+(m.uid?'<img src="/appbild/'+m.uid+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" onerror="this.remove()" loading="lazy">':'')+'</div>';
+      const headerInfo = isMe
+        ? '<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;justify-content:flex-end"><span style="font-size:10px;color:var(--muted)">'+t(m.timestamp)+'</span>'+delBtn+'</div>'
+        : '<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">'+nameEl+'<span style="font-size:10px;color:var(--muted)">'+t(m.timestamp)+'</span>'+delBtn+'</div>';
+      const bodyAlign = isMe ? 'text-align:right' : 'text-align:left';
+      const rowFlex = isMe
+        ? 'display:flex;gap:8px;align-items:flex-end;flex-direction:row-reverse'
+        : 'display:flex;gap:10px;align-items:flex-start';
+      return '<div class="fade-in" style="'+rowFlex+'">'+(isMe?'':avatarHtml)+'<div style="flex:1;min-width:0;'+bodyAlign+'">'+headerInfo+body+reactBadges+actBar+'</div></div>';
     }).join('');
     if(atBottom)window.scrollTo(0,document.body.scrollHeight);
   }
