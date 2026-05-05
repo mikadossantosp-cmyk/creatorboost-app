@@ -1615,7 +1615,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v27-bigger';
+const SW_VERSION='v28-photo';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
@@ -3638,9 +3638,6 @@ async function submitSuperLink(){
 </div>
 <style>@keyframes pulse-red{0%,100%{opacity:1}50%{opacity:.3}}</style>
 <div style="position:fixed;bottom:60px;left:0;right:0;background:var(--bg);border-top:1px solid rgba(255,255,255,0.06);padding:8px 10px;display:flex;gap:6px;align-items:center;z-index:100">
-  <button onclick="alert('Mehr Optionen folgen 📎')" style="width:38px;height:38px;border-radius:50%;background:#0866FF;border:none;color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0" title="Mehr">
-    <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-  </button>
   <label style="width:38px;height:38px;border-radius:50%;background:transparent;color:#0866FF;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0" title="Kamera">
     <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M9.4 10.5l4.77-8.26C13.47 2.09 12.75 2 12 2 9.53 2 7.29 2.99 5.64 4.59l3.74 5.91zm9.83-1.5c-.86-2.3-2.55-4.18-4.74-5.27L11.32 9h7.91zm.34 2H12v9.96c4.42-.32 8-3.99 8-8.46 0-.52-.05-1.02-.13-1.5zM4.41 4.59C2.93 6.16 2 8.27 2 10.6c0 .8.13 1.59.4 2.34l4-7.04L4.41 4.59zM2.81 12.59C3.97 16.5 7.65 19.5 12 19.96V12.59H2.81z"/></svg>
     <input type="file" accept="image/*" capture="user" style="display:none" onchange="selectImage(this)">
@@ -3654,25 +3651,26 @@ async function submitSuperLink(){
   </button>
   <div style="flex:1;background:#3a3b3c;border-radius:22px;display:flex;align-items:center;padding:4px 4px 4px 14px;gap:6px;min-width:0">
     <input type="text" id="msg-input" placeholder="Nachricht senden..." style="flex:1;background:transparent;border:none;outline:none;color:#e4e6eb;font-size:15px;padding:8px 0;margin:0;min-width:0" onkeypress="if(event.key==='Enter')sendMsg()">
-    <button onclick="alert('Emoji-Picker folgt 😊')" style="background:none;border:none;color:#e4e6eb;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-size:20px" title="Emoji">😊</button>
+    <button onclick="document.getElementById('msg-input').focus()" style="background:none;border:none;color:#e4e6eb;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-size:20px" title="Emoji">😊</button>
   </div>
   <button id="send-btn" onclick="sendMsg()" style="width:38px;height:38px;border-radius:50%;background:transparent;color:#0866FF;border:none;font-size:22px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center" title="Senden">❤️</button>
 </div>
 <script>
-// Heart -> Plane wenn Text getippt wird (Messenger-Style)
+// Send-Button: Plane-Icon wenn Text ODER Foto/Audio bereit, sonst ❤️ (Quick-Like)
 (function(){
   const inp = document.getElementById('msg-input');
   const btn = document.getElementById('send-btn');
   if (!inp || !btn) return;
+  function hasContent(){ return (inp.value.trim().length > 0) || (typeof selectedImage !== 'undefined' && selectedImage); }
   function toggleSend(){
-    const has = inp.value.trim().length > 0;
-    btn.innerHTML = has ? '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>' : '❤️';
+    btn.innerHTML = hasContent() ? '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>' : '❤️';
   }
   inp.addEventListener('input', toggleSend);
+  window._chatToggleSend = toggleSend;
   toggleSend();
-  // Heart-Tap = sendet ❤️ als Schnell-Like
+  // Heart-Tap nur wenn WIRKLICH leer (kein Text, kein Bild) — sonst normaler sendMsg
   btn.addEventListener('click', function(e){
-    if (inp.value.trim().length === 0) {
+    if (!hasContent()) {
       e.preventDefault(); e.stopPropagation();
       const tmpVal = inp.value;
       inp.value = '❤️';
@@ -3719,18 +3717,24 @@ let recSeconds = 0;
 function selectImage(input) {
     const file = input.files[0];
     if (!file) return;
-    if (file.size > 5000000) { alert('Max 5MB'); return; }
+    if (file.size > 5000000) { alert('Foto ist zu gross (max 5MB)'); return; }
     const reader = new FileReader();
     reader.onload = e => {
         selectedImage = e.target.result;
-        document.getElementById('img-preview').src = selectedImage;
-        document.getElementById('img-preview-wrap').style.display = 'block';
+        const prev = document.getElementById('img-preview');
+        const wrap = document.getElementById('img-preview-wrap');
+        if (prev) prev.src = selectedImage;
+        if (wrap) wrap.style.display = 'block';
+        if (typeof window._chatToggleSend === 'function') window._chatToggleSend();
     };
+    reader.onerror = () => alert('Foto konnte nicht gelesen werden');
     reader.readAsDataURL(file);
+    input.value = ''; // damit nächste Auswahl auch das gleiche Bild triggert
 }
 
 function clearImage() {
     selectedImage = null;
+    if (typeof window._chatToggleSend === 'function') window._chatToggleSend();
     document.getElementById('img-preview-wrap').style.display = 'none';
 }
 

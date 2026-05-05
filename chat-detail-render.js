@@ -133,12 +133,8 @@ module.exports = function renderChatBubbles(opts) {
         } else {
             metaHtml = '<span class="chat-meta"><span class="chat-time">' + timeStr + '</span></span>';
         }
-        // Status-Zeile unterhalb nur bei eigener letzter Nachricht (kompakt)
-        let statusHtml = '';
-        if (isMe && isLastFromSender) {
-            const isRead = m.read === true;
-            statusHtml = '<div class="chat-status' + (isRead ? ' read' : '') + '">' + (isRead ? 'Gesehen' : 'Gesendet') + '</div>';
-        }
+        // Kein separater "Gesendet/Gesehen"-Text mehr — die ✓/✓✓ in der Meta innerhalb der Bubble zeigen es bereits (Telegram-Style).
+        const statusHtml = '';
 
         const showAvatar = !isMe && isLastFromSender;
         const avatarHtml = showAvatar ?
