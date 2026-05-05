@@ -1828,6 +1828,7 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
         const [uid, u] = found;
         const sid = genSid();
         sessions.set(sid, { uid: String(uid), name: u.name, username: u.username||null, theme: 'light', lang: 'de', createdAt: Date.now() });
+        saveSessions();
         res.writeHead(302,{'Set-Cookie':`cbsid=${sid}; HttpOnly; Path=/; Max-Age=2592000`,'Location':'/feed'});
         return res.end();
     }
@@ -2998,11 +2999,18 @@ p{line-height:1.65;color:var(--muted)}
         if (result.ok !== false && webpush) {
             const posterName = session.name || 'Jemand';
             const payload = JSON.stringify({title:'🔥 Neuer Reel-Link!',body:posterName+' hat einen Link in CreatorX geteilt',url:'/feed'});
-            for (const [hash, {uid, sub}] of Object.entries(pushSubs)) {
-                if (uid === myUid) continue;
-                webpush.sendNotification(sub, payload).catch(e=>{if(e.statusCode===410||e.statusCode===404){delete pushSubs[hash];}});
-            }
-            savePushSubs();
+            // Vorher: savePushSubs() lief synchron VOR den .catch der Sends — abgelaufene Subs (410/404)
+            // wurden nie persistiert. Jetzt: Promise.allSettled, dann erst persistieren.
+            const targets = Object.entries(pushSubs).filter(([,v]) => v.uid !== myUid);
+            const results = await Promise.allSettled(targets.map(([,v]) => webpush.sendNotification(v.sub, payload)));
+            let dirty = false;
+            results.forEach((r,i) => {
+                if (r.status === 'rejected') {
+                    const sc = r.reason?.statusCode;
+                    if (sc === 410 || sc === 404) { delete pushSubs[targets[i][0]]; dirty = true; }
+                }
+            });
+            if (dirty) savePushSubs();
         }
         return json({ok:true});
     }
