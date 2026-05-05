@@ -653,6 +653,21 @@ async function checkNotifBadge(){
 }
 checkNotifBadge();
 setInterval(checkNotifBadge, 60000);
+
+// Bfcache-Fix: wenn der User von Instagram/anderer Seite zurückkommt
+// und der Browser die Seite aus dem Cache wiederherstellt, neu laden
+// damit kein weisser Bildschirm hängenbleibt.
+window.addEventListener('pageshow', function(ev){
+  if (ev.persisted) { location.reload(); return; }
+  // Falls die Page komplett leer ist (gestrichener iframe etc.), auch reload
+  if (!document.body || document.body.children.length < 2) location.reload();
+});
+document.addEventListener('visibilitychange', function(){
+  if (!document.hidden) {
+    // Body unverhältnismäßig leer → reload
+    if (document.body && document.body.children.length < 2) location.reload();
+  }
+});
 async function checkMsgBadge(){
     try{
         const r=await fetch('/api/messages-count');
@@ -3594,8 +3609,24 @@ async function submitSuperLink(){
 })();
 </script>
 <script>
+// Sofort nach unten scrollen + nochmal wenn Bilder geladen sind (sonst bleibt's mittendrin)
+function _chatScrollBottom(smooth){ const opts = smooth ? {top:document.body.scrollHeight,behavior:'smooth'} : {top:document.body.scrollHeight}; window.scrollTo(opts); }
+_chatScrollBottom(false);
+window.addEventListener('load', () => _chatScrollBottom(false));
+// Bilder-Load: bei jedem geladenen Bild nochmal nach unten scrollen
+document.querySelectorAll('#chat-msgs img').forEach(img => {
+  if (!img.complete) img.addEventListener('load', () => _chatScrollBottom(false), { once: true });
+});
+// Sofort als gelesen markieren (chatKey wird vom SSR gesetzt)
+fetch('/api/mark-messages-read', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({chatKey: '${chatKey}'}) }).catch(()=>{});
+// Page-Visibility: wenn der User zurückkommt, nochmal mark-as-read + scroll
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) {
+    fetch('/api/mark-messages-read', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({chatKey: '${chatKey}'}) }).catch(()=>{});
+    _chatScrollBottom(false);
+  }
+});
 document.getElementById('msg-input').focus();
-window.scrollTo(0, document.body.scrollHeight);
 
 let selectedImage = null;
 let mediaRecorder = null;
@@ -4281,7 +4312,7 @@ document.getElementById('search-input').focus();
     ${mAvatars ? `<div class="sug-meta"><div style="display:flex;align-items:center">${mAvatars}</div></div>` : ''}
     <div class="sug-mutuals">${mutualText}</div>
   </div>
-  <button type="button" class="sug-btn" data-follow-uid="${uid}" onclick="event.preventDefault();event.stopPropagation();sugFollow(this);return false">+ Folgen</button>
+  <button type="button" class="sug-btn" data-follow-uid="${uid}">+ Folgen</button>
 </div>`;
         }).join('');
 
@@ -4516,16 +4547,17 @@ async function applyBanner(gradient){
     if(data.ok){location.reload();}else{alert(data.error||'Fehler');}
   }catch(e){alert('Fehler beim Setzen des Banners');}
 }
-window.sugFollow = async function(btn){
+// Globaler delegierter Handler für Folgen-Button (kann von keinem Parent geschluckt werden)
+async function sugDoFollow(btn){
   const uid = btn && btn.dataset ? btn.dataset.followUid : null;
   if (!uid || btn.disabled) return;
   btn.disabled = true;
   const orig = btn.textContent;
   btn.textContent = '...';
   try {
-    const r = await fetch('/api/follow', { method: 'POST', headers: {'Content-Type':'application/json','Accept':'application/json'}, body: JSON.stringify({uid: String(uid)}) });
-    const data = await r.json().catch(()=>null);
-    if (data && data.ok !== false) {
+    const r = await fetch('/api/follow', { method: 'POST', headers: {'Content-Type':'application/json','Accept':'application/json'}, body: JSON.stringify({uid: String(uid)}), credentials: 'same-origin' });
+    let data = null; try { data = await r.json(); } catch(e) {}
+    if (r.ok && data && data.ok !== false) {
       btn.textContent = '✓ Folge';
       btn.classList.add('followed');
       btn.disabled = false;
@@ -4536,14 +4568,27 @@ window.sugFollow = async function(btn){
     } else {
       btn.textContent = orig;
       btn.disabled = false;
-      alert('❌ ' + (data && data.error ? data.error : 'Folgen fehlgeschlagen'));
+      const msg = data && data.error ? data.error : ('HTTP ' + r.status);
+      alert('Folgen fehlgeschlagen: ' + msg);
     }
   } catch(e) {
     btn.textContent = orig;
     btn.disabled = false;
-    alert('Netzwerkfehler: ' + e.message);
+    alert('Netzwerkfehler beim Folgen: ' + e.message);
   }
-};
+}
+window.sugDoFollow = sugDoFollow;
+// Click + touchend Capture-Listener — wird IMMER getriggert, egal welche Wrapper drumherum
+['click','touchend'].forEach(evt => {
+  document.addEventListener(evt, function(ev){
+    const btn = ev.target.closest && ev.target.closest('[data-follow-uid]');
+    if (!btn) return;
+    ev.preventDefault(); ev.stopPropagation();
+    sugDoFollow(btn);
+  }, { capture: true, passive: false });
+});
+// Backwards-compat
+window.sugFollow = sugDoFollow;
 window.sugDismiss = function(btn){
   const card = btn.closest('.sug-card');
   if (!card) return;
