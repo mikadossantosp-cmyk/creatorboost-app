@@ -627,11 +627,12 @@ textarea.form-input{resize:none;min-height:80px}
 function layout(content, session, page='feed', lang='de') {
     return `<!DOCTYPE html><html lang="${lang}" data-theme="light">
 <head>
-<script>try{var t=localStorage.getItem('cbTheme3');document.documentElement.setAttribute('data-theme',t==='dark'?'dark':'light');}catch(e){document.documentElement.setAttribute('data-theme','light');}</script>
+<script>try{var t=localStorage.getItem('cbTheme3');var dark=(t==='dark');document.documentElement.setAttribute('data-theme',dark?'dark':'light');setTimeout(function(){var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute('content',dark?'#0b0b0e':'#ffffff');var sb=document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');if(sb)sb.setAttribute('content',dark?'black-translucent':'default');},0);}catch(e){document.documentElement.setAttribute('data-theme','light');}</script>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="theme-color" content="#ffffff">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0b0b0e" media="(prefers-color-scheme: dark)">
 <link rel="manifest" href="/manifest.json">
 <link rel="icon" type="image/png" href="/icon-512.png?v=22">
 <link rel="apple-touch-icon" sizes="512x512" href="/icon-512.png?v=22">
@@ -1684,7 +1685,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v62-storiesfix';
+const SW_VERSION='v63-audit4';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
@@ -2003,9 +2004,8 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
         const { msgId } = body;
         if (!msgId || !session) return json({error:'Ungültig'},400);
         const result = await fetchBot('/like-from-app?uid=' + getMyUid(session) + '&msgId=' + encodeURIComponent(msgId));
-        // ok korrekt vom Bot durchreichen — vorher 'ok:true' immer, also UI sah Erfolg auch wenn der
-        // Bot Self-Like / nicht-gefunden / etc. abgelehnt hat → Like 'verschwand' beim Refresh.
-        return json({ok: result?.ok !== false, liked: result?.liked, likes: result?.likes, error: result?.error});
+        if (!result) return json({ok:false, error:'Bot offline'}, 502);
+        return json({ok: result.ok !== false, liked: result.liked, likes: result.likes, error: result.error});
     }
 
     // ── APK SIGN PAGE ──
@@ -3698,19 +3698,26 @@ if (new URLSearchParams(window.location.search).get('opensl') === '1') { setTime
 
 // Pull-to-refresh
 (function(){
-  let startY=0,pulling=false;
+  // Pull-to-refresh: braucht jetzt MIN 90px Pull-Down (vorher 1px) — verhindert
+  // versehentlichen Reload bei jedem winzigen Touch-Move oben (Stories-Swipe etc).
+  const PULL_THRESHOLD = 90;
+  let startY=0,startX=0,pulling=false,maxDy=0;
   const ind=document.createElement('div');
   ind.id='ptr-ind';
   ind.style.cssText='position:fixed;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,var(--accent),var(--accent2));transform:scaleX(0);transform-origin:left;transition:transform .2s;z-index:200';
   document.body.prepend(ind);
-  document.addEventListener('touchstart',e=>{if(window.scrollY===0)startY=e.touches[0].clientY;},{passive:true});
+  document.addEventListener('touchstart',e=>{if(window.scrollY===0){startY=e.touches[0].clientY;startX=e.touches[0].clientX;maxDy=0;pulling=false;}},{passive:true});
   document.addEventListener('touchmove',e=>{
     if(!startY||window.scrollY>0)return;
     const dy=e.touches[0].clientY-startY;
-    if(dy>0){pulling=true;ind.style.transform='scaleX('+Math.min(dy/120,1)+')';}
+    const dx=Math.abs(e.touches[0].clientX-startX);
+    // Horizontale Geste? Pull-to-refresh abbrechen
+    if(dx>Math.abs(dy)){pulling=false;ind.style.transform='scaleX(0)';startY=0;return;}
+    if(dy>20){maxDy=Math.max(maxDy,dy);if(dy>=PULL_THRESHOLD){pulling=true;}ind.style.transform='scaleX('+Math.min(dy/PULL_THRESHOLD,1)+')';}
   },{passive:true});
   document.addEventListener('touchend',()=>{
-    if(pulling&&window.scrollY===0){ind.style.transform='scaleX(1)';setTimeout(()=>location.reload(),200);}
+    // Nur reloaden wenn wirklich >= Threshold gezogen wurde
+    if(pulling && maxDy>=PULL_THRESHOLD && window.scrollY===0){ind.style.transform='scaleX(1)';setTimeout(()=>location.reload(),200);}
     else{ind.style.transform='scaleX(0)';}
     startY=0;pulling=false;
   });
@@ -5360,23 +5367,27 @@ window.sugFormSubmit = function(form, ev){
   } catch(e) { return true; /* normal submit als Fallback */ }
   return false;
 };
-// Click + touchend Capture-Listener — wird IMMER getriggert, egal welche Wrapper drumherum
-['click','touchend'].forEach(evt => {
-  document.addEventListener(evt, function(ev){
-    const btn = ev.target.closest && ev.target.closest('[data-follow-uid]');
-    if (!btn) return;
-    ev.preventDefault(); ev.stopPropagation();
-    sugDoFollow(btn);
-  }, { capture: true, passive: false });
-});
-// Direkter Bind auf alle .js-sug-follow Buttons — robusteste Variante.
-// Wird einmal direkt nach DOM-Render und nochmal bei DOMContentLoaded gemacht damit's auf jeden Fall greift.
+// Click Capture-Listener — click reicht (touchend würde auf Mobile doppelt feuern)
+document.addEventListener('click', function(ev){
+  const btn = ev.target.closest && ev.target.closest('[data-follow-uid]');
+  if (!btn) return;
+  if (btn._followInFlight) { ev.preventDefault(); ev.stopPropagation(); return; }
+  ev.preventDefault(); ev.stopPropagation();
+  btn._followInFlight = true;
+  Promise.resolve(sugDoFollow(btn)).finally(()=>{ setTimeout(()=>{ btn._followInFlight = false; }, 600); });
+}, { capture: true, passive: false });
+// Direkter Bind auf alle .js-sug-follow Buttons — nur click, kein touchend (sonst Doppel-Fire).
 function _bindFollowBtns(){
   document.querySelectorAll('.js-sug-follow').forEach(btn => {
     if (btn._bound) return; btn._bound = true;
-    const handler = (e) => { try { e.preventDefault(); } catch(_){} try { e.stopPropagation(); } catch(_){} sugDoFollow(btn); return false; };
-    btn.addEventListener('click', handler);
-    btn.addEventListener('touchend', handler);
+    btn.addEventListener('click', (e) => {
+      try { e.preventDefault(); } catch(_){}
+      try { e.stopPropagation(); } catch(_){}
+      if (btn._followInFlight) return false;
+      btn._followInFlight = true;
+      Promise.resolve(sugDoFollow(btn)).finally(()=>{ setTimeout(()=>{ btn._followInFlight = false; }, 600); });
+      return false;
+    });
   });
 }
 _bindFollowBtns();
@@ -5411,12 +5422,12 @@ window.sugDismiss = function(btn){
                 const entries = (d.newsletter||[]).slice().reverse();
                 const entriesHtml = entries.length
                     ? entries.map(e=>`
-<div class="nl-entry" data-id="${e.id}" style="padding:16px;border:1px solid var(--border2);border-radius:14px;background:var(--bg3);margin:0 16px 12px">
+<div class="nl-entry" data-id="${htmlEsc(String(e.id||''))}" style="padding:16px;border:1px solid var(--border2);border-radius:14px;background:var(--bg3);margin:0 16px 12px">
   <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px">
-    ${e.title?`<div style="font-size:15px;font-weight:700;font-family:var(--font-display)">${e.title}</div>`:'<div></div>'}
-    ${isAdminNL?`<div style="display:flex;gap:6px;flex-shrink:0"><button onclick="nlEdit('${e.id}')" style="background:var(--bg4);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:4px 10px;font-size:12px;cursor:pointer">✏️</button><button onclick="nlDelete('${e.id}')" style="background:rgba(255,59,48,.1);border:1px solid rgba(255,59,48,.3);color:#ff3b30;border-radius:8px;padding:4px 10px;font-size:12px;cursor:pointer">🗑️</button></div>`:''}
+    ${e.title?`<div style="font-size:15px;font-weight:700;font-family:var(--font-display)">${htmlEsc(String(e.title))}</div>`:'<div></div>'}
+    ${isAdminNL?`<div style="display:flex;gap:6px;flex-shrink:0"><button onclick="nlEdit('${htmlEsc(String(e.id||''))}')" style="background:var(--bg4);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:4px 10px;font-size:12px;cursor:pointer">✏️</button><button onclick="nlDelete('${htmlEsc(String(e.id||''))}')" style="background:rgba(255,59,48,.1);border:1px solid rgba(255,59,48,.3);color:#ff3b30;border-radius:8px;padding:4px 10px;font-size:12px;cursor:pointer">🗑️</button></div>`:''}
   </div>
-  <div style="font-size:13px;line-height:1.65;color:var(--text);white-space:pre-wrap">${e.content}</div>
+  <div style="font-size:13px;line-height:1.65;color:var(--text);white-space:pre-wrap">${htmlEsc(String(e.content||''))}</div>
   <div style="font-size:11px;color:var(--muted);margin-top:10px">${new Date(e.timestamp).toLocaleDateString('de-DE',{day:'2-digit',month:'short',year:'numeric'})}</div>
 </div>`).join('')
                     : '<div class="empty" style="padding:48px 24px;text-align:center"><div class="empty-icon">📩</div><div class="empty-text">Noch keine Newsletter-Einträge</div></div>';
