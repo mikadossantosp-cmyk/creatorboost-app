@@ -2305,6 +2305,7 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
     // ── DIAMANTEN-INFO-SEITE ──
     if (path === '/diamanten') {
         if (!session) return redirect('/');
+        const myUid = getMyUid(session);
         const botData = await fetchBot('/data');
         const u = (botData?.users||{})[myUid] || {};
         const stand = u.diamonds || 0;
