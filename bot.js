@@ -302,23 +302,28 @@ const CSS = `
 --text:#111;--muted:#666;--muted2:#999;
 }
 [data-theme=dark]{
---bg:#000;--bg2:#0a0a0a;--bg3:#111;--bg4:#1a1a1a;
+--bg:#0a0b0f;--bg2:#13141a;--bg3:#1a1c24;--bg4:#23252e;
 --border:rgba(255,255,255,.1);--border2:rgba(255,255,255,.06);
---text:#fff;--muted:#999;--muted2:#666;
+--text:#fff;--muted:#a3a8b3;--muted2:#6e7280;
 }
 html{scroll-behavior:smooth;-webkit-tap-highlight-color:transparent}
 body{font-family:var(--font);background:var(--bg);background-image:radial-gradient(ellipse 80% 60% at 0% -10%,rgba(255,107,107,0.06),transparent 60%),radial-gradient(ellipse 70% 50% at 100% 110%,rgba(167,139,250,0.05),transparent 60%);background-attachment:fixed;color:var(--text);min-height:100vh;margin:0 auto;padding-bottom:calc(70px + var(--safe-bottom));overflow-x:hidden;overscroll-behavior-y:contain}
 a{color:inherit;text-decoration:none}
 img{display:block;max-width:100%}
 button{cursor:pointer;border:none;outline:none;font-family:var(--font)}
-.topbar{position:sticky;top:0;z-index:100;background:var(--bg);border-bottom:1px solid var(--border2);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
-.topbar-logo{font-family:var(--font-display);font-size:20px;font-weight:800;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.topbar-actions{display:flex;gap:8px;align-items:center}
+.topbar{position:sticky;top:0;z-index:100;background:rgba(0,0,0,0.65);border-bottom:1px solid rgba(255,255,255,0.06);padding:14px 16px;display:flex;align-items:center;justify-content:space-between;backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%)}
+.topbar-logo{font-family:var(--font-display);font-size:22px;font-weight:800;letter-spacing:-0.5px;background:linear-gradient(135deg,#fff,rgba(255,255,255,0.7));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.topbar-actions{display:flex;gap:6px;align-items:center}
+.topbar .icon-btn{width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.06);color:var(--text);display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;transition:background 0.15s,transform 0.12s}
+.topbar .icon-btn:active{transform:scale(0.92)}
+.topbar .icon-btn:hover{background:rgba(255,255,255,0.08)}
 .icon-btn{width:36px;height:36px;border-radius:50%;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--text)}
-.bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:var(--bg);border-top:1px solid var(--border2);display:flex;justify-content:space-around;padding:8px 0 calc(8px + var(--safe-bottom));z-index:100;backdrop-filter:blur(20px)}
-.nav-item{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px;color:var(--muted);padding:4px 16px;transition:color .2s}
+.bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:rgba(0,0,0,0.65);border-top:1px solid rgba(255,255,255,0.06);display:flex;justify-content:space-around;padding:10px 0 calc(10px + var(--safe-bottom));z-index:100;backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%)}
+.nav-item{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:9.5px;font-weight:600;letter-spacing:0.2px;color:rgba(255,255,255,0.45);padding:4px 14px;transition:color .2s,transform .12s;text-decoration:none}
+.nav-item:active{transform:scale(0.92)}
 .nav-item.active{color:var(--text)}
-.nav-item svg{width:24px;height:24px}
+.nav-item.active svg{stroke:var(--accent);fill:rgba(255,107,107,0.1)}
+.nav-item svg{width:23px;height:23px;transition:stroke .2s,fill .2s}
 .nav-dot{width:4px;height:4px;border-radius:50%;background:var(--accent);margin:0 auto}
 .card{background:var(--bg3);border-radius:var(--radius);border:1px solid var(--border2);overflow:hidden}
 .avatar{border-radius:50%;object-fit:cover;background:var(--bg4)}
@@ -1643,7 +1648,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v44-vibrant';
+const SW_VERSION='v45-premium';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
