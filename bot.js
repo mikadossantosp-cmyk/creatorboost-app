@@ -1639,7 +1639,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v36-hub';
+const SW_VERSION='v37-folgenfix';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
@@ -4766,10 +4766,10 @@ document.getElementById('search-input').focus();
       <div class="sug-mutuals${mutuals.length?' has-mutual':''}">${mutualText}</div>
     </div>
   </a>
-  <form method="POST" action="/follow-form" style="margin:0;padding:0" onsubmit="return sugFormSubmit(this,event)">
+  <button type="button" class="sug-btn" data-follow-uid="${uid}" onclick="event.preventDefault();event.stopPropagation();sugDoFollow(this);return false">+ Folgen</button>
+  <form method="POST" action="/follow-form" style="display:none" onsubmit="return sugFormSubmit(this,event)">
     <input type="hidden" name="uid" value="${uid}">
     <input type="hidden" name="back" value="/explore">
-    <button type="submit" class="sug-btn" data-follow-uid="${uid}">+ Folgen</button>
   </form>
 </div>`;
         }).join('');
