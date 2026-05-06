@@ -538,8 +538,7 @@ textarea.form-input{resize:none;min-height:80px}
 .creator-scroll::-webkit-scrollbar{display:none}
 .sug-list{display:flex;gap:11px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:6px 16px 12px;scroll-snap-type:x proximity}
 .sug-list::-webkit-scrollbar{display:none}
-.sug-card{flex:0 0 auto;width:172px;background:linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.015));border:1px solid rgba(255,255,255,0.08);border-radius:18px;padding:0 0 12px;display:flex;flex-direction:column;align-items:stretch;text-align:center;scroll-snap-align:start;transition:transform 0.18s,border-color 0.2s;overflow:hidden;position:relative}
-.sug-card:active{transform:scale(0.97)}
+.sug-card{flex:0 0 auto;width:172px;background:linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.015));border:1px solid rgba(255,255,255,0.08);border-radius:18px;padding:0 0 12px;display:flex;flex-direction:column;align-items:stretch;text-align:center;scroll-snap-align:start;transition:border-color 0.2s;overflow:hidden;position:relative}
 .sug-card:hover{border-color:rgba(167,139,250,0.25)}
 .sug-card-banner{height:56px;position:relative;overflow:hidden}
 .sug-card-banner::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 40%,rgba(0,0,0,0.55) 100%)}
@@ -1639,7 +1638,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v38-folgen2';
+const SW_VERSION='v39-tapfix';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
