@@ -307,7 +307,7 @@ const CSS = `
 --text:#fff;--muted:#999;--muted2:#666;
 }
 html{scroll-behavior:smooth;-webkit-tap-highlight-color:transparent}
-body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;margin:0 auto;padding-bottom:calc(70px + var(--safe-bottom));overflow-x:hidden}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;margin:0 auto;padding-bottom:calc(70px + var(--safe-bottom));overflow-x:hidden;overscroll-behavior-y:contain}
 a{color:inherit;text-decoration:none}
 img{display:block;max-width:100%}
 button{cursor:pointer;border:none;outline:none;font-family:var(--font)}
@@ -322,13 +322,14 @@ button{cursor:pointer;border:none;outline:none;font-family:var(--font)}
 .nav-dot{width:4px;height:4px;border-radius:50%;background:var(--accent);margin:0 auto}
 .card{background:var(--bg3);border-radius:var(--radius);border:1px solid var(--border2);overflow:hidden}
 .avatar{border-radius:50%;object-fit:cover;background:var(--bg4)}
-.stories{display:flex;gap:12px;padding:12px 16px;overflow-x:auto;scrollbar-width:none}
+.stories{display:flex;gap:14px;padding:14px 16px 8px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
 .stories::-webkit-scrollbar{display:none}
-.story-item{display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;width:80px}
-.story-ring{width:62px;height:62px;border-radius:50%;padding:2px;background:linear-gradient(135deg,#f9a825,#e91e63,#9c27b0);position:relative}
-.story-ring.seen{background:var(--bg4)}
-.story-inner{width:100%;height:100%;border-radius:50%;border:2px solid var(--bg);overflow:hidden;position:relative;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:22px}
-.story-name{font-size:11px;color:var(--muted);max-width:80px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.story-item{display:flex;flex-direction:column;align-items:center;gap:6px;flex-shrink:0;width:74px;text-decoration:none;color:inherit;-webkit-tap-highlight-color:transparent}
+.story-item:active{transform:scale(0.92);transition:transform 0.15s}
+.story-ring{width:68px;height:68px;border-radius:50%;padding:2.5px;background:conic-gradient(from 45deg,#f9a825,#e91e63,#9c27b0,#3b82f6,#f9a825);position:relative;box-shadow:0 4px 12px rgba(233,30,99,0.18)}
+.story-ring.seen{background:rgba(255,255,255,0.12);box-shadow:none}
+.story-inner{width:100%;height:100%;border-radius:50%;border:2.5px solid var(--bg);overflow:hidden;position:relative;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:#fff}
+.story-name{font-size:11.5px;color:var(--text);max-width:74px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;letter-spacing:0.1px}
 .post{margin-bottom:1px;background:var(--bg3)}
 .post-header{display:flex;align-items:center;gap:10px;padding:12px 16px}
 .post-user-info{flex:1;min-width:0}
@@ -1638,7 +1639,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v41-formfallback';
+const SW_VERSION='v42-feedpolish';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
@@ -3559,10 +3560,10 @@ ${(()=>{
   }
   return '';
 })()}
-<div style="display:flex;border-bottom:2px solid var(--border2);width:100%">
-  <a href="/feed?tab=heute" style="flex:1;padding:9px 4px;font-size:12px;font-weight:700;text-align:center;text-decoration:none;display:block;border-bottom:3px solid ${tab==='heute'?'var(--accent)':'transparent'};margin-bottom:-2px;color:${tab==='heute'?'var(--accent)':'var(--muted)'}">📅 Heute</a>
-  <a href="/feed?tab=aelter" style="flex:1;padding:9px 4px;font-size:12px;font-weight:700;text-align:center;text-decoration:none;display:block;border-bottom:3px solid ${tab==='aelter'?'var(--accent)':'transparent'};margin-bottom:-2px;color:${tab==='aelter'?'var(--accent)':'var(--muted)'}">🕐 Älter</a>
-  <a href="/feed?tab=engagement" style="flex:1;padding:9px 4px;font-size:12px;font-weight:700;text-align:center;text-decoration:none;display:block;border-bottom:3px solid ${tab==='engagement'?'var(--accent)':'transparent'};margin-bottom:-2px;color:${tab==='engagement'?'var(--accent)':'var(--muted)'}">⭐ Engagement</a>
+<div style="display:flex;gap:6px;padding:6px 16px 14px;width:100%;box-sizing:border-box">
+  <a href="/feed?tab=heute" class="feed-pill ${tab==='heute'?'active':''}" style="flex:1;padding:9px 8px;font-size:12.5px;font-weight:800;text-align:center;text-decoration:none;border-radius:999px;${tab==='heute'?'background:linear-gradient(135deg,var(--accent),#ff8e53);color:#fff;box-shadow:0 4px 14px rgba(255,107,107,0.3)':'background:rgba(255,255,255,0.05);color:var(--muted);border:1px solid rgba(255,255,255,0.06)'};letter-spacing:0.2px">📅 Heute</a>
+  <a href="/feed?tab=aelter" class="feed-pill ${tab==='aelter'?'active':''}" style="flex:1;padding:9px 8px;font-size:12.5px;font-weight:800;text-align:center;text-decoration:none;border-radius:999px;${tab==='aelter'?'background:linear-gradient(135deg,#4dabf7,#1d6fa5);color:#fff;box-shadow:0 4px 14px rgba(77,171,247,0.3)':'background:rgba(255,255,255,0.05);color:var(--muted);border:1px solid rgba(255,255,255,0.06)'};letter-spacing:0.2px">🕐 Älter</a>
+  <a href="/feed?tab=engagement" class="feed-pill ${tab==='engagement'?'active':''}" style="flex:1;padding:9px 8px;font-size:12.5px;font-weight:800;text-align:center;text-decoration:none;border-radius:999px;${tab==='engagement'?'background:linear-gradient(135deg,#f59e0b,#a78bfa);color:#fff;box-shadow:0 4px 14px rgba(245,158,11,0.3)':'background:rgba(255,255,255,0.05);color:var(--muted);border:1px solid rgba(255,255,255,0.06)'};letter-spacing:0.2px">⭐ Engagement</a>
 </div>
 ${tab==='engagement' ? `<div style="padding:12px 16px 4px">
   ${slAvailable > 0
