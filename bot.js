@@ -1631,7 +1631,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v33-tabs-pro';
+const SW_VERSION='v34-welcome';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
@@ -4764,16 +4764,43 @@ document.getElementById('search-input').focus();
 </div>`;
         }).join('');
 
+        const _me = d.users[myUid]||{};
+        const _greetName = _me.spitzname || _me.name || 'Creator';
+        const _hr = new Date().getHours();
+        const _greet = _hr < 5 ? 'Gute Nacht' : _hr < 11 ? 'Guten Morgen' : _hr < 14 ? 'Servus' : _hr < 18 ? 'Hi' : _hr < 22 ? 'Guten Abend' : 'Späten Abend';
+        const _newsArr = (d.newsletter||[]).slice().sort((a,b)=>(b.timestamp||0)-(a.timestamp||0));
+        const _latestNews = _newsArr[0];
+        const _newsAge = _latestNews ? (Date.now() - (_latestNews.timestamp||0)) : null;
+        const _newsAgeStr = _newsAge==null ? '' : (_newsAge < 86400000 ? 'heute' : _newsAge < 7*86400000 ? Math.floor(_newsAge/86400000)+'d' : new Date(_latestNews.timestamp).toLocaleDateString('de-DE',{day:'2-digit',month:'short'}));
         const tabContent = {
             allgemein: `
-<div class="explore-welcome" style="margin:0 16px 20px">
-  <div style="position:absolute;inset:0;background:linear-gradient(135deg,#1a0533,#0d1b4b,#1a2a6c)"></div>
-  <div style="position:absolute;inset:0;background:radial-gradient(ellipse at top right,rgba(139,92,246,.35),transparent 60%),radial-gradient(ellipse at bottom left,rgba(255,107,107,.2),transparent 60%)"></div>
-  <div style="position:absolute;inset:0;padding:22px;display:flex;flex-direction:column;justify-content:flex-end">
-    <div style="font-size:10px;font-weight:700;letter-spacing:2px;color:rgba(255,255,255,.5);text-transform:uppercase;margin-bottom:8px">✦ Community Hub</div>
-    <div style="font-size:22px;font-weight:800;color:#fff;font-family:var(--font-display);line-height:1.15">Willkommen bei<br><span style="background:linear-gradient(90deg,#C9A227,#FFD700);-webkit-background-clip:text;-webkit-text-fill-color:transparent">CreatorX</span></div>
-    <div style="font-size:12px;color:rgba(255,255,255,.6);margin-top:8px;margin-bottom:16px;line-height:1.5">Deine Plattform für Wachstum,<br>Reichweite und Community</div>
-    <a href="/feed" style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.12);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.2);color:#fff;padding:8px 18px;border-radius:20px;font-size:12px;font-weight:700;text-decoration:none;align-self:flex-start">Zum Feed →</a>
+<div style="margin:4px 16px 20px;border-radius:22px;overflow:hidden;position:relative;background:linear-gradient(135deg,#0f172a 0%,#1e1b4b 50%,#312e81 100%)">
+  <div style="position:absolute;inset:0;background:radial-gradient(circle at 80% -20%,rgba(167,139,250,0.45),transparent 55%),radial-gradient(circle at 10% 110%,rgba(77,171,247,0.35),transparent 50%);pointer-events:none"></div>
+  <div style="position:absolute;top:-30px;right:-30px;width:140px;height:140px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,0.08),transparent 70%);pointer-events:none"></div>
+  <div style="position:relative;padding:22px 20px 18px">
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:14px">
+      <span style="width:7px;height:7px;border-radius:50%;background:#22c55e;box-shadow:0 0 8px rgba(34,197,94,0.6);display:inline-block"></span>
+      <span style="font-size:10px;font-weight:700;letter-spacing:2px;color:rgba(255,255,255,0.55);text-transform:uppercase">Community live</span>
+    </div>
+    <div style="font-size:13px;color:rgba(255,255,255,0.55);font-weight:500;letter-spacing:0.3px">${_greet},</div>
+    <div style="font-size:26px;font-weight:800;color:#fff;font-family:var(--font-display);line-height:1.1;margin-top:2px;letter-spacing:-0.5px">${htmlEsc(_greetName)} 👋</div>
+    <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
+      <div style="display:inline-flex;align-items:center;gap:5px;padding:6px 11px;background:rgba(255,255,255,0.08);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.1);border-radius:999px;font-size:11.5px;color:#fff;font-weight:600">⭐ ${_me.xp||0} XP</div>
+      ${myRank>0?`<div style="display:inline-flex;align-items:center;gap:5px;padding:6px 11px;background:rgba(255,255,255,0.08);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.1);border-radius:999px;font-size:11.5px;color:#fff;font-weight:600">🏆 Rang #${myRank}</div>`:''}
+      <div style="display:inline-flex;align-items:center;gap:5px;padding:6px 11px;background:rgba(255,255,255,0.08);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.1);border-radius:999px;font-size:11.5px;color:#fff;font-weight:600">💎 ${_me.diamonds||0}</div>
+    </div>
+    ${_latestNews ? `<a href="/explore?tab=newsletter" style="display:flex;align-items:center;gap:12px;margin-top:18px;padding:13px 14px;background:rgba(255,255,255,0.08);backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,0.12);border-radius:14px;text-decoration:none;color:#fff;transition:transform 0.18s">
+      <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#4dabf7,#1d6fa5);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">📩</div>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:6px;font-size:10px;font-weight:700;letter-spacing:1.2px;color:rgba(255,255,255,0.6);text-transform:uppercase">Neuste News${_newsAgeStr?' · '+_newsAgeStr:''}</div>
+        <div style="font-size:13px;font-weight:700;color:#fff;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${htmlEsc(_latestNews.title || _latestNews.content || '').slice(0,60)}</div>
+      </div>
+      <div style="font-size:18px;color:rgba(255,255,255,0.5)">→</div>
+    </a>` : `<a href="/explore?tab=newsletter" style="display:flex;align-items:center;gap:10px;margin-top:18px;padding:13px 14px;background:rgba(255,255,255,0.08);backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,0.12);border-radius:14px;text-decoration:none;color:#fff">
+      <div style="font-size:22px">📩</div>
+      <div style="flex:1"><div style="font-size:13px;font-weight:700;color:#fff">News & Updates entdecken</div><div style="font-size:11px;color:rgba(255,255,255,0.6);margin-top:1px">Bleib up-to-date</div></div>
+      <div style="font-size:18px;color:rgba(255,255,255,0.5)">→</div>
+    </a>`}
   </div>
 </div>
 ${topSuggestions.length ? `
