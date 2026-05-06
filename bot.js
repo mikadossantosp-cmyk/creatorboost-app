@@ -1987,7 +1987,9 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
         const { msgId } = body;
         if (!msgId || !session) return json({error:'Ungültig'},400);
         const result = await fetchBot('/like-from-app?uid=' + getMyUid(session) + '&msgId=' + encodeURIComponent(msgId));
-        return json({ok:true, liked: result?.liked, likes: result?.likes});
+        // ok korrekt vom Bot durchreichen — vorher 'ok:true' immer, also UI sah Erfolg auch wenn der
+        // Bot Self-Like / nicht-gefunden / etc. abgelehnt hat → Like 'verschwand' beim Refresh.
+        return json({ok: result?.ok !== false, liked: result?.liked, likes: result?.likes, error: result?.error});
     }
 
     // ── APK SIGN PAGE ──
