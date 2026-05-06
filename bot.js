@@ -5154,11 +5154,11 @@ async function nlDelete(id){if(!confirm('Eintrag löschen?'))return;const r=awai
 
         const tabs = [
             {id:'allgemein', emoji:'✨', label:'Übersicht'},
+            {id:'newsletter',emoji:'📩', label:'News'},
             {id:'ranking',   emoji:'🏆', label:'Ranking'},
             {id:'tipps',     emoji:'💡', label:'Tipps'},
             {id:'regeln',    emoji:'📋', label:'Regeln'},
             {id:'shop',      emoji:'💎', label:'Shop'},
-            {id:'newsletter',emoji:'📩', label:'News'},
         ];
 
         return html(`
