@@ -360,20 +360,20 @@ button{cursor:pointer;border:none;outline:none;font-family:var(--font)}
 .post-action-btn svg{width:18px;height:18px;transition:fill 0.15s,stroke 0.15s}
 .post-likers{padding:0 16px 4px;font-size:12px;color:var(--muted)}
 .post-likers span{color:var(--text);font-weight:600}
-.profile-banner{width:100%;aspect-ratio:3.5/1;position:relative;overflow:hidden}
-.profile-banner-overlay{position:absolute;inset:0;background:linear-gradient(to bottom,transparent 40%,var(--bg3))}
-.profile-avatar-wrap{position:absolute;bottom:-30px;left:16px}
-.profile-avatar{width:88px;height:88px;border-radius:50%;border:3px solid var(--bg3);background:var(--bg4);object-fit:cover;display:flex;align-items:center;justify-content:center;font-size:36px}
-.profile-info{padding:40px 16px 16px}
-.profile-name{font-family:var(--font-display);font-size:22px;font-weight:700}
-.profile-username{font-size:13px;color:var(--muted);margin-top:2px}
-.profile-bio{font-size:13px;color:var(--muted);margin-top:8px;line-height:1.5}
-.profile-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700;margin-top:8px}
-.profile-stats{display:flex;gap:0;margin-top:16px;border-top:1px solid var(--border2);border-bottom:1px solid var(--border2)}
-.profile-stat{flex:1;text-align:center;padding:14px 0}
-.profile-stat:not(:last-child){border-right:1px solid var(--border2)}
-.profile-stat-val{font-size:18px;font-weight:700}
-.profile-stat-label{font-size:11px;color:var(--muted);margin-top:2px}
+.profile-banner{width:100%;aspect-ratio:3/1;position:relative;overflow:hidden}
+.profile-banner-overlay{position:absolute;inset:0;background:linear-gradient(to bottom,transparent 30%,rgba(0,0,0,0.15) 70%,var(--bg) 100%)}
+.profile-avatar-wrap{position:absolute;bottom:-44px;left:18px}
+.profile-avatar{width:96px;height:96px;border-radius:50%;border:4px solid var(--bg);background:var(--bg4);object-fit:cover;display:flex;align-items:center;justify-content:center;font-size:36px;box-shadow:0 8px 24px rgba(0,0,0,0.18)}
+.profile-info{padding:54px 18px 12px}
+.profile-name{font-family:var(--font-display);font-size:24px;font-weight:800;letter-spacing:-0.4px;line-height:1.1}
+.profile-username{font-size:13px;color:var(--muted);margin-top:3px;font-weight:500}
+.profile-bio{font-size:14px;color:var(--text);margin-top:12px;line-height:1.55}
+.profile-badge{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:999px;font-size:11.5px;font-weight:800;letter-spacing:0.3px;box-shadow:0 4px 12px rgba(0,0,0,0.1);text-transform:uppercase}
+.profile-stats{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:16px 14px 0;padding:14px 4px;background:var(--bg2);border:1px solid var(--border2);border-radius:16px}
+.profile-stat{text-align:center;padding:0;border:none!important;position:relative}
+.profile-stat:not(:last-child)::after{content:"";position:absolute;right:0;top:20%;bottom:20%;width:1px;background:var(--border2)}
+.profile-stat-val{font-size:17px;font-weight:800;color:var(--text);letter-spacing:-0.3px}
+.profile-stat-label{font-size:10.5px;color:var(--muted);margin-top:3px;font-weight:600;letter-spacing:0.2px;text-transform:uppercase}
 .profile-xp-bar{margin:16px;background:var(--bg4);border-radius:4px;height:4px;overflow:hidden}
 .profile-xp-fill{height:4px;border-radius:4px;transition:width .6s ease}
 .profile-xp-info{margin:0 16px 16px;display:flex;justify-content:space-between;font-size:11px;color:var(--muted)}
@@ -1669,7 +1669,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v56-likered';
+const SW_VERSION='v57-profilpolish';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
