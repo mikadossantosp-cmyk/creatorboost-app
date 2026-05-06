@@ -515,15 +515,21 @@ textarea.form-input{resize:none;min-height:80px}
 .comm-live{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:var(--green)}
 .comm-live-dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse-dot 1.5s ease-in-out infinite}
 @keyframes pulse-dot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.85)}}
-/* ── EXPLORE ── */
-.explore-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:10px 16px 16px}
-.explore-tab{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:14px 6px;border-radius:18px;font-size:12.5px;font-weight:700;background:var(--bg3);color:var(--text);border:1px solid var(--border2);cursor:pointer;transition:transform 0.18s cubic-bezier(0.34,1.56,0.64,1),box-shadow 0.2s,background 0.2s;font-family:var(--font);text-align:center;line-height:1.2;overflow:hidden;min-height:78px}
-.explore-tab .et-emoji{font-size:24px;line-height:1;display:block}
-.explore-tab .et-label{font-size:12px;font-weight:700;color:var(--text);opacity:0.95}
-.explore-tab:active{transform:scale(0.95)}
-.explore-tab.active{background:linear-gradient(135deg,var(--accent),var(--purple,#a78bfa));color:#fff;border-color:transparent;box-shadow:0 6px 20px rgba(167,139,250,0.35),0 0 0 1px rgba(255,255,255,0.06) inset;transform:scale(1.02)}
-.explore-tab.active .et-label{color:#fff}
-.explore-tab.active::after{content:"";position:absolute;inset:0;border-radius:18px;background:radial-gradient(ellipse at top,rgba(255,255,255,0.12),transparent 60%);pointer-events:none}
+/* ── EXPLORE TABS — Premium Cards ── */
+.explore-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;padding:12px 14px 18px}
+.explore-tab{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:14px 6px 12px;border-radius:16px;background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.06);cursor:pointer;transition:transform 0.2s cubic-bezier(0.34,1.56,0.64,1),background 0.2s,border-color 0.2s;font-family:var(--font);text-align:center;overflow:hidden;min-height:84px;-webkit-tap-highlight-color:transparent}
+.explore-tab::before{content:"";position:absolute;inset:0;border-radius:16px;background:linear-gradient(135deg,var(--et-c1,#a78bfa),var(--et-c2,#7c3aed));opacity:0;transition:opacity 0.25s;pointer-events:none}
+.explore-tab .et-icon{position:relative;z-index:1;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;background:linear-gradient(135deg,var(--et-c1,#a78bfa)33,var(--et-c2,#7c3aed)1a);transition:transform 0.25s cubic-bezier(0.34,1.56,0.64,1),background 0.2s;line-height:1}
+.explore-tab .et-label{position:relative;z-index:1;font-size:11.5px;font-weight:700;color:var(--text);letter-spacing:0.2px;line-height:1;opacity:0.9}
+.explore-tab:active{transform:scale(0.94)}
+.explore-tab:hover:not(.active){background:rgba(255,255,255,0.045);border-color:rgba(255,255,255,0.1)}
+.explore-tab:hover:not(.active) .et-icon{transform:scale(1.08)}
+.explore-tab.active{border-color:transparent}
+.explore-tab.active::before{opacity:1}
+.explore-tab.active::after{content:"";position:absolute;inset:0;border-radius:16px;background:radial-gradient(ellipse at top,rgba(255,255,255,0.18),transparent 65%);pointer-events:none;z-index:0}
+.explore-tab.active{box-shadow:0 8px 24px var(--et-shadow,rgba(167,139,250,0.45)),inset 0 1px 0 rgba(255,255,255,0.18)}
+.explore-tab.active .et-icon{background:rgba(255,255,255,0.22);color:#fff;backdrop-filter:blur(6px);transform:scale(1.05)}
+.explore-tab.active .et-label{color:#fff;font-weight:800;letter-spacing:0.4px;opacity:1;text-shadow:0 1px 2px rgba(0,0,0,0.15)}
 .explore-welcome{margin:0 16px 16px;border-radius:16px;overflow:hidden;position:relative;min-height:220px;background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460)}
 .highlight-card{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:14px;display:flex;align-items:center;gap:12px;margin-bottom:8px;text-decoration:none;color:var(--text);transition:background .2s}
 .highlight-card:active{background:rgba(255,255,255,.08)}
@@ -1625,7 +1631,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v32-tabs';
+const SW_VERSION='v33-tabs-pro';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
@@ -5153,12 +5159,12 @@ async function nlDelete(id){if(!confirm('Eintrag löschen?'))return;const r=awai
         };
 
         const tabs = [
-            {id:'allgemein', emoji:'✨', label:'Übersicht'},
-            {id:'newsletter',emoji:'📩', label:'News'},
-            {id:'ranking',   emoji:'🏆', label:'Ranking'},
-            {id:'tipps',     emoji:'💡', label:'Tipps'},
-            {id:'regeln',    emoji:'📋', label:'Regeln'},
-            {id:'shop',      emoji:'💎', label:'Shop'},
+            {id:'allgemein', emoji:'✨', label:'Übersicht', c1:'#a78bfa', c2:'#7c3aed', shadow:'rgba(167,139,250,0.45)'},
+            {id:'newsletter',emoji:'📩', label:'News',      c1:'#4dabf7', c2:'#1d6fa5', shadow:'rgba(77,171,247,0.45)'},
+            {id:'ranking',   emoji:'🏆', label:'Ranking',   c1:'#f59e0b', c2:'#d97706', shadow:'rgba(245,158,11,0.45)'},
+            {id:'tipps',     emoji:'💡', label:'Tipps',     c1:'#22c55e', c2:'#15803d', shadow:'rgba(34,197,94,0.45)'},
+            {id:'regeln',    emoji:'📋', label:'Regeln',    c1:'#94a3b8', c2:'#475569', shadow:'rgba(148,163,184,0.45)'},
+            {id:'shop',      emoji:'💎', label:'Shop',      c1:'#ec4899', c2:'#a21caf', shadow:'rgba(236,72,153,0.45)'},
         ];
 
         return html(`
@@ -5173,7 +5179,7 @@ async function nlDelete(id){if(!confirm('Eintrag löschen?'))return;const r=awai
   <div style="font-size:13px;color:var(--muted);margin-top:3px">Entdecke, lerne und wachse als Creator</div>
 </div>
 <div class="explore-tabs">
-  ${tabs.map(t=>`<button class="explore-tab${tab===t.id?' active':''}" onclick="location.href='/explore?tab=${t.id}'"><span class="et-emoji">${t.emoji}</span><span class="et-label">${t.label}</span></button>`).join('')}
+  ${tabs.map(t=>`<button class="explore-tab${tab===t.id?' active':''}" style="--et-c1:${t.c1};--et-c2:${t.c2};--et-shadow:${t.shadow}" onclick="location.href='/explore?tab=${t.id}'"><span class="et-icon">${t.emoji}</span><span class="et-label">${t.label}</span></button>`).join('')}
 </div>
 <div id="explore-content" style="padding-bottom:${tab==='allgemein'?'0':'80px'}">
   ${tabContent[tab]||tabContent.allgemein}
