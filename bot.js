@@ -600,7 +600,7 @@ textarea.form-input{resize:none;min-height:80px}
 function layout(content, session, page='feed', lang='de') {
     return `<!DOCTYPE html><html lang="${lang}" data-theme="light">
 <head>
-<script>try{var t=localStorage.getItem('cbTheme2');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
+<script>try{var t=localStorage.getItem('cbTheme3');document.documentElement.setAttribute('data-theme',t==='dark'?'dark':'light');}catch(e){document.documentElement.setAttribute('data-theme','light');}</script>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
@@ -775,8 +775,8 @@ async function checkMsgBadge(){
 checkMsgBadge();
 setInterval(checkMsgBadge,30000);
 function toast(msg,dur=2500){const t=document.getElementById('toast');if(!t)return;t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),dur);}
-function setTheme(t){document.documentElement.setAttribute('data-theme',t);try{localStorage.setItem('cbTheme2',t);}catch(e){}document.querySelectorAll('[title="Theme"]').forEach(b=>b.textContent=t==='dark'?'☀️':'🌙');fetch('/api/theme',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({theme:t})}).catch(()=>{});}
-try{const t=localStorage.getItem('cbTheme2');if(t){document.documentElement.setAttribute('data-theme',t);}}catch(e){}
+function setTheme(t){document.documentElement.setAttribute('data-theme',t);try{localStorage.setItem('cbTheme3',t);}catch(e){}document.querySelectorAll('[title="Theme"]').forEach(b=>b.textContent=t==='dark'?'☀️':'🌙');fetch('/api/theme',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({theme:t})}).catch(()=>{});}
+try{const t=localStorage.getItem('cbTheme3');if(t){document.documentElement.setAttribute('data-theme',t);}}catch(e){}
 function setLang(l){fetch('/api/lang',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lang:l})}).then(()=>location.reload());}
 async function openPlusSheet(){
   const s=document.getElementById('plus-sheet');
@@ -1653,7 +1653,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v46-light';
+const SW_VERSION='v47-forcelight';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
@@ -4799,7 +4799,7 @@ document.getElementById('search-input').focus();
         const _newsAgeStr = _newsAge==null ? '' : (_newsAge < 86400000 ? 'heute' : _newsAge < 7*86400000 ? Math.floor(_newsAge/86400000)+'d' : new Date(_latestNews.timestamp).toLocaleDateString('de-DE',{day:'2-digit',month:'short'}));
         const tabContent = {
             allgemein: `
-<div style="margin:4px 16px 20px;border-radius:22px;overflow:hidden;position:relative;background:linear-gradient(135deg,#0f172a 0%,#1e1b4b 50%,#312e81 100%)">
+<div style="margin:4px 16px 20px;border-radius:22px;overflow:hidden;position:relative;background:linear-gradient(135deg,#7c3aed 0%,#a78bfa 50%,#4dabf7 100%)">
   <div style="position:absolute;inset:0;background:radial-gradient(circle at 80% -20%,rgba(167,139,250,0.45),transparent 55%),radial-gradient(circle at 10% 110%,rgba(77,171,247,0.35),transparent 50%);pointer-events:none"></div>
   <div style="position:absolute;top:-30px;right:-30px;width:140px;height:140px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,0.08),transparent 70%);pointer-events:none"></div>
   <div style="position:relative;padding:22px 20px 18px">
