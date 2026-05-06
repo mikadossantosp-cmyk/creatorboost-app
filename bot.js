@@ -1639,7 +1639,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v35-suggestions';
+const SW_VERSION='v36-hub';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
@@ -5214,9 +5214,13 @@ async function nlDelete(id){if(!confirm('Eintrag löschen?'))return;const r=awai
     <button class="icon-btn" onclick="setTheme(document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark')" title="Theme">🌙</button>
   </div>
 </div>
-<div style="padding:16px 16px 4px">
-  <div style="font-size:28px;font-weight:800;font-family:var(--font-display);letter-spacing:-.5px;background:linear-gradient(90deg,var(--text),rgba(255,255,255,.6));-webkit-background-clip:text;-webkit-text-fill-color:transparent">EXPLORE</div>
-  <div style="font-size:13px;color:var(--muted);margin-top:3px">Entdecke, lerne und wachse als Creator</div>
+<div style="padding:18px 16px 6px">
+  <div style="display:flex;align-items:center;gap:8px;font-size:10px;font-weight:800;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:6px">
+    <span style="display:inline-block;width:18px;height:1.5px;background:linear-gradient(90deg,#a78bfa,transparent)"></span>
+    Creator Hub
+  </div>
+  <h1 style="font-size:30px;font-weight:800;font-family:var(--font-display);letter-spacing:-0.8px;line-height:1.05;margin:0;color:var(--text)">Deine Community.<br><span style="background:linear-gradient(135deg,#a78bfa,#4dabf7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Dein Wachstum.</span></h1>
+  <div style="font-size:12.5px;color:var(--muted);margin-top:8px;line-height:1.5;letter-spacing:0.1px">News, Rankings, Tipps & Shop — alles an einem Ort.</div>
 </div>
 <div class="explore-tabs">
   ${tabs.map(t=>`<button class="explore-tab${tab===t.id?' active':''}" style="--et-c1:${t.c1};--et-c2:${t.c2};--et-shadow:${t.shadow}" onclick="location.href='/explore?tab=${t.id}'"><span class="et-icon">${t.emoji}</span><span class="et-label">${t.label}</span></button>`).join('')}
