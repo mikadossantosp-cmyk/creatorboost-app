@@ -341,20 +341,22 @@ button{cursor:pointer;border:none;outline:none;font-family:var(--font)}
 .story-ring.seen{background:rgba(255,255,255,0.12);box-shadow:none}
 .story-inner{width:100%;height:100%;border-radius:50%;border:2.5px solid var(--bg);overflow:hidden;position:relative;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:#fff}
 .story-name{font-size:11.5px;color:var(--text);max-width:74px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;letter-spacing:0.1px}
-.post{margin:0 0 1px;background:var(--bg3);border-bottom:1px solid var(--border2);overflow:hidden;transition:background 0.15s}
-.post-header{display:flex;align-items:center;gap:11px;padding:14px 16px 8px}
+.post{margin:0 12px 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:18px;overflow:hidden;transition:border-color 0.2s,box-shadow 0.2s;box-shadow:0 1px 3px rgba(15,23,42,0.04)}
+.post:hover{border-color:var(--border);box-shadow:0 4px 14px rgba(15,23,42,0.06)}
+.post-header{display:flex;align-items:center;gap:11px;padding:14px 16px 10px}
 .post-user-info{flex:1;min-width:0}
 .post-name{font-size:14px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:-0.1px}
 .post-time{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
 .post-badge{font-size:10px;color:var(--muted)}
 .post-time{font-size:11px;color:var(--muted2)}
 .post-actions{display:flex;align-items:center;gap:4px;padding:8px 12px}
-.post-action-btn{display:flex;align-items:center;justify-content:center;gap:7px;padding:8px 14px;border-radius:999px;background:transparent;font-size:13.5px;font-weight:600;color:var(--muted);transition:background 0.15s,color 0.15s,transform 0.12s;border:1px solid var(--border2)!important;letter-spacing:0.1px;cursor:pointer}
-.post-action-btn:active{transform:scale(0.96)}
-.post-action-btn:hover{background:var(--surface-tint);color:var(--text)}
-.post-action-btn.liked{color:var(--accent);background:rgba(255,107,107,0.08);border-color:rgba(255,107,107,0.25)!important}
+.post-action-btn{display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 16px;border-radius:14px;background:rgba(255,107,107,0.06);font-size:13.5px;font-weight:700;color:var(--text);transition:all .18s;border:1px solid rgba(255,107,107,0.15)!important;letter-spacing:0.1px;cursor:pointer}
+.post-action-btn:active{transform:scale(0.95)}
+.post-action-btn.liked{color:var(--accent);background:rgba(255,107,107,0.15);border-color:rgba(255,107,107,0.4)!important;box-shadow:0 4px 12px rgba(255,107,107,0.18)}
 .post-action-btn.liked svg{fill:var(--accent);stroke:var(--accent)}
-.post-action-btn svg{width:17px;height:17px;transition:fill 0.15s,stroke 0.15s}
+.post-action-btn[onclick*="showLikerModal"]{background:rgba(77,171,247,0.06);border-color:rgba(77,171,247,0.18)!important;color:var(--text)}
+.post-action-btn[onclick*="showLikerModal"]:active{background:rgba(77,171,247,0.12)}
+.post-action-btn svg{width:18px;height:18px;transition:fill 0.15s,stroke 0.15s}
 .post-likers{padding:0 16px 4px;font-size:12px;color:var(--muted)}
 .post-likers span{color:var(--text);font-weight:600}
 .profile-banner{width:100%;aspect-ratio:3.5/1;position:relative;overflow:hidden}
@@ -507,7 +509,7 @@ textarea.form-input{resize:none;min-height:80px}
     font-size: 12px;
   }
 }
-.post-category-label{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;padding:3px 9px;border-radius:6px;color:var(--accent);background:rgba(255,107,107,0.08);border:1px solid rgba(255,107,107,0.16)}
+.post-category-label{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:800;letter-spacing:1px;text-transform:uppercase;padding:5px 11px;border-radius:999px;color:#fff;box-shadow:0 4px 12px rgba(255,107,107,0.25),inset 0 1px 0 rgba(255,255,255,0.15)}
 .post-likes-row{display:flex;align-items:center;gap:14px;padding:10px 16px 4px}
 .post-like-count{font-size:22px;font-weight:800;display:flex;align-items:center;gap:4px;color:var(--text)}
 .post-xp-pill{font-size:12px;font-weight:700;color:var(--gold);background:rgba(255,214,0,.12);padding:3px 10px;border-radius:20px}
@@ -1654,7 +1656,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v49-trulywhite';
+const SW_VERSION='v50-revert48';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
@@ -3409,10 +3411,11 @@ p{line-height:1.65;color:var(--muted)}
             // Extract Instagram shortcode for reel embed
             const instaShortcode = (()=>{ const m=(link.text||'').match(/instagram\.com\/(?:reel|p|tv)\/([A-Za-z0-9_-]+)/); return m?m[1]:null; })();
 
-            return '<div class="post fade-up" id="post-'+msgId+'" data-url="'+link.text+'" data-ts="'+(link.timestamp||0)+'">\n'+
+            return '<div class="post fade-up" id="post-'+msgId+'" data-url="'+link.text+'" data-ts="'+(link.timestamp||0)+'" style="position:relative">\n'+
+'  <div style="position:absolute;left:0;top:0;bottom:0;width:3px;background:'+grad+';border-radius:18px 0 0 18px"></div>\n'+
 // Category badge + timestamp row
 '  <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px 0">\n'+
-(isNewForUser ? '    <span class="post-category-label">Neuer Link</span>\n' : '    <span></span>\n')+
+(isNewForUser ? '    <span class="post-category-label" style="background:linear-gradient(135deg,var(--accent),var(--accent2))">📸 Neuer Link</span>\n' : '    <span></span>\n')+
 '    <span class="post-time">'+new Date(link.timestamp).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})+'</span>\n'+
 '  </div>\n'+
 // Post header
@@ -3430,7 +3433,7 @@ p{line-height:1.65;color:var(--muted)}
 '    </div>\n'+
 '  </div>\n'+
 // Reel video preview card
-'  <div style="margin:0 16px;border-radius:12px;overflow:hidden;background:#000;border:1px solid var(--border2);cursor:pointer" onclick="window.open(\''+link.text+'\',\'_blank\')">\n'+
+'  <div style="margin:0 16px;border-radius:14px;overflow:hidden;background:#000;border:1.5px solid;border-image:linear-gradient(135deg,#f9a825,#e91e63,#9c27b0) 1;cursor:pointer;box-shadow:0 6px 20px rgba(233,30,99,0.10)" onclick="window.open(\''+link.text+'\',\'_blank\')">\n'+
 '    <div style="position:relative;width:100%;padding-top:62%;background:'+bannerBg+';overflow:hidden">\n'+
 '      '+bannerImg.replace('position:absolute;inset:0;','position:absolute;inset:0;')+'\n'+
 '      <div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.1) 0%,rgba(0,0,0,.55) 100%)"></div>\n'+
