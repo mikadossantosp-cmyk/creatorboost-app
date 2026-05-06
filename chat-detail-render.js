@@ -118,7 +118,12 @@ module.exports = function renderChatBubbles(opts) {
 
         let backendReactions = {};
         if (m.reactions && Object.keys(m.reactions).length > 0) {
-            Object.values(m.reactions).forEach(emoji => { backendReactions[emoji] = (backendReactions[emoji] || 0) + 1; });
+            // Server-Format ist { emoji: [uid, ...] } — Counter aus Array-Length holen.
+            // Legacy-Format { emoji: count } toleriert: Number-Werte direkt übernehmen.
+            for (const [emo, val] of Object.entries(m.reactions)) {
+                if (Array.isArray(val)) backendReactions[emo] = val.length;
+                else if (typeof val === 'number') backendReactions[emo] = val;
+            }
         }
         const reactionsHtml = '<div class="chat-reactions" data-ts="' + ts + '" data-backend="' + esc(JSON.stringify(backendReactions)) + '">' +
             Object.entries(backendReactions).map(([emo, n]) => '<span class="chat-reaction">' + emo + (n > 1 ? ' <b>' + n + '</b>' : '') + '</span>').join('') +

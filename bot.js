@@ -107,6 +107,10 @@ function getSession(req) { const m=(req.headers.cookie||'').match(/cbsid=([^;]+)
 function getSid(req) { const m=(req.headers.cookie||'').match(/cbsid=([^;]+)/); return m?m[1]:null; }
 // Aktive UID (Parent ODER Sub-Account, je nach Switch-Status). session.uid = immer Parent (Telegram).
 function getMyUid(session) { return session ? String(session.activeUid || session.uid) : ''; }
+// HTML-Escape für User-eingegebene Strings — verhindert Stored-XSS in profileCard, posts, comments.
+function htmlEsc(s) { return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+// Sicherer URL-Check: nur http(s)-Links erlaubt, kein javascript:/data:/vbscript:.
+function safeUrl(u) { const s = String(u||'').trim(); return /^https?:\/\//i.test(s) ? s : ''; }
 
 const ONLINE_WINDOW_MS = 60000;
 function isUidOnline(uid) {
@@ -1109,9 +1113,9 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
   <div style="display:flex;align-items:center;gap:6px;margin-top:4px">
     ${isUidOnline(uid) ? '<span style="width:8px;height:8px;border-radius:50%;background:#00c851;display:inline-block"></span><span style="font-size:11px;color:#00c851">Online</span>' : '<span style="width:8px;height:8px;border-radius:50%;background:var(--muted2);display:inline-block"></span><span style="font-size:11px;color:var(--muted2)">Offline</span>'}
   </div>
-  ${u.bio?`<div class="profile-bio">${u.bio}</div>`:''}
-  ${u.nische?`<div style="font-size:12px;color:var(--accent);margin-top:4px">🎯 ${u.nische}</div>`:''}
-  ${u.website?`<a href="${u.website}" target="_blank" style="font-size:13px;color:var(--blue);margin-top:6px;display:block">🔗 ${u.website.replace('https://','').replace('http://','').slice(0,40)}</a>`:''}
+  ${u.bio?`<div class="profile-bio">${htmlEsc(u.bio)}</div>`:''}
+  ${u.nische?`<div style="font-size:12px;color:var(--accent);margin-top:4px">🎯 ${htmlEsc(u.nische)}</div>`:''}
+  ${(()=>{const sw = safeUrl(u.website); return sw ? `<a href="${htmlEsc(sw)}" target="_blank" rel="noopener noreferrer" style="font-size:13px;color:var(--blue);margin-top:6px;display:block">🔗 ${htmlEsc(sw.replace(/^https?:\/\//i,'').slice(0,40))}</a>` : '';})()}
   <div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap">
     <div class="profile-badge" style="background:${grad};color:#fff">${u.role||'🆕 New'}</div>
     ${rank>0?`<div style="font-size:12px;color:var(--muted)">Rang #${rank}</div>`:''}
@@ -2992,11 +2996,17 @@ p{line-height:1.65;color:var(--muted)}
     if (path === '/api/save-profile' && req.method === 'POST') {
         const body = await parseBody(req);
         const updateData = { uid: myUid };
-        if (body.bio !== undefined) updateData.bio = body.bio;
-        if (body.spitzname !== undefined) updateData.spitzname = body.spitzname;
-        if (body.accentColor) updateData.accentColor = body.accentColor;
-        if (body.nische !== undefined) updateData.nische = body.nische;
-        if (body.website !== undefined) updateData.website = body.website;
+        if (body.bio !== undefined) updateData.bio = String(body.bio).slice(0, 100);
+        if (body.spitzname !== undefined) updateData.spitzname = String(body.spitzname).slice(0, 30);
+        // accentColor-Whitelist gegen JS-Injection im inline-Style/JS-Literal
+        const ACCENT_WHITELIST = ['#ff6b6b','#ffa500','#00c851','#4dabf7','#cc5de8','#ffd43b','#ff8cc8','#20c997','#ff6348'];
+        if (body.accentColor && ACCENT_WHITELIST.includes(body.accentColor)) updateData.accentColor = body.accentColor;
+        if (body.nische !== undefined) updateData.nische = String(body.nische).slice(0, 50);
+        // Website nur http(s) durchlassen
+        if (body.website !== undefined) {
+            const w = String(body.website).trim();
+            updateData.website = w === '' ? '' : (/^https?:\/\//i.test(w) ? w.slice(0, 100) : '');
+        }
         if (body.tiktok !== undefined) updateData.tiktok = body.tiktok;
         if (body.youtube !== undefined) updateData.youtube = body.youtube;
         if (body.twitter !== undefined) updateData.twitter = body.twitter;
@@ -3250,7 +3260,7 @@ p{line-height:1.65;color:var(--muted)}
                     const cf=ladeBild(String(c.uid),'profilepic'); const ci=cu.instagram;
                     const cimg=cf?'<img src="/appbild/'+c.uid+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" alt="">':ci?'<img src="https://unavatar.io/instagram/'+ci+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" alt="">':'';
                     const ct=new Date(c.timestamp||0).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
-                    return '<div style="display:flex;gap:8px;padding:8px 12px;border-bottom:1px solid var(--border2)"><div style="position:relative;width:28px;height:28px;border-radius:50%;background:'+cg+';flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff"><span style="position:absolute">'+(cu.name||'?')[0]+'</span>'+cimg+'</div><div style="flex:1;min-width:0"><div style="font-size:11px;font-weight:700">'+(cu.spitzname||cu.name||'User')+' <span style="font-size:10px;color:var(--muted);font-weight:400">'+ct+'</span></div><div style="font-size:12px;color:var(--text);margin-top:2px">'+c.text+'</div></div></div>';
+                    return '<div style="display:flex;gap:8px;padding:8px 12px;border-bottom:1px solid var(--border2)"><div style="position:relative;width:28px;height:28px;border-radius:50%;background:'+cg+';flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff"><span style="position:absolute">'+htmlEsc((cu.name||'?')[0])+'</span>'+cimg+'</div><div style="flex:1;min-width:0"><div style="font-size:11px;font-weight:700">'+htmlEsc(cu.spitzname||cu.name||'User')+' <span style="font-size:10px;color:var(--muted);font-weight:400">'+ct+'</span></div><div style="font-size:12px;color:var(--text);margin-top:2px">'+htmlEsc(c.text)+'</div></div></div>';
                 }).join('');
 
             // Liker names text ("Gefällt X, Y und Z weiteren")
@@ -3492,8 +3502,21 @@ async function likePost(msgId, btn) {
         if (data.ok) {
             if (data.likes !== undefined) countEl.textContent = data.likes;
             toast('❤️ Geliked!');
+        } else {
+            // Bei Fehler UI zurücksetzen, sonst hängt der Button leer/disabled
+            btn.classList.remove('liked');
+            btn.querySelector('svg').setAttribute('fill', 'none');
+            countEl.textContent = Math.max(0, Number(countEl.textContent) - 1);
+            btn.disabled = false;
+            toast('❌ ' + (data.error || 'Konnte nicht liken'));
         }
-    } catch(e) { toast('❤️ Geliked!'); }
+    } catch(e) {
+        btn.classList.remove('liked');
+        btn.querySelector('svg').setAttribute('fill', 'none');
+        countEl.textContent = Math.max(0, Number(countEl.textContent) - 1);
+        btn.disabled = false;
+        toast('❌ Netzwerkfehler');
+    }
 }
 async function refreshLikes() {
     try {
@@ -5895,8 +5918,8 @@ async function announceFeThread(btn){
   }catch(e){r.style.display='block';r.style.color='#ef4444';r.textContent='❌ '+e.message;}
   btn.disabled=false;btn.textContent='📢 Ankündigung in FE-Thread senden';
 }
-let selectedBanner = '${(u.banner||gradients[0]).replace(/'/g,"\\'")}';
-let selectedAccent = '${u.accentColor||'#ff6b6b'}';
+let selectedBanner = ${JSON.stringify(u.banner||gradients[0])};
+let selectedAccent = ${JSON.stringify(accentColors.includes(u.accentColor) ? u.accentColor : '#ff6b6b')};
 function selectBanner(val, el) {
     document.querySelectorAll('.gradient-opt').forEach(e=>e.classList.remove('selected'));
     el.classList.add('selected');
@@ -6029,6 +6052,15 @@ async function setRing(ringId) {
         const { threadId, timestamp, emoji } = body;
         if (!threadId || !timestamp || !emoji) return json({ok:false});
         const result = await postBot('/react-thread-msg-api', { threadId, timestamp: Number(timestamp), emoji, uid: myUid });
+        return json(result || {ok:false});
+    }
+    // DM-Reaktionen — frontend (chat-detail-render) ruft das, vorher fehlte der Endpoint komplett.
+    if (path === '/api/react-message' && req.method === 'POST') {
+        if (!session) return json({ok:false}, 401);
+        const body = await parseBody(req);
+        const { chatKey, timestamp, emoji } = body;
+        if (!chatKey || !timestamp || !emoji) return json({ok:false});
+        const result = await postBot('/react-dm-msg-api', { chatKey, timestamp: Number(timestamp), emoji, uid: myUid });
         return json(result || {ok:false});
     }
 

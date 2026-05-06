@@ -89,7 +89,7 @@ module.exports = function renderChatList(opts) {
 
         const unreadClass = (c.unread > 0 ? ' unread' : '');
         const tickHtml = (isOwn && !c.unread) ? '<div class="dm-tick' + (isRead ? ' read' : '') + '">' + (isRead ? '✓✓' : '✓') + '</div>' : '';
-        const badgeHtml = c.unread > 0 ? '<div class="dm-badge">' + c.unread + '</div>' : '';
+        const badgeHtml = c.unread > 0 ? '<div class="dm-badge">' + (c.unread > 99 ? '99+' : c.unread) + '</div>' : '';
 
         return '<a href="/nachrichten/' + c.otherUid + '" class="dm-row' + unreadClass + '" data-uid="' + c.otherUid + '" data-name="' + esc(c.otherName) + '" oncontextmenu="event.preventDefault(); dmCtxMenu(event,this)" ontouchstart="dmCtxStart(event,this)" ontouchend="dmCtxEnd()" ontouchmove="dmCtxEnd()">' +
             '<div class="dm-avatar' + (isOnline ? ' online' : '') + '">' + avatarInner + '</div>' +
@@ -331,8 +331,12 @@ module.exports = function renderChatList(opts) {
             '}' +
             'dmApplySettings();' +
             // Long-Press Context Menu
-            'let __dmPressTimer = null, __dmPressedRow = null;' +
-            'function dmCtxStart(e, row){ __dmPressedRow = row; __dmPressTimer = setTimeout(() => { dmCtxMenu({clientX: e.touches[0].clientX, clientY: e.touches[0].clientY, preventDefault:()=>{}}, row); if (navigator.vibrate) navigator.vibrate(15); }, 480); }' +
+            'let __dmPressTimer = null, __dmPressedRow = null, __dmCtxFired = false;' +
+            // TouchEvents werden vom Browser recycled — Coords SOFORT capturen, nicht erst im setTimeout
+            // (sonst e.touches ist [] beim Fire → TypeError).
+            'function dmCtxStart(e, row){ __dmPressedRow = row; const t = e.touches&&e.touches[0]; const cx = t?t.clientX:0; const cy = t?t.clientY:0; __dmPressTimer = setTimeout(() => { __dmCtxFired = true; dmCtxMenu({clientX: cx, clientY: cy, preventDefault:()=>{}}, row); if (navigator.vibrate) navigator.vibrate(15); }, 480); }' +
+            // Click-Suppression nach Long-Press: Browser feuert click NACH touchend → wir blocken den nächsten click einmal
+            'document.addEventListener("click", function(e){ if (__dmCtxFired) { __dmCtxFired = false; e.preventDefault(); e.stopPropagation(); } }, true);' +
             'function dmCtxEnd(){ if (__dmPressTimer) { clearTimeout(__dmPressTimer); __dmPressTimer = null; } }' +
             'function dmCtxMenu(e, row){' +
                 'e.preventDefault && e.preventDefault();' +
