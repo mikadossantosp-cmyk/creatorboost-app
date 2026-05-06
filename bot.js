@@ -536,18 +536,26 @@ textarea.form-input{resize:none;min-height:80px}
 .highlight-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
 .creator-scroll{display:flex;gap:12px;padding:0 16px 12px;overflow-x:auto;scrollbar-width:none}
 .creator-scroll::-webkit-scrollbar{display:none}
-.sug-list{display:flex;gap:12px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:4px 16px 8px;scroll-snap-type:x proximity}
+.sug-list{display:flex;gap:11px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:6px 16px 12px;scroll-snap-type:x proximity}
 .sug-list::-webkit-scrollbar{display:none}
-.sug-card{flex:0 0 auto;width:160px;background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:14px 10px 12px;display:flex;flex-direction:column;align-items:center;text-align:center;scroll-snap-align:start;transition:transform 0.18s}
+.sug-card{flex:0 0 auto;width:172px;background:linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.015));border:1px solid rgba(255,255,255,0.08);border-radius:18px;padding:0 0 12px;display:flex;flex-direction:column;align-items:stretch;text-align:center;scroll-snap-align:start;transition:transform 0.18s,border-color 0.2s;overflow:hidden;position:relative}
 .sug-card:active{transform:scale(0.97)}
-.sug-info{display:flex;flex-direction:column;align-items:center;gap:3px;width:100%;margin-top:8px}
-.sug-name{font-size:14px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;width:100%;text-decoration:none}
-.sug-meta{display:flex;align-items:center;justify-content:center;gap:0;margin-top:4px;min-height:20px}
-.sug-mutuals{font-size:11px;color:var(--muted);text-align:center;line-height:1.3;margin-top:2px}
-.sug-btn{width:100%;background:#0866FF;color:#fff;border:none;border-radius:8px;padding:8px 0;font-size:13px;font-weight:700;cursor:pointer;margin-top:10px;transition:background 0.18s,transform 0.15s;-webkit-tap-highlight-color:transparent}
-.sug-btn:active{transform:scale(0.95);background:#0653cc}
-.sug-btn.followed{background:#3a3b3c;color:#e4e6eb}
-.sug-x{position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,0.5);color:#fff;border:none;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:5}
+.sug-card:hover{border-color:rgba(167,139,250,0.25)}
+.sug-card-banner{height:56px;position:relative;overflow:hidden}
+.sug-card-banner::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 40%,rgba(0,0,0,0.55) 100%)}
+.sug-avatar{width:72px;height:72px;border-radius:50%;border:3px solid var(--bg);margin:-36px auto 8px;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:800;color:#fff;box-shadow:0 4px 14px rgba(0,0,0,0.3);z-index:1}
+.sug-avatar::after{content:"";position:absolute;inset:-3px;border-radius:50%;background:linear-gradient(135deg,#a78bfa,#4dabf7,#22c55e);z-index:-1;padding:3px;-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude;opacity:0.7}
+.sug-info{display:flex;flex-direction:column;align-items:center;gap:2px;width:100%;padding:0 10px}
+.sug-name{font-size:14px;font-weight:800;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;width:100%;text-decoration:none;letter-spacing:-0.2px}
+.sug-role{font-size:10px;font-weight:700;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;width:100%;letter-spacing:0.2px;text-transform:none}
+.sug-meta{display:flex;align-items:center;justify-content:center;gap:0;margin-top:6px;min-height:18px}
+.sug-mutuals{font-size:10.5px;color:var(--muted);text-align:center;line-height:1.3;margin-top:3px;font-weight:600;letter-spacing:0.1px}
+.sug-mutuals.has-mutual{color:#a78bfa}
+.sug-btn{width:calc(100% - 20px);background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;border:none;border-radius:10px;padding:9px 0;font-size:12.5px;font-weight:800;cursor:pointer;margin:11px 10px 0;transition:transform 0.15s,box-shadow 0.2s;-webkit-tap-highlight-color:transparent;letter-spacing:0.2px;box-shadow:0 4px 12px rgba(167,139,250,0.3)}
+.sug-btn:active{transform:scale(0.94)}
+.sug-btn.followed{background:rgba(255,255,255,0.08);color:var(--muted);box-shadow:none}
+.sug-x{position:absolute;top:8px;right:8px;width:26px;height:26px;border-radius:50%;background:rgba(0,0,0,0.55);backdrop-filter:blur(8px);color:#fff;border:1px solid rgba(255,255,255,0.15);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:5;line-height:1}
+.sug-x:active{background:rgba(0,0,0,0.75)}
 .creator-card{flex-shrink:0;width:140px;background:var(--bg3);border:1px solid var(--border2);border-radius:16px;overflow:hidden;text-decoration:none;color:var(--text);display:block}
 .creator-card-banner{height:50px;position:relative;overflow:hidden;background:var(--bg4)}
 .creator-card-avatar{width:44px;height:44px;border-radius:50%;border:3px solid var(--bg3);margin:-22px auto 0;position:relative;overflow:hidden;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff}
@@ -1631,7 +1639,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v34-welcome';
+const SW_VERSION='v35-suggestions';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
@@ -4743,20 +4751,22 @@ document.getElementById('search-input').focus();
                 const left = i === 0 ? '0' : '-8px';
                 return `<div style="width:18px;height:18px;border-radius:50%;background:${badgeGradient(mu.role)};border:2px solid var(--bg3);overflow:hidden;flex-shrink:0;margin-left:${left};display:flex;align-items:center;justify-content:center">${mp?`<img src="/appbild/${mid}/profilepic" style="width:100%;height:100%;object-fit:cover" loading="lazy">`:mInsta?`<img src="https://unavatar.io/instagram/${mInsta}" style="width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.remove()">`:`<span style="color:#fff;font-size:9px;font-weight:700">${(mu.name||'?')[0]}</span>`}</div>`;
             }).join('');
-            return `<div class="sug-card" data-uid="${uid}" style="position:relative">
+            return `<div class="sug-card" data-uid="${uid}">
   <button type="button" class="sug-x" data-uid="${uid}" title="Ausblenden" onclick="event.preventDefault();event.stopPropagation();var btn=this;var u=btn.dataset.uid;var c=btn.closest('.sug-card');if(c){c.style.transition='opacity 0.25s,transform 0.25s';c.style.opacity='0';c.style.transform='scale(0.85)';setTimeout(function(){c.remove();},250);}try{var ds=JSON.parse(localStorage.getItem('sugDismissed')||'[]');if(!ds.includes(u)){ds.push(u);localStorage.setItem('sugDismissed',JSON.stringify(ds.slice(-100)));}}catch(e){}return false">×</button>
-  <a href="/profil/${uid}" style="text-decoration:none;display:block">
-    <div style="position:relative;width:88px;height:88px;border-radius:50%;background:${grad};overflow:hidden;display:flex;align-items:center;justify-content:center;margin:0 auto${getRingBoxShadow(u)}">
-      <span style="position:absolute;color:#fff;font-size:32px;font-weight:800">${name[0]}</span>
-      ${pic?`<img src="/appbild/${uid}/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy">`:insta?`<img src="https://unavatar.io/instagram/${insta}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.remove()">`:''}
+  <a href="/profil/${uid}" style="text-decoration:none;color:inherit;display:block">
+    <div class="sug-card-banner" style="background:${grad}"></div>
+    <div class="sug-avatar" style="background:${grad}${getRingBoxShadow(u)}">
+      <span style="position:absolute">${htmlEsc((name[0]||'?').toUpperCase())}</span>
+      ${pic?`<img src="/appbild/${uid}/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:50%" loading="lazy">`:insta?`<img src="https://unavatar.io/instagram/${insta}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:50%" loading="lazy" onerror="this.remove()">`:''}
+    </div>
+    <div class="sug-info">
+      <div class="sug-name">${htmlEsc(name)}</div>
+      <div class="sug-role">${htmlEsc(u.role||'🆕 New')}${u.xp?'  ·  '+u.xp+' XP':''}</div>
+      ${mAvatars ? `<div class="sug-meta"><div style="display:flex;align-items:center">${mAvatars}</div></div>` : ''}
+      <div class="sug-mutuals${mutuals.length?' has-mutual':''}">${mutualText}</div>
     </div>
   </a>
-  <div class="sug-info">
-    <a href="/profil/${uid}" class="sug-name">${name}</a>
-    ${mAvatars ? `<div class="sug-meta"><div style="display:flex;align-items:center">${mAvatars}</div></div>` : ''}
-    <div class="sug-mutuals">${mutualText}</div>
-  </div>
-  <form method="POST" action="/follow-form" style="margin:10px 0 0;width:100%" onsubmit="return sugFormSubmit(this,event)">
+  <form method="POST" action="/follow-form" style="margin:0;padding:0" onsubmit="return sugFormSubmit(this,event)">
     <input type="hidden" name="uid" value="${uid}">
     <input type="hidden" name="back" value="/explore">
     <button type="submit" class="sug-btn" data-follow-uid="${uid}">+ Folgen</button>
@@ -4804,10 +4814,13 @@ document.getElementById('search-input').focus();
   </div>
 </div>
 ${topSuggestions.length ? `
-<div style="margin:0 0 18px">
-  <div style="display:flex;align-items:center;justify-content:space-between;padding:0 16px 10px">
-    <h3 style="font-size:14px;font-weight:700;margin:0;color:var(--text)">Personen, die du kennen könntest</h3>
-    <span style="font-size:11px;color:var(--muted)">${topSuggestions.length}</span>
+<div style="margin:4px 0 22px">
+  <div style="display:flex;align-items:flex-end;justify-content:space-between;padding:0 16px 12px;gap:8px">
+    <div>
+      <div style="display:flex;align-items:center;gap:7px;font-size:10px;font-weight:800;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-bottom:3px"><span style="display:inline-block;width:14px;height:1.5px;background:linear-gradient(90deg,#a78bfa,transparent)"></span>Entdecken</div>
+      <h3 style="font-size:17px;font-weight:800;margin:0;color:var(--text);letter-spacing:-0.3px;line-height:1.15">Personen, die du<br>kennen könntest</h3>
+    </div>
+    <div style="display:inline-flex;align-items:center;gap:5px;padding:5px 10px;background:rgba(167,139,250,0.12);border:1px solid rgba(167,139,250,0.25);border-radius:999px;font-size:11px;font-weight:700;color:#a78bfa">${topSuggestions.length} neu</div>
   </div>
   <div class="sug-list">${sugCards}</div>
 </div>
