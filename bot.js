@@ -1669,7 +1669,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v57-profilpolish';
+const SW_VERSION='v58-news-push';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
@@ -4722,23 +4722,48 @@ document.getElementById('user-search-input')?.addEventListener('input',filterSea
     // ── BENACHRICHTIGUNGEN ──
     if (path === '/benachrichtigungen') {
         return html(`
-<div class="topbar"><div class="topbar-logo">Benachrichtigungen</div></div>
-<div id="notif-list" style="padding:8px 0">
-  <div class="empty"><div class="empty-icon">🔔</div><div class="empty-text">Lädt...</div></div>
+<div class="topbar"><div class="topbar-logo">Aktivität</div></div>
+<style>
+.notif-section{padding:6px 16px 4px;font-size:10.5px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);margin-top:14px}
+.notif-row{display:flex;gap:12px;align-items:center;padding:11px 16px;text-decoration:none;color:inherit;transition:background 0.15s;border-bottom:1px solid var(--border2);position:relative}
+.notif-row:hover{background:var(--surface-tint)}
+.notif-row.unread{background:linear-gradient(90deg,rgba(255,107,107,0.04),transparent 60%)}
+.notif-row.unread::before{content:"";position:absolute;left:6px;top:50%;transform:translateY(-50%);width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px rgba(255,107,107,0.5)}
+.notif-icon{flex-shrink:0;width:42px;height:42px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:20px;background:var(--bg2);border:1px solid var(--border2)}
+.notif-icon.like{background:rgba(255,107,107,0.12);border-color:rgba(255,107,107,0.25)}
+.notif-icon.follow{background:rgba(167,139,250,0.12);border-color:rgba(167,139,250,0.25)}
+.notif-icon.news{background:rgba(77,171,247,0.12);border-color:rgba(77,171,247,0.25)}
+.notif-icon.diamond{background:linear-gradient(135deg,rgba(245,158,11,0.18),rgba(167,139,250,0.18));border-color:rgba(245,158,11,0.3)}
+.notif-icon.warn{background:rgba(245,158,11,0.12);border-color:rgba(245,158,11,0.3)}
+.notif-text{flex:1;min-width:0;font-size:13.5px;line-height:1.4;color:var(--text)}
+.notif-time{font-size:11.5px;color:var(--muted);margin-top:3px;font-weight:500}
+.notif-empty{padding:80px 24px;text-align:center;color:var(--muted)}
+.notif-empty-icon{font-size:48px;margin-bottom:14px;opacity:0.5}
+.notif-empty-text{font-size:15px;font-weight:700;color:var(--text);margin-bottom:6px}
+.notif-empty-sub{font-size:12.5px;color:var(--muted);line-height:1.5}
+</style>
+<div id="notif-list" style="padding:0 0 80px">
+  <div class="notif-empty"><div class="notif-empty-icon">⏳</div><div class="notif-empty-text">Lädt...</div></div>
 </div>
 <script>
+function relTime(ts){const m=Math.round((Date.now()-ts)/60000);if(m<1)return 'gerade eben';if(m<60)return 'vor '+m+' Min';const h=Math.round(m/60);if(h<24)return 'vor '+h+' Std';const d=Math.round(h/24);if(d<7)return 'vor '+d+'d';return new Date(ts).toLocaleDateString('de-DE',{day:'2-digit',month:'short'});}
+function iconClass(text,icon){const t=(text||'').toLowerCase();const i=icon||'';if(i==='❤️'||t.includes('liked'))return 'like';if(i==='👤'||t.includes('folgt')||t.includes('follow'))return 'follow';if(i==='📩'||t.includes('newsletter')||t.includes('news'))return 'news';if(i==='💎'||t.includes('diamant'))return 'diamond';if(i==='⚠️'||t.includes('warn')||t.includes('verwarnung'))return 'warn';return '';}
 fetch('/api/notifications').then(r=>r.json()).then(data=>{
-    const list = document.getElementById('notif-list');
-    if(!data.notifications||!data.notifications.length){
-      list.innerHTML='<div class="empty"><div class="empty-icon">🔔</div><div class="empty-text">Keine Benachrichtigungen</div></div>';
-      return;
+    const list=document.getElementById('notif-list');
+    const items=(data.notifications||[]).slice().sort((a,b)=>(b.timestamp||0)-(a.timestamp||0));
+    if(!items.length){
+        list.innerHTML='<div class="notif-empty"><div class="notif-empty-icon">🔔</div><div class="notif-empty-text">Alles ruhig</div><div class="notif-empty-sub">Hier erscheinen Likes, Follower,<br>News und Diamant-Belohnungen</div></div>';
+        return;
     }
-    list.innerHTML = data.notifications.map(n=>\`
-      <div style="padding:14px 16px;border-bottom:1px solid var(--border2);display:flex;gap:12px;align-items:center;\${n.read?'':'background:rgba(255,107,107,.05)'}">
-        <div style="font-size:24px;flex-shrink:0">\${n.icon||'🔔'}</div>
-        <div style="flex:1"><div style="font-size:13px">\${n.text}</div><div style="font-size:11px;color:var(--muted);margin-top:2px">\${new Date(n.timestamp).toLocaleDateString('de-DE',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}</div></div>
-      </div>
-    \`).join('');
+    const now=Date.now();
+    const today=[],week=[],older=[];
+    items.forEach(n=>{const age=now-(n.timestamp||0);if(age<86400000)today.push(n);else if(age<604800000)week.push(n);else older.push(n);});
+    const renderRow=n=>'<div class="notif-row '+(n.read?'':'unread')+'"><div class="notif-icon '+iconClass(n.text,n.icon)+'">'+(n.icon||'🔔')+'</div><div style="flex:1;min-width:0"><div class="notif-text">'+(n.text||'').replace(/[<>&]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;"}[c]))+'</div><div class="notif-time">'+relTime(n.timestamp||0)+'</div></div></div>';
+    let html='';
+    if(today.length){html+='<div class="notif-section">Heute</div>'+today.map(renderRow).join('');}
+    if(week.length){html+='<div class="notif-section">Diese Woche</div>'+week.map(renderRow).join('');}
+    if(older.length){html+='<div class="notif-section">Älter</div>'+older.map(renderRow).join('');}
+    list.innerHTML=html;
 });
 </script>`, 'notif');
     }
