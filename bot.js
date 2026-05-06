@@ -1668,7 +1668,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v54-suchelist';
+const SW_VERSION='v55-likestring';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
@@ -3325,7 +3325,7 @@ p{line-height:1.65;color:var(--muted)}
             const allLikes = new Set();
             allLinksForUrl.forEach(l=>{(Array.isArray(l.likes)?l.likes:[]).forEach(id=>allLikes.add(id));});
             const likes = [...allLikes];
-            const hasLiked = likes.includes(Number(myUid));
+            const hasLiked = likes.map(String).includes(String(myUid));
             const isNewForUser = !hasLiked && link.timestamp && new Date(link.timestamp).toDateString() === new Date().toDateString();
             const insta = poster.instagram;
             const grad = badgeGradient(poster.role);
@@ -3500,7 +3500,7 @@ commentsBox+
         function renderSuperLink(sl) {
             const poster = d.users[String(sl.uid)]||{};
             const likes = Array.isArray(sl.likes) ? sl.likes : [];
-            const hasLiked = likes.includes(myUid);
+            const hasLiked = likes.map(String).includes(String(myUid));
             const isOwnPost = String(sl.uid) === String(myUid);
             const insta = poster.instagram;
             const grad = badgeGradient(poster.role);
@@ -3574,9 +3574,9 @@ commentsBox+
 </div>
 <div style="width:100%">${storiesHtml}</div>
 ${(()=>{
-  const todayLiked = Object.values(d.links||{}).some(l=>Array.isArray(l.likes)&&l.likes.includes(Number(myUid))&&new Date(l.timestamp).toDateString()===today);
+  const todayLiked = Object.values(d.links||{}).some(l=>Array.isArray(l.likes)&&l.likes.map(String).includes(String(myUid))&&new Date(l.timestamp).toDateString()===today);
   const todayTotal = dedupLinks.filter(([,l])=>new Date(l.timestamp||0).toDateString()===today).length;
-  const myTodayLikes = Object.values(d.links||{}).filter(l=>Array.isArray(l.likes)&&l.likes.includes(Number(myUid))&&new Date(l.timestamp).toDateString()===today).length;
+  const myTodayLikes = Object.values(d.links||{}).filter(l=>Array.isArray(l.likes)&&l.likes.map(String).includes(String(myUid))&&new Date(l.timestamp).toDateString()===today).length;
   const remaining = Math.max(0, todayTotal - myTodayLikes);
   if (remaining > 0 && !todayLiked) {
     return `<div style="margin:8px 16px;padding:10px 14px;background:linear-gradient(135deg,rgba(255,107,107,.15),rgba(255,165,0,.1));border:1px solid rgba(255,107,107,.3);border-radius:12px;display:flex;align-items:center;gap:10px">
