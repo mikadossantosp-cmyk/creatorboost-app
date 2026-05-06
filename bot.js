@@ -105,6 +105,8 @@ async function checkProfileCompletion(uid, session) {
 }
 function getSession(req) { const m=(req.headers.cookie||'').match(/cbsid=([^;]+)/); return m?sessions.get(m[1]):null; }
 function getSid(req) { const m=(req.headers.cookie||'').match(/cbsid=([^;]+)/); return m?m[1]:null; }
+// Aktive UID (Parent ODER Sub-Account, je nach Switch-Status). getMyUid(session) = immer Parent (Telegram).
+function getMyUid(session) { return session ? String(session.activeUid || getMyUid(session)) : ''; }
 
 const ONLINE_WINDOW_MS = 60000;
 function isUidOnline(uid) {
@@ -1615,7 +1617,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v29-camera-emoji';
+const SW_VERSION='v30-subaccount';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
@@ -1801,6 +1803,46 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
     }
 
     // ── CODE AUTH (Form POST) ──
+    // ── SUB-ACCOUNT MANAGEMENT ──
+    // Erstellt Sub-Account für die aktive Telegram-UID. Auto-switcht direkt auf den Sub.
+    if (path === '/api/create-subaccount' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        if (session.activeUid && String(session.activeUid) !== String(session.uid)) return json({ok:false, error:'Sub-Account kann keinen Sub erstellen'}, 400);
+        const body = await parseBody(req);
+        const name = (body.name||'').toString().trim().slice(0, 30);
+        if (!name) return json({ok:false, error:'Name erforderlich'}, 400);
+        const result = await postBot('/create-subaccount-api', { parent_uid: String(session.uid), name });
+        if (!result || !result.ok) return json({ok:false, error: (result && result.error) || 'Erstellen fehlgeschlagen'}, 500);
+        session.subUid = String(result.sub_uid);
+        session.activeUid = String(result.sub_uid);
+        saveSessions();
+        return json({ok:true, sub_uid: result.sub_uid});
+    }
+    // Switch zwischen Parent und Sub. Body: { uid: "<entweder parent_uid oder sub_uid>" }
+    if (path === '/api/switch-account' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        const body = await parseBody(req);
+        const target = String(body.uid||'');
+        if (target !== String(session.uid) && target !== String(session.subUid)) {
+            return json({ok:false, error:'Account gehört nicht zur Session'}, 403);
+        }
+        session.activeUid = target;
+        saveSessions();
+        return json({ok:true, activeUid: target});
+    }
+    // Sub komplett löschen (nur vom Parent aus). Switcht zurück auf Parent.
+    if (path === '/api/delete-subaccount' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        if (session.activeUid && String(session.activeUid) !== String(session.uid)) return json({ok:false, error:'Vorher zurück zum Hauptaccount switchen'}, 400);
+        if (!session.subUid) return json({ok:false, error:'Kein Sub vorhanden'}, 400);
+        const result = await postBot('/delete-subaccount-api', { parent_uid: String(session.uid), sub_uid: String(session.subUid) });
+        if (!result || !result.ok) return json({ok:false, error: (result && result.error) || 'Löschen fehlgeschlagen'}, 500);
+        delete session.subUid;
+        session.activeUid = String(session.uid);
+        saveSessions();
+        return json({ok:true});
+    }
+
     if (path === '/auth/code-form' && req.method === 'POST') {
         const body = await parseBody(req);
         const code = (body.code||'').toLowerCase().trim();
@@ -1819,7 +1861,7 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
         if (!found) { res.writeHead(302,{'Location':'/?error=1'}); return res.end(); }
         const [uid, u] = found;
         const sid = genSid();
-        sessions.set(sid, { uid: String(uid), name: u.name, username: u.username||null, theme: 'light', lang: 'de', createdAt: Date.now() });
+        sessions.set(sid, { uid: String(uid), name: u.name, username: u.username||null, theme: 'light', lang: 'de', createdAt: Date.now(), subUid: u.subUid ? String(u.subUid) : null, activeUid: String(uid) });
         saveSessions();
         res.writeHead(302,{'Set-Cookie':'cbsid='+sid+'; HttpOnly; Path=/; Max-Age=2592000','Location':'/feed'});
         return res.end();
@@ -1842,7 +1884,7 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
         if (!found) { res.writeHead(302,{'Location':'/?error=1'}); return res.end(); }
         const [uid, u] = found;
         const sid = genSid();
-        sessions.set(sid, { uid: String(uid), name: u.name, username: u.username||null, theme: 'light', lang: 'de', createdAt: Date.now() });
+        sessions.set(sid, { uid: String(uid), name: u.name, username: u.username||null, theme: 'light', lang: 'de', createdAt: Date.now(), subUid: u.subUid ? String(u.subUid) : null, activeUid: String(uid) });
         saveSessions();
         res.writeHead(302,{'Set-Cookie':`cbsid=${sid}; HttpOnly; Path=/; Max-Age=2592000`,'Location':'/feed'});
         return res.end();
@@ -1870,7 +1912,7 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
         const body = await parseBody(req);
         const { msgId } = body;
         if (!msgId || !session) return json({error:'Ungültig'},400);
-        const result = await fetchBot('/like-from-app?uid=' + session.uid + '&msgId=' + encodeURIComponent(msgId));
+        const result = await fetchBot('/like-from-app?uid=' + getMyUid(session) + '&msgId=' + encodeURIComponent(msgId));
         return json({ok:true, liked: result?.liked, likes: result?.likes});
     }
 
@@ -1958,8 +2000,8 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
             if (imageData.length > 3000000) return json({error:'Max 2MB'},400);
             session.profilePicData = imageData;
             saveSessions();
-            try { fs.writeFileSync(DATA_DIR + '/bild_' + session.uid + '_profilepic.txt', imageData); } catch(e) {}
-            checkProfileCompletion(String(session.uid), session);
+            try { fs.writeFileSync(DATA_DIR + '/bild_' + getMyUid(session) + '_profilepic.txt', imageData); } catch(e) {}
+            checkProfileCompletion(getMyUid(session), session);
             return json({ok:true});
         } catch(e) { return json({error:e.message},500); }
     }
@@ -1975,8 +2017,8 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
             if (imageData.length > 3000000) return json({error:'Max 2MB'},400);
             session.bannerData = imageData;
             saveSessions();
-            try { fs.writeFileSync(DATA_DIR + '/bild_' + session.uid + '_banner.txt', imageData); } catch(e) {}
-            checkProfileCompletion(String(session.uid), session);
+            try { fs.writeFileSync(DATA_DIR + '/bild_' + getMyUid(session) + '_banner.txt', imageData); } catch(e) {}
+            checkProfileCompletion(getMyUid(session), session);
             return json({ok:true});
         } catch(e) { return json({error:e.message},500); }
     }
@@ -1989,19 +2031,19 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
             const { imageData, title, description, link, docData, docName } = JSON.parse(Buffer.concat(chunks).toString());
             if (!title?.trim()) return json({error:'Titel fehlt'}, 400);
             const botData = await fetchBot('/data');
-            const userProjs = botData?.users?.[session.uid]?.projects || [];
+            const userProjs = botData?.users?.[getMyUid(session)]?.projects || [];
             if (userProjs.length >= 2) return json({error:'Max 2 Projekte erlaubt'}, 400);
             const projectId = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
             if (imageData) {
                 if (!imageData.startsWith('data:image/')) return json({error:'Kein Bild'}, 400);
                 if (imageData.length > 5000000) return json({error:'Max 4MB'}, 400);
-                try { fs.writeFileSync(DATA_DIR + '/bild_' + session.uid + '_proj_' + projectId + '.txt', imageData); } catch(e) {}
+                try { fs.writeFileSync(DATA_DIR + '/bild_' + getMyUid(session) + '_proj_' + projectId + '.txt', imageData); } catch(e) {}
             }
             if (docData && docName) {
                 if (docData.length > 15000000) return json({error:'Max 10MB für Dokument'}, 400);
-                try { fs.writeFileSync(DATA_DIR + '/doc_' + session.uid + '_proj_' + projectId + '.txt', docData); } catch(e) {}
+                try { fs.writeFileSync(DATA_DIR + '/doc_' + getMyUid(session) + '_proj_' + projectId + '.txt', docData); } catch(e) {}
             }
-            const result = await postBot('/add-project-api', { uid: session.uid, projectId, title: title.trim(), description: (description||'').trim(), link: (link||'').trim(), docName: docName||'' });
+            const result = await postBot('/add-project-api', { uid: getMyUid(session), projectId, title: title.trim(), description: (description||'').trim(), link: (link||'').trim(), docName: docName||'' });
             if (!result?.ok) return json({error: result?.error || 'Fehler'}, 400);
             return json({ok: true, projectId});
         } catch(e) { return json({error: e.message}, 500); }
@@ -2017,13 +2059,13 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
             if (imageData) {
                 if (!imageData.startsWith('data:image/')) return json({error:'Kein Bild'}, 400);
                 if (imageData.length > 5000000) return json({error:'Max 4MB'}, 400);
-                try { fs.writeFileSync(DATA_DIR + '/bild_' + session.uid + '_proj_' + projectId + '.txt', imageData); } catch(e) {}
+                try { fs.writeFileSync(DATA_DIR + '/bild_' + getMyUid(session) + '_proj_' + projectId + '.txt', imageData); } catch(e) {}
             }
             if (docData && docName) {
                 if (docData.length > 15000000) return json({error:'Max 10MB für Dokument'}, 400);
-                try { fs.writeFileSync(DATA_DIR + '/doc_' + session.uid + '_proj_' + projectId + '.txt', docData); } catch(e) {}
+                try { fs.writeFileSync(DATA_DIR + '/doc_' + getMyUid(session) + '_proj_' + projectId + '.txt', docData); } catch(e) {}
             }
-            const result = await postBot('/update-project-api', { uid: session.uid, projectId, title: title.trim(), description: (description||'').trim(), link: (link||'').trim(), docName: docName||'' });
+            const result = await postBot('/update-project-api', { uid: getMyUid(session), projectId, title: title.trim(), description: (description||'').trim(), link: (link||'').trim(), docName: docName||'' });
             if (!result?.ok) return json({error: result?.error || 'Fehler'}, 400);
             return json({ok: true});
         } catch(e) { return json({error: e.message}, 500); }
@@ -2035,12 +2077,12 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
         const { projectId } = body;
         if (!projectId) return json({error:'Fehlend'}, 400);
         try {
-            const imgF = DATA_DIR + '/bild_' + session.uid + '_proj_' + projectId + '.txt';
+            const imgF = DATA_DIR + '/bild_' + getMyUid(session) + '_proj_' + projectId + '.txt';
             if (fs.existsSync(imgF)) fs.unlinkSync(imgF);
-            const docF = DATA_DIR + '/doc_' + session.uid + '_proj_' + projectId + '.txt';
+            const docF = DATA_DIR + '/doc_' + getMyUid(session) + '_proj_' + projectId + '.txt';
             if (fs.existsSync(docF)) fs.unlinkSync(docF);
         } catch(e) {}
-        const result = await postBot('/delete-project-api', { uid: session.uid, projectId });
+        const result = await postBot('/delete-project-api', { uid: getMyUid(session), projectId });
         return json({ok: !!result?.ok});
     }
 
@@ -2070,9 +2112,9 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
         if (url && !url.includes('instagram.com')) return json({error:'Nur Instagram Links'},400);
         try {
             if (url) {
-                fs.writeFileSync(DATA_DIR + '/pinnedlink_' + session.uid + '.txt', url);
+                fs.writeFileSync(DATA_DIR + '/pinnedlink_' + getMyUid(session) + '.txt', url);
             } else {
-                const f = DATA_DIR + '/pinnedlink_' + session.uid + '.txt';
+                const f = DATA_DIR + '/pinnedlink_' + getMyUid(session) + '.txt';
                 if (fs.existsSync(f)) fs.unlinkSync(f);
             }
             return json({ok:true});
@@ -2135,14 +2177,14 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
         if (!session) return json({notifications:[]});
         const botData = await fetchBot('/data');
         if (!botData) return json({notifications:[]});
-        const notifs = (botData.notifications?.[session.uid] || []).slice(-20).reverse();
-        await postBot('/mark-notifications-read', { uid: session.uid });
+        const notifs = (botData.notifications?.[getMyUid(session)] || []).slice(-20).reverse();
+        await postBot('/mark-notifications-read', { uid: getMyUid(session) });
         return json({notifications: notifs});
     }
 
     if (path === '/api/messages-count') {
         if (!session) return json({count:0});
-        const myUid = String(session.uid);
+        const myUid = getMyUid(session);
         const botData = await fetchBot('/data');
         if (!botData) return json({count:0});
         // Count unread DMs
@@ -2171,14 +2213,14 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
         if (!session) return json({count:0});
         const botData = await fetchBot('/data');
         if (!botData) return json({count:0});
-        const unread = (botData.notifications?.[session.uid] || []).filter(n => !n.read).length;
+        const unread = (botData.notifications?.[getMyUid(session)] || []).filter(n => !n.read).length;
         return json({count: unread});
     }
 
     // ── FIX 1: NACHRICHT SENDEN — myUid definiert ──
     if (path === '/api/send-message' && req.method === 'POST') {
         if (!session) return json({error:'Nicht eingeloggt'}, 401);
-        const myUid = String(session.uid);
+        const myUid = getMyUid(session);
         let body;
         try { body = JSON.parse(await readBody(req, 10000000)); } catch(e) { return json({error:'Ungültig'},400); }
         const { to, text, image, audio, replyTo } = body;
@@ -2198,7 +2240,7 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
     // ── FIX 2: NACHRICHTEN LADEN — myUid definiert ──
     if (path.startsWith('/api/messages/')) {
         if (!session) return json({error:'Nicht eingeloggt'}, 401);
-        const myUid = String(session.uid); // FIX: war undefined
+        const myUid = getMyUid(session); // FIX: war undefined
         const otherUid = path.replace('/api/messages/', '');
         const botData = await fetchBot('/data');
         const chatKey = [myUid, otherUid].sort().join('_');
@@ -2209,7 +2251,7 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
     // ── FIX 3: NACHRICHTEN GELESEN — myUid definiert ──
     if (path === '/api/edit-message' && req.method === 'POST') {
         if (!session) return json({error:'Nicht eingeloggt'}, 401);
-        const myUid = String(session.uid);
+        const myUid = getMyUid(session);
         let body;
         try { body = JSON.parse(await readBody(req, 100000)); } catch(e) { return json({error:'Ungültig'},400); }
         const { chatKey, timestamp, newText } = body;
@@ -2220,7 +2262,7 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
 
     if (path === '/api/mark-messages-read' && req.method === 'POST') {
         if (!session) return json({error:'Nicht eingeloggt'}, 401);
-        const myUid = String(session.uid); // FIX: war undefined
+        const myUid = getMyUid(session); // FIX: war undefined
         const body = await parseBody(req);
         await postBot('/mark-messages-read', { uid: myUid, chatKey: body.chatKey });
         return json({ok: true});
@@ -2854,7 +2896,7 @@ p{line-height:1.65;color:var(--muted)}
         return res.end(layout('<div class="empty" style="margin-top:30vh"><div class="empty-icon">⚠️</div><div class="empty-text">Server nicht erreichbar</div><div class="empty-sub">Bitte versuche es später</div></div>', session, 'feed', lang));
     }
 
-    const myUid = String(session.uid);
+    const myUid = getMyUid(session);
     const myUser = d.users?.[myUid];
     const today = new Date().toDateString();
     const adminIds = (Array.isArray(d._adminIds) ? d._adminIds.map(Number) : Object.entries(d.users).filter(([,u])=>u.role==='⚙️ Admin').map(([id])=>Number(id)));
