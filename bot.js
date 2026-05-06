@@ -1134,7 +1134,7 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
   <div class="profile-stat"><div class="profile-stat-val">${u.links||0}</div><div class="profile-stat-label">Links</div></div>
   <div class="profile-stat"><div class="profile-stat-val">${(u.followers||[]).length}</div><div class="profile-stat-label">Follower</div></div>
   <div class="profile-stat"><div class="profile-stat-val">🔥 ${u.streak||0}</div><div class="profile-stat-label">Streak</div></div>
-  <div class="profile-stat"><div class="profile-stat-val">💎 ${u.diamonds||0}</div><div class="profile-stat-label">Diamanten</div></div>
+  <a href="/diamanten" class="profile-stat" style="text-decoration:none;color:inherit;cursor:pointer"><div class="profile-stat-val">💎 ${u.diamonds||0}</div><div class="profile-stat-label" style="display:flex;align-items:center;justify-content:center;gap:3px">Diamanten <span style="font-size:9px;opacity:0.6">ⓘ</span></div></a>
 </div>
 ${nb?`
 <div class="profile-xp-bar"><div class="profile-xp-fill" style="width:${nb.pct}%;background:${grad}"></div></div>
@@ -1621,7 +1621,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v30-subaccount';
+const SW_VERSION='v31-diamanten';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
@@ -2300,6 +2300,73 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
         if (!session) return redirect('/');
         res.writeHead(200, {'Content-Type':'text/html; charset=utf-8'});
         return res.end(onboardingHTML(false));
+    }
+
+    // ── DIAMANTEN-INFO-SEITE ──
+    if (path === '/diamanten') {
+        if (!session) return redirect('/');
+        const botData = await fetchBot('/data');
+        const u = (botData?.users||{})[myUid] || {};
+        const stand = u.diamonds || 0;
+        const appLikes = u.appLikeCount || 0;
+        const threadMsgs = u.threadMsgCount || 0;
+        const profileDone = u.profileCompletionRewarded ? '✅' : '⏳';
+        return html(`
+<div class="topbar"><a href="/newsletter" class="icon-btn" style="font-size:22px">‹</a><div style="font-size:15px;font-weight:600">Diamanten</div><div style="width:36px"></div></div>
+<div style="padding:20px 16px 80px">
+  <div style="background:linear-gradient(135deg,#4dabf7,#a78bfa);border-radius:18px;padding:22px;text-align:center;margin-bottom:18px;box-shadow:0 6px 22px rgba(167,139,250,0.3)">
+    <div style="font-size:11px;font-weight:700;letter-spacing:2px;color:rgba(255,255,255,0.7);text-transform:uppercase;margin-bottom:8px">Dein Diamant-Stand</div>
+    <div style="font-size:48px;font-weight:800;color:#fff;font-family:var(--font-display)">💎 ${stand}</div>
+  </div>
+  <div style="font-size:13.5px;line-height:1.55;color:var(--muted);margin-bottom:16px">Diamanten sind die Währung im Shop (App + Telegram). Aktuell zu kaufen: <b style="color:var(--text)">Extralinks</b> + <b style="color:var(--text)">Superlinks</b>. Mehr folgt.</div>
+  <div style="font-size:11px;font-weight:700;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin:8px 4px">Wie verdiene ich Diamanten?</div>
+  <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:14px;overflow:hidden;margin-bottom:12px">
+    <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--border2)">
+      <div style="font-size:20px">${profileDone}</div>
+      <div style="flex:1"><div style="font-size:13.5px;font-weight:700">Profil vervollständigen</div><div style="font-size:11.5px;color:var(--muted);margin-top:2px">Bild, Bio, Nische, Banner</div></div>
+      <div style="font-size:13px;font-weight:700;color:#a78bfa">+1 💎</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--border2)">
+      <div style="font-size:20px">📅</div>
+      <div style="flex:1"><div style="font-size:13.5px;font-weight:700">Tagesmission M3</div><div style="font-size:11.5px;color:var(--muted);margin-top:2px">Alle Links des Tages liken</div></div>
+      <div style="font-size:13px;font-weight:700;color:#a78bfa">+1 💎</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--border2)">
+      <div style="font-size:20px">📈</div>
+      <div style="flex:1"><div style="font-size:13.5px;font-weight:700">Wochenmission M2</div><div style="font-size:11.5px;color:var(--muted);margin-top:2px">7 Tage je 80% liken</div></div>
+      <div style="font-size:13px;font-weight:700;color:#a78bfa">+1 💎</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--border2)">
+      <div style="font-size:20px">🏆</div>
+      <div style="flex:1"><div style="font-size:13.5px;font-weight:700">Wochenmission M3</div><div style="font-size:11.5px;color:var(--muted);margin-top:2px">7 Tage in Folge alle liken</div></div>
+      <div style="font-size:13px;font-weight:700;color:#a78bfa">+2 💎</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--border2)">
+      <div style="font-size:20px">⭐</div>
+      <div style="flex:1"><div style="font-size:13.5px;font-weight:700">Alle Superlinks der Woche engagieren</div><div style="font-size:11.5px;color:var(--muted);margin-top:2px">Liken, Kommentieren, Teilen, Speichern</div></div>
+      <div style="font-size:13px;font-weight:700;color:#a78bfa">+1 💎</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--border2)">
+      <div style="font-size:20px">📲</div>
+      <div style="flex:1"><div style="font-size:13.5px;font-weight:700">100 Likes via App</div><div style="font-size:11.5px;color:var(--muted);margin-top:2px">Aktuell: ${appLikes}/${Math.ceil((appLikes+1)/100)*100}</div></div>
+      <div style="font-size:13px;font-weight:700;color:#a78bfa">+1 💎</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--border2)">
+      <div style="font-size:20px">💬</div>
+      <div style="flex:1"><div style="font-size:13.5px;font-weight:700">10 Thread-Nachrichten</div><div style="font-size:11.5px;color:var(--muted);margin-top:2px">Min 10 Zeichen, kein Spam · Aktuell: ${threadMsgs}/${Math.ceil((threadMsgs+1)/10)*10}</div></div>
+      <div style="font-size:13px;font-weight:700;color:#a78bfa">+1 💎</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;padding:12px 14px">
+      <div style="font-size:20px">📌</div>
+      <div style="flex:1"><div style="font-size:13.5px;font-weight:700">Pinned Post engagiert</div><div style="font-size:11.5px;color:var(--muted);margin-top:2px">Owner kriegt Diamant pro neuem Engager</div></div>
+      <div style="font-size:13px;font-weight:700;color:#a78bfa">+1 💎</div>
+    </div>
+  </div>
+  <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);border-radius:12px;padding:14px;font-size:12.5px;line-height:1.55;color:var(--text)">
+    <b>⚠️ Wichtig:</b> Es gelten weiterhin die Standard-Regeln (1 Post = 5 Likes + Kommentar). Niemand muss alles machen — wer aber mehr engagiert, wird belohnt 🙏
+  </div>
+  <div style="margin-top:18px;text-align:center"><a href="/shop" style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;padding:12px 22px;border-radius:14px;font-size:13px;font-weight:700;text-decoration:none;box-shadow:0 4px 14px rgba(167,139,250,0.4)">💎 Zum Shop</a></div>
+</div>`, 'diamanten');
     }
 
     if (path === '/newsletter' || path === '/newsletter/download') {
@@ -5045,6 +5112,11 @@ window.sugDismiss = function(btn){
   <div style="padding:0 16px 12px;display:flex;align-items:center;justify-content:space-between">
     <div style="font-size:18px;font-weight:800;font-family:var(--font-display)">📩 Newsletter</div>
   </div>
+  <a href="/diamanten" style="display:flex;align-items:center;gap:12px;margin:0 16px 16px;padding:14px 16px;background:linear-gradient(135deg,#4dabf7,#a78bfa);border-radius:14px;text-decoration:none;color:#fff;box-shadow:0 4px 14px rgba(167,139,250,0.3)">
+    <div style="font-size:28px">💎</div>
+    <div style="flex:1"><div style="font-size:14px;font-weight:700">Diamanten‑System</div><div style="font-size:11.5px;opacity:0.85;margin-top:2px">Wie verdiene ich Diamanten? Was kann ich kaufen?</div></div>
+    <div style="font-size:18px;opacity:0.8">→</div>
+  </a>
   ${adminBtn}
   ${adminForm}
   ${entriesHtml}
