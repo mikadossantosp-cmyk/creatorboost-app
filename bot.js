@@ -361,14 +361,24 @@ button{cursor:pointer;border:none;outline:none;font-family:var(--font)}
 .post-likers{padding:0 16px 4px;font-size:12px;color:var(--muted)}
 .post-likers span{color:var(--text);font-weight:600}
 .profile-banner{width:100%;aspect-ratio:3/1;position:relative;overflow:hidden}
-.profile-banner-overlay{position:absolute;inset:0;background:linear-gradient(to bottom,transparent 30%,rgba(0,0,0,0.15) 70%,var(--bg) 100%)}
+.profile-banner-overlay{position:absolute;inset:0;background:linear-gradient(to bottom,transparent 30%,rgba(0,0,0,0.18) 70%,var(--bg) 100%);pointer-events:none}
 .profile-avatar-wrap{position:absolute;bottom:-44px;left:18px}
-.profile-avatar{width:96px;height:96px;border-radius:50%;border:4px solid var(--bg);background:var(--bg4);object-fit:cover;display:flex;align-items:center;justify-content:center;font-size:36px;box-shadow:0 8px 24px rgba(0,0,0,0.18)}
+.profile-avatar{width:96px;height:96px;border-radius:50%;border:4px solid var(--bg);background:var(--bg4);object-fit:cover;display:flex;align-items:center;justify-content:center;font-size:36px;box-shadow:0 10px 28px rgba(15,23,42,0.18)}
+.profile-online-dot{position:absolute;bottom:6px;right:6px;width:18px;height:18px;border-radius:50%;background:#22c55e;border:3px solid var(--bg);box-shadow:0 0 10px rgba(34,197,94,0.6);z-index:2}
+.profile-action-pill{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:var(--glass-bg,rgba(255,255,255,0.85));backdrop-filter:blur(14px) saturate(180%);-webkit-backdrop-filter:blur(14px) saturate(180%);border:1px solid var(--border2);color:var(--text);border-radius:999px;font-size:12.5px;font-weight:700;text-decoration:none;transition:transform 0.12s,background 0.15s;letter-spacing:0.1px;box-shadow:0 4px 14px rgba(15,23,42,0.08)}
+.profile-action-pill:active{transform:scale(0.94)}
+.profile-action-pill:hover{background:var(--bg)}
 .profile-info{padding:54px 18px 12px}
-.profile-name{font-family:var(--font-display);font-size:24px;font-weight:800;letter-spacing:-0.4px;line-height:1.1}
-.profile-username{font-size:13px;color:var(--muted);margin-top:3px;font-weight:500}
-.profile-bio{font-size:14px;color:var(--text);margin-top:12px;line-height:1.55}
-.profile-badge{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:999px;font-size:11.5px;font-weight:800;letter-spacing:0.3px;box-shadow:0 4px 12px rgba(0,0,0,0.1);text-transform:uppercase}
+.profile-name-row{display:flex;align-items:flex-start;gap:8px;flex-wrap:wrap}
+.profile-name{font-family:var(--font-display);font-size:26px;font-weight:800;letter-spacing:-0.5px;line-height:1.1;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.profile-username{font-size:13.5px;color:var(--muted);margin-top:4px;font-weight:500}
+.profile-bio{font-size:14px;color:var(--text);margin-top:12px;line-height:1.55;font-weight:500}
+.profile-status-pill{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:999px;font-size:11.5px;font-weight:700;background:var(--surface-tint);border:1px solid var(--border2);color:var(--muted);letter-spacing:0.1px}
+.profile-status-pill.online{color:#22c55e;background:rgba(34,197,94,0.08);border-color:rgba(34,197,94,0.25)}
+.profile-status-pill.offline{color:var(--muted2);background:var(--surface-tint)}
+.profile-meta-chip{display:inline-flex;align-items:center;gap:5px;padding:6px 11px;background:var(--surface-tint);border:1px solid var(--border2);border-radius:10px;font-size:12px;font-weight:600;color:var(--text);letter-spacing:0.1px;transition:background 0.15s}
+.profile-meta-chip:hover{background:var(--bg2)}
+.profile-badge{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:999px;font-size:11px;font-weight:800;letter-spacing:0.5px;box-shadow:0 4px 14px rgba(255,107,107,0.2);text-transform:uppercase;flex-shrink:0;align-self:flex-start;margin-top:3px}
 .profile-stats{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:16px 14px 0;padding:14px 4px;background:var(--bg2);border:1px solid var(--border2);border-radius:16px}
 .profile-stat{text-align:center;padding:0;border:none!important;position:relative}
 .profile-stat:not(:last-child)::after{content:"";position:absolute;right:0;top:20%;bottom:20%;width:1px;background:var(--border2)}
@@ -1141,38 +1151,42 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
     return `
 <div style="position:relative">
   <div class="profile-banner" style="${bannerIsGrad ? 'background:'+banner : ''}">
-    ${!bannerIsGrad ? '<img src="'+banner+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:fill" alt="">' : ''}
+    ${!bannerIsGrad ? '<img src="'+banner+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">' : ''}
     <div class="profile-banner-overlay"></div>
-    ${isOwn?`<a href="/einstellungen" style="position:absolute;bottom:12px;right:12px;background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.2);color:#fff;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;backdrop-filter:blur(8px)">✏️ Bearbeiten</a>`:''}
   </div>
   <div class="profile-avatar-wrap">
     ${(picData||ladeBild(uid,'profilepic'))
       ? `<img src="${picData||ladeBild(uid,'profilepic')}" class="profile-avatar" style="${getRingBoxShadow(u)}" onerror="this.style.display='none'" alt="">`
       : u.instagram
       ? `<img src="https://unavatar.io/instagram/${u.instagram}" class="profile-avatar" style="${getRingBoxShadow(u)}" onerror="this.style.display='none'" alt="">`
-      : `<div class="profile-avatar" style="display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:700;background:${grad};color:#fff${getRingBoxShadow(u)}">${(u.name||'?').slice(0,2).toUpperCase()}</div>`}
+      : `<div class="profile-avatar" style="display:flex;align-items:center;justify-content:center;font-size:34px;font-weight:800;background:${grad};color:#fff${getRingBoxShadow(u)}">${(u.name||'?').slice(0,2).toUpperCase()}</div>`}
+    ${isUidOnline(uid)?'<div class="profile-online-dot" title="Online"></div>':''}
     ${![...sessions.values()].some(s=>String(s.uid)===String(uid))?`<div style="position:absolute;bottom:6px;right:6px;background:rgba(15,15,15,.92);border:1.5px solid #555;border-radius:20px;padding:2px 7px;font-size:10px;color:#888;z-index:2;font-weight:600;white-space:nowrap">Kein Web</div>`:''}
   </div>
+  ${isOwn?`<div style="position:absolute;top:12px;right:12px;display:flex;gap:8px;z-index:3">
+    <a href="/einstellungen" class="profile-action-pill" title="Bearbeiten"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg><span>Bearbeiten</span></a>
+  </div>`:''}
 </div>
 <div class="profile-info">
-  <div class="profile-name">${u.spitzname||u.name||'User'}</div>
-  ${u.spitzname?`<div class="profile-username">${u.name||''}</div>`:''}
-  ${u.username?`<div class="profile-username">@${u.username}</div>`:''}
-  <div style="display:flex;align-items:center;gap:6px;margin-top:4px">
-    ${isUidOnline(uid) ? '<span style="width:8px;height:8px;border-radius:50%;background:#00c851;display:inline-block"></span><span style="font-size:11px;color:#00c851">Online</span>' : '<span style="width:8px;height:8px;border-radius:50%;background:var(--muted2);display:inline-block"></span><span style="font-size:11px;color:var(--muted2)">Offline</span>'}
+  <div class="profile-name-row">
+    <div class="profile-name">${htmlEsc(u.spitzname||u.name||'User')}</div>
+    <div class="profile-badge" style="background:${grad};color:#fff">${htmlEsc(u.role||'🆕 New')}</div>
+  </div>
+  ${u.username||u.spitzname?`<div class="profile-username">${u.spitzname?htmlEsc(u.name||''):''}${u.username?(u.spitzname?' · ':'')+'@'+htmlEsc(u.username):''}</div>`:''}
+  <div style="display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap">
+    ${isUidOnline(uid) ? '<span class="profile-status-pill online">● Online</span>' : '<span class="profile-status-pill offline">○ Offline</span>'}
+    ${rank>0?`<span class="profile-status-pill"><span style="opacity:0.65">Rang</span> #${rank}</span>`:''}
   </div>
   ${u.bio?`<div class="profile-bio">${htmlEsc(u.bio)}</div>`:''}
-  ${u.nische?`<div style="font-size:12px;color:var(--accent);margin-top:4px">🎯 ${htmlEsc(u.nische)}</div>`:''}
-  ${(()=>{const sw = safeUrl(u.website); return sw ? `<a href="${htmlEsc(sw)}" target="_blank" rel="noopener noreferrer" style="font-size:13px;color:var(--blue);margin-top:6px;display:block">🔗 ${htmlEsc(sw.replace(/^https?:\/\//i,'').slice(0,40))}</a>` : '';})()}
   <div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap">
-    <div class="profile-badge" style="background:${grad};color:#fff">${u.role||'🆕 New'}</div>
-    ${rank>0?`<div style="font-size:12px;color:var(--muted)">Rang #${rank}</div>`:''}
-    ${instaUrl?`<a href="${instaUrl}" target="_blank" style="font-size:12px;color:var(--blue)">📸 @${u.instagram}</a>`:''}
+    ${u.nische?`<span class="profile-meta-chip"><span style="opacity:0.7">🎯</span> ${htmlEsc(u.nische)}</span>`:''}
+    ${(()=>{const sw=safeUrl(u.website);return sw?`<a href="${htmlEsc(sw)}" target="_blank" rel="noopener noreferrer" class="profile-meta-chip" style="text-decoration:none">🔗 ${htmlEsc(sw.replace(/^https?:\/\//i,'').replace(/\/$/, '').slice(0,30))}</a>`:'';})()}
+    ${instaUrl?`<a href="${htmlEsc(instaUrl)}" target="_blank" rel="noopener noreferrer" class="profile-meta-chip" style="text-decoration:none">📸 @${htmlEsc(u.instagram)}</a>`:''}
   </div>
   ${u.trophies&&u.trophies.length?`
-  <div style="margin-top:10px">
-    <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Trophäen</div>
-    <div style="display:flex;gap:6px;flex-wrap:wrap">
+  <div style="margin-top:14px;padding:12px 14px;background:linear-gradient(135deg,rgba(245,158,11,0.06),rgba(167,139,250,0.06));border:1px solid rgba(245,158,11,0.18);border-radius:14px">
+    <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1.4px;margin-bottom:8px;font-weight:800">🏆 Trophäen</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
       ${u.trophies.map(t=>`<span style="font-size:22px;background:var(--bg4);border-radius:8px;padding:4px 8px">${t}</span>`).join('')}
     </div>
   </div>`:''}
@@ -1669,7 +1683,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v59-notifpro';
+const SW_VERSION='v60-profilpro';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
