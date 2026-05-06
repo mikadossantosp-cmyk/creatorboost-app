@@ -5083,6 +5083,14 @@ ${sorted.map(([id,u],i)=>{
         if (!myUser) return redirect('/');
         const myBannerData = session.bannerData || ladeBild(myUid, 'banner');
         const myPicData = session.profilePicData || ladeBild(myUid, 'profilepic');
+        // Sub-Account-Switcher Daten
+        const parentUid = String(session.uid);
+        const subUid = session.subUid ? String(session.subUid) : null;
+        const parentUser = (d.users||{})[parentUid] || {};
+        const subUser = subUid ? (d.users||{})[subUid] : null;
+        const parentPic = ladeBild(parentUid, 'profilepic');
+        const subPic = subUid ? ladeBild(subUid, 'profilepic') : null;
+        const isParentActive = String(myUid) === parentUid;
         const myPosts = (d.posts||{})[myUid] || [];
         const myProjects = myUser.projects || [];
 
@@ -5217,6 +5225,85 @@ ${sorted.map(([id,u],i)=>{
   </div>
 </div>
 ${profileCard(myUid, myUser, d, true, lang, adminIds, myBannerData, myPicData)}
+<div class="acc-switcher" style="margin:8px 12px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:6px">
+  <div class="acc-row${isParentActive?' active':''}" onclick="switchAcc('${parentUid}')" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;cursor:pointer;transition:background 0.15s">
+    <div style="width:36px;height:36px;border-radius:50%;overflow:hidden;background:linear-gradient(135deg,#a78bfa,#7c3aed);display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;flex-shrink:0">
+      ${parentPic ? `<img src="/appbild/${parentUid}/profilepic" style="width:100%;height:100%;object-fit:cover" alt="">` : (parentUser.name||'?').slice(0,1).toUpperCase()}
+    </div>
+    <div style="flex:1;min-width:0">
+      <div style="font-size:13.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${(parentUser.spitzname||parentUser.name||'Hauptaccount').replace(/[<>"]/g,'')}</div>
+      <div style="font-size:11px;color:var(--muted)">Hauptaccount · ${parentUser.xp||0} XP</div>
+    </div>
+    ${isParentActive?'<div style="font-size:10px;font-weight:700;color:#22c55e;background:rgba(34,197,94,0.15);border-radius:999px;padding:3px 8px">aktiv</div>':'<div style="font-size:18px;color:var(--muted)">→</div>'}
+  </div>
+  ${subUid && subUser ? `
+  <div class="acc-row${!isParentActive?' active':''}" onclick="switchAcc('${subUid}')" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;cursor:pointer;transition:background 0.15s;margin-top:4px">
+    <div style="width:36px;height:36px;border-radius:50%;overflow:hidden;background:linear-gradient(135deg,#fb923c,#f59e0b);display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;flex-shrink:0">
+      ${subPic ? `<img src="/appbild/${subUid}/profilepic" style="width:100%;height:100%;object-fit:cover" alt="">` : (subUser.name||'?').slice(0,1).toUpperCase()}
+    </div>
+    <div style="flex:1;min-width:0">
+      <div style="font-size:13.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${(subUser.spitzname||subUser.name||'Sub').replace(/[<>"]/g,'')}</div>
+      <div style="font-size:11px;color:var(--muted)">Sub-Account · ${subUser.xp||0} XP</div>
+    </div>
+    ${!isParentActive?'<div style="font-size:10px;font-weight:700;color:#22c55e;background:rgba(34,197,94,0.15);border-radius:999px;padding:3px 8px">aktiv</div>':'<div style="font-size:18px;color:var(--muted)">→</div>'}
+  </div>
+  ${isParentActive ? `<div style="display:flex;justify-content:flex-end;padding:4px 10px 2px"><button onclick="deleteSubAcc()" style="background:none;border:none;color:#ef4444;font-size:11px;cursor:pointer">Sub-Account löschen</button></div>` : ''}
+  ` : `
+  <div onclick="openCreateSubModal()" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:10px;margin-top:4px;border-radius:10px;cursor:pointer;border:1.5px dashed rgba(167,139,250,0.4);color:#a78bfa;font-size:13px;font-weight:600">
+    <span style="font-size:18px;line-height:1">＋</span> Neuen Account erstellen
+  </div>`}
+</div>
+<div id="create-sub-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(8px)">
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:18px;padding:20px;width:100%;max-width:340px">
+    <div style="font-size:16px;font-weight:700;margin-bottom:6px">Neuen Account erstellen</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.5">App‑Only Persona mit eigenen XP, Followers und Profil. Du kannst zwischen Haupt‑ und Sub‑Account switchen.</div>
+    <input id="sub-name-input" type="text" placeholder="Name (max 30 Zeichen)" maxlength="30" style="width:100%;background:var(--bg4);border:1.5px solid var(--border);border-radius:12px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;margin-bottom:12px">
+    <div style="display:flex;gap:8px">
+      <button onclick="closeCreateSubModal()" style="flex:1;background:var(--bg4);border:1px solid var(--border);border-radius:12px;padding:10px;font-size:13px;font-weight:600;color:var(--text);cursor:pointer">Abbrechen</button>
+      <button id="sub-create-btn" onclick="confirmCreateSub()" style="flex:1;background:linear-gradient(135deg,#a78bfa,#7c3aed);border:none;border-radius:12px;padding:10px;font-size:13px;font-weight:700;color:#fff;cursor:pointer">Erstellen</button>
+    </div>
+  </div>
+</div>
+<script>
+async function switchAcc(uid){
+  try {
+    const r = await fetch('/api/switch-account',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({uid})});
+    const d = await r.json();
+    if (d.ok) location.reload();
+    else alert('Fehler: '+(d.error||'unbekannt'));
+  } catch(e){ alert('Netzwerkfehler: '+e.message); }
+}
+function openCreateSubModal(){
+  const m = document.getElementById('create-sub-modal');
+  if (m) { m.style.display='flex'; setTimeout(()=>document.getElementById('sub-name-input')?.focus(),50); }
+}
+function closeCreateSubModal(){
+  const m = document.getElementById('create-sub-modal');
+  if (m) m.style.display='none';
+}
+async function confirmCreateSub(){
+  const inp = document.getElementById('sub-name-input');
+  const btn = document.getElementById('sub-create-btn');
+  const name = (inp?.value||'').trim();
+  if (!name) { alert('Bitte einen Namen eingeben'); return; }
+  if (btn) { btn.disabled=true; btn.textContent='...'; }
+  try {
+    const r = await fetch('/api/create-subaccount',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name})});
+    const d = await r.json();
+    if (d.ok) location.reload();
+    else { if (btn) { btn.disabled=false; btn.textContent='Erstellen'; } alert('Fehler: '+(d.error||'unbekannt')); }
+  } catch(e){ if (btn) { btn.disabled=false; btn.textContent='Erstellen'; } alert('Netzwerkfehler: '+e.message); }
+}
+async function deleteSubAcc(){
+  if (!confirm('Sub-Account wirklich löschen? Alle XP, Posts und Follower gehen verloren.')) return;
+  try {
+    const r = await fetch('/api/delete-subaccount',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})});
+    const d = await r.json();
+    if (d.ok) location.reload();
+    else alert('Fehler: '+(d.error||'unbekannt'));
+  } catch(e){ alert('Netzwerkfehler: '+e.message); }
+}
+</script>
 ${completionHtml}
 <div id="mission-widget" style="margin:0 12px 4px">
   <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:14px 16px;animation:shimmer 1.5s infinite">
