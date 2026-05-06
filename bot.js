@@ -1826,6 +1826,17 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
         if (target !== String(session.uid) && target !== String(session.subUid)) {
             return json({ok:false, error:'Account gehört nicht zur Session'}, 403);
         }
+        // Verifizieren dass Ziel-User noch existiert (orphan-subUid: Sub wurde im Bot gelöscht
+        // aber session weiß noch nichts davon)
+        const botData = await fetchBot('/data');
+        if (botData && !botData.users?.[target]) {
+            if (target === String(session.subUid)) { delete session.subUid; saveSessions(); }
+            return json({ok:false, error:'Account existiert nicht mehr'}, 410);
+        }
+        // Cache-Clear: profilePicData/bannerData waren auf den vorherigen Account gemünzt,
+        // sonst sieht der Sub das Banner vom Parent.
+        delete session.profilePicData;
+        delete session.bannerData;
         session.activeUid = target;
         saveSessions();
         return json({ok:true, activeUid: target});
@@ -1835,10 +1846,18 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
         if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
         if (session.activeUid && String(session.activeUid) !== String(session.uid)) return json({ok:false, error:'Vorher zurück zum Hauptaccount switchen'}, 400);
         if (!session.subUid) return json({ok:false, error:'Kein Sub vorhanden'}, 400);
-        const result = await postBot('/delete-subaccount-api', { parent_uid: String(session.uid), sub_uid: String(session.subUid) });
+        const subUidToDelete = String(session.subUid);
+        const result = await postBot('/delete-subaccount-api', { parent_uid: String(session.uid), sub_uid: subUidToDelete });
         if (!result || !result.ok) return json({ok:false, error: (result && result.error) || 'Löschen fehlgeschlagen'}, 500);
-        delete session.subUid;
-        session.activeUid = String(session.uid);
+        // Auch andere Sessions desselben Parents aufräumen, sonst zeigen die noch den Sub
+        for (const s of sessions.values()) {
+            if (String(s.uid) === String(session.uid)) {
+                delete s.subUid;
+                if (String(s.activeUid) === subUidToDelete) s.activeUid = String(s.uid);
+                delete s.profilePicData;
+                delete s.bannerData;
+            }
+        }
         saveSessions();
         return json({ok:true});
     }
@@ -1861,7 +1880,9 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
         if (!found) { res.writeHead(302,{'Location':'/?error=1'}); return res.end(); }
         const [uid, u] = found;
         const sid = genSid();
-        sessions.set(sid, { uid: String(uid), name: u.name, username: u.username||null, theme: 'light', lang: 'de', createdAt: Date.now(), subUid: u.subUid ? String(u.subUid) : null, activeUid: String(uid) });
+        // subUid nur übernehmen wenn der Sub im Bot wirklich noch existiert (sonst orphan → Switch crashed)
+        const validSubUid = u.subUid && botData.users?.[u.subUid] ? String(u.subUid) : null;
+        sessions.set(sid, { uid: String(uid), name: u.name, username: u.username||null, theme: 'light', lang: 'de', createdAt: Date.now(), subUid: validSubUid, activeUid: String(uid) });
         saveSessions();
         res.writeHead(302,{'Set-Cookie':'cbsid='+sid+'; HttpOnly; Path=/; Max-Age=2592000','Location':'/feed'});
         return res.end();
@@ -1884,7 +1905,9 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
         if (!found) { res.writeHead(302,{'Location':'/?error=1'}); return res.end(); }
         const [uid, u] = found;
         const sid = genSid();
-        sessions.set(sid, { uid: String(uid), name: u.name, username: u.username||null, theme: 'light', lang: 'de', createdAt: Date.now(), subUid: u.subUid ? String(u.subUid) : null, activeUid: String(uid) });
+        // subUid nur übernehmen wenn der Sub im Bot wirklich noch existiert (sonst orphan → Switch crashed)
+        const validSubUid = u.subUid && botData.users?.[u.subUid] ? String(u.subUid) : null;
+        sessions.set(sid, { uid: String(uid), name: u.name, username: u.username||null, theme: 'light', lang: 'de', createdAt: Date.now(), subUid: validSubUid, activeUid: String(uid) });
         saveSessions();
         res.writeHead(302,{'Set-Cookie':`cbsid=${sid}; HttpOnly; Path=/; Max-Age=2592000`,'Location':'/feed'});
         return res.end();
@@ -2907,7 +2930,9 @@ p{line-height:1.65;color:var(--muted)}
         const { sub } = body;
         if (!sub?.endpoint) return json({ok:false});
         const hash = crypto.createHash('sha256').update(sub.endpoint).digest('hex').slice(0,16);
-        pushSubs[hash] = { uid: myUid, sub };
+        // Push-Subscription gehört dem Gerät/Mensch — IMMER auf Parent-UID keyen, nicht auf
+        // den gerade aktiven Sub. Sonst kriegt der Parent keine Pushes mehr nach Account-Switch.
+        pushSubs[hash] = { uid: String(session.uid), sub };
         savePushSubs();
         return json({ok:true});
     }
