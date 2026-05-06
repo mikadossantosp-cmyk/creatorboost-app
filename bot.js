@@ -330,16 +330,20 @@ button{cursor:pointer;border:none;outline:none;font-family:var(--font)}
 .story-ring.seen{background:rgba(255,255,255,0.12);box-shadow:none}
 .story-inner{width:100%;height:100%;border-radius:50%;border:2.5px solid var(--bg);overflow:hidden;position:relative;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:#fff}
 .story-name{font-size:11.5px;color:var(--text);max-width:74px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;letter-spacing:0.1px}
-.post{margin-bottom:1px;background:var(--bg3)}
-.post-header{display:flex;align-items:center;gap:10px;padding:12px 16px}
+.post{margin:0 12px 12px;background:linear-gradient(180deg,rgba(255,255,255,0.025),rgba(255,255,255,0.01));border:1px solid rgba(255,255,255,0.06);border-radius:18px;overflow:hidden;transition:border-color 0.2s}
+.post:hover{border-color:rgba(255,255,255,0.1)}
+.post-header{display:flex;align-items:center;gap:10px;padding:14px 16px 10px}
 .post-user-info{flex:1;min-width:0}
-.post-name{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.post-name{font-size:13.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:-0.1px}
 .post-badge{font-size:10px;color:var(--muted)}
 .post-time{font-size:11px;color:var(--muted2)}
 .post-actions{display:flex;align-items:center;gap:4px;padding:8px 12px}
-.post-action-btn{display:flex;align-items:center;gap:5px;padding:7px 12px;border-radius:20px;background:transparent;font-size:13px;font-weight:500;color:var(--muted);transition:all .15s}
-.post-action-btn.liked{color:var(--accent)}
-.post-action-btn svg{width:20px;height:20px}
+.post-action-btn{display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 16px;border-radius:14px;background:rgba(255,107,107,0.06);font-size:13.5px;font-weight:700;color:var(--text);transition:all .18s;border:1px solid rgba(255,107,107,0.15)!important;letter-spacing:0.1px}
+.post-action-btn:active{transform:scale(0.95)}
+.post-action-btn.liked{color:var(--accent);background:rgba(255,107,107,0.15);border-color:rgba(255,107,107,0.4)!important;box-shadow:0 4px 12px rgba(255,107,107,0.2)}
+.post-action-btn[onclick*="showLikerModal"]{background:rgba(77,171,247,0.06);border-color:rgba(77,171,247,0.18)!important;color:var(--text)}
+.post-action-btn[onclick*="showLikerModal"]:active{background:rgba(77,171,247,0.12)}
+.post-action-btn svg{width:18px;height:18px}
 .post-likers{padding:0 16px 4px;font-size:12px;color:var(--muted)}
 .post-likers span{color:var(--text);font-weight:600}
 .profile-banner{width:100%;aspect-ratio:3.5/1;position:relative;overflow:hidden}
@@ -492,7 +496,7 @@ textarea.form-input{resize:none;min-height:80px}
     font-size: 12px;
   }
 }
-.post-category-label{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;padding:3px 10px;border-radius:20px;color:#fff}
+.post-category-label{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:800;letter-spacing:1px;text-transform:uppercase;padding:5px 11px;border-radius:999px;color:#fff;box-shadow:0 4px 12px rgba(255,107,107,0.3),inset 0 1px 0 rgba(255,255,255,0.15)}
 .post-likes-row{display:flex;align-items:center;gap:14px;padding:10px 16px 4px}
 .post-like-count{font-size:22px;font-weight:800;display:flex;align-items:center;gap:4px;color:var(--text)}
 .post-xp-pill{font-size:12px;font-weight:700;color:var(--gold);background:rgba(255,214,0,.12);padding:3px 10px;border-radius:20px}
@@ -1639,7 +1643,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v42-feedpolish';
+const SW_VERSION='v43-feedcolor';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
