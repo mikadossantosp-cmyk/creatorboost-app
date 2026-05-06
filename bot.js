@@ -333,9 +333,10 @@ button{cursor:pointer;border:none;outline:none;font-family:var(--font)}
 .nav-dot{width:4px;height:4px;border-radius:50%;background:var(--accent);margin:0 auto}
 .card{background:var(--bg3);border-radius:var(--radius);border:1px solid var(--border2);overflow:hidden}
 .avatar{border-radius:50%;object-fit:cover;background:var(--bg4)}
-.stories{display:flex;gap:14px;padding:14px 16px 8px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.stories{display:flex;gap:14px;padding:14px 16px 8px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;touch-action:pan-x}
 .stories::-webkit-scrollbar{display:none}
 .story-item{display:flex;flex-direction:column;align-items:center;gap:6px;flex-shrink:0;width:74px;text-decoration:none;color:inherit;-webkit-tap-highlight-color:transparent}
+.stories.is-swiping .story-item{pointer-events:none}
 .story-item:active{transform:scale(0.92);transition:transform 0.15s}
 .story-ring{width:68px;height:68px;border-radius:50%;padding:2.5px;background:conic-gradient(from 45deg,#f9a825,#e91e63,#9c27b0,#3b82f6,#f9a825);position:relative;box-shadow:0 4px 12px rgba(233,30,99,0.18)}
 .story-ring.seen{background:rgba(255,255,255,0.12);box-shadow:none}
@@ -1683,7 +1684,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v61-notifavatar';
+const SW_VERSION='v62-storiesfix';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
@@ -3680,6 +3681,16 @@ async function refreshLikes() {
     } catch(e) {}
 }
 setInterval(refreshLikes, 30000);
+// Stories: Click-Cancel beim horizontalen Wischen — Swipe scrollt, kein Tap-zum-Profil
+(function(){
+  const stories=document.querySelector('.stories');
+  if(!stories) return;
+  let sx=0,sy=0,swiping=false;
+  stories.addEventListener('touchstart',e=>{const t=e.touches[0];sx=t.clientX;sy=t.clientY;swiping=false;stories.classList.remove('is-swiping');},{passive:true});
+  stories.addEventListener('touchmove',e=>{const t=e.touches[0];const dx=Math.abs(t.clientX-sx),dy=Math.abs(t.clientY-sy);if(!swiping && (dx>6 || dy>6)){swiping=true;if(dx>dy){stories.classList.add('is-swiping');}}},{passive:true});
+  stories.addEventListener('touchend',()=>{setTimeout(()=>stories.classList.remove('is-swiping'),50);},{passive:true});
+  stories.addEventListener('click',e=>{if(stories.classList.contains('is-swiping')){e.preventDefault();e.stopPropagation();}},{capture:true});
+})();
 // Onboarding beim ersten Besuch
 try{if(!localStorage.getItem('cb_onboarded')){window.location.href='/onboarding';}}catch(e){}
 // Auto-open superlink sheet if redirected from + button
@@ -5298,10 +5309,16 @@ async function sugDoFollow(btn){
       btn.textContent = '✓ Folge';
       btn.classList.add('followed');
       btn.disabled = false;
+      // Direkt animieren — kein 900ms-Wait mehr (gefuehlte Verzoegerung). 350ms reichen fuer
+      // visuelles Feedback. Funktioniert sowohl fuer .sug-card (alte Cards) als auch .sug-row (Liste).
       setTimeout(() => {
-        const card = btn.closest('.sug-card');
-        if (card) { card.style.transition='opacity 0.3s,transform 0.3s'; card.style.opacity='0'; card.style.transform='scale(0.85)'; setTimeout(()=>card.remove(), 300); }
-      }, 900);
+        const container = btn.closest('.sug-card') || btn.closest('.sug-row');
+        if (!container) return;
+        container.style.transition = 'opacity 0.25s,transform 0.25s,height 0.25s,padding 0.25s,margin 0.25s';
+        container.style.opacity = '0';
+        container.style.transform = container.matches('.sug-card') ? 'scale(0.85)' : 'translateX(40px)';
+        setTimeout(() => container.remove(), 250);
+      }, 350);
     } else if (r.status === 302 || r.redirected || (raw && raw.includes('<!DOCTYPE'))) {
       btn.textContent = orig; btn.disabled = false;
       alert('Du musst eingeloggt sein. Bitte App neu öffnen / einloggen.');
