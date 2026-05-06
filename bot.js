@@ -312,6 +312,7 @@ const CSS = `
 --glass-bg:rgba(10,11,15,0.65);--surface-tint:rgba(255,255,255,0.04);--hover-tint:rgba(255,255,255,0.08);
 }
 html{scroll-behavior:smooth;-webkit-tap-highlight-color:transparent}
+html{background:var(--bg)}
 body{font-family:var(--font);background:var(--bg);background-image:radial-gradient(ellipse 80% 60% at 0% -10%,rgba(255,107,107,0.05),transparent 60%),radial-gradient(ellipse 70% 50% at 100% 110%,rgba(167,139,250,0.04),transparent 60%);background-attachment:fixed;color:var(--text);min-height:100vh;margin:0 auto;padding-bottom:calc(70px + var(--safe-bottom));overflow-x:hidden;overscroll-behavior-y:contain;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
 a{color:inherit;text-decoration:none}
 img{display:block;max-width:100%}
@@ -603,8 +604,8 @@ function layout(content, session, page='feed', lang='de') {
 <script>try{var t=localStorage.getItem('cbTheme3');document.documentElement.setAttribute('data-theme',t==='dark'?'dark':'light');}catch(e){document.documentElement.setAttribute('data-theme','light');}</script>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black">
-<meta name="theme-color" content="#ff6b6b">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#ffffff">
 <link rel="manifest" href="/manifest.json">
 <link rel="icon" type="image/png" href="/icon-512.png?v=22">
 <link rel="apple-touch-icon" sizes="512x512" href="/icon-512.png?v=22">
@@ -1653,7 +1654,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v48-pro';
+const SW_VERSION='v49-trulywhite';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
@@ -1779,7 +1780,7 @@ self.addEventListener('notificationclick',e=>{
 <link rel="manifest" href="/manifest.json">
 <link rel="icon" type="image/png" href="/icon-512.png?v=22">
 <link rel="apple-touch-icon" href="/icon-512.png?v=22">
-<meta name="theme-color" content="#ff6b6b">
+<meta name="theme-color" content="#ffffff">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -2030,7 +2031,7 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
     // ── PWA MANIFEST ──
     if (path === '/manifest.json') {
         res.writeHead(200,{'Content-Type':'application/manifest+json','Cache-Control':'no-store','Access-Control-Allow-Origin':'*'});
-        return res.end(JSON.stringify({name:'CreatorX',short_name:'CreatorX',description:'Die kreative Community für Instagram Creators',start_url:'/',scope:'/',display:'standalone',background_color:'#000000',theme_color:'#ff6b6b',orientation:'portrait',categories:['social','lifestyle'],prefer_related_applications:false,screenshots:[],icons:[{src:'/icon-192.png',sizes:'192x192',type:'image/png',purpose:'any'},{src:'/icon-512.png',sizes:'512x512',type:'image/png',purpose:'any maskable'}]}));
+        return res.end(JSON.stringify({name:'CreatorX',short_name:'CreatorX',description:'Die kreative Community für Instagram Creators',start_url:'/',scope:'/',display:'standalone',background_color:'#ffffff',theme_color:'#ffffff',orientation:'portrait',categories:['social','lifestyle'],prefer_related_applications:false,screenshots:[],icons:[{src:'/icon-192.png',sizes:'192x192',type:'image/png',purpose:'any'},{src:'/icon-512.png',sizes:'512x512',type:'image/png',purpose:'any maskable'}]}));
     }
 
     if (path === '/api/vapid-public-key') {
