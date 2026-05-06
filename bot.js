@@ -105,8 +105,8 @@ async function checkProfileCompletion(uid, session) {
 }
 function getSession(req) { const m=(req.headers.cookie||'').match(/cbsid=([^;]+)/); return m?sessions.get(m[1]):null; }
 function getSid(req) { const m=(req.headers.cookie||'').match(/cbsid=([^;]+)/); return m?m[1]:null; }
-// Aktive UID (Parent ODER Sub-Account, je nach Switch-Status). getMyUid(session) = immer Parent (Telegram).
-function getMyUid(session) { return session ? String(session.activeUid || getMyUid(session)) : ''; }
+// Aktive UID (Parent ODER Sub-Account, je nach Switch-Status). session.uid = immer Parent (Telegram).
+function getMyUid(session) { return session ? String(session.activeUid || session.uid) : ''; }
 
 const ONLINE_WINDOW_MS = 60000;
 function isUidOnline(uid) {
