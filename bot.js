@@ -307,7 +307,7 @@ const CSS = `
 --text:#fff;--muted:#999;--muted2:#666;
 }
 html{scroll-behavior:smooth;-webkit-tap-highlight-color:transparent}
-body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;margin:0 auto;padding-bottom:calc(70px + var(--safe-bottom));overflow-x:hidden;overscroll-behavior-y:contain}
+body{font-family:var(--font);background:var(--bg);background-image:radial-gradient(ellipse 80% 60% at 0% -10%,rgba(255,107,107,0.06),transparent 60%),radial-gradient(ellipse 70% 50% at 100% 110%,rgba(167,139,250,0.05),transparent 60%);background-attachment:fixed;color:var(--text);min-height:100vh;margin:0 auto;padding-bottom:calc(70px + var(--safe-bottom));overflow-x:hidden;overscroll-behavior-y:contain}
 a{color:inherit;text-decoration:none}
 img{display:block;max-width:100%}
 button{cursor:pointer;border:none;outline:none;font-family:var(--font)}
@@ -1643,7 +1643,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v43-feedcolor';
+const SW_VERSION='v44-vibrant';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
@@ -3398,7 +3398,8 @@ p{line-height:1.65;color:var(--muted)}
             // Extract Instagram shortcode for reel embed
             const instaShortcode = (()=>{ const m=(link.text||'').match(/instagram\.com\/(?:reel|p|tv)\/([A-Za-z0-9_-]+)/); return m?m[1]:null; })();
 
-            return '<div class="post fade-up" id="post-'+msgId+'" data-url="'+link.text+'" data-ts="'+(link.timestamp||0)+'">\n'+
+            return '<div class="post fade-up" id="post-'+msgId+'" data-url="'+link.text+'" data-ts="'+(link.timestamp||0)+'" style="position:relative">\n'+
+'  <div style="position:absolute;left:0;top:0;bottom:0;width:3px;background:'+grad+';border-radius:18px 0 0 18px"></div>\n'+
 // Category badge + timestamp row
 '  <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px 0">\n'+
 (isNewForUser ? '    <span class="post-category-label" style="background:linear-gradient(135deg,var(--accent),var(--accent2))">📸 Neuer Link</span>\n' : '    <span></span>\n')+
@@ -3419,7 +3420,7 @@ p{line-height:1.65;color:var(--muted)}
 '    </div>\n'+
 '  </div>\n'+
 // Reel video preview card
-'  <div style="margin:0 16px;border-radius:14px;overflow:hidden;background:#000;border:1px solid rgba(255,255,255,.08);cursor:pointer" onclick="window.open(\''+link.text+'\',\'_blank\')">\n'+
+'  <div style="margin:0 16px;border-radius:14px;overflow:hidden;background:#000;border:1.5px solid;border-image:linear-gradient(135deg,#f9a825,#e91e63,#9c27b0) 1;cursor:pointer;box-shadow:0 6px 20px rgba(233,30,99,0.12)" onclick="window.open(\''+link.text+'\',\'_blank\')">\n'+
 '    <div style="position:relative;width:100%;padding-top:62%;background:'+bannerBg+';overflow:hidden">\n'+
 '      '+bannerImg.replace('position:absolute;inset:0;','position:absolute;inset:0;')+'\n'+
 '      <div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.1) 0%,rgba(0,0,0,.55) 100%)"></div>\n'+
