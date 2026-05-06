@@ -1638,7 +1638,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v39-tapfix';
+const SW_VERSION='v40-folgen3';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
@@ -4765,8 +4765,8 @@ document.getElementById('search-input').focus();
       <div class="sug-mutuals${mutuals.length?' has-mutual':''}">${mutualText}</div>
     </div>
   </a>
-  <button type="button" class="sug-btn" data-follow-uid="${uid}" onclick="event.preventDefault();event.stopPropagation();sugDoFollow(this);return false">+ Folgen</button>
-  <form method="POST" action="/follow-form" style="display:none" onsubmit="return sugFormSubmit(this,event)">
+  <button type="button" class="sug-btn js-sug-follow" data-follow-uid="${uid}">+ Folgen</button>
+  <form method="POST" action="/follow-form" style="display:none">
     <input type="hidden" name="uid" value="${uid}">
     <input type="hidden" name="back" value="/explore">
   </form>
@@ -5050,9 +5050,10 @@ async function applyBanner(gradient){
 }
 // Globaler delegierter Handler für Folgen-Button (kann von keinem Parent geschluckt werden)
 async function sugDoFollow(btn){
-  const uid = btn && btn.dataset ? btn.dataset.followUid : null;
-  if (!uid) { alert('🐛 Kein UID am Button'); return; }
-  if (btn.disabled) return;
+  if (!btn) { alert('🐛 Kein Button-Element'); return; }
+  const uid = btn.dataset ? (btn.dataset.followUid || btn.getAttribute('data-follow-uid')) : btn.getAttribute && btn.getAttribute('data-follow-uid');
+  if (!uid) { alert('🐛 Kein UID am Button. Bitte App neu laden.'); return; }
+  if (btn.disabled) { btn.disabled = false; /* defensiv: stuck disabled freigeben */ }
   btn.disabled = true;
   const orig = btn.textContent;
   btn.textContent = '...';
@@ -5119,6 +5120,19 @@ window.sugFormSubmit = function(form, ev){
     sugDoFollow(btn);
   }, { capture: true, passive: false });
 });
+// Direkter Bind auf alle .js-sug-follow Buttons — robusteste Variante.
+// Wird einmal direkt nach DOM-Render und nochmal bei DOMContentLoaded gemacht damit's auf jeden Fall greift.
+function _bindFollowBtns(){
+  document.querySelectorAll('.js-sug-follow').forEach(btn => {
+    if (btn._bound) return; btn._bound = true;
+    const handler = (e) => { try { e.preventDefault(); } catch(_){} try { e.stopPropagation(); } catch(_){} sugDoFollow(btn); return false; };
+    btn.addEventListener('click', handler);
+    btn.addEventListener('touchend', handler);
+  });
+}
+_bindFollowBtns();
+document.addEventListener('DOMContentLoaded', _bindFollowBtns);
+window.addEventListener('load', _bindFollowBtns);
 // Backwards-compat
 window.sugFollow = sugDoFollow;
 window.sugDismiss = function(btn){
