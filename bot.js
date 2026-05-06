@@ -1790,8 +1790,9 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
   <div class="login-wrap">
     <div class="divider"><span>Bereits Mitglied?</span></div>
     <div class="code-hint">Tippe <b style="color:#d4af37">/mycode</b> im Bot und gib deinen Code ein</div>
+    ${query.error ? '<div style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);border-radius:12px;padding:10px 14px;margin-bottom:10px;font-size:13px;color:#ef4444;text-align:center">⚠️ Code falsch oder unbekannt. Hol dir mit /mycode im Bot einen frischen Code.</div>' : ''}
     <form method="POST" action="/auth/code-form">
-      <input type="text" name="code" class="code-input" placeholder="Dein Code" autocomplete="off" autocapitalize="none" spellcheck="false" required>
+      <input type="text" name="code" class="code-input" placeholder="Dein Code" autocomplete="off" autocapitalize="none" spellcheck="false" required value="${(query.code||'').toString().slice(0,40).replace(/[<>"]/g,'')}">
       <button type="submit" class="login-btn">Einloggen →</button>
     </form>
   </div>
@@ -1804,9 +1805,17 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
         const body = await parseBody(req);
         const code = (body.code||'').toLowerCase().trim();
         if (!code) { res.writeHead(302,{'Location':'/?error=1'}); return res.end(); }
-        const botData = await fetchBot('/data');
+        let botData = await fetchBot('/data');
         if (!botData) { res.writeHead(302,{'Location':'/?error=1'}); return res.end(); }
-        const found = Object.entries(botData.users||{}).find(([,u]) => u.appCode === code);
+        let found = Object.entries(botData.users||{}).find(([,u]) => u.appCode === code);
+        // Cache-Miss: Code könnte gerade frisch im Bot generiert sein und unser /data-Cache ist stale.
+        // Einmal Force-Refresh, dann nochmal suchen, bevor wir 'falscher Code' sagen.
+        if (!found) {
+            _dataCache = null; _dataCacheTime = 0;
+            await refreshDataCache();
+            botData = _dataCache;
+            if (botData) found = Object.entries(botData.users||{}).find(([,u]) => u.appCode === code);
+        }
         if (!found) { res.writeHead(302,{'Location':'/?error=1'}); return res.end(); }
         const [uid, u] = found;
         const sid = genSid();
@@ -1821,9 +1830,15 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
         const body = await parseBody(req);
         const code = (body.code||'').toLowerCase().trim();
         if (!code) return json({error:'Kein Code'},400);
-        const botData = await fetchBot('/data');
+        let botData = await fetchBot('/data');
         if (!botData) return json({error:'Server nicht erreichbar'},503);
-        const found = Object.entries(botData.users||{}).find(([, u]) => u.appCode === code);
+        let found = Object.entries(botData.users||{}).find(([, u]) => u.appCode === code);
+        if (!found) {
+            _dataCache = null; _dataCacheTime = 0;
+            await refreshDataCache();
+            botData = _dataCache;
+            if (botData) found = Object.entries(botData.users||{}).find(([, u]) => u.appCode === code);
+        }
         if (!found) { res.writeHead(302,{'Location':'/?error=1'}); return res.end(); }
         const [uid, u] = found;
         const sid = genSid();
