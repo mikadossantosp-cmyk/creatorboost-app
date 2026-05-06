@@ -350,10 +350,11 @@ button{cursor:pointer;border:none;outline:none;font-family:var(--font)}
 .post-badge{font-size:10px;color:var(--muted)}
 .post-time{font-size:11px;color:var(--muted2)}
 .post-actions{display:flex;align-items:center;gap:4px;padding:8px 12px}
-.post-action-btn{display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 16px;border-radius:14px;background:rgba(255,107,107,0.06);font-size:13.5px;font-weight:700;color:var(--text);transition:all .18s;border:1px solid rgba(255,107,107,0.15)!important;letter-spacing:0.1px;cursor:pointer}
+.post-action-btn{display:flex;align-items:center;justify-content:center;gap:7px;padding:9px 16px;border-radius:14px;background:transparent;font-size:13.5px;font-weight:700;color:var(--muted);transition:all .15s;border:1px solid var(--border)!important;letter-spacing:0.1px;cursor:pointer}
 .post-action-btn:active{transform:scale(0.95)}
-.post-action-btn.liked{color:var(--accent);background:rgba(255,107,107,0.15);border-color:rgba(255,107,107,0.4)!important;box-shadow:0 4px 12px rgba(255,107,107,0.18)}
-.post-action-btn.liked svg{fill:var(--accent);stroke:var(--accent)}
+.post-action-btn:hover{background:var(--surface-tint);color:var(--text)}
+.post-action-btn.liked{color:#fff!important;background:#ff6b6b!important;border-color:#ff6b6b!important;box-shadow:0 6px 18px rgba(255,107,107,0.35)}
+.post-action-btn.liked svg{fill:#fff!important;stroke:#fff!important}
 .post-action-btn[onclick*="showLikerModal"]{background:rgba(77,171,247,0.06);border-color:rgba(77,171,247,0.18)!important;color:var(--text)}
 .post-action-btn[onclick*="showLikerModal"]:active{background:rgba(77,171,247,0.12)}
 .post-action-btn svg{width:18px;height:18px;transition:fill 0.15s,stroke 0.15s}
@@ -1668,7 +1669,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v55-likestring';
+const SW_VERSION='v56-likered';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
@@ -3391,14 +3392,14 @@ p{line-height:1.65;color:var(--muted)}
             const isOwnPost = String(link.user_id)===String(myUid);
             const likeBtn = isOwnPost
                 ? '<div style="font-size:12px;color:var(--muted);padding:7px 0">👤 Dein Link</div>'
-                : '<button class="post-action-btn '+(hasLiked?'liked':'')+'" onclick="likePost(\''+lid1+'\',this)" data-msgid="'+lid1+'" '+(hasLiked?'disabled':'')+' style="border:1px solid '+(hasLiked?'var(--accent)':'var(--border)')+';border-radius:12px;padding:9px 20px;font-size:14px;font-weight:700;gap:6px">'+
+                : '<button class="post-action-btn '+(hasLiked?'liked':'')+'" onclick="likePost(\''+lid1+'\',this)" data-msgid="'+lid1+'" '+(hasLiked?'disabled':'')+'>'+
                   '<svg width="18" height="18" viewBox="0 0 24 24" fill="'+(hasLiked?'currentColor':'none')+'" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>'+
                   'Like <span id="likes-'+lid1+'">'+likes.length+'</span>'+
                   '</button>';
 
             // "Wer hat geliked?" button — only shown when there are likes
             const whoLikedBtn = likes.length>0
-                ? '<button class="post-action-btn" onclick="showLikerModal(\''+lid1+'\')" style="border:1px solid var(--border);border-radius:12px;padding:9px 20px;font-size:14px;font-weight:700;gap:6px">'+
+                ? '<button class="post-action-btn" onclick="showLikerModal(\''+lid1+'\')">'+
                   '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>'+
                   'Wer hat geliked?</button>'
                 : '';
