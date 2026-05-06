@@ -1683,7 +1683,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v60-profilpro';
+const SW_VERSION='v61-notifavatar';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
@@ -2268,9 +2268,21 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
         if (!session) return json({notifications:[]});
         const botData = await fetchBot('/data');
         if (!botData) return json({notifications:[]});
-        const notifs = (botData.notifications?.[getMyUid(session)] || []).slice(-20).reverse();
+        const notifs = (botData.notifications?.[getMyUid(session)] || []).slice(-30).reverse();
+        // Actor-Info anreichern (Name + hatProfilbild) damit der Client Avatar rendern kann
+        const enriched = notifs.map(n => {
+            if (!n.actorUid) return n;
+            const a = botData.users?.[n.actorUid];
+            if (!a) return n;
+            return Object.assign({}, n, {
+                actorName: a.spitzname || a.name || null,
+                actorRole: a.role || null,
+                actorInsta: a.instagram || null,
+                actorHasPic: !!ladeBild(String(n.actorUid), 'profilepic')
+            });
+        });
         await postBot('/mark-notifications-read', { uid: getMyUid(session) });
-        return json({notifications: notifs});
+        return json({notifications: enriched});
     }
 
     if (path === '/api/messages-count') {
@@ -4755,6 +4767,17 @@ document.getElementById('user-search-input')?.addEventListener('input',filterSea
 .notif-row.unread{background:linear-gradient(90deg,rgba(255,107,107,0.05),transparent 70%)}
 .notif-row.unread::before{content:"";position:absolute;left:7px;top:50%;transform:translateY(-50%);width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px rgba(255,107,107,0.5)}
 .notif-icon{flex-shrink:0;width:44px;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:20px;background:var(--bg2);border:1px solid var(--border2);font-weight:700}
+.notif-actor{position:relative;flex-shrink:0;width:48px;height:48px}
+.notif-actor-avatar{width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#a78bfa,#7c3aed);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:#fff;overflow:hidden;position:relative;box-shadow:0 4px 12px rgba(15,23,42,0.1)}
+.notif-actor-avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:50%}
+.notif-actor-avatar span{position:absolute}
+.notif-actor-badge{position:absolute;bottom:-3px;right:-3px;width:22px;height:22px;border-radius:50%;background:var(--bg);border:2px solid var(--bg);box-shadow:0 2px 8px rgba(15,23,42,0.15);display:flex;align-items:center;justify-content:center;font-size:11px;line-height:1}
+.notif-actor-badge.like{background:linear-gradient(135deg,#ff8e8e,#ff6b6b);color:#fff}
+.notif-actor-badge.follow{background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff}
+.notif-actor-badge.message{background:linear-gradient(135deg,#34d399,#22c55e);color:#fff}
+.notif-actor-badge.diamond{background:linear-gradient(135deg,#fbbf24,#a78bfa);color:#fff}
+.notif-actor-badge.warn{background:linear-gradient(135deg,#fbbf24,#ef4444);color:#fff}
+.notif-actor-badge.news{background:linear-gradient(135deg,#60a5fa,#1d6fa5);color:#fff}
 .notif-icon.like{background:linear-gradient(135deg,rgba(255,107,107,0.15),rgba(255,107,107,0.06));border-color:rgba(255,107,107,0.3);box-shadow:0 4px 12px rgba(255,107,107,0.1)}
 .notif-icon.follow{background:linear-gradient(135deg,rgba(167,139,250,0.15),rgba(167,139,250,0.06));border-color:rgba(167,139,250,0.3);box-shadow:0 4px 12px rgba(167,139,250,0.1)}
 .notif-icon.news{background:linear-gradient(135deg,rgba(77,171,247,0.15),rgba(77,171,247,0.06));border-color:rgba(77,171,247,0.3);box-shadow:0 4px 12px rgba(77,171,247,0.1)}
@@ -4790,7 +4813,19 @@ function classify(n){const t=(n.text||'').toLowerCase();const i=n.icon||'';if(i=
 function targetUrl(n){const c=classify(n);if(c==='news')return '/explore?tab=newsletter';if(c==='diamond')return '/diamanten';if(c==='message')return '/nachrichten';if(c==='follow')return '/suche';return '/feed';}
 let _allNotifs=[],_currentFilter='all';
 function escTxt(s){return String(s||'').replace(/[<>&]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;"}[c]));}
-function renderRow(n){const c=classify(n);return '<a href="'+targetUrl(n)+'" class="notif-row '+(n.read?'':'unread')+'"><div class="notif-icon '+c+'">'+(n.icon||'🔔')+'</div><div style="flex:1;min-width:0"><div class="notif-text">'+escTxt(n.text)+'</div><div class="notif-time">'+relTime(n.timestamp||0)+'</div></div><div class="notif-arrow">›</div></a>';}
+function renderRow(n){
+  const c=classify(n);
+  const tgt=n.actorUid?'/profil/'+n.actorUid:targetUrl(n);
+  let avatarHtml;
+  if(n.actorUid){
+    const initial=((n.actorName||'?')[0]||'?').toUpperCase();
+    const src=n.actorHasPic?'/appbild/'+n.actorUid+'/profilepic':(n.actorInsta?'https://unavatar.io/instagram/'+n.actorInsta:null);
+    avatarHtml='<div class="notif-actor"><div class="notif-actor-avatar">'+(src?'<img src="'+src+'" loading="lazy" onerror="this.remove()">':'')+'<span>'+escTxt(initial)+'</span></div><div class="notif-actor-badge '+c+'">'+(n.icon||'🔔')+'</div></div>';
+  } else {
+    avatarHtml='<div class="notif-icon '+c+'">'+(n.icon||'🔔')+'</div>';
+  }
+  return '<a href="'+tgt+'" class="notif-row '+(n.read?'':'unread')+'">'+avatarHtml+'<div style="flex:1;min-width:0"><div class="notif-text">'+escTxt(n.text)+'</div><div class="notif-time">'+relTime(n.timestamp||0)+'</div></div><div class="notif-arrow">›</div></a>';
+}
 function renderList(){
   const list=document.getElementById('notif-list');
   let items=_allNotifs;
