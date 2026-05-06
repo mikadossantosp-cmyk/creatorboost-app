@@ -1656,7 +1656,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v50-revert48';
+const SW_VERSION='v51-suche';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
@@ -4569,6 +4569,111 @@ async function renameThread(tid,current){
 
 
 
+    // ── USER-SUCHE + Vorschläge ──
+    if (path === '/suche') {
+        const botData = await fetchBot('/data');
+        if (!botData) return redirect('/feed');
+        const _adminIds2 = Array.isArray(botData._adminIds) ? botData._adminIds.map(Number) : [];
+        const myFollowingSet2 = new Set((botData.users[myUid]?.following||[]).map(String));
+        const allUsersForSearch = Object.entries(botData.users||{})
+            .filter(([uid,u]) => {
+                if (String(uid) === String(myUid)) return false;
+                if (_adminIds2.includes(Number(uid))) return false;
+                if (!u || !u.started || u.inGruppe === false) return false;
+                if (u.parent_uid) return false; // Subs nicht in Suche
+                return true;
+            });
+        // Vorschläge wie auf Explore: Mutuals first, dann XP
+        const suggestions2 = [];
+        for (const [uid, u] of allUsersForSearch) {
+            if (myFollowingSet2.has(String(uid))) continue;
+            const theirFollowers = (u.followers||[]).map(String);
+            const mutuals = theirFollowers.filter(f => myFollowingSet2.has(f));
+            const score = mutuals.length * 1000 + (u.xp || 0);
+            suggestions2.push({ uid, u, mutuals, score });
+        }
+        suggestions2.sort((a,b) => b.score - a.score);
+        const topSug2 = suggestions2.slice(0, 18);
+        const sugCards2 = topSug2.map(({uid, u, mutuals}) => {
+            const grad = badgeGradient(u.role);
+            const insta = u.instagram;
+            const pic = ladeBild(uid, 'profilepic');
+            const name = u.spitzname || u.name || 'User';
+            const mutualText = mutuals.length === 0 ? 'Vorschlag' : (mutuals.length + (mutuals.length===1?' gemeinsamer':' gemeinsame'));
+            const mAvatars = mutuals.slice(0, 3).map((mid, i) => {
+                const mu = botData.users[mid] || {};
+                const mp = ladeBild(mid, 'profilepic');
+                const left = i === 0 ? '0' : '-8px';
+                return `<div style="width:18px;height:18px;border-radius:50%;background:${badgeGradient(mu.role)};border:2px solid var(--bg);overflow:hidden;flex-shrink:0;margin-left:${left};display:flex;align-items:center;justify-content:center">${mp?`<img src="/appbild/${mid}/profilepic" style="width:100%;height:100%;object-fit:cover" loading="lazy">`:mu.instagram?`<img src="https://unavatar.io/instagram/${mu.instagram}" style="width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.remove()">`:`<span style="color:#fff;font-size:9px;font-weight:700">${(mu.name||'?')[0]}</span>`}</div>`;
+            }).join('');
+            return `<div class="sug-card" data-uid="${uid}" data-search="${htmlEsc((name+' '+(u.instagram||'')+' '+(u.role||'')).toLowerCase())}">
+  <button type="button" class="sug-x" data-uid="${uid}" title="Ausblenden" onclick="event.preventDefault();event.stopPropagation();var btn=this;var c=btn.closest('.sug-card');if(c){c.style.transition='opacity 0.25s,transform 0.25s';c.style.opacity='0';c.style.transform='scale(0.85)';setTimeout(function(){c.remove();},250);}return false">×</button>
+  <a href="/profil/${uid}" style="text-decoration:none;color:inherit;display:block">
+    <div class="sug-card-banner" style="background:${grad}"></div>
+    <div class="sug-avatar" style="background:${grad}${getRingBoxShadow(u)}">
+      <span style="position:absolute">${htmlEsc((name[0]||'?').toUpperCase())}</span>
+      ${pic?`<img src="/appbild/${uid}/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:50%" loading="lazy">`:insta?`<img src="https://unavatar.io/instagram/${insta}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:50%" loading="lazy" onerror="this.remove()">`:''}
+    </div>
+    <div class="sug-info">
+      <div class="sug-name">${htmlEsc(name)}</div>
+      <div class="sug-role">${htmlEsc(u.role||'🆕 New')}${u.xp?'  ·  '+u.xp+' XP':''}</div>
+      ${mAvatars ? `<div class="sug-meta"><div style="display:flex;align-items:center">${mAvatars}</div></div>` : ''}
+      <div class="sug-mutuals${mutuals.length?' has-mutual':''}">${mutualText}</div>
+    </div>
+  </a>
+  <form method="POST" action="/follow-form" style="margin:0">
+    <input type="hidden" name="uid" value="${uid}">
+    <input type="hidden" name="back" value="/suche">
+    <button type="submit" class="sug-btn js-sug-follow" data-follow-uid="${uid}">+ Folgen</button>
+  </form>
+</div>`;
+        }).join('');
+        return html(`
+<div class="topbar"><a href="/nachrichten" class="icon-btn" style="font-size:22px;text-decoration:none">‹</a><div style="font-size:15px;font-weight:700;flex:1;text-align:center">User suchen</div><div style="width:38px"></div></div>
+<div style="padding:14px 16px 8px">
+  <div style="position:relative">
+    <svg style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <input type="text" id="user-search-input" placeholder="Name, Instagram oder Rolle..." autocomplete="off" autocapitalize="none" spellcheck="false" style="width:100%;background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:12px 14px 12px 42px;color:var(--text);font-size:14px;outline:none;font-family:var(--font);box-sizing:border-box;transition:border-color 0.2s">
+    <button id="user-search-clear" onclick="document.getElementById('user-search-input').value='';filterSearch();" style="display:none;position:absolute;right:8px;top:50%;transform:translateY(-50%);background:var(--bg4);border:none;width:26px;height:26px;border-radius:50%;color:var(--muted);font-size:14px;cursor:pointer">×</button>
+  </div>
+</div>
+<div id="search-empty" style="display:none;padding:60px 24px;text-align:center;color:var(--muted)">
+  <div style="font-size:48px;margin-bottom:12px;opacity:0.5">🔍</div>
+  <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px">Keine Treffer</div>
+  <div style="font-size:12px">Versuch's mit einem anderen Suchbegriff</div>
+</div>
+<div style="margin:8px 0 22px">
+  <div style="display:flex;align-items:flex-end;justify-content:space-between;padding:0 16px 12px;gap:8px">
+    <div>
+      <div style="display:flex;align-items:center;gap:7px;font-size:10px;font-weight:800;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-bottom:3px"><span style="display:inline-block;width:14px;height:1.5px;background:linear-gradient(90deg,#a78bfa,transparent)"></span>Entdecken</div>
+      <h3 style="font-size:17px;font-weight:800;margin:0;color:var(--text);letter-spacing:-0.3px;line-height:1.15">Personen, die du<br>kennen könntest</h3>
+    </div>
+    ${topSug2.length?`<div style="display:inline-flex;align-items:center;gap:5px;padding:5px 10px;background:rgba(167,139,250,0.12);border:1px solid rgba(167,139,250,0.25);border-radius:999px;font-size:11px;font-weight:700;color:#a78bfa">${topSug2.length} neu</div>`:''}
+  </div>
+  <div class="sug-list" id="sug-search-list">${sugCards2}</div>
+</div>
+<script>
+function filterSearch(){
+  const q=(document.getElementById('user-search-input')?.value||'').toLowerCase().trim();
+  const clearBtn=document.getElementById('user-search-clear');
+  if(clearBtn) clearBtn.style.display=q?'flex':'none';
+  let visible=0;
+  document.querySelectorAll('#sug-search-list .sug-card').forEach(c=>{
+    const txt=(c.dataset.search||'')+' '+(c.querySelector('.sug-name')?.textContent||'').toLowerCase();
+    const hit=!q||txt.toLowerCase().includes(q);
+    c.style.display=hit?'':'none';
+    if(hit) visible++;
+  });
+  const list=document.getElementById('sug-search-list');
+  const empty=document.getElementById('search-empty');
+  if(list) list.style.display=visible?'':'none';
+  if(empty) empty.style.display=visible?'none':'block';
+}
+document.getElementById('user-search-input')?.addEventListener('input',filterSearch);
+</script>
+`, 'messages');
+    }
+
     if (path === '/nachrichten') {
         const botData = await fetchBot('/data');
         if (!botData) return redirect('/feed');
@@ -4608,7 +4713,7 @@ async function renameThread(tid,current){
             threads.unshift({ id:'general', name:'Allgemein', emoji:'💬', last_msg:lastCF?{text:lastCF.text,name:lastCF.name||lastCF.username,timestamp:lastCF.timestamp}:null, msg_count:Math.max(cfeed.length, thrMsgsAll['general']?.length||0) });
         }
         const convHtml = require('./chat-list-render')({ myConvos, botData, myUid, feedPreview, totalThreadUnread, ladeBild, adminIds, onlineUids: getOnlineUids(), threadsList: threads, threadLastRead: lastReadAll });
-        return html(`<div class="topbar"><div class="topbar-logo">Nachrichten</div></div><div style="padding-bottom:80px">${convHtml}</div>`, 'messages');
+        return html(`<div class="topbar"><div class="topbar-logo">Nachrichten</div><div class="topbar-actions"><a href="/suche" class="icon-btn" title="User suchen" style="text-decoration:none"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></a></div></div><div style="padding-bottom:80px">${convHtml}</div>`, 'messages');
     }
 
     // ── BENACHRICHTIGUNGEN ──
@@ -4831,18 +4936,7 @@ document.getElementById('search-input').focus();
     </a>`}
   </div>
 </div>
-${topSuggestions.length ? `
-<div style="margin:4px 0 22px">
-  <div style="display:flex;align-items:flex-end;justify-content:space-between;padding:0 16px 12px;gap:8px">
-    <div>
-      <div style="display:flex;align-items:center;gap:7px;font-size:10px;font-weight:800;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-bottom:3px"><span style="display:inline-block;width:14px;height:1.5px;background:linear-gradient(90deg,#a78bfa,transparent)"></span>Entdecken</div>
-      <h3 style="font-size:17px;font-weight:800;margin:0;color:var(--text);letter-spacing:-0.3px;line-height:1.15">Personen, die du<br>kennen könntest</h3>
-    </div>
-    <div style="display:inline-flex;align-items:center;gap:5px;padding:5px 10px;background:rgba(167,139,250,0.12);border:1px solid rgba(167,139,250,0.25);border-radius:999px;font-size:11px;font-weight:700;color:#a78bfa">${topSuggestions.length} neu</div>
-  </div>
-  <div class="sug-list">${sugCards}</div>
-</div>
-` : ''}
+${''/* Personen-die-du-kennen-koenntest-Section ist umgezogen nach /suche (siehe Nachrichten-Topbar) */}
 <div style="padding:0 16px 14px">
   <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">⚡ Aktuelle Highlights</div>
   <a href="/explore?tab=ranking" class="highlight-card">
