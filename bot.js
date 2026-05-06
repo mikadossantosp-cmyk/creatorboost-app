@@ -683,9 +683,9 @@ ${session ? `
     <svg viewBox="0 0 24 24" fill="${page==='feed'?'currentColor':'none'}" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
     ${page==='feed'?'<div class="nav-dot"></div>':''}
   </a>
-  <a href="/suche" class="nav-item ${page==='search'?'active':''}">
-    <svg viewBox="0 0 24 24" fill="${page==='search'?'currentColor':'none'}" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-    ${page==='search'?'<div class="nav-dot"></div>':''}
+  <a href="/explore" class="nav-item ${page==='explore'?'active':''}">
+    <svg viewBox="0 0 24 24" fill="${page==='explore'?'currentColor':'none'}" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    ${page==='explore'?'<div class="nav-dot"></div>':''}
   </a>
   <button class="nav-plus" onclick="openPlusSheet()">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="18" height="18"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -1656,7 +1656,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v52-suchenav';
+const SW_VERSION='v53-suche2';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
@@ -4629,7 +4629,7 @@ async function renameThread(tid,current){
 </div>`;
         }).join('');
         return html(`
-<div class="topbar"><div class="topbar-logo">Suche</div></div>
+<div class="topbar"><a href="/nachrichten" class="icon-btn" style="font-size:22px;text-decoration:none">‹</a><div style="font-size:15px;font-weight:700;flex:1;text-align:center">User suchen</div><div style="width:38px"></div></div>
 <div style="padding:14px 16px 8px">
   <div style="position:relative">
     <svg style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -4671,14 +4671,7 @@ function filterSearch(){
 }
 document.getElementById('user-search-input')?.addEventListener('input',filterSearch);
 </script>
-<div style="margin:24px 16px 32px">
-  <a href="/explore" style="display:flex;align-items:center;gap:12px;padding:14px 16px;background:linear-gradient(135deg,rgba(167,139,250,0.08),rgba(77,171,247,0.08));border:1px solid rgba(167,139,250,0.2);border-radius:14px;text-decoration:none;color:var(--text)">
-    <div style="font-size:24px">✨</div>
-    <div style="flex:1"><div style="font-size:13.5px;font-weight:700">Creator Hub</div><div style="font-size:11.5px;color:var(--muted);margin-top:2px">News, Ranking, Tipps, Shop & Diamanten</div></div>
-    <div style="font-size:18px;color:var(--muted)">→</div>
-  </a>
-</div>
-`, 'search');
+`, 'messages');
     }
 
     if (path === '/nachrichten') {
@@ -4720,7 +4713,7 @@ document.getElementById('user-search-input')?.addEventListener('input',filterSea
             threads.unshift({ id:'general', name:'Allgemein', emoji:'💬', last_msg:lastCF?{text:lastCF.text,name:lastCF.name||lastCF.username,timestamp:lastCF.timestamp}:null, msg_count:Math.max(cfeed.length, thrMsgsAll['general']?.length||0) });
         }
         const convHtml = require('./chat-list-render')({ myConvos, botData, myUid, feedPreview, totalThreadUnread, ladeBild, adminIds, onlineUids: getOnlineUids(), threadsList: threads, threadLastRead: lastReadAll });
-        return html(`<div class="topbar"><div class="topbar-logo">Nachrichten</div></div><div style="padding-bottom:80px">${convHtml}</div>`, 'messages');
+        return html(`<div class="topbar"><div class="topbar-logo">Nachrichten</div><div class="topbar-actions"><a href="/suche" class="icon-btn" title="User suchen" style="text-decoration:none"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></a></div></div><div style="padding-bottom:80px">${convHtml}</div>`, 'messages');
     }
 
     // ── BENACHRICHTIGUNGEN ──
