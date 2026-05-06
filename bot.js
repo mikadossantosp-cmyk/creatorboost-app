@@ -516,10 +516,14 @@ textarea.form-input{resize:none;min-height:80px}
 .comm-live-dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse-dot 1.5s ease-in-out infinite}
 @keyframes pulse-dot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.85)}}
 /* ── EXPLORE ── */
-.explore-tabs{display:flex;flex-wrap:wrap;gap:8px;padding:8px 16px 12px;overflow-x:hidden}
-
-.explore-tab{flex:1 1 calc(33.333% - 6px);min-width:0;padding:7px 4px;border-radius:20px;font-size:11px;font-weight:700;background:var(--bg4);color:var(--muted);border:none;cursor:pointer;transition:all .2s;font-family:var(--font);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.explore-tab.active{background:var(--accent);color:#fff;box-shadow:0 0 14px rgba(255,107,107,.35)}
+.explore-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:10px 16px 16px}
+.explore-tab{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:14px 6px;border-radius:18px;font-size:12.5px;font-weight:700;background:var(--bg3);color:var(--text);border:1px solid var(--border2);cursor:pointer;transition:transform 0.18s cubic-bezier(0.34,1.56,0.64,1),box-shadow 0.2s,background 0.2s;font-family:var(--font);text-align:center;line-height:1.2;overflow:hidden;min-height:78px}
+.explore-tab .et-emoji{font-size:24px;line-height:1;display:block}
+.explore-tab .et-label{font-size:12px;font-weight:700;color:var(--text);opacity:0.95}
+.explore-tab:active{transform:scale(0.95)}
+.explore-tab.active{background:linear-gradient(135deg,var(--accent),var(--purple,#a78bfa));color:#fff;border-color:transparent;box-shadow:0 6px 20px rgba(167,139,250,0.35),0 0 0 1px rgba(255,255,255,0.06) inset;transform:scale(1.02)}
+.explore-tab.active .et-label{color:#fff}
+.explore-tab.active::after{content:"";position:absolute;inset:0;border-radius:18px;background:radial-gradient(ellipse at top,rgba(255,255,255,0.12),transparent 60%);pointer-events:none}
 .explore-welcome{margin:0 16px 16px;border-radius:16px;overflow:hidden;position:relative;min-height:220px;background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460)}
 .highlight-card{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:14px;display:flex;align-items:center;gap:12px;margin-bottom:8px;text-decoration:none;color:var(--text);transition:background .2s}
 .highlight-card:active{background:rgba(255,255,255,.08)}
@@ -1621,7 +1625,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v31-diamanten';
+const SW_VERSION='v32-tabs';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
@@ -5149,12 +5153,12 @@ async function nlDelete(id){if(!confirm('Eintrag löschen?'))return;const r=awai
         };
 
         const tabs = [
-            {id:'allgemein',label:'Allgemein'},
-            {id:'ranking',label:'🏆 Ranking'},
-            {id:'tipps',label:'💡 Tipps'},
-            {id:'regeln',label:'📋 Regeln'},
-            {id:'shop',label:'💎 Shop'},
-            {id:'newsletter',label:'📩 Newsletter'},
+            {id:'allgemein', emoji:'✨', label:'Übersicht'},
+            {id:'ranking',   emoji:'🏆', label:'Ranking'},
+            {id:'tipps',     emoji:'💡', label:'Tipps'},
+            {id:'regeln',    emoji:'📋', label:'Regeln'},
+            {id:'shop',      emoji:'💎', label:'Shop'},
+            {id:'newsletter',emoji:'📩', label:'News'},
         ];
 
         return html(`
@@ -5169,7 +5173,7 @@ async function nlDelete(id){if(!confirm('Eintrag löschen?'))return;const r=awai
   <div style="font-size:13px;color:var(--muted);margin-top:3px">Entdecke, lerne und wachse als Creator</div>
 </div>
 <div class="explore-tabs">
-  ${tabs.map(t=>`<button class="explore-tab${tab===t.id?' active':''}" onclick="location.href='/explore?tab=${t.id}'">${t.label}</button>`).join('')}
+  ${tabs.map(t=>`<button class="explore-tab${tab===t.id?' active':''}" onclick="location.href='/explore?tab=${t.id}'"><span class="et-emoji">${t.emoji}</span><span class="et-label">${t.label}</span></button>`).join('')}
 </div>
 <div id="explore-content" style="padding-bottom:${tab==='allgemein'?'0':'80px'}">
   ${tabContent[tab]||tabContent.allgemein}
