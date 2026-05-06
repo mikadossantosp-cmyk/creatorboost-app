@@ -2975,6 +2975,7 @@ p{line-height:1.65;color:var(--muted)}
         if (body.tiktok !== undefined) updateData.tiktok = body.tiktok;
         if (body.youtube !== undefined) updateData.youtube = body.youtube;
         if (body.twitter !== undefined) updateData.twitter = body.twitter;
+        if (body.instagram !== undefined) updateData.instagram = body.instagram;
         if (body.banner !== undefined) updateData.banner = body.banner;
         await postBot('/update-profile-api', updateData);
         if (session) {
@@ -5755,6 +5756,14 @@ async function toggleFollow(uid,btn){
   <input type="text" class="form-input" id="inp-spitzname" placeholder="Dein Spitzname" maxlength="30" value="${u.spitzname||''}">
 </div>
 <div style="padding:16px;border-bottom:1px solid var(--border2)">
+  <div class="form-label">Instagram</div>
+  <div style="position:relative">
+    <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:14px;pointer-events:none">@</span>
+    <input type="text" class="form-input" id="inp-instagram" placeholder="dein.instagram" maxlength="50" value="${(u.instagram||'').replace(/^@/,'')}" style="padding-left:30px" autocapitalize="none" spellcheck="false">
+  </div>
+  <div class="form-hint">Wird als Profilbild & Verlinkung genutzt</div>
+</div>
+<div style="padding:16px;border-bottom:1px solid var(--border2)">
   <div class="form-label">Nische</div>
   <input type="text" class="form-input" id="inp-nische" placeholder="z.B. Fitness, Food, Travel..." maxlength="50" value="${u.nische||''}">
 </div>
@@ -5921,7 +5930,8 @@ async function saveProfile() {
     try {
         const nische = document.getElementById('inp-nische')?.value?.trim()||'';
         const website = document.getElementById('inp-website')?.value?.trim()||'';
-        const payload = {bio, spitzname, accentColor: selectedAccent, theme, nische, website};
+        const instagram = (document.getElementById('inp-instagram')?.value||'').replace(/^@/,'').trim();
+        const payload = {bio, spitzname, accentColor: selectedAccent, theme, nische, website, instagram};
         if (selectedBanner) payload.banner = selectedBanner;
         const res = await fetch('/api/save-profile', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
         const data = await res.json();
