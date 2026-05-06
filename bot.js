@@ -1669,7 +1669,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v58-news-push';
+const SW_VERSION='v59-notifpro';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
@@ -4724,46 +4724,88 @@ document.getElementById('user-search-input')?.addEventListener('input',filterSea
         return html(`
 <div class="topbar"><div class="topbar-logo">Aktivität</div></div>
 <style>
-.notif-section{padding:6px 16px 4px;font-size:10.5px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);margin-top:14px}
-.notif-row{display:flex;gap:12px;align-items:center;padding:11px 16px;text-decoration:none;color:inherit;transition:background 0.15s;border-bottom:1px solid var(--border2);position:relative}
+.notif-filters{display:flex;gap:6px;padding:10px 16px 12px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;border-bottom:1px solid var(--border2)}
+.notif-filters::-webkit-scrollbar{display:none}
+.notif-filter{flex-shrink:0;padding:7px 14px;border-radius:999px;font-size:12.5px;font-weight:700;color:var(--muted);background:var(--surface-tint);border:1px solid var(--border2);cursor:pointer;transition:background 0.15s,color 0.15s,transform 0.12s;-webkit-tap-highlight-color:transparent;letter-spacing:0.1px}
+.notif-filter:active{transform:scale(0.94)}
+.notif-filter.active{background:var(--text);color:var(--bg);border-color:var(--text)}
+.notif-section{padding:14px 16px 6px;font-size:11px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;color:var(--muted)}
+.notif-row{display:flex;gap:12px;align-items:center;padding:13px 16px;text-decoration:none;color:inherit;transition:background 0.15s;border-bottom:1px solid var(--border2);position:relative;animation:notif-in 0.25s cubic-bezier(0.16,1,0.3,1) backwards}
+.notif-row:nth-child(1){animation-delay:0.02s}
+.notif-row:nth-child(2){animation-delay:0.05s}
+.notif-row:nth-child(3){animation-delay:0.08s}
+.notif-row:nth-child(4){animation-delay:0.11s}
+.notif-row:nth-child(n+5){animation-delay:0.14s}
+@keyframes notif-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 .notif-row:hover{background:var(--surface-tint)}
-.notif-row.unread{background:linear-gradient(90deg,rgba(255,107,107,0.04),transparent 60%)}
-.notif-row.unread::before{content:"";position:absolute;left:6px;top:50%;transform:translateY(-50%);width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px rgba(255,107,107,0.5)}
-.notif-icon{flex-shrink:0;width:42px;height:42px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:20px;background:var(--bg2);border:1px solid var(--border2)}
-.notif-icon.like{background:rgba(255,107,107,0.12);border-color:rgba(255,107,107,0.25)}
-.notif-icon.follow{background:rgba(167,139,250,0.12);border-color:rgba(167,139,250,0.25)}
-.notif-icon.news{background:rgba(77,171,247,0.12);border-color:rgba(77,171,247,0.25)}
-.notif-icon.diamond{background:linear-gradient(135deg,rgba(245,158,11,0.18),rgba(167,139,250,0.18));border-color:rgba(245,158,11,0.3)}
-.notif-icon.warn{background:rgba(245,158,11,0.12);border-color:rgba(245,158,11,0.3)}
-.notif-text{flex:1;min-width:0;font-size:13.5px;line-height:1.4;color:var(--text)}
-.notif-time{font-size:11.5px;color:var(--muted);margin-top:3px;font-weight:500}
-.notif-empty{padding:80px 24px;text-align:center;color:var(--muted)}
-.notif-empty-icon{font-size:48px;margin-bottom:14px;opacity:0.5}
-.notif-empty-text{font-size:15px;font-weight:700;color:var(--text);margin-bottom:6px}
-.notif-empty-sub{font-size:12.5px;color:var(--muted);line-height:1.5}
+.notif-row.unread{background:linear-gradient(90deg,rgba(255,107,107,0.05),transparent 70%)}
+.notif-row.unread::before{content:"";position:absolute;left:7px;top:50%;transform:translateY(-50%);width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px rgba(255,107,107,0.5)}
+.notif-icon{flex-shrink:0;width:44px;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:20px;background:var(--bg2);border:1px solid var(--border2);font-weight:700}
+.notif-icon.like{background:linear-gradient(135deg,rgba(255,107,107,0.15),rgba(255,107,107,0.06));border-color:rgba(255,107,107,0.3);box-shadow:0 4px 12px rgba(255,107,107,0.1)}
+.notif-icon.follow{background:linear-gradient(135deg,rgba(167,139,250,0.15),rgba(167,139,250,0.06));border-color:rgba(167,139,250,0.3);box-shadow:0 4px 12px rgba(167,139,250,0.1)}
+.notif-icon.news{background:linear-gradient(135deg,rgba(77,171,247,0.15),rgba(77,171,247,0.06));border-color:rgba(77,171,247,0.3);box-shadow:0 4px 12px rgba(77,171,247,0.1)}
+.notif-icon.diamond{background:linear-gradient(135deg,rgba(245,158,11,0.18),rgba(167,139,250,0.18));border-color:rgba(245,158,11,0.35);box-shadow:0 4px 14px rgba(245,158,11,0.15)}
+.notif-icon.warn{background:linear-gradient(135deg,rgba(245,158,11,0.18),rgba(239,68,68,0.10));border-color:rgba(245,158,11,0.4);box-shadow:0 4px 12px rgba(245,158,11,0.12)}
+.notif-icon.message{background:linear-gradient(135deg,rgba(34,197,94,0.15),rgba(34,197,94,0.06));border-color:rgba(34,197,94,0.3);box-shadow:0 4px 12px rgba(34,197,94,0.1)}
+.notif-text{flex:1;min-width:0;font-size:13.5px;line-height:1.42;color:var(--text);font-weight:500}
+.notif-text b{font-weight:800}
+.notif-time{font-size:11.5px;color:var(--muted);margin-top:3px;font-weight:600;letter-spacing:0.1px}
+.notif-arrow{font-size:18px;color:var(--muted2);flex-shrink:0;opacity:0.4;transition:opacity 0.15s}
+.notif-row:hover .notif-arrow{opacity:1}
+.notif-empty{padding:90px 24px;text-align:center;color:var(--muted)}
+.notif-empty-icon{font-size:56px;margin-bottom:16px;opacity:0.5;animation:bell-wiggle 2.5s ease-in-out infinite}
+@keyframes bell-wiggle{0%,80%,100%{transform:rotate(0)}85%,95%{transform:rotate(-8deg)}90%{transform:rotate(8deg)}}
+.notif-empty-text{font-size:16px;font-weight:800;color:var(--text);margin-bottom:6px;letter-spacing:-0.2px}
+.notif-empty-sub{font-size:13px;color:var(--muted);line-height:1.55;max-width:280px;margin:0 auto}
 </style>
+<div class="notif-filters">
+  <button class="notif-filter active" data-f="all">Alle</button>
+  <button class="notif-filter" data-f="like">❤️ Likes</button>
+  <button class="notif-filter" data-f="follow">👤 Follower</button>
+  <button class="notif-filter" data-f="news">📩 News</button>
+  <button class="notif-filter" data-f="diamond">💎 Diamanten</button>
+  <button class="notif-filter" data-f="message">💬 Nachrichten</button>
+  <button class="notif-filter" data-f="warn">⚠️ System</button>
+</div>
 <div id="notif-list" style="padding:0 0 80px">
   <div class="notif-empty"><div class="notif-empty-icon">⏳</div><div class="notif-empty-text">Lädt...</div></div>
 </div>
 <script>
 function relTime(ts){const m=Math.round((Date.now()-ts)/60000);if(m<1)return 'gerade eben';if(m<60)return 'vor '+m+' Min';const h=Math.round(m/60);if(h<24)return 'vor '+h+' Std';const d=Math.round(h/24);if(d<7)return 'vor '+d+'d';return new Date(ts).toLocaleDateString('de-DE',{day:'2-digit',month:'short'});}
-function iconClass(text,icon){const t=(text||'').toLowerCase();const i=icon||'';if(i==='❤️'||t.includes('liked'))return 'like';if(i==='👤'||t.includes('folgt')||t.includes('follow'))return 'follow';if(i==='📩'||t.includes('newsletter')||t.includes('news'))return 'news';if(i==='💎'||t.includes('diamant'))return 'diamond';if(i==='⚠️'||t.includes('warn')||t.includes('verwarnung'))return 'warn';return '';}
+function classify(n){const t=(n.text||'').toLowerCase();const i=n.icon||'';if(i==='❤️'||t.includes('liked')||t.includes('gelikt'))return 'like';if(i==='👤'||t.includes('folgt')||t.includes('follow'))return 'follow';if(i==='📩'||t.includes('newsletter')||t.includes('news'))return 'news';if(i==='💎'||t.includes('diamant'))return 'diamond';if(i==='⚠️'||t.includes('warn')||t.includes('verwarnung'))return 'warn';if(i==='💬'||t.includes('kommentiert')||t.includes('nachricht'))return 'message';return '';}
+function targetUrl(n){const c=classify(n);if(c==='news')return '/explore?tab=newsletter';if(c==='diamond')return '/diamanten';if(c==='message')return '/nachrichten';if(c==='follow')return '/suche';return '/feed';}
+let _allNotifs=[],_currentFilter='all';
+function escTxt(s){return String(s||'').replace(/[<>&]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;"}[c]));}
+function renderRow(n){const c=classify(n);return '<a href="'+targetUrl(n)+'" class="notif-row '+(n.read?'':'unread')+'"><div class="notif-icon '+c+'">'+(n.icon||'🔔')+'</div><div style="flex:1;min-width:0"><div class="notif-text">'+escTxt(n.text)+'</div><div class="notif-time">'+relTime(n.timestamp||0)+'</div></div><div class="notif-arrow">›</div></a>';}
+function renderList(){
+  const list=document.getElementById('notif-list');
+  let items=_allNotifs;
+  if(_currentFilter!=='all') items=items.filter(n=>classify(n)===_currentFilter);
+  if(!items.length){
+    const map={all:['🔔','Alles ruhig','Hier erscheinen Likes, Follower,<br>News und Diamant-Belohnungen'],like:['❤️','Keine Likes bisher','Wenn dich jemand liked,<br>steht es hier'],follow:['👤','Keine neuen Follower','Sobald dir jemand folgt,<br>wirst du hier benachrichtigt'],news:['📩','Keine News','Newsletter-Einträge erscheinen hier'],diamond:['💎','Keine Belohnungen','Verdiene Diamanten durch Engagement'],message:['💬','Keine Nachrichten','Kommentare und DMs erscheinen hier'],warn:['⚠️','Alles im grünen Bereich','Keine System-Hinweise']};
+    const e=map[_currentFilter]||map.all;
+    list.innerHTML='<div class="notif-empty"><div class="notif-empty-icon">'+e[0]+'</div><div class="notif-empty-text">'+e[1]+'</div><div class="notif-empty-sub">'+e[2]+'</div></div>';
+    return;
+  }
+  const now=Date.now();const today=[],week=[],older=[];
+  items.forEach(n=>{const age=now-(n.timestamp||0);if(age<86400000)today.push(n);else if(age<604800000)week.push(n);else older.push(n);});
+  let html='';
+  if(today.length){html+='<div class="notif-section">Heute</div>'+today.map(renderRow).join('');}
+  if(week.length){html+='<div class="notif-section">Diese Woche</div>'+week.map(renderRow).join('');}
+  if(older.length){html+='<div class="notif-section">Älter</div>'+older.map(renderRow).join('');}
+  list.innerHTML=html;
+}
+document.querySelectorAll('.notif-filter').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.notif-filter').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    _currentFilter=btn.dataset.f;
+    renderList();
+  });
+});
 fetch('/api/notifications').then(r=>r.json()).then(data=>{
-    const list=document.getElementById('notif-list');
-    const items=(data.notifications||[]).slice().sort((a,b)=>(b.timestamp||0)-(a.timestamp||0));
-    if(!items.length){
-        list.innerHTML='<div class="notif-empty"><div class="notif-empty-icon">🔔</div><div class="notif-empty-text">Alles ruhig</div><div class="notif-empty-sub">Hier erscheinen Likes, Follower,<br>News und Diamant-Belohnungen</div></div>';
-        return;
-    }
-    const now=Date.now();
-    const today=[],week=[],older=[];
-    items.forEach(n=>{const age=now-(n.timestamp||0);if(age<86400000)today.push(n);else if(age<604800000)week.push(n);else older.push(n);});
-    const renderRow=n=>'<div class="notif-row '+(n.read?'':'unread')+'"><div class="notif-icon '+iconClass(n.text,n.icon)+'">'+(n.icon||'🔔')+'</div><div style="flex:1;min-width:0"><div class="notif-text">'+(n.text||'').replace(/[<>&]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;"}[c]))+'</div><div class="notif-time">'+relTime(n.timestamp||0)+'</div></div></div>';
-    let html='';
-    if(today.length){html+='<div class="notif-section">Heute</div>'+today.map(renderRow).join('');}
-    if(week.length){html+='<div class="notif-section">Diese Woche</div>'+week.map(renderRow).join('');}
-    if(older.length){html+='<div class="notif-section">Älter</div>'+older.map(renderRow).join('');}
-    list.innerHTML=html;
+  _allNotifs=(data.notifications||[]).slice().sort((a,b)=>(b.timestamp||0)-(a.timestamp||0));
+  renderList();
 });
 </script>`, 'notif');
     }
