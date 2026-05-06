@@ -2366,7 +2366,7 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
   <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);border-radius:12px;padding:14px;font-size:12.5px;line-height:1.55;color:var(--text)">
     <b>⚠️ Wichtig:</b> Es gelten weiterhin die Standard-Regeln (1 Post = 5 Likes + Kommentar). Niemand muss alles machen — wer aber mehr engagiert, wird belohnt 🙏
   </div>
-  <div style="margin-top:18px;text-align:center"><a href="/shop" style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;padding:12px 22px;border-radius:14px;font-size:13px;font-weight:700;text-decoration:none;box-shadow:0 4px 14px rgba(167,139,250,0.4)">💎 Zum Shop</a></div>
+  <div style="margin-top:18px;text-align:center"><a href="/explore?tab=shop" style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;padding:12px 22px;border-radius:14px;font-size:13px;font-weight:700;text-decoration:none;box-shadow:0 4px 14px rgba(167,139,250,0.4)">💎 Zum Shop</a></div>
 </div>`, 'diamanten');
     }
 
@@ -4913,6 +4913,20 @@ function switchRanking(tab, btn) {
           <button onclick="buyExtraLink()" id="buy-extralink-btn" style="background:${extraLinkCanBuy?'linear-gradient(135deg,#a78bfa,#7c3aed)':'var(--bg4)'};color:${extraLinkCanBuy?'#fff':'var(--muted)'};border:none;border-radius:12px;padding:8px 20px;font-size:13px;font-weight:700;cursor:${extraLinkCanBuy?'pointer':'not-allowed'}" ${extraLinkCanBuy?'':'disabled'}>Kaufen</button>
         </div>
         ${!extraLinkCanBuy?`<div style="font-size:11px;color:rgba(255,59,48,.8);margin-top:8px">Nicht genug Diamanten (benötigt: 5, vorhanden: ${myDiamonds})</div>`:''}
+      </div>
+    </div>
+  </div>
+  <div style="background:linear-gradient(135deg,rgba(245,158,11,0.12),rgba(167,139,250,0.12));border:1px solid rgba(245,158,11,0.3);border-radius:16px;padding:16px;margin-bottom:20px">
+    <div style="display:flex;align-items:flex-start;gap:14px">
+      <div style="font-size:36px;flex-shrink:0">⭐</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:15px;font-weight:700;margin-bottom:4px">Extra-Superlink diese Woche</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.5">Du hast deinen wöchentlichen Superlink schon verbraucht? Poste einen <b style="color:var(--text)">zweiten Superlink</b> für 10 💎 — direkt beim Posten in der App oder im Bot wird er automatisch abgerechnet.</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+          <div style="font-size:14px;font-weight:800;color:#f59e0b">💎 10 Diamanten / Superlink</div>
+          <a href="/feed?tab=engagement" style="background:linear-gradient(135deg,#f59e0b,#a78bfa);color:#fff;border:none;border-radius:12px;padding:8px 18px;font-size:13px;font-weight:700;text-decoration:none">Posten</a>
+        </div>
+        ${myDiamonds < 10 ? `<div style="font-size:11px;color:rgba(255,59,48,.8);margin-top:8px">Nicht genug Diamanten (benötigt: 10, vorhanden: ${myDiamonds})</div>` : ''}
       </div>
     </div>
   </div>
