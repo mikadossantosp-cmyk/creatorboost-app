@@ -1775,7 +1775,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v73-tg-threads';
+const SW_VERSION='v74-tg-msg';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
@@ -4328,16 +4328,16 @@ async function createThread(){
                 const isLastInSeries = !next || String(next.uid) !== String(m.uid) || ((next.timestamp||0) - (m.timestamp||0)) > 5*60*1000;
                 const showAvatar = isLastInSeries;
                 // Reply-Quote
-                const replyBlock = m.replyTo ? `<div style="background:rgba(0,0,0,0.18);border-left:3px solid ${c};padding:5px 9px;margin:0 0 5px 0;border-radius:0 6px 6px 0;font-size:12px;line-height:1.4;color:rgba(255,255,255,0.85)"><div style="font-weight:700;color:${c};font-size:11px">${esc(m.replyTo.name||'?')}</div><div style="opacity:0.85;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc((m.replyTo.text||'').slice(0,80))}</div></div>` : '';
-                // Bubble: alle dunkelgrau (Telegram-Style)
-                const nameInBubble = m.uid
-                    ? `<a href="/profil/${esc(m.uid)}" style="font-size:14.5px;font-weight:700;color:${c};text-decoration:none;display:block;margin-bottom:3px">${m.role?esc(m.role)+' ':''}${esc(m.name)}</a>`
-                    : `<div style="font-size:14.5px;font-weight:700;color:${c};margin-bottom:3px">${m.role?esc(m.role)+' ':''}${esc(m.name)}</div>`;
-                const textBody = m.text ? `<div style="font-size:16.5px;line-height:1.42;color:#e4e6eb;word-break:break-word">${esc(m.text)}</div>` : '';
-                const timeFooter = `<div style="font-size:10.5px;color:rgba(255,255,255,0.5);text-align:right;margin-top:3px;font-variant-numeric:tabular-nums">${timeStr}</div>`;
+                const replyBlock = m.replyTo ? `<div class="thr-reply-quote" style="border-left:3px solid ${isMeS?'rgba(255,255,255,0.7)':c};padding:5px 9px;margin:0 0 5px 0;border-radius:0 6px 6px 0;font-size:12.5px;line-height:1.4"><div style="font-weight:800;font-size:11.5px;${isMeS?'color:rgba(255,255,255,0.95)':'color:'+c}">${esc(m.replyTo.name||'?')}</div><div style="opacity:0.85;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc((m.replyTo.text||'').slice(0,80))}</div></div>` : '';
+                // Bubble theme-aware: own = lila Gradient (rechts), other = neutral
+                const nameInBubble = isMeS ? '' : (m.uid
+                    ? `<a href="/profil/${esc(m.uid)}" style="font-size:14.5px;font-weight:800;color:${c};text-decoration:none;display:block;margin-bottom:3px">${m.role?esc(m.role)+' ':''}${esc(m.name)}</a>`
+                    : `<div style="font-size:14.5px;font-weight:800;color:${c};margin-bottom:3px">${m.role?esc(m.role)+' ':''}${esc(m.name)}</div>`);
+                const textBody = m.text ? `<div class="thr-text" style="font-size:17.5px;line-height:1.45;word-break:break-word">${esc(m.text)}</div>` : '';
+                const timeFooter = `<div class="thr-time" style="font-size:11px;text-align:right;margin-top:3px;font-variant-numeric:tabular-nums;opacity:0.65">${timeStr}</div>`;
                 const canDelSSR = (m.uid && String(m.uid) === String(myUid)) || isAdmin;
                 const swipeAttrs = ` data-del-ts="${m.timestamp}" data-del-mid="${m.msg_id||0}"${canDelSSR ? ' data-can-del="1"' : ''}`;
-                const bubble = `<div class="thr-bubble" style="position:relative;display:inline-block;max-width:78%;background:#212121;border-radius:14px;padding:8px 12px 6px 12px;box-shadow:0 1px 2px rgba(0,0,0,0.3)">${nameInBubble}${replyBlock}${textBody}${timeFooter}</div>`;
+                const bubble = `<div class="thr-bubble${isMeS?' thr-bubble-me':''}">${nameInBubble}${replyBlock}${textBody}${timeFooter}</div>`;
                 const avatarSlot = showAvatar
                     ? `<a href="/profil/${esc(m.uid)}" style="text-decoration:none;flex-shrink:0"><div style="width:30px;height:30px;border-radius:50%;background:${c};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;position:relative;overflow:hidden${ring}">${ini}${m.uid?`<img src="/appbild/${esc(m.uid)}/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" onerror="this.remove()" loading="lazy">`:''}</div></a>`
                     : `<div style="width:30px;flex-shrink:0"></div>`;
@@ -4348,7 +4348,7 @@ async function createThread(){
                     unreadInsertedSSR = true;
                 }
                 const trashEl = '<div class="thr-swipe-trash" aria-hidden="true">↩️</div>';
-                return bannerPrefix + `<div class="thr-row"${swipeAttrs} style="display:flex;gap:8px;align-items:flex-end${isLastInSeries?'':';margin-bottom:2px'}"${firstUnreadId}>${avatarSlot}<div class="thr-row-inner" style="flex:1;min-width:0;text-align:left;display:flex">${bubble}</div>${trashEl}</div>`;
+                return bannerPrefix + `<div class="thr-row${isMeS?' thr-row-me':''}"${swipeAttrs}${firstUnreadId}>${avatarSlot}<div class="thr-row-inner">${bubble}</div>${trashEl}</div>`;
               }).join('')
             : '<div style="text-align:center;padding:60px 20px;color:var(--muted)"><div style="font-size:40px;margin-bottom:12px">💬</div><div style="font-size:14px">Noch keine Nachrichten.<br>Schreib die erste!</div></div>';
         return html(`
@@ -4363,10 +4363,22 @@ async function createThread(){
 <style>
 .thread-unread-divider{display:flex;align-items:center;justify-content:center;gap:6px;margin:14px 0 6px;padding:8px 12px;background:rgba(8,102,255,0.12);border:1px solid rgba(8,102,255,0.25);border-radius:12px;color:#4dabf7;font-size:12.5px;font-weight:700;letter-spacing:0.2px;cursor:pointer;transition:background 0.15s,transform 0.15s}
 .thread-unread-divider:active{background:rgba(8,102,255,0.18);transform:scale(0.98)}
-.thr-row{position:relative;overflow:visible;touch-action:pan-y}
-.thr-row .thr-row-inner{transition:transform 0.25s cubic-bezier(0.34,1.56,0.64,1);background:transparent}
+.thr-row{position:relative;overflow:visible;touch-action:pan-y;display:flex;gap:8px;align-items:flex-end;animation:thr-row-in 0.2s ease}
+@keyframes thr-row-in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+.thr-row .thr-row-inner{flex:1;min-width:0;display:flex;justify-content:flex-start;transition:transform 0.25s cubic-bezier(0.34,1.56,0.64,1)}
 .thr-row.swiping .thr-row-inner{transition:none}
+.thr-row-me{flex-direction:row-reverse}
+.thr-row-me .thr-row-inner{justify-content:flex-end}
+.thr-bubble{position:relative;display:inline-block;max-width:78%;padding:9px 13px 7px 13px;border-radius:16px;background:#e5e5ea;color:#0f172a;box-shadow:0 1px 2px rgba(15,23,42,0.06)}
+[data-theme=dark] .thr-bubble{background:#2c2c2e;color:#f5f5f7;box-shadow:0 1px 2px rgba(0,0,0,0.3)}
+.thr-bubble-me{background:linear-gradient(135deg,#a78bfa,#7c3aed)!important;color:#fff!important;box-shadow:0 4px 14px rgba(124,58,237,0.20)!important}
+.thr-row-me .thr-bubble{border-radius:16px 16px 4px 16px}
+.thr-row:not(.thr-row-me) .thr-bubble{border-radius:16px 16px 16px 4px}
+.thr-bubble-me .thr-time{color:rgba(255,255,255,0.85)}
+.thr-bubble-me .thr-reply-quote{background:rgba(255,255,255,0.18)}
+.thr-bubble:not(.thr-bubble-me) .thr-reply-quote{background:rgba(15,23,42,0.06)}
 .thr-swipe-trash{position:absolute;right:14px;top:50%;transform:translateY(-50%);width:42px;height:42px;border-radius:50%;background:var(--surface-tint);border:1px solid var(--border2);color:var(--text);font-size:20px;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.15s,transform 0.15s;z-index:1}
+.thr-row-me .thr-swipe-trash{right:auto;left:14px}
 .thr-row.selected .thr-bubble{box-shadow:0 0 0 2px rgba(167,139,250,0.5),0 8px 32px rgba(15,23,42,0.18);transform:scale(1.02)}
 .thr-del-btn{display:none}
 /* Telegram-Style Action-Menu für Threads */
@@ -4544,10 +4556,10 @@ async function createThread(){
   document.addEventListener('pointercancel', () => reset(false), { passive: true });
 })();
 </script>
-<div id="reply-bar" style="display:none;position:fixed;bottom:calc(108px + var(--safe-bottom));left:0;right:0;padding:7px 12px;background:rgba(0,136,204,.15);border-top:1px solid rgba(0,136,204,.3);align-items:center;gap:8px;z-index:6;box-sizing:border-box">
-  <div style="width:3px;height:32px;background:#0088cc;border-radius:2px;flex-shrink:0"></div>
-  <div style="flex:1;min-width:0"><span id="reply-name" style="font-size:11px;font-weight:700;color:#0088cc;display:block"></span><span id="reply-text" style="font-size:11px;color:var(--muted);display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:calc(100vw - 80px)"></span></div>
-  <button onclick="cancelReply()" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;flex-shrink:0;padding:4px">✕</button>
+<div id="reply-bar" style="display:none;position:fixed;bottom:calc(108px + var(--safe-bottom));left:8px;right:8px;padding:10px 12px 10px 14px;background:var(--bg);border:1px solid var(--border);border-left:3px solid #a78bfa;border-radius:14px;align-items:center;gap:10px;z-index:6;box-sizing:border-box;box-shadow:0 -4px 18px rgba(15,23,42,.10)">
+  <div style="font-size:18px;flex-shrink:0">↩️</div>
+  <div style="flex:1;min-width:0"><span id="reply-name" style="font-size:12px;font-weight:800;color:#a78bfa;display:block;letter-spacing:0.1px">Antwort an</span><span id="reply-text" style="font-size:13px;color:var(--text);display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:calc(100vw - 90px);font-weight:500;margin-top:1px"></span></div>
+  <button onclick="cancelReply()" style="background:var(--surface-tint);border:1px solid var(--border2);color:var(--text);font-size:14px;cursor:pointer;flex-shrink:0;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center">✕</button>
 </div>
 <div id="react-picker" style="display:none;position:fixed;bottom:calc(112px + var(--safe-bottom));left:50%;transform:translateX(-50%);background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:10px 14px;z-index:10;box-shadow:0 4px 24px rgba(0,0,0,.5)">
   <div style="display:flex;gap:6px;align-items:center">
@@ -4592,22 +4604,21 @@ async function createThread(){
       const next = arr[mi + 1];
       const isLastInSeries = !next || String(next.uid) !== String(m.uid) || ((next.timestamp||0) - (m.timestamp||0)) > 5*60*1000;
       const showAvatar = isLastInSeries;
-      const nameInBubble = m.uid
-        ? '<a href="/profil/'+m.uid+'" style="font-size:14.5px;font-weight:700;color:'+c+';text-decoration:none;display:block;margin-bottom:3px">'+(m.role?esc(m.role)+' ':'')+esc(m.name)+'</a>'
-        : '<div style="font-size:14.5px;font-weight:700;color:'+c+';margin-bottom:3px">'+(m.role?esc(m.role)+' ':'')+esc(m.name)+'</div>';
-      const replyBlock = m.replyTo ? '<div style="background:rgba(0,0,0,0.18);border-left:3px solid '+c+';padding:5px 9px;margin:0 0 5px 0;border-radius:0 6px 6px 0;font-size:12px;line-height:1.4;color:rgba(255,255,255,0.85)"><div style="font-weight:700;color:'+c+';font-size:11px">'+esc(m.replyTo.name||'?')+'</div><div style="opacity:0.85;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc((m.replyTo.text||'').slice(0,80))+'</div></div>' : '';
+      const nameInBubble = isMe ? '' : (m.uid
+        ? '<a href="/profil/'+m.uid+'" style="font-size:14.5px;font-weight:800;color:'+c+';text-decoration:none;display:block;margin-bottom:3px">'+(m.role?esc(m.role)+' ':'')+esc(m.name)+'</a>'
+        : '<div style="font-size:14.5px;font-weight:800;color:'+c+';margin-bottom:3px">'+(m.role?esc(m.role)+' ':'')+esc(m.name)+'</div>');
+      const replyBlock = m.replyTo ? '<div class="thr-reply-quote" style="border-left:3px solid '+(isMe?'rgba(255,255,255,0.7)':c)+';padding:5px 9px;margin:0 0 5px 0;border-radius:0 6px 6px 0;font-size:12.5px;line-height:1.4"><div style="font-weight:800;font-size:11.5px;'+(isMe?'color:rgba(255,255,255,0.95)':'color:'+c)+'">'+esc(m.replyTo.name||'?')+'</div><div style="opacity:0.85;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc((m.replyTo.text||'').slice(0,80))+'</div></div>' : '';
       let media='';
       if(m.type==='photo'&&m.mediaId)media='<img src="/api/tg-file/'+m.mediaId+'" style="max-width:100%;border-radius:10px;margin:0 0 5px;display:block" loading="lazy">';
       else if(m.type==='sticker'&&m.mediaId)media='<img src="/api/tg-file/'+m.mediaId+'" style="width:80px;height:80px;object-fit:contain;display:block;margin:0 0 5px" loading="lazy">';
       else if(m.type==='video')media='<div style="background:rgba(0,0,0,.3);border-radius:10px;padding:8px 12px;font-size:12px;color:var(--muted);margin:0 0 5px">🎬 Video — öffne Telegram zum Ansehen</div>';
-      const textBody = m.text ? '<div style="font-size:16.5px;line-height:1.42;color:#e4e6eb;word-break:break-word">'+esc(m.text)+'</div>' : '';
-      const timeFooter = '<div style="font-size:10.5px;color:rgba(255,255,255,0.5);text-align:right;margin-top:3px;font-variant-numeric:tabular-nums">'+ts+'</div>';
+      const textBody = m.text ? '<div class="thr-text" style="font-size:17.5px;line-height:1.45;word-break:break-word">'+esc(m.text)+'</div>' : '';
+      const timeFooter = '<div class="thr-time" style="font-size:11px;text-align:right;margin-top:3px;font-variant-numeric:tabular-nums;opacity:0.65">'+ts+'</div>';
       const canDel=(m.uid&&String(m.uid)===String(MY_UID))||IS_ADMIN;
       const swipeAttrsJS = ' data-del-ts="'+m.timestamp+'" data-del-mid="'+(m.msg_id||0)+'"'+(canDel ? ' data-can-del="1"' : '');
-      const reactBadges=m.reactions&&Object.keys(m.reactions).length?'<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:5px">'+Object.entries(m.reactions).map(([em,uids])=>'<button onclick="react('+m.timestamp+',\''+em+'\')" style="background:'+(uids.includes(MY_UID)?'rgba(0,136,204,.25)':'rgba(255,255,255,.07)')+';border:1px solid rgba(255,255,255,.15);border-radius:20px;padding:2px 7px;font-size:11px;cursor:pointer;color:var(--text)">'+em+' '+uids.length+'</button>').join('')+'</div>':'';
-      const actBar='<div style="display:flex;gap:6px;margin-top:4px;font-size:11px"><button onclick="setReply('+m.timestamp+')" style="background:none;border:none;color:rgba(255,255,255,0.55);cursor:pointer;padding:2px 0">↩ Antworten</button><button onclick="openReact('+m.timestamp+')" style="background:none;border:none;color:rgba(255,255,255,0.55);cursor:pointer;padding:2px 0">😊 Reagieren</button></div>';
+      const reactBadges=m.reactions&&Object.keys(m.reactions).length?'<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:5px">'+Object.entries(m.reactions).map(([em,uids])=>'<button onclick="react('+m.timestamp+',\''+em+'\')" style="background:'+(uids.includes(MY_UID)?'rgba(167,139,250,.25)':'var(--surface-tint)')+';border:1px solid var(--border2);border-radius:20px;padding:2px 7px;font-size:11px;cursor:pointer;color:var(--text)">'+em+' '+uids.length+'</button>').join('')+'</div>':'';
       const ring=m.uid&&RING_MAP[m.uid]?RING_MAP[m.uid]:'';
-      const bubble = '<div class="thr-bubble" style="position:relative;display:inline-block;max-width:78%;background:#212121;border-radius:14px;padding:8px 12px 6px 12px;box-shadow:0 1px 2px rgba(0,0,0,0.3)">'+nameInBubble+replyBlock+media+textBody+timeFooter+'</div>';
+      const bubble = '<div class="thr-bubble'+(isMe?' thr-bubble-me':'')+'">'+nameInBubble+replyBlock+media+textBody+timeFooter+'</div>';
       const avatarSlot = showAvatar
         ? '<a href="/profil/'+m.uid+'" style="text-decoration:none;flex-shrink:0"><div style="width:30px;height:30px;border-radius:50%;background:'+c+';display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;position:relative;overflow:hidden'+ring+'">'+ini(m.name)+(m.uid?'<img src="/appbild/'+m.uid+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" onerror="this.remove()" loading="lazy">':'')+'</div></a>'
         : '<div style="width:30px;flex-shrink:0"></div>';
@@ -4618,7 +4629,7 @@ async function createThread(){
         unreadInsertedJS=true;
       }
       const trashElJS = '<div class="thr-swipe-trash" aria-hidden="true">↩️</div>';
-      return banner+'<div class="thr-row"'+swipeAttrsJS+' style="display:flex;gap:8px;align-items:flex-end'+(isLastInSeries?'':';margin-bottom:2px')+'"'+firstUnreadId+'>'+avatarSlot+'<div class="thr-row-inner" style="flex:1;min-width:0;text-align:left">'+bubble+reactBadges+actBar+'</div>'+trashElJS+'</div>';
+      return banner+'<div class="thr-row'+(isMe?' thr-row-me':'')+'"'+swipeAttrsJS+firstUnreadId+'>'+avatarSlot+'<div class="thr-row-inner">'+bubble+reactBadges+'</div>'+trashElJS+'</div>';
     }).join('');
     if(atBottom){
       const ud=document.getElementById('unread-divider');
@@ -4729,8 +4740,8 @@ async function createThread(){
     replyState={ts:m.timestamp,msgId:m.msg_id||0,name:m.name||'?',text:m.text||''};
     const bar=document.getElementById('reply-bar');
     bar.style.display='flex';
-    document.getElementById('reply-name').textContent=m.name||'?';
-    document.getElementById('reply-text').textContent=(m.text||'').slice(0,60);
+    document.getElementById('reply-name').textContent='Antwort an '+(m.name||'?');
+    document.getElementById('reply-text').textContent=(m.text||'').slice(0,80);
     document.getElementById('inp').focus();
   };
   window.cancelReply=function(){

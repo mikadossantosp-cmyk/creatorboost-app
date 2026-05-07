@@ -198,7 +198,7 @@ function getStyles() {
         '.chat-bubble-wrap { max-width: 78%; display: flex; flex-direction: column; }' +
         '.chat-row-me .chat-bubble-wrap { align-items: flex-end; }' +
         '.chat-row-other .chat-bubble-wrap { align-items: flex-start; }' +
-        '.chat-bubble { padding: 8px 12px 7px; border-radius: 14px; font-size: 16.5px; line-height: 1.38; word-break: break-word; user-select: none; -webkit-user-select: none; cursor: pointer; transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1); max-width: 100%; position: relative; }' +
+        '.chat-bubble { padding: 9px 13px 7px; border-radius: 18px; font-size: 17.5px; line-height: 1.42; word-break: break-word; user-select: none; -webkit-user-select: none; cursor: pointer; transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1); max-width: 100%; position: relative; }' +
         '.chat-bubble:active { transform: scale(0.96); }' +
         '.chat-row-me .chat-bubble { background: linear-gradient(135deg,#a78bfa,#7c3aed); color: #fff; border-radius: 18px 18px 4px 18px; box-shadow: 0 4px 14px rgba(124,58,237,0.20); }' +
         '.chat-row-me.chat-row-grouped .chat-bubble { border-radius: 18px 4px 4px 18px; }' +
@@ -227,7 +227,7 @@ function getStyles() {
         '.chat-img-wrap { max-width: 260px; border-radius: inherit; overflow: hidden; cursor: pointer; }' +
         '.chat-img-wrap img { width: 100%; display: block; border-radius: inherit; transition: transform 0.3s; }' +
         '.chat-img-wrap:active img { transform: scale(0.97); }' +
-        '.chat-img-caption { padding: 11px 16px; font-size: 16.5px; line-height: 1.42; }' +
+        '.chat-img-caption { padding: 11px 16px; font-size: 17.5px; line-height: 1.45; }' +
         '.chat-audio { display: flex; align-items: center; gap: 12px; min-width: 220px; padding: 4px 0; }' +
         '.chat-audio-btn { width: 36px; height: 36px; border-radius: 50%; background: rgba(255,255,255,0.25); border: none; color: inherit; font-size: 14px; cursor: pointer; flex-shrink: 0; transition: transform 0.15s; }' +
         '.chat-audio-btn:active { transform: scale(0.9); }' +
@@ -259,13 +259,14 @@ function getStyles() {
         '.chat-row.swiping .chat-bubble-wrap { transform: translateX(var(--swipe,0)); transition: none; }' +
         '.chat-row .chat-bubble-wrap { transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1); position: relative; }' +
         '.chat-row.swiping .chat-bubble-wrap::before { content: "↩️"; position: absolute; right: -44px; top: 50%; transform: translateY(-50%); font-size: 22px; opacity: var(--swipe-op,0); width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; background: var(--surface-tint); border: 1px solid var(--border2); border-radius: 50%; }' +
-        '#reply-preview { display: none; position: fixed; bottom: var(--compose-bottom, 70px); left: 8px; right: 8px; background: var(--bg2); border: 1px solid rgba(255,255,255,0.12); border-left: 3px solid #a78bfa; border-radius: 12px; padding: 8px 12px; z-index: 50; backdrop-filter: blur(20px); box-shadow: 0 -4px 16px rgba(0,0,0,0.3); animation: rp-in 0.2s ease; }' +
+        '#reply-preview { display: none; position: fixed; bottom: var(--compose-bottom, 70px); left: 8px; right: 8px; background: var(--bg); border: 1px solid var(--border); border-left: 3px solid #a78bfa; border-radius: 14px; padding: 10px 12px 10px 14px; z-index: 50; box-shadow: 0 -4px 18px rgba(15,23,42,0.10); animation: rp-in 0.2s ease; }' +
         '#reply-preview.show { display: flex; align-items: center; gap: 10px; }' +
         '@keyframes rp-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }' +
+        '#reply-preview .rp-arrow { font-size: 18px; flex-shrink: 0; }' +
         '#reply-preview .rp-info { flex: 1; min-width: 0; }' +
-        '#reply-preview .rp-label { font-size: 11px; color: #a78bfa; font-weight: 700; }' +
-        '#reply-preview .rp-text { font-size: 12.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 1px; }' +
-        '#reply-preview .rp-close { width: 24px; height: 24px; border-radius: 50%; background: rgba(255,255,255,0.08); border: none; color: var(--text); font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }' +
+        '#reply-preview .rp-label { font-size: 12px; color: #a78bfa; font-weight: 800; letter-spacing: 0.1px; }' +
+        '#reply-preview .rp-text { font-size: 13px; color: var(--text); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 1px; }' +
+        '#reply-preview .rp-close { width: 28px; height: 28px; border-radius: 50%; background: var(--surface-tint); border: 1px solid var(--border2); color: var(--text); font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }' +
         '.chat-link-preview { display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 8px 10px; margin-top: 7px; text-decoration: none; color: var(--text); transition: background 0.15s; }' +
         '.chat-row-me .chat-link-preview { background: rgba(255,255,255,0.18); border-color: rgba(255,255,255,0.25); color: #fff; }' +
         '.chat-link-preview:active { background: rgba(255,255,255,0.12); }' +
@@ -466,7 +467,7 @@ function getScripts(myUid, otherUid) {
             '__replyState = { ts: Number(ts)||0, name: name||"?", text: (text||"").slice(0,140) };' +
             'let prev = document.getElementById("reply-preview");' +
             'if (!prev) { prev = document.createElement("div"); prev.id = "reply-preview"; document.body.appendChild(prev); }' +
-            'prev.innerHTML = "<div class=\\"rp-info\\"><div class=\\"rp-label\\">↩️ Antwort an " + (name||"User").replace(/[<>&]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;"}[c])) + "</div><div class=\\"rp-text\\">" + (text||"").replace(/[<>&]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;"}[c])) + "</div></div><button class=\\"rp-close\\" onclick=\\"chatCancelReply()\\">×</button>";' +
+            'prev.innerHTML = "<div class=\\"rp-arrow\\">↩️</div><div class=\\"rp-info\\"><div class=\\"rp-label\\">Antwort an " + (name||"User").replace(/[<>&]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;"}[c])) + "</div><div class=\\"rp-text\\">" + (text||"").replace(/[<>&]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;"}[c])) + "</div></div><button class=\\"rp-close\\" onclick=\\"chatCancelReply()\\">×</button>";' +
             'prev.classList.add("show");' +
             'document.getElementById("msg-input")?.focus();' +
             'if (navigator.vibrate) navigator.vibrate(20);' +
