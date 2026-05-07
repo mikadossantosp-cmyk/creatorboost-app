@@ -1954,7 +1954,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v106-thread-div';
+const SW_VERSION='v107-thread-noselect';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
@@ -5385,7 +5385,9 @@ function showThreadActions(tid, currentName, currentEmoji){
     const c=e.target.closest('.thr-card');
     if(c && !('ontouchstart' in window)) navigate(c);
   });
-  document.addEventListener('contextmenu',e=>{if(e.target.closest('.thr-card')){e.preventDefault();}},false);
+  document.addEventListener('contextmenu',e=>{if(e.target.closest('.thr-card')){e.preventDefault();e.stopPropagation();return false;}},true);
+  document.addEventListener('selectstart',e=>{if(e.target.closest('.thr-card')){e.preventDefault();return false;}},true);
+  document.addEventListener('dragstart',e=>{if(e.target.closest('.thr-card')){e.preventDefault();return false;}},true);
 })();
 </script>`, 'messages');
     }
