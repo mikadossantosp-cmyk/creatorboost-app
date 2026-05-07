@@ -136,7 +136,7 @@ module.exports = function renderThreadList(opts) {
         const renameBtn = isAdmin ?
             '<span class="thr-rename" onclick="event.preventDefault();event.stopPropagation();customizeThread(\'' + tid + '\',\'' + safeName.replace(/'/g, "\\'") + '\',\'' + String(icon).replace(/'/g, "\\'") + '\')">✏️</span>' : '';
 
-        return '<a href="/nachrichten/gruppe/' + tid + '" class="thr-card' + (unread > 0 ? ' unread' : '') + '">' +
+        return '<a href="/nachrichten/gruppe/' + tid + '" class="thr-card' + (unread > 0 ? ' unread' : '') + '" data-tid="' + tid + '" data-name="' + safeName.replace(/"/g,'&quot;') + '" data-emoji="' + String(icon).replace(/"/g,'&quot;') + '">' +
             '<div class="thr-icon" style="background:' + grad + '">' +
                 icon +
                 (isLive ? '<span class="thr-icon-pulse"></span>' : '') +

@@ -109,6 +109,12 @@ function getSid(req) { const m=(req.headers.cookie||'').match(/cbsid=([^;]+)/); 
 function getMyUid(session) { return session ? String(session.activeUid || session.uid) : ''; }
 // HTML-Escape für User-eingegebene Strings — verhindert Stored-XSS in profileCard, posts, comments.
 function htmlEsc(s) { return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function cleanRole(r) {
+  let s = String(r==null?'🆕 New':r);
+  s = s.replace(/⚙️?/g,'🛡️').replace(/^\?{1,4}\s*/,'🛡️ ');
+  s = s.replace(/^[\?\u{FFFD}]{1,4}\s*/u,'🛡️ ');
+  return s;
+}
 // Sicherer URL-Check: nur http(s)-Links erlaubt, kein javascript:/data:/vbscript:.
 function safeUrl(u) { const s = String(u||'').trim(); return /^https?:\/\//i.test(s) ? s : ''; }
 
@@ -348,7 +354,10 @@ button{cursor:pointer;border:none;outline:none;font-family:var(--font)}
 .story-ring{width:68px;height:68px;border-radius:50%;padding:2.5px;background:conic-gradient(from 45deg,#3b82f6,#60a5fa,#1d4ed8,#3b82f6);position:relative;box-shadow:0 4px 12px rgba(59,130,246,0.25)}
 .story-ring.seen{background:linear-gradient(135deg,#3b82f6,#1d4ed8);opacity:0.55;box-shadow:none}
 .story-inner{width:100%;height:100%;border-radius:50%;border:2.5px solid var(--bg);overflow:hidden;position:relative;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:#fff}
-[data-theme=light] .story-inner{box-shadow:inset 0 0 0 1px rgba(15,23,42,0.12)}
+[data-theme=light] .story-ring{box-shadow:0 4px 16px rgba(59,130,246,0.45),0 1px 4px rgba(15,23,42,0.12)}
+[data-theme=light] .story-ring.seen{box-shadow:0 2px 8px rgba(15,23,42,0.10)}
+[data-theme=light] .story-inner{border-color:#ffffff;box-shadow:inset 0 0 0 1.5px rgba(15,23,42,0.18),0 1px 4px rgba(15,23,42,0.15)}
+[data-theme=light] .story-inner img{background:#f1f5f9}
 [data-theme=light] .post-header > div:first-child,
 [data-theme=light] .post-header img,
 [data-theme=light] .post img,
@@ -1386,7 +1395,7 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
 <div class="profile-info">
   <div class="profile-name-row">
     <div class="profile-name">${htmlEsc(u.spitzname||u.name||'User')}</div>
-    <div class="profile-badge" style="background:${grad};color:#fff">${htmlEsc(String(u.role||'🆕 New').replace(/⚙️?/g,'🛡️'))}</div>
+    <div class="profile-badge" style="background:${grad};color:#fff">${htmlEsc(String(u.role||'🆕 New').replace(/⚙️?/g,'🛡️').replace(/^\?{1,4}\s*/,'🛡️ '))}</div>
   </div>
   ${u.username||u.spitzname?`<div class="profile-username">${u.spitzname?htmlEsc(u.name||''):''}${u.username?(u.spitzname?' · ':'')+'@'+htmlEsc(u.username):''}</div>`:''}
   <div style="display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap">
@@ -1942,7 +1951,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v99-thread-custom';
+const SW_VERSION='v100-clean-role';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
@@ -3921,7 +3930,7 @@ p{line-height:1.65;color:var(--muted)}
                 const lu=d.users[String(lid)]; const lg=badgeGradient(lu&&lu.role);
                 const lf=ladeBild(String(lid),'profilepic'); const li=lu&&lu.instagram;
                 const limg=lf?'<img src="/appbild/'+lid+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" alt="">':li?'<img src="https://unavatar.io/instagram/'+li+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" alt="">':'';
-                return '<a href="/profil/'+lid+'" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--border2);text-decoration:none;background:'+(i%2===0?'transparent':'rgba(255,255,255,.02)')+'"><div style="position:relative;width:34px;height:34px;border-radius:50%;background:'+lg+';flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff"><span style="position:absolute">'+(lu&&lu.name||'?')[0]+'</span>'+limg+'</div><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:var(--text)">'+(lu&&(lu.spitzname||lu.name)||'User')+'</div><div style="font-size:10px;color:var(--muted)">'+((lu&&lu.role||'').replace(/⚙️?/g,'🛡️'))+'</div></div><div style="font-size:11px;color:var(--accent)">→</div></a>';
+                return '<a href="/profil/'+lid+'" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--border2);text-decoration:none;background:'+(i%2===0?'transparent':'rgba(255,255,255,.02)')+'"><div style="position:relative;width:34px;height:34px;border-radius:50%;background:'+lg+';flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff"><span style="position:absolute">'+(lu&&lu.name||'?')[0]+'</span>'+limg+'</div><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:var(--text)">'+(lu&&(lu.spitzname||lu.name)||'User')+'</div><div style="font-size:10px;color:var(--muted)">'+((lu&&lu.role||'').replace(/⚙️?/g,'🛡️').replace(/^\?{1,4}\s*/,'🛡️ '))+'</div></div><div style="font-size:11px;color:var(--accent)">→</div></a>';
             }).join('');
 
             // Comments
@@ -4000,7 +4009,7 @@ p{line-height:1.65;color:var(--muted)}
 '        '+(poster.spitzname||poster.name||'User')+'\n'+
 '        '+(isOnline?'<span style="width:7px;height:7px;border-radius:50%;background:#00c851;display:inline-block;flex-shrink:0"></span>':'')+'\n'+
 '      </div>\n'+
-'      <div class="post-badge">'+((poster.role||'').replace(/⚙️?/g,'🛡️'))+(insta?'<span style="color:var(--muted2)"> · @'+poster.instagram+'</span>':'')+'</div>\n'+
+'      <div class="post-badge">'+((poster.role||'').replace(/⚙️?/g,'🛡️').replace(/^\?{1,4}\s*/,'🛡️ '))+(insta?'<span style="color:var(--muted2)"> · @'+poster.instagram+'</span>':'')+'</div>\n'+
 '    </div>\n'+
 '  </div>\n'+
 // Reel video preview card
@@ -4090,7 +4099,7 @@ commentsBox+
                 +avatarSmall+'\n</div>\n'
                 +'<div class="post-user-info">\n'
                 +'<div class="post-name">'+(poster.spitzname||poster.name||'User')+'</div>\n'
-                +'<div class="post-badge">'+((poster.role||'').replace(/⚙️?/g,'🛡️'))+(insta?'<span style="color:var(--muted2)"> · @'+insta+'</span>':'')+'</div>\n'
+                +'<div class="post-badge">'+((poster.role||'').replace(/⚙️?/g,'🛡️').replace(/^\?{1,4}\s*/,'🛡️ '))+(insta?'<span style="color:var(--muted2)"> · @'+insta+'</span>':'')+'</div>\n'
                 +'</div>\n</div>\n'
                 +'<div style="margin:8px 16px;padding:8px 12px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:10px;font-size:11px;color:rgba(245,158,11,.9);font-weight:600">🔄 Bitte Liken, Kommentieren, Teilen und Speichern</div>\n'
                 +'<div style="margin:0 16px 8px;border-radius:14px;overflow:hidden;background:var(--bg3);border:1px solid rgba(255,255,255,.08)">\n'
@@ -5242,8 +5251,10 @@ async function createThread(){
             const api = apiTopics[String(t.id)];
             const emoji = ov.emoji || (String(t.id)==='general' ? '💬' : (api?.emoji && api.emoji.length>1 ? api.emoji : threadEmoji(t.id)));
             const name = ov.name || api?.name || t.name;
-            return {...t, name, emoji};
+            return {...t, name, emoji, _hidden: ov.hidden === true};
         });
+        // Versteckte threads ausfiltern (general bleibt immer sichtbar)
+        threads = threads.filter(t => String(t.id) === 'general' || !t._hidden);
         if (!threads.find(t=>String(t.id)==='general')) {
             const lastCF = communityFeed[0];
             threads.unshift({ id:'general', name:'Allgemein', emoji:'💬', last_msg:lastCF?{text:lastCF.text,name:lastCF.name||lastCF.username}:null, msg_count:Math.max(communityFeed.length, threadMsgs['general']?.length||0) });
@@ -5288,6 +5299,46 @@ async function saveThreadCustom(tid){
   if(data.ok){document.getElementById('thr-cust-modal').remove();location.reload();}
   else alert(data.error||'Fehler beim Speichern');
 }
+async function deleteThread(tid, name){
+  if(!confirm('Thread "'+name+'" wirklich aus der App verstecken?\\n\\n(Erscheint dann nicht mehr in der Liste — auf Telegram bleibt er bestehen.)'))return;
+  const r=await fetch('/api/hide-thread',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({thread_id:tid})});
+  const data=await r.json();
+  if(data.ok)location.reload();
+  else alert(data.error||'Fehler');
+}
+function showThreadActions(tid, currentName, currentEmoji){
+  const old=document.getElementById('thr-actions-modal'); if(old)old.remove();
+  const m=document.createElement('div');
+  m.id='thr-actions-modal';
+  m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(6px);z-index:9999;display:flex;align-items:flex-end;justify-content:center';
+  m.onclick=function(e){if(e.target===m)m.remove();};
+  m.innerHTML='<div style="background:var(--bg2);border-radius:24px 24px 0 0;padding:18px 16px 30px;width:100%;max-width:480px"><div style="width:36px;height:4px;background:#666;border-radius:4px;margin:0 auto 14px"></div><div style="font-size:14px;font-weight:700;text-align:center;color:var(--muted);margin-bottom:12px;text-transform:uppercase;letter-spacing:0.5px">'+currentEmoji+' '+currentName+'</div><button onclick="document.getElementById(\'thr-actions-modal\').remove();renameThread(\''+tid+'\',\''+currentName.replace(/\'/g,"\\\'")+'\')" style="width:100%;padding:16px;border-radius:14px;border:none;background:var(--bg3);color:var(--text);font-size:15px;font-weight:600;cursor:pointer;margin-bottom:8px;text-align:left;display:flex;align-items:center;gap:14px">✏️ Umbenennen</button><button onclick="document.getElementById(\'thr-actions-modal\').remove();customizeThread(\''+tid+'\',\''+currentName.replace(/\'/g,"\\\'")+'\',\''+currentEmoji+'\')" style="width:100%;padding:16px;border-radius:14px;border:none;background:var(--bg3);color:var(--text);font-size:15px;font-weight:600;cursor:pointer;margin-bottom:8px;text-align:left;display:flex;align-items:center;gap:14px">😀 Symbol ändern</button><button onclick="document.getElementById(\'thr-actions-modal\').remove();deleteThread(\''+tid+'\',\''+currentName.replace(/\'/g,"\\\'")+'\')" style="width:100%;padding:16px;border-radius:14px;border:none;background:rgba(239,68,68,0.12);color:#ef4444;font-size:15px;font-weight:700;cursor:pointer;text-align:left;display:flex;align-items:center;gap:14px">🗑️ Löschen (verstecken)</button><button onclick="document.getElementById(\'thr-actions-modal\').remove()" style="width:100%;padding:13px;border-radius:14px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:14px;font-weight:600;cursor:pointer;margin-top:10px">Abbrechen</button></div>';
+  document.body.appendChild(m);
+}
+// Long-press detection auf thread-cards (admin only)
+(function(){
+  const isAdmin = ${isAdmin};
+  if (!isAdmin) return;
+  let pressTimer=null, pressTid=null, didLongPress=false;
+  function start(card, e){
+    didLongPress=false;
+    pressTid=card.getAttribute('data-tid');
+    pressTimer=setTimeout(()=>{
+      didLongPress=true;
+      if(navigator.vibrate)navigator.vibrate(40);
+      const name=card.getAttribute('data-name')||'';
+      const emoji=card.getAttribute('data-emoji')||'';
+      showThreadActions(pressTid, name, emoji);
+    }, 480);
+  }
+  function cancel(){if(pressTimer){clearTimeout(pressTimer);pressTimer=null;}}
+  document.addEventListener('touchstart',e=>{const c=e.target.closest('.thr-card');if(c)start(c,e);},{passive:true});
+  document.addEventListener('touchend',cancel);
+  document.addEventListener('touchmove',cancel);
+  document.addEventListener('touchcancel',cancel);
+  // Block link click during/after long-press
+  document.addEventListener('click',e=>{if(didLongPress){e.preventDefault();e.stopPropagation();didLongPress=false;}},true);
+})();
 </script>`, 'messages');
     }
 
@@ -5626,7 +5677,7 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
               <div class="suche-avatar" style="background:${grad}">${pic}<span>${initial}</span>${isUidOnline(id)?'<i class="suche-dot"></i>':''}</div>
               <div class="suche-info">
                 <div class="suche-name">${htmlEsc(u.spitzname||u.name||'User')}</div>
-                <div class="suche-meta">${htmlEsc((u.role||'').replace(/⚙️?/g,'🛡️'))} · ${(u.xp||0).toLocaleString('de-DE')} XP${insta?' · @'+htmlEsc(insta):''}</div>
+                <div class="suche-meta">${htmlEsc((u.role||'').replace(/⚙️?/g,'🛡️').replace(/^\?{1,4}\s*/,'🛡️ '))} · ${(u.xp||0).toLocaleString('de-DE')} XP${insta?' · @'+htmlEsc(insta):''}</div>
               </div>
               <button class="suche-follow js-suche-follow" data-follow-uid="${id}" onclick="event.preventDefault();event.stopPropagation();sucheFollow(this)">Folgen</button>
             </a>`;
@@ -5839,7 +5890,7 @@ setTimeout(()=>document.getElementById('search-input').focus(),100);
     </div>
     <div class="rank-info">
       <div class="rank-name">${htmlEsc(u.spitzname||u.name||'User')}${isMe?' (Du)':''}</div>
-      <div class="rank-badge">${htmlEsc((u.role||'').replace(/⚙️?/g,'🛡️'))}</div>
+      <div class="rank-badge">${htmlEsc((u.role||'').replace(/⚙️?/g,'🛡️').replace(/^\?{1,4}\s*/,'🛡️ '))}</div>
     </div>
     <div class="rank-xp">${(xp||0).toLocaleString('de-DE')} XP</div>
   </a>`;
@@ -6440,7 +6491,7 @@ ${rest.map(([id,u],idx)=>{
     </div>
     <div class="rank-info">
       <div class="rank-name">${htmlEsc(u.spitzname||u.name||'User')}${isMe?' (Du)':''}</div>
-      <div class="rank-badge">${htmlEsc((u.role||'').replace(/⚙️?/g,'🛡️'))}</div>
+      <div class="rank-badge">${htmlEsc((u.role||'').replace(/⚙️?/g,'🛡️').replace(/^\?{1,4}\s*/,'🛡️ '))}</div>
     </div>
     <div class="rank-xp">${(u.xp||0).toLocaleString('de-DE')} XP</div>
   </a>`;
@@ -7485,6 +7536,21 @@ async function setRing(ringId) {
         let overrides = {};
         try { overrides = JSON.parse(fs.readFileSync(DATA_DIR + '/thread-overrides.json', 'utf8')); } catch(e) {}
         return json(overrides);
+    }
+    // Thread aus App verstecken (nur admin)
+    if (path === '/api/hide-thread' && req.method === 'POST') {
+        const _admh = (Array.isArray((await fetchBot('/data') || {})._adminIds) ? (await fetchBot('/data'))._adminIds.map(Number) : []);
+        if (!_admh.includes(Number(myUid))) return json({ ok: false, error: 'Nur Admin' }, 403);
+        const body = await parseBody(req);
+        const { thread_id } = body;
+        if (!thread_id || String(thread_id) === 'general') return json({ ok: false, error: 'Ungültig' });
+        const overridesPath = DATA_DIR + '/thread-overrides.json';
+        let overrides = {};
+        try { overrides = JSON.parse(fs.readFileSync(overridesPath, 'utf8')); } catch(e) {}
+        overrides[String(thread_id)] = overrides[String(thread_id)] || {};
+        overrides[String(thread_id)].hidden = true;
+        try { fs.writeFileSync(overridesPath, JSON.stringify(overrides, null, 2)); } catch(e) { return json({ ok: false }); }
+        return json({ ok: true });
     }
 
     if (path === '/api/mark-read' && req.method === 'POST') {
