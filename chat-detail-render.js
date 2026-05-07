@@ -493,26 +493,28 @@ function getScripts(myUid, otherUid) {
         '}' +
         // Touch-Swipe Handler auf .chat-row
         'let __swipeRow = null, __swipeStartX = 0, __swipeStartY = 0, __swipeActive = false;' +
-        'document.addEventListener("touchstart", e => {' +
+        // ── Pointer-Events für Swipe-Reply (zuverlässiger als touchstart auf iOS-Chrome PWA) ──
+        'document.addEventListener("pointerdown", e => {' +
+            'if (e.pointerType==="mouse" && e.button!==0) return;' +
             'const row = e.target.closest && e.target.closest(".chat-row"); if (!row) return;' +
             '__swipeRow = row; __swipeActive = false;' +
-            '__swipeStartX = e.touches[0].clientX; __swipeStartY = e.touches[0].clientY;' +
+            '__swipeStartX = e.clientX; __swipeStartY = e.clientY;' +
         '}, { passive: true });' +
-        'document.addEventListener("touchmove", e => {' +
+        'document.addEventListener("pointermove", e => {' +
             'if (!__swipeRow) return;' +
-            'const dx = e.touches[0].clientX - __swipeStartX;' +
-            'const dy = Math.abs(e.touches[0].clientY - __swipeStartY);' +
-            'if (dy > 18) { __swipeRow.classList.remove("swiping"); __swipeRow = null; return; }' +
-            // Telegram-Style: SWIPE LINKS auf jede Message triggert Reply
+            'const dx = e.clientX - __swipeStartX;' +
+            'const dy = e.clientY - __swipeStartY;' +
+            // Vertikal-dominante Bewegung -> abort. Horizontal darf auch leichten dy haben.
+            'if (Math.abs(dy) > 24 && Math.abs(dy) > Math.abs(dx)) { __swipeRow.classList.remove("swiping"); __swipeRow = null; return; }' +
             'const adx = Math.min(0, dx);' +
-            'if (Math.abs(adx) > 4) {' +
+            'if (Math.abs(adx) > 3) {' +
                 '__swipeActive = true; __swipeRow.classList.add("swiping");' +
                 'const cap = Math.max(-90, Math.min(0, adx));' +
                 '__swipeRow.style.setProperty("--swipe", cap + "px");' +
                 '__swipeRow.style.setProperty("--swipe-op", Math.min(1, Math.abs(cap)/40));' +
             '}' +
         '}, { passive: true });' +
-        'document.addEventListener("touchend", e => {' +
+        'function __chatSwipeEnd(){' +
             'if (!__swipeRow) return;' +
             'const cap = parseInt(__swipeRow.style.getPropertyValue("--swipe")||"0", 10);' +
             'if (Math.abs(cap) >= 40 && __swipeActive) {' +
@@ -527,7 +529,9 @@ function getScripts(myUid, otherUid) {
             '__swipeRow.style.setProperty("--swipe-op", "0");' +
             '__swipeRow.classList.remove("swiping");' +
             '__swipeRow = null; __swipeActive = false;' +
-        '}, { passive: true });' +
+        '}' +
+        'document.addEventListener("pointerup", __chatSwipeEnd, { passive: true });' +
+        'document.addEventListener("pointercancel", __chatSwipeEnd, { passive: true });' +
         // (Reply-Button steckt jetzt in der Bottom-Action-Bar — der DOMContentLoaded-Patch hier ist obsolet)
         'function chatJumpToMsg(ts){' +
             'const el = document.querySelector(".chat-row[data-ts=\\\""+ts+"\\\"]");' +
