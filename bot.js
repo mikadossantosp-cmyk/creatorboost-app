@@ -289,7 +289,7 @@ const CSS = `
 --bg:#ffffff;--bg2:#ffffff;--bg3:#ffffff;--bg4:#ffffff;
 --border:rgba(15,23,42,.10);--border2:rgba(15,23,42,.07);
 --text:#0f172a;--muted:#64748b;--muted2:#94a3b8;
---accent:#ff6b6b;--accent2:#ffa500;
+--accent:#3b82f6;--accent2:#1d4ed8;
 --green:#00c851;--blue:#4dabf7;--purple:#cc5de8;--gold:#ffd43b;
 --radius:16px;--radius-sm:10px;--radius-xs:6px;
 --font:'DM Sans',sans-serif;--font-display:'Syne',sans-serif;
@@ -329,7 +329,7 @@ button{cursor:pointer;border:none;outline:none;font-family:var(--font)}
 .nav-item{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:9.5px;font-weight:600;letter-spacing:0.2px;color:var(--muted2);padding:4px 14px;transition:color .2s,transform .12s;text-decoration:none}
 .nav-item:active{transform:scale(0.92)}
 .nav-item.active{color:var(--text)}
-.nav-item.active svg{stroke:var(--accent);fill:rgba(255,107,107,0.1)}
+.nav-item.active svg{stroke:var(--accent);fill:rgba(59,130,246,0.12)}
 .nav-item svg{width:23px;height:23px;transition:stroke .2s,fill .2s}
 .nav-dot{width:4px;height:4px;border-radius:50%;background:var(--accent);margin:0 auto}
 .card{background:var(--bg3);border-radius:var(--radius);border:1px solid var(--border2);overflow:hidden}
@@ -339,7 +339,7 @@ button{cursor:pointer;border:none;outline:none;font-family:var(--font)}
 .story-item{display:flex;flex-direction:column;align-items:center;gap:6px;flex-shrink:0;width:74px;text-decoration:none;color:inherit;-webkit-tap-highlight-color:transparent}
 .stories.is-swiping .story-item{pointer-events:none}
 .story-item:active{transform:scale(0.92);transition:transform 0.15s}
-.story-ring{width:68px;height:68px;border-radius:50%;padding:2.5px;background:conic-gradient(from 45deg,#f9a825,#e91e63,#9c27b0,#3b82f6,#f9a825);position:relative;box-shadow:0 4px 12px rgba(233,30,99,0.18)}
+.story-ring{width:68px;height:68px;border-radius:50%;padding:2.5px;background:conic-gradient(from 45deg,#3b82f6,#60a5fa,#1d4ed8,#3b82f6);position:relative;box-shadow:0 4px 12px rgba(59,130,246,0.25)}
 .story-ring.seen{background:rgba(255,255,255,0.12);box-shadow:none}
 .story-inner{width:100%;height:100%;border-radius:50%;border:2.5px solid var(--bg);overflow:hidden;position:relative;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:#fff}
 .story-name{font-size:11.5px;color:var(--text);max-width:74px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;letter-spacing:0.1px}
@@ -1927,7 +1927,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v91-apk-auto';
+const SW_VERSION='v92-blue-accent';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
