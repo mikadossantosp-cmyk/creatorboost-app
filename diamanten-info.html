@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>💎 Diamanten — Was ist das?</title>
+<meta name="theme-color" content="#0a1929">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#000;color:#fff;line-height:1.55;overflow-x:hidden;padding-bottom:40px}
+.hero{position:relative;text-align:center;padding:60px 24px 40px;background:radial-gradient(ellipse at top,rgba(167,139,250,0.25),transparent 70%),linear-gradient(180deg,#0a1929,#000 80%);overflow:hidden}
+.hero::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 20% 30%,rgba(77,171,247,0.15),transparent 40%),radial-gradient(circle at 80% 70%,rgba(167,139,250,0.15),transparent 40%);pointer-events:none}
+.diamond{font-size:96px;display:inline-block;animation:float 3s ease-in-out infinite;filter:drop-shadow(0 0 40px rgba(167,139,250,0.6));position:relative;z-index:1}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+h1{font-size:34px;font-weight:900;letter-spacing:-0.5px;margin:18px 0 10px;background:linear-gradient(135deg,#a78bfa,#4dabf7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;position:relative;z-index:1}
+.tagline{font-size:15px;color:#94a3b8;font-weight:500;max-width:380px;margin:0 auto;position:relative;z-index:1}
+.section{max-width:520px;margin:0 auto;padding:24px 20px}
+h2{font-size:22px;font-weight:800;margin-bottom:16px;letter-spacing:-0.2px;display:flex;align-items:center;gap:10px}
+h2 .num{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#a78bfa,#7c3aed);font-size:14px;font-weight:800;color:#fff}
+.intro{font-size:15px;color:#cbd5e1;margin-bottom:20px}
+.card{background:#111;border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:18px;margin-bottom:12px;display:flex;align-items:center;gap:14px;transition:transform 0.2s,border-color 0.2s}
+.card:hover{transform:translateX(4px);border-color:rgba(167,139,250,0.4)}
+.card-icon{font-size:28px;flex-shrink:0;width:48px;height:48px;display:flex;align-items:center;justify-content:center;border-radius:12px;background:linear-gradient(135deg,rgba(167,139,250,0.15),rgba(77,171,247,0.08))}
+.card-content{flex:1;min-width:0}
+.card-title{font-size:14.5px;font-weight:700;margin-bottom:3px}
+.card-desc{font-size:12.5px;color:#94a3b8;line-height:1.45}
+.card-reward{font-size:14px;font-weight:800;color:#a78bfa;flex-shrink:0;background:rgba(167,139,250,0.12);padding:6px 12px;border-radius:999px;border:1px solid rgba(167,139,250,0.25)}
+.use-card{background:linear-gradient(135deg,rgba(77,171,247,0.10),rgba(167,139,250,0.08));border:1px solid rgba(77,171,247,0.25);border-radius:16px;padding:18px;margin-bottom:12px}
+.use-card-title{font-size:15px;font-weight:800;margin-bottom:6px;display:flex;align-items:center;gap:8px}
+.use-card-desc{font-size:13px;color:#cbd5e1;margin-bottom:8px}
+.use-card-price{display:inline-block;font-size:12px;font-weight:800;color:#fff;background:linear-gradient(135deg,#a78bfa,#7c3aed);padding:4px 10px;border-radius:999px}
+.tip-box{background:linear-gradient(135deg,rgba(245,158,11,0.10),rgba(245,158,11,0.04));border:1px solid rgba(245,158,11,0.30);border-radius:14px;padding:16px;margin:24px 0;font-size:13px;line-height:1.6}
+.tip-box b{color:#fbbf24}
+.cta-wrap{text-align:center;margin-top:36px}
+.cta{display:inline-flex;align-items:center;gap:10px;background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;padding:16px 32px;border-radius:999px;font-size:15px;font-weight:800;text-decoration:none;box-shadow:0 8px 28px rgba(167,139,250,0.4);transition:transform 0.18s}
+.cta:active{transform:scale(0.96)}
+.coming-soon{display:inline-block;font-size:10px;font-weight:800;letter-spacing:1px;color:#fbbf24;background:rgba(251,191,36,0.12);border:1px solid rgba(251,191,36,0.3);padding:2px 8px;border-radius:6px;text-transform:uppercase;margin-left:6px;vertical-align:middle}
+.divider{height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.12),transparent);margin:36px 0 28px}
+.footer{text-align:center;font-size:11.5px;color:#64748b;margin-top:32px;padding:0 20px}
+@media (max-width:380px){h1{font-size:28px}.diamond{font-size:80px}.section{padding:20px 16px}}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="diamond">💎</div>
+  <h1>Diamanten</h1>
+  <p class="tagline">Die Belohnung für aktives Engagement in unserer Community.</p>
+</div>
+
+<div class="section">
+  <p class="intro">Du sammelst <b>Diamanten</b> indem du dich in der Community engagierst — und gibst sie im <b>Shop</b> für Extras aus.<br><br>Es gibt aktuell <b>8 Wege</b> Diamanten zu verdienen. Hier die Übersicht:</p>
+</div>
+
+<div class="section">
+  <h2><span class="num">1</span>Wie verdiene ich Diamanten?</h2>
+
+  <div class="card">
+    <div class="card-icon">✅</div>
+    <div class="card-content">
+      <div class="card-title">Profil vervollständigen</div>
+      <div class="card-desc">Profilbild, Bio, Nische, Banner setzen — einmalig</div>
+    </div>
+    <div class="card-reward">+1 💎</div>
+  </div>
+
+  <div class="card">
+    <div class="card-icon">📅</div>
+    <div class="card-content">
+      <div class="card-title">Tagesmission M3</div>
+      <div class="card-desc">Alle Links des Tages liken</div>
+    </div>
+    <div class="card-reward">+1 💎</div>
+  </div>
+
+  <div class="card">
+    <div class="card-icon">📈</div>
+    <div class="card-content">
+      <div class="card-title">Wochenmission M2</div>
+      <div class="card-desc">7 Tage je 80% liken</div>
+    </div>
+    <div class="card-reward">+1 💎</div>
+  </div>
+
+  <div class="card">
+    <div class="card-icon">🏆</div>
+    <div class="card-content">
+      <div class="card-title">Wochenmission M3</div>
+      <div class="card-desc">7 Tage in Folge alle liken</div>
+    </div>
+    <div class="card-reward">+2 💎</div>
+  </div>
+
+  <div class="card">
+    <div class="card-icon">⭐</div>
+    <div class="card-content">
+      <div class="card-title">Superlinks der Woche engagieren</div>
+      <div class="card-desc">Liken, Kommentieren, Teilen, Speichern — bei allen</div>
+    </div>
+    <div class="card-reward">+1 💎</div>
+  </div>
+
+  <div class="card">
+    <div class="card-icon">📲</div>
+    <div class="card-content">
+      <div class="card-title">100 Likes via App</div>
+      <div class="card-desc">Pro 100 Likes über die App ein Diamant</div>
+    </div>
+    <div class="card-reward">+1 💎</div>
+  </div>
+
+  <div class="card">
+    <div class="card-icon">💬</div>
+    <div class="card-content">
+      <div class="card-title">10 Thread-Nachrichten</div>
+      <div class="card-desc">Min. 10 Zeichen, keine Spam-Messages</div>
+    </div>
+    <div class="card-reward">+1 💎</div>
+  </div>
+
+  <div class="card">
+    <div class="card-icon">📌</div>
+    <div class="card-content">
+      <div class="card-title">Pinned Post engagiert</div>
+      <div class="card-desc">Owner bekommt 1 💎 pro neuem Engager</div>
+    </div>
+    <div class="card-reward">+1 💎</div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<div class="section">
+  <h2><span class="num">2</span>Wofür kann ich sie ausgeben?</h2>
+  <p class="intro">Im <b>Shop</b> (in der App + Telegram) findest du:</p>
+
+  <div class="use-card">
+    <div class="use-card-title">🔗 Extra-Link</div>
+    <div class="use-card-desc">Du darfst noch einen Link zusätzlich zu deinen täglichen Links posten.</div>
+    <span class="use-card-price">5 💎</span>
+  </div>
+
+  <div class="use-card">
+    <div class="use-card-title">⭐ Superlink</div>
+    <div class="use-card-desc">Ein zusätzlicher Superlink für die Woche — höhere Reichweite, alle müssen engagieren.</div>
+    <span class="use-card-price">je nach Tier</span>
+  </div>
+
+  <div class="use-card">
+    <div class="use-card-title">💍 Profil-Ringe <span class="coming-soon">Coming Soon</span></div>
+    <div class="use-card-desc">Funkelnde Ringe um dein Profilbild — Flame, Ocean, Gold, Diamond &amp; mehr.</div>
+    <span class="use-card-price">8–20 💎</span>
+  </div>
+
+  <div class="use-card">
+    <div class="use-card-title">🎨 Premium-Banner <span class="coming-soon">Coming Soon</span></div>
+    <div class="use-card-desc">Exklusive Banner-Designs für dein Profil — Sunset, Ocean, Lavender und mehr.</div>
+    <span class="use-card-price">5–10 💎</span>
+  </div>
+</div>
+
+<div class="section">
+  <div class="tip-box">
+    <b>⚠️ Wichtig:</b> Es gelten weiterhin die Standard-Regeln (1 Post = 5 Likes + Kommentar). Niemand muss alles machen — wer aber mehr engagiert, wird belohnt 🙏
+  </div>
+</div>
+
+<div class="cta-wrap">
+  <a href="/diamanten" class="cta">💎 Mein Stand ansehen</a>
+</div>
+
+<div class="footer">
+  CreatorX · Engagement-Belohnung für aktive Community-Member
+</div>
+
+</body>
+</html>

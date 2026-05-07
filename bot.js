@@ -2278,6 +2278,17 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
     }
 
     // ── APK UPLOAD PAGE (für schon-signierte APKs aus Bubblewrap) ──
+    // ── Diamanten-Info Public-Page (zum Teilen mit Usern) ──
+    if (path === '/diamanten-info' || path === '/info/diamanten') {
+        try {
+            const html = fs.readFileSync(__dirname + '/diamanten-info.html', 'utf8');
+            res.writeHead(200, {'Content-Type':'text/html; charset=utf-8','Cache-Control':'public, max-age=3600'});
+            return res.end(html);
+        } catch(e) {
+            res.writeHead(500); return res.end('Datei nicht gefunden');
+        }
+    }
+
     if (path === '/apk-upload') {
         if ((query.key || '') !== BRIDGE_SECRET) { res.writeHead(403); return res.end('Kein Zugriff'); }
         res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});
