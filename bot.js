@@ -1867,7 +1867,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v85-apk-mtime';
+const SW_VERSION='v86-apk-upload';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
@@ -2188,6 +2188,32 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
         const result = await fetchBot('/like-from-app?uid=' + getMyUid(session) + '&msgId=' + encodeURIComponent(msgId));
         if (!result) return json({ok:false, error:'Bot offline'}, 502);
         return json({ok: result.ok !== false, liked: result.liked, likes: result.likes, error: result.error});
+    }
+
+    // ── APK UPLOAD PAGE (für schon-signierte APKs aus Bubblewrap) ──
+    if (path === '/apk-upload') {
+        if ((query.key || '') !== BRIDGE_SECRET) { res.writeHead(403); return res.end('Kein Zugriff'); }
+        res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});
+        return res.end(`<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>APK Upload</title><style>*{box-sizing:border-box;margin:0;padding:0}body{background:#000;color:#fff;font-family:sans-serif;padding:24px;min-height:100vh}h1{font-size:22px;margin-bottom:8px}p{font-size:13px;color:#aaa;margin-bottom:24px;line-height:1.5}.box{background:#111;border-radius:16px;padding:20px}.btn{background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:none;border-radius:12px;padding:14px 24px;font-size:15px;font-weight:700;cursor:pointer;width:100%;margin-top:12px}.btn:disabled{opacity:.5;cursor:default}#status{margin-top:16px;font-size:14px;color:#aaa;text-align:center;line-height:1.5}.ok{color:#22c55e!important;font-weight:700}.err{color:#ef4444!important;font-weight:700}input[type=file]{width:100%;padding:14px;background:#222;color:#fff;border:2px dashed #444;border-radius:12px;font-size:14px}.info{background:#0a2540;border-left:3px solid #3b82f6;border-radius:8px;padding:12px;font-size:12px;color:#93c5fd;margin-bottom:16px;line-height:1.5}</style></head><body><h1>📤 APK Upload</h1><p>Lade deine schon signierte APK (aus Bubblewrap) direkt hoch — der Server speichert sie und alle App-User sehen sofort den Update-Banner.</p><div class="info">Nimm die Datei <code style="background:#000;padding:2px 6px;border-radius:4px">app-release-signed.apk</code> aus deinem lokalen Bubblewrap-Ordner.</div><div class="box"><input type="file" id="f" accept=".apk"><button class="btn" id="btn" onclick="up()">📦 APK auf Server hochladen</button><div id="status"></div></div><script>async function up(){const f=document.getElementById('f').files[0];if(!f){alert('Bitte APK auswählen');return}const btn=document.getElementById('btn');const st=document.getElementById('status');btn.disabled=true;st.textContent='APK wird gelesen ('+(f.size/1024/1024).toFixed(1)+' MB)...';st.className='';const buf=await f.arrayBuffer();st.textContent='Upload läuft...';try{const res=await fetch('/api/upload-apk?key=${query.key}',{method:'POST',headers:{'Content-Type':'application/octet-stream'},body:buf});if(!res.ok){const t=await res.text();st.textContent='❌ '+t;st.className='err';btn.disabled=false;return}const j=await res.json();st.innerHTML='✅ Hochgeladen! ('+(j.size/1024/1024).toFixed(1)+' MB)<br>Alle User sehen jetzt den Update-Banner beim nächsten App-Open.';st.className='ok';}catch(e){st.textContent='❌ '+e.message;st.className='err';btn.disabled=false}}</script></body></html>`);
+    }
+    if (path === '/api/upload-apk' && req.method === 'POST') {
+        if ((query.key || '') !== BRIDGE_SECRET) { res.writeHead(403); return res.end('Kein Zugriff'); }
+        const chunks = [];
+        req.on('data', c => chunks.push(c));
+        req.on('end', () => {
+            try {
+                const buf = Buffer.concat(chunks);
+                if (buf.length < 1000) { res.writeHead(400); return res.end('Datei zu klein'); }
+                if (buf[0] !== 0x50 || buf[1] !== 0x4B) { res.writeHead(400); return res.end('Keine gültige APK (kein ZIP-Header)'); }
+                fs.writeFileSync(DATA_DIR + '/CreatorX-signed.apk', buf);
+                res.writeHead(200, {'Content-Type':'application/json'});
+                res.end(JSON.stringify({ok:true, size: buf.length}));
+            } catch(e) {
+                res.writeHead(500); res.end('Fehler: ' + e.message);
+            }
+        });
+        req.on('error', e => { res.writeHead(500); res.end('Upload-Fehler: ' + e.message); });
+        return;
     }
 
     // ── APK SIGN PAGE ──
