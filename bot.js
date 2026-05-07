@@ -380,7 +380,7 @@ button{cursor:pointer;border:none;outline:none;font-family:var(--font)}
 .profile-meta-chip{display:inline-flex;align-items:center;gap:5px;padding:6px 11px;background:var(--surface-tint);border:1px solid var(--border2);border-radius:10px;font-size:12px;font-weight:600;color:var(--text);letter-spacing:0.1px;transition:background 0.15s}
 .profile-meta-chip:hover{background:var(--bg2)}
 .profile-badge{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:999px;font-size:11px;font-weight:800;letter-spacing:0.5px;box-shadow:0 4px 14px rgba(255,107,107,0.2);text-transform:uppercase;flex-shrink:0;align-self:flex-start;margin-top:3px}
-.profile-stats{position:relative;display:grid;grid-template-columns:repeat(5,1fr);gap:0;margin:-26px 14px 0;padding:14px 6px 12px;background:rgba(255,255,255,0.78);backdrop-filter:saturate(160%) blur(18px);-webkit-backdrop-filter:saturate(160%) blur(18px);border:1px solid rgba(255,255,255,0.6);border-radius:18px;box-shadow:0 8px 28px -10px rgba(15,23,42,0.18),0 2px 6px -1px rgba(15,23,42,0.06);z-index:5}
+.profile-stats{position:relative;display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:0;margin:-26px 14px 0;padding:14px 6px 12px;background:rgba(255,255,255,0.78);backdrop-filter:saturate(160%) blur(18px);-webkit-backdrop-filter:saturate(160%) blur(18px);border:1px solid rgba(255,255,255,0.6);border-radius:18px;box-shadow:0 8px 28px -10px rgba(15,23,42,0.18),0 2px 6px -1px rgba(15,23,42,0.06);z-index:5}
 [data-theme="dark"] .profile-stats{background:rgba(20,20,28,0.78);border-color:rgba(255,255,255,0.08);box-shadow:0 8px 28px -10px rgba(0,0,0,0.6)}
 .profile-stat{text-align:center;padding:2px 0;border:none!important;position:relative;transition:transform .18s ease}
 .profile-stat[href]:active{transform:scale(0.96)}
@@ -1759,7 +1759,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v64-premium';
+const SW_VERSION='v65-fix';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
@@ -4861,8 +4861,8 @@ document.getElementById('user-search-input')?.addEventListener('input',filterSea
 .notif-icon{flex-shrink:0;width:44px;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:20px;background:var(--bg2);border:1px solid var(--border2);font-weight:700}
 .notif-actor{position:relative;flex-shrink:0;width:48px;height:48px}
 .notif-actor-avatar{width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#a78bfa,#7c3aed);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:#fff;overflow:hidden;position:relative;box-shadow:0 4px 12px rgba(15,23,42,0.1)}
-.notif-stack-avatar{position:relative;border:2px solid var(--bg);border-radius:50%}
-.notif-stack-avatar .notif-actor-avatar{box-shadow:none}
+.notif-stack-avatar{position:absolute;top:8px;border:2px solid var(--bg);border-radius:50%;background:var(--bg);width:32px;height:32px}
+.notif-stack-avatar .notif-actor-avatar{box-shadow:none;border-radius:50%}
 .notif-actor-avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:50%}
 .notif-actor-avatar span{position:absolute}
 .notif-actor-badge{position:absolute;bottom:-3px;right:-3px;width:22px;height:22px;border-radius:50%;background:var(--bg);border:2px solid var(--bg);box-shadow:0 2px 8px rgba(15,23,42,0.15);display:flex;align-items:center;justify-content:center;font-size:11px;line-height:1}
@@ -4905,14 +4905,40 @@ document.getElementById('user-search-input')?.addEventListener('input',filterSea
 function relTime(ts){const m=Math.round((Date.now()-ts)/60000);if(m<1)return 'gerade eben';if(m<60)return 'vor '+m+' Min';const h=Math.round(m/60);if(h<24)return 'vor '+h+' Std';const d=Math.round(h/24);if(d<7)return 'vor '+d+'d';return new Date(ts).toLocaleDateString('de-DE',{day:'2-digit',month:'short'});}
 function classify(n){const t=(n.text||'').toLowerCase();const i=n.icon||'';if(i==='❤️'||t.includes('liked')||t.includes('gelikt'))return 'like';if(i==='👤'||t.includes('folgt')||t.includes('follow'))return 'follow';if(i==='📩'||t.includes('newsletter')||t.includes('news'))return 'news';if(i==='💎'||t.includes('diamant'))return 'diamond';if(i==='⚠️'||t.includes('warn')||t.includes('verwarnung'))return 'warn';if(i==='💬'||t.includes('kommentiert')||t.includes('nachricht'))return 'message';return '';}
 function targetUrl(n){const c=classify(n);if(c==='news')return '/explore?tab=newsletter';if(c==='diamond')return '/diamanten';if(c==='message')return '/nachrichten';if(c==='follow')return '/suche';return '/feed';}
-// Gruppen-Key: classify + Aktions-Template (Text minus Actor-Name) — innerhalb 24h zusammenfassen
+// Gruppen-Key: classify + Aktions-Subtype — innerhalb 24h zusammenfassen
+function groupSubtype(n){
+  const t=(n.text||'').toLowerCase();
+  if (t.includes('superlink')) return 'superlink';
+  if (t.includes('link')) return 'link';
+  if (t.includes('post')) return 'post';
+  if (t.includes('foto')||t.includes('photo')) return 'foto';
+  return 'misc';
+}
 function groupKey(n){
   const c=classify(n);
   if (c!=='like' && c!=='follow') return null; // nur Likes & Follower zusammenfassen
-  let suffix = (n.text||'');
-  if (n.actorName) suffix = suffix.replace(n.actorName,'').trim();
-  // Comment-Text variabel → nicht gruppieren wenn message; like/follow haben stabile Suffixe
-  return c+'|'+suffix.toLowerCase().slice(0,60);
+  return c+'|'+groupSubtype(n);
+}
+// Sauberer Text fuer eine Gruppe — KEIN Mixing mehr
+function groupText(c, sub, actors){
+  const others = actors.length - 1;
+  const firstName = actors[0].actorName || 'Jemand';
+  if (others === 0) {
+    // Single → originalen Text nehmen, falls actorName am Anfang fett markieren
+    let txt = escTxt(actors[0].text);
+    if (actors[0].actorName) {
+      const nameEsc = escTxt(actors[0].actorName);
+      if (txt.startsWith(nameEsc)) txt = '<b>'+nameEsc+'</b>'+txt.slice(nameEsc.length);
+    }
+    return txt;
+  }
+  const head = '<b>'+escTxt(firstName)+'</b> + <b>'+others+' '+(others===1?'andere':'andere')+'</b>';
+  if (c==='follow') return head+' folgen dir jetzt';
+  // like
+  if (sub==='superlink') return head+' haben deinen Superlink geliked';
+  if (sub==='post') return head+' haben deinen Post geliked';
+  if (sub==='foto') return head+' haben dein Foto geliked';
+  return head+' haben deinen Link geliked';
 }
 let _allNotifs=[],_currentFilter='all';
 function escTxt(s){return String(s||'').replace(/[<>&]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;"}[c]));}
@@ -4923,36 +4949,28 @@ function actorAvatar(n,size){
   return '<div class="notif-actor-avatar" style="width:'+size+'px;height:'+size+'px;font-size:'+(size*0.38)+'px">'+(src?'<img src="'+src+'" loading="lazy" onerror="this.remove()">':'')+'<span>'+escTxt(initial)+'</span></div>';
 }
 function renderGroup(group){
-  // group = {representative: notif, count, actors: [n,...], maxRead}
   const n = group.representative;
   const c = classify(n);
+  const sub = groupSubtype(n);
   const actors = group.actors;
   let avatarHtml;
   if (actors.length > 1) {
-    // Stack: bis zu 3 Avatare überlappend
-    const stack = actors.slice(0,3).map((a,i)=>'<div class="notif-stack-avatar" style="z-index:'+(3-i)+';margin-left:'+(i===0?'0':'-14px')+'">'+actorAvatar(a,34)+'</div>').join('');
-    avatarHtml = '<div class="notif-actor"><div style="display:flex;align-items:center;width:48px;height:48px;position:relative">'+stack+'</div><div class="notif-actor-badge '+c+'">'+(n.icon||'🔔')+'</div></div>';
+    const withUid = actors.filter(a=>a.actorUid).slice(0,3);
+    if (withUid.length > 0) {
+      const stack = withUid.map((a,i)=>'<div class="notif-stack-avatar" style="z-index:'+(3-i)+';left:'+(i*16)+'px">'+actorAvatar(a,32)+'</div>').join('');
+      avatarHtml = '<div class="notif-actor" style="width:'+(32+(withUid.length-1)*16)+'px"><div style="position:relative;width:100%;height:48px">'+stack+'</div><div class="notif-actor-badge '+c+'">'+(n.icon||'🔔')+'</div></div>';
+    } else {
+      avatarHtml = '<div class="notif-icon '+c+'">'+(n.icon||'🔔')+'</div>';
+    }
   } else if (n.actorUid) {
     avatarHtml = '<div class="notif-actor">'+actorAvatar(n,48)+'<div class="notif-actor-badge '+c+'">'+(n.icon||'🔔')+'</div></div>';
   } else {
     avatarHtml = '<div class="notif-icon '+c+'">'+(n.icon||'🔔')+'</div>';
   }
-  let txt;
-  if (actors.length > 1) {
-    const firstName = n.actorName || 'Jemand';
-    const others = actors.length - 1;
-    let suffix = (n.text||'').replace(n.actorName||'','').trim();
-    txt = '<b>'+escTxt(firstName)+'</b> + <b>'+others+' '+(others===1?'andere':'andere')+'</b> '+escTxt(suffix);
-  } else {
-    txt = escTxt(n.text);
-    if (n.actorName) {
-      const re = new RegExp('^('+n.actorName.replace(/[.*+?^\${}()|[\\]\\\\]/g,'\\\\$&')+')');
-      txt = txt.replace(re,'<b>\$1</b>');
-    }
-  }
+  const txt = groupText(c, sub, actors);
   const tgt = n.actorUid && actors.length===1 ? '/profil/'+n.actorUid : targetUrl(n);
   const isUnread = !group.allRead;
-  return '<a href="'+tgt+'" class="notif-row '+(isUnread?'unread':'')+'">'+avatarHtml+'<div style="flex:1;min-width:0"><div class="notif-text">'+txt+'</div><div class="notif-time">'+relTime(group.latestTs)+(actors.length>1?' · '+actors.length+' Aktionen':'')+'</div></div><div class="notif-arrow">›</div></a>';
+  return '<a href="'+tgt+'" class="notif-row '+(isUnread?'unread':'')+'">'+avatarHtml+'<div style="flex:1;min-width:0"><div class="notif-text">'+txt+'</div><div class="notif-time">'+relTime(group.latestTs)+(actors.length>1?' · '+actors.length+'×':'')+'</div></div><div class="notif-arrow">›</div></a>';
 }
 function buildGroups(items){
   // Items kommen sortiert (neuste zuerst). Wir gehen durch und sammeln in 24h-Buckets pro groupKey.
@@ -5079,34 +5097,63 @@ document.getElementById('search-input').focus();
 </a>`;
         }).join('');
 
-        // Ranking rows helper
-        const makeRankRows = (entries, xpFn) => entries.map(([id,u],i)=>{
+        // Podium fuer Top-3 + Listrows ab Rang 4
+        const makePodium = (entries, xpFn) => {
+            const top3 = entries.slice(0,3);
+            if (!top3.length) return '';
+            const slot = (entry, place) => {
+                if (!entry) return `<div class="podium-slot p${place}"></div>`;
+                const [id,u] = entry;
+                const grad = badgeGradient(u.role);
+                const insta = u.instagram;
+                const initial = (u.name||'?').slice(0,2).toUpperCase();
+                const img = ladeBild(id,'profilepic')
+                    ? `<img src="/appbild/${id}/profilepic" loading="lazy" alt="">`
+                    : insta ? `<img src="https://unavatar.io/instagram/${htmlEsc(insta)}" loading="lazy" onerror="this.remove()" alt="">` : '';
+                const crown = place===1 ? '<div class="podium-crown">👑</div>' : '';
+                return `<a href="/profil/${id}" class="podium-slot p${place}">
+                  ${crown}
+                  <div class="podium-avatar" style="background:${grad}"><span>${initial}</span>${img}</div>
+                  <div class="podium-name">${htmlEsc(u.spitzname||u.name||'User')}${id===myUid?' (Du)':''}</div>
+                  <div class="podium-xp">${(xpFn(id,u)||0).toLocaleString('de-DE')} XP</div>
+                  <div class="podium-block">${place}</div>
+                </a>`;
+            };
+            return `<div class="podium-wrap"><div class="podium-row">${slot(top3[1],2)}${slot(top3[0],1)}${slot(top3[2],3)}</div></div>`;
+        };
+        // Ranking rows helper (ab Rang 4 — Podium oben rendert Top-3)
+        const makeRankRows = (entries, xpFn) => entries.slice(3).map(([id,u],idx)=>{
+            const i = idx + 3;
             const isMe = id===myUid;
             const insta = u.instagram;
             const grad = badgeGradient(u.role);
             const xp = xpFn(id,u);
             return `<a href="/profil/${id}" class="rank-item ${isMe?'rank-me':''}">
-    <div class="rank-pos">${i<3?medals[i]:`<span class="rank-num">${i+1}</span>`}</div>
+    <div class="rank-pos"><span class="rank-num">${i+1}</span></div>
     <div style="position:relative;width:40px;height:40px;border-radius:50%;overflow:hidden;background:${grad};flex-shrink:0;display:flex;align-items:center;justify-content:center${getRingBoxShadow(u)}">
       <span style="color:#fff;font-weight:700;font-size:14px;position:absolute">${(u.name||'?').slice(0,2).toUpperCase()}</span>
-      ${ladeBild(id,'profilepic')?`<img src="/appbild/${id}/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" alt="">`:insta?`<img src="https://unavatar.io/instagram/${insta}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" alt="">`:''}
+      ${ladeBild(id,'profilepic')?`<img src="/appbild/${id}/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" alt="">`:insta?`<img src="https://unavatar.io/instagram/${htmlEsc(insta)}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.remove()" alt="">`:''}
     </div>
     <div class="rank-info">
-      <div class="rank-name">${u.spitzname||u.name||'User'}${isMe?' (Du)':''}</div>
-      <div class="rank-badge">${u.role||''}</div>
+      <div class="rank-name">${htmlEsc(u.spitzname||u.name||'User')}${isMe?' (Du)':''}</div>
+      <div class="rank-badge">${htmlEsc(u.role||'')}</div>
     </div>
-    <div class="rank-xp">${xp} XP</div>
+    <div class="rank-xp">${(xp||0).toLocaleString('de-DE')} XP</div>
   </a>`;
         }).join('');
-        const rankingRows = makeRankRows(sorted, (_,u)=>u.xp||0);
+        const makeRankSection = (entries, xpFn, emptyHint) => {
+            if (!entries.length) return `<div class="empty" style="padding:48px 24px;text-align:center"><div class="empty-icon">🏆</div><div class="empty-text">${emptyHint}</div></div>`;
+            return makePodium(entries, xpFn) + makeRankRows(entries, xpFn);
+        };
+        const rankingRows = makeRankSection(sorted, (_,u)=>u.xp||0, 'Noch keine Daten');
         const dailySorted = Object.entries(d.users||{})
             .filter(([id,u])=>!adminIds.includes(Number(id))&&u.started&&(d.dailyXP[id]||0)>0)
             .sort((a,b)=>(d.dailyXP[b[0]]||0)-(d.dailyXP[a[0]]||0));
         const weeklySorted = Object.entries(d.users||{})
             .filter(([id,u])=>!adminIds.includes(Number(id))&&u.started&&(d.weeklyXP[id]||0)>0)
             .sort((a,b)=>(d.weeklyXP[b[0]]||0)-(d.weeklyXP[a[0]]||0));
-        const dailyRows = makeRankRows(dailySorted, (id)=>d.dailyXP[id]||0);
-        const weeklyRows = makeRankRows(weeklySorted, (id)=>d.weeklyXP[id]||0);
+        const dailyRows = makeRankSection(dailySorted, (id)=>d.dailyXP[id]||0, 'Heute noch keine XP');
+        const weeklyRows = makeRankSection(weeklySorted, (id)=>d.weeklyXP[id]||0, 'Diese Woche noch keine XP');
 
         // ── PERSONEN DIE DU KENNEN KÖNNTEST ──
         const myFollowingSet = new Set((d.users[myUid]?.following||[]).map(String));
@@ -5274,9 +5321,9 @@ ${''/* Personen-die-du-kennen-koenntest-Section ist umgezogen nach /suche (siehe
   <button onclick="switchRanking('daily',this)" id="rtab-daily" style="flex:1;background:var(--bg3);color:var(--muted);border:1px solid var(--border2);border-radius:10px;padding:7px;font-size:12px;font-weight:700;cursor:pointer">📅 Daily</button>
   <button onclick="switchRanking('weekly',this)" id="rtab-weekly" style="flex:1;background:var(--bg3);color:var(--muted);border:1px solid var(--border2);border-radius:10px;padding:7px;font-size:12px;font-weight:700;cursor:pointer">📆 Woche</button>
 </div>
-<div id="rlist-gesamt" style="padding-bottom:100px">${rankingRows||'<div class="empty" style="padding:48px 24px;text-align:center"><div class="empty-icon">🏆</div><div class="empty-text">Noch keine Daten</div></div>'}</div>
-<div id="rlist-daily" style="display:none;padding-bottom:100px">${dailyRows||'<div class="empty" style="padding:48px 24px;text-align:center"><div class="empty-icon">📅</div><div class="empty-text">Heute noch keine XP</div></div>'}</div>
-<div id="rlist-weekly" style="display:none;padding-bottom:100px">${weeklyRows||'<div class="empty" style="padding:48px 24px;text-align:center"><div class="empty-icon">📆</div><div class="empty-text">Diese Woche noch keine XP</div></div>'}</div>
+<div id="rlist-gesamt" style="padding-bottom:100px">${rankingRows}</div>
+<div id="rlist-daily" style="display:none;padding-bottom:100px">${dailyRows}</div>
+<div id="rlist-weekly" style="display:none;padding-bottom:100px">${weeklyRows}</div>
 <script>
 function switchRanking(tab, btn) {
   ['gesamt','daily','weekly'].forEach(t=>{
