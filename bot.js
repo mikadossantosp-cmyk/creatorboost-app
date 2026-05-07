@@ -1954,7 +1954,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v103-bug-sweep';
+const SW_VERSION='v104-bot-story';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
@@ -3869,7 +3869,22 @@ p{line-height:1.65;color:var(--muted)}
             .sort((a,b)=>(b[1].xp||0)-(a[1].xp||0))
             .slice(0,10);
 
+        // Latest newsletter for bot story-bubble
+        const _latestNews = (d.newsletter||[]).slice().sort((a,b)=>(b.timestamp||0)-(a.timestamp||0))[0];
+        const _latestNewsTs = _latestNews?.timestamp || 0;
+        const _latestNewsTitle = (_latestNews?.title || 'Neuer Newsletter').slice(0,30);
+        const _botBubbleHtml = _latestNewsTs ? `<a href="/newsletter" class="story-item bot-story" data-news-ts="${_latestNewsTs}" id="bot-story-bubble" onclick="try{localStorage.setItem('cb_news_seen',String(${_latestNewsTs}));}catch(e){}">
+      <div class="story-ring" style="background:linear-gradient(135deg,#3b82f6,#0ea5e9,#06b6d4);box-shadow:0 4px 16px rgba(59,130,246,0.55)">
+        <div style="width:58px;height:58px;border-radius:50%;overflow:hidden;background:#0a1929;display:flex;align-items:center;justify-content:center;font-size:28px;border:2px solid var(--bg);position:relative">
+          🤖
+          <span style="position:absolute;bottom:-1px;right:-1px;width:14px;height:14px;border-radius:50%;background:#22c55e;border:2px solid var(--bg);box-shadow:0 0 6px rgba(34,197,94,0.6)"></span>
+        </div>
+      </div>
+      <div class="story-name" style="color:#3b82f6;font-weight:800">News</div>
+    </a>` : '';
+
         const storiesHtml = `<div class="stories">
+  ${_botBubbleHtml}
   ${topUsers.map(([id,u])=>{
     const insta = u.instagram;
     const hasLink = Object.values(d.links||{}).some(l=>l.user_id===Number(id)&&new Date(l.timestamp).toDateString()===today);
@@ -3882,7 +3897,19 @@ p{line-height:1.65;color:var(--muted)}
       <div class="story-name">${u.spitzname||u.name||'?'}</div>
     </a>`;
   }).join('')}
-</div>`;
+</div>
+<script>
+(function(){
+  // Bot-Story nur zeigen wenn news ungelesen sind
+  try {
+    var bot = document.getElementById('bot-story-bubble');
+    if (!bot) return;
+    var ts = parseInt(bot.getAttribute('data-news-ts')||'0', 10);
+    var seen = parseInt(localStorage.getItem('cb_news_seen')||'0', 10);
+    if (ts && ts === seen) bot.style.display = 'none';
+  } catch(e) {}
+})();
+</script>`;
 
         const todayStr = new Date().toDateString();
         const heuteLinks = dedupLinks.filter(([,l])=>new Date(l.timestamp||0).toDateString()===todayStr);
