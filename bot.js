@@ -1775,7 +1775,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v75-tg-bigger';
+const SW_VERSION='v76-unified-menu';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
@@ -4381,34 +4381,36 @@ async function createThread(){
 .thr-row-me .thr-swipe-trash{right:auto;left:14px}
 .thr-row.selected .thr-bubble{box-shadow:0 0 0 2px rgba(167,139,250,0.5),0 8px 32px rgba(15,23,42,0.18);transform:scale(1.02)}
 .thr-del-btn{display:none}
-/* Telegram-Style Action-Menu für Threads */
-.thr-react-picker{position:fixed;z-index:210;background:var(--bg);border:1px solid var(--border);border-radius:999px;padding:6px 8px;box-shadow:0 12px 32px rgba(15,23,42,0.18);display:none;gap:2px}
+/* Telegram-Style Action-Menu für Threads — Unified Picker */
+.thr-react-picker{position:fixed;z-index:9999;background:var(--bg);border:1px solid var(--border);border-radius:16px;padding:8px;box-shadow:0 16px 40px rgba(15,23,42,0.20);display:none;flex-direction:column;gap:4px;min-width:220px;max-width:280px}
 .thr-react-picker.show{display:flex;animation:thr-pop 0.25s cubic-bezier(0.34,1.56,0.64,1)}
-.thr-react-picker button{background:none;border:none;font-size:28px;padding:4px 8px;cursor:pointer;transition:transform 0.18s cubic-bezier(0.34,1.56,0.64,1);border-radius:50%}
-.thr-react-picker button:active{transform:scale(1.5)}
-@keyframes thr-pop{from{transform:scale(0.5) translateY(12px);opacity:0}to{transform:scale(1) translateY(0);opacity:1}}
-.thr-action-bar{position:fixed;left:50%;transform:translateX(-50%) translateY(110%);bottom:calc(78px + env(safe-area-inset-bottom,0px));max-width:460px;width:calc(100% - 16px);background:var(--bg);border:1px solid var(--border);border-radius:18px;padding:6px;box-shadow:0 16px 40px rgba(15,23,42,0.20);display:flex;gap:4px;z-index:210;opacity:0;transition:transform 0.28s cubic-bezier(0.16,1,0.3,1),opacity 0.18s ease;pointer-events:none}
-.thr-action-bar.show{transform:translateX(-50%) translateY(0);opacity:1;pointer-events:auto}
-.thr-action-bar .tab-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 6px;background:none;border:none;color:var(--text);font-size:12px;font-weight:700;cursor:pointer;border-radius:12px;transition:background 0.15s,transform 0.12s}
-.thr-action-bar .tab-btn:active{transform:scale(0.95);background:var(--surface-tint)}
-.thr-action-bar .tab-btn.danger{color:#ef4444}
-.thr-action-bar .tab-icon{font-size:22px;line-height:1}
-.thr-select-bd{position:fixed;inset:0;background:rgba(0,0,0,0.32);backdrop-filter:blur(2px);z-index:199;display:none}
+.thr-react-picker .crp-emojis{display:flex;gap:2px;padding:2px 4px 6px;border-bottom:1px solid var(--border2);justify-content:space-between}
+.thr-react-picker .crp-emojis button{background:none;border:none;font-size:26px;padding:4px;cursor:pointer;transition:transform 0.18s cubic-bezier(0.34,1.56,0.64,1);border-radius:50%;flex:1}
+.thr-react-picker .crp-emojis button:active{transform:scale(1.4)}
+.thr-react-picker .crp-actions{display:flex;flex-direction:column;padding-top:4px;gap:1px}
+.thr-react-picker .crp-action{display:flex;align-items:center;gap:12px;padding:11px 14px;background:none;border:none;color:var(--text);font-size:15px;font-weight:600;cursor:pointer;border-radius:10px;transition:background 0.12s;text-align:left;width:100%}
+.thr-react-picker .crp-action:active{background:var(--surface-tint)}
+.thr-react-picker .crp-action.danger{color:#ef4444}
+.thr-react-picker .crp-action .crp-icon{font-size:18px;width:24px;text-align:center}
+@keyframes thr-pop{from{transform:scale(0.85) translateY(8px);opacity:0}to{transform:scale(1) translateY(0);opacity:1}}
+.thr-select-bd{position:fixed;inset:0;background:rgba(0,0,0,0.42);backdrop-filter:blur(2px);z-index:9998;display:none}
 .thr-select-bd.show{display:block;animation:thr-fade .18s ease}
 @keyframes thr-fade{from{opacity:0}to{opacity:1}}
 </style>
 <div id="thr-react-picker" class="thr-react-picker">
-  <button onclick="thrReactWith('❤️')">❤️</button>
-  <button onclick="thrReactWith('😂')">😂</button>
-  <button onclick="thrReactWith('😮')">😮</button>
-  <button onclick="thrReactWith('😢')">😢</button>
-  <button onclick="thrReactWith('👏')">👏</button>
-  <button onclick="thrReactWith('🔥')">🔥</button>
-</div>
-<div id="thr-action-bar" class="thr-action-bar">
-  <button class="tab-btn" onclick="thrDoReply()"><span class="tab-icon">↩️</span><span>Antworten</span></button>
-  <button class="tab-btn" onclick="thrDoCopy()"><span class="tab-icon">📋</span><span>Kopieren</span></button>
-  <button class="tab-btn danger" id="thr-del-btn" onclick="thrDoDelete()" style="display:none"><span class="tab-icon">🗑️</span><span>Löschen</span></button>
+  <div class="crp-emojis">
+    <button type="button" onclick="thrReactWith('❤️')">❤️</button>
+    <button type="button" onclick="thrReactWith('😂')">😂</button>
+    <button type="button" onclick="thrReactWith('😮')">😮</button>
+    <button type="button" onclick="thrReactWith('😢')">😢</button>
+    <button type="button" onclick="thrReactWith('👏')">👏</button>
+    <button type="button" onclick="thrReactWith('🔥')">🔥</button>
+  </div>
+  <div class="crp-actions">
+    <button type="button" class="crp-action" onclick="thrDoReply()"><span class="crp-icon">↩️</span><span>Antworten</span></button>
+    <button type="button" class="crp-action" onclick="thrDoCopy()"><span class="crp-icon">📋</span><span>Kopieren</span></button>
+    <button type="button" class="crp-action danger" id="thr-del-btn" onclick="thrDoDelete()" style="display:none"><span class="crp-icon">🗑️</span><span>Löschen</span></button>
+  </div>
 </div>
 <div id="msgs" style="padding:12px 12px 165px;display:flex;flex-direction:column;gap:10px;overflow-x:hidden;min-width:0;width:100%">${initialMsgsHtml}</div>
 <script>
@@ -4431,13 +4433,13 @@ async function createThread(){
     _lastShow = Date.now();
     const canDel = row.dataset.canDel === '1';
     document.getElementById('thr-del-btn').style.display = canDel ? 'flex' : 'none';
-    // Backdrop
+    // Backdrop — onclick delayed
     let bd = document.getElementById('thr-select-bd');
     if (!bd) { bd = document.createElement('div'); bd.id = 'thr-select-bd'; bd.className = 'thr-select-bd'; document.body.appendChild(bd); }
     bd.onclick = null;
     bd.classList.add('show');
-    setTimeout(() => { if (bd) bd.onclick = thrHideMenu; }, 280);
-    // Picker oben über bubble
+    setTimeout(() => { if (bd) bd.onclick = thrHideMenu; }, 320);
+    // Picker oben oder unten neben bubble
     const picker = document.getElementById('thr-react-picker');
     const bubble = row.querySelector('.thr-bubble');
     document.querySelectorAll('.thr-row.selected').forEach(r => r.classList.remove('selected'));
@@ -4445,17 +4447,18 @@ async function createThread(){
     picker.classList.add('show');
     if (bubble) {
       const r = bubble.getBoundingClientRect();
-      const pw = picker.offsetWidth || 260;
+      const ph = picker.offsetHeight || 200;
+      const pw = picker.offsetWidth || 240;
       const left = Math.max(8, Math.min(window.innerWidth - pw - 8, r.left + r.width / 2 - pw / 2));
       picker.style.left = left + 'px';
-      picker.style.top = Math.max(60, r.top - picker.offsetHeight - 12) + 'px';
+      const above = r.top - ph - 12;
+      const below = r.bottom + 12;
+      picker.style.top = (above >= 12 ? above : Math.min(below, window.innerHeight - ph - 12)) + 'px';
     }
-    document.getElementById('thr-action-bar').classList.add('show');
     if (navigator.vibrate) navigator.vibrate(15);
   }
   function thrHideMenu(){
     document.getElementById('thr-react-picker')?.classList.remove('show');
-    document.getElementById('thr-action-bar')?.classList.remove('show');
     document.getElementById('thr-select-bd')?.classList.remove('show');
     document.querySelectorAll('.thr-row.selected').forEach(r => r.classList.remove('selected'));
     _activeRow = null;
@@ -4497,10 +4500,9 @@ async function createThread(){
     fetch('/api/react-thread-msg',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({threadId:TID,timestamp:ts,emoji})}).catch(()=>{});
   };
   document.addEventListener('click', e => {
-    if (Date.now() - _lastShow < 320) return;
+    if (Date.now() - _lastShow < 350) return;
     const picker = document.getElementById('thr-react-picker');
-    const bar = document.getElementById('thr-action-bar');
-    if (picker?.classList.contains('show') && !picker.contains(e.target) && !bar?.contains(e.target) && !e.target.closest('.thr-bubble')) thrHideMenu();
+    if (picker?.classList.contains('show') && !picker.contains(e.target) && !e.target.closest('.thr-bubble')) thrHideMenu();
   });
   // Pointer-State für Long-Press UND Swipe-Reply
   let row=null, x0=0, y0=0, pid=null, lpTimer=null, swiping=false, committed=false;

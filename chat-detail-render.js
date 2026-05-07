@@ -293,41 +293,42 @@ function getStyles() {
         '@keyframes wave { 0%, 100% { transform: rotate(0deg); } 25% { transform: rotate(-15deg); } 75% { transform: rotate(15deg); } }' +
         '.chat-empty-text { font-weight: 700; color: var(--text); margin-bottom: 6px; font-size: 17px; }' +
         '.chat-empty-sub { font-size: 13px; color: var(--muted); line-height: 1.5; max-width: 240px; margin: 0 auto; }' +
-        '.chat-react-picker { position: fixed; z-index: 210; background: var(--bg); border: 1px solid var(--border); border-radius: 999px; padding: 6px 8px; box-shadow: 0 12px 32px rgba(15,23,42,0.18); display: none; gap: 2px; }' +
+        '.chat-react-picker { position: fixed; z-index: 9999; background: var(--bg); border: 1px solid var(--border); border-radius: 16px; padding: 8px; box-shadow: 0 16px 40px rgba(15,23,42,0.20); display: none; flex-direction: column; gap: 4px; min-width: 220px; max-width: 280px; }' +
         '.chat-react-picker.show { display: flex; animation: picker-pop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1); }' +
-        '.chat-react-picker button { background: none; border: none; font-size: 28px; padding: 4px 8px; cursor: pointer; transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1); border-radius: 50%; }' +
-        '.chat-react-picker button:hover, .chat-react-picker button:active { transform: scale(1.5); }' +
-        '@keyframes picker-pop { from { transform: scale(0.5) translateY(12px); opacity: 0; } to { transform: scale(1) translateY(0); opacity: 1; } }' +
-        // Telegram-Style Bottom-Action-Bar
-        '.chat-action-bar { position: fixed; left: 50%; transform: translateX(-50%) translateY(110%); bottom: calc(78px + env(safe-area-inset-bottom, 0px)); max-width: 460px; width: calc(100% - 16px); background: var(--bg); border: 1px solid var(--border); border-radius: 18px; padding: 6px; box-shadow: 0 16px 40px rgba(15,23,42,0.20); display: flex; gap: 4px; z-index: 210; opacity: 0; transition: transform 0.28s cubic-bezier(0.16,1,0.3,1), opacity 0.18s ease; pointer-events: none; }' +
-        '.chat-action-bar.show { transform: translateX(-50%) translateY(0); opacity: 1; pointer-events: auto; }' +
-        '.chat-action-bar .cab-btn { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 6px; background: none; border: none; color: var(--text); font-size: 12px; font-weight: 700; cursor: pointer; border-radius: 12px; transition: background 0.15s, transform 0.12s; letter-spacing: 0.1px; }' +
-        '.chat-action-bar .cab-btn:active { transform: scale(0.95); background: var(--surface-tint); }' +
-        '.chat-action-bar .cab-btn.danger { color: #ef4444; }' +
-        '.chat-action-bar .cab-icon { font-size: 22px; line-height: 1; }' +
+        '.chat-react-picker .crp-emojis { display: flex; gap: 2px; padding: 2px 4px 6px; border-bottom: 1px solid var(--border2); justify-content: space-between; }' +
+        '.chat-react-picker .crp-emojis button { background: none; border: none; font-size: 26px; padding: 4px; cursor: pointer; transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1); border-radius: 50%; flex: 1; }' +
+        '.chat-react-picker .crp-emojis button:active { transform: scale(1.4); }' +
+        '.chat-react-picker .crp-actions { display: flex; flex-direction: column; padding-top: 4px; gap: 1px; }' +
+        '.chat-react-picker .crp-action { display: flex; align-items: center; gap: 12px; padding: 11px 14px; background: none; border: none; color: var(--text); font-size: 15px; font-weight: 600; cursor: pointer; border-radius: 10px; transition: background 0.12s; text-align: left; width: 100%; }' +
+        '.chat-react-picker .crp-action:active { background: var(--surface-tint); }' +
+        '.chat-react-picker .crp-action.danger { color: #ef4444; }' +
+        '.chat-react-picker .crp-action .crp-icon { font-size: 18px; width: 24px; text-align: center; }' +
+        '@keyframes picker-pop { from { transform: scale(0.85) translateY(8px); opacity: 0; } to { transform: scale(1) translateY(0); opacity: 1; } }' +
         // Selection-Mode Backdrop
-        '.chat-select-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.32); backdrop-filter: blur(2px); z-index: 199; display: none; }' +
+        '.chat-select-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.42); backdrop-filter: blur(2px); z-index: 9998; display: none; }' +
         '.chat-select-backdrop.show { display: block; animation: cb-fade .18s ease; }' +
         '@keyframes cb-fade { from { opacity: 0; } to { opacity: 1; } }' +
-        '.chat-row.chat-row-selected { z-index: 200; position: relative; }' +
+        '.chat-row.chat-row-selected { z-index: 9990; position: relative; }' +
         '.chat-row.chat-row-selected .chat-bubble { box-shadow: 0 0 0 2px rgba(167,139,250,0.5), 0 8px 32px rgba(15,23,42,0.18); transform: scale(1.02); }' +
         '</style>';
 }
 
 function getReactionPicker() {
+    // Ein einzelner Picker mit Emojis oben und Aktionen darunter (alles bubble-nah)
     return '<div id="chat-react-picker" class="chat-react-picker">' +
-        '<button onclick="chatPickReaction(\'❤️\')">❤️</button>' +
-        '<button onclick="chatPickReaction(\'😂\')">😂</button>' +
-        '<button onclick="chatPickReaction(\'😮\')">😮</button>' +
-        '<button onclick="chatPickReaction(\'😢\')">😢</button>' +
-        '<button onclick="chatPickReaction(\'👏\')">👏</button>' +
-        '<button onclick="chatPickReaction(\'🔥\')">🔥</button>' +
+        '<div class="crp-emojis">' +
+            '<button type="button" onclick="chatPickReaction(\'❤️\')">❤️</button>' +
+            '<button type="button" onclick="chatPickReaction(\'😂\')">😂</button>' +
+            '<button type="button" onclick="chatPickReaction(\'😮\')">😮</button>' +
+            '<button type="button" onclick="chatPickReaction(\'😢\')">😢</button>' +
+            '<button type="button" onclick="chatPickReaction(\'👏\')">👏</button>' +
+            '<button type="button" onclick="chatPickReaction(\'🔥\')">🔥</button>' +
         '</div>' +
-        // Telegram-Style Bottom-Action-Bar
-        '<div id="chat-action-bar" class="chat-action-bar">' +
-            '<button class="cab-btn" onclick="chatReplyFromPicker()"><span class="cab-icon">↩️</span><span class="cab-label">Antworten</span></button>' +
-            '<button class="cab-btn" onclick="chatCopyMsg()"><span class="cab-icon">📋</span><span class="cab-label">Kopieren</span></button>' +
-            '<button id="cab-del-btn" class="cab-btn danger" onclick="chatDeleteMsg()" style="display:none"><span class="cab-icon">🗑️</span><span class="cab-label">Löschen</span></button>' +
+        '<div class="crp-actions">' +
+            '<button type="button" class="crp-action" onclick="chatReplyFromPicker()"><span class="crp-icon">↩️</span><span>Antworten</span></button>' +
+            '<button type="button" class="crp-action" onclick="chatCopyMsg()"><span class="crp-icon">📋</span><span>Kopieren</span></button>' +
+            '<button type="button" id="cab-del-btn" class="crp-action danger" onclick="chatDeleteMsg()" style="display:none"><span class="crp-icon">🗑️</span><span>Löschen</span></button>' +
+        '</div>' +
         '</div>';
 }
 
@@ -376,41 +377,41 @@ function getScripts(myUid, otherUid) {
         '}' +
         'function chatShowReactions(el, ts) {' +
             'const picker = document.getElementById("chat-react-picker");' +
-            'const bar = document.getElementById("chat-action-bar");' +
             'const row = el.closest(".chat-row");' +
             'const isMyMsg = row?.classList.contains("chat-row-me");' +
             'const delBtn = document.getElementById("cab-del-btn");' +
             'if (delBtn) delBtn.style.display = isMyMsg ? "flex" : "none";' +
-            // Backdrop — onclick delayed um 280ms damit der touchend-click nach long-press nicht sofort schliesst
+            // Backdrop — onclick delayed um 320ms damit der touchend-click nach long-press nicht sofort schliesst
             'let bd = document.getElementById("chat-select-bd");' +
             'if (!bd) { bd = document.createElement("div"); bd.id = "chat-select-bd"; bd.className = "chat-select-backdrop"; document.body.appendChild(bd); }' +
             'bd.onclick = null;' +
             'bd.classList.add("show");' +
-            'setTimeout(() => { if (bd) bd.onclick = chatHidePicker; }, 280);' +
+            'setTimeout(() => { if (bd) bd.onclick = chatHidePicker; }, 320);' +
             // Selected-State auf Row
             'document.querySelectorAll(".chat-row-selected").forEach(r => r.classList.remove("chat-row-selected"));' +
             'if (row) row.classList.add("chat-row-selected");' +
             'picker.classList.add("show"); chatActiveTs = ts; __chatLastShow = Date.now();' +
+            // Position: picker so dass er bubble nicht ueberdeckt (above wenn Platz, sonst below)
             'const r = el.getBoundingClientRect();' +
-            'const pw = picker.offsetWidth || 260;' +
+            'const ph = picker.offsetHeight || 200;' +
+            'const pw = picker.offsetWidth || 240;' +
             'const left = Math.max(8, Math.min(window.innerWidth - pw - 8, r.left + r.width / 2 - pw / 2));' +
             'picker.style.left = left + "px";' +
-            'picker.style.top = Math.max(60, r.top - picker.offsetHeight - 12) + "px";' +
-            'bar?.classList.add("show");' +
+            'const above = r.top - ph - 12;' +
+            'const below = r.bottom + 12;' +
+            'picker.style.top = (above >= 12 ? above : Math.min(below, window.innerHeight - ph - 12)) + "px";' +
         '}' +
         'function chatHidePicker() {' +
             'document.getElementById("chat-react-picker")?.classList.remove("show");' +
-            'document.getElementById("chat-action-bar")?.classList.remove("show");' +
             'document.getElementById("chat-select-bd")?.classList.remove("show");' +
             'document.querySelectorAll(".chat-row-selected").forEach(r => r.classList.remove("chat-row-selected"));' +
         '}' +
         'let __chatLastShow = 0;' +
         'document.addEventListener("click", e => {' +
-            'if (Date.now() - __chatLastShow < 320) return;' + // touchend-click direkt nach long-press ignorieren
+            'if (Date.now() - __chatLastShow < 350) return;' + // touchend-click direkt nach long-press ignorieren
             'const picker = document.getElementById("chat-react-picker");' +
-            'const bar = document.getElementById("chat-action-bar");' +
             'const bd = document.getElementById("chat-select-bd");' +
-            'if (picker?.classList.contains("show") && !picker.contains(e.target) && !bar?.contains(e.target) && !e.target.closest(".chat-bubble") && e.target !== bd) chatHidePicker();' +
+            'if (picker?.classList.contains("show") && !picker.contains(e.target) && !e.target.closest(".chat-bubble") && e.target !== bd) chatHidePicker();' +
         '});' +
         'async function chatPickReaction(emoji) {' +
             'if (!chatActiveTs) return;' +
