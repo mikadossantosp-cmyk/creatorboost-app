@@ -187,7 +187,7 @@ function getStyles() {
         '.chat-date-sep span { display: inline-block; padding: 5px 14px; font-size: 11px; font-weight: 700; color: var(--muted); background: var(--surface-tint); border: 1px solid var(--border2); border-radius: 999px; letter-spacing: 0.4px; text-transform: uppercase; }' +
         '.chat-unread-divider { display: flex; align-items: center; justify-content: center; gap: 6px; margin: 16px 14px 8px; padding: 8px 12px; background: rgba(8,102,255,0.12); border: 1px solid rgba(8,102,255,0.25); border-radius: 12px; color: #4dabf7; font-size: 12.5px; font-weight: 700; letter-spacing: 0.2px; cursor: pointer; transition: background 0.15s, transform 0.15s; }' +
         '.chat-unread-divider:active { background: rgba(8,102,255,0.18); transform: scale(0.98); }' +
-        '.chat-row { display: flex; align-items: flex-end; gap: 10px; padding: 0 14px; margin-top: 14px; animation: msg-in 0.3s cubic-bezier(0.16, 1, 0.3, 1); }' +
+        '.chat-row { display: flex; align-items: flex-end; gap: 10px; padding: 0 14px; margin-top: 14px; animation: msg-in 0.3s cubic-bezier(0.16, 1, 0.3, 1); touch-action: pan-y; position: relative; overflow: visible; }' +
         '.chat-row-grouped { margin-top: 3px; animation: none; }' +
         '@keyframes msg-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }' +
         '.chat-row-me { justify-content: flex-end; }' +
@@ -463,9 +463,9 @@ function getScripts(myUid, otherUid) {
         '}' +
         // ── Swipe-to-Reply (Instagram-style) ──
         'const OTHER_NAME = "' + esc(otherUid) + '";' +
-        'let __replyState = null;' +
+        'window.__replyState = null;' +
         'function chatStartReply(ts, name, text){' +
-            '__replyState = { ts: Number(ts)||0, name: name||"?", text: (text||"").slice(0,140) };' +
+            'window.__replyState = { ts: Number(ts)||0, name: name||"?", text: (text||"").slice(0,140) };' +
             'let prev = document.getElementById("reply-preview");' +
             'if (!prev) { prev = document.createElement("div"); prev.id = "reply-preview"; document.body.appendChild(prev); }' +
             'prev.innerHTML = "<div class=\\"rp-arrow\\">↩️</div><div class=\\"rp-info\\"><div class=\\"rp-label\\">Antwort an " + (name||"User").replace(/[<>&]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;"}[c])) + "</div><div class=\\"rp-text\\">" + (text||"").replace(/[<>&]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;"}[c])) + "</div></div><button class=\\"rp-close\\" onclick=\\"chatCancelReply()\\">×</button>";' +
@@ -474,7 +474,7 @@ function getScripts(myUid, otherUid) {
             'if (navigator.vibrate) navigator.vibrate(20);' +
         '}' +
         'function chatCancelReply(){' +
-            '__replyState = null;' +
+            'window.__replyState = null;' +
             'document.getElementById("reply-preview")?.classList.remove("show");' +
         '}' +
         // Patch sendMessage um replyTo mitzuschicken (überschreibt fetch-Body)
@@ -482,8 +482,8 @@ function getScripts(myUid, otherUid) {
             'const origFetch = window.fetch.bind(window);' +
             'window.fetch = function(u, opts){' +
                 'try {' +
-                    'if (typeof u === "string" && u.indexOf("/api/send-message") === 0 && opts && opts.body && __replyState) {' +
-                        'const body = JSON.parse(opts.body); body.replyTo = __replyState;' +
+                    'if (typeof u === "string" && u.indexOf("/api/send-message") === 0 && opts && opts.body && window.__replyState) {' +
+                        'const body = JSON.parse(opts.body); body.replyTo = window.__replyState;' +
                         'opts = Object.assign({}, opts, { body: JSON.stringify(body) });' +
                         'setTimeout(chatCancelReply, 100);' +
                     '}' +
@@ -505,21 +505,22 @@ function getScripts(myUid, otherUid) {
             'if (dy > 18) { __swipeRow.classList.remove("swiping"); __swipeRow = null; return; }' +
             // Telegram-Style: SWIPE LINKS auf jede Message triggert Reply
             'const adx = Math.min(0, dx);' +
-            'if (Math.abs(adx) > 6) {' +
+            'if (Math.abs(adx) > 4) {' +
                 '__swipeActive = true; __swipeRow.classList.add("swiping");' +
                 'const cap = Math.max(-90, Math.min(0, adx));' +
                 '__swipeRow.style.setProperty("--swipe", cap + "px");' +
-                '__swipeRow.style.setProperty("--swipe-op", Math.min(1, Math.abs(cap)/60));' +
+                '__swipeRow.style.setProperty("--swipe-op", Math.min(1, Math.abs(cap)/40));' +
             '}' +
         '}, { passive: true });' +
         'document.addEventListener("touchend", e => {' +
             'if (!__swipeRow) return;' +
             'const cap = parseInt(__swipeRow.style.getPropertyValue("--swipe")||"0", 10);' +
-            'if (Math.abs(cap) >= 55 && __swipeActive) {' +
+            'if (Math.abs(cap) >= 40 && __swipeActive) {' +
                 'const ts = __swipeRow.dataset.ts;' +
                 'const isMe = __swipeRow.classList.contains("chat-row-me");' +
                 'const name = isMe ? "Du" : (document.querySelector(".chat-header-name")?.innerText || "User").trim();' +
                 'const text = (__swipeRow.querySelector(".chat-text")?.innerText || __swipeRow.querySelector(".chat-img-caption")?.innerText || (__swipeRow.querySelector(".chat-img-wrap")?"📷 Foto":"") || (__swipeRow.querySelector(".chat-audio")?"🎤 Sprachnachricht":"") || "").trim();' +
+                'if (navigator.vibrate) navigator.vibrate(15);' +
                 'chatStartReply(ts, name, text);' +
             '}' +
             '__swipeRow.style.setProperty("--swipe", "0px");' +
