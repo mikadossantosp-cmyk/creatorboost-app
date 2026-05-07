@@ -1775,7 +1775,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v72-tg-chat';
+const SW_VERSION='v73-tg-threads';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
@@ -4336,7 +4336,7 @@ async function createThread(){
                 const textBody = m.text ? `<div style="font-size:16.5px;line-height:1.42;color:#e4e6eb;word-break:break-word">${esc(m.text)}</div>` : '';
                 const timeFooter = `<div style="font-size:10.5px;color:rgba(255,255,255,0.5);text-align:right;margin-top:3px;font-variant-numeric:tabular-nums">${timeStr}</div>`;
                 const canDelSSR = (m.uid && String(m.uid) === String(myUid)) || isAdmin;
-                const swipeAttrs = canDelSSR ? ` data-can-del="1" data-del-ts="${m.timestamp}" data-del-mid="${m.msg_id||0}"` : '';
+                const swipeAttrs = ` data-del-ts="${m.timestamp}" data-del-mid="${m.msg_id||0}"${canDelSSR ? ' data-can-del="1"' : ''}`;
                 const bubble = `<div class="thr-bubble" style="position:relative;display:inline-block;max-width:78%;background:#212121;border-radius:14px;padding:8px 12px 6px 12px;box-shadow:0 1px 2px rgba(0,0,0,0.3)">${nameInBubble}${replyBlock}${textBody}${timeFooter}</div>`;
                 const avatarSlot = showAvatar
                     ? `<a href="/profil/${esc(m.uid)}" style="text-decoration:none;flex-shrink:0"><div style="width:30px;height:30px;border-radius:50%;background:${c};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;position:relative;overflow:hidden${ring}">${ini}${m.uid?`<img src="/appbild/${esc(m.uid)}/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" onerror="this.remove()" loading="lazy">`:''}</div></a>`
@@ -4347,7 +4347,7 @@ async function createThread(){
                     firstUnreadId = ' id="first-unread"';
                     unreadInsertedSSR = true;
                 }
-                const trashEl = canDelSSR ? '<div class="thr-swipe-trash" aria-hidden="true">🗑️</div>' : '';
+                const trashEl = '<div class="thr-swipe-trash" aria-hidden="true">↩️</div>';
                 return bannerPrefix + `<div class="thr-row"${swipeAttrs} style="display:flex;gap:8px;align-items:flex-end${isLastInSeries?'':';margin-bottom:2px'}"${firstUnreadId}>${avatarSlot}<div class="thr-row-inner" style="flex:1;min-width:0;text-align:left;display:flex">${bubble}</div>${trashEl}</div>`;
               }).join('')
             : '<div style="text-align:center;padding:60px 20px;color:var(--muted)"><div style="font-size:40px;margin-bottom:12px">💬</div><div style="font-size:14px">Noch keine Nachrichten.<br>Schreib die erste!</div></div>';
@@ -4365,12 +4365,39 @@ async function createThread(){
 .thread-unread-divider:active{background:rgba(8,102,255,0.18);transform:scale(0.98)}
 .thr-row{position:relative;overflow:visible;touch-action:pan-y}
 .thr-row .thr-row-inner{transition:transform 0.25s cubic-bezier(0.34,1.56,0.64,1);background:transparent}
-.thr-row.swiping{background:rgba(239,68,68,0.05)}
 .thr-row.swiping .thr-row-inner{transition:none}
-.thr-swipe-trash{position:absolute;right:14px;top:50%;transform:translateY(-50%);width:46px;height:46px;border-radius:50%;background:#ef4444;color:#fff;font-size:22px;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.15s,transform 0.15s;z-index:1;box-shadow:0 4px 14px rgba(239,68,68,0.4)}
-.thr-row.swiping .thr-swipe-trash{transform:translateY(-50%) scale(1.05)}
+.thr-swipe-trash{position:absolute;right:14px;top:50%;transform:translateY(-50%);width:42px;height:42px;border-radius:50%;background:var(--surface-tint);border:1px solid var(--border2);color:var(--text);font-size:20px;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.15s,transform 0.15s;z-index:1}
+.thr-row.selected .thr-bubble{box-shadow:0 0 0 2px rgba(167,139,250,0.5),0 8px 32px rgba(15,23,42,0.18);transform:scale(1.02)}
 .thr-del-btn{display:none}
+/* Telegram-Style Action-Menu für Threads */
+.thr-react-picker{position:fixed;z-index:210;background:var(--bg);border:1px solid var(--border);border-radius:999px;padding:6px 8px;box-shadow:0 12px 32px rgba(15,23,42,0.18);display:none;gap:2px}
+.thr-react-picker.show{display:flex;animation:thr-pop 0.25s cubic-bezier(0.34,1.56,0.64,1)}
+.thr-react-picker button{background:none;border:none;font-size:28px;padding:4px 8px;cursor:pointer;transition:transform 0.18s cubic-bezier(0.34,1.56,0.64,1);border-radius:50%}
+.thr-react-picker button:active{transform:scale(1.5)}
+@keyframes thr-pop{from{transform:scale(0.5) translateY(12px);opacity:0}to{transform:scale(1) translateY(0);opacity:1}}
+.thr-action-bar{position:fixed;left:50%;transform:translateX(-50%) translateY(110%);bottom:calc(78px + env(safe-area-inset-bottom,0px));max-width:460px;width:calc(100% - 16px);background:var(--bg);border:1px solid var(--border);border-radius:18px;padding:6px;box-shadow:0 16px 40px rgba(15,23,42,0.20);display:flex;gap:4px;z-index:210;opacity:0;transition:transform 0.28s cubic-bezier(0.16,1,0.3,1),opacity 0.18s ease;pointer-events:none}
+.thr-action-bar.show{transform:translateX(-50%) translateY(0);opacity:1;pointer-events:auto}
+.thr-action-bar .tab-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 6px;background:none;border:none;color:var(--text);font-size:12px;font-weight:700;cursor:pointer;border-radius:12px;transition:background 0.15s,transform 0.12s}
+.thr-action-bar .tab-btn:active{transform:scale(0.95);background:var(--surface-tint)}
+.thr-action-bar .tab-btn.danger{color:#ef4444}
+.thr-action-bar .tab-icon{font-size:22px;line-height:1}
+.thr-select-bd{position:fixed;inset:0;background:rgba(0,0,0,0.32);backdrop-filter:blur(2px);z-index:199;display:none}
+.thr-select-bd.show{display:block;animation:thr-fade .18s ease}
+@keyframes thr-fade{from{opacity:0}to{opacity:1}}
 </style>
+<div id="thr-react-picker" class="thr-react-picker">
+  <button onclick="thrReactWith('❤️')">❤️</button>
+  <button onclick="thrReactWith('😂')">😂</button>
+  <button onclick="thrReactWith('😮')">😮</button>
+  <button onclick="thrReactWith('😢')">😢</button>
+  <button onclick="thrReactWith('👏')">👏</button>
+  <button onclick="thrReactWith('🔥')">🔥</button>
+</div>
+<div id="thr-action-bar" class="thr-action-bar">
+  <button class="tab-btn" onclick="thrDoReply()"><span class="tab-icon">↩️</span><span>Antworten</span></button>
+  <button class="tab-btn" onclick="thrDoCopy()"><span class="tab-icon">📋</span><span>Kopieren</span></button>
+  <button class="tab-btn danger" id="thr-del-btn" onclick="thrDoDelete()" style="display:none"><span class="tab-icon">🗑️</span><span>Löschen</span></button>
+</div>
 <div id="msgs" style="padding:12px 12px 165px;display:flex;flex-direction:column;gap:10px;overflow-x:hidden;min-width:0;width:100%">${initialMsgsHtml}</div>
 <script>
 (function(){
@@ -4382,24 +4409,93 @@ async function createThread(){
   }
   scrollInit();
   window.addEventListener('load', scrollInit);
-  const LONG_PRESS_MS=650, LP_ABORT_PX=8, SWIPE_START_PX=6, SWIPE_VERT_ABORT_PX=14, SWIPE_COMMIT_PX=60, SWIPE_CAP_PX=180;
-  async function doDelete(row){
+  const LONG_PRESS_MS=480, LP_ABORT_PX=8, SWIPE_START_PX=6, SWIPE_VERT_ABORT_PX=14, SWIPE_COMMIT_PX=55, SWIPE_CAP_PX=90;
+  // Swipe-Trash-Element wird zur Reply-Pfeil
+  document.querySelectorAll('.thr-swipe-trash').forEach(el => { el.textContent = '↩️'; });
+  let _activeRow = null, _lastShow = 0;
+  function thrShowMenu(row){
     if (!row) return;
-    const ts = row.dataset.delTs, mid = row.dataset.delMid || 0;
-    if (!confirm('Nachricht löschen?')) return;
+    _activeRow = row;
+    _lastShow = Date.now();
+    const canDel = row.dataset.canDel === '1';
+    document.getElementById('thr-del-btn').style.display = canDel ? 'flex' : 'none';
+    // Backdrop
+    let bd = document.getElementById('thr-select-bd');
+    if (!bd) { bd = document.createElement('div'); bd.id = 'thr-select-bd'; bd.className = 'thr-select-bd'; document.body.appendChild(bd); }
+    bd.onclick = null;
+    bd.classList.add('show');
+    setTimeout(() => { if (bd) bd.onclick = thrHideMenu; }, 280);
+    // Picker oben über bubble
+    const picker = document.getElementById('thr-react-picker');
+    const bubble = row.querySelector('.thr-bubble');
+    document.querySelectorAll('.thr-row.selected').forEach(r => r.classList.remove('selected'));
+    row.classList.add('selected');
+    picker.classList.add('show');
+    if (bubble) {
+      const r = bubble.getBoundingClientRect();
+      const pw = picker.offsetWidth || 260;
+      const left = Math.max(8, Math.min(window.innerWidth - pw - 8, r.left + r.width / 2 - pw / 2));
+      picker.style.left = left + 'px';
+      picker.style.top = Math.max(60, r.top - picker.offsetHeight - 12) + 'px';
+    }
+    document.getElementById('thr-action-bar').classList.add('show');
+    if (navigator.vibrate) navigator.vibrate(15);
+  }
+  function thrHideMenu(){
+    document.getElementById('thr-react-picker')?.classList.remove('show');
+    document.getElementById('thr-action-bar')?.classList.remove('show');
+    document.getElementById('thr-select-bd')?.classList.remove('show');
+    document.querySelectorAll('.thr-row.selected').forEach(r => r.classList.remove('selected'));
+    _activeRow = null;
+  }
+  window.thrDoReply = function(){
+    if (!_activeRow) return;
+    const ts = Number(_activeRow.dataset.delTs);
+    thrHideMenu();
+    if (typeof window.setReply === 'function') window.setReply(ts);
+  };
+  window.thrDoCopy = async function(){
+    if (!_activeRow) return;
+    const txt = _activeRow.querySelector('.thr-bubble div[style*="line-height:1.42"]')?.textContent?.trim()
+      || _activeRow.querySelector('.thr-bubble')?.textContent?.trim() || '';
+    thrHideMenu();
+    if (!txt) return;
+    try { await navigator.clipboard.writeText(txt);
+      const t=document.getElementById('toast'); if(t){t.textContent='📋 Kopiert';t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1400);}
+    } catch(e){ alert('Kopieren fehlgeschlagen'); }
+  };
+  window.thrDoDelete = async function(){
+    if (!_activeRow) return;
+    if (!confirm('Nachricht wirklich löschen?')) return;
+    const ts = _activeRow.dataset.delTs, mid = _activeRow.dataset.delMid || 0;
+    const target = _activeRow;
+    thrHideMenu();
     try {
       const r = await fetch('/api/delete-thread-msg', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({threadId: TID, timestamp: Number(ts), msgId: Number(mid)||null}) });
       const d = await r.json();
-      if (d.ok) { row.style.transition='all 0.2s'; row.style.opacity='0'; row.style.transform='translateX(-100%)'; setTimeout(()=>row.remove(),200); }
+      if (d.ok) { target.style.transition='all 0.2s'; target.style.opacity='0'; target.style.transform='translateX(-100%)'; setTimeout(()=>target.remove(),200); }
       else alert('Fehler: '+(d.error||'unbekannt'));
     } catch(e2) { alert('Netzwerkfehler: '+e2.message); }
-  }
-  // Ein gemeinsamer Pointer-State für Long-Press UND Swipe — kein doppelter closest()-Walk, keine Race zw. den Gesten.
+  };
+  window.thrReactWith = function(emoji){
+    if (!_activeRow) return;
+    const ts = Number(_activeRow.dataset.delTs);
+    thrHideMenu();
+    if (!ts) return;
+    fetch('/api/react-thread-msg',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({threadId:TID,timestamp:ts,emoji})}).catch(()=>{});
+  };
+  document.addEventListener('click', e => {
+    if (Date.now() - _lastShow < 320) return;
+    const picker = document.getElementById('thr-react-picker');
+    const bar = document.getElementById('thr-action-bar');
+    if (picker?.classList.contains('show') && !picker.contains(e.target) && !bar?.contains(e.target) && !e.target.closest('.thr-bubble')) thrHideMenu();
+  });
+  // Pointer-State für Long-Press UND Swipe-Reply
   let row=null, x0=0, y0=0, pid=null, lpTimer=null, swiping=false, committed=false;
   function reset(commit){
     if (!row) return;
     const inner = row.querySelector('.thr-row-inner'), tr = row.querySelector('.thr-swipe-trash');
-    if (inner) { inner.style.transition='transform 0.22s'; inner.style.transform = commit ? 'translateX(-100%)' : ''; }
+    if (inner) { inner.style.transition='transform 0.22s'; inner.style.transform = ''; }
     if (tr) tr.style.opacity = '0';
     row.classList.remove('swiping');
     if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; }
@@ -4407,7 +4503,7 @@ async function createThread(){
   }
   document.addEventListener('pointerdown', e => {
     if (e.pointerType==='mouse' && e.button!==0) return;
-    const r = e.target.closest && e.target.closest('.thr-row[data-can-del="1"]');
+    const r = e.target.closest && e.target.closest('.thr-row');
     if (!r) return;
     row = r; x0 = e.clientX; y0 = e.clientY; pid = e.pointerId; swiping = false; committed = false;
     const inner = r.querySelector('.thr-row-inner');
@@ -4415,11 +4511,7 @@ async function createThread(){
     lpTimer = setTimeout(() => {
       if (!row || swiping) return;
       committed = true;
-      if (navigator.vibrate) navigator.vibrate(30);
-      const target = row;
-      target.style.transition='background 0.15s'; target.style.background='rgba(239,68,68,0.15)';
-      setTimeout(()=>{ target.style.background=''; },200);
-      doDelete(target);
+      thrShowMenu(row);
       reset(false);
     }, LONG_PRESS_MS);
   }, { passive: true, capture: true });
@@ -4435,18 +4527,18 @@ async function createThread(){
       const inner = row.querySelector('.thr-row-inner');
       if (inner) inner.style.transform = 'translateX(' + cap + 'px)';
       const tr = row.querySelector('.thr-swipe-trash');
-      if (tr) tr.style.opacity = String(Math.min(1, Math.abs(cap)/70));
+      if (tr) tr.style.opacity = String(Math.min(1, Math.abs(cap)/55));
     }
   }, { passive: true, capture: true });
   document.addEventListener('pointerup', e => {
     if (!row || committed) return;
     if (!swiping) { reset(false); return; }
     const dx = e.clientX - x0;
+    const ts = Number(row.dataset.delTs);
     if (dx <= -SWIPE_COMMIT_PX) {
-      const target = row;
-      reset(true);
-      if (navigator.vibrate) navigator.vibrate(20);
-      setTimeout(()=>doDelete(target), 220);
+      reset(false);
+      if (navigator.vibrate) navigator.vibrate(15);
+      if (typeof window.setReply === 'function' && ts) window.setReply(ts);
     } else reset(false);
   }, { passive: true, capture: true });
   document.addEventListener('pointercancel', () => reset(false), { passive: true });
@@ -4511,7 +4603,7 @@ async function createThread(){
       const textBody = m.text ? '<div style="font-size:16.5px;line-height:1.42;color:#e4e6eb;word-break:break-word">'+esc(m.text)+'</div>' : '';
       const timeFooter = '<div style="font-size:10.5px;color:rgba(255,255,255,0.5);text-align:right;margin-top:3px;font-variant-numeric:tabular-nums">'+ts+'</div>';
       const canDel=(m.uid&&String(m.uid)===String(MY_UID))||IS_ADMIN;
-      const swipeAttrsJS = canDel ? ' data-can-del="1" data-del-ts="'+m.timestamp+'" data-del-mid="'+(m.msg_id||0)+'"' : '';
+      const swipeAttrsJS = ' data-del-ts="'+m.timestamp+'" data-del-mid="'+(m.msg_id||0)+'"'+(canDel ? ' data-can-del="1"' : '');
       const reactBadges=m.reactions&&Object.keys(m.reactions).length?'<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:5px">'+Object.entries(m.reactions).map(([em,uids])=>'<button onclick="react('+m.timestamp+',\''+em+'\')" style="background:'+(uids.includes(MY_UID)?'rgba(0,136,204,.25)':'rgba(255,255,255,.07)')+';border:1px solid rgba(255,255,255,.15);border-radius:20px;padding:2px 7px;font-size:11px;cursor:pointer;color:var(--text)">'+em+' '+uids.length+'</button>').join('')+'</div>':'';
       const actBar='<div style="display:flex;gap:6px;margin-top:4px;font-size:11px"><button onclick="setReply('+m.timestamp+')" style="background:none;border:none;color:rgba(255,255,255,0.55);cursor:pointer;padding:2px 0">↩ Antworten</button><button onclick="openReact('+m.timestamp+')" style="background:none;border:none;color:rgba(255,255,255,0.55);cursor:pointer;padding:2px 0">😊 Reagieren</button></div>';
       const ring=m.uid&&RING_MAP[m.uid]?RING_MAP[m.uid]:'';
@@ -4525,7 +4617,7 @@ async function createThread(){
         firstUnreadId=' id="first-unread"';
         unreadInsertedJS=true;
       }
-      const trashElJS = canDel ? '<div class="thr-swipe-trash" aria-hidden="true">🗑️</div>' : '';
+      const trashElJS = '<div class="thr-swipe-trash" aria-hidden="true">↩️</div>';
       return banner+'<div class="thr-row"'+swipeAttrsJS+' style="display:flex;gap:8px;align-items:flex-end'+(isLastInSeries?'':';margin-bottom:2px')+'"'+firstUnreadId+'>'+avatarSlot+'<div class="thr-row-inner" style="flex:1;min-width:0;text-align:left">'+bubble+reactBadges+actBar+'</div>'+trashElJS+'</div>';
     }).join('');
     if(atBottom){

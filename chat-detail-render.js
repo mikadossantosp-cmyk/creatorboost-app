@@ -380,14 +380,16 @@ function getScripts(myUid, otherUid) {
             'const isMyMsg = row?.classList.contains("chat-row-me");' +
             'const delBtn = document.getElementById("cab-del-btn");' +
             'if (delBtn) delBtn.style.display = isMyMsg ? "flex" : "none";' +
-            // Backdrop
+            // Backdrop — onclick delayed um 280ms damit der touchend-click nach long-press nicht sofort schliesst
             'let bd = document.getElementById("chat-select-bd");' +
-            'if (!bd) { bd = document.createElement("div"); bd.id = "chat-select-bd"; bd.className = "chat-select-backdrop"; bd.onclick = chatHidePicker; document.body.appendChild(bd); }' +
+            'if (!bd) { bd = document.createElement("div"); bd.id = "chat-select-bd"; bd.className = "chat-select-backdrop"; document.body.appendChild(bd); }' +
+            'bd.onclick = null;' +
             'bd.classList.add("show");' +
+            'setTimeout(() => { if (bd) bd.onclick = chatHidePicker; }, 280);' +
             // Selected-State auf Row
             'document.querySelectorAll(".chat-row-selected").forEach(r => r.classList.remove("chat-row-selected"));' +
             'if (row) row.classList.add("chat-row-selected");' +
-            'picker.classList.add("show"); chatActiveTs = ts;' +
+            'picker.classList.add("show"); chatActiveTs = ts; __chatLastShow = Date.now();' +
             'const r = el.getBoundingClientRect();' +
             'const pw = picker.offsetWidth || 260;' +
             'const left = Math.max(8, Math.min(window.innerWidth - pw - 8, r.left + r.width / 2 - pw / 2));' +
@@ -401,10 +403,13 @@ function getScripts(myUid, otherUid) {
             'document.getElementById("chat-select-bd")?.classList.remove("show");' +
             'document.querySelectorAll(".chat-row-selected").forEach(r => r.classList.remove("chat-row-selected"));' +
         '}' +
+        'let __chatLastShow = 0;' +
         'document.addEventListener("click", e => {' +
+            'if (Date.now() - __chatLastShow < 320) return;' + // touchend-click direkt nach long-press ignorieren
             'const picker = document.getElementById("chat-react-picker");' +
             'const bar = document.getElementById("chat-action-bar");' +
-            'if (picker && !picker.contains(e.target) && !bar?.contains(e.target) && !e.target.closest(".chat-bubble")) chatHidePicker();' +
+            'const bd = document.getElementById("chat-select-bd");' +
+            'if (picker?.classList.contains("show") && !picker.contains(e.target) && !bar?.contains(e.target) && !e.target.closest(".chat-bubble") && e.target !== bd) chatHidePicker();' +
         '});' +
         'async function chatPickReaction(emoji) {' +
             'if (!chatActiveTs) return;' +
