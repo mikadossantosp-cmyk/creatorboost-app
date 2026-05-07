@@ -126,12 +126,15 @@ module.exports = function renderThreadList(opts) {
         const author = lm && lm.name ? lm.name : '';
         const lmTime = formatTime(lm && lm.timestamp);
 
-        const { icon, grad } = smartIcon(thr.name, tid);
+        const auto = smartIcon(thr.name, tid);
+        // Falls thread.emoji explizit gesetzt: admin-override oder Telegram API → nutze das, sonst smart-icon
+        const icon = (thr.emoji && String(thr.emoji).trim().length > 0 && tid !== 'general') ? thr.emoji : auto.icon;
+        const grad = auto.grad;
         const safeName = esc(thr.name || ('Thread ' + tid));
         const isLive = (Date.now() - (lm && lm.timestamp || 0)) < 60000;
 
         const renameBtn = isAdmin ?
-            '<span class="thr-rename" onclick="event.preventDefault();event.stopPropagation();renameThread(\'' + tid + '\',\'' + safeName.replace(/'/g, "\\'") + '\')">✏️</span>' : '';
+            '<span class="thr-rename" onclick="event.preventDefault();event.stopPropagation();customizeThread(\'' + tid + '\',\'' + safeName.replace(/'/g, "\\'") + '\',\'' + String(icon).replace(/'/g, "\\'") + '\')">✏️</span>' : '';
 
         return '<a href="/nachrichten/gruppe/' + tid + '" class="thr-card' + (unread > 0 ? ' unread' : '') + '">' +
             '<div class="thr-icon" style="background:' + grad + '">' +

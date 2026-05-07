@@ -1942,7 +1942,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v98-light-images';
+const SW_VERSION='v99-thread-custom';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
@@ -5226,6 +5226,9 @@ async function createThread(){
         const communityFeed = botData.communityFeed || [];
         let apiTopics = {};
         try { if (ftData?.threads) ftData.threads.forEach(t => { apiTopics[String(t.id)] = t; }); } catch(e) {}
+        // Lokale thread-overrides laden (admin-set custom name + emoji)
+        let threadOverrides = {};
+        try { threadOverrides = JSON.parse(fs.readFileSync(DATA_DIR + '/thread-overrides.json', 'utf8')); } catch(e) {}
         // Build thread list
         let threads = botData.threads || [];
         const threadEmojiPalette = ['🎯','🚀','💡','📊','🎨','🔥','⚡','🌟','📝','🎭','🏆','🎵','🧠','💎','🌈','🎮','📣','🛠️','🌍','🎬'];
@@ -5233,12 +5236,13 @@ async function createThread(){
         if (!threads.length) {
             threads = Object.keys(threadMsgs).map(tid => ({ id:tid, name:tid==='general'?'Allgemein':'Thread '+tid, emoji:tid==='general'?'💬':threadEmoji(tid), last_msg:threadMsgs[tid]?.[0]||null, msg_count:threadMsgs[tid]?.length||0 }));
         }
-        // Merge real names from Telegram API
+        // Merge: 1) lokale overrides (höchste prio), 2) Telegram API, 3) auto-emoji
         threads = threads.map(t => {
+            const ov = threadOverrides[String(t.id)] || {};
             const api = apiTopics[String(t.id)];
-            const emoji = String(t.id)==='general' ? '💬' : (api?.emoji && api.emoji.length>1 ? api.emoji : threadEmoji(t.id));
-            if (api?.name) return {...t, name: api.name, emoji};
-            return {...t, emoji};
+            const emoji = ov.emoji || (String(t.id)==='general' ? '💬' : (api?.emoji && api.emoji.length>1 ? api.emoji : threadEmoji(t.id)));
+            const name = ov.name || api?.name || t.name;
+            return {...t, name, emoji};
         });
         if (!threads.find(t=>String(t.id)==='general')) {
             const lastCF = communityFeed[0];
@@ -5264,6 +5268,25 @@ async function renameThread(tid,current){
   const data=await r.json();
   if(data.ok)location.reload();
   else alert(data.error||'Fehler beim Umbenennen');
+}
+async function customizeThread(tid, currentName, currentEmoji){
+  // Modal dynamisch
+  const old=document.getElementById('thr-cust-modal'); if(old)old.remove();
+  const m=document.createElement('div');
+  m.id='thr-cust-modal';
+  m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(6px);z-index:9999;display:flex;align-items:flex-end;justify-content:center';
+  const palette=['💬','💡','❓','🗣️','📣','📈','📋','🛡️','📤','🎨','📢','🛍️','🏆','📸','🎥','🎵','🗳️','👋','🌟','🔥','⚡','🎯','🚀','📝','🎭','🧠','💎','🌈','🎮','🛠️','🎬','📱','📚','⭐','✨','👀','💼','🪄','📊','🎉'];
+  m.innerHTML='<div style="background:var(--bg2);border-radius:24px 24px 0 0;padding:22px 20px 30px;width:100%;max-width:480px;border-top:3px solid #0088cc"><div style="width:36px;height:4px;background:#666;border-radius:4px;margin:0 auto 18px"></div><div style="font-size:16px;font-weight:800;text-align:center;margin-bottom:6px">Thread anpassen</div><div style="font-size:12px;color:var(--muted);text-align:center;margin-bottom:18px">Icon + Name wie auf Telegram</div><label style="font-size:12px;color:var(--muted);font-weight:600;display:block;margin-bottom:6px">Name</label><input type="text" id="thr-cust-name" value="'+(currentName||'').replace(/"/g,'&quot;')+'" style="width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:12px;padding:11px 14px;font-size:14px;outline:none;margin-bottom:14px"><label style="font-size:12px;color:var(--muted);font-weight:600;display:block;margin-bottom:6px">Icon — getipptes Emoji oder unten auswählen</label><input type="text" id="thr-cust-emoji" value="'+(currentEmoji||'')+'" maxlength="6" style="width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:12px;padding:11px 14px;font-size:18px;outline:none;margin-bottom:14px;text-align:center"><div style="display:grid;grid-template-columns:repeat(8,1fr);gap:6px;max-height:180px;overflow-y:auto;background:var(--bg3);border-radius:12px;padding:10px;margin-bottom:18px">'+palette.map(e=>'<button type="button" onclick="document.getElementById(\'thr-cust-emoji\').value=\''+e+'\'" style="background:var(--bg2);border:1px solid var(--border2);border-radius:10px;font-size:22px;padding:8px;cursor:pointer">'+e+'</button>').join('')+'</div><div style="display:flex;gap:10px"><button onclick="document.getElementById(\'thr-cust-modal\').remove()" style="flex:1;padding:13px;border-radius:12px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:14px;font-weight:600;cursor:pointer">Abbrechen</button><button onclick="saveThreadCustom(\''+tid+'\')" style="flex:1;padding:13px;border-radius:12px;border:none;background:linear-gradient(135deg,#0088cc,#00c6ff);color:#fff;font-size:14px;font-weight:800;cursor:pointer">Speichern</button></div></div>';
+  document.body.appendChild(m);
+}
+async function saveThreadCustom(tid){
+  const name=document.getElementById('thr-cust-name').value.trim();
+  const emoji=document.getElementById('thr-cust-emoji').value.trim();
+  if(!name && !emoji){alert('Name oder Icon angeben');return;}
+  const r=await fetch('/api/set-thread-meta',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({thread_id:tid,name,emoji})});
+  const data=await r.json();
+  if(data.ok){document.getElementById('thr-cust-modal').remove();location.reload();}
+  else alert(data.error||'Fehler beim Speichern');
 }
 </script>`, 'messages');
     }
@@ -7439,6 +7462,29 @@ async function setRing(ringId) {
         if (!name?.trim() || !thread_id) return json({ ok: false });
         const ok = await postBot('/rename-thread', { uid: myUid, thread_id, name: name.trim() });
         return json(ok || { ok: false });
+    }
+
+    // ── THREAD META OVERRIDES (icon + name lokal) ──
+    // bot kann nicht alle Telegram-Topic-icons liefern → admin kann pro thread custom emoji/name setzen
+    if (path === '/api/set-thread-meta' && req.method === 'POST') {
+        const _adm = (Array.isArray((await fetchBot('/data') || {})._adminIds) ? (await fetchBot('/data'))._adminIds.map(Number) : []);
+        if (!_adm.includes(Number(myUid))) return json({ ok: false, error: 'Nur Admin' }, 403);
+        const body = await parseBody(req);
+        const { thread_id, name, emoji } = body;
+        if (!thread_id) return json({ ok: false, error: 'thread_id fehlt' });
+        const overridesPath = DATA_DIR + '/thread-overrides.json';
+        let overrides = {};
+        try { overrides = JSON.parse(fs.readFileSync(overridesPath, 'utf8')); } catch(e) {}
+        overrides[String(thread_id)] = overrides[String(thread_id)] || {};
+        if (typeof name === 'string' && name.trim()) overrides[String(thread_id)].name = name.trim().slice(0,40);
+        if (typeof emoji === 'string' && emoji.trim()) overrides[String(thread_id)].emoji = emoji.trim().slice(0,6);
+        try { fs.writeFileSync(overridesPath, JSON.stringify(overrides, null, 2)); } catch(e) { return json({ ok: false, error: 'Speichern fehlgeschlagen' }); }
+        return json({ ok: true });
+    }
+    if (path === '/api/get-thread-overrides') {
+        let overrides = {};
+        try { overrides = JSON.parse(fs.readFileSync(DATA_DIR + '/thread-overrides.json', 'utf8')); } catch(e) {}
+        return json(overrides);
     }
 
     if (path === '/api/mark-read' && req.method === 'POST') {
