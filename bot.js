@@ -695,6 +695,66 @@ ${session ? `<link rel="prefetch" href="/feed"><link rel="prefetch" href="/explo
 <div class="toast" id="toast"></div>
 <a href="/download-app" id="apk-download-btn" style="display:none;position:fixed;bottom:calc(120px + var(--safe-bottom,0px));left:50%;transform:translateX(-50%);background:#22c55e;color:#fff;border-radius:24px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;z-index:9997;text-decoration:none;white-space:nowrap;box-shadow:0 4px 16px rgba(34,197,94,.4)">📦 APK herunterladen</a>
 <div id="pwa-install-btn" onclick="installPWA()" style="display:none;position:fixed;bottom:calc(70px + var(--safe-bottom,0px));left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#ff6b6b,#cc5de8);color:#fff;border:none;border-radius:24px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;z-index:9998;gap:8px;align-items:center;box-shadow:0 4px 16px rgba(255,107,107,.4);white-space:nowrap">📲 App installieren</div>
+<script>
+// ── APK Update-Banner (standalone, läuft sofort, unabhängig von SW) ──
+(function(){
+  try {
+    var qs = new URLSearchParams(location.search);
+    var force = qs.get('force-update') === '1';
+    var refTWA = (document.referrer || '').indexOf('android-app://') === 0;
+    var standaloneAndroid = /Android/i.test(navigator.userAgent) && (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+    var persisted = false;
+    try { persisted = localStorage.getItem('cb_is_twa') === '1'; } catch(e){}
+    if (refTWA) { try{ localStorage.setItem('cb_is_twa','1'); }catch(e){} persisted = true; }
+    var maybeTWA = refTWA || persisted || standaloneAndroid;
+    if (!force && !maybeTWA) return;
+
+    function show(srv){
+      if (document.getElementById('cx-apk-upd')) return;
+      var b = document.createElement('div');
+      b.id = 'cx-apk-upd';
+      b.style.cssText = 'position:fixed;left:8px;right:8px;bottom:90px;z-index:99999;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:12px;box-shadow:0 16px 40px rgba(22,163,74,0.45);max-width:460px;margin-left:auto;margin-right:auto';
+      var notes = ((srv && srv.releaseNotes) || 'Neue Features + Bugfixes').replace(/[<>&]/g, function(c){return ({"<":"&lt;",">":"&gt;","&":"&amp;"})[c];});
+      b.innerHTML = '<span style="font-size:28px">📦</span><div style="flex:1;min-width:0"><div style="font-size:14.5px;font-weight:800">Update verfügbar</div><div style="font-size:12px;font-weight:500;opacity:.92;margin-top:2px;line-height:1.35">'+notes+'</div></div><button id="cx-apk-skip" style="background:rgba(255,255,255,.18);border:none;color:#fff;width:30px;height:30px;border-radius:50%;font-size:14px;cursor:pointer;flex-shrink:0">✕</button><button id="cx-apk-go" style="background:#fff;color:#16a34a;border:none;font-weight:800;padding:9px 16px;border-radius:999px;font-size:13px;cursor:pointer;flex-shrink:0;box-shadow:0 4px 12px rgba(0,0,0,0.15)">Installieren</button>';
+      document.body.appendChild(b);
+      document.getElementById('cx-apk-skip').onclick = function(){
+        try{ localStorage.setItem('cb_apk_dismissed', (srv && srv.buildId) || ''); }catch(e){}
+        b.remove();
+      };
+      document.getElementById('cx-apk-go').onclick = function(){
+        try{ localStorage.setItem('cb_apk_build', (srv && srv.buildId) || ''); }catch(e){}
+        var a = document.createElement('a');
+        a.href = (srv && srv.downloadUrl) || '/download-app';
+        a.setAttribute('download','');
+        a.style.display='none';
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(function(){ a.remove(); }, 100);
+        b.style.opacity='0.5';
+      };
+    }
+
+    function check(){
+      fetch('/api/app-version', { cache: 'no-store' })
+        .then(function(r){ return r.ok ? r.json() : null; })
+        .then(function(srv){
+          if (!srv) { if (force) show({}); return; }
+          if (!srv.available && !force) return;
+          var installed = ''; var dismissed = '';
+          try { installed = localStorage.getItem('cb_apk_build') || ''; dismissed = localStorage.getItem('cb_apk_dismissed') || ''; } catch(e){}
+          if (force || (srv.buildId !== installed && srv.buildId !== dismissed)) show(srv);
+        })
+        .catch(function(){ if (force) show({}); });
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', function(){ setTimeout(check, force ? 100 : 1500); });
+    } else {
+      setTimeout(check, force ? 100 : 1500);
+    }
+  } catch(e) {}
+})();
+</script>
 <div class="plus-sheet" id="plus-sheet" onclick="if(event.target===this)closePlusSheet()">
   <div class="plus-sheet-inner">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
@@ -1867,7 +1927,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v86-apk-upload';
+const SW_VERSION='v87-banner-bulletproof';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
@@ -1980,7 +2040,7 @@ self.addEventListener('notificationclick',e=>{
     if (session && !isPolling) { session.lastSeen = Date.now(); }
 
     function redirect(to) { res.writeHead(302,{'Location':to}); res.end(); }
-    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'max-age=0, stale-while-revalidate=60','X-App-Version':'21'}); res.end(layout(content,session,page,lang)); }
+    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'22'}); res.end(layout(content,session,page,lang)); }
     function json(data, status=200) { res.writeHead(status,{'Content-Type':'application/json'}); res.end(JSON.stringify(data)); }
 
     // ── LANDING ──
