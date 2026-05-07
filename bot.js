@@ -111,7 +111,10 @@ function getMyUid(session) { return session ? String(session.activeUid || sessio
 function htmlEsc(s) { return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function cleanRole(r) {
   let s = String(r==null?'🆕 New':r);
-  s = s.replace(/⚙️?/g,'🛡️').replace(/^\?{1,4}\s*/,'🛡️ ');
+  // Force-fix: jeder role-string der 'admin' enthält → IMMER '🛡️ Admin' (egal welche corruption)
+  if (/admin/i.test(s)) return '🛡️ Admin';
+  // Sonst: gear-emoji + leading-question-marks cleanup
+  s = s.replace(/⚙️?/g,'🛡️');
   s = s.replace(/^[\?\u{FFFD}]{1,4}\s*/u,'🛡️ ');
   return s;
 }
@@ -352,7 +355,7 @@ button{cursor:pointer;border:none;outline:none;font-family:var(--font)}
 .stories.is-swiping .story-item{pointer-events:none}
 .story-item:active{transform:scale(0.92);transition:transform 0.15s}
 .story-ring{width:68px;height:68px;border-radius:50%;padding:3.5px;background:linear-gradient(135deg,#1d4ed8,#3b82f6,#0ea5e9);position:relative;box-shadow:0 4px 14px rgba(29,78,216,0.45)}
-.story-ring.seen{background:linear-gradient(135deg,#64748b,#475569);box-shadow:0 2px 6px rgba(0,0,0,0.15)}
+.story-ring.seen{background:linear-gradient(135deg,#93c5fd,#60a5fa);box-shadow:0 2px 8px rgba(96,165,250,0.35)}
 .story-inner{width:100%;height:100%;border-radius:50%;border:2.5px solid var(--bg);overflow:hidden;position:relative;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:#fff}
 [data-theme=light] .story-ring{box-shadow:0 6px 20px rgba(29,78,216,0.5),0 1px 4px rgba(15,23,42,0.12)}
 [data-theme=light] .story-ring.seen{box-shadow:0 3px 10px rgba(15,23,42,0.18)}
@@ -1395,7 +1398,7 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
 <div class="profile-info">
   <div class="profile-name-row">
     <div class="profile-name">${htmlEsc(u.spitzname||u.name||'User')}</div>
-    <div class="profile-badge" style="background:${grad};color:#fff">${htmlEsc(String(u.role||'🆕 New').replace(/⚙️?/g,'🛡️').replace(/^\?{1,4}\s*/,'🛡️ '))}</div>
+    <div class="profile-badge" style="background:${grad};color:#fff">${htmlEsc(cleanRole(u.role))}</div>
   </div>
   ${u.username||u.spitzname?`<div class="profile-username">${u.spitzname?htmlEsc(u.name||''):''}${u.username?(u.spitzname?' · ':'')+'@'+htmlEsc(u.username):''}</div>`:''}
   <div style="display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap">
@@ -1951,7 +1954,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v101-rings-vibrant';
+const SW_VERSION='v102-blue-rings-admin';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
@@ -3930,7 +3933,7 @@ p{line-height:1.65;color:var(--muted)}
                 const lu=d.users[String(lid)]; const lg=badgeGradient(lu&&lu.role);
                 const lf=ladeBild(String(lid),'profilepic'); const li=lu&&lu.instagram;
                 const limg=lf?'<img src="/appbild/'+lid+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" alt="">':li?'<img src="https://unavatar.io/instagram/'+li+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" alt="">':'';
-                return '<a href="/profil/'+lid+'" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--border2);text-decoration:none;background:'+(i%2===0?'transparent':'rgba(255,255,255,.02)')+'"><div style="position:relative;width:34px;height:34px;border-radius:50%;background:'+lg+';flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff"><span style="position:absolute">'+(lu&&lu.name||'?')[0]+'</span>'+limg+'</div><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:var(--text)">'+(lu&&(lu.spitzname||lu.name)||'User')+'</div><div style="font-size:10px;color:var(--muted)">'+((lu&&lu.role||'').replace(/⚙️?/g,'🛡️').replace(/^\?{1,4}\s*/,'🛡️ '))+'</div></div><div style="font-size:11px;color:var(--accent)">→</div></a>';
+                return '<a href="/profil/'+lid+'" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--border2);text-decoration:none;background:'+(i%2===0?'transparent':'rgba(255,255,255,.02)')+'"><div style="position:relative;width:34px;height:34px;border-radius:50%;background:'+lg+';flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff"><span style="position:absolute">'+(lu&&lu.name||'?')[0]+'</span>'+limg+'</div><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:var(--text)">'+(lu&&(lu.spitzname||lu.name)||'User')+'</div><div style="font-size:10px;color:var(--muted)">'+cleanRole(lu&&lu.role)+'</div></div><div style="font-size:11px;color:var(--accent)">→</div></a>';
             }).join('');
 
             // Comments
@@ -4009,7 +4012,7 @@ p{line-height:1.65;color:var(--muted)}
 '        '+(poster.spitzname||poster.name||'User')+'\n'+
 '        '+(isOnline?'<span style="width:7px;height:7px;border-radius:50%;background:#00c851;display:inline-block;flex-shrink:0"></span>':'')+'\n'+
 '      </div>\n'+
-'      <div class="post-badge">'+((poster.role||'').replace(/⚙️?/g,'🛡️').replace(/^\?{1,4}\s*/,'🛡️ '))+(insta?'<span style="color:var(--muted2)"> · @'+poster.instagram+'</span>':'')+'</div>\n'+
+'      <div class="post-badge">'+cleanRole(poster.role)+(insta?'<span style="color:var(--muted2)"> · @'+poster.instagram+'</span>':'')+'</div>\n'+
 '    </div>\n'+
 '  </div>\n'+
 // Reel video preview card
@@ -4099,7 +4102,7 @@ commentsBox+
                 +avatarSmall+'\n</div>\n'
                 +'<div class="post-user-info">\n'
                 +'<div class="post-name">'+(poster.spitzname||poster.name||'User')+'</div>\n'
-                +'<div class="post-badge">'+((poster.role||'').replace(/⚙️?/g,'🛡️').replace(/^\?{1,4}\s*/,'🛡️ '))+(insta?'<span style="color:var(--muted2)"> · @'+insta+'</span>':'')+'</div>\n'
+                +'<div class="post-badge">'+cleanRole(poster.role)+(insta?'<span style="color:var(--muted2)"> · @'+insta+'</span>':'')+'</div>\n'
                 +'</div>\n</div>\n'
                 +'<div style="margin:8px 16px;padding:8px 12px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:10px;font-size:11px;color:rgba(245,158,11,.9);font-weight:600">🔄 Bitte Liken, Kommentieren, Teilen und Speichern</div>\n'
                 +'<div style="margin:0 16px 8px;border-radius:14px;overflow:hidden;background:var(--bg3);border:1px solid rgba(255,255,255,.08)">\n'
@@ -5677,7 +5680,7 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
               <div class="suche-avatar" style="background:${grad}">${pic}<span>${initial}</span>${isUidOnline(id)?'<i class="suche-dot"></i>':''}</div>
               <div class="suche-info">
                 <div class="suche-name">${htmlEsc(u.spitzname||u.name||'User')}</div>
-                <div class="suche-meta">${htmlEsc((u.role||'').replace(/⚙️?/g,'🛡️').replace(/^\?{1,4}\s*/,'🛡️ '))} · ${(u.xp||0).toLocaleString('de-DE')} XP${insta?' · @'+htmlEsc(insta):''}</div>
+                <div class="suche-meta">${htmlEsc(cleanRole(u.role))} · ${(u.xp||0).toLocaleString('de-DE')} XP${insta?' · @'+htmlEsc(insta):''}</div>
               </div>
               <button class="suche-follow js-suche-follow" data-follow-uid="${id}" onclick="event.preventDefault();event.stopPropagation();sucheFollow(this)">Folgen</button>
             </a>`;
@@ -5890,7 +5893,7 @@ setTimeout(()=>document.getElementById('search-input').focus(),100);
     </div>
     <div class="rank-info">
       <div class="rank-name">${htmlEsc(u.spitzname||u.name||'User')}${isMe?' (Du)':''}</div>
-      <div class="rank-badge">${htmlEsc((u.role||'').replace(/⚙️?/g,'🛡️').replace(/^\?{1,4}\s*/,'🛡️ '))}</div>
+      <div class="rank-badge">${htmlEsc(cleanRole(u.role))}</div>
     </div>
     <div class="rank-xp">${(xp||0).toLocaleString('de-DE')} XP</div>
   </a>`;
@@ -6491,7 +6494,7 @@ ${rest.map(([id,u],idx)=>{
     </div>
     <div class="rank-info">
       <div class="rank-name">${htmlEsc(u.spitzname||u.name||'User')}${isMe?' (Du)':''}</div>
-      <div class="rank-badge">${htmlEsc((u.role||'').replace(/⚙️?/g,'🛡️').replace(/^\?{1,4}\s*/,'🛡️ '))}</div>
+      <div class="rank-badge">${htmlEsc(cleanRole(u.role))}</div>
     </div>
     <div class="rank-xp">${(u.xp||0).toLocaleString('de-DE')} XP</div>
   </a>`;
