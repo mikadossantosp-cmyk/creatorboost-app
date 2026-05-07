@@ -299,10 +299,10 @@ const CSS = `
 }
 [data-theme=light]{
 --bg:#ffffff;--bg2:#ffffff;--bg3:#ffffff;--bg4:#ffffff;
---border:rgba(15,23,42,.10);--border2:rgba(15,23,42,.07);
+--border:rgba(15,23,42,.09);--border2:rgba(15,23,42,.06);
 --text:#0f172a;--muted:#64748b;--muted2:#94a3b8;
---shadow:0 8px 32px rgba(15,23,42,.06);
---glass-bg:rgba(255,255,255,0.72);--surface-tint:rgba(15,23,42,0.03);--hover-tint:rgba(15,23,42,0.05);
+--shadow:0 8px 32px rgba(15,23,42,.05);
+--glass-bg:rgba(255,255,255,0.92);--surface-tint:rgba(255,255,255,1);--hover-tint:rgba(15,23,42,0.04);
 }
 [data-theme=dark]{
 --bg:#0a0b0f;--bg2:#13141a;--bg3:#1a1c24;--bg4:#23252e;
@@ -313,7 +313,8 @@ const CSS = `
 }
 html{scroll-behavior:smooth;-webkit-tap-highlight-color:transparent}
 html{background:var(--bg)}
-body{font-family:var(--font);background:var(--bg);background-image:radial-gradient(ellipse 80% 60% at 0% -10%,rgba(255,107,107,0.05),transparent 60%),radial-gradient(ellipse 70% 50% at 100% 110%,rgba(167,139,250,0.04),transparent 60%);background-attachment:fixed;color:var(--text);min-height:100vh;margin:0 auto;padding-bottom:calc(70px + var(--safe-bottom));overflow-x:hidden;overscroll-behavior-y:contain;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;margin:0 auto;padding-bottom:calc(70px + var(--safe-bottom));overflow-x:hidden;overscroll-behavior-y:contain;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+[data-theme=dark] body{background-image:radial-gradient(ellipse 80% 60% at 0% -10%,rgba(255,107,107,0.05),transparent 60%),radial-gradient(ellipse 70% 50% at 100% 110%,rgba(167,139,250,0.04),transparent 60%);background-attachment:fixed}
 a{color:inherit;text-decoration:none}
 img{display:block;max-width:100%}
 button{cursor:pointer;border:none;outline:none;font-family:var(--font)}
@@ -392,9 +393,25 @@ button{cursor:pointer;border:none;outline:none;font-family:var(--font)}
 .profile-stat-trend.down{background:rgba(239,68,68,.14);color:#dc2626}
 .profile-stat-trend.flat{background:var(--bg4);color:var(--muted)}
 .profile-spark{display:block;width:42px;height:14px;margin:0 auto 2px;opacity:.85}
-.profile-xp-bar{margin:16px;background:var(--bg4);border-radius:4px;height:4px;overflow:hidden}
-.profile-xp-fill{height:4px;border-radius:4px;transition:width .6s ease}
-.profile-xp-info{margin:0 16px 16px;display:flex;justify-content:space-between;font-size:11px;color:var(--muted)}
+.profile-xp-bar{margin:14px 16px 6px;background:var(--bg4);border:1px solid var(--border2);border-radius:999px;height:10px;overflow:hidden;position:relative}
+.profile-xp-fill{height:100%;border-radius:999px;transition:width .9s cubic-bezier(.16,1,.3,1);position:relative;overflow:hidden}
+.profile-xp-fill::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.4),transparent);transform:translateX(-100%);animation:xp-shimmer 2.5s ease-in-out infinite}
+@keyframes xp-shimmer{0%{transform:translateX(-100%)}60%,100%{transform:translateX(220%)}}
+.profile-xp-info{margin:0 16px 14px;display:flex;justify-content:space-between;font-size:11.5px;color:var(--muted);font-weight:600;letter-spacing:.1px}
+.profile-xp-info b{color:var(--text);font-weight:700}
+/* Slots-Card (Superlink + Extra-Links) */
+.profile-slots{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 14px 0}
+.profile-slot-card{background:#fff;border:1px solid var(--border2);border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:10px;transition:transform .18s ease,box-shadow .18s ease;text-decoration:none;color:inherit;position:relative;overflow:hidden}
+[data-theme="dark"] .profile-slot-card{background:var(--bg3)}
+.profile-slot-card:active{transform:scale(0.98)}
+.profile-slot-icon{font-size:22px;flex-shrink:0;width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,rgba(167,139,250,.15),rgba(124,58,237,.06));border:1px solid rgba(167,139,250,.2)}
+.profile-slot-card.lnk .profile-slot-icon{background:linear-gradient(135deg,rgba(255,107,107,.15),rgba(255,165,0,.06));border-color:rgba(255,107,107,.2)}
+.profile-slot-info{flex:1;min-width:0}
+.profile-slot-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;font-weight:700;line-height:1}
+.profile-slot-val{font-size:15px;font-weight:800;color:var(--text);margin-top:3px;letter-spacing:-.2px;font-variant-numeric:tabular-nums;line-height:1.1}
+.profile-slot-val .small{font-size:11px;font-weight:600;color:var(--muted)}
+.profile-slot-val.ok{color:#16a34a}
+.profile-slot-val.zero{color:var(--muted)}
 .rank-item{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border2);text-decoration:none;color:inherit;transition:background .15s}
 .rank-item:active{background:var(--surface-tint)}
 .rank-pos{width:32px;text-align:center;font-size:18px;flex-shrink:0}
@@ -1250,9 +1267,32 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run);
   else run();
 })();</script>
+${(()=>{
+  const wkKey = (()=>{const n=new Date();const dd=n.getDay();const mon=new Date(n);mon.setDate(n.getDate()-(dd===0?6:dd-1));return mon.toISOString().slice(0,10);})();
+  const slMaxC = (u.role === '🌟 Elite+') ? 2 : 1;
+  const slCountC = Object.values(d.superlinks||{}).filter(s=>s.uid===uid&&s.week===wkKey).length;
+  const slLeftC = Math.max(0, slMaxC - slCountC);
+  const bonusC = (d.bonusLinks||{})[uid] || 0;
+  return `<div class="profile-slots">
+    <div class="profile-slot-card">
+      <div class="profile-slot-icon">⭐</div>
+      <div class="profile-slot-info">
+        <div class="profile-slot-label">Superlink</div>
+        <div class="profile-slot-val ${slLeftC>0?'ok':'zero'}">${slLeftC} <span class="small">/ ${slMaxC} verfügbar</span></div>
+      </div>
+    </div>
+    <div class="profile-slot-card lnk">
+      <div class="profile-slot-icon">🔗</div>
+      <div class="profile-slot-info">
+        <div class="profile-slot-label">Extra-Links</div>
+        <div class="profile-slot-val ${bonusC>0?'ok':'zero'}">${bonusC} <span class="small">verfügbar</span></div>
+      </div>
+    </div>
+  </div>`;
+})()}
 ${nb?`
 <div class="profile-xp-bar"><div class="profile-xp-fill" style="width:${nb.pct}%;background:${grad}"></div></div>
-<div class="profile-xp-info"><span>Noch ${nb.fehlend} XP bis ${nb.ziel}</span><span>${nb.pct}%</span></div>`:'<div style="padding:12px 16px;font-size:12px;color:var(--gold)">👑 Maximales Level erreicht!</div>'}
+<div class="profile-xp-info"><span>Noch <b>${nb.fehlend}</b> XP bis <b>${nb.ziel}</b></span><span>${nb.pct}%</span></div>`:'<div style="margin:14px 16px;padding:12px 16px;background:linear-gradient(135deg,rgba(255,212,59,.10),rgba(255,165,0,.04));border:1px solid rgba(255,212,59,.3);border-radius:14px;font-size:12.5px;font-weight:700;color:#a16207;display:flex;align-items:center;gap:8px"><span style="font-size:18px">👑</span>Maximales Level erreicht!</div>'}
 ${(()=>{
   const weekKey = (() => { const n=new Date(); const d=n.getDay(); const mon=new Date(n); mon.setDate(n.getDate()-(d===0?6:d-1)); return mon.toISOString().slice(0,10); })();
   const mySuperlink = Object.values(d.superlinks||{}).find(s=>s.uid===uid&&s.week===weekKey);
@@ -1735,7 +1775,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v67-pureweiss';
+const SW_VERSION='v68-suche-extralinks';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
@@ -4993,36 +5033,156 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
 
     // ── SUCHE ──
     if (path === '/suche') {
+        // Vorschlaege: Top User die der User noch nicht followt
+        const me = d.users[myUid] || {};
+        const myFollowing = new Set((me.following||[]).map(String));
+        const suggested = Object.entries(d.users||{})
+            .filter(([id,u]) => !adminIds.includes(Number(id)) && id !== String(myUid) && u.started && u.inGruppe !== false && !myFollowing.has(String(id)))
+            .sort((a,b)=>(b[1].xp||0)-(a[1].xp||0))
+            .slice(0, 8);
+        const sugCardsHtml = suggested.map(([id,u])=>{
+            const grad = badgeGradient(u.role);
+            const insta = u.instagram;
+            const initial = (u.name||'?').slice(0,2).toUpperCase();
+            const pic = ladeBild(id,'profilepic')
+                ? `<img src="/appbild/${id}/profilepic" loading="lazy" alt="">`
+                : insta ? `<img src="https://unavatar.io/instagram/${htmlEsc(insta)}" loading="lazy" onerror="this.remove()" alt="">` : '';
+            return `<a href="/profil/${id}" class="suche-row" data-uid="${id}">
+              <div class="suche-avatar" style="background:${grad}">${pic}<span>${initial}</span>${isUidOnline(id)?'<i class="suche-dot"></i>':''}</div>
+              <div class="suche-info">
+                <div class="suche-name">${htmlEsc(u.spitzname||u.name||'User')}</div>
+                <div class="suche-meta">${htmlEsc(u.role||'')} · ${(u.xp||0).toLocaleString('de-DE')} XP${insta?' · @'+htmlEsc(insta):''}</div>
+              </div>
+              <button class="suche-follow js-suche-follow" data-follow-uid="${id}" onclick="event.preventDefault();event.stopPropagation();sucheFollow(this)">Folgen</button>
+            </a>`;
+        }).join('');
         return html(`
+<style>
+.suche-bar{position:sticky;top:0;z-index:90;padding:12px 16px;background:var(--glass-bg);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);border-bottom:1px solid var(--border2)}
+.suche-input-wrap{position:relative}
+.suche-input{width:100%;background:var(--bg);border:1.5px solid var(--border2);border-radius:14px;padding:13px 44px 13px 44px;font-size:14.5px;color:var(--text);outline:none;font-family:var(--font);font-weight:500;transition:border-color .18s,box-shadow .18s}
+.suche-input:focus{border-color:rgba(167,139,250,.55);box-shadow:0 0 0 4px rgba(167,139,250,.10)}
+.suche-input-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none}
+.suche-clear{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:var(--surface-tint);border:1px solid var(--border2);width:26px;height:26px;border-radius:50%;display:none;align-items:center;justify-content:center;color:var(--muted);font-size:14px;cursor:pointer;line-height:1}
+.suche-clear.show{display:flex}
+.suche-tabs{display:flex;gap:6px;margin-top:10px;overflow-x:auto;scrollbar-width:none}
+.suche-tabs::-webkit-scrollbar{display:none}
+.suche-tab{flex-shrink:0;padding:7px 14px;border-radius:999px;font-size:12.5px;font-weight:700;color:var(--muted);background:var(--bg);border:1px solid var(--border2);cursor:pointer;-webkit-tap-highlight-color:transparent;transition:transform .12s,background .15s}
+.suche-tab:active{transform:scale(.94)}
+.suche-tab.active{background:var(--text);color:var(--bg);border-color:var(--text)}
+.suche-section-h{font-size:11px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);padding:14px 16px 6px;display:flex;align-items:center;justify-content:space-between}
+.suche-section-h .clear-recent{font-size:11px;font-weight:700;color:var(--accent);cursor:pointer;text-transform:none;letter-spacing:0}
+.suche-recent{display:flex;gap:8px;padding:0 16px 4px;flex-wrap:wrap}
+.suche-recent-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:var(--bg);border:1px solid var(--border2);border-radius:999px;font-size:12.5px;font-weight:600;color:var(--text);cursor:pointer;transition:transform .12s}
+.suche-recent-chip:active{transform:scale(.95)}
+.suche-row{display:flex;align-items:center;gap:12px;padding:12px 16px;text-decoration:none;color:inherit;transition:background .15s;border-bottom:1px solid var(--border2);position:relative}
+.suche-row:active{background:var(--surface-tint)}
+.suche-avatar{position:relative;width:50px;height:50px;border-radius:50%;flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:16px;box-shadow:0 4px 14px rgba(15,23,42,.10)}
+.suche-avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1}
+.suche-avatar span{position:absolute;z-index:0}
+.suche-dot{position:absolute;bottom:1px;right:1px;width:12px;height:12px;border-radius:50%;background:#22c55e;border:2px solid var(--bg);z-index:2;box-shadow:0 0 6px rgba(34,197,94,.5)}
+.suche-info{flex:1;min-width:0}
+.suche-name{font-size:14.5px;font-weight:700;letter-spacing:-.1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.suche-meta{font-size:11.5px;color:var(--muted);margin-top:2px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.suche-follow{flex-shrink:0;padding:7px 16px;background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;border:none;border-radius:999px;font-size:12.5px;font-weight:800;cursor:pointer;letter-spacing:.2px;box-shadow:0 4px 12px rgba(124,58,237,.25);transition:transform .12s}
+.suche-follow:active{transform:scale(.94)}
+.suche-follow.followed{background:var(--bg);color:var(--text);border:1px solid var(--border)}
+.suche-empty{padding:60px 24px;text-align:center;color:var(--muted)}
+.suche-empty-icon{font-size:54px;margin-bottom:12px;opacity:.5}
+.suche-empty-text{font-size:15px;font-weight:800;color:var(--text);margin-bottom:4px;letter-spacing:-.2px}
+.suche-empty-sub{font-size:12.5px;color:var(--muted);max-width:260px;margin:0 auto;line-height:1.5}
+</style>
 <div class="topbar"><div class="topbar-logo">Suche</div></div>
-<div style="padding:12px 16px">
-  <input type="text" id="search-input" class="form-input" placeholder="🔍 User oder Link suchen..." oninput="doSearch(this.value)" autocomplete="off">
+<div class="suche-bar">
+  <div class="suche-input-wrap">
+    <svg class="suche-input-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <input type="text" id="search-input" class="suche-input" placeholder="User, @insta oder Link suchen…" autocomplete="off" enterkeyhint="search">
+    <button class="suche-clear" id="search-clear" onclick="searchClear()">✕</button>
+  </div>
+  <div class="suche-tabs">
+    <button class="suche-tab active" data-cat="all">Alle</button>
+    <button class="suche-tab" data-cat="user">👥 User</button>
+    <button class="suche-tab" data-cat="link">🔗 Links</button>
+  </div>
 </div>
-<div id="search-results" style="padding:0 16px"></div>
+<div id="search-results"></div>
+<div id="search-default">
+  <div id="recent-block" style="display:none">
+    <div class="suche-section-h">Zuletzt gesucht <span class="clear-recent" onclick="recentClear()">Löschen</span></div>
+    <div class="suche-recent" id="recent-chips"></div>
+  </div>
+  <div class="suche-section-h">✨ Vorgeschlagen für dich</div>
+  ${sugCardsHtml || '<div class="suche-empty"><div class="suche-empty-icon">🌟</div><div class="suche-empty-text">Du folgst schon allen</div><div class="suche-empty-sub">Tippe oben um nach jemandem zu suchen</div></div>'}
+</div>
 <script>
-let searchTimer;
-async function doSearch(q) {
-    clearTimeout(searchTimer);
-    if (!q.trim()) { document.getElementById('search-results').innerHTML=''; return; }
-    searchTimer = setTimeout(async () => {
-        const res = await fetch('/api/search?q='+encodeURIComponent(q));
-        const data = await res.json();
-        let html = '';
-        if (data.users.length) {
-            html += '<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin:12px 0 8px">👥 User</div>';
-            html += data.users.map(u=>'<a href="/profil/'+u.id+'" style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border2)">'
-                +'<div style="position:relative;width:44px;height:44px;border-radius:50%;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;overflow:hidden">'
-                +'<span style="position:absolute;font-size:15px;color:var(--text)">'+(u.name||'?').slice(0,2).toUpperCase()+'</span>'
-                +(u.pic ? '<img src="'+u.pic+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" alt="">' : '')
-                +'</div>'
-                +'<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600">'+(u.spitzname||u.name||'?')+'</div><div style="font-size:11px;color:var(--muted)">'+(u.role||'')+' · '+(u.xp||0)+' XP</div></div>'
-                +'</a>').join('');
-        }
-        if (!data.users.length && !data.links.length) html = '<div class="empty"><div class="empty-icon">🔍</div><div class="empty-text">Nichts gefunden</div></div>';
-        document.getElementById('search-results').innerHTML = html;
-    }, 300);
+let _searchCat='all', _searchTimer;
+const RECENT_KEY='cb_search_recent';
+function getRecent(){try{return JSON.parse(localStorage.getItem(RECENT_KEY)||'[]');}catch(e){return [];}}
+function pushRecent(q){q=q.trim();if(!q||q.length<2)return;let r=getRecent().filter(x=>x.toLowerCase()!==q.toLowerCase());r.unshift(q);r=r.slice(0,6);try{localStorage.setItem(RECENT_KEY,JSON.stringify(r));}catch(e){}renderRecent();}
+function recentClear(){try{localStorage.removeItem(RECENT_KEY);}catch(e){}renderRecent();}
+function renderRecent(){const r=getRecent();const block=document.getElementById('recent-block');const chips=document.getElementById('recent-chips');if(!r.length){block.style.display='none';return;}block.style.display='block';chips.innerHTML=r.map(q=>'<span class="suche-recent-chip" onclick="document.getElementById(\\'search-input\\').value=\\''+q.replace(/'/g,'')+'\\';doSearch();">'+q.replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]))+'</span>').join('');}
+async function sucheFollow(btn){
+  const uid=btn.dataset.followUid;
+  if(btn._busy)return;btn._busy=true;
+  const orig=btn.textContent;btn.textContent='…';btn.disabled=true;
+  try{
+    const r=await fetch('/api/follow',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({uid})});
+    const d=await r.json();
+    if(d.ok){btn.textContent='✓ Folge';btn.classList.add('followed');}
+    else{btn.textContent=orig;btn.disabled=false;alert(d.error||'Fehler');}
+  }catch(e){btn.textContent=orig;btn.disabled=false;alert('Netzwerk: '+e.message);}
+  finally{btn._busy=false;}
 }
-document.getElementById('search-input').focus();
+function searchClear(){const i=document.getElementById('search-input');i.value='';doSearch();i.focus();}
+function escTxt(s){return String(s||'').replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));}
+async function doSearch(){
+  const q=document.getElementById('search-input').value;
+  const clearBtn=document.getElementById('search-clear');
+  clearBtn.classList.toggle('show',!!q.trim());
+  const def=document.getElementById('search-default');
+  const results=document.getElementById('search-results');
+  if(!q.trim()){results.innerHTML='';def.style.display='block';return;}
+  def.style.display='none';
+  results.innerHTML='<div class="suche-empty"><div class="suche-empty-icon">⏳</div><div class="suche-empty-text">Sucht…</div></div>';
+  clearTimeout(_searchTimer);
+  _searchTimer=setTimeout(async()=>{
+    try{
+      const res=await fetch('/api/search?q='+encodeURIComponent(q));
+      const data=await res.json();
+      let html='';
+      const showUsers=_searchCat==='all'||_searchCat==='user';
+      const showLinks=_searchCat==='all'||_searchCat==='link';
+      if(showUsers && data.users.length){
+        html+='<div class="suche-section-h">👥 User · '+data.users.length+'</div>';
+        html+=data.users.map(u=>{
+          const initial=(u.name||'?').slice(0,2).toUpperCase();
+          const pic=u.pic?'<img src="'+u.pic+'" loading="lazy" alt="">':'';
+          return '<a href="/profil/'+u.id+'" class="suche-row">'
+            +'<div class="suche-avatar" style="background:linear-gradient(135deg,#a78bfa,#7c3aed)">'+pic+'<span>'+escTxt(initial)+'</span></div>'
+            +'<div class="suche-info"><div class="suche-name">'+escTxt(u.spitzname||u.name||'?')+'</div><div class="suche-meta">'+escTxt(u.role||'')+' · '+(u.xp||0).toLocaleString('de-DE')+' XP'+(u.instagram?' · @'+escTxt(u.instagram):'')+'</div></div>'
+            +'<button class="suche-follow js-suche-follow" data-follow-uid="'+u.id+'" onclick="event.preventDefault();event.stopPropagation();sucheFollow(this)">Folgen</button>'
+            +'</a>';
+        }).join('');
+      }
+      if(showLinks && data.links && data.links.length){
+        html+='<div class="suche-section-h">🔗 Links · '+data.links.length+'</div>';
+        html+=data.links.map(l=>{
+          return '<a href="'+escTxt(l.text)+'" target="_blank" class="suche-row" style="border-bottom:1px solid var(--border2)">'
+            +'<div class="suche-avatar" style="background:linear-gradient(135deg,#ff6b6b,#ffa500);font-size:18px"><span>🔗</span></div>'
+            +'<div class="suche-info"><div class="suche-name" style="font-size:13px;color:#4dabf7">'+escTxt(l.text.replace('https://www.instagram.com/','ig.com/').slice(0,46))+'</div><div class="suche-meta">'+escTxt(l.user_name||'')+' · ❤️ '+(l.likes||0)+'</div></div>'
+            +'</a>';
+        }).join('');
+      }
+      if(!html) html='<div class="suche-empty"><div class="suche-empty-icon">🔍</div><div class="suche-empty-text">Nichts gefunden</div><div class="suche-empty-sub">Versuche es mit Name, @instagram oder Link-URL</div></div>';
+      results.innerHTML=html;
+      pushRecent(q);
+    }catch(e){results.innerHTML='<div class="suche-empty"><div class="suche-empty-icon">⚠️</div><div class="suche-empty-text">Fehler beim Suchen</div></div>';}
+  },280);
+}
+document.getElementById('search-input').addEventListener('input',doSearch);
+document.querySelectorAll('.suche-tab').forEach(t=>t.addEventListener('click',e=>{document.querySelectorAll('.suche-tab').forEach(x=>x.classList.remove('active'));t.classList.add('active');_searchCat=t.dataset.cat;doSearch();}));
+renderRecent();
+setTimeout(()=>document.getElementById('search-input').focus(),100);
 </script>`, 'search');
     }
 
