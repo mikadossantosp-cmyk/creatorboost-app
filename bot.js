@@ -1954,7 +1954,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v105-longpress-fix';
+const SW_VERSION='v106-thread-div';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
@@ -5345,30 +5345,46 @@ function showThreadActions(tid, currentName, currentEmoji){
   m.innerHTML='<div style="background:var(--bg2);border-radius:24px 24px 0 0;padding:18px 16px 30px;width:100%;max-width:480px"><div style="width:36px;height:4px;background:#666;border-radius:4px;margin:0 auto 14px"></div><div style="font-size:14px;font-weight:700;text-align:center;color:var(--muted);margin-bottom:12px;text-transform:uppercase;letter-spacing:0.5px">'+currentEmoji+' '+currentName+'</div><button onclick="document.getElementById(\'thr-actions-modal\').remove();renameThread(\''+tid+'\',\''+currentName.replace(/\'/g,"\\\'")+'\')" style="width:100%;padding:16px;border-radius:14px;border:none;background:var(--bg3);color:var(--text);font-size:15px;font-weight:600;cursor:pointer;margin-bottom:8px;text-align:left;display:flex;align-items:center;gap:14px">✏️ Umbenennen</button><button onclick="document.getElementById(\'thr-actions-modal\').remove();customizeThread(\''+tid+'\',\''+currentName.replace(/\'/g,"\\\'")+'\',\''+currentEmoji+'\')" style="width:100%;padding:16px;border-radius:14px;border:none;background:var(--bg3);color:var(--text);font-size:15px;font-weight:600;cursor:pointer;margin-bottom:8px;text-align:left;display:flex;align-items:center;gap:14px">😀 Symbol ändern</button><button onclick="document.getElementById(\'thr-actions-modal\').remove();deleteThread(\''+tid+'\',\''+currentName.replace(/\'/g,"\\\'")+'\')" style="width:100%;padding:16px;border-radius:14px;border:none;background:rgba(239,68,68,0.12);color:#ef4444;font-size:15px;font-weight:700;cursor:pointer;text-align:left;display:flex;align-items:center;gap:14px">🗑️ Löschen (verstecken)</button><button onclick="document.getElementById(\'thr-actions-modal\').remove()" style="width:100%;padding:13px;border-radius:14px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:14px;font-weight:600;cursor:pointer;margin-top:10px">Abbrechen</button></div>';
   document.body.appendChild(m);
 }
-// Long-press detection auf thread-cards (admin only)
+// Thread-card touch + long-press handling
 (function(){
   const isAdmin = ${isAdmin};
-  if (!isAdmin) return;
-  let pressTimer=null, pressTid=null, didLongPress=false;
-  function start(card, e){
+  let pressTimer=null, didLongPress=false, startCard=null;
+  function start(card){
     didLongPress=false;
-    pressTid=card.getAttribute('data-tid');
+    startCard=card;
+    if (!isAdmin) return;
     pressTimer=setTimeout(()=>{
       didLongPress=true;
       if(navigator.vibrate)navigator.vibrate(40);
+      const tid=card.getAttribute('data-tid');
       const name=card.getAttribute('data-name')||'';
       const emoji=card.getAttribute('data-emoji')||'';
-      showThreadActions(pressTid, name, emoji);
+      showThreadActions(tid, name, emoji);
     }, 480);
   }
   function cancel(){if(pressTimer){clearTimeout(pressTimer);pressTimer=null;}}
-  document.addEventListener('touchstart',e=>{const c=e.target.closest('.thr-card');if(c)start(c,e);},{passive:true});
-  document.addEventListener('touchend',cancel);
+  function navigate(card){
+    if (didLongPress) { didLongPress=false; return; }
+    const href = card.getAttribute('data-href');
+    if (href) location.href = href;
+  }
+  document.addEventListener('touchstart',e=>{const c=e.target.closest('.thr-card');if(c)start(c);},{passive:true});
+  document.addEventListener('touchend',e=>{
+    cancel();
+    const c=e.target.closest('.thr-card');
+    if(c && c===startCard && !didLongPress){
+      e.preventDefault();
+      navigate(c);
+    }
+    startCard=null;
+  });
   document.addEventListener('touchmove',cancel);
-  document.addEventListener('touchcancel',cancel);
-  // Block link click during/after long-press
-  document.addEventListener('click',e=>{if(didLongPress){e.preventDefault();e.stopPropagation();didLongPress=false;}},true);
-  // Block native browser context-menu auf thread-cards (Samsung Internet zeigt sonst eigenes link-menü)
+  document.addEventListener('touchcancel',()=>{cancel();startCard=null;});
+  // Desktop / non-touch: simple click
+  document.addEventListener('click',e=>{
+    const c=e.target.closest('.thr-card');
+    if(c && !('ontouchstart' in window)) navigate(c);
+  });
   document.addEventListener('contextmenu',e=>{if(e.target.closest('.thr-card')){e.preventDefault();}},false);
 })();
 </script>`, 'messages');
