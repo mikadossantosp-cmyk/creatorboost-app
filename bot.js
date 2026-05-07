@@ -286,6 +286,8 @@ function ladePinnedLink(uid) {
 const CSS = `
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
+color-scheme:light dark;
+forced-color-adjust:none;
 --bg:#ffffff;--bg2:#ffffff;--bg3:#ffffff;--bg4:#ffffff;
 --border:rgba(15,23,42,.10);--border2:rgba(15,23,42,.07);
 --text:#0f172a;--muted:#64748b;--muted2:#94a3b8;
@@ -298,6 +300,7 @@ const CSS = `
 --safe-bottom:env(safe-area-inset-bottom,0px);
 }
 [data-theme=light]{
+color-scheme:light;
 --bg:#ffffff;--bg2:#ffffff;--bg3:#ffffff;--bg4:#ffffff;
 --border:rgba(15,23,42,.09);--border2:rgba(15,23,42,.06);
 --text:#0f172a;--muted:#64748b;--muted2:#94a3b8;
@@ -305,6 +308,7 @@ const CSS = `
 --glass-bg:#ffffff;--surface-tint:rgba(255,255,255,1);--hover-tint:rgba(15,23,42,0.04);
 }
 [data-theme=dark]{
+color-scheme:dark;
 --bg:#000000;--bg2:#000000;--bg3:#000000;--bg4:#000000;
 --border:rgba(255,255,255,.1);--border2:rgba(255,255,255,.06);
 --text:#fff;--muted:#a3a8b3;--muted2:#6e7280;
@@ -680,6 +684,7 @@ function layout(content, session, page='feed', lang='de') {
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0b0b0e" media="(prefers-color-scheme: dark)">
 <link rel="manifest" href="/manifest.json">
@@ -1929,7 +1934,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v95-pure-bg';
+const SW_VERSION='v96-color-scheme';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
