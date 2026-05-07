@@ -450,11 +450,88 @@ module.exports = function renderChatList(opts) {
               'document.addEventListener("click",e=>{const c=e.target.closest(".thread-row");if(c&&!("ontouchstart" in window)&&!e.target.closest(".thr-menu-btn")){const h=c.getAttribute("data-href");if(h)location.href=h;}});' +
               'document.addEventListener("contextmenu",e=>{if(e.target.closest(".thread-row"))e.preventDefault();},true);' +
             '})();' +
-            // ── Admin: Thread anpassen / löschen ──
-            'async function renameThread(tid,current){const name=prompt("Neuer Thread-Name:",current);if(!name||!name.trim())return;const r=await fetch("/api/rename-thread",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({thread_id:tid,name:name.trim()})});const data=await r.json();if(data.ok)location.reload();else alert(data.error||"Fehler beim Umbenennen");}' +
-            'async function customizeThread(tid,currentName,currentEmoji){const old=document.getElementById("thr-cust-modal");if(old)old.remove();const m=document.createElement("div");m.id="thr-cust-modal";m.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(6px);z-index:99999;display:flex;align-items:flex-end;justify-content:center";const palette=["💬","💡","❓","🗣️","📣","📈","📋","🛡️","📤","🎨","📢","🛍️","🏆","📸","🎥","🎵","🗳️","👋","🌟","🔥","⚡","🎯","🚀","📝","🎭","🧠","💎","🌈","🎮","🛠️","🎬","📱","📚","⭐","✨","👀","💼","🪄","📊","🎉"];m.innerHTML="<div style=\\"background:var(--bg2);border-radius:24px 24px 0 0;padding:22px 20px 30px;width:100%;max-width:480px;border-top:3px solid #0088cc\\"><div style=\\"width:36px;height:4px;background:#666;border-radius:4px;margin:0 auto 18px\\"></div><div style=\\"font-size:16px;font-weight:800;text-align:center;margin-bottom:6px\\">Thread anpassen</div><div style=\\"font-size:12px;color:var(--muted);text-align:center;margin-bottom:18px\\">Icon + Name</div><label style=\\"font-size:12px;color:var(--muted);font-weight:600;display:block;margin-bottom:6px\\">Name</label><input type=\\"text\\" id=\\"thr-cust-name\\" value=\\""+(currentName||"").replace(/\\"/g,"&quot;")+"\\" style=\\"width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:12px;padding:11px 14px;font-size:14px;outline:none;margin-bottom:14px\\"><label style=\\"font-size:12px;color:var(--muted);font-weight:600;display:block;margin-bottom:6px\\">Icon</label><input type=\\"text\\" id=\\"thr-cust-emoji\\" value=\\""+(currentEmoji||"")+"\\" maxlength=\\"6\\" style=\\"width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:12px;padding:11px 14px;font-size:18px;outline:none;margin-bottom:14px;text-align:center\\"><div style=\\"display:grid;grid-template-columns:repeat(8,1fr);gap:6px;max-height:180px;overflow-y:auto;background:var(--bg3);border-radius:12px;padding:10px;margin-bottom:18px\\">"+palette.map(e=>"<button type=\\"button\\" onclick=\\"document.getElementById(\\\\\'thr-cust-emoji\\\\\').value=\\\\\'"+e+"\\\\\'\\" style=\\"background:var(--bg2);border:1px solid var(--border2);border-radius:10px;font-size:22px;padding:8px;cursor:pointer\\">"+e+"</button>").join("")+"</div><div style=\\"display:flex;gap:10px\\"><button onclick=\\"document.getElementById(\\\\\'thr-cust-modal\\\\\').remove()\\" style=\\"flex:1;padding:13px;border-radius:12px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:14px;font-weight:600;cursor:pointer\\">Abbrechen</button><button onclick=\\"saveThreadCustom(\\\\\'"+tid+"\\\\\')\\" style=\\"flex:1;padding:13px;border-radius:12px;border:none;background:linear-gradient(135deg,#0088cc,#00c6ff);color:#fff;font-size:14px;font-weight:800;cursor:pointer\\">Speichern</button></div></div>";document.body.appendChild(m);}' +
-            'async function saveThreadCustom(tid){const name=document.getElementById("thr-cust-name").value.trim();const emoji=document.getElementById("thr-cust-emoji").value.trim();if(!name&&!emoji){alert("Name oder Icon angeben");return;}const r=await fetch("/api/set-thread-meta",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({thread_id:tid,name,emoji})});const data=await r.json();if(data.ok){document.getElementById("thr-cust-modal").remove();location.reload();}else alert(data.error||"Fehler beim Speichern");}' +
-            'async function deleteThread(tid,name){if(!confirm("Thread \\""+name+"\\" wirklich aus der App verstecken?\\n\\n(Auf Telegram bleibt er bestehen.)"))return;const r=await fetch("/api/hide-thread",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({thread_id:tid})});const data=await r.json();if(data.ok)location.reload();else alert(data.error||"Fehler");}' +
-            'function showThreadActions(tid,currentName,currentEmoji){const old=document.getElementById("thr-actions-modal");if(old)old.remove();const m=document.createElement("div");m.id="thr-actions-modal";m.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(6px);z-index:99999;display:flex;align-items:flex-end;justify-content:center";m.onclick=function(e){if(e.target===m)m.remove();};m.innerHTML="<div style=\\"background:var(--bg2);border-radius:24px 24px 0 0;padding:18px 16px 30px;width:100%;max-width:480px\\"><div style=\\"width:36px;height:4px;background:#666;border-radius:4px;margin:0 auto 14px\\"></div><div style=\\"font-size:14px;font-weight:700;text-align:center;color:var(--muted);margin-bottom:12px;text-transform:uppercase;letter-spacing:0.5px\\">"+currentEmoji+" "+currentName+"</div><button onclick=\\"document.getElementById(\\\\\'thr-actions-modal\\\\\').remove();renameThread(\\\\\'"+tid+"\\\\\',\\\\\'"+currentName.replace(/\'/g,"\\\\\'")+"\\\\\')\\" style=\\"width:100%;padding:16px;border-radius:14px;border:none;background:var(--bg3);color:var(--text);font-size:15px;font-weight:600;cursor:pointer;margin-bottom:8px;text-align:left;display:flex;align-items:center;gap:14px\\">✏️ Umbenennen</button><button onclick=\\"document.getElementById(\\\\\'thr-actions-modal\\\\\').remove();customizeThread(\\\\\'"+tid+"\\\\\',\\\\\'"+currentName.replace(/\'/g,"\\\\\'")+"\\\\\',\\\\\'"+currentEmoji+"\\\\\')\\" style=\\"width:100%;padding:16px;border-radius:14px;border:none;background:var(--bg3);color:var(--text);font-size:15px;font-weight:600;cursor:pointer;margin-bottom:8px;text-align:left;display:flex;align-items:center;gap:14px\\">😀 Symbol ändern</button><button onclick=\\"document.getElementById(\\\\\'thr-actions-modal\\\\\').remove();deleteThread(\\\\\'"+tid+"\\\\\',\\\\\'"+currentName.replace(/\'/g,"\\\\\'")+"\\\\\')\\" style=\\"width:100%;padding:16px;border-radius:14px;border:none;background:rgba(239,68,68,0.12);color:#ef4444;font-size:15px;font-weight:700;cursor:pointer;text-align:left;display:flex;align-items:center;gap:14px\\">🗑️ Löschen (verstecken)</button><button onclick=\\"document.getElementById(\\\\\'thr-actions-modal\\\\\').remove()\\" style=\\"width:100%;padding:13px;border-radius:14px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:14px;font-weight:600;cursor:pointer;margin-top:10px\\">Abbrechen</button></div>";document.body.appendChild(m);}' +
+            // ── Admin: Thread anpassen / löschen (mit addEventListener — sauber escaped) ──
+            `async function renameThread(tid,current){
+              const name=prompt("Neuer Thread-Name:",current);
+              if(!name||!name.trim())return;
+              try{
+                const r=await fetch("/api/rename-thread",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({thread_id:tid,name:name.trim()})});
+                const data=await r.json();
+                if(data.ok)location.reload();
+                else alert(data.error||"Fehler beim Umbenennen");
+              }catch(e){alert("Netzwerk-Fehler: "+e.message);}
+            }
+            async function saveThreadCustom(tid){
+              const name=document.getElementById("thr-cust-name").value.trim();
+              const emoji=document.getElementById("thr-cust-emoji").value.trim();
+              if(!name&&!emoji){alert("Name oder Icon angeben");return;}
+              try{
+                const r=await fetch("/api/set-thread-meta",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({thread_id:tid,name,emoji})});
+                const data=await r.json();
+                if(data.ok){document.getElementById("thr-cust-modal").remove();location.reload();}
+                else alert(data.error||"Fehler beim Speichern");
+              }catch(e){alert("Netzwerk-Fehler: "+e.message);}
+            }
+            async function deleteThread(tid,name){
+              if(!confirm("Thread "+name+" wirklich aus der App verstecken?\\n(Auf Telegram bleibt er bestehen.)"))return;
+              try{
+                const r=await fetch("/api/hide-thread",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({thread_id:tid})});
+                const data=await r.json();
+                if(data.ok)location.reload();
+                else alert(data.error||"Fehler");
+              }catch(e){alert("Netzwerk-Fehler: "+e.message);}
+            }
+            function customizeThread(tid,currentName,currentEmoji){
+              const old=document.getElementById("thr-cust-modal");if(old)old.remove();
+              const m=document.createElement("div");
+              m.id="thr-cust-modal";
+              m.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(6px);z-index:99999;display:flex;align-items:flex-end;justify-content:center";
+              const palette=["💬","💡","❓","🗣️","📣","📈","📋","🛡️","📤","🎨","📢","🛍️","🏆","📸","🎥","🎵","🗳️","👋","🌟","🔥","⚡","🎯","🚀","📝","🎭","🧠","💎","🌈","🎮","🛠️","🎬","📱","📚","⭐","✨","👀","💼","🪄","📊","🎉"];
+              const inner=document.createElement("div");
+              inner.style.cssText="background:var(--bg2);border-radius:24px 24px 0 0;padding:22px 20px 30px;width:100%;max-width:480px;border-top:3px solid #0088cc";
+              let html='<div style="width:36px;height:4px;background:#666;border-radius:4px;margin:0 auto 18px"></div><div style="font-size:16px;font-weight:800;text-align:center;margin-bottom:6px">Thread anpassen</div><div style="font-size:12px;color:var(--muted);text-align:center;margin-bottom:18px">Icon + Name</div><label style="font-size:12px;color:var(--muted);font-weight:600;display:block;margin-bottom:6px">Name</label><input type="text" id="thr-cust-name" style="width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:12px;padding:11px 14px;font-size:14px;outline:none;margin-bottom:14px;box-sizing:border-box"><label style="font-size:12px;color:var(--muted);font-weight:600;display:block;margin-bottom:6px">Icon</label><input type="text" id="thr-cust-emoji" maxlength="6" style="width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:12px;padding:11px 14px;font-size:18px;outline:none;margin-bottom:14px;text-align:center;box-sizing:border-box"><div id="thr-cust-palette" style="display:grid;grid-template-columns:repeat(8,1fr);gap:6px;max-height:180px;overflow-y:auto;background:var(--bg3);border-radius:12px;padding:10px;margin-bottom:18px"></div><div style="display:flex;gap:10px"><button id="thr-cust-cancel" style="flex:1;padding:13px;border-radius:12px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:14px;font-weight:600;cursor:pointer">Abbrechen</button><button id="thr-cust-save" style="flex:1;padding:13px;border-radius:12px;border:none;background:linear-gradient(135deg,#0088cc,#00c6ff);color:#fff;font-size:14px;font-weight:800;cursor:pointer">Speichern</button></div>';
+              inner.innerHTML=html;
+              m.appendChild(inner);
+              document.body.appendChild(m);
+              document.getElementById("thr-cust-name").value=currentName||"";
+              document.getElementById("thr-cust-emoji").value=currentEmoji||"";
+              const pal=document.getElementById("thr-cust-palette");
+              palette.forEach(e=>{const b=document.createElement("button");b.type="button";b.textContent=e;b.style.cssText="background:var(--bg2);border:1px solid var(--border2);border-radius:10px;font-size:22px;padding:8px;cursor:pointer";b.onclick=()=>{document.getElementById("thr-cust-emoji").value=e;};pal.appendChild(b);});
+              document.getElementById("thr-cust-cancel").onclick=()=>m.remove();
+              document.getElementById("thr-cust-save").onclick=()=>saveThreadCustom(tid);
+            }
+            function showThreadActions(tid,currentName,currentEmoji){
+              const old=document.getElementById("thr-actions-modal");if(old)old.remove();
+              const m=document.createElement("div");
+              m.id="thr-actions-modal";
+              m.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(6px);z-index:99999;display:flex;align-items:flex-end;justify-content:center";
+              m.addEventListener("click",e=>{if(e.target===m)m.remove();});
+              const inner=document.createElement("div");
+              inner.style.cssText="background:var(--bg2);border-radius:24px 24px 0 0;padding:18px 16px 30px;width:100%;max-width:480px";
+              const titleDiv=document.createElement("div");
+              titleDiv.style.cssText="font-size:14px;font-weight:700;text-align:center;color:var(--muted);margin-bottom:12px;text-transform:uppercase;letter-spacing:0.5px";
+              titleDiv.textContent=(currentEmoji||"")+" "+(currentName||"");
+              const grip=document.createElement("div");
+              grip.style.cssText="width:36px;height:4px;background:#666;border-radius:4px;margin:0 auto 14px";
+              inner.appendChild(grip);
+              inner.appendChild(titleDiv);
+              const mkBtn=(label,bg,color,fontWeight,handler)=>{
+                const b=document.createElement("button");
+                b.style.cssText="width:100%;padding:16px;border-radius:14px;border:none;background:"+bg+";color:"+color+";font-size:15px;font-weight:"+fontWeight+";cursor:pointer;margin-bottom:8px;text-align:left;display:flex;align-items:center;gap:14px";
+                b.innerHTML=label;
+                b.onclick=()=>{m.remove();handler();};
+                return b;
+              };
+              inner.appendChild(mkBtn("✏️ Umbenennen","var(--bg3)","var(--text)","600",()=>renameThread(tid,currentName)));
+              inner.appendChild(mkBtn("😀 Symbol ändern","var(--bg3)","var(--text)","600",()=>customizeThread(tid,currentName,currentEmoji)));
+              inner.appendChild(mkBtn("🗑️ Löschen (verstecken)","rgba(239,68,68,0.12)","#ef4444","700",()=>deleteThread(tid,currentName)));
+              const cancelBtn=document.createElement("button");
+              cancelBtn.textContent="Abbrechen";
+              cancelBtn.style.cssText="width:100%;padding:13px;border-radius:14px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:14px;font-weight:600;cursor:pointer;margin-top:10px";
+              cancelBtn.onclick=()=>m.remove();
+              inner.appendChild(cancelBtn);
+              m.appendChild(inner);
+              document.body.appendChild(m);
+            }` +
         '<\/script>';
 };
