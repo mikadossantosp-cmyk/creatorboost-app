@@ -108,6 +108,8 @@ module.exports = function renderThreadList(opts) {
         '.thr-badge { background: linear-gradient(135deg,#0088cc,#00c6ff); color: #fff; min-width: 20px; height: 20px; border-radius: 999px; font-size: 11px; font-weight: 800; padding: 0 6px; display: flex; align-items: center; justify-content: center; line-height: 1; box-shadow: 0 2px 8px rgba(0,136,204,0.4); }' +
         '.thr-rename { font-size: 11px; opacity: 0.4; cursor: pointer; padding: 2px; flex-shrink: 0; }' +
         '.thr-rename:hover { opacity: 1; }' +
+        '.thr-menu-btn { background: var(--bg3); border: 1px solid var(--border2); color: var(--muted); width: 36px; height: 36px; border-radius: 50%; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; padding: 0; transition: all 0.15s; margin-left: 4px; }' +
+        '.thr-menu-btn:active { transform: scale(0.9); background: var(--bg4); color: var(--text); }' +
         '</style>';
 
     const cards = (threads || []).map(thr => {
@@ -135,7 +137,7 @@ module.exports = function renderThreadList(opts) {
         const isLive = (Date.now() - (lm && lm.timestamp || 0)) < 60000;
 
         const renameBtn = isAdmin ?
-            '<span class="thr-rename" onclick="event.preventDefault();event.stopPropagation();customizeThread(\'' + tid + '\',\'' + safeName.replace(/'/g, "\\'") + '\',\'' + String(icon).replace(/'/g, "\\'") + '\')">✏️</span>' : '';
+            '<button class="thr-menu-btn" onclick="event.preventDefault();event.stopPropagation();showThreadActions(\'' + tid + '\',\'' + safeName.replace(/'/g, "\\'") + '\',\'' + String(icon).replace(/'/g, "\\'") + '\')" aria-label="Thread-Optionen"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button>' : '';
 
         return '<div class="thr-card' + (unread > 0 ? ' unread' : '') + '" data-tid="' + tid + '" data-name="' + safeName.replace(/"/g,'&quot;') + '" data-emoji="' + String(icon).replace(/"/g,'&quot;') + '" data-href="/nachrichten/gruppe/' + tid + '" oncontextmenu="return false">' +
             '<div class="thr-icon" style="background:' + grad + '">' +
@@ -144,7 +146,7 @@ module.exports = function renderThreadList(opts) {
             '</div>' +
             '<div class="thr-content">' +
                 '<div class="thr-head">' +
-                    '<div class="thr-name">' + safeName + renameBtn + '</div>' +
+                    '<div class="thr-name">' + safeName + '</div>' +
                     (lmTime ? '<div class="thr-time">' + lmTime + '</div>' : '') +
                 '</div>' +
                 '<div class="thr-foot">' +
@@ -160,6 +162,7 @@ module.exports = function renderThreadList(opts) {
                     '</div>' +
                 '</div>' +
             '</div>' +
+            renameBtn +
         '</div>';
     }).join('');
 
