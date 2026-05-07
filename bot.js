@@ -348,6 +348,13 @@ button{cursor:pointer;border:none;outline:none;font-family:var(--font)}
 .story-ring{width:68px;height:68px;border-radius:50%;padding:2.5px;background:conic-gradient(from 45deg,#3b82f6,#60a5fa,#1d4ed8,#3b82f6);position:relative;box-shadow:0 4px 12px rgba(59,130,246,0.25)}
 .story-ring.seen{background:linear-gradient(135deg,#3b82f6,#1d4ed8);opacity:0.55;box-shadow:none}
 .story-inner{width:100%;height:100%;border-radius:50%;border:2.5px solid var(--bg);overflow:hidden;position:relative;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:#fff}
+[data-theme=light] .story-inner{box-shadow:inset 0 0 0 1px rgba(15,23,42,0.12)}
+[data-theme=light] .post-header > div:first-child,
+[data-theme=light] .post-header img,
+[data-theme=light] .post img,
+[data-theme=light] .post-card img,
+[data-theme=light] .liker-avatar,
+[data-theme=light] .profile-pic-img{box-shadow:0 0 0 1px rgba(15,23,42,0.10)}
 .story-name{font-size:11.5px;color:var(--text);max-width:74px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;letter-spacing:0.1px}
 .post{margin:0 12px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:18px;overflow:hidden;transition:border-color 0.2s,box-shadow 0.2s;box-shadow:0 4px 14px rgba(15,23,42,0.08),0 1px 3px rgba(15,23,42,0.05)}
 [data-theme=dark] .post{box-shadow:0 1px 3px rgba(0,0,0,0.4);border-color:var(--border2)}
@@ -1935,7 +1942,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v97-light-contrast';
+const SW_VERSION='v98-light-images';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
