@@ -72,15 +72,34 @@ module.exports = function renderChatList(opts) {
         '</div>' +
         '</a>';
 
-    const dmRows = (myConvos || []).map(c => {
+    // Smart preview: image, audio oder text
+    function smartPreview(msg) {
+        if (!msg) return 'Tippen zum Schreiben…';
+        if (msg.image) return '📷 Foto';
+        if (msg.audio) return '🎤 Sprachnachricht';
+        const t = (msg.text||'').trim();
+        if (!t) return 'Tippen zum Schreiben…';
+        return t.slice(0, 64);
+    }
+    function timeBucket(ts) {
+        if (!ts) return 'older';
+        const now = Date.now();
+        const diff = now - ts;
+        if (diff < 86400000) return 'today';
+        if (diff < 172800000) return 'yesterday';
+        if (diff < 604800000) return 'week';
+        return 'older';
+    }
+
+    function buildDmRow(c) {
         const ou = (botData.users || {})[c.otherUid] || {};
         const insta = ou.instagram;
         const pic = ladeBild(c.otherUid, 'profilepic');
         const isOwn = c.lastMsg && String(c.lastMsg.from) === String(myUid);
         const isRead = isOwn && c.lastMsg && c.lastMsg.read;
         const time = formatTime(c.lastMsg && c.lastMsg.timestamp);
-        const preview = (c.lastMsg && c.lastMsg.text) || '';
-        const previewText = (isOwn ? 'Du: ' : '') + preview.slice(0, 50);
+        const previewRaw = smartPreview(c.lastMsg);
+        const previewText = (isOwn && !c.lastMsg?.image && !c.lastMsg?.audio ? 'Du: ' : '') + previewRaw;
         const isOnline = onlineSet.has(String(c.otherUid));
 
         let avatarInner = '<span class="dm-avatar-fb">' + esc((c.otherName || '?').slice(0, 1)) + '</span>';
@@ -90,12 +109,15 @@ module.exports = function renderChatList(opts) {
         const unreadClass = (c.unread > 0 ? ' unread' : '');
         const tickHtml = (isOwn && !c.unread) ? '<div class="dm-tick' + (isRead ? ' read' : '') + '">' + (isRead ? '✓✓' : '✓') + '</div>' : '';
         const badgeHtml = c.unread > 0 ? '<div class="dm-badge">' + (c.unread > 99 ? '99+' : c.unread) + '</div>' : '';
+        const previewHtml = (isOwn && !c.lastMsg?.image && !c.lastMsg?.audio)
+            ? '<span class="dm-prev-mine">Du:</span> ' + esc(previewRaw)
+            : esc(previewRaw);
 
-        return '<a href="/nachrichten/' + c.otherUid + '" class="dm-row' + unreadClass + '" data-uid="' + c.otherUid + '" data-name="' + esc(c.otherName) + '" oncontextmenu="event.preventDefault(); dmCtxMenu(event,this)" ontouchstart="dmCtxStart(event,this)" ontouchend="dmCtxEnd()" ontouchmove="dmCtxEnd()">' +
+        return '<a href="/nachrichten/' + c.otherUid + '" class="dm-row' + unreadClass + '" data-uid="' + c.otherUid + '" data-name="' + esc(c.otherName) + '" data-bucket="' + timeBucket(c.lastMsg && c.lastMsg.timestamp) + '" oncontextmenu="event.preventDefault(); dmCtxMenu(event,this)" ontouchstart="dmCtxStart(event,this)" ontouchend="dmCtxEnd()" ontouchmove="dmCtxEnd()">' +
             '<div class="dm-avatar' + (isOnline ? ' online' : '') + '">' + avatarInner + '</div>' +
             '<div class="dm-content">' +
                 '<div class="dm-name">' + esc(c.otherName) + '<span class="dm-pin-marker">📌</span></div>' +
-                '<div class="dm-preview">' + esc(previewText) + '</div>' +
+                '<div class="dm-preview">' + previewHtml + '</div>' +
             '</div>' +
             '<div class="dm-meta">' +
                 (time ? '<div class="dm-time">' + time + '</div>' : '') +
@@ -103,7 +125,22 @@ module.exports = function renderChatList(opts) {
                 tickHtml +
             '</div>' +
         '</a>';
-    }).join('');
+    }
+
+    // Gruppieren nach Zeit-Buckets
+    const buckets = { today: [], yesterday: [], week: [], older: [] };
+    (myConvos || []).forEach(c => {
+        const b = timeBucket(c.lastMsg && c.lastMsg.timestamp);
+        buckets[b].push(c);
+    });
+    function bucketSection(label, arr) {
+        if (!arr.length) return '';
+        return '<div class="dm-section-h">' + label + '</div>' + arr.map(buildDmRow).join('');
+    }
+    const dmRows = bucketSection('Heute', buckets.today)
+        + bucketSection('Gestern', buckets.yesterday)
+        + bucketSection('Diese Woche', buckets.week)
+        + bucketSection('Älter', buckets.older);
 
     const emptyState = (!myConvos || !myConvos.length) ?
         '<div class="dm-empty">' +
@@ -146,6 +183,15 @@ module.exports = function renderChatList(opts) {
     });
     function pickThrEmoji(t){ return _thrEmojiMap.get(String(t.id)) || thrEmojiFor(t.id); }
     // Threads-Liste rendern (für Tab 2)
+    const threadGradients = [
+      'linear-gradient(135deg,#0088cc,#00c6ff)',
+      'linear-gradient(135deg,#a78bfa,#7c3aed)',
+      'linear-gradient(135deg,#f59e0b,#dc2743)',
+      'linear-gradient(135deg,#22c55e,#0088cc)',
+      'linear-gradient(135deg,#ec4899,#a78bfa)',
+      'linear-gradient(135deg,#06b6d4,#22c55e)',
+    ];
+    function thrGradient(tid){let h=0;const s=String(tid);for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))>>>0;return threadGradients[h%threadGradients.length];}
     const threadsRows = (threadsList || []).map(t => {
         const tid = String(t.id);
         const lr = threadLastRead?.[tid] || 0;
@@ -153,13 +199,28 @@ module.exports = function renderChatList(opts) {
         const unread = thrMsgs.filter(m => (m.timestamp||0) > lr).length;
         const last = t.last_msg || thrMsgs[0];
         const lastTime = last?.timestamp ? formatTime(last.timestamp) : '';
-        const lastText = last ? ((last.name?last.name+': ':'') + (last.text||'').slice(0,50)) : 'Keine Nachrichten';
+        const lastTextRaw = last ? ((last.name?last.name+': ':'') + (last.text||'')) : 'Noch keine Nachrichten';
+        const lastText = lastTextRaw.slice(0,55);
         const tName = t.name && t.name !== ('Thread '+tid) ? t.name : (tid === 'general' ? 'Allgemein' : t.name || 'Thread');
-        return '<a href="/nachrichten/gruppe/' + encodeURIComponent(tid) + '" class="dm-row' + (unread>0?' unread':'') + '">' +
-            '<div class="dm-avatar dm-tg" style="background:linear-gradient(135deg,#0088cc,#00c6ff);font-size:24px">' + pickThrEmoji(t) + '</div>' +
+        // Member estimate aus unique authors
+        const memberSet = new Set();
+        thrMsgs.forEach(m => { if (m.uid || m.user_id || m.username) memberSet.add(String(m.uid||m.user_id||m.username)); });
+        const memberCount = memberSet.size;
+        const msgCount = thrMsgs.length || t.msg_count || 0;
+        const isActive = last?.timestamp && (Date.now() - last.timestamp) < 3600000; // <1h
+        const grad = tid === 'general' ? 'linear-gradient(135deg,#0088cc,#00c6ff)' : thrGradient(tid);
+        return '<a href="/nachrichten/gruppe/' + encodeURIComponent(tid) + '" class="dm-row thread-row' + (unread>0?' unread':'') + '">' +
+            '<div class="dm-avatar dm-tg" style="background:' + grad + ';font-size:26px">' + pickThrEmoji(t) +
+              (isActive ? '<i class="thr-active-dot" title="Aktiv jetzt"></i>' : '') +
+            '</div>' +
             '<div class="dm-content">' +
                 '<div class="dm-name">' + esc(tName) + '</div>' +
                 '<div class="dm-preview">' + esc(lastText) + '</div>' +
+                '<div class="thr-meta-row">' +
+                    (memberCount ? '<span class="thr-chip">👥 ' + memberCount + '</span>' : '') +
+                    (msgCount ? '<span class="thr-chip">💬 ' + msgCount + '</span>' : '') +
+                    (isActive ? '<span class="thr-chip thr-chip-live">● Aktiv</span>' : '') +
+                '</div>' +
             '</div>' +
             '<div class="dm-meta">' +
                 (lastTime ? '<div class="dm-time">' + lastTime + '</div>' : '') +
@@ -195,7 +256,17 @@ module.exports = function renderChatList(opts) {
         '.dm-stories-section .dm-story-item .dm-story-ring .dm-story-avatar > img { position: absolute !important; inset: 2.5px !important; width: calc(100% - 5px) !important; height: calc(100% - 5px) !important; border-radius: 50% !important; object-fit: cover !important; border: 0 !important; outline: 0 !important; }' +
         '.dm-stories-section .dm-story-item .dm-story-ring .dm-story-avatar .sa-fb { position: absolute !important; inset: 2.5px !important; border-radius: 50% !important; display: flex !important; align-items: center !important; justify-content: center !important; font-weight: 800 !important; color: #fff !important; font-size: 22px !important; background: linear-gradient(135deg, #a78bfa, #7c3aed) !important; }' +
         '.dm-stories-section .dm-story-item .dm-story-name { font-size: 11px !important; margin-top: 7px !important; color: var(--text) !important; overflow: hidden !important; text-overflow: ellipsis !important; white-space: nowrap !important; max-width: 70px !important; font-weight: 600 !important; }' +
-        '.dm-section-h { padding: 16px 16px 4px; font-size: 11px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; color: var(--muted); }' +
+        '.dm-section-h { padding: 16px 16px 4px; font-size: 10.5px; font-weight: 800; letter-spacing: 1.4px; text-transform: uppercase; color: var(--muted); display: flex; align-items: center; gap: 8px; }' +
+        '.dm-section-h::after { content: ""; flex: 1; height: 1px; background: var(--border2); }' +
+        '.dm-prev-mine { color: var(--muted2); font-weight: 700; }' +
+        '.thread-row { padding: 14px 16px; }' +
+        '.thread-row .dm-avatar { width: 56px; height: 56px; border-radius: 16px; box-shadow: 0 6px 18px rgba(15,23,42,0.10); }' +
+        '.thread-row .dm-avatar.dm-tg { font-size: 26px; }' +
+        '.thread-row .thr-active-dot { position: absolute; top: -2px; right: -2px; width: 14px; height: 14px; border-radius: 50%; background: #22c55e; border: 2.5px solid var(--bg); box-shadow: 0 0 0 1px rgba(34,197,94,0.3); animation: thr-pulse 1.8s ease-in-out infinite; }' +
+        '@keyframes thr-pulse { 0%,100% { box-shadow: 0 0 0 1px rgba(34,197,94,0.3); } 50% { box-shadow: 0 0 0 6px rgba(34,197,94,0); } }' +
+        '.thr-meta-row { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }' +
+        '.thr-chip { display: inline-flex; align-items: center; gap: 3px; padding: 2px 8px; background: var(--surface-tint); border: 1px solid var(--border2); border-radius: 999px; font-size: 10.5px; font-weight: 700; color: var(--muted); letter-spacing: 0.1px; }' +
+        '.thr-chip-live { color: #22c55e; background: rgba(34,197,94,0.10); border-color: rgba(34,197,94,0.25); }' +
         '.dm-list { padding: 4px 0 90px; }' +
         '.dm-row { display: flex; align-items: center; gap: 13px; padding: 12px 16px; text-decoration: none; color: inherit; transition: background 0.15s; position: relative; }' +
         '.dm-row::after { content: ""; position: absolute; left: 84px; right: 0; bottom: 0; height: 1px; background: var(--border2); }' +
