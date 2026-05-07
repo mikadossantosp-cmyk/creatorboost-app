@@ -312,9 +312,10 @@ const CSS = `
 --glass-bg:#000000;--surface-tint:rgba(255,255,255,0.04);--hover-tint:rgba(255,255,255,0.08);
 }
 html{scroll-behavior:smooth;-webkit-tap-highlight-color:transparent}
-html{background:var(--bg)}
-body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;margin:0 auto;padding-bottom:calc(70px + var(--safe-bottom));overflow-x:hidden;overscroll-behavior-y:contain;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
-[data-theme=dark] body{background-image:radial-gradient(ellipse 80% 60% at 0% -10%,rgba(255,107,107,0.05),transparent 60%),radial-gradient(ellipse 70% 50% at 100% 110%,rgba(167,139,250,0.04),transparent 60%);background-attachment:fixed}
+html{background:var(--bg) !important}
+body{font-family:var(--font);background:var(--bg) !important;color:var(--text);min-height:100vh;margin:0 auto;padding-bottom:calc(70px + var(--safe-bottom));overflow-x:hidden;overscroll-behavior-y:contain;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+[data-theme=light] html, [data-theme=light] body{background:#ffffff !important;background-image:none !important}
+[data-theme=dark] html, [data-theme=dark] body{background:#000000 !important;background-image:none !important}
 a{color:inherit;text-decoration:none}
 img{display:block;max-width:100%}
 button{cursor:pointer;border:none;outline:none;font-family:var(--font)}
@@ -1928,7 +1929,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v94-admin-emoji';
+const SW_VERSION='v95-pure-bg';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
