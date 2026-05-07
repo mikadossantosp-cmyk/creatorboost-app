@@ -681,8 +681,8 @@ function layout(content, session, page='feed', lang='de') {
 <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0b0b0e" media="(prefers-color-scheme: dark)">
 <link rel="manifest" href="/manifest.json">
-<link rel="icon" type="image/png" href="/icon-512.png?v=24">
-<link rel="apple-touch-icon" sizes="512x512" href="/icon-512.png?v=24">
+<link rel="icon" type="image/png" href="/icon-512.png?v=25">
+<link rel="apple-touch-icon" sizes="512x512" href="/icon-512.png?v=25">
 <meta name="apple-mobile-web-app-title" content="CreatorX">
 <title>CreatorX</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1801,7 +1801,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v81-unified-pointer';
+const SW_VERSION='v82-bugfix-bundle';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
@@ -1925,8 +1925,8 @@ self.addEventListener('notificationclick',e=>{
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>CreatorX</title>
 <link rel="manifest" href="/manifest.json">
-<link rel="icon" type="image/png" href="/icon-512.png?v=24">
-<link rel="apple-touch-icon" href="/icon-512.png?v=24">
+<link rel="icon" type="image/png" href="/icon-512.png?v=25">
+<link rel="apple-touch-icon" href="/icon-512.png?v=25">
 <meta name="theme-color" content="#ffffff">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -2179,7 +2179,7 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
     // ── PWA MANIFEST ──
     if (path === '/manifest.json') {
         res.writeHead(200,{'Content-Type':'application/manifest+json','Cache-Control':'no-store','Access-Control-Allow-Origin':'*'});
-        return res.end(JSON.stringify({name:'CreatorX',short_name:'CreatorX',description:'Die kreative Community für Instagram Creators',start_url:'/',scope:'/',display:'standalone',background_color:'#ffffff',theme_color:'#ffffff',orientation:'portrait',categories:['social','lifestyle'],prefer_related_applications:false,screenshots:[],icons:[{src:'/icon-192.png?v=24',sizes:'192x192',type:'image/png',purpose:'any'},{src:'/icon-512.png?v=24',sizes:'512x512',type:'image/png',purpose:'any maskable'}]}));
+        return res.end(JSON.stringify({name:'CreatorX',short_name:'CreatorX',description:'Die kreative Community für Instagram Creators',start_url:'/',scope:'/',display:'standalone',background_color:'#ffffff',theme_color:'#ffffff',orientation:'portrait',categories:['social','lifestyle'],prefer_related_applications:false,screenshots:[],icons:[{src:'/icon-192.png?v=25',sizes:'192x192',type:'image/png',purpose:'any'},{src:'/icon-512.png?v=25',sizes:'512x512',type:'image/png',purpose:'any maskable'}]}));
     }
 
     if (path === '/api/vapid-public-key') {
