@@ -1927,7 +1927,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v89-pure-black';
+const SW_VERSION='v90-apk-build';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
@@ -2270,6 +2270,103 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
                 res.end(JSON.stringify({ok:true, size: buf.length}));
             } catch(e) {
                 res.writeHead(500); res.end('Fehler: ' + e.message);
+            }
+        });
+        req.on('error', e => { res.writeHead(500); res.end('Upload-Fehler: ' + e.message); });
+        return;
+    }
+
+    // ── APK BUILD PAGE (akzeptiert .apk, .aab oder .zip von PWABuilder) ──
+    if (path === '/apk-build') {
+        if ((query.key || '') !== BRIDGE_SECRET) { res.writeHead(403); return res.end('Kein Zugriff'); }
+        res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});
+        return res.end(`<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>APK Build</title><style>*{box-sizing:border-box;margin:0;padding:0}body{background:#000;color:#fff;font-family:sans-serif;padding:24px;min-height:100vh}h1{font-size:22px;margin-bottom:8px}p{font-size:13px;color:#aaa;margin-bottom:18px;line-height:1.5}.box{background:#111;border-radius:16px;padding:20px;margin-bottom:14px}.btn{background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:none;border-radius:12px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;width:100%;margin-top:12px}.btn:disabled{opacity:.5}.info{background:#0a2540;border-left:3px solid #3b82f6;border-radius:8px;padding:12px;font-size:12px;color:#93c5fd;margin-bottom:14px;line-height:1.5}#status{margin-top:14px;font-size:14px;color:#aaa;text-align:center;line-height:1.6;white-space:pre-wrap}.ok{color:#22c55e!important;font-weight:700}.err{color:#ef4444!important;font-weight:700}input[type=file]{width:100%;padding:14px;background:#222;color:#fff;border:2px dashed #444;border-radius:12px;font-size:13px}</style></head><body><h1>📦 APK Build</h1><p>Lädt jede Datei aus PWABuilder hoch — egal ob ZIP, .aab oder .apk. Der Server konvertiert + signiert automatisch.</p><div class="info"><b>Workflow:</b><br>1. PWABuilder.com auf Mobile → Google Play Package generieren<br>2. ZIP runterladen (kann der mobile Browser)<br>3. ZIP komplett hier hochladen — kein entpacken nötig</div><div class="box"><input type="file" id="f" accept=".zip,.aab,.apk"><button class="btn" id="btn" onclick="up()">🔧 Bauen + Signieren + Speichern</button><div id="status"></div></div><script>async function up(){const f=document.getElementById('f').files[0];if(!f){alert('Bitte Datei auswählen');return}const btn=document.getElementById('btn');const st=document.getElementById('status');btn.disabled=true;st.className='';st.textContent='Lese Datei ('+(f.size/1024/1024).toFixed(1)+' MB)…';const buf=await f.arrayBuffer();st.textContent='Upload + Build läuft… kann 30-90 Sek dauern (bundletool Download beim ersten Mal).';try{const res=await fetch('/api/build-from-upload?key=${query.key}&name='+encodeURIComponent(f.name),{method:'POST',headers:{'Content-Type':'application/octet-stream'},body:buf});const t=await res.text();if(!res.ok){st.textContent='❌ '+t;st.className='err';btn.disabled=false;return}st.textContent='✅ '+t;st.className='ok';}catch(e){st.textContent='❌ '+e.message;st.className='err';btn.disabled=false}}</script></body></html>`);
+    }
+    if (path === '/api/build-from-upload' && req.method === 'POST') {
+        if ((query.key || '') !== BRIDGE_SECRET) { res.writeHead(403); return res.end('Kein Zugriff'); }
+        const chunks = [];
+        req.on('data', c => chunks.push(c));
+        req.on('end', async () => {
+            const log = [];
+            try {
+                const buf = Buffer.concat(chunks);
+                if (buf.length < 1000) { res.writeHead(400); return res.end('Datei zu klein'); }
+                if (buf[0] !== 0x50 || buf[1] !== 0x4B) { res.writeHead(400); return res.end('Keine ZIP-basierte Datei (kein PK-Header)'); }
+                const { execSync } = require('child_process');
+                const path_mod = require('path');
+                const tmpDir = require('os').tmpdir() + '/cx-build-' + Date.now();
+                fs.mkdirSync(tmpDir, { recursive: true });
+                const inputName = (query.name || 'input').toLowerCase();
+                const inputPath = tmpDir + '/' + (inputName.endsWith('.aab') ? 'in.aab' : inputName.endsWith('.apk') ? 'in.apk' : 'in.zip');
+                fs.writeFileSync(inputPath, buf);
+                log.push('• Datei empfangen: ' + (buf.length/1024/1024).toFixed(1) + ' MB als ' + path_mod.basename(inputPath));
+
+                let apkPath = null;
+                let aabPath = null;
+
+                // Wenn ZIP → entpacken und nach .apk / .aab suchen
+                if (inputPath.endsWith('.zip')) {
+                    const extractDir = tmpDir + '/extracted';
+                    fs.mkdirSync(extractDir, { recursive: true });
+                    execSync(`unzip -o -q "${inputPath}" -d "${extractDir}"`, { timeout: 30000 });
+                    const findFile = (dir, ext) => {
+                        for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+                            const p = dir + '/' + e.name;
+                            if (e.isDirectory()) { const r = findFile(p, ext); if (r) return r; }
+                            else if (e.name.toLowerCase().endsWith(ext)) return p;
+                        }
+                        return null;
+                    };
+                    apkPath = findFile(extractDir, '.apk');
+                    aabPath = findFile(extractDir, '.aab');
+                    log.push('• ZIP entpackt — APK: ' + (apkPath ? path_mod.basename(apkPath) : 'nein') + ', AAB: ' + (aabPath ? path_mod.basename(aabPath) : 'nein'));
+                } else if (inputPath.endsWith('.apk')) {
+                    apkPath = inputPath;
+                } else if (inputPath.endsWith('.aab')) {
+                    aabPath = inputPath;
+                }
+
+                // Falls keine APK gefunden, aus AAB bauen via bundletool
+                if (!apkPath && aabPath) {
+                    log.push('• Konvertiere AAB → APK via bundletool…');
+                    const bundletoolPath = DATA_DIR + '/bundletool.jar';
+                    if (!fs.existsSync(bundletoolPath)) {
+                        log.push('• Lade bundletool.jar (einmalig, ~10 MB)…');
+                        execSync(`curl -L -o "${bundletoolPath}" https://github.com/google/bundletool/releases/download/1.17.2/bundletool-all-1.17.2.jar`, { timeout: 60000 });
+                    }
+                    const apksOut = tmpDir + '/output.apks';
+                    execSync(`java -jar "${bundletoolPath}" build-apks --bundle="${aabPath}" --output="${apksOut}" --mode=universal`, { timeout: 120000 });
+                    const apksExtract = tmpDir + '/apks-extracted';
+                    fs.mkdirSync(apksExtract, { recursive: true });
+                    execSync(`unzip -o -q "${apksOut}" -d "${apksExtract}"`, { timeout: 30000 });
+                    apkPath = apksExtract + '/universal.apk';
+                    if (!fs.existsSync(apkPath)) throw new Error('universal.apk nicht in bundletool-Output gefunden');
+                    log.push('• universal.apk extrahiert (' + (fs.statSync(apkPath).size/1024/1024).toFixed(1) + ' MB)');
+                }
+
+                if (!apkPath) throw new Error('Weder APK noch AAB in Upload gefunden');
+
+                // Re-Sign mit eingebettetem Server-Keystore
+                const ksPath = tmpDir + '/creatorx.keystore';
+                const KEYSTORE_B64 = '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';
+                fs.writeFileSync(ksPath, Buffer.from(KEYSTORE_B64, 'base64'));
+                const apkSigned = tmpDir + '/signed.apk';
+                execSync(`apksigner sign --v4-signing-enabled false --min-sdk-version 21 --ks "${ksPath}" --ks-pass pass:creatorx2024 --key-pass pass:creatorx2024 --ks-key-alias creatorx --out "${apkSigned}" "${apkPath}"`, { timeout: 60000 });
+                log.push('• APK signiert mit Server-Keystore');
+
+                const finalBuf = fs.readFileSync(apkSigned);
+                fs.writeFileSync(DATA_DIR + '/CreatorX-signed.apk', finalBuf);
+                log.push('• Gespeichert (' + (finalBuf.length/1024/1024).toFixed(1) + ' MB) → /download-app');
+                log.push('');
+                log.push('🎉 Fertig — alle App-User sehen den Update-Banner beim nächsten Öffnen.');
+
+                try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch(e) {}
+                res.writeHead(200, {'Content-Type':'text/plain; charset=utf-8'});
+                res.end(log.join('\\n'));
+            } catch(e) {
+                log.push('❌ Fehler: ' + (e.message || e));
+                res.writeHead(500, {'Content-Type':'text/plain; charset=utf-8'});
+                res.end(log.join('\\n'));
             }
         });
         req.on('error', e => { res.writeHead(500); res.end('Upload-Fehler: ' + e.message); });
