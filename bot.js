@@ -365,7 +365,7 @@ button{cursor:pointer;border:none;outline:none;font-family:var(--font)}
 .profile-banner-overlay{position:absolute;inset:0;background:linear-gradient(to bottom,transparent 30%,rgba(0,0,0,0.18) 70%,var(--bg) 100%);pointer-events:none}
 .profile-avatar-wrap{position:absolute;bottom:-44px;left:18px}
 .profile-avatar{width:96px;height:96px;border-radius:50%;border:4px solid var(--bg);background:var(--bg4);object-fit:cover;display:flex;align-items:center;justify-content:center;font-size:36px;box-shadow:0 10px 28px rgba(15,23,42,0.18)}
-.profile-online-dot{position:absolute;bottom:6px;right:6px;width:18px;height:18px;border-radius:50%;background:#22c55e;border:3px solid var(--bg);box-shadow:0 0 10px rgba(34,197,94,0.6);z-index:2}
+.profile-online-dot{position:absolute;bottom:-2px;right:-2px;width:18px;height:18px;border-radius:50%;background:#22c55e;border:3px solid var(--bg);box-shadow:0 0 10px rgba(34,197,94,0.6);z-index:3}
 .profile-action-pill{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:var(--glass-bg,rgba(255,255,255,0.85));backdrop-filter:blur(14px) saturate(180%);-webkit-backdrop-filter:blur(14px) saturate(180%);border:1px solid var(--border2);color:var(--text);border-radius:999px;font-size:12.5px;font-weight:700;text-decoration:none;transition:transform 0.12s,background 0.15s;letter-spacing:0.1px;box-shadow:0 4px 14px rgba(15,23,42,0.08)}
 .profile-action-pill:active{transform:scale(0.94)}
 .profile-action-pill:hover{background:var(--bg)}
@@ -1223,33 +1223,10 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
     </div>
   </div>`:''}
 </div>
-${(()=>{
-  const followerCount = (u.followers||[]).length;
-  // deterministische 7-Tage-Sparkline (seed = uid + count) — sieht echt aus, immer konsistent
-  const seed = (String(uid).split('').reduce((a,c)=>a+c.charCodeAt(0),0) + followerCount) || 1;
-  const pts = [];
-  let v = Math.max(0, followerCount - 6);
-  for (let i=0;i<7;i++) {
-    const r = Math.sin((seed+i*17)*0.91) * 0.5 + 0.5;
-    v += Math.round(r * 2);
-    pts.push(v);
-  }
-  pts[6] = followerCount;
-  const mn = Math.min(...pts), mx = Math.max(...pts);
-  const range = Math.max(1, mx - mn);
-  const sparkPath = pts.map((p,i)=>`${i===0?'M':'L'} ${(i*7).toFixed(1)} ${(12 - ((p-mn)/range)*10).toFixed(1)}`).join(' ');
-  const trendDelta = pts[6] - pts[0];
-  const trendCls = trendDelta>0?'up':(trendDelta<0?'down':'flat');
-  const trendArrow = trendDelta>0?'▲':(trendDelta<0?'▼':'·');
-  const trendChip = trendDelta!==0 ? `<span class="profile-stat-trend ${trendCls}">${trendArrow}${Math.abs(trendDelta)}</span>` : '';
-  return `<div class="profile-stats">
+<div class="profile-stats">
   ${!isAdmin?`<div class="profile-stat"><div class="profile-stat-val" data-count="${xp}">0</div><div class="profile-stat-label">XP</div></div>`:''}
   <div class="profile-stat"><div class="profile-stat-val" data-count="${u.links||0}">0</div><div class="profile-stat-label">Links</div></div>
-  <div class="profile-stat">
-    <svg class="profile-spark" viewBox="0 0 42 14" preserveAspectRatio="none" aria-hidden="true"><path d="${sparkPath}" fill="none" stroke="url(#cbSpark)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><defs><linearGradient id="cbSpark" x1="0" y1="0" x2="42" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#a78bfa"/><stop offset="1" stop-color="#ff6b6b"/></linearGradient></defs></svg>
-    <div class="profile-stat-val"><span data-count="${followerCount}">0</span>${trendChip}</div>
-    <div class="profile-stat-label">Follower</div>
-  </div>
+  <div class="profile-stat"><div class="profile-stat-val" data-count="${(u.followers||[]).length}">0</div><div class="profile-stat-label">Follower</div></div>
   <div class="profile-stat"><div class="profile-stat-val">🔥 <span data-count="${u.streak||0}">0</span></div><div class="profile-stat-label">Streak</div></div>
   <a href="/diamanten" class="profile-stat" style="text-decoration:none;color:inherit;cursor:pointer"><div class="profile-stat-val">💎 <span data-count="${u.diamonds||0}">0</span></div><div class="profile-stat-label" style="display:flex;align-items:center;justify-content:center;gap:3px">Diamanten <span style="font-size:9px;opacity:0.6">ⓘ</span></div></a>
 </div>
@@ -1272,8 +1249,7 @@ ${(()=>{
   function run(){ document.querySelectorAll('[data-count]').forEach(animOne); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run);
   else run();
-})();</script>`;
-})()}
+})();</script>
 ${nb?`
 <div class="profile-xp-bar"><div class="profile-xp-fill" style="width:${nb.pct}%;background:${grad}"></div></div>
 <div class="profile-xp-info"><span>Noch ${nb.fehlend} XP bis ${nb.ziel}</span><span>${nb.pct}%</span></div>`:'<div style="padding:12px 16px;font-size:12px;color:var(--gold)">👑 Maximales Level erreicht!</div>'}
@@ -1759,7 +1735,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v65-fix';
+const SW_VERSION='v66-clean';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
@@ -4954,15 +4930,7 @@ function renderGroup(group){
   const sub = groupSubtype(n);
   const actors = group.actors;
   let avatarHtml;
-  if (actors.length > 1) {
-    const withUid = actors.filter(a=>a.actorUid).slice(0,3);
-    if (withUid.length > 0) {
-      const stack = withUid.map((a,i)=>'<div class="notif-stack-avatar" style="z-index:'+(3-i)+';left:'+(i*16)+'px">'+actorAvatar(a,32)+'</div>').join('');
-      avatarHtml = '<div class="notif-actor" style="width:'+(32+(withUid.length-1)*16)+'px"><div style="position:relative;width:100%;height:48px">'+stack+'</div><div class="notif-actor-badge '+c+'">'+(n.icon||'🔔')+'</div></div>';
-    } else {
-      avatarHtml = '<div class="notif-icon '+c+'">'+(n.icon||'🔔')+'</div>';
-    }
-  } else if (n.actorUid) {
+  if (n.actorUid) {
     avatarHtml = '<div class="notif-actor">'+actorAvatar(n,48)+'<div class="notif-actor-badge '+c+'">'+(n.icon||'🔔')+'</div></div>';
   } else {
     avatarHtml = '<div class="notif-icon '+c+'">'+(n.icon||'🔔')+'</div>';
