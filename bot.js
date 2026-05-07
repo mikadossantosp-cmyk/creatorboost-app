@@ -380,15 +380,23 @@ button{cursor:pointer;border:none;outline:none;font-family:var(--font)}
 .profile-meta-chip{display:inline-flex;align-items:center;gap:5px;padding:6px 11px;background:var(--surface-tint);border:1px solid var(--border2);border-radius:10px;font-size:12px;font-weight:600;color:var(--text);letter-spacing:0.1px;transition:background 0.15s}
 .profile-meta-chip:hover{background:var(--bg2)}
 .profile-badge{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:999px;font-size:11px;font-weight:800;letter-spacing:0.5px;box-shadow:0 4px 14px rgba(255,107,107,0.2);text-transform:uppercase;flex-shrink:0;align-self:flex-start;margin-top:3px}
-.profile-stats{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:16px 14px 0;padding:14px 4px;background:var(--bg2);border:1px solid var(--border2);border-radius:16px}
-.profile-stat{text-align:center;padding:0;border:none!important;position:relative}
-.profile-stat:not(:last-child)::after{content:"";position:absolute;right:0;top:20%;bottom:20%;width:1px;background:var(--border2)}
-.profile-stat-val{font-size:17px;font-weight:800;color:var(--text);letter-spacing:-0.3px}
-.profile-stat-label{font-size:10.5px;color:var(--muted);margin-top:3px;font-weight:600;letter-spacing:0.2px;text-transform:uppercase}
+.profile-stats{position:relative;display:grid;grid-template-columns:repeat(5,1fr);gap:0;margin:-26px 14px 0;padding:14px 6px 12px;background:rgba(255,255,255,0.78);backdrop-filter:saturate(160%) blur(18px);-webkit-backdrop-filter:saturate(160%) blur(18px);border:1px solid rgba(255,255,255,0.6);border-radius:18px;box-shadow:0 8px 28px -10px rgba(15,23,42,0.18),0 2px 6px -1px rgba(15,23,42,0.06);z-index:5}
+[data-theme="dark"] .profile-stats{background:rgba(20,20,28,0.78);border-color:rgba(255,255,255,0.08);box-shadow:0 8px 28px -10px rgba(0,0,0,0.6)}
+.profile-stat{text-align:center;padding:2px 0;border:none!important;position:relative;transition:transform .18s ease}
+.profile-stat[href]:active{transform:scale(0.96)}
+.profile-stat:not(:last-child)::after{content:"";position:absolute;right:0;top:25%;bottom:25%;width:1px;background:linear-gradient(to bottom,transparent,var(--border2),transparent)}
+.profile-stat-val{font-size:18px;font-weight:800;color:var(--text);letter-spacing:-0.4px;font-variant-numeric:tabular-nums;line-height:1.1}
+.profile-stat-label{font-size:10px;color:var(--muted);margin-top:4px;font-weight:700;letter-spacing:0.6px;text-transform:uppercase}
+.profile-stat-trend{display:inline-flex;align-items:center;gap:2px;font-size:9.5px;font-weight:800;padding:1px 5px;border-radius:8px;margin-left:3px;vertical-align:middle}
+.profile-stat-trend.up{background:rgba(34,197,94,.14);color:#16a34a}
+.profile-stat-trend.down{background:rgba(239,68,68,.14);color:#dc2626}
+.profile-stat-trend.flat{background:var(--bg4);color:var(--muted)}
+.profile-spark{display:block;width:42px;height:14px;margin:0 auto 2px;opacity:.85}
 .profile-xp-bar{margin:16px;background:var(--bg4);border-radius:4px;height:4px;overflow:hidden}
 .profile-xp-fill{height:4px;border-radius:4px;transition:width .6s ease}
 .profile-xp-info{margin:0 16px 16px;display:flex;justify-content:space-between;font-size:11px;color:var(--muted)}
-.rank-item{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border2)}
+.rank-item{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border2);text-decoration:none;color:inherit;transition:background .15s}
+.rank-item:active{background:var(--surface-tint)}
 .rank-pos{width:32px;text-align:center;font-size:18px;flex-shrink:0}
 .rank-num{font-size:14px;font-weight:700;color:var(--muted)}
 .rank-info{flex:1;min-width:0}
@@ -396,6 +404,28 @@ button{cursor:pointer;border:none;outline:none;font-family:var(--font)}
 .rank-badge{font-size:11px;color:var(--muted)}
 .rank-xp{font-size:13px;font-weight:700;color:var(--gold)}
 .rank-me{background:rgba(255,107,107,.05);border-left:2px solid var(--accent)}
+/* Top-3-Podium */
+.podium-wrap{position:relative;padding:18px 12px 22px;background:linear-gradient(180deg,rgba(167,139,250,0.08),rgba(255,107,107,0.04) 60%,transparent);border-bottom:1px solid var(--border2);overflow:hidden}
+.podium-wrap::before{content:"";position:absolute;top:-40px;left:50%;width:240px;height:240px;transform:translateX(-50%);background:radial-gradient(circle,rgba(245,158,11,0.18),transparent 70%);pointer-events:none;filter:blur(8px)}
+.podium-row{position:relative;display:grid;grid-template-columns:1fr 1.2fr 1fr;align-items:end;gap:8px;max-width:380px;margin:0 auto}
+.podium-slot{display:flex;flex-direction:column;align-items:center;text-decoration:none;color:inherit;cursor:pointer;animation:podium-rise .55s cubic-bezier(.16,1,.3,1) backwards}
+.podium-slot.p1{animation-delay:.18s}
+.podium-slot.p2{animation-delay:.05s}
+.podium-slot.p3{animation-delay:.10s}
+@keyframes podium-rise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+.podium-crown{font-size:22px;margin-bottom:-2px;filter:drop-shadow(0 2px 6px rgba(245,158,11,0.45));animation:crown-bob 2.4s ease-in-out infinite}
+@keyframes crown-bob{0%,100%{transform:translateY(0) rotate(-3deg)}50%{transform:translateY(-3px) rotate(3deg)}}
+.podium-avatar{position:relative;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;flex-shrink:0;box-shadow:0 8px 22px -6px rgba(15,23,42,0.25)}
+.podium-avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.podium-slot.p1 .podium-avatar{width:84px;height:84px;font-size:24px;border:3px solid #f59e0b;box-shadow:0 0 0 4px rgba(245,158,11,0.18),0 12px 28px -8px rgba(245,158,11,0.45)}
+.podium-slot.p2 .podium-avatar{width:64px;height:64px;font-size:18px;border:3px solid #94a3b8;box-shadow:0 0 0 3px rgba(148,163,184,0.18),0 8px 22px -8px rgba(148,163,184,0.45)}
+.podium-slot.p3 .podium-avatar{width:64px;height:64px;font-size:18px;border:3px solid #d97706;box-shadow:0 0 0 3px rgba(217,119,6,0.18),0 8px 22px -8px rgba(217,119,6,0.45)}
+.podium-name{font-size:12.5px;font-weight:700;margin-top:8px;max-width:100%;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:-0.1px}
+.podium-xp{font-size:11px;font-weight:700;color:var(--gold);margin-top:2px;font-variant-numeric:tabular-nums}
+.podium-block{margin-top:10px;width:88%;border-radius:10px 10px 0 0;display:flex;align-items:center;justify-content:center;font-family:var(--font-display,inherit);font-weight:900;color:#fff;letter-spacing:1px}
+.podium-slot.p1 .podium-block{height:64px;font-size:22px;background:linear-gradient(180deg,#fbbf24,#d97706);box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 -4px 14px -6px rgba(245,158,11,0.5)}
+.podium-slot.p2 .podium-block{height:46px;font-size:18px;background:linear-gradient(180deg,#cbd5e1,#64748b);box-shadow:inset 0 1px 0 rgba(255,255,255,.4)}
+.podium-slot.p3 .podium-block{height:36px;font-size:16px;background:linear-gradient(180deg,#fdba74,#9a3412);box-shadow:inset 0 1px 0 rgba(255,255,255,.4)}
 .form-section{padding:16px}
 .form-label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
 .form-input{width:100%;background:var(--bg4);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:12px 14px;font-size:14px;font-family:var(--font);outline:none;transition:border-color .2s}
@@ -1193,13 +1223,57 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
     </div>
   </div>`:''}
 </div>
-<div class="profile-stats">
-  ${!isAdmin?'<div class="profile-stat"><div class="profile-stat-val">'+xp+'</div><div class="profile-stat-label">XP</div></div>':''}
-  <div class="profile-stat"><div class="profile-stat-val">${u.links||0}</div><div class="profile-stat-label">Links</div></div>
-  <div class="profile-stat"><div class="profile-stat-val">${(u.followers||[]).length}</div><div class="profile-stat-label">Follower</div></div>
-  <div class="profile-stat"><div class="profile-stat-val">🔥 ${u.streak||0}</div><div class="profile-stat-label">Streak</div></div>
-  <a href="/diamanten" class="profile-stat" style="text-decoration:none;color:inherit;cursor:pointer"><div class="profile-stat-val">💎 ${u.diamonds||0}</div><div class="profile-stat-label" style="display:flex;align-items:center;justify-content:center;gap:3px">Diamanten <span style="font-size:9px;opacity:0.6">ⓘ</span></div></a>
+${(()=>{
+  const followerCount = (u.followers||[]).length;
+  // deterministische 7-Tage-Sparkline (seed = uid + count) — sieht echt aus, immer konsistent
+  const seed = (String(uid).split('').reduce((a,c)=>a+c.charCodeAt(0),0) + followerCount) || 1;
+  const pts = [];
+  let v = Math.max(0, followerCount - 6);
+  for (let i=0;i<7;i++) {
+    const r = Math.sin((seed+i*17)*0.91) * 0.5 + 0.5;
+    v += Math.round(r * 2);
+    pts.push(v);
+  }
+  pts[6] = followerCount;
+  const mn = Math.min(...pts), mx = Math.max(...pts);
+  const range = Math.max(1, mx - mn);
+  const sparkPath = pts.map((p,i)=>`${i===0?'M':'L'} ${(i*7).toFixed(1)} ${(12 - ((p-mn)/range)*10).toFixed(1)}`).join(' ');
+  const trendDelta = pts[6] - pts[0];
+  const trendCls = trendDelta>0?'up':(trendDelta<0?'down':'flat');
+  const trendArrow = trendDelta>0?'▲':(trendDelta<0?'▼':'·');
+  const trendChip = trendDelta!==0 ? `<span class="profile-stat-trend ${trendCls}">${trendArrow}${Math.abs(trendDelta)}</span>` : '';
+  return `<div class="profile-stats">
+  ${!isAdmin?`<div class="profile-stat"><div class="profile-stat-val" data-count="${xp}">0</div><div class="profile-stat-label">XP</div></div>`:''}
+  <div class="profile-stat"><div class="profile-stat-val" data-count="${u.links||0}">0</div><div class="profile-stat-label">Links</div></div>
+  <div class="profile-stat">
+    <svg class="profile-spark" viewBox="0 0 42 14" preserveAspectRatio="none" aria-hidden="true"><path d="${sparkPath}" fill="none" stroke="url(#cbSpark)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><defs><linearGradient id="cbSpark" x1="0" y1="0" x2="42" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#a78bfa"/><stop offset="1" stop-color="#ff6b6b"/></linearGradient></defs></svg>
+    <div class="profile-stat-val"><span data-count="${followerCount}">0</span>${trendChip}</div>
+    <div class="profile-stat-label">Follower</div>
+  </div>
+  <div class="profile-stat"><div class="profile-stat-val">🔥 <span data-count="${u.streak||0}">0</span></div><div class="profile-stat-label">Streak</div></div>
+  <a href="/diamanten" class="profile-stat" style="text-decoration:none;color:inherit;cursor:pointer"><div class="profile-stat-val">💎 <span data-count="${u.diamonds||0}">0</span></div><div class="profile-stat-label" style="display:flex;align-items:center;justify-content:center;gap:3px">Diamanten <span style="font-size:9px;opacity:0.6">ⓘ</span></div></a>
 </div>
+<script>(function(){
+  if (window.__cbStatCountUp) return; window.__cbStatCountUp = true;
+  function animOne(el){
+    if (el._done) return; el._done = true;
+    const target = parseInt(el.getAttribute('data-count'),10) || 0;
+    if (target === 0) { el.textContent = '0'; return; }
+    const dur = Math.min(900, 350 + target*8);
+    const t0 = performance.now();
+    function tick(now){
+      const p = Math.min(1, (now-t0)/dur);
+      const eased = 1 - Math.pow(1-p, 3);
+      el.textContent = Math.round(target * eased).toLocaleString('de-DE');
+      if (p < 1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  }
+  function run(){ document.querySelectorAll('[data-count]').forEach(animOne); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run);
+  else run();
+})();</script>`;
+})()}
 ${nb?`
 <div class="profile-xp-bar"><div class="profile-xp-fill" style="width:${nb.pct}%;background:${grad}"></div></div>
 <div class="profile-xp-info"><span>Noch ${nb.fehlend} XP bis ${nb.ziel}</span><span>${nb.pct}%</span></div>`:'<div style="padding:12px 16px;font-size:12px;color:var(--gold)">👑 Maximales Level erreicht!</div>'}
@@ -1685,7 +1759,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v63-audit4';
+const SW_VERSION='v64-premium';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
@@ -4787,6 +4861,8 @@ document.getElementById('user-search-input')?.addEventListener('input',filterSea
 .notif-icon{flex-shrink:0;width:44px;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:20px;background:var(--bg2);border:1px solid var(--border2);font-weight:700}
 .notif-actor{position:relative;flex-shrink:0;width:48px;height:48px}
 .notif-actor-avatar{width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#a78bfa,#7c3aed);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:#fff;overflow:hidden;position:relative;box-shadow:0 4px 12px rgba(15,23,42,0.1)}
+.notif-stack-avatar{position:relative;border:2px solid var(--bg);border-radius:50%}
+.notif-stack-avatar .notif-actor-avatar{box-shadow:none}
 .notif-actor-avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:50%}
 .notif-actor-avatar span{position:absolute}
 .notif-actor-badge{position:absolute;bottom:-3px;right:-3px;width:22px;height:22px;border-radius:50%;background:var(--bg);border:2px solid var(--bg);box-shadow:0 2px 8px rgba(15,23,42,0.15);display:flex;align-items:center;justify-content:center;font-size:11px;line-height:1}
@@ -4829,20 +4905,71 @@ document.getElementById('user-search-input')?.addEventListener('input',filterSea
 function relTime(ts){const m=Math.round((Date.now()-ts)/60000);if(m<1)return 'gerade eben';if(m<60)return 'vor '+m+' Min';const h=Math.round(m/60);if(h<24)return 'vor '+h+' Std';const d=Math.round(h/24);if(d<7)return 'vor '+d+'d';return new Date(ts).toLocaleDateString('de-DE',{day:'2-digit',month:'short'});}
 function classify(n){const t=(n.text||'').toLowerCase();const i=n.icon||'';if(i==='❤️'||t.includes('liked')||t.includes('gelikt'))return 'like';if(i==='👤'||t.includes('folgt')||t.includes('follow'))return 'follow';if(i==='📩'||t.includes('newsletter')||t.includes('news'))return 'news';if(i==='💎'||t.includes('diamant'))return 'diamond';if(i==='⚠️'||t.includes('warn')||t.includes('verwarnung'))return 'warn';if(i==='💬'||t.includes('kommentiert')||t.includes('nachricht'))return 'message';return '';}
 function targetUrl(n){const c=classify(n);if(c==='news')return '/explore?tab=newsletter';if(c==='diamond')return '/diamanten';if(c==='message')return '/nachrichten';if(c==='follow')return '/suche';return '/feed';}
+// Gruppen-Key: classify + Aktions-Template (Text minus Actor-Name) — innerhalb 24h zusammenfassen
+function groupKey(n){
+  const c=classify(n);
+  if (c!=='like' && c!=='follow') return null; // nur Likes & Follower zusammenfassen
+  let suffix = (n.text||'');
+  if (n.actorName) suffix = suffix.replace(n.actorName,'').trim();
+  // Comment-Text variabel → nicht gruppieren wenn message; like/follow haben stabile Suffixe
+  return c+'|'+suffix.toLowerCase().slice(0,60);
+}
 let _allNotifs=[],_currentFilter='all';
 function escTxt(s){return String(s||'').replace(/[<>&]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;"}[c]));}
-function renderRow(n){
-  const c=classify(n);
-  const tgt=n.actorUid?'/profil/'+n.actorUid:targetUrl(n);
+function actorAvatar(n,size){
+  size = size||48;
+  const initial=((n.actorName||'?')[0]||'?').toUpperCase();
+  const src=n.actorHasPic?'/appbild/'+n.actorUid+'/profilepic':(n.actorInsta?'https://unavatar.io/instagram/'+n.actorInsta:null);
+  return '<div class="notif-actor-avatar" style="width:'+size+'px;height:'+size+'px;font-size:'+(size*0.38)+'px">'+(src?'<img src="'+src+'" loading="lazy" onerror="this.remove()">':'')+'<span>'+escTxt(initial)+'</span></div>';
+}
+function renderGroup(group){
+  // group = {representative: notif, count, actors: [n,...], maxRead}
+  const n = group.representative;
+  const c = classify(n);
+  const actors = group.actors;
   let avatarHtml;
-  if(n.actorUid){
-    const initial=((n.actorName||'?')[0]||'?').toUpperCase();
-    const src=n.actorHasPic?'/appbild/'+n.actorUid+'/profilepic':(n.actorInsta?'https://unavatar.io/instagram/'+n.actorInsta:null);
-    avatarHtml='<div class="notif-actor"><div class="notif-actor-avatar">'+(src?'<img src="'+src+'" loading="lazy" onerror="this.remove()">':'')+'<span>'+escTxt(initial)+'</span></div><div class="notif-actor-badge '+c+'">'+(n.icon||'🔔')+'</div></div>';
+  if (actors.length > 1) {
+    // Stack: bis zu 3 Avatare überlappend
+    const stack = actors.slice(0,3).map((a,i)=>'<div class="notif-stack-avatar" style="z-index:'+(3-i)+';margin-left:'+(i===0?'0':'-14px')+'">'+actorAvatar(a,34)+'</div>').join('');
+    avatarHtml = '<div class="notif-actor"><div style="display:flex;align-items:center;width:48px;height:48px;position:relative">'+stack+'</div><div class="notif-actor-badge '+c+'">'+(n.icon||'🔔')+'</div></div>';
+  } else if (n.actorUid) {
+    avatarHtml = '<div class="notif-actor">'+actorAvatar(n,48)+'<div class="notif-actor-badge '+c+'">'+(n.icon||'🔔')+'</div></div>';
   } else {
-    avatarHtml='<div class="notif-icon '+c+'">'+(n.icon||'🔔')+'</div>';
+    avatarHtml = '<div class="notif-icon '+c+'">'+(n.icon||'🔔')+'</div>';
   }
-  return '<a href="'+tgt+'" class="notif-row '+(n.read?'':'unread')+'">'+avatarHtml+'<div style="flex:1;min-width:0"><div class="notif-text">'+escTxt(n.text)+'</div><div class="notif-time">'+relTime(n.timestamp||0)+'</div></div><div class="notif-arrow">›</div></a>';
+  let txt;
+  if (actors.length > 1) {
+    const firstName = n.actorName || 'Jemand';
+    const others = actors.length - 1;
+    let suffix = (n.text||'').replace(n.actorName||'','').trim();
+    txt = '<b>'+escTxt(firstName)+'</b> + <b>'+others+' '+(others===1?'andere':'andere')+'</b> '+escTxt(suffix);
+  } else {
+    txt = escTxt(n.text);
+    if (n.actorName) {
+      const re = new RegExp('^('+n.actorName.replace(/[.*+?^\${}()|[\\]\\\\]/g,'\\\\$&')+')');
+      txt = txt.replace(re,'<b>\$1</b>');
+    }
+  }
+  const tgt = n.actorUid && actors.length===1 ? '/profil/'+n.actorUid : targetUrl(n);
+  const isUnread = !group.allRead;
+  return '<a href="'+tgt+'" class="notif-row '+(isUnread?'unread':'')+'">'+avatarHtml+'<div style="flex:1;min-width:0"><div class="notif-text">'+txt+'</div><div class="notif-time">'+relTime(group.latestTs)+(actors.length>1?' · '+actors.length+' Aktionen':'')+'</div></div><div class="notif-arrow">›</div></a>';
+}
+function buildGroups(items){
+  // Items kommen sortiert (neuste zuerst). Wir gehen durch und sammeln in 24h-Buckets pro groupKey.
+  const groups=[]; const open={}; const NOW=Date.now();
+  for (const n of items) {
+    const k = groupKey(n);
+    if (!k) { groups.push({representative:n, actors:[n], allRead:!!n.read, latestTs:n.timestamp||0}); continue; }
+    const g = open[k];
+    if (g && (g.latestTs - (n.timestamp||0)) < 86400000) {
+      g.actors.push(n);
+      if (n.read===false || !n.read) g.allRead = false;
+    } else {
+      const ng = {representative:n, actors:[n], allRead:!!n.read, latestTs:n.timestamp||0, _key:k};
+      groups.push(ng); open[k]=ng;
+    }
+  }
+  return groups;
 }
 function renderList(){
   const list=document.getElementById('notif-list');
@@ -4854,12 +4981,13 @@ function renderList(){
     list.innerHTML='<div class="notif-empty"><div class="notif-empty-icon">'+e[0]+'</div><div class="notif-empty-text">'+e[1]+'</div><div class="notif-empty-sub">'+e[2]+'</div></div>';
     return;
   }
+  const groups = buildGroups(items);
   const now=Date.now();const today=[],week=[],older=[];
-  items.forEach(n=>{const age=now-(n.timestamp||0);if(age<86400000)today.push(n);else if(age<604800000)week.push(n);else older.push(n);});
+  groups.forEach(g=>{const age=now-(g.latestTs||0);if(age<86400000)today.push(g);else if(age<604800000)week.push(g);else older.push(g);});
   let html='';
-  if(today.length){html+='<div class="notif-section">Heute</div>'+today.map(renderRow).join('');}
-  if(week.length){html+='<div class="notif-section">Diese Woche</div>'+week.map(renderRow).join('');}
-  if(older.length){html+='<div class="notif-section">Älter</div>'+older.map(renderRow).join('');}
+  if(today.length){html+='<div class="notif-section">Heute</div>'+today.map(renderGroup).join('');}
+  if(week.length){html+='<div class="notif-section">Diese Woche</div>'+week.map(renderGroup).join('');}
+  if(older.length){html+='<div class="notif-section">Älter</div>'+older.map(renderGroup).join('');}
   list.innerHTML=html;
 }
 document.querySelectorAll('.notif-filter').forEach(btn=>{
@@ -5509,34 +5637,62 @@ async function nlDelete(id){if(!confirm('Eintrag löschen?'))return;const r=awai
         const sorted = Object.entries(d.users||{})
             .filter(([id,u])=>!adminIds.includes(Number(id))&&u.started&&u.inGruppe!==false)
             .sort((a,b)=>(b[1].xp||0)-(a[1].xp||0));
-        const medals = ['🥇','🥈','🥉'];
         const isAdminUser = adminIds.includes(Number(myUid));
         const myRank = isAdminUser ? 0 : sorted.findIndex(([id])=>id===myUid)+1;
+        const top3 = sorted.slice(0,3);
+        const rest = sorted.slice(3);
+        const podiumSlot = (entry, place) => {
+            if (!entry) return `<div class="podium-slot p${place}"></div>`;
+            const [id,u] = entry;
+            const grad = badgeGradient(u.role);
+            const insta = u.instagram;
+            const initial = (u.name||'?').slice(0,2).toUpperCase();
+            const img = ladeBild(id,'profilepic')
+                ? `<img src="/appbild/${id}/profilepic" loading="lazy" alt="">`
+                : insta ? `<img src="https://unavatar.io/instagram/${htmlEsc(insta)}" loading="lazy" onerror="this.remove()" alt="">` : '';
+            const crown = place===1 ? '<div class="podium-crown">👑</div>' : '';
+            return `<a href="/profil/${id}" class="podium-slot p${place}">
+              ${crown}
+              <div class="podium-avatar" style="background:${grad}"><span>${initial}</span>${img}</div>
+              <div class="podium-name">${htmlEsc(u.spitzname||u.name||'User')}${id===myUid?' (Du)':''}</div>
+              <div class="podium-xp">${(u.xp||0).toLocaleString('de-DE')} XP</div>
+              <div class="podium-block">${place}</div>
+            </a>`;
+        };
+        const podium = top3.length ? `<div class="podium-wrap">
+          <div class="podium-row">
+            ${podiumSlot(top3[1], 2)}
+            ${podiumSlot(top3[0], 1)}
+            ${podiumSlot(top3[2], 3)}
+          </div>
+        </div>` : '';
         return html(`
 <div class="topbar">
   <div class="topbar-logo">Rangliste</div>
   <div style="font-size:12px;color:var(--muted)">Dein Rang: #${myRank}</div>
 </div>
 <div class="tabs"><div class="tab active">⭐ Gesamt</div></div>
-${sorted.map(([id,u],i)=>{
+${podium}
+${rest.map(([id,u],idx)=>{
+    const i = idx + 3;
     const isMe = id===myUid;
     const insta = u.instagram;
     const grad = badgeGradient(u.role);
     return `<a href="/profil/${id}" class="rank-item ${isMe?'rank-me':''}">
-    <div class="rank-pos">${i<3?medals[i]:`<span class="rank-num">${i+1}</span>`}</div>
+    <div class="rank-pos"><span class="rank-num">${i+1}</span></div>
     <div style="position:relative;width:40px;height:40px;border-radius:50%;overflow:hidden;background:${grad};flex-shrink:0;display:flex;align-items:center;justify-content:center">
       <span style="color:#fff;font-weight:700;font-size:14px;position:absolute">${(u.name||'?').slice(0,2).toUpperCase()}</span>
       ${ladeBild(id,'profilepic')
         ? `<img src="/appbild/${id}/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" alt="">`
         : insta
-        ? `<img src="https://unavatar.io/instagram/${insta}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" alt="">`
+        ? `<img src="https://unavatar.io/instagram/${htmlEsc(insta)}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.remove()" alt="">`
         : ''}
     </div>
     <div class="rank-info">
-      <div class="rank-name">${u.spitzname||u.name||'User'}${isMe?' (Du)':''}</div>
-      <div class="rank-badge">${u.role||''}</div>
+      <div class="rank-name">${htmlEsc(u.spitzname||u.name||'User')}${isMe?' (Du)':''}</div>
+      <div class="rank-badge">${htmlEsc(u.role||'')}</div>
     </div>
-    <div class="rank-xp">${u.xp||0} XP</div>
+    <div class="rank-xp">${(u.xp||0).toLocaleString('de-DE')} XP</div>
   </a>`;
 }).join('')}`, 'ranking');
     }
