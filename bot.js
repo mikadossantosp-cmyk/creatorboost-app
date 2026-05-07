@@ -939,7 +939,7 @@ setInterval(checkMsgBadge,30000);
 function toast(msg,dur=2500){const t=document.getElementById('toast');if(!t)return;t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),dur);}
 function setTheme(t){document.documentElement.setAttribute('data-theme',t);try{localStorage.setItem('cbTheme4',t);}catch(e){}document.querySelectorAll('[title="Theme"]').forEach(b=>b.textContent=t==='dark'?'☀️':'🌙');fetch('/api/theme',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({theme:t})}).catch(()=>{});}
 try{const t=localStorage.getItem('cbTheme4');if(t){document.documentElement.setAttribute('data-theme',t);}}catch(e){}
-function setLang(l){fetch('/api/lang',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lang:l})}).then(()=>location.reload());}
+function setLang(l){fetch('/api/lang',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lang:l})}).then(()=>location.reload()).catch(()=>{try{document.cookie='cbLang='+l+';path=/;max-age=31536000';}catch(e){}location.reload();});}
 async function openPlusSheet(){
   const s=document.getElementById('plus-sheet');
   if(!s)return;
@@ -1038,7 +1038,7 @@ function confirmCrop(){
   vp.addEventListener('pointerup',()=>{_cropDrag.on=false;});vp.addEventListener('pointercancel',()=>{_cropDrag.on=false;});
   vp.addEventListener('wheel',e=>{e.preventDefault();const sl=document.getElementById('crop-zoom');const nz=Math.max(parseFloat(sl.min),Math.min(parseFloat(sl.max),_cs.z*(1-e.deltaY*0.001)));setCropZoom(nz);sl.value=nz;},{passive:false});
   vp.addEventListener('touchstart',e=>{if(e.touches.length===2)_cropPinch=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);},{passive:true});
-  vp.addEventListener('touchmove',e=>{if(e.touches.length===2){e.preventDefault();const sl=document.getElementById('crop-zoom');const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);const nz=Math.max(parseFloat(sl.min),Math.min(parseFloat(sl.max),_cs.z*(d/_cropPinch)));setCropZoom(nz);sl.value=nz;_cropPinch=d;}},{passive:false});
+  vp.addEventListener('touchmove',e=>{if(e.touches.length===2){e.preventDefault();const sl=document.getElementById('crop-zoom');const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);if(!_cropPinch||!isFinite(_cropPinch)){_cropPinch=d;return;}const nz=Math.max(parseFloat(sl.min),Math.min(parseFloat(sl.max),_cs.z*(d/_cropPinch)));setCropZoom(nz);sl.value=nz;_cropPinch=d;}},{passive:false});
 })();
 </script>
 <script>
@@ -1372,7 +1372,7 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
     const banner = bannerData || ladeBild(uid, 'banner') || u.banner || 'linear-gradient(135deg,#667eea,#764ba2)';
     const bannerIsGrad = !banner.startsWith('data:image') && !banner.startsWith('http');
     const instaUrl = u.instagram ? `https://instagram.com/${u.instagram}` : null;
-    const sorted = Object.entries(d.users||{}).filter(([,u])=>u.role!=='⚙️ Admin').sort((a,b)=>(b[1].xp||0)-(a[1].xp||0));
+    const sorted = Object.entries(d.users||{}).filter(([,u])=>!/admin/i.test(String(u.role||''))).sort((a,b)=>(b[1].xp||0)-(a[1].xp||0));
     const isAdmin = adminIds.includes(Number(uid));
     const rank = isAdmin ? 0 : sorted.findIndex(([id])=>id===uid)+1;
 
@@ -1954,7 +1954,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v102-blue-rings-admin';
+const SW_VERSION='v103-bug-sweep';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
@@ -3612,7 +3612,7 @@ p{line-height:1.65;color:var(--muted)}
     const myUid = getMyUid(session);
     const myUser = d.users?.[myUid];
     const today = new Date().toDateString();
-    const adminIds = (Array.isArray(d._adminIds) ? d._adminIds.map(Number) : Object.entries(d.users).filter(([,u])=>u.role==='⚙️ Admin').map(([id])=>Number(id)));
+    const adminIds = (Array.isArray(d._adminIds) ? d._adminIds.map(Number) : Object.entries(d.users).filter(([,u])=>/admin/i.test(String(u.role||''))).map(([id])=>Number(id)));
 
     // ── API ENDPOINTS ──
     if (path === '/api/push-subscribe' && req.method === 'POST') {
@@ -7521,7 +7521,8 @@ async function setRing(ringId) {
     // ── THREAD META OVERRIDES (icon + name lokal) ──
     // bot kann nicht alle Telegram-Topic-icons liefern → admin kann pro thread custom emoji/name setzen
     if (path === '/api/set-thread-meta' && req.method === 'POST') {
-        const _adm = (Array.isArray((await fetchBot('/data') || {})._adminIds) ? (await fetchBot('/data'))._adminIds.map(Number) : []);
+        const _data = await fetchBot('/data') || {};
+        const _adm = Array.isArray(_data._adminIds) ? _data._adminIds.map(Number) : [];
         if (!_adm.includes(Number(myUid))) return json({ ok: false, error: 'Nur Admin' }, 403);
         const body = await parseBody(req);
         const { thread_id, name, emoji } = body;
@@ -7542,7 +7543,8 @@ async function setRing(ringId) {
     }
     // Thread aus App verstecken (nur admin)
     if (path === '/api/hide-thread' && req.method === 'POST') {
-        const _admh = (Array.isArray((await fetchBot('/data') || {})._adminIds) ? (await fetchBot('/data'))._adminIds.map(Number) : []);
+        const _dataH = await fetchBot('/data') || {};
+        const _admh = Array.isArray(_dataH._adminIds) ? _dataH._adminIds.map(Number) : [];
         if (!_admh.includes(Number(myUid))) return json({ ok: false, error: 'Nur Admin' }, 403);
         const body = await parseBody(req);
         const { thread_id } = body;
