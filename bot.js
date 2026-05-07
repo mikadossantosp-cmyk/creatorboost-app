@@ -1775,7 +1775,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v70-pro';
+const SW_VERSION='v71-chat';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
@@ -3962,18 +3962,22 @@ async function submitSuperLink(){
         postBot('/mark-messages-read', { uid: myUid, chatKey }).catch(()=>{});
         const msgsHtml = require('./chat-detail-render')({ msgs, myUid, otherUid, otherUser, ladeBild, otherOnline: isUidOnline(otherUid) });
         return html(`
-<div class="topbar" style="display:flex;align-items:center;gap:6px;padding:6px 10px">
-  <a href="/nachrichten" class="icon-btn" style="font-size:24px;color:#0866FF;padding:6px 10px;text-decoration:none">‹</a>
-  <a href="/profil/${otherUid}" class="chat-header-link" style="display:flex;align-items:center;gap:10px;text-decoration:none;flex:1;min-width:0">
-    <div style="position:relative;width:36px;height:36px;border-radius:50%;overflow:hidden;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0">
-      <span style="position:absolute;z-index:0;color:#fff">${otherName[0]}</span>
+<div class="topbar" style="display:flex;align-items:center;gap:8px;padding:8px 10px">
+  <a href="/nachrichten" class="icon-btn" style="font-size:26px;color:var(--accent);padding:6px 10px;text-decoration:none;display:flex;align-items:center">‹</a>
+  <a href="/profil/${otherUid}" class="chat-header-link" style="display:flex;align-items:center;gap:11px;text-decoration:none;flex:1;min-width:0">
+    <div style="position:relative;width:42px;height:42px;border-radius:50%;overflow:hidden;background:linear-gradient(135deg,#a78bfa,#7c3aed);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:#fff;flex-shrink:0;box-shadow:0 2px 8px rgba(15,23,42,.10)">
+      <span style="position:absolute;z-index:0">${htmlEsc(otherName.slice(0,1).toUpperCase())}</span>
       ${ladeBild(otherUid,'profilepic')
         ? `<img src="/appbild/${otherUid}/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1" alt="">`
         : otherUser.instagram
         ? `<img src="https://unavatar.io/instagram/${otherUser.instagram}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1" onerror="this.remove()" alt="">`
         : ''}
+      ${isUidOnline(otherUid)?'<i style="position:absolute;bottom:-1px;right:-1px;width:12px;height:12px;border-radius:50%;background:#22c55e;border:2.5px solid var(--bg);z-index:2"></i>':''}
     </div>
-    <span class="chat-header-name" style="font-size:16px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${otherName}</span>
+    <div style="display:flex;flex-direction:column;min-width:0;flex:1">
+      <span class="chat-header-name" style="font-size:18px;font-weight:800;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:-0.3px;line-height:1.15">${htmlEsc(otherName)}</span>
+      <span class="chat-header-status" style="font-size:12px;font-weight:600;color:${isUidOnline(otherUid)?'#22c55e':'var(--muted)'};letter-spacing:0.1px;line-height:1.2;margin-top:2px">${isUidOnline(otherUid)?'● Online':'Offline'}</span>
+    </div>
   </a>
   <button onclick="alert('Sprachanruf folgt bald 📞')" style="background:none;border:none;color:#0866FF;width:40px;height:40px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0" title="Anrufen">
     <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M20 15.5c-1.25 0-2.45-.2-3.57-.57-.35-.11-.74-.03-1.02.24l-2.2 2.2c-2.83-1.44-5.15-3.75-6.59-6.58l2.2-2.21c.28-.27.36-.66.25-1.01C8.7 6.45 8.5 5.25 8.5 4c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1 0 9.39 7.61 17 17 17 .55 0 1-.45 1-1v-3.5c0-.55-.45-1-1-1z"/></svg>
