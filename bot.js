@@ -1954,7 +1954,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v111-like-after-visit';
+const SW_VERSION='v112-revert-visit';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
@@ -4043,7 +4043,7 @@ p{line-height:1.65;color:var(--muted)}
 '    </div>\n'+
 '  </div>\n'+
 // Reel video preview card
-'  <div style="margin:0 16px;border-radius:14px;overflow:hidden;background:#000;border:1.5px solid;border-image:linear-gradient(135deg,#f9a825,#e91e63,#9c27b0) 1;cursor:pointer;box-shadow:0 6px 20px rgba(233,30,99,0.10)" onclick="markVisited(\''+lid1+'\',\''+link.text.replace(/\'/g,"\\\'")+'\')">\n'+
+'  <div style="margin:0 16px;border-radius:14px;overflow:hidden;background:#000;border:1.5px solid;border-image:linear-gradient(135deg,#f9a825,#e91e63,#9c27b0) 1;cursor:pointer;box-shadow:0 6px 20px rgba(233,30,99,0.10)" onclick="window.open(\''+link.text+'\',\'_blank\')">\n'+
 '    <div style="position:relative;width:100%;padding-top:62%;background:'+bannerBg+';overflow:hidden">\n'+
 '      '+bannerImg.replace('position:absolute;inset:0;','position:absolute;inset:0;')+'\n'+
 '      <div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.1) 0%,rgba(0,0,0,.55) 100%)"></div>\n'+
@@ -4201,18 +4201,7 @@ ${tab==='engagement' ? `<div style="padding:12px 16px 4px">
 </div>` : ''}
 ${postsHtml}
 <script>
-function markVisited(msgId, url){
-  try { localStorage.setItem('cb_visited_'+msgId, '1'); } catch(e) {}
-  if (url) window.open(url, '_blank');
-}
-function hasVisited(msgId){
-  try { return localStorage.getItem('cb_visited_'+msgId) === '1'; } catch(e) { return false; }
-}
 async function likePost(msgId, btn) {
-    if (!hasVisited(msgId)) {
-        toast('🔗 Du musst zuerst den Link besuchen!');
-        return;
-    }
     const countEl = document.getElementById('likes-'+msgId);
     if (btn.classList.contains('liked')) return;
     btn.classList.add('liked');
