@@ -1004,26 +1004,37 @@ function confirmCrop(){
   if(/Android/i.test(navigator.userAgent)){fetch('/download-app',{method:'HEAD'}).then(r=>{if(r.ok){const b=document.getElementById('apk-download-btn');if(b)b.style.display='block';}}).catch(()=>{});}
 
   // ── APK-User: Update-Banner mit One-Tap-Install ──
-  // TWA-Detection: läuft App im installierten APK (Trusted Web Activity)?
-  const __isTWA = document.referrer.startsWith('android-app://')
-    || (window.matchMedia('(display-mode: standalone)').matches && /Android/i.test(navigator.userAgent) && /; wv\\)/.test(navigator.userAgent))
-    || /CreatorX/i.test(navigator.userAgent);
-  // Beim ersten Start im APK: Version aus URL-Parameter ?ver=N persistieren (twa-manifest.json startUrl setzt das)
+  // TWA-Detection mit Persistierung (Referrer ist nur beim 1. Nav 'android-app://')
+  let __isTWA = false;
   try {
-    const urlVer = new URLSearchParams(location.search).get('ver');
-    if (urlVer && __isTWA) localStorage.setItem('cb_apk_ver', urlVer);
+    const __refTWA = document.referrer.startsWith('android-app://');
+    const __urlVer = new URLSearchParams(location.search).get('ver');
+    const __urlForce = new URLSearchParams(location.search).get('force-update') === '1';
+    const __persisted = localStorage.getItem('cb_is_twa') === '1';
+    if (__refTWA) localStorage.setItem('cb_is_twa', '1');
+    if (__urlVer) { localStorage.setItem('cb_apk_ver', __urlVer); localStorage.setItem('cb_is_twa', '1'); }
+    __isTWA = __refTWA || __persisted || !!__urlVer || __urlForce;
+    // Heuristik-Fallback: standalone-Mode auf Android UND beforeinstallprompt feuert nicht (TWA-Indiz)
+    if (!__isTWA && /Android/i.test(navigator.userAgent) && window.matchMedia('(display-mode: standalone)').matches) {
+      // Markiere Verdacht — bestätigt sich falls beforeinstallprompt 4s lang nicht feuert
+      let __bipFired = false;
+      window.addEventListener('beforeinstallprompt', () => { __bipFired = true; }, { once: true });
+      setTimeout(() => {
+        if (!__bipFired) { localStorage.setItem('cb_is_twa', '1'); checkApkVersion(); }
+      }, 4000);
+    }
   } catch(e) {}
-  if (__isTWA) {
-    setTimeout(async () => {
-      try {
-        const r = await fetch('/api/app-version', { cache: 'no-store' });
-        if (!r.ok) return;
-        const srv = await r.json();
-        const installed = parseInt(localStorage.getItem('cb_apk_ver') || '1', 10);
-        if (srv.versionCode > installed) showApkUpdateBanner(srv);
-      } catch(e) {}
-    }, 1500);
+  async function checkApkVersion() {
+    try {
+      const r = await fetch('/api/app-version', { cache: 'no-store' });
+      if (!r.ok) return;
+      const srv = await r.json();
+      const installed = parseInt(localStorage.getItem('cb_apk_ver') || '1', 10);
+      const force = new URLSearchParams(location.search).get('force-update') === '1';
+      if (force || srv.versionCode > installed) showApkUpdateBanner(srv);
+    } catch(e) {}
   }
+  if (__isTWA) setTimeout(checkApkVersion, 1500);
   function showApkUpdateBanner(srv){
     if (document.getElementById('cx-apk-upd')) return;
     const dismissed = parseInt(localStorage.getItem('cb_apk_upd_dismissed') || '0', 10);
@@ -1851,7 +1862,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v83-apk-update';
+const SW_VERSION='v84-apk-update-detect';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
