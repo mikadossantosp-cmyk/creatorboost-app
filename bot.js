@@ -305,7 +305,7 @@ const CSS = `
 --glass-bg:rgba(255,255,255,0.92);--surface-tint:rgba(255,255,255,1);--hover-tint:rgba(15,23,42,0.04);
 }
 [data-theme=dark]{
---bg:#000000;--bg2:#0a0a0a;--bg3:#111111;--bg4:#1a1a1a;
+--bg:#000000;--bg2:#000000;--bg3:#000000;--bg4:#000000;
 --border:rgba(255,255,255,.1);--border2:rgba(255,255,255,.06);
 --text:#fff;--muted:#a3a8b3;--muted2:#6e7280;
 --shadow:0 8px 32px rgba(0,0,0,.4);
@@ -1927,7 +1927,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v88-icon-black';
+const SW_VERSION='v89-pure-black';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
