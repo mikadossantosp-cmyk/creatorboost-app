@@ -302,10 +302,10 @@ forced-color-adjust:none;
 [data-theme=light]{
 color-scheme:light;
 --bg:#ffffff;--bg2:#ffffff;--bg3:#ffffff;--bg4:#ffffff;
---border:rgba(15,23,42,.09);--border2:rgba(15,23,42,.06);
+--border:rgba(15,23,42,.16);--border2:rgba(15,23,42,.12);
 --text:#0f172a;--muted:#64748b;--muted2:#94a3b8;
---shadow:0 8px 32px rgba(15,23,42,.05);
---glass-bg:#ffffff;--surface-tint:rgba(255,255,255,1);--hover-tint:rgba(15,23,42,0.04);
+--shadow:0 8px 32px rgba(15,23,42,.08);
+--glass-bg:#ffffff;--surface-tint:rgba(255,255,255,1);--hover-tint:rgba(15,23,42,0.05);
 }
 [data-theme=dark]{
 color-scheme:dark;
@@ -349,7 +349,8 @@ button{cursor:pointer;border:none;outline:none;font-family:var(--font)}
 .story-ring.seen{background:linear-gradient(135deg,#3b82f6,#1d4ed8);opacity:0.55;box-shadow:none}
 .story-inner{width:100%;height:100%;border-radius:50%;border:2.5px solid var(--bg);overflow:hidden;position:relative;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:#fff}
 .story-name{font-size:11.5px;color:var(--text);max-width:74px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;letter-spacing:0.1px}
-.post{margin:0 12px 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:18px;overflow:hidden;transition:border-color 0.2s,box-shadow 0.2s;box-shadow:0 1px 3px rgba(15,23,42,0.04)}
+.post{margin:0 12px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:18px;overflow:hidden;transition:border-color 0.2s,box-shadow 0.2s;box-shadow:0 4px 14px rgba(15,23,42,0.08),0 1px 3px rgba(15,23,42,0.05)}
+[data-theme=dark] .post{box-shadow:0 1px 3px rgba(0,0,0,0.4);border-color:var(--border2)}
 .post:hover{border-color:var(--border);box-shadow:0 4px 14px rgba(15,23,42,0.06)}
 .post-header{display:flex;align-items:center;gap:11px;padding:14px 16px 10px}
 .post-user-info{flex:1;min-width:0}
@@ -1934,7 +1935,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v96-color-scheme';
+const SW_VERSION='v97-light-contrast';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
@@ -4142,9 +4143,9 @@ ${(()=>{
   return '';
 })()}
 <div style="display:flex;gap:6px;padding:6px 16px 14px;width:100%;box-sizing:border-box">
-  <a href="/feed?tab=heute" class="feed-pill ${tab==='heute'?'active':''}" style="flex:1;padding:9px 8px;font-size:12.5px;font-weight:800;text-align:center;text-decoration:none;border-radius:999px;${tab==='heute'?'background:linear-gradient(135deg,#3b82f6,#60a5fa);color:#fff;box-shadow:0 4px 14px rgba(59,130,246,0.35)':'background:rgba(59,130,246,0.08);color:var(--accent);border:1px solid rgba(59,130,246,0.2)'};letter-spacing:0.2px">📅 Heute</a>
-  <a href="/feed?tab=aelter" class="feed-pill ${tab==='aelter'?'active':''}" style="flex:1;padding:9px 8px;font-size:12.5px;font-weight:800;text-align:center;text-decoration:none;border-radius:999px;${tab==='aelter'?'background:linear-gradient(135deg,#4dabf7,#1d6fa5);color:#fff;box-shadow:0 4px 14px rgba(77,171,247,0.3)':'background:rgba(255,255,255,0.05);color:var(--muted);border:1px solid rgba(255,255,255,0.06)'};letter-spacing:0.2px">🕐 Älter</a>
-  <a href="/feed?tab=engagement" class="feed-pill ${tab==='engagement'?'active':''}" style="flex:1;padding:9px 8px;font-size:12.5px;font-weight:800;text-align:center;text-decoration:none;border-radius:999px;${tab==='engagement'?'background:linear-gradient(135deg,#f59e0b,#a78bfa);color:#fff;box-shadow:0 4px 14px rgba(245,158,11,0.3)':'background:rgba(255,255,255,0.05);color:var(--muted);border:1px solid rgba(255,255,255,0.06)'};letter-spacing:0.2px">⭐ Engagement</a>
+  <a href="/feed?tab=heute" class="feed-pill ${tab==='heute'?'active':''}" style="flex:1;padding:9px 8px;font-size:12.5px;font-weight:800;text-align:center;text-decoration:none;border-radius:999px;${tab==='heute'?'background:linear-gradient(135deg,#3b82f6,#60a5fa);color:#fff;box-shadow:0 4px 14px rgba(59,130,246,0.35)':'background:rgba(59,130,246,0.10);color:#3b82f6;border:1px solid rgba(59,130,246,0.35)'};letter-spacing:0.2px">📅 Heute</a>
+  <a href="/feed?tab=aelter" class="feed-pill ${tab==='aelter'?'active':''}" style="flex:1;padding:9px 8px;font-size:12.5px;font-weight:800;text-align:center;text-decoration:none;border-radius:999px;${tab==='aelter'?'background:linear-gradient(135deg,#4dabf7,#1d6fa5);color:#fff;box-shadow:0 4px 14px rgba(77,171,247,0.3)':'background:var(--surface-tint);color:var(--muted);border:1px solid var(--border)'};letter-spacing:0.2px">🕐 Älter</a>
+  <a href="/feed?tab=engagement" class="feed-pill ${tab==='engagement'?'active':''}" style="flex:1;padding:9px 8px;font-size:12.5px;font-weight:800;text-align:center;text-decoration:none;border-radius:999px;${tab==='engagement'?'background:linear-gradient(135deg,#f59e0b,#a78bfa);color:#fff;box-shadow:0 4px 14px rgba(245,158,11,0.3)':'background:var(--surface-tint);color:var(--muted);border:1px solid var(--border)'};letter-spacing:0.2px">⭐ Engagement</a>
 </div>
 ${tab==='engagement' ? `<div style="padding:12px 16px 4px">
   ${slAvailable > 0
