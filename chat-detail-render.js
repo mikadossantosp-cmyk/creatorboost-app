@@ -468,7 +468,7 @@ function getScripts(myUid, otherUid) {
             'window.__replyState = { ts: Number(ts)||0, name: name||"?", text: (text||"").slice(0,140) };' +
             'let prev = document.getElementById("reply-preview");' +
             'if (!prev) { prev = document.createElement("div"); prev.id = "reply-preview"; document.body.appendChild(prev); }' +
-            'prev.innerHTML = "<div class=\\"rp-arrow\\">↩️</div><div class=\\"rp-info\\"><div class=\\"rp-label\\">Antwort an " + (name||"User").replace(/[<>&]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;"}[c])) + "</div><div class=\\"rp-text\\">" + (text||"").replace(/[<>&]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;"}[c])) + "</div></div><button class=\\"rp-close\\" onclick=\\"chatCancelReply()\\">×</button>";' +
+            'prev.innerHTML = "<div class=\\"rp-arrow\\">↩️</div><div class=\\"rp-info\\"><div class=\\"rp-label\\">" + (name||"User").replace(/[<>&]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;"}[c])) + " antworten</div><div class=\\"rp-text\\">" + (text||"").replace(/[<>&]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;"}[c])) + "</div></div><button class=\\"rp-close\\" onclick=\\"chatCancelReply()\\">×</button>";' +
             'prev.classList.add("show");' +
             'document.getElementById("msg-input")?.focus();' +
             'if (navigator.vibrate) navigator.vibrate(20);' +
@@ -493,45 +493,61 @@ function getScripts(myUid, otherUid) {
         '}' +
         // Touch-Swipe Handler auf .chat-row
         'let __swipeRow = null, __swipeStartX = 0, __swipeStartY = 0, __swipeActive = false;' +
-        // ── Pointer-Events für Swipe-Reply (zuverlässiger als touchstart auf iOS-Chrome PWA) ──
+        // ── UNIFIED Pointer-Handler für Long-Press UND Swipe-Reply (gleich wie in Threads) ──
+        'const CHAT_LP_MS=480, CHAT_LP_ABORT=8, CHAT_SWIPE_START=4, CHAT_SWIPE_VERT_ABORT=14, CHAT_SWIPE_COMMIT=40, CHAT_SWIPE_CAP=90;' +
+        'let __cpRow=null, __cpX=0, __cpY=0, __cpPid=null, __cpTimer=null, __cpSwiping=false, __cpCommitted=false;' +
+        'function __cpReset(){' +
+            'if (!__cpRow) return;' +
+            'const wrap = __cpRow.querySelector(".chat-bubble-wrap");' +
+            'if (wrap){ wrap.style.transition="transform 0.22s"; }' +
+            '__cpRow.style.setProperty("--swipe","0px");' +
+            '__cpRow.style.setProperty("--swipe-op","0");' +
+            '__cpRow.classList.remove("swiping");' +
+            'if (__cpTimer){ clearTimeout(__cpTimer); __cpTimer=null; }' +
+            '__cpRow=null; __cpPid=null; __cpSwiping=false; __cpCommitted=false;' +
+        '}' +
         'document.addEventListener("pointerdown", e => {' +
             'if (e.pointerType==="mouse" && e.button!==0) return;' +
-            'const row = e.target.closest && e.target.closest(".chat-row"); if (!row) return;' +
-            '__swipeRow = row; __swipeActive = false;' +
-            '__swipeStartX = e.clientX; __swipeStartY = e.clientY;' +
-        '}, { passive: true });' +
+            'const r = e.target.closest && e.target.closest(".chat-row"); if (!r) return;' +
+            '__cpRow=r; __cpX=e.clientX; __cpY=e.clientY; __cpPid=e.pointerId; __cpSwiping=false; __cpCommitted=false;' +
+            '__cpTimer = setTimeout(() => {' +
+                'if (!__cpRow || __cpSwiping) return;' +
+                '__cpCommitted = true;' +
+                'const ts = Number(__cpRow.dataset.ts) || 0;' +
+                'const bubble = __cpRow.querySelector(".chat-bubble");' +
+                'chatActiveTs = ts;' +
+                'if (bubble) chatShowReactions(bubble, ts);' +
+                '__cpReset();' +
+            '}, CHAT_LP_MS);' +
+        '}, { passive: true, capture: true });' +
         'document.addEventListener("pointermove", e => {' +
-            'if (!__swipeRow) return;' +
-            'const dx = e.clientX - __swipeStartX;' +
-            'const dy = e.clientY - __swipeStartY;' +
-            // Vertikal-dominante Bewegung -> abort. Horizontal darf auch leichten dy haben.
-            'if (Math.abs(dy) > 24 && Math.abs(dy) > Math.abs(dx)) { __swipeRow.classList.remove("swiping"); __swipeRow = null; return; }' +
-            'const adx = Math.min(0, dx);' +
-            'if (Math.abs(adx) > 3) {' +
-                '__swipeActive = true; __swipeRow.classList.add("swiping");' +
-                'const cap = Math.max(-90, Math.min(0, adx));' +
-                '__swipeRow.style.setProperty("--swipe", cap + "px");' +
-                '__swipeRow.style.setProperty("--swipe-op", Math.min(1, Math.abs(cap)/40));' +
+            'if (!__cpRow || e.pointerId !== __cpPid) return;' +
+            'const dx = e.clientX - __cpX, dy = e.clientY - __cpY;' +
+            'if (!__cpSwiping && (Math.abs(dx) > CHAT_LP_ABORT || Math.abs(dy) > CHAT_LP_ABORT) && __cpTimer) { clearTimeout(__cpTimer); __cpTimer = null; }' +
+            'if (!__cpSwiping && Math.abs(dy) > CHAT_SWIPE_VERT_ABORT && Math.abs(dy) > Math.abs(dx)) { __cpReset(); return; }' +
+            'if (dx < -CHAT_SWIPE_START && Math.abs(dx) > Math.abs(dy)) {' +
+                '__cpSwiping = true;' +
+                '__cpRow.classList.add("swiping");' +
+                'const cap = Math.max(-CHAT_SWIPE_CAP, dx);' +
+                '__cpRow.style.setProperty("--swipe", cap + "px");' +
+                '__cpRow.style.setProperty("--swipe-op", Math.min(1, Math.abs(cap)/40));' +
             '}' +
-        '}, { passive: true });' +
-        'function __chatSwipeEnd(){' +
-            'if (!__swipeRow) return;' +
-            'const cap = parseInt(__swipeRow.style.getPropertyValue("--swipe")||"0", 10);' +
-            'if (Math.abs(cap) >= 40 && __swipeActive) {' +
-                'const ts = __swipeRow.dataset.ts;' +
-                'const isMe = __swipeRow.classList.contains("chat-row-me");' +
+        '}, { passive: true, capture: true });' +
+        'document.addEventListener("pointerup", e => {' +
+            'if (!__cpRow || __cpCommitted) { if (__cpRow && __cpCommitted) __cpReset(); return; }' +
+            'if (!__cpSwiping) { __cpReset(); return; }' +
+            'const dx = e.clientX - __cpX;' +
+            'if (dx <= -CHAT_SWIPE_COMMIT) {' +
+                'const ts = __cpRow.dataset.ts;' +
+                'const isMe = __cpRow.classList.contains("chat-row-me");' +
                 'const name = isMe ? "Du" : (document.querySelector(".chat-header-name")?.innerText || "User").trim();' +
-                'const text = (__swipeRow.querySelector(".chat-text")?.innerText || __swipeRow.querySelector(".chat-img-caption")?.innerText || (__swipeRow.querySelector(".chat-img-wrap")?"📷 Foto":"") || (__swipeRow.querySelector(".chat-audio")?"🎤 Sprachnachricht":"") || "").trim();' +
+                'const text = (__cpRow.querySelector(".chat-text")?.innerText || __cpRow.querySelector(".chat-img-caption")?.innerText || (__cpRow.querySelector(".chat-img-wrap")?"📷 Foto":"") || (__cpRow.querySelector(".chat-audio")?"🎤 Sprachnachricht":"") || "").trim();' +
+                '__cpReset();' +
                 'if (navigator.vibrate) navigator.vibrate(15);' +
                 'chatStartReply(ts, name, text);' +
-            '}' +
-            '__swipeRow.style.setProperty("--swipe", "0px");' +
-            '__swipeRow.style.setProperty("--swipe-op", "0");' +
-            '__swipeRow.classList.remove("swiping");' +
-            '__swipeRow = null; __swipeActive = false;' +
-        '}' +
-        'document.addEventListener("pointerup", __chatSwipeEnd, { passive: true });' +
-        'document.addEventListener("pointercancel", __chatSwipeEnd, { passive: true });' +
+            '} else __cpReset();' +
+        '}, { passive: true, capture: true });' +
+        'document.addEventListener("pointercancel", __cpReset, { passive: true });' +
         // (Reply-Button steckt jetzt in der Bottom-Action-Bar — der DOMContentLoaded-Patch hier ist obsolet)
         'function chatJumpToMsg(ts){' +
             'const el = document.querySelector(".chat-row[data-ts=\\\""+ts+"\\\"]");' +

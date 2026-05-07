@@ -681,8 +681,8 @@ function layout(content, session, page='feed', lang='de') {
 <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0b0b0e" media="(prefers-color-scheme: dark)">
 <link rel="manifest" href="/manifest.json">
-<link rel="icon" type="image/png" href="/icon-512.png?v=23">
-<link rel="apple-touch-icon" sizes="512x512" href="/icon-512.png?v=23">
+<link rel="icon" type="image/png" href="/icon-512.png?v=24">
+<link rel="apple-touch-icon" sizes="512x512" href="/icon-512.png?v=24">
 <meta name="apple-mobile-web-app-title" content="CreatorX">
 <title>CreatorX</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1801,7 +1801,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v80-pointer-swipe';
+const SW_VERSION='v81-unified-pointer';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
@@ -1925,8 +1925,8 @@ self.addEventListener('notificationclick',e=>{
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>CreatorX</title>
 <link rel="manifest" href="/manifest.json">
-<link rel="icon" type="image/png" href="/icon-512.png?v=23">
-<link rel="apple-touch-icon" href="/icon-512.png?v=23">
+<link rel="icon" type="image/png" href="/icon-512.png?v=24">
+<link rel="apple-touch-icon" href="/icon-512.png?v=24">
 <meta name="theme-color" content="#ffffff">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -2179,7 +2179,7 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
     // ── PWA MANIFEST ──
     if (path === '/manifest.json') {
         res.writeHead(200,{'Content-Type':'application/manifest+json','Cache-Control':'no-store','Access-Control-Allow-Origin':'*'});
-        return res.end(JSON.stringify({name:'CreatorX',short_name:'CreatorX',description:'Die kreative Community für Instagram Creators',start_url:'/',scope:'/',display:'standalone',background_color:'#ffffff',theme_color:'#ffffff',orientation:'portrait',categories:['social','lifestyle'],prefer_related_applications:false,screenshots:[],icons:[{src:'/icon-192.png',sizes:'192x192',type:'image/png',purpose:'any'},{src:'/icon-512.png',sizes:'512x512',type:'image/png',purpose:'any maskable'}]}));
+        return res.end(JSON.stringify({name:'CreatorX',short_name:'CreatorX',description:'Die kreative Community für Instagram Creators',start_url:'/',scope:'/',display:'standalone',background_color:'#ffffff',theme_color:'#ffffff',orientation:'portrait',categories:['social','lifestyle'],prefer_related_applications:false,screenshots:[],icons:[{src:'/icon-192.png?v=24',sizes:'192x192',type:'image/png',purpose:'any'},{src:'/icon-512.png?v=24',sizes:'512x512',type:'image/png',purpose:'any maskable'}]}));
     }
 
     if (path === '/api/vapid-public-key') {
@@ -4590,7 +4590,7 @@ async function createThread(){
 </script>
 <div id="reply-bar" style="display:none;position:fixed;bottom:calc(108px + var(--safe-bottom));left:8px;right:8px;padding:10px 12px 10px 14px;background:var(--bg);border:1px solid var(--border);border-left:3px solid #a78bfa;border-radius:14px;align-items:center;gap:10px;z-index:6;box-sizing:border-box;box-shadow:0 -4px 18px rgba(15,23,42,.10)">
   <div style="font-size:18px;flex-shrink:0">↩️</div>
-  <div style="flex:1;min-width:0"><span id="reply-name" style="font-size:12px;font-weight:800;color:#a78bfa;display:block;letter-spacing:0.1px">Antwort an</span><span id="reply-text" style="font-size:13px;color:var(--text);display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:calc(100vw - 90px);font-weight:500;margin-top:1px"></span></div>
+  <div style="flex:1;min-width:0"><span id="reply-name" style="font-size:13px;font-weight:800;color:#a78bfa;display:block;letter-spacing:0.1px"></span><span id="reply-text" style="font-size:13px;color:var(--text);display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:calc(100vw - 90px);font-weight:500;margin-top:1px"></span></div>
   <button onclick="cancelReply()" style="background:var(--surface-tint);border:1px solid var(--border2);color:var(--text);font-size:14px;cursor:pointer;flex-shrink:0;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center">✕</button>
 </div>
 <div id="react-picker" style="display:none;position:fixed;bottom:calc(112px + var(--safe-bottom));left:50%;transform:translateX(-50%);background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:10px 14px;z-index:10;box-shadow:0 4px 24px rgba(0,0,0,.5)">
@@ -4772,7 +4772,7 @@ async function createThread(){
     replyState={ts:m.timestamp,msgId:m.msg_id||0,name:m.name||'?',text:m.text||''};
     const bar=document.getElementById('reply-bar');
     bar.style.display='flex';
-    document.getElementById('reply-name').textContent='Antwort an '+(m.name||'?');
+    document.getElementById('reply-name').textContent=(m.name||'?')+' antworten';
     document.getElementById('reply-text').textContent=(m.text||'').slice(0,80);
     document.getElementById('inp').focus();
   };
