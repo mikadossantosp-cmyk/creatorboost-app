@@ -11,7 +11,7 @@
   "navigationDividerColorDark": "#0b0b0e",
   "backgroundColor": "#ffffff",
   "enableNotifications": true,
-  "startUrl": "/",
+  "startUrl": "/?ver=1",
   "iconUrl": "https://PUT_YOUR_PWA_HOST_HERE.onrender.com/icon-512.png?v=25",
   "maskableIconUrl": "https://PUT_YOUR_PWA_HOST_HERE.onrender.com/icon-512.png?v=25",
   "monochromeIconUrl": "https://PUT_YOUR_PWA_HOST_HERE.onrender.com/icon-512.png?v=25",

@@ -60,12 +60,35 @@ Heißt: **Wenn du das Icon im Server bot.js änderst und v=25 → v=26 bumpst**,
 2. `npm run apk:full` (update version + build)
 3. Neue APK hochladen
 
-## Auto-Update für deine User
+## Auto-Update für deine User (eingebaut)
 
-Die installierte APK kann sich nicht selbst updaten (Android-Security). Aber:
+**Code/Features** updaten automatisch (PWA im TWA).
 
-- **Code/Features**: Update kommt automatisch beim nächsten App-Start (PWA-Inhalt im TWA)
-- **Icon-Update**: User muss neue APK installieren → ich kann dir einen In-App-Banner einbauen der erkennt „läuft im APK" und „neue Version verfügbar — hier neu installieren" zeigt
+**Icon/APK-Update** mit eingebautem One-Tap-Install-Banner:
+1. Server merkt sich die aktuelle APK-Version via env vars
+2. App im APK fragt `/api/app-version` ab und vergleicht mit lokal gespeicherter Version
+3. Bei Mismatch: grüner Banner unten „📦 Update verfügbar — Installieren"
+4. Tap → APK-Download → Android zeigt System-Install-Dialog → User tippt einmal „Installieren" → fertig
+
+### Bei jedem APK-Rebuild **3 Werte hochzählen** (alle gleich):
+
+**A. `twa-manifest.json`:**
+```json
+"appVersionName": "1.0.2",
+"appVersionCode": 3,
+"startUrl": "/?ver=3"
+```
+
+**B. Server env vars** (auf Render Dashboard → Environment):
+```
+APK_VERSION_NAME=1.0.2
+APK_VERSION_CODE=3
+APK_RELEASE_NOTES=Neues Icon + Bugfixes
+```
+
+**C. `/icon-512.png?v=N`** in `bot.js` hochzählen wenn auch das Icon neu ist.
+
+Dann `npm run apk:full` → fertig. Beim nächsten App-Open auf der alten APK erscheint der Banner. User tippt → installiert die neue APK in 5 Sekunden.
 
 ## CI/CD (optional, voll automatisch)
 
