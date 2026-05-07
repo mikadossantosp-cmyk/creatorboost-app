@@ -351,11 +351,11 @@ button{cursor:pointer;border:none;outline:none;font-family:var(--font)}
 .story-item{display:flex;flex-direction:column;align-items:center;gap:6px;flex-shrink:0;width:74px;text-decoration:none;color:inherit;-webkit-tap-highlight-color:transparent}
 .stories.is-swiping .story-item{pointer-events:none}
 .story-item:active{transform:scale(0.92);transition:transform 0.15s}
-.story-ring{width:68px;height:68px;border-radius:50%;padding:2.5px;background:conic-gradient(from 45deg,#3b82f6,#60a5fa,#1d4ed8,#3b82f6);position:relative;box-shadow:0 4px 12px rgba(59,130,246,0.25)}
-.story-ring.seen{background:linear-gradient(135deg,#3b82f6,#1d4ed8);opacity:0.55;box-shadow:none}
+.story-ring{width:68px;height:68px;border-radius:50%;padding:3.5px;background:linear-gradient(135deg,#1d4ed8,#3b82f6,#0ea5e9);position:relative;box-shadow:0 4px 14px rgba(29,78,216,0.45)}
+.story-ring.seen{background:linear-gradient(135deg,#64748b,#475569);box-shadow:0 2px 6px rgba(0,0,0,0.15)}
 .story-inner{width:100%;height:100%;border-radius:50%;border:2.5px solid var(--bg);overflow:hidden;position:relative;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:#fff}
-[data-theme=light] .story-ring{box-shadow:0 4px 16px rgba(59,130,246,0.45),0 1px 4px rgba(15,23,42,0.12)}
-[data-theme=light] .story-ring.seen{box-shadow:0 2px 8px rgba(15,23,42,0.10)}
+[data-theme=light] .story-ring{box-shadow:0 6px 20px rgba(29,78,216,0.5),0 1px 4px rgba(15,23,42,0.12)}
+[data-theme=light] .story-ring.seen{box-shadow:0 3px 10px rgba(15,23,42,0.18)}
 [data-theme=light] .story-inner{border-color:#ffffff;box-shadow:inset 0 0 0 1.5px rgba(15,23,42,0.18),0 1px 4px rgba(15,23,42,0.15)}
 [data-theme=light] .story-inner img{background:#f1f5f9}
 [data-theme=light] .post-header > div:first-child,
@@ -1951,7 +1951,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v100-clean-role';
+const SW_VERSION='v101-rings-vibrant';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
