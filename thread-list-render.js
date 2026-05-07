@@ -86,7 +86,7 @@ module.exports = function renderThreadList(opts) {
 
     const styles = '<style>' +
         '.thr-list { padding: 8px 12px 100px; display: flex; flex-direction: column; gap: 8px; }' +
-        '.thr-card { display: flex; align-items: center; gap: 13px; padding: 14px; background: var(--bg2); border: 1px solid var(--border2); border-radius: 16px; text-decoration: none; color: inherit; transition: all 0.2s; position: relative; }' +
+        '.thr-card { display: flex; align-items: center; gap: 13px; padding: 14px; background: var(--bg2); border: 1px solid var(--border2); border-radius: 16px; text-decoration: none; color: inherit; transition: all 0.2s; position: relative; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }' +
         '.thr-card:active { transform: scale(0.98); background: var(--bg3); }' +
         '.thr-card.unread { border-color: rgba(0, 136, 204, 0.4); background: linear-gradient(135deg, rgba(0,136,204,0.08), var(--bg2) 50%); }' +
         '.thr-icon { width: 54px; height: 54px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 28px; flex-shrink: 0; box-shadow: 0 4px 12px rgba(0,0,0,0.25); position: relative; }' +
@@ -136,7 +136,7 @@ module.exports = function renderThreadList(opts) {
         const renameBtn = isAdmin ?
             '<span class="thr-rename" onclick="event.preventDefault();event.stopPropagation();customizeThread(\'' + tid + '\',\'' + safeName.replace(/'/g, "\\'") + '\',\'' + String(icon).replace(/'/g, "\\'") + '\')">✏️</span>' : '';
 
-        return '<a href="/nachrichten/gruppe/' + tid + '" class="thr-card' + (unread > 0 ? ' unread' : '') + '" data-tid="' + tid + '" data-name="' + safeName.replace(/"/g,'&quot;') + '" data-emoji="' + String(icon).replace(/"/g,'&quot;') + '">' +
+        return '<a href="/nachrichten/gruppe/' + tid + '" class="thr-card' + (unread > 0 ? ' unread' : '') + '" data-tid="' + tid + '" data-name="' + safeName.replace(/"/g,'&quot;') + '" data-emoji="' + String(icon).replace(/"/g,'&quot;') + '" oncontextmenu="return false">' +
             '<div class="thr-icon" style="background:' + grad + '">' +
                 icon +
                 (isLive ? '<span class="thr-icon-pulse"></span>' : '') +

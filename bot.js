@@ -1954,7 +1954,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v104-bot-story';
+const SW_VERSION='v105-longpress-fix';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
@@ -5368,6 +5368,8 @@ function showThreadActions(tid, currentName, currentEmoji){
   document.addEventListener('touchcancel',cancel);
   // Block link click during/after long-press
   document.addEventListener('click',e=>{if(didLongPress){e.preventDefault();e.stopPropagation();didLongPress=false;}},true);
+  // Block native browser context-menu auf thread-cards (Samsung Internet zeigt sonst eigenes link-menü)
+  document.addEventListener('contextmenu',e=>{if(e.target.closest('.thr-card')){e.preventDefault();}},false);
 })();
 </script>`, 'messages');
     }
