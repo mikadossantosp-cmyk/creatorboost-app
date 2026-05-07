@@ -198,7 +198,7 @@ function getStyles() {
         '.chat-bubble-wrap { max-width: 78%; display: flex; flex-direction: column; }' +
         '.chat-row-me .chat-bubble-wrap { align-items: flex-end; }' +
         '.chat-row-other .chat-bubble-wrap { align-items: flex-start; }' +
-        '.chat-bubble { padding: 9px 13px 7px; border-radius: 18px; font-size: 17.5px; line-height: 1.42; word-break: break-word; user-select: none; -webkit-user-select: none; cursor: pointer; transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1); max-width: 100%; position: relative; }' +
+        '.chat-bubble { padding: 10px 14px 8px; border-radius: 18px; font-size: 19px; line-height: 1.42; word-break: break-word; user-select: none; -webkit-user-select: none; cursor: pointer; transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1); max-width: 100%; position: relative; }' +
         '.chat-bubble:active { transform: scale(0.96); }' +
         '.chat-row-me .chat-bubble { background: linear-gradient(135deg,#a78bfa,#7c3aed); color: #fff; border-radius: 18px 18px 4px 18px; box-shadow: 0 4px 14px rgba(124,58,237,0.20); }' +
         '.chat-row-me.chat-row-grouped .chat-bubble { border-radius: 18px 4px 4px 18px; }' +
@@ -227,7 +227,7 @@ function getStyles() {
         '.chat-img-wrap { max-width: 260px; border-radius: inherit; overflow: hidden; cursor: pointer; }' +
         '.chat-img-wrap img { width: 100%; display: block; border-radius: inherit; transition: transform 0.3s; }' +
         '.chat-img-wrap:active img { transform: scale(0.97); }' +
-        '.chat-img-caption { padding: 11px 16px; font-size: 17.5px; line-height: 1.45; }' +
+        '.chat-img-caption { padding: 11px 16px; font-size: 19px; line-height: 1.45; }' +
         '.chat-audio { display: flex; align-items: center; gap: 12px; min-width: 220px; padding: 4px 0; }' +
         '.chat-audio-btn { width: 36px; height: 36px; border-radius: 50%; background: rgba(255,255,255,0.25); border: none; color: inherit; font-size: 14px; cursor: pointer; flex-shrink: 0; transition: transform 0.15s; }' +
         '.chat-audio-btn:active { transform: scale(0.9); }' +

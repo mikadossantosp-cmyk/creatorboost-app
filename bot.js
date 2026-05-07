@@ -1775,7 +1775,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v74-tg-msg';
+const SW_VERSION='v75-tg-bigger';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
@@ -4331,9 +4331,9 @@ async function createThread(){
                 const replyBlock = m.replyTo ? `<div class="thr-reply-quote" style="border-left:3px solid ${isMeS?'rgba(255,255,255,0.7)':c};padding:5px 9px;margin:0 0 5px 0;border-radius:0 6px 6px 0;font-size:12.5px;line-height:1.4"><div style="font-weight:800;font-size:11.5px;${isMeS?'color:rgba(255,255,255,0.95)':'color:'+c}">${esc(m.replyTo.name||'?')}</div><div style="opacity:0.85;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc((m.replyTo.text||'').slice(0,80))}</div></div>` : '';
                 // Bubble theme-aware: own = lila Gradient (rechts), other = neutral
                 const nameInBubble = isMeS ? '' : (m.uid
-                    ? `<a href="/profil/${esc(m.uid)}" style="font-size:14.5px;font-weight:800;color:${c};text-decoration:none;display:block;margin-bottom:3px">${m.role?esc(m.role)+' ':''}${esc(m.name)}</a>`
-                    : `<div style="font-size:14.5px;font-weight:800;color:${c};margin-bottom:3px">${m.role?esc(m.role)+' ':''}${esc(m.name)}</div>`);
-                const textBody = m.text ? `<div class="thr-text" style="font-size:17.5px;line-height:1.45;word-break:break-word">${esc(m.text)}</div>` : '';
+                    ? `<a href="/profil/${esc(m.uid)}" style="font-size:15.5px;font-weight:800;color:${c};text-decoration:none;display:block;margin-bottom:3px">${m.role?esc(m.role)+' ':''}${esc(m.name)}</a>`
+                    : `<div style="font-size:15.5px;font-weight:800;color:${c};margin-bottom:3px">${m.role?esc(m.role)+' ':''}${esc(m.name)}</div>`);
+                const textBody = m.text ? `<div class="thr-text" style="font-size:19px;line-height:1.45;word-break:break-word">${esc(m.text)}</div>` : '';
                 const timeFooter = `<div class="thr-time" style="font-size:11px;text-align:right;margin-top:3px;font-variant-numeric:tabular-nums;opacity:0.65">${timeStr}</div>`;
                 const canDelSSR = (m.uid && String(m.uid) === String(myUid)) || isAdmin;
                 const swipeAttrs = ` data-del-ts="${m.timestamp}" data-del-mid="${m.msg_id||0}"${canDelSSR ? ' data-can-del="1"' : ''}`;
@@ -4355,8 +4355,8 @@ async function createThread(){
 <div class="topbar" style="position:sticky;top:0;z-index:10;background:linear-gradient(135deg,#0088cc,#006699)">
   <a href="/nachrichten/gruppe" style="padding:8px;color:#fff;display:flex;align-items:center;text-decoration:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20"><polyline points="15 18 9 12 15 6"/></svg></a>
   <div style="flex:1;text-align:center">
-    <div style="font-weight:800;font-size:15px;color:#fff">${thrInfo.emoji} ${thrInfo.name}</div>
-    <div style="font-size:11px;color:rgba(255,255,255,0.7)">${msgs.length} Nachrichten</div>
+    <div style="font-weight:800;font-size:18px;color:#fff;letter-spacing:-0.2px">${thrInfo.emoji} ${thrInfo.name}</div>
+    <div style="font-size:12.5px;color:rgba(255,255,255,0.75);font-weight:600;margin-top:1px">${msgs.length} Nachrichten</div>
   </div>
   <div style="width:36px"></div>
 </div>
@@ -4605,14 +4605,14 @@ async function createThread(){
       const isLastInSeries = !next || String(next.uid) !== String(m.uid) || ((next.timestamp||0) - (m.timestamp||0)) > 5*60*1000;
       const showAvatar = isLastInSeries;
       const nameInBubble = isMe ? '' : (m.uid
-        ? '<a href="/profil/'+m.uid+'" style="font-size:14.5px;font-weight:800;color:'+c+';text-decoration:none;display:block;margin-bottom:3px">'+(m.role?esc(m.role)+' ':'')+esc(m.name)+'</a>'
-        : '<div style="font-size:14.5px;font-weight:800;color:'+c+';margin-bottom:3px">'+(m.role?esc(m.role)+' ':'')+esc(m.name)+'</div>');
+        ? '<a href="/profil/'+m.uid+'" style="font-size:15.5px;font-weight:800;color:'+c+';text-decoration:none;display:block;margin-bottom:3px">'+(m.role?esc(m.role)+' ':'')+esc(m.name)+'</a>'
+        : '<div style="font-size:15.5px;font-weight:800;color:'+c+';margin-bottom:3px">'+(m.role?esc(m.role)+' ':'')+esc(m.name)+'</div>');
       const replyBlock = m.replyTo ? '<div class="thr-reply-quote" style="border-left:3px solid '+(isMe?'rgba(255,255,255,0.7)':c)+';padding:5px 9px;margin:0 0 5px 0;border-radius:0 6px 6px 0;font-size:12.5px;line-height:1.4"><div style="font-weight:800;font-size:11.5px;'+(isMe?'color:rgba(255,255,255,0.95)':'color:'+c)+'">'+esc(m.replyTo.name||'?')+'</div><div style="opacity:0.85;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc((m.replyTo.text||'').slice(0,80))+'</div></div>' : '';
       let media='';
       if(m.type==='photo'&&m.mediaId)media='<img src="/api/tg-file/'+m.mediaId+'" style="max-width:100%;border-radius:10px;margin:0 0 5px;display:block" loading="lazy">';
       else if(m.type==='sticker'&&m.mediaId)media='<img src="/api/tg-file/'+m.mediaId+'" style="width:80px;height:80px;object-fit:contain;display:block;margin:0 0 5px" loading="lazy">';
       else if(m.type==='video')media='<div style="background:rgba(0,0,0,.3);border-radius:10px;padding:8px 12px;font-size:12px;color:var(--muted);margin:0 0 5px">🎬 Video — öffne Telegram zum Ansehen</div>';
-      const textBody = m.text ? '<div class="thr-text" style="font-size:17.5px;line-height:1.45;word-break:break-word">'+esc(m.text)+'</div>' : '';
+      const textBody = m.text ? '<div class="thr-text" style="font-size:19px;line-height:1.45;word-break:break-word">'+esc(m.text)+'</div>' : '';
       const timeFooter = '<div class="thr-time" style="font-size:11px;text-align:right;margin-top:3px;font-variant-numeric:tabular-nums;opacity:0.65">'+ts+'</div>';
       const canDel=(m.uid&&String(m.uid)===String(MY_UID))||IS_ADMIN;
       const swipeAttrsJS = ' data-del-ts="'+m.timestamp+'" data-del-mid="'+(m.msg_id||0)+'"'+(canDel ? ' data-can-del="1"' : '');
