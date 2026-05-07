@@ -2,7 +2,11 @@
   "name": "creatorboost-app",
   "version": "1.0.0",
   "scripts": {
-    "start": "node bot.js"
+    "start": "node bot.js",
+    "apk:init": "npx -y @bubblewrap/cli@latest init --manifest=https://$PWA_HOST/manifest.json",
+    "apk:build": "npx -y @bubblewrap/cli@latest build --skipPwaValidation",
+    "apk:update": "npx -y @bubblewrap/cli@latest update --appVersionName=$VERSION --appVersionCode=$VCODE",
+    "apk:full": "npm run apk:update && npm run apk:build"
   },
   "engines": {
     "node": "20.x"
