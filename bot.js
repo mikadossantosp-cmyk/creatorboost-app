@@ -6471,6 +6471,11 @@ window.sugDismiss = function(btn){
   <div style="padding:0 16px 12px;display:flex;align-items:center;justify-content:space-between">
     <div style="font-size:18px;font-weight:800;font-family:var(--font-display)">📩 Newsletter</div>
   </div>
+  <a href="/system-info" style="display:flex;align-items:center;gap:12px;margin:0 16px 12px;padding:16px 18px;background:linear-gradient(135deg,#0ea5e9,#4dabf7,#a78bfa);border-radius:16px;text-decoration:none;color:#fff;box-shadow:0 6px 22px rgba(77,171,247,0.40);position:relative;overflow:hidden">
+    <div style="font-size:32px">📖</div>
+    <div style="flex:1"><div style="font-size:15px;font-weight:800;letter-spacing:-0.1px">So funktioniert CreatorX</div><div style="font-size:12px;opacity:0.92;margin-top:3px;line-height:1.4">Komplette Anleitung — Telegram, App, Levels, Missionen, Diamanten, Superlinks, Grundregeln</div></div>
+    <div style="font-size:20px;opacity:0.9">→</div>
+  </a>
   <a href="/diamanten" style="display:flex;align-items:center;gap:12px;margin:0 16px 16px;padding:14px 16px;background:linear-gradient(135deg,#4dabf7,#a78bfa);border-radius:14px;text-decoration:none;color:#fff;box-shadow:0 4px 14px rgba(167,139,250,0.3)">
     <div style="font-size:28px">💎</div>
     <div style="flex:1"><div style="font-size:14px;font-weight:700">Diamanten‑System</div><div style="font-size:11.5px;opacity:0.85;margin-top:2px">Wie verdiene ich Diamanten? Was kann ich kaufen?</div></div>

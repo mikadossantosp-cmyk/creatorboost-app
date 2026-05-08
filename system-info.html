@@ -106,10 +106,41 @@ h3::before{content:'';width:3px;height:14px;border-radius:2px;background:#4dabf7
   <h2><span class="num">1</span>Erste Schritte</h2>
   <div class="steps">
     <div class="step"><b>Bot per DM starten</b> — schreib dem Bot eine private Nachricht <code>/start</code>. Schaltet alle Funktionen frei.</div>
-    <div class="step"><b>Instagram verknüpfen</b> — Bot fragt nach deinem Insta-Handle. Eintragen, fertig.</div>
+    <div class="step"><b>Instagram verknüpfen</b> — Bot fragt direkt nach deinem Insta-Handle. Schreib z.B. „<code>max123</code>" (ohne @). Bot speichert das automatisch.</div>
     <div class="step"><b>Gruppe beitreten</b> — über den Einladungs-Link. Falls du noch nicht drin bist, frag den Admin.</div>
     <div class="step"><b>Hilfe lesen</b> — schreib <code>/help</code> für alle Bot-Befehle.</div>
     <div class="step"><b>Erstes Reel posten</b> — einfach Instagram-Link in die Gruppe schicken. Bot ersetzt automatisch.</div>
+  </div>
+
+  <h3>Profil komplett einrichten</h3>
+  <p class="intro">Damit du den <b>Profil-Diamant</b> bekommst und besser sichtbar bist, mach folgendes:</p>
+  <div class="card">
+    <div class="card-icon">📸</div>
+    <div class="card-content">
+      <div class="card-title"><code>/setinsta</code> — Instagram-Handle</div>
+      <div class="card-desc">Schreibst du dem Bot <code>/setinsta</code> → Bot fragt nach. Antworte mit deinem Handle (ohne @, z.B. <code>lyndaia.official</code>). Wird zu allen deinen Posts angezeigt + Profilbild wird automatisch von Instagram gezogen.</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-icon">📝</div>
+    <div class="card-content">
+      <div class="card-title"><code>/setbio</code> — Deine Bio</div>
+      <div class="card-desc">Kurzer Text über dich. Wird auf deinem Profil + bei <code>/profil</code> angezeigt. Max ~200 Zeichen.</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-icon">🏷️</div>
+    <div class="card-content">
+      <div class="card-title"><code>/setspitzname</code> — Anzeige-Name</div>
+      <div class="card-desc">Spitzname statt deines Telegram-Vornamens. Wird in allen Bot-Karten + App genutzt.</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-icon">🎯</div>
+    <div class="card-content">
+      <div class="card-title">Nische festlegen (in App)</div>
+      <div class="card-desc">In der App → Settings → Nische wählen (z.B. Fitness, Mindset, Travel). Hilft beim Matching mit ähnlichen Creators.</div>
+    </div>
   </div>
 
   <h2><span class="num">2</span>Wie der Bot Reels handhabt</h2>
@@ -384,7 +415,97 @@ h3::before{content:'';width:3px;height:14px;border-radius:2px;background:#4dabf7
     </div>
   </div>
 
-  <h2><span class="num">8</span>Einstellungen</h2>
+  <h2><span class="num">8</span>Einstellungen — alles im Detail</h2>
+
+  <h3>Profil-Daten</h3>
+  <div class="card">
+    <div class="card-icon">🖼️</div>
+    <div class="card-content">
+      <div class="card-title">Profilbild hochladen</div>
+      <div class="card-desc">Settings → Profilbild → Foto wählen → <b>Crop-Tool</b> öffnet sich (zoomen + verschieben) → Speichern. Wird auch automatisch von Instagram-Handle gezogen falls du eins gesetzt hast.</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-icon">🏷️</div>
+    <div class="card-content">
+      <div class="card-title">Spitzname (Display-Name)</div>
+      <div class="card-desc">Wird in Feed, Profil, Chats statt Telegram-Vornamen genutzt. Max 30 Zeichen.</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-icon">📸</div>
+    <div class="card-content">
+      <div class="card-title">Instagram-Handle</div>
+      <div class="card-desc">Verbindet deine App-Identität mit deinem Insta-Account. Wird automatisch zu Profilbild-Quelle + bei Posts angezeigt mit „@handle".</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-icon">📝</div>
+    <div class="card-content">
+      <div class="card-title">Bio</div>
+      <div class="card-desc">Kurzer Vorstellungstext. Erscheint auf deinem Profil unter dem Namen.</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-icon">🎯</div>
+    <div class="card-content">
+      <div class="card-title">Nische</div>
+      <div class="card-desc">Wähle deine Content-Nische (Fitness, Mindset, Beauty, Travel, Food, Business, Comedy, Music…). Hilft Algorithmus bei Vorschlägen.</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-icon">🌐</div>
+    <div class="card-content">
+      <div class="card-title">Website</div>
+      <div class="card-desc">Optionaler Link zu deiner Webseite, Linktree, Newsletter etc.</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-icon">📌</div>
+    <div class="card-content">
+      <div class="card-title">Pinned Reel-Link</div>
+      <div class="card-desc">Dein wichtigster Reel oben auf dem Profil. <b>Nur 1× pro Monat änderbar</b> — Counter zeigt dir wann's wieder geht.</div>
+    </div>
+  </div>
+
+  <h3>Look & Feel</h3>
+  <div class="card">
+    <div class="card-icon">🎨</div>
+    <div class="card-content">
+      <div class="card-title">Banner wählen</div>
+      <div class="card-desc">Default-Gradients gratis. <b>Premium-Banner</b> kosten 5–10 💎 (Bronze/Silber/Gold-Tier). Eigenes Bild als Banner hochladbar.</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-icon">💍</div>
+    <div class="card-content">
+      <div class="card-title">Aktiver Profil-Ring</div>
+      <div class="card-desc">Wenn du Ringe gekauft hast, wechselbar in Inventar (🔥 Flame, 🌊 Ocean, ✨ Gold, 🔮 Cosmic, 🌈 Rainbow, 💎 Diamond).</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-icon">🌗</div>
+    <div class="card-content">
+      <div class="card-title">Dark / Light Mode</div>
+      <div class="card-desc">Toggle oben rechts (Mond/Sonne-Icon). Browser-Auto-Dark wird automatisch deaktiviert.</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-icon">🌐</div>
+    <div class="card-content">
+      <div class="card-title">Sprache umschalten</div>
+      <div class="card-desc">Deutsch ↔ English jederzeit umschaltbar.</div>
+    </div>
+  </div>
+
+  <h3>Inventar</h3>
+  <div class="card">
+    <div class="card-icon">🛍️</div>
+    <div class="card-content">
+      <div class="card-title">Mein Inventar</div>
+      <div class="card-desc">Alle gekauften Banner + Ringe — anwenden, vorschauen, wechseln.</div>
+    </div>
+  </div>
   <div class="card">
     <div class="card-icon">👤</div>
     <div class="card-content">
