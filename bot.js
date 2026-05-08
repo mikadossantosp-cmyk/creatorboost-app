@@ -2604,6 +2604,17 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
 
     // ── APK VERSION ── (für In-App-Update-Banner)
     // BuildId = mtime der APK-Datei. Neue APK hochladen → buildId ändert sich → Banner triggert automatisch.
+    // ── Standalone Landing-Page (zum Teilen — KEIN App-Login nötig) ──
+    if (path === '/willkommen' || path === '/landing' || path === '/community' || path === '/join') {
+        try {
+            const html = fs.readFileSync(__dirname + '/landing.html', 'utf8');
+            res.writeHead(200, {'Content-Type':'text/html; charset=utf-8','Cache-Control':'public, max-age=300'});
+            return res.end(html);
+        } catch(e) {
+            res.writeHead(500); return res.end('Datei nicht gefunden');
+        }
+    }
+
     // ── Public Community-Stats (für Landingpage, kein Auth nötig) ──
     if (path === '/api/community-stats') {
         const d = (await fetchBot('/data')) || {};
