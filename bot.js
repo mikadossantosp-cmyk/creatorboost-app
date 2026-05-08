@@ -1954,7 +1954,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v112-revert-visit';
+const SW_VERSION='v113-pinned-engager';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
@@ -2988,7 +2988,7 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
     </div>
     <div style="display:flex;align-items:center;gap:12px;padding:12px 14px">
       <div style="font-size:20px">📌</div>
-      <div style="flex:1"><div style="font-size:13.5px;font-weight:700">Pinned Post engagiert</div><div style="font-size:11.5px;color:var(--muted);margin-top:2px">Owner kriegt Diamant pro neuem Engager</div></div>
+      <div style="flex:1"><div style="font-size:13.5px;font-weight:700">Pinned Post engagieren</div><div style="font-size:11.5px;color:var(--muted);margin-top:2px">Du bekommst 1 💎 wenn du einen angepinnten Link likest (1× pro Owner)</div></div>
       <div style="font-size:13px;font-weight:700;color:#a78bfa">+1 💎</div>
     </div>
   </div>
