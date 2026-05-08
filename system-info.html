@@ -87,20 +87,20 @@ h3::before{content:'';width:3px;height:13px;border-radius:2px;background:#4dabf7
 
 <div class="tabs">
   <div class="tabs-grid">
-    <button class="tab-btn active" data-tab="telegram" onclick="setTab('telegram')">✈️ Telegram</button>
+    <button class="tab-btn active" data-tab="rules" onclick="setTab('rules')">⚠️ Regeln</button>
+    <button class="tab-btn" data-tab="telegram" onclick="setTab('telegram')">✈️ Telegram</button>
     <button class="tab-btn" data-tab="app" onclick="setTab('app')">📱 App</button>
     <button class="tab-btn" data-tab="ranking" onclick="setTab('ranking')">🏆 XP & Level</button>
-    <button class="tab-btn" data-tab="missions" onclick="setTab('missions')">🎯 Missionen</button>
   </div>
   <div class="tabs-grid row2">
+    <button class="tab-btn" data-tab="missions" onclick="setTab('missions')">🎯 Missionen</button>
     <button class="tab-btn" data-tab="diamonds" onclick="setTab('diamonds')">💎 Diamanten</button>
     <button class="tab-btn" data-tab="superlinks" onclick="setTab('superlinks')">⭐ Superlinks</button>
-    <button class="tab-btn" data-tab="rules" onclick="setTab('rules')">⚠️ Regeln</button>
   </div>
 </div>
 
 <!-- ═══════════ TELEGRAM ═══════════ -->
-<div class="tab-content active" id="tab-telegram">
+<div class="tab-content" id="tab-telegram">
 <div class="section">
 
   <div class="callout">
@@ -188,7 +188,9 @@ h3::before{content:'';width:3px;height:13px;border-radius:2px;background:#4dabf7
 
   <h2><span class="num">5</span>Bot-Befehle (Komplettliste)</h2>
 
-  <h3>Setup</h3>
+  <div class="tip-box" style="margin-bottom:14px"><b>💡 Wichtig:</b> Schreib alle Befehle <b>privat dem Bot</b> (DM, nicht in der Gruppe). In der Gruppe funktionieren die meisten Befehle nicht oder werden auf DM weitergeleitet.</div>
+
+  <h3>Setup (privat im Bot-Chat)</h3>
   <div class="cmd-list">
 <code>/start</code>            — Bot aktivieren<br>
 <code>/help</code>             — Alle Befehle<br>
@@ -200,17 +202,17 @@ h3::before{content:'';width:3px;height:13px;border-radius:2px;background:#4dabf7
 <code>/mycode</code>           — Login-Code für die App
   </div>
 
-  <h3>XP & Belohnungen</h3>
+  <h3>XP & Belohnungen (privat)</h3>
   <div class="cmd-list">
 <code>/daily</code>            — Daily Bonus (10–29 XP, 24h Cooldown)<br>
 <code>/missionen</code>        — Aktueller Missions-Stand<br>
 <code>/diamanten</code>        — Diamant-Stand<br>
-<code>/shop</code>             — Diamanten-Shop<br>
+<code>/shop</code>             — Diamanten-Shop (nur DM)<br>
 <code>/bonuslinks</code>       — Verfügbare Bonus-Links<br>
 <code>/superlink</code>        — Superlink-Status (zeigt alle der Woche + dein Like-Status)
   </div>
 
-  <h3>Rankings</h3>
+  <h3>Rankings (privat)</h3>
   <div class="cmd-list">
 <code>/ranking</code>          — Gesamt-Rangliste<br>
 <code>/dailyranking</code>     — Heute<br>
@@ -219,8 +221,7 @@ h3::before{content:'';width:3px;height:13px;border-radius:2px;background:#4dabf7
 
   <h3>Sonstiges</h3>
   <div class="cmd-list">
-<code>/melden</code>           — Verstoß melden<br>
-<code>/extralink</code>        — Extra-Link aktivieren (kostet Diamanten)
+<code>/melden</code>           — Verstoß melden (nur per DM)
   </div>
 
   <h2><span class="num">6</span>FAQ — Telegram</h2>
@@ -522,14 +523,14 @@ h3::before{content:'';width:3px;height:13px;border-radius:2px;background:#4dabf7
     <div class="card-icon">🆕</div>
     <div class="card-content">
       <div class="card-title">🆕 New — 0–49 XP</div>
-      <div class="card-desc">Newcomer-Phase. Kein spezieller Vorteil — ist nur dein Status-Badge.</div>
+      <div class="card-desc">Newcomer-Phase. Status-Badge.</div>
     </div>
   </div>
   <div class="card">
     <div class="card-icon">📘</div>
     <div class="card-content">
       <div class="card-title">📘 Anfänger — 50–499 XP</div>
-      <div class="card-desc">Status-Badge. Trophy 📘 wird auf deinem Profil gespeichert.</div>
+      <div class="card-desc">Status-Badge + Trophy 📘 auf Profil.</div>
     </div>
   </div>
   <div class="card">
@@ -543,26 +544,26 @@ h3::before{content:'';width:3px;height:13px;border-radius:2px;background:#4dabf7
     <div class="card-icon">🏅</div>
     <div class="card-content">
       <div class="card-title">🏅 Erfahrener — 1.000–4.999 XP</div>
-      <div class="card-desc">Status-Badge + Trophy 🏅.</div>
+      <div class="card-desc"><b>🎁 Bonus:</b> 1 zusätzlicher Reel-Post pro Tag (gratis, nicht aus Diamanten). Status-Badge + Trophy 🏅.</div>
     </div>
   </div>
   <div class="card">
     <div class="card-icon">👑</div>
     <div class="card-content">
       <div class="card-title">👑 Elite — 5.000–9.999 XP</div>
-      <div class="card-desc">Status-Badge + Trophy 👑.</div>
+      <div class="card-desc"><b>🎁 Bonus:</b> 1 zusätzlicher Reel-Post pro Tag (gratis). Status-Badge + Trophy 👑.</div>
     </div>
   </div>
   <div class="card">
     <div class="card-icon">🌟</div>
     <div class="card-content">
       <div class="card-title">🌟 Elite+ — 10.000+ XP</div>
-      <div class="card-desc"><b>Echter Vorteil:</b> 2 Superlinks pro Woche statt 1. Mehr Reichweite + Trophy 🌟.</div>
+      <div class="card-desc"><b>🎁 Bonus:</b> 1 zusätzlicher Reel-Post pro Tag + <b>2 Superlinks pro Woche</b> (statt 1) — mehr Reichweite. Status-Badge + Trophy 🌟.</div>
     </div>
   </div>
 
   <div class="tip-box">
-    <b>💡 Was bringen Levels?</b> Hauptsächlich <b>Status</b> (sichtbar in jedem Reel-Post + Profil) und <b>Trophy-Sammlung</b>. Nur <b>Elite+</b> hat einen echten Gameplay-Bonus (2 Superlinks/Woche).
+    <b>💡 Wichtig:</b> Ab <b>🏅 Erfahrener (1.000 XP)</b> bekommst du täglich automatisch <b>1 Bonus-Reel-Post extra</b> — du kannst dann 2 Reels/Tag posten ohne Diamanten ausgeben zu müssen. Elite+ kriegt zusätzlich 2 Superlinks/Woche.
   </div>
 
   <h2><span class="num">3</span>Streak-System 🔥</h2>
@@ -601,7 +602,30 @@ h3::before{content:'';width:3px;height:13px;border-radius:2px;background:#4dabf7
     </div>
   </div>
 
-  <h2><span class="num">5</span>FAQ — XP & Level</h2>
+  <h2><span class="num">5</span>Level-Bonus-Übersicht</h2>
+  <div class="card">
+    <div class="card-icon">🆕</div>
+    <div class="card-content">
+      <div class="card-title">🆕 New / 📘 Anfänger / ⬆️ Aufsteiger</div>
+      <div class="card-desc">Status-Badge + Trophy. Keine extra Reels.</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-icon">🏅</div>
+    <div class="card-content">
+      <div class="card-title">🏅 Erfahrener / 👑 Elite</div>
+      <div class="card-desc"><b>+1 Bonus-Reel pro Tag automatisch.</b> Du darfst 2 Reels/Tag posten ohne 5 💎 ausgeben zu müssen.</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-icon">🌟</div>
+    <div class="card-content">
+      <div class="card-title">🌟 Elite+</div>
+      <div class="card-desc"><b>+1 Bonus-Reel/Tag</b> + <b>2 Superlinks pro Woche</b> (statt 1).</div>
+    </div>
+  </div>
+
+  <h2><span class="num">6</span>FAQ — XP & Level</h2>
   <div class="faq-q">Verliere ich XP wenn ich inaktiv bin?</div>
   <div class="faq-a">Nein, bestehende XP bleiben. Nur durch <b>Superlink-Strafe</b> (−50 XP) oder Admin-Eingriff verlierst du XP.</div>
 
@@ -611,8 +635,8 @@ h3::before{content:'';width:3px;height:13px;border-radius:2px;background:#4dabf7
   <div class="faq-q">Wann zählen Likes nicht?</div>
   <div class="faq-a">Bei Self-Like, schon-geliked, oder wenn der Reel von einem deiner Sub-Accounts kommt.</div>
 
-  <div class="faq-q">Was bringt mir Elite+?</div>
-  <div class="faq-a">2 Superlinks pro Woche statt 1 — mehr Reichweite. Plus die 🌟 Trophy.</div>
+  <div class="faq-q">Wie aktiviere ich den Bonus-Reel ab Erfahrener?</div>
+  <div class="faq-a">Nichts machen — wird automatisch aktiv ab 1.000 XP. Du kannst dann einfach 2 Reels am Tag posten, der Bot lässt's durch.</div>
 
 </div>
 </div>
@@ -989,20 +1013,33 @@ h3::before{content:'';width:3px;height:13px;border-radius:2px;background:#4dabf7
     </div>
   </div>
 
-  <h2><span class="num">3</span>So postest du einen Superlink</h2>
-  <div class="steps">
-    <div class="step">Schreib dem Bot privat <code>/superlink</code></div>
-    <div class="step">Bot zeigt dir alle Superlinks der Woche + deinen Status</div>
-    <div class="step">Falls du noch nicht gepostet hast → Bot fragt nach dem Instagram-Link</div>
-    <div class="step">Schick die URL → Bot postet die Karte in der Gruppe (mit Superlink-Markierung)</div>
-    <div class="step">Alle Mitglieder werden per DM informiert</div>
+  <h2><span class="num">3</span>Wie postest du einen Superlink?</h2>
+  <p class="intro">Es gibt <b>2 offizielle Wege</b>:</p>
+
+  <div class="card">
+    <div class="card-icon">📱</div>
+    <div class="card-content">
+      <div class="card-title">Weg 1: Über die App (empfohlen)</div>
+      <div class="card-desc">In der App: <b>➕ Plus-Button → ⭐ Superlink posten</b>. Instagram-URL einfügen + optional Caption. Bot postet automatisch in den Full-Engagement-Thread.</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-icon">🧵</div>
+    <div class="card-content">
+      <div class="card-title">Weg 2: Direkt im Full-Engagement-Thread</div>
+      <div class="card-desc">In der Telegram-Gruppe → Thema „Full Engagement" → Instagram-Link einfach hineinposten. Bot erkennt automatisch und macht eine Superlink-Karte daraus.</div>
+    </div>
+  </div>
+
+  <div class="tip-box">
+    <b>💡 Status checken:</b> Mit <code>/superlink</code> im privaten Bot-Chat siehst du den Wochen-Status (alle Superlinks + dein Like-Status pro Stück) — aber posten passiert über App oder Thread, nicht über DM-Befehl.
   </div>
 
   <h2><span class="num">4</span><code>/superlink</code> — was zeigt der Befehl?</h2>
   <div class="card">
     <div class="card-icon">📊</div>
     <div class="card-content">
-      <div class="card-title">Status-Übersicht</div>
+      <div class="card-title">Status-Übersicht im DM</div>
       <div class="card-desc">
         Bot zeigt:<br>
         • Anzahl Superlinks diese Woche<br>
@@ -1010,7 +1047,7 @@ h3::before{content:'';width:3px;height:13px;border-radius:2px;background:#4dabf7
         &nbsp;&nbsp;✅ schon geliked<br>
         &nbsp;&nbsp;❌ noch nicht geliked<br>
         &nbsp;&nbsp;(dein) für deinen eigenen<br>
-        • Anzahl Superlinks die du noch posten kannst<br>
+        • Wieviele du noch posten kannst<br>
         • Button „🚀 Per App posten"
       </div>
     </div>
@@ -1031,7 +1068,7 @@ h3::before{content:'';width:3px;height:13px;border-radius:2px;background:#4dabf7
   <div class="faq-a"><b>Nein.</b> Engagement-Pflicht gilt nur für die die selbst posten. Wer nicht postet, hat keine Pflicht.</div>
 
   <div class="faq-q">Können Admins Superlinks posten?</div>
-  <div class="faq-a">Nein. Admins sind ausgenommen vom Superlink-System.</div>
+  <div class="faq-a">Ja, über die App. Per Bot-Befehl <code>/superlink</code> sind Admins blockiert, aber via App-Posting funktioniert's.</div>
 
   <div class="faq-q">Wann kann ich Superlinks posten?</div>
   <div class="faq-a">Mo bis Sa. Sonntags ist Sperre.</div>
@@ -1046,7 +1083,7 @@ h3::before{content:'';width:3px;height:13px;border-radius:2px;background:#4dabf7
 </div>
 
 <!-- ═══════════ REGELN ═══════════ -->
-<div class="tab-content" id="tab-rules">
+<div class="tab-content active" id="tab-rules">
 <div class="section">
 
   <div class="callout" style="border-color:rgba(239,68,68,0.30);background:linear-gradient(135deg,rgba(239,68,68,0.12),rgba(185,28,28,0.04))">
@@ -1167,7 +1204,7 @@ h3::before{content:'';width:3px;height:13px;border-radius:2px;background:#4dabf7
   <a href="/feed">🏠 Feed</a> ·
   <a href="/profil">👤 Profil</a> ·
   <a href="/download-app">📦 APK</a>
-  <div style="margin-top:12px;font-size:9.5px;color:#475569">Version 5 · 2026-05-08</div>
+  <div style="margin-top:12px;font-size:9.5px;color:#475569">Version 6 · 2026-05-08</div>
 </div>
 
 <script>
@@ -1184,7 +1221,7 @@ function setTab(name){
   document.querySelectorAll('#tab-'+name+' h2 .num').forEach(n=>n.style.background='linear-gradient(135deg,'+c[0]+','+c[1]+')');
   window.scrollTo({top:0,behavior:'smooth'});
 }
-setTab('telegram');
+setTab('rules');
 </script>
 
 </body>
