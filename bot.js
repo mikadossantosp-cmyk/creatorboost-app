@@ -1954,7 +1954,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v115-pin-once-month';
+const SW_VERSION='v119-tipps-content';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
@@ -6180,7 +6180,30 @@ function switchRanking(tab, btn) {
   });
 }
 </script>`,
-            tipps: `<div style="padding:48px 24px;text-align:center"><div style="font-size:48px;margin-bottom:16px">💡</div><div style="font-size:17px;font-weight:700;margin-bottom:8px">Tipps & Tricks</div><div style="font-size:13px;color:var(--muted)">🔧 In Bearbeitung — Inhalte folgen bald!</div></div>`,
+            tipps: (()=>{
+                const tipps = [
+                    { icon:'🔁', title:'Eigene Reels nach 2h teilen', desc:'2 Stunden nach Posting deinen eigenen Reel als Story reposten + selbst liken. Boost-Trick den viele vergessen — der Algorithmus merkt: „Engagement geht weiter".' },
+                    { icon:'🎬', title:'Hook in 3 Sekunden', desc:'Wenn dein Reel in den ersten 3 Sek nicht packt, ist der Rest egal. Visuelle Spannung, klare Frage, oder unerwarteter Cut — wähl einen Hook und teste ihn.' },
+                    { icon:'💾', title:'Saves > Likes für Algorithmus', desc:'Speichern signalisiert „Will ich später nochmal sehen" und ist ein STARKES Signal. Mach Content der Save-würdig ist (Tutorials, Tipps, Inspiration).' },
+                    { icon:'💬', title:'Kommentare mit ≥2 Wörtern', desc:'„🔥🔥" oder „nice" werden vom Algorithmus oft als Bot-Verhalten eingestuft. Echte Sätze pushen viel mehr — auch wenn du selbst kommentierst.' },
+                    { icon:'❓', title:'Frage am Ende der Caption', desc:'„Was meinst du?" am Caption-Ende = +30% Comments. User antworten gerne wenn sie gefragt werden. Algorithmus liebt Diskussionen.' },
+                    { icon:'⏰', title:'Deine beste Posting-Zeit', desc:'Insta-Insights → schau wann DEINE Audience aktiv ist. „Allgemein beste Zeit" ist Quatsch — deine Stunde zählt. 30 Min vor Peak-Aktivität posten.' },
+                    { icon:'🖼️', title:'Carousels für Watch Time', desc:'Karussell-Posts halten User länger auf deinem Profil → mehr Watch Time. Ab und zu zwischen Reels einbauen — pusht das Profil-Engagement.' },
+                    { icon:'🎯', title:'Trends NICHT 1:1 kopieren', desc:'Adapt sie auf deine Nische statt blind nachzumachen. Die ersten paar Variationen pushen, danach wird\'s zu spät. Eigene Note schlägt Kopie.' },
+                    { icon:'🔊', title:'Trending Audio nutzen', desc:'Reels mit Trending-Sounds (kleines ↗ Pfeil-Icon im Audio-Picker) bekommen Algorithmus-Boost. Check täglich neue Trends, schnell drauf reagieren.' },
+                    { icon:'📝', title:'Caption: erste 125 Zeichen', desc:'Nur die ersten ~125 Zeichen sind sichtbar bevor „Mehr". Dort muss der Hook stehen. Wichtigste Info zuerst, Hashtags ans Ende.' },
+                    { icon:'#️⃣', title:'Hashtag-Mix: 3 Größen', desc:'Mix aus großen (1M+), mittleren (100k–1M) und kleinen (<100k) Hashtags. Nur große = unsichtbar. 5–10 zielgerichtete Hashtags > 30 generische.' },
+                    { icon:'📌', title:'Pinned Posts strategisch', desc:'Pin deine 3 besten Reels oben aufs Profil — neue Besucher sehen die zuerst. Wechsel sie alle 1–2 Wochen, behalt nur die Top-Performer.' },
+                    { icon:'🎬', title:'9:16 Vertical, immer', desc:'Reels in 16:9 oder 1:1 werden gestaucht/zugeschnitten. Immer 9:16 (1080x1920). Wichtige Elemente nicht in den Rändern — Insta UI überlagert.' },
+                    { icon:'⚡', title:'Erste 5 Min nach Posting', desc:'Sofort nach Posting: in deine Story teilen + auf alle Kommentare antworten. Die ersten 5 Min entscheiden über die initiale Reichweite.' },
+                    { icon:'🔁', title:'Cross-Posting auf TikTok/YT', desc:'Gleichen Reel auch auf TikTok + YT Shorts → 3× Reichweite mit 1× Aufwand. Nur Wasserzeichen entfernen (z.B. via SnapTik) bevor du auf andere Plattformen postest.' },
+                    { icon:'👥', title:'Collab-Posts', desc:'Insta erlaubt Co-Author auf Reels — beide Profile haben den Post auf ihrer Seite. Doppelte Reichweite, doppelte Engagement. Mit anderen Creatorn aus der Community absprechen!' },
+                    { icon:'🎨', title:'Konsistenter Look', desc:'Gleiche Schrift, gleiche Farben, gleiches Format → User erkennen deine Reels sofort beim Scrollen. Brand-Recognition pusht Loyalität.' },
+                    { icon:'⚠️', title:'Vermeide Music-Copyright', desc:'Reels mit lizenzierter Musik werden in Business-Accounts oft stumm. Nutze nur Insta\'s Built-in Audio Library — sicher + algorithm-friendly.' },
+                ];
+                const tippsHtml = tipps.map(t=>`<div style="background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:14px 16px;margin-bottom:10px;display:flex;align-items:flex-start;gap:13px"><div style="font-size:22px;flex-shrink:0;width:38px;height:38px;display:flex;align-items:center;justify-content:center;border-radius:10px;background:linear-gradient(135deg,rgba(34,197,94,0.18),rgba(21,128,61,0.06))">${t.icon}</div><div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:700;margin-bottom:4px;line-height:1.35">${t.title}</div><div style="font-size:12.5px;color:var(--muted);line-height:1.55">${t.desc}</div></div></div>`).join('');
+                return `<div style="padding:18px 14px 80px"><div style="font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;font-weight:700">💡 ${tipps.length} Tipps</div><div style="font-size:18px;font-weight:800;font-family:var(--font-display);margin-bottom:14px">Instagram Reel Tipps</div>${tippsHtml}<div style="margin-top:18px;padding:14px;background:linear-gradient(135deg,rgba(34,197,94,0.10),rgba(21,128,61,0.04));border:1px solid rgba(34,197,94,0.30);border-radius:12px;font-size:12px;color:var(--text);line-height:1.55">💡 <b>Tipp:</b> Schreib eigene Erfahrungen in den Tipps-Thread — wir erweitern die Liste basierend auf was bei euch funktioniert hat.</div></div>`;
+            })(),
             regeln: require('./regeln-tab'),
             shop: (()=>{
                 const myDiamonds = d.users[myUid]?.diamonds || 0;
