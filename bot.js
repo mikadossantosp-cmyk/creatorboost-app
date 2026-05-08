@@ -1954,7 +1954,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v114-pinned-buttons';
+const SW_VERSION='v115-pin-once-month';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
@@ -2754,13 +2754,34 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
         const body = await parseBody(req);
         const url = (body.url||'').trim();
         if (url && !url.includes('instagram.com')) return json({error:'Nur Instagram Links'},400);
+        const _myUidPin = getMyUid(session);
+        // Admin-bypass: admins können beliebig oft pinnen/unpinnen
+        const _botDataPin = await fetchBot('/data');
+        const _adminIdsPin = (Array.isArray(_botDataPin?._adminIds) ? _botDataPin._adminIds.map(Number) : []);
+        const _isAdminPin = _adminIdsPin.includes(Number(_myUidPin)) || String(_botDataPin?.users?.[_myUidPin]?.role||'').includes('Admin');
+        // 30-Tage Rate-Limit (für Nicht-Admins): tracking via pinnedlink_<uid>_changed.txt
+        const tsFile = DATA_DIR + '/pinnedlink_' + _myUidPin + '_changed.txt';
+        if (!_isAdminPin) {
+            try {
+                if (fs.existsSync(tsFile)) {
+                    const lastChange = parseInt(fs.readFileSync(tsFile, 'utf8'), 10) || 0;
+                    const daysSince = (Date.now() - lastChange) / (1000 * 60 * 60 * 24);
+                    if (daysSince < 30) {
+                        const wait = Math.ceil(30 - daysSince);
+                        return json({ error: 'Du kannst deinen Pinned-Link nur 1× pro Monat ändern. Noch ' + wait + ' Tag' + (wait===1?'':'e') + ' warten.' }, 429);
+                    }
+                }
+            } catch(e) {}
+        }
         try {
+            const f = DATA_DIR + '/pinnedlink_' + _myUidPin + '.txt';
             if (url) {
-                fs.writeFileSync(DATA_DIR + '/pinnedlink_' + getMyUid(session) + '.txt', url);
+                fs.writeFileSync(f, url);
             } else {
-                const f = DATA_DIR + '/pinnedlink_' + getMyUid(session) + '.txt';
                 if (fs.existsSync(f)) fs.unlinkSync(f);
             }
+            // Timestamp aktualisieren (auch bei Admin damit es konsistent bleibt)
+            try { fs.writeFileSync(tsFile, String(Date.now())); } catch(e) {}
             return json({ok:true});
         } catch(e) { return json({error:e.message},500); }
     }
@@ -7230,6 +7251,17 @@ async function toggleFollow(uid,btn){
         const myInventory = u.inventory || [];
         const myActiveRing = u.activeRing || null;
         const currentPinnedLink = ladePinnedLink(myUid) || '';
+        // Pinned-Link rate-limit info: wann darf user wieder ändern?
+        let _pinDaysLeft = 0;
+        try {
+            const _pinTsFile = DATA_DIR + '/pinnedlink_' + myUid + '_changed.txt';
+            if (fs.existsSync(_pinTsFile)) {
+                const _last = parseInt(fs.readFileSync(_pinTsFile, 'utf8'), 10) || 0;
+                const _diff = (Date.now() - _last) / (1000 * 60 * 60 * 24);
+                if (_diff < 30) _pinDaysLeft = Math.ceil(30 - _diff);
+            }
+        } catch(e) {}
+        const _isAdminPinUI = adminIds.includes(Number(myUid));
         const myRecentLinks = Object.values(d.links||{})
             .filter(l=>String(l.user_id)===String(myUid)&&l.text&&l.text.includes('instagram.com'))
             .sort((a,b)=>(b.timestamp||0)-(a.timestamp||0))
@@ -7303,8 +7335,9 @@ async function toggleFollow(uid,btn){
       ${myRecentLinks.map(l=>`<button onclick="document.getElementById('inp-pinned-link').value='${l.replace(/'/g,"\\'")}" style="background:var(--bg4);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:5px 10px;font-size:11px;text-align:left;cursor:pointer;font-family:var(--font);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${l.replace('https://www.instagram.com/','ig.com/')}</button>`).join('')}
     </div>
   </div>` : ''}
-  <button class="btn btn-outline btn-full" style="margin-top:10px;font-size:13px" onclick="savePinnedLink()">📌 Reel anpinnen</button>
-  ${currentPinnedLink ? `<button onclick="removePinnedLink()" style="background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;margin-top:6px;display:block">🗑️ Pin entfernen</button>` : ''}
+  <button class="btn btn-outline btn-full" style="margin-top:10px;font-size:13px" onclick="savePinnedLink()" ${(_pinDaysLeft>0 && !_isAdminPinUI)?'disabled':''}>📌 Reel anpinnen</button>
+  ${(_pinDaysLeft > 0 && !_isAdminPinUI) ? `<div style="margin-top:8px;padding:8px 12px;background:rgba(245,158,11,0.10);border:1px solid rgba(245,158,11,0.25);border-radius:10px;font-size:11.5px;color:#f59e0b;font-weight:600;line-height:1.45">⏳ Du kannst deinen Pin nur 1× pro Monat ändern. Noch <b>${_pinDaysLeft}</b> Tag${_pinDaysLeft===1?'':'e'} bis zur nächsten Änderung.</div>` : ''}
+  ${currentPinnedLink ? `<button onclick="removePinnedLink()" ${(_pinDaysLeft>0 && !_isAdminPinUI)?'disabled':''} style="background:none;border:none;color:var(--muted);font-size:11px;cursor:${(_pinDaysLeft>0 && !_isAdminPinUI)?'not-allowed':'pointer'};margin-top:6px;display:block;${(_pinDaysLeft>0 && !_isAdminPinUI)?'opacity:0.5':''}">🗑️ Pin entfernen</button>` : ''}
 </div>
 <div style="padding:16px;border-bottom:1px solid var(--border2)">
   <div class="form-label">Banner</div>
