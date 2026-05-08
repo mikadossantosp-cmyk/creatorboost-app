@@ -2282,7 +2282,7 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
     if (path === '/diamanten-info' || path === '/info/diamanten') {
         try {
             const html = fs.readFileSync(__dirname + '/diamanten-info.html', 'utf8');
-            res.writeHead(200, {'Content-Type':'text/html; charset=utf-8','Cache-Control':'public, max-age=3600'});
+            res.writeHead(200, {'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0'});
             return res.end(html);
         } catch(e) {
             res.writeHead(500); return res.end('Datei nicht gefunden');
@@ -2292,7 +2292,7 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
     if (path === '/system-info' || path === '/info' || path === '/info/system') {
         try {
             const html = fs.readFileSync(__dirname + '/system-info.html', 'utf8');
-            res.writeHead(200, {'Content-Type':'text/html; charset=utf-8','Cache-Control':'public, max-age=3600'});
+            res.writeHead(200, {'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','Pragma':'no-cache','Expires':'0'});
             return res.end(html);
         } catch(e) {
             res.writeHead(500); return res.end('Datei nicht gefunden');
