@@ -1954,7 +1954,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v113-pinned-engager';
+const SW_VERSION='v114-pinned-buttons';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
@@ -7061,10 +7061,51 @@ async function submitPost(){const _spBtn=document.querySelector('[onclick="submi
         const theirProjects = u.projects || [];
         const theirPosts = (d.posts||{})[uid] || [];
         const theirPinnedLink = ladePinnedLink(uid);
+        // Engager-Liste (alle die diesen pinned post geliked haben) aus d.pinnedEngages berechnen
+        const _ownerStr = String(uid);
+        const theirPinnedEngagers = Object.entries(d.pinnedEngages || {})
+            .filter(([eng, owners]) => Array.isArray(owners) && owners.map(String).includes(_ownerStr))
+            .map(([eng]) => String(eng));
+        const _myEngaged = theirPinnedEngagers.includes(String(myUid));
+        const _engagerCount = theirPinnedEngagers.length;
+        // Engager-Cards für Modal (Avatar + Name)
+        const _engagerCardsHtml = theirPinnedEngagers.length
+            ? theirPinnedEngagers.map(eUid => {
+                const eu = d.users[eUid] || {};
+                const eg = badgeGradient(eu.role);
+                const ePic = ladeBild(eUid, 'profilepic');
+                const eImgHtml = ePic
+                    ? '<img src="/appbild/'+eUid+'/profilepic" loading="lazy" style="width:100%;height:100%;object-fit:cover">'
+                    : (eu.instagram ? '<img src="https://unavatar.io/instagram/'+eu.instagram+'" loading="lazy" style="width:100%;height:100%;object-fit:cover" onerror="this.remove()">' : '');
+                return '<a href="/profil/'+eUid+'" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--border2);text-decoration:none">'
+                    +'<div style="position:relative;width:34px;height:34px;border-radius:50%;background:'+eg+';overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0">'
+                        +'<span style="position:absolute">'+(eu.name||'?')[0]+'</span>'+eImgHtml
+                    +'</div>'
+                    +'<div style="flex:1;min-width:0">'
+                        +'<div style="font-size:13px;font-weight:600;color:var(--text)">'+(eu.spitzname||eu.name||'User')+'</div>'
+                        +'<div style="font-size:10px;color:var(--muted)">'+cleanRole(eu.role)+'</div>'
+                    +'</div>'
+                +'</a>';
+            }).join('')
+            : '<div style="padding:18px;text-align:center;color:var(--muted);font-size:12.5px">Noch keine Engagements</div>';
         const theirPinnedHtml = theirPinnedLink
-            ? '<div style="padding:12px 16px;border-bottom:2px solid var(--accent);background:linear-gradient(135deg,rgba(255,107,107,.08),rgba(255,165,0,.04));margin-bottom:4px">'
-              +'<span style="font-size:11px;font-weight:700;color:var(--accent);background:rgba(255,107,107,.15);padding:3px 10px;border-radius:20px;display:inline-block;margin-bottom:8px">📌 Wichtigster Post</span>'
-              +'<a href="'+theirPinnedLink+'" target="_blank" style="display:block;font-size:13px;color:var(--blue);word-break:break-all">'+theirPinnedLink.replace('https://www.instagram.com/','ig.com/')+'</a>'
+            ? '<div style="padding:14px 16px;border-bottom:2px solid var(--accent);background:linear-gradient(135deg,rgba(255,107,107,.08),rgba(255,165,0,.04));margin-bottom:4px">'
+              +'<span style="font-size:11px;font-weight:700;color:var(--accent);background:rgba(255,107,107,.15);padding:3px 10px;border-radius:20px;display:inline-block;margin-bottom:10px">📌 Wichtigster Post</span>'
+              +'<a href="'+theirPinnedLink+'" target="_blank" style="display:block;font-size:13px;color:var(--blue);word-break:break-all;margin-bottom:12px">'+theirPinnedLink.replace('https://www.instagram.com/','ig.com/')+'</a>'
+              +'<div style="display:flex;gap:8px;align-items:center">'
+                +'<button id="pin-like-btn" onclick="likePinnedPost(\''+uid+'\',this)" '+(_myEngaged?'disabled':'')+' style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;padding:9px 14px;border-radius:14px;border:1px solid '+(_myEngaged?'#22c55e':'rgba(255,107,107,.35)')+';background:'+(_myEngaged?'rgba(34,197,94,.12)':'rgba(255,107,107,.10)')+';color:'+(_myEngaged?'#22c55e':'#ff6b6b')+';font-size:13px;font-weight:700;cursor:'+(_myEngaged?'default':'pointer')+';font-family:var(--font)">'+(_myEngaged?'✅ Geliked':'❤️ Like')+(_myEngaged?'':' · +1 💎')+'</button>'
+                +'<button onclick="showPinnedEngagers()" style="display:flex;align-items:center;gap:6px;padding:9px 14px;border-radius:14px;border:1px solid rgba(77,171,247,.30);background:rgba(77,171,247,.08);color:var(--text);font-size:12.5px;font-weight:700;cursor:pointer;font-family:var(--font)">👥 <span id="pin-eng-count">'+_engagerCount+'</span></button>'
+              +'</div>'
+              +'<div id="pin-engagers-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(6px);z-index:9999;align-items:flex-end;justify-content:center" onclick="if(event.target===this)this.style.display=\'none\'">'
+                +'<div style="background:var(--bg2);border-radius:24px 24px 0 0;width:100%;max-width:480px;padding:18px 0 24px;max-height:75vh;overflow-y:auto" onclick="event.stopPropagation()">'
+                  +'<div style="width:36px;height:4px;background:#666;border-radius:4px;margin:0 auto 14px"></div>'
+                  +'<div style="font-size:14px;font-weight:800;text-align:center;color:var(--text);margin-bottom:6px">👥 Engagements</div>'
+                  +'<div style="font-size:11px;color:var(--muted);text-align:center;margin-bottom:8px">Wer hat den Pinned-Post geliked?</div>'
+                  +'<div id="pin-engagers-list">'+_engagerCardsHtml+'</div>'
+                +'</div>'
+              +'</div>'
+              +'<script>function showPinnedEngagers(){document.getElementById(\'pin-engagers-modal\').style.display=\'flex\';}'
+              +'async function likePinnedPost(ownerUid, btn){if(btn.disabled)return;btn.disabled=true;btn.textContent=\'…\';try{const r=await fetch(\'/api/engage-pinned-post\',{method:\'POST\',headers:{\'Content-Type\':\'application/json\'},body:JSON.stringify({ownerUid})});const data=await r.json();if(data.ok){btn.style.background=\'rgba(34,197,94,.12)\';btn.style.borderColor=\'#22c55e\';btn.style.color=\'#22c55e\';btn.textContent=\'✅ Geliked\';const c=document.getElementById(\'pin-eng-count\');if(c)c.textContent=parseInt(c.textContent||0)+1;if(window.toast)toast(\'❤️ +1 💎\');}else if(data.alreadyDone){btn.style.background=\'rgba(34,197,94,.12)\';btn.style.borderColor=\'#22c55e\';btn.style.color=\'#22c55e\';btn.textContent=\'✅ Geliked\';}else{btn.disabled=false;btn.textContent=\'❤️ Like · +1 💎\';if(window.toast)toast(\'❌ Fehler\');}}catch(e){btn.disabled=false;btn.textContent=\'❤️ Like · +1 💎\';}}<\/script>'
               +'</div>'
             : '';
 
