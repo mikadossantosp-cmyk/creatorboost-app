@@ -3,190 +3,241 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>CreatorX</title>
-<meta name="description" content="Eine Community von Instagram Creators, die gemeinsam wachsen. Kostenlos.">
+<title>CreatorX — A community for creators.</title>
+<meta name="description" content="Eine kuratierte Community für Instagram Creators. Kostenlos.">
 <meta name="theme-color" content="#000000">
-<meta property="og:title" content="CreatorX — Wir wachsen gemeinsam">
-<meta property="og:description" content="Eine Community von Instagram Creators, die gemeinsam wachsen. Kostenlos.">
+<meta property="og:title" content="CreatorX — A community for creators.">
+<meta property="og:description" content="Eine kuratierte Community für Instagram Creators.">
 <meta property="og:type" content="website">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Inter+Tight:wght@600;700;800;900&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
   --bg:#000;
-  --bg2:#0a0a0a;
+  --bg-soft:#08090b;
   --text:#fff;
-  --muted:#94a3b8;
-  --muted2:#64748b;
-  --border:rgba(255,255,255,0.08);
-  --accent:#0088cc;
+  --text-soft:#a3a3a3;
+  --text-faint:#6b6b6b;
+  --border:rgba(255,255,255,0.06);
+  --border-strong:rgba(255,255,255,0.12);
 }
 html,body{background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
-body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',sans-serif;line-height:1.55;overflow-x:hidden;font-feature-settings:'ss01','cv11'}
-.bg-gradient{position:fixed;inset:0;pointer-events:none;z-index:0;background:radial-gradient(ellipse 70% 40% at 50% 0%,rgba(0,136,204,0.10),transparent 60%),radial-gradient(ellipse 50% 40% at 100% 100%,rgba(124,58,237,0.06),transparent 60%)}
-.container{position:relative;z-index:1;max-width:680px;margin:0 auto;padding:0 24px}
+body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;line-height:1.5;overflow-x:hidden;font-feature-settings:'cv11','ss03'}
+
+/* Subtle grid background */
+.grid-bg{position:fixed;inset:0;pointer-events:none;z-index:0;opacity:0.4;background-image:linear-gradient(rgba(255,255,255,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.025) 1px,transparent 1px);background-size:48px 48px;mask-image:radial-gradient(ellipse 80% 60% at 50% 30%,#000,transparent 80%);-webkit-mask-image:radial-gradient(ellipse 80% 60% at 50% 30%,#000,transparent 80%)}
+.glow{position:fixed;inset:0;pointer-events:none;z-index:0;background:radial-gradient(ellipse 60% 40% at 50% -10%,rgba(56,189,248,0.10),transparent 60%)}
+
+.container{position:relative;z-index:2;max-width:1080px;margin:0 auto;padding:0 24px}
+.container-narrow{max-width:680px;margin:0 auto}
 
 /* Top nav */
-.nav{padding:28px 0 0;display:flex;align-items:center;justify-content:space-between}
-.brand{font-size:13px;font-weight:700;letter-spacing:1.5px;color:var(--text);text-transform:uppercase}
-.nav-cta{font-size:12.5px;font-weight:600;color:var(--muted);text-decoration:none;padding:7px 14px;border:1px solid var(--border);border-radius:999px;transition:all 0.2s}
-.nav-cta:hover{color:var(--text);border-color:rgba(255,255,255,0.18)}
+nav{padding:32px 0;display:flex;align-items:center;justify-content:space-between}
+.brand{display:flex;align-items:center;gap:8px;font-family:'Inter Tight',sans-serif;font-size:15px;font-weight:800;letter-spacing:-0.3px;color:var(--text)}
+.brand-mark{width:8px;height:8px;background:#fff;border-radius:2px;transform:rotate(45deg)}
+.nav-links{display:flex;align-items:center;gap:24px}
+.nav-link{font-size:13px;font-weight:500;color:var(--text-soft);text-decoration:none;transition:color 0.18s}
+.nav-link:hover{color:var(--text)}
+.nav-cta{font-size:13px;font-weight:600;color:var(--bg);background:var(--text);text-decoration:none;padding:8px 16px;border-radius:8px;transition:opacity 0.18s}
+.nav-cta:hover{opacity:0.85}
 
 /* Hero */
-.hero{padding:90px 0 54px;text-align:center}
-.kicker{display:inline-block;font-size:11.5px;font-weight:700;letter-spacing:2px;color:var(--muted);text-transform:uppercase;padding:6px 14px;border:1px solid var(--border);border-radius:999px;margin-bottom:28px}
-.kicker .dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#22c55e;margin-right:7px;vertical-align:middle;animation:pulse 2s ease-in-out infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
-h1{font-size:clamp(40px,8vw,68px);font-weight:800;letter-spacing:-2.5px;line-height:1.02;margin-bottom:22px;color:var(--text)}
-h1 .accent{display:block;background:linear-gradient(135deg,#5eb6ff 0%,#a78bfa 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-weight:900}
-.lead{font-size:clamp(16px,3.5vw,19px);color:var(--muted);font-weight:400;max-width:480px;margin:0 auto 40px;letter-spacing:-0.2px}
-.lead b{color:var(--text);font-weight:600}
+.hero{padding:90px 0 110px;text-align:center}
+.hero-meta{display:inline-flex;align-items:center;gap:9px;padding:6px 14px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:999px;margin-bottom:32px;font-size:12px;font-weight:500;color:var(--text-soft);letter-spacing:-0.1px}
+.hero-meta-dot{display:inline-block;width:5px;height:5px;border-radius:50%;background:#22c55e;box-shadow:0 0 8px rgba(34,197,94,0.6)}
+h1{font-family:'Inter Tight',sans-serif;font-size:clamp(46px,8.5vw,92px);font-weight:800;letter-spacing:-3.5px;line-height:0.96;margin-bottom:28px;color:var(--text)}
+h1 .accent{color:var(--text-soft);font-weight:700}
+.lead{font-size:clamp(16px,2.5vw,19px);color:var(--text-soft);font-weight:400;max-width:520px;margin:0 auto 48px;letter-spacing:-0.2px;line-height:1.55}
+.lead b{color:var(--text);font-weight:500}
 
 /* Stats */
-.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border-radius:18px;overflow:hidden;margin:0 auto 44px;max-width:480px;border:1px solid var(--border)}
-.stat{background:var(--bg);padding:20px 12px;text-align:center}
-.stat-num{font-size:clamp(20px,4.8vw,28px);font-weight:800;color:var(--text);font-variant-numeric:tabular-nums;line-height:1;margin-bottom:6px;letter-spacing:-0.5px}
-.stat-label{font-size:10.5px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:1.2px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);max-width:560px;margin:0 auto 56px}
+.stat{padding:0 8px;text-align:center;border-right:1px solid var(--border)}
+.stat:last-child{border-right:none}
+.stat-num{font-family:'Inter Tight',sans-serif;font-size:clamp(26px,5.5vw,34px);font-weight:700;color:var(--text);font-variant-numeric:tabular-nums;line-height:1;margin-bottom:8px;letter-spacing:-1px}
+.stat-label{font-size:11px;color:var(--text-faint);font-weight:500;text-transform:uppercase;letter-spacing:1.5px}
 
 /* CTAs */
 .ctas{display:flex;flex-direction:column;gap:10px;max-width:380px;margin:0 auto}
-.btn{display:flex;align-items:center;justify-content:center;gap:10px;padding:16px 24px;border-radius:12px;font-size:15px;font-weight:700;text-decoration:none;transition:all 0.2s;cursor:pointer;border:none;font-family:inherit;letter-spacing:-0.1px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;padding:14px 28px;border-radius:10px;font-size:14.5px;font-weight:600;text-decoration:none;transition:all 0.18s;cursor:pointer;border:none;font-family:inherit;letter-spacing:-0.1px}
 .btn-primary{background:var(--text);color:var(--bg)}
-.btn-primary:hover{transform:translateY(-1px);background:#f1f5f9}
-.btn-secondary{background:transparent;color:var(--text);border:1px solid rgba(255,255,255,0.18)}
-.btn-secondary:hover{border-color:rgba(255,255,255,0.32);background:rgba(255,255,255,0.04)}
-.btn svg{width:16px;height:16px}
+.btn-primary:hover{background:#e5e5e5}
+.btn-secondary{background:transparent;color:var(--text);border:1px solid var(--border-strong)}
+.btn-secondary:hover{border-color:rgba(255,255,255,0.24);background:rgba(255,255,255,0.03)}
+.btn-arrow{width:14px;height:14px;transition:transform 0.18s}
+.btn:hover .btn-arrow{transform:translateX(2px)}
 
-/* Section divider */
-.divider{height:1px;background:linear-gradient(90deg,transparent,var(--border),transparent);margin:60px 0}
+/* Section */
+section{padding:100px 0}
+.section-eyebrow{font-size:12px;font-weight:600;color:var(--text-soft);text-transform:uppercase;letter-spacing:2px;margin-bottom:20px;display:block;text-align:center}
+.section-title{font-family:'Inter Tight',sans-serif;font-size:clamp(34px,6vw,52px);font-weight:800;letter-spacing:-2px;text-align:center;margin-bottom:72px;line-height:1.05;color:var(--text);max-width:680px;margin-left:auto;margin-right:auto}
+.section-title em{font-style:normal;color:var(--text-soft);font-weight:700}
 
-/* Features */
-.features{padding:20px 0}
-.section-label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:2.5px;text-align:center;margin-bottom:16px}
-.section-title{font-size:clamp(28px,5.5vw,38px);font-weight:800;letter-spacing:-1px;text-align:center;margin-bottom:48px;line-height:1.15;color:var(--text)}
-.feature-list{display:grid;grid-template-columns:1fr;gap:1px;background:var(--border);border-radius:18px;overflow:hidden;border:1px solid var(--border)}
-.feature{background:var(--bg);padding:28px 26px}
-.feature-num{font-size:11.5px;font-weight:700;color:var(--muted2);letter-spacing:2px;margin-bottom:10px;font-variant-numeric:tabular-nums}
-.feature-title{font-size:18px;font-weight:700;margin-bottom:8px;letter-spacing:-0.3px;color:var(--text)}
-.feature-desc{font-size:14px;color:var(--muted);line-height:1.6}
+/* Principles grid */
+.principles{display:grid;grid-template-columns:1fr;gap:1px;background:var(--border);border:1px solid var(--border);border-radius:0;max-width:1080px;margin:0 auto}
+.principle{background:var(--bg);padding:48px 36px;display:flex;flex-direction:column;gap:14px;transition:background 0.2s}
+.principle:hover{background:#0a0a0a}
+.principle-num{font-family:'Inter Tight',sans-serif;font-size:13px;font-weight:700;color:var(--text-faint);letter-spacing:0.5px;font-variant-numeric:tabular-nums}
+.principle-title{font-family:'Inter Tight',sans-serif;font-size:22px;font-weight:700;letter-spacing:-0.6px;color:var(--text);line-height:1.2}
+.principle-desc{font-size:14px;color:var(--text-soft);line-height:1.65;font-weight:400;letter-spacing:-0.1px}
 
-/* Bottom CTA */
-.bottom-cta{padding:80px 0 60px;text-align:center}
-.bottom-cta h2{font-size:clamp(28px,5.5vw,42px);font-weight:800;margin-bottom:14px;letter-spacing:-1px;line-height:1.1}
-.bottom-cta p{font-size:15px;color:var(--muted);margin-bottom:32px;max-width:380px;margin-left:auto;margin-right:auto}
+/* Quote / testimonial style */
+.testimonial{padding:80px 0;text-align:center}
+.testimonial-q{font-family:'Inter Tight',sans-serif;font-size:clamp(22px,4vw,32px);font-weight:600;letter-spacing:-1px;line-height:1.3;color:var(--text);max-width:680px;margin:0 auto 24px}
+.testimonial-cite{font-size:12px;color:var(--text-faint);font-weight:500;letter-spacing:1px;text-transform:uppercase}
+
+/* Final CTA */
+.final-cta{padding:120px 0;text-align:center;border-top:1px solid var(--border)}
+.final-cta-title{font-family:'Inter Tight',sans-serif;font-size:clamp(36px,7vw,68px);font-weight:800;letter-spacing:-2.5px;line-height:1;margin-bottom:20px;color:var(--text)}
+.final-cta-sub{font-size:16px;color:var(--text-soft);margin-bottom:40px;max-width:420px;margin-left:auto;margin-right:auto;letter-spacing:-0.1px}
 
 /* Footer */
-.footer{padding:30px 0 50px;text-align:center;font-size:12px;color:var(--muted2);line-height:1.7;border-top:1px solid var(--border);margin-top:40px}
-.footer a{color:var(--muted);text-decoration:none;margin:0 12px;transition:color 0.2s}
-.footer a:hover{color:var(--text)}
-.footer-brand{display:block;font-weight:700;color:var(--muted);letter-spacing:0.5px;margin-bottom:6px}
+footer{padding:48px 0 60px;border-top:1px solid var(--border);font-size:12.5px;color:var(--text-faint)}
+.footer-grid{display:flex;flex-direction:column;gap:28px;align-items:center;text-align:center}
+.footer-brand-row{display:flex;align-items:center;gap:8px}
+.footer-links{display:flex;gap:28px;flex-wrap:wrap;justify-content:center}
+.footer-links a{color:var(--text-soft);text-decoration:none;font-weight:500;transition:color 0.18s}
+.footer-links a:hover{color:var(--text)}
+.footer-bottom{font-size:11px;color:var(--text-faint);letter-spacing:0.3px}
 
 @media (min-width:720px){
-  .feature-list{grid-template-columns:repeat(3,1fr)}
+  .principles{grid-template-columns:repeat(3,1fr)}
   .ctas{flex-direction:row;max-width:none}
   .ctas .btn{flex:1}
+  .footer-grid{flex-direction:row;justify-content:space-between;text-align:left}
 }
 </style>
 </head>
 <body>
 
-<div class="bg-gradient"></div>
+<div class="grid-bg"></div>
+<div class="glow"></div>
 
 <div class="container">
 
-  <nav class="nav">
-    <div class="brand">CreatorX</div>
-    <a href="https://web-production-7981d.up.railway.app/system-info" class="nav-cta">Mehr erfahren →</a>
+  <nav>
+    <div class="brand">
+      <span class="brand-mark"></span>
+      <span>CreatorX</span>
+    </div>
+    <div class="nav-links">
+      <a href="https://web-production-7981d.up.railway.app/system-info" class="nav-link">Über uns</a>
+      <a href="https://t.me/+w-V2QL-igJw5YjY0" class="nav-cta" target="_blank" rel="noopener">Beitreten</a>
+    </div>
   </nav>
 
   <!-- Hero -->
   <section class="hero">
-    <div class="kicker"><span class="dot"></span>Aktive Community</div>
-    <h1>
-      Wir wachsen
-      <span class="accent">gemeinsam.</span>
-    </h1>
-    <p class="lead">Eine Community von <b>Instagram Creators</b>, die sich gegenseitig unterstützen — kostenlos und ohne Versteckspiel.</p>
-
-    <!-- Live Stats -->
-    <div class="stats">
-      <div class="stat">
-        <div class="stat-num" id="stat-members">—</div>
-        <div class="stat-label">Creators</div>
+    <div class="container-narrow">
+      <div class="hero-meta">
+        <span class="hero-meta-dot"></span>
+        <span>Aktiv · Free Forever</span>
       </div>
-      <div class="stat">
-        <div class="stat-num" id="stat-likes">—</div>
-        <div class="stat-label">Likes</div>
-      </div>
-      <div class="stat">
-        <div class="stat-num" id="stat-posts">—</div>
-        <div class="stat-label">Posts</div>
-      </div>
-    </div>
+      <h1>
+        Eine Community<br>
+        <span class="accent">für Creators.</span>
+      </h1>
+      <p class="lead">Kuratiert. Kostenlos. Kein Marketing-Bullshit.<br><b>Wachsen funktioniert besser zusammen.</b></p>
 
-    <!-- CTAs -->
-    <div class="ctas">
-      <a href="https://t.me/+w-V2QL-igJw5YjY0" class="btn btn-primary" target="_blank" rel="noopener">
-        Telegram beitreten
-        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 3l5 5-5 5"/></svg>
-      </a>
-      <a href="https://web-production-7981d.up.railway.app/" class="btn btn-secondary">
-        Zur App
-      </a>
-    </div>
-  </section>
-
-  <div class="divider"></div>
-
-  <!-- Features -->
-  <section class="features">
-    <div class="section-label">Warum CreatorX</div>
-    <h2 class="section-title">Drei klare Prinzipien.</h2>
-
-    <div class="feature-list">
-      <div class="feature">
-        <div class="feature-num">01</div>
-        <div class="feature-title">Echte Creator</div>
-        <div class="feature-desc">Keine Bots, keine Fakes. Eine geprüfte Community von Menschen, die wirklich auf Instagram aktiv sind.</div>
+      <div class="stats">
+        <div class="stat">
+          <div class="stat-num" id="stat-members">—</div>
+          <div class="stat-label">Members</div>
+        </div>
+        <div class="stat">
+          <div class="stat-num" id="stat-likes">—</div>
+          <div class="stat-label">Likes</div>
+        </div>
+        <div class="stat">
+          <div class="stat-num" id="stat-posts">—</div>
+          <div class="stat-label">Posts</div>
+        </div>
       </div>
-      <div class="feature">
-        <div class="feature-num">02</div>
-        <div class="feature-title">Gemeinsam wachsen</div>
-        <div class="feature-desc">Was alleine schwer ist, schaffen wir zusammen. Wenn ein Member Erfolg hat, profitiert die ganze Community.</div>
-      </div>
-      <div class="feature">
-        <div class="feature-num">03</div>
-        <div class="feature-title">Komplett kostenlos</div>
-        <div class="feature-desc">Kein Premium, keine versteckten Kosten. Die Community lebt vom Mitmachen — nicht vom Bezahlen.</div>
+
+      <div class="ctas">
+        <a href="https://t.me/+w-V2QL-igJw5YjY0" class="btn btn-primary" target="_blank" rel="noopener">
+          Jetzt beitreten
+          <svg class="btn-arrow" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
+        </a>
+        <a href="https://web-production-7981d.up.railway.app/" class="btn btn-secondary">
+          Zur App
+        </a>
       </div>
     </div>
   </section>
-
-  <!-- Bottom CTA -->
-  <section class="bottom-cta">
-    <h2>Bereit?</h2>
-    <p>Tritt bei und werde Teil von etwas, das wirklich wächst.</p>
-    <div class="ctas">
-      <a href="https://t.me/+w-V2QL-igJw5YjY0" class="btn btn-primary" target="_blank" rel="noopener">
-        Telegram beitreten
-        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 3l5 5-5 5"/></svg>
-      </a>
-      <a href="https://web-production-7981d.up.railway.app/" class="btn btn-secondary">
-        Zur App
-      </a>
-    </div>
-  </section>
-
-  <!-- Footer -->
-  <div class="footer">
-    <span class="footer-brand">CreatorX</span>
-    Eine Community für Instagram Creators<br>
-    <a href="https://web-production-7981d.up.railway.app/system-info">So funktioniert's</a>
-    <a href="https://t.me/+w-V2QL-igJw5YjY0" target="_blank" rel="noopener">Telegram</a>
-    <a href="https://web-production-7981d.up.railway.app/">App</a>
-    <div style="margin-top:14px;font-size:9.5px;color:#475569;letter-spacing:0.5px">v2 · 2026-05-08</div>
-  </div>
 
 </div>
+
+<!-- Principles -->
+<section style="padding:80px 0 100px;background:var(--bg-soft);border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
+  <div class="container">
+    <span class="section-eyebrow">Prinzipien</span>
+    <h2 class="section-title">Drei Grundsätze.<br><em>Nicht verhandelbar.</em></h2>
+
+    <div class="principles">
+      <div class="principle">
+        <span class="principle-num">01 / Identität</span>
+        <h3 class="principle-title">Echte Creators.</h3>
+        <p class="principle-desc">Keine Bots, keine Fake-Accounts. Eine kuratierte Community von Menschen, die Content für ihre Audience erstellen — nicht für Statistiken.</p>
+      </div>
+      <div class="principle">
+        <span class="principle-num">02 / Wachstum</span>
+        <h3 class="principle-title">Gemeinsam größer.</h3>
+        <p class="principle-desc">Wachstum allein ist langsam. Im Verbund schneller. Wenn ein Member Erfolg hat, profitiert die ganze Community vom Algorithmus-Effekt.</p>
+      </div>
+      <div class="principle">
+        <span class="principle-num">03 / Zugang</span>
+        <h3 class="principle-title">Frei. Für immer.</h3>
+        <p class="principle-desc">Keine Premium-Tiers. Keine versteckten Kosten. Kein Pay-to-win. Was zählt ist Beitrag — nicht Bezahlung.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Testimonial -->
+<div class="container">
+  <section class="testimonial">
+    <p class="testimonial-q">„Allein bist du ein Creator. Mit uns bist du eine Bewegung."</p>
+    <div class="testimonial-cite">CreatorX · Manifest</div>
+  </section>
+</div>
+
+<!-- Final CTA -->
+<section class="final-cta">
+  <div class="container">
+    <h2 class="final-cta-title">Bereit?</h2>
+    <p class="final-cta-sub">Werde Teil von etwas, das wirklich wächst.</p>
+    <div class="ctas">
+      <a href="https://t.me/+w-V2QL-igJw5YjY0" class="btn btn-primary" target="_blank" rel="noopener">
+        Jetzt beitreten
+        <svg class="btn-arrow" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
+      </a>
+      <a href="https://web-production-7981d.up.railway.app/" class="btn btn-secondary">
+        Zur App
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer>
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand-row">
+        <span class="brand-mark"></span>
+        <span style="font-family:'Inter Tight',sans-serif;font-weight:700;color:var(--text-soft)">CreatorX</span>
+      </div>
+      <div class="footer-links">
+        <a href="https://web-production-7981d.up.railway.app/system-info">Dokumentation</a>
+        <a href="https://t.me/+w-V2QL-igJw5YjY0" target="_blank" rel="noopener">Telegram</a>
+        <a href="https://web-production-7981d.up.railway.app/">App</a>
+      </div>
+      <div class="footer-bottom">v3 · 2026</div>
+    </div>
+  </div>
+</footer>
 
 <script>
 (async function(){
@@ -203,11 +254,11 @@ h1 .accent{display:block;background:linear-gradient(135deg,#5eb6ff 0%,#a78bfa 10
 function animateCount(id, target){
   const el = document.getElementById(id);
   if (!el || !isFinite(target)) return;
-  const dur = 1400;
+  const dur = 1600;
   const start = performance.now();
   function step(t){
     const p = Math.min(1, (t - start) / dur);
-    const eased = 1 - Math.pow(1 - p, 3);
+    const eased = 1 - Math.pow(1 - p, 4);
     const val = Math.round(target * eased);
     el.textContent = val.toLocaleString('de-DE');
     if (p < 1) requestAnimationFrame(step);
