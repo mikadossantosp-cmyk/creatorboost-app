@@ -2288,6 +2288,16 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
             res.writeHead(500); return res.end('Datei nicht gefunden');
         }
     }
+    // ── System-Übersicht Public-Page (Telegram + App erklärt) ──
+    if (path === '/system-info' || path === '/info' || path === '/info/system') {
+        try {
+            const html = fs.readFileSync(__dirname + '/system-info.html', 'utf8');
+            res.writeHead(200, {'Content-Type':'text/html; charset=utf-8','Cache-Control':'public, max-age=3600'});
+            return res.end(html);
+        } catch(e) {
+            res.writeHead(500); return res.end('Datei nicht gefunden');
+        }
+    }
 
     if (path === '/apk-upload') {
         if ((query.key || '') !== BRIDGE_SECRET) { res.writeHead(403); return res.end('Kein Zugriff'); }

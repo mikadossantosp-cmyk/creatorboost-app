@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>📖 So funktioniert CreatorX</title>
+<meta name="theme-color" content="#0a0a0a">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#000;color:#fff;line-height:1.55;overflow-x:hidden;padding-bottom:60px}
+.hero{position:relative;text-align:center;padding:54px 24px 30px;background:radial-gradient(ellipse at top,rgba(77,171,247,0.18),transparent 70%),linear-gradient(180deg,#0a1929,#000 75%);overflow:hidden}
+.hero::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 25% 30%,rgba(167,139,250,0.12),transparent 35%),radial-gradient(circle at 75% 60%,rgba(34,197,94,0.10),transparent 40%);pointer-events:none}
+.hero-icons{font-size:50px;display:flex;align-items:center;justify-content:center;gap:18px;margin-bottom:14px;position:relative;z-index:1}
+.hero-icons .arrow{font-size:24px;color:#94a3b8;animation:swap 3s ease-in-out infinite}
+@keyframes swap{0%,100%{transform:translateX(0)}50%{transform:translateX(8px)}}
+h1{font-size:32px;font-weight:900;letter-spacing:-0.5px;margin:6px 0 8px;background:linear-gradient(135deg,#4dabf7,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;position:relative;z-index:1}
+.tagline{font-size:14px;color:#94a3b8;font-weight:500;max-width:380px;margin:0 auto;position:relative;z-index:1}
+.toggle-wrap{display:flex;justify-content:center;padding:24px 16px 0}
+.toggle{display:flex;background:#111;border:1px solid rgba(255,255,255,0.08);border-radius:999px;padding:5px;gap:4px;width:100%;max-width:380px}
+.toggle-btn{flex:1;padding:11px 18px;background:transparent;border:none;color:#94a3b8;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;border-radius:999px;display:flex;align-items:center;justify-content:center;gap:8px;transition:all 0.25s}
+.toggle-btn.active{background:linear-gradient(135deg,#4dabf7,#1d4ed8);color:#fff;box-shadow:0 4px 16px rgba(77,171,247,0.4)}
+.toggle-btn.app.active{background:linear-gradient(135deg,#a78bfa,#7c3aed);box-shadow:0 4px 16px rgba(167,139,250,0.4)}
+.section{max-width:540px;margin:0 auto;padding:24px 20px}
+.tab-content{display:none;animation:fadeIn 0.3s ease}
+.tab-content.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+h2{font-size:20px;font-weight:800;margin:24px 0 14px;letter-spacing:-0.2px;display:flex;align-items:center;gap:10px}
+h2 .num{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#4dabf7,#1d4ed8);font-size:13px;font-weight:800;color:#fff}
+.tab-content.app h2 .num{background:linear-gradient(135deg,#a78bfa,#7c3aed)}
+.intro{font-size:14.5px;color:#cbd5e1;margin-bottom:18px}
+.card{background:#111;border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:14px 16px;margin-bottom:10px;display:flex;align-items:flex-start;gap:13px;transition:transform 0.18s,border-color 0.2s}
+.card:hover{transform:translateX(3px);border-color:rgba(77,171,247,0.30)}
+.tab-content.app .card:hover{border-color:rgba(167,139,250,0.30)}
+.card-icon{font-size:22px;flex-shrink:0;width:38px;height:38px;display:flex;align-items:center;justify-content:center;border-radius:10px;background:linear-gradient(135deg,rgba(77,171,247,0.15),rgba(29,78,216,0.06))}
+.tab-content.app .card-icon{background:linear-gradient(135deg,rgba(167,139,250,0.15),rgba(124,58,237,0.06))}
+.card-content{flex:1;min-width:0}
+.card-title{font-size:14px;font-weight:700;margin-bottom:3px;line-height:1.35}
+.card-desc{font-size:12.5px;color:#94a3b8;line-height:1.5}
+.card-desc b{color:#cbd5e1}
+.section-divider{height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.10),transparent);margin:24px 0}
+.tip-box{background:linear-gradient(135deg,rgba(245,158,11,0.10),rgba(245,158,11,0.04));border:1px solid rgba(245,158,11,0.30);border-radius:12px;padding:14px;margin:20px 0;font-size:13px;line-height:1.55}
+.tip-box b{color:#fbbf24}
+.callout{background:linear-gradient(135deg,rgba(77,171,247,0.08),rgba(167,139,250,0.06));border:1px solid rgba(77,171,247,0.25);border-radius:14px;padding:16px;margin:18px 0;font-size:13.5px;line-height:1.6}
+.callout-title{font-size:13px;font-weight:800;margin-bottom:6px;color:#4dabf7;letter-spacing:0.3px;text-transform:uppercase}
+.tab-content.app .callout-title{color:#a78bfa}
+.tab-content.app .callout{border-color:rgba(167,139,250,0.25)}
+.connection-box{background:linear-gradient(135deg,rgba(34,197,94,0.10),rgba(16,163,74,0.04));border:1px solid rgba(34,197,94,0.30);border-radius:14px;padding:18px;margin:24px 0;font-size:13.5px;line-height:1.6}
+.connection-box b{color:#22c55e}
+.badge-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.badge-pill{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.10);border-radius:999px;font-size:11px;font-weight:700;color:#cbd5e1}
+.footer{text-align:center;font-size:11px;color:#64748b;margin-top:36px;padding:0 20px;line-height:1.6}
+@media (max-width:380px){h1{font-size:26px}.hero-icons{font-size:40px}.section{padding:20px 16px}}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-icons"><span>✈️</span><span class="arrow">↔</span><span>📱</span></div>
+  <h1>So funktioniert CreatorX</h1>
+  <p class="tagline">Die Community läuft auf zwei Plattformen, die zusammenspielen.</p>
+</div>
+
+<div class="toggle-wrap">
+  <div class="toggle">
+    <button class="toggle-btn active" id="btn-telegram" onclick="switchTab('telegram')">✈️ Telegram</button>
+    <button class="toggle-btn app" id="btn-app" onclick="switchTab('app')">📱 App</button>
+  </div>
+</div>
+
+<!-- ═══════════ TELEGRAM TAB ═══════════ -->
+<div class="tab-content active" id="tab-telegram">
+<div class="section">
+
+  <div class="callout">
+    <div class="callout-title">⚡ Was ist das?</div>
+    Die <b>Telegram-Gruppe</b> ist das Herz der Community. Hier postest du deine Reels, lädst andere ein zu engagen und sammelst XP. Der Bot moderiert alles automatisch.
+  </div>
+
+  <h2><span class="num">1</span>Reels posten</h2>
+  <div class="card">
+    <div class="card-icon">📸</div>
+    <div class="card-content">
+      <div class="card-title">1 Link pro Tag</div>
+      <div class="card-desc">Du postest deinen Instagram-Reel-Link in die Gruppe. Bot ersetzt deine Nachricht mit einer schönen Karte mit <b>Like-Button</b> und <b>Liker-Anzeige</b>.</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-icon">🚫</div>
+    <div class="card-content">
+      <div class="card-title">Doppelte Links geblockt</div>
+      <div class="card-desc">Schon gepostete Reels können nicht nochmal gepostet werden. Nur Instagram-Links erlaubt.</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-icon">💎</div>
+    <div class="card-content">
+      <div class="card-title">Extra-Links via Shop</div>
+      <div class="card-desc">Mehr posten? Mit <b>5 💎</b> kaufst du dir einen Extra-Link.</div>
+    </div>
+  </div>
+
+  <h2><span class="num">2</span>Liken & Engagement</h2>
+  <div class="card">
+    <div class="card-icon">👍</div>
+    <div class="card-content">
+      <div class="card-title">Pflicht: 5 Likes pro Tag</div>
+      <div class="card-desc">Jeder muss mindestens <b>5 fremde Reels liken + kommentieren</b>. Dafür gibt's <b>+5 XP pro Like</b>.</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-icon">🚫</div>
+    <div class="card-content">
+      <div class="card-title">Kein Self-Like</div>
+      <div class="card-desc">Du kannst dein eigenes Reel nicht liken. Auch nicht über verbundene Sub-Accounts.</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-icon">👁</div>
+    <div class="card-content">
+      <div class="card-title">Liker-Liste</div>
+      <div class="card-desc">Tap auf 👁 zeigt wer deinen Reel geliked hat.</div>
+    </div>
+  </div>
+
+  <h2><span class="num">3</span>XP & Badges</h2>
+  <div class="card">
+    <div class="card-icon">⭐</div>
+    <div class="card-content">
+      <div class="card-title">XP sammeln</div>
+      <div class="card-desc">Mit jedem Like, jeder Mission und jeder Aktion bekommst du XP. Daraus steigst du in <b>Level</b> auf.</div>
+      <div class="badge-row">
+        <span class="badge-pill">🆕 New (0–49)</span>
+        <span class="badge-pill">📘 Anfänger (50–499)</span>
+        <span class="badge-pill">⬆️ Aufsteiger (500–999)</span>
+        <span class="badge-pill">🏅 Erfahrener (1000–4999)</span>
+        <span class="badge-pill">👑 Elite (5000–9999)</span>
+        <span class="badge-pill">🌟 Elite+ (10000+)</span>
+      </div>
+    </div>
+  </div>
+
+  <h2><span class="num">4</span>Tägliche Missionen</h2>
+  <div class="card">
+    <div class="card-icon">🎯</div>
+    <div class="card-content">
+      <div class="card-title">M1: 5 Likes vergeben</div>
+      <div class="card-desc">Mindest-Engagement → <b>+5 XP</b></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-icon">📈</div>
+    <div class="card-content">
+      <div class="card-title">M2: 80% aller Posts liken</div>
+      <div class="card-desc">Großes Engagement → <b>+5 XP</b></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-icon">🏆</div>
+    <div class="card-content">
+      <div class="card-title">M3: 100% — alle Posts liken</div>
+      <div class="card-desc">Champion → <b>+5 XP + 1 💎</b></div>
+    </div>
+  </div>
+  <div class="tip-box">
+    <b>⏳ Auswertung:</b> jeden Tag um <b>12:00 Uhr</b>. Wer 7 Tage in Folge M1/M2/M3 schafft, kriegt extra XP + Diamanten.
+  </div>
+
+  <h2><span class="num">5</span>Superlinks (Full Engagement)</h2>
+  <div class="card">
+    <div class="card-icon">⭐</div>
+    <div class="card-content">
+      <div class="card-title">1 Superlink pro Woche (Mo–Sa)</div>
+      <div class="card-desc">Dein wichtigster Reel der Woche. <b>Alle Mitglieder müssen liken, kommentieren, teilen und speichern.</b></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-icon">⚠️</div>
+    <div class="card-content">
+      <div class="card-title">Nicht engagiert = −50 XP</div>
+      <div class="card-desc">Wer Superlinks ignoriert, verliert XP. Engagement zählt.</div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- ═══════════ APP TAB ═══════════ -->
+<div class="tab-content app" id="tab-app">
+<div class="section">
+
+  <div class="callout">
+    <div class="callout-title">📱 Was ist das?</div>
+    Die <b>App</b> (CreatorX PWA) ist der visuelle Bereich der Community — Profil, Feed, DMs, Stats. Auf dem Handy installierbar wie eine echte App.
+  </div>
+
+  <h2><span class="num">1</span>Feed</h2>
+  <div class="card">
+    <div class="card-icon">🏠</div>
+    <div class="card-content">
+      <div class="card-title">Heute / Älter / Engagement</div>
+      <div class="card-desc">Alle Reels aus der Telegram-Gruppe automatisch im Feed — sortiert nach Tag oder als Engagement-Liste (Superlinks).</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-icon">⭕</div>
+    <div class="card-content">
+      <div class="card-title">User-Bubbles oben</div>
+      <div class="card-desc">Aktive Creator der Community auf einen Blick. Tap → direkt zum Profil.</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-icon">🤖</div>
+    <div class="card-content">
+      <div class="card-title">News-Bot</div>
+      <div class="card-desc">Wenn ein neuer Newsletter kommt, taucht ein Bot-Avatar in der Story-Reihe auf. Tap → direkt zum Newsletter.</div>
+    </div>
+  </div>
+
+  <h2><span class="num">2</span>Profil</h2>
+  <div class="card">
+    <div class="card-icon">👤</div>
+    <div class="card-content">
+      <div class="card-title">Eigenes Profil</div>
+      <div class="card-desc">Profilbild, Bio, Banner, Akzentfarbe, Nische, Instagram-Verknüpfung. Alles über <b>Einstellungen</b> anpassbar.</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-icon">📊</div>
+    <div class="card-content">
+      <div class="card-title">Stats</div>
+      <div class="card-desc">XP, Level, Streak, Diamanten, Links — alles auf einen Blick auf deinem Profil.</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-icon">📌</div>
+    <div class="card-content">
+      <div class="card-title">Pinned Reel</div>
+      <div class="card-desc">Pin deinen wichtigsten Reel oben aufs Profil — andere können ihn liken und du kriegst <b>1 💎</b> für jeden Engager. <b>Änderbar 1× pro Monat.</b></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-icon">⭐</div>
+    <div class="card-content">
+      <div class="card-title">Pinned-Like = Diamant</div>
+      <div class="card-desc">Wenn du den Pin von jemand anderem likest, kriegst <b>du</b> einen 💎.</div>
+    </div>
+  </div>
+
+  <h2><span class="num">3</span>Nachrichten</h2>
+  <div class="card">
+    <div class="card-icon">💬</div>
+    <div class="card-content">
+      <div class="card-title">Direkt-Chats</div>
+      <div class="card-desc">Schreib mit anderen Community-Mitgliedern privat. Nachrichten, Bilder, Sprachnotizen.</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-icon">🧵</div>
+    <div class="card-content">
+      <div class="card-title">Telegram-Threads</div>
+      <div class="card-desc">Alle Themen aus der Telegram-Gruppe in der App lesbar — Fragen, Feedback, Strategien, Ideen.</div>
+    </div>
+  </div>
+
+  <h2><span class="num">4</span>Diamanten-Shop</h2>
+  <div class="card">
+    <div class="card-icon">💎</div>
+    <div class="card-content">
+      <div class="card-title">Belohnungen sammeln</div>
+      <div class="card-desc">Profil vervollständigen, Missionen schaffen, Pinned-Posts liken, App-Likes vergeben — <b>8 Wege</b> Diamanten zu sammeln.</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-icon">🛍️</div>
+    <div class="card-content">
+      <div class="card-title">Shop-Items</div>
+      <div class="card-desc">Extra-Links, Superlinks, Profil-Ringe, Premium-Banner — kostet zwischen 5–20 💎.</div>
+    </div>
+  </div>
+
+  <h2><span class="num">5</span>Suche & Discovery</h2>
+  <div class="card">
+    <div class="card-icon">🔍</div>
+    <div class="card-content">
+      <div class="card-title">User suchen</div>
+      <div class="card-desc">Finde andere Creator über Name, Nische oder Instagram-Handle.</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-icon">🌟</div>
+    <div class="card-content">
+      <div class="card-title">Explore</div>
+      <div class="card-desc">Vorschläge, Newsletter, Rangliste, Shop — alles entdeckbar im Explore-Tab.</div>
+    </div>
+  </div>
+
+  <h2><span class="num">6</span>Notifications</h2>
+  <div class="card">
+    <div class="card-icon">🔔</div>
+    <div class="card-content">
+      <div class="card-title">Push & Inbox</div>
+      <div class="card-desc">Likes, Follower, Newsletter, Diamant-Belohnungen — gefiltert nach Kategorie. Auch als Push-Notification aufs Handy.</div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- ═══════════ CONNECTION ═══════════ -->
+<div class="section">
+  <div class="connection-box">
+    <b>🔗 Wie hängen Telegram & App zusammen?</b><br><br>
+    Beide Plattformen sind verknüpft. Wenn du in <b>Telegram</b> einen Reel postest, erscheint er automatisch im <b>App-Feed</b>. Likes über die App zählen genauso wie Likes in Telegram. XP, Diamanten und Levels werden synchronisiert.<br><br>
+    Du kannst alles über Telegram allein nutzen — die App ist eine schönere visuelle Ergänzung.
+  </div>
+</div>
+
+<div class="footer">
+  CreatorX · Eine Community für Instagram Creator<br>
+  Engagement, das wirklich zählt.
+</div>
+
+<script>
+function switchTab(name){
+  document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.toggle-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  document.getElementById('btn-'+name).classList.add('active');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+</script>
+
+</body>
+</html>
