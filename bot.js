@@ -2621,7 +2621,7 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
         const adminIds = (Array.isArray(d._adminIds) ? d._adminIds.map(Number) : []);
         let members = 0;
         let totalLikes = 0;
-        let totalPosts = 0;
+        let currentPosts = 0;
         try {
             const users = d.users || {};
             for (const [uid, u] of Object.entries(users)) {
@@ -2631,14 +2631,34 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
                 totalLikes += (u.totalLikes || 0);
             }
             const links = d.links || {};
-            totalPosts = Object.keys(links).length;
+            currentPosts = Object.keys(links).length;
         } catch(e) {}
+
+        // ── Lifetime-Tracker: zählt nur nach oben, nie zurück ──
+        // (Beiträge werden gelöscht → counter bleibt stehen)
+        const LIFETIME_FILE = (typeof DATA_DIR !== 'undefined' ? DATA_DIR : __dirname) + '/lifetime-stats.json';
+        let lifetime = { posts: 0, likes: 0, peakMembers: 0, lastSnapshotPosts: 0, lastSnapshotLikes: 0 };
+        try { lifetime = Object.assign(lifetime, JSON.parse(fs.readFileSync(LIFETIME_FILE,'utf8'))); } catch(e) {}
+
+        const deltaPosts = Math.max(0, currentPosts - (lifetime.lastSnapshotPosts || 0));
+        const deltaLikes = Math.max(0, totalLikes - (lifetime.lastSnapshotLikes || 0));
+        lifetime.posts = (lifetime.posts || 0) + deltaPosts;
+        lifetime.likes = Math.max(lifetime.likes || 0, totalLikes); // Likes monoton-wachsend (User-Counter geht eh nie zurück)
+        lifetime.peakMembers = Math.max(lifetime.peakMembers || 0, members);
+        lifetime.lastSnapshotPosts = currentPosts;
+        lifetime.lastSnapshotLikes = totalLikes;
+        try { fs.writeFileSync(LIFETIME_FILE, JSON.stringify(lifetime)); } catch(e) {}
+
         res.writeHead(200, {
             'Content-Type': 'application/json',
             'Access-Control-Allow-Origin': '*',
             'Cache-Control': 'public, max-age=60'
         });
-        return res.end(JSON.stringify({ members, totalLikes, totalPosts }));
+        return res.end(JSON.stringify({
+            members,
+            totalLikes: lifetime.likes,
+            totalPosts: lifetime.posts
+        }));
     }
 
     if (path === '/api/app-version') {
