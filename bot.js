@@ -2604,6 +2604,32 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
 
     // ── APK VERSION ── (für In-App-Update-Banner)
     // BuildId = mtime der APK-Datei. Neue APK hochladen → buildId ändert sich → Banner triggert automatisch.
+    // ── Public Community-Stats (für Landingpage, kein Auth nötig) ──
+    if (path === '/api/community-stats') {
+        const d = (await fetchBot('/data')) || {};
+        const adminIds = (Array.isArray(d._adminIds) ? d._adminIds.map(Number) : []);
+        let members = 0;
+        let totalLikes = 0;
+        let totalPosts = 0;
+        try {
+            const users = d.users || {};
+            for (const [uid, u] of Object.entries(users)) {
+                if (!u || adminIds.includes(Number(uid))) continue;
+                if (u.parent_uid) continue; // Sub-Accounts nicht doppelt zählen
+                if (u.started && u.inGruppe !== false) members++;
+                totalLikes += (u.totalLikes || 0);
+            }
+            const links = d.links || {};
+            totalPosts = Object.keys(links).length;
+        } catch(e) {}
+        res.writeHead(200, {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
+            'Cache-Control': 'public, max-age=60'
+        });
+        return res.end(JSON.stringify({ members, totalLikes, totalPosts }));
+    }
+
     if (path === '/api/app-version') {
         const apkPath = DATA_DIR + '/CreatorX-signed.apk';
         let buildId = '';
