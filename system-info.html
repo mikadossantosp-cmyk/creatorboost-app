@@ -174,16 +174,41 @@ h3::before{content:'';width:3px;height:13px;border-radius:2px;background:#4dabf7
   </div>
 
   <h2><span class="num">4</span>Sub-Accounts</h2>
+  <p class="intro">Wenn du mehrere Instagram-Accounts hast, kannst du sie als <b>Sub-Accounts</b> mit deinem Hauptaccount verbinden lassen (Admin fragen).</p>
+
   <div class="card">
     <div class="card-icon">🔗</div>
     <div class="card-content">
-      <div class="card-title">Mehrere Insta-Profile? Verbinde sie zentral.</div>
-      <div class="card-desc">Wenn du mehrere Instagram-Accounts hast: Sub-Accounts mit deinem Hauptaccount verbinden lassen (Admin fragen).<br><br>
-        • Kein Self-Like-Trick zwischen deinen Accounts<br>
-        • XP & Stats werden konsolidiert<br>
-        • Eine zentrale Identität in der Community
+      <div class="card-title">Was bringt's?</div>
+      <div class="card-desc">
+        • Eine zentrale Identität in der Community<br>
+        • Kein Self-Like-Trick zwischen deinen eigenen Accounts<br>
+        • Jeder Sub-Account hat eigenes Profil + eigene XP/Diamanten/Missionen
       </div>
     </div>
+  </div>
+
+  <div class="card">
+    <div class="card-icon">🎯</div>
+    <div class="card-content">
+      <div class="card-title">Mission-Pool: was zählt?</div>
+      <div class="card-desc">
+        ✅ Reels von <b>anderen Usern + deren Sub-Accounts</b> → zählen für deine M1/M2/M3 als „fremde Reels" (musst du engagen)<br><br>
+        ❌ Reels von <b>deinen EIGENEN Sub-Accounts</b> → werden ausgeschlossen (kein Self-Like-Loophole, du musst sie nicht engagen)
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-icon">👤</div>
+    <div class="card-content">
+      <div class="card-title">Eigene Missionen pro Account</div>
+      <div class="card-desc">Jeder deiner Accounts (Hauptaccount + Subs) hat seine <b>eigenen Tagesmissionen</b>. Likes von einem Sub zählen NICHT für die Mission deines Hauptaccounts und umgekehrt — jedes Konto muss selbst engagen.</div>
+    </div>
+  </div>
+
+  <div class="warn-box">
+    <b>⚠️ Wichtig:</b> Sub-Accounts werden vom Bot über die <code>parent_uid</code>-Verknüpfung erkannt. Like-Versuche zwischen deinen verbundenen Accounts werden automatisch geblockt.
   </div>
 
   <h2><span class="num">5</span>Bot-Befehle (Komplettliste)</h2>
@@ -751,8 +776,11 @@ h3::before{content:'';width:3px;height:13px;border-radius:2px;background:#4dabf7
   <div class="faq-q">Kann ich M1 einmal ausfallen lassen ohne Verwarnung?</div>
   <div class="faq-a">Ja — Verwarnung gibt's nur wenn du gepostet hast. Nicht-Poster ohne M1 = keine Strafe.</div>
 
-  <div class="faq-q">Was wenn alle Reels des Tages von Sub-Accounts sind?</div>
-  <div class="faq-a">Ungewöhnlich — aber dann hättest du wenig zu liken. Bot wertet aus mit den verfügbaren Reels.</div>
+  <div class="faq-q">Zählen Reels von anderen Sub-Accounts in meinen Missionen?</div>
+  <div class="faq-a">Ja — Sub-Accounts von anderen Usern sind ganz normale Reels für dich, die du engagen musst. Nur DEINE eigenen Sub-Accounts sind aus deinem Mission-Pool ausgeschlossen.</div>
+
+  <div class="faq-q">Wenn ich mehrere Sub-Accounts habe, zählen meine Likes von einem für die Mission des anderen?</div>
+  <div class="faq-a">Nein. Jeder Sub-Account hat seine <b>eigenen Missionen</b>. Likes von einem Account zählen nur für diesen Account selbst — nicht für deine anderen Subs.</div>
 
 </div>
 </div>
@@ -1204,7 +1232,7 @@ h3::before{content:'';width:3px;height:13px;border-radius:2px;background:#4dabf7
   <a href="/feed">🏠 Feed</a> ·
   <a href="/profil">👤 Profil</a> ·
   <a href="/download-app">📦 APK</a>
-  <div style="margin-top:12px;font-size:9.5px;color:#475569">Version 6 · 2026-05-08</div>
+  <div style="margin-top:12px;font-size:9.5px;color:#475569">Version 7 · 2026-05-08</div>
 </div>
 
 <script>
