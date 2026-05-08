@@ -2608,7 +2608,7 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
     if (path === '/willkommen' || path === '/landing' || path === '/community' || path === '/join') {
         try {
             const html = fs.readFileSync(__dirname + '/landing.html', 'utf8');
-            res.writeHead(200, {'Content-Type':'text/html; charset=utf-8','Cache-Control':'public, max-age=300'});
+            res.writeHead(200, {'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','Pragma':'no-cache','Expires':'0'});
             return res.end(html);
         } catch(e) {
             res.writeHead(500); return res.end('Datei nicht gefunden');
