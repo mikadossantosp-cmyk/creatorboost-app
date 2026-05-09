@@ -2465,7 +2465,7 @@ ${_isPreview ? '<div class="admin-pb">👀 Admin-Vorschau · Login-Page &nbsp;·
     <div class="feat"><div class="feat-icon">📊</div><div><div class="feat-t">Creator-Profil</div><div class="feat-s">Banner, Stats, Feed &amp; Follower.</div></div></div>
   </div>
 
-  <div class="sec-title">Noch kein Mitglied?</div>
+  <div class="sec-title">Direkt loslegen</div>
   <a href="https://t.me/+w-V2QL-igJw5YjY0" target="_blank" class="tg-card">
     <div class="tg-card-icon">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="#fff"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.248l-1.97 9.269c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12L8.19 14.9l-2.965-.924c-.643-.203-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.631.686z"/></svg>
@@ -2476,6 +2476,10 @@ ${_isPreview ? '<div class="admin-pb">👀 Admin-Vorschau · Login-Page &nbsp;·
     </div>
     <div class="tg-card-arrow">→</div>
   </a>
+  <div style="text-align:center;margin-top:14px;font-size:12px;color:var(--muted)">
+    <span style="display:inline-block;padding:0 12px;background:var(--bg);position:relative;top:1px">oder</span>
+    <a href="#login" style="display:inline-flex;align-items:center;gap:6px;color:var(--gold);font-weight:600;margin-left:6px;text-decoration:none">📧 mit Email einloggen →</a>
+  </div>
 
   <div id="login" class="login-card">
     <div class="login-h">Einloggen</div>
@@ -2513,11 +2517,12 @@ ${_isPreview ? '<div class="admin-pb">👀 Admin-Vorschau · Login-Page &nbsp;·
 
   <div class="bottom-cta">
     <div class="bottom-cta-h">Ready zu wachsen?</div>
-    <div class="bottom-cta-s">Tritt der Community bei und sieh deine ersten echten Likes innerhalb von Minuten.</div>
+    <div class="bottom-cta-s">Logge dich über Telegram <b>oder mit deiner Email-Adresse</b> ein und sieh deine ersten echten Likes innerhalb von Minuten.</div>
     <a href="https://t.me/+w-V2QL-igJw5YjY0" target="_blank" class="btn-p" style="display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;margin:0">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.248l-1.97 9.269c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12L8.19 14.9l-2.965-.924c-.643-.203-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.631.686z"/></svg>
       Auf Telegram beitreten
     </a>
+    <a href="#login" style="display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;margin-top:10px;background:rgba(255,255,255,0.04);border:1px solid var(--border);color:var(--text);border-radius:12px;padding:13px;font-size:14px;font-weight:600;font-family:inherit">📧 Mit Email einloggen</a>
   </div>
 
   <footer class="foot">
@@ -2544,11 +2549,14 @@ ${_isPreview ? '<div class="admin-pb">👀 Admin-Vorschau · Login-Page &nbsp;·
   fetch('/api/community-stats',{cache:'no-store'}).then(function(r){return r.json();}).then(function(s){
     document.querySelectorAll('[data-stat]').forEach(function(el){
       var k=el.getAttribute('data-stat');
-      var v=k==='members'?(s.members||0):k==='posts'?(s.lifetimePosts||s.posts||0):(s.lifetimeLikes||s.totalLikes||0);
-      animNum(el,v);
+      var v=0;
+      if(k==='members') v=s.members||0;
+      else if(k==='posts') v=s.totalPosts||s.currentPosts||0;
+      else if(k==='likes') v=s.totalLikes||s.currentLikes||0;
+      if(v>0) animNum(el,v); else el.textContent='—';
     });
     var tc=document.getElementById('trust-count');
-    if(tc) animNum(tc, s.members||0);
+    if(tc){ var m=s.members||0; if(m>0) animNum(tc,m); else tc.textContent='—'; }
   }).catch(function(){
     document.querySelectorAll('[data-stat]').forEach(function(el){el.textContent='—';});
   });
@@ -2860,10 +2868,90 @@ function sendMagicLink(prefilledEmail){
             sessions.set(sid, { uid: String(entry.uid), name: u.name, username: u.username||null, theme: 'light', lang: 'de', createdAt: Date.now(), subUid: validSubUid, activeUid: String(entry.uid) });
             saveSessions();
         }
-        // Wenn User noch kein Passwort gesetzt hat → /set-password (kann übersprungen werden).
-        const target = u.password_hash ? '/feed' : '/set-password?first=1';
+        // Onboarding-Flow nach Magic-Link:
+        //  1. Kein Instagram → /onboarding-instagram (PFLICHT, kein Skip — sonst kein Liken/Posten)
+        //  2. Kein Passwort → /set-password?first=1 (skippbar)
+        //  3. Sonst → /feed
+        const target = !u.instagram ? '/onboarding-instagram?first=1' : (u.password_hash ? '/feed' : '/set-password?first=1');
         res.writeHead(302,{'Set-Cookie':`cbsid=${sid}; HttpOnly; Path=/; Max-Age=2592000`,'Location':target});
         return res.end();
+    }
+    // Onboarding-Pflicht: Email-User müssen Instagram setzen bevor sie liken/posten können.
+    if (path === '/onboarding-instagram' && req.method === 'GET') {
+        if (!session) return redirect('/');
+        const isFirst = (query.first === '1');
+        const _bd = await fetchBot('/data');
+        const _u = _bd?.users?.[getMyUid(session)] || {};
+        // Falls schon Instagram gesetzt → direkt weiter (kein doppelter Onboarding-Step).
+        if (_u.instagram) {
+            return redirect(_u.password_hash ? '/feed' : '/set-password?first=1');
+        }
+        res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});
+        return res.end(`<!DOCTYPE html><html lang="de" data-theme="dark"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Instagram verknüpfen · CreatorX</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;background:#000;color:#fff;min-height:100vh;padding:24px;display:flex;flex-direction:column}
+.wrap{max-width:420px;margin:0 auto;width:100%;flex:1;display:flex;flex-direction:column;justify-content:center}
+.icon{font-size:48px;text-align:center;margin-bottom:14px}
+h1{font-size:24px;font-weight:800;text-align:center;margin-bottom:8px;letter-spacing:-0.5px}
+.sub{font-size:13.5px;color:rgba(255,255,255,.6);text-align:center;line-height:1.55;margin-bottom:24px}
+.field{position:relative;margin-bottom:8px}
+.field .at{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:rgba(255,255,255,.4);font-size:15px;pointer-events:none;font-weight:600}
+input{width:100%;background:rgba(255,255,255,.06);border:1.5px solid rgba(212,175,55,.3);color:#fff;border-radius:14px;padding:14px 16px 14px 32px;font-size:15px;outline:none;transition:border-color .2s;font-family:inherit;font-weight:500}
+input:focus{border-color:#d4af37}
+button.primary{background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;border:none;border-radius:14px;padding:15px;font-size:15px;font-weight:700;width:100%;cursor:pointer;margin-top:6px;font-family:inherit;letter-spacing:0.2px;box-shadow:0 8px 24px -8px rgba(212,175,55,0.6),inset 0 1px 0 rgba(255,255,255,0.5)}
+button.primary:disabled{opacity:0.5;cursor:not-allowed}
+.warn{padding:14px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);border-radius:12px;font-size:12.5px;color:rgba(245,158,11,0.95);margin-bottom:18px;line-height:1.55;display:flex;align-items:flex-start;gap:10px}
+.warn-icon{font-size:18px;flex-shrink:0;line-height:1}
+.msg{padding:10px 14px;margin-top:14px;font-size:13px;border-radius:12px;text-align:center;display:none}
+.msg.show{display:block}
+.msg.ok{background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.4);color:#4ade80}
+.msg.err{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.4);color:#f87171}
+.hint{font-size:11px;color:rgba(255,255,255,.4);text-align:center;margin-top:14px;line-height:1.5}
+</style></head><body>
+<div class="wrap">
+  <div class="icon">📸</div>
+  <h1>Verknüpf deinen Instagram</h1>
+  <div class="sub">${isFirst ? 'Eine letzte Sache vorm Loslegen — wir brauchen deinen Instagram-Username, damit andere Creator deine Posts korrekt zuordnen können.' : 'Setz deinen Instagram-Username, um Posts veröffentlichen und liken zu können.'}</div>
+  <div class="warn"><div class="warn-icon">⚠️</div><div><b>Pflichtfeld.</b> Ohne Instagram kannst du nichts posten und auch keine fremden Posts liken.</div></div>
+  <form id="ig-form" onsubmit="return submitIg(event)">
+    <div class="field">
+      <span class="at">@</span>
+      <input type="text" id="ig" placeholder="dein.instagram" autocomplete="off" autocapitalize="none" spellcheck="false" required maxlength="50" pattern="[a-zA-Z0-9._]+" title="Nur Buchstaben, Zahlen, . und _">
+    </div>
+    <button type="submit" class="primary" id="btn">Verknüpfen & Loslegen →</button>
+  </form>
+  <div class="msg" id="msg"></div>
+  <div class="hint">Du kannst es später in den Einstellungen ändern.</div>
+</div>
+<script>
+function submitIg(ev){
+  ev.preventDefault();
+  var inp=document.getElementById('ig'),btn=document.getElementById('btn'),msg=document.getElementById('msg');
+  var v=(inp.value||'').replace(/^@/,'').trim();
+  if(!v){msg.textContent='Bitte Instagram-Username eingeben.';msg.classList.add('show','err');return false;}
+  if(!/^[a-zA-Z0-9._]+$/.test(v)){msg.textContent='Ungültiger Username (nur Buchstaben/Zahlen/.,_).';msg.classList.add('show','err');return false;}
+  msg.classList.remove('show','ok','err');
+  btn.disabled=true;btn.textContent='Speichere...';
+  fetch('/api/save-profile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({instagram:v})})
+    .then(function(r){return r.json();})
+    .then(function(j){
+      if(j&&j.ok){
+        msg.textContent='✅ Instagram verknüpft!';msg.classList.add('show','ok');
+        setTimeout(function(){window.location.href='/set-password?first=1';},500);
+      } else {
+        msg.textContent=(j&&j.error)||'Fehler beim Speichern.';msg.classList.add('show','err');
+        btn.disabled=false;btn.textContent='Verknüpfen & Loslegen →';
+      }
+    })
+    .catch(function(){msg.textContent='Netzwerkfehler.';msg.classList.add('show','err');btn.disabled=false;btn.textContent='Verknüpfen & Loslegen →';});
+  return false;
+}
+</script>
+</body></html>`);
     }
     // /set-password Seite — User wird hier nach Magic-Link landen wenn noch kein PW gesetzt.
     if (path === '/set-password' && req.method === 'GET') {
@@ -2986,6 +3074,10 @@ function submitPw(ev){
         const body = await parseBody(req);
         const { msgId } = body;
         if (!msgId || !session) return json({error:'Ungültig'},400);
+        // Gate: ohne Instagram kein Liken (sonst kann Poster später nicht prüfen ob Like real ist).
+        const _bdLk = await fetchBot('/data');
+        const _myLk = _bdLk?.users?.[getMyUid(session)] || {};
+        if (!_myLk.instagram) return json({ok:false, error:'Bitte zuerst deinen Instagram-Username in den Einstellungen setzen, um liken zu können.', missingInstagram:true}, 403);
         const result = await fetchBot('/like-from-app?uid=' + getMyUid(session) + '&msgId=' + encodeURIComponent(msgId));
         if (!result) return json({ok:false, error:'Bot offline'}, 502);
         return json({ok: result.ok !== false, liked: result.liked, likes: result.likes, error: result.error});
@@ -3372,7 +3464,10 @@ function submitPw(ev){
         return res.end(JSON.stringify({
             members,
             totalLikes: lifetime.likes,
-            totalPosts: lifetime.posts
+            totalPosts: lifetime.posts,
+            // Fallbacks für Landing-Page (zeigt was wenn lifetime noch 0)
+            currentPosts,
+            currentLikes: totalLikes
         }));
     }
 
@@ -4646,6 +4741,8 @@ p{line-height:1.65;color:var(--muted)}
     }
 
     if (path === '/api/post-link' && req.method === 'POST') {
+        // Gate: ohne Instagram im Profil kein Posting (Engagement-Tracking braucht den Insta-Handle).
+        if (myUser && !myUser.instagram) return json({ok:false, error:'Bitte zuerst deinen Instagram-Username in den Einstellungen setzen.', missingInstagram:true}, 403);
         const body = await parseBody(req);
         const { url: linkUrl, caption } = body;
         if (!linkUrl || !linkUrl.includes('instagram.com')) return json({ok:false, error:'Nur Instagram Links'},400);
@@ -8655,6 +8752,8 @@ async function setRing(ringId) {
 
     if (path === '/api/like-superlink' && req.method === 'POST') {
         if (!session) return json({error:'Nicht eingeloggt'}, 401);
+        // Gate: ohne Instagram kein Liken.
+        if (myUser && !myUser.instagram) return json({ok:false, error:'Bitte zuerst deinen Instagram-Username in den Einstellungen setzen.', missingInstagram:true}, 403);
         const body = await parseBody(req);
         const { slId } = body;
         if (!slId) return json({ok:false});
