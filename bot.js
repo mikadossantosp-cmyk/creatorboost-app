@@ -2615,14 +2615,6 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
         }
     }
 
-    // ── Landing-Brand-Logo ──
-    if (path === '/cx-logo.png') {
-        try {
-            const buf = fs.readFileSync(__dirname + '/cx-logo.png');
-            res.writeHead(200,{'Content-Type':'image/png','Cache-Control':'public, max-age=86400'});
-            return res.end(buf);
-        } catch(e) { res.writeHead(404); return res.end(); }
-    }
 
 
     // ── Public Community-Stats (für Landingpage, kein Auth nötig) ──

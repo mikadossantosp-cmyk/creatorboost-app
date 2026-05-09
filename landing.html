@@ -6,11 +6,8 @@
 <title>CreatorX — Wir wachsen gemeinsam</title>
 <meta name="description" content="Eine kuratierte Community für Instagram Creators. Kostenlos.">
 <meta name="theme-color" content="#000000">
-<link rel="icon" type="image/png" href="/cx-logo.png">
-<link rel="apple-touch-icon" href="/cx-logo.png">
 <meta property="og:title" content="CreatorX — Wir wachsen gemeinsam">
 <meta property="og:description" content="Eine kuratierte Community für Instagram Creators.">
-<meta property="og:image" content="/cx-logo.png">
 <meta property="og:type" content="website">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -47,7 +44,8 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;line-height
 nav{position:sticky;top:0;z-index:50;backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);background:rgba(0,0,0,0.78);border-bottom:1px solid var(--line)}
 .nav-inner{max-width:1120px;margin:0 auto;padding:14px 28px;display:flex;align-items:center;justify-content:space-between}
 .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:var(--text)}
-.brand-logo{width:32px;height:32px;border-radius:8px;background:url('/cx-logo.png') center/cover;box-shadow:0 0 0 1px rgba(212,169,70,0.20),0 4px 12px rgba(0,0,0,0.6)}
+.brand-logo{width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,#fff5d4 0%,#f5d76e 25%,#d4a946 60%,#8b6914 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,0.4),0 0 0 1px rgba(212,169,70,0.30),0 4px 12px rgba(0,0,0,0.6);display:inline-flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-weight:700;font-style:italic;color:#1a1407;font-size:14px;letter-spacing:-0.8px;line-height:1}
+.brand-logo::before{content:'CX'}
 .brand-name{font-family:'Cormorant Garamond',serif;font-weight:600;font-size:18px;letter-spacing:0.5px;color:var(--silver-bright)}
 .brand-name .x{background:linear-gradient(180deg,#f5d76e,#d4a946);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
 .nav-right{display:flex;align-items:center;gap:4px}
@@ -72,8 +70,9 @@ nav{position:sticky;top:0;z-index:50;backdrop-filter:saturate(180%) blur(20px);-
 .hero-bg{position:absolute;inset:0;pointer-events:none;display:flex;align-items:center;justify-content:center;z-index:0}
 .hero-bg::before{content:'';position:absolute;width:1100px;height:600px;background:radial-gradient(ellipse,rgba(212,169,70,0.10) 0%,transparent 60%)}
 .hero-inner{position:relative;z-index:2;max-width:780px;margin:0 auto}
-.hero-icon{width:96px;height:96px;margin:0 auto 36px;border-radius:22px;background:url('/cx-logo.png') center/cover;box-shadow:0 0 0 1px rgba(212,169,70,0.30),0 20px 60px rgba(212,169,70,0.20),0 8px 24px rgba(0,0,0,0.8);position:relative}
-.hero-icon::after{content:'';position:absolute;inset:-1px;border-radius:22px;background:linear-gradient(180deg,rgba(245,215,110,0.30),transparent 50%);pointer-events:none;mix-blend-mode:overlay}
+.hero-icon{width:96px;height:96px;margin:0 auto 36px;border-radius:22px;background:linear-gradient(135deg,#fff5d4 0%,#f5d76e 22%,#d4a946 60%,#8b6914 100%);box-shadow:inset 0 2px 0 rgba(255,255,255,0.5),inset 0 -2px 0 rgba(0,0,0,0.15),0 0 0 1px rgba(212,169,70,0.30),0 20px 60px rgba(212,169,70,0.20),0 8px 24px rgba(0,0,0,0.8);position:relative;display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-weight:600;font-style:italic;color:#1a1407;font-size:46px;letter-spacing:-2.5px;line-height:1}
+.hero-icon::before{content:'CX';position:relative;z-index:2}
+.hero-icon::after{content:'';position:absolute;inset:0;border-radius:22px;background:linear-gradient(180deg,rgba(255,255,255,0.20),transparent 40%);pointer-events:none;z-index:1}
 .hero-tag{display:inline-block;font-size:11px;font-weight:600;color:var(--gold);letter-spacing:3px;text-transform:uppercase;margin-bottom:24px;padding:6px 16px;border:1px solid rgba(212,169,70,0.25);border-radius:999px;background:rgba(212,169,70,0.04)}
 h1{font-family:'Cormorant Garamond',serif;font-size:clamp(48px,8vw,88px);font-weight:500;letter-spacing:-1px;line-height:1.05;margin-bottom:28px;color:var(--text)}
 h1 .accent{font-style:italic;font-weight:600;background:linear-gradient(180deg,#fff5d4 0%,#f5d76e 30%,#d4a946 65%,#8b6914 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;display:inline-block;padding-right:10px}
