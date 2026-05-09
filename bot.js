@@ -968,7 +968,7 @@ ${session ? `
     ${page==='feed'?'<div class="nav-dot"></div>':''}
   </a>
   <a href="/explore" class="nav-item ${page==='explore'?'active':''}" data-tour="explore">
-    <svg viewBox="0 0 24 24" fill="${page==='explore'?'currentColor':'none'}" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <svg viewBox="0 0 24 24" fill="${page==='explore'?'currentColor':'none'}" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
     ${page==='explore'?'<div class="nav-dot"></div>':''}
   </a>
   <button class="nav-plus" onclick="openPlusSheet()" data-tour="post">
@@ -1038,7 +1038,7 @@ ${session ? `
   var STEPS = [
     {tgt:'feed',     eyebrow:'Hier ist dein Feed',  h:'📸 Reels von anderen Creatorn',          s:'Hier landen alle Insta-Reels die heute geteilt wurden. Like sie, kommentier — du bekommst dafür XP.'},
     {tgt:'post',     eyebrow:'Reel teilen',         h:'➕ Hier postest du deinen eigenen Reel',  s:'Tippe auf das + um deinen Insta-Reel-Link zu teilen. Andere Creator engagen dann mit deinem Post.'},
-    {tgt:'explore',  eyebrow:'Suchen & Stöbern',    h:'🔍 Such User & entdecke',                 s:'Finde andere Creator nach Nische, schau dir Top-Posts an, sieh dir das Ranking an.'},
+    {tgt:'explore',  eyebrow:'Hub-Bereich',         h:'📰 News, Ranking, Tipps &amp; Shop',       s:'Hier findest du den Newsletter, das Creator-Ranking, App-Tipps, Regeln und den Diamanten-Shop. Der zentrale Übersichts-Hub der App.'},
     {tgt:'messages', eyebrow:'Direktnachrichten',   h:'💬 Schreib mit anderen',                  s:'Privatchats und Gruppen — z.B. der Engagement-Thread für tägliche Like-Runden.'},
     {tgt:'profile',  eyebrow:'Dein Profil',         h:'👤 Dein Stand &amp; Einstellungen',       s:'Banner, Bio, Stats, deine Posts. Hier auch der Sub-Account-Switcher und die Einstellungen.'}
   ];
