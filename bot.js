@@ -963,27 +963,169 @@ ${session ? `<link rel="prefetch" href="/feed"><link rel="prefetch" href="/explo
 ${content}
 ${session ? `
 <nav class="bottom-nav">
-  <a href="/feed" class="nav-item ${page==='feed'?'active':''}">
+  <a href="/feed" class="nav-item ${page==='feed'?'active':''}" data-tour="feed">
     <svg viewBox="0 0 24 24" fill="${page==='feed'?'currentColor':'none'}" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
     ${page==='feed'?'<div class="nav-dot"></div>':''}
   </a>
-  <a href="/explore" class="nav-item ${page==='explore'?'active':''}">
+  <a href="/explore" class="nav-item ${page==='explore'?'active':''}" data-tour="explore">
     <svg viewBox="0 0 24 24" fill="${page==='explore'?'currentColor':'none'}" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
     ${page==='explore'?'<div class="nav-dot"></div>':''}
   </a>
-  <button class="nav-plus" onclick="openPlusSheet()">
+  <button class="nav-plus" onclick="openPlusSheet()" data-tour="post">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="18" height="18"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
   </button>
-  <a href="/nachrichten" class="nav-item ${page==='messages'?'active':''}" style="position:relative">
+  <a href="/nachrichten" class="nav-item ${page==='messages'?'active':''}" data-tour="messages" style="position:relative">
     <svg viewBox="0 0 24 24" fill="${page==='messages'?'currentColor':'none'}" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
     <div id="msg-badge" style="display:none;position:absolute;top:0;right:0;background:#ff6b6b;color:#fff;border-radius:50%;min-width:16px;height:16px;font-size:9px;font-weight:700;align-items:center;justify-content:center;padding:0 3px;line-height:16px;text-align:center"></div>
     ${page==='messages'?'<div class="nav-dot"></div>':''}
   </a>
-  <a href="/profil" class="nav-item ${page==='profile'?'active':''}">
+  <a href="/profil" class="nav-item ${page==='profile'?'active':''}" data-tour="profile">
     <svg viewBox="0 0 24 24" fill="${page==='profile'?'currentColor':'none'}" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
     ${page==='profile'?'<div class="nav-dot"></div>':''}
   </a>
 </nav>` : ''}
+
+<!-- ─── In-App Coach-Mark Tour (zeigt Pfeile auf Nav-Buttons beim ersten Feed-Besuch) ─── -->
+<style>
+.tour-overlay{position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,0.78);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);display:none;animation:tour-fade .25s ease}
+.tour-overlay.show{display:block}
+@keyframes tour-fade{from{opacity:0}to{opacity:1}}
+.tour-spot{position:absolute;border-radius:50%;box-shadow:0 0 0 9999px rgba(0,0,0,0.78),0 0 0 4px rgba(212,175,55,0.6),0 0 40px rgba(212,175,55,0.4);pointer-events:none;animation:tour-pulse 1.5s ease-in-out infinite;transition:all .35s cubic-bezier(.16,1,.3,1)}
+@keyframes tour-pulse{0%,100%{box-shadow:0 0 0 9999px rgba(0,0,0,0.78),0 0 0 4px rgba(212,175,55,0.6),0 0 40px rgba(212,175,55,0.4)}50%{box-shadow:0 0 0 9999px rgba(0,0,0,0.78),0 0 0 8px rgba(212,175,55,0.85),0 0 60px rgba(212,175,55,0.7)}}
+.tour-arrow{position:absolute;font-size:42px;color:#d4af37;pointer-events:none;filter:drop-shadow(0 4px 12px rgba(212,175,55,0.6));animation:tour-bounce 1.2s ease-in-out infinite;transition:all .35s cubic-bezier(.16,1,.3,1)}
+@keyframes tour-bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(8px)}}
+.tour-card{position:absolute;left:20px;right:20px;background:linear-gradient(180deg,#1a1a1a,#0a0a0a);border:1px solid rgba(212,175,55,0.35);border-radius:18px;padding:20px;box-shadow:0 30px 70px rgba(0,0,0,0.7),0 0 0 1px rgba(255,255,255,0.05);transition:all .35s cubic-bezier(.16,1,.3,1);max-width:440px;margin:0 auto;font-family:'Inter',sans-serif}
+.tour-eyebrow{font-size:10px;font-weight:700;color:#d4af37;text-transform:uppercase;letter-spacing:2px;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.tour-eyebrow .step-num{font-family:'JetBrains Mono',monospace;background:rgba(212,175,55,0.15);padding:2px 8px;border-radius:99px;font-size:10px}
+.tour-h{font-size:18px;font-weight:800;letter-spacing:-0.4px;color:#fff;margin-bottom:8px}
+.tour-s{font-size:13px;color:rgba(255,255,255,0.7);line-height:1.55;margin-bottom:16px}
+.tour-actions{display:flex;gap:8px}
+.tour-btn{padding:11px 14px;font-size:13px;font-weight:700;border-radius:11px;border:none;cursor:pointer;font-family:inherit;transition:all .15s}
+.tour-btn-skip{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.6);flex:0 0 auto}
+.tour-btn-next{background:linear-gradient(180deg,#f5d76e,#d4a946);color:#000;flex:1;box-shadow:0 6px 18px -6px rgba(212,175,55,0.5),inset 0 1px 0 rgba(255,255,255,0.4)}
+.tour-progress{display:flex;gap:4px;margin-bottom:14px}
+.tour-progress-d{flex:1;height:3px;border-radius:99px;background:rgba(255,255,255,0.08)}
+.tour-progress-d.done{background:rgba(212,175,55,0.4)}
+.tour-progress-d.active{background:linear-gradient(90deg,#d4af37,#f5d76e)}
+</style>
+<div class="tour-overlay" id="tour-ov">
+  <div class="tour-spot" id="tour-spot"></div>
+  <div class="tour-arrow" id="tour-arrow">▼</div>
+  <div class="tour-card" id="tour-card">
+    <div class="tour-progress" id="tour-progress"></div>
+    <div class="tour-eyebrow"><span class="step-num" id="tour-step-num">1/5</span><span id="tour-eyebrow-text">Quick Tour</span></div>
+    <div class="tour-h" id="tour-h"></div>
+    <div class="tour-s" id="tour-s"></div>
+    <div class="tour-actions">
+      <button class="tour-btn tour-btn-skip" onclick="window.cbTourSkip()">Überspringen</button>
+      <button class="tour-btn tour-btn-next" onclick="window.cbTourNext()" id="tour-next-btn">Weiter →</button>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+  // Tour läuft nur auf /feed UND beim ersten Besuch (oder ?tour=1).
+  if(!/^\\/feed/.test(location.pathname)) return;
+  var force = /[?&]tour=1/.test(location.search);
+  var done = false;
+  try{ done = localStorage.getItem('cb_tour_done') === '1'; }catch(e){}
+  if(done && !force) return;
+
+  var STEPS = [
+    {tgt:'feed',     eyebrow:'Hier ist dein Feed',  h:'📸 Reels von anderen Creatorn',          s:'Hier landen alle Insta-Reels die heute geteilt wurden. Like sie, kommentier — du bekommst dafür XP.'},
+    {tgt:'post',     eyebrow:'Reel teilen',         h:'➕ Hier postest du deinen eigenen Reel',  s:'Tippe auf das + um deinen Insta-Reel-Link zu teilen. Andere Creator engagen dann mit deinem Post.'},
+    {tgt:'explore',  eyebrow:'Suchen & Stöbern',    h:'🔍 Such User & entdecke',                 s:'Finde andere Creator nach Nische, schau dir Top-Posts an, sieh dir das Ranking an.'},
+    {tgt:'messages', eyebrow:'Direktnachrichten',   h:'💬 Schreib mit anderen',                  s:'Privatchats und Gruppen — z.B. der Engagement-Thread für tägliche Like-Runden.'},
+    {tgt:'profile',  eyebrow:'Dein Profil',         h:'👤 Dein Stand &amp; Einstellungen',       s:'Banner, Bio, Stats, deine Posts. Hier auch der Sub-Account-Switcher und die Einstellungen.'}
+  ];
+  var idx = 0;
+
+  function $(s){return document.querySelector(s);}
+  function getTarget(name){return document.querySelector('[data-tour="'+name+'"]');}
+
+  function placeCardAndArrow(rect){
+    var ov = document.getElementById('tour-ov');
+    var card = document.getElementById('tour-card');
+    var arrow = document.getElementById('tour-arrow');
+    var vh = window.innerHeight;
+    // Ist Target unten (Bottom-Nav)? Card oben, Arrow zeigt nach unten.
+    var below = rect.top > vh / 2;
+    if(below){
+      card.style.top = '20px';
+      card.style.bottom = 'auto';
+      arrow.textContent = '▼';
+      arrow.style.left = (rect.left + rect.width/2 - 21) + 'px';
+      arrow.style.top = (rect.top - 56) + 'px';
+    } else {
+      card.style.bottom = '20px';
+      card.style.top = 'auto';
+      arrow.textContent = '▲';
+      arrow.style.left = (rect.left + rect.width/2 - 21) + 'px';
+      arrow.style.top = (rect.bottom + 14) + 'px';
+    }
+  }
+
+  function placeSpot(rect){
+    var spot = document.getElementById('tour-spot');
+    var pad = 8;
+    var size = Math.max(rect.width, rect.height) + pad*2;
+    spot.style.width = size + 'px';
+    spot.style.height = size + 'px';
+    spot.style.left = (rect.left + rect.width/2 - size/2) + 'px';
+    spot.style.top  = (rect.top  + rect.height/2 - size/2) + 'px';
+  }
+
+  function renderProgress(){
+    var p = document.getElementById('tour-progress');
+    p.innerHTML = '';
+    for(var i=0;i<STEPS.length;i++){
+      var d = document.createElement('div');
+      d.className = 'tour-progress-d' + (i<idx?' done':i===idx?' active':'');
+      p.appendChild(d);
+    }
+  }
+
+  function show(){
+    var step = STEPS[idx];
+    if(!step){ window.cbTourSkip(); return; }
+    var t = getTarget(step.tgt);
+    if(!t){ // Target fehlt → Skip
+      idx++;
+      return show();
+    }
+    var rect = t.getBoundingClientRect();
+    placeSpot(rect);
+    placeCardAndArrow(rect);
+    document.getElementById('tour-step-num').textContent = (idx+1)+'/'+STEPS.length;
+    document.getElementById('tour-eyebrow-text').textContent = step.eyebrow;
+    document.getElementById('tour-h').innerHTML = step.h;
+    document.getElementById('tour-s').innerHTML = step.s;
+    document.getElementById('tour-next-btn').textContent = (idx === STEPS.length-1) ? '✓ Loslegen' : 'Weiter →';
+    renderProgress();
+  }
+
+  window.cbTourNext = function(){
+    idx++;
+    if(idx >= STEPS.length){
+      window.cbTourSkip();
+      return;
+    }
+    show();
+  };
+  window.cbTourSkip = function(){
+    document.getElementById('tour-ov').classList.remove('show');
+    try{ localStorage.setItem('cb_tour_done','1'); }catch(e){}
+  };
+
+  // Trigger nach kurzem Delay damit die Page-Render fertig ist.
+  setTimeout(function(){
+    document.getElementById('tour-ov').classList.add('show');
+    show();
+    window.addEventListener('resize', show, {passive:true});
+  }, 600);
+})();
+</script>
+
 <script>
 // Instant nav visual feedback
 (function(){
@@ -3184,7 +3326,7 @@ button.skip{background:transparent;border:none;color:rgba(255,255,255,.55);font-
     <input type="password" id="pw2" placeholder="Passwort wiederholen" autocomplete="new-password" required minlength="6" maxlength="200">
     <button type="submit" class="primary" id="btn">${hasPw ? 'Passwort ändern' : 'Passwort speichern'} →</button>
   </form>
-  <button type="button" class="skip" onclick="window.location.href='/feed'">${isFirst ? 'Später · zur App' : 'Abbrechen'}</button>
+  <button type="button" class="skip" onclick="window.location.href='${isFirst ? '/feed?tour=1' : '/feed'}'">${isFirst ? 'Später · zur App' : 'Abbrechen'}</button>
   <div class="msg" id="msg"></div>
   <div class="hint">Du kannst jederzeit in den Einstellungen wieder ändern.</div>
 </div>
@@ -3201,7 +3343,7 @@ function submitPw(ev){
     .then(function(j){
       if(j&&j.ok){
         msg.textContent='✅ Passwort gespeichert!';msg.classList.add('show','ok');
-        setTimeout(function(){window.location.href='/feed';},700);
+        setTimeout(function(){window.location.href='${isFirst ? '/feed?tour=1' : '/feed'}';},700);
       } else {
         msg.textContent=(j&&j.error)||'Fehler beim Speichern.';msg.classList.add('show','err');
         btn.disabled=false;btn.textContent='${hasPw ? 'Passwort ändern' : 'Passwort speichern'} →';
