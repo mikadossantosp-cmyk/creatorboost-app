@@ -5218,6 +5218,7 @@ p{line-height:1.65;color:var(--muted)}
     const today = new Date().toDateString();
     // d.users könnte undefined sein wenn Bot leeres data zurückgibt → Object.entries(undefined) wäre crash.
     const adminIds = (Array.isArray(d._adminIds) ? d._adminIds.map(Number) : Object.entries(d.users || {}).filter(([,u])=>/admin/i.test(String((u && u.role)||''))).map(([id])=>Number(id)));
+    const _myIsAdmin = adminIds.includes(Number(myUid));
     // 👑🥈🥉 Top-3 Ranking: gold (Top-1), silber (Top-2), bronze (Top-3).
     // Wird ÜBERALL angezeigt wo der Username gerendert wird (Posts, Kommentare, Liker, Stories etc).
     const _top3 = getTop3Uids(d, adminIds);
@@ -5375,6 +5376,37 @@ p{line-height:1.65;color:var(--muted)}
         const body = await parseBody(req);
         const result = await postBot('/delete-post-api', { uid: myUid, timestamp: body.timestamp });
         return json({ok: result?.ok === true, error: result?.error || null});
+    }
+
+    // Admin (oder Owner) löscht einen Reel-Link aus dem Feed.
+    if (path === '/api/delete-link' && req.method === 'POST') {
+        const body = await parseBody(req);
+        const linkId = String(body.linkId || '').trim();
+        if (!linkId) return json({ok:false, error:'linkId fehlt'}, 400);
+        const _bd = await fetchBot('/data');
+        if (!_bd) return json({ok:false, error:'Bot offline'}, 502);
+        const link = _bd.links?.[linkId];
+        if (!link) return json({ok:false, error:'Link nicht gefunden'}, 404);
+        const _adminIds = Array.isArray(_bd._adminIds) ? _bd._adminIds.map(Number) : [];
+        const isAdmin = _adminIds.includes(Number(myUid));
+        const isOwner = String(link.user_id) === String(myUid);
+        if (!isAdmin && !isOwner) return json({ok:false, error:'Nur Admin oder Poster darf löschen'}, 403);
+        // Bot's /delete-link Bridge-Endpoint aufrufen (DELETE_LINK macht TG-Cleanup + d.links delete)
+        try {
+            const url = (process.env.MAINBOT_URL || '').replace(/\/$/, '') + '/delete-link?id=' + encodeURIComponent(linkId);
+            const lib = url.startsWith('https') ? https : http;
+            const u = new URL(url);
+            await new Promise((resolve) => {
+                const req2 = lib.request({hostname:u.hostname, port:u.port||(url.startsWith('https')?443:80), path:u.pathname+u.search, method:'GET', headers:{'x-bridge-secret': BRIDGE_SECRET}}, (res2) => {
+                    res2.on('data',()=>{}); res2.on('end',resolve);
+                });
+                req2.on('error', resolve);
+                req2.setTimeout(5000, () => { req2.destroy(); resolve(); });
+                req2.end();
+            });
+        } catch(e) {}
+        refreshDataCache();
+        return json({ok:true});
     }
 
     if (path === '/api/delete-thread-msg' && req.method === 'POST') {
@@ -5671,7 +5703,10 @@ p{line-height:1.65;color:var(--muted)}
 // Category badge + timestamp row
 '  <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px 0">\n'+
 (isNewForUser ? '    <span class="post-category-label" style="background:linear-gradient(135deg,var(--accent),var(--accent2))">📸 Neuer Link</span>\n' : '    <span></span>\n')+
-'    <span class="post-time">'+new Date(link.timestamp).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})+'</span>\n'+
+'    <div style="display:flex;align-items:center;gap:8px">\n'+
+'      <span class="post-time">'+new Date(link.timestamp).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})+'</span>\n'+
+((_myIsAdmin || String(link.user_id) === String(myUid)) ? '      <button onclick=\'adminDelLink("'+msgId+'",this)\' title="Link löschen" style="background:none;border:none;color:#ef4444;font-size:15px;cursor:pointer;padding:0 0 0 4px;line-height:1">🗑️</button>\n' : '')+
+'    </div>\n'+
 '  </div>\n'+
 // Post header
 '  <div class="post-header" style="padding-top:8px">\n'+
@@ -5855,6 +5890,24 @@ ${tab==='engagement' ? `<div style="padding:12px 16px 4px">
 </div>` : ''}
 ${postsHtml}
 <script>
+async function adminDelLink(linkId, btn){
+    if(!confirm('Diesen Link wirklich für ALLE löschen? Wird auch aus Telegram-Gruppe + Kommentaren entfernt.')) return;
+    if(btn){ btn.disabled=true; btn.textContent='⏳'; }
+    try{
+        const r = await fetch('/api/delete-link',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({linkId})});
+        const j = await r.json();
+        if(j.ok){
+            // Post-Card aus DOM ausfaden + entfernen
+            const card = document.getElementById('post-'+linkId);
+            if(card){ card.style.transition='all .3s ease'; card.style.opacity='0'; card.style.transform='scale(0.96)'; setTimeout(()=>card.remove(),300); }
+            toast('🗑️ Link gelöscht');
+        } else {
+            if(btn){ btn.disabled=false; btn.textContent='🗑️'; }
+            toast('❌ '+(j.error||'Fehler'));
+        }
+    }catch(e){ if(btn){btn.disabled=false;btn.textContent='🗑️';} toast('❌ Netzwerkfehler'); }
+}
+
 async function likePost(msgId, btn) {
     // Already-liked Check zuerst — sonst kriegt User '⚠️ erst Link besuchen' wenn
     // er auf einen schon gelikten Post tappt nachdem localStorage gecleared wurde.
