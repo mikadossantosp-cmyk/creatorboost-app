@@ -1065,107 +1065,37 @@ ${session ? `
   </div>
 </div>
 
-<!-- ─── Welcome-Briefing Modal (zeigt sich beim ersten Login bis 'Verstanden' geklickt) ─── -->
-<style>
-.brief-overlay{position:fixed;inset:0;z-index:99990;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(0,0,0,0.85);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);font-family:'Inter',-apple-system,sans-serif;animation:brief-fade .35s ease}
-.brief-overlay.show{display:flex}
-@keyframes brief-fade{from{opacity:0}to{opacity:1}}
-.brief-card{max-width:440px;width:100%;background:linear-gradient(180deg,rgba(28,28,30,0.98),rgba(15,15,17,0.98));border:1px solid rgba(212,175,55,0.45);border-radius:22px;padding:24px;box-shadow:0 40px 100px rgba(0,0,0,0.85),0 0 0 1px rgba(255,255,255,0.04),0 0 60px rgba(212,175,55,0.32);max-height:90vh;overflow-y:auto;animation:brief-rise .45s cubic-bezier(.16,1,.3,1)}
-@keyframes brief-rise{from{opacity:0;transform:translateY(20px) scale(0.97)}to{opacity:1;transform:translateY(0) scale(1)}}
-.brief-eyebrow{display:inline-flex;align-items:center;gap:7px;font-size:10.5px;font-weight:700;color:#d4af37;text-transform:uppercase;letter-spacing:2.2px;background:rgba(212,175,55,0.10);border:1px solid rgba(212,175,55,0.28);padding:5px 12px;border-radius:99px;margin-bottom:14px}
-.brief-h{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;letter-spacing:-0.6px;color:#fff;margin-bottom:8px;line-height:1.2;background:linear-gradient(180deg,#fff,#d4af37);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.brief-sub{font-size:13.5px;color:rgba(255,255,255,0.72);line-height:1.6;margin-bottom:20px}
-.brief-list{display:flex;flex-direction:column;gap:10px;margin-bottom:22px}
-.brief-item{display:flex;align-items:flex-start;gap:12px;padding:14px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:14px;transition:all .15s}
-.brief-item:hover{border-color:rgba(212,175,55,0.3)}
-.brief-item.highlight{border-color:rgba(212,175,55,0.45);background:linear-gradient(135deg,rgba(212,175,55,0.10),rgba(212,175,55,0.03))}
-.brief-icon{width:40px;height:40px;border-radius:11px;background:linear-gradient(135deg,rgba(212,175,55,0.15),rgba(212,175,55,0.04));border:1px solid rgba(212,175,55,0.22);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
-.brief-body{flex:1;min-width:0}
-.brief-t{font-size:14px;font-weight:700;letter-spacing:-0.2px;margin-bottom:3px;color:#fff}
-.brief-t .star{color:#d4af37;margin-left:5px}
-.brief-s{font-size:12.5px;color:rgba(255,255,255,0.65);line-height:1.55}
-.brief-confirm{background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;border:none;border-radius:14px;padding:15px;font-size:15px;font-weight:800;width:100%;cursor:pointer;font-family:inherit;letter-spacing:0.2px;box-shadow:0 10px 28px -8px rgba(212,175,55,0.7),inset 0 1px 0 rgba(255,255,255,0.5);transition:all .15s}
-.brief-confirm:hover{transform:translateY(-1px);box-shadow:0 14px 32px -8px rgba(212,175,55,0.85),inset 0 1px 0 rgba(255,255,255,0.5)}
-.brief-confirm:disabled{opacity:0.55;cursor:not-allowed;transform:none}
-</style>
-<div class="brief-overlay" id="brief-overlay" role="dialog" aria-modal="true" aria-labelledby="brief-h">
-  <div class="brief-card">
-    <div class="brief-eyebrow">👋 Willkommen in CreatorX</div>
-    <div class="brief-h" id="brief-h">So funktioniert's.</div>
-    <div class="brief-sub">Wir haben <b style="color:#fff">2 Telegram-Gruppen</b> und <b style="color:#d4af37">eine App</b> (in der du gerade bist 😉):</div>
-    <div class="brief-list">
-      <div class="brief-item">
-        <div class="brief-icon">🔗</div>
-        <div class="brief-body">
-          <div class="brief-t">Link-Gruppe (Telegram)</div>
-          <div class="brief-s">Hier postest du täglich deinen Insta-Reel-Link. Andere Creator liken zurück. Bot trackt alles.</div>
-        </div>
-      </div>
-      <div class="brief-item">
-        <div class="brief-icon">💬</div>
-        <div class="brief-body">
-          <div class="brief-t">Chat-Gruppe (Telegram)</div>
-          <div class="brief-s">Community-Chat, Tipps, Fragen, Engagement-Pflicht-Threads.</div>
-        </div>
-      </div>
-      <div class="brief-item highlight">
-        <div class="brief-icon">📱</div>
-        <div class="brief-body">
-          <div class="brief-t">Die App<span class="star">⭐</span></div>
-          <div class="brief-s"><b style="color:#d4af37">Vereinfacht alles — nutze am besten die.</b><br>Feed, Stories, Profil, Ranking (👑 / 🥈 / 🥉 für Top-3), Messages, Sub-Account, Einstellungen — alles an einem Ort.</div>
-        </div>
-      </div>
-    </div>
-    <button class="brief-confirm" id="brief-confirm" onclick="window.cbDismissBriefing()">✓ Verstanden — los geht's</button>
-  </div>
-</div>
-<script>
-(function(){
-  // Briefing-Modal: zeigt sich beim ersten Login (server-state) bis 'Verstanden' geklickt.
-  // Tour-Mode (active sessionStorage) skippt das Modal — sonst Konflikt.
-  try{ if(sessionStorage.getItem('cb_tour_active') === '1') return; }catch(e){}
-  // Schnellcheck via localStorage als Fast-Skip (Server bestätigt später).
-  var seenLocal = false;
-  try{ seenLocal = localStorage.getItem('cb_briefing_seen') === '1'; }catch(e){}
-  if(seenLocal) return;
-  // Server-Status holen: u.appBriefingSeen?
-  fetch('/api/briefing-status', {cache:'no-store'}).then(function(r){return r.json();}).then(function(j){
-    if(j && j.seen){
-      try{ localStorage.setItem('cb_briefing_seen','1'); }catch(e){}
-      return;
-    }
-    // Anzeigen
-    var ov = document.getElementById('brief-overlay');
-    if(ov) ov.classList.add('show');
-  }).catch(function(){
-    // Auch bei Fehler zeigen — fail-open ist hier ok (Briefing ist informativ).
-    var ov = document.getElementById('brief-overlay');
-    if(ov) ov.classList.add('show');
-  });
-  window.cbDismissBriefing = function(){
-    var btn = document.getElementById('brief-confirm');
-    if(btn){ btn.disabled = true; btn.textContent = '✓ Speichere…'; }
-    try{ localStorage.setItem('cb_briefing_seen','1'); }catch(e){}
-    fetch('/api/dismiss-briefing', {method:'POST'}).catch(function(){}).finally(function(){
-      var ov = document.getElementById('brief-overlay');
-      if(ov) ov.classList.remove('show');
-    });
-  };
-})();
-</script>
 <script>
 (function(){
   // Multi-Page Tour: läuft über mehrere Seiten (Feed → Explore → Profil → Einstellungen).
   // Active-State + Index in sessionStorage damit Navigation funktioniert.
+  // Server-State (u.appBriefingSeen) entscheidet ob Tour beim ersten Login automatisch startet.
   var force = /[?&]tour=1/.test(location.search);
-  var done = false, active = false;
-  try{ done = localStorage.getItem('cb_tour_done') === '1'; }catch(e){}
+  var continueMode = /[?&]tour=continue/.test(location.search);
+  var active = false;
   try{ active = sessionStorage.getItem('cb_tour_active') === '1'; }catch(e){}
+
+  // Force-Mode (?tour=1) → reset & starte
   if(force){
-    try{ localStorage.removeItem('cb_tour_done'); sessionStorage.setItem('cb_tour_active','1'); sessionStorage.setItem('cb_tour_idx','0'); }catch(e){}
-    active = true; done = false;
+    try{ sessionStorage.setItem('cb_tour_active','1'); sessionStorage.setItem('cb_tour_idx','0'); }catch(e){}
+    active = true;
   }
-  if(!active || done) return;
+
+  // Wenn Tour aktiv (force oder mid-page-jump) → direkt weiter mit dem normalen Flow.
+  if(active){
+    runTour();
+  } else if(/^\/feed/.test(location.pathname) && !continueMode){
+    // Auto-Start beim ersten Login (auf /feed): server fragen ob u.appBriefingSeen.
+    fetch('/api/briefing-status', {cache:'no-store'}).then(function(r){return r.json();}).then(function(j){
+      if(j && j.seen) return; // schon gesehen → nicht starten
+      try{ sessionStorage.setItem('cb_tour_active','1'); sessionStorage.setItem('cb_tour_idx','0'); }catch(e){}
+      runTour();
+    }).catch(function(){ /* fail-quiet — keine Tour bei Netzwerkfehler */ });
+  }
+  if(!active && !/^\/feed/.test(location.pathname)) return;
+  if(!active && continueMode) return; // andere Page mit ?tour=continue aber kein active flag → nicht erneut starten
+  function runTour(){
+  // ── runTour Body ─────────────────────────────────────────────────────────
 
   var STEPS = [
     // ── FEED PAGE ────────────────────────────────────────────────────────
@@ -1440,14 +1370,16 @@ ${session ? `
   };
   window.cbTourSkip = function(){
     document.getElementById('tour-ov').classList.remove('show');
-    try{ localStorage.setItem('cb_tour_done','1'); sessionStorage.removeItem('cb_tour_active'); sessionStorage.removeItem('cb_tour_idx'); }catch(e){}
+    try{ sessionStorage.removeItem('cb_tour_active'); sessionStorage.removeItem('cb_tour_idx'); }catch(e){}
+    // Server-State setzen damit beim nächsten Login auf KEINEM Device wieder gestartet wird.
+    fetch('/api/dismiss-briefing', {method:'POST'}).catch(function(){});
   };
   window.cbTourFinish = function(){
     fireConfetti();
     setTimeout(window.cbTourSkip, 600);
   };
   window.cbTourRestart = function(){
-    try{ sessionStorage.setItem('cb_tour_active','1'); sessionStorage.setItem('cb_tour_idx','0'); localStorage.removeItem('cb_tour_done'); }catch(e){}
+    try{ sessionStorage.setItem('cb_tour_active','1'); sessionStorage.setItem('cb_tour_idx','0'); }catch(e){}
     var first = STEPS[0];
     var wipe = document.getElementById('tour-pagewipe');
     if(wipe) wipe.classList.add('show');
@@ -1489,6 +1421,7 @@ ${session ? `
     }
     window.addEventListener('resize', function(){ if(idx < STEPS.length) show(); }, {passive:true});
   }, 600);
+  } // ─── ENDE runTour ───
 })();
 </script>
 
