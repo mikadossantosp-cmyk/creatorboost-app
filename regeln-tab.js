@@ -223,17 +223,23 @@ module.exports = `
   const nav = document.getElementById('regeln-tabs');
   if (!nav) return;
   const buttons = nav.querySelectorAll('button[data-target]');
-  buttons.forEach(btn => {
-    btn.addEventListener('click', () => {
-      const target = btn.getAttribute('data-target');
-      buttons.forEach(b => b.classList.toggle('active', b === btn));
-      document.querySelectorAll('.regeln-section').forEach(s => {
-        s.classList.toggle('active', s.id === target);
-      });
-      // Scroll Tab in Sicht falls abgeschnitten
-      btn.scrollIntoView({ behavior:'smooth', inline:'center', block:'nearest' });
+  function activate(target) {
+    buttons.forEach(b => b.classList.toggle('active', b.getAttribute('data-target') === target));
+    document.querySelectorAll('.regeln-section').forEach(s => {
+      s.classList.toggle('active', s.id === target);
     });
+    const btn = nav.querySelector('button[data-target="' + target + '"]');
+    if (btn) btn.scrollIntoView({ behavior:'smooth', inline:'center', block:'nearest' });
+  }
+  buttons.forEach(btn => {
+    btn.addEventListener('click', () => activate(btn.getAttribute('data-target')));
   });
+  // Beim Laden URL-Hash respektieren — z.B. /explore?tab=regeln#r-superlinks
+  // soll direkt auf den Superlinks-Subtab springen statt auf dem Default zu bleiben.
+  const hash = (location.hash || '').replace(/^#/, '');
+  if (hash && nav.querySelector('button[data-target="' + hash + '"]')) {
+    activate(hash);
+  }
 })();
 <\/script>
 `;
