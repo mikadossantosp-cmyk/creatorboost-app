@@ -4193,9 +4193,26 @@ p{line-height:1.65;color:var(--muted)}
         if (body.twitter !== undefined) updateData.twitter = body.twitter;
         if (body.instagram !== undefined) updateData.instagram = body.instagram;
         if (body.banner !== undefined) updateData.banner = body.banner;
+        // Email für Magic-Link-Login. Format-Validation auf Bot-Seite, Eindeutigkeits-Check ebenso.
+        if (body.email !== undefined) {
+            const em = String(body.email||'').toLowerCase().trim();
+            if (em === '' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) {
+                updateData.email = em.slice(0, 200);
+            } else {
+                return json({ok:false, error:'Ungültige Email-Adresse'}, 400);
+            }
+        }
         const updateResult = await postBot('/update-profile-api', updateData);
         if (updateResult && updateResult.ok === false) {
             return json({ok:false, error: updateResult.error || 'Profile-Update fehlgeschlagen'});
+        }
+        // Wenn Email gesetzt war aber im Bot nicht ankam (z.B. Eindeutigkeits-Konflikt) → Fehler zurückgeben.
+        if (body.email !== undefined && updateData.email && updateData.email !== '') {
+            const _bd = await fetchBot('/data');
+            const _saved = _bd?.users?.[myUid]?.email || '';
+            if (String(_saved).toLowerCase() !== updateData.email) {
+                return json({ok:false, error:'Diese Email ist bereits einem anderen Account zugeordnet.'}, 409);
+            }
         }
         if (session) {
             if (body.theme) session.theme = body.theme;
@@ -7835,6 +7852,11 @@ async function toggleFollow(uid,btn){
   <input type="text" class="form-input" id="inp-spitzname" placeholder="Dein Spitzname" maxlength="30" value="${u.spitzname||''}">
 </div>
 <div style="padding:16px;border-bottom:1px solid var(--border2)">
+  <div class="form-label">📧 Email <span style="font-size:10px;color:var(--muted);font-weight:500">(für Magic-Link-Login)</span></div>
+  <input type="email" class="form-input" id="inp-email" placeholder="deine@email.de" maxlength="200" value="${u.email||''}" autocapitalize="none" spellcheck="false">
+  <div class="form-hint">Wenn gesetzt, kannst du dich auch ohne Telegram über die Email einloggen.</div>
+</div>
+<div style="padding:16px;border-bottom:1px solid var(--border2)">
   <div class="form-label">Instagram</div>
   <div style="position:relative">
     <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:14px;pointer-events:none">@</span>
@@ -8017,7 +8039,8 @@ async function saveProfile() {
         const nische = document.getElementById('inp-nische')?.value?.trim()||'';
         const website = document.getElementById('inp-website')?.value?.trim()||'';
         const instagram = (document.getElementById('inp-instagram')?.value||'').replace(/^@/,'').trim();
-        const payload = {bio, spitzname, accentColor: selectedAccent, theme, nische, website, instagram};
+        const email = (document.getElementById('inp-email')?.value||'').toLowerCase().trim();
+        const payload = {bio, spitzname, accentColor: selectedAccent, theme, nische, website, instagram, email};
         if (selectedBanner) payload.banner = selectedBanner;
         const res = await fetch('/api/save-profile', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
         const data = await res.json();
