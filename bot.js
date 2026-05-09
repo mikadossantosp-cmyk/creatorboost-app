@@ -1028,28 +1028,67 @@ ${session ? `
 </div>
 <script>
 (function(){
-  // Tour läuft nur auf /feed UND beim ersten Besuch (oder ?tour=1).
-  if(!/^\\/feed/.test(location.pathname)) return;
+  // Multi-Page Tour: läuft über mehrere Seiten (Feed → Explore → Profil → Einstellungen).
+  // Active-State + Index in sessionStorage damit Navigation funktioniert.
   var force = /[?&]tour=1/.test(location.search);
-  var done = false;
+  var done = false, active = false;
   try{ done = localStorage.getItem('cb_tour_done') === '1'; }catch(e){}
-  if(done && !force) return;
+  try{ active = sessionStorage.getItem('cb_tour_active') === '1'; }catch(e){}
+  if(force){
+    try{ localStorage.removeItem('cb_tour_done'); sessionStorage.setItem('cb_tour_active','1'); sessionStorage.setItem('cb_tour_idx','0'); }catch(e){}
+    active = true; done = false;
+  }
+  if(!active || done) return;
 
   var STEPS = [
-    // ── Topbar / Stories / Tabs ──
-    {q:'[data-tour="stories"]',                    eyebrow:'Stories oben',        h:'📷 Aktive Creator von heute',             s:'Hier siehst du Creator die heute schon gepostet haben. Tippe eine Story-Bubble um direkt aufs Profil zu kommen.'},
-    {q:'[data-tour="feed-tabs"]',                  eyebrow:'Feed-Filter',         h:'📅 Heute · 🕐 Älter · ⭐ Engagement',     s:'Wechsle zwischen heutigen Posts, älteren Posts und der Engagement-Pflicht-Liste (Superlinks die du noch liken musst).'},
-    // ── Erster Post: Like-Button + Comments ──
-    {q:'.post.fade-up',                            eyebrow:'Ein Post',            h:'🎬 So sieht ein geteilter Reel aus',     s:'Jeder Post zeigt das Insta-Reel, den Creator, Like-Count, Kommentare. Tippe das Reel-Preview um den Reel auf Insta zu öffnen — VORHER musst du ihn besuchen, dann kannst du liken.'},
-    {q:'.post.fade-up .post-action-btn',           eyebrow:'Like-Button',         h:'❤️ So likest du',                          s:'Tippe auf Like — du gibst XP an den Creator und bekommst selbst XP für dein Engagement. Vorher musst du den Reel auf Insta öffnen (Visit-before-Like).'},
-    // ── Bottom-Nav ──
-    {q:'[data-tour="feed"]',                       eyebrow:'Bottom-Nav',          h:'🏠 Feed (du bist hier)',                  s:'Der Haupt-Feed mit allen heutigen Reel-Posts.'},
-    {q:'[data-tour="post"]',                       eyebrow:'Posten',              h:'➕ Hier postest du deinen Reel',          s:'Tippe + um deinen Insta-Reel-Link zu teilen. Andere Creator sehen ihn sofort und engagen mit dir.'},
-    {q:'[data-tour="explore"]',                    eyebrow:'Hub-Bereich',         h:'🧭 News, Ranking, Tipps &amp; Shop',      s:'Newsletter, Creator-Ranking (👑/🥈/🥉), App-Tipps, Regeln und Diamanten-Shop.'},
-    {q:'[data-tour="messages"]',                   eyebrow:'Nachrichten',         h:'💬 Direktnachrichten &amp; Threads',     s:'Privatchats mit anderen Creatorn + Gruppen-Threads (z.B. der Engagement-Thread für tägliche Like-Runden).'},
-    {q:'[data-tour="profile"]',                    eyebrow:'Dein Profil',         h:'👤 Profil, Einstellungen &amp; Sub-Account', s:'Banner, Bio, deine Posts, XP-Stats. Über den Stift (Bearbeiten) oder ⚙️ kommst du in die Einstellungen — Email, Passwort, Spitzname, Bio, Pinned-Reel.'}
+    // ── FEED PAGE ────────────────────────────────────────────────────────
+    {page:'/feed', q:'[data-tour="stories"]',                    eyebrow:'Feed · Stories',     h:'📷 Aktive Creator von heute',           s:'Hier siehst du Creator die heute schon gepostet haben. Tippe eine Story-Bubble um auf ihr Profil zu kommen.'},
+    {page:'/feed', q:'[data-tour="feed-tabs"]',                  eyebrow:'Feed · Filter',      h:'📅 Heute · 🕐 Älter · ⭐ Engagement',   s:'Wechsle zwischen heutigen Posts, älteren Posts und der Engagement-Pflicht-Liste.'},
+    {page:'/feed', q:'.post.fade-up',                            eyebrow:'Feed · Post',        h:'🎬 So sieht ein Reel-Post aus',         s:'Tippe das Reel-Preview um es auf Insta zu öffnen — VORHER musst du ihn besuchen, dann kannst du liken (Visit-before-Like).'},
+    {page:'/feed', q:'.post.fade-up .post-action-btn',           eyebrow:'Feed · Like',        h:'❤️ So likest du',                        s:'Tippe Like — du gibst XP an den Creator und bekommst selbst XP. Beidseitige Unterstützung als System.'},
+    {page:'/feed', q:'[data-tour="feed"]',                       eyebrow:'Bottom-Nav',         h:'🏠 Feed (du bist hier)',                s:'Der Haupt-Feed mit allen heutigen Reel-Posts.'},
+    {page:'/feed', q:'[data-tour="post"]',                       eyebrow:'Bottom-Nav',         h:'➕ Hier postest du deinen Reel',        s:'Tippe + um deinen Insta-Reel-Link zu teilen. Andere Creator engagen sofort mit dir.'},
+    // ── EXPLORE PAGE ─────────────────────────────────────────────────────
+    {page:'/explore', q:'.explore-tabs',                         eyebrow:'Explore · Tabs',     h:'🧭 News, Ranking, Tipps &amp; Shop',    s:'Wir sind jetzt im Hub. Hier findest du alle Übersichts-Bereiche: Newsletter, Ranking, Tipps, Regeln und Diamanten-Shop.'},
+    {page:'/explore', q:'.action-grid',                          eyebrow:'Explore · Aktionen', h:'🚀 Was möchtest du tun?',                s:'Schnell-Zugriff auf Ranking, Tipps, Regeln, Shop und Newsletter — alles auf einen Blick.'},
+    // ── MESSAGES PAGE ────────────────────────────────────────────────────
+    {page:'/nachrichten', q:'[data-tour="messages"]',            eyebrow:'Bottom-Nav',         h:'💬 Direktnachrichten &amp; Threads',    s:'Wir sind jetzt im Nachrichten-Bereich. Privatchats + Gruppen-Threads (z.B. der Engagement-Thread für tägliche Like-Runden).'},
+    // ── PROFIL PAGE ──────────────────────────────────────────────────────
+    {page:'/profil', q:'.profile-avatar-wrap',                   eyebrow:'Profil · Avatar',    h:'👤 Dein Profil-Avatar',                  s:'Banner + Profilbild + Online-Status. Wenn du Top-1 bist, schwebt eine 👑 darüber.'},
+    {page:'/profil', q:'.profile-stats',                         eyebrow:'Profil · Stats',     h:'📊 XP, Links, Followers, Diamanten',     s:'Deine Live-Stats: XP-Stand, Anzahl Links, Followers, Streak und 💎 Diamanten.'},
+    {page:'/profil', q:'.acc-switcher',                          eyebrow:'Profil · Switcher',  h:'🔄 Account &amp; Sub-Account',          s:'Hauptaccount + optional ein Sub-Account. Schalte hier zwischen ihnen um (oder erstelle einen neuen).'},
+    {page:'/profil', q:'a[href="/einstellungen"]',               eyebrow:'Profil · Bearbeiten',h:'✏️ Hier kommst du in Einstellungen',     s:'Über diesen Stift kommst du zu allen Einstellungen — Profil, Email, Passwort, Spitzname, Pinned-Reel.'},
+    // ── EINSTELLUNGEN PAGE ───────────────────────────────────────────────
+    {page:'/einstellungen', q:'#pic-preview',                    eyebrow:'Einstellungen · Bild',h:'📷 Profilbild ändern',                   s:'Tippe "📷 Foto hochladen" um dein Profilbild zu setzen. Wird auch im Insta-Avatar verwendet wenn du keinen Insta-Handle hast.'},
+    {page:'/einstellungen', q:'#inp-bio',                        eyebrow:'Einstellungen · Bio',h:'✍️ Bio &amp; Spitzname',                 s:'Schreib was über dich. Spitzname wird statt deines echten Namens angezeigt.'},
+    {page:'/einstellungen', q:'#inp-email',                      eyebrow:'Einstellungen · Email',h:'📧 Email für Magic-Link Login',         s:'Mit Email gesetzt kannst du dich auch ohne Telegram einloggen — über den Email-Tab auf der Login-Page.'},
+    {page:'/einstellungen', q:'#inp-instagram',                  eyebrow:'Einstellungen · Insta',h:'📸 Instagram-Handle',                    s:'Pflicht zum Posten/Liken. Wird für Engagement-Tracking gebraucht.'}
   ];
   var idx = 0;
+  try{ idx = parseInt(sessionStorage.getItem('cb_tour_idx'),10) || 0; }catch(e){}
+
+  function pageMatches(stepPage){
+    if(!stepPage) return true;
+    var p = location.pathname;
+    if(p === stepPage) return true;
+    // /feed?tab=heute, /feed/anything etc. zählt als /feed
+    if(p === stepPage + '/' || p.indexOf(stepPage + '/') === 0) return true;
+    if(stepPage === '/feed' && (p === '/' || p === '')) return false; // niemals match auf root
+    return false;
+  }
+
+  // Skip alle Steps deren Target auf der aktuellen Seite NICHT existiert (z.B. leerer Feed: kein .post.fade-up)
+  // Bewege idx vorwärts bis ein Step für die aktuelle Page passt.
+  while(idx < STEPS.length && !pageMatches(STEPS[idx].page)){
+    // Step ist für eine andere Seite — wir müssen dorthin navigieren, aber nur wenn wir noch nicht durchgelaufen sind.
+    break;
+  }
+  // Wenn aktueller Step nicht zur Page passt → automatisch dorthin navigieren.
+  if(idx < STEPS.length && !pageMatches(STEPS[idx].page)){
+    try{ sessionStorage.setItem('cb_tour_idx', String(idx)); }catch(e){}
+    location.href = STEPS[idx].page + '?tour=continue';
+    return;
+  }
 
   function $(s){return document.querySelector(s);}
   function getTarget(step){
@@ -1103,9 +1142,16 @@ ${session ? `
   function show(){
     var step = STEPS[idx];
     if(!step){ window.cbTourSkip(); return; }
+    // Falls aktuelle Page nicht zum Step passt (z.B. via 'Zurück'-Button gelandet) → navigieren.
+    if(!pageMatches(step.page)){
+      try{ sessionStorage.setItem('cb_tour_idx', String(idx)); sessionStorage.setItem('cb_tour_active','1'); }catch(e){}
+      location.href = step.page + '?tour=continue';
+      return;
+    }
     var t = getTarget(step);
-    if(!t){ // Target fehlt → Skip (z.B. wenn Feed leer ist und kein Post vorhanden)
+    if(!t){ // Target fehlt auf der Page → diesen Step skippen
       idx++;
+      try{ sessionStorage.setItem('cb_tour_idx', String(idx)); }catch(e){}
       return show();
     }
     // Bottom-Nav Targets: Page nach unten scrollen damit es sichtbar ist.
@@ -1135,11 +1181,19 @@ ${session ? `
       window.cbTourSkip();
       return;
     }
+    var next = STEPS[idx];
+    // Wenn nächster Step auf anderer Page → speichern + navigieren.
+    if(!pageMatches(next.page)){
+      try{ sessionStorage.setItem('cb_tour_idx', String(idx)); sessionStorage.setItem('cb_tour_active','1'); }catch(e){}
+      location.href = next.page + '?tour=continue';
+      return;
+    }
+    try{ sessionStorage.setItem('cb_tour_idx', String(idx)); }catch(e){}
     show();
   };
   window.cbTourSkip = function(){
     document.getElementById('tour-ov').classList.remove('show');
-    try{ localStorage.setItem('cb_tour_done','1'); }catch(e){}
+    try{ localStorage.setItem('cb_tour_done','1'); sessionStorage.removeItem('cb_tour_active'); sessionStorage.removeItem('cb_tour_idx'); }catch(e){}
   };
 
   // Trigger nach kurzem Delay damit die Page-Render fertig ist.
