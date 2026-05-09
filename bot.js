@@ -2242,101 +2242,235 @@ self.addEventListener('notificationclick',e=>{
         res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','Pragma':'no-cache','Expires':'0','X-App-Version':'20'});
         return res.end(`<!DOCTYPE html><html lang="de"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>CreatorX</title>
+<title>CreatorX — Die Creator-Engagement-Engine</title>
+<meta name="description" content="Wachse mit echtem Engagement von echten Creatorn. Likes, Kommentare, Shares — täglich. Beitreten, posten, ranken.">
 <link rel="manifest" href="/manifest.json">
 <link rel="icon" type="image/png" href="/icon-512.png?v=26">
 <link rel="apple-touch-icon" href="/icon-512.png?v=26">
-<meta name="theme-color" content="#ffffff">
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<meta name="theme-color" content="#000000">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100vh}
-.bg{position:fixed;inset:0;background:radial-gradient(ellipse at 50% 0%,rgba(212,175,55,.2) 0%,transparent 60%),#000;z-index:0}
-.hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;position:relative;padding-bottom:40px}
-.logo-wrap{position:relative;z-index:1;text-align:center;padding:48px 24px 16px}
-.logo-title{font-family:'Syne',sans-serif;font-size:32px;font-weight:800;background:linear-gradient(135deg,#d4af37,#fff 50%,#d4af37);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-top:12px}
-.logo-sub{font-size:12px;color:rgba(255,255,255,.4);letter-spacing:3px;text-transform:uppercase;margin-top:4px}
-.features{position:relative;z-index:1;padding:8px 20px;display:flex;flex-direction:column;gap:10px;width:100%;max-width:420px}
-.feat{background:rgba(255,255,255,.04);border:1px solid rgba(212,175,55,.2);border-radius:14px;padding:14px;display:flex;align-items:center;gap:12px}
-.feat-icon{font-size:24px;width:44px;height:44px;background:rgba(212,175,55,.1);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.feat-t{font-size:13px;font-weight:600}
-.feat-s{font-size:11px;color:rgba(255,255,255,.4);margin-top:2px}
-.tg-wrap{position:relative;z-index:1;width:100%;max-width:420px;padding:16px 20px 0}
-.tg-btn{display:flex;align-items:center;justify-content:center;gap:10px;background:#0088cc;color:#fff;padding:14px;border-radius:14px;font-size:14px;font-weight:600;text-decoration:none}
-.tg-hint{font-size:11px;color:rgba(255,255,255,.35);text-align:center;margin-top:8px}
-.login-wrap{position:relative;z-index:1;width:100%;max-width:420px;padding:16px 20px 0}
-.divider{display:flex;align-items:center;gap:10px;margin-bottom:14px}
-.divider::before,.divider::after{content:'';flex:1;height:1px;background:rgba(255,255,255,.1)}
-.divider span{font-size:11px;color:rgba(255,255,255,.3)}
-.code-hint{font-size:12px;color:rgba(255,255,255,.4);text-align:center;margin-bottom:10px}
-.code-input{width:100%;background:rgba(255,255,255,.06);border:1.5px solid rgba(212,175,55,.3);color:#fff;border-radius:14px;padding:16px;font-size:18px;font-family:monospace;text-align:center;outline:none;letter-spacing:4px;transition:border-color .2s}
-.code-input:focus{border-color:#d4af37}
-.login-btn{background:linear-gradient(135deg,#d4af37,#b8960c);color:#000;border:none;border-radius:14px;padding:15px;font-size:15px;font-weight:700;width:100%;cursor:pointer;margin-top:10px;font-family:'DM Sans',sans-serif}
-.login-btn:disabled{opacity:.55;cursor:not-allowed}
-.tabs{display:flex;gap:6px;margin-bottom:14px;background:rgba(255,255,255,.04);border-radius:12px;padding:4px}
-.tab{flex:1;padding:10px;text-align:center;font-size:13px;font-weight:600;color:rgba(255,255,255,.55);border-radius:8px;cursor:pointer;border:none;background:transparent;font-family:'DM Sans',sans-serif;transition:all .15s}
-.tab.active{background:rgba(212,175,55,.15);color:#d4af37}
-.email-input{width:100%;background:rgba(255,255,255,.06);border:1.5px solid rgba(212,175,55,.3);color:#fff;border-radius:14px;padding:14px 16px;font-size:15px;outline:none;transition:border-color .2s;font-family:'DM Sans',sans-serif}
-.email-input:focus{border-color:#d4af37}
-.email-hint{font-size:11px;color:rgba(255,255,255,.4);text-align:center;margin-top:8px;line-height:1.5}
-.email-msg{padding:10px 14px;margin-bottom:10px;font-size:13px;border-radius:12px;text-align:center;display:none}
-.email-msg.show{display:block}
-.email-msg.ok{background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.4);color:#22c55e}
-.email-msg.err{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.4);color:#ef4444}
-.admin-pb{position:sticky;top:0;left:0;right:0;background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;padding:10px 14px;font-size:12px;font-weight:700;text-align:center;z-index:99;letter-spacing:.3px}
-.admin-pb a{color:rgba(255,255,255,.85);text-decoration:underline}
+:root{
+  --gold:#d4af37; --gold-dim:#a3852a; --silver:#c0c0c0;
+  --bg:#000; --bg-soft:#0a0a0a; --bg-card:rgba(255,255,255,0.025); --border:rgba(255,255,255,0.08); --border-strong:rgba(212,175,55,0.25);
+  --text:#fff; --muted:rgba(255,255,255,0.55); --muted-2:rgba(255,255,255,0.38);
+}
+html,body{background:var(--bg);color:var(--text);font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh;overflow-x:hidden}
+a{color:inherit;text-decoration:none}
+
+/* Mesh-gradient background */
+.mesh{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+.mesh::before{content:'';position:absolute;width:80vw;height:80vw;left:-20vw;top:-20vw;background:radial-gradient(circle at center,rgba(212,175,55,0.18) 0%,transparent 55%);filter:blur(40px);animation:meshA 22s ease-in-out infinite alternate}
+.mesh::after{content:'';position:absolute;width:70vw;height:70vw;right:-25vw;bottom:-25vw;background:radial-gradient(circle at center,rgba(167,139,250,0.10) 0%,transparent 55%);filter:blur(40px);animation:meshB 26s ease-in-out infinite alternate}
+@keyframes meshA{0%{transform:translate(0,0) scale(1)}100%{transform:translate(8vw,12vh) scale(1.1)}}
+@keyframes meshB{0%{transform:translate(0,0) scale(1)}100%{transform:translate(-10vw,-8vh) scale(0.95)}}
+.grain{position:fixed;inset:0;z-index:1;pointer-events:none;opacity:0.04;mix-blend-mode:overlay;background-image:repeating-linear-gradient(0deg,#fff 0,#fff 1px,transparent 1px,transparent 3px)}
+
+.shell{position:relative;z-index:2;min-height:100vh;max-width:480px;margin:0 auto;padding:0 20px 80px}
+
+/* Top nav */
+.nav{display:flex;align-items:center;justify-content:space-between;padding:18px 4px 0}
+.nav-brand{display:flex;align-items:center;gap:9px;font-weight:800;font-size:16px;letter-spacing:-0.3px}
+.nav-brand .nav-logo{width:28px;height:28px;border-radius:8px;background:url('/cx-logo-256.png') center/cover no-repeat,#0a0a0a;flex-shrink:0;box-shadow:0 2px 10px rgba(212,175,55,0.25),inset 0 0 0 1px rgba(212,175,55,0.3)}
+.nav-cta{font-size:12px;font-weight:600;color:var(--muted);padding:7px 13px;border:1px solid var(--border);border-radius:99px;transition:all .15s}
+.nav-cta:hover{color:var(--text);border-color:var(--border-strong)}
+
+/* Hero */
+.hero{padding:48px 0 8px;text-align:center}
+.hero-mark{width:108px;height:108px;margin:0 auto 24px;position:relative;border-radius:24px;background:url('/cx-logo.png') center/contain no-repeat,#0a0a0a;box-shadow:0 22px 60px -12px rgba(212,175,55,0.45),0 0 0 1px rgba(212,175,55,0.18),inset 0 0 0 1px rgba(255,255,255,0.05)}
+.hero-mark::after{content:'';position:absolute;inset:-2px;border-radius:26px;background:conic-gradient(from 0deg,transparent,rgba(212,175,55,0.6),transparent 30%);animation:spin 6s linear infinite;z-index:-1;filter:blur(8px)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.hero-eyebrow{display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:600;color:var(--muted);letter-spacing:2px;text-transform:uppercase;background:rgba(255,255,255,0.04);border:1px solid var(--border);padding:6px 12px;border-radius:99px;margin-bottom:18px}
+.hero-eyebrow .dot{width:6px;height:6px;border-radius:50%;background:#22c55e;box-shadow:0 0 10px rgba(34,197,94,0.7);animation:pulse 1.6s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+.hero-h1{font-family:'Syne',sans-serif;font-size:42px;line-height:1.05;font-weight:800;letter-spacing:-1.2px;margin-bottom:14px;background:linear-gradient(180deg,#fff 0%,#d4af37 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero-sub{font-size:15px;line-height:1.6;color:var(--muted);max-width:340px;margin:0 auto 26px}
+.hero-sub b{color:var(--text);font-weight:600}
+
+/* Stats */
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:24px 0 8px}
+.stat{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:14px 8px;text-align:center;backdrop-filter:blur(10px);transition:border-color .2s}
+.stat:hover{border-color:var(--border-strong)}
+.stat-num{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:600;color:var(--text);letter-spacing:-0.5px;line-height:1}
+.stat-num .plus{color:var(--gold);margin-left:1px}
+.stat-lbl{font-size:9.5px;color:var(--muted-2);text-transform:uppercase;letter-spacing:1.5px;margin-top:6px;font-weight:600}
+
+/* Section title */
+.sec-title{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:2.5px;text-transform:uppercase;margin:36px 0 14px;display:flex;align-items:center;gap:10px}
+.sec-title::before{content:'';width:18px;height:1px;background:var(--gold)}
+
+/* Feature grid */
+.feat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.feat{background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:10px;transition:all .2s;position:relative;overflow:hidden}
+.feat:hover{border-color:var(--border-strong);transform:translateY(-2px)}
+.feat::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(212,175,55,0.4),transparent);opacity:0;transition:opacity .2s}
+.feat:hover::before{opacity:1}
+.feat-icon{font-size:22px;width:38px;height:38px;background:linear-gradient(135deg,rgba(212,175,55,0.15),rgba(212,175,55,0.05));border:1px solid rgba(212,175,55,0.2);border-radius:10px;display:flex;align-items:center;justify-content:center}
+.feat-t{font-size:13px;font-weight:700;letter-spacing:-0.2px}
+.feat-s{font-size:11.5px;color:var(--muted);line-height:1.5}
+
+/* Telegram CTA */
+.tg-card{background:linear-gradient(135deg,rgba(0,136,204,0.12),rgba(0,136,204,0.04));border:1px solid rgba(0,136,204,0.25);border-radius:16px;padding:16px;display:flex;align-items:center;gap:12px;margin-top:10px;transition:all .2s}
+.tg-card:hover{border-color:rgba(0,136,204,0.5);transform:translateY(-1px)}
+.tg-card-icon{width:42px;height:42px;background:#0088cc;border-radius:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 6px 18px -4px rgba(0,136,204,0.5)}
+.tg-card-t{font-size:14px;font-weight:700;letter-spacing:-0.2px}
+.tg-card-s{font-size:11.5px;color:var(--muted);margin-top:1px}
+.tg-card-arrow{margin-left:auto;color:rgba(0,136,204,0.7);font-size:18px}
+
+/* Login card */
+.login-card{margin-top:28px;background:linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.01));border:1px solid var(--border);border-radius:20px;padding:20px;backdrop-filter:blur(20px);box-shadow:0 30px 80px -30px rgba(212,175,55,0.18)}
+.login-h{font-size:18px;font-weight:700;letter-spacing:-0.4px;margin-bottom:4px}
+.login-sub{font-size:12.5px;color:var(--muted);margin-bottom:18px}
+
+/* Tabs */
+.tabs{display:flex;gap:4px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:12px;padding:4px;margin-bottom:16px}
+.tab{flex:1;padding:9px 8px;text-align:center;font-size:12.5px;font-weight:600;color:var(--muted);border-radius:8px;cursor:pointer;border:none;background:transparent;font-family:inherit;transition:all .18s;letter-spacing:-0.1px}
+.tab.active{background:linear-gradient(180deg,rgba(212,175,55,0.18),rgba(212,175,55,0.08));color:var(--gold);box-shadow:inset 0 0 0 1px rgba(212,175,55,0.3),0 4px 12px -4px rgba(212,175,55,0.3)}
+
+.code-hint,.email-hint{font-size:11.5px;color:var(--muted-2);text-align:center;line-height:1.55;margin-top:10px}
+.code-hint b,.email-hint b{color:var(--gold);font-weight:600}
+
+/* Inputs */
+.in{width:100%;background:rgba(255,255,255,0.04);border:1.5px solid var(--border);color:var(--text);border-radius:12px;padding:13px 15px;font-size:14px;outline:none;transition:all .18s;font-family:inherit;font-weight:500}
+.in:focus{border-color:var(--gold);background:rgba(212,175,55,0.04);box-shadow:0 0 0 3px rgba(212,175,55,0.15)}
+.in.code-in{font-family:'JetBrains Mono',monospace;text-align:center;letter-spacing:5px;font-size:16px;text-transform:lowercase}
+.in+.in{margin-top:8px}
+
+/* Primary button */
+.btn-p{background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;border:none;border-radius:12px;padding:14px;font-size:14px;font-weight:700;width:100%;cursor:pointer;margin-top:10px;font-family:inherit;letter-spacing:0.2px;box-shadow:0 8px 24px -8px rgba(212,175,55,0.6),inset 0 1px 0 rgba(255,255,255,0.5);transition:all .15s}
+.btn-p:hover{transform:translateY(-1px);box-shadow:0 12px 30px -8px rgba(212,175,55,0.7),inset 0 1px 0 rgba(255,255,255,0.5)}
+.btn-p:active{transform:translateY(0)}
+.btn-p:disabled{opacity:0.55;cursor:not-allowed;transform:none}
+
+.btn-link{background:transparent;border:none;color:var(--muted);font-size:12px;cursor:pointer;width:100%;padding:11px 0;margin-top:4px;font-family:inherit;text-decoration:underline;text-decoration-color:rgba(255,255,255,0.2);transition:color .15s}
+.btn-link:hover{color:var(--text)}
+
+.msg{padding:10px 13px;font-size:12.5px;border-radius:10px;text-align:center;margin-bottom:12px;display:none;font-weight:500}
+.msg.show{display:block}
+.msg.ok{background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);color:#4ade80}
+.msg.err{background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#f87171}
+
+/* Footer */
+.foot{margin-top:48px;padding-top:24px;border-top:1px solid var(--border);text-align:center}
+.foot-text{font-size:11px;color:var(--muted-2);line-height:1.7}
+.foot-links{display:flex;justify-content:center;gap:16px;margin-top:10px;font-size:11px;color:var(--muted-2)}
+.foot-links a{transition:color .15s}
+.foot-links a:hover{color:var(--text)}
+
+/* Admin preview banner */
+.admin-pb{position:sticky;top:0;left:0;right:0;background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;padding:10px 14px;font-size:12px;font-weight:700;text-align:center;z-index:99;letter-spacing:0.3px}
+.admin-pb a{color:rgba(255,255,255,0.85);text-decoration:underline}
+
+@media (min-width:480px){.hero-h1{font-size:48px}}
 </style></head><body>
 ${_isPreview ? '<div class="admin-pb">👀 Admin-Vorschau · Login-Page &nbsp;·&nbsp; <a href="/einstellungen">← Zurück</a></div>' : ''}
-<div class="bg"></div>
-<div class="hero">
-  <div class="logo-wrap">
-    <div class="logo-title">CreatorX</div>
-    <div class="logo-sub">Creator Community</div>
+<div class="mesh"></div>
+<div class="grain"></div>
+<div class="shell">
+  <nav class="nav">
+    <div class="nav-brand"><div class="nav-logo"></div>CreatorX</div>
+    <a href="#login" class="nav-cta">Einloggen →</a>
+  </nav>
+
+  <section class="hero">
+    <div class="hero-mark"></div>
+    <div class="hero-eyebrow"><span class="dot"></span><span>Live · Creator-Community</span></div>
+    <h1 class="hero-h1">Wachse mit echten<br>Creatorn.</h1>
+    <p class="hero-sub">Echte Likes, echte Kommentare, echtes Engagement — <b>täglich</b>. Keine Bots, keine Fake-Follower. Nur Creator die sich gegenseitig pushen.</p>
+  </section>
+
+  <div class="stats" id="stats">
+    <div class="stat"><div class="stat-num" data-stat="members">—</div><div class="stat-lbl">Creator</div></div>
+    <div class="stat"><div class="stat-num" data-stat="posts">—</div><div class="stat-lbl">Posts</div></div>
+    <div class="stat"><div class="stat-num" data-stat="likes">—</div><div class="stat-lbl">Likes</div></div>
   </div>
-  <div class="features">
-    <div class="feat"><div class="feat-icon">🚀</div><div><div class="feat-t">Wachse mit echten Creatorn</div><div class="feat-s">Echtes Engagement von echten Menschen</div></div></div>
-    <div class="feat"><div class="feat-icon">❤️</div><div><div class="feat-t">Gegenseitige Unterstützung</div><div class="feat-s">Like & werde geliked — täglich</div></div></div>
-    <div class="feat"><div class="feat-icon">🏆</div><div><div class="feat-t">Rangliste & Badges</div><div class="feat-s">Steig auf und werde Elite Creator</div></div></div>
-    <div class="feat"><div class="feat-icon">📊</div><div><div class="feat-t">Dein Creator Profil</div><div class="feat-s">Banner, Stats & persönlicher Feed</div></div></div>
+
+  <div class="sec-title">Was du bekommst</div>
+  <div class="feat-grid">
+    <div class="feat"><div class="feat-icon">🚀</div><div><div class="feat-t">Echtes Wachstum</div><div class="feat-s">Engagement von echten Creatorn — täglich.</div></div></div>
+    <div class="feat"><div class="feat-icon">❤️</div><div><div class="feat-t">Like &amp; Like-back</div><div class="feat-s">Gegenseitige Unterstützung als System.</div></div></div>
+    <div class="feat"><div class="feat-icon">🏆</div><div><div class="feat-t">Rang &amp; Badges</div><div class="feat-s">Steig auf zur Elite. 👑 für Top-1.</div></div></div>
+    <div class="feat"><div class="feat-icon">📊</div><div><div class="feat-t">Creator-Profil</div><div class="feat-s">Banner, Stats, Feed &amp; Follower.</div></div></div>
   </div>
-  <div class="tg-wrap">
-    <a href="https://t.me/+w-V2QL-igJw5YjY0" target="_blank" class="tg-btn">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.248l-1.97 9.269c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12L8.19 14.9l-2.965-.924c-.643-.203-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.631.686z"/></svg>
-      Telegram Gruppe beitreten
-    </a>
-    <div class="tg-hint">Tritt zuerst der Gruppe bei um einen Code zu erhalten</div>
-  </div>
-  <div class="login-wrap">
-    <div class="divider"><span>Bereits Mitglied?</span></div>
-    ${query.error==='1' ? '<div style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);border-radius:12px;padding:10px 14px;margin-bottom:10px;font-size:13px;color:#ef4444;text-align:center">⚠️ Code falsch oder unbekannt. Hol dir mit /mycode im Bot einen frischen Code.</div>' : ''}
-    ${query.error==='email-expired' ? '<div style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);border-radius:12px;padding:10px 14px;margin-bottom:10px;font-size:13px;color:#ef4444;text-align:center">⚠️ Login-Link ist abgelaufen oder schon benutzt. Fordere einen neuen an.</div>' : ''}
-    ${query.error==='email-invalid' ? '<div style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);border-radius:12px;padding:10px 14px;margin-bottom:10px;font-size:13px;color:#ef4444;text-align:center">⚠️ Login-Link ungültig.</div>' : ''}
-    ${query.error==='email-userlost' ? '<div style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);border-radius:12px;padding:10px 14px;margin-bottom:10px;font-size:13px;color:#ef4444;text-align:center">⚠️ Account nicht mehr verfügbar.</div>' : ''}
+
+  <div class="sec-title">Noch kein Mitglied?</div>
+  <a href="https://t.me/+w-V2QL-igJw5YjY0" target="_blank" class="tg-card">
+    <div class="tg-card-icon">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="#fff"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.248l-1.97 9.269c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12L8.19 14.9l-2.965-.924c-.643-.203-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.631.686z"/></svg>
+    </div>
+    <div>
+      <div class="tg-card-t">Telegram Gruppe beitreten</div>
+      <div class="tg-card-s">Free · Sofort dabei · Erste Likes heute</div>
+    </div>
+    <div class="tg-card-arrow">→</div>
+  </a>
+
+  <div id="login" class="login-card">
+    <div class="login-h">Einloggen</div>
+    <div class="login-sub">Wähle deinen Login-Weg</div>
+
+    ${query.error==='1' ? '<div class="msg show err">⚠️ Code falsch oder unbekannt. Hol dir mit /mycode im Bot einen frischen Code.</div>' : ''}
+    ${query.error==='email-expired' ? '<div class="msg show err">⚠️ Login-Link abgelaufen oder schon benutzt.</div>' : ''}
+    ${query.error==='email-invalid' ? '<div class="msg show err">⚠️ Login-Link ungültig.</div>' : ''}
+    ${query.error==='email-userlost' ? '<div class="msg show err">⚠️ Account nicht mehr verfügbar.</div>' : ''}
+
     <div class="tabs" role="tablist">
-      <button type="button" class="tab active" id="tab-code" onclick="switchLoginTab('code')">Code</button>
-      <button type="button" class="tab" id="tab-email" onclick="switchLoginTab('email')">Email</button>
+      <button type="button" class="tab active" id="tab-email" onclick="switchLoginTab('email')">📧 Email</button>
+      <button type="button" class="tab" id="tab-code" onclick="switchLoginTab('code')">🔑 Code</button>
     </div>
-    <div id="pane-code">
-      <div class="code-hint">Tippe <b style="color:#d4af37">/mycode</b> im Bot und gib deinen Code ein</div>
-      <form method="POST" action="/auth/code-form">
-        <input type="text" name="code" class="code-input" placeholder="Dein Code" autocomplete="off" autocapitalize="none" spellcheck="false" required value="${(query.code||'').toString().slice(0,40).replace(/[<>"]/g,'')}">
-        <button type="submit" class="login-btn">Einloggen →</button>
-      </form>
-    </div>
-    <div id="pane-email" style="display:none">
-      <div class="code-hint">Email + Passwort einloggen — oder Magic-Link an die Email schicken</div>
-      <div class="email-msg" id="email-msg"></div>
+
+    <div id="pane-email">
+      <div class="msg" id="email-msg"></div>
       <form id="email-form" onsubmit="return submitEmail(event)">
-        <input type="email" id="email-input" class="email-input" placeholder="deine@email.de" autocomplete="email" autocapitalize="none" spellcheck="false" required maxlength="200" style="margin-bottom:8px">
-        <input type="password" id="email-pw" class="email-input" placeholder="Passwort (optional, leer = Magic-Link)" autocomplete="current-password" maxlength="200">
-        <button type="submit" class="login-btn" id="email-btn">Einloggen →</button>
+        <input type="email" id="email-input" class="in" placeholder="deine@email.de" autocomplete="email" autocapitalize="none" spellcheck="false" required maxlength="200">
+        <input type="password" id="email-pw" class="in" placeholder="Passwort (optional · leer = Magic-Link)" autocomplete="current-password" maxlength="200">
+        <button type="submit" class="btn-p" id="email-btn">Einloggen →</button>
       </form>
-      <button type="button" id="email-magic-btn" onclick="sendMagicLink()" style="margin-top:6px;background:transparent;border:none;color:rgba(255,255,255,.55);font-size:12px;text-decoration:underline;cursor:pointer;width:100%;padding:8px;font-family:'DM Sans',sans-serif">📧 Magic-Link senden (ohne Passwort)</button>
-      <div class="email-hint">Email vorher in Einstellungen oder per <b style="color:#d4af37">/setemail</b> im Bot setzen. Passwort kannst du nach dem ersten Login wählen.</div>
+      <button type="button" id="email-magic-btn" onclick="sendMagicLink()" class="btn-link">📧 Magic-Link an die Email senden</button>
+      <div class="email-hint">Email vorher in Einstellungen oder per <b>/setemail</b> im Bot setzen.</div>
+    </div>
+
+    <div id="pane-code" style="display:none">
+      <form method="POST" action="/auth/code-form">
+        <input type="text" name="code" class="in code-in" placeholder="Dein Code" autocomplete="off" autocapitalize="none" spellcheck="false" required value="${(query.code||'').toString().slice(0,40).replace(/[<>"]/g,'')}">
+        <button type="submit" class="btn-p">Einloggen →</button>
+      </form>
+      <div class="code-hint">Tippe <b>/mycode</b> im Bot um deinen Code zu bekommen.</div>
     </div>
   </div>
+
+  <footer class="foot">
+    <div class="foot-text">© ${new Date().getFullYear()} CreatorX · Built for real creators</div>
+    <div class="foot-links">
+      <a href="/willkommen">Über uns</a>
+      <a href="https://t.me/+w-V2QL-igJw5YjY0" target="_blank">Telegram</a>
+    </div>
+  </footer>
 </div>
 <script>
+// Stats async laden + Count-up animieren
+(function(){
+  function animNum(el, target){
+    if(!el||target==null)return;
+    var dur=900,start=performance.now();
+    function tick(now){
+      var p=Math.min(1,(now-start)/dur),eased=1-Math.pow(1-p,3),val=Math.round(target*eased);
+      el.textContent=val.toLocaleString('de-DE');
+      if(p<1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  }
+  fetch('/api/community-stats',{cache:'no-store'}).then(function(r){return r.json();}).then(function(s){
+    document.querySelectorAll('[data-stat]').forEach(function(el){
+      var k=el.getAttribute('data-stat');
+      var v=k==='members'?(s.members||0):k==='posts'?(s.lifetimePosts||s.posts||0):(s.lifetimeLikes||s.totalLikes||0);
+      animNum(el,v);
+    });
+  }).catch(function(){
+    document.querySelectorAll('[data-stat]').forEach(function(el){el.textContent='—';});
+  });
+})();
 function switchLoginTab(t){
   var tc=document.getElementById('tab-code'),te=document.getElementById('tab-email');
   var pc=document.getElementById('pane-code'),pe=document.getElementById('pane-email');
