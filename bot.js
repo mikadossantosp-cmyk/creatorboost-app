@@ -2230,6 +2230,17 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
 .code-input{width:100%;background:rgba(255,255,255,.06);border:1.5px solid rgba(212,175,55,.3);color:#fff;border-radius:14px;padding:16px;font-size:18px;font-family:monospace;text-align:center;outline:none;letter-spacing:4px;transition:border-color .2s}
 .code-input:focus{border-color:#d4af37}
 .login-btn{background:linear-gradient(135deg,#d4af37,#b8960c);color:#000;border:none;border-radius:14px;padding:15px;font-size:15px;font-weight:700;width:100%;cursor:pointer;margin-top:10px;font-family:'DM Sans',sans-serif}
+.login-btn:disabled{opacity:.55;cursor:not-allowed}
+.tabs{display:flex;gap:6px;margin-bottom:14px;background:rgba(255,255,255,.04);border-radius:12px;padding:4px}
+.tab{flex:1;padding:10px;text-align:center;font-size:13px;font-weight:600;color:rgba(255,255,255,.55);border-radius:8px;cursor:pointer;border:none;background:transparent;font-family:'DM Sans',sans-serif;transition:all .15s}
+.tab.active{background:rgba(212,175,55,.15);color:#d4af37}
+.email-input{width:100%;background:rgba(255,255,255,.06);border:1.5px solid rgba(212,175,55,.3);color:#fff;border-radius:14px;padding:14px 16px;font-size:15px;outline:none;transition:border-color .2s;font-family:'DM Sans',sans-serif}
+.email-input:focus{border-color:#d4af37}
+.email-hint{font-size:11px;color:rgba(255,255,255,.4);text-align:center;margin-top:8px;line-height:1.5}
+.email-msg{padding:10px 14px;margin-bottom:10px;font-size:13px;border-radius:12px;text-align:center;display:none}
+.email-msg.show{display:block}
+.email-msg.ok{background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.4);color:#22c55e}
+.email-msg.err{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.4);color:#ef4444}
 </style></head><body>
 <div class="bg"></div>
 <div class="hero">
@@ -2252,14 +2263,63 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
   </div>
   <div class="login-wrap">
     <div class="divider"><span>Bereits Mitglied?</span></div>
-    <div class="code-hint">Tippe <b style="color:#d4af37">/mycode</b> im Bot und gib deinen Code ein</div>
-    ${query.error ? '<div style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);border-radius:12px;padding:10px 14px;margin-bottom:10px;font-size:13px;color:#ef4444;text-align:center">⚠️ Code falsch oder unbekannt. Hol dir mit /mycode im Bot einen frischen Code.</div>' : ''}
-    <form method="POST" action="/auth/code-form">
-      <input type="text" name="code" class="code-input" placeholder="Dein Code" autocomplete="off" autocapitalize="none" spellcheck="false" required value="${(query.code||'').toString().slice(0,40).replace(/[<>"]/g,'')}">
-      <button type="submit" class="login-btn">Einloggen →</button>
-    </form>
+    ${query.error==='1' ? '<div style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);border-radius:12px;padding:10px 14px;margin-bottom:10px;font-size:13px;color:#ef4444;text-align:center">⚠️ Code falsch oder unbekannt. Hol dir mit /mycode im Bot einen frischen Code.</div>' : ''}
+    ${query.error==='email-expired' ? '<div style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);border-radius:12px;padding:10px 14px;margin-bottom:10px;font-size:13px;color:#ef4444;text-align:center">⚠️ Login-Link ist abgelaufen oder schon benutzt. Fordere einen neuen an.</div>' : ''}
+    ${query.error==='email-invalid' ? '<div style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);border-radius:12px;padding:10px 14px;margin-bottom:10px;font-size:13px;color:#ef4444;text-align:center">⚠️ Login-Link ungültig.</div>' : ''}
+    ${query.error==='email-userlost' ? '<div style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);border-radius:12px;padding:10px 14px;margin-bottom:10px;font-size:13px;color:#ef4444;text-align:center">⚠️ Account nicht mehr verfügbar.</div>' : ''}
+    <div class="tabs" role="tablist">
+      <button type="button" class="tab active" id="tab-code" onclick="switchLoginTab('code')">Code</button>
+      <button type="button" class="tab" id="tab-email" onclick="switchLoginTab('email')">Email</button>
+    </div>
+    <div id="pane-code">
+      <div class="code-hint">Tippe <b style="color:#d4af37">/mycode</b> im Bot und gib deinen Code ein</div>
+      <form method="POST" action="/auth/code-form">
+        <input type="text" name="code" class="code-input" placeholder="Dein Code" autocomplete="off" autocapitalize="none" spellcheck="false" required value="${(query.code||'').toString().slice(0,40).replace(/[<>"]/g,'')}">
+        <button type="submit" class="login-btn">Einloggen →</button>
+      </form>
+    </div>
+    <div id="pane-email" style="display:none">
+      <div class="code-hint">Wir schicken dir einen Login-Link an deine Email</div>
+      <div class="email-msg" id="email-msg"></div>
+      <form id="email-form" onsubmit="return submitEmail(event)">
+        <input type="email" id="email-input" class="email-input" placeholder="deine@email.de" autocomplete="email" autocapitalize="none" spellcheck="false" required maxlength="200">
+        <button type="submit" class="login-btn" id="email-btn">Login-Link senden →</button>
+      </form>
+      <div class="email-hint">Du musst deine Email zuerst im Bot mit <b style="color:#d4af37">/setemail</b> registrieren.</div>
+    </div>
   </div>
 </div>
+<script>
+function switchLoginTab(t){
+  var tc=document.getElementById('tab-code'),te=document.getElementById('tab-email');
+  var pc=document.getElementById('pane-code'),pe=document.getElementById('pane-email');
+  if(t==='email'){tc.classList.remove('active');te.classList.add('active');pc.style.display='none';pe.style.display='block';}
+  else{te.classList.remove('active');tc.classList.add('active');pe.style.display='none';pc.style.display='block';}
+}
+function submitEmail(ev){
+  ev.preventDefault();
+  var inp=document.getElementById('email-input'),btn=document.getElementById('email-btn'),msg=document.getElementById('email-msg');
+  var em=(inp.value||'').trim();
+  if(!em) return false;
+  btn.disabled=true;btn.textContent='Sende...';
+  msg.classList.remove('show','ok','err');
+  fetch('/api/auth/email-request',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:em})})
+    .then(function(r){return r.json().then(function(j){return{s:r.status,j:j};});})
+    .then(function(o){
+      if(o.j&&o.j.ok){
+        msg.textContent=o.j.message||'Login-Link gesendet. Schau in dein Email-Postfach (auch Spam).';
+        msg.classList.add('show','ok');
+        inp.value='';
+      } else {
+        msg.textContent=(o.j&&o.j.error)||'Fehler beim Senden.';
+        msg.classList.add('show','err');
+      }
+    })
+    .catch(function(){msg.textContent='Netzwerkfehler.';msg.classList.add('show','err');})
+    .finally(function(){btn.disabled=false;btn.textContent='Login-Link senden →';});
+  return false;
+}
+</script>
 </body></html>`);
     }
 
