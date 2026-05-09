@@ -263,12 +263,28 @@ function badgeGradient(role) {
 }
 
 const _bildCache = new Map();
+const _BILD_CACHE_TTL = 120000;       // 2 min Daten-TTL (bisherig)
+const _BILD_CACHE_MAX = 200;          // hartes Limit Einträge — verhindert unbounded growth
+// Cache-Cleanup alle 5 Min: entferne abgelaufene Einträge + erzwinge Max-Größe.
+setInterval(() => {
+    const now = Date.now();
+    for (const [k, v] of _bildCache.entries()) {
+        if (now - (v?.ts || 0) > _BILD_CACHE_TTL * 5) _bildCache.delete(k);
+    }
+    if (_bildCache.size > _BILD_CACHE_MAX) {
+        // Älteste zuerst (Map insertion-order)
+        const overflow = _bildCache.size - _BILD_CACHE_MAX;
+        const it = _bildCache.keys();
+        for (let i = 0; i < overflow; i++) _bildCache.delete(it.next().value);
+    }
+}, 5 * 60 * 1000);
+
 function ladeBild(uid, type) {
     // CreatorBoost-System-User: gebundeltes Avatar aus Repo.
     if (uid === 'creatorboost' && type === 'profilepic') return 'bundled';
     const key = uid + '_' + type;
     const hit = _bildCache.get(key);
-    if (hit !== undefined && Date.now() - hit.ts < 120000) return hit.v;
+    if (hit !== undefined && Date.now() - hit.ts < _BILD_CACHE_TTL) return hit.v;
     let v = null;
     try {
         const f = DATA_DIR + '/bild_' + uid + '_' + type + '.txt';
