@@ -82,23 +82,32 @@ module.exports = function renderChatBubbles(opts) {
                 '</div>';
         }
 
-        // Auto Link-Preview Helper
-        const urlMatch = (m.text||'').match(/(https?:\/\/[^\s]+)/);
-        const linkPreview = urlMatch ? (() => {
+        // Link-Preview Helper — bevorzugt m.link (System-DMs setzen das),
+        // fällt zurück auf URL-Auto-Detection im Text.
+        const buildPreview = (url, customLabel) => {
             try {
-                const u = new URL(urlMatch[1]);
+                const u = new URL(url);
                 let icon = '🔗';
                 if (/instagram\.com/.test(u.hostname)) icon = '📸';
                 else if (/youtube\.com|youtu\.be/.test(u.hostname)) icon = '▶️';
                 else if (/tiktok\.com/.test(u.hostname)) icon = '🎵';
                 else if (/twitter\.com|x\.com/.test(u.hostname)) icon = '🐦';
                 else if (/facebook\.com/.test(u.hostname)) icon = '👥';
-                return '<a href="' + esc(urlMatch[1]) + '" target="_blank" rel="noopener" class="chat-link-preview" onclick="event.stopPropagation()">' +
+                const headLine = customLabel || u.hostname.replace(/^www\./,'');
+                const subLine = customLabel ? u.hostname.replace(/^www\./,'') : (u.pathname||'/').slice(0,40);
+                return '<a href="' + esc(url) + '" target="_blank" rel="noopener" class="chat-link-preview" onclick="event.stopPropagation()">' +
                     '<div class="clp-icon">' + icon + '</div>' +
-                    '<div class="clp-info"><div class="clp-host">' + esc(u.hostname.replace(/^www\./,'')) + '</div><div class="clp-path">' + esc((u.pathname||'/').slice(0,40)) + '</div></div>' +
+                    '<div class="clp-info"><div class="clp-host">' + esc(headLine) + '</div><div class="clp-path">' + esc(subLine) + '</div></div>' +
                     '</a>';
             } catch(e) { return ''; }
-        })() : '';
+        };
+        let linkPreview = '';
+        if (m.link?.url) {
+            linkPreview = buildPreview(m.link.url, m.link.label);
+        } else {
+            const urlMatch = (m.text||'').match(/(https?:\/\/[^\s]+)/);
+            if (urlMatch) linkPreview = buildPreview(urlMatch[1]);
+        }
 
         const editedTag = '';
         let bubbleContent = '';
