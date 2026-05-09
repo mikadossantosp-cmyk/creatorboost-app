@@ -2251,6 +2251,40 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
         return res.end();
     }
 
+    // ── MAGIC-LINK AUTO-LOGIN ──
+    // GET /auth/auto?code=USERS_APPCODE&redirect=/feed?tab=engagement
+    // Bot baut diese URL und packt sie in Reminder-DMs. Klick → Session erstellt → kein Tippen.
+    if (path === '/auth/auto' && req.method === 'GET') {
+        const code = (query.code||'').toString().toLowerCase().trim();
+        const rawRedirect = (query.redirect || '/feed').toString();
+        const safeRedirect = (rawRedirect.startsWith('/') && !rawRedirect.startsWith('//')) ? rawRedirect : '/feed';
+        if (!code) { res.writeHead(302,{'Location':'/?error=nocode'}); return res.end(); }
+        let botData = await fetchBot('/data');
+        if (!botData) { res.writeHead(302,{'Location':'/?error=503'}); return res.end(); }
+        let found = Object.entries(botData.users||{}).find(([,u]) => u.appCode === code);
+        if (!found) {
+            _dataCache = null; _dataCacheTime = 0;
+            await refreshDataCache();
+            botData = _dataCache;
+            if (botData) found = Object.entries(botData.users||{}).find(([,u]) => u.appCode === code);
+        }
+        if (!found) { res.writeHead(302,{'Location':'/?error=invalidcode'}); return res.end(); }
+        const [uid, u] = found;
+        // Bestehende Session wiederverwenden falls da, sonst neue.
+        let sid = null;
+        for (const [s, sess] of sessions.entries()) {
+            if (sess.uid === String(uid)) { sid = s; break; }
+        }
+        if (!sid) {
+            sid = genSid();
+            const validSubUid = u.subUid && botData.users?.[u.subUid] ? String(u.subUid) : null;
+            sessions.set(sid, { uid: String(uid), name: u.name, username: u.username||null, theme: 'light', lang: 'de', createdAt: Date.now(), subUid: validSubUid, activeUid: String(uid) });
+            saveSessions();
+        }
+        res.writeHead(302,{'Set-Cookie':`cbsid=${sid}; HttpOnly; Path=/; Max-Age=2592000`,'Location':safeRedirect});
+        return res.end();
+    }
+
     // ── LOGOUT ──
     if (path === '/logout') {
         const sid = getSid(req);
