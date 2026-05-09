@@ -563,14 +563,14 @@ button{cursor:pointer;border:none;outline:none;font-family:var(--font)}
 .podium-slot.p3{animation-delay:.10s}
 @keyframes podium-rise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
 .podium-crown{font-size:22px;margin-bottom:-2px;filter:drop-shadow(0 2px 6px rgba(245,158,11,0.45));animation:crown-bob 2.4s ease-in-out infinite}
-.podium-crown.rank-silver{filter:grayscale(100%) brightness(1.35) drop-shadow(0 2px 6px rgba(148,163,184,0.55))}
-.podium-crown.rank-bronze{filter:sepia(85%) saturate(180%) hue-rotate(-22deg) brightness(0.82) drop-shadow(0 2px 6px rgba(180,83,9,0.55))}
+.podium-crown.rank-silver{filter:grayscale(100%) brightness(1.45) contrast(0.9) drop-shadow(0 2px 6px rgba(148,163,184,0.55))}
+.podium-crown.rank-bronze{filter:sepia(100%) saturate(700%) hue-rotate(-22deg) brightness(0.55) contrast(1.15) drop-shadow(0 2px 6px rgba(180,83,9,0.6))}
 @keyframes crown-bob{0%,100%{transform:translateY(0) rotate(-3deg)}50%{transform:translateY(-3px) rotate(3deg)}}
 .crown-float{position:absolute;left:50%;transform:translateX(-50%) rotate(-3deg);top:-14px;font-size:18px;line-height:1;filter:drop-shadow(0 2px 5px rgba(245,158,11,0.5));animation:crown-bob 2.4s ease-in-out infinite;z-index:5;pointer-events:none}
 .crown-float-sm{position:absolute;left:50%;transform:translateX(-50%) rotate(-3deg);top:-10px;font-size:13px;line-height:1;filter:drop-shadow(0 1px 3px rgba(245,158,11,0.5));animation:crown-bob 2.4s ease-in-out infinite;z-index:5;pointer-events:none}
 .crown-float-xs{position:absolute;left:50%;transform:translateX(-50%) rotate(-3deg);top:-8px;font-size:10px;line-height:1;filter:drop-shadow(0 1px 2px rgba(245,158,11,0.5));animation:crown-bob 2.4s ease-in-out infinite;z-index:5;pointer-events:none}
-.crown-float.rank-silver,.crown-float-sm.rank-silver,.crown-float-xs.rank-silver{filter:grayscale(100%) brightness(1.35) drop-shadow(0 2px 5px rgba(148,163,184,0.55))}
-.crown-float.rank-bronze,.crown-float-sm.rank-bronze,.crown-float-xs.rank-bronze{filter:sepia(85%) saturate(180%) hue-rotate(-22deg) brightness(0.82) drop-shadow(0 2px 5px rgba(180,83,9,0.55))}
+.crown-float.rank-silver,.crown-float-sm.rank-silver,.crown-float-xs.rank-silver{filter:grayscale(100%) brightness(1.45) contrast(0.9) drop-shadow(0 2px 5px rgba(148,163,184,0.55))}
+.crown-float.rank-bronze,.crown-float-sm.rank-bronze,.crown-float-xs.rank-bronze{filter:sepia(100%) saturate(700%) hue-rotate(-22deg) brightness(0.55) contrast(1.15) drop-shadow(0 2px 5px rgba(180,83,9,0.6))}
 .podium-avatar{position:relative;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;flex-shrink:0;box-shadow:0 8px 22px -6px rgba(15,23,42,0.25)}
 .podium-avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .podium-slot.p1 .podium-avatar{width:84px;height:84px;font-size:24px;border:3px solid #f59e0b;box-shadow:0 0 0 4px rgba(245,158,11,0.18),0 12px 28px -8px rgba(245,158,11,0.45)}
@@ -1534,7 +1534,7 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
     <div class="profile-banner-overlay"></div>
   </div>
   <div class="profile-avatar-wrap">
-    ${_myRankCrown ? `<div style="position:absolute;left:48px;top:-26px;font-size:28px;line-height:1;filter:${_myRankCrown===1?'drop-shadow(0 3px 8px rgba(245,158,11,0.5))':_myRankCrown===2?'grayscale(100%) brightness(1.35) drop-shadow(0 3px 8px rgba(148,163,184,0.55))':'sepia(85%) saturate(180%) hue-rotate(-22deg) brightness(0.82) drop-shadow(0 3px 8px rgba(180,83,9,0.55))'};animation:crown-bob 2.4s ease-in-out infinite;z-index:6;transform:translateX(-50%) rotate(-3deg);pointer-events:none">👑</div>` : ''}
+    ${_myRankCrown ? `<div style="position:absolute;left:48px;top:-26px;font-size:28px;line-height:1;filter:${_myRankCrown===1?'drop-shadow(0 3px 8px rgba(245,158,11,0.5))':_myRankCrown===2?'grayscale(100%) brightness(1.45) contrast(0.9) drop-shadow(0 3px 8px rgba(148,163,184,0.55))':'sepia(100%) saturate(700%) hue-rotate(-22deg) brightness(0.55) contrast(1.15) drop-shadow(0 3px 8px rgba(180,83,9,0.6))'};animation:crown-bob 2.4s ease-in-out infinite;z-index:6;transform:translateX(-50%) rotate(-3deg);pointer-events:none">👑</div>` : ''}
     ${(picData||ladeBild(uid,'profilepic'))
       ? `<img src="${picData||ladeBild(uid,'profilepic')}" class="profile-avatar" style="${getRingBoxShadow(u)}" onerror="this.style.display='none'" alt="">`
       : u.instagram
@@ -2351,6 +2351,42 @@ a{color:inherit;text-decoration:none}
 .msg.ok{background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);color:#4ade80}
 .msg.err{background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#f87171}
 
+/* Trust strip */
+.trust{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:22px}
+.trust-avs{display:flex}
+.trust-avs .av{width:30px;height:30px;border-radius:50%;border:2px solid #000;margin-left:-8px;background-size:cover;background-position:center;background-repeat:no-repeat;box-shadow:0 4px 10px rgba(0,0,0,0.5)}
+.trust-avs .av:first-child{margin-left:0}
+.trust-avs .av-1{background:linear-gradient(135deg,#fb923c,#ef4444)}
+.trust-avs .av-2{background:linear-gradient(135deg,#a78bfa,#7c3aed)}
+.trust-avs .av-3{background:linear-gradient(135deg,#06b6d4,#3b82f6)}
+.trust-avs .av-4{background:linear-gradient(135deg,#22c55e,#10b981)}
+.trust-avs .av-5{background:linear-gradient(135deg,#f5d76e,#d4a946);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:#000}
+.trust-text{font-size:12px;color:var(--muted);line-height:1.4}
+.trust-text b{color:var(--text);font-weight:700}
+
+/* How it works */
+.how{display:flex;flex-direction:column;gap:10px;counter-reset:step}
+.how-step{display:flex;align-items:flex-start;gap:14px;padding:16px;background:var(--bg-card);border:1px solid var(--border);border-radius:14px;position:relative;transition:all .2s}
+.how-step:hover{border-color:var(--border-strong)}
+.how-num{width:32px;height:32px;border-radius:10px;background:linear-gradient(135deg,#f5d76e,#8b6914);color:#000;font-weight:800;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 6px 16px -6px rgba(212,175,55,0.5),inset 0 1px 0 rgba(255,255,255,0.5);font-family:'JetBrains Mono',monospace}
+.how-body{flex:1;padding-top:1px}
+.how-t{font-size:14px;font-weight:700;letter-spacing:-0.2px;margin-bottom:3px}
+.how-s{font-size:12px;color:var(--muted);line-height:1.55}
+
+/* Quote / Social proof */
+.quote{margin-top:20px;background:linear-gradient(135deg,rgba(212,175,55,0.06),rgba(167,139,250,0.04));border:1px solid var(--border-strong);border-radius:18px;padding:22px;position:relative}
+.quote::before{content:'"';position:absolute;top:-8px;left:18px;font-family:'Syne',serif;font-size:80px;color:rgba(212,175,55,0.2);line-height:1;font-weight:800}
+.quote-text{font-size:14.5px;line-height:1.6;color:rgba(255,255,255,0.85);font-style:italic;font-weight:500;position:relative;z-index:1}
+.quote-meta{display:flex;align-items:center;gap:10px;margin-top:14px;padding-top:14px;border-top:1px solid var(--border)}
+.quote-av{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#fb923c,#ef4444);display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;font-size:14px;flex-shrink:0}
+.quote-name{font-size:13px;font-weight:700}
+.quote-role{font-size:11px;color:var(--muted)}
+
+/* Bigger CTA at bottom */
+.bottom-cta{margin-top:28px;background:linear-gradient(135deg,rgba(212,175,55,0.08),rgba(212,175,55,0.02));border:1px solid var(--border-strong);border-radius:20px;padding:24px;text-align:center}
+.bottom-cta-h{font-size:18px;font-weight:800;letter-spacing:-0.4px;margin-bottom:6px}
+.bottom-cta-s{font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.5}
+
 /* Footer */
 .foot{margin-top:48px;padding-top:24px;border-top:1px solid var(--border);text-align:center}
 .foot-text{font-size:11px;color:var(--muted-2);line-height:1.7}
@@ -2377,13 +2413,48 @@ ${_isPreview ? '<div class="admin-pb">👀 Admin-Vorschau · Login-Page &nbsp;·
     <div class="hero-mark"></div>
     <div class="hero-eyebrow"><span class="dot"></span><span>Live · Creator-Community</span></div>
     <h1 class="hero-h1">Wachse mit echten<br>Creatorn.</h1>
-    <p class="hero-sub">Echte Likes, echte Kommentare, echtes Engagement — <b>täglich</b>. Keine Bots, keine Fake-Follower. Nur Creator die sich gegenseitig pushen.</p>
+    <p class="hero-sub">Echte Likes, echte Kommentare, echtes Engagement — <b>jeden Tag</b>. Keine Bots, keine Fake-Follower. Eine geschlossene Community von Creatorn die sich gegenseitig pushen.</p>
+    <div class="trust">
+      <div class="trust-avs">
+        <div class="av av-1"></div>
+        <div class="av av-2"></div>
+        <div class="av av-3"></div>
+        <div class="av av-4"></div>
+        <div class="av av-5">+</div>
+      </div>
+      <div class="trust-text"><b id="trust-count">—</b> aktive Creator<br><span style="color:var(--muted-2);font-size:11px">Heute online &amp; engaged</span></div>
+    </div>
   </section>
 
   <div class="stats" id="stats">
     <div class="stat"><div class="stat-num" data-stat="members">—</div><div class="stat-lbl">Creator</div></div>
     <div class="stat"><div class="stat-num" data-stat="posts">—</div><div class="stat-lbl">Posts</div></div>
     <div class="stat"><div class="stat-num" data-stat="likes">—</div><div class="stat-lbl">Likes</div></div>
+  </div>
+
+  <div class="sec-title">So einfach geht's</div>
+  <div class="how">
+    <div class="how-step">
+      <div class="how-num">1</div>
+      <div class="how-body">
+        <div class="how-t">Beitreten</div>
+        <div class="how-s">Tritt der Telegram-Gruppe bei und logge dich in der App ein. Free.</div>
+      </div>
+    </div>
+    <div class="how-step">
+      <div class="how-num">2</div>
+      <div class="how-body">
+        <div class="how-t">Posten &amp; Liken</div>
+        <div class="how-s">Teile deine Insta-Reels im Feed. Like andere zurück. Verdiene XP.</div>
+      </div>
+    </div>
+    <div class="how-step">
+      <div class="how-num">3</div>
+      <div class="how-body">
+        <div class="how-t">Aufsteigen</div>
+        <div class="how-s">Sammle XP, klettere im Ranking. Top-1 bekommt 👑 überall in der App.</div>
+      </div>
+    </div>
   </div>
 
   <div class="sec-title">Was du bekommst</div>
@@ -2428,7 +2499,7 @@ ${_isPreview ? '<div class="admin-pb">👀 Admin-Vorschau · Login-Page &nbsp;·
         <button type="submit" class="btn-p" id="email-btn">Einloggen →</button>
       </form>
       <button type="button" id="email-magic-btn" onclick="sendMagicLink()" class="btn-link">📧 Magic-Link an die Email senden</button>
-      <div class="email-hint">Email vorher in Einstellungen oder per <b>/setemail</b> im Bot setzen.</div>
+      <div class="email-hint">Erste Anmeldung? Magic-Link an deine Email anfordern — du kannst danach in Einstellungen ein Passwort setzen.</div>
     </div>
 
     <div id="pane-code" style="display:none">
@@ -2438,6 +2509,15 @@ ${_isPreview ? '<div class="admin-pb">👀 Admin-Vorschau · Login-Page &nbsp;·
       </form>
       <div class="code-hint">Tippe <b>/mycode</b> im Bot um deinen Code zu bekommen.</div>
     </div>
+  </div>
+
+  <div class="bottom-cta">
+    <div class="bottom-cta-h">Ready zu wachsen?</div>
+    <div class="bottom-cta-s">Tritt der Community bei und sieh deine ersten echten Likes innerhalb von Minuten.</div>
+    <a href="https://t.me/+w-V2QL-igJw5YjY0" target="_blank" class="btn-p" style="display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;margin:0">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.248l-1.97 9.269c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12L8.19 14.9l-2.965-.924c-.643-.203-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.631.686z"/></svg>
+      Auf Telegram beitreten
+    </a>
   </div>
 
   <footer class="foot">
@@ -2467,6 +2547,8 @@ ${_isPreview ? '<div class="admin-pb">👀 Admin-Vorschau · Login-Page &nbsp;·
       var v=k==='members'?(s.members||0):k==='posts'?(s.lifetimePosts||s.posts||0):(s.lifetimeLikes||s.totalLikes||0);
       animNum(el,v);
     });
+    var tc=document.getElementById('trust-count');
+    if(tc) animNum(tc, s.members||0);
   }).catch(function(){
     document.querySelectorAll('[data-stat]').forEach(function(el){el.textContent='—';});
   });
