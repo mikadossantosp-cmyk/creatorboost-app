@@ -1036,16 +1036,27 @@ ${session ? `
   if(done && !force) return;
 
   var STEPS = [
-    {tgt:'feed',     eyebrow:'Hier ist dein Feed',  h:'📸 Reels von anderen Creatorn',          s:'Hier landen alle Insta-Reels die heute geteilt wurden. Like sie, kommentier — du bekommst dafür XP.'},
-    {tgt:'post',     eyebrow:'Reel teilen',         h:'➕ Hier postest du deinen eigenen Reel',  s:'Tippe auf das + um deinen Insta-Reel-Link zu teilen. Andere Creator engagen dann mit deinem Post.'},
-    {tgt:'explore',  eyebrow:'Hub-Bereich',         h:'📰 News, Ranking, Tipps &amp; Shop',       s:'Hier findest du den Newsletter, das Creator-Ranking, App-Tipps, Regeln und den Diamanten-Shop. Der zentrale Übersichts-Hub der App.'},
-    {tgt:'messages', eyebrow:'Direktnachrichten',   h:'💬 Schreib mit anderen',                  s:'Privatchats und Gruppen — z.B. der Engagement-Thread für tägliche Like-Runden.'},
-    {tgt:'profile',  eyebrow:'Dein Profil',         h:'👤 Dein Stand &amp; Einstellungen',       s:'Banner, Bio, Stats, deine Posts. Hier auch der Sub-Account-Switcher und die Einstellungen.'}
+    // ── Topbar / Stories / Tabs ──
+    {q:'[data-tour="stories"]',                    eyebrow:'Stories oben',        h:'📷 Aktive Creator von heute',             s:'Hier siehst du Creator die heute schon gepostet haben. Tippe eine Story-Bubble um direkt aufs Profil zu kommen.'},
+    {q:'[data-tour="feed-tabs"]',                  eyebrow:'Feed-Filter',         h:'📅 Heute · 🕐 Älter · ⭐ Engagement',     s:'Wechsle zwischen heutigen Posts, älteren Posts und der Engagement-Pflicht-Liste (Superlinks die du noch liken musst).'},
+    // ── Erster Post: Like-Button + Comments ──
+    {q:'.post.fade-up',                            eyebrow:'Ein Post',            h:'🎬 So sieht ein geteilter Reel aus',     s:'Jeder Post zeigt das Insta-Reel, den Creator, Like-Count, Kommentare. Tippe das Reel-Preview um den Reel auf Insta zu öffnen — VORHER musst du ihn besuchen, dann kannst du liken.'},
+    {q:'.post.fade-up .post-action-btn',           eyebrow:'Like-Button',         h:'❤️ So likest du',                          s:'Tippe auf Like — du gibst XP an den Creator und bekommst selbst XP für dein Engagement. Vorher musst du den Reel auf Insta öffnen (Visit-before-Like).'},
+    // ── Bottom-Nav ──
+    {q:'[data-tour="feed"]',                       eyebrow:'Bottom-Nav',          h:'🏠 Feed (du bist hier)',                  s:'Der Haupt-Feed mit allen heutigen Reel-Posts.'},
+    {q:'[data-tour="post"]',                       eyebrow:'Posten',              h:'➕ Hier postest du deinen Reel',          s:'Tippe + um deinen Insta-Reel-Link zu teilen. Andere Creator sehen ihn sofort und engagen mit dir.'},
+    {q:'[data-tour="explore"]',                    eyebrow:'Hub-Bereich',         h:'🧭 News, Ranking, Tipps &amp; Shop',      s:'Newsletter, Creator-Ranking (👑/🥈/🥉), App-Tipps, Regeln und Diamanten-Shop.'},
+    {q:'[data-tour="messages"]',                   eyebrow:'Nachrichten',         h:'💬 Direktnachrichten &amp; Threads',     s:'Privatchats mit anderen Creatorn + Gruppen-Threads (z.B. der Engagement-Thread für tägliche Like-Runden).'},
+    {q:'[data-tour="profile"]',                    eyebrow:'Dein Profil',         h:'👤 Profil, Einstellungen &amp; Sub-Account', s:'Banner, Bio, deine Posts, XP-Stats. Über den Stift (Bearbeiten) oder ⚙️ kommst du in die Einstellungen — Email, Passwort, Spitzname, Bio, Pinned-Reel.'}
   ];
   var idx = 0;
 
   function $(s){return document.querySelector(s);}
-  function getTarget(name){return document.querySelector('[data-tour="'+name+'"]');}
+  function getTarget(step){
+    if(step.q) return document.querySelector(step.q);
+    if(step.tgt) return document.querySelector('[data-tour="'+step.tgt+'"]');
+    return null;
+  }
 
   function placeCardAndArrow(rect){
     var ov = document.getElementById('tour-ov');
@@ -1092,14 +1103,24 @@ ${session ? `
   function show(){
     var step = STEPS[idx];
     if(!step){ window.cbTourSkip(); return; }
-    var t = getTarget(step.tgt);
-    if(!t){ // Target fehlt → Skip
+    var t = getTarget(step);
+    if(!t){ // Target fehlt → Skip (z.B. wenn Feed leer ist und kein Post vorhanden)
       idx++;
       return show();
     }
-    var rect = t.getBoundingClientRect();
-    placeSpot(rect);
-    placeCardAndArrow(rect);
+    // Bottom-Nav Targets: Page nach unten scrollen damit es sichtbar ist.
+    // Andere Targets (Stories, Tabs, Post): an den Anfang scrollen, Element zentriert.
+    var isBottomNav = step.q && step.q.indexOf('[data-tour="feed"]') === 0
+                      || step.q && /\[data-tour="(feed|post|explore|messages|profile)"\]/.test(step.q);
+    if(!isBottomNav){
+      try { t.scrollIntoView({behavior:'smooth',block:'center',inline:'nearest'}); } catch(e){}
+    }
+    // Kurz warten damit smooth-scroll fertig ist, dann positionieren.
+    setTimeout(function(){
+      var rect = t.getBoundingClientRect();
+      placeSpot(rect);
+      placeCardAndArrow(rect);
+    }, isBottomNav ? 0 : 350);
     document.getElementById('tour-step-num').textContent = (idx+1)+'/'+STEPS.length;
     document.getElementById('tour-eyebrow-text').textContent = step.eyebrow;
     document.getElementById('tour-h').innerHTML = step.h;
@@ -5215,7 +5236,7 @@ p{line-height:1.65;color:var(--muted)}
       <div class="story-name" style="color:#3b82f6;font-weight:800">News</div>
     </a>` : '';
 
-        const storiesHtml = `<div class="stories">
+        const storiesHtml = `<div class="stories" data-tour="stories">
   ${_botBubbleHtml}
   ${topUsers.map(([id,u])=>{
     const insta = u.instagram;
@@ -5534,7 +5555,7 @@ ${(()=>{
   }
   return '';
 })()}
-<div style="display:flex;gap:6px;padding:6px 16px 14px;width:100%;box-sizing:border-box">
+<div data-tour="feed-tabs" style="display:flex;gap:6px;padding:6px 16px 14px;width:100%;box-sizing:border-box">
   <a href="/feed?tab=heute" class="feed-pill ${tab==='heute'?'active':''}" style="flex:1;padding:9px 8px;font-size:12.5px;font-weight:800;text-align:center;text-decoration:none;border-radius:999px;${tab==='heute'?'background:linear-gradient(135deg,#3b82f6,#60a5fa);color:#fff;box-shadow:0 4px 14px rgba(59,130,246,0.35)':'background:rgba(59,130,246,0.10);color:#3b82f6;border:1px solid rgba(59,130,246,0.35)'};letter-spacing:0.2px">📅 Heute</a>
   <a href="/feed?tab=aelter" class="feed-pill ${tab==='aelter'?'active':''}" style="flex:1;padding:9px 8px;font-size:12.5px;font-weight:800;text-align:center;text-decoration:none;border-radius:999px;${tab==='aelter'?'background:linear-gradient(135deg,#4dabf7,#1d6fa5);color:#fff;box-shadow:0 4px 14px rgba(77,171,247,0.3)':'background:var(--surface-tint);color:var(--muted);border:1px solid var(--border)'};letter-spacing:0.2px">🕐 Älter</a>
   <a href="/feed?tab=engagement" class="feed-pill ${tab==='engagement'?'active':''}" style="flex:1;padding:9px 8px;font-size:12.5px;font-weight:800;text-align:center;text-decoration:none;border-radius:999px;${tab==='engagement'?'background:linear-gradient(135deg,#f59e0b,#a78bfa);color:#fff;box-shadow:0 4px 14px rgba(245,158,11,0.3)':'background:var(--surface-tint);color:var(--muted);border:1px solid var(--border)'};letter-spacing:0.2px">⭐ Engagement</a>
