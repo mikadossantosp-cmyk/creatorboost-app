@@ -2715,6 +2715,7 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
             const users = d.users || {};
             for (const [uid, u] of Object.entries(users)) {
                 if (!u || adminIds.includes(Number(uid))) continue;
+                if (u.isSystem || uid === 'creatorboost') continue; // System-User nicht zählen
                 if (u.parent_uid) continue; // Sub-Accounts nicht doppelt zählen
                 if (u.started && u.inGruppe !== false) members++;
                 totalLikes += (u.totalLikes || 0);
