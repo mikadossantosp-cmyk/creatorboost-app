@@ -3912,12 +3912,13 @@ p{line-height:1.65;color:var(--muted)}
 
     if (path === '/api/post' && req.method === 'POST') {
         let body;
-        try { body = JSON.parse(await readBody(req, 25000000)); } catch(e) { return json({error:'Zu groß oder ungültig'},400); }
+        try { body = JSON.parse(await readBody(req, 25000000)); } catch(e) { return json({ok:false, error:'Zu groß oder ungültig'},400); }
         const { text, attachment, attachmentType } = body;
-        if (!text?.trim() && !attachment) return json({error:'Text oder Datei erforderlich'},400);
-        if (text && text.length > 300) return json({error:'Max 300 Zeichen'},400);
-        await postBot('/create-post-api', { uid: myUid, text: (text||'').trim(), attachment, attachmentType });
-        return json({ok:true});
+        if (!text?.trim() && !attachment) return json({ok:false, error:'Text oder Datei erforderlich'},400);
+        if (text && text.length > 300) return json({ok:false, error:'Max 300 Zeichen'},400);
+        const result = await postBot('/create-post-api', { uid: myUid, text: (text||'').trim(), attachment, attachmentType });
+        if (!result) return json({ok:false, error:'Bot offline'}, 502);
+        return json(result);
     }
 
     if (path === '/api/delete-post' && req.method === 'POST') {
@@ -3980,8 +3981,9 @@ p{line-height:1.65;color:var(--muted)}
 
     if (path === '/api/pin-post' && req.method === 'POST') {
         const body = await parseBody(req);
-        await postBot('/pin-post-api', { uid: myUid, timestamp: body.timestamp });
-        return json({ok:true});
+        const result = await postBot('/pin-post-api', { uid: myUid, timestamp: body.timestamp });
+        if (!result) return json({ok:false, error:'Bot offline'}, 502);
+        return json(result);
     }
 
     if (path === '/api/engage-pinned-post' && req.method === 'POST') {
@@ -4021,9 +4023,10 @@ p{line-height:1.65;color:var(--muted)}
     if (path === '/api/comment' && req.method === 'POST') {
         const body = await parseBody(req);
         const { postId, text } = body;
-        if (!postId || !text?.trim()) return json({error:'Ungültig'},400);
-        await postBot('/comment-api', { uid: myUid, name: session.name||'User', linkId: postId, text: text.trim().slice(0,200) });
-        return json({ok:true});
+        if (!postId || !text?.trim()) return json({ok:false, error:'Ungültig'},400);
+        const result = await postBot('/comment-api', { uid: myUid, name: session.name||'User', linkId: postId, text: text.trim().slice(0,200) });
+        if (!result) return json({ok:false, error:'Bot offline'}, 502);
+        return json(result);
     }
 
     // ── FEED ──
