@@ -173,6 +173,15 @@ function getTop1Uid(d, adminIds=[]) {
 function makeCrown(top1Uid) {
     return (uid) => (top1Uid && String(uid) === top1Uid) ? '👑 ' : '';
 }
+// Visuelle Krone als HTML-Overlay über dem Avatar (für Stories/Posts/Profil).
+// Container muss position:relative sein. size: '' (default ~18px), 'sm' (~13px), 'xs' (~10px).
+function makeCrownOverlay(top1Uid) {
+    return (uid, size='') => {
+        if (!top1Uid || String(uid) !== top1Uid) return '';
+        const cls = size==='sm' ? 'crown-float-sm' : size==='xs' ? 'crown-float-xs' : 'crown-float';
+        return '<div class="' + cls + '">👑</div>';
+    };
+}
 
 const ONLINE_WINDOW_MS = 60000;
 function isUidOnline(uid) {
@@ -536,6 +545,9 @@ button{cursor:pointer;border:none;outline:none;font-family:var(--font)}
 @keyframes podium-rise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
 .podium-crown{font-size:22px;margin-bottom:-2px;filter:drop-shadow(0 2px 6px rgba(245,158,11,0.45));animation:crown-bob 2.4s ease-in-out infinite}
 @keyframes crown-bob{0%,100%{transform:translateY(0) rotate(-3deg)}50%{transform:translateY(-3px) rotate(3deg)}}
+.crown-float{position:absolute;left:50%;transform:translateX(-50%) rotate(-3deg);top:-14px;font-size:18px;line-height:1;filter:drop-shadow(0 2px 5px rgba(245,158,11,0.5));animation:crown-bob 2.4s ease-in-out infinite;z-index:5;pointer-events:none}
+.crown-float-sm{position:absolute;left:50%;transform:translateX(-50%) rotate(-3deg);top:-10px;font-size:13px;line-height:1;filter:drop-shadow(0 1px 3px rgba(245,158,11,0.5));animation:crown-bob 2.4s ease-in-out infinite;z-index:5;pointer-events:none}
+.crown-float-xs{position:absolute;left:50%;transform:translateX(-50%) rotate(-3deg);top:-8px;font-size:10px;line-height:1;filter:drop-shadow(0 1px 2px rgba(245,158,11,0.5));animation:crown-bob 2.4s ease-in-out infinite;z-index:5;pointer-events:none}
 .podium-avatar{position:relative;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;flex-shrink:0;box-shadow:0 8px 22px -6px rgba(15,23,42,0.25)}
 .podium-avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .podium-slot.p1 .podium-avatar{width:84px;height:84px;font-size:24px;border:3px solid #f59e0b;box-shadow:0 0 0 4px rgba(245,158,11,0.18),0 12px 28px -8px rgba(245,158,11,0.45)}
@@ -1486,7 +1498,9 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
     const sorted = Object.entries(d.users||{}).filter(([,u])=>!/admin/i.test(String(u.role||''))).sort((a,b)=>(b[1].xp||0)-(a[1].xp||0));
     const isAdmin = adminIds.includes(Number(uid));
     const rank = isAdmin ? 0 : sorted.findIndex(([id])=>id===uid)+1;
-    const crown = makeCrown(getTop1Uid(d, adminIds));
+    const _t1 = getTop1Uid(d, adminIds);
+    const crown = makeCrown(_t1);
+    const crownOverlay = makeCrownOverlay(_t1);
 
     return `
 <div style="position:relative">
@@ -1495,6 +1509,7 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
     <div class="profile-banner-overlay"></div>
   </div>
   <div class="profile-avatar-wrap">
+    ${_t1 && String(uid)===_t1 ? '<div style="position:absolute;left:48px;top:-26px;font-size:28px;line-height:1;filter:drop-shadow(0 3px 8px rgba(245,158,11,0.5));animation:crown-bob 2.4s ease-in-out infinite;z-index:6;transform:translateX(-50%) rotate(-3deg);pointer-events:none">👑</div>' : ''}
     ${(picData||ladeBild(uid,'profilepic'))
       ? `<img src="${picData||ladeBild(uid,'profilepic')}" class="profile-avatar" style="${getRingBoxShadow(u)}" onerror="this.style.display='none'" alt="">`
       : u.instagram
@@ -1509,7 +1524,7 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
 </div>
 <div class="profile-info">
   <div class="profile-name-row">
-    <div class="profile-name">${crown(uid)}${htmlEsc(u.spitzname||u.name||'User')}</div>
+    <div class="profile-name">${htmlEsc(u.spitzname||u.name||'User')}</div>
     <div class="profile-badge" style="background:${grad};color:#fff">${htmlEsc(cleanRole(u.role))}</div>
   </div>
   ${u.username||u.spitzname?`<div class="profile-username">${u.spitzname?htmlEsc(u.name||''):''}${u.username?(u.spitzname?' · ':'')+'@'+htmlEsc(u.username):''}</div>`:''}
@@ -4047,6 +4062,7 @@ p{line-height:1.65;color:var(--muted)}
         }
     }
     const crown = (uid) => (_top1Uid && String(uid) === _top1Uid) ? '👑 ' : '';
+    const crownOverlay = makeCrownOverlay(_top1Uid);
 
     // ── API ENDPOINTS ──
     if (path === '/api/push-subscribe' && req.method === 'POST') {
@@ -4334,11 +4350,12 @@ p{line-height:1.65;color:var(--muted)}
     const hasLink = Object.values(d.links||{}).some(l=>l.user_id===Number(id)&&new Date(l.timestamp).toDateString()===today);
     return `<a href="/profil/${id}" class="story-item">
       <div class="story-ring ${hasLink?'':'seen'}">
+        ${crownOverlay(id, 'sm')}
         <div style="width:58px;height:58px;border-radius:50%;overflow:hidden;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:#fff;border:2px solid var(--bg)">
           ${(ladeBild(id,"profilepic")||insta)?`<img src="${ladeBild(id,"profilepic")?"/appbild/"+id+"/profilepic":"https://unavatar.io/instagram/"+insta}" style="width:100%;height:100%;object-fit:cover" alt="">`:`<span>${(u.name||"?")[0]}</span>`}
         </div>
       </div>
-      <div class="story-name">${crown(id)}${u.spitzname||u.name||'?'}</div>
+      <div class="story-name">${u.spitzname||u.name||'?'}</div>
     </a>`;
   }).join('')}
 </div>
@@ -4408,7 +4425,7 @@ p{line-height:1.65;color:var(--muted)}
                 const lu=d.users[String(lid)]; const lg=badgeGradient(lu&&lu.role);
                 const lf=ladeBild(String(lid),'profilepic'); const li=lu&&lu.instagram;
                 const limg=lf?'<img src="/appbild/'+lid+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" alt="">':li?'<img src="https://unavatar.io/instagram/'+li+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" alt="">':'';
-                return '<a href="/profil/'+lid+'" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--border2);text-decoration:none;background:'+(i%2===0?'transparent':'rgba(255,255,255,.02)')+'"><div style="position:relative;width:34px;height:34px;border-radius:50%;background:'+lg+';flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff"><span style="position:absolute">'+(lu&&lu.name||'?')[0]+'</span>'+limg+'</div><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:var(--text)">'+crown(lid)+(lu&&(lu.spitzname||lu.name)||'User')+'</div><div style="font-size:10px;color:var(--muted)">'+cleanRole(lu&&lu.role)+'</div></div><div style="font-size:11px;color:var(--accent)">→</div></a>';
+                return '<a href="/profil/'+lid+'" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--border2);text-decoration:none;background:'+(i%2===0?'transparent':'rgba(255,255,255,.02)')+'"><div style="position:relative;width:34px;height:34px;flex-shrink:0">'+crownOverlay(lid,'xs')+'<div style="position:relative;width:34px;height:34px;border-radius:50%;background:'+lg+';overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff"><span style="position:absolute">'+(lu&&lu.name||'?')[0]+'</span>'+limg+'</div></div><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:var(--text)">'+(lu&&(lu.spitzname||lu.name)||'User')+'</div><div style="font-size:10px;color:var(--muted)">'+cleanRole(lu&&lu.role)+'</div></div><div style="font-size:11px;color:var(--accent)">→</div></a>';
             }).join('');
 
             // Comments
@@ -4421,7 +4438,7 @@ p{line-height:1.65;color:var(--muted)}
                     const cf=ladeBild(String(c.uid),'profilepic'); const ci=cu.instagram;
                     const cimg=cf?'<img src="/appbild/'+c.uid+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" alt="">':ci?'<img src="https://unavatar.io/instagram/'+ci+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" alt="">':'';
                     const ct=new Date(c.timestamp||0).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
-                    return '<div style="display:flex;gap:8px;padding:8px 12px;border-bottom:1px solid var(--border2)"><div style="position:relative;width:28px;height:28px;border-radius:50%;background:'+cg+';flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff"><span style="position:absolute">'+htmlEsc((cu.name||'?')[0])+'</span>'+cimg+'</div><div style="flex:1;min-width:0"><div style="font-size:11px;font-weight:700">'+crown(c.uid)+htmlEsc(cu.spitzname||cu.name||'User')+' <span style="font-size:10px;color:var(--muted);font-weight:400">'+ct+'</span></div><div style="font-size:12px;color:var(--text);margin-top:2px">'+htmlEsc(c.text)+'</div></div></div>';
+                    return '<div style="display:flex;gap:8px;padding:8px 12px;border-bottom:1px solid var(--border2)"><div style="position:relative;width:28px;height:28px;flex-shrink:0">'+crownOverlay(c.uid,'xs')+'<div style="position:relative;width:28px;height:28px;border-radius:50%;background:'+cg+';overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff"><span style="position:absolute">'+htmlEsc((cu.name||'?')[0])+'</span>'+cimg+'</div></div><div style="flex:1;min-width:0"><div style="font-size:11px;font-weight:700">'+htmlEsc(cu.spitzname||cu.name||'User')+' <span style="font-size:10px;color:var(--muted);font-weight:400">'+ct+'</span></div><div style="font-size:12px;color:var(--text);margin-top:2px">'+htmlEsc(c.text)+'</div></div></div>';
                 }).join('');
 
             // Liker names text ("Gefällt X, Y und Z weiteren")
@@ -4478,13 +4495,16 @@ p{line-height:1.65;color:var(--muted)}
 '  </div>\n'+
 // Post header
 '  <div class="post-header" style="padding-top:8px">\n'+
-'    <div style="position:relative;width:40px;height:40px;border-radius:50%;overflow:hidden;background:'+grad+';flex-shrink:0;display:flex;align-items:center;justify-content:center">\n'+
-'      <span style="color:#fff;font-weight:700;font-size:15px;position:absolute">'+(poster.name||'?').slice(0,1)+'</span>\n'+
-'      '+avatarSmall+'\n'+
+'    <div style="position:relative;width:40px;height:40px;flex-shrink:0">\n'+
+'      '+crownOverlay(link.user_id, 'sm')+'\n'+
+'      <div style="position:relative;width:40px;height:40px;border-radius:50%;overflow:hidden;background:'+grad+';display:flex;align-items:center;justify-content:center">\n'+
+'        <span style="color:#fff;font-weight:700;font-size:15px;position:absolute">'+(poster.name||'?').slice(0,1)+'</span>\n'+
+'        '+avatarSmall+'\n'+
+'      </div>\n'+
 '    </div>\n'+
 '    <div class="post-user-info">\n'+
 '      <div class="post-name" style="display:flex;align-items:center;gap:5px">\n'+
-'        '+crown(link.user_id)+(poster.spitzname||poster.name||'User')+'\n'+
+'        '+(poster.spitzname||poster.name||'User')+'\n'+
 '        '+(isOnline?'<span style="width:7px;height:7px;border-radius:50%;background:#00c851;display:inline-block;flex-shrink:0"></span>':'')+'\n'+
 '      </div>\n'+
 '      <div class="post-badge">'+cleanRole(poster.role)+(insta?'<span style="color:var(--muted2)"> · @'+poster.instagram+'</span>':'')+'</div>\n'+
@@ -4505,8 +4525,11 @@ p{line-height:1.65;color:var(--muted)}
 '      </div>\n'+
 '      <div style="position:absolute;bottom:0;left:0;right:0;padding:10px 12px">\n'+
 '        <a href="/profil/'+link.user_id+'" onclick="event.stopPropagation()" style="display:flex;align-items:center;gap:8px;text-decoration:none">\n'+
-'          <div style="width:32px;height:32px;border-radius:50%;border:2px solid rgba(255,255,255,.5);overflow:hidden;background:'+grad+';flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff">'+profPic+'</div>\n'+
-'          <div style="font-size:12px;font-weight:700;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.6)">'+crown(link.user_id)+(poster.spitzname||poster.name||'User')+'</div>\n'+
+'          <div style="position:relative;width:32px;height:32px;flex-shrink:0">\n'+
+'            '+crownOverlay(link.user_id, 'xs')+'\n'+
+'            <div style="width:32px;height:32px;border-radius:50%;border:2px solid rgba(255,255,255,.5);overflow:hidden;background:'+grad+';display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff">'+profPic+'</div>\n'+
+'          </div>\n'+
+'          <div style="font-size:12px;font-weight:700;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.6)">'+(poster.spitzname||poster.name||'User')+'</div>\n'+
 '        </a>\n'+
 '      </div>\n'+
 '    </div>\n'+
@@ -4558,7 +4581,7 @@ commentsBox+
                 const limg=lf?'<img src="/appbild/'+lid+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" alt="">':li?'<img src="https://unavatar.io/instagram/'+li+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" alt="">':'';
                 const rName = ((lu&&(lu.spitzname||lu.name))||'User').replace(/'/g,'&#39;');
                 const reportBtn = isOwnPost ? '<button onclick="reportNonEngager(\''+sl.id+'\',\''+lid+'\',\''+rName+'\')" style="background:none;border:1px solid rgba(255,59,48,.5);color:rgba(255,59,48,.8);border-radius:8px;padding:3px 8px;font-size:10px;font-weight:600;cursor:pointer;flex-shrink:0">Melden</button>' : '';
-                return '<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--border2)"><div style="position:relative;width:34px;height:34px;border-radius:50%;background:'+lg+';flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff"><span style="position:absolute">'+(lu&&lu.name||'?')[0]+'</span>'+limg+'</div><div style="flex:1;min-width:0;font-size:13px;font-weight:600;color:var(--text)">'+crown(lid)+(lu&&(lu.spitzname||lu.name)||'User')+'</div>'+reportBtn+'</div>';
+                return '<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--border2)"><div style="position:relative;width:34px;height:34px;flex-shrink:0">'+crownOverlay(lid,'xs')+'<div style="position:relative;width:34px;height:34px;border-radius:50%;background:'+lg+';overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff"><span style="position:absolute">'+(lu&&lu.name||'?')[0]+'</span>'+limg+'</div></div><div style="flex:1;min-width:0;font-size:13px;font-weight:600;color:var(--text)">'+(lu&&(lu.spitzname||lu.name)||'User')+'</div>'+reportBtn+'</div>';
             }).join('');
             const likeBtn = isOwnPost
                 ? '<div style="font-size:12px;color:var(--muted);padding:7px 0">👤 Dein Superlink</div>'
@@ -4572,11 +4595,11 @@ commentsBox+
                 +'<span class="post-time">'+dateStr+' '+time+'</span>\n'
                 +'</div>\n'
                 +'<div class="post-header" style="padding-top:8px">\n'
-                +'<div style="position:relative;width:40px;height:40px;border-radius:50%;overflow:hidden;background:'+grad+';flex-shrink:0;display:flex;align-items:center;justify-content:center">\n'
+                +'<div style="position:relative;width:40px;height:40px;flex-shrink:0">'+crownOverlay(sl.uid,'sm')+'<div style="position:relative;width:40px;height:40px;border-radius:50%;overflow:hidden;background:'+grad+';display:flex;align-items:center;justify-content:center">\n'
                 +'<span style="color:#fff;font-weight:700;font-size:15px;position:absolute">'+(poster.name||'?')[0]+'</span>\n'
-                +avatarSmall+'\n</div>\n'
+                +avatarSmall+'\n</div></div>\n'
                 +'<div class="post-user-info">\n'
-                +'<div class="post-name">'+crown(sl.uid)+(poster.spitzname||poster.name||'User')+'</div>\n'
+                +'<div class="post-name">'+(poster.spitzname||poster.name||'User')+'</div>\n'
                 +'<div class="post-badge">'+cleanRole(poster.role)+(insta?'<span style="color:var(--muted2)"> · @'+insta+'</span>':'')+'</div>\n'
                 +'</div>\n</div>\n'
                 +'<div style="margin:8px 16px;padding:8px 12px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:10px;font-size:11px;color:rgba(245,158,11,.9);font-weight:600">🔄 Bitte Liken, Kommentieren, Teilen und Speichern</div>\n'
