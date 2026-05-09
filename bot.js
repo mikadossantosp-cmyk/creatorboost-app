@@ -3025,10 +3025,12 @@ function sendMagicLink(prefilledEmail){
     // Onboarding-Pflicht: Email-User müssen Instagram setzen bevor sie liken/posten können.
     if (path === '/onboarding-instagram' && req.method === 'GET') {
         if (!session) return redirect('/');
+        const _isPreview = (query.preview === '1');
         const _bd = await fetchBot('/data');
         const _u = _bd?.users?.[getMyUid(session)] || {};
         // Falls schon Instagram gesetzt → direkt weiter (kein doppelter Onboarding-Step).
-        if (_u.instagram) {
+        // Außer in Admin-Vorschau (?preview=1) — dann immer rendern.
+        if (_u.instagram && !_isPreview) {
             return redirect(_u.password_hash ? '/feed' : '/set-password?first=1');
         }
         const _hello = (_u.spitzname || _u.name || '').replace(/[<>"]/g,'');
@@ -3121,7 +3123,10 @@ input:focus,textarea:focus{border-color:var(--gold);background:rgba(212,175,55,0
 
 /* step counter */
 .step-counter{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted-2);text-align:center;margin-top:18px;letter-spacing:1px}
+.admin-pb{position:sticky;top:0;left:0;right:0;background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;padding:10px 14px;font-size:12px;font-weight:700;text-align:center;z-index:99;letter-spacing:0.3px}
+.admin-pb a{color:rgba(255,255,255,0.85);text-decoration:underline}
 </style></head><body>
+${_isPreview ? '<div class="admin-pb">👀 Admin-Vorschau · Email-Onboarding Wizard &nbsp;·&nbsp; <a href="/einstellungen">← Zurück</a></div>' : ''}
 <div class="mesh"></div>
 <div class="shell">
   <div class="bar">
@@ -3234,6 +3239,7 @@ function showStep(n){
   _step=n;
   window.scrollTo({top:0,behavior:'smooth'});
 }
+var _IS_PREVIEW = ${_isPreview ? 'true' : 'false'};
 function saveIg(ev){
   ev.preventDefault();
   var inp=document.getElementById('ig'),btn=document.getElementById('btn-ig'),msg=document.getElementById('msg-2');
@@ -3242,6 +3248,11 @@ function saveIg(ev){
   if(!/^[a-zA-Z0-9._]+$/.test(v)){msg.textContent='Ungültiger Username (nur Buchstaben/Zahlen/.,_).';msg.classList.add('show','err');return false;}
   msg.classList.remove('show','ok','err');
   btn.disabled=true;btn.textContent='Speichere...';
+  // In Admin-Vorschau: simuliere Erfolg ohne wirklich zu speichern.
+  if(_IS_PREVIEW){
+    setTimeout(function(){msg.textContent='✅ (Vorschau) Instagram verknüpft!';msg.classList.add('show','ok');setTimeout(function(){showStep(3);msg.classList.remove('show','ok');btn.disabled=false;btn.textContent='Verknüpfen →';},400);},300);
+    return false;
+  }
   fetch('/api/save-profile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({instagram:v})})
     .then(function(r){return r.json();})
     .then(function(j){
@@ -3263,6 +3274,11 @@ function saveProfile(ev){
 }
 function finish(skipProfile){
   var btn=document.getElementById('btn-finish'),skipBtn=document.getElementById('btn-skip'),msg=document.getElementById('msg-3');
+  if(_IS_PREVIEW){
+    if(msg){msg.textContent='✅ (Vorschau) — würde jetzt zu /set-password → /feed weiterleiten';msg.classList.add('show','ok');}
+    setTimeout(function(){window.location.href='/einstellungen';},1200);
+    return;
+  }
   if(skipProfile){
     window.location.href='/set-password?first=1';
     return;
@@ -8746,7 +8762,9 @@ ${adminIds.includes(Number(myUid)) ? `
   <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">👀 Vorschauen</div>
   <a href="/?preview=1" target="_blank" class="btn btn-outline btn-full" style="margin-bottom:8px;display:flex">🔐 Login-Page (App)</a>
   <a href="/willkommen" target="_blank" class="btn btn-outline btn-full" style="margin-bottom:8px;display:flex">🌐 Public Landing-Page</a>
-  <a href="/onboarding-preview" target="_blank" class="btn btn-outline btn-full" style="margin-bottom:8px;display:flex">📲 Onboarding</a>
+  <a href="/onboarding-instagram?preview=1" target="_blank" class="btn btn-outline btn-full" style="margin-bottom:8px;display:flex">🚀 Email-Onboarding (3-Step Wizard)</a>
+  <a href="/onboarding-preview" target="_blank" class="btn btn-outline btn-full" style="margin-bottom:8px;display:flex">📲 Onboarding (alt)</a>
+  <a href="/feed?tour=1" target="_blank" class="btn btn-outline btn-full" style="margin-bottom:8px;display:flex">🎯 In-App Tour (Pfeile)</a>
   <a href="/preview/email-login" target="_blank" class="btn btn-outline btn-full" style="margin-bottom:8px;display:flex">📧 Magic-Link Email</a>
 </div>
 <div style="padding:16px;border-bottom:1px solid var(--border2)">
