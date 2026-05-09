@@ -3095,7 +3095,7 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
         let body;
         try { body = JSON.parse(await readBody(req, 10000000)); } catch(e) { return json({error:'Ungültig'},400); }
         const { to, text, image, audio, replyTo } = body;
-        if (!to || (!text?.trim() && !image && !audio)) return json({error:'Ungültig'}, 400);
+        if (!to || (!text?.trim() && !image && !audio)) return json({ok:false, error:'Ungültig'}, 400);
         const result = await postBot('/send-message-api', {
             from: myUid,
             to,
@@ -3105,7 +3105,8 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
             replyTo: replyTo || null,
             timestamp: Date.now()
         });
-        return json({ok: !!result});
+        // Vorher !!result → fake-true bei {ok:false, error}.
+        return json({ok: result?.ok === true, error: result?.error || null});
     }
 
     // ── FIX 2: NACHRICHTEN LADEN — myUid definiert ──
@@ -3937,7 +3938,10 @@ p{line-height:1.65;color:var(--muted)}
         if (body.twitter !== undefined) updateData.twitter = body.twitter;
         if (body.instagram !== undefined) updateData.instagram = body.instagram;
         if (body.banner !== undefined) updateData.banner = body.banner;
-        await postBot('/update-profile-api', updateData);
+        const updateResult = await postBot('/update-profile-api', updateData);
+        if (updateResult && updateResult.ok === false) {
+            return json({ok:false, error: updateResult.error || 'Profile-Update fehlgeschlagen'});
+        }
         if (session) {
             if (body.theme) session.theme = body.theme;
             if (body.lang) session.lang = body.lang;
@@ -3982,7 +3986,7 @@ p{line-height:1.65;color:var(--muted)}
     if (path === '/api/delete-post' && req.method === 'POST') {
         const body = await parseBody(req);
         const result = await postBot('/delete-post-api', { uid: myUid, timestamp: body.timestamp });
-        return json({ok: !!result});
+        return json({ok: result?.ok === true, error: result?.error || null});
     }
 
     if (path === '/api/delete-thread-msg' && req.method === 'POST') {
