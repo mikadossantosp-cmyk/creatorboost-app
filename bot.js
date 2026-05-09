@@ -4347,12 +4347,14 @@ ${tab==='engagement' ? `<div style="padding:12px 16px 4px">
 ${postsHtml}
 <script>
 async function likePost(msgId, btn) {
+    // Already-liked Check zuerst — sonst kriegt User '⚠️ erst Link besuchen' wenn
+    // er auf einen schon gelikten Post tappt nachdem localStorage gecleared wurde.
+    if (btn.classList.contains('liked')) return;
     if (!hasLinkVisited(msgId)) {
         toast('⚠️ Du musst zuerst den Link besuchen!!', 3500);
         return;
     }
     const countEl = document.getElementById('likes-'+msgId);
-    if (btn.classList.contains('liked')) return;
     btn.classList.add('liked');
     btn.querySelector('svg').setAttribute('fill', 'currentColor');
     countEl.textContent = Number(countEl.textContent) + 1;
