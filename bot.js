@@ -985,45 +985,68 @@ ${session ? `
   </a>
 </nav>` : ''}
 
-<!-- ─── In-App Coach-Mark Tour (cleaner: kein Backdrop, nur Highlight-Ring + Tooltip) ─── -->
+<!-- ─── In-App Coach-Mark Tour (Pro-Polish: smooth scroll, smart positioning, animated transitions) ─── -->
 <style>
 .tour-overlay{position:fixed;inset:0;z-index:9998;pointer-events:none;display:none}
 .tour-overlay.show{display:block}
-.tour-overlay .blocker{position:absolute;inset:0;pointer-events:auto;background:transparent}
-/* Pulsierender Gold-Ring direkt um's Target — KEIN Dim mehr, UI bleibt voll sichtbar */
-.tour-ring{position:absolute;border-radius:14px;border:2.5px solid #d4af37;box-shadow:0 0 0 4px rgba(212,175,55,0.18),0 0 28px rgba(212,175,55,0.55);pointer-events:none;transition:all .35s cubic-bezier(.16,1,.3,1);animation:tour-ring-pulse 1.6s ease-in-out infinite;z-index:9999}
-@keyframes tour-ring-pulse{0%,100%{box-shadow:0 0 0 4px rgba(212,175,55,0.18),0 0 24px rgba(212,175,55,0.55);transform:scale(1)}50%{box-shadow:0 0 0 8px rgba(212,175,55,0.32),0 0 40px rgba(212,175,55,0.85);transform:scale(1.04)}}
-.tour-arrow{position:absolute;font-size:36px;color:#d4af37;pointer-events:none;filter:drop-shadow(0 4px 14px rgba(212,175,55,0.7));animation:tour-bounce 1.2s ease-in-out infinite;transition:all .35s cubic-bezier(.16,1,.3,1);z-index:10000;line-height:1}
-@keyframes tour-bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(8px)}}
-.tour-card{position:absolute;left:16px;right:16px;background:rgba(20,20,20,0.96);border:1px solid rgba(212,175,55,0.35);border-radius:18px;padding:18px;box-shadow:0 24px 60px rgba(0,0,0,0.6),0 0 0 1px rgba(255,255,255,0.04),0 0 30px rgba(212,175,55,0.18);transition:all .35s cubic-bezier(.16,1,.3,1);max-width:420px;margin:0 auto;font-family:'Inter',sans-serif;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);pointer-events:auto;z-index:10001}
-.tour-close{position:absolute;top:10px;right:10px;width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.6);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit;transition:all .15s}
-.tour-close:hover{background:rgba(255,255,255,0.12);color:#fff}
-.tour-eyebrow{font-size:10px;font-weight:700;color:#d4af37;text-transform:uppercase;letter-spacing:2px;margin-bottom:8px;display:flex;align-items:center;gap:8px}
-.tour-eyebrow .step-num{font-family:'JetBrains Mono',monospace;background:rgba(212,175,55,0.15);padding:2px 8px;border-radius:99px;font-size:10px}
-.tour-h{font-size:17px;font-weight:800;letter-spacing:-0.4px;color:#fff;margin-bottom:8px;padding-right:30px}
-.tour-s{font-size:13px;color:rgba(255,255,255,0.72);line-height:1.55;margin-bottom:14px}
+/* Sanftes radial-gradient highlight statt harter Backdrop — UI bleibt sichtbar, Target glüht */
+.tour-spotlight{position:fixed;inset:0;pointer-events:none;background:radial-gradient(circle var(--rad,180px) at var(--cx,50%) var(--cy,50%),transparent 0%,transparent 60%,rgba(0,0,0,0.35) 100%);transition:background .5s cubic-bezier(.16,1,.3,1);z-index:9998;opacity:0}
+.tour-overlay.show .tour-spotlight{opacity:1}
+/* Pulsierender Gold-Ring direkt um's Target */
+.tour-ring{position:absolute;border-radius:14px;border:2.5px solid #d4af37;box-shadow:0 0 0 4px rgba(212,175,55,0.20),0 0 32px rgba(212,175,55,0.65),inset 0 0 16px rgba(212,175,55,0.18);pointer-events:none;transition:all .55s cubic-bezier(.16,1,.3,1);animation:tour-ring-pulse 1.8s ease-in-out infinite;z-index:9999;will-change:transform,box-shadow}
+@keyframes tour-ring-pulse{0%,100%{box-shadow:0 0 0 4px rgba(212,175,55,0.20),0 0 28px rgba(212,175,55,0.55),inset 0 0 14px rgba(212,175,55,0.16);transform:scale(1)}50%{box-shadow:0 0 0 9px rgba(212,175,55,0.34),0 0 48px rgba(212,175,55,0.9),inset 0 0 20px rgba(212,175,55,0.24);transform:scale(1.035)}}
+.tour-arrow{position:absolute;font-size:42px;color:#d4af37;pointer-events:none;filter:drop-shadow(0 6px 18px rgba(212,175,55,0.85));animation:tour-bounce 1.4s ease-in-out infinite;transition:all .55s cubic-bezier(.16,1,.3,1);z-index:10000;line-height:1;font-weight:700;will-change:transform}
+@keyframes tour-bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(10px)}}
+.tour-card{position:absolute;left:16px;right:16px;background:linear-gradient(180deg,rgba(28,28,30,0.97),rgba(15,15,17,0.97));border:1px solid rgba(212,175,55,0.4);border-radius:20px;padding:20px;box-shadow:0 30px 80px -10px rgba(0,0,0,0.75),0 0 0 1px rgba(255,255,255,0.04),0 0 40px rgba(212,175,55,0.22);transition:all .55s cubic-bezier(.16,1,.3,1);max-width:440px;margin:0 auto;font-family:'Inter',sans-serif;backdrop-filter:blur(28px) saturate(180%);-webkit-backdrop-filter:blur(28px) saturate(180%);pointer-events:auto;z-index:10001}
+.tour-card.transitioning{opacity:0;transform:translateY(8px) scale(0.985)}
+.tour-close{position:absolute;top:12px;right:12px;width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.65);font-size:18px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit;transition:all .18s}
+.tour-close:hover{background:rgba(255,255,255,0.13);color:#fff;border-color:rgba(255,255,255,0.24)}
+.tour-eyebrow{font-size:10px;font-weight:700;color:#d4af37;text-transform:uppercase;letter-spacing:2.2px;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.tour-eyebrow .step-num{font-family:'JetBrains Mono',monospace;background:linear-gradient(135deg,rgba(212,175,55,0.22),rgba(212,175,55,0.10));padding:3px 10px;border-radius:99px;font-size:10px;border:1px solid rgba(212,175,55,0.25);letter-spacing:0.5px}
+.tour-h{font-size:18px;font-weight:800;letter-spacing:-0.5px;color:#fff;margin-bottom:8px;padding-right:34px;line-height:1.3}
+.tour-s{font-size:13.5px;color:rgba(255,255,255,0.78);line-height:1.6;margin-bottom:16px}
 .tour-actions{display:flex;gap:8px}
-.tour-btn{padding:10px 14px;font-size:13px;font-weight:700;border-radius:11px;border:none;cursor:pointer;font-family:inherit;transition:all .15s}
-.tour-btn-skip{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.6);flex:0 0 auto}
-.tour-btn-next{background:linear-gradient(180deg,#f5d76e,#d4a946);color:#000;flex:1;box-shadow:0 6px 18px -6px rgba(212,175,55,0.5),inset 0 1px 0 rgba(255,255,255,0.4)}
-.tour-progress{display:flex;gap:4px;margin-bottom:14px}
-.tour-progress-d{flex:1;height:3px;border-radius:99px;background:rgba(255,255,255,0.08)}
-.tour-progress-d.done{background:rgba(212,175,55,0.4)}
-.tour-progress-d.active{background:linear-gradient(90deg,#d4af37,#f5d76e)}
+.tour-btn{padding:11px 14px;font-size:13px;font-weight:700;border-radius:12px;border:none;cursor:pointer;font-family:inherit;transition:all .18s;letter-spacing:0.1px}
+.tour-btn-skip{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.65);flex:0 0 auto}
+.tour-btn-skip:hover{background:rgba(255,255,255,0.1);color:#fff}
+.tour-btn-prev{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.65);flex:0 0 auto;padding:11px 12px}
+.tour-btn-prev:hover{background:rgba(255,255,255,0.1);color:#fff}
+.tour-btn-next{background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;flex:1;box-shadow:0 8px 22px -8px rgba(212,175,55,0.65),inset 0 1px 0 rgba(255,255,255,0.5)}
+.tour-btn-next:hover{transform:translateY(-1px);box-shadow:0 12px 28px -8px rgba(212,175,55,0.75),inset 0 1px 0 rgba(255,255,255,0.5)}
+.tour-progress{display:flex;gap:3px;margin-bottom:14px}
+.tour-progress-d{flex:1;height:3px;border-radius:99px;background:rgba(255,255,255,0.08);transition:all .35s ease}
+.tour-progress-d.done{background:rgba(212,175,55,0.45)}
+.tour-progress-d.active{background:linear-gradient(90deg,#d4af37,#f5d76e);box-shadow:0 0 12px rgba(212,175,55,0.5)}
+/* Page-Transition Indikator — kurze Welle wenn zur nächsten Page navigiert wird */
+.tour-pagewipe{position:fixed;inset:0;background:radial-gradient(circle at center,rgba(212,175,55,0.18) 0%,rgba(0,0,0,0.95) 70%);z-index:99999;display:none;pointer-events:none;animation:wipe-in .4s ease-out;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.tour-pagewipe.show{display:flex;align-items:center;justify-content:center}
+.tour-pagewipe-inner{text-align:center;color:#fff;font-family:'Inter',sans-serif}
+.tour-pagewipe-spinner{width:38px;height:38px;border:3px solid rgba(212,175,55,0.2);border-top-color:#d4af37;border-radius:50%;margin:0 auto 14px;animation:spin 0.7s linear infinite}
+.tour-pagewipe-text{font-size:13px;font-weight:600;color:rgba(255,255,255,0.85);letter-spacing:0.3px}
+@keyframes wipe-in{from{opacity:0}to{opacity:1}}
+@keyframes spin{to{transform:rotate(360deg)}}
 </style>
-<div class="tour-overlay" id="tour-ov">
+<div class="tour-overlay" id="tour-ov" aria-hidden="true">
+  <div class="tour-spotlight" id="tour-spotlight"></div>
   <div class="tour-ring" id="tour-ring"></div>
   <div class="tour-arrow" id="tour-arrow">▼</div>
-  <div class="tour-card" id="tour-card">
-    <button class="tour-close" onclick="window.cbTourSkip()" aria-label="Schließen">×</button>
+  <div class="tour-card" id="tour-card" role="dialog" aria-live="polite">
+    <button class="tour-close" onclick="window.cbTourSkip()" aria-label="Tour beenden">×</button>
     <div class="tour-progress" id="tour-progress"></div>
-    <div class="tour-eyebrow"><span class="step-num" id="tour-step-num">1/5</span><span id="tour-eyebrow-text">Quick Tour</span></div>
+    <div class="tour-eyebrow"><span class="step-num" id="tour-step-num">1/17</span><span id="tour-eyebrow-text">Quick Tour</span></div>
     <div class="tour-h" id="tour-h"></div>
     <div class="tour-s" id="tour-s"></div>
     <div class="tour-actions">
+      <button class="tour-btn tour-btn-prev" id="tour-prev-btn" onclick="window.cbTourPrev()" style="display:none" aria-label="Zurück">←</button>
       <button class="tour-btn tour-btn-skip" onclick="window.cbTourSkip()">Überspringen</button>
       <button class="tour-btn tour-btn-next" onclick="window.cbTourNext()" id="tour-next-btn">Weiter →</button>
     </div>
+  </div>
+</div>
+<div class="tour-pagewipe" id="tour-pagewipe">
+  <div class="tour-pagewipe-inner">
+    <div class="tour-pagewipe-spinner"></div>
+    <div class="tour-pagewipe-text">Wechsle zur nächsten Seite…</div>
   </div>
 </div>
 <script>
@@ -1097,25 +1120,42 @@ ${session ? `
     return null;
   }
 
+  // Smart Card+Arrow Position: errechnet welche Seite (oben/unten) mehr Platz hat,
+  // setzt Card + Arrow so dass sie nie das Target überdecken.
   function placeCardAndArrow(rect){
-    var ov = document.getElementById('tour-ov');
     var card = document.getElementById('tour-card');
     var arrow = document.getElementById('tour-arrow');
+    var spotlight = document.getElementById('tour-spotlight');
     var vh = window.innerHeight;
-    // Ist Target unten (Bottom-Nav)? Card oben, Arrow zeigt nach unten.
-    var below = rect.top > vh / 2;
-    if(below){
-      card.style.top = '20px';
-      card.style.bottom = 'auto';
-      arrow.textContent = '▼';
-      arrow.style.left = (rect.left + rect.width/2 - 21) + 'px';
-      arrow.style.top = (rect.top - 56) + 'px';
-    } else {
-      card.style.bottom = '20px';
-      card.style.top = 'auto';
+    var vw = window.innerWidth;
+    var GAP = 18; // Abstand zwischen Element und Arrow/Card
+    var ARROW_H = 44, CARD_H_EST = 230; // grober Höhenrichtwert für Card
+    var spaceAbove = rect.top;
+    var spaceBelow = vh - rect.bottom;
+    var placeBelow = spaceBelow >= (CARD_H_EST + GAP + ARROW_H) || spaceBelow > spaceAbove;
+    if(placeBelow){
+      // Element oben → Card+Arrow unter dem Element
       arrow.textContent = '▲';
+      arrow.style.top  = (rect.bottom + GAP - 4) + 'px';
       arrow.style.left = (rect.left + rect.width/2 - 21) + 'px';
-      arrow.style.top = (rect.bottom + 14) + 'px';
+      card.style.top    = (rect.bottom + GAP + ARROW_H - 6) + 'px';
+      card.style.bottom = 'auto';
+    } else {
+      // Element unten → Card+Arrow über dem Element
+      arrow.textContent = '▼';
+      arrow.style.top  = (rect.top - GAP - ARROW_H + 8) + 'px';
+      arrow.style.left = (rect.left + rect.width/2 - 21) + 'px';
+      card.style.bottom = (vh - rect.top + GAP + ARROW_H - 6) + 'px';
+      card.style.top    = 'auto';
+    }
+    // Spotlight Center auf Target setzen — sanftes Glow um's Element rum
+    if(spotlight){
+      var cx = rect.left + rect.width/2;
+      var cy = rect.top + rect.height/2;
+      var rad = Math.max(rect.width, rect.height) * 1.6 + 80;
+      spotlight.style.setProperty('--cx', cx + 'px');
+      spotlight.style.setProperty('--cy', cy + 'px');
+      spotlight.style.setProperty('--rad', rad + 'px');
     }
   }
 
@@ -1139,13 +1179,45 @@ ${session ? `
     }
   }
 
+  // Wartet bis das smooth-scroll fertig ist (Element-Position stabil) bevor positioniert wird.
+  function waitForScrollSettle(t, cb){
+    var lastTop = t.getBoundingClientRect().top;
+    var stable = 0, tries = 0;
+    function tick(){
+      var top = t.getBoundingClientRect().top;
+      if(Math.abs(top - lastTop) < 0.5){
+        stable++;
+        if(stable >= 3) return cb();
+      } else { stable = 0; }
+      lastTop = top;
+      tries++;
+      if(tries > 60) return cb(); // safety: max 1s warten
+      requestAnimationFrame(tick);
+    }
+    tick();
+  }
+
+  function fadeCardOut(cb){
+    var card = document.getElementById('tour-card');
+    if(!card){ cb(); return; }
+    card.classList.add('transitioning');
+    setTimeout(cb, 180);
+  }
+  function fadeCardIn(){
+    var card = document.getElementById('tour-card');
+    if(!card) return;
+    requestAnimationFrame(function(){ card.classList.remove('transitioning'); });
+  }
+
   function show(){
     var step = STEPS[idx];
     if(!step){ window.cbTourSkip(); return; }
-    // Falls aktuelle Page nicht zum Step passt (z.B. via 'Zurück'-Button gelandet) → navigieren.
+    // Falls aktuelle Page nicht zum Step passt → mit Page-Wipe navigieren.
     if(!pageMatches(step.page)){
       try{ sessionStorage.setItem('cb_tour_idx', String(idx)); sessionStorage.setItem('cb_tour_active','1'); }catch(e){}
-      location.href = step.page + '?tour=continue';
+      var wipe = document.getElementById('tour-pagewipe');
+      if(wipe) wipe.classList.add('show');
+      setTimeout(function(){ location.href = step.page + '?tour=continue'; }, 280);
       return;
     }
     var t = getTarget(step);
@@ -1154,38 +1226,87 @@ ${session ? `
       try{ sessionStorage.setItem('cb_tour_idx', String(idx)); }catch(e){}
       return show();
     }
-    // Bottom-Nav Targets: Page nach unten scrollen damit es sichtbar ist.
-    // Andere Targets (Stories, Tabs, Post): an den Anfang scrollen, Element zentriert.
-    var isBottomNav = step.q && step.q.indexOf('[data-tour="feed"]') === 0
-                      || step.q && /\[data-tour="(feed|post|explore|messages|profile)"\]/.test(step.q);
-    if(!isBottomNav){
-      try { t.scrollIntoView({behavior:'smooth',block:'center',inline:'nearest'}); } catch(e){}
+    // ALLE Targets in den Viewport scrollen (zentriert) bevor positioniert wird.
+    // Bei Bottom-Nav (sticky/fixed) hat scrollIntoView keinen Effekt — kein Problem.
+    try { t.scrollIntoView({behavior:'smooth',block:'center',inline:'nearest'}); } catch(e){
+      try { t.scrollIntoView(); } catch(_e){}
     }
-    // Kurz warten damit smooth-scroll fertig ist, dann positionieren.
-    setTimeout(function(){
-      var rect = t.getBoundingClientRect();
-      placeSpot(rect);
-      placeCardAndArrow(rect);
-    }, isBottomNav ? 0 : 350);
-    document.getElementById('tour-step-num').textContent = (idx+1)+'/'+STEPS.length;
-    document.getElementById('tour-eyebrow-text').textContent = step.eyebrow;
-    document.getElementById('tour-h').innerHTML = step.h;
-    document.getElementById('tour-s').innerHTML = step.s;
-    document.getElementById('tour-next-btn').textContent = (idx === STEPS.length-1) ? '✓ Loslegen' : 'Weiter →';
-    renderProgress();
+    // Card-Content fade-out → update → fade-in (smooth Transition zwischen Steps).
+    fadeCardOut(function(){
+      document.getElementById('tour-step-num').textContent = (idx+1)+' / '+STEPS.length;
+      document.getElementById('tour-eyebrow-text').textContent = step.eyebrow;
+      document.getElementById('tour-h').innerHTML = step.h;
+      document.getElementById('tour-s').innerHTML = step.s;
+      document.getElementById('tour-next-btn').textContent = (idx === STEPS.length-1) ? '✓ Loslegen' : 'Weiter →';
+      var prevBtn = document.getElementById('tour-prev-btn');
+      if(prevBtn) prevBtn.style.display = idx > 0 ? 'block' : 'none';
+      renderProgress();
+      // Warten bis Scroll fertig, dann Ring + Card platzieren + reinfaden.
+      waitForScrollSettle(t, function(){
+        var rect = t.getBoundingClientRect();
+        placeSpot(rect);
+        placeCardAndArrow(rect);
+        fadeCardIn();
+      });
+    });
+  }
+
+  // Final-Summary anzeigen (am Ende der Tour) — Card zentriert, zwei Buttons.
+  function showSummary(){
+    var ring = document.getElementById('tour-ring');
+    var arrow = document.getElementById('tour-arrow');
+    var spotlight = document.getElementById('tour-spotlight');
+    var card = document.getElementById('tour-card');
+    if(ring) ring.style.display = 'none';
+    if(arrow) arrow.style.display = 'none';
+    if(spotlight) spotlight.style.opacity = '0.5';
+    fadeCardOut(function(){
+      // Card zentriert
+      card.style.top = '50%'; card.style.bottom = 'auto';
+      card.style.transform = 'translateY(-50%)';
+      document.getElementById('tour-step-num').textContent = '✓ Fertig';
+      document.getElementById('tour-eyebrow-text').textContent = 'Tour abgeschlossen';
+      document.getElementById('tour-h').innerHTML = '🎉 Alles verstanden?';
+      document.getElementById('tour-s').innerHTML = 'Du kennst jetzt die wichtigsten Bereiche der App.<br><br><b>Was als nächstes?</b><br>📸 Poste deinen ersten Reel-Link · ❤️ Like andere Posts für XP · 🏆 Klettere im Ranking.';
+      // Buttons austauschen
+      document.querySelector('.tour-actions').innerHTML = ''
+        + '<button class="tour-btn tour-btn-skip" onclick="window.cbTourRestart()" style="flex:1">↻ Tour nochmal</button>'
+        + '<button class="tour-btn tour-btn-next" onclick="window.cbTourFinish()" style="flex:1.5">✓ Alles verstanden</button>';
+      renderProgress();
+      fadeCardIn();
+    });
   }
 
   window.cbTourNext = function(){
-    idx++;
-    if(idx >= STEPS.length){
-      window.cbTourSkip();
+    var nextIdx = idx + 1;
+    // Letzter regulärer Step erreicht → Summary einblenden statt sofort zu beenden.
+    if(nextIdx >= STEPS.length){
+      try{ sessionStorage.setItem('cb_tour_idx', String(STEPS.length)); }catch(e){}
+      idx = STEPS.length;
+      showSummary();
       return;
     }
+    idx = nextIdx;
     var next = STEPS[idx];
-    // Wenn nächster Step auf anderer Page → speichern + navigieren.
     if(!pageMatches(next.page)){
       try{ sessionStorage.setItem('cb_tour_idx', String(idx)); sessionStorage.setItem('cb_tour_active','1'); }catch(e){}
-      location.href = next.page + '?tour=continue';
+      var wipe = document.getElementById('tour-pagewipe');
+      if(wipe) wipe.classList.add('show');
+      setTimeout(function(){ location.href = next.page + '?tour=continue'; }, 280);
+      return;
+    }
+    try{ sessionStorage.setItem('cb_tour_idx', String(idx)); }catch(e){}
+    show();
+  };
+  window.cbTourPrev = function(){
+    if(idx <= 0) return;
+    idx--;
+    var prev = STEPS[idx];
+    if(!pageMatches(prev.page)){
+      try{ sessionStorage.setItem('cb_tour_idx', String(idx)); sessionStorage.setItem('cb_tour_active','1'); }catch(e){}
+      var wipe = document.getElementById('tour-pagewipe');
+      if(wipe) wipe.classList.add('show');
+      setTimeout(function(){ location.href = prev.page + '?tour=continue'; }, 280);
       return;
     }
     try{ sessionStorage.setItem('cb_tour_idx', String(idx)); }catch(e){}
@@ -1195,12 +1316,27 @@ ${session ? `
     document.getElementById('tour-ov').classList.remove('show');
     try{ localStorage.setItem('cb_tour_done','1'); sessionStorage.removeItem('cb_tour_active'); sessionStorage.removeItem('cb_tour_idx'); }catch(e){}
   };
+  window.cbTourFinish = window.cbTourSkip;
+  window.cbTourRestart = function(){
+    try{ sessionStorage.setItem('cb_tour_active','1'); sessionStorage.setItem('cb_tour_idx','0'); localStorage.removeItem('cb_tour_done'); }catch(e){}
+    var first = STEPS[0];
+    var wipe = document.getElementById('tour-pagewipe');
+    if(wipe) wipe.classList.add('show');
+    setTimeout(function(){ location.href = first.page + '?tour=continue'; }, 280);
+  };
+  // Esc beendet die Tour.
+  document.addEventListener('keydown', function(e){ if(e.key === 'Escape') window.cbTourSkip(); });
 
   // Trigger nach kurzem Delay damit die Page-Render fertig ist.
   setTimeout(function(){
     document.getElementById('tour-ov').classList.add('show');
-    show();
-    window.addEventListener('resize', show, {passive:true});
+    if(idx >= STEPS.length){
+      // Summary-Modus (z.B. nach reload mit idx=STEPS.length)
+      showSummary();
+    } else {
+      show();
+    }
+    window.addEventListener('resize', function(){ if(idx < STEPS.length) show(); }, {passive:true});
   }, 600);
 })();
 </script>
