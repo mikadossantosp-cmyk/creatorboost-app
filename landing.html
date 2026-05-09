@@ -6,140 +6,172 @@
 <title>CreatorX — Wir wachsen gemeinsam</title>
 <meta name="description" content="Eine kuratierte Community für Instagram Creators. Kostenlos.">
 <meta name="theme-color" content="#000000">
-<meta property="og:title" content="CreatorX">
+<meta property="og:title" content="CreatorX — Wir wachsen gemeinsam">
 <meta property="og:description" content="Eine kuratierte Community für Instagram Creators.">
 <meta property="og:type" content="website">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Inter+Tight:wght@500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Cormorant+Garamond:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
   --bg:#000;
-  --surface:#0a0a0c;
-  --text:#fafafa;
-  --text-2:#9b9ba1;
-  --text-3:#5b5b62;
-  --line:rgba(255,255,255,0.07);
-  --line-2:rgba(255,255,255,0.12);
-  --brand:#a78bfa;
-  --brand-2:#4dabf7;
+  --bg-2:#070605;
+  --bg-3:#0a0907;
+  --text:#fafaf6;
+  --text-2:#a8a39a;
+  --text-3:#605c54;
+  --line:rgba(212,169,70,0.10);
+  --line-2:rgba(212,169,70,0.22);
+  --gold:#d4a946;
+  --gold-bright:#f5d76e;
+  --gold-deep:#8b6914;
+  --silver:#c8c8c8;
+  --silver-bright:#ededed;
 }
 html{scroll-behavior:smooth}
 html,body{background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
-body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;line-height:1.5;overflow-x:hidden;font-feature-settings:'cv11','ss03'}
+body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;line-height:1.55;overflow-x:hidden;font-feature-settings:'cv11','ss03'}
+.serif{font-family:'Cormorant Garamond',serif;font-style:italic}
+
+/* Gold gradient text utility */
+.gold-text{background:linear-gradient(180deg,#fff5d4 0%,#f5d76e 30%,#d4a946 60%,#8b6914 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.silver-text{background:linear-gradient(180deg,#fff 0%,#ededed 30%,#c8c8c8 70%,#7a7a7a 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
 
 .wrap{max-width:1120px;margin:0 auto;padding:0 28px}
 
 /* ── NAV ── */
-nav{position:sticky;top:0;z-index:50;backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);background:rgba(0,0,0,0.72);border-bottom:1px solid var(--line)}
-.nav-inner{max-width:1120px;margin:0 auto;padding:16px 28px;display:flex;align-items:center;justify-content:space-between}
-.brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--text)}
-.brand-mark{width:22px;height:22px;border-radius:6px;background:linear-gradient(135deg,var(--brand),var(--brand-2));position:relative}
-.brand-mark::after{content:'';position:absolute;inset:5px;background:#000;border-radius:2px}
-.brand-name{font-family:'Inter Tight',sans-serif;font-weight:700;font-size:15px;letter-spacing:-0.3px}
-.nav-right{display:flex;align-items:center;gap:6px}
-.nav-link{font-size:13.5px;color:var(--text-2);text-decoration:none;font-weight:500;padding:8px 14px;border-radius:8px;transition:all 0.15s}
-.nav-link:hover{color:var(--text);background:rgba(255,255,255,0.04)}
-.nav-cta{font-size:13.5px;font-weight:600;padding:8px 16px;background:#fff;color:#000;border-radius:8px;text-decoration:none;transition:opacity 0.15s;margin-left:6px}
-.nav-cta:hover{opacity:0.85}
+nav{position:sticky;top:0;z-index:50;backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);background:rgba(0,0,0,0.78);border-bottom:1px solid var(--line)}
+.nav-inner{max-width:1120px;margin:0 auto;padding:14px 28px;display:flex;align-items:center;justify-content:space-between}
+.brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:var(--text)}
+.brand-logo{width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,#fff5d4 0%,#f5d76e 25%,#d4a946 60%,#8b6914 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,0.4),0 0 0 1px rgba(212,169,70,0.30),0 4px 12px rgba(0,0,0,0.6);display:inline-flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-weight:700;font-style:italic;color:#1a1407;font-size:14px;letter-spacing:-0.8px;line-height:1}
+.brand-logo::before{content:'CX'}
+.brand-name{font-family:'Cormorant Garamond',serif;font-weight:600;font-size:18px;letter-spacing:0.5px;color:var(--silver-bright)}
+.brand-name .x{background:linear-gradient(180deg,#f5d76e,#d4a946);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.nav-right{display:flex;align-items:center;gap:4px}
+.nav-link{font-size:13px;color:var(--text-2);text-decoration:none;font-weight:500;padding:9px 14px;border-radius:8px;transition:all 0.15s;letter-spacing:0.2px}
+.nav-link:hover{color:var(--gold);background:rgba(212,169,70,0.05)}
+.nav-cta{font-size:13px;font-weight:600;padding:9px 18px;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;border-radius:8px;text-decoration:none;transition:all 0.2s;margin-left:8px;box-shadow:0 2px 12px rgba(212,169,70,0.25),inset 0 1px 0 rgba(255,255,255,0.4)}
+.nav-cta:hover{transform:translateY(-1px);box-shadow:0 4px 18px rgba(212,169,70,0.40),inset 0 1px 0 rgba(255,255,255,0.4)}
+
+/* ── ORBITAL DECORATION ── */
+.orbital{position:absolute;width:600px;height:600px;border-radius:50%;border:1px solid rgba(212,169,70,0.15);pointer-events:none;animation:rotate 60s linear infinite}
+.orbital::before,.orbital::after{content:'';position:absolute;width:8px;height:8px;border-radius:50%;background:radial-gradient(circle at 30% 30%,#f5d76e,#8b6914);box-shadow:0 0 12px rgba(212,169,70,0.6)}
+.orbital::before{top:-4px;left:50%;margin-left:-4px}
+.orbital::after{bottom:-4px;left:50%;margin-left:-4px}
+.orbital-2{position:absolute;width:600px;height:600px;border-radius:50%;border:1px solid rgba(200,200,200,0.10);pointer-events:none;transform:rotate(60deg);animation:rotate 80s linear infinite reverse}
+.orbital-2::before,.orbital-2::after{content:'';position:absolute;width:6px;height:6px;border-radius:50%;background:radial-gradient(circle at 30% 30%,#fff,#7a7a7a)}
+.orbital-2::before{top:-3px;left:30%;}
+.orbital-2::after{bottom:-3px;right:25%}
+@keyframes rotate{to{transform:rotate(360deg)}}
 
 /* ── HERO ── */
-.hero{padding:120px 0 100px;text-align:center;position:relative;overflow:hidden}
-.hero::before{content:'';position:absolute;top:-200px;left:50%;transform:translateX(-50%);width:900px;height:600px;background:radial-gradient(ellipse,rgba(167,139,250,0.14),transparent 60%);pointer-events:none}
-.hero-inner{position:relative;z-index:1;max-width:760px;margin:0 auto}
-.hero-tag{display:inline-flex;align-items:center;gap:8px;padding:6px 14px 6px 8px;background:rgba(255,255,255,0.04);border:1px solid var(--line);border-radius:999px;margin-bottom:32px;font-size:13px;color:var(--text-2);font-weight:500}
-.hero-tag-pill{font-size:11px;font-weight:700;padding:3px 9px;background:linear-gradient(135deg,var(--brand),var(--brand-2));color:#fff;border-radius:999px;letter-spacing:0.3px}
-h1{font-family:'Inter Tight',sans-serif;font-size:clamp(44px,7vw,76px);font-weight:700;letter-spacing:-1.5px;line-height:1.08;margin-bottom:28px;color:var(--text)}
-h1 .accent{background:linear-gradient(120deg,var(--brand) 30%,var(--brand-2) 70%);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.subhead{font-size:clamp(17px,2vw,20px);color:var(--text-2);font-weight:400;max-width:560px;margin:0 auto 44px;letter-spacing:-0.1px;line-height:1.6}
-.hero-ctas{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
-.btn{display:inline-flex;align-items:center;gap:8px;padding:12px 22px;border-radius:10px;font-size:14.5px;font-weight:600;text-decoration:none;transition:all 0.18s;border:none;cursor:pointer;font-family:inherit;letter-spacing:-0.1px}
-.btn-primary{background:#fff;color:#000}
-.btn-primary:hover{background:#e6e6e6}
-.btn-secondary{background:transparent;color:var(--text);border:1px solid var(--line-2)}
-.btn-secondary:hover{background:rgba(255,255,255,0.04);border-color:rgba(255,255,255,0.20)}
+.hero{padding:100px 0 80px;text-align:center;position:relative;overflow:hidden}
+.hero-bg{position:absolute;inset:0;pointer-events:none;display:flex;align-items:center;justify-content:center;z-index:0}
+.hero-bg::before{content:'';position:absolute;width:1100px;height:600px;background:radial-gradient(ellipse,rgba(212,169,70,0.10) 0%,transparent 60%)}
+.hero-inner{position:relative;z-index:2;max-width:780px;margin:0 auto}
+.hero-icon{width:96px;height:96px;margin:0 auto 36px;border-radius:22px;background:linear-gradient(135deg,#fff5d4 0%,#f5d76e 22%,#d4a946 60%,#8b6914 100%);box-shadow:inset 0 2px 0 rgba(255,255,255,0.5),inset 0 -2px 0 rgba(0,0,0,0.15),0 0 0 1px rgba(212,169,70,0.30),0 20px 60px rgba(212,169,70,0.20),0 8px 24px rgba(0,0,0,0.8);position:relative;display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-weight:600;font-style:italic;color:#1a1407;font-size:46px;letter-spacing:-2.5px;line-height:1}
+.hero-icon::before{content:'CX';position:relative;z-index:2}
+.hero-icon::after{content:'';position:absolute;inset:0;border-radius:22px;background:linear-gradient(180deg,rgba(255,255,255,0.20),transparent 40%);pointer-events:none;z-index:1}
+.hero-tag{display:inline-block;font-size:11px;font-weight:600;color:var(--gold);letter-spacing:3px;text-transform:uppercase;margin-bottom:24px;padding:6px 16px;border:1px solid rgba(212,169,70,0.25);border-radius:999px;background:rgba(212,169,70,0.04)}
+h1{font-family:'Cormorant Garamond',serif;font-size:clamp(48px,8vw,88px);font-weight:500;letter-spacing:-1px;line-height:1.05;margin-bottom:28px;color:var(--text)}
+h1 .accent{font-style:italic;font-weight:600;background:linear-gradient(180deg,#fff5d4 0%,#f5d76e 30%,#d4a946 65%,#8b6914 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;display:inline-block;padding-right:10px}
+.subhead{font-size:clamp(16px,1.8vw,19px);color:var(--text-2);font-weight:400;max-width:560px;margin:0 auto 44px;letter-spacing:0;line-height:1.7}
+.subhead b{color:var(--silver-bright);font-weight:500}
+.hero-ctas{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:9px;padding:13px 26px;border-radius:8px;font-size:14px;font-weight:600;text-decoration:none;transition:all 0.2s;border:none;cursor:pointer;font-family:inherit;letter-spacing:0.3px}
+.btn-primary{background:linear-gradient(180deg,#f5d76e 0%,#d4a946 50%,#8b6914 100%);color:#000;box-shadow:0 4px 20px rgba(212,169,70,0.30),inset 0 1px 0 rgba(255,255,255,0.4),inset 0 -1px 0 rgba(0,0,0,0.2)}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 8px 28px rgba(212,169,70,0.45),inset 0 1px 0 rgba(255,255,255,0.4)}
+.btn-secondary{background:transparent;color:var(--silver-bright);border:1px solid rgba(200,200,200,0.20)}
+.btn-secondary:hover{border-color:rgba(212,169,70,0.40);color:var(--gold)}
 .btn-arrow{width:14px;height:14px;transition:transform 0.18s}
 .btn:hover .btn-arrow{transform:translateX(2px)}
 
-/* ── TRUST STRIP (Stats) ── */
-.trust{padding:80px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--surface)}
-.trust-label{text-align:center;font-size:11.5px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:2.5px;margin-bottom:48px}
-.trust-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:0;max-width:900px;margin:0 auto}
-.trust-cell{background:var(--surface);padding:36px 24px;text-align:center}
-.trust-num{font-family:'Inter Tight',sans-serif;font-size:clamp(32px,5vw,52px);font-weight:700;color:var(--text);font-variant-numeric:tabular-nums;line-height:1.05;letter-spacing:-1px;margin-bottom:14px}
-.trust-num .plus{color:var(--brand);font-weight:600}
-.trust-lbl{font-size:12px;color:var(--text-2);font-weight:500;letter-spacing:0.3px}
-.trust-sub{font-size:11px;color:var(--text-3);margin-top:4px;font-weight:400}
+/* ── TRUST STRIP ── */
+.trust{padding:64px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--bg-2),var(--bg))}
+.trust-label{text-align:center;font-size:11px;font-weight:600;color:var(--gold);text-transform:uppercase;letter-spacing:3px;margin-bottom:48px}
+.trust-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);max-width:920px;margin:0 auto;border:1px solid var(--line)}
+.trust-cell{background:var(--bg);padding:36px 24px;text-align:center;position:relative}
+.trust-num{font-family:'Cormorant Garamond',serif;font-size:clamp(38px,5.5vw,56px);font-weight:500;font-variant-numeric:tabular-nums;line-height:1.05;letter-spacing:-1px;margin-bottom:12px;background:linear-gradient(180deg,#fff5d4 0%,#f5d76e 30%,#d4a946 65%,#8b6914 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.trust-num .plus{font-size:0.6em;vertical-align:top;margin-left:2px;font-weight:400}
+.trust-lbl{font-size:12px;color:var(--silver-bright);font-weight:500;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px}
+.trust-sub{font-size:11px;color:var(--text-3);font-weight:400;letter-spacing:0.5px}
 
 /* ── SECTION ── */
 section.s{padding:120px 0;position:relative}
-.s-head{text-align:center;max-width:680px;margin:0 auto 72px}
-.s-eyebrow{display:inline-block;font-size:12px;font-weight:600;color:var(--brand);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:16px}
-.s-title{font-family:'Inter Tight',sans-serif;font-size:clamp(32px,5vw,48px);font-weight:700;letter-spacing:-1px;line-height:1.18;color:var(--text);margin-bottom:20px}
-.s-sub{font-size:17px;color:var(--text-2);line-height:1.6;font-weight:400;letter-spacing:0}
+.s-head{text-align:center;max-width:720px;margin:0 auto 80px}
+.s-eyebrow{display:inline-block;font-size:11px;font-weight:600;color:var(--gold);letter-spacing:3px;text-transform:uppercase;margin-bottom:20px}
+.s-title{font-family:'Cormorant Garamond',serif;font-size:clamp(36px,5vw,56px);font-weight:500;letter-spacing:-0.5px;line-height:1.15;color:var(--text);margin-bottom:20px}
+.s-title .em{font-style:italic;background:linear-gradient(180deg,#fff5d4,#d4a946);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.s-sub{font-size:17px;color:var(--text-2);line-height:1.65;font-weight:400;letter-spacing:0}
 
-/* ── PRINCIPLES (Card-Grid) ── */
-.cards{display:grid;grid-template-columns:1fr;gap:16px;max-width:1080px;margin:0 auto}
-.card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:36px 32px;transition:all 0.3s}
-.card:hover{border-color:rgba(167,139,250,0.25);background:#0d0d10}
-.card-icon{width:42px;height:42px;border-radius:10px;background:linear-gradient(135deg,rgba(167,139,250,0.18),rgba(77,171,247,0.10));border:1px solid rgba(167,139,250,0.20);display:flex;align-items:center;justify-content:center;margin-bottom:24px;color:var(--brand)}
-.card-icon svg{width:20px;height:20px}
-.card-title{font-family:'Inter Tight',sans-serif;font-size:21px;font-weight:700;letter-spacing:-0.2px;line-height:1.3;margin-bottom:12px;color:var(--text)}
-.card-desc{font-size:15px;color:var(--text-2);line-height:1.65;letter-spacing:0}
+/* ── PRINCIPLES ── */
+.cards{display:grid;grid-template-columns:1fr;gap:1px;max-width:1080px;margin:0 auto;background:var(--line);border:1px solid var(--line)}
+.card{background:var(--bg);padding:42px 36px;transition:background 0.3s;position:relative}
+.card:hover{background:var(--bg-2)}
+.card-num{font-family:'Cormorant Garamond',serif;font-size:48px;font-weight:400;font-style:italic;background:linear-gradient(180deg,#f5d76e 0%,#d4a946 60%,#8b6914 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;line-height:1;margin-bottom:24px;display:inline-block}
+.card-title{font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:600;letter-spacing:-0.2px;line-height:1.25;margin-bottom:14px;color:var(--silver-bright)}
+.card-desc{font-size:14.5px;color:var(--text-2);line-height:1.7;letter-spacing:0}
 
 /* ── HOW (Steps) ── */
 .steps{max-width:760px;margin:0 auto}
-.step{display:flex;gap:24px;padding:28px 0;border-bottom:1px solid var(--line);align-items:flex-start}
+.step{display:flex;gap:32px;padding:32px 0;border-bottom:1px solid var(--line);align-items:flex-start}
 .step:last-child{border-bottom:none}
-.step-num{flex-shrink:0;width:36px;height:36px;border-radius:50%;background:rgba(167,139,250,0.10);border:1px solid rgba(167,139,250,0.30);display:flex;align-items:center;justify-content:center;font-family:'Inter Tight',sans-serif;font-weight:700;font-size:14px;color:var(--brand)}
-.step-content{flex:1;padding-top:4px}
-.step-title{font-family:'Inter Tight',sans-serif;font-size:18px;font-weight:700;color:var(--text);margin-bottom:8px;letter-spacing:-0.1px;line-height:1.3}
-.step-desc{font-size:15px;color:var(--text-2);line-height:1.65}
+.step-num{flex-shrink:0;width:48px;height:48px;border-radius:50%;background:linear-gradient(180deg,rgba(245,215,110,0.15),rgba(139,105,20,0.05));border:1px solid rgba(212,169,70,0.40);display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-weight:600;font-style:italic;font-size:20px;background-clip:padding-box}
+.step-num span{background:linear-gradient(180deg,#f5d76e,#d4a946);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.step-content{flex:1;padding-top:6px}
+.step-title{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600;color:var(--silver-bright);margin-bottom:8px;letter-spacing:-0.2px;line-height:1.3}
+.step-desc{font-size:15px;color:var(--text-2);line-height:1.7}
 
-/* ── BIG QUOTE ── */
-.quote{padding:120px 0;text-align:center;background:linear-gradient(180deg,transparent,rgba(167,139,250,0.04) 50%,transparent)}
-.quote-text{font-family:'Inter Tight',sans-serif;font-size:clamp(24px,3.5vw,36px);font-weight:600;letter-spacing:-0.4px;line-height:1.4;max-width:780px;margin:0 auto 24px;color:var(--text)}
-.quote-text .em{background:linear-gradient(120deg,var(--brand),var(--brand-2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.quote-cite{font-size:12px;color:var(--text-3);letter-spacing:2px;text-transform:uppercase;font-weight:500}
+/* ── QUOTE ── */
+.quote-section{padding:140px 0;text-align:center;background:linear-gradient(180deg,transparent,rgba(212,169,70,0.04) 50%,transparent);position:relative;overflow:hidden}
+.quote-mark{font-family:'Cormorant Garamond',serif;font-size:120px;line-height:0.8;background:linear-gradient(180deg,#d4a946,transparent);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:-20px;font-weight:600}
+.quote-text{font-family:'Cormorant Garamond',serif;font-size:clamp(26px,3.8vw,42px);font-weight:500;letter-spacing:-0.2px;line-height:1.4;max-width:820px;margin:0 auto 24px;color:var(--silver-bright)}
+.quote-text .em{font-style:italic;background:linear-gradient(180deg,#fff5d4,#d4a946);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.quote-cite{font-size:11px;color:var(--gold);letter-spacing:3px;text-transform:uppercase;font-weight:600}
 
 /* ── FAQ ── */
 .faq{max-width:780px;margin:0 auto}
-.faq-item{border-bottom:1px solid var(--line);padding:24px 0}
-.faq-q{font-family:'Inter Tight',sans-serif;font-size:17px;font-weight:600;color:var(--text);margin-bottom:10px;letter-spacing:-0.1px;line-height:1.4;display:flex;justify-content:space-between;align-items:center;cursor:pointer;gap:16px}
-.faq-q::after{content:'+';font-size:22px;font-weight:300;color:var(--text-3);transition:transform 0.2s}
+.faq-item{border-bottom:1px solid var(--line);padding:26px 0;transition:border-color 0.2s}
+.faq-item:hover{border-color:var(--line-2)}
+.faq-q{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;color:var(--silver-bright);margin-bottom:10px;letter-spacing:-0.1px;line-height:1.4;display:flex;justify-content:space-between;align-items:center;cursor:pointer;gap:18px}
+.faq-q::after{content:'+';font-family:'Inter',sans-serif;font-size:24px;font-weight:300;color:var(--gold);transition:transform 0.25s}
 .faq-item.open .faq-q::after{transform:rotate(45deg)}
-.faq-a{font-size:14.5px;color:var(--text-2);line-height:1.6;max-height:0;overflow:hidden;transition:max-height 0.3s ease,margin 0.3s ease}
-.faq-item.open .faq-a{max-height:300px;margin-top:6px}
+.faq-a{font-size:15px;color:var(--text-2);line-height:1.7;max-height:0;overflow:hidden;transition:max-height 0.3s ease,margin 0.3s ease}
+.faq-item.open .faq-a{max-height:300px;margin-top:8px}
 
 /* ── FINAL CTA ── */
 .final{padding:140px 0;text-align:center;border-top:1px solid var(--line);position:relative;overflow:hidden}
-.final::before{content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:1000px;height:600px;background:radial-gradient(ellipse,rgba(167,139,250,0.10),transparent 60%);pointer-events:none}
-.final-inner{position:relative;z-index:1}
-.final h2{font-family:'Inter Tight',sans-serif;font-size:clamp(38px,5.5vw,64px);font-weight:700;letter-spacing:-1.2px;line-height:1.1;margin-bottom:24px}
-.final h2 .em{background:linear-gradient(120deg,var(--brand),var(--brand-2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.final p{font-size:17px;color:var(--text-2);max-width:480px;margin:0 auto 36px;line-height:1.5}
+.final-bg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:0}
+.final-bg::before{content:'';width:1000px;height:600px;background:radial-gradient(ellipse,rgba(212,169,70,0.10),transparent 60%)}
+.final-inner{position:relative;z-index:2}
+.final h2{font-family:'Cormorant Garamond',serif;font-size:clamp(40px,6vw,72px);font-weight:500;letter-spacing:-0.5px;line-height:1.1;margin-bottom:24px;color:var(--text)}
+.final h2 .em{font-style:italic;background:linear-gradient(180deg,#fff5d4 0%,#f5d76e 30%,#d4a946 65%,#8b6914 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.final p{font-size:17px;color:var(--text-2);max-width:480px;margin:0 auto 40px;line-height:1.6}
 
 /* ── FOOTER ── */
 footer{border-top:1px solid var(--line);padding:48px 0 56px;background:var(--bg)}
 .footer-inner{display:flex;flex-direction:column;gap:24px;align-items:center;text-align:center;font-size:13px;color:var(--text-3)}
-.footer-links{display:flex;flex-wrap:wrap;gap:24px;justify-content:center}
-.footer-links a{color:var(--text-2);text-decoration:none;font-weight:500;transition:color 0.15s}
-.footer-links a:hover{color:var(--text)}
-.footer-meta{font-size:11.5px;color:var(--text-3);letter-spacing:0.3px}
+.footer-links{display:flex;flex-wrap:wrap;gap:28px;justify-content:center}
+.footer-links a{color:var(--text-2);text-decoration:none;font-weight:500;transition:color 0.15s;letter-spacing:0.3px}
+.footer-links a:hover{color:var(--gold)}
+.footer-meta{font-size:11px;color:var(--text-3);letter-spacing:1px}
 
 /* Reveal */
-.reveal{opacity:0;transform:translateY(16px);transition:opacity 0.7s ease,transform 0.7s ease}
+.reveal{opacity:0;transform:translateY(16px);transition:opacity 0.8s ease,transform 0.8s ease}
 .reveal.in{opacity:1;transform:translateY(0)}
 
 @media (min-width:780px){
   .cards{grid-template-columns:repeat(3,1fr)}
 }
 @media (max-width:540px){
-  .hero{padding:80px 0 60px}
-  .trust-grid{grid-template-columns:1fr;max-width:380px}
+  .hero{padding:60px 0 40px}
+  .trust-grid{grid-template-columns:1fr;max-width:360px}
   section.s{padding:80px 0}
-  .quote,.final{padding:80px 0}
+  .quote-section,.final{padding:80px 0}
+  .nav-link{display:none}
+  .step{gap:18px}
+  .step-num{width:40px;height:40px;font-size:18px}
 }
 </style>
 </head>
@@ -147,9 +179,12 @@ footer{border-top:1px solid var(--line);padding:48px 0 56px;background:var(--bg)
 
 <nav>
   <div class="nav-inner">
-    <a class="brand" href="#top"><span class="brand-mark"></span><span class="brand-name">CreatorX</span></a>
+    <a class="brand" href="#top">
+      <span class="brand-logo"></span>
+      <span class="brand-name">Creator<span class="x">X</span></span>
+    </a>
     <div class="nav-right">
-      <a class="nav-link" href="#how">So funktioniert's</a>
+      <a class="nav-link" href="#how">Funktion</a>
       <a class="nav-link" href="#faq">FAQ</a>
       <a class="nav-cta" href="https://t.me/+w-V2QL-igJw5YjY0" target="_blank" rel="noopener">Beitreten</a>
     </div>
@@ -160,17 +195,19 @@ footer{border-top:1px solid var(--line);padding:48px 0 56px;background:var(--bg)
 
 <!-- HERO -->
 <section class="hero">
+  <div class="hero-bg">
+    <div class="orbital"></div>
+    <div class="orbital-2"></div>
+  </div>
   <div class="wrap">
     <div class="hero-inner">
-      <div class="hero-tag">
-        <span class="hero-tag-pill">Free</span>
-        <span>Eine Community für ambitionierte Creators</span>
-      </div>
+      <div class="hero-icon"></div>
+      <div class="hero-tag">Free · Invite-Only Community</div>
       <h1>
         Wachsen ist<br>
-        <span class="accent">kein Solosport.</span>
+        <span class="accent serif">kein Solosport.</span>
       </h1>
-      <p class="subhead">CreatorX ist eine kuratierte Community von Instagram Creators, die sich gegenseitig stärken — strukturiert, transparent und ohne versteckte Kosten.</p>
+      <p class="subhead">CreatorX ist eine kuratierte Community von <b>Instagram Creators</b>, die sich gegenseitig stärken — strukturiert, transparent und ohne versteckte Kosten.</p>
       <div class="hero-ctas">
         <a href="https://t.me/+w-V2QL-igJw5YjY0" class="btn btn-primary" target="_blank" rel="noopener">
           Community beitreten
@@ -185,21 +222,21 @@ footer{border-top:1px solid var(--line);padding:48px 0 56px;background:var(--bg)
 <!-- TRUST -->
 <section class="trust">
   <div class="wrap">
-    <div class="trust-label">Aktivität seit Tag 1</div>
+    <div class="trust-label">— Aktivität seit Tag Eins —</div>
     <div class="trust-grid">
       <div class="trust-cell">
         <div class="trust-num" id="stat-members">—</div>
-        <div class="trust-lbl">Aktive Creators</div>
-        <div class="trust-sub">aktuell online</div>
+        <div class="trust-lbl">Creators</div>
+        <div class="trust-sub">aktuell aktiv</div>
       </div>
       <div class="trust-cell">
-        <div class="trust-num" id="stat-likes">—<span class="plus">+</span></div>
-        <div class="trust-lbl">Likes vergeben</div>
+        <div class="trust-num" id="stat-likes">—</div>
+        <div class="trust-lbl">Likes</div>
         <div class="trust-sub">seit Bestehen</div>
       </div>
       <div class="trust-cell">
-        <div class="trust-num" id="stat-posts">—<span class="plus">+</span></div>
-        <div class="trust-lbl">Beiträge geteilt</div>
+        <div class="trust-num" id="stat-posts">—</div>
+        <div class="trust-lbl">Beiträge</div>
         <div class="trust-sub">seit Bestehen</div>
       </div>
     </div>
@@ -210,24 +247,24 @@ footer{border-top:1px solid var(--line);padding:48px 0 56px;background:var(--bg)
 <section class="s">
   <div class="wrap">
     <div class="s-head reveal">
-      <span class="s-eyebrow">Worauf es ankommt</span>
-      <h2 class="s-title">Drei Prinzipien.<br>Nicht verhandelbar.</h2>
-      <p class="s-sub">Wir machen nicht alles. Wir machen wenige Dinge richtig.</p>
+      <span class="s-eyebrow">Das Fundament</span>
+      <h2 class="s-title">Drei Prinzipien.<br><span class="em">Nicht verhandelbar.</span></h2>
+      <p class="s-sub">Was uns ausmacht, ist nicht Geschmackssache.</p>
     </div>
 
     <div class="cards">
       <div class="card reveal">
-        <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+        <div class="card-num">i</div>
         <h3 class="card-title">Echte Creators</h3>
-        <p class="card-desc">Keine Bots, keine Fake-Accounts. Eine geprüfte Community von Menschen, die wirklich Content erstellen.</p>
+        <p class="card-desc">Keine Bots. Keine Fake-Profile. Eine geprüfte Community von Menschen, die wirklich Content erstellen — nicht nur konsumieren.</p>
       </div>
       <div class="card reveal">
-        <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-5"/></svg></div>
+        <div class="card-num">ii</div>
         <h3 class="card-title">Strukturiertes Wachstum</h3>
-        <p class="card-desc">Ein klares System statt zufälliger Hilfe. Jeder Beitrag wird gesehen, jeder Beitrag zählt.</p>
+        <p class="card-desc">Ein klares System statt zufälliger Hilfe. Jeder Beitrag wird gesehen, jeder Beitrag zählt — algorithmisch fair.</p>
       </div>
       <div class="card reveal">
-        <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v6m0 8v6M4.93 4.93l4.24 4.24m5.66 5.66l4.24 4.24M2 12h6m8 0h6M4.93 19.07l4.24-4.24m5.66-5.66l4.24-4.24"/></svg></div>
+        <div class="card-num">iii</div>
         <h3 class="card-title">Frei. Für immer.</h3>
         <p class="card-desc">Keine Premium-Tiers. Keine Paywalls. Was zählt ist Beitrag — nicht Bezahlung.</p>
       </div>
@@ -236,33 +273,33 @@ footer{border-top:1px solid var(--line);padding:48px 0 56px;background:var(--bg)
 </section>
 
 <!-- HOW -->
-<section class="s" id="how" style="background:var(--surface);border-top:1px solid var(--line);border-bottom:1px solid var(--line)">
+<section class="s" id="how" style="background:var(--bg-2);border-top:1px solid var(--line);border-bottom:1px solid var(--line)">
   <div class="wrap">
     <div class="s-head reveal">
-      <span class="s-eyebrow">In 3 Schritten</span>
-      <h2 class="s-title">So funktioniert's.</h2>
-      <p class="s-sub">Vom Beitritt zum ersten Wachstumsschub — meistens unter 5 Minuten.</p>
+      <span class="s-eyebrow">In drei Schritten</span>
+      <h2 class="s-title">So funktioniert <span class="em">CreatorX</span>.</h2>
+      <p class="s-sub">Vom Beitritt zum ersten Wachstumsschub — meistens unter fünf Minuten.</p>
     </div>
 
     <div class="steps">
       <div class="step reveal">
-        <div class="step-num">1</div>
+        <div class="step-num"><span>I</span></div>
         <div class="step-content">
           <div class="step-title">Telegram beitreten</div>
           <div class="step-desc">Klick den Button und tritt der Telegram-Community bei. Kostenlos, ohne Anmeldung, ohne E-Mail.</div>
         </div>
       </div>
       <div class="step reveal">
-        <div class="step-num">2</div>
+        <div class="step-num"><span>II</span></div>
         <div class="step-content">
           <div class="step-title">Profil verbinden</div>
           <div class="step-desc">Verknüpfe dein Instagram-Profil über die App. Nur Username — kein Login, kein Passwort.</div>
         </div>
       </div>
       <div class="step reveal">
-        <div class="step-num">3</div>
+        <div class="step-num"><span>III</span></div>
         <div class="step-content">
-          <div class="step-title">Mitwirken & Wachsen</div>
+          <div class="step-title">Mitwirken &amp; Wachsen</div>
           <div class="step-desc">Like Beiträge anderer Creators, teile deine eigenen. Die Community macht den Rest.</div>
         </div>
       </div>
@@ -271,13 +308,11 @@ footer{border-top:1px solid var(--line);padding:48px 0 56px;background:var(--bg)
 </section>
 
 <!-- QUOTE -->
-<section class="quote">
+<section class="quote-section">
   <div class="wrap">
-    <p class="quote-text reveal">
-      „Allein bist du ein Creator.<br>
-      <span class="em">Mit uns bist du eine Bewegung."</span>
-    </p>
-    <div class="quote-cite">CreatorX · Manifest</div>
+    <div class="quote-mark reveal">"</div>
+    <p class="quote-text reveal">Allein bist du ein Creator.<br><span class="em">Mit uns bist du eine Bewegung.</span></p>
+    <div class="quote-cite">— CreatorX Manifest —</div>
   </div>
 </section>
 
@@ -285,8 +320,8 @@ footer{border-top:1px solid var(--line);padding:48px 0 56px;background:var(--bg)
 <section class="s" id="faq">
   <div class="wrap">
     <div class="s-head reveal">
-      <span class="s-eyebrow">Fragen &amp; Antworten</span>
-      <h2 class="s-title">Was du wissen solltest.</h2>
+      <span class="s-eyebrow">Klärung</span>
+      <h2 class="s-title">Was du <span class="em">wissen solltest</span>.</h2>
     </div>
 
     <div class="faq">
@@ -312,8 +347,9 @@ footer{border-top:1px solid var(--line);padding:48px 0 56px;background:var(--bg)
 
 <!-- FINAL CTA -->
 <section class="final">
+  <div class="final-bg"></div>
   <div class="wrap final-inner">
-    <h2>Werde Teil <span class="em">der Bewegung.</span></h2>
+    <h2>Werde Teil <span class="em serif">der Bewegung</span>.</h2>
     <p>Tritt bei und finde heraus, wie weit du mit der richtigen Community kommst.</p>
     <div class="hero-ctas">
       <a href="https://t.me/+w-V2QL-igJw5YjY0" class="btn btn-primary" target="_blank" rel="noopener">
@@ -328,23 +364,25 @@ footer{border-top:1px solid var(--line);padding:48px 0 56px;background:var(--bg)
 <!-- FOOTER -->
 <footer>
   <div class="wrap footer-inner">
-    <a class="brand" href="#top"><span class="brand-mark"></span><span class="brand-name" style="color:var(--text-2)">CreatorX</span></a>
+    <a class="brand" href="#top">
+      <span class="brand-logo"></span>
+      <span class="brand-name">Creator<span class="x">X</span></span>
+    </a>
     <div class="footer-links">
-      <a href="#how">So funktioniert's</a>
+      <a href="#how">Funktion</a>
       <a href="#faq">FAQ</a>
       <a href="https://t.me/+w-V2QL-igJw5YjY0" target="_blank" rel="noopener">Telegram</a>
-      <a href="https://web-production-7981d.up.railway.app/">Web App</a>
-      <a href="https://web-production-7981d.up.railway.app/system-info">Dokumentation</a>
+      <a href="https://web-production-7981d.up.railway.app/">App</a>
+      <a href="https://web-production-7981d.up.railway.app/system-info">Doku</a>
     </div>
-    <div class="footer-meta">© 2026 CreatorX · v6 · Eine Community für Instagram Creators</div>
+    <div class="footer-meta">© MMXXVI · CreatorX · v7</div>
   </div>
 </footer>
 
 <script>
-// Stats
 (async function(){
   try {
-    const res = await fetch('https://web-production-7981d.up.railway.app/api/community-stats');
+    const res = await fetch('/api/community-stats');
     if (!res.ok) return;
     const d = await res.json();
     setStat('stat-members', d.members || 0, false);
@@ -356,7 +394,7 @@ footer{border-top:1px solid var(--line);padding:48px 0 56px;background:var(--bg)
 function setStat(id, target, hasPlus){
   const el = document.getElementById(id);
   if (!el || !isFinite(target)) return;
-  const dur = 1800, start = performance.now();
+  const dur = 2000, start = performance.now();
   function step(t){
     const p = Math.min(1, (t - start) / dur);
     const eased = 1 - Math.pow(1 - p, 4);
@@ -367,14 +405,10 @@ function setStat(id, target, hasPlus){
   requestAnimationFrame(step);
 }
 
-// FAQ toggles
 document.querySelectorAll('.faq-item').forEach(item => {
-  item.querySelector('.faq-q').addEventListener('click', () => {
-    item.classList.toggle('open');
-  });
+  item.querySelector('.faq-q').addEventListener('click', () => item.classList.toggle('open'));
 });
 
-// Reveal
 const io = new IntersectionObserver((entries) => {
   entries.forEach(e => {
     if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
