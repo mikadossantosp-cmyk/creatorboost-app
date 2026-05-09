@@ -993,11 +993,14 @@ ${session ? `
 .tour-spotlight{position:fixed;inset:0;pointer-events:none;background:radial-gradient(circle var(--rad,180px) at var(--cx,50%) var(--cy,50%),transparent 0%,transparent 60%,rgba(0,0,0,0.35) 100%);transition:background .5s cubic-bezier(.16,1,.3,1);z-index:9998;opacity:0}
 .tour-overlay.show .tour-spotlight{opacity:1}
 /* Pulsierender Gold-Ring direkt um's Target */
-.tour-ring{position:absolute;border-radius:14px;border:2.5px solid #d4af37;box-shadow:0 0 0 4px rgba(212,175,55,0.20),0 0 32px rgba(212,175,55,0.65),inset 0 0 16px rgba(212,175,55,0.18);pointer-events:none;transition:all .55s cubic-bezier(.16,1,.3,1);animation:tour-ring-pulse 1.8s ease-in-out infinite;z-index:9999;will-change:transform,box-shadow}
+.tour-ring{position:fixed;border-radius:14px;border:2.5px solid #d4af37;box-shadow:0 0 0 4px rgba(212,175,55,0.20),0 0 32px rgba(212,175,55,0.65),inset 0 0 16px rgba(212,175,55,0.18);pointer-events:none;transition:all .55s cubic-bezier(.16,1,.3,1);animation:tour-ring-pulse 1.8s ease-in-out infinite;z-index:9999;will-change:transform,box-shadow}
 @keyframes tour-ring-pulse{0%,100%{box-shadow:0 0 0 4px rgba(212,175,55,0.20),0 0 28px rgba(212,175,55,0.55),inset 0 0 14px rgba(212,175,55,0.16);transform:scale(1)}50%{box-shadow:0 0 0 9px rgba(212,175,55,0.34),0 0 48px rgba(212,175,55,0.9),inset 0 0 20px rgba(212,175,55,0.24);transform:scale(1.035)}}
-.tour-arrow{position:absolute;font-size:42px;color:#d4af37;pointer-events:none;filter:drop-shadow(0 6px 18px rgba(212,175,55,0.85));animation:tour-bounce 1.4s ease-in-out infinite;transition:all .55s cubic-bezier(.16,1,.3,1);z-index:10000;line-height:1;font-weight:700;will-change:transform}
+.tour-arrow{position:fixed;width:42px;height:42px;pointer-events:none;filter:drop-shadow(0 8px 22px rgba(212,175,55,0.9));animation:tour-bounce 1.4s ease-in-out infinite;transition:all .55s cubic-bezier(.16,1,.3,1);z-index:10000;will-change:transform}
+.tour-arrow svg{width:100%;height:100%;display:block}
 @keyframes tour-bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(10px)}}
-.tour-card{position:absolute;left:16px;right:16px;background:linear-gradient(180deg,rgba(28,28,30,0.97),rgba(15,15,17,0.97));border:1px solid rgba(212,175,55,0.4);border-radius:20px;padding:20px;box-shadow:0 30px 80px -10px rgba(0,0,0,0.75),0 0 0 1px rgba(255,255,255,0.04),0 0 40px rgba(212,175,55,0.22);transition:all .55s cubic-bezier(.16,1,.3,1);max-width:440px;margin:0 auto;font-family:'Inter',sans-serif;backdrop-filter:blur(28px) saturate(180%);-webkit-backdrop-filter:blur(28px) saturate(180%);pointer-events:auto;z-index:10001}
+.tour-card{position:fixed;left:16px;right:16px;background:linear-gradient(180deg,rgba(28,28,30,0.97),rgba(15,15,17,0.97));border:1px solid rgba(212,175,55,0.4);border-radius:20px;padding:20px;box-shadow:0 30px 80px -10px rgba(0,0,0,0.75),0 0 0 1px rgba(255,255,255,0.04),0 0 40px rgba(212,175,55,0.22);transition:opacity .25s ease,transform .35s cubic-bezier(.16,1,.3,1);max-width:440px;margin:0 auto;font-family:'Inter',sans-serif;backdrop-filter:blur(28px) saturate(180%);-webkit-backdrop-filter:blur(28px) saturate(180%);pointer-events:auto;z-index:10001;overflow:hidden}
+.tour-card::before{content:'';position:absolute;inset:0;border-radius:20px;padding:1px;background:linear-gradient(135deg,rgba(212,175,55,0.6),rgba(212,175,55,0.05) 30%,rgba(212,175,55,0.05) 70%,rgba(212,175,55,0.6));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none;opacity:0.5;animation:gradient-rotate 6s linear infinite}
+@keyframes gradient-rotate{0%{filter:hue-rotate(0deg)}100%{filter:hue-rotate(360deg)}}
 .tour-card.transitioning{opacity:0;transform:translateY(8px) scale(0.985)}
 .tour-close{position:absolute;top:12px;right:12px;width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.65);font-size:18px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit;transition:all .18s}
 .tour-close:hover{background:rgba(255,255,255,0.13);color:#fff;border-color:rgba(255,255,255,0.24)}
@@ -1017,6 +1020,14 @@ ${session ? `
 .tour-progress-d{flex:1;height:3px;border-radius:99px;background:rgba(255,255,255,0.08);transition:all .35s ease}
 .tour-progress-d.done{background:rgba(212,175,55,0.45)}
 .tour-progress-d.active{background:linear-gradient(90deg,#d4af37,#f5d76e);box-shadow:0 0 12px rgba(212,175,55,0.5)}
+.tour-progress-d{cursor:pointer}
+.tour-kbd-hint{font-size:10.5px;color:rgba(255,255,255,0.35);text-align:center;margin-top:10px;font-family:'Inter',sans-serif;letter-spacing:0.2px}
+.tour-kbd-hint kbd{display:inline-block;padding:1px 6px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:5px;font-family:'JetBrains Mono',monospace;font-size:10px;color:rgba(255,255,255,0.7);line-height:14px;margin:0 2px}
+/* Confetti */
+.tour-confetti{position:fixed;inset:0;pointer-events:none;z-index:10002;display:none}
+.tour-confetti.show{display:block}
+.tour-confetti span{position:absolute;top:-30px;font-size:22px;animation:confetti-fall 2.4s ease-out forwards}
+@keyframes confetti-fall{0%{transform:translateY(0) rotate(0deg);opacity:1}100%{transform:translateY(110vh) rotate(720deg);opacity:0}}
 /* Page-Transition Indikator — kurze Welle wenn zur nächsten Page navigiert wird */
 .tour-pagewipe{position:fixed;inset:0;background:radial-gradient(circle at center,rgba(212,175,55,0.18) 0%,rgba(0,0,0,0.95) 70%);z-index:99999;display:none;pointer-events:none;animation:wipe-in .4s ease-out;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
 .tour-pagewipe.show{display:flex;align-items:center;justify-content:center}
@@ -1029,7 +1040,9 @@ ${session ? `
 <div class="tour-overlay" id="tour-ov" aria-hidden="true">
   <div class="tour-spotlight" id="tour-spotlight"></div>
   <div class="tour-ring" id="tour-ring"></div>
-  <div class="tour-arrow" id="tour-arrow">▼</div>
+  <div class="tour-arrow" id="tour-arrow">
+    <svg viewBox="0 0 32 40" fill="#d4af37" style="transform-origin:center"><path d="M16 0 L16 28 M6 18 L16 32 L26 18" stroke="#d4af37" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+  </div>
   <div class="tour-card" id="tour-card" role="dialog" aria-live="polite">
     <button class="tour-close" onclick="window.cbTourSkip()" aria-label="Tour beenden">×</button>
     <div class="tour-progress" id="tour-progress"></div>
@@ -1041,8 +1054,10 @@ ${session ? `
       <button class="tour-btn tour-btn-skip" onclick="window.cbTourSkip()">Überspringen</button>
       <button class="tour-btn tour-btn-next" onclick="window.cbTourNext()" id="tour-next-btn">Weiter →</button>
     </div>
+    <div class="tour-kbd-hint" id="tour-kbd-hint"><kbd>↵</kbd> Weiter · <kbd>←</kbd> Zurück · <kbd>Esc</kbd> Beenden</div>
   </div>
 </div>
+<div class="tour-confetti" id="tour-confetti"></div>
 <div class="tour-pagewipe" id="tour-pagewipe">
   <div class="tour-pagewipe-inner">
     <div class="tour-pagewipe-spinner"></div>
@@ -1133,16 +1148,17 @@ ${session ? `
     var spaceAbove = rect.top;
     var spaceBelow = vh - rect.bottom;
     var placeBelow = spaceBelow >= (CARD_H_EST + GAP + ARROW_H) || spaceBelow > spaceAbove;
+    var arrowSvg = arrow.querySelector('svg');
     if(placeBelow){
-      // Element oben → Card+Arrow unter dem Element
-      arrow.textContent = '▲';
+      // Element oben → Card+Arrow unter dem Element. SVG zeigt nach OBEN (180° rotiert)
+      if(arrowSvg) arrowSvg.style.transform = 'rotate(180deg)';
       arrow.style.top  = (rect.bottom + GAP - 4) + 'px';
       arrow.style.left = (rect.left + rect.width/2 - 21) + 'px';
       card.style.top    = (rect.bottom + GAP + ARROW_H - 6) + 'px';
       card.style.bottom = 'auto';
     } else {
-      // Element unten → Card+Arrow über dem Element
-      arrow.textContent = '▼';
+      // Element unten → Card+Arrow über dem Element. SVG zeigt nach UNTEN (default)
+      if(arrowSvg) arrowSvg.style.transform = 'rotate(0deg)';
       arrow.style.top  = (rect.top - GAP - ARROW_H + 8) + 'px';
       arrow.style.left = (rect.left + rect.width/2 - 21) + 'px';
       card.style.bottom = (vh - rect.top + GAP + ARROW_H - 6) + 'px';
@@ -1175,8 +1191,27 @@ ${session ? `
     for(var i=0;i<STEPS.length;i++){
       var d = document.createElement('div');
       d.className = 'tour-progress-d' + (i<idx?' done':i===idx?' active':'');
+      d.setAttribute('data-jump-idx', i);
+      d.title = (STEPS[i].eyebrow || '') + ' — Step ' + (i+1);
+      d.addEventListener('click', function(ev){ window.cbTourJump(parseInt(ev.target.getAttribute('data-jump-idx'),10)); });
       p.appendChild(d);
     }
+  }
+  function fireConfetti(){
+    var c = document.getElementById('tour-confetti');
+    if(!c) return;
+    c.innerHTML = '';
+    var emojis = ['🎉','✨','🎊','⭐','💫','🏆','👑','💎'];
+    for(var i=0;i<32;i++){
+      var s = document.createElement('span');
+      s.textContent = emojis[Math.floor(Math.random()*emojis.length)];
+      s.style.left = (Math.random()*100) + '%';
+      s.style.animationDelay = (Math.random()*0.6) + 's';
+      s.style.animationDuration = (1.8 + Math.random()*1.4) + 's';
+      c.appendChild(s);
+    }
+    c.classList.add('show');
+    setTimeout(function(){ c.classList.remove('show'); c.innerHTML=''; }, 3500);
   }
 
   // Wartet bis das smooth-scroll fertig ist (Element-Position stabil) bevor positioniert wird.
@@ -1272,6 +1307,8 @@ ${session ? `
       document.querySelector('.tour-actions').innerHTML = ''
         + '<button class="tour-btn tour-btn-skip" onclick="window.cbTourRestart()" style="flex:1">↻ Tour nochmal</button>'
         + '<button class="tour-btn tour-btn-next" onclick="window.cbTourFinish()" style="flex:1.5">✓ Alles verstanden</button>';
+      var hint = document.getElementById('tour-kbd-hint');
+      if(hint) hint.style.display = 'none';
       renderProgress();
       fadeCardIn();
     });
@@ -1316,7 +1353,10 @@ ${session ? `
     document.getElementById('tour-ov').classList.remove('show');
     try{ localStorage.setItem('cb_tour_done','1'); sessionStorage.removeItem('cb_tour_active'); sessionStorage.removeItem('cb_tour_idx'); }catch(e){}
   };
-  window.cbTourFinish = window.cbTourSkip;
+  window.cbTourFinish = function(){
+    fireConfetti();
+    setTimeout(window.cbTourSkip, 600);
+  };
   window.cbTourRestart = function(){
     try{ sessionStorage.setItem('cb_tour_active','1'); sessionStorage.setItem('cb_tour_idx','0'); localStorage.removeItem('cb_tour_done'); }catch(e){}
     var first = STEPS[0];
@@ -1324,8 +1364,30 @@ ${session ? `
     if(wipe) wipe.classList.add('show');
     setTimeout(function(){ location.href = first.page + '?tour=continue'; }, 280);
   };
-  // Esc beendet die Tour.
-  document.addEventListener('keydown', function(e){ if(e.key === 'Escape') window.cbTourSkip(); });
+  // Click auf Progress-Dot springt zu dem Step.
+  window.cbTourJump = function(targetIdx){
+    if(typeof targetIdx !== 'number' || targetIdx < 0 || targetIdx >= STEPS.length) return;
+    idx = targetIdx;
+    var step = STEPS[idx];
+    if(!pageMatches(step.page)){
+      try{ sessionStorage.setItem('cb_tour_idx', String(idx)); sessionStorage.setItem('cb_tour_active','1'); }catch(e){}
+      var wipe = document.getElementById('tour-pagewipe');
+      if(wipe) wipe.classList.add('show');
+      setTimeout(function(){ location.href = step.page + '?tour=continue'; }, 280);
+      return;
+    }
+    try{ sessionStorage.setItem('cb_tour_idx', String(idx)); }catch(e){}
+    show();
+  };
+  // Keyboard: Esc=close, ↵/Space=next, ←/Backspace=prev
+  document.addEventListener('keydown', function(e){
+    var ov = document.getElementById('tour-ov');
+    if(!ov || !ov.classList.contains('show')) return;
+    if(e.key === 'Escape'){ e.preventDefault(); window.cbTourSkip(); }
+    else if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); window.cbTourNext(); }
+    else if(e.key === 'ArrowLeft' || e.key === 'Backspace'){ e.preventDefault(); window.cbTourPrev(); }
+    else if(e.key === 'ArrowRight'){ e.preventDefault(); window.cbTourNext(); }
+  });
 
   // Trigger nach kurzem Delay damit die Page-Render fertig ist.
   setTimeout(function(){
