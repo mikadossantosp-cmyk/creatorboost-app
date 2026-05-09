@@ -1070,30 +1070,48 @@ ${session ? `
   // Multi-Page Tour: läuft über mehrere Seiten (Feed → Explore → Profil → Einstellungen).
   // Active-State + Index in sessionStorage damit Navigation funktioniert.
   // Server-State (u.appBriefingSeen) entscheidet ob Tour beim ersten Login automatisch startet.
+  function _tourLog(msg){ try{ console.log('[TOUR]', msg); }catch(e){} }
   var force = /[?&]tour=1/.test(location.search);
   var continueMode = /[?&]tour=continue/.test(location.search);
   var active = false;
   try{ active = sessionStorage.getItem('cb_tour_active') === '1'; }catch(e){}
+  _tourLog('init force='+force+' continue='+continueMode+' active='+active+' path='+location.pathname);
 
-  // Force-Mode (?tour=1) → reset & starte
+  // Force-Mode (?tour=1) → reset & starte. Auch sicherstellen dass tour-ov existiert,
+  // sonst kann die Tour nichts anzeigen (z.B. Layout-Bug).
   if(force){
     try{ sessionStorage.setItem('cb_tour_active','1'); sessionStorage.setItem('cb_tour_idx','0'); }catch(e){}
     active = true;
+    if(!document.getElementById('tour-ov')){
+      _tourLog('FAIL: #tour-ov missing — Layout-Bug');
+      try{ alert('Tour-Overlay fehlt im DOM. Bitte Hard-Reload (Strg+F5).'); }catch(e){}
+      return;
+    }
+    _tourLog('force-mode → runTour() now');
+    runTour();
+    return;
   }
 
-  // Wenn Tour aktiv (force oder mid-page-jump) → direkt weiter mit dem normalen Flow.
+  // Mid-Page-Jump (Navigation zwischen Pages mit aktiver Tour).
   if(active){
+    _tourLog('active session-state → runTour()');
     runTour();
-  } else if(/^\/feed/.test(location.pathname) && !continueMode){
-    // Auto-Start beim ersten Login (auf /feed): server fragen ob u.appBriefingSeen.
+    return;
+  }
+
+  // Auto-Start auf /feed wenn Server sagt 'noch nicht gesehen'.
+  if(/^\/feed/.test(location.pathname) && !continueMode){
+    _tourLog('feed page — fetching briefing-status…');
     fetch('/api/briefing-status', {cache:'no-store'}).then(function(r){return r.json();}).then(function(j){
+      _tourLog('briefing-status: ' + JSON.stringify(j));
       if(j && j.seen) return; // schon gesehen → nicht starten
       try{ sessionStorage.setItem('cb_tour_active','1'); sessionStorage.setItem('cb_tour_idx','0'); }catch(e){}
       runTour();
-    }).catch(function(){ /* fail-quiet — keine Tour bei Netzwerkfehler */ });
+    }).catch(function(e){ _tourLog('briefing-status fail: '+e); });
+    return;
   }
-  if(!active && !/^\/feed/.test(location.pathname)) return;
-  if(!active && continueMode) return; // andere Page mit ?tour=continue aber kein active flag → nicht erneut starten
+  // Sonst nichts tun.
+  return;
   function runTour(){
   // ── runTour Body ─────────────────────────────────────────────────────────
 
