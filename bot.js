@@ -2757,7 +2757,7 @@ self.addEventListener('notificationclick',e=>{
     if (session && !isPolling) { session.lastSeen = Date.now(); }
 
     function redirect(to) { res.writeHead(302,{'Location':to}); res.end(); }
-    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'22'}); res.end(layout(content,session,page,lang)); }
+    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'99'}); res.end(layout(content,session,page,lang)); }
     function json(data, status=200) { res.writeHead(status,{'Content-Type':'application/json'}); res.end(JSON.stringify(data)); }
 
     // ── LANDING ──
@@ -5978,6 +5978,7 @@ commentsBox+
             : '<div style="padding:8px 0 80px">'+heuteHtml+'</div>';
 
         return html(`
+${query.tour === '1' ? `<div id="cb-tour-server-banner" style="position:fixed;top:8px;left:8px;right:8px;z-index:99999;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;padding:12px 16px;border-radius:12px;font-family:Inter,-apple-system,sans-serif;font-size:13.5px;font-weight:600;text-align:center;box-shadow:0 12px 30px rgba(34,197,94,.45);max-width:520px;margin:0 auto;border:1px solid rgba(255,255,255,.2)">✅ Server-Trigger aktiv — Tour startet gleich…</div><script>setTimeout(function(){try{sessionStorage.setItem('cb_tour_active','1');sessionStorage.setItem('cb_tour_idx','0');}catch(e){}var b=document.getElementById('cb-tour-server-banner');if(b){b.style.transition='opacity .4s';b.style.opacity='0';setTimeout(function(){b.remove();},500);}},1500);</script>` : ''}
 <div class="topbar">
   <div class="topbar-logo">CreatorX</div>
   <div class="topbar-actions">
