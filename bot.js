@@ -1072,9 +1072,32 @@ ${session ? `
   // Server-State (u.appBriefingSeen) entscheidet ob Tour beim ersten Login automatisch startet.
   function _tourLog(msg){ try{ console.log('[TOUR]', msg); }catch(e){} }
   function _safeRun(fn, label){
-    try { fn(); } catch(e) { _tourLog('ERROR in '+label+': '+(e.message||e)); try{ console.error(e); }catch(_){} }
+    try { fn(); } catch(e) { _tourLog('ERROR in '+label+': '+(e.message||e)); try{ console.error(e); }catch(_){} _showTourErrorBanner(label, e); }
+  }
+  // VISIBLE error banner — falls runTour crashed sieht User direkt was
+  function _showTourErrorBanner(label, err){
+    try{
+      var b = document.createElement('div');
+      b.style.cssText = 'position:fixed;top:10px;left:10px;right:10px;z-index:99999;background:#7c1d1d;color:#fff;padding:14px;border-radius:12px;font-family:Inter,sans-serif;font-size:13px;font-weight:600;box-shadow:0 12px 30px rgba(0,0,0,.6);max-width:600px;margin:0 auto;border:1px solid #ef4444';
+      b.innerHTML = '<b style="font-size:14px">⚠️ Tour-Error in '+label+'</b><div style="margin-top:6px;font-weight:400;font-size:12px;color:#fecaca">'+(err.message||err)+'</div><div style="margin-top:8px;font-size:11px;color:#fca5a5">Schick mir bitte einen Screenshot davon!</div>';
+      document.body.appendChild(b);
+      setTimeout(function(){ b.style.transition='opacity .5s'; b.style.opacity='0'; setTimeout(function(){b.remove();}, 600); }, 12000);
+    }catch(e){}
   }
   var force = /[?&]tour=1/.test(location.search);
+  if(force){
+    // Sichtbarer Test-Banner — wenn DAS angezeigt wird läuft das Skript zumindest
+    try{
+      var bx = document.createElement('div');
+      bx.id = 'cb-tour-loading';
+      bx.style.cssText = 'position:fixed;top:10px;left:10px;right:10px;z-index:99999;background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;padding:12px 16px;border-radius:12px;font-family:Inter,sans-serif;font-size:13px;font-weight:600;text-align:center;box-shadow:0 10px 28px rgba(124,58,237,.45);max-width:520px;margin:0 auto';
+      bx.innerHTML = '🎯 Tour wird vorbereitet…';
+      // append nach DOMContentLoaded falls body nicht ready
+      if(document.body){ document.body.appendChild(bx); }
+      else { document.addEventListener('DOMContentLoaded', function(){ document.body.appendChild(bx); }); }
+      setTimeout(function(){ var el=document.getElementById('cb-tour-loading'); if(el) el.remove(); }, 4000);
+    }catch(e){}
+  }
   var continueMode = /[?&]tour=continue/.test(location.search);
   var active = false;
   try{ active = sessionStorage.getItem('cb_tour_active') === '1'; }catch(e){}
