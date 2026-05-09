@@ -2324,13 +2324,15 @@ ${_isPreview ? '<div class="admin-pb">👀 Admin-Vorschau · Login-Page &nbsp;·
       </form>
     </div>
     <div id="pane-email" style="display:none">
-      <div class="code-hint">Wir schicken dir einen Login-Link an deine Email</div>
+      <div class="code-hint">Email + Passwort einloggen — oder Magic-Link an die Email schicken</div>
       <div class="email-msg" id="email-msg"></div>
       <form id="email-form" onsubmit="return submitEmail(event)">
-        <input type="email" id="email-input" class="email-input" placeholder="deine@email.de" autocomplete="email" autocapitalize="none" spellcheck="false" required maxlength="200">
-        <button type="submit" class="login-btn" id="email-btn">Login-Link senden →</button>
+        <input type="email" id="email-input" class="email-input" placeholder="deine@email.de" autocomplete="email" autocapitalize="none" spellcheck="false" required maxlength="200" style="margin-bottom:8px">
+        <input type="password" id="email-pw" class="email-input" placeholder="Passwort (optional, leer = Magic-Link)" autocomplete="current-password" maxlength="200">
+        <button type="submit" class="login-btn" id="email-btn">Einloggen →</button>
       </form>
-      <div class="email-hint">Du musst deine Email zuerst im Bot mit <b style="color:#d4af37">/setemail</b> registrieren.</div>
+      <button type="button" id="email-magic-btn" onclick="sendMagicLink()" style="margin-top:6px;background:transparent;border:none;color:rgba(255,255,255,.55);font-size:12px;text-decoration:underline;cursor:pointer;width:100%;padding:8px;font-family:'DM Sans',sans-serif">📧 Magic-Link senden (ohne Passwort)</button>
+      <div class="email-hint">Email vorher in Einstellungen oder per <b style="color:#d4af37">/setemail</b> im Bot setzen. Passwort kannst du nach dem ersten Login wählen.</div>
     </div>
   </div>
 </div>
@@ -2343,10 +2345,34 @@ function switchLoginTab(t){
 }
 function submitEmail(ev){
   ev.preventDefault();
-  var inp=document.getElementById('email-input'),btn=document.getElementById('email-btn'),msg=document.getElementById('email-msg');
-  var em=(inp.value||'').trim();
+  var inp=document.getElementById('email-input'),pwInp=document.getElementById('email-pw'),btn=document.getElementById('email-btn'),msg=document.getElementById('email-msg');
+  var em=(inp.value||'').trim().toLowerCase();
+  var pw=(pwInp.value||'');
   if(!em) return false;
-  btn.disabled=true;btn.textContent='Sende...';
+  msg.classList.remove('show','ok','err');
+  // Wenn Passwort leer → Magic-Link.
+  if(!pw){ sendMagicLink(em); return false; }
+  btn.disabled=true;btn.textContent='Login...';
+  fetch('/api/auth/email-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:em,password:pw})})
+    .then(function(r){return r.json().then(function(j){return{s:r.status,j:j};});})
+    .then(function(o){
+      if(o.j&&o.j.ok&&o.j.redirect){
+        msg.textContent='✅ Eingeloggt — leite weiter...';msg.classList.add('show','ok');
+        setTimeout(function(){window.location.href=o.j.redirect;},250);
+      } else {
+        msg.textContent=(o.j&&o.j.error)||'Login fehlgeschlagen.';
+        msg.classList.add('show','err');
+        btn.disabled=false;btn.textContent='Einloggen →';
+      }
+    })
+    .catch(function(){msg.textContent='Netzwerkfehler.';msg.classList.add('show','err');btn.disabled=false;btn.textContent='Einloggen →';});
+  return false;
+}
+function sendMagicLink(prefilledEmail){
+  var inp=document.getElementById('email-input'),btn=document.getElementById('email-btn'),mb=document.getElementById('email-magic-btn'),msg=document.getElementById('email-msg');
+  var em=(prefilledEmail||(inp.value||'').trim()).toLowerCase();
+  if(!em){ msg.textContent='Bitte Email eingeben.';msg.classList.add('show','err');return; }
+  btn.disabled=true;mb.disabled=true;mb.textContent='Sende Magic-Link...';
   msg.classList.remove('show','ok','err');
   fetch('/api/auth/email-request',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:em})})
     .then(function(r){return r.json().then(function(j){return{s:r.status,j:j};});})
@@ -2354,15 +2380,13 @@ function submitEmail(ev){
       if(o.j&&o.j.ok){
         msg.textContent=o.j.message||'Login-Link gesendet. Schau in dein Email-Postfach (auch Spam).';
         msg.classList.add('show','ok');
-        inp.value='';
       } else {
         msg.textContent=(o.j&&o.j.error)||'Fehler beim Senden.';
         msg.classList.add('show','err');
       }
     })
     .catch(function(){msg.textContent='Netzwerkfehler.';msg.classList.add('show','err');})
-    .finally(function(){btn.disabled=false;btn.textContent='Login-Link senden →';});
-  return false;
+    .finally(function(){btn.disabled=false;mb.disabled=false;mb.textContent='📧 Magic-Link senden (ohne Passwort)';});
 }
 </script>
 </body></html>`);
@@ -2482,6 +2506,55 @@ function submitEmail(ev){
     // ── MAGIC-LINK AUTO-LOGIN ──
     // GET /auth/auto?code=USERS_APPCODE&redirect=/feed?tab=engagement
     // Bot baut diese URL und packt sie in Reminder-DMs. Klick → Session erstellt → kein Tippen.
+    // Email + Passwort Direkt-Login (statt Magic-Link). Setzt Session-Cookie.
+    if (path === '/api/auth/email-password' && req.method === 'POST') {
+        const body = await parseBody(req);
+        const email = String(body.email || '').toLowerCase().trim();
+        const password = String(body.password || '');
+        if (!email || !password) return json({ok:false, error:'Email und Passwort erforderlich'}, 400);
+        // Rate-Limit: 10 Versuche pro Email pro 5min (gegen Brute-Force).
+        const rlKey = 'pw:' + email;
+        const lastTs = emailRateLimit.get(rlKey) || 0;
+        const tries = emailRateLimit.get(rlKey + ':n') || 0;
+        if (tries >= 10 && Date.now() - lastTs < EMAIL_RATE_LIMIT) {
+            return json({ok:false, error:'Zu viele Login-Versuche — bitte 5 min warten'}, 429);
+        }
+        emailRateLimit.set(rlKey, Date.now());
+        emailRateLimit.set(rlKey + ':n', tries + 1);
+        // Bot verifiziert Email+Passwort und liefert uid wenn ok.
+        const result = await postBot('/auth-email-password', { email, password });
+        if (!result || !result.ok) {
+            return json({ok:false, error: (result && result.error) || 'Email oder Passwort falsch'}, 401);
+        }
+        // Reset rate-limit on success.
+        emailRateLimit.delete(rlKey + ':n');
+        const botData = await fetchBot('/data');
+        const u = botData?.users?.[result.uid];
+        if (!u) return json({ok:false, error:'User nicht gefunden'}, 404);
+        let sid = null;
+        for (const [s, sess] of sessions.entries()) {
+            if (sess.uid === String(result.uid)) { sid = s; break; }
+        }
+        if (!sid) {
+            sid = genSid();
+            const validSubUid = u.subUid && botData.users?.[u.subUid] ? String(u.subUid) : null;
+            sessions.set(sid, { uid: String(result.uid), name: u.name, username: u.username||null, theme: 'light', lang: 'de', createdAt: Date.now(), subUid: validSubUid, activeUid: String(result.uid) });
+            saveSessions();
+        }
+        res.writeHead(200, {'Set-Cookie':`cbsid=${sid}; HttpOnly; Path=/; Max-Age=2592000`,'Content-Type':'application/json'});
+        return res.end(JSON.stringify({ok:true, redirect:'/feed'}));
+    }
+    // Passwort setzen / ändern (eingeloggter User).
+    if (path === '/api/auth/set-password' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        const body = await parseBody(req);
+        const newPw = String(body.password || '');
+        if (newPw.length > 0 && newPw.length < 6) return json({ok:false, error:'Passwort muss mindestens 6 Zeichen haben'}, 400);
+        if (newPw.length > 200) return json({ok:false, error:'Passwort zu lang'}, 400);
+        const result = await postBot('/set-user-password', { uid: getMyUid(session), password: newPw });
+        if (!result || !result.ok) return json({ok:false, error: (result && result.error) || 'Speichern fehlgeschlagen'}, 500);
+        return json({ok:true, cleared: !!result.cleared});
+    }
     // Email-Magic-Link Request: User gibt Email ein, wir schicken Login-Link per Mail.
     if (path === '/api/auth/email-request' && req.method === 'POST') {
         const body = await parseBody(req);
@@ -2571,8 +2644,78 @@ function submitEmail(ev){
             sessions.set(sid, { uid: String(entry.uid), name: u.name, username: u.username||null, theme: 'light', lang: 'de', createdAt: Date.now(), subUid: validSubUid, activeUid: String(entry.uid) });
             saveSessions();
         }
-        res.writeHead(302,{'Set-Cookie':`cbsid=${sid}; HttpOnly; Path=/; Max-Age=2592000`,'Location':'/feed'});
+        // Wenn User noch kein Passwort gesetzt hat → /set-password (kann übersprungen werden).
+        const target = u.password_hash ? '/feed' : '/set-password?first=1';
+        res.writeHead(302,{'Set-Cookie':`cbsid=${sid}; HttpOnly; Path=/; Max-Age=2592000`,'Location':target});
         return res.end();
+    }
+    // /set-password Seite — User wird hier nach Magic-Link landen wenn noch kein PW gesetzt.
+    if (path === '/set-password' && req.method === 'GET') {
+        if (!session) return redirect('/');
+        const isFirst = (query.first === '1');
+        const _bd = await fetchBot('/data');
+        const _u = _bd?.users?.[getMyUid(session)] || {};
+        const hasPw = !!_u.password_hash;
+        res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});
+        return res.end(`<!DOCTYPE html><html lang="de" data-theme="dark"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Passwort setzen · CreatorX</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100vh;padding:24px;display:flex;flex-direction:column}
+.wrap{max-width:420px;margin:0 auto;width:100%;flex:1;display:flex;flex-direction:column;justify-content:center}
+.icon{font-size:48px;text-align:center;margin-bottom:14px}
+h1{font-size:24px;font-weight:700;text-align:center;margin-bottom:8px}
+.sub{font-size:13px;color:rgba(255,255,255,.55);text-align:center;line-height:1.55;margin-bottom:24px}
+input{width:100%;background:rgba(255,255,255,.06);border:1.5px solid rgba(212,175,55,.3);color:#fff;border-radius:14px;padding:14px 16px;font-size:15px;outline:none;transition:border-color .2s;font-family:'DM Sans',sans-serif;margin-bottom:8px}
+input:focus{border-color:#d4af37}
+button.primary{background:linear-gradient(135deg,#d4af37,#b8960c);color:#000;border:none;border-radius:14px;padding:15px;font-size:15px;font-weight:700;width:100%;cursor:pointer;margin-top:6px;font-family:'DM Sans',sans-serif}
+button.primary:disabled{opacity:.5;cursor:not-allowed}
+button.skip{background:transparent;border:none;color:rgba(255,255,255,.55);font-size:13px;text-decoration:underline;cursor:pointer;width:100%;padding:14px 0;margin-top:8px;font-family:'DM Sans',sans-serif}
+.msg{padding:10px 14px;margin-top:14px;font-size:13px;border-radius:12px;text-align:center;display:none}
+.msg.show{display:block}
+.msg.ok{background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.4);color:#22c55e}
+.msg.err{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.4);color:#ef4444}
+.hint{font-size:11px;color:rgba(255,255,255,.4);text-align:center;margin-top:14px;line-height:1.5}
+</style></head><body>
+<div class="wrap">
+  <div class="icon">🔐</div>
+  <h1>${hasPw ? 'Passwort ändern' : 'Passwort setzen'}</h1>
+  <div class="sub">${isFirst ? 'Damit du dich nächstes Mal direkt mit Email + Passwort einloggen kannst, ohne jedes Mal einen Magic-Link warten zu müssen.' : 'Dein Passwort schützt deinen Account. Mind. 6 Zeichen.'}</div>
+  <form id="pw-form" onsubmit="return submitPw(event)">
+    <input type="password" id="pw1" placeholder="Neues Passwort (min. 6 Zeichen)" autocomplete="new-password" required minlength="6" maxlength="200">
+    <input type="password" id="pw2" placeholder="Passwort wiederholen" autocomplete="new-password" required minlength="6" maxlength="200">
+    <button type="submit" class="primary" id="btn">${hasPw ? 'Passwort ändern' : 'Passwort speichern'} →</button>
+  </form>
+  <button type="button" class="skip" onclick="window.location.href='/feed'">${isFirst ? 'Später · zur App' : 'Abbrechen'}</button>
+  <div class="msg" id="msg"></div>
+  <div class="hint">Du kannst jederzeit in den Einstellungen wieder ändern.</div>
+</div>
+<script>
+function submitPw(ev){
+  ev.preventDefault();
+  var p1=document.getElementById('pw1').value,p2=document.getElementById('pw2').value,btn=document.getElementById('btn'),msg=document.getElementById('msg');
+  msg.classList.remove('show','ok','err');
+  if(p1!==p2){ msg.textContent='Passwörter stimmen nicht überein.';msg.classList.add('show','err');return false; }
+  if(p1.length<6){ msg.textContent='Mindestens 6 Zeichen.';msg.classList.add('show','err');return false; }
+  btn.disabled=true;btn.textContent='Speichere...';
+  fetch('/api/auth/set-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:p1})})
+    .then(function(r){return r.json();})
+    .then(function(j){
+      if(j&&j.ok){
+        msg.textContent='✅ Passwort gespeichert!';msg.classList.add('show','ok');
+        setTimeout(function(){window.location.href='/feed';},700);
+      } else {
+        msg.textContent=(j&&j.error)||'Fehler beim Speichern.';msg.classList.add('show','err');
+        btn.disabled=false;btn.textContent='${hasPw ? 'Passwort ändern' : 'Passwort speichern'} →';
+      }
+    })
+    .catch(function(){msg.textContent='Netzwerkfehler.';msg.classList.add('show','err');btn.disabled=false;btn.textContent='${hasPw ? 'Passwort ändern' : 'Passwort speichern'} →';});
+  return false;
+}
+</script>
+</body></html>`);
     }
     if (path === '/auth/auto' && req.method === 'GET') {
         const code = (query.code||'').toString().toLowerCase().trim();
@@ -7961,6 +8104,12 @@ ${adminIds.includes(Number(myUid)) ? `
   <button onclick="announceFeThread(this)" class="btn btn-outline btn-full" style="margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:8px">📢 Ankündigung in FE-Thread senden</button>
   <div id="fethread-result" style="display:none;font-size:12px;padding:8px;border-radius:8px;margin-top:4px"></div>
 </div>` : ''}
+<div style="padding:16px;border-bottom:1px solid var(--border2)">
+  <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">🔐 Passwort</div>
+  <div style="font-size:12px;color:var(--muted);margin-bottom:10px">${u.password_hash ? 'Du hast ein Passwort gesetzt — du kannst dich auch ohne Magic-Link einloggen.' : 'Setz ein Passwort, um dich nächstes Mal direkt mit Email + Passwort einzuloggen (ohne Magic-Link).'}</div>
+  <a href="/set-password" class="btn btn-outline btn-full" style="display:flex;align-items:center;justify-content:center;gap:8px">${u.password_hash ? '🔄 Passwort ändern' : '🔐 Passwort setzen'}</a>
+  ${u.password_hash ? '<button onclick="removePw()" class="btn btn-outline btn-full" style="margin-top:8px;color:#ef4444;display:flex;align-items:center;justify-content:center;gap:8px">🗑️ Passwort entfernen</button>' : ''}
+</div>
 <div style="padding:16px">
   <a href="/logout" class="btn btn-outline btn-full" style="color:var(--accent)">🚪 Ausloggen</a>
 </div>
@@ -7988,6 +8137,15 @@ async function announceFeThread(btn){
     else{r.style.background='rgba(239,68,68,.15)';r.style.color='#ef4444';r.textContent='❌ '+data.error;}
   }catch(e){r.style.display='block';r.style.color='#ef4444';r.textContent='❌ '+e.message;}
   btn.disabled=false;btn.textContent='📢 Ankündigung in FE-Thread senden';
+}
+async function removePw(){
+  if(!confirm('Passwort wirklich entfernen? Du kannst dich danach nur noch über Magic-Link einloggen.'))return;
+  try{
+    const res=await fetch('/api/auth/set-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:''})});
+    const j=await res.json();
+    if(j&&j.ok){toast('🗑️ Passwort entfernt');setTimeout(()=>location.reload(),400);}
+    else toast('❌ '+(j&&j.error||'Fehler'));
+  }catch(e){toast('❌ Netzwerkfehler');}
 }
 let selectedBanner = ${JSON.stringify(u.banner||gradients[0])};
 let selectedAccent = ${JSON.stringify(accentColors.includes(u.accentColor) ? u.accentColor : '#ff6b6b')};
