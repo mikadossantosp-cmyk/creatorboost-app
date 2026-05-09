@@ -2211,7 +2211,9 @@ self.addEventListener('notificationclick',e=>{
 
     // ── LANDING ──
     if (path === '/' || path === '') {
-        if (session) return redirect('/feed');
+        // Admin-Vorschau via ?preview=1 — überspringt den /feed-Redirect für eingeloggte User.
+        const _isPreview = (query.preview === '1');
+        if (session && !_isPreview) return redirect('/feed');
         res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','Pragma':'no-cache','Expires':'0','X-App-Version':'20'});
         return res.end(`<!DOCTYPE html><html lang="de"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -2256,7 +2258,10 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
 .email-msg.show{display:block}
 .email-msg.ok{background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.4);color:#22c55e}
 .email-msg.err{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.4);color:#ef4444}
+.admin-pb{position:sticky;top:0;left:0;right:0;background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;padding:10px 14px;font-size:12px;font-weight:700;text-align:center;z-index:99;letter-spacing:.3px}
+.admin-pb a{color:rgba(255,255,255,.85);text-decoration:underline}
 </style></head><body>
+${_isPreview ? '<div class="admin-pb">👀 Admin-Vorschau · Login-Page &nbsp;·&nbsp; <a href="/einstellungen">← Zurück</a></div>' : ''}
 <div class="bg"></div>
 <div class="hero">
   <div class="logo-wrap">
@@ -2494,6 +2499,29 @@ function submitEmail(ev){
             return json({ok:false, error:'Email-Versand fehlgeschlagen — bitte später nochmal'}, 502);
         }
         return json({ok:true, message:'Login-Link wurde gesendet.'});
+    }
+    // Admin-Vorschau für die Magic-Link-Email (zeigt das HTML der Email mit Beispiel-Daten).
+    if (path === '/preview/email-login' && req.method === 'GET') {
+        const baseUrl = (process.env.APP_URL || ('https://' + (req.headers.host || 'creatorx.app'))).replace(/\/$/, '');
+        let exampleName = 'Max';
+        if (session) {
+            const _bd = await fetchBot('/data');
+            exampleName = _bd?.users?.[getMyUid(session)]?.spitzname || _bd?.users?.[getMyUid(session)]?.name || 'Max';
+        }
+        const fakeUrl = baseUrl + '/auth/email-login?token=BEISPIEL_TOKEN_NICHT_GUELTIG';
+        const previewHtml = `<!DOCTYPE html><html><body style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0a0a0a;padding:0">
+<div style="position:sticky;top:0;background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;padding:10px 14px;font-size:12px;font-weight:700;text-align:center;z-index:99">👀 Admin-Vorschau · Email-Magic-Link Mail &nbsp;·&nbsp; <a href="/einstellungen" style="color:rgba(255,255,255,.85)">← Zurück</a></div>
+<div style="background:#000;color:#fff">
+<div style="max-width:560px;margin:0 auto;padding:32px 24px">
+<div style="text-align:center;margin-bottom:24px"><img src="${baseUrl}/cx-logo-256.png" width="80" height="80" style="border-radius:18px" alt="CreatorX"></div>
+<h1 style="font-size:26px;font-weight:700;margin:0 0 12px;text-align:center;color:#fff">Hi ${exampleName.replace(/[<>]/g,'')}!</h1>
+<p style="font-size:15px;color:#a8a39a;line-height:1.6;text-align:center;margin:0 0 28px">Klick auf den Button um dich in der CreatorX-App einzuloggen. Der Link ist 1 Stunde gültig und kann nur einmal benutzt werden.</p>
+<div style="text-align:center;margin:32px 0"><a href="${fakeUrl}" style="display:inline-block;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px;letter-spacing:0.3px">📲 In die App einloggen</a></div>
+<p style="font-size:12px;color:#605c54;line-height:1.5;text-align:center;margin:32px 0 0;border-top:1px solid #221f1a;padding-top:20px">Falls du das nicht angefragt hast, ignoriere die Email einfach. Niemand kann sich nur mit der Email-Anfrage einloggen.<br><br>Falls der Button nicht funktioniert, kopier diese URL in deinen Browser:<br><span style="color:#a8a39a;word-break:break-all;font-size:11px">${fakeUrl}</span></p>
+</div>
+</div></body></html>`;
+        res.writeHead(200, {'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});
+        return res.end(previewHtml);
     }
     // Email-Magic-Link Verify: User klickt Link → Session erstellen.
     if (path === '/auth/email-login' && req.method === 'GET') {
@@ -7869,8 +7897,14 @@ ${myInventory.length > 0 ? `
 </div>` : ''}
 ${adminIds.includes(Number(myUid)) ? `
 <div style="padding:16px;border-bottom:1px solid var(--border2)">
+  <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">👀 Vorschauen</div>
+  <a href="/?preview=1" target="_blank" class="btn btn-outline btn-full" style="margin-bottom:8px;display:flex">🔐 Login-Page (App)</a>
+  <a href="/willkommen" target="_blank" class="btn btn-outline btn-full" style="margin-bottom:8px;display:flex">🌐 Public Landing-Page</a>
+  <a href="/onboarding-preview" target="_blank" class="btn btn-outline btn-full" style="margin-bottom:8px;display:flex">📲 Onboarding</a>
+  <a href="/preview/email-login" target="_blank" class="btn btn-outline btn-full" style="margin-bottom:8px;display:flex">📧 Magic-Link Email</a>
+</div>
+<div style="padding:16px;border-bottom:1px solid var(--border2)">
   <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">⚙️ Admin Tools</div>
-  <a href="/onboarding-preview" class="btn btn-outline btn-full" style="margin-bottom:8px;display:flex">👀 Onboarding Vorschau</a>
   <button onclick="createFeThread(this)" class="btn btn-outline btn-full" style="margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:8px">⭐ Full Engagement Thread erstellen</button>
   <button onclick="announceFeThread(this)" class="btn btn-outline btn-full" style="margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:8px">📢 Ankündigung in FE-Thread senden</button>
   <div id="fethread-result" style="display:none;font-size:12px;padding:8px;border-radius:8px;margin-top:4px"></div>
