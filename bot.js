@@ -985,22 +985,25 @@ ${session ? `
   </a>
 </nav>` : ''}
 
-<!-- ─── In-App Coach-Mark Tour (zeigt Pfeile auf Nav-Buttons beim ersten Feed-Besuch) ─── -->
+<!-- ─── In-App Coach-Mark Tour (cleaner: kein Backdrop, nur Highlight-Ring + Tooltip) ─── -->
 <style>
-.tour-overlay{position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,0.78);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);display:none;animation:tour-fade .25s ease}
+.tour-overlay{position:fixed;inset:0;z-index:9998;pointer-events:none;display:none}
 .tour-overlay.show{display:block}
-@keyframes tour-fade{from{opacity:0}to{opacity:1}}
-.tour-spot{position:absolute;border-radius:50%;box-shadow:0 0 0 9999px rgba(0,0,0,0.78),0 0 0 4px rgba(212,175,55,0.6),0 0 40px rgba(212,175,55,0.4);pointer-events:none;animation:tour-pulse 1.5s ease-in-out infinite;transition:all .35s cubic-bezier(.16,1,.3,1)}
-@keyframes tour-pulse{0%,100%{box-shadow:0 0 0 9999px rgba(0,0,0,0.78),0 0 0 4px rgba(212,175,55,0.6),0 0 40px rgba(212,175,55,0.4)}50%{box-shadow:0 0 0 9999px rgba(0,0,0,0.78),0 0 0 8px rgba(212,175,55,0.85),0 0 60px rgba(212,175,55,0.7)}}
-.tour-arrow{position:absolute;font-size:42px;color:#d4af37;pointer-events:none;filter:drop-shadow(0 4px 12px rgba(212,175,55,0.6));animation:tour-bounce 1.2s ease-in-out infinite;transition:all .35s cubic-bezier(.16,1,.3,1)}
+.tour-overlay .blocker{position:absolute;inset:0;pointer-events:auto;background:transparent}
+/* Pulsierender Gold-Ring direkt um's Target — KEIN Dim mehr, UI bleibt voll sichtbar */
+.tour-ring{position:absolute;border-radius:14px;border:2.5px solid #d4af37;box-shadow:0 0 0 4px rgba(212,175,55,0.18),0 0 28px rgba(212,175,55,0.55);pointer-events:none;transition:all .35s cubic-bezier(.16,1,.3,1);animation:tour-ring-pulse 1.6s ease-in-out infinite;z-index:9999}
+@keyframes tour-ring-pulse{0%,100%{box-shadow:0 0 0 4px rgba(212,175,55,0.18),0 0 24px rgba(212,175,55,0.55);transform:scale(1)}50%{box-shadow:0 0 0 8px rgba(212,175,55,0.32),0 0 40px rgba(212,175,55,0.85);transform:scale(1.04)}}
+.tour-arrow{position:absolute;font-size:36px;color:#d4af37;pointer-events:none;filter:drop-shadow(0 4px 14px rgba(212,175,55,0.7));animation:tour-bounce 1.2s ease-in-out infinite;transition:all .35s cubic-bezier(.16,1,.3,1);z-index:10000;line-height:1}
 @keyframes tour-bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(8px)}}
-.tour-card{position:absolute;left:20px;right:20px;background:linear-gradient(180deg,#1a1a1a,#0a0a0a);border:1px solid rgba(212,175,55,0.35);border-radius:18px;padding:20px;box-shadow:0 30px 70px rgba(0,0,0,0.7),0 0 0 1px rgba(255,255,255,0.05);transition:all .35s cubic-bezier(.16,1,.3,1);max-width:440px;margin:0 auto;font-family:'Inter',sans-serif}
+.tour-card{position:absolute;left:16px;right:16px;background:rgba(20,20,20,0.96);border:1px solid rgba(212,175,55,0.35);border-radius:18px;padding:18px;box-shadow:0 24px 60px rgba(0,0,0,0.6),0 0 0 1px rgba(255,255,255,0.04),0 0 30px rgba(212,175,55,0.18);transition:all .35s cubic-bezier(.16,1,.3,1);max-width:420px;margin:0 auto;font-family:'Inter',sans-serif;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);pointer-events:auto;z-index:10001}
+.tour-close{position:absolute;top:10px;right:10px;width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.6);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit;transition:all .15s}
+.tour-close:hover{background:rgba(255,255,255,0.12);color:#fff}
 .tour-eyebrow{font-size:10px;font-weight:700;color:#d4af37;text-transform:uppercase;letter-spacing:2px;margin-bottom:8px;display:flex;align-items:center;gap:8px}
 .tour-eyebrow .step-num{font-family:'JetBrains Mono',monospace;background:rgba(212,175,55,0.15);padding:2px 8px;border-radius:99px;font-size:10px}
-.tour-h{font-size:18px;font-weight:800;letter-spacing:-0.4px;color:#fff;margin-bottom:8px}
-.tour-s{font-size:13px;color:rgba(255,255,255,0.7);line-height:1.55;margin-bottom:16px}
+.tour-h{font-size:17px;font-weight:800;letter-spacing:-0.4px;color:#fff;margin-bottom:8px;padding-right:30px}
+.tour-s{font-size:13px;color:rgba(255,255,255,0.72);line-height:1.55;margin-bottom:14px}
 .tour-actions{display:flex;gap:8px}
-.tour-btn{padding:11px 14px;font-size:13px;font-weight:700;border-radius:11px;border:none;cursor:pointer;font-family:inherit;transition:all .15s}
+.tour-btn{padding:10px 14px;font-size:13px;font-weight:700;border-radius:11px;border:none;cursor:pointer;font-family:inherit;transition:all .15s}
 .tour-btn-skip{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.6);flex:0 0 auto}
 .tour-btn-next{background:linear-gradient(180deg,#f5d76e,#d4a946);color:#000;flex:1;box-shadow:0 6px 18px -6px rgba(212,175,55,0.5),inset 0 1px 0 rgba(255,255,255,0.4)}
 .tour-progress{display:flex;gap:4px;margin-bottom:14px}
@@ -1009,9 +1012,10 @@ ${session ? `
 .tour-progress-d.active{background:linear-gradient(90deg,#d4af37,#f5d76e)}
 </style>
 <div class="tour-overlay" id="tour-ov">
-  <div class="tour-spot" id="tour-spot"></div>
+  <div class="tour-ring" id="tour-ring"></div>
   <div class="tour-arrow" id="tour-arrow">▼</div>
   <div class="tour-card" id="tour-card">
+    <button class="tour-close" onclick="window.cbTourSkip()" aria-label="Schließen">×</button>
     <div class="tour-progress" id="tour-progress"></div>
     <div class="tour-eyebrow"><span class="step-num" id="tour-step-num">1/5</span><span id="tour-eyebrow-text">Quick Tour</span></div>
     <div class="tour-h" id="tour-h"></div>
@@ -1066,13 +1070,13 @@ ${session ? `
   }
 
   function placeSpot(rect){
-    var spot = document.getElementById('tour-spot');
-    var pad = 8;
-    var size = Math.max(rect.width, rect.height) + pad*2;
-    spot.style.width = size + 'px';
-    spot.style.height = size + 'px';
-    spot.style.left = (rect.left + rect.width/2 - size/2) + 'px';
-    spot.style.top  = (rect.top  + rect.height/2 - size/2) + 'px';
+    var ring = document.getElementById('tour-ring');
+    if(!ring) return;
+    var pad = 6;
+    ring.style.width  = (rect.width  + pad*2) + 'px';
+    ring.style.height = (rect.height + pad*2) + 'px';
+    ring.style.left   = (rect.left   - pad)   + 'px';
+    ring.style.top    = (rect.top    - pad)   + 'px';
   }
 
   function renderProgress(){
