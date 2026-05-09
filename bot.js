@@ -4133,6 +4133,48 @@ function submitPw(ev){
         }));
     }
 
+    // Instagram-Thumbnail-Proxy: lädt das Bild server-seitig OHNE Referer und
+    // streamed es an den Client. Umgeht den Hotlink-Schutz des Instagram-CDN.
+    // GET /insta-thumb?u=<encoded-url>
+    if (path === '/insta-thumb' && req.method === 'GET') {
+        const targetRaw = String(query.u || '').trim();
+        if (!targetRaw) { res.writeHead(400); return res.end('missing u'); }
+        let target;
+        try { target = new URL(targetRaw); } catch(e) { res.writeHead(400); return res.end('bad url'); }
+        // Whitelist: nur Instagram/Facebook CDN-Hosts erlauben.
+        const okHost = /(\.cdninstagram\.com|\.fbcdn\.net|\.facebook\.com|instagram\.com)$/i.test(target.hostname);
+        if (!okHost) { res.writeHead(400); return res.end('host not allowed'); }
+        const lib = target.protocol === 'https:' ? https : http;
+        const upstreamReq = lib.request({
+            hostname: target.hostname,
+            port: target.port || (target.protocol === 'https:' ? 443 : 80),
+            path: target.pathname + target.search,
+            method: 'GET',
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'image/webp,image/jpeg,image/png,image/*;q=0.9,*/*;q=0.8'
+                // KEIN Referer Header → Instagram CDN blockt nicht
+            }
+        }, (upstreamRes) => {
+            const ct = upstreamRes.headers['content-type'] || 'image/jpeg';
+            if (upstreamRes.statusCode >= 200 && upstreamRes.statusCode < 300) {
+                res.writeHead(200, {
+                    'Content-Type': ct,
+                    'Cache-Control': 'public, max-age=21600, s-maxage=21600',
+                    'Access-Control-Allow-Origin': '*'
+                });
+                upstreamRes.pipe(res);
+            } else {
+                res.writeHead(upstreamRes.statusCode || 502);
+                res.end();
+            }
+        });
+        upstreamReq.on('error', () => { try { res.writeHead(502); res.end(); } catch(e){} });
+        upstreamReq.setTimeout(8000, () => { upstreamReq.destroy(); try { res.writeHead(504); res.end(); } catch(e){} });
+        upstreamReq.end();
+        return;
+    }
+
     if (path === '/api/app-version') {
         const apkPath = DATA_DIR + '/CreatorX-signed.apk';
         let buildId = '';
@@ -5390,7 +5432,7 @@ p{line-height:1.65;color:var(--muted)}
         const _adminIds = Array.isArray(_bd._adminIds) ? _bd._adminIds.map(Number) : [];
         const isAdmin = _adminIds.includes(Number(myUid));
         const isOwner = String(link.user_id) === String(myUid);
-        if (!isAdmin && !isOwner) return json({ok:false, error:'Nur Admin oder Poster darf löschen'}, 403);
+        if (!isAdmin) return json({ok:false, error:'Nur Admins dürfen Links löschen'}, 403);
         // Bot's /delete-link Bridge-Endpoint aufrufen (DELETE_LINK macht TG-Cleanup + d.links delete)
         try {
             const url = (process.env.MAINBOT_URL || '').replace(/\/$/, '') + '/delete-link?id=' + encodeURIComponent(linkId);
@@ -5608,7 +5650,7 @@ p{line-height:1.65;color:var(--muted)}
             // Bevorzugt Instagram-Thumbnail (link.thumbnail vom Bot gefetcht), sonst Banner.
             // onerror räumt das <img> auf falls Instagram-CDN-URL abgelaufen ist (24h-Signatur).
             const bannerImg = link.thumbnail
-                ? '<img src="'+link.thumbnail.replace(/"/g,'%22')+'" referrerpolicy="no-referrer" crossorigin="anonymous" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.remove()" alt="">'
+                ? '<img src="/insta-thumb?u='+encodeURIComponent(link.thumbnail)+'" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.remove()" alt="">'
                 : (bannerFile ? '<img src="/appbild/'+String(link.user_id)+'/banner" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.remove()" alt="">' : '');
 
             // Profile pic (small, in header)
@@ -5705,7 +5747,7 @@ p{line-height:1.65;color:var(--muted)}
 (isNewForUser ? '    <span class="post-category-label" style="background:linear-gradient(135deg,var(--accent),var(--accent2))">📸 Neuer Link</span>\n' : '    <span></span>\n')+
 '    <div style="display:flex;align-items:center;gap:8px">\n'+
 '      <span class="post-time">'+new Date(link.timestamp).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})+'</span>\n'+
-((_myIsAdmin || String(link.user_id) === String(myUid)) ? '      <button onclick=\'adminDelLink("'+msgId+'",this)\' title="Link löschen" style="background:none;border:none;color:#ef4444;font-size:15px;cursor:pointer;padding:0 0 0 4px;line-height:1">🗑️</button>\n' : '')+
+(_myIsAdmin ? '      <button onclick=\'adminDelLink("'+msgId+'",this)\' title="Link löschen (Admin)" style="background:none;border:none;color:#ef4444;font-size:15px;cursor:pointer;padding:0 0 0 4px;line-height:1">🗑️</button>\n' : '')+
 '    </div>\n'+
 '  </div>\n'+
 // Post header
@@ -5820,7 +5862,7 @@ commentsBox+
                 +'<div style="margin:8px 16px;padding:8px 12px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:10px;font-size:11px;color:rgba(245,158,11,.9);font-weight:600">🔄 Bitte Liken, Kommentieren, Teilen und Speichern</div>\n'
                 +'<div style="margin:0 16px 8px;border-radius:14px;overflow:hidden;background:var(--bg3);border:1px solid rgba(255,255,255,.08)">\n'
                 +(sl.thumbnail
-                    ? '<a href="'+(sl.url||'').replace(/"/g,'%22')+'" target="_blank" rel="noopener" onclick="markLinkVisited(\''+sl.id+'\')" style="display:block;position:relative;width:100%;padding-top:62%;overflow:hidden;background:#000"><img src="'+sl.thumbnail.replace(/"/g,'%22')+'" referrerpolicy="no-referrer" crossorigin="anonymous" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.parentElement.style.display=\'none\'" alt=""><div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.05),rgba(0,0,0,.55))"></div><div style="position:absolute;top:10px;left:12px;background:rgba(0,0,0,.55);border-radius:8px;padding:4px 9px;font-size:11px;color:#fff;font-weight:600;backdrop-filter:blur(4px)">📸 Instagram</div></a>\n'
+                    ? '<a href="'+(sl.url||'').replace(/"/g,'%22')+'" target="_blank" rel="noopener" onclick="markLinkVisited(\''+sl.id+'\')" style="display:block;position:relative;width:100%;padding-top:62%;overflow:hidden;background:#000"><img src="/insta-thumb?u='+encodeURIComponent(sl.thumbnail)+'" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.parentElement.style.display=\'none\'" alt=""><div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.05),rgba(0,0,0,.55))"></div><div style="position:absolute;top:10px;left:12px;background:rgba(0,0,0,.55);border-radius:8px;padding:4px 9px;font-size:11px;color:#fff;font-weight:600;backdrop-filter:blur(4px)">📸 Instagram</div></a>\n'
                     : '')
                 +'<a href="'+(sl.url||'').replace(/"/g,'%22')+'" target="_blank" rel="noopener" onclick="markLinkVisited(\''+sl.id+'\')" style="display:block;padding:12px 14px;text-decoration:none">\n'
                 +'<div style="font-size:13px;color:var(--blue);word-break:break-all;margin-bottom:4px">'+(sl.url||'').replace('https://www.','').replace('https://','').slice(0,60)+'</div>\n'
