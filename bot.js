@@ -496,6 +496,17 @@ textarea.form-input{resize:none;min-height:80px}
 .empty-sub{font-size:13px}
 .toast{position:fixed;top:80px;left:50%;transform:translateX(-50%);background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:10px 20px;font-size:13px;font-weight:500;z-index:999;box-shadow:var(--shadow);opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap}
 .toast.show{opacity:1}
+.cb-banner{position:fixed;top:0;left:0;right:0;z-index:9999;padding:20px 24px;color:#fff;text-align:center;font-family:var(--font);transform:translateY(-100%);transition:transform .4s cubic-bezier(.2,.8,.2,1);box-shadow:0 12px 32px rgba(0,0,0,0.5);pointer-events:none;display:flex;align-items:center;justify-content:center;gap:14px;letter-spacing:0.2px}
+.cb-banner.show{transform:translateY(0);pointer-events:auto}
+.cb-banner-warn{background:linear-gradient(135deg,#ef4444 0%,#dc2626 50%,#a78bfa 100%)}
+.cb-banner-success{background:linear-gradient(135deg,#10b981 0%,#22c55e 50%,#4ade80 100%)}
+.cb-banner-info{background:linear-gradient(135deg,#3b82f6 0%,#6366f1 50%,#8b5cf6 100%)}
+.cb-banner-icon{font-size:32px;line-height:1;flex-shrink:0;animation:cb-banner-pulse 1.4s ease-in-out infinite}
+@keyframes cb-banner-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
+.cb-banner-text{display:flex;flex-direction:column;align-items:flex-start;text-align:left;gap:2px;min-width:0}
+.cb-banner-title{font-size:17px;font-weight:800;line-height:1.25}
+.cb-banner-sub{font-size:13px;font-weight:500;opacity:0.92;line-height:1.35}
+@media (max-width:540px){.cb-banner{padding:16px 18px;gap:11px}.cb-banner-icon{font-size:28px}.cb-banner-title{font-size:15.5px}.cb-banner-sub{font-size:12.5px}}
 @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
 @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
 .fade-up{animation:fadeUp .4s ease forwards}
@@ -721,6 +732,7 @@ ${session ? `<link rel="prefetch" href="/feed"><link rel="prefetch" href="/explo
 </head>
 <body>
 <div class="toast" id="toast"></div>
+<div class="cb-banner" id="cb-banner" role="alert" aria-live="assertive"></div>
 <a href="/download-app" id="apk-download-btn" style="display:none;position:fixed;bottom:calc(120px + var(--safe-bottom,0px));left:50%;transform:translateX(-50%);background:#22c55e;color:#fff;border-radius:24px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;z-index:9997;text-decoration:none;white-space:nowrap;box-shadow:0 4px 16px rgba(34,197,94,.4)">📦 APK herunterladen</a>
 <div id="pwa-install-btn" onclick="installPWA()" style="display:none;position:fixed;bottom:calc(70px + var(--safe-bottom,0px));left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#ff6b6b,#cc5de8);color:#fff;border:none;border-radius:24px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;z-index:9998;gap:8px;align-items:center;box-shadow:0 4px 16px rgba(255,107,107,.4);white-space:nowrap">📲 App installieren</div>
 <script>
@@ -938,6 +950,23 @@ async function checkMsgBadge(){
 checkMsgBadge();
 setInterval(checkMsgBadge,30000);
 function toast(msg,dur=2500){const t=document.getElementById('toast');if(!t)return;t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),dur);}
+// Großes Banner oben für wichtige Notifications (warn/success/info).
+// showBanner({title, subtitle?, type='warn', dur=4500, icon?})
+function showBanner(opts){
+  const b=document.getElementById('cb-banner');if(!b)return;
+  const o=typeof opts==='string'?{title:opts}:(opts||{});
+  const type=o.type||'warn';
+  const icon=o.icon||(type==='warn'?'⚠️':type==='success'?'✅':'ℹ️');
+  const dur=o.dur||4500;
+  b.className='cb-banner cb-banner-'+type;
+  const title=String(o.title||'').replace(/[<>]/g,'');
+  const sub=o.subtitle?String(o.subtitle).replace(/[<>]/g,''):'';
+  b.innerHTML='<span class="cb-banner-icon">'+icon+'</span><div class="cb-banner-text"><div class="cb-banner-title">'+title+'</div>'+(sub?'<div class="cb-banner-sub">'+sub+'</div>':'')+'</div>';
+  void b.offsetWidth;
+  b.classList.add('show');
+  clearTimeout(b._t);
+  b._t=setTimeout(()=>b.classList.remove('show'),dur);
+}
 // Engagement-Quality-Control: User muss erst Link besuchen, bevor er liken darf.
 // Status pro Link wird in localStorage gespeichert (cb_visited_links: { lid: timestamp }).
 function markLinkVisited(lid){try{const v=JSON.parse(localStorage.getItem('cb_visited_links')||'{}');v[String(lid)]=Date.now();localStorage.setItem('cb_visited_links',JSON.stringify(v));}catch(e){}}
@@ -4351,7 +4380,7 @@ async function likePost(msgId, btn) {
     // er auf einen schon gelikten Post tappt nachdem localStorage gecleared wurde.
     if (btn.classList.contains('liked')) return;
     if (!hasLinkVisited(msgId)) {
-        toast('⚠️ Du musst zuerst den Link besuchen!!', 3500);
+        showBanner({ type:'warn', title:'Erst den Link besuchen!', subtitle:'Tap auf den Post → Instagram öffnen → dann liken. So funktioniert echtes Engagement.', dur:5000 });
         return;
     }
     const countEl = document.getElementById('likes-'+msgId);
@@ -4366,7 +4395,7 @@ async function likePost(msgId, btn) {
         const data = await res.json();
         if (data.ok) {
             if (data.likes !== undefined) countEl.textContent = data.likes;
-            toast('✓ Vergiss nicht: Auf Instagram liken & mit 2 Wörter kommentieren. Danke!', 4500);
+            showBanner({ type:'success', title:'Like registriert ❤️', subtitle:'Vergiss nicht: Auf Instagram liken & mit 2 Wörter kommentieren. Danke!', dur:5000 });
         } else {
             // Bei Fehler UI zurücksetzen, sonst hängt der Button leer/disabled
             btn.classList.remove('liked');
@@ -4486,7 +4515,7 @@ function toggleLikers(msgId) {
 async function likeSuperLink(slId, btn) {
     if (btn.disabled) return;
     if (!hasLinkVisited(slId)) {
-        toast('⚠️ Du musst zuerst den Link besuchen!!', 3500);
+        showBanner({ type:'warn', title:'Erst den Link besuchen!', subtitle:'Tap auf den Superlink → Instagram öffnen → dann liken. Pflicht für Full-Engagement.', dur:5000 });
         return;
     }
     btn.disabled = true;
@@ -4498,7 +4527,7 @@ async function likeSuperLink(slId, btn) {
             btn.querySelector('svg')?.setAttribute('fill','currentColor');
             btn.style.borderColor='var(--accent)';
             document.querySelectorAll('#sl-likes-'+slId).forEach(el=>el.textContent=data.likes);
-            toast('✓ Vergiss nicht: Auf Instagram liken & mit 2 Wörter kommentieren. Danke!', 4500);
+            showBanner({ type:'success', title:'Superlink geliked ❤️', subtitle:'Vergiss nicht: Auf Instagram liken & mit 2 Wörter kommentieren. Danke!', dur:5000 });
         } else { btn.disabled=false; toast('❌ '+(data.error||'Fehler')); }
     } catch(e) { btn.disabled=false; toast('❌ Netzwerkfehler'); }
 }
