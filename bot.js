@@ -3,6 +3,7 @@ const https = require('https');
 const http = require('http');
 const url = require('url');
 const crypto = require('crypto');
+const { genderize } = require('./gender-helper');
 
 const MAINBOT_URL   = process.env.MAINBOT_URL   || '';
 const BRIDGE_SECRET = process.env.BRIDGE_SECRET || 'geheimer-key';
@@ -4252,7 +4253,7 @@ commentsBox+
 <div style="text-align:center;padding:48px 24px">
   <div style="font-size:56px;margin-bottom:16px">📸</div>
   <div style="font-size:17px;font-weight:700;margin-bottom:8px">Noch keine Links heute</div>
-  <div style="font-size:13px;color:var(--muted);margin-bottom:24px">Sei der Erste! Teile deinen Instagram Link mit der Community.</div>
+  <div style="font-size:13px;color:var(--muted);margin-bottom:24px">${genderize(d.users[myUid], 'Sei der Erste!', 'Sei die Erste!', 'Mach den Anfang!')} Teile deinen Instagram Link mit der Community.</div>
   <button onclick="openPlusSheet()" style="display:inline-flex;align-items:center;gap:8px;background:var(--accent);color:#fff;padding:12px 24px;border-radius:12px;font-size:14px;font-weight:700;border:none;cursor:pointer;font-family:var(--font)">📸 Jetzt Link teilen</button>
 </div>`;
         const aelterHtml = aelterLinks.length ? aelterLinks.map(renderLink).join('') : '<div class="empty" style="margin-top:40px"><div class="empty-icon">🕐</div><div class="empty-text">Keine älteren Links</div></div>';
