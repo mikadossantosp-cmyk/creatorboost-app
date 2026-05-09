@@ -2784,36 +2784,57 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
         return res.end(buf);
     }    // ── PROFILBILD UPLOAD ──
     if (path === '/api/upload-profilepic' && req.method === 'POST') {
-        if (!session) return json({error:'Nicht eingeloggt'},401);
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'},401);
+        // Memory-Schutz: hartes Limit auf Request-Body (vorher unbounded chunks → DoS-Risk).
         const chunks = [];
-        for await (const chunk of req) chunks.push(chunk);
+        let total = 0;
+        const HARD_LIMIT = 4 * 1024 * 1024; // 4MB roh, deckt 3MB data-URL ab
+        let aborted = false;
+        try {
+            for await (const chunk of req) {
+                total += chunk.length;
+                if (total > HARD_LIMIT) { aborted = true; req.destroy(); break; }
+                chunks.push(chunk);
+            }
+        } catch(e) { aborted = true; }
+        if (aborted) return json({ok:false, error:'Datei zu groß (max 4MB)'},413);
         try {
             const { imageData } = JSON.parse(Buffer.concat(chunks).toString());
-            if (!imageData?.startsWith('data:image/')) return json({error:'Kein Bild'},400);
-            if (imageData.length > 3000000) return json({error:'Max 2MB'},400);
+            if (!imageData?.startsWith('data:image/')) return json({ok:false, error:'Kein Bild'},400);
+            if (imageData.length > 3000000) return json({ok:false, error:'Max 2MB'},400);
             session.profilePicData = imageData;
             saveSessions();
             try { fs.writeFileSync(DATA_DIR + '/bild_' + getMyUid(session) + '_profilepic.txt', imageData); } catch(e) {}
             checkProfileCompletion(getMyUid(session), session);
             return json({ok:true});
-        } catch(e) { return json({error:e.message},500); }
+        } catch(e) { return json({ok:false, error:e.message},500); }
     }
 
     // ── BILD UPLOAD (Banner) ──
     if (path === '/api/upload-banner' && req.method === 'POST') {
-        if (!session) return json({error:'Nicht eingeloggt'},401);
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'},401);
         const chunks = [];
-        for await (const chunk of req) chunks.push(chunk);
+        let total = 0;
+        const HARD_LIMIT = 4 * 1024 * 1024;
+        let aborted = false;
+        try {
+            for await (const chunk of req) {
+                total += chunk.length;
+                if (total > HARD_LIMIT) { aborted = true; req.destroy(); break; }
+                chunks.push(chunk);
+            }
+        } catch(e) { aborted = true; }
+        if (aborted) return json({ok:false, error:'Datei zu groß (max 4MB)'},413);
         try {
             const { imageData } = JSON.parse(Buffer.concat(chunks).toString());
-            if (!imageData?.startsWith('data:image/')) return json({error:'Kein Bild'},400);
-            if (imageData.length > 3000000) return json({error:'Max 2MB'},400);
+            if (!imageData?.startsWith('data:image/')) return json({ok:false, error:'Kein Bild'},400);
+            if (imageData.length > 3000000) return json({ok:false, error:'Max 2MB'},400);
             session.bannerData = imageData;
             saveSessions();
             try { fs.writeFileSync(DATA_DIR + '/bild_' + getMyUid(session) + '_banner.txt', imageData); } catch(e) {}
             checkProfileCompletion(getMyUid(session), session);
             return json({ok:true});
-        } catch(e) { return json({error:e.message},500); }
+        } catch(e) { return json({ok:false, error:e.message},500); }
     }
 
     if (path === '/api/add-project' && req.method === 'POST') {
