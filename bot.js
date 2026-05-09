@@ -4397,19 +4397,18 @@ async function likePost(msgId, btn) {
             if (data.likes !== undefined) countEl.textContent = data.likes;
             showBanner({ type:'success', title:'Like registriert ❤️', subtitle:'Vergiss nicht: Auf Instagram liken & mit 2 Wörter kommentieren. Danke!', dur:5000 });
         } else {
-            // Bei Fehler UI zurücksetzen, sonst hängt der Button leer/disabled
             btn.classList.remove('liked');
             btn.querySelector('svg').setAttribute('fill', 'none');
             countEl.textContent = Math.max(0, Number(countEl.textContent) - 1);
             btn.disabled = false;
-            toast('❌ ' + (data.error || 'Konnte nicht liken'));
+            showBanner({ type:'warn', icon:'❌', title:'Like fehlgeschlagen', subtitle: data.error || 'Konnte nicht liken — versuch es gleich nochmal.', dur:4500 });
         }
     } catch(e) {
         btn.classList.remove('liked');
         btn.querySelector('svg').setAttribute('fill', 'none');
         countEl.textContent = Math.max(0, Number(countEl.textContent) - 1);
         btn.disabled = false;
-        toast('❌ Netzwerkfehler');
+        showBanner({ type:'warn', icon:'📡', title:'Netzwerkfehler', subtitle:'Like konnte nicht gesendet werden — Verbindung prüfen.', dur:4500 });
     }
 }
 async function refreshLikes() {
@@ -4528,8 +4527,8 @@ async function likeSuperLink(slId, btn) {
             btn.style.borderColor='var(--accent)';
             document.querySelectorAll('#sl-likes-'+slId).forEach(el=>el.textContent=data.likes);
             showBanner({ type:'success', title:'Superlink geliked ❤️', subtitle:'Vergiss nicht: Auf Instagram liken & mit 2 Wörter kommentieren. Danke!', dur:5000 });
-        } else { btn.disabled=false; toast('❌ '+(data.error||'Fehler')); }
-    } catch(e) { btn.disabled=false; toast('❌ Netzwerkfehler'); }
+        } else { btn.disabled=false; showBanner({ type:'warn', icon:'❌', title:'Superlink-Like fehlgeschlagen', subtitle: data.error || 'Versuch es gleich nochmal.', dur:4500 }); }
+    } catch(e) { btn.disabled=false; showBanner({ type:'warn', icon:'📡', title:'Netzwerkfehler', subtitle:'Like konnte nicht gesendet werden.', dur:4500 }); }
 }
 function showSLLikerModal(slId) {
     const modal=document.getElementById('sl-liker-modal');
@@ -7306,7 +7305,7 @@ async function submitPost(){const _spBtn=document.querySelector('[onclick="submi
                 +'</div>'
               +'</div>'
               +'<script>function showPinnedEngagers(){document.getElementById(\'pin-engagers-modal\').style.display=\'flex\';}'
-              +'async function likePinnedPost(ownerUid, btn){if(btn.disabled)return;btn.disabled=true;btn.textContent=\'…\';try{const r=await fetch(\'/api/engage-pinned-post\',{method:\'POST\',headers:{\'Content-Type\':\'application/json\'},body:JSON.stringify({ownerUid})});const data=await r.json();if(data.ok){btn.style.background=\'rgba(34,197,94,.12)\';btn.style.borderColor=\'#22c55e\';btn.style.color=\'#22c55e\';btn.textContent=\'✅ Geliked\';const c=document.getElementById(\'pin-eng-count\');if(c)c.textContent=parseInt(c.textContent||0)+1;if(window.toast)toast(\'❤️ +1 💎\');}else if(data.alreadyDone){btn.style.background=\'rgba(34,197,94,.12)\';btn.style.borderColor=\'#22c55e\';btn.style.color=\'#22c55e\';btn.textContent=\'✅ Geliked\';}else{btn.disabled=false;btn.textContent=\'❤️ Like · +1 💎\';if(window.toast)toast(\'❌ Fehler\');}}catch(e){btn.disabled=false;btn.textContent=\'❤️ Like · +1 💎\';}}<\/script>'
+              +'async function likePinnedPost(ownerUid, btn){if(btn.disabled)return;btn.disabled=true;btn.textContent=\'…\';try{const r=await fetch(\'/api/engage-pinned-post\',{method:\'POST\',headers:{\'Content-Type\':\'application/json\'},body:JSON.stringify({ownerUid})});const data=await r.json();if(data.ok){btn.style.background=\'rgba(34,197,94,.12)\';btn.style.borderColor=\'#22c55e\';btn.style.color=\'#22c55e\';btn.textContent=\'✅ Geliked\';const c=document.getElementById(\'pin-eng-count\');if(c)c.textContent=parseInt(c.textContent||0)+1;if(window.showBanner)showBanner({type:\'success\',icon:\'❤️\',title:\'Pinned-Post geliked!\',subtitle:\'+1 💎 in deiner Wallet — danke fürs Engagement!\',dur:4500});}else if(data.alreadyDone){btn.style.background=\'rgba(34,197,94,.12)\';btn.style.borderColor=\'#22c55e\';btn.style.color=\'#22c55e\';btn.textContent=\'✅ Geliked\';}else{btn.disabled=false;btn.textContent=\'❤️ Like · +1 💎\';if(window.showBanner)showBanner({type:\'warn\',icon:\'❌\',title:\'Like fehlgeschlagen\',subtitle:data.error||\'Versuch es gleich nochmal.\',dur:4500});}}catch(e){btn.disabled=false;btn.textContent=\'❤️ Like · +1 💎\';}}<\/script>'
               +'</div>'
             : '';
 
