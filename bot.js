@@ -3938,17 +3938,18 @@ p{line-height:1.65;color:var(--muted)}
     if (path === '/api/delete-dm' && req.method === 'POST') {
         const body = await parseBody(req);
         const { chatKey, timestamp } = body;
-        if (!chatKey || !timestamp) return json({error:'Ungültig'}, 400);
+        if (!chatKey || !timestamp) return json({ok:false, error:'Ungültig'}, 400);
         const [a, b] = chatKey.split('_');
-        if (a !== myUid && b !== myUid) return json({error:'Kein Zugriff'}, 403);
+        if (a !== myUid && b !== myUid) return json({ok:false, error:'Kein Zugriff'}, 403);
         const result = await postBot('/delete-dm-api', { chatKey, timestamp: Number(timestamp), uid: myUid });
-        return json({ok: !!result});
+        // !!result war true für {ok:false, error} → fake-success.
+        return json({ok: result?.ok === true, error: result?.error || null});
     }
 
     if (path === '/api/delete-comment' && req.method === 'POST') {
         const body = await parseBody(req);
         const result = await postBot('/delete-comment-api', { uid: myUid, postId: body.postId, commentIdx: body.commentIdx });
-        return json({ok: !!result});
+        return json({ok: result?.ok === true, error: result?.error || null});
     }
 
     if (path === '/api/post-link' && req.method === 'POST') {
@@ -3987,12 +3988,12 @@ p{line-height:1.65;color:var(--muted)}
     }
 
     if (path === '/api/engage-pinned-post' && req.method === 'POST') {
-        if (!session) return json({error:'Nicht eingeloggt'},401);
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'},401);
         const body = await parseBody(req);
         const ownerUid = String(body.ownerUid||'');
-        if (!ownerUid || ownerUid === myUid) return json({error:'Ungültig'},400);
+        if (!ownerUid || ownerUid === myUid) return json({ok:false, error:'Ungültig'},400);
         const result = await postBot('/engage-pinned-post-api', { engagerUid: myUid, ownerUid });
-        return json({ok:!!result?.ok, alreadyDone: result?.alreadyDone||false});
+        return json({ok:!!result?.ok, alreadyDone: result?.alreadyDone||false, error: result?.error || null});
     }
 
     if (path === '/api/newsletter-add' && req.method === 'POST') {
