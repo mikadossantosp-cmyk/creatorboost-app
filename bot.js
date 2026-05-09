@@ -3953,10 +3953,13 @@ p{line-height:1.65;color:var(--muted)}
     if (path === '/api/post-link' && req.method === 'POST') {
         const body = await parseBody(req);
         const { url: linkUrl, caption } = body;
-        if (!linkUrl || !linkUrl.includes('instagram.com')) return json({error:'Nur Instagram Links'},400);
+        if (!linkUrl || !linkUrl.includes('instagram.com')) return json({ok:false, error:'Nur Instagram Links'},400);
         const result = await postBot('/post-link-from-app', { uid: myUid, name: session.name, url: linkUrl.trim(), caption: body.caption||'' });
-        if (!result) return json({error:'Fehler beim Senden'},500);
-        if (result.ok !== false && webpush) {
+        if (!result) return json({ok:false, error:'Fehler beim Senden'},500);
+        // BUGFIX: Bot-Fehler korrekt forwarden statt fake-{ok:true} zu retournieren.
+        // Auch Web-Push nur bei explizitem ok:true (nicht bei undefined ok).
+        if (result.ok === false) return json({ok:false, error: result.error || 'Posten fehlgeschlagen'});
+        if (result.ok === true && webpush) {
             const posterName = session.name || 'Jemand';
             const payload = JSON.stringify({title:'🔥 Neuer Reel-Link!',body:posterName+' hat einen Link in CreatorX geteilt',url:'/feed'});
             // Vorher: savePushSubs() lief synchron VOR den .catch der Sends — abgelaufene Subs (410/404)
