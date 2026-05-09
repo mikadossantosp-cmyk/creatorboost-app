@@ -159,27 +159,46 @@ function cleanRole(r) {
 // Sicherer URL-Check: nur http(s)-Links erlaubt, kein javascript:/data:/vbscript:.
 function safeUrl(u) { const s = String(u||'').trim(); return /^https?:\/\//i.test(s) ? s : ''; }
 
-// 👑 Top-1 User mit höchstem XP (ohne Admins, Subs, System) — fallback wenn lokale crown nicht in scope.
-function getTop1Uid(d, adminIds=[]) {
-    let bestXp = -1, top = '';
-    for (const [uid, u] of Object.entries(d?.users || {})) {
-        if (!u || u.parent_uid || u.isSystem || uid === 'creatorboost') continue;
-        if (adminIds.includes(Number(uid))) continue;
-        const xp = u.xp || 0;
-        if (xp > bestXp) { bestXp = xp; top = String(uid); }
-    }
-    return top;
+// 👑 Top-3 User mit höchstem XP (ohne Admins, Subs, System).
+// Top1 = gold, Top2 = silber, Top3 = bronze — wird ÜBERALL angezeigt wo Username gerendert wird.
+function getTop3Uids(d, adminIds=[]) {
+    const ranked = Object.entries(d?.users || {})
+        .filter(([uid, u]) => u && !u.parent_uid && !u.isSystem && uid !== 'creatorboost' && !adminIds.includes(Number(uid)))
+        .sort(([,a],[,b]) => (b.xp||0) - (a.xp||0));
+    return {
+        top1: ranked[0]?.[0] ? String(ranked[0][0]) : '',
+        top2: ranked[1]?.[0] ? String(ranked[1][0]) : '',
+        top3: ranked[2]?.[0] ? String(ranked[2][0]) : '',
+    };
 }
+// Backwards-compat: getTop1Uid liefert nur den Top-1 Uid als String.
+function getTop1Uid(d, adminIds=[]) { return getTop3Uids(d, adminIds).top1; }
+// rankOf(uid, top3) → 1, 2, 3 oder 0 (kein Crown).
+function rankOf(uid, top3) {
+    if (!top3) return 0;
+    const s = String(uid);
+    if (top3.top1 && s === top3.top1) return 1;
+    if (top3.top2 && s === top3.top2) return 2;
+    if (top3.top3 && s === top3.top3) return 3;
+    return 0;
+}
+// Text-Variante: nur Top-1 bekommt 👑 prefix (CSS-Filter funktionieren nicht in Plain-Text-Contexts
+// wie escTxt-escapten Notification-Names oder 'Gefällt X, Y'-Text).
 function makeCrown(top1Uid) {
-    return (uid) => (top1Uid && String(uid) === top1Uid) ? '👑 ' : '';
+    const top1 = (top1Uid && typeof top1Uid === 'object') ? top1Uid.top1 : top1Uid;
+    return (uid) => (top1 && String(uid) === top1) ? '👑 ' : '';
 }
 // Visuelle Krone als HTML-Overlay über dem Avatar (für Stories/Posts/Profil).
 // Container muss position:relative sein. size: '' (default ~18px), 'sm' (~13px), 'xs' (~10px).
-function makeCrownOverlay(top1Uid) {
+// top3 kann ein Objekt {top1, top2, top3} oder ein String (= Top-1 nur) sein.
+function makeCrownOverlay(top3) {
+    const t = (top3 && typeof top3 === 'object') ? top3 : { top1: top3 || '', top2: '', top3: '' };
     return (uid, size='') => {
-        if (!top1Uid || String(uid) !== top1Uid) return '';
-        const cls = size==='sm' ? 'crown-float-sm' : size==='xs' ? 'crown-float-xs' : 'crown-float';
-        return '<div class="' + cls + '">👑</div>';
+        const r = rankOf(uid, t);
+        if (!r) return '';
+        const baseCls = size==='sm' ? 'crown-float-sm' : size==='xs' ? 'crown-float-xs' : 'crown-float';
+        const rankCls = r===1 ? '' : (r===2 ? ' rank-silver' : ' rank-bronze');
+        return '<div class="' + baseCls + rankCls + '">👑</div>';
     };
 }
 
@@ -544,10 +563,14 @@ button{cursor:pointer;border:none;outline:none;font-family:var(--font)}
 .podium-slot.p3{animation-delay:.10s}
 @keyframes podium-rise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
 .podium-crown{font-size:22px;margin-bottom:-2px;filter:drop-shadow(0 2px 6px rgba(245,158,11,0.45));animation:crown-bob 2.4s ease-in-out infinite}
+.podium-crown.rank-silver{filter:grayscale(100%) brightness(1.35) drop-shadow(0 2px 6px rgba(148,163,184,0.55))}
+.podium-crown.rank-bronze{filter:sepia(85%) saturate(180%) hue-rotate(-22deg) brightness(0.82) drop-shadow(0 2px 6px rgba(180,83,9,0.55))}
 @keyframes crown-bob{0%,100%{transform:translateY(0) rotate(-3deg)}50%{transform:translateY(-3px) rotate(3deg)}}
 .crown-float{position:absolute;left:50%;transform:translateX(-50%) rotate(-3deg);top:-14px;font-size:18px;line-height:1;filter:drop-shadow(0 2px 5px rgba(245,158,11,0.5));animation:crown-bob 2.4s ease-in-out infinite;z-index:5;pointer-events:none}
 .crown-float-sm{position:absolute;left:50%;transform:translateX(-50%) rotate(-3deg);top:-10px;font-size:13px;line-height:1;filter:drop-shadow(0 1px 3px rgba(245,158,11,0.5));animation:crown-bob 2.4s ease-in-out infinite;z-index:5;pointer-events:none}
 .crown-float-xs{position:absolute;left:50%;transform:translateX(-50%) rotate(-3deg);top:-8px;font-size:10px;line-height:1;filter:drop-shadow(0 1px 2px rgba(245,158,11,0.5));animation:crown-bob 2.4s ease-in-out infinite;z-index:5;pointer-events:none}
+.crown-float.rank-silver,.crown-float-sm.rank-silver,.crown-float-xs.rank-silver{filter:grayscale(100%) brightness(1.35) drop-shadow(0 2px 5px rgba(148,163,184,0.55))}
+.crown-float.rank-bronze,.crown-float-sm.rank-bronze,.crown-float-xs.rank-bronze{filter:sepia(85%) saturate(180%) hue-rotate(-22deg) brightness(0.82) drop-shadow(0 2px 5px rgba(180,83,9,0.55))}
 .podium-avatar{position:relative;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;flex-shrink:0;box-shadow:0 8px 22px -6px rgba(15,23,42,0.25)}
 .podium-avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .podium-slot.p1 .podium-avatar{width:84px;height:84px;font-size:24px;border:3px solid #f59e0b;box-shadow:0 0 0 4px rgba(245,158,11,0.18),0 12px 28px -8px rgba(245,158,11,0.45)}
@@ -1498,9 +1521,11 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
     const sorted = Object.entries(d.users||{}).filter(([,u])=>!/admin/i.test(String(u.role||''))).sort((a,b)=>(b[1].xp||0)-(a[1].xp||0));
     const isAdmin = adminIds.includes(Number(uid));
     const rank = isAdmin ? 0 : sorted.findIndex(([id])=>id===uid)+1;
-    const _t1 = getTop1Uid(d, adminIds);
-    const crown = makeCrown(_t1);
-    const crownOverlay = makeCrownOverlay(_t1);
+    const _t3 = getTop3Uids(d, adminIds);
+    const _t1 = _t3.top1;
+    const _myRankCrown = rankOf(uid, _t3); // 1, 2, 3 oder 0
+    const crown = makeCrown(_t3);
+    const crownOverlay = makeCrownOverlay(_t3);
 
     return `
 <div style="position:relative">
@@ -1509,7 +1534,7 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
     <div class="profile-banner-overlay"></div>
   </div>
   <div class="profile-avatar-wrap">
-    ${_t1 && String(uid)===_t1 ? '<div style="position:absolute;left:48px;top:-26px;font-size:28px;line-height:1;filter:drop-shadow(0 3px 8px rgba(245,158,11,0.5));animation:crown-bob 2.4s ease-in-out infinite;z-index:6;transform:translateX(-50%) rotate(-3deg);pointer-events:none">👑</div>' : ''}
+    ${_myRankCrown ? `<div style="position:absolute;left:48px;top:-26px;font-size:28px;line-height:1;filter:${_myRankCrown===1?'drop-shadow(0 3px 8px rgba(245,158,11,0.5))':_myRankCrown===2?'grayscale(100%) brightness(1.35) drop-shadow(0 3px 8px rgba(148,163,184,0.55))':'sepia(85%) saturate(180%) hue-rotate(-22deg) brightness(0.82) drop-shadow(0 3px 8px rgba(180,83,9,0.55))'};animation:crown-bob 2.4s ease-in-out infinite;z-index:6;transform:translateX(-50%) rotate(-3deg);pointer-events:none">👑</div>` : ''}
     ${(picData||ladeBild(uid,'profilepic'))
       ? `<img src="${picData||ladeBild(uid,'profilepic')}" class="profile-avatar" style="${getRingBoxShadow(u)}" onerror="this.style.display='none'" alt="">`
       : u.instagram
@@ -4077,20 +4102,12 @@ p{line-height:1.65;color:var(--muted)}
     const today = new Date().toDateString();
     // d.users könnte undefined sein wenn Bot leeres data zurückgibt → Object.entries(undefined) wäre crash.
     const adminIds = (Array.isArray(d._adminIds) ? d._adminIds.map(Number) : Object.entries(d.users || {}).filter(([,u])=>/admin/i.test(String((u && u.role)||''))).map(([id])=>Number(id)));
-    // 👑 Top-1 Ranking: User mit höchstem XP (ohne Admins, Subs, System) — wird ÜBERALL
-    // angezeigt wo der Username gerendert wird (Posts, Kommentare, Liker, Stories etc).
-    let _top1Uid = '';
-    {
-        let bestXp = -1;
-        for (const [uid, u] of Object.entries(d.users || {})) {
-            if (!u || u.parent_uid || u.isSystem || uid === 'creatorboost') continue;
-            if (adminIds.includes(Number(uid))) continue;
-            const xp = u.xp || 0;
-            if (xp > bestXp) { bestXp = xp; _top1Uid = String(uid); }
-        }
-    }
-    const crown = (uid) => (_top1Uid && String(uid) === _top1Uid) ? '👑 ' : '';
-    const crownOverlay = makeCrownOverlay(_top1Uid);
+    // 👑🥈🥉 Top-3 Ranking: gold (Top-1), silber (Top-2), bronze (Top-3).
+    // Wird ÜBERALL angezeigt wo der Username gerendert wird (Posts, Kommentare, Liker, Stories etc).
+    const _top3 = getTop3Uids(d, adminIds);
+    const _top1Uid = _top3.top1;
+    const crown = makeCrown(_top3);            // text prefix '👑 ' nur für Top-1 (Plain-Text-Contexts)
+    const crownOverlay = makeCrownOverlay(_top3); // visuelles HTML-Crown mit Silber/Bronze für 2/3
 
     // ── API ENDPOINTS ──
     if (path === '/api/push-subscribe' && req.method === 'POST') {
@@ -6425,7 +6442,8 @@ setTimeout(()=>document.getElementById('search-input').focus(),100);
                 const img = ladeBild(id,'profilepic')
                     ? `<img src="/appbild/${id}/profilepic" loading="lazy" alt="">`
                     : insta ? `<img src="https://unavatar.io/instagram/${htmlEsc(insta)}" loading="lazy" onerror="this.remove()" alt="">` : '';
-                const crown = place===1 ? '<div class="podium-crown">👑</div>' : '';
+                const crownCls = place===1 ? '' : (place===2 ? ' rank-silver' : (place===3 ? ' rank-bronze' : ''));
+                const crown = (place===1||place===2||place===3) ? '<div class="podium-crown'+crownCls+'">👑</div>' : '';
                 return `<a href="/profil/${id}" class="podium-slot p${place}">
                   ${crown}
                   <div class="podium-avatar" style="background:${grad}"><span>${initial}</span>${img}</div>
@@ -7040,7 +7058,8 @@ async function nlDelete(id){if(!confirm('Eintrag löschen?'))return;const r=awai
             const img = ladeBild(id,'profilepic')
                 ? `<img src="/appbild/${id}/profilepic" loading="lazy" alt="">`
                 : insta ? `<img src="https://unavatar.io/instagram/${htmlEsc(insta)}" loading="lazy" onerror="this.remove()" alt="">` : '';
-            const crown = place===1 ? '<div class="podium-crown">👑</div>' : '';
+            const crownCls = place===1 ? '' : (place===2 ? ' rank-silver' : (place===3 ? ' rank-bronze' : ''));
+            const crown = (place===1||place===2||place===3) ? '<div class="podium-crown'+crownCls+'">👑</div>' : '';
             return `<a href="/profil/${id}" class="podium-slot p${place}">
               ${crown}
               <div class="podium-avatar" style="background:${grad}"><span>${initial}</span>${img}</div>
