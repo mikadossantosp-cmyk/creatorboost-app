@@ -7128,10 +7128,21 @@ ${rest.map(([id,u],idx)=>{
         if (!myUser) return redirect('/');
         const myBannerData = session.bannerData || ladeBild(myUid, 'banner');
         const myPicData = session.profilePicData || ladeBild(myUid, 'profilepic');
-        // Sub-Account-Switcher Daten
+        // Sub-Account-Switcher Daten — Source-of-Truth ist d.users[parent].subUid (Bot),
+        // NICHT session.subUid. Letzteres kann durch Bug/Session-Restart auf null gesetzt
+        // worden sein während der Sub im Bot weiterhin existiert (Render-Bug → Switcher leer).
         const parentUid = String(session.uid);
-        const subUid = session.subUid ? String(session.subUid) : null;
         const parentUser = (d.users||{})[parentUid] || {};
+        const subUidFromBot = parentUser.subUid && (d.users||{})[parentUser.subUid] ? String(parentUser.subUid) : null;
+        const subUid = subUidFromBot;
+        // Self-heal: wenn Bot-Wahrheit von Session abweicht, syncen.
+        if (session.subUid !== subUid) {
+            if (subUid) session.subUid = subUid; else delete session.subUid;
+            if (String(session.activeUid) !== parentUid && String(session.activeUid) !== subUid) {
+                session.activeUid = parentUid;
+            }
+            saveSessions();
+        }
         const subUser = subUid ? (d.users||{})[subUid] : null;
         const parentPic = ladeBild(parentUid, 'profilepic');
         const subPic = subUid ? ladeBild(subUid, 'profilepic') : null;
