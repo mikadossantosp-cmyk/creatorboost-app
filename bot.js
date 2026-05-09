@@ -2615,8 +2615,6 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
         }
     }
 
-
-
     // ── Public Community-Stats (für Landingpage, kein Auth nötig) ──
     if (path === '/api/community-stats') {
         const d = (await fetchBot('/data')) || {};
