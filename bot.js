@@ -2879,58 +2879,218 @@ function sendMagicLink(prefilledEmail){
     // Onboarding-Pflicht: Email-User müssen Instagram setzen bevor sie liken/posten können.
     if (path === '/onboarding-instagram' && req.method === 'GET') {
         if (!session) return redirect('/');
-        const isFirst = (query.first === '1');
         const _bd = await fetchBot('/data');
         const _u = _bd?.users?.[getMyUid(session)] || {};
         // Falls schon Instagram gesetzt → direkt weiter (kein doppelter Onboarding-Step).
         if (_u.instagram) {
             return redirect(_u.password_hash ? '/feed' : '/set-password?first=1');
         }
+        const _hello = (_u.spitzname || _u.name || '').replace(/[<>"]/g,'');
         res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});
         return res.end(`<!DOCTYPE html><html lang="de" data-theme="dark"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Instagram verknüpfen · CreatorX</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<title>Willkommen · CreatorX</title>
+<link rel="icon" type="image/png" href="/icon-512.png?v=26">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@600&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Inter',sans-serif;background:#000;color:#fff;min-height:100vh;padding:24px;display:flex;flex-direction:column}
-.wrap{max-width:420px;margin:0 auto;width:100%;flex:1;display:flex;flex-direction:column;justify-content:center}
-.icon{font-size:48px;text-align:center;margin-bottom:14px}
-h1{font-size:24px;font-weight:800;text-align:center;margin-bottom:8px;letter-spacing:-0.5px}
-.sub{font-size:13.5px;color:rgba(255,255,255,.6);text-align:center;line-height:1.55;margin-bottom:24px}
-.field{position:relative;margin-bottom:8px}
-.field .at{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:rgba(255,255,255,.4);font-size:15px;pointer-events:none;font-weight:600}
-input{width:100%;background:rgba(255,255,255,.06);border:1.5px solid rgba(212,175,55,.3);color:#fff;border-radius:14px;padding:14px 16px 14px 32px;font-size:15px;outline:none;transition:border-color .2s;font-family:inherit;font-weight:500}
-input:focus{border-color:#d4af37}
-button.primary{background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;border:none;border-radius:14px;padding:15px;font-size:15px;font-weight:700;width:100%;cursor:pointer;margin-top:6px;font-family:inherit;letter-spacing:0.2px;box-shadow:0 8px 24px -8px rgba(212,175,55,0.6),inset 0 1px 0 rgba(255,255,255,0.5)}
-button.primary:disabled{opacity:0.5;cursor:not-allowed}
-.warn{padding:14px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);border-radius:12px;font-size:12.5px;color:rgba(245,158,11,0.95);margin-bottom:18px;line-height:1.55;display:flex;align-items:flex-start;gap:10px}
-.warn-icon{font-size:18px;flex-shrink:0;line-height:1}
-.msg{padding:10px 14px;margin-top:14px;font-size:13px;border-radius:12px;text-align:center;display:none}
+:root{--gold:#d4af37;--text:#fff;--muted:rgba(255,255,255,0.6);--muted-2:rgba(255,255,255,0.38);--border:rgba(255,255,255,0.08);--border-strong:rgba(212,175,55,0.25);--bg-card:rgba(255,255,255,0.03)}
+html,body{background:#000;color:var(--text);font-family:'Inter',-apple-system,sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh;overflow-x:hidden}
+a{color:inherit;text-decoration:none}
+
+/* mesh bg */
+.mesh{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+.mesh::before{content:'';position:absolute;width:90vw;height:90vw;left:-20vw;top:-30vw;background:radial-gradient(circle at center,rgba(212,175,55,0.16) 0%,transparent 55%);filter:blur(50px);animation:meshA 22s ease-in-out infinite alternate}
+.mesh::after{content:'';position:absolute;width:80vw;height:80vw;right:-25vw;bottom:-25vw;background:radial-gradient(circle at center,rgba(167,139,250,0.10) 0%,transparent 55%);filter:blur(50px);animation:meshB 26s ease-in-out infinite alternate}
+@keyframes meshA{0%{transform:translate(0,0) scale(1)}100%{transform:translate(8vw,12vh) scale(1.1)}}
+@keyframes meshB{0%{transform:translate(0,0) scale(1)}100%{transform:translate(-10vw,-8vh) scale(0.95)}}
+
+/* shell */
+.shell{position:relative;z-index:1;max-width:480px;margin:0 auto;padding:20px 22px 60px;min-height:100vh;display:flex;flex-direction:column}
+
+/* progress */
+.bar{display:flex;gap:6px;margin-bottom:32px;padding-top:8px}
+.dot{flex:1;height:4px;border-radius:99px;background:rgba(255,255,255,0.08);transition:background .3s}
+.dot.active{background:linear-gradient(90deg,#d4af37,#f5d76e)}
+.dot.done{background:rgba(212,175,55,0.4)}
+
+/* step container */
+.steps{position:relative;flex:1}
+.step{display:none;animation:fade-up .35s ease-out}
+.step.active{display:block}
+@keyframes fade-up{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+/* hero element */
+.step-icon{width:72px;height:72px;margin:0 auto 18px;border-radius:20px;background:linear-gradient(135deg,rgba(212,175,55,0.15),rgba(212,175,55,0.04));border:1px solid rgba(212,175,55,0.3);display:flex;align-items:center;justify-content:center;font-size:36px;box-shadow:0 12px 32px -10px rgba(212,175,55,0.4)}
+.step-eyebrow{display:inline-flex;align-items:center;gap:6px;font-size:10.5px;font-weight:700;color:var(--gold);background:rgba(212,175,55,0.08);border:1px solid rgba(212,175,55,0.25);padding:5px 11px;border-radius:99px;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:14px}
+.step-h{font-family:'Syne',sans-serif;font-size:30px;font-weight:800;line-height:1.1;letter-spacing:-1px;margin-bottom:10px;background:linear-gradient(180deg,#fff,#d4af37);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.step-sub{font-size:14px;color:var(--muted);line-height:1.6;margin-bottom:28px}
+.step-sub b{color:var(--text);font-weight:600}
+.center{text-align:center}
+
+/* feature list (step 1) */
+.flist{display:flex;flex-direction:column;gap:10px;margin-bottom:24px}
+.fitem{display:flex;align-items:flex-start;gap:14px;padding:14px;background:var(--bg-card);border:1px solid var(--border);border-radius:14px;transition:all .15s}
+.fitem:hover{border-color:var(--border-strong)}
+.fitem-icon{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,rgba(212,175,55,0.15),rgba(212,175,55,0.05));border:1px solid rgba(212,175,55,0.2);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.fitem-body{flex:1}
+.fitem-t{font-size:13.5px;font-weight:700;letter-spacing:-0.2px;margin-bottom:2px}
+.fitem-s{font-size:12px;color:var(--muted);line-height:1.5}
+
+/* form */
+.form-group{margin-bottom:16px}
+.form-label{display:block;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:8px}
+.form-label .req{color:#fb923c;margin-left:4px}
+.form-label .opt{color:var(--muted-2);font-weight:500;margin-left:4px;text-transform:none;letter-spacing:0}
+.field{position:relative}
+.field .at{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:rgba(255,255,255,0.45);font-size:15px;pointer-events:none;font-weight:600}
+input,textarea{width:100%;background:rgba(255,255,255,0.04);border:1.5px solid var(--border);color:#fff;border-radius:13px;padding:13px 15px;font-size:14.5px;outline:none;transition:all .18s;font-family:inherit;font-weight:500;resize:none}
+input:focus,textarea:focus{border-color:var(--gold);background:rgba(212,175,55,0.04);box-shadow:0 0 0 3px rgba(212,175,55,0.12)}
+.field input{padding-left:32px}
+.form-hint{font-size:11.5px;color:var(--muted-2);margin-top:6px;line-height:1.5}
+
+/* warn box */
+.warn{padding:14px;background:rgba(245,158,11,0.07);border:1px solid rgba(245,158,11,0.25);border-radius:13px;font-size:12.5px;color:rgba(245,158,11,0.95);margin-bottom:18px;line-height:1.55;display:flex;align-items:flex-start;gap:10px}
+.warn-i{font-size:18px;flex-shrink:0;line-height:1}
+.warn b{color:rgba(245,158,11,1);font-weight:700}
+
+/* nav buttons */
+.nav-row{display:flex;gap:8px;margin-top:12px}
+.btn{padding:14px;font-size:14px;font-weight:700;border-radius:13px;cursor:pointer;font-family:inherit;letter-spacing:0.2px;transition:all .15s;border:none;flex:1;text-align:center;display:flex;align-items:center;justify-content:center;gap:6px}
+.btn-p{background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;box-shadow:0 8px 22px -8px rgba(212,175,55,0.6),inset 0 1px 0 rgba(255,255,255,0.5)}
+.btn-p:hover{transform:translateY(-1px);box-shadow:0 12px 28px -8px rgba(212,175,55,0.7),inset 0 1px 0 rgba(255,255,255,0.5)}
+.btn-p:disabled{opacity:0.55;cursor:not-allowed;transform:none}
+.btn-s{background:rgba(255,255,255,0.04);border:1px solid var(--border);color:var(--muted)}
+.btn-s:hover{color:var(--text);border-color:rgba(255,255,255,0.2)}
+
+/* msg */
+.msg{padding:11px 14px;margin-top:12px;font-size:12.5px;border-radius:11px;text-align:center;display:none;font-weight:500}
 .msg.show{display:block}
-.msg.ok{background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.4);color:#4ade80}
-.msg.err{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.4);color:#f87171}
-.hint{font-size:11px;color:rgba(255,255,255,.4);text-align:center;margin-top:14px;line-height:1.5}
+.msg.ok{background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);color:#4ade80}
+.msg.err{background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#f87171}
+
+/* step 3 success burst */
+.success-burst{width:96px;height:96px;margin:0 auto 18px;border-radius:50%;background:radial-gradient(circle,rgba(34,197,94,0.25) 0%,rgba(34,197,94,0.08) 50%,transparent 70%);display:flex;align-items:center;justify-content:center;font-size:50px;animation:burst .55s ease-out}
+@keyframes burst{0%{transform:scale(0);opacity:0}50%{transform:scale(1.15)}100%{transform:scale(1);opacity:1}}
+
+/* step counter */
+.step-counter{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted-2);text-align:center;margin-top:18px;letter-spacing:1px}
 </style></head><body>
-<div class="wrap">
-  <div class="icon">📸</div>
-  <h1>Verknüpf deinen Instagram</h1>
-  <div class="sub">${isFirst ? 'Eine letzte Sache vorm Loslegen — wir brauchen deinen Instagram-Username, damit andere Creator deine Posts korrekt zuordnen können.' : 'Setz deinen Instagram-Username, um Posts veröffentlichen und liken zu können.'}</div>
-  <div class="warn"><div class="warn-icon">⚠️</div><div><b>Pflichtfeld.</b> Ohne Instagram kannst du nichts posten und auch keine fremden Posts liken.</div></div>
-  <form id="ig-form" onsubmit="return submitIg(event)">
-    <div class="field">
-      <span class="at">@</span>
-      <input type="text" id="ig" placeholder="dein.instagram" autocomplete="off" autocapitalize="none" spellcheck="false" required maxlength="50" pattern="[a-zA-Z0-9._]+" title="Nur Buchstaben, Zahlen, . und _">
+<div class="mesh"></div>
+<div class="shell">
+  <div class="bar">
+    <div class="dot active" id="dot-1"></div>
+    <div class="dot" id="dot-2"></div>
+    <div class="dot" id="dot-3"></div>
+  </div>
+
+  <div class="steps">
+    <!-- STEP 1: Welcome / Wie funktioniert's -->
+    <div class="step active" id="step-1">
+      <div class="step-icon">🚀</div>
+      <div class="center"><div class="step-eyebrow">Willkommen${_hello ? ', ' + _hello : ''}</div></div>
+      <div class="step-h center">So wirst du zum<br>Top-Creator.</div>
+      <div class="step-sub center">CreatorX ist eine geschlossene Community von echten Creatorn die sich <b>gegenseitig pushen</b>. Hier sind die <b>3 Spielregeln</b>:</div>
+      <div class="flist">
+        <div class="fitem">
+          <div class="fitem-icon">📸</div>
+          <div class="fitem-body">
+            <div class="fitem-t">1. Poste deine Insta-Reels</div>
+            <div class="fitem-s">Teile täglich deinen besten Reel-Link in der App. Andere Creator sehen ihn sofort im Feed.</div>
+          </div>
+        </div>
+        <div class="fitem">
+          <div class="fitem-icon">❤️</div>
+          <div class="fitem-body">
+            <div class="fitem-t">2. Like &amp; engage zurück</div>
+            <div class="fitem-s">Like, kommentier &amp; speicher andere Reels auf Insta. Dafür bekommst du XP und gleiche Unterstützung zurück.</div>
+          </div>
+        </div>
+        <div class="fitem">
+          <div class="fitem-icon">🏆</div>
+          <div class="fitem-body">
+            <div class="fitem-t">3. Steig auf</div>
+            <div class="fitem-s">Sammle XP, klettere im Ranking. <b>👑 Gold</b> für Top-1, <b>🥈 Silber</b> für Top-2, <b>🥉 Bronze</b> für Top-3 — überall in der App sichtbar.</div>
+          </div>
+        </div>
+      </div>
+      <div class="nav-row">
+        <button type="button" class="btn btn-p" onclick="showStep(2)">Verstanden — los geht's →</button>
+      </div>
+      <div class="step-counter">Schritt 1 von 3</div>
     </div>
-    <button type="submit" class="primary" id="btn">Verknüpfen & Loslegen →</button>
-  </form>
-  <div class="msg" id="msg"></div>
-  <div class="hint">Du kannst es später in den Einstellungen ändern.</div>
+
+    <!-- STEP 2: Instagram Pflicht -->
+    <div class="step" id="step-2">
+      <div class="step-icon">📸</div>
+      <div class="center"><div class="step-eyebrow">Wichtig</div></div>
+      <div class="step-h center">Verknüpf deinen<br>Instagram.</div>
+      <div class="step-sub center">Damit andere Creator <b>wissen, wessen Reel sie liken</b>. Ohne Insta-Username kann das Engagement-System nicht prüfen, ob du auch wirklich engagierst.</div>
+      <div class="warn"><div class="warn-i">⚠️</div><div><b>Pflichtfeld.</b> Ohne Instagram kannst du <b>nicht posten</b> und auch <b>keine fremden Reels liken</b>.</div></div>
+      <form id="ig-form" onsubmit="return saveIg(event)">
+        <div class="form-group">
+          <label class="form-label" for="ig">Dein Instagram-Username <span class="req">*</span></label>
+          <div class="field">
+            <span class="at">@</span>
+            <input type="text" id="ig" placeholder="dein.instagram" autocomplete="off" autocapitalize="none" spellcheck="false" required maxlength="50" pattern="[a-zA-Z0-9._]+" title="Nur Buchstaben, Zahlen, . und _">
+          </div>
+          <div class="form-hint">Z.B. <span style="color:var(--gold);font-family:'JetBrains Mono',monospace">cristiano</span> wenn dein Insta <span style="color:var(--gold);font-family:'JetBrains Mono',monospace">@cristiano</span> ist. Kann später in Einstellungen geändert werden.</div>
+        </div>
+        <div class="msg" id="msg-2"></div>
+        <div class="nav-row">
+          <button type="button" class="btn btn-s" onclick="showStep(1)">← Zurück</button>
+          <button type="submit" class="btn btn-p" id="btn-ig" style="flex:2">Verknüpfen →</button>
+        </div>
+      </form>
+      <div class="step-counter">Schritt 2 von 3</div>
+    </div>
+
+    <!-- STEP 3: Optional Spitzname & Bio -->
+    <div class="step" id="step-3">
+      <div class="success-burst">✓</div>
+      <div class="center"><div class="step-eyebrow">Fast geschafft</div></div>
+      <div class="step-h center">Mach dein Profil<br>persönlich.</div>
+      <div class="step-sub center">Optional — du kannst diese Felder auch später in den Einstellungen ergänzen.</div>
+      <form id="profile-form" onsubmit="return saveProfile(event)">
+        <div class="form-group">
+          <label class="form-label" for="sp">Spitzname <span class="opt">(optional)</span></label>
+          <input type="text" id="sp" placeholder="Wie sollen dich die anderen nennen?" maxlength="30">
+          <div class="form-hint">Wird statt deines echten Namens angezeigt.</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="bio">Bio <span class="opt">(optional)</span></label>
+          <textarea id="bio" placeholder="Was machst du? Welche Nische?" maxlength="100" rows="2"></textarea>
+          <div class="form-hint" id="bio-count">0 / 100</div>
+        </div>
+        <div class="msg" id="msg-3"></div>
+        <div class="nav-row">
+          <button type="button" class="btn btn-s" onclick="finish(true)" id="btn-skip">Überspringen</button>
+          <button type="submit" class="btn btn-p" id="btn-finish" style="flex:2">Fertig — zur App →</button>
+        </div>
+      </form>
+      <div class="step-counter">Schritt 3 von 3</div>
+    </div>
+  </div>
 </div>
 <script>
-function submitIg(ev){
+var _step=1;
+function showStep(n){
+  if(n<1||n>3) return;
+  // Validierung: Step 2 nur überspringbar nach Speichern (Pflichtfeld)
+  document.querySelectorAll('.step').forEach(function(el){el.classList.remove('active');});
+  document.getElementById('step-'+n).classList.add('active');
+  for(var i=1;i<=3;i++){
+    var d=document.getElementById('dot-'+i);
+    d.classList.remove('active','done');
+    if(i<n) d.classList.add('done');
+    else if(i===n) d.classList.add('active');
+  }
+  _step=n;
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function saveIg(ev){
   ev.preventDefault();
-  var inp=document.getElementById('ig'),btn=document.getElementById('btn'),msg=document.getElementById('msg');
+  var inp=document.getElementById('ig'),btn=document.getElementById('btn-ig'),msg=document.getElementById('msg-2');
   var v=(inp.value||'').replace(/^@/,'').trim();
   if(!v){msg.textContent='Bitte Instagram-Username eingeben.';msg.classList.add('show','err');return false;}
   if(!/^[a-zA-Z0-9._]+$/.test(v)){msg.textContent='Ungültiger Username (nur Buchstaben/Zahlen/.,_).';msg.classList.add('show','err');return false;}
@@ -2941,15 +3101,47 @@ function submitIg(ev){
     .then(function(j){
       if(j&&j.ok){
         msg.textContent='✅ Instagram verknüpft!';msg.classList.add('show','ok');
-        setTimeout(function(){window.location.href='/set-password?first=1';},500);
+        setTimeout(function(){showStep(3);msg.classList.remove('show','ok');},400);
       } else {
         msg.textContent=(j&&j.error)||'Fehler beim Speichern.';msg.classList.add('show','err');
-        btn.disabled=false;btn.textContent='Verknüpfen & Loslegen →';
+        btn.disabled=false;btn.textContent='Verknüpfen →';
       }
     })
-    .catch(function(){msg.textContent='Netzwerkfehler.';msg.classList.add('show','err');btn.disabled=false;btn.textContent='Verknüpfen & Loslegen →';});
+    .catch(function(){msg.textContent='Netzwerkfehler.';msg.classList.add('show','err');btn.disabled=false;btn.textContent='Verknüpfen →';});
   return false;
 }
+function saveProfile(ev){
+  ev.preventDefault();
+  finish(false);
+  return false;
+}
+function finish(skipProfile){
+  var btn=document.getElementById('btn-finish'),skipBtn=document.getElementById('btn-skip'),msg=document.getElementById('msg-3');
+  if(skipProfile){
+    window.location.href='/set-password?first=1';
+    return;
+  }
+  var sp=(document.getElementById('sp').value||'').trim();
+  var bio=(document.getElementById('bio').value||'').trim();
+  msg.classList.remove('show','ok','err');
+  btn.disabled=true;skipBtn.disabled=true;btn.textContent='Speichere...';
+  var payload={};
+  if(sp) payload.spitzname=sp;
+  if(bio) payload.bio=bio;
+  if(!Object.keys(payload).length){window.location.href='/set-password?first=1';return;}
+  fetch('/api/save-profile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
+    .then(function(r){return r.json();})
+    .then(function(j){
+      window.location.href='/set-password?first=1';
+    })
+    .catch(function(){
+      // Trotzdem weiter — Profil-Daten sind optional.
+      window.location.href='/set-password?first=1';
+    });
+}
+// Bio counter
+var _bio=document.getElementById('bio'),_cnt=document.getElementById('bio-count');
+if(_bio&&_cnt){_bio.addEventListener('input',function(){_cnt.textContent=(_bio.value||'').length+' / 100';});}
 </script>
 </body></html>`);
     }
