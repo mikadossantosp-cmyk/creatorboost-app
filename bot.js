@@ -5576,7 +5576,7 @@ p{line-height:1.65;color:var(--muted)}
             // Bevorzugt Instagram-Thumbnail (link.thumbnail vom Bot gefetcht), sonst Banner.
             // onerror räumt das <img> auf falls Instagram-CDN-URL abgelaufen ist (24h-Signatur).
             const bannerImg = link.thumbnail
-                ? '<img src="'+link.thumbnail.replace(/"/g,'%22')+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.remove()" alt="">'
+                ? '<img src="'+link.thumbnail.replace(/"/g,'%22')+'" referrerpolicy="no-referrer" crossorigin="anonymous" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.remove()" alt="">'
                 : (bannerFile ? '<img src="/appbild/'+String(link.user_id)+'/banner" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.remove()" alt="">' : '');
 
             // Profile pic (small, in header)
@@ -5785,7 +5785,7 @@ commentsBox+
                 +'<div style="margin:8px 16px;padding:8px 12px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:10px;font-size:11px;color:rgba(245,158,11,.9);font-weight:600">🔄 Bitte Liken, Kommentieren, Teilen und Speichern</div>\n'
                 +'<div style="margin:0 16px 8px;border-radius:14px;overflow:hidden;background:var(--bg3);border:1px solid rgba(255,255,255,.08)">\n'
                 +(sl.thumbnail
-                    ? '<a href="'+(sl.url||'').replace(/"/g,'%22')+'" target="_blank" rel="noopener" onclick="markLinkVisited(\''+sl.id+'\')" style="display:block;position:relative;width:100%;padding-top:62%;overflow:hidden;background:#000"><img src="'+sl.thumbnail.replace(/"/g,'%22')+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.parentElement.style.display=\'none\'" alt=""><div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.05),rgba(0,0,0,.55))"></div><div style="position:absolute;top:10px;left:12px;background:rgba(0,0,0,.55);border-radius:8px;padding:4px 9px;font-size:11px;color:#fff;font-weight:600;backdrop-filter:blur(4px)">📸 Instagram</div></a>\n'
+                    ? '<a href="'+(sl.url||'').replace(/"/g,'%22')+'" target="_blank" rel="noopener" onclick="markLinkVisited(\''+sl.id+'\')" style="display:block;position:relative;width:100%;padding-top:62%;overflow:hidden;background:#000"><img src="'+sl.thumbnail.replace(/"/g,'%22')+'" referrerpolicy="no-referrer" crossorigin="anonymous" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.parentElement.style.display=\'none\'" alt=""><div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.05),rgba(0,0,0,.55))"></div><div style="position:absolute;top:10px;left:12px;background:rgba(0,0,0,.55);border-radius:8px;padding:4px 9px;font-size:11px;color:#fff;font-weight:600;backdrop-filter:blur(4px)">📸 Instagram</div></a>\n'
                     : '')
                 +'<a href="'+(sl.url||'').replace(/"/g,'%22')+'" target="_blank" rel="noopener" onclick="markLinkVisited(\''+sl.id+'\')" style="display:block;padding:12px 14px;text-decoration:none">\n'
                 +'<div style="font-size:13px;color:var(--blue);word-break:break-all;margin-bottom:4px">'+(sl.url||'').replace('https://www.','').replace('https://','').slice(0,60)+'</div>\n'
