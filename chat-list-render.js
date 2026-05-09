@@ -393,9 +393,9 @@ module.exports = function renderChatList(opts) {
                 'const th = document.getElementById("dm-list-threads");' +
                 'if (c) c.style.display = (t === "chats") ? "" : "none";' +
                 'if (th) th.style.display = (t === "threads") ? "" : "none";' +
-                'try { localStorage.setItem("dmTab", t); } catch(e) {}' +
             '}' +
-            'try { const saved = localStorage.getItem("dmTab"); if (saved && (saved === "chats" || saved === "threads")) dmSwitchTab(saved); } catch(e) {}' +
+            // Beim Öffnen immer mit "Chats" (privaten DMs) starten — kein localStorage-Restore.
+            'try { localStorage.removeItem("dmTab"); } catch(e) {}' +
             // ── Pin/Mute Settings (localStorage) ──
             'function dmGetSettings(){ try { return JSON.parse(localStorage.getItem("dmSettings")||"{}"); } catch(e) { return {}; } }' +
             'function dmSaveSettings(s){ try { localStorage.setItem("dmSettings", JSON.stringify(s)); } catch(e) {} }' +
