@@ -1263,6 +1263,38 @@ ${session ? `
     requestAnimationFrame(function(){ card.classList.remove('transitioning'); });
   }
 
+  // Injiziert einen fiktiven Demo-Post für die Tour wenn der Feed leer ist.
+  // Zeigt die Tour-Schritte 'Post' + 'Like-Button' auch ohne echte Daten.
+  function ensureDemoPost(){
+    if(document.querySelector('.post.fade-up')) return; // Echte Posts vorhanden — kein Demo nötig
+    if(document.getElementById('tour-demo-post')) return; // Schon injected
+    var feed = document.querySelector('.feed-list, [data-tour="stories"], #feed-list, main, body');
+    if(!feed) return;
+    var demo = document.createElement('div');
+    demo.id = 'tour-demo-post';
+    demo.className = 'post fade-up';
+    demo.style.cssText = 'background:linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.01));border:1.5px dashed rgba(212,175,55,0.45);border-radius:18px;margin:14px 12px;padding:14px;position:relative;max-width:480px;font-family:Inter,-apple-system,sans-serif;color:#fff';
+    demo.innerHTML = ''
+      + '<div style="position:absolute;top:-10px;left:14px;background:linear-gradient(135deg,#d4af37,#a3852a);color:#000;padding:3px 10px;border-radius:99px;font-size:9.5px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase">Demo · Tour</div>'
+      + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">'
+      + '  <div style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#a78bfa,#7c3aed);display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;font-size:14px">CX</div>'
+      + '  <div><div style="font-weight:700;font-size:13.5px">Beispiel-Creator</div><div style="font-size:11px;color:rgba(255,255,255,0.55)">📘 Anfänger · @beispiel</div></div>'
+      + '</div>'
+      + '<div style="aspect-ratio:1.6/1;background:linear-gradient(135deg,rgba(167,139,250,0.18),rgba(59,130,246,0.18));border-radius:12px;margin-bottom:10px;display:flex;align-items:center;justify-content:center;font-size:32px">📸</div>'
+      + '<div style="font-size:12px;color:rgba(255,255,255,0.7);margin-bottom:10px">So sieht ein Reel-Post in deinem Feed aus.</div>'
+      + '<div style="display:flex;gap:8px;align-items:center">'
+      + '  <button class="post-action-btn" style="display:inline-flex;align-items:center;gap:6px;padding:9px 14px;border:1px solid rgba(255,255,255,0.12);border-radius:11px;background:rgba(255,255,255,0.04);color:#fff;font-weight:700;font-size:13px;cursor:default"><span style="color:#ef4444">❤</span> Like · 0</button>'
+      + '  <button class="post-comment-btn" style="display:inline-flex;align-items:center;gap:6px;padding:9px 14px;border:1px solid rgba(255,255,255,0.12);border-radius:11px;background:rgba(255,255,255,0.04);color:#fff;font-weight:700;font-size:13px;cursor:default">💬 Kommentar</button>'
+      + '</div>';
+    // Top of feed insert
+    var firstChild = feed.firstChild;
+    feed.insertBefore(demo, firstChild);
+  }
+  function removeDemoPost(){
+    var el = document.getElementById('tour-demo-post');
+    if(el) el.remove();
+  }
+
   function show(){
     var step = STEPS[idx];
     if(!step){ window.cbTourSkip(); return; }
@@ -1274,6 +1306,9 @@ ${session ? `
       setTimeout(function(){ location.href = step.page + '?tour=continue'; }, 280);
       return;
     }
+    // Wenn Step auf Post-Card oder Like-Btn zeigt UND kein echter Post da ist → Demo injizieren.
+    var needsPostDemo = step.q && (step.q.indexOf('.post.fade-up') >= 0);
+    if(needsPostDemo) ensureDemoPost();
     var t = getTarget(step);
     if(!t){ // Target fehlt auf der Page → diesen Step skippen
       idx++;
@@ -1371,6 +1406,7 @@ ${session ? `
   window.cbTourSkip = function(){
     document.getElementById('tour-ov').classList.remove('show');
     try{ sessionStorage.removeItem('cb_tour_active'); sessionStorage.removeItem('cb_tour_idx'); }catch(e){}
+    removeDemoPost();
     // Server-State setzen damit beim nächsten Login auf KEINEM Device wieder gestartet wird.
     fetch('/api/dismiss-briefing', {method:'POST'}).catch(function(){});
   };
