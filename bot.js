@@ -1071,46 +1071,54 @@ ${session ? `
   // Active-State + Index in sessionStorage damit Navigation funktioniert.
   // Server-State (u.appBriefingSeen) entscheidet ob Tour beim ersten Login automatisch startet.
   function _tourLog(msg){ try{ console.log('[TOUR]', msg); }catch(e){} }
+  function _safeRun(fn, label){
+    try { fn(); } catch(e) { _tourLog('ERROR in '+label+': '+(e.message||e)); try{ console.error(e); }catch(_){} }
+  }
   var force = /[?&]tour=1/.test(location.search);
   var continueMode = /[?&]tour=continue/.test(location.search);
   var active = false;
   try{ active = sessionStorage.getItem('cb_tour_active') === '1'; }catch(e){}
   _tourLog('init force='+force+' continue='+continueMode+' active='+active+' path='+location.pathname);
 
-  // Force-Mode (?tour=1) → reset & starte. Auch sicherstellen dass tour-ov existiert,
-  // sonst kann die Tour nichts anzeigen (z.B. Layout-Bug).
+  // Mache runTour global verfügbar — Debugging via Browser-Console: cbForceTour()
+  function startTourSafely(label){
+    if(!document.getElementById('tour-ov')){
+      _tourLog('FAIL '+label+': #tour-ov missing — DOM noch nicht ready oder Layout-Bug');
+      // Retry nach 500ms — DOM könnte noch laden
+      setTimeout(function(){
+        if(document.getElementById('tour-ov')){
+          _tourLog('retry: tour-ov now exists, runTour()');
+          _safeRun(runTour, 'runTour-retry');
+        } else {
+          _tourLog('FAIL final: tour-ov definitely missing');
+        }
+      }, 500);
+      return;
+    }
+    _tourLog(label + ' → runTour() now');
+    _safeRun(runTour, label);
+  }
+
   if(force){
     try{ sessionStorage.setItem('cb_tour_active','1'); sessionStorage.setItem('cb_tour_idx','0'); }catch(e){}
     active = true;
-    if(!document.getElementById('tour-ov')){
-      _tourLog('FAIL: #tour-ov missing — Layout-Bug');
-      try{ alert('Tour-Overlay fehlt im DOM. Bitte Hard-Reload (Strg+F5).'); }catch(e){}
-      return;
-    }
-    _tourLog('force-mode → runTour() now');
-    runTour();
+    startTourSafely('force-mode');
     return;
   }
-
-  // Mid-Page-Jump (Navigation zwischen Pages mit aktiver Tour).
   if(active){
-    _tourLog('active session-state → runTour()');
-    runTour();
+    startTourSafely('active-state');
     return;
   }
-
-  // Auto-Start auf /feed wenn Server sagt 'noch nicht gesehen'.
   if(/^\/feed/.test(location.pathname) && !continueMode){
     _tourLog('feed page — fetching briefing-status…');
     fetch('/api/briefing-status', {cache:'no-store'}).then(function(r){return r.json();}).then(function(j){
       _tourLog('briefing-status: ' + JSON.stringify(j));
-      if(j && j.seen) return; // schon gesehen → nicht starten
+      if(j && j.seen) return;
       try{ sessionStorage.setItem('cb_tour_active','1'); sessionStorage.setItem('cb_tour_idx','0'); }catch(e){}
-      runTour();
+      startTourSafely('auto-start');
     }).catch(function(e){ _tourLog('briefing-status fail: '+e); });
     return;
   }
-  // Sonst nichts tun.
   return;
   function runTour(){
   // ── runTour Body ─────────────────────────────────────────────────────────
