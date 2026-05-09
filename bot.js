@@ -17,6 +17,43 @@ const SESSIONS_FILE = DATA_DIR + '/cb_sessions.json';
 
 // Sessions von Disk laden
 const sessions = new Map();
+// Email-Magic-Link: in-memory (Token nur 1h gültig, Server-Restart ist OK).
+const emailLoginTokens = new Map();   // token → { email, uid, exp }
+const emailRateLimit = new Map();      // email → lastRequestTs (Cooldown gegen Spam)
+const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
+const EMAIL_FROM = process.env.EMAIL_FROM || 'CreatorX <onboarding@resend.dev>';
+const EMAIL_TOKEN_TTL = 60 * 60 * 1000;       // 1 Stunde
+const EMAIL_RATE_LIMIT = 5 * 60 * 1000;       // 5 Min zwischen Requests pro Email
+setInterval(() => {
+    const now = Date.now();
+    for (const [t, v] of emailLoginTokens.entries()) if (v.exp < now) emailLoginTokens.delete(t);
+    for (const [e, ts] of emailRateLimit.entries()) if (now - ts > EMAIL_RATE_LIMIT * 2) emailRateLimit.delete(e);
+}, 5 * 60 * 1000);
+
+async function sendEmail(to, subject, html) {
+    if (!RESEND_API_KEY) { console.error('RESEND_API_KEY nicht gesetzt'); return false; }
+    return new Promise(resolve => {
+        const data = JSON.stringify({ from: EMAIL_FROM, to: [to], subject, html });
+        const req = https.request({
+            hostname: 'api.resend.com', path: '/emails', method: 'POST',
+            headers: {
+                'Authorization': 'Bearer ' + RESEND_API_KEY,
+                'Content-Type': 'application/json',
+                'Content-Length': Buffer.byteLength(data)
+            }
+        }, res => {
+            let buf = ''; res.on('data', c => buf += c);
+            res.on('end', () => {
+                if (res.statusCode >= 200 && res.statusCode < 300) resolve(true);
+                else { console.error('Resend Error:', res.statusCode, buf.slice(0, 200)); resolve(false); }
+            });
+        });
+        req.on('error', e => { console.error('Resend Request Fehler:', e.message); resolve(false); });
+        req.setTimeout(8000, () => { req.destroy(); resolve(false); });
+        req.write(data); req.end();
+    });
+}
+
 try {
     if (fs.existsSync(SESSIONS_FILE)) {
         const raw = JSON.parse(fs.readFileSync(SESSIONS_FILE, 'utf8'));
@@ -2193,6 +2230,17 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
 .code-input{width:100%;background:rgba(255,255,255,.06);border:1.5px solid rgba(212,175,55,.3);color:#fff;border-radius:14px;padding:16px;font-size:18px;font-family:monospace;text-align:center;outline:none;letter-spacing:4px;transition:border-color .2s}
 .code-input:focus{border-color:#d4af37}
 .login-btn{background:linear-gradient(135deg,#d4af37,#b8960c);color:#000;border:none;border-radius:14px;padding:15px;font-size:15px;font-weight:700;width:100%;cursor:pointer;margin-top:10px;font-family:'DM Sans',sans-serif}
+.login-btn:disabled{opacity:.55;cursor:not-allowed}
+.tabs{display:flex;gap:6px;margin-bottom:14px;background:rgba(255,255,255,.04);border-radius:12px;padding:4px}
+.tab{flex:1;padding:10px;text-align:center;font-size:13px;font-weight:600;color:rgba(255,255,255,.55);border-radius:8px;cursor:pointer;border:none;background:transparent;font-family:'DM Sans',sans-serif;transition:all .15s}
+.tab.active{background:rgba(212,175,55,.15);color:#d4af37}
+.email-input{width:100%;background:rgba(255,255,255,.06);border:1.5px solid rgba(212,175,55,.3);color:#fff;border-radius:14px;padding:14px 16px;font-size:15px;outline:none;transition:border-color .2s;font-family:'DM Sans',sans-serif}
+.email-input:focus{border-color:#d4af37}
+.email-hint{font-size:11px;color:rgba(255,255,255,.4);text-align:center;margin-top:8px;line-height:1.5}
+.email-msg{padding:10px 14px;margin-bottom:10px;font-size:13px;border-radius:12px;text-align:center;display:none}
+.email-msg.show{display:block}
+.email-msg.ok{background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.4);color:#22c55e}
+.email-msg.err{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.4);color:#ef4444}
 </style></head><body>
 <div class="bg"></div>
 <div class="hero">
@@ -2215,14 +2263,63 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
   </div>
   <div class="login-wrap">
     <div class="divider"><span>Bereits Mitglied?</span></div>
-    <div class="code-hint">Tippe <b style="color:#d4af37">/mycode</b> im Bot und gib deinen Code ein</div>
-    ${query.error ? '<div style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);border-radius:12px;padding:10px 14px;margin-bottom:10px;font-size:13px;color:#ef4444;text-align:center">⚠️ Code falsch oder unbekannt. Hol dir mit /mycode im Bot einen frischen Code.</div>' : ''}
-    <form method="POST" action="/auth/code-form">
-      <input type="text" name="code" class="code-input" placeholder="Dein Code" autocomplete="off" autocapitalize="none" spellcheck="false" required value="${(query.code||'').toString().slice(0,40).replace(/[<>"]/g,'')}">
-      <button type="submit" class="login-btn">Einloggen →</button>
-    </form>
+    ${query.error==='1' ? '<div style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);border-radius:12px;padding:10px 14px;margin-bottom:10px;font-size:13px;color:#ef4444;text-align:center">⚠️ Code falsch oder unbekannt. Hol dir mit /mycode im Bot einen frischen Code.</div>' : ''}
+    ${query.error==='email-expired' ? '<div style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);border-radius:12px;padding:10px 14px;margin-bottom:10px;font-size:13px;color:#ef4444;text-align:center">⚠️ Login-Link ist abgelaufen oder schon benutzt. Fordere einen neuen an.</div>' : ''}
+    ${query.error==='email-invalid' ? '<div style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);border-radius:12px;padding:10px 14px;margin-bottom:10px;font-size:13px;color:#ef4444;text-align:center">⚠️ Login-Link ungültig.</div>' : ''}
+    ${query.error==='email-userlost' ? '<div style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);border-radius:12px;padding:10px 14px;margin-bottom:10px;font-size:13px;color:#ef4444;text-align:center">⚠️ Account nicht mehr verfügbar.</div>' : ''}
+    <div class="tabs" role="tablist">
+      <button type="button" class="tab active" id="tab-code" onclick="switchLoginTab('code')">Code</button>
+      <button type="button" class="tab" id="tab-email" onclick="switchLoginTab('email')">Email</button>
+    </div>
+    <div id="pane-code">
+      <div class="code-hint">Tippe <b style="color:#d4af37">/mycode</b> im Bot und gib deinen Code ein</div>
+      <form method="POST" action="/auth/code-form">
+        <input type="text" name="code" class="code-input" placeholder="Dein Code" autocomplete="off" autocapitalize="none" spellcheck="false" required value="${(query.code||'').toString().slice(0,40).replace(/[<>"]/g,'')}">
+        <button type="submit" class="login-btn">Einloggen →</button>
+      </form>
+    </div>
+    <div id="pane-email" style="display:none">
+      <div class="code-hint">Wir schicken dir einen Login-Link an deine Email</div>
+      <div class="email-msg" id="email-msg"></div>
+      <form id="email-form" onsubmit="return submitEmail(event)">
+        <input type="email" id="email-input" class="email-input" placeholder="deine@email.de" autocomplete="email" autocapitalize="none" spellcheck="false" required maxlength="200">
+        <button type="submit" class="login-btn" id="email-btn">Login-Link senden →</button>
+      </form>
+      <div class="email-hint">Du musst deine Email zuerst im Bot mit <b style="color:#d4af37">/setemail</b> registrieren.</div>
+    </div>
   </div>
 </div>
+<script>
+function switchLoginTab(t){
+  var tc=document.getElementById('tab-code'),te=document.getElementById('tab-email');
+  var pc=document.getElementById('pane-code'),pe=document.getElementById('pane-email');
+  if(t==='email'){tc.classList.remove('active');te.classList.add('active');pc.style.display='none';pe.style.display='block';}
+  else{te.classList.remove('active');tc.classList.add('active');pe.style.display='none';pc.style.display='block';}
+}
+function submitEmail(ev){
+  ev.preventDefault();
+  var inp=document.getElementById('email-input'),btn=document.getElementById('email-btn'),msg=document.getElementById('email-msg');
+  var em=(inp.value||'').trim();
+  if(!em) return false;
+  btn.disabled=true;btn.textContent='Sende...';
+  msg.classList.remove('show','ok','err');
+  fetch('/api/auth/email-request',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:em})})
+    .then(function(r){return r.json().then(function(j){return{s:r.status,j:j};});})
+    .then(function(o){
+      if(o.j&&o.j.ok){
+        msg.textContent=o.j.message||'Login-Link gesendet. Schau in dein Email-Postfach (auch Spam).';
+        msg.classList.add('show','ok');
+        inp.value='';
+      } else {
+        msg.textContent=(o.j&&o.j.error)||'Fehler beim Senden.';
+        msg.classList.add('show','err');
+      }
+    })
+    .catch(function(){msg.textContent='Netzwerkfehler.';msg.classList.add('show','err');})
+    .finally(function(){btn.disabled=false;btn.textContent='Login-Link senden →';});
+  return false;
+}
+</script>
 </body></html>`);
     }
 
@@ -2340,6 +2437,75 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
     // ── MAGIC-LINK AUTO-LOGIN ──
     // GET /auth/auto?code=USERS_APPCODE&redirect=/feed?tab=engagement
     // Bot baut diese URL und packt sie in Reminder-DMs. Klick → Session erstellt → kein Tippen.
+    // Email-Magic-Link Request: User gibt Email ein, wir schicken Login-Link per Mail.
+    if (path === '/api/auth/email-request' && req.method === 'POST') {
+        const body = await parseBody(req);
+        const email = String(body.email || '').toLowerCase().trim();
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 200) {
+            return json({ok:false, error:'Ungültige Email'}, 400);
+        }
+        const lastTs = emailRateLimit.get(email) || 0;
+        if (Date.now() - lastTs < EMAIL_RATE_LIMIT) {
+            const wait = Math.ceil((EMAIL_RATE_LIMIT - (Date.now() - lastTs)) / 1000);
+            return json({ok:false, error:`Bitte warte noch ${wait}s vor dem nächsten Versuch.`}, 429);
+        }
+        emailRateLimit.set(email, Date.now());
+        // User per Email finden (Match in d.users[*].email).
+        const botData = await fetchBot('/data');
+        if (!botData) return json({ok:false, error:'Server nicht erreichbar'}, 503);
+        const found = Object.entries(botData.users || {}).find(([, u]) => String(u.email || '').toLowerCase() === email);
+        // SECURITY: Auch bei nicht-existierender Email same response (kein Email-Enumeration-Leak).
+        if (!found) {
+            console.log('[email-login] Unknown email request:', email);
+            return json({ok:true, message:'Wenn die Email registriert ist, kommt ein Login-Link.'});
+        }
+        const [uid, u] = found;
+        const token = crypto.randomBytes(24).toString('hex');
+        emailLoginTokens.set(token, { email, uid: String(uid), exp: Date.now() + EMAIL_TOKEN_TTL });
+        const baseUrl = (process.env.APP_URL || ('https://' + (req.headers.host || 'creatorx.app'))).replace(/\/$/, '');
+        const loginUrl = baseUrl + '/auth/email-login?token=' + encodeURIComponent(token);
+        const userName = u.spitzname || u.name || 'CreatorX User';
+        const html = `<!DOCTYPE html><html><body style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#000;color:#fff;padding:0">
+<div style="max-width:560px;margin:0 auto;padding:32px 24px">
+<div style="text-align:center;margin-bottom:24px"><img src="${baseUrl}/cx-logo-256.png" width="80" height="80" style="border-radius:18px" alt="CreatorX"></div>
+<h1 style="font-size:26px;font-weight:700;margin:0 0 12px;text-align:center;color:#fff">Hi ${userName.replace(/[<>]/g,'')}!</h1>
+<p style="font-size:15px;color:#a8a39a;line-height:1.6;text-align:center;margin:0 0 28px">Klick auf den Button um dich in der CreatorX-App einzuloggen. Der Link ist 1 Stunde gültig und kann nur einmal benutzt werden.</p>
+<div style="text-align:center;margin:32px 0"><a href="${loginUrl}" style="display:inline-block;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px;letter-spacing:0.3px">📲 In die App einloggen</a></div>
+<p style="font-size:12px;color:#605c54;line-height:1.5;text-align:center;margin:32px 0 0;border-top:1px solid #221f1a;padding-top:20px">Falls du das nicht angefragt hast, ignoriere die Email einfach. Niemand kann sich nur mit der Email-Anfrage einloggen.<br><br>Falls der Button nicht funktioniert, kopier diese URL in deinen Browser:<br><span style="color:#a8a39a;word-break:break-all;font-size:11px">${loginUrl}</span></p>
+</div></body></html>`;
+        const sent = await sendEmail(email, '🔐 Dein CreatorX Login-Link', html);
+        if (!sent) {
+            emailLoginTokens.delete(token);
+            return json({ok:false, error:'Email-Versand fehlgeschlagen — bitte später nochmal'}, 502);
+        }
+        return json({ok:true, message:'Login-Link wurde gesendet.'});
+    }
+    // Email-Magic-Link Verify: User klickt Link → Session erstellen.
+    if (path === '/auth/email-login' && req.method === 'GET') {
+        const token = String(query.token || '').trim();
+        if (!token) { res.writeHead(302,{'Location':'/?error=email-invalid'}); return res.end(); }
+        const entry = emailLoginTokens.get(token);
+        if (!entry || entry.exp < Date.now()) {
+            emailLoginTokens.delete(token);
+            res.writeHead(302,{'Location':'/?error=email-expired'}); return res.end();
+        }
+        emailLoginTokens.delete(token); // single-use
+        const botData = await fetchBot('/data');
+        if (!botData || !botData.users?.[entry.uid]) { res.writeHead(302,{'Location':'/?error=email-userlost'}); return res.end(); }
+        const u = botData.users[entry.uid];
+        let sid = null;
+        for (const [s, sess] of sessions.entries()) {
+            if (sess.uid === String(entry.uid)) { sid = s; break; }
+        }
+        if (!sid) {
+            sid = genSid();
+            const validSubUid = u.subUid && botData.users?.[u.subUid] ? String(u.subUid) : null;
+            sessions.set(sid, { uid: String(entry.uid), name: u.name, username: u.username||null, theme: 'light', lang: 'de', createdAt: Date.now(), subUid: validSubUid, activeUid: String(entry.uid) });
+            saveSessions();
+        }
+        res.writeHead(302,{'Set-Cookie':`cbsid=${sid}; HttpOnly; Path=/; Max-Age=2592000`,'Location':'/feed'});
+        return res.end();
+    }
     if (path === '/auth/auto' && req.method === 'GET') {
         const code = (query.code||'').toString().toLowerCase().trim();
         const rawRedirect = (query.redirect || '/feed').toString();
