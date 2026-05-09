@@ -3848,7 +3848,8 @@ p{line-height:1.65;color:var(--muted)}
     const myUid = getMyUid(session);
     const myUser = d.users?.[myUid];
     const today = new Date().toDateString();
-    const adminIds = (Array.isArray(d._adminIds) ? d._adminIds.map(Number) : Object.entries(d.users).filter(([,u])=>/admin/i.test(String(u.role||''))).map(([id])=>Number(id)));
+    // d.users könnte undefined sein wenn Bot leeres data zurückgibt → Object.entries(undefined) wäre crash.
+    const adminIds = (Array.isArray(d._adminIds) ? d._adminIds.map(Number) : Object.entries(d.users || {}).filter(([,u])=>/admin/i.test(String((u && u.role)||''))).map(([id])=>Number(id)));
     // 👑 Top-1 Ranking: User mit höchstem XP (ohne Admins, Subs, System) — wird ÜBERALL
     // angezeigt wo der Username gerendert wird (Posts, Kommentare, Liker, Stories etc).
     let _top1Uid = '';
