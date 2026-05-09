@@ -122,6 +122,21 @@ function cleanRole(r) {
 // Sicherer URL-Check: nur http(s)-Links erlaubt, kein javascript:/data:/vbscript:.
 function safeUrl(u) { const s = String(u||'').trim(); return /^https?:\/\//i.test(s) ? s : ''; }
 
+// 👑 Top-1 User mit höchstem XP (ohne Admins, Subs, System) — fallback wenn lokale crown nicht in scope.
+function getTop1Uid(d, adminIds=[]) {
+    let bestXp = -1, top = '';
+    for (const [uid, u] of Object.entries(d?.users || {})) {
+        if (!u || u.parent_uid || u.isSystem || uid === 'creatorboost') continue;
+        if (adminIds.includes(Number(uid))) continue;
+        const xp = u.xp || 0;
+        if (xp > bestXp) { bestXp = xp; top = String(uid); }
+    }
+    return top;
+}
+function makeCrown(top1Uid) {
+    return (uid) => (top1Uid && String(uid) === top1Uid) ? '👑 ' : '';
+}
+
 const ONLINE_WINDOW_MS = 60000;
 function isUidOnline(uid) {
     const u = String(uid), now = Date.now();
@@ -1434,6 +1449,7 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
     const sorted = Object.entries(d.users||{}).filter(([,u])=>!/admin/i.test(String(u.role||''))).sort((a,b)=>(b[1].xp||0)-(a[1].xp||0));
     const isAdmin = adminIds.includes(Number(uid));
     const rank = isAdmin ? 0 : sorted.findIndex(([id])=>id===uid)+1;
+    const crown = makeCrown(getTop1Uid(d, adminIds));
 
     return `
 <div style="position:relative">
@@ -3046,6 +3062,8 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
         const botData = await fetchBot('/data');
         if (!botData) return json({notifications:[]});
         const notifs = (botData.notifications?.[getMyUid(session)] || []).slice(-30).reverse();
+        const _adminIds = (Array.isArray(botData._adminIds) ? botData._adminIds.map(Number) : Object.entries(botData.users||{}).filter(([,u])=>/admin/i.test(String(u.role||''))).map(([id])=>Number(id)));
+        const crown = makeCrown(getTop1Uid(botData, _adminIds));
         // Actor-Info anreichern (Name + hatProfilbild) damit der Client Avatar rendern kann
         const enriched = notifs.map(n => {
             if (!n.actorUid) return n;
@@ -4154,7 +4172,7 @@ p{line-height:1.65;color:var(--muted)}
           ${(ladeBild(id,"profilepic")||insta)?`<img src="${ladeBild(id,"profilepic")?"/appbild/"+id+"/profilepic":"https://unavatar.io/instagram/"+insta}" style="width:100%;height:100%;object-fit:cover" alt="">`:`<span>${(u.name||"?")[0]}</span>`}
         </div>
       </div>
-      <div class="story-name">${crown(uid)}${u.spitzname||u.name||'?'}</div>
+      <div class="story-name">${crown(id)}${u.spitzname||u.name||'?'}</div>
     </a>`;
   }).join('')}
 </div>
