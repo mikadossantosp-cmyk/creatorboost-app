@@ -9180,6 +9180,11 @@ ${adminIds.includes(Number(myUid)) ? `
   <div id="fethread-result" style="display:none;font-size:12px;padding:8px;border-radius:8px;margin-top:4px"></div>
 </div>` : ''}
 <div style="padding:16px;border-bottom:1px solid var(--border2)">
+  <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">🎯 App-Tour</div>
+  <div style="font-size:12px;color:var(--muted);margin-bottom:10px">${u.appBriefingSeen ? 'Du hast die Tour schon einmal gesehen.' : 'Du hast die Tour noch nicht gesehen — sie startet beim nächsten Feed-Open automatisch.'}</div>
+  <a href="/feed?tour=1" class="btn btn-outline btn-full" style="display:flex;align-items:center;justify-content:center;gap:8px">🎯 Tour erneut anschauen</a>
+</div>
+<div style="padding:16px;border-bottom:1px solid var(--border2)">
   <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">🔐 Passwort</div>
   <div style="font-size:12px;color:var(--muted);margin-bottom:10px">${u.password_hash ? 'Du hast ein Passwort gesetzt — du kannst dich auch ohne Magic-Link einloggen.' : 'Setz ein Passwort, um dich nächstes Mal direkt mit Email + Passwort einzuloggen (ohne Magic-Link).'}</div>
   <a href="/set-password" class="btn btn-outline btn-full" style="display:flex;align-items:center;justify-content:center;gap:8px">${u.password_hash ? '🔄 Passwort ändern' : '🔐 Passwort setzen'}</a>
