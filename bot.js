@@ -1452,6 +1452,15 @@ ${session ? `
     try{ sessionStorage.setItem('cb_tour_idx', String(idx)); }catch(e){}
     show();
   };
+  // Globaler Manual-Trigger — kann von beliebigem Code aufgerufen werden
+  window.cbStartTour = function(){
+    try{ sessionStorage.setItem('cb_tour_active','1'); sessionStorage.setItem('cb_tour_idx','0'); }catch(e){}
+    _safeRun(function(){
+      idx = 0;
+      document.getElementById('tour-ov').classList.add('show');
+      show();
+    }, 'manual-trigger');
+  };
   window.cbTourSkip = function(){
     document.getElementById('tour-ov').classList.remove('show');
     try{ sessionStorage.removeItem('cb_tour_active'); sessionStorage.removeItem('cb_tour_idx'); }catch(e){}
@@ -5978,7 +5987,7 @@ commentsBox+
             : '<div style="padding:8px 0 80px">'+heuteHtml+'</div>';
 
         return html(`
-${query.tour === '1' ? `<div id="cb-tour-server-banner" style="position:fixed;top:8px;left:8px;right:8px;z-index:99999;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;padding:12px 16px;border-radius:12px;font-family:Inter,-apple-system,sans-serif;font-size:13.5px;font-weight:600;text-align:center;box-shadow:0 12px 30px rgba(34,197,94,.45);max-width:520px;margin:0 auto;border:1px solid rgba(255,255,255,.2)">✅ Server-Trigger aktiv — Tour startet gleich…</div><script>setTimeout(function(){try{sessionStorage.setItem('cb_tour_active','1');sessionStorage.setItem('cb_tour_idx','0');}catch(e){}var b=document.getElementById('cb-tour-server-banner');if(b){b.style.transition='opacity .4s';b.style.opacity='0';setTimeout(function(){b.remove();},500);}},1500);</script>` : ''}
+${query.tour === '1' ? `<div id="cb-tour-server-banner" style="position:fixed;top:8px;left:8px;right:8px;z-index:99999;background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;padding:14px 16px;border-radius:14px;font-family:Inter,-apple-system,sans-serif;font-size:13.5px;font-weight:600;text-align:center;box-shadow:0 12px 30px rgba(124,58,237,.45);max-width:520px;margin:0 auto;border:1px solid rgba(255,255,255,.2)"><div style="margin-bottom:10px">🎯 Tour-Modus aktiv</div><button onclick="(function(){try{if(typeof window.cbStartTour==='function'){window.cbStartTour();return;}var ov=document.getElementById('tour-ov');if(!ov){alert('Fehler: tour-ov fehlt im DOM');return;}alert('Fehler: cbStartTour nicht verfügbar — Tour-Skript wurde nicht geladen');}catch(e){alert('Fehler: '+e.message);}})()" style="background:#fff;color:#7c3aed;border:none;border-radius:10px;padding:10px 22px;font-weight:800;font-size:13px;cursor:pointer">▶ Tour jetzt starten</button> <button onclick="document.getElementById('cb-tour-server-banner').remove()" style="background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:10px;padding:10px 16px;font-weight:600;font-size:13px;cursor:pointer;margin-left:6px">✕</button></div>` : ''}
 <div class="topbar">
   <div class="topbar-logo">CreatorX</div>
   <div class="topbar-actions">
