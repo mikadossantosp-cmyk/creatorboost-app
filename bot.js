@@ -938,6 +938,10 @@ async function checkMsgBadge(){
 checkMsgBadge();
 setInterval(checkMsgBadge,30000);
 function toast(msg,dur=2500){const t=document.getElementById('toast');if(!t)return;t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),dur);}
+// Engagement-Quality-Control: User muss erst Link besuchen, bevor er liken darf.
+// Status pro Link wird in localStorage gespeichert (cb_visited_links: { lid: timestamp }).
+function markLinkVisited(lid){try{const v=JSON.parse(localStorage.getItem('cb_visited_links')||'{}');v[String(lid)]=Date.now();localStorage.setItem('cb_visited_links',JSON.stringify(v));}catch(e){}}
+function hasLinkVisited(lid){try{const v=JSON.parse(localStorage.getItem('cb_visited_links')||'{}');return !!v[String(lid)];}catch(e){return false;}}
 function setTheme(t){document.documentElement.setAttribute('data-theme',t);try{localStorage.setItem('cbTheme4',t);}catch(e){}document.querySelectorAll('[title="Theme"]').forEach(b=>b.textContent=t==='dark'?'☀️':'🌙');fetch('/api/theme',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({theme:t})}).catch(()=>{});}
 try{const t=localStorage.getItem('cbTheme4');if(t){document.documentElement.setAttribute('data-theme',t);}}catch(e){}
 function setLang(l){fetch('/api/lang',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lang:l})}).then(()=>location.reload()).catch(()=>{try{document.cookie='cbLang='+l+';path=/;max-age=31536000';}catch(e){}location.reload();});}
@@ -4177,7 +4181,7 @@ p{line-height:1.65;color:var(--muted)}
 '    </div>\n'+
 '  </div>\n'+
 // Reel video preview card
-'  <div style="margin:0 16px;border-radius:14px;overflow:hidden;background:#000;border:1.5px solid;border-image:linear-gradient(135deg,#f9a825,#e91e63,#9c27b0) 1;cursor:pointer;box-shadow:0 6px 20px rgba(233,30,99,0.10)" onclick="window.open(\''+link.text+'\',\'_blank\')">\n'+
+'  <div style="margin:0 16px;border-radius:14px;overflow:hidden;background:#000;border:1.5px solid;border-image:linear-gradient(135deg,#f9a825,#e91e63,#9c27b0) 1;cursor:pointer;box-shadow:0 6px 20px rgba(233,30,99,0.10)" onclick="markLinkVisited(\''+lid1+'\');window.open(\''+link.text+'\',\'_blank\')">\n'+
 '    <div style="position:relative;width:100%;padding-top:62%;background:'+bannerBg+';overflow:hidden">\n'+
 '      '+bannerImg.replace('position:absolute;inset:0;','position:absolute;inset:0;')+'\n'+
 '      <div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.1) 0%,rgba(0,0,0,.55) 100%)"></div>\n'+
@@ -4267,7 +4271,7 @@ commentsBox+
                 +'</div>\n</div>\n'
                 +'<div style="margin:8px 16px;padding:8px 12px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:10px;font-size:11px;color:rgba(245,158,11,.9);font-weight:600">🔄 Bitte Liken, Kommentieren, Teilen und Speichern</div>\n'
                 +'<div style="margin:0 16px 8px;border-radius:14px;overflow:hidden;background:var(--bg3);border:1px solid rgba(255,255,255,.08)">\n'
-                +'<a href="'+(sl.url||'').replace(/"/g,'%22')+'" target="_blank" rel="noopener" style="display:block;padding:12px 14px;text-decoration:none">\n'
+                +'<a href="'+(sl.url||'').replace(/"/g,'%22')+'" target="_blank" rel="noopener" onclick="markLinkVisited(\''+sl.id+'\')" style="display:block;padding:12px 14px;text-decoration:none">\n'
                 +'<div style="font-size:13px;color:var(--blue);word-break:break-all;margin-bottom:4px">'+(sl.url||'').replace('https://www.','').replace('https://','').slice(0,60)+'</div>\n'
                 +(sl.caption?'<div style="font-size:12px;color:var(--muted);margin-top:4px">'+String(sl.caption).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</div>':'')+'\n'
                 +'<div style="font-size:11px;color:var(--accent);font-weight:700;margin-top:6px">Ansehen →</div>\n'
@@ -4336,6 +4340,10 @@ ${tab==='engagement' ? `<div style="padding:12px 16px 4px">
 ${postsHtml}
 <script>
 async function likePost(msgId, btn) {
+    if (!hasLinkVisited(msgId)) {
+        toast('⚠️ Du musst zuerst den Link besuchen!!', 3500);
+        return;
+    }
     const countEl = document.getElementById('likes-'+msgId);
     if (btn.classList.contains('liked')) return;
     btn.classList.add('liked');
@@ -4349,7 +4357,7 @@ async function likePost(msgId, btn) {
         const data = await res.json();
         if (data.ok) {
             if (data.likes !== undefined) countEl.textContent = data.likes;
-            toast('❤️ Geliked!');
+            toast('✓ Vergiss nicht: Auf Instagram liken & mit 2 Wörter kommentieren. Danke!', 4500);
         } else {
             // Bei Fehler UI zurücksetzen, sonst hängt der Button leer/disabled
             btn.classList.remove('liked');
@@ -4468,6 +4476,10 @@ function toggleLikers(msgId) {
 // ── SUPERLINK ──
 async function likeSuperLink(slId, btn) {
     if (btn.disabled) return;
+    if (!hasLinkVisited(slId)) {
+        toast('⚠️ Du musst zuerst den Link besuchen!!', 3500);
+        return;
+    }
     btn.disabled = true;
     try {
         const res = await fetch('/api/like-superlink',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({slId})});
@@ -4477,7 +4489,7 @@ async function likeSuperLink(slId, btn) {
             btn.querySelector('svg')?.setAttribute('fill','currentColor');
             btn.style.borderColor='var(--accent)';
             document.querySelectorAll('#sl-likes-'+slId).forEach(el=>el.textContent=data.likes);
-            toast('❤️ Geliked!');
+            toast('✓ Vergiss nicht: Auf Instagram liken & mit 2 Wörter kommentieren. Danke!', 4500);
         } else { btn.disabled=false; toast('❌ '+(data.error||'Fehler')); }
     } catch(e) { btn.disabled=false; toast('❌ Netzwerkfehler'); }
 }
