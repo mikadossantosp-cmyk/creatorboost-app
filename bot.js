@@ -201,6 +201,7 @@ setInterval(refreshDataCache, 45000);
 async function postBot(path, body) {
     const result = await new Promise(resolve => {
         const fullUrl = MAINBOT_URL + path;
+        if (!fullUrl.startsWith('http')) return resolve(null);
         const lib = fullUrl.startsWith('https')?https:http;
         const data = JSON.stringify(body);
         const u = new url.URL(fullUrl);
@@ -208,11 +209,17 @@ async function postBot(path, body) {
         const req = lib.request(opts, res=>{
             let buf='';
             res.on('data',c=>buf+=c);
-            res.on('end',()=>{ try{resolve(JSON.parse(buf));}catch(e){resolve({ok:true});} });
+            res.on('end',()=>{
+                // Vorher fallback {ok:true} — bei Bot-Crash/empty-response sah App
+                // jeden Call als Erfolg. Jetzt: null wie fetchBotRaw bei Parse-Fehler.
+                try { resolve(JSON.parse(buf)); } catch(e) { resolve(null); }
+            });
         });
-        req.on('error',()=>resolve(null)); req.write(data); req.end();
+        req.on('error',()=>resolve(null));
+        // 5-Sek Timeout (vorher unbounded — Bot-Hang würde App-Request blockieren)
+        req.setTimeout(5000, () => { req.destroy(); resolve(null); });
+        req.write(data); req.end();
     });
-    // Stale-while-revalidate: nächster Read wartet einmal auf frische Daten, blockt aber nicht den Write
     _dataCache = null; _dataCacheTime = 0;
     refreshDataCache().catch(()=>{});
     return result;
