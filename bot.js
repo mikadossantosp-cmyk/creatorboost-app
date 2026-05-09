@@ -257,6 +257,8 @@ function badgeGradient(role) {
 
 const _bildCache = new Map();
 function ladeBild(uid, type) {
+    // CreatorBoost-System-User: gebundeltes Avatar aus Repo.
+    if (uid === 'creatorboost' && type === 'profilepic') return 'bundled';
     const key = uid + '_' + type;
     const hit = _bildCache.get(key);
     if (hit !== undefined && Date.now() - hit.ts < 120000) return hit.v;
@@ -2062,8 +2064,20 @@ self.addEventListener('notificationclick',e=>{
         const parts = path.split('/');
         const buid = parts[2];
         const btype = parts[3];
-        if (!/^\d+$/.test(buid||'') || !/^(profilepic|banner)$/.test(btype||'')) {
+        // Erlaubt sind numerische UIDs + 'creatorboost' (System-User mit gebundeltem Avatar).
+        if (!/^(\d+|creatorboost)$/.test(buid||'') || !/^(profilepic|banner)$/.test(btype||'')) {
             res.writeHead(400); return res.end('bad request');
+        }
+        // CreatorBoost-System-User: gebundeltes Avatar aus Repo (data-URL .txt) statt /data-Volume,
+        // damit es nach jedem Deploy verfügbar ist.
+        if (buid === 'creatorboost' && btype === 'profilepic') {
+            try {
+                const data = fs.readFileSync(__dirname + '/creatorboost-avatar.txt', 'utf8');
+                const mime = data.split(';')[0].replace('data:','');
+                const base64 = data.split(',')[1];
+                res.writeHead(200, {'Content-Type': mime, 'Cache-Control': 'public, max-age=86400'});
+                return res.end(Buffer.from(base64, 'base64'));
+            } catch(e) { res.writeHead(404); return res.end('not found'); }
         }
         const bildFile = DATA_DIR + '/bild_' + buid + '_' + btype + '.txt';
         // Try local file first
