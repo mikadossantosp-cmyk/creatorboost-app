@@ -3043,7 +3043,7 @@ body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100v
             const a = botData.users?.[n.actorUid];
             if (!a) return n;
             return Object.assign({}, n, {
-                actorName: a.spitzname || a.name || null,
+                actorName: (crown(n.actorUid) + (a.spitzname || a.name || '')).trim() || null,
                 actorRole: a.role || null,
                 actorInsta: a.instagram || null,
                 actorHasPic: !!ladeBild(String(n.actorUid), 'profilepic')
@@ -4223,11 +4223,11 @@ p{line-height:1.65;color:var(--muted)}
                     const cf=ladeBild(String(c.uid),'profilepic'); const ci=cu.instagram;
                     const cimg=cf?'<img src="/appbild/'+c.uid+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" alt="">':ci?'<img src="https://unavatar.io/instagram/'+ci+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" alt="">':'';
                     const ct=new Date(c.timestamp||0).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
-                    return '<div style="display:flex;gap:8px;padding:8px 12px;border-bottom:1px solid var(--border2)"><div style="position:relative;width:28px;height:28px;border-radius:50%;background:'+cg+';flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff"><span style="position:absolute">'+htmlEsc((cu.name||'?')[0])+'</span>'+cimg+'</div><div style="flex:1;min-width:0"><div style="font-size:11px;font-weight:700">'+htmlEsc(cu.spitzname||cu.name||'User')+' <span style="font-size:10px;color:var(--muted);font-weight:400">'+ct+'</span></div><div style="font-size:12px;color:var(--text);margin-top:2px">'+htmlEsc(c.text)+'</div></div></div>';
+                    return '<div style="display:flex;gap:8px;padding:8px 12px;border-bottom:1px solid var(--border2)"><div style="position:relative;width:28px;height:28px;border-radius:50%;background:'+cg+';flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff"><span style="position:absolute">'+htmlEsc((cu.name||'?')[0])+'</span>'+cimg+'</div><div style="flex:1;min-width:0"><div style="font-size:11px;font-weight:700">'+crown(c.uid)+htmlEsc(cu.spitzname||cu.name||'User')+' <span style="font-size:10px;color:var(--muted);font-weight:400">'+ct+'</span></div><div style="font-size:12px;color:var(--text);margin-top:2px">'+htmlEsc(c.text)+'</div></div></div>';
                 }).join('');
 
             // Liker names text ("Gefällt X, Y und Z weiteren")
-            const likerNamesList=likes.slice(0,3).map(lid=>{const lu=d.users[String(lid)];return lu&&(lu.spitzname||lu.name)||'?';});
+            const likerNamesList=likes.slice(0,3).map(lid=>{const lu=d.users[String(lid)];return crown(lid)+(lu&&(lu.spitzname||lu.name)||'?');});
             let likersNameText='';
             if(likes.length===1) likersNameText='Gefällt <span>'+likerNamesList[0]+'</span>';
             else if(likes.length===2) likersNameText='Gefällt <span>'+likerNamesList[0]+'</span> und <span>'+likerNamesList[1]+'</span>';
@@ -4360,7 +4360,7 @@ commentsBox+
                 const limg=lf?'<img src="/appbild/'+lid+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" alt="">':li?'<img src="https://unavatar.io/instagram/'+li+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" alt="">':'';
                 const rName = ((lu&&(lu.spitzname||lu.name))||'User').replace(/'/g,'&#39;');
                 const reportBtn = isOwnPost ? '<button onclick="reportNonEngager(\''+sl.id+'\',\''+lid+'\',\''+rName+'\')" style="background:none;border:1px solid rgba(255,59,48,.5);color:rgba(255,59,48,.8);border-radius:8px;padding:3px 8px;font-size:10px;font-weight:600;cursor:pointer;flex-shrink:0">Melden</button>' : '';
-                return '<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--border2)"><div style="position:relative;width:34px;height:34px;border-radius:50%;background:'+lg+';flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff"><span style="position:absolute">'+(lu&&lu.name||'?')[0]+'</span>'+limg+'</div><div style="flex:1;min-width:0;font-size:13px;font-weight:600;color:var(--text)">'+(lu&&(lu.spitzname||lu.name)||'User')+'</div>'+reportBtn+'</div>';
+                return '<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--border2)"><div style="position:relative;width:34px;height:34px;border-radius:50%;background:'+lg+';flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff"><span style="position:absolute">'+(lu&&lu.name||'?')[0]+'</span>'+limg+'</div><div style="flex:1;min-width:0;font-size:13px;font-weight:600;color:var(--text)">'+crown(lid)+(lu&&(lu.spitzname||lu.name)||'User')+'</div>'+reportBtn+'</div>';
             }).join('');
             const likeBtn = isOwnPost
                 ? '<div style="font-size:12px;color:var(--muted);padding:7px 0">👤 Dein Superlink</div>'
