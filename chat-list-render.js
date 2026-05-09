@@ -27,7 +27,7 @@ function esc(s) {
 }
 
 module.exports = function renderChatList(opts) {
-    const { myConvos = [], botData = {}, myUid = '', feedPreview = '', totalThreadUnread = 0, ladeBild = () => null, onlineUids, threadsList = [], threadLastRead = {} } = opts || {};
+    const { myConvos = [], botData = {}, myUid = '', feedPreview = '', totalThreadUnread = 0, ladeBild = () => null, onlineUids, threadsList = [], threadLastRead = {}, crown = () => '' } = opts || {};
     const adminIds = (typeof opts.adminIds !== 'undefined') ? opts.adminIds : [];
     const isAdminUser = (Array.isArray(adminIds) ? adminIds : []).map(Number).includes(Number(myUid));
     const onlineSet = onlineUids instanceof Set ? onlineUids : (Array.isArray(onlineUids) ? new Set(onlineUids.map(String)) : new Set());
@@ -117,7 +117,7 @@ module.exports = function renderChatList(opts) {
         return '<a href="/nachrichten/' + c.otherUid + '" class="dm-row' + unreadClass + '" data-uid="' + c.otherUid + '" data-name="' + esc(c.otherName) + '" data-bucket="' + timeBucket(c.lastMsg && c.lastMsg.timestamp) + '" oncontextmenu="event.preventDefault(); dmCtxMenu(event,this)" ontouchstart="dmCtxStart(event,this)" ontouchend="dmCtxEnd()" ontouchmove="dmCtxEnd()">' +
             '<div class="dm-avatar' + (isOnline ? ' online' : '') + '">' + avatarInner + '</div>' +
             '<div class="dm-content">' +
-                '<div class="dm-name">' + esc(c.otherName) + '<span class="dm-pin-marker">📌</span></div>' +
+                '<div class="dm-name">' + crown(c.otherUid) + esc(c.otherName) + '<span class="dm-pin-marker">📌</span></div>' +
                 '<div class="dm-preview">' + previewHtml + '</div>' +
             '</div>' +
             '<div class="dm-meta">' +
