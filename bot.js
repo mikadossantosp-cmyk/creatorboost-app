@@ -2324,13 +2324,15 @@ ${_isPreview ? '<div class="admin-pb">👀 Admin-Vorschau · Login-Page &nbsp;·
       </form>
     </div>
     <div id="pane-email" style="display:none">
-      <div class="code-hint">Wir schicken dir einen Login-Link an deine Email</div>
+      <div class="code-hint">Email + Passwort einloggen — oder Magic-Link an die Email schicken</div>
       <div class="email-msg" id="email-msg"></div>
       <form id="email-form" onsubmit="return submitEmail(event)">
-        <input type="email" id="email-input" class="email-input" placeholder="deine@email.de" autocomplete="email" autocapitalize="none" spellcheck="false" required maxlength="200">
-        <button type="submit" class="login-btn" id="email-btn">Login-Link senden →</button>
+        <input type="email" id="email-input" class="email-input" placeholder="deine@email.de" autocomplete="email" autocapitalize="none" spellcheck="false" required maxlength="200" style="margin-bottom:8px">
+        <input type="password" id="email-pw" class="email-input" placeholder="Passwort (optional, leer = Magic-Link)" autocomplete="current-password" maxlength="200">
+        <button type="submit" class="login-btn" id="email-btn">Einloggen →</button>
       </form>
-      <div class="email-hint">Du musst deine Email zuerst im Bot mit <b style="color:#d4af37">/setemail</b> registrieren.</div>
+      <button type="button" id="email-magic-btn" onclick="sendMagicLink()" style="margin-top:6px;background:transparent;border:none;color:rgba(255,255,255,.55);font-size:12px;text-decoration:underline;cursor:pointer;width:100%;padding:8px;font-family:'DM Sans',sans-serif">📧 Magic-Link senden (ohne Passwort)</button>
+      <div class="email-hint">Email vorher in Einstellungen oder per <b style="color:#d4af37">/setemail</b> im Bot setzen. Passwort kannst du nach dem ersten Login wählen.</div>
     </div>
   </div>
 </div>
@@ -2343,10 +2345,34 @@ function switchLoginTab(t){
 }
 function submitEmail(ev){
   ev.preventDefault();
-  var inp=document.getElementById('email-input'),btn=document.getElementById('email-btn'),msg=document.getElementById('email-msg');
-  var em=(inp.value||'').trim();
+  var inp=document.getElementById('email-input'),pwInp=document.getElementById('email-pw'),btn=document.getElementById('email-btn'),msg=document.getElementById('email-msg');
+  var em=(inp.value||'').trim().toLowerCase();
+  var pw=(pwInp.value||'');
   if(!em) return false;
-  btn.disabled=true;btn.textContent='Sende...';
+  msg.classList.remove('show','ok','err');
+  // Wenn Passwort leer → Magic-Link.
+  if(!pw){ sendMagicLink(em); return false; }
+  btn.disabled=true;btn.textContent='Login...';
+  fetch('/api/auth/email-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:em,password:pw})})
+    .then(function(r){return r.json().then(function(j){return{s:r.status,j:j};});})
+    .then(function(o){
+      if(o.j&&o.j.ok&&o.j.redirect){
+        msg.textContent='✅ Eingeloggt — leite weiter...';msg.classList.add('show','ok');
+        setTimeout(function(){window.location.href=o.j.redirect;},250);
+      } else {
+        msg.textContent=(o.j&&o.j.error)||'Login fehlgeschlagen.';
+        msg.classList.add('show','err');
+        btn.disabled=false;btn.textContent='Einloggen →';
+      }
+    })
+    .catch(function(){msg.textContent='Netzwerkfehler.';msg.classList.add('show','err');btn.disabled=false;btn.textContent='Einloggen →';});
+  return false;
+}
+function sendMagicLink(prefilledEmail){
+  var inp=document.getElementById('email-input'),btn=document.getElementById('email-btn'),mb=document.getElementById('email-magic-btn'),msg=document.getElementById('email-msg');
+  var em=(prefilledEmail||(inp.value||'').trim()).toLowerCase();
+  if(!em){ msg.textContent='Bitte Email eingeben.';msg.classList.add('show','err');return; }
+  btn.disabled=true;mb.disabled=true;mb.textContent='Sende Magic-Link...';
   msg.classList.remove('show','ok','err');
   fetch('/api/auth/email-request',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:em})})
     .then(function(r){return r.json().then(function(j){return{s:r.status,j:j};});})
@@ -2354,15 +2380,13 @@ function submitEmail(ev){
       if(o.j&&o.j.ok){
         msg.textContent=o.j.message||'Login-Link gesendet. Schau in dein Email-Postfach (auch Spam).';
         msg.classList.add('show','ok');
-        inp.value='';
       } else {
         msg.textContent=(o.j&&o.j.error)||'Fehler beim Senden.';
         msg.classList.add('show','err');
       }
     })
     .catch(function(){msg.textContent='Netzwerkfehler.';msg.classList.add('show','err');})
-    .finally(function(){btn.disabled=false;btn.textContent='Login-Link senden →';});
-  return false;
+    .finally(function(){btn.disabled=false;mb.disabled=false;mb.textContent='📧 Magic-Link senden (ohne Passwort)';});
 }
 </script>
 </body></html>`);
@@ -2482,6 +2506,55 @@ function submitEmail(ev){
     // ── MAGIC-LINK AUTO-LOGIN ──
     // GET /auth/auto?code=USERS_APPCODE&redirect=/feed?tab=engagement
     // Bot baut diese URL und packt sie in Reminder-DMs. Klick → Session erstellt → kein Tippen.
+    // Email + Passwort Direkt-Login (statt Magic-Link). Setzt Session-Cookie.
+    if (path === '/api/auth/email-password' && req.method === 'POST') {
+        const body = await parseBody(req);
+        const email = String(body.email || '').toLowerCase().trim();
+        const password = String(body.password || '');
+        if (!email || !password) return json({ok:false, error:'Email und Passwort erforderlich'}, 400);
+        // Rate-Limit: 10 Versuche pro Email pro 5min (gegen Brute-Force).
+        const rlKey = 'pw:' + email;
+        const lastTs = emailRateLimit.get(rlKey) || 0;
+        const tries = emailRateLimit.get(rlKey + ':n') || 0;
+        if (tries >= 10 && Date.now() - lastTs < EMAIL_RATE_LIMIT) {
+            return json({ok:false, error:'Zu viele Login-Versuche — bitte 5 min warten'}, 429);
+        }
+        emailRateLimit.set(rlKey, Date.now());
+        emailRateLimit.set(rlKey + ':n', tries + 1);
+        // Bot verifiziert Email+Passwort und liefert uid wenn ok.
+        const result = await postBot('/auth-email-password', { email, password });
+        if (!result || !result.ok) {
+            return json({ok:false, error: (result && result.error) || 'Email oder Passwort falsch'}, 401);
+        }
+        // Reset rate-limit on success.
+        emailRateLimit.delete(rlKey + ':n');
+        const botData = await fetchBot('/data');
+        const u = botData?.users?.[result.uid];
+        if (!u) return json({ok:false, error:'User nicht gefunden'}, 404);
+        let sid = null;
+        for (const [s, sess] of sessions.entries()) {
+            if (sess.uid === String(result.uid)) { sid = s; break; }
+        }
+        if (!sid) {
+            sid = genSid();
+            const validSubUid = u.subUid && botData.users?.[u.subUid] ? String(u.subUid) : null;
+            sessions.set(sid, { uid: String(result.uid), name: u.name, username: u.username||null, theme: 'light', lang: 'de', createdAt: Date.now(), subUid: validSubUid, activeUid: String(result.uid) });
+            saveSessions();
+        }
+        res.writeHead(200, {'Set-Cookie':`cbsid=${sid}; HttpOnly; Path=/; Max-Age=2592000`,'Content-Type':'application/json'});
+        return res.end(JSON.stringify({ok:true, redirect:'/feed'}));
+    }
+    // Passwort setzen / ändern (eingeloggter User).
+    if (path === '/api/auth/set-password' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        const body = await parseBody(req);
+        const newPw = String(body.password || '');
+        if (newPw.length > 0 && newPw.length < 6) return json({ok:false, error:'Passwort muss mindestens 6 Zeichen haben'}, 400);
+        if (newPw.length > 200) return json({ok:false, error:'Passwort zu lang'}, 400);
+        const result = await postBot('/set-user-password', { uid: getMyUid(session), password: newPw });
+        if (!result || !result.ok) return json({ok:false, error: (result && result.error) || 'Speichern fehlgeschlagen'}, 500);
+        return json({ok:true, cleared: !!result.cleared});
+    }
     // Email-Magic-Link Request: User gibt Email ein, wir schicken Login-Link per Mail.
     if (path === '/api/auth/email-request' && req.method === 'POST') {
         const body = await parseBody(req);
