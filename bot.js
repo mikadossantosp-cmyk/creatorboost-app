@@ -914,6 +914,25 @@ textarea.form-input{resize:none;min-height:80px}
 .page-transition{animation:fadeIn .25s ease forwards}
 `;
 
+// Globaler JS-Error-Handler im HTML-Head: zeigt JEDEN ungeklärten Error als Banner.
+// Hilft beim Debugging von Tour, Likes, etc. Auto-removal nach 15s.
+const GLOBAL_ERROR_HANDLER = `<script>
+window.addEventListener('error', function(e){
+  try {
+    var b = document.createElement('div');
+    b.style.cssText = 'position:fixed;top:8px;left:8px;right:8px;z-index:99999;background:#7c1d1d;color:#fff;padding:12px 14px;border-radius:10px;font-family:system-ui,sans-serif;font-size:12px;font-weight:600;box-shadow:0 12px 30px rgba(0,0,0,.5);max-width:520px;margin:0 auto;border:1px solid #ef4444';
+    b.innerHTML = '<b style="font-size:13px">⚠️ JS-Error</b><div style="margin-top:5px;font-weight:400;font-size:11.5px;color:#fecaca;line-height:1.4">'+(e.message||'unknown')+'<br><span style="opacity:.7">'+(e.filename||'').split('/').pop()+':'+(e.lineno||'?')+':'+(e.colno||'?')+'</span></div>';
+    if (document.body) document.body.appendChild(b);
+    setTimeout(function(){ b.style.transition='opacity .4s'; b.style.opacity='0'; setTimeout(function(){b.remove();},500); }, 15000);
+    try { console.error('[GLOBAL-ERR]', e.message, e.filename, e.lineno, e.colno, e.error); } catch(_){}
+  } catch(_){}
+});
+window.addEventListener('unhandledrejection', function(e){
+  try { console.error('[UNHANDLED-PROMISE]', e.reason); } catch(_){}
+});
+console.log('[CX] Layout-JS loaded @', new Date().toISOString(), 'path:', location.pathname, 'search:', location.search);
+</script>`;
+
 function layout(content, session, page='feed', lang='de') {
     // Aktuelle UID in window verfügbar machen — wird für Per-User-LocalStorage-Keys
     // benötigt (Like-Cache, Like-Queue etc.) damit Sub- und Hauptaccount keine
@@ -921,6 +940,7 @@ function layout(content, session, page='feed', lang='de') {
     const _meUid = session ? String(session.activeUid || session.uid || '') : '';
     return `<!DOCTYPE html><html lang="${lang}" data-theme="light">
 <head>
+${GLOBAL_ERROR_HANDLER}
 <script>window.MY_UID=${JSON.stringify(_meUid)};</script>
 <script>try{var t=localStorage.getItem('cbTheme4');var dark=(t==='dark');document.documentElement.setAttribute('data-theme',dark?'dark':'light');setTimeout(function(){var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute('content',dark?'#0b0b0e':'#ffffff');var sb=document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');if(sb)sb.setAttribute('content',dark?'black-translucent':'default');},0);}catch(e){document.documentElement.setAttribute('data-theme','light');}</script>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -2999,7 +3019,7 @@ self.addEventListener('notificationclick',e=>{
     }
 
     function redirect(to) { res.writeHead(302,{'Location':to}); res.end(); }
-    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'231'}); res.end(layout(content,session,page,lang)); }
+    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'232'}); res.end(layout(content,session,page,lang)); }
     function json(data, status=200) { res.writeHead(status,{'Content-Type':'application/json'}); res.end(JSON.stringify(data)); }
 
     // ── LANDING ──
