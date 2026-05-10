@@ -1323,15 +1323,15 @@ ${session ? `
     // ── FEED PAGE ────────────────────────────────────────────────────────
     {page:'/feed', q:'[data-tour="stories"]',                    eyebrow:'Feed · Stories',     h:'📷 Aktive Creator von heute',           s:'Hier siehst du Creator die heute schon gepostet haben. Tippe eine Story-Bubble um auf ihr Profil zu kommen.'},
     {page:'/feed', q:'[data-tour="feed-tabs"]',                  eyebrow:'Feed · Filter',      h:'📅 Heute · 🕐 Älter · ⭐ Engagement',   s:'Wechsle zwischen heutigen Posts, älteren Posts und der Engagement-Pflicht-Liste.'},
-    {page:'/feed', q:'.post.fade-up',                            eyebrow:'Feed · Post',        h:'🎬 So sieht ein Reel-Post aus',         s:'Tippe das Reel-Preview um es auf Insta zu öffnen — VORHER musst du ihn besuchen, dann kannst du liken (Visit-before-Like).'},
-    {page:'/feed', q:'.post.fade-up .post-action-btn',           eyebrow:'Feed · Like',        h:'❤️ So likest du',                        s:'Tippe Like — DU bekommst XP fürs Engagement. Der Poster bekommt deine Like-Unterstützung auf seinem Insta-Reel (das ist sein eigentliches Wachstum).'},
+    {page:'/feed', q:'.post.fade-up',                            eyebrow:'Feed · Post',        h:'🎬 So sieht ein Reel-Post aus',         s:'Tippe das Reel-Preview → Instagram öffnet sich. Dort musst du <b>liken UND kommentieren</b> — erst dann kannst du in der App den Like vergeben (Visit-before-Like).'},
+    {page:'/feed', q:'.post.fade-up .post-action-btn',           eyebrow:'Feed · Like',        h:'❤️ So likest du',                        s:'Erst Insta-Reel öffnen → dort liken UND kommentieren. Dann hier Like tippen — DU bekommst XP, der Poster bekommt echtes Insta-Engagement.'},
     {page:'/feed', q:'[data-tour="feed"]',                       eyebrow:'Bottom-Nav',         h:'🏠 Feed (du bist hier)',                s:'Der Haupt-Feed mit allen heutigen Reel-Posts.'},
     {page:'/feed', q:'[data-tour="post"]',                       eyebrow:'Bottom-Nav',         h:'➕ Hier postest du deinen Reel',        s:'Tippe + um deinen Insta-Reel-Link zu teilen. Andere Creator engagen sofort mit dir.'},
     // ── EXPLORE PAGE ─────────────────────────────────────────────────────
     {page:'/explore', q:'.explore-tabs',                         eyebrow:'Explore · Tabs',     h:'🧭 News, Ranking, Tipps &amp; Shop',    s:'Wir sind jetzt im Hub. Hier findest du alle Übersichts-Bereiche: Newsletter, Ranking, Tipps, Regeln und Diamanten-Shop.'},
     {page:'/explore', q:'.action-grid',                          eyebrow:'Explore · Aktionen', h:'🚀 Was möchtest du tun?',                s:'Schnell-Zugriff auf Ranking, Tipps, Regeln, Shop und Newsletter — alles auf einen Blick.'},
     // ── REGELN (Pflicht-Lese-Step) ───────────────────────────────────────
-    {page:'/explore?tab=regeln', q:'.regeln-wrap, .regeln-tabnav, .regeln-card', eyebrow:'⚠️ Regeln · PFLICHT', h:'📋 Regeln lesen — bitte alles anschauen',  s:'<b>Wichtig:</b> Lies dir die Regeln durch — Link-Regeln &amp; Engagement-Pflicht (5 andere liken UND kommentieren). Du musst sie am Ende der Tour bestätigen, sonst kannst du nicht posten/liken.', requiresScroll:true},
+    {page:'/explore?tab=regeln', q:'.regeln-wrap, .regeln-tabnav, .regeln-card', eyebrow:'⚠️ Regeln · PFLICHT', h:'📋 Regeln lesen — bitte alles anschauen',  s:'<b>Wichtig:</b> Wer einen Link postet muss 5 andere zurück-liken &amp; kommentieren. Vor dem Like in der App: Insta öffnen → dort liken &amp; kommentieren. Du musst die Regeln am Ende der Tour bestätigen.', requiresScroll:true},
     // ── MESSAGES PAGE ────────────────────────────────────────────────────
     {page:'/nachrichten', q:'[data-tour="messages"]',            eyebrow:'Bottom-Nav',         h:'💬 Direktnachrichten',                  s:'Wir sind jetzt im Nachrichten-Bereich. Hier laufen alle Privatchats mit anderen Creatorn — schreib direkt mit ihnen für Kollabs, Feedback oder einfach zum Quatschen.'},
     // ── PROFIL PAGE ──────────────────────────────────────────────────────
@@ -1598,11 +1598,10 @@ ${session ? `
       document.getElementById('tour-h').innerHTML = '📋 Regeln akzeptieren';
       document.getElementById('tour-s').innerHTML = 'Damit du posten und liken darfst, musst du die <b>Community-Regeln</b> aktiv bestätigen:'
         + '<br><br><b>Du verpflichtest dich:</b>'
-        + '<br>• 1 Link/Tag posten'
-        + '<br>• 5 andere Creator liken UND kommentieren (Pflicht)'
-        + '<br>• Visit-before-Like (Insta-Reel öffnen → liken)'
-        + '<br>• 2-Wort-Kommentar Pflicht'
-        + '<br>• Mission-Auswertung 12:00 sonst Verwarnung'
+        + '<br>• <b>Wenn du einen Link postest:</b> 5 andere Creator zurück-liken UND kommentieren (Pflicht)'
+        + '<br>• <b>Vor jedem Like in der App:</b> Instagram öffnen → dort liken UND kommentieren'
+        + '<br>• Erst danach kannst du den Like in der App vergeben'
+        + '<br>• Mission-Auswertung 12:00 — sonst Verwarnung &amp; XP-Abzug'
         + '<br><br>'
         + '<label style="display:flex;align-items:flex-start;gap:10px;background:rgba(212,175,55,0.10);border:1px solid rgba(212,175,55,0.30);border-radius:12px;padding:14px;cursor:pointer;font-size:13px;line-height:1.5">'
         +   '<input type="checkbox" id="tour-rules-cb" style="margin-top:2px;flex-shrink:0;width:18px;height:18px;accent-color:#d4af37;cursor:pointer" onchange="document.getElementById(\\'tour-finish-btn\\').disabled=!this.checked;document.getElementById(\\'tour-finish-btn\\').style.opacity=this.checked?\\'1\\':\\'0.4\\'">'
@@ -3019,7 +3018,7 @@ self.addEventListener('notificationclick',e=>{
     }
 
     function redirect(to) { res.writeHead(302,{'Location':to}); res.end(); }
-    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'234'}); res.end(layout(content,session,page,lang)); }
+    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'235'}); res.end(layout(content,session,page,lang)); }
     function json(data, status=200) { res.writeHead(status,{'Content-Type':'application/json'}); res.end(JSON.stringify(data)); }
 
     // ── LANDING ──
