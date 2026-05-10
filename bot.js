@@ -4644,13 +4644,6 @@ function submitPw(ev){
         return json({ok: true});
     }
 
-    // ── ONBOARDING ──
-    if (path === '/onboarding') {
-        if (!session) return redirect('/');
-        res.writeHead(200, {'Content-Type':'text/html; charset=utf-8'});
-        return res.end(onboardingHTML(false));
-    }
-
     // ── DIAMANTEN-INFO-SEITE ──
     if (path === '/diamanten') {
         if (!session) return redirect('/');
@@ -5324,12 +5317,6 @@ p{line-height:1.65;color:var(--muted)}
         return res.end(NEWSLETTER_HTML);
     }
 
-    // ── ONBOARDING PREVIEW (Admin) ──
-    if (path === '/onboarding-preview') {
-        if (!session) return redirect('/');
-        res.writeHead(200, {'Content-Type':'text/html; charset=utf-8'});
-        return res.end(onboardingHTML(true));
-    }
 
     // ── AUTH REQUIRED ──
     if (!session) return redirect('/');
@@ -5642,12 +5629,6 @@ p{line-height:1.65;color:var(--muted)}
     }
 
     // ── FEED ──
-    if (path === '/api/onboarding-done' && req.method === 'POST') {
-        session.onboardingDone = true;
-        saveSessions();
-        return json({ok:true});
-    }
-
     if (path === '/feed') {
         const tab = query.tab || 'heute';
         const twoDaysAgo = Date.now() - 2 * 24 * 60 * 60 * 1000;
@@ -6099,8 +6080,6 @@ setInterval(refreshLikes, 30000);
   stories.addEventListener('touchend',()=>{setTimeout(()=>stories.classList.remove('is-swiping'),50);},{passive:true});
   stories.addEventListener('click',e=>{if(stories.classList.contains('is-swiping')){e.preventDefault();e.stopPropagation();}},{capture:true});
 })();
-// Onboarding beim ersten Besuch
-try{if(!localStorage.getItem('cb_onboarded')){window.location.href='/onboarding';}}catch(e){}
 // Auto-open superlink sheet if redirected from + button
 if (new URLSearchParams(window.location.search).get('opensl') === '1') { setTimeout(openSLSheet, 400); }
 
@@ -9255,7 +9234,6 @@ ${adminIds.includes(Number(myUid)) ? `
   <a href="/?preview=1" target="_blank" class="btn btn-outline btn-full" style="margin-bottom:8px;display:flex">🔐 Login-Page (App)</a>
   <a href="/willkommen" target="_blank" class="btn btn-outline btn-full" style="margin-bottom:8px;display:flex">🌐 Public Landing-Page</a>
   <a href="/onboarding-instagram?preview=1" target="_blank" class="btn btn-outline btn-full" style="margin-bottom:8px;display:flex">🚀 Email-Onboarding (3-Step Wizard)</a>
-  <a href="/onboarding-preview" target="_blank" class="btn btn-outline btn-full" style="margin-bottom:8px;display:flex">📲 Onboarding (alt)</a>
   <a href="/feed?tour=1" target="_blank" class="btn btn-outline btn-full" style="margin-bottom:8px;display:flex">🎯 In-App Tour (Pfeile)</a>
   <a href="/preview/email-login" target="_blank" class="btn btn-outline btn-full" style="margin-bottom:8px;display:flex">📧 Magic-Link Email</a>
 </div>
