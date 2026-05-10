@@ -1284,6 +1284,8 @@ ${session ? `
     // ── EXPLORE PAGE ─────────────────────────────────────────────────────
     {page:'/explore', q:'.explore-tabs',                         eyebrow:'Explore · Tabs',     h:'🧭 News, Ranking, Tipps &amp; Shop',    s:'Wir sind jetzt im Hub. Hier findest du alle Übersichts-Bereiche: Newsletter, Ranking, Tipps, Regeln und Diamanten-Shop.'},
     {page:'/explore', q:'.action-grid',                          eyebrow:'Explore · Aktionen', h:'🚀 Was möchtest du tun?',                s:'Schnell-Zugriff auf Ranking, Tipps, Regeln, Shop und Newsletter — alles auf einen Blick.'},
+    // ── REGELN (Pflicht-Lese-Step) ───────────────────────────────────────
+    {page:'/explore?tab=regeln', q:'.regeln-wrap, .regeln-tabnav, .regeln-card', eyebrow:'⚠️ Regeln · PFLICHT', h:'📋 Regeln lesen — bitte alles anschauen',  s:'<b>Wichtig:</b> Lies dir die Regeln durch — Link-Regeln, Superlink-Regeln, Mission-Pflicht. Du musst sie am Ende der Tour bestätigen, sonst kannst du nicht posten/liken.', requiresScroll:true},
     // ── MESSAGES PAGE ────────────────────────────────────────────────────
     {page:'/nachrichten', q:'[data-tour="messages"]',            eyebrow:'Bottom-Nav',         h:'💬 Direktnachrichten &amp; Threads',    s:'Wir sind jetzt im Nachrichten-Bereich. Privatchats + Gruppen-Threads (z.B. der Engagement-Thread für tägliche Like-Runden).'},
     // ── PROFIL PAGE ──────────────────────────────────────────────────────
@@ -1302,12 +1304,18 @@ ${session ? `
 
   function pageMatches(stepPage){
     if(!stepPage) return true;
+    // Query-String aus stepPage strippen — Vergleich nur auf pathname
+    var basePage = stepPage.split('?')[0];
     var p = location.pathname;
-    if(p === stepPage) return true;
-    // /feed?tab=heute, /feed/anything etc. zählt als /feed
-    if(p === stepPage + '/' || p.indexOf(stepPage + '/') === 0) return true;
-    if(stepPage === '/feed' && (p === '/' || p === '')) return false; // niemals match auf root
+    if(p === basePage) return true;
+    if(p === basePage + '/' || p.indexOf(basePage + '/') === 0) return true;
+    if(basePage === '/feed' && (p === '/' || p === '')) return false;
     return false;
+  }
+  function buildStepUrl(stepPage){
+    if(!stepPage) return location.href;
+    var sep = stepPage.indexOf('?') === -1 ? '?' : '&';
+    return stepPage + sep + 'tour=continue';
   }
 
   // Skip alle Steps deren Target auf der aktuellen Seite NICHT existiert (z.B. leerer Feed: kein .post.fade-up)
@@ -1489,7 +1497,7 @@ ${session ? `
       try{ sessionStorage.setItem('cb_tour_idx', String(idx)); sessionStorage.setItem('cb_tour_active','1'); }catch(e){}
       var wipe = document.getElementById('tour-pagewipe');
       if(wipe) wipe.classList.add('show');
-      setTimeout(function(){ location.href = step.page + '?tour=continue'; }, 280);
+      setTimeout(function(){ location.href = buildStepUrl(step.page); }, 280);
       return;
     }
     // Wenn Step auf Post-Card oder Like-Btn zeigt UND kein echter Post da ist → Demo injizieren.
@@ -1540,13 +1548,23 @@ ${session ? `
       card.style.top = '50%'; card.style.bottom = 'auto';
       card.style.transform = 'translateY(-50%)';
       document.getElementById('tour-step-num').textContent = '✓ Fertig';
-      document.getElementById('tour-eyebrow-text').textContent = 'Tour abgeschlossen';
-      document.getElementById('tour-h').innerHTML = '🎉 Alles verstanden?';
-      document.getElementById('tour-s').innerHTML = 'Du kennst jetzt die wichtigsten Bereiche der App.<br><br><b>Was als nächstes?</b><br>📸 Poste deinen ersten Reel-Link · ❤️ Like andere Posts für XP · 🏆 Klettere im Ranking.';
-      // Buttons austauschen
+      document.getElementById('tour-eyebrow-text').textContent = 'Tour abgeschlossen — Regel-Bestätigung';
+      document.getElementById('tour-h').innerHTML = '📋 Regeln akzeptieren';
+      document.getElementById('tour-s').innerHTML = 'Damit du posten und liken darfst, musst du die <b>Community-Regeln</b> aktiv bestätigen:'
+        + '<br><br><b>Du verpflichtest dich:</b>'
+        + '<br>• 1 Link/Tag · andere Reels liken (M1: 5 Likes/Tag)'
+        + '<br>• Visit-before-Like (Insta-Reel öffnen → liken)'
+        + '<br>• 2-Wort-Kommentar Pflicht (M2/M3)'
+        + '<br>• Mission-Auswertung 12:00 sonst Verwarnung'
+        + '<br>• Superlinks (1-2/Woche): du engagest ALLE anderen'
+        + '<br><br>'
+        + '<label style="display:flex;align-items:flex-start;gap:10px;background:rgba(212,175,55,0.10);border:1px solid rgba(212,175,55,0.30);border-radius:12px;padding:14px;cursor:pointer;font-size:13px;line-height:1.5">'
+        +   '<input type="checkbox" id="tour-rules-cb" style="margin-top:2px;flex-shrink:0;width:18px;height:18px;accent-color:#d4af37;cursor:pointer" onchange="document.getElementById(\'tour-finish-btn\').disabled=!this.checked;document.getElementById(\'tour-finish-btn\').style.opacity=this.checked?\'1\':\'0.4\'">'
+        +   '<span><b>Ich habe alle Regeln gelesen und akzeptiere sie.</b><br><span style="color:rgba(255,255,255,0.6);font-size:12px">Wenn ich verstoße, akzeptiere ich Verwarnungen, XP-Abzug oder Sperrung.</span></span>'
+        + '</label>';
       document.querySelector('.tour-actions').innerHTML = ''
         + '<button class="tour-btn tour-btn-skip" onclick="window.cbTourRestart()" style="flex:1">↻ Tour nochmal</button>'
-        + '<button class="tour-btn tour-btn-next" onclick="window.cbTourFinish()" style="flex:1.5">✓ Alles verstanden</button>';
+        + '<button class="tour-btn tour-btn-next" id="tour-finish-btn" disabled style="opacity:0.4;flex:1.5" onclick="if(!document.getElementById(\'tour-rules-cb\').checked){alert(\'Bitte zuerst die Regeln akzeptieren\');return;}fetch(\'/api/accept-rules\',{method:\'POST\'}).catch(()=>{});window.cbTourFinish();">✓ Regeln akzeptieren &amp; Tour beenden</button>';
       var hint = document.getElementById('tour-kbd-hint');
       if(hint) hint.style.display = 'none';
       renderProgress();
@@ -1616,7 +1634,7 @@ ${session ? `
       try{ sessionStorage.setItem('cb_tour_idx', String(idx)); sessionStorage.setItem('cb_tour_active','1'); }catch(e){}
       var wipe = document.getElementById('tour-pagewipe');
       if(wipe) wipe.classList.add('show');
-      setTimeout(function(){ location.href = step.page + '?tour=continue'; }, 280);
+      setTimeout(function(){ location.href = buildStepUrl(step.page); }, 280);
       return;
     }
     try{ sessionStorage.setItem('cb_tour_idx', String(idx)); }catch(e){}
@@ -2916,7 +2934,7 @@ self.addEventListener('notificationclick',e=>{
     }
 
     function redirect(to) { res.writeHead(302,{'Location':to}); res.end(); }
-    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'217'}); res.end(layout(content,session,page,lang)); }
+    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'218'}); res.end(layout(content,session,page,lang)); }
     function json(data, status=200) { res.writeHead(status,{'Content-Type':'application/json'}); res.end(JSON.stringify(data)); }
 
     // ── LANDING ──
@@ -3447,6 +3465,13 @@ document.addEventListener('DOMContentLoaded', function(){
     if (path === '/api/dismiss-briefing' && req.method === 'POST') {
         if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
         const result = await postBot('/update-profile-api', { uid: getMyUid(session), appBriefingSeenV2: true });
+        if (!result || result.ok === false) return json({ok:false, error: (result && result.error) || 'Speichern fehlgeschlagen'}, 500);
+        return json({ok:true});
+    }
+    // Regeln akzeptieren — wird am Ende der Tour aufgerufen wenn User die Checkbox aktiviert.
+    if (path === '/api/accept-rules' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        const result = await postBot('/update-profile-api', { uid: getMyUid(session), rulesAcceptedAt: Date.now() });
         if (!result || result.ok === false) return json({ok:false, error: (result && result.error) || 'Speichern fehlgeschlagen'}, 500);
         return json({ok:true});
     }
