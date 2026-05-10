@@ -1066,6 +1066,14 @@ ${session ? `
 </div>
 
 <script>
+// Legacy-Onboarding-Cleanup: alte Versionen der App haben localStorage 'cb_onboarded'
+// gesetzt + redirected zu /onboarding wenn fehlt. Falls jemand mit alter Cache-Version
+// landet, hier den Flag setzen damit der Redirect nicht triggert. Auch SW deregistrieren.
+(function(){
+  try { localStorage.setItem('cb_onboarded','1'); } catch(e){}
+})();
+</script>
+<script>
 (function(){
   // Multi-Page Tour: läuft über mehrere Seiten (Feed → Explore → Profil → Einstellungen).
   // Active-State + Index in sessionStorage damit Navigation funktioniert.
@@ -1143,6 +1151,27 @@ ${session ? `
     return;
   }
   return;
+  // Globaler Hook für Debugging + Retry-Fallback.
+  window.cbStartTour = function(){
+    _tourLog('cbStartTour() called manually');
+    try{ sessionStorage.setItem('cb_tour_active','1'); sessionStorage.setItem('cb_tour_idx','0'); }catch(e){}
+    if(document.getElementById('tour-ov')) _safeRun(runTour, 'manual');
+    else _tourLog('tour-ov missing');
+  };
+  // Fallback-Retry: wenn ?tour=1 oder cb_tour_active aber Tour nach 3s nicht sichtbar → manuell triggern.
+  setTimeout(function(){
+    var ov = document.getElementById('tour-ov');
+    if(!ov) return;
+    if(ov.classList.contains('show')) return; // läuft schon
+    var shouldRun = false;
+    try{ shouldRun = sessionStorage.getItem('cb_tour_active') === '1'; }catch(e){}
+    if(/[?&]tour=1/.test(location.search)) shouldRun = true;
+    if(shouldRun){
+      _tourLog('FALLBACK after 3s: tour not running, force-trigger');
+      _safeRun(runTour, 'fallback-3s');
+    }
+  }, 3000);
+
   function runTour(){
   // ── runTour Body ─────────────────────────────────────────────────────────
 
@@ -2757,7 +2786,7 @@ self.addEventListener('notificationclick',e=>{
     if (session && !isPolling) { session.lastSeen = Date.now(); }
 
     function redirect(to) { res.writeHead(302,{'Location':to}); res.end(); }
-    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'99'}); res.end(layout(content,session,page,lang)); }
+    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'100'}); res.end(layout(content,session,page,lang)); }
     function json(data, status=200) { res.writeHead(status,{'Content-Type':'application/json'}); res.end(JSON.stringify(data)); }
 
     // ── LANDING ──
@@ -4681,6 +4710,14 @@ function submitPw(ev){
         const body = await parseBody(req);
         await postBot('/mark-messages-read', { uid: myUid, chatKey: body.chatKey });
         return json({ok: true});
+    }
+
+    // ── LEGACY-ONBOARDING-REDIRECT ──
+    // Altes /onboarding ist abgeschafft. Falls aber irgendwo noch ein
+    // gecachter Client darauf zeigt → 302 zu /feed (kein 404, kein Re-Render).
+    if (path === '/onboarding' || path === '/onboarding-preview') {
+        res.writeHead(302,{'Location':'/feed','Cache-Control':'no-store'});
+        return res.end();
     }
 
     // ── DIAMANTEN-INFO-SEITE ──
