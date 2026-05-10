@@ -7,9 +7,8 @@ module.exports = `
   .regeln-header { padding:16px 16px 8px; }
   .regeln-title { font-size:18px; font-weight:800; margin-bottom:2px; }
   .regeln-meta { font-size:11px; color:var(--muted); }
-  .regeln-tabnav { position:sticky; top:0; z-index:5; background:var(--bg); display:flex; gap:6px; overflow-x:auto; padding:10px 16px; border-bottom:1px solid var(--border2); -webkit-overflow-scrolling:touch; scrollbar-width:none; }
-  .regeln-tabnav::-webkit-scrollbar { display:none; }
-  .regeln-tabnav button { flex-shrink:0; padding:7px 14px; border-radius:999px; background:var(--bg3); color:var(--muted); font-size:12px; font-weight:700; border:1px solid var(--border2); white-space:nowrap; cursor:pointer; transition:all .2s; font-family:inherit; }
+  .regeln-tabnav { position:sticky; top:0; z-index:5; background:var(--bg); display:grid; grid-template-columns:repeat(3,1fr); gap:6px; padding:10px 12px; border-bottom:1px solid var(--border2); }
+  .regeln-tabnav button { padding:9px 6px; border-radius:12px; background:var(--bg3); color:var(--muted); font-size:11.5px; font-weight:700; border:1px solid var(--border2); white-space:nowrap; cursor:pointer; transition:all .2s; font-family:inherit; text-align:center; line-height:1.2; }
   .regeln-tabnav button:hover { background:var(--bg4); color:var(--text); }
   .regeln-tabnav button.active { background:linear-gradient(135deg,#a78bfa,#7c3aed); color:#fff; border-color:transparent; }
   .regeln-section { display:none; padding:18px 16px; animation:fadeIn .25s ease; }
@@ -76,11 +75,10 @@ module.exports = `
     <div class="regeln-card">
       <h2>🚀 Neu? Deine ersten 24h</h2>
       <ul>
-        <li><b>1️⃣ Bot starten</b> → /start</li>
-        <li><b>2️⃣ Instagram verbinden</b> → /setinsta</li>
-        <li><b>3️⃣ Profilbild & Spitzname</b> setzen</li>
-        <li><b>4️⃣ Ersten Link posten</b></li>
-        <li><b>5️⃣ 5 andere Links liken UND kommentieren</b> (Mission 1)<br><span style="font-size:12px;color:var(--muted);padding-left:22px;display:inline-block;margin-top:4px">Insta-Reel öffnen → dort liken &amp; kommentieren → dann hier in der App liken</span></li>
+        <li><b>1️⃣ Profilbild &amp; Spitzname</b> setzen → <a href="/einstellungen" style="color:#a78bfa">Einstellungen</a></li>
+        <li><b>2️⃣ Instagram-Handle</b> setzen → <a href="/einstellungen" style="color:#a78bfa">Einstellungen</a></li>
+        <li><b>3️⃣ Ersten Reel-Link posten</b> → <a href="/post" style="color:#a78bfa">+ Posten</a></li>
+        <li><b>4️⃣ 5 andere Links liken UND kommentieren</b> (Mission 1)<br><span style="font-size:12px;color:var(--muted);padding-left:22px;display:inline-block;margin-top:4px">Insta-Reel öffnen → dort liken &amp; kommentieren → dann hier in der App liken</span></li>
       </ul>
       <div class="why-box">🎉 Damit hast du am ersten Tag schon ~25 XP + Daily Bonus.</div>
     </div>
@@ -159,14 +157,14 @@ module.exports = `
       <ul>
         <li>• 1 Superlink pro Woche <b style="color:#a78bfa">(Elite+: 2!)</b></li>
         <li>• Nur Mo–Sa möglich</li>
-        <li>• Instagram-Profil Pflicht (/setinsta)</li>
+        <li>• Instagram-Handle in <a href="/einstellungen" style="color:#a78bfa">Einstellungen</a> Pflicht</li>
         <li>• Wer postet MUSS alle anderen Superlinks der Woche liken</li>
       </ul>
       <p style="font-size:12px;color:var(--muted)">⏰ Erinnerung Sonntag 21:00 · ✅ Auswertung Sonntag 23:59</p>
 
       <h3>Verstöße</h3>
       <div class="regeln-row"><span>Engagement-Pflicht verletzt</span><span class="konsequenz k-warn">💀 −50 XP + ⚠️</span></div>
-      <div class="regeln-row"><span>Ohne /setinsta</span><span class="konsequenz k-block">❌ blockiert</span></div>
+      <div class="regeln-row"><span>Ohne Insta-Handle</span><span class="konsequenz k-block">❌ blockiert</span></div>
       <div class="regeln-row"><span>Mehrfach pro Woche</span><span class="konsequenz k-block">❌ blockiert</span></div>
     </div>
   </section>
@@ -229,8 +227,7 @@ module.exports = `
     document.querySelectorAll('.regeln-section').forEach(s => {
       s.classList.toggle('active', s.id === target);
     });
-    const btn = nav.querySelector('button[data-target="' + target + '"]');
-    if (btn) btn.scrollIntoView({ behavior:'smooth', inline:'center', block:'nearest' });
+    window.scrollTo({ top:0, behavior:'smooth' });
   }
   buttons.forEach(btn => {
     btn.addEventListener('click', () => activate(btn.getAttribute('data-target')));

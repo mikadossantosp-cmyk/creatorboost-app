@@ -3018,7 +3018,7 @@ self.addEventListener('notificationclick',e=>{
     }
 
     function redirect(to) { res.writeHead(302,{'Location':to}); res.end(); }
-    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'236'}); res.end(layout(content,session,page,lang)); }
+    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'237'}); res.end(layout(content,session,page,lang)); }
     function json(data, status=200) { res.writeHead(status,{'Content-Type':'application/json'}); res.end(JSON.stringify(data)); }
 
     // ── LANDING ──
@@ -9496,7 +9496,7 @@ function switchRanking(tab, btn) {
       <div style="font-size:36px;flex-shrink:0">🔗</div>
       <div style="flex:1;min-width:0">
         <div style="font-size:15px;font-weight:700;margin-bottom:4px">Extra-Link für heute</div>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.5">Poste einen zusätzlichen Reel-Link heute — verfügbar im Web und in der Telegram-Gruppe. Bonus-Links: <b style="color:var(--text)">${myBonusLinks}</b></div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.5">Poste einen zusätzlichen Reel-Link heute — direkt in der App. Bonus-Links: <b style="color:var(--text)">${myBonusLinks}</b></div>
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
           ${extraLinkPriceHtml}
           <button onclick="buyExtraLink()" id="buy-extralink-btn" style="background:${extraLinkCanBuy?'linear-gradient(135deg,#a78bfa,#7c3aed)':'var(--bg4)'};color:${extraLinkCanBuy?'#fff':'var(--muted)'};border:none;border-radius:12px;padding:8px 20px;font-size:13px;font-weight:700;cursor:${extraLinkCanBuy?'pointer':'not-allowed'}" ${extraLinkCanBuy?'':'disabled'}>Kaufen</button>
@@ -9510,7 +9510,7 @@ function switchRanking(tab, btn) {
       <div style="font-size:36px;flex-shrink:0">⭐</div>
       <div style="flex:1;min-width:0">
         <div style="font-size:15px;font-weight:700;margin-bottom:4px">Extra-Superlink diese Woche</div>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.5">Du hast deinen wöchentlichen Superlink schon verbraucht? Poste einen <b style="color:var(--text)">zweiten Superlink</b> für 10 💎 — direkt beim Posten in der App oder im Bot wird er automatisch abgerechnet.</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.5">Du hast deinen wöchentlichen Superlink schon verbraucht? Poste einen <b style="color:var(--text)">zweiten Superlink</b> für 10 💎 — direkt beim Posten in der App wird er automatisch abgerechnet.</div>
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
           <div style="font-size:14px;font-weight:800;color:#f59e0b">💎 10 Diamanten / Superlink</div>
           <a href="/feed?tab=engagement" style="background:linear-gradient(135deg,#f59e0b,#a78bfa);color:#fff;border:none;border-radius:12px;padding:8px 18px;font-size:13px;font-weight:700;text-decoration:none">Posten</a>
@@ -9742,7 +9742,7 @@ window.sugDismiss = function(btn){
   </div>
   <a href="/system-info" style="display:flex;align-items:center;gap:12px;margin:0 16px 12px;padding:16px 18px;background:linear-gradient(135deg,#0ea5e9,#4dabf7,#a78bfa);border-radius:16px;text-decoration:none;color:#fff;box-shadow:0 6px 22px rgba(77,171,247,0.40);position:relative;overflow:hidden">
     <div style="font-size:32px">📖</div>
-    <div style="flex:1"><div style="font-size:15px;font-weight:800;letter-spacing:-0.1px">So funktioniert CreatorX</div><div style="font-size:12px;opacity:0.92;margin-top:3px;line-height:1.4">Komplette Anleitung — Telegram, App, Levels, Missionen, Diamanten, Superlinks, Grundregeln</div></div>
+    <div style="flex:1"><div style="font-size:15px;font-weight:800;letter-spacing:-0.1px">So funktioniert CreatorX</div><div style="font-size:12px;opacity:0.92;margin-top:3px;line-height:1.4">Komplette Anleitung — App, Levels, Missionen, Diamanten, Superlinks, Grundregeln</div></div>
     <div style="font-size:20px;opacity:0.9">→</div>
   </a>
   <a href="/diamanten" style="display:flex;align-items:center;gap:12px;margin:0 16px 16px;padding:14px 16px;background:linear-gradient(135deg,#4dabf7,#a78bfa);border-radius:14px;text-decoration:none;color:#fff;box-shadow:0 4px 14px rgba(167,139,250,0.3)">
