@@ -6,7 +6,11 @@ const crypto = require('crypto');
 const { genderize } = require('./gender-helper');
 
 const MAINBOT_URL   = process.env.MAINBOT_URL   || '';
-const BRIDGE_SECRET = process.env.BRIDGE_SECRET || 'geheimer-key';
+const BRIDGE_SECRET = process.env.BRIDGE_SECRET || '';
+if (!BRIDGE_SECRET) {
+    console.error('FATAL: BRIDGE_SECRET env-var nicht gesetzt. Server startet nicht.');
+    process.exit(1);
+}
 const BOT_TOKEN     = process.env.BOT_TOKEN     || '';
 const BOT_USERNAME  = process.env.BOT_USERNAME  || 'Creator_Boostbot';
 const PORT          = process.env.PORT          || 3000;
