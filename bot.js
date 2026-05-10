@@ -2194,6 +2194,45 @@ function confirmCrop(){
   }
 })();
 </script>
+${session ? `<!-- Telegram-User Reminder: Email + Passwort setzen -->
+<script>
+(function(){
+  // Skip wenn auf /einstellungen (User ist gerade dabei das zu fixen)
+  if (location.pathname === '/einstellungen') return;
+  // Nicht öfter als 1×/Tag pro Session zeigen
+  try {
+    var last = parseInt(sessionStorage.getItem('cb_tg_reminder_dismissed') || '0', 10);
+    if (last && (Date.now() - last) < 24*60*60*1000) return;
+  } catch(e) {}
+  fetch('/api/email-pw-status', {cache:'no-store'}).then(function(r){return r.json();}).then(function(s){
+    // Reminder NUR für Telegram-User die KEIN email ODER KEIN passwort haben
+    if (s.loginVia !== 'telegram') return;
+    if (s.hasEmail && s.hasPassword) return;
+    var missing = [];
+    if (!s.hasEmail) missing.push('Email');
+    if (!s.hasPassword) missing.push('Passwort');
+    var b = document.createElement('div');
+    b.id = 'tg-reminder-banner';
+    b.style.cssText = 'position:fixed;bottom:calc(78px + env(safe-area-inset-bottom));left:10px;right:10px;max-width:480px;margin:0 auto;background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;padding:14px 16px;border-radius:16px;font-family:Inter,-apple-system,sans-serif;font-size:13.5px;font-weight:600;box-shadow:0 12px 32px rgba(124,58,237,0.45);z-index:9990;display:flex;align-items:center;gap:12px;animation:tg-rem-in .35s cubic-bezier(.34,1.56,.64,1)';
+    b.innerHTML = '<div style="font-size:24px;flex-shrink:0">🔐</div>'
+      + '<div style="flex:1;min-width:0;line-height:1.4">'
+      +   '<div style="font-weight:800;letter-spacing:-0.1px;margin-bottom:2px">' + missing.join(' &amp; ') + ' setzen</div>'
+      +   '<div style="font-size:12px;color:rgba(255,255,255,0.85);font-weight:500">Damit du auch ohne Telegram einloggen kannst.</div>'
+      + '</div>'
+      + '<a href="/einstellungen" style="background:rgba(255,255,255,0.25);color:#fff;border:1px solid rgba(255,255,255,0.4);padding:8px 14px;border-radius:99px;font-size:12.5px;font-weight:800;text-decoration:none;flex-shrink:0;backdrop-filter:blur(8px)">→ Setzen</a>'
+      + '<button id="tg-rem-x" style="background:transparent;border:none;color:rgba(255,255,255,0.7);font-size:18px;cursor:pointer;padding:4px;flex-shrink:0;line-height:1">✕</button>';
+    document.body.appendChild(b);
+    var st = document.createElement('style');
+    st.textContent = '@keyframes tg-rem-in{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}';
+    document.head.appendChild(st);
+    document.getElementById('tg-rem-x').onclick = function(){
+      try{ sessionStorage.setItem('cb_tg_reminder_dismissed', String(Date.now())); }catch(e){}
+      b.style.transition='all .25s'; b.style.opacity='0'; b.style.transform='translateY(20px)';
+      setTimeout(function(){ b.remove(); }, 280);
+    };
+  }).catch(function(){});
+})();
+</script>` : ''}
 ${ADMIN_FULLTOUR_SCRIPT_TAG}
 </body></html>`;
 }
@@ -2935,7 +2974,7 @@ self.addEventListener('notificationclick',e=>{
     }
 
     function redirect(to) { res.writeHead(302,{'Location':to}); res.end(); }
-    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'221'}); res.end(layout(content,session,page,lang)); }
+    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'222'}); res.end(layout(content,session,page,lang)); }
     function json(data, status=200) { res.writeHead(status,{'Content-Type':'application/json'}); res.end(JSON.stringify(data)); }
 
     // ── LANDING ──
@@ -3182,6 +3221,7 @@ ${_isPreview ? '<div class="admin-pb">👀 Admin-Vorschau · Login-Page &nbsp;·
     ${query.error==='email-expired' ? '<div class="msg show err">⚠️ Login-Link abgelaufen oder schon benutzt.</div>' : ''}
     ${query.error==='email-invalid' ? '<div class="msg show err">⚠️ Login-Link ungültig.</div>' : ''}
     ${query.error==='email-userlost' ? '<div class="msg show err">⚠️ Account nicht mehr verfügbar.</div>' : ''}
+    ${query.error==='1' ? '<div class="msg show err">⚠️ Code falsch oder unbekannt. Hol dir mit /mycode im Bot einen frischen Code.</div>' : ''}
 
     <div class="msg" id="email-msg"></div>
     <form id="email-form" onsubmit="return submitEmail(event)">
@@ -3191,6 +3231,16 @@ ${_isPreview ? '<div class="admin-pb">👀 Admin-Vorschau · Login-Page &nbsp;·
     </form>
     <button type="button" id="email-magic-btn" onclick="sendMagicLink()" class="btn-link">📧 Magic-Link an die Email senden</button>
     <div class="email-hint">Erste Anmeldung? Magic-Link an deine Email anfordern — du kannst danach in Einstellungen ein Passwort setzen.</div>
+    <div style="text-align:center;margin-top:18px;padding-top:14px;border-top:1px solid var(--border)">
+      <button type="button" onclick="document.getElementById('tg-code-pane').style.display=this.dataset.open==='1'?'none':'block';this.dataset.open=this.dataset.open==='1'?'0':'1';this.textContent=this.dataset.open==='1'?'✕ Code-Login schließen':'🔑 Du hast einen Login-Code aus Telegram?'" data-open="0" style="background:none;border:none;color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;text-decoration:underline">🔑 Du hast einen Login-Code aus Telegram?</button>
+      <div id="tg-code-pane" style="display:none;margin-top:12px">
+        <form method="POST" action="/auth/code-form">
+          <input type="text" name="code" class="in code-in" placeholder="Dein Code aus /mycode" autocomplete="off" autocapitalize="none" spellcheck="false" required value="${(query.code||'').toString().slice(0,40).replace(/[<>"]/g,'')}">
+          <button type="submit" class="btn-p" style="margin-top:8px">Mit Code einloggen →</button>
+        </form>
+        <div class="code-hint" style="margin-top:8px">Tippe <b>/mycode</b> im CreatorX-Bot um deinen Code zu bekommen.</div>
+      </div>
+    </div>
   </div>
 
   <div class="bottom-cta">
@@ -3419,6 +3469,17 @@ document.addEventListener('DOMContentLoaded', function(){
         const _bd = await fetchBot('/data');
         const _u = _bd?.users?.[getMyUid(session)] || {};
         return json({seen: !!_u.appBriefingSeenV2});
+    }
+    // Email/Passwort-Status — für Reminder-Banner bei Telegram-Usern.
+    if (path === '/api/email-pw-status' && req.method === 'GET') {
+        if (!session) return json({hasEmail: true, hasPassword: true, loginVia: 'telegram'});
+        const _bd = await fetchBot('/data');
+        const _u = _bd?.users?.[getMyUid(session)] || {};
+        return json({
+            hasEmail: !!_u.email,
+            hasPassword: !!_u.password_hash,
+            loginVia: session.loginVia || (_u.email ? 'email' : 'telegram')
+        });
     }
     if (path === '/api/dismiss-briefing' && req.method === 'POST') {
         if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
