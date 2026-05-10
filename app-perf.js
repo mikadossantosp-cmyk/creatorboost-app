@@ -85,7 +85,7 @@ module.exports = `
         '<div class="upd-title">✨ Neues App-Icon!</div>' +
         '<div class="upd-sub">Tippe um zu sehen wie du es bekommst</div>' +
       '</div>' +
-      '<button class="upd-close" onclick="event.stopPropagation();sessionStorage.setItem(\'upd_dismissed_session\',\'1\');this.parentElement.remove();">×</button>';
+      '<button class="upd-close" onclick="event.stopPropagation();sessionStorage.setItem(\\'upd_dismissed_session\\',\\'1\\');this.parentElement.remove();">×</button>';
     banner.onclick = (e) => {
       if (e.target.classList.contains('upd-close')) return;
       showUpdateModal();
@@ -110,8 +110,8 @@ module.exports = `
           '<li>Altes Icon vom Home-Screen löschen</li>' +
         '</ol>' +
         '<div class="upd-actions">' +
-          '<button class="upd-btn-secondary" onclick="document.getElementById(\'app-update-modal\').remove();sessionStorage.setItem(\'upd_dismissed_session\',\'1\');document.getElementById(\'app-update-banner\') && document.getElementById(\'app-update-banner\').remove();">Später</button>' +
-          '<button class="upd-btn-primary" onclick="localStorage.setItem(\'' + UPDATE_KEY + '\',\'1\');document.getElementById(\'app-update-modal\').remove();document.getElementById(\'app-update-banner\') && document.getElementById(\'app-update-banner\').remove();">Verstanden</button>' +
+          '<button class="upd-btn-secondary" onclick="document.getElementById(\\'app-update-modal\\').remove();sessionStorage.setItem(\\'upd_dismissed_session\\',\\'1\\');document.getElementById(\\'app-update-banner\\') && document.getElementById(\\'app-update-banner\\').remove();">Später</button>' +
+          '<button class="upd-btn-primary" onclick="localStorage.setItem(\\'' + UPDATE_KEY + '\\',\\'1\\');document.getElementById(\\'app-update-modal\\').remove();document.getElementById(\\'app-update-banner\\') && document.getElementById(\\'app-update-banner\\').remove();">Verstanden</button>' +
         '</div>' +
       '</div>';
     modal.onclick = (e) => { if (e.target.id === 'app-update-modal') modal.remove(); };
