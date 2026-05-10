@@ -998,7 +998,10 @@ ${session ? `
 .tour-arrow{position:fixed;width:42px;height:42px;pointer-events:none;filter:drop-shadow(0 8px 22px rgba(212,175,55,0.9));animation:tour-bounce 1.4s ease-in-out infinite;transition:all .55s cubic-bezier(.16,1,.3,1);z-index:10000;will-change:transform}
 .tour-arrow svg{width:100%;height:100%;display:block}
 @keyframes tour-bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(10px)}}
-.tour-card{position:fixed;left:16px;right:16px;background:linear-gradient(180deg,rgba(28,28,30,0.97),rgba(15,15,17,0.97));border:1px solid rgba(212,175,55,0.4);border-radius:20px;padding:20px;box-shadow:0 30px 80px -10px rgba(0,0,0,0.75),0 0 0 1px rgba(255,255,255,0.04),0 0 40px rgba(212,175,55,0.22);transition:opacity .25s ease,transform .35s cubic-bezier(.16,1,.3,1);max-width:440px;margin:0 auto;font-family:'Inter',sans-serif;backdrop-filter:blur(28px) saturate(180%);-webkit-backdrop-filter:blur(28px) saturate(180%);pointer-events:auto;z-index:10001;overflow:hidden}
+.tour-card{position:fixed;left:16px;right:16px;background:linear-gradient(180deg,rgba(28,28,30,0.97),rgba(15,15,17,0.97));border:1px solid rgba(212,175,55,0.4);border-radius:20px;padding:20px;box-shadow:0 30px 80px -10px rgba(0,0,0,0.75),0 0 0 1px rgba(255,255,255,0.04),0 0 40px rgba(212,175,55,0.22);transition:opacity .25s ease,transform .35s cubic-bezier(.16,1,.3,1);max-width:440px;margin:0 auto;font-family:'Inter',sans-serif;backdrop-filter:blur(28px) saturate(180%);-webkit-backdrop-filter:blur(28px) saturate(180%);pointer-events:auto;z-index:10001;overflow-y:auto;-webkit-overflow-scrolling:touch;max-height:calc(100dvh - 100px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));overscroll-behavior:contain}
+.tour-card::-webkit-scrollbar{width:5px}
+.tour-card::-webkit-scrollbar-thumb{background:rgba(212,175,55,0.45);border-radius:99px}
+.tour-card::-webkit-scrollbar-track{background:transparent}
 .tour-card::before{content:'';position:absolute;inset:0;border-radius:20px;padding:1px;background:linear-gradient(135deg,rgba(212,175,55,0.6),rgba(212,175,55,0.05) 30%,rgba(212,175,55,0.05) 70%,rgba(212,175,55,0.6));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none;opacity:0.5;animation:gradient-rotate 6s linear infinite}
 @keyframes gradient-rotate{0%{filter:hue-rotate(0deg)}100%{filter:hue-rotate(360deg)}}
 .tour-card.transitioning{opacity:0;transform:translateY(8px) scale(0.985)}
@@ -1244,25 +1247,35 @@ ${session ? `
     var spotlight = document.getElementById('tour-spotlight');
     var vh = window.innerHeight;
     var vw = window.innerWidth;
-    var GAP = 18; // Abstand zwischen Element und Arrow/Card
-    var ARROW_H = 44, CARD_H_EST = 230; // grober Höhenrichtwert für Card
-    var spaceAbove = rect.top;
-    var spaceBelow = vh - rect.bottom;
-    var placeBelow = spaceBelow >= (CARD_H_EST + GAP + ARROW_H) || spaceBelow > spaceAbove;
+    var GAP = 18;
+    var ARROW_H = 44;
+    // Safe-Area + Reserveplatz für Status-Bar/Notch oben und Bottom-Nav unten
+    var SAFE_TOP = 12, SAFE_BOTTOM = 84; // 84 = bottom-nav 70 + 14
+    // Card-Höhe wirklich messen statt schätzen
+    var CARD_H = card.offsetHeight || 230;
+    var spaceAbove = rect.top - SAFE_TOP;
+    var spaceBelow = vh - rect.bottom - SAFE_BOTTOM;
+    var placeBelow = spaceBelow >= (CARD_H + GAP + ARROW_H) || spaceBelow > spaceAbove;
     var arrowSvg = arrow.querySelector('svg');
     if(placeBelow){
       // Element oben → Card+Arrow unter dem Element. SVG zeigt nach OBEN (180° rotiert)
       if(arrowSvg) arrowSvg.style.transform = 'rotate(180deg)';
+      var topPx = Math.max(SAFE_TOP, rect.bottom + GAP + ARROW_H - 6);
+      // Wenn Card sonst unter den Bildschirm fallen würde → nach oben verschieben
+      if (topPx + CARD_H > vh - SAFE_BOTTOM) topPx = Math.max(SAFE_TOP, vh - SAFE_BOTTOM - CARD_H);
       arrow.style.top  = (rect.bottom + GAP - 4) + 'px';
       arrow.style.left = (rect.left + rect.width/2 - 21) + 'px';
-      card.style.top    = (rect.bottom + GAP + ARROW_H - 6) + 'px';
+      card.style.top    = topPx + 'px';
       card.style.bottom = 'auto';
     } else {
       // Element unten → Card+Arrow über dem Element. SVG zeigt nach UNTEN (default)
       if(arrowSvg) arrowSvg.style.transform = 'rotate(0deg)';
+      var bottomPx = vh - rect.top + GAP + ARROW_H - 6;
+      // Wenn Card oben den Screen verlassen würde → nach unten verschieben
+      if (vh - bottomPx - CARD_H < SAFE_TOP) bottomPx = Math.max(SAFE_BOTTOM, vh - CARD_H - SAFE_TOP);
       arrow.style.top  = (rect.top - GAP - ARROW_H + 8) + 'px';
       arrow.style.left = (rect.left + rect.width/2 - 21) + 'px';
-      card.style.bottom = (vh - rect.top + GAP + ARROW_H - 6) + 'px';
+      card.style.bottom = bottomPx + 'px';
       card.style.top    = 'auto';
     }
     // Spotlight Center auf Target setzen — sanftes Glow um's Element rum
@@ -2804,7 +2817,7 @@ self.addEventListener('notificationclick',e=>{
     }
 
     function redirect(to) { res.writeHead(302,{'Location':to}); res.end(); }
-    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'210'}); res.end(layout(content,session,page,lang)); }
+    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'211'}); res.end(layout(content,session,page,lang)); }
     function json(data, status=200) { res.writeHead(status,{'Content-Type':'application/json'}); res.end(JSON.stringify(data)); }
 
     // ── LANDING ──
@@ -4759,8 +4772,9 @@ function submitPw(ev){
         const body = await parseBody(req);
         const text = String(body.text || '').slice(0, 2000);
         const image = body.image ? String(body.image).slice(0, 500000) : null;
+        const replyToTs = Number(body.replyToTs || 0);
         if (!text && !image) return json({ok:false, error:'Leer'}, 400);
-        const result = await postBot('/app-chat-send', { uid: myUid, text, image });
+        const result = await postBot('/app-chat-send', { uid: myUid, text, image, replyToTs });
         if (!result || !result.ok) return json({ok:false, error: result?.error || 'Fehler'}, 500);
         return json({ok:true, message: result.message});
     }
