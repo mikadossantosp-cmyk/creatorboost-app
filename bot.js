@@ -2817,7 +2817,7 @@ self.addEventListener('notificationclick',e=>{
     }
 
     function redirect(to) { res.writeHead(302,{'Location':to}); res.end(); }
-    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'211'}); res.end(layout(content,session,page,lang)); }
+    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'212'}); res.end(layout(content,session,page,lang)); }
     function json(data, status=200) { res.writeHead(status,{'Content-Type':'application/json'}); res.end(JSON.stringify(data)); }
 
     // ── LANDING ──
@@ -6927,22 +6927,35 @@ async function acDelete(ts) {
   } catch(e) { alert('Netzwerkfehler'); }
 }
 async function acToggleReact(ts, emoji) {
-  // Optimistic toggle
+  // Optimistic: 1 User = 1 Emoji pro Message. Spiegelt Server-Logik exakt.
   const m = _acMsgs.find(x => x.ts === ts);
   if (m) {
     if (!m.reactions) m.reactions = {};
-    if (!m.reactions[emoji]) m.reactions[emoji] = [];
-    const idx = m.reactions[emoji].indexOf(ME_UID);
-    if (idx >= 0) {
-      m.reactions[emoji].splice(idx, 1);
-      if (m.reactions[emoji].length === 0) delete m.reactions[emoji];
-    } else {
+    // 1) User aus ALLEN Emojis dieser Message entfernen
+    let hadSameEmoji = false;
+    for (const e of Object.keys(m.reactions)) {
+      const i = m.reactions[e].indexOf(ME_UID);
+      if (i >= 0) {
+        m.reactions[e].splice(i, 1);
+        if (e === emoji) hadSameEmoji = true;
+        if (m.reactions[e].length === 0) delete m.reactions[e];
+      }
+    }
+    // 2) Wenn anderer Emoji oder Erst-Reaktion → setzen. Wenn gleicher → bleibt entfernt (Toggle).
+    if (!hadSameEmoji) {
+      if (!m.reactions[emoji]) m.reactions[emoji] = [];
       m.reactions[emoji].push(ME_UID);
     }
     acRenderAll();
   }
+  // Server-Sync: Server schickt verbindlichen Stand zurück → den nehmen wir.
   try {
-    await fetch('/api/app-chat/react', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ts, emoji})});
+    const r = await fetch('/api/app-chat/react', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ts, emoji})});
+    const d = await r.json().catch(()=>({}));
+    if (d && d.ok && d.reactions !== undefined && m) {
+      m.reactions = d.reactions || {};
+      acRenderAll();
+    }
   } catch(e) {}
 }
 // ── Long-press + Swipe-Delete UX (wie in Threads) ─────────────────────
