@@ -27,7 +27,7 @@ function esc(s) {
 }
 
 module.exports = function renderChatList(opts) {
-    const { myConvos = [], botData = {}, myUid = '', feedPreview = '', totalThreadUnread = 0, ladeBild = () => null, onlineUids, threadsList = [], threadLastRead = {} } = opts || {};
+    const { myConvos = [], botData = {}, myUid = '', feedPreview = '', totalThreadUnread = 0, ladeBild = () => null, onlineUids, threadsList = [], threadLastRead = {}, crown = () => '', appChatPreview = null, appChatUnread = 0, appChatMembers = 0 } = opts || {};
     const adminIds = (typeof opts.adminIds !== 'undefined') ? opts.adminIds : [];
     const isAdminUser = (Array.isArray(adminIds) ? adminIds : []).map(Number).includes(Number(myUid));
     const onlineSet = onlineUids instanceof Set ? onlineUids : (Array.isArray(onlineUids) ? new Set(onlineUids.map(String)) : new Set());
@@ -61,17 +61,23 @@ module.exports = function renderChatList(opts) {
             '</a>';
     }).join('');
 
-    const telegramRow = '<a href="/nachrichten/gruppe" class="dm-row dm-pinned">' +
-        '<div class="dm-avatar dm-tg">✈️</div>' +
+    // Pinned-Row: App-Community-Chat (globale Gruppe für alle App-User).
+    // Immer ganz oben sichtbar, unabhängig von DMs.
+    const appChatPrev = appChatPreview ? smartPreview(appChatPreview) : 'Tippen, um mit allen App-Usern zu chatten…';
+    const appChatPrevText = appChatPreview ? ((appChatPreview.name ? appChatPreview.name + ': ' : '') + appChatPrev) : appChatPrev;
+    const appCommunityRow = '<a href="/nachrichten/app-chat" class="dm-row dm-pinned dm-app-community">' +
+        '<div class="dm-avatar dm-app-community-avatar">🌍</div>' +
         '<div class="dm-content">' +
-          '<div class="dm-name">Telegram Gruppe <span class="dm-pin-icon">📌</span></div>' +
-          '<div class="dm-preview">' + esc((feedPreview || 'Live Telegram Nachrichten').slice(0, 60)) + '</div>' +
+          '<div class="dm-name">App Community <span style="font-size:10px;color:#a78bfa;font-weight:700;background:rgba(167,139,250,0.12);padding:2px 7px;border-radius:99px;margin-left:6px">📌 Pinned</span></div>' +
+          '<div class="dm-preview">' + esc(appChatPrevText.slice(0, 70)) + '</div>' +
         '</div>' +
         '<div class="dm-meta">' +
-          '<div class="dm-online-dot" title="Live"></div>' +
-          (totalThreadUnread > 0 ? '<div class="dm-badge dm-tg-badge">' + (totalThreadUnread > 9 ? '9+' : totalThreadUnread) + '</div>' : '') +
+          (appChatMembers ? '<div class="dm-time">' + appChatMembers + ' 👥</div>' : '') +
+          (appChatUnread > 0 ? '<div class="dm-badge">' + (appChatUnread > 99 ? '99+' : appChatUnread) + '</div>' : '') +
         '</div>' +
         '</a>';
+
+    // Telegram-Group-Row entfernt — Threads sind aus der App komplett raus.
 
     // Smart preview: image, audio oder text
     function smartPreview(msg) {
@@ -117,7 +123,7 @@ module.exports = function renderChatList(opts) {
         return '<a href="/nachrichten/' + c.otherUid + '" class="dm-row' + unreadClass + '" data-uid="' + c.otherUid + '" data-name="' + esc(c.otherName) + '" data-bucket="' + timeBucket(c.lastMsg && c.lastMsg.timestamp) + '" oncontextmenu="event.preventDefault(); dmCtxMenu(event,this)" ontouchstart="dmCtxStart(event,this)" ontouchend="dmCtxEnd()" ontouchmove="dmCtxEnd()">' +
             '<div class="dm-avatar' + (isOnline ? ' online' : '') + '">' + avatarInner + '</div>' +
             '<div class="dm-content">' +
-                '<div class="dm-name">' + esc(c.otherName) + '<span class="dm-pin-marker">📌</span></div>' +
+                '<div class="dm-name">' + crown(c.otherUid) + esc(c.otherName) + '<span class="dm-pin-marker">📌</span></div>' +
                 '<div class="dm-preview">' + previewHtml + '</div>' +
             '</div>' +
             '<div class="dm-meta">' +
@@ -282,6 +288,8 @@ module.exports = function renderChatList(opts) {
         '.dm-row.unread .dm-preview { color: var(--text); font-weight: 600; }' +
         '.dm-row.unread::before { content:""; position:absolute; left:6px; top:50%; transform:translateY(-50%); width:7px; height:7px; border-radius:50%; background:#a78bfa; box-shadow:0 0 8px rgba(167,139,250,0.5); }' +
         '.dm-pinned { background: linear-gradient(90deg, rgba(0,136,204,0.05), transparent 60%); }' +
+        '.dm-app-community { background: linear-gradient(90deg, rgba(167,139,250,0.10), rgba(124,58,237,0.04) 60%); border-bottom: 1.5px solid rgba(167,139,250,0.2); }' +
+        '.dm-app-community-avatar { background: linear-gradient(135deg,#a78bfa,#7c3aed); color: #fff; font-size: 22px; box-shadow: 0 6px 16px rgba(124,58,237,0.35); }' +
         '.dm-avatar { position: relative; width: 56px; height: 56px; border-radius: 50%; flex-shrink: 0; background: var(--bg4); overflow: visible; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(15,23,42,0.06); }' +
         '.dm-avatar > img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }' +
         '.dm-avatar-fb { font-weight: 800; font-size: 22px; color: #fff; background: linear-gradient(135deg, #a78bfa, #7c3aed); width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; border-radius: 50%; }' +
@@ -323,18 +331,10 @@ module.exports = function renderChatList(opts) {
 
         (storiesArr.length ? '<div class="dm-stories-section"><div class="dm-stories-wrap">' + storiesHtml + '</div></div>' : '') +
 
-        '<div class="dm-tabs">' +
-            '<button class="dm-tab active" data-tab="chats" onclick="dmSwitchTab(\'chats\')">💬 Chats' + ((myConvos||[]).reduce((s,c)=>s+(c.unread||0),0) > 0 ? ' <span class="dm-tab-count">' + Math.min(99,(myConvos||[]).reduce((s,c)=>s+(c.unread||0),0)) + '</span>' : '') + '</button>' +
-            '<button class="dm-tab" data-tab="threads" onclick="dmSwitchTab(\'threads\')">✈️ Telegram-Treads' + (totalThreadUnread > 0 ? ' <span class="dm-tab-count">' + (totalThreadUnread > 99 ? '99+' : totalThreadUnread) + '</span>' : '') + '</button>' +
-        '</div>' +
-
         '<div class="dm-list" id="dm-list-chats">' +
+            appCommunityRow +
             dmRows +
             emptyState +
-        '</div>' +
-
-        '<div class="dm-list" id="dm-list-threads" style="display:none">' +
-            (threadsRows || '<div class="dm-empty"><div class="dm-empty-icon">✈️</div><div class="dm-empty-text">Keine Telegram-Treads</div></div>') +
         '</div>' +
 
         '<button class="dm-fab" onclick="dmFocusSearch()" title="Neue Nachricht" aria-label="Neue Nachricht">' +
