@@ -5137,6 +5137,7 @@ function submitPw(ev){
 
     // ── SEARCH API ──
     if (path === '/api/search') {
+        if (!session) return json({users:[], links:[]}, 401);
         const q = (query.q||'').toLowerCase().trim();
         if (!q) return json({users:[], links:[]});
         const botData = await fetchBot('/data');
@@ -5169,6 +5170,7 @@ function submitPw(ev){
 
     // ── LIKES UPDATE API ──
     if (path === '/api/likes-update') {
+        if (!session) return json({links:[]}, 401);
         const botData = await fetchBot('/data');
         if (!botData) return json({links:[]});
         const today = new Date().toDateString();
@@ -6362,7 +6364,8 @@ p{line-height:1.65;color:var(--muted)}
     if (path === '/api/newsletter-add' && req.method === 'POST') {
         if (!session) return json({error:'Nicht eingeloggt'},401);
         const chunks=[]; for await(const c of req) chunks.push(c);
-        const { title, content } = JSON.parse(Buffer.concat(chunks).toString());
+        let title, content;
+        try { ({ title, content } = JSON.parse(Buffer.concat(chunks).toString())); } catch(e) { return json({error:'Ungültiges JSON'},400); }
         if (!content?.trim()) return json({error:'Inhalt fehlt'},400);
         const result = await postBot('/add-newsletter-api', { uid: myUid, title: (title||'').trim(), content: content.trim() });
         return json({ok:!!result?.ok, error: result?.error});
@@ -6371,7 +6374,8 @@ p{line-height:1.65;color:var(--muted)}
     if (path === '/api/newsletter-edit' && req.method === 'POST') {
         if (!session) return json({error:'Nicht eingeloggt'},401);
         const chunks=[]; for await(const c of req) chunks.push(c);
-        const { id, title, content } = JSON.parse(Buffer.concat(chunks).toString());
+        let id, title, content;
+        try { ({ id, title, content } = JSON.parse(Buffer.concat(chunks).toString())); } catch(e) { return json({error:'Ungültiges JSON'},400); }
         if (!id || !content?.trim()) return json({error:'Fehlend'},400);
         const result = await postBot('/edit-newsletter-api', { uid: myUid, id, title: (title||'').trim(), content: content.trim() });
         return json({ok:!!result?.ok, error: result?.error});
