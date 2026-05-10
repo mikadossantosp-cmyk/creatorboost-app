@@ -398,6 +398,37 @@ async function postBot(path, body) {
     return result;
 }
 
+// ── ZEIT-CRON ──────────────────────────────────────────────────────────────
+// Vorher hat der Announcer-Bot Sonntag 20:00 das Wochen-Gewinnspiel ausgelöst.
+// Der Announcer-Bot ist abgeschaltet — die App ist jetzt der Trigger.
+// Mainbot kümmert sich weiterhin selbst um Daily-/Wochen-Reset (intern).
+const _appCronSeen = {};
+async function appCronTick() {
+    try {
+        const jetzt = new Date();
+        const h = jetzt.getHours();
+        const m = jetzt.getMinutes();
+        const wochentag = jetzt.getDay();
+        const tagStr = jetzt.toDateString();
+        const einmalig = (key, fn) => {
+            const fullKey = `${key}_${h}:${m}_${tagStr}`;
+            if (_appCronSeen[fullKey]) return;
+            _appCronSeen[fullKey] = true;
+            return fn();
+        };
+        if (wochentag === 0 && h === 20 && m === 0) {
+            einmalig('wochenGewinnspiel', async () => {
+                console.log('🎰 [Cron] Trigger Wochen-Gewinnspiel → Mainbot');
+                const r = await postBot('/run-wochen-gewinnspiel-api', {});
+                console.log('🎰 [Cron] Mainbot Response:', r ? JSON.stringify(r) : 'null');
+            });
+        }
+        // Tageswechsel: alte einmalig-Keys aufräumen, damit der Speicher nicht wächst.
+        for (const key of Object.keys(_appCronSeen)) { if (!key.endsWith(tagStr)) delete _appCronSeen[key]; }
+    } catch (e) { console.log('appCronTick Fehler:', e.message); }
+}
+setInterval(appCronTick, 60000);
+
 const PARSE_BODY_MAX = 1024 * 1024; // 1MB cap; uploads use readBody with explicit limits
 function parseBody(req) {
     return new Promise(resolve => {
