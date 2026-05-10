@@ -2804,7 +2804,7 @@ self.addEventListener('notificationclick',e=>{
     }
 
     function redirect(to) { res.writeHead(302,{'Location':to}); res.end(); }
-    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'205'}); res.end(layout(content,session,page,lang)); }
+    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'206'}); res.end(layout(content,session,page,lang)); }
     function json(data, status=200) { res.writeHead(status,{'Content-Type':'application/json'}); res.end(JSON.stringify(data)); }
 
     // ── LANDING ──
@@ -4753,7 +4753,9 @@ function submitPw(ev){
     if (path === '/api/app-chat/messages') {
         if (!session) return json({error:'Nicht eingeloggt'}, 401);
         const myUid = getMyUid(session);
-        const data = await fetchBot('/app-chat?uid=' + encodeURIComponent(myUid) + '&limit=200');
+        const since = Number(query.since || 0);
+        const url = '/app-chat?uid=' + encodeURIComponent(myUid) + (since > 0 ? '&since=' + since : '&limit=200');
+        const data = await fetchBot(url);
         return json(data || { messages: [], unread: 0 });
     }
     if (path === '/api/app-chat/send' && req.method === 'POST') {
@@ -6555,119 +6557,214 @@ async function submitSuperLink(){
 
     // ── APP-COMMUNITY-CHAT (globale Gruppe) ──
     if (path === '/nachrichten/app-chat') {
-        const [data, botData] = await Promise.all([
-            fetchBot('/app-chat?uid=' + encodeURIComponent(myUid) + '&limit=200'),
-            fetchBot('/data')
-        ]);
-        const msgs = (data?.messages || []).filter(m => !m.deleted);
+        const data = await fetchBot('/app-chat?uid=' + encodeURIComponent(myUid) + '&limit=200');
+        const allMsgs = (data?.messages || []).filter(m => !m.deleted);
         const memberCount = data?.memberCount || 0;
-        // Mark als gelesen (best-effort, blockiert Render nicht)
+        const lastTs = allMsgs.length ? allMsgs[allMsgs.length - 1].ts : 0;
         postBot('/app-chat-mark-read', { uid: myUid }).catch(()=>{});
         const isAdminUid = adminIds.map(Number).includes(Number(myUid));
-        const msgsHtml = msgs.length === 0
-            ? '<div class="empty" style="margin-top:60px;text-align:center;padding:40px"><div style="font-size:48px;margin-bottom:14px">🌍</div><div style="font-size:16px;font-weight:700;margin-bottom:6px">App Community</div><div style="font-size:13px;color:var(--muted);max-width:280px;margin:0 auto;line-height:1.5">Sei der Erste, der hier was schreibt! Diese Gruppe ist für alle App-User.</div></div>'
-            : msgs.map(m => {
-                const mine = String(m.uid) === myUid;
-                const u = botData?.users?.[m.uid] || {};
-                const ava = ladeBild(m.uid, 'profilepic');
-                const avaHtml = ava
-                    ? `<img src="/appbild/${m.uid}/profilepic" style="width:32px;height:32px;border-radius:50%;object-fit:cover" alt="">`
-                    : (u.instagram
-                        ? `<img src="https://unavatar.io/instagram/${u.instagram}" style="width:32px;height:32px;border-radius:50%;object-fit:cover" onerror="this.outerHTML='<div style=\\'width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center\\'>${htmlEsc((m.name||'?').slice(0,1).toUpperCase())}</div>'" alt="">`
-                        : `<div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center">${htmlEsc((m.name||'?').slice(0,1).toUpperCase())}</div>`);
-                const time = new Date(m.ts).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
-                const escText = htmlEsc(m.text||'').replace(/\n/g,'<br>');
-                const canDelete = mine || isAdminUid;
-                const delBtn = canDelete ? `<button onclick="deleteAppChatMsg(${m.ts})" style="background:none;border:none;color:rgba(239,68,68,.7);font-size:11px;cursor:pointer;padding:0;margin-left:8px">🗑</button>` : '';
-                const imgHtml = m.image ? `<img src="${m.image}" style="max-width:200px;max-height:280px;border-radius:10px;margin-top:6px;display:block" alt="">` : '';
-                return `<div style="display:flex;gap:10px;padding:10px 14px;align-items:flex-start;${mine?'background:rgba(167,139,250,0.04)':''}">
-                    <a href="/profil/${m.uid}" style="flex-shrink:0;text-decoration:none">${avaHtml}</a>
-                    <div style="flex:1;min-width:0">
-                        <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:2px">
-                            <a href="/profil/${m.uid}" style="font-weight:700;font-size:13.5px;color:${mine?'#a78bfa':'var(--text)'};text-decoration:none">${htmlEsc(m.name||'User')}</a>
-                            <span style="font-size:11px;color:var(--muted)">${time}</span>
-                            ${delBtn}
-                        </div>
-                        ${escText?`<div style="font-size:14px;color:var(--text);line-height:1.45;word-wrap:break-word;overflow-wrap:break-word">${escText}</div>`:''}
-                        ${imgHtml}
-                    </div>
-                </div>`;
-            }).join('');
+        // Server-render die initialen Bubbles als JSON → JS rendert (gleicher Code wie Live-Updates)
+        const seedJson = JSON.stringify(allMsgs).replace(/</g,'\\u003c');
         return html(`
-<div class="topbar" style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:linear-gradient(135deg,#a78bfa,#7c3aed);position:sticky;top:0;z-index:10">
-  <a href="/nachrichten" style="padding:8px;color:#fff;display:flex;align-items:center;text-decoration:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="22" height="22"><polyline points="15 18 9 12 15 6"/></svg></a>
-  <div style="flex:1;text-align:center">
-    <div style="font-weight:800;font-size:15px;color:#fff">🌍 App Community</div>
-    <div style="font-size:11px;color:rgba(255,255,255,0.85)">${memberCount} Mitglieder · Live ●</div>
+<style>
+:root { --ac-mine-grad: linear-gradient(135deg,#a78bfa,#7c3aed); --ac-other-bg: var(--bg3); --ac-name: rgba(255,255,255,0.85); }
+.ac-wrap { padding:14px 0 200px; min-height:60vh; display:flex; flex-direction:column; gap:2px; }
+.ac-day { align-self:center; background:var(--bg3); color:var(--muted); font-size:12px; font-weight:700; padding:6px 14px; border-radius:99px; margin:18px 0 10px; letter-spacing:0.3px; box-shadow:0 2px 8px rgba(0,0,0,0.08); }
+.ac-row { display:flex; gap:9px; padding:0 14px; align-items:flex-end; }
+.ac-row.mine { flex-direction:row-reverse; }
+.ac-row.grouped { padding-top:1px; }
+.ac-row + .ac-row:not(.grouped) { margin-top:14px; }
+.ac-avatar { width:36px; height:36px; border-radius:50%; flex-shrink:0; overflow:hidden; background:linear-gradient(135deg,#a78bfa,#7c3aed); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:800; font-size:14px; box-shadow:0 2px 8px rgba(15,23,42,0.10); position:relative; }
+.ac-avatar img { width:100%; height:100%; object-fit:cover; }
+.ac-avatar.hidden { visibility:hidden; }
+.ac-msgcol { display:flex; flex-direction:column; max-width:75%; min-width:0; }
+.ac-row.mine .ac-msgcol { align-items:flex-end; }
+.ac-name { font-size:13px; font-weight:700; color:#a78bfa; margin:0 4px 4px; }
+.ac-row.mine .ac-name { display:none; }
+.ac-bubble { padding:11px 15px; border-radius:20px; font-size:16px; line-height:1.42; word-wrap:break-word; overflow-wrap:break-word; box-shadow:0 1px 3px rgba(0,0,0,0.07); position:relative; max-width:100%; }
+.ac-bubble.other { background:var(--bg3); color:var(--text); border-bottom-left-radius:6px; }
+.ac-row.grouped .ac-bubble.other { border-bottom-left-radius:20px; border-top-left-radius:6px; }
+.ac-bubble.mine { background:var(--ac-mine-grad); color:#fff; border-bottom-right-radius:6px; }
+.ac-row.grouped .ac-bubble.mine { border-bottom-right-radius:20px; border-top-right-radius:6px; }
+.ac-bubble img.media { max-width:240px; max-height:280px; border-radius:14px; display:block; margin-top:6px; }
+.ac-time { font-size:11px; color:var(--muted); margin:3px 6px 0; font-weight:600; }
+.ac-row.mine .ac-time { color:rgba(255,255,255,0.65); }
+.ac-del { background:none; border:none; color:rgba(239,68,68,0.85); font-size:12px; cursor:pointer; padding:2px 5px; margin-top:2px; opacity:0.5; transition:opacity .15s; }
+.ac-row:hover .ac-del { opacity:1; }
+.ac-empty { padding:80px 28px; text-align:center; }
+.ac-empty-icon { font-size:64px; margin-bottom:18px; opacity:0.55; }
+.ac-empty-title { font-size:20px; font-weight:800; color:var(--text); margin-bottom:10px; letter-spacing:-0.3px; }
+.ac-empty-sub { font-size:14px; color:var(--muted); line-height:1.55; max-width:300px; margin:0 auto; }
+.ac-input-wrap { position:fixed; bottom:calc(68px + env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%); width:100%; max-width:480px; background:var(--bg); border-top:1px solid var(--border2); padding:10px 12px calc(10px + env(safe-area-inset-bottom,0px)); display:flex; align-items:flex-end; gap:9px; z-index:99; box-shadow:0 -6px 18px rgba(0,0,0,0.12); backdrop-filter:blur(20px) saturate(180%); -webkit-backdrop-filter:blur(20px) saturate(180%); background:var(--glass-bg, var(--bg)); }
+.ac-input { flex:1; background:var(--bg3); border:1.5px solid var(--border2); color:var(--text); border-radius:22px; padding:12px 16px; font-size:16px; font-family:inherit; resize:none; outline:none; max-height:140px; line-height:1.42; transition:border-color .15s; }
+.ac-input:focus { border-color:#a78bfa; box-shadow:0 0 0 3px rgba(167,139,250,0.12); }
+.ac-send { background:var(--ac-mine-grad); border:none; color:#fff; width:48px; height:48px; border-radius:50%; font-size:20px; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-weight:700; touch-action:manipulation; box-shadow:0 6px 18px rgba(124,58,237,0.35); transition:transform .12s; }
+.ac-send:active { transform:scale(0.92); }
+.ac-send:disabled { opacity:0.4; cursor:not-allowed; }
+.ac-bubble-anim { animation: ac-pop .25s cubic-bezier(.34,1.56,.64,1); }
+@keyframes ac-pop { from { opacity:0; transform:translateY(8px) scale(0.96); } to { opacity:1; transform:translateY(0) scale(1); } }
+.ac-pending { opacity:0.55; }
+.ac-pending::after { content:" ⏳"; font-size:11px; }
+</style>
+<div class="topbar" style="display:flex;align-items:center;gap:8px;padding:10px 10px;background:linear-gradient(135deg,#a78bfa,#7c3aed);position:sticky;top:0;z-index:10;box-shadow:0 4px 14px rgba(124,58,237,0.25)">
+  <a href="/nachrichten" style="padding:8px;color:#fff;display:flex;align-items:center;text-decoration:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="24" height="24"><polyline points="15 18 9 12 15 6"/></svg></a>
+  <div style="width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,0.18);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">🌍</div>
+  <div style="flex:1;min-width:0">
+    <div style="font-weight:800;font-size:17px;color:#fff;letter-spacing:-0.2px">App Community</div>
+    <div id="ac-status" style="font-size:12px;color:rgba(255,255,255,0.85);font-weight:600">${memberCount} Mitglieder · <span style="color:#86efac">● Live</span></div>
   </div>
   <div style="width:38px"></div>
 </div>
-<div id="app-chat-msgs" style="padding:8px 0 180px;display:flex;flex-direction:column;min-height:60vh">
-  ${msgsHtml}
-</div>
-<div style="position:fixed;bottom:calc(70px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:var(--bg);border-top:1px solid var(--border2);padding:10px 12px;display:flex;align-items:flex-end;gap:8px;z-index:99;box-shadow:0 -4px 14px rgba(0,0,0,0.10)">
-  <textarea id="app-chat-input" placeholder="Nachricht an alle App-User…" rows="1" maxlength="2000" style="flex:1;background:var(--bg3);border:1px solid var(--border2);color:var(--text);border-radius:18px;padding:10px 14px;font-size:15px;font-family:inherit;resize:none;outline:none;max-height:120px;line-height:1.4"></textarea>
-  <button id="app-chat-send-btn" onclick="sendAppChat()" style="background:linear-gradient(135deg,#a78bfa,#7c3aed);border:none;color:#fff;width:44px;height:44px;border-radius:50%;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:700;touch-action:manipulation">➤</button>
+<div id="ac-msgs" class="ac-wrap"></div>
+<div class="ac-input-wrap">
+  <textarea id="ac-input" class="ac-input" placeholder="Nachricht an alle App-User…" rows="1" maxlength="2000" autocapitalize="sentences"></textarea>
+  <button id="ac-send" class="ac-send" onclick="acSend()" aria-label="Senden">➤</button>
 </div>
 <script>
-const _appChatTA = document.getElementById('app-chat-input');
-if (_appChatTA) {
-    _appChatTA.addEventListener('input', () => {
-        _appChatTA.style.height = 'auto';
-        _appChatTA.style.height = Math.min(120, _appChatTA.scrollHeight) + 'px';
-    });
-    _appChatTA.addEventListener('keydown', e => {
-        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendAppChat(); }
-    });
+const ME_UID = '${myUid}';
+const IS_ADMIN = ${isAdminUid ? 'true' : 'false'};
+let _acMsgs = ${seedJson};
+let _acLastTs = ${lastTs};
+
+function acEsc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function acTime(ts){const d=new Date(ts);return d.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});}
+function acDayLabel(ts){const d=new Date(ts);const today=new Date();const yest=new Date();yest.setDate(yest.getDate()-1);if(d.toDateString()===today.toDateString())return 'Heute';if(d.toDateString()===yest.toDateString())return 'Gestern';return d.toLocaleDateString('de-DE',{day:'numeric',month:'long'});}
+function acAvatar(m){
+  const initial=acEsc((m.name||'?').slice(0,1).toUpperCase());
+  return '<div class="ac-avatar"><img src="/appbild/'+m.uid+'/profilepic" onerror="this.style.display=\\'none\\';this.parentElement.textContent=\\''+initial+'\\'" alt=""></div>';
 }
-async function sendAppChat() {
-    const ta = document.getElementById('app-chat-input');
-    const btn = document.getElementById('app-chat-send-btn');
-    if (!ta) return;
-    const text = ta.value.trim();
-    if (!text) { ta.focus(); return; }
-    btn.disabled = true; btn.style.opacity = '0.5';
-    try {
-        const r = await fetch('/api/app-chat/send', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});
-        let d = {};
-        try { d = await r.json(); } catch(_) {}
-        if (r.ok && d.ok) {
-            ta.value = '';
-            ta.style.height = 'auto';
-            location.reload();
-        } else {
-            alert((d && d.error) ? d.error : ('Senden fehlgeschlagen (HTTP ' + r.status + ')'));
-            btn.disabled = false; btn.style.opacity = '1';
-            ta.focus();
-        }
-    } catch(e) {
-        alert('Netzwerkfehler — bitte nochmal versuchen');
-        btn.disabled = false; btn.style.opacity = '1';
+function acRenderRow(m, prev){
+  const mine = String(m.uid) === ME_UID;
+  const grouped = prev && String(prev.uid) === String(m.uid) && (m.ts - prev.ts) < 5*60*1000;
+  const showName = !mine && !grouped;
+  const canDel = mine || IS_ADMIN;
+  const escText = acEsc(m.text||'').replace(/\\n/g,'<br>');
+  const imgHtml = m.image ? '<img class="media" src="'+m.image+'" alt="">' : '';
+  const delBtn = canDel ? '<button class="ac-del" onclick="acDelete('+m.ts+')">Löschen</button>' : '';
+  return '<div class="ac-row '+(mine?'mine':'')+' '+(grouped?'grouped':'')+'" data-ts="'+m.ts+'" data-uid="'+m.uid+'">'
+    +(grouped ? '<div class="ac-avatar hidden"></div>' : (mine ? '' : '<a href="/profil/'+m.uid+'" style="text-decoration:none">'+acAvatar(m)+'</a>'))
+    +'<div class="ac-msgcol">'
+      +(showName ? '<a href="/profil/'+m.uid+'" style="text-decoration:none"><div class="ac-name">'+acEsc(m.name||'User')+'</div></a>' : '')
+      +'<div class="ac-bubble '+(mine?'mine':'other')+' ac-bubble-anim">'+(escText||'')+(imgHtml||'')+'</div>'
+      +'<div class="ac-time">'+acTime(m.ts)+(canDel ? ' · '+delBtn.replace('<button class="ac-del"','<button class="ac-del" style="display:inline"') : '')+'</div>'
+    +'</div>'
+  +'</div>';
+}
+function acRenderAll(){
+  const c = document.getElementById('ac-msgs');
+  if (!c) return;
+  if (!_acMsgs.length) {
+    c.innerHTML = '<div class="ac-empty"><div class="ac-empty-icon">🌍</div><div class="ac-empty-title">App Community</div><div class="ac-empty-sub">Sei der Erste, der hier was schreibt! Diese Gruppe ist für alle App-User.</div></div>';
+    return;
+  }
+  let html = '';
+  let lastDay = '';
+  let prev = null;
+  for (const m of _acMsgs) {
+    const day = acDayLabel(m.ts);
+    if (day !== lastDay) { html += '<div class="ac-day">'+day+'</div>'; lastDay = day; prev = null; }
+    html += acRenderRow(m, prev);
+    prev = m;
+  }
+  c.innerHTML = html;
+}
+function acScrollBottom(smooth){
+  // Smooth nur bei Live-Update, sonst instant
+  window.scrollTo({top: document.body.scrollHeight, behavior: smooth ? 'smooth' : 'auto'});
+}
+acRenderAll();
+requestAnimationFrame(()=>acScrollBottom(false));
+
+const _ta = document.getElementById('ac-input');
+const _sb = document.getElementById('ac-send');
+_ta.addEventListener('input', () => {
+  _ta.style.height = 'auto';
+  _ta.style.height = Math.min(140, _ta.scrollHeight) + 'px';
+});
+_ta.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey && !window.matchMedia('(max-width:768px)').matches) {
+    e.preventDefault(); acSend();
+  }
+});
+
+async function acSend() {
+  const text = _ta.value.trim();
+  if (!text) { _ta.focus(); return; }
+  _sb.disabled = true;
+  // Optimistic Bubble
+  const tmpTs = Date.now();
+  const myMsg = { uid: ME_UID, name: '${(myUser?.spitzname || myUser?.name || 'Du').replace(/'/g, "\\'")}', text, ts: tmpTs, _pending: true };
+  _acMsgs.push(myMsg);
+  acRenderAll();
+  acScrollBottom(true);
+  // Markiere als pending visuell
+  const lastBubble = document.querySelector('.ac-row[data-ts="'+tmpTs+'"] .ac-bubble');
+  if (lastBubble) lastBubble.classList.add('ac-pending');
+  _ta.value = ''; _ta.style.height = 'auto';
+  try {
+    const r = await fetch('/api/app-chat/send', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});
+    const d = await r.json().catch(()=>({}));
+    if (r.ok && d.ok && d.message) {
+      // Replace optimistic mit echtem Message-Object
+      const idx = _acMsgs.findIndex(m => m.ts === tmpTs);
+      if (idx >= 0) _acMsgs[idx] = d.message;
+      _acLastTs = Math.max(_acLastTs, d.message.ts);
+      acRenderAll();
+      acScrollBottom(true);
+    } else {
+      // Failed: zeige Fehler, lasse Bubble grau
+      const idx = _acMsgs.findIndex(m => m.ts === tmpTs);
+      if (idx >= 0) { _acMsgs[idx]._failed = true; }
+      const b = document.querySelector('.ac-row[data-ts="'+tmpTs+'"] .ac-bubble');
+      if (b) { b.style.background = 'rgba(239,68,68,0.15)'; b.style.color = '#ef4444'; }
+      alert((d && d.error) ? d.error : ('Senden fehlgeschlagen (HTTP ' + r.status + ')'));
     }
+  } catch(e) {
+    const b = document.querySelector('.ac-row[data-ts="'+tmpTs+'"] .ac-bubble');
+    if (b) { b.style.background = 'rgba(239,68,68,0.15)'; b.style.color = '#ef4444'; }
+    alert('Netzwerkfehler — bitte nochmal versuchen');
+  } finally {
+    _sb.disabled = false;
+    _ta.focus();
+  }
 }
-// Presence-Ping wenn Chat geöffnet — markiert User als aktiv für Member-Count
+async function acDelete(ts) {
+  if (!confirm('Nachricht löschen?')) return;
+  try {
+    const r = await fetch('/api/app-chat/delete', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ts})});
+    const d = await r.json();
+    if (d.ok) {
+      _acMsgs = _acMsgs.filter(m => m.ts !== ts);
+      acRenderAll();
+    } else { alert(d.error || 'Fehler'); }
+  } catch(e) { alert('Netzwerkfehler'); }
+}
+// Lightweight Polling alle 3s — nur neue Nachrichten seit lastTs
+async function acPoll() {
+  try {
+    const r = await fetch('/api/app-chat/messages?since=' + _acLastTs);
+    const d = await r.json();
+    const fresh = (d.messages || []).filter(m => !m.deleted && m.ts > _acLastTs);
+    if (fresh.length) {
+      const wasNearBottom = (window.innerHeight + window.scrollY) >= document.body.scrollHeight - 80;
+      for (const m of fresh) {
+        if (!_acMsgs.find(x => x.ts === m.ts)) _acMsgs.push(m);
+        _acLastTs = Math.max(_acLastTs, m.ts);
+      }
+      _acMsgs.sort((a,b) => (a.ts||0) - (b.ts||0));
+      acRenderAll();
+      if (wasNearBottom) acScrollBottom(true);
+    }
+    if (typeof d.memberCount === 'number') {
+      const st = document.getElementById('ac-status');
+      if (st) st.innerHTML = d.memberCount + ' Mitglieder · <span style="color:#86efac">● Live</span>';
+    }
+  } catch(e) {}
+}
+setInterval(acPoll, 3000);
 fetch('/api/app-presence', {method:'POST'}).catch(()=>{});
-async function deleteAppChatMsg(ts) {
-    if (!confirm('Nachricht löschen?')) return;
-    try {
-        const r = await fetch('/api/app-chat/delete', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ts})});
-        const d = await r.json();
-        if (d.ok) location.reload();
-        else alert(d.error || 'Fehler');
-    } catch(e) { alert('Netzwerkfehler'); }
-}
-// Auto-scroll to bottom on load
-window.addEventListener('load', () => { window.scrollTo(0, document.body.scrollHeight); });
-// Poll für neue Nachrichten alle 8s
-let _appChatLastCount = ${msgs.length};
-setInterval(async () => {
-    try {
-        const r = await fetch('/api/app-chat/messages');
-        const d = await r.json();
-        const visible = (d.messages||[]).filter(m=>!m.deleted);
-        if (visible.length !== _appChatLastCount) location.reload();
-    } catch(e) {}
-}, 8000);
+// Bei Tab-Wechsel zurück: sofort syncen
+document.addEventListener('visibilitychange', () => { if (!document.hidden) acPoll(); });
 </script>`, 'messages');
     }
 
@@ -10085,18 +10182,9 @@ server.listen(PORT, async () => {
     console.log('🌐 CreatorX App läuft auf Port ' + PORT);
     // Pre-warm data cache
     refreshDataCache().then(() => console.log('✅ Data cache vorgewärmt'));
-    // Backfill: alle bekannten Sessions als App-Mitglieder im Bot markieren.
-    // Jeder User mit aktiver Session war/ist in der App → muss Member sein.
-    setTimeout(async () => {
-        try {
-            const uniqueUids = new Set();
-            for (const s of sessions.values()) { if (s && s.uid) uniqueUids.add(String(s.uid)); }
-            console.log('📡 Presence-Backfill für ' + uniqueUids.size + ' Session-User...');
-            for (const uid of uniqueUids) {
-                postBot('/app-presence', { uid }).catch(()=>{});
-            }
-        } catch(e) { console.log('Presence-Backfill Fehler:', e.message); }
-    }, 3000);
+    // (Backfill entfernt: hatte alle Sessions als 'gerade online' markiert via
+    // Bot-Middleware → Dashboard zeigte plötzlich alle User als 🟢 online.
+    // Bot-Side macht jetzt eigenen Backfill via u.appUser-Flag.)
     // Auto-migrate images from Northflank if none exist locally
     const NORTHFLANK_URL = 'https://site--creatorboost-app--899dydmn7d7v.code.run';
     try {
