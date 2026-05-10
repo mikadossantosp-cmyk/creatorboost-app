@@ -1140,7 +1140,7 @@ ${session ? `
     startTourSafely('active-state');
     return;
   }
-  if(/^\/feed/.test(location.pathname) && !continueMode){
+  if(/^\\/feed/.test(location.pathname) && !continueMode){
     _tourLog('feed page — fetching briefing-status…');
     fetch('/api/briefing-status', {cache:'no-store'}).then(function(r){return r.json();}).then(function(j){
       _tourLog('briefing-status: ' + JSON.stringify(j));
@@ -1581,7 +1581,7 @@ document.addEventListener('visibilitychange', function(){
     const a = ev.target.closest && ev.target.closest('a[href]');
     if (!a) return;
     const href = a.getAttribute('href') || '';
-    const isExternal = /^https?:\/\//i.test(href) && !href.includes(location.host);
+    const isExternal = /^https?:\\/\\//i.test(href) && !href.includes(location.host);
     if (!isExternal) return;
     waitingReturn = true;
   }, true);
@@ -2786,7 +2786,7 @@ self.addEventListener('notificationclick',e=>{
     if (session && !isPolling) { session.lastSeen = Date.now(); }
 
     function redirect(to) { res.writeHead(302,{'Location':to}); res.end(); }
-    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'100'}); res.end(layout(content,session,page,lang)); }
+    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'201'}); res.end(layout(content,session,page,lang)); }
     function json(data, status=200) { res.writeHead(status,{'Content-Type':'application/json'}); res.end(JSON.stringify(data)); }
 
     // ── LANDING ──
