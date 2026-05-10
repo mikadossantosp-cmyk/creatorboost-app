@@ -2804,7 +2804,7 @@ self.addEventListener('notificationclick',e=>{
     }
 
     function redirect(to) { res.writeHead(302,{'Location':to}); res.end(); }
-    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'209'}); res.end(layout(content,session,page,lang)); }
+    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'210'}); res.end(layout(content,session,page,lang)); }
     function json(data, status=200) { res.writeHead(status,{'Content-Type':'application/json'}); res.end(JSON.stringify(data)); }
 
     // ── LANDING ──
@@ -6600,14 +6600,22 @@ async function submitSuperLink(){
 .ac-empty-title { font-size:24px; font-weight:800; color:var(--text); margin-bottom:12px; letter-spacing:-0.4px; }
 .ac-empty-sub { font-size:15.5px; color:var(--muted); line-height:1.6; max-width:320px; margin:0 auto; }
 /* Reply-Quote in Bubble */
-.ac-quote { background:rgba(0,0,0,0.10); border-left:3px solid var(--ac-purple); border-radius:10px; padding:8px 12px; margin:0 0 8px; font-size:14px; line-height:1.4; cursor:pointer; max-width:100%; overflow:hidden; transition:background .15s; }
-.ac-bubble.mine .ac-quote { background:rgba(255,255,255,0.20); border-left-color:#fff; }
-.ac-bubble.other .ac-quote { background:rgba(167,139,250,0.10); border-left-color:var(--ac-purple); }
-.ac-quote:active { background:rgba(0,0,0,0.18); }
-.ac-quote-name { font-weight:800; font-size:13px; color:var(--ac-purple); display:block; margin-bottom:2px; letter-spacing:-0.05px; }
+.ac-quote { background:rgba(0,0,0,0.10); border-left:4px solid var(--ac-purple); border-radius:12px; padding:10px 14px; margin:0 0 10px; font-size:14px; line-height:1.4; cursor:pointer; max-width:100%; overflow:hidden; transition:background .15s, transform .12s; touch-action:manipulation; -webkit-tap-highlight-color:transparent; user-select:none; -webkit-user-select:none; position:relative; padding-right:32px; display:block; text-decoration:none; }
+.ac-bubble.mine .ac-quote { background:rgba(255,255,255,0.22); border-left-color:#fff; }
+.ac-bubble.other .ac-quote { background:rgba(167,139,250,0.12); border-left-color:var(--ac-purple); }
+.ac-quote:active { transform:scale(0.98); background:rgba(0,0,0,0.18); }
+.ac-bubble.mine .ac-quote:active { background:rgba(255,255,255,0.30); }
+.ac-quote-name { font-weight:800; font-size:13.5px; color:var(--ac-purple); display:block; margin-bottom:3px; letter-spacing:-0.05px; }
 .ac-bubble.mine .ac-quote-name { color:#fff; opacity:0.95; }
-.ac-quote-text { font-size:14px; color:var(--text); opacity:0.85; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.ac-quote-text { font-size:14px; color:var(--text); opacity:0.88; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
 .ac-bubble.mine .ac-quote-text { color:rgba(255,255,255,0.92); }
+.ac-quote-arrow { position:absolute; right:10px; top:50%; transform:translateY(-50%); font-size:13px; color:var(--ac-purple); opacity:0.7; font-weight:800; }
+.ac-bubble.mine .ac-quote-arrow { color:#fff; }
+.ac-quote.gone { cursor:default; opacity:0.7; padding-right:14px; }
+.ac-quote.gone .ac-quote-arrow { display:none; }
+.ac-quote.gone:active { transform:none; background:rgba(0,0,0,0.10); }
+@keyframes ac-flash { 0%,100% { box-shadow:0 0 0 3px rgba(167,139,250,0); } 50% { box-shadow:0 0 0 4px rgba(167,139,250,0.7), 0 12px 32px rgba(124,58,237,0.45); } }
+.ac-bubble.flash { animation: ac-flash 1.6s ease; }
 /* Swipe Reveal: Reply Icon (statt Trash) */
 .ac-swipe-icon { position:absolute; right:18px; top:50%; transform:translateY(-50%) scale(0.6); width:50px; height:50px; border-radius:50%; background:linear-gradient(135deg,#a78bfa,#7c3aed); color:#fff; font-size:24px; display:flex; align-items:center; justify-content:center; opacity:0; pointer-events:none; box-shadow:0 6px 20px rgba(124,58,237,0.5); z-index:1; transition:opacity 0.15s, transform 0.15s; }
 .ac-row.mine .ac-swipe-icon { right:auto; left:18px; }
@@ -6729,10 +6737,19 @@ function acRenderQuote(m){
   if (!m.replyTo) return '';
   const r = m.replyTo;
   const txt = (r.text || (r.hasImage ? '📷 Foto' : '')).slice(0, 140);
-  return '<div class="ac-quote" onclick="event.stopPropagation();acScrollToMsg('+r.ts+')">'
-    +'<span class="ac-quote-name">'+acEsc(r.name||'User')+'</span>'
+  // Existiert Original noch? (nicht-deleted vorhanden in unseren Msgs)
+  const exists = !!_acMsgs.find(x => x.ts === r.ts && !x.deleted);
+  if (!exists) {
+    return '<div class="ac-quote gone" title="Original nicht mehr verfügbar">'
+      +'<span class="ac-quote-name">'+acEsc(r.name||'User')+'</span>'
+      +'<span class="ac-quote-text" style="font-style:italic;opacity:0.7">Nachricht nicht mehr verfügbar</span>'
+      +'</div>';
+  }
+  return '<a href="#msg-'+r.ts+'" class="ac-quote" role="button" aria-label="Zur Original-Nachricht springen" onclick="event.preventDefault();event.stopPropagation();acScrollToMsg('+r.ts+')">'
+    +'<span class="ac-quote-name">↩ '+acEsc(r.name||'User')+'</span>'
     +'<span class="ac-quote-text">'+acEsc(txt).replace(/\\n/g,' ')+'</span>'
-    +'</div>';
+    +'<span class="ac-quote-arrow">→</span>'
+    +'</a>';
 }
 function acRenderRow(m, prev){
   const mine = String(m.uid) === ME_UID;
@@ -6812,13 +6829,24 @@ function acCancelReply(){
 }
 function acScrollToMsg(ts){
   const row = document.querySelector('.ac-row[data-ts="'+ts+'"]');
-  if (!row) return;
+  if (!row) {
+    // Fallback: gibt's das in unserer Liste? Wenn ja, alle DOM-Rows sind da → re-render
+    if (_acMsgs.find(m => m.ts === ts)) { acRenderAll(); setTimeout(() => acScrollToMsg(ts), 30); return; }
+    // Ansonsten: Toast-Hinweis
+    const t = document.createElement('div');
+    t.textContent = '⚠️ Original-Nachricht nicht mehr verfügbar';
+    t.style.cssText = 'position:fixed;bottom:160px;left:50%;transform:translateX(-50%);background:#000d;color:#fff;padding:10px 18px;border-radius:99px;font-size:13px;font-weight:700;z-index:200;box-shadow:0 6px 24px rgba(0,0,0,.4)';
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 2000);
+    return;
+  }
   row.scrollIntoView({ behavior:'smooth', block:'center' });
   const bubble = row.querySelector('.ac-bubble');
   if (bubble) {
-    bubble.classList.add('selected');
-    setTimeout(() => bubble.classList.remove('selected'), 1400);
+    bubble.classList.add('flash');
+    setTimeout(() => bubble.classList.remove('flash'), 1700);
   }
+  if (navigator.vibrate) navigator.vibrate(8);
 }
 async function acSend() {
   const text = _ta.value.trim();
