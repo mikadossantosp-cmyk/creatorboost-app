@@ -2997,7 +2997,7 @@ self.addEventListener('notificationclick',e=>{
     }
 
     function redirect(to) { res.writeHead(302,{'Location':to}); res.end(); }
-    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'225'}); res.end(layout(content,session,page,lang)); }
+    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'226'}); res.end(layout(content,session,page,lang)); }
     function json(data, status=200) { res.writeHead(status,{'Content-Type':'application/json'}); res.end(JSON.stringify(data)); }
 
     // ── LANDING ──
@@ -3601,11 +3601,25 @@ document.addEventListener('DOMContentLoaded', function(){
         // User per Email finden (Match in d.users[*].email).
         const botData = await fetchBot('/data');
         if (!botData) return json({ok:false, error:'Server nicht erreichbar'}, 503);
-        const found = Object.entries(botData.users || {}).find(([, u]) => String(u.email || '').toLowerCase() === email);
-        // SECURITY: Auch bei nicht-existierender Email same response (kein Email-Enumeration-Leak).
+        let found = Object.entries(botData.users || {}).find(([, u]) => String(u.email || '').toLowerCase() === email);
+        let isNewSignup = false;
+        // Wenn Email unbekannt → Auto-Signup (neuen Email-Only User erstellen)
         if (!found) {
-            console.log('[email-login] Unknown email request:', email);
-            return json({ok:true, message:'Wenn die Email registriert ist, kommt ein Login-Link.'});
+            console.log('[email-signup] new email — creating account:', email);
+            const created = await postBot('/create-email-user-api', { email });
+            if (!created || !created.ok || !created.uid) {
+                return json({ok:false, error: (created && created.error) || 'Account konnte nicht erstellt werden'}, 500);
+            }
+            // Frische Daten laden mit dem neuen User drin
+            _dataCache = null; _dataCacheTime = 0;
+            const fresh = await fetchBot('/data');
+            const u2 = fresh?.users?.[created.uid];
+            if (u2) found = [String(created.uid), u2];
+            isNewSignup = !created.existed;
+        }
+        if (!found) {
+            console.log('[email-login] post-create lookup failed for:', email);
+            return json({ok:false, error:'Account-Lookup fehlgeschlagen — bitte später erneut versuchen'}, 500);
         }
         const [uid, u] = found;
         const token = crypto.randomBytes(24).toString('hex');
@@ -3621,12 +3635,13 @@ document.addEventListener('DOMContentLoaded', function(){
 <div style="text-align:center;margin:32px 0"><a href="${loginUrl}" style="display:inline-block;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px;letter-spacing:0.3px">📲 In die App einloggen</a></div>
 <p style="font-size:12px;color:#605c54;line-height:1.5;text-align:center;margin:32px 0 0;border-top:1px solid #221f1a;padding-top:20px">Falls du das nicht angefragt hast, ignoriere die Email einfach. Niemand kann sich nur mit der Email-Anfrage einloggen.<br><br>Falls der Button nicht funktioniert, kopier diese URL in deinen Browser:<br><span style="color:#a8a39a;word-break:break-all;font-size:11px">${loginUrl}</span></p>
 </div></body></html>`;
-        const sent = await sendEmail(email, '🔐 Dein CreatorX Login-Link', html);
+        const subject = isNewSignup ? '🎉 Willkommen bei CreatorX — Login-Link' : '🔐 Dein CreatorX Login-Link';
+        const sent = await sendEmail(email, subject, html);
         if (!sent) {
             emailLoginTokens.delete(token);
             return json({ok:false, error:'Email-Versand fehlgeschlagen — bitte später nochmal'}, 502);
         }
-        return json({ok:true, message:'Login-Link wurde gesendet.'});
+        return json({ok:true, message: isNewSignup ? '🎉 Willkommen! Dein Login-Link wurde an deine Email gesendet.' : '✅ Login-Link wurde an deine Email gesendet.', isNewSignup});
     }
     // Admin-Vorschau für die Magic-Link-Email (zeigt das HTML der Email mit Beispiel-Daten).
     if (path === '/preview/email-login' && req.method === 'GET') {
