@@ -150,8 +150,9 @@ function htmlEsc(s) { return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'
 
 // ─── Admin-Fulltour Script (Multi-Page) ─────────────────────────────────────
 // Wird in /willkommen + layout() injiziert — Walkthrough von Landing bis Profil.
-const ADMIN_FULLTOUR_SCRIPT = `<script>
-(function(){
+// JS-Body OHNE <script>-Tags (wird über /static/admin-fulltour.js gecached
+// ausgeliefert statt inline pro Page → spart ~7.8KB Bytes pro Page-Load).
+const ADMIN_FULLTOUR_JS = `(function(){
   const FT_STEPS = [
     { url: '/willkommen?fulltour=1', sel: 'h1, .hero, .lp-h, .lp-hero', title: '🌐 Landing-Page', text: 'Was ein neuer Besucher zuerst sieht — Hero, Telegram-CTA, Email-Form. Hier startet die User-Journey.' },
     { url: '/willkommen?fulltour=1', sel: 'a[href*="t.me/"]', title: '✈️ Telegram-CTA', text: 'Direkter Beitritt der Gruppe. Telegram öffnet → User chattet mit Bot → /start.' },
@@ -212,8 +213,13 @@ const ADMIN_FULLTOUR_SCRIPT = `<script>
   window.ftStart=function(){ftSet(0);if(location.pathname!=='/willkommen')location.href='/willkommen?fulltour=1';else ftRender(0);};
   function ftStartIfActive(){const idx=ftIdx();if(idx<0)return;if(idx>=FT_STEPS.length){ftClear();return;}setTimeout(function(){ftRender(idx);},280);}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',ftStartIfActive);else ftStartIfActive();
-})();
-</script>`;
+})();`;
+// Tag-Wrapper für Inline-Use in /willkommen (statisches HTML, kann nicht via <script src> geladen werden ohne Edit)
+const ADMIN_FULLTOUR_SCRIPT = '<script>' + ADMIN_FULLTOUR_JS + '</script>';
+// Externe Reference (für layout()): cached, parallel-loadable.
+const ADMIN_FULLTOUR_SCRIPT_TAG = '<script src="/static/admin-fulltour.js?v=217" defer></script>';
+// In-Memory Cache für landing.html (mit Injektion). Wird beim ersten Request gefüllt.
+let _cachedLandingHtml = null;
 
 // Landing-Tracking + Admin-Fulltour-Hook (für /willkommen via injection)
 const LANDING_TRACK_SCRIPT = `<script>
@@ -225,7 +231,7 @@ const LANDING_TRACK_SCRIPT = `<script>
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind);else bind();
 })();
-</script>` + ADMIN_FULLTOUR_SCRIPT;
+</script>` + ADMIN_FULLTOUR_SCRIPT_TAG;
 
 function cleanRole(r) {
   let s = String(r==null?'🆕 New':r);
@@ -2169,7 +2175,7 @@ function confirmCrop(){
   }
 })();
 </script>
-${ADMIN_FULLTOUR_SCRIPT}
+${ADMIN_FULLTOUR_SCRIPT_TAG}
 </body></html>`;
 }
 
@@ -2767,6 +2773,12 @@ async function handleRequest(req, res) {
     const query = pu.query;
 
     // ── SERVICE WORKER ──
+    // Admin-Fulltour Script — extern + cached (spart pro Page-Load 7.8KB)
+    if (path === '/static/admin-fulltour.js') {
+        res.writeHead(200, {'Content-Type':'application/javascript','Cache-Control':'public, max-age=86400, immutable'});
+        return res.end(ADMIN_FULLTOUR_JS);
+    }
+
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
@@ -2904,7 +2916,7 @@ self.addEventListener('notificationclick',e=>{
     }
 
     function redirect(to) { res.writeHead(302,{'Location':to}); res.end(); }
-    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'216'}); res.end(layout(content,session,page,lang)); }
+    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'217'}); res.end(layout(content,session,page,lang)); }
     function json(data, status=200) { res.writeHead(status,{'Content-Type':'application/json'}); res.end(JSON.stringify(data)); }
 
     // ── LANDING ──
@@ -4407,12 +4419,13 @@ function submitPw(ev){
             postBot('/track-funnel', { event: 'landing-view', meta: { ref, ua, page: 'willkommen', utmSource, utmMedium, utmContent, fbclid: fbclid ? 'yes' : '' } }).catch(()=>{});
         } catch(e) {}
         try {
-            let html = fs.readFileSync(__dirname + '/landing.html', 'utf8');
-            // Inject Tracking + Fulltour-Hook (vor </body>)
-            const inj = LANDING_TRACK_SCRIPT;
-            html = html.replace('</body>', inj + '</body>');
+            // Cache: landing.html wird einmal geladen + Inject einmalig kombiniert.
+            if (!_cachedLandingHtml) {
+                const raw = fs.readFileSync(__dirname + '/landing.html', 'utf8');
+                _cachedLandingHtml = raw.replace('</body>', LANDING_TRACK_SCRIPT + '</body>');
+            }
             res.writeHead(200, {'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','Pragma':'no-cache','Expires':'0'});
-            return res.end(html);
+            return res.end(_cachedLandingHtml);
         } catch(e) {
             res.writeHead(500); return res.end('Datei nicht gefunden');
         }
