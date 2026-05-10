@@ -2804,7 +2804,7 @@ self.addEventListener('notificationclick',e=>{
     }
 
     function redirect(to) { res.writeHead(302,{'Location':to}); res.end(); }
-    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'208'}); res.end(layout(content,session,page,lang)); }
+    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'209'}); res.end(layout(content,session,page,lang)); }
     function json(data, status=200) { res.writeHead(status,{'Content-Type':'application/json'}); res.end(JSON.stringify(data)); }
 
     // ── LANDING ──
@@ -6569,39 +6569,48 @@ async function submitSuperLink(){
         const seedJson = JSON.stringify(allMsgs).replace(/</g,'\\u003c');
         return html(`
 <style>
-:root { --ac-mine-grad: linear-gradient(135deg,#a78bfa 0%,#8b5cf6 50%,#7c3aed 100%); }
-.ac-wrap { padding:16px 0 200px; min-height:60vh; display:flex; flex-direction:column; gap:0; }
-.ac-day { align-self:center; background:var(--bg3); color:var(--muted); font-size:12px; font-weight:700; padding:6px 14px; border-radius:99px; margin:24px 0 14px; letter-spacing:0.4px; box-shadow:0 2px 8px rgba(0,0,0,0.08); border:1px solid var(--border2); }
-.ac-row { display:flex; gap:10px; padding:0 14px; align-items:flex-end; user-select:none; -webkit-user-select:none; touch-action:pan-y; position:relative; }
+:root { --ac-mine-grad: linear-gradient(135deg,#a78bfa 0%,#8b5cf6 50%,#7c3aed 100%); --ac-purple:#a78bfa; }
+.ac-wrap { padding:18px 0 220px; min-height:60vh; display:flex; flex-direction:column; gap:0; }
+.ac-day { align-self:center; background:var(--bg3); color:var(--muted); font-size:13.5px; font-weight:700; padding:7px 18px; border-radius:99px; margin:28px 0 16px; letter-spacing:0.4px; box-shadow:0 2px 10px rgba(0,0,0,0.10); border:1px solid var(--border2); }
+.ac-row { display:flex; gap:11px; padding:0 14px; align-items:flex-end; user-select:none; -webkit-user-select:none; touch-action:pan-y; position:relative; }
 .ac-row.mine { flex-direction:row-reverse; }
 .ac-row.grouped { padding-top:2px; }
-.ac-row + .ac-row:not(.grouped) { margin-top:18px; }
-.ac-row-inner { display:flex; gap:10px; align-items:flex-end; flex:1; transition:transform 0.22s cubic-bezier(.34,1.56,.64,1); will-change:transform; min-width:0; }
+.ac-row + .ac-row:not(.grouped) { margin-top:20px; }
+.ac-row-inner { display:flex; gap:11px; align-items:flex-end; flex:1; transition:transform 0.22s cubic-bezier(.34,1.56,.64,1); will-change:transform; min-width:0; }
 .ac-row.mine .ac-row-inner { flex-direction:row-reverse; }
 .ac-row.swiping .ac-row-inner { transition:none; }
-.ac-avatar { width:38px; height:38px; border-radius:50%; flex-shrink:0; overflow:hidden; background:linear-gradient(135deg,#a78bfa,#7c3aed); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:800; font-size:15px; box-shadow:0 2px 10px rgba(15,23,42,0.12); position:relative; }
+.ac-avatar { width:44px; height:44px; border-radius:50%; flex-shrink:0; overflow:hidden; background:linear-gradient(135deg,#a78bfa,#7c3aed); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:800; font-size:17px; box-shadow:0 3px 12px rgba(15,23,42,0.14); position:relative; }
 .ac-avatar img { width:100%; height:100%; object-fit:cover; }
 .ac-avatar.hidden { visibility:hidden; }
-.ac-msgcol { display:flex; flex-direction:column; max-width:78%; min-width:0; }
+.ac-msgcol { display:flex; flex-direction:column; max-width:80%; min-width:0; }
 .ac-row.mine .ac-msgcol { align-items:flex-end; }
-.ac-name { font-size:13px; font-weight:800; color:#a78bfa; margin:0 6px 5px; letter-spacing:-0.1px; }
+.ac-name { font-size:14.5px; font-weight:800; color:var(--ac-purple); margin:0 8px 6px; letter-spacing:-0.1px; }
 .ac-row.mine .ac-name { display:none; }
-.ac-bubble { padding:12px 16px; border-radius:22px; font-size:16px; line-height:1.45; word-wrap:break-word; overflow-wrap:break-word; box-shadow:0 1px 3px rgba(0,0,0,0.06), 0 4px 12px rgba(0,0,0,0.04); position:relative; max-width:100%; transition:transform 0.15s, box-shadow 0.15s; }
+.ac-bubble { padding:14px 18px; border-radius:24px; font-size:17px; line-height:1.45; word-wrap:break-word; overflow-wrap:break-word; box-shadow:0 2px 4px rgba(0,0,0,0.06), 0 6px 16px rgba(0,0,0,0.05); position:relative; max-width:100%; transition:transform 0.18s cubic-bezier(.34,1.56,.64,1), box-shadow 0.18s; -webkit-user-select:text; user-select:text; }
 .ac-bubble.other { background:var(--bg3); color:var(--text); border-bottom-left-radius:6px; border:1px solid var(--border2); }
-.ac-row.grouped .ac-bubble.other { border-bottom-left-radius:22px; border-top-left-radius:6px; }
-.ac-bubble.mine { background:var(--ac-mine-grad); color:#fff; border-bottom-right-radius:6px; box-shadow:0 4px 16px rgba(124,58,237,0.32); }
-.ac-row.grouped .ac-bubble.mine { border-bottom-right-radius:22px; border-top-right-radius:6px; }
-.ac-bubble img.media { max-width:260px; max-height:300px; border-radius:14px; display:block; margin-top:6px; }
-.ac-bubble.selected { box-shadow:0 0 0 3px rgba(167,139,250,0.55), 0 8px 24px rgba(124,58,237,0.4); transform:scale(1.02); z-index:101; }
-.ac-time { font-size:11.5px; color:var(--muted); margin:4px 8px 0; font-weight:600; letter-spacing:0.1px; }
+.ac-row.grouped .ac-bubble.other { border-bottom-left-radius:24px; border-top-left-radius:6px; }
+.ac-bubble.mine { background:var(--ac-mine-grad); color:#fff; border-bottom-right-radius:6px; box-shadow:0 4px 18px rgba(124,58,237,0.36); }
+.ac-row.grouped .ac-bubble.mine { border-bottom-right-radius:24px; border-top-right-radius:6px; }
+.ac-bubble img.media { max-width:280px; max-height:340px; border-radius:16px; display:block; margin-top:8px; }
+.ac-bubble.selected { box-shadow:0 0 0 3px rgba(167,139,250,0.6), 0 12px 32px rgba(124,58,237,0.45); transform:scale(1.03); z-index:101; }
+.ac-time { font-size:12.5px; color:var(--muted); margin:6px 10px 0; font-weight:600; letter-spacing:0.1px; }
 .ac-row.mine .ac-time { color:var(--muted); }
-.ac-empty { padding:90px 28px; text-align:center; }
-.ac-empty-icon { font-size:72px; margin-bottom:20px; opacity:0.55; }
-.ac-empty-title { font-size:22px; font-weight:800; color:var(--text); margin-bottom:10px; letter-spacing:-0.3px; }
-.ac-empty-sub { font-size:14.5px; color:var(--muted); line-height:1.55; max-width:300px; margin:0 auto; }
-/* Swipe-Trash Reveal */
-.ac-trash { position:absolute; right:18px; top:50%; transform:translateY(-50%); width:46px; height:46px; border-radius:50%; background:linear-gradient(135deg,#ef4444,#dc2626); color:#fff; font-size:22px; display:flex; align-items:center; justify-content:center; opacity:0; pointer-events:none; box-shadow:0 6px 18px rgba(239,68,68,0.4); z-index:1; transition:opacity 0.15s; }
-.ac-row.mine .ac-trash { right:auto; left:18px; }
+.ac-empty { padding:100px 28px; text-align:center; }
+.ac-empty-icon { font-size:84px; margin-bottom:24px; opacity:0.55; }
+.ac-empty-title { font-size:24px; font-weight:800; color:var(--text); margin-bottom:12px; letter-spacing:-0.4px; }
+.ac-empty-sub { font-size:15.5px; color:var(--muted); line-height:1.6; max-width:320px; margin:0 auto; }
+/* Reply-Quote in Bubble */
+.ac-quote { background:rgba(0,0,0,0.10); border-left:3px solid var(--ac-purple); border-radius:10px; padding:8px 12px; margin:0 0 8px; font-size:14px; line-height:1.4; cursor:pointer; max-width:100%; overflow:hidden; transition:background .15s; }
+.ac-bubble.mine .ac-quote { background:rgba(255,255,255,0.20); border-left-color:#fff; }
+.ac-bubble.other .ac-quote { background:rgba(167,139,250,0.10); border-left-color:var(--ac-purple); }
+.ac-quote:active { background:rgba(0,0,0,0.18); }
+.ac-quote-name { font-weight:800; font-size:13px; color:var(--ac-purple); display:block; margin-bottom:2px; letter-spacing:-0.05px; }
+.ac-bubble.mine .ac-quote-name { color:#fff; opacity:0.95; }
+.ac-quote-text { font-size:14px; color:var(--text); opacity:0.85; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.ac-bubble.mine .ac-quote-text { color:rgba(255,255,255,0.92); }
+/* Swipe Reveal: Reply Icon (statt Trash) */
+.ac-swipe-icon { position:absolute; right:18px; top:50%; transform:translateY(-50%) scale(0.6); width:50px; height:50px; border-radius:50%; background:linear-gradient(135deg,#a78bfa,#7c3aed); color:#fff; font-size:24px; display:flex; align-items:center; justify-content:center; opacity:0; pointer-events:none; box-shadow:0 6px 20px rgba(124,58,237,0.5); z-index:1; transition:opacity 0.15s, transform 0.15s; }
+.ac-row.mine .ac-swipe-icon { right:auto; left:18px; }
 /* Backdrop + Reactions Picker (Long-press) */
 .ac-backdrop { position:fixed; inset:0; background:rgba(0,0,0,0.35); backdrop-filter:blur(3px); z-index:90; display:none; }
 .ac-backdrop.show { display:block; animation:ac-fade .18s ease; }
@@ -6609,66 +6618,86 @@ async function submitSuperLink(){
 .ac-react-picker { position:fixed; background:var(--bg2); border:1px solid var(--border); border-radius:24px; padding:10px 14px; box-shadow:0 14px 38px rgba(0,0,0,0.30); z-index:101; display:none; align-items:center; gap:6px; }
 .ac-react-picker.show { display:flex; animation:ac-pop-up .25s cubic-bezier(.34,1.56,.64,1); }
 @keyframes ac-pop-up { from { opacity:0; transform:translateY(10px) scale(.92); } to { opacity:1; transform:translateY(0) scale(1); } }
-.ac-react-picker button { background:none; border:none; font-size:28px; cursor:pointer; padding:6px; border-radius:14px; transition:transform .15s, background .12s; line-height:1; }
+.ac-react-picker button { background:none; border:none; font-size:32px; cursor:pointer; padding:7px; border-radius:14px; transition:transform .15s, background .12s; line-height:1; }
 .ac-react-picker button:active { transform:scale(1.4); background:rgba(167,139,250,0.18); }
+.ac-react-picker button.mine { background:rgba(167,139,250,0.20); }
 /* Action-Sheet */
-.ac-sheet { position:fixed; left:0; right:0; bottom:0; background:var(--bg2); border-radius:24px 24px 0 0; padding:14px 14px calc(20px + env(safe-area-inset-bottom)); z-index:101; transform:translateY(100%); transition:transform .25s cubic-bezier(.34,1.56,.64,1); box-shadow:0 -8px 32px rgba(0,0,0,0.32); max-width:480px; margin:0 auto; }
+.ac-sheet { position:fixed; left:0; right:0; bottom:0; background:var(--bg2); border-radius:26px 26px 0 0; padding:16px 14px calc(22px + env(safe-area-inset-bottom)); z-index:101; transform:translateY(100%); transition:transform .26s cubic-bezier(.34,1.56,.64,1); box-shadow:0 -10px 36px rgba(0,0,0,0.34); max-width:480px; margin:0 auto; }
 .ac-sheet.show { transform:translateY(0); }
-.ac-sheet-handle { width:40px; height:5px; background:#7777; border-radius:99px; margin:0 auto 16px; }
-.ac-sheet-row { display:flex; align-items:center; gap:14px; padding:14px 16px; border-radius:14px; cursor:pointer; font-size:16px; font-weight:600; color:var(--text); transition:background .12s; touch-action:manipulation; -webkit-tap-highlight-color:transparent; }
-.ac-sheet-row:active { background:rgba(167,139,250,0.10); }
+.ac-sheet-handle { width:42px; height:5px; background:#7777; border-radius:99px; margin:0 auto 18px; }
+.ac-sheet-row { display:flex; align-items:center; gap:16px; padding:16px 18px; border-radius:16px; cursor:pointer; font-size:17px; font-weight:600; color:var(--text); transition:background .12s; touch-action:manipulation; -webkit-tap-highlight-color:transparent; }
+.ac-sheet-row:active { background:rgba(167,139,250,0.12); }
 .ac-sheet-row.danger { color:#ef4444; }
 .ac-sheet-row.danger:active { background:rgba(239,68,68,0.10); }
-.ac-sheet-row .ac-icon { font-size:20px; width:24px; text-align:center; flex-shrink:0; }
-.ac-sheet-cancel { margin-top:6px; padding:14px; border-radius:14px; border:1px solid var(--border); background:transparent; color:var(--muted); font-size:14.5px; font-weight:700; cursor:pointer; width:100%; text-align:center; }
+.ac-sheet-row .ac-icon { font-size:22px; width:28px; text-align:center; flex-shrink:0; }
+.ac-sheet-cancel { margin-top:8px; padding:16px; border-radius:16px; border:1px solid var(--border); background:transparent; color:var(--muted); font-size:15.5px; font-weight:700; cursor:pointer; width:100%; text-align:center; }
 /* Reactions */
-.ac-reactions { display:flex; flex-wrap:wrap; gap:4px; margin:6px 4px 0; }
+.ac-reactions { display:flex; flex-wrap:wrap; gap:5px; margin:7px 6px 0; }
 .ac-row.mine .ac-reactions { justify-content:flex-end; }
-.ac-react { background:var(--bg3); border:1px solid var(--border2); border-radius:99px; padding:3px 9px; font-size:13px; cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition:transform .12s, background .12s; }
+.ac-react { background:var(--bg3); border:1.5px solid var(--border2); border-radius:99px; padding:4px 11px; font-size:14px; cursor:pointer; display:inline-flex; align-items:center; gap:5px; transition:transform .12s, background .12s; line-height:1.3; }
 .ac-react:active { transform:scale(.94); }
-.ac-react.mine { background:rgba(167,139,250,0.18); border-color:#a78bfa; color:#a78bfa; }
-.ac-react .ac-react-count { font-weight:700; font-size:12px; }
+.ac-react.mine { background:rgba(167,139,250,0.20); border-color:var(--ac-purple); color:var(--ac-purple); }
+.ac-react .ac-react-count { font-weight:700; font-size:13px; }
+/* Reply-Bar above Input */
+.ac-reply-bar { position:fixed; bottom:calc(140px + env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%); width:calc(100% - 16px); max-width:464px; background:var(--bg2); border:1px solid var(--border); border-left:4px solid var(--ac-purple); border-radius:14px; padding:10px 12px 10px 14px; display:none; align-items:center; gap:12px; z-index:98; box-shadow:0 -4px 18px rgba(15,23,42,0.10); animation:ac-slide-up .22s cubic-bezier(.34,1.56,.64,1); }
+.ac-reply-bar.show { display:flex; }
+@keyframes ac-slide-up { from { opacity:0; transform:translate(-50%,8px); } to { opacity:1; transform:translate(-50%,0); } }
+.ac-reply-bar .ic { font-size:20px; flex-shrink:0; }
+.ac-reply-bar .body { flex:1; min-width:0; }
+.ac-reply-bar .name { font-size:13.5px; font-weight:800; color:var(--ac-purple); display:block; line-height:1.2; margin-bottom:1px; }
+.ac-reply-bar .txt { font-size:14px; color:var(--text); opacity:0.85; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:calc(100vw - 110px); }
+.ac-reply-bar .x { background:var(--surface-tint); border:1px solid var(--border2); color:var(--text); width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; font-size:14px; }
 /* Input Bar */
-.ac-input-wrap { position:fixed; bottom:calc(68px + env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%); width:100%; max-width:480px; background:var(--bg); border-top:1px solid var(--border2); padding:10px 12px; display:flex; align-items:flex-end; gap:9px; z-index:99; box-shadow:0 -6px 22px rgba(0,0,0,0.14); }
-.ac-input { flex:1; background:var(--bg3); border:1.5px solid var(--border2); color:var(--text); border-radius:24px; padding:13px 18px; font-size:16px; font-family:inherit; resize:none; outline:none; max-height:140px; line-height:1.42; transition:border-color .15s, box-shadow .15s; }
-.ac-input:focus { border-color:#a78bfa; box-shadow:0 0 0 4px rgba(167,139,250,0.14); }
-.ac-send { background:var(--ac-mine-grad); border:none; color:#fff; width:50px; height:50px; border-radius:50%; font-size:22px; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-weight:700; touch-action:manipulation; box-shadow:0 6px 20px rgba(124,58,237,0.40); transition:transform .12s, box-shadow .12s; }
+.ac-input-wrap { position:fixed; bottom:calc(68px + env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%); width:100%; max-width:480px; background:var(--bg); border-top:1px solid var(--border2); padding:11px 12px; display:flex; align-items:flex-end; gap:10px; z-index:99; box-shadow:0 -6px 22px rgba(0,0,0,0.14); }
+.ac-input { flex:1; background:var(--bg3); border:1.5px solid var(--border2); color:var(--text); border-radius:26px; padding:14px 20px; font-size:17px; font-family:inherit; resize:none; outline:none; max-height:150px; line-height:1.45; transition:border-color .15s, box-shadow .15s; }
+.ac-input:focus { border-color:var(--ac-purple); box-shadow:0 0 0 4px rgba(167,139,250,0.14); }
+.ac-send { background:var(--ac-mine-grad); border:none; color:#fff; width:54px; height:54px; border-radius:50%; font-size:22px; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-weight:700; touch-action:manipulation; box-shadow:0 6px 22px rgba(124,58,237,0.42); transition:transform .12s, box-shadow .12s; }
 .ac-send:active { transform:scale(0.90); box-shadow:0 3px 10px rgba(124,58,237,0.30); }
 .ac-send:disabled { opacity:0.4; cursor:not-allowed; }
-.ac-send svg { width:22px; height:22px; }
+.ac-send svg { width:24px; height:24px; }
 .ac-bubble-anim { animation: ac-pop .25s cubic-bezier(.34,1.56,.64,1); }
 @keyframes ac-pop { from { opacity:0; transform:translateY(8px) scale(0.94); } to { opacity:1; transform:translateY(0) scale(1); } }
 .ac-pending { opacity:0.65; }
 .ac-pending::after { content:" ⏳"; font-size:12px; }
 .ac-failed { background:rgba(239,68,68,0.18) !important; color:#ef4444 !important; box-shadow:0 0 0 1px rgba(239,68,68,0.3) !important; }
 </style>
-<div class="topbar" style="display:flex;align-items:center;gap:8px;padding:10px 10px;background:linear-gradient(135deg,#a78bfa,#7c3aed);position:sticky;top:0;z-index:10;box-shadow:0 4px 14px rgba(124,58,237,0.25)">
-  <a href="/nachrichten" style="padding:8px;color:#fff;display:flex;align-items:center;text-decoration:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="24" height="24"><polyline points="15 18 9 12 15 6"/></svg></a>
-  <div style="width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,0.18);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">🌍</div>
+<div class="topbar" style="display:flex;align-items:center;gap:10px;padding:12px 12px;background:linear-gradient(135deg,#a78bfa,#7c3aed);position:sticky;top:0;z-index:10;box-shadow:0 4px 18px rgba(124,58,237,0.28)">
+  <a href="/nachrichten" style="padding:8px;color:#fff;display:flex;align-items:center;text-decoration:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="26" height="26"><polyline points="15 18 9 12 15 6"/></svg></a>
+  <div style="width:46px;height:46px;border-radius:50%;background:rgba(255,255,255,0.20);display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;box-shadow:inset 0 1px 0 rgba(255,255,255,0.3)">🌍</div>
   <div style="flex:1;min-width:0">
-    <div style="font-weight:800;font-size:17px;color:#fff;letter-spacing:-0.2px">App Community</div>
-    <div id="ac-status" style="font-size:12px;color:rgba(255,255,255,0.85);font-weight:600">${memberCount} Mitglieder · <span style="color:#86efac">● Live</span></div>
+    <div style="font-weight:800;font-size:18.5px;color:#fff;letter-spacing:-0.3px">App Community</div>
+    <div id="ac-status" style="font-size:13px;color:rgba(255,255,255,0.92);font-weight:600;margin-top:1px">${memberCount} Mitglieder · <span style="color:#86efac">● Live</span></div>
   </div>
   <div style="width:38px"></div>
 </div>
 <div id="ac-msgs" class="ac-wrap"></div>
 <!-- Long-press React-Picker (positioniert per JS) -->
 <div id="ac-react-picker" class="ac-react-picker">
-  <button onclick="acPickReaction('👍')">👍</button>
-  <button onclick="acPickReaction('❤️')">❤️</button>
-  <button onclick="acPickReaction('😂')">😂</button>
-  <button onclick="acPickReaction('🔥')">🔥</button>
-  <button onclick="acPickReaction('💯')">💯</button>
-  <button onclick="acPickReaction('💎')">💎</button>
+  <button data-emoji="👍" onclick="acPickReaction('👍')">👍</button>
+  <button data-emoji="❤️" onclick="acPickReaction('❤️')">❤️</button>
+  <button data-emoji="😂" onclick="acPickReaction('😂')">😂</button>
+  <button data-emoji="🔥" onclick="acPickReaction('🔥')">🔥</button>
+  <button data-emoji="💯" onclick="acPickReaction('💯')">💯</button>
+  <button data-emoji="💎" onclick="acPickReaction('💎')">💎</button>
 </div>
 <!-- Action Sheet (slide-up) -->
 <div id="ac-backdrop" class="ac-backdrop" onclick="acHideMenu()"></div>
 <div id="ac-sheet" class="ac-sheet">
   <div class="ac-sheet-handle"></div>
+  <div class="ac-sheet-row" onclick="acDoReply()"><span class="ac-icon">↩️</span><span>Antworten</span></div>
   <div class="ac-sheet-row" onclick="acDoCopy()"><span class="ac-icon">📋</span><span>Text kopieren</span></div>
   <div class="ac-sheet-row" id="ac-sheet-react" onclick="acOpenReactPicker()"><span class="ac-icon">😀</span><span>Reagieren</span></div>
   <div class="ac-sheet-row danger" id="ac-sheet-del" onclick="acDoDelete()"><span class="ac-icon">🗑️</span><span>Nachricht löschen</span></div>
   <button class="ac-sheet-cancel" onclick="acHideMenu()">Abbrechen</button>
+</div>
+<!-- Reply-Bar (above input) -->
+<div id="ac-reply-bar" class="ac-reply-bar">
+  <div class="ic">↩️</div>
+  <div class="body">
+    <span class="name" id="ac-reply-name"></span>
+    <span class="txt" id="ac-reply-text"></span>
+  </div>
+  <button class="x" onclick="acCancelReply()" aria-label="Reply abbrechen">✕</button>
 </div>
 <div class="ac-input-wrap">
   <textarea id="ac-input" class="ac-input" placeholder="Nachricht an alle App-User…" rows="1" maxlength="2000" autocapitalize="sentences"></textarea>
@@ -6693,12 +6722,21 @@ function acRenderReactions(m){
   if (!entries.length) return '';
   return '<div class="ac-reactions">'+entries.map(([emoji, uids]) => {
     const mine = uids.includes(ME_UID);
-    return '<button class="ac-react'+(mine?' mine':'')+'" onclick="acToggleReact('+m.ts+',\\''+emoji+'\\')" data-emoji="'+emoji+'">'+emoji+' <span class="ac-react-count">'+uids.length+'</span></button>';
+    return '<button class="ac-react'+(mine?' mine':'')+'" onclick="event.stopPropagation();acToggleReact('+m.ts+',\\''+emoji+'\\')" data-emoji="'+emoji+'">'+emoji+' <span class="ac-react-count">'+uids.length+'</span></button>';
   }).join('')+'</div>';
+}
+function acRenderQuote(m){
+  if (!m.replyTo) return '';
+  const r = m.replyTo;
+  const txt = (r.text || (r.hasImage ? '📷 Foto' : '')).slice(0, 140);
+  return '<div class="ac-quote" onclick="event.stopPropagation();acScrollToMsg('+r.ts+')">'
+    +'<span class="ac-quote-name">'+acEsc(r.name||'User')+'</span>'
+    +'<span class="ac-quote-text">'+acEsc(txt).replace(/\\n/g,' ')+'</span>'
+    +'</div>';
 }
 function acRenderRow(m, prev){
   const mine = String(m.uid) === ME_UID;
-  const grouped = prev && String(prev.uid) === String(m.uid) && (m.ts - prev.ts) < 5*60*1000;
+  const grouped = prev && String(prev.uid) === String(m.uid) && (m.ts - prev.ts) < 5*60*1000 && !m.replyTo;
   const showName = !mine && !grouped;
   const canDel = mine || IS_ADMIN;
   const escText = acEsc(m.text||'').replace(/\\n/g,'<br>');
@@ -6708,12 +6746,16 @@ function acRenderRow(m, prev){
     +(grouped ? '<div class="ac-avatar hidden"></div>' : (mine ? '' : '<a href="/profil/'+m.uid+'" style="text-decoration:none" onclick="event.stopPropagation()">'+acAvatar(m)+'</a>'))
     +'<div class="ac-msgcol">'
       +(showName ? '<a href="/profil/'+m.uid+'" style="text-decoration:none" onclick="event.stopPropagation()"><div class="ac-name">'+acEsc(m.name||'User')+'</div></a>' : '')
-      +'<div class="ac-bubble '+(mine?'mine':'other')+' ac-bubble-anim">'+(escText||'')+(imgHtml||'')+'</div>'
+      +'<div class="ac-bubble '+(mine?'mine':'other')+' ac-bubble-anim">'
+        +acRenderQuote(m)
+        +(escText?'<div>'+escText+'</div>':'')
+        +(imgHtml||'')
+      +'</div>'
       +acRenderReactions(m)
       +'<div class="ac-time">'+acTime(m.ts)+'</div>'
     +'</div>'
     +'</div>'
-    +'<div class="ac-trash" aria-hidden="true">🗑</div>'
+    +'<div class="ac-swipe-icon" aria-hidden="true">↩️</div>'
   +'</div>';
 }
 function acRenderAll(){
@@ -6753,41 +6795,68 @@ _ta.addEventListener('keydown', e => {
   }
 });
 
+// Reply-State
+let _acReply = null; // { ts, name, text, hasImage }
+function acSetReply(ts){
+  const m = _acMsgs.find(x => x.ts === ts);
+  if (!m) return;
+  _acReply = { ts: m.ts, name: m.name||'User', text: (m.text||'').slice(0,140), hasImage: !!m.image };
+  document.getElementById('ac-reply-name').textContent = _acReply.name;
+  document.getElementById('ac-reply-text').textContent = _acReply.text || (_acReply.hasImage ? '📷 Foto' : '');
+  document.getElementById('ac-reply-bar').classList.add('show');
+  _ta.focus();
+}
+function acCancelReply(){
+  _acReply = null;
+  document.getElementById('ac-reply-bar').classList.remove('show');
+}
+function acScrollToMsg(ts){
+  const row = document.querySelector('.ac-row[data-ts="'+ts+'"]');
+  if (!row) return;
+  row.scrollIntoView({ behavior:'smooth', block:'center' });
+  const bubble = row.querySelector('.ac-bubble');
+  if (bubble) {
+    bubble.classList.add('selected');
+    setTimeout(() => bubble.classList.remove('selected'), 1400);
+  }
+}
 async function acSend() {
   const text = _ta.value.trim();
   if (!text) { _ta.focus(); return; }
   _sb.disabled = true;
-  // Optimistic Bubble
   const tmpTs = Date.now();
   const myMsg = { uid: ME_UID, name: '${(myUser?.spitzname || myUser?.name || 'Du').replace(/'/g, "\\'")}', text, ts: tmpTs, _pending: true };
+  if (_acReply) {
+    myMsg.replyTo = { ts: _acReply.ts, name: _acReply.name, text: _acReply.text, hasImage: _acReply.hasImage };
+  }
+  const replyToTs = _acReply ? _acReply.ts : 0;
+  _acReply = null;
+  document.getElementById('ac-reply-bar').classList.remove('show');
   _acMsgs.push(myMsg);
   acRenderAll();
   acScrollBottom(true);
-  // Markiere als pending visuell
   const lastBubble = document.querySelector('.ac-row[data-ts="'+tmpTs+'"] .ac-bubble');
   if (lastBubble) lastBubble.classList.add('ac-pending');
   _ta.value = ''; _ta.style.height = 'auto';
   try {
-    const r = await fetch('/api/app-chat/send', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});
+    const r = await fetch('/api/app-chat/send', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text, replyToTs})});
     const d = await r.json().catch(()=>({}));
     if (r.ok && d.ok && d.message) {
-      // Replace optimistic mit echtem Message-Object
       const idx = _acMsgs.findIndex(m => m.ts === tmpTs);
       if (idx >= 0) _acMsgs[idx] = d.message;
       _acLastTs = Math.max(_acLastTs, d.message.ts);
       acRenderAll();
       acScrollBottom(true);
     } else {
-      // Failed: zeige Fehler, lasse Bubble grau
       const idx = _acMsgs.findIndex(m => m.ts === tmpTs);
       if (idx >= 0) { _acMsgs[idx]._failed = true; }
       const b = document.querySelector('.ac-row[data-ts="'+tmpTs+'"] .ac-bubble');
-      if (b) { b.style.background = 'rgba(239,68,68,0.15)'; b.style.color = '#ef4444'; }
+      if (b) b.classList.add('ac-failed');
       alert((d && d.error) ? d.error : ('Senden fehlgeschlagen (HTTP ' + r.status + ')'));
     }
   } catch(e) {
     const b = document.querySelector('.ac-row[data-ts="'+tmpTs+'"] .ac-bubble');
-    if (b) { b.style.background = 'rgba(239,68,68,0.15)'; b.style.color = '#ef4444'; }
+    if (b) b.classList.add('ac-failed');
     alert('Netzwerkfehler — bitte nochmal versuchen');
   } finally {
     _sb.disabled = false;
@@ -6844,25 +6913,29 @@ function acShowMenu(row){
   const canDel = row.dataset.canDel === '1';
   document.getElementById('ac-sheet-del').style.display = canDel ? '' : 'none';
   document.getElementById('ac-backdrop').classList.add('show');
-  // Bubble heben
   const bubble = row.querySelector('.ac-bubble');
   if (bubble) bubble.classList.add('selected');
-  // React-Picker: oberhalb / unterhalb der Bubble
+  // Mark current reaction in Picker
+  const ts = Number(row.dataset.ts);
+  const m = _acMsgs.find(x => x.ts === ts);
+  const myEmoji = m && m.reactions ? Object.keys(m.reactions).find(e => m.reactions[e].includes(ME_UID)) : null;
+  document.querySelectorAll('#ac-react-picker button').forEach(b => {
+    b.classList.toggle('mine', myEmoji && b.dataset.emoji === myEmoji);
+  });
   const picker = document.getElementById('ac-react-picker');
   picker.classList.add('show');
   if (bubble) {
     const r = bubble.getBoundingClientRect();
     const ph = picker.offsetHeight || 60;
-    const pw = picker.offsetWidth || 280;
+    const pw = picker.offsetWidth || 320;
     const left = Math.max(8, Math.min(window.innerWidth - pw - 8, r.left + r.width / 2 - pw / 2));
     picker.style.left = left + 'px';
-    const above = r.top - ph - 12;
-    const below = r.bottom + 12;
-    picker.style.top = (above >= 12 ? above : Math.min(below, window.innerHeight - ph - 12)) + 'px';
+    const above = r.top - ph - 14;
+    const below = r.bottom + 14;
+    picker.style.top = (above >= 12 ? above : Math.min(below, window.innerHeight - ph - 14)) + 'px';
   }
-  // Sheet
   setTimeout(() => document.getElementById('ac-sheet').classList.add('show'), 30);
-  if (navigator.vibrate) navigator.vibrate(15);
+  if (navigator.vibrate) navigator.vibrate(18);
 }
 function acHideMenu(){
   if (Date.now() - _acLastShow < 200) return;
@@ -6887,9 +6960,16 @@ function acDoCopy(){
 }
 function acDoDelete(){
   if (!_acActiveRow) return;
+  if (!confirm('Nachricht löschen?')) return;
   const ts = Number(_acActiveRow.dataset.ts);
   acHideMenu();
   if (ts) acDelete(ts);
+}
+function acDoReply(){
+  if (!_acActiveRow) return;
+  const ts = Number(_acActiveRow.dataset.ts);
+  acHideMenu();
+  if (ts) acSetReply(ts);
 }
 function acOpenReactPicker(){
   // React-Picker ist schon offen — Sheet runter, damit Picker frei sichtbar bleibt.
@@ -6901,20 +6981,20 @@ function acPickReaction(emoji){
   acHideMenu();
   if (ts) acToggleReact(ts, emoji);
 }
-// Pointer-State für Long-Press + Swipe-Delete
+// Pointer-State: Long-Press = Menü, Swipe = REPLY (nie löschen)
 const LONG_PRESS_MS = 420;
 const LP_ABORT_PX = 8;
 const SWIPE_START_PX = 14;
-const SWIPE_COMMIT_PX = 88;
+const SWIPE_COMMIT_PX = 70;
 const SWIPE_CAP_PX = 110;
 const SWIPE_VERT_ABORT_PX = 18;
 let _pRow = null, _pX0 = 0, _pY0 = 0, _pId = null, _pTimer = null, _pSwiping = false, _pCommitted = false;
 function _resetSwipe(){
   if (!_pRow) return;
   const inner = _pRow.querySelector('.ac-row-inner');
-  const tr = _pRow.querySelector('.ac-trash');
-  if (inner) { inner.style.transition='transform 0.22s'; inner.style.transform=''; }
-  if (tr) tr.style.opacity = '0';
+  const ic = _pRow.querySelector('.ac-swipe-icon');
+  if (inner) { inner.style.transition='transform 0.22s cubic-bezier(.34,1.56,.64,1)'; inner.style.transform=''; }
+  if (ic) { ic.style.opacity = '0'; ic.style.transform = 'translateY(-50%) scale(0.6)'; }
   _pRow.classList.remove('swiping');
   if (_pTimer) { clearTimeout(_pTimer); _pTimer = null; }
   _pRow = null; _pId = null; _pSwiping = false; _pCommitted = false;
@@ -6923,7 +7003,7 @@ document.addEventListener('pointerdown', e => {
   if (e.pointerType === 'mouse' && e.button !== 0) return;
   const r = e.target.closest && e.target.closest('.ac-row');
   if (!r) return;
-  if (e.target.closest('.ac-react') || e.target.closest('a')) return;
+  if (e.target.closest('.ac-react') || e.target.closest('a') || e.target.closest('.ac-quote')) return;
   _pRow = r; _pX0 = e.clientX; _pY0 = e.clientY; _pId = e.pointerId;
   _pSwiping = false; _pCommitted = false;
   const inner = r.querySelector('.ac-row-inner');
@@ -6940,18 +7020,21 @@ document.addEventListener('pointermove', e => {
   const dx = e.clientX - _pX0, dy = e.clientY - _pY0;
   if (!_pSwiping && (Math.abs(dx) > LP_ABORT_PX || Math.abs(dy) > LP_ABORT_PX) && _pTimer) { clearTimeout(_pTimer); _pTimer = null; }
   if (!_pSwiping && Math.abs(dy) > SWIPE_VERT_ABORT_PX && Math.abs(dy) > Math.abs(dx)) { _resetSwipe(); return; }
-  // Swipe richtung: bei eigenen Messages nach RECHTS swipen, bei anderen nach LINKS
+  // Swipe-Richtung: eigene Messages nach RECHTS, andere nach LINKS — beide für Reply
   const mine = _pRow.classList.contains('mine');
   const validDir = mine ? (dx > 0) : (dx < 0);
   if (validDir && Math.abs(dx) > SWIPE_START_PX && Math.abs(dx) > Math.abs(dy)) {
-    if (_pRow.dataset.canDel !== '1') { _resetSwipe(); return; }
     _pSwiping = true;
     _pRow.classList.add('swiping');
     const cap = mine ? Math.min(SWIPE_CAP_PX, dx) : Math.max(-SWIPE_CAP_PX, dx);
     const inner = _pRow.querySelector('.ac-row-inner');
     if (inner) inner.style.transform = 'translateX(' + cap + 'px)';
-    const tr = _pRow.querySelector('.ac-trash');
-    if (tr) tr.style.opacity = String(Math.min(1, Math.abs(cap) / 65));
+    const ic = _pRow.querySelector('.ac-swipe-icon');
+    if (ic) {
+      const progress = Math.min(1, Math.abs(cap) / SWIPE_COMMIT_PX);
+      ic.style.opacity = String(progress);
+      ic.style.transform = 'translateY(-50%) scale(' + (0.6 + 0.4 * progress) + ')';
+    }
   }
 }, { passive: true, capture: true });
 document.addEventListener('pointerup', e => {
@@ -6961,11 +7044,10 @@ document.addEventListener('pointerup', e => {
   const ts = Number(_pRow.dataset.ts);
   const mine = _pRow.classList.contains('mine');
   const committed = mine ? (dx >= SWIPE_COMMIT_PX) : (dx <= -SWIPE_COMMIT_PX);
-  if (committed && ts && _pRow.dataset.canDel === '1') {
+  if (committed && ts) {
     if (navigator.vibrate) navigator.vibrate(20);
-    const target = _pRow;
     _resetSwipe();
-    acDelete(ts);
+    acSetReply(ts); // SWIPE = REPLY
   } else { _resetSwipe(); }
 }, { passive: true, capture: true });
 document.addEventListener('pointercancel', _resetSwipe, { passive: true });
