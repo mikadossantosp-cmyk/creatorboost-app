@@ -2816,7 +2816,7 @@ self.addEventListener('notificationclick',e=>{
     if (path === '/import-images') {
         const key = query.key || '';
         if (key !== BRIDGE_SECRET) { res.writeHead(403); res.end('Forbidden'); return; }
-        const sourceUrl = query.from || 'https://site--creatorboost-app--899dydmn7d7v.code.run';
+        const sourceUrl = query.from || 'https://web-production-7981d.up.railway.app';
         try {
             const resp = await fetch(`${sourceUrl}/export-images?key=${BRIDGE_SECRET}`);
             if (!resp.ok) {
@@ -3531,7 +3531,7 @@ document.addEventListener('DOMContentLoaded', function(){
         const [uid, u] = found;
         const token = crypto.randomBytes(24).toString('hex');
         emailLoginTokens.set(token, { email, uid: String(uid), exp: Date.now() + EMAIL_TOKEN_TTL });
-        const baseUrl = (process.env.APP_URL || ('https://' + (req.headers.host || 'creatorx.app'))).replace(/\/$/, '');
+        const baseUrl = (process.env.APP_URL || ('https://' + (req.headers.host || 'web-production-7981d.up.railway.app'))).replace(/\/$/, '');
         const loginUrl = baseUrl + '/auth/email-login?token=' + encodeURIComponent(token);
         const userName = u.spitzname || u.name || 'CreatorX User';
         const html = `<!DOCTYPE html><html><body style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#000;color:#fff;padding:0">
@@ -3551,7 +3551,7 @@ document.addEventListener('DOMContentLoaded', function(){
     }
     // Admin-Vorschau für die Magic-Link-Email (zeigt das HTML der Email mit Beispiel-Daten).
     if (path === '/preview/email-login' && req.method === 'GET') {
-        const baseUrl = (process.env.APP_URL || ('https://' + (req.headers.host || 'creatorx.app'))).replace(/\/$/, '');
+        const baseUrl = (process.env.APP_URL || ('https://' + (req.headers.host || 'web-production-7981d.up.railway.app'))).replace(/\/$/, '');
         let exampleName = 'Max';
         if (session) {
             const _bd = await fetchBot('/data');
