@@ -1605,12 +1605,12 @@ ${session ? `
         + '<br>• Superlinks (1-2/Woche): du engagest ALLE anderen'
         + '<br><br>'
         + '<label style="display:flex;align-items:flex-start;gap:10px;background:rgba(212,175,55,0.10);border:1px solid rgba(212,175,55,0.30);border-radius:12px;padding:14px;cursor:pointer;font-size:13px;line-height:1.5">'
-        +   '<input type="checkbox" id="tour-rules-cb" style="margin-top:2px;flex-shrink:0;width:18px;height:18px;accent-color:#d4af37;cursor:pointer" onchange="document.getElementById(\'tour-finish-btn\').disabled=!this.checked;document.getElementById(\'tour-finish-btn\').style.opacity=this.checked?\'1\':\'0.4\'">'
+        +   '<input type="checkbox" id="tour-rules-cb" style="margin-top:2px;flex-shrink:0;width:18px;height:18px;accent-color:#d4af37;cursor:pointer" onchange="document.getElementById(\\'tour-finish-btn\\').disabled=!this.checked;document.getElementById(\\'tour-finish-btn\\').style.opacity=this.checked?\\'1\\':\\'0.4\\'">'
         +   '<span><b>Ich habe alle Regeln gelesen und akzeptiere sie.</b><br><span style="color:rgba(255,255,255,0.6);font-size:12px">Wenn ich verstoße, akzeptiere ich Verwarnungen, XP-Abzug oder Sperrung.</span></span>'
         + '</label>';
       document.querySelector('.tour-actions').innerHTML = ''
         + '<button class="tour-btn tour-btn-skip" onclick="window.cbTourRestart()" style="flex:1">↻ Tour nochmal</button>'
-        + '<button class="tour-btn tour-btn-next" id="tour-finish-btn" disabled style="opacity:0.4;flex:1.5" onclick="if(!document.getElementById(\'tour-rules-cb\').checked){alert(\'Bitte zuerst die Regeln akzeptieren\');return;}fetch(\'/api/accept-rules\',{method:\'POST\'}).catch(()=>{});window.cbTourFinish();">✓ Regeln akzeptieren &amp; Tour beenden</button>';
+        + '<button class="tour-btn tour-btn-next" id="tour-finish-btn" disabled style="opacity:0.4;flex:1.5" onclick="if(!document.getElementById(\\'tour-rules-cb\\').checked){alert(\\'Bitte zuerst die Regeln akzeptieren\\');return;}fetch(\\'/api/accept-rules\\',{method:\\'POST\\'}).catch(()=>{});window.cbTourFinish();">✓ Regeln akzeptieren &amp; Tour beenden</button>';
       var hint = document.getElementById('tour-kbd-hint');
       if(hint) hint.style.display = 'none';
       renderProgress();
@@ -3019,7 +3019,7 @@ self.addEventListener('notificationclick',e=>{
     }
 
     function redirect(to) { res.writeHead(302,{'Location':to}); res.end(); }
-    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'232'}); res.end(layout(content,session,page,lang)); }
+    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'233'}); res.end(layout(content,session,page,lang)); }
     function json(data, status=200) { res.writeHead(status,{'Content-Type':'application/json'}); res.end(JSON.stringify(data)); }
 
     // ── LANDING ──
