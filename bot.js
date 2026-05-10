@@ -1789,7 +1789,8 @@ function confirmCrop(){
     }catch(e){}
   }).catch(()=>{});
   // APK-Download Button: nur auf Android anzeigen wenn APK vorhanden
-  if(/Android/i.test(navigator.userAgent)){fetch('/download-app',{method:'HEAD'}).then(r=>{if(r.ok){const b=document.getElementById('apk-download-btn');if(b)b.style.display='block';}}).catch(()=>{});}
+  // APK-Download-Button deaktiviert (User-Wunsch)
+  if(false){fetch('/download-app',{method:'HEAD'}).then(r=>{if(r.ok){const b=document.getElementById('apk-download-btn');if(b)b.style.display='block';}}).catch(()=>{});}
 
   // ── APK-User: Update-Banner mit One-Tap-Install ──
   // TWA-Detection mit Persistierung (Referrer ist nur beim 1. Nav 'android-app://')
@@ -1900,8 +1901,9 @@ function confirmCrop(){
 </style>
 <script>
 (function(){
-  if (window.__cxV20) return;
+  // App-Install-Button komplett deaktiviert (User-Wunsch)
   window.__cxV20 = true;
+  return;
 
   // Remove any leftover old banner from earlier versions
   ['cxUpd', 'cxModal'].forEach(function(id){
@@ -1987,8 +1989,9 @@ function confirmCrop(){
 </style>
 <script>
 (function(){
-  if (window.__cxV20) return;
+  // App-Install-Button komplett deaktiviert (User-Wunsch)
   window.__cxV20 = true;
+  return;
 
   // Remove any leftover old banner from earlier versions
   ['cxUpd', 'cxModal'].forEach(function(id){
@@ -2462,8 +2465,9 @@ sr.addEventListener('touchend',e=>{const dx=sx-e.changedTouches[0].clientX;if(Ma
 </style>
 <script>
 (function(){
-  if (window.__cxV20) return;
+  // App-Install-Button komplett deaktiviert (User-Wunsch)
   window.__cxV20 = true;
+  return;
 
   // Remove any leftover old banner from earlier versions
   ['cxUpd', 'cxModal'].forEach(function(id){
@@ -2549,8 +2553,9 @@ sr.addEventListener('touchend',e=>{const dx=sx-e.changedTouches[0].clientX;if(Ma
 </style>
 <script>
 (function(){
-  if (window.__cxV20) return;
+  // App-Install-Button komplett deaktiviert (User-Wunsch)
   window.__cxV20 = true;
+  return;
 
   // Remove any leftover old banner from earlier versions
   ['cxUpd', 'cxModal'].forEach(function(id){
