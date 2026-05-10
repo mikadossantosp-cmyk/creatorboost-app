@@ -6035,7 +6035,38 @@ commentsBox+
             : '<div style="padding:8px 0 80px">'+heuteHtml+'</div>';
 
         return html(`
-${query.tour === '1' ? `<div id="cb-tour-server-banner" style="position:fixed;top:8px;left:8px;right:8px;z-index:99999;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;padding:12px 16px;border-radius:12px;font-family:Inter,-apple-system,sans-serif;font-size:13.5px;font-weight:600;text-align:center;box-shadow:0 12px 30px rgba(34,197,94,.45);max-width:520px;margin:0 auto;border:1px solid rgba(255,255,255,.2)">✅ Server-Trigger aktiv — Tour startet gleich…</div><script>setTimeout(function(){try{sessionStorage.setItem('cb_tour_active','1');sessionStorage.setItem('cb_tour_idx','0');}catch(e){}var b=document.getElementById('cb-tour-server-banner');if(b){b.style.transition='opacity .4s';b.style.opacity='0';setTimeout(function(){b.remove();},500);}},1500);</script>` : ''}
+${query.tour === '1' ? `<div id="cb-tour-server-banner" style="position:fixed;top:8px;left:8px;right:8px;z-index:99999;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;padding:12px 16px;border-radius:12px;font-family:Inter,-apple-system,sans-serif;font-size:13.5px;font-weight:600;text-align:center;box-shadow:0 12px 30px rgba(34,197,94,.45);max-width:520px;margin:0 auto;border:1px solid rgba(255,255,255,.2)">✅ Server-Trigger aktiv — Tour startet gleich…</div>
+<script>
+window.addEventListener('error', function(e){
+  var b = document.createElement('div');
+  b.style.cssText='position:fixed;bottom:10px;left:10px;right:10px;z-index:99999;background:#7c1d1d;color:#fff;padding:14px;border-radius:12px;font-family:Inter,sans-serif;font-size:12px;font-weight:600;box-shadow:0 12px 30px rgba(0,0,0,.6);max-width:520px;margin:0 auto;border:1px solid #ef4444';
+  b.innerHTML='⚠️ JS-ERROR: '+(e.message||e.error?.message||'unknown')+'<br><span style="font-weight:400;font-size:11px;color:#fca5a5">'+(e.filename||'')+':'+(e.lineno||'')+'</span>';
+  document.body.appendChild(b);
+});
+setTimeout(function(){
+  try{sessionStorage.setItem('cb_tour_active','1');sessionStorage.setItem('cb_tour_idx','0');}catch(e){}
+  var b=document.getElementById('cb-tour-server-banner');
+  if(b){b.style.transition='opacity .4s';b.style.opacity='0';setTimeout(function(){b.remove();},500);}
+  // DIAGNOSE: window.cbStartTour sollte existieren wenn Tour-Script geladen ist
+  setTimeout(function(){
+    if(typeof window.cbStartTour === 'function'){
+      // Tour-Script ist da — manuell starten
+      var diag = document.createElement('div');
+      diag.style.cssText='position:fixed;top:8px;left:8px;right:8px;z-index:99999;background:#1e40af;color:#fff;padding:10px;border-radius:10px;font-family:Inter,sans-serif;font-size:12px;font-weight:600;text-align:center;max-width:520px;margin:0 auto;box-shadow:0 8px 22px rgba(30,64,175,.5)';
+      diag.textContent='🔵 cbStartTour gefunden — starte jetzt';
+      document.body.appendChild(diag);
+      setTimeout(function(){diag.remove();},3000);
+      window.cbStartTour();
+    } else {
+      // Tour-Script-IIFE lief nie / crashed
+      var err = document.createElement('div');
+      err.style.cssText='position:fixed;top:8px;left:8px;right:8px;z-index:99999;background:#7c1d1d;color:#fff;padding:14px;border-radius:12px;font-family:Inter,sans-serif;font-size:13px;font-weight:700;text-align:center;max-width:520px;margin:0 auto;box-shadow:0 12px 30px rgba(0,0,0,.6);border:1px solid #ef4444';
+      err.innerHTML='❌ Tour-Script lädt nicht (cbStartTour undefined)<br><span style="font-weight:400;font-size:11px;color:#fca5a5">Cache-Problem oder JS-Error im Layout</span>';
+      document.body.appendChild(err);
+    }
+  }, 800);
+},1500);
+</script>` : ''}
 <div class="topbar">
   <div class="topbar-logo">CreatorX</div>
   <div class="topbar-actions">
