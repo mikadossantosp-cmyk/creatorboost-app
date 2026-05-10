@@ -822,8 +822,13 @@ textarea.form-input{resize:none;min-height:80px}
 `;
 
 function layout(content, session, page='feed', lang='de') {
+    // Aktuelle UID in window verfügbar machen — wird für Per-User-LocalStorage-Keys
+    // benötigt (Like-Cache, Like-Queue etc.) damit Sub- und Hauptaccount keine
+    // gemeinsame Sicht auf "geliked" haben.
+    const _meUid = session ? String(session.activeUid || session.uid || '') : '';
     return `<!DOCTYPE html><html lang="${lang}" data-theme="light">
 <head>
+<script>window.MY_UID=${JSON.stringify(_meUid)};</script>
 <script>try{var t=localStorage.getItem('cbTheme4');var dark=(t==='dark');document.documentElement.setAttribute('data-theme',dark?'dark':'light');setTimeout(function(){var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute('content',dark?'#0b0b0e':'#ffffff');var sb=document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');if(sb)sb.setAttribute('content',dark?'black-translucent':'default');},0);}catch(e){document.documentElement.setAttribute('data-theme','light');}</script>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -2817,7 +2822,7 @@ self.addEventListener('notificationclick',e=>{
     }
 
     function redirect(to) { res.writeHead(302,{'Location':to}); res.end(); }
-    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'213'}); res.end(layout(content,session,page,lang)); }
+    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'214'}); res.end(layout(content,session,page,lang)); }
     function json(data, status=200) { res.writeHead(status,{'Content-Type':'application/json'}); res.end(JSON.stringify(data)); }
 
     // ── LANDING ──
@@ -6264,32 +6269,44 @@ async function adminDelLink(linkId, btn){
     }catch(e){ if(btn){btn.disabled=false;btn.textContent='🗑️';} toast('❌ Netzwerkfehler'); }
 }
 
-// Lokaler Like-Cache + Retry-Queue. Like wird sofort lokal markiert (überlebt Reload),
-// dann gefeuert. Bei Netzwerk-Fehler → Queue + Background-Retry alle 5s. Server-Render
-// + lokaler Cache werden bei Page-Load OR-ed → Like bleibt überall sichtbar.
-function _likedSet() { try { return new Set(Object.keys(JSON.parse(localStorage.getItem('cb_my_likes')||'{}'))); } catch(e) { return new Set(); } }
+// Lokaler Like-Cache + Retry-Queue. Per-UID-Scoped damit Sub- und Hauptaccount
+// jeweils nur ihre eigene Sicht auf "geliked" haben (sonst zeigt Hauptkonto
+// fälschlich "geliked" wenn der Sub geliked hat — gleiche localStorage-Domain).
+function _likeUid(){ try { return String(window.MY_UID||''); } catch(e) { return ''; } }
+function _kLikes(){ return 'cb_my_likes_' + (_likeUid()||'anon'); }
+function _kQueue(){ return 'cb_like_queue_' + (_likeUid()||'anon'); }
+function _kSlQueue(){ return 'cb_sl_like_queue_' + (_likeUid()||'anon'); }
+// Cleanup: alte unscoped Keys löschen (waren vermischt zwischen Sub und Main —
+// kein verlässlicher Migration-Pfad. Server ist Source-of-Truth, hasLiked wird
+// beim nächsten Render korrekt eingefärbt.)
+(function _cleanupLegacyLikeKeys(){
+    try {
+        ['cb_my_likes','cb_like_queue','cb_sl_like_queue'].forEach(k => localStorage.removeItem(k));
+    } catch(e) {}
+})();
+function _likedSet() { try { return new Set(Object.keys(JSON.parse(localStorage.getItem(_kLikes())||'{}'))); } catch(e) { return new Set(); } }
 function _markLikedLocal(msgId) {
     try {
-        const v = JSON.parse(localStorage.getItem('cb_my_likes')||'{}');
+        const v = JSON.parse(localStorage.getItem(_kLikes())||'{}');
         v[String(msgId)] = Date.now();
-        localStorage.setItem('cb_my_likes', JSON.stringify(v));
+        localStorage.setItem(_kLikes(), JSON.stringify(v));
     } catch(e) {}
 }
 function _queueLike(msgId) {
     try {
-        const q = JSON.parse(localStorage.getItem('cb_like_queue')||'[]');
-        if (!q.includes(String(msgId))) { q.push(String(msgId)); localStorage.setItem('cb_like_queue', JSON.stringify(q)); }
+        const q = JSON.parse(localStorage.getItem(_kQueue())||'[]');
+        if (!q.includes(String(msgId))) { q.push(String(msgId)); localStorage.setItem(_kQueue(), JSON.stringify(q)); }
     } catch(e) {}
 }
 function _dequeueLike(msgId) {
     try {
-        const q = JSON.parse(localStorage.getItem('cb_like_queue')||'[]').filter(x => x !== String(msgId));
-        localStorage.setItem('cb_like_queue', JSON.stringify(q));
+        const q = JSON.parse(localStorage.getItem(_kQueue())||'[]').filter(x => x !== String(msgId));
+        localStorage.setItem(_kQueue(), JSON.stringify(q));
     } catch(e) {}
 }
 async function _flushLikeQueue() {
     let q = [];
-    try { q = JSON.parse(localStorage.getItem('cb_like_queue')||'[]'); } catch(e){}
+    try { q = JSON.parse(localStorage.getItem(_kQueue())||'[]'); } catch(e){}
     for (const msgId of q) {
         try {
             const ctrl = new AbortController();
@@ -6355,7 +6372,7 @@ async function likePost(msgId, btn) {
         } else if (data.missingInstagram) {
             // Echte Server-Ablehnung → revert lokal (Like nicht erlaubt)
             _dequeueLike(msgId);
-            try { const v = JSON.parse(localStorage.getItem('cb_my_likes')||'{}'); delete v[String(msgId)]; localStorage.setItem('cb_my_likes', JSON.stringify(v)); } catch(e){}
+            try { const v = JSON.parse(localStorage.getItem(_kLikes())||'{}'); delete v[String(msgId)]; localStorage.setItem(_kLikes(), JSON.stringify(v)); } catch(e){}
             btn.classList.remove('liked');
             btn.querySelector('svg').setAttribute('fill', 'none');
             if (countEl) countEl.textContent = Math.max(0, Number(countEl.textContent) - 1);
@@ -6471,19 +6488,19 @@ function toggleLikers(msgId) {
 // ── SUPERLINK ──
 function _queueSLLike(slId) {
     try {
-        const q = JSON.parse(localStorage.getItem('cb_sl_like_queue')||'[]');
-        if (!q.includes(String(slId))) { q.push(String(slId)); localStorage.setItem('cb_sl_like_queue', JSON.stringify(q)); }
+        const q = JSON.parse(localStorage.getItem(_kSlQueue())||'[]');
+        if (!q.includes(String(slId))) { q.push(String(slId)); localStorage.setItem(_kSlQueue(), JSON.stringify(q)); }
     } catch(e) {}
 }
 function _dequeueSLLike(slId) {
     try {
-        const q = JSON.parse(localStorage.getItem('cb_sl_like_queue')||'[]').filter(x=>x!==String(slId));
-        localStorage.setItem('cb_sl_like_queue', JSON.stringify(q));
+        const q = JSON.parse(localStorage.getItem(_kSlQueue())||'[]').filter(x=>x!==String(slId));
+        localStorage.setItem(_kSlQueue(), JSON.stringify(q));
     } catch(e) {}
 }
 async function _flushSLLikeQueue() {
     let q = [];
-    try { q = JSON.parse(localStorage.getItem('cb_sl_like_queue')||'[]'); } catch(e){}
+    try { q = JSON.parse(localStorage.getItem(_kSlQueue())||'[]'); } catch(e){}
     for (const slId of q) {
         try {
             const ctrl = new AbortController();
@@ -6523,7 +6540,7 @@ async function likeSuperLink(slId, btn) {
             showBanner({ type:'success', title:'Superlink geliked ❤️', subtitle:'Vergiss nicht: Auf Instagram liken & mit 2 Wörter kommentieren. Danke!', dur:5000 });
         } else if (data.missingInstagram) {
             _dequeueSLLike(slId);
-            try { const v = JSON.parse(localStorage.getItem('cb_my_likes')||'{}'); delete v[String(slId)]; localStorage.setItem('cb_my_likes', JSON.stringify(v)); } catch(e){}
+            try { const v = JSON.parse(localStorage.getItem(_kLikes())||'{}'); delete v[String(slId)]; localStorage.setItem(_kLikes(), JSON.stringify(v)); } catch(e){}
             btn.disabled=false;
             btn.classList.remove('liked');
             btn.querySelector('svg')?.setAttribute('fill','none');
