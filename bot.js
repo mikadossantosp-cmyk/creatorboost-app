@@ -1882,7 +1882,7 @@ function confirmCrop(){
       +(isIOS
         ?'<div style="display:flex;flex-direction:column;gap:12px"><div style="background:#fff1;border-radius:14px;padding:14px 16px;display:flex;gap:14px;align-items:center"><div style="font-size:26px">1️⃣</div><div><div style="font-weight:700;font-size:14px">Teilen-Symbol tippen ⬆️</div><div style="font-size:12px;color:#aaa">Unten in der Mitte der Leiste</div></div></div><div style="background:#fff1;border-radius:14px;padding:14px 16px;display:flex;gap:14px;align-items:center"><div style="font-size:26px">2️⃣</div><div><div style="font-weight:700;font-size:14px">„Zum Home-Bildschirm"</div><div style="font-size:12px;color:#aaa">Nach unten scrollen, antippen</div></div></div><div style="background:#fff1;border-radius:14px;padding:14px 16px;display:flex;gap:14px;align-items:center"><div style="font-size:26px">3️⃣</div><div><div style="font-weight:700;font-size:14px">„Hinzufügen" drücken</div><div style="font-size:12px;color:#aaa">App erscheint auf dem Homescreen</div></div></div></div>'
         :'<div style="display:flex;flex-direction:column;gap:12px"><div style="background:#fff1;border-radius:14px;padding:14px 16px;display:flex;gap:14px;align-items:center"><div style="font-size:26px">1️⃣</div><div><div style="font-weight:700;font-size:14px">Oben rechts ⋮ tippen</div><div style="font-size:12px;color:#aaa">Die drei Punkte im Browser-Menü</div></div></div><div style="background:#fff1;border-radius:14px;padding:14px 16px;display:flex;gap:14px;align-items:center"><div style="font-size:26px">2️⃣</div><div><div style="font-weight:700;font-size:14px">„App installieren" wählen</div><div style="font-size:12px;color:#aaa">Oder „Zum Startbildschirm hinzufügen"</div></div></div><div style="background:#fff1;border-radius:14px;padding:14px 16px;display:flex;gap:14px;align-items:center"><div style="font-size:26px">3️⃣</div><div><div style="font-weight:700;font-size:14px">„Hinzufügen" bestätigen ✓</div><div style="font-size:12px;color:#aaa">App erscheint auf dem Homescreen</div></div></div></div>')
-      +'<button onclick="document.getElementById(\'install-guide-modal\').remove()" style="margin-top:20px;width:100%;padding:14px;border-radius:14px;border:none;background:#ff6b6b;color:#fff;font-size:15px;font-weight:700;cursor:pointer">Verstanden ✓</button></div>';
+      +'<button onclick="document.getElementById(\\'install-guide-modal\\').remove()" style="margin-top:20px;width:100%;padding:14px;border-radius:14px;border:none;background:#ff6b6b;color:#fff;font-size:15px;font-weight:700;cursor:pointer">Verstanden ✓</button></div>';
   };
   window.addEventListener('appinstalled',()=>{
     const b=document.getElementById('pwa-install-btn');
@@ -3253,7 +3253,7 @@ function sendMagicLink(prefilledEmail){
         const validSubUid = u.subUid && botData.users?.[u.subUid] ? String(u.subUid) : null;
         sessions.set(sid, { uid: String(uid), name: u.name, username: u.username||null, theme: 'light', lang: 'de', createdAt: Date.now(), subUid: validSubUid, activeUid: String(uid) });
         saveSessions();
-        res.writeHead(302,{'Set-Cookie':'cbsid='+sid+'; HttpOnly; Path=/; Max-Age=2592000','Location':'/feed'});
+        res.writeHead(302,{'Set-Cookie':'cbsid='+sid+'; HttpOnly; Path=/; Max-Age=31536000','Location':'/feed'});
         return res.end();
     }
 
@@ -3278,7 +3278,7 @@ function sendMagicLink(prefilledEmail){
         const validSubUid = u.subUid && botData.users?.[u.subUid] ? String(u.subUid) : null;
         sessions.set(sid, { uid: String(uid), name: u.name, username: u.username||null, theme: 'light', lang: 'de', createdAt: Date.now(), subUid: validSubUid, activeUid: String(uid) });
         saveSessions();
-        res.writeHead(302,{'Set-Cookie':`cbsid=${sid}; HttpOnly; Path=/; Max-Age=2592000`,'Location':'/feed'});
+        res.writeHead(302,{'Set-Cookie':`cbsid=${sid}; HttpOnly; Path=/; Max-Age=31536000`,'Location':'/feed'});
         return res.end();
     }
 
@@ -3333,7 +3333,7 @@ function sendMagicLink(prefilledEmail){
             sessions.set(sid, { uid: String(result.uid), name: u.name, username: u.username||null, theme: 'light', lang: 'de', createdAt: Date.now(), subUid: validSubUid, activeUid: String(result.uid) });
             saveSessions();
         }
-        res.writeHead(200, {'Set-Cookie':`cbsid=${sid}; HttpOnly; Path=/; Max-Age=2592000`,'Content-Type':'application/json'});
+        res.writeHead(200, {'Set-Cookie':`cbsid=${sid}; HttpOnly; Path=/; Max-Age=31536000`,'Content-Type':'application/json'});
         return res.end(JSON.stringify({ok:true, redirect:'/feed'}));
     }
     // Passwort setzen / ändern (eingeloggter User).
@@ -3441,7 +3441,7 @@ function sendMagicLink(prefilledEmail){
         //  2. Kein Passwort → /set-password?first=1 (skippbar)
         //  3. Sonst → /feed
         const target = !u.instagram ? '/onboarding-instagram?first=1' : (u.password_hash ? '/feed' : '/set-password?first=1');
-        res.writeHead(302,{'Set-Cookie':`cbsid=${sid}; HttpOnly; Path=/; Max-Age=2592000`,'Location':target});
+        res.writeHead(302,{'Set-Cookie':`cbsid=${sid}; HttpOnly; Path=/; Max-Age=31536000`,'Location':target});
         return res.end();
     }
     // Onboarding-Pflicht: Email-User müssen Instagram setzen bevor sie liken/posten können.
@@ -3824,13 +3824,13 @@ function submitPw(ev){
                     sessions.set(sid, { uid: String(uid), name: u.name, username: u.username||null, theme: 'light', lang: 'de', createdAt: Date.now(), subUid: validSubUid, activeUid: String(uid) });
                     saveSessions();
                 }
-                res.writeHead(302,{'Set-Cookie':`cbsid=${sid}; HttpOnly; Path=/; Max-Age=2592000`,'Location':'/feed'});
+                res.writeHead(302,{'Set-Cookie':`cbsid=${sid}; HttpOnly; Path=/; Max-Age=31536000`,'Location':'/feed'});
                 return res.end();
             }
         }
         // Generischer Invite (Code passt zu keinem User) → Landing mit Invite-Cookie.
         res.writeHead(302, {
-            'Set-Cookie': `cbInvite=${encodeURIComponent(code)}; Path=/; Max-Age=2592000`,
+            'Set-Cookie': `cbInvite=${encodeURIComponent(code)}; Path=/; Max-Age=31536000`,
             'Location': '/?invite=' + encodeURIComponent(code)
         });
         return res.end();
@@ -3863,7 +3863,7 @@ function submitPw(ev){
             sessions.set(sid, { uid: String(uid), name: u.name, username: u.username||null, theme: 'light', lang: 'de', createdAt: Date.now(), subUid: validSubUid, activeUid: String(uid) });
             saveSessions();
         }
-        res.writeHead(302,{'Set-Cookie':`cbsid=${sid}; HttpOnly; Path=/; Max-Age=2592000`,'Location':safeRedirect});
+        res.writeHead(302,{'Set-Cookie':`cbsid=${sid}; HttpOnly; Path=/; Max-Age=31536000`,'Location':safeRedirect});
         return res.end();
     }
 
