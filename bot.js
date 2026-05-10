@@ -2999,7 +2999,7 @@ self.addEventListener('notificationclick',e=>{
     }
 
     function redirect(to) { res.writeHead(302,{'Location':to}); res.end(); }
-    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'230'}); res.end(layout(content,session,page,lang)); }
+    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'231'}); res.end(layout(content,session,page,lang)); }
     function json(data, status=200) { res.writeHead(status,{'Content-Type':'application/json'}); res.end(JSON.stringify(data)); }
 
     // ── LANDING ──
@@ -3590,10 +3590,14 @@ document.addEventListener('DOMContentLoaded', function(){
             // Bestehende Session: loginVia auf 'email' aktualisieren — wichtig für Insta-Gate
             const existing = sessions.get(sid); if (existing) { existing.loginVia = 'email'; sessions.set(sid, existing); saveSessions(); }
         }
-        // Email-User: kein Insta gesetzt → sofort zum Insta-Onboarding (Pflicht)
-        const redirect = !u.instagram ? '/onboarding-instagram?first=1' : '/feed';
+        // Email-User Redirect-Chain (mit /feed?tour=1 als finales Ziel damit Tour autostartet)
+        let redirect;
+        if (!u.instagram) redirect = '/onboarding-instagram?first=1';
+        else if (!u.appCodeChosenAt) redirect = '/onboarding-code?first=1';
+        else if (!u.appBriefingSeenV2) redirect = '/feed?tour=1';
+        else redirect = '/feed';
         res.writeHead(200, {'Set-Cookie':`cbsid=${sid}; HttpOnly; Path=/; Max-Age=157680000`,'Content-Type':'application/json'});
-        return res.end(JSON.stringify({ok:true, redirect}));
+        return res.end(JSON.stringify({ok:true, redirect, didSetupPassword}));
     }
     // Passwort setzen / ändern (eingeloggter User).
     if (path === '/api/auth/set-password' && req.method === 'POST') {
@@ -3911,6 +3915,7 @@ function submitSignup(ev){
         if (!u.instagram) target = '/onboarding-instagram?first=1';
         else if (!_hasCode) target = '/onboarding-code?first=1';
         else if (!u.password_hash) target = '/set-password?first=1';
+        else if (!u.appBriefingSeenV2) target = '/feed?tour=1';
         res.writeHead(302,{'Set-Cookie':`cbsid=${sid}; HttpOnly; Path=/; Max-Age=157680000`,'Location':target});
         return res.end();
     }
