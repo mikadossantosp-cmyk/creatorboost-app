@@ -8,7 +8,7 @@ const { genderize } = require('./gender-helper');
 const MAINBOT_URL   = process.env.MAINBOT_URL   || '';
 const BRIDGE_SECRET = process.env.BRIDGE_SECRET || 'geheimer-key';
 const BOT_TOKEN     = process.env.BOT_TOKEN     || '';
-const BOT_USERNAME  = process.env.BOT_USERNAME  || 'CreatorBoostbot';
+const BOT_USERNAME  = process.env.BOT_USERNAME  || 'Creator_Boostbot';
 const PORT          = process.env.PORT          || 3000;
 
 const fs = require('fs');
@@ -2904,7 +2904,7 @@ self.addEventListener('notificationclick',e=>{
     }
 
     function redirect(to) { res.writeHead(302,{'Location':to}); res.end(); }
-    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'215'}); res.end(layout(content,session,page,lang)); }
+    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'216'}); res.end(layout(content,session,page,lang)); }
     function json(data, status=200) { res.writeHead(status,{'Content-Type':'application/json'}); res.end(JSON.stringify(data)); }
 
     // ── LANDING ──
