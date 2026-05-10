@@ -26,7 +26,9 @@ const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
 const EMAIL_FROM = process.env.EMAIL_FROM || 'CreatorX <onboarding@resend.dev>';
 const EMAIL_TOKEN_TTL = 60 * 60 * 1000;       // 1 Stunde
 const ACCOUNT_UNLOCK_TTL = 30 * 60 * 1000;    // 30 Min Edit-Window nach Unlock-Klick
-const EMAIL_RATE_LIMIT = 5 * 60 * 1000;       // 5 Min zwischen Requests pro Email
+const MAGIC_LINK_RATE_LIMIT = 30 * 1000;      // 30 Sek zwischen Magic-Link-Requests pro Email
+const PW_RESET_RATE_LIMIT = 5 * 60 * 1000;    // 5 Min zwischen Password-Reset-Requests pro Email
+const EMAIL_RATE_LIMIT = MAGIC_LINK_RATE_LIMIT; // Backward-compat alias
 setInterval(() => {
     const now = Date.now();
     for (const [t, v] of emailLoginTokens.entries()) if (v.exp < now) emailLoginTokens.delete(t);
@@ -2997,7 +2999,7 @@ self.addEventListener('notificationclick',e=>{
     }
 
     function redirect(to) { res.writeHead(302,{'Location':to}); res.end(); }
-    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'227'}); res.end(layout(content,session,page,lang)); }
+    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'229'}); res.end(layout(content,session,page,lang)); }
     function json(data, status=200) { res.writeHead(status,{'Content-Type':'application/json'}); res.end(JSON.stringify(data)); }
 
     // ── LANDING ──
@@ -3238,8 +3240,8 @@ ${_isPreview ? '<div class="admin-pb">👀 Admin-Vorschau · Login-Page &nbsp;·
   </div>
 
   <div id="login" class="login-card" style="margin-top:24px">
-    <div class="login-h">Mit Email einloggen</div>
-    <div class="login-sub">Magic-Link oder Passwort — kein Telegram nötig.</div>
+    <div class="login-h">Sign In</div>
+    <div class="login-sub">Mit deiner Email + Passwort einloggen.</div>
 
     ${query.error==='email-expired' ? '<div class="msg show err">⚠️ Login-Link abgelaufen oder schon benutzt.</div>' : ''}
     ${query.error==='email-invalid' ? '<div class="msg show err">⚠️ Login-Link ungültig.</div>' : ''}
@@ -3249,11 +3251,16 @@ ${_isPreview ? '<div class="admin-pb">👀 Admin-Vorschau · Login-Page &nbsp;·
     <div class="msg" id="email-msg"></div>
     <form id="email-form" onsubmit="return submitEmail(event)">
       <input type="email" id="email-input" class="in" placeholder="deine@email.de" autocomplete="email" autocapitalize="none" spellcheck="false" required maxlength="200">
-      <input type="password" id="email-pw" class="in" placeholder="Passwort (optional · leer = Magic-Link)" autocomplete="current-password" maxlength="200">
-      <button type="submit" class="btn-p" id="email-btn">Einloggen →</button>
+      <input type="password" id="email-pw" class="in" placeholder="Passwort" autocomplete="current-password" maxlength="200" required>
+      <button type="submit" class="btn-p" id="email-btn">Sign In →</button>
     </form>
-    <button type="button" id="email-magic-btn" onclick="sendMagicLink()" class="btn-link">📧 Magic-Link an die Email senden</button>
-    <div class="email-hint">Erste Anmeldung? Magic-Link an deine Email anfordern — du kannst danach in Einstellungen ein Passwort setzen.</div>
+    <div style="text-align:center;margin-top:14px;padding-top:14px;border-top:1px dashed var(--border)">
+      <button type="button" id="email-magic-btn" onclick="sendMagicLink()" class="btn-link" style="font-size:12px;color:var(--muted)">📧 Passwort vergessen? Magic-Link senden</button>
+    </div>
+    <div style="text-align:center;margin-top:18px;padding-top:18px;border-top:1px solid var(--border)">
+      <div style="font-size:12.5px;color:var(--muted);margin-bottom:8px">Noch keinen Account?</div>
+      <a href="/signup" style="display:inline-flex;align-items:center;gap:6px;color:var(--gold);font-weight:700;text-decoration:none;font-size:13.5px">→ Jetzt Sign Up</a>
+    </div>
     <div style="text-align:center;margin-top:18px;padding-top:14px;border-top:1px solid var(--border)">
       <button type="button" onclick="document.getElementById('tg-code-pane').style.display=this.dataset.open==='1'?'none':'block';this.dataset.open=this.dataset.open==='1'?'0':'1';this.textContent=this.dataset.open==='1'?'✕ Code-Login schließen':'🔑 Du hast einen Login-Code aus Telegram?'" data-open="0" style="background:none;border:none;color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;text-decoration:underline">🔑 Du hast einen Login-Code aus Telegram?</button>
       <div id="tg-code-pane" style="display:none;margin-top:12px">
@@ -3314,22 +3321,24 @@ function submitEmail(ev){
   var pw=(pwInp.value||'');
   if(!em) return false;
   msg.classList.remove('show','ok','err');
-  // Wenn Passwort leer → Magic-Link.
-  if(!pw){ sendMagicLink(em); return false; }
-  btn.disabled=true;btn.textContent='Login...';
+  if(!pw || pw.length < 6){
+    msg.textContent='Passwort muss mindestens 6 Zeichen haben.';msg.classList.add('show','err');
+    return false;
+  }
+  btn.disabled=true;btn.textContent='Wird verarbeitet...';
   fetch('/api/auth/email-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:em,password:pw})})
     .then(function(r){return r.json().then(function(j){return{s:r.status,j:j};});})
     .then(function(o){
       if(o.j&&o.j.ok&&o.j.redirect){
         msg.textContent='✅ Eingeloggt — leite weiter...';msg.classList.add('show','ok');
-        setTimeout(function(){window.location.href=o.j.redirect;},250);
+        setTimeout(function(){window.location.href=o.j.redirect;},400);
       } else {
         msg.textContent=(o.j&&o.j.error)||'Login fehlgeschlagen.';
         msg.classList.add('show','err');
-        btn.disabled=false;btn.textContent='Einloggen →';
+        btn.disabled=false;btn.textContent='Sign In →';
       }
     })
-    .catch(function(){msg.textContent='Netzwerkfehler.';msg.classList.add('show','err');btn.disabled=false;btn.textContent='Einloggen →';});
+    .catch(function(){msg.textContent='Netzwerkfehler.';msg.classList.add('show','err');btn.disabled=false;btn.textContent='Sign In →';});
   return false;
 }
 function sendMagicLink(prefilledEmail){
@@ -3523,22 +3532,25 @@ document.addEventListener('DOMContentLoaded', function(){
         const email = String(body.email || '').toLowerCase().trim();
         const password = String(body.password || '');
         if (!email || !password) return json({ok:false, error:'Email und Passwort erforderlich'}, 400);
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json({ok:false, error:'Ungültige Email-Adresse'}, 400);
+        if (password.length < 6) return json({ok:false, error:'Passwort muss mindestens 6 Zeichen haben'}, 400);
         // Rate-Limit: 10 Versuche pro Email pro 5min (gegen Brute-Force).
         const rlKey = 'pw:' + email;
         const lastTs = emailRateLimit.get(rlKey) || 0;
         const tries = emailRateLimit.get(rlKey + ':n') || 0;
-        if (tries >= 10 && Date.now() - lastTs < EMAIL_RATE_LIMIT) {
+        if (tries >= 10 && Date.now() - lastTs < PW_RESET_RATE_LIMIT) {
             return json({ok:false, error:'Zu viele Login-Versuche — bitte 5 min warten'}, 429);
         }
         emailRateLimit.set(rlKey, Date.now());
         emailRateLimit.set(rlKey + ':n', tries + 1);
-        // Bot verifiziert Email+Passwort und liefert uid wenn ok.
-        const result = await postBot('/auth-email-password', { email, password });
         const _ip = String(req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '').split(',')[0].trim().slice(0, 64);
         const _ua = String(req.headers['user-agent'] || '').slice(0, 200);
+        // Sign-In: NUR existierende User. Neue User müssen über /signup gehen.
+        const result = await postBot('/auth-email-password', { email, password });
+        const isNewSignup = false;
         if (!result || !result.ok) {
             postBot('/log-email-login', { email, success: false, method: 'password', uid: '', ip: _ip, ua: _ua }).catch(()=>{});
-            return json({ok:false, error: (result && result.error) || 'Email oder Passwort falsch'}, 401);
+            return json({ok:false, error: (result && result.error) || 'Email oder Passwort falsch — oder noch kein Account? Sign Up unter /signup', notRegistered: result?.error?.includes('falsch')}, 401);
         }
         postBot('/log-email-login', { email, success: true, method: 'password', uid: String(result.uid), ip: _ip, ua: _ua }).catch(()=>{});
         // Reset rate-limit on success.
@@ -3599,29 +3611,17 @@ document.addEventListener('DOMContentLoaded', function(){
         }
         emailRateLimit.set(email, Date.now());
         // User per Email finden (Match in d.users[*].email).
+        // Magic-Link ist NUR für bereits-registrierte User. Neue User müssen
+        // sich mit Email + Passwort registrieren (Auto-Signup im /email-password Flow).
         const botData = await fetchBot('/data');
         if (!botData) return json({ok:false, error:'Server nicht erreichbar'}, 503);
-        let found = Object.entries(botData.users || {}).find(([, u]) => String(u.email || '').toLowerCase() === email);
-        let isNewSignup = false;
-        // Wenn Email unbekannt → Auto-Signup (neuen Email-Only User erstellen)
+        const found = Object.entries(botData.users || {}).find(([, u]) => String(u.email || '').toLowerCase() === email);
         if (!found) {
-            console.log('[email-signup] new email — creating account:', email);
-            const created = await postBot('/create-email-user-api', { email });
-            if (!created || !created.ok || !created.uid) {
-                return json({ok:false, error: (created && created.error) || 'Account konnte nicht erstellt werden'}, 500);
-            }
-            // Frische Daten laden mit dem neuen User drin
-            _dataCache = null; _dataCacheTime = 0;
-            const fresh = await fetchBot('/data');
-            const u2 = fresh?.users?.[created.uid];
-            if (u2) found = [String(created.uid), u2];
-            isNewSignup = !created.existed;
-        }
-        if (!found) {
-            console.log('[email-login] post-create lookup failed for:', email);
-            return json({ok:false, error:'Account-Lookup fehlgeschlagen — bitte später erneut versuchen'}, 500);
+            console.log('[email-login] Magic-Link für unbekannte Email abgelehnt:', email);
+            return json({ok:false, error:'Diese Email ist nicht registriert. Bitte registrier dich mit Email + Passwort.', notRegistered:true}, 404);
         }
         const [uid, u] = found;
+        const isNewSignup = false;
         const token = crypto.randomBytes(24).toString('hex');
         emailLoginTokens.set(token, { email, uid: String(uid), exp: Date.now() + EMAIL_TOKEN_TTL });
         const baseUrl = (process.env.APP_URL || ('https://' + (req.headers.host || 'web-production-7981d.up.railway.app'))).replace(/\/$/, '');
@@ -3673,11 +3673,11 @@ document.addEventListener('DOMContentLoaded', function(){
         const _bd = await fetchBot('/data');
         const _u = _bd?.users?.[myUid] || {};
         if (!_u.email) return json({ok:false, error:'Keine Email gesetzt — kein Unlock möglich'}, 400);
-        // Rate-Limit: 1× pro 5 Min pro User
+        // Rate-Limit: 1× pro 5 Min pro User (sensible Account-Operation)
         const rlKey = 'unlock:' + myUid;
         const lastTs = emailRateLimit.get(rlKey) || 0;
-        if (Date.now() - lastTs < EMAIL_RATE_LIMIT) {
-            const wait = Math.ceil((EMAIL_RATE_LIMIT - (Date.now() - lastTs)) / 1000);
+        if (Date.now() - lastTs < PW_RESET_RATE_LIMIT) {
+            const wait = Math.ceil((PW_RESET_RATE_LIMIT - (Date.now() - lastTs)) / 1000);
             return json({ok:false, error:`Bitte warte noch ${wait}s vor dem nächsten Versuch.`}, 429);
         }
         emailRateLimit.set(rlKey, Date.now());
@@ -3745,6 +3745,113 @@ document.addEventListener('DOMContentLoaded', function(){
         return res.end(baseHtml('✅','Email bestätigt!','Deine Email <b style="color:#fff">'+entry.email+'</b> ist jetzt aktiv. Du kannst dich damit einloggen.','#22c55e'));
     }
     // Email-Magic-Link Verify: User klickt Link → Session erstellen.
+    // ── /signup: Separate Signup-Page für neue User ──
+    if (path === '/signup' && req.method === 'GET') {
+        if (session && (query.preview !== '1')) return redirect('/feed');
+        res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0'});
+        return res.end(`<!DOCTYPE html><html lang="de" data-theme="dark"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Sign Up · CreatorX</title>
+<link rel="icon" type="image/png" href="/cx-logo-256.png">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--gold:#d4af37;--text:#fff;--muted:rgba(255,255,255,0.6);--border:rgba(255,255,255,0.10);--bg-card:rgba(255,255,255,0.03)}
+html,body{background:#000;color:#fff;font-family:'Inter',-apple-system,sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh}
+.shell{max-width:480px;margin:0 auto;padding:32px 22px 60px;min-height:100vh;display:flex;flex-direction:column;justify-content:center}
+.brand{font-family:'Syne',sans-serif;font-size:22px;font-weight:900;background:linear-gradient(135deg,#ff6b6b,#ffa500);-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-align:center;margin-bottom:32px}
+.icon{width:72px;height:72px;margin:0 auto 18px;border-radius:20px;background:linear-gradient(135deg,rgba(212,175,55,0.15),rgba(212,175,55,0.04));border:1px solid rgba(212,175,55,0.3);display:flex;align-items:center;justify-content:center;font-size:36px;box-shadow:0 12px 32px -10px rgba(212,175,55,0.4)}
+h1{font-family:'Syne',sans-serif;font-size:30px;font-weight:800;line-height:1.1;letter-spacing:-1px;margin-bottom:10px;background:linear-gradient(180deg,#fff,#d4af37);-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-align:center}
+.sub{font-size:14px;color:var(--muted);line-height:1.6;margin-bottom:24px;text-align:center}
+.in{width:100%;background:rgba(255,255,255,0.04);border:1.5px solid var(--border);color:#fff;border-radius:13px;padding:13px 15px;font-size:15px;outline:none;margin-bottom:12px;font-family:inherit;transition:.18s}
+.in:focus{border-color:var(--gold);background:rgba(212,175,55,0.04);box-shadow:0 0 0 3px rgba(212,175,55,0.12)}
+.btn{margin-top:6px;width:100%;padding:14px;font-size:14px;font-weight:700;border-radius:13px;border:none;cursor:pointer;font-family:inherit;letter-spacing:0.2px;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;box-shadow:0 8px 22px -8px rgba(212,175,55,0.6)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.msg{font-size:13px;padding:10px 12px;border-radius:10px;margin-bottom:10px;display:none;line-height:1.5}
+.msg.show{display:block}
+.msg.ok{background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.3);color:#22c55e}
+.msg.err{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);color:#ef4444}
+.hint{font-size:11.5px;color:var(--muted);margin-top:6px;text-align:center;line-height:1.55}
+.bottom{text-align:center;margin-top:18px;padding-top:18px;border-top:1px solid var(--border)}
+.bottom a{color:var(--gold);font-weight:700;text-decoration:none;font-size:13.5px}
+</style></head><body>
+<div class="shell">
+  <div class="brand">CreatorX</div>
+  <div style="text-align:center"><div class="icon">🎉</div></div>
+  <h1>Sign Up</h1>
+  <div class="sub">Erstelle deinen kostenlosen Account.<br>Email + Passwort — ohne Telegram, ohne Umwege.</div>
+  <div class="msg" id="signup-msg"></div>
+  <form id="signup-form" onsubmit="return submitSignup(event)">
+    <input type="email" id="signup-email" class="in" placeholder="deine@email.de" autocomplete="email" autocapitalize="none" spellcheck="false" required maxlength="200">
+    <input type="password" id="signup-pw" class="in" placeholder="Passwort (min. 6 Zeichen)" autocomplete="new-password" minlength="6" maxlength="200" required>
+    <button type="submit" class="btn" id="signup-btn">🎉 Account erstellen →</button>
+  </form>
+  <div class="hint">Mit Klick stimmst du zu, dass dein Account angelegt wird. Kein Spam, keine versteckten Kosten.</div>
+  <div class="bottom">
+    <div style="font-size:12.5px;color:var(--muted);margin-bottom:8px">Schon einen Account?</div>
+    <a href="/">→ Sign In</a>
+  </div>
+</div>
+<script>
+function submitSignup(ev){
+  ev.preventDefault();
+  var em=(document.getElementById('signup-email').value||'').trim().toLowerCase();
+  var pw=document.getElementById('signup-pw').value||'';
+  var btn=document.getElementById('signup-btn'),msg=document.getElementById('signup-msg');
+  msg.classList.remove('show','ok','err');
+  if(!em || pw.length<6){msg.textContent='Email + Passwort (min. 6 Zeichen) erforderlich';msg.classList.add('show','err');return false;}
+  btn.disabled=true;btn.textContent='⏳ Account wird erstellt...';
+  fetch('/api/auth/email-signup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:em,password:pw})})
+    .then(function(r){return r.json().then(function(j){return{s:r.status,j:j};});})
+    .then(function(o){
+      if(o.j&&o.j.ok&&o.j.redirect){
+        msg.textContent='🎉 Account erstellt — leite weiter...';msg.classList.add('show','ok');
+        setTimeout(function(){window.location.href=o.j.redirect;},500);
+      } else {
+        msg.textContent=(o.j&&o.j.error)||'Signup fehlgeschlagen.';msg.classList.add('show','err');
+        btn.disabled=false;btn.textContent='🎉 Account erstellen →';
+      }
+    })
+    .catch(function(){msg.textContent='Netzwerkfehler.';msg.classList.add('show','err');btn.disabled=false;btn.textContent='🎉 Account erstellen →';});
+  return false;
+}
+</script>
+</body></html>`);
+    }
+    // ── /api/auth/email-signup: erstellt neuen Account (Email + Passwort) ──
+    if (path === '/api/auth/email-signup' && req.method === 'POST') {
+        const body = await parseBody(req);
+        const email = String(body.email || '').toLowerCase().trim();
+        const password = String(body.password || '');
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json({ok:false, error:'Ungültige Email-Adresse'}, 400);
+        if (password.length < 6 || password.length > 200) return json({ok:false, error:'Passwort muss 6–200 Zeichen lang sein'}, 400);
+        const _ip = String(req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '').split(',')[0].trim().slice(0, 64);
+        const _ua = String(req.headers['user-agent'] || '').slice(0, 200);
+        // Existiert die Email schon?
+        const _bd = await fetchBot('/data');
+        const _exists = Object.entries(_bd?.users || {}).find(([, u]) => String(u.email||'').toLowerCase() === email);
+        if (_exists) {
+            postBot('/log-email-login', { email, success: false, method: 'signup-exists', uid: String(_exists[0]), ip: _ip, ua: _ua }).catch(()=>{});
+            return json({ok:false, error:'Diese Email ist bereits registriert. Bitte → Sign In.', existed:true}, 409);
+        }
+        // Account anlegen
+        const created = await postBot('/create-email-user-api', { email, password });
+        if (!created || !created.ok || !created.uid) {
+            postBot('/log-email-login', { email, success: false, method: 'signup-fail', uid: '', ip: _ip, ua: _ua }).catch(()=>{});
+            return json({ok:false, error: (created && created.error) || 'Account konnte nicht erstellt werden'}, 500);
+        }
+        postBot('/log-email-login', { email, success: true, method: 'signup', uid: String(created.uid), ip: _ip, ua: _ua }).catch(()=>{});
+        // Session erstellen
+        const fresh = await fetchBot('/data');
+        const u = fresh?.users?.[created.uid];
+        if (!u) return json({ok:false, error:'Account angelegt aber Lookup fehlgeschlagen'}, 500);
+        const sid = genSid();
+        sessions.set(sid, { uid: String(created.uid), name: u.name, username: u.username||null, theme: 'light', lang: 'de', createdAt: Date.now(), subUid: null, activeUid: String(created.uid), loginVia: 'email' });
+        saveSessions();
+        // → Onboarding-Flow (Insta first)
+        res.writeHead(200, {'Set-Cookie':`cbsid=${sid}; HttpOnly; Path=/; Max-Age=157680000`,'Content-Type':'application/json'});
+        return res.end(JSON.stringify({ok:true, redirect:'/onboarding-instagram?first=1'}));
+    }
     if (path === '/auth/email-login' && req.method === 'GET') {
         const token = String(query.token || '').trim();
         if (!token) { res.writeHead(302,{'Location':'/?error=email-invalid'}); return res.end(); }
