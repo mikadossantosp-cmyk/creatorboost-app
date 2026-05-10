@@ -77,17 +77,7 @@ module.exports = function renderChatList(opts) {
         '</div>' +
         '</a>';
 
-    const telegramRow = '<a href="/nachrichten/gruppe" class="dm-row dm-pinned">' +
-        '<div class="dm-avatar dm-tg">✈️</div>' +
-        '<div class="dm-content">' +
-          '<div class="dm-name">Telegram Gruppe <span class="dm-pin-icon">📌</span></div>' +
-          '<div class="dm-preview">' + esc((feedPreview || 'Live Telegram Nachrichten').slice(0, 60)) + '</div>' +
-        '</div>' +
-        '<div class="dm-meta">' +
-          '<div class="dm-online-dot" title="Live"></div>' +
-          (totalThreadUnread > 0 ? '<div class="dm-badge dm-tg-badge">' + (totalThreadUnread > 9 ? '9+' : totalThreadUnread) + '</div>' : '') +
-        '</div>' +
-        '</a>';
+    // Telegram-Group-Row entfernt — Threads sind aus der App komplett raus.
 
     // Smart preview: image, audio oder text
     function smartPreview(msg) {

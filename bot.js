@@ -2804,7 +2804,7 @@ self.addEventListener('notificationclick',e=>{
     }
 
     function redirect(to) { res.writeHead(302,{'Location':to}); res.end(); }
-    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'207'}); res.end(layout(content,session,page,lang)); }
+    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'208'}); res.end(layout(content,session,page,lang)); }
     function json(data, status=200) { res.writeHead(status,{'Content-Type':'application/json'}); res.end(JSON.stringify(data)); }
 
     // ── LANDING ──
@@ -4675,18 +4675,13 @@ function submitPw(ev){
             if (a === myUid || b === myUid)
                 unreadDMs += msgs.filter(m=>m.to===myUid&&!m.read).length;
         });
-        // Count unread thread messages
-        const thrMsgs = botData.threadMessages || {};
-        const lastRead = botData.threadLastRead?.[myUid] || {};
-        const cf = botData.communityFeed || [];
-        let unreadThreads = 0;
-        const glr = lastRead['general'] || 0;
-        const gm = thrMsgs['general']?.length ? thrMsgs['general'] : cf;
-        unreadThreads += gm.filter(m=>(m.timestamp||0)>glr).length;
-        Object.keys(thrMsgs).forEach(tid => {
-            if (tid !== 'general') unreadThreads += (thrMsgs[tid]||[]).filter(m=>(m.timestamp||0)>(lastRead[tid]||0)).length;
-        });
-        return json({count: unreadDMs + unreadThreads, dms: unreadDMs, threads: unreadThreads});
+        // App-Community-Chat unread (Threads sind aus der App entfernt)
+        let unreadAppChat = 0;
+        try {
+            const ac = await fetchBot('/app-chat?uid=' + encodeURIComponent(myUid));
+            unreadAppChat = ac?.unread || 0;
+        } catch(e) {}
+        return json({count: unreadDMs + unreadAppChat, dms: unreadDMs, appChat: unreadAppChat});
     }
 
     if (path === '/api/notifications/count') {
@@ -7284,6 +7279,11 @@ setInterval(async()=>{
 
 
     // ── NEUER THREAD (ADMIN) ──
+    // Telegram-Threads sind aus der App entfernt — alle /nachrichten/gruppe* → /nachrichten
+    if (path === '/nachrichten/gruppe' || path.startsWith('/nachrichten/gruppe/')) {
+        res.writeHead(302, {'Location':'/nachrichten','Cache-Control':'no-store'});
+        return res.end();
+    }
     if (path === '/nachrichten/gruppe/neu') {
         return html(`
 <div class="topbar" style="background:linear-gradient(135deg,#0088cc,#006699)">
@@ -8084,31 +8084,9 @@ document.getElementById('user-search-input')?.addEventListener('input',filterSea
                 return { key, otherUid, otherName: otherUser.spitzname||otherUser.name||'User', lastMsg, unread: msgsArr.filter(m=>m.to===myUid&&!m.read).length };
             })
             .sort((a, b) => (b.lastMsg?.timestamp||0)-(a.lastMsg?.timestamp||0));
-        const feedPreview = (await (async()=>{try{const r=await fetchBot('/telegram-feed');return r?.messages?.[0]?.text?.slice(0,40)||'Live Telegram Nachrichten';}catch(e){return 'Live Telegram Nachrichten';}})());
-        // Count unread thread messages
-        const thrMsgsAll = botData.threadMessages || {};
-        const lastReadAll = botData.threadLastRead?.[myUid] || {};
-        const cfeed = botData.communityFeed || [];
-        let totalThreadUnread = 0;
-        const genLastRead = lastReadAll['general'] || 0;
-        const genMsgs = thrMsgsAll['general']?.length ? thrMsgsAll['general'] : cfeed;
-        totalThreadUnread += genMsgs.filter(m => (m.timestamp||0) > genLastRead).length;
-        Object.keys(thrMsgsAll).forEach(tid => {
-            if (tid !== 'general') totalThreadUnread += (thrMsgsAll[tid]||[]).filter(m=>(m.timestamp||0)>(lastReadAll[tid]||0)).length;
-        });
-        // Threads-Daten für den 2. Tab
-        const threadEmojiPalette = ['🎯','🚀','💡','📊','🎨','🔥','⚡','🌟','📝','🎭','🏆','🎵','🧠','💎','🌈','🎮','📣','🛠️','🌍','🎬'];
-        function threadEmoji(tid){let h=0;for(const c of String(tid))h=(h*31+c.charCodeAt(0))>>>0;return threadEmojiPalette[h%threadEmojiPalette.length];}
-        let threads = botData.threads || [];
-        if (!threads.length) {
-            threads = Object.keys(thrMsgsAll).map(tid => ({ id:tid, name:tid==='general'?'Allgemein':'Thread '+tid, emoji:tid==='general'?'💬':threadEmoji(tid), last_msg:thrMsgsAll[tid]?.[0]||null, msg_count:thrMsgsAll[tid]?.length||0 }));
-        }
-        if (!threads.find(t=>String(t.id)==='general')) {
-            const lastCF = cfeed[0];
-            threads.unshift({ id:'general', name:'Allgemein', emoji:'💬', last_msg:lastCF?{text:lastCF.text,name:lastCF.name||lastCF.username,timestamp:lastCF.timestamp}:null, msg_count:Math.max(cfeed.length, thrMsgsAll['general']?.length||0) });
-        }
+        // Threads sind aus der App entfernt — keine Unread/List mehr nötig
         const lastAppChat = (appChatData?.messages || []).filter(m => !m.deleted).slice(-1)[0] || null;
-        const convHtml = require('./chat-list-render')({ myConvos, botData, myUid, feedPreview, totalThreadUnread, ladeBild, adminIds, onlineUids: getOnlineUids(), threadsList: threads, threadLastRead: lastReadAll, crown, appChatPreview: lastAppChat ? { name: lastAppChat.name, text: lastAppChat.text, image: lastAppChat.image, timestamp: lastAppChat.ts } : null, appChatUnread: appChatData?.unread || 0, appChatMembers: appChatData?.memberCount || 0 });
+        const convHtml = require('./chat-list-render')({ myConvos, botData, myUid, ladeBild, adminIds, onlineUids: getOnlineUids(), crown, appChatPreview: lastAppChat ? { name: lastAppChat.name, text: lastAppChat.text, image: lastAppChat.image, timestamp: lastAppChat.ts } : null, appChatUnread: appChatData?.unread || 0, appChatMembers: appChatData?.memberCount || 0 });
         return html(`<div class="topbar"><div class="topbar-logo">Nachrichten</div><div class="topbar-actions"><a href="/suche" class="icon-btn" title="User suchen" style="text-decoration:none"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></a></div></div><div style="padding-bottom:80px">${convHtml}</div>`, 'messages');
     }
 
