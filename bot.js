@@ -4740,6 +4740,39 @@ function submitPw(ev){
         return json({ok: true});
     }
 
+    // ── APP-COMMUNITY-CHAT (globale Gruppe für alle App-User) ──
+    if (path === '/api/app-chat/messages') {
+        if (!session) return json({error:'Nicht eingeloggt'}, 401);
+        const myUid = getMyUid(session);
+        const data = await fetchBot('/app-chat?uid=' + encodeURIComponent(myUid) + '&limit=200');
+        return json(data || { messages: [], unread: 0 });
+    }
+    if (path === '/api/app-chat/send' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        const myUid = getMyUid(session);
+        const body = await parseBody(req);
+        const text = String(body.text || '').slice(0, 2000);
+        const image = body.image ? String(body.image).slice(0, 500000) : null;
+        if (!text && !image) return json({ok:false, error:'Leer'}, 400);
+        const result = await postBot('/app-chat-send', { uid: myUid, text, image });
+        if (!result || !result.ok) return json({ok:false, error: result?.error || 'Fehler'}, 500);
+        return json({ok:true, message: result.message});
+    }
+    if (path === '/api/app-chat/mark-read' && req.method === 'POST') {
+        if (!session) return json({ok:false}, 401);
+        const myUid = getMyUid(session);
+        await postBot('/app-chat-mark-read', { uid: myUid });
+        return json({ok:true});
+    }
+    if (path === '/api/app-chat/delete' && req.method === 'POST') {
+        if (!session) return json({ok:false}, 401);
+        const myUid = getMyUid(session);
+        const body = await parseBody(req);
+        const result = await postBot('/app-chat-delete', { uid: myUid, ts: Number(body.ts || 0) });
+        if (!result || !result.ok) return json({ok:false, error: result?.error || 'Fehler'}, 403);
+        return json({ok:true});
+    }
+
     // ── LEGACY-ONBOARDING-REDIRECT ──
     // Altes /onboarding ist abgeschafft. Falls aber irgendwo noch ein
     // gecachter Client darauf zeigt → 302 zu /feed (kein 404, kein Re-Render).
@@ -6391,8 +6424,122 @@ async function submitSuperLink(){
 `, 'feed');
     }
 
+    // ── APP-COMMUNITY-CHAT (globale Gruppe) ──
+    if (path === '/nachrichten/app-chat') {
+        const [data, botData] = await Promise.all([
+            fetchBot('/app-chat?uid=' + encodeURIComponent(myUid) + '&limit=200'),
+            fetchBot('/data')
+        ]);
+        const msgs = (data?.messages || []).filter(m => !m.deleted);
+        const memberCount = data?.memberCount || 0;
+        // Mark als gelesen (best-effort, blockiert Render nicht)
+        postBot('/app-chat-mark-read', { uid: myUid }).catch(()=>{});
+        const isAdminUid = adminIds.map(Number).includes(Number(myUid));
+        const msgsHtml = msgs.length === 0
+            ? '<div class="empty" style="margin-top:60px;text-align:center;padding:40px"><div style="font-size:48px;margin-bottom:14px">🌍</div><div style="font-size:16px;font-weight:700;margin-bottom:6px">App Community</div><div style="font-size:13px;color:var(--muted);max-width:280px;margin:0 auto;line-height:1.5">Sei der Erste, der hier was schreibt! Diese Gruppe ist für alle App-User.</div></div>'
+            : msgs.map(m => {
+                const mine = String(m.uid) === myUid;
+                const u = botData?.users?.[m.uid] || {};
+                const ava = ladeBild(m.uid, 'profilepic');
+                const avaHtml = ava
+                    ? `<img src="/appbild/${m.uid}/profilepic" style="width:32px;height:32px;border-radius:50%;object-fit:cover" alt="">`
+                    : (u.instagram
+                        ? `<img src="https://unavatar.io/instagram/${u.instagram}" style="width:32px;height:32px;border-radius:50%;object-fit:cover" onerror="this.outerHTML='<div style=\\'width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center\\'>${htmlEsc((m.name||'?').slice(0,1).toUpperCase())}</div>'" alt="">`
+                        : `<div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center">${htmlEsc((m.name||'?').slice(0,1).toUpperCase())}</div>`);
+                const time = new Date(m.ts).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+                const escText = htmlEsc(m.text||'').replace(/\n/g,'<br>');
+                const canDelete = mine || isAdminUid;
+                const delBtn = canDelete ? `<button onclick="deleteAppChatMsg(${m.ts})" style="background:none;border:none;color:rgba(239,68,68,.7);font-size:11px;cursor:pointer;padding:0;margin-left:8px">🗑</button>` : '';
+                const imgHtml = m.image ? `<img src="${m.image}" style="max-width:200px;max-height:280px;border-radius:10px;margin-top:6px;display:block" alt="">` : '';
+                return `<div style="display:flex;gap:10px;padding:10px 14px;align-items:flex-start;${mine?'background:rgba(167,139,250,0.04)':''}">
+                    <a href="/profil/${m.uid}" style="flex-shrink:0;text-decoration:none">${avaHtml}</a>
+                    <div style="flex:1;min-width:0">
+                        <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:2px">
+                            <a href="/profil/${m.uid}" style="font-weight:700;font-size:13.5px;color:${mine?'#a78bfa':'var(--text)'};text-decoration:none">${htmlEsc(m.name||'User')}</a>
+                            <span style="font-size:11px;color:var(--muted)">${time}</span>
+                            ${delBtn}
+                        </div>
+                        ${escText?`<div style="font-size:14px;color:var(--text);line-height:1.45;word-wrap:break-word;overflow-wrap:break-word">${escText}</div>`:''}
+                        ${imgHtml}
+                    </div>
+                </div>`;
+            }).join('');
+        return html(`
+<div class="topbar" style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:linear-gradient(135deg,#a78bfa,#7c3aed);position:sticky;top:0;z-index:10">
+  <a href="/nachrichten" style="padding:8px;color:#fff;display:flex;align-items:center;text-decoration:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="22" height="22"><polyline points="15 18 9 12 15 6"/></svg></a>
+  <div style="flex:1;text-align:center">
+    <div style="font-weight:800;font-size:15px;color:#fff">🌍 App Community</div>
+    <div style="font-size:11px;color:rgba(255,255,255,0.85)">${memberCount} Mitglieder · Live ●</div>
+  </div>
+  <div style="width:38px"></div>
+</div>
+<div id="app-chat-msgs" style="padding:8px 0 140px;display:flex;flex-direction:column;min-height:60vh">
+  ${msgsHtml}
+</div>
+<div style="position:fixed;bottom:0;left:0;right:0;background:var(--bg);border-top:1px solid var(--border2);padding:10px 12px 14px;display:flex;align-items:flex-end;gap:8px;z-index:50">
+  <textarea id="app-chat-input" placeholder="Nachricht an alle App-User…" rows="1" maxlength="2000" style="flex:1;background:var(--bg3);border:1px solid var(--border2);color:var(--text);border-radius:18px;padding:10px 14px;font-size:14px;font-family:inherit;resize:none;outline:none;max-height:120px;line-height:1.4"></textarea>
+  <button id="app-chat-send-btn" onclick="sendAppChat()" style="background:linear-gradient(135deg,#a78bfa,#7c3aed);border:none;color:#fff;width:42px;height:42px;border-radius:50%;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:700">➤</button>
+</div>
+<script>
+const _appChatTA = document.getElementById('app-chat-input');
+if (_appChatTA) {
+    _appChatTA.addEventListener('input', () => {
+        _appChatTA.style.height = 'auto';
+        _appChatTA.style.height = Math.min(120, _appChatTA.scrollHeight) + 'px';
+    });
+    _appChatTA.addEventListener('keydown', e => {
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendAppChat(); }
+    });
+}
+async function sendAppChat() {
+    const ta = document.getElementById('app-chat-input');
+    const btn = document.getElementById('app-chat-send-btn');
+    if (!ta) return;
+    const text = ta.value.trim();
+    if (!text) return;
+    btn.disabled = true; btn.style.opacity = '0.5';
+    try {
+        const r = await fetch('/api/app-chat/send', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});
+        const d = await r.json();
+        if (d.ok) {
+            ta.value = '';
+            ta.style.height = 'auto';
+            location.reload();
+        } else {
+            alert(d.error || 'Senden fehlgeschlagen');
+            btn.disabled = false; btn.style.opacity = '1';
+        }
+    } catch(e) {
+        alert('Netzwerkfehler');
+        btn.disabled = false; btn.style.opacity = '1';
+    }
+}
+async function deleteAppChatMsg(ts) {
+    if (!confirm('Nachricht löschen?')) return;
+    try {
+        const r = await fetch('/api/app-chat/delete', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ts})});
+        const d = await r.json();
+        if (d.ok) location.reload();
+        else alert(d.error || 'Fehler');
+    } catch(e) { alert('Netzwerkfehler'); }
+}
+// Auto-scroll to bottom on load
+window.addEventListener('load', () => { window.scrollTo(0, document.body.scrollHeight); });
+// Poll für neue Nachrichten alle 8s
+let _appChatLastCount = ${msgs.length};
+setInterval(async () => {
+    try {
+        const r = await fetch('/api/app-chat/messages');
+        const d = await r.json();
+        const visible = (d.messages||[]).filter(m=>!m.deleted);
+        if (visible.length !== _appChatLastCount) location.reload();
+    } catch(e) {}
+}, 8000);
+</script>`, 'messages');
+    }
+
     // ── CHAT ──
-    if (path.startsWith('/nachrichten/') && !path.startsWith('/nachrichten/gruppe')) {
+    if (path.startsWith('/nachrichten/') && !path.startsWith('/nachrichten/gruppe') && !path.startsWith('/nachrichten/app-chat')) {
         const otherUid = path.replace('/nachrichten/', '');
         const botData = await fetchBot('/data');
         if (!botData) return redirect('/nachrichten');
@@ -7451,7 +7598,10 @@ document.getElementById('user-search-input')?.addEventListener('input',filterSea
     }
 
     if (path === '/nachrichten') {
-        const botData = await fetchBot('/data');
+        const [botData, appChatData] = await Promise.all([
+            fetchBot('/data'),
+            fetchBot('/app-chat?uid=' + encodeURIComponent(myUid) + '&limit=1')
+        ]);
         if (!botData) return redirect('/feed');
         const convos = botData.messages || {};
         const myConvos = Object.entries(convos)
@@ -7488,7 +7638,8 @@ document.getElementById('user-search-input')?.addEventListener('input',filterSea
             const lastCF = cfeed[0];
             threads.unshift({ id:'general', name:'Allgemein', emoji:'💬', last_msg:lastCF?{text:lastCF.text,name:lastCF.name||lastCF.username,timestamp:lastCF.timestamp}:null, msg_count:Math.max(cfeed.length, thrMsgsAll['general']?.length||0) });
         }
-        const convHtml = require('./chat-list-render')({ myConvos, botData, myUid, feedPreview, totalThreadUnread, ladeBild, adminIds, onlineUids: getOnlineUids(), threadsList: threads, threadLastRead: lastReadAll, crown });
+        const lastAppChat = (appChatData?.messages || []).filter(m => !m.deleted).slice(-1)[0] || null;
+        const convHtml = require('./chat-list-render')({ myConvos, botData, myUid, feedPreview, totalThreadUnread, ladeBild, adminIds, onlineUids: getOnlineUids(), threadsList: threads, threadLastRead: lastReadAll, crown, appChatPreview: lastAppChat ? { name: lastAppChat.name, text: lastAppChat.text, image: lastAppChat.image, timestamp: lastAppChat.ts } : null, appChatUnread: appChatData?.unread || 0, appChatMembers: appChatData?.memberCount || 0 });
         return html(`<div class="topbar"><div class="topbar-logo">Nachrichten</div><div class="topbar-actions"><a href="/suche" class="icon-btn" title="User suchen" style="text-decoration:none"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></a></div></div><div style="padding-bottom:80px">${convHtml}</div>`, 'messages');
     }
 
