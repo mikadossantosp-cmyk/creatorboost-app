@@ -19,6 +19,7 @@ const SESSIONS_FILE = DATA_DIR + '/cb_sessions.json';
 const sessions = new Map();
 // Email-Magic-Link: in-memory (Token nur 1h gültig, Server-Restart ist OK).
 const emailLoginTokens = new Map();   // token → { email, uid, exp }
+const emailConfirmTokens = new Map(); // token → { email, uid, exp } (für /einstellungen Email-Bestätigung)
 const emailRateLimit = new Map();      // email → lastRequestTs (Cooldown gegen Spam)
 const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
 const EMAIL_FROM = process.env.EMAIL_FROM || 'CreatorX <onboarding@resend.dev>';
@@ -27,6 +28,7 @@ const EMAIL_RATE_LIMIT = 5 * 60 * 1000;       // 5 Min zwischen Requests pro Ema
 setInterval(() => {
     const now = Date.now();
     for (const [t, v] of emailLoginTokens.entries()) if (v.exp < now) emailLoginTokens.delete(t);
+    for (const [t, v] of emailConfirmTokens.entries()) if (v.exp < now) emailConfirmTokens.delete(t);
     for (const [e, ts] of emailRateLimit.entries()) if (now - ts > EMAIL_RATE_LIMIT * 2) emailRateLimit.delete(e);
 }, 5 * 60 * 1000);
 
@@ -2974,7 +2976,7 @@ self.addEventListener('notificationclick',e=>{
     }
 
     function redirect(to) { res.writeHead(302,{'Location':to}); res.end(); }
-    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'222'}); res.end(layout(content,session,page,lang)); }
+    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'223'}); res.end(layout(content,session,page,lang)); }
     function json(data, status=200) { res.writeHead(status,{'Content-Type':'application/json'}); res.end(JSON.stringify(data)); }
 
     // ── LANDING ──
@@ -3627,6 +3629,27 @@ document.addEventListener('DOMContentLoaded', function(){
 </div></body></html>`;
         res.writeHead(200, {'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});
         return res.end(previewHtml);
+    }
+    // Email-Confirmation: User klickt Bestätigungs-Link aus Settings-Email → email wird aktiviert.
+    if (path === '/auth/confirm-email' && req.method === 'GET') {
+        const token = String(query.token || '').trim();
+        const baseHtml = (icon, title, msg, color) => `<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><style>body{margin:0;font-family:-apple-system,BlinkMacSystemFont,Inter,sans-serif;background:#0b0b0e;color:#fff;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}.box{background:linear-gradient(180deg,#1c1c1e,#0f0f11);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:40px 28px;max-width:420px;text-align:center;box-shadow:0 30px 80px rgba(0,0,0,.5)}.ic{font-size:64px;margin-bottom:16px}.t{font-size:22px;font-weight:800;margin-bottom:10px;letter-spacing:-.4px;color:${color}}.m{font-size:14px;color:rgba(255,255,255,.7);line-height:1.55;margin-bottom:24px}.btn{display:inline-block;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;padding:13px 28px;border-radius:12px;text-decoration:none;font-weight:800;font-size:14px}</style></head><body><div class="box"><div class="ic">${icon}</div><div class="t">${title}</div><div class="m">${msg}</div><a href="/feed" class="btn">→ Zur App</a></div></body></html>`;
+        if (!token) { res.writeHead(400, {'Content-Type':'text/html'}); return res.end(baseHtml('⚠️','Ungültiger Link','Der Bestätigungslink ist ungültig oder unvollständig.','#f59e0b')); }
+        const entry = emailConfirmTokens.get(token);
+        if (!entry || entry.exp < Date.now()) {
+            emailConfirmTokens.delete(token);
+            res.writeHead(400, {'Content-Type':'text/html'});
+            return res.end(baseHtml('⏰','Link abgelaufen','Der Bestätigungslink ist abgelaufen oder schon benutzt. Geh in die Einstellungen und sende einen neuen.','#ef4444'));
+        }
+        emailConfirmTokens.delete(token);
+        // Bot anrufen → confirmEmail-Field setzen
+        const result = await postBot('/update-profile-api', { uid: entry.uid, confirmEmail: entry.email });
+        if (!result || result.ok === false) {
+            res.writeHead(500, {'Content-Type':'text/html'});
+            return res.end(baseHtml('❌','Fehler','Bestätigung konnte nicht gespeichert werden. Bitte später erneut versuchen.','#ef4444'));
+        }
+        res.writeHead(200, {'Content-Type':'text/html'});
+        return res.end(baseHtml('✅','Email bestätigt!','Deine Email <b style="color:#fff">'+entry.email+'</b> ist jetzt aktiv. Du kannst dich damit einloggen.','#22c55e'));
     }
     // Email-Magic-Link Verify: User klickt Link → Session erstellen.
     if (path === '/auth/email-login' && req.method === 'GET') {
@@ -5809,12 +5832,34 @@ p{line-height:1.65;color:var(--muted)}
         if (updateResult && updateResult.ok === false) {
             return json({ok:false, error: updateResult.error || 'Profile-Update fehlgeschlagen'});
         }
-        // Wenn Email gesetzt war aber im Bot nicht ankam (z.B. Eindeutigkeits-Konflikt) → Fehler zurückgeben.
+        // Email-Bestätigungs-Flow: wenn Email neu/geändert → Confirmation-Mail senden statt direkt zu speichern.
+        let _emailPending = false;
         if (body.email !== undefined && updateData.email && updateData.email !== '') {
             const _bd = await fetchBot('/data');
-            const _saved = _bd?.users?.[myUid]?.email || '';
-            if (String(_saved).toLowerCase() !== updateData.email) {
+            const _u = _bd?.users?.[myUid] || {};
+            // Eindeutigkeit-Konflikt? (Bot hat es nicht gespeichert AND auch nicht als pending)
+            if (String(_u.email||'').toLowerCase() !== updateData.email && String(_u.pendingEmail||'').toLowerCase() !== updateData.email) {
                 return json({ok:false, error:'Diese Email ist bereits einem anderen Account zugeordnet.'}, 409);
+            }
+            // Wenn als pending gespeichert (also unbestätigte Änderung) → Confirmation-Mail senden
+            if (String(_u.pendingEmail||'').toLowerCase() === updateData.email) {
+                try {
+                    const token = crypto.randomBytes(24).toString('hex');
+                    emailConfirmTokens.set(token, { email: updateData.email, uid: String(myUid), exp: Date.now() + EMAIL_TOKEN_TTL });
+                    const baseUrl = (process.env.APP_URL || ('https://' + (req.headers.host || 'web-production-7981d.up.railway.app'))).replace(/\/$/, '');
+                    const confirmUrl = baseUrl + '/auth/confirm-email?token=' + encodeURIComponent(token);
+                    const userName = _u.spitzname || _u.name || 'CreatorX User';
+                    const html = `<!DOCTYPE html><html><body style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#000;color:#fff;padding:0">
+<div style="max-width:560px;margin:0 auto;padding:32px 24px">
+<div style="text-align:center;margin-bottom:24px"><img src="${baseUrl}/cx-logo-256.png" width="80" height="80" style="border-radius:18px" alt="CreatorX"></div>
+<h1 style="font-size:26px;font-weight:700;margin:0 0 12px;text-align:center;color:#fff">Hi ${userName.replace(/[<>]/g,'')}!</h1>
+<p style="font-size:15px;color:#a8a39a;line-height:1.6;text-align:center;margin:0 0 28px">Bestätige deine Email-Adresse <b style="color:#fff">${updateData.email}</b> für deinen CreatorX-Account. Klick den Button — der Link ist 1 Stunde gültig.</p>
+<div style="text-align:center;margin:32px 0"><a href="${confirmUrl}" style="display:inline-block;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px;letter-spacing:0.3px">✅ Email bestätigen</a></div>
+<p style="font-size:12px;color:#605c54;line-height:1.5;text-align:center;margin:32px 0 0;border-top:1px solid #221f1a;padding-top:20px">Falls du diese Änderung nicht angefragt hast, ignoriere die Email — niemand kann deine Email-Adresse ohne Klick ändern.<br><br>Falls der Button nicht funktioniert, kopier diese URL in deinen Browser:<br><span style="color:#a8a39a;word-break:break-all;font-size:11px">${confirmUrl}</span></p>
+</div></body></html>`;
+                    sendEmail(updateData.email, '✅ Bestätige deine CreatorX-Email', html).catch(()=>{});
+                    _emailPending = true;
+                } catch(e) { console.log('Email-Confirm Send Fehler:', e.message); }
             }
         }
         if (session) {
@@ -5823,7 +5868,7 @@ p{line-height:1.65;color:var(--muted)}
             saveSessions();
         }
         await checkProfileCompletion(myUid, session);
-        return json({ok:true});
+        return json({ok:true, emailPending: _emailPending});
     }
 
     if (path === '/api/follow' && req.method === 'POST') {
@@ -10207,9 +10252,10 @@ async function toggleFollow(uid,btn){
 </div>
 <div style="padding:16px;border-bottom:1px solid var(--border2)">
   <div class="form-label">📧 Email <span style="font-size:10px;color:var(--muted);font-weight:500">(für Magic-Link-Login)</span></div>
-  <input type="email" class="form-input" id="inp-email" placeholder="deine@email.de" maxlength="200" value="${u.email||''}" autocapitalize="none" spellcheck="false">
-  <div class="form-hint">Wenn gesetzt, kannst du dich auch ohne Telegram über die Email einloggen.</div>
-  ${u.email ? `<div style="margin-top:10px;padding:10px 12px;background:rgba(34,197,94,0.10);border:1px solid rgba(34,197,94,0.25);border-radius:10px;font-size:11.5px;color:#22c55e;line-height:1.5"><b>✓ Email aktiv.</b> Du kannst die Telegram-Gruppe jederzeit verlassen — dein Account, XP, Likes &amp; Posts bleiben erhalten. Login bleibt dauerhaft über deine Email.</div>` : ''}
+  <input type="email" class="form-input" id="inp-email" placeholder="deine@email.de" maxlength="200" value="${u.email||u.pendingEmail||''}" autocapitalize="none" spellcheck="false">
+  <div class="form-hint">Wenn gesetzt, kannst du dich auch ohne Telegram über die Email einloggen. Du bekommst eine Bestätigungs-Mail an die Adresse.</div>
+  ${u.pendingEmail && u.pendingEmail !== u.email ? `<div style="margin-top:10px;padding:10px 12px;background:rgba(245,158,11,0.10);border:1px solid rgba(245,158,11,0.30);border-radius:10px;font-size:11.5px;color:#f59e0b;line-height:1.5"><b>⏳ Bestätigung ausstehend.</b> Wir haben einen Bestätigungs-Link an <b>${htmlEsc(u.pendingEmail)}</b> gesendet — schau in dein Email-Postfach (auch Spam) und klick den Button.</div>` : ''}
+  ${u.email ? `<div style="margin-top:10px;padding:10px 12px;background:rgba(34,197,94,0.10);border:1px solid rgba(34,197,94,0.25);border-radius:10px;font-size:11.5px;color:#22c55e;line-height:1.5"><b>✓ Email bestätigt &amp; aktiv.</b> Du kannst dich jederzeit ohne Telegram einloggen. Account, XP, Likes &amp; Posts bleiben erhalten.</div>` : ''}
 </div>
 <div style="padding:16px;border-bottom:1px solid var(--border2)">
   <div class="form-label">🔑 Eigener App-Code <span style="font-size:10px;color:var(--muted);font-weight:500">(für /mycode &amp; Login-Link)</span></div>
@@ -10434,7 +10480,15 @@ async function saveProfile() {
         if (selectedBanner) payload.banner = selectedBanner;
         const res = await fetch('/api/save-profile', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
         const data = await res.json();
-        if(data.ok) { toast('✅ Gespeichert!'); setTimeout(()=>location.reload(), 300); }
+        if(data.ok) {
+            if (data.emailPending) {
+                toast('📧 Bestätigungs-Email gesendet!', 4500);
+                setTimeout(()=>location.reload(), 1200);
+            } else {
+                toast('✅ Gespeichert!');
+                setTimeout(()=>location.reload(), 300);
+            }
+        }
         else { toast('❌ Fehler: ' + (data.error||'Unbekannt')); }
     } catch(e) { toast('❌ Netzwerkfehler'); }
     if(btn) { btn.textContent = '💾 Speichern'; btn.disabled = false; }
