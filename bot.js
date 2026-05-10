@@ -2804,7 +2804,7 @@ self.addEventListener('notificationclick',e=>{
     }
 
     function redirect(to) { res.writeHead(302,{'Location':to}); res.end(); }
-    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'206'}); res.end(layout(content,session,page,lang)); }
+    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'207'}); res.end(layout(content,session,page,lang)); }
     function json(data, status=200) { res.writeHead(status,{'Content-Type':'application/json'}); res.end(JSON.stringify(data)); }
 
     // ── LANDING ──
@@ -4783,6 +4783,14 @@ function submitPw(ev){
         if (!result || !result.ok) return json({ok:false, error: result?.error || 'Fehler'}, 403);
         return json({ok:true});
     }
+    if (path === '/api/app-chat/react' && req.method === 'POST') {
+        if (!session) return json({ok:false}, 401);
+        const myUid = getMyUid(session);
+        const body = await parseBody(req);
+        const result = await postBot('/app-chat-react', { uid: myUid, ts: Number(body.ts || 0), emoji: String(body.emoji || '') });
+        if (!result || !result.ok) return json({ok:false, error: result?.error || 'Fehler'}, 400);
+        return json({ok:true, reactions: result.reactions});
+    }
     // App-Presence: leichter Heartbeat, markiert User als "aktiv in der App"
     if (path === '/api/app-presence' && req.method === 'POST') {
         if (!session) return json({ok:false}, 401);
@@ -6563,48 +6571,81 @@ async function submitSuperLink(){
         const lastTs = allMsgs.length ? allMsgs[allMsgs.length - 1].ts : 0;
         postBot('/app-chat-mark-read', { uid: myUid }).catch(()=>{});
         const isAdminUid = adminIds.map(Number).includes(Number(myUid));
-        // Server-render die initialen Bubbles als JSON → JS rendert (gleicher Code wie Live-Updates)
         const seedJson = JSON.stringify(allMsgs).replace(/</g,'\\u003c');
         return html(`
 <style>
-:root { --ac-mine-grad: linear-gradient(135deg,#a78bfa,#7c3aed); --ac-other-bg: var(--bg3); --ac-name: rgba(255,255,255,0.85); }
-.ac-wrap { padding:14px 0 200px; min-height:60vh; display:flex; flex-direction:column; gap:2px; }
-.ac-day { align-self:center; background:var(--bg3); color:var(--muted); font-size:12px; font-weight:700; padding:6px 14px; border-radius:99px; margin:18px 0 10px; letter-spacing:0.3px; box-shadow:0 2px 8px rgba(0,0,0,0.08); }
-.ac-row { display:flex; gap:9px; padding:0 14px; align-items:flex-end; }
+:root { --ac-mine-grad: linear-gradient(135deg,#a78bfa 0%,#8b5cf6 50%,#7c3aed 100%); }
+.ac-wrap { padding:16px 0 200px; min-height:60vh; display:flex; flex-direction:column; gap:0; }
+.ac-day { align-self:center; background:var(--bg3); color:var(--muted); font-size:12px; font-weight:700; padding:6px 14px; border-radius:99px; margin:24px 0 14px; letter-spacing:0.4px; box-shadow:0 2px 8px rgba(0,0,0,0.08); border:1px solid var(--border2); }
+.ac-row { display:flex; gap:10px; padding:0 14px; align-items:flex-end; user-select:none; -webkit-user-select:none; touch-action:pan-y; position:relative; }
 .ac-row.mine { flex-direction:row-reverse; }
-.ac-row.grouped { padding-top:1px; }
-.ac-row + .ac-row:not(.grouped) { margin-top:14px; }
-.ac-avatar { width:36px; height:36px; border-radius:50%; flex-shrink:0; overflow:hidden; background:linear-gradient(135deg,#a78bfa,#7c3aed); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:800; font-size:14px; box-shadow:0 2px 8px rgba(15,23,42,0.10); position:relative; }
+.ac-row.grouped { padding-top:2px; }
+.ac-row + .ac-row:not(.grouped) { margin-top:18px; }
+.ac-row-inner { display:flex; gap:10px; align-items:flex-end; flex:1; transition:transform 0.22s cubic-bezier(.34,1.56,.64,1); will-change:transform; min-width:0; }
+.ac-row.mine .ac-row-inner { flex-direction:row-reverse; }
+.ac-row.swiping .ac-row-inner { transition:none; }
+.ac-avatar { width:38px; height:38px; border-radius:50%; flex-shrink:0; overflow:hidden; background:linear-gradient(135deg,#a78bfa,#7c3aed); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:800; font-size:15px; box-shadow:0 2px 10px rgba(15,23,42,0.12); position:relative; }
 .ac-avatar img { width:100%; height:100%; object-fit:cover; }
 .ac-avatar.hidden { visibility:hidden; }
-.ac-msgcol { display:flex; flex-direction:column; max-width:75%; min-width:0; }
+.ac-msgcol { display:flex; flex-direction:column; max-width:78%; min-width:0; }
 .ac-row.mine .ac-msgcol { align-items:flex-end; }
-.ac-name { font-size:13px; font-weight:700; color:#a78bfa; margin:0 4px 4px; }
+.ac-name { font-size:13px; font-weight:800; color:#a78bfa; margin:0 6px 5px; letter-spacing:-0.1px; }
 .ac-row.mine .ac-name { display:none; }
-.ac-bubble { padding:11px 15px; border-radius:20px; font-size:16px; line-height:1.42; word-wrap:break-word; overflow-wrap:break-word; box-shadow:0 1px 3px rgba(0,0,0,0.07); position:relative; max-width:100%; }
-.ac-bubble.other { background:var(--bg3); color:var(--text); border-bottom-left-radius:6px; }
-.ac-row.grouped .ac-bubble.other { border-bottom-left-radius:20px; border-top-left-radius:6px; }
-.ac-bubble.mine { background:var(--ac-mine-grad); color:#fff; border-bottom-right-radius:6px; }
-.ac-row.grouped .ac-bubble.mine { border-bottom-right-radius:20px; border-top-right-radius:6px; }
-.ac-bubble img.media { max-width:240px; max-height:280px; border-radius:14px; display:block; margin-top:6px; }
-.ac-time { font-size:11px; color:var(--muted); margin:3px 6px 0; font-weight:600; }
-.ac-row.mine .ac-time { color:rgba(255,255,255,0.65); }
-.ac-del { background:none; border:none; color:rgba(239,68,68,0.85); font-size:12px; cursor:pointer; padding:2px 5px; margin-top:2px; opacity:0.5; transition:opacity .15s; }
-.ac-row:hover .ac-del { opacity:1; }
-.ac-empty { padding:80px 28px; text-align:center; }
-.ac-empty-icon { font-size:64px; margin-bottom:18px; opacity:0.55; }
-.ac-empty-title { font-size:20px; font-weight:800; color:var(--text); margin-bottom:10px; letter-spacing:-0.3px; }
-.ac-empty-sub { font-size:14px; color:var(--muted); line-height:1.55; max-width:300px; margin:0 auto; }
-.ac-input-wrap { position:fixed; bottom:calc(68px + env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%); width:100%; max-width:480px; background:var(--bg); border-top:1px solid var(--border2); padding:10px 12px calc(10px + env(safe-area-inset-bottom,0px)); display:flex; align-items:flex-end; gap:9px; z-index:99; box-shadow:0 -6px 18px rgba(0,0,0,0.12); backdrop-filter:blur(20px) saturate(180%); -webkit-backdrop-filter:blur(20px) saturate(180%); background:var(--glass-bg, var(--bg)); }
-.ac-input { flex:1; background:var(--bg3); border:1.5px solid var(--border2); color:var(--text); border-radius:22px; padding:12px 16px; font-size:16px; font-family:inherit; resize:none; outline:none; max-height:140px; line-height:1.42; transition:border-color .15s; }
-.ac-input:focus { border-color:#a78bfa; box-shadow:0 0 0 3px rgba(167,139,250,0.12); }
-.ac-send { background:var(--ac-mine-grad); border:none; color:#fff; width:48px; height:48px; border-radius:50%; font-size:20px; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-weight:700; touch-action:manipulation; box-shadow:0 6px 18px rgba(124,58,237,0.35); transition:transform .12s; }
-.ac-send:active { transform:scale(0.92); }
+.ac-bubble { padding:12px 16px; border-radius:22px; font-size:16px; line-height:1.45; word-wrap:break-word; overflow-wrap:break-word; box-shadow:0 1px 3px rgba(0,0,0,0.06), 0 4px 12px rgba(0,0,0,0.04); position:relative; max-width:100%; transition:transform 0.15s, box-shadow 0.15s; }
+.ac-bubble.other { background:var(--bg3); color:var(--text); border-bottom-left-radius:6px; border:1px solid var(--border2); }
+.ac-row.grouped .ac-bubble.other { border-bottom-left-radius:22px; border-top-left-radius:6px; }
+.ac-bubble.mine { background:var(--ac-mine-grad); color:#fff; border-bottom-right-radius:6px; box-shadow:0 4px 16px rgba(124,58,237,0.32); }
+.ac-row.grouped .ac-bubble.mine { border-bottom-right-radius:22px; border-top-right-radius:6px; }
+.ac-bubble img.media { max-width:260px; max-height:300px; border-radius:14px; display:block; margin-top:6px; }
+.ac-bubble.selected { box-shadow:0 0 0 3px rgba(167,139,250,0.55), 0 8px 24px rgba(124,58,237,0.4); transform:scale(1.02); z-index:101; }
+.ac-time { font-size:11.5px; color:var(--muted); margin:4px 8px 0; font-weight:600; letter-spacing:0.1px; }
+.ac-row.mine .ac-time { color:var(--muted); }
+.ac-empty { padding:90px 28px; text-align:center; }
+.ac-empty-icon { font-size:72px; margin-bottom:20px; opacity:0.55; }
+.ac-empty-title { font-size:22px; font-weight:800; color:var(--text); margin-bottom:10px; letter-spacing:-0.3px; }
+.ac-empty-sub { font-size:14.5px; color:var(--muted); line-height:1.55; max-width:300px; margin:0 auto; }
+/* Swipe-Trash Reveal */
+.ac-trash { position:absolute; right:18px; top:50%; transform:translateY(-50%); width:46px; height:46px; border-radius:50%; background:linear-gradient(135deg,#ef4444,#dc2626); color:#fff; font-size:22px; display:flex; align-items:center; justify-content:center; opacity:0; pointer-events:none; box-shadow:0 6px 18px rgba(239,68,68,0.4); z-index:1; transition:opacity 0.15s; }
+.ac-row.mine .ac-trash { right:auto; left:18px; }
+/* Backdrop + Reactions Picker (Long-press) */
+.ac-backdrop { position:fixed; inset:0; background:rgba(0,0,0,0.35); backdrop-filter:blur(3px); z-index:90; display:none; }
+.ac-backdrop.show { display:block; animation:ac-fade .18s ease; }
+@keyframes ac-fade { from { opacity:0; } to { opacity:1; } }
+.ac-react-picker { position:fixed; background:var(--bg2); border:1px solid var(--border); border-radius:24px; padding:10px 14px; box-shadow:0 14px 38px rgba(0,0,0,0.30); z-index:101; display:none; align-items:center; gap:6px; }
+.ac-react-picker.show { display:flex; animation:ac-pop-up .25s cubic-bezier(.34,1.56,.64,1); }
+@keyframes ac-pop-up { from { opacity:0; transform:translateY(10px) scale(.92); } to { opacity:1; transform:translateY(0) scale(1); } }
+.ac-react-picker button { background:none; border:none; font-size:28px; cursor:pointer; padding:6px; border-radius:14px; transition:transform .15s, background .12s; line-height:1; }
+.ac-react-picker button:active { transform:scale(1.4); background:rgba(167,139,250,0.18); }
+/* Action-Sheet */
+.ac-sheet { position:fixed; left:0; right:0; bottom:0; background:var(--bg2); border-radius:24px 24px 0 0; padding:14px 14px calc(20px + env(safe-area-inset-bottom)); z-index:101; transform:translateY(100%); transition:transform .25s cubic-bezier(.34,1.56,.64,1); box-shadow:0 -8px 32px rgba(0,0,0,0.32); max-width:480px; margin:0 auto; }
+.ac-sheet.show { transform:translateY(0); }
+.ac-sheet-handle { width:40px; height:5px; background:#7777; border-radius:99px; margin:0 auto 16px; }
+.ac-sheet-row { display:flex; align-items:center; gap:14px; padding:14px 16px; border-radius:14px; cursor:pointer; font-size:16px; font-weight:600; color:var(--text); transition:background .12s; touch-action:manipulation; -webkit-tap-highlight-color:transparent; }
+.ac-sheet-row:active { background:rgba(167,139,250,0.10); }
+.ac-sheet-row.danger { color:#ef4444; }
+.ac-sheet-row.danger:active { background:rgba(239,68,68,0.10); }
+.ac-sheet-row .ac-icon { font-size:20px; width:24px; text-align:center; flex-shrink:0; }
+.ac-sheet-cancel { margin-top:6px; padding:14px; border-radius:14px; border:1px solid var(--border); background:transparent; color:var(--muted); font-size:14.5px; font-weight:700; cursor:pointer; width:100%; text-align:center; }
+/* Reactions */
+.ac-reactions { display:flex; flex-wrap:wrap; gap:4px; margin:6px 4px 0; }
+.ac-row.mine .ac-reactions { justify-content:flex-end; }
+.ac-react { background:var(--bg3); border:1px solid var(--border2); border-radius:99px; padding:3px 9px; font-size:13px; cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition:transform .12s, background .12s; }
+.ac-react:active { transform:scale(.94); }
+.ac-react.mine { background:rgba(167,139,250,0.18); border-color:#a78bfa; color:#a78bfa; }
+.ac-react .ac-react-count { font-weight:700; font-size:12px; }
+/* Input Bar */
+.ac-input-wrap { position:fixed; bottom:calc(68px + env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%); width:100%; max-width:480px; background:var(--bg); border-top:1px solid var(--border2); padding:10px 12px; display:flex; align-items:flex-end; gap:9px; z-index:99; box-shadow:0 -6px 22px rgba(0,0,0,0.14); }
+.ac-input { flex:1; background:var(--bg3); border:1.5px solid var(--border2); color:var(--text); border-radius:24px; padding:13px 18px; font-size:16px; font-family:inherit; resize:none; outline:none; max-height:140px; line-height:1.42; transition:border-color .15s, box-shadow .15s; }
+.ac-input:focus { border-color:#a78bfa; box-shadow:0 0 0 4px rgba(167,139,250,0.14); }
+.ac-send { background:var(--ac-mine-grad); border:none; color:#fff; width:50px; height:50px; border-radius:50%; font-size:22px; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-weight:700; touch-action:manipulation; box-shadow:0 6px 20px rgba(124,58,237,0.40); transition:transform .12s, box-shadow .12s; }
+.ac-send:active { transform:scale(0.90); box-shadow:0 3px 10px rgba(124,58,237,0.30); }
 .ac-send:disabled { opacity:0.4; cursor:not-allowed; }
+.ac-send svg { width:22px; height:22px; }
 .ac-bubble-anim { animation: ac-pop .25s cubic-bezier(.34,1.56,.64,1); }
-@keyframes ac-pop { from { opacity:0; transform:translateY(8px) scale(0.96); } to { opacity:1; transform:translateY(0) scale(1); } }
-.ac-pending { opacity:0.55; }
-.ac-pending::after { content:" ⏳"; font-size:11px; }
+@keyframes ac-pop { from { opacity:0; transform:translateY(8px) scale(0.94); } to { opacity:1; transform:translateY(0) scale(1); } }
+.ac-pending { opacity:0.65; }
+.ac-pending::after { content:" ⏳"; font-size:12px; }
+.ac-failed { background:rgba(239,68,68,0.18) !important; color:#ef4444 !important; box-shadow:0 0 0 1px rgba(239,68,68,0.3) !important; }
 </style>
 <div class="topbar" style="display:flex;align-items:center;gap:8px;padding:10px 10px;background:linear-gradient(135deg,#a78bfa,#7c3aed);position:sticky;top:0;z-index:10;box-shadow:0 4px 14px rgba(124,58,237,0.25)">
   <a href="/nachrichten" style="padding:8px;color:#fff;display:flex;align-items:center;text-decoration:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="24" height="24"><polyline points="15 18 9 12 15 6"/></svg></a>
@@ -6616,9 +6657,27 @@ async function submitSuperLink(){
   <div style="width:38px"></div>
 </div>
 <div id="ac-msgs" class="ac-wrap"></div>
+<!-- Long-press React-Picker (positioniert per JS) -->
+<div id="ac-react-picker" class="ac-react-picker">
+  <button onclick="acPickReaction('👍')">👍</button>
+  <button onclick="acPickReaction('❤️')">❤️</button>
+  <button onclick="acPickReaction('😂')">😂</button>
+  <button onclick="acPickReaction('🔥')">🔥</button>
+  <button onclick="acPickReaction('💯')">💯</button>
+  <button onclick="acPickReaction('💎')">💎</button>
+</div>
+<!-- Action Sheet (slide-up) -->
+<div id="ac-backdrop" class="ac-backdrop" onclick="acHideMenu()"></div>
+<div id="ac-sheet" class="ac-sheet">
+  <div class="ac-sheet-handle"></div>
+  <div class="ac-sheet-row" onclick="acDoCopy()"><span class="ac-icon">📋</span><span>Text kopieren</span></div>
+  <div class="ac-sheet-row" id="ac-sheet-react" onclick="acOpenReactPicker()"><span class="ac-icon">😀</span><span>Reagieren</span></div>
+  <div class="ac-sheet-row danger" id="ac-sheet-del" onclick="acDoDelete()"><span class="ac-icon">🗑️</span><span>Nachricht löschen</span></div>
+  <button class="ac-sheet-cancel" onclick="acHideMenu()">Abbrechen</button>
+</div>
 <div class="ac-input-wrap">
   <textarea id="ac-input" class="ac-input" placeholder="Nachricht an alle App-User…" rows="1" maxlength="2000" autocapitalize="sentences"></textarea>
-  <button id="ac-send" class="ac-send" onclick="acSend()" aria-label="Senden">➤</button>
+  <button id="ac-send" class="ac-send" onclick="acSend()" aria-label="Senden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
 </div>
 <script>
 const ME_UID = '${myUid}';
@@ -6633,6 +6692,15 @@ function acAvatar(m){
   const initial=acEsc((m.name||'?').slice(0,1).toUpperCase());
   return '<div class="ac-avatar"><img src="/appbild/'+m.uid+'/profilepic" onerror="this.style.display=\\'none\\';this.parentElement.textContent=\\''+initial+'\\'" alt=""></div>';
 }
+function acRenderReactions(m){
+  if (!m.reactions) return '';
+  const entries = Object.entries(m.reactions).filter(([_, uids]) => Array.isArray(uids) && uids.length);
+  if (!entries.length) return '';
+  return '<div class="ac-reactions">'+entries.map(([emoji, uids]) => {
+    const mine = uids.includes(ME_UID);
+    return '<button class="ac-react'+(mine?' mine':'')+'" onclick="acToggleReact('+m.ts+',\\''+emoji+'\\')" data-emoji="'+emoji+'">'+emoji+' <span class="ac-react-count">'+uids.length+'</span></button>';
+  }).join('')+'</div>';
+}
 function acRenderRow(m, prev){
   const mine = String(m.uid) === ME_UID;
   const grouped = prev && String(prev.uid) === String(m.uid) && (m.ts - prev.ts) < 5*60*1000;
@@ -6640,14 +6708,17 @@ function acRenderRow(m, prev){
   const canDel = mine || IS_ADMIN;
   const escText = acEsc(m.text||'').replace(/\\n/g,'<br>');
   const imgHtml = m.image ? '<img class="media" src="'+m.image+'" alt="">' : '';
-  const delBtn = canDel ? '<button class="ac-del" onclick="acDelete('+m.ts+')">Löschen</button>' : '';
-  return '<div class="ac-row '+(mine?'mine':'')+' '+(grouped?'grouped':'')+'" data-ts="'+m.ts+'" data-uid="'+m.uid+'">'
-    +(grouped ? '<div class="ac-avatar hidden"></div>' : (mine ? '' : '<a href="/profil/'+m.uid+'" style="text-decoration:none">'+acAvatar(m)+'</a>'))
+  return '<div class="ac-row '+(mine?'mine':'')+(grouped?' grouped':'')+'" data-ts="'+m.ts+'" data-uid="'+m.uid+'"'+(canDel?' data-can-del="1"':'')+'>'
+    +'<div class="ac-row-inner">'
+    +(grouped ? '<div class="ac-avatar hidden"></div>' : (mine ? '' : '<a href="/profil/'+m.uid+'" style="text-decoration:none" onclick="event.stopPropagation()">'+acAvatar(m)+'</a>'))
     +'<div class="ac-msgcol">'
-      +(showName ? '<a href="/profil/'+m.uid+'" style="text-decoration:none"><div class="ac-name">'+acEsc(m.name||'User')+'</div></a>' : '')
+      +(showName ? '<a href="/profil/'+m.uid+'" style="text-decoration:none" onclick="event.stopPropagation()"><div class="ac-name">'+acEsc(m.name||'User')+'</div></a>' : '')
       +'<div class="ac-bubble '+(mine?'mine':'other')+' ac-bubble-anim">'+(escText||'')+(imgHtml||'')+'</div>'
-      +'<div class="ac-time">'+acTime(m.ts)+(canDel ? ' · '+delBtn.replace('<button class="ac-del"','<button class="ac-del" style="display:inline"') : '')+'</div>'
+      +acRenderReactions(m)
+      +'<div class="ac-time">'+acTime(m.ts)+'</div>'
     +'</div>'
+    +'</div>'
+    +'<div class="ac-trash" aria-hidden="true">🗑</div>'
   +'</div>';
 }
 function acRenderAll(){
@@ -6729,16 +6800,182 @@ async function acSend() {
   }
 }
 async function acDelete(ts) {
-  if (!confirm('Nachricht löschen?')) return;
   try {
     const r = await fetch('/api/app-chat/delete', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ts})});
     const d = await r.json();
     if (d.ok) {
-      _acMsgs = _acMsgs.filter(m => m.ts !== ts);
-      acRenderAll();
+      const row = document.querySelector('.ac-row[data-ts="'+ts+'"]');
+      if (row) {
+        row.style.transition = 'all 0.22s ease';
+        row.style.opacity = '0';
+        row.style.transform = 'translateX(' + (row.classList.contains('mine') ? '120%' : '-120%') + ')';
+        setTimeout(() => {
+          _acMsgs = _acMsgs.filter(m => m.ts !== ts);
+          acRenderAll();
+        }, 230);
+      } else {
+        _acMsgs = _acMsgs.filter(m => m.ts !== ts);
+        acRenderAll();
+      }
     } else { alert(d.error || 'Fehler'); }
   } catch(e) { alert('Netzwerkfehler'); }
 }
+async function acToggleReact(ts, emoji) {
+  // Optimistic toggle
+  const m = _acMsgs.find(x => x.ts === ts);
+  if (m) {
+    if (!m.reactions) m.reactions = {};
+    if (!m.reactions[emoji]) m.reactions[emoji] = [];
+    const idx = m.reactions[emoji].indexOf(ME_UID);
+    if (idx >= 0) {
+      m.reactions[emoji].splice(idx, 1);
+      if (m.reactions[emoji].length === 0) delete m.reactions[emoji];
+    } else {
+      m.reactions[emoji].push(ME_UID);
+    }
+    acRenderAll();
+  }
+  try {
+    await fetch('/api/app-chat/react', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ts, emoji})});
+  } catch(e) {}
+}
+// ── Long-press + Swipe-Delete UX (wie in Threads) ─────────────────────
+let _acActiveRow = null;
+let _acLastShow = 0;
+function acShowMenu(row){
+  if (!row) return;
+  _acActiveRow = row;
+  _acLastShow = Date.now();
+  const canDel = row.dataset.canDel === '1';
+  document.getElementById('ac-sheet-del').style.display = canDel ? '' : 'none';
+  document.getElementById('ac-backdrop').classList.add('show');
+  // Bubble heben
+  const bubble = row.querySelector('.ac-bubble');
+  if (bubble) bubble.classList.add('selected');
+  // React-Picker: oberhalb / unterhalb der Bubble
+  const picker = document.getElementById('ac-react-picker');
+  picker.classList.add('show');
+  if (bubble) {
+    const r = bubble.getBoundingClientRect();
+    const ph = picker.offsetHeight || 60;
+    const pw = picker.offsetWidth || 280;
+    const left = Math.max(8, Math.min(window.innerWidth - pw - 8, r.left + r.width / 2 - pw / 2));
+    picker.style.left = left + 'px';
+    const above = r.top - ph - 12;
+    const below = r.bottom + 12;
+    picker.style.top = (above >= 12 ? above : Math.min(below, window.innerHeight - ph - 12)) + 'px';
+  }
+  // Sheet
+  setTimeout(() => document.getElementById('ac-sheet').classList.add('show'), 30);
+  if (navigator.vibrate) navigator.vibrate(15);
+}
+function acHideMenu(){
+  if (Date.now() - _acLastShow < 200) return;
+  document.getElementById('ac-react-picker').classList.remove('show');
+  document.getElementById('ac-backdrop').classList.remove('show');
+  document.getElementById('ac-sheet').classList.remove('show');
+  document.querySelectorAll('.ac-bubble.selected').forEach(b => b.classList.remove('selected'));
+  _acActiveRow = null;
+}
+function acDoCopy(){
+  if (!_acActiveRow) return;
+  const txt = (_acActiveRow.querySelector('.ac-bubble')?.innerText || '').trim();
+  acHideMenu();
+  if (!txt) return;
+  navigator.clipboard?.writeText(txt).then(() => {
+    const t = document.createElement('div');
+    t.textContent = '📋 Kopiert';
+    t.style.cssText = 'position:fixed;bottom:140px;left:50%;transform:translateX(-50%);background:#000d;color:#fff;padding:10px 18px;border-radius:99px;font-size:13px;font-weight:700;z-index:200;box-shadow:0 6px 24px rgba(0,0,0,.4)';
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 1500);
+  }).catch(() => alert('Kopieren fehlgeschlagen'));
+}
+function acDoDelete(){
+  if (!_acActiveRow) return;
+  const ts = Number(_acActiveRow.dataset.ts);
+  acHideMenu();
+  if (ts) acDelete(ts);
+}
+function acOpenReactPicker(){
+  // React-Picker ist schon offen — Sheet runter, damit Picker frei sichtbar bleibt.
+  document.getElementById('ac-sheet').classList.remove('show');
+}
+function acPickReaction(emoji){
+  if (!_acActiveRow) return;
+  const ts = Number(_acActiveRow.dataset.ts);
+  acHideMenu();
+  if (ts) acToggleReact(ts, emoji);
+}
+// Pointer-State für Long-Press + Swipe-Delete
+const LONG_PRESS_MS = 420;
+const LP_ABORT_PX = 8;
+const SWIPE_START_PX = 14;
+const SWIPE_COMMIT_PX = 88;
+const SWIPE_CAP_PX = 110;
+const SWIPE_VERT_ABORT_PX = 18;
+let _pRow = null, _pX0 = 0, _pY0 = 0, _pId = null, _pTimer = null, _pSwiping = false, _pCommitted = false;
+function _resetSwipe(){
+  if (!_pRow) return;
+  const inner = _pRow.querySelector('.ac-row-inner');
+  const tr = _pRow.querySelector('.ac-trash');
+  if (inner) { inner.style.transition='transform 0.22s'; inner.style.transform=''; }
+  if (tr) tr.style.opacity = '0';
+  _pRow.classList.remove('swiping');
+  if (_pTimer) { clearTimeout(_pTimer); _pTimer = null; }
+  _pRow = null; _pId = null; _pSwiping = false; _pCommitted = false;
+}
+document.addEventListener('pointerdown', e => {
+  if (e.pointerType === 'mouse' && e.button !== 0) return;
+  const r = e.target.closest && e.target.closest('.ac-row');
+  if (!r) return;
+  if (e.target.closest('.ac-react') || e.target.closest('a')) return;
+  _pRow = r; _pX0 = e.clientX; _pY0 = e.clientY; _pId = e.pointerId;
+  _pSwiping = false; _pCommitted = false;
+  const inner = r.querySelector('.ac-row-inner');
+  if (inner) inner.style.transition = 'none';
+  _pTimer = setTimeout(() => {
+    if (!_pRow || _pSwiping) return;
+    _pCommitted = true;
+    acShowMenu(_pRow);
+    _resetSwipe();
+  }, LONG_PRESS_MS);
+}, { passive: true, capture: true });
+document.addEventListener('pointermove', e => {
+  if (!_pRow || e.pointerId !== _pId) return;
+  const dx = e.clientX - _pX0, dy = e.clientY - _pY0;
+  if (!_pSwiping && (Math.abs(dx) > LP_ABORT_PX || Math.abs(dy) > LP_ABORT_PX) && _pTimer) { clearTimeout(_pTimer); _pTimer = null; }
+  if (!_pSwiping && Math.abs(dy) > SWIPE_VERT_ABORT_PX && Math.abs(dy) > Math.abs(dx)) { _resetSwipe(); return; }
+  // Swipe richtung: bei eigenen Messages nach RECHTS swipen, bei anderen nach LINKS
+  const mine = _pRow.classList.contains('mine');
+  const validDir = mine ? (dx > 0) : (dx < 0);
+  if (validDir && Math.abs(dx) > SWIPE_START_PX && Math.abs(dx) > Math.abs(dy)) {
+    if (_pRow.dataset.canDel !== '1') { _resetSwipe(); return; }
+    _pSwiping = true;
+    _pRow.classList.add('swiping');
+    const cap = mine ? Math.min(SWIPE_CAP_PX, dx) : Math.max(-SWIPE_CAP_PX, dx);
+    const inner = _pRow.querySelector('.ac-row-inner');
+    if (inner) inner.style.transform = 'translateX(' + cap + 'px)';
+    const tr = _pRow.querySelector('.ac-trash');
+    if (tr) tr.style.opacity = String(Math.min(1, Math.abs(cap) / 65));
+  }
+}, { passive: true, capture: true });
+document.addEventListener('pointerup', e => {
+  if (!_pRow || _pCommitted) { _resetSwipe(); return; }
+  if (!_pSwiping) { _resetSwipe(); return; }
+  const dx = e.clientX - _pX0;
+  const ts = Number(_pRow.dataset.ts);
+  const mine = _pRow.classList.contains('mine');
+  const committed = mine ? (dx >= SWIPE_COMMIT_PX) : (dx <= -SWIPE_COMMIT_PX);
+  if (committed && ts && _pRow.dataset.canDel === '1') {
+    if (navigator.vibrate) navigator.vibrate(20);
+    const target = _pRow;
+    _resetSwipe();
+    acDelete(ts);
+  } else { _resetSwipe(); }
+}, { passive: true, capture: true });
+document.addEventListener('pointercancel', _resetSwipe, { passive: true });
+// Disable native context-menu (long-press) on bubbles
+document.addEventListener('contextmenu', e => { if (e.target.closest('.ac-row')) e.preventDefault(); });
 // Lightweight Polling alle 3s — nur neue Nachrichten seit lastTs
 async function acPoll() {
   try {
