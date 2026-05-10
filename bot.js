@@ -76,15 +76,15 @@ if (sessions.size === 0) {
             for (const [k,v] of Object.entries(raw)) sessions.set(k, v);
             console.log('✅ Sessions (lokal) geladen:', sessions.size);
         }
-    } catch(e) {}
+    } catch(e) { console.error('Sessions load failed:', e.message); }
 }
 
 function saveSessions() {
     const obj = {};
     for (const [k,v] of sessions.entries()) obj[k] = v;
     const data = JSON.stringify(obj);
-    try { fs.writeFileSync(SESSIONS_FILE, data); } catch(e) {}
-    try { fs.writeFileSync(LOCAL_SESSIONS, data); } catch(e) {}
+    try { fs.writeFileSync(SESSIONS_FILE, data); } catch(e) { console.error('Sessions save failed (primary):', e.message); }
+    try { fs.writeFileSync(LOCAL_SESSIONS, data); } catch(e) { console.error('Sessions save failed (local):', e.message); }
 }
 setInterval(saveSessions, 60000);
 
@@ -99,8 +99,8 @@ const VAPID_PUBLIC = 'BF3FxtRYkoHBCgfG0U1o9UIeib81WmArYdKWJZQWMbCwdd2cvivmAB9TNj
 const VAPID_PRIVATE = 'ViWUilwaJSHAmfWLyIfCyvJVWnOFirq3Dn1HTGfIaoQ';
 const PUSH_SUBS_FILE = DATA_DIR + '/push_subscriptions.json';
 let pushSubs = {};
-try { if (fs.existsSync(PUSH_SUBS_FILE)) pushSubs = JSON.parse(fs.readFileSync(PUSH_SUBS_FILE, 'utf8')); } catch(e) {}
-function savePushSubs() { try { fs.writeFileSync(PUSH_SUBS_FILE, JSON.stringify(pushSubs)); } catch(e) {} }
+try { if (fs.existsSync(PUSH_SUBS_FILE)) pushSubs = JSON.parse(fs.readFileSync(PUSH_SUBS_FILE, 'utf8')); } catch(e) { console.error('Push subs load failed:', e.message); }
+function savePushSubs() { try { fs.writeFileSync(PUSH_SUBS_FILE, JSON.stringify(pushSubs)); } catch(e) { console.error('Push subs save failed:', e.message); } }
 if (webpush) webpush.setVapidDetails('mailto:admin@creatorx.app', VAPID_PUBLIC, VAPID_PRIVATE);
 
 const RING_ITEMS = [
@@ -146,7 +146,7 @@ async function checkProfileCompletion(uid, session) {
         const hasBanner = !!(session?.bannerData || ladeBild(String(uid),'banner'));
         const allDone = hasPic && hasBanner && !!(fu.bio?.trim()) && !!(fu.nische?.trim());
         if (allDone) await postBot('/complete-profile-api', { uid: String(uid) });
-    } catch(e) {}
+    } catch(e) { console.error('checkProfileCompletion failed:', e.message); }
 }
 function getSession(req) { const m=(req.headers.cookie||'').match(/cbsid=([^;]+)/); return m?sessions.get(m[1]):null; }
 function getSid(req) { const m=(req.headers.cookie||'').match(/cbsid=([^;]+)/); return m?m[1]:null; }
@@ -3277,16 +3277,6 @@ ${_isPreview ? '<div class="admin-pb">👀 Admin-Vorschau · Login-Page &nbsp;·
       <div style="font-size:12.5px;color:var(--muted);margin-bottom:8px">Noch keinen Account?</div>
       <a href="/signup" style="display:inline-flex;align-items:center;gap:6px;color:var(--gold);font-weight:700;text-decoration:none;font-size:13.5px">→ Jetzt Sign Up</a>
     </div>
-    <div style="text-align:center;margin-top:18px;padding-top:14px;border-top:1px solid var(--border)">
-      <button type="button" onclick="document.getElementById('tg-code-pane').style.display=this.dataset.open==='1'?'none':'block';this.dataset.open=this.dataset.open==='1'?'0':'1';this.textContent=this.dataset.open==='1'?'✕ Code-Login schließen':'🔑 Du hast einen Login-Code aus Telegram?'" data-open="0" style="background:none;border:none;color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;text-decoration:underline">🔑 Du hast einen Login-Code aus Telegram?</button>
-      <div id="tg-code-pane" style="display:none;margin-top:12px">
-        <form method="POST" action="/auth/code-form">
-          <input type="text" name="code" class="in code-in" placeholder="Dein Code aus /mycode" autocomplete="off" autocapitalize="none" spellcheck="false" required value="${(query.code||'').toString().slice(0,40).replace(/[<>"]/g,'')}">
-          <button type="submit" class="btn-p" style="margin-top:8px">Mit Code einloggen →</button>
-        </form>
-        <div class="code-hint" style="margin-top:8px">Tippe <b>/mycode</b> im CreatorX-Bot um deinen Code zu bekommen.</div>
-      </div>
-    </div>
   </div>
 
   <div class="bottom-cta">
@@ -4992,7 +4982,7 @@ function submitPw(ev){
             if (imageData.length > 3000000) return json({ok:false, error:'Max 2MB'},400);
             session.profilePicData = imageData;
             saveSessions();
-            try { fs.writeFileSync(DATA_DIR + '/bild_' + getMyUid(session) + '_profilepic.txt', imageData); } catch(e) {}
+            try { await fs.promises.writeFile(DATA_DIR + '/bild_' + getMyUid(session) + '_profilepic.txt', imageData); } catch(e) { console.error('profilepic write failed:', e.message); }
             checkProfileCompletion(getMyUid(session), session);
             return json({ok:true});
         } catch(e) { return json({ok:false, error:e.message},500); }
@@ -5019,7 +5009,7 @@ function submitPw(ev){
             if (imageData.length > 3000000) return json({ok:false, error:'Max 2MB'},400);
             session.bannerData = imageData;
             saveSessions();
-            try { fs.writeFileSync(DATA_DIR + '/bild_' + getMyUid(session) + '_banner.txt', imageData); } catch(e) {}
+            try { await fs.promises.writeFile(DATA_DIR + '/bild_' + getMyUid(session) + '_banner.txt', imageData); } catch(e) { console.error('banner write failed:', e.message); }
             checkProfileCompletion(getMyUid(session), session);
             return json({ok:true});
         } catch(e) { return json({ok:false, error:e.message},500); }
@@ -5039,11 +5029,11 @@ function submitPw(ev){
             if (imageData) {
                 if (!imageData.startsWith('data:image/')) return json({error:'Kein Bild'}, 400);
                 if (imageData.length > 5000000) return json({error:'Max 4MB'}, 400);
-                try { fs.writeFileSync(DATA_DIR + '/bild_' + getMyUid(session) + '_proj_' + projectId + '.txt', imageData); } catch(e) {}
+                try { await fs.promises.writeFile(DATA_DIR + '/bild_' + getMyUid(session) + '_proj_' + projectId + '.txt', imageData); } catch(e) { console.error('project image write failed:', e.message); }
             }
             if (docData && docName) {
                 if (docData.length > 15000000) return json({error:'Max 10MB für Dokument'}, 400);
-                try { fs.writeFileSync(DATA_DIR + '/doc_' + getMyUid(session) + '_proj_' + projectId + '.txt', docData); } catch(e) {}
+                try { await fs.promises.writeFile(DATA_DIR + '/doc_' + getMyUid(session) + '_proj_' + projectId + '.txt', docData); } catch(e) { console.error('project doc write failed:', e.message); }
             }
             const result = await postBot('/add-project-api', { uid: getMyUid(session), projectId, title: title.trim(), description: (description||'').trim(), link: (link||'').trim(), docName: docName||'' });
             if (!result?.ok) return json({error: result?.error || 'Fehler'}, 400);
@@ -5061,11 +5051,11 @@ function submitPw(ev){
             if (imageData) {
                 if (!imageData.startsWith('data:image/')) return json({error:'Kein Bild'}, 400);
                 if (imageData.length > 5000000) return json({error:'Max 4MB'}, 400);
-                try { fs.writeFileSync(DATA_DIR + '/bild_' + getMyUid(session) + '_proj_' + projectId + '.txt', imageData); } catch(e) {}
+                try { await fs.promises.writeFile(DATA_DIR + '/bild_' + getMyUid(session) + '_proj_' + projectId + '.txt', imageData); } catch(e) { console.error('project image write failed:', e.message); }
             }
             if (docData && docName) {
                 if (docData.length > 15000000) return json({error:'Max 10MB für Dokument'}, 400);
-                try { fs.writeFileSync(DATA_DIR + '/doc_' + getMyUid(session) + '_proj_' + projectId + '.txt', docData); } catch(e) {}
+                try { await fs.promises.writeFile(DATA_DIR + '/doc_' + getMyUid(session) + '_proj_' + projectId + '.txt', docData); } catch(e) { console.error('project doc write failed:', e.message); }
             }
             const result = await postBot('/update-project-api', { uid: getMyUid(session), projectId, title: title.trim(), description: (description||'').trim(), link: (link||'').trim(), docName: docName||'' });
             if (!result?.ok) return json({error: result?.error || 'Fehler'}, 400);
@@ -5089,6 +5079,7 @@ function submitPw(ev){
     }
 
     if (path.startsWith('/api/download-project-doc/') && req.method === 'GET') {
+        if (!session) return text('Nicht gefunden', 404);
         const parts = path.replace('/api/download-project-doc/','').split('/');
         const docUid = parts[0], docProjId = parts[1];
         if (!docUid || !docProjId) return text('Nicht gefunden', 404);
@@ -8620,7 +8611,7 @@ async function customizeThread(tid, currentName, currentEmoji){
   m.id='thr-cust-modal';
   m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(6px);z-index:9999;display:flex;align-items:flex-end;justify-content:center';
   const palette=['💬','💡','❓','🗣️','📣','📈','📋','🛡️','📤','🎨','📢','🛍️','🏆','📸','🎥','🎵','🗳️','👋','🌟','🔥','⚡','🎯','🚀','📝','🎭','🧠','💎','🌈','🎮','🛠️','🎬','📱','📚','⭐','✨','👀','💼','🪄','📊','🎉'];
-  m.innerHTML='<div style="background:var(--bg2);border-radius:24px 24px 0 0;padding:22px 20px 30px;width:100%;max-width:480px;border-top:3px solid #0088cc"><div style="width:36px;height:4px;background:#666;border-radius:4px;margin:0 auto 18px"></div><div style="font-size:16px;font-weight:800;text-align:center;margin-bottom:6px">Thread anpassen</div><div style="font-size:12px;color:var(--muted);text-align:center;margin-bottom:18px">Icon + Name wie auf Telegram</div><label style="font-size:12px;color:var(--muted);font-weight:600;display:block;margin-bottom:6px">Name</label><input type="text" id="thr-cust-name" value="'+(currentName||'').replace(/"/g,'&quot;')+'" style="width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:12px;padding:11px 14px;font-size:14px;outline:none;margin-bottom:14px"><label style="font-size:12px;color:var(--muted);font-weight:600;display:block;margin-bottom:6px">Icon — getipptes Emoji oder unten auswählen</label><input type="text" id="thr-cust-emoji" value="'+(currentEmoji||'')+'" maxlength="6" style="width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:12px;padding:11px 14px;font-size:18px;outline:none;margin-bottom:14px;text-align:center"><div style="display:grid;grid-template-columns:repeat(8,1fr);gap:6px;max-height:180px;overflow-y:auto;background:var(--bg3);border-radius:12px;padding:10px;margin-bottom:18px">'+palette.map(e=>'<button type="button" onclick="document.getElementById(\'thr-cust-emoji\').value=\''+e+'\'" style="background:var(--bg2);border:1px solid var(--border2);border-radius:10px;font-size:22px;padding:8px;cursor:pointer">'+e+'</button>').join('')+'</div><div style="display:flex;gap:10px"><button onclick="document.getElementById(\'thr-cust-modal\').remove()" style="flex:1;padding:13px;border-radius:12px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:14px;font-weight:600;cursor:pointer">Abbrechen</button><button onclick="saveThreadCustom(\''+tid+'\')" style="flex:1;padding:13px;border-radius:12px;border:none;background:linear-gradient(135deg,#0088cc,#00c6ff);color:#fff;font-size:14px;font-weight:800;cursor:pointer">Speichern</button></div></div>';
+  m.innerHTML='<div style="background:var(--bg2);border-radius:24px 24px 0 0;padding:22px 20px 30px;width:100%;max-width:480px;border-top:3px solid #0088cc"><div style="width:36px;height:4px;background:#666;border-radius:4px;margin:0 auto 18px"></div><div style="font-size:16px;font-weight:800;text-align:center;margin-bottom:6px">Thread anpassen</div><div style="font-size:12px;color:var(--muted);text-align:center;margin-bottom:18px">Icon + Name für diesen Thread</div><label style="font-size:12px;color:var(--muted);font-weight:600;display:block;margin-bottom:6px">Name</label><input type="text" id="thr-cust-name" value="'+(currentName||'').replace(/"/g,'&quot;')+'" style="width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:12px;padding:11px 14px;font-size:14px;outline:none;margin-bottom:14px"><label style="font-size:12px;color:var(--muted);font-weight:600;display:block;margin-bottom:6px">Icon — getipptes Emoji oder unten auswählen</label><input type="text" id="thr-cust-emoji" value="'+(currentEmoji||'')+'" maxlength="6" style="width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:12px;padding:11px 14px;font-size:18px;outline:none;margin-bottom:14px;text-align:center"><div style="display:grid;grid-template-columns:repeat(8,1fr);gap:6px;max-height:180px;overflow-y:auto;background:var(--bg3);border-radius:12px;padding:10px;margin-bottom:18px">'+palette.map(e=>'<button type="button" onclick="document.getElementById(\'thr-cust-emoji\').value=\''+e+'\'" style="background:var(--bg2);border:1px solid var(--border2);border-radius:10px;font-size:22px;padding:8px;cursor:pointer">'+e+'</button>').join('')+'</div><div style="display:flex;gap:10px"><button onclick="document.getElementById(\'thr-cust-modal\').remove()" style="flex:1;padding:13px;border-radius:12px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:14px;font-weight:600;cursor:pointer">Abbrechen</button><button onclick="saveThreadCustom(\''+tid+'\')" style="flex:1;padding:13px;border-radius:12px;border:none;background:linear-gradient(135deg,#0088cc,#00c6ff);color:#fff;font-size:14px;font-weight:800;cursor:pointer">Speichern</button></div></div>';
   document.body.appendChild(m);
 }
 async function saveThreadCustom(tid){
