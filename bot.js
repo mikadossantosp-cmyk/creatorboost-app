@@ -26,7 +26,9 @@ const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
 const EMAIL_FROM = process.env.EMAIL_FROM || 'CreatorX <onboarding@resend.dev>';
 const EMAIL_TOKEN_TTL = 60 * 60 * 1000;       // 1 Stunde
 const ACCOUNT_UNLOCK_TTL = 30 * 60 * 1000;    // 30 Min Edit-Window nach Unlock-Klick
-const EMAIL_RATE_LIMIT = 5 * 60 * 1000;       // 5 Min zwischen Requests pro Email
+const MAGIC_LINK_RATE_LIMIT = 30 * 1000;      // 30 Sek zwischen Magic-Link-Requests pro Email
+const PW_RESET_RATE_LIMIT = 5 * 60 * 1000;    // 5 Min zwischen Password-Reset-Requests pro Email
+const EMAIL_RATE_LIMIT = MAGIC_LINK_RATE_LIMIT; // Backward-compat alias
 setInterval(() => {
     const now = Date.now();
     for (const [t, v] of emailLoginTokens.entries()) if (v.exp < now) emailLoginTokens.delete(t);
@@ -2997,7 +2999,7 @@ self.addEventListener('notificationclick',e=>{
     }
 
     function redirect(to) { res.writeHead(302,{'Location':to}); res.end(); }
-    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'227'}); res.end(layout(content,session,page,lang)); }
+    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'228'}); res.end(layout(content,session,page,lang)); }
     function json(data, status=200) { res.writeHead(status,{'Content-Type':'application/json'}); res.end(JSON.stringify(data)); }
 
     // ── LANDING ──
@@ -3239,7 +3241,7 @@ ${_isPreview ? '<div class="admin-pb">👀 Admin-Vorschau · Login-Page &nbsp;·
 
   <div id="login" class="login-card" style="margin-top:24px">
     <div class="login-h">Mit Email einloggen</div>
-    <div class="login-sub">Magic-Link oder Passwort — kein Telegram nötig.</div>
+    <div class="login-sub">Email + Passwort — neu? Du wirst direkt registriert.</div>
 
     ${query.error==='email-expired' ? '<div class="msg show err">⚠️ Login-Link abgelaufen oder schon benutzt.</div>' : ''}
     ${query.error==='email-invalid' ? '<div class="msg show err">⚠️ Login-Link ungültig.</div>' : ''}
@@ -3249,11 +3251,13 @@ ${_isPreview ? '<div class="admin-pb">👀 Admin-Vorschau · Login-Page &nbsp;·
     <div class="msg" id="email-msg"></div>
     <form id="email-form" onsubmit="return submitEmail(event)">
       <input type="email" id="email-input" class="in" placeholder="deine@email.de" autocomplete="email" autocapitalize="none" spellcheck="false" required maxlength="200">
-      <input type="password" id="email-pw" class="in" placeholder="Passwort (optional · leer = Magic-Link)" autocomplete="current-password" maxlength="200">
-      <button type="submit" class="btn-p" id="email-btn">Einloggen →</button>
+      <input type="password" id="email-pw" class="in" placeholder="Passwort (min. 6 Zeichen)" autocomplete="current-password" minlength="6" maxlength="200" required>
+      <button type="submit" class="btn-p" id="email-btn">Einloggen / Registrieren →</button>
     </form>
-    <button type="button" id="email-magic-btn" onclick="sendMagicLink()" class="btn-link">📧 Magic-Link an die Email senden</button>
-    <div class="email-hint">Erste Anmeldung? Magic-Link an deine Email anfordern — du kannst danach in Einstellungen ein Passwort setzen.</div>
+    <div class="email-hint">Neu? Wir legen automatisch deinen Account an. Schon registriert? Du wirst eingeloggt.</div>
+    <div style="text-align:center;margin-top:14px;padding-top:14px;border-top:1px dashed var(--border)">
+      <button type="button" id="email-magic-btn" onclick="sendMagicLink()" class="btn-link" style="font-size:12px;color:var(--muted)">📧 Magic-Link senden (nur für bereits registrierte User)</button>
+    </div>
     <div style="text-align:center;margin-top:18px;padding-top:14px;border-top:1px solid var(--border)">
       <button type="button" onclick="document.getElementById('tg-code-pane').style.display=this.dataset.open==='1'?'none':'block';this.dataset.open=this.dataset.open==='1'?'0':'1';this.textContent=this.dataset.open==='1'?'✕ Code-Login schließen':'🔑 Du hast einen Login-Code aus Telegram?'" data-open="0" style="background:none;border:none;color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;text-decoration:underline">🔑 Du hast einen Login-Code aus Telegram?</button>
       <div id="tg-code-pane" style="display:none;margin-top:12px">
@@ -3314,22 +3318,24 @@ function submitEmail(ev){
   var pw=(pwInp.value||'');
   if(!em) return false;
   msg.classList.remove('show','ok','err');
-  // Wenn Passwort leer → Magic-Link.
-  if(!pw){ sendMagicLink(em); return false; }
-  btn.disabled=true;btn.textContent='Login...';
+  if(!pw || pw.length < 6){
+    msg.textContent='Passwort muss mindestens 6 Zeichen haben.';msg.classList.add('show','err');
+    return false;
+  }
+  btn.disabled=true;btn.textContent='Wird verarbeitet...';
   fetch('/api/auth/email-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:em,password:pw})})
     .then(function(r){return r.json().then(function(j){return{s:r.status,j:j};});})
     .then(function(o){
       if(o.j&&o.j.ok&&o.j.redirect){
-        msg.textContent='✅ Eingeloggt — leite weiter...';msg.classList.add('show','ok');
-        setTimeout(function(){window.location.href=o.j.redirect;},250);
+        msg.textContent='✅ ' + (o.j.isNewSignup ? '🎉 Account erstellt — leite weiter...' : 'Eingeloggt — leite weiter...');msg.classList.add('show','ok');
+        setTimeout(function(){window.location.href=o.j.redirect;},400);
       } else {
         msg.textContent=(o.j&&o.j.error)||'Login fehlgeschlagen.';
         msg.classList.add('show','err');
-        btn.disabled=false;btn.textContent='Einloggen →';
+        btn.disabled=false;btn.textContent='Einloggen / Registrieren →';
       }
     })
-    .catch(function(){msg.textContent='Netzwerkfehler.';msg.classList.add('show','err');btn.disabled=false;btn.textContent='Einloggen →';});
+    .catch(function(){msg.textContent='Netzwerkfehler.';msg.classList.add('show','err');btn.disabled=false;btn.textContent='Einloggen / Registrieren →';});
   return false;
 }
 function sendMagicLink(prefilledEmail){
@@ -3523,24 +3529,42 @@ document.addEventListener('DOMContentLoaded', function(){
         const email = String(body.email || '').toLowerCase().trim();
         const password = String(body.password || '');
         if (!email || !password) return json({ok:false, error:'Email und Passwort erforderlich'}, 400);
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json({ok:false, error:'Ungültige Email-Adresse'}, 400);
+        if (password.length < 6) return json({ok:false, error:'Passwort muss mindestens 6 Zeichen haben'}, 400);
         // Rate-Limit: 10 Versuche pro Email pro 5min (gegen Brute-Force).
         const rlKey = 'pw:' + email;
         const lastTs = emailRateLimit.get(rlKey) || 0;
         const tries = emailRateLimit.get(rlKey + ':n') || 0;
-        if (tries >= 10 && Date.now() - lastTs < EMAIL_RATE_LIMIT) {
+        if (tries >= 10 && Date.now() - lastTs < PW_RESET_RATE_LIMIT) {
             return json({ok:false, error:'Zu viele Login-Versuche — bitte 5 min warten'}, 429);
         }
         emailRateLimit.set(rlKey, Date.now());
         emailRateLimit.set(rlKey + ':n', tries + 1);
-        // Bot verifiziert Email+Passwort und liefert uid wenn ok.
-        const result = await postBot('/auth-email-password', { email, password });
         const _ip = String(req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '').split(',')[0].trim().slice(0, 64);
         const _ua = String(req.headers['user-agent'] || '').slice(0, 200);
+        // 1. Versuche existierenden Login
+        let result = await postBot('/auth-email-password', { email, password });
+        let isNewSignup = false;
+        // 2. Wenn fehlschlägt UND User existiert nicht → Auto-Signup (neuer Account)
         if (!result || !result.ok) {
-            postBot('/log-email-login', { email, success: false, method: 'password', uid: '', ip: _ip, ua: _ua }).catch(()=>{});
-            return json({ok:false, error: (result && result.error) || 'Email oder Passwort falsch'}, 401);
+            const _bd = await fetchBot('/data');
+            const _exists = Object.entries(_bd?.users || {}).find(([, u]) => String(u.email||'').toLowerCase() === email);
+            if (_exists) {
+                // User existiert aber Passwort falsch → Login-Fehler
+                postBot('/log-email-login', { email, success: false, method: 'password', uid: String(_exists[0]), ip: _ip, ua: _ua }).catch(()=>{});
+                return json({ok:false, error:'Email oder Passwort falsch'}, 401);
+            }
+            // User existiert NICHT → Auto-Signup mit Email + Passwort
+            console.log('[email-signup] new email + password — creating account:', email);
+            const created = await postBot('/create-email-user-api', { email, password });
+            if (!created || !created.ok || !created.uid) {
+                postBot('/log-email-login', { email, success: false, method: 'signup', uid: '', ip: _ip, ua: _ua }).catch(()=>{});
+                return json({ok:false, error: (created && created.error) || 'Account konnte nicht erstellt werden'}, 500);
+            }
+            isNewSignup = true;
+            result = { ok: true, uid: created.uid, hasPassword: true };
         }
-        postBot('/log-email-login', { email, success: true, method: 'password', uid: String(result.uid), ip: _ip, ua: _ua }).catch(()=>{});
+        postBot('/log-email-login', { email, success: true, method: isNewSignup ? 'signup' : 'password', uid: String(result.uid), ip: _ip, ua: _ua }).catch(()=>{});
         // Reset rate-limit on success.
         emailRateLimit.delete(rlKey + ':n');
         const botData = await fetchBot('/data');
@@ -3599,29 +3623,17 @@ document.addEventListener('DOMContentLoaded', function(){
         }
         emailRateLimit.set(email, Date.now());
         // User per Email finden (Match in d.users[*].email).
+        // Magic-Link ist NUR für bereits-registrierte User. Neue User müssen
+        // sich mit Email + Passwort registrieren (Auto-Signup im /email-password Flow).
         const botData = await fetchBot('/data');
         if (!botData) return json({ok:false, error:'Server nicht erreichbar'}, 503);
-        let found = Object.entries(botData.users || {}).find(([, u]) => String(u.email || '').toLowerCase() === email);
-        let isNewSignup = false;
-        // Wenn Email unbekannt → Auto-Signup (neuen Email-Only User erstellen)
+        const found = Object.entries(botData.users || {}).find(([, u]) => String(u.email || '').toLowerCase() === email);
         if (!found) {
-            console.log('[email-signup] new email — creating account:', email);
-            const created = await postBot('/create-email-user-api', { email });
-            if (!created || !created.ok || !created.uid) {
-                return json({ok:false, error: (created && created.error) || 'Account konnte nicht erstellt werden'}, 500);
-            }
-            // Frische Daten laden mit dem neuen User drin
-            _dataCache = null; _dataCacheTime = 0;
-            const fresh = await fetchBot('/data');
-            const u2 = fresh?.users?.[created.uid];
-            if (u2) found = [String(created.uid), u2];
-            isNewSignup = !created.existed;
-        }
-        if (!found) {
-            console.log('[email-login] post-create lookup failed for:', email);
-            return json({ok:false, error:'Account-Lookup fehlgeschlagen — bitte später erneut versuchen'}, 500);
+            console.log('[email-login] Magic-Link für unbekannte Email abgelehnt:', email);
+            return json({ok:false, error:'Diese Email ist nicht registriert. Bitte registrier dich mit Email + Passwort.', notRegistered:true}, 404);
         }
         const [uid, u] = found;
+        const isNewSignup = false;
         const token = crypto.randomBytes(24).toString('hex');
         emailLoginTokens.set(token, { email, uid: String(uid), exp: Date.now() + EMAIL_TOKEN_TTL });
         const baseUrl = (process.env.APP_URL || ('https://' + (req.headers.host || 'web-production-7981d.up.railway.app'))).replace(/\/$/, '');
@@ -3673,11 +3685,11 @@ document.addEventListener('DOMContentLoaded', function(){
         const _bd = await fetchBot('/data');
         const _u = _bd?.users?.[myUid] || {};
         if (!_u.email) return json({ok:false, error:'Keine Email gesetzt — kein Unlock möglich'}, 400);
-        // Rate-Limit: 1× pro 5 Min pro User
+        // Rate-Limit: 1× pro 5 Min pro User (sensible Account-Operation)
         const rlKey = 'unlock:' + myUid;
         const lastTs = emailRateLimit.get(rlKey) || 0;
-        if (Date.now() - lastTs < EMAIL_RATE_LIMIT) {
-            const wait = Math.ceil((EMAIL_RATE_LIMIT - (Date.now() - lastTs)) / 1000);
+        if (Date.now() - lastTs < PW_RESET_RATE_LIMIT) {
+            const wait = Math.ceil((PW_RESET_RATE_LIMIT - (Date.now() - lastTs)) / 1000);
             return json({ok:false, error:`Bitte warte noch ${wait}s vor dem nächsten Versuch.`}, 429);
         }
         emailRateLimit.set(rlKey, Date.now());
