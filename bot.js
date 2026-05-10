@@ -2999,7 +2999,7 @@ self.addEventListener('notificationclick',e=>{
     }
 
     function redirect(to) { res.writeHead(302,{'Location':to}); res.end(); }
-    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'229'}); res.end(layout(content,session,page,lang)); }
+    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'230'}); res.end(layout(content,session,page,lang)); }
     function json(data, status=200) { res.writeHead(status,{'Content-Type':'application/json'}); res.end(JSON.stringify(data)); }
 
     // ── LANDING ──
@@ -3254,9 +3254,6 @@ ${_isPreview ? '<div class="admin-pb">👀 Admin-Vorschau · Login-Page &nbsp;·
       <input type="password" id="email-pw" class="in" placeholder="Passwort" autocomplete="current-password" maxlength="200" required>
       <button type="submit" class="btn-p" id="email-btn">Sign In →</button>
     </form>
-    <div style="text-align:center;margin-top:14px;padding-top:14px;border-top:1px dashed var(--border)">
-      <button type="button" id="email-magic-btn" onclick="sendMagicLink()" class="btn-link" style="font-size:12px;color:var(--muted)">📧 Passwort vergessen? Magic-Link senden</button>
-    </div>
     <div style="text-align:center;margin-top:18px;padding-top:18px;border-top:1px solid var(--border)">
       <div style="font-size:12.5px;color:var(--muted);margin-bottom:8px">Noch keinen Account?</div>
       <a href="/signup" style="display:inline-flex;align-items:center;gap:6px;color:var(--gold);font-weight:700;text-decoration:none;font-size:13.5px">→ Jetzt Sign Up</a>
@@ -3548,9 +3545,31 @@ document.addEventListener('DOMContentLoaded', function(){
         // Sign-In: NUR existierende User. Neue User müssen über /signup gehen.
         const result = await postBot('/auth-email-password', { email, password });
         const isNewSignup = false;
+        let didSetupPassword = false;
         if (!result || !result.ok) {
-            postBot('/log-email-login', { email, success: false, method: 'password', uid: '', ip: _ip, ua: _ua }).catch(()=>{});
-            return json({ok:false, error: (result && result.error) || 'Email oder Passwort falsch — oder noch kein Account? Sign Up unter /signup', notRegistered: result?.error?.includes('falsch')}, 401);
+            // Spezialfall: User existiert mit Email aber HAT NOCH KEIN PASSWORT (z.B. alter TG-User
+            // mit Email aber ohne PW). First-time Sign In setzt das Passwort direkt + loggt ein.
+            if (result && /noch kein Passwort gesetzt/i.test(String(result.error||''))) {
+                const _bd = await fetchBot('/data');
+                const _ex = Object.entries(_bd?.users || {}).find(([, u]) => String(u.email||'').toLowerCase() === email);
+                if (_ex) {
+                    const [_uid] = _ex;
+                    const setPw = await postBot('/set-user-password', { uid: _uid, password });
+                    if (setPw && setPw.ok) {
+                        // Jetzt nochmal Login versuchen
+                        const result2 = await postBot('/auth-email-password', { email, password });
+                        if (result2 && result2.ok) {
+                            postBot('/log-email-login', { email, success: true, method: 'first-time-pw', uid: String(result2.uid), ip: _ip, ua: _ua }).catch(()=>{});
+                            Object.assign(result || {}, result2);
+                            didSetupPassword = true;
+                        }
+                    }
+                }
+            }
+            if (!didSetupPassword) {
+                postBot('/log-email-login', { email, success: false, method: 'password', uid: '', ip: _ip, ua: _ua }).catch(()=>{});
+                return json({ok:false, error: (result && result.error) || 'Email oder Passwort falsch — oder noch kein Account? Sign Up unter /signup', notRegistered: result?.error?.includes('falsch')}, 401);
+            }
         }
         postBot('/log-email-login', { email, success: true, method: 'password', uid: String(result.uid), ip: _ip, ua: _ua }).catch(()=>{});
         // Reset rate-limit on success.
