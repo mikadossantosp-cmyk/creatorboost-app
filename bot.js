@@ -2997,7 +2997,7 @@ self.addEventListener('notificationclick',e=>{
     }
 
     function redirect(to) { res.writeHead(302,{'Location':to}); res.end(); }
-    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'226'}); res.end(layout(content,session,page,lang)); }
+    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'227'}); res.end(layout(content,session,page,lang)); }
     function json(data, status=200) { res.writeHead(status,{'Content-Type':'application/json'}); res.end(JSON.stringify(data)); }
 
     // ── LANDING ──
@@ -3777,11 +3777,98 @@ document.addEventListener('DOMContentLoaded', function(){
         }
         // Onboarding-Flow nach Magic-Link:
         //  1. Kein Instagram → /onboarding-instagram (PFLICHT, kein Skip — sonst kein Liken/Posten)
-        //  2. Kein Passwort → /set-password?first=1 (skippbar)
-        //  3. Sonst → /feed
-        const target = !u.instagram ? '/onboarding-instagram?first=1' : (u.password_hash ? '/feed' : '/set-password?first=1');
+        //  2. Kein eigener App-Code → /onboarding-code (PFLICHT für neue Email-User)
+        //  3. Kein Passwort → /set-password?first=1 (skippbar)
+        //  4. Sonst → /feed
+        const _hasCode = !!u.appCodeChosenAt;
+        let target = '/feed';
+        if (!u.instagram) target = '/onboarding-instagram?first=1';
+        else if (!_hasCode) target = '/onboarding-code?first=1';
+        else if (!u.password_hash) target = '/set-password?first=1';
         res.writeHead(302,{'Set-Cookie':`cbsid=${sid}; HttpOnly; Path=/; Max-Age=157680000`,'Location':target});
         return res.end();
+    }
+    // ── ONBOARDING: User wählt eigenen App-Code (statt auto-generated) ──
+    if (path === '/onboarding-code' && req.method === 'GET') {
+        if (!session) return redirect('/');
+        const _bd = await fetchBot('/data');
+        const _u = _bd?.users?.[getMyUid(session)] || {};
+        const _isPreview = (query.preview === '1');
+        if (_u.appCodeChosenAt && !_isPreview) {
+            return redirect(_u.password_hash ? '/feed' : '/set-password?first=1');
+        }
+        const _hello = (_u.spitzname || _u.name || '').replace(/[<>"]/g,'');
+        const _suggested = (_u.name || _u.email?.split('@')[0] || 'creator').toLowerCase().replace(/[^a-z0-9_-]/g,'').slice(0,20) || 'creator';
+        res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});
+        return res.end(`<!DOCTYPE html><html lang="de" data-theme="dark"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Wähle deinen Code · CreatorX</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--gold:#d4af37;--text:#fff;--muted:rgba(255,255,255,0.6);--border:rgba(255,255,255,0.08)}
+html,body{background:#000;color:var(--text);font-family:'Inter',-apple-system,sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh}
+.shell{max-width:480px;margin:0 auto;padding:24px 22px 60px;min-height:100vh;display:flex;flex-direction:column}
+.bar{display:flex;gap:6px;margin-bottom:32px;padding-top:8px}
+.dot{flex:1;height:4px;border-radius:99px;background:rgba(255,255,255,0.08)}
+.dot.done{background:rgba(212,175,55,0.4)}
+.dot.active{background:linear-gradient(90deg,#d4af37,#f5d76e)}
+.icon{width:72px;height:72px;margin:0 auto 18px;border-radius:20px;background:linear-gradient(135deg,rgba(212,175,55,0.15),rgba(212,175,55,0.04));border:1px solid rgba(212,175,55,0.3);display:flex;align-items:center;justify-content:center;font-size:36px;box-shadow:0 12px 32px -10px rgba(212,175,55,0.4)}
+.eye{display:inline-flex;align-items:center;gap:6px;font-size:10.5px;font-weight:700;color:var(--gold);background:rgba(212,175,55,0.08);border:1px solid rgba(212,175,55,0.25);padding:5px 11px;border-radius:99px;letter-spacing:1.5px;text-transform:uppercase;margin:0 auto 14px}
+.h{font-family:'Syne',sans-serif;font-size:30px;font-weight:800;line-height:1.1;letter-spacing:-1px;margin-bottom:10px;background:linear-gradient(180deg,#fff,#d4af37);-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-align:center}
+.sub{font-size:14px;color:var(--muted);line-height:1.6;margin-bottom:28px;text-align:center}
+.field{position:relative;margin-bottom:14px}
+.at{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--gold);font-size:15px;pointer-events:none;font-weight:700}
+input{width:100%;background:rgba(255,255,255,0.04);border:1.5px solid var(--border);color:#fff;border-radius:13px;padding:13px 15px 13px 34px;font-size:15px;outline:none;transition:.18s;font-family:'JetBrains Mono',monospace;font-weight:600;letter-spacing:0.5px}
+input:focus{border-color:var(--gold);background:rgba(212,175,55,0.04);box-shadow:0 0 0 3px rgba(212,175,55,0.12)}
+.hint{font-size:11.5px;color:var(--muted);margin-top:8px;line-height:1.55;text-align:center}
+.msg{font-size:13px;padding:10px 12px;border-radius:10px;margin-top:8px;display:none;line-height:1.5}
+.msg.show{display:block}
+.msg.ok{background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.3);color:#22c55e}
+.msg.err{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);color:#ef4444}
+.btn{margin-top:14px;width:100%;padding:14px;font-size:14px;font-weight:700;border-radius:13px;border:none;cursor:pointer;font-family:inherit;letter-spacing:0.2px;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;box-shadow:0 8px 22px -8px rgba(212,175,55,0.6)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.center{text-align:center}
+</style>
+</head><body>
+<div class="shell">
+  <div class="bar"><div class="dot done"></div><div class="dot active"></div><div class="dot"></div><div class="dot"></div></div>
+  <div class="center">
+    <div class="icon">🔑</div>
+    <div class="eye">Step 2 · Dein Code</div>
+    <h1 class="h">Wähle deinen App-Code${_hello?'<br><small style="font-size:18px;font-weight:600;color:rgba(255,255,255,.7);-webkit-text-fill-color:rgba(255,255,255,.7)"> '+_hello+'</small>':''}</h1>
+    <div class="sub">Dein persönlicher Code für Login-Links und Profil-Sharing.<br>4–30 Zeichen, nur a–z, 0–9, _ oder -</div>
+  </div>
+  <div class="field">
+    <span class="at">@</span>
+    <input type="text" id="code-inp" placeholder="dein-name" value="${_suggested}" maxlength="30" autocapitalize="none" spellcheck="false" autocomplete="off">
+  </div>
+  <div class="msg" id="code-msg"></div>
+  <div class="hint">Dein Login-Link wird:<br><span style="color:var(--gold);font-weight:700">https://creatorx.app/i/<span id="prev">${_suggested}</span></span></div>
+  <button class="btn" id="save-btn" onclick="saveCode()">Code speichern → Weiter</button>
+</div>
+<script>
+var inp=document.getElementById('code-inp'),msg=document.getElementById('code-msg'),btn=document.getElementById('save-btn'),prev=document.getElementById('prev');
+inp.addEventListener('input',function(){
+  var v=inp.value.toLowerCase().replace(/[^a-z0-9_-]/g,'').slice(0,30);
+  if(v!==inp.value)inp.value=v;
+  prev.textContent=v||'dein-code';
+});
+inp.addEventListener('focus',function(){inp.setSelectionRange(0,inp.value.length);});
+async function saveCode(){
+  var code=(inp.value||'').toLowerCase().trim();
+  if(!/^[a-z0-9_-]{4,30}$/.test(code)){msg.className='msg show err';msg.textContent='Code: 4–30 Zeichen, nur a–z, 0–9, _ oder -';return;}
+  btn.disabled=true;btn.textContent='⏳ Speichern…';msg.className='';msg.textContent='';
+  try{
+    var r=await fetch('/api/auth/set-my-code',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:code})});
+    var d=await r.json();
+    if(d.ok){msg.className='msg show ok';msg.textContent='✅ Code gespeichert!';setTimeout(function(){window.location.href='/set-password?first=1';},700);}
+    else{msg.className='msg show err';msg.textContent='❌ '+(d.error||'Fehler');btn.disabled=false;btn.textContent='Code speichern → Weiter';}
+  }catch(e){msg.className='msg show err';msg.textContent='❌ Netzwerkfehler';btn.disabled=false;btn.textContent='Code speichern → Weiter';}
+}
+inp.focus();
+</script>
+</body></html>`);
     }
     // Onboarding-Pflicht: Email-User müssen Instagram setzen bevor sie liken/posten können.
     if (path === '/onboarding-instagram' && req.method === 'GET') {
@@ -3792,6 +3879,8 @@ document.addEventListener('DOMContentLoaded', function(){
         // Falls schon Instagram gesetzt → direkt weiter (kein doppelter Onboarding-Step).
         // Außer in Admin-Vorschau (?preview=1) — dann immer rendern.
         if (_u.instagram && !_isPreview) {
+            // Nach Insta: → Code wählen → Passwort → Feed
+            if (!_u.appCodeChosenAt) return redirect('/onboarding-code?first=1');
             return redirect(_u.password_hash ? '/feed' : '/set-password?first=1');
         }
         const _hello = (_u.spitzname || _u.name || '').replace(/[<>"]/g,'');
@@ -4041,7 +4130,7 @@ function finish(skipProfile){
     return;
   }
   if(skipProfile){
-    window.location.href='/set-password?first=1';
+    window.location.href='/onboarding-code?first=1';
     return;
   }
   var sp=(document.getElementById('sp').value||'').trim();
@@ -4051,15 +4140,15 @@ function finish(skipProfile){
   var payload={};
   if(sp) payload.spitzname=sp;
   if(bio) payload.bio=bio;
-  if(!Object.keys(payload).length){window.location.href='/set-password?first=1';return;}
+  if(!Object.keys(payload).length){window.location.href='/onboarding-code?first=1';return;}
   fetch('/api/save-profile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
     .then(function(r){return r.json();})
     .then(function(j){
-      window.location.href='/set-password?first=1';
+      window.location.href='/onboarding-code?first=1';
     })
     .catch(function(){
       // Trotzdem weiter — Profil-Daten sind optional.
-      window.location.href='/set-password?first=1';
+      window.location.href='/onboarding-code?first=1';
     });
 }
 // Bio counter
