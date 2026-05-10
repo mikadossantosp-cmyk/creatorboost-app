@@ -484,7 +484,7 @@ button{cursor:pointer;border:none;outline:none;font-family:var(--font)}
 .post-badge{font-size:10px;color:var(--muted)}
 .post-time{font-size:11px;color:var(--muted2)}
 .post-actions{display:flex;align-items:center;gap:4px;padding:8px 12px}
-.post-action-btn{display:flex;align-items:center;justify-content:center;gap:7px;padding:9px 16px;border-radius:14px;background:transparent;font-size:13.5px;font-weight:700;color:var(--muted);transition:all .15s;border:1px solid var(--border)!important;letter-spacing:0.1px;cursor:pointer}
+.post-action-btn{display:flex;align-items:center;justify-content:center;gap:7px;padding:9px 16px;border-radius:14px;background:transparent;font-size:13.5px;font-weight:700;color:var(--muted);transition:all .15s;border:1px solid var(--border)!important;letter-spacing:0.1px;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
 .post-action-btn:active{transform:scale(0.95)}
 .post-action-btn:hover{background:var(--surface-tint);color:var(--text)}
 .post-action-btn.liked{color:#fff!important;background:#ff6b6b!important;border-color:#ff6b6b!important;box-shadow:0 6px 18px rgba(255,107,107,0.35)}
@@ -2795,7 +2795,7 @@ self.addEventListener('notificationclick',e=>{
     if (session && !isPolling) { session.lastSeen = Date.now(); }
 
     function redirect(to) { res.writeHead(302,{'Location':to}); res.end(); }
-    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'201'}); res.end(layout(content,session,page,lang)); }
+    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'202'}); res.end(layout(content,session,page,lang)); }
     function json(data, status=200) { res.writeHead(status,{'Content-Type':'application/json'}); res.end(JSON.stringify(data)); }
 
     // ── LANDING ──
@@ -3260,7 +3260,7 @@ function sendMagicLink(prefilledEmail){
         const sid = genSid();
         // subUid nur übernehmen wenn der Sub im Bot wirklich noch existiert (sonst orphan → Switch crashed)
         const validSubUid = u.subUid && botData.users?.[u.subUid] ? String(u.subUid) : null;
-        sessions.set(sid, { uid: String(uid), name: u.name, username: u.username||null, theme: 'light', lang: 'de', createdAt: Date.now(), subUid: validSubUid, activeUid: String(uid) });
+        sessions.set(sid, { uid: String(uid), name: u.name, username: u.username||null, theme: 'light', lang: 'de', createdAt: Date.now(), subUid: validSubUid, activeUid: String(uid), loginVia: 'telegram' });
         saveSessions();
         res.writeHead(302,{'Set-Cookie':'cbsid='+sid+'; HttpOnly; Path=/; Max-Age=2592000','Location':'/feed'});
         return res.end();
@@ -3285,7 +3285,7 @@ function sendMagicLink(prefilledEmail){
         const sid = genSid();
         // subUid nur übernehmen wenn der Sub im Bot wirklich noch existiert (sonst orphan → Switch crashed)
         const validSubUid = u.subUid && botData.users?.[u.subUid] ? String(u.subUid) : null;
-        sessions.set(sid, { uid: String(uid), name: u.name, username: u.username||null, theme: 'light', lang: 'de', createdAt: Date.now(), subUid: validSubUid, activeUid: String(uid) });
+        sessions.set(sid, { uid: String(uid), name: u.name, username: u.username||null, theme: 'light', lang: 'de', createdAt: Date.now(), subUid: validSubUid, activeUid: String(uid), loginVia: 'telegram' });
         saveSessions();
         res.writeHead(302,{'Set-Cookie':`cbsid=${sid}; HttpOnly; Path=/; Max-Age=2592000`,'Location':'/feed'});
         return res.end();
@@ -3339,11 +3339,16 @@ function sendMagicLink(prefilledEmail){
         if (!sid) {
             sid = genSid();
             const validSubUid = u.subUid && botData.users?.[u.subUid] ? String(u.subUid) : null;
-            sessions.set(sid, { uid: String(result.uid), name: u.name, username: u.username||null, theme: 'light', lang: 'de', createdAt: Date.now(), subUid: validSubUid, activeUid: String(result.uid) });
+            sessions.set(sid, { uid: String(result.uid), name: u.name, username: u.username||null, theme: 'light', lang: 'de', createdAt: Date.now(), subUid: validSubUid, activeUid: String(result.uid), loginVia: 'email' });
             saveSessions();
+        } else {
+            // Bestehende Session: loginVia auf 'email' aktualisieren — wichtig für Insta-Gate
+            const existing = sessions.get(sid); if (existing) { existing.loginVia = 'email'; sessions.set(sid, existing); saveSessions(); }
         }
+        // Email-User: kein Insta gesetzt → sofort zum Insta-Onboarding (Pflicht)
+        const redirect = !u.instagram ? '/onboarding-instagram?first=1' : '/feed';
         res.writeHead(200, {'Set-Cookie':`cbsid=${sid}; HttpOnly; Path=/; Max-Age=2592000`,'Content-Type':'application/json'});
-        return res.end(JSON.stringify({ok:true, redirect:'/feed'}));
+        return res.end(JSON.stringify({ok:true, redirect}));
     }
     // Passwort setzen / ändern (eingeloggter User).
     if (path === '/api/auth/set-password' && req.method === 'POST') {
@@ -3442,8 +3447,10 @@ function sendMagicLink(prefilledEmail){
         if (!sid) {
             sid = genSid();
             const validSubUid = u.subUid && botData.users?.[u.subUid] ? String(u.subUid) : null;
-            sessions.set(sid, { uid: String(entry.uid), name: u.name, username: u.username||null, theme: 'light', lang: 'de', createdAt: Date.now(), subUid: validSubUid, activeUid: String(entry.uid) });
+            sessions.set(sid, { uid: String(entry.uid), name: u.name, username: u.username||null, theme: 'light', lang: 'de', createdAt: Date.now(), subUid: validSubUid, activeUid: String(entry.uid), loginVia: 'email' });
             saveSessions();
+        } else {
+            const existing = sessions.get(sid); if (existing) { existing.loginVia = 'email'; sessions.set(sid, existing); saveSessions(); }
         }
         // Onboarding-Flow nach Magic-Link:
         //  1. Kein Instagram → /onboarding-instagram (PFLICHT, kein Skip — sonst kein Liken/Posten)
@@ -3830,7 +3837,7 @@ function submitPw(ev){
                 if (!sid) {
                     sid = genSid();
                     const validSubUid = u.subUid && botData.users?.[u.subUid] ? String(u.subUid) : null;
-                    sessions.set(sid, { uid: String(uid), name: u.name, username: u.username||null, theme: 'light', lang: 'de', createdAt: Date.now(), subUid: validSubUid, activeUid: String(uid) });
+                    sessions.set(sid, { uid: String(uid), name: u.name, username: u.username||null, theme: 'light', lang: 'de', createdAt: Date.now(), subUid: validSubUid, activeUid: String(uid), loginVia: 'telegram' });
                     saveSessions();
                 }
                 res.writeHead(302,{'Set-Cookie':`cbsid=${sid}; HttpOnly; Path=/; Max-Age=2592000`,'Location':'/feed'});
@@ -3869,7 +3876,7 @@ function submitPw(ev){
         if (!sid) {
             sid = genSid();
             const validSubUid = u.subUid && botData.users?.[u.subUid] ? String(u.subUid) : null;
-            sessions.set(sid, { uid: String(uid), name: u.name, username: u.username||null, theme: 'light', lang: 'de', createdAt: Date.now(), subUid: validSubUid, activeUid: String(uid) });
+            sessions.set(sid, { uid: String(uid), name: u.name, username: u.username||null, theme: 'light', lang: 'de', createdAt: Date.now(), subUid: validSubUid, activeUid: String(uid), loginVia: 'telegram' });
             saveSessions();
         }
         res.writeHead(302,{'Set-Cookie':`cbsid=${sid}; HttpOnly; Path=/; Max-Age=2592000`,'Location':safeRedirect});
@@ -3898,10 +3905,12 @@ function submitPw(ev){
         const body = await parseBody(req);
         const { msgId } = body;
         if (!msgId || !session) return json({error:'Ungültig'},400);
-        // Gate: ohne Instagram kein Liken (sonst kann Poster später nicht prüfen ob Like real ist).
-        const _bdLk = await fetchBot('/data');
-        const _myLk = _bdLk?.users?.[getMyUid(session)] || {};
-        if (!_myLk.instagram) return json({ok:false, error:'Bitte zuerst deinen Instagram-Username in den Einstellungen setzen, um liken zu können.', missingInstagram:true}, 403);
+        // Gate: nur Email-User müssen Insta setzen (Telegram-User haben bereits Identität via @-Handle).
+        if (session.loginVia === 'email') {
+            const _bdLk = await fetchBot('/data');
+            const _myLk = _bdLk?.users?.[getMyUid(session)] || {};
+            if (!_myLk.instagram) return json({ok:false, error:'Bitte zuerst deinen Instagram-Username in den Einstellungen setzen, um liken zu können.', missingInstagram:true}, 403);
+        }
         const result = await fetchBot('/like-from-app?uid=' + getMyUid(session) + '&msgId=' + encodeURIComponent(msgId));
         if (!result) return json({ok:false, error:'Bot offline'}, 502);
         return json({ok: result.ok !== false, liked: result.liked, likes: result.likes, error: result.error});
@@ -5634,8 +5643,8 @@ p{line-height:1.65;color:var(--muted)}
     }
 
     if (path === '/api/post-link' && req.method === 'POST') {
-        // Gate: ohne Instagram im Profil kein Posting (Engagement-Tracking braucht den Insta-Handle).
-        if (myUser && !myUser.instagram) return json({ok:false, error:'Bitte zuerst deinen Instagram-Username in den Einstellungen setzen.', missingInstagram:true}, 403);
+        // Gate: nur Email-User müssen Insta setzen (Telegram-User haben bereits Identität).
+        if (session.loginVia === 'email' && myUser && !myUser.instagram) return json({ok:false, error:'Bitte zuerst deinen Instagram-Username in den Einstellungen setzen.', missingInstagram:true}, 403);
         const body = await parseBody(req);
         const { url: linkUrl, caption } = body;
         if (!linkUrl || !linkUrl.includes('instagram.com')) return json({ok:false, error:'Nur Instagram Links'},400);
@@ -6134,17 +6143,20 @@ async function adminDelLink(linkId, btn){
 }
 
 async function likePost(msgId, btn) {
-    // Already-liked Check zuerst — sonst kriegt User '⚠️ erst Link besuchen' wenn
-    // er auf einen schon gelikten Post tappt nachdem localStorage gecleared wurde.
-    if (btn.classList.contains('liked')) return;
+    if (btn.dataset.busy === '1') return;
+    if (btn.classList.contains('liked')) {
+        showBanner({ type:'success', title:'Schon geliked ❤️', subtitle:'Du hast diesen Post bereits geliked.', dur:2500 });
+        return;
+    }
     if (!hasLinkVisited(msgId)) {
         showBanner({ type:'warn', title:'Erst den Link besuchen!', subtitle:'Tap auf den Post → Instagram öffnen → dann liken. So funktioniert echtes Engagement.', dur:5000 });
         return;
     }
+    btn.dataset.busy = '1';
     const countEl = document.getElementById('likes-'+msgId);
     btn.classList.add('liked');
     btn.querySelector('svg').setAttribute('fill', 'currentColor');
-    countEl.textContent = Number(countEl.textContent) + 1;
+    if (countEl) countEl.textContent = Number(countEl.textContent) + 1;
     btn.style.animation='pulse .3s ease';
     btn.disabled = true;
     setTimeout(()=>btn.style.animation='',300);
@@ -6152,20 +6164,22 @@ async function likePost(msgId, btn) {
         const res = await fetch('/api/like', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({msgId})});
         const data = await res.json();
         if (data.ok) {
-            if (data.likes !== undefined) countEl.textContent = data.likes;
+            if (countEl && data.likes !== undefined) countEl.textContent = data.likes;
             showBanner({ type:'success', title:'Like registriert ❤️', subtitle:'Vergiss nicht: Auf Instagram liken & mit 2 Wörter kommentieren. Danke!', dur:5000 });
         } else {
             btn.classList.remove('liked');
             btn.querySelector('svg').setAttribute('fill', 'none');
-            countEl.textContent = Math.max(0, Number(countEl.textContent) - 1);
+            if (countEl) countEl.textContent = Math.max(0, Number(countEl.textContent) - 1);
             btn.disabled = false;
+            btn.dataset.busy = '0';
             showBanner({ type:'warn', icon:'❌', title:'Like fehlgeschlagen', subtitle: data.error || 'Konnte nicht liken — versuch es gleich nochmal.', dur:4500 });
         }
     } catch(e) {
         btn.classList.remove('liked');
         btn.querySelector('svg').setAttribute('fill', 'none');
-        countEl.textContent = Math.max(0, Number(countEl.textContent) - 1);
+        if (countEl) countEl.textContent = Math.max(0, Number(countEl.textContent) - 1);
         btn.disabled = false;
+        btn.dataset.busy = '0';
         showBanner({ type:'warn', icon:'📡', title:'Netzwerkfehler', subtitle:'Like konnte nicht gesendet werden — Verbindung prüfen.', dur:4500 });
     }
 }
@@ -9699,8 +9713,8 @@ async function setRing(ringId) {
 
     if (path === '/api/like-superlink' && req.method === 'POST') {
         if (!session) return json({error:'Nicht eingeloggt'}, 401);
-        // Gate: ohne Instagram kein Liken.
-        if (myUser && !myUser.instagram) return json({ok:false, error:'Bitte zuerst deinen Instagram-Username in den Einstellungen setzen.', missingInstagram:true}, 403);
+        // Gate: nur Email-User müssen Insta setzen.
+        if (session.loginVia === 'email' && myUser && !myUser.instagram) return json({ok:false, error:'Bitte zuerst deinen Instagram-Username in den Einstellungen setzen.', missingInstagram:true}, 403);
         const body = await parseBody(req);
         const { slId } = body;
         if (!slId) return json({ok:false});
