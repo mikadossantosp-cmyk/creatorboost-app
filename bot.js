@@ -2795,7 +2795,7 @@ self.addEventListener('notificationclick',e=>{
     if (session && !isPolling) { session.lastSeen = Date.now(); }
 
     function redirect(to) { res.writeHead(302,{'Location':to}); res.end(); }
-    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'203'}); res.end(layout(content,session,page,lang)); }
+    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'204'}); res.end(layout(content,session,page,lang)); }
     function json(data, status=200) { res.writeHead(status,{'Content-Type':'application/json'}); res.end(JSON.stringify(data)); }
 
     // ── LANDING ──
@@ -4772,6 +4772,13 @@ function submitPw(ev){
         if (!result || !result.ok) return json({ok:false, error: result?.error || 'Fehler'}, 403);
         return json({ok:true});
     }
+    // App-Presence: leichter Heartbeat, markiert User als "aktiv in der App"
+    if (path === '/api/app-presence' && req.method === 'POST') {
+        if (!session) return json({ok:false}, 401);
+        const myUid = getMyUid(session);
+        await postBot('/app-presence', { uid: myUid }).catch(()=>{});
+        return json({ok:true});
+    }
 
     // ── LEGACY-ONBOARDING-REDIRECT ──
     // Altes /onboarding ist abgeschafft. Falls aber irgendwo noch ein
@@ -6586,12 +6593,12 @@ async function submitSuperLink(){
   </div>
   <div style="width:38px"></div>
 </div>
-<div id="app-chat-msgs" style="padding:8px 0 140px;display:flex;flex-direction:column;min-height:60vh">
+<div id="app-chat-msgs" style="padding:8px 0 180px;display:flex;flex-direction:column;min-height:60vh">
   ${msgsHtml}
 </div>
-<div style="position:fixed;bottom:0;left:0;right:0;background:var(--bg);border-top:1px solid var(--border2);padding:10px 12px 14px;display:flex;align-items:flex-end;gap:8px;z-index:50">
-  <textarea id="app-chat-input" placeholder="Nachricht an alle App-User…" rows="1" maxlength="2000" style="flex:1;background:var(--bg3);border:1px solid var(--border2);color:var(--text);border-radius:18px;padding:10px 14px;font-size:14px;font-family:inherit;resize:none;outline:none;max-height:120px;line-height:1.4"></textarea>
-  <button id="app-chat-send-btn" onclick="sendAppChat()" style="background:linear-gradient(135deg,#a78bfa,#7c3aed);border:none;color:#fff;width:42px;height:42px;border-radius:50%;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:700">➤</button>
+<div style="position:fixed;bottom:calc(70px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:var(--bg);border-top:1px solid var(--border2);padding:10px 12px;display:flex;align-items:flex-end;gap:8px;z-index:99;box-shadow:0 -4px 14px rgba(0,0,0,0.10)">
+  <textarea id="app-chat-input" placeholder="Nachricht an alle App-User…" rows="1" maxlength="2000" style="flex:1;background:var(--bg3);border:1px solid var(--border2);color:var(--text);border-radius:18px;padding:10px 14px;font-size:15px;font-family:inherit;resize:none;outline:none;max-height:120px;line-height:1.4"></textarea>
+  <button id="app-chat-send-btn" onclick="sendAppChat()" style="background:linear-gradient(135deg,#a78bfa,#7c3aed);border:none;color:#fff;width:44px;height:44px;border-radius:50%;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:700;touch-action:manipulation">➤</button>
 </div>
 <script>
 const _appChatTA = document.getElementById('app-chat-input');
@@ -6609,24 +6616,28 @@ async function sendAppChat() {
     const btn = document.getElementById('app-chat-send-btn');
     if (!ta) return;
     const text = ta.value.trim();
-    if (!text) return;
+    if (!text) { ta.focus(); return; }
     btn.disabled = true; btn.style.opacity = '0.5';
     try {
         const r = await fetch('/api/app-chat/send', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});
-        const d = await r.json();
-        if (d.ok) {
+        let d = {};
+        try { d = await r.json(); } catch(_) {}
+        if (r.ok && d.ok) {
             ta.value = '';
             ta.style.height = 'auto';
             location.reload();
         } else {
-            alert(d.error || 'Senden fehlgeschlagen');
+            alert((d && d.error) ? d.error : ('Senden fehlgeschlagen (HTTP ' + r.status + ')'));
             btn.disabled = false; btn.style.opacity = '1';
+            ta.focus();
         }
     } catch(e) {
-        alert('Netzwerkfehler');
+        alert('Netzwerkfehler — bitte nochmal versuchen');
         btn.disabled = false; btn.style.opacity = '1';
     }
 }
+// Presence-Ping wenn Chat geöffnet — markiert User als aktiv für Member-Count
+fetch('/api/app-presence', {method:'POST'}).catch(()=>{});
 async function deleteAppChatMsg(ts) {
     if (!confirm('Nachricht löschen?')) return;
     try {
@@ -7711,6 +7722,8 @@ document.getElementById('user-search-input')?.addEventListener('input',filterSea
     }
 
     if (path === '/nachrichten') {
+        // Presence-Ping: beim Öffnen von Nachrichten gilt User als aktiv (Member-Count)
+        postBot('/app-presence', { uid: myUid }).catch(()=>{});
         const [botData, appChatData] = await Promise.all([
             fetchBot('/data'),
             fetchBot('/app-chat?uid=' + encodeURIComponent(myUid) + '&limit=1')
