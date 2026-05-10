@@ -1066,11 +1066,15 @@ ${session ? `
 </div>
 
 <script>
-// Legacy-Onboarding-Cleanup: alte Versionen der App haben localStorage 'cb_onboarded'
-// gesetzt + redirected zu /onboarding wenn fehlt. Falls jemand mit alter Cache-Version
-// landet, hier den Flag setzen damit der Redirect nicht triggert. Auch SW deregistrieren.
+// Legacy-Onboarding-Cleanup + iOS-PWA-Cache-Bust.
 (function(){
   try { localStorage.setItem('cb_onboarded','1'); } catch(e){}
+  // iOS-PWA hartes Cache-Bust: SW updaten zwingen wenn alte Version cacht.
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.getRegistrations().then(function(regs){
+      regs.forEach(function(r){ try{ r.update(); }catch(e){} });
+    }).catch(function(){});
+  }
 })();
 </script>
 <script>
