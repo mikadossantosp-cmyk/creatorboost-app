@@ -1331,9 +1331,9 @@ ${session ? `
     {page:'/explore', q:'.explore-tabs',                         eyebrow:'Explore · Tabs',     h:'🧭 News, Ranking, Tipps &amp; Shop',    s:'Wir sind jetzt im Hub. Hier findest du alle Übersichts-Bereiche: Newsletter, Ranking, Tipps, Regeln und Diamanten-Shop.'},
     {page:'/explore', q:'.action-grid',                          eyebrow:'Explore · Aktionen', h:'🚀 Was möchtest du tun?',                s:'Schnell-Zugriff auf Ranking, Tipps, Regeln, Shop und Newsletter — alles auf einen Blick.'},
     // ── REGELN (Pflicht-Lese-Step) ───────────────────────────────────────
-    {page:'/explore?tab=regeln', q:'.regeln-wrap, .regeln-tabnav, .regeln-card', eyebrow:'⚠️ Regeln · PFLICHT', h:'📋 Regeln lesen — bitte alles anschauen',  s:'<b>Wichtig:</b> Lies dir die Regeln durch — Link-Regeln, Superlink-Regeln, Mission-Pflicht. Du musst sie am Ende der Tour bestätigen, sonst kannst du nicht posten/liken.', requiresScroll:true},
+    {page:'/explore?tab=regeln', q:'.regeln-wrap, .regeln-tabnav, .regeln-card', eyebrow:'⚠️ Regeln · PFLICHT', h:'📋 Regeln lesen — bitte alles anschauen',  s:'<b>Wichtig:</b> Lies dir die Regeln durch — Link-Regeln &amp; Engagement-Pflicht (5 andere liken UND kommentieren). Du musst sie am Ende der Tour bestätigen, sonst kannst du nicht posten/liken.', requiresScroll:true},
     // ── MESSAGES PAGE ────────────────────────────────────────────────────
-    {page:'/nachrichten', q:'[data-tour="messages"]',            eyebrow:'Bottom-Nav',         h:'💬 Direktnachrichten &amp; Threads',    s:'Wir sind jetzt im Nachrichten-Bereich. Privatchats + Gruppen-Threads (z.B. der Engagement-Thread für tägliche Like-Runden).'},
+    {page:'/nachrichten', q:'[data-tour="messages"]',            eyebrow:'Bottom-Nav',         h:'💬 Direktnachrichten',                  s:'Wir sind jetzt im Nachrichten-Bereich. Hier laufen alle Privatchats mit anderen Creatorn — schreib direkt mit ihnen für Kollabs, Feedback oder einfach zum Quatschen.'},
     // ── PROFIL PAGE ──────────────────────────────────────────────────────
     {page:'/profil', q:'.profile-avatar-wrap',                   eyebrow:'Profil · Avatar',    h:'👤 Dein Profil-Avatar',                  s:'Banner + Profilbild + Online-Status. Wenn du Top-1 bist, schwebt eine 👑 darüber.'},
     {page:'/profil', q:'.profile-stats',                         eyebrow:'Profil · Stats',     h:'📊 XP, Links, Followers, Diamanten',     s:'Deine Live-Stats: XP-Stand, Anzahl Links, Followers, Streak und 💎 Diamanten.'},
@@ -1598,11 +1598,11 @@ ${session ? `
       document.getElementById('tour-h').innerHTML = '📋 Regeln akzeptieren';
       document.getElementById('tour-s').innerHTML = 'Damit du posten und liken darfst, musst du die <b>Community-Regeln</b> aktiv bestätigen:'
         + '<br><br><b>Du verpflichtest dich:</b>'
-        + '<br>• 1 Link/Tag · andere Reels liken (M1: 5 Likes/Tag)'
+        + '<br>• 1 Link/Tag posten'
+        + '<br>• 5 andere Creator liken UND kommentieren (Pflicht)'
         + '<br>• Visit-before-Like (Insta-Reel öffnen → liken)'
-        + '<br>• 2-Wort-Kommentar Pflicht (M2/M3)'
+        + '<br>• 2-Wort-Kommentar Pflicht'
         + '<br>• Mission-Auswertung 12:00 sonst Verwarnung'
-        + '<br>• Superlinks (1-2/Woche): du engagest ALLE anderen'
         + '<br><br>'
         + '<label style="display:flex;align-items:flex-start;gap:10px;background:rgba(212,175,55,0.10);border:1px solid rgba(212,175,55,0.30);border-radius:12px;padding:14px;cursor:pointer;font-size:13px;line-height:1.5">'
         +   '<input type="checkbox" id="tour-rules-cb" style="margin-top:2px;flex-shrink:0;width:18px;height:18px;accent-color:#d4af37;cursor:pointer" onchange="document.getElementById(\\'tour-finish-btn\\').disabled=!this.checked;document.getElementById(\\'tour-finish-btn\\').style.opacity=this.checked?\\'1\\':\\'0.4\\'">'
@@ -3019,7 +3019,7 @@ self.addEventListener('notificationclick',e=>{
     }
 
     function redirect(to) { res.writeHead(302,{'Location':to}); res.end(); }
-    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'233'}); res.end(layout(content,session,page,lang)); }
+    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'234'}); res.end(layout(content,session,page,lang)); }
     function json(data, status=200) { res.writeHead(status,{'Content-Type':'application/json'}); res.end(JSON.stringify(data)); }
 
     // ── LANDING ──
