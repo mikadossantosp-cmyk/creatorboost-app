@@ -147,6 +147,86 @@ function getSid(req) { const m=(req.headers.cookie||'').match(/cbsid=([^;]+)/); 
 function getMyUid(session) { return session ? String(session.activeUid || session.uid) : ''; }
 // HTML-Escape für User-eingegebene Strings — verhindert Stored-XSS in profileCard, posts, comments.
 function htmlEsc(s) { return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// ─── Admin-Fulltour Script (Multi-Page) ─────────────────────────────────────
+// Wird in /willkommen + layout() injiziert — Walkthrough von Landing bis Profil.
+const ADMIN_FULLTOUR_SCRIPT = `<script>
+(function(){
+  const FT_STEPS = [
+    { url: '/willkommen?fulltour=1', sel: 'h1, .hero, .lp-h, .lp-hero', title: '🌐 Landing-Page', text: 'Was ein neuer Besucher zuerst sieht — Hero, Telegram-CTA, Email-Form. Hier startet die User-Journey.' },
+    { url: '/willkommen?fulltour=1', sel: 'a[href*="t.me/"]', title: '✈️ Telegram-CTA', text: 'Direkter Beitritt der Gruppe. Telegram öffnet → User chattet mit Bot → /start.' },
+    { url: '/?fulltour=1', sel: '.tg-card, form[action="/auth/code-form"], #code-input', title: '🔑 Code-Login', text: 'User aus Telegram trägt seinen Code aus /mycode hier ein → bekommt Session.' },
+    { url: '/?fulltour=1', sel: '#email-input, #email-magic-btn', title: '📧 Email-Login', text: 'Alternative ohne Telegram: Email + Magic-Link oder Passwort.' },
+    { url: '/preview/email-login?fulltour=1', sel: 'a[href*="auth/email-login"]', title: '📨 Magic-Link Email', text: 'So sieht die Login-Mail aus. Klick → Single-Use-Token → eingeloggt.' },
+    { url: '/onboarding-instagram?preview=1&fulltour=1', sel: '#inp-instagram, input[type="text"]', title: '📸 Onboarding: Instagram', text: 'PFLICHT für Email-User: Instagram-Handle eintragen bevor liken/posten geht.' },
+    { url: '/set-password?first=1&fulltour=1', sel: 'input[type="password"], #pw1', title: '🔐 Passwort setzen', text: 'Optional für Email-User: Passwort für Direct-Login. Skippbar.' },
+    { url: '/feed?fulltour=1', sel: '.post-action-btn, [data-tour="messages"]', title: '🏠 Feed', text: 'Erster Blick eingeloggt: Posts, Like-Buttons, Stories oben, Bottom-Nav unten.' },
+    { url: '/einstellungen?fulltour=1', sel: '#inp-instagram, .form-label, #inp-email', title: '⚙️ Einstellungen', text: 'Bio, Spitzname, Insta, Email, App-Code, Pinned Reel, Banner — alles anpassbar.' },
+    { url: '/profil?fulltour=1', sel: '.profile-avatar, .profile-banner, h1, h2', title: '👤 Profil-Seite', text: 'Fertiges Profil: Banner, Avatar, XP, Badge, Stats, Posts. Ende der Tour 🎉' }
+  ];
+  function ftIdx(){try{const v=sessionStorage.getItem('cb_fulltour_idx');return v==null?-1:parseInt(v,10);}catch(e){return -1;}}
+  function ftSet(i){try{sessionStorage.setItem('cb_fulltour_idx',String(i));}catch(e){}}
+  function ftClear(){try{sessionStorage.removeItem('cb_fulltour_idx');}catch(e){}}
+  function ftGo(step){const expectedPath=step.url.split('?')[0];if(location.pathname!==expectedPath){location.href=step.url;return false;}return true;}
+  function ftRender(idx){
+    const step=FT_STEPS[idx]; if(!step){ftClear();return;}
+    if(!ftGo(step))return;
+    document.querySelectorAll('.ft-overlay,.ft-card,.ft-spot').forEach(function(e){e.remove();});
+    const isLast=idx===FT_STEPS.length-1, isFirst=idx===0;
+    const ov=document.createElement('div');ov.className='ft-overlay';
+    ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.55);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);z-index:99990;animation:ft-fade .25s ease;pointer-events:none';
+    document.body.appendChild(ov);
+    let target=null;
+    try{step.sel.split(',').map(function(s){return s.trim();}).filter(Boolean).some(function(sel){try{target=document.querySelector(sel);return !!target;}catch(_){return false;}});}catch(e){}
+    if(target){
+      try{target.scrollIntoView({behavior:'smooth',block:'center'});}catch(e){}
+      setTimeout(function(){
+        const r=target.getBoundingClientRect();
+        const spot=document.createElement('div');spot.className='ft-spot';
+        spot.style.cssText='position:fixed;left:'+(r.left-8)+'px;top:'+(r.top-8)+'px;width:'+(r.width+16)+'px;height:'+(r.height+16)+'px;border:3px solid #d4af37;border-radius:14px;box-shadow:0 0 0 4px rgba(212,175,55,0.25),0 0 0 9999px rgba(0,0,0,0.55);z-index:99991;animation:ft-pulse 1.6s ease-in-out infinite;pointer-events:none';
+        document.body.appendChild(spot);ov.style.background='transparent';
+      },380);
+    }
+    const card=document.createElement('div');card.className='ft-card';
+    card.style.cssText='position:fixed;left:50%;bottom:calc(28px + env(safe-area-inset-bottom));transform:translateX(-50%);width:calc(100% - 24px);max-width:440px;background:linear-gradient(180deg,rgba(28,28,30,0.97),rgba(15,15,17,0.97));border:1px solid rgba(212,175,55,0.4);color:#fff;border-radius:20px;padding:18px;box-shadow:0 30px 70px rgba(0,0,0,0.6),0 0 40px rgba(212,175,55,0.2);font-family:Inter,-apple-system,sans-serif;backdrop-filter:blur(28px) saturate(180%);-webkit-backdrop-filter:blur(28px) saturate(180%);z-index:99992;animation:ft-slide .35s cubic-bezier(.34,1.56,.64,1)';
+    const dots=FT_STEPS.map(function(_,i){return '<div style="flex:1;height:3px;border-radius:99px;background:'+(i<idx?'rgba(212,175,55,0.4)':i===idx?'linear-gradient(90deg,#d4af37,#f5d76e)':'rgba(255,255,255,0.10)')+'"></div>';}).join('');
+    card.innerHTML='<div style="display:flex;gap:3px;margin-bottom:14px">'+dots+'</div>'+
+      '<div style="font-size:10.5px;font-weight:800;color:#d4af37;text-transform:uppercase;letter-spacing:2px;margin-bottom:8px">ADMIN-FULLTOUR · Step '+(idx+1)+' / '+FT_STEPS.length+'</div>'+
+      '<div style="font-size:19px;font-weight:800;letter-spacing:-0.4px;line-height:1.25;margin-bottom:8px">'+step.title+'</div>'+
+      '<div style="font-size:14px;color:rgba(255,255,255,0.8);line-height:1.55;margin-bottom:14px">'+step.text+'</div>'+
+      '<div style="display:flex;gap:8px">'+
+        '<button id="ft-close" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.65);padding:11px 12px;font-size:13px;font-weight:700;border-radius:12px;cursor:pointer;font-family:inherit">✕</button>'+
+        (isFirst?'':'<button id="ft-prev" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.7);padding:11px 14px;font-size:13px;font-weight:700;border-radius:12px;cursor:pointer;font-family:inherit">← Zurück</button>')+
+        '<button id="ft-next" style="background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;border:none;padding:11px 14px;font-size:13.5px;font-weight:800;border-radius:12px;cursor:pointer;font-family:inherit;flex:1;letter-spacing:0.1px;box-shadow:0 6px 18px rgba(212,175,55,0.45)">'+(isLast?'🎉 Beenden':'Weiter →')+'</button>'+
+      '</div>';
+    document.body.appendChild(card);
+    document.getElementById('ft-close').onclick=function(){ftClear();document.querySelectorAll('.ft-overlay,.ft-card,.ft-spot').forEach(function(e){e.remove();});};
+    document.getElementById('ft-next').onclick=function(){if(isLast){ftClear();document.querySelectorAll('.ft-overlay,.ft-card,.ft-spot').forEach(function(e){e.remove();});alert('🎉 Admin-Fulltour abgeschlossen!');return;}ftSet(idx+1);ftRender(idx+1);};
+    if(!isFirst)document.getElementById('ft-prev').onclick=function(){ftSet(idx-1);ftRender(idx-1);};
+  }
+  if(!document.getElementById('ft-css')){
+    const st=document.createElement('style');st.id='ft-css';
+    st.textContent='@keyframes ft-fade{from{opacity:0}to{opacity:1}}@keyframes ft-slide{from{opacity:0;transform:translate(-50%,16px)}to{opacity:1;transform:translate(-50%,0)}}@keyframes ft-pulse{0%,100%{box-shadow:0 0 0 4px rgba(212,175,55,0.25),0 0 0 9999px rgba(0,0,0,0.55)}50%{box-shadow:0 0 0 8px rgba(212,175,55,0.5),0 0 0 9999px rgba(0,0,0,0.55)}}';
+    document.head.appendChild(st);
+  }
+  window.ftStart=function(){ftSet(0);if(location.pathname!=='/willkommen')location.href='/willkommen?fulltour=1';else ftRender(0);};
+  function ftStartIfActive(){const idx=ftIdx();if(idx<0)return;if(idx>=FT_STEPS.length){ftClear();return;}setTimeout(function(){ftRender(idx);},280);}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',ftStartIfActive);else ftStartIfActive();
+})();
+</script>`;
+
+// Landing-Tracking + Admin-Fulltour-Hook (für /willkommen via injection)
+const LANDING_TRACK_SCRIPT = `<script>
+(function(){
+  function trk(ev,m){try{const body=JSON.stringify({event:ev,meta:m||{}});if(navigator.sendBeacon){const b=new Blob([body],{type:'application/json'});navigator.sendBeacon('/api/track-funnel',b);}else{fetch('/api/track-funnel',{method:'POST',headers:{'Content-Type':'application/json'},body:body,keepalive:true});}}catch(e){}}
+  function bind(){
+    document.querySelectorAll('a[href*="t.me/"]').forEach(function(a){a.addEventListener('click',function(){trk('telegram-click',{href:a.getAttribute('href')||''});});});
+    document.querySelectorAll('a[href="/"],a[href^="/?"],a[href*="/feed"],a.cta-btn,.lp-cta,button[onclick*="login"],a[href*="signup"],a[href*="auth"]').forEach(function(a){a.addEventListener('click',function(){trk('landing-cta-click',{txt:(a.textContent||'').trim().slice(0,80),href:a.getAttribute('href')||''});});});
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind);else bind();
+})();
+</script>` + ADMIN_FULLTOUR_SCRIPT;
+
 function cleanRole(r) {
   let s = String(r==null?'🆕 New':r);
   // Force-fix: jeder role-string der 'admin' enthält → IMMER '🛡️ Admin' (egal welche corruption)
@@ -2088,7 +2168,9 @@ function confirmCrop(){
     mountButton();
   }
 })();
-</script></body></html>`;
+</script>
+${ADMIN_FULLTOUR_SCRIPT}
+</body></html>`;
 }
 
 function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=null, picData=null) {
@@ -2822,7 +2904,7 @@ self.addEventListener('notificationclick',e=>{
     }
 
     function redirect(to) { res.writeHead(302,{'Location':to}); res.end(); }
-    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'214'}); res.end(layout(content,session,page,lang)); }
+    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'215'}); res.end(layout(content,session,page,lang)); }
     function json(data, status=200) { res.writeHead(status,{'Content-Type':'application/json'}); res.end(JSON.stringify(data)); }
 
     // ── LANDING ──
@@ -4314,8 +4396,21 @@ function submitPw(ev){
     // BuildId = mtime der APK-Datei. Neue APK hochladen → buildId ändert sich → Banner triggert automatisch.
     // ── Standalone Landing-Page (zum Teilen — KEIN App-Login nötig) ──
     if (path === '/willkommen' || path === '/landing' || path === '/community' || path === '/join') {
+        // Landing-Page-View tracken (Server-Side, anonym) — INKL. UTM-Quelle
         try {
-            const html = fs.readFileSync(__dirname + '/landing.html', 'utf8');
+            const ref = String(req.headers['referer'] || '').slice(0, 300);
+            const ua = String(req.headers['user-agent'] || '').slice(0, 200);
+            const utmSource = String(query.utm_source || '').slice(0, 50);
+            const utmMedium = String(query.utm_medium || '').slice(0, 50);
+            const utmContent = String(query.utm_content || '').slice(0, 100);
+            const fbclid = String(query.fbclid || '').slice(0, 200);
+            postBot('/track-funnel', { event: 'landing-view', meta: { ref, ua, page: 'willkommen', utmSource, utmMedium, utmContent, fbclid: fbclid ? 'yes' : '' } }).catch(()=>{});
+        } catch(e) {}
+        try {
+            let html = fs.readFileSync(__dirname + '/landing.html', 'utf8');
+            // Inject Tracking + Fulltour-Hook (vor </body>)
+            const inj = LANDING_TRACK_SCRIPT;
+            html = html.replace('</body>', inj + '</body>');
             res.writeHead(200, {'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','Pragma':'no-cache','Expires':'0'});
             return res.end(html);
         } catch(e) {
@@ -10175,6 +10270,11 @@ ${myInventory.length > 0 ? `
   </div>
 </div>` : ''}
 ${adminIds.includes(Number(myUid)) ? `
+<div style="padding:16px;border-bottom:1px solid var(--border2)">
+  <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">🎬 Live-Tour (Admin)</div>
+  <button onclick="if(window.ftStart)window.ftStart();else alert('Tour-Script nicht geladen — Page reload bitte');" class="btn btn-primary btn-full" style="margin-bottom:8px;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;box-shadow:0 6px 18px rgba(212,175,55,0.4);font-weight:800;display:flex;align-items:center;justify-content:center;gap:8px">🎬 Komplette User-Journey-Tour starten</button>
+  <div style="font-size:11.5px;color:var(--muted);line-height:1.4;margin-top:6px">10-Step Walkthrough: Landing → Telegram → Email → Login → Insta → Password → Feed → Einstellungen → Profil. Highlighted-Spot + Beschreibung pro Stage.</div>
+</div>
 <div style="padding:16px;border-bottom:1px solid var(--border2)">
   <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">👀 Vorschauen</div>
   <a href="/?preview=1" target="_blank" class="btn btn-outline btn-full" style="margin-bottom:8px;display:flex">🔐 Login-Page (App)</a>
