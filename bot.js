@@ -3262,7 +3262,7 @@ function sendMagicLink(prefilledEmail){
         const validSubUid = u.subUid && botData.users?.[u.subUid] ? String(u.subUid) : null;
         sessions.set(sid, { uid: String(uid), name: u.name, username: u.username||null, theme: 'light', lang: 'de', createdAt: Date.now(), subUid: validSubUid, activeUid: String(uid), loginVia: 'telegram' });
         saveSessions();
-        res.writeHead(302,{'Set-Cookie':'cbsid='+sid+'; HttpOnly; Path=/; Max-Age=2592000','Location':'/feed'});
+        res.writeHead(302,{'Set-Cookie':'cbsid='+sid+'; HttpOnly; Path=/; Max-Age=157680000','Location':'/feed'});
         return res.end();
     }
 
@@ -3287,7 +3287,7 @@ function sendMagicLink(prefilledEmail){
         const validSubUid = u.subUid && botData.users?.[u.subUid] ? String(u.subUid) : null;
         sessions.set(sid, { uid: String(uid), name: u.name, username: u.username||null, theme: 'light', lang: 'de', createdAt: Date.now(), subUid: validSubUid, activeUid: String(uid), loginVia: 'telegram' });
         saveSessions();
-        res.writeHead(302,{'Set-Cookie':`cbsid=${sid}; HttpOnly; Path=/; Max-Age=2592000`,'Location':'/feed'});
+        res.writeHead(302,{'Set-Cookie':`cbsid=${sid}; HttpOnly; Path=/; Max-Age=157680000`,'Location':'/feed'});
         return res.end();
     }
 
@@ -3347,7 +3347,7 @@ function sendMagicLink(prefilledEmail){
         }
         // Email-User: kein Insta gesetzt → sofort zum Insta-Onboarding (Pflicht)
         const redirect = !u.instagram ? '/onboarding-instagram?first=1' : '/feed';
-        res.writeHead(200, {'Set-Cookie':`cbsid=${sid}; HttpOnly; Path=/; Max-Age=2592000`,'Content-Type':'application/json'});
+        res.writeHead(200, {'Set-Cookie':`cbsid=${sid}; HttpOnly; Path=/; Max-Age=157680000`,'Content-Type':'application/json'});
         return res.end(JSON.stringify({ok:true, redirect}));
     }
     // Passwort setzen / ändern (eingeloggter User).
@@ -3360,6 +3360,16 @@ function sendMagicLink(prefilledEmail){
         const result = await postBot('/set-user-password', { uid: getMyUid(session), password: newPw });
         if (!result || !result.ok) return json({ok:false, error: (result && result.error) || 'Speichern fehlgeschlagen'}, 500);
         return json({ok:true, cleared: !!result.cleared});
+    }
+    // Eigenen App-Code wählen (statt Auto-Generated). Wird nach Email-Setzen vorgeschlagen.
+    if (path === '/api/auth/set-my-code' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        const body = await parseBody(req);
+        const code = String(body.code || '').toLowerCase().trim();
+        if (!/^[a-z0-9_-]{4,30}$/.test(code)) return json({ok:false, error:'Code: 4–30 Zeichen, nur a–z, 0–9, _ oder -'}, 400);
+        const result = await postBot('/set-app-code-api', { uid: getMyUid(session), code });
+        if (!result || !result.ok) return json({ok:false, error: (result && result.error) || 'Speichern fehlgeschlagen'}, result?.error?.includes('vergeben') ? 409 : 400);
+        return json({ok:true, code: result.code});
     }
     // Email-Magic-Link Request: User gibt Email ein, wir schicken Login-Link per Mail.
     if (path === '/api/auth/email-request' && req.method === 'POST') {
@@ -3457,7 +3467,7 @@ function sendMagicLink(prefilledEmail){
         //  2. Kein Passwort → /set-password?first=1 (skippbar)
         //  3. Sonst → /feed
         const target = !u.instagram ? '/onboarding-instagram?first=1' : (u.password_hash ? '/feed' : '/set-password?first=1');
-        res.writeHead(302,{'Set-Cookie':`cbsid=${sid}; HttpOnly; Path=/; Max-Age=2592000`,'Location':target});
+        res.writeHead(302,{'Set-Cookie':`cbsid=${sid}; HttpOnly; Path=/; Max-Age=157680000`,'Location':target});
         return res.end();
     }
     // Onboarding-Pflicht: Email-User müssen Instagram setzen bevor sie liken/posten können.
@@ -3840,7 +3850,7 @@ function submitPw(ev){
                     sessions.set(sid, { uid: String(uid), name: u.name, username: u.username||null, theme: 'light', lang: 'de', createdAt: Date.now(), subUid: validSubUid, activeUid: String(uid), loginVia: 'telegram' });
                     saveSessions();
                 }
-                res.writeHead(302,{'Set-Cookie':`cbsid=${sid}; HttpOnly; Path=/; Max-Age=2592000`,'Location':'/feed'});
+                res.writeHead(302,{'Set-Cookie':`cbsid=${sid}; HttpOnly; Path=/; Max-Age=157680000`,'Location':'/feed'});
                 return res.end();
             }
         }
@@ -3879,7 +3889,7 @@ function submitPw(ev){
             sessions.set(sid, { uid: String(uid), name: u.name, username: u.username||null, theme: 'light', lang: 'de', createdAt: Date.now(), subUid: validSubUid, activeUid: String(uid), loginVia: 'telegram' });
             saveSessions();
         }
-        res.writeHead(302,{'Set-Cookie':`cbsid=${sid}; HttpOnly; Path=/; Max-Age=2592000`,'Location':safeRedirect});
+        res.writeHead(302,{'Set-Cookie':`cbsid=${sid}; HttpOnly; Path=/; Max-Age=157680000`,'Location':safeRedirect});
         return res.end();
     }
 
@@ -9277,6 +9287,16 @@ async function toggleFollow(uid,btn){
   <div class="form-label">📧 Email <span style="font-size:10px;color:var(--muted);font-weight:500">(für Magic-Link-Login)</span></div>
   <input type="email" class="form-input" id="inp-email" placeholder="deine@email.de" maxlength="200" value="${u.email||''}" autocapitalize="none" spellcheck="false">
   <div class="form-hint">Wenn gesetzt, kannst du dich auch ohne Telegram über die Email einloggen.</div>
+  ${u.email ? `<div style="margin-top:10px;padding:10px 12px;background:rgba(34,197,94,0.10);border:1px solid rgba(34,197,94,0.25);border-radius:10px;font-size:11.5px;color:#22c55e;line-height:1.5"><b>✓ Email aktiv.</b> Du kannst die Telegram-Gruppe jederzeit verlassen — dein Account, XP, Likes &amp; Posts bleiben erhalten. Login bleibt dauerhaft über deine Email.</div>` : ''}
+</div>
+<div style="padding:16px;border-bottom:1px solid var(--border2)">
+  <div class="form-label">🔑 Eigener App-Code <span style="font-size:10px;color:var(--muted);font-weight:500">(für /mycode &amp; Login-Link)</span></div>
+  <div style="position:relative">
+    <input type="text" class="form-input" id="inp-app-code" placeholder="z.B. dein-name" maxlength="30" value="${(u.appCode||'')}" autocapitalize="none" spellcheck="false" style="font-family:JetBrains Mono,monospace;letter-spacing:0.5px">
+  </div>
+  <div class="form-hint">4–30 Zeichen, nur a–z, 0–9, _ oder -. Eindeutig. Wird auch für deinen persönlichen Login-Link benutzt.</div>
+  <button class="btn btn-outline btn-full" style="margin-top:8px;font-size:13px" onclick="saveAppCode()">🔑 Code speichern</button>
+  <div id="app-code-msg" style="margin-top:6px;font-size:11.5px;line-height:1.4"></div>
 </div>
 <div style="padding:16px;border-bottom:1px solid var(--border2)">
   <div class="form-label">Instagram</div>
@@ -9502,6 +9522,34 @@ async function savePinnedLink() {
     const data = await res.json();
     if (data.ok) { toast(url ? '📌 Reel angepeint!' : '🗑️ Pin entfernt!'); setTimeout(()=>location.reload(),250); }
     else toast('❌ ' + (data.error||'Fehler'));
+}
+async function saveAppCode() {
+    const inp = document.getElementById('inp-app-code');
+    const msg = document.getElementById('app-code-msg');
+    const code = (inp?.value || '').toLowerCase().trim();
+    if (!/^[a-z0-9_-]{4,30}$/.test(code)) {
+        msg.style.color = '#f59e0b';
+        msg.textContent = 'Code: 4–30 Zeichen, nur a–z, 0–9, _ oder -';
+        return;
+    }
+    msg.style.color = 'var(--muted)';
+    msg.textContent = 'Wird gespeichert…';
+    try {
+        const res = await fetch('/api/auth/set-my-code', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code})});
+        const data = await res.json();
+        if (data.ok) {
+            msg.style.color = '#22c55e';
+            msg.textContent = '✓ Code gespeichert: ' + data.code;
+            inp.value = data.code;
+            toast('🔑 App-Code gesetzt');
+        } else {
+            msg.style.color = '#ef4444';
+            msg.textContent = '❌ ' + (data.error || 'Fehler');
+        }
+    } catch(e) {
+        msg.style.color = '#ef4444';
+        msg.textContent = '❌ Netzwerkfehler';
+    }
 }
 async function removePinnedLink() {
     document.getElementById('inp-pinned-link').value = '';
