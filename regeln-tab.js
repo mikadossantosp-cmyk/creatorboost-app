@@ -80,7 +80,7 @@ module.exports = `
         <li><b>2️⃣ Instagram verbinden</b> → /setinsta</li>
         <li><b>3️⃣ Profilbild & Spitzname</b> setzen</li>
         <li><b>4️⃣ Ersten Link posten</b></li>
-        <li><b>5️⃣ Mindestens 5 andere Links liken</b> (Mission 1)</li>
+        <li><b>5️⃣ 5 andere Links liken UND kommentieren</b> (Mission 1)<br><span style="font-size:12px;color:var(--muted);padding-left:22px;display:inline-block;margin-top:4px">Insta-Reel öffnen → dort liken &amp; kommentieren → dann hier in der App liken</span></li>
       </ul>
       <div class="why-box">🎉 Damit hast du am ersten Tag schon ~25 XP + Daily Bonus.</div>
     </div>
@@ -139,9 +139,10 @@ module.exports = `
       <h2>🎯 Missionen</h2>
 
       <h3>📅 Daily — Auswertung 12:00 Uhr</h3>
-      <div class="regeln-row"><span>M1 — 5 Links liken</span><span class="konsequenz k-xp">+5 XP</span></div>
-      <div class="regeln-row"><span>M2 — 80% aller Links liken</span><span class="konsequenz k-xp">+5 XP</span></div>
-      <div class="regeln-row"><span>M3 — 100% aller Links liken</span><span class="konsequenz k-xp">+5 XP + 💎</span></div>
+      <div class="regeln-row"><span>M1 — 5 Links liken &amp; kommentieren</span><span class="konsequenz k-xp">+5 XP</span></div>
+      <div class="regeln-row"><span>M2 — 80% aller Links liken &amp; kommentieren</span><span class="konsequenz k-xp">+5 XP</span></div>
+      <div class="regeln-row"><span>M3 — 100% aller Links liken &amp; kommentieren</span><span class="konsequenz k-xp">+5 XP + 💎</span></div>
+      <div class="why-box" style="margin-top:8px">📌 <b>Visit-before-Like:</b> Erst auf Instagram liken &amp; kommentieren — dann zählt der Like in der App.</div>
       <div class="warn-bar k-warn" style="margin-top:8px"><span>⚠️</span><span>Link gepostet ohne M1 → Verwarnung</span></div>
 
       <h3>📆 Weekly — Reset Montag 00:05 Uhr</h3>
