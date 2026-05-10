@@ -341,19 +341,10 @@ module.exports = function renderChatList(opts) {
 
         (storiesArr.length ? '<div class="dm-stories-section"><div class="dm-stories-wrap">' + storiesHtml + '</div></div>' : '') +
 
-        '<div class="dm-tabs">' +
-            '<button class="dm-tab active" data-tab="chats" onclick="dmSwitchTab(\'chats\')">💬 Chats' + ((myConvos||[]).reduce((s,c)=>s+(c.unread||0),0) > 0 ? ' <span class="dm-tab-count">' + Math.min(99,(myConvos||[]).reduce((s,c)=>s+(c.unread||0),0)) + '</span>' : '') + '</button>' +
-            '<button class="dm-tab" data-tab="threads" onclick="dmSwitchTab(\'threads\')">✈️ Telegram-Treads' + (totalThreadUnread > 0 ? ' <span class="dm-tab-count">' + (totalThreadUnread > 99 ? '99+' : totalThreadUnread) + '</span>' : '') + '</button>' +
-        '</div>' +
-
         '<div class="dm-list" id="dm-list-chats">' +
             appCommunityRow +
             dmRows +
             emptyState +
-        '</div>' +
-
-        '<div class="dm-list" id="dm-list-threads" style="display:none">' +
-            (threadsRows || '<div class="dm-empty"><div class="dm-empty-icon">✈️</div><div class="dm-empty-text">Keine Telegram-Treads</div></div>') +
         '</div>' +
 
         '<button class="dm-fab" onclick="dmFocusSearch()" title="Neue Nachricht" aria-label="Neue Nachricht">' +
