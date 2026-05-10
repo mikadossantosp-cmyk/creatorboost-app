@@ -3018,7 +3018,7 @@ self.addEventListener('notificationclick',e=>{
     }
 
     function redirect(to) { res.writeHead(302,{'Location':to}); res.end(); }
-    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'235'}); res.end(layout(content,session,page,lang)); }
+    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'236'}); res.end(layout(content,session,page,lang)); }
     function json(data, status=200) { res.writeHead(status,{'Content-Type':'application/json'}); res.end(JSON.stringify(data)); }
 
     // ── LANDING ──
@@ -9622,11 +9622,11 @@ async function sugDoFollow(btn){
     } else {
       btn.textContent = orig; btn.disabled = false;
       const msg = (data && data.error) ? data.error : ('HTTP ' + r.status + (raw ? ' — ' + raw.slice(0,200) : ''));
-      alert('Folgen fehlgeschlagen:\n' + msg);
+      alert('Folgen fehlgeschlagen:\\n' + msg);
     }
   } catch(e) {
     btn.textContent = orig; btn.disabled = false;
-    alert('Netzwerkfehler beim Folgen:\n' + e.message);
+    alert('Netzwerkfehler beim Folgen:\\n' + e.message);
   }
 }
 window.sugDoFollow = sugDoFollow;
@@ -9650,10 +9650,10 @@ window.sugFormSubmit = function(form, ev){
           btn.textContent = orig; form.submit();
         } else {
           btn.textContent = orig; btn.disabled = false;
-          alert('Folgen fehlgeschlagen:\n' + (data && data.error ? data.error : ('HTTP ' + status + (txt ? ' — ' + txt.slice(0,150) : ''))));
+          alert('Folgen fehlgeschlagen:\\n' + (data && data.error ? data.error : ('HTTP ' + status + (txt ? ' — ' + txt.slice(0,150) : ''))));
         }
       })
-      .catch(e => { btn.disabled = false; btn.textContent = orig; alert('Netzwerk: ' + e.message + '\nForm wird normal abgeschickt...'); form.submit(); });
+      .catch(e => { btn.disabled = false; btn.textContent = orig; alert('Netzwerk: ' + e.message + '\\nForm wird normal abgeschickt...'); form.submit(); });
   } catch(e) { return true; /* normal submit als Fallback */ }
   return false;
 };
