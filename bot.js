@@ -2793,9 +2793,18 @@ self.addEventListener('notificationclick',e=>{
     // ewig als online, weil eigene Polls die eigene Session ständig refreshen.
     const isPolling = /^\/api\/(notifications\/count|messages-count|likes-update|messages\/|push-broadcast|push-notify)/.test(path);
     if (session && !isPolling) { session.lastSeen = Date.now(); }
+    // Presence-Ping an Bot (debounced 10 min/session): jeder echte Page-Load
+    // markiert User als App-aktiv → zählt sofort als App-Chat-Member.
+    if (session && !isPolling) {
+        const _PRESENCE_INTERVAL = 10 * 60 * 1000;
+        if (!session._lastPresence || (Date.now() - session._lastPresence) > _PRESENCE_INTERVAL) {
+            session._lastPresence = Date.now();
+            postBot('/app-presence', { uid: getMyUid(session) }).catch(()=>{});
+        }
+    }
 
     function redirect(to) { res.writeHead(302,{'Location':to}); res.end(); }
-    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'204'}); res.end(layout(content,session,page,lang)); }
+    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'205'}); res.end(layout(content,session,page,lang)); }
     function json(data, status=200) { res.writeHead(status,{'Content-Type':'application/json'}); res.end(JSON.stringify(data)); }
 
     // ── LANDING ──
@@ -10076,6 +10085,18 @@ server.listen(PORT, async () => {
     console.log('🌐 CreatorX App läuft auf Port ' + PORT);
     // Pre-warm data cache
     refreshDataCache().then(() => console.log('✅ Data cache vorgewärmt'));
+    // Backfill: alle bekannten Sessions als App-Mitglieder im Bot markieren.
+    // Jeder User mit aktiver Session war/ist in der App → muss Member sein.
+    setTimeout(async () => {
+        try {
+            const uniqueUids = new Set();
+            for (const s of sessions.values()) { if (s && s.uid) uniqueUids.add(String(s.uid)); }
+            console.log('📡 Presence-Backfill für ' + uniqueUids.size + ' Session-User...');
+            for (const uid of uniqueUids) {
+                postBot('/app-presence', { uid }).catch(()=>{});
+            }
+        } catch(e) { console.log('Presence-Backfill Fehler:', e.message); }
+    }, 3000);
     // Auto-migrate images from Northflank if none exist locally
     const NORTHFLANK_URL = 'https://site--creatorboost-app--899dydmn7d7v.code.run';
     try {
