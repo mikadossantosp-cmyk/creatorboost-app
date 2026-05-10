@@ -1217,9 +1217,27 @@ ${session ? `
   // Globaler Hook: VOR allen frühen returns definieren, sonst dead code.
   window.cbStartTour = function(){
     _tourLog('cbStartTour() called manually');
+    try{ console.log('[TOUR] cbStartTour fired @ '+new Date().toISOString()); }catch(_){}
+    // Sichtbarer Toast für Debug — verschwindet nach 2s
+    try {
+      var t = document.createElement('div');
+      t.style.cssText = 'position:fixed;top:14px;left:14px;right:14px;max-width:420px;margin:0 auto;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;padding:12px 16px;border-radius:12px;font-family:Inter,sans-serif;font-size:13px;font-weight:700;z-index:99999;text-align:center;box-shadow:0 12px 30px rgba(34,197,94,.45)';
+      t.textContent = '🎯 Tour startet…';
+      document.body.appendChild(t);
+      setTimeout(function(){ t.style.transition='opacity .4s'; t.style.opacity='0'; setTimeout(function(){t.remove();},500); }, 1800);
+    } catch(_){}
     try{ sessionStorage.setItem('cb_tour_active','1'); sessionStorage.setItem('cb_tour_idx','0'); }catch(e){}
-    if(document.getElementById('tour-ov')) _safeRun(runTour, 'manual');
-    else _tourLog('tour-ov missing');
+    var ov = document.getElementById('tour-ov');
+    if(!ov){
+      // Retry — DOM evtl. noch nicht ready (z.B. cbStartTour von anderem Script früh aufgerufen)
+      _tourLog('tour-ov fehlt — retry in 400ms');
+      setTimeout(function(){
+        if(document.getElementById('tour-ov')) _safeRun(runTour, 'manual-retry');
+        else _showTourErrorBanner('cbStartTour', new Error('tour-ov Element nie gefunden — Layout-Bug'));
+      }, 400);
+      return;
+    }
+    _safeRun(runTour, 'manual');
   };
   // Fallback-Retry: wenn ?tour=1 oder cb_tour_active aber Tour nach 3s nicht sichtbar → manuell triggern.
   setTimeout(function(){
@@ -2979,7 +2997,7 @@ self.addEventListener('notificationclick',e=>{
     }
 
     function redirect(to) { res.writeHead(302,{'Location':to}); res.end(); }
-    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'224'}); res.end(layout(content,session,page,lang)); }
+    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'225'}); res.end(layout(content,session,page,lang)); }
     function json(data, status=200) { res.writeHead(status,{'Content-Type':'application/json'}); res.end(JSON.stringify(data)); }
 
     // ── LANDING ──
