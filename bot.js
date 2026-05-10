@@ -217,7 +217,7 @@ const ADMIN_FULLTOUR_JS = `(function(){
 // Tag-Wrapper für Inline-Use in /willkommen (statisches HTML, kann nicht via <script src> geladen werden ohne Edit)
 const ADMIN_FULLTOUR_SCRIPT = '<script>' + ADMIN_FULLTOUR_JS + '</script>';
 // Externe Reference (für layout()): cached, parallel-loadable.
-const ADMIN_FULLTOUR_SCRIPT_TAG = '<script src="/static/admin-fulltour.js?v=217" defer></script>';
+const ADMIN_FULLTOUR_SCRIPT_TAG = '<script src="/static/admin-fulltour.js?v=221" defer></script>';
 // In-Memory Cache für landing.html (mit Injektion). Wird beim ersten Request gefüllt.
 let _cachedLandingHtml = null;
 
@@ -2935,7 +2935,7 @@ self.addEventListener('notificationclick',e=>{
     }
 
     function redirect(to) { res.writeHead(302,{'Location':to}); res.end(); }
-    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'220'}); res.end(layout(content,session,page,lang)); }
+    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'221'}); res.end(layout(content,session,page,lang)); }
     function json(data, status=200) { res.writeHead(status,{'Content-Type':'application/json'}); res.end(JSON.stringify(data)); }
 
     // ── LANDING ──
@@ -3147,8 +3147,8 @@ ${_isPreview ? '<div class="admin-pb">👀 Admin-Vorschau · Login-Page &nbsp;·
     <div class="how-step">
       <div class="how-num">1</div>
       <div class="how-body">
-        <div class="how-t">Beitreten</div>
-        <div class="how-s">Tritt der Telegram-Gruppe bei und logge dich in der App ein. Free.</div>
+        <div class="how-t">Mit Email einloggen</div>
+        <div class="how-s">Magic-Link an deine Email — kein Account nötig. Du bist sofort drin.</div>
       </div>
     </div>
     <div class="how-step">
@@ -5605,13 +5605,12 @@ p{line-height:1.65;color:var(--muted)}
 <div class="cta">
   <div class="cta-glow"></div>
   <h2>Bereit zum <span class="grad-text">Starten?</span></h2>
-  <p>Tritt der Gruppe bei, hol dir deinen Code und leg los. Die Community wartet.</p>
+  <p>Logge dich mit deiner Email ein — kein Account nötig, sofort dabei.</p>
   <div style="display:flex;flex-direction:column;align-items:center;gap:12px;position:relative;z-index:1">
-    <a href="https://t.me/+w-V2QL-igJw5YjY0" class="cta-btn">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.248l-1.97 9.269c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12L8.19 14.9l-2.965-.924c-.643-.203-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.631.686z"/></svg>
-      Telegram Gruppe beitreten
+    <a href="/" class="cta-btn">
+      📧 Mit Email einloggen
     </a>
-    <div style="font-size:12px;color:rgba(255,255,255,.3)">Dann /mycode im Bot eingeben → App-Code erhalten → einloggen</div>
+    <div style="font-size:12px;color:rgba(255,255,255,.3)">Magic-Link an deine Email → einmal klicken → drin</div>
   </div>
 </div>
 
