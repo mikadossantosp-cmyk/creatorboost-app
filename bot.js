@@ -2817,7 +2817,7 @@ self.addEventListener('notificationclick',e=>{
     }
 
     function redirect(to) { res.writeHead(302,{'Location':to}); res.end(); }
-    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'212'}); res.end(layout(content,session,page,lang)); }
+    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'213'}); res.end(layout(content,session,page,lang)); }
     function json(data, status=200) { res.writeHead(status,{'Content-Type':'application/json'}); res.end(JSON.stringify(data)); }
 
     // ── LANDING ──
@@ -2825,6 +2825,12 @@ self.addEventListener('notificationclick',e=>{
         // Admin-Vorschau via ?preview=1 — überspringt den /feed-Redirect für eingeloggte User.
         const _isPreview = (query.preview === '1');
         if (session && !_isPreview) return redirect('/feed');
+        // Landing-Page-View tracken (Server-Side, anonym)
+        try {
+            const ref = String(req.headers['referer'] || '').slice(0, 300);
+            const ua = String(req.headers['user-agent'] || '').slice(0, 200);
+            postBot('/track-funnel', { event: 'landing-view', meta: { ref, ua } }).catch(()=>{});
+        } catch(e) {}
         res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','Pragma':'no-cache','Expires':'0','X-App-Version':'20'});
         return res.end(`<!DOCTYPE html><html lang="de"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -3198,6 +3204,22 @@ function sendMagicLink(prefilledEmail){
     .catch(function(){msg.textContent='Netzwerkfehler.';msg.classList.add('show','err');})
     .finally(function(){btn.disabled=false;mb.disabled=false;mb.textContent='📧 Magic-Link senden (ohne Passwort)';});
 }
+// Funnel-Tracking: Landing-CTAs
+function _trackFn(ev, meta){ try{ navigator.sendBeacon ? navigator.sendBeacon('/api/track-funnel', new Blob([JSON.stringify({event:ev,meta:meta||{}})],{type:'application/json'})) : fetch('/api/track-funnel',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({event:ev,meta:meta||{}}),keepalive:true}); }catch(e){} }
+document.addEventListener('DOMContentLoaded', function(){
+  // Telegram-CTA-Klicks
+  document.querySelectorAll('a[href*="t.me/"]').forEach(function(a){
+    a.addEventListener('click', function(){ _trackFn('telegram-click', {href: a.getAttribute('href')||''}); });
+  });
+  // Code-Form-Submit (Login mit Code)
+  var cf = document.querySelector('form[action="/auth/code-form"]');
+  if (cf) cf.addEventListener('submit', function(){ _trackFn('login-code-submit', {}); });
+  // Email-Submit
+  var eb = document.getElementById('email-btn');
+  if (eb) eb.addEventListener('click', function(){ _trackFn('email-submit', {}); });
+  var mb = document.getElementById('email-magic-btn');
+  if (mb) mb.addEventListener('click', function(){ _trackFn('email-magic-submit', {}); });
+});
 </script>
 </body></html>`);
     }
@@ -3346,9 +3368,13 @@ function sendMagicLink(prefilledEmail){
         emailRateLimit.set(rlKey + ':n', tries + 1);
         // Bot verifiziert Email+Passwort und liefert uid wenn ok.
         const result = await postBot('/auth-email-password', { email, password });
+        const _ip = String(req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '').split(',')[0].trim().slice(0, 64);
+        const _ua = String(req.headers['user-agent'] || '').slice(0, 200);
         if (!result || !result.ok) {
+            postBot('/log-email-login', { email, success: false, method: 'password', uid: '', ip: _ip, ua: _ua }).catch(()=>{});
             return json({ok:false, error: (result && result.error) || 'Email oder Passwort falsch'}, 401);
         }
+        postBot('/log-email-login', { email, success: true, method: 'password', uid: String(result.uid), ip: _ip, ua: _ua }).catch(()=>{});
         // Reset rate-limit on success.
         emailRateLimit.delete(rlKey + ':n');
         const botData = await fetchBot('/data');
@@ -3469,8 +3495,14 @@ function sendMagicLink(prefilledEmail){
             res.writeHead(302,{'Location':'/?error=email-expired'}); return res.end();
         }
         emailLoginTokens.delete(token); // single-use
+        const _ip2 = String(req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '').split(',')[0].trim().slice(0, 64);
+        const _ua2 = String(req.headers['user-agent'] || '').slice(0, 200);
         const botData = await fetchBot('/data');
-        if (!botData || !botData.users?.[entry.uid]) { res.writeHead(302,{'Location':'/?error=email-userlost'}); return res.end(); }
+        if (!botData || !botData.users?.[entry.uid]) {
+            postBot('/log-email-login', { email: entry.email, success: false, method: 'magic-link', uid: '', ip: _ip2, ua: _ua2 }).catch(()=>{});
+            res.writeHead(302,{'Location':'/?error=email-userlost'}); return res.end();
+        }
+        postBot('/log-email-login', { email: entry.email, success: true, method: 'magic-link', uid: String(entry.uid), ip: _ip2, ua: _ua2 }).catch(()=>{});
         const u = botData.users[entry.uid];
         let sid = null;
         for (const [s, sess] of sessions.entries()) {
@@ -4805,6 +4837,18 @@ function submitPw(ev){
         if (!session) return json({ok:false}, 401);
         const myUid = getMyUid(session);
         await postBot('/app-presence', { uid: myUid }).catch(()=>{});
+        return json({ok:true});
+    }
+    // Anonymes Funnel-Tracking — auch ohne Session aufrufbar (Landing → Login → Telegram-CTA-Klick).
+    if (path === '/api/track-funnel' && req.method === 'POST') {
+        const body = await parseBody(req);
+        const event = String(body.event || '').slice(0, 40);
+        if (!event) return json({ok:false}, 400);
+        const meta = (typeof body.meta === 'object' && body.meta) ? body.meta : {};
+        meta.ua = String(req.headers['user-agent'] || '').slice(0, 200);
+        meta.ref = String(req.headers['referer'] || body.ref || '').slice(0, 300);
+        const uid = session ? getMyUid(session) : '';
+        postBot('/track-funnel', { event, meta, uid }).catch(()=>{});
         return json({ok:true});
     }
 
