@@ -20,15 +20,18 @@ const sessions = new Map();
 // Email-Magic-Link: in-memory (Token nur 1h gültig, Server-Restart ist OK).
 const emailLoginTokens = new Map();   // token → { email, uid, exp }
 const emailConfirmTokens = new Map(); // token → { email, uid, exp } (für /einstellungen Email-Bestätigung)
+const accountUnlockTokens = new Map(); // token → { uid, exp } — nach Klick im Mail Settings-Edit freischalten
 const emailRateLimit = new Map();      // email → lastRequestTs (Cooldown gegen Spam)
 const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
 const EMAIL_FROM = process.env.EMAIL_FROM || 'CreatorX <onboarding@resend.dev>';
 const EMAIL_TOKEN_TTL = 60 * 60 * 1000;       // 1 Stunde
+const ACCOUNT_UNLOCK_TTL = 30 * 60 * 1000;    // 30 Min Edit-Window nach Unlock-Klick
 const EMAIL_RATE_LIMIT = 5 * 60 * 1000;       // 5 Min zwischen Requests pro Email
 setInterval(() => {
     const now = Date.now();
     for (const [t, v] of emailLoginTokens.entries()) if (v.exp < now) emailLoginTokens.delete(t);
     for (const [t, v] of emailConfirmTokens.entries()) if (v.exp < now) emailConfirmTokens.delete(t);
+    for (const [t, v] of accountUnlockTokens.entries()) if (v.exp < now) accountUnlockTokens.delete(t);
     for (const [e, ts] of emailRateLimit.entries()) if (now - ts > EMAIL_RATE_LIMIT * 2) emailRateLimit.delete(e);
 }, 5 * 60 * 1000);
 
@@ -2976,7 +2979,7 @@ self.addEventListener('notificationclick',e=>{
     }
 
     function redirect(to) { res.writeHead(302,{'Location':to}); res.end(); }
-    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'223'}); res.end(layout(content,session,page,lang)); }
+    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'224'}); res.end(layout(content,session,page,lang)); }
     function json(data, status=200) { res.writeHead(status,{'Content-Type':'application/json'}); res.end(JSON.stringify(data)); }
 
     // ── LANDING ──
@@ -3629,6 +3632,63 @@ document.addEventListener('DOMContentLoaded', function(){
 </div></body></html>`;
         res.writeHead(200, {'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});
         return res.end(previewHtml);
+    }
+    // Account-Change-Request: User klickt 'Ändern anfragen' → Email mit Unlock-Link.
+    if (path === '/api/request-account-change' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        const myUid = getMyUid(session);
+        const _bd = await fetchBot('/data');
+        const _u = _bd?.users?.[myUid] || {};
+        if (!_u.email) return json({ok:false, error:'Keine Email gesetzt — kein Unlock möglich'}, 400);
+        // Rate-Limit: 1× pro 5 Min pro User
+        const rlKey = 'unlock:' + myUid;
+        const lastTs = emailRateLimit.get(rlKey) || 0;
+        if (Date.now() - lastTs < EMAIL_RATE_LIMIT) {
+            const wait = Math.ceil((EMAIL_RATE_LIMIT - (Date.now() - lastTs)) / 1000);
+            return json({ok:false, error:`Bitte warte noch ${wait}s vor dem nächsten Versuch.`}, 429);
+        }
+        emailRateLimit.set(rlKey, Date.now());
+        const token = crypto.randomBytes(24).toString('hex');
+        accountUnlockTokens.set(token, { uid: String(myUid), exp: Date.now() + EMAIL_TOKEN_TTL });
+        const baseUrl = (process.env.APP_URL || ('https://' + (req.headers.host || 'web-production-7981d.up.railway.app'))).replace(/\/$/, '');
+        const unlockUrl = baseUrl + '/auth/unlock-edit?token=' + encodeURIComponent(token);
+        const userName = _u.spitzname || _u.name || 'CreatorX User';
+        const html = `<!DOCTYPE html><html><body style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#000;color:#fff;padding:0">
+<div style="max-width:560px;margin:0 auto;padding:32px 24px">
+<div style="text-align:center;margin-bottom:24px"><img src="${baseUrl}/cx-logo-256.png" width="80" height="80" style="border-radius:18px" alt="CreatorX"></div>
+<h1 style="font-size:26px;font-weight:700;margin:0 0 12px;text-align:center;color:#fff">Hi ${userName.replace(/[<>]/g,'')}!</h1>
+<p style="font-size:15px;color:#a8a39a;line-height:1.6;text-align:center;margin:0 0 28px">Du möchtest deine <b style="color:#fff">Email oder dein Passwort</b> in den CreatorX-Einstellungen ändern. Klick den Button um deinen Account-Login für 30 Minuten zur Bearbeitung freizuschalten.</p>
+<div style="text-align:center;margin:32px 0"><a href="${unlockUrl}" style="display:inline-block;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px;letter-spacing:0.3px">🔓 Änderung freischalten</a></div>
+<p style="font-size:12px;color:#605c54;line-height:1.5;text-align:center;margin:32px 0 0;border-top:1px solid #221f1a;padding-top:20px">Falls du diese Änderung nicht angefragt hast, ignoriere die Email — niemand kann deine Login-Daten ohne Klick ändern.<br><br>Link gültig 1 Stunde, einmal verwendbar.<br><br>Falls der Button nicht funktioniert, kopier diese URL in deinen Browser:<br><span style="color:#a8a39a;word-break:break-all;font-size:11px">${unlockUrl}</span></p>
+</div></body></html>`;
+        const sent = await sendEmail(_u.email, '🔓 CreatorX: Account-Login Änderung freischalten', html);
+        if (!sent) {
+            accountUnlockTokens.delete(token);
+            return json({ok:false, error:'Email-Versand fehlgeschlagen — bitte später nochmal'}, 502);
+        }
+        return json({ok:true, sentTo: _u.email});
+    }
+    // Unlock-Edit: User klickt Link → 30 Min Edit-Window
+    if (path === '/auth/unlock-edit' && req.method === 'GET') {
+        const token = String(query.token || '').trim();
+        const baseHtml = (icon, title, msg, color, btn) => `<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><style>body{margin:0;font-family:-apple-system,BlinkMacSystemFont,Inter,sans-serif;background:#0b0b0e;color:#fff;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}.box{background:linear-gradient(180deg,#1c1c1e,#0f0f11);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:40px 28px;max-width:420px;text-align:center;box-shadow:0 30px 80px rgba(0,0,0,.5)}.ic{font-size:64px;margin-bottom:16px}.t{font-size:22px;font-weight:800;margin-bottom:10px;letter-spacing:-.4px;color:${color}}.m{font-size:14px;color:rgba(255,255,255,.7);line-height:1.55;margin-bottom:24px}.btn{display:inline-block;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;padding:13px 28px;border-radius:12px;text-decoration:none;font-weight:800;font-size:14px}</style></head><body><div class="box"><div class="ic">${icon}</div><div class="t">${title}</div><div class="m">${msg}</div>${btn||''}</div></body></html>`;
+        if (!token) { res.writeHead(400, {'Content-Type':'text/html'}); return res.end(baseHtml('⚠️','Ungültiger Link','Der Unlock-Link ist ungültig.','#f59e0b','<a href="/einstellungen" class="btn">→ Einstellungen</a>')); }
+        const entry = accountUnlockTokens.get(token);
+        if (!entry || entry.exp < Date.now()) {
+            accountUnlockTokens.delete(token);
+            res.writeHead(400, {'Content-Type':'text/html'});
+            return res.end(baseHtml('⏰','Link abgelaufen','Der Unlock-Link ist abgelaufen oder schon benutzt. Geh in die Einstellungen und sende einen neuen.','#ef4444','<a href="/einstellungen" class="btn">→ Einstellungen</a>'));
+        }
+        accountUnlockTokens.delete(token);
+        if (!session || getMyUid(session) !== entry.uid) {
+            res.writeHead(403, {'Content-Type':'text/html'});
+            return res.end(baseHtml('🔒','Anmeldung erforderlich','Bitte melde dich erst auf dem gleichen Gerät an mit dem du die Änderung anfrägst.','#ef4444','<a href="/" class="btn">→ Login</a>'));
+        }
+        // Setze Unlock-Window in Session
+        session.accountUnlockUntil = Date.now() + ACCOUNT_UNLOCK_TTL;
+        saveSessions();
+        res.writeHead(302, {'Location':'/einstellungen#account'});
+        return res.end();
     }
     // Email-Confirmation: User klickt Bestätigungs-Link aus Settings-Email → email wird aktiviert.
     if (path === '/auth/confirm-email' && req.method === 'GET') {
@@ -5820,13 +5880,34 @@ p{line-height:1.65;color:var(--muted)}
         if (body.instagram !== undefined) updateData.instagram = body.instagram;
         if (body.banner !== undefined) updateData.banner = body.banner;
         // Email für Magic-Link-Login. Format-Validation auf Bot-Seite, Eindeutigkeits-Check ebenso.
+        // Lock-Check: wenn User schon BEIDES (email + password) hat, braucht er Unlock-Window
+        const _curBd = await fetchBot('/data');
+        const _curUser = _curBd?.users?.[myUid] || {};
+        const _isFullySet = !!_curUser.email && !!_curUser.password_hash;
+        const _unlockActive = !!session && Number(session.accountUnlockUntil||0) > Date.now();
         if (body.email !== undefined) {
             const em = String(body.email||'').toLowerCase().trim();
+            const emChanged = String(_curUser.email||'').toLowerCase() !== em;
+            if (emChanged && _isFullySet && !_unlockActive) {
+                return json({ok:false, error:'Email-Änderung gesperrt. Klick "Änderung anfragen" — wir senden dir einen Link zur Email zum Freischalten.', locked:true}, 423);
+            }
             if (em === '' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) {
                 updateData.email = em.slice(0, 200);
             } else {
                 return json({ok:false, error:'Ungültige Email-Adresse'}, 400);
             }
+        }
+        // Passwort-Update direkt im Save-Profile (statt separat /api/auth/set-password aus Settings)
+        let _pwUpdated = false;
+        if (body.password && String(body.password).length > 0) {
+            const pw = String(body.password);
+            if (pw.length < 6 || pw.length > 200) return json({ok:false, error:'Passwort muss 6–200 Zeichen lang sein'}, 400);
+            if (_isFullySet && !_unlockActive) {
+                return json({ok:false, error:'Passwort-Änderung gesperrt. Klick "Änderung anfragen" zum Freischalten.', locked:true}, 423);
+            }
+            const pwResult = await postBot('/set-user-password', { uid: myUid, password: pw });
+            if (!pwResult || !pwResult.ok) return json({ok:false, error: (pwResult && pwResult.error) || 'Passwort speichern fehlgeschlagen'}, 500);
+            _pwUpdated = true;
         }
         const updateResult = await postBot('/update-profile-api', updateData);
         if (updateResult && updateResult.ok === false) {
@@ -5868,7 +5949,11 @@ p{line-height:1.65;color:var(--muted)}
             saveSessions();
         }
         await checkProfileCompletion(myUid, session);
-        return json({ok:true, emailPending: _emailPending});
+        // Wenn Unlock-Window aktiv UND Email/Passwort geändert wurden → Window schließen (single-use)
+        if (session && _unlockActive && (body.email !== undefined || _pwUpdated)) {
+            session.accountUnlockUntil = 0; saveSessions();
+        }
+        return json({ok:true, emailPending: _emailPending, pwUpdated: _pwUpdated});
     }
 
     if (path === '/api/follow' && req.method === 'POST') {
@@ -10251,11 +10336,39 @@ async function toggleFollow(uid,btn){
   <input type="text" class="form-input" id="inp-spitzname" placeholder="Dein Spitzname" maxlength="30" value="${u.spitzname||''}">
 </div>
 <div style="padding:16px;border-bottom:1px solid var(--border2)">
-  <div class="form-label">📧 Email <span style="font-size:10px;color:var(--muted);font-weight:500">(für Magic-Link-Login)</span></div>
-  <input type="email" class="form-input" id="inp-email" placeholder="deine@email.de" maxlength="200" value="${u.email||u.pendingEmail||''}" autocapitalize="none" spellcheck="false">
-  <div class="form-hint">Wenn gesetzt, kannst du dich auch ohne Telegram über die Email einloggen. Du bekommst eine Bestätigungs-Mail an die Adresse.</div>
-  ${u.pendingEmail && u.pendingEmail !== u.email ? `<div style="margin-top:10px;padding:10px 12px;background:rgba(245,158,11,0.10);border:1px solid rgba(245,158,11,0.30);border-radius:10px;font-size:11.5px;color:#f59e0b;line-height:1.5"><b>⏳ Bestätigung ausstehend.</b> Wir haben einen Bestätigungs-Link an <b>${htmlEsc(u.pendingEmail)}</b> gesendet — schau in dein Email-Postfach (auch Spam) und klick den Button.</div>` : ''}
-  ${u.email ? `<div style="margin-top:10px;padding:10px 12px;background:rgba(34,197,94,0.10);border:1px solid rgba(34,197,94,0.25);border-radius:10px;font-size:11.5px;color:#22c55e;line-height:1.5"><b>✓ Email bestätigt &amp; aktiv.</b> Du kannst dich jederzeit ohne Telegram einloggen. Account, XP, Likes &amp; Posts bleiben erhalten.</div>` : ''}
+  <div class="form-label">🔐 Account-Login <span style="font-size:10px;color:var(--muted);font-weight:500">(Email + Passwort)</span></div>
+  ${(() => {
+    const hasEmail = !!u.email;
+    const hasPw = !!u.password_hash;
+    const hasPending = u.pendingEmail && u.pendingEmail !== u.email;
+    const isLocked = hasEmail && hasPw && (!session || !session.accountUnlockUntil || Number(session.accountUnlockUntil) < Date.now());
+    if (isLocked) {
+      return `<div style="background:var(--bh,var(--bg3));border:1px solid var(--border2);border-radius:14px;padding:14px;margin-top:6px">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px"><div style="font-size:24px">🔒</div><div><div style="font-weight:800;font-size:14px;color:var(--text)">Account-Login gesperrt</div><div style="font-size:12px;color:var(--muted);margin-top:2px">Email + Passwort sind gesetzt. Änderungen brauchen eine Bestätigung per Mail.</div></div></div>
+        <div style="display:flex;flex-direction:column;gap:6px;font-size:13px;margin-bottom:12px">
+          <div style="display:flex;align-items:center;gap:8px;color:var(--text)"><span style="color:var(--muted);font-weight:600;min-width:90px">📧 Email:</span><span style="font-family:JetBrains Mono,monospace;font-size:12.5px">${htmlEsc(u.email)}</span><span style="color:#22c55e;font-size:11px;margin-left:auto">✓ bestätigt</span></div>
+          <div style="display:flex;align-items:center;gap:8px;color:var(--text)"><span style="color:var(--muted);font-weight:600;min-width:90px">🔐 Passwort:</span><span style="font-family:JetBrains Mono,monospace;font-size:12.5px">••••••••</span><span style="color:#22c55e;font-size:11px;margin-left:auto">✓ gesetzt</span></div>
+        </div>
+        <button class="btn btn-outline btn-full" id="ep-request-change-btn" onclick="requestAccountChange()" style="font-size:13px;display:flex">📨 Änderung anfragen</button>
+        <div id="ep-request-msg" style="font-size:11.5px;color:var(--muted);margin-top:8px;line-height:1.4">Klick → wir senden einen Bestätigungs-Link an deine Email. 30 Min nach Klick kannst du Email/Passwort ändern.</div>
+      </div>`;
+    }
+    // Edit-State (kein Lock oder Unlock-Window aktiv)
+    return `<div style="display:flex;flex-direction:column;gap:14px">
+      <div>
+        <div style="font-size:11.5px;color:var(--muted);font-weight:700;margin-bottom:6px">📧 EMAIL</div>
+        <input type="email" class="form-input" id="inp-email" placeholder="deine@email.de" maxlength="200" value="${u.email||u.pendingEmail||''}" autocapitalize="none" spellcheck="false">
+        ${hasPending ? `<div style="margin-top:8px;padding:9px 11px;background:rgba(245,158,11,0.10);border:1px solid rgba(245,158,11,0.30);border-radius:10px;font-size:11.5px;color:#f59e0b;line-height:1.45"><b>⏳ Bestätigung ausstehend.</b> Bestätigungs-Link an <b>${htmlEsc(u.pendingEmail)}</b> gesendet — schau ins Postfach (auch Spam).</div>` : ''}
+        ${hasEmail ? `<div style="margin-top:8px;padding:9px 11px;background:rgba(34,197,94,0.10);border:1px solid rgba(34,197,94,0.25);border-radius:10px;font-size:11.5px;color:#22c55e;line-height:1.45"><b>✓ Email bestätigt.</b></div>` : ''}
+      </div>
+      <div>
+        <div style="font-size:11.5px;color:var(--muted);font-weight:700;margin-bottom:6px">🔐 PASSWORT ${hasPw ? '<span style="color:#22c55e;font-weight:600;margin-left:4px">(gesetzt)</span>' : '<span style="color:var(--muted-2);font-weight:500;margin-left:4px">(optional)</span>'}</div>
+        <input type="password" class="form-input" id="inp-password" placeholder="${hasPw ? 'Neues Passwort (leer = unverändert)' : 'Min. 6 Zeichen'}" minlength="6" maxlength="200" autocomplete="new-password">
+        <div style="font-size:11.5px;color:var(--muted);margin-top:6px;line-height:1.45">Mit Passwort kannst du dich direkt einloggen — ohne Magic-Link. Min. 6 Zeichen.</div>
+      </div>
+      ${hasEmail && hasPw ? `<div style="padding:10px 12px;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.25);border-radius:10px;font-size:11.5px;color:#22c55e;line-height:1.5"><b>✓ Edit-Window aktiv (30 Min).</b> Speichere deine Änderungen jetzt — danach wird der Block wieder gesperrt.</div>` : ''}
+    </div>`;
+  })()}
 </div>
 <div style="padding:16px;border-bottom:1px solid var(--border2)">
   <div class="form-label">🔑 Eigener App-Code <span style="font-size:10px;color:var(--muted);font-weight:500">(für /mycode &amp; Login-Link)</span></div>
@@ -10475,23 +10588,54 @@ async function saveProfile() {
         const nische = document.getElementById('inp-nische')?.value?.trim()||'';
         const website = document.getElementById('inp-website')?.value?.trim()||'';
         const instagram = (document.getElementById('inp-instagram')?.value||'').replace(/^@/,'').trim();
-        const email = (document.getElementById('inp-email')?.value||'').toLowerCase().trim();
-        const payload = {bio, spitzname, accentColor: selectedAccent, theme, nische, website, instagram, email};
+        const emailEl = document.getElementById('inp-email');
+        const pwEl = document.getElementById('inp-password');
+        const payload = {bio, spitzname, accentColor: selectedAccent, theme, nische, website, instagram};
+        if (emailEl) payload.email = (emailEl.value||'').toLowerCase().trim();
+        if (pwEl && pwEl.value) payload.password = pwEl.value;
         if (selectedBanner) payload.banner = selectedBanner;
         const res = await fetch('/api/save-profile', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
         const data = await res.json();
         if(data.ok) {
-            if (data.emailPending) {
+            if (data.emailPending && data.pwUpdated) {
+                toast('📧 Email + Passwort gespeichert — bestätige Email-Link!', 5000);
+                setTimeout(()=>location.reload(), 1400);
+            } else if (data.emailPending) {
                 toast('📧 Bestätigungs-Email gesendet!', 4500);
                 setTimeout(()=>location.reload(), 1200);
+            } else if (data.pwUpdated) {
+                toast('🔐 Passwort aktualisiert!', 3000);
+                setTimeout(()=>location.reload(), 800);
             } else {
                 toast('✅ Gespeichert!');
                 setTimeout(()=>location.reload(), 300);
             }
         }
+        else if (data.locked) {
+            toast('🔒 ' + data.error, 5500);
+        }
         else { toast('❌ Fehler: ' + (data.error||'Unbekannt')); }
     } catch(e) { toast('❌ Netzwerkfehler'); }
     if(btn) { btn.textContent = '💾 Speichern'; btn.disabled = false; }
+}
+async function requestAccountChange(){
+    const btn = document.getElementById('ep-request-change-btn');
+    const msg = document.getElementById('ep-request-msg');
+    if (btn) { btn.disabled = true; btn.textContent = '📨 Sende...'; }
+    try {
+        const r = await fetch('/api/request-account-change', {method:'POST',headers:{'Content-Type':'application/json'}});
+        const d = await r.json();
+        if (d.ok) {
+            if (msg) { msg.style.color = '#22c55e'; msg.innerHTML = '✅ <b>Email gesendet an ' + (d.sentTo||'deine Adresse') + '.</b> Klick den Link in der Email — dann hast du 30 Min zum Ändern.'; }
+            if (btn) { btn.textContent = '✓ Email gesendet'; }
+        } else {
+            if (msg) { msg.style.color = '#ef4444'; msg.textContent = '❌ ' + (d.error || 'Fehler'); }
+            if (btn) { btn.disabled = false; btn.textContent = '📨 Änderung anfragen'; }
+        }
+    } catch(e) {
+        if (msg) { msg.style.color = '#ef4444'; msg.textContent = '❌ Netzwerkfehler'; }
+        if (btn) { btn.disabled = false; btn.textContent = '📨 Änderung anfragen'; }
+    }
 }
 document.getElementById('inp-bio').addEventListener('input', function() {
     this.nextElementSibling.textContent = this.value.length + '/100';
