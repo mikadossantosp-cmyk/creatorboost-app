@@ -1069,7 +1069,7 @@ ${session ? `
 (function(){
   // Multi-Page Tour: läuft über mehrere Seiten (Feed → Explore → Profil → Einstellungen).
   // Active-State + Index in sessionStorage damit Navigation funktioniert.
-  // Server-State (u.appBriefingSeen) entscheidet ob Tour beim ersten Login automatisch startet.
+  // Server-State (u.appBriefingSeenV2) entscheidet ob Tour beim ersten Login automatisch startet.
   function _tourLog(msg){ try{ console.log('[TOUR]', msg); }catch(e){} }
   function _safeRun(fn, label){
     try { fn(); } catch(e) { _tourLog('ERROR in '+label+': '+(e.message||e)); try{ console.error(e); }catch(_){} _showTourErrorBanner(label, e); }
@@ -3261,11 +3261,11 @@ function sendMagicLink(prefilledEmail){
         if (!session) return json({seen: true}); // Logged-out → kein Modal nötig
         const _bd = await fetchBot('/data');
         const _u = _bd?.users?.[getMyUid(session)] || {};
-        return json({seen: !!_u.appBriefingSeen});
+        return json({seen: !!_u.appBriefingSeenV2});
     }
     if (path === '/api/dismiss-briefing' && req.method === 'POST') {
         if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
-        const result = await postBot('/update-profile-api', { uid: getMyUid(session), appBriefingSeen: true });
+        const result = await postBot('/update-profile-api', { uid: getMyUid(session), appBriefingSeenV2: true });
         if (!result || result.ok === false) return json({ok:false, error: (result && result.error) || 'Speichern fehlgeschlagen'}, 500);
         return json({ok:true});
     }
@@ -3768,6 +3768,45 @@ function submitPw(ev){
 </script>
 </body></html>`);
     }
+    // ── INVITE-LINK ──
+    // /i/<code>  — universeller Auto-Login + Onboarding-Link.
+    // - Wenn der Code zu einem User passt (= persönlicher Magic-Link) → einloggen + /feed.
+    // - Wenn schon eingeloggt → /feed (du bist eh drin).
+    // - Sonst (generischer Invite-Code, nicht-User) → Landing-Page mit ?invite=<code> für
+    //   Tracking + vorausgefülltem Email-Login-Tab.
+    if (path.startsWith('/i/') && req.method === 'GET') {
+        const code = path.slice(3).toLowerCase().trim().slice(0, 60);
+        if (!code) { res.writeHead(302,{'Location':'/'}); return res.end(); }
+        // Wenn schon eingeloggt → kurz weiter zu /feed.
+        if (session) { res.writeHead(302,{'Location':'/feed'}); return res.end(); }
+        // User mit appCode == code finden → automatisch einloggen.
+        let botData = await fetchBot('/data');
+        if (botData) {
+            const found = Object.entries(botData.users||{}).find(([,u]) => u.appCode === code);
+            if (found) {
+                const [uid, u] = found;
+                let sid = null;
+                for (const [s, sess] of sessions.entries()) {
+                    if (sess.uid === String(uid)) { sid = s; break; }
+                }
+                if (!sid) {
+                    sid = genSid();
+                    const validSubUid = u.subUid && botData.users?.[u.subUid] ? String(u.subUid) : null;
+                    sessions.set(sid, { uid: String(uid), name: u.name, username: u.username||null, theme: 'light', lang: 'de', createdAt: Date.now(), subUid: validSubUid, activeUid: String(uid) });
+                    saveSessions();
+                }
+                res.writeHead(302,{'Set-Cookie':`cbsid=${sid}; HttpOnly; Path=/; Max-Age=2592000`,'Location':'/feed'});
+                return res.end();
+            }
+        }
+        // Generischer Invite (Code passt zu keinem User) → Landing mit Invite-Cookie.
+        res.writeHead(302, {
+            'Set-Cookie': `cbInvite=${encodeURIComponent(code)}; Path=/; Max-Age=2592000`,
+            'Location': '/?invite=' + encodeURIComponent(code)
+        });
+        return res.end();
+    }
+
     if (path === '/auth/auto' && req.method === 'GET') {
         const code = (query.code||'').toString().toLowerCase().trim();
         const rawRedirect = (query.redirect || '/feed').toString();
@@ -9245,7 +9284,7 @@ ${adminIds.includes(Number(myUid)) ? `
 </div>` : ''}
 <div style="padding:16px;border-bottom:1px solid var(--border2)">
   <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">🎯 App-Tour</div>
-  <div style="font-size:12px;color:var(--muted);margin-bottom:10px">${u.appBriefingSeen ? 'Du hast die Tour schon einmal gesehen.' : 'Du hast die Tour noch nicht gesehen — sie startet beim nächsten Feed-Open automatisch.'}</div>
+  <div style="font-size:12px;color:var(--muted);margin-bottom:10px">${u.appBriefingSeenV2 ? 'Du hast die Tour schon einmal gesehen.' : 'Du hast die Tour noch nicht gesehen — sie startet beim nächsten Feed-Open automatisch.'}</div>
   <a href="/feed?tour=1" class="btn btn-outline btn-full" style="display:flex;align-items:center;justify-content:center;gap:8px">🎯 Tour erneut anschauen</a>
 </div>
 <div style="padding:16px;border-bottom:1px solid var(--border2)">
