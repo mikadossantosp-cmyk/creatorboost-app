@@ -2795,7 +2795,7 @@ self.addEventListener('notificationclick',e=>{
     if (session && !isPolling) { session.lastSeen = Date.now(); }
 
     function redirect(to) { res.writeHead(302,{'Location':to}); res.end(); }
-    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'202'}); res.end(layout(content,session,page,lang)); }
+    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'203'}); res.end(layout(content,session,page,lang)); }
     function json(data, status=200) { res.writeHead(status,{'Content-Type':'application/json'}); res.end(JSON.stringify(data)); }
 
     // ── LANDING ──
@@ -6185,6 +6185,63 @@ async function adminDelLink(linkId, btn){
     }catch(e){ if(btn){btn.disabled=false;btn.textContent='🗑️';} toast('❌ Netzwerkfehler'); }
 }
 
+// Lokaler Like-Cache + Retry-Queue. Like wird sofort lokal markiert (überlebt Reload),
+// dann gefeuert. Bei Netzwerk-Fehler → Queue + Background-Retry alle 5s. Server-Render
+// + lokaler Cache werden bei Page-Load OR-ed → Like bleibt überall sichtbar.
+function _likedSet() { try { return new Set(Object.keys(JSON.parse(localStorage.getItem('cb_my_likes')||'{}'))); } catch(e) { return new Set(); } }
+function _markLikedLocal(msgId) {
+    try {
+        const v = JSON.parse(localStorage.getItem('cb_my_likes')||'{}');
+        v[String(msgId)] = Date.now();
+        localStorage.setItem('cb_my_likes', JSON.stringify(v));
+    } catch(e) {}
+}
+function _queueLike(msgId) {
+    try {
+        const q = JSON.parse(localStorage.getItem('cb_like_queue')||'[]');
+        if (!q.includes(String(msgId))) { q.push(String(msgId)); localStorage.setItem('cb_like_queue', JSON.stringify(q)); }
+    } catch(e) {}
+}
+function _dequeueLike(msgId) {
+    try {
+        const q = JSON.parse(localStorage.getItem('cb_like_queue')||'[]').filter(x => x !== String(msgId));
+        localStorage.setItem('cb_like_queue', JSON.stringify(q));
+    } catch(e) {}
+}
+async function _flushLikeQueue() {
+    let q = [];
+    try { q = JSON.parse(localStorage.getItem('cb_like_queue')||'[]'); } catch(e){}
+    for (const msgId of q) {
+        try {
+            const ctrl = new AbortController();
+            const tmo = setTimeout(()=>ctrl.abort(), 8000);
+            const res = await fetch('/api/like', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({msgId}), signal: ctrl.signal });
+            clearTimeout(tmo);
+            const data = await res.json();
+            if (data.ok || data.missingInstagram) _dequeueLike(msgId);
+        } catch(e) { /* keep in queue, retry next round */ }
+    }
+}
+// Beim Laden: lokal-gelikte Posts in UI markieren — verhindert "Like weg nach Reload"
+function _hydrateLikes(){
+    try {
+        const liked = _likedSet();
+        if (liked.size === 0) return;
+        document.querySelectorAll('.post-action-btn[data-msgid]').forEach(b => {
+            const id = b.getAttribute('data-msgid');
+            if (id && liked.has(String(id)) && !b.classList.contains('liked')) {
+                b.classList.add('liked');
+                b.disabled = true;
+                const svg = b.querySelector('svg'); if (svg) svg.setAttribute('fill','currentColor');
+            }
+        });
+    } catch(e) {}
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', _hydrateLikes);
+else _hydrateLikes();
+window.addEventListener('load', () => { setTimeout(_flushLikeQueue, 1500); });
+setInterval(_flushLikeQueue, 30000);
+window.addEventListener('online', _flushLikeQueue);
 async function likePost(msgId, btn) {
     if (btn.dataset.busy === '1') return;
     if (btn.classList.contains('liked')) {
@@ -6195,6 +6252,9 @@ async function likePost(msgId, btn) {
         showBanner({ type:'warn', title:'Erst den Link besuchen!', subtitle:'Tap auf den Post → Instagram öffnen → dann liken. So funktioniert echtes Engagement.', dur:5000 });
         return;
     }
+    // Sofort lokal speichern — überlebt Reload, Network-Fail, App-Restart.
+    _markLikedLocal(msgId);
+    _queueLike(msgId);
     btn.dataset.busy = '1';
     const countEl = document.getElementById('likes-'+msgId);
     btn.classList.add('liked');
@@ -6204,26 +6264,32 @@ async function likePost(msgId, btn) {
     btn.disabled = true;
     setTimeout(()=>btn.style.animation='',300);
     try {
-        const res = await fetch('/api/like', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({msgId})});
+        const ctrl = new AbortController();
+        const tmo = setTimeout(()=>ctrl.abort(), 8000);
+        const res = await fetch('/api/like', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({msgId}),signal:ctrl.signal});
+        clearTimeout(tmo);
         const data = await res.json();
         if (data.ok) {
+            _dequeueLike(msgId);
             if (countEl && data.likes !== undefined) countEl.textContent = data.likes;
             showBanner({ type:'success', title:'Like registriert ❤️', subtitle:'Vergiss nicht: Auf Instagram liken & mit 2 Wörter kommentieren. Danke!', dur:5000 });
-        } else {
+        } else if (data.missingInstagram) {
+            // Echte Server-Ablehnung → revert lokal (Like nicht erlaubt)
+            _dequeueLike(msgId);
+            try { const v = JSON.parse(localStorage.getItem('cb_my_likes')||'{}'); delete v[String(msgId)]; localStorage.setItem('cb_my_likes', JSON.stringify(v)); } catch(e){}
             btn.classList.remove('liked');
             btn.querySelector('svg').setAttribute('fill', 'none');
             if (countEl) countEl.textContent = Math.max(0, Number(countEl.textContent) - 1);
             btn.disabled = false;
             btn.dataset.busy = '0';
-            showBanner({ type:'warn', icon:'❌', title:'Like fehlgeschlagen', subtitle: data.error || 'Konnte nicht liken — versuch es gleich nochmal.', dur:4500 });
+            showBanner({ type:'warn', icon:'❌', title:'Like fehlgeschlagen', subtitle: data.error || 'Insta in Einstellungen setzen.', dur:4500 });
+        } else {
+            // Andere Fehler (z.B. 502 Bot offline) → in Queue lassen, optimistisch UI behalten
+            showBanner({ type:'warn', icon:'⏳', title:'Wird im Hintergrund nachgeholt', subtitle:'Like ist gespeichert und wird nochmal gesendet sobald die Verbindung wieder steht.', dur:4500 });
         }
     } catch(e) {
-        btn.classList.remove('liked');
-        btn.querySelector('svg').setAttribute('fill', 'none');
-        if (countEl) countEl.textContent = Math.max(0, Number(countEl.textContent) - 1);
-        btn.disabled = false;
-        btn.dataset.busy = '0';
-        showBanner({ type:'warn', icon:'📡', title:'Netzwerkfehler', subtitle:'Like konnte nicht gesendet werden — Verbindung prüfen.', dur:4500 });
+        // Netzwerk-Fail / Timeout → optimistisch UI behalten, Queue feuert später
+        showBanner({ type:'warn', icon:'📡', title:'Offline — wird nachgeholt', subtitle:'Like ist lokal gespeichert. Sobald Internet da ist, geht er automatisch durch.', dur:4500 });
     }
 }
 async function refreshLikes() {
@@ -6324,24 +6390,71 @@ function toggleLikers(msgId) {
 }
 
 // ── SUPERLINK ──
+function _queueSLLike(slId) {
+    try {
+        const q = JSON.parse(localStorage.getItem('cb_sl_like_queue')||'[]');
+        if (!q.includes(String(slId))) { q.push(String(slId)); localStorage.setItem('cb_sl_like_queue', JSON.stringify(q)); }
+    } catch(e) {}
+}
+function _dequeueSLLike(slId) {
+    try {
+        const q = JSON.parse(localStorage.getItem('cb_sl_like_queue')||'[]').filter(x=>x!==String(slId));
+        localStorage.setItem('cb_sl_like_queue', JSON.stringify(q));
+    } catch(e) {}
+}
+async function _flushSLLikeQueue() {
+    let q = [];
+    try { q = JSON.parse(localStorage.getItem('cb_sl_like_queue')||'[]'); } catch(e){}
+    for (const slId of q) {
+        try {
+            const ctrl = new AbortController();
+            const tmo = setTimeout(()=>ctrl.abort(), 8000);
+            const res = await fetch('/api/like-superlink', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({slId}), signal: ctrl.signal });
+            clearTimeout(tmo);
+            const data = await res.json();
+            if (data.ok || data.missingInstagram) _dequeueSLLike(slId);
+        } catch(e) {}
+    }
+}
+window.addEventListener('load', () => { setTimeout(_flushSLLikeQueue, 1800); });
+setInterval(_flushSLLikeQueue, 30000);
+window.addEventListener('online', _flushSLLikeQueue);
 async function likeSuperLink(slId, btn) {
     if (btn.disabled) return;
     if (!hasLinkVisited(slId)) {
         showBanner({ type:'warn', title:'Erst den Link besuchen!', subtitle:'Tap auf den Superlink → Instagram öffnen → dann liken. Pflicht für Full-Engagement.', dur:5000 });
         return;
     }
+    // Sofort lokal markieren + queuen — Like überlebt Reload und Netzwerk-Fail.
+    _markLikedLocal(slId);
+    _queueSLLike(slId);
     btn.disabled = true;
+    btn.classList.add('liked');
+    btn.querySelector('svg')?.setAttribute('fill','currentColor');
+    btn.style.borderColor='var(--accent)';
     try {
-        const res = await fetch('/api/like-superlink',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({slId})});
+        const ctrl = new AbortController();
+        const tmo = setTimeout(()=>ctrl.abort(), 8000);
+        const res = await fetch('/api/like-superlink',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({slId}),signal:ctrl.signal});
+        clearTimeout(tmo);
         const data = await res.json();
         if (data.ok) {
-            btn.classList.add('liked');
-            btn.querySelector('svg')?.setAttribute('fill','currentColor');
-            btn.style.borderColor='var(--accent)';
+            _dequeueSLLike(slId);
             document.querySelectorAll('#sl-likes-'+slId).forEach(el=>el.textContent=data.likes);
             showBanner({ type:'success', title:'Superlink geliked ❤️', subtitle:'Vergiss nicht: Auf Instagram liken & mit 2 Wörter kommentieren. Danke!', dur:5000 });
-        } else { btn.disabled=false; showBanner({ type:'warn', icon:'❌', title:'Superlink-Like fehlgeschlagen', subtitle: data.error || 'Versuch es gleich nochmal.', dur:4500 }); }
-    } catch(e) { btn.disabled=false; showBanner({ type:'warn', icon:'📡', title:'Netzwerkfehler', subtitle:'Like konnte nicht gesendet werden.', dur:4500 }); }
+        } else if (data.missingInstagram) {
+            _dequeueSLLike(slId);
+            try { const v = JSON.parse(localStorage.getItem('cb_my_likes')||'{}'); delete v[String(slId)]; localStorage.setItem('cb_my_likes', JSON.stringify(v)); } catch(e){}
+            btn.disabled=false;
+            btn.classList.remove('liked');
+            btn.querySelector('svg')?.setAttribute('fill','none');
+            showBanner({ type:'warn', icon:'❌', title:'Superlink-Like fehlgeschlagen', subtitle: data.error || 'Insta in Einstellungen setzen.', dur:4500 });
+        } else {
+            showBanner({ type:'warn', icon:'⏳', title:'Wird im Hintergrund nachgeholt', subtitle:'Like ist gespeichert und wird automatisch nochmal gesendet.', dur:4500 });
+        }
+    } catch(e) {
+        showBanner({ type:'warn', icon:'📡', title:'Offline — wird nachgeholt', subtitle:'Like ist lokal gespeichert. Sobald Internet da ist, geht er automatisch durch.', dur:4500 });
+    }
 }
 function showSLLikerModal(slId) {
     const modal=document.getElementById('sl-liker-modal');
