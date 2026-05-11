@@ -9262,12 +9262,24 @@ setTimeout(()=>document.getElementById('search-input').focus(),100);
         if (!adminIds.includes(Number(myUid)) && !String(d.users?.[myUid]?.role||'').includes('Admin')) {
             return text('Nur Admins', 403);
         }
-        // Berlin-Wochenkey: Montag der aktuellen Woche
-        const now = new Date();
-        const day = now.getDay() || 7;
-        const monday = new Date(now);
-        monday.setDate(now.getDate() - (day - 1));
-        const weekKey = monday.getFullYear() + '-' + String(monday.getMonth()+1).padStart(2,'0') + '-' + String(monday.getDate()).padStart(2,'0');
+        // Berlin-Wochenkey: Montag der gewählten Woche
+        const computeWeekKey = (offset = 0) => {
+            const n = new Date();
+            const dy = n.getDay() || 7;
+            const mon = new Date(n);
+            mon.setDate(n.getDate() - (dy - 1) + (offset * 7));
+            return mon.getFullYear() + '-' + String(mon.getMonth()+1).padStart(2,'0') + '-' + String(mon.getDate()).padStart(2,'0');
+        };
+        // ?week=last → letzte Woche; ?week=YYYY-MM-DD → bestimmte Woche
+        let weekKey;
+        if (query.week === 'last') weekKey = computeWeekKey(-1);
+        else if (query.week === 'current' || !query.week) weekKey = computeWeekKey(0);
+        else if (/^\d{4}-\d{2}-\d{2}$/.test(String(query.week))) weekKey = String(query.week);
+        else weekKey = computeWeekKey(0);
+        const currentWeek = computeWeekKey(0);
+        const lastWeek = computeWeekKey(-1);
+        // Verfügbare Wochen aus d.superlinks
+        const availableWeeks = [...new Set(Object.values(d.superlinks||{}).map(s => s?.week).filter(Boolean))].sort().reverse();
 
         const weekSls = Object.values(d.superlinks||{}).filter(s => s && s.week === weekKey);
         const posters = [...new Set(weekSls.map(s => String(s.uid)))];
@@ -9333,16 +9345,25 @@ setTimeout(()=>document.getElementById('search-input').focus(),100);
   <div style="font-size:11px;letter-spacing:2px;font-weight:700;opacity:.85;text-transform:uppercase">Letzter Like</div>
   <div style="font-size:18px;font-weight:800;margin-top:6px">${lastLikeTs ? fmtTs(lastLikeTs) : 'Noch keine Likes diese Woche'}</div>
   ${lastLikeTs ? `<div style="font-size:12.5px;margin-top:6px;opacity:.95">${htmlEsc(lastLikeBy)} → ${htmlEsc(lastLikeFor)}'s Superlink</div>` : ''}
-  <div style="font-size:11px;margin-top:10px;opacity:.85">Aktuelle Woche: ${weekKey} · ${weekSls.length} Superlinks · ${posters.length} Poster</div>
+  <div style="font-size:11px;margin-top:10px;opacity:.85">Woche: ${weekKey}${weekKey===currentWeek?' (aktuell)':weekKey===lastWeek?' (letzte)':''} · ${weekSls.length} Superlinks · ${posters.length} Poster</div>
 </div>`;
+
+        // Wochen-Selektor
+        const weekOptions = [
+            { key: currentWeek, label: 'Aktuelle Woche' },
+            { key: lastWeek, label: 'Letzte Woche' },
+            ...availableWeeks.filter(w => w !== currentWeek && w !== lastWeek).slice(0, 6).map(w => ({ key: w, label: 'KW ' + w.slice(5) })),
+        ];
+        const weekSelector = `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px">${weekOptions.map(w => `<a href="/admin/superlinks-debug?week=${w.key}" style="display:inline-block;padding:7px 12px;border-radius:10px;background:${w.key===weekKey?'linear-gradient(135deg,#a78bfa,#7c3aed)':'var(--bg3)'};color:${w.key===weekKey?'#fff':'var(--text)'};border:1px solid var(--border);text-decoration:none;font-size:12px;font-weight:700">${w.label}</a>`).join('')}</div>`;
 
         return html(`<div style="padding:18px 16px;max-width:900px;margin:0 auto">
   <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
     <a href="/explore?tab=newsletter" style="color:var(--muted);text-decoration:none;font-size:14px">‹ zurück</a>
     <div style="font-size:20px;font-weight:800;font-family:var(--font-display)">🔍 Superlinks-Debug</div>
   </div>
+  ${weekSelector}
   ${summary}
-  ${rows || '<div style="padding:32px;text-align:center;color:var(--muted)">Keine Superlinks diese Woche</div>'}
+  ${rows || '<div style="padding:32px;text-align:center;color:var(--muted)">Keine Superlinks in dieser Woche</div>'}
 </div>`, 'explore');
     }
 
