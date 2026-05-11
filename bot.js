@@ -45,8 +45,16 @@ setInterval(() => {
     for (const [ip, v] of signupIpRateLimit.entries()) if (now - v.ts > SIGNUP_RATE_LIMIT_WINDOW) signupIpRateLimit.delete(ip);
 }, 5 * 60 * 1000);
 
+// In-memory email send log (last 200 entries, not persisted across restarts)
+const _emailSendLog = [];
+const EMAIL_LOG_MAX = 200;
+function logEmailSend(to, subject, ok, error) {
+    _emailSendLog.unshift({ to, subject, ok, error: error || null, ts: Date.now() });
+    if (_emailSendLog.length > EMAIL_LOG_MAX) _emailSendLog.length = EMAIL_LOG_MAX;
+}
+
 async function sendEmail(to, subject, html) {
-    if (!RESEND_API_KEY) { console.error('RESEND_API_KEY nicht gesetzt'); return false; }
+    if (!RESEND_API_KEY) { console.error('RESEND_API_KEY nicht gesetzt'); logEmailSend(to, subject, false, 'RESEND_API_KEY nicht gesetzt'); return false; }
     return new Promise(resolve => {
         const data = JSON.stringify({ from: EMAIL_FROM, to: [to], subject, html });
         const req = https.request({
@@ -59,12 +67,12 @@ async function sendEmail(to, subject, html) {
         }, res => {
             let buf = ''; res.on('data', c => buf += c);
             res.on('end', () => {
-                if (res.statusCode >= 200 && res.statusCode < 300) resolve(true);
-                else { console.error('Resend Error:', res.statusCode, buf.slice(0, 200)); resolve(false); }
+                if (res.statusCode >= 200 && res.statusCode < 300) { logEmailSend(to, subject, true, null); resolve(true); }
+                else { const errMsg = 'HTTP ' + res.statusCode; console.error('Resend Error:', res.statusCode, buf.slice(0, 200)); logEmailSend(to, subject, false, errMsg); resolve(false); }
             });
         });
-        req.on('error', e => { console.error('Resend Request Fehler:', e.message); resolve(false); });
-        req.setTimeout(8000, () => { req.destroy(); resolve(false); });
+        req.on('error', e => { console.error('Resend Request Fehler:', e.message); logEmailSend(to, subject, false, e.message); resolve(false); });
+        req.setTimeout(8000, () => { req.destroy(); logEmailSend(to, subject, false, 'Timeout'); resolve(false); });
         req.write(data); req.end();
     });
 }
@@ -4520,8 +4528,195 @@ function submitPw(ev){
         return res.end();
     }
 
+    // ── ADMIN: Email Dashboard (before auth gate — uses query.key) ──
+    if (path === '/admin/emails') {
+        if ((query.key || '') !== BRIDGE_SECRET) { res.writeHead(403); return res.end('Kein Zugriff'); }
+        const page = Math.max(1, parseInt(query.page) || 1);
+        const perPage = 50;
+        const filterMode = query.filter || 'all';
+        const searchQ = (query.q || '').toLowerCase().trim();
+        const bd = await fetchBot('/data');
+        if (!bd) { res.writeHead(503); return res.end('MainBot nicht erreichbar'); }
+        const users = bd.users || {};
+        let entries = Object.entries(users).map(([uid, u]) => {
+            const emails = [];
+            if (u.email) emails.push({ addr: u.email, source: 'active' });
+            if (u.pendingEmail && u.pendingEmail !== u.email) emails.push({ addr: u.pendingEmail, source: 'pending' });
+            const hasEmail = emails.length > 0;
+            const verified = !!u.email && !u.pendingEmail;
+            return { uid, name: u.spitzname || u.name || '', instagram: u.instagram || '', emails, hasEmail, verified, hasPassword: !!u.password_hash, appCode: u.appCode || '', started: u.started || false, role: u.role || '' };
+        });
+        if (filterMode === 'verified') entries = entries.filter(e => e.verified && e.hasEmail);
+        else if (filterMode === 'unverified') entries = entries.filter(e => e.hasEmail && !e.verified);
+        else if (filterMode === 'no-email') entries = entries.filter(e => !e.hasEmail);
+        else if (filterMode === 'errors') entries = entries.filter(e => e.hasEmail && _emailSendLog.some(l => !l.ok && e.emails.some(em => em.addr === l.to)));
+        if (searchQ) entries = entries.filter(e => e.name.toLowerCase().includes(searchQ) || e.uid.includes(searchQ) || e.emails.some(em => em.addr.toLowerCase().includes(searchQ)) || (e.instagram && e.instagram.toLowerCase().includes(searchQ)));
+        const total = entries.length;
+        const totalPages = Math.max(1, Math.ceil(total / perPage));
+        const pageEntries = entries.slice((page - 1) * perPage, page * perPage);
+        const totalUsers = Object.keys(users).length;
+        const withEmail = Object.values(users).filter(u => u.email).length;
+        const withPending = Object.values(users).filter(u => u.pendingEmail).length;
+        const verifiedCount = Object.values(users).filter(u => u.email && !u.pendingEmail).length;
+        const lastOk = _emailSendLog.find(l => l.ok);
+        const lastErr = _emailSendLog.find(l => !l.ok);
+        const esc = s => String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+        const k = encodeURIComponent(query.key);
+        const buildUrl = (p, f, q) => `/admin/emails?key=${k}&page=${p}&filter=${f||filterMode}&q=${encodeURIComponent(q||searchQ)}`;
+        const rows = pageEntries.map(e => {
+            const lastLog = _emailSendLog.find(l => e.emails.some(em => em.addr === l.to));
+            const emailCells = e.emails.length ? e.emails.map(em => `<span class="em-addr${em.source==='pending'?' pending':''}">${esc(em.addr)} <small>(${em.source})</small></span>`).join('') : '<span class="em-none">\u2014</span>';
+            return `<tr>
+<td>${esc(e.name)}<br><small class="uid">${e.uid}</small>${e.instagram?'<br><small>@'+esc(e.instagram)+'</small>':''}</td>
+<td>${emailCells}</td>
+<td><span class="badge ${e.verified?'ok':'no'}">${e.verified?'Ja':'Nein'}</span></td>
+<td>${e.appCode?esc(e.appCode):'\u2014'}</td>
+<td>${lastLog?'<small>'+(lastLog.ok?'\u2705':'\u274c')+' '+new Date(lastLog.ts).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})+(lastLog.error?' \u2014 '+esc(lastLog.error):'')+'</small>':'\u2014'}</td>
+<td>${e.emails.length && e.emails[0].addr?'<button class="btn-send" onclick="sendOne(this,\''+esc(e.uid)+'\')">Senden</button>':'\u2014'}</td>
+</tr>`;
+        }).join('');
+        let pagination = '';
+        if (totalPages > 1) {
+            pagination = '<div class="pag">';
+            if (page > 1) pagination += `<a href="${buildUrl(page-1)}">\u2190 Zur\u00fcck</a>`;
+            pagination += `<span>Seite ${page} / ${totalPages}</span>`;
+            if (page < totalPages) pagination += `<a href="${buildUrl(page+1)}">Weiter \u2192</a>`;
+            pagination += '</div>';
+        }
+        const logRows = _emailSendLog.slice(0, 20).map(l => `<tr><td>${new Date(l.ts).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'})}</td><td>${esc(l.to)}</td><td>${esc(l.subject).slice(0,40)}</td><td>${l.ok?'\u2705':'\u274c '+esc(l.error||'')}</td></tr>`).join('');
+        res.writeHead(200, {'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});
+        return res.end(`<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Email Dashboard</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0a0a0a;color:#e5e5e5;padding:16px;font-size:13px;line-height:1.5}
+h1{font-size:20px;font-weight:800;margin-bottom:4px}h2{font-size:15px;font-weight:700;margin:24px 0 8px;color:#a78bfa}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin:12px 0}
+.stat{background:#161616;border:1px solid #222;border-radius:10px;padding:12px}.stat-val{font-size:22px;font-weight:800}.stat-lbl{font-size:11px;color:#888;margin-top:2px}
+.mail-status{background:#161616;border:1px solid #222;border-radius:10px;padding:14px;margin:12px 0}
+.mail-status .provider{color:#a78bfa;font-weight:700}
+.bar{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0;align-items:center}
+input[type=text]{background:#161616;border:1px solid #333;border-radius:8px;padding:8px 12px;color:#e5e5e5;font-size:13px;flex:1;min-width:180px}
+.btn{padding:7px 14px;border-radius:8px;border:none;font-size:12px;font-weight:700;cursor:pointer;transition:transform .1s}.btn:active{transform:scale(.96)}
+.btn-primary{background:#7c3aed;color:#fff}.btn-danger{background:#ef4444;color:#fff}.btn-send{background:#22c55e;color:#fff;padding:5px 10px;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer}
+.btn-send:disabled{opacity:.5;cursor:default}
+.filter-bar{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}.filter-bar a{padding:5px 12px;border-radius:999px;font-size:11px;font-weight:700;text-decoration:none;border:1px solid #333;color:#888;transition:all .15s}
+.filter-bar a.active{background:#7c3aed;color:#fff;border-color:#7c3aed}
+table{width:100%;border-collapse:collapse;margin:8px 0}th,td{padding:8px 6px;text-align:left;border-bottom:1px solid #1a1a1a;vertical-align:top}
+th{font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.5px;font-weight:700;position:sticky;top:0;background:#0a0a0a}
+td{font-size:12px}.uid{color:#666;font-size:10px}.em-addr{display:block;font-size:12px}.em-addr.pending{color:#f59e0b}.em-none{color:#444}
+.badge{padding:2px 8px;border-radius:999px;font-size:10px;font-weight:700}.badge.ok{background:rgba(34,197,94,.15);color:#22c55e}.badge.no{background:rgba(239,68,68,.12);color:#ef4444}
+.pag{display:flex;gap:12px;align-items:center;justify-content:center;margin:16px 0}.pag a{color:#a78bfa;text-decoration:none;font-weight:600}.pag span{color:#888;font-size:12px}
+.log-table{margin:8px 0}.log-table td{font-size:11px}
+.toast{position:fixed;bottom:20px;right:20px;padding:10px 16px;border-radius:10px;font-size:13px;font-weight:600;color:#fff;z-index:999;animation:toast-in .3s ease}
+@keyframes toast-in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.bulk-status{margin:8px 0;padding:10px;background:#161616;border:1px solid #222;border-radius:8px;font-size:12px;display:none}
+</style></head><body>
+<h1>\ud83d\udce7 Email Dashboard</h1>
+<p style="color:#888;font-size:12px">Admin-Bereich \u00b7 ${totalUsers} User gesamt</p>
+<div class="stats">
+<div class="stat"><div class="stat-val">${withEmail}</div><div class="stat-lbl">Mit Email</div></div>
+<div class="stat"><div class="stat-val">${verifiedCount}</div><div class="stat-lbl">Verifiziert</div></div>
+<div class="stat"><div class="stat-val">${withPending}</div><div class="stat-lbl">Pending</div></div>
+<div class="stat"><div class="stat-val">${totalUsers - withEmail}</div><div class="stat-lbl">Ohne Email</div></div>
+</div>
+<div class="mail-status">
+<b>Mail System Status</b><br>
+Provider: <span class="provider">${RESEND_API_KEY ? 'Resend \u2705' : 'Nicht konfiguriert \u274c'}</span><br>
+API-Key: ${RESEND_API_KEY ? '****' + RESEND_API_KEY.slice(-4) : 'Fehlt'} \u00b7 From: ${esc(EMAIL_FROM)}<br>
+${lastOk ? 'Letzte OK: ' + new Date(lastOk.ts).toLocaleString('de-DE') + ' \u2192 ' + esc(lastOk.to) : 'Noch keine erfolgreiche Mail'}<br>
+${lastErr ? '<span style="color:#ef4444">Letzter Fehler: ' + new Date(lastErr.ts).toLocaleString('de-DE') + ' \u2192 ' + esc(lastErr.error||'') + '</span>' : ''}
+<br><button class="btn btn-primary" style="margin-top:8px" onclick="sendTest()">Testmail senden</button>
+</div>
+<h2>User-Liste</h2>
+<div class="bar">
+<form method="GET" action="/admin/emails" style="display:flex;gap:8px;flex:1;flex-wrap:wrap">
+<input type="hidden" name="key" value="${esc(query.key)}"><input type="hidden" name="filter" value="${filterMode}">
+<input type="text" name="q" value="${esc(searchQ)}" placeholder="Name, Email, UID oder @insta suchen...">
+<button class="btn btn-primary" type="submit">Suchen</button>
+${searchQ?`<a href="${buildUrl(1, filterMode, '')}" style="color:#888;font-size:12px;align-self:center">\u00d7 Reset</a>`:''}
+</form>
+<button class="btn btn-danger" onclick="sendAllUnverified()">Allen unbestaetigten senden</button>
+</div>
+<div class="filter-bar">
+<a href="${buildUrl(1,'all')}" class="${filterMode==='all'?'active':''}">Alle (${total})</a>
+<a href="${buildUrl(1,'verified')}" class="${filterMode==='verified'?'active':''}">Verifiziert</a>
+<a href="${buildUrl(1,'unverified')}" class="${filterMode==='unverified'?'active':''}">Nicht verifiziert</a>
+<a href="${buildUrl(1,'errors')}" class="${filterMode==='errors'?'active':''}">Mit Fehlern</a>
+<a href="${buildUrl(1,'no-email')}" class="${filterMode==='no-email'?'active':''}">Ohne Email</a>
+</div>
+<div class="bulk-status" id="bulk-status"></div>
+<div style="overflow-x:auto">
+<table><thead><tr><th>User</th><th>Email(s)</th><th>Verifiziert</th><th>Code</th><th>Letzter Versand</th><th>Aktion</th></tr></thead>
+<tbody>${rows || '<tr><td colspan="6" style="text-align:center;color:#666;padding:32px">Keine Eintraege</td></tr>'}</tbody></table>
+</div>
+${pagination}
+<h2>Versand-Log (letzte 20)</h2>
+<div style="overflow-x:auto">
+<table class="log-table"><thead><tr><th>Zeit</th><th>An</th><th>Betreff</th><th>Status</th></tr></thead>
+<tbody>${logRows || '<tr><td colspan="4" style="color:#666">Noch keine Logs</td></tr>'}</tbody></table>
+</div>
+<script>
+const K='${esc(query.key)}';
+function toast(msg,ok){const d=document.createElement('div');d.className='toast';d.style.background=ok?'#22c55e':'#ef4444';d.textContent=msg;document.body.appendChild(d);setTimeout(()=>d.remove(),3500);}
+async function sendOne(btn,uid){btn.disabled=true;btn.textContent='\u2026';try{const r=await fetch('/api/admin/send-confirmation',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:K,uid})});const d=await r.json();if(d.ok)toast('\u2705 Gesendet an '+d.to,true);else toast('\u274c '+(d.error||'Fehler'),false);}catch(e){toast('\u274c '+e.message,false);}finally{btn.disabled=false;btn.textContent='Senden';}}
+async function sendAllUnverified(){if(!confirm('Allen unbestaetigten Usern Bestaetigungsmail senden?'))return;const el=document.getElementById('bulk-status');el.style.display='block';el.textContent='Starte Sammelversand...';try{const r=await fetch('/api/admin/send-all-unverified',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:K})});const d=await r.json();el.textContent='Fertig: '+d.sent+' gesendet, '+d.failed+' fehlgeschlagen, '+d.skipped+' uebersprungen';toast('Sammelversand abgeschlossen',d.failed===0);}catch(e){el.textContent='Fehler: '+e.message;toast('\u274c '+e.message,false);}}
+async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)return;try{const r=await fetch('/api/admin/send-test',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:K,to})});const d=await r.json();toast(d.ok?'\u2705 Testmail gesendet':'\u274c '+(d.error||'Fehler'),d.ok);}catch(e){toast('\u274c '+e.message,false);}}
+</script></body></html>`);
+    }
+    if (path === '/api/admin/send-confirmation' && req.method === 'POST') {
+        const body = await parseBody(req);
+        if ((body.key || '') !== BRIDGE_SECRET) return json({error:'Kein Zugriff'}, 403);
+        const bd = await fetchBot('/data');
+        if (!bd) return json({error:'MainBot nicht erreichbar'}, 503);
+        const uid = String(body.uid || '');
+        const u = bd.users?.[uid];
+        if (!u) return json({error:'User nicht gefunden'}, 404);
+        const email = u.pendingEmail || u.email;
+        if (!email) return json({error:'User hat keine Email'}, 400);
+        const baseUrl = (process.env.APP_URL || ('https://' + (req.headers.host || 'web-production-7981d.up.railway.app'))).replace(/\/$/, '');
+        const token = crypto.randomBytes(24).toString('hex');
+        emailConfirmTokens.set(token, { email, uid, exp: Date.now() + EMAIL_TOKEN_TTL });
+        const confirmUrl = baseUrl + '/auth/confirm-email?token=' + encodeURIComponent(token);
+        const userName = u.spitzname || u.name || 'CreatorX User';
+        const mailHtml = `<!DOCTYPE html><html><body style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#000;color:#fff;padding:0"><div style="max-width:560px;margin:0 auto;padding:32px 24px"><div style="text-align:center;margin-bottom:24px"><img src="${baseUrl}/cx-logo-256.png" width="80" height="80" style="border-radius:18px" alt="CreatorX"></div><h1 style="font-size:26px;font-weight:700;margin:0 0 12px;text-align:center;color:#fff">Hi ${userName.replace(/[<>]/g,'')}!</h1><p style="font-size:15px;color:#a8a39a;line-height:1.6;text-align:center;margin:0 0 28px">Bestaetige deine Email-Adresse <b style="color:#fff">${email}</b> fuer deinen CreatorX-Account.</p><div style="text-align:center;margin:32px 0"><a href="${confirmUrl}" style="display:inline-block;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px">\u2705 Email bestätigen</a></div><p style="font-size:12px;color:#605c54;text-align:center;margin-top:32px;border-top:1px solid #221f1a;padding-top:20px">Link 1h gueltig \u00b7 einmalig nutzbar</p></div></body></html>`;
+        const sent = await sendEmail(email, '\u2705 Bestaetige deine CreatorX-Email', mailHtml);
+        return json(sent ? {ok:true, to:email} : {ok:false, error:'Versand fehlgeschlagen'});
+    }
+    if (path === '/api/admin/send-all-unverified' && req.method === 'POST') {
+        const body = await parseBody(req);
+        if ((body.key || '') !== BRIDGE_SECRET) return json({error:'Kein Zugriff'}, 403);
+        const bd = await fetchBot('/data');
+        if (!bd) return json({error:'MainBot nicht erreichbar'}, 503);
+        const targets = Object.entries(bd.users || {}).filter(([, u]) => u.pendingEmail || (u.email && !u.password_hash));
+        let sent = 0, failed = 0, skipped = 0;
+        const baseUrl = (process.env.APP_URL || ('https://' + (req.headers.host || 'web-production-7981d.up.railway.app'))).replace(/\/$/, '');
+        for (const [uid, u] of targets) {
+            const email = u.pendingEmail || u.email;
+            if (!email) { skipped++; continue; }
+            try {
+                const token = crypto.randomBytes(24).toString('hex');
+                emailConfirmTokens.set(token, { email, uid: String(uid), exp: Date.now() + EMAIL_TOKEN_TTL });
+                const confirmUrl = baseUrl + '/auth/confirm-email?token=' + encodeURIComponent(token);
+                const userName = u.spitzname || u.name || 'CreatorX User';
+                const mailHtml = `<!DOCTYPE html><html><body style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#000;color:#fff;padding:0"><div style="max-width:560px;margin:0 auto;padding:32px 24px"><h1 style="font-size:22px;font-weight:700;text-align:center;color:#fff">Hi ${userName.replace(/[<>]/g,'')}!</h1><p style="font-size:14px;color:#a8a39a;text-align:center;margin:16px 0">Bestaetige deine Email <b style="color:#fff">${email}</b>.</p><div style="text-align:center;margin:24px 0"><a href="${confirmUrl}" style="display:inline-block;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;padding:12px 28px;border-radius:10px;text-decoration:none;font-weight:700;font-size:14px">\u2705 Bestätigen</a></div></div></body></html>`;
+                const ok = await sendEmail(email, '\u2705 Bestaetige deine CreatorX-Email', mailHtml);
+                if (ok) sent++; else failed++;
+            } catch(_e) { failed++; }
+            await new Promise(r => setTimeout(r, 500));
+        }
+        return json({ok:true, sent, failed, skipped, total: targets.length});
+    }
+    if (path === '/api/admin/send-test' && req.method === 'POST') {
+        const body = await parseBody(req);
+        if ((body.key || '') !== BRIDGE_SECRET) return json({error:'Kein Zugriff'}, 403);
+        const to = String(body.to || '').trim();
+        if (!to || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) return json({error:'Ungueltige Email'}, 400);
+        const sent = await sendEmail(to, '\ud83e\uddea CreatorX Testmail', '<!DOCTYPE html><html><body style="margin:0;font-family:sans-serif;background:#000;color:#fff;padding:32px;text-align:center"><h1>Testmail \u2705</h1><p>Das Mailsystem funktioniert.</p><p style="color:#888;font-size:12px">Gesendet: '+new Date().toISOString()+'</p></body></html>');
+        return json(sent ? {ok:true} : {ok:false, error:'Versand fehlgeschlagen'});
+    }
+
     // ── DEBUG ──
     if (path === '/debug/test') {
+        if ((query.key || '') !== BRIDGE_SECRET) { res.writeHead(403); return res.end('Kein Zugriff'); }
         const botData = await fetchBot('/data');
         if (!botData) return json({error:'Main Bot nicht erreichbar', mainbotUrl: MAINBOT_URL});
         const userCount = Object.keys(botData.users||{}).length;
@@ -9101,161 +9296,6 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
 </script>`, 'notif');
     }
 
-    // ── SUCHE ──
-    if (path === '/suche') {
-        // Vorschlaege: Top User die der User noch nicht followt
-        const me = d.users[myUid] || {};
-        const myFollowing = new Set((me.following||[]).map(String));
-        const suggested = Object.entries(d.users||{})
-            .filter(([id,u]) => !adminIds.includes(Number(id)) && id !== String(myUid) && u.started && u.inGruppe !== false && !myFollowing.has(String(id)))
-            .sort((a,b)=>(b[1].xp||0)-(a[1].xp||0))
-            .slice(0, 8);
-        const sugCardsHtml = suggested.map(([id,u])=>{
-            const grad = badgeGradient(u.role);
-            const insta = u.instagram;
-            const initial = (u.name||'?').slice(0,2).toUpperCase();
-            const pic = ladeBild(id,'profilepic')
-                ? `<img src="/appbild/${id}/profilepic" loading="lazy" alt="">`
-                : insta ? `<img src="https://unavatar.io/instagram/${htmlEsc(insta)}" loading="lazy" onerror="this.remove()" alt="">` : '';
-            return `<a href="/profil/${id}" class="suche-row" data-uid="${id}">
-              <div class="suche-avatar" style="background:${grad}">${pic}<span>${initial}</span>${isUidOnline(id)?'<i class="suche-dot"></i>':''}</div>
-              <div class="suche-info">
-                <div class="suche-name">${htmlEsc(u.spitzname||u.name||'User')}</div>
-                <div class="suche-meta">${htmlEsc(cleanRole(u.role))} · ${(u.xp||0).toLocaleString('de-DE')} XP${insta?' · @'+htmlEsc(insta):''}</div>
-              </div>
-              <button class="suche-follow js-suche-follow" data-follow-uid="${id}" onclick="event.preventDefault();event.stopPropagation();sucheFollow(this)">Folgen</button>
-            </a>`;
-        }).join('');
-        return html(`
-<style>
-.suche-bar{position:sticky;top:0;z-index:90;padding:12px 16px;background:var(--glass-bg);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);border-bottom:1px solid var(--border2)}
-.suche-input-wrap{position:relative}
-.suche-input{width:100%;background:var(--bg);border:1.5px solid var(--border2);border-radius:14px;padding:13px 44px 13px 44px;font-size:14.5px;color:var(--text);outline:none;font-family:var(--font);font-weight:500;transition:border-color .18s,box-shadow .18s}
-.suche-input:focus{border-color:rgba(167,139,250,.55);box-shadow:0 0 0 4px rgba(167,139,250,.10)}
-.suche-input-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none}
-.suche-clear{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:var(--surface-tint);border:1px solid var(--border2);width:26px;height:26px;border-radius:50%;display:none;align-items:center;justify-content:center;color:var(--muted);font-size:14px;cursor:pointer;line-height:1}
-.suche-clear.show{display:flex}
-.suche-tabs{display:flex;gap:6px;margin-top:10px;overflow-x:auto;scrollbar-width:none}
-.suche-tabs::-webkit-scrollbar{display:none}
-.suche-tab{flex-shrink:0;padding:7px 14px;border-radius:999px;font-size:12.5px;font-weight:700;color:var(--muted);background:var(--bg);border:1px solid var(--border2);cursor:pointer;-webkit-tap-highlight-color:transparent;transition:transform .12s,background .15s}
-.suche-tab:active{transform:scale(.94)}
-.suche-tab.active{background:var(--text);color:var(--bg);border-color:var(--text)}
-.suche-section-h{font-size:11px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);padding:14px 16px 6px;display:flex;align-items:center;justify-content:space-between}
-.suche-section-h .clear-recent{font-size:11px;font-weight:700;color:var(--accent);cursor:pointer;text-transform:none;letter-spacing:0}
-.suche-recent{display:flex;gap:8px;padding:0 16px 4px;flex-wrap:wrap}
-.suche-recent-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:var(--bg);border:1px solid var(--border2);border-radius:999px;font-size:12.5px;font-weight:600;color:var(--text);cursor:pointer;transition:transform .12s}
-.suche-recent-chip:active{transform:scale(.95)}
-.suche-row{display:flex;align-items:center;gap:12px;padding:12px 16px;text-decoration:none;color:inherit;transition:background .15s;border-bottom:1px solid var(--border2);position:relative}
-.suche-row:active{background:var(--surface-tint)}
-.suche-avatar{position:relative;width:50px;height:50px;border-radius:50%;flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:16px;box-shadow:0 4px 14px rgba(15,23,42,.10)}
-.suche-avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1}
-.suche-avatar span{position:absolute;z-index:0}
-.suche-dot{position:absolute;bottom:1px;right:1px;width:12px;height:12px;border-radius:50%;background:#22c55e;border:2px solid var(--bg);z-index:2;box-shadow:0 0 6px rgba(34,197,94,.5)}
-.suche-info{flex:1;min-width:0}
-.suche-name{font-size:14.5px;font-weight:700;letter-spacing:-.1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.suche-meta{font-size:11.5px;color:var(--muted);margin-top:2px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.suche-follow{flex-shrink:0;padding:7px 16px;background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;border:none;border-radius:999px;font-size:12.5px;font-weight:800;cursor:pointer;letter-spacing:.2px;box-shadow:0 4px 12px rgba(124,58,237,.25);transition:transform .12s}
-.suche-follow:active{transform:scale(.94)}
-.suche-follow.followed{background:var(--bg);color:var(--text);border:1px solid var(--border)}
-.suche-empty{padding:60px 24px;text-align:center;color:var(--muted)}
-.suche-empty-icon{font-size:54px;margin-bottom:12px;opacity:.5}
-.suche-empty-text{font-size:15px;font-weight:800;color:var(--text);margin-bottom:4px;letter-spacing:-.2px}
-.suche-empty-sub{font-size:12.5px;color:var(--muted);max-width:260px;margin:0 auto;line-height:1.5}
-</style>
-<div class="topbar"><div class="topbar-logo">Suche</div></div>
-<div class="suche-bar">
-  <div class="suche-input-wrap">
-    <svg class="suche-input-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-    <input type="text" id="search-input" class="suche-input" placeholder="User, @insta oder Link suchen…" autocomplete="off" enterkeyhint="search">
-    <button class="suche-clear" id="search-clear" onclick="searchClear()">✕</button>
-  </div>
-  <div class="suche-tabs">
-    <button class="suche-tab active" data-cat="all">Alle</button>
-    <button class="suche-tab" data-cat="user">👥 User</button>
-    <button class="suche-tab" data-cat="link">🔗 Links</button>
-  </div>
-</div>
-<div id="search-results"></div>
-<div id="search-default">
-  <div id="recent-block" style="display:none">
-    <div class="suche-section-h">Zuletzt gesucht <span class="clear-recent" onclick="recentClear()">Löschen</span></div>
-    <div class="suche-recent" id="recent-chips"></div>
-  </div>
-  <div class="suche-section-h">✨ Vorgeschlagen für dich</div>
-  ${sugCardsHtml || '<div class="suche-empty"><div class="suche-empty-icon">🌟</div><div class="suche-empty-text">Du folgst schon allen</div><div class="suche-empty-sub">Tippe oben um nach jemandem zu suchen</div></div>'}
-</div>
-<script>
-let _searchCat='all', _searchTimer;
-const RECENT_KEY='cb_search_recent';
-function getRecent(){try{return JSON.parse(localStorage.getItem(RECENT_KEY)||'[]');}catch(e){return [];}}
-function pushRecent(q){q=q.trim();if(!q||q.length<2)return;let r=getRecent().filter(x=>x.toLowerCase()!==q.toLowerCase());r.unshift(q);r=r.slice(0,6);try{localStorage.setItem(RECENT_KEY,JSON.stringify(r));}catch(e){}renderRecent();}
-function recentClear(){try{localStorage.removeItem(RECENT_KEY);}catch(e){}renderRecent();}
-function renderRecent(){const r=getRecent();const block=document.getElementById('recent-block');const chips=document.getElementById('recent-chips');if(!r.length){block.style.display='none';return;}block.style.display='block';chips.innerHTML=r.map(q=>'<span class="suche-recent-chip" onclick="document.getElementById(\\'search-input\\').value=\\''+q.replace(/'/g,'')+'\\';doSearch();">'+q.replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]))+'</span>').join('');}
-async function sucheFollow(btn){
-  const uid=btn.dataset.followUid;
-  if(btn._busy)return;btn._busy=true;
-  const orig=btn.textContent;btn.textContent='…';btn.disabled=true;
-  try{
-    const r=await fetch('/api/follow',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({uid})});
-    const d=await r.json();
-    if(d.ok){btn.textContent='✓ Folge';btn.classList.add('followed');}
-    else{btn.textContent=orig;btn.disabled=false;alert(d.error||'Fehler');}
-  }catch(e){btn.textContent=orig;btn.disabled=false;alert('Netzwerk: '+e.message);}
-  finally{btn._busy=false;}
-}
-function searchClear(){const i=document.getElementById('search-input');i.value='';doSearch();i.focus();}
-function escTxt(s){return String(s||'').replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));}
-async function doSearch(){
-  const q=document.getElementById('search-input').value;
-  const clearBtn=document.getElementById('search-clear');
-  clearBtn.classList.toggle('show',!!q.trim());
-  const def=document.getElementById('search-default');
-  const results=document.getElementById('search-results');
-  if(!q.trim()){results.innerHTML='';def.style.display='block';return;}
-  def.style.display='none';
-  results.innerHTML='<div class="suche-empty"><div class="suche-empty-icon">⏳</div><div class="suche-empty-text">Sucht…</div></div>';
-  clearTimeout(_searchTimer);
-  _searchTimer=setTimeout(async()=>{
-    try{
-      const res=await fetch('/api/search?q='+encodeURIComponent(q));
-      const data=await res.json();
-      let html='';
-      const showUsers=_searchCat==='all'||_searchCat==='user';
-      const showLinks=_searchCat==='all'||_searchCat==='link';
-      if(showUsers && data.users.length){
-        html+='<div class="suche-section-h">👥 User · '+data.users.length+'</div>';
-        html+=data.users.map(u=>{
-          const initial=(u.name||'?').slice(0,2).toUpperCase();
-          const pic=u.pic?'<img src="'+u.pic+'" loading="lazy" alt="">':'';
-          return '<a href="/profil/'+u.id+'" class="suche-row">'
-            +'<div class="suche-avatar" style="background:linear-gradient(135deg,#a78bfa,#7c3aed)">'+pic+'<span>'+escTxt(initial)+'</span></div>'
-            +'<div class="suche-info"><div class="suche-name">'+escTxt(u.spitzname||u.name||'?')+'</div><div class="suche-meta">'+escTxt(u.role||'')+' · '+(u.xp||0).toLocaleString('de-DE')+' XP'+(u.instagram?' · @'+escTxt(u.instagram):'')+'</div></div>'
-            +'<button class="suche-follow js-suche-follow" data-follow-uid="'+u.id+'" onclick="event.preventDefault();event.stopPropagation();sucheFollow(this)">Folgen</button>'
-            +'</a>';
-        }).join('');
-      }
-      if(showLinks && data.links && data.links.length){
-        html+='<div class="suche-section-h">🔗 Links · '+data.links.length+'</div>';
-        html+=data.links.map(l=>{
-          return '<a href="'+escTxt(l.text)+'" target="_blank" class="suche-row" style="border-bottom:1px solid var(--border2)">'
-            +'<div class="suche-avatar" style="background:linear-gradient(135deg,#ff6b6b,#ffa500);font-size:18px"><span>🔗</span></div>'
-            +'<div class="suche-info"><div class="suche-name" style="font-size:13px;color:#4dabf7">'+escTxt(l.text.replace('https://www.instagram.com/','ig.com/').slice(0,46))+'</div><div class="suche-meta">'+escTxt(l.user_name||'')+' · ❤️ '+(l.likes||0)+'</div></div>'
-            +'</a>';
-        }).join('');
-      }
-      if(!html) html='<div class="suche-empty"><div class="suche-empty-icon">🔍</div><div class="suche-empty-text">Nichts gefunden</div><div class="suche-empty-sub">Versuche es mit Name, @instagram oder Link-URL</div></div>';
-      results.innerHTML=html;
-      pushRecent(q);
-    }catch(e){results.innerHTML='<div class="suche-empty"><div class="suche-empty-icon">⚠️</div><div class="suche-empty-text">Fehler beim Suchen</div></div>';}
-  },280);
-}
-document.getElementById('search-input').addEventListener('input',doSearch);
-document.querySelectorAll('.suche-tab').forEach(t=>t.addEventListener('click',e=>{document.querySelectorAll('.suche-tab').forEach(x=>x.classList.remove('active'));t.classList.add('active');_searchCat=t.dataset.cat;doSearch();}));
-renderRecent();
-setTimeout(()=>document.getElementById('search-input').focus(),100);
-</script>`, 'search');
-    }
-
     // ── EXPLORE ──
     // ── ADMIN DEBUG: Superlinks dieser Woche + wer wann geliked hat ──
     if (path === '/admin/superlinks-debug') {
@@ -10362,6 +10402,8 @@ ${rest.map(([id,u],idx)=>{
     </a>
     ${_myIsAdmin ? `<a href="${process.env.ADMIN_DASHBOARD_URL || 'https://dashboard-production-bda4.up.railway.app/dashboard'}" target="_blank" rel="noopener" class="icon-btn" title="Admin-Dashboard" style="background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;border-color:rgba(167,139,250,0.5)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="18" height="18"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+    </a><a href="/admin/emails?key=" class="icon-btn" title="Email Dashboard" style="background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border-color:rgba(34,197,94,0.5)" onclick="event.preventDefault();location.href='/admin/emails?key='+prompt('Bridge Secret:')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="18" height="18"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 4l-10 8L2 4"/></svg>
     </a>` : ''}
     <a href="/einstellungen" class="icon-btn">⚙️</a>
   </div>

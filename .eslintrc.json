@@ -1,0 +1,22 @@
+{
+  "env": {
+    "node": true,
+    "es2020": true
+  },
+  "parserOptions": {
+    "ecmaVersion": 2020
+  },
+  "extends": [
+    "eslint:recommended",
+    "prettier"
+  ],
+  "rules": {
+    "no-unused-vars": ["warn", { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }],
+    "no-undef": "error",
+    "no-unreachable": "warn",
+    "no-useless-escape": "off",
+    "no-empty": ["warn", { "allowEmptyCatch": true }],
+    "no-inner-declarations": "warn"
+  },
+  "ignorePatterns": ["node_modules/", "regeln-tab-content.js"]
+}
