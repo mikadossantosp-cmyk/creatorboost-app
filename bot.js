@@ -3268,7 +3268,39 @@ a{color:inherit;text-decoration:none}
 .admin-pb{position:sticky;top:0;left:0;right:0;background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;padding:10px 14px;font-size:12px;font-weight:700;text-align:center;z-index:99;letter-spacing:0.3px}
 .admin-pb a{color:rgba(255,255,255,0.85);text-decoration:underline}
 
-@media (min-width:480px){.hero-h1{font-size:48px}}
+@media (min-width:480px){.hero-h1{font-size:48px}.hero-sub{font-size:16px;max-width:420px}}
+@media (min-width:768px){
+  .shell{max-width:680px;padding:0 32px 80px}
+  .hero{padding:64px 0 16px}
+  .hero-mark{width:128px;height:128px;border-radius:28px}
+  .hero-h1{font-size:54px}
+  .hero-sub{font-size:17px;max-width:480px}
+  .stats{grid-template-columns:repeat(3,1fr);gap:12px}
+  .stat{padding:20px 12px}
+  .stat-num{font-size:28px}
+  .feat-grid{gap:12px}
+  .feat{padding:20px}
+  .how-step{padding:20px}
+  .login-card{padding:28px;max-width:440px;margin-left:auto;margin-right:auto}
+  .bottom-cta{padding:32px;max-width:440px;margin-left:auto;margin-right:auto}
+  .quote{max-width:540px;margin-left:auto;margin-right:auto}
+}
+@media (min-width:1024px){
+  .shell{max-width:900px;padding:0 48px 100px}
+  .hero{padding:80px 0 24px}
+  .hero-mark{width:140px;height:140px}
+  .hero-h1{font-size:62px}
+  .hero-sub{font-size:18px;max-width:520px}
+  .stats{gap:16px;max-width:600px;margin-left:auto;margin-right:auto}
+  .stat{padding:24px 16px}
+  .stat-num{font-size:32px}
+  .feat-grid{grid-template-columns:repeat(4,1fr);gap:14px}
+  .how{flex-direction:row;gap:14px}
+  .how-step{flex:1}
+  .login-card{max-width:460px}
+  .trust-text{font-size:13px}
+  .nav{padding:24px 4px 0}
+}
 </style></head><body>
 ${_isPreview ? '<div class="admin-pb">👀 Admin-Vorschau · Login-Page &nbsp;·&nbsp; <a href="/einstellungen">← Zurück</a></div>' : ''}
 <div class="mesh"></div>
@@ -3282,8 +3314,8 @@ ${_isPreview ? '<div class="admin-pb">👀 Admin-Vorschau · Login-Page &nbsp;·
   <section class="hero">
     <div class="hero-mark"></div>
     <div class="hero-eyebrow"><span class="dot"></span><span>Live · Creator-Community</span></div>
-    <h1 class="hero-h1">Wachse mit echten<br>Creatorn.</h1>
-    <p class="hero-sub">Echte Likes, echte Kommentare, echtes Engagement — <b>jeden Tag</b>. Keine Bots, keine Fake-Follower. Eine geschlossene Community von Creatorn die sich gegenseitig pushen.</p>
+    <h1 class="hero-h1">Dein Instagram-<br>Wachstum startet hier.</h1>
+    <p class="hero-sub">Echte Likes, echte Kommentare, echtes Engagement — <b>jeden Tag</b>. Eine exklusive Community von Creatorn die sich gegenseitig nach oben pushen.</p>
     <div class="trust">
       <div class="trust-avs">
         <div class="av av-1"></div>
@@ -3307,8 +3339,8 @@ ${_isPreview ? '<div class="admin-pb">👀 Admin-Vorschau · Login-Page &nbsp;·
     <div class="how-step">
       <div class="how-num">1</div>
       <div class="how-body">
-        <div class="how-t">Mit Email einloggen</div>
-        <div class="how-s">Magic-Link an deine Email — kein Account nötig. Du bist sofort drin.</div>
+        <div class="how-t">Account erstellen</div>
+        <div class="how-s">Email + Passwort — in 30 Sekunden startklar.</div>
       </div>
     </div>
     <div class="how-step">
@@ -3336,8 +3368,8 @@ ${_isPreview ? '<div class="admin-pb">👀 Admin-Vorschau · Login-Page &nbsp;·
   </div>
 
   <div id="login" class="login-card" style="margin-top:24px">
-    <div class="login-h">Sign In</div>
-    <div class="login-sub">Mit deiner Email + Passwort einloggen.</div>
+    <div class="login-h">Willkommen zurück</div>
+    <div class="login-sub">Logge dich mit Email &amp; Passwort ein.</div>
 
     ${query.error==='email-expired' ? '<div class="msg show err">⚠️ Login-Link abgelaufen oder schon benutzt.</div>' : ''}
     ${query.error==='email-invalid' ? '<div class="msg show err">⚠️ Login-Link ungültig.</div>' : ''}
@@ -3357,9 +3389,9 @@ ${_isPreview ? '<div class="admin-pb">👀 Admin-Vorschau · Login-Page &nbsp;·
   </div>
 
   <div class="bottom-cta">
-    <div class="bottom-cta-h">Ready zu wachsen?</div>
-    <div class="bottom-cta-s">Logge dich mit deiner <b>Email-Adresse</b> ein und sieh deine ersten echten Likes innerhalb von Minuten.</div>
-    <a href="#login" class="btn-p" style="display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;margin:0">📧 Mit Email einloggen</a>
+    <div class="bottom-cta-h">Bereit durchzustarten?</div>
+    <div class="bottom-cta-s">Erstelle deinen Account und sieh deine ersten echten Likes innerhalb von Minuten.</div>
+    <a href="/signup" class="btn-p" style="display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;margin:0">🚀 Jetzt kostenlos starten</a>
   </div>
 
   <footer class="foot">
@@ -3424,26 +3456,6 @@ function submitEmail(ev){
     .catch(function(){msg.textContent='Netzwerkfehler.';msg.classList.add('show','err');btn.disabled=false;btn.textContent='Sign In →';});
   return false;
 }
-function sendMagicLink(prefilledEmail){
-  var inp=document.getElementById('email-input'),btn=document.getElementById('email-btn'),mb=document.getElementById('email-magic-btn'),msg=document.getElementById('email-msg');
-  var em=(prefilledEmail||(inp.value||'').trim()).toLowerCase();
-  if(!em){ msg.textContent='Bitte Email eingeben.';msg.classList.add('show','err');return; }
-  btn.disabled=true;mb.disabled=true;mb.textContent='Sende Magic-Link...';
-  msg.classList.remove('show','ok','err');
-  fetch('/api/auth/email-request',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:em})})
-    .then(function(r){return r.json().then(function(j){return{s:r.status,j:j};});})
-    .then(function(o){
-      if(o.j&&o.j.ok){
-        msg.textContent=o.j.message||'Login-Link gesendet. Schau in dein Email-Postfach (auch Spam).';
-        msg.classList.add('show','ok');
-      } else {
-        msg.textContent=(o.j&&o.j.error)||'Fehler beim Senden.';
-        msg.classList.add('show','err');
-      }
-    })
-    .catch(function(){msg.textContent='Netzwerkfehler.';msg.classList.add('show','err');})
-    .finally(function(){btn.disabled=false;mb.disabled=false;mb.textContent='📧 Magic-Link senden (ohne Passwort)';});
-}
 // Funnel-Tracking: Landing-CTAs
 function _trackFn(ev, meta){ try{ navigator.sendBeacon ? navigator.sendBeacon('/api/track-funnel', new Blob([JSON.stringify({event:ev,meta:meta||{}})],{type:'application/json'})) : fetch('/api/track-funnel',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({event:ev,meta:meta||{}}),keepalive:true}); }catch(e){} }
 document.addEventListener('DOMContentLoaded', function(){
@@ -3457,8 +3469,6 @@ document.addEventListener('DOMContentLoaded', function(){
   // Email-Submit
   var eb = document.getElementById('email-btn');
   if (eb) eb.addEventListener('click', function(){ _trackFn('email-submit', {}); });
-  var mb = document.getElementById('email-magic-btn');
-  if (mb) mb.addEventListener('click', function(){ _trackFn('email-magic-submit', {}); });
 });
 </script>
 </body></html>`);
