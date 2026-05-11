@@ -9964,13 +9964,13 @@ window.sugDismiss = function(btn){
                     mindsetUserCard = `<div style="margin:0 16px 16px;padding:16px;background:var(--bg3);border:1px solid var(--border2);border-radius:16px">
   <div style="font-size:11px;font-weight:700;letter-spacing:1.5px;color:#f59e0b;text-transform:uppercase">📖 Mindset Stories</div>
   <div style="font-size:14px;font-weight:700;margin-top:6px">Setz erst deinen Insta-Username</div>
-  <div style="font-size:12.5px;color:var(--muted);margin-top:6px;line-height:1.5">Jede Woche stelle ich 1 User auf <b>@mindset.stories_</b> vor. Trag deinen Insta-Username in den <a href="/einstellungen" style="color:#4dabf7">Einstellungen</a> ein, um mitzumachen.</div>
+  <div style="font-size:12.5px;color:var(--muted);margin-top:6px;line-height:1.5">Jede Woche stelle ich 1 User auf meinem Profil <b>@mindset.stories_</b> vor. Trag deinen Insta-Username in den <a href="/einstellungen" style="color:#4dabf7">Einstellungen</a> ein, um mitzumachen.</div>
 </div>`;
                 } else {
                     const headerLabel = myMsStatus === 'yes' ? '✅ Du bist auf der Liste' : myMsStatus === 'no' ? '❌ Du bist nicht dabei' : '📖 Mindset Stories';
                     const headerColor = myMsStatus === 'yes' ? '#22c55e' : myMsStatus === 'no' ? '#94a3b8' : '#a78bfa';
                     const bodyText = myMsStatus === 'none'
-                        ? 'Jede Woche stelle ich <b>1 User</b> in meinen Mindset Stories auf <b>@mindset.stories_</b> vor. Lust dabei zu sein? Trag dich ein, ich pick zufällig.'
+                        ? 'Jede Woche stelle ich <b>1 User</b> auf meinem Profil <b>@mindset.stories_</b> in den Mindset Stories vor. Lust dabei zu sein? Trag dich ein, ich pick zufällig.'
                         : myMsStatus === 'yes'
                         ? 'Du stehst auf der Warteliste. Sonntag 20:00 wird zufällig gepickt — Daumen drücken!'
                         : 'Du hast Nein gesagt. Kannst du jederzeit ändern (bis Samstag 23:59).';
