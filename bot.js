@@ -410,7 +410,6 @@ async function postBot(path, body) {
     return result;
 }
 
-// ── ZEIT-CRON ──────────────────────────────────────────────────────────────
 // Sonntag 20:00 (Berlin TZ, schon global gesetzt) triggert Wochen-Gewinnspiel
 // + Mindset-Stories-Pick im Mainbot. Mainbot kümmert sich weiterhin selbst um
 // Daily/Wochen-Reset (intern). einmalig() Pattern verhindert Doppel-Trigger
@@ -963,33 +962,47 @@ textarea.form-input{resize:none;min-height:80px}
 .page-transition{animation:fadeIn .25s ease forwards}
 `;
 
-// Globaler JS-Error-Handler im HTML-Head: zeigt JEDEN ungeklärten Error als Banner.
-// Hilft beim Debugging von Tour, Likes, etc. Auto-removal nach 15s.
-const GLOBAL_ERROR_HANDLER = `<script>
+// Globaler JS-Error-Handler im HTML-Head: console.error für alle (für DevTools-
+// Reports und User-Bugreports), aber der ROTE BANNER nur für Admins. Vorher sahen
+// auch normale User jeden ungeklärten Frontend-Error als alarmierenden Banner.
+function buildErrorHandler(isAdmin) {
+    const showBanner = isAdmin ? 'true' : 'false';
+    return `<script>
+(function(){
+var SHOW_BANNER = ${showBanner};
 window.addEventListener('error', function(e){
+  try { console.error('[GLOBAL-ERR]', e.message, e.filename, e.lineno, e.colno, e.error); } catch(_){}
+  if (!SHOW_BANNER) return;
   try {
     var b = document.createElement('div');
     b.style.cssText = 'position:fixed;top:8px;left:8px;right:8px;z-index:99999;background:#7c1d1d;color:#fff;padding:12px 14px;border-radius:10px;font-family:system-ui,sans-serif;font-size:12px;font-weight:600;box-shadow:0 12px 30px rgba(0,0,0,.5);max-width:520px;margin:0 auto;border:1px solid #ef4444';
     b.innerHTML = '<b style="font-size:13px">⚠️ JS-Error</b><div style="margin-top:5px;font-weight:400;font-size:11.5px;color:#fecaca;line-height:1.4">'+(e.message||'unknown')+'<br><span style="opacity:.7">'+(e.filename||'').split('/').pop()+':'+(e.lineno||'?')+':'+(e.colno||'?')+'</span></div>';
     if (document.body) document.body.appendChild(b);
     setTimeout(function(){ b.style.transition='opacity .4s'; b.style.opacity='0'; setTimeout(function(){b.remove();},500); }, 15000);
-    try { console.error('[GLOBAL-ERR]', e.message, e.filename, e.lineno, e.colno, e.error); } catch(_){}
   } catch(_){}
 });
 window.addEventListener('unhandledrejection', function(e){
   try { console.error('[UNHANDLED-PROMISE]', e.reason); } catch(_){}
 });
 console.log('[CX] Layout-JS loaded @', new Date().toISOString(), 'path:', location.pathname, 'search:', location.search);
+})();
 </script>`;
+}
 
 function layout(content, session, page='feed', lang='de') {
     // Aktuelle UID in window verfügbar machen — wird für Per-User-LocalStorage-Keys
     // benötigt (Like-Cache, Like-Queue etc.) damit Sub- und Hauptaccount keine
     // gemeinsame Sicht auf "geliked" haben.
     const _meUid = session ? String(session.activeUid || session.uid || '') : '';
+    let _isAdmin = false;
+    try {
+        const _adm = Array.isArray(_dataCache?._adminIds) ? _dataCache._adminIds.map(Number) : [];
+        if (_meUid && _adm.includes(Number(_meUid))) _isAdmin = true;
+        if (!_isAdmin && _dataCache?.users?.[_meUid]?.role && /admin/i.test(String(_dataCache.users[_meUid].role))) _isAdmin = true;
+    } catch (e) {}
     return `<!DOCTYPE html><html lang="${lang}" data-theme="light">
 <head>
-${GLOBAL_ERROR_HANDLER}
+${buildErrorHandler(_isAdmin)}
 <script>window.MY_UID=${JSON.stringify(_meUid)};</script>
 <script>try{var t=localStorage.getItem('cbTheme4');var dark=(t==='dark');document.documentElement.setAttribute('data-theme',dark?'dark':'light');setTimeout(function(){var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute('content',dark?'#0b0b0e':'#ffffff');var sb=document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');if(sb)sb.setAttribute('content',dark?'black-translucent':'default');},0);}catch(e){document.documentElement.setAttribute('data-theme','light');}</script>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
