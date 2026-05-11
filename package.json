@@ -3,6 +3,10 @@
   "version": "1.0.0",
   "scripts": {
     "start": "node bot.js",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "apk:init": "npx -y @bubblewrap/cli@latest init --manifest=https://$PWA_HOST/manifest.json",
     "apk:build": "npx -y @bubblewrap/cli@latest build --skipPwaValidation",
     "apk:update": "npx -y @bubblewrap/cli@latest update --appVersionName=$VERSION --appVersionCode=$VCODE",
@@ -13,5 +17,10 @@
   },
   "dependencies": {
     "web-push": "^3.6.7"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.1",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.8.3"
   }
 }
