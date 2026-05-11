@@ -410,6 +410,43 @@ async function postBot(path, body) {
     return result;
 }
 
+// ── ZEIT-CRON ──────────────────────────────────────────────────────────────
+// Sonntag 20:00 (Berlin TZ, schon global gesetzt) triggert Wochen-Gewinnspiel
+// + Mindset-Stories-Pick im Mainbot. Mainbot kümmert sich weiterhin selbst um
+// Daily/Wochen-Reset (intern). einmalig() Pattern verhindert Doppel-Trigger
+// innerhalb einer Minute.
+const _appCronSeen = {};
+async function appCronTick() {
+    try {
+        const jetzt = new Date();
+        const h = jetzt.getHours();
+        const m = jetzt.getMinutes();
+        const wochentag = jetzt.getDay();
+        const tagStr = jetzt.toDateString();
+        const einmalig = (key, fn) => {
+            const fullKey = `${key}_${h}:${m}_${tagStr}`;
+            if (_appCronSeen[fullKey]) return;
+            _appCronSeen[fullKey] = true;
+            return fn();
+        };
+        if (wochentag === 0 && h === 20 && m === 0) {
+            einmalig('wochenGewinnspiel', async () => {
+                console.log('🎰 [Cron] Trigger Wochen-Gewinnspiel → Mainbot');
+                const r = await postBot('/run-wochen-gewinnspiel-api', {});
+                console.log('🎰 [Cron] Mainbot Response:', r ? JSON.stringify(r) : 'null');
+            });
+            einmalig('mindsetPick', async () => {
+                console.log('📖 [Cron] Trigger Mindset-Stories-Pick → Mainbot');
+                const r = await postBot('/run-mindset-pick-api', {});
+                console.log('📖 [Cron] Mainbot Response:', r ? JSON.stringify(r) : 'null');
+            });
+        }
+        // Tageswechsel: alte einmalig-Keys aufräumen, damit der Speicher nicht wächst.
+        for (const key of Object.keys(_appCronSeen)) { if (!key.endsWith(tagStr)) delete _appCronSeen[key]; }
+    } catch (e) { console.log('appCronTick Fehler:', e.message); }
+}
+setInterval(appCronTick, 60000);
+
 const PARSE_BODY_MAX = 1024 * 1024; // 1MB cap; uploads use readBody with explicit limits
 function parseBody(req) {
     return new Promise(resolve => {
@@ -6414,6 +6451,41 @@ p{line-height:1.65;color:var(--muted)}
         return json({ok:!!result?.ok});
     }
 
+    // ── MINDSET STORIES API ──
+    if (path === '/api/mindset-state' && req.method === 'GET') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        const result = await fetchBot('/mindset-state-api?uid=' + encodeURIComponent(myUid));
+        return json(result || {ok:false, error:'Bot offline'});
+    }
+    if (path === '/api/mindset-answer' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        const body = await parseBody(req);
+        const result = await postBot('/mindset-set-answer-api', { uid: myUid, answer: body.answer });
+        return json(result || {ok:false, error:'Bot offline'});
+    }
+    if (path === '/api/mindset-admin/pick' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        const body = await parseBody(req);
+        const result = await postBot('/mindset-admin-pick-api', { callerUid: myUid, targetUid: body.targetUid });
+        return json(result || {ok:false, error:'Bot offline'});
+    }
+    if (path === '/api/mindset-admin/skip' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        const result = await postBot('/mindset-admin-skip-api', { callerUid: myUid });
+        return json(result || {ok:false, error:'Bot offline'});
+    }
+    if (path === '/api/mindset-admin/blast' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        const result = await postBot('/mindset-admin-blast-api', { callerUid: myUid });
+        return json(result || {ok:false, error:'Bot offline'});
+    }
+    if (path === '/api/mindset-admin/restore' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        const body = await parseBody(req);
+        const result = await postBot('/mindset-admin-restore-api', { callerUid: myUid, targetUid: body.targetUid });
+        return json(result || {ok:false, error:'Bot offline'});
+    }
+
     if (path === '/api/comment' && req.method === 'POST') {
         const body = await parseBody(req);
         const { postId, text } = body;
@@ -9731,6 +9803,109 @@ window.sugDismiss = function(btn){
             newsletter: (()=>{
                 const isAdminNL = adminIds.includes(Number(myUid));
                 const entries = (d.newsletter||[]).slice().reverse();
+
+                // ── MINDSET STORIES CARD ──
+                const ms = d.mindsetStories || { weeklyState:{}, waitlist:{}, rejected:{}, done:{} };
+                const myInsta = d.users?.[myUid]?.instagram;
+                const myMsStatus = ms.weeklyState?.pickedUid === myUid ? 'picked' :
+                    ms.done?.[myUid] ? 'done' :
+                    ms.waitlist?.[myUid] ? 'yes' :
+                    ms.rejected?.[myUid] ? 'no' : 'none';
+                const msCounts = { waitlist: Object.keys(ms.waitlist||{}).length, rejected: Object.keys(ms.rejected||{}).length, done: Object.keys(ms.done||{}).length };
+                const _berDow = new Date().getDay();
+                const _berH = new Date().getHours();
+                const _berM = new Date().getMinutes();
+                const msLocked = _berDow === 0 || (_berDow === 6 && _berH >= 23 && _berM >= 59);
+                const msPickedName = ms.weeklyState?.pickedUid ? htmlEsc(d.users?.[ms.weeklyState.pickedUid]?.spitzname || d.users?.[ms.weeklyState.pickedUid]?.name || '?') : '';
+
+                let mindsetUserCard = '';
+                if (myMsStatus === 'picked') {
+                    mindsetUserCard = `<div style="margin:0 16px 16px;padding:18px;background:linear-gradient(135deg,#f59e0b,#ec4899);border-radius:18px;color:#fff;box-shadow:0 6px 22px rgba(245,158,11,0.45)">
+  <div style="font-size:11px;font-weight:700;letter-spacing:1.5px;opacity:.85;text-transform:uppercase">🎉 Diese Woche dran</div>
+  <div style="font-size:18px;font-weight:800;margin-top:6px;font-family:var(--font-display)">DU bist gepickt!</div>
+  <div style="font-size:13px;line-height:1.5;margin-top:8px;opacity:.95">Du erscheinst Sonntag/Montag auf <b>@mindset.stories_</b>. Check deine DM — ich brauche ein paar Infos von dir!</div>
+</div>`;
+                } else if (myMsStatus === 'done') {
+                    mindsetUserCard = `<div style="margin:0 16px 16px;padding:16px;background:var(--bg3);border:1px solid var(--border2);border-radius:16px">
+  <div style="font-size:11px;font-weight:700;letter-spacing:1.5px;color:#22c55e;text-transform:uppercase">✅ Erledigt</div>
+  <div style="font-size:15px;font-weight:700;margin-top:6px">Du wurdest vorgestellt</div>
+  <div style="font-size:12.5px;color:var(--muted);margin-top:6px;line-height:1.5">Danke fürs Mitmachen 🙏 — Schau dir den Post an: <a href="https://instagram.com/mindset.stories_" target="_blank" style="color:#4dabf7">@mindset.stories_</a></div>
+</div>`;
+                } else if (!myInsta) {
+                    mindsetUserCard = `<div style="margin:0 16px 16px;padding:16px;background:var(--bg3);border:1px solid var(--border2);border-radius:16px">
+  <div style="font-size:11px;font-weight:700;letter-spacing:1.5px;color:#f59e0b;text-transform:uppercase">📖 Mindset Stories</div>
+  <div style="font-size:14px;font-weight:700;margin-top:6px">Setz erst deinen Insta-Username</div>
+  <div style="font-size:12.5px;color:var(--muted);margin-top:6px;line-height:1.5">Jede Woche stelle ich 1 User auf <b>@mindset.stories_</b> vor. Trag deinen Insta-Username in den <a href="/einstellungen" style="color:#4dabf7">Einstellungen</a> ein, um mitzumachen.</div>
+</div>`;
+                } else {
+                    const headerLabel = myMsStatus === 'yes' ? '✅ Du bist auf der Liste' : myMsStatus === 'no' ? '❌ Du bist nicht dabei' : '📖 Mindset Stories';
+                    const headerColor = myMsStatus === 'yes' ? '#22c55e' : myMsStatus === 'no' ? '#94a3b8' : '#a78bfa';
+                    const bodyText = myMsStatus === 'none'
+                        ? 'Jede Woche stelle ich <b>1 User</b> in meinen Mindset Stories auf <b>@mindset.stories_</b> vor. Lust dabei zu sein? Trag dich ein, ich pick zufällig.'
+                        : myMsStatus === 'yes'
+                        ? 'Du stehst auf der Warteliste. Sonntag 20:00 wird zufällig gepickt — Daumen drücken!'
+                        : 'Du hast Nein gesagt. Kannst du jederzeit ändern (bis Samstag 23:59).';
+                    const buttons = msLocked
+                        ? '<div style="font-size:11.5px;color:var(--muted);margin-top:12px;font-style:italic">🔒 Antworten gefroren bis Pick am Sonntag 20:00</div>'
+                        : myMsStatus === 'yes'
+                        ? '<div style="display:flex;gap:8px;margin-top:12px"><button onclick="msSet(\'no\')" style="flex:1;padding:11px;border-radius:12px;border:1px solid var(--border);background:var(--bg4);color:var(--text);font-size:13px;font-weight:700;cursor:pointer">❌ Doch nicht</button></div>'
+                        : myMsStatus === 'no'
+                        ? '<div style="display:flex;gap:8px;margin-top:12px"><button onclick="msSet(\'yes\')" style="flex:1;padding:11px;border-radius:12px;border:none;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;font-size:13px;font-weight:700;cursor:pointer">✅ Doch dabei</button></div>'
+                        : '<div style="display:flex;gap:8px;margin-top:12px"><button onclick="msSet(\'yes\')" style="flex:1;padding:12px;border-radius:12px;border:none;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;font-size:14px;font-weight:800;cursor:pointer">✅ Ja, ich will</button><button onclick="msSet(\'no\')" style="flex:1;padding:12px;border-radius:12px;border:1px solid var(--border);background:var(--bg4);color:var(--text);font-size:14px;font-weight:700;cursor:pointer">❌ Nein, danke</button></div>';
+                    mindsetUserCard = `<div style="margin:0 16px 16px;padding:18px;background:var(--bg3);border:1px solid var(--border2);border-radius:16px">
+  <div style="font-size:11px;font-weight:700;letter-spacing:1.5px;color:${headerColor};text-transform:uppercase">${headerLabel}</div>
+  <div style="font-size:15px;font-weight:800;margin-top:6px;font-family:var(--font-display)">📖 Mindset Stories</div>
+  <div style="font-size:13px;line-height:1.6;color:var(--text);margin-top:8px">${bodyText}</div>
+  <div style="font-size:11.5px;color:var(--muted);margin-top:10px">${msCounts.waitlist} auf Liste · ${msCounts.done} bereits vorgestellt</div>
+  ${buttons}
+  <div id="ms-result" style="margin-top:8px;font-size:12px;text-align:center"></div>
+</div>`;
+                }
+
+                // Admin-Sicht
+                let mindsetAdminCard = '';
+                if (isAdminNL) {
+                    const waitlistArr = Object.entries(ms.waitlist||{}).sort((a,b)=>(a[1].joinedAt||0)-(b[1].joinedAt||0));
+                    const doneArr = Object.entries(ms.done||{}).sort((a,b)=>(b[1].featuredAt||0)-(a[1].featuredAt||0));
+                    const waitlistHtml = waitlistArr.length
+                        ? waitlistArr.map(([uid,v],i)=>{
+                            const u = d.users?.[uid] || {};
+                            const name = htmlEsc(u.spitzname || u.name || '?');
+                            const insta = u.instagram ? '@'+htmlEsc(u.instagram) : '<span style="color:#ef4444">kein Insta</span>';
+                            return `<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg4);border-radius:10px;margin-bottom:6px">
+  <div style="font-size:11px;color:var(--muted);width:24px">#${i+1}</div>
+  <div style="flex:1;font-size:13px"><b>${name}</b> · <span style="color:#4dabf7">${insta}</span></div>
+  <button onclick="msAdminPick('${uid}','${name}')" style="background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;border:none;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer">Picken</button>
+</div>`;
+                        }).join('')
+                        : '<div style="padding:14px;text-align:center;color:var(--muted);font-size:12.5px">Warteliste leer</div>';
+                    const doneHtml = doneArr.length
+                        ? doneArr.slice(0,20).map(([uid,v])=>`<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--bg4);border-radius:10px;margin-bottom:5px;font-size:12px">
+  <div style="flex:1"><b>${htmlEsc(v.name||'?')}</b> · <span style="color:var(--muted);font-size:11px">KW ${(v.week||'').slice(5,10)}</span></div>
+  <button onclick="msAdminRestore('${uid}','${htmlEsc(v.name||'?')}')" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:3px 8px;font-size:10.5px;cursor:pointer">↩ Zurück</button>
+</div>`).join('')
+                        : '<div style="padding:14px;text-align:center;color:var(--muted);font-size:12.5px">Noch keine vorgestellten User</div>';
+                    const currentPickHtml = ms.weeklyState?.pickedUid
+                        ? `<div style="padding:12px;background:linear-gradient(135deg,rgba(245,158,11,0.15),rgba(236,72,153,0.1));border:1px solid rgba(245,158,11,0.3);border-radius:12px;margin-bottom:10px"><div style="font-size:11px;color:#f59e0b;font-weight:700;letter-spacing:1px;text-transform:uppercase">⭐ Diese Woche</div><div style="font-size:14px;font-weight:800;margin-top:4px">${msPickedName}</div></div>`
+                        : ms.weeklyState?.skipped
+                        ? '<div style="padding:10px;background:var(--bg4);border-radius:10px;margin-bottom:10px;font-size:12.5px;color:var(--muted);text-align:center">Diese Woche übersprungen</div>'
+                        : '<div style="padding:10px;background:var(--bg4);border-radius:10px;margin-bottom:10px;font-size:12.5px;color:var(--muted);text-align:center">Noch nicht gepickt (Sonntag 20:00)</div>';
+                    mindsetAdminCard = `<div style="margin:0 16px 16px;padding:18px;background:var(--bg3);border:1px solid var(--border2);border-radius:16px">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+    <div style="font-size:15px;font-weight:800;font-family:var(--font-display)">📊 Admin · Mindset Stories</div>
+  </div>
+  ${currentPickHtml}
+  <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+    <button onclick="msAdminBlast()" style="flex:1;min-width:140px;padding:10px;border-radius:10px;border:none;background:linear-gradient(135deg,#4dabf7,#1d6fa5);color:#fff;font-size:12.5px;font-weight:700;cursor:pointer">📨 Initial-Blast</button>
+    <button onclick="msAdminSkip()" style="flex:1;min-width:120px;padding:10px;border-radius:10px;border:1px solid var(--border);background:var(--bg4);color:var(--text);font-size:12.5px;font-weight:700;cursor:pointer">⏭ Woche skippen</button>
+  </div>
+  <div style="font-size:11px;font-weight:700;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-bottom:8px">📋 Warteliste (${msCounts.waitlist})</div>
+  <div style="max-height:280px;overflow-y:auto;margin-bottom:14px">${waitlistHtml}</div>
+  <div style="font-size:11px;font-weight:700;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-bottom:8px">✅ Erledigt (${msCounts.done})</div>
+  <div style="max-height:200px;overflow-y:auto">${doneHtml}</div>
+  <div id="ms-admin-result" style="margin-top:10px;font-size:12px;text-align:center;color:var(--muted)"></div>
+</div>`;
+                }
                 const entriesHtml = entries.length
                     ? entries.map(e=>`
 <div class="nl-entry" data-id="${htmlEsc(String(e.id||''))}" style="padding:16px;border:1px solid var(--border2);border-radius:14px;background:var(--bg3);margin:0 16px 12px">
@@ -9761,6 +9936,8 @@ window.sugDismiss = function(btn){
   <div style="padding:0 16px 12px;display:flex;align-items:center;justify-content:space-between">
     <div style="font-size:18px;font-weight:800;font-family:var(--font-display)">📩 Newsletter</div>
   </div>
+  ${mindsetUserCard}
+  ${mindsetAdminCard}
   <a href="/system-info" style="display:flex;align-items:center;gap:12px;margin:0 16px 12px;padding:16px 18px;background:linear-gradient(135deg,#0ea5e9,#4dabf7,#a78bfa);border-radius:16px;text-decoration:none;color:#fff;box-shadow:0 6px 22px rgba(77,171,247,0.40);position:relative;overflow:hidden">
     <div style="font-size:32px">📖</div>
     <div style="flex:1"><div style="font-size:15px;font-weight:800;letter-spacing:-0.1px">So funktioniert CreatorX</div><div style="font-size:12px;opacity:0.92;margin-top:3px;line-height:1.4">Komplette Anleitung — App, Levels, Missionen, Diamanten, Superlinks, Grundregeln</div></div>
@@ -9776,12 +9953,17 @@ window.sugDismiss = function(btn){
   ${entriesHtml}
 </div>
 <script>
+async function msSet(answer){const el=document.getElementById('ms-result');if(el){el.textContent='Speichern…';el.style.color='var(--muted)';}try{const r=await fetch('/api/mindset-answer',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({answer})});const d=await r.json();if(d.ok){if(el){el.textContent='✅ Gespeichert';el.style.color='#22c55e';}setTimeout(()=>location.reload(),400);}else{if(el){el.textContent='❌ '+(d.error||'Fehler');el.style.color='#ef4444';}}}catch(e){if(el){el.textContent='❌ Netzwerkfehler';el.style.color='#ef4444';}}}
 ${isAdminNL?`
 function nlNew(){document.getElementById('nl-form').style.display='block';document.getElementById('nl-edit-id').value='';document.getElementById('nl-title').value='';document.getElementById('nl-content').value='';document.getElementById('nl-result').textContent='';}
 function nlCancel(){document.getElementById('nl-form').style.display='none';}
 function nlEdit(id){const el=document.querySelector('[data-id="'+id+'"]');if(!el)return;document.getElementById('nl-edit-id').value=id;document.getElementById('nl-title').value=el.querySelector('[style*="font-display"]')?.textContent||'';document.getElementById('nl-content').value=el.querySelector('[style*="pre-wrap"]')?.textContent||'';document.getElementById('nl-form').style.display='block';window.scrollTo({top:0,behavior:'smooth'});}
 async function nlSave(){const id=document.getElementById('nl-edit-id').value;const title=document.getElementById('nl-title').value.trim();const content=document.getElementById('nl-content').value.trim();if(!content)return;const ep=id?'/api/newsletter-edit':'/api/newsletter-add';const body=id?{id,title,content}:{title,content};const r=await fetch(ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const d=await r.json();if(d.ok){toast('✅ Gespeichert!');setTimeout(()=>location.reload(),200);}else document.getElementById('nl-result').textContent='❌ '+(d.error||'Fehler');}
 async function nlDelete(id){if(!confirm('Eintrag löschen?'))return;const r=await fetch('/api/newsletter-delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id})});const d=await r.json();if(d.ok){toast('✅ Gelöscht');setTimeout(()=>location.reload(),150);}else toast('❌ Fehler');}
+async function msAdminPick(uid,name){if(!confirm(name+' diese Woche picken? (Der bisherige Pick wird zurück auf die Liste verschoben)'))return;const el=document.getElementById('ms-admin-result');if(el){el.textContent='Picke…';el.style.color='var(--muted)';}const r=await fetch('/api/mindset-admin/pick',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({targetUid:uid})});const d=await r.json();if(d.ok){if(el){el.textContent='✅ Gepickt + DM verschickt';el.style.color='#22c55e';}setTimeout(()=>location.reload(),600);}else{if(el){el.textContent='❌ '+(d.error||'Fehler');el.style.color='#ef4444';}}}
+async function msAdminSkip(){if(!confirm('Diese Woche überspringen? Es wird niemand gepickt.'))return;const el=document.getElementById('ms-admin-result');if(el){el.textContent='Skippen…';el.style.color='var(--muted)';}const r=await fetch('/api/mindset-admin/skip',{method:'POST',headers:{'Content-Type':'application/json'}});const d=await r.json();if(d.ok){if(el){el.textContent='⏭ Übersprungen';el.style.color='#94a3b8';}setTimeout(()=>location.reload(),600);}else{if(el){el.textContent='❌ '+(d.error||'Fehler');el.style.color='#ef4444';}}}
+async function msAdminBlast(){if(!confirm('Initial-DM an alle Insta-User die noch nicht geantwortet haben? Das geht nicht rückgängig.'))return;const el=document.getElementById('ms-admin-result');if(el){el.textContent='Sende DMs…';el.style.color='var(--muted)';}const r=await fetch('/api/mindset-admin/blast',{method:'POST',headers:{'Content-Type':'application/json'}});const d=await r.json();if(d.ok){if(el){el.textContent='✅ '+d.queued+' DMs versendet';el.style.color='#22c55e';}}else{if(el){el.textContent='❌ '+(d.error||'Fehler');el.style.color='#ef4444';}}}
+async function msAdminRestore(uid,name){if(!confirm(name+' zurück auf die Warteliste verschieben?'))return;const el=document.getElementById('ms-admin-result');if(el){el.textContent='…';el.style.color='var(--muted)';}const r=await fetch('/api/mindset-admin/restore',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({targetUid:uid})});const d=await r.json();if(d.ok){if(el){el.textContent='↩ Zurück auf Liste';el.style.color='#22c55e';}setTimeout(()=>location.reload(),500);}else{if(el){el.textContent='❌ '+(d.error||'Fehler');el.style.color='#ef4444';}}}
 `:''}
 </script>`;
             })()
