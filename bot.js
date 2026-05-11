@@ -9243,6 +9243,95 @@ setTimeout(()=>document.getElementById('search-input').focus(),100);
     }
 
     // ── EXPLORE ──
+    // ── ADMIN DEBUG: Superlinks dieser Woche + wer wann geliked hat ──
+    if (path === '/admin/superlinks-debug') {
+        if (!adminIds.includes(Number(myUid)) && !String(d.users?.[myUid]?.role||'').includes('Admin')) {
+            return text('Nur Admins', 403);
+        }
+        // Berlin-Wochenkey: Montag der aktuellen Woche
+        const now = new Date();
+        const day = now.getDay() || 7;
+        const monday = new Date(now);
+        monday.setDate(now.getDate() - (day - 1));
+        const weekKey = monday.getFullYear() + '-' + String(monday.getMonth()+1).padStart(2,'0') + '-' + String(monday.getDate()).padStart(2,'0');
+
+        const weekSls = Object.values(d.superlinks||{}).filter(s => s && s.week === weekKey);
+        const posters = [...new Set(weekSls.map(s => String(s.uid)))];
+
+        // Like-Timestamps aus d.notifications[posterUid] extrahieren (icon ❤️ + actorUid match)
+        const likeTsByKey = {}; // `${posterUid}_${likerUid}` → ts (newest)
+        for (const posterUid of posters) {
+            const notifs = d.notifications?.[posterUid] || [];
+            for (const n of notifs) {
+                if (n.icon !== '❤️' || !n.actorUid) continue;
+                const key = posterUid + '_' + String(n.actorUid);
+                if (!likeTsByKey[key] || n.timestamp > likeTsByKey[key]) likeTsByKey[key] = n.timestamp;
+            }
+        }
+
+        // Last like overall
+        let lastLikeTs = 0, lastLikeBy = '', lastLikeFor = '';
+        for (const [key, ts] of Object.entries(likeTsByKey)) {
+            if (ts > lastLikeTs) {
+                lastLikeTs = ts;
+                const [pUid, lUid] = key.split('_');
+                lastLikeBy = d.users?.[lUid]?.spitzname || d.users?.[lUid]?.name || lUid;
+                lastLikeFor = d.users?.[pUid]?.spitzname || d.users?.[pUid]?.name || pUid;
+            }
+        }
+
+        const fmtTs = ts => ts ? new Date(ts).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '–';
+        const userName = uid => htmlEsc(d.users?.[uid]?.spitzname || d.users?.[uid]?.name || ('UID '+uid));
+
+        const rows = weekSls.sort((a,b)=>(b.timestamp||0)-(a.timestamp||0)).map(s => {
+            const pUid = String(s.uid);
+            const likes = Array.isArray(s.likes) ? s.likes.map(String) : [];
+            const expectedLikers = posters.filter(u => u !== pUid);
+            const missingLikers = expectedLikers.filter(u => !likes.includes(u));
+            const likeRows = likes.map(lUid => {
+                const ts = likeTsByKey[pUid + '_' + lUid];
+                return `<tr><td style="padding:5px 8px">${userName(lUid)}</td><td style="padding:5px 8px;color:var(--muted);font-size:11px">${fmtTs(ts)}</td></tr>`;
+            }).join('') || '<tr><td colspan="2" style="padding:8px;color:var(--muted);font-style:italic">Noch keine Likes</td></tr>';
+            const missingRows = missingLikers.map(lUid => `<tr><td style="padding:5px 8px;color:#ef4444">${userName(lUid)}</td></tr>`).join('') || '<tr><td style="padding:8px;color:var(--muted);font-style:italic">Alle haben geliked ✓</td></tr>';
+            return `<div style="background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:16px;margin-bottom:14px">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+    <div>
+      <div style="font-size:14px;font-weight:800">${userName(pUid)}</div>
+      <div style="font-size:11px;color:var(--muted)">Gepostet: ${fmtTs(s.timestamp)} · ID: ${htmlEsc(String(s.id||''))}</div>
+    </div>
+    <div style="font-size:12px;color:var(--muted)">${likes.length}/${expectedLikers.length} Likes</div>
+  </div>
+  <div style="font-size:12px;color:var(--text);background:var(--bg4);padding:8px 10px;border-radius:8px;margin-bottom:10px;word-break:break-all">${htmlEsc(String(s.url||''))}</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+    <div>
+      <div style="font-size:11px;color:#22c55e;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">✓ Geliked (${likes.length})</div>
+      <table style="width:100%;font-size:12px;border-collapse:collapse">${likeRows}</table>
+    </div>
+    <div>
+      <div style="font-size:11px;color:#ef4444;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">✗ Fehlt (${missingLikers.length})</div>
+      <table style="width:100%;font-size:12px;border-collapse:collapse">${missingRows}</table>
+    </div>
+  </div>
+</div>`;
+        }).join('');
+
+        const summary = `<div style="background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;padding:18px;border-radius:16px;margin-bottom:18px">
+  <div style="font-size:11px;letter-spacing:2px;font-weight:700;opacity:.85;text-transform:uppercase">Letzter Like</div>
+  <div style="font-size:18px;font-weight:800;margin-top:6px">${lastLikeTs ? fmtTs(lastLikeTs) : 'Noch keine Likes diese Woche'}</div>
+  ${lastLikeTs ? `<div style="font-size:12.5px;margin-top:6px;opacity:.95">${htmlEsc(lastLikeBy)} → ${htmlEsc(lastLikeFor)}'s Superlink</div>` : ''}
+  <div style="font-size:11px;margin-top:10px;opacity:.85">Aktuelle Woche: ${weekKey} · ${weekSls.length} Superlinks · ${posters.length} Poster</div>
+</div>`;
+
+        return html(`<div style="padding:18px 16px;max-width:900px;margin:0 auto">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
+    <a href="/explore?tab=newsletter" style="color:var(--muted);text-decoration:none;font-size:14px">‹ zurück</a>
+    <div style="font-size:20px;font-weight:800;font-family:var(--font-display)">🔍 Superlinks-Debug</div>
+  </div>
+  ${summary}
+  ${rows || '<div style="padding:32px;text-align:center;color:var(--muted)">Keine Superlinks diese Woche</div>'}
+</div>`, 'explore');
+    }
+
     if (path === '/explore') {
         const tab = query.tab || 'allgemein';
         const sorted = Object.entries(d.users||{})
