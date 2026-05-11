@@ -3075,6 +3075,7 @@ self.addEventListener('notificationclick',e=>{
     function redirect(to) { res.writeHead(302,{'Location':to}); res.end(); }
     function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'237'}); res.end(layout(content,session,page,lang)); }
     function json(data, status=200) { res.writeHead(status,{'Content-Type':'application/json'}); res.end(JSON.stringify(data)); }
+    function text(content, status=200) { res.writeHead(status,{'Content-Type':'text/plain; charset=utf-8'}); res.end(String(content)); }
 
     // ── LANDING ──
     if (path === '/' || path === '') {
