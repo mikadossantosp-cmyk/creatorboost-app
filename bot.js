@@ -9259,9 +9259,14 @@ setTimeout(()=>document.getElementById('search-input').focus(),100);
     // ── EXPLORE ──
     // ── ADMIN DEBUG: Superlinks dieser Woche + wer wann geliked hat ──
     if (path === '/admin/superlinks-debug') {
-        if (!adminIds.includes(Number(myUid)) && !String(d.users?.[myUid]?.role||'').includes('Admin')) {
-            return text('Nur Admins', 403);
-        }
+        // Admin-Check: prüft sowohl activeUid (aktuell ausgewählt) als auch session.uid (Parent),
+        // damit Admins die auf einen Sub-Account gewechselt haben, die Page trotzdem öffnen können.
+        const parentUid = String(session?.uid || '');
+        const isAdmin = adminIds.includes(Number(myUid))
+            || adminIds.includes(Number(parentUid))
+            || String(d.users?.[myUid]?.role||'').includes('Admin')
+            || String(d.users?.[parentUid]?.role||'').includes('Admin');
+        if (!isAdmin) return text('Nur Admins', 403);
         // Berlin-Wochenkey: Montag der gewählten Woche
         const computeWeekKey = (offset = 0) => {
             const n = new Date();
