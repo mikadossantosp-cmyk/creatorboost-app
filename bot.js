@@ -26,6 +26,9 @@ const emailLoginTokens = new Map();   // token → { email, uid, exp }
 const emailConfirmTokens = new Map(); // token → { email, uid, exp } (für /einstellungen Email-Bestätigung)
 const accountUnlockTokens = new Map(); // token → { uid, exp } — nach Klick im Mail Settings-Edit freischalten
 const emailRateLimit = new Map();      // email → lastRequestTs (Cooldown gegen Spam)
+const signupIpRateLimit = new Map();   // ip → { ts, n } — gegen Fake-Account-Spam + Email-Enumeration
+const SIGNUP_RATE_LIMIT_WINDOW = 60 * 60 * 1000; // 1 Stunde Fenster
+const SIGNUP_RATE_LIMIT_MAX = 5;       // max 5 Signups pro Stunde pro IP
 const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
 const EMAIL_FROM = process.env.EMAIL_FROM || 'CreatorX <onboarding@resend.dev>';
 const EMAIL_TOKEN_TTL = 60 * 60 * 1000;       // 1 Stunde
@@ -39,6 +42,7 @@ setInterval(() => {
     for (const [t, v] of emailConfirmTokens.entries()) if (v.exp < now) emailConfirmTokens.delete(t);
     for (const [t, v] of accountUnlockTokens.entries()) if (v.exp < now) accountUnlockTokens.delete(t);
     for (const [e, ts] of emailRateLimit.entries()) if (now - ts > EMAIL_RATE_LIMIT * 2) emailRateLimit.delete(e);
+    for (const [ip, v] of signupIpRateLimit.entries()) if (now - v.ts > SIGNUP_RATE_LIMIT_WINDOW) signupIpRateLimit.delete(ip);
 }, 5 * 60 * 1000);
 
 async function sendEmail(to, subject, html) {
@@ -2882,6 +2886,12 @@ async function handleRequest(req, res) {
     const path = pu.pathname;
     const query = pu.query;
 
+    // ── SECURITY HEADERS (global, per Response) ──
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+
     // ── SERVICE WORKER ──
     // Admin-Fulltour Script — extern + cached (spart pro Page-Load 7.8KB)
     if (path === '/static/admin-fulltour.js') {
@@ -3477,7 +3487,7 @@ document.addEventListener('DOMContentLoaded', function(){
         const validSubUid = u.subUid && botData.users?.[u.subUid] ? String(u.subUid) : null;
         sessions.set(sid, { uid: String(uid), name: u.name, username: u.username||null, theme: 'light', lang: 'de', createdAt: Date.now(), subUid: validSubUid, activeUid: String(uid), loginVia: 'telegram' });
         saveSessions();
-        res.writeHead(302,{'Set-Cookie':'cbsid='+sid+'; HttpOnly; Path=/; Max-Age=157680000','Location':'/feed'});
+        res.writeHead(302,{'Set-Cookie':'cbsid='+sid+'; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=157680000','Location':'/feed'});
         return res.end();
     }
 
@@ -3502,7 +3512,7 @@ document.addEventListener('DOMContentLoaded', function(){
         const validSubUid = u.subUid && botData.users?.[u.subUid] ? String(u.subUid) : null;
         sessions.set(sid, { uid: String(uid), name: u.name, username: u.username||null, theme: 'light', lang: 'de', createdAt: Date.now(), subUid: validSubUid, activeUid: String(uid), loginVia: 'telegram' });
         saveSessions();
-        res.writeHead(302,{'Set-Cookie':`cbsid=${sid}; HttpOnly; Path=/; Max-Age=157680000`,'Location':'/feed'});
+        res.writeHead(302,{'Set-Cookie':`cbsid=${sid}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=157680000`,'Location':'/feed'});
         return res.end();
     }
 
@@ -3613,7 +3623,7 @@ document.addEventListener('DOMContentLoaded', function(){
         else if (!u.appCodeChosenAt) redirect = '/onboarding-code?first=1';
         else if (!u.appBriefingSeenV2) redirect = '/feed?tour=1';
         else redirect = '/feed';
-        res.writeHead(200, {'Set-Cookie':`cbsid=${sid}; HttpOnly; Path=/; Max-Age=157680000`,'Content-Type':'application/json'});
+        res.writeHead(200, {'Set-Cookie':`cbsid=${sid}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=157680000`,'Content-Type':'application/json'});
         return res.end(JSON.stringify({ok:true, redirect, didSetupPassword}));
     }
     // Passwort setzen / ändern (eingeloggter User).
@@ -3867,6 +3877,14 @@ function submitSignup(ev){
         if (password.length < 6 || password.length > 200) return json({ok:false, error:'Passwort muss 6–200 Zeichen lang sein'}, 400);
         const _ip = String(req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '').split(',')[0].trim().slice(0, 64);
         const _ua = String(req.headers['user-agent'] || '').slice(0, 200);
+        // Rate-Limit: 5 Signup-Versuche pro Stunde pro IP — gegen Fake-Account-Spam + Email-Enumeration via 409.
+        const _sl = signupIpRateLimit.get(_ip) || { ts: 0, n: 0 };
+        if (Date.now() - _sl.ts > SIGNUP_RATE_LIMIT_WINDOW) { _sl.ts = Date.now(); _sl.n = 0; }
+        if (_sl.n >= SIGNUP_RATE_LIMIT_MAX) {
+            return json({ok:false, error:'Zu viele Signup-Versuche — bitte später nochmal versuchen'}, 429);
+        }
+        _sl.n += 1;
+        signupIpRateLimit.set(_ip, _sl);
         // Existiert die Email schon?
         const _bd = await fetchBot('/data');
         const _exists = Object.entries(_bd?.users || {}).find(([, u]) => String(u.email||'').toLowerCase() === email);
@@ -3889,7 +3907,7 @@ function submitSignup(ev){
         sessions.set(sid, { uid: String(created.uid), name: u.name, username: u.username||null, theme: 'light', lang: 'de', createdAt: Date.now(), subUid: null, activeUid: String(created.uid), loginVia: 'email' });
         saveSessions();
         // → Onboarding-Flow (Insta first)
-        res.writeHead(200, {'Set-Cookie':`cbsid=${sid}; HttpOnly; Path=/; Max-Age=157680000`,'Content-Type':'application/json'});
+        res.writeHead(200, {'Set-Cookie':`cbsid=${sid}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=157680000`,'Content-Type':'application/json'});
         return res.end(JSON.stringify({ok:true, redirect:'/onboarding-instagram?first=1'}));
     }
     if (path === '/auth/email-login' && req.method === 'GET') {
@@ -3933,7 +3951,7 @@ function submitSignup(ev){
         else if (!_hasCode) target = '/onboarding-code?first=1';
         else if (!u.password_hash) target = '/set-password?first=1';
         else if (!u.appBriefingSeenV2) target = '/feed?tour=1';
-        res.writeHead(302,{'Set-Cookie':`cbsid=${sid}; HttpOnly; Path=/; Max-Age=157680000`,'Location':target});
+        res.writeHead(302,{'Set-Cookie':`cbsid=${sid}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=157680000`,'Location':target});
         return res.end();
     }
     // ── ONBOARDING: User wählt eigenen App-Code (statt auto-generated) ──
@@ -4400,7 +4418,7 @@ function submitPw(ev){
                     sessions.set(sid, { uid: String(uid), name: u.name, username: u.username||null, theme: 'light', lang: 'de', createdAt: Date.now(), subUid: validSubUid, activeUid: String(uid), loginVia: 'telegram' });
                     saveSessions();
                 }
-                res.writeHead(302,{'Set-Cookie':`cbsid=${sid}; HttpOnly; Path=/; Max-Age=157680000`,'Location':'/feed'});
+                res.writeHead(302,{'Set-Cookie':`cbsid=${sid}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=157680000`,'Location':'/feed'});
                 return res.end();
             }
         }
@@ -4439,7 +4457,7 @@ function submitPw(ev){
             sessions.set(sid, { uid: String(uid), name: u.name, username: u.username||null, theme: 'light', lang: 'de', createdAt: Date.now(), subUid: validSubUid, activeUid: String(uid), loginVia: 'telegram' });
             saveSessions();
         }
-        res.writeHead(302,{'Set-Cookie':`cbsid=${sid}; HttpOnly; Path=/; Max-Age=157680000`,'Location':safeRedirect});
+        res.writeHead(302,{'Set-Cookie':`cbsid=${sid}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=157680000`,'Location':safeRedirect});
         return res.end();
     }
 
@@ -4447,7 +4465,7 @@ function submitPw(ev){
     if (path === '/logout') {
         const sid = getSid(req);
         if(sid) { sessions.delete(sid); saveSessions(); }
-        res.writeHead(302,{'Set-Cookie':'cbsid=; HttpOnly; Path=/; Max-Age=0','Location':'/'});
+        res.writeHead(302,{'Set-Cookie':'cbsid=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0','Location':'/'});
         return res.end();
     }
 
