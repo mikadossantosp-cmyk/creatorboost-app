@@ -45,8 +45,16 @@ setInterval(() => {
     for (const [ip, v] of signupIpRateLimit.entries()) if (now - v.ts > SIGNUP_RATE_LIMIT_WINDOW) signupIpRateLimit.delete(ip);
 }, 5 * 60 * 1000);
 
+// In-memory email send log (last 200 entries, not persisted across restarts)
+const _emailSendLog = [];
+const EMAIL_LOG_MAX = 200;
+function logEmailSend(to, subject, ok, error) {
+    _emailSendLog.unshift({ to, subject, ok, error: error || null, ts: Date.now() });
+    if (_emailSendLog.length > EMAIL_LOG_MAX) _emailSendLog.length = EMAIL_LOG_MAX;
+}
+
 async function sendEmail(to, subject, html) {
-    if (!RESEND_API_KEY) { console.error('RESEND_API_KEY nicht gesetzt'); return false; }
+    if (!RESEND_API_KEY) { console.error('RESEND_API_KEY nicht gesetzt'); logEmailSend(to, subject, false, 'RESEND_API_KEY nicht gesetzt'); return false; }
     return new Promise(resolve => {
         const data = JSON.stringify({ from: EMAIL_FROM, to: [to], subject, html });
         const req = https.request({
@@ -59,12 +67,12 @@ async function sendEmail(to, subject, html) {
         }, res => {
             let buf = ''; res.on('data', c => buf += c);
             res.on('end', () => {
-                if (res.statusCode >= 200 && res.statusCode < 300) resolve(true);
-                else { console.error('Resend Error:', res.statusCode, buf.slice(0, 200)); resolve(false); }
+                if (res.statusCode >= 200 && res.statusCode < 300) { logEmailSend(to, subject, true, null); resolve(true); }
+                else { const errMsg = 'HTTP ' + res.statusCode; console.error('Resend Error:', res.statusCode, buf.slice(0, 200)); logEmailSend(to, subject, false, errMsg); resolve(false); }
             });
         });
-        req.on('error', e => { console.error('Resend Request Fehler:', e.message); resolve(false); });
-        req.setTimeout(8000, () => { req.destroy(); resolve(false); });
+        req.on('error', e => { console.error('Resend Request Fehler:', e.message); logEmailSend(to, subject, false, e.message); resolve(false); });
+        req.setTimeout(8000, () => { req.destroy(); logEmailSend(to, subject, false, 'Timeout'); resolve(false); });
         req.write(data); req.end();
     });
 }
@@ -4518,6 +4526,192 @@ function submitPw(ev){
         if(sid) { sessions.delete(sid); saveSessions(); }
         res.writeHead(302,{'Set-Cookie':'cbsid=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0','Location':'/'});
         return res.end();
+    }
+
+    // ── ADMIN: Email Dashboard (before auth gate — uses query.key) ──
+    if (path === '/admin/emails') {
+        if ((query.key || '') !== BRIDGE_SECRET) { res.writeHead(403); return res.end('Kein Zugriff'); }
+        const page = Math.max(1, parseInt(query.page) || 1);
+        const perPage = 50;
+        const filterMode = query.filter || 'all';
+        const searchQ = (query.q || '').toLowerCase().trim();
+        const bd = await fetchBot('/data');
+        if (!bd) { res.writeHead(503); return res.end('MainBot nicht erreichbar'); }
+        const users = bd.users || {};
+        let entries = Object.entries(users).map(([uid, u]) => {
+            const emails = [];
+            if (u.email) emails.push({ addr: u.email, source: 'active' });
+            if (u.pendingEmail && u.pendingEmail !== u.email) emails.push({ addr: u.pendingEmail, source: 'pending' });
+            const hasEmail = emails.length > 0;
+            const verified = !!u.email && !u.pendingEmail;
+            return { uid, name: u.spitzname || u.name || '', instagram: u.instagram || '', emails, hasEmail, verified, hasPassword: !!u.password_hash, appCode: u.appCode || '', started: u.started || false, role: u.role || '' };
+        });
+        if (filterMode === 'verified') entries = entries.filter(e => e.verified && e.hasEmail);
+        else if (filterMode === 'unverified') entries = entries.filter(e => e.hasEmail && !e.verified);
+        else if (filterMode === 'no-email') entries = entries.filter(e => !e.hasEmail);
+        else if (filterMode === 'errors') entries = entries.filter(e => e.hasEmail && _emailSendLog.some(l => !l.ok && e.emails.some(em => em.addr === l.to)));
+        if (searchQ) entries = entries.filter(e => e.name.toLowerCase().includes(searchQ) || e.uid.includes(searchQ) || e.emails.some(em => em.addr.toLowerCase().includes(searchQ)) || (e.instagram && e.instagram.toLowerCase().includes(searchQ)));
+        const total = entries.length;
+        const totalPages = Math.max(1, Math.ceil(total / perPage));
+        const pageEntries = entries.slice((page - 1) * perPage, page * perPage);
+        const totalUsers = Object.keys(users).length;
+        const withEmail = Object.values(users).filter(u => u.email).length;
+        const withPending = Object.values(users).filter(u => u.pendingEmail).length;
+        const verifiedCount = Object.values(users).filter(u => u.email && !u.pendingEmail).length;
+        const lastOk = _emailSendLog.find(l => l.ok);
+        const lastErr = _emailSendLog.find(l => !l.ok);
+        const esc = s => String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+        const k = encodeURIComponent(query.key);
+        const buildUrl = (p, f, q) => `/admin/emails?key=${k}&page=${p}&filter=${f||filterMode}&q=${encodeURIComponent(q||searchQ)}`;
+        const rows = pageEntries.map(e => {
+            const lastLog = _emailSendLog.find(l => e.emails.some(em => em.addr === l.to));
+            const emailCells = e.emails.length ? e.emails.map(em => `<span class="em-addr${em.source==='pending'?' pending':''}">${esc(em.addr)} <small>(${em.source})</small></span>`).join('') : '<span class="em-none">\u2014</span>';
+            return `<tr>
+<td>${esc(e.name)}<br><small class="uid">${e.uid}</small>${e.instagram?'<br><small>@'+esc(e.instagram)+'</small>':''}</td>
+<td>${emailCells}</td>
+<td><span class="badge ${e.verified?'ok':'no'}">${e.verified?'Ja':'Nein'}</span></td>
+<td>${e.appCode?esc(e.appCode):'\u2014'}</td>
+<td>${lastLog?'<small>'+(lastLog.ok?'\u2705':'\u274c')+' '+new Date(lastLog.ts).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})+(lastLog.error?' \u2014 '+esc(lastLog.error):'')+'</small>':'\u2014'}</td>
+<td>${e.emails.length && e.emails[0].addr?'<button class="btn-send" onclick="sendOne(this,\''+esc(e.uid)+'\')">Senden</button>':'\u2014'}</td>
+</tr>`;
+        }).join('');
+        let pagination = '';
+        if (totalPages > 1) {
+            pagination = '<div class="pag">';
+            if (page > 1) pagination += `<a href="${buildUrl(page-1)}">\u2190 Zur\u00fcck</a>`;
+            pagination += `<span>Seite ${page} / ${totalPages}</span>`;
+            if (page < totalPages) pagination += `<a href="${buildUrl(page+1)}">Weiter \u2192</a>`;
+            pagination += '</div>';
+        }
+        const logRows = _emailSendLog.slice(0, 20).map(l => `<tr><td>${new Date(l.ts).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'})}</td><td>${esc(l.to)}</td><td>${esc(l.subject).slice(0,40)}</td><td>${l.ok?'\u2705':'\u274c '+esc(l.error||'')}</td></tr>`).join('');
+        res.writeHead(200, {'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});
+        return res.end(`<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Email Dashboard</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0a0a0a;color:#e5e5e5;padding:16px;font-size:13px;line-height:1.5}
+h1{font-size:20px;font-weight:800;margin-bottom:4px}h2{font-size:15px;font-weight:700;margin:24px 0 8px;color:#a78bfa}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin:12px 0}
+.stat{background:#161616;border:1px solid #222;border-radius:10px;padding:12px}.stat-val{font-size:22px;font-weight:800}.stat-lbl{font-size:11px;color:#888;margin-top:2px}
+.mail-status{background:#161616;border:1px solid #222;border-radius:10px;padding:14px;margin:12px 0}
+.mail-status .provider{color:#a78bfa;font-weight:700}
+.bar{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0;align-items:center}
+input[type=text]{background:#161616;border:1px solid #333;border-radius:8px;padding:8px 12px;color:#e5e5e5;font-size:13px;flex:1;min-width:180px}
+.btn{padding:7px 14px;border-radius:8px;border:none;font-size:12px;font-weight:700;cursor:pointer;transition:transform .1s}.btn:active{transform:scale(.96)}
+.btn-primary{background:#7c3aed;color:#fff}.btn-danger{background:#ef4444;color:#fff}.btn-send{background:#22c55e;color:#fff;padding:5px 10px;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer}
+.btn-send:disabled{opacity:.5;cursor:default}
+.filter-bar{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}.filter-bar a{padding:5px 12px;border-radius:999px;font-size:11px;font-weight:700;text-decoration:none;border:1px solid #333;color:#888;transition:all .15s}
+.filter-bar a.active{background:#7c3aed;color:#fff;border-color:#7c3aed}
+table{width:100%;border-collapse:collapse;margin:8px 0}th,td{padding:8px 6px;text-align:left;border-bottom:1px solid #1a1a1a;vertical-align:top}
+th{font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.5px;font-weight:700;position:sticky;top:0;background:#0a0a0a}
+td{font-size:12px}.uid{color:#666;font-size:10px}.em-addr{display:block;font-size:12px}.em-addr.pending{color:#f59e0b}.em-none{color:#444}
+.badge{padding:2px 8px;border-radius:999px;font-size:10px;font-weight:700}.badge.ok{background:rgba(34,197,94,.15);color:#22c55e}.badge.no{background:rgba(239,68,68,.12);color:#ef4444}
+.pag{display:flex;gap:12px;align-items:center;justify-content:center;margin:16px 0}.pag a{color:#a78bfa;text-decoration:none;font-weight:600}.pag span{color:#888;font-size:12px}
+.log-table{margin:8px 0}.log-table td{font-size:11px}
+.toast{position:fixed;bottom:20px;right:20px;padding:10px 16px;border-radius:10px;font-size:13px;font-weight:600;color:#fff;z-index:999;animation:toast-in .3s ease}
+@keyframes toast-in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.bulk-status{margin:8px 0;padding:10px;background:#161616;border:1px solid #222;border-radius:8px;font-size:12px;display:none}
+</style></head><body>
+<h1>\ud83d\udce7 Email Dashboard</h1>
+<p style="color:#888;font-size:12px">Admin-Bereich \u00b7 ${totalUsers} User gesamt</p>
+<div class="stats">
+<div class="stat"><div class="stat-val">${withEmail}</div><div class="stat-lbl">Mit Email</div></div>
+<div class="stat"><div class="stat-val">${verifiedCount}</div><div class="stat-lbl">Verifiziert</div></div>
+<div class="stat"><div class="stat-val">${withPending}</div><div class="stat-lbl">Pending</div></div>
+<div class="stat"><div class="stat-val">${totalUsers - withEmail}</div><div class="stat-lbl">Ohne Email</div></div>
+</div>
+<div class="mail-status">
+<b>Mail System Status</b><br>
+Provider: <span class="provider">${RESEND_API_KEY ? 'Resend \u2705' : 'Nicht konfiguriert \u274c'}</span><br>
+API-Key: ${RESEND_API_KEY ? '****' + RESEND_API_KEY.slice(-4) : 'Fehlt'} \u00b7 From: ${esc(EMAIL_FROM)}<br>
+${lastOk ? 'Letzte OK: ' + new Date(lastOk.ts).toLocaleString('de-DE') + ' \u2192 ' + esc(lastOk.to) : 'Noch keine erfolgreiche Mail'}<br>
+${lastErr ? '<span style="color:#ef4444">Letzter Fehler: ' + new Date(lastErr.ts).toLocaleString('de-DE') + ' \u2192 ' + esc(lastErr.error||'') + '</span>' : ''}
+<br><button class="btn btn-primary" style="margin-top:8px" onclick="sendTest()">Testmail senden</button>
+</div>
+<h2>User-Liste</h2>
+<div class="bar">
+<form method="GET" action="/admin/emails" style="display:flex;gap:8px;flex:1;flex-wrap:wrap">
+<input type="hidden" name="key" value="${esc(query.key)}"><input type="hidden" name="filter" value="${filterMode}">
+<input type="text" name="q" value="${esc(searchQ)}" placeholder="Name, Email, UID oder @insta suchen...">
+<button class="btn btn-primary" type="submit">Suchen</button>
+${searchQ?`<a href="${buildUrl(1, filterMode, '')}" style="color:#888;font-size:12px;align-self:center">\u00d7 Reset</a>`:''}
+</form>
+<button class="btn btn-danger" onclick="sendAllUnverified()">Allen unbestaetigten senden</button>
+</div>
+<div class="filter-bar">
+<a href="${buildUrl(1,'all')}" class="${filterMode==='all'?'active':''}">Alle (${total})</a>
+<a href="${buildUrl(1,'verified')}" class="${filterMode==='verified'?'active':''}">Verifiziert</a>
+<a href="${buildUrl(1,'unverified')}" class="${filterMode==='unverified'?'active':''}">Nicht verifiziert</a>
+<a href="${buildUrl(1,'errors')}" class="${filterMode==='errors'?'active':''}">Mit Fehlern</a>
+<a href="${buildUrl(1,'no-email')}" class="${filterMode==='no-email'?'active':''}">Ohne Email</a>
+</div>
+<div class="bulk-status" id="bulk-status"></div>
+<div style="overflow-x:auto">
+<table><thead><tr><th>User</th><th>Email(s)</th><th>Verifiziert</th><th>Code</th><th>Letzter Versand</th><th>Aktion</th></tr></thead>
+<tbody>${rows || '<tr><td colspan="6" style="text-align:center;color:#666;padding:32px">Keine Eintraege</td></tr>'}</tbody></table>
+</div>
+${pagination}
+<h2>Versand-Log (letzte 20)</h2>
+<div style="overflow-x:auto">
+<table class="log-table"><thead><tr><th>Zeit</th><th>An</th><th>Betreff</th><th>Status</th></tr></thead>
+<tbody>${logRows || '<tr><td colspan="4" style="color:#666">Noch keine Logs</td></tr>'}</tbody></table>
+</div>
+<script>
+const K='${esc(query.key)}';
+function toast(msg,ok){const d=document.createElement('div');d.className='toast';d.style.background=ok?'#22c55e':'#ef4444';d.textContent=msg;document.body.appendChild(d);setTimeout(()=>d.remove(),3500);}
+async function sendOne(btn,uid){btn.disabled=true;btn.textContent='\u2026';try{const r=await fetch('/api/admin/send-confirmation',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:K,uid})});const d=await r.json();if(d.ok)toast('\u2705 Gesendet an '+d.to,true);else toast('\u274c '+(d.error||'Fehler'),false);}catch(e){toast('\u274c '+e.message,false);}finally{btn.disabled=false;btn.textContent='Senden';}}
+async function sendAllUnverified(){if(!confirm('Allen unbestaetigten Usern Bestaetigungsmail senden?'))return;const el=document.getElementById('bulk-status');el.style.display='block';el.textContent='Starte Sammelversand...';try{const r=await fetch('/api/admin/send-all-unverified',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:K})});const d=await r.json();el.textContent='Fertig: '+d.sent+' gesendet, '+d.failed+' fehlgeschlagen, '+d.skipped+' uebersprungen';toast('Sammelversand abgeschlossen',d.failed===0);}catch(e){el.textContent='Fehler: '+e.message;toast('\u274c '+e.message,false);}}
+async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)return;try{const r=await fetch('/api/admin/send-test',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:K,to})});const d=await r.json();toast(d.ok?'\u2705 Testmail gesendet':'\u274c '+(d.error||'Fehler'),d.ok);}catch(e){toast('\u274c '+e.message,false);}}
+</script></body></html>`);
+    }
+    if (path === '/api/admin/send-confirmation' && req.method === 'POST') {
+        const body = await parseBody(req);
+        if ((body.key || '') !== BRIDGE_SECRET) return json({error:'Kein Zugriff'}, 403);
+        const bd = await fetchBot('/data');
+        if (!bd) return json({error:'MainBot nicht erreichbar'}, 503);
+        const uid = String(body.uid || '');
+        const u = bd.users?.[uid];
+        if (!u) return json({error:'User nicht gefunden'}, 404);
+        const email = u.pendingEmail || u.email;
+        if (!email) return json({error:'User hat keine Email'}, 400);
+        const baseUrl = (process.env.APP_URL || ('https://' + (req.headers.host || 'web-production-7981d.up.railway.app'))).replace(/\/$/, '');
+        const token = crypto.randomBytes(24).toString('hex');
+        emailConfirmTokens.set(token, { email, uid, exp: Date.now() + EMAIL_TOKEN_TTL });
+        const confirmUrl = baseUrl + '/auth/confirm-email?token=' + encodeURIComponent(token);
+        const userName = u.spitzname || u.name || 'CreatorX User';
+        const mailHtml = `<!DOCTYPE html><html><body style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#000;color:#fff;padding:0"><div style="max-width:560px;margin:0 auto;padding:32px 24px"><div style="text-align:center;margin-bottom:24px"><img src="${baseUrl}/cx-logo-256.png" width="80" height="80" style="border-radius:18px" alt="CreatorX"></div><h1 style="font-size:26px;font-weight:700;margin:0 0 12px;text-align:center;color:#fff">Hi ${userName.replace(/[<>]/g,'')}!</h1><p style="font-size:15px;color:#a8a39a;line-height:1.6;text-align:center;margin:0 0 28px">Bestaetige deine Email-Adresse <b style="color:#fff">${email}</b> fuer deinen CreatorX-Account.</p><div style="text-align:center;margin:32px 0"><a href="${confirmUrl}" style="display:inline-block;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px">\u2705 Email bestätigen</a></div><p style="font-size:12px;color:#605c54;text-align:center;margin-top:32px;border-top:1px solid #221f1a;padding-top:20px">Link 1h gueltig \u00b7 einmalig nutzbar</p></div></body></html>`;
+        const sent = await sendEmail(email, '\u2705 Bestaetige deine CreatorX-Email', mailHtml);
+        return json(sent ? {ok:true, to:email} : {ok:false, error:'Versand fehlgeschlagen'});
+    }
+    if (path === '/api/admin/send-all-unverified' && req.method === 'POST') {
+        const body = await parseBody(req);
+        if ((body.key || '') !== BRIDGE_SECRET) return json({error:'Kein Zugriff'}, 403);
+        const bd = await fetchBot('/data');
+        if (!bd) return json({error:'MainBot nicht erreichbar'}, 503);
+        const targets = Object.entries(bd.users || {}).filter(([, u]) => u.pendingEmail || (u.email && !u.password_hash));
+        let sent = 0, failed = 0, skipped = 0;
+        const baseUrl = (process.env.APP_URL || ('https://' + (req.headers.host || 'web-production-7981d.up.railway.app'))).replace(/\/$/, '');
+        for (const [uid, u] of targets) {
+            const email = u.pendingEmail || u.email;
+            if (!email) { skipped++; continue; }
+            try {
+                const token = crypto.randomBytes(24).toString('hex');
+                emailConfirmTokens.set(token, { email, uid: String(uid), exp: Date.now() + EMAIL_TOKEN_TTL });
+                const confirmUrl = baseUrl + '/auth/confirm-email?token=' + encodeURIComponent(token);
+                const userName = u.spitzname || u.name || 'CreatorX User';
+                const mailHtml = `<!DOCTYPE html><html><body style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#000;color:#fff;padding:0"><div style="max-width:560px;margin:0 auto;padding:32px 24px"><h1 style="font-size:22px;font-weight:700;text-align:center;color:#fff">Hi ${userName.replace(/[<>]/g,'')}!</h1><p style="font-size:14px;color:#a8a39a;text-align:center;margin:16px 0">Bestaetige deine Email <b style="color:#fff">${email}</b>.</p><div style="text-align:center;margin:24px 0"><a href="${confirmUrl}" style="display:inline-block;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;padding:12px 28px;border-radius:10px;text-decoration:none;font-weight:700;font-size:14px">\u2705 Bestätigen</a></div></div></body></html>`;
+                const ok = await sendEmail(email, '\u2705 Bestaetige deine CreatorX-Email', mailHtml);
+                if (ok) sent++; else failed++;
+            } catch(_e) { failed++; }
+            await new Promise(r => setTimeout(r, 500));
+        }
+        return json({ok:true, sent, failed, skipped, total: targets.length});
+    }
+    if (path === '/api/admin/send-test' && req.method === 'POST') {
+        const body = await parseBody(req);
+        if ((body.key || '') !== BRIDGE_SECRET) return json({error:'Kein Zugriff'}, 403);
+        const to = String(body.to || '').trim();
+        if (!to || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) return json({error:'Ungueltige Email'}, 400);
+        const sent = await sendEmail(to, '\ud83e\uddea CreatorX Testmail', '<!DOCTYPE html><html><body style="margin:0;font-family:sans-serif;background:#000;color:#fff;padding:32px;text-align:center"><h1>Testmail \u2705</h1><p>Das Mailsystem funktioniert.</p><p style="color:#888;font-size:12px">Gesendet: '+new Date().toISOString()+'</p></body></html>');
+        return json(sent ? {ok:true} : {ok:false, error:'Versand fehlgeschlagen'});
     }
 
     // ── DEBUG ──
@@ -10208,6 +10402,8 @@ ${rest.map(([id,u],idx)=>{
     </a>
     ${_myIsAdmin ? `<a href="${process.env.ADMIN_DASHBOARD_URL || 'https://dashboard-production-bda4.up.railway.app/dashboard'}" target="_blank" rel="noopener" class="icon-btn" title="Admin-Dashboard" style="background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;border-color:rgba(167,139,250,0.5)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="18" height="18"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+    </a><a href="/admin/emails?key=" class="icon-btn" title="Email Dashboard" style="background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border-color:rgba(34,197,94,0.5)" onclick="event.preventDefault();location.href='/admin/emails?key='+prompt('Bridge Secret:')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="18" height="18"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 4l-10 8L2 4"/></svg>
     </a>` : ''}
     <a href="/einstellungen" class="icon-btn">⚙️</a>
   </div>
