@@ -4522,6 +4522,7 @@ function submitPw(ev){
 
     // ── DEBUG ──
     if (path === '/debug/test') {
+        if ((query.key || '') !== BRIDGE_SECRET) { res.writeHead(403); return res.end('Kein Zugriff'); }
         const botData = await fetchBot('/data');
         if (!botData) return json({error:'Main Bot nicht erreichbar', mainbotUrl: MAINBOT_URL});
         const userCount = Object.keys(botData.users||{}).length;
