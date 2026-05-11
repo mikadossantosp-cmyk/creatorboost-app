@@ -99,8 +99,12 @@ saveSessions();
 // Web Push
 let webpush;
 try { webpush = require('web-push'); } catch(e) {}
-const VAPID_PUBLIC = 'BF3FxtRYkoHBCgfG0U1o9UIeib81WmArYdKWJZQWMbCwdd2cvivmAB9TNjY3p-XdkGjQux1OZZR-m3iwjBvCyKg';
-const VAPID_PRIVATE = 'ViWUilwaJSHAmfWLyIfCyvJVWnOFirq3Dn1HTGfIaoQ';
+const VAPID_PUBLIC = process.env.VAPID_PUBLIC || '';
+const VAPID_PRIVATE = process.env.VAPID_PRIVATE || '';
+if (!VAPID_PUBLIC || !VAPID_PRIVATE) {
+    console.error('FATAL: VAPID_PUBLIC/VAPID_PRIVATE env-vars nicht gesetzt. Server startet nicht.');
+    process.exit(1);
+}
 const PUSH_SUBS_FILE = DATA_DIR + '/push_subscriptions.json';
 let pushSubs = {};
 try { if (fs.existsSync(PUSH_SUBS_FILE)) pushSubs = JSON.parse(fs.readFileSync(PUSH_SUBS_FILE, 'utf8')); } catch(e) { console.error('Push subs load failed:', e.message); }
