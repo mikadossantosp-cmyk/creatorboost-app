@@ -9936,7 +9936,16 @@ window.sugDismiss = function(btn){
                 // ── MINDSET STORIES CARD ──
                 const ms = d.mindsetStories || { weeklyState:{}, waitlist:{}, rejected:{}, done:{} };
                 const myInsta = d.users?.[myUid]?.instagram;
-                const myMsStatus = ms.weeklyState?.pickedUid === myUid ? 'picked' :
+                // Aktuelle Berlin-Woche (Montag).
+                const _msNow = new Date();
+                const _msDay = _msNow.getDay() || 7;
+                const _msMon = new Date(_msNow);
+                _msMon.setDate(_msNow.getDate() - (_msDay - 1));
+                const msCurrentWeek = _msMon.getFullYear() + '-' + String(_msMon.getMonth()+1).padStart(2,'0') + '-' + String(_msMon.getDate()).padStart(2,'0');
+                // weeklyState ist nur aktuell wenn week === msCurrentWeek — sonst stale aus letzter Woche.
+                const msStateIsCurrent = ms.weeklyState?.week === msCurrentWeek;
+                const msCurrentPickedUid = msStateIsCurrent ? ms.weeklyState?.pickedUid : null;
+                const myMsStatus = msCurrentPickedUid === myUid ? 'picked' :
                     ms.done?.[myUid] ? 'done' :
                     ms.waitlist?.[myUid] ? 'yes' :
                     ms.rejected?.[myUid] ? 'no' : 'none';
@@ -9945,7 +9954,7 @@ window.sugDismiss = function(btn){
                 const _berH = new Date().getHours();
                 const _berM = new Date().getMinutes();
                 const msLocked = _berDow === 0 || (_berDow === 6 && _berH >= 23 && _berM >= 59);
-                const msPickedName = ms.weeklyState?.pickedUid ? htmlEsc(d.users?.[ms.weeklyState.pickedUid]?.spitzname || d.users?.[ms.weeklyState.pickedUid]?.name || '?') : '';
+                const msPickedName = msCurrentPickedUid ? htmlEsc(d.users?.[msCurrentPickedUid]?.spitzname || d.users?.[msCurrentPickedUid]?.name || '?') : '';
 
                 let mindsetUserCard = '';
                 if (myMsStatus === 'picked') {
@@ -10014,9 +10023,9 @@ window.sugDismiss = function(btn){
   <button onclick="msAdminRestore('${uid}','${htmlEsc(v.name||'?')}')" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:3px 8px;font-size:10.5px;cursor:pointer">↩ Zurück</button>
 </div>`).join('')
                         : '<div style="padding:14px;text-align:center;color:var(--muted);font-size:12.5px">Noch keine vorgestellten User</div>';
-                    const currentPickHtml = ms.weeklyState?.pickedUid
+                    const currentPickHtml = msCurrentPickedUid
                         ? `<div style="padding:12px;background:linear-gradient(135deg,rgba(245,158,11,0.15),rgba(236,72,153,0.1));border:1px solid rgba(245,158,11,0.3);border-radius:12px;margin-bottom:10px"><div style="font-size:11px;color:#f59e0b;font-weight:700;letter-spacing:1px;text-transform:uppercase">⭐ Diese Woche</div><div style="font-size:14px;font-weight:800;margin-top:4px">${msPickedName}</div></div>`
-                        : ms.weeklyState?.skipped
+                        : (msStateIsCurrent && ms.weeklyState?.skipped)
                         ? '<div style="padding:10px;background:var(--bg4);border-radius:10px;margin-bottom:10px;font-size:12.5px;color:var(--muted);text-align:center">Diese Woche übersprungen</div>'
                         : '<div style="padding:10px;background:var(--bg4);border-radius:10px;margin-bottom:10px;font-size:12.5px;color:var(--muted);text-align:center">Noch nicht gepickt (Sonntag 20:00)</div>';
                     mindsetAdminCard = `<div style="margin:0 16px 16px;padding:18px;background:var(--bg3);border:1px solid var(--border2);border-radius:16px">
