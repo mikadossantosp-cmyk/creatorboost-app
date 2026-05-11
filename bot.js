@@ -6,7 +6,11 @@ const crypto = require('crypto');
 const { genderize } = require('./gender-helper');
 
 const MAINBOT_URL   = process.env.MAINBOT_URL   || '';
-const BRIDGE_SECRET = process.env.BRIDGE_SECRET || 'geheimer-key';
+const BRIDGE_SECRET = process.env.BRIDGE_SECRET || '';
+if (!BRIDGE_SECRET) {
+    console.error('FATAL: BRIDGE_SECRET env-var nicht gesetzt. Server startet nicht.');
+    process.exit(1);
+}
 const BOT_TOKEN     = process.env.BOT_TOKEN     || '';
 const BOT_USERNAME  = process.env.BOT_USERNAME  || 'Creator_Boostbot';
 const PORT          = process.env.PORT          || 3000;
@@ -22,6 +26,9 @@ const emailLoginTokens = new Map();   // token → { email, uid, exp }
 const emailConfirmTokens = new Map(); // token → { email, uid, exp } (für /einstellungen Email-Bestätigung)
 const accountUnlockTokens = new Map(); // token → { uid, exp } — nach Klick im Mail Settings-Edit freischalten
 const emailRateLimit = new Map();      // email → lastRequestTs (Cooldown gegen Spam)
+const signupIpRateLimit = new Map();   // ip → { ts, n } — gegen Fake-Account-Spam + Email-Enumeration
+const SIGNUP_RATE_LIMIT_WINDOW = 60 * 60 * 1000; // 1 Stunde Fenster
+const SIGNUP_RATE_LIMIT_MAX = 5;       // max 5 Signups pro Stunde pro IP
 const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
 const EMAIL_FROM = process.env.EMAIL_FROM || 'CreatorX <onboarding@resend.dev>';
 const EMAIL_TOKEN_TTL = 60 * 60 * 1000;       // 1 Stunde
@@ -35,6 +42,7 @@ setInterval(() => {
     for (const [t, v] of emailConfirmTokens.entries()) if (v.exp < now) emailConfirmTokens.delete(t);
     for (const [t, v] of accountUnlockTokens.entries()) if (v.exp < now) accountUnlockTokens.delete(t);
     for (const [e, ts] of emailRateLimit.entries()) if (now - ts > EMAIL_RATE_LIMIT * 2) emailRateLimit.delete(e);
+    for (const [ip, v] of signupIpRateLimit.entries()) if (now - v.ts > SIGNUP_RATE_LIMIT_WINDOW) signupIpRateLimit.delete(ip);
 }, 5 * 60 * 1000);
 
 async function sendEmail(to, subject, html) {
@@ -76,15 +84,15 @@ if (sessions.size === 0) {
             for (const [k,v] of Object.entries(raw)) sessions.set(k, v);
             console.log('✅ Sessions (lokal) geladen:', sessions.size);
         }
-    } catch(e) {}
+    } catch(e) { console.error('Sessions load failed:', e.message); }
 }
 
 function saveSessions() {
     const obj = {};
     for (const [k,v] of sessions.entries()) obj[k] = v;
     const data = JSON.stringify(obj);
-    try { fs.writeFileSync(SESSIONS_FILE, data); } catch(e) {}
-    try { fs.writeFileSync(LOCAL_SESSIONS, data); } catch(e) {}
+    try { fs.writeFileSync(SESSIONS_FILE, data); } catch(e) { console.error('Sessions save failed (primary):', e.message); }
+    try { fs.writeFileSync(LOCAL_SESSIONS, data); } catch(e) { console.error('Sessions save failed (local):', e.message); }
 }
 setInterval(saveSessions, 60000);
 
@@ -95,12 +103,16 @@ saveSessions();
 // Web Push
 let webpush;
 try { webpush = require('web-push'); } catch(e) {}
-const VAPID_PUBLIC = 'BF3FxtRYkoHBCgfG0U1o9UIeib81WmArYdKWJZQWMbCwdd2cvivmAB9TNjY3p-XdkGjQux1OZZR-m3iwjBvCyKg';
-const VAPID_PRIVATE = 'ViWUilwaJSHAmfWLyIfCyvJVWnOFirq3Dn1HTGfIaoQ';
+const VAPID_PUBLIC = process.env.VAPID_PUBLIC || '';
+const VAPID_PRIVATE = process.env.VAPID_PRIVATE || '';
+if (!VAPID_PUBLIC || !VAPID_PRIVATE) {
+    console.error('FATAL: VAPID_PUBLIC/VAPID_PRIVATE env-vars nicht gesetzt. Server startet nicht.');
+    process.exit(1);
+}
 const PUSH_SUBS_FILE = DATA_DIR + '/push_subscriptions.json';
 let pushSubs = {};
-try { if (fs.existsSync(PUSH_SUBS_FILE)) pushSubs = JSON.parse(fs.readFileSync(PUSH_SUBS_FILE, 'utf8')); } catch(e) {}
-function savePushSubs() { try { fs.writeFileSync(PUSH_SUBS_FILE, JSON.stringify(pushSubs)); } catch(e) {} }
+try { if (fs.existsSync(PUSH_SUBS_FILE)) pushSubs = JSON.parse(fs.readFileSync(PUSH_SUBS_FILE, 'utf8')); } catch(e) { console.error('Push subs load failed:', e.message); }
+function savePushSubs() { try { fs.writeFileSync(PUSH_SUBS_FILE, JSON.stringify(pushSubs)); } catch(e) { console.error('Push subs save failed:', e.message); } }
 if (webpush) webpush.setVapidDetails('mailto:admin@creatorx.app', VAPID_PUBLIC, VAPID_PRIVATE);
 
 const RING_ITEMS = [
@@ -146,7 +158,7 @@ async function checkProfileCompletion(uid, session) {
         const hasBanner = !!(session?.bannerData || ladeBild(String(uid),'banner'));
         const allDone = hasPic && hasBanner && !!(fu.bio?.trim()) && !!(fu.nische?.trim());
         if (allDone) await postBot('/complete-profile-api', { uid: String(uid) });
-    } catch(e) {}
+    } catch(e) { console.error('checkProfileCompletion failed:', e.message); }
 }
 function getSession(req) { const m=(req.headers.cookie||'').match(/cbsid=([^;]+)/); return m?sessions.get(m[1]):null; }
 function getSid(req) { const m=(req.headers.cookie||'').match(/cbsid=([^;]+)/); return m?m[1]:null; }
@@ -398,10 +410,10 @@ async function postBot(path, body) {
     return result;
 }
 
-// ── ZEIT-CRON ──────────────────────────────────────────────────────────────
-// Vorher hat der Announcer-Bot Sonntag 20:00 das Wochen-Gewinnspiel ausgelöst.
-// Der Announcer-Bot ist abgeschaltet — die App ist jetzt der Trigger.
-// Mainbot kümmert sich weiterhin selbst um Daily-/Wochen-Reset (intern).
+// Sonntag 20:00 (Berlin TZ, schon global gesetzt) triggert Wochen-Gewinnspiel
+// + Mindset-Stories-Pick im Mainbot. Mainbot kümmert sich weiterhin selbst um
+// Daily/Wochen-Reset (intern). einmalig() Pattern verhindert Doppel-Trigger
+// innerhalb einer Minute.
 const _appCronSeen = {};
 async function appCronTick() {
     try {
@@ -421,6 +433,11 @@ async function appCronTick() {
                 console.log('🎰 [Cron] Trigger Wochen-Gewinnspiel → Mainbot');
                 const r = await postBot('/run-wochen-gewinnspiel-api', {});
                 console.log('🎰 [Cron] Mainbot Response:', r ? JSON.stringify(r) : 'null');
+            });
+            einmalig('mindsetPick', async () => {
+                console.log('📖 [Cron] Trigger Mindset-Stories-Pick → Mainbot');
+                const r = await postBot('/run-mindset-pick-api', {});
+                console.log('📖 [Cron] Mainbot Response:', r ? JSON.stringify(r) : 'null');
             });
         }
         // Tageswechsel: alte einmalig-Keys aufräumen, damit der Speicher nicht wächst.
@@ -2919,6 +2936,12 @@ async function handleRequest(req, res) {
     const path = pu.pathname;
     const query = pu.query;
 
+    // ── SECURITY HEADERS (global, per Response) ──
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+
     // ── SERVICE WORKER ──
     // Admin-Fulltour Script — extern + cached (spart pro Page-Load 7.8KB)
     if (path === '/static/admin-fulltour.js') {
@@ -3065,6 +3088,7 @@ self.addEventListener('notificationclick',e=>{
     function redirect(to) { res.writeHead(302,{'Location':to}); res.end(); }
     function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'237'}); res.end(layout(content,session,page,lang)); }
     function json(data, status=200) { res.writeHead(status,{'Content-Type':'application/json'}); res.end(JSON.stringify(data)); }
+    function text(content, status=200) { res.writeHead(status,{'Content-Type':'text/plain; charset=utf-8'}); res.end(String(content)); }
 
     // ── LANDING ──
     if (path === '/' || path === '') {
@@ -3322,16 +3346,6 @@ ${_isPreview ? '<div class="admin-pb">👀 Admin-Vorschau · Login-Page &nbsp;·
       <div style="font-size:12.5px;color:var(--muted);margin-bottom:8px">Noch keinen Account?</div>
       <a href="/signup" style="display:inline-flex;align-items:center;gap:6px;color:var(--gold);font-weight:700;text-decoration:none;font-size:13.5px">→ Jetzt Sign Up</a>
     </div>
-    <div style="text-align:center;margin-top:18px;padding-top:14px;border-top:1px solid var(--border)">
-      <button type="button" onclick="document.getElementById('tg-code-pane').style.display=this.dataset.open==='1'?'none':'block';this.dataset.open=this.dataset.open==='1'?'0':'1';this.textContent=this.dataset.open==='1'?'✕ Code-Login schließen':'🔑 Du hast einen Login-Code aus Telegram?'" data-open="0" style="background:none;border:none;color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;text-decoration:underline">🔑 Du hast einen Login-Code aus Telegram?</button>
-      <div id="tg-code-pane" style="display:none;margin-top:12px">
-        <form method="POST" action="/auth/code-form">
-          <input type="text" name="code" class="in code-in" placeholder="Dein Code aus /mycode" autocomplete="off" autocapitalize="none" spellcheck="false" required value="${(query.code||'').toString().slice(0,40).replace(/[<>"]/g,'')}">
-          <button type="submit" class="btn-p" style="margin-top:8px">Mit Code einloggen →</button>
-        </form>
-        <div class="code-hint" style="margin-top:8px">Tippe <b>/mycode</b> im CreatorX-Bot um deinen Code zu bekommen.</div>
-      </div>
-    </div>
   </div>
 
   <div class="bottom-cta">
@@ -3524,7 +3538,7 @@ document.addEventListener('DOMContentLoaded', function(){
         const validSubUid = u.subUid && botData.users?.[u.subUid] ? String(u.subUid) : null;
         sessions.set(sid, { uid: String(uid), name: u.name, username: u.username||null, theme: 'light', lang: 'de', createdAt: Date.now(), subUid: validSubUid, activeUid: String(uid), loginVia: 'telegram' });
         saveSessions();
-        res.writeHead(302,{'Set-Cookie':'cbsid='+sid+'; HttpOnly; Path=/; Max-Age=157680000','Location':'/feed'});
+        res.writeHead(302,{'Set-Cookie':'cbsid='+sid+'; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=157680000','Location':'/feed'});
         return res.end();
     }
 
@@ -3549,7 +3563,7 @@ document.addEventListener('DOMContentLoaded', function(){
         const validSubUid = u.subUid && botData.users?.[u.subUid] ? String(u.subUid) : null;
         sessions.set(sid, { uid: String(uid), name: u.name, username: u.username||null, theme: 'light', lang: 'de', createdAt: Date.now(), subUid: validSubUid, activeUid: String(uid), loginVia: 'telegram' });
         saveSessions();
-        res.writeHead(302,{'Set-Cookie':`cbsid=${sid}; HttpOnly; Path=/; Max-Age=157680000`,'Location':'/feed'});
+        res.writeHead(302,{'Set-Cookie':`cbsid=${sid}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=157680000`,'Location':'/feed'});
         return res.end();
     }
 
@@ -3660,7 +3674,7 @@ document.addEventListener('DOMContentLoaded', function(){
         else if (!u.appCodeChosenAt) redirect = '/onboarding-code?first=1';
         else if (!u.appBriefingSeenV2) redirect = '/feed?tour=1';
         else redirect = '/feed';
-        res.writeHead(200, {'Set-Cookie':`cbsid=${sid}; HttpOnly; Path=/; Max-Age=157680000`,'Content-Type':'application/json'});
+        res.writeHead(200, {'Set-Cookie':`cbsid=${sid}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=157680000`,'Content-Type':'application/json'});
         return res.end(JSON.stringify({ok:true, redirect, didSetupPassword}));
     }
     // Passwort setzen / ändern (eingeloggter User).
@@ -3914,6 +3928,14 @@ function submitSignup(ev){
         if (password.length < 6 || password.length > 200) return json({ok:false, error:'Passwort muss 6–200 Zeichen lang sein'}, 400);
         const _ip = String(req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '').split(',')[0].trim().slice(0, 64);
         const _ua = String(req.headers['user-agent'] || '').slice(0, 200);
+        // Rate-Limit: 5 Signup-Versuche pro Stunde pro IP — gegen Fake-Account-Spam + Email-Enumeration via 409.
+        const _sl = signupIpRateLimit.get(_ip) || { ts: 0, n: 0 };
+        if (Date.now() - _sl.ts > SIGNUP_RATE_LIMIT_WINDOW) { _sl.ts = Date.now(); _sl.n = 0; }
+        if (_sl.n >= SIGNUP_RATE_LIMIT_MAX) {
+            return json({ok:false, error:'Zu viele Signup-Versuche — bitte später nochmal versuchen'}, 429);
+        }
+        _sl.n += 1;
+        signupIpRateLimit.set(_ip, _sl);
         // Existiert die Email schon?
         const _bd = await fetchBot('/data');
         const _exists = Object.entries(_bd?.users || {}).find(([, u]) => String(u.email||'').toLowerCase() === email);
@@ -3936,7 +3958,7 @@ function submitSignup(ev){
         sessions.set(sid, { uid: String(created.uid), name: u.name, username: u.username||null, theme: 'light', lang: 'de', createdAt: Date.now(), subUid: null, activeUid: String(created.uid), loginVia: 'email' });
         saveSessions();
         // → Onboarding-Flow (Insta first)
-        res.writeHead(200, {'Set-Cookie':`cbsid=${sid}; HttpOnly; Path=/; Max-Age=157680000`,'Content-Type':'application/json'});
+        res.writeHead(200, {'Set-Cookie':`cbsid=${sid}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=157680000`,'Content-Type':'application/json'});
         return res.end(JSON.stringify({ok:true, redirect:'/onboarding-instagram?first=1'}));
     }
     if (path === '/auth/email-login' && req.method === 'GET') {
@@ -3980,7 +4002,7 @@ function submitSignup(ev){
         else if (!_hasCode) target = '/onboarding-code?first=1';
         else if (!u.password_hash) target = '/set-password?first=1';
         else if (!u.appBriefingSeenV2) target = '/feed?tour=1';
-        res.writeHead(302,{'Set-Cookie':`cbsid=${sid}; HttpOnly; Path=/; Max-Age=157680000`,'Location':target});
+        res.writeHead(302,{'Set-Cookie':`cbsid=${sid}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=157680000`,'Location':target});
         return res.end();
     }
     // ── ONBOARDING: User wählt eigenen App-Code (statt auto-generated) ──
@@ -4447,7 +4469,7 @@ function submitPw(ev){
                     sessions.set(sid, { uid: String(uid), name: u.name, username: u.username||null, theme: 'light', lang: 'de', createdAt: Date.now(), subUid: validSubUid, activeUid: String(uid), loginVia: 'telegram' });
                     saveSessions();
                 }
-                res.writeHead(302,{'Set-Cookie':`cbsid=${sid}; HttpOnly; Path=/; Max-Age=157680000`,'Location':'/feed'});
+                res.writeHead(302,{'Set-Cookie':`cbsid=${sid}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=157680000`,'Location':'/feed'});
                 return res.end();
             }
         }
@@ -4486,7 +4508,7 @@ function submitPw(ev){
             sessions.set(sid, { uid: String(uid), name: u.name, username: u.username||null, theme: 'light', lang: 'de', createdAt: Date.now(), subUid: validSubUid, activeUid: String(uid), loginVia: 'telegram' });
             saveSessions();
         }
-        res.writeHead(302,{'Set-Cookie':`cbsid=${sid}; HttpOnly; Path=/; Max-Age=157680000`,'Location':safeRedirect});
+        res.writeHead(302,{'Set-Cookie':`cbsid=${sid}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=157680000`,'Location':safeRedirect});
         return res.end();
     }
 
@@ -4494,7 +4516,7 @@ function submitPw(ev){
     if (path === '/logout') {
         const sid = getSid(req);
         if(sid) { sessions.delete(sid); saveSessions(); }
-        res.writeHead(302,{'Set-Cookie':'cbsid=; HttpOnly; Path=/; Max-Age=0','Location':'/'});
+        res.writeHead(302,{'Set-Cookie':'cbsid=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0','Location':'/'});
         return res.end();
     }
 
@@ -5037,7 +5059,7 @@ function submitPw(ev){
             if (imageData.length > 3000000) return json({ok:false, error:'Max 2MB'},400);
             session.profilePicData = imageData;
             saveSessions();
-            try { fs.writeFileSync(DATA_DIR + '/bild_' + getMyUid(session) + '_profilepic.txt', imageData); } catch(e) {}
+            try { await fs.promises.writeFile(DATA_DIR + '/bild_' + getMyUid(session) + '_profilepic.txt', imageData); } catch(e) { console.error('profilepic write failed:', e.message); }
             checkProfileCompletion(getMyUid(session), session);
             return json({ok:true});
         } catch(e) { return json({ok:false, error:e.message},500); }
@@ -5064,7 +5086,7 @@ function submitPw(ev){
             if (imageData.length > 3000000) return json({ok:false, error:'Max 2MB'},400);
             session.bannerData = imageData;
             saveSessions();
-            try { fs.writeFileSync(DATA_DIR + '/bild_' + getMyUid(session) + '_banner.txt', imageData); } catch(e) {}
+            try { await fs.promises.writeFile(DATA_DIR + '/bild_' + getMyUid(session) + '_banner.txt', imageData); } catch(e) { console.error('banner write failed:', e.message); }
             checkProfileCompletion(getMyUid(session), session);
             return json({ok:true});
         } catch(e) { return json({ok:false, error:e.message},500); }
@@ -5084,11 +5106,11 @@ function submitPw(ev){
             if (imageData) {
                 if (!imageData.startsWith('data:image/')) return json({error:'Kein Bild'}, 400);
                 if (imageData.length > 5000000) return json({error:'Max 4MB'}, 400);
-                try { fs.writeFileSync(DATA_DIR + '/bild_' + getMyUid(session) + '_proj_' + projectId + '.txt', imageData); } catch(e) {}
+                try { await fs.promises.writeFile(DATA_DIR + '/bild_' + getMyUid(session) + '_proj_' + projectId + '.txt', imageData); } catch(e) { console.error('project image write failed:', e.message); }
             }
             if (docData && docName) {
                 if (docData.length > 15000000) return json({error:'Max 10MB für Dokument'}, 400);
-                try { fs.writeFileSync(DATA_DIR + '/doc_' + getMyUid(session) + '_proj_' + projectId + '.txt', docData); } catch(e) {}
+                try { await fs.promises.writeFile(DATA_DIR + '/doc_' + getMyUid(session) + '_proj_' + projectId + '.txt', docData); } catch(e) { console.error('project doc write failed:', e.message); }
             }
             const result = await postBot('/add-project-api', { uid: getMyUid(session), projectId, title: title.trim(), description: (description||'').trim(), link: (link||'').trim(), docName: docName||'' });
             if (!result?.ok) return json({error: result?.error || 'Fehler'}, 400);
@@ -5106,11 +5128,11 @@ function submitPw(ev){
             if (imageData) {
                 if (!imageData.startsWith('data:image/')) return json({error:'Kein Bild'}, 400);
                 if (imageData.length > 5000000) return json({error:'Max 4MB'}, 400);
-                try { fs.writeFileSync(DATA_DIR + '/bild_' + getMyUid(session) + '_proj_' + projectId + '.txt', imageData); } catch(e) {}
+                try { await fs.promises.writeFile(DATA_DIR + '/bild_' + getMyUid(session) + '_proj_' + projectId + '.txt', imageData); } catch(e) { console.error('project image write failed:', e.message); }
             }
             if (docData && docName) {
                 if (docData.length > 15000000) return json({error:'Max 10MB für Dokument'}, 400);
-                try { fs.writeFileSync(DATA_DIR + '/doc_' + getMyUid(session) + '_proj_' + projectId + '.txt', docData); } catch(e) {}
+                try { await fs.promises.writeFile(DATA_DIR + '/doc_' + getMyUid(session) + '_proj_' + projectId + '.txt', docData); } catch(e) { console.error('project doc write failed:', e.message); }
             }
             const result = await postBot('/update-project-api', { uid: getMyUid(session), projectId, title: title.trim(), description: (description||'').trim(), link: (link||'').trim(), docName: docName||'' });
             if (!result?.ok) return json({error: result?.error || 'Fehler'}, 400);
@@ -5134,6 +5156,7 @@ function submitPw(ev){
     }
 
     if (path.startsWith('/api/download-project-doc/') && req.method === 'GET') {
+        if (!session) return text('Nicht gefunden', 404);
         const parts = path.replace('/api/download-project-doc/','').split('/');
         const docUid = parts[0], docProjId = parts[1];
         if (!docUid || !docProjId) return text('Nicht gefunden', 404);
@@ -5191,6 +5214,7 @@ function submitPw(ev){
 
     // ── SEARCH API ──
     if (path === '/api/search') {
+        if (!session) return json({users:[], links:[]}, 401);
         const q = (query.q||'').toLowerCase().trim();
         if (!q) return json({users:[], links:[]});
         const botData = await fetchBot('/data');
@@ -5223,6 +5247,7 @@ function submitPw(ev){
 
     // ── LIKES UPDATE API ──
     if (path === '/api/likes-update') {
+        if (!session) return json({links:[]}, 401);
         const botData = await fetchBot('/data');
         if (!botData) return json({links:[]});
         const today = new Date().toDateString();
@@ -6416,7 +6441,8 @@ p{line-height:1.65;color:var(--muted)}
     if (path === '/api/newsletter-add' && req.method === 'POST') {
         if (!session) return json({error:'Nicht eingeloggt'},401);
         const chunks=[]; for await(const c of req) chunks.push(c);
-        const { title, content } = JSON.parse(Buffer.concat(chunks).toString());
+        let title, content;
+        try { ({ title, content } = JSON.parse(Buffer.concat(chunks).toString())); } catch(e) { return json({error:'Ungültiges JSON'},400); }
         if (!content?.trim()) return json({error:'Inhalt fehlt'},400);
         const result = await postBot('/add-newsletter-api', { uid: myUid, title: (title||'').trim(), content: content.trim() });
         return json({ok:!!result?.ok, error: result?.error});
@@ -6425,7 +6451,8 @@ p{line-height:1.65;color:var(--muted)}
     if (path === '/api/newsletter-edit' && req.method === 'POST') {
         if (!session) return json({error:'Nicht eingeloggt'},401);
         const chunks=[]; for await(const c of req) chunks.push(c);
-        const { id, title, content } = JSON.parse(Buffer.concat(chunks).toString());
+        let id, title, content;
+        try { ({ id, title, content } = JSON.parse(Buffer.concat(chunks).toString())); } catch(e) { return json({error:'Ungültiges JSON'},400); }
         if (!id || !content?.trim()) return json({error:'Fehlend'},400);
         const result = await postBot('/edit-newsletter-api', { uid: myUid, id, title: (title||'').trim(), content: content.trim() });
         return json({ok:!!result?.ok, error: result?.error});
@@ -6436,6 +6463,41 @@ p{line-height:1.65;color:var(--muted)}
         const body = await parseBody(req);
         const result = await postBot('/delete-newsletter-api', { uid: myUid, id: body.id });
         return json({ok:!!result?.ok});
+    }
+
+    // ── MINDSET STORIES API ──
+    if (path === '/api/mindset-state' && req.method === 'GET') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        const result = await fetchBot('/mindset-state-api?uid=' + encodeURIComponent(myUid));
+        return json(result || {ok:false, error:'Bot offline'});
+    }
+    if (path === '/api/mindset-answer' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        const body = await parseBody(req);
+        const result = await postBot('/mindset-set-answer-api', { uid: myUid, answer: body.answer });
+        return json(result || {ok:false, error:'Bot offline'});
+    }
+    if (path === '/api/mindset-admin/pick' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        const body = await parseBody(req);
+        const result = await postBot('/mindset-admin-pick-api', { callerUid: myUid, targetUid: body.targetUid });
+        return json(result || {ok:false, error:'Bot offline'});
+    }
+    if (path === '/api/mindset-admin/skip' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        const result = await postBot('/mindset-admin-skip-api', { callerUid: myUid });
+        return json(result || {ok:false, error:'Bot offline'});
+    }
+    if (path === '/api/mindset-admin/blast' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        const result = await postBot('/mindset-admin-blast-api', { callerUid: myUid });
+        return json(result || {ok:false, error:'Bot offline'});
+    }
+    if (path === '/api/mindset-admin/restore' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        const body = await parseBody(req);
+        const result = await postBot('/mindset-admin-restore-api', { callerUid: myUid, targetUid: body.targetUid });
+        return json(result || {ok:false, error:'Bot offline'});
     }
 
     if (path === '/api/comment' && req.method === 'POST') {
@@ -8665,7 +8727,7 @@ async function customizeThread(tid, currentName, currentEmoji){
   m.id='thr-cust-modal';
   m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(6px);z-index:9999;display:flex;align-items:flex-end;justify-content:center';
   const palette=['💬','💡','❓','🗣️','📣','📈','📋','🛡️','📤','🎨','📢','🛍️','🏆','📸','🎥','🎵','🗳️','👋','🌟','🔥','⚡','🎯','🚀','📝','🎭','🧠','💎','🌈','🎮','🛠️','🎬','📱','📚','⭐','✨','👀','💼','🪄','📊','🎉'];
-  m.innerHTML='<div style="background:var(--bg2);border-radius:24px 24px 0 0;padding:22px 20px 30px;width:100%;max-width:480px;border-top:3px solid #0088cc"><div style="width:36px;height:4px;background:#666;border-radius:4px;margin:0 auto 18px"></div><div style="font-size:16px;font-weight:800;text-align:center;margin-bottom:6px">Thread anpassen</div><div style="font-size:12px;color:var(--muted);text-align:center;margin-bottom:18px">Icon + Name wie auf Telegram</div><label style="font-size:12px;color:var(--muted);font-weight:600;display:block;margin-bottom:6px">Name</label><input type="text" id="thr-cust-name" value="'+(currentName||'').replace(/"/g,'&quot;')+'" style="width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:12px;padding:11px 14px;font-size:14px;outline:none;margin-bottom:14px"><label style="font-size:12px;color:var(--muted);font-weight:600;display:block;margin-bottom:6px">Icon — getipptes Emoji oder unten auswählen</label><input type="text" id="thr-cust-emoji" value="'+(currentEmoji||'')+'" maxlength="6" style="width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:12px;padding:11px 14px;font-size:18px;outline:none;margin-bottom:14px;text-align:center"><div style="display:grid;grid-template-columns:repeat(8,1fr);gap:6px;max-height:180px;overflow-y:auto;background:var(--bg3);border-radius:12px;padding:10px;margin-bottom:18px">'+palette.map(e=>'<button type="button" onclick="document.getElementById(\'thr-cust-emoji\').value=\''+e+'\'" style="background:var(--bg2);border:1px solid var(--border2);border-radius:10px;font-size:22px;padding:8px;cursor:pointer">'+e+'</button>').join('')+'</div><div style="display:flex;gap:10px"><button onclick="document.getElementById(\'thr-cust-modal\').remove()" style="flex:1;padding:13px;border-radius:12px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:14px;font-weight:600;cursor:pointer">Abbrechen</button><button onclick="saveThreadCustom(\''+tid+'\')" style="flex:1;padding:13px;border-radius:12px;border:none;background:linear-gradient(135deg,#0088cc,#00c6ff);color:#fff;font-size:14px;font-weight:800;cursor:pointer">Speichern</button></div></div>';
+  m.innerHTML='<div style="background:var(--bg2);border-radius:24px 24px 0 0;padding:22px 20px 30px;width:100%;max-width:480px;border-top:3px solid #0088cc"><div style="width:36px;height:4px;background:#666;border-radius:4px;margin:0 auto 18px"></div><div style="font-size:16px;font-weight:800;text-align:center;margin-bottom:6px">Thread anpassen</div><div style="font-size:12px;color:var(--muted);text-align:center;margin-bottom:18px">Icon + Name für diesen Thread</div><label style="font-size:12px;color:var(--muted);font-weight:600;display:block;margin-bottom:6px">Name</label><input type="text" id="thr-cust-name" value="'+(currentName||'').replace(/"/g,'&quot;')+'" style="width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:12px;padding:11px 14px;font-size:14px;outline:none;margin-bottom:14px"><label style="font-size:12px;color:var(--muted);font-weight:600;display:block;margin-bottom:6px">Icon — getipptes Emoji oder unten auswählen</label><input type="text" id="thr-cust-emoji" value="'+(currentEmoji||'')+'" maxlength="6" style="width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:12px;padding:11px 14px;font-size:18px;outline:none;margin-bottom:14px;text-align:center"><div style="display:grid;grid-template-columns:repeat(8,1fr);gap:6px;max-height:180px;overflow-y:auto;background:var(--bg3);border-radius:12px;padding:10px;margin-bottom:18px">'+palette.map(e=>'<button type="button" onclick="document.getElementById(\'thr-cust-emoji\').value=\''+e+'\'" style="background:var(--bg2);border:1px solid var(--border2);border-radius:10px;font-size:22px;padding:8px;cursor:pointer">'+e+'</button>').join('')+'</div><div style="display:flex;gap:10px"><button onclick="document.getElementById(\'thr-cust-modal\').remove()" style="flex:1;padding:13px;border-radius:12px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:14px;font-weight:600;cursor:pointer">Abbrechen</button><button onclick="saveThreadCustom(\''+tid+'\')" style="flex:1;padding:13px;border-radius:12px;border:none;background:linear-gradient(135deg,#0088cc,#00c6ff);color:#fff;font-size:14px;font-weight:800;cursor:pointer">Speichern</button></div></div>';
   document.body.appendChild(m);
 }
 async function saveThreadCustom(tid){
@@ -9195,6 +9257,95 @@ setTimeout(()=>document.getElementById('search-input').focus(),100);
     }
 
     // ── EXPLORE ──
+    // ── ADMIN DEBUG: Superlinks dieser Woche + wer wann geliked hat ──
+    if (path === '/admin/superlinks-debug') {
+        if (!adminIds.includes(Number(myUid)) && !String(d.users?.[myUid]?.role||'').includes('Admin')) {
+            return text('Nur Admins', 403);
+        }
+        // Berlin-Wochenkey: Montag der aktuellen Woche
+        const now = new Date();
+        const day = now.getDay() || 7;
+        const monday = new Date(now);
+        monday.setDate(now.getDate() - (day - 1));
+        const weekKey = monday.getFullYear() + '-' + String(monday.getMonth()+1).padStart(2,'0') + '-' + String(monday.getDate()).padStart(2,'0');
+
+        const weekSls = Object.values(d.superlinks||{}).filter(s => s && s.week === weekKey);
+        const posters = [...new Set(weekSls.map(s => String(s.uid)))];
+
+        // Like-Timestamps aus d.notifications[posterUid] extrahieren (icon ❤️ + actorUid match)
+        const likeTsByKey = {}; // `${posterUid}_${likerUid}` → ts (newest)
+        for (const posterUid of posters) {
+            const notifs = d.notifications?.[posterUid] || [];
+            for (const n of notifs) {
+                if (n.icon !== '❤️' || !n.actorUid) continue;
+                const key = posterUid + '_' + String(n.actorUid);
+                if (!likeTsByKey[key] || n.timestamp > likeTsByKey[key]) likeTsByKey[key] = n.timestamp;
+            }
+        }
+
+        // Last like overall
+        let lastLikeTs = 0, lastLikeBy = '', lastLikeFor = '';
+        for (const [key, ts] of Object.entries(likeTsByKey)) {
+            if (ts > lastLikeTs) {
+                lastLikeTs = ts;
+                const [pUid, lUid] = key.split('_');
+                lastLikeBy = d.users?.[lUid]?.spitzname || d.users?.[lUid]?.name || lUid;
+                lastLikeFor = d.users?.[pUid]?.spitzname || d.users?.[pUid]?.name || pUid;
+            }
+        }
+
+        const fmtTs = ts => ts ? new Date(ts).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '–';
+        const userName = uid => htmlEsc(d.users?.[uid]?.spitzname || d.users?.[uid]?.name || ('UID '+uid));
+
+        const rows = weekSls.sort((a,b)=>(b.timestamp||0)-(a.timestamp||0)).map(s => {
+            const pUid = String(s.uid);
+            const likes = Array.isArray(s.likes) ? s.likes.map(String) : [];
+            const expectedLikers = posters.filter(u => u !== pUid);
+            const missingLikers = expectedLikers.filter(u => !likes.includes(u));
+            const likeRows = likes.map(lUid => {
+                const ts = likeTsByKey[pUid + '_' + lUid];
+                return `<tr><td style="padding:5px 8px">${userName(lUid)}</td><td style="padding:5px 8px;color:var(--muted);font-size:11px">${fmtTs(ts)}</td></tr>`;
+            }).join('') || '<tr><td colspan="2" style="padding:8px;color:var(--muted);font-style:italic">Noch keine Likes</td></tr>';
+            const missingRows = missingLikers.map(lUid => `<tr><td style="padding:5px 8px;color:#ef4444">${userName(lUid)}</td></tr>`).join('') || '<tr><td style="padding:8px;color:var(--muted);font-style:italic">Alle haben geliked ✓</td></tr>';
+            return `<div style="background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:16px;margin-bottom:14px">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+    <div>
+      <div style="font-size:14px;font-weight:800">${userName(pUid)}</div>
+      <div style="font-size:11px;color:var(--muted)">Gepostet: ${fmtTs(s.timestamp)} · ID: ${htmlEsc(String(s.id||''))}</div>
+    </div>
+    <div style="font-size:12px;color:var(--muted)">${likes.length}/${expectedLikers.length} Likes</div>
+  </div>
+  <div style="font-size:12px;color:var(--text);background:var(--bg4);padding:8px 10px;border-radius:8px;margin-bottom:10px;word-break:break-all">${htmlEsc(String(s.url||''))}</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+    <div>
+      <div style="font-size:11px;color:#22c55e;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">✓ Geliked (${likes.length})</div>
+      <table style="width:100%;font-size:12px;border-collapse:collapse">${likeRows}</table>
+    </div>
+    <div>
+      <div style="font-size:11px;color:#ef4444;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">✗ Fehlt (${missingLikers.length})</div>
+      <table style="width:100%;font-size:12px;border-collapse:collapse">${missingRows}</table>
+    </div>
+  </div>
+</div>`;
+        }).join('');
+
+        const summary = `<div style="background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;padding:18px;border-radius:16px;margin-bottom:18px">
+  <div style="font-size:11px;letter-spacing:2px;font-weight:700;opacity:.85;text-transform:uppercase">Letzter Like</div>
+  <div style="font-size:18px;font-weight:800;margin-top:6px">${lastLikeTs ? fmtTs(lastLikeTs) : 'Noch keine Likes diese Woche'}</div>
+  ${lastLikeTs ? `<div style="font-size:12.5px;margin-top:6px;opacity:.95">${htmlEsc(lastLikeBy)} → ${htmlEsc(lastLikeFor)}'s Superlink</div>` : ''}
+  <div style="font-size:11px;margin-top:10px;opacity:.85">Aktuelle Woche: ${weekKey} · ${weekSls.length} Superlinks · ${posters.length} Poster</div>
+</div>`;
+
+        return html(`<div style="padding:18px 16px;max-width:900px;margin:0 auto">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
+    <a href="/explore?tab=newsletter" style="color:var(--muted);text-decoration:none;font-size:14px">‹ zurück</a>
+    <div style="font-size:20px;font-weight:800;font-family:var(--font-display)">🔍 Superlinks-Debug</div>
+  </div>
+  ${summary}
+  ${rows || '<div style="padding:32px;text-align:center;color:var(--muted)">Keine Superlinks diese Woche</div>'}
+</div>`, 'explore');
+    }
+
     if (path === '/explore') {
         const tab = query.tab || 'allgemein';
         const sorted = Object.entries(d.users||{})
@@ -9755,6 +9906,109 @@ window.sugDismiss = function(btn){
             newsletter: (()=>{
                 const isAdminNL = adminIds.includes(Number(myUid));
                 const entries = (d.newsletter||[]).slice().reverse();
+
+                // ── MINDSET STORIES CARD ──
+                const ms = d.mindsetStories || { weeklyState:{}, waitlist:{}, rejected:{}, done:{} };
+                const myInsta = d.users?.[myUid]?.instagram;
+                const myMsStatus = ms.weeklyState?.pickedUid === myUid ? 'picked' :
+                    ms.done?.[myUid] ? 'done' :
+                    ms.waitlist?.[myUid] ? 'yes' :
+                    ms.rejected?.[myUid] ? 'no' : 'none';
+                const msCounts = { waitlist: Object.keys(ms.waitlist||{}).length, rejected: Object.keys(ms.rejected||{}).length, done: Object.keys(ms.done||{}).length };
+                const _berDow = new Date().getDay();
+                const _berH = new Date().getHours();
+                const _berM = new Date().getMinutes();
+                const msLocked = _berDow === 0 || (_berDow === 6 && _berH >= 23 && _berM >= 59);
+                const msPickedName = ms.weeklyState?.pickedUid ? htmlEsc(d.users?.[ms.weeklyState.pickedUid]?.spitzname || d.users?.[ms.weeklyState.pickedUid]?.name || '?') : '';
+
+                let mindsetUserCard = '';
+                if (myMsStatus === 'picked') {
+                    mindsetUserCard = `<div style="margin:0 16px 16px;padding:18px;background:linear-gradient(135deg,#f59e0b,#ec4899);border-radius:18px;color:#fff;box-shadow:0 6px 22px rgba(245,158,11,0.45)">
+  <div style="font-size:11px;font-weight:700;letter-spacing:1.5px;opacity:.85;text-transform:uppercase">🎉 Diese Woche dran</div>
+  <div style="font-size:18px;font-weight:800;margin-top:6px;font-family:var(--font-display)">DU bist gepickt!</div>
+  <div style="font-size:13px;line-height:1.5;margin-top:8px;opacity:.95">Du erscheinst Sonntag/Montag auf <b>@mindset.stories_</b>. Check deine DM — ich brauche ein paar Infos von dir!</div>
+</div>`;
+                } else if (myMsStatus === 'done') {
+                    mindsetUserCard = `<div style="margin:0 16px 16px;padding:16px;background:var(--bg3);border:1px solid var(--border2);border-radius:16px">
+  <div style="font-size:11px;font-weight:700;letter-spacing:1.5px;color:#22c55e;text-transform:uppercase">✅ Erledigt</div>
+  <div style="font-size:15px;font-weight:700;margin-top:6px">Du wurdest vorgestellt</div>
+  <div style="font-size:12.5px;color:var(--muted);margin-top:6px;line-height:1.5">Danke fürs Mitmachen 🙏 — Schau dir den Post an: <a href="https://instagram.com/mindset.stories_" target="_blank" style="color:#4dabf7">@mindset.stories_</a></div>
+</div>`;
+                } else if (!myInsta) {
+                    mindsetUserCard = `<div style="margin:0 16px 16px;padding:16px;background:var(--bg3);border:1px solid var(--border2);border-radius:16px">
+  <div style="font-size:11px;font-weight:700;letter-spacing:1.5px;color:#f59e0b;text-transform:uppercase">📖 Mindset Stories</div>
+  <div style="font-size:14px;font-weight:700;margin-top:6px">Setz erst deinen Insta-Username</div>
+  <div style="font-size:12.5px;color:var(--muted);margin-top:6px;line-height:1.5">Jede Woche stelle ich 1 User auf <b>@mindset.stories_</b> vor. Trag deinen Insta-Username in den <a href="/einstellungen" style="color:#4dabf7">Einstellungen</a> ein, um mitzumachen.</div>
+</div>`;
+                } else {
+                    const headerLabel = myMsStatus === 'yes' ? '✅ Du bist auf der Liste' : myMsStatus === 'no' ? '❌ Du bist nicht dabei' : '📖 Mindset Stories';
+                    const headerColor = myMsStatus === 'yes' ? '#22c55e' : myMsStatus === 'no' ? '#94a3b8' : '#a78bfa';
+                    const bodyText = myMsStatus === 'none'
+                        ? 'Jede Woche stelle ich <b>1 User</b> in meinen Mindset Stories auf <b>@mindset.stories_</b> vor. Lust dabei zu sein? Trag dich ein, ich pick zufällig.'
+                        : myMsStatus === 'yes'
+                        ? 'Du stehst auf der Warteliste. Sonntag 20:00 wird zufällig gepickt — Daumen drücken!'
+                        : 'Du hast Nein gesagt. Kannst du jederzeit ändern (bis Samstag 23:59).';
+                    const buttons = msLocked
+                        ? '<div style="font-size:11.5px;color:var(--muted);margin-top:12px;font-style:italic">🔒 Antworten gefroren bis Pick am Sonntag 20:00</div>'
+                        : myMsStatus === 'yes'
+                        ? '<div style="display:flex;gap:8px;margin-top:12px"><button onclick="msSet(\'no\')" style="flex:1;padding:11px;border-radius:12px;border:1px solid var(--border);background:var(--bg4);color:var(--text);font-size:13px;font-weight:700;cursor:pointer">❌ Doch nicht</button></div>'
+                        : myMsStatus === 'no'
+                        ? '<div style="display:flex;gap:8px;margin-top:12px"><button onclick="msSet(\'yes\')" style="flex:1;padding:11px;border-radius:12px;border:none;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;font-size:13px;font-weight:700;cursor:pointer">✅ Doch dabei</button></div>'
+                        : '<div style="display:flex;gap:8px;margin-top:12px"><button onclick="msSet(\'yes\')" style="flex:1;padding:12px;border-radius:12px;border:none;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;font-size:14px;font-weight:800;cursor:pointer">✅ Ja, ich will</button><button onclick="msSet(\'no\')" style="flex:1;padding:12px;border-radius:12px;border:1px solid var(--border);background:var(--bg4);color:var(--text);font-size:14px;font-weight:700;cursor:pointer">❌ Nein, danke</button></div>';
+                    mindsetUserCard = `<div style="margin:0 16px 16px;padding:18px;background:var(--bg3);border:1px solid var(--border2);border-radius:16px">
+  <div style="font-size:11px;font-weight:700;letter-spacing:1.5px;color:${headerColor};text-transform:uppercase">${headerLabel}</div>
+  <div style="font-size:15px;font-weight:800;margin-top:6px;font-family:var(--font-display)">📖 Mindset Stories</div>
+  <div style="font-size:13px;line-height:1.6;color:var(--text);margin-top:8px">${bodyText}</div>
+  <div style="font-size:11.5px;color:var(--muted);margin-top:10px">${msCounts.waitlist} auf Liste · ${msCounts.done} bereits vorgestellt</div>
+  ${buttons}
+  <div id="ms-result" style="margin-top:8px;font-size:12px;text-align:center"></div>
+</div>`;
+                }
+
+                // Admin-Sicht
+                let mindsetAdminCard = '';
+                if (isAdminNL) {
+                    const waitlistArr = Object.entries(ms.waitlist||{}).sort((a,b)=>(a[1].joinedAt||0)-(b[1].joinedAt||0));
+                    const doneArr = Object.entries(ms.done||{}).sort((a,b)=>(b[1].featuredAt||0)-(a[1].featuredAt||0));
+                    const waitlistHtml = waitlistArr.length
+                        ? waitlistArr.map(([uid,v],i)=>{
+                            const u = d.users?.[uid] || {};
+                            const name = htmlEsc(u.spitzname || u.name || '?');
+                            const insta = u.instagram ? '@'+htmlEsc(u.instagram) : '<span style="color:#ef4444">kein Insta</span>';
+                            return `<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg4);border-radius:10px;margin-bottom:6px">
+  <div style="font-size:11px;color:var(--muted);width:24px">#${i+1}</div>
+  <div style="flex:1;font-size:13px"><b>${name}</b> · <span style="color:#4dabf7">${insta}</span></div>
+  <button onclick="msAdminPick('${uid}','${name}')" style="background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;border:none;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer">Picken</button>
+</div>`;
+                        }).join('')
+                        : '<div style="padding:14px;text-align:center;color:var(--muted);font-size:12.5px">Warteliste leer</div>';
+                    const doneHtml = doneArr.length
+                        ? doneArr.slice(0,20).map(([uid,v])=>`<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--bg4);border-radius:10px;margin-bottom:5px;font-size:12px">
+  <div style="flex:1"><b>${htmlEsc(v.name||'?')}</b> · <span style="color:var(--muted);font-size:11px">KW ${(v.week||'').slice(5,10)}</span></div>
+  <button onclick="msAdminRestore('${uid}','${htmlEsc(v.name||'?')}')" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:3px 8px;font-size:10.5px;cursor:pointer">↩ Zurück</button>
+</div>`).join('')
+                        : '<div style="padding:14px;text-align:center;color:var(--muted);font-size:12.5px">Noch keine vorgestellten User</div>';
+                    const currentPickHtml = ms.weeklyState?.pickedUid
+                        ? `<div style="padding:12px;background:linear-gradient(135deg,rgba(245,158,11,0.15),rgba(236,72,153,0.1));border:1px solid rgba(245,158,11,0.3);border-radius:12px;margin-bottom:10px"><div style="font-size:11px;color:#f59e0b;font-weight:700;letter-spacing:1px;text-transform:uppercase">⭐ Diese Woche</div><div style="font-size:14px;font-weight:800;margin-top:4px">${msPickedName}</div></div>`
+                        : ms.weeklyState?.skipped
+                        ? '<div style="padding:10px;background:var(--bg4);border-radius:10px;margin-bottom:10px;font-size:12.5px;color:var(--muted);text-align:center">Diese Woche übersprungen</div>'
+                        : '<div style="padding:10px;background:var(--bg4);border-radius:10px;margin-bottom:10px;font-size:12.5px;color:var(--muted);text-align:center">Noch nicht gepickt (Sonntag 20:00)</div>';
+                    mindsetAdminCard = `<div style="margin:0 16px 16px;padding:18px;background:var(--bg3);border:1px solid var(--border2);border-radius:16px">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+    <div style="font-size:15px;font-weight:800;font-family:var(--font-display)">📊 Admin · Mindset Stories</div>
+  </div>
+  ${currentPickHtml}
+  <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+    <button onclick="msAdminBlast()" style="flex:1;min-width:140px;padding:10px;border-radius:10px;border:none;background:linear-gradient(135deg,#4dabf7,#1d6fa5);color:#fff;font-size:12.5px;font-weight:700;cursor:pointer">📨 Initial-Blast</button>
+    <button onclick="msAdminSkip()" style="flex:1;min-width:120px;padding:10px;border-radius:10px;border:1px solid var(--border);background:var(--bg4);color:var(--text);font-size:12.5px;font-weight:700;cursor:pointer">⏭ Woche skippen</button>
+  </div>
+  <div style="font-size:11px;font-weight:700;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-bottom:8px">📋 Warteliste (${msCounts.waitlist})</div>
+  <div style="max-height:280px;overflow-y:auto;margin-bottom:14px">${waitlistHtml}</div>
+  <div style="font-size:11px;font-weight:700;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-bottom:8px">✅ Erledigt (${msCounts.done})</div>
+  <div style="max-height:200px;overflow-y:auto">${doneHtml}</div>
+  <div id="ms-admin-result" style="margin-top:10px;font-size:12px;text-align:center;color:var(--muted)"></div>
+</div>`;
+                }
                 const entriesHtml = entries.length
                     ? entries.map(e=>`
 <div class="nl-entry" data-id="${htmlEsc(String(e.id||''))}" style="padding:16px;border:1px solid var(--border2);border-radius:14px;background:var(--bg3);margin:0 16px 12px">
@@ -9785,6 +10039,8 @@ window.sugDismiss = function(btn){
   <div style="padding:0 16px 12px;display:flex;align-items:center;justify-content:space-between">
     <div style="font-size:18px;font-weight:800;font-family:var(--font-display)">📩 Newsletter</div>
   </div>
+  ${mindsetUserCard}
+  ${mindsetAdminCard}
   <a href="/system-info" style="display:flex;align-items:center;gap:12px;margin:0 16px 12px;padding:16px 18px;background:linear-gradient(135deg,#0ea5e9,#4dabf7,#a78bfa);border-radius:16px;text-decoration:none;color:#fff;box-shadow:0 6px 22px rgba(77,171,247,0.40);position:relative;overflow:hidden">
     <div style="font-size:32px">📖</div>
     <div style="flex:1"><div style="font-size:15px;font-weight:800;letter-spacing:-0.1px">So funktioniert CreatorX</div><div style="font-size:12px;opacity:0.92;margin-top:3px;line-height:1.4">Komplette Anleitung — App, Levels, Missionen, Diamanten, Superlinks, Grundregeln</div></div>
@@ -9800,12 +10056,17 @@ window.sugDismiss = function(btn){
   ${entriesHtml}
 </div>
 <script>
+async function msSet(answer){const el=document.getElementById('ms-result');if(el){el.textContent='Speichern…';el.style.color='var(--muted)';}try{const r=await fetch('/api/mindset-answer',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({answer})});const d=await r.json();if(d.ok){if(el){el.textContent='✅ Gespeichert';el.style.color='#22c55e';}setTimeout(()=>location.reload(),400);}else{if(el){el.textContent='❌ '+(d.error||'Fehler');el.style.color='#ef4444';}}}catch(e){if(el){el.textContent='❌ Netzwerkfehler';el.style.color='#ef4444';}}}
 ${isAdminNL?`
 function nlNew(){document.getElementById('nl-form').style.display='block';document.getElementById('nl-edit-id').value='';document.getElementById('nl-title').value='';document.getElementById('nl-content').value='';document.getElementById('nl-result').textContent='';}
 function nlCancel(){document.getElementById('nl-form').style.display='none';}
 function nlEdit(id){const el=document.querySelector('[data-id="'+id+'"]');if(!el)return;document.getElementById('nl-edit-id').value=id;document.getElementById('nl-title').value=el.querySelector('[style*="font-display"]')?.textContent||'';document.getElementById('nl-content').value=el.querySelector('[style*="pre-wrap"]')?.textContent||'';document.getElementById('nl-form').style.display='block';window.scrollTo({top:0,behavior:'smooth'});}
 async function nlSave(){const id=document.getElementById('nl-edit-id').value;const title=document.getElementById('nl-title').value.trim();const content=document.getElementById('nl-content').value.trim();if(!content)return;const ep=id?'/api/newsletter-edit':'/api/newsletter-add';const body=id?{id,title,content}:{title,content};const r=await fetch(ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const d=await r.json();if(d.ok){toast('✅ Gespeichert!');setTimeout(()=>location.reload(),200);}else document.getElementById('nl-result').textContent='❌ '+(d.error||'Fehler');}
 async function nlDelete(id){if(!confirm('Eintrag löschen?'))return;const r=await fetch('/api/newsletter-delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id})});const d=await r.json();if(d.ok){toast('✅ Gelöscht');setTimeout(()=>location.reload(),150);}else toast('❌ Fehler');}
+async function msAdminPick(uid,name){if(!confirm(name+' diese Woche picken? (Der bisherige Pick wird zurück auf die Liste verschoben)'))return;const el=document.getElementById('ms-admin-result');if(el){el.textContent='Picke…';el.style.color='var(--muted)';}const r=await fetch('/api/mindset-admin/pick',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({targetUid:uid})});const d=await r.json();if(d.ok){if(el){el.textContent='✅ Gepickt + DM verschickt';el.style.color='#22c55e';}setTimeout(()=>location.reload(),600);}else{if(el){el.textContent='❌ '+(d.error||'Fehler');el.style.color='#ef4444';}}}
+async function msAdminSkip(){if(!confirm('Diese Woche überspringen? Es wird niemand gepickt.'))return;const el=document.getElementById('ms-admin-result');if(el){el.textContent='Skippen…';el.style.color='var(--muted)';}const r=await fetch('/api/mindset-admin/skip',{method:'POST',headers:{'Content-Type':'application/json'}});const d=await r.json();if(d.ok){if(el){el.textContent='⏭ Übersprungen';el.style.color='#94a3b8';}setTimeout(()=>location.reload(),600);}else{if(el){el.textContent='❌ '+(d.error||'Fehler');el.style.color='#ef4444';}}}
+async function msAdminBlast(){if(!confirm('Initial-DM an alle Insta-User die noch nicht geantwortet haben? Das geht nicht rückgängig.'))return;const el=document.getElementById('ms-admin-result');if(el){el.textContent='Sende DMs…';el.style.color='var(--muted)';}const r=await fetch('/api/mindset-admin/blast',{method:'POST',headers:{'Content-Type':'application/json'}});const d=await r.json();if(d.ok){if(el){el.textContent='✅ '+d.queued+' DMs versendet';el.style.color='#22c55e';}}else{if(el){el.textContent='❌ '+(d.error||'Fehler');el.style.color='#ef4444';}}}
+async function msAdminRestore(uid,name){if(!confirm(name+' zurück auf die Warteliste verschieben?'))return;const el=document.getElementById('ms-admin-result');if(el){el.textContent='…';el.style.color='var(--muted)';}const r=await fetch('/api/mindset-admin/restore',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({targetUid:uid})});const d=await r.json();if(d.ok){if(el){el.textContent='↩ Zurück auf Liste';el.style.color='#22c55e';}setTimeout(()=>location.reload(),500);}else{if(el){el.textContent='❌ '+(d.error||'Fehler');el.style.color='#ef4444';}}}
 `:''}
 </script>`;
             })()
