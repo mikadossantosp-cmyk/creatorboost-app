@@ -45,6 +45,23 @@ setInterval(() => {
     for (const [ip, v] of signupIpRateLimit.entries()) if (now - v.ts > SIGNUP_RATE_LIMIT_WINDOW) signupIpRateLimit.delete(ip);
 }, 5 * 60 * 1000);
 
+// Daily claims tracker (persisted to file, keyed by "type:uid:date")
+const DAILY_CLAIMS_FILE = DATA_DIR + '/daily_claims.json';
+let _dailyClaims = {};
+try { if (fs.existsSync(DAILY_CLAIMS_FILE)) _dailyClaims = JSON.parse(fs.readFileSync(DAILY_CLAIMS_FILE, 'utf8')); } catch(e) {}
+function hasClaimed(type, uid) {
+    const today = new Date().toISOString().slice(0, 10);
+    return !!_dailyClaims[type + ':' + uid + ':' + today];
+}
+function markClaimed(type, uid) {
+    const today = new Date().toISOString().slice(0, 10);
+    _dailyClaims[type + ':' + uid + ':' + today] = Date.now();
+    // Cleanup old entries (keep only today + yesterday)
+    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    for (const k of Object.keys(_dailyClaims)) { const d = k.split(':').pop(); if (d !== today && d !== yesterday) delete _dailyClaims[k]; }
+    try { fs.writeFileSync(DAILY_CLAIMS_FILE, JSON.stringify(_dailyClaims)); } catch(e) {}
+}
+
 // In-memory email send log (last 200 entries, not persisted across restarts)
 const _emailSendLog = [];
 const EMAIL_LOG_MAX = 200;
@@ -4833,16 +4850,13 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
     if (path === '/api/claim-daily-xp' && req.method === 'POST') {
         if (!session) return json({error:'Nicht eingeloggt'}, 401);
         const myUid = getMyUid(session);
-        const today = new Date().toISOString().slice(0, 10);
-        const claimKey = 'dailyxp:' + myUid + ':' + today;
-        if (emailRateLimit.has(claimKey)) return json({ok:false, error:'Schon abgeholt! Morgen wieder.'}, 429);
-        emailRateLimit.set(claimKey, Date.now());
+        if (hasClaimed('dailyxp', myUid)) return json({ok:false, error:'Schon abgeholt! Morgen wieder.'}, 429);
         const xpAmount = Math.floor(Math.random() * 11) + 10; // 10-20
-        const result = await postBot('/add-xp', { uid: myUid, amount: xpAmount, reason: 'daily-bonus' });
+        const result = await postBot('/add-xp', { uid: myUid, amount: xpAmount, reason: 'daily-bonus', noRanking: true });
         if (!result || !result.ok) {
-            emailRateLimit.delete(claimKey);
             return json({ok:false, error:'XP konnten nicht gutgeschrieben werden'}, 500);
         }
+        markClaimed('dailyxp', myUid);
         return json({ok:true, xp: xpAmount});
     }
 
@@ -4850,24 +4864,17 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
     if (path === '/api/spin-roulette' && req.method === 'POST') {
         if (!session) return json({error:'Nicht eingeloggt'}, 401);
         const myUid = getMyUid(session);
-        const today = new Date().toISOString().slice(0, 10);
-        const claimKey = 'roulette:' + myUid + ':' + today;
-        if (emailRateLimit.has(claimKey)) return json({ok:false, error:'Schon gedreht! Morgen wieder.'}, 429);
-        emailRateLimit.set(claimKey, Date.now());
-        // Weighted prize pool: index matches canvas segments
-        // Segments: 0=20XP, 1=ExtraLink, 2=20XP, 3=Superlink, 4=20XP, 5=1Diamant, 6=100XP, 7=5Diamanten, 8=20XP, 9=10Diamanten
-        // Weights (must sum to 100): 20XP=44%(4x11), ExtraLink=20%, Superlink=20%, 1Diamant=20%... wait
-        // Actual: 20XP×4=each segment, but weighted pick determines which segment wins
+        if (hasClaimed('roulette', myUid)) return json({ok:false, error:'Schon gedreht! Morgen wieder.'}, 429);
         const prizes = [
-            { idx:0, label:'20 XP', weight:15, action:'/add-xp', data:{amount:20,reason:'roulette'} },
+            { idx:0, label:'20 XP', weight:15, action:'/add-xp', data:{amount:20,reason:'roulette',noRanking:true} },
             { idx:1, label:'1 Extra-Link', weight:20, action:'/add-extra-link', data:{} },
-            { idx:2, label:'20 XP', weight:15, action:'/add-xp', data:{amount:20,reason:'roulette'} },
+            { idx:2, label:'20 XP', weight:15, action:'/add-xp', data:{amount:20,reason:'roulette',noRanking:true} },
             { idx:3, label:'1 Superlink', weight:20, action:'/add-superlink', data:{} },
-            { idx:4, label:'20 XP', weight:9, action:'/add-xp', data:{amount:20,reason:'roulette'} },
+            { idx:4, label:'20 XP', weight:9, action:'/add-xp', data:{amount:20,reason:'roulette',noRanking:true} },
             { idx:5, label:'1 Diamant', weight:10, action:'/add-diamonds', data:{amount:1,reason:'roulette'} },
-            { idx:6, label:'100 XP', weight:5, action:'/add-xp', data:{amount:100,reason:'roulette'} },
+            { idx:6, label:'100 XP', weight:5, action:'/add-xp', data:{amount:100,reason:'roulette',noRanking:true} },
             { idx:7, label:'5 Diamanten', weight:4, action:'/add-diamonds', data:{amount:5,reason:'roulette'} },
-            { idx:8, label:'20 XP', weight:1, action:'/add-xp', data:{amount:20,reason:'roulette'} },
+            { idx:8, label:'20 XP', weight:1, action:'/add-xp', data:{amount:20,reason:'roulette',noRanking:true} },
             { idx:9, label:'10 Diamanten', weight:1, action:'/add-diamonds', data:{amount:10,reason:'roulette'} },
         ];
         const totalWeight = prizes.reduce((s,p) => s + p.weight, 0);
@@ -4877,9 +4884,9 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
         const payload = { uid: myUid, ...picked.data };
         const result = await postBot(picked.action, payload);
         if (!result || !result.ok) {
-            emailRateLimit.delete(claimKey);
             return json({ok:false, error:'Gewinn konnte nicht gutgeschrieben werden'}, 500);
         }
+        markClaimed('roulette', myUid);
         return json({ok:true, prize: picked.label, segmentIndex: picked.idx});
     }
 
@@ -10357,6 +10364,13 @@ async function msAdminRestore(uid,name){if(!confirm(name+' zurück auf die Warte
 .rl-btn:disabled{opacity:0.5;cursor:not-allowed;transform:none}
 .rl-result{margin-top:16px;padding:16px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);border-radius:14px;font-size:15px;font-weight:700;color:#4ade80;display:none}
 .rl-cooldown{font-size:12px;color:var(--muted);margin-top:10px}
+@keyframes rl-jackpot{0%{transform:scale(1)}25%{transform:scale(1.15) rotate(-2deg)}50%{transform:scale(1.1) rotate(2deg)}75%{transform:scale(1.15) rotate(-1deg)}100%{transform:scale(1)}}
+@keyframes rl-confetti{0%{opacity:1;transform:translateY(0) rotate(0)}100%{opacity:0;transform:translateY(-60px) rotate(720deg)}}
+@keyframes rl-glow{0%,100%{box-shadow:0 0 20px rgba(34,197,94,0.3)}50%{box-shadow:0 0 40px rgba(34,197,94,0.7),0 0 80px rgba(34,197,94,0.3)}}
+.rl-result.jackpot{animation:rl-jackpot 0.6s ease,rl-glow 1.5s ease infinite;font-size:18px}
+.rl-confetti-wrap{position:fixed;inset:0;pointer-events:none;z-index:9999;overflow:hidden}
+.rl-confetti-piece{position:absolute;width:10px;height:10px;border-radius:2px;animation:rl-fall 2.5s ease-out forwards}
+@keyframes rl-fall{0%{opacity:1;transform:translateY(-20px) rotate(0) scale(1)}100%{opacity:0;transform:translateY(100vh) rotate(720deg) scale(0.5)}}
 </style>
 <div class="rl-wrap">
 <div class="rl-card">
@@ -10391,6 +10405,26 @@ const ctx=canvas.getContext('2d');
 const cx=280,cy=280,r=270;
 let currentAngle=0;
 
+// Web Audio sounds (no external files needed)
+const AudioCtx=window.AudioContext||window.webkitAudioContext;
+let audioCtx;
+function ensureAudio(){if(!audioCtx)audioCtx=new AudioCtx();}
+function playTick(){
+  ensureAudio();const o=audioCtx.createOscillator();const g=audioCtx.createGain();
+  o.connect(g);g.connect(audioCtx.destination);o.frequency.value=800+Math.random()*400;
+  o.type='sine';g.gain.value=0.08;o.start();g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.05);o.stop(audioCtx.currentTime+0.05);
+}
+function playWin(big){
+  ensureAudio();const notes=big?[523,659,784,1047]:[523,659,784];
+  notes.forEach((f,i)=>{setTimeout(()=>{const o=audioCtx.createOscillator();const g=audioCtx.createGain();o.connect(g);g.connect(audioCtx.destination);o.frequency.value=f;o.type='triangle';g.gain.value=0.15;o.start();g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.3);o.stop(audioCtx.currentTime+0.3);},i*120);});
+}
+function showConfetti(){
+  const wrap=document.createElement('div');wrap.className='rl-confetti-wrap';document.body.appendChild(wrap);
+  const colors=['#ef4444','#f59e0b','#22c55e','#3b82f6','#8b5cf6','#ec4899','#fbbf24','#4ade80'];
+  for(let i=0;i<40;i++){const p=document.createElement('div');p.className='rl-confetti-piece';p.style.left=Math.random()*100+'%';p.style.top='-10px';p.style.background=colors[Math.floor(Math.random()*colors.length)];p.style.animationDelay=(Math.random()*0.8)+'s';p.style.animationDuration=(2+Math.random()*1.5)+'s';p.style.width=(6+Math.random()*8)+'px';p.style.height=(6+Math.random()*8)+'px';wrap.appendChild(p);}
+  setTimeout(()=>wrap.remove(),4000);
+}
+
 function drawWheel(angle){
   ctx.clearRect(0,0,560,560);
   const arc=2*Math.PI/segments.length;
@@ -10398,48 +10432,58 @@ function drawWheel(angle){
     const start=angle+i*arc;
     ctx.beginPath();ctx.moveTo(cx,cy);ctx.arc(cx,cy,r,start,start+arc);ctx.closePath();
     ctx.fillStyle=seg.color;ctx.fill();
-    ctx.strokeStyle='rgba(0,0,0,0.2)';ctx.lineWidth=2;ctx.stroke();
+    ctx.strokeStyle='rgba(0,0,0,0.25)';ctx.lineWidth=2;ctx.stroke();
     ctx.save();ctx.translate(cx,cy);ctx.rotate(start+arc/2);
     ctx.fillStyle=seg.text;ctx.font='bold 13px Inter,sans-serif';ctx.textAlign='center';
     ctx.fillText(seg.label,r*0.62,5);
     ctx.restore();
   });
-  ctx.beginPath();ctx.arc(cx,cy,30,0,2*Math.PI);ctx.fillStyle='#1a1a1a';ctx.fill();
-  ctx.strokeStyle='rgba(255,255,255,0.1)';ctx.lineWidth=3;ctx.stroke();
+  ctx.beginPath();ctx.arc(cx,cy,32,0,2*Math.PI);ctx.fillStyle='#1a1a1a';ctx.fill();
+  ctx.strokeStyle='rgba(255,255,255,0.15)';ctx.lineWidth=3;ctx.stroke();
+  ctx.fillStyle='#fff';ctx.font='bold 14px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('SPIN',cx,cy);
 }
 drawWheel(0);
 
 window.spinRoulette=async function(){
   const btn=document.getElementById('rl-spin-btn');
   const result=document.getElementById('rl-result');
-  btn.disabled=true;result.style.display='none';
+  btn.disabled=true;result.style.display='none';result.classList.remove('jackpot');
+  ensureAudio();
   try{
     const res=await fetch('/api/spin-roulette',{method:'POST',headers:{'Content-Type':'application/json'}});
     const data=await res.json();
     if(!data.ok){result.style.display='block';result.style.background='rgba(239,68,68,0.1)';result.style.borderColor='rgba(239,68,68,0.3)';result.style.color='#f87171';result.textContent=data.error||'Fehler';btn.disabled=false;return;}
     const idx=data.segmentIndex;
     const arc=2*Math.PI/segments.length;
-    const targetAngle=2*Math.PI*5+(2*Math.PI-idx*arc-arc/2);
-    let start=null;const duration=4000;
+    const targetAngle=2*Math.PI*6+(2*Math.PI-idx*arc-arc/2);
+    let startTs=null;const duration=5000;
+    let lastTick=0;
     function animate(ts){
-      if(!start)start=ts;
-      const elapsed=ts-start;
+      if(!startTs)startTs=ts;
+      const elapsed=ts-startTs;
       const progress=Math.min(elapsed/duration,1);
       const eased=1-Math.pow(1-progress,4);
       currentAngle=targetAngle*eased;
       drawWheel(-currentAngle);
+      // Tick sound based on segment crossings
+      const segCross=Math.floor(currentAngle/(2*Math.PI/segments.length));
+      if(segCross!==lastTick&&progress<0.95){lastTick=segCross;playTick();}
       if(progress<1){requestAnimationFrame(animate);}
       else{
+        const isBig=idx===9||idx===7||idx===6; // 10 diamonds, 5 diamonds, 100 XP
+        playWin(isBig);
+        if(isBig)showConfetti();
         result.style.display='block';result.style.background='rgba(34,197,94,0.1)';result.style.borderColor='rgba(34,197,94,0.3)';result.style.color='#4ade80';
         result.textContent='🎉 Gewonnen: '+data.prize;
-        btn.textContent='Morgen wieder!';
+        if(isBig){result.classList.add('jackpot');result.textContent='🏆 JACKPOT! '+data.prize+'!';}
+        btn.textContent='Morgen wieder! 🎡';
       }
     }
     requestAnimationFrame(animate);
   }catch(e){result.style.display='block';result.style.color='#f87171';result.textContent='Netzwerkfehler';btn.disabled=false;}
 };
 })();
-</script>`
+<\/script>`
         };
 
         const tabs = [
@@ -10760,9 +10804,17 @@ async function claimDailyXP(){
   try{
     var r=await fetch('/api/claim-daily-xp',{method:'POST',headers:{'Content-Type':'application/json'}});
     var d=await r.json();
-    if(d.ok){btn.textContent='✅ +'+d.xp+' XP';btn.style.background='#333';setTimeout(function(){btn.textContent='Erledigt ✓';},1500);}
-    else{btn.textContent=d.error||'Fehler';btn.disabled=false;setTimeout(function(){btn.textContent='Abholen';btn.disabled=false;},2000);}
-  }catch(e){btn.textContent='Fehler';btn.disabled=false;setTimeout(function(){btn.textContent='Abholen';},2000);}
+    if(d.ok){
+      btn.textContent='✅ +'+d.xp+' XP';btn.style.background='#333';
+      // Update XP display on profile immediately
+      var xpEls=document.querySelectorAll('[data-xp-value]');
+      xpEls.forEach(function(el){var cur=parseInt(el.textContent.replace(/\D/g,''))||0;el.textContent=(cur+d.xp).toLocaleString('de-DE');});
+      var statEls=document.querySelectorAll('.stat-value, .xp-num, .profile-xp');
+      statEls.forEach(function(el){if(el.textContent.includes('XP')){var m=el.textContent.match(/[\d.]+/);if(m){var cur=parseInt(m[0].replace(/\./g,''))||0;el.textContent=el.textContent.replace(m[0],(cur+d.xp).toLocaleString('de-DE'));}}});
+      setTimeout(function(){btn.textContent='Erledigt ✓';},1500);
+    }
+    else{btn.textContent=d.error||'Fehler';setTimeout(function(){btn.textContent='Abholen';btn.disabled=false;},2500);}
+  }catch(e){btn.textContent='Fehler';setTimeout(function(){btn.textContent='Abholen';btn.disabled=false;},2500);}
 }
 async function switchAcc(uid){
   try {
