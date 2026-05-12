@@ -104,6 +104,35 @@ function saveSessions() {
 }
 setInterval(saveSessions, 60000);
 
+// Weekly raffle (Gewinnspiel): runs every minute, triggers Sunday 20:00 Berlin time
+let _lastRaffleTrigger = '';
+setInterval(async () => {
+    try {
+        const now = new Date(new Date().toLocaleString('en-US', {timeZone:'Europe/Berlin'}));
+        if (now.getDay() !== 0 || now.getHours() !== 20 || now.getMinutes() !== 0) return;
+        const key = now.toISOString().slice(0, 10);
+        if (_lastRaffleTrigger === key) return;
+        _lastRaffleTrigger = key;
+        const bd = await fetchBot('/data');
+        if (!bd) return;
+        const threshold = 750;
+        const eligible = Object.entries(bd.users || {}).filter(([, u]) => (u.xpThisWeek || u.weeklyXp || 0) >= threshold && u.started);
+        if (!eligible.length) { console.log('[Gewinnspiel] Keine qualifizierten Teilnehmer diese Woche'); return; }
+        const winner = eligible[Math.floor(Math.random() * eligible.length)];
+        const [winnerUid, winnerUser] = winner;
+        const prizes = [
+            { name: '1 Extra-Link', action: '/add-extra-link' },
+            { name: '1 Superlink', action: '/add-superlink' },
+            { name: '500 XP', action: '/add-xp', data: { amount: 500, reason: 'gewinnspiel' } },
+            { name: '5 Diamanten', action: '/add-diamonds', data: { amount: 5, reason: 'gewinnspiel' } }
+        ];
+        const prize = prizes[Math.floor(Math.random() * prizes.length)];
+        const payload = { uid: winnerUid, ...(prize.data || {}), reason: prize.data?.reason || 'gewinnspiel' };
+        await postBot(prize.action, payload);
+        console.log(`[Gewinnspiel] Gewinner: ${winnerUser.spitzname || winnerUser.name} (${winnerUid}) — Preis: ${prize.name}`);
+    } catch(e) { console.error('[Gewinnspiel] Fehler:', e.message); }
+}, 60000);
+
 // Migrate all existing sessions to light theme
 for (const [k, v] of sessions.entries()) { if (!v.theme || v.theme === 'dark') { v.theme = 'light'; } }
 saveSessions();
@@ -10236,6 +10265,48 @@ async function msAdminBlast(){if(!confirm('Initial-DM an alle Insta-User die noc
 async function msAdminRestore(uid,name){if(!confirm(name+' zurück auf die Warteliste verschieben?'))return;const el=document.getElementById('ms-admin-result');if(el){el.textContent='…';el.style.color='var(--muted)';}const r=await fetch('/api/mindset-admin/restore',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({targetUid:uid})});const d=await r.json();if(d.ok){if(el){el.textContent='↩ Zurück auf Liste';el.style.color='#22c55e';}setTimeout(()=>location.reload(),500);}else{if(el){el.textContent='❌ '+(d.error||'Fehler');el.style.color='#ef4444';}}}
 `:''}
 </script>`;
+            })(),
+            gewinnspiel: (()=>{
+                const myXpThisWeek = myUser.xpThisWeek || myUser.weeklyXp || 0;
+                const threshold = 750;
+                const qualified = myXpThisWeek >= threshold;
+                const nextSunday = (()=>{ const n=new Date(); const d=n.getDay(); const diff=d===0?0:7-d; const s=new Date(n); s.setDate(n.getDate()+diff); s.setHours(20,0,0,0); return s; })();
+                const timeLeft = Math.max(0, nextSunday.getTime() - Date.now());
+                const hoursLeft = Math.floor(timeLeft / 3600000);
+                const prizes = ['🔗 1 Extra-Link','⚡ 1 Superlink','✨ 500 XP','💎 5 Diamanten'];
+                return `
+<div style="padding:16px">
+  <div style="background:linear-gradient(135deg,rgba(245,158,11,0.1),rgba(239,68,68,0.05));border:1px solid rgba(245,158,11,0.3);border-radius:20px;padding:24px 20px;text-align:center;margin-bottom:16px">
+    <div style="font-size:42px;margin-bottom:12px">🎰</div>
+    <h2 style="font-size:20px;font-weight:800;margin:0 0 6px;letter-spacing:-0.3px">Wöchentliches Gewinnspiel</h2>
+    <div style="font-size:13px;color:var(--muted);line-height:1.5">Sammle <b style="color:var(--text)">${threshold} XP</b> diese Woche und nimm automatisch teil!</div>
+    <div style="margin:16px 0;padding:14px;background:rgba(255,255,255,0.04);border-radius:12px;border:1px solid var(--border2)">
+      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Dein Fortschritt</div>
+      <div style="font-size:28px;font-weight:800;color:${qualified?'#22c55e':'var(--text)'}">${myXpThisWeek} <span style="font-size:14px;color:var(--muted)">/ ${threshold} XP</span></div>
+      <div style="margin-top:10px;height:8px;background:rgba(255,255,255,0.06);border-radius:99px;overflow:hidden">
+        <div style="height:100%;width:${Math.min(100,Math.round(myXpThisWeek/threshold*100))}%;background:${qualified?'linear-gradient(90deg,#22c55e,#4ade80)':'linear-gradient(90deg,#f59e0b,#ef4444)'};border-radius:99px;transition:width 0.5s"></div>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-top:8px">${qualified?'✅ Du nimmst teil!':'Noch '+(threshold-myXpThisWeek)+' XP bis zur Teilnahme'}</div>
+    </div>
+    <div style="font-size:12px;color:var(--muted)">⏰ Ziehung: Sonntag 20:00 Uhr · noch ~${hoursLeft}h</div>
+  </div>
+  <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:16px;padding:18px">
+    <div style="font-size:13px;font-weight:700;margin-bottom:12px">🎁 Mögliche Gewinne</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      ${prizes.map(p=>'<div style="padding:12px;background:rgba(255,255,255,0.03);border:1px solid var(--border2);border-radius:10px;font-size:12px;font-weight:600;text-align:center">'+p+'</div>').join('')}
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-top:12px;text-align:center">Gewinn wird zufällig vom System gewählt. 1 Gewinner pro Woche.</div>
+  </div>
+  <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:16px;padding:18px;margin-top:12px">
+    <div style="font-size:13px;font-weight:700;margin-bottom:8px">📋 So funktioniert's</div>
+    <div style="font-size:12px;color:var(--muted);line-height:1.7">
+      1. Sammle mindestens <b style="color:var(--text)">750 XP</b> in einer Woche<br>
+      2. Du nimmst automatisch am Gewinnspiel teil<br>
+      3. Jeden <b style="color:var(--text)">Sonntag um 20:00 Uhr</b> wird gezogen<br>
+      4. Der Gewinn wird dir automatisch gutgeschrieben
+    </div>
+  </div>
+</div>`;
             })()
         };
 
@@ -10246,6 +10317,7 @@ async function msAdminRestore(uid,name){if(!confirm(name+' zurück auf die Warte
             {id:'tipps',     emoji:'💡', label:'Tipps',     c1:'#22c55e', c2:'#15803d', shadow:'rgba(34,197,94,0.45)'},
             {id:'regeln',    emoji:'📋', label:'Regeln',    c1:'#94a3b8', c2:'#475569', shadow:'rgba(148,163,184,0.45)'},
             {id:'shop',      emoji:'💎', label:'Shop',      c1:'#ec4899', c2:'#a21caf', shadow:'rgba(236,72,153,0.45)'},
+            {id:'gewinnspiel',emoji:'🎰',label:'Gewinn',    c1:'#f59e0b', c2:'#ef4444', shadow:'rgba(245,158,11,0.45)'},
         ];
 
         return html(`
