@@ -3875,41 +3875,64 @@ document.addEventListener('DOMContentLoaded', function(){
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{--gold:#d4af37;--text:#fff;--muted:rgba(255,255,255,0.6);--border:rgba(255,255,255,0.10);--bg-card:rgba(255,255,255,0.03)}
-html,body{background:#000;color:#fff;font-family:'Inter',-apple-system,sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh}
-.shell{max-width:480px;margin:0 auto;padding:32px 22px 60px;min-height:100vh;display:flex;flex-direction:column;justify-content:center}
-.brand{font-family:'Syne',sans-serif;font-size:22px;font-weight:900;background:linear-gradient(135deg,#ff6b6b,#ffa500);-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-align:center;margin-bottom:32px}
-.icon{width:72px;height:72px;margin:0 auto 18px;border-radius:20px;background:linear-gradient(135deg,rgba(212,175,55,0.15),rgba(212,175,55,0.04));border:1px solid rgba(212,175,55,0.3);display:flex;align-items:center;justify-content:center;font-size:36px;box-shadow:0 12px 32px -10px rgba(212,175,55,0.4)}
-h1{font-family:'Syne',sans-serif;font-size:30px;font-weight:800;line-height:1.1;letter-spacing:-1px;margin-bottom:10px;background:linear-gradient(180deg,#fff,#d4af37);-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-align:center}
+:root{--gold:#d4af37;--text:#fff;--muted:rgba(255,255,255,0.55);--muted2:rgba(255,255,255,0.38);--border:rgba(255,255,255,0.08);--border-gold:rgba(212,175,55,0.25)}
+html,body{background:#000;color:#fff;font-family:'Inter',-apple-system,sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh;overflow-x:hidden}
+.mesh{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+.mesh::before{content:'';position:absolute;width:60vw;height:60vw;left:-15vw;top:-15vw;background:radial-gradient(circle,rgba(212,175,55,0.12),transparent 60%);filter:blur(40px)}
+.mesh::after{content:'';position:absolute;width:50vw;height:50vw;right:-20vw;bottom:-20vw;background:radial-gradient(circle,rgba(167,139,250,0.08),transparent 60%);filter:blur(40px)}
+.page{position:relative;z-index:1;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:32px 20px}
+.card{width:100%;max-width:420px;background:rgba(255,255,255,0.025);border:1px solid var(--border);border-radius:24px;padding:36px 24px 32px;backdrop-filter:blur(20px);box-shadow:0 30px 80px -20px rgba(0,0,0,0.5)}
+.brand{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:28px}
+.brand-logo{width:36px;height:36px;border-radius:10px;background:url('/cx-logo-256.png') center/cover,#0a0a0a;box-shadow:0 4px 14px rgba(212,175,55,0.3)}
+.brand-name{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;letter-spacing:-0.3px}
+h1{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;line-height:1.1;letter-spacing:-0.8px;margin-bottom:8px;text-align:center;background:linear-gradient(180deg,#fff,#d4af37);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
 .sub{font-size:14px;color:var(--muted);line-height:1.6;margin-bottom:24px;text-align:center}
-.in{width:100%;background:rgba(255,255,255,0.04);border:1.5px solid var(--border);color:#fff;border-radius:13px;padding:13px 15px;font-size:15px;outline:none;margin-bottom:12px;font-family:inherit;transition:.18s}
+.in{width:100%;background:rgba(255,255,255,0.04);border:1.5px solid var(--border);color:#fff;border-radius:12px;padding:14px 16px;font-size:15px;outline:none;margin-bottom:12px;font-family:inherit;transition:.18s;font-weight:500}
 .in:focus{border-color:var(--gold);background:rgba(212,175,55,0.04);box-shadow:0 0 0 3px rgba(212,175,55,0.12)}
-.btn{margin-top:6px;width:100%;padding:14px;font-size:14px;font-weight:700;border-radius:13px;border:none;cursor:pointer;font-family:inherit;letter-spacing:0.2px;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;box-shadow:0 8px 22px -8px rgba(212,175,55,0.6)}
-.btn:disabled{opacity:.5;cursor:not-allowed}
-.msg{font-size:13px;padding:10px 12px;border-radius:10px;margin-bottom:10px;display:none;line-height:1.5}
+.in::placeholder{color:var(--muted2)}
+.btn{margin-top:8px;width:100%;padding:15px;font-size:15px;font-weight:700;border-radius:12px;border:none;cursor:pointer;font-family:inherit;letter-spacing:0.2px;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;box-shadow:0 8px 24px -8px rgba(212,175,55,0.6),inset 0 1px 0 rgba(255,255,255,0.5);transition:all .15s}
+.btn:hover{transform:translateY(-1px);box-shadow:0 12px 30px -8px rgba(212,175,55,0.7)}
+.btn:active{transform:translateY(0)}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.msg{font-size:13px;padding:10px 14px;border-radius:10px;margin-bottom:12px;display:none;line-height:1.5;font-weight:500}
 .msg.show{display:block}
-.msg.ok{background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.3);color:#22c55e}
-.msg.err{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);color:#ef4444}
-.hint{font-size:11.5px;color:var(--muted);margin-top:6px;text-align:center;line-height:1.55}
-.bottom{text-align:center;margin-top:18px;padding-top:18px;border-top:1px solid var(--border)}
-.bottom a{color:var(--gold);font-weight:700;text-decoration:none;font-size:13.5px}
+.msg.ok{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.25);color:#4ade80}
+.msg.err{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);color:#f87171}
+.perks{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:24px}
+.perk{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);font-weight:500}
+.perk-icon{font-size:16px}
+.hint{font-size:11px;color:var(--muted2);margin-top:10px;text-align:center;line-height:1.55}
+.bottom{text-align:center;margin-top:20px;padding-top:20px;border-top:1px solid var(--border)}
+.bottom-lbl{font-size:12px;color:var(--muted);margin-bottom:6px}
+.bottom a{color:var(--gold);font-weight:700;text-decoration:none;font-size:14px;transition:opacity .15s}
+.bottom a:hover{opacity:.8}
+@media(min-width:768px){.card{padding:44px 36px 40px}h1{font-size:32px}.sub{font-size:15px}}
+@media(min-width:1024px){.card{max-width:460px;padding:48px 40px 44px}}
 </style></head><body>
-<div class="shell">
-  <div class="brand">CreatorX</div>
-  <div style="text-align:center"><div class="icon">🎉</div></div>
-  <h1>Sign Up</h1>
-  <div class="sub">Erstelle deinen kostenlosen Account.<br>Email + Passwort — ohne Telegram, ohne Umwege.</div>
+<div class="mesh"></div>
+<div class="page">
+<div class="card">
+  <div class="brand"><div class="brand-logo"></div><div class="brand-name">CreatorX</div></div>
+  <h1>Account erstellen</h1>
+  <div class="sub">Werde Teil der Creator-Community. Kostenlos.</div>
+  <div class="perks">
+    <div class="perk"><span class="perk-icon">🚀</span>Echtes Engagement</div>
+    <div class="perk"><span class="perk-icon">❤️</span>Täglich Likes</div>
+    <div class="perk"><span class="perk-icon">🏆</span>Ranking &amp; XP</div>
+    <div class="perk"><span class="perk-icon">📊</span>Creator-Profil</div>
+  </div>
   <div class="msg" id="signup-msg"></div>
   <form id="signup-form" onsubmit="return submitSignup(event)">
-    <input type="email" id="signup-email" class="in" placeholder="deine@email.de" autocomplete="email" autocapitalize="none" spellcheck="false" required maxlength="200">
+    <input type="email" id="signup-email" class="in" placeholder="Email-Adresse" autocomplete="email" autocapitalize="none" spellcheck="false" required maxlength="200">
     <input type="password" id="signup-pw" class="in" placeholder="Passwort (min. 6 Zeichen)" autocomplete="new-password" minlength="6" maxlength="200" required>
-    <button type="submit" class="btn" id="signup-btn">🎉 Account erstellen →</button>
+    <button type="submit" class="btn" id="signup-btn">Kostenlos starten →</button>
   </form>
-  <div class="hint">Mit Klick stimmst du zu, dass dein Account angelegt wird. Kein Spam, keine versteckten Kosten.</div>
+  <div class="hint">Kein Spam, keine versteckten Kosten. Jederzeit löschbar.</div>
   <div class="bottom">
-    <div style="font-size:12.5px;color:var(--muted);margin-bottom:8px">Schon einen Account?</div>
+    <div class="bottom-lbl">Schon einen Account?</div>
     <a href="/">→ Sign In</a>
   </div>
+</div>
 </div>
 <script>
 function submitSignup(ev){
