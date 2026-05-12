@@ -3382,6 +3382,7 @@ ${_isPreview ? '<div class="admin-pb">👀 Admin-Vorschau · Login-Page &nbsp;·
       <input type="password" id="email-pw" class="in" placeholder="Passwort" autocomplete="current-password" maxlength="200" required>
       <button type="submit" class="btn-p" id="email-btn">Sign In →</button>
     </form>
+    <button class="btn-link" id="pw-reset-btn" onclick="resetPassword()">Passwort vergessen?</button>
     <div style="text-align:center;margin-top:18px;padding-top:18px;border-top:1px solid var(--border)">
       <div style="font-size:12.5px;color:var(--muted);margin-bottom:8px">Noch keinen Account?</div>
       <a href="/signup" style="display:inline-flex;align-items:center;gap:6px;color:var(--gold);font-weight:700;text-decoration:none;font-size:13.5px">→ Jetzt Sign Up</a>
@@ -3455,6 +3456,20 @@ function submitEmail(ev){
     })
     .catch(function(){msg.textContent='Netzwerkfehler.';msg.classList.add('show','err');btn.disabled=false;btn.textContent='Sign In →';});
   return false;
+}
+function resetPassword(){
+  var inp=document.getElementById('email-input'),msg=document.getElementById('email-msg'),btn=document.getElementById('pw-reset-btn');
+  var em=(inp.value||'').trim().toLowerCase();
+  if(!em){msg.textContent='Bitte zuerst deine Email-Adresse eingeben.';msg.classList.add('show','err');inp.focus();return;}
+  msg.classList.remove('show','ok','err');btn.disabled=true;btn.textContent='Wird gesendet...';
+  fetch('/api/auth/password-reset',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:em})})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(d.ok){msg.textContent='✅ Reset-Link an deine Email gesendet. Prüfe auch den Spam-Ordner.';msg.classList.add('show','ok');}
+      else{msg.textContent=d.error||'Fehler beim Senden.';msg.classList.add('show','err');}
+    })
+    .catch(function(){msg.textContent='Netzwerkfehler.';msg.classList.add('show','err');})
+    .finally(function(){btn.disabled=false;btn.textContent='Passwort vergessen?';});
 }
 // Funnel-Tracking: Landing-CTAs
 function _trackFn(ev, meta){ try{ navigator.sendBeacon ? navigator.sendBeacon('/api/track-funnel', new Blob([JSON.stringify({event:ev,meta:meta||{}})],{type:'application/json'})) : fetch('/api/track-funnel',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({event:ev,meta:meta||{}}),keepalive:true}); }catch(e){} }
@@ -3762,6 +3777,33 @@ document.addEventListener('DOMContentLoaded', function(){
         }
         return json({ok:true, message: isNewSignup ? '🎉 Willkommen! Dein Login-Link wurde an deine Email gesendet.' : '✅ Login-Link wurde an deine Email gesendet.', isNewSignup});
     }
+    // Password-Reset: sendet Magic-Link zum Passwort-Ändern
+    if (path === '/api/auth/password-reset' && req.method === 'POST') {
+        const body = await parseBody(req);
+        const email = String(body.email || '').toLowerCase().trim();
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json({ok:false, error:'Ungültige Email'}, 400);
+        const rlKey = 'pwreset:' + email;
+        const lastTs = emailRateLimit.get(rlKey) || 0;
+        if (Date.now() - lastTs < PW_RESET_RATE_LIMIT) {
+            const wait = Math.ceil((PW_RESET_RATE_LIMIT - (Date.now() - lastTs)) / 1000);
+            return json({ok:false, error:`Bitte warte noch ${wait}s vor dem nächsten Versuch.`}, 429);
+        }
+        emailRateLimit.set(rlKey, Date.now());
+        const botData = await fetchBot('/data');
+        if (!botData) return json({ok:false, error:'Server nicht erreichbar'}, 503);
+        const found = Object.entries(botData.users || {}).find(([, u]) => String(u.email || '').toLowerCase() === email);
+        if (!found) return json({ok:true}); // silent — no email enumeration
+        const [uid, u] = found;
+        const token = crypto.randomBytes(24).toString('hex');
+        emailLoginTokens.set(token, { email, uid: String(uid), exp: Date.now() + EMAIL_TOKEN_TTL });
+        const baseUrl = (process.env.APP_URL || ('https://' + (req.headers.host || 'web-production-7981d.up.railway.app'))).replace(/\/$/, '');
+        const loginUrl = baseUrl + '/auth/email-login?token=' + encodeURIComponent(token);
+        const userName = u.spitzname || u.name || 'CreatorX User';
+        const mailHtml = `<!DOCTYPE html><html><body style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#000;color:#fff;padding:0"><div style="max-width:560px;margin:0 auto;padding:32px 24px"><div style="text-align:center;margin-bottom:24px"><img src="${baseUrl}/cx-logo-256.png" width="80" height="80" style="border-radius:18px" alt="CreatorX"></div><h1 style="font-size:26px;font-weight:700;margin:0 0 12px;text-align:center;color:#fff">Passwort zurücksetzen</h1><p style="font-size:15px;color:#a8a39a;line-height:1.6;text-align:center;margin:0 0 28px">Hi ${userName.replace(/[<>]/g,'')}, klick den Button um dich einzuloggen. Danach kannst du in den Einstellungen ein neues Passwort setzen.</p><div style="text-align:center;margin:32px 0"><a href="${loginUrl}" style="display:inline-block;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px">🔐 Einloggen & Passwort ändern</a></div><p style="font-size:12px;color:#605c54;text-align:center;margin-top:32px;border-top:1px solid #221f1a;padding-top:20px">Link 1h gültig, einmalig nutzbar. Falls du das nicht angefragt hast, ignoriere die Email.</p></div></body></html>`;
+        await sendEmail(email, '🔐 CreatorX: Passwort zurücksetzen', mailHtml);
+        return json({ok:true});
+    }
+
     // Admin-Vorschau für die Magic-Link-Email (zeigt das HTML der Email mit Beispiel-Daten).
     if (path === '/preview/email-login' && req.method === 'GET') {
         const baseUrl = (process.env.APP_URL || ('https://' + (req.headers.host || 'web-production-7981d.up.railway.app'))).replace(/\/$/, '');
