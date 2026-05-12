@@ -4850,7 +4850,8 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
     if (path === '/api/claim-daily-xp' && req.method === 'POST') {
         if (!session) return json({error:'Nicht eingeloggt'}, 401);
         const myUid = getMyUid(session);
-        if (hasClaimed('dailyxp', myUid)) return json({ok:false, error:'Schon abgeholt! Morgen wieder.'}, 429);
+        const _dxAdmins = Array.isArray(_dataCache?._adminIds) ? _dataCache._adminIds.map(Number) : [];
+        if (!_dxAdmins.includes(Number(myUid)) && hasClaimed('dailyxp', myUid)) return json({ok:false, error:'Schon abgeholt! Morgen wieder.'}, 429);
         const xpAmount = Math.floor(Math.random() * 11) + 10; // 10-20
         const result = await postBot('/add-xp', { uid: myUid, amount: xpAmount, reason: 'daily-bonus', noRanking: true });
         if (!result || !result.ok) {
@@ -4864,7 +4865,8 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
     if (path === '/api/spin-roulette' && req.method === 'POST') {
         if (!session) return json({error:'Nicht eingeloggt'}, 401);
         const myUid = getMyUid(session);
-        if (hasClaimed('roulette', myUid)) return json({ok:false, error:'Schon gedreht! Morgen wieder.'}, 429);
+        const _rlAdmins = Array.isArray(_dataCache?._adminIds) ? _dataCache._adminIds.map(Number) : [];
+        if (!_rlAdmins.includes(Number(myUid)) && hasClaimed('roulette', myUid)) return json({ok:false, error:'Schon gedreht! Morgen wieder.'}, 429);
         const prizes = [
             { idx:0, label:'20 XP', weight:15, action:'/add-xp', data:{amount:20,reason:'roulette',noRanking:true} },
             { idx:1, label:'1 Extra-Link', weight:20, action:'/add-extra-link', data:{} },
@@ -10760,7 +10762,7 @@ ${rest.map(([id,u],idx)=>{
             +'</div>'
             +'<div style="background:var(--bg3);border-radius:14px;padding:14px 16px">'
             +'<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Status</div>'
-            +'<div style="display:inline-flex;align-items:center;padding:4px 12px;border-radius:20px;background:'+badgeGradient(myUser?.role)+';color:#fff;font-size:12px;font-weight:700">'+( myUser?.role||'🆕 New')+'</div>'
+            +'<div style="display:inline-flex;align-items:center;padding:4px 12px;border-radius:20px;background:'+badgeGradient(myUser?.role || (_myIsAdmin?'Admin':''))+';color:#fff;font-size:12px;font-weight:700">'+(myUser?.role || (_myIsAdmin?'👑 Admin':'🆕 New'))+'</div>'
             +(myUser?.trophies&&myUser.trophies.length?'<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px">'+myUser.trophies.map(t=>'<span style="font-size:22px;background:var(--bg4);border-radius:8px;padding:4px 8px">'+t+'</span>').join('')+'</div>':'')
             +'</div>'
             +(()=>{
