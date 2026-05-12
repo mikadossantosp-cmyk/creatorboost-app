@@ -4846,6 +4846,43 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
         return json({ok:true, xp: xpAmount});
     }
 
+    // Daily Roulette spin (1x per day per user)
+    if (path === '/api/spin-roulette' && req.method === 'POST') {
+        if (!session) return json({error:'Nicht eingeloggt'}, 401);
+        const myUid = getMyUid(session);
+        const today = new Date().toISOString().slice(0, 10);
+        const claimKey = 'roulette:' + myUid + ':' + today;
+        if (emailRateLimit.has(claimKey)) return json({ok:false, error:'Schon gedreht! Morgen wieder.'}, 429);
+        emailRateLimit.set(claimKey, Date.now());
+        // Weighted prize pool: index matches canvas segments
+        // Segments: 0=20XP, 1=ExtraLink, 2=20XP, 3=Superlink, 4=20XP, 5=1Diamant, 6=100XP, 7=5Diamanten, 8=20XP, 9=10Diamanten
+        // Weights (must sum to 100): 20XP=44%(4x11), ExtraLink=20%, Superlink=20%, 1Diamant=20%... wait
+        // Actual: 20XP×4=each segment, but weighted pick determines which segment wins
+        const prizes = [
+            { idx:0, label:'20 XP', weight:15, action:'/add-xp', data:{amount:20,reason:'roulette'} },
+            { idx:1, label:'1 Extra-Link', weight:20, action:'/add-extra-link', data:{} },
+            { idx:2, label:'20 XP', weight:15, action:'/add-xp', data:{amount:20,reason:'roulette'} },
+            { idx:3, label:'1 Superlink', weight:20, action:'/add-superlink', data:{} },
+            { idx:4, label:'20 XP', weight:9, action:'/add-xp', data:{amount:20,reason:'roulette'} },
+            { idx:5, label:'1 Diamant', weight:10, action:'/add-diamonds', data:{amount:1,reason:'roulette'} },
+            { idx:6, label:'100 XP', weight:5, action:'/add-xp', data:{amount:100,reason:'roulette'} },
+            { idx:7, label:'5 Diamanten', weight:4, action:'/add-diamonds', data:{amount:5,reason:'roulette'} },
+            { idx:8, label:'20 XP', weight:1, action:'/add-xp', data:{amount:20,reason:'roulette'} },
+            { idx:9, label:'10 Diamanten', weight:1, action:'/add-diamonds', data:{amount:10,reason:'roulette'} },
+        ];
+        const totalWeight = prizes.reduce((s,p) => s + p.weight, 0);
+        let rand = Math.random() * totalWeight;
+        let picked = prizes[0];
+        for (const p of prizes) { rand -= p.weight; if (rand <= 0) { picked = p; break; } }
+        const payload = { uid: myUid, ...picked.data };
+        const result = await postBot(picked.action, payload);
+        if (!result || !result.ok) {
+            emailRateLimit.delete(claimKey);
+            return json({ok:false, error:'Gewinn konnte nicht gutgeschrieben werden'}, 500);
+        }
+        return json({ok:true, prize: picked.label, segmentIndex: picked.idx});
+    }
+
     if (path === '/api/like' && req.method === 'POST') {
         const body = await parseBody(req);
         const { msgId } = body;
@@ -10307,7 +10344,102 @@ async function msAdminRestore(uid,name){if(!confirm(name+' zurück auf die Warte
     </div>
   </div>
 </div>`;
-            })()
+            })(),
+            roulette: `
+<style>
+.rl-wrap{padding:16px;text-align:center}
+.rl-card{background:linear-gradient(135deg,rgba(239,68,68,0.08),rgba(245,158,11,0.05));border:1px solid rgba(239,68,68,0.3);border-radius:20px;padding:24px 16px;margin-bottom:16px}
+.rl-wheel{position:relative;width:280px;height:280px;margin:20px auto;-webkit-user-select:none;user-select:none}
+.rl-wheel canvas{width:100%;height:100%;border-radius:50%;box-shadow:0 0 0 6px rgba(239,68,68,0.4),0 12px 40px rgba(0,0,0,0.4)}
+.rl-pointer{position:absolute;top:-12px;left:50%;transform:translateX(-50%);font-size:28px;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5));z-index:2}
+.rl-btn{margin-top:20px;padding:16px 40px;background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;border:none;border-radius:14px;font-size:16px;font-weight:800;cursor:pointer;box-shadow:0 8px 24px rgba(239,68,68,0.4);transition:transform .12s}
+.rl-btn:active{transform:scale(0.95)}
+.rl-btn:disabled{opacity:0.5;cursor:not-allowed;transform:none}
+.rl-result{margin-top:16px;padding:16px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);border-radius:14px;font-size:15px;font-weight:700;color:#4ade80;display:none}
+.rl-cooldown{font-size:12px;color:var(--muted);margin-top:10px}
+</style>
+<div class="rl-wrap">
+<div class="rl-card">
+  <div style="font-size:36px;margin-bottom:8px">🎡</div>
+  <h2 style="font-size:20px;font-weight:800;margin:0 0 6px">Tägliches Roulette</h2>
+  <div style="font-size:13px;color:var(--muted)">Drehe einmal pro Tag und gewinne einen Preis!</div>
+</div>
+<div class="rl-wheel">
+  <div class="rl-pointer">🔻</div>
+  <canvas id="rl-canvas" width="560" height="560"></canvas>
+</div>
+<button class="rl-btn" id="rl-spin-btn" onclick="spinRoulette()">🎡 Drehen!</button>
+<div class="rl-result" id="rl-result"></div>
+<div class="rl-cooldown" id="rl-cooldown"></div>
+</div>
+<script>
+(function(){
+const segments=[
+  {label:'20 XP',color:'#f59e0b',text:'#000'},
+  {label:'1 Extra-Link',color:'#3b82f6',text:'#fff'},
+  {label:'20 XP',color:'#f59e0b',text:'#000'},
+  {label:'1 Superlink',color:'#8b5cf6',text:'#fff'},
+  {label:'20 XP',color:'#f59e0b',text:'#000'},
+  {label:'1 Diamant',color:'#06b6d4',text:'#fff'},
+  {label:'100 XP',color:'#22c55e',text:'#fff'},
+  {label:'5 Diamanten',color:'#ec4899',text:'#fff'},
+  {label:'20 XP',color:'#f59e0b',text:'#000'},
+  {label:'10 Diamanten',color:'#ef4444',text:'#fff'},
+];
+const canvas=document.getElementById('rl-canvas');
+const ctx=canvas.getContext('2d');
+const cx=280,cy=280,r=270;
+let currentAngle=0;
+
+function drawWheel(angle){
+  ctx.clearRect(0,0,560,560);
+  const arc=2*Math.PI/segments.length;
+  segments.forEach((seg,i)=>{
+    const start=angle+i*arc;
+    ctx.beginPath();ctx.moveTo(cx,cy);ctx.arc(cx,cy,r,start,start+arc);ctx.closePath();
+    ctx.fillStyle=seg.color;ctx.fill();
+    ctx.strokeStyle='rgba(0,0,0,0.2)';ctx.lineWidth=2;ctx.stroke();
+    ctx.save();ctx.translate(cx,cy);ctx.rotate(start+arc/2);
+    ctx.fillStyle=seg.text;ctx.font='bold 13px Inter,sans-serif';ctx.textAlign='center';
+    ctx.fillText(seg.label,r*0.62,5);
+    ctx.restore();
+  });
+  ctx.beginPath();ctx.arc(cx,cy,30,0,2*Math.PI);ctx.fillStyle='#1a1a1a';ctx.fill();
+  ctx.strokeStyle='rgba(255,255,255,0.1)';ctx.lineWidth=3;ctx.stroke();
+}
+drawWheel(0);
+
+window.spinRoulette=async function(){
+  const btn=document.getElementById('rl-spin-btn');
+  const result=document.getElementById('rl-result');
+  btn.disabled=true;result.style.display='none';
+  try{
+    const res=await fetch('/api/spin-roulette',{method:'POST',headers:{'Content-Type':'application/json'}});
+    const data=await res.json();
+    if(!data.ok){result.style.display='block';result.style.background='rgba(239,68,68,0.1)';result.style.borderColor='rgba(239,68,68,0.3)';result.style.color='#f87171';result.textContent=data.error||'Fehler';btn.disabled=false;return;}
+    const idx=data.segmentIndex;
+    const arc=2*Math.PI/segments.length;
+    const targetAngle=2*Math.PI*5+(2*Math.PI-idx*arc-arc/2);
+    let start=null;const duration=4000;
+    function animate(ts){
+      if(!start)start=ts;
+      const elapsed=ts-start;
+      const progress=Math.min(elapsed/duration,1);
+      const eased=1-Math.pow(1-progress,4);
+      currentAngle=targetAngle*eased;
+      drawWheel(-currentAngle);
+      if(progress<1){requestAnimationFrame(animate);}
+      else{
+        result.style.display='block';result.style.background='rgba(34,197,94,0.1)';result.style.borderColor='rgba(34,197,94,0.3)';result.style.color='#4ade80';
+        result.textContent='🎉 Gewonnen: '+data.prize;
+        btn.textContent='Morgen wieder!';
+      }
+    }
+    requestAnimationFrame(animate);
+  }catch(e){result.style.display='block';result.style.color='#f87171';result.textContent='Netzwerkfehler';btn.disabled=false;}
+};
+})();
+</script>`
         };
 
         const tabs = [
@@ -10318,6 +10450,7 @@ async function msAdminRestore(uid,name){if(!confirm(name+' zurück auf die Warte
             {id:'regeln',    emoji:'📋', label:'Regeln',    c1:'#94a3b8', c2:'#475569', shadow:'rgba(148,163,184,0.45)'},
             {id:'shop',      emoji:'💎', label:'Shop',      c1:'#ec4899', c2:'#a21caf', shadow:'rgba(236,72,153,0.45)'},
             {id:'gewinnspiel',emoji:'🎰',label:'Gewinn',    c1:'#f59e0b', c2:'#ef4444', shadow:'rgba(245,158,11,0.45)'},
+            {id:'roulette',  emoji:'🎡', label:'Roulette',  c1:'#ef4444', c2:'#dc2626', shadow:'rgba(239,68,68,0.45)'},
         ];
 
         return html(`
