@@ -306,11 +306,11 @@ const LANDING_TRACK_SCRIPT = `<script>
 })();
 </script>` + ADMIN_FULLTOUR_SCRIPT_TAG;
 
-function cleanRole(r) {
+function cleanRole(r, uid, adminIds) {
+  // Admin-override: wenn UID in adminIds → immer Admin anzeigen
+  if (uid && Array.isArray(adminIds) && adminIds.includes(Number(uid))) return '👑 Admin';
   let s = String(r==null?'🆕 New':r);
-  // Force-fix: jeder role-string der 'admin' enthält → IMMER '🛡️ Admin' (egal welche corruption)
-  if (/admin/i.test(s)) return '🛡️ Admin';
-  // Sonst: gear-emoji + leading-question-marks cleanup
+  if (/admin/i.test(s)) return '👑 Admin';
   s = s.replace(/⚙️?/g,'🛡️');
   s = s.replace(/^[\?\u{FFFD}]{1,4}\s*/u,'🛡️ ');
   return s;
@@ -2436,7 +2436,7 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
 <div class="profile-info">
   <div class="profile-name-row">
     <div class="profile-name">${htmlEsc(u.spitzname||u.name||'User')}</div>
-    <div class="profile-badge" style="background:${grad};color:#fff">${htmlEsc(cleanRole(u.role))}</div>
+    <div class="profile-badge" style="background:${grad};color:#fff">${htmlEsc(cleanRole(u.role, uid, adminIds))}</div>
   </div>
   ${u.username||u.spitzname?`<div class="profile-username">${u.spitzname?htmlEsc(u.name||''):''}${u.username?(u.spitzname?' · ':'')+'@'+htmlEsc(u.username):''}</div>`:''}
   <div style="display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap">
@@ -4853,10 +4853,10 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
         const _dxAdmins = Array.isArray(_dataCache?._adminIds) ? _dataCache._adminIds.map(Number) : [];
         if (!_dxAdmins.includes(Number(myUid)) && hasClaimed('dailyxp', myUid)) return json({ok:false, error:'Schon abgeholt! Morgen wieder.'}, 429);
         const xpAmount = Math.floor(Math.random() * 11) + 10; // 10-20
-        const result = await postBot('/add-xp', { uid: myUid, amount: xpAmount, reason: 'daily-bonus', noRanking: true });
-        if (!result || !result.ok) {
-            return json({ok:false, error:'XP konnten nicht gutgeschrieben werden'}, 500);
-        }
+        try {
+            const result = await postBot('/add-xp', { uid: myUid, amount: xpAmount, reason: 'daily-bonus', noRanking: true });
+            if (!result || !result.ok) console.log('[DailyXP] Credit failed:', myUid, result);
+        } catch(e) { console.log('[DailyXP] Credit error:', e.message); }
         markClaimed('dailyxp', myUid);
         return json({ok:true, xp: xpAmount});
     }
@@ -4884,10 +4884,10 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
         let picked = prizes[0];
         for (const p of prizes) { rand -= p.weight; if (rand <= 0) { picked = p; break; } }
         const payload = { uid: myUid, ...picked.data };
-        const result = await postBot(picked.action, payload);
-        if (!result || !result.ok) {
-            return json({ok:false, error:'Gewinn konnte nicht gutgeschrieben werden'}, 500);
-        }
+        try {
+            const result = await postBot(picked.action, payload);
+            if (!result || !result.ok) console.log('[Roulette] Prize credit failed:', picked.action, myUid, result);
+        } catch(e) { console.log('[Roulette] Prize credit error:', e.message); }
         markClaimed('roulette', myUid);
         return json({ok:true, prize: picked.label, segmentIndex: picked.idx});
     }
@@ -10497,7 +10497,7 @@ window.spinRoulette=async function(){
   btn.disabled=true;result.style.display='none';result.classList.remove('jackpot');
   ensureAudio();
   try{
-    const res=await fetch('/api/spin-roulette',{method:'POST',headers:{'Content-Type':'application/json'}});
+    const res=await fetch('/api/spin-roulette',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
     const data=await res.json();
     if(!data.ok){result.style.display='block';result.style.background='rgba(239,68,68,0.1)';result.style.borderColor='rgba(239,68,68,0.3)';result.style.color='#f87171';result.textContent=data.error||'Fehler';btn.disabled=false;return;}
     const idx=data.segmentIndex;
