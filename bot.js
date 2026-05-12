@@ -10498,8 +10498,9 @@ window.spinRoulette=async function(){
   ensureAudio();
   try{
     const res=await fetch('/api/spin-roulette',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
-    const data=await res.json();
-    if(!data.ok){result.style.display='block';result.style.background='rgba(239,68,68,0.1)';result.style.borderColor='rgba(239,68,68,0.3)';result.style.color='#f87171';result.textContent=data.error||'Fehler';btn.disabled=false;return;}
+    const txt=await res.text();
+    let data;try{data=JSON.parse(txt);}catch(pe){result.style.display='block';result.style.color='#f87171';result.textContent='Server-Fehler ('+res.status+')';btn.disabled=false;return;}
+    if(!data.ok){result.style.display='block';result.style.background='rgba(239,68,68,0.1)';result.style.borderColor='rgba(239,68,68,0.3)';result.style.color='#f87171';result.textContent=data.error||'Fehler ('+res.status+')';btn.disabled=false;return;}
     const idx=data.segmentIndex;
     const arc=2*Math.PI/N;
     // Pointer is at top (angle -PI/2 in drawWheel). We rotate CW.
@@ -10538,7 +10539,7 @@ window.spinRoulette=async function(){
       }
     }
     requestAnimationFrame(animate);
-  }catch(e){result.style.display='block';result.style.color='#f87171';result.textContent='Netzwerkfehler';btn.disabled=false;}
+  }catch(e){result.style.display='block';result.style.color='#f87171';result.textContent='Fehler: '+e.message;btn.disabled=false;}
 };
 })();
 <\/script>`
@@ -10861,7 +10862,7 @@ async function claimDailyXP(){
   btn.disabled=true;btn.textContent='...';
   try{
     var r=await fetch('/api/claim-daily-xp',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
-    var d=await r.json();
+    var _t=await r.text();var d;try{d=JSON.parse(_t);}catch(_pe){btn.textContent='Fehler ('+r.status+')';return;}
     if(d.ok){
       btn.textContent='✅ +'+d.xp+' XP';btn.style.background='#333';
       // Update XP display on profile immediately
