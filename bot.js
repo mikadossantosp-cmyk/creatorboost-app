@@ -4800,6 +4800,23 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
     }
 
     // ── LIKE API ──
+    // Daily XP claim (1x per day per user)
+    if (path === '/api/claim-daily-xp' && req.method === 'POST') {
+        if (!session) return json({error:'Nicht eingeloggt'}, 401);
+        const myUid = getMyUid(session);
+        const today = new Date().toISOString().slice(0, 10);
+        const claimKey = 'dailyxp:' + myUid + ':' + today;
+        if (emailRateLimit.has(claimKey)) return json({ok:false, error:'Schon abgeholt! Morgen wieder.'}, 429);
+        emailRateLimit.set(claimKey, Date.now());
+        const xpAmount = Math.floor(Math.random() * 11) + 10; // 10-20
+        const result = await postBot('/add-xp', { uid: myUid, amount: xpAmount, reason: 'daily-bonus' });
+        if (!result || !result.ok) {
+            emailRateLimit.delete(claimKey);
+            return json({ok:false, error:'XP konnten nicht gutgeschrieben werden'}, 500);
+        }
+        return json({ok:true, xp: xpAmount});
+    }
+
     if (path === '/api/like' && req.method === 'POST') {
         const body = await parseBody(req);
         const { msgId } = body;
@@ -10484,6 +10501,14 @@ ${rest.map(([id,u],idx)=>{
   </div>
 </div>
 ${profileCard(myUid, myUser, d, true, lang, adminIds, myBannerData, myPicData)}
+<div id="daily-xp-box" style="margin:10px 12px;background:linear-gradient(135deg,rgba(34,197,94,0.08),rgba(34,197,94,0.02));border:1px solid rgba(34,197,94,0.25);border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:12px">
+  <div style="font-size:28px">🎁</div>
+  <div style="flex:1;min-width:0">
+    <div style="font-size:13px;font-weight:700">Täglicher XP-Bonus</div>
+    <div style="font-size:11px;color:var(--muted);margin-top:2px">Hol dir 10–20 Gratis-XP — einmal pro Tag!</div>
+  </div>
+  <button id="daily-xp-btn" onclick="claimDailyXP()" style="flex-shrink:0;padding:9px 16px;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(34,197,94,0.3);transition:transform .12s">Abholen</button>
+</div>
 <div class="acc-switcher" style="margin:8px 12px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:6px">
   <div class="acc-row${isParentActive?' active':''}" onclick="switchAcc('${parentUid}')" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;cursor:pointer;transition:background 0.15s">
     <div style="width:36px;height:36px;border-radius:50%;overflow:hidden;background:linear-gradient(135deg,#a78bfa,#7c3aed);display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;flex-shrink:0">
@@ -10524,6 +10549,16 @@ ${profileCard(myUid, myUser, d, true, lang, adminIds, myBannerData, myPicData)}
   </div>
 </div>
 <script>
+async function claimDailyXP(){
+  var btn=document.getElementById('daily-xp-btn');
+  btn.disabled=true;btn.textContent='...';
+  try{
+    var r=await fetch('/api/claim-daily-xp',{method:'POST',headers:{'Content-Type':'application/json'}});
+    var d=await r.json();
+    if(d.ok){btn.textContent='✅ +'+d.xp+' XP';btn.style.background='#333';setTimeout(function(){btn.textContent='Erledigt ✓';},1500);}
+    else{btn.textContent=d.error||'Fehler';btn.disabled=false;setTimeout(function(){btn.textContent='Abholen';btn.disabled=false;},2000);}
+  }catch(e){btn.textContent='Fehler';btn.disabled=false;setTimeout(function(){btn.textContent='Abholen';},2000);}
+}
 async function switchAcc(uid){
   try {
     const r = await fetch('/api/switch-account',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({uid})});
