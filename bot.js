@@ -104,6 +104,35 @@ function saveSessions() {
 }
 setInterval(saveSessions, 60000);
 
+// Weekly raffle (Gewinnspiel): runs every minute, triggers Sunday 20:00 Berlin time
+let _lastRaffleTrigger = '';
+setInterval(async () => {
+    try {
+        const now = new Date(new Date().toLocaleString('en-US', {timeZone:'Europe/Berlin'}));
+        if (now.getDay() !== 0 || now.getHours() !== 20 || now.getMinutes() !== 0) return;
+        const key = now.toISOString().slice(0, 10);
+        if (_lastRaffleTrigger === key) return;
+        _lastRaffleTrigger = key;
+        const bd = await fetchBot('/data');
+        if (!bd) return;
+        const threshold = 750;
+        const eligible = Object.entries(bd.users || {}).filter(([, u]) => (u.xpThisWeek || u.weeklyXp || 0) >= threshold && u.started);
+        if (!eligible.length) { console.log('[Gewinnspiel] Keine qualifizierten Teilnehmer diese Woche'); return; }
+        const winner = eligible[Math.floor(Math.random() * eligible.length)];
+        const [winnerUid, winnerUser] = winner;
+        const prizes = [
+            { name: '1 Extra-Link', action: '/add-extra-link' },
+            { name: '1 Superlink', action: '/add-superlink' },
+            { name: '500 XP', action: '/add-xp', data: { amount: 500, reason: 'gewinnspiel' } },
+            { name: '5 Diamanten', action: '/add-diamonds', data: { amount: 5, reason: 'gewinnspiel' } }
+        ];
+        const prize = prizes[Math.floor(Math.random() * prizes.length)];
+        const payload = { uid: winnerUid, ...(prize.data || {}), reason: prize.data?.reason || 'gewinnspiel' };
+        await postBot(prize.action, payload);
+        console.log(`[Gewinnspiel] Gewinner: ${winnerUser.spitzname || winnerUser.name} (${winnerUid}) — Preis: ${prize.name}`);
+    } catch(e) { console.error('[Gewinnspiel] Fehler:', e.message); }
+}, 60000);
+
 // Migrate all existing sessions to light theme
 for (const [k, v] of sessions.entries()) { if (!v.theme || v.theme === 'dark') { v.theme = 'light'; } }
 saveSessions();
@@ -3382,6 +3411,7 @@ ${_isPreview ? '<div class="admin-pb">👀 Admin-Vorschau · Login-Page &nbsp;·
       <input type="password" id="email-pw" class="in" placeholder="Passwort" autocomplete="current-password" maxlength="200" required>
       <button type="submit" class="btn-p" id="email-btn">Sign In →</button>
     </form>
+    <button class="btn-link" id="pw-reset-btn" onclick="resetPassword()">Passwort vergessen?</button>
     <div style="text-align:center;margin-top:18px;padding-top:18px;border-top:1px solid var(--border)">
       <div style="font-size:12.5px;color:var(--muted);margin-bottom:8px">Noch keinen Account?</div>
       <a href="/signup" style="display:inline-flex;align-items:center;gap:6px;color:var(--gold);font-weight:700;text-decoration:none;font-size:13.5px">→ Jetzt Sign Up</a>
@@ -3455,6 +3485,20 @@ function submitEmail(ev){
     })
     .catch(function(){msg.textContent='Netzwerkfehler.';msg.classList.add('show','err');btn.disabled=false;btn.textContent='Sign In →';});
   return false;
+}
+function resetPassword(){
+  var inp=document.getElementById('email-input'),msg=document.getElementById('email-msg'),btn=document.getElementById('pw-reset-btn');
+  var em=(inp.value||'').trim().toLowerCase();
+  if(!em){msg.textContent='Bitte zuerst deine Email-Adresse eingeben.';msg.classList.add('show','err');inp.focus();return;}
+  msg.classList.remove('show','ok','err');btn.disabled=true;btn.textContent='Wird gesendet...';
+  fetch('/api/auth/password-reset',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:em})})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(d.ok){msg.textContent='✅ Reset-Link an deine Email gesendet. Prüfe auch den Spam-Ordner.';msg.classList.add('show','ok');}
+      else{msg.textContent=d.error||'Fehler beim Senden.';msg.classList.add('show','err');}
+    })
+    .catch(function(){msg.textContent='Netzwerkfehler.';msg.classList.add('show','err');})
+    .finally(function(){btn.disabled=false;btn.textContent='Passwort vergessen?';});
 }
 // Funnel-Tracking: Landing-CTAs
 function _trackFn(ev, meta){ try{ navigator.sendBeacon ? navigator.sendBeacon('/api/track-funnel', new Blob([JSON.stringify({event:ev,meta:meta||{}})],{type:'application/json'})) : fetch('/api/track-funnel',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({event:ev,meta:meta||{}}),keepalive:true}); }catch(e){} }
@@ -3762,6 +3806,33 @@ document.addEventListener('DOMContentLoaded', function(){
         }
         return json({ok:true, message: isNewSignup ? '🎉 Willkommen! Dein Login-Link wurde an deine Email gesendet.' : '✅ Login-Link wurde an deine Email gesendet.', isNewSignup});
     }
+    // Password-Reset: sendet Magic-Link zum Passwort-Ändern
+    if (path === '/api/auth/password-reset' && req.method === 'POST') {
+        const body = await parseBody(req);
+        const email = String(body.email || '').toLowerCase().trim();
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json({ok:false, error:'Ungültige Email'}, 400);
+        const rlKey = 'pwreset:' + email;
+        const lastTs = emailRateLimit.get(rlKey) || 0;
+        if (Date.now() - lastTs < PW_RESET_RATE_LIMIT) {
+            const wait = Math.ceil((PW_RESET_RATE_LIMIT - (Date.now() - lastTs)) / 1000);
+            return json({ok:false, error:`Bitte warte noch ${wait}s vor dem nächsten Versuch.`}, 429);
+        }
+        emailRateLimit.set(rlKey, Date.now());
+        const botData = await fetchBot('/data');
+        if (!botData) return json({ok:false, error:'Server nicht erreichbar'}, 503);
+        const found = Object.entries(botData.users || {}).find(([, u]) => String(u.email || '').toLowerCase() === email);
+        if (!found) return json({ok:true}); // silent — no email enumeration
+        const [uid, u] = found;
+        const token = crypto.randomBytes(24).toString('hex');
+        emailLoginTokens.set(token, { email, uid: String(uid), exp: Date.now() + EMAIL_TOKEN_TTL });
+        const baseUrl = (process.env.APP_URL || ('https://' + (req.headers.host || 'web-production-7981d.up.railway.app'))).replace(/\/$/, '');
+        const loginUrl = baseUrl + '/auth/email-login?token=' + encodeURIComponent(token);
+        const userName = u.spitzname || u.name || 'CreatorX User';
+        const mailHtml = `<!DOCTYPE html><html><body style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#000;color:#fff;padding:0"><div style="max-width:560px;margin:0 auto;padding:32px 24px"><div style="text-align:center;margin-bottom:24px"><img src="${baseUrl}/cx-logo-256.png" width="80" height="80" style="border-radius:18px" alt="CreatorX"></div><h1 style="font-size:26px;font-weight:700;margin:0 0 12px;text-align:center;color:#fff">Passwort zurücksetzen</h1><p style="font-size:15px;color:#a8a39a;line-height:1.6;text-align:center;margin:0 0 28px">Hi ${userName.replace(/[<>]/g,'')}, klick den Button um dich einzuloggen. Danach kannst du in den Einstellungen ein neues Passwort setzen.</p><div style="text-align:center;margin:32px 0"><a href="${loginUrl}" style="display:inline-block;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px">🔐 Einloggen & Passwort ändern</a></div><p style="font-size:12px;color:#605c54;text-align:center;margin-top:32px;border-top:1px solid #221f1a;padding-top:20px">Link 1h gültig, einmalig nutzbar. Falls du das nicht angefragt hast, ignoriere die Email.</p></div></body></html>`;
+        await sendEmail(email, '🔐 CreatorX: Passwort zurücksetzen', mailHtml);
+        return json({ok:true});
+    }
+
     // Admin-Vorschau für die Magic-Link-Email (zeigt das HTML der Email mit Beispiel-Daten).
     if (path === '/preview/email-login' && req.method === 'GET') {
         const baseUrl = (process.env.APP_URL || ('https://' + (req.headers.host || 'web-production-7981d.up.railway.app'))).replace(/\/$/, '');
@@ -4758,6 +4829,23 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
     }
 
     // ── LIKE API ──
+    // Daily XP claim (1x per day per user)
+    if (path === '/api/claim-daily-xp' && req.method === 'POST') {
+        if (!session) return json({error:'Nicht eingeloggt'}, 401);
+        const myUid = getMyUid(session);
+        const today = new Date().toISOString().slice(0, 10);
+        const claimKey = 'dailyxp:' + myUid + ':' + today;
+        if (emailRateLimit.has(claimKey)) return json({ok:false, error:'Schon abgeholt! Morgen wieder.'}, 429);
+        emailRateLimit.set(claimKey, Date.now());
+        const xpAmount = Math.floor(Math.random() * 11) + 10; // 10-20
+        const result = await postBot('/add-xp', { uid: myUid, amount: xpAmount, reason: 'daily-bonus' });
+        if (!result || !result.ok) {
+            emailRateLimit.delete(claimKey);
+            return json({ok:false, error:'XP konnten nicht gutgeschrieben werden'}, 500);
+        }
+        return json({ok:true, xp: xpAmount});
+    }
+
     if (path === '/api/like' && req.method === 'POST') {
         const body = await parseBody(req);
         const { msgId } = body;
@@ -10177,6 +10265,48 @@ async function msAdminBlast(){if(!confirm('Initial-DM an alle Insta-User die noc
 async function msAdminRestore(uid,name){if(!confirm(name+' zurück auf die Warteliste verschieben?'))return;const el=document.getElementById('ms-admin-result');if(el){el.textContent='…';el.style.color='var(--muted)';}const r=await fetch('/api/mindset-admin/restore',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({targetUid:uid})});const d=await r.json();if(d.ok){if(el){el.textContent='↩ Zurück auf Liste';el.style.color='#22c55e';}setTimeout(()=>location.reload(),500);}else{if(el){el.textContent='❌ '+(d.error||'Fehler');el.style.color='#ef4444';}}}
 `:''}
 </script>`;
+            })(),
+            gewinnspiel: (()=>{
+                const myXpThisWeek = myUser.xpThisWeek || myUser.weeklyXp || 0;
+                const threshold = 750;
+                const qualified = myXpThisWeek >= threshold;
+                const nextSunday = (()=>{ const n=new Date(); const d=n.getDay(); const diff=d===0?0:7-d; const s=new Date(n); s.setDate(n.getDate()+diff); s.setHours(20,0,0,0); return s; })();
+                const timeLeft = Math.max(0, nextSunday.getTime() - Date.now());
+                const hoursLeft = Math.floor(timeLeft / 3600000);
+                const prizes = ['🔗 1 Extra-Link','⚡ 1 Superlink','✨ 500 XP','💎 5 Diamanten'];
+                return `
+<div style="padding:16px">
+  <div style="background:linear-gradient(135deg,rgba(245,158,11,0.1),rgba(239,68,68,0.05));border:1px solid rgba(245,158,11,0.3);border-radius:20px;padding:24px 20px;text-align:center;margin-bottom:16px">
+    <div style="font-size:42px;margin-bottom:12px">🎰</div>
+    <h2 style="font-size:20px;font-weight:800;margin:0 0 6px;letter-spacing:-0.3px">Wöchentliches Gewinnspiel</h2>
+    <div style="font-size:13px;color:var(--muted);line-height:1.5">Sammle <b style="color:var(--text)">${threshold} XP</b> diese Woche und nimm automatisch teil!</div>
+    <div style="margin:16px 0;padding:14px;background:rgba(255,255,255,0.04);border-radius:12px;border:1px solid var(--border2)">
+      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Dein Fortschritt</div>
+      <div style="font-size:28px;font-weight:800;color:${qualified?'#22c55e':'var(--text)'}">${myXpThisWeek} <span style="font-size:14px;color:var(--muted)">/ ${threshold} XP</span></div>
+      <div style="margin-top:10px;height:8px;background:rgba(255,255,255,0.06);border-radius:99px;overflow:hidden">
+        <div style="height:100%;width:${Math.min(100,Math.round(myXpThisWeek/threshold*100))}%;background:${qualified?'linear-gradient(90deg,#22c55e,#4ade80)':'linear-gradient(90deg,#f59e0b,#ef4444)'};border-radius:99px;transition:width 0.5s"></div>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-top:8px">${qualified?'✅ Du nimmst teil!':'Noch '+(threshold-myXpThisWeek)+' XP bis zur Teilnahme'}</div>
+    </div>
+    <div style="font-size:12px;color:var(--muted)">⏰ Ziehung: Sonntag 20:00 Uhr · noch ~${hoursLeft}h</div>
+  </div>
+  <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:16px;padding:18px">
+    <div style="font-size:13px;font-weight:700;margin-bottom:12px">🎁 Mögliche Gewinne</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      ${prizes.map(p=>'<div style="padding:12px;background:rgba(255,255,255,0.03);border:1px solid var(--border2);border-radius:10px;font-size:12px;font-weight:600;text-align:center">'+p+'</div>').join('')}
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-top:12px;text-align:center">Gewinn wird zufällig vom System gewählt. 1 Gewinner pro Woche.</div>
+  </div>
+  <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:16px;padding:18px;margin-top:12px">
+    <div style="font-size:13px;font-weight:700;margin-bottom:8px">📋 So funktioniert's</div>
+    <div style="font-size:12px;color:var(--muted);line-height:1.7">
+      1. Sammle mindestens <b style="color:var(--text)">750 XP</b> in einer Woche<br>
+      2. Du nimmst automatisch am Gewinnspiel teil<br>
+      3. Jeden <b style="color:var(--text)">Sonntag um 20:00 Uhr</b> wird gezogen<br>
+      4. Der Gewinn wird dir automatisch gutgeschrieben
+    </div>
+  </div>
+</div>`;
             })()
         };
 
@@ -10187,6 +10317,7 @@ async function msAdminRestore(uid,name){if(!confirm(name+' zurück auf die Warte
             {id:'tipps',     emoji:'💡', label:'Tipps',     c1:'#22c55e', c2:'#15803d', shadow:'rgba(34,197,94,0.45)'},
             {id:'regeln',    emoji:'📋', label:'Regeln',    c1:'#94a3b8', c2:'#475569', shadow:'rgba(148,163,184,0.45)'},
             {id:'shop',      emoji:'💎', label:'Shop',      c1:'#ec4899', c2:'#a21caf', shadow:'rgba(236,72,153,0.45)'},
+            {id:'gewinnspiel',emoji:'🎰',label:'Gewinn',    c1:'#f59e0b', c2:'#ef4444', shadow:'rgba(245,158,11,0.45)'},
         ];
 
         return html(`
@@ -10442,6 +10573,14 @@ ${rest.map(([id,u],idx)=>{
   </div>
 </div>
 ${profileCard(myUid, myUser, d, true, lang, adminIds, myBannerData, myPicData)}
+<div id="daily-xp-box" style="margin:10px 12px;background:linear-gradient(135deg,rgba(34,197,94,0.08),rgba(34,197,94,0.02));border:1px solid rgba(34,197,94,0.25);border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:12px">
+  <div style="font-size:28px">🎁</div>
+  <div style="flex:1;min-width:0">
+    <div style="font-size:13px;font-weight:700">Täglicher XP-Bonus</div>
+    <div style="font-size:11px;color:var(--muted);margin-top:2px">Hol dir 10–20 Gratis-XP — einmal pro Tag!</div>
+  </div>
+  <button id="daily-xp-btn" onclick="claimDailyXP()" style="flex-shrink:0;padding:9px 16px;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(34,197,94,0.3);transition:transform .12s">Abholen</button>
+</div>
 <div class="acc-switcher" style="margin:8px 12px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:6px">
   <div class="acc-row${isParentActive?' active':''}" onclick="switchAcc('${parentUid}')" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;cursor:pointer;transition:background 0.15s">
     <div style="width:36px;height:36px;border-radius:50%;overflow:hidden;background:linear-gradient(135deg,#a78bfa,#7c3aed);display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;flex-shrink:0">
@@ -10482,6 +10621,16 @@ ${profileCard(myUid, myUser, d, true, lang, adminIds, myBannerData, myPicData)}
   </div>
 </div>
 <script>
+async function claimDailyXP(){
+  var btn=document.getElementById('daily-xp-btn');
+  btn.disabled=true;btn.textContent='...';
+  try{
+    var r=await fetch('/api/claim-daily-xp',{method:'POST',headers:{'Content-Type':'application/json'}});
+    var d=await r.json();
+    if(d.ok){btn.textContent='✅ +'+d.xp+' XP';btn.style.background='#333';setTimeout(function(){btn.textContent='Erledigt ✓';},1500);}
+    else{btn.textContent=d.error||'Fehler';btn.disabled=false;setTimeout(function(){btn.textContent='Abholen';btn.disabled=false;},2000);}
+  }catch(e){btn.textContent='Fehler';btn.disabled=false;setTimeout(function(){btn.textContent='Abholen';},2000);}
+}
 async function switchAcc(uid){
   try {
     const r = await fetch('/api/switch-account',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({uid})});
