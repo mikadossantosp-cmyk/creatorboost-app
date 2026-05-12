@@ -4853,11 +4853,11 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
         const _dxAdmins = Array.isArray(_dataCache?._adminIds) ? _dataCache._adminIds.map(Number) : [];
         if (!_dxAdmins.includes(Number(myUid)) && hasClaimed('dailyxp', myUid)) return json({ok:false, error:'Schon abgeholt! Morgen wieder.'}, 429);
         const xpAmount = Math.floor(Math.random() * 11) + 10; // 10-20
-        try {
-            const result = await postBot('/add-xp', { uid: myUid, amount: xpAmount, reason: 'daily-bonus', noRanking: true });
-            if (!result || !result.ok) console.log('[DailyXP] Credit failed:', myUid, result);
-        } catch(e) { console.log('[DailyXP] Credit error:', e.message); }
         markClaimed('dailyxp', myUid);
+        // Fire-and-forget: respond immediately, credit XP in background
+        postBot('/add-xp', { uid: myUid, amount: xpAmount, reason: 'daily-bonus', noRanking: true }).then(r => {
+            if (!r || !r.ok) console.log('[DailyXP] Credit failed:', myUid, r);
+        }).catch(e => console.log('[DailyXP] Credit error:', e.message));
         return json({ok:true, xp: xpAmount});
     }
 
@@ -4884,11 +4884,11 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
         let picked = prizes[0];
         for (const p of prizes) { rand -= p.weight; if (rand <= 0) { picked = p; break; } }
         const payload = { uid: myUid, ...picked.data };
-        try {
-            const result = await postBot(picked.action, payload);
-            if (!result || !result.ok) console.log('[Roulette] Prize credit failed:', picked.action, myUid, result);
-        } catch(e) { console.log('[Roulette] Prize credit error:', e.message); }
         markClaimed('roulette', myUid);
+        // Fire-and-forget: don't await postBot (can take 5s+ on timeout)
+        postBot(picked.action, payload).then(r => {
+            if (!r || !r.ok) console.log('[Roulette] Prize credit failed:', picked.action, myUid, r);
+        }).catch(e => console.log('[Roulette] Prize credit error:', e.message));
         return json({ok:true, prize: picked.label, segmentIndex: picked.idx});
     }
 
@@ -10860,7 +10860,7 @@ async function claimDailyXP(){
   var btn=document.getElementById('daily-xp-btn');
   btn.disabled=true;btn.textContent='...';
   try{
-    var r=await fetch('/api/claim-daily-xp',{method:'POST',headers:{'Content-Type':'application/json'}});
+    var r=await fetch('/api/claim-daily-xp',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
     var d=await r.json();
     if(d.ok){
       btn.textContent='✅ +'+d.xp+' XP';btn.style.background='#333';
