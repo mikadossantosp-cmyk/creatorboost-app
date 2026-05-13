@@ -49,8 +49,14 @@ setInterval(() => {
 const DAILY_CLAIMS_FILE = DATA_DIR + '/daily_claims.json';
 let _dailyClaims = {};
 try { if (fs.existsSync(DAILY_CLAIMS_FILE)) _dailyClaims = JSON.parse(fs.readFileSync(DAILY_CLAIMS_FILE, 'utf8')); } catch(e) {}
+// Node 20+'s ICU formatiert `en-CA` als "2026-05-13, 14:32" — `new Date()` darauf wirft
+// "Invalid time value" → 500 auf /api/claim-daily-xp + /api/spin-roulette.
+// Stattdessen formatToParts: lokale-unabhängig, immer YYYY-MM-DD.
+const _berlinDateFmt = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Berlin', year:'numeric', month:'2-digit', day:'2-digit' });
 function getBerlinDate() {
-    return new Date(new Date().toLocaleString('en-CA', {timeZone:'Europe/Berlin'})).toISOString().slice(0, 10);
+    const parts = _berlinDateFmt.formatToParts(new Date());
+    const get = (t) => (parts.find(p => p.type === t) || {}).value || '';
+    return get('year') + '-' + get('month') + '-' + get('day');
 }
 function hasClaimed(type, uid) {
     return !!_dailyClaims[type + ':' + uid + ':' + getBerlinDate()];
@@ -220,6 +226,16 @@ function getSid(req) { const m=(req.headers.cookie||'').match(/cbsid=([^;]+)/); 
 function getMyUid(session) { return session ? String(session.activeUid || session.uid) : ''; }
 // HTML-Escape für User-eingegebene Strings — verhindert Stored-XSS in profileCard, posts, comments.
 function htmlEsc(s) { return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// Sichtbarkeit eines Users in App-Listen (Ranking, Following-Liste, Active-Member-Count):
+//   - `started` muss true sein,
+//   - UND entweder noch in der Telegram-Gruppe (`inGruppe !== false`)
+//     ODER er hat eine Email — dann ist es ein Ex-Telegram-User der jetzt nur per App aktiv ist,
+//     bzw. ein Email-only-Signup. Beide bleiben im App-Ranking sichtbar.
+function isAppVisible(u) {
+    if (!u || !u.started) return false;
+    return u.inGruppe !== false || !!u.email;
+}
 
 // ─── Admin-Fulltour Script (Multi-Page) ─────────────────────────────────────
 // Wird in /willkommen + layout() injiziert — Walkthrough von Landing bis Profil.
@@ -2430,6 +2446,7 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
     ${![...sessions.values()].some(s=>String(s.uid)===String(uid))?`<div style="position:absolute;bottom:6px;right:6px;background:rgba(15,15,15,.92);border:1.5px solid #555;border-radius:20px;padding:2px 7px;font-size:10px;color:#888;z-index:2;font-weight:600;white-space:nowrap">Kein Web</div>`:''}
   </div>
   ${isOwn?`<div style="position:absolute;top:12px;right:12px;display:flex;gap:8px;z-index:3">
+    ${isAdmin?`<a href="/dashboard" class="profile-action-pill" title="Admin Dashboard" style="background:linear-gradient(135deg,#f5d76e,#d4a946 55%,#8b6914);color:#000;border-color:rgba(212,175,55,.55)"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2l9 4v6c0 5-3.8 9.4-9 10-5.2-.6-9-5-9-10V6l9-4z"/></svg><span>Dashboard</span></a>`:''}
     <a href="/einstellungen" class="profile-action-pill" title="Bearbeiten"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg><span>Bearbeiten</span></a>
   </div>`:''}
 </div>
@@ -5272,7 +5289,7 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
                 if (!u || adminIds.includes(Number(uid))) continue;
                 if (u.isSystem || uid === 'creatorboost') continue; // System-User nicht zählen
                 if (u.parent_uid) continue; // Sub-Accounts nicht doppelt zählen
-                if (u.started && u.inGruppe !== false) members++;
+                if (isAppVisible(u)) members++;
                 totalLikes += (u.totalLikes || 0);
             }
             const links = d.links || {};
@@ -5582,7 +5599,7 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
         const botData = await fetchBot('/data');
         if (!botData) return json({users:[], links:[]});
         const users = Object.entries(botData.users||{})
-            .filter(([,u])=>u.started && u.inGruppe!==false && (
+            .filter(([,u])=>isAppVisible(u) && (
                 (u.name||'').toLowerCase().includes(q) ||
                 (u.username||'').toLowerCase().includes(q) ||
                 (u.instagram||'').toLowerCase().includes(q) ||
@@ -6888,7 +6905,7 @@ p{line-height:1.65;color:var(--muted)}
 
         const myFollowing = (d.users[myUid]?.following||[]).map(String);
         const topUsers = Object.entries(d.users||{})
-            .filter(([id,u])=>!adminIds.includes(Number(id))&&u.started&&u.inGruppe!==false&&(myFollowing.includes(String(id))||String(id)===String(myUid)))
+            .filter(([id,u])=>!adminIds.includes(Number(id))&&isAppVisible(u)&&(myFollowing.includes(String(id))||String(id)===String(myUid)))
             .sort((a,b)=>(b[1].xp||0)-(a[1].xp||0))
             .slice(0,10);
 
@@ -9176,7 +9193,7 @@ function showThreadActions(tid, currentName, currentEmoji){
             .filter(([uid,u]) => {
                 if (String(uid) === String(myUid)) return false;
                 if (_adminIds2.includes(Number(uid))) return false;
-                if (!u || !u.started || u.inGruppe === false) return false;
+                if (!isAppVisible(u)) return false;
                 if (u.parent_uid) return false; // Subs nicht in Suche
                 return true;
             });
@@ -9579,121 +9596,318 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
 </div>`, 'explore');
     }
 
-    // ── EXPLORE ──
-    // ── ADMIN DEBUG: Superlinks dieser Woche + wer wann geliked hat ──
-    if (path === '/admin/superlinks-debug') {
-        if (!adminIds.includes(Number(myUid)) && !String(d.users?.[myUid]?.role||'').includes('Admin')) {
-            return text('Nur Admins', 403);
-        }
-        // Berlin-Wochenkey: Montag der gewählten Woche
-        const computeWeekKey = (offset = 0) => {
-            const n = new Date();
-            const dy = n.getDay() || 7;
-            const mon = new Date(n);
-            mon.setDate(n.getDate() - (dy - 1) + (offset * 7));
-            return mon.getFullYear() + '-' + String(mon.getMonth()+1).padStart(2,'0') + '-' + String(mon.getDate()).padStart(2,'0');
-        };
-        // ?week=last → letzte Woche; ?week=YYYY-MM-DD → bestimmte Woche
-        let weekKey;
-        if (query.week === 'last') weekKey = computeWeekKey(-1);
-        else if (query.week === 'current' || !query.week) weekKey = computeWeekKey(0);
-        else if (/^\d{4}-\d{2}-\d{2}$/.test(String(query.week))) weekKey = String(query.week);
-        else weekKey = computeWeekKey(0);
-        const currentWeek = computeWeekKey(0);
-        const lastWeek = computeWeekKey(-1);
-        // Verfügbare Wochen aus d.superlinks
-        const availableWeeks = [...new Set(Object.values(d.superlinks||{}).map(s => s?.week).filter(Boolean))].sort().reverse();
+    // ── ADMIN DASHBOARD (App-side, holt Daten via /admin-userlist-api, schreibt via /add-xp etc.) ──
+    // Sichtbar nur für Admins (CB-Bot Admin-IDs ODER role enthält 'Admin'). Auch über Sub-Account ok.
+    const _dashIsAdmin = (() => {
+        const parentUid = String(session?.uid || '');
+        return adminIds.includes(Number(myUid))
+            || adminIds.includes(Number(parentUid))
+            || String(d.users?.[myUid]?.role||'').includes('Admin')
+            || String(d.users?.[parentUid]?.role||'').includes('Admin');
+    })();
 
-        const weekSls = Object.values(d.superlinks||{}).filter(s => s && s.week === weekKey);
-        const posters = [...new Set(weekSls.map(s => String(s.uid)))];
-
-        // Like-Timestamps aus d.notifications[posterUid] extrahieren (icon ❤️ + actorUid match)
-        const likeTsByKey = {}; // `${posterUid}_${likerUid}` → ts (newest)
-        for (const posterUid of posters) {
-            const notifs = d.notifications?.[posterUid] || [];
-            for (const n of notifs) {
-                if (n.icon !== '❤️' || !n.actorUid) continue;
-                const key = posterUid + '_' + String(n.actorUid);
-                if (!likeTsByKey[key] || n.timestamp > likeTsByKey[key]) likeTsByKey[key] = n.timestamp;
-            }
-        }
-
-        // Last like overall
-        let lastLikeTs = 0, lastLikeBy = '', lastLikeFor = '';
-        for (const [key, ts] of Object.entries(likeTsByKey)) {
-            if (ts > lastLikeTs) {
-                lastLikeTs = ts;
-                const [pUid, lUid] = key.split('_');
-                lastLikeBy = d.users?.[lUid]?.spitzname || d.users?.[lUid]?.name || lUid;
-                lastLikeFor = d.users?.[pUid]?.spitzname || d.users?.[pUid]?.name || pUid;
-            }
-        }
-
-        const fmtTs = ts => ts ? new Date(ts).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '–';
-        const userName = uid => htmlEsc(d.users?.[uid]?.spitzname || d.users?.[uid]?.name || ('UID '+uid));
-
-        const rows = weekSls.sort((a,b)=>(b.timestamp||0)-(a.timestamp||0)).map(s => {
-            const pUid = String(s.uid);
-            const likes = Array.isArray(s.likes) ? s.likes.map(String) : [];
-            const expectedLikers = posters.filter(u => u !== pUid);
-            const missingLikers = expectedLikers.filter(u => !likes.includes(u));
-            const likeRows = likes.map(lUid => {
-                const ts = likeTsByKey[pUid + '_' + lUid];
-                return `<tr><td style="padding:5px 8px">${userName(lUid)}</td><td style="padding:5px 8px;color:var(--muted);font-size:11px">${fmtTs(ts)}</td></tr>`;
-            }).join('') || '<tr><td colspan="2" style="padding:8px;color:var(--muted);font-style:italic">Noch keine Likes</td></tr>';
-            const missingRows = missingLikers.map(lUid => `<tr><td style="padding:5px 8px;color:#ef4444">${userName(lUid)}</td></tr>`).join('') || '<tr><td style="padding:8px;color:var(--muted);font-style:italic">Alle haben geliked ✓</td></tr>';
-            return `<div style="background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:16px;margin-bottom:14px">
-  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
-    <div>
-      <div style="font-size:14px;font-weight:800">${userName(pUid)}</div>
-      <div style="font-size:11px;color:var(--muted)">Gepostet: ${fmtTs(s.timestamp)} · ID: ${htmlEsc(String(s.id||''))}</div>
-    </div>
-    <div style="font-size:12px;color:var(--muted)">${likes.length}/${expectedLikers.length} Likes</div>
-  </div>
-  <div style="font-size:12px;color:var(--text);background:var(--bg4);padding:8px 10px;border-radius:8px;margin-bottom:10px;word-break:break-all">${htmlEsc(String(s.url||''))}</div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-    <div>
-      <div style="font-size:11px;color:#22c55e;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">✓ Geliked (${likes.length})</div>
-      <table style="width:100%;font-size:12px;border-collapse:collapse">${likeRows}</table>
-    </div>
-    <div>
-      <div style="font-size:11px;color:#ef4444;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">✗ Fehlt (${missingLikers.length})</div>
-      <table style="width:100%;font-size:12px;border-collapse:collapse">${missingRows}</table>
-    </div>
-  </div>
-</div>`;
-        }).join('');
-
-        const summary = `<div style="background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;padding:18px;border-radius:16px;margin-bottom:18px">
-  <div style="font-size:11px;letter-spacing:2px;font-weight:700;opacity:.85;text-transform:uppercase">Letzter Like</div>
-  <div style="font-size:18px;font-weight:800;margin-top:6px">${lastLikeTs ? fmtTs(lastLikeTs) : 'Noch keine Likes diese Woche'}</div>
-  ${lastLikeTs ? `<div style="font-size:12.5px;margin-top:6px;opacity:.95">${htmlEsc(lastLikeBy)} → ${htmlEsc(lastLikeFor)}'s Superlink</div>` : ''}
-  <div style="font-size:11px;margin-top:10px;opacity:.85">Woche: ${weekKey}${weekKey===currentWeek?' (aktuell)':weekKey===lastWeek?' (letzte)':''} · ${weekSls.length} Superlinks · ${posters.length} Poster</div>
-</div>`;
-
-        // Wochen-Selektor
-        const weekOptions = [
-            { key: currentWeek, label: 'Aktuelle Woche' },
-            { key: lastWeek, label: 'Letzte Woche' },
-            ...availableWeeks.filter(w => w !== currentWeek && w !== lastWeek).slice(0, 6).map(w => ({ key: w, label: 'KW ' + w.slice(5) })),
-        ];
-        const weekSelector = `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px">${weekOptions.map(w => `<a href="/admin/superlinks-debug?week=${w.key}" style="display:inline-block;padding:7px 12px;border-radius:10px;background:${w.key===weekKey?'linear-gradient(135deg,#a78bfa,#7c3aed)':'var(--bg3)'};color:${w.key===weekKey?'#fff':'var(--text)'};border:1px solid var(--border);text-decoration:none;font-size:12px;font-weight:700">${w.label}</a>`).join('')}</div>`;
-
-        return html(`<div style="padding:18px 16px;max-width:900px;margin:0 auto">
-  <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
-    <a href="/explore?tab=newsletter" style="color:var(--muted);text-decoration:none;font-size:14px">‹ zurück</a>
-    <div style="font-size:20px;font-weight:800;font-family:var(--font-display)">🔍 Superlinks-Debug</div>
-  </div>
-  ${weekSelector}
-  ${summary}
-  ${rows || '<div style="padding:32px;text-align:center;color:var(--muted)">Keine Superlinks in dieser Woche</div>'}
-</div>`, 'explore');
+    // ── Admin: Listet alle User mit Onboarding-Status; Filter ?new=1 → letzte 3 Tage. ──
+    if (path === '/api/admin/users' && req.method === 'GET') {
+        if (!session) return json({error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({error:'Nur Admins'}, 403);
+        const r = await fetchBotRaw('/admin-userlist-api');
+        if (!r || !r.ok) return json({error:'Mainbot offline'}, 502);
+        const threeDays = 3 * 24 * 3600 * 1000;
+        const now = Date.now();
+        const enriched = (r.users||[]).map(u => {
+            const ageMs = u.joinDate ? (now - u.joinDate) : null;
+            return Object.assign({}, u, {
+                ageMs,
+                isNew: ageMs !== null && ageMs <= threeDays,
+                hasEmail: !!u.email,
+                hasInstagram: !!u.instagram,
+                hasBio: !!u.bio,
+                hasNische: !!u.nische,
+                hasSpitzname: !!u.spitzname,
+                hasFirstLike: (u.totalLikes||0) > 0,
+                hasFirstLink: (u.links||0) > 0,
+                emailConfirmed: !!u.emailConfirmedAt && !u.pendingEmail,
+            });
+        });
+        return json({ ok:true, users: enriched, now });
     }
+
+    // ── Admin: XP / Diamanten / Extra-Link / Superlink-Slot vergeben oder abziehen ──
+    if (path === '/api/admin/grant' && req.method === 'POST') {
+        if (!session) return json({error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({error:'Nur Admins'}, 403);
+        const body = await parseBody(req);
+        const targetUid = String(body.uid || '');
+        const action = String(body.action || '');
+        const amount = parseInt(body.amount, 10);
+        if (!targetUid) return json({ok:false, error:'uid fehlt'}, 400);
+        const isPositiveActionWithAmount = ['add-xp','remove-xp','add-diamonds','remove-diamonds'];
+        if (isPositiveActionWithAmount.includes(action) && (!Number.isFinite(amount) || amount <= 0)) {
+            return json({ok:false, error:'amount muss > 0 sein'}, 400);
+        }
+        const allowedActions = ['add-xp','remove-xp','add-diamonds','remove-diamonds','add-extra-link','add-superlink'];
+        if (!allowedActions.includes(action)) return json({ok:false, error:'unbekannte Aktion'}, 400);
+        const payload = { uid: targetUid, reason: 'admin' };
+        if (isPositiveActionWithAmount.includes(action)) payload.amount = amount;
+        const r = await postBot('/' + action, payload);
+        if (!r) return json({ok:false, error:'Mainbot offline / kein Endpoint'}, 502);
+        if (r.ok === false) return json({ok:false, error: r.error || 'Mainbot lehnte ab'}, 400);
+        return json({ ok:true, result: r });
+    }
+
+    if (path === '/dashboard') {
+        if (!session) return redirect('/');
+        if (!_dashIsAdmin) return text('🛡️ Nur Admins.', 403);
+        return html(`
+<style>
+.dash-wrap{max-width:1100px;margin:0 auto;padding:18px 16px 80px}
+.dash-h1{font-size:26px;font-weight:800;font-family:var(--font-display);letter-spacing:-0.5px;margin:0 0 4px}
+.dash-sub{font-size:13px;color:var(--muted);margin:0 0 18px}
+.dash-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:18px}
+.dash-stat{background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:14px}
+.dash-stat-lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
+.dash-stat-val{font-size:22px;font-weight:800;font-family:var(--font-display)}
+.dash-tabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+.dash-tab{padding:8px 14px;border-radius:10px;border:1px solid var(--border2);background:var(--bg3);color:var(--muted);font-size:12.5px;font-weight:700;cursor:pointer;transition:all .15s}
+.dash-tab.active{background:linear-gradient(135deg,#f5d76e,#d4a946 55%,#8b6914);color:#000;border-color:#8b6914}
+.dash-search{width:100%;padding:11px 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:12px;color:var(--text);font-size:13.5px;margin-bottom:14px}
+.dash-list{display:flex;flex-direction:column;gap:8px}
+.dash-row{display:flex;align-items:center;gap:10px;padding:12px;background:var(--bg3);border:1px solid var(--border2);border-radius:14px;cursor:pointer;transition:transform .12s}
+.dash-row:hover{transform:translateY(-1px);border-color:rgba(212,175,55,0.4)}
+.dash-row-name{flex:1;min-width:0}
+.dash-row-name b{font-size:13.5px;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dash-row-sub{font-size:11px;color:var(--muted);display:flex;gap:6px;flex-wrap:wrap;margin-top:3px}
+.dash-row-stats{display:flex;gap:14px;font-size:11px;color:var(--muted);text-align:right;flex-shrink:0}
+.dash-row-stats b{display:block;font-size:13.5px;color:var(--text)}
+.dash-pill{display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:99px;font-size:10.5px;font-weight:700}
+.dash-pill.ok{background:rgba(34,197,94,0.18);color:#22c55e}
+.dash-pill.warn{background:rgba(245,158,11,0.18);color:#f59e0b}
+.dash-pill.err{background:rgba(239,68,68,0.18);color:#ef4444}
+.dash-pill.muted{background:var(--bg4);color:var(--muted)}
+.dash-modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(6px);z-index:9000;display:flex;align-items:center;justify-content:center;padding:16px}
+.dash-modal{background:var(--bg2);border:1px solid var(--border2);border-radius:18px;padding:22px;max-width:480px;width:100%;max-height:90vh;overflow-y:auto}
+.dash-modal h3{margin:0 0 4px;font-size:18px;font-weight:800}
+.dash-modal-meta{font-size:12px;color:var(--muted);margin-bottom:14px}
+.dash-action-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.dash-act{padding:11px 8px;border-radius:11px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:12.5px;font-weight:700;cursor:pointer;text-align:center;transition:all .12s}
+.dash-act:hover{transform:translateY(-1px);border-color:#f5d76e}
+.dash-act.danger{color:#f87171;border-color:rgba(239,68,68,.3)}
+.dash-act.danger:hover{border-color:#ef4444}
+.dash-close{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:10px;padding:9px;width:100%;font-size:13px;font-weight:700;cursor:pointer;margin-top:8px}
+.dash-onboarding{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px}
+.dash-onb-row{padding:6px 8px;background:var(--bg4);border-radius:8px;font-size:11.5px;display:flex;align-items:center;gap:6px}
+</style>
+<div class="dash-wrap">
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px">
+    <h1 class="dash-h1">🛡️ Admin Dashboard</h1>
+    <a href="/profil" style="color:var(--muted);text-decoration:none;font-size:13px">‹ Profil</a>
+  </div>
+  <p class="dash-sub">Web-Dashboard · Daten live aus dem App-Server, Aktionen schreiben direkt in den Mainbot.</p>
+
+  <div class="dash-grid">
+    <div class="dash-stat"><div class="dash-stat-lbl">User gesamt</div><div class="dash-stat-val" id="stat-total">–</div></div>
+    <div class="dash-stat"><div class="dash-stat-lbl">Aktive (gestartet)</div><div class="dash-stat-val" id="stat-active">–</div></div>
+    <div class="dash-stat"><div class="dash-stat-lbl">Neu (≤ 3 Tage)</div><div class="dash-stat-val" id="stat-new">–</div></div>
+    <div class="dash-stat"><div class="dash-stat-lbl">Email bestätigt</div><div class="dash-stat-val" id="stat-email">–</div></div>
+    <div class="dash-stat"><div class="dash-stat-lbl">Ex-Telegram</div><div class="dash-stat-val" id="stat-extg">–</div></div>
+  </div>
+
+  <input type="text" class="dash-search" id="dash-q" placeholder="Suche nach Name, Spitzname, Insta, Email, UID…">
+
+  <div class="dash-tabs">
+    <button class="dash-tab active" data-tab="new">✨ Neu (≤ 3 Tage)</button>
+    <button class="dash-tab" data-tab="all">👥 Alle User</button>
+    <button class="dash-tab" data-tab="email">📧 Email-User</button>
+    <button class="dash-tab" data-tab="incomplete">⚠️ Setup unvollständig</button>
+    <button class="dash-tab" data-tab="ranking">🏆 Top XP</button>
+  </div>
+
+  <div class="dash-list" id="dash-list">
+    <div style="padding:24px;text-align:center;color:var(--muted)">Lade User …</div>
+  </div>
+</div>
+
+<script>
+let ALL_USERS = [];
+let CUR_TAB = 'new';
+let CUR_Q = '';
+const TAB_LABELS = { new:'Neue User (≤ 3 Tage)', all:'Alle User', email:'Email-User', incomplete:'Setup unvollständig', ranking:'Top XP' };
+
+function pill(label, cls){ return '<span class="dash-pill '+cls+'">'+label+'</span>'; }
+function fmtAge(ms){
+  if (ms === null || ms === undefined) return '–';
+  const d = Math.floor(ms / 86400000);
+  if (d < 1) {
+    const h = Math.floor(ms / 3600000);
+    return h <= 0 ? '<1h' : h+'h';
+  }
+  return d+'d';
+}
+function esc(s){ return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function renderList() {
+  let list = ALL_USERS.slice();
+  if (CUR_TAB === 'new') list = list.filter(u => u.isNew);
+  else if (CUR_TAB === 'email') list = list.filter(u => u.hasEmail);
+  else if (CUR_TAB === 'incomplete') list = list.filter(u => !u.hasInstagram || !u.hasBio || !u.hasSpitzname);
+  else if (CUR_TAB === 'ranking') list = list.filter(u => !u.isAdmin).sort((a,b) => (b.xp||0) - (a.xp||0));
+
+  const q = CUR_Q.toLowerCase().trim();
+  if (q) {
+    list = list.filter(u =>
+      String(u.uid).includes(q) ||
+      (u.name||'').toLowerCase().includes(q) ||
+      (u.spitzname||'').toLowerCase().includes(q) ||
+      (u.instagram||'').toLowerCase().includes(q) ||
+      (u.email||'').toLowerCase().includes(q)
+    );
+  }
+  if (CUR_TAB === 'new') list.sort((a,b) => (b.joinDate||0) - (a.joinDate||0));
+  else if (CUR_TAB !== 'ranking') list.sort((a,b) => (b.xp||0) - (a.xp||0));
+
+  const html = list.map(u => {
+    const onb = [];
+    onb.push(pill(u.hasEmail?'📧 ok':'📧 –', u.hasEmail?'ok':'muted'));
+    if (u.hasEmail) onb.push(pill(u.emailConfirmed?'✓ bestätigt':'⏳ unbestätigt', u.emailConfirmed?'ok':'warn'));
+    onb.push(pill(u.hasInstagram?'📸 ok':'📸 –', u.hasInstagram?'ok':'warn'));
+    onb.push(pill(u.hasFirstLike?'❤ Like':'❤ –', u.hasFirstLike?'ok':'muted'));
+    onb.push(pill(u.hasFirstLink?'🔗 Link':'🔗 –', u.hasFirstLink?'ok':'muted'));
+    onb.push(pill(u.inGruppe?'TG ✓':'TG ✗', u.inGruppe?'ok':'err'));
+    if (u.isAdmin) onb.push(pill('🛡 Admin','warn'));
+    const ageMs = u.joinDate ? (Date.now() - u.joinDate) : null;
+    return '<div class="dash-row" onclick="openUser(\\''+u.uid+'\\')">' +
+      '<div class="dash-row-name">' +
+        '<b>'+esc(u.spitzname||u.name||'User '+u.uid)+'</b>' +
+        '<div class="dash-row-sub">' +
+          (u.instagram?'@'+esc(u.instagram):'') +
+          (u.email?(u.instagram?' · ':'')+esc(u.email):'') +
+          ' · '+fmtAge(ageMs)+' alt · UID '+esc(u.uid) +
+        '</div>' +
+        '<div class="dash-row-sub">'+onb.join(' ')+'</div>' +
+      '</div>' +
+      '<div class="dash-row-stats">' +
+        '<div><b>'+(u.xp||0)+'</b>XP</div>' +
+        '<div><b>'+(u.diamonds||0)+'</b>💎</div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+  document.getElementById('dash-list').innerHTML = html || '<div style="padding:24px;text-align:center;color:var(--muted)">Keine User in "'+(TAB_LABELS[CUR_TAB]||CUR_TAB)+'"</div>';
+}
+
+function openUser(uid) {
+  const u = ALL_USERS.find(x => String(x.uid) === String(uid));
+  if (!u) return;
+  const bg = document.createElement('div');
+  bg.className = 'dash-modal-bg';
+  bg.onclick = e => { if (e.target === bg) bg.remove(); };
+  const onb = [
+    {label:'📧 Email gesetzt', ok: u.hasEmail},
+    {label:'✓ Email bestätigt', ok: u.emailConfirmed},
+    {label:'📸 Instagram', ok: u.hasInstagram},
+    {label:'🏷 Spitzname', ok: u.hasSpitzname},
+    {label:'📝 Bio', ok: u.hasBio},
+    {label:'🎯 Nische', ok: u.hasNische},
+    {label:'❤ Erster Like', ok: u.hasFirstLike},
+    {label:'🔗 Erster Link', ok: u.hasFirstLink},
+  ];
+  const meta = [];
+  if (u.email) meta.push('📧 '+esc(u.email)+(u.emailConfirmed?'':' (unbestätigt)'));
+  if (u.instagram) meta.push('📸 @'+esc(u.instagram));
+  if (u.signupSource) meta.push('🪪 '+u.signupSource);
+  meta.push('UID '+u.uid);
+  bg.innerHTML =
+    '<div class="dash-modal">' +
+      '<h3>'+esc(u.spitzname||u.name||'User')+(u.isAdmin?' <span class="dash-pill warn">Admin</span>':'')+'</h3>' +
+      '<div class="dash-modal-meta">'+meta.join(' · ')+'</div>' +
+      '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;text-align:center;margin-bottom:14px">' +
+        '<div><div style="font-size:18px;font-weight:800">'+(u.xp||0)+'</div><div style="font-size:10.5px;color:var(--muted)">XP</div></div>' +
+        '<div><div style="font-size:18px;font-weight:800">'+(u.diamonds||0)+'</div><div style="font-size:10.5px;color:var(--muted)">💎</div></div>' +
+        '<div><div style="font-size:18px;font-weight:800">'+(u.totalLikes||0)+'</div><div style="font-size:10.5px;color:var(--muted)">❤ Likes</div></div>' +
+        '<div><div style="font-size:18px;font-weight:800">'+(u.links||0)+'</div><div style="font-size:10.5px;color:var(--muted)">🔗 Links</div></div>' +
+      '</div>' +
+      '<div class="dash-onboarding">' +
+        onb.map(o => '<div class="dash-onb-row">'+(o.ok?'✅':'⬜')+' '+o.label+'</div>').join('') +
+      '</div>' +
+      '<div style="margin-top:14px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:8px">⚙️ Aktionen</div>' +
+      '<div class="dash-action-grid">' +
+        '<button class="dash-act" onclick="grant(\\''+u.uid+'\\',\\'add-xp\\')">+ XP</button>' +
+        '<button class="dash-act danger" onclick="grant(\\''+u.uid+'\\',\\'remove-xp\\')">− XP</button>' +
+        '<button class="dash-act" onclick="grant(\\''+u.uid+'\\',\\'add-diamonds\\')">+ 💎</button>' +
+        '<button class="dash-act danger" onclick="grant(\\''+u.uid+'\\',\\'remove-diamonds\\')">− 💎</button>' +
+        '<button class="dash-act" onclick="grantNoAmount(\\''+u.uid+'\\',\\'add-extra-link\\')">+ 🔗 Extra-Link</button>' +
+        '<button class="dash-act" onclick="grantNoAmount(\\''+u.uid+'\\',\\'add-superlink\\')">+ ⚡ Superlink-Slot</button>' +
+      '</div>' +
+      '<a href="/profil/'+u.uid+'" target="_blank" class="dash-act" style="display:block;margin-bottom:8px;text-decoration:none">→ Profil ansehen</a>' +
+      '<button class="dash-close" onclick="this.closest(\\'.dash-modal-bg\\').remove()">Schließen</button>' +
+    '</div>';
+  document.body.appendChild(bg);
+}
+
+async function grant(uid, action) {
+  const labelMap = {
+    'add-xp':'XP vergeben',
+    'remove-xp':'XP abziehen',
+    'add-diamonds':'Diamanten vergeben',
+    'remove-diamonds':'Diamanten abziehen',
+  };
+  const amountStr = prompt(labelMap[action]+' — Betrag:');
+  if (!amountStr) return;
+  const amount = parseInt(amountStr, 10);
+  if (!Number.isFinite(amount) || amount <= 0) { alert('Ungültiger Betrag'); return; }
+  const res = await fetch('/api/admin/grant', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ uid, action, amount }) });
+  const j = await res.json().catch(()=>({ok:false, error:'kein JSON'}));
+  if (j.ok) { alert('✅ ' + labelMap[action] + ' erfolgt'); refreshUsers(); document.querySelectorAll('.dash-modal-bg').forEach(m => m.remove()); }
+  else alert('❌ '+ (j.error||'Fehler'));
+}
+async function grantNoAmount(uid, action) {
+  if (!confirm('Aktion ausführen: '+action+'?')) return;
+  const res = await fetch('/api/admin/grant', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ uid, action }) });
+  const j = await res.json().catch(()=>({ok:false, error:'kein JSON'}));
+  if (j.ok) { alert('✅ erledigt'); refreshUsers(); document.querySelectorAll('.dash-modal-bg').forEach(m => m.remove()); }
+  else alert('❌ '+ (j.error||'Fehler'));
+}
+
+async function refreshUsers() {
+  try {
+    const r = await fetch('/api/admin/users');
+    if (!r.ok) {
+      document.getElementById('dash-list').innerHTML = '<div style="padding:24px;text-align:center;color:#ef4444">Fehler ('+r.status+')</div>';
+      return;
+    }
+    const j = await r.json();
+    ALL_USERS = j.users || [];
+    document.getElementById('stat-total').textContent = ALL_USERS.length;
+    document.getElementById('stat-active').textContent = ALL_USERS.filter(u => u.started).length;
+    document.getElementById('stat-new').textContent = ALL_USERS.filter(u => u.isNew).length;
+    document.getElementById('stat-email').textContent = ALL_USERS.filter(u => u.emailConfirmed).length;
+    document.getElementById('stat-extg').textContent = ALL_USERS.filter(u => u.hasEmail && !u.inGruppe).length;
+    renderList();
+  } catch(e) {
+    document.getElementById('dash-list').innerHTML = '<div style="padding:24px;text-align:center;color:#ef4444">'+e.message+'</div>';
+  }
+}
+
+document.querySelectorAll('.dash-tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.dash-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    CUR_TAB = btn.dataset.tab;
+    renderList();
+  });
+});
+document.getElementById('dash-q').addEventListener('input', e => { CUR_Q = e.target.value; renderList(); });
+
+refreshUsers();
+setInterval(refreshUsers, 60000);
+</script>
+`, 'dashboard');
+    }
+
 
     if (path === '/explore') {
         const tab = query.tab || 'allgemein';
         const sorted = Object.entries(d.users||{})
-            .filter(([id,u])=>!adminIds.includes(Number(id))&&u.started&&u.inGruppe!==false)
+            .filter(([id,u])=>!adminIds.includes(Number(id))&&isAppVisible(u))
             .sort((a,b)=>(b[1].xp||0)-(a[1].xp||0));
         const medals = ['🥇','🥈','🥉'];
         const myRank = adminIds.includes(Number(myUid)) ? 0 : sorted.findIndex(([id])=>id===myUid)+1;
@@ -9793,7 +10007,7 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
         for (const [uid, u] of Object.entries(d.users||{})) {
             if (String(uid) === String(myUid)) continue;
             if (adminIds.includes(Number(uid))) continue;
-            if (!u || !u.started || u.inGruppe === false) continue;
+            if (!isAppVisible(u)) continue;
             if (myFollowingSet.has(String(uid))) continue;
             const theirFollowers = (u.followers||[]).map(String);
             const mutuals = theirFollowers.filter(f => myFollowingSet.has(f));
@@ -10694,7 +10908,7 @@ window.spinRoulette=async function(){
     // ── RANKING ──
     if (path === '/ranking') {
         const sorted = Object.entries(d.users||{})
-            .filter(([id,u])=>!adminIds.includes(Number(id))&&u.started&&u.inGruppe!==false)
+            .filter(([id,u])=>!adminIds.includes(Number(id))&&isAppVisible(u))
             .sort((a,b)=>(b[1].xp||0)-(a[1].xp||0));
         const isAdminUser = adminIds.includes(Number(myUid));
         const myRank = isAdminUser ? 0 : sorted.findIndex(([id])=>id===myUid)+1;
