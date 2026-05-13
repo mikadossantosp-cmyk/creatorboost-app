@@ -53,6 +53,7 @@ module.exports = `
     <button data-target="r-respekt">🤝 Respekt</button>
     <button data-target="r-missionen">🎯 Missionen</button>
     <button data-target="r-superlinks">🌟 Superlinks</button>
+    <button data-target="r-kollabs">🤝 Kollabs</button>
     <button data-target="r-warns">⚠️ Warns</button>
     <button data-target="r-xp">📈 XP</button>
     <button data-target="r-shop">💎 Shop</button>
@@ -166,6 +167,34 @@ module.exports = `
       <div class="regeln-row"><span>Engagement-Pflicht verletzt</span><span class="konsequenz k-warn">💀 −50 XP + ⚠️</span></div>
       <div class="regeln-row"><span>Ohne Insta-Handle</span><span class="konsequenz k-block">❌ blockiert</span></div>
       <div class="regeln-row"><span>Mehrfach pro Woche</span><span class="konsequenz k-block">❌ blockiert</span></div>
+    </div>
+  </section>
+
+  <section id="r-kollabs" class="regeln-section">
+    <div class="regeln-card">
+      <h2>🤝 Kollaborations-Posts</h2>
+      <p style="background:rgba(236,72,153,0.08);border-left:3px solid #ec4899;padding:10px 12px;border-radius:6px;margin-bottom:14px">Tretet einer Kollaboration bei. 1× wöchentlich erlaubt. 1 💎 wird an den User vergeben, der den Post engagiert. Kollaborations-Posts werden gründlich kontrolliert.</p>
+
+      <h3>📋 Regeln</h3>
+      <ul>
+        <li>• <b>1× pro Woche</b> pro User darf ein Kollab-Post veröffentlicht werden</li>
+        <li>• Vorher müsst ihr eine Kollaboration eingehen (Profil → Anfrage → Annahme)</li>
+        <li>• Engagement-Pflicht beim Liker: erst auf Instagram öffnen + <b>LIKEN + KOMMENTIEREN + SPEICHERN + TEILEN</b> — dann hier ✅</li>
+        <li>• Pro engagiertem Kollab-Post bekommt der <b>Liker 1 💎</b> (Poster bekommt nichts)</li>
+        <li>• Beide Kollab-Partner dürfen ihren eigenen Post <b>nicht liken</b> (Self-Like blockiert)</li>
+        <li>• Kollab-Posts werden gründlich kontrolliert — Schein-Likes werden sanktioniert</li>
+      </ul>
+
+      <h3>🚀 So gehst du eine Kollaboration ein</h3>
+      <ul>
+        <li>1. Gehe auf das Profil deines Wunsch-Partners</li>
+        <li>2. Klicke auf <b>🤝 Kollaboration anfragen</b></li>
+        <li>3. Dein Partner muss in seinen Benachrichtigungen <b>akzeptieren</b></li>
+        <li>4. Fertig — ihr seid offiziell Kollab-Partner und könnt im +Menü "🤝 Kollab-Link" auswählen</li>
+      </ul>
+
+      <h3>🎯 Ziel</h3>
+      <p>Gemeinsame Zusammenarbeit. Mehr Reichweite, Mehrwert und Sichtbarkeit für beide Partner und die Community.</p>
     </div>
   </section>
 
