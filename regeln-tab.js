@@ -179,10 +179,11 @@ module.exports = `
       <ul>
         <li>• <b>1× pro Woche</b> pro User darf ein Kollab-Post veröffentlicht werden</li>
         <li>• Vorher müsst ihr eine Kollaboration eingehen (Profil → Anfrage → Annahme)</li>
+        <li>• <b>Sichtbare Zusammenarbeit Pflicht:</b> Im Reel/Post muss erkennbar sein, dass <b>beide Parteien</b> zusammenarbeiten — z.B. Logos beider Creator irgendwo im Reel, gemeinsamer Branding-Frame oder beide @-Handles eingeblendet. Ohne sichtbare Zusammenarbeit wird der Post nicht freigegeben.</li>
         <li>• Engagement-Pflicht beim Liker: erst auf Instagram öffnen + <b>LIKEN + KOMMENTIEREN + SPEICHERN + TEILEN</b> — dann hier ✅</li>
         <li>• Pro engagiertem Kollab-Post bekommt der <b>Liker 1 💎</b> (Poster bekommt nichts)</li>
         <li>• Beide Kollab-Partner dürfen ihren eigenen Post <b>nicht liken</b> (Self-Like blockiert)</li>
-        <li>• Kollab-Posts werden gründlich kontrolliert — Schein-Likes werden sanktioniert</li>
+        <li>• Kollab-Posts werden gründlich kontrolliert — Schein-Likes und Posts ohne sichtbare Zusammenarbeit werden sanktioniert</li>
       </ul>
 
       <h3>🚀 So gehst du eine Kollaboration ein</h3>
