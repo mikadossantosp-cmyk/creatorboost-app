@@ -10014,9 +10014,7 @@ async function grantNoAmount(uid, action) {
 }
 
 async function runMissionBackfill() {
-  // \\n im Source-Template → \n im rendered Script. Vorher: echte Newlines im
-  // JS-String → SyntaxError → alle Dashboard-Funktionen undefined.
-  if (!confirm('Wochen-Missionen für alle User seit Montag rückwirkend auswerten?\\n\\nIdempotent (sicher mehrfach klickbar) und silent (keine Telegram-DMs an User).')) return;
+  if (!confirm('Wochen-Missionen für alle User seit Montag rückwirkend auswerten? Idempotent und silent.')) return;
   const out = document.getElementById('backfill-result');
   out.textContent = '⏳ Läuft …';
   try {
