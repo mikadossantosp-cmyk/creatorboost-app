@@ -207,7 +207,7 @@ module.exports = `
 
       <h3>📋 Regeln</h3>
       <ul>
-        <li>• Posten kostet <b>30 💎</b> (Admins gratis)</li>
+        <li>• Posten kostet <b>30 💎</b></li>
         <li>• Diamantlinks stehen <b>3 Tage</b> oben im Feed (älteste zuerst, dann zweitältester usw.)</li>
         <li>• Jeder Liker bekommt <b>+3 💎</b> Belohnung</li>
         <li>• <b>Engagement-Pflicht beim Liker:</b> LIKEN + KOMMENTIEREN + TEILEN + SPEICHERN</li>
