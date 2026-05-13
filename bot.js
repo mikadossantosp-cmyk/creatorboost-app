@@ -234,7 +234,12 @@ function htmlEsc(s) { return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'
 //     ODER er hat eine Email — dann ist es ein Ex-Telegram-User der jetzt nur per App aktiv ist,
 //     bzw. ein Email-only-Signup. Beide bleiben im App-Ranking sichtbar.
 function isAppVisible(u) {
-    if (!u || !u.started) return false;
+    if (!u) return false;
+    // Sub-Accounts: immer sichtbar — sie haben keinen eigenen Telegram-Start (started
+    // bleibt false bei manchen Subs aus Legacy-Daten) und sie sind per Definition aktiv
+    // weil sie an einem aktiven Parent-Account hängen.
+    if (u.parent_uid) return true;
+    if (!u.started) return false;
     return u.inGruppe !== false || !!u.email;
 }
 
@@ -6958,6 +6963,45 @@ p{line-height:1.65;color:var(--muted)}
         return json(result || {ok:false, error:'Mainbot offline'});
     }
 
+    if (path === '/api/admin/stats' && req.method === 'GET') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
+        const result = await fetchBotRaw('/admin-stats-api');
+        return json(result || {ok:false, error:'Mainbot offline'});
+    }
+
+    if (path === '/api/admin/ban' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
+        const body = await parseBody(req);
+        const r = await postBot(body.unban ? '/unban-user-api' : '/ban-user-api', { uid: String(body.uid||'') });
+        return json(r || {ok:false, error:'Mainbot offline'});
+    }
+
+    if (path === '/api/admin/reset-user' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
+        const body = await parseBody(req);
+        const r = await postBot('/reset-user', { uid: String(body.uid||'') });
+        return json(r || {ok:false, error:'Mainbot offline'});
+    }
+
+    if (path === '/api/admin/send-dm-single' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
+        const body = await parseBody(req);
+        const r = await postBot('/send-dm-single-api', { uid: String(body.uid||''), text: String(body.text||'') });
+        return json(r || {ok:false, error:'Mainbot offline'});
+    }
+
+    if (path === '/api/admin/send-dm-all' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
+        const body = await parseBody(req);
+        const r = await postBot('/send-dm-all-api', { text: String(body.text||'') });
+        return json(r || {ok:false, error:'Mainbot offline'});
+    }
+
     if (path === '/api/newsletter-add' && req.method === 'POST') {
         if (!session) return json({error:'Nicht eingeloggt'},401);
         const chunks=[]; for await(const c of req) chunks.push(c);
@@ -10108,6 +10152,13 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
   </div>
   <p class="dash-sub">Web-Dashboard · Daten live aus dem App-Server, Aktionen schreiben direkt in den Mainbot.</p>
 
+  <!-- Live-Stats vom Mainbot (online User, Landing-Visits, Funnel) -->
+  <div class="dash-grid" style="margin-bottom:8px">
+    <div class="dash-stat" style="border-color:rgba(34,197,94,0.35);background:linear-gradient(135deg,rgba(34,197,94,0.10),rgba(34,197,94,0.03))"><div class="dash-stat-lbl" style="color:#22c55e">🟢 Online jetzt</div><div class="dash-stat-val" id="stat-online">–</div><div style="font-size:11px;color:var(--muted);margin-top:2px"><span id="stat-app7d">–</span> in 7d · <span id="stat-app30d">–</span> in 30d</div></div>
+    <div class="dash-stat"><div class="dash-stat-lbl">🌐 Landing heute</div><div class="dash-stat-val" id="stat-landing-today">–</div><div style="font-size:11px;color:var(--muted);margin-top:2px">gestern: <span id="stat-landing-yesterday">–</span></div></div>
+    <div class="dash-stat"><div class="dash-stat-lbl">📝 Signups heute</div><div class="dash-stat-val" id="stat-signup-today">–</div></div>
+    <div class="dash-stat" style="border-color:rgba(239,68,68,0.30)"><div class="dash-stat-lbl" style="color:#ef4444">🚫 Gebannt</div><div class="dash-stat-val" id="stat-banned">–</div></div>
+  </div>
   <div class="dash-grid">
     <div class="dash-stat"><div class="dash-stat-lbl">User gesamt</div><div class="dash-stat-val" id="stat-total">–</div></div>
     <div class="dash-stat"><div class="dash-stat-lbl">Aktive (gestartet)</div><div class="dash-stat-val" id="stat-active">–</div></div>
@@ -10120,6 +10171,7 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
 
   <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
     <button onclick="runMissionBackfill()" style="padding:9px 14px;border-radius:10px;border:1px solid rgba(167,139,250,0.4);background:rgba(167,139,250,0.12);color:#a78bfa;font-size:12.5px;font-weight:700;cursor:pointer">🔁 Wochenmissionen-Backfill (seit Mo)</button>
+    <button onclick="openBroadcastModal()" style="padding:9px 14px;border-radius:10px;border:1px solid rgba(212,175,55,0.45);background:linear-gradient(135deg,rgba(212,175,55,0.18),rgba(212,175,55,0.06));color:#d4af37;font-size:12.5px;font-weight:700;cursor:pointer">📢 DM an alle senden</button>
     <span id="backfill-result" style="font-size:12px;color:var(--muted);align-self:center"></span>
   </div>
 
@@ -10251,10 +10303,53 @@ function openUser(uid) {
         '<button class="dash-act" onclick="grantNoAmount(\\''+u.uid+'\\',\\'add-extra-link\\')">+ 🔗 Extra-Link</button>' +
         '<button class="dash-act" onclick="grantNoAmount(\\''+u.uid+'\\',\\'add-superlink\\')">+ ⚡ Superlink-Slot</button>' +
       '</div>' +
-      '<a href="/profil/'+u.uid+'" target="_blank" class="dash-act" style="display:block;margin-bottom:8px;text-decoration:none">→ Profil ansehen</a>' +
+      '<div style="font-size:11px;font-weight:700;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin:14px 0 8px">📨 Kommunikation</div>' +
+      '<div class="dash-action-grid">' +
+        '<button class="dash-act" onclick="sendDmTo(\\''+u.uid+'\\',\\''+esc(u.spitzname||u.name||'User')+'\\')">📨 DM senden</button>' +
+        '<button class="dash-act" onclick="window.open(\\'/nachrichten/'+u.uid+'\\',\\'_blank\\')">💬 Chat öffnen</button>' +
+      '</div>' +
+      '<div style="font-size:11px;font-weight:700;letter-spacing:1px;color:#ef4444;text-transform:uppercase;margin:14px 0 8px">⚠️ Gefährliche Aktionen</div>' +
+      '<div class="dash-action-grid">' +
+        '<button class="dash-act danger" onclick="resetUserConfirm(\\''+u.uid+'\\',\\''+esc(u.spitzname||u.name||'User')+'\\')">♻️ XP-Reset</button>' +
+        (u.banned ? '<button class="dash-act" onclick="banUser(\\''+u.uid+'\\',false)">✅ Entbannen</button>'
+                  : '<button class="dash-act danger" onclick="banUser(\\''+u.uid+'\\',true)">🚫 Bannen</button>') +
+      '</div>' +
+      '<a href="/profil/'+u.uid+'" target="_blank" class="dash-act" style="display:block;margin:12px 0 8px;text-decoration:none">→ Profil ansehen</a>' +
       '<button class="dash-close" onclick="this.closest(\\'.dash-modal-bg\\').remove()">Schließen</button>' +
     '</div>';
   document.body.appendChild(bg);
+}
+
+async function sendDmTo(uid, name) {
+  const text = prompt('Nachricht an '+name+' senden:');
+  if (!text || !text.trim()) return;
+  const r = await fetch('/api/admin/send-dm-single', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ uid, text }) });
+  const j = await r.json().catch(()=>({}));
+  if (j.ok) alert('✅ DM an '+name+' gesendet'); else alert('❌ '+(j.error||'Fehler'));
+}
+async function resetUserConfirm(uid, name) {
+  if (!confirm('XP von '+name+' wirklich auf 0 setzen? Das kann nicht rückgängig gemacht werden.')) return;
+  const r = await fetch('/api/admin/reset-user', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ uid }) });
+  const j = await r.json().catch(()=>({}));
+  if (j.ok) { alert('✅ XP zurückgesetzt'); refreshUsers(); document.querySelectorAll('.dash-modal-bg').forEach(m=>m.remove()); }
+  else alert('❌ '+(j.error||'Fehler'));
+}
+async function banUser(uid, ban) {
+  const verb = ban ? 'BANNEN' : 'entbannen';
+  if (!confirm('User wirklich '+verb+'?'+(ban?' (Account wird deaktiviert)':''))) return;
+  const r = await fetch('/api/admin/ban', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ uid, unban: !ban }) });
+  const j = await r.json().catch(()=>({}));
+  if (j.ok) { alert(ban?'🚫 Gebannt':'✅ Entbannt'); refreshUsers(); document.querySelectorAll('.dash-modal-bg').forEach(m=>m.remove()); }
+  else alert('❌ '+(j.error||'Fehler'));
+}
+async function openBroadcastModal() {
+  const text = prompt('📢 DM an ALLE aktiven User senden (max 1500 Zeichen):\\n\\nMarkdown unterstützt (*bold*, _italic_).\\nBanned User + Admins werden übersprungen.');
+  if (!text || !text.trim()) return;
+  if (text.length > 1500) { alert('Max 1500 Zeichen'); return; }
+  if (!confirm('Wirklich an ALLE aktiven User senden? Diese Aktion ist nicht widerrufbar.')) return;
+  const r = await fetch('/api/admin/send-dm-all', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ text }) });
+  const j = await r.json().catch(()=>({}));
+  if (j.ok) alert('✅ DM an '+j.sent+' User gesendet'); else alert('❌ '+(j.error||'Fehler'));
 }
 
 async function grant(uid, action) {
@@ -10328,9 +10423,27 @@ async function refreshUsers() {
     document.getElementById('stat-email').textContent = ALL_USERS.filter(u => u.emailConfirmed).length;
     document.getElementById('stat-extg').textContent = ALL_USERS.filter(u => u.hasEmail && !u.inGruppe).length;
     renderList();
+    // Live-Stats vom Mainbot (online, landing, signup, banned)
+    loadStatsOverview();
   } catch(e) {
     showErr('Network: '+e.message);
   }
+}
+
+async function loadStatsOverview() {
+  try {
+    const r = await fetch('/api/admin/stats');
+    const s = await r.json();
+    if (!s.ok) return;
+    const setText = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+    setText('stat-online', s.online ?? '–');
+    setText('stat-app7d', s.app7d ?? '–');
+    setText('stat-app30d', s.app30d ?? '–');
+    setText('stat-landing-today', s.landingToday ?? 0);
+    setText('stat-landing-yesterday', s.landingYesterday ?? 0);
+    setText('stat-signup-today', s.signupToday ?? 0);
+    setText('stat-banned', s.banned ?? 0);
+  } catch(e) {}
 }
 
 document.querySelectorAll('.dash-tab').forEach(btn => {
