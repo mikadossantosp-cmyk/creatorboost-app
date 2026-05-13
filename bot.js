@@ -10671,10 +10671,20 @@ async function refreshUsers() {
 }
 
 async function loadStatsOverview() {
+  let _stage = 'fetch';
   try {
     const r = await fetch('/api/admin/stats');
+    _stage = 'parse';
     const s = await r.json();
-    if (!s.ok) return;
+    if (!s.ok) {
+      console.warn('[dashboard stats] api returned not-ok:', s);
+      // Trotzdem alle Funnel-Felder mit 0 füllen statt sie auf '–' zu lassen.
+      ['fn-landing','fn-cta','fn-cta-pct','fn-signup-view','fn-signup-view-pct','fn-signup-complete','fn-signup-complete-pct','fn-login','fn-dropoff','fn-tg-today','fn-email-today','newusers-count','newusers-today'].forEach(id => {
+        const el = document.getElementById(id); if (el) el.textContent = '0';
+      });
+      return;
+    }
+    _stage = 'render';
     const setText = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
     setText('stat-online', s.online ?? '–');
     setText('stat-app7d', s.app7d ?? '–');
@@ -10741,7 +10751,13 @@ async function loadStatsOverview() {
         '</div>';
       }).join('');
     }
-  } catch(e) {}
+  } catch(e) {
+    console.warn('[dashboard stats] error at stage '+_stage+':', e);
+    // Bei Fehler: Funnel-Felder mit 0 füllen statt '—' stehen lassen
+    ['fn-landing','fn-cta','fn-cta-pct','fn-signup-view','fn-signup-view-pct','fn-signup-complete','fn-signup-complete-pct','fn-login','fn-dropoff','fn-tg-today','fn-email-today','newusers-count','newusers-today'].forEach(id => {
+      const el = document.getElementById(id); if (el && el.textContent === '–') el.textContent = '0';
+    });
+  }
 }
 
 function drawSparkline(id, data, color) {
