@@ -9786,6 +9786,16 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
         return json({ ok:true, result: r });
     }
 
+    // ── Admin: Wochenmissions-Backfill seit Mo (für alle started-User, silent, idempotent) ──
+    if (path === '/api/admin/missionen-backfill' && req.method === 'POST') {
+        if (!session) return json({error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({error:'Nur Admins'}, 403);
+        const r = await postBot('/admin-backfill-missionen-api', {});
+        if (!r) return json({ok:false, error:'Mainbot offline'}, 502);
+        if (r.ok === false) return json({ok:false, error: r.error || 'Mainbot lehnte ab'}, 400);
+        return json(r);
+    }
+
     if (path === '/dashboard') {
         if (!session) return redirect('/');
         if (!_dashIsAdmin) return text('🛡️ Nur Admins.', 403);
@@ -9844,6 +9854,11 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
   </div>
 
   <input type="text" class="dash-search" id="dash-q" placeholder="Suche nach Name, Spitzname, Insta, Email, UID…">
+
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+    <button onclick="runMissionBackfill()" style="padding:9px 14px;border-radius:10px;border:1px solid rgba(167,139,250,0.4);background:rgba(167,139,250,0.12);color:#a78bfa;font-size:12.5px;font-weight:700;cursor:pointer">🔁 Wochenmissionen-Backfill (seit Mo)</button>
+    <span id="backfill-result" style="font-size:12px;color:var(--muted);align-self:center"></span>
+  </div>
 
   <div class="dash-tabs">
     <button class="dash-tab active" data-tab="new">✨ Neu (≤ 3 Tage)</button>
@@ -9996,6 +10011,21 @@ async function grantNoAmount(uid, action) {
   const j = await res.json().catch(()=>({ok:false, error:'kein JSON'}));
   if (j.ok) { alert('✅ erledigt'); refreshUsers(); document.querySelectorAll('.dash-modal-bg').forEach(m => m.remove()); }
   else alert('❌ '+ (j.error||'Fehler'));
+}
+
+async function runMissionBackfill() {
+  if (!confirm('Wochen-Missionen für alle User seit Montag rückwirkend auswerten?\n\nIdempotent (sicher mehrfach klickbar) und silent (keine Telegram-DMs an User).')) return;
+  const out = document.getElementById('backfill-result');
+  out.textContent = '⏳ Läuft …';
+  try {
+    const r = await fetch('/api/admin/missionen-backfill', { method:'POST' });
+    const j = await r.json();
+    if (!j.ok) { out.textContent = '❌ ' + (j.error||'Fehler'); out.style.color = '#ef4444'; return; }
+    const s = j.stats || {};
+    out.textContent = '✅ ' + s.days + ' Tage · ' + s.users + ' User geprüft · ' + s.bumped + ' Auswertungen · +' + s.xp + ' XP · +' + s.diamonds + ' 💎';
+    out.style.color = '#22c55e';
+    refreshUsers();
+  } catch(e) { out.textContent = '❌ '+e.message; out.style.color = '#ef4444'; }
 }
 
 async function refreshUsers() {
