@@ -10029,13 +10029,30 @@ async function runMissionBackfill() {
 }
 
 async function refreshUsers() {
+  const errBox = document.getElementById('dash-err') || (function(){
+    const e = document.createElement('div');
+    e.id = 'dash-err';
+    e.style.cssText = 'display:none;padding:14px 16px;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.35);border-radius:12px;margin:0 0 14px;font-size:13px;color:#ef4444;font-family:ui-monospace,monospace;white-space:pre-wrap;word-break:break-all';
+    const list = document.getElementById('dash-list');
+    list.parentNode.insertBefore(e, list);
+    return e;
+  })();
+  const showErr = (msg) => { errBox.style.display = 'block'; errBox.textContent = msg; };
+  const hideErr = () => { errBox.style.display = 'none'; };
   try {
     const r = await fetch('/api/admin/users');
-    if (!r.ok) {
-      document.getElementById('dash-list').innerHTML = '<div style="padding:24px;text-align:center;color:#ef4444">Fehler ('+r.status+')</div>';
+    const txt = await r.text();
+    let j;
+    try { j = JSON.parse(txt); }
+    catch(_) {
+      showErr('HTTP '+r.status+' · kein JSON · Response:\\n'+txt.slice(0,800));
       return;
     }
-    const j = await r.json();
+    if (!r.ok || j.ok === false) {
+      showErr('HTTP '+r.status+' · '+(j.error||'unbekannt')+'\\nFull: '+JSON.stringify(j).slice(0,800));
+      return;
+    }
+    hideErr();
     ALL_USERS = j.users || [];
     document.getElementById('stat-total').textContent = ALL_USERS.length;
     document.getElementById('stat-active').textContent = ALL_USERS.filter(u => u.started).length;
@@ -10044,7 +10061,7 @@ async function refreshUsers() {
     document.getElementById('stat-extg').textContent = ALL_USERS.filter(u => u.hasEmail && !u.inGruppe).length;
     renderList();
   } catch(e) {
-    document.getElementById('dash-list').innerHTML = '<div style="padding:24px;text-align:center;color:#ef4444">'+e.message+'</div>';
+    showErr('Network: '+e.message);
   }
 }
 
