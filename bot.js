@@ -1238,8 +1238,24 @@ ${session ? `<link rel="prefetch" href="/feed"><link rel="prefetch" href="/explo
     <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border2)">
       <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Engagement</div>
       <button class="btn btn-full" onclick="closePlusSheet();setTimeout(()=>{if(typeof openSLSheet==='function')openSLSheet();else location.href='/feed?tab=engagement&opensl=1';},200)" style="background:linear-gradient(135deg,rgba(245,158,11,.15),rgba(245,158,11,.05));border:1px solid rgba(245,158,11,.3);color:#f59e0b;font-weight:700">⭐ Superlink posten</button>
-      <div style="font-size:11px;color:var(--muted);margin-top:6px;text-align:center">Alle Mitglieder müssen deinen Link liken, kommentieren & teilen</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:6px;text-align:center;margin-bottom:14px">Alle Mitglieder müssen deinen Link liken, kommentieren & teilen</div>
+      <button class="btn btn-full" onclick="closePlusSheet();setTimeout(openKollabSheet,200)" style="background:linear-gradient(135deg,rgba(236,72,153,.15),rgba(236,72,153,.05));border:1px solid rgba(236,72,153,.3);color:#ec4899;font-weight:700">🤝 Kollab-Link posten</button>
+      <div style="font-size:11px;color:var(--muted);margin-top:6px;text-align:center">Mit deinem Kollab-Partner gemeinsam · 1× pro Woche</div>
     </div>
+  </div>
+</div>
+<div class="plus-sheet" id="kollab-sheet" onclick="if(event.target===this)closeKollabSheet()">
+  <div class="plus-sheet-inner">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <span style="font-size:16px;font-weight:700">🤝 Kollab-Link posten</span>
+      <button onclick="closeKollabSheet()" style="background:var(--bg4);border:none;color:var(--text);border-radius:50%;width:28px;height:28px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>
+    </div>
+    <div id="kollab-info" style="border-radius:10px;padding:10px 13px;margin-bottom:12px;font-size:12px;font-weight:600;background:rgba(236,72,153,.10);border:1px solid rgba(236,72,153,.3);color:#ec4899">Lädt Kollab-Partner …</div>
+    <select id="kollab-partner" class="form-input" style="margin-bottom:8px"></select>
+    <input type="url" id="kollab-url" class="form-input" placeholder="https://www.instagram.com/reel/..." style="margin-bottom:8px">
+    <textarea id="kollab-caption" class="form-input" placeholder="Beschreibung (optional)" maxlength="400" rows="2" style="margin-bottom:8px"></textarea>
+    <button class="btn btn-full" id="kollab-post-btn" onclick="postKollabLink()" style="background:linear-gradient(135deg,#ec4899,#a21caf);color:#fff;font-weight:700">🤝 Kollab-Link veröffentlichen</button>
+    <div id="kollab-result" style="margin-top:8px;font-size:12px;text-align:center;color:var(--muted)"></div>
   </div>
 </div>
 <div class="liker-modal" id="liker-modal" onclick="if(event.target===this)closeLikerModal()">
@@ -2038,6 +2054,52 @@ async function openPlusSheet(){
   }
 }
 function closePlusSheet(){const s=document.getElementById('plus-sheet');if(s){s.classList.remove('open');document.body.style.overflow='';const btn=document.getElementById('plus-post-btn');if(btn){btn.disabled=false;btn.style.opacity='';btn.textContent='📸 Link teilen';}}}
+
+async function openKollabSheet(){
+  const s=document.getElementById('kollab-sheet'); if(!s) return;
+  s.classList.add('open'); document.body.style.overflow='hidden';
+  const info=document.getElementById('kollab-info');
+  const sel=document.getElementById('kollab-partner');
+  info.textContent='Lädt Kollab-Partner …';
+  try {
+    const r=await fetch('/api/collab/list');
+    const j=await r.json();
+    if (!j.ok || !Array.isArray(j.partners)){ info.textContent='❌ Konnte Partner nicht laden'; return; }
+    if (!j.partners.length){
+      info.innerHTML='Du hast noch keine Kollab-Partner.<br>Gehe auf das Profil eines Users → 🤝 Kollaboration anfragen.';
+      sel.style.display='none';
+      document.getElementById('kollab-post-btn').disabled=true;
+      return;
+    }
+    if (j.postedThisWeek) {
+      info.textContent='⚠️ Du hast diese Woche schon einen Kollab-Post veröffentlicht. Nächste Woche wieder.';
+      sel.style.display='none';
+      document.getElementById('kollab-post-btn').disabled=true;
+      return;
+    }
+    info.textContent='Wähle deinen Kollab-Partner für diesen Post:';
+    sel.style.display='block';
+    sel.innerHTML=j.partners.map(p=>'<option value="'+p.uid+'">'+(p.name||'User')+(p.instagram?' · @'+p.instagram:'')+'</option>').join('');
+    document.getElementById('kollab-post-btn').disabled=false;
+  } catch(e){ info.textContent='❌ '+e.message; }
+}
+function closeKollabSheet(){const s=document.getElementById('kollab-sheet');if(s){s.classList.remove('open');document.body.style.overflow='';}}
+async function postKollabLink(){
+  const partnerUid=document.getElementById('kollab-partner').value;
+  const url=(document.getElementById('kollab-url').value||'').trim();
+  const caption=(document.getElementById('kollab-caption').value||'').trim();
+  const result=document.getElementById('kollab-result');
+  if(!partnerUid){result.textContent='❌ Bitte Partner wählen';return;}
+  if(!url){result.textContent='❌ Bitte Instagram-Link eingeben';return;}
+  if(!url.includes('instagram.com')){result.textContent='❌ Nur Instagram-Links erlaubt';return;}
+  const btn=document.getElementById('kollab-post-btn'); btn.disabled=true; btn.textContent='⏳ Wird veröffentlicht …';
+  try {
+    const r=await fetch('/api/collab/post-create',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({partnerUid,url,caption})});
+    const j=await r.json();
+    if(j.ok){ result.style.color='#22c55e'; result.textContent='✅ Kollab-Post live!'; setTimeout(()=>{ closeKollabSheet(); location.href='/feed?tab=kollabs'; },800); }
+    else { result.style.color='#ef4444'; result.textContent='❌ '+(j.error||'Fehler'); btn.disabled=false; btn.textContent='🤝 Kollab-Link veröffentlichen'; }
+  } catch(e){ result.style.color='#ef4444'; result.textContent='❌ '+e.message; btn.disabled=false; btn.textContent='🤝 Kollab-Link veröffentlichen'; }
+}
 async function plusPostLink(){
   const url=(document.getElementById('plus-link-input')?.value||'').trim();
   const result=document.getElementById('plus-link-result');
@@ -7274,8 +7336,10 @@ commentsBox+
   <button onclick="openPlusSheet()" style="display:inline-flex;align-items:center;gap:8px;background:var(--accent);color:#fff;padding:12px 24px;border-radius:12px;font-size:14px;font-weight:700;border:none;cursor:pointer;font-family:var(--font)">📸 Jetzt Link teilen</button>
 </div>`;
         const aelterHtml = aelterLinks.length ? aelterLinks.map(renderLink).join('') : '<div class="empty" style="margin-top:40px"><div class="empty-icon">🕐</div><div class="empty-text">Keine älteren Links</div></div>';
+        const kollabsHtml = '<div id="kollabs-tab-root" style="padding:8px 0 80px"><div style="padding:48px 24px;text-align:center;color:var(--muted);font-size:13px">⏳ Lade Kollab-Posts…</div></div>';
         const postsHtml = tab === 'aelter' ? '<div style="padding:8px 0 80px">'+aelterHtml+'</div>'
             : tab === 'engagement' ? engagementHtml
+            : tab === 'kollabs' ? kollabsHtml
             : '<div style="padding:8px 0 80px">'+heuteHtml+'</div>';
 
         return html(`
@@ -7312,10 +7376,11 @@ ${(()=>{
   }
   return '';
 })()}
-<div data-tour="feed-tabs" style="display:flex;gap:6px;padding:6px 16px 14px;width:100%;box-sizing:border-box">
-  <a href="/feed?tab=heute" class="feed-pill ${tab==='heute'?'active':''}" style="flex:1;padding:9px 8px;font-size:12.5px;font-weight:800;text-align:center;text-decoration:none;border-radius:999px;${tab==='heute'?'background:linear-gradient(135deg,#3b82f6,#60a5fa);color:#fff;box-shadow:0 4px 14px rgba(59,130,246,0.35)':'background:rgba(59,130,246,0.10);color:#3b82f6;border:1px solid rgba(59,130,246,0.35)'};letter-spacing:0.2px">📅 Heute</a>
-  <a href="/feed?tab=aelter" class="feed-pill ${tab==='aelter'?'active':''}" style="flex:1;padding:9px 8px;font-size:12.5px;font-weight:800;text-align:center;text-decoration:none;border-radius:999px;${tab==='aelter'?'background:linear-gradient(135deg,#4dabf7,#1d6fa5);color:#fff;box-shadow:0 4px 14px rgba(77,171,247,0.3)':'background:var(--surface-tint);color:var(--muted);border:1px solid var(--border)'};letter-spacing:0.2px">🕐 Älter</a>
-  <a href="/feed?tab=engagement" class="feed-pill ${tab==='engagement'?'active':''}" style="flex:1;padding:9px 8px;font-size:12.5px;font-weight:800;text-align:center;text-decoration:none;border-radius:999px;${tab==='engagement'?'background:linear-gradient(135deg,#f59e0b,#a78bfa);color:#fff;box-shadow:0 4px 14px rgba(245,158,11,0.3)':'background:var(--surface-tint);color:var(--muted);border:1px solid var(--border)'};letter-spacing:0.2px">⭐ Engagement</a>
+<div data-tour="feed-tabs" style="display:flex;gap:6px;padding:6px 16px 14px;width:100%;box-sizing:border-box;flex-wrap:wrap">
+  <a href="/feed?tab=heute" class="feed-pill ${tab==='heute'?'active':''}" style="flex:1;min-width:80px;padding:9px 6px;font-size:12px;font-weight:800;text-align:center;text-decoration:none;border-radius:999px;${tab==='heute'?'background:linear-gradient(135deg,#3b82f6,#60a5fa);color:#fff;box-shadow:0 4px 14px rgba(59,130,246,0.35)':'background:rgba(59,130,246,0.10);color:#3b82f6;border:1px solid rgba(59,130,246,0.35)'};letter-spacing:0.2px">📅 Heute</a>
+  <a href="/feed?tab=aelter" class="feed-pill ${tab==='aelter'?'active':''}" style="flex:1;min-width:80px;padding:9px 6px;font-size:12px;font-weight:800;text-align:center;text-decoration:none;border-radius:999px;${tab==='aelter'?'background:linear-gradient(135deg,#4dabf7,#1d6fa5);color:#fff;box-shadow:0 4px 14px rgba(77,171,247,0.3)':'background:var(--surface-tint);color:var(--muted);border:1px solid var(--border)'};letter-spacing:0.2px">🕐 Älter</a>
+  <a href="/feed?tab=engagement" class="feed-pill ${tab==='engagement'?'active':''}" style="flex:1;min-width:80px;padding:9px 6px;font-size:12px;font-weight:800;text-align:center;text-decoration:none;border-radius:999px;${tab==='engagement'?'background:linear-gradient(135deg,#f59e0b,#a78bfa);color:#fff;box-shadow:0 4px 14px rgba(245,158,11,0.3)':'background:var(--surface-tint);color:var(--muted);border:1px solid var(--border)'};letter-spacing:0.2px">⭐ Engagement</a>
+  <a href="/feed?tab=kollabs" class="feed-pill ${tab==='kollabs'?'active':''}" style="flex:1;min-width:80px;padding:9px 6px;font-size:12px;font-weight:800;text-align:center;text-decoration:none;border-radius:999px;${tab==='kollabs'?'background:linear-gradient(135deg,#ec4899,#a21caf);color:#fff;box-shadow:0 4px 14px rgba(236,72,153,0.35)':'background:rgba(236,72,153,0.10);color:#ec4899;border:1px solid rgba(236,72,153,0.35)'};letter-spacing:0.2px">🤝 Kollabs</a>
 </div>
 ${tab==='engagement' ? `<div style="padding:12px 16px 4px">
   ${slAvailable > 0
@@ -9423,9 +9488,39 @@ document.getElementById('user-search-input')?.addEventListener('input',filterSea
   <button class="notif-filter" data-f="message">💬 Nachrichten</button>
   <button class="notif-filter" data-f="warn">⚠️ System</button>
 </div>
+<div id="collab-pending" style="padding:0"></div>
 <div id="notif-list" style="padding:0 0 80px">
   <div class="notif-empty"><div class="notif-empty-icon">⏳</div><div class="notif-empty-text">Lädt...</div></div>
 </div>
+<script>
+// Kollab-Pending-Section: zeigt offene eingegangene Anfragen mit Accept/Decline
+(async function loadCollabPending(){
+  try {
+    const r = await fetch('/api/collab/list');
+    const j = await r.json();
+    if (!j.ok) return;
+    const root = document.getElementById('collab-pending');
+    const inReqs = j.pendingIn || [];
+    if (!inReqs.length) { root.innerHTML = ''; return; }
+    const esc = (s) => String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    root.innerHTML = '<div class="notif-section">🤝 Kollab-Anfragen</div>' + inReqs.map(req =>
+      '<div style="padding:14px 16px;border-bottom:1px solid var(--border2);display:flex;align-items:center;gap:12px">' +
+        '<div style="width:44px;height:44px;border-radius:14px;background:linear-gradient(135deg,#ec4899,#a21caf);color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🤝</div>' +
+        '<div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:700"><a href="/profil/'+esc(req.fromUid)+'" style="color:var(--text);text-decoration:none">'+esc(req.name)+'</a> möchte mit dir kollaborieren</div><div style="font-size:11.5px;color:var(--muted);margin-top:2px">1× pro Woche gemeinsamer Kollab-Post</div></div>' +
+        '<button onclick="respondCollab(\\''+esc(req.reqId)+'\\', true, this)" style="background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:none;border-radius:10px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer">✅</button>' +
+        '<button onclick="respondCollab(\\''+esc(req.reqId)+'\\', false, this)" style="background:var(--bg4);border:1px solid var(--border);color:var(--muted);border-radius:10px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer;margin-left:6px">❌</button>' +
+      '</div>'
+    ).join('');
+  } catch(e) {}
+})();
+window.respondCollab = async function(reqId, accept, btn){
+  btn.disabled = true; btn.textContent = '⏳';
+  const r = await fetch('/api/collab/respond', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ reqId, accept }) });
+  const j = await r.json().catch(()=>({}));
+  if (j.ok) location.reload();
+  else { btn.disabled = false; btn.textContent = accept?'✅':'❌'; alert('❌ '+(j.error||'Fehler')); }
+};
+</script>
 <script>
 function relTime(ts){const m=Math.round((Date.now()-ts)/60000);if(m<1)return 'gerade eben';if(m<60)return 'vor '+m+' Min';const h=Math.round(m/60);if(h<24)return 'vor '+h+' Std';const d=Math.round(h/24);if(d<7)return 'vor '+d+'d';return new Date(ts).toLocaleDateString('de-DE',{day:'2-digit',month:'short'});}
 function classify(n){const t=(n.text||'').toLowerCase();const i=n.icon||'';if(i==='❤️'||t.includes('liked')||t.includes('gelikt'))return 'like';if(i==='👤'||t.includes('folgt')||t.includes('follow'))return 'follow';if(i==='📩'||t.includes('newsletter')||t.includes('news'))return 'news';if(i==='💎'||t.includes('diamant'))return 'diamond';if(i==='⚠️'||t.includes('warn')||t.includes('verwarnung'))return 'warn';if(i==='💬'||t.includes('kommentiert')||t.includes('nachricht'))return 'message';return '';}
@@ -9784,6 +9879,64 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
         if (!r) return json({ok:false, error:'Mainbot offline / kein Endpoint'}, 502);
         if (r.ok === false) return json({ok:false, error: r.error || 'Mainbot lehnte ab'}, 400);
         return json({ ok:true, result: r });
+    }
+
+    // ── KOLLABORATIONS-POSTS API (proxy zu Mainbot) ──
+    if (path === '/api/collab/list' && req.method === 'GET') {
+        if (!session) return json({error:'Nicht eingeloggt'}, 401);
+        const r = await fetchBotRaw('/collab-list-api?uid=' + encodeURIComponent(myUid));
+        if (!r) return json({ok:false, error:'Mainbot offline'}, 502);
+        return json(r);
+    }
+    if (path === '/api/collab/feed' && req.method === 'GET') {
+        if (!session) return json({error:'Nicht eingeloggt'}, 401);
+        const r = await fetchBotRaw('/collab-feed-api?uid=' + encodeURIComponent(myUid));
+        if (!r) return json({ok:false, error:'Mainbot offline'}, 502);
+        return json(r);
+    }
+    if (path === '/api/collab/request' && req.method === 'POST') {
+        if (!session) return json({error:'Nicht eingeloggt'}, 401);
+        const body = await parseBody(req);
+        const targetUid = String(body.targetUid || '');
+        if (!targetUid) return json({ok:false, error:'targetUid fehlt'}, 400);
+        const r = await postBot('/collab-request-api', { fromUid: myUid, toUid: targetUid });
+        if (!r) return json({ok:false, error:'Mainbot offline'}, 502);
+        return json(r);
+    }
+    if (path === '/api/collab/respond' && req.method === 'POST') {
+        if (!session) return json({error:'Nicht eingeloggt'}, 401);
+        const body = await parseBody(req);
+        const reqId = String(body.reqId || '');
+        const accept = !!body.accept;
+        if (!reqId) return json({ok:false, error:'reqId fehlt'}, 400);
+        const r = await postBot('/collab-respond-api', { reqId, accept, callerUid: myUid });
+        if (!r) return json({ok:false, error:'Mainbot offline'}, 502);
+        return json(r);
+    }
+    if (path === '/api/collab/post-create' && req.method === 'POST') {
+        if (!session) return json({error:'Nicht eingeloggt'}, 401);
+        const body = await parseBody(req);
+        const r = await postBot('/collab-create-post-api', {
+            uid: myUid,
+            partnerUid: String(body.partnerUid||''),
+            url: String(body.url||''),
+            caption: String(body.caption||''),
+        });
+        if (!r) return json({ok:false, error:'Mainbot offline'}, 502);
+        return json(r);
+    }
+    if (path === '/api/collab/like' && req.method === 'POST') {
+        if (!session) return json({error:'Nicht eingeloggt'}, 401);
+        const body = await parseBody(req);
+        const r = await postBot('/collab-like-post-api', { uid: myUid, postId: String(body.postId||'') });
+        if (!r) return json({ok:false, error:'Mainbot offline'}, 502);
+        return json(r);
+    }
+    if (path === '/api/collab/accept-feed-rules' && req.method === 'POST') {
+        if (!session) return json({error:'Nicht eingeloggt'}, 401);
+        const r = await postBot('/collab-accept-feed-rules-api', { uid: myUid });
+        if (!r) return json({ok:false, error:'Mainbot offline'}, 502);
+        return json(r);
     }
 
     // ── Admin: Wochenmissions-Backfill seit Mo (für alle started-User, silent, idempotent) ──
@@ -11794,6 +11947,7 @@ async function submitPost(){const _spBtn=document.querySelector('[onclick="submi
   <div style="font-size:15px;font-weight:600">${u.spitzname||u.name||'User'}</div>
   <div style="display:flex;gap:8px">
     <button onclick="toggleFollow('${uid}',this)" style="background:${isFollowing?'var(--bg4)':'var(--accent)'};color:${isFollowing?'var(--muted)':'#fff'};border:1px solid var(--border);border-radius:20px;padding:6px 16px;font-size:13px;font-weight:600;cursor:pointer">${isFollowing?'Gefolgt':'Folgen'}</button>
+    <button id="collab-btn" onclick="collabRequest('${uid}',this)" title="Kollaboration anfragen" style="background:linear-gradient(135deg,#ec4899,#a21caf);color:#fff;border:none;border-radius:20px;padding:6px 14px;font-size:13px;font-weight:700;cursor:pointer">🤝</button>
     <a href="/nachrichten/${uid}" style="background:var(--bg4);border:1px solid var(--border);border-radius:20px;padding:6px 14px;font-size:13px;font-weight:600;color:var(--text);text-decoration:none">💬</a>
   </div>
 </div>
@@ -11853,6 +12007,109 @@ async function toggleFollow(uid,btn){
   await fetch('/api/follow',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({uid})});
   toast(isFollowing?'Nicht mehr gefolgt':'✅ Gefolgt!');
 }
+async function collabRequest(targetUid, btn){
+  if (!confirm('Kollaboration mit diesem User anfragen? Wenn er akzeptiert, dürft ihr 1× pro Woche einen Kollab-Post veröffentlichen.')) return;
+  btn.disabled = true;
+  const r = await fetch('/api/collab/request', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ targetUid }) });
+  const j = await r.json().catch(()=>({}));
+  if (j.ok) { btn.innerHTML = '✅'; alert('✅ Kollab-Anfrage gesendet'); }
+  else { btn.disabled = false; alert('❌ '+(j.error||'Fehler')); }
+}
+
+// ── KOLLABORATIONS-FEED ──
+(function initKollabsTab(){
+  const isKollabs = ${tab==='kollabs' ? 'true' : 'false'};
+  if (!isKollabs) return;
+  const root = document.getElementById('kollabs-tab-root');
+  if (!root) return;
+  function esc(s){ return String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  function pillBox(html){
+    return '<div style="margin:0 16px 12px;padding:14px 16px;background:rgba(236,72,153,0.10);border:1px solid rgba(236,72,153,0.30);border-radius:14px;font-size:12.5px;line-height:1.6">'+html+'</div>';
+  }
+  async function loadAndRender(){
+    const listRes = await fetch('/api/collab/list');
+    const list = await listRes.json().catch(()=>({}));
+    if (!list || list.rulesAccepted === false) {
+      showRulesModal();
+      return;
+    }
+    const fRes = await fetch('/api/collab/feed');
+    const f = await fRes.json().catch(()=>({}));
+    if (!f.ok) { root.innerHTML = '<div style="padding:32px;text-align:center;color:#ef4444">Fehler: '+esc(f.error||'unbekannt')+'</div>'; return; }
+    const posts = f.posts || [];
+    let html = '';
+    html += pillBox('<b style="color:var(--text)">🤝 Kollab-Posts</b><br>Engagement = Liken + Kommentieren + <b>Speichern</b> + Teilen auf Instagram → dann hier ✅ → <b>+1 💎</b>.<br><a href="/explore?tab=regeln#kollabs" style="color:#ec4899;font-weight:700">→ Regeln ansehen</a>');
+    if (!posts.length) html += '<div style="padding:48px 24px;text-align:center;color:var(--muted)">Noch keine Kollab-Posts. Verbinde dich mit einem Partner auf seinem Profil und teilt euren ersten Kollab-Post!</div>';
+    else {
+      for (const p of posts) {
+        const isMine = !!p.isSelf;
+        const liked = !!p.liked;
+        const aName = esc(p.authorA?.name||'User');
+        const bName = esc(p.authorB?.name||'User');
+        html += '<div style="margin:0 16px 14px;padding:14px;background:var(--bg3);border:1px solid var(--border2);border-radius:14px">' +
+          '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">' +
+            '<div style="font-size:11px;color:#ec4899;font-weight:800;letter-spacing:1px;text-transform:uppercase">🤝 Kollab-Post</div>' +
+            '<div style="flex:1"></div>' +
+            '<div style="font-size:11px;color:var(--muted)">'+new Date(p.createdAt).toLocaleDateString('de-DE',{day:'2-digit',month:'short'})+'</div>' +
+          '</div>' +
+          '<div style="font-size:13px;font-weight:700;margin-bottom:6px"><a href="/profil/'+esc(p.uid)+'" style="color:var(--text);text-decoration:none">'+aName+'</a> × <a href="/profil/'+esc(p.partnerUid)+'" style="color:var(--text);text-decoration:none">'+bName+'</a></div>' +
+          (p.caption ? '<div style="font-size:13px;color:var(--text);line-height:1.5;margin:6px 0 10px">'+esc(p.caption)+'</div>' : '') +
+          '<a href="'+esc(p.url)+'" target="_blank" rel="noopener noreferrer" onclick="window._kvisit_'+p.id+'=Date.now()" style="display:block;padding:11px 13px;background:rgba(236,72,153,0.10);border:1px solid rgba(236,72,153,0.30);border-radius:10px;font-size:12.5px;color:#ec4899;font-weight:700;word-break:break-all;text-decoration:none;margin-bottom:10px">🔗 Auf Instagram öffnen</a>' +
+          (isMine
+            ? '<div style="padding:10px 12px;background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.35);border-radius:10px;font-size:12px;color:#ef4444;font-weight:700;text-align:center">🚫 Kein Self-Like für Kollaboratoren · Dies ist dein Post mit '+(p.uid===window._myUid?bName:aName)+'</div>'
+            : liked
+            ? '<div style="padding:11px;background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.35);border-radius:10px;font-size:13px;color:#22c55e;font-weight:700;text-align:center">✅ Engagiert · +1 💎</div>'
+            : '<button onclick="kollabLike(\\''+p.id+'\\', this)" style="display:block;width:100%;padding:12px;background:linear-gradient(135deg,#ec4899,#a21caf);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer">❤️ Engagiert · +1 💎</button>'
+          ) +
+          '<div style="font-size:11px;color:var(--muted);margin-top:8px;text-align:center">'+p.likeCount+' Engagements</div>' +
+        '</div>';
+      }
+    }
+    root.innerHTML = html;
+  }
+  function showRulesModal(){
+    const bg = document.createElement('div');
+    bg.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(6px);z-index:9000;display:flex;align-items:center;justify-content:center;padding:18px';
+    bg.innerHTML =
+      '<div style="background:var(--bg2);border:1px solid var(--border2);border-radius:18px;padding:24px;max-width:520px;width:100%;max-height:90vh;overflow-y:auto">' +
+        '<div style="font-size:36px;margin-bottom:8px;text-align:center">🤝</div>' +
+        '<h2 style="margin:0 0 8px;font-size:20px;font-weight:800;text-align:center">Kollaborations-Bereich</h2>' +
+        '<div style="font-size:13.5px;line-height:1.7;color:var(--text)">' +
+          '<b>So läuft\\'s:</b><br>' +
+          '• Verbinde dich mit einem Partner über sein Profil (Button "🤝 Kollaboration anfragen")<br>' +
+          '• Sobald er akzeptiert seid ihr Kollab-Partner<br>' +
+          '• Gemeinsam dürft ihr <b>1× pro Woche</b> einen Kollab-Post veröffentlichen<br>' +
+          '• Andere User engagieren → du als Liker bekommst pro engagiertem Post <b>1 💎</b><br>' +
+          '• <b>Wichtig:</b> zuerst auf Instagram öffnen, dann <b>LIKEN, KOMMENTIEREN, SPEICHERN und TEILEN</b> — danach hier ✅<br>' +
+          '• <b>Beide Kollab-Partner</b> dürfen ihren EIGENEN Post NICHT liken (Self-Like blockiert)<br><br>' +
+          'Ziel: gemeinsame Zusammenarbeit, mehr Reichweite für die Community.' +
+        '</div>' +
+        '<button id="collab-accept-btn" style="width:100%;margin-top:18px;padding:14px;background:linear-gradient(135deg,#ec4899,#a21caf);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer">✅ Verstanden &amp; akzeptieren</button>' +
+      '</div>';
+    document.body.appendChild(bg);
+    document.getElementById('collab-accept-btn').onclick = async () => {
+      await fetch('/api/collab/accept-feed-rules', { method:'POST' });
+      bg.remove();
+      loadAndRender();
+    };
+  }
+  window.kollabLike = async function(postId, btn){
+    btn.disabled = true; btn.textContent = '⏳ Bestätige…';
+    const visitTs = window['_kvisit_'+postId];
+    if (!visitTs || (Date.now() - visitTs) < 1500) {
+      btn.disabled = false; btn.innerHTML = '❤️ Engagiert · +1 💎';
+      alert('Bitte zuerst auf Instagram öffnen, liken/kommentieren/speichern/teilen — dann hier bestätigen.');
+      return;
+    }
+    const r = await fetch('/api/collab/like', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ postId }) });
+    const j = await r.json().catch(()=>({}));
+    if (j.ok) loadAndRender();
+    else { btn.disabled = false; btn.innerHTML = '❤️ Engagiert · +1 💎'; alert('❌ '+(j.message||j.error||'Fehler')); }
+  };
+  // Expose my-uid for self-detection in card render
+  try { window._myUid = document.cookie.match(/cb_uid=([^;]+)/)?.[1] || ''; } catch(e) {}
+  loadAndRender();
+})();
 </script>`, 'feed');
     }
 
