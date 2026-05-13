@@ -3892,6 +3892,8 @@ document.addEventListener('DOMContentLoaded', function(){
             // Bestehende Session: loginVia auf 'email' aktualisieren — wichtig für Insta-Gate
             const existing = sessions.get(sid); if (existing) { existing.loginVia = 'email'; sessions.set(sid, existing); saveSessions(); }
         }
+        // Funnel: Login erfolgreich
+        postBot('/track-funnel', { event: 'login-success', uid: String(result.uid), meta: { method: didSetupPassword ? 'first-pw' : 'email-pw' } }).catch(()=>{});
         // Email-User Redirect-Chain (mit /feed?tour=1 als finales Ziel damit Tour autostartet)
         let redirect;
         if (!u.instagram) redirect = '/onboarding-instagram?first=1';
@@ -4168,6 +4170,8 @@ h1{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;line-height:1.1;
 </div>
 </div>
 <script>
+// Funnel: Signup-Page-View
+try { fetch('/api/track-funnel', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({event:'signup-view',meta:{ref:document.referrer.slice(0,200)}}),keepalive:true}); } catch(e) {}
 function submitSignup(ev){
   ev.preventDefault();
   var em=(document.getElementById('signup-email').value||'').trim().toLowerCase();
@@ -4224,6 +4228,8 @@ function submitSignup(ev){
             return json({ok:false, error: (created && created.error) || 'Account konnte nicht erstellt werden'}, 500);
         }
         postBot('/log-email-login', { email, success: true, method: 'signup', uid: String(created.uid), ip: _ip, ua: _ua }).catch(()=>{});
+        // Funnel-Event: Signup abgeschlossen
+        postBot('/track-funnel', { event: 'signup-complete', uid: String(created.uid), meta: { method: 'email' } }).catch(()=>{});
         // Session erstellen
         const fresh = await fetchBot('/data');
         const u = fresh?.users?.[created.uid];
@@ -10321,6 +10327,39 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
       <div class="dash-stat"><div class="dash-stat-lbl">🪪 Ex-Telegram</div><div class="dash-stat-val" id="stat-extg">–</div></div>
     </div>
 
+    <!-- Funnel: Landing → CTA → Signup → Login (last 7d) -->
+    <section class="dash-section">
+      <div class="dash-section-hdr">
+        <div class="dash-section-title">📊 Conversion-Funnel</div>
+        <div class="dash-section-sub">letzte 7 Tage · Acquisition → Aktivierung</div>
+      </div>
+      <div class="dash-section-body">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:14px" id="funnel-steps">
+          <div style="padding:14px;background:var(--dink);border:1px solid var(--dline);border-radius:12px"><div style="font-size:10px;font-weight:700;color:var(--dsub);text-transform:uppercase;letter-spacing:1.4px">1️⃣ Landing</div><div style="font-size:24px;font-weight:800;color:#fff;margin-top:4px" id="fn-landing">–</div><div style="font-size:11px;color:var(--dsub);margin-top:2px">Besuche der Startseite</div></div>
+          <div style="padding:14px;background:var(--dink);border:1px solid var(--dline);border-radius:12px"><div style="font-size:10px;font-weight:700;color:var(--dsub);text-transform:uppercase;letter-spacing:1.4px">2️⃣ CTA-Klick</div><div style="font-size:24px;font-weight:800;color:#fff;margin-top:4px" id="fn-cta">–</div><div style="font-size:11px;color:var(--dsub);margin-top:2px"><span id="fn-cta-pct">–</span>% von Landing</div></div>
+          <div style="padding:14px;background:var(--dink);border:1px solid var(--dline);border-radius:12px"><div style="font-size:10px;font-weight:700;color:var(--dsub);text-transform:uppercase;letter-spacing:1.4px">3️⃣ Signup-Seite</div><div style="font-size:24px;font-weight:800;color:#fff;margin-top:4px" id="fn-signup-view">–</div><div style="font-size:11px;color:var(--dsub);margin-top:2px"><span id="fn-signup-view-pct">–</span>% von Landing</div></div>
+          <div style="padding:14px;background:linear-gradient(180deg,rgba(212,175,55,0.12),var(--dink));border:1px solid rgba(212,175,55,0.30);border-radius:12px"><div style="font-size:10px;font-weight:700;color:#d4af37;text-transform:uppercase;letter-spacing:1.4px">4️⃣ Registriert</div><div style="font-size:24px;font-weight:800;color:#fff;margin-top:4px" id="fn-signup-complete">–</div><div style="font-size:11px;color:var(--dsub);margin-top:2px"><span id="fn-signup-complete-pct">–</span>% von Signup-Seite</div></div>
+          <div style="padding:14px;background:linear-gradient(180deg,rgba(34,197,94,0.10),var(--dink));border:1px solid rgba(34,197,94,0.30);border-radius:12px"><div style="font-size:10px;font-weight:700;color:#22c55e;text-transform:uppercase;letter-spacing:1.4px">5️⃣ Logins</div><div style="font-size:24px;font-weight:800;color:#fff;margin-top:4px" id="fn-login">–</div><div style="font-size:11px;color:var(--dsub);margin-top:2px">erfolgreiche Logins</div></div>
+        </div>
+        <div style="font-size:12px;color:var(--dsub);line-height:1.6">📌 <b style="color:#fff">Tipp:</b> Landing-Drop-Off heute: <span id="fn-dropoff" style="color:#fff;font-weight:700">–</span> · Telegram-Klicks: <span id="fn-tg-today" style="color:#fff;font-weight:700">–</span> · Email-Submits: <span id="fn-email-today" style="color:#fff;font-weight:700">–</span></div>
+      </div>
+    </section>
+
+    <!-- Recent Signups (last 30 days) -->
+    <section class="dash-section">
+      <div class="dash-section-hdr">
+        <div class="dash-section-title">🆕 Neu registriert</div>
+        <div class="dash-section-sub">letzte 30 Tage · <span id="newusers-count">–</span></div>
+        <div class="dash-section-grow"></div>
+        <span class="dash-pill ok" style="font-size:10.5px">heute: <span id="newusers-today">–</span></span>
+      </div>
+      <div class="dash-section-body">
+        <div id="recent-signups-list" style="display:flex;flex-direction:column;gap:6px">
+          <div style="padding:18px;text-align:center;color:var(--dsub);font-size:12.5px">Lädt …</div>
+        </div>
+      </div>
+    </section>
+
     <!-- User Section -->
     <section class="dash-section">
       <div class="dash-section-hdr">
@@ -10656,6 +10695,52 @@ async function loadStatsOverview() {
     }
     // Sparkline: last 7 days landing-views
     drawSparkline('spark-landing', (s.last7Days||[]).map(d => d.events['landing-view']||0), '#3b82f6');
+
+    // Funnel
+    const f = s.funnel7d || {};
+    setText('fn-landing', (f.landing||0).toLocaleString('de-DE'));
+    setText('fn-cta', (f.ctaClick||0).toLocaleString('de-DE'));
+    setText('fn-cta-pct', f.ctaPct||0);
+    setText('fn-signup-view', (f.signupView||0).toLocaleString('de-DE'));
+    setText('fn-signup-view-pct', f.signupViewPct||0);
+    setText('fn-signup-complete', (f.signupComplete||0).toLocaleString('de-DE'));
+    setText('fn-signup-complete-pct', f.signupCompletePct||0);
+    setText('fn-login', (f.loginSuccess||0).toLocaleString('de-DE'));
+    setText('fn-dropoff', ((s.landingToday||0) - (s.ctaClickToday||0)).toLocaleString('de-DE'));
+    setText('fn-tg-today', (s.telegramClickToday||0).toLocaleString('de-DE'));
+    setText('fn-email-today', (s.emailSubmitToday||0).toLocaleString('de-DE'));
+
+    // Recent Signups
+    setText('newusers-count', (s.newUsers30d||0)+' · 7d: '+(s.newUsers7d||0));
+    setText('newusers-today', s.newUsersToday||0);
+    const recentEl = document.getElementById('recent-signups-list');
+    if (recentEl) {
+      const rs = s.recentSignups || [];
+      if (!rs.length) recentEl.innerHTML = '<div style="padding:18px;text-align:center;color:var(--dsub);font-size:12.5px">Noch keine neuen User</div>';
+      else recentEl.innerHTML = rs.slice(0, 20).map(r => {
+        const ageMs = Date.now() - (r.joinDate||0);
+        const ageH = Math.floor(ageMs / 3600000);
+        const age = ageH < 1 ? '<1h' : ageH < 24 ? ageH+'h' : Math.floor(ageH/24)+'d';
+        const initials = ((r.name||'?').replace(/[^A-Za-z0-9äöüÄÖÜß]/g,'').slice(0,2).toUpperCase() || '?');
+        const bg = avatarColorFor(r.uid);
+        const srcEmoji = r.signupSource === 'email' ? '📧' : '✈️';
+        return '<div class="dash-row" onclick="openUser(\\''+r.uid+'\\')">' +
+          '<div class="dash-row-avatar" style="background:'+bg+'">'+esc(initials)+'</div>' +
+          '<div class="dash-row-name">' +
+            '<b>'+esc(r.name)+'</b>' +
+            '<div class="dash-row-sub"><span>'+srcEmoji+' '+esc(r.signupSource)+'</span>' +
+              (r.instagram?'<span class="dash-row-sub-dot">·</span><span>@'+esc(r.instagram)+'</span>':'') +
+              (r.email?'<span class="dash-row-sub-dot">·</span><span>'+esc(r.email)+'</span>':'') +
+              '<span class="dash-row-sub-dot">·</span><span>vor '+age+'</span>' +
+            '</div>' +
+            '<div class="dash-row-pills">' +
+              (r.email ? pill(r.emailConfirmed?'📧 bestätigt':'📧 unbestätigt', r.emailConfirmed?'ok':'warn') : '') +
+              pill(r.hasInstagram?'📸 set':'📸 –', r.hasInstagram?'ok':'warn') +
+            '</div>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
   } catch(e) {}
 }
 
