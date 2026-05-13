@@ -234,7 +234,12 @@ function htmlEsc(s) { return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'
 //     ODER er hat eine Email — dann ist es ein Ex-Telegram-User der jetzt nur per App aktiv ist,
 //     bzw. ein Email-only-Signup. Beide bleiben im App-Ranking sichtbar.
 function isAppVisible(u) {
-    if (!u || !u.started) return false;
+    if (!u) return false;
+    // Sub-Accounts: immer sichtbar — sie haben keinen eigenen Telegram-Start (started
+    // bleibt false bei manchen Subs aus Legacy-Daten) und sie sind per Definition aktiv
+    // weil sie an einem aktiven Parent-Account hängen.
+    if (u.parent_uid) return true;
+    if (!u.started) return false;
     return u.inGruppe !== false || !!u.email;
 }
 
