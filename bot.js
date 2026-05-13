@@ -1,4 +1,23 @@
 process.env.TZ = 'Europe/Berlin';
+console.log('───────────────────────────────────────────');
+console.log('🚀 CreatorX App — Startup ' + new Date().toISOString());
+console.log('   Node: ' + process.version + ' · Platform: ' + process.platform);
+console.log('   PORT env: ' + (process.env.PORT || '(unset — Default 3000)'));
+console.log('   BRIDGE_SECRET: ' + (process.env.BRIDGE_SECRET ? 'set' : 'MISSING'));
+console.log('   VAPID_PUBLIC: ' + (process.env.VAPID_PUBLIC ? 'set' : 'MISSING'));
+console.log('   VAPID_PRIVATE: ' + (process.env.VAPID_PRIVATE ? 'set' : 'MISSING'));
+console.log('   MAINBOT_URL: ' + (process.env.MAINBOT_URL || '(unset)'));
+console.log('───────────────────────────────────────────');
+
+// Process-level error trap — App soll NICHT crashen wenn irgendwo Promise rejected
+// oder uncaught throw — sonst killt Railway den Container.
+process.on('uncaughtException', (e) => {
+    console.error('[uncaughtException]', e && e.stack || e);
+});
+process.on('unhandledRejection', (reason) => {
+    console.error('[unhandledRejection]', reason);
+});
+
 const https = require('https');
 const http = require('http');
 const url = require('url');
@@ -2546,6 +2565,27 @@ ${session ? `<!-- Telegram-User Reminder: Email + Passwort setzen -->
   }).catch(function(){});
 })();
 </script>` : ''}
+${session ? `<script>
+// Globaler App-Presence-Heartbeat: feuert alle 45s wenn Tab sichtbar ist.
+// Stellt sicher dass 'Online jetzt' (5min-Fenster) korrekt anzeigt wer wirklich aktiv ist —
+// vorher feuerte presence nur einmal pro Navigation → User blieben max 5min 'online'.
+(function(){
+  let _lastPing = 0;
+  function ping(){
+    if (document.hidden) return;
+    if (Date.now() - _lastPing < 30000) return; // mindestens 30s zwischen Pings
+    _lastPing = Date.now();
+    try { fetch('/api/app-presence', { method:'POST', keepalive:true }).catch(()=>{}); } catch(e) {}
+  }
+  ping(); // erster Ping sofort
+  setInterval(ping, 45000); // alle 45s
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) ping(); });
+  // Ping auch beim Tab-Close (sendBeacon)
+  window.addEventListener('pagehide', () => {
+    if (navigator.sendBeacon) navigator.sendBeacon('/api/app-presence', '');
+  });
+})();
+</script>` : ''}
 ${ADMIN_FULLTOUR_SCRIPT_TAG}
 </body></html>`;
 }
@@ -3143,6 +3183,20 @@ async function handleRequest(req, res) {
     const pu = url.parse(req.url, true);
     const path = pu.pathname;
     const query = pu.query;
+
+    // ── HEALTH-CHECK — antwortet IMMER 200 auch wenn Mainbot down ist.
+    // Railway healthchecks brauchen das damit der Container nicht killed wird.
+    if (path === '/api/health' || path === '/healthz' || path === '/health') {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({
+            ok: true,
+            now: new Date().toISOString(),
+            uptime: Math.round(process.uptime()),
+            cacheAge: _dataCacheTime ? Math.round((Date.now()-_dataCacheTime)/1000) : null,
+            mainbotConfigured: !!MAINBOT_URL,
+            sessions: sessions.size,
+        }));
+    }
 
     // ── SECURITY HEADERS (global, per Response) ──
     res.setHeader('X-Frame-Options', 'DENY');
