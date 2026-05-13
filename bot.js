@@ -139,7 +139,8 @@ setInterval(async () => {
         const bd = await fetchBot('/data');
         if (!bd) return;
         const threshold = 750;
-        const eligible = Object.entries(bd.users || {}).filter(([, u]) => (u.xpThisWeek || u.weeklyXp || 0) >= threshold && u.started);
+        const weeklyXP = bd.weeklyXP || {};
+        const eligible = Object.entries(bd.users || {}).filter(([uid, u]) => (weeklyXP[uid] || u.xpThisWeek || u.weeklyXp || 0) >= threshold && u.started);
         if (!eligible.length) { console.log('[Gewinnspiel] Keine qualifizierten Teilnehmer diese Woche'); return; }
         const winner = eligible[Math.floor(Math.random() * eligible.length)];
         const [winnerUid, winnerUser] = winner;
@@ -11139,7 +11140,9 @@ async function msAdminRestore(uid,name){if(!confirm(name+' zurück auf die Warte
 </script>`;
             })(),
             gewinnspiel: (()=>{
-                const myXpThisWeek = myUser.xpThisWeek || myUser.weeklyXp || 0;
+                // Mainbot speichert weekly XP in d.weeklyXP[uid] (separates Map), nicht am User-Objekt.
+                // Fallback auf user-fields für Kompat falls altes Schema irgendwo noch existiert.
+                const myXpThisWeek = (d.weeklyXP||{})[myUid] || myUser.xpThisWeek || myUser.weeklyXp || 0;
                 const threshold = 750;
                 const qualified = myXpThisWeek >= threshold;
                 const nextSunday = (()=>{ const n=new Date(); const d=n.getDay(); const diff=d===0?0:7-d; const s=new Date(n); s.setDate(n.getDate()+diff); s.setHours(20,0,0,0); return s; })();
