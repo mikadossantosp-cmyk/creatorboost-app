@@ -2123,7 +2123,7 @@ async function postDiamondLink(){
   const result=document.getElementById('diamond-result');
   if(!url){result.textContent='❌ Bitte Instagram-Link eingeben';return;}
   if(!url.includes('instagram.com')){result.textContent='❌ Nur Instagram-Links erlaubt';return;}
-  if(!confirm('💎 Diamantlink veröffentlichen?\n\nKostet 30 💎 (Admins gratis). 3 Tage Feed-Top, jeder Liker bekommt +3 💎. Bei Schein-Engagement folgen harte Strafen.')) return;
+  if(!confirm('💎 Diamantlink veröffentlichen?\\n\\nKostet 30 💎 (Admins gratis). 3 Tage Feed-Top, jeder Liker bekommt +3 💎. Bei Schein-Engagement folgen harte Strafen.')) return;
   const btn=document.getElementById('diamond-post-btn'); btn.disabled=true; btn.textContent='⏳ Wird veröffentlicht …';
   try {
     const r=await fetch('/api/diamond-link/create',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url,caption})});
