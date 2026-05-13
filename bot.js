@@ -7830,6 +7830,7 @@ async function submitSuperLink(){
           '• Sobald er akzeptiert seid ihr Kollab-Partner<br>' +
           '• Gemeinsam dürft ihr <b>1× pro Woche</b> einen Kollab-Post veröffentlichen<br>' +
           '• Andere User engagieren → du als Liker bekommst pro engagiertem Post <b>1 💎</b><br>' +
+          '• <b>Sichtbare Zusammenarbeit Pflicht:</b> Im Reel muss erkennbar sein dass <b>beide Parteien</b> zusammenarbeiten (z.B. Logos beider Creator, gemeinsamer Branding-Frame, beide @-Handles eingeblendet)<br>' +
           '• <b>Wichtig:</b> zuerst auf Instagram öffnen, dann <b>LIKEN, KOMMENTIEREN, SPEICHERN und TEILEN</b> — danach hier ✅<br>' +
           '• <b>Beide Kollab-Partner</b> dürfen ihren EIGENEN Post NICHT liken (Self-Like blockiert)<br><br>' +
           'Ziel: gemeinsame Zusammenarbeit, mehr Reichweite für die Community.' +
@@ -12170,6 +12171,7 @@ async function collabRequest(targetUid, btn){
           '• Sobald er akzeptiert seid ihr Kollab-Partner<br>' +
           '• Gemeinsam dürft ihr <b>1× pro Woche</b> einen Kollab-Post veröffentlichen<br>' +
           '• Andere User engagieren → du als Liker bekommst pro engagiertem Post <b>1 💎</b><br>' +
+          '• <b>Sichtbare Zusammenarbeit Pflicht:</b> Im Reel muss erkennbar sein dass <b>beide Parteien</b> zusammenarbeiten (z.B. Logos beider Creator, gemeinsamer Branding-Frame, beide @-Handles eingeblendet)<br>' +
           '• <b>Wichtig:</b> zuerst auf Instagram öffnen, dann <b>LIKEN, KOMMENTIEREN, SPEICHERN und TEILEN</b> — danach hier ✅<br>' +
           '• <b>Beide Kollab-Partner</b> dürfen ihren EIGENEN Post NICHT liken (Self-Like blockiert)<br><br>' +
           'Ziel: gemeinsame Zusammenarbeit, mehr Reichweite für die Community.' +
