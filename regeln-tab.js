@@ -54,6 +54,7 @@ module.exports = `
     <button data-target="r-missionen">🎯 Missionen</button>
     <button data-target="r-superlinks">🌟 Superlinks</button>
     <button data-target="r-kollabs">🤝 Kollabs</button>
+    <button data-target="r-diamond">💎 Diamantlinks</button>
     <button data-target="r-warns">⚠️ Warns</button>
     <button data-target="r-xp">📈 XP</button>
     <button data-target="r-shop">💎 Shop</button>
@@ -196,6 +197,44 @@ module.exports = `
 
       <h3>🎯 Ziel</h3>
       <p>Gemeinsame Zusammenarbeit. Mehr Reichweite, Mehrwert und Sichtbarkeit für beide Partner und die Community.</p>
+    </div>
+  </section>
+
+  <section id="r-diamond" class="regeln-section">
+    <div class="regeln-card">
+      <h2>💎 Diamantlinks</h2>
+      <p style="background:rgba(6,182,212,0.08);border-left:3px solid #06b6d4;padding:10px 12px;border-radius:6px;margin-bottom:14px">Premium-Posts mit Vollengagement. <b>30 💎 Kosten</b> · <b>3 Tage</b> im Feed an erster Stelle · jeder Liker bekommt <b>+3 💎</b>.</p>
+
+      <h3>📋 Regeln</h3>
+      <ul>
+        <li>• Posten kostet <b>30 💎</b> (Admins gratis)</li>
+        <li>• Diamantlinks stehen <b>3 Tage</b> oben im Feed (älteste zuerst, dann zweitältester usw.)</li>
+        <li>• Jeder Liker bekommt <b>+3 💎</b> Belohnung</li>
+        <li>• <b>Engagement-Pflicht beim Liker:</b> LIKEN + KOMMENTIEREN + TEILEN + SPEICHERN</li>
+        <li>• Self-Like auf eigenen Diamantlink ist <b>blockiert</b></li>
+        <li>• <b>Sehr hohe Strafen bei Betrug:</b> XP-Abzug + Diamonds-Reset + Bann</li>
+        <li>• Diamantlinks werden gründlich kontrolliert — gespeichert bleiben sie für immer im Admin-Log</li>
+      </ul>
+
+      <h3>🚀 So postest du einen Diamantlink</h3>
+      <ul>
+        <li>1. Tippe auf <b>+</b> unten in der Navi</li>
+        <li>2. Wähle <b>💎 Diamantlink posten</b></li>
+        <li>3. Insta-URL + optionale Beschreibung eingeben</li>
+        <li>4. 30 💎 werden abgezogen, Post geht live</li>
+      </ul>
+
+      <h3>❤️ So engagierst du einen Diamantlink</h3>
+      <ul>
+        <li>1. Im Feed → 💎 Diamond Tab oder oben im normalen Heute-Tab</li>
+        <li>2. Tippe auf <b>🔗 Auf Instagram öffnen</b></li>
+        <li>3. Auf Instagram <b>liken + kommentieren + teilen + speichern</b></li>
+        <li>4. Zurück in die App, tippe auf <b>💎 Engagiert · +3 💎</b></li>
+        <li>5. Bestätige im Popup, dass du alle 4 Aktionen ausgeführt hast → +3 💎</li>
+      </ul>
+
+      <h3>🎯 Ziel</h3>
+      <p>Premium-Reichweite für wichtige Posts. Wer 30 💎 investiert bekommt 3 Tage echte Sichtbarkeit + Full-Engagement von der Community.</p>
     </div>
   </section>
 

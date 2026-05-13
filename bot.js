@@ -1274,8 +1274,27 @@ ${session ? `<link rel="prefetch" href="/feed"><link rel="prefetch" href="/explo
       <button class="btn btn-full" onclick="closePlusSheet();setTimeout(()=>{if(typeof openSLSheet==='function')openSLSheet();else location.href='/feed?tab=engagement&opensl=1';},200)" style="background:linear-gradient(135deg,rgba(245,158,11,.15),rgba(245,158,11,.05));border:1px solid rgba(245,158,11,.3);color:#f59e0b;font-weight:700">⭐ Superlink posten</button>
       <div style="font-size:11px;color:var(--muted);margin-top:6px;text-align:center;margin-bottom:14px">Alle Mitglieder müssen deinen Link liken, kommentieren & teilen</div>
       <button class="btn btn-full" onclick="closePlusSheet();setTimeout(openKollabSheet,200)" style="background:linear-gradient(135deg,rgba(236,72,153,.15),rgba(236,72,153,.05));border:1px solid rgba(236,72,153,.3);color:#ec4899;font-weight:700">🤝 Kollab-Link posten</button>
-      <div style="font-size:11px;color:var(--muted);margin-top:6px;text-align:center">Mit deinem Kollab-Partner gemeinsam · 1× pro Woche</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:6px;text-align:center;margin-bottom:14px">Mit deinem Kollab-Partner gemeinsam · 1× pro Woche</div>
+      <button class="btn btn-full" onclick="closePlusSheet();setTimeout(openDiamondSheet,200)" style="background:linear-gradient(135deg,rgba(6,182,212,.18),rgba(6,182,212,.04));border:1px solid rgba(6,182,212,.45);color:#06b6d4;font-weight:700;box-shadow:0 0 14px rgba(6,182,212,.18)">💎 Diamantlink posten <span style="font-weight:500;opacity:.85;font-size:11.5px;margin-left:6px">(-30 💎)</span></button>
+      <div style="font-size:11px;color:var(--muted);margin-top:6px;text-align:center">3 Tage Feed-Top · Liker bekommen +3 💎</div>
     </div>
+  </div>
+</div>
+<div class="plus-sheet" id="diamond-sheet" onclick="if(event.target===this)closeDiamondSheet()">
+  <div class="plus-sheet-inner">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <span style="font-size:16px;font-weight:700">💎 Diamantlink posten</span>
+      <button onclick="closeDiamondSheet()" style="background:var(--bg4);border:none;color:var(--text);border-radius:50%;width:28px;height:28px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>
+    </div>
+    <div id="diamond-info" style="border-radius:10px;padding:11px 13px;margin-bottom:12px;font-size:12px;line-height:1.5;background:rgba(6,182,212,.10);border:1px solid rgba(6,182,212,.30);color:var(--text)">
+      <b style="color:#06b6d4">Kostet 30 💎</b> · 3 Tage Feed-Top · ältester Diamantlink steht ganz oben.<br>
+      Jeder Liker bekommt <b>+3 💎</b> Belohnung.<br>
+      <b style="color:#f59e0b">Pflicht: FULL ENGAGED</b> — wer schein-likt wird hart sanktioniert.
+    </div>
+    <input type="url" id="diamond-url" class="form-input" placeholder="https://www.instagram.com/reel/..." style="margin-bottom:8px">
+    <textarea id="diamond-caption" class="form-input" placeholder="Beschreibung (optional)" maxlength="500" rows="2" style="margin-bottom:8px"></textarea>
+    <button class="btn btn-full" id="diamond-post-btn" onclick="postDiamondLink()" style="background:linear-gradient(135deg,#06b6d4,#0e7490);color:#fff;font-weight:800;box-shadow:0 0 20px rgba(6,182,212,.45)">💎 Diamantlink veröffentlichen (-30 💎)</button>
+    <div id="diamond-result" style="margin-top:8px;font-size:12px;text-align:center;color:var(--muted)"></div>
   </div>
 </div>
 <div class="plus-sheet" id="kollab-sheet" onclick="if(event.target===this)closeKollabSheet()">
@@ -2088,6 +2107,31 @@ async function openPlusSheet(){
   }
 }
 function closePlusSheet(){const s=document.getElementById('plus-sheet');if(s){s.classList.remove('open');document.body.style.overflow='';const btn=document.getElementById('plus-post-btn');if(btn){btn.disabled=false;btn.style.opacity='';btn.textContent='📸 Link teilen';}}}
+
+function openDiamondSheet(){
+  const s=document.getElementById('diamond-sheet'); if(!s) return;
+  s.classList.add('open'); document.body.style.overflow='hidden';
+  document.getElementById('diamond-url').value='';
+  document.getElementById('diamond-caption').value='';
+  document.getElementById('diamond-result').textContent='';
+  const btn=document.getElementById('diamond-post-btn'); btn.disabled=false; btn.textContent='💎 Diamantlink veröffentlichen (-30 💎)';
+}
+function closeDiamondSheet(){const s=document.getElementById('diamond-sheet');if(s){s.classList.remove('open');document.body.style.overflow='';}}
+async function postDiamondLink(){
+  const url=(document.getElementById('diamond-url').value||'').trim();
+  const caption=(document.getElementById('diamond-caption').value||'').trim();
+  const result=document.getElementById('diamond-result');
+  if(!url){result.textContent='❌ Bitte Instagram-Link eingeben';return;}
+  if(!url.includes('instagram.com')){result.textContent='❌ Nur Instagram-Links erlaubt';return;}
+  if(!confirm('💎 Diamantlink veröffentlichen?\n\nKostet 30 💎 (Admins gratis). 3 Tage Feed-Top, jeder Liker bekommt +3 💎. Bei Schein-Engagement folgen harte Strafen.')) return;
+  const btn=document.getElementById('diamond-post-btn'); btn.disabled=true; btn.textContent='⏳ Wird veröffentlicht …';
+  try {
+    const r=await fetch('/api/diamond-link/create',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url,caption})});
+    const j=await r.json();
+    if(j.ok){ result.style.color='#06b6d4'; result.textContent='✅ Diamantlink live!'; setTimeout(()=>{ closeDiamondSheet(); location.href='/feed?tab=diamond'; },800); }
+    else { result.style.color='#ef4444'; result.textContent='❌ '+(j.error||'Fehler'); btn.disabled=false; btn.textContent='💎 Diamantlink veröffentlichen (-30 💎)'; }
+  } catch(e){ result.style.color='#ef4444'; result.textContent='❌ '+e.message; btn.disabled=false; btn.textContent='💎 Diamantlink veröffentlichen (-30 💎)'; }
+}
 
 async function openKollabSheet(){
   const s=document.getElementById('kollab-sheet'); if(!s) return;
@@ -7484,10 +7528,16 @@ commentsBox+
 </div>`;
         const aelterHtml = aelterLinks.length ? aelterLinks.map(renderLink).join('') : '<div class="empty" style="margin-top:40px"><div class="empty-icon">🕐</div><div class="empty-text">Keine älteren Links</div></div>';
         const kollabsHtml = '<div id="kollabs-tab-root" style="padding:8px 0 80px"><div style="padding:48px 24px;text-align:center;color:var(--muted);font-size:13px">⏳ Lade Kollab-Posts…</div></div>';
+        const diamondHtml = '<div id="diamond-tab-root" style="padding:8px 0 80px"><div style="padding:48px 24px;text-align:center;color:var(--muted);font-size:13px">⏳ Lade Diamantlinks…</div></div>';
+        // Diamantlink-Top-Strip nur im 'heute'-Tab — älteste Diamantlinks ganz oben.
+        const heuteWithDiamondTop = tab === 'heute'
+            ? '<div id="diamond-top-strip"></div><div style="padding:8px 0 80px">'+heuteHtml+'</div>'
+            : '<div style="padding:8px 0 80px">'+heuteHtml+'</div>';
         const postsHtml = tab === 'aelter' ? '<div style="padding:8px 0 80px">'+aelterHtml+'</div>'
             : tab === 'engagement' ? engagementHtml
             : tab === 'kollabs' ? kollabsHtml
-            : '<div style="padding:8px 0 80px">'+heuteHtml+'</div>';
+            : tab === 'diamond' ? diamondHtml
+            : heuteWithDiamondTop;
 
         return html(`
 ${query.tour === '1' ? `<script>
@@ -7530,6 +7580,7 @@ ${(()=>{
   <a href="/feed?tab=aelter" class="feed-pill ${tab==='aelter'?'active':''}" style="flex:1;min-width:80px;padding:9px 6px;font-size:12px;font-weight:800;text-align:center;text-decoration:none;border-radius:999px;${tab==='aelter'?'background:linear-gradient(135deg,#4dabf7,#1d6fa5);color:#fff;box-shadow:0 4px 14px rgba(77,171,247,0.3)':'background:var(--surface-tint);color:var(--muted);border:1px solid var(--border)'};letter-spacing:0.2px">🕐 Älter</a>
   <a href="/feed?tab=engagement" class="feed-pill ${tab==='engagement'?'active':''}" style="flex:1;min-width:80px;padding:9px 6px;font-size:12px;font-weight:800;text-align:center;text-decoration:none;border-radius:999px;${tab==='engagement'?'background:linear-gradient(135deg,#f59e0b,#a78bfa);color:#fff;box-shadow:0 4px 14px rgba(245,158,11,0.3)':'background:var(--surface-tint);color:var(--muted);border:1px solid var(--border)'};letter-spacing:0.2px">⭐ Engagement</a>
   <a href="/feed?tab=kollabs" class="feed-pill ${tab==='kollabs'?'active':''}" style="flex:1;min-width:80px;padding:9px 6px;font-size:12px;font-weight:800;text-align:center;text-decoration:none;border-radius:999px;${tab==='kollabs'?'background:linear-gradient(135deg,#ec4899,#a21caf);color:#fff;box-shadow:0 4px 14px rgba(236,72,153,0.35)':'background:rgba(236,72,153,0.10);color:#ec4899;border:1px solid rgba(236,72,153,0.35)'};letter-spacing:0.2px">🤝 Kollabs</a>
+  <a href="/feed?tab=diamond" class="feed-pill ${tab==='diamond'?'active':''}" style="flex:1;min-width:80px;padding:9px 6px;font-size:12px;font-weight:800;text-align:center;text-decoration:none;border-radius:999px;${tab==='diamond'?'background:linear-gradient(135deg,#06b6d4,#0e7490);color:#fff;box-shadow:0 4px 16px rgba(6,182,212,0.50)':'background:rgba(6,182,212,0.10);color:#06b6d4;border:1px solid rgba(6,182,212,0.40)'};letter-spacing:0.2px">💎 Diamond</a>
 </div>
 ${tab==='engagement' ? `<div style="padding:12px 16px 4px">
   ${slAvailable > 0
@@ -8007,6 +8058,126 @@ async function submitSuperLink(){
     else { btn.disabled = false; btn.innerHTML = '❤️ Engagiert · +1 💎'; alert('❌ '+(j.message||j.error||'Fehler')); }
   };
   loadAndRender();
+})();
+
+// ── DIAMANTLINKS (Heute-Top-Strip + eigener Tab) ──
+(function initDiamondLinks(){
+  const stripEl = document.getElementById('diamond-top-strip');
+  const tabEl = document.getElementById('diamond-tab-root');
+  if (!stripEl && !tabEl) return;
+  function esc(s){ return String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  function fmtRemaining(ms){
+    if (ms <= 0) return 'abgelaufen';
+    const s = Math.floor(ms/1000), d=Math.floor(s/86400), h=Math.floor((s%86400)/3600), m=Math.floor((s%3600)/60);
+    if (d > 0) return d+'d '+h+'h';
+    if (h > 0) return h+'h '+m+'m';
+    return m+'m';
+  }
+  function renderCard(p, opts){
+    const isMine = !!p.isSelf;
+    const liked = !!p.liked;
+    const aName = esc(p.author?.name||'User');
+    const aHandle = p.author?.instagram ? '@'+esc(p.author.instagram) : '';
+    const remaining = p.remainingMs;
+    return '<div class="diamond-card" data-post-id="'+esc(p.id)+'">' +
+      '<div class="diamond-card-glow"></div>' +
+      '<div class="diamond-card-body">' +
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">' +
+          '<span style="font-size:10.5px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#06b6d4;background:rgba(6,182,212,0.12);padding:4px 10px;border-radius:99px;border:1px solid rgba(6,182,212,0.30)">💎 DIAMANTLINK · +'+(p.reward||3)+' 💎</span>' +
+          '<div style="flex:1"></div>' +
+          '<div style="font-size:11px;color:#06b6d4;font-weight:700">⏱ '+fmtRemaining(remaining)+'</div>' +
+        '</div>' +
+        '<div style="font-size:13.5px;font-weight:700"><a href="/profil/'+esc(p.uid)+'" style="color:var(--text);text-decoration:none">'+aName+'</a> '+(aHandle?'<span style="color:#06b6d4;font-weight:500;font-size:12px">'+aHandle+'</span>':'')+'</div>' +
+        (p.caption ? '<div style="font-size:13px;color:var(--text);line-height:1.5;margin:6px 0 8px">'+esc(p.caption)+'</div>' : '') +
+        '<a href="'+esc(p.url)+'" target="_blank" rel="noopener noreferrer" onclick="window._dvisit_'+p.id+'=Date.now()" style="display:block;padding:11px 13px;background:rgba(6,182,212,0.10);border:1px solid rgba(6,182,212,0.35);border-radius:10px;font-size:12.5px;color:#06b6d4;font-weight:700;word-break:break-all;text-decoration:none;margin-bottom:10px">🔗 Auf Instagram öffnen</a>' +
+        '<div style="font-size:11px;color:#f59e0b;background:rgba(245,158,11,0.08);border-left:3px solid #f59e0b;border-radius:6px;padding:8px 10px;margin-bottom:10px;line-height:1.5"><b>⚠️ Pflicht:</b> LIKEN + KOMMENTIEREN + TEILEN + SPEICHERN. Bei Schein-Likes: XP-Abzug + Diamonds-Reset + Bann!</div>' +
+        (isMine
+          ? '<div style="padding:11px;background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.35);border-radius:10px;font-size:12.5px;color:#ef4444;font-weight:700;text-align:center">🚫 Kein Self-Like — dein eigener Post</div>'
+          : liked
+          ? '<div style="padding:11px;background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.35);border-radius:10px;font-size:13px;color:#22c55e;font-weight:700;text-align:center">✅ Engagiert · +'+(p.reward||3)+' 💎</div>'
+          : '<button onclick="diamondLikeClick(\\''+p.id+'\\', this)" style="display:block;width:100%;padding:12px;background:linear-gradient(135deg,#06b6d4,#0e7490);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 0 18px rgba(6,182,212,0.35)">💎 Engagiert · +'+(p.reward||3)+' 💎</button>'
+        ) +
+        '<div style="font-size:11px;color:var(--muted);margin-top:8px;text-align:center">'+p.likeCount+' Engagements</div>' +
+      '</div>' +
+    '</div>';
+  }
+  function diamondCss(){
+    if (document.getElementById('diamond-css')) return;
+    const s = document.createElement('style'); s.id='diamond-css';
+    s.textContent = '.diamond-card{position:relative;margin:0 16px 14px;border-radius:18px;overflow:hidden;background:linear-gradient(180deg,var(--bg3),var(--bg2));isolation:isolate}'+
+      '.diamond-card-glow{position:absolute;inset:-2px;border-radius:20px;padding:2px;background:conic-gradient(from 0deg,#06b6d4,#a78bfa,#06b6d4,#0e7490,#06b6d4);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;animation:dl-glow 4s linear infinite;pointer-events:none}'+
+      '@keyframes dl-glow{to{transform:rotate(360deg)}}'+
+      '.diamond-card-body{position:relative;padding:14px;background:var(--bg3);border-radius:16px;margin:2px}';
+    document.head.appendChild(s);
+  }
+  let TAB_RULES_OK = true;
+  async function load(){
+    diamondCss();
+    try {
+      const r = await fetch('/api/diamond-link/feed');
+      const j = await r.json();
+      TAB_RULES_OK = !!j.rulesAccepted;
+      const posts = j.posts || [];
+      // Top-Strip im Heute-Tab: alle Diamantlinks oben, älteste zuerst (j.posts ist schon ASC sortiert)
+      if (stripEl) {
+        if (posts.length) stripEl.innerHTML = posts.map(p => renderCard(p)).join('');
+        else stripEl.innerHTML = '';
+      }
+      // Diamond-Tab: zeigt zusätzlich Erst-Visit-Modal wenn !rulesAccepted
+      if (tabEl) {
+        if (!TAB_RULES_OK) { showRulesModal(); return; }
+        const header = '<div style="margin:0 16px 14px;padding:14px;background:rgba(6,182,212,0.06);border:1px solid rgba(6,182,212,0.25);border-radius:14px;font-size:12.5px;line-height:1.6"><b style="color:#06b6d4">💎 Diamantlinks</b> · 30 💎 zum Posten, 3 Tage Feed-Top, jeder Liker bekommt 3 💎. Engagement-Pflicht: LIKEN + KOMMENTIEREN + TEILEN + SPEICHERN. <a href="/explore?tab=regeln#diamond" style="color:#06b6d4;font-weight:700">→ Regeln</a></div>';
+        tabEl.innerHTML = header + (posts.length ? posts.map(p => renderCard(p)).join('') : '<div style="padding:48px 24px;text-align:center;color:var(--muted)">Noch keine Diamantlinks. Werde der erste — + Menü → 💎 Diamantlink posten.</div>');
+      }
+    } catch(e) { console.warn('[diamond] load error', e); }
+  }
+  function showRulesModal(){
+    if (document.getElementById('diamond-rules-modal')) return;
+    const bg = document.createElement('div');
+    bg.id='diamond-rules-modal';
+    bg.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.78);backdrop-filter:blur(8px);z-index:9100;display:flex;align-items:center;justify-content:center;padding:18px';
+    bg.innerHTML = '<div style="background:var(--bg2);border:1px solid rgba(6,182,212,0.35);border-radius:18px;padding:24px;max-width:520px;width:100%;max-height:92vh;overflow-y:auto;box-shadow:0 24px 60px rgba(6,182,212,0.20)">' +
+      '<div style="font-size:36px;text-align:center;margin-bottom:8px">💎</div>' +
+      '<h2 style="margin:0 0 10px;font-size:20px;font-weight:800;text-align:center;background:linear-gradient(180deg,#fff,#06b6d4);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent">Diamantlinks</h2>' +
+      '<div style="font-size:13.5px;line-height:1.7;color:var(--text)">' +
+        '<b>Regeln:</b><br>' +
+        '• <b>Kosten 30 💎</b> pro Post (Admins gratis)<br>' +
+        '• 3 Tage Feed-Top, ältester Post ganz oben<br>' +
+        '• Jeder Liker bekommt <b>+3 💎</b><br>' +
+        '• <b>Pflicht: FULL ENGAGED</b> — LIKEN + KOMMENTIEREN + TEILEN + SPEICHERN<br>' +
+        '• <b>Sehr hohe Strafen bei Betrug</b> (XP-Abzug + Diamonds-Reset + Bann)<br><br>' +
+        'Du bestätigst, dass jeder deiner Likes ein echtes Vollengagement war.' +
+      '</div>' +
+      '<button id="diamond-accept-btn" style="width:100%;margin-top:18px;padding:14px;background:linear-gradient(135deg,#06b6d4,#0e7490);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 6px 20px rgba(6,182,212,0.4)">✅ Verstanden &amp; akzeptieren</button>' +
+      '</div>';
+    document.body.appendChild(bg);
+    document.getElementById('diamond-accept-btn').onclick = async () => {
+      await fetch('/api/diamond-link/accept-rules', { method:'POST' });
+      bg.remove();
+      load();
+    };
+  }
+  window.diamondLikeClick = async function(postId, btn){
+    const visitTs = window['_dvisit_'+postId];
+    if (!visitTs || (Date.now() - visitTs) < 1500) {
+      alert('Bitte erst auf den Instagram-Link tippen und LIKEN + KOMMENTIEREN + TEILEN + SPEICHERN.');
+      return;
+    }
+    // Confirm-Popup mit Regeln
+    if (!confirm('💎 Diamantlink engagieren\n\nDu bestätigst mit deinem Like:\n✓ Du hast den Post auf Instagram GELIKT\n✓ Du hast KOMMENTIERT\n✓ Du hast den Post GETEILT\n✓ Du hast den Post GESPEICHERT\n\n→ Belohnung: +3 💎\n→ Strafe bei Betrug: XP-Abzug + Diamonds-Reset + Bann\n\nFortfahren?')) return;
+    btn.disabled = true; btn.textContent = '⏳ Bestätige …';
+    try {
+      const r = await fetch('/api/diamond-link/like', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ postId }) });
+      const j = await r.json();
+      if (j.ok) { load(); }
+      else { btn.disabled=false; btn.innerHTML='💎 Engagiert · +3 💎'; alert('❌ '+(j.message||j.error||'Fehler')); }
+    } catch(e) { btn.disabled=false; btn.innerHTML='💎 Engagiert · +3 💎'; alert('❌ '+e.message); }
+  };
+  load();
+  setInterval(() => {
+    // Countdown tick — re-render alle 60s damit Restzeit aktuell bleibt
+    load();
+  }, 60000);
 })();
 
 // ── EVENT-BANNER (Feed-Top) ──
@@ -9727,7 +9898,10 @@ document.getElementById('user-search-input')?.addEventListener('input',filterSea
                 const otherUid = a === myUid ? b : a;
                 const otherUser = botData.users?.[otherUid] || {};
                 const lastMsg = msgsArr[msgsArr.length - 1];
-                return { key, otherUid, otherName: otherUser.spitzname||otherUser.name||'User', lastMsg, unread: msgsArr.filter(m=>m.to===myUid&&!m.read).length };
+                // CreatorBoost-System-User braucht Display-Namen weil nicht in d.users
+                const isSystemBot = otherUid === 'creatorboost';
+                const otherName = isSystemBot ? 'CreatorBoost' : (otherUser.spitzname||otherUser.name||'User');
+                return { key, otherUid, otherName, lastMsg, isSystem: isSystemBot, unread: msgsArr.filter(m=>m.to===myUid&&!m.read).length };
             })
             .sort((a, b) => (b.lastMsg?.timestamp||0)-(a.lastMsg?.timestamp||0));
         // Threads sind aus der App entfernt — keine Unread/List mehr nötig
@@ -10203,6 +10377,43 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
         if (!r) return json({ok:false, error:'Mainbot offline'}, 502);
         return json(r);
     }
+
+    // ── DIAMANTLINK API ──
+    if (path === '/api/diamond-link/feed' && req.method === 'GET') {
+        if (!session) return json({error:'Nicht eingeloggt'}, 401);
+        const r = await fetchBotRaw('/diamond-link-feed-api?uid=' + encodeURIComponent(myUid));
+        return json(r || {ok:false, error:'Mainbot offline'});
+    }
+    if (path === '/api/diamond-link/create' && req.method === 'POST') {
+        if (!session) return json({error:'Nicht eingeloggt'}, 401);
+        const body = await parseBody(req);
+        const r = await postBot('/diamond-link-create-api', { uid: myUid, url: String(body.url||''), caption: String(body.caption||'') });
+        return json(r || {ok:false, error:'Mainbot offline'});
+    }
+    if (path === '/api/diamond-link/like' && req.method === 'POST') {
+        if (!session) return json({error:'Nicht eingeloggt'}, 401);
+        const body = await parseBody(req);
+        const r = await postBot('/diamond-link-like-api', { uid: myUid, postId: String(body.postId||'') });
+        return json(r || {ok:false, error:'Mainbot offline'});
+    }
+    if (path === '/api/diamond-link/accept-rules' && req.method === 'POST') {
+        if (!session) return json({error:'Nicht eingeloggt'}, 401);
+        const r = await postBot('/diamond-link-accept-rules-api', { uid: myUid });
+        return json(r || {ok:false, error:'Mainbot offline'});
+    }
+    if (path === '/api/admin/diamond-link/list' && req.method === 'GET') {
+        if (!session) return json({error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({error:'Nur Admins'}, 403);
+        const r = await fetchBotRaw('/diamond-link-admin-list-api');
+        return json(r || {ok:false, error:'Mainbot offline'});
+    }
+    if (path === '/api/admin/diamond-link/delete' && req.method === 'POST') {
+        if (!session) return json({error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({error:'Nur Admins'}, 403);
+        const body = await parseBody(req);
+        const r = await postBot('/diamond-link-admin-delete-api', { postId: String(body.postId||'') });
+        return json(r || {ok:false, error:'Mainbot offline'});
+    }
     if (path === '/api/collab/request' && req.method === 'POST') {
         if (!session) return json({error:'Nicht eingeloggt'}, 401);
         const body = await parseBody(req);
@@ -10564,9 +10775,11 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
           <button class="dash-tab" data-tab="incomplete">⚠️ Unvollständig</button>
           <button class="dash-tab" data-tab="ranking">🏆 Top XP</button>
           <button class="dash-tab" data-tab="engagement-log">📋 Engagement-Log</button>
+          <button class="dash-tab" data-tab="diamond-links">💎 Diamantlinks</button>
         </div>
 
         <div id="dash-engagement-log" style="display:none"></div>
+        <div id="dash-diamond-links" style="display:none"></div>
         <div class="dash-list" id="dash-list">
           <div class="dash-skel"><div class="dash-skel-avatar"></div><div style="flex:1"><div class="dash-skel-line" style="width:160px;margin-bottom:6px"></div><div class="dash-skel-line" style="width:240px"></div></div></div>
           <div class="dash-skel"><div class="dash-skel-avatar"></div><div style="flex:1"><div class="dash-skel-line" style="width:140px;margin-bottom:6px"></div><div class="dash-skel-line" style="width:200px"></div></div></div>
@@ -11082,17 +11295,79 @@ document.querySelectorAll('.dash-tab').forEach(btn => {
     document.querySelectorAll('.dash-tab').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     CUR_TAB = btn.dataset.tab;
-    if (CUR_TAB === 'engagement-log') {
+    const hideAll = () => {
       document.getElementById('dash-list').style.display = 'none';
+      document.getElementById('dash-engagement-log').style.display = 'none';
+      const dl = document.getElementById('dash-diamond-links'); if (dl) dl.style.display = 'none';
+    };
+    if (CUR_TAB === 'engagement-log') {
+      hideAll();
       document.getElementById('dash-engagement-log').style.display = 'block';
       loadEngagementLog();
+    } else if (CUR_TAB === 'diamond-links') {
+      hideAll();
+      const dl = document.getElementById('dash-diamond-links'); if (dl) dl.style.display = 'block';
+      loadDiamondLinksAdmin();
     } else {
+      hideAll();
       document.getElementById('dash-list').style.display = '';
-      document.getElementById('dash-engagement-log').style.display = 'none';
       renderList();
     }
   });
 });
+
+async function loadDiamondLinksAdmin(){
+  const root = document.getElementById('dash-diamond-links');
+  if (!root) return;
+  root.innerHTML = '<div style="padding:24px;text-align:center;color:var(--dsub)">⏳ Lade Diamantlinks …</div>';
+  try {
+    const r = await fetch('/api/admin/diamond-link/list');
+    const j = await r.json();
+    if (!j.ok) { root.innerHTML = '<div style="padding:24px;text-align:center;color:#ef4444">'+(j.error||'Fehler')+'</div>'; return; }
+    const fmtTs = (ts) => ts ? new Date(ts).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '–';
+    const posts = j.posts || [];
+    if (!posts.length) { root.innerHTML = '<div style="padding:32px;text-align:center;color:var(--dsub);font-size:13px">Noch keine Diamantlinks gepostet</div>'; return; }
+    let html = '<div style="padding:14px 16px 8px;font-size:11px;color:var(--dsub);text-transform:uppercase;letter-spacing:1.4px;font-weight:700">💎 Alle Diamantlinks · '+posts.length+' insgesamt · '+posts.filter(p=>p.active).length+' aktiv</div>';
+    for (const p of posts) {
+      const a = p.author||{};
+      const status = p.deletedAt ? '<span class="dash-pill err">🗑️ gelöscht</span>'
+        : p.active ? '<span class="dash-pill ok">🟢 aktiv</span>'
+        : '<span class="dash-pill muted">⏱ abgelaufen</span>';
+      const engagersHtml = (p.engagers||[]).length
+        ? '<div style="margin-top:8px;display:flex;flex-direction:column;gap:4px">'+p.engagers.map(e =>
+            '<div style="display:flex;align-items:center;gap:8px;padding:5px 10px;background:var(--dink);border-radius:6px;font-size:11.5px">' +
+              '<a href="/profil/'+esc(e.uid)+'" style="color:var(--text);text-decoration:none;font-weight:600">'+esc(e.name)+'</a>'+
+              (e.instagram?'<span style="color:#06b6d4">@'+esc(e.instagram)+'</span>':'')+
+              '<div style="flex:1"></div>'+
+              '<span style="color:var(--dsub);font-size:10.5px">'+fmtTs(e.engagedAt)+'</span>'+
+            '</div>'
+          ).join('')+'</div>'
+        : '<div style="font-size:11px;color:var(--dsub);margin-top:6px;font-style:italic">Noch keine Engagements</div>';
+      html += '<div style="margin:0 16px 12px;padding:14px;background:var(--dink2);border:1px solid var(--dline);border-radius:12px">' +
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">' +
+          status +
+          '<span style="font-size:11px;color:var(--dsub)">'+fmtTs(p.createdAt)+' · endet '+fmtTs(p.expiresAt)+'</span>'+
+          '<div style="flex:1"></div>'+
+          (!p.deletedAt ? '<button onclick="deleteDiamondLink(\\''+esc(p.id)+'\\', this)" style="background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.35);color:#ef4444;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer">🗑️ Löschen</button>' : '')+
+        '</div>'+
+        '<div style="font-size:13px;font-weight:700;margin-bottom:6px"><a href="/profil/'+esc(p.uid)+'" style="color:var(--text);text-decoration:none">'+esc(a.name||'User')+'</a>'+(a.instagram?'<span style="color:#06b6d4;font-weight:500;font-size:12px;margin-left:6px">@'+esc(a.instagram)+'</span>':'')+'</div>'+
+        '<a href="'+esc(p.url)+'" target="_blank" style="display:block;font-size:12px;color:#06b6d4;word-break:break-all;text-decoration:none;margin-bottom:6px">🔗 '+esc(p.url)+'</a>'+
+        (p.caption?'<div style="font-size:12px;color:var(--text);margin-bottom:8px">'+esc(p.caption)+'</div>':'')+
+        '<div style="font-size:11px;color:var(--dsub);margin-top:8px">'+p.likeCount+' Engagements:</div>'+
+        engagersHtml+
+      '</div>';
+    }
+    root.innerHTML = html;
+  } catch(e) { root.innerHTML = '<div style="padding:24px;text-align:center;color:#ef4444">'+e.message+'</div>'; }
+}
+async function deleteDiamondLink(postId, btn){
+  if (!confirm('Diamantlink wirklich löschen? Soft-Delete — Post bleibt im Log, wird aber nicht mehr im Feed angezeigt.')) return;
+  btn.disabled = true; btn.textContent = '⏳';
+  const r = await fetch('/api/admin/diamond-link/delete', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ postId }) });
+  const j = await r.json().catch(()=>({}));
+  if (j.ok) loadDiamondLinksAdmin();
+  else { btn.disabled=false; btn.textContent='🗑️ Löschen'; alert('❌ '+(j.error||'Fehler')); }
+}
 
 async function loadEngagementLog(){
   const root = document.getElementById('dash-engagement-log');
@@ -13127,7 +13402,14 @@ async function submitPost(){const _spBtn=document.querySelector('[onclick="submi
   <div style="font-size:15px;font-weight:600">${u.spitzname||u.name||'User'}</div>
   <div style="display:flex;gap:8px">
     <button onclick="toggleFollow('${uid}',this)" style="background:${isFollowing?'var(--bg4)':'var(--accent)'};color:${isFollowing?'var(--muted)':'#fff'};border:1px solid var(--border);border-radius:20px;padding:6px 16px;font-size:13px;font-weight:600;cursor:pointer">${isFollowing?'Gefolgt':'Folgen'}</button>
-    <button id="collab-btn" onclick="collabRequest('${uid}',this)" title="Kollaboration anfragen" style="background:linear-gradient(135deg,#ec4899,#a21caf);color:#fff;border:none;border-radius:20px;padding:6px 14px;font-size:13px;font-weight:700;cursor:pointer">🤝</button>
+    ${(()=>{
+      // Markiere Kollab-Symbol mit ✓ wenn bereits eine aktive Kollaboration zwischen
+      // mir und diesem User existiert.
+      const myCollabs = Array.isArray(myUser?.collaborations) ? myUser.collaborations : [];
+      const isCollabActive = myCollabs.some(c => String(c.partnerUid) === String(uid));
+      if (isCollabActive) return `<button id="collab-btn" disabled title="Kollab-Partner aktiv" style="background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:none;border-radius:20px;padding:6px 14px;font-size:13px;font-weight:700;cursor:default;display:inline-flex;align-items:center;gap:4px">🤝 ✓</button>`;
+      return `<button id="collab-btn" onclick="collabRequest('${uid}',this)" title="Kollaboration anfragen" style="background:linear-gradient(135deg,#ec4899,#a21caf);color:#fff;border:none;border-radius:20px;padding:6px 14px;font-size:13px;font-weight:700;cursor:pointer">🤝</button>`;
+    })()}
     <a href="/nachrichten/${uid}" style="background:var(--bg4);border:1px solid var(--border);border-radius:20px;padding:6px 14px;font-size:13px;font-weight:600;color:var(--text);text-decoration:none">💬</a>
   </div>
 </div>
