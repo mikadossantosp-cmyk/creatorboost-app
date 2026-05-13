@@ -6939,6 +6939,24 @@ p{line-height:1.65;color:var(--muted)}
         return json({ok:!!result?.ok, alreadyDone: result?.alreadyDone||false, error: result?.error || null});
     }
 
+    // ── Report user (Schein-Engagement, Spam, etc.) ──
+    if (path === '/api/report-user' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'},401);
+        const body = await parseBody(req);
+        const targetUid = String(body.targetUid||'');
+        if (!targetUid || targetUid === myUid) return json({ok:false, error:'Ungültig'},400);
+        const result = await postBot('/report-user-api', { reporterUid: myUid, targetUid, reason: String(body.reason||''), context: String(body.context||'') });
+        return json(result || {ok:false, error:'Mainbot offline'});
+    }
+
+    // ── Admin Engagement-Log (pinned + collab + reports) ──
+    if (path === '/api/admin/engagement-log' && req.method === 'GET') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
+        const result = await fetchBotRaw('/admin-engagement-log-api');
+        return json(result || {ok:false, error:'Mainbot offline'});
+    }
+
     if (path === '/api/newsletter-add' && req.method === 'POST') {
         if (!session) return json({error:'Nicht eingeloggt'},401);
         const chunks=[]; for await(const c of req) chunks.push(c);
@@ -9962,7 +9980,7 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
         if (isPositiveActionWithAmount.includes(action) && (!Number.isFinite(amount) || amount <= 0)) {
             return json({ok:false, error:'amount muss > 0 sein'}, 400);
         }
-        const allowedActions = ['add-xp','remove-xp','add-diamonds','remove-diamonds','add-extra-link','add-superlink'];
+        const allowedActions = ['add-xp','remove-xp','add-diamonds','remove-diamonds','add-extra-link','add-superlink','add-warn','remove-warn'];
         if (!allowedActions.includes(action)) return json({ok:false, error:'unbekannte Aktion'}, 400);
         const payload = { uid: targetUid, reason: 'admin' };
         if (isPositiveActionWithAmount.includes(action)) payload.amount = amount;
@@ -10110,8 +10128,10 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
     <button class="dash-tab" data-tab="email">📧 Email-User</button>
     <button class="dash-tab" data-tab="incomplete">⚠️ Setup unvollständig</button>
     <button class="dash-tab" data-tab="ranking">🏆 Top XP</button>
+    <button class="dash-tab" data-tab="engagement-log">📋 Engagement-Log</button>
   </div>
 
+  <div id="dash-engagement-log" style="display:none;padding:6px 0 80px"></div>
   <div class="dash-list" id="dash-list">
     <div style="padding:24px;text-align:center;color:var(--muted)">Lade User …</div>
   </div>
@@ -10219,11 +10239,14 @@ function openUser(uid) {
         onb.map(o => '<div class="dash-onb-row">'+(o.ok?'✅':'⬜')+' '+o.label+'</div>').join('') +
       '</div>' +
       '<div style="margin-top:14px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:8px">⚙️ Aktionen</div>' +
+      '<div style="font-size:11px;color:var(--muted);margin-bottom:6px">Warns: <b style="color:'+((u.warnings||0)>=3?'#ef4444':'var(--text)')+'">'+(u.warnings||0)+'/5</b></div>' +
       '<div class="dash-action-grid">' +
         '<button class="dash-act" onclick="grant(\\''+u.uid+'\\',\\'add-xp\\')">+ XP</button>' +
         '<button class="dash-act danger" onclick="grant(\\''+u.uid+'\\',\\'remove-xp\\')">− XP</button>' +
         '<button class="dash-act" onclick="grant(\\''+u.uid+'\\',\\'add-diamonds\\')">+ 💎</button>' +
         '<button class="dash-act danger" onclick="grant(\\''+u.uid+'\\',\\'remove-diamonds\\')">− 💎</button>' +
+        '<button class="dash-act danger" onclick="grantNoAmount(\\''+u.uid+'\\',\\'add-warn\\')">+ ⚠️ Warn</button>' +
+        '<button class="dash-act" onclick="grantNoAmount(\\''+u.uid+'\\',\\'remove-warn\\')">− ⚠️ Warn</button>' +
         '<button class="dash-act" onclick="grantNoAmount(\\''+u.uid+'\\',\\'add-extra-link\\')">+ 🔗 Extra-Link</button>' +
         '<button class="dash-act" onclick="grantNoAmount(\\''+u.uid+'\\',\\'add-superlink\\')">+ ⚡ Superlink-Slot</button>' +
       '</div>' +
@@ -10314,9 +10337,65 @@ document.querySelectorAll('.dash-tab').forEach(btn => {
     document.querySelectorAll('.dash-tab').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     CUR_TAB = btn.dataset.tab;
-    renderList();
+    if (CUR_TAB === 'engagement-log') {
+      document.getElementById('dash-list').style.display = 'none';
+      document.getElementById('dash-engagement-log').style.display = 'block';
+      loadEngagementLog();
+    } else {
+      document.getElementById('dash-list').style.display = '';
+      document.getElementById('dash-engagement-log').style.display = 'none';
+      renderList();
+    }
   });
 });
+
+async function loadEngagementLog(){
+  const root = document.getElementById('dash-engagement-log');
+  root.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted)">⏳ Lade Engagement-Log…</div>';
+  try {
+    const r = await fetch('/api/admin/engagement-log');
+    const j = await r.json();
+    if (!j.ok) { root.innerHTML = '<div style="padding:24px;text-align:center;color:#ef4444">'+(j.error||'Fehler')+'</div>'; return; }
+    const esc = (s) => String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const fmtTs = (ts) => ts ? new Date(ts).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '–';
+    let html = '';
+    // Pinned engagements
+    html += '<div style="padding:14px 16px 8px;font-size:11px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;color:var(--muted)">📌 Pinned-Engagements (' + (j.pinned||[]).length + ')</div>';
+    if (!j.pinned?.length) html += '<div style="padding:16px;text-align:center;color:var(--muted);font-size:12.5px">Noch keine</div>';
+    else {
+      for (const e of j.pinned) {
+        html += '<div style="margin:0 16px 8px;padding:10px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;font-size:12.5px;line-height:1.5">' +
+          '<div><a href="/profil/'+esc(e.engagerUid)+'" style="color:#ec4899;font-weight:700;text-decoration:none">'+esc(e.engagerName)+'</a>'+(e.engagerInstagram?' · @'+esc(e.engagerInstagram):'')+' → engagierte Pinned von <a href="/profil/'+esc(e.ownerUid)+'" style="color:#a78bfa;font-weight:700;text-decoration:none">'+esc(e.ownerName)+'</a></div>' +
+          (e.pinnedUrl ? '<div style="margin-top:4px"><a href="'+esc(e.pinnedUrl)+'" target="_blank" style="color:var(--muted);font-size:11px;word-break:break-all">'+esc(e.pinnedUrl)+'</a></div>' : '') +
+          '<div style="font-size:11px;color:var(--muted);margin-top:4px">'+fmtTs(e.ts)+'</div>' +
+        '</div>';
+      }
+    }
+    // Collab likes
+    html += '<div style="padding:18px 16px 8px;font-size:11px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;color:var(--muted)">🤝 Kollab-Engagements (' + (j.collabs||[]).length + ')</div>';
+    if (!j.collabs?.length) html += '<div style="padding:16px;text-align:center;color:var(--muted);font-size:12.5px">Noch keine</div>';
+    else {
+      for (const e of j.collabs) {
+        html += '<div style="margin:0 16px 8px;padding:10px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;font-size:12.5px;line-height:1.5">' +
+          '<div><a href="/profil/'+esc(e.engagerUid)+'" style="color:#ec4899;font-weight:700;text-decoration:none">'+esc(e.engagerName)+'</a>'+(e.engagerInstagram?' · @'+esc(e.engagerInstagram):'')+' → engagierte Kollab von <a href="/profil/'+esc(e.authorA.uid)+'" style="color:#a78bfa;font-weight:700;text-decoration:none">'+esc(e.authorA.name)+'</a> × <a href="/profil/'+esc(e.authorB.uid)+'" style="color:#a78bfa;font-weight:700;text-decoration:none">'+esc(e.authorB.name)+'</a></div>' +
+          (e.url ? '<div style="margin-top:4px"><a href="'+esc(e.url)+'" target="_blank" style="color:var(--muted);font-size:11px;word-break:break-all">'+esc(e.url)+'</a></div>' : '') +
+          '<div style="font-size:11px;color:var(--muted);margin-top:4px">Woche '+esc(e.week||'?')+'</div>' +
+        '</div>';
+      }
+    }
+    // Reports
+    if (j.reports?.length) {
+      html += '<div style="padding:18px 16px 8px;font-size:11px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;color:#ef4444">🚩 Meldungen (' + j.reports.length + ')</div>';
+      for (const r of j.reports) {
+        html += '<div style="margin:0 16px 8px;padding:10px 12px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);border-radius:10px;font-size:12.5px;line-height:1.5">' +
+          '<div><b>'+esc(r.reporterUid)+'</b> meldet <b>'+esc(r.targetUid)+'</b> — '+esc(r.reason||'(kein Grund)')+(r.context?' · '+esc(r.context):'')+'</div>' +
+          '<div style="font-size:11px;color:var(--muted);margin-top:4px">'+fmtTs(r.ts)+'</div>' +
+        '</div>';
+      }
+    }
+    root.innerHTML = html;
+  } catch(e) { root.innerHTML = '<div style="padding:24px;text-align:center;color:#ef4444">'+e.message+'</div>'; }
+}
 document.getElementById('dash-q').addEventListener('input', e => { CUR_Q = e.target.value; renderList(); });
 
 refreshUsers();
@@ -11964,24 +12043,52 @@ async function submitPost(){const _spBtn=document.querySelector('[onclick="submi
                 +'</a>';
             }).join('')
             : '<div style="padding:18px;text-align:center;color:var(--muted);font-size:12.5px">Noch keine Engagements</div>';
+        // Engager-Cards mit 🚩-Report-Button (Admin oder eigener Profil-Besitzer können nicht reporten — sich selbst nicht)
+        const _engagerCardsHtmlWithReport = theirPinnedEngagers.length
+            ? theirPinnedEngagers.map(eUid => {
+                const eu = d.users[eUid] || {};
+                const eg = badgeGradient(eu.role);
+                const ePic = ladeBild(eUid, 'profilepic');
+                const eImgHtml = ePic
+                    ? '<img src="/appbild/'+eUid+'/profilepic" loading="lazy" style="width:100%;height:100%;object-fit:cover">'
+                    : (eu.instagram ? '<img src="https://unavatar.io/instagram/'+eu.instagram+'" loading="lazy" style="width:100%;height:100%;object-fit:cover" onerror="this.remove()">' : '');
+                const canReport = String(eUid) !== String(myUid);
+                return '<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--border2)">'
+                    +'<a href="/profil/'+eUid+'" style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;text-decoration:none">'
+                        +'<div style="position:relative;width:34px;height:34px;border-radius:50%;background:'+eg+';overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0">'
+                            +'<span style="position:absolute">'+(eu.name||'?')[0]+'</span>'+eImgHtml
+                        +'</div>'
+                        +'<div style="flex:1;min-width:0">'
+                            +'<div style="font-size:13px;font-weight:600;color:var(--text)">'+(eu.spitzname||eu.name||'User')+'</div>'
+                            +'<div style="font-size:10px;color:var(--muted)">'+cleanRole(eu.role)+'</div>'
+                        +'</div>'
+                    +'</a>'
+                    +(canReport ? '<button onclick="reportPinnedEngager(\''+eUid+'\', \''+uid+'\', this)" title="Schein-Engagement melden" style="background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.35);color:#ef4444;border-radius:8px;padding:6px 10px;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0">🚩 Melden</button>' : '')
+                +'</div>';
+            }).join('')
+            : '<div style="padding:18px;text-align:center;color:var(--muted);font-size:12.5px">Noch keine Engagements</div>';
         const theirPinnedHtml = theirPinnedLink
             ? '<div style="padding:14px 16px;border-bottom:2px solid var(--accent);background:linear-gradient(135deg,rgba(255,107,107,.08),rgba(255,165,0,.04));margin-bottom:4px">'
               +'<span style="font-size:11px;font-weight:700;color:var(--accent);background:rgba(255,107,107,.15);padding:3px 10px;border-radius:20px;display:inline-block;margin-bottom:10px">📌 Wichtigster Post</span>'
-              +'<a href="'+theirPinnedLink+'" target="_blank" style="display:block;font-size:13px;color:var(--blue);word-break:break-all;margin-bottom:12px">'+theirPinnedLink.replace('https://www.instagram.com/','ig.com/')+'</a>'
+              +'<a id="pin-insta-link" href="'+theirPinnedLink+'" target="_blank" rel="noopener noreferrer" onclick="window._pinVisit=Date.now()" style="display:block;font-size:13px;color:var(--blue);word-break:break-all;margin-bottom:8px">'+theirPinnedLink.replace('https://www.instagram.com/','ig.com/')+'</a>'
+              +'<div style="font-size:11px;color:var(--muted);margin-bottom:12px;line-height:1.5"><b>Engagieren = LIKEN + KOMMENTIEREN + TEILEN + SPEICHERN</b> auf Instagram. Erst dann hier ✅ — bringt dir <b>1 💎</b>.</div>'
               +'<div style="display:flex;gap:8px;align-items:center">'
-                +'<button id="pin-like-btn" onclick="likePinnedPost(\''+uid+'\',this)" '+(_myEngaged?'disabled':'')+' style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;padding:9px 14px;border-radius:14px;border:1px solid '+(_myEngaged?'#22c55e':'rgba(255,107,107,.35)')+';background:'+(_myEngaged?'rgba(34,197,94,.12)':'rgba(255,107,107,.10)')+';color:'+(_myEngaged?'#22c55e':'#ff6b6b')+';font-size:13px;font-weight:700;cursor:'+(_myEngaged?'default':'pointer')+';font-family:var(--font)">'+(_myEngaged?'✅ Geliked':'❤️ Like')+(_myEngaged?'':' · +1 💎')+'</button>'
+                +'<button id="pin-like-btn" onclick="likePinnedPost(\''+uid+'\',this)" '+(_myEngaged?'disabled':'')+' style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;padding:9px 14px;border-radius:14px;border:1px solid '+(_myEngaged?'#22c55e':'rgba(255,107,107,.35)')+';background:'+(_myEngaged?'rgba(34,197,94,.12)':'rgba(255,107,107,.10)')+';color:'+(_myEngaged?'#22c55e':'#ff6b6b')+';font-size:13px;font-weight:700;cursor:'+(_myEngaged?'default':'pointer')+';font-family:var(--font)">'+(_myEngaged?'✅ Engagiert':'❤️ Engagiert')+(_myEngaged?'':' · +1 💎')+'</button>'
                 +'<button onclick="showPinnedEngagers()" style="display:flex;align-items:center;gap:6px;padding:9px 14px;border-radius:14px;border:1px solid rgba(77,171,247,.30);background:rgba(77,171,247,.08);color:var(--text);font-size:12.5px;font-weight:700;cursor:pointer;font-family:var(--font)">👥 <span id="pin-eng-count">'+_engagerCount+'</span></button>'
               +'</div>'
               +'<div id="pin-engagers-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(6px);z-index:9999;align-items:flex-end;justify-content:center" onclick="if(event.target===this)this.style.display=\'none\'">'
                 +'<div style="background:var(--bg2);border-radius:24px 24px 0 0;width:100%;max-width:480px;padding:18px 0 24px;max-height:75vh;overflow-y:auto" onclick="event.stopPropagation()">'
                   +'<div style="width:36px;height:4px;background:#666;border-radius:4px;margin:0 auto 14px"></div>'
                   +'<div style="font-size:14px;font-weight:800;text-align:center;color:var(--text);margin-bottom:6px">👥 Engagements</div>'
-                  +'<div style="font-size:11px;color:var(--muted);text-align:center;margin-bottom:8px">Wer hat den Pinned-Post geliked?</div>'
-                  +'<div id="pin-engagers-list">'+_engagerCardsHtml+'</div>'
+                  +'<div style="font-size:11px;color:var(--muted);text-align:center;margin-bottom:8px">Wer hat den Pinned-Post geliked? · 🚩 = Schein-Engagement melden</div>'
+                  +'<div id="pin-engagers-list">'+_engagerCardsHtmlWithReport+'</div>'
                 +'</div>'
               +'</div>'
               +'<script>function showPinnedEngagers(){document.getElementById(\'pin-engagers-modal\').style.display=\'flex\';}'
-              +'async function likePinnedPost(ownerUid, btn){if(btn.disabled)return;btn.disabled=true;btn.textContent=\'…\';try{const r=await fetch(\'/api/engage-pinned-post\',{method:\'POST\',headers:{\'Content-Type\':\'application/json\'},body:JSON.stringify({ownerUid})});const data=await r.json();if(data.ok){btn.style.background=\'rgba(34,197,94,.12)\';btn.style.borderColor=\'#22c55e\';btn.style.color=\'#22c55e\';btn.textContent=\'✅ Geliked\';const c=document.getElementById(\'pin-eng-count\');if(c)c.textContent=parseInt(c.textContent||0)+1;if(window.showBanner)showBanner({type:\'success\',icon:\'❤️\',title:\'Pinned-Post geliked!\',subtitle:\'+1 💎 in deiner Wallet — danke fürs Engagement!\',dur:4500});}else if(data.alreadyDone){btn.style.background=\'rgba(34,197,94,.12)\';btn.style.borderColor=\'#22c55e\';btn.style.color=\'#22c55e\';btn.textContent=\'✅ Geliked\';}else{btn.disabled=false;btn.textContent=\'❤️ Like · +1 💎\';if(window.showBanner)showBanner({type:\'warn\',icon:\'❌\',title:\'Like fehlgeschlagen\',subtitle:data.error||\'Versuch es gleich nochmal.\',dur:4500});}}catch(e){btn.disabled=false;btn.textContent=\'❤️ Like · +1 💎\';}}<\/script>'
+              +'async function likePinnedPost(ownerUid, btn){if(btn.disabled)return;'
+              +'if(!window._pinVisit || (Date.now()-window._pinVisit) < 1500){alert(\'Bitte zuerst auf Instagram öffnen und LIKEN, KOMMENTIEREN, SPEICHERN und TEILEN — dann hier bestätigen.\');return;}'
+              +'btn.disabled=true;btn.textContent=\'…\';try{const r=await fetch(\'/api/engage-pinned-post\',{method:\'POST\',headers:{\'Content-Type\':\'application/json\'},body:JSON.stringify({ownerUid})});const data=await r.json();if(data.ok){btn.style.background=\'rgba(34,197,94,.12)\';btn.style.borderColor=\'#22c55e\';btn.style.color=\'#22c55e\';btn.textContent=\'✅ Engagiert\';const c=document.getElementById(\'pin-eng-count\');if(c)c.textContent=parseInt(c.textContent||0)+1;if(window.showBanner)showBanner({type:\'success\',icon:\'❤️\',title:\'Pinned-Post engagiert!\',subtitle:\'+1 💎 in deiner Wallet · DM mit Bestätigung erhalten.\',dur:4500});}else if(data.alreadyDone){btn.style.background=\'rgba(34,197,94,.12)\';btn.style.borderColor=\'#22c55e\';btn.style.color=\'#22c55e\';btn.textContent=\'✅ Engagiert\';}else{btn.disabled=false;btn.textContent=\'❤️ Engagiert · +1 💎\';if(window.showBanner)showBanner({type:\'warn\',icon:\'❌\',title:\'Like fehlgeschlagen\',subtitle:data.error||\'Versuch es gleich nochmal.\',dur:4500});}}catch(e){btn.disabled=false;btn.textContent=\'❤️ Engagiert · +1 💎\';}}'
+              +'async function reportPinnedEngager(targetUid, ownerUid, btn){const reason=prompt(\'Warum meldest du diesen User? (z.B. "Hat nicht wirklich geliked/kommentiert")\');if(!reason)return;btn.disabled=true;btn.textContent=\'…\';const r=await fetch(\'/api/report-user\',{method:\'POST\',headers:{\'Content-Type\':\'application/json\'},body:JSON.stringify({targetUid,reason,context:\'pinned-engagement:\'+ownerUid})});const j=await r.json().catch(()=>({}));if(j.ok){btn.textContent=\'✅ Gemeldet\';btn.style.background=\'rgba(34,197,94,.12)\';btn.style.borderColor=\'#22c55e\';btn.style.color=\'#22c55e\';}else{btn.disabled=false;btn.textContent=\'🚩 Melden\';alert(\'❌ \'+(j.error||\'Fehler\'));}}<\/script>'
               +'</div>'
             : '';
 
