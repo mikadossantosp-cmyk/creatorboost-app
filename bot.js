@@ -235,6 +235,7 @@ function htmlEsc(s) { return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'
 //     bzw. ein Email-only-Signup. Beide bleiben im App-Ranking sichtbar.
 function isAppVisible(u) {
     if (!u) return false;
+    if (u.banned) return false;  // Gebannte User komplett aus Ranking/Suche/Listen raus
     // Sub-Accounts: immer sichtbar — sie haben keinen eigenen Telegram-Start (started
     // bleibt false bei manchen Subs aus Legacy-Daten) und sie sind per Definition aktiv
     // weil sie an einem aktiven Parent-Account hängen.
@@ -464,7 +465,7 @@ function loadAppDbFromDisk() {
 // Damit ist die App auch ohne Mainbot start-fähig.
 loadAppDbFromDisk();
 
-async function fetchBotRaw(path) {
+async function fetchBotRawOnce(path, timeoutMs) {
     return new Promise(resolve => {
         const fullUrl = MAINBOT_URL + path;
         if (!fullUrl.startsWith('http')) return resolve(null);
@@ -474,8 +475,16 @@ async function fetchBotRaw(path) {
                 try { resolve(JSON.parse(data)); } catch(e){ resolve(null); }
             });
         });
-        req.on('error',()=>resolve(null)); req.setTimeout(3000,()=>{req.destroy();resolve(null);});
+        req.on('error',()=>resolve(null));
+        req.setTimeout(timeoutMs || 5000, () => { req.destroy(); resolve(null); });
     });
+}
+// Timeout auf 5s erhöht (war 3s — bei Mainbot-Slowness sofort 503).
+// Retry: bei null einmal nachfassen mit längerem Timeout. Reduziert intermittent 503s.
+async function fetchBotRaw(path) {
+    let r = await fetchBotRawOnce(path, 5000);
+    if (r === null) r = await fetchBotRawOnce(path, 8000);
+    return r;
 }
 
 let _refreshInFlight = null;
@@ -10417,7 +10426,12 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
       <div class="dash-stat live">
         <div class="dash-stat-lbl">🟢 Online jetzt</div>
         <div class="dash-stat-val" id="stat-online">–</div>
-        <div class="dash-stat-sub"><span id="stat-app7d">–</span> · 7d <span class="dash-row-sub-dot">·</span> <span id="stat-app30d">–</span> · 30d</div>
+        <div class="dash-stat-sub"><b style="color:#22c55e" id="stat-active-today">–</b> · heute aktiv <span class="dash-row-sub-dot">·</span> <span id="stat-app24h">–</span> · 24h</div>
+      </div>
+      <div class="dash-stat">
+        <div class="dash-stat-lbl">📅 Aktive 7 / 30 Tage</div>
+        <div class="dash-stat-val"><span id="stat-app7d">–</span></div>
+        <div class="dash-stat-sub">7d-Aktive <span class="dash-row-sub-dot">·</span> <b id="stat-app30d">–</b> in 30d</div>
       </div>
       <div class="dash-stat info">
         <div class="dash-stat-lbl">🌐 Landing heute</div>
@@ -10902,7 +10916,7 @@ async function refreshUsers() {
 
 // IDs die loadStatsOverview() befüllt. Bei jeder API-Failure auf '0' setzen damit
 // klar ist 'Daten leer' statt 'lädt noch'.
-const _DASH_STAT_IDS = ['stat-online','stat-app7d','stat-app30d','stat-landing-today','stat-landing-yesterday','stat-signup-today','stat-banned','fn-landing','fn-cta','fn-cta-pct','fn-signup-view','fn-signup-view-pct','fn-signup-complete','fn-signup-complete-pct','fn-login','fn-dropoff','fn-tg-today','fn-email-today','newusers-count','newusers-today'];
+const _DASH_STAT_IDS = ['stat-online','stat-active-today','stat-app24h','stat-app7d','stat-app30d','stat-landing-today','stat-landing-yesterday','stat-signup-today','stat-banned','fn-landing','fn-cta','fn-cta-pct','fn-signup-view','fn-signup-view-pct','fn-signup-complete','fn-signup-complete-pct','fn-login','fn-dropoff','fn-tg-today','fn-email-today','newusers-count','newusers-today'];
 function _dashStatsFallback(reason){
   console.warn('[dashboard stats] fallback to 0 ('+reason+')');
   // Force-set ALL stat IDs to '0' — wenn API failed darf nichts mehr '—' stehen.
@@ -10923,6 +10937,8 @@ async function loadStatsOverview() {
     _stage = 'render';
     const setText = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
     setText('stat-online', s.online ?? '–');
+    setText('stat-active-today', s.activeToday ?? '–');
+    setText('stat-app24h', s.app24h ?? '–');
     setText('stat-app7d', s.app7d ?? '–');
     setText('stat-app30d', s.app30d ?? '–');
     setText('stat-landing-today', (s.landingToday ?? 0).toLocaleString('de-DE'));
