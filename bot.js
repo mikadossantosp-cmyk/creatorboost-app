@@ -10670,18 +10670,24 @@ async function refreshUsers() {
   }
 }
 
+// IDs die loadStatsOverview() befüllt. Bei jeder API-Failure auf '0' setzen damit
+// klar ist 'Daten leer' statt 'lädt noch'.
+const _DASH_STAT_IDS = ['stat-online','stat-app7d','stat-app30d','stat-landing-today','stat-landing-yesterday','stat-signup-today','stat-banned','fn-landing','fn-cta','fn-cta-pct','fn-signup-view','fn-signup-view-pct','fn-signup-complete','fn-signup-complete-pct','fn-login','fn-dropoff','fn-tg-today','fn-email-today','newusers-count','newusers-today'];
+function _dashStatsFallback(reason){
+  console.warn('[dashboard stats] fallback to 0 ('+reason+')');
+  // Force-set ALL stat IDs to '0' — wenn API failed darf nichts mehr '—' stehen.
+  _DASH_STAT_IDS.forEach(id => { const el = document.getElementById(id); if (el) el.textContent = '0'; });
+}
 async function loadStatsOverview() {
   let _stage = 'fetch';
   try {
     const r = await fetch('/api/admin/stats');
-    _stage = 'parse';
+    _stage = 'parse · http '+r.status;
+    if (!r.ok) { _dashStatsFallback('http '+r.status); return; }
     const s = await r.json();
     if (!s.ok) {
       console.warn('[dashboard stats] api returned not-ok:', s);
-      // Trotzdem alle Funnel-Felder mit 0 füllen statt sie auf '–' zu lassen.
-      ['fn-landing','fn-cta','fn-cta-pct','fn-signup-view','fn-signup-view-pct','fn-signup-complete','fn-signup-complete-pct','fn-login','fn-dropoff','fn-tg-today','fn-email-today','newusers-count','newusers-today'].forEach(id => {
-        const el = document.getElementById(id); if (el) el.textContent = '0';
-      });
+      _dashStatsFallback('api-not-ok');
       return;
     }
     _stage = 'render';
@@ -10753,10 +10759,7 @@ async function loadStatsOverview() {
     }
   } catch(e) {
     console.warn('[dashboard stats] error at stage '+_stage+':', e);
-    // Bei Fehler: Funnel-Felder mit 0 füllen statt '—' stehen lassen
-    ['fn-landing','fn-cta','fn-cta-pct','fn-signup-view','fn-signup-view-pct','fn-signup-complete','fn-signup-complete-pct','fn-login','fn-dropoff','fn-tg-today','fn-email-today','newusers-count','newusers-today'].forEach(id => {
-      const el = document.getElementById(id); if (el && el.textContent === '–') el.textContent = '0';
-    });
+    _dashStatsFallback('exception at '+_stage);
   }
 }
 
