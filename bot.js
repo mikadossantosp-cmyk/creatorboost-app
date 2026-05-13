@@ -7440,6 +7440,8 @@ setTimeout(function(){
     <button class="icon-btn" onclick="setTheme(document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark')" title="Theme">🌙</button>
   </div>
 </div>
+<!-- Event-Banner: aktive XP/Diamond-Events mit Countdown -->
+<div id="event-banner" style="display:none"></div>
 <div style="width:100%">${storiesHtml}</div>
 ${(()=>{
   const todayLiked = Object.values(d.links||{}).some(l=>Array.isArray(l.likes)&&l.likes.map(String).includes(String(myUid))&&new Date(l.timestamp).toDateString()===today);
@@ -7942,6 +7944,75 @@ async function submitSuperLink(){
     else { btn.disabled = false; btn.innerHTML = '❤️ Engagiert · +1 💎'; alert('❌ '+(j.message||j.error||'Fehler')); }
   };
   loadAndRender();
+})();
+
+// ── EVENT-BANNER (Feed-Top) ──
+// Zeigt aktive XP/Diamond-Events mit Live-Countdown. Refresh alle 30s.
+(function initEventBanner(){
+  const banner = document.getElementById('event-banner');
+  if (!banner) return;
+  let CUR_EVENTS = [];
+  let _tickHandle = null;
+  function fmtRemaining(ms){
+    if (ms <= 0) return '0s';
+    const s = Math.floor(ms/1000);
+    const h = Math.floor(s/3600);
+    const m = Math.floor((s%3600)/60);
+    const sec = s%60;
+    if (h > 0) return h+'h '+m+'m '+sec+'s';
+    if (m > 0) return m+'m '+sec+'s';
+    return sec+'s';
+  }
+  function render(){
+    if (!CUR_EVENTS.length) { banner.style.display='none'; banner.innerHTML=''; return; }
+    banner.style.display='block';
+    const now = Date.now();
+    const cards = CUR_EVENTS.map(e => {
+      const remaining = e.end - now;
+      if (remaining <= 0) return null;
+      const isDiamond = e.type === 'diamond';
+      const isMult = e.type === 'xp-multiplier';
+      const grad = isDiamond ? 'linear-gradient(135deg,#06b6d4,#0e7490)' : isMult ? 'linear-gradient(135deg,#8b5cf6,#6d28d9)' : 'linear-gradient(135deg,#f59e0b,#d97706)';
+      const emoji = isDiamond ? '💎' : isMult ? '⚡' : '✨';
+      const valueLabel = isMult ? ('XP × '+e.multiplier) : ('+' + e.amount + ' ' + (isDiamond?'💎':'XP') + ' pro Post');
+      return '<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:'+grad+';color:#fff;font-weight:700">' +
+        '<div style="font-size:24px;line-height:1">'+emoji+'</div>' +
+        '<div style="flex:1;min-width:0">' +
+          '<div style="font-size:11px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;opacity:.9">🎉 EVENT AKTIV</div>' +
+          '<div style="font-size:14px;font-weight:800;margin-top:2px">'+valueLabel+'</div>' +
+        '</div>' +
+        '<div style="text-align:right">' +
+          '<div style="font-size:10px;opacity:.85;letter-spacing:1px;text-transform:uppercase">Endet in</div>' +
+          '<div style="font-size:14px;font-weight:800;font-variant-numeric:tabular-nums" data-event-end="'+e.end+'">'+fmtRemaining(remaining)+'</div>' +
+        '</div>' +
+      '</div>';
+    }).filter(Boolean).join('');
+    banner.innerHTML = cards || '';
+    if (!cards) banner.style.display='none';
+  }
+  function startTick(){
+    if (_tickHandle) clearInterval(_tickHandle);
+    _tickHandle = setInterval(()=>{
+      const now = Date.now();
+      banner.querySelectorAll('[data-event-end]').forEach(el=>{
+        const remaining = parseInt(el.dataset.eventEnd,10) - now;
+        el.textContent = fmtRemaining(remaining);
+      });
+      if (CUR_EVENTS.some(e => (e.end - now) <= 0)) { CUR_EVENTS = CUR_EVENTS.filter(e => (e.end - now) > 0); render(); }
+    }, 1000);
+  }
+  async function refresh(){
+    try {
+      const r = await fetch('/api/events/status');
+      const j = await r.json();
+      CUR_EVENTS = (j.events || []).filter(e => e.end > Date.now());
+      render();
+      if (CUR_EVENTS.length) startTick();
+      else if (_tickHandle) { clearInterval(_tickHandle); _tickHandle = null; }
+    } catch(e) {}
+  }
+  refresh();
+  setInterval(refresh, 30000);
 })();
 </script>
 `, 'feed');
@@ -10124,6 +10195,35 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
         return json(r);
     }
 
+    // ── EVENT API ──
+    // Public (für Feed-Banner — kein Admin-Check, jeder User darf laufende Events sehen)
+    if (path === '/api/events/status' && req.method === 'GET') {
+        const r = await fetchBotRaw('/events-status-api');
+        return json(r || { ok:true, events: [] });
+    }
+    if (path === '/api/admin/event-start' && req.method === 'POST') {
+        if (!session) return json({error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({error:'Nur Admins'}, 403);
+        const body = await parseBody(req);
+        const type = String(body.type||'');
+        const amount = parseInt(body.amount,10);
+        const durationMs = parseInt(body.durationMs,10);
+        const label = String(body.label||'');
+        if (!['xp','diamond'].includes(type)) return json({ok:false,error:'type muss xp/diamond sein'},400);
+        if (!Number.isFinite(amount) || amount<=0) return json({ok:false,error:'amount muss > 0 sein'},400);
+        if (!Number.isFinite(durationMs) || durationMs<=0) return json({ok:false,error:'durationMs muss > 0 sein'},400);
+        const ep = type === 'xp' ? '/admin-start-xp-event-api' : '/admin-start-diamond-event-api';
+        const r = await postBot(ep, { amount, durationMs, label });
+        return json(r || {ok:false,error:'Mainbot offline'});
+    }
+    if (path === '/api/admin/event-stop' && req.method === 'POST') {
+        if (!session) return json({error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({error:'Nur Admins'}, 403);
+        const body = await parseBody(req);
+        const r = await postBot('/admin-stop-event-api', { type: String(body.type||'') });
+        return json(r || {ok:false,error:'Mainbot offline'});
+    }
+
     if (path === '/dashboard') {
         if (!session) return redirect('/');
         if (!_dashIsAdmin) return text('🛡️ Nur Admins.', 403);
@@ -10306,6 +10406,8 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
       <div class="dash-top-actions">
         <button class="dash-btn dash-btn-ghost" onclick="runMissionBackfill()">🔁 Backfill</button>
         <button class="dash-btn" onclick="openFunnelDebug()">🔬 Funnel Debug</button>
+        <button class="dash-btn" onclick="openEventModal('xp')" style="border-color:rgba(245,158,11,0.40);color:#fbbf24">✨ XP-Event starten</button>
+        <button class="dash-btn" onclick="openEventModal('diamond')" style="border-color:rgba(6,182,212,0.40);color:#06b6d4">💎 Diamond-Event starten</button>
         <button class="dash-btn dash-btn-primary" onclick="openBroadcastModal()">📢 Broadcast DM</button>
       </div>
     </div>
@@ -10649,6 +10751,67 @@ async function testFunnelFire(btn) {
   else alert('❌ '+(j.error||'Fehler'));
   btn.disabled = false; btn.textContent = '🧪 Test-Event feuern';
 }
+async function openEventModal(type) {
+  const isDiamond = type === 'diamond';
+  const cur = await fetch('/api/events/status').then(r=>r.json()).catch(()=>({events:[]}));
+  const active = (cur.events||[]).find(e => e.type === type);
+  const bg = document.createElement('div');
+  bg.className = 'dash-modal-bg';
+  bg.onclick = e => { if (e.target===bg) bg.remove(); };
+  bg.innerHTML = '<div class="dash-modal" style="max-width:480px">' +
+    '<div class="dash-modal-hdr"><h3>'+(isDiamond?'💎 Diamond-Event':'✨ XP-Event')+'</h3>' +
+      '<div class="dash-modal-meta">Flat-Bonus pro veröffentlichtem Post für eine bestimmte Zeit. Alle aktiven User sehen einen Live-Banner im Feed mit Countdown.</div>' +
+    '</div>' +
+    '<div class="dash-modal-body">' +
+      (active
+        ? '<div style="padding:14px;background:rgba(34,197,94,0.10);border:1px solid rgba(34,197,94,0.35);border-radius:12px;margin-bottom:14px">' +
+            '<div style="font-size:11px;font-weight:700;color:#22c55e;letter-spacing:1px;text-transform:uppercase">⏱ Läuft gerade</div>' +
+            '<div style="font-size:14px;font-weight:700;margin-top:4px">+'+active.amount+(isDiamond?' 💎':' XP')+' pro Post · noch '+Math.round(active.remainingMs/60000)+' min</div>' +
+          '</div>'
+        : '') +
+      '<label style="font-size:11px;font-weight:700;letter-spacing:1.4px;color:var(--dsub);text-transform:uppercase;display:block;margin-bottom:6px">Bonus pro Post</label>' +
+      '<input type="number" id="evt-amount" min="1" max="'+(isDiamond?'10':'1000')+'" placeholder="'+(isDiamond?'1':'10')+'" style="width:100%;padding:11px 14px;background:var(--dink);border:1px solid var(--dline);border-radius:10px;color:#fff;font-size:14px;margin-bottom:12px;font-family:inherit">' +
+      '<label style="font-size:11px;font-weight:700;letter-spacing:1.4px;color:var(--dsub);text-transform:uppercase;display:block;margin-bottom:6px">Dauer</label>' +
+      '<select id="evt-duration" style="width:100%;padding:11px 14px;background:var(--dink);border:1px solid var(--dline);border-radius:10px;color:#fff;font-size:14px;margin-bottom:12px;font-family:inherit">' +
+        '<option value="1800000">30 Minuten</option>' +
+        '<option value="3600000" selected>1 Stunde</option>' +
+        '<option value="7200000">2 Stunden</option>' +
+        '<option value="21600000">6 Stunden</option>' +
+        '<option value="86400000">1 Tag</option>' +
+        '<option value="259200000">3 Tage</option>' +
+        '<option value="604800000">7 Tage</option>' +
+      '</select>' +
+      '<label style="font-size:11px;font-weight:700;letter-spacing:1.4px;color:var(--dsub);text-transform:uppercase;display:block;margin-bottom:6px">Label (optional)</label>' +
+      '<input type="text" id="evt-label" placeholder="z.B. \\'Wochenend-Bonus\\'" maxlength="60" style="width:100%;padding:11px 14px;background:var(--dink);border:1px solid var(--dline);border-radius:10px;color:#fff;font-size:14px;margin-bottom:6px;font-family:inherit">' +
+      '<div style="font-size:11px;color:var(--dsub);margin-top:8px;line-height:1.5">Während des Events erscheint ein Live-Banner im Feed bei jedem User. Bei jedem Post wird der Bonus automatisch gutgeschrieben + In-App-DM gesendet.</div>' +
+    '</div>' +
+    '<div class="dash-modal-foot">' +
+      (active ? '<button class="dash-btn" onclick="stopEvent(\\''+type+'\\', this)" style="color:#ef4444;border-color:rgba(239,68,68,0.4)">🛑 Event stoppen</button>' : '') +
+      '<button class="dash-btn dash-btn-primary" onclick="startEvent(\\''+type+'\\', this)">🚀 '+(active?'Neu starten':'Starten')+'</button>' +
+      '<button class="dash-btn" onclick="this.closest(\\'.dash-modal-bg\\').remove()">Abbrechen</button>' +
+    '</div></div>';
+  document.body.appendChild(bg);
+}
+async function startEvent(type, btn) {
+  const amount = parseInt(document.getElementById('evt-amount').value, 10);
+  const durationMs = parseInt(document.getElementById('evt-duration').value, 10);
+  const label = document.getElementById('evt-label').value || '';
+  if (!Number.isFinite(amount) || amount <= 0) { alert('Bitte gültigen Betrag eingeben'); return; }
+  btn.disabled = true; btn.textContent = '⏳';
+  const r = await fetch('/api/admin/event-start', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ type, amount, durationMs, label }) });
+  const j = await r.json().catch(()=>({}));
+  if (j.ok) { dToast('🚀 Event gestartet · '+amount+(type==='diamond'?' 💎':' XP')+' pro Post für '+Math.round(durationMs/60000)+' min','ok'); document.querySelectorAll('.dash-modal-bg').forEach(m=>m.remove()); }
+  else { btn.disabled = false; btn.textContent = '🚀 Starten'; alert('❌ '+(j.error||'Fehler')); }
+}
+async function stopEvent(type, btn) {
+  if (!confirm('Event sofort beenden?')) return;
+  btn.disabled = true; btn.textContent = '⏳';
+  const r = await fetch('/api/admin/event-stop', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ type }) });
+  const j = await r.json().catch(()=>({}));
+  if (j.ok) { dToast('🛑 Event gestoppt','info'); document.querySelectorAll('.dash-modal-bg').forEach(m=>m.remove()); }
+  else { btn.disabled = false; btn.textContent = '🛑 Event stoppen'; alert('❌ '+(j.error||'Fehler')); }
+}
+
 async function openBroadcastModal() {
   const text = prompt('📢 DM an ALLE aktiven User senden (max 1500 Zeichen):\\n\\nMarkdown unterstützt (*bold*, _italic_).\\nBanned User + Admins werden übersprungen.');
   if (!text || !text.trim()) return;
