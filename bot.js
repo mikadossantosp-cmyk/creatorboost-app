@@ -13244,7 +13244,7 @@ async function submitPost(){const _spBtn=document.querySelector('[onclick="submi
       +bar(daily.likesGegeben,5,'#a78bfa')
       +'<div style="margin-top:6px">'+mChip(daily.m2,'M2: '+daily.prozent+'% (≥80%)')+'</div>'
       +bar(daily.prozent,100,'#818cf8')
-      +'<div style="margin-top:6px">'+mChip(daily.m3,'M3: '+(daily.gesamtLinks>0?daily.gelikedLinks+'/'+daily.gesamtLinks+' alle':'–'))+'</div>'
+      +'<div style="margin-top:6px">'+mChip(daily.m3,'M3: '+(daily.gesamtLinks>0?Math.min(daily.gelikedLinks,daily.m3Target||daily.gesamtLinks)+'/'+(daily.m3Target||daily.gesamtLinks)+' '+(daily.gesamtLinks>(daily.m3Cap||30)?'(max 30)':'alle'):'–'))+'</div>'
       +(daily.m3?'<div style="font-size:10px;color:#a78bfa;margin-top:4px">+5 XP + 💎 1 Diamant bei Abrechnung</div>':'')
       +'</div>'
       +'<div style="background:var(--bg3);border-radius:10px;padding:10px 12px">'
