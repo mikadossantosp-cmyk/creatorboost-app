@@ -45,8 +45,33 @@ setInterval(() => {
     for (const [ip, v] of signupIpRateLimit.entries()) if (now - v.ts > SIGNUP_RATE_LIMIT_WINDOW) signupIpRateLimit.delete(ip);
 }, 5 * 60 * 1000);
 
+// Daily claims tracker (persisted to file, keyed by "type:uid:date")
+const DAILY_CLAIMS_FILE = DATA_DIR + '/daily_claims.json';
+let _dailyClaims = {};
+try { if (fs.existsSync(DAILY_CLAIMS_FILE)) _dailyClaims = JSON.parse(fs.readFileSync(DAILY_CLAIMS_FILE, 'utf8')); } catch(e) {}
+function getBerlinDate() {
+    return new Date(new Date().toLocaleString('en-CA', {timeZone:'Europe/Berlin'})).toISOString().slice(0, 10);
+}
+function hasClaimed(type, uid) {
+    return !!_dailyClaims[type + ':' + uid + ':' + getBerlinDate()];
+}
+function markClaimed(type, uid) {
+    const today = getBerlinDate();
+    _dailyClaims[type + ':' + uid + ':' + today] = Date.now();
+    for (const k of Object.keys(_dailyClaims)) { const d = k.split(':').pop(); if (d !== today) delete _dailyClaims[k]; }
+    try { fs.writeFileSync(DAILY_CLAIMS_FILE, JSON.stringify(_dailyClaims)); } catch(e) {}
+}
+
+// In-memory email send log (last 200 entries, not persisted across restarts)
+const _emailSendLog = [];
+const EMAIL_LOG_MAX = 200;
+function logEmailSend(to, subject, ok, error) {
+    _emailSendLog.unshift({ to, subject, ok, error: error || null, ts: Date.now() });
+    if (_emailSendLog.length > EMAIL_LOG_MAX) _emailSendLog.length = EMAIL_LOG_MAX;
+}
+
 async function sendEmail(to, subject, html) {
-    if (!RESEND_API_KEY) { console.error('RESEND_API_KEY nicht gesetzt'); return false; }
+    if (!RESEND_API_KEY) { console.error('RESEND_API_KEY nicht gesetzt'); logEmailSend(to, subject, false, 'RESEND_API_KEY nicht gesetzt'); return false; }
     return new Promise(resolve => {
         const data = JSON.stringify({ from: EMAIL_FROM, to: [to], subject, html });
         const req = https.request({
@@ -59,12 +84,12 @@ async function sendEmail(to, subject, html) {
         }, res => {
             let buf = ''; res.on('data', c => buf += c);
             res.on('end', () => {
-                if (res.statusCode >= 200 && res.statusCode < 300) resolve(true);
-                else { console.error('Resend Error:', res.statusCode, buf.slice(0, 200)); resolve(false); }
+                if (res.statusCode >= 200 && res.statusCode < 300) { logEmailSend(to, subject, true, null); resolve(true); }
+                else { const errMsg = 'HTTP ' + res.statusCode; console.error('Resend Error:', res.statusCode, buf.slice(0, 200)); logEmailSend(to, subject, false, errMsg); resolve(false); }
             });
         });
-        req.on('error', e => { console.error('Resend Request Fehler:', e.message); resolve(false); });
-        req.setTimeout(8000, () => { req.destroy(); resolve(false); });
+        req.on('error', e => { console.error('Resend Request Fehler:', e.message); logEmailSend(to, subject, false, e.message); resolve(false); });
+        req.setTimeout(8000, () => { req.destroy(); logEmailSend(to, subject, false, 'Timeout'); resolve(false); });
         req.write(data); req.end();
     });
 }
@@ -95,6 +120,35 @@ function saveSessions() {
     try { fs.writeFileSync(LOCAL_SESSIONS, data); } catch(e) { console.error('Sessions save failed (local):', e.message); }
 }
 setInterval(saveSessions, 60000);
+
+// Weekly raffle (Gewinnspiel): runs every minute, triggers Sunday 20:00 Berlin time
+let _lastRaffleTrigger = '';
+setInterval(async () => {
+    try {
+        const now = new Date(new Date().toLocaleString('en-US', {timeZone:'Europe/Berlin'}));
+        if (now.getDay() !== 0 || now.getHours() !== 20 || now.getMinutes() !== 0) return;
+        const key = now.toISOString().slice(0, 10);
+        if (_lastRaffleTrigger === key) return;
+        _lastRaffleTrigger = key;
+        const bd = await fetchBot('/data');
+        if (!bd) return;
+        const threshold = 750;
+        const eligible = Object.entries(bd.users || {}).filter(([, u]) => (u.xpThisWeek || u.weeklyXp || 0) >= threshold && u.started);
+        if (!eligible.length) { console.log('[Gewinnspiel] Keine qualifizierten Teilnehmer diese Woche'); return; }
+        const winner = eligible[Math.floor(Math.random() * eligible.length)];
+        const [winnerUid, winnerUser] = winner;
+        const prizes = [
+            { name: '1 Extra-Link', action: '/add-extra-link' },
+            { name: '1 Superlink', action: '/add-superlink' },
+            { name: '500 XP', action: '/add-xp', data: { amount: 500, reason: 'gewinnspiel' } },
+            { name: '5 Diamanten', action: '/add-diamonds', data: { amount: 5, reason: 'gewinnspiel' } }
+        ];
+        const prize = prizes[Math.floor(Math.random() * prizes.length)];
+        const payload = { uid: winnerUid, ...(prize.data || {}), reason: prize.data?.reason || 'gewinnspiel' };
+        await postBot(prize.action, payload);
+        console.log(`[Gewinnspiel] Gewinner: ${winnerUser.spitzname || winnerUser.name} (${winnerUid}) — Preis: ${prize.name}`);
+    } catch(e) { console.error('[Gewinnspiel] Fehler:', e.message); }
+}, 60000);
 
 // Migrate all existing sessions to light theme
 for (const [k, v] of sessions.entries()) { if (!v.theme || v.theme === 'dark') { v.theme = 'light'; } }
@@ -252,11 +306,11 @@ const LANDING_TRACK_SCRIPT = `<script>
 })();
 </script>` + ADMIN_FULLTOUR_SCRIPT_TAG;
 
-function cleanRole(r) {
+function cleanRole(r, uid, adminIds) {
+  // Admin-override: wenn UID in adminIds → immer Admin anzeigen
+  if (uid && Array.isArray(adminIds) && adminIds.includes(Number(uid))) return '👑 Admin';
   let s = String(r==null?'🆕 New':r);
-  // Force-fix: jeder role-string der 'admin' enthält → IMMER '🛡️ Admin' (egal welche corruption)
-  if (/admin/i.test(s)) return '🛡️ Admin';
-  // Sonst: gear-emoji + leading-question-marks cleanup
+  if (/admin/i.test(s)) return '👑 Admin';
   s = s.replace(/⚙️?/g,'🛡️');
   s = s.replace(/^[\?\u{FFFD}]{1,4}\s*/u,'🛡️ ');
   return s;
@@ -2382,7 +2436,7 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
 <div class="profile-info">
   <div class="profile-name-row">
     <div class="profile-name">${htmlEsc(u.spitzname||u.name||'User')}</div>
-    <div class="profile-badge" style="background:${grad};color:#fff">${htmlEsc(cleanRole(u.role))}</div>
+    <div class="profile-badge" style="background:${grad};color:#fff">${htmlEsc(cleanRole(u.role, uid, adminIds))}</div>
   </div>
   ${u.username||u.spitzname?`<div class="profile-username">${u.spitzname?htmlEsc(u.name||''):''}${u.username?(u.spitzname?' · ':'')+'@'+htmlEsc(u.username):''}</div>`:''}
   <div style="display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap">
@@ -3260,7 +3314,39 @@ a{color:inherit;text-decoration:none}
 .admin-pb{position:sticky;top:0;left:0;right:0;background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;padding:10px 14px;font-size:12px;font-weight:700;text-align:center;z-index:99;letter-spacing:0.3px}
 .admin-pb a{color:rgba(255,255,255,0.85);text-decoration:underline}
 
-@media (min-width:480px){.hero-h1{font-size:48px}}
+@media (min-width:480px){.hero-h1{font-size:48px}.hero-sub{font-size:16px;max-width:420px}}
+@media (min-width:768px){
+  .shell{max-width:680px;padding:0 32px 80px}
+  .hero{padding:64px 0 16px}
+  .hero-mark{width:128px;height:128px;border-radius:28px}
+  .hero-h1{font-size:54px}
+  .hero-sub{font-size:17px;max-width:480px}
+  .stats{grid-template-columns:repeat(3,1fr);gap:12px}
+  .stat{padding:20px 12px}
+  .stat-num{font-size:28px}
+  .feat-grid{gap:12px}
+  .feat{padding:20px}
+  .how-step{padding:20px}
+  .login-card{padding:28px;max-width:440px;margin-left:auto;margin-right:auto}
+  .bottom-cta{padding:32px;max-width:440px;margin-left:auto;margin-right:auto}
+  .quote{max-width:540px;margin-left:auto;margin-right:auto}
+}
+@media (min-width:1024px){
+  .shell{max-width:900px;padding:0 48px 100px}
+  .hero{padding:80px 0 24px}
+  .hero-mark{width:140px;height:140px}
+  .hero-h1{font-size:62px}
+  .hero-sub{font-size:18px;max-width:520px}
+  .stats{gap:16px;max-width:600px;margin-left:auto;margin-right:auto}
+  .stat{padding:24px 16px}
+  .stat-num{font-size:32px}
+  .feat-grid{grid-template-columns:repeat(4,1fr);gap:14px}
+  .how{flex-direction:row;gap:14px}
+  .how-step{flex:1}
+  .login-card{max-width:460px}
+  .trust-text{font-size:13px}
+  .nav{padding:24px 4px 0}
+}
 </style></head><body>
 ${_isPreview ? '<div class="admin-pb">👀 Admin-Vorschau · Login-Page &nbsp;·&nbsp; <a href="/einstellungen">← Zurück</a></div>' : ''}
 <div class="mesh"></div>
@@ -3274,8 +3360,8 @@ ${_isPreview ? '<div class="admin-pb">👀 Admin-Vorschau · Login-Page &nbsp;·
   <section class="hero">
     <div class="hero-mark"></div>
     <div class="hero-eyebrow"><span class="dot"></span><span>Live · Creator-Community</span></div>
-    <h1 class="hero-h1">Wachse mit echten<br>Creatorn.</h1>
-    <p class="hero-sub">Echte Likes, echte Kommentare, echtes Engagement — <b>jeden Tag</b>. Keine Bots, keine Fake-Follower. Eine geschlossene Community von Creatorn die sich gegenseitig pushen.</p>
+    <h1 class="hero-h1">Dein Instagram-<br>Wachstum startet hier.</h1>
+    <p class="hero-sub">Echte Likes, echte Kommentare, echtes Engagement — <b>jeden Tag</b>. Eine exklusive Community von Creatorn die sich gegenseitig nach oben pushen.</p>
     <div class="trust">
       <div class="trust-avs">
         <div class="av av-1"></div>
@@ -3299,8 +3385,8 @@ ${_isPreview ? '<div class="admin-pb">👀 Admin-Vorschau · Login-Page &nbsp;·
     <div class="how-step">
       <div class="how-num">1</div>
       <div class="how-body">
-        <div class="how-t">Mit Email einloggen</div>
-        <div class="how-s">Magic-Link an deine Email — kein Account nötig. Du bist sofort drin.</div>
+        <div class="how-t">Account erstellen</div>
+        <div class="how-s">Email + Passwort — in 30 Sekunden startklar.</div>
       </div>
     </div>
     <div class="how-step">
@@ -3328,8 +3414,8 @@ ${_isPreview ? '<div class="admin-pb">👀 Admin-Vorschau · Login-Page &nbsp;·
   </div>
 
   <div id="login" class="login-card" style="margin-top:24px">
-    <div class="login-h">Sign In</div>
-    <div class="login-sub">Mit deiner Email + Passwort einloggen.</div>
+    <div class="login-h">Willkommen zurück</div>
+    <div class="login-sub">Logge dich mit Email &amp; Passwort ein.</div>
 
     ${query.error==='email-expired' ? '<div class="msg show err">⚠️ Login-Link abgelaufen oder schon benutzt.</div>' : ''}
     ${query.error==='email-invalid' ? '<div class="msg show err">⚠️ Login-Link ungültig.</div>' : ''}
@@ -3342,6 +3428,7 @@ ${_isPreview ? '<div class="admin-pb">👀 Admin-Vorschau · Login-Page &nbsp;·
       <input type="password" id="email-pw" class="in" placeholder="Passwort" autocomplete="current-password" maxlength="200" required>
       <button type="submit" class="btn-p" id="email-btn">Sign In →</button>
     </form>
+    <button class="btn-link" id="pw-reset-btn" onclick="resetPassword()">Passwort vergessen?</button>
     <div style="text-align:center;margin-top:18px;padding-top:18px;border-top:1px solid var(--border)">
       <div style="font-size:12.5px;color:var(--muted);margin-bottom:8px">Noch keinen Account?</div>
       <a href="/signup" style="display:inline-flex;align-items:center;gap:6px;color:var(--gold);font-weight:700;text-decoration:none;font-size:13.5px">→ Jetzt Sign Up</a>
@@ -3349,9 +3436,9 @@ ${_isPreview ? '<div class="admin-pb">👀 Admin-Vorschau · Login-Page &nbsp;·
   </div>
 
   <div class="bottom-cta">
-    <div class="bottom-cta-h">Ready zu wachsen?</div>
-    <div class="bottom-cta-s">Logge dich mit deiner <b>Email-Adresse</b> ein und sieh deine ersten echten Likes innerhalb von Minuten.</div>
-    <a href="#login" class="btn-p" style="display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;margin:0">📧 Mit Email einloggen</a>
+    <div class="bottom-cta-h">Bereit durchzustarten?</div>
+    <div class="bottom-cta-s">Erstelle deinen Account und sieh deine ersten echten Likes innerhalb von Minuten.</div>
+    <a href="/signup" class="btn-p" style="display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;margin:0">🚀 Jetzt kostenlos starten</a>
   </div>
 
   <footer class="foot">
@@ -3416,25 +3503,19 @@ function submitEmail(ev){
     .catch(function(){msg.textContent='Netzwerkfehler.';msg.classList.add('show','err');btn.disabled=false;btn.textContent='Sign In →';});
   return false;
 }
-function sendMagicLink(prefilledEmail){
-  var inp=document.getElementById('email-input'),btn=document.getElementById('email-btn'),mb=document.getElementById('email-magic-btn'),msg=document.getElementById('email-msg');
-  var em=(prefilledEmail||(inp.value||'').trim()).toLowerCase();
-  if(!em){ msg.textContent='Bitte Email eingeben.';msg.classList.add('show','err');return; }
-  btn.disabled=true;mb.disabled=true;mb.textContent='Sende Magic-Link...';
-  msg.classList.remove('show','ok','err');
-  fetch('/api/auth/email-request',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:em})})
-    .then(function(r){return r.json().then(function(j){return{s:r.status,j:j};});})
-    .then(function(o){
-      if(o.j&&o.j.ok){
-        msg.textContent=o.j.message||'Login-Link gesendet. Schau in dein Email-Postfach (auch Spam).';
-        msg.classList.add('show','ok');
-      } else {
-        msg.textContent=(o.j&&o.j.error)||'Fehler beim Senden.';
-        msg.classList.add('show','err');
-      }
+function resetPassword(){
+  var inp=document.getElementById('email-input'),msg=document.getElementById('email-msg'),btn=document.getElementById('pw-reset-btn');
+  var em=(inp.value||'').trim().toLowerCase();
+  if(!em){msg.textContent='Bitte zuerst deine Email-Adresse eingeben.';msg.classList.add('show','err');inp.focus();return;}
+  msg.classList.remove('show','ok','err');btn.disabled=true;btn.textContent='Wird gesendet...';
+  fetch('/api/auth/password-reset',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:em})})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(d.ok){msg.textContent='✅ Reset-Link an deine Email gesendet. Prüfe auch den Spam-Ordner.';msg.classList.add('show','ok');}
+      else{msg.textContent=d.error||'Fehler beim Senden.';msg.classList.add('show','err');}
     })
     .catch(function(){msg.textContent='Netzwerkfehler.';msg.classList.add('show','err');})
-    .finally(function(){btn.disabled=false;mb.disabled=false;mb.textContent='📧 Magic-Link senden (ohne Passwort)';});
+    .finally(function(){btn.disabled=false;btn.textContent='Passwort vergessen?';});
 }
 // Funnel-Tracking: Landing-CTAs
 function _trackFn(ev, meta){ try{ navigator.sendBeacon ? navigator.sendBeacon('/api/track-funnel', new Blob([JSON.stringify({event:ev,meta:meta||{}})],{type:'application/json'})) : fetch('/api/track-funnel',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({event:ev,meta:meta||{}}),keepalive:true}); }catch(e){} }
@@ -3449,8 +3530,6 @@ document.addEventListener('DOMContentLoaded', function(){
   // Email-Submit
   var eb = document.getElementById('email-btn');
   if (eb) eb.addEventListener('click', function(){ _trackFn('email-submit', {}); });
-  var mb = document.getElementById('email-magic-btn');
-  if (mb) mb.addEventListener('click', function(){ _trackFn('email-magic-submit', {}); });
 });
 </script>
 </body></html>`);
@@ -3744,6 +3823,33 @@ document.addEventListener('DOMContentLoaded', function(){
         }
         return json({ok:true, message: isNewSignup ? '🎉 Willkommen! Dein Login-Link wurde an deine Email gesendet.' : '✅ Login-Link wurde an deine Email gesendet.', isNewSignup});
     }
+    // Password-Reset: sendet Magic-Link zum Passwort-Ändern
+    if (path === '/api/auth/password-reset' && req.method === 'POST') {
+        const body = await parseBody(req);
+        const email = String(body.email || '').toLowerCase().trim();
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json({ok:false, error:'Ungültige Email'}, 400);
+        const rlKey = 'pwreset:' + email;
+        const lastTs = emailRateLimit.get(rlKey) || 0;
+        if (Date.now() - lastTs < PW_RESET_RATE_LIMIT) {
+            const wait = Math.ceil((PW_RESET_RATE_LIMIT - (Date.now() - lastTs)) / 1000);
+            return json({ok:false, error:`Bitte warte noch ${wait}s vor dem nächsten Versuch.`}, 429);
+        }
+        emailRateLimit.set(rlKey, Date.now());
+        const botData = await fetchBot('/data');
+        if (!botData) return json({ok:false, error:'Server nicht erreichbar'}, 503);
+        const found = Object.entries(botData.users || {}).find(([, u]) => String(u.email || '').toLowerCase() === email);
+        if (!found) return json({ok:true}); // silent — no email enumeration
+        const [uid, u] = found;
+        const token = crypto.randomBytes(24).toString('hex');
+        emailLoginTokens.set(token, { email, uid: String(uid), exp: Date.now() + EMAIL_TOKEN_TTL });
+        const baseUrl = (process.env.APP_URL || ('https://' + (req.headers.host || 'web-production-7981d.up.railway.app'))).replace(/\/$/, '');
+        const loginUrl = baseUrl + '/auth/email-login?token=' + encodeURIComponent(token);
+        const userName = u.spitzname || u.name || 'CreatorX User';
+        const mailHtml = `<!DOCTYPE html><html><body style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#000;color:#fff;padding:0"><div style="max-width:560px;margin:0 auto;padding:32px 24px"><div style="text-align:center;margin-bottom:24px"><img src="${baseUrl}/cx-logo-256.png" width="80" height="80" style="border-radius:18px" alt="CreatorX"></div><h1 style="font-size:26px;font-weight:700;margin:0 0 12px;text-align:center;color:#fff">Passwort zurücksetzen</h1><p style="font-size:15px;color:#a8a39a;line-height:1.6;text-align:center;margin:0 0 28px">Hi ${userName.replace(/[<>]/g,'')}, klick den Button um dich einzuloggen. Danach kannst du in den Einstellungen ein neues Passwort setzen.</p><div style="text-align:center;margin:32px 0"><a href="${loginUrl}" style="display:inline-block;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px">🔐 Einloggen & Passwort ändern</a></div><p style="font-size:12px;color:#605c54;text-align:center;margin-top:32px;border-top:1px solid #221f1a;padding-top:20px">Link 1h gültig, einmalig nutzbar. Falls du das nicht angefragt hast, ignoriere die Email.</p></div></body></html>`;
+        await sendEmail(email, '🔐 CreatorX: Passwort zurücksetzen', mailHtml);
+        return json({ok:true});
+    }
+
     // Admin-Vorschau für die Magic-Link-Email (zeigt das HTML der Email mit Beispiel-Daten).
     if (path === '/preview/email-login' && req.method === 'GET') {
         const baseUrl = (process.env.APP_URL || ('https://' + (req.headers.host || 'web-production-7981d.up.railway.app'))).replace(/\/$/, '');
@@ -3857,41 +3963,64 @@ document.addEventListener('DOMContentLoaded', function(){
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{--gold:#d4af37;--text:#fff;--muted:rgba(255,255,255,0.6);--border:rgba(255,255,255,0.10);--bg-card:rgba(255,255,255,0.03)}
-html,body{background:#000;color:#fff;font-family:'Inter',-apple-system,sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh}
-.shell{max-width:480px;margin:0 auto;padding:32px 22px 60px;min-height:100vh;display:flex;flex-direction:column;justify-content:center}
-.brand{font-family:'Syne',sans-serif;font-size:22px;font-weight:900;background:linear-gradient(135deg,#ff6b6b,#ffa500);-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-align:center;margin-bottom:32px}
-.icon{width:72px;height:72px;margin:0 auto 18px;border-radius:20px;background:linear-gradient(135deg,rgba(212,175,55,0.15),rgba(212,175,55,0.04));border:1px solid rgba(212,175,55,0.3);display:flex;align-items:center;justify-content:center;font-size:36px;box-shadow:0 12px 32px -10px rgba(212,175,55,0.4)}
-h1{font-family:'Syne',sans-serif;font-size:30px;font-weight:800;line-height:1.1;letter-spacing:-1px;margin-bottom:10px;background:linear-gradient(180deg,#fff,#d4af37);-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-align:center}
+:root{--gold:#d4af37;--text:#fff;--muted:rgba(255,255,255,0.55);--muted2:rgba(255,255,255,0.38);--border:rgba(255,255,255,0.08);--border-gold:rgba(212,175,55,0.25)}
+html,body{background:#000;color:#fff;font-family:'Inter',-apple-system,sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh;overflow-x:hidden}
+.mesh{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+.mesh::before{content:'';position:absolute;width:60vw;height:60vw;left:-15vw;top:-15vw;background:radial-gradient(circle,rgba(212,175,55,0.12),transparent 60%);filter:blur(40px)}
+.mesh::after{content:'';position:absolute;width:50vw;height:50vw;right:-20vw;bottom:-20vw;background:radial-gradient(circle,rgba(167,139,250,0.08),transparent 60%);filter:blur(40px)}
+.page{position:relative;z-index:1;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:32px 20px}
+.card{width:100%;max-width:420px;background:rgba(255,255,255,0.025);border:1px solid var(--border);border-radius:24px;padding:36px 24px 32px;backdrop-filter:blur(20px);box-shadow:0 30px 80px -20px rgba(0,0,0,0.5)}
+.brand{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:28px}
+.brand-logo{width:36px;height:36px;border-radius:10px;background:url('/cx-logo-256.png') center/cover,#0a0a0a;box-shadow:0 4px 14px rgba(212,175,55,0.3)}
+.brand-name{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;letter-spacing:-0.3px}
+h1{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;line-height:1.1;letter-spacing:-0.8px;margin-bottom:8px;text-align:center;background:linear-gradient(180deg,#fff,#d4af37);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
 .sub{font-size:14px;color:var(--muted);line-height:1.6;margin-bottom:24px;text-align:center}
-.in{width:100%;background:rgba(255,255,255,0.04);border:1.5px solid var(--border);color:#fff;border-radius:13px;padding:13px 15px;font-size:15px;outline:none;margin-bottom:12px;font-family:inherit;transition:.18s}
+.in{width:100%;background:rgba(255,255,255,0.04);border:1.5px solid var(--border);color:#fff;border-radius:12px;padding:14px 16px;font-size:15px;outline:none;margin-bottom:12px;font-family:inherit;transition:.18s;font-weight:500}
 .in:focus{border-color:var(--gold);background:rgba(212,175,55,0.04);box-shadow:0 0 0 3px rgba(212,175,55,0.12)}
-.btn{margin-top:6px;width:100%;padding:14px;font-size:14px;font-weight:700;border-radius:13px;border:none;cursor:pointer;font-family:inherit;letter-spacing:0.2px;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;box-shadow:0 8px 22px -8px rgba(212,175,55,0.6)}
-.btn:disabled{opacity:.5;cursor:not-allowed}
-.msg{font-size:13px;padding:10px 12px;border-radius:10px;margin-bottom:10px;display:none;line-height:1.5}
+.in::placeholder{color:var(--muted2)}
+.btn{margin-top:8px;width:100%;padding:15px;font-size:15px;font-weight:700;border-radius:12px;border:none;cursor:pointer;font-family:inherit;letter-spacing:0.2px;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;box-shadow:0 8px 24px -8px rgba(212,175,55,0.6),inset 0 1px 0 rgba(255,255,255,0.5);transition:all .15s}
+.btn:hover{transform:translateY(-1px);box-shadow:0 12px 30px -8px rgba(212,175,55,0.7)}
+.btn:active{transform:translateY(0)}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.msg{font-size:13px;padding:10px 14px;border-radius:10px;margin-bottom:12px;display:none;line-height:1.5;font-weight:500}
 .msg.show{display:block}
-.msg.ok{background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.3);color:#22c55e}
-.msg.err{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);color:#ef4444}
-.hint{font-size:11.5px;color:var(--muted);margin-top:6px;text-align:center;line-height:1.55}
-.bottom{text-align:center;margin-top:18px;padding-top:18px;border-top:1px solid var(--border)}
-.bottom a{color:var(--gold);font-weight:700;text-decoration:none;font-size:13.5px}
+.msg.ok{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.25);color:#4ade80}
+.msg.err{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);color:#f87171}
+.perks{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:24px}
+.perk{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);font-weight:500}
+.perk-icon{font-size:16px}
+.hint{font-size:11px;color:var(--muted2);margin-top:10px;text-align:center;line-height:1.55}
+.bottom{text-align:center;margin-top:20px;padding-top:20px;border-top:1px solid var(--border)}
+.bottom-lbl{font-size:12px;color:var(--muted);margin-bottom:6px}
+.bottom a{color:var(--gold);font-weight:700;text-decoration:none;font-size:14px;transition:opacity .15s}
+.bottom a:hover{opacity:.8}
+@media(min-width:768px){.card{padding:44px 36px 40px}h1{font-size:32px}.sub{font-size:15px}}
+@media(min-width:1024px){.card{max-width:460px;padding:48px 40px 44px}}
 </style></head><body>
-<div class="shell">
-  <div class="brand">CreatorX</div>
-  <div style="text-align:center"><div class="icon">🎉</div></div>
-  <h1>Sign Up</h1>
-  <div class="sub">Erstelle deinen kostenlosen Account.<br>Email + Passwort — ohne Telegram, ohne Umwege.</div>
+<div class="mesh"></div>
+<div class="page">
+<div class="card">
+  <div class="brand"><div class="brand-logo"></div><div class="brand-name">CreatorX</div></div>
+  <h1>Account erstellen</h1>
+  <div class="sub">Werde Teil der Creator-Community. Kostenlos.</div>
+  <div class="perks">
+    <div class="perk"><span class="perk-icon">🚀</span>Echtes Engagement</div>
+    <div class="perk"><span class="perk-icon">❤️</span>Täglich Likes</div>
+    <div class="perk"><span class="perk-icon">🏆</span>Ranking &amp; XP</div>
+    <div class="perk"><span class="perk-icon">📊</span>Creator-Profil</div>
+  </div>
   <div class="msg" id="signup-msg"></div>
   <form id="signup-form" onsubmit="return submitSignup(event)">
-    <input type="email" id="signup-email" class="in" placeholder="deine@email.de" autocomplete="email" autocapitalize="none" spellcheck="false" required maxlength="200">
+    <input type="email" id="signup-email" class="in" placeholder="Email-Adresse" autocomplete="email" autocapitalize="none" spellcheck="false" required maxlength="200">
     <input type="password" id="signup-pw" class="in" placeholder="Passwort (min. 6 Zeichen)" autocomplete="new-password" minlength="6" maxlength="200" required>
-    <button type="submit" class="btn" id="signup-btn">🎉 Account erstellen →</button>
+    <button type="submit" class="btn" id="signup-btn">Kostenlos starten →</button>
   </form>
-  <div class="hint">Mit Klick stimmst du zu, dass dein Account angelegt wird. Kein Spam, keine versteckten Kosten.</div>
+  <div class="hint">Kein Spam, keine versteckten Kosten. Jederzeit löschbar.</div>
   <div class="bottom">
-    <div style="font-size:12.5px;color:var(--muted);margin-bottom:8px">Schon einen Account?</div>
+    <div class="bottom-lbl">Schon einen Account?</div>
     <a href="/">→ Sign In</a>
   </div>
+</div>
 </div>
 <script>
 function submitSignup(ev){
@@ -4520,8 +4649,195 @@ function submitPw(ev){
         return res.end();
     }
 
+    // ── ADMIN: Email Dashboard (before auth gate — uses query.key) ──
+    if (path === '/admin/emails') {
+        if ((query.key || '') !== BRIDGE_SECRET) { res.writeHead(403); return res.end('Kein Zugriff'); }
+        const page = Math.max(1, parseInt(query.page) || 1);
+        const perPage = 50;
+        const filterMode = query.filter || 'all';
+        const searchQ = (query.q || '').toLowerCase().trim();
+        const bd = await fetchBot('/data');
+        if (!bd) { res.writeHead(503); return res.end('MainBot nicht erreichbar'); }
+        const users = bd.users || {};
+        let entries = Object.entries(users).map(([uid, u]) => {
+            const emails = [];
+            if (u.email) emails.push({ addr: u.email, source: 'active' });
+            if (u.pendingEmail && u.pendingEmail !== u.email) emails.push({ addr: u.pendingEmail, source: 'pending' });
+            const hasEmail = emails.length > 0;
+            const verified = !!u.email && !u.pendingEmail;
+            return { uid, name: u.spitzname || u.name || '', instagram: u.instagram || '', emails, hasEmail, verified, hasPassword: !!u.password_hash, appCode: u.appCode || '', started: u.started || false, role: u.role || '' };
+        });
+        if (filterMode === 'verified') entries = entries.filter(e => e.verified && e.hasEmail);
+        else if (filterMode === 'unverified') entries = entries.filter(e => e.hasEmail && !e.verified);
+        else if (filterMode === 'no-email') entries = entries.filter(e => !e.hasEmail);
+        else if (filterMode === 'errors') entries = entries.filter(e => e.hasEmail && _emailSendLog.some(l => !l.ok && e.emails.some(em => em.addr === l.to)));
+        if (searchQ) entries = entries.filter(e => e.name.toLowerCase().includes(searchQ) || e.uid.includes(searchQ) || e.emails.some(em => em.addr.toLowerCase().includes(searchQ)) || (e.instagram && e.instagram.toLowerCase().includes(searchQ)));
+        const total = entries.length;
+        const totalPages = Math.max(1, Math.ceil(total / perPage));
+        const pageEntries = entries.slice((page - 1) * perPage, page * perPage);
+        const totalUsers = Object.keys(users).length;
+        const withEmail = Object.values(users).filter(u => u.email).length;
+        const withPending = Object.values(users).filter(u => u.pendingEmail).length;
+        const verifiedCount = Object.values(users).filter(u => u.email && !u.pendingEmail).length;
+        const lastOk = _emailSendLog.find(l => l.ok);
+        const lastErr = _emailSendLog.find(l => !l.ok);
+        const esc = s => String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+        const k = encodeURIComponent(query.key);
+        const buildUrl = (p, f, q) => `/admin/emails?key=${k}&page=${p}&filter=${f||filterMode}&q=${encodeURIComponent(q||searchQ)}`;
+        const rows = pageEntries.map(e => {
+            const lastLog = _emailSendLog.find(l => e.emails.some(em => em.addr === l.to));
+            const emailCells = e.emails.length ? e.emails.map(em => `<span class="em-addr${em.source==='pending'?' pending':''}">${esc(em.addr)} <small>(${em.source})</small></span>`).join('') : '<span class="em-none">\u2014</span>';
+            return `<tr>
+<td>${esc(e.name)}<br><small class="uid">${e.uid}</small>${e.instagram?'<br><small>@'+esc(e.instagram)+'</small>':''}</td>
+<td>${emailCells}</td>
+<td><span class="badge ${e.verified?'ok':'no'}">${e.verified?'Ja':'Nein'}</span></td>
+<td>${e.appCode?esc(e.appCode):'\u2014'}</td>
+<td>${lastLog?'<small>'+(lastLog.ok?'\u2705':'\u274c')+' '+new Date(lastLog.ts).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})+(lastLog.error?' \u2014 '+esc(lastLog.error):'')+'</small>':'\u2014'}</td>
+<td>${e.emails.length && e.emails[0].addr?'<button class="btn-send" onclick="sendOne(this,\''+esc(e.uid)+'\')">Senden</button>':'\u2014'}</td>
+</tr>`;
+        }).join('');
+        let pagination = '';
+        if (totalPages > 1) {
+            pagination = '<div class="pag">';
+            if (page > 1) pagination += `<a href="${buildUrl(page-1)}">\u2190 Zur\u00fcck</a>`;
+            pagination += `<span>Seite ${page} / ${totalPages}</span>`;
+            if (page < totalPages) pagination += `<a href="${buildUrl(page+1)}">Weiter \u2192</a>`;
+            pagination += '</div>';
+        }
+        const logRows = _emailSendLog.slice(0, 20).map(l => `<tr><td>${new Date(l.ts).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'})}</td><td>${esc(l.to)}</td><td>${esc(l.subject).slice(0,40)}</td><td>${l.ok?'\u2705':'\u274c '+esc(l.error||'')}</td></tr>`).join('');
+        res.writeHead(200, {'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});
+        return res.end(`<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Email Dashboard</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0a0a0a;color:#e5e5e5;padding:16px;font-size:13px;line-height:1.5}
+h1{font-size:20px;font-weight:800;margin-bottom:4px}h2{font-size:15px;font-weight:700;margin:24px 0 8px;color:#a78bfa}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin:12px 0}
+.stat{background:#161616;border:1px solid #222;border-radius:10px;padding:12px}.stat-val{font-size:22px;font-weight:800}.stat-lbl{font-size:11px;color:#888;margin-top:2px}
+.mail-status{background:#161616;border:1px solid #222;border-radius:10px;padding:14px;margin:12px 0}
+.mail-status .provider{color:#a78bfa;font-weight:700}
+.bar{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0;align-items:center}
+input[type=text]{background:#161616;border:1px solid #333;border-radius:8px;padding:8px 12px;color:#e5e5e5;font-size:13px;flex:1;min-width:180px}
+.btn{padding:7px 14px;border-radius:8px;border:none;font-size:12px;font-weight:700;cursor:pointer;transition:transform .1s}.btn:active{transform:scale(.96)}
+.btn-primary{background:#7c3aed;color:#fff}.btn-danger{background:#ef4444;color:#fff}.btn-send{background:#22c55e;color:#fff;padding:5px 10px;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer}
+.btn-send:disabled{opacity:.5;cursor:default}
+.filter-bar{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}.filter-bar a{padding:5px 12px;border-radius:999px;font-size:11px;font-weight:700;text-decoration:none;border:1px solid #333;color:#888;transition:all .15s}
+.filter-bar a.active{background:#7c3aed;color:#fff;border-color:#7c3aed}
+table{width:100%;border-collapse:collapse;margin:8px 0}th,td{padding:8px 6px;text-align:left;border-bottom:1px solid #1a1a1a;vertical-align:top}
+th{font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.5px;font-weight:700;position:sticky;top:0;background:#0a0a0a}
+td{font-size:12px}.uid{color:#666;font-size:10px}.em-addr{display:block;font-size:12px}.em-addr.pending{color:#f59e0b}.em-none{color:#444}
+.badge{padding:2px 8px;border-radius:999px;font-size:10px;font-weight:700}.badge.ok{background:rgba(34,197,94,.15);color:#22c55e}.badge.no{background:rgba(239,68,68,.12);color:#ef4444}
+.pag{display:flex;gap:12px;align-items:center;justify-content:center;margin:16px 0}.pag a{color:#a78bfa;text-decoration:none;font-weight:600}.pag span{color:#888;font-size:12px}
+.log-table{margin:8px 0}.log-table td{font-size:11px}
+.toast{position:fixed;bottom:20px;right:20px;padding:10px 16px;border-radius:10px;font-size:13px;font-weight:600;color:#fff;z-index:999;animation:toast-in .3s ease}
+@keyframes toast-in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.bulk-status{margin:8px 0;padding:10px;background:#161616;border:1px solid #222;border-radius:8px;font-size:12px;display:none}
+</style></head><body>
+<h1>\ud83d\udce7 Email Dashboard</h1>
+<p style="color:#888;font-size:12px">Admin-Bereich \u00b7 ${totalUsers} User gesamt</p>
+<div class="stats">
+<div class="stat"><div class="stat-val">${withEmail}</div><div class="stat-lbl">Mit Email</div></div>
+<div class="stat"><div class="stat-val">${verifiedCount}</div><div class="stat-lbl">Verifiziert</div></div>
+<div class="stat"><div class="stat-val">${withPending}</div><div class="stat-lbl">Pending</div></div>
+<div class="stat"><div class="stat-val">${totalUsers - withEmail}</div><div class="stat-lbl">Ohne Email</div></div>
+</div>
+<div class="mail-status">
+<b>Mail System Status</b><br>
+Provider: <span class="provider">${RESEND_API_KEY ? 'Resend \u2705' : 'Nicht konfiguriert \u274c'}</span><br>
+API-Key: ${RESEND_API_KEY ? '****' + RESEND_API_KEY.slice(-4) : 'Fehlt'} \u00b7 From: ${esc(EMAIL_FROM)}<br>
+${lastOk ? 'Letzte OK: ' + new Date(lastOk.ts).toLocaleString('de-DE') + ' \u2192 ' + esc(lastOk.to) : 'Noch keine erfolgreiche Mail'}<br>
+${lastErr ? '<span style="color:#ef4444">Letzter Fehler: ' + new Date(lastErr.ts).toLocaleString('de-DE') + ' \u2192 ' + esc(lastErr.error||'') + '</span>' : ''}
+<br><button class="btn btn-primary" style="margin-top:8px" onclick="sendTest()">Testmail senden</button>
+</div>
+<h2>User-Liste</h2>
+<div class="bar">
+<form method="GET" action="/admin/emails" style="display:flex;gap:8px;flex:1;flex-wrap:wrap">
+<input type="hidden" name="key" value="${esc(query.key)}"><input type="hidden" name="filter" value="${filterMode}">
+<input type="text" name="q" value="${esc(searchQ)}" placeholder="Name, Email, UID oder @insta suchen...">
+<button class="btn btn-primary" type="submit">Suchen</button>
+${searchQ?`<a href="${buildUrl(1, filterMode, '')}" style="color:#888;font-size:12px;align-self:center">\u00d7 Reset</a>`:''}
+</form>
+<button class="btn btn-danger" onclick="sendAllUnverified()">Allen unbestaetigten senden</button>
+</div>
+<div class="filter-bar">
+<a href="${buildUrl(1,'all')}" class="${filterMode==='all'?'active':''}">Alle (${total})</a>
+<a href="${buildUrl(1,'verified')}" class="${filterMode==='verified'?'active':''}">Verifiziert</a>
+<a href="${buildUrl(1,'unverified')}" class="${filterMode==='unverified'?'active':''}">Nicht verifiziert</a>
+<a href="${buildUrl(1,'errors')}" class="${filterMode==='errors'?'active':''}">Mit Fehlern</a>
+<a href="${buildUrl(1,'no-email')}" class="${filterMode==='no-email'?'active':''}">Ohne Email</a>
+</div>
+<div class="bulk-status" id="bulk-status"></div>
+<div style="overflow-x:auto">
+<table><thead><tr><th>User</th><th>Email(s)</th><th>Verifiziert</th><th>Code</th><th>Letzter Versand</th><th>Aktion</th></tr></thead>
+<tbody>${rows || '<tr><td colspan="6" style="text-align:center;color:#666;padding:32px">Keine Eintraege</td></tr>'}</tbody></table>
+</div>
+${pagination}
+<h2>Versand-Log (letzte 20)</h2>
+<div style="overflow-x:auto">
+<table class="log-table"><thead><tr><th>Zeit</th><th>An</th><th>Betreff</th><th>Status</th></tr></thead>
+<tbody>${logRows || '<tr><td colspan="4" style="color:#666">Noch keine Logs</td></tr>'}</tbody></table>
+</div>
+<script>
+const K='${esc(query.key)}';
+function toast(msg,ok){const d=document.createElement('div');d.className='toast';d.style.background=ok?'#22c55e':'#ef4444';d.textContent=msg;document.body.appendChild(d);setTimeout(()=>d.remove(),3500);}
+async function sendOne(btn,uid){btn.disabled=true;btn.textContent='\u2026';try{const r=await fetch('/api/admin/send-confirmation',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:K,uid})});const d=await r.json();if(d.ok)toast('\u2705 Gesendet an '+d.to,true);else toast('\u274c '+(d.error||'Fehler'),false);}catch(e){toast('\u274c '+e.message,false);}finally{btn.disabled=false;btn.textContent='Senden';}}
+async function sendAllUnverified(){if(!confirm('Allen unbestaetigten Usern Bestaetigungsmail senden?'))return;const el=document.getElementById('bulk-status');el.style.display='block';el.textContent='Starte Sammelversand...';try{const r=await fetch('/api/admin/send-all-unverified',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:K})});const d=await r.json();el.textContent='Fertig: '+d.sent+' gesendet, '+d.failed+' fehlgeschlagen, '+d.skipped+' uebersprungen';toast('Sammelversand abgeschlossen',d.failed===0);}catch(e){el.textContent='Fehler: '+e.message;toast('\u274c '+e.message,false);}}
+async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)return;try{const r=await fetch('/api/admin/send-test',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:K,to})});const d=await r.json();toast(d.ok?'\u2705 Testmail gesendet':'\u274c '+(d.error||'Fehler'),d.ok);}catch(e){toast('\u274c '+e.message,false);}}
+</script></body></html>`);
+    }
+    if (path === '/api/admin/send-confirmation' && req.method === 'POST') {
+        const body = await parseBody(req);
+        if ((body.key || '') !== BRIDGE_SECRET) return json({error:'Kein Zugriff'}, 403);
+        const bd = await fetchBot('/data');
+        if (!bd) return json({error:'MainBot nicht erreichbar'}, 503);
+        const uid = String(body.uid || '');
+        const u = bd.users?.[uid];
+        if (!u) return json({error:'User nicht gefunden'}, 404);
+        const email = u.pendingEmail || u.email;
+        if (!email) return json({error:'User hat keine Email'}, 400);
+        const baseUrl = (process.env.APP_URL || ('https://' + (req.headers.host || 'web-production-7981d.up.railway.app'))).replace(/\/$/, '');
+        const token = crypto.randomBytes(24).toString('hex');
+        emailConfirmTokens.set(token, { email, uid, exp: Date.now() + EMAIL_TOKEN_TTL });
+        const confirmUrl = baseUrl + '/auth/confirm-email?token=' + encodeURIComponent(token);
+        const userName = u.spitzname || u.name || 'CreatorX User';
+        const mailHtml = `<!DOCTYPE html><html><body style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#000;color:#fff;padding:0"><div style="max-width:560px;margin:0 auto;padding:32px 24px"><div style="text-align:center;margin-bottom:24px"><img src="${baseUrl}/cx-logo-256.png" width="80" height="80" style="border-radius:18px" alt="CreatorX"></div><h1 style="font-size:26px;font-weight:700;margin:0 0 12px;text-align:center;color:#fff">Hi ${userName.replace(/[<>]/g,'')}!</h1><p style="font-size:15px;color:#a8a39a;line-height:1.6;text-align:center;margin:0 0 28px">Bestaetige deine Email-Adresse <b style="color:#fff">${email}</b> fuer deinen CreatorX-Account.</p><div style="text-align:center;margin:32px 0"><a href="${confirmUrl}" style="display:inline-block;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px">\u2705 Email bestätigen</a></div><p style="font-size:12px;color:#605c54;text-align:center;margin-top:32px;border-top:1px solid #221f1a;padding-top:20px">Link 1h gueltig \u00b7 einmalig nutzbar</p></div></body></html>`;
+        const sent = await sendEmail(email, '\u2705 Bestaetige deine CreatorX-Email', mailHtml);
+        return json(sent ? {ok:true, to:email} : {ok:false, error:'Versand fehlgeschlagen'});
+    }
+    if (path === '/api/admin/send-all-unverified' && req.method === 'POST') {
+        const body = await parseBody(req);
+        if ((body.key || '') !== BRIDGE_SECRET) return json({error:'Kein Zugriff'}, 403);
+        const bd = await fetchBot('/data');
+        if (!bd) return json({error:'MainBot nicht erreichbar'}, 503);
+        const targets = Object.entries(bd.users || {}).filter(([, u]) => u.pendingEmail || (u.email && !u.password_hash));
+        let sent = 0, failed = 0, skipped = 0;
+        const baseUrl = (process.env.APP_URL || ('https://' + (req.headers.host || 'web-production-7981d.up.railway.app'))).replace(/\/$/, '');
+        for (const [uid, u] of targets) {
+            const email = u.pendingEmail || u.email;
+            if (!email) { skipped++; continue; }
+            try {
+                const token = crypto.randomBytes(24).toString('hex');
+                emailConfirmTokens.set(token, { email, uid: String(uid), exp: Date.now() + EMAIL_TOKEN_TTL });
+                const confirmUrl = baseUrl + '/auth/confirm-email?token=' + encodeURIComponent(token);
+                const userName = u.spitzname || u.name || 'CreatorX User';
+                const mailHtml = `<!DOCTYPE html><html><body style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#000;color:#fff;padding:0"><div style="max-width:560px;margin:0 auto;padding:32px 24px"><h1 style="font-size:22px;font-weight:700;text-align:center;color:#fff">Hi ${userName.replace(/[<>]/g,'')}!</h1><p style="font-size:14px;color:#a8a39a;text-align:center;margin:16px 0">Bestaetige deine Email <b style="color:#fff">${email}</b>.</p><div style="text-align:center;margin:24px 0"><a href="${confirmUrl}" style="display:inline-block;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;padding:12px 28px;border-radius:10px;text-decoration:none;font-weight:700;font-size:14px">\u2705 Bestätigen</a></div></div></body></html>`;
+                const ok = await sendEmail(email, '\u2705 Bestaetige deine CreatorX-Email', mailHtml);
+                if (ok) sent++; else failed++;
+            } catch(_e) { failed++; }
+            await new Promise(r => setTimeout(r, 500));
+        }
+        return json({ok:true, sent, failed, skipped, total: targets.length});
+    }
+    if (path === '/api/admin/send-test' && req.method === 'POST') {
+        const body = await parseBody(req);
+        if ((body.key || '') !== BRIDGE_SECRET) return json({error:'Kein Zugriff'}, 403);
+        const to = String(body.to || '').trim();
+        if (!to || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) return json({error:'Ungueltige Email'}, 400);
+        const sent = await sendEmail(to, '\ud83e\uddea CreatorX Testmail', '<!DOCTYPE html><html><body style="margin:0;font-family:sans-serif;background:#000;color:#fff;padding:32px;text-align:center"><h1>Testmail \u2705</h1><p>Das Mailsystem funktioniert.</p><p style="color:#888;font-size:12px">Gesendet: '+new Date().toISOString()+'</p></body></html>');
+        return json(sent ? {ok:true} : {ok:false, error:'Versand fehlgeschlagen'});
+    }
+
     // ── DEBUG ──
     if (path === '/debug/test') {
+        if ((query.key || '') !== BRIDGE_SECRET) { res.writeHead(403); return res.end('Kein Zugriff'); }
         const botData = await fetchBot('/data');
         if (!botData) return json({error:'Main Bot nicht erreichbar', mainbotUrl: MAINBOT_URL});
         const userCount = Object.keys(botData.users||{}).length;
@@ -4530,6 +4846,52 @@ function submitPw(ev){
     }
 
     // ── LIKE API ──
+    // Daily XP claim (1x per day per user)
+    if (path === '/api/claim-daily-xp' && req.method === 'POST') {
+        if (!session) return json({error:'Nicht eingeloggt'}, 401);
+        const myUid = getMyUid(session);
+        const _dxAdmins = Array.isArray(_dataCache?._adminIds) ? _dataCache._adminIds.map(Number) : [];
+        if (!_dxAdmins.includes(Number(myUid)) && hasClaimed('dailyxp', myUid)) return json({ok:false, error:'Schon abgeholt! Morgen wieder.'}, 429);
+        const xpAmount = Math.floor(Math.random() * 11) + 10; // 10-20
+        markClaimed('dailyxp', myUid);
+        // Fire-and-forget: respond immediately, credit XP in background
+        postBot('/add-xp', { uid: myUid, amount: xpAmount, reason: 'daily-bonus', noRanking: true }).then(r => {
+            if (!r || !r.ok) console.log('[DailyXP] Credit failed:', myUid, r);
+        }).catch(e => console.log('[DailyXP] Credit error:', e.message));
+        return json({ok:true, xp: xpAmount});
+    }
+
+    // Daily Roulette spin (1x per day per user)
+    if (path === '/api/spin-roulette' && req.method === 'POST') {
+        if (!session) return json({error:'Nicht eingeloggt'}, 401);
+        const myUid = getMyUid(session);
+        const _rlAdmins = Array.isArray(_dataCache?._adminIds) ? _dataCache._adminIds.map(Number) : [];
+        if (!_rlAdmins.includes(Number(myUid)) && hasClaimed('roulette', myUid)) return json({ok:false, error:'Schon gedreht! Morgen wieder.'}, 429);
+        const prizes = [
+            { idx:0, label:'20 XP', weight:15, action:'/add-xp', data:{amount:20,reason:'roulette',noRanking:true} },
+            { idx:1, label:'1 Extra-Link', weight:20, action:'/add-extra-link', data:{} },
+            { idx:2, label:'20 XP', weight:15, action:'/add-xp', data:{amount:20,reason:'roulette',noRanking:true} },
+            { idx:3, label:'1 Superlink', weight:20, action:'/add-superlink', data:{} },
+            { idx:4, label:'20 XP', weight:9, action:'/add-xp', data:{amount:20,reason:'roulette',noRanking:true} },
+            { idx:5, label:'1 Diamant', weight:10, action:'/add-diamonds', data:{amount:1,reason:'roulette'} },
+            { idx:6, label:'100 XP', weight:5, action:'/add-xp', data:{amount:100,reason:'roulette',noRanking:true} },
+            { idx:7, label:'5 Diamanten', weight:4, action:'/add-diamonds', data:{amount:5,reason:'roulette'} },
+            { idx:8, label:'20 XP', weight:1, action:'/add-xp', data:{amount:20,reason:'roulette',noRanking:true} },
+            { idx:9, label:'10 Diamanten', weight:1, action:'/add-diamonds', data:{amount:10,reason:'roulette'} },
+        ];
+        const totalWeight = prizes.reduce((s,p) => s + p.weight, 0);
+        let rand = Math.random() * totalWeight;
+        let picked = prizes[0];
+        for (const p of prizes) { rand -= p.weight; if (rand <= 0) { picked = p; break; } }
+        const payload = { uid: myUid, ...picked.data };
+        markClaimed('roulette', myUid);
+        // Fire-and-forget: don't await postBot (can take 5s+ on timeout)
+        postBot(picked.action, payload).then(r => {
+            if (!r || !r.ok) console.log('[Roulette] Prize credit failed:', picked.action, myUid, r);
+        }).catch(e => console.log('[Roulette] Prize credit error:', e.message));
+        return json({ok:true, prize: picked.label, segmentIndex: picked.idx});
+    }
+
     if (path === '/api/like' && req.method === 'POST') {
         const body = await parseBody(req);
         const { msgId } = body;
@@ -9101,159 +9463,120 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
 </script>`, 'notif');
     }
 
-    // ── SUCHE ──
-    if (path === '/suche') {
-        // Vorschlaege: Top User die der User noch nicht followt
-        const me = d.users[myUid] || {};
-        const myFollowing = new Set((me.following||[]).map(String));
-        const suggested = Object.entries(d.users||{})
-            .filter(([id,u]) => !adminIds.includes(Number(id)) && id !== String(myUid) && u.started && u.inGruppe !== false && !myFollowing.has(String(id)))
-            .sort((a,b)=>(b[1].xp||0)-(a[1].xp||0))
-            .slice(0, 8);
-        const sugCardsHtml = suggested.map(([id,u])=>{
-            const grad = badgeGradient(u.role);
-            const insta = u.instagram;
-            const initial = (u.name||'?').slice(0,2).toUpperCase();
-            const pic = ladeBild(id,'profilepic')
-                ? `<img src="/appbild/${id}/profilepic" loading="lazy" alt="">`
-                : insta ? `<img src="https://unavatar.io/instagram/${htmlEsc(insta)}" loading="lazy" onerror="this.remove()" alt="">` : '';
-            return `<a href="/profil/${id}" class="suche-row" data-uid="${id}">
-              <div class="suche-avatar" style="background:${grad}">${pic}<span>${initial}</span>${isUidOnline(id)?'<i class="suche-dot"></i>':''}</div>
-              <div class="suche-info">
-                <div class="suche-name">${htmlEsc(u.spitzname||u.name||'User')}</div>
-                <div class="suche-meta">${htmlEsc(cleanRole(u.role))} · ${(u.xp||0).toLocaleString('de-DE')} XP${insta?' · @'+htmlEsc(insta):''}</div>
-              </div>
-              <button class="suche-follow js-suche-follow" data-follow-uid="${id}" onclick="event.preventDefault();event.stopPropagation();sucheFollow(this)">Folgen</button>
-            </a>`;
-        }).join('');
-        return html(`
-<style>
-.suche-bar{position:sticky;top:0;z-index:90;padding:12px 16px;background:var(--glass-bg);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);border-bottom:1px solid var(--border2)}
-.suche-input-wrap{position:relative}
-.suche-input{width:100%;background:var(--bg);border:1.5px solid var(--border2);border-radius:14px;padding:13px 44px 13px 44px;font-size:14.5px;color:var(--text);outline:none;font-family:var(--font);font-weight:500;transition:border-color .18s,box-shadow .18s}
-.suche-input:focus{border-color:rgba(167,139,250,.55);box-shadow:0 0 0 4px rgba(167,139,250,.10)}
-.suche-input-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none}
-.suche-clear{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:var(--surface-tint);border:1px solid var(--border2);width:26px;height:26px;border-radius:50%;display:none;align-items:center;justify-content:center;color:var(--muted);font-size:14px;cursor:pointer;line-height:1}
-.suche-clear.show{display:flex}
-.suche-tabs{display:flex;gap:6px;margin-top:10px;overflow-x:auto;scrollbar-width:none}
-.suche-tabs::-webkit-scrollbar{display:none}
-.suche-tab{flex-shrink:0;padding:7px 14px;border-radius:999px;font-size:12.5px;font-weight:700;color:var(--muted);background:var(--bg);border:1px solid var(--border2);cursor:pointer;-webkit-tap-highlight-color:transparent;transition:transform .12s,background .15s}
-.suche-tab:active{transform:scale(.94)}
-.suche-tab.active{background:var(--text);color:var(--bg);border-color:var(--text)}
-.suche-section-h{font-size:11px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);padding:14px 16px 6px;display:flex;align-items:center;justify-content:space-between}
-.suche-section-h .clear-recent{font-size:11px;font-weight:700;color:var(--accent);cursor:pointer;text-transform:none;letter-spacing:0}
-.suche-recent{display:flex;gap:8px;padding:0 16px 4px;flex-wrap:wrap}
-.suche-recent-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:var(--bg);border:1px solid var(--border2);border-radius:999px;font-size:12.5px;font-weight:600;color:var(--text);cursor:pointer;transition:transform .12s}
-.suche-recent-chip:active{transform:scale(.95)}
-.suche-row{display:flex;align-items:center;gap:12px;padding:12px 16px;text-decoration:none;color:inherit;transition:background .15s;border-bottom:1px solid var(--border2);position:relative}
-.suche-row:active{background:var(--surface-tint)}
-.suche-avatar{position:relative;width:50px;height:50px;border-radius:50%;flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:16px;box-shadow:0 4px 14px rgba(15,23,42,.10)}
-.suche-avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1}
-.suche-avatar span{position:absolute;z-index:0}
-.suche-dot{position:absolute;bottom:1px;right:1px;width:12px;height:12px;border-radius:50%;background:#22c55e;border:2px solid var(--bg);z-index:2;box-shadow:0 0 6px rgba(34,197,94,.5)}
-.suche-info{flex:1;min-width:0}
-.suche-name{font-size:14.5px;font-weight:700;letter-spacing:-.1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.suche-meta{font-size:11.5px;color:var(--muted);margin-top:2px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.suche-follow{flex-shrink:0;padding:7px 16px;background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;border:none;border-radius:999px;font-size:12.5px;font-weight:800;cursor:pointer;letter-spacing:.2px;box-shadow:0 4px 12px rgba(124,58,237,.25);transition:transform .12s}
-.suche-follow:active{transform:scale(.94)}
-.suche-follow.followed{background:var(--bg);color:var(--text);border:1px solid var(--border)}
-.suche-empty{padding:60px 24px;text-align:center;color:var(--muted)}
-.suche-empty-icon{font-size:54px;margin-bottom:12px;opacity:.5}
-.suche-empty-text{font-size:15px;font-weight:800;color:var(--text);margin-bottom:4px;letter-spacing:-.2px}
-.suche-empty-sub{font-size:12.5px;color:var(--muted);max-width:260px;margin:0 auto;line-height:1.5}
-</style>
-<div class="topbar"><div class="topbar-logo">Suche</div></div>
-<div class="suche-bar">
-  <div class="suche-input-wrap">
-    <svg class="suche-input-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-    <input type="text" id="search-input" class="suche-input" placeholder="User, @insta oder Link suchen…" autocomplete="off" enterkeyhint="search">
-    <button class="suche-clear" id="search-clear" onclick="searchClear()">✕</button>
+    // ── EXPLORE ──
+    // ── ADMIN DEBUG: Superlinks dieser Woche + wer wann geliked hat ──
+    if (path === '/admin/superlinks-debug') {
+        // Admin-Check: prüft sowohl activeUid (aktuell ausgewählt) als auch session.uid (Parent),
+        // damit Admins die auf einen Sub-Account gewechselt haben, die Page trotzdem öffnen können.
+        const parentUid = String(session?.uid || '');
+        const isAdmin = adminIds.includes(Number(myUid))
+            || adminIds.includes(Number(parentUid))
+            || String(d.users?.[myUid]?.role||'').includes('Admin')
+            || String(d.users?.[parentUid]?.role||'').includes('Admin');
+        if (!isAdmin) return text('Nur Admins', 403);
+        // Berlin-Wochenkey: Montag der gewählten Woche
+        const computeWeekKey = (offset = 0) => {
+            const n = new Date();
+            const dy = n.getDay() || 7;
+            const mon = new Date(n);
+            mon.setDate(n.getDate() - (dy - 1) + (offset * 7));
+            return mon.getFullYear() + '-' + String(mon.getMonth()+1).padStart(2,'0') + '-' + String(mon.getDate()).padStart(2,'0');
+        };
+        // ?week=last → letzte Woche; ?week=YYYY-MM-DD → bestimmte Woche
+        let weekKey;
+        if (query.week === 'last') weekKey = computeWeekKey(-1);
+        else if (query.week === 'current' || !query.week) weekKey = computeWeekKey(0);
+        else if (/^\d{4}-\d{2}-\d{2}$/.test(String(query.week))) weekKey = String(query.week);
+        else weekKey = computeWeekKey(0);
+        const currentWeek = computeWeekKey(0);
+        const lastWeek = computeWeekKey(-1);
+        // Verfügbare Wochen aus d.superlinks
+        const availableWeeks = [...new Set(Object.values(d.superlinks||{}).map(s => s?.week).filter(Boolean))].sort().reverse();
+
+        const weekSls = Object.values(d.superlinks||{}).filter(s => s && s.week === weekKey);
+        const posters = [...new Set(weekSls.map(s => String(s.uid)))];
+
+        // Like-Timestamps aus d.notifications[posterUid] extrahieren (icon ❤️ + actorUid match)
+        const likeTsByKey = {}; // `${posterUid}_${likerUid}` → ts (newest)
+        for (const posterUid of posters) {
+            const notifs = d.notifications?.[posterUid] || [];
+            for (const n of notifs) {
+                if (n.icon !== '❤️' || !n.actorUid) continue;
+                const key = posterUid + '_' + String(n.actorUid);
+                if (!likeTsByKey[key] || n.timestamp > likeTsByKey[key]) likeTsByKey[key] = n.timestamp;
+            }
+        }
+
+        // Last like overall
+        let lastLikeTs = 0, lastLikeBy = '', lastLikeFor = '';
+        for (const [key, ts] of Object.entries(likeTsByKey)) {
+            if (ts > lastLikeTs) {
+                lastLikeTs = ts;
+                const [pUid, lUid] = key.split('_');
+                lastLikeBy = d.users?.[lUid]?.spitzname || d.users?.[lUid]?.name || lUid;
+                lastLikeFor = d.users?.[pUid]?.spitzname || d.users?.[pUid]?.name || pUid;
+            }
+        }
+
+        const fmtTs = ts => ts ? new Date(ts).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '–';
+        const userName = uid => htmlEsc(d.users?.[uid]?.spitzname || d.users?.[uid]?.name || ('UID '+uid));
+
+        const rows = weekSls.sort((a,b)=>(b.timestamp||0)-(a.timestamp||0)).map(s => {
+            const pUid = String(s.uid);
+            const likes = Array.isArray(s.likes) ? s.likes.map(String) : [];
+            const expectedLikers = posters.filter(u => u !== pUid);
+            const missingLikers = expectedLikers.filter(u => !likes.includes(u));
+            const likeRows = likes.map(lUid => {
+                const ts = likeTsByKey[pUid + '_' + lUid];
+                return `<tr><td style="padding:5px 8px">${userName(lUid)}</td><td style="padding:5px 8px;color:var(--muted);font-size:11px">${fmtTs(ts)}</td></tr>`;
+            }).join('') || '<tr><td colspan="2" style="padding:8px;color:var(--muted);font-style:italic">Noch keine Likes</td></tr>';
+            const missingRows = missingLikers.map(lUid => `<tr><td style="padding:5px 8px;color:#ef4444">${userName(lUid)}</td></tr>`).join('') || '<tr><td style="padding:8px;color:var(--muted);font-style:italic">Alle haben geliked ✓</td></tr>';
+            return `<div style="background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:16px;margin-bottom:14px">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+    <div>
+      <div style="font-size:14px;font-weight:800">${userName(pUid)}</div>
+      <div style="font-size:11px;color:var(--muted)">Gepostet: ${fmtTs(s.timestamp)} · ID: ${htmlEsc(String(s.id||''))}</div>
+    </div>
+    <div style="font-size:12px;color:var(--muted)">${likes.length}/${expectedLikers.length} Likes</div>
   </div>
-  <div class="suche-tabs">
-    <button class="suche-tab active" data-cat="all">Alle</button>
-    <button class="suche-tab" data-cat="user">👥 User</button>
-    <button class="suche-tab" data-cat="link">🔗 Links</button>
+  <div style="font-size:12px;color:var(--text);background:var(--bg4);padding:8px 10px;border-radius:8px;margin-bottom:10px;word-break:break-all">${htmlEsc(String(s.url||''))}</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+    <div>
+      <div style="font-size:11px;color:#22c55e;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">✓ Geliked (${likes.length})</div>
+      <table style="width:100%;font-size:12px;border-collapse:collapse">${likeRows}</table>
+    </div>
+    <div>
+      <div style="font-size:11px;color:#ef4444;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">✗ Fehlt (${missingLikers.length})</div>
+      <table style="width:100%;font-size:12px;border-collapse:collapse">${missingRows}</table>
+    </div>
   </div>
-</div>
-<div id="search-results"></div>
-<div id="search-default">
-  <div id="recent-block" style="display:none">
-    <div class="suche-section-h">Zuletzt gesucht <span class="clear-recent" onclick="recentClear()">Löschen</span></div>
-    <div class="suche-recent" id="recent-chips"></div>
+</div>`;
+        }).join('');
+
+        const summary = `<div style="background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;padding:18px;border-radius:16px;margin-bottom:18px">
+  <div style="font-size:11px;letter-spacing:2px;font-weight:700;opacity:.85;text-transform:uppercase">Letzter Like</div>
+  <div style="font-size:18px;font-weight:800;margin-top:6px">${lastLikeTs ? fmtTs(lastLikeTs) : 'Noch keine Likes diese Woche'}</div>
+  ${lastLikeTs ? `<div style="font-size:12.5px;margin-top:6px;opacity:.95">${htmlEsc(lastLikeBy)} → ${htmlEsc(lastLikeFor)}'s Superlink</div>` : ''}
+  <div style="font-size:11px;margin-top:10px;opacity:.85">Woche: ${weekKey}${weekKey===currentWeek?' (aktuell)':weekKey===lastWeek?' (letzte)':''} · ${weekSls.length} Superlinks · ${posters.length} Poster</div>
+</div>`;
+
+        // Wochen-Selektor
+        const weekOptions = [
+            { key: currentWeek, label: 'Aktuelle Woche' },
+            { key: lastWeek, label: 'Letzte Woche' },
+            ...availableWeeks.filter(w => w !== currentWeek && w !== lastWeek).slice(0, 6).map(w => ({ key: w, label: 'KW ' + w.slice(5) })),
+        ];
+        const weekSelector = `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px">${weekOptions.map(w => `<a href="/admin/superlinks-debug?week=${w.key}" style="display:inline-block;padding:7px 12px;border-radius:10px;background:${w.key===weekKey?'linear-gradient(135deg,#a78bfa,#7c3aed)':'var(--bg3)'};color:${w.key===weekKey?'#fff':'var(--text)'};border:1px solid var(--border);text-decoration:none;font-size:12px;font-weight:700">${w.label}</a>`).join('')}</div>`;
+
+        return html(`<div style="padding:18px 16px;max-width:900px;margin:0 auto">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
+    <a href="/explore?tab=newsletter" style="color:var(--muted);text-decoration:none;font-size:14px">‹ zurück</a>
+    <div style="font-size:20px;font-weight:800;font-family:var(--font-display)">🔍 Superlinks-Debug</div>
   </div>
-  <div class="suche-section-h">✨ Vorgeschlagen für dich</div>
-  ${sugCardsHtml || '<div class="suche-empty"><div class="suche-empty-icon">🌟</div><div class="suche-empty-text">Du folgst schon allen</div><div class="suche-empty-sub">Tippe oben um nach jemandem zu suchen</div></div>'}
-</div>
-<script>
-let _searchCat='all', _searchTimer;
-const RECENT_KEY='cb_search_recent';
-function getRecent(){try{return JSON.parse(localStorage.getItem(RECENT_KEY)||'[]');}catch(e){return [];}}
-function pushRecent(q){q=q.trim();if(!q||q.length<2)return;let r=getRecent().filter(x=>x.toLowerCase()!==q.toLowerCase());r.unshift(q);r=r.slice(0,6);try{localStorage.setItem(RECENT_KEY,JSON.stringify(r));}catch(e){}renderRecent();}
-function recentClear(){try{localStorage.removeItem(RECENT_KEY);}catch(e){}renderRecent();}
-function renderRecent(){const r=getRecent();const block=document.getElementById('recent-block');const chips=document.getElementById('recent-chips');if(!r.length){block.style.display='none';return;}block.style.display='block';chips.innerHTML=r.map(q=>'<span class="suche-recent-chip" onclick="document.getElementById(\\'search-input\\').value=\\''+q.replace(/'/g,'')+'\\';doSearch();">'+q.replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]))+'</span>').join('');}
-async function sucheFollow(btn){
-  const uid=btn.dataset.followUid;
-  if(btn._busy)return;btn._busy=true;
-  const orig=btn.textContent;btn.textContent='…';btn.disabled=true;
-  try{
-    const r=await fetch('/api/follow',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({uid})});
-    const d=await r.json();
-    if(d.ok){btn.textContent='✓ Folge';btn.classList.add('followed');}
-    else{btn.textContent=orig;btn.disabled=false;alert(d.error||'Fehler');}
-  }catch(e){btn.textContent=orig;btn.disabled=false;alert('Netzwerk: '+e.message);}
-  finally{btn._busy=false;}
-}
-function searchClear(){const i=document.getElementById('search-input');i.value='';doSearch();i.focus();}
-function escTxt(s){return String(s||'').replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));}
-async function doSearch(){
-  const q=document.getElementById('search-input').value;
-  const clearBtn=document.getElementById('search-clear');
-  clearBtn.classList.toggle('show',!!q.trim());
-  const def=document.getElementById('search-default');
-  const results=document.getElementById('search-results');
-  if(!q.trim()){results.innerHTML='';def.style.display='block';return;}
-  def.style.display='none';
-  results.innerHTML='<div class="suche-empty"><div class="suche-empty-icon">⏳</div><div class="suche-empty-text">Sucht…</div></div>';
-  clearTimeout(_searchTimer);
-  _searchTimer=setTimeout(async()=>{
-    try{
-      const res=await fetch('/api/search?q='+encodeURIComponent(q));
-      const data=await res.json();
-      let html='';
-      const showUsers=_searchCat==='all'||_searchCat==='user';
-      const showLinks=_searchCat==='all'||_searchCat==='link';
-      if(showUsers && data.users.length){
-        html+='<div class="suche-section-h">👥 User · '+data.users.length+'</div>';
-        html+=data.users.map(u=>{
-          const initial=(u.name||'?').slice(0,2).toUpperCase();
-          const pic=u.pic?'<img src="'+u.pic+'" loading="lazy" alt="">':'';
-          return '<a href="/profil/'+u.id+'" class="suche-row">'
-            +'<div class="suche-avatar" style="background:linear-gradient(135deg,#a78bfa,#7c3aed)">'+pic+'<span>'+escTxt(initial)+'</span></div>'
-            +'<div class="suche-info"><div class="suche-name">'+escTxt(u.spitzname||u.name||'?')+'</div><div class="suche-meta">'+escTxt(u.role||'')+' · '+(u.xp||0).toLocaleString('de-DE')+' XP'+(u.instagram?' · @'+escTxt(u.instagram):'')+'</div></div>'
-            +'<button class="suche-follow js-suche-follow" data-follow-uid="'+u.id+'" onclick="event.preventDefault();event.stopPropagation();sucheFollow(this)">Folgen</button>'
-            +'</a>';
-        }).join('');
-      }
-      if(showLinks && data.links && data.links.length){
-        html+='<div class="suche-section-h">🔗 Links · '+data.links.length+'</div>';
-        html+=data.links.map(l=>{
-          return '<a href="'+escTxt(l.text)+'" target="_blank" class="suche-row" style="border-bottom:1px solid var(--border2)">'
-            +'<div class="suche-avatar" style="background:linear-gradient(135deg,#ff6b6b,#ffa500);font-size:18px"><span>🔗</span></div>'
-            +'<div class="suche-info"><div class="suche-name" style="font-size:13px;color:#4dabf7">'+escTxt(l.text.replace('https://www.instagram.com/','ig.com/').slice(0,46))+'</div><div class="suche-meta">'+escTxt(l.user_name||'')+' · ❤️ '+(l.likes||0)+'</div></div>'
-            +'</a>';
-        }).join('');
-      }
-      if(!html) html='<div class="suche-empty"><div class="suche-empty-icon">🔍</div><div class="suche-empty-text">Nichts gefunden</div><div class="suche-empty-sub">Versuche es mit Name, @instagram oder Link-URL</div></div>';
-      results.innerHTML=html;
-      pushRecent(q);
-    }catch(e){results.innerHTML='<div class="suche-empty"><div class="suche-empty-icon">⚠️</div><div class="suche-empty-text">Fehler beim Suchen</div></div>';}
-  },280);
-}
-document.getElementById('search-input').addEventListener('input',doSearch);
-document.querySelectorAll('.suche-tab').forEach(t=>t.addEventListener('click',e=>{document.querySelectorAll('.suche-tab').forEach(x=>x.classList.remove('active'));t.classList.add('active');_searchCat=t.dataset.cat;doSearch();}));
-renderRecent();
-setTimeout(()=>document.getElementById('search-input').focus(),100);
-</script>`, 'search');
+  ${weekSelector}
+  ${summary}
+  ${rows || '<div style="padding:32px;text-align:center;color:var(--muted)">Keine Superlinks in dieser Woche</div>'}
+</div>`, 'explore');
     }
 
     // ── EXPLORE ──
@@ -9931,7 +10254,16 @@ window.sugDismiss = function(btn){
                 // ── MINDSET STORIES CARD ──
                 const ms = d.mindsetStories || { weeklyState:{}, waitlist:{}, rejected:{}, done:{} };
                 const myInsta = d.users?.[myUid]?.instagram;
-                const myMsStatus = ms.weeklyState?.pickedUid === myUid ? 'picked' :
+                // Aktuelle Berlin-Woche (Montag).
+                const _msNow = new Date();
+                const _msDay = _msNow.getDay() || 7;
+                const _msMon = new Date(_msNow);
+                _msMon.setDate(_msNow.getDate() - (_msDay - 1));
+                const msCurrentWeek = _msMon.getFullYear() + '-' + String(_msMon.getMonth()+1).padStart(2,'0') + '-' + String(_msMon.getDate()).padStart(2,'0');
+                // weeklyState ist nur aktuell wenn week === msCurrentWeek — sonst stale aus letzter Woche.
+                const msStateIsCurrent = ms.weeklyState?.week === msCurrentWeek;
+                const msCurrentPickedUid = msStateIsCurrent ? ms.weeklyState?.pickedUid : null;
+                const myMsStatus = msCurrentPickedUid === myUid ? 'picked' :
                     ms.done?.[myUid] ? 'done' :
                     ms.waitlist?.[myUid] ? 'yes' :
                     ms.rejected?.[myUid] ? 'no' : 'none';
@@ -9940,7 +10272,7 @@ window.sugDismiss = function(btn){
                 const _berH = new Date().getHours();
                 const _berM = new Date().getMinutes();
                 const msLocked = _berDow === 0 || (_berDow === 6 && _berH >= 23 && _berM >= 59);
-                const msPickedName = ms.weeklyState?.pickedUid ? htmlEsc(d.users?.[ms.weeklyState.pickedUid]?.spitzname || d.users?.[ms.weeklyState.pickedUid]?.name || '?') : '';
+                const msPickedName = msCurrentPickedUid ? htmlEsc(d.users?.[msCurrentPickedUid]?.spitzname || d.users?.[msCurrentPickedUid]?.name || '?') : '';
 
                 let mindsetUserCard = '';
                 if (myMsStatus === 'picked') {
@@ -9959,13 +10291,13 @@ window.sugDismiss = function(btn){
                     mindsetUserCard = `<div style="margin:0 16px 16px;padding:16px;background:var(--bg3);border:1px solid var(--border2);border-radius:16px">
   <div style="font-size:11px;font-weight:700;letter-spacing:1.5px;color:#f59e0b;text-transform:uppercase">📖 Mindset Stories</div>
   <div style="font-size:14px;font-weight:700;margin-top:6px">Setz erst deinen Insta-Username</div>
-  <div style="font-size:12.5px;color:var(--muted);margin-top:6px;line-height:1.5">Jede Woche stelle ich 1 User auf <b>@mindset.stories_</b> vor. Trag deinen Insta-Username in den <a href="/einstellungen" style="color:#4dabf7">Einstellungen</a> ein, um mitzumachen.</div>
+  <div style="font-size:12.5px;color:var(--muted);margin-top:6px;line-height:1.5">Jede Woche stelle ich 1 User auf meinem Profil <b>@mindset.stories_</b> vor. <b>Ziel:</b> die Community pushen und gemeinsam mehr Reichweite generieren. Trag deinen Insta-Username in den <a href="/einstellungen" style="color:#4dabf7">Einstellungen</a> ein, um mitzumachen.</div>
 </div>`;
                 } else {
                     const headerLabel = myMsStatus === 'yes' ? '✅ Du bist auf der Liste' : myMsStatus === 'no' ? '❌ Du bist nicht dabei' : '📖 Mindset Stories';
                     const headerColor = myMsStatus === 'yes' ? '#22c55e' : myMsStatus === 'no' ? '#94a3b8' : '#a78bfa';
                     const bodyText = myMsStatus === 'none'
-                        ? 'Jede Woche stelle ich <b>1 User</b> in meinen Mindset Stories auf <b>@mindset.stories_</b> vor. Lust dabei zu sein? Trag dich ein, ich pick zufällig.'
+                        ? 'Jede Woche stelle ich <b>1 User</b> auf meinem Profil <b>@mindset.stories_</b> in den Mindset Stories vor. <b>Ziel:</b> die Community pushen und gemeinsam mehr Reichweite generieren. Lust dabei zu sein? Trag dich ein, ich pick zufällig.'
                         : myMsStatus === 'yes'
                         ? 'Du stehst auf der Warteliste. Sonntag 20:00 wird zufällig gepickt — Daumen drücken!'
                         : 'Du hast Nein gesagt. Kannst du jederzeit ändern (bis Samstag 23:59).';
@@ -10009,9 +10341,9 @@ window.sugDismiss = function(btn){
   <button onclick="msAdminRestore('${uid}','${htmlEsc(v.name||'?')}')" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:3px 8px;font-size:10.5px;cursor:pointer">↩ Zurück</button>
 </div>`).join('')
                         : '<div style="padding:14px;text-align:center;color:var(--muted);font-size:12.5px">Noch keine vorgestellten User</div>';
-                    const currentPickHtml = ms.weeklyState?.pickedUid
+                    const currentPickHtml = msCurrentPickedUid
                         ? `<div style="padding:12px;background:linear-gradient(135deg,rgba(245,158,11,0.15),rgba(236,72,153,0.1));border:1px solid rgba(245,158,11,0.3);border-radius:12px;margin-bottom:10px"><div style="font-size:11px;color:#f59e0b;font-weight:700;letter-spacing:1px;text-transform:uppercase">⭐ Diese Woche</div><div style="font-size:14px;font-weight:800;margin-top:4px">${msPickedName}</div></div>`
-                        : ms.weeklyState?.skipped
+                        : (msStateIsCurrent && ms.weeklyState?.skipped)
                         ? '<div style="padding:10px;background:var(--bg4);border-radius:10px;margin-bottom:10px;font-size:12.5px;color:var(--muted);text-align:center">Diese Woche übersprungen</div>'
                         : '<div style="padding:10px;background:var(--bg4);border-radius:10px;margin-bottom:10px;font-size:12.5px;color:var(--muted);text-align:center">Noch nicht gepickt (Sonntag 20:00)</div>';
                     mindsetAdminCard = `<div style="margin:0 16px 16px;padding:18px;background:var(--bg3);border:1px solid var(--border2);border-radius:16px">
@@ -10090,7 +10422,238 @@ async function msAdminBlast(){if(!confirm('Initial-DM an alle Insta-User die noc
 async function msAdminRestore(uid,name){if(!confirm(name+' zurück auf die Warteliste verschieben?'))return;const el=document.getElementById('ms-admin-result');if(el){el.textContent='…';el.style.color='var(--muted)';}const r=await fetch('/api/mindset-admin/restore',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({targetUid:uid})});const d=await r.json();if(d.ok){if(el){el.textContent='↩ Zurück auf Liste';el.style.color='#22c55e';}setTimeout(()=>location.reload(),500);}else{if(el){el.textContent='❌ '+(d.error||'Fehler');el.style.color='#ef4444';}}}
 `:''}
 </script>`;
-            })()
+            })(),
+            gewinnspiel: (()=>{
+                const myXpThisWeek = myUser.xpThisWeek || myUser.weeklyXp || 0;
+                const threshold = 750;
+                const qualified = myXpThisWeek >= threshold;
+                const nextSunday = (()=>{ const n=new Date(); const d=n.getDay(); const diff=d===0?0:7-d; const s=new Date(n); s.setDate(n.getDate()+diff); s.setHours(20,0,0,0); return s; })();
+                const timeLeft = Math.max(0, nextSunday.getTime() - Date.now());
+                const hoursLeft = Math.floor(timeLeft / 3600000);
+                const prizes = ['🔗 1 Extra-Link','⚡ 1 Superlink','✨ 500 XP','💎 5 Diamanten'];
+                return `
+<div style="padding:16px">
+  <div style="background:linear-gradient(135deg,rgba(245,158,11,0.1),rgba(239,68,68,0.05));border:1px solid rgba(245,158,11,0.3);border-radius:20px;padding:24px 20px;text-align:center;margin-bottom:16px">
+    <div style="font-size:42px;margin-bottom:12px">🎰</div>
+    <h2 style="font-size:20px;font-weight:800;margin:0 0 6px;letter-spacing:-0.3px">Wöchentliches Gewinnspiel</h2>
+    <div style="font-size:13px;color:var(--muted);line-height:1.5">Sammle <b style="color:var(--text)">${threshold} XP</b> diese Woche und nimm automatisch teil!</div>
+    <div style="margin:16px 0;padding:14px;background:rgba(255,255,255,0.04);border-radius:12px;border:1px solid var(--border2)">
+      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Dein Fortschritt</div>
+      <div style="font-size:28px;font-weight:800;color:${qualified?'#22c55e':'var(--text)'}">${myXpThisWeek} <span style="font-size:14px;color:var(--muted)">/ ${threshold} XP</span></div>
+      <div style="margin-top:10px;height:8px;background:rgba(255,255,255,0.06);border-radius:99px;overflow:hidden">
+        <div style="height:100%;width:${Math.min(100,Math.round(myXpThisWeek/threshold*100))}%;background:${qualified?'linear-gradient(90deg,#22c55e,#4ade80)':'linear-gradient(90deg,#f59e0b,#ef4444)'};border-radius:99px;transition:width 0.5s"></div>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-top:8px">${qualified?'✅ Du nimmst teil!':'Noch '+(threshold-myXpThisWeek)+' XP bis zur Teilnahme'}</div>
+    </div>
+    <div style="font-size:12px;color:var(--muted)">⏰ Ziehung: Sonntag 20:00 Uhr · noch ~${hoursLeft}h</div>
+  </div>
+  <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:16px;padding:18px">
+    <div style="font-size:13px;font-weight:700;margin-bottom:12px">🎁 Mögliche Gewinne</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      ${prizes.map(p=>'<div style="padding:12px;background:rgba(255,255,255,0.03);border:1px solid var(--border2);border-radius:10px;font-size:12px;font-weight:600;text-align:center">'+p+'</div>').join('')}
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-top:12px;text-align:center">Gewinn wird zufällig vom System gewählt. 1 Gewinner pro Woche.</div>
+  </div>
+  <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:16px;padding:18px;margin-top:12px">
+    <div style="font-size:13px;font-weight:700;margin-bottom:8px">📋 So funktioniert's</div>
+    <div style="font-size:12px;color:var(--muted);line-height:1.7">
+      1. Sammle mindestens <b style="color:var(--text)">750 XP</b> in einer Woche<br>
+      2. Du nimmst automatisch am Gewinnspiel teil<br>
+      3. Jeden <b style="color:var(--text)">Sonntag um 20:00 Uhr</b> wird gezogen<br>
+      4. Der Gewinn wird dir automatisch gutgeschrieben
+    </div>
+  </div>
+</div>`;
+            })(),
+            roulette: `
+<style>
+.rl-wrap{padding:16px;text-align:center}
+.rl-card{background:linear-gradient(135deg,rgba(239,68,68,0.08),rgba(245,158,11,0.05));border:1px solid rgba(239,68,68,0.3);border-radius:20px;padding:24px 16px;margin-bottom:16px}
+.rl-wheel{position:relative;width:280px;height:280px;margin:20px auto;-webkit-user-select:none;user-select:none}
+.rl-wheel canvas{width:100%;height:100%;border-radius:50%;box-shadow:0 0 0 6px rgba(239,68,68,0.4),0 12px 40px rgba(0,0,0,0.4)}
+.rl-pointer{position:absolute;top:-12px;left:50%;transform:translateX(-50%);font-size:28px;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5));z-index:2}
+.rl-btn{margin-top:20px;padding:16px 40px;background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;border:none;border-radius:14px;font-size:16px;font-weight:800;cursor:pointer;box-shadow:0 8px 24px rgba(239,68,68,0.4);transition:transform .12s}
+.rl-btn:active{transform:scale(0.95)}
+.rl-btn:disabled{opacity:0.5;cursor:not-allowed;transform:none}
+.rl-result{margin-top:16px;padding:16px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);border-radius:14px;font-size:15px;font-weight:700;color:#4ade80;display:none}
+.rl-cooldown{font-size:12px;color:var(--muted);margin-top:10px}
+@keyframes rl-jackpot{0%{transform:scale(1)}25%{transform:scale(1.15) rotate(-2deg)}50%{transform:scale(1.1) rotate(2deg)}75%{transform:scale(1.15) rotate(-1deg)}100%{transform:scale(1)}}
+@keyframes rl-confetti{0%{opacity:1;transform:translateY(0) rotate(0)}100%{opacity:0;transform:translateY(-60px) rotate(720deg)}}
+@keyframes rl-glow{0%,100%{box-shadow:0 0 20px rgba(34,197,94,0.3)}50%{box-shadow:0 0 40px rgba(34,197,94,0.7),0 0 80px rgba(34,197,94,0.3)}}
+.rl-result.jackpot{animation:rl-jackpot 0.6s ease,rl-glow 1.5s ease infinite;font-size:18px}
+.rl-confetti-wrap{position:fixed;inset:0;pointer-events:none;z-index:9999;overflow:hidden}
+.rl-confetti-piece{position:absolute;width:10px;height:10px;border-radius:2px;animation:rl-fall 2.5s ease-out forwards}
+@keyframes rl-fall{0%{opacity:1;transform:translateY(-20px) rotate(0) scale(1)}100%{opacity:0;transform:translateY(100vh) rotate(720deg) scale(0.5)}}
+</style>
+<div class="rl-wrap">
+<div class="rl-card">
+  <div style="font-size:36px;margin-bottom:8px">🎡</div>
+  <h2 style="font-size:20px;font-weight:800;margin:0 0 6px">Tägliches Roulette</h2>
+  <div style="font-size:13px;color:var(--muted)">Drehe einmal pro Tag und gewinne einen Preis!</div>
+</div>
+<div class="rl-wheel">
+  <div class="rl-pointer">🔻</div>
+  <canvas id="rl-canvas" width="560" height="560"></canvas>
+</div>
+<button class="rl-btn" id="rl-spin-btn" onclick="spinRoulette()">🎡 Drehen!</button>
+<div class="rl-result" id="rl-result"></div>
+<div class="rl-cooldown" id="rl-cooldown"></div>
+</div>
+<script>
+(function(){
+const segments=[
+  {label:'20 XP',color:'#f59e0b',text:'#000',emoji:'✨'},
+  {label:'Extra-Link',color:'#3b82f6',text:'#fff',emoji:'🔗'},
+  {label:'20 XP',color:'#d97706',text:'#000',emoji:'✨'},
+  {label:'Superlink',color:'#8b5cf6',text:'#fff',emoji:'⚡'},
+  {label:'20 XP',color:'#f59e0b',text:'#000',emoji:'✨'},
+  {label:'1 Diamant',color:'#06b6d4',text:'#fff',emoji:'💎'},
+  {label:'100 XP',color:'#22c55e',text:'#fff',emoji:'🔥'},
+  {label:'5 Diamanten',color:'#ec4899',text:'#fff',emoji:'💎'},
+  {label:'20 XP',color:'#d97706',text:'#000',emoji:'✨'},
+  {label:'10 Diamanten',color:'#ef4444',text:'#fff',emoji:'👑'},
+];
+const N=segments.length;
+const canvas=document.getElementById('rl-canvas');
+const ctx=canvas.getContext('2d');
+const W=560,cx=W/2,cy=W/2,R=250,IR=40;
+let rotation=0;
+
+const AudioCtx=window.AudioContext||window.webkitAudioContext;
+let audioCtx;
+function ensureAudio(){if(!audioCtx)try{audioCtx=new AudioCtx();}catch(e){}}
+function playTick(){
+  if(!audioCtx)return;
+  const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+  o.connect(g);g.connect(audioCtx.destination);
+  o.frequency.value=600+Math.random()*600;o.type='sine';
+  g.gain.setValueAtTime(0.06,audioCtx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.04);
+  o.start();o.stop(audioCtx.currentTime+0.04);
+}
+function playWin(big){
+  if(!audioCtx)return;
+  const notes=big?[440,554,659,880]:[523,659,784];
+  notes.forEach((f,i)=>{setTimeout(()=>{
+    const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+    o.connect(g);g.connect(audioCtx.destination);
+    o.frequency.value=f;o.type=big?'square':'triangle';
+    g.gain.setValueAtTime(0.12,audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.4);
+    o.start();o.stop(audioCtx.currentTime+0.4);
+  },i*150);});
+}
+function showConfetti(count){
+  const wrap=document.createElement('div');wrap.className='rl-confetti-wrap';document.body.appendChild(wrap);
+  const colors=['#ef4444','#f59e0b','#22c55e','#3b82f6','#8b5cf6','#ec4899','#fbbf24','#4ade80','#fff'];
+  for(let i=0;i<(count||50);i++){
+    const p=document.createElement('div');p.className='rl-confetti-piece';
+    p.style.left=(10+Math.random()*80)+'%';p.style.top='-10px';
+    p.style.background=colors[i%colors.length];
+    p.style.animationDelay=(Math.random()*1)+'s';
+    p.style.animationDuration=(2.5+Math.random()*2)+'s';
+    p.style.width=(5+Math.random()*10)+'px';
+    p.style.height=(5+Math.random()*10)+'px';
+    p.style.borderRadius=Math.random()>0.5?'50%':'2px';
+    wrap.appendChild(p);
+  }
+  setTimeout(()=>wrap.remove(),5000);
+}
+
+function drawWheel(angle){
+  ctx.clearRect(0,0,W,W);
+  const arc=2*Math.PI/N;
+  // Outer ring
+  ctx.beginPath();ctx.arc(cx,cy,R+8,0,2*Math.PI);
+  ctx.fillStyle='#1a1a1a';ctx.fill();
+  ctx.strokeStyle='rgba(255,255,255,0.1)';ctx.lineWidth=2;ctx.stroke();
+  // Segments
+  for(let i=0;i<N;i++){
+    const a=angle-Math.PI/2+i*arc;
+    ctx.beginPath();ctx.moveTo(cx,cy);ctx.arc(cx,cy,R,a,a+arc);ctx.closePath();
+    const grad=ctx.createRadialGradient(cx,cy,IR,cx,cy,R);
+    grad.addColorStop(0,segments[i].color+'cc');grad.addColorStop(1,segments[i].color);
+    ctx.fillStyle=grad;ctx.fill();
+    ctx.strokeStyle='rgba(0,0,0,0.3)';ctx.lineWidth=1.5;ctx.stroke();
+    // Label
+    ctx.save();ctx.translate(cx,cy);ctx.rotate(a+arc/2);
+    ctx.fillStyle=segments[i].text;
+    ctx.font='bold 11px Inter,system-ui,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(segments[i].emoji,R*0.72,0);
+    ctx.font='bold 10px Inter,system-ui,sans-serif';
+    ctx.fillText(segments[i].label,R*0.52,0);
+    ctx.restore();
+  }
+  // Pegs on outer edge
+  for(let i=0;i<N;i++){
+    const a=angle-Math.PI/2+i*arc;
+    const px=cx+Math.cos(a)*(R-2),py=cy+Math.sin(a)*(R-2);
+    ctx.beginPath();ctx.arc(px,py,4,0,2*Math.PI);ctx.fillStyle='#fff';ctx.fill();
+    ctx.strokeStyle='rgba(0,0,0,0.3)';ctx.lineWidth=1;ctx.stroke();
+  }
+  // Center hub
+  ctx.beginPath();ctx.arc(cx,cy,IR,0,2*Math.PI);
+  const cGrad=ctx.createRadialGradient(cx,cy,0,cx,cy,IR);
+  cGrad.addColorStop(0,'#333');cGrad.addColorStop(1,'#111');
+  ctx.fillStyle=cGrad;ctx.fill();
+  ctx.strokeStyle='rgba(255,255,255,0.2)';ctx.lineWidth=3;ctx.stroke();
+  ctx.fillStyle='#fff';ctx.font='bold 13px system-ui,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText('DREH',cx,cy-6);ctx.font='10px system-ui';ctx.fillStyle='#aaa';ctx.fillText('MICH',cx,cy+8);
+}
+drawWheel(0);
+
+window.spinRoulette=async function(){
+  const btn=document.getElementById('rl-spin-btn');
+  const result=document.getElementById('rl-result');
+  btn.disabled=true;result.style.display='none';result.classList.remove('jackpot');
+  ensureAudio();
+  try{
+    const res=await fetch('/api/spin-roulette',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+    const txt=await res.text();
+    let data;try{data=JSON.parse(txt);}catch(pe){result.style.display='block';result.style.color='#f87171';result.textContent='Server-Fehler ('+res.status+')';btn.disabled=false;return;}
+    if(!data.ok){result.style.display='block';result.style.background='rgba(239,68,68,0.1)';result.style.borderColor='rgba(239,68,68,0.3)';result.style.color='#f87171';result.textContent=data.error||'Fehler ('+res.status+')';btn.disabled=false;return;}
+    const idx=data.segmentIndex;
+    const arc=2*Math.PI/N;
+    // Pointer is at top (angle -PI/2 in drawWheel). We rotate CW.
+    // To land on segment idx: center of segment idx must align with top.
+    // Segment i center is at i*arc. We need total rotation so that idx*arc+arc/2 is at top.
+    const segCenter=idx*arc+arc/2;
+    const fullSpins=7;
+    const targetRotation=fullSpins*2*Math.PI+(2*Math.PI-segCenter);
+    const duration=5500;
+    let startTs=null,lastTickSeg=-1;
+    function animate(ts){
+      if(!startTs)startTs=ts;
+      const elapsed=ts-startTs;
+      const progress=Math.min(elapsed/duration,1);
+      // Cubic ease-out for natural deceleration
+      const eased=1-Math.pow(1-progress,3);
+      rotation=targetRotation*eased;
+      drawWheel(rotation);
+      // Tick on peg crossings
+      const curSeg=Math.floor((rotation%(2*Math.PI))/arc);
+      if(curSeg!==lastTickSeg){lastTickSeg=curSeg;if(progress>0.05&&progress<0.92)playTick();}
+      if(progress<1){requestAnimationFrame(animate);}
+      else{
+        const isBig=idx===9||idx===7||idx===6;
+        setTimeout(()=>{
+          playWin(isBig);
+          showConfetti(isBig?60:25);
+          result.style.display='block';
+          result.style.background=isBig?'rgba(239,68,68,0.12)':'rgba(34,197,94,0.1)';
+          result.style.borderColor=isBig?'rgba(239,68,68,0.4)':'rgba(34,197,94,0.3)';
+          result.style.color=isBig?'#fbbf24':'#4ade80';
+          if(isBig){result.classList.add('jackpot');result.innerHTML='<div style="font-size:24px;margin-bottom:4px">🏆</div>JACKPOT! '+data.prize;}
+          else{result.innerHTML='<div style="font-size:20px;margin-bottom:4px">🎉</div>Gewonnen: '+data.prize;}
+          btn.textContent='Morgen wieder! 🎡';
+        },300);
+      }
+    }
+    requestAnimationFrame(animate);
+  }catch(e){result.style.display='block';result.style.color='#f87171';result.textContent='Fehler: '+e.message;btn.disabled=false;}
+};
+})();
+<\/script>`
         };
 
         const tabs = [
@@ -10100,6 +10663,8 @@ async function msAdminRestore(uid,name){if(!confirm(name+' zurück auf die Warte
             {id:'tipps',     emoji:'💡', label:'Tipps',     c1:'#22c55e', c2:'#15803d', shadow:'rgba(34,197,94,0.45)'},
             {id:'regeln',    emoji:'📋', label:'Regeln',    c1:'#94a3b8', c2:'#475569', shadow:'rgba(148,163,184,0.45)'},
             {id:'shop',      emoji:'💎', label:'Shop',      c1:'#ec4899', c2:'#a21caf', shadow:'rgba(236,72,153,0.45)'},
+            {id:'gewinnspiel',emoji:'🎰',label:'Gewinn',    c1:'#f59e0b', c2:'#ef4444', shadow:'rgba(245,158,11,0.45)'},
+            {id:'roulette',  emoji:'🎡', label:'Roulette',  c1:'#ef4444', c2:'#dc2626', shadow:'rgba(239,68,68,0.45)'},
         ];
 
         return html(`
@@ -10309,7 +10874,7 @@ ${rest.map(([id,u],idx)=>{
             +'</div>'
             +'<div style="background:var(--bg3);border-radius:14px;padding:14px 16px">'
             +'<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Status</div>'
-            +'<div style="display:inline-flex;align-items:center;padding:4px 12px;border-radius:20px;background:'+badgeGradient(myUser?.role)+';color:#fff;font-size:12px;font-weight:700">'+( myUser?.role||'🆕 New')+'</div>'
+            +'<div style="display:inline-flex;align-items:center;padding:4px 12px;border-radius:20px;background:'+badgeGradient(myUser?.role || (_myIsAdmin?'Admin':''))+';color:#fff;font-size:12px;font-weight:700">'+(myUser?.role || (_myIsAdmin?'👑 Admin':'🆕 New'))+'</div>'
             +(myUser?.trophies&&myUser.trophies.length?'<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px">'+myUser.trophies.map(t=>'<span style="font-size:22px;background:var(--bg4);border-radius:8px;padding:4px 8px">'+t+'</span>').join('')+'</div>':'')
             +'</div>'
             +(()=>{
@@ -10348,11 +10913,21 @@ ${rest.map(([id,u],idx)=>{
     </a>
     ${_myIsAdmin ? `<a href="${process.env.ADMIN_DASHBOARD_URL || 'https://dashboard-production-bda4.up.railway.app/dashboard'}" target="_blank" rel="noopener" class="icon-btn" title="Admin-Dashboard" style="background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;border-color:rgba(167,139,250,0.5)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="18" height="18"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+    </a><a href="/admin/emails?key=" class="icon-btn" title="Email Dashboard" style="background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border-color:rgba(34,197,94,0.5)" onclick="event.preventDefault();location.href='/admin/emails?key='+prompt('Bridge Secret:')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="18" height="18"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 4l-10 8L2 4"/></svg>
     </a>` : ''}
     <a href="/einstellungen" class="icon-btn">⚙️</a>
   </div>
 </div>
 ${profileCard(myUid, myUser, d, true, lang, adminIds, myBannerData, myPicData)}
+<div id="daily-xp-box" style="margin:10px 12px;background:linear-gradient(135deg,rgba(34,197,94,0.08),rgba(34,197,94,0.02));border:1px solid rgba(34,197,94,0.25);border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:12px">
+  <div style="font-size:28px">🎁</div>
+  <div style="flex:1;min-width:0">
+    <div style="font-size:13px;font-weight:700">Täglicher XP-Bonus</div>
+    <div style="font-size:11px;color:var(--muted);margin-top:2px">Hol dir 10–20 Gratis-XP — einmal pro Tag!</div>
+  </div>
+  <button id="daily-xp-btn" onclick="claimDailyXP()" style="flex-shrink:0;padding:9px 16px;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(34,197,94,0.3);transition:transform .12s">Abholen</button>
+</div>
 <div class="acc-switcher" style="margin:8px 12px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:6px">
   <div class="acc-row${isParentActive?' active':''}" onclick="switchAcc('${parentUid}')" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;cursor:pointer;transition:background 0.15s">
     <div style="width:36px;height:36px;border-radius:50%;overflow:hidden;background:linear-gradient(135deg,#a78bfa,#7c3aed);display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;flex-shrink:0">
@@ -10393,6 +10968,24 @@ ${profileCard(myUid, myUser, d, true, lang, adminIds, myBannerData, myPicData)}
   </div>
 </div>
 <script>
+async function claimDailyXP(){
+  var btn=document.getElementById('daily-xp-btn');
+  btn.disabled=true;btn.textContent='...';
+  try{
+    var r=await fetch('/api/claim-daily-xp',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+    var _t=await r.text();var d;try{d=JSON.parse(_t);}catch(_pe){btn.textContent='Fehler ('+r.status+')';return;}
+    if(d.ok){
+      btn.textContent='✅ +'+d.xp+' XP';btn.style.background='#333';
+      // Update XP display on profile immediately
+      var xpEls=document.querySelectorAll('[data-xp-value]');
+      xpEls.forEach(function(el){var cur=parseInt(el.textContent.replace(/\D/g,''))||0;el.textContent=(cur+d.xp).toLocaleString('de-DE');});
+      var statEls=document.querySelectorAll('.stat-value, .xp-num, .profile-xp');
+      statEls.forEach(function(el){if(el.textContent.includes('XP')){var m=el.textContent.match(/[\d.]+/);if(m){var cur=parseInt(m[0].replace(/\./g,''))||0;el.textContent=el.textContent.replace(m[0],(cur+d.xp).toLocaleString('de-DE'));}}});
+      setTimeout(function(){btn.textContent='Erledigt ✓';},1500);
+    }
+    else{btn.textContent=d.error||'Fehler';setTimeout(function(){btn.textContent='Abholen';btn.disabled=false;},2500);}
+  }catch(e){btn.textContent='Fehler';setTimeout(function(){btn.textContent='Abholen';btn.disabled=false;},2500);}
+}
 async function switchAcc(uid){
   try {
     const r = await fetch('/api/switch-account',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({uid})});
