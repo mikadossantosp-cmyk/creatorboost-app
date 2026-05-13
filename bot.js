@@ -6976,6 +6976,21 @@ p{line-height:1.65;color:var(--muted)}
         return json(result || {ok:false, error:'Mainbot offline'});
     }
 
+    if (path === '/api/admin/funnel-debug' && req.method === 'GET') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
+        const result = await fetchBotRaw('/admin-funnel-debug-api');
+        return json(result || {ok:false, error:'Mainbot offline'});
+    }
+
+    if (path === '/api/admin/funnel-test' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
+        const body = await parseBody(req);
+        const result = await postBot('/admin-funnel-test-api', { event: String(body.event||'admin-test') });
+        return json(result || {ok:false, error:'Mainbot offline'});
+    }
+
     if (path === '/api/admin/ban' && req.method === 'POST') {
         if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
         if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
@@ -10290,6 +10305,7 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
       </div>
       <div class="dash-top-actions">
         <button class="dash-btn dash-btn-ghost" onclick="runMissionBackfill()">🔁 Backfill</button>
+        <button class="dash-btn" onclick="openFunnelDebug()">🔬 Funnel Debug</button>
         <button class="dash-btn dash-btn-primary" onclick="openBroadcastModal()">📢 Broadcast DM</button>
       </div>
     </div>
@@ -10581,6 +10597,46 @@ async function banUser(uid, ban) {
   const j = await r.json().catch(()=>({}));
   if (j.ok) { alert(ban?'🚫 Gebannt':'✅ Entbannt'); refreshUsers(); document.querySelectorAll('.dash-modal-bg').forEach(m=>m.remove()); }
   else alert('❌ '+(j.error||'Fehler'));
+}
+async function openFunnelDebug() {
+  const r = await fetch('/api/admin/funnel-debug');
+  const j = await r.json().catch(()=>({}));
+  const bg = document.createElement('div');
+  bg.className = 'dash-modal-bg';
+  bg.onclick = e => { if (e.target===bg) bg.remove(); };
+  const eventCountsStr = Object.entries(j.eventCounts||{}).sort((a,b)=>b[1]-a[1]).map(([k,v])=>k+': '+v).join('\\n') || '(keine Events)';
+  const dailyTodayStr = Object.entries(j.dailyToday||{}).map(([k,v])=>k+': '+v).join('\\n') || '(leer)';
+  const dailyBerlinStr = Object.entries(j.dailyBerlinToday||{}).map(([k,v])=>k+': '+v).join('\\n') || '(leer)';
+  const last20Str = (j.last20Events||[]).map(e=>'· '+e.date+' · '+e.event).join('\\n') || '(keine)';
+  bg.innerHTML = '<div class="dash-modal" style="max-width:680px"><div class="dash-modal-hdr"><h3>🔬 Funnel-Debug</h3><div class="dash-modal-meta">Roh-Daten aus d.funnel — verifiziert ob Tracking läuft</div></div>' +
+    '<div class="dash-modal-body" style="font-family:ui-monospace,monospace;font-size:11.5px">' +
+      '<div style="padding:10px 12px;background:var(--dink);border-radius:8px;margin-bottom:10px">' +
+        '<b style="color:#f5d76e">funnelExists:</b> '+j.funnelExists+' · <b style="color:#f5d76e">totalEvents:</b> '+(j.totalEvents||0)+'<br>' +
+        '<b style="color:#f5d76e">nowUtc:</b> '+(j.nowUtc||'–')+'<br>' +
+        '<b style="color:#f5d76e">nowBerlin:</b> '+(j.nowBerlin||'–')+
+      '</div>' +
+      '<div style="font-size:10.5px;color:#22c55e;letter-spacing:1px;text-transform:uppercase;margin:14px 0 4px;font-weight:700">Event-Counts (alle Zeit)</div>' +
+      '<pre style="background:var(--dink);padding:10px;border-radius:8px;white-space:pre-wrap;margin:0">'+esc(eventCountsStr)+'</pre>' +
+      '<div style="font-size:10.5px;color:#22c55e;letter-spacing:1px;text-transform:uppercase;margin:14px 0 4px;font-weight:700">Heute UTC ('+(j.dailyKeys?j.dailyKeys[j.dailyKeys.length-1]:'?')+')</div>' +
+      '<pre style="background:var(--dink);padding:10px;border-radius:8px;white-space:pre-wrap;margin:0">'+esc(dailyTodayStr)+'</pre>' +
+      '<div style="font-size:10.5px;color:#22c55e;letter-spacing:1px;text-transform:uppercase;margin:14px 0 4px;font-weight:700">Heute Berlin</div>' +
+      '<pre style="background:var(--dink);padding:10px;border-radius:8px;white-space:pre-wrap;margin:0">'+esc(dailyBerlinStr)+'</pre>' +
+      '<div style="font-size:10.5px;color:#22c55e;letter-spacing:1px;text-transform:uppercase;margin:14px 0 4px;font-weight:700">Verfügbare Tage</div>' +
+      '<pre style="background:var(--dink);padding:10px;border-radius:8px;white-space:pre-wrap;margin:0">'+esc((j.dailyKeys||[]).join(", ") || "(keine)")+'</pre>' +
+      '<div style="font-size:10.5px;color:#22c55e;letter-spacing:1px;text-transform:uppercase;margin:14px 0 4px;font-weight:700">Letzte 20 Events</div>' +
+      '<pre style="background:var(--dink);padding:10px;border-radius:8px;white-space:pre-wrap;margin:0;font-size:10px">'+esc(last20Str)+'</pre>' +
+    '</div>' +
+    '<div class="dash-modal-foot"><button class="dash-btn" onclick="testFunnelFire(this)">🧪 Test-Event feuern</button><button class="dash-btn dash-btn-primary" onclick="this.closest(\\'.dash-modal-bg\\').remove()">Schließen</button></div>' +
+    '</div>';
+  document.body.appendChild(bg);
+}
+async function testFunnelFire(btn) {
+  btn.disabled = true; btn.textContent = '⏳';
+  const r = await fetch('/api/admin/funnel-test', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ event: 'admin-test' }) });
+  const j = await r.json().catch(()=>({}));
+  if (j.ok) { alert('✅ Test-Event geschrieben. Total Events jetzt: '+j.totalEvents+'\\n\\nKlick erneut auf "Funnel Debug" um zu sehen ob der Event-Count gestiegen ist.'); }
+  else alert('❌ '+(j.error||'Fehler'));
+  btn.disabled = false; btn.textContent = '🧪 Test-Event feuern';
 }
 async function openBroadcastModal() {
   const text = prompt('📢 DM an ALLE aktiven User senden (max 1500 Zeichen):\\n\\nMarkdown unterstützt (*bold*, _italic_).\\nBanned User + Admins werden übersprungen.');
