@@ -11185,191 +11185,425 @@ async function msAdminRestore(uid,name){if(!confirm(name+' zurück auf die Warte
             })(),
             roulette: `
 <style>
-.rl-wrap{padding:16px;text-align:center}
-.rl-card{background:linear-gradient(135deg,rgba(239,68,68,0.08),rgba(245,158,11,0.05));border:1px solid rgba(239,68,68,0.3);border-radius:20px;padding:24px 16px;margin-bottom:16px}
-.rl-wheel{position:relative;width:280px;height:280px;margin:20px auto;-webkit-user-select:none;user-select:none}
-.rl-wheel canvas{width:100%;height:100%;border-radius:50%;box-shadow:0 0 0 6px rgba(239,68,68,0.4),0 12px 40px rgba(0,0,0,0.4)}
-.rl-pointer{position:absolute;top:-12px;left:50%;transform:translateX(-50%);font-size:28px;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5));z-index:2}
-.rl-btn{margin-top:20px;padding:16px 40px;background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;border:none;border-radius:14px;font-size:16px;font-weight:800;cursor:pointer;box-shadow:0 8px 24px rgba(239,68,68,0.4);transition:transform .12s}
-.rl-btn:active{transform:scale(0.95)}
-.rl-btn:disabled{opacity:0.5;cursor:not-allowed;transform:none}
-.rl-result{margin-top:16px;padding:16px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);border-radius:14px;font-size:15px;font-weight:700;color:#4ade80;display:none}
-.rl-cooldown{font-size:12px;color:var(--muted);margin-top:10px}
-@keyframes rl-jackpot{0%{transform:scale(1)}25%{transform:scale(1.15) rotate(-2deg)}50%{transform:scale(1.1) rotate(2deg)}75%{transform:scale(1.15) rotate(-1deg)}100%{transform:scale(1)}}
-@keyframes rl-confetti{0%{opacity:1;transform:translateY(0) rotate(0)}100%{opacity:0;transform:translateY(-60px) rotate(720deg)}}
-@keyframes rl-glow{0%,100%{box-shadow:0 0 20px rgba(34,197,94,0.3)}50%{box-shadow:0 0 40px rgba(34,197,94,0.7),0 0 80px rgba(34,197,94,0.3)}}
-.rl-result.jackpot{animation:rl-jackpot 0.6s ease,rl-glow 1.5s ease infinite;font-size:18px}
+.rl-stage{position:relative;padding:18px 16px 28px;background:radial-gradient(ellipse at 50% 0%,rgba(245,158,11,0.10) 0%,rgba(8,4,2,0.0) 60%);overflow:hidden}
+.rl-stage::before{content:'';position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(45deg,rgba(212,175,55,0.025) 0 1px,transparent 1px 14px);opacity:0.6}
+.rl-head{text-align:center;position:relative;z-index:2}
+.rl-eyebrow{display:inline-flex;align-items:center;gap:8px;padding:6px 14px;background:rgba(212,175,55,0.10);border:1px solid rgba(212,175,55,0.30);border-radius:99px;font-size:10.5px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#f5d76e;margin-bottom:10px}
+.rl-eyebrow::before,.rl-eyebrow::after{content:'';width:14px;height:1px;background:linear-gradient(90deg,transparent,#f5d76e)}
+.rl-eyebrow::after{background:linear-gradient(90deg,#f5d76e,transparent)}
+.rl-title{font-size:28px;font-weight:900;font-family:var(--font-display,Inter,system-ui,sans-serif);background:linear-gradient(180deg,#fff8d6 0%,#f5d76e 30%,#d4af37 55%,#8b6914 85%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-0.5px;line-height:1.05;margin:0 0 8px;text-shadow:0 2px 18px rgba(212,175,55,0.25)}
+.rl-sub{font-size:13px;color:var(--muted);line-height:1.5;max-width:320px;margin:0 auto 18px}
+.rl-meta{display:flex;justify-content:center;gap:10px;margin-bottom:8px;flex-wrap:wrap}
+.rl-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 11px;background:rgba(255,255,255,0.04);border:1px solid var(--border2);border-radius:99px;font-size:11px;font-weight:700;color:var(--muted)}
+.rl-chip.live{color:#22c55e;border-color:rgba(34,197,94,0.3);background:rgba(34,197,94,0.08)}
+.rl-chip.live::before{content:'';width:6px;height:6px;border-radius:50%;background:#22c55e;box-shadow:0 0 8px #22c55e;animation:rl-pulse 1.5s ease-in-out infinite}
+@keyframes rl-pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.6;transform:scale(0.85)}}
+
+.rl-wheel-frame{position:relative;width:320px;height:340px;margin:14px auto 8px;display:flex;align-items:flex-start;justify-content:center;-webkit-user-select:none;user-select:none}
+.rl-pointer{position:absolute;top:0;left:50%;transform:translateX(-50%);width:42px;height:54px;z-index:5;filter:drop-shadow(0 6px 14px rgba(0,0,0,0.55));pointer-events:none}
+.rl-pointer-svg{width:100%;height:100%;display:block}
+.rl-wheel{position:relative;width:300px;height:300px;margin-top:30px;border-radius:50%;
+  background:
+    radial-gradient(ellipse at 50% 35%,rgba(255,255,255,0.18) 0%,transparent 38%),
+    conic-gradient(from 0deg,#f5d76e 0deg,#d4af37 15deg,#8b6914 28deg,#d4af37 40deg,#f5d76e 55deg,#8b6914 70deg,#d4af37 85deg,#f5d76e 100deg,#d4af37 115deg,#8b6914 130deg,#d4af37 145deg,#f5d76e 160deg,#8b6914 175deg,#d4af37 190deg,#f5d76e 205deg,#8b6914 220deg,#d4af37 235deg,#f5d76e 250deg,#8b6914 265deg,#d4af37 280deg,#f5d76e 295deg,#8b6914 310deg,#d4af37 325deg,#f5d76e 340deg,#8b6914 355deg,#f5d76e 360deg);
+  padding:8px;
+  box-shadow:
+    0 0 0 2px rgba(255,237,170,0.5),
+    0 0 28px rgba(212,175,55,0.45),
+    0 22px 60px rgba(0,0,0,0.55),
+    inset 0 0 18px rgba(0,0,0,0.4);
+  isolation:isolate;
+}
+.rl-wheel::after{content:'';position:absolute;inset:0;border-radius:50%;pointer-events:none;background:radial-gradient(circle at 50% 20%,rgba(255,255,255,0.35) 0%,transparent 35%),radial-gradient(circle at 50% 85%,rgba(0,0,0,0.40) 0%,transparent 38%);mix-blend-mode:overlay}
+.rl-wheel canvas{width:100%;height:100%;border-radius:50%;display:block;background:#0c0a08}
+.rl-stand{position:absolute;left:50%;bottom:-2px;transform:translateX(-50%);width:140px;height:24px;background:linear-gradient(180deg,#d4af37 0%,#8b6914 60%,#3d2c0a 100%);border-radius:50%;filter:blur(2px);opacity:0.75;z-index:0}
+
+.rl-btn-wrap{position:relative;text-align:center;margin-top:18px;z-index:2}
+.rl-btn{position:relative;display:inline-flex;align-items:center;gap:10px;padding:15px 38px;background:linear-gradient(180deg,#f8e7a0 0%,#d4af37 40%,#a07a1c 85%);color:#1a0f00;border:none;border-radius:16px;font-size:15px;font-weight:900;letter-spacing:0.4px;text-transform:uppercase;cursor:pointer;font-family:inherit;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.7),
+    inset 0 -2px 0 rgba(0,0,0,0.25),
+    0 8px 24px rgba(212,175,55,0.45),
+    0 2px 0 rgba(60,40,4,0.6);
+  transition:transform .12s ease,box-shadow .15s ease;
+}
+.rl-btn:hover{transform:translateY(-1px);box-shadow:inset 0 1px 0 rgba(255,255,255,0.7),inset 0 -2px 0 rgba(0,0,0,0.25),0 12px 30px rgba(212,175,55,0.55),0 2px 0 rgba(60,40,4,0.6)}
+.rl-btn:active{transform:translateY(1px);box-shadow:inset 0 1px 0 rgba(255,255,255,0.5),inset 0 -1px 0 rgba(0,0,0,0.3),0 4px 12px rgba(212,175,55,0.35)}
+.rl-btn:disabled{opacity:0.55;cursor:not-allowed;transform:none;background:linear-gradient(180deg,#666,#333);color:#aaa;box-shadow:none}
+.rl-btn-icon{display:inline-block;animation:rl-icon-spin 4s linear infinite}
+@keyframes rl-icon-spin{to{transform:rotate(360deg)}}
+.rl-btn:disabled .rl-btn-icon{animation:none}
+
+.rl-result{margin:18px 16px 0;padding:0;border-radius:18px;display:none;overflow:hidden;position:relative;z-index:2}
+.rl-result.shown{display:block;animation:rl-result-in .4s cubic-bezier(0.16,1,0.3,1)}
+@keyframes rl-result-in{from{opacity:0;transform:translateY(12px) scale(0.96)}to{opacity:1;transform:none}}
+.rl-result-inner{padding:18px 18px 16px;text-align:center;background:linear-gradient(180deg,rgba(34,197,94,0.10),rgba(34,197,94,0.04));border:1px solid rgba(34,197,94,0.30)}
+.rl-result.jackpot .rl-result-inner{background:linear-gradient(180deg,rgba(245,158,11,0.18),rgba(212,175,55,0.06));border-color:rgba(212,175,55,0.55);box-shadow:0 0 40px rgba(212,175,55,0.4)}
+.rl-result-emoji{font-size:42px;line-height:1;margin-bottom:8px;display:block}
+.rl-result.jackpot .rl-result-emoji{animation:rl-trophy 1.4s ease-in-out infinite}
+@keyframes rl-trophy{0%,100%{transform:scale(1) rotate(0)}25%{transform:scale(1.08) rotate(-4deg)}75%{transform:scale(1.08) rotate(4deg)}}
+.rl-result-label{font-size:11px;font-weight:800;letter-spacing:2.5px;text-transform:uppercase;color:#22c55e;margin-bottom:4px}
+.rl-result.jackpot .rl-result-label{color:#f5d76e}
+.rl-result-prize{font-size:22px;font-weight:900;font-family:var(--font-display,Inter,system-ui,sans-serif);color:var(--text);letter-spacing:-0.3px}
+.rl-result.jackpot .rl-result-prize{background:linear-gradient(180deg,#fff8d6,#d4af37);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-size:28px}
+.rl-result-sub{font-size:11.5px;color:var(--muted);margin-top:6px;letter-spacing:0.1px}
+
+.rl-cooldown{text-align:center;font-size:11.5px;color:var(--muted);margin:14px 16px 0;letter-spacing:0.3px}
+.rl-cooldown b{color:var(--text);font-weight:700}
+
+.rl-prizes{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:20px 16px 0;position:relative;z-index:2}
+.rl-prize{padding:10px 12px;background:rgba(255,255,255,0.03);border:1px solid var(--border2);border-radius:12px;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text)}
+.rl-prize-emoji{font-size:18px;line-height:1}
+.rl-prize-name{font-weight:700;flex:1;min-width:0;font-size:12px}
+.rl-prize-odds{font-size:10px;color:var(--muted);font-weight:600;flex-shrink:0}
+
 .rl-confetti-wrap{position:fixed;inset:0;pointer-events:none;z-index:9999;overflow:hidden}
-.rl-confetti-piece{position:absolute;width:10px;height:10px;border-radius:2px;animation:rl-fall 2.5s ease-out forwards}
-@keyframes rl-fall{0%{opacity:1;transform:translateY(-20px) rotate(0) scale(1)}100%{opacity:0;transform:translateY(100vh) rotate(720deg) scale(0.5)}}
+.rl-confetti-piece{position:absolute;width:10px;height:10px;border-radius:2px;animation:rl-fall 3.2s cubic-bezier(0.16,1,0.3,1) forwards}
+@keyframes rl-fall{0%{opacity:1;transform:translateY(-20px) rotate(0) scale(1)}100%{opacity:0;transform:translateY(105vh) rotate(720deg) scale(0.5)}}
 </style>
-<div class="rl-wrap">
-<div class="rl-card">
-  <div style="font-size:36px;margin-bottom:8px">🎡</div>
-  <h2 style="font-size:20px;font-weight:800;margin:0 0 6px">Tägliches Roulette</h2>
-  <div style="font-size:13px;color:var(--muted)">Drehe einmal pro Tag und gewinne einen Preis!</div>
-</div>
-<div class="rl-wheel">
-  <div class="rl-pointer">🔻</div>
-  <canvas id="rl-canvas" width="560" height="560"></canvas>
-</div>
-<button class="rl-btn" id="rl-spin-btn" onclick="spinRoulette()">🎡 Drehen!</button>
-<div class="rl-result" id="rl-result"></div>
-<div class="rl-cooldown" id="rl-cooldown"></div>
+
+<div class="rl-stage">
+  <div class="rl-head">
+    <div class="rl-eyebrow">★ Glücksrad ★</div>
+    <h1 class="rl-title">Tägliches Roulette</h1>
+    <div class="rl-sub">Drehe einmal pro Tag und gewinne XP, Diamanten, Extra-Links oder Superlink-Slots.</div>
+    <div class="rl-meta">
+      <span class="rl-chip live">Heute spielbar</span>
+      <span class="rl-chip">⏱ 1×/Tag</span>
+      <span class="rl-chip">🔄 Reset 00:00</span>
+    </div>
+  </div>
+
+  <div class="rl-wheel-frame">
+    <div class="rl-pointer">
+      <svg class="rl-pointer-svg" viewBox="0 0 42 54" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="rl-p-grad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#fff8d6"/>
+            <stop offset="0.45" stop-color="#d4af37"/>
+            <stop offset="1" stop-color="#8b6914"/>
+          </linearGradient>
+        </defs>
+        <path d="M21 52 L4 6 Q4 2 8 2 L34 2 Q38 2 38 6 Z" fill="url(#rl-p-grad)" stroke="#5c3e08" stroke-width="1.6"/>
+        <circle cx="21" cy="14" r="4.5" fill="#fff" opacity="0.55"/>
+      </svg>
+    </div>
+    <div class="rl-wheel">
+      <canvas id="rl-canvas" width="600" height="600"></canvas>
+    </div>
+    <div class="rl-stand"></div>
+  </div>
+
+  <div class="rl-btn-wrap">
+    <button class="rl-btn" id="rl-spin-btn" onclick="spinRoulette()"><span class="rl-btn-icon">🎰</span> <span id="rl-btn-label">Jetzt drehen</span></button>
+  </div>
+
+  <div class="rl-result" id="rl-result">
+    <div class="rl-result-inner">
+      <span class="rl-result-emoji" id="rl-result-emoji">🎉</span>
+      <div class="rl-result-label" id="rl-result-label">Gewonnen</div>
+      <div class="rl-result-prize" id="rl-result-prize">—</div>
+      <div class="rl-result-sub" id="rl-result-sub">Schau in deine Wallet · Komm morgen wieder!</div>
+    </div>
+  </div>
+
+  <div class="rl-cooldown" id="rl-cooldown"></div>
+
+  <div class="rl-prizes">
+    <div class="rl-prize"><span class="rl-prize-emoji">✨</span><span class="rl-prize-name">20 XP</span><span class="rl-prize-odds">häufig</span></div>
+    <div class="rl-prize"><span class="rl-prize-emoji">🔗</span><span class="rl-prize-name">1 Extra-Link</span><span class="rl-prize-odds">häufig</span></div>
+    <div class="rl-prize"><span class="rl-prize-emoji">⚡</span><span class="rl-prize-name">1 Superlink</span><span class="rl-prize-odds">häufig</span></div>
+    <div class="rl-prize"><span class="rl-prize-emoji">💎</span><span class="rl-prize-name">1 Diamant</span><span class="rl-prize-odds">selten</span></div>
+    <div class="rl-prize"><span class="rl-prize-emoji">🔥</span><span class="rl-prize-name">100 XP</span><span class="rl-prize-odds">selten</span></div>
+    <div class="rl-prize"><span class="rl-prize-emoji">💎</span><span class="rl-prize-name">5 Diamanten</span><span class="rl-prize-odds">selten</span></div>
+    <div class="rl-prize" style="grid-column:span 2;background:linear-gradient(135deg,rgba(212,175,55,0.10),rgba(245,158,11,0.04));border-color:rgba(212,175,55,0.4)"><span class="rl-prize-emoji">👑</span><span class="rl-prize-name">JACKPOT · 10 Diamanten</span><span class="rl-prize-odds" style="color:#f5d76e">ultra-rar</span></div>
+  </div>
 </div>
 <script>
 (function(){
+// Premium Vegas-Style Wheel — schwarzer Hintergrund, abwechselnd dunkelrot/schwarz/grün
+// (klassisches Roulette-Farbschema), Gold-Akzente, sauberere Pegs.
 const segments=[
-  {label:'20 XP',color:'#f59e0b',text:'#000',emoji:'✨'},
-  {label:'Extra-Link',color:'#3b82f6',text:'#fff',emoji:'🔗'},
-  {label:'20 XP',color:'#d97706',text:'#000',emoji:'✨'},
-  {label:'Superlink',color:'#8b5cf6',text:'#fff',emoji:'⚡'},
-  {label:'20 XP',color:'#f59e0b',text:'#000',emoji:'✨'},
-  {label:'1 Diamant',color:'#06b6d4',text:'#fff',emoji:'💎'},
-  {label:'100 XP',color:'#22c55e',text:'#fff',emoji:'🔥'},
-  {label:'5 Diamanten',color:'#ec4899',text:'#fff',emoji:'💎'},
-  {label:'20 XP',color:'#d97706',text:'#000',emoji:'✨'},
-  {label:'10 Diamanten',color:'#ef4444',text:'#fff',emoji:'👑'},
+  {label:'20 XP',  color:'#3a0a0a', highlight:'#7a1a1a', text:'#f5d76e', emoji:'✨'},
+  {label:'Extra-Link', color:'#0a0a0a', highlight:'#222', text:'#fff', emoji:'🔗'},
+  {label:'20 XP',  color:'#3a0a0a', highlight:'#7a1a1a', text:'#f5d76e', emoji:'✨'},
+  {label:'Superlink', color:'#0a0a0a', highlight:'#222', text:'#fff', emoji:'⚡'},
+  {label:'20 XP',  color:'#3a0a0a', highlight:'#7a1a1a', text:'#f5d76e', emoji:'✨'},
+  {label:'1 Diamant', color:'#0a0a0a', highlight:'#222', text:'#fff', emoji:'💎'},
+  {label:'100 XP', color:'#0a3a1a', highlight:'#1a6a3a', text:'#fff', emoji:'🔥'},
+  {label:'5 Diamanten', color:'#3a0a0a', highlight:'#7a1a1a', text:'#fff', emoji:'💎'},
+  {label:'20 XP',  color:'#0a0a0a', highlight:'#222', text:'#f5d76e', emoji:'✨'},
+  {label:'JACKPOT', color:'#5c3e08', highlight:'#d4af37', text:'#1a0f00', emoji:'👑'},
 ];
 const N=segments.length;
 const canvas=document.getElementById('rl-canvas');
 const ctx=canvas.getContext('2d');
-const W=560,cx=W/2,cy=W/2,R=250,IR=40;
+const W=600,cx=W/2,cy=W/2,R=275,IR=58;
 let rotation=0;
 
 const AudioCtx=window.AudioContext||window.webkitAudioContext;
-let audioCtx;
-function ensureAudio(){if(!audioCtx)try{audioCtx=new AudioCtx();}catch(e){}}
-function playTick(){
-  if(!audioCtx)return;
-  const o=audioCtx.createOscillator(),g=audioCtx.createGain();
-  o.connect(g);g.connect(audioCtx.destination);
-  o.frequency.value=600+Math.random()*600;o.type='sine';
-  g.gain.setValueAtTime(0.06,audioCtx.currentTime);
-  g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.04);
-  o.start();o.stop(audioCtx.currentTime+0.04);
+let audioCtx, masterGain;
+function ensureAudio(){
+  if(audioCtx)return;
+  try{
+    audioCtx=new AudioCtx();
+    masterGain=audioCtx.createGain();
+    masterGain.gain.value=0.7;
+    masterGain.connect(audioCtx.destination);
+  }catch(e){}
 }
+// Casino-Click: realistisches Klacken eines Roulette-Pegs (Noise-Burst + tight band-pass)
+function playTick(velocity){
+  if(!audioCtx)return;
+  const t0=audioCtx.currentTime;
+  // Noise-Buffer
+  const buf=audioCtx.createBuffer(1,audioCtx.sampleRate*0.05,audioCtx.sampleRate);
+  const data=buf.getChannelData(0);
+  for(let i=0;i<data.length;i++) data[i]=(Math.random()*2-1)*Math.exp(-i*0.0008);
+  const src=audioCtx.createBufferSource(); src.buffer=buf;
+  // Band-pass um 2.5kHz für scharfen Holz-Click-Charakter
+  const bp=audioCtx.createBiquadFilter();
+  bp.type='bandpass'; bp.frequency.value=2200+Math.random()*900; bp.Q.value=8;
+  const g=audioCtx.createGain();
+  const vol=Math.min(0.18, 0.08+(velocity||0.5)*0.10);
+  g.gain.setValueAtTime(vol, t0);
+  g.gain.exponentialRampToValueAtTime(0.001, t0+0.06);
+  src.connect(bp); bp.connect(g); g.connect(masterGain);
+  src.start(t0); src.stop(t0+0.06);
+  // Plus kurzer Body-Thump für mehr Casino-Tiefe
+  const bo=audioCtx.createOscillator(); const bg=audioCtx.createGain();
+  bo.frequency.value=180; bo.type='triangle';
+  bg.gain.setValueAtTime(vol*0.4, t0);
+  bg.gain.exponentialRampToValueAtTime(0.001, t0+0.04);
+  bo.connect(bg); bg.connect(masterGain);
+  bo.start(t0); bo.stop(t0+0.04);
+}
+function playWoosh(){
+  if(!audioCtx)return;
+  // Aufstieg beim Spin-Start
+  const t0=audioCtx.currentTime;
+  const o=audioCtx.createOscillator(); const g=audioCtx.createGain();
+  o.type='sawtooth'; o.frequency.setValueAtTime(120,t0); o.frequency.exponentialRampToValueAtTime(420,t0+0.7);
+  const f=audioCtx.createBiquadFilter(); f.type='lowpass'; f.frequency.value=900; f.Q.value=3;
+  g.gain.setValueAtTime(0.0001,t0);
+  g.gain.exponentialRampToValueAtTime(0.18,t0+0.15);
+  g.gain.exponentialRampToValueAtTime(0.0001,t0+0.7);
+  o.connect(f); f.connect(g); g.connect(masterGain);
+  o.start(t0); o.stop(t0+0.75);
+}
+// Slot-Machine Win-Jingle (ascending chime)
 function playWin(big){
   if(!audioCtx)return;
-  const notes=big?[440,554,659,880]:[523,659,784];
-  notes.forEach((f,i)=>{setTimeout(()=>{
-    const o=audioCtx.createOscillator(),g=audioCtx.createGain();
-    o.connect(g);g.connect(audioCtx.destination);
-    o.frequency.value=f;o.type=big?'square':'triangle';
-    g.gain.setValueAtTime(0.12,audioCtx.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.4);
-    o.start();o.stop(audioCtx.currentTime+0.4);
-  },i*150);});
+  const t0=audioCtx.currentTime;
+  // Coin-Drop-Sequenz (high-pitched "ka-ching"-Bursts)
+  const notes = big ? [880,1175,1397,1760,2349] : [659,784,988,1318];
+  notes.forEach((freq,i)=>{
+    const dt=t0+i*0.09;
+    const o=audioCtx.createOscillator(); const g=audioCtx.createGain();
+    o.type=big?'square':'triangle'; o.frequency.value=freq;
+    g.gain.setValueAtTime(0.0001,dt);
+    g.gain.exponentialRampToValueAtTime(big?0.20:0.16,dt+0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001,dt+0.35);
+    o.connect(g); g.connect(masterGain);
+    o.start(dt); o.stop(dt+0.4);
+    // Sub-harmonic für mehr Wärme
+    const o2=audioCtx.createOscillator(); const g2=audioCtx.createGain();
+    o2.type='sine'; o2.frequency.value=freq/2;
+    g2.gain.setValueAtTime(0.0001,dt);
+    g2.gain.exponentialRampToValueAtTime(0.08,dt+0.02);
+    g2.gain.exponentialRampToValueAtTime(0.0001,dt+0.5);
+    o2.connect(g2); g2.connect(masterGain);
+    o2.start(dt); o2.stop(dt+0.55);
+  });
+  if(big){
+    // Jackpot-Fanfare: dramatischer Sustain-Chord nach den Coin-Drops
+    const ct=t0+notes.length*0.09+0.1;
+    [523,659,784,988,1318].forEach(freq=>{
+      const o=audioCtx.createOscillator(); const g=audioCtx.createGain();
+      o.type='sawtooth'; o.frequency.value=freq;
+      const f=audioCtx.createBiquadFilter(); f.type='lowpass'; f.frequency.value=4000; f.Q.value=2;
+      g.gain.setValueAtTime(0.0001,ct);
+      g.gain.exponentialRampToValueAtTime(0.10,ct+0.04);
+      g.gain.exponentialRampToValueAtTime(0.04,ct+0.6);
+      g.gain.exponentialRampToValueAtTime(0.0001,ct+1.5);
+      o.connect(f); f.connect(g); g.connect(masterGain);
+      o.start(ct); o.stop(ct+1.55);
+    });
+    // Cymbal-roll (white noise with high-pass) für Trommelwirbel-Effekt
+    const nb=audioCtx.createBuffer(1,audioCtx.sampleRate*1.0,audioCtx.sampleRate);
+    const nd=nb.getChannelData(0);
+    for(let i=0;i<nd.length;i++) nd[i]=(Math.random()*2-1)*Math.min(1,i/8000);
+    const ns=audioCtx.createBufferSource(); ns.buffer=nb;
+    const hp=audioCtx.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=5000;
+    const ng=audioCtx.createGain();
+    ng.gain.setValueAtTime(0.0001,ct);
+    ng.gain.exponentialRampToValueAtTime(0.08,ct+0.1);
+    ng.gain.exponentialRampToValueAtTime(0.0001,ct+1.0);
+    ns.connect(hp); hp.connect(ng); ng.connect(masterGain);
+    ns.start(ct); ns.stop(ct+1.1);
+  }
 }
 function showConfetti(count){
   const wrap=document.createElement('div');wrap.className='rl-confetti-wrap';document.body.appendChild(wrap);
-  const colors=['#ef4444','#f59e0b','#22c55e','#3b82f6','#8b5cf6','#ec4899','#fbbf24','#4ade80','#fff'];
+  const colors=['#d4af37','#f5d76e','#fff8d6','#ef4444','#22c55e','#3b82f6','#ec4899','#fff'];
   for(let i=0;i<(count||50);i++){
     const p=document.createElement('div');p.className='rl-confetti-piece';
-    p.style.left=(10+Math.random()*80)+'%';p.style.top='-10px';
+    p.style.left=(5+Math.random()*90)+'%';p.style.top='-10px';
     p.style.background=colors[i%colors.length];
-    p.style.animationDelay=(Math.random()*1)+'s';
+    p.style.animationDelay=(Math.random()*0.8)+'s';
     p.style.animationDuration=(2.5+Math.random()*2)+'s';
     p.style.width=(5+Math.random()*10)+'px';
-    p.style.height=(5+Math.random()*10)+'px';
+    p.style.height=(7+Math.random()*14)+'px';
     p.style.borderRadius=Math.random()>0.5?'50%':'2px';
     wrap.appendChild(p);
   }
-  setTimeout(()=>wrap.remove(),5000);
+  setTimeout(()=>wrap.remove(),5500);
 }
 
 function drawWheel(angle){
   ctx.clearRect(0,0,W,W);
   const arc=2*Math.PI/N;
-  // Outer ring
-  ctx.beginPath();ctx.arc(cx,cy,R+8,0,2*Math.PI);
-  ctx.fillStyle='#1a1a1a';ctx.fill();
-  ctx.strokeStyle='rgba(255,255,255,0.1)';ctx.lineWidth=2;ctx.stroke();
+  // Black inner background
+  ctx.beginPath(); ctx.arc(cx,cy,R+4,0,2*Math.PI); ctx.fillStyle='#050300'; ctx.fill();
   // Segments
   for(let i=0;i<N;i++){
     const a=angle-Math.PI/2+i*arc;
-    ctx.beginPath();ctx.moveTo(cx,cy);ctx.arc(cx,cy,R,a,a+arc);ctx.closePath();
+    const seg=segments[i];
+    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,R,a,a+arc); ctx.closePath();
     const grad=ctx.createRadialGradient(cx,cy,IR,cx,cy,R);
-    grad.addColorStop(0,segments[i].color+'cc');grad.addColorStop(1,segments[i].color);
-    ctx.fillStyle=grad;ctx.fill();
-    ctx.strokeStyle='rgba(0,0,0,0.3)';ctx.lineWidth=1.5;ctx.stroke();
+    grad.addColorStop(0,seg.highlight); grad.addColorStop(0.6,seg.color); grad.addColorStop(1,'#000');
+    ctx.fillStyle=grad; ctx.fill();
+    // Subtle gold separator
+    ctx.strokeStyle='rgba(212,175,55,0.55)'; ctx.lineWidth=1.5; ctx.stroke();
     // Label
-    ctx.save();ctx.translate(cx,cy);ctx.rotate(a+arc/2);
-    ctx.fillStyle=segments[i].text;
-    ctx.font='bold 11px Inter,system-ui,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
-    ctx.fillText(segments[i].emoji,R*0.72,0);
-    ctx.font='bold 10px Inter,system-ui,sans-serif';
-    ctx.fillText(segments[i].label,R*0.52,0);
+    ctx.save(); ctx.translate(cx,cy); ctx.rotate(a+arc/2);
+    ctx.fillStyle=seg.text;
+    ctx.font='800 28px "Inter",system-ui,sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(seg.emoji, R*0.74, -2);
+    ctx.font='800 13px "Inter",system-ui,sans-serif';
+    ctx.shadowColor='rgba(0,0,0,0.7)'; ctx.shadowBlur=3;
+    ctx.fillText(seg.label, R*0.46, 0);
+    ctx.shadowBlur=0;
     ctx.restore();
   }
-  // Pegs on outer edge
+  // Gold rim with inner highlight
+  ctx.beginPath(); ctx.arc(cx,cy,R,0,2*Math.PI);
+  const rim=ctx.createRadialGradient(cx,cy,R-6,cx,cy,R+2);
+  rim.addColorStop(0,'rgba(212,175,55,0)'); rim.addColorStop(1,'#d4af37');
+  ctx.strokeStyle='#d4af37'; ctx.lineWidth=4; ctx.stroke();
+  // Pegs on outer edge — glänzend
   for(let i=0;i<N;i++){
     const a=angle-Math.PI/2+i*arc;
     const px=cx+Math.cos(a)*(R-2),py=cy+Math.sin(a)*(R-2);
-    ctx.beginPath();ctx.arc(px,py,4,0,2*Math.PI);ctx.fillStyle='#fff';ctx.fill();
-    ctx.strokeStyle='rgba(0,0,0,0.3)';ctx.lineWidth=1;ctx.stroke();
+    const pegGrad=ctx.createRadialGradient(px-1.5,py-1.5,0,px,py,5);
+    pegGrad.addColorStop(0,'#fff8d6'); pegGrad.addColorStop(0.6,'#d4af37'); pegGrad.addColorStop(1,'#5c3e08');
+    ctx.beginPath(); ctx.arc(px,py,5,0,2*Math.PI); ctx.fillStyle=pegGrad; ctx.fill();
+    ctx.strokeStyle='rgba(0,0,0,0.6)'; ctx.lineWidth=1; ctx.stroke();
   }
-  // Center hub
-  ctx.beginPath();ctx.arc(cx,cy,IR,0,2*Math.PI);
-  const cGrad=ctx.createRadialGradient(cx,cy,0,cx,cy,IR);
-  cGrad.addColorStop(0,'#333');cGrad.addColorStop(1,'#111');
-  ctx.fillStyle=cGrad;ctx.fill();
-  ctx.strokeStyle='rgba(255,255,255,0.2)';ctx.lineWidth=3;ctx.stroke();
-  ctx.fillStyle='#fff';ctx.font='bold 13px system-ui,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
-  ctx.fillText('DREH',cx,cy-6);ctx.font='10px system-ui';ctx.fillStyle='#aaa';ctx.fillText('MICH',cx,cy+8);
+  // Center hub — gold metallic
+  ctx.beginPath(); ctx.arc(cx,cy,IR,0,2*Math.PI);
+  const hub=ctx.createRadialGradient(cx-12,cy-14,2,cx,cy,IR);
+  hub.addColorStop(0,'#fff8d6'); hub.addColorStop(0.45,'#d4af37'); hub.addColorStop(1,'#3d2c0a');
+  ctx.fillStyle=hub; ctx.fill();
+  ctx.strokeStyle='#5c3e08'; ctx.lineWidth=3; ctx.stroke();
+  // Inner hub circle
+  ctx.beginPath(); ctx.arc(cx,cy,IR-12,0,2*Math.PI);
+  const innerHub=ctx.createRadialGradient(cx-4,cy-4,1,cx,cy,IR-12);
+  innerHub.addColorStop(0,'#5c3e08'); innerHub.addColorStop(1,'#1a0f00');
+  ctx.fillStyle=innerHub; ctx.fill();
+  // Star in center
+  ctx.fillStyle='#f5d76e'; ctx.font='900 28px "Inter",system-ui,sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.shadowColor='rgba(212,175,55,0.8)'; ctx.shadowBlur=8;
+  ctx.fillText('★', cx, cy+1);
+  ctx.shadowBlur=0;
 }
 drawWheel(0);
 
 window.spinRoulette=async function(){
   const btn=document.getElementById('rl-spin-btn');
+  const btnLabel=document.getElementById('rl-btn-label');
   const result=document.getElementById('rl-result');
-  btn.disabled=true;result.style.display='none';result.classList.remove('jackpot');
+  btn.disabled=true; result.classList.remove('shown'); result.classList.remove('jackpot');
+  btnLabel.textContent='Dreht…';
   ensureAudio();
+  playWoosh();
   try{
     const res=await fetch('/api/spin-roulette',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
     const txt=await res.text();
-    let data;try{data=JSON.parse(txt);}catch(pe){result.style.display='block';result.style.color='#f87171';result.textContent='Server-Fehler ('+res.status+')';btn.disabled=false;return;}
-    if(!data.ok){result.style.display='block';result.style.background='rgba(239,68,68,0.1)';result.style.borderColor='rgba(239,68,68,0.3)';result.style.color='#f87171';result.textContent=data.error||'Fehler ('+res.status+')';btn.disabled=false;return;}
+    let data;try{data=JSON.parse(txt);}catch(pe){showErr('Server-Fehler ('+res.status+')'); btn.disabled=false; btnLabel.textContent='Nochmal versuchen'; return;}
+    if(!data.ok){showErr(data.error||'Fehler ('+res.status+')'); btn.disabled=false; btnLabel.textContent='Nochmal versuchen'; return;}
     const idx=data.segmentIndex;
     const arc=2*Math.PI/N;
-    // Pointer is at top (angle -PI/2 in drawWheel). We rotate CW.
-    // To land on segment idx: center of segment idx must align with top.
-    // Segment i center is at i*arc. We need total rotation so that idx*arc+arc/2 is at top.
     const segCenter=idx*arc+arc/2;
     const fullSpins=7;
     const targetRotation=fullSpins*2*Math.PI+(2*Math.PI-segCenter);
-    const duration=5500;
+    const duration=5800;
     let startTs=null,lastTickSeg=-1;
     function animate(ts){
       if(!startTs)startTs=ts;
       const elapsed=ts-startTs;
       const progress=Math.min(elapsed/duration,1);
-      // Cubic ease-out for natural deceleration
       const eased=1-Math.pow(1-progress,3);
       rotation=targetRotation*eased;
       drawWheel(rotation);
-      // Tick on peg crossings
       const curSeg=Math.floor((rotation%(2*Math.PI))/arc);
-      if(curSeg!==lastTickSeg){lastTickSeg=curSeg;if(progress>0.05&&progress<0.92)playTick();}
+      if(curSeg!==lastTickSeg){
+        lastTickSeg=curSeg;
+        if(progress>0.03 && progress<0.94){
+          // velocity sinkt mit progress → leiser werdende Klicks
+          const v=1-eased;
+          playTick(v);
+        }
+      }
       if(progress<1){requestAnimationFrame(animate);}
       else{
-        const isBig=idx===9||idx===7||idx===6;
+        const isBig=idx===9 || idx===7 || idx===6;
         setTimeout(()=>{
           playWin(isBig);
-          showConfetti(isBig?60:25);
-          result.style.display='block';
-          result.style.background=isBig?'rgba(239,68,68,0.12)':'rgba(34,197,94,0.1)';
-          result.style.borderColor=isBig?'rgba(239,68,68,0.4)':'rgba(34,197,94,0.3)';
-          result.style.color=isBig?'#fbbf24':'#4ade80';
-          if(isBig){result.classList.add('jackpot');result.innerHTML='<div style="font-size:24px;margin-bottom:4px">🏆</div>JACKPOT! '+data.prize;}
-          else{result.innerHTML='<div style="font-size:20px;margin-bottom:4px">🎉</div>Gewonnen: '+data.prize;}
-          btn.textContent='Morgen wieder! 🎡';
-        },300);
+          showConfetti(isBig?100:40);
+          showResult(data.prize, isBig);
+          btnLabel.textContent='Morgen wieder';
+        },280);
       }
     }
     requestAnimationFrame(animate);
-  }catch(e){result.style.display='block';result.style.color='#f87171';result.textContent='Fehler: '+e.message;btn.disabled=false;}
+  }catch(e){showErr('Netzwerk: '+e.message); btn.disabled=false; btnLabel.textContent='Nochmal versuchen';}
 };
+function showResult(prize, isBig){
+  const r=document.getElementById('rl-result');
+  const emoji=document.getElementById('rl-result-emoji');
+  const label=document.getElementById('rl-result-label');
+  const prizeEl=document.getElementById('rl-result-prize');
+  const sub=document.getElementById('rl-result-sub');
+  r.classList.add('shown');
+  if(isBig){
+    r.classList.add('jackpot');
+    emoji.textContent='🏆';
+    label.textContent='Jackpot';
+    prizeEl.textContent=prize;
+    sub.textContent='Glückwunsch! Schau in deine Wallet · Morgen wieder spielbar.';
+  }else{
+    emoji.textContent='🎉';
+    label.textContent='Gewonnen';
+    prizeEl.textContent=prize;
+    sub.textContent='Schau in deine Wallet · Morgen wieder spielbar.';
+  }
+}
+function showErr(msg){
+  const r=document.getElementById('rl-result');
+  const emoji=document.getElementById('rl-result-emoji');
+  const label=document.getElementById('rl-result-label');
+  const prizeEl=document.getElementById('rl-result-prize');
+  const sub=document.getElementById('rl-result-sub');
+  r.classList.add('shown');
+  r.classList.remove('jackpot');
+  r.querySelector('.rl-result-inner').style.background='linear-gradient(180deg,rgba(239,68,68,0.10),rgba(239,68,68,0.04))';
+  r.querySelector('.rl-result-inner').style.borderColor='rgba(239,68,68,0.35)';
+  emoji.textContent='⚠️';
+  label.style.color='#ef4444'; label.textContent='Fehler';
+  prizeEl.textContent=msg; prizeEl.style.fontSize='15px';
+  sub.textContent='';
+}
 })();
 <\/script>`
         };
