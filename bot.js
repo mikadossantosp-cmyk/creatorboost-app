@@ -10600,7 +10600,10 @@ async function banUser(uid, ban) {
 }
 async function openFunnelDebug() {
   const r = await fetch('/api/admin/funnel-debug');
-  const j = await r.json().catch(()=>({}));
+  const httpStatus = r.status;
+  const responseText = await r.text();
+  let j;
+  try { j = JSON.parse(responseText); } catch(e) { j = {ok:false, _parseError: e.message, _raw: responseText.slice(0,500)}; }
   const bg = document.createElement('div');
   bg.className = 'dash-modal-bg';
   bg.onclick = e => { if (e.target===bg) bg.remove(); };
@@ -10608,9 +10611,17 @@ async function openFunnelDebug() {
   const dailyTodayStr = Object.entries(j.dailyToday||{}).map(([k,v])=>k+': '+v).join('\\n') || '(leer)';
   const dailyBerlinStr = Object.entries(j.dailyBerlinToday||{}).map(([k,v])=>k+': '+v).join('\\n') || '(leer)';
   const last20Str = (j.last20Events||[]).map(e=>'· '+e.date+' · '+e.event).join('\\n') || '(keine)';
+  const errBanner = j.ok ? '' :
+    '<div style="padding:12px 14px;background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.35);border-radius:8px;margin-bottom:12px;color:#f87171;font-weight:700">' +
+      '❌ Response NICHT ok · HTTP '+httpStatus+' · error: '+esc(j.error||j._parseError||'unbekannt') +
+      (j._raw ? '<br><span style="font-weight:400;color:#fca5a5">Raw: '+esc(j._raw)+'</span>' : '') +
+      '<br><br><b style="color:#fff">Bedeutung:</b> Mainbot antwortet nicht (richtig). Prüfe Railway-Deploy + Logs. PR #104 muss deployed sein.' +
+    '</div>';
   bg.innerHTML = '<div class="dash-modal" style="max-width:680px"><div class="dash-modal-hdr"><h3>🔬 Funnel-Debug</h3><div class="dash-modal-meta">Roh-Daten aus d.funnel — verifiziert ob Tracking läuft</div></div>' +
     '<div class="dash-modal-body" style="font-family:ui-monospace,monospace;font-size:11.5px">' +
+      errBanner +
       '<div style="padding:10px 12px;background:var(--dink);border-radius:8px;margin-bottom:10px">' +
+        '<b style="color:#f5d76e">HTTP-Status:</b> '+httpStatus+' · <b style="color:#f5d76e">response.ok:</b> '+(j.ok===true)+'<br>' +
         '<b style="color:#f5d76e">funnelExists:</b> '+j.funnelExists+' · <b style="color:#f5d76e">totalEvents:</b> '+(j.totalEvents||0)+'<br>' +
         '<b style="color:#f5d76e">nowUtc:</b> '+(j.nowUtc||'–')+'<br>' +
         '<b style="color:#f5d76e">nowBerlin:</b> '+(j.nowBerlin||'–')+
