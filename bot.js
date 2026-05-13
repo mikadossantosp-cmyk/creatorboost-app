@@ -408,6 +408,56 @@ let _dataCache = null;
 let _dataCacheTime = 0;
 const DATA_CACHE_TTL = 60000; // 60 seconds
 
+// ── Migration Step 1: persistierter App-side Snapshot ──
+// Ziel: App-Side hat eigenes db.json damit sie auch ohne Mainbot booten kann.
+// Heute nur READ-ONLY-Mirror: bei jedem Mainbot-Refresh wird's auf Platte geschrieben,
+// beim Startup wird's wieder geladen. Writes laufen weiter über Mainbot (postBot).
+// Nächste Phase: Writes spiegeln, dann Reads autonom, dann Mainbot pulled von App.
+const APP_DB_FILE = DATA_DIR + '/app_db.json';
+let _appDbSaveTimer = null;
+let _appDbLastSaveOk = null;     // ISO-Time des letzten erfolgreichen Schreibens
+let _appDbLastRefreshOk = null;  // ISO-Time des letzten erfolgreichen Mainbot-Pulls
+let _appDbLastRefreshTry = null; // letzter Versuch (auch fehlgeschlagen)
+let _appDbRefreshFailures = 0;   // fortlaufende Fehlschläge (für Health-Check)
+
+function persistAppDb() {
+    // Debounce 2s — schützt vor disk-thrash bei rapid-fire refreshes
+    if (_appDbSaveTimer) return;
+    _appDbSaveTimer = setTimeout(() => {
+        _appDbSaveTimer = null;
+        if (!_dataCache) return;
+        try {
+            const tmp = APP_DB_FILE + '.tmp';
+            fs.writeFileSync(tmp, JSON.stringify(_dataCache));
+            fs.renameSync(tmp, APP_DB_FILE);  // atomic
+            _appDbLastSaveOk = new Date().toISOString();
+        } catch(e) {
+            console.error('app_db save failed:', e.message);
+        }
+    }, 2000);
+}
+
+function loadAppDbFromDisk() {
+    try {
+        if (!fs.existsSync(APP_DB_FILE)) return false;
+        const raw = fs.readFileSync(APP_DB_FILE, 'utf8');
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object') {
+            _dataCache = parsed;
+            _dataCacheTime = Date.now();
+            console.log('✅ app_db.json geladen (' + Object.keys(parsed.users||{}).length + ' user)');
+            return true;
+        }
+    } catch(e) {
+        console.error('app_db load failed:', e.message);
+    }
+    return false;
+}
+
+// Boot-time: Disk laden BEVOR der Mainbot überhaupt erreichbar sein muss.
+// Damit ist die App auch ohne Mainbot start-fähig.
+loadAppDbFromDisk();
+
 async function fetchBotRaw(path) {
     return new Promise(resolve => {
         const fullUrl = MAINBOT_URL + path;
@@ -426,11 +476,21 @@ let _refreshInFlight = null;
 function refreshDataCache() {
     if (_refreshInFlight) return _refreshInFlight;
     _refreshInFlight = (async () => {
+        _appDbLastRefreshTry = new Date().toISOString();
         try {
             const parsed = await fetchBotRaw('/data');
-            if (parsed) { _dataCache = parsed; _dataCacheTime = Date.now(); }
-        } catch(e) {}
-        finally { _refreshInFlight = null; }
+            if (parsed) {
+                _dataCache = parsed;
+                _dataCacheTime = Date.now();
+                _appDbLastRefreshOk = new Date().toISOString();
+                _appDbRefreshFailures = 0;
+                persistAppDb();  // Snapshot auf Platte für nächsten Boot
+            } else {
+                _appDbRefreshFailures++;
+            }
+        } catch(e) {
+            _appDbRefreshFailures++;
+        } finally { _refreshInFlight = null; }
     })();
     return _refreshInFlight;
 }
@@ -9478,6 +9538,77 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
   renderList();
 });
 </script>`, 'notif');
+    }
+
+    // ── ADMIN DEBUG: App-DB Sync-Status (Migration Phase 1) ──
+    if (path === '/admin/db-status') {
+        const parentUid = String(session?.uid || '');
+        const isAdminDb = adminIds.includes(Number(myUid))
+            || adminIds.includes(Number(parentUid))
+            || String(d.users?.[myUid]?.role||'').includes('Admin')
+            || String(d.users?.[parentUid]?.role||'').includes('Admin');
+        if (!isAdminDb) return text('Nur Admins', 403);
+        let fileSize = null, fileMtime = null;
+        try {
+            const st = fs.statSync(APP_DB_FILE);
+            fileSize = st.size;
+            fileMtime = st.mtime.toISOString();
+        } catch(e) {}
+        const userCount = Object.keys(_dataCache?.users||{}).length;
+        const linkCount = Object.keys(_dataCache?.links||{}).length;
+        const cacheAgeSec = _dataCacheTime ? Math.round((Date.now() - _dataCacheTime) / 1000) : null;
+        const healthy = _appDbRefreshFailures < 3 && _dataCache && cacheAgeSec !== null && cacheAgeSec < 600;
+        if (query.format === 'json') {
+            return json({
+                ok: true,
+                healthy,
+                userCount, linkCount,
+                inMemoryCacheAgeSec: cacheAgeSec,
+                lastRefreshOk: _appDbLastRefreshOk,
+                lastRefreshTry: _appDbLastRefreshTry,
+                refreshFailures: _appDbRefreshFailures,
+                lastSaveOk: _appDbLastSaveOk,
+                fileSize, fileMtime,
+                file: APP_DB_FILE,
+            });
+        }
+        return html(`
+<div style="max-width:780px;margin:0 auto;padding:18px 16px 80px">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
+    <a href="/dashboard" style="color:var(--muted);text-decoration:none;font-size:14px">‹ Dashboard</a>
+    <h1 style="font-size:22px;font-weight:800;font-family:var(--font-display);margin:0">🗄️ App-DB Status</h1>
+  </div>
+  <div style="padding:14px 16px;background:${healthy?'rgba(34,197,94,0.12)':'rgba(239,68,68,0.12)'};border:1px solid ${healthy?'rgba(34,197,94,0.3)':'rgba(239,68,68,0.3)'};border-radius:12px;margin-bottom:18px;font-size:14px;font-weight:700;color:${healthy?'#22c55e':'#ef4444'}">
+    ${healthy?'✅ Sync gesund':'⚠️ Sync degraded — Mainbot evtl. unerreichbar'}
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:18px">
+    <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:12px;padding:12px"><div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">User im Cache</div><div style="font-size:22px;font-weight:800">${userCount}</div></div>
+    <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:12px;padding:12px"><div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Links im Cache</div><div style="font-size:22px;font-weight:800">${linkCount}</div></div>
+    <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:12px;padding:12px"><div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Cache-Alter</div><div style="font-size:22px;font-weight:800">${cacheAgeSec===null?'–':cacheAgeSec+'s'}</div></div>
+    <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:12px;padding:12px"><div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Refresh-Failures</div><div style="font-size:22px;font-weight:800;color:${_appDbRefreshFailures>0?'#ef4444':'inherit'}">${_appDbRefreshFailures}</div></div>
+  </div>
+  <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:16px;margin-bottom:14px">
+    <div style="font-size:11px;font-weight:700;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-bottom:10px">📥 Mainbot → App-Cache</div>
+    <div style="display:grid;gap:6px;font-size:13px;font-family:ui-monospace,monospace">
+      <div>Letzter erfolgreicher Pull: <b>${_appDbLastRefreshOk||'noch nie'}</b></div>
+      <div>Letzter Versuch: <b>${_appDbLastRefreshTry||'–'}</b></div>
+    </div>
+  </div>
+  <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:16px">
+    <div style="font-size:11px;font-weight:700;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-bottom:10px">💾 App-Cache → Platte (app_db.json)</div>
+    <div style="display:grid;gap:6px;font-size:13px;font-family:ui-monospace,monospace">
+      <div>Datei: <b>${htmlEsc(APP_DB_FILE)}</b></div>
+      <div>Größe: <b>${fileSize===null?'noch nie geschrieben':(fileSize/1024).toFixed(1)+' KB'}</b></div>
+      <div>Letzter Schreib: <b>${_appDbLastSaveOk||'noch nie'}</b></div>
+      <div>Letzter mtime: <b>${fileMtime||'–'}</b></div>
+    </div>
+  </div>
+  <div style="margin-top:18px;padding:14px;background:var(--bg4);border-radius:12px;font-size:12px;color:var(--muted);line-height:1.6">
+    <b style="color:var(--text)">Migration Phase 1:</b> App spiegelt Mainbot-Snapshot auf eigene Platte. App bootet jetzt auch ohne Mainbot. Writes laufen weiter über Mainbot.
+    <br><br>
+    JSON-Endpoint: <a href="/admin/db-status?format=json" style="color:#a78bfa">/admin/db-status?format=json</a>
+  </div>
+</div>`, 'admin');
     }
 
     // ── EXPLORE ──
