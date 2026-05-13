@@ -8164,7 +8164,7 @@ async function submitSuperLink(){
       return;
     }
     // Confirm-Popup mit Regeln
-    if (!confirm('💎 Diamantlink engagieren\n\nDu bestätigst mit deinem Like:\n✓ Du hast den Post auf Instagram GELIKT\n✓ Du hast KOMMENTIERT\n✓ Du hast den Post GETEILT\n✓ Du hast den Post GESPEICHERT\n\n→ Belohnung: +3 💎\n→ Strafe bei Betrug: XP-Abzug + Diamonds-Reset + Bann\n\nFortfahren?')) return;
+    if (!confirm('💎 Diamantlink engagieren\\n\\nDu bestätigst mit deinem Like:\\n✓ Du hast den Post auf Instagram GELIKT\\n✓ Du hast KOMMENTIERT\\n✓ Du hast den Post GETEILT\\n✓ Du hast den Post GESPEICHERT\\n\\n→ Belohnung: +3 💎\\n→ Strafe bei Betrug: XP-Abzug + Diamonds-Reset + Bann\\n\\nFortfahren?')) return;
     btn.disabled = true; btn.textContent = '⏳ Bestätige …';
     try {
       const r = await fetch('/api/diamond-link/like', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ postId }) });
