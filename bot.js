@@ -2123,7 +2123,7 @@ async function postDiamondLink(){
   const result=document.getElementById('diamond-result');
   if(!url){result.textContent='❌ Bitte Instagram-Link eingeben';return;}
   if(!url.includes('instagram.com')){result.textContent='❌ Nur Instagram-Links erlaubt';return;}
-  if(!confirm('💎 Diamantlink veröffentlichen?\\n\\nKostet 30 💎 (Admins gratis). 3 Tage Feed-Top, jeder Liker bekommt +3 💎. Bei Schein-Engagement folgen harte Strafen.')) return;
+  if(!confirm('💎 Diamantlink veröffentlichen?\\n\\nKostet 30 💎. 3 Tage Feed-Top, jeder Liker bekommt +3 💎. Bei Schein-Engagement folgen harte Strafen.')) return;
   const btn=document.getElementById('diamond-post-btn'); btn.disabled=true; btn.textContent='⏳ Wird veröffentlicht …';
   try {
     const r=await fetch('/api/diamond-link/create',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url,caption})});
@@ -8141,7 +8141,7 @@ async function submitSuperLink(){
       '<h2 style="margin:0 0 10px;font-size:20px;font-weight:800;text-align:center;background:linear-gradient(180deg,#fff,#06b6d4);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent">Diamantlinks</h2>' +
       '<div style="font-size:13.5px;line-height:1.7;color:var(--text)">' +
         '<b>Regeln:</b><br>' +
-        '• <b>Kosten 30 💎</b> pro Post (Admins gratis)<br>' +
+        '• <b>Kosten 30 💎</b> pro Post<br>' +
         '• 3 Tage Feed-Top, ältester Post ganz oben<br>' +
         '• Jeder Liker bekommt <b>+3 💎</b><br>' +
         '• <b>Pflicht: FULL ENGAGED</b> — LIKEN + KOMMENTIEREN + TEILEN + SPEICHERN<br>' +
