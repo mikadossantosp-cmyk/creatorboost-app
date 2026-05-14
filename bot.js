@@ -7281,6 +7281,25 @@ p{line-height:1.65;color:var(--muted)}
         const heuteLinks = dedupLinks.filter(([,l])=>new Date(l.timestamp||0).toDateString()===todayStr);
         const aelterLinks = dedupLinks.filter(([,l])=>new Date(l.timestamp||0).toDateString()!==todayStr);
 
+        // First-Post-Pin: jedes User-Erstposting wird 8h lang ganz oben angezeigt.
+        // firstLinkByUser: user_id → earliest l.timestamp eines Insta-Links überhaupt.
+        const FIRST_POST_PIN_MS = 8 * 3600 * 1000;
+        const _nowMs = Date.now();
+        const firstLinkByUser = {};
+        for (const l of Object.values(d.links||{})) {
+            if (!l || !l.text || !l.text.includes('instagram.com') || !l.timestamp) continue;
+            const uid = String(l.user_id);
+            if (!firstLinkByUser[uid] || l.timestamp < firstLinkByUser[uid]) firstLinkByUser[uid] = l.timestamp;
+        }
+        function _isPinnedFirstPost([, link]) {
+            if (!link || !link.timestamp) return false;
+            const uid = String(link.user_id);
+            return firstLinkByUser[uid] === link.timestamp
+                && (_nowMs - link.timestamp) < FIRST_POST_PIN_MS;
+        }
+        const pinnedFirstPosts = heuteLinks.filter(_isPinnedFirstPost);
+        const heuteLinksRegular = heuteLinks.filter(l => !_isPinnedFirstPost(l));
+
         function renderLink([msgId, link]){
             const poster = d.users[String(link.user_id)]||{};
             const allLinksForUrl = Object.values(d.links||{}).filter(l=>l.text===link.text);
@@ -7531,13 +7550,22 @@ commentsBox+
             ? '<div style="padding:8px 0 80px">'+allSuperLinks.map(renderSuperLink).join('')+'</div>'
             : '<div style="text-align:center;padding:48px 24px;padding-bottom:80px"><div style="font-size:56px;margin-bottom:16px">⭐</div><div style="font-size:17px;font-weight:700;margin-bottom:8px">Noch keine Superlinks</div><div style="font-size:13px;color:var(--muted);margin-bottom:24px">Teile deinen Instagram-Link für maximales Engagement mit der Community.</div></div>';
 
-        const heuteHtml = heuteLinks.length ? heuteLinks.map(renderLink).join('') : `
+        // Pinned-First-Posts kommen ganz oben (zwischen Diamond-Strip und regulärem Feed).
+        // Wrap mit 🌟-Banner darüber + farblicher Rand am Post selbst.
+        const pinnedHeader = pinnedFirstPosts.length
+            ? '<div style="margin:0 16px 8px;padding:10px 14px;background:linear-gradient(135deg,rgba(245,158,11,0.14),rgba(168,85,247,0.10));border:1px solid rgba(245,158,11,0.32);border-radius:12px;display:flex;align-items:center;gap:10px"><span style="font-size:18px">🌟</span><div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:800;color:#f59e0b;letter-spacing:0.4px">ERSTER POST · 8h FEATURED</div><div style="font-size:10.5px;color:var(--muted);margin-top:1px">Onboarding-Boost für neue Creator</div></div></div>'
+            : '';
+        const pinnedHtml = pinnedFirstPosts.length
+            ? pinnedHeader + pinnedFirstPosts.map(([id, l]) => '<div style="position:relative">'+renderLink([id, l])+'<div style="position:absolute;top:14px;right:18px;background:linear-gradient(135deg,#f59e0b,#a855f7);color:#fff;font-size:9.5px;font-weight:800;letter-spacing:0.8px;padding:3px 8px;border-radius:99px;box-shadow:0 2px 8px rgba(245,158,11,0.4);pointer-events:none">🌟 ERSTER POST</div></div>').join('')
+            : '';
+        const regularHeuteHtml = heuteLinksRegular.length ? heuteLinksRegular.map(renderLink).join('') : (pinnedFirstPosts.length ? '' : `
 <div style="text-align:center;padding:48px 24px">
   <div style="font-size:56px;margin-bottom:16px">📸</div>
   <div style="font-size:17px;font-weight:700;margin-bottom:8px">Noch keine Links heute</div>
   <div style="font-size:13px;color:var(--muted);margin-bottom:24px">${genderize(d.users[myUid], 'Sei der Erste!', 'Sei die Erste!', 'Mach den Anfang!')} Teile deinen Instagram Link mit der Community.</div>
   <button onclick="openPlusSheet()" style="display:inline-flex;align-items:center;gap:8px;background:var(--accent);color:#fff;padding:12px 24px;border-radius:12px;font-size:14px;font-weight:700;border:none;cursor:pointer;font-family:var(--font)">📸 Jetzt Link teilen</button>
-</div>`;
+</div>`);
+        const heuteHtml = pinnedHtml + regularHeuteHtml;
         const aelterHtml = aelterLinks.length ? aelterLinks.map(renderLink).join('') : '<div class="empty" style="margin-top:40px"><div class="empty-icon">🕐</div><div class="empty-text">Keine älteren Links</div></div>';
         const kollabsHtml = '<div id="kollabs-tab-root" style="padding:8px 0 80px"><div style="padding:48px 24px;text-align:center;color:var(--muted);font-size:13px">⏳ Lade Kollab-Posts…</div></div>';
         const diamondHtml = '<div id="diamond-tab-root" style="padding:8px 0 80px"><div style="padding:48px 24px;text-align:center;color:var(--muted);font-size:13px">⏳ Lade Diamantlinks…</div></div>';
