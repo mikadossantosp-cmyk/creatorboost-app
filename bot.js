@@ -7153,6 +7153,17 @@ p{line-height:1.65;color:var(--muted)}
         return json(result || {ok:false, error:'Mainbot offline'});
     }
 
+    // ── Admin: User als Sub-Account verknüpfen (z.B. Elitedrop → mein 3. Sub) ──
+    if (path === '/api/admin/link-as-sub' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
+        const body = await parseBody(req);
+        const target_uid = String(body.target_uid||'').trim();
+        if (!target_uid) return json({ok:false, error:'target_uid erforderlich'},400);
+        const r = await postBot('/admin-link-as-sub-api', { parent_uid: String(session.uid), target_uid });
+        return json(r || {ok:false, error:'Mainbot offline'});
+    }
+
     // ── Sync-Health (Phase 2 Smart-Mirror) ──
     if (path === '/api/admin/sync-health' && req.method === 'GET') {
         if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
@@ -11365,6 +11376,7 @@ function openUser(uid) {
         '<button class="dash-act" onclick="grantNoAmount(\\''+u.uid+'\\',\\'remove-warn\\')">− ⚠️ Warn</button>' +
         '<button class="dash-act" onclick="grantNoAmount(\\''+u.uid+'\\',\\'add-extra-link\\')">+ 🔗 Extra-Link</button>' +
         '<button class="dash-act" onclick="grantNoAmount(\\''+u.uid+'\\',\\'add-superlink\\')">+ ⚡ Superlink-Slot</button>' +
+        '<button class="dash-act" onclick="linkAsSub(\\''+u.uid+'\\',\\''+esc(u.spitzname||u.name||u.uid)+'\\')" style="background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;border-color:transparent">🔗 Als mein Sub linken</button>' +
       '</div>' +
       '<div style="font-size:11px;font-weight:700;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin:14px 0 8px">📨 Kommunikation</div>' +
       '<div class="dash-action-grid">' +
@@ -11733,6 +11745,20 @@ async function grant(uid, action) {
   if (j.ok) { alert('✅ ' + labelMap[action] + ' erfolgt'); refreshUsers(); document.querySelectorAll('.dash-modal-bg').forEach(m => m.remove()); }
   else alert('❌ '+ (j.error||'Fehler'));
 }
+async function linkAsSub(targetUid, targetName) {
+  if (!confirm('User "' + targetName + '" (UID ' + targetUid + ') als deinen Sub-Account verknüpfen?\\n\\nDieser User wird Teil deiner Account-Familie. Alle Posts/XP bleiben erhalten — aber er gilt fortan als dein Sub.')) return;
+  try {
+    const r = await fetch('/api/admin/link-as-sub', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ target_uid: targetUid }) });
+    const j = await r.json().catch(()=>({}));
+    if (j.ok) {
+      dToast('🔗 ' + targetName + ' ist jetzt dein Sub · ' + (j.allSubs?.length||0) + ' Subs total', 'ok');
+      document.querySelectorAll('.dash-modal-bg').forEach(m=>m.remove());
+    } else {
+      alert('❌ ' + (j.error||'Fehler'));
+    }
+  } catch(e) { alert('❌ Netzwerk: '+e.message); }
+}
+
 async function grantNoAmount(uid, action) {
   if (!confirm('Aktion ausführen: '+action+'?')) return;
   const res = await fetch('/api/admin/grant', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ uid, action }) });
