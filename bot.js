@@ -7581,9 +7581,10 @@ commentsBox+
         const mySlMax = (d.users[myUid]?.role === '🌟 Elite+') ? 2 : 1;
         const mySlCount = Object.values(d.superlinks||{}).filter(s=>s.uid===myUid&&s.week===slWeekKey).length;
         const myWeekSuperlink = mySlCount > 0;
-        const myBonusSL = Number(d.users[myUid]?.bonusSuperlinks||0);
-        // Bonus-Superlinks ignorieren das Wochenlimit → werden zur Verfügung addiert
-        const slAvailable = Math.max(0, mySlMax - mySlCount) + myBonusSL;
+        const mySlCredits = Number(d.users[myUid]?.superlinkCredits||0);
+        // Superlink-Credits (aus Roulette/Gewinnspiel/Admin) ignorieren das
+        // Wochenlimit → werden zur 'zur Verfügung'-Anzeige addiert.
+        const slAvailable = Math.max(0, mySlMax - mySlCount) + mySlCredits;
 
         function renderSuperLink(sl) {
             const poster = d.users[String(sl.uid)]||{};
