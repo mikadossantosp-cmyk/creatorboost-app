@@ -446,6 +446,62 @@ let _appDbLastRefreshOk = null;  // ISO-Time des letzten erfolgreichen Mainbot-P
 let _appDbLastRefreshTry = null; // letzter Versuch (auch fehlgeschlagen)
 let _appDbRefreshFailures = 0;   // fortlaufende Fehlschläge (für Health-Check)
 
+// ── Phase 2: Write-Audit-Log + Sync-Health ──
+// Jede postBot-Mutation wird protokolliert (Rolling 5000 Einträge). Plus
+// Fail-Counter für Mainbot-Calls damit ein Banner zeigt wann Bridge degraded ist.
+const APP_WRITES_LOG = DATA_DIR + '/app_writes_log.json';
+const _writeLog = [];           // in-memory, last 5000 entries
+let _writeLogSaveTimer = null;
+let _mainbotConsecutiveFails = 0;
+let _lastMainbotSuccessAt = Date.now();
+let _lastMainbotCallAt = 0;
+function logWrite(endpoint, body, response, success, durationMs) {
+    const entry = {
+        ts: Date.now(),
+        endpoint: String(endpoint||'').slice(0, 80),
+        uid: String(body?.uid || body?.fromUid || body?.reporterUid || ''),
+        success: !!success,
+        ms: Number(durationMs)||0,
+        responseOk: success && response && response.ok !== false,
+        error: success ? null : 'no-response',
+    };
+    _writeLog.push(entry);
+    if (_writeLog.length > 5000) _writeLog.splice(0, _writeLog.length - 5000);
+    if (_writeLogSaveTimer) return;
+    _writeLogSaveTimer = setTimeout(() => {
+        _writeLogSaveTimer = null;
+        try {
+            const tmp = APP_WRITES_LOG + '.tmp';
+            fs.writeFileSync(tmp, JSON.stringify(_writeLog.slice(-5000)));
+            fs.renameSync(tmp, APP_WRITES_LOG);
+        } catch(e) {
+            console.error('app_writes_log save failed:', e.message);
+        }
+    }, 3000);
+}
+function loadWriteLogFromDisk() {
+    try {
+        if (!fs.existsSync(APP_WRITES_LOG)) return;
+        const raw = fs.readFileSync(APP_WRITES_LOG, 'utf8');
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+            _writeLog.push(...parsed.slice(-5000));
+            console.log('✅ app_writes_log.json geladen (' + _writeLog.length + ' Einträge)');
+        }
+    } catch(e) {
+        console.error('app_writes_log load failed:', e.message);
+    }
+}
+function _markMainbotSuccess() {
+    _mainbotConsecutiveFails = 0;
+    _lastMainbotSuccessAt = Date.now();
+    _lastMainbotCallAt = Date.now();
+}
+function _markMainbotFail() {
+    _mainbotConsecutiveFails++;
+    _lastMainbotCallAt = Date.now();
+}
+
 function persistAppDb() {
     // Debounce 2s — schützt vor disk-thrash bei rapid-fire refreshes
     if (_appDbSaveTimer) return;
@@ -483,6 +539,7 @@ function loadAppDbFromDisk() {
 // Boot-time: Disk laden BEVOR der Mainbot überhaupt erreichbar sein muss.
 // Damit ist die App auch ohne Mainbot start-fähig.
 loadAppDbFromDisk();
+loadWriteLogFromDisk();
 
 async function fetchBotRawOnce(path, timeoutMs) {
     return new Promise(resolve => {
@@ -503,6 +560,7 @@ async function fetchBotRawOnce(path, timeoutMs) {
 async function fetchBotRaw(path) {
     let r = await fetchBotRawOnce(path, 5000);
     if (r === null) r = await fetchBotRawOnce(path, 8000);
+    if (r !== null) _markMainbotSuccess(); else _markMainbotFail();
     return r;
 }
 
@@ -548,6 +606,7 @@ async function fetchBot(path) {
 setInterval(refreshDataCache, 45000);
 
 async function postBot(path, body) {
+    const _t0 = Date.now();
     const result = await new Promise(resolve => {
         const fullUrl = MAINBOT_URL + path;
         if (!fullUrl.startsWith('http')) return resolve(null);
@@ -569,6 +628,10 @@ async function postBot(path, body) {
         req.setTimeout(5000, () => { req.destroy(); resolve(null); });
         req.write(data); req.end();
     });
+    const _ms = Date.now() - _t0;
+    const _ok = result !== null;
+    if (_ok) _markMainbotSuccess(); else _markMainbotFail();
+    logWrite(path, body, result, _ok, _ms);
     _dataCache = null; _dataCacheTime = 0;
     refreshDataCache().catch(()=>{});
     return result;
@@ -7080,6 +7143,35 @@ p{line-height:1.65;color:var(--muted)}
         return json(result || {ok:false, error:'Mainbot offline'});
     }
 
+    // ── Sync-Health (Phase 2 Smart-Mirror) ──
+    if (path === '/api/admin/sync-health' && req.method === 'GET') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
+        const now = Date.now();
+        const todayStr = new Date().toDateString();
+        const writesToday = _writeLog.filter(w => new Date(w.ts).toDateString() === todayStr).length;
+        const writesFailed24h = _writeLog.filter(w => !w.success && (now - w.ts) < 86400000).length;
+        const successRate = _writeLog.length > 0
+            ? Math.round((_writeLog.filter(w => w.success).length / _writeLog.length) * 100)
+            : 100;
+        return json({
+            ok: true,
+            cacheAgeSec: _dataCacheTime ? Math.round((now - _dataCacheTime) / 1000) : null,
+            mainbotLastSuccessAt: _lastMainbotSuccessAt,
+            mainbotConsecutiveFails: _mainbotConsecutiveFails,
+            mainbotDegraded: _mainbotConsecutiveFails >= 3,
+            mainbotLastCallAt: _lastMainbotCallAt,
+            writesTotal: _writeLog.length,
+            writesToday,
+            writesFailed24h,
+            successRate,
+            appDbLastSaveOk: _appDbLastSaveOk,
+            appDbLastRefreshOk: _appDbLastRefreshOk,
+            appDbRefreshFailures: _appDbRefreshFailures,
+            lastWrites: _writeLog.slice(-30).reverse(),
+        });
+    }
+
     // ── Admin Engagement-Log (pinned + collab + reports) ──
     if (path === '/api/admin/engagement-log' && req.method === 'GET') {
         if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
@@ -10719,6 +10811,9 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
       </div>
     </div>
 
+    <!-- Sync-Health Banner (Phase 2 Smart-Mirror) -->
+    <div id="sync-health-banner" style="display:none;margin-bottom:16px"></div>
+
     <!-- Live Metrics -->
     <div class="dash-stat-grid">
       <div class="dash-stat live">
@@ -11228,18 +11323,36 @@ async function startEvent(type, btn) {
   const label = document.getElementById('evt-label').value || '';
   if (!Number.isFinite(amount) || amount <= 0) { alert('Bitte gültigen Betrag eingeben'); return; }
   btn.disabled = true; btn.textContent = '⏳';
-  const r = await fetch('/api/admin/event-start', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ type, amount, durationMs, label }) });
-  const j = await r.json().catch(()=>({}));
-  if (j.ok) { dToast('🚀 Event gestartet · '+amount+(type==='diamond'?' 💎':' XP')+' pro Post für '+Math.round(durationMs/60000)+' min','ok'); document.querySelectorAll('.dash-modal-bg').forEach(m=>m.remove()); }
-  else { btn.disabled = false; btn.textContent = '🚀 Starten'; alert('❌ '+(j.error||'Fehler')); }
+  try {
+    const r = await fetch('/api/admin/event-start', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ type, amount, durationMs, label }) });
+    const raw = await r.text();
+    let j; try { j = JSON.parse(raw); } catch(e) { j = { _raw: raw.slice(0, 200) }; }
+    if (j.ok) {
+      dToast('🚀 Event gestartet · '+amount+(type==='diamond'?' 💎':' XP')+' pro Post für '+Math.round(durationMs/60000)+' min','ok');
+      document.querySelectorAll('.dash-modal-bg').forEach(m=>m.remove());
+    } else {
+      btn.disabled = false; btn.textContent = '🚀 Starten';
+      const detail = j.error || j._raw || 'unbekannt';
+      alert('❌ HTTP '+r.status+'\\n\\n'+detail);
+    }
+  } catch(e) {
+    btn.disabled = false; btn.textContent = '🚀 Starten';
+    alert('❌ Network: '+e.message);
+  }
 }
 async function stopEvent(type, btn) {
   if (!confirm('Event sofort beenden?')) return;
   btn.disabled = true; btn.textContent = '⏳';
-  const r = await fetch('/api/admin/event-stop', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ type }) });
-  const j = await r.json().catch(()=>({}));
-  if (j.ok) { dToast('🛑 Event gestoppt','info'); document.querySelectorAll('.dash-modal-bg').forEach(m=>m.remove()); }
-  else { btn.disabled = false; btn.textContent = '🛑 Event stoppen'; alert('❌ '+(j.error||'Fehler')); }
+  try {
+    const r = await fetch('/api/admin/event-stop', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ type }) });
+    const raw = await r.text();
+    let j; try { j = JSON.parse(raw); } catch(e) { j = { _raw: raw.slice(0, 200) }; }
+    if (j.ok) { dToast('🛑 Event gestoppt','info'); document.querySelectorAll('.dash-modal-bg').forEach(m=>m.remove()); }
+    else { btn.disabled = false; btn.textContent = '🛑 Event stoppen'; alert('❌ HTTP '+r.status+'\\n\\n'+(j.error||j._raw||'unbekannt')); }
+  } catch(e) {
+    btn.disabled = false; btn.textContent = '🛑 Event stoppen';
+    alert('❌ Network: '+e.message);
+  }
 }
 
 async function openBroadcastModal() {
@@ -11446,6 +11559,8 @@ async function loadStatsOverview() {
     renderSourceFunnel(s.sourceFunnel || {});
     // Live Activity Feed
     renderActivityFeed(s.recentActivity || []);
+    // Phase 2: Sync-Health
+    loadSyncHealth();
   } catch(e) {
     console.warn('[dashboard stats] error at stage '+_stage+':', e);
     _dashStatsFallback('exception at '+_stage);
@@ -11559,6 +11674,83 @@ function renderActivityFeed(events) {
       '<div style="font-size:10.5px;color:var(--dsub);font-variant-numeric:tabular-nums;flex-shrink:0">'+dateStr+' '+timeStr+'</div>' +
     '</div>';
   }).join('');
+}
+
+async function loadSyncHealth() {
+  try {
+    const r = await fetch('/api/admin/sync-health');
+    if (!r.ok) return;
+    const h = await r.json();
+    if (!h.ok) return;
+    const banner = document.getElementById('sync-health-banner');
+    if (!banner) return;
+    const cacheAge = h.cacheAgeSec ?? '?';
+    const writesT = h.writesToday || 0;
+    const successRate = h.successRate ?? 100;
+    const degraded = !!h.mainbotDegraded;
+    if (degraded) {
+      banner.style.display = 'block';
+      banner.innerHTML = '<div style="padding:14px 16px;background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.40);border-radius:12px;display:flex;align-items:center;gap:12px">' +
+        '<div style="font-size:20px">⚠️</div>' +
+        '<div style="flex:1;min-width:0">' +
+          '<div style="font-size:13px;font-weight:800;color:#ef4444">Mainbot-Sync DEGRADED</div>' +
+          '<div style="font-size:11.5px;color:var(--dsub);margin-top:2px">'+h.mainbotConsecutiveFails+' Calls in Folge fehlgeschlagen · Cache-Age: '+cacheAge+'s · Schreibvorgänge schlagen evtl. fehl</div>' +
+        '</div>' +
+        '<button class="dash-btn" onclick="openSyncHealthDetail()">📋 Details</button>' +
+      '</div>';
+    } else {
+      // Kompakter OK-Banner
+      banner.style.display = 'block';
+      banner.innerHTML = '<div style="padding:8px 14px;background:rgba(34,197,94,0.06);border:1px solid rgba(34,197,94,0.20);border-radius:10px;display:flex;align-items:center;gap:10px;font-size:11.5px">' +
+        '<span style="color:#22c55e;font-weight:800">●</span>' +
+        '<span style="color:var(--dsub)">Bridge-Sync OK · Cache-Age <b style="color:#fff">'+cacheAge+'s</b> · '+writesT+' Writes heute · '+successRate+'% Success-Rate</span>' +
+        '<div style="flex:1"></div>' +
+        '<button class="dash-btn" style="padding:4px 10px;font-size:11px" onclick="openSyncHealthDetail()">📋 Details</button>' +
+      '</div>';
+    }
+  } catch(e) {}
+}
+async function openSyncHealthDetail() {
+  const r = await fetch('/api/admin/sync-health');
+  const h = await r.json().catch(()=>({}));
+  const bg = document.createElement('div');
+  bg.className = 'dash-modal-bg';
+  bg.onclick = e => { if (e.target===bg) bg.remove(); };
+  const writes = h.lastWrites || [];
+  const writesHtml = writes.length
+    ? writes.map(w => {
+        const color = w.success ? '#22c55e' : '#ef4444';
+        const ts = new Date(w.ts).toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+        return '<tr><td style="padding:4px 8px;color:var(--dsub)">'+ts+'</td><td style="padding:4px 8px;color:#fff">'+esc(w.endpoint)+'</td><td style="padding:4px 8px;color:var(--dsub);font-size:10.5px">'+esc(w.uid||'-')+'</td><td style="padding:4px 8px;color:'+color+';font-weight:700;text-align:right">'+(w.success?'✓':'✗')+' '+w.ms+'ms</td></tr>';
+      }).join('')
+    : '<tr><td colspan="4" style="padding:14px;text-align:center;color:var(--dsub)">Noch keine Writes</td></tr>';
+  bg.innerHTML = '<div class="dash-modal" style="max-width:760px"><div class="dash-modal-hdr"><h3>📋 Sync-Health (Phase 2)</h3><div class="dash-modal-meta">Live-Mirror-Status der App↔Mainbot Bridge</div></div>' +
+    '<div class="dash-modal-body" style="font-family:ui-monospace,monospace;font-size:11.5px">' +
+      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:14px">' +
+        statCard('Cache-Age', (h.cacheAgeSec??'-')+'s', h.cacheAgeSec > 300 ? '#f59e0b' : '#22c55e') +
+        statCard('Bridge-Fails (Reihe)', h.mainbotConsecutiveFails??0, h.mainbotConsecutiveFails > 0 ? '#ef4444' : '#22c55e') +
+        statCard('Writes heute', h.writesToday??0, '#3b82f6') +
+        statCard('Writes total', h.writesTotal??0, '#a78bfa') +
+        statCard('Success-Rate', (h.successRate??100)+'%', h.successRate < 95 ? '#ef4444' : '#22c55e') +
+        statCard('Fehler 24h', h.writesFailed24h??0, h.writesFailed24h > 0 ? '#f59e0b' : '#22c55e') +
+      '</div>' +
+      '<div style="padding:10px 12px;background:var(--dink);border-radius:8px;margin-bottom:14px">' +
+        '<b style="color:#f5d76e">app_db.json letzter Save:</b> '+(h.appDbLastSaveOk||'nie')+'<br>' +
+        '<b style="color:#f5d76e">/data letzter Pull:</b> '+(h.appDbLastRefreshOk||'nie')+'<br>' +
+        '<b style="color:#f5d76e">Mainbot last success:</b> '+new Date(h.mainbotLastSuccessAt||0).toLocaleString('de-DE') +
+      '</div>' +
+      '<div style="font-size:10.5px;color:#22c55e;letter-spacing:1px;text-transform:uppercase;margin:14px 0 6px;font-weight:700">Letzte 30 Writes</div>' +
+      '<div style="background:var(--dink);border-radius:8px;overflow:hidden;max-height:360px;overflow-y:auto"><table style="width:100%;border-collapse:collapse">'+writesHtml+'</table></div>' +
+    '</div>' +
+    '<div class="dash-modal-foot"><button class="dash-btn dash-btn-primary" onclick="this.closest(\\'.dash-modal-bg\\').remove()">Schließen</button></div>' +
+    '</div>';
+  document.body.appendChild(bg);
+}
+function statCard(label, value, color) {
+  return '<div style="padding:10px 12px;background:var(--dink);border-radius:8px;border-left:3px solid '+color+'">' +
+    '<div style="font-size:9.5px;font-weight:700;color:var(--dsub);text-transform:uppercase;letter-spacing:1px">'+label+'</div>' +
+    '<div style="font-size:18px;font-weight:800;color:'+color+';margin-top:2px">'+value+'</div>' +
+  '</div>';
 }
 
 function drawSparkline(id, data, color) {
