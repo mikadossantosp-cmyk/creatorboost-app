@@ -7383,21 +7383,25 @@ p{line-height:1.65;color:var(--muted)}
         const heuteLinks = dedupLinks.filter(([,l])=>new Date(l.timestamp||0).toDateString()===todayStr);
         const aelterLinks = dedupLinks.filter(([,l])=>new Date(l.timestamp||0).toDateString()!==todayStr);
 
-        // First-Post-Pin: jedes User-Erstposting wird 8h lang ganz oben angezeigt.
-        // firstLinkByUser: user_id → earliest l.timestamp eines Insta-Links überhaupt.
+        // First-Post-Pin: NUR der allererste Post eines NEUEN Members (8h sichtbar).
+        // Vorher buggy: nahm earliest timestamp aus d.links — aber d.links ist
+        // rolling 500-Limit, alte Links werden evicted → 'erfahrener' User wurden
+        // fälschlich als 'erster Post' markiert.
+        // Neu: u.links === 1 (Counter inkrementiert je gepostetem Link, NIE
+        // resettet) + joinDate ≤ 7 Tage (echter Newcomer).
         const FIRST_POST_PIN_MS = 8 * 3600 * 1000;
+        const NEW_MEMBER_MAX_AGE_MS = 7 * 24 * 3600 * 1000;
         const _nowMs = Date.now();
-        const firstLinkByUser = {};
-        for (const l of Object.values(d.links||{})) {
-            if (!l || !l.text || !l.text.includes('instagram.com') || !l.timestamp) continue;
-            const uid = String(l.user_id);
-            if (!firstLinkByUser[uid] || l.timestamp < firstLinkByUser[uid]) firstLinkByUser[uid] = l.timestamp;
-        }
         function _isPinnedFirstPost([, link]) {
             if (!link || !link.timestamp) return false;
-            const uid = String(link.user_id);
-            return firstLinkByUser[uid] === link.timestamp
-                && (_nowMs - link.timestamp) < FIRST_POST_PIN_MS;
+            if ((_nowMs - link.timestamp) >= FIRST_POST_PIN_MS) return false;
+            const u = d.users[String(link.user_id)];
+            if (!u) return false;
+            // Counter exakt 1 → user's allererster Post ever
+            if (Number(u.links||0) !== 1) return false;
+            // Plus: User muss frisch sein (joinDate < 7 Tage)
+            if (!u.joinDate || (_nowMs - u.joinDate) > NEW_MEMBER_MAX_AGE_MS) return false;
+            return true;
         }
         const pinnedFirstPosts = heuteLinks.filter(_isPinnedFirstPost);
         const heuteLinksRegular = heuteLinks.filter(l => !_isPinnedFirstPost(l));
