@@ -7570,8 +7570,16 @@ commentsBox+
         const kollabsHtml = '<div id="kollabs-tab-root" style="padding:8px 0 80px"><div style="padding:48px 24px;text-align:center;color:var(--muted);font-size:13px">⏳ Lade Kollab-Posts…</div></div>';
         const diamondHtml = '<div id="diamond-tab-root" style="padding:8px 0 80px"><div style="padding:48px 24px;text-align:center;color:var(--muted);font-size:13px">⏳ Lade Diamantlinks…</div></div>';
         // Diamantlink-Top-Strip nur im 'heute'-Tab — älteste Diamantlinks ganz oben.
+        // Stack-Order Heute-Tab:
+        //   1. Diamond-Top-Strip (#diamond-top-strip)
+        //   2. First-Post-Pin (im heuteHtml, vor dem regulären Feed)
+        //   3. Kollab-Boost-Strip (#collab-boost-strip) — alle 4h 20min lang
+        //   4. Reguläre Heute-Links
+        // First-Post-Pin steht oben im heuteHtml. Boost-Strip kommt zwischen
+        // First-Post-Pin und regulärer Feed → wir splitten heuteHtml in
+        // pinnedHtml + regularHeuteHtml, dann boost-strip dazwischen.
         const heuteWithDiamondTop = tab === 'heute'
-            ? '<div id="diamond-top-strip"></div><div style="padding:8px 0 80px">'+heuteHtml+'</div>'
+            ? '<div id="diamond-top-strip"></div>'+pinnedHtml+'<div id="collab-boost-strip"></div><div style="padding:8px 0 80px">'+regularHeuteHtml+'</div>'
             : '<div style="padding:8px 0 80px">'+heuteHtml+'</div>';
         const postsHtml = tab === 'aelter' ? '<div style="padding:8px 0 80px">'+aelterHtml+'</div>'
             : tab === 'engagement' ? engagementHtml
@@ -8218,6 +8226,107 @@ async function submitSuperLink(){
     // Countdown tick — re-render alle 60s damit Restzeit aktuell bleibt
     load();
   }, 60000);
+})();
+
+// ── KOLLAB-BOOST-STRIP (Heute-Feed, alle 4h 20min) ──
+(function initCollabBoostStrip(){
+  const root = document.getElementById('collab-boost-strip');
+  if (!root) return;
+  function esc(s){ return String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  function fmtMs(ms){
+    if (ms <= 0) return '0:00';
+    const s = Math.floor(ms/1000);
+    const m = Math.floor(s/60);
+    const sec = s%60;
+    return m+':'+(sec<10?'0':'')+sec;
+  }
+  function injectCss(){
+    if (document.getElementById('collab-boost-css')) return;
+    const s = document.createElement('style'); s.id='collab-boost-css';
+    s.textContent =
+      '.cb-card{position:relative;margin:0 16px 14px;border-radius:18px;overflow:hidden;background:var(--bg2);isolation:isolate}'+
+      '.cb-glow{position:absolute;inset:-2px;border-radius:20px;padding:2px;background:conic-gradient(from 0deg,#ec4899,#f59e0b,#a855f7,#ec4899,#f59e0b,#ec4899);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;animation:cb-rot 4s linear infinite;pointer-events:none}'+
+      '@keyframes cb-rot{to{transform:rotate(360deg)}}'+
+      '.cb-body{position:relative;padding:14px;background:linear-gradient(180deg,rgba(236,72,153,0.06),var(--bg3));border-radius:16px;margin:2px}'+
+      '.cb-banner{display:flex;align-items:center;gap:10px;padding:10px 12px;margin-bottom:12px;background:linear-gradient(135deg,rgba(236,72,153,0.18),rgba(168,85,247,0.12));border:1px solid rgba(236,72,153,0.40);border-radius:10px;animation:cb-pulse 2s ease-in-out infinite}'+
+      '@keyframes cb-pulse{0%,100%{box-shadow:0 0 0 0 rgba(236,72,153,0.45)}50%{box-shadow:0 0 0 8px rgba(236,72,153,0)}}'+
+      '.cb-btn{display:block;width:100%;padding:13px;background:linear-gradient(135deg,#ec4899,#a21caf);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 0 20px rgba(236,72,153,0.45);position:relative;overflow:hidden}'+
+      '.cb-btn::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.18),transparent);transform:translateX(-100%);animation:cb-shimmer 2.5s ease-in-out infinite}'+
+      '@keyframes cb-shimmer{50%{transform:translateX(100%)}}';
+    document.head.appendChild(s);
+  }
+  function renderCard(p){
+    const aName = esc(p.authorA?.name||'User'), bName = esc(p.authorB?.name||'User');
+    const aHandle = p.authorA?.instagram ? '@'+esc(p.authorA.instagram) : '';
+    const bHandle = p.authorB?.instagram ? '@'+esc(p.authorB.instagram) : '';
+    const isMine = !!p.isSelf;
+    const liked = !!p.liked;
+    return '<div class="cb-card" data-post-id="'+esc(p.id)+'" data-boost-end="'+(p.boostEndsAt||0)+'">' +
+      '<div class="cb-glow"></div>' +
+      '<div class="cb-body">' +
+        '<div class="cb-banner">' +
+          '<div style="font-size:18px">🤝⚡</div>' +
+          '<div style="flex:1;min-width:0">' +
+            '<div style="font-size:10.5px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;color:#ec4899">KOLLAB BOOST · +1 💎 EXTRA</div>' +
+            '<div style="font-size:11px;color:var(--muted);margin-top:1px">Engagiere jetzt für Bonus · noch <b style="color:#ec4899" data-boost-timer>—</b></div>' +
+          '</div>' +
+        '</div>' +
+        '<div style="font-size:13.5px;font-weight:700;margin-bottom:6px"><a href="/profil/'+esc(p.uid)+'" style="color:var(--text);text-decoration:none">'+aName+'</a> '+(aHandle?'<span style="color:#ec4899;font-weight:500;font-size:12px">'+aHandle+'</span>':'')+' × <a href="/profil/'+esc(p.partnerUid)+'" style="color:var(--text);text-decoration:none">'+bName+'</a> '+(bHandle?'<span style="color:#ec4899;font-weight:500;font-size:12px">'+bHandle+'</span>':'')+'</div>' +
+        (p.caption ? '<div style="font-size:13px;color:var(--text);line-height:1.5;margin:6px 0 10px">'+esc(p.caption)+'</div>' : '') +
+        '<a href="'+esc(p.url)+'" target="_blank" rel="noopener noreferrer" onclick="window._cbvisit_'+p.id+'=Date.now()" style="display:block;padding:11px 13px;background:rgba(236,72,153,0.08);border:1px solid rgba(236,72,153,0.30);border-radius:10px;font-size:12.5px;color:#ec4899;font-weight:700;word-break:break-all;text-decoration:none;margin-bottom:10px">🔗 Auf Instagram öffnen</a>' +
+        (isMine
+          ? '<div style="padding:11px;background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.35);border-radius:10px;font-size:12.5px;color:#ef4444;font-weight:700;text-align:center">🚫 Kein Self-Like — Dein Kollab-Post</div>'
+          : liked
+          ? '<div style="padding:11px;background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.35);border-radius:10px;font-size:13px;color:#22c55e;font-weight:700;text-align:center">✅ Engagiert · +'+(p.boostActive?'2':'1')+' 💎</div>'
+          : '<button class="cb-btn" onclick="collabBoostLike(\\''+p.id+'\\', this)">⚡ Engagiere jetzt · +2 💎 (1+1 Boost)</button>'
+        ) +
+        '<div style="font-size:11px;color:var(--muted);margin-top:8px;text-align:center">'+p.likeCount+' Engagements gesamt</div>' +
+      '</div>' +
+    '</div>';
+  }
+  async function load(){
+    injectCss();
+    try {
+      const r = await fetch('/api/collab/feed');
+      const j = await r.json();
+      if (!j.ok) { root.innerHTML = ''; return; }
+      const boostPosts = (j.posts||[]).filter(p => p.boostActive && !p.boostExpired);
+      if (!boostPosts.length) { root.innerHTML = ''; return; }
+      root.innerHTML = boostPosts.map(renderCard).join('');
+      tick();
+    } catch(e) {
+      console.warn('[collab-boost] load error', e);
+    }
+  }
+  function tick(){
+    const now = Date.now();
+    let anyExpired = false;
+    root.querySelectorAll('[data-boost-end]').forEach(card => {
+      const endsAt = Number(card.dataset.boostEnd) || 0;
+      const remaining = endsAt - now;
+      const tEl = card.querySelector('[data-boost-timer]');
+      if (tEl) tEl.textContent = remaining > 0 ? fmtMs(remaining) : 'beendet';
+      if (remaining <= 0) anyExpired = true;
+    });
+    if (anyExpired) { setTimeout(load, 200); return; }
+  }
+  window.collabBoostLike = async function(postId, btn){
+    const visitTs = window['_cbvisit_'+postId];
+    if (!visitTs || (Date.now() - visitTs) < 1500) {
+      alert('Bitte erst auf den Instagram-Link tippen und LIKEN + KOMMENTIEREN + TEILEN + SPEICHERN.');
+      return;
+    }
+    btn.disabled = true; btn.textContent = '⏳ Bestätige …';
+    try {
+      const r = await fetch('/api/collab/like', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ postId }) });
+      const j = await r.json();
+      if (j.ok) { load(); }
+      else { btn.disabled=false; btn.textContent='⚡ Engagiere jetzt · +2 💎'; alert('❌ '+(j.message||j.error||'Fehler')); }
+    } catch(e) { btn.disabled=false; btn.textContent='⚡ Engagiere jetzt · +2 💎'; alert('❌ '+e.message); }
+  };
+  load();
+  setInterval(load, 60000);  // 1min für neue Boost-Slots
+  setInterval(tick, 1000);   // 1s Countdown-Update
 })();
 
 // ── EVENT-BANNER (Feed-Top) ──
