@@ -7638,16 +7638,27 @@ commentsBox+
         }
 
         const allSuperLinks = Object.values(d.superlinks||{}).sort((a,b)=>b.timestamp-a.timestamp);
-        // Tab-Badges: Anzahl noch ungelikter Posts pro Tab (ohne eigene Posts)
+        // Aktueller Berlin-Wochenkey (Mo-Datum als YYYY-MM-DD) — Superlinks alter Wochen ausblenden
+        const _curWeekKey = (() => { const n=new Date(); const day=n.getDay(); const mon=new Date(n); mon.setDate(n.getDate()-(day===0?6:day-1)); return mon.toISOString().slice(0,10); })();
+        const allSuperLinksWeek = allSuperLinks.filter(sl => !sl.week || sl.week === _curWeekKey);
+        // Tab-Badges: Anzahl ungelikte Posts. Eigene Posts (inkl. Sub-/Parent-Konten)
+        // werden ausgeschlossen — diese können nicht geliked werden und sollen nicht
+        // zählen. _getRoot bringt jeden uid auf den Hauptaccount-uid.
+        const _getRoot = (uid) => {
+            const u = d.users?.[String(uid)];
+            return u && u.parent_uid ? String(u.parent_uid) : String(uid);
+        };
+        const _myRoot = _getRoot(myUid);
+        const _otherUser = (uid) => _getRoot(uid) !== _myRoot;
         const _isUnliked = (likesArr, uid) => !(Array.isArray(likesArr) && likesArr.map(String).includes(String(uid)));
-        const _unlikedCountHeute = heuteLinks.filter(([,l]) => String(l.user_id) !== String(myUid) && _isUnliked(l.likes, myUid)).length;
-        const _unlikedCountAelter = aelterLinks.filter(([,l]) => String(l.user_id) !== String(myUid) && _isUnliked(l.likes, myUid)).length;
-        const _unlikedCountSuper = allSuperLinks.filter(sl => String(sl.uid) !== String(myUid) && _isUnliked(sl.likes, myUid)).length;
+        const _unlikedCountHeute = heuteLinks.filter(([,l]) => _otherUser(l.user_id) && _isUnliked(l.likes, myUid)).length;
+        const _unlikedCountAelter = aelterLinks.filter(([,l]) => _otherUser(l.user_id) && _isUnliked(l.likes, myUid)).length;
+        const _unlikedCountSuper = allSuperLinksWeek.filter(sl => _otherUser(sl.uid) && _isUnliked(sl.likes, myUid)).length;
         const tabBadge = (count) => count > 0
             ? '<span style="display:inline-block;min-width:18px;height:16px;line-height:16px;padding:0 5px;border-radius:99px;background:#ef4444;color:#fff;font-size:9.5px;font-weight:800;vertical-align:middle;margin-left:4px;box-shadow:0 2px 6px rgba(239,68,68,0.45)">'+count+'</span>'
             : '';
-        const engagementHtml = allSuperLinks.length
-            ? '<div style="padding:8px 0 80px">'+allSuperLinks.map(renderSuperLink).join('')+'</div>'
+        const engagementHtml = allSuperLinksWeek.length
+            ? '<div style="padding:8px 0 80px">'+allSuperLinksWeek.map(renderSuperLink).join('')+'</div>'
             : '<div style="text-align:center;padding:48px 24px;padding-bottom:80px"><div style="font-size:56px;margin-bottom:16px">⭐</div><div style="font-size:17px;font-weight:700;margin-bottom:8px">Noch keine Superlinks</div><div style="font-size:13px;color:var(--muted);margin-bottom:24px">Teile deinen Instagram-Link für maximales Engagement mit der Community.</div></div>';
 
         // Pinned-First-Posts kommen ganz oben (zwischen Diamond-Strip und regulärem Feed).
@@ -7698,9 +7709,14 @@ setTimeout(function(){
 <div class="topbar">
   <div class="topbar-logo">CreatorX</div>
   <div class="topbar-actions">
+    <a href="/benachrichtigungen" class="icon-btn" title="Benachrichtigungen" style="position:relative;text-decoration:none;color:inherit">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      <span id="notif-badge-feed" style="display:none;position:absolute;top:2px;right:2px;background:#ef4444;color:#fff;font-size:9px;font-weight:800;border-radius:50%;min-width:14px;height:14px;line-height:14px;text-align:center;padding:0 3px;box-shadow:0 2px 6px rgba(239,68,68,0.45)"></span>
+    </a>
     <button class="icon-btn" onclick="setTheme(document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark')" title="Theme">🌙</button>
   </div>
 </div>
+<script>(async()=>{try{const r=await fetch('/api/notifications/count');const j=await r.json();const b=document.getElementById('notif-badge-feed');if(b&&j.count>0){b.textContent=j.count>9?'9+':j.count;b.style.display='block';}}catch(e){}})();</script>
 <!-- Event-Banner: aktive XP/Diamond-Events mit Countdown -->
 <div id="event-banner" style="display:none"></div>
 <div style="width:100%">${storiesHtml}</div>
