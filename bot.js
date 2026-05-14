@@ -11215,6 +11215,7 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
           <button class="dash-tab" data-tab="email">📧 Email</button>
           <button class="dash-tab" data-tab="incomplete">⚠️ Unvollständig</button>
           <button class="dash-tab" data-tab="ranking">🏆 Top XP</button>
+          <button class="dash-tab" data-tab="subs">👶 Sub-Accounts</button>
           <button class="dash-tab" data-tab="engagement-log">📋 Engagement-Log</button>
           <button class="dash-tab" data-tab="diamond-links">💎 Diamantlinks</button>
         </div>
@@ -11257,6 +11258,7 @@ function renderList() {
   else if (CUR_TAB === 'email') list = list.filter(u => u.hasEmail);
   else if (CUR_TAB === 'incomplete') list = list.filter(u => !u.hasInstagram || !u.hasBio || !u.hasSpitzname);
   else if (CUR_TAB === 'ranking') list = list.filter(u => !u.isAdmin).sort((a,b) => (b.xp||0) - (a.xp||0));
+  else if (CUR_TAB === 'subs') list = list.filter(u => u.isSub);
 
   const q = CUR_Q.toLowerCase().trim();
   if (q) {
@@ -11280,6 +11282,7 @@ function renderList() {
     onb.push(pill(u.hasFirstLink?'🔗':'🔗 –', u.hasFirstLink?'ok':'muted'));
     onb.push(pill(u.inGruppe?'TG':'TG ✗', u.inGruppe?'ok':'err'));
     if (u.isAdmin) onb.push(pill('🛡 Admin','gold'));
+    if (u.isSub) onb.push(pill('👶 Sub','muted'));
     if ((u.warnings||0) > 0) onb.push(pill('⚠️ '+u.warnings+'/5', (u.warnings||0)>=3?'err':'warn'));
     const ageMs = u.joinDate ? (Date.now() - u.joinDate) : null;
     const name = u.spitzname || u.name || ('User '+u.uid);
