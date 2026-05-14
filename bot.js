@@ -8044,11 +8044,16 @@ async function submitSuperLink(){
         const liked = !!p.liked;
         const aName = esc(p.authorA?.name||'User');
         const bName = esc(p.authorB?.name||'User');
+        const boostInfo = p.boostActive
+          ? '<div style="font-size:11px;color:#ec4899;font-weight:800;background:rgba(236,72,153,0.18);border:1px solid rgba(236,72,153,0.40);padding:5px 10px;border-radius:99px">⚡ BOOST AKTIV · +1 💎 Extra</div>'
+          : p.boostNextStartAt
+          ? '<div style="font-size:11px;color:#ec4899;font-weight:700;background:rgba(236,72,153,0.06);border:1px solid rgba(236,72,153,0.20);padding:5px 10px;border-radius:99px">⚡ Nächster Slot: '+new Date(p.boostNextStartAt).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/Berlin'})+' Uhr</div>'
+          : '';
         html += '<div style="margin:0 16px 14px;padding:14px;background:var(--bg3);border:1px solid var(--border2);border-radius:14px">' +
           '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">' +
             '<div style="font-size:11px;color:#ec4899;font-weight:800;letter-spacing:1px;text-transform:uppercase">🤝 Kollab-Post</div>' +
             '<div style="flex:1"></div>' +
-            '<div style="font-size:11px;color:var(--muted)">'+new Date(p.createdAt).toLocaleDateString('de-DE',{day:'2-digit',month:'short'})+'</div>' +
+            (boostInfo || ('<div style="font-size:11px;color:var(--muted)">'+new Date(p.createdAt).toLocaleDateString('de-DE',{day:'2-digit',month:'short'})+'</div>')) +
           '</div>' +
           '<div style="font-size:13px;font-weight:700;margin-bottom:6px"><a href="/profil/'+esc(p.uid)+'" style="color:var(--text);text-decoration:none">'+aName+'</a> × <a href="/profil/'+esc(p.partnerUid)+'" style="color:var(--text);text-decoration:none">'+bName+'</a></div>' +
           (p.caption ? '<div style="font-size:13px;color:var(--text);line-height:1.5;margin:6px 0 10px">'+esc(p.caption)+'</div>' : '') +
@@ -8056,8 +8061,8 @@ async function submitSuperLink(){
           (isMine
             ? '<div style="padding:10px 12px;background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.35);border-radius:10px;font-size:12px;color:#ef4444;font-weight:700;text-align:center">🚫 Kein Self-Like für Kollaboratoren · Dies ist dein Post</div>'
             : liked
-            ? '<div style="padding:11px;background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.35);border-radius:10px;font-size:13px;color:#22c55e;font-weight:700;text-align:center">✅ Engagiert · +1 💎</div>'
-            : '<button onclick="kollabLike(\\''+p.id+'\\', this)" style="display:block;width:100%;padding:12px;background:linear-gradient(135deg,#ec4899,#a21caf);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer">❤️ Engagiert · +1 💎</button>'
+            ? '<div style="padding:11px;background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.35);border-radius:10px;font-size:13px;color:#22c55e;font-weight:700;text-align:center">✅ Engagiert · +'+(p.boostActive?'2':'1')+' 💎</div>'
+            : '<button onclick="kollabLike(\\''+p.id+'\\', this)" style="display:block;width:100%;padding:12px;background:linear-gradient(135deg,#ec4899,#a21caf);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer">❤️ Engagiert · +'+(p.boostActive?'2':'1')+' 💎</button>'
           ) +
           '<div style="font-size:11px;color:var(--muted);margin-top:8px;text-align:center">'+p.likeCount+' Engagements</div>' +
         '</div>';
