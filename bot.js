@@ -7638,6 +7638,14 @@ commentsBox+
         }
 
         const allSuperLinks = Object.values(d.superlinks||{}).sort((a,b)=>b.timestamp-a.timestamp);
+        // Tab-Badges: Anzahl noch ungelikter Posts pro Tab (ohne eigene Posts)
+        const _isUnliked = (likesArr, uid) => !(Array.isArray(likesArr) && likesArr.map(String).includes(String(uid)));
+        const _unlikedCountHeute = heuteLinks.filter(([,l]) => String(l.user_id) !== String(myUid) && _isUnliked(l.likes, myUid)).length;
+        const _unlikedCountAelter = aelterLinks.filter(([,l]) => String(l.user_id) !== String(myUid) && _isUnliked(l.likes, myUid)).length;
+        const _unlikedCountSuper = allSuperLinks.filter(sl => String(sl.uid) !== String(myUid) && _isUnliked(sl.likes, myUid)).length;
+        const tabBadge = (count) => count > 0
+            ? '<span style="display:inline-block;min-width:18px;height:16px;line-height:16px;padding:0 5px;border-radius:99px;background:#ef4444;color:#fff;font-size:9.5px;font-weight:800;vertical-align:middle;margin-left:4px;box-shadow:0 2px 6px rgba(239,68,68,0.45)">'+count+'</span>'
+            : '';
         const engagementHtml = allSuperLinks.length
             ? '<div style="padding:8px 0 80px">'+allSuperLinks.map(renderSuperLink).join('')+'</div>'
             : '<div style="text-align:center;padding:48px 24px;padding-bottom:80px"><div style="font-size:56px;margin-bottom:16px">⭐</div><div style="font-size:17px;font-weight:700;margin-bottom:8px">Noch keine Superlinks</div><div style="font-size:13px;color:var(--muted);margin-bottom:24px">Teile deinen Instagram-Link für maximales Engagement mit der Community.</div></div>';
@@ -7716,11 +7724,11 @@ ${(()=>{
   return '';
 })()}
 <div data-tour="feed-tabs" style="display:flex;gap:6px;padding:6px 16px 14px;width:100%;box-sizing:border-box;flex-wrap:wrap">
-  <a href="/feed?tab=heute" class="feed-pill ${tab==='heute'?'active':''}" style="flex:1;min-width:80px;padding:9px 6px;font-size:12px;font-weight:800;text-align:center;text-decoration:none;border-radius:999px;${tab==='heute'?'background:linear-gradient(135deg,#3b82f6,#60a5fa);color:#fff;box-shadow:0 4px 14px rgba(59,130,246,0.35)':'background:rgba(59,130,246,0.10);color:#3b82f6;border:1px solid rgba(59,130,246,0.35)'};letter-spacing:0.2px">📅 Heute</a>
-  <a href="/feed?tab=aelter" class="feed-pill ${tab==='aelter'?'active':''}" style="flex:1;min-width:80px;padding:9px 6px;font-size:12px;font-weight:800;text-align:center;text-decoration:none;border-radius:999px;${tab==='aelter'?'background:linear-gradient(135deg,#4dabf7,#1d6fa5);color:#fff;box-shadow:0 4px 14px rgba(77,171,247,0.3)':'background:var(--surface-tint);color:var(--muted);border:1px solid var(--border)'};letter-spacing:0.2px">🕐 Älter</a>
-  <a href="/feed?tab=engagement" class="feed-pill ${tab==='engagement'?'active':''}" style="flex:1;min-width:80px;padding:9px 6px;font-size:12px;font-weight:800;text-align:center;text-decoration:none;border-radius:999px;${tab==='engagement'?'background:linear-gradient(135deg,#f59e0b,#a78bfa);color:#fff;box-shadow:0 4px 14px rgba(245,158,11,0.3)':'background:var(--surface-tint);color:var(--muted);border:1px solid var(--border)'};letter-spacing:0.2px">⭐ Engagement</a>
-  <a href="/feed?tab=kollabs" class="feed-pill ${tab==='kollabs'?'active':''}" style="flex:1;min-width:80px;padding:9px 6px;font-size:12px;font-weight:800;text-align:center;text-decoration:none;border-radius:999px;${tab==='kollabs'?'background:linear-gradient(135deg,#ec4899,#a21caf);color:#fff;box-shadow:0 4px 14px rgba(236,72,153,0.35)':'background:rgba(236,72,153,0.10);color:#ec4899;border:1px solid rgba(236,72,153,0.35)'};letter-spacing:0.2px">🤝 Kollabs</a>
-  <a href="/feed?tab=diamond" class="feed-pill ${tab==='diamond'?'active':''}" style="flex:1;min-width:80px;padding:9px 6px;font-size:12px;font-weight:800;text-align:center;text-decoration:none;border-radius:999px;${tab==='diamond'?'background:linear-gradient(135deg,#06b6d4,#0e7490);color:#fff;box-shadow:0 4px 16px rgba(6,182,212,0.50)':'background:rgba(6,182,212,0.10);color:#06b6d4;border:1px solid rgba(6,182,212,0.40)'};letter-spacing:0.2px">💎 Diamond</a>
+  <a href="/feed?tab=heute" class="feed-pill ${tab==='heute'?'active':''}" style="flex:1;min-width:80px;padding:9px 6px;font-size:12px;font-weight:800;text-align:center;text-decoration:none;border-radius:999px;${tab==='heute'?'background:linear-gradient(135deg,#3b82f6,#60a5fa);color:#fff;box-shadow:0 4px 14px rgba(59,130,246,0.35)':'background:rgba(59,130,246,0.10);color:#3b82f6;border:1px solid rgba(59,130,246,0.35)'};letter-spacing:0.2px">📅 Heute${tabBadge(_unlikedCountHeute)}</a>
+  <a href="/feed?tab=aelter" class="feed-pill ${tab==='aelter'?'active':''}" style="flex:1;min-width:80px;padding:9px 6px;font-size:12px;font-weight:800;text-align:center;text-decoration:none;border-radius:999px;${tab==='aelter'?'background:linear-gradient(135deg,#4dabf7,#1d6fa5);color:#fff;box-shadow:0 4px 14px rgba(77,171,247,0.3)':'background:var(--surface-tint);color:var(--muted);border:1px solid var(--border)'};letter-spacing:0.2px">🕐 Älter${tabBadge(_unlikedCountAelter)}</a>
+  <a href="/feed?tab=engagement" class="feed-pill ${tab==='engagement'?'active':''}" style="flex:1;min-width:80px;padding:9px 6px;font-size:12px;font-weight:800;text-align:center;text-decoration:none;border-radius:999px;${tab==='engagement'?'background:linear-gradient(135deg,#f59e0b,#a78bfa);color:#fff;box-shadow:0 4px 14px rgba(245,158,11,0.3)':'background:var(--surface-tint);color:var(--muted);border:1px solid var(--border)'};letter-spacing:0.2px">⭐ Engagement${tabBadge(_unlikedCountSuper)}</a>
+  <a href="/feed?tab=kollabs" class="feed-pill ${tab==='kollabs'?'active':''}" style="flex:1;min-width:80px;padding:9px 6px;font-size:12px;font-weight:800;text-align:center;text-decoration:none;border-radius:999px;${tab==='kollabs'?'background:linear-gradient(135deg,#ec4899,#a21caf);color:#fff;box-shadow:0 4px 14px rgba(236,72,153,0.35)':'background:rgba(236,72,153,0.10);color:#ec4899;border:1px solid rgba(236,72,153,0.35)'};letter-spacing:0.2px">🤝 Kollabs<span id="tab-badge-kollabs"></span></a>
+  <a href="/feed?tab=diamond" class="feed-pill ${tab==='diamond'?'active':''}" style="flex:1;min-width:80px;padding:9px 6px;font-size:12px;font-weight:800;text-align:center;text-decoration:none;border-radius:999px;${tab==='diamond'?'background:linear-gradient(135deg,#06b6d4,#0e7490);color:#fff;box-shadow:0 4px 16px rgba(6,182,212,0.50)':'background:rgba(6,182,212,0.10);color:#06b6d4;border:1px solid rgba(6,182,212,0.40)'};letter-spacing:0.2px">💎 Diamond<span id="tab-badge-diamond"></span></a>
 </div>
 ${tab==='engagement' ? `<div style="padding:12px 16px 4px">
   ${slAvailable > 0
@@ -8156,6 +8164,12 @@ async function submitSuperLink(){
       }
     }
     root.innerHTML = html;
+    // Tab-Badge: Anzahl noch ungelikter Kollab-Posts (ohne eigene)
+    const unliked = (posts||[]).filter(p => !p.liked && !p.isSelf).length;
+    const badgeEl = document.getElementById('tab-badge-kollabs');
+    if (badgeEl) badgeEl.innerHTML = unliked > 0
+      ? '<span style="display:inline-block;min-width:18px;height:16px;line-height:16px;padding:0 5px;border-radius:99px;background:#ef4444;color:#fff;font-size:9.5px;font-weight:800;vertical-align:middle;margin-left:4px;box-shadow:0 2px 6px rgba(239,68,68,0.45)">'+unliked+'</span>'
+      : '';
   }
   function showRulesModal(){
     const bg = document.createElement('div');
@@ -8258,6 +8272,12 @@ async function submitSuperLink(){
       const j = await r.json();
       TAB_RULES_OK = !!j.rulesAccepted;
       const posts = j.posts || [];
+      // Tab-Badge: Anzahl noch ungelikter Diamantlinks (ohne eigene)
+      const unliked = posts.filter(p => !p.liked && !p.isSelf).length;
+      const badgeEl = document.getElementById('tab-badge-diamond');
+      if (badgeEl) badgeEl.innerHTML = unliked > 0
+        ? '<span style="display:inline-block;min-width:18px;height:16px;line-height:16px;padding:0 5px;border-radius:99px;background:#ef4444;color:#fff;font-size:9.5px;font-weight:800;vertical-align:middle;margin-left:4px;box-shadow:0 2px 6px rgba(239,68,68,0.45)">'+unliked+'</span>'
+        : '';
       // Top-Strip im Heute-Tab: alle Diamantlinks oben, älteste zuerst (j.posts ist schon ASC sortiert)
       if (stripEl) {
         if (posts.length) stripEl.innerHTML = posts.map(p => renderCard(p)).join('');
@@ -14114,6 +14134,12 @@ async function collabRequest(targetUid, btn){
       }
     }
     root.innerHTML = html;
+    // Tab-Badge: Anzahl noch ungelikter Kollab-Posts (ohne eigene)
+    const unliked = (posts||[]).filter(p => !p.liked && !p.isSelf).length;
+    const badgeEl = document.getElementById('tab-badge-kollabs');
+    if (badgeEl) badgeEl.innerHTML = unliked > 0
+      ? '<span style="display:inline-block;min-width:18px;height:16px;line-height:16px;padding:0 5px;border-radius:99px;background:#ef4444;color:#fff;font-size:9.5px;font-weight:800;vertical-align:middle;margin-left:4px;box-shadow:0 2px 6px rgba(239,68,68,0.45)">'+unliked+'</span>'
+      : '';
   }
   function showRulesModal(){
     const bg = document.createElement('div');
