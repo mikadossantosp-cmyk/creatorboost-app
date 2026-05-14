@@ -7406,6 +7406,9 @@ p{line-height:1.65;color:var(--muted)}
         function _isPinnedFirstPost([, link]) {
             if (!link || !link.timestamp) return false;
             if ((_nowMs - link.timestamp) >= FIRST_POST_PIN_MS) return false;
+            // Wenn User schon liked → raus aus Pin, fällt in Regular-Feed wo Liked-Sort
+            // den Post ans Ende rutscht.
+            if (Array.isArray(link.likes) && link.likes.map(String).includes(String(myUid))) return false;
             const u = d.users[String(link.user_id)];
             if (!u) return false;
             // Counter exakt 1 → user's allererster Post ever
@@ -8372,9 +8375,12 @@ async function submitSuperLink(){
       if (badgeEl) badgeEl.innerHTML = unliked > 0
         ? '<span style="display:inline-block;min-width:18px;height:16px;line-height:16px;padding:0 5px;border-radius:99px;background:#ef4444;color:#fff;font-size:9.5px;font-weight:800;vertical-align:middle;margin-left:4px;box-shadow:0 2px 6px rgba(239,68,68,0.45)">'+unliked+'</span>'
         : '';
-      // Top-Strip im Heute-Tab: alle Diamantlinks oben, älteste zuerst (j.posts ist schon ASC sortiert)
+      // Top-Strip im Heute-Tab: alle Diamantlinks oben, älteste zuerst (j.posts ist schon ASC sortiert).
+      // Liked-by-me Diamantlinks werden NICHT mehr im Top-Strip gezeigt — User hat
+      // den Boost-Reward schon kassiert, kein Re-Engagement mehr nötig.
       if (stripEl) {
-        if (posts.length) stripEl.innerHTML = posts.map(p => renderCard(p)).join('');
+        const stripPosts = posts.filter(p => !p.liked);
+        if (stripPosts.length) stripEl.innerHTML = stripPosts.map(p => renderCard(p)).join('');
         else stripEl.innerHTML = '';
       }
       // Diamond-Tab: zeigt zusätzlich Erst-Visit-Modal wenn !rulesAccepted
@@ -8496,7 +8502,9 @@ async function submitSuperLink(){
       const r = await fetch('/api/collab/feed');
       const j = await r.json();
       if (!j.ok) { root.innerHTML = ''; return; }
-      const boostPosts = (j.posts||[]).filter(p => p.boostActive && !p.boostExpired);
+      // Boost-Strip: aktive + nicht-expired + nicht-schon-geliked vom User.
+      // Liked Posts verschwinden aus dem Boost-Strip (Reward bereits kassiert).
+      const boostPosts = (j.posts||[]).filter(p => p.boostActive && !p.boostExpired && !p.liked);
       if (!boostPosts.length) { root.innerHTML = ''; return; }
       root.innerHTML = boostPosts.map(renderCard).join('');
       tick();
