@@ -2764,6 +2764,7 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
   <div class="profile-stat"><div class="profile-stat-val" data-count="${(u.followers||[]).length}">0</div><div class="profile-stat-label">Follower</div></div>
   <div class="profile-stat"><div class="profile-stat-val">🔥 <span data-count="${u.streak||0}">0</span></div><div class="profile-stat-label">Streak</div></div>
   <a href="/diamanten" class="profile-stat" style="text-decoration:none;color:inherit;cursor:pointer"><div class="profile-stat-val">💎 <span data-count="${u.diamonds||0}">0</span></div><div class="profile-stat-label" style="display:flex;align-items:center;justify-content:center;gap:3px">Diamanten <span style="font-size:9px;opacity:0.6">ⓘ</span></div></a>
+  ${Number(u.superlinkCredits||0) > 0 ? `<div class="profile-stat" title="Gewonnene Superlink-Slots (Roulette/Gewinnspiel)"><div class="profile-stat-val" style="color:#f59e0b">⚡ <span data-count="${u.superlinkCredits}">0</span></div><div class="profile-stat-label">Superlink-Credits</div></div>` : ''}
 </div>
 <script>(function(){
   if (window.__cbStatCountUp) return; window.__cbStatCountUp = true;
@@ -11278,11 +11279,12 @@ function openUser(uid) {
     '<div class="dash-modal">' +
       '<h3>'+esc(u.spitzname||u.name||'User')+(u.isAdmin?' <span class="dash-pill warn">Admin</span>':'')+'</h3>' +
       '<div class="dash-modal-meta">'+meta.join(' · ')+'</div>' +
-      '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;text-align:center;margin-bottom:14px">' +
+      '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;text-align:center;margin-bottom:14px">' +
         '<div><div style="font-size:18px;font-weight:800">'+(u.xp||0)+'</div><div style="font-size:10.5px;color:var(--muted)">XP</div></div>' +
         '<div><div style="font-size:18px;font-weight:800">'+(u.diamonds||0)+'</div><div style="font-size:10.5px;color:var(--muted)">💎</div></div>' +
         '<div><div style="font-size:18px;font-weight:800">'+(u.totalLikes||0)+'</div><div style="font-size:10.5px;color:var(--muted)">❤ Likes</div></div>' +
         '<div><div style="font-size:18px;font-weight:800">'+(u.links||0)+'</div><div style="font-size:10.5px;color:var(--muted)">🔗 Links</div></div>' +
+        '<div><div style="font-size:18px;font-weight:800;color:'+((u.superlinkCredits||0)>0?'#f59e0b':'inherit')+'">⚡ '+(u.superlinkCredits||0)+'</div><div style="font-size:10.5px;color:var(--muted)">SL-Credits</div></div>' +
       '</div>' +
       '<div class="dash-onboarding">' +
         onb.map(o => '<div class="dash-onb-row">'+(o.ok?'✅':'⬜')+' '+o.label+'</div>').join('') +
