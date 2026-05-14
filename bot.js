@@ -10748,6 +10748,64 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
       <div class="dash-stat"><div class="dash-stat-lbl">🪪 Ex-Telegram</div><div class="dash-stat-val" id="stat-extg">–</div></div>
     </div>
 
+    <!-- 30-Tage Trend-Chart -->
+    <section class="dash-section">
+      <div class="dash-section-hdr">
+        <div class="dash-section-title">📈 30-Tage Trend</div>
+        <div class="dash-section-sub">Landing · Signups · Logins · Likes</div>
+        <div class="dash-section-grow"></div>
+        <div style="display:flex;gap:14px;font-size:11px;font-weight:700">
+          <span style="color:#3b82f6">● Landing</span>
+          <span style="color:#d4af37">● Signups</span>
+          <span style="color:#22c55e">● Logins</span>
+          <span style="color:#ef4444">● Likes</span>
+        </div>
+      </div>
+      <div class="dash-section-body">
+        <svg id="trend-chart" viewBox="0 0 600 180" preserveAspectRatio="none" style="width:100%;height:180px;display:block"></svg>
+        <div id="trend-chart-xlabels" style="display:flex;justify-content:space-between;margin-top:6px;font-size:10px;color:var(--dsub);font-variant-numeric:tabular-nums"></div>
+      </div>
+    </section>
+
+    <!-- Top Creators heute + Source-Vergleich -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px;margin-bottom:18px">
+      <section class="dash-section" style="margin:0">
+        <div class="dash-section-hdr">
+          <div class="dash-section-title">🏆 Top Creator heute</div>
+          <div class="dash-section-sub">XP-Gewinn seit Mitternacht</div>
+        </div>
+        <div class="dash-section-body">
+          <div id="top-creators-list" style="display:flex;flex-direction:column;gap:6px">
+            <div style="padding:18px;text-align:center;color:var(--dsub);font-size:12.5px">Lädt …</div>
+          </div>
+        </div>
+      </section>
+      <section class="dash-section" style="margin:0">
+        <div class="dash-section-hdr">
+          <div class="dash-section-title">📱 Source-Vergleich</div>
+          <div class="dash-section-sub">letzte 7 Tage · Signups → 7d-Aktiv</div>
+        </div>
+        <div class="dash-section-body">
+          <div id="source-funnel-content" style="display:flex;flex-direction:column;gap:14px">
+            <div style="padding:14px;text-align:center;color:var(--dsub);font-size:12.5px">Lädt …</div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Live Activity Feed -->
+    <section class="dash-section">
+      <div class="dash-section-hdr">
+        <div class="dash-section-title">⚡ Live Activity</div>
+        <div class="dash-section-sub">letzte 20 Funnel-Events · Live-Refresh 60s</div>
+      </div>
+      <div class="dash-section-body">
+        <div id="activity-feed" style="display:flex;flex-direction:column;gap:4px;max-height:280px;overflow-y:auto">
+          <div style="padding:18px;text-align:center;color:var(--dsub);font-size:12.5px">Lädt …</div>
+        </div>
+      </div>
+    </section>
+
     <!-- Funnel: Landing → CTA → Signup → Login (last 7d) -->
     <section class="dash-section">
       <div class="dash-section-hdr">
@@ -11351,10 +11409,128 @@ async function loadStatsOverview() {
         '</div>';
       }).join('');
     }
+
+    // 30-Tage Trend-Chart
+    drawTrendChart(s.last30Days || []);
+    // Top Creators heute
+    renderTopCreators(s.topXpToday || []);
+    // Source-Vergleich
+    renderSourceFunnel(s.sourceFunnel || {});
+    // Live Activity Feed
+    renderActivityFeed(s.recentActivity || []);
   } catch(e) {
     console.warn('[dashboard stats] error at stage '+_stage+':', e);
     _dashStatsFallback('exception at '+_stage);
   }
+}
+
+function drawTrendChart(last30Days) {
+  const svg = document.getElementById('trend-chart');
+  const xlbl = document.getElementById('trend-chart-xlabels');
+  if (!svg || !last30Days.length) return;
+  const W = 600, H = 180, pad = 8;
+  const n = last30Days.length;
+  const dx = (W - pad*2) / Math.max(1, n - 1);
+  // Series: landing, signups, logins, likes (likes computed from xp-related event 'like' if present, else 0)
+  const series = [
+    { key: 'landing-view', label: 'Landing', color: '#3b82f6' },
+    { key: 'signup-complete', label: 'Signups', color: '#d4af37' },
+    { key: 'login-success', label: 'Logins', color: '#22c55e' },
+    { key: 'like', label: 'Likes', color: '#ef4444' },
+  ];
+  const allValues = series.flatMap(s => last30Days.map(d => d.events[s.key]||0));
+  const max = Math.max(1, ...allValues);
+  let svgContent = '';
+  // Grid-lines (4 horizontal)
+  for (let i = 1; i < 5; i++) {
+    const y = pad + (H - pad*2) * (i/5);
+    svgContent += '<line x1="'+pad+'" y1="'+y.toFixed(1)+'" x2="'+(W-pad)+'" y2="'+y.toFixed(1)+'" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>';
+  }
+  for (const s of series) {
+    const pts = last30Days.map((d, i) => [pad + i*dx, H - pad - ((d.events[s.key]||0)/max) * (H - pad*2)]);
+    const linePath = 'M' + pts.map(p => p[0].toFixed(1)+','+p[1].toFixed(1)).join(' L');
+    svgContent += '<path d="'+linePath+'" fill="none" stroke="'+s.color+'" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>';
+    // last point dot
+    const last = pts[pts.length-1];
+    svgContent += '<circle cx="'+last[0].toFixed(1)+'" cy="'+last[1].toFixed(1)+'" r="3" fill="'+s.color+'"/>';
+  }
+  svg.innerHTML = svgContent;
+  // X-Labels (alle 5 Tage)
+  xlbl.innerHTML = last30Days.map((d, i) => {
+    if (i === 0 || i === n-1 || i % 5 === 0) {
+      const date = new Date(d.day);
+      return '<span>'+date.getDate()+'.'+(date.getMonth()+1)+'.</span>';
+    }
+    return '<span style="width:0"></span>';
+  }).join('');
+}
+
+function renderTopCreators(list) {
+  const el = document.getElementById('top-creators-list'); if (!el) return;
+  if (!list.length) { el.innerHTML = '<div style="padding:18px;text-align:center;color:var(--dsub);font-size:12.5px">Heute noch keine XP-Gewinne</div>'; return; }
+  el.innerHTML = list.slice(0, 5).map((r, idx) => {
+    const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : '<span style="color:var(--dsub);font-weight:700;width:18px;display:inline-block;text-align:center">'+(idx+1)+'</span>';
+    const subBadge = r.isSub ? '<span style="font-size:9.5px;background:rgba(167,139,250,0.15);color:#a78bfa;padding:1.5px 6px;border-radius:99px;font-weight:700;letter-spacing:0.5px;margin-left:6px">SUB</span>' : '';
+    return '<div class="dash-row" onclick="openUser(\\''+r.uid+'\\')" style="cursor:pointer">' +
+      '<div style="width:28px;text-align:center;font-size:18px;flex-shrink:0">'+medal+'</div>' +
+      '<div class="dash-row-name" style="flex:1;min-width:0">' +
+        '<b>'+esc(r.name)+'</b>'+subBadge +
+        '<div class="dash-row-sub">' +
+          (r.instagram?'<span>@'+esc(r.instagram)+'</span><span class="dash-row-sub-dot">·</span>':'') +
+          '<span style="color:#22c55e;font-weight:700">+'+r.xpGained.toLocaleString('de-DE')+' XP heute</span>' +
+          '<span class="dash-row-sub-dot">·</span>' +
+          '<span>'+r.xpTotal.toLocaleString('de-DE')+' gesamt</span>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function renderSourceFunnel(sf) {
+  const el = document.getElementById('source-funnel-content'); if (!el) return;
+  const tg = sf.telegram || { signups:0, active7d:0, retentionPct:0 };
+  const em = sf.email || { signups:0, active7d:0, retentionPct:0 };
+  function row(emoji, label, data, color) {
+    const bar = Math.min(100, data.retentionPct||0);
+    return '<div>' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">' +
+        '<div style="font-size:12.5px;font-weight:700">'+emoji+' '+label+'</div>' +
+        '<div style="font-size:11px;color:var(--dsub)">'+data.signups+' Signups · <b style="color:'+color+'">'+data.active7d+'</b> aktiv</div>' +
+      '</div>' +
+      '<div style="height:8px;background:var(--dink);border-radius:99px;overflow:hidden">' +
+        '<div style="height:100%;width:'+bar+'%;background:'+color+';transition:width .5s"></div>' +
+      '</div>' +
+      '<div style="font-size:10.5px;color:var(--dsub);margin-top:3px;text-align:right">7d-Retention: <b style="color:'+color+'">'+data.retentionPct+'%</b></div>' +
+    '</div>';
+  }
+  el.innerHTML = row('✈️', 'Telegram', tg, '#0088cc') + row('📧', 'Email', em, '#d4af37');
+}
+
+function renderActivityFeed(events) {
+  const el = document.getElementById('activity-feed'); if (!el) return;
+  if (!events.length) { el.innerHTML = '<div style="padding:18px;text-align:center;color:var(--dsub);font-size:12.5px">Noch keine Events</div>'; return; }
+  const eventIcons = {
+    'landing-view': ['🌐','#3b82f6'],
+    'landing-cta-click': ['👆','#a78bfa'],
+    'signup-view': ['📝','#f59e0b'],
+    'signup-complete': ['✅','#22c55e'],
+    'login-success': ['🔓','#22c55e'],
+    'login-fail': ['🚫','#ef4444'],
+    'email-submit': ['📧','#d4af37'],
+    'telegram-click': ['✈️','#0088cc'],
+    'admin-test': ['🧪','#a78bfa'],
+  };
+  el.innerHTML = events.map(e => {
+    const [icon, color] = eventIcons[e.event] || ['•','#9ca3af'];
+    const ts = new Date(e.ts);
+    const timeStr = ts.toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+    const dateStr = ts.toDateString() === new Date().toDateString() ? 'heute' : ts.toLocaleDateString('de-DE', {day:'2-digit', month:'2-digit'});
+    return '<div style="display:flex;align-items:center;gap:10px;padding:7px 10px;background:var(--dink);border-radius:8px;font-size:12px">' +
+      '<div style="width:24px;height:24px;border-radius:50%;background:'+color+'22;color:'+color+';display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0">'+icon+'</div>' +
+      '<div style="flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis"><b style="color:#fff">'+esc(e.event)+'</b><span style="color:var(--dsub);margin-left:8px">·</span><span style="color:var(--dsub);margin-left:8px">'+esc(e.name||'anonym')+'</span></div>' +
+      '<div style="font-size:10.5px;color:var(--dsub);font-variant-numeric:tabular-nums;flex-shrink:0">'+dateStr+' '+timeStr+'</div>' +
+    '</div>';
+  }).join('');
 }
 
 function drawSparkline(id, data, color) {
