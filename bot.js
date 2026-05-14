@@ -3909,7 +3909,10 @@ document.addEventListener('DOMContentLoaded', function(){
         // Allow switching to: parent (session.uid) OR any user whose parent_uid === session.uid
         // (statt nur session.subUid — damit Admins mit mehreren Subs alle switchen können
         // UND vergessene/orphaned Subs erreichbar bleiben).
-        const targetUser = d.users?.[target];
+        // Daten via fetchBot('/data') statt globalem 'd' (existiert in App nicht).
+        const _switchData = await fetchBot('/data');
+        const _users = (_switchData && _switchData.users) || {};
+        const targetUser = _users[target];
         const isOwnParent = target === String(session.uid);
         const isOwnSub = targetUser && String(targetUser.parent_uid||'') === String(session.uid);
         if (!isOwnParent && !isOwnSub) {
@@ -3917,8 +3920,7 @@ document.addEventListener('DOMContentLoaded', function(){
         }
         // Verifizieren dass Ziel-User noch existiert (orphan-subUid: Sub wurde im Bot gelöscht
         // aber session weiß noch nichts davon)
-        const botData = await fetchBot('/data');
-        if (botData && !botData.users?.[target]) {
+        if (_switchData && !_users[target]) {
             if (target === String(session.subUid)) { delete session.subUid; saveSessions(); }
             return json({ok:false, error:'Account existiert nicht mehr'}, 410);
         }
