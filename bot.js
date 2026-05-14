@@ -10967,6 +10967,7 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
         <button class="dash-btn dash-btn-ghost" onclick="runMissionBackfill()">🔁 Backfill</button>
         <button class="dash-btn" onclick="openFunnelDebug()">🔬 Funnel Debug</button>
         <button class="dash-btn" onclick="openStatsDebug()">📊 Stats Debug</button>
+        <button class="dash-btn" onclick="openKollabBoostPreview()" style="border-color:rgba(236,72,153,0.40);color:#ec4899">🎨 Kollab-Boost Preview</button>
         <button class="dash-btn" onclick="openEventModal('xp')" style="border-color:rgba(245,158,11,0.40);color:#fbbf24">✨ XP-Event starten</button>
         <button class="dash-btn" onclick="openEventModal('diamond')" style="border-color:rgba(6,182,212,0.40);color:#06b6d4">💎 Diamond-Event starten</button>
         <button class="dash-btn dash-btn-primary" onclick="openBroadcastModal()">📢 Broadcast DM</button>
@@ -11392,6 +11393,112 @@ async function openFunnelDebug() {
     '</div>';
   document.body.appendChild(bg);
 }
+async function openKollabBoostPreview() {
+  // CSS einmal injecten
+  if (!document.getElementById('kbp-css')) {
+    const s = document.createElement('style'); s.id='kbp-css';
+    s.textContent =
+      '.kbp-card{position:relative;margin:0;border-radius:18px;overflow:hidden;background:#0a0a0a;isolation:isolate}'+
+      '.kbp-glow{position:absolute;inset:-2px;border-radius:20px;padding:2px;background:conic-gradient(from 0deg,#ec4899,#f59e0b,#a855f7,#ec4899,#f59e0b,#ec4899);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;animation:kbp-rot 4s linear infinite;pointer-events:none}'+
+      '@keyframes kbp-rot{to{transform:rotate(360deg)}}'+
+      '.kbp-body{position:relative;padding:14px;background:linear-gradient(180deg,rgba(236,72,153,0.08),#161618);border-radius:16px;margin:2px;color:#e7e7ea}'+
+      '.kbp-banner{display:flex;align-items:center;gap:10px;padding:10px 12px;margin-bottom:12px;background:linear-gradient(135deg,rgba(236,72,153,0.20),rgba(168,85,247,0.14));border:1px solid rgba(236,72,153,0.45);border-radius:10px;animation:kbp-pulse 2s ease-in-out infinite}'+
+      '@keyframes kbp-pulse{0%,100%{box-shadow:0 0 0 0 rgba(236,72,153,0.45)}50%{box-shadow:0 0 0 8px rgba(236,72,153,0)}}'+
+      '.kbp-btn{display:block;width:100%;padding:13px;background:linear-gradient(135deg,#ec4899,#a21caf);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 0 20px rgba(236,72,153,0.45);position:relative;overflow:hidden;font-family:inherit}'+
+      '.kbp-btn::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.18),transparent);transform:translateX(-100%);animation:kbp-shimmer 2.5s ease-in-out infinite}'+
+      '@keyframes kbp-shimmer{50%{transform:translateX(100%)}}'+
+      '.kbp-rule{display:flex;align-items:center;gap:6px;font-size:11.5px;color:#fcd34d;margin:3px 0}'+
+      '.kbp-modeswitch{display:flex;gap:6px;margin-bottom:14px}'+
+      '.kbp-modeswitch button{flex:1;padding:8px 12px;background:var(--dink);border:1px solid var(--dline);color:var(--dsub);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s}'+
+      '.kbp-modeswitch button.active{background:rgba(236,72,153,0.15);border-color:#ec4899;color:#ec4899}';
+    document.head.appendChild(s);
+  }
+  const bg = document.createElement('div');
+  bg.className = 'dash-modal-bg';
+  bg.onclick = e => { if (e.target===bg) bg.remove(); };
+  const fakePost = {
+    id: 'preview-demo',
+    uid: '111111',
+    partnerUid: '222222',
+    url: 'https://www.instagram.com/reel/DPreviewMockupABC123/',
+    caption: 'Unser Sonntag-Stretch Kollab — beide Profile sichtbar im Reel.',
+    likeCount: 12,
+    authorA: { name: 'Caro', instagram: 'caro_yoga' },
+    authorB: { name: 'Dennis', instagram: 'dennis_disziplin' },
+  };
+  function renderActive(secondsRemaining){
+    return '<div class="kbp-card">'+
+      '<div class="kbp-glow"></div>'+
+      '<div class="kbp-body">'+
+        '<div class="kbp-banner">'+
+          '<div style="font-size:20px">🤝⚡</div>'+
+          '<div style="flex:1;min-width:0">'+
+            '<div style="font-size:11px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;color:#ec4899">KOLLAB BOOST · NUR JETZT</div>'+
+            '<div style="font-size:11.5px;margin-top:1px;opacity:.95">+1 💎 Base · +1 💎 Extra · noch <b style="color:#ec4899" id="kbp-countdown">'+fmtKbp(secondsRemaining)+'</b></div>'+
+          '</div>'+
+        '</div>'+
+        '<div style="font-size:13.5px;font-weight:700;margin-bottom:4px">'+fakePost.authorA.name+' × '+fakePost.authorB.name+'</div>'+
+        '<div style="font-size:12px;color:#ec4899;margin-bottom:8px">@'+fakePost.authorA.instagram+' × @'+fakePost.authorB.instagram+'</div>'+
+        '<div style="font-size:13px;line-height:1.5;margin:6px 0 10px;opacity:.95">"'+fakePost.caption+'"</div>'+
+        '<a href="#" onclick="return false" style="display:block;padding:11px 13px;background:rgba(236,72,153,0.10);border:1px solid rgba(236,72,153,0.35);border-radius:10px;font-size:12.5px;color:#ec4899;font-weight:700;word-break:break-all;text-decoration:none;margin-bottom:10px">🔗 Auf Instagram öffnen</a>'+
+        '<div style="font-size:11px;color:#f59e0b;background:rgba(245,158,11,0.10);border-left:3px solid #f59e0b;border-radius:6px;padding:9px 11px;margin-bottom:10px;line-height:1.55">'+
+          '<b style="color:#fbbf24">⚠️ Pflicht für +1(+1) 💎:</b><br>'+
+          '<div class="kbp-rule">✓ LIKEN auf Instagram</div>'+
+          '<div class="kbp-rule">✓ KOMMENTIEREN</div>'+
+          '<div class="kbp-rule">✓ SPEICHERN</div>'+
+          '<div class="kbp-rule">✓ TEILEN</div>'+
+          '<div style="font-size:10.5px;color:#fbbf24;margin-top:5px;opacity:.85">Beide Creator müssen im Reel sichtbar sein. Schein-Likes → Sanktionen.</div>'+
+        '</div>'+
+        '<button class="kbp-btn">⚡ Engagiere jetzt · +1(+1) 💎</button>'+
+        '<div style="font-size:11px;color:var(--dsub);margin-top:8px;text-align:center">'+fakePost.likeCount+' Engagements gesamt</div>'+
+      '</div>'+
+    '</div>';
+  }
+  function renderTab(boostActive){
+    const banner = boostActive
+      ? '<div style="font-size:11px;color:#ec4899;font-weight:800;background:rgba(236,72,153,0.18);border:1px solid rgba(236,72,153,0.40);padding:5px 10px;border-radius:99px">⚡ BOOST AKTIV · +1 💎 Extra</div>'
+      : '<div style="font-size:11px;color:var(--dsub)">11. März</div>';
+    return '<div style="padding:14px;background:#161618;border:1px solid rgba(255,255,255,0.06);border-radius:14px;color:#e7e7ea">'+
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">'+
+        '<div style="font-size:11px;color:#ec4899;font-weight:800;letter-spacing:1px;text-transform:uppercase">🤝 Kollab-Post</div>'+
+        '<div style="flex:1"></div>'+
+        banner+
+      '</div>'+
+      '<div style="font-size:13px;font-weight:700;margin-bottom:6px">'+fakePost.authorA.name+' × '+fakePost.authorB.name+'</div>'+
+      '<div style="font-size:13px;line-height:1.5;margin-bottom:10px;opacity:.9">"'+fakePost.caption+'"</div>'+
+      '<a href="#" onclick="return false" style="display:block;padding:11px 13px;background:rgba(236,72,153,0.10);border:1px solid rgba(236,72,153,0.30);border-radius:10px;font-size:12.5px;color:#ec4899;font-weight:700;text-decoration:none;margin-bottom:10px">🔗 Auf Instagram öffnen</a>'+
+      '<button style="display:block;width:100%;padding:12px;background:linear-gradient(135deg,#ec4899,#a21caf);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit">❤️ Engagiert · +'+(boostActive?'2':'1')+' 💎</button>'+
+      '<div style="font-size:11px;color:var(--dsub);margin-top:8px;text-align:center">'+fakePost.likeCount+' Engagements</div>'+
+    '</div>';
+  }
+  function fmtKbp(s){ const m=Math.floor(s/60), sec=s%60; return m+':'+(sec<10?'0':'')+sec; }
+  bg.innerHTML = '<div class="dash-modal" style="max-width:540px;max-height:92vh;overflow-y:auto">'+
+    '<div class="dash-modal-hdr"><h3>🎨 Kollab-Boost Live-Preview</h3><div class="dash-modal-meta">Echtes Rendering — wie es im Feed aussieht</div></div>'+
+    '<div class="dash-modal-body">'+
+      '<div class="kbp-modeswitch">'+
+        '<button id="kbp-mode-feed" class="active" onclick="document.getElementById(\\'kbp-stage\\').innerHTML = window._kbpRenderActive(20*60);document.getElementById(\\'kbp-mode-feed\\').classList.add(\\'active\\');document.getElementById(\\'kbp-mode-tab\\').classList.remove(\\'active\\');document.getElementById(\\'kbp-mode-tab-off\\').classList.remove(\\'active\\');">🤝⚡ Heute-Feed (Boost aktiv)</button>'+
+        '<button id="kbp-mode-tab" onclick="document.getElementById(\\'kbp-stage\\').innerHTML = window._kbpRenderTab(true);document.getElementById(\\'kbp-mode-feed\\').classList.remove(\\'active\\');document.getElementById(\\'kbp-mode-tab\\').classList.add(\\'active\\');document.getElementById(\\'kbp-mode-tab-off\\').classList.remove(\\'active\\');">🤝 Kollab-Tab (Boost)</button>'+
+        '<button id="kbp-mode-tab-off" onclick="document.getElementById(\\'kbp-stage\\').innerHTML = window._kbpRenderTab(false);document.getElementById(\\'kbp-mode-feed\\').classList.remove(\\'active\\');document.getElementById(\\'kbp-mode-tab\\').classList.remove(\\'active\\');document.getElementById(\\'kbp-mode-tab-off\\').classList.add(\\'active\\');">🤝 Tab (normal)</button>'+
+      '</div>'+
+      '<div id="kbp-stage" style="padding:6px">' + renderActive(20*60) + '</div>'+
+    '</div>'+
+    '<div class="dash-modal-foot"><button class="dash-btn dash-btn-primary" onclick="this.closest(\\'.dash-modal-bg\\').remove();window._kbpStop&&window._kbpStop()">Schließen</button></div>'+
+  '</div>';
+  window._kbpRenderActive = renderActive;
+  window._kbpRenderTab = renderTab;
+  document.body.appendChild(bg);
+  // Live-Countdown 1s
+  let remaining = 20*60;
+  const tickHandle = setInterval(() => {
+    remaining--;
+    if (remaining <= 0) remaining = 20*60; // loop für demo
+    const el = document.getElementById('kbp-countdown');
+    if (el) el.textContent = fmtKbp(remaining);
+    if (!bg.isConnected) { clearInterval(tickHandle); }
+  }, 1000);
+  window._kbpStop = () => clearInterval(tickHandle);
+}
+
 async function openStatsDebug() {
   const r = await fetch('/api/admin/stats');
   const httpStatus = r.status;
