@@ -8418,8 +8418,8 @@ async function submitSuperLink(){
         (isMine
           ? '<div style="padding:11px;background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.35);border-radius:10px;font-size:12.5px;color:#ef4444;font-weight:700;text-align:center">🚫 Kein Self-Like — Dein Kollab-Post</div>'
           : liked
-          ? '<div style="padding:11px;background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.35);border-radius:10px;font-size:13px;color:#22c55e;font-weight:700;text-align:center">✅ Engagiert · +'+(p.boostActive?'2':'1')+' 💎</div>'
-          : '<button class="cb-btn" onclick="collabBoostLike(\\''+p.id+'\\', this)">⚡ Engagiere jetzt · +2 💎 (1+1 Boost)</button>'
+          ? '<div style="padding:13px;background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.40);border-radius:10px;font-size:13.5px;color:#22c55e;font-weight:800;text-align:center;cursor:not-allowed;opacity:.92">✅ Bereits engagiert<div style="font-size:11px;font-weight:600;color:#22c55e;opacity:.85;margin-top:3px">Diamanten erhalten · nicht mehr klickbar</div></div>'
+          : '<button class="cb-btn" onclick="collabBoostLike(\\''+p.id+'\\', this)">⚡ Engagiere jetzt · +1(+1) 💎</button>'
         ) +
         '<div style="font-size:11px;color:var(--muted);margin-top:8px;text-align:center">'+p.likeCount+' Engagements gesamt</div>' +
       '</div>' +
@@ -11426,7 +11426,7 @@ async function openKollabBoostPreview() {
     authorA: { name: 'Caro', instagram: 'caro_yoga' },
     authorB: { name: 'Dennis', instagram: 'dennis_disziplin' },
   };
-  function renderActive(secondsRemaining){
+  function renderActive(secondsRemaining, alreadyEngaged){
     return '<div class="kbp-card">'+
       '<div class="kbp-glow"></div>'+
       '<div class="kbp-body">'+
@@ -11449,7 +11449,9 @@ async function openKollabBoostPreview() {
           '<div class="kbp-rule">✓ TEILEN</div>'+
           '<div style="font-size:10.5px;color:#fbbf24;margin-top:5px;opacity:.85">Beide Creator müssen im Reel sichtbar sein. Schein-Likes → Sanktionen.</div>'+
         '</div>'+
-        '<button class="kbp-btn">⚡ Engagiere jetzt · +1(+1) 💎</button>'+
+        (alreadyEngaged
+          ? '<div style="padding:13px;background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.40);border-radius:10px;font-size:13.5px;color:#22c55e;font-weight:800;text-align:center;cursor:not-allowed;opacity:.92">✅ Bereits engagiert<div style="font-size:11px;font-weight:600;color:#22c55e;opacity:.85;margin-top:3px">Diamanten erhalten · nicht mehr klickbar</div></div>'
+          : '<button class="kbp-btn">⚡ Engagiere jetzt · +1(+1) 💎</button>')+
         '<div style="font-size:11px;color:var(--dsub);margin-top:8px;text-align:center">'+fakePost.likeCount+' Engagements gesamt</div>'+
       '</div>'+
     '</div>';
@@ -11476,9 +11478,10 @@ async function openKollabBoostPreview() {
     '<div class="dash-modal-hdr"><h3>🎨 Kollab-Boost Live-Preview</h3><div class="dash-modal-meta">Echtes Rendering — wie es im Feed aussieht</div></div>'+
     '<div class="dash-modal-body">'+
       '<div class="kbp-modeswitch">'+
-        '<button id="kbp-mode-feed" class="active" onclick="document.getElementById(\\'kbp-stage\\').innerHTML = window._kbpRenderActive(20*60);document.getElementById(\\'kbp-mode-feed\\').classList.add(\\'active\\');document.getElementById(\\'kbp-mode-tab\\').classList.remove(\\'active\\');document.getElementById(\\'kbp-mode-tab-off\\').classList.remove(\\'active\\');">🤝⚡ Heute-Feed (Boost aktiv)</button>'+
-        '<button id="kbp-mode-tab" onclick="document.getElementById(\\'kbp-stage\\').innerHTML = window._kbpRenderTab(true);document.getElementById(\\'kbp-mode-feed\\').classList.remove(\\'active\\');document.getElementById(\\'kbp-mode-tab\\').classList.add(\\'active\\');document.getElementById(\\'kbp-mode-tab-off\\').classList.remove(\\'active\\');">🤝 Kollab-Tab (Boost)</button>'+
-        '<button id="kbp-mode-tab-off" onclick="document.getElementById(\\'kbp-stage\\').innerHTML = window._kbpRenderTab(false);document.getElementById(\\'kbp-mode-feed\\').classList.remove(\\'active\\');document.getElementById(\\'kbp-mode-tab\\').classList.remove(\\'active\\');document.getElementById(\\'kbp-mode-tab-off\\').classList.add(\\'active\\');">🤝 Tab (normal)</button>'+
+        '<button id="kbp-mode-feed" class="active" onclick="window._kbpSwitch(\\'feed\\')">🤝⚡ Feed (Boost)</button>'+
+        '<button id="kbp-mode-feed-done" onclick="window._kbpSwitch(\\'feed-done\\')">✅ Feed (bereits engagiert)</button>'+
+        '<button id="kbp-mode-tab" onclick="window._kbpSwitch(\\'tab\\')">🤝 Kollab-Tab (Boost)</button>'+
+        '<button id="kbp-mode-tab-off" onclick="window._kbpSwitch(\\'tab-off\\')">🤝 Tab (normal)</button>'+
       '</div>'+
       '<div id="kbp-stage" style="padding:6px">' + renderActive(20*60) + '</div>'+
     '</div>'+
@@ -11486,6 +11489,18 @@ async function openKollabBoostPreview() {
   '</div>';
   window._kbpRenderActive = renderActive;
   window._kbpRenderTab = renderTab;
+  window._kbpSwitch = (mode) => {
+    const stage = document.getElementById('kbp-stage'); if (!stage) return;
+    const all = ['feed','feed-done','tab','tab-off'];
+    all.forEach(m => {
+      const btn = document.getElementById('kbp-mode-' + m);
+      if (btn) btn.classList.toggle('active', m === mode);
+    });
+    if (mode === 'feed') stage.innerHTML = renderActive(20*60, false);
+    else if (mode === 'feed-done') stage.innerHTML = renderActive(20*60, true);
+    else if (mode === 'tab') stage.innerHTML = renderTab(true);
+    else stage.innerHTML = renderTab(false);
+  };
   document.body.appendChild(bg);
   // Live-Countdown 1s
   let remaining = 20*60;
