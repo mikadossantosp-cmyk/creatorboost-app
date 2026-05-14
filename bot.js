@@ -2764,6 +2764,16 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
   <div class="profile-stat"><div class="profile-stat-val" data-count="${(u.followers||[]).length}">0</div><div class="profile-stat-label">Follower</div></div>
   <div class="profile-stat"><div class="profile-stat-val">🔥 <span data-count="${u.streak||0}">0</span></div><div class="profile-stat-label">Streak</div></div>
   <a href="/diamanten" class="profile-stat" style="text-decoration:none;color:inherit;cursor:pointer"><div class="profile-stat-val">💎 <span data-count="${u.diamonds||0}">0</span></div><div class="profile-stat-label" style="display:flex;align-items:center;justify-content:center;gap:3px">Diamanten <span style="font-size:9px;opacity:0.6">ⓘ</span></div></a>
+  ${(() => {
+    const _credits = Number(u.superlinkCredits||0);
+    const _maxStd = (u.role === '🌟 Elite+') ? 2 : 1;
+    // Wochen-Verbrauch berechnen
+    const _curMon = (() => { const n=new Date(); const day=n.getDay(); const mon=new Date(n); mon.setDate(n.getDate()-(day===0?6:day-1)); return mon.toISOString().slice(0,10); })();
+    const _usedThisWeek = Object.values(d.superlinks||{}).filter(s => String(s.uid) === String(uid) && s.week === _curMon).length;
+    const _available = Math.max(0, _maxStd - _usedThisWeek) + _credits;
+    if (_available <= 0 && _credits <= 0) return '';
+    return '<div class="profile-stat" title="Verfügbar / Standard pro Woche (Credits aus Roulette/Gewinnspiel + wöchentlicher Gratis-Bonus)"><div class="profile-stat-val" style="color:#f59e0b">⚡ <span>' + _available + '</span>/' + _maxStd + '</div><div class="profile-stat-label">Superlinks</div></div>';
+  })()}
 </div>
 <script>(function(){
   if (window.__cbStatCountUp) return; window.__cbStatCountUp = true;
@@ -7581,7 +7591,10 @@ commentsBox+
         const mySlMax = (d.users[myUid]?.role === '🌟 Elite+') ? 2 : 1;
         const mySlCount = Object.values(d.superlinks||{}).filter(s=>s.uid===myUid&&s.week===slWeekKey).length;
         const myWeekSuperlink = mySlCount > 0;
-        const slAvailable = Math.max(0, mySlMax - mySlCount);
+        const mySlCredits = Number(d.users[myUid]?.superlinkCredits||0);
+        // Superlink-Credits (aus Roulette/Gewinnspiel/Admin) ignorieren das
+        // Wochenlimit → werden zur 'zur Verfügung'-Anzeige addiert.
+        const slAvailable = Math.max(0, mySlMax - mySlCount) + mySlCredits;
 
         function renderSuperLink(sl) {
             const poster = d.users[String(sl.uid)]||{};
@@ -8482,10 +8495,14 @@ async function submitSuperLink(){
       const remaining = e.end - now;
       if (remaining <= 0) return null;
       const isDiamond = e.type === 'diamond';
-      const isMult = e.type === 'xp-multiplier';
-      const grad = isDiamond ? 'linear-gradient(135deg,#06b6d4,#0e7490)' : isMult ? 'linear-gradient(135deg,#8b5cf6,#6d28d9)' : 'linear-gradient(135deg,#f59e0b,#d97706)';
-      const emoji = isDiamond ? '💎' : isMult ? '⚡' : '✨';
-      const valueLabel = isMult ? ('XP × '+e.multiplier) : ('+' + e.amount + ' ' + (isDiamond?'💎':'XP') + ' pro Post');
+      const isPercentXP = e.type === 'xp' && (e.mode === 'percent' || e.bonusPercent);
+      const isLegacyMult = e.type === 'xp-multiplier';
+      const grad = isDiamond ? 'linear-gradient(135deg,#06b6d4,#0e7490)' : (isPercentXP||isLegacyMult) ? 'linear-gradient(135deg,#8b5cf6,#6d28d9)' : 'linear-gradient(135deg,#f59e0b,#d97706)';
+      const emoji = isDiamond ? '💎' : (isPercentXP||isLegacyMult) ? '⚡' : '✨';
+      const valueLabel = isPercentXP ? ('+' + (e.bonusPercent || e.amount) + '% XP pro Like')
+        : isLegacyMult ? ('XP × ' + e.multiplier)
+        : isDiamond ? ('+' + e.amount + ' 💎 pro Post')
+        : ('+' + e.amount + ' XP pro Post');
       return '<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:'+grad+';color:#fff;font-weight:700">' +
         '<div style="font-size:24px;line-height:1">'+emoji+'</div>' +
         '<div style="flex:1;min-width:0">' +
@@ -11271,11 +11288,12 @@ function openUser(uid) {
     '<div class="dash-modal">' +
       '<h3>'+esc(u.spitzname||u.name||'User')+(u.isAdmin?' <span class="dash-pill warn">Admin</span>':'')+'</h3>' +
       '<div class="dash-modal-meta">'+meta.join(' · ')+'</div>' +
-      '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;text-align:center;margin-bottom:14px">' +
+      '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;text-align:center;margin-bottom:14px">' +
         '<div><div style="font-size:18px;font-weight:800">'+(u.xp||0)+'</div><div style="font-size:10.5px;color:var(--muted)">XP</div></div>' +
         '<div><div style="font-size:18px;font-weight:800">'+(u.diamonds||0)+'</div><div style="font-size:10.5px;color:var(--muted)">💎</div></div>' +
         '<div><div style="font-size:18px;font-weight:800">'+(u.totalLikes||0)+'</div><div style="font-size:10.5px;color:var(--muted)">❤ Likes</div></div>' +
         '<div><div style="font-size:18px;font-weight:800">'+(u.links||0)+'</div><div style="font-size:10.5px;color:var(--muted)">🔗 Links</div></div>' +
+        '<div><div style="font-size:18px;font-weight:800;color:'+((u.superlinkCredits||0)>0?'#f59e0b':'inherit')+'">⚡ '+(u.superlinkCredits||0)+'</div><div style="font-size:10.5px;color:var(--muted)">SL-Credits</div></div>' +
       '</div>' +
       '<div class="dash-onboarding">' +
         onb.map(o => '<div class="dash-onb-row">'+(o.ok?'✅':'⬜')+' '+o.label+'</div>').join('') +
@@ -11428,19 +11446,28 @@ async function openEventModal(type) {
   const bg = document.createElement('div');
   bg.className = 'dash-modal-bg';
   bg.onclick = e => { if (e.target===bg) bg.remove(); };
+  const xpModeNote = isDiamond
+    ? 'Flat-Bonus pro veröffentlichtem Post.'
+    : 'Prozent-Bonus pro Like (z.B. 100 → +100% = 2× XP). Wirkt automatisch auf alle Likes während des Events.';
+  const labelText = isDiamond ? 'Bonus pro Post (💎)' : 'Bonus pro Like (%)';
+  const placeholder = isDiamond ? '1' : '100';
+  const maxVal = isDiamond ? '10' : '500';
+  const activeText = active && !isDiamond
+    ? '+' + (active.bonusPercent || active.amount) + '% XP pro Like'
+    : active ? '+' + active.amount + ' 💎 pro Post' : '';
   bg.innerHTML = '<div class="dash-modal" style="max-width:480px">' +
     '<div class="dash-modal-hdr"><h3>'+(isDiamond?'💎 Diamond-Event':'✨ XP-Event')+'</h3>' +
-      '<div class="dash-modal-meta">Flat-Bonus pro veröffentlichtem Post für eine bestimmte Zeit. Alle aktiven User sehen einen Live-Banner im Feed mit Countdown.</div>' +
+      '<div class="dash-modal-meta">'+xpModeNote+' Alle aktiven User sehen einen Live-Banner im Feed mit Countdown.</div>' +
     '</div>' +
     '<div class="dash-modal-body">' +
       (active
         ? '<div style="padding:14px;background:rgba(34,197,94,0.10);border:1px solid rgba(34,197,94,0.35);border-radius:12px;margin-bottom:14px">' +
             '<div style="font-size:11px;font-weight:700;color:#22c55e;letter-spacing:1px;text-transform:uppercase">⏱ Läuft gerade</div>' +
-            '<div style="font-size:14px;font-weight:700;margin-top:4px">+'+active.amount+(isDiamond?' 💎':' XP')+' pro Post · noch '+Math.round(active.remainingMs/60000)+' min</div>' +
+            '<div style="font-size:14px;font-weight:700;margin-top:4px">'+activeText+' · noch '+Math.round(active.remainingMs/60000)+' min</div>' +
           '</div>'
         : '') +
-      '<label style="font-size:11px;font-weight:700;letter-spacing:1.4px;color:var(--dsub);text-transform:uppercase;display:block;margin-bottom:6px">Bonus pro Post</label>' +
-      '<input type="number" id="evt-amount" min="1" max="'+(isDiamond?'10':'1000')+'" placeholder="'+(isDiamond?'1':'10')+'" style="width:100%;padding:11px 14px;background:var(--dink);border:1px solid var(--dline);border-radius:10px;color:#fff;font-size:14px;margin-bottom:12px;font-family:inherit">' +
+      '<label style="font-size:11px;font-weight:700;letter-spacing:1.4px;color:var(--dsub);text-transform:uppercase;display:block;margin-bottom:6px">'+labelText+'</label>' +
+      '<input type="number" id="evt-amount" min="1" max="'+maxVal+'" placeholder="'+placeholder+'" style="width:100%;padding:11px 14px;background:var(--dink);border:1px solid var(--dline);border-radius:10px;color:#fff;font-size:14px;margin-bottom:12px;font-family:inherit">' +
       '<label style="font-size:11px;font-weight:700;letter-spacing:1.4px;color:var(--dsub);text-transform:uppercase;display:block;margin-bottom:6px">Dauer</label>' +
       '<select id="evt-duration" style="width:100%;padding:11px 14px;background:var(--dink);border:1px solid var(--dline);border-radius:10px;color:#fff;font-size:14px;margin-bottom:12px;font-family:inherit">' +
         '<option value="1800000">30 Minuten</option>' +
@@ -11473,7 +11500,10 @@ async function startEvent(type, btn) {
     const raw = await r.text();
     let j; try { j = JSON.parse(raw); } catch(e) { j = { _raw: raw.slice(0, 200) }; }
     if (j.ok) {
-      dToast('🚀 Event gestartet · '+amount+(type==='diamond'?' 💎':' XP')+' pro Post für '+Math.round(durationMs/60000)+' min','ok');
+      const summary = type === 'diamond'
+        ? '+'+amount+' 💎 pro Post'
+        : '+'+amount+'% XP pro Like';
+      dToast('🚀 Event gestartet · '+summary+' für '+Math.round(durationMs/60000)+' min','ok');
       document.querySelectorAll('.dash-modal-bg').forEach(m=>m.remove());
     } else {
       btn.disabled = false; btn.textContent = '🚀 Starten';
