@@ -10716,6 +10716,25 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
       </div>
     </div>
 
+    <!-- Activity heute vs gestern: XP / Likes / Links -->
+    <div class="dash-stat-grid">
+      <div class="dash-stat">
+        <div class="dash-stat-lbl">📊 XP heute</div>
+        <div class="dash-stat-val" id="stat-xp-today">–</div>
+        <div class="dash-stat-sub">gestern: <span id="stat-xp-yesterday">–</span> <span id="stat-xp-trend"></span></div>
+      </div>
+      <div class="dash-stat">
+        <div class="dash-stat-lbl">❤️ Likes heute</div>
+        <div class="dash-stat-val" id="stat-likes-today">–</div>
+        <div class="dash-stat-sub">gestern: <span id="stat-likes-yesterday">–</span> <span id="stat-likes-trend"></span></div>
+      </div>
+      <div class="dash-stat">
+        <div class="dash-stat-lbl">🔗 Links heute</div>
+        <div class="dash-stat-val" id="stat-links-today">–</div>
+        <div class="dash-stat-sub">gestern: <span id="stat-links-yesterday">–</span> <span id="stat-links-trend"></span></div>
+      </div>
+    </div>
+
     <div class="dash-stat-grid">
       <div class="dash-stat"><div class="dash-stat-lbl">👥 User gesamt</div><div class="dash-stat-val" id="stat-total">–</div></div>
       <div class="dash-stat"><div class="dash-stat-lbl">✅ Aktive (started)</div><div class="dash-stat-val" id="stat-active">–</div></div>
@@ -11183,7 +11202,7 @@ async function refreshUsers() {
 
 // IDs die loadStatsOverview() befüllt. Bei jeder API-Failure auf '0' setzen damit
 // klar ist 'Daten leer' statt 'lädt noch'.
-const _DASH_STAT_IDS = ['stat-online','stat-active-today','stat-app24h','stat-app7d','stat-app30d','stat-landing-today','stat-landing-yesterday','stat-signup-today','stat-banned','fn-landing','fn-cta','fn-cta-pct','fn-signup-view','fn-signup-view-pct','fn-signup-complete','fn-signup-complete-pct','fn-login','fn-dropoff','fn-tg-today','fn-email-today','newusers-count','newusers-today'];
+const _DASH_STAT_IDS = ['stat-online','stat-active-today','stat-app24h','stat-app7d','stat-app30d','stat-landing-today','stat-landing-yesterday','stat-signup-today','stat-banned','stat-xp-today','stat-xp-yesterday','stat-likes-today','stat-likes-yesterday','stat-links-today','stat-links-yesterday','fn-landing','fn-cta','fn-cta-pct','fn-signup-view','fn-signup-view-pct','fn-signup-complete','fn-signup-complete-pct','fn-login','fn-dropoff','fn-tg-today','fn-email-today','newusers-count','newusers-today'];
 function _dashStatsFallback(reason){
   console.warn('[dashboard stats] fallback to 0 ('+reason+')');
   // Force-set ALL stat IDs to '0' — wenn API failed darf nichts mehr '—' stehen.
@@ -11212,6 +11231,24 @@ async function loadStatsOverview() {
     setText('stat-landing-yesterday', (s.landingYesterday ?? 0).toLocaleString('de-DE'));
     setText('stat-signup-today', s.signupToday ?? 0);
     setText('stat-banned', s.banned ?? 0);
+    // Activity heute vs gestern
+    setText('stat-xp-today', (s.xpToday ?? 0).toLocaleString('de-DE'));
+    setText('stat-xp-yesterday', (s.xpYesterday ?? 0).toLocaleString('de-DE'));
+    setText('stat-likes-today', (s.likesToday ?? 0).toLocaleString('de-DE'));
+    setText('stat-likes-yesterday', (s.likesYesterday ?? 0).toLocaleString('de-DE'));
+    setText('stat-links-today', (s.linksToday ?? 0).toLocaleString('de-DE'));
+    setText('stat-links-yesterday', (s.linksYesterday ?? 0).toLocaleString('de-DE'));
+    function _trendPill(elId, todayVal, yesterdayVal){
+      const el = document.getElementById(elId); if (!el) return;
+      if (yesterdayVal > 0) {
+        const pct = Math.round((todayVal - yesterdayVal) / yesterdayVal * 100);
+        const cls = pct > 0 ? 'up' : pct < 0 ? 'down' : 'flat';
+        el.innerHTML = '<span class="dash-stat-trend '+cls+'">'+(pct>0?'▲ +':pct<0?'▼ ':'·')+Math.abs(pct)+'%</span>';
+      } else el.innerHTML = '';
+    }
+    _trendPill('stat-xp-trend', s.xpToday||0, s.xpYesterday||0);
+    _trendPill('stat-likes-trend', s.likesToday||0, s.likesYesterday||0);
+    _trendPill('stat-links-trend', s.linksToday||0, s.linksYesterday||0);
     // Trend-Pill
     const today = s.landingToday||0, yesterday = s.landingYesterday||0;
     const trendEl = document.getElementById('stat-landing-trend');
