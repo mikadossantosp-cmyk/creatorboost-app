@@ -7701,14 +7701,41 @@ commentsBox+
             ? '<div style="padding:8px 0 80px">'+allSuperLinksWeek.map(renderSuperLink).join('')+'</div>'
             : '<div style="text-align:center;padding:48px 24px;padding-bottom:80px"><div style="font-size:56px;margin-bottom:16px">⭐</div><div style="font-size:17px;font-weight:700;margin-bottom:8px">Noch keine Superlinks</div><div style="font-size:13px;color:var(--muted);margin-bottom:24px">Teile deinen Instagram-Link für maximales Engagement mit der Community.</div></div>';
 
-        // Pinned-First-Posts kommen ganz oben (zwischen Diamond-Strip und regulärem Feed).
-        // Wrap mit 🌟-Banner darüber + Live-Countdown + +20 XP Bonus-Marker.
-        const pinnedHeader = pinnedFirstPosts.length
-            ? '<div style="margin:0 16px 8px;padding:11px 14px;background:linear-gradient(135deg,rgba(245,158,11,0.14),rgba(168,85,247,0.10));border:1px solid rgba(245,158,11,0.32);border-radius:12px;display:flex;align-items:center;gap:10px"><span style="font-size:20px">🌟</span><div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:800;color:#f59e0b;letter-spacing:0.4px">ERSTER POST · NEUER MEMBER</div><div style="font-size:10.5px;color:var(--muted);margin-top:2px">+20 XP für Liker · noch <b style="color:#f59e0b" id="first-post-countdown">—</b></div></div></div>'
-            : '';
+        // Pinned-First-Posts: jeder Post bekommt einen 'Star-Frame' mit gold-purple
+        // Gradient-Border + Star-Topbar (kein Overlay mehr auf der Post-Card selbst).
+        // Topbar enthält: 🌟 ERSTER POST · +20 XP für Liker · ⏱ Countdown
+        function _firstPostWrapper([id, l]) {
+            const endTs = (l.firstPostBonusUntil || (l.timestamp + 8*3600*1000)) || 0;
+            return (
+              '<div class="first-post-star" data-first-post-end="'+endTs+'" style="margin:0 14px 14px;position:relative">' +
+                '<div class="first-post-star-frame"></div>' +
+                '<div class="first-post-star-inner">' +
+                  '<div class="first-post-star-topbar">' +
+                    '<span class="first-post-star-pill"><span style="font-size:13px">🌟</span> ERSTER POST</span>' +
+                    '<span class="first-post-star-pill bonus">+20 XP für Liker</span>' +
+                    '<span class="first-post-star-cd">⏱ <b data-first-post-cd>—</b></span>' +
+                  '</div>' +
+                  '<div class="first-post-star-card">' + renderLink([id, l]) + '</div>' +
+                '</div>' +
+              '</div>'
+            );
+        }
         const pinnedHtml = pinnedFirstPosts.length
-            ? pinnedHeader + pinnedFirstPosts.map(([id, l]) => '<div style="position:relative" data-first-post-end="'+((l.firstPostBonusUntil||(l.timestamp+8*3600*1000))||0)+'">'+renderLink([id, l])+'<div style="position:absolute;top:14px;right:14px;display:flex;flex-direction:column;gap:4px;align-items:flex-end;pointer-events:none"><div style="background:linear-gradient(135deg,#f59e0b,#a855f7);color:#fff;font-size:9.5px;font-weight:800;letter-spacing:0.7px;padding:3px 8px;border-radius:99px;box-shadow:0 2px 8px rgba(245,158,11,0.45)">🌟 ERSTER POST</div><div style="background:rgba(34,197,94,0.92);color:#fff;font-size:9.5px;font-weight:800;letter-spacing:0.7px;padding:3px 8px;border-radius:99px;box-shadow:0 2px 8px rgba(34,197,94,0.45)">+20 XP BONUS</div></div></div>').join('')
-              + '<script>(function(){const els=document.querySelectorAll("[data-first-post-end]");const cdEl=document.getElementById("first-post-countdown");function tick(){const now=Date.now();let earliest=Infinity;els.forEach(e=>{const t=Number(e.dataset.firstPostEnd)||0;if(t>now&&t<earliest)earliest=t;});if(cdEl){if(earliest===Infinity){cdEl.textContent="beendet";return;}const r=earliest-now;const h=Math.floor(r/3600000);const m=Math.floor((r%3600000)/60000);const s=Math.floor((r%60000)/1000);cdEl.textContent=h+":"+(m<10?"0":"")+m+":"+(s<10?"0":"")+s;}}tick();setInterval(tick,1000);})();</script>'
+            ? '<style>'+
+                '.first-post-star{border-radius:22px;overflow:hidden}'+
+                '.first-post-star-frame{position:absolute;inset:0;border-radius:22px;padding:3px;background:conic-gradient(from 0deg,#f59e0b,#fcd34d,#a855f7,#ec4899,#f59e0b,#fcd34d,#f59e0b);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;animation:fp-rot 6s linear infinite;pointer-events:none}'+
+                '@keyframes fp-rot{to{transform:rotate(360deg)}}'+
+                '.first-post-star-inner{position:relative;background:linear-gradient(180deg,rgba(245,158,11,0.10),rgba(245,158,11,0));border-radius:20px;margin:3px;padding:10px 8px 6px}'+
+                '[data-theme="dark"] .first-post-star-inner{background:linear-gradient(180deg,rgba(245,158,11,0.18),rgba(0,0,0,0));}' +
+                '.first-post-star-topbar{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:0 6px 8px}'+
+                '.first-post-star-pill{display:inline-flex;align-items:center;gap:4px;background:linear-gradient(135deg,#f59e0b,#a855f7);color:#fff;font-size:10px;font-weight:800;letter-spacing:0.6px;padding:4px 10px;border-radius:99px;box-shadow:0 3px 10px rgba(245,158,11,0.45)}'+
+                '.first-post-star-pill.bonus{background:linear-gradient(135deg,#22c55e,#16a34a);box-shadow:0 3px 10px rgba(34,197,94,0.45)}'+
+                '.first-post-star-cd{margin-left:auto;font-size:11px;font-weight:700;color:#f59e0b;font-variant-numeric:tabular-nums;display:inline-flex;align-items:center;gap:4px}'+
+                '.first-post-star-card{position:relative;border-radius:16px;overflow:hidden}'+
+                '.first-post-star-card .post{margin:0!important;border:0!important;border-radius:16px!important}'+
+              '</style>' +
+              pinnedFirstPosts.map(_firstPostWrapper).join('') +
+              '<script>(function(){function tick(){const now=Date.now();document.querySelectorAll(".first-post-star").forEach(card=>{const ts=Number(card.dataset.firstPostEnd)||0;const r=ts-now;const cd=card.querySelector("[data-first-post-cd]");if(!cd)return;if(r<=0){cd.textContent="beendet";return;}const h=Math.floor(r/3600000);const m=Math.floor((r%3600000)/60000);const s=Math.floor((r%60000)/1000);cd.textContent=h+":"+(m<10?"0":"")+m+":"+(s<10?"0":"")+s;});}tick();setInterval(tick,1000);})();</script>'
             : '';
         const regularHeuteHtml = heuteLinksRegular.length ? heuteLinksRegular.map(renderLink).join('') : (pinnedFirstPosts.length ? '' : `
 <div style="text-align:center;padding:48px 24px">
