@@ -7058,6 +7058,18 @@ p{line-height:1.65;color:var(--muted)}
         return json({ok:!!result?.ok, alreadyDone: result?.alreadyDone||false, error: result?.error || null});
     }
 
+    // Admin-Check für alle /api/admin/*-Routen unten — muss BEVOR die Routen
+    // referenziert werden, sonst Temporal-Dead-Zone-Error → HTTP 500.
+    // (Es gibt eine zweite Definition weiter unten — die ist redundant aber
+    //  überschreibt diese nicht da const block-scoped ist; deshalb hier _early.)
+    const _dashIsAdmin = (() => {
+        const parentUid = String(session?.uid || '');
+        return adminIds.includes(Number(myUid))
+            || adminIds.includes(Number(parentUid))
+            || String(d.users?.[myUid]?.role||'').includes('Admin')
+            || String(d.users?.[parentUid]?.role||'').includes('Admin');
+    })();
+
     // ── Report user (Schein-Engagement, Spam, etc.) ──
     if (path === '/api/report-user' && req.method === 'POST') {
         if (!session) return json({ok:false, error:'Nicht eingeloggt'},401);
@@ -10307,14 +10319,6 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
 
     // ── ADMIN DASHBOARD (App-side, holt Daten via /admin-userlist-api, schreibt via /add-xp etc.) ──
     // Sichtbar nur für Admins (CB-Bot Admin-IDs ODER role enthält 'Admin'). Auch über Sub-Account ok.
-    const _dashIsAdmin = (() => {
-        const parentUid = String(session?.uid || '');
-        return adminIds.includes(Number(myUid))
-            || adminIds.includes(Number(parentUid))
-            || String(d.users?.[myUid]?.role||'').includes('Admin')
-            || String(d.users?.[parentUid]?.role||'').includes('Admin');
-    })();
-
     // ── Admin: Listet alle User mit Onboarding-Status; Filter ?new=1 → letzte 3 Tage. ──
     if (path === '/api/admin/users' && req.method === 'GET') {
         if (!session) return json({error:'Nicht eingeloggt'}, 401);
