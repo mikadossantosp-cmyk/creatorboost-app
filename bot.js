@@ -10680,6 +10680,7 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
       <div class="dash-top-actions">
         <button class="dash-btn dash-btn-ghost" onclick="runMissionBackfill()">🔁 Backfill</button>
         <button class="dash-btn" onclick="openFunnelDebug()">🔬 Funnel Debug</button>
+        <button class="dash-btn" onclick="openStatsDebug()">📊 Stats Debug</button>
         <button class="dash-btn" onclick="openEventModal('xp')" style="border-color:rgba(245,158,11,0.40);color:#fbbf24">✨ XP-Event starten</button>
         <button class="dash-btn" onclick="openEventModal('diamond')" style="border-color:rgba(6,182,212,0.40);color:#06b6d4">💎 Diamond-Event starten</button>
         <button class="dash-btn dash-btn-primary" onclick="openBroadcastModal()">📢 Broadcast DM</button>
@@ -11040,6 +11041,45 @@ async function openFunnelDebug() {
       '<pre style="background:var(--dink);padding:10px;border-radius:8px;white-space:pre-wrap;margin:0;font-size:10px">'+esc(last20Str)+'</pre>' +
     '</div>' +
     '<div class="dash-modal-foot"><button class="dash-btn" onclick="testFunnelFire(this)">🧪 Test-Event feuern</button><button class="dash-btn dash-btn-primary" onclick="this.closest(\\'.dash-modal-bg\\').remove()">Schließen</button></div>' +
+    '</div>';
+  document.body.appendChild(bg);
+}
+async function openStatsDebug() {
+  const r = await fetch('/api/admin/stats');
+  const httpStatus = r.status;
+  const responseText = await r.text();
+  let j;
+  try { j = JSON.parse(responseText); } catch(e) { j = {ok:false, _parseError: e.message, _raw: responseText.slice(0,500)}; }
+  const bg = document.createElement('div');
+  bg.className = 'dash-modal-bg';
+  bg.onclick = e => { if (e.target===bg) bg.remove(); };
+  const fields = [
+    ['online', j.online], ['activeToday', j.activeToday], ['app24h', j.app24h],
+    ['app7d', j.app7d], ['app30d', j.app30d],
+    ['xpToday', j.xpToday], ['xpYesterday', j.xpYesterday],
+    ['likesToday', j.likesToday], ['likesYesterday', j.likesYesterday],
+    ['linksToday', j.linksToday], ['linksYesterday', j.linksYesterday],
+    ['totalUsers', j.totalUsers], ['newUsersToday', j.newUsersToday],
+    ['banned', j.banned], ['landingToday', j.landingToday],
+    ['signupToday', j.signupToday], ['loginSuccessToday', j.loginSuccessToday],
+  ];
+  const fieldRows = fields.map(([k,v]) => '<tr><td style="padding:4px 8px;color:#9ca3af">'+esc(k)+'</td><td style="padding:4px 8px;color:'+(v===undefined||v===0?'#6b7280':'#22c55e')+';font-weight:700;text-align:right">'+(v===undefined?'<i>undefined</i>':String(v))+'</td></tr>').join('');
+  const errBanner = (j.ok && r.ok) ? '' :
+    '<div style="padding:12px 14px;background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.35);border-radius:8px;margin-bottom:12px;color:#f87171;font-weight:700">' +
+      '❌ Response NICHT ok · HTTP '+httpStatus+' · error: '+esc(j.error||j._parseError||'unbekannt') +
+      '<br><br><b style="color:#fff">Bedeutung:</b> Wenn "Mainbot offline" → Bridge zwischen App und Telegram-Bot ist kaputt. Prüfe BRIDGE_SECRET/MAINBOT_URL env-vars + Mainbot-Health.' +
+    '</div>';
+  bg.innerHTML = '<div class="dash-modal" style="max-width:560px"><div class="dash-modal-hdr"><h3>📊 Stats-Debug</h3><div class="dash-modal-meta">Roh-Antwort von /api/admin/stats (Mainbot-Bridge)</div></div>' +
+    '<div class="dash-modal-body" style="font-family:ui-monospace,monospace;font-size:11.5px">' +
+      errBanner +
+      '<div style="padding:10px 12px;background:var(--dink);border-radius:8px;margin-bottom:10px">' +
+        '<b style="color:#f5d76e">HTTP-Status:</b> '+httpStatus+' · <b style="color:#f5d76e">response.ok:</b> '+(j.ok===true)+'<br>' +
+        '<b style="color:#f5d76e">Recent Signups:</b> '+((j.recentSignups||[]).length)+
+      '</div>' +
+      '<table style="width:100%;border-collapse:collapse;background:var(--dink);border-radius:8px;overflow:hidden">'+fieldRows+'</table>' +
+      '<div style="font-size:10px;color:#9ca3af;margin-top:8px">Grün = Wert > 0 · Grau = 0 oder undefined</div>' +
+    '</div>' +
+    '<div class="dash-modal-foot"><button class="dash-btn dash-btn-primary" onclick="this.closest(\\'.dash-modal-bg\\').remove()">Schließen</button></div>' +
     '</div>';
   document.body.appendChild(bg);
 }
