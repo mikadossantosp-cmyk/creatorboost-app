@@ -7581,7 +7581,9 @@ commentsBox+
         const mySlMax = (d.users[myUid]?.role === '🌟 Elite+') ? 2 : 1;
         const mySlCount = Object.values(d.superlinks||{}).filter(s=>s.uid===myUid&&s.week===slWeekKey).length;
         const myWeekSuperlink = mySlCount > 0;
-        const slAvailable = Math.max(0, mySlMax - mySlCount);
+        const myBonusSL = Number(d.users[myUid]?.bonusSuperlinks||0);
+        // Bonus-Superlinks ignorieren das Wochenlimit → werden zur Verfügung addiert
+        const slAvailable = Math.max(0, mySlMax - mySlCount) + myBonusSL;
 
         function renderSuperLink(sl) {
             const poster = d.users[String(sl.uid)]||{};
@@ -8482,10 +8484,14 @@ async function submitSuperLink(){
       const remaining = e.end - now;
       if (remaining <= 0) return null;
       const isDiamond = e.type === 'diamond';
-      const isMult = e.type === 'xp-multiplier';
-      const grad = isDiamond ? 'linear-gradient(135deg,#06b6d4,#0e7490)' : isMult ? 'linear-gradient(135deg,#8b5cf6,#6d28d9)' : 'linear-gradient(135deg,#f59e0b,#d97706)';
-      const emoji = isDiamond ? '💎' : isMult ? '⚡' : '✨';
-      const valueLabel = isMult ? ('XP × '+e.multiplier) : ('+' + e.amount + ' ' + (isDiamond?'💎':'XP') + ' pro Post');
+      const isPercentXP = e.type === 'xp' && (e.mode === 'percent' || e.bonusPercent);
+      const isLegacyMult = e.type === 'xp-multiplier';
+      const grad = isDiamond ? 'linear-gradient(135deg,#06b6d4,#0e7490)' : (isPercentXP||isLegacyMult) ? 'linear-gradient(135deg,#8b5cf6,#6d28d9)' : 'linear-gradient(135deg,#f59e0b,#d97706)';
+      const emoji = isDiamond ? '💎' : (isPercentXP||isLegacyMult) ? '⚡' : '✨';
+      const valueLabel = isPercentXP ? ('+' + (e.bonusPercent || e.amount) + '% XP pro Like')
+        : isLegacyMult ? ('XP × ' + e.multiplier)
+        : isDiamond ? ('+' + e.amount + ' 💎 pro Post')
+        : ('+' + e.amount + ' XP pro Post');
       return '<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:'+grad+';color:#fff;font-weight:700">' +
         '<div style="font-size:24px;line-height:1">'+emoji+'</div>' +
         '<div style="flex:1;min-width:0">' +
@@ -11428,19 +11434,28 @@ async function openEventModal(type) {
   const bg = document.createElement('div');
   bg.className = 'dash-modal-bg';
   bg.onclick = e => { if (e.target===bg) bg.remove(); };
+  const xpModeNote = isDiamond
+    ? 'Flat-Bonus pro veröffentlichtem Post.'
+    : 'Prozent-Bonus pro Like (z.B. 100 → +100% = 2× XP). Wirkt automatisch auf alle Likes während des Events.';
+  const labelText = isDiamond ? 'Bonus pro Post (💎)' : 'Bonus pro Like (%)';
+  const placeholder = isDiamond ? '1' : '100';
+  const maxVal = isDiamond ? '10' : '500';
+  const activeText = active && !isDiamond
+    ? '+' + (active.bonusPercent || active.amount) + '% XP pro Like'
+    : active ? '+' + active.amount + ' 💎 pro Post' : '';
   bg.innerHTML = '<div class="dash-modal" style="max-width:480px">' +
     '<div class="dash-modal-hdr"><h3>'+(isDiamond?'💎 Diamond-Event':'✨ XP-Event')+'</h3>' +
-      '<div class="dash-modal-meta">Flat-Bonus pro veröffentlichtem Post für eine bestimmte Zeit. Alle aktiven User sehen einen Live-Banner im Feed mit Countdown.</div>' +
+      '<div class="dash-modal-meta">'+xpModeNote+' Alle aktiven User sehen einen Live-Banner im Feed mit Countdown.</div>' +
     '</div>' +
     '<div class="dash-modal-body">' +
       (active
         ? '<div style="padding:14px;background:rgba(34,197,94,0.10);border:1px solid rgba(34,197,94,0.35);border-radius:12px;margin-bottom:14px">' +
             '<div style="font-size:11px;font-weight:700;color:#22c55e;letter-spacing:1px;text-transform:uppercase">⏱ Läuft gerade</div>' +
-            '<div style="font-size:14px;font-weight:700;margin-top:4px">+'+active.amount+(isDiamond?' 💎':' XP')+' pro Post · noch '+Math.round(active.remainingMs/60000)+' min</div>' +
+            '<div style="font-size:14px;font-weight:700;margin-top:4px">'+activeText+' · noch '+Math.round(active.remainingMs/60000)+' min</div>' +
           '</div>'
         : '') +
-      '<label style="font-size:11px;font-weight:700;letter-spacing:1.4px;color:var(--dsub);text-transform:uppercase;display:block;margin-bottom:6px">Bonus pro Post</label>' +
-      '<input type="number" id="evt-amount" min="1" max="'+(isDiamond?'10':'1000')+'" placeholder="'+(isDiamond?'1':'10')+'" style="width:100%;padding:11px 14px;background:var(--dink);border:1px solid var(--dline);border-radius:10px;color:#fff;font-size:14px;margin-bottom:12px;font-family:inherit">' +
+      '<label style="font-size:11px;font-weight:700;letter-spacing:1.4px;color:var(--dsub);text-transform:uppercase;display:block;margin-bottom:6px">'+labelText+'</label>' +
+      '<input type="number" id="evt-amount" min="1" max="'+maxVal+'" placeholder="'+placeholder+'" style="width:100%;padding:11px 14px;background:var(--dink);border:1px solid var(--dline);border-radius:10px;color:#fff;font-size:14px;margin-bottom:12px;font-family:inherit">' +
       '<label style="font-size:11px;font-weight:700;letter-spacing:1.4px;color:var(--dsub);text-transform:uppercase;display:block;margin-bottom:6px">Dauer</label>' +
       '<select id="evt-duration" style="width:100%;padding:11px 14px;background:var(--dink);border:1px solid var(--dline);border-radius:10px;color:#fff;font-size:14px;margin-bottom:12px;font-family:inherit">' +
         '<option value="1800000">30 Minuten</option>' +
@@ -11473,7 +11488,10 @@ async function startEvent(type, btn) {
     const raw = await r.text();
     let j; try { j = JSON.parse(raw); } catch(e) { j = { _raw: raw.slice(0, 200) }; }
     if (j.ok) {
-      dToast('🚀 Event gestartet · '+amount+(type==='diamond'?' 💎':' XP')+' pro Post für '+Math.round(durationMs/60000)+' min','ok');
+      const summary = type === 'diamond'
+        ? '+'+amount+' 💎 pro Post'
+        : '+'+amount+'% XP pro Like';
+      dToast('🚀 Event gestartet · '+summary+' für '+Math.round(durationMs/60000)+' min','ok');
       document.querySelectorAll('.dash-modal-bg').forEach(m=>m.remove());
     } else {
       btn.disabled = false; btn.textContent = '🚀 Starten';
