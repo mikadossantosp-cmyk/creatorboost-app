@@ -1246,6 +1246,9 @@ ${buildErrorHandler(_isAdmin)}
 <title>CreatorX</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://unavatar.io" crossorigin>
+<link rel="dns-prefetch" href="https://scontent-cdninstagram.com">
+<link rel="dns-prefetch" href="https://instagram.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" media="print" onload="this.media='all'">
 ${session ? `<link rel="prefetch" href="/feed"><link rel="prefetch" href="/explore"><link rel="prefetch" href="/nachrichten"><link rel="prefetch" href="/profil">` : ''}
 <style>${CSS}</style>
@@ -2056,8 +2059,8 @@ async function checkNotifBadge(){
         }
     } catch(e){}
 }
-checkNotifBadge();
-setInterval(checkNotifBadge, 60000);
+// Perf: nicht-kritisch — defer 2s nach Page-Load damit initial-render nicht blockiert wird
+setTimeout(() => { checkNotifBadge(); setInterval(checkNotifBadge, 60000); }, 2000);
 
 // Bfcache-Fix: wenn der User von Instagram/anderer Seite zurückkommt
 window.addEventListener('pageshow', function(ev){
@@ -2110,8 +2113,8 @@ async function checkMsgBadge(){
         if(b){if(d.count>0){b.textContent=d.count>9?'9+':d.count;b.style.display='flex';}else b.style.display='none';}
     }catch(e){}
 }
-checkMsgBadge();
-setInterval(checkMsgBadge,30000);
+// Perf: defer 2.5s damit initial-render nicht von Hintergrund-Fetches blockiert wird
+setTimeout(() => { checkMsgBadge(); setInterval(checkMsgBadge, 30000); }, 2500);
 function toast(msg,dur=2500){const t=document.getElementById('toast');if(!t)return;t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),dur);}
 // Großes Banner oben für wichtige Notifications (warn/success/info).
 // showBanner({title, subtitle?, type='warn', dur=4500, icon?})
@@ -11063,6 +11066,7 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
         <button class="dash-btn" onclick="openFunnelDebug()">🔬 Funnel Debug</button>
         <button class="dash-btn" onclick="openStatsDebug()">📊 Stats Debug</button>
         <button class="dash-btn" onclick="openKollabBoostPreview()" style="border-color:rgba(236,72,153,0.40);color:#ec4899">🎨 Kollab-Boost Preview</button>
+        <button class="dash-btn" onclick="adminCreateNewSub()" style="border-color:rgba(167,139,250,0.45);color:#a78bfa">🆕 Neuen Sub erstellen</button>
         <button class="dash-btn" onclick="openEventModal('xp')" style="border-color:rgba(245,158,11,0.40);color:#fbbf24">✨ XP-Event starten</button>
         <button class="dash-btn" onclick="openEventModal('diamond')" style="border-color:rgba(6,182,212,0.40);color:#06b6d4">💎 Diamond-Event starten</button>
         <button class="dash-btn dash-btn-primary" onclick="openBroadcastModal()">📢 Broadcast DM</button>
@@ -11777,6 +11781,22 @@ async function grant(uid, action) {
   if (j.ok) { alert('✅ ' + labelMap[action] + ' erfolgt'); refreshUsers(); document.querySelectorAll('.dash-modal-bg').forEach(m => m.remove()); }
   else alert('❌ '+ (j.error||'Fehler'));
 }
+async function adminCreateNewSub() {
+  const name = prompt('🆕 Neuen Sub-Account erstellen\\n\\nName des neuen Sub-Accounts (z.B. "Elitedrop"):');
+  if (!name || !name.trim()) return;
+  try {
+    const r = await fetch('/api/create-subaccount', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name: name.trim() }) });
+    const j = await r.json().catch(()=>({}));
+    if (j.ok) {
+      dToast('🆕 Sub erstellt · UID ' + j.sub_uid, 'ok');
+      // Reload damit der neue Sub in ALL_USERS auftaucht
+      setTimeout(() => location.reload(), 800);
+    } else {
+      alert('❌ ' + (j.error||'Fehler'));
+    }
+  } catch(e) { alert('❌ Netzwerk: '+e.message); }
+}
+
 async function linkAsSub(targetUid, targetName) {
   if (!confirm('User "' + targetName + '" (UID ' + targetUid + ') als deinen Sub-Account verknüpfen?\\n\\nDieser User wird Teil deiner Account-Familie. Alle Posts/XP bleiben erhalten — aber er gilt fortan als dein Sub.')) return;
   try {
