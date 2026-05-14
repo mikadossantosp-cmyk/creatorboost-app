@@ -2764,7 +2764,16 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
   <div class="profile-stat"><div class="profile-stat-val" data-count="${(u.followers||[]).length}">0</div><div class="profile-stat-label">Follower</div></div>
   <div class="profile-stat"><div class="profile-stat-val">🔥 <span data-count="${u.streak||0}">0</span></div><div class="profile-stat-label">Streak</div></div>
   <a href="/diamanten" class="profile-stat" style="text-decoration:none;color:inherit;cursor:pointer"><div class="profile-stat-val">💎 <span data-count="${u.diamonds||0}">0</span></div><div class="profile-stat-label" style="display:flex;align-items:center;justify-content:center;gap:3px">Diamanten <span style="font-size:9px;opacity:0.6">ⓘ</span></div></a>
-  ${Number(u.superlinkCredits||0) > 0 ? `<div class="profile-stat" title="Gewonnene Superlink-Slots (Roulette/Gewinnspiel)"><div class="profile-stat-val" style="color:#f59e0b">⚡ <span data-count="${u.superlinkCredits}">0</span></div><div class="profile-stat-label">Superlink-Credits</div></div>` : ''}
+  ${(() => {
+    const _credits = Number(u.superlinkCredits||0);
+    const _maxStd = (u.role === '🌟 Elite+') ? 2 : 1;
+    // Wochen-Verbrauch berechnen
+    const _curMon = (() => { const n=new Date(); const day=n.getDay(); const mon=new Date(n); mon.setDate(n.getDate()-(day===0?6:day-1)); return mon.toISOString().slice(0,10); })();
+    const _usedThisWeek = Object.values(d.superlinks||{}).filter(s => String(s.uid) === String(uid) && s.week === _curMon).length;
+    const _available = Math.max(0, _maxStd - _usedThisWeek) + _credits;
+    if (_available <= 0 && _credits <= 0) return '';
+    return '<div class="profile-stat" title="Verfügbar / Standard pro Woche (Credits aus Roulette/Gewinnspiel + wöchentlicher Gratis-Bonus)"><div class="profile-stat-val" style="color:#f59e0b">⚡ <span>' + _available + '</span>/' + _maxStd + '</div><div class="profile-stat-label">Superlinks</div></div>';
+  })()}
 </div>
 <script>(function(){
   if (window.__cbStatCountUp) return; window.__cbStatCountUp = true;
