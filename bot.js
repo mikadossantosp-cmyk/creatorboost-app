@@ -7404,7 +7404,22 @@ p{line-height:1.65;color:var(--muted)}
             return true;
         }
         const pinnedFirstPosts = heuteLinks.filter(_isPinnedFirstPost);
-        const heuteLinksRegular = heuteLinks.filter(l => !_isPinnedFirstPost(l));
+        // Liked-Sort: für die jeweilige User-Sicht — ungelikte Posts kommen oben,
+        // gelikte rutschen ans Ende. Eigene Posts (kein Self-Like möglich)
+        // bleiben in ihrer Timestamp-Position.
+        function _likedByMe([, l]) {
+            return Array.isArray(l.likes) && l.likes.map(String).includes(String(myUid));
+        }
+        function _byLikedThenTimestamp(a, b) {
+            const aLiked = _likedByMe(a) ? 1 : 0;
+            const bLiked = _likedByMe(b) ? 1 : 0;
+            if (aLiked !== bLiked) return aLiked - bLiked;     // ungelikt zuerst
+            return (b[1].timestamp||0) - (a[1].timestamp||0); // dann newest first
+        }
+        const heuteLinksRegular = heuteLinks
+            .filter(l => !_isPinnedFirstPost(l))
+            .sort(_byLikedThenTimestamp);
+        const aelterLinks2 = [...aelterLinks].sort(_byLikedThenTimestamp);
 
         function renderLink([msgId, link]){
             const poster = d.users[String(link.user_id)]||{};
@@ -7657,7 +7672,15 @@ commentsBox+
         const allSuperLinks = Object.values(d.superlinks||{}).sort((a,b)=>b.timestamp-a.timestamp);
         // Aktueller Berlin-Wochenkey (Mo-Datum als YYYY-MM-DD) — Superlinks alter Wochen ausblenden
         const _curWeekKey = (() => { const n=new Date(); const day=n.getDay(); const mon=new Date(n); mon.setDate(n.getDate()-(day===0?6:day-1)); return mon.toISOString().slice(0,10); })();
-        const allSuperLinksWeek = allSuperLinks.filter(sl => !sl.week || sl.week === _curWeekKey);
+        // Liked-Sort: ungelikt zuerst, gelikt rutscht ans Ende
+        const allSuperLinksWeek = allSuperLinks
+            .filter(sl => !sl.week || sl.week === _curWeekKey)
+            .sort((a, b) => {
+                const aLiked = Array.isArray(a.likes) && a.likes.map(String).includes(String(myUid)) ? 1 : 0;
+                const bLiked = Array.isArray(b.likes) && b.likes.map(String).includes(String(myUid)) ? 1 : 0;
+                if (aLiked !== bLiked) return aLiked - bLiked;
+                return (b.timestamp||0) - (a.timestamp||0);
+            });
         // Tab-Badges: Anzahl ungelikte Posts. Eigene Posts (inkl. Sub-/Parent-Konten)
         // werden ausgeschlossen — diese können nicht geliked werden und sollen nicht
         // zählen. _getRoot bringt jeden uid auf den Hauptaccount-uid.
@@ -7695,7 +7718,7 @@ commentsBox+
   <button onclick="openPlusSheet()" style="display:inline-flex;align-items:center;gap:8px;background:var(--accent);color:#fff;padding:12px 24px;border-radius:12px;font-size:14px;font-weight:700;border:none;cursor:pointer;font-family:var(--font)">📸 Jetzt Link teilen</button>
 </div>`);
         const heuteHtml = pinnedHtml + regularHeuteHtml;
-        const aelterHtml = aelterLinks.length ? aelterLinks.map(renderLink).join('') : '<div class="empty" style="margin-top:40px"><div class="empty-icon">🕐</div><div class="empty-text">Keine älteren Links</div></div>';
+        const aelterHtml = aelterLinks2.length ? aelterLinks2.map(renderLink).join('') : '<div class="empty" style="margin-top:40px"><div class="empty-icon">🕐</div><div class="empty-text">Keine älteren Links</div></div>';
         const kollabsHtml = '<div id="kollabs-tab-root" style="padding:8px 0 80px"><div style="padding:48px 24px;text-align:center;color:var(--muted);font-size:13px">⏳ Lade Kollab-Posts…</div></div>';
         const diamondHtml = '<div id="diamond-tab-root" style="padding:8px 0 80px"><div style="padding:48px 24px;text-align:center;color:var(--muted);font-size:13px">⏳ Lade Diamantlinks…</div></div>';
         // Diamantlink-Top-Strip nur im 'heute'-Tab — älteste Diamantlinks ganz oben.
