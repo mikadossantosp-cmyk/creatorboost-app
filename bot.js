@@ -7545,8 +7545,7 @@ p{line-height:1.65;color:var(--muted)}
             return '<div class="post fade-up" id="post-'+msgId+'" data-url="'+link.text+'" data-ts="'+(link.timestamp||0)+'" style="position:relative">\n'+
 '  <div style="position:absolute;left:0;top:0;bottom:0;width:3px;background:'+grad+';border-radius:18px 0 0 18px"></div>\n'+
 // Category badge + timestamp row
-'  <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px 0">\n'+
-(isNewForUser ? '    <span class="post-category-label" style="background:linear-gradient(135deg,var(--accent),var(--accent2))">📸 Neuer Link</span>\n' : '    <span></span>\n')+
+'  <div style="display:flex;align-items:center;justify-content:flex-end;padding:10px 16px 0">\n'+
 '    <div style="display:flex;align-items:center;gap:8px">\n'+
 '      <span class="post-time">'+new Date(link.timestamp).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})+'</span>\n'+
 (_myIsAdmin ? '      <button onclick=\'adminDelLink("'+msgId+'",this)\' title="Link löschen (Admin)" style="background:none;border:none;color:#ef4444;font-size:15px;cursor:pointer;padding:0 0 0 4px;line-height:1">🗑️</button>\n' : '')+
