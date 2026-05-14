@@ -3906,7 +3906,13 @@ document.addEventListener('DOMContentLoaded', function(){
         if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
         const body = await parseBody(req);
         const target = String(body.uid||'');
-        if (target !== String(session.uid) && target !== String(session.subUid)) {
+        // Allow switching to: parent (session.uid) OR any user whose parent_uid === session.uid
+        // (statt nur session.subUid — damit Admins mit mehreren Subs alle switchen können
+        // UND vergessene/orphaned Subs erreichbar bleiben).
+        const targetUser = d.users?.[target];
+        const isOwnParent = target === String(session.uid);
+        const isOwnSub = targetUser && String(targetUser.parent_uid||'') === String(session.uid);
+        if (!isOwnParent && !isOwnSub) {
             return json({ok:false, error:'Account gehört nicht zur Session'}, 403);
         }
         // Verifizieren dass Ziel-User noch existiert (orphan-subUid: Sub wurde im Bot gelöscht
@@ -13645,14 +13651,22 @@ ${rest.map(([id,u],idx)=>{
         // worden sein während der Sub im Bot weiterhin existiert (Render-Bug → Switcher leer).
         const parentUid = String(session.uid);
         const parentUser = (d.users||{})[parentUid] || {};
-        const subUidFromBot = parentUser.subUid && (d.users||{})[parentUser.subUid] ? String(parentUser.subUid) : null;
+        // Alle Subs via Reverse-Lookup (parent_uid === me). Robust gegen subUid-Bug
+        // (parent.subUid wird beim Sub-Erstellen überschrieben → alte Subs blieben
+        // 'orphaned' im UI, jetzt sichtbar via reverse-lookup).
+        const allMySubs = Object.entries(d.users||{})
+            .filter(([sid, su]) => su && String(su.parent_uid||'') === parentUid)
+            .map(([sid, su]) => ({ uid: String(sid), user: su }));
+        // Legacy: subUid (singular) für alte Code-Pfade
+        const subUidFromBot = parentUser.subUid && (d.users||{})[parentUser.subUid] ? String(parentUser.subUid) : (allMySubs[0]?.uid || null);
         const subUid = subUidFromBot;
         // Self-heal: wenn Bot-Wahrheit von Session abweicht, syncen.
         if (session.subUid !== subUid) {
             if (subUid) session.subUid = subUid; else delete session.subUid;
-            if (String(session.activeUid) !== parentUid && String(session.activeUid) !== subUid) {
-                session.activeUid = parentUid;
-            }
+            // activeUid: nur reset wenn er nicht auf einen gültigen Sub zeigt
+            const activeIsValid = String(session.activeUid) === parentUid ||
+                allMySubs.some(s => s.uid === String(session.activeUid));
+            if (!activeIsValid) session.activeUid = parentUid;
             saveSessions();
         }
         const subUser = subUid ? (d.users||{})[subUid] : null;
@@ -13817,22 +13831,26 @@ ${profileCard(myUid, myUser, d, true, lang, adminIds, myBannerData, myPicData)}
     </div>
     ${isParentActive?'<div style="font-size:10px;font-weight:700;color:#22c55e;background:rgba(34,197,94,0.15);border-radius:999px;padding:3px 8px">aktiv</div>':'<div style="font-size:18px;color:var(--muted)">→</div>'}
   </div>
-  ${subUid && subUser ? `
-  <div class="acc-row${!isParentActive?' active':''}" onclick="switchAcc('${subUid}')" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;cursor:pointer;transition:background 0.15s;margin-top:4px">
+  ${allMySubs.map(({ uid: sid, user: sUser }) => {
+    const isActive = String(myUid) === sid;
+    const sPic = ladeBild(sid, 'profilepic');
+    return `
+  <div class="acc-row${isActive?' active':''}" onclick="switchAcc('${sid}')" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;cursor:pointer;transition:background 0.15s;margin-top:4px">
     <div style="width:36px;height:36px;border-radius:50%;overflow:hidden;background:linear-gradient(135deg,#fb923c,#f59e0b);display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;flex-shrink:0">
-      ${subPic ? `<img src="/appbild/${subUid}/profilepic" style="width:100%;height:100%;object-fit:cover" alt="">` : (subUser.name||'?').slice(0,1).toUpperCase()}
+      ${sPic ? `<img src="/appbild/${sid}/profilepic" style="width:100%;height:100%;object-fit:cover" alt="">` : (sUser.name||'?').slice(0,1).toUpperCase()}
     </div>
     <div style="flex:1;min-width:0">
-      <div style="font-size:13.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${(subUser.spitzname||subUser.name||'Sub').replace(/[<>"]/g,'')}</div>
-      <div style="font-size:11px;color:var(--muted)">Sub-Account · ${subUser.xp||0} XP</div>
+      <div style="font-size:13.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${(sUser.spitzname||sUser.name||'Sub').replace(/[<>"]/g,'')}</div>
+      <div style="font-size:11px;color:var(--muted)">Sub-Account · ${sUser.xp||0} XP</div>
     </div>
-    ${!isParentActive?'<div style="font-size:10px;font-weight:700;color:#22c55e;background:rgba(34,197,94,0.15);border-radius:999px;padding:3px 8px">aktiv</div>':'<div style="font-size:18px;color:var(--muted)">→</div>'}
-  </div>
-  ${isParentActive ? `<div style="display:flex;justify-content:flex-end;padding:4px 10px 2px"><button onclick="deleteSubAcc()" style="background:none;border:none;color:#ef4444;font-size:11px;cursor:pointer">Sub-Account löschen</button></div>` : ''}
-  ` : `
+    ${isActive?'<div style="font-size:10px;font-weight:700;color:#22c55e;background:rgba(34,197,94,0.15);border-radius:999px;padding:3px 8px">aktiv</div>':'<div style="font-size:18px;color:var(--muted)">→</div>'}
+  </div>`;
+  }).join('')}
+  ${isParentActive && allMySubs.length ? `<div style="display:flex;justify-content:flex-end;padding:4px 10px 2px"><button onclick="deleteSubAcc()" style="background:none;border:none;color:#ef4444;font-size:11px;cursor:pointer">Sub-Account löschen</button></div>` : ''}
+  ${_myIsAdmin || !allMySubs.length ? `
   <div onclick="openCreateSubModal()" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:10px;margin-top:4px;border-radius:10px;cursor:pointer;border:1.5px dashed rgba(167,139,250,0.4);color:#a78bfa;font-size:13px;font-weight:600">
-    <span style="font-size:18px;line-height:1">＋</span> Neuen Account erstellen
-  </div>`}
+    <span style="font-size:18px;line-height:1">＋</span> ${allMySubs.length ? 'Weiteren Sub erstellen' : 'Neuen Account erstellen'}
+  </div>` : ''}
 </div>
 <div id="create-sub-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(8px)">
   <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:18px;padding:20px;width:100%;max-width:340px">
