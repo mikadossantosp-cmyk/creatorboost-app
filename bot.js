@@ -35,6 +35,7 @@ const BOT_USERNAME  = process.env.BOT_USERNAME  || 'Creator_Boostbot';
 const PORT          = process.env.PORT          || 3000;
 
 const fs = require('fs');
+const zlib = require('zlib');
 const DATA_DIR = fs.existsSync('/data') ? '/data' : __dirname;
 const SESSIONS_FILE = DATA_DIR + '/cb_sessions.json';
 
@@ -3465,9 +3466,31 @@ self.addEventListener('notificationclick',e=>{
     }
 
     function redirect(to) { res.writeHead(302,{'Location':to}); res.end(); }
-    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'237'}); res.end(layout(content,session,page,lang)); }
-    function json(data, status=200) { res.writeHead(status,{'Content-Type':'application/json'}); res.end(JSON.stringify(data)); }
-    function text(content, status=200) { res.writeHead(status,{'Content-Type':'text/plain; charset=utf-8'}); res.end(String(content)); }
+    function _writeCompressed(status, headers, body) {
+        // Gzip-Compression nur für Text-Responses > 1KB UND wenn Client gzip akzeptiert.
+        // Spart 70-80% bei JSON/HTML — der größte Speed-Win bei großen /data und Feed-Renders.
+        try {
+            const buf = Buffer.isBuffer(body) ? body : Buffer.from(String(body), 'utf8');
+            const ae = String(req.headers['accept-encoding']||'');
+            if (buf.length >= 1024 && ae.includes('gzip')) {
+                const gz = zlib.gzipSync(buf, { level: 6 });
+                const h = Object.assign({}, headers, {
+                    'Content-Encoding': 'gzip',
+                    'Content-Length': gz.length,
+                    'Vary': 'Accept-Encoding',
+                });
+                res.writeHead(status, h);
+                return res.end(gz);
+            }
+            res.writeHead(status, headers);
+            return res.end(buf);
+        } catch(e) {
+            try { res.writeHead(status, headers); res.end(body); } catch(e2) {}
+        }
+    }
+    function html(content, page) { _writeCompressed(200, {'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'237'}, layout(content,session,page,lang)); }
+    function json(data, status=200) { _writeCompressed(status, {'Content-Type':'application/json'}, JSON.stringify(data)); }
+    function text(content, status=200) { _writeCompressed(status, {'Content-Type':'text/plain; charset=utf-8'}, String(content)); }
 
     // ── LANDING ──
     if (path === '/' || path === '') {
@@ -3480,8 +3503,7 @@ self.addEventListener('notificationclick',e=>{
             const ua = String(req.headers['user-agent'] || '').slice(0, 200);
             postBot('/track-funnel', { event: 'landing-view', meta: { ref, ua } }).catch(()=>{});
         } catch(e) {}
-        res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','Pragma':'no-cache','Expires':'0','X-App-Version':'20'});
-        return res.end(`<!DOCTYPE html><html lang="de"><head>
+        return _writeCompressed(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','Pragma':'no-cache','Expires':'0','X-App-Version':'20'}, `<!DOCTYPE html><html lang="de"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>CreatorX — Die Creator-Engagement-Engine</title>
 <meta name="description" content="Wachse mit echtem Engagement von echten Creatorn. Likes, Kommentare, Shares — täglich. Beitreten, posten, ranken.">
