@@ -15135,14 +15135,13 @@ async function submitPost(){const _spBtn=document.querySelector('[onclick="submi
   }catch(e){const w2=document.getElementById('mission-widget');if(w2)w2.innerHTML='';}
 })();
 
-// ── INLINE-PROFIL-EDITING (eigenes Profil, Instagram-Style) ──
-// Sichtbare "+" auf Avatar, "📷 Bearbeiten"-Pill auf Banner,
-// "✏️ Ändern"-Boxen neben Bio + Spitzname. KEINE Hover-Hidden-Triggers.
+// ── INLINE-PROFIL-EDITING (eigenes Profil) ──
+// Hover über Avatar/Banner zeigt 📷-Overlay, Click → File-Picker → Crop → Upload.
+// Bio/Spitzname/Nische click-to-edit (contentEditable). Save bei Blur/Enter.
 (function setupInlineEdit(){
   const avatar = document.querySelector('.profile-avatar-wrap .profile-avatar');
   const banner = document.querySelector('.profile-banner');
   const name = document.querySelector('.profile-name');
-  const nameRow = document.querySelector('.profile-name-row');
   let bio = document.querySelector('.profile-bio');
   if (!avatar || !banner) return;
 
@@ -15151,28 +15150,31 @@ async function submitPost(){const _spBtn=document.querySelector('[onclick="submi
   const ib = document.createElement('input'); ib.type='file'; ib.accept='image/*'; ib.style.display='none';
   document.body.appendChild(ip); document.body.appendChild(ib);
 
-  // ── BANNER: immer sichtbare "📷 Bearbeiten" Pill (oben rechts) ──
-  const bannerPill = document.createElement('button');
-  bannerPill.type = 'button';
-  bannerPill.innerHTML = '📷 Bearbeiten';
-  bannerPill.style.cssText = 'position:absolute;top:12px;right:12px;background:rgba(0,0,0,.65);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);color:#fff;padding:8px 14px;border-radius:99px;font-size:12px;font-weight:700;z-index:4;border:1px solid rgba(255,255,255,.18);cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px;transition:transform .1s,background .15s';
-  bannerPill.addEventListener('mouseenter',()=>{bannerPill.style.background='rgba(0,0,0,.85)';bannerPill.style.transform='scale(1.04)';});
-  bannerPill.addEventListener('mouseleave',()=>{bannerPill.style.background='rgba(0,0,0,.65)';bannerPill.style.transform='scale(1)';});
-  bannerPill.addEventListener('click', e => { e.stopPropagation(); ib.click(); });
-  banner.appendChild(bannerPill);
+  // Banner-Edit-Overlay
+  const bannerWrap = banner;
+  bannerWrap.style.cursor = 'pointer';
+  const bannerHint = document.createElement('div');
+  bannerHint.innerHTML = '📷 Banner ändern';
+  bannerHint.style.cssText = 'position:absolute;top:10px;left:10px;background:rgba(0,0,0,.65);backdrop-filter:blur(8px);color:#fff;padding:7px 12px;border-radius:99px;font-size:12px;font-weight:700;z-index:4;display:flex;align-items:center;gap:6px;pointer-events:none;opacity:0;transition:opacity .15s';
+  bannerWrap.appendChild(bannerHint);
+  bannerWrap.addEventListener('mouseenter',()=>bannerHint.style.opacity='1');
+  bannerWrap.addEventListener('mouseleave',()=>bannerHint.style.opacity='0');
+  bannerWrap.addEventListener('click', e=>{ if(e.target.tagName==='A'||e.target.closest('a'))return; ib.click(); });
 
-  // ── AVATAR: immer sichtbares goldenes "+" Badge (unten rechts am Avatar) ──
-  const avatarWrap = avatar.parentElement;
+  // Avatar-Edit-Overlay
+  const avatarWrap = avatar.parentElement; // .profile-avatar-wrap
+  avatarWrap.style.cursor = 'pointer';
+  const avatarHint = document.createElement('div');
+  avatarHint.innerHTML = '📷';
+  avatarHint.style.cssText = 'position:absolute;bottom:-4px;right:-4px;width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#f5d76e,#d4af37);color:#000;font-size:14px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,0,0,.35);border:3px solid var(--bg);z-index:5;pointer-events:none;transition:transform .15s';
   avatarWrap.style.position = 'relative';
-  const plusBadge = document.createElement('button');
-  plusBadge.type = 'button';
-  plusBadge.setAttribute('aria-label', 'Profilbild ändern');
-  plusBadge.innerHTML = '+';
-  plusBadge.style.cssText = 'position:absolute;bottom:0;right:0;width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#f8e7a0 0%,#d4af37 50%,#a07a1c 100%);color:#000;font-size:22px;font-weight:300;line-height:1;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.5);border:3px solid var(--bg);z-index:6;cursor:pointer;padding:0;font-family:inherit;transition:transform .12s';
-  plusBadge.addEventListener('mouseenter',()=>plusBadge.style.transform='scale(1.12)');
-  plusBadge.addEventListener('mouseleave',()=>plusBadge.style.transform='scale(1)');
-  plusBadge.addEventListener('click', e => { e.stopPropagation(); ip.click(); });
-  avatarWrap.appendChild(plusBadge);
+  avatarWrap.appendChild(avatarHint);
+  avatarWrap.addEventListener('mouseenter',()=>avatarHint.style.transform='scale(1.15)');
+  avatarWrap.addEventListener('mouseleave',()=>avatarHint.style.transform='scale(1)');
+  avatarWrap.addEventListener('click', e=>{
+    if(e.target.closest('.profile-online-dot'))return;
+    ip.click();
+  });
 
   // Upload-Handler
   ip.onchange = () => uploadInline(ip, 'circle', '/api/upload-profilepic', '✅ Profilbild aktualisiert', 'avatar');
@@ -15188,6 +15190,7 @@ async function submitPost(){const _spBtn=document.querySelector('[onclick="submi
           const j = await res.json();
           if (j.ok) {
             if (typeof toast === 'function') toast(successMsg);
+            // Lokal updaten ohne Page-Reload
             if (kind === 'avatar') {
               const img = document.querySelector('.profile-avatar-wrap .profile-avatar');
               if (img && img.tagName === 'IMG') img.src = croppedData + '?v=' + Date.now();
@@ -15206,26 +15209,7 @@ async function submitPost(){const _spBtn=document.querySelector('[onclick="submi
     input.value = '';
   }
 
-  // ── "Ändern"-Box Style ──
-  function makeChangeBox(label){
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.innerHTML = '✏️ ' + label;
-    b.style.cssText = 'display:inline-flex;align-items:center;gap:5px;background:var(--bg3);border:1px solid var(--border2);color:var(--muted);padding:4px 10px;border-radius:8px;font-size:11.5px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .12s;margin-left:8px';
-    b.addEventListener('mouseenter',()=>{b.style.background='var(--bg4)';b.style.color='var(--text)';b.style.borderColor='var(--accent)';});
-    b.addEventListener('mouseleave',()=>{b.style.background='var(--bg3)';b.style.color='var(--muted)';b.style.borderColor='var(--border2)';});
-    return b;
-  }
-
-  // ── SPITZNAME: "Ändern"-Box neben dem Namen ──
-  if (name && nameRow) {
-    const nameEditBtn = makeChangeBox('Ändern');
-    nameEditBtn.title = 'Spitzname ändern';
-    nameEditBtn.addEventListener('click', () => makeEditable(name, 30, 'spitzname', '', false));
-    nameRow.appendChild(nameEditBtn);
-  }
-
-  // ── BIO: falls leer im DOM erzeugen, sonst direkt nutzen. Mit "Ändern"-Box DAVOR ──
+  // Bio: falls leer noch nicht im DOM → erzeugen
   if (!bio) {
     const info = document.querySelector('.profile-info');
     if (info) {
@@ -15233,26 +15217,25 @@ async function submitPost(){const _spBtn=document.querySelector('[onclick="submi
       bio.className = 'profile-bio';
       bio.style.opacity = '0.55';
       bio.style.fontStyle = 'italic';
-      bio.textContent = 'Noch keine Bio…';
+      bio.textContent = '+ Bio hinzufügen…';
+      // Nach .profile-name-row einfügen
       const row = info.querySelector('.profile-name-row');
       if (row && row.nextSibling) info.insertBefore(bio, row.nextSibling);
       else info.appendChild(bio);
     }
   }
+
+  // Inline-Edit für Bio
   if (bio) {
-    // Wrap bio + edit-button in einem flex-container
-    const wrap = document.createElement('div');
-    wrap.style.cssText = 'display:flex;align-items:flex-start;gap:8px;margin-top:12px';
-    const bioEditBtn = makeChangeBox('Bio ändern');
-    bioEditBtn.style.marginLeft = '0';
-    bioEditBtn.style.flexShrink = '0';
-    bioEditBtn.style.marginTop = '0';
-    bio.style.marginTop = '0';
-    bio.style.flex = '1';
-    bio.parentNode.insertBefore(wrap, bio);
-    wrap.appendChild(bio);
-    wrap.appendChild(bioEditBtn);
-    bioEditBtn.addEventListener('click', () => makeEditable(bio, 100, 'bio', 'Noch keine Bio…', true));
+    bio.style.cursor = 'pointer';
+    bio.title = 'Klick zum Bearbeiten';
+    bio.addEventListener('click', () => makeEditable(bio, 100, 'bio', '+ Bio hinzufügen…', true));
+  }
+  // Inline-Edit für Spitzname
+  if (name) {
+    name.style.cursor = 'pointer';
+    name.title = 'Klick zum Bearbeiten';
+    name.addEventListener('click', () => makeEditable(name, 30, 'spitzname', '', false));
   }
 
   function makeEditable(el, maxLen, field, placeholder, multiline){
@@ -15264,9 +15247,9 @@ async function submitPost(){const _spBtn=document.querySelector('[onclick="submi
     editor.value = original;
     editor.maxLength = maxLen;
     editor.style.cssText = (multiline
-      ? 'width:100%;min-height:64px;'
-      : 'width:auto;min-width:160px;') +
-      'font:inherit;color:inherit;background:var(--bg3);border:1.5px solid var(--accent);border-radius:8px;padding:7px 10px;outline:none;resize:vertical;box-shadow:0 4px 14px rgba(0,0,0,.18)';
+      ? 'width:100%;min-height:60px;'
+      : 'width:auto;min-width:140px;') +
+      'font:inherit;color:inherit;background:var(--bg3);border:1px solid var(--accent);border-radius:8px;padding:6px 10px;outline:none;resize:vertical';
     el.replaceWith(editor);
     editor.focus(); editor.select();
     let saving = false;
@@ -15278,12 +15261,12 @@ async function submitPost(){const _spBtn=document.querySelector('[onclick="submi
         try {
           const r = await fetch('/api/save-profile', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
           const j = await r.json();
-          if (!j.ok) { alert('❌ '+(j.error||'Fehler')); saving=false; editor.focus(); return; }
+          if (!j.ok) { alert('❌ '+(j.error||'Fehler')); return; }
           if (typeof toast === 'function') toast('✅ Gespeichert');
           el.textContent = newVal || placeholder;
           el.style.opacity = newVal ? '1' : '0.55';
           el.style.fontStyle = newVal ? '' : 'italic';
-        } catch(e){ alert('Netzwerk-Fehler'); saving=false; return; }
+        } catch(e){ alert('Netzwerk-Fehler'); return; }
       }
       editor.replaceWith(el);
       el._editing = false;
