@@ -3712,7 +3712,7 @@ ${_isPreview ? '<div class="admin-pb">👀 Admin-Vorschau · Login-Page &nbsp;·
 <div class="shell">
   <nav class="nav">
     <div class="nav-brand"><div class="nav-logo"></div>CreatorX</div>
-    <a href="#login" class="nav-cta">Einloggen →</a>
+    <a href="/login" class="nav-cta">Einloggen →</a>
   </nav>
 
   <section class="hero">
@@ -4457,6 +4457,237 @@ function submitSignup(ev){
 </script>
 </body></html>`);
     }
+
+    // ── PROFESSIONAL LOGIN PAGE (/login) ──
+    // Fokussierte Login-Page für returning Users. Standalone HTML (kein layout(),
+    // kein Tour-JS), damit nichts redirecten kann. Eigene Route /login, von der
+    // Marketing-Landing (/) verlinkt via 'Einloggen →'.
+    if (path === '/login' && req.method === 'GET') {
+        if (session && (query.preview !== '1')) return redirect('/feed');
+        res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0'});
+        return res.end(`<!DOCTYPE html><html lang="de" data-theme="dark"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Anmelden · CreatorX</title>
+<meta name="description" content="Melde dich bei CreatorX an — der Creator-Engagement-Community.">
+<link rel="icon" type="image/png" href="/cx-logo-256.png">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --gold:#d4af37;--gold-bright:#f5d76e;--gold-deep:#8b6914;
+  --text:#fff;--muted:rgba(255,255,255,0.55);--muted2:rgba(255,255,255,0.38);
+  --border:rgba(255,255,255,0.08);--border-strong:rgba(212,175,55,0.30);
+  --success:#22c55e;--danger:#ef4444;
+}
+html,body{background:#000;color:#fff;font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh;overflow-x:hidden}
+.mesh{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+.mesh::before{content:'';position:absolute;width:60vw;height:60vw;left:-15vw;top:-10vw;background:radial-gradient(circle,rgba(212,175,55,0.14),transparent 60%);filter:blur(40px);animation:mA 22s ease-in-out infinite alternate}
+.mesh::after{content:'';position:absolute;width:50vw;height:50vw;right:-20vw;bottom:-15vw;background:radial-gradient(circle,rgba(167,139,250,0.10),transparent 60%);filter:blur(40px);animation:mB 26s ease-in-out infinite alternate}
+@keyframes mA{0%{transform:translate(0,0)}100%{transform:translate(6vw,8vh)}}
+@keyframes mB{0%{transform:translate(0,0)}100%{transform:translate(-8vw,-6vh)}}
+
+.page{position:relative;z-index:1;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:32px 20px}
+.card{width:100%;max-width:420px;background:rgba(255,255,255,0.025);border:1px solid var(--border);border-radius:24px;padding:36px 24px 28px;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);box-shadow:0 30px 80px -20px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.04)}
+
+.brand{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:24px}
+.brand-logo{width:40px;height:40px;border-radius:11px;background:url('/cx-logo-256.png') center/cover,#0a0a0a;box-shadow:0 6px 20px rgba(212,175,55,0.35),inset 0 0 0 1px rgba(212,175,55,0.3)}
+.brand-name{font-family:'Syne',sans-serif;font-size:19px;font-weight:800;letter-spacing:-0.4px;background:linear-gradient(180deg,#fff,#d4af37);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+
+h1{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;line-height:1.1;letter-spacing:-0.7px;margin-bottom:6px;text-align:center;color:#fff}
+.sub{font-size:13.5px;color:var(--muted);line-height:1.55;margin-bottom:22px;text-align:center}
+
+.trust{display:flex;align-items:center;justify-content:center;gap:8px;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.20);border-radius:99px;padding:6px 14px;margin:0 auto 20px;font-size:11.5px;color:rgba(34,197,94,0.95);font-weight:600;width:fit-content}
+.trust .dot{width:6px;height:6px;border-radius:50%;background:#22c55e;box-shadow:0 0 8px rgba(34,197,94,0.7);animation:pls 1.6s ease-in-out infinite}
+@keyframes pls{0%,100%{opacity:1}50%{opacity:0.45}}
+
+.field{position:relative;margin-bottom:11px}
+.field-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--muted2);pointer-events:none;width:18px;height:18px;display:flex;align-items:center;justify-content:center}
+.in{width:100%;background:rgba(255,255,255,0.04);border:1.5px solid var(--border);color:#fff;border-radius:12px;padding:14px 16px 14px 44px;font-size:15px;outline:none;font-family:inherit;transition:all .18s;font-weight:500}
+.in:focus{border-color:var(--gold);background:rgba(212,175,55,0.04);box-shadow:0 0 0 3px rgba(212,175,55,0.12)}
+.in::placeholder{color:var(--muted2)}
+.in.pw{padding-right:48px}
+
+.pw-toggle{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--muted);cursor:pointer;padding:8px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.pw-toggle:hover{color:var(--gold);background:rgba(212,175,55,0.06)}
+.pw-toggle svg{width:18px;height:18px}
+
+.btn{margin-top:6px;width:100%;padding:14px;font-size:15px;font-weight:700;border-radius:12px;border:none;cursor:pointer;font-family:inherit;letter-spacing:0.2px;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;box-shadow:0 8px 24px -8px rgba(212,175,55,0.6),inset 0 1px 0 rgba(255,255,255,0.5);transition:all .15s;display:flex;align-items:center;justify-content:center;gap:8px;position:relative}
+.btn:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 12px 30px -8px rgba(212,175,55,0.7)}
+.btn:active:not(:disabled){transform:translateY(0)}
+.btn:disabled{opacity:.6;cursor:not-allowed;transform:none}
+.btn .spin{width:16px;height:16px;border:2px solid rgba(0,0,0,0.3);border-top-color:#000;border-radius:50%;animation:spin 0.7s linear infinite;display:none}
+.btn.loading .spin{display:inline-block}
+
+.row-link{display:flex;justify-content:flex-end;margin:2px 2px 12px}
+.link-btn{background:none;border:none;color:var(--muted);font-size:12.5px;cursor:pointer;font-family:inherit;padding:4px;transition:color .15s}
+.link-btn:hover{color:var(--gold)}
+
+.msg{font-size:13px;padding:11px 14px;border-radius:10px;margin-bottom:12px;display:none;line-height:1.5;font-weight:500}
+.msg.show{display:block;animation:slideIn 0.25s ease}
+.msg.ok{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.30);color:#4ade80}
+.msg.err{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.30);color:#f87171}
+@keyframes slideIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.div-or{display:flex;align-items:center;gap:12px;margin:20px 0 16px;color:var(--muted2);font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase}
+.div-or::before,.div-or::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--border),transparent)}
+
+.alt-btn{width:100%;padding:12px 14px;background:rgba(255,255,255,0.03);border:1px solid var(--border);color:#fff;border-radius:12px;font-family:inherit;font-size:13.5px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:all .15s;text-decoration:none}
+.alt-btn:hover:not(:disabled){background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.16);transform:translateY(-1px)}
+.alt-btn:disabled{opacity:.6;cursor:not-allowed}
+.alt-btn-icon{font-size:16px;display:flex;align-items:center;justify-content:center}
+
+.bottom{text-align:center;margin-top:22px;padding-top:18px;border-top:1px solid var(--border)}
+.bottom-lbl{font-size:12.5px;color:var(--muted);margin-bottom:4px}
+.bottom a{color:var(--gold);font-weight:700;text-decoration:none;font-size:13.5px;display:inline-flex;align-items:center;gap:4px;transition:opacity .15s}
+.bottom a:hover{opacity:.8}
+
+.foot{text-align:center;margin-top:20px;font-size:10.5px;color:var(--muted2);line-height:1.7}
+.foot a{color:var(--muted);text-decoration:none;border-bottom:1px dotted var(--muted2);transition:color .15s}
+.foot a:hover{color:var(--gold);border-bottom-color:var(--gold)}
+
+@media(min-width:768px){
+  .card{padding:42px 36px 32px;max-width:440px}
+  h1{font-size:29px}
+  .sub{font-size:14.5px}
+}
+</style></head><body>
+<div class="mesh"></div>
+<div class="page">
+  <div class="card">
+    <div class="brand"><div class="brand-logo"></div><div class="brand-name">CreatorX</div></div>
+
+    <h1>Willkommen zurück</h1>
+    <div class="sub">Melde dich an um in der Community weiterzumachen.</div>
+
+    <div class="trust"><span class="dot"></span><span><b id="trust-count">…</b> Creator gerade aktiv</span></div>
+
+    ${query.error==='email-expired' ? '<div class="msg show err">⚠️ Login-Link abgelaufen oder bereits benutzt.</div>' : ''}
+    ${query.error==='email-invalid' ? '<div class="msg show err">⚠️ Login-Link ungültig.</div>' : ''}
+    ${query.error==='email-userlost' ? '<div class="msg show err">⚠️ Account nicht mehr verfügbar.</div>' : ''}
+    ${query.logout==='1' ? '<div class="msg show ok">✅ Erfolgreich ausgeloggt.</div>' : ''}
+
+    <div class="msg" id="login-msg"></div>
+
+    <form id="login-form" onsubmit="return submitLogin(event)" novalidate>
+      <div class="field">
+        <span class="field-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></span>
+        <input type="email" id="login-email" class="in" placeholder="deine@email.de" autocomplete="email" autocapitalize="none" spellcheck="false" required maxlength="200" autofocus>
+      </div>
+      <div class="field">
+        <span class="field-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><rect x="3" y="11" width="18" height="11" rx="2"/><circle cx="12" cy="16" r="1"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+        <input type="password" id="login-pw" class="in pw" placeholder="Passwort" autocomplete="current-password" maxlength="200" required>
+        <button type="button" class="pw-toggle" onclick="togglePw()" aria-label="Passwort anzeigen">
+          <svg id="pw-eye-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          <svg id="pw-eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+        </button>
+      </div>
+      <div class="row-link"><button type="button" class="link-btn" id="pw-reset-btn" onclick="resetPassword()">Passwort vergessen?</button></div>
+      <button type="submit" class="btn" id="login-btn"><span class="spin"></span><span>Anmelden</span></button>
+    </form>
+
+    <div class="div-or">oder</div>
+
+    <button type="button" class="alt-btn" id="magic-btn" onclick="sendMagicLink()">
+      <span class="alt-btn-icon">✨</span>
+      <span>Magic-Link an Email (ohne Passwort)</span>
+    </button>
+
+    <div class="bottom">
+      <div class="bottom-lbl">Noch keinen Account?</div>
+      <a href="/signup">Jetzt kostenlos registrieren →</a>
+    </div>
+
+    <div class="foot">
+      Mit der Anmeldung akzeptierst du die <a href="/agb">AGB</a> und die <a href="/datenschutz">Datenschutzerklärung</a>.<br>
+      <a href="/impressum">Impressum</a>
+    </div>
+  </div>
+</div>
+
+<script>
+fetch('/api/community-stats',{cache:'no-store'}).then(r=>r.json()).then(s=>{
+  const el=document.getElementById('trust-count');
+  if(el&&s&&s.members){el.textContent=Number(s.members).toLocaleString('de-DE');}else if(el){el.textContent='—';}
+}).catch(()=>{const el=document.getElementById('trust-count');if(el)el.textContent='—';});
+
+function togglePw(){
+  const inp=document.getElementById('login-pw');
+  const on=document.getElementById('pw-eye-on');
+  const off=document.getElementById('pw-eye-off');
+  if(inp.type==='password'){inp.type='text';on.style.display='none';off.style.display='block';}
+  else{inp.type='password';on.style.display='block';off.style.display='none';}
+}
+
+function showMsg(text,type){
+  const m=document.getElementById('login-msg');
+  m.className='msg show '+type;
+  m.textContent=text;
+}
+function clearMsg(){document.getElementById('login-msg').className='msg';}
+function setBtnLoading(btn,on){
+  if(on){btn.disabled=true;btn.classList.add('loading');}
+  else{btn.disabled=false;btn.classList.remove('loading');}
+}
+
+function submitLogin(ev){
+  ev.preventDefault();clearMsg();
+  const email=(document.getElementById('login-email').value||'').trim().toLowerCase();
+  const pw=document.getElementById('login-pw').value||'';
+  const btn=document.getElementById('login-btn');
+  if(!email||!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)){showMsg('Bitte gültige Email eingeben.','err');return false;}
+  if(pw.length<6){showMsg('Passwort muss mindestens 6 Zeichen haben.','err');return false;}
+  setBtnLoading(btn,true);
+  fetch('/api/auth/email-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:pw})})
+    .then(r=>r.json().then(j=>({s:r.status,j})))
+    .then(o=>{
+      if(o.j&&o.j.ok&&o.j.redirect){
+        showMsg('✅ Eingeloggt — leite weiter...','ok');
+        setTimeout(()=>{window.location.href=o.j.redirect;},400);
+      } else {
+        showMsg(o.j&&o.j.error||'Login fehlgeschlagen.','err');
+        setBtnLoading(btn,false);
+      }
+    })
+    .catch(()=>{showMsg('Netzwerkfehler — bitte später nochmal.','err');setBtnLoading(btn,false);});
+  return false;
+}
+
+function resetPassword(){
+  const email=(document.getElementById('login-email').value||'').trim().toLowerCase();
+  const btn=document.getElementById('pw-reset-btn');
+  if(!email){showMsg('Bitte zuerst deine Email-Adresse eingeben.','err');document.getElementById('login-email').focus();return;}
+  clearMsg();btn.disabled=true;btn.textContent='Wird gesendet...';
+  fetch('/api/auth/password-reset',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})})
+    .then(r=>r.json())
+    .then(d=>{
+      if(d.ok){showMsg('✅ Reset-Link an deine Email gesendet. Schau auch im Spam-Ordner.','ok');}
+      else{showMsg(d.error||'Fehler beim Senden.','err');}
+    })
+    .catch(()=>{showMsg('Netzwerkfehler.','err');})
+    .finally(()=>{btn.disabled=false;btn.textContent='Passwort vergessen?';});
+}
+
+function sendMagicLink(){
+  const email=(document.getElementById('login-email').value||'').trim().toLowerCase();
+  const btn=document.getElementById('magic-btn');
+  if(!email||!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)){showMsg('Bitte zuerst deine Email-Adresse eingeben.','err');document.getElementById('login-email').focus();return;}
+  clearMsg();btn.disabled=true;btn.innerHTML='<span class="alt-btn-icon">⏳</span><span>Sende Magic-Link...</span>';
+  fetch('/api/auth/email-request',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})})
+    .then(r=>r.json())
+    .then(d=>{
+      if(d.ok){showMsg('✨ Magic-Link verschickt! Schau in deine Email-Inbox (Spam-Ordner checken).','ok');}
+      else{showMsg(d.error||'Fehler beim Senden.','err');}
+    })
+    .catch(()=>{showMsg('Netzwerkfehler.','err');})
+    .finally(()=>{btn.disabled=false;btn.innerHTML='<span class="alt-btn-icon">✨</span><span>Magic-Link an Email (ohne Passwort)</span>';});
+}
+
+try { fetch('/api/track-funnel',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({event:'login-view',meta:{ref:document.referrer.slice(0,200)}}),keepalive:true}); } catch(e) {}
+</script>
+</body></html>`);
+    }
+
     // ── /api/auth/email-signup: erstellt neuen Account (Email + Passwort) ──
     if (path === '/api/auth/email-signup' && req.method === 'POST') {
         const body = await parseBody(req);
@@ -5058,7 +5289,7 @@ function submitPw(ev){
     if (path === '/logout') {
         const sid = getSid(req);
         if(sid) { sessions.delete(sid); saveSessions(); }
-        res.writeHead(302,{'Set-Cookie':'cbsid=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0','Location':'/'});
+        res.writeHead(302,{'Set-Cookie':'cbsid=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0','Location':'/login?logout=1'});
         return res.end();
     }
 
