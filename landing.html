@@ -418,6 +418,39 @@ const io = new IntersectionObserver((entries) => {
   });
 }, {threshold:0.12});
 document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+
+// ── COOKIE-CONSENT BANNER (DSGVO-Pflicht für EU-Besucher) ─────────────
+// Wir nutzen NUR technisch notwendige Cookies (Session) — KEIN Tracking,
+// KEINE Werbe-Cookies, KEIN Cross-Site-Tracking. Banner zeigt eine
+// einmalige Info + "OK"-Bestätigung. Persistenz in localStorage.
+(function(){
+  try {
+    if (localStorage.getItem('cb_cookie_ack') === '1') return;
+    var b = document.createElement('div');
+    b.id = 'cb-cookie-banner';
+    b.style.cssText = 'position:fixed;left:10px;right:10px;bottom:10px;z-index:99999;background:linear-gradient(180deg,#1a1407,#0a0907);border:1px solid rgba(212,175,55,0.35);color:#fff;border-radius:16px;padding:16px 18px;display:flex;flex-direction:column;gap:12px;box-shadow:0 20px 60px rgba(0,0,0,0.6),0 0 0 1px rgba(212,175,55,0.10);max-width:560px;margin-left:auto;margin-right:auto;font-family:Inter,-apple-system,sans-serif;font-size:13.5px;line-height:1.55';
+    b.innerHTML =
+      '<div style="display:flex;align-items:flex-start;gap:10px">' +
+        '<span style="font-size:22px;flex-shrink:0">🍪</span>' +
+        '<div style="flex:1;min-width:0">' +
+          '<div style="font-weight:700;color:#f5d76e;margin-bottom:4px;font-size:14px">Hinweis zu Cookies</div>' +
+          '<div style="color:rgba(255,255,255,0.78);font-size:12.5px">Wir nutzen ausschließlich <b style="color:#fff">technisch notwendige Cookies</b> für deine Anmeldung. Kein Tracking, keine Werbung, keine Drittanbieter-Analyse. <a href="/datenschutz" style="color:#d4a946;text-decoration:underline">Details</a></div>' +
+        '</div>' +
+      '</div>' +
+      '<div style="display:flex;gap:8px">' +
+        '<a href="/datenschutz" style="flex:1;text-align:center;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.7);padding:11px 16px;font-size:13px;font-weight:600;border-radius:10px;text-decoration:none;font-family:inherit">Mehr erfahren</a>' +
+        '<button id="cb-cookie-ok" style="flex:1;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;border:none;padding:11px 16px;font-size:13px;font-weight:800;border-radius:10px;cursor:pointer;font-family:inherit;box-shadow:0 6px 14px rgba(212,175,55,0.35)">Verstanden ✓</button>' +
+      '</div>';
+    document.body.appendChild(b);
+    document.getElementById('cb-cookie-ok').onclick = function(){
+      try { localStorage.setItem('cb_cookie_ack', '1'); } catch(e){}
+      b.style.transition='opacity .25s,transform .25s';
+      b.style.opacity='0';
+      b.style.transform='translateY(20px)';
+      setTimeout(function(){ b.remove(); }, 260);
+    };
+  } catch(e) {}
+})();
 </script>
 
 </body>

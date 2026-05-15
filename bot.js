@@ -335,7 +335,7 @@ const ADMIN_FULLTOUR_JS = `(function(){
 // Tag-Wrapper für Inline-Use in /willkommen (statisches HTML, kann nicht via <script src> geladen werden ohne Edit)
 const ADMIN_FULLTOUR_SCRIPT = '<script>' + ADMIN_FULLTOUR_JS + '</script>';
 // Externe Reference (für layout()): cached, parallel-loadable.
-const ADMIN_FULLTOUR_SCRIPT_TAG = '<script src="/static/admin-fulltour.js?v=221" defer></script>';
+const ADMIN_FULLTOUR_SCRIPT_TAG = '<script src="/static/admin-fulltour.js?v=222-legal-bailout" defer></script>';
 // In-Memory Cache für landing.html (mit Injektion). Wird beim ersten Request gefüllt.
 let _cachedLandingHtml = null;
 
@@ -3343,7 +3343,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v120-offline-utf8-reload';
+const SW_VERSION='v121-legal-pages-standalone-and-blockuser';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
@@ -4414,6 +4414,10 @@ h1{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;line-height:1.1;
   <form id="signup-form" onsubmit="return submitSignup(event)">
     <input type="email" id="signup-email" class="in" placeholder="Email-Adresse" autocomplete="email" autocapitalize="none" spellcheck="false" required maxlength="200">
     <input type="password" id="signup-pw" class="in" placeholder="Passwort (min. 6 Zeichen)" autocomplete="new-password" minlength="6" maxlength="200" required>
+    <label style="display:flex;align-items:flex-start;gap:10px;margin:6px 2px 4px;cursor:pointer;font-size:12.5px;color:var(--muted);line-height:1.5">
+      <input type="checkbox" id="signup-age" required style="margin-top:3px;flex-shrink:0;width:16px;height:16px;accent-color:#d4a946;cursor:pointer">
+      <span>Ich bestätige, dass ich <b style="color:#fff">mindestens 16 Jahre alt</b> bin und die <a href="/datenschutz" target="_blank" style="color:#d4a946;text-decoration:underline">Datenschutzerklärung</a> sowie die <a href="/agb" target="_blank" style="color:#d4a946;text-decoration:underline">AGB</a> akzeptiere.</span>
+    </label>
     <button type="submit" class="btn" id="signup-btn">Kostenlos starten →</button>
   </form>
   <div class="hint">Kein Spam, keine versteckten Kosten. Jederzeit löschbar.</div>
@@ -4430,11 +4434,13 @@ function submitSignup(ev){
   ev.preventDefault();
   var em=(document.getElementById('signup-email').value||'').trim().toLowerCase();
   var pw=document.getElementById('signup-pw').value||'';
+  var ageOk=document.getElementById('signup-age').checked;
   var btn=document.getElementById('signup-btn'),msg=document.getElementById('signup-msg');
   msg.classList.remove('show','ok','err');
   if(!em || pw.length<6){msg.textContent='Email + Passwort (min. 6 Zeichen) erforderlich';msg.classList.add('show','err');return false;}
+  if(!ageOk){msg.textContent='Bitte bestätige dein Alter und akzeptiere Datenschutz + AGB';msg.classList.add('show','err');return false;}
   btn.disabled=true;btn.textContent='⏳ Account wird erstellt...';
-  fetch('/api/auth/email-signup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:em,password:pw})})
+  fetch('/api/auth/email-signup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:em,password:pw,ageConfirmed:true,termsAccepted:true})})
     .then(function(r){return r.json().then(function(j){return{s:r.status,j:j};});})
     .then(function(o){
       if(o.j&&o.j.ok&&o.j.redirect){
@@ -4456,6 +4462,8 @@ function submitSignup(ev){
         const body = await parseBody(req);
         const email = String(body.email || '').toLowerCase().trim();
         const password = String(body.password || '');
+        // DSGVO + Google-Play: Altersbestätigung (≥16) und AGB/Datenschutz-Zustimmung sind Pflicht.
+        if (!body.ageConfirmed || !body.termsAccepted) return json({ok:false, error:'Altersbestätigung (16+) und Zustimmung zu Datenschutz/AGB erforderlich'}, 400);
         if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json({ok:false, error:'Ungültige Email-Adresse'}, 400);
         if (password.length < 6 || password.length > 200) return json({ok:false, error:'Passwort muss 6–200 Zeichen lang sein'}, 400);
         const _ip = String(req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '').split(',')[0].trim().slice(0, 64);
@@ -4475,8 +4483,8 @@ function submitSignup(ev){
             postBot('/log-email-login', { email, success: false, method: 'signup-exists', uid: String(_exists[0]), ip: _ip, ua: _ua }).catch(()=>{});
             return json({ok:false, error:'Diese Email ist bereits registriert. Bitte → Sign In.', existed:true}, 409);
         }
-        // Account anlegen
-        const created = await postBot('/create-email-user-api', { email, password });
+        // Account anlegen (mit Age-Gate + Terms-Akzeptanz für DSGVO/Play-Store-Audit)
+        const created = await postBot('/create-email-user-api', { email, password, ageConfirmedAt: Date.now(), termsAcceptedAt: Date.now(), termsVersion: '2026-05' });
         if (!created || !created.ok || !created.uid) {
             postBot('/log-email-login', { email, success: false, method: 'signup-fail', uid: '', ip: _ip, ua: _ua }).catch(()=>{});
             return json({ok:false, error: (created && created.error) || 'Account konnte nicht erstellt werden'}, 500);
@@ -7225,6 +7233,34 @@ p{line-height:1.65;color:var(--muted)}
         if (!targetUid || targetUid === myUid) return json({ok:false, error:'Ungültig'},400);
         const result = await postBot('/report-user-api', { reporterUid: myUid, targetUid, reason: String(body.reason||''), context: String(body.context||'') });
         return json(result || {ok:false, error:'Mainbot offline'});
+    }
+
+    // ── BLOCK / UNBLOCK / LIST BLOCKED USERS (Google-Play UGC-Pflicht) ──
+    // Persistenz im Mainbot (Bridge), damit Block über Sub-Accounts hinweg + Server-Side
+    // gefiltert wird. Bei Mainbot-Offline: best-effort, Fail mit Hinweis.
+    if (path === '/api/block-user' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        const body = await parseBody(req);
+        const targetUid = String(body.targetUid||'').trim();
+        if (!targetUid || targetUid === myUid) return json({ok:false, error:'Ungültige Ziel-ID'}, 400);
+        const result = await postBot('/block-user-api', { blockerUid: myUid, targetUid });
+        return json(result || {ok:false, error:'Mainbot offline — Block konnte nicht gespeichert werden, bitte später nochmal'});
+    }
+
+    if (path === '/api/unblock-user' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        const body = await parseBody(req);
+        const targetUid = String(body.targetUid||'').trim();
+        if (!targetUid) return json({ok:false, error:'Ungültige Ziel-ID'}, 400);
+        const result = await postBot('/unblock-user-api', { blockerUid: myUid, targetUid });
+        return json(result || {ok:false, error:'Mainbot offline'});
+    }
+
+    if (path === '/api/blocked-users' && req.method === 'GET') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        // Aus d.users[myUid].blockedUsers lesen — wird vom Mainbot beim Block geschrieben.
+        const blocked = Array.isArray(d.users?.[myUid]?.blockedUsers) ? d.users[myUid].blockedUsers.map(String) : [];
+        return json({ok:true, blocked});
     }
 
     // ── Admin: User als Sub-Account verknüpfen (z.B. Elitedrop → mein 3. Sub) ──
@@ -14582,8 +14618,16 @@ async function submitPost(){const _spBtn=document.querySelector('[onclick="submi
       return `<button id="collab-btn" onclick="collabRequest('${uid}',this)" title="Kollaboration anfragen" style="background:linear-gradient(135deg,#ec4899,#a21caf);color:#fff;border:none;border-radius:20px;padding:6px 14px;font-size:13px;font-weight:700;cursor:pointer">🤝</button>`;
     })()}
     <a href="/nachrichten/${uid}" style="background:var(--bg4);border:1px solid var(--border);border-radius:20px;padding:6px 14px;font-size:13px;font-weight:600;color:var(--text);text-decoration:none">💬</a>
+    ${String(uid) !== String(myUid) ? `<button id="profile-more-btn" onclick="toggleProfileMore()" title="Mehr Optionen" style="background:var(--bg4);border:1px solid var(--border);border-radius:20px;width:32px;height:32px;font-size:18px;color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;line-height:1">⋮</button>` : ''}
   </div>
 </div>
+${String(uid) !== String(myUid) ? `
+<div id="profile-more-menu" style="display:none;position:fixed;top:60px;right:12px;background:var(--bg);border:1px solid var(--border);border-radius:14px;box-shadow:0 12px 32px rgba(0,0,0,0.3);z-index:9999;overflow:hidden;min-width:180px">
+  <button onclick="reportThisUser('${uid}')" style="display:flex;align-items:center;gap:10px;width:100%;background:none;border:none;border-bottom:1px solid var(--border);padding:13px 16px;font-size:14px;color:var(--text);cursor:pointer;text-align:left;font-family:inherit"><span>🚩</span><span>Nutzer melden</span></button>
+  <button onclick="blockThisUser('${uid}')" style="display:flex;align-items:center;gap:10px;width:100%;background:none;border:none;padding:13px 16px;font-size:14px;color:#ef4444;cursor:pointer;text-align:left;font-family:inherit"><span>🚫</span><span>Nutzer blockieren</span></button>
+</div>
+<div id="profile-more-backdrop" style="display:none;position:fixed;inset:0;z-index:9998" onclick="toggleProfileMore()"></div>
+` : ''}
 ${profileCard(uid, u, d, false, lang, adminIds)}
 <div class="tabs" style="position:sticky;top:57px;z-index:50;background:var(--bg)">
   <div class="tab active" onclick="showTPTab('posts',this)">📝 Posts</div>
@@ -14632,6 +14676,35 @@ function openTProjDetail(idx){
   document.getElementById('tproj-detail-modal').classList.add('open');
 }
 function closeTProj(){document.getElementById('tproj-detail-modal').classList.remove('open');}
+function toggleProfileMore(){
+  const m=document.getElementById('profile-more-menu');
+  const b=document.getElementById('profile-more-backdrop');
+  if(!m||!b)return;
+  const show=m.style.display==='none';
+  m.style.display=show?'block':'none';
+  b.style.display=show?'block':'none';
+}
+async function reportThisUser(uid){
+  toggleProfileMore();
+  const reason=prompt('Warum meldest du diesen Nutzer? (Spam, Belästigung, Fake-Account, illegale Inhalte, …)');
+  if(!reason||!reason.trim())return;
+  try{
+    const r=await fetch('/api/report-user',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({targetUid:uid,reason:reason.trim(),context:'profile'})});
+    const j=await r.json().catch(()=>({}));
+    if(j&&j.ok){alert('✅ Meldung verschickt. Danke! Wir prüfen den Vorgang innerhalb von 24h.');}
+    else{alert('❌ '+(j&&j.error||'Meldung fehlgeschlagen — bitte später nochmal'));}
+  }catch(e){alert('❌ Netzwerk-Fehler — bitte später nochmal');}
+}
+async function blockThisUser(uid){
+  toggleProfileMore();
+  if(!confirm('Diesen Nutzer blockieren?\\n\\n• Du siehst seine Posts und Kommentare nicht mehr\\n• Er kann dir keine Nachrichten mehr schicken\\n• Du kannst die Blockierung jederzeit in den Einstellungen aufheben'))return;
+  try{
+    const r=await fetch('/api/block-user',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({targetUid:uid})});
+    const j=await r.json().catch(()=>({}));
+    if(j&&j.ok){alert('🚫 Nutzer blockiert. Du wirst seine Inhalte nicht mehr sehen.');location.href='/feed';}
+    else{alert('❌ '+(j&&j.error||'Blockieren fehlgeschlagen — bitte später nochmal'));}
+  }catch(e){alert('❌ Netzwerk-Fehler — bitte später nochmal');}
+}
 async function toggleFollow(uid,btn){
   const isFollowing=btn.textContent.trim()==='Gefolgt';
   btn.textContent=isFollowing?'Folgen':'Gefolgt';
@@ -14980,9 +15053,34 @@ ${adminIds.includes(Number(myUid)) ? `
   <a href="/agb" style="color:var(--muted);text-decoration:none;padding:8px 0;border-bottom:1px solid var(--border2)">📜 Nutzungsbedingungen (AGB)</a>
   <a href="/impressum" style="color:var(--muted);text-decoration:none;padding:8px 0;border-bottom:1px solid var(--border2)">ℹ️ Impressum</a>
   <a href="/api/datenexport" style="color:var(--muted);text-decoration:none;padding:8px 0;border-bottom:1px solid var(--border2)">📦 Meine Daten exportieren (DSGVO)</a>
+  <button onclick="loadBlockedUsers()" id="show-blocked-btn" style="background:none;border:none;color:var(--muted);text-align:left;padding:8px 0;font-size:12px;cursor:pointer;font-family:inherit;border-bottom:1px solid var(--border2)">🚫 Blockierte Nutzer verwalten</button>
+  <div id="blocked-users-list" style="display:none;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;margin:6px 0;padding:8px;font-size:12.5px"></div>
   <button onclick="deleteAccountDsgvo()" id="delete-account" style="background:none;border:none;color:#ef4444;text-align:left;padding:8px 0;font-size:12px;cursor:pointer;font-family:inherit">🗑️ Account dauerhaft löschen</button>
 </div>
 <script>
+async function loadBlockedUsers(){
+  const box=document.getElementById('blocked-users-list');
+  if(box.style.display==='block'){box.style.display='none';return;}
+  box.style.display='block';box.innerHTML='<div style="padding:8px;color:var(--muted)">Lädt…</div>';
+  try{
+    const r=await fetch('/api/blocked-users');
+    const j=await r.json();
+    if(!j||!j.ok){box.innerHTML='<div style="padding:8px;color:#ef4444">❌ '+(j&&j.error||'Fehler beim Laden')+'</div>';return;}
+    if(!j.blocked||!j.blocked.length){box.innerHTML='<div style="padding:8px;color:var(--muted)">Du hast aktuell niemanden blockiert.</div>';return;}
+    box.innerHTML=j.blocked.map(function(uid){
+      return '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 4px;border-top:1px solid var(--border2)"><a href="/profil/'+uid+'" style="color:var(--text);text-decoration:none;font-weight:600">User #'+uid+'</a><button onclick="unblockUser(\\''+uid+'\\',this)" style="background:rgba(34,197,94,0.10);border:1px solid rgba(34,197,94,0.35);color:#22c55e;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer">Aufheben</button></div>';
+    }).join('');
+  }catch(e){box.innerHTML='<div style="padding:8px;color:#ef4444">❌ Netzwerk-Fehler</div>';}
+}
+async function unblockUser(uid,btn){
+  btn.disabled=true;btn.textContent='…';
+  try{
+    const r=await fetch('/api/unblock-user',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({targetUid:uid})});
+    const j=await r.json();
+    if(j&&j.ok){btn.textContent='✓';setTimeout(loadBlockedUsers,300);loadBlockedUsers();}
+    else{btn.disabled=false;btn.textContent='Aufheben';alert('❌ '+(j&&j.error||'Fehler'));}
+  }catch(e){btn.disabled=false;btn.textContent='Aufheben';alert('❌ Netzwerk-Fehler');}
+}
 async function deleteAccountDsgvo(){
   if(!confirm('⚠️ Account dauerhaft löschen?\\n\\nDies entfernt:\\n• Dein Profil + alle Sub-Accounts\\n• Alle deine Posts + Likes + Kommentare\\n• Alle XP, Diamanten, Items\\n• Notifications + Chats\\n\\nDie Löschung kann NICHT rückgängig gemacht werden. Sie erfolgt innerhalb von 30 Tagen (DSGVO Art. 17).')) return;
   if(!confirm('Wirklich? Alle Daten gehen für immer verloren.')) return;
