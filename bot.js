@@ -4570,13 +4570,6 @@ h1{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;line-height:1.1;
       <button type="submit" class="btn" id="login-btn"><span class="spin"></span><span>Anmelden</span></button>
     </form>
 
-    <div class="div-or">oder</div>
-
-    <button type="button" class="alt-btn" id="magic-btn" onclick="sendMagicLink()">
-      <span class="alt-btn-icon">✨</span>
-      <span>Magic-Link an Email (ohne Passwort)</span>
-    </button>
-
     <div class="bottom">
       <div class="bottom-lbl">Noch keinen Account?</div>
       <a href="/signup">Jetzt kostenlos registrieren →</a>
@@ -4650,21 +4643,6 @@ function resetPassword(){
     })
     .catch(()=>{showMsg('Netzwerkfehler.','err');})
     .finally(()=>{btn.disabled=false;btn.textContent='Passwort vergessen?';});
-}
-
-function sendMagicLink(){
-  const email=(document.getElementById('login-email').value||'').trim().toLowerCase();
-  const btn=document.getElementById('magic-btn');
-  if(!email||!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)){showMsg('Bitte zuerst deine Email-Adresse eingeben.','err');document.getElementById('login-email').focus();return;}
-  clearMsg();btn.disabled=true;btn.innerHTML='<span class="alt-btn-icon">⏳</span><span>Sende Magic-Link...</span>';
-  fetch('/api/auth/email-request',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})})
-    .then(r=>r.json())
-    .then(d=>{
-      if(d.ok){showMsg('✨ Magic-Link verschickt! Schau in deine Email-Inbox (Spam-Ordner checken).','ok');}
-      else{showMsg(d.error||'Fehler beim Senden.','err');}
-    })
-    .catch(()=>{showMsg('Netzwerkfehler.','err');})
-    .finally(()=>{btn.disabled=false;btn.innerHTML='<span class="alt-btn-icon">✨</span><span>Magic-Link an Email (ohne Passwort)</span>';});
 }
 
 try { fetch('/api/track-funnel',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({event:'login-view',meta:{ref:document.referrer.slice(0,200)}}),keepalive:true}); } catch(e) {}
