@@ -15134,6 +15134,151 @@ async function submitPost(){const _spBtn=document.querySelector('[onclick="submi
       +'</div>';
   }catch(e){const w2=document.getElementById('mission-widget');if(w2)w2.innerHTML='';}
 })();
+
+// ── INLINE-PROFIL-EDITING (eigenes Profil) ──
+// Hover über Avatar/Banner zeigt 📷-Overlay, Click → File-Picker → Crop → Upload.
+// Bio/Spitzname/Nische click-to-edit (contentEditable). Save bei Blur/Enter.
+(function setupInlineEdit(){
+  const avatar = document.querySelector('.profile-avatar-wrap .profile-avatar');
+  const banner = document.querySelector('.profile-banner');
+  const name = document.querySelector('.profile-name');
+  let bio = document.querySelector('.profile-bio');
+  if (!avatar || !banner) return;
+
+  // Hidden file-inputs
+  const ip = document.createElement('input'); ip.type='file'; ip.accept='image/*'; ip.style.display='none';
+  const ib = document.createElement('input'); ib.type='file'; ib.accept='image/*'; ib.style.display='none';
+  document.body.appendChild(ip); document.body.appendChild(ib);
+
+  // Banner-Edit-Overlay
+  const bannerWrap = banner;
+  bannerWrap.style.cursor = 'pointer';
+  const bannerHint = document.createElement('div');
+  bannerHint.innerHTML = '📷 Banner ändern';
+  bannerHint.style.cssText = 'position:absolute;top:10px;left:10px;background:rgba(0,0,0,.65);backdrop-filter:blur(8px);color:#fff;padding:7px 12px;border-radius:99px;font-size:12px;font-weight:700;z-index:4;display:flex;align-items:center;gap:6px;pointer-events:none;opacity:0;transition:opacity .15s';
+  bannerWrap.appendChild(bannerHint);
+  bannerWrap.addEventListener('mouseenter',()=>bannerHint.style.opacity='1');
+  bannerWrap.addEventListener('mouseleave',()=>bannerHint.style.opacity='0');
+  bannerWrap.addEventListener('click', e=>{ if(e.target.tagName==='A'||e.target.closest('a'))return; ib.click(); });
+
+  // Avatar-Edit-Overlay
+  const avatarWrap = avatar.parentElement; // .profile-avatar-wrap
+  avatarWrap.style.cursor = 'pointer';
+  const avatarHint = document.createElement('div');
+  avatarHint.innerHTML = '📷';
+  avatarHint.style.cssText = 'position:absolute;bottom:-4px;right:-4px;width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#f5d76e,#d4af37);color:#000;font-size:14px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,0,0,.35);border:3px solid var(--bg);z-index:5;pointer-events:none;transition:transform .15s';
+  avatarWrap.style.position = 'relative';
+  avatarWrap.appendChild(avatarHint);
+  avatarWrap.addEventListener('mouseenter',()=>avatarHint.style.transform='scale(1.15)');
+  avatarWrap.addEventListener('mouseleave',()=>avatarHint.style.transform='scale(1)');
+  avatarWrap.addEventListener('click', e=>{
+    if(e.target.closest('.profile-online-dot'))return;
+    ip.click();
+  });
+
+  // Upload-Handler
+  ip.onchange = () => uploadInline(ip, 'circle', '/api/upload-profilepic', '✅ Profilbild aktualisiert', 'avatar');
+  ib.onchange = () => uploadInline(ib, 'banner', '/api/upload-banner', '✅ Banner aktualisiert', 'banner');
+
+  function uploadInline(input, mode, endpoint, successMsg, kind){
+    const file = input.files && input.files[0]; if(!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      openCropModal(e.target.result, mode, async croppedData => {
+        try {
+          const res = await fetch(endpoint, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({imageData:croppedData})});
+          const j = await res.json();
+          if (j.ok) {
+            if (typeof toast === 'function') toast(successMsg);
+            // Lokal updaten ohne Page-Reload
+            if (kind === 'avatar') {
+              const img = document.querySelector('.profile-avatar-wrap .profile-avatar');
+              if (img && img.tagName === 'IMG') img.src = croppedData + '?v=' + Date.now();
+              else if (img) { const newImg = new Image(); newImg.src = croppedData; newImg.className='profile-avatar'; newImg.style.cssText = img.style.cssText; img.replaceWith(newImg); }
+            } else if (kind === 'banner') {
+              setTimeout(()=>location.reload(), 600);
+            }
+          } else {
+            if (typeof toast === 'function') toast('❌ ' + (j.error||'Fehler'));
+            else alert('Fehler: '+(j.error||'?'));
+          }
+        } catch(e){ alert('Upload-Fehler: '+e.message); }
+      });
+    };
+    reader.readAsDataURL(file);
+    input.value = '';
+  }
+
+  // Bio: falls leer noch nicht im DOM → erzeugen
+  if (!bio) {
+    const info = document.querySelector('.profile-info');
+    if (info) {
+      bio = document.createElement('div');
+      bio.className = 'profile-bio';
+      bio.style.opacity = '0.55';
+      bio.style.fontStyle = 'italic';
+      bio.textContent = '+ Bio hinzufügen…';
+      // Nach .profile-name-row einfügen
+      const row = info.querySelector('.profile-name-row');
+      if (row && row.nextSibling) info.insertBefore(bio, row.nextSibling);
+      else info.appendChild(bio);
+    }
+  }
+
+  // Inline-Edit für Bio
+  if (bio) {
+    bio.style.cursor = 'pointer';
+    bio.title = 'Klick zum Bearbeiten';
+    bio.addEventListener('click', () => makeEditable(bio, 100, 'bio', '+ Bio hinzufügen…', true));
+  }
+  // Inline-Edit für Spitzname
+  if (name) {
+    name.style.cursor = 'pointer';
+    name.title = 'Klick zum Bearbeiten';
+    name.addEventListener('click', () => makeEditable(name, 30, 'spitzname', '', false));
+  }
+
+  function makeEditable(el, maxLen, field, placeholder, multiline){
+    if (el._editing) return;
+    el._editing = true;
+    const original = (el.textContent === placeholder ? '' : el.textContent).trim();
+    const editor = document.createElement(multiline ? 'textarea' : 'input');
+    if (!multiline) editor.type = 'text';
+    editor.value = original;
+    editor.maxLength = maxLen;
+    editor.style.cssText = (multiline
+      ? 'width:100%;min-height:60px;'
+      : 'width:auto;min-width:140px;') +
+      'font:inherit;color:inherit;background:var(--bg3);border:1px solid var(--accent);border-radius:8px;padding:6px 10px;outline:none;resize:vertical';
+    el.replaceWith(editor);
+    editor.focus(); editor.select();
+    let saving = false;
+    const finish = async (save) => {
+      if (saving) return; saving = true;
+      const newVal = editor.value.trim().slice(0, maxLen);
+      if (save && newVal !== original) {
+        const body = {}; body[field] = newVal;
+        try {
+          const r = await fetch('/api/save-profile', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+          const j = await r.json();
+          if (!j.ok) { alert('❌ '+(j.error||'Fehler')); return; }
+          if (typeof toast === 'function') toast('✅ Gespeichert');
+          el.textContent = newVal || placeholder;
+          el.style.opacity = newVal ? '1' : '0.55';
+          el.style.fontStyle = newVal ? '' : 'italic';
+        } catch(e){ alert('Netzwerk-Fehler'); return; }
+      }
+      editor.replaceWith(el);
+      el._editing = false;
+    };
+    editor.addEventListener('blur', () => finish(true));
+    editor.addEventListener('keydown', e => {
+      if (e.key === 'Escape') { editor.value = original; finish(false); }
+      else if (e.key === 'Enter' && !multiline) { e.preventDefault(); editor.blur(); }
+      else if (e.key === 'Enter' && multiline && (e.metaKey || e.ctrlKey)) { e.preventDefault(); editor.blur(); }
+    });
+  }
+})();
 </script>`, 'profile');
     }
 
