@@ -14624,19 +14624,6 @@ ${rest.map(([id,u],idx)=>{
         const isParentActive = String(myUid) === parentUid;
         const myPosts = (d.posts||{})[myUid] || [];
         const myProjects = myUser.projects || [];
-        // Edit-Modal-Daten für /profil: aktuelles Profil als JSON ins window injecten,
-        // damit das Modal die Felder ohne extra fetch befüllen kann.
-        const _meDataForModal = {
-            uid: String(myUid),
-            spitzname: myUser.spitzname || '',
-            bio: myUser.bio || '',
-            nische: myUser.nische || '',
-            instagram: myUser.instagram || '',
-            website: myUser.website || '',
-            tiktok: myUser.tiktok || '',
-            youtube: myUser.youtube || '',
-            twitter: myUser.twitter || '',
-        };
 
         const myPostsHtml = myPosts.length
             ? myPosts.slice().reverse().map((p)=>{
@@ -14977,7 +14964,6 @@ ${completionHtml}
 <script>
 const PROJECTS = ${projDataJson};
 const _SESSION_UID = '${myUid}';
-window._meData = ${JSON.stringify(_meDataForModal)};
 let _curProjIdx=-1, _editMode=false, _editProjId=null;
 function showPTab(tab,el){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
@@ -15149,11 +15135,15 @@ async function submitPost(){const _spBtn=document.querySelector('[onclick="submi
   }catch(e){const w2=document.getElementById('mission-widget');if(w2)w2.innerHTML='';}
 })();
 
-// ── PROFIL-EDITING (eigenes Profil, Instagram-Style) ──
-// "+" auf Avatar = Foto, "📷" auf Banner = Banner, "Bearbeiten"-Pill = alles andere.
-(function setupProfileEdit(){
+// ── INLINE-PROFIL-EDITING (eigenes Profil, Instagram-Style) ──
+// Sichtbare "+" auf Avatar, "📷 Bearbeiten"-Pill auf Banner,
+// "✏️ Ändern"-Boxen neben Bio + Spitzname. KEINE Hover-Hidden-Triggers.
+(function setupInlineEdit(){
   const avatar = document.querySelector('.profile-avatar-wrap .profile-avatar');
   const banner = document.querySelector('.profile-banner');
+  const name = document.querySelector('.profile-name');
+  const nameRow = document.querySelector('.profile-name-row');
+  let bio = document.querySelector('.profile-bio');
   if (!avatar || !banner) return;
 
   // Hidden file-inputs
@@ -15161,25 +15151,30 @@ async function submitPost(){const _spBtn=document.querySelector('[onclick="submi
   const ib = document.createElement('input'); ib.type='file'; ib.accept='image/*'; ib.style.display='none';
   document.body.appendChild(ip); document.body.appendChild(ib);
 
-  // BANNER: "📷 Bearbeiten" Pill oben rechts (immer sichtbar)
+  // ── BANNER: immer sichtbare "📷 Bearbeiten" Pill (oben rechts) ──
   const bannerPill = document.createElement('button');
   bannerPill.type = 'button';
   bannerPill.innerHTML = '📷 Bearbeiten';
   bannerPill.style.cssText = 'position:absolute;top:12px;right:12px;background:rgba(0,0,0,.65);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);color:#fff;padding:8px 14px;border-radius:99px;font-size:12px;font-weight:700;z-index:4;border:1px solid rgba(255,255,255,.18);cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px;transition:transform .1s,background .15s';
+  bannerPill.addEventListener('mouseenter',()=>{bannerPill.style.background='rgba(0,0,0,.85)';bannerPill.style.transform='scale(1.04)';});
+  bannerPill.addEventListener('mouseleave',()=>{bannerPill.style.background='rgba(0,0,0,.65)';bannerPill.style.transform='scale(1)';});
   bannerPill.addEventListener('click', e => { e.stopPropagation(); ib.click(); });
   banner.appendChild(bannerPill);
 
-  // AVATAR: goldenes "+" Badge (immer sichtbar)
+  // ── AVATAR: immer sichtbares goldenes "+" Badge (unten rechts am Avatar) ──
   const avatarWrap = avatar.parentElement;
-  // WICHTIG: avatarWrap.position NICHT überschreiben — er ist bereits position:absolute
+  avatarWrap.style.position = 'relative';
   const plusBadge = document.createElement('button');
   plusBadge.type = 'button';
   plusBadge.setAttribute('aria-label', 'Profilbild ändern');
   plusBadge.innerHTML = '+';
   plusBadge.style.cssText = 'position:absolute;bottom:0;right:0;width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#f8e7a0 0%,#d4af37 50%,#a07a1c 100%);color:#000;font-size:22px;font-weight:300;line-height:1;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.5);border:3px solid var(--bg);z-index:6;cursor:pointer;padding:0;font-family:inherit;transition:transform .12s';
+  plusBadge.addEventListener('mouseenter',()=>plusBadge.style.transform='scale(1.12)');
+  plusBadge.addEventListener('mouseleave',()=>plusBadge.style.transform='scale(1)');
   plusBadge.addEventListener('click', e => { e.stopPropagation(); ip.click(); });
   avatarWrap.appendChild(plusBadge);
 
+  // Upload-Handler
   ip.onchange = () => uploadInline(ip, 'circle', '/api/upload-profilepic', '✅ Profilbild aktualisiert', 'avatar');
   ib.onchange = () => uploadInline(ib, 'banner', '/api/upload-banner', '✅ Banner aktualisiert', 'banner');
 
@@ -15211,164 +15206,95 @@ async function submitPost(){const _spBtn=document.querySelector('[onclick="submi
     input.value = '';
   }
 
-  // ── "Bearbeiten"-Pill oben rechts: öffnet Full-Edit-Modal ──
-  // Existierender Link zu /einstellungen wird überschrieben → öffnet Modal.
-  const editPill = document.querySelector('a.profile-action-pill[href="/einstellungen"]');
-  if (editPill) {
-    editPill.removeAttribute('href');
-    editPill.style.cursor = 'pointer';
-    editPill.addEventListener('click', e => { e.preventDefault(); openProfileEditModal(); });
+  // ── "Ändern"-Box Style ──
+  function makeChangeBox(label){
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.innerHTML = '✏️ ' + label;
+    b.style.cssText = 'display:inline-flex;align-items:center;gap:5px;background:var(--bg3);border:1px solid var(--border2);color:var(--muted);padding:4px 10px;border-radius:8px;font-size:11.5px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .12s;margin-left:8px';
+    b.addEventListener('mouseenter',()=>{b.style.background='var(--bg4)';b.style.color='var(--text)';b.style.borderColor='var(--accent)';});
+    b.addEventListener('mouseleave',()=>{b.style.background='var(--bg3)';b.style.color='var(--muted)';b.style.borderColor='var(--border2)';});
+    return b;
   }
 
-  // ── PROFIL-EDIT-MODAL: alle Text-Felder in einer Form ──
-  window.openProfileEditModal = function() {
-    const data = window._meData || {};
-    const esc = s => String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-    const bg = document.createElement('div');
-    bg.id = 'profile-edit-bg';
-    bg.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.65);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:9000;display:flex;align-items:flex-end;justify-content:center;animation:pe-fade .2s ease-out';
-    bg.onclick = e => { if (e.target === bg) closeProfileEdit(); };
-    bg.innerHTML = '\\n' +
-      '<style>\\n' +
-      '@keyframes pe-fade{from{opacity:0}to{opacity:1}}\\n' +
-      '@keyframes pe-slide{from{transform:translateY(100%)}to{transform:translateY(0)}}\\n' +
-      '.pe-modal{background:var(--bg);border-radius:20px 20px 0 0;width:100%;max-width:500px;max-height:92vh;overflow-y:auto;animation:pe-slide .3s cubic-bezier(.34,1.56,.64,1);box-shadow:0 -20px 60px rgba(0,0,0,.5)}\\n' +
-      '@media(min-width:600px){.pe-modal{border-radius:20px;margin-bottom:auto;margin-top:auto;max-height:88vh}}\\n' +
-      '.pe-hdr{position:sticky;top:0;background:var(--glass-bg);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);padding:14px 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border2);z-index:2}\\n' +
-      '.pe-hdr h3{margin:0;font-size:16px;font-weight:700}\\n' +
-      '.pe-close{background:rgba(255,255,255,.08);border:none;color:var(--text);width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:16px;font-family:inherit}\\n' +
-      '.pe-save{background:linear-gradient(135deg,#4dabf7,#1971c2);color:#fff;border:none;padding:8px 18px;border-radius:99px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}\\n' +
-      '.pe-save:disabled{opacity:.5;cursor:wait}\\n' +
-      '.pe-body{padding:8px 0}\\n' +
-      '.pe-field{padding:14px 18px;border-bottom:1px solid var(--border2)}\\n' +
-      '.pe-label{display:block;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}\\n' +
-      '.pe-input{width:100%;background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:10px 12px;border-radius:10px;font-size:14px;font-family:inherit;outline:none;transition:border-color .15s}\\n' +
-      '.pe-input:focus{border-color:var(--accent)}\\n' +
-      '.pe-input.pe-textarea{min-height:70px;resize:vertical;line-height:1.5}\\n' +
-      '.pe-hint{font-size:11px;color:var(--muted);margin-top:5px}\\n' +
-      '.pe-img-row{display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--border2)}\\n' +
-      '.pe-img-thumb{width:56px;height:56px;border-radius:50%;background:var(--bg4);background-size:cover;background-position:center;flex-shrink:0;border:2px solid var(--border2)}\\n' +
-      '.pe-img-thumb.banner{border-radius:10px;width:90px;height:28px}\\n' +
-      '.pe-img-btn{background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:8px 14px;border-radius:99px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit}\\n' +
-      '</style>\\n' +
-      '<div class="pe-modal">\\n' +
-      '  <div class="pe-hdr">\\n' +
-      '    <button type="button" class="pe-close" onclick="closeProfileEdit()">✕</button>\\n' +
-      '    <h3>Profil bearbeiten</h3>\\n' +
-      '    <button type="button" id="pe-save-btn" class="pe-save" onclick="saveProfileEdit()">Speichern</button>\\n' +
-      '  </div>\\n' +
-      '  <div class="pe-body">\\n' +
-      '    <div class="pe-img-row">\\n' +
-      '      <div class="pe-img-thumb" id="pe-thumb-avatar" style="background-image:url(\\''+esc('/appbild/'+(data.uid||'')+'/profilepic')+'\\')"></div>\\n' +
-      '      <div style="flex:1"><div style="font-size:13.5px;font-weight:700">Profilbild</div><div class="pe-hint" style="margin-top:2px">JPG/PNG · quadratisch</div></div>\\n' +
-      '      <button type="button" class="pe-img-btn" onclick="document.getElementById(\\'pe-pic-input\\').click()">Ändern</button>\\n' +
-      '      <input type="file" id="pe-pic-input" accept="image/*" style="display:none">\\n' +
-      '    </div>\\n' +
-      '    <div class="pe-img-row">\\n' +
-      '      <div class="pe-img-thumb banner" id="pe-thumb-banner" style="background-image:url(\\''+esc('/appbild/'+(data.uid||'')+'/banner')+'\\')"></div>\\n' +
-      '      <div style="flex:1"><div style="font-size:13.5px;font-weight:700">Banner</div><div class="pe-hint" style="margin-top:2px">Querformat · 3:1</div></div>\\n' +
-      '      <button type="button" class="pe-img-btn" onclick="document.getElementById(\\'pe-banner-input\\').click()">Ändern</button>\\n' +
-      '      <input type="file" id="pe-banner-input" accept="image/*" style="display:none">\\n' +
-      '    </div>\\n' +
-      '    <div class="pe-field"><label class="pe-label">Spitzname</label>\\n' +
-      '      <input class="pe-input" id="pe-spitzname" type="text" maxlength="30" value="'+esc(data.spitzname||'')+'" placeholder="Dein Anzeige-Name">\\n' +
-      '      <div class="pe-hint">Max 30 Zeichen. Wird im Profil + Ranking angezeigt.</div></div>\\n' +
-      '    <div class="pe-field"><label class="pe-label">Bio</label>\\n' +
-      '      <textarea class="pe-input pe-textarea" id="pe-bio" maxlength="100" placeholder="Erzähl was über dich…">'+esc(data.bio||'')+'</textarea>\\n' +
-      '      <div class="pe-hint"><span id="pe-bio-count">'+(data.bio||'').length+'</span>/100</div></div>\\n' +
-      '    <div class="pe-field"><label class="pe-label">Nische</label>\\n' +
-      '      <input class="pe-input" id="pe-nische" type="text" maxlength="50" value="'+esc(data.nische||'')+'" placeholder="z.B. Mindset, Fashion, Gaming…">\\n' +
-      '      <div class="pe-hint">Deine Hauptkategorie als Creator.</div></div>\\n' +
-      '    <div class="pe-field"><label class="pe-label">📸 Instagram</label>\\n' +
-      '      <input class="pe-input" id="pe-instagram" type="text" maxlength="50" value="'+esc(data.instagram||'')+'" placeholder="dein_handle (ohne @)">\\n' +
-      '      <div class="pe-hint">Ohne @ und ohne URL. Wird als Link im Profil angezeigt.</div></div>\\n' +
-      '    <div class="pe-field"><label class="pe-label">🔗 Website</label>\\n' +
-      '      <input class="pe-input" id="pe-website" type="url" maxlength="100" value="'+esc(data.website||'')+'" placeholder="https://…">\\n' +
-      '      <div class="pe-hint">Mit https:// am Anfang.</div></div>\\n' +
-      '    <div class="pe-field"><label class="pe-label">🎵 TikTok</label>\\n' +
-      '      <input class="pe-input" id="pe-tiktok" type="text" maxlength="50" value="'+esc(data.tiktok||'')+'" placeholder="dein_handle"></div>\\n' +
-      '    <div class="pe-field"><label class="pe-label">▶️ YouTube</label>\\n' +
-      '      <input class="pe-input" id="pe-youtube" type="text" maxlength="50" value="'+esc(data.youtube||'')+'" placeholder="@channel oder ID"></div>\\n' +
-      '    <div class="pe-field"><label class="pe-label">🐦 Twitter / X</label>\\n' +
-      '      <input class="pe-input" id="pe-twitter" type="text" maxlength="50" value="'+esc(data.twitter||'')+'" placeholder="handle (ohne @)"></div>\\n' +
-      '    <div class="pe-field" style="border-bottom:none;padding-bottom:32px">\\n' +
-      '      <a href="/einstellungen" style="display:block;text-align:center;padding:12px;background:var(--bg3);color:var(--text);border-radius:10px;text-decoration:none;font-size:13px;font-weight:600">⚙️ Mehr Einstellungen (Email · Passwort · Privacy)</a>\\n' +
-      '    </div>\\n' +
-      '  </div>\\n' +
-      '</div>';
-    document.body.appendChild(bg);
-    document.body.style.overflow = 'hidden';
-    // Bio-Counter live
-    const bioInp = document.getElementById('pe-bio');
-    bioInp.addEventListener('input', () => { document.getElementById('pe-bio-count').textContent = bioInp.value.length; });
-    // Foto-Upload aus Modal
-    document.getElementById('pe-pic-input').onchange = function(){ uploadFromModal(this, 'circle', '/api/upload-profilepic', 'pe-thumb-avatar', '✅ Profilbild aktualisiert'); };
-    document.getElementById('pe-banner-input').onchange = function(){ uploadFromModal(this, 'banner', '/api/upload-banner', 'pe-thumb-banner', '✅ Banner aktualisiert'); };
-  };
-
-  window.closeProfileEdit = function() {
-    const bg = document.getElementById('profile-edit-bg');
-    if (bg) bg.remove();
-    document.body.style.overflow = '';
-  };
-
-  function uploadFromModal(input, mode, endpoint, thumbId, msg){
-    const file = input.files && input.files[0]; if(!file) return;
-    const reader = new FileReader();
-    reader.onload = e => {
-      openCropModal(e.target.result, mode, async croppedData => {
-        try {
-          const res = await fetch(endpoint, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({imageData:croppedData})});
-          const j = await res.json();
-          if (j.ok) {
-            if (typeof toast === 'function') toast(msg);
-            const th = document.getElementById(thumbId);
-            if (th) th.style.backgroundImage = 'url("'+croppedData+'")';
-            // Original-Avatar/Banner auf Profilseite auch updaten
-            if (thumbId === 'pe-thumb-avatar') {
-              const img = document.querySelector('.profile-avatar-wrap .profile-avatar');
-              if (img && img.tagName === 'IMG') img.src = croppedData + '?v=' + Date.now();
-            }
-          } else {
-            if (typeof toast === 'function') toast('❌ ' + (j.error||'Fehler'));
-            else alert('Fehler: '+(j.error||'?'));
-          }
-        } catch(e){ alert('Upload-Fehler: '+e.message); }
-      });
-    };
-    reader.readAsDataURL(file);
-    input.value = '';
+  // ── SPITZNAME: "Ändern"-Box neben dem Namen ──
+  if (name && nameRow) {
+    const nameEditBtn = makeChangeBox('Ändern');
+    nameEditBtn.title = 'Spitzname ändern';
+    nameEditBtn.addEventListener('click', () => makeEditable(name, 30, 'spitzname', '', false));
+    nameRow.appendChild(nameEditBtn);
   }
 
-  window.saveProfileEdit = async function() {
-    const btn = document.getElementById('pe-save-btn');
-    btn.disabled = true; btn.textContent = '⏳';
-    const payload = {
-      spitzname: document.getElementById('pe-spitzname').value.trim(),
-      bio: document.getElementById('pe-bio').value.trim(),
-      nische: document.getElementById('pe-nische').value.trim(),
-      instagram: document.getElementById('pe-instagram').value.trim().replace(/^@/,''),
-      website: document.getElementById('pe-website').value.trim(),
-      tiktok: document.getElementById('pe-tiktok').value.trim().replace(/^@/,''),
-      youtube: document.getElementById('pe-youtube').value.trim(),
-      twitter: document.getElementById('pe-twitter').value.trim().replace(/^@/,''),
-    };
-    try {
-      const r = await fetch('/api/save-profile', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-      const j = await r.json();
-      if (j.ok) {
-        if (typeof toast === 'function') toast('✅ Profil gespeichert');
-        closeProfileEdit();
-        setTimeout(()=>location.reload(), 400);
-      } else {
-        btn.disabled = false; btn.textContent = 'Speichern';
-        alert('❌ ' + (j.error||'Fehler beim Speichern'));
-      }
-    } catch(e) {
-      btn.disabled = false; btn.textContent = 'Speichern';
-      alert('Netzwerk-Fehler: '+e.message);
+  // ── BIO: falls leer im DOM erzeugen, sonst direkt nutzen. Mit "Ändern"-Box DAVOR ──
+  if (!bio) {
+    const info = document.querySelector('.profile-info');
+    if (info) {
+      bio = document.createElement('div');
+      bio.className = 'profile-bio';
+      bio.style.opacity = '0.55';
+      bio.style.fontStyle = 'italic';
+      bio.textContent = 'Noch keine Bio…';
+      const row = info.querySelector('.profile-name-row');
+      if (row && row.nextSibling) info.insertBefore(bio, row.nextSibling);
+      else info.appendChild(bio);
     }
-  };
+  }
+  if (bio) {
+    // Wrap bio + edit-button in einem flex-container
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'display:flex;align-items:flex-start;gap:8px;margin-top:12px';
+    const bioEditBtn = makeChangeBox('Bio ändern');
+    bioEditBtn.style.marginLeft = '0';
+    bioEditBtn.style.flexShrink = '0';
+    bioEditBtn.style.marginTop = '0';
+    bio.style.marginTop = '0';
+    bio.style.flex = '1';
+    bio.parentNode.insertBefore(wrap, bio);
+    wrap.appendChild(bio);
+    wrap.appendChild(bioEditBtn);
+    bioEditBtn.addEventListener('click', () => makeEditable(bio, 100, 'bio', 'Noch keine Bio…', true));
+  }
+
+  function makeEditable(el, maxLen, field, placeholder, multiline){
+    if (el._editing) return;
+    el._editing = true;
+    const original = (el.textContent === placeholder ? '' : el.textContent).trim();
+    const editor = document.createElement(multiline ? 'textarea' : 'input');
+    if (!multiline) editor.type = 'text';
+    editor.value = original;
+    editor.maxLength = maxLen;
+    editor.style.cssText = (multiline
+      ? 'width:100%;min-height:64px;'
+      : 'width:auto;min-width:160px;') +
+      'font:inherit;color:inherit;background:var(--bg3);border:1.5px solid var(--accent);border-radius:8px;padding:7px 10px;outline:none;resize:vertical;box-shadow:0 4px 14px rgba(0,0,0,.18)';
+    el.replaceWith(editor);
+    editor.focus(); editor.select();
+    let saving = false;
+    const finish = async (save) => {
+      if (saving) return; saving = true;
+      const newVal = editor.value.trim().slice(0, maxLen);
+      if (save && newVal !== original) {
+        const body = {}; body[field] = newVal;
+        try {
+          const r = await fetch('/api/save-profile', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+          const j = await r.json();
+          if (!j.ok) { alert('❌ '+(j.error||'Fehler')); saving=false; editor.focus(); return; }
+          if (typeof toast === 'function') toast('✅ Gespeichert');
+          el.textContent = newVal || placeholder;
+          el.style.opacity = newVal ? '1' : '0.55';
+          el.style.fontStyle = newVal ? '' : 'italic';
+        } catch(e){ alert('Netzwerk-Fehler'); saving=false; return; }
+      }
+      editor.replaceWith(el);
+      el._editing = false;
+    };
+    editor.addEventListener('blur', () => finish(true));
+    editor.addEventListener('keydown', e => {
+      if (e.key === 'Escape') { editor.value = original; finish(false); }
+      else if (e.key === 'Enter' && !multiline) { e.preventDefault(); editor.blur(); }
+      else if (e.key === 'Enter' && multiline && (e.metaKey || e.ctrlKey)) { e.preventDefault(); editor.blur(); }
+    });
+  }
 })();
 </script>`, 'profile');
     }
