@@ -3343,7 +3343,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v121-legal-pages-standalone-and-blockuser';
+const SW_VERSION='v122-launch-route-and-target-blank-legal';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
@@ -4439,6 +4439,15 @@ function submitSignup(ev){
 </body></html>`);
     }
 
+    // ── SMART LAUNCH (PWA/TWA start_url) ──
+    // Wenn PWA/TWA gestartet wird, lädt diese Route. Mit Session → /feed,
+    // ohne → /login. So sieht ausgeloggte User direkt die Login-Page statt
+    // der Marketing-Landing (war Verhalten vor diesem Route).
+    if (path === '/launch' && req.method === 'GET') {
+        if (session) return redirect('/feed');
+        return redirect('/login');
+    }
+
     // ── PROFESSIONAL LOGIN PAGE (/login) ──
     // Fokussierte Login-Page für returning Users. Standalone HTML (kein layout(),
     // kein Tour-JS), damit nichts redirecten kann. Eigene Route /login, von der
@@ -4576,8 +4585,8 @@ h1{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;line-height:1.1;
     </div>
 
     <div class="foot">
-      Mit der Anmeldung akzeptierst du die <a href="/agb">AGB</a> und die <a href="/datenschutz">Datenschutzerklärung</a>.<br>
-      <a href="/impressum">Impressum</a>
+      Mit der Anmeldung akzeptierst du die <a href="/agb" target="_blank" rel="noopener">AGB</a> und die <a href="/datenschutz" target="_blank" rel="noopener">Datenschutzerklärung</a>.<br>
+      <a href="/impressum" target="_blank" rel="noopener">Impressum</a>
     </div>
   </div>
 </div>
@@ -5978,7 +5987,7 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
     // ── PWA MANIFEST ──
     if (path === '/manifest.json') {
         res.writeHead(200,{'Content-Type':'application/manifest+json','Cache-Control':'no-store','Access-Control-Allow-Origin':'*'});
-        return res.end(JSON.stringify({name:'CreatorX',short_name:'CreatorX',description:'Die kreative Community für Instagram Creators',start_url:'/',scope:'/',display:'standalone',background_color:'#000000',theme_color:'#000000',orientation:'portrait',categories:['social','lifestyle'],prefer_related_applications:false,screenshots:[],icons:[{src:'/icon-192.png?v=26',sizes:'192x192',type:'image/png',purpose:'any'},{src:'/icon-512.png?v=26',sizes:'512x512',type:'image/png',purpose:'any maskable'}]}));
+        return res.end(JSON.stringify({name:'CreatorX',short_name:'CreatorX',description:'Die kreative Community für Instagram Creators',start_url:'/launch',scope:'/',display:'standalone',background_color:'#000000',theme_color:'#000000',orientation:'portrait',categories:['social','lifestyle'],prefer_related_applications:false,screenshots:[],icons:[{src:'/icon-192.png?v=26',sizes:'192x192',type:'image/png',purpose:'any'},{src:'/icon-512.png?v=26',sizes:'512x512',type:'image/png',purpose:'any maskable'}]}));
     }
 
     if (path === '/api/vapid-public-key') {
