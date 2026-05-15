@@ -7641,6 +7641,15 @@ p{line-height:1.65;color:var(--muted)}
         return json(r || {ok:false, error:'Mainbot offline'});
     }
 
+    if (path === '/api/admin/user-detail' && req.method === 'GET') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
+        const targetUid = String(query.uid || '');
+        if (!targetUid) return json({ok:false, error:'uid fehlt'}, 400);
+        const result = await fetchBotRaw('/admin-user-detail-api?uid=' + encodeURIComponent(targetUid));
+        return json(result || {ok:false, error:'Mainbot offline'});
+    }
+
     if (path === '/api/admin/report-action' && req.method === 'POST') {
         if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
         if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
@@ -11770,69 +11779,237 @@ function dToast(msg, kind) {
   setTimeout(() => { el.style.opacity = '0'; el.style.transform = 'translateX(20px)'; el.style.transition = 'all .25s'; setTimeout(()=>el.remove(), 280); }, 3500);
 }
 
+function fmtRelative(ts) {
+  if (!ts) return '–';
+  const diff = Date.now() - ts;
+  if (diff < 60000) return 'gerade eben';
+  if (diff < 3600000) return Math.floor(diff/60000) + ' Min';
+  if (diff < 86400000) return Math.floor(diff/3600000) + ' Std';
+  const days = Math.floor(diff/86400000);
+  if (days < 30) return days + ' Tag' + (days!==1?'e':'');
+  const months = Math.floor(days/30);
+  if (months < 12) return months + ' Mon';
+  return Math.floor(months/12) + ' J';
+}
+function fmtTs(ts) {
+  if (!ts) return '–';
+  return new Date(ts).toLocaleString('de-DE', { day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit' });
+}
+
 function openUser(uid) {
-  const u = ALL_USERS.find(x => String(x.uid) === String(uid));
-  if (!u) return;
+  const baseUser = ALL_USERS.find(x => String(x.uid) === String(uid));
+  if (!baseUser) return;
   const bg = document.createElement('div');
   bg.className = 'dash-modal-bg';
   bg.onclick = e => { if (e.target === bg) bg.remove(); };
-  const onb = [
-    {label:'📧 Email gesetzt', ok: u.hasEmail},
-    {label:'✓ Email bestätigt', ok: u.emailConfirmed},
-    {label:'📸 Instagram', ok: u.hasInstagram},
-    {label:'🏷 Spitzname', ok: u.hasSpitzname},
-    {label:'📝 Bio', ok: u.hasBio},
-    {label:'🎯 Nische', ok: u.hasNische},
-    {label:'❤ Erster Like', ok: u.hasFirstLike},
-    {label:'🔗 Erster Link', ok: u.hasFirstLink},
-  ];
-  const meta = [];
-  if (u.email) meta.push('📧 '+esc(u.email)+(u.emailConfirmed?'':' (unbestätigt)'));
-  if (u.instagram) meta.push('📸 @'+esc(u.instagram));
-  if (u.signupSource) meta.push('🪪 '+u.signupSource);
-  meta.push('UID '+u.uid);
+  // Initial skeleton mit Basisdaten, dann Detail-Fetch ergänzt
   bg.innerHTML =
-    '<div class="dash-modal">' +
-      '<h3>'+esc(u.spitzname||u.name||'User')+(u.isAdmin?' <span class="dash-pill warn">Admin</span>':'')+'</h3>' +
-      '<div class="dash-modal-meta">'+meta.join(' · ')+'</div>' +
-      '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;text-align:center;margin-bottom:14px">' +
-        '<div><div style="font-size:18px;font-weight:800">'+(u.xp||0)+'</div><div style="font-size:10.5px;color:var(--muted)">XP</div></div>' +
-        '<div><div style="font-size:18px;font-weight:800">'+(u.diamonds||0)+'</div><div style="font-size:10.5px;color:var(--muted)">💎</div></div>' +
-        '<div><div style="font-size:18px;font-weight:800">'+(u.totalLikes||0)+'</div><div style="font-size:10.5px;color:var(--muted)">❤ Likes</div></div>' +
-        '<div><div style="font-size:18px;font-weight:800">'+(u.links||0)+'</div><div style="font-size:10.5px;color:var(--muted)">🔗 Links</div></div>' +
-        '<div><div style="font-size:18px;font-weight:800;color:'+((u.superlinkCredits||0)>0?'#f59e0b':'inherit')+'">⚡ '+(u.superlinkCredits||0)+'</div><div style="font-size:10.5px;color:var(--muted)">SL-Credits</div></div>' +
+    '<div class="dash-modal" id="user-modal-content">' +
+      '<div style="padding:24px;text-align:center;color:var(--dsub)">' +
+        '<div style="font-size:14px;font-weight:700;color:#fff;margin-bottom:6px">'+esc(baseUser.spitzname||baseUser.name||'User')+'</div>' +
+        '<div style="font-size:12px">⏳ Lade Insights …</div>' +
       '</div>' +
-      '<div class="dash-onboarding">' +
-        onb.map(o => '<div class="dash-onb-row">'+(o.ok?'✅':'⬜')+' '+o.label+'</div>').join('') +
-      '</div>' +
-      '<div style="margin-top:14px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:8px">⚙️ Aktionen</div>' +
-      '<div style="font-size:11px;color:var(--muted);margin-bottom:6px">Warns: <b style="color:'+((u.warnings||0)>=3?'#ef4444':'var(--text)')+'">'+(u.warnings||0)+'/5</b></div>' +
-      '<div class="dash-action-grid">' +
-        '<button class="dash-act" onclick="grant(\\''+u.uid+'\\',\\'add-xp\\')">+ XP</button>' +
-        '<button class="dash-act danger" onclick="grant(\\''+u.uid+'\\',\\'remove-xp\\')">− XP</button>' +
-        '<button class="dash-act" onclick="grant(\\''+u.uid+'\\',\\'add-diamonds\\')">+ 💎</button>' +
-        '<button class="dash-act danger" onclick="grant(\\''+u.uid+'\\',\\'remove-diamonds\\')">− 💎</button>' +
-        '<button class="dash-act danger" onclick="grantNoAmount(\\''+u.uid+'\\',\\'add-warn\\')">+ ⚠️ Warn</button>' +
-        '<button class="dash-act" onclick="grantNoAmount(\\''+u.uid+'\\',\\'remove-warn\\')">− ⚠️ Warn</button>' +
-        '<button class="dash-act" onclick="grantNoAmount(\\''+u.uid+'\\',\\'add-extra-link\\')">+ 🔗 Extra-Link</button>' +
-        '<button class="dash-act" onclick="grantNoAmount(\\''+u.uid+'\\',\\'add-superlink\\')">+ ⚡ Superlink-Slot</button>' +
-        '<button class="dash-act" onclick="linkAsSub(\\''+u.uid+'\\',\\''+esc(u.spitzname||u.name||u.uid)+'\\')" style="background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;border-color:transparent">🔗 Als mein Sub linken</button>' +
-      '</div>' +
-      '<div style="font-size:11px;font-weight:700;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin:14px 0 8px">📨 Kommunikation</div>' +
-      '<div class="dash-action-grid">' +
-        '<button class="dash-act" onclick="sendDmTo(\\''+u.uid+'\\',\\''+esc(u.spitzname||u.name||'User')+'\\')">📨 DM senden</button>' +
-        '<button class="dash-act" onclick="window.open(\\'/nachrichten/'+u.uid+'\\',\\'_blank\\')">💬 Chat öffnen</button>' +
-      '</div>' +
-      '<div style="font-size:11px;font-weight:700;letter-spacing:1px;color:#ef4444;text-transform:uppercase;margin:14px 0 8px">⚠️ Gefährliche Aktionen</div>' +
-      '<div class="dash-action-grid">' +
-        '<button class="dash-act danger" onclick="resetUserConfirm(\\''+u.uid+'\\',\\''+esc(u.spitzname||u.name||'User')+'\\')">♻️ XP-Reset</button>' +
-        (u.banned ? '<button class="dash-act" onclick="banUser(\\''+u.uid+'\\',false)">✅ Entbannen</button>'
-                  : '<button class="dash-act danger" onclick="banUser(\\''+u.uid+'\\',true)">🚫 Bannen</button>') +
-      '</div>' +
-      '<a href="/profil/'+u.uid+'" target="_blank" class="dash-act" style="display:block;margin:12px 0 8px;text-decoration:none">→ Profil ansehen</a>' +
-      '<button class="dash-close" onclick="this.closest(\\'.dash-modal-bg\\').remove()">Schließen</button>' +
     '</div>';
   document.body.appendChild(bg);
+
+  fetch('/api/admin/user-detail?uid=' + encodeURIComponent(uid))
+    .then(r => r.json())
+    .then(j => {
+      if (!j.ok) {
+        document.getElementById('user-modal-content').innerHTML =
+          '<div style="padding:24px;text-align:center;color:#ef4444">'+esc(j.error||'Fehler beim Laden')+'</div>' +
+          '<button class="dash-close" onclick="this.closest(\\'.dash-modal-bg\\').remove()">Schließen</button>';
+        return;
+      }
+      renderUserDetail(j);
+    })
+    .catch(e => {
+      const c = document.getElementById('user-modal-content');
+      if (c) c.innerHTML = '<div style="padding:24px;text-align:center;color:#ef4444">'+esc(e.message)+'</div>';
+    });
+}
+
+function renderUserDetail(j) {
+  const u = j.user || {};
+  const act = j.activity || {};
+  const eng = j.engagement || {};
+  const ra = j.reportsAgainst || [];
+  const rm = j.reportsMade || [];
+  const subs = j.subAccounts || [];
+  const parent = j.parent || null;
+  const notifs = j.notifications || [];
+
+  const reportsAgainstOpen = ra.filter(r => (r.status||'open') === 'open').length;
+  const pinnedReel = u.pinnedReel || '';
+
+  const meta = [];
+  if (u.email) meta.push('📧 '+esc(u.email)+(u.emailConfirmedAt?'':' <span style="color:#fbbf24">(unbestätigt)</span>'));
+  if (u.instagram) meta.push('<a href="https://instagram.com/'+esc(u.instagram)+'" target="_blank" style="color:#06b6d4;text-decoration:none">📸 @'+esc(u.instagram)+'</a>');
+  if (u.signupSource) meta.push('🪪 '+esc(u.signupSource));
+  meta.push('UID '+esc(u.uid));
+
+  const pills = [];
+  if (u.isAdmin) pills.push('<span class="dash-pill warn">👑 Admin</span>');
+  if (u.banned) pills.push('<span class="dash-pill err">🚫 Gebannt '+fmtRelative(u.bannedAt)+'</span>');
+  if (u.warnings >= 3) pills.push('<span class="dash-pill err">⚠️ '+u.warnings+'/5 Warns</span>');
+  else if (u.warnings > 0) pills.push('<span class="dash-pill warn">⚠️ '+u.warnings+'/5</span>');
+  if (parent) pills.push('<span class="dash-pill muted">👶 Sub von '+esc(parent.name)+'</span>');
+  if (subs.length) pills.push('<span class="dash-pill gold">👥 '+subs.length+' Sub'+(subs.length!==1?'s':'')+'</span>');
+  if (reportsAgainstOpen) pills.push('<span class="dash-pill err">🚩 '+reportsAgainstOpen+' offen</span>');
+
+  const lastSeenStr = act.lastSeen ? fmtRelative(act.lastSeen) : 'nie';
+  const isOnline = act.lastSeen && (Date.now() - act.lastSeen) < 5*60*1000;
+
+  const stat = (val, lbl, color) => '<div style="text-align:center;padding:8px 4px"><div style="font-size:17px;font-weight:800;color:'+(color||'#fff')+'">'+val+'</div><div style="font-size:9.5px;color:var(--dsub);text-transform:uppercase;letter-spacing:1px;margin-top:3px">'+lbl+'</div></div>';
+
+  const sectionLbl = (text, danger) =>
+    '<div class="dash-act-section-lbl'+(danger?' danger':'')+'">'+text+'</div>';
+
+  let html = '<div class="dash-modal-hdr" style="display:flex;align-items:center;gap:14px">' +
+    '<div style="width:54px;height:54px;border-radius:16px;background:'+avatarColorFor(u.uid)+';display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;color:#fff;flex-shrink:0;overflow:hidden;position:relative">' +
+      '<img src="/appbild/'+esc(u.uid)+'/profilepic" onerror="this.style.display=\\'none\\'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">' +
+      '<span style="position:relative;z-index:0">'+esc((u.spitzname||u.name||'?').slice(0,1).toUpperCase())+'</span>' +
+      (isOnline ? '<span style="position:absolute;bottom:-2px;right:-2px;width:14px;height:14px;border-radius:50%;background:#22c55e;border:2px solid var(--dink2);z-index:2"></span>' : '') +
+    '</div>' +
+    '<div style="flex:1;min-width:0">' +
+      '<h3 style="margin:0">'+esc(u.spitzname||u.name||'User')+' '+pills.join(' ')+'</h3>' +
+      '<div class="dash-modal-meta">'+meta.join(' · ')+'</div>' +
+      '<div style="font-size:11px;color:var(--dsub);margin-top:4px">📅 Joined '+fmtRelative(u.joinDate)+' · 🕒 zuletzt aktiv '+(isOnline?'<b style="color:#22c55e">jetzt online</b>':'vor '+lastSeenStr)+'</div>' +
+    '</div>' +
+    '<button onclick="this.closest(\\'.dash-modal-bg\\').remove()" style="background:rgba(255,255,255,0.06);border:1px solid var(--dline);color:var(--dsub);width:32px;height:32px;border-radius:10px;cursor:pointer;font-size:16px;flex-shrink:0">✕</button>' +
+  '</div>';
+
+  html += '<div class="dash-modal-body">';
+
+  // Top Stats
+  html += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;background:var(--dink);border:1px solid var(--dline);border-radius:12px;padding:8px;margin-bottom:14px">' +
+    stat(u.xp, 'XP', '#f5d76e') +
+    stat(u.diamonds, '💎 Diamanten', '#06b6d4') +
+    stat(u.totalLikes, '❤ Likes', '#ec4899') +
+    stat(u.links, '🔗 Links', '#a78bfa') +
+  '</div>';
+
+  // Activity section
+  if (act && act.lastSeen) {
+    html += sectionLbl('📊 App-Aktivität');
+    html += '<div style="background:var(--dink);border:1px solid var(--dline);border-radius:12px;padding:12px;margin-bottom:14px;font-size:12.5px;line-height:1.6">' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">' +
+        '<div><span style="color:var(--dsub)">Sessions:</span> <b>'+(act.sessions||0)+'</b></div>' +
+        '<div><span style="color:var(--dsub)">API-Calls:</span> <b>'+(act.totalCalls||0)+'</b></div>' +
+        '<div><span style="color:var(--dsub)">Erst gesehen:</span> <b>'+fmtRelative(act.firstSeen)+'</b></div>' +
+        '<div><span style="color:var(--dsub)">Letzter Endpoint:</span> <code style="font-size:11px;color:#a78bfa">'+esc(act.lastEndpoint||'?')+'</code></div>' +
+      '</div>' +
+      ((act.topEndpoints||[]).length ? '<div style="margin-top:8px;font-size:11px;color:var(--dsub)"><b>Top:</b> ' +
+        act.topEndpoints.map(([k,v])=>'<span style="color:#e7e7ea">'+esc(k)+'</span>·'+v).join(' · ') + '</div>' : '') +
+    '</div>';
+  }
+
+  // Engagement section
+  html += sectionLbl('🤝 Engagement');
+  html += '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px;background:var(--dink);border:1px solid var(--dline);border-radius:12px;padding:12px;margin-bottom:14px;font-size:12.5px">' +
+    '<div><span style="color:var(--dsub)">📌 Pinned engaged:</span> <b>'+eng.pinnedEngaged+'</b></div>' +
+    '<div><span style="color:var(--dsub)">📌 Pinned erhalten:</span> <b>'+eng.pinnedReceived+'</b></div>' +
+    '<div><span style="color:var(--dsub)">🤝 Kollab engaged:</span> <b>'+eng.collabEngaged+'</b></div>' +
+    '<div><span style="color:var(--dsub)">🤝 Kollab erhalten:</span> <b>'+eng.collabReceived+'</b></div>' +
+  '</div>';
+
+  // Family (parent + subs)
+  if (parent || subs.length) {
+    html += sectionLbl('👨‍👩‍👧 Account-Familie');
+    html += '<div style="background:var(--dink);border:1px solid var(--dline);border-radius:12px;padding:10px;margin-bottom:14px">';
+    if (parent) html += '<div style="font-size:12.5px;margin-bottom:6px"><span style="color:var(--dsub)">Parent:</span> <a href="javascript:openUser(\\''+esc(parent.uid)+'\\')" style="color:#a78bfa;font-weight:700;text-decoration:none">'+esc(parent.name)+'</a></div>';
+    if (subs.length) {
+      html += '<div style="font-size:11px;color:var(--dsub);margin-bottom:4px">Sub-Accounts:</div>';
+      for (const s of subs) {
+        html += '<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:var(--dink2);border-radius:8px;margin-top:4px;font-size:12.5px">' +
+          '<a href="javascript:openUser(\\''+esc(s.uid)+'\\')" style="flex:1;color:#fff;text-decoration:none"><b>'+esc(s.name)+'</b></a>' +
+          '<span style="color:var(--dsub);font-size:11px">'+s.xp+' XP</span>' +
+          (s.banned ? '<span class="dash-pill err">🚫</span>' : '') +
+        '</div>';
+      }
+    }
+    html += '</div>';
+  }
+
+  // Reports against
+  if (ra.length) {
+    html += sectionLbl('🚩 Meldungen gegen diesen User ('+ra.length+(reportsAgainstOpen?' · '+reportsAgainstOpen+' offen':'')+')', true);
+    html += '<div style="background:rgba(239,68,68,0.05);border:1px solid rgba(239,68,68,0.20);border-radius:12px;padding:10px;margin-bottom:14px;max-height:180px;overflow-y:auto">';
+    for (const r of ra.slice(0, 10)) {
+      const pill = r.status === 'open' ? '<span class="dash-pill err">offen</span>'
+        : r.status === 'resolved' ? '<span class="dash-pill ok">erledigt'+(r.action?'·'+esc(r.action):'')+'</span>'
+        : '<span class="dash-pill muted">verworfen</span>';
+      html += '<div style="font-size:12px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.04)">' +
+        pill + ' <b>'+esc(r.reporterName)+'</b>: '+esc(r.reason||'(kein Grund)') +
+        '<div style="font-size:10.5px;color:var(--dsub);margin-top:2px">'+fmtTs(r.ts)+'</div>' +
+      '</div>';
+    }
+    html += '</div>';
+  }
+
+  // Reports made
+  if (rm.length) {
+    html += sectionLbl('📣 Meldungen erstellt ('+rm.length+')');
+    html += '<div style="background:var(--dink);border:1px solid var(--dline);border-radius:12px;padding:10px;margin-bottom:14px;max-height:140px;overflow-y:auto;font-size:11.5px">';
+    for (const r of rm.slice(0, 10)) {
+      html += '<div style="padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.04)">' +
+        '<b>→ '+esc(r.targetName)+':</b> '+esc(r.reason||'(kein Grund)') +
+        ' <span style="color:var(--dsub)">'+fmtRelative(r.ts)+'</span></div>';
+    }
+    html += '</div>';
+  }
+
+  // Notifications
+  if (notifs.length) {
+    html += sectionLbl('🔔 Letzte Notifs (' + notifs.length + ')');
+    html += '<details style="background:var(--dink);border:1px solid var(--dline);border-radius:12px;padding:8px 12px;margin-bottom:14px;font-size:11.5px">' +
+      '<summary style="cursor:pointer;color:var(--dsub);outline:none">Ausklappen</summary>' +
+      '<div style="margin-top:8px;max-height:200px;overflow-y:auto">';
+    for (const n of notifs.slice(0, 15)) {
+      html += '<div style="padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.04)">' +
+        (n.icon||'') + ' ' + esc(n.text||'') +
+        ' <span style="color:var(--dsub);font-size:10.5px;float:right">'+(n.ts?fmtRelative(n.ts):'')+'</span></div>';
+    }
+    html += '</div></details>';
+  }
+
+  // Pinned Reel preview
+  if (pinnedReel) {
+    html += sectionLbl('📌 Pinned Reel');
+    html += '<a href="'+esc(pinnedReel)+'" target="_blank" style="display:block;background:var(--dink);border:1px solid var(--dline);border-radius:12px;padding:10px;margin-bottom:14px;font-size:12px;color:#06b6d4;word-break:break-all;text-decoration:none">🔗 '+esc(pinnedReel)+'</a>';
+  }
+
+  // ── Aktionen ──
+  html += sectionLbl('⚙️ XP / Diamanten / Warns');
+  html += '<div class="dash-action-grid">' +
+    '<button class="dash-act" onclick="grant(\\''+esc(u.uid)+'\\',\\'add-xp\\')">+ XP</button>' +
+    '<button class="dash-act danger" onclick="grant(\\''+esc(u.uid)+'\\',\\'remove-xp\\')">− XP</button>' +
+    '<button class="dash-act" onclick="grant(\\''+esc(u.uid)+'\\',\\'add-diamonds\\')">+ 💎</button>' +
+    '<button class="dash-act danger" onclick="grant(\\''+esc(u.uid)+'\\',\\'remove-diamonds\\')">− 💎</button>' +
+    '<button class="dash-act danger" onclick="grantNoAmount(\\''+esc(u.uid)+'\\',\\'add-warn\\')">+ ⚠️ Warn</button>' +
+    '<button class="dash-act" onclick="grantNoAmount(\\''+esc(u.uid)+'\\',\\'remove-warn\\')">− ⚠️ Warn</button>' +
+    '<button class="dash-act" onclick="grantNoAmount(\\''+esc(u.uid)+'\\',\\'add-extra-link\\')">+ 🔗 Extra-Link</button>' +
+    '<button class="dash-act" onclick="grantNoAmount(\\''+esc(u.uid)+'\\',\\'add-superlink\\')">+ ⚡ Superlink-Slot</button>' +
+    '<button class="dash-act" onclick="linkAsSub(\\''+esc(u.uid)+'\\',\\''+esc(u.spitzname||u.name||u.uid)+'\\')" style="background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;border-color:transparent">🔗 Als mein Sub linken</button>' +
+  '</div>';
+
+  html += sectionLbl('📨 Kommunikation');
+  html += '<div class="dash-action-grid">' +
+    '<button class="dash-act" onclick="sendDmTo(\\''+esc(u.uid)+'\\',\\''+esc(u.spitzname||u.name||'User')+'\\')">📨 DM senden</button>' +
+    '<button class="dash-act" onclick="window.open(\\'/nachrichten/'+esc(u.uid)+'\\',\\'_blank\\')">💬 Chat öffnen</button>' +
+  '</div>';
+
+  html += sectionLbl('⚠️ Gefährliche Aktionen', true);
+  html += '<div class="dash-action-grid">' +
+    '<button class="dash-act danger" onclick="resetUserConfirm(\\''+esc(u.uid)+'\\',\\''+esc(u.spitzname||u.name||'User')+'\\')">♻️ XP-Reset</button>' +
+    (u.banned ? '<button class="dash-act" onclick="banUser(\\''+esc(u.uid)+'\\',false)">✅ Entbannen</button>'
+              : '<button class="dash-act danger" onclick="banUser(\\''+esc(u.uid)+'\\',true)">🚫 Bannen</button>') +
+  '</div>';
+
+  html += '<a href="/profil/'+esc(u.uid)+'" target="_blank" class="dash-act" style="display:block;margin:14px 0 0;text-decoration:none;text-align:center">→ Public Profil ansehen</a>';
+  html += '</div>'; // close dash-modal-body
+
+  document.getElementById('user-modal-content').innerHTML = html;
 }
 
 async function sendDmTo(uid, name) {
