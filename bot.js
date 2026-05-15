@@ -3508,6 +3508,14 @@ self.addEventListener('notificationclick',e=>{
         // Admin-Vorschau via ?preview=1 — überspringt den /feed-Redirect für eingeloggte User.
         const _isPreview = (query.preview === '1');
         if (session && !_isPreview) return redirect('/feed');
+        // TWA-Detection: installierte App-Icon-Launches haben referer 'android-app://...'.
+        // Diese ausgeloggten User landen sonst auf der Marketing-Landing — was
+        // unprofessionell ist (App-User wollen direkt auf Login, nicht Marketing).
+        // ?preview=1 bypassed Detection für Admin-Vorschau der Marketing-Page.
+        const _ref = String(req.headers['referer'] || '');
+        if (!_isPreview && _ref.startsWith('android-app://')) {
+            return redirect('/login');
+        }
         // Landing-Page-View tracken (Server-Side, anonym)
         try {
             const ref = String(req.headers['referer'] || '').slice(0, 300);
