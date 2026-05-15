@@ -13618,15 +13618,53 @@ function showErr(msg){
 `, 'explore');
     }
 
-    // ── LEGAL: Datenschutz / Impressum / AGB (DSGVO-Pflicht + Google-Play-Submission) ──
+    // ── LEGAL: Datenschutz / Impressum / AGB ──
+    // STANDALONE: keine layout() / html() Wrapper, KEINE Scripts, KEIN Tour-Code.
+    // Diese Pages müssen für Google-Play-Reviewer (unangemeldet) IMMER erreichbar sein,
+    // unabhängig von SessionStorage-State, Service-Worker oder Tour-Logic.
+    function _legalPage(title, body){
+        return `<!DOCTYPE html><html lang="de"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${title} · CreatorX</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#fff;color:#1a1a1a;line-height:1.65}
+.tb{position:sticky;top:0;background:#fff;border-bottom:1px solid #e5e5e5;padding:14px 16px;display:flex;align-items:center;font-weight:600;font-size:15px;z-index:10}
+.tb a{color:#1a1a1a;text-decoration:none;font-size:22px;margin-right:12px}
+.wrap{padding:16px;max-width:720px;margin:0 auto;font-size:14px}
+.wrap h1{font-size:22px;margin-bottom:12px;font-weight:800}
+.wrap h2{font-size:16px;margin:20px 0 8px;font-weight:700}
+.wrap p,.wrap ul{margin-bottom:10px}
+.wrap ul{padding-left:18px}
+.wrap a{color:#0066cc}
+.wrap code{background:#f4f4f4;padding:2px 5px;border-radius:3px;font-size:13px}
+.stamp{color:#888;font-size:12px;margin-bottom:18px}
+.foot{margin-top:32px;padding-top:18px;border-top:1px solid #e5e5e5;font-size:11.5px;color:#888;text-align:center}
+.foot a{color:#0066cc;text-decoration:none;margin:0 7px}
+@media(prefers-color-scheme:dark){
+  body{background:#0b0b0e;color:#e8e8e8}
+  .tb{background:#0b0b0e;border-bottom-color:#1f1f24}
+  .tb a{color:#e8e8e8}
+  .wrap a,.foot a{color:#8ab4f8}
+  .wrap code{background:#1f1f24}
+  .foot{border-top-color:#1f1f24}
+}
+</style>
+</head>
+<body>
+<div class="tb"><a href="/">‹</a><span>${title}</span></div>
+<div class="wrap">${body}</div>
+</body>
+</html>`;
+    }
+    function _sendLegal(title, body){
+        res.writeHead(200, {'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-Cb-Route':'legal-standalone-v4'});
+        res.end(_legalPage(title, body));
+    }
+
     if (path === '/datenschutz' || path === '/privacy') {
-        // DIAGNOSE-MARKER (v3): Wenn dieser rote Banner sichtbar ist, wird die Route definitiv vom Server bedient.
-        // Wenn der Banner FEHLT obwohl /datenschutz in der URL steht → Route wird NICHT erreicht (DNS/Cache/Redirect).
-        res.setHeader('X-Cb-Route', 'datenschutz-v3');
-        return html(`
-<div style="position:sticky;top:0;background:#ef4444;color:#fff;padding:14px;text-align:center;font-weight:800;font-size:14px;z-index:99999;box-shadow:0 4px 12px rgba(0,0,0,0.3)">✅ DATENSCHUTZ-ROUTE ERREICHT (v3) — wenn du das siehst, funktioniert der Server.</div>
-<div class="topbar"><a href="/profil" class="icon-btn" style="font-size:22px">‹</a><div style="font-size:15px;font-weight:600">Datenschutz</div><div style="width:36px"></div></div>
-<div style="padding:16px;max-width:720px;margin:0 auto;line-height:1.65;font-size:14px;color:var(--text)">
+        return _sendLegal('Datenschutz', `
 <h1 style="font-size:22px;font-weight:800;margin:0 0 8px">Datenschutzerklärung</h1>
 <p style="color:var(--muted);font-size:12px;margin:0 0 18px">Stand: ${new Date().toLocaleDateString('de-DE')}</p>
 
@@ -13681,18 +13719,15 @@ function showErr(msg){
 <h2 style="font-size:16px;margin:20px 0 8px">10. Änderungen</h2>
 <p>Wir behalten uns vor, diese Datenschutzerklärung anzupassen. Bei wesentlichen Änderungen informieren wir dich in der App.</p>
 
-<div style="margin-top:32px;padding-top:18px;border-top:1px solid var(--border2);font-size:11.5px;color:var(--muted);text-align:center">
-<a href="/impressum" style="color:var(--accent);text-decoration:none;margin-right:14px">Impressum</a>
-<a href="/agb" style="color:var(--accent);text-decoration:none">AGB</a>
-</div>
-</div>`, 'datenschutz');
+<div class="foot">
+<a href="/impressum">Impressum</a>
+<a href="/agb">AGB</a>
+</div>`);
     }
 
     if (path === '/impressum') {
-        return html(`
-<div class="topbar"><a href="/profil" class="icon-btn" style="font-size:22px">‹</a><div style="font-size:15px;font-weight:600">Impressum</div><div style="width:36px"></div></div>
-<div style="padding:16px;max-width:720px;margin:0 auto;line-height:1.65;font-size:14px;color:var(--text)">
-<h1 style="font-size:22px;font-weight:800;margin:0 0 14px">Impressum</h1>
+        return _sendLegal('Impressum', `
+<h1>Impressum</h1>
 <p>Angaben gemäß § 5 DDG (Deutschland) und Art. 5 LCEN (Luxemburg):</p>
 
 <h2 style="font-size:16px;margin:18px 0 8px">Anbieter</h2>
@@ -13719,19 +13754,16 @@ function showErr(msg){
 <h2 style="font-size:16px;margin:18px 0 8px">Urheberrecht</h2>
 <p>Die durch uns erstellten Inhalte und Werke unterliegen luxemburgischem und deutschem Urheberrecht. User-generierte Inhalte verbleiben bei den jeweiligen Erstellern.</p>
 
-<div style="margin-top:32px;padding-top:18px;border-top:1px solid var(--border2);font-size:11.5px;color:var(--muted);text-align:center">
-<a href="/datenschutz" style="color:var(--accent);text-decoration:none;margin-right:14px">Datenschutz</a>
-<a href="/agb" style="color:var(--accent);text-decoration:none">AGB</a>
-</div>
-</div>`, 'impressum');
+<div class="foot">
+<a href="/datenschutz">Datenschutz</a>
+<a href="/agb">AGB</a>
+</div>`);
     }
 
     if (path === '/agb' || path === '/terms') {
-        return html(`
-<div class="topbar"><a href="/profil" class="icon-btn" style="font-size:22px">‹</a><div style="font-size:15px;font-weight:600">AGB</div><div style="width:36px"></div></div>
-<div style="padding:16px;max-width:720px;margin:0 auto;line-height:1.65;font-size:14px;color:var(--text)">
-<h1 style="font-size:22px;font-weight:800;margin:0 0 8px">Allgemeine Nutzungsbedingungen</h1>
-<p style="color:var(--muted);font-size:12px;margin:0 0 18px">Stand: ${new Date().toLocaleDateString('de-DE')}</p>
+        return _sendLegal('AGB', `
+<h1>Allgemeine Nutzungsbedingungen</h1>
+<p class="stamp">Stand: ${new Date().toLocaleDateString('de-DE')}</p>
 
 <h2 style="font-size:16px;margin:18px 0 8px">§ 1 Geltungsbereich</h2>
 <p>Diese Nutzungsbedingungen regeln die Nutzung der CreatorX App (die "App") zwischen dem Betreiber (siehe <a href="/impressum" style="color:var(--accent)">Impressum</a>) und dem Nutzer.</p>
@@ -13783,11 +13815,10 @@ function showErr(msg){
 <h2 style="font-size:16px;margin:18px 0 8px">§ 10 Schlussbestimmungen</h2>
 <p>Es gilt luxemburgisches Recht. Bei Verbrauchern (Art. 6 Rom-I-VO) gelten zusätzlich die zwingenden Verbraucherschutzbestimmungen ihres Wohnsitzlandes. Gerichtsstand ist Luxemburg-Stadt. Sollte eine Bestimmung unwirksam sein, bleiben die übrigen davon unberührt.</p>
 
-<div style="margin-top:32px;padding-top:18px;border-top:1px solid var(--border2);font-size:11.5px;color:var(--muted);text-align:center">
-<a href="/datenschutz" style="color:var(--accent);text-decoration:none;margin-right:14px">Datenschutz</a>
-<a href="/impressum" style="color:var(--accent);text-decoration:none">Impressum</a>
-</div>
-</div>`, 'agb');
+<div class="foot">
+<a href="/datenschutz">Datenschutz</a>
+<a href="/impressum">Impressum</a>
+</div>`);
     }
 
     // ── RANKING ──
