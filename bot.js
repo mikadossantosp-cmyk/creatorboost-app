@@ -11501,6 +11501,11 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
         <div class="dash-stat-val" id="stat-banned">–</div>
         <div class="dash-stat-sub">deaktivierte Accounts</div>
       </div>
+      <div class="dash-stat danger" id="stat-reports-card" onclick="jumpToReports()" style="cursor:pointer">
+        <div class="dash-stat-lbl">🚩 Offene Meldungen</div>
+        <div class="dash-stat-val" id="stat-reports-open">–</div>
+        <div class="dash-stat-sub">→ Tab "Meldungen" öffnen</div>
+      </div>
     </div>
 
     <!-- Activity heute vs gestern: XP / Likes / Links -->
@@ -12730,9 +12735,20 @@ let CUR_REPORT_FILTER = 'open';
 function updateReportsBadge(reports) {
   const open = (reports||[]).filter(r => (r.status||'open') === 'open').length;
   const badge = document.getElementById('dash-reports-badge');
-  if (!badge) return;
-  if (open > 0) { badge.style.display = ''; badge.textContent = String(open); }
-  else badge.style.display = 'none';
+  if (badge) {
+    if (open > 0) { badge.style.display = ''; badge.textContent = String(open); }
+    else badge.style.display = 'none';
+  }
+  const statVal = document.getElementById('stat-reports-open');
+  if (statVal) statVal.textContent = String(open);
+}
+
+function jumpToReports() {
+  const tabBtn = document.querySelector('.dash-tab[data-tab="reports"]');
+  if (tabBtn) {
+    tabBtn.click();
+    tabBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
 }
 
 async function loadReports() {
