@@ -15763,6 +15763,66 @@ ${_setSubHead('🛡️ Sicherheit & Sessions', 'Aktive Geräte und Logout-Option
 `, 'settings-security');
     }
 
+    if (path === '/einstellungen/admin') {
+        const isAdmin = adminIds.includes(Number(myUid));
+        if (!isAdmin) return text('🛡️ Nur Admins.', 403);
+        return html(`
+<div class="subset-page">
+${_setSubHead('🛡️ Admin-Tools', 'Live-Tour, Page-Vorschauen und FE-Thread-Tools — nur für Admins sichtbar.')}
+<div class="subset-section">
+  <div class="subset-section-title">🎬 Live-Tour</div>
+  <button onclick="if(window.ftStart)window.ftStart();else alert('Tour-Script nicht geladen — Page reload bitte');" class="btn btn-primary btn-full" style="margin-bottom:8px;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;box-shadow:0 6px 18px rgba(212,175,55,0.4);font-weight:800;display:flex;align-items:center;justify-content:center;gap:8px">🎬 Komplette User-Journey-Tour starten</button>
+  <div style="font-size:11.5px;color:var(--muted);line-height:1.4;margin-top:6px">10-Step Walkthrough: Landing → Telegram → Email → Login → Insta → Password → Feed → Einstellungen → Profil. Highlighted-Spot + Beschreibung pro Stage.</div>
+</div>
+<div class="subset-section">
+  <div class="subset-section-title">👀 Vorschauen</div>
+  <a href="/?preview=1" target="_blank" class="btn btn-outline btn-full" style="margin-bottom:8px;display:flex">🔐 Login-Page (App)</a>
+  <a href="/willkommen" target="_blank" class="btn btn-outline btn-full" style="margin-bottom:8px;display:flex">🌐 Public Landing-Page</a>
+  <a href="/onboarding-instagram?preview=1" target="_blank" class="btn btn-outline btn-full" style="margin-bottom:8px;display:flex">🚀 Email-Onboarding (3-Step Wizard)</a>
+  <a href="/feed?tour=1" target="_blank" class="btn btn-outline btn-full" style="margin-bottom:8px;display:flex">🎯 In-App Tour (Pfeile)</a>
+  <a href="/preview/email-login" target="_blank" class="btn btn-outline btn-full" style="margin-bottom:8px;display:flex">📧 Magic-Link Email</a>
+</div>
+<div class="subset-section">
+  <div class="subset-section-title">⚙️ FE-Thread Tools</div>
+  <button onclick="createFeThread(this)" class="btn btn-outline btn-full" style="margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:8px">⭐ Full Engagement Thread erstellen</button>
+  <button onclick="announceFeThread(this)" class="btn btn-outline btn-full" style="margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:8px">📢 Ankündigung in FE-Thread senden</button>
+  <div id="fethread-result" style="display:none;font-size:12px;padding:8px;border-radius:8px;margin-top:4px"></div>
+</div>
+<div class="subset-section">
+  <div class="subset-section-title">🛡️ Dashboard</div>
+  <a href="/dashboard" class="btn btn-primary btn-full" style="background:linear-gradient(135deg,#f5d76e,#d4a946 55%,#8b6914);color:#000;font-weight:800;display:flex;align-items:center;justify-content:center;gap:8px">🛡️ Admin-Dashboard öffnen</a>
+  <div style="font-size:11.5px;color:var(--muted);line-height:1.4;margin-top:6px">User-Verwaltung, Moderation-Queue, Stats, Engagement-Log und mehr.</div>
+</div>
+<script>
+async function createFeThread(btn){
+  btn.disabled=true;btn.textContent='⏳ Erstelle Thread...';
+  const r=document.getElementById('fethread-result');
+  try{
+    const res=await fetch('/api/admin/create-fethread',{method:'POST'});
+    const data=await res.json();
+    r.style.display='block';
+    if(data.ok){r.style.background='rgba(34,197,94,.15)';r.style.color='#22c55e';r.textContent='✅ Thread erstellt! ID: '+data.threadId;}
+    else{r.style.background='rgba(239,68,68,.15)';r.style.color='#ef4444';r.textContent='❌ '+data.error;}
+  }catch(e){r.style.display='block';r.style.color='#ef4444';r.textContent='❌ '+e.message;}
+  btn.disabled=false;btn.textContent='⭐ Full Engagement Thread erstellen';
+}
+async function announceFeThread(btn){
+  btn.disabled=true;btn.textContent='⏳ Sende...';
+  const r=document.getElementById('fethread-result');
+  try{
+    const res=await fetch('/api/admin/announce-fethread',{method:'POST'});
+    const data=await res.json();
+    r.style.display='block';
+    if(data.ok){r.style.background='rgba(34,197,94,.15)';r.style.color='#22c55e';r.textContent='✅ '+(data.message||'Ankündigung gesendet');}
+    else{r.style.background='rgba(239,68,68,.15)';r.style.color='#ef4444';r.textContent='❌ '+data.error;}
+  }catch(e){r.style.display='block';r.style.color='#ef4444';r.textContent='❌ '+e.message;}
+  btn.disabled=false;btn.textContent='📢 Ankündigung in FE-Thread senden';
+}
+</script>
+</div>
+`, 'settings-admin');
+    }
+
     if (path === '/einstellungen/pro') {
         return html(`
 <div class="subset-page">
@@ -15891,6 +15951,12 @@ ${_setSubHead('⭐ Pro-Features', 'Premium-Tools für ernsthafte Creator. <b sty
     <div class="set-hub-content"><div class="set-hub-title">Pro-Features <span style="font-size:9.5px;background:linear-gradient(135deg,#f5d76e,#d4af37);color:#000;padding:2px 6px;border-radius:6px;font-weight:800;letter-spacing:0.5px;margin-left:4px">SOON</span></div><div class="set-hub-sub">Analytics · Scheduler · API · mehr</div></div>
     <div class="set-hub-arrow">›</div>
   </a>
+  ${adminIds.includes(Number(myUid)) ? `
+  <a href="/einstellungen/admin" class="set-hub-card" style="background:linear-gradient(135deg,rgba(245,215,110,0.10),rgba(212,175,55,0.04));border-color:rgba(212,175,55,0.40)">
+    <div class="set-hub-icon" style="background:linear-gradient(135deg,#d4af37,#8b6914);color:#000">🛡️</div>
+    <div class="set-hub-content"><div class="set-hub-title">Admin-Tools <span style="font-size:9.5px;background:rgba(212,175,55,0.20);color:#d4af37;padding:2px 6px;border-radius:6px;font-weight:800;letter-spacing:0.5px;margin-left:4px;border:1px solid rgba(212,175,55,0.30)">ADMIN</span></div><div class="set-hub-sub">Live-Tour · Vorschauen · FE-Thread · Dashboard</div></div>
+    <div class="set-hub-arrow">›</div>
+  </a>` : ''}
 </div>
 <div style="padding:14px 16px 4px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted)">Profil bearbeiten</div>
 <div style="padding:16px;border-bottom:1px solid var(--border2)">
@@ -16040,26 +16106,7 @@ ${myInventory.length > 0 ? `
     }).join('')}
   </div>
 </div>` : ''}
-${adminIds.includes(Number(myUid)) ? `
-<div style="padding:16px;border-bottom:1px solid var(--border2)">
-  <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">🎬 Live-Tour (Admin)</div>
-  <button onclick="if(window.ftStart)window.ftStart();else alert('Tour-Script nicht geladen — Page reload bitte');" class="btn btn-primary btn-full" style="margin-bottom:8px;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;box-shadow:0 6px 18px rgba(212,175,55,0.4);font-weight:800;display:flex;align-items:center;justify-content:center;gap:8px">🎬 Komplette User-Journey-Tour starten</button>
-  <div style="font-size:11.5px;color:var(--muted);line-height:1.4;margin-top:6px">10-Step Walkthrough: Landing → Telegram → Email → Login → Insta → Password → Feed → Einstellungen → Profil. Highlighted-Spot + Beschreibung pro Stage.</div>
-</div>
-<div style="padding:16px;border-bottom:1px solid var(--border2)">
-  <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">👀 Vorschauen</div>
-  <a href="/?preview=1" target="_blank" class="btn btn-outline btn-full" style="margin-bottom:8px;display:flex">🔐 Login-Page (App)</a>
-  <a href="/willkommen" target="_blank" class="btn btn-outline btn-full" style="margin-bottom:8px;display:flex">🌐 Public Landing-Page</a>
-  <a href="/onboarding-instagram?preview=1" target="_blank" class="btn btn-outline btn-full" style="margin-bottom:8px;display:flex">🚀 Email-Onboarding (3-Step Wizard)</a>
-  <a href="/feed?tour=1" target="_blank" class="btn btn-outline btn-full" style="margin-bottom:8px;display:flex">🎯 In-App Tour (Pfeile)</a>
-  <a href="/preview/email-login" target="_blank" class="btn btn-outline btn-full" style="margin-bottom:8px;display:flex">📧 Magic-Link Email</a>
-</div>
-<div style="padding:16px;border-bottom:1px solid var(--border2)">
-  <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">⚙️ Admin Tools</div>
-  <button onclick="createFeThread(this)" class="btn btn-outline btn-full" style="margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:8px">⭐ Full Engagement Thread erstellen</button>
-  <button onclick="announceFeThread(this)" class="btn btn-outline btn-full" style="margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:8px">📢 Ankündigung in FE-Thread senden</button>
-  <div id="fethread-result" style="display:none;font-size:12px;padding:8px;border-radius:8px;margin-top:4px"></div>
-</div>` : ''}
+<!-- Admin-Sections wurden nach /einstellungen/admin verschoben (siehe Admin-Card oben im Hub) -->
 <div style="padding:16px;border-bottom:1px solid var(--border2)">
   <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">🎯 App-Tour</div>
   <div style="font-size:12px;color:var(--muted);margin-bottom:10px">${u.appBriefingSeenV2 ? 'Du hast die Tour schon einmal gesehen.' : 'Du hast die Tour noch nicht gesehen — sie startet beim nächsten Feed-Open automatisch.'}</div>
