@@ -13619,7 +13619,7 @@ function showErr(msg){
 <p style="color:var(--muted);font-size:12px;margin:0 0 18px">Stand: ${new Date().toLocaleDateString('de-DE')}</p>
 
 <h2 style="font-size:16px;margin:20px 0 8px">1. Verantwortlicher</h2>
-<p>[FIRMENNAME / VOR- UND NACHNAME]<br>[STRASSE + HAUSNUMMER]<br>[PLZ + ORT]<br>E-Mail: [EMAIL]</p>
+<p>Michael Dos Santos Pexioto<br>33b Haaptstrooss<br>L-9835 Luxembourg<br>E-Mail: mindset.stories_@outlook.de</p>
 
 <h2 style="font-size:16px;margin:20px 0 8px">2. Welche Daten wir verarbeiten</h2>
 <ul style="padding-left:18px">
@@ -13657,7 +13657,7 @@ function showErr(msg){
   <li><b>Löschung</b> (Art. 17): <a href="/einstellungen#delete-account" style="color:var(--accent);font-weight:700">Account löschen</a></li>
   <li><b>Datenübertragbarkeit</b> (Art. 20): JSON-Export deiner Daten</li>
   <li><b>Widerspruch</b> (Art. 21): Email an Verantwortlichen</li>
-  <li><b>Beschwerde</b>: zuständige Datenschutzbehörde</li>
+  <li><b>Beschwerde</b>: CNPD (Commission nationale pour la protection des données, Luxembourg — <a href="https://cnpd.public.lu" target="_blank" style="color:var(--accent)">cnpd.public.lu</a>) oder deine lokale Datenschutzbehörde</li>
 </ul>
 
 <h2 style="font-size:16px;margin:20px 0 8px">8. Sicherheit</h2>
@@ -13681,34 +13681,31 @@ function showErr(msg){
 <div class="topbar"><a href="/profil" class="icon-btn" style="font-size:22px">‹</a><div style="font-size:15px;font-weight:600">Impressum</div><div style="width:36px"></div></div>
 <div style="padding:16px;max-width:720px;margin:0 auto;line-height:1.65;font-size:14px;color:var(--text)">
 <h1 style="font-size:22px;font-weight:800;margin:0 0 14px">Impressum</h1>
-<p>Angaben gemäß § 5 TMG sowie § 18 Abs. 2 MStV:</p>
+<p>Angaben gemäß § 5 DDG (Deutschland) und Art. 5 LCEN (Luxemburg):</p>
 
 <h2 style="font-size:16px;margin:18px 0 8px">Anbieter</h2>
-<p>[FIRMENNAME oder VOR- UND NACHNAME]<br>[STRASSE + HAUSNUMMER]<br>[PLZ + ORT]<br>Deutschland</p>
+<p>Michael Dos Santos Pexioto<br>33b Haaptstrooss<br>L-9835 Luxembourg</p>
 
 <h2 style="font-size:16px;margin:18px 0 8px">Kontakt</h2>
-<p>E-Mail: [EMAIL]<br>Telefon: [TELEFON falls vorhanden]</p>
+<p>E-Mail: mindset.stories_@outlook.de</p>
 
-<h2 style="font-size:16px;margin:18px 0 8px">Vertretungsberechtigt</h2>
-<p>[NAME] (Einzelunternehmer/in)</p>
-
-<h2 style="font-size:16px;margin:18px 0 8px">Umsatzsteuer-ID</h2>
-<p>[USt-IdNr. falls vorhanden — sonst Satz unten:]<br><i>Kein Ausweis der Umsatzsteuer gemäß § 19 UStG (Kleinunternehmer).</i></p>
+<h2 style="font-size:16px;margin:18px 0 8px">Rechtsform</h2>
+<p>Privatperson — derzeit kein gewerblicher Betrieb. Die App wird als Hobby-Projekt ohne Gewinnerzielungsabsicht betrieben. Keine Umsatzsteuer-Pflicht (keine wirtschaftliche Tätigkeit i.S.d. Art. 4 MwStG).</p>
 
 <h2 style="font-size:16px;margin:18px 0 8px">Verantwortlich für Inhalt</h2>
-<p>nach § 18 Abs. 2 MStV: [NAME, ANSCHRIFT WIE OBEN]</p>
+<p>nach § 18 Abs. 2 MStV: Michael Dos Santos Pexioto, Anschrift wie oben.</p>
 
 <h2 style="font-size:16px;margin:18px 0 8px">EU-Streitschlichtung</h2>
 <p>Plattform der EU-Kommission zur Online-Streitbeilegung: <a href="https://ec.europa.eu/consumers/odr" target="_blank" style="color:var(--accent)">ec.europa.eu/consumers/odr</a>. Wir sind nicht verpflichtet und nicht bereit, an einem Streitbeilegungsverfahren teilzunehmen.</p>
 
 <h2 style="font-size:16px;margin:18px 0 8px">Haftung für Inhalte</h2>
-<p>Als Diensteanbieter sind wir für eigene Inhalte verantwortlich. Wir sind nicht verpflichtet, übermittelte oder gespeicherte fremde Informationen zu überwachen (§§ 8 bis 10 TMG). Verpflichtungen zur Entfernung oder Sperrung bei Kenntnis einer Rechtsverletzung bleiben unberührt.</p>
+<p>Als Diensteanbieter sind wir für eigene Inhalte verantwortlich. Wir sind nicht verpflichtet, übermittelte oder gespeicherte fremde Informationen zu überwachen (§§ 7 bis 10 DDG bzw. Art. 60-64 LCEN). Verpflichtungen zur Entfernung oder Sperrung bei Kenntnis einer Rechtsverletzung bleiben unberührt.</p>
 
 <h2 style="font-size:16px;margin:18px 0 8px">Haftung für Links</h2>
 <p>Externe Links unterliegen der Verantwortung des jeweiligen Betreibers. Wir haben keinen Einfluss auf deren Inhalte.</p>
 
 <h2 style="font-size:16px;margin:18px 0 8px">Urheberrecht</h2>
-<p>Die durch uns erstellten Inhalte und Werke unterliegen dem deutschen Urheberrecht. User-generierte Inhalte verbleiben bei den jeweiligen Erstellern.</p>
+<p>Die durch uns erstellten Inhalte und Werke unterliegen luxemburgischem und deutschem Urheberrecht. User-generierte Inhalte verbleiben bei den jeweiligen Erstellern.</p>
 
 <div style="margin-top:32px;padding-top:18px;border-top:1px solid var(--border2);font-size:11.5px;color:var(--muted);text-align:center">
 <a href="/datenschutz" style="color:var(--accent);text-decoration:none;margin-right:14px">Datenschutz</a>
@@ -13772,7 +13769,7 @@ function showErr(msg){
 <p>Wir können diese Bedingungen anpassen. Bei wesentlichen Änderungen informieren wir dich in der App mindestens 30 Tage vor Inkrafttreten. Wenn du den Änderungen nicht zustimmst, kannst du den Vertrag kündigen.</p>
 
 <h2 style="font-size:16px;margin:18px 0 8px">§ 10 Schlussbestimmungen</h2>
-<p>Es gilt deutsches Recht. Gerichtsstand ist [STADT]. Sollte eine Bestimmung unwirksam sein, bleiben die übrigen davon unberührt.</p>
+<p>Es gilt luxemburgisches Recht. Bei Verbrauchern (Art. 6 Rom-I-VO) gelten zusätzlich die zwingenden Verbraucherschutzbestimmungen ihres Wohnsitzlandes. Gerichtsstand ist Luxemburg-Stadt. Sollte eine Bestimmung unwirksam sein, bleiben die übrigen davon unberührt.</p>
 
 <div style="margin-top:32px;padding-top:18px;border-top:1px solid var(--border2);font-size:11.5px;color:var(--muted);text-align:center">
 <a href="/datenschutz" style="color:var(--accent);text-decoration:none;margin-right:14px">Datenschutz</a>
