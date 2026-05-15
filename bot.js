@@ -1228,10 +1228,14 @@ function layout(content, session, page='feed', lang='de') {
     // gemeinsame Sicht auf "geliked" haben.
     const _meUid = session ? String(session.activeUid || session.uid || '') : '';
     let _isAdmin = false;
+    let _emailUnconfirmed = false;
     try {
         const _adm = Array.isArray(_dataCache?._adminIds) ? _dataCache._adminIds.map(Number) : [];
         if (_meUid && _adm.includes(Number(_meUid))) _isAdmin = true;
         if (!_isAdmin && _dataCache?.users?.[_meUid]?.role && /admin/i.test(String(_dataCache.users[_meUid].role))) _isAdmin = true;
+        // Email-Confirmation-Check: User mit Email aber ohne emailConfirmedAt → Banner
+        const _u = _dataCache?.users?.[_meUid];
+        if (_u && _u.email && !_u.emailConfirmedAt) _emailUnconfirmed = true;
     } catch (e) {}
     return `<!DOCTYPE html><html lang="${lang}" data-theme="light">
 <head>
@@ -1259,6 +1263,22 @@ ${session ? `<link rel="prefetch" href="/feed"><link rel="prefetch" href="/explo
 <style>${CSS}</style>
 </head>
 <body>
+${_emailUnconfirmed ? `<div id="cb-email-confirm-bar" style="position:sticky;top:0;left:0;right:0;z-index:9998;background:linear-gradient(90deg,#f59e0b,#eab308);color:#000;padding:10px 14px;display:flex;align-items:center;justify-content:center;gap:12px;font-family:Inter,sans-serif;font-size:13px;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,0.15)">
+  <span style="font-size:16px;flex-shrink:0">📧</span>
+  <span style="flex:1;min-width:0">Bestätige deine Email-Adresse</span>
+  <button onclick="cbResendConfirm(this)" style="background:rgba(0,0,0,0.20);border:1px solid rgba(0,0,0,0.30);color:#000;padding:5px 12px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0">Erneut senden</button>
+</div>
+<script>
+async function cbResendConfirm(btn){
+  btn.disabled=true;btn.textContent='⏳';
+  try{
+    const r=await fetch('/api/resend-confirmation',{method:'POST'});
+    const j=await r.json();
+    if(j&&j.ok){btn.textContent='✓ Gesendet';btn.style.background='rgba(34,197,94,0.4)';setTimeout(()=>{btn.textContent='Erneut senden';btn.disabled=false;btn.style.background='rgba(0,0,0,0.20)';},5000);}
+    else{btn.textContent='Erneut senden';btn.disabled=false;alert('❌ '+(j&&j.error||'Fehler beim Senden'));}
+  }catch(e){btn.textContent='Erneut senden';btn.disabled=false;alert('❌ Netzwerkfehler');}
+}
+</script>` : ''}
 <div class="toast" id="toast"></div>
 <div class="cb-banner" id="cb-banner" role="alert" aria-live="assertive"></div>
 <a href="/download-app" id="apk-download-btn" style="display:none;position:fixed;bottom:calc(120px + var(--safe-bottom,0px));left:50%;transform:translateX(-50%);background:#22c55e;color:#fff;border-radius:24px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;z-index:9997;text-decoration:none;white-space:nowrap;box-shadow:0 4px 16px rgba(34,197,94,.4)">📦 APK herunterladen</a>
@@ -4619,6 +4639,8 @@ h1{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;line-height:1.1;
     ${query.error==='1' || query.error==='invalidcode' ? '<div class="msg show err">⚠️ Login-Code falsch oder unbekannt.</div>' : ''}
     ${query.error==='nocode' ? '<div class="msg show err">⚠️ Kein Login-Code übergeben.</div>' : ''}
     ${query.error==='503' ? '<div class="msg show err">⚠️ Server nicht erreichbar. Bitte später nochmal versuchen.</div>' : ''}
+    ${query.error==='confirm-invalid' ? '<div class="msg show err">⚠️ Bestätigungslink ungültig oder bereits eingelöst.</div>' : ''}
+    ${query.error==='confirm-expired' ? '<div class="msg show err">⚠️ Bestätigungslink abgelaufen. Bitte einloggen und neuen anfordern.</div>' : ''}
     ${query.logout==='1' ? '<div class="msg show ok">✅ Erfolgreich ausgeloggt.</div>' : ''}
 
     <div class="msg" id="login-msg"></div>
@@ -4762,6 +4784,22 @@ try { fetch('/api/track-funnel',{method:'POST',headers:{'Content-Type':'applicat
         postBot('/log-email-login', { email, success: true, method: 'signup', uid: String(created.uid), ip: _ip, ua: _ua }).catch(()=>{});
         // Funnel-Event: Signup abgeschlossen
         postBot('/track-funnel', { event: 'signup-complete', uid: String(created.uid), meta: { method: 'email' } }).catch(()=>{});
+        // Email-Confirmation: wenn Mainbot einen Token zurückgegeben hat (FEATURE_EMAIL_CONFIRMATION=1),
+        // schicken wir die Bestätigungsmail. User kann App trotzdem direkt nutzen, sieht aber Banner.
+        if (created.emailConfirmToken) {
+            const baseUrl = (process.env.APP_URL || ('https://' + (req.headers.host || 'web-production-7981d.up.railway.app'))).replace(/\/$/, '');
+            const confirmUrl = baseUrl + '/auth/confirm-email?token=' + encodeURIComponent(created.emailConfirmToken);
+            const userName = email.split('@')[0];
+            const confirmHtml = `<!DOCTYPE html><html><body style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#000;color:#fff;padding:0">
+<div style="max-width:560px;margin:0 auto;padding:32px 24px">
+<div style="text-align:center;margin-bottom:24px"><img src="${baseUrl}/cx-logo-256.png" width="80" height="80" style="border-radius:18px" alt="CreatorX"></div>
+<h1 style="font-size:26px;font-weight:700;margin:0 0 12px;text-align:center;color:#fff">Willkommen bei CreatorX! 🎉</h1>
+<p style="font-size:15px;color:#a8a39a;line-height:1.6;text-align:center;margin:0 0 28px">Hi ${userName.replace(/[<>]/g,'').slice(0,30)}, klick den Button um deine Email-Adresse zu bestätigen und vollen Zugriff auf alle Features zu bekommen.</p>
+<div style="text-align:center;margin:32px 0"><a href="${confirmUrl}" style="display:inline-block;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px;letter-spacing:0.3px">✅ Email bestätigen</a></div>
+<p style="font-size:12px;color:#605c54;line-height:1.5;text-align:center;margin:32px 0 0;border-top:1px solid #221f1a;padding-top:20px">Link 7 Tage gültig, einmalig nutzbar.<br>Falls du das nicht warst, ignoriere diese Email.</p>
+</div></body></html>`;
+            sendEmail(email, '🎉 Willkommen bei CreatorX — Email bestätigen', confirmHtml).catch(e => console.error('[email-confirm] Send fehlgeschlagen:', e.message));
+        }
         // Session erstellen
         const fresh = await fetchBot('/data');
         const u = fresh?.users?.[created.uid];
@@ -4773,6 +4811,50 @@ try { fetch('/api/track-funnel',{method:'POST',headers:{'Content-Type':'applicat
         res.writeHead(200, {'Set-Cookie':`cbsid=${sid}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=157680000`,'Content-Type':'application/json'});
         return res.end(JSON.stringify({ok:true, redirect:'/onboarding-instagram?first=1'}));
     }
+
+    // ── EMAIL-CONFIRMATION ──
+    // Klick aus Bestätigungs-Email → Token validieren → emailConfirmedAt setzen
+    if (path === '/auth/confirm-email' && req.method === 'GET') {
+        const token = String(query.token || '').trim();
+        if (!token) {
+            res.writeHead(302,{'Location':'/login?error=confirm-invalid'});
+            return res.end();
+        }
+        const result = await postBot('/confirm-email-api', { token });
+        if (result && result.ok) {
+            // Erfolg-Page mit Auto-Redirect
+            res.writeHead(200, {'Content-Type':'text/html; charset=utf-8'});
+            return res.end(`<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="refresh" content="3;url=/feed"><title>Email bestätigt · CreatorX</title><style>body{margin:0;background:#000;color:#fff;font-family:-apple-system,system-ui,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;text-align:center;padding:24px}.box{max-width:420px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:20px;padding:36px 28px}.icon{font-size:56px;margin-bottom:16px}h1{font-size:24px;font-weight:800;margin:0 0 10px;background:linear-gradient(180deg,#fff,#22c55e);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}p{font-size:14px;color:rgba(255,255,255,0.65);line-height:1.6;margin:0 0 20px}a.btn{display:inline-block;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;padding:13px 28px;border-radius:10px;text-decoration:none;font-weight:700;font-size:14px}</style></head><body><div class="box"><div class="icon">✅</div><h1>Email bestätigt!</h1><p>Dein Account ist jetzt vollständig aktiviert.<br>Du wirst gleich weitergeleitet…</p><a href="/feed" class="btn">→ Zur App</a></div></body></html>`);
+        }
+        const errCode = (result && result.expired) ? 'confirm-expired' : 'confirm-invalid';
+        res.writeHead(302,{'Location':'/login?error='+errCode});
+        return res.end();
+    }
+
+    // Resend Bestätigungsmail (für eingeloggte User die noch nicht bestätigt sind)
+    if (path === '/api/resend-confirmation' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        const result = await postBot('/resend-confirmation-api', { uid: myUid });
+        if (!result || !result.ok) {
+            return json({ok:false, error: (result && result.error) || 'Resend fehlgeschlagen'});
+        }
+        // Email mit neuem Token verschicken
+        const baseUrl = (process.env.APP_URL || ('https://' + (req.headers.host || 'web-production-7981d.up.railway.app'))).replace(/\/$/, '');
+        const confirmUrl = baseUrl + '/auth/confirm-email?token=' + encodeURIComponent(result.emailConfirmToken);
+        const userName = String(result.email || '').split('@')[0];
+        const html = `<!DOCTYPE html><html><body style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#000;color:#fff;padding:0">
+<div style="max-width:560px;margin:0 auto;padding:32px 24px">
+<div style="text-align:center;margin-bottom:24px"><img src="${baseUrl}/cx-logo-256.png" width="80" height="80" style="border-radius:18px" alt="CreatorX"></div>
+<h1 style="font-size:26px;font-weight:700;margin:0 0 12px;text-align:center;color:#fff">Email bestätigen</h1>
+<p style="font-size:15px;color:#a8a39a;line-height:1.6;text-align:center;margin:0 0 28px">Hi ${userName.replace(/[<>]/g,'').slice(0,30)}, hier ist dein neuer Bestätigungslink. Klick um deine Email zu verifizieren.</p>
+<div style="text-align:center;margin:32px 0"><a href="${confirmUrl}" style="display:inline-block;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px;letter-spacing:0.3px">✅ Email bestätigen</a></div>
+<p style="font-size:12px;color:#605c54;line-height:1.5;text-align:center;margin:32px 0 0;border-top:1px solid #221f1a;padding-top:20px">Link 7 Tage gültig, einmalig nutzbar.</p>
+</div></body></html>`;
+        const sent = await sendEmail(result.email, '🔁 Neuer Bestätigungslink für CreatorX', html);
+        if (!sent) return json({ok:false, error:'Email-Versand fehlgeschlagen'});
+        return json({ok:true});
+    }
+
     if (path === '/auth/email-login' && req.method === 'GET') {
         const token = String(query.token || '').trim();
         if (!token) { res.writeHead(302,{'Location':'/login?error=email-invalid'}); return res.end(); }
