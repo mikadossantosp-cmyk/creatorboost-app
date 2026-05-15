@@ -3771,32 +3771,13 @@ ${_isPreview ? '<div class="admin-pb">👀 Admin-Vorschau · Login-Page &nbsp;·
     <div class="feat"><div class="feat-icon">📊</div><div><div class="feat-t">Creator-Profil</div><div class="feat-s">Banner, Stats, Feed &amp; Follower.</div></div></div>
   </div>
 
-  <div id="login" class="login-card" style="margin-top:24px">
-    <div class="login-h">Willkommen zurück</div>
-    <div class="login-sub">Logge dich mit Email &amp; Passwort ein.</div>
-
-    ${query.error==='email-expired' ? '<div class="msg show err">⚠️ Login-Link abgelaufen oder schon benutzt.</div>' : ''}
-    ${query.error==='email-invalid' ? '<div class="msg show err">⚠️ Login-Link ungültig.</div>' : ''}
-    ${query.error==='email-userlost' ? '<div class="msg show err">⚠️ Account nicht mehr verfügbar.</div>' : ''}
-    ${query.error==='1' ? '<div class="msg show err">⚠️ Code falsch oder unbekannt. Hol dir mit /mycode im Bot einen frischen Code.</div>' : ''}
-
-    <div class="msg" id="email-msg"></div>
-    <form id="email-form" onsubmit="return submitEmail(event)">
-      <input type="email" id="email-input" class="in" placeholder="deine@email.de" autocomplete="email" autocapitalize="none" spellcheck="false" required maxlength="200">
-      <input type="password" id="email-pw" class="in" placeholder="Passwort" autocomplete="current-password" maxlength="200" required>
-      <button type="submit" class="btn-p" id="email-btn">Sign In →</button>
-    </form>
-    <button class="btn-link" id="pw-reset-btn" onclick="resetPassword()">Passwort vergessen?</button>
-    <div style="text-align:center;margin-top:18px;padding-top:18px;border-top:1px solid var(--border)">
-      <div style="font-size:12.5px;color:var(--muted);margin-bottom:8px">Noch keinen Account?</div>
-      <a href="/signup" style="display:inline-flex;align-items:center;gap:6px;color:var(--gold);font-weight:700;text-decoration:none;font-size:13.5px">→ Jetzt Sign Up</a>
-    </div>
-  </div>
-
   <div class="bottom-cta">
     <div class="bottom-cta-h">Bereit durchzustarten?</div>
     <div class="bottom-cta-s">Erstelle deinen Account und sieh deine ersten echten Likes innerhalb von Minuten.</div>
-    <a href="/signup" class="btn-p" style="display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;margin:0">🚀 Jetzt kostenlos starten</a>
+    <a href="/signup" class="btn-p" style="display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;margin:0 0 12px">🚀 Jetzt kostenlos starten</a>
+    <div style="text-align:center;font-size:12.5px;color:var(--muted)">
+      Schon ein Account? <a href="/login" style="color:var(--gold);font-weight:700;text-decoration:none">Anmelden →</a>
+    </div>
   </div>
 
   <footer class="foot">
@@ -3997,9 +3978,9 @@ document.addEventListener('DOMContentLoaded', function(){
     if (path === '/auth/code-form' && req.method === 'POST') {
         const body = await parseBody(req);
         const code = (body.code||'').toLowerCase().trim();
-        if (!code) { res.writeHead(302,{'Location':'/?error=1'}); return res.end(); }
+        if (!code) { res.writeHead(302,{'Location':'/login?error=1'}); return res.end(); }
         let botData = await fetchBot('/data');
-        if (!botData) { res.writeHead(302,{'Location':'/?error=1'}); return res.end(); }
+        if (!botData) { res.writeHead(302,{'Location':'/login?error=1'}); return res.end(); }
         let found = Object.entries(botData.users||{}).find(([,u]) => u.appCode === code);
         // Cache-Miss: Code könnte gerade frisch im Bot generiert sein und unser /data-Cache ist stale.
         // Einmal Force-Refresh, dann nochmal suchen, bevor wir 'falscher Code' sagen.
@@ -4009,7 +3990,7 @@ document.addEventListener('DOMContentLoaded', function(){
             botData = _dataCache;
             if (botData) found = Object.entries(botData.users||{}).find(([,u]) => u.appCode === code);
         }
-        if (!found) { res.writeHead(302,{'Location':'/?error=1'}); return res.end(); }
+        if (!found) { res.writeHead(302,{'Location':'/login?error=1'}); return res.end(); }
         const [uid, u] = found;
         const sid = genSid();
         // subUid nur übernehmen wenn der Sub im Bot wirklich noch existiert (sonst orphan → Switch crashed)
@@ -4034,7 +4015,7 @@ document.addEventListener('DOMContentLoaded', function(){
             botData = _dataCache;
             if (botData) found = Object.entries(botData.users||{}).find(([, u]) => u.appCode === code);
         }
-        if (!found) { res.writeHead(302,{'Location':'/?error=1'}); return res.end(); }
+        if (!found) { res.writeHead(302,{'Location':'/login?error=1'}); return res.end(); }
         const [uid, u] = found;
         const sid = genSid();
         // subUid nur übernehmen wenn der Sub im Bot wirklich noch existiert (sonst orphan → Switch crashed)
@@ -4565,6 +4546,9 @@ h1{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;line-height:1.1;
     ${query.error==='email-expired' ? '<div class="msg show err">⚠️ Login-Link abgelaufen oder bereits benutzt.</div>' : ''}
     ${query.error==='email-invalid' ? '<div class="msg show err">⚠️ Login-Link ungültig.</div>' : ''}
     ${query.error==='email-userlost' ? '<div class="msg show err">⚠️ Account nicht mehr verfügbar.</div>' : ''}
+    ${query.error==='1' || query.error==='invalidcode' ? '<div class="msg show err">⚠️ Login-Code falsch oder unbekannt.</div>' : ''}
+    ${query.error==='nocode' ? '<div class="msg show err">⚠️ Kein Login-Code übergeben.</div>' : ''}
+    ${query.error==='503' ? '<div class="msg show err">⚠️ Server nicht erreichbar. Bitte später nochmal versuchen.</div>' : ''}
     ${query.logout==='1' ? '<div class="msg show ok">✅ Erfolgreich ausgeloggt.</div>' : ''}
 
     <div class="msg" id="login-msg"></div>
@@ -4736,11 +4720,11 @@ try { fetch('/api/track-funnel',{method:'POST',headers:{'Content-Type':'applicat
     }
     if (path === '/auth/email-login' && req.method === 'GET') {
         const token = String(query.token || '').trim();
-        if (!token) { res.writeHead(302,{'Location':'/?error=email-invalid'}); return res.end(); }
+        if (!token) { res.writeHead(302,{'Location':'/login?error=email-invalid'}); return res.end(); }
         const entry = emailLoginTokens.get(token);
         if (!entry || entry.exp < Date.now()) {
             emailLoginTokens.delete(token);
-            res.writeHead(302,{'Location':'/?error=email-expired'}); return res.end();
+            res.writeHead(302,{'Location':'/login?error=email-expired'}); return res.end();
         }
         emailLoginTokens.delete(token); // single-use
         const _ip2 = String(req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '').split(',')[0].trim().slice(0, 64);
@@ -4748,7 +4732,7 @@ try { fetch('/api/track-funnel',{method:'POST',headers:{'Content-Type':'applicat
         const botData = await fetchBot('/data');
         if (!botData || !botData.users?.[entry.uid]) {
             postBot('/log-email-login', { email: entry.email, success: false, method: 'magic-link', uid: '', ip: _ip2, ua: _ua2 }).catch(()=>{});
-            res.writeHead(302,{'Location':'/?error=email-userlost'}); return res.end();
+            res.writeHead(302,{'Location':'/login?error=email-userlost'}); return res.end();
         }
         postBot('/log-email-login', { email: entry.email, success: true, method: 'magic-link', uid: String(entry.uid), ip: _ip2, ua: _ua2 }).catch(()=>{});
         const u = botData.users[entry.uid];
@@ -5258,9 +5242,9 @@ function submitPw(ev){
         const code = (query.code||'').toString().toLowerCase().trim();
         const rawRedirect = (query.redirect || '/feed').toString();
         const safeRedirect = (rawRedirect.startsWith('/') && !rawRedirect.startsWith('//')) ? rawRedirect : '/feed';
-        if (!code) { res.writeHead(302,{'Location':'/?error=nocode'}); return res.end(); }
+        if (!code) { res.writeHead(302,{'Location':'/login?error=nocode'}); return res.end(); }
         let botData = await fetchBot('/data');
-        if (!botData) { res.writeHead(302,{'Location':'/?error=503'}); return res.end(); }
+        if (!botData) { res.writeHead(302,{'Location':'/login?error=503'}); return res.end(); }
         let found = Object.entries(botData.users||{}).find(([,u]) => u.appCode === code);
         if (!found) {
             _dataCache = null; _dataCacheTime = 0;
@@ -5268,7 +5252,7 @@ function submitPw(ev){
             botData = _dataCache;
             if (botData) found = Object.entries(botData.users||{}).find(([,u]) => u.appCode === code);
         }
-        if (!found) { res.writeHead(302,{'Location':'/?error=invalidcode'}); return res.end(); }
+        if (!found) { res.writeHead(302,{'Location':'/login?error=invalidcode'}); return res.end(); }
         const [uid, u] = found;
         // Bestehende Session wiederverwenden falls da, sonst neue.
         let sid = null;
