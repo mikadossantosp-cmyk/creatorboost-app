@@ -1537,7 +1537,8 @@ ${session ? `
   //    /datenschutz, /impressum, /agb für eingeloggte User mit aktiver Tour
   //    auf /feed?tour=continue umgeleitet (Bug: Google-Play-Reviewer kann die
   //    Pflicht-Pages nicht öffnen). State bleibt erhalten, Tour pausiert nur hier.
-  if(/^\/(datenschutz|privacy|impressum|agb|terms)$/.test(location.pathname)) return;
+  //    Backslash doppelt — wir sind in einem layout()-Template-Literal.
+  if(/^\\/(datenschutz|privacy|impressum|agb|terms)$/.test(location.pathname)) return;
   function _tourLog(msg){ try{ console.log('[TOUR]', msg); }catch(e){} }
   function _safeRun(fn, label){
     try { fn(); } catch(e) { _tourLog('ERROR in '+label+': '+(e.message||e)); try{ console.error(e); }catch(_){} _showTourErrorBanner(label, e); }
