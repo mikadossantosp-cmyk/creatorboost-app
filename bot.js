@@ -7225,6 +7225,43 @@ p{line-height:1.65;color:var(--muted)}
         return json({ok:true});
     }
 
+    // Push-Subscription für aktuellen Parent-User aufheben (alle Geräte dieses Users).
+    // Falls Client den endpoint kennt → nur diese eine Sub löschen. Sonst alle.
+    if (path === '/api/push-unsubscribe' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        const body = await parseBody(req).catch(()=>({}));
+        const endpoint = body && body.endpoint;
+        if (endpoint) {
+            const hash = crypto.createHash('sha256').update(endpoint).digest('hex').slice(0,16);
+            if (pushSubs[hash] && String(pushSubs[hash].uid) === String(session.uid)) delete pushSubs[hash];
+        } else {
+            for (const [k, v] of Object.entries(pushSubs)) {
+                if (String(v.uid) === String(session.uid)) delete pushSubs[k];
+            }
+        }
+        savePushSubs();
+        return json({ok:true});
+    }
+
+    // Alle anderen Sessions dieses Users abmelden (außer aktuelle).
+    if (path === '/api/logout-all-others' && req.method === 'POST') {
+        if (!session) {
+            res.writeHead(302, { 'Location': '/login' });
+            return res.end();
+        }
+        const currentSid = getSid(req);
+        let killed = 0;
+        for (const [sid, s] of sessions) {
+            if (s && String(s.uid) === String(session.uid) && sid !== currentSid) {
+                sessions.delete(sid);
+                killed++;
+            }
+        }
+        if (killed) saveSessions();
+        res.writeHead(302, { 'Location': '/einstellungen/sicherheit?cleared=' + killed });
+        return res.end();
+    }
+
     // Server-to-server push (vom main bot getriggert) — komplett zusätzlich, ändert nichts Bestehendes
     if (path === '/api/push-notify' && req.method === 'POST') {
         if (req.headers['x-bridge-secret'] !== BRIDGE_SECRET) return json({ok:false, error:'Forbidden'}, 403);
@@ -15456,6 +15493,325 @@ async function collabRequest(targetUid, btn){
 </script>`, 'feed');
     }
 
+    // ── EINSTELLUNGEN: Sub-Pages (Instagram-Style Hub) ──
+    // Gemeinsamer Wrapper für Sub-Pages: konsistente Topbar mit Back-Link + Titel.
+    const _setSubHead = (title, sub) => `
+<style>
+.subset-page{min-height:100vh;background:var(--bg)}
+.subset-section{padding:16px;border-bottom:1px solid var(--border2)}
+.subset-section-title{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:10px}
+.subset-row{display:flex;align-items:center;gap:14px;padding:12px 16px;background:var(--bg3);border:1px solid var(--border2);border-radius:12px;margin-bottom:8px}
+.subset-row-icon{width:36px;height:36px;border-radius:10px;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.subset-row-body{flex:1;min-width:0}
+.subset-row-title{font-size:14px;font-weight:700}
+.subset-row-sub{font-size:11.5px;color:var(--muted);margin-top:2px;line-height:1.4}
+.subset-toggle{position:relative;width:42px;height:24px;background:var(--bg4);border-radius:99px;cursor:pointer;transition:background .2s;flex-shrink:0;border:1px solid var(--border)}
+.subset-toggle::after{content:'';position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.subset-toggle.on{background:#22c55e;border-color:#16a34a}
+.subset-toggle.on::after{transform:translateX(18px)}
+.subset-empty{padding:32px 16px;text-align:center;color:var(--muted);font-size:13px}
+</style>
+<div class="topbar">
+  <a href="/einstellungen" class="icon-btn" style="font-size:22px">‹</a>
+  <div style="font-size:15px;font-weight:600">${title}</div>
+  <div style="width:36px"></div>
+</div>
+${sub ? `<div style="padding:12px 16px;font-size:12.5px;color:var(--muted);line-height:1.5;border-bottom:1px solid var(--border2)">${sub}</div>` : ''}`;
+
+    if (path === '/einstellungen/account') {
+        const u = myUser || {};
+        const hasEmail = !!u.email;
+        const hasPw = !!u.password_hash;
+        const emailConfirmed = !!u.emailConfirmedAt;
+        return html(`
+<div class="subset-page">
+${_setSubHead('🔐 Account', 'Email-Adresse, Passwort und Login-Methoden')}
+<div class="subset-section">
+  <div class="subset-section-title">Email</div>
+  <div class="subset-row">
+    <div class="subset-row-icon">📧</div>
+    <div class="subset-row-body">
+      <div class="subset-row-title">${hasEmail ? htmlEsc(u.email) : 'Keine Email gesetzt'}</div>
+      <div class="subset-row-sub">${hasEmail ? (emailConfirmed ? '<span style="color:#22c55e">✓ Bestätigt</span>' : '<span style="color:#fbbf24">⚠️ Nicht bestätigt</span>') : 'Setze eine Email-Adresse für Login + Sicherheit.'}</div>
+    </div>
+  </div>
+  <a href="/einstellungen#account" class="btn btn-outline btn-full" style="margin-top:6px;text-decoration:none;text-align:center">${hasEmail ? '✏️ Email ändern' : '➕ Email setzen'}</a>
+</div>
+<div class="subset-section">
+  <div class="subset-section-title">Passwort</div>
+  <div class="subset-row">
+    <div class="subset-row-icon">🔑</div>
+    <div class="subset-row-body">
+      <div class="subset-row-title">${hasPw ? '••••••••' : 'Kein Passwort gesetzt'}</div>
+      <div class="subset-row-sub">${hasPw ? 'Direct-Login per Email + Passwort möglich.' : 'Mit Passwort kannst du dich direkt einloggen (statt nur per Magic-Link).'}</div>
+    </div>
+  </div>
+  <a href="/einstellungen#account" class="btn btn-outline btn-full" style="margin-top:6px;text-decoration:none;text-align:center">${hasPw ? '✏️ Passwort ändern' : '➕ Passwort setzen'}</a>
+</div>
+<div class="subset-section">
+  <div class="subset-section-title">Telegram-Verknüpfung</div>
+  <div class="subset-row">
+    <div class="subset-row-icon">📲</div>
+    <div class="subset-row-body">
+      <div class="subset-row-title">${u.username ? '@'+htmlEsc(u.username) : 'UID '+htmlEsc(myUid)}</div>
+      <div class="subset-row-sub">Telegram ist deine Master-Verknüpfung. UID kann nicht geändert werden.</div>
+    </div>
+  </div>
+</div>
+<div class="subset-section">
+  <div class="subset-section-title" style="color:#ef4444">⚠️ Gefahrenzone</div>
+  <a href="/einstellungen#danger" class="btn btn-outline btn-full" style="border-color:rgba(239,68,68,.35);color:#ef4444;text-decoration:none;text-align:center">🗑️ Account löschen</a>
+</div>
+</div>
+`, 'settings-account');
+    }
+
+    if (path === '/einstellungen/privacy') {
+        const u = myUser || {};
+        const blocked = Array.isArray(u.blockedUsers) ? u.blockedUsers : [];
+        const blockedRows = blocked.map(bUid => {
+            const bU = d.users?.[bUid] || {};
+            const name = bU.spitzname || bU.name || ('User '+bUid);
+            const insta = bU.instagram || '';
+            return `
+<div class="subset-row" id="blocked-row-${htmlEsc(bUid)}">
+  <div class="subset-row-icon">🚫</div>
+  <div class="subset-row-body">
+    <div class="subset-row-title">${htmlEsc(name)}</div>
+    <div class="subset-row-sub">${insta ? '@'+htmlEsc(insta)+' · ' : ''}UID ${htmlEsc(bUid)}</div>
+  </div>
+  <button onclick="unblockSub('${htmlEsc(bUid)}', this)" class="btn btn-outline" style="font-size:12px;padding:7px 12px">Entsperren</button>
+</div>`;
+        }).join('');
+        return html(`
+<div class="subset-page">
+${_setSubHead('🔒 Privatsphäre', 'Wer kann was über dich sehen und mit dir interagieren.')}
+<div class="subset-section">
+  <div class="subset-section-title">Blockierte Nutzer (${blocked.length})</div>
+  ${blocked.length ? blockedRows : '<div class="subset-empty">Du hast niemanden blockiert.<br><span style="font-size:11px;color:var(--muted)">Block-Button auf Profilen oder in Chats nutzen.</span></div>'}
+</div>
+<div class="subset-section">
+  <div class="subset-section-title">Profilsichtbarkeit</div>
+  <div class="subset-row">
+    <div class="subset-row-icon">👁️</div>
+    <div class="subset-row-body">
+      <div class="subset-row-title">Profil öffentlich</div>
+      <div class="subset-row-sub">Jeder eingeloggte User sieht dein Profil. (Bald: Privat-Modus toggle)</div>
+    </div>
+    <div class="subset-toggle on" style="opacity:.5;cursor:not-allowed" title="Coming soon"></div>
+  </div>
+  <div class="subset-row">
+    <div class="subset-row-icon">💬</div>
+    <div class="subset-row-body">
+      <div class="subset-row-title">DMs von allen</div>
+      <div class="subset-row-sub">Jeder kann dir Nachrichten schicken. (Bald: nur Follower)</div>
+    </div>
+    <div class="subset-toggle on" style="opacity:.5;cursor:not-allowed" title="Coming soon"></div>
+  </div>
+</div>
+<script>
+async function unblockSub(uid, btn){
+  if(!confirm('Wirklich entsperren?')) return;
+  btn.disabled=true; btn.textContent='⏳';
+  const r=await fetch('/api/unblock-user',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({targetUid:uid})});
+  const j=await r.json().catch(()=>({}));
+  if(j.ok){ document.getElementById('blocked-row-'+uid).remove(); }
+  else { btn.disabled=false; btn.textContent='Entsperren'; alert('❌ '+(j.error||'Fehler')); }
+}
+</script>
+</div>
+`, 'settings-privacy');
+    }
+
+    if (path === '/einstellungen/notifications') {
+        return html(`
+<div class="subset-page">
+${_setSubHead('🔔 Benachrichtigungen', 'Push-Benachrichtigungen, In-App-Notifs und Email-Newsletter.')}
+<div class="subset-section">
+  <div class="subset-section-title">Push-Benachrichtigungen</div>
+  <div class="subset-row">
+    <div class="subset-row-icon">📱</div>
+    <div class="subset-row-body">
+      <div class="subset-row-title">Push aktiv</div>
+      <div class="subset-row-sub" id="push-status-sub">Wird geprüft …</div>
+    </div>
+    <div class="subset-toggle" id="push-toggle" onclick="togglePush(this)"></div>
+  </div>
+  <div style="font-size:11px;color:var(--muted);padding:6px 4px 0;line-height:1.5">
+    Du bekommst Benachrichtigungen bei Likes, Kommentaren, Followern und neuen Pinned-Engagements.
+  </div>
+</div>
+<div class="subset-section">
+  <div class="subset-section-title">Per-Event (bald)</div>
+  <div class="subset-row" style="opacity:.55">
+    <div class="subset-row-icon">❤️</div>
+    <div class="subset-row-body"><div class="subset-row-title">Likes</div><div class="subset-row-sub">Wenn jemand deinen Post liked</div></div>
+    <div class="subset-toggle on" style="cursor:not-allowed"></div>
+  </div>
+  <div class="subset-row" style="opacity:.55">
+    <div class="subset-row-icon">💬</div>
+    <div class="subset-row-body"><div class="subset-row-title">Kommentare & Replies</div><div class="subset-row-sub">Wenn jemand auf deinen Post antwortet</div></div>
+    <div class="subset-toggle on" style="cursor:not-allowed"></div>
+  </div>
+  <div class="subset-row" style="opacity:.55">
+    <div class="subset-row-icon">📌</div>
+    <div class="subset-row-body"><div class="subset-row-title">Pinned-Engagement</div><div class="subset-row-sub">Wenn jemand deinen Pinned-Post engagiert</div></div>
+    <div class="subset-toggle on" style="cursor:not-allowed"></div>
+  </div>
+  <div class="subset-row" style="opacity:.55">
+    <div class="subset-row-icon">📩</div>
+    <div class="subset-row-body"><div class="subset-row-title">Newsletter & Updates</div><div class="subset-row-sub">App-Updates und Newsletter</div></div>
+    <div class="subset-toggle on" style="cursor:not-allowed"></div>
+  </div>
+</div>
+<script>
+async function togglePush(t){
+  if(!('Notification' in window) || !('serviceWorker' in navigator)){ alert('Browser unterstützt keine Push-Notifications.'); return; }
+  const isOn = t.classList.contains('on');
+  if(isOn){
+    if(!confirm('Push-Benachrichtigungen wirklich abschalten?')) return;
+    try{
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.getSubscription();
+      if(sub) await sub.unsubscribe();
+      await fetch('/api/push-unsubscribe',{method:'POST'}).catch(()=>{});
+      t.classList.remove('on');
+      document.getElementById('push-status-sub').textContent='Aus';
+    } catch(e){ alert('Fehler: '+e.message); }
+  } else {
+    const p = await Notification.requestPermission();
+    if(p !== 'granted'){ alert('Berechtigung verweigert. In Browser-Settings erlauben.'); return; }
+    try{
+      const reg = await navigator.serviceWorker.ready;
+      const vk = await fetch('/push-vapid-key').then(r=>r.text());
+      const bytes = Uint8Array.from(atob(vk.replace(/-/g,'+').replace(/_/g,'/')), c=>c.charCodeAt(0));
+      const sub = await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:bytes});
+      await fetch('/api/push-subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sub:sub.toJSON()})});
+      t.classList.add('on');
+      document.getElementById('push-status-sub').textContent='Aktiv auf diesem Gerät';
+    } catch(e){ alert('Fehler: '+e.message); }
+  }
+}
+(async function initPushStatus(){
+  if(!('serviceWorker' in navigator)){ document.getElementById('push-status-sub').textContent='Nicht unterstützt'; return; }
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    if(sub && Notification.permission === 'granted'){
+      document.getElementById('push-toggle').classList.add('on');
+      document.getElementById('push-status-sub').textContent='Aktiv auf diesem Gerät';
+    } else {
+      document.getElementById('push-status-sub').textContent='Aus';
+    }
+  } catch(e){ document.getElementById('push-status-sub').textContent='Status unbekannt'; }
+})();
+</script>
+</div>
+`, 'settings-notifications');
+    }
+
+    if (path === '/einstellungen/sicherheit') {
+        // Sessions dieses Users zählen (inkl. aktiver)
+        let mySessions = 0;
+        for (const s of sessions.values()) {
+            if (s && String(s.uid) === String(myUid)) mySessions++;
+        }
+        const ua = (req.headers['user-agent'] || '').slice(0, 200);
+        const device = /iphone|ipad|ios/i.test(ua) ? '📱 iPhone/iPad'
+            : /android/i.test(ua) ? '🤖 Android'
+            : /macintosh|mac os/i.test(ua) ? '💻 Mac'
+            : /windows/i.test(ua) ? '🪟 Windows'
+            : /linux/i.test(ua) ? '🐧 Linux'
+            : '🖥️ Unbekannt';
+        return html(`
+<div class="subset-page">
+${_setSubHead('🛡️ Sicherheit & Sessions', 'Aktive Geräte und Logout-Optionen.')}
+<div class="subset-section">
+  <div class="subset-section-title">Dieses Gerät</div>
+  <div class="subset-row">
+    <div class="subset-row-icon" style="background:rgba(34,197,94,.14);color:#22c55e">${device.split(' ')[0]}</div>
+    <div class="subset-row-body">
+      <div class="subset-row-title">${device.split(' ').slice(1).join(' ') || device} <span style="color:#22c55e;font-size:11px;margin-left:6px">● Aktiv</span></div>
+      <div class="subset-row-sub" style="font-size:11px;font-family:JetBrains Mono,monospace;word-break:break-all">${htmlEsc(ua.slice(0,80))}…</div>
+    </div>
+  </div>
+</div>
+<div class="subset-section">
+  <div class="subset-section-title">Alle Sessions</div>
+  <div class="subset-row">
+    <div class="subset-row-icon">🔢</div>
+    <div class="subset-row-body">
+      <div class="subset-row-title">${mySessions} aktive Session${mySessions===1?'':'s'}</div>
+      <div class="subset-row-sub">Inklusive Sub-Accounts. Detaillierte Liste pro Device kommt.</div>
+    </div>
+  </div>
+  <form method="POST" action="/api/logout-all-others" onsubmit="return confirm('Alle anderen Sessions abmelden? Du bleibst auf diesem Gerät eingeloggt.')">
+    <button type="submit" class="btn btn-outline btn-full" style="margin-top:8px;border-color:rgba(245,158,11,.35);color:#fbbf24">🚪 Alle anderen Geräte abmelden</button>
+  </form>
+</div>
+<div class="subset-section">
+  <div class="subset-section-title">Login-Historie</div>
+  <div class="subset-empty" style="padding:18px;font-size:12.5px">📜 Login-Log kommt in einer der nächsten Versionen.<br><span style="font-size:11px">Aktivität jetzt nur Admin-seitig im Dashboard sichtbar.</span></div>
+</div>
+<div class="subset-section">
+  <div class="subset-section-title">Ausloggen</div>
+  <form method="POST" action="/logout">
+    <button type="submit" class="btn btn-outline btn-full" style="border-color:rgba(239,68,68,.35);color:#ef4444">🚪 Von diesem Gerät abmelden</button>
+  </form>
+</div>
+</div>
+`, 'settings-security');
+    }
+
+    if (path === '/einstellungen/pro') {
+        return html(`
+<div class="subset-page">
+${_setSubHead('⭐ Pro-Features', 'Premium-Tools für ernsthafte Creator. <b style="color:#f5d76e">In Entwicklung.</b>')}
+<div class="subset-section">
+  <div class="subset-section-title">Kommt bald</div>
+  <div class="subset-row" style="background:linear-gradient(135deg,rgba(245,215,110,.08),rgba(212,175,55,.04));border-color:rgba(212,175,55,.30)">
+    <div class="subset-row-icon" style="background:linear-gradient(135deg,#f5d76e,#d4af37);color:#000">📊</div>
+    <div class="subset-row-body">
+      <div class="subset-row-title">Deep-Analytics</div>
+      <div class="subset-row-sub">Engagement-Rate pro Post · Cohort-Curves · Audience-Demographics · Heatmaps</div>
+    </div>
+  </div>
+  <div class="subset-row" style="background:linear-gradient(135deg,rgba(245,215,110,.08),rgba(212,175,55,.04));border-color:rgba(212,175,55,.30)">
+    <div class="subset-row-icon" style="background:linear-gradient(135deg,#f5d76e,#d4af37);color:#000">📅</div>
+    <div class="subset-row-body">
+      <div class="subset-row-title">Post-Scheduler</div>
+      <div class="subset-row-sub">Pinned-Reel und Diamantlinks zeitlich planen</div>
+    </div>
+  </div>
+  <div class="subset-row" style="background:linear-gradient(135deg,rgba(245,215,110,.08),rgba(212,175,55,.04));border-color:rgba(212,175,55,.30)">
+    <div class="subset-row-icon" style="background:linear-gradient(135deg,#f5d76e,#d4af37);color:#000">🤝</div>
+    <div class="subset-row-body">
+      <div class="subset-row-title">Kollab-Manager</div>
+      <div class="subset-row-sub">Mehrere Kollabs gleichzeitig tracken + auto-Reminder</div>
+    </div>
+  </div>
+  <div class="subset-row" style="background:linear-gradient(135deg,rgba(245,215,110,.08),rgba(212,175,55,.04));border-color:rgba(212,175,55,.30)">
+    <div class="subset-row-icon" style="background:linear-gradient(135deg,#f5d76e,#d4af37);color:#000">🎨</div>
+    <div class="subset-row-body">
+      <div class="subset-row-title">Custom-Branding</div>
+      <div class="subset-row-sub">Profil-Theme, Banner-Animationen, Pro-Badge</div>
+    </div>
+  </div>
+  <div class="subset-row" style="background:linear-gradient(135deg,rgba(245,215,110,.08),rgba(212,175,55,.04));border-color:rgba(212,175,55,.30)">
+    <div class="subset-row-icon" style="background:linear-gradient(135deg,#f5d76e,#d4af37);color:#000">🔌</div>
+    <div class="subset-row-body">
+      <div class="subset-row-title">API-Zugang</div>
+      <div class="subset-row-sub">Eigene Stats abrufen, Webhooks, Zapier-Integration</div>
+    </div>
+  </div>
+  <div style="font-size:12px;color:var(--muted);padding:14px 4px 0;text-align:center;line-height:1.5">
+    Interesse? <a href="/nachrichten" style="color:var(--accent);font-weight:700">DM an CreatorBoost</a> — Early-Access-Liste verfügbar.
+  </div>
+</div>
+</div>
+`, 'settings-pro');
+    }
+
     // ── EINSTELLUNGEN ──
     if (path === '/einstellungen') {
         const u = myUser || {};
@@ -15496,6 +15852,47 @@ async function collabRequest(targetUid, btn){
   <div style="font-size:15px;font-weight:600">Einstellungen</div>
   <div style="width:36px"></div>
 </div>
+<style>
+.set-hub-grid{display:grid;grid-template-columns:1fr;gap:8px;padding:14px 16px;border-bottom:1px solid var(--border2)}
+.set-hub-card{display:flex;align-items:center;gap:14px;padding:14px;background:var(--bg3);border:1px solid var(--border2);border-radius:14px;text-decoration:none;color:var(--text);transition:all .15s}
+.set-hub-card:hover{background:var(--bg4);border-color:var(--accent)}
+.set-hub-card:active{transform:scale(.98)}
+.set-hub-icon{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.set-hub-content{flex:1;min-width:0}
+.set-hub-title{font-size:14.5px;font-weight:700;margin-bottom:2px}
+.set-hub-sub{font-size:11.5px;color:var(--muted);line-height:1.4}
+.set-hub-arrow{color:var(--muted);font-size:18px;flex-shrink:0}
+.set-hub-badge{background:#ef4444;color:#fff;font-size:10px;font-weight:800;padding:2px 7px;border-radius:99px;margin-left:6px}
+</style>
+<div class="set-hub-grid">
+  <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);padding:4px 0 6px">Schnellzugriff</div>
+  <a href="/einstellungen/account" class="set-hub-card">
+    <div class="set-hub-icon" style="background:linear-gradient(135deg,#4dabf7,#1971c2)">🔐</div>
+    <div class="set-hub-content"><div class="set-hub-title">Account</div><div class="set-hub-sub">Email · Passwort · Telefon</div></div>
+    <div class="set-hub-arrow">›</div>
+  </a>
+  <a href="/einstellungen/privacy" class="set-hub-card">
+    <div class="set-hub-icon" style="background:linear-gradient(135deg,#9775fa,#6741d9)">🔒</div>
+    <div class="set-hub-content"><div class="set-hub-title">Privatsphäre</div><div class="set-hub-sub">Blockierte Nutzer · Sichtbarkeit</div></div>
+    <div class="set-hub-arrow">›</div>
+  </a>
+  <a href="/einstellungen/notifications" class="set-hub-card">
+    <div class="set-hub-icon" style="background:linear-gradient(135deg,#ff8787,#e03131)">🔔</div>
+    <div class="set-hub-content"><div class="set-hub-title">Benachrichtigungen</div><div class="set-hub-sub">Push · In-App · Email</div></div>
+    <div class="set-hub-arrow">›</div>
+  </a>
+  <a href="/einstellungen/sicherheit" class="set-hub-card">
+    <div class="set-hub-icon" style="background:linear-gradient(135deg,#51cf66,#2f9e44)">🛡️</div>
+    <div class="set-hub-content"><div class="set-hub-title">Sicherheit & Sessions</div><div class="set-hub-sub">Aktive Geräte · Logout</div></div>
+    <div class="set-hub-arrow">›</div>
+  </a>
+  <a href="/einstellungen/pro" class="set-hub-card">
+    <div class="set-hub-icon" style="background:linear-gradient(135deg,#f5d76e,#d4af37 50%,#8b6914);color:#000">⭐</div>
+    <div class="set-hub-content"><div class="set-hub-title">Pro-Features <span style="font-size:9.5px;background:linear-gradient(135deg,#f5d76e,#d4af37);color:#000;padding:2px 6px;border-radius:6px;font-weight:800;letter-spacing:0.5px;margin-left:4px">SOON</span></div><div class="set-hub-sub">Analytics · Scheduler · API · mehr</div></div>
+    <div class="set-hub-arrow">›</div>
+  </a>
+</div>
+<div style="padding:14px 16px 4px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted)">Profil bearbeiten</div>
 <div style="padding:16px;border-bottom:1px solid var(--border2)">
   <div class="form-label">Profilbild</div>
   <div style="display:flex;align-items:center;gap:16px;margin-top:8px">
