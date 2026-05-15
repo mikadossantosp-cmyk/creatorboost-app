@@ -7101,7 +7101,15 @@ p{line-height:1.65;color:var(--muted)}
 
 
     // ── AUTH REQUIRED ──
-    if (!session) return redirect('/');
+    // Public Pages, die OHNE Session erreichbar sein müssen (Legal-Pflicht, sonst
+    // landet Google-Play-Reviewer beim Aufruf von /datenschutz auf /).
+    // Diese 5 Routes sind hier im File weiter unten definiert (~Z. 13900+), würden
+    // also von der Auth-Gate gekapert ohne die Whitelist.
+    if (!session) {
+        if (!/^\/(datenschutz|privacy|impressum|agb|terms)$/.test(path)) {
+            return redirect('/login');
+        }
+    }
 
     const d = await fetchBot('/data');
     if (!d) {
