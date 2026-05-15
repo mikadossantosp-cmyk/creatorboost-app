@@ -269,6 +269,8 @@ function isAppVisible(u) {
 // JS-Body OHNE <script>-Tags (wird über /static/admin-fulltour.js gecached
 // ausgeliefert statt inline pro Page → spart ~7.8KB Bytes pro Page-Load).
 const ADMIN_FULLTOUR_JS = `(function(){
+  // PUBLIC LEGAL PAGES: Tour darf hier NIE auto-redirecten (sonst kann der Google-Play-Reviewer die Pflichtseiten nicht öffnen).
+  if(/^\\/(datenschutz|privacy|impressum|agb|terms)$/.test(location.pathname)) return;
   const FT_STEPS = [
     { url: '/willkommen?fulltour=1', sel: 'h1, .hero, .lp-h, .lp-hero', title: '🌐 Landing-Page', text: 'Was ein neuer Besucher zuerst sieht — Hero, Telegram-CTA, Email-Form. Hier startet die User-Journey.' },
     { url: '/willkommen?fulltour=1', sel: 'a[href*="t.me/"]', title: '✈️ Telegram-CTA', text: 'Direkter Beitritt der Gruppe. Telegram öffnet → User chattet mit Bot → /start.' },
@@ -1531,6 +1533,11 @@ ${session ? `
   // Multi-Page Tour: läuft über mehrere Seiten (Feed → Explore → Profil → Einstellungen).
   // Active-State + Index in sessionStorage damit Navigation funktioniert.
   // Server-State (u.appBriefingSeenV2) entscheidet ob Tour beim ersten Login automatisch startet.
+  // ── PUBLIC LEGAL PAGES: Tour darf hier NIEMALS redirecten — sonst werden
+  //    /datenschutz, /impressum, /agb für eingeloggte User mit aktiver Tour
+  //    auf /feed?tour=continue umgeleitet (Bug: Google-Play-Reviewer kann die
+  //    Pflicht-Pages nicht öffnen). State bleibt erhalten, Tour pausiert nur hier.
+  if(/^\/(datenschutz|privacy|impressum|agb|terms)$/.test(location.pathname)) return;
   function _tourLog(msg){ try{ console.log('[TOUR]', msg); }catch(e){} }
   function _safeRun(fn, label){
     try { fn(); } catch(e) { _tourLog('ERROR in '+label+': '+(e.message||e)); try{ console.error(e); }catch(_){} _showTourErrorBanner(label, e); }
