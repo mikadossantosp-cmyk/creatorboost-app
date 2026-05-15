@@ -3932,6 +3932,39 @@ document.addEventListener('DOMContentLoaded', function(){
         saveSessions();
         return json({ok:true, activeUid: target});
     }
+    // ── DSGVO: Account-Selbstlöschung (Art. 17 + Google Play Pflicht seit 2024) ──
+    if (path === '/api/delete-my-account' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        const result = await postBot('/user-delete-self-api', { uid: String(session.uid) });
+        if (result && result.ok) {
+            // Session aus dem In-Memory-Store + Disk entfernen
+            try {
+                if (typeof sessions !== 'undefined' && sessions instanceof Map) {
+                    for (const [sid, s] of sessions.entries()) {
+                        if (String(s.uid) === String(session.uid)) sessions.delete(sid);
+                    }
+                    saveSessions();
+                }
+            } catch(e) {}
+            return json({ok:true, deletedAt: new Date().toISOString(), deletedSubs: result.deletedSubs || 0});
+        }
+        return json(result || {ok:false, error:'Mainbot offline'});
+    }
+
+    // ── DSGVO: Datenexport (Art. 20 Datenübertragbarkeit) ──
+    if (path === '/api/datenexport' && req.method === 'GET') {
+        if (!session) return text('Nicht eingeloggt', 401);
+        const result = await fetchBotRaw('/user-data-export-api?uid=' + encodeURIComponent(session.uid));
+        if (!result || !result.ok) return text('Export-Fehler: ' + (result?.error || 'Mainbot offline'), 500);
+        const fname = 'creatorx-datenexport-' + session.uid + '-' + new Date().toISOString().slice(0,10) + '.json';
+        res.writeHead(200, {
+            'Content-Type': 'application/json; charset=utf-8',
+            'Content-Disposition': 'attachment; filename="' + fname + '"',
+            'Cache-Control': 'no-store',
+        });
+        return res.end(JSON.stringify(result, null, 2));
+    }
+
     // Sub komplett löschen (nur vom Parent aus). Switcht zurück auf Parent.
     if (path === '/api/delete-subaccount' && req.method === 'POST') {
         if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
@@ -13577,6 +13610,174 @@ function showErr(msg){
 `, 'explore');
     }
 
+    // ── LEGAL: Datenschutz / Impressum / AGB (DSGVO-Pflicht + Google-Play-Submission) ──
+    if (path === '/datenschutz' || path === '/privacy') {
+        return html(`
+<div class="topbar"><a href="/profil" class="icon-btn" style="font-size:22px">‹</a><div style="font-size:15px;font-weight:600">Datenschutz</div><div style="width:36px"></div></div>
+<div style="padding:16px;max-width:720px;margin:0 auto;line-height:1.65;font-size:14px;color:var(--text)">
+<h1 style="font-size:22px;font-weight:800;margin:0 0 8px">Datenschutzerklärung</h1>
+<p style="color:var(--muted);font-size:12px;margin:0 0 18px">Stand: ${new Date().toLocaleDateString('de-DE')}</p>
+
+<h2 style="font-size:16px;margin:20px 0 8px">1. Verantwortlicher</h2>
+<p>Michael Dos Santos Pexioto<br>33b Haaptstrooss<br>L-9835 Luxembourg<br>E-Mail: mindset.stories_@outlook.de</p>
+
+<h2 style="font-size:16px;margin:20px 0 8px">2. Welche Daten wir verarbeiten</h2>
+<ul style="padding-left:18px">
+  <li><b>Account-Daten:</b> Name/Spitzname, optional E-Mail, optional Instagram-Username</li>
+  <li><b>Authentifizierung:</b> Passwort-Hash (gesalzen + gehashed, kein Klartext)</li>
+  <li><b>Inhalte:</b> von dir geteilte Instagram-Links, Posts, Kommentare, Like-Aktivität</li>
+  <li><b>Profilbild + Banner:</b> falls hochgeladen (auf unseren Servern gespeichert)</li>
+  <li><b>Nutzung:</b> Login-Zeitpunkte, App-Aktivität (für 'Online jetzt'-Anzeige), letzter Besuch</li>
+  <li><b>Funnel-Tracking:</b> anonymisierte Page-Views (Landing, Signup, Login) zur Optimierung</li>
+  <li><b>Push-Tokens:</b> nur wenn du Benachrichtigungen aktivierst</li>
+  <li><b>Technisches:</b> IP-Adresse (für Anti-Missbrauch), User-Agent</li>
+</ul>
+
+<h2 style="font-size:16px;margin:20px 0 8px">3. Zweck der Verarbeitung</h2>
+<p>Bereitstellung der App-Funktionen (Feed, Likes, Profile), Authentifizierung, Spam-Schutz, Service-Verbesserung. Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO (Vertragserfüllung).</p>
+
+<h2 style="font-size:16px;margin:20px 0 8px">4. Cookies und lokale Speicherung</h2>
+<p>Wir nutzen einen technisch notwendigen Session-Cookie (<code>cbsid</code>) zur Anmeldung. Kein Tracking-Cookie, kein Werbe-Cookie. <code>localStorage</code> wird genutzt für UI-Einstellungen (Theme, Sprache).</p>
+
+<h2 style="font-size:16px;margin:20px 0 8px">5. Drittanbieter</h2>
+<ul style="padding-left:18px">
+  <li><b>Telegram Bot API:</b> für Kontoverknüpfung und DMs (wenn du dich via Telegram anmeldest). Telegram-Datenschutzerklärung: <a href="https://telegram.org/privacy" target="_blank" style="color:var(--accent)">telegram.org/privacy</a></li>
+  <li><b>Instagram-CDN (unavatar.io, scontent-cdninstagram.com):</b> nur zum Anzeigen von öffentlichen Insta-Avataren — kein Datentransfer von dir an Meta</li>
+  <li><b>Railway.app (Hosting, EU):</b> Server-Hosting in europäischen Rechenzentren</li>
+  <li><b>Web-Push (VAPID):</b> nur wenn du Benachrichtigungen erlaubst</li>
+</ul>
+
+<h2 style="font-size:16px;margin:20px 0 8px">6. Speicherdauer</h2>
+<p>Account-Daten werden gespeichert solange dein Account aktiv ist. Bei Löschung deines Accounts werden alle persönlichen Daten innerhalb von 30 Tagen entfernt. Funnel-Daten werden 60 Tage gespeichert (anonymisiert), Sicherheits-Logs 90 Tage.</p>
+
+<h2 style="font-size:16px;margin:20px 0 8px">7. Deine Rechte (DSGVO)</h2>
+<ul style="padding-left:18px">
+  <li><b>Auskunft</b> (Art. 15): du kannst jederzeit eine Kopie deiner Daten anfordern → <a href="/api/datenexport" style="color:var(--accent);font-weight:700">Datenexport herunterladen</a></li>
+  <li><b>Berichtigung</b> (Art. 16): Profil-Einstellungen anpassen</li>
+  <li><b>Löschung</b> (Art. 17): <a href="/einstellungen#delete-account" style="color:var(--accent);font-weight:700">Account löschen</a></li>
+  <li><b>Datenübertragbarkeit</b> (Art. 20): JSON-Export deiner Daten</li>
+  <li><b>Widerspruch</b> (Art. 21): Email an Verantwortlichen</li>
+  <li><b>Beschwerde</b>: CNPD (Commission nationale pour la protection des données, Luxembourg — <a href="https://cnpd.public.lu" target="_blank" style="color:var(--accent)">cnpd.public.lu</a>) oder deine lokale Datenschutzbehörde</li>
+</ul>
+
+<h2 style="font-size:16px;margin:20px 0 8px">8. Sicherheit</h2>
+<p>Übertragung via HTTPS/TLS. Passwörter werden mit bcrypt gehashed. Session-Cookies sind HTTP-only + SameSite=Lax.</p>
+
+<h2 style="font-size:16px;margin:20px 0 8px">9. Minderjährige</h2>
+<p>Die App ist für Personen ab 16 Jahren. Jüngere User dürfen den Service nicht ohne Zustimmung ihrer Erziehungsberechtigten nutzen.</p>
+
+<h2 style="font-size:16px;margin:20px 0 8px">10. Änderungen</h2>
+<p>Wir behalten uns vor, diese Datenschutzerklärung anzupassen. Bei wesentlichen Änderungen informieren wir dich in der App.</p>
+
+<div style="margin-top:32px;padding-top:18px;border-top:1px solid var(--border2);font-size:11.5px;color:var(--muted);text-align:center">
+<a href="/impressum" style="color:var(--accent);text-decoration:none;margin-right:14px">Impressum</a>
+<a href="/agb" style="color:var(--accent);text-decoration:none">AGB</a>
+</div>
+</div>`, 'datenschutz');
+    }
+
+    if (path === '/impressum') {
+        return html(`
+<div class="topbar"><a href="/profil" class="icon-btn" style="font-size:22px">‹</a><div style="font-size:15px;font-weight:600">Impressum</div><div style="width:36px"></div></div>
+<div style="padding:16px;max-width:720px;margin:0 auto;line-height:1.65;font-size:14px;color:var(--text)">
+<h1 style="font-size:22px;font-weight:800;margin:0 0 14px">Impressum</h1>
+<p>Angaben gemäß § 5 DDG (Deutschland) und Art. 5 LCEN (Luxemburg):</p>
+
+<h2 style="font-size:16px;margin:18px 0 8px">Anbieter</h2>
+<p>Michael Dos Santos Pexioto<br>33b Haaptstrooss<br>L-9835 Luxembourg</p>
+
+<h2 style="font-size:16px;margin:18px 0 8px">Kontakt</h2>
+<p>E-Mail: mindset.stories_@outlook.de</p>
+
+<h2 style="font-size:16px;margin:18px 0 8px">Rechtsform</h2>
+<p>Privatperson — derzeit kein gewerblicher Betrieb. Die App wird als Hobby-Projekt ohne Gewinnerzielungsabsicht betrieben. Keine Umsatzsteuer-Pflicht (keine wirtschaftliche Tätigkeit i.S.d. Art. 4 MwStG).</p>
+
+<h2 style="font-size:16px;margin:18px 0 8px">Verantwortlich für Inhalt</h2>
+<p>nach § 18 Abs. 2 MStV: Michael Dos Santos Pexioto, Anschrift wie oben.</p>
+
+<h2 style="font-size:16px;margin:18px 0 8px">EU-Streitschlichtung</h2>
+<p>Plattform der EU-Kommission zur Online-Streitbeilegung: <a href="https://ec.europa.eu/consumers/odr" target="_blank" style="color:var(--accent)">ec.europa.eu/consumers/odr</a>. Wir sind nicht verpflichtet und nicht bereit, an einem Streitbeilegungsverfahren teilzunehmen.</p>
+
+<h2 style="font-size:16px;margin:18px 0 8px">Haftung für Inhalte</h2>
+<p>Als Diensteanbieter sind wir für eigene Inhalte verantwortlich. Wir sind nicht verpflichtet, übermittelte oder gespeicherte fremde Informationen zu überwachen (§§ 7 bis 10 DDG bzw. Art. 60-64 LCEN). Verpflichtungen zur Entfernung oder Sperrung bei Kenntnis einer Rechtsverletzung bleiben unberührt.</p>
+
+<h2 style="font-size:16px;margin:18px 0 8px">Haftung für Links</h2>
+<p>Externe Links unterliegen der Verantwortung des jeweiligen Betreibers. Wir haben keinen Einfluss auf deren Inhalte.</p>
+
+<h2 style="font-size:16px;margin:18px 0 8px">Urheberrecht</h2>
+<p>Die durch uns erstellten Inhalte und Werke unterliegen luxemburgischem und deutschem Urheberrecht. User-generierte Inhalte verbleiben bei den jeweiligen Erstellern.</p>
+
+<div style="margin-top:32px;padding-top:18px;border-top:1px solid var(--border2);font-size:11.5px;color:var(--muted);text-align:center">
+<a href="/datenschutz" style="color:var(--accent);text-decoration:none;margin-right:14px">Datenschutz</a>
+<a href="/agb" style="color:var(--accent);text-decoration:none">AGB</a>
+</div>
+</div>`, 'impressum');
+    }
+
+    if (path === '/agb' || path === '/terms') {
+        return html(`
+<div class="topbar"><a href="/profil" class="icon-btn" style="font-size:22px">‹</a><div style="font-size:15px;font-weight:600">AGB</div><div style="width:36px"></div></div>
+<div style="padding:16px;max-width:720px;margin:0 auto;line-height:1.65;font-size:14px;color:var(--text)">
+<h1 style="font-size:22px;font-weight:800;margin:0 0 8px">Allgemeine Nutzungsbedingungen</h1>
+<p style="color:var(--muted);font-size:12px;margin:0 0 18px">Stand: ${new Date().toLocaleDateString('de-DE')}</p>
+
+<h2 style="font-size:16px;margin:18px 0 8px">§ 1 Geltungsbereich</h2>
+<p>Diese Nutzungsbedingungen regeln die Nutzung der CreatorX App (die "App") zwischen dem Betreiber (siehe <a href="/impressum" style="color:var(--accent)">Impressum</a>) und dem Nutzer.</p>
+
+<h2 style="font-size:16px;margin:18px 0 8px">§ 2 Account & Mindestalter</h2>
+<p>Die Nutzung der App ist Personen ab 16 Jahren erlaubt. Mit der Registrierung versicherst du, dass du dieses Alter erreicht hast. Pro Person ist nur ein Hauptaccount erlaubt. Sub-Accounts dürfen nur für eigene Personas verwendet werden, nicht für Drittpersonen.</p>
+
+<h2 style="font-size:16px;margin:18px 0 8px">§ 3 Verhaltensregeln</h2>
+<ul style="padding-left:18px">
+  <li>Keine Spam-Posts, keine doppelten Links</li>
+  <li>Keine Schein-Likes — wer in der App liked muss auch auf Instagram echt engagieren (Liken, Kommentieren, Teilen, Speichern)</li>
+  <li>Kein Self-Like auf eigene Account-Familie</li>
+  <li>Kein Manipulationsversuch von XP/Diamanten</li>
+  <li>Keine illegalen, beleidigenden, diskriminierenden oder pornographischen Inhalte</li>
+  <li>Keine Werbung ohne unsere ausdrückliche Erlaubnis</li>
+</ul>
+
+<h2 style="font-size:16px;margin:18px 0 8px">§ 4 Diamanten & XP (Gamification)</h2>
+<p><b>XP und Diamanten sind reine Spiel-Punkte ohne monetären Wert.</b> Sie sind:</p>
+<ul style="padding-left:18px">
+  <li>nicht auszahlbar in Echtgeld</li>
+  <li>nicht handelbar zwischen Usern (außer In-App-Geschenken)</li>
+  <li>nicht übertragbar bei Account-Löschung</li>
+  <li>können von uns jederzeit angepasst, reduziert oder zurückgesetzt werden (z.B. bei Verstößen)</li>
+</ul>
+
+<h2 style="font-size:16px;margin:18px 0 8px">§ 5 User-generierte Inhalte</h2>
+<p>Du behältst alle Rechte an deinen Beiträgen. Du räumst uns das nicht-exklusive Recht ein, deine Inhalte innerhalb der App anzuzeigen. Beim Löschen deines Accounts werden alle eigenen Inhalte entfernt. Beleidigende oder rechtswidrige Inhalte werden auf Hinweis hin entfernt — Meldung über die in-App Report-Funktion.</p>
+
+<h2 style="font-size:16px;margin:18px 0 8px">§ 6 Sanktionen</h2>
+<p>Bei Verstößen können wir folgende Maßnahmen ergreifen:</p>
+<ul style="padding-left:18px">
+  <li>Verwarnung (max. 5 → automatischer Bann)</li>
+  <li>XP-Abzug</li>
+  <li>Diamanten-Reset</li>
+  <li>Temporärer oder dauerhafter Bann</li>
+  <li>Account-Löschung</li>
+</ul>
+
+<h2 style="font-size:16px;margin:18px 0 8px">§ 7 Haftung</h2>
+<p>Wir haften nur für Vorsatz und grobe Fahrlässigkeit. Für leichte Fahrlässigkeit nur bei Verletzung wesentlicher Vertragspflichten. Die App wird "as is" angeboten — wir geben keine Garantie auf jederzeitige Verfügbarkeit oder Fehlerfreiheit.</p>
+
+<h2 style="font-size:16px;margin:18px 0 8px">§ 8 Beendigung</h2>
+<p>Du kannst deinen Account jederzeit über die <a href="/einstellungen#delete-account" style="color:var(--accent)">Einstellungen</a> löschen. Wir können den Account bei wiederholten Verstößen kündigen.</p>
+
+<h2 style="font-size:16px;margin:18px 0 8px">§ 9 Änderungen der Nutzungsbedingungen</h2>
+<p>Wir können diese Bedingungen anpassen. Bei wesentlichen Änderungen informieren wir dich in der App mindestens 30 Tage vor Inkrafttreten. Wenn du den Änderungen nicht zustimmst, kannst du den Vertrag kündigen.</p>
+
+<h2 style="font-size:16px;margin:18px 0 8px">§ 10 Schlussbestimmungen</h2>
+<p>Es gilt luxemburgisches Recht. Bei Verbrauchern (Art. 6 Rom-I-VO) gelten zusätzlich die zwingenden Verbraucherschutzbestimmungen ihres Wohnsitzlandes. Gerichtsstand ist Luxemburg-Stadt. Sollte eine Bestimmung unwirksam sein, bleiben die übrigen davon unberührt.</p>
+
+<div style="margin-top:32px;padding-top:18px;border-top:1px solid var(--border2);font-size:11.5px;color:var(--muted);text-align:center">
+<a href="/datenschutz" style="color:var(--accent);text-decoration:none;margin-right:14px">Datenschutz</a>
+<a href="/impressum" style="color:var(--accent);text-decoration:none">Impressum</a>
+</div>
+</div>`, 'agb');
+    }
+
     // ── RANKING ──
     if (path === '/ranking') {
         const sorted = Object.entries(d.users||{})
@@ -14730,6 +14931,28 @@ ${adminIds.includes(Number(myUid)) ? `
 <div style="padding:16px">
   <a href="/logout" class="btn btn-outline btn-full" style="color:var(--accent)">🚪 Ausloggen</a>
 </div>
+<div style="padding:0 16px 14px;display:flex;flex-direction:column;gap:6px;font-size:12px">
+  <div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin:14px 0 4px">Rechtliches</div>
+  <a href="/datenschutz" style="color:var(--muted);text-decoration:none;padding:8px 0;border-bottom:1px solid var(--border2)">🔒 Datenschutzerklärung</a>
+  <a href="/agb" style="color:var(--muted);text-decoration:none;padding:8px 0;border-bottom:1px solid var(--border2)">📜 Nutzungsbedingungen (AGB)</a>
+  <a href="/impressum" style="color:var(--muted);text-decoration:none;padding:8px 0;border-bottom:1px solid var(--border2)">ℹ️ Impressum</a>
+  <a href="/api/datenexport" style="color:var(--muted);text-decoration:none;padding:8px 0;border-bottom:1px solid var(--border2)">📦 Meine Daten exportieren (DSGVO)</a>
+  <button onclick="deleteAccountDsgvo()" id="delete-account" style="background:none;border:none;color:#ef4444;text-align:left;padding:8px 0;font-size:12px;cursor:pointer;font-family:inherit">🗑️ Account dauerhaft löschen</button>
+</div>
+<script>
+async function deleteAccountDsgvo(){
+  if(!confirm('⚠️ Account dauerhaft löschen?\\n\\nDies entfernt:\\n• Dein Profil + alle Sub-Accounts\\n• Alle deine Posts + Likes + Kommentare\\n• Alle XP, Diamanten, Items\\n• Notifications + Chats\\n\\nDie Löschung kann NICHT rückgängig gemacht werden. Sie erfolgt innerhalb von 30 Tagen (DSGVO Art. 17).')) return;
+  if(!confirm('Wirklich? Alle Daten gehen für immer verloren.')) return;
+  const code = prompt('Tippe LÖSCHEN um zu bestätigen:');
+  if(code !== 'LÖSCHEN'){ alert('Abgebrochen.'); return; }
+  try{
+    const r = await fetch('/api/delete-my-account', {method:'POST'});
+    const j = await r.json();
+    if(j.ok){ alert('✅ Account-Löschung gestartet. Du wirst jetzt ausgeloggt.'); location.href='/logout'; }
+    else{ alert('❌ '+(j.error||'Fehler')); }
+  }catch(e){ alert('❌ Netzwerk: '+e.message); }
+}
+</script>
 <script>
 async function createFeThread(btn){
   btn.disabled=true;btn.textContent='⏳ Erstelle Thread...';
