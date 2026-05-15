@@ -13619,7 +13619,11 @@ function showErr(msg){
 
     // ── LEGAL: Datenschutz / Impressum / AGB (DSGVO-Pflicht + Google-Play-Submission) ──
     if (path === '/datenschutz' || path === '/privacy') {
+        // DIAGNOSE-MARKER (v3): Wenn dieser rote Banner sichtbar ist, wird die Route definitiv vom Server bedient.
+        // Wenn der Banner FEHLT obwohl /datenschutz in der URL steht → Route wird NICHT erreicht (DNS/Cache/Redirect).
+        res.setHeader('X-Cb-Route', 'datenschutz-v3');
         return html(`
+<div style="position:sticky;top:0;background:#ef4444;color:#fff;padding:14px;text-align:center;font-weight:800;font-size:14px;z-index:99999;box-shadow:0 4px 12px rgba(0,0,0,0.3)">✅ DATENSCHUTZ-ROUTE ERREICHT (v3) — wenn du das siehst, funktioniert der Server.</div>
 <div class="topbar"><a href="/profil" class="icon-btn" style="font-size:22px">‹</a><div style="font-size:15px;font-weight:600">Datenschutz</div><div style="width:36px"></div></div>
 <div style="padding:16px;max-width:720px;margin:0 auto;line-height:1.65;font-size:14px;color:var(--text)">
 <h1 style="font-size:22px;font-weight:800;margin:0 0 8px">Datenschutzerklärung</h1>
