@@ -7641,6 +7641,18 @@ p{line-height:1.65;color:var(--muted)}
         return json(r || {ok:false, error:'Mainbot offline'});
     }
 
+    if (path === '/api/admin/report-action' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
+        const body = await parseBody(req);
+        const r = await postBot('/admin-report-action-api', {
+            reportId: String(body.reportId||''),
+            action: String(body.action||''),
+            adminUid: String(myUid||''),
+        });
+        return json(r || {ok:false, error:'Mainbot offline'});
+    }
+
     if (path === '/api/admin/reset-user' && req.method === 'POST') {
         if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
         if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
@@ -11628,10 +11640,12 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
           <button class="dash-tab" data-tab="ranking">🏆 Top XP</button>
           <button class="dash-tab" data-tab="subs">👶 Sub-Accounts</button>
           <button class="dash-tab" data-tab="engagement-log">📋 Engagement-Log</button>
+          <button class="dash-tab" data-tab="reports">🚩 Meldungen <span id="dash-reports-badge" style="display:none;margin-left:4px;padding:1px 6px;border-radius:99px;background:#ef4444;color:#fff;font-size:10px;font-weight:800"></span></button>
           <button class="dash-tab" data-tab="diamond-links">💎 Diamantlinks</button>
         </div>
 
         <div id="dash-engagement-log" style="display:none"></div>
+        <div id="dash-reports" style="display:none"></div>
         <div id="dash-diamond-links" style="display:none"></div>
         <div class="dash-list" id="dash-list">
           <div class="dash-skel"><div class="dash-skel-avatar"></div><div style="flex:1"><div class="dash-skel-line" style="width:160px;margin-bottom:6px"></div><div class="dash-skel-line" style="width:240px"></div></div></div>
@@ -12590,12 +12604,17 @@ document.querySelectorAll('.dash-tab').forEach(btn => {
     const hideAll = () => {
       document.getElementById('dash-list').style.display = 'none';
       document.getElementById('dash-engagement-log').style.display = 'none';
+      const rp = document.getElementById('dash-reports'); if (rp) rp.style.display = 'none';
       const dl = document.getElementById('dash-diamond-links'); if (dl) dl.style.display = 'none';
     };
     if (CUR_TAB === 'engagement-log') {
       hideAll();
       document.getElementById('dash-engagement-log').style.display = 'block';
       loadEngagementLog();
+    } else if (CUR_TAB === 'reports') {
+      hideAll();
+      const rp = document.getElementById('dash-reports'); if (rp) rp.style.display = 'block';
+      loadReports();
     } else if (CUR_TAB === 'diamond-links') {
       hideAll();
       const dl = document.getElementById('dash-diamond-links'); if (dl) dl.style.display = 'block';
@@ -12695,23 +12714,141 @@ async function loadEngagementLog(){
         '</div>';
       }
     }
-    // Reports
+    // Reports-Hint (Details im dedizierten Tab)
     if (j.reports?.length) {
-      html += '<div style="padding:18px 16px 8px;font-size:11px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;color:#ef4444">🚩 Meldungen (' + j.reports.length + ')</div>';
-      for (const r of j.reports) {
-        html += '<div style="margin:0 16px 8px;padding:10px 12px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);border-radius:10px;font-size:12.5px;line-height:1.5">' +
-          '<div><b>'+esc(r.reporterUid)+'</b> meldet <b>'+esc(r.targetUid)+'</b> — '+esc(r.reason||'(kein Grund)')+(r.context?' · '+esc(r.context):'')+'</div>' +
-          '<div style="font-size:11px;color:var(--muted);margin-top:4px">'+fmtTs(r.ts)+'</div>' +
-        '</div>';
-      }
+      const open = j.reports.filter(r => (r.status||'open') === 'open').length;
+      html += '<div style="padding:18px 16px 8px;font-size:11px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;color:#ef4444">🚩 ' + j.reports.length + ' Meldungen ' + (open ? '· '+open+' offen' : '') + ' → siehe Tab "Meldungen"</div>';
     }
     root.innerHTML = html;
+    updateReportsBadge(j.reports || []);
   } catch(e) { root.innerHTML = '<div style="padding:24px;text-align:center;color:#ef4444">'+e.message+'</div>'; }
 }
+
+let LAST_REPORTS = [];
+let CUR_REPORT_FILTER = 'open';
+
+function updateReportsBadge(reports) {
+  const open = (reports||[]).filter(r => (r.status||'open') === 'open').length;
+  const badge = document.getElementById('dash-reports-badge');
+  if (!badge) return;
+  if (open > 0) { badge.style.display = ''; badge.textContent = String(open); }
+  else badge.style.display = 'none';
+}
+
+async function loadReports() {
+  const root = document.getElementById('dash-reports');
+  if (!root) return;
+  root.innerHTML = '<div style="padding:24px;text-align:center;color:var(--dsub)">⏳ Lade Meldungen…</div>';
+  try {
+    const r = await fetch('/api/admin/engagement-log');
+    const j = await r.json();
+    if (!j.ok) { root.innerHTML = '<div style="padding:24px;text-align:center;color:#ef4444">'+(j.error||'Fehler')+'</div>'; return; }
+    LAST_REPORTS = j.reports || [];
+    updateReportsBadge(LAST_REPORTS);
+    renderReports();
+  } catch(e) { root.innerHTML = '<div style="padding:24px;text-align:center;color:#ef4444">'+e.message+'</div>'; }
+}
+
+function renderReports() {
+  const root = document.getElementById('dash-reports');
+  if (!root) return;
+  const fmtTs = (ts) => ts ? new Date(ts).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '–';
+  const all = LAST_REPORTS;
+  const counts = {
+    open: all.filter(r => (r.status||'open') === 'open').length,
+    resolved: all.filter(r => r.status === 'resolved').length,
+    dismissed: all.filter(r => r.status === 'dismissed').length,
+    all: all.length,
+  };
+  const filtered = CUR_REPORT_FILTER === 'all' ? all : all.filter(r => (r.status||'open') === CUR_REPORT_FILTER);
+  const tabBtn = (key, label, count, color) =>
+    '<button onclick="setReportFilter(\\''+key+'\\')" class="dash-tab'+(CUR_REPORT_FILTER===key?' active':'')+'" style="'+(CUR_REPORT_FILTER===key?'':'color:'+color)+'">'+label+' <b style="margin-left:4px;opacity:.7">'+count+'</b></button>';
+
+  let html = '<div class="dash-tabs" style="margin:8px 0 12px">' +
+    tabBtn('open', '🔴 Offen', counts.open, '#f87171') +
+    tabBtn('resolved', '✅ Erledigt', counts.resolved, '#4ade80') +
+    tabBtn('dismissed', '⚪ Verworfen', counts.dismissed, '#9ca3af') +
+    tabBtn('all', '📋 Alle', counts.all, '#e7e7ea') +
+  '</div>';
+
+  if (!filtered.length) {
+    html += '<div style="padding:32px;text-align:center;color:var(--dsub);font-size:13px">' +
+      (CUR_REPORT_FILTER === 'open' ? '🎉 Keine offenen Meldungen.' : 'Keine Einträge in diesem Filter.') +
+    '</div>';
+    root.innerHTML = html;
+    return;
+  }
+
+  for (const r of filtered) {
+    const status = r.status || 'open';
+    const isOpen = status === 'open';
+    const statusPill = status === 'open' ? '<span class="dash-pill err">🔴 Offen</span>'
+      : status === 'resolved' ? '<span class="dash-pill ok">✅ Erledigt'+(r.action?' · '+esc(r.action):'')+'</span>'
+      : '<span class="dash-pill muted">⚪ Verworfen</span>';
+    const warnPill = r.targetWarnings > 0 ? '<span class="dash-pill warn">⚠️ '+r.targetWarnings+'/5 Warns</span>' : '';
+    const banPill = r.targetBanned ? '<span class="dash-pill err">🚫 Bereits gebannt</span>' : '';
+
+    html += '<div style="margin:0 0 10px;padding:14px 16px;background:'+(isOpen?'rgba(239,68,68,0.06)':'var(--dink2)')+';border:1px solid '+(isOpen?'rgba(239,68,68,0.20)':'var(--dline)')+';border-radius:12px">' +
+      '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px">' +
+        statusPill + warnPill + banPill +
+        '<div style="flex:1"></div>' +
+        '<span style="font-size:11px;color:var(--dsub)">'+fmtTs(r.ts)+'</span>' +
+      '</div>' +
+      '<div style="font-size:13.5px;line-height:1.5;margin-bottom:6px">' +
+        '<a href="/profil/'+esc(r.reporterUid)+'" style="color:#a78bfa;font-weight:700;text-decoration:none">'+esc(r.reporterName)+'</a>' +
+        (r.reporterInstagram?' <span style="color:#06b6d4;font-size:12px">@'+esc(r.reporterInstagram)+'</span>':'') +
+        ' <span style="color:var(--dsub)">→ meldet</span> ' +
+        '<a href="/profil/'+esc(r.targetUid)+'" style="color:#f87171;font-weight:700;text-decoration:none">'+esc(r.targetName)+'</a>' +
+        (r.targetInstagram?' <span style="color:#06b6d4;font-size:12px">@'+esc(r.targetInstagram)+'</span>':'') +
+      '</div>' +
+      (r.reason ? '<div style="font-size:12.5px;color:#e7e7ea;margin-bottom:4px"><b style="color:var(--dsub);font-weight:600">Grund:</b> '+esc(r.reason)+'</div>' : '') +
+      (r.context ? '<div style="font-size:12px;color:var(--dsub);margin-bottom:8px">Kontext: '+esc(r.context)+'</div>' : '') +
+      (r.resolvedAt ? '<div style="font-size:11px;color:var(--dsub);margin-bottom:8px">Bearbeitet '+fmtTs(r.resolvedAt)+(r.resolvedBy?' · von UID '+esc(r.resolvedBy):'')+'</div>' : '') +
+      (isOpen
+        ? '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">' +
+            '<button onclick="reportAction(\\''+esc(r.id)+'\\',\\'dismiss\\',this)" class="dash-act">⚪ Verwerfen</button>' +
+            '<button onclick="reportAction(\\''+esc(r.id)+'\\',\\'resolve\\',this)" class="dash-act">✅ Erledigt (keine Aktion)</button>' +
+            '<button onclick="reportAction(\\''+esc(r.id)+'\\',\\'warn\\',this)" class="dash-act" style="border-color:rgba(245,158,11,0.35);color:#fbbf24">⚠️ Verwarnen</button>' +
+            (r.targetBanned ? '' : '<button onclick="reportAction(\\''+esc(r.id)+'\\',\\'ban\\',this)" class="dash-act danger">🚫 Bannen</button>') +
+            '<button onclick="reportAction(\\''+esc(r.id)+'\\',\\'delete\\',this)" class="dash-act" style="margin-left:auto;color:var(--dsub)">🗑️</button>' +
+          '</div>'
+        : '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">' +
+            '<button onclick="reportAction(\\''+esc(r.id)+'\\',\\'delete\\',this)" class="dash-act" style="color:var(--dsub)">🗑️ Löschen</button>' +
+          '</div>'
+      ) +
+    '</div>';
+  }
+  root.innerHTML = html;
+}
+
+function setReportFilter(key) { CUR_REPORT_FILTER = key; renderReports(); }
+
+async function reportAction(reportId, action, btn) {
+  const labels = { dismiss:'Verwerfen', resolve:'Erledigen', warn:'Verwarnen', ban:'Bannen', delete:'Löschen' };
+  if (action === 'ban' || action === 'delete') {
+    if (!confirm(labels[action] + '? Diese Aktion ist nicht rückgängig zu machen.')) return;
+  }
+  btn.disabled = true;
+  const oldText = btn.textContent;
+  btn.textContent = '⏳';
+  try {
+    const r = await fetch('/api/admin/report-action', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reportId, action }),
+    });
+    const j = await r.json();
+    if (j.ok) loadReports();
+    else { btn.disabled = false; btn.textContent = oldText; alert('❌ ' + (j.error || 'Fehler')); }
+  } catch(e) { btn.disabled = false; btn.textContent = oldText; alert('❌ ' + e.message); }
+}
+
 document.getElementById('dash-q').addEventListener('input', e => { CUR_Q = e.target.value; renderList(); });
 
 refreshUsers();
 setInterval(refreshUsers, 60000);
+// Initial-Badge für offene Meldungen (lazy, ohne UI zu blockieren)
+fetch('/api/admin/engagement-log').then(r=>r.json()).then(j=>{ if (j.ok) { LAST_REPORTS = j.reports||[]; updateReportsBadge(LAST_REPORTS); } }).catch(()=>{});
 </script>
 `, 'dashboard');
     }
