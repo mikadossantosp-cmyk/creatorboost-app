@@ -3336,6 +3336,39 @@ async function handleRequest(req, res) {
     const path = pu.pathname;
     const query = pu.query;
 
+    // ── DIAGNOSE: Mainbot live testen (für Admin-Debugging von Signup-Fehlern) ──
+    if (path === '/api/diag/signup') {
+        const testEmail = String(query.email || '').toLowerCase().trim() || 'diag-test-' + Date.now() + '@example.invalid';
+        const t0 = Date.now();
+        // 1) Mainbot /data erreichbar?
+        const dataT0 = Date.now();
+        const bd = await fetchBotRaw('/data');
+        const dataMs = Date.now() - dataT0;
+        // 2) Email bereits in d.users[]?
+        let emailExists = null;
+        if (bd && bd.users) {
+            const found = Object.entries(bd.users).find(([, u]) =>
+                String(u.email||'').toLowerCase() === testEmail ||
+                String(u.pendingEmail||'').toLowerCase() === testEmail
+            );
+            if (found) emailExists = { uid: found[0], state: found[1].email === testEmail ? 'active' : 'pending', emailConfirmedAt: found[1].emailConfirmedAt || null };
+        }
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({
+            ok: true,
+            ts: new Date().toISOString(),
+            totalMs: Date.now() - t0,
+            mainbotConfigured: !!MAINBOT_URL,
+            mainbotUrl: MAINBOT_URL ? MAINBOT_URL.replace(/^https?:\/\//,'').slice(0,30) + '...' : null,
+            dataFetch: { ok: !!bd, ms: dataMs, userCount: bd?.users ? Object.keys(bd.users).length : null },
+            testEmail,
+            emailExists,
+            recommend: !bd ? 'Mainbot nicht erreichbar — Railway-Status checken'
+                : emailExists ? ('Email existiert schon als UID ' + emailExists.uid + ' (' + emailExists.state + '). User soll → Sign-In oder andere Email.')
+                : 'Mainbot OK + Email frei. Signup sollte klappen — Browser-DevTools/Network-Tab beim Versuch checken.',
+        }, null, 2));
+    }
+
     // ── HEALTH-CHECK — antwortet IMMER 200 auch wenn Mainbot down ist.
     // Railway healthchecks brauchen das damit der Container nicht killed wird.
     if (path === '/api/health' || path === '/healthz' || path === '/health') {
