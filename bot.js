@@ -38,6 +38,7 @@ const fs = require('fs');
 const zlib = require('zlib');
 const DATA_DIR = fs.existsSync('/data') ? '/data' : __dirname;
 const SESSIONS_FILE = DATA_DIR + '/cb_sessions.json';
+const PENDING_CONFIRMS_FILE = DATA_DIR + '/email_confirm_pending.json';
 
 // Sessions von Disk laden
 const sessions = new Map();
@@ -47,6 +48,9 @@ const emailConfirmTokens = new Map(); // token → { email, uid, exp } (für /ei
 const accountUnlockTokens = new Map(); // token → { uid, exp } — nach Klick im Mail Settings-Edit freischalten
 const emailRateLimit = new Map();      // email → lastRequestTs (Cooldown gegen Spam)
 const signupIpRateLimit = new Map();   // ip → { ts, n } — gegen Fake-Account-Spam + Email-Enumeration
+// Signup-Email-Confirmation: tracking unconfirmed Users LOCAL (Mainbot wird NICHT angefasst).
+// uid → { token, email, exp }. Persisted to disk via savePendingEmailConfirms.
+const pendingEmailConfirms = new Map();
 const SIGNUP_RATE_LIMIT_WINDOW = 60 * 60 * 1000; // 1 Stunde Fenster
 const SIGNUP_RATE_LIMIT_MAX = 5;       // max 5 Signups pro Stunde pro IP
 const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
@@ -146,6 +150,58 @@ function saveSessions() {
     try { fs.writeFileSync(LOCAL_SESSIONS, data); } catch(e) { console.error('Sessions save failed (local):', e.message); }
 }
 setInterval(saveSessions, 60000);
+
+// Pending Email-Confirmations laden + speichern
+try {
+    if (fs.existsSync(PENDING_CONFIRMS_FILE)) {
+        const raw = JSON.parse(fs.readFileSync(PENDING_CONFIRMS_FILE, 'utf8'));
+        const now = Date.now();
+        for (const [uid, v] of Object.entries(raw || {})) {
+            if (v && v.exp > now) pendingEmailConfirms.set(String(uid), v);
+        }
+        console.log('✅ Pending email-confirms geladen:', pendingEmailConfirms.size);
+    }
+} catch(e) { console.error('PendingConfirms load failed:', e.message); }
+function savePendingEmailConfirms() {
+    const obj = {};
+    for (const [k,v] of pendingEmailConfirms.entries()) obj[k] = v;
+    try { fs.writeFileSync(PENDING_CONFIRMS_FILE, JSON.stringify(obj)); } catch(e) { console.error('PendingConfirms save failed:', e.message); }
+}
+setInterval(savePendingEmailConfirms, 60000);
+// Cleanup expired entries every 5 min
+setInterval(() => {
+    const now = Date.now();
+    let removed = 0;
+    for (const [uid, v] of pendingEmailConfirms.entries()) {
+        if (!v || v.exp < now) { pendingEmailConfirms.delete(uid); removed++; }
+    }
+    if (removed) { savePendingEmailConfirms(); console.log('PendingConfirms expired cleanup:', removed); }
+}, 5 * 60 * 1000);
+
+// Helper: Bestätigungs-Email versenden für einen User. Fire-and-forget vom Signup-Pfad.
+async function sendSignupConfirmationEmail(uid, email, hostHeader) {
+    try {
+        const token = crypto.randomBytes(24).toString('hex');
+        const exp = Date.now() + 7 * 24 * 60 * 60 * 1000;
+        pendingEmailConfirms.set(String(uid), { token, email, exp });
+        savePendingEmailConfirms();
+        const baseUrl = (process.env.APP_URL || ('https://' + (hostHeader || 'www.creatorboostx.de'))).replace(/\/$/, '');
+        const confirmUrl = baseUrl + '/auth/confirm-email?token=' + encodeURIComponent(token);
+        const userName = String(email||'').split('@')[0].replace(/[<>]/g,'').slice(0,30);
+        const html = '<!DOCTYPE html><html><body style="margin:0;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',sans-serif;background:#000;color:#fff;padding:0">'+
+            '<div style="max-width:560px;margin:0 auto;padding:32px 24px">'+
+            '<div style="text-align:center;margin-bottom:24px"><img src="'+baseUrl+'/cx-logo-256.png" width="80" height="80" style="border-radius:18px" alt="CreatorX"></div>'+
+            '<h1 style="font-size:26px;font-weight:700;margin:0 0 12px;text-align:center;color:#fff">Willkommen bei CreatorX! 🎉</h1>'+
+            '<p style="font-size:15px;color:#a8a39a;line-height:1.6;text-align:center;margin:0 0 28px">Hi '+userName+', klick den Button um deine Email-Adresse zu bestätigen.</p>'+
+            '<div style="text-align:center;margin:32px 0"><a href="'+confirmUrl+'" style="display:inline-block;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px;letter-spacing:0.3px">✅ Email bestätigen</a></div>'+
+            '<p style="font-size:12px;color:#605c54;line-height:1.5;text-align:center;margin:32px 0 0;border-top:1px solid #221f1a;padding-top:20px">Link 7 Tage gültig, einmalig nutzbar.<br>Falls du das nicht warst, ignoriere diese Email.</p>'+
+            '</div></body></html>';
+        const ok = await sendEmail(email, '🎉 Willkommen bei CreatorX — Email bestätigen', html);
+        console.log('[email-confirm] Sent to', email, '→', ok ? 'OK' : 'FAILED');
+    } catch(e) {
+        console.error('[email-confirm] sendSignupConfirmationEmail error:', e.message, 'uid:', uid, 'email:', email);
+    }
+}
 
 // Weekly raffle (Gewinnspiel): runs every minute, triggers Sunday 20:00 Berlin time
 let _lastRaffleTrigger = '';
@@ -1228,10 +1284,17 @@ function layout(content, session, page='feed', lang='de') {
     // gemeinsame Sicht auf "geliked" haben.
     const _meUid = session ? String(session.activeUid || session.uid || '') : '';
     let _isAdmin = false;
+    let _emailUnconfirmed = false;
     try {
         const _adm = Array.isArray(_dataCache?._adminIds) ? _dataCache._adminIds.map(Number) : [];
         if (_meUid && _adm.includes(Number(_meUid))) _isAdmin = true;
         if (!_isAdmin && _dataCache?.users?.[_meUid]?.role && /admin/i.test(String(_dataCache.users[_meUid].role))) _isAdmin = true;
+        // Email-Confirmation-Banner: User hat noch nicht auf Bestätigungs-Link geklickt
+        // (lokales Tracking, Mainbot ist nicht involviert).
+        if (_meUid) {
+            const _pec = pendingEmailConfirms.get(String(session?.uid || _meUid));
+            if (_pec && _pec.exp > Date.now()) _emailUnconfirmed = true;
+        }
     } catch (e) {}
     return `<!DOCTYPE html><html lang="${lang}" data-theme="light">
 <head>
@@ -1259,6 +1322,22 @@ ${session ? `<link rel="prefetch" href="/feed"><link rel="prefetch" href="/explo
 <style>${CSS}</style>
 </head>
 <body>
+${_emailUnconfirmed ? `<div id="cb-email-confirm-bar" style="position:sticky;top:0;left:0;right:0;z-index:9998;background:linear-gradient(90deg,#f59e0b,#eab308);color:#000;padding:10px 14px;display:flex;align-items:center;justify-content:center;gap:12px;font-family:Inter,sans-serif;font-size:13px;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,0.15)">
+  <span style="font-size:16px;flex-shrink:0">📧</span>
+  <span style="flex:1;min-width:0">Bestätige deine Email-Adresse</span>
+  <button onclick="cbResendConfirm(this)" style="background:rgba(0,0,0,0.20);border:1px solid rgba(0,0,0,0.30);color:#000;padding:5px 12px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0">Erneut senden</button>
+</div>
+<script>
+async function cbResendConfirm(btn){
+  btn.disabled=true;btn.textContent='⏳';
+  try{
+    const r=await fetch('/api/resend-confirmation',{method:'POST'});
+    const j=await r.json();
+    if(j&&j.ok){btn.textContent='✓ Gesendet';btn.style.background='rgba(34,197,94,0.4)';setTimeout(()=>{btn.textContent='Erneut senden';btn.disabled=false;btn.style.background='rgba(0,0,0,0.20)';},5000);}
+    else{btn.textContent='Erneut senden';btn.disabled=false;alert('❌ '+(j&&j.error||'Fehler beim Senden'));}
+  }catch(e){btn.textContent='Erneut senden';btn.disabled=false;alert('❌ Netzwerkfehler');}
+}
+</script>` : ''}
 <div class="toast" id="toast"></div>
 <div class="cb-banner" id="cb-banner" role="alert" aria-live="assertive"></div>
 <a href="/download-app" id="apk-download-btn" style="display:none;position:fixed;bottom:calc(120px + var(--safe-bottom,0px));left:50%;transform:translateX(-50%);background:#22c55e;color:#fff;border-radius:24px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;z-index:9997;text-decoration:none;white-space:nowrap;box-shadow:0 4px 16px rgba(34,197,94,.4)">📦 APK herunterladen</a>
@@ -4771,8 +4850,64 @@ try { fetch('/api/track-funnel',{method:'POST',headers:{'Content-Type':'applicat
         saveSessions();
         // → Onboarding-Flow (Insta first)
         res.writeHead(200, {'Set-Cookie':`cbsid=${sid}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=157680000`,'Content-Type':'application/json'});
-        return res.end(JSON.stringify({ok:true, redirect:'/onboarding-instagram?first=1'}));
+        res.end(JSON.stringify({ok:true, redirect:'/onboarding-instagram?first=1'}));
+        // Email-Confirmation NACH Response — fire-and-forget, blockt Signup NICHT.
+        // Mainbot bleibt unberührt; Pending-State + Token leben lokal im App-Bot.
+        setImmediate(() => {
+            sendSignupConfirmationEmail(created.uid, email, req.headers.host).catch(e =>
+                console.error('[signup] confirm-email send failed:', e.message)
+            );
+        });
+        return;
     }
+    // ── EMAIL-CONFIRMATION: Klick aus Bestätigungs-Mail ──
+    if (path === '/auth/confirm-email' && req.method === 'GET') {
+        const token = String(query.token || '').trim();
+        if (!token) {
+            res.writeHead(302, { 'Location': '/login?error=confirm-invalid' });
+            return res.end();
+        }
+        // Token → uid Lookup
+        let foundUid = null, foundEntry = null;
+        for (const [uid, entry] of pendingEmailConfirms.entries()) {
+            if (entry && entry.token === token) { foundUid = uid; foundEntry = entry; break; }
+        }
+        if (!foundUid) {
+            res.writeHead(302, { 'Location': '/login?error=confirm-invalid' });
+            return res.end();
+        }
+        if (foundEntry.exp < Date.now()) {
+            pendingEmailConfirms.delete(foundUid);
+            savePendingEmailConfirms();
+            res.writeHead(302, { 'Location': '/login?error=confirm-expired' });
+            return res.end();
+        }
+        // Token gültig → Pending-Entry löschen. Mainbot's emailConfirmedAt ist seit Signup
+        // schon gesetzt (auto-confirm), also keine zusätzliche Mainbot-Aktion nötig.
+        pendingEmailConfirms.delete(foundUid);
+        savePendingEmailConfirms();
+        console.log('[email-confirm] Confirmed uid:', foundUid, 'email:', foundEntry.email);
+        // Erfolg-Page mit Auto-Redirect zu /feed
+        res.writeHead(200, {'Content-Type':'text/html; charset=utf-8'});
+        return res.end('<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="refresh" content="3;url=/feed"><title>Email bestätigt · CreatorX</title><style>body{margin:0;background:#000;color:#fff;font-family:-apple-system,system-ui,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;text-align:center;padding:24px}.box{max-width:420px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:20px;padding:36px 28px}.icon{font-size:56px;margin-bottom:16px}h1{font-size:24px;font-weight:800;margin:0 0 10px;background:linear-gradient(180deg,#fff,#22c55e);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}p{font-size:14px;color:rgba(255,255,255,0.65);line-height:1.6;margin:0 0 20px}a.btn{display:inline-block;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;padding:13px 28px;border-radius:10px;text-decoration:none;font-weight:700;font-size:14px}</style></head><body><div class="box"><div class="icon">✅</div><h1>Email bestätigt!</h1><p>Danke! Du wirst gleich weitergeleitet…</p><a href="/feed" class="btn">→ Zur App</a></div></body></html>');
+    }
+
+    // Resend Bestätigungsmail für eingeloggten User
+    if (path === '/api/resend-confirmation' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        const uid = String(session.uid);
+        const bd = await fetchBot('/data');
+        const u = bd?.users?.[uid];
+        if (!u || !u.email) return json({ok:false, error:'Keine Email gesetzt'}, 400);
+        // Rate-Limit: max 1 Resend pro Minute pro User
+        const prev = pendingEmailConfirms.get(uid);
+        if (prev && prev.exp - (7 * 24 * 60 * 60 * 1000 - 60 * 1000) > Date.now()) {
+            return json({ok:false, error:'Bitte warte 1 Minute bevor du erneut sendest.'});
+        }
+        await sendSignupConfirmationEmail(uid, u.email, req.headers.host);
+        return json({ok:true});
+    }
+
     if (path === '/auth/email-login' && req.method === 'GET') {
         const token = String(query.token || '').trim();
         if (!token) { res.writeHead(302,{'Location':'/login?error=email-invalid'}); return res.end(); }
