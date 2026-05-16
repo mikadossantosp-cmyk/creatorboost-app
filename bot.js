@@ -9304,7 +9304,24 @@ async function submitSuperLink(){
           ? '<div style="padding:11px;background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.35);border-radius:10px;font-size:13px;color:#22c55e;font-weight:700;text-align:center">✅ Engagiert · +'+(p.reward||3)+' 💎</div>'
           : '<button onclick="diamondLikeClick(\\''+p.id+'\\', this)" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;background:linear-gradient(135deg,#06b6d4,#0e7490);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 0 18px rgba(6,182,212,0.35);position:relative"><span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900">2</span><span>💎 Engagiert · +'+(p.reward||3)+' 💎</span></button>'
         ) +
-        '<div style="font-size:11px;color:var(--muted);margin-top:8px;text-align:center">'+p.likeCount+' Engagements</div>' +
+        (function(){
+          const lkrs = Array.isArray(p.likers) ? p.likers : [];
+          const cnt = p.likeCount || lkrs.length;
+          if (cnt === 0) return '<div style="font-size:11px;color:var(--muted);margin-top:8px;text-align:center">Noch keine Engagements</div>';
+          const top = lkrs.slice(0,3).map(u => '<b style="color:var(--text)">'+esc(u.name||'User')+'</b>').join(', ');
+          const rest = cnt > 3 ? ' und ' + (cnt-3) + ' weiteren' : '';
+          const namesTxt = 'Gefällt ' + top + rest;
+          const rows = lkrs.map(u => {
+            const av = u.instagram ? '<img src="https://unavatar.io/instagram/'+esc(u.instagram)+'" style="width:34px;height:34px;border-radius:50%;object-fit:cover" alt="" loading="lazy">'
+                                   : '<div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#06b6d4,#0e7490);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px">'+esc((u.name||'?')[0])+'</div>';
+            return '<a href="/profil/'+esc(u.uid)+'" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--border2);text-decoration:none">'+av+'<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:var(--text)">'+esc(u.name||'User')+'</div>'+(u.instagram?'<div style="font-size:11px;color:#06b6d4">@'+esc(u.instagram)+'</div>':'')+'</div><div style="font-size:11px;color:var(--accent)">→</div></a>';
+          }).join('');
+          return '<div id="liker-rows-dl-'+esc(p.id)+'" style="display:none">'+rows+'</div>' +
+            '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px;padding:0 4px">' +
+              '<div style="font-size:12px;color:var(--muted);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+namesTxt+'</div>' +
+              '<button onclick="showLikerModal(\\'dl-'+esc(p.id)+'\\')" style="background:rgba(6,182,212,0.10);border:1px solid rgba(6,182,212,0.35);color:#06b6d4;font-size:11px;font-weight:700;padding:5px 10px;border-radius:8px;cursor:pointer;white-space:nowrap;flex-shrink:0">👥 Wer hat engagiert? ('+cnt+')</button>' +
+            '</div>';
+        })() +
       '</div>' +
     '</div>';
   }
