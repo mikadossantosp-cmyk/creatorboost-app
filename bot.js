@@ -252,6 +252,171 @@ try { if (fs.existsSync(PUSH_SUBS_FILE)) pushSubs = JSON.parse(fs.readFileSync(P
 function savePushSubs() { try { fs.writeFileSync(PUSH_SUBS_FILE, JSON.stringify(pushSubs)); } catch(e) { console.error('Push subs save failed:', e.message); } }
 if (webpush) webpush.setVapidDetails('mailto:admin@creatorx.app', VAPID_PUBLIC, VAPID_PRIVATE);
 
+// ── Google Gemini API (Helper-Bot AI, kostenloser Tier) ──
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
+if (GEMINI_API_KEY) {
+    console.log('[AI] Gemini Helper-AI aktiv (Modell:', GEMINI_MODEL + ')');
+} else {
+    console.log('[AI] GEMINI_API_KEY fehlt — Helper-AI deaktiviert, Fallback auf Keyword/Admin');
+}
+const HELPER_SYSTEM_PROMPT = `Du bist CreatorBoost, der freundliche In-App-Assistent von CreatorBoostX (CreatorX) — einer Web-/PWA-App für Instagram-Creator-Wachstum via gegenseitiges Engagement.
+
+# Antwortformat — WICHTIG
+- Antworte auf Deutsch (du-Form, locker, freundlich).
+- Antworte in einfachem HTML (NICHT Markdown). Erlaubt: <b>, <br>, <ul>, <li>, <a href="/pfad" style="color:#a78bfa;font-weight:700">Linktext</a>, <code>.
+- KEINE Tags wie <html>, <body>, <p>, <div>, <script>, <style>, <img>. KEIN ** oder ### (Markdown).
+- Max 6-8 Sätze. Lieber kurz + direkter Link zur App-Seite.
+- Wenn du etwas nicht weißt: ehrlich sagen + "<i>Frag den Admin: <a href='/nachrichten/creatorboost' style='color:#a78bfa;font-weight:700'>→ DM an CreatorBoost</a></i>"
+- Erfinde NIEMALS Features, URLs, Beträge oder Regeln. Wenn nicht hier dokumentiert → "weiß ich nicht genau".
+
+# App-Navigation
+- /feed — Haupt-Feed, alle Reels, Post-Button (+), Helper-Chat (💬)
+- /explore — Discovery + Tabs (Regeln-Tab: /explore?tab=regeln)
+- /profil oder /profil/{uid} — User-Profile
+- /einstellungen — Hub mit Sub-Seiten: /einstellungen/account (Email+PW), /einstellungen/privacy (Blockierte), /einstellungen/notifications (Push), /einstellungen/sicherheit (Logout, Sessions), /einstellungen/admin (nur Admins)
+- /nachrichten — DM-Inbox, /nachrichten/creatorboost = Direkt-DM mit Admin
+- /dashboard — nur Admins
+- /diamanten — Shop & Diamanten
+- /daily — Daily-Bonus
+- /set-password — Passwort setzen
+- /logout — Direkt-Ausloggen
+- /download-app — APK-Download
+
+# XP-System (exakte Werte)
+- Like: +5 XP pro Like (Pflicht: 5/Tag für M1)
+- Post: +5 XP (1 Link/Tag Standard)
+- Daily-Missionen M1+M2+M3: je +5 XP, M3 zusätzlich +1💎 — max +15 XP + 1💎/Tag
+- Wochen-Missionen (7 Tage Folge): W-M1 +10 XP, W-M2 +15 XP + 1💎, W-M3 +20 XP + 2💎
+- Daily-Bonus (/daily): zufällig 10-29 XP
+- First-Post-Newcomer-Bonus: +20 XP einmalig
+- Event-Multiplier während Events (z.B. +100%)
+
+# Badges (XP-Schwellen)
+🆕 New: 0-49 · 📘 Anfänger: 50-499 · ⬆️ Aufsteiger: 500-999 · 🏅 Erfahrener: 1000-4999 · 👑 Elite: 5000-9999 · 🌟 Elite+: 10000+
+
+# Missionen (Auswertung täglich 12:00 Berlin)
+- M1 (Daily Engagement): 5 Links liken + Insta-Kommentar → +5 XP
+- M2 (Solidarisch): 80%+ aller heute geposteten Links liken → +5 XP
+- M3 (Champion): ALLE heute geposteten Links liken (cap 30) → +5 XP + 1💎
+- Visit-before-Like-Pflicht: erst Insta öffnen, liken+kommentieren, DANN App-Like. Sonst = Schein-Engagement = Verwarnung.
+
+# Diamanten 💎
+Earn: M3 daily (+1), W-M2 (+1), W-M3 (+2), Pinned-Post engagieren (+1, 1× pro Owner), Diamantlink liken (+3), Roulette, Diamond-Events.
+Spend: Diamantlink posten = 30💎 (3 Tage Top) · Superlink-Extra-Slot = 10💎 · Shop-Items (Banner, Avatar-Rings, Trophys).
+
+# Superlinks ⚡
+Premium-Post die Woche, besonders sichtbar. Limit: 1/Woche (Mo-Sa), Elite+ 2/Woche. Extra-Slot = 10💎.
+Engagement-Pflicht aller Member: LIKEN + KOMMENT + TEILEN + SPEICHERN auf Insta. Wer nicht: Sonntag 23:59 → −50 XP + Verwarnung.
+Posten: /feed → + → ⚡ Superlink.
+
+# Kollab-Posts 🤝
+Doppel-Post mit Partner. 1/Woche pro Paar. Beide Logos/Handles sichtbar. Engagement-Pflicht. Jeder Liker +1💎.
+Setup: Partner-Profil → "🤝 Kollab anfragen" → Partner bestätigt → /feed → + → 🤝 Kollab.
+
+# Pinned Reel 📌
+Lieblings-Reel auf Creator-Karte. Setzen: /einstellungen → 📌 Pinned Reel → Insta-URL. Nur 1× pro 30 Tage änderbar. Liker +1💎 (1× pro Owner-Paar).
+
+# Verwarnungen ⚠️
+Triggers: Post ohne M1, Schein-Engagement, Admin-Verwarnung, Superlink-Engagement-Verstoß.
+Eskalation: 1+2 → kurze DM · 3 → Aufklärungs-DM · 4 → "Letzte Chance"-DM · 5 → 🚫 permanenter Auto-Ban.
+Abbauen: 5 Tage M1 in Folge → 1 Warn weg.
+
+# Link-Regeln
+Erlaubt: nur eigene Insta-Reels · 1 Link/Tag (mehr via Bonus-Link kaufen) · kein Self-Like.
+Verboten: fremde Reels, Affiliate/Spam, Wiederholungen. Self-Like → temporäre Sperre + XP-Abzug.
+
+# Account-Verwaltung
+- Profilbild: /einstellungen → 📷 Profilbild → upload → crop. Quadrat optimal.
+- Banner: /einstellungen → Banner. Querformat 3:1.
+- Bio: /einstellungen → Bio (max 100 Zeichen).
+- Spitzname: /einstellungen → Spitzname (max 30 Zeichen).
+- Instagram-Handle: /einstellungen → Instagram → Handle ohne @.
+- Email setzen/ändern: /einstellungen/account. Mit gesetztem PW: erst "Änderung anfragen" → Bestätigungs-Mail → 30 Min Edit-Window.
+- Passwort: /set-password oder /einstellungen/account. Min. 6 Zeichen.
+- Ausloggen: /einstellungen/sicherheit → 🚪 Ausloggen oder direkt /logout.
+- Account löschen: /einstellungen → ganz unten 🗑️ Account dauerhaft löschen → "LÖSCHEN" tippen. Nicht umkehrbar (außer Admin-Restore in 50 Tagen). DSGVO Art. 17.
+- User blockieren: User-Profil → 3-Punkte-Menü → 🚫 Blockieren. Verwalten: /einstellungen/privacy.
+- Push-Notifications: /einstellungen/notifications → "Push aktivieren" → Browser-Berechtigung.
+- Sub-Account: Profil → Account-Switcher oben → + Sub-Account.
+- App installieren: iPhone/Safari: Teilen → "Zum Home-Bildschirm". Android/Chrome: Menü → "App installieren". Oder /download-app (APK).
+- Dark Mode: 🌙 oben rechts in Topbar.
+
+# Posting
+- Normal: /feed → + → 📌 Link posten → Insta-Reel-URL. +5 XP + 8h Pin im Heute-Feed.
+- Superlink: /feed → + → ⚡ Superlink.
+- Kollab: /feed → + → 🤝 Kollab (nach Partner-Bestätigung).
+- Diamantlink: /feed → + → 💎 Diamantlink (30💎, 3 Tage Top).
+
+# Daily-Bonus 🎁
+1× pro Tag via /daily. Zufällig 10-29 XP.
+
+# Shop 🛍
+/diamanten → Banner-Designs, Avatar-Rings (animiert), Trophy-Items, Superlink-Credits, Extra-Link-Slot.
+
+# Was du NICHT darfst
+- Keine XP/Diamanten manuell vergeben (nur Admin).
+- Keine User bannen/verwarnen (nur Admin).
+- Keine Bug-Fixes versprechen — verweise auf Admin-DM.
+- Keine fremden User-Daten preisgeben.
+- Keine Wachstums-Garantien.
+
+# Ton
+Locker, du-Form, hilfsbereit, sparsam mit Emoji. Bei Frust: empathisch ("Ärgerlich! Lass uns das fixen…").`;
+
+async function helperAiAnswer(question, history) {
+    if (!GEMINI_API_KEY) throw new Error('AI not configured');
+    const stripHtml = s => String(s||'').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    const contents = [];
+    for (const m of (history || []).slice(-10)) {
+        const role = m.role === 'user' ? 'user' : 'model';
+        const text = (m.role === 'user') ? String(m.text||'').trim() : stripHtml(m.text||'');
+        if (!text) continue;
+        contents.push({ role, parts: [{ text }] });
+    }
+    if (contents.length && contents[contents.length-1].role === 'user') contents.pop();
+    contents.push({ role: 'user', parts: [{ text: question }] });
+    const payload = JSON.stringify({
+        system_instruction: { parts: [{ text: HELPER_SYSTEM_PROMPT }] },
+        contents,
+        generationConfig: { temperature: 0.7, maxOutputTokens: 1024 },
+        safetySettings: [
+            { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
+            { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
+            { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
+            { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' },
+        ],
+    });
+    const result = await new Promise((resolve, reject) => {
+        const opts = {
+            hostname: 'generativelanguage.googleapis.com',
+            path: '/v1beta/models/' + encodeURIComponent(GEMINI_MODEL) + ':generateContent?key=' + encodeURIComponent(GEMINI_API_KEY),
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) },
+        };
+        const req = https.request(opts, res => {
+            let buf = '';
+            res.on('data', c => buf += c);
+            res.on('end', () => {
+                try {
+                    const j = JSON.parse(buf);
+                    if (res.statusCode !== 200) return reject(new Error('Gemini ' + res.statusCode + ': ' + (j.error && j.error.message || buf.slice(0,200))));
+                    resolve(j);
+                } catch (e) { reject(new Error('Gemini parse: ' + e.message)); }
+            });
+        });
+        req.on('error', reject);
+        req.setTimeout(20000, () => { req.destroy(new Error('Gemini timeout')); });
+        req.write(payload); req.end();
+    });
+    const cand = (result.candidates || [])[0];
+    if (!cand) throw new Error('Gemini: keine Antwort');
+    if (cand.finishReason === 'SAFETY') throw new Error('Gemini: Safety-Block');
+    const text = ((cand.content && cand.content.parts) || []).map(p => p.text || '').join('\n').trim();
+    if (!text) throw new Error('Gemini: leere Antwort');
+    return text;
+}
+
 const RING_ITEMS = [
     { id: 'ring_flame',   name: 'Flame Ring',   emoji: '🔥', price: 8,  shadow: '0 0 0 3px #ff9a3c, 0 0 0 6px #ff3900',   gradient: 'linear-gradient(135deg,#ff3900,#ff9a3c)', desc: 'Heißes Feuer-Glühen' },
     { id: 'ring_ocean',   name: 'Ocean Ring',   emoji: '🌊', price: 8,  shadow: '0 0 0 3px #00c9ff, 0 0 0 6px #0088cc',   gradient: 'linear-gradient(135deg,#0088cc,#00c9ff)', desc: 'Tiefblaues Meeresleuchten' },
@@ -7851,6 +8016,22 @@ p{line-height:1.65;color:var(--muted)}
         const r = await postBot('/helper-question-api', { fromUid: String(session.uid), question });
         return json(r || {ok:false, error:'Mainbot offline'});
     }
+    if (path === '/api/helper-ai' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        if (!GEMINI_API_KEY) return json({ok:false, fallback:true, error:'AI nicht konfiguriert'});
+        const body = await parseBody(req);
+        const question = String(body.question || '').trim();
+        if (!question) return json({ok:false, error:'Frage fehlt'}, 400);
+        if (question.length > 800) return json({ok:false, error:'Frage zu lang (max 800 Zeichen)'}, 400);
+        try {
+            const hist = await fetchBotRaw('/helper-chat-history-api?uid=' + encodeURIComponent(session.uid));
+            const answer = await helperAiAnswer(question, (hist && hist.messages) || []);
+            return json({ok:true, answer});
+        } catch (e) {
+            console.error('[AI] helper-ai failed:', e.message);
+            return json({ok:false, fallback:true, error: e.message});
+        }
+    }
     if (path === '/api/admin/helper-questions' && req.method === 'GET') {
         if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
         if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
@@ -9339,7 +9520,7 @@ async function submitSuperLink(){
       <div class="cb-helper-avatar" style="overflow:hidden"><img src="/appbild/creatorboost/profilepic" alt="CreatorBoost" style="width:100%;height:100%;object-fit:cover;border-radius:50%"></div>
       <div class="cb-helper-hdr-title">
         <b id="cb-helper-title">CreatorBoost</b>
-        <span>online · sucht in Regeln &amp; System</span>
+        <span>online · KI-Assistent</span>
       </div>
       <a href="/nachrichten/creatorboost" class="cb-helper-close" style="text-decoration:none;background:rgba(167,139,250,.15);color:#a78bfa;font-size:14px;width:auto;padding:0 12px;display:inline-flex;align-items:center;gap:5px" title="Vollständiger Chat">💬</a>
       <button class="cb-helper-close" onclick="cbHelperClose()" aria-label="Schließen">✕</button>
@@ -9566,6 +9747,14 @@ function cbHelperFindTopic(q){
   }
   return bestScore >= 4 ? best : null;
 }
+function cbHelperFindScore(q){
+  const lq = (q||'').toLowerCase(); let best = 0;
+  for (const kws of Object.values(CB_HELP_KEYWORDS)){
+    let s=0; for (const kw of kws){ s += cbHelperKwScore(lq, kw); }
+    if (s > best) best = s;
+  }
+  return best;
+}
 async function cbHelperAsk(){
   const inp = document.getElementById('cb-helper-input');
   const btn = document.getElementById('cb-helper-send');
@@ -9575,29 +9764,26 @@ async function cbHelperAsk(){
   inp.value = '';
   const body = document.getElementById('cb-helper-body');
   const chips = document.getElementById('cb-helper-chips');
-  // User-Bubble + persist
   const u = document.createElement('div'); u.className='cb-msg user'; u.textContent = q;
   body.appendChild(u);
   cbHelperPersist('user', q);
   chips.innerHTML = '';
-  // Typing
   const t = document.createElement('div'); t.className='cb-typing';
   t.innerHTML='<span></span><span></span><span></span>';
   body.appendChild(t);
   body.scrollTop = body.scrollHeight;
-  // Search first
-  await new Promise(r => setTimeout(r, 600));
+  // 1) Schnelle Topic-Suche (instant, gratis) — nur bei sehr starkem Match direkt antworten
   const topicId = cbHelperFindTopic(q);
-  t.remove();
-  if (topicId && CB_HELP[topicId]) {
-    // Found → show topic answer
+  const topicScore = cbHelperFindScore(q);
+  if (topicId && CB_HELP[topicId] && topicScore >= 12) {
+    await new Promise(r => setTimeout(r, 400));
+    t.remove();
     const node = CB_HELP[topicId];
     const a = document.createElement('div'); a.className='cb-msg bot';
     const htmlA = '<div style="font-size:11px;color:var(--muted);margin-bottom:4px">📚 Gefunden im Topic <b>'+ (node.q||'') +'</b>:</div>' + node.a;
     a.innerHTML = htmlA;
     body.appendChild(a);
     cbHelperPersist('bot', htmlA);
-    // Chips: confirm + follow-ups + ask-admin
     chips.innerHTML = '';
     const yes = document.createElement('button'); yes.className='cb-chip'; yes.textContent='✅ Hat geholfen';
     yes.onclick = ()=>{ chips.innerHTML=''; cbHelperShow('_back'); };
@@ -9611,12 +9797,67 @@ async function cbHelperAsk(){
       c.onclick = ()=>cbHelperShow(nid);
       chips.appendChild(c);
     });
-  } else {
-    // No match → forward to admin
-    cbHelperForwardToAdmin(q);
+    body.scrollTop = body.scrollHeight;
+    btn.disabled = false; btn.textContent = '→';
+    return;
   }
-  body.scrollTop = body.scrollHeight;
-  btn.disabled = false; btn.textContent = '→';
+  // 2) AI (Gemini) versuchen
+  try {
+    const r = await fetch('/api/helper-ai', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question: q})});
+    const j = await r.json();
+    if (j.ok && j.answer) {
+      t.remove();
+      const a = document.createElement('div'); a.className='cb-msg bot';
+      const htmlA = '<div style="font-size:11px;color:var(--muted);margin-bottom:4px">🤖 CreatorBoost (KI):</div>' + j.answer;
+      a.innerHTML = htmlA;
+      body.appendChild(a);
+      cbHelperPersist('bot', htmlA);
+      chips.innerHTML = '';
+      const yes = document.createElement('button'); yes.className='cb-chip'; yes.textContent='✅ Hat geholfen';
+      yes.onclick = ()=>{ chips.innerHTML=''; cbHelperShow('_back'); };
+      chips.appendChild(yes);
+      const no = document.createElement('button'); no.className='cb-chip'; no.textContent='❌ Doch Admin fragen';
+      no.onclick = ()=>cbHelperForwardToAdmin(q);
+      chips.appendChild(no);
+      const back = document.createElement('button'); back.className='cb-chip back'; back.textContent='← Übersicht';
+      back.onclick = ()=>cbHelperShow('_back');
+      chips.appendChild(back);
+      body.scrollTop = body.scrollHeight;
+      btn.disabled = false; btn.textContent = '→';
+      return;
+    }
+    // AI nicht verfügbar oder Fehler → schwächeres Keyword-Match probieren, dann Admin
+    if (j.fallback) {
+      if (topicId && CB_HELP[topicId]) {
+        t.remove();
+        const node = CB_HELP[topicId];
+        const a = document.createElement('div'); a.className='cb-msg bot';
+        const htmlA = '<div style="font-size:11px;color:var(--muted);margin-bottom:4px">📚 Vielleicht meinst du <b>'+ (node.q||'') +'</b>:</div>' + node.a;
+        a.innerHTML = htmlA;
+        body.appendChild(a);
+        cbHelperPersist('bot', htmlA);
+        chips.innerHTML = '';
+        const no = document.createElement('button'); no.className='cb-chip'; no.textContent='❌ Nicht das — Admin fragen';
+        no.onclick = ()=>cbHelperForwardToAdmin(q);
+        chips.appendChild(no);
+        const back = document.createElement('button'); back.className='cb-chip back'; back.textContent='← Übersicht';
+        back.onclick = ()=>cbHelperShow('_back');
+        chips.appendChild(back);
+        body.scrollTop = body.scrollHeight;
+        btn.disabled = false; btn.textContent = '→';
+        return;
+      }
+      t.remove();
+      cbHelperForwardToAdmin(q);
+      btn.disabled = false; btn.textContent = '→';
+      return;
+    }
+    throw new Error(j.error || 'AI failed');
+  } catch(e) {
+    t.remove();
+    cbHelperForwardToAdmin(q);
+    btn.disabled = false; btn.textContent = '→';
+  }
 }
 async function cbHelperForwardToAdmin(question){
   const body = document.getElementById('cb-helper-body');
