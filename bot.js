@@ -9281,7 +9281,9 @@ async function submitSuperLink(){
 
 <!-- ── CREATORX HELPER BOT (FAQ-Chatbot, popup im Feed) ─────────────── -->
 <style>
-#cb-helper-fab{position:fixed;bottom:calc(90px + env(safe-area-inset-bottom,0px));right:14px;width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;border:none;font-size:24px;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:8500;box-shadow:0 8px 24px rgba(124,58,237,.5),inset 0 1px 0 rgba(255,255,255,.3);animation:cb-helper-bob 3s ease-in-out infinite}
+#cb-helper-fab{position:fixed;bottom:calc(90px + env(safe-area-inset-bottom,0px));right:14px;width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;border:none;padding:3px;cursor:pointer;z-index:8500;box-shadow:0 8px 24px rgba(124,58,237,.5);animation:cb-helper-bob 3s ease-in-out infinite;overflow:visible}
+#cb-helper-fab img{display:block;width:100%;height:100%;border-radius:50%;object-fit:cover;background:var(--bg)}
+#cb-helper-fab .chat-tail{position:absolute;bottom:-2px;right:-2px;width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,#a78bfa,#7c3aed);display:flex;align-items:center;justify-content:center;font-size:13px;border:2px solid var(--bg);box-shadow:0 2px 6px rgba(0,0,0,.3);color:#fff}
 @keyframes cb-helper-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
 #cb-helper-fab:hover{transform:scale(1.08)}
 #cb-helper-fab .badge{position:absolute;top:-2px;right:-2px;width:18px;height:18px;border-radius:50%;background:#ef4444;color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;border:2px solid var(--bg)}
@@ -9318,7 +9320,7 @@ async function submitSuperLink(){
 .cb-typing span:nth-child(3){animation-delay:.4s}
 @keyframes cb-typing-dot{0%,60%,100%{opacity:.3;transform:scale(.85)}30%{opacity:1;transform:scale(1)}}
 </style>
-<button id="cb-helper-fab" onclick="cbHelperOpen()" aria-label="CreatorBoost öffnen" style="overflow:hidden;padding:0"><img src="/appbild/creatorboost/profilepic" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%"><span class="badge" id="cb-helper-badge">?</span></button>
+<button id="cb-helper-fab" onclick="cbHelperOpen()" aria-label="CreatorBoost öffnen"><img src="/appbild/creatorboost/profilepic" alt=""><span class="chat-tail">💬</span><span class="badge" id="cb-helper-badge">?</span></button>
 <div id="cb-helper-modal" onclick="if(event.target===this)cbHelperClose()">
   <div class="cb-helper-box" role="dialog" aria-labelledby="cb-helper-title">
     <div class="cb-helper-hdr">
