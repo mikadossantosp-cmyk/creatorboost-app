@@ -13262,8 +13262,10 @@ function renderCompliance() {
   const s = j.summary;
   const all = j.users || [];
 
+  // Warnung-Gruppe + Sortier-Defaults
   const groups = {
     failedM1: all.filter(u => u.postedButFailedM1),
+    warnings: all.filter(u => u.warnings > 0).sort((a,b)=>b.warnings-a.warnings),
     onlyPosters: all.filter(u => u.onlyPoster),
     onlyLikers: all.filter(u => u.onlyLiker),
     inactive: all.filter(u => u.inactive),
@@ -13273,37 +13275,63 @@ function renderCompliance() {
     m3: all.filter(u => u.m3),
     all: all.slice().sort((a,b) => (b.likedToday||0) - (a.likedToday||0)),
   };
+  const totalWarnings = groups.warnings.length;
+  const criticalWarnings = all.filter(u => u.warnings >= 3).length;
 
   const tabBtn = (key, label, count, color) =>
     '<button onclick="setComplianceFilter(\\''+key+'\\')" class="dash-tab'+(CUR_COMP_FILTER===key?' active':'')+'" style="'+(CUR_COMP_FILTER===key?'':'color:'+color+';')+'flex-shrink:0">'+label+' <b style="margin-left:4px;opacity:.7">'+count+'</b></button>';
 
+  // ── Header mit Datums-Picker und Hero-Banner ──
   let html =
-    '<div style="display:flex;gap:8px;align-items:center;margin:8px 0 14px;flex-wrap:wrap">' +
-      '<input type="date" id="comp-date-input" style="background:var(--dink);border:1px solid var(--dline);color:#fff;padding:7px 10px;border-radius:8px;font-family:inherit;font-size:13px" value="'+(j.summary.date ? new Date(j.summary.date).toISOString().slice(0,10) : '')+'">' +
-      '<button onclick="loadCompliance(document.getElementById(\\'comp-date-input\\').value)" class="dash-btn">→ Laden</button>' +
-      '<button onclick="loadCompliance(\\'yesterday\\')" class="dash-btn">Gestern</button>' +
-      '<button onclick="loadCompliance(\\'today\\')" class="dash-btn">Heute</button>' +
-      '<div style="flex:1"></div>' +
-      '<div style="font-size:11px;color:var(--dsub)">'+j.summary.totalUsers+' aktive User · '+j.summary.totalLinks+' Links gepostet · '+j.summary.date+'</div>' +
+    '<div style="margin:6px 0 18px;padding:18px 20px;background:linear-gradient(135deg,rgba(167,139,250,0.10),rgba(6,182,212,0.04));border:1px solid rgba(167,139,250,0.30);border-radius:16px">' +
+      '<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">' +
+        '<div style="font-size:32px">📊</div>' +
+        '<div style="flex:1;min-width:200px">' +
+          '<div style="font-size:18px;font-weight:800;color:#fff">Compliance-Report</div>' +
+          '<div style="font-size:12.5px;color:var(--dsub);margin-top:2px">Mission-Auswertung, Posting/Liking-Verhältnis, Verwarnungen — '+esc(j.summary.date)+'</div>' +
+        '</div>' +
+        '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">' +
+          '<input type="date" id="comp-date-input" style="background:var(--dink);border:1px solid var(--dline);color:#fff;padding:8px 12px;border-radius:8px;font-family:inherit;font-size:13px" value="'+(j.summary.date ? new Date(j.summary.date).toISOString().slice(0,10) : '')+'">' +
+          '<button onclick="loadCompliance(document.getElementById(\\'comp-date-input\\').value)" class="dash-btn">→ Laden</button>' +
+          '<button onclick="loadCompliance(\\'yesterday\\')" class="dash-btn">Gestern</button>' +
+          '<button onclick="loadCompliance(\\'today\\')" class="dash-btn">Heute</button>' +
+        '</div>' +
+      '</div>' +
     '</div>';
 
-  // Summary-Stats Row
-  const stat = (lbl, val, color) =>
-    '<div style="flex:1;min-width:120px;padding:10px 12px;background:var(--dink);border:1px solid var(--dline);border-radius:10px"><div style="font-size:10px;font-weight:800;letter-spacing:1.2px;color:var(--dsub);text-transform:uppercase">'+lbl+'</div><div style="font-size:20px;font-weight:800;color:'+color+';margin-top:2px">'+val+'</div></div>';
-  html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">' +
-    stat('M1 erfüllt', s.m1Done + '/' + s.totalUsers, '#4ade80') +
-    stat('M2 erfüllt', s.m2Done + '/' + s.totalUsers, '#22c55e') +
-    stat('M3 erfüllt', s.m3Done + '/' + s.totalUsers, '#06b6d4') +
-    stat('M1 verletzt', s.postedButFailedM1, '#ef4444') +
-    stat('Nur Poster', s.onlyPosters, '#f59e0b') +
-    stat('Nur Liker', s.onlyLikers, '#a78bfa') +
-    stat('Inaktiv', s.inactive, '#6b7280') +
-    stat('Gesperrt', s.currentlyPostSuspended, '#dc2626') +
+  // ── Big Summary-Stats Grid (4 große Cards für Mission-Status) ──
+  const bigStat = (lbl, val, sub, color, bg, icon) =>
+    '<div style="padding:18px 20px;background:'+bg+';border:1.5px solid '+color+';border-radius:14px">' +
+      '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">' +
+        '<div><div style="font-size:11px;font-weight:800;letter-spacing:1.5px;color:'+color+';text-transform:uppercase">'+lbl+'</div>' +
+        '<div style="font-size:32px;font-weight:900;color:#fff;line-height:1;margin-top:4px;letter-spacing:-0.5px">'+val+'</div>' +
+        '<div style="font-size:11.5px;color:var(--dsub);margin-top:4px;line-height:1.3">'+sub+'</div></div>' +
+        '<div style="font-size:28px;opacity:.4">'+icon+'</div>' +
+      '</div>' +
+    '</div>';
+  html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-bottom:14px">' +
+    bigStat('Mission 1 erfüllt', s.m1Done+'/'+s.totalUsers, '5 Likes geliked (Pflicht)', '#22c55e', 'rgba(34,197,94,0.07)', '✅') +
+    bigStat('Mission 2 erfüllt', s.m2Done+'/'+s.totalUsers, '80% der Posts geliked', '#10b981', 'rgba(16,185,129,0.07)', '✅') +
+    bigStat('Mission 3 erfüllt', s.m3Done+'/'+s.totalUsers, 'ALLE Posts geliked (+1💎)', '#06b6d4', 'rgba(6,182,212,0.07)', '💎') +
+    bigStat('M1 VERLETZT', String(s.postedButFailedM1), 'Posted, aber M1 nicht erfüllt (auto-Warn)', '#ef4444', 'rgba(239,68,68,0.07)', '🚨') +
   '</div>';
 
-  // Filter-Tabs
+  // ── 2. Reihe: Verhalten + Warnungen ──
+  html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:18px">' +
+    bigStat('Nur Poster', String(s.onlyPosters), 'Posten ohne zu liken', '#f59e0b', 'rgba(245,158,11,0.06)', '⚠️') +
+    bigStat('Nur Liker', String(s.onlyLikers), 'Liken ohne zu posten', '#a78bfa', 'rgba(167,139,250,0.06)', '✨') +
+    bigStat('Inaktiv', String(s.inactive), 'Weder posted noch geliked', '#6b7280', 'rgba(107,114,128,0.05)', '⚪') +
+    bigStat('Verwarnt', String(totalWarnings), criticalWarnings+' davon kritisch (3+)', '#fbbf24', 'rgba(251,191,36,0.06)', '⚠️') +
+    bigStat('Gesperrt', String(s.currentlyPostSuspended), 'Aktive Post-Sperren', '#dc2626', 'rgba(220,38,38,0.07)', '🚫') +
+  '</div>';
+
+  // ── Warnung-Eskalations-Hinweis ──
+  html += '<div style="margin-bottom:14px;padding:12px 14px;background:rgba(245,158,11,0.06);border-left:3px solid #f59e0b;border-radius:8px;font-size:12px;color:#fbbf24;line-height:1.5"><b>⚠️ Auto-Eskalation:</b> 3. Verwarnung = ausführliche DM-Aufklärung · 4. = "letzte Chance"-DM · 5. = automatischer permanenter Bann. User kann 1 Warn abbauen via 5 Tage M1-Streak.</div>';
+
+  // ── Filter-Tabs ──
   html += '<div class="dash-tabs" style="margin:8px 0 12px">' +
-    tabBtn('failedM1', '🔴 Posted ohne M1', groups.failedM1.length, '#f87171') +
+    tabBtn('failedM1', '🔴 M1-Verletzt', groups.failedM1.length, '#f87171') +
+    tabBtn('warnings', '⚠️ Verwarnt', groups.warnings.length, '#fbbf24') +
     tabBtn('onlyPosters', '⚠️ Nur Poster', groups.onlyPosters.length, '#fbbf24') +
     tabBtn('onlyLikers', '✨ Nur Liker', groups.onlyLikers.length, '#a78bfa') +
     tabBtn('inactive', '⚪ Inaktiv', groups.inactive.length, '#9ca3af') +
@@ -13316,38 +13344,67 @@ function renderCompliance() {
 
   const list = groups[CUR_COMP_FILTER] || [];
   if (!list.length) {
-    html += '<div style="padding:32px;text-align:center;color:var(--dsub);font-size:13px">Keine User in diesem Filter.</div>';
+    html += '<div style="padding:48px 24px;text-align:center;color:var(--dsub);font-size:14px">✨ Keine User in diesem Filter.</div>';
   } else {
+    const fmtAgo = (ts) => {
+      if (!ts) return '–';
+      const diff = Date.now() - ts;
+      if (diff < 60000) return 'gerade';
+      if (diff < 3600000) return Math.floor(diff/60000)+'min';
+      if (diff < 86400000) return Math.floor(diff/3600000)+'h';
+      return Math.floor(diff/86400000)+'d';
+    };
     for (const u of list) {
-      const pills = [];
-      if (u.m1) pills.push('<span class="dash-pill ok">M1 ✅</span>');
-      if (u.m2) pills.push('<span class="dash-pill ok">M2 ✅</span>');
-      if (u.m3) pills.push('<span class="dash-pill ok">M3 ✅</span>');
-      if (u.warnings >= 3) pills.push('<span class="dash-pill err">⚠️ '+u.warnings+'/5</span>');
-      else if (u.warnings > 0) pills.push('<span class="dash-pill warn">⚠️ '+u.warnings+'/5</span>');
-      if (u.postSuspendedUntil && u.postSuspendedUntil > Date.now()) {
-        const daysLeft = Math.ceil((u.postSuspendedUntil - Date.now())/86400000);
-        pills.push('<span class="dash-pill err">🚫 '+daysLeft+'d gesperrt</span>');
-      }
-      html += '<div style="margin:0 0 8px;padding:12px 14px;background:var(--dink2);border:1px solid var(--dline);border-radius:12px">' +
-        '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">' +
-          '<a href="javascript:openUser(\\''+esc(u.uid)+'\\')" style="font-size:14px;font-weight:700;color:#fff;text-decoration:none">'+esc(u.name)+'</a>' +
-          (u.instagram?'<span style="font-size:12px;color:#06b6d4">@'+esc(u.instagram)+'</span>':'') +
+      // Warnungs-Anzeige in groß als eigene Sektion
+      const warnLevel = u.warnings >= 5 ? 'CRITICAL' : u.warnings >= 4 ? 'HIGH' : u.warnings >= 3 ? 'MED' : u.warnings > 0 ? 'LOW' : 'NONE';
+      const warnColor = warnLevel === 'CRITICAL' ? '#dc2626' : warnLevel === 'HIGH' ? '#ef4444' : warnLevel === 'MED' ? '#f59e0b' : warnLevel === 'LOW' ? '#fbbf24' : '#4ade80';
+      const warnBg = warnLevel === 'NONE' ? 'rgba(34,197,94,0.08)' : warnLevel === 'LOW' ? 'rgba(251,191,36,0.10)' : 'rgba(239,68,68,0.10)';
+      const warnDots = '<div style="display:inline-flex;gap:3px;vertical-align:middle">' +
+        Array.from({length:5}, (_,i)=> '<div style="width:8px;height:8px;border-radius:50%;background:'+(i < u.warnings ? warnColor : 'rgba(255,255,255,0.15)')+';'+(i<u.warnings?'box-shadow:0 0 6px '+warnColor:'')+'"></div>').join('') +
+      '</div>';
+      const missionPills = [];
+      if (u.m1) missionPills.push('<span style="padding:3px 8px;border-radius:6px;background:rgba(34,197,94,0.18);color:#4ade80;font-size:10.5px;font-weight:800;letter-spacing:0.5px">M1 ✅</span>');
+      else if (u.postedToday > 0) missionPills.push('<span style="padding:3px 8px;border-radius:6px;background:rgba(239,68,68,0.18);color:#f87171;font-size:10.5px;font-weight:800;letter-spacing:0.5px">M1 ❌</span>');
+      if (u.m2) missionPills.push('<span style="padding:3px 8px;border-radius:6px;background:rgba(16,185,129,0.18);color:#22c55e;font-size:10.5px;font-weight:800;letter-spacing:0.5px">M2 ✅</span>');
+      if (u.m3) missionPills.push('<span style="padding:3px 8px;border-radius:6px;background:rgba(6,182,212,0.18);color:#06b6d4;font-size:10.5px;font-weight:800;letter-spacing:0.5px">M3 💎</span>');
+      const suspended = u.postSuspendedUntil && u.postSuspendedUntil > Date.now();
+      const daysLeft = suspended ? Math.ceil((u.postSuspendedUntil - Date.now())/86400000) : 0;
+
+      html += '<div style="margin:0 0 10px;padding:14px 16px;background:var(--dink2);border:1px solid '+(u.warnings>=3?'rgba(239,68,68,0.30)':'var(--dline)')+';border-radius:14px">' +
+        // Row 1: Name + Insta + Mission-Pills + Last Seen
+        '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">' +
+          '<a href="javascript:openUser(\\''+esc(u.uid)+'\\')" style="font-size:15px;font-weight:800;color:#fff;text-decoration:none">'+esc(u.name)+'</a>' +
+          (u.instagram?'<span style="font-size:12.5px;color:#06b6d4">@'+esc(u.instagram)+'</span>':'') +
+          '<div style="display:flex;gap:4px;flex-wrap:wrap">'+missionPills.join('')+'</div>' +
           '<div style="flex:1"></div>' +
-          pills.join(' ') +
+          (u.lastSeen ? '<span style="font-size:10.5px;color:var(--dsub)">🕒 '+fmtAgo(u.lastSeen)+'</span>' : '') +
+          (u.banned ? '<span class="dash-pill err">🚫 GEBANNT</span>' : '') +
         '</div>' +
-        '<div style="font-size:12px;color:var(--dsub);display:flex;gap:14px;flex-wrap:wrap;margin-bottom:8px">' +
-          '<span><b style="color:#4dabf7">'+u.postedToday+'</b> Posts</span>' +
-          '<span><b style="color:#f59e0b">'+u.likedToday+'</b>/'+u.othersAvailable+' Likes</span>' +
-          '<span><b>'+u.xp+'</b> XP</span>' +
-          '<span>Wo: M1 '+u.weekM1+'/7 · M2 '+u.weekM2+'/7 · M3 '+u.weekM3+'/7</span>' +
+        // Row 2: Big stat grid
+        '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(80px,1fr));gap:6px;margin-bottom:10px">' +
+          '<div style="padding:8px;background:var(--dink);border-radius:8px;text-align:center"><div style="font-size:9.5px;color:var(--dsub);font-weight:700;text-transform:uppercase;letter-spacing:0.8px">Posts</div><div style="font-size:18px;font-weight:800;color:#4dabf7;margin-top:1px">'+u.postedToday+'</div></div>' +
+          '<div style="padding:8px;background:var(--dink);border-radius:8px;text-align:center"><div style="font-size:9.5px;color:var(--dsub);font-weight:700;text-transform:uppercase;letter-spacing:0.8px">Likes</div><div style="font-size:18px;font-weight:800;color:#f59e0b;margin-top:1px">'+u.likedToday+'</div><div style="font-size:9.5px;color:var(--dsub)">/'+u.othersAvailable+'</div></div>' +
+          '<div style="padding:8px;background:var(--dink);border-radius:8px;text-align:center"><div style="font-size:9.5px;color:var(--dsub);font-weight:700;text-transform:uppercase;letter-spacing:0.8px">XP heute</div><div style="font-size:18px;font-weight:800;color:#a78bfa;margin-top:1px">'+(u.dailyXP||0)+'</div></div>' +
+          '<div style="padding:8px;background:var(--dink);border-radius:8px;text-align:center"><div style="font-size:9.5px;color:var(--dsub);font-weight:700;text-transform:uppercase;letter-spacing:0.8px">XP gesamt</div><div style="font-size:18px;font-weight:800;color:#fff;margin-top:1px">'+(u.xp||0)+'</div></div>' +
+          '<div style="padding:8px;background:var(--dink);border-radius:8px;text-align:center"><div style="font-size:9.5px;color:var(--dsub);font-weight:700;text-transform:uppercase;letter-spacing:0.8px">💎</div><div style="font-size:18px;font-weight:800;color:#06b6d4;margin-top:1px">'+(u.diamonds||0)+'</div></div>' +
+          '<div style="padding:8px;background:var(--dink);border-radius:8px;text-align:center"><div style="font-size:9.5px;color:var(--dsub);font-weight:700;text-transform:uppercase;letter-spacing:0.8px">❤ Total</div><div style="font-size:18px;font-weight:800;color:#ec4899;margin-top:1px">'+(u.totalLikes||0)+'</div></div>' +
         '</div>' +
+        // Row 3: Warnings (BIG VISIBLE)
+        '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:'+warnBg+';border:1px solid '+warnColor+'33;border-radius:10px;margin-bottom:8px">' +
+          '<div style="font-size:12px;font-weight:800;color:'+warnColor+';min-width:100px">⚠️ '+u.warnings+'/5 Warns</div>' +
+          warnDots +
+          '<div style="flex:1;text-align:right;font-size:11px;color:var(--dsub)">Wochen: M1 <b>'+u.weekM1+'</b>/7 · M2 <b>'+u.weekM2+'</b>/7 · M3 <b>'+u.weekM3+'</b>/7</div>' +
+        '</div>' +
+        // Row 4: Suspended-Banner falls aktiv
+        (suspended ? '<div style="margin-bottom:8px;padding:8px 12px;background:rgba(220,38,38,0.10);border-left:3px solid #dc2626;border-radius:6px;font-size:11.5px;color:#fca5a5">🚫 <b>Posting gesperrt</b> noch '+daysLeft+'d'+(u.postSuspendReason?' — '+esc(u.postSuspendReason):'')+'</div>' : '') +
+        // Row 5: Aktionen
         '<div style="display:flex;gap:6px;flex-wrap:wrap">' +
-          '<button onclick="warnUserPrompt(\\''+esc(u.uid)+'\\',\\''+esc(u.name)+'\\')" class="dash-act" style="border-color:rgba(245,158,11,0.4);color:#fbbf24">⚠️ Verwarnen</button>' +
-          (u.postSuspendedUntil && u.postSuspendedUntil > Date.now()
-            ? '<button onclick="suspendPostingPrompt(\\''+esc(u.uid)+'\\',\\''+esc(u.name)+'\\',0)" class="dash-act" style="border-color:rgba(34,197,94,0.4);color:#22c55e">✅ Sperre aufheben</button>'
-            : '<button onclick="suspendPostingPrompt(\\''+esc(u.uid)+'\\',\\''+esc(u.name)+'\\',3)" class="dash-act danger">🚫 Posten sperren</button>') +
-          '<button onclick="openUser(\\''+esc(u.uid)+'\\')" class="dash-act" style="margin-left:auto">👁️ Profil</button>' +
+          '<button onclick="warnUserPrompt(\\''+esc(u.uid)+'\\',\\''+esc(u.name)+'\\')" class="dash-act" style="border-color:rgba(245,158,11,0.4);color:#fbbf24"><b>⚠️ Verwarnen</b></button>' +
+          (suspended
+            ? '<button onclick="suspendPostingPrompt(\\''+esc(u.uid)+'\\',\\''+esc(u.name)+'\\',0)" class="dash-act" style="border-color:rgba(34,197,94,0.4);color:#22c55e"><b>✅ Sperre auf</b></button>'
+            : '<button onclick="suspendPostingPrompt(\\''+esc(u.uid)+'\\',\\''+esc(u.name)+'\\',3)" class="dash-act danger"><b>🚫 Posten sperren</b></button>') +
+          '<button onclick="sendDmTo(\\''+esc(u.uid)+'\\',\\''+esc(u.name)+'\\')" class="dash-act">📨 DM</button>' +
+          '<button onclick="openUser(\\''+esc(u.uid)+'\\')" class="dash-act" style="margin-left:auto"><b>👁️ Profil</b></button>' +
         '</div>' +
       '</div>';
     }
