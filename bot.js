@@ -4228,6 +4228,10 @@ function submitEmail(ev){
       if(o.j&&o.j.ok&&o.j.redirect){
         msg.textContent='✅ Eingeloggt — leite weiter...';msg.classList.add('show','ok');
         setTimeout(function(){window.location.href=o.j.redirect;},400);
+      } else if(o.j&&o.j.requiresMagicLink){
+        msg.textContent='📨 Login-Link wurde dir per Email geschickt. Klick drauf!';
+        msg.classList.add('show','ok');
+        btn.disabled=false;btn.textContent='Sign In →';
       } else {
         msg.textContent=(o.j&&o.j.error)||'Login fehlgeschlagen.';
         msg.classList.add('show','err');
@@ -4477,33 +4481,39 @@ document.addEventListener('DOMContentLoaded', function(){
         // Sign-In: NUR existierende User. Neue User müssen über /signup gehen.
         const result = await postBot('/auth-email-password', { email, password });
         const isNewSignup = false;
-        let didSetupPassword = false;
         if (!result || !result.ok) {
-            // Spezialfall: User existiert mit Email aber HAT NOCH KEIN PASSWORT (z.B. alter TG-User
-            // mit Email aber ohne PW). First-time Sign In setzt das Passwort direkt + loggt ein.
+            // SECURITY-FIX: Vorher wurde bei "noch kein Passwort gesetzt" das Passwort des
+            // Angreifers direkt gespeichert und der Account übernommen. Jetzt muss der User
+            // Email-Zugang beweisen — wir schicken einen Magic-Link. Nach Login kann er in
+            // /einstellungen ein Passwort setzen.
             if (result && /noch kein Passwort gesetzt/i.test(String(result.error||''))) {
-                const _bd = await fetchBot('/data');
-                const _ex = Object.entries(_bd?.users || {}).find(([, u]) => String(u.email||'').toLowerCase() === email);
-                if (_ex) {
-                    const [_uid] = _ex;
-                    const setPw = await postBot('/set-user-password', { uid: _uid, password });
-                    if (setPw && setPw.ok) {
-                        // Jetzt nochmal Login versuchen
-                        const result2 = await postBot('/auth-email-password', { email, password });
-                        if (result2 && result2.ok) {
-                            postBot('/log-email-login', { email, success: true, method: 'first-time-pw', uid: String(result2.uid), ip: _ip, ua: _ua }).catch(()=>{});
-                            Object.assign(result || {}, result2);
-                            didSetupPassword = true;
-                        }
+                postBot('/log-email-login', { email, success: false, method: 'pw-attempted-no-pw-set', uid: '', ip: _ip, ua: _ua }).catch(()=>{});
+                // Magic-Link triggern (gleicher Code-Pfad wie /api/auth/email-login intern)
+                try {
+                    const _bd = await fetchBot('/data');
+                    const _ex = Object.entries(_bd?.users || {}).find(([, u]) => String(u.email||'').toLowerCase() === email);
+                    if (_ex) {
+                        const [_uid, _u] = _ex;
+                        const _token = crypto.randomBytes(24).toString('hex');
+                        emailLoginTokens.set(_token, { email, uid: String(_uid), exp: Date.now() + EMAIL_TOKEN_TTL });
+                        const _baseUrl = (process.env.APP_URL || ('https://' + (req.headers.host || 'www.creatorboostx.de'))).replace(/\/$/, '');
+                        const _loginUrl = _baseUrl + '/auth/email-login?token=' + encodeURIComponent(_token) + '&setpw=1';
+                        const _userName = String(_u.spitzname || _u.name || 'CreatorX User').replace(/[<>]/g,'').slice(0,30);
+                        const _html = '<!DOCTYPE html><html><body style="margin:0;font-family:-apple-system,sans-serif;background:#000;color:#fff;padding:0">' +
+                            '<div style="max-width:560px;margin:0 auto;padding:32px 24px">' +
+                            '<div style="text-align:center;margin-bottom:24px"><img src="' + _baseUrl + '/cx-logo-256.png" width="80" height="80" style="border-radius:18px" alt=""></div>' +
+                            '<h1 style="font-size:24px;font-weight:700;margin:0 0 12px;text-align:center">Hi ' + _userName + '!</h1>' +
+                            '<p style="font-size:14px;color:#a8a39a;line-height:1.6;text-align:center;margin:0 0 24px">Du hast noch kein Passwort gesetzt. Klick auf den Button um dich einzuloggen — danach kannst du in den Einstellungen ein Passwort hinterlegen.</p>' +
+                            '<div style="text-align:center;margin:28px 0"><a href="' + _loginUrl + '" style="display:inline-block;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px">🔓 Login + Passwort setzen</a></div>' +
+                            '<p style="font-size:11px;color:#605c54;text-align:center;margin:24px 0 0;border-top:1px solid #221f1a;padding-top:18px">Wenn du das nicht angefordert hast, ignorier die Mail — niemand kann dein Konto übernehmen.<br><br>Link: <span style="word-break:break-all;color:#a8a39a">' + _loginUrl + '</span></p>' +
+                            '</div></body></html>';
+                        sendEmail(email, '🔐 Dein CreatorX Login-Link', _html).catch(()=>{});
                     }
-                }
+                } catch(e) { console.error('[email-password] magic-link fallback failed:', e.message); }
+                return json({ok:false, requiresMagicLink:true, error:'Du hast noch kein Passwort. Wir haben dir einen Login-Link an deine Email geschickt — klick drauf und setze danach in /einstellungen ein Passwort.'}, 200);
             }
-            if (!didSetupPassword) {
-                postBot('/log-email-login', { email, success: false, method: 'password', uid: '', ip: _ip, ua: _ua }).catch(()=>{});
-                // Mainbot setzt notRegistered:true wenn User nicht gefunden wurde, sonst undefined.
-                // Vorher wurde notRegistered fälschlich aus 'falsch'-Text inferred (semantic inversion).
-                return json({ok:false, error: (result && result.error) || 'Email oder Passwort falsch — oder noch kein Account? Sign Up unter /signup', notRegistered: !!(result && result.notRegistered)}, 401);
-            }
+            postBot('/log-email-login', { email, success: false, method: 'password', uid: '', ip: _ip, ua: _ua }).catch(()=>{});
+            return json({ok:false, error: (result && result.error) || 'Email oder Passwort falsch — oder noch kein Account? Sign Up unter /signup', notRegistered: !!(result && result.notRegistered)}, 401);
         }
         postBot('/log-email-login', { email, success: true, method: 'password', uid: String(result.uid), ip: _ip, ua: _ua }).catch(()=>{});
         // Reset rate-limit on success.
