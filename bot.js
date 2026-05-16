@@ -55,18 +55,22 @@ const SIGNUP_RATE_LIMIT_WINDOW = 60 * 60 * 1000; // 1 Stunde Fenster
 const SIGNUP_RATE_LIMIT_MAX = 5;       // max 5 Signups pro Stunde pro IP
 const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
 const EMAIL_FROM = process.env.EMAIL_FROM || 'CreatorX <onboarding@resend.dev>';
-const EMAIL_TOKEN_TTL = 60 * 60 * 1000;       // 1 Stunde
+const EMAIL_TOKEN_TTL = 24 * 60 * 60 * 1000;  // 24 Stunden (war 1h, zu kurz wenn Mail spät zugestellt)
 const ACCOUNT_UNLOCK_TTL = 30 * 60 * 1000;    // 30 Min Edit-Window nach Unlock-Klick
 const MAGIC_LINK_RATE_LIMIT = 30 * 1000;      // 30 Sek zwischen Magic-Link-Requests pro Email
 const PW_RESET_RATE_LIMIT = 5 * 60 * 1000;    // 5 Min zwischen Password-Reset-Requests pro Email
 const EMAIL_RATE_LIMIT = MAGIC_LINK_RATE_LIMIT; // Backward-compat alias
 setInterval(() => {
     const now = Date.now();
+    let confirmsRemoved = 0;
     for (const [t, v] of emailLoginTokens.entries()) if (v.exp < now) emailLoginTokens.delete(t);
-    for (const [t, v] of emailConfirmTokens.entries()) if (v.exp < now) emailConfirmTokens.delete(t);
+    for (const [t, v] of emailConfirmTokens.entries()) { if (v.exp < now) { emailConfirmTokens.delete(t); confirmsRemoved++; } }
     for (const [t, v] of accountUnlockTokens.entries()) if (v.exp < now) accountUnlockTokens.delete(t);
-    for (const [e, ts] of emailRateLimit.entries()) if (now - ts > EMAIL_RATE_LIMIT * 2) emailRateLimit.delete(e);
+    for (const [e, ts] of emailRateLimit.entries()) { if (typeof ts === 'number' && now - ts > EMAIL_RATE_LIMIT * 2) emailRateLimit.delete(e); }
     for (const [ip, v] of signupIpRateLimit.entries()) if (now - v.ts > SIGNUP_RATE_LIMIT_WINDOW) signupIpRateLimit.delete(ip);
+    // Wenn Email-Confirm-Tokens gelöscht wurden: sofort auf Disk persistieren
+    // (sonst werden expired tokens nach Restart aus alter Datei wiedergeladen — würde aber unten gefiltert, also nur Inkonsistenz)
+    if (confirmsRemoved > 0) { try { savePendingEmailConfirms(); } catch(e) {} }
 }, 5 * 60 * 1000);
 
 // Daily claims tracker (persisted to file, keyed by "type:uid:date")
@@ -194,6 +198,11 @@ async function sendSignupConfirmationEmail(uid, email, hostHeader) {
     try {
         const token = crypto.randomBytes(24).toString('hex');
         const exp = Date.now() + 7 * 24 * 60 * 60 * 1000;
+        // Token-keyed Map (Source of Truth fürs Lookup) — alte Tokens BLEIBEN bis sie
+        // expirieren. So funktioniert "Resend" ohne dass die alte Email-Link tot wird.
+        emailConfirmTokens.set(token, { email, uid: String(uid), exp, kind: 'signup' });
+        // UID-keyed Helper (nur für Banner-Check + Resend-Anzeige). Wird auch nicht
+        // overwritten als kritischer Pfad — alte Token sind via emailConfirmTokens noch valid.
         pendingEmailConfirms.set(String(uid), { token, email, exp });
         savePendingEmailConfirms();
         console.log('[email-confirm] Signup-Token gesetzt für uid=' + uid + ' email=' + email + ' tokenPrefix=' + token.slice(0,12) + '…');
@@ -4705,40 +4714,46 @@ document.addEventListener('DOMContentLoaded', function(){
         const token = String(query.token || '').trim();
         const baseHtml = (icon, title, msg, color) => `<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><style>body{margin:0;font-family:-apple-system,BlinkMacSystemFont,Inter,sans-serif;background:#0b0b0e;color:#fff;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}.box{background:linear-gradient(180deg,#1c1c1e,#0f0f11);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:40px 28px;max-width:420px;text-align:center;box-shadow:0 30px 80px rgba(0,0,0,.5)}.ic{font-size:64px;margin-bottom:16px}.t{font-size:22px;font-weight:800;margin-bottom:10px;letter-spacing:-.4px;color:${color}}.m{font-size:14px;color:rgba(255,255,255,.7);line-height:1.55;margin-bottom:24px}.btn{display:inline-block;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;padding:13px 28px;border-radius:12px;text-decoration:none;font-weight:800;font-size:14px}</style></head><body><div class="box"><div class="ic">${icon}</div><div class="t">${title}</div><div class="m">${msg}</div><a href="/feed" class="btn">→ Zur App</a></div></body></html>`;
         if (!token) { res.writeHead(400, {'Content-Type':'text/html'}); return res.end(baseHtml('⚠️','Ungültiger Link','Der Bestätigungslink ist ungültig oder unvollständig.','#f59e0b')); }
-        console.log('[email-confirm] Got token:', token.slice(0,12)+'…', 'len:', token.length, 'maps: ect=' + emailConfirmTokens.size + ' pec=' + pendingEmailConfirms.size);
-        // Erst in emailConfirmTokens (token-keyed) suchen → Email-Change-Flow
+        console.log('[email-confirm] Got token:', token.slice(0,12)+'…', 'len:', token.length, 'ect-size:', emailConfirmTokens.size);
+        // SINGLE token-keyed lookup (Source of Truth). Signup + Email-Change beide hier.
         let entry = emailConfirmTokens.get(token);
-        if (entry) console.log('[email-confirm] Found in emailConfirmTokens, exp in', Math.round((entry.exp - Date.now())/60000), 'min');
-        if (entry && entry.exp >= Date.now()) {
+        if (!entry) {
+            // Legacy fallback: alte Tokens nur in pendingEmailConfirms (uid-keyed mit token in entry)
+            // Können noch da sein für User die vor dem Refactor signupt haben.
+            for (const [uid, e] of pendingEmailConfirms.entries()) {
+                if (e && e.token === token) { entry = { ...e, uid, kind: 'signup' }; break; }
+            }
+        }
+        if (!entry) {
+            console.log('[email-confirm] NOT found in any map. Token prefix:', token.slice(0,12)+'…');
+            res.writeHead(400, {'Content-Type':'text/html'});
+            return res.end(baseHtml('⏰','Link abgelaufen','Der Bestätigungslink ist ungültig oder schon benutzt. Geh in die Einstellungen und sende einen neuen.','#ef4444'));
+        }
+        if (entry.exp < Date.now()) {
+            console.log('[email-confirm] Token expired (was', Math.round((Date.now()-entry.exp)/60000), 'min ago)');
             emailConfirmTokens.delete(token);
+            for (const [uid, e] of pendingEmailConfirms.entries()) if (e && e.token === token) pendingEmailConfirms.delete(uid);
             savePendingEmailConfirms();
+            res.writeHead(400, {'Content-Type':'text/html'});
+            return res.end(baseHtml('⏰','Link abgelaufen','Der Bestätigungslink ist abgelaufen. Geh in die Einstellungen und sende einen neuen.','#ef4444'));
+        }
+        // Gültig — Token einlösen
+        emailConfirmTokens.delete(token);
+        for (const [uid, e] of pendingEmailConfirms.entries()) if (e && e.token === token) pendingEmailConfirms.delete(uid);
+        savePendingEmailConfirms();
+        const isSignup = entry.kind === 'signup';
+        console.log('[email-confirm] Confirmed (' + (isSignup ? 'signup' : 'change') + ') uid:', entry.uid, 'email:', entry.email);
+        if (!isSignup) {
+            // Email-Change-Flow: Mainbot setzt confirmEmail-Field
             const result = await postBot('/update-profile-api', { uid: entry.uid, confirmEmail: entry.email });
             if (!result || result.ok === false) {
                 res.writeHead(500, {'Content-Type':'text/html'});
-                return res.end(baseHtml('❌','Fehler','Bestätigung konnte nicht gespeichert werden. Bitte später erneut versuchen.','#ef4444'));
+                return res.end(baseHtml('❌','Fehler','Bestätigung konnte nicht gespeichert werden ('+(result && result.error || 'unbekannt')+'). Bitte später erneut versuchen.','#ef4444'));
             }
-            res.writeHead(200, {'Content-Type':'text/html'});
-            return res.end(baseHtml('✅','Email bestätigt!','Deine Email <b style="color:#fff">'+entry.email+'</b> ist jetzt aktiv. Du kannst dich damit einloggen.','#22c55e'));
         }
-        // Sonst in pendingEmailConfirms (uid-keyed mit token im entry) suchen → Signup-Flow
-        let signupUid = null, signupEntry = null;
-        for (const [uid, e] of pendingEmailConfirms.entries()) {
-            if (e && e.token === token) { signupUid = uid; signupEntry = e; break; }
-        }
-        if (signupEntry) console.log('[email-confirm] Found in pendingEmailConfirms uid=' + signupUid + ', exp in', Math.round((signupEntry.exp - Date.now())/60000), 'min');
-        else console.log('[email-confirm] NOT found in either map. Token prefix:', token.slice(0,12)+'…');
-        if (signupEntry && signupEntry.exp >= Date.now()) {
-            pendingEmailConfirms.delete(signupUid);
-            savePendingEmailConfirms();
-            console.log('[email-confirm] Signup confirmed uid:', signupUid, 'email:', signupEntry.email);
-            res.writeHead(200, {'Content-Type':'text/html'});
-            return res.end(baseHtml('✅','Email bestätigt!','Deine Email <b style="color:#fff">'+signupEntry.email+'</b> ist bestätigt. Willkommen bei CreatorX!','#22c55e'));
-        }
-        // Beide nicht gefunden oder abgelaufen
-        if (entry) { emailConfirmTokens.delete(token); savePendingEmailConfirms(); }
-        if (signupUid) { pendingEmailConfirms.delete(signupUid); savePendingEmailConfirms(); }
-        res.writeHead(400, {'Content-Type':'text/html'});
-        return res.end(baseHtml('⏰','Link abgelaufen','Der Bestätigungslink ist abgelaufen oder schon benutzt. Geh in die Einstellungen und sende einen neuen.','#ef4444'));
+        // Signup-Flow: Mainbot hat emailConfirmedAt schon beim Signup gesetzt — kein API-Call nötig
+        res.writeHead(200, {'Content-Type':'text/html'});
+        return res.end(baseHtml('✅','Email bestätigt!','Deine Email <b style="color:#fff">'+entry.email+'</b> ist jetzt aktiv. Du kannst dich damit einloggen.','#22c55e'));
     }
     // Email-Magic-Link Verify: User klickt Link → Session erstellen.
     // ── /signup: Separate Signup-Page für neue User ──
@@ -5128,36 +5143,9 @@ try { fetch('/api/track-funnel',{method:'POST',headers:{'Content-Type':'applicat
         return;
     }
     // ── EMAIL-CONFIRMATION: Klick aus Bestätigungs-Mail ──
-    if (path === '/auth/confirm-email' && req.method === 'GET') {
-        const token = String(query.token || '').trim();
-        if (!token) {
-            res.writeHead(302, { 'Location': '/login?error=confirm-invalid' });
-            return res.end();
-        }
-        // Token → uid Lookup
-        let foundUid = null, foundEntry = null;
-        for (const [uid, entry] of pendingEmailConfirms.entries()) {
-            if (entry && entry.token === token) { foundUid = uid; foundEntry = entry; break; }
-        }
-        if (!foundUid) {
-            res.writeHead(302, { 'Location': '/login?error=confirm-invalid' });
-            return res.end();
-        }
-        if (foundEntry.exp < Date.now()) {
-            pendingEmailConfirms.delete(foundUid);
-            savePendingEmailConfirms();
-            res.writeHead(302, { 'Location': '/login?error=confirm-expired' });
-            return res.end();
-        }
-        // Token gültig → Pending-Entry löschen. Mainbot's emailConfirmedAt ist seit Signup
-        // schon gesetzt (auto-confirm), also keine zusätzliche Mainbot-Aktion nötig.
-        pendingEmailConfirms.delete(foundUid);
-        savePendingEmailConfirms();
-        console.log('[email-confirm] Confirmed uid:', foundUid, 'email:', foundEntry.email);
-        // Erfolg-Page mit Auto-Redirect zu /feed
-        res.writeHead(200, {'Content-Type':'text/html; charset=utf-8'});
-        return res.end('<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="refresh" content="3;url=/feed"><title>Email bestätigt · CreatorX</title><style>body{margin:0;background:#000;color:#fff;font-family:-apple-system,system-ui,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;text-align:center;padding:24px}.box{max-width:420px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:20px;padding:36px 28px}.icon{font-size:56px;margin-bottom:16px}h1{font-size:24px;font-weight:800;margin:0 0 10px;background:linear-gradient(180deg,#fff,#22c55e);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}p{font-size:14px;color:rgba(255,255,255,0.65);line-height:1.6;margin:0 0 20px}a.btn{display:inline-block;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;padding:13px 28px;border-radius:10px;text-decoration:none;font-weight:700;font-size:14px}</style></head><body><div class="box"><div class="icon">✅</div><h1>Email bestätigt!</h1><p>Danke! Du wirst gleich weitergeleitet…</p><a href="/feed" class="btn">→ Zur App</a></div></body></html>');
-    }
+    // (Toter Handler /auth/confirm-email entfernt — der primary Handler weiter oben in der
+    // Route-Reihenfolge (Z. 4713) matched zuerst und behandelt jetzt beide Flows: Signup +
+    // Email-Change. Single Source of Truth = emailConfirmTokens.)
 
     // Resend Bestätigungsmail für eingeloggten User
     if (path === '/api/resend-confirmation' && req.method === 'POST') {
