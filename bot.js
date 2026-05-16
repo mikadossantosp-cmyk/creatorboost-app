@@ -18339,8 +18339,14 @@ async function saveAppCode() {
     }
 }
 async function removePinnedLink() {
-    document.getElementById('inp-pinned-link').value = '';
-    await savePinnedLink();
+    // inp-pinned-link wurde aus /einstellungen entfernt — ist jetzt im Hero-Edit-Sheet (pfPinnedLink).
+    // Direkt API-Call statt Input-Manipulation.
+    try {
+        const res = await fetch('/api/set-pinned-link', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({url:''})});
+        const data = await res.json();
+        if (data.ok) { toast('🗑️ Pin entfernt!'); setTimeout(()=>location.reload(),250); }
+        else toast('❌ ' + (data.error || 'Fehler'));
+    } catch(e) { toast('❌ Netzwerk-Fehler'); }
 }
 async function setRing(ringId) {
     const res = await fetch('/api/set-active-ring', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ringId:ringId||null})});
