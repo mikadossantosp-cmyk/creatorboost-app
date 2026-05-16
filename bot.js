@@ -3745,14 +3745,48 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v122-launch-route-and-target-blank-legal';
+const SW_VERSION='v200-asset-cache';
+const STATIC_CACHE='cb-static-' + SW_VERSION;
+const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
-  caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
+  caches.keys().then(keys=>Promise.all(
+    keys.filter(k=>k!==STATIC_CACHE && k!==IMAGE_CACHE).map(k=>caches.delete(k))
+  )).then(()=>clients.claim())
 ));
 self.addEventListener('fetch',e=>{
-  if(e.request.mode==='navigate'){e.respondWith(fetch(e.request).catch(()=>new Response('<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Offline · CreatorX</title></head><body style="font-family:system-ui,-apple-system,sans-serif;background:#000;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center;padding:24px"><div><div style="font-size:48px;margin-bottom:16px">📡</div><div style="font-size:18px;font-weight:700;margin-bottom:8px">Offline</div><div style="font-size:13px;color:#999;line-height:1.5;margin-bottom:18px">Server antwortet nicht. Bitte Internetverbindung prüfen oder kurz später nochmal versuchen.</div><button onclick="location.reload()" style="background:#3b82f6;color:#fff;border:none;border-radius:10px;padding:12px 22px;font-size:14px;font-weight:700;cursor:pointer">🔄 Neu laden</button></div></body></html>',{headers:{'Content-Type':'text/html; charset=utf-8'}})));return;}
-  e.respondWith(fetch(e.request).catch(()=>new Response('',{status:503})));
+  const req=e.request;
+  if(req.method!=='GET'){return;}
+  const url=new URL(req.url);
+  // Navigation requests — network-first mit Offline-Fallback
+  if(req.mode==='navigate'){
+    e.respondWith(fetch(req).catch(()=>new Response('<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Offline · CreatorX</title></head><body style="font-family:system-ui,-apple-system,sans-serif;background:#000;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center;padding:24px"><div><div style="font-size:48px;margin-bottom:16px">📡</div><div style="font-size:18px;font-weight:700;margin-bottom:8px">Offline</div><div style="font-size:13px;color:#999;line-height:1.5;margin-bottom:18px">Server antwortet nicht. Bitte Internetverbindung prüfen oder kurz später nochmal versuchen.</div><button onclick="location.reload()" style="background:#3b82f6;color:#fff;border:none;border-radius:10px;padding:12px 22px;font-size:14px;font-weight:700;cursor:pointer">🔄 Neu laden</button></div></body></html>',{headers:{'Content-Type':'text/html; charset=utf-8'}})));
+    return;
+  }
+  // Bilder (/appbild/*, Logos, Icons) — stale-while-revalidate
+  if(url.pathname.startsWith('/appbild/')||url.pathname.startsWith('/cx-logo')||url.pathname.startsWith('/icon-')||url.pathname.startsWith('/icon.')||url.pathname.startsWith('/favicon')||url.pathname.endsWith('.png')||url.pathname.endsWith('.jpg')||url.pathname.endsWith('.webp')){
+    e.respondWith(caches.open(IMAGE_CACHE).then(async cache=>{
+      const cached=await cache.match(req);
+      const fetchPromise=fetch(req).then(net=>{
+        if(net&&net.ok){cache.put(req,net.clone()).catch(()=>{});}
+        return net;
+      }).catch(()=>cached||new Response('',{status:503}));
+      return cached||fetchPromise;
+    }));
+    return;
+  }
+  // Static (Fonts, CSS-Bundles, JS-Bundles in /static/*) — cache-first
+  if(url.pathname.startsWith('/static/')||url.pathname.endsWith('.css')||url.pathname.endsWith('.woff2')||url.pathname.endsWith('.woff')){
+    e.respondWith(caches.open(STATIC_CACHE).then(async cache=>{
+      const cached=await cache.match(req);
+      if(cached)return cached;
+      try{const net=await fetch(req);if(net&&net.ok){cache.put(req,net.clone()).catch(()=>{});}return net;}
+      catch(e){return new Response('',{status:503});}
+    }));
+    return;
+  }
+  // Rest: network-only mit silent error
+  e.respondWith(fetch(req).catch(()=>new Response('',{status:503})));
 });
 self.addEventListener('push',e=>{
   const data=e.data?.json()||{title:'CreatorX',body:'Neue Aktivität!'};
