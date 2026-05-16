@@ -47,6 +47,23 @@ const emailLoginTokens = new Map();   // token → { email, uid, exp }
 const emailConfirmTokens = new Map(); // token → { email, uid, exp } (für /einstellungen Email-Bestätigung)
 const accountUnlockTokens = new Map(); // token → { uid, exp } — nach Klick im Mail Settings-Edit freischalten
 const emailRateLimit = new Map();      // email → lastRequestTs (Cooldown gegen Spam)
+// In-Memory LRU für /appbild/* — vorher 180 sync Disk-Reads pro Feed-Render
+const _appbildBufCache = new Map();    // cacheKey → {buf, mime, etag, ts}
+const _APPBILD_LRU_MAX = 500;
+function _appbildLRUSet(key, val) {
+    if (_appbildBufCache.size >= _APPBILD_LRU_MAX) {
+        // Älteste Einträge zuerst rauswerfen (Map preserved insertion order)
+        const toRemove = Math.floor(_APPBILD_LRU_MAX * 0.1);
+        let removed = 0;
+        for (const k of _appbildBufCache.keys()) {
+            if (removed >= toRemove) break;
+            _appbildBufCache.delete(k); removed++;
+        }
+    }
+    _appbildBufCache.set(key, val);
+}
+// Bei Profilbild/Banner-Upload invalidate: in /api/upload-profilepic und /api/upload-banner
+// wird _appbildBufCache.delete(uid + '/' + type) gesetzt (separate Edit).
 const signupIpRateLimit = new Map();   // ip → { ts, n } — gegen Fake-Account-Spam + Email-Enumeration
 // Signup-Email-Confirmation: tracking unconfirmed Users LOCAL (Mainbot wird NICHT angefasst).
 // uid → { token, email, exp }. Persisted to disk via savePendingEmailConfirms.
@@ -3808,6 +3825,18 @@ self.addEventListener('notificationclick',e=>{
         if (!/^(\d+|creatorboost)$/.test(buid||'') || !/^(profilepic|banner)$/.test(btype||'')) {
             res.writeHead(400); return res.end('bad request');
         }
+        // ── PERF: In-Memory LRU + ETag — vorher 180 sync Disk-Reads pro Feed ──
+        const cacheKey = buid + '/' + btype;
+        const cached = _appbildBufCache.get(cacheKey);
+        const reqEtag = req.headers['if-none-match'];
+        if (cached) {
+            // 304 wenn Browser noch frische Version hat
+            if (reqEtag === cached.etag) {
+                res.writeHead(304, {'ETag': cached.etag}); return res.end();
+            }
+            res.writeHead(200, {'Content-Type': cached.mime, 'Cache-Control':'public, max-age=86400, immutable', 'ETag': cached.etag, 'Content-Length': cached.buf.length});
+            return res.end(cached.buf);
+        }
         // CreatorBoost-System-User: gebundeltes Avatar aus Repo (data-URL .txt) statt /data-Volume,
         // damit es nach jedem Deploy verfügbar ist.
         if (buid === 'creatorboost' && btype === 'profilepic') {
@@ -3815,8 +3844,11 @@ self.addEventListener('notificationclick',e=>{
                 const data = fs.readFileSync(__dirname + '/creatorboost-avatar.txt', 'utf8');
                 const mime = data.split(';')[0].replace('data:','');
                 const base64 = data.split(',')[1];
-                res.writeHead(200, {'Content-Type': mime, 'Cache-Control': 'public, max-age=86400'});
-                return res.end(Buffer.from(base64, 'base64'));
+                const buf = Buffer.from(base64, 'base64');
+                const etag = '"cb-' + buf.length + '"';
+                _appbildLRUSet(cacheKey, { buf, mime, etag, ts: Date.now() });
+                res.writeHead(200, {'Content-Type': mime, 'Cache-Control': 'public, max-age=86400, immutable', 'ETag': etag, 'Content-Length': buf.length});
+                return res.end(buf);
             } catch(e) { res.writeHead(404); return res.end('not found'); }
         }
         const bildFile = DATA_DIR + '/bild_' + buid + '_' + btype + '.txt';
@@ -3825,8 +3857,13 @@ self.addEventListener('notificationclick',e=>{
             const data = fs.readFileSync(bildFile, 'utf8');
             const mime = data.split(';')[0].replace('data:','');
             const base64 = data.split(',')[1];
-            res.writeHead(200, {'Content-Type': mime, 'Cache-Control': 'public, max-age=86400, immutable'});
-            return res.end(Buffer.from(base64, 'base64'));
+            const buf = Buffer.from(base64, 'base64');
+            const stat = fs.statSync(bildFile);
+            const etag = '"' + buid + '-' + btype + '-' + Math.round(stat.mtimeMs) + '"';
+            _appbildLRUSet(cacheKey, { buf, mime, etag, ts: Date.now() });
+            if (reqEtag === etag) { res.writeHead(304, {'ETag': etag}); return res.end(); }
+            res.writeHead(200, {'Content-Type': mime, 'Cache-Control': 'public, max-age=86400, immutable', 'ETag': etag, 'Content-Length': buf.length});
+            return res.end(buf);
         } catch(e) {}
         // Proxy to telegram-bot (separate Railway volume)
         if (MAINBOT_URL) {
@@ -3835,12 +3872,23 @@ self.addEventListener('notificationclick',e=>{
                 const lib = botUrl.startsWith('https') ? https : http;
                 lib.get(botUrl, { headers: {'x-bridge-secret': BRIDGE_SECRET} }, (bres) => {
                     if (bres.statusCode === 200) {
-                        res.writeHead(200, { 'Content-Type': bres.headers['content-type'] || 'image/jpeg', 'Cache-Control': 'public, max-age=3600' });
-                        bres.pipe(res);
+                        // Stream + buffer für Cache
+                        const chunks = [];
+                        bres.on('data', c => chunks.push(c));
+                        bres.on('end', () => {
+                            const buf = Buffer.concat(chunks);
+                            const mime = bres.headers['content-type'] || 'image/jpeg';
+                            const etag = '"proxy-' + buid + '-' + btype + '-' + buf.length + '"';
+                            _appbildLRUSet(cacheKey, { buf, mime, etag, ts: Date.now() });
+                            if (reqEtag === etag) { res.writeHead(304, {'ETag': etag}); return res.end(); }
+                            res.writeHead(200, { 'Content-Type': mime, 'Cache-Control': 'public, max-age=3600', 'ETag': etag, 'Content-Length': buf.length });
+                            res.end(buf);
+                            resolve();
+                        });
                     } else {
                         res.writeHead(404); res.end('not found');
+                        resolve();
                     }
-                    resolve();
                 }).on('error', () => { res.writeHead(404); res.end('not found'); resolve(); });
             });
         }
@@ -6502,6 +6550,8 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
             session.profilePicData = imageData;
             saveSessions();
             try { await fs.promises.writeFile(DATA_DIR + '/bild_' + getMyUid(session) + '_profilepic.txt', imageData); } catch(e) { console.error('profilepic write failed:', e.message); }
+            // Cache-Invalidation: damit /appbild/UID/profilepic sofort die neue Version zeigt
+            _appbildBufCache.delete(getMyUid(session) + '/profilepic');
             checkProfileCompletion(getMyUid(session), session);
             return json({ok:true});
         } catch(e) { return json({ok:false, error:e.message},500); }
@@ -6529,6 +6579,7 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
             session.bannerData = imageData;
             saveSessions();
             try { await fs.promises.writeFile(DATA_DIR + '/bild_' + getMyUid(session) + '_banner.txt', imageData); } catch(e) { console.error('banner write failed:', e.message); }
+            _appbildBufCache.delete(getMyUid(session) + '/banner');
             checkProfileCompletion(getMyUid(session), session);
             return json({ok:true});
         } catch(e) { return json({ok:false, error:e.message},500); }
