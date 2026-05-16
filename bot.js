@@ -3274,7 +3274,7 @@ async function pinnedEngageClick(ownerUid, btn){
     alert('Bitte erst auf "📸 Auf Instagram öffnen" tippen + auf Insta LIKEN, KOMMENTIEREN, SPEICHERN, TEILEN.');
     return;
   }
-  if (!confirm('📌 Pinned-Post engagieren\n\nDu bestätigst:\n✓ Du hast auf Instagram GELIKT\n✓ Du hast KOMMENTIERT\n✓ Du hast GETEILT\n✓ Du hast GESPEICHERT\n\n→ Belohnung: +1 💎\n→ Bei Schein-Engagement: Sanktionen\n\nFortfahren?')) return;
+  if (!confirm('📌 Pinned-Post engagieren\\n\\nDu bestätigst:\\n✓ Du hast auf Instagram GELIKT\\n✓ Du hast KOMMENTIERT\\n✓ Du hast GETEILT\\n✓ Du hast GESPEICHERT\\n\\n→ Belohnung: +1 💎\\n→ Bei Schein-Engagement: Sanktionen\\n\\nFortfahren?')) return;
   btn.disabled = true; btn.textContent = '⏳ Bestätige …';
   try {
     const r = await fetch('/api/engage-pinned-post', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ownerUid})});
