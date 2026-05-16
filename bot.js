@@ -3353,6 +3353,18 @@ async function handleRequest(req, res) {
             );
             if (found) emailExists = { uid: found[0], state: found[1].email === testEmail ? 'active' : 'pending', emailConfirmedAt: found[1].emailConfirmedAt || null };
         }
+        // 3) ACTIVE Mainbot-POST-Test: invalider Request → erwarte 400 mit error-message
+        //    Wenn das null returnt = POST-Pfad zu Mainbot ist tot.
+        //    Wenn das einen JSON-Body returnt = Mainbot lebt und antwortet auf POSTs.
+        const postT0 = Date.now();
+        const postTest = await postBot('/create-email-user-api', {
+            email: '__diag_invalid__',   // invalid email → mainbot returnt 400 mit "Ungültige Email"
+            password: 'x',                // zu kurz, aber email-check feuert zuerst
+        });
+        const postMs = Date.now() - postT0;
+        // 4) Detailed mainbot status
+        const mainbotPostAlive = postTest !== null;
+        const mainbotPostExpected400 = postTest && postTest.ok === false && /Ungültige Email/i.test(String(postTest.error||''));
         res.writeHead(200, { 'Content-Type': 'application/json' });
         return res.end(JSON.stringify({
             ok: true,
@@ -3360,12 +3372,17 @@ async function handleRequest(req, res) {
             totalMs: Date.now() - t0,
             mainbotConfigured: !!MAINBOT_URL,
             mainbotUrl: MAINBOT_URL ? MAINBOT_URL.replace(/^https?:\/\//,'').slice(0,30) + '...' : null,
-            dataFetch: { ok: !!bd, ms: dataMs, userCount: bd?.users ? Object.keys(bd.users).length : null },
+            tests: {
+                dataFetch: { ok: !!bd, ms: dataMs, userCount: bd?.users ? Object.keys(bd.users).length : null },
+                postAlive: { ok: mainbotPostAlive, ms: postMs, expectedResponse: mainbotPostExpected400, response: postTest },
+            },
             testEmail,
             emailExists,
-            recommend: !bd ? 'Mainbot nicht erreichbar — Railway-Status checken'
-                : emailExists ? ('Email existiert schon als UID ' + emailExists.uid + ' (' + emailExists.state + '). User soll → Sign-In oder andere Email.')
-                : 'Mainbot OK + Email frei. Signup sollte klappen — Browser-DevTools/Network-Tab beim Versuch checken.',
+            verdict: !bd ? '❌ Mainbot /data GET schlägt fehl — Mainbot komplett down'
+                : !mainbotPostAlive ? '❌ Mainbot POST schlägt fehl (GET geht aber POST nicht) — Mainbot ist halb-tot, vermutlich CPU/Memory-Issue auf Railway'
+                : !mainbotPostExpected400 ? '⚠️ Mainbot antwortet auf POST aber nicht wie erwartet. Response: ' + JSON.stringify(postTest).slice(0, 200)
+                : emailExists ? ('⚠️ Email existiert schon als UID ' + emailExists.uid + ' (' + emailExists.state + '). User soll → Sign-In.')
+                : '✅ Mainbot OK + Email frei — Signup sollte klappen. Wenn nicht: Browser-DevTools/Network-Tab checken.',
         }, null, 2));
     }
 
