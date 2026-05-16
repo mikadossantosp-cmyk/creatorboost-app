@@ -9594,6 +9594,41 @@ async function cbHelperOpen(){
     await cbHelperLoadHistory();
   }
   try{ localStorage.setItem('cb_helper_seen','1'); const b=document.getElementById('cb-helper-badge'); if(b)b.style.display='none'; }catch(e){}
+  // Polling für neue Admin-Antworten alle 8s solang der Chat offen ist
+  if (!window._cbHelperPoll) {
+    window._cbHelperPoll = setInterval(()=>{
+      const open = document.getElementById('cb-helper-modal').classList.contains('open');
+      if (!open) { clearInterval(window._cbHelperPoll); window._cbHelperPoll = null; return; }
+      cbHelperPollNew();
+    }, 8000);
+  }
+}
+async function cbHelperPollNew(){
+  try {
+    const r = await fetch('/api/helper-history');
+    const j = await r.json();
+    if (!j.ok || !Array.isArray(j.messages)) return;
+    const body = document.getElementById('cb-helper-body');
+    const lastTsAttr = body.dataset.lastTs ? Number(body.dataset.lastTs) : 0;
+    let maxTs = lastTsAttr;
+    let appendedAny = false;
+    for (const m of j.messages) {
+      const ts = Number(m.ts || 0);
+      if (ts <= lastTsAttr) continue;
+      if (ts > maxTs) maxTs = ts;
+      // Nur Admin-Antworten dynamisch nachreichen — User-Bubbles + Bot-Replies
+      // sind schon lokal angezeigt
+      if (!m.fromAdmin) continue;
+      const el = document.createElement('div');
+      el.className = 'cb-msg bot';
+      el.style.border = '1px solid rgba(167,139,250,0.4)';
+      el.innerHTML = m.text;
+      body.appendChild(el);
+      appendedAny = true;
+    }
+    if (maxTs > lastTsAttr) body.dataset.lastTs = String(maxTs);
+    if (appendedAny) body.scrollTop = body.scrollHeight;
+  } catch(e) {}
 }
 async function cbHelperLoadHistory(){
   const body = document.getElementById('cb-helper-body');
@@ -9603,13 +9638,16 @@ async function cbHelperLoadHistory(){
     const j = await r.json();
     if (j.ok && Array.isArray(j.messages) && j.messages.length > 0) {
       body.innerHTML = '';
+      let maxTs = 0;
       for (const m of j.messages) {
         const el = document.createElement('div');
         el.className = 'cb-msg ' + (m.role === 'user' ? 'user' : 'bot');
         if (m.fromAdmin) { el.style.border = '1px solid rgba(167,139,250,0.4)'; }
         el.innerHTML = (m.role === 'bot') ? m.text : escapeHtml(m.text);
         body.appendChild(el);
+        const ts = Number(m.ts || 0); if (ts > maxTs) maxTs = ts;
       }
+      body.dataset.lastTs = String(maxTs);
       const hint = document.createElement('div');
       hint.style.cssText = 'text-align:center;padding:8px;font-size:11px;color:var(--muted);font-style:italic';
       hint.textContent = '— Stelle eine Frage oder wähle ein Thema —';
