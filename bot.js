@@ -3532,6 +3532,8 @@ self.addEventListener('notificationclick',e=>{
             const images = await resp.json();
             let count = 0;
             for (const [filename, content] of Object.entries(images)) {
+                // Path-Traversal-Schutz: nur reine Filenames erlauben, keine '../' oder absolute Pfade.
+                if (!filename || /[/\\]/.test(filename) || filename.includes('..') || filename.startsWith('.')) continue;
                 fs.writeFileSync(DATA_DIR + '/' + filename, content, 'utf8');
                 count++;
             }
@@ -4245,7 +4247,9 @@ document.addEventListener('DOMContentLoaded', function(){
             }
             if (!didSetupPassword) {
                 postBot('/log-email-login', { email, success: false, method: 'password', uid: '', ip: _ip, ua: _ua }).catch(()=>{});
-                return json({ok:false, error: (result && result.error) || 'Email oder Passwort falsch — oder noch kein Account? Sign Up unter /signup', notRegistered: result?.error?.includes('falsch')}, 401);
+                // Mainbot setzt notRegistered:true wenn User nicht gefunden wurde, sonst undefined.
+                // Vorher wurde notRegistered fälschlich aus 'falsch'-Text inferred (semantic inversion).
+                return json({ok:false, error: (result && result.error) || 'Email oder Passwort falsch — oder noch kein Account? Sign Up unter /signup', notRegistered: !!(result && result.notRegistered)}, 401);
             }
         }
         postBot('/log-email-login', { email, success: true, method: 'password', uid: String(result.uid), ip: _ip, ua: _ua }).catch(()=>{});
@@ -6135,8 +6139,12 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
         if (!targetRaw) { res.writeHead(400); return res.end('missing u'); }
         let target;
         try { target = new URL(targetRaw); } catch(e) { res.writeHead(400); return res.end('bad url'); }
-        // Whitelist: nur Instagram/Facebook CDN-Hosts erlauben.
-        const okHost = /(\.cdninstagram\.com|\.fbcdn\.net|\.facebook\.com|instagram\.com)$/i.test(target.hostname);
+        // Whitelist: nur Instagram/Facebook CDN-Hosts erlauben. Führender Punkt VOR jedem Hostname-
+        // Suffix WICHTIG — sonst matched 'attacker-instagram.com' (SSRF). Apex 'instagram.com' / 'facebook.com'
+        // separat erlauben via ^pattern.
+        const h = target.hostname.toLowerCase();
+        const okHost = /(\.cdninstagram\.com|\.fbcdn\.net|\.facebook\.com|\.instagram\.com)$/.test(h)
+            || h === 'instagram.com' || h === 'facebook.com';
         if (!okHost) { res.writeHead(400); return res.end('host not allowed'); }
         const lib = target.protocol === 'https:' ? https : http;
         const upstreamReq = lib.request({
@@ -6340,6 +6348,11 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
         const parts = path.replace('/api/download-project-doc/','').split('/');
         const docUid = parts[0], docProjId = parts[1];
         if (!docUid || !docProjId) return text('Nicht gefunden', 404);
+        // Path-Traversal-Schutz: uid + projId müssen alphanumeric (+ underscore/dash) sein.
+        // Sonst kann '../../etc/whatever' arbitrary files vom DATA_DIR lesen.
+        if (!/^[a-zA-Z0-9_-]+$/.test(docUid) || !/^[a-zA-Z0-9_-]+$/.test(docProjId)) {
+            return text('Nicht gefunden', 404);
+        }
         const docBase64 = ladeProjectDoc(docUid, docProjId);
         if (!docBase64) return text('Nicht gefunden', 404);
         const botData = await fetchBot('/data');
@@ -16593,11 +16606,20 @@ async function setRing(ringId) {
         const botUrl = MAINBOT_URL + '/tg-file/' + encodeURIComponent(fileId);
         return new Promise((resolve) => {
             const lib = botUrl.startsWith('https') ? require('https') : require('http');
-            lib.get(botUrl, { headers: { 'x-bridge-secret': BRIDGE_SECRET } }, (bres) => {
-                res.writeHead(bres.statusCode, { 'Content-Type': bres.headers['content-type'] || 'image/jpeg', 'Cache-Control': 'public,max-age=86400' });
-                bres.pipe(res);
-                resolve();
-            }).on('error', () => { res.writeHead(404); res.end(); resolve(); });
+            const upstream = lib.get(botUrl, { headers: { 'x-bridge-secret': BRIDGE_SECRET } }, (bres) => {
+                try {
+                    const status = bres.statusCode || 502;
+                    res.writeHead(status, { 'Content-Type': bres.headers['content-type'] || 'image/jpeg', 'Cache-Control': 'public,max-age=86400' });
+                    bres.pipe(res);
+                    bres.on('error', () => { try { res.end(); } catch(e) {} resolve(); });
+                    bres.on('end', resolve);
+                } catch(e) {
+                    try { res.writeHead(502); res.end(); } catch(_) {}
+                    resolve();
+                }
+            });
+            upstream.on('error', () => { try { res.writeHead(404); res.end(); } catch(e) {} resolve(); });
+            upstream.setTimeout(15000, () => { try { upstream.destroy(); res.writeHead(504); res.end(); } catch(e) {} resolve(); });
         });
     }
 
@@ -16726,6 +16748,8 @@ server.listen(PORT, async () => {
                 const images = await resp.json();
                 let count = 0;
                 for (const [filename, content] of Object.entries(images)) {
+                    // Path-Traversal-Schutz: nur reine Filenames erlauben.
+                    if (!filename || /[/\\]/.test(filename) || filename.includes('..') || filename.startsWith('.')) continue;
                     fs.writeFileSync(DATA_DIR + '/' + filename, content, 'utf8');
                     count++;
                 }
