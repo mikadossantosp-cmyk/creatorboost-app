@@ -7830,6 +7830,43 @@ p{line-height:1.65;color:var(--muted)}
         });
         return json(r || {ok:false, error:'Mainbot offline'});
     }
+    // ── Helper-Bot Fallback (User-Frage an Admin forwarden) ──
+    if (path === '/api/helper-ask' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        const body = await parseBody(req);
+        const question = String(body.question || '').trim();
+        if (!question) return json({ok:false, error:'Frage fehlt'}, 400);
+        const r = await postBot('/helper-question-api', { fromUid: String(session.uid), question });
+        return json(r || {ok:false, error:'Mainbot offline'});
+    }
+    if (path === '/api/admin/helper-questions' && req.method === 'GET') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
+        const status = String(query.status || 'open');
+        const r = await fetchBotRaw('/admin-helper-questions-api?status=' + encodeURIComponent(status));
+        return json(r || {ok:false, error:'Mainbot offline'});
+    }
+    if (path === '/api/admin/helper-answer' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
+        const body = await parseBody(req);
+        const r = await postBot('/admin-helper-answer-api', { qId: String(body.qId||''), answer: String(body.answer||'') });
+        return json(r || {ok:false, error:'Mainbot offline'});
+    }
+    if (path === '/api/admin/schedule-event' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
+        const body = await parseBody(req);
+        const r = await postBot('/admin-schedule-event-api', {
+            type: String(body.type||''),
+            amount: Number(body.amount||0),
+            durationMs: Number(body.durationMs||0),
+            startAt: Number(body.startAt||0),
+            label: String(body.label||''),
+        });
+        return json(r || {ok:false, error:'Mainbot offline'});
+    }
+
     if (path === '/api/admin/warn-user' && req.method === 'POST') {
         if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
         if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
@@ -9294,8 +9331,19 @@ async function submitSuperLink(){
     </div>
     <div class="cb-helper-body" id="cb-helper-body"></div>
     <div class="cb-helper-chips" id="cb-helper-chips"></div>
+    <div class="cb-helper-input-row">
+      <input type="text" id="cb-helper-input" placeholder="Eigene Frage stellen…" maxlength="500" autocomplete="off">
+      <button id="cb-helper-send" onclick="cbHelperAsk()" aria-label="Senden">→</button>
+    </div>
   </div>
 </div>
+<style>
+.cb-helper-input-row{display:flex;gap:8px;padding:10px 14px;border-top:1px solid var(--border2);background:var(--bg)}
+#cb-helper-input{flex:1;background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:10px 14px;border-radius:99px;font-size:13.5px;font-family:inherit;outline:none}
+#cb-helper-input:focus{border-color:#a78bfa}
+#cb-helper-send{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;border:none;font-size:18px;cursor:pointer;font-weight:800;font-family:inherit;flex-shrink:0}
+#cb-helper-send:disabled{opacity:.5;cursor:wait}
+</style>
 <script>
 // Q&A-Tree: id → {q, a, next: [childIds]}
 const CB_HELP = {
@@ -9355,6 +9403,107 @@ function cbHelperShow(id){
     });
   }, Math.min(700, 200 + node.a.length*5));
 }
+// Keywords pro Topic für Search
+const CB_HELP_KEYWORDS = {
+  'm': ['mission','m1','m2','m3','aufgabe','ziele','task','daily mission'],
+  'xp': ['xp','punkte','level','rolle','badge','rang','rank','erfahrung'],
+  'diamond': ['diamant','diamond','💎','währung','wallet','geld','reward','belohnung'],
+  'superlink': ['superlink','super link','superpost','premium post','top'],
+  'kollab': ['kollab','kollabo','collab','partner','zusammenarbeit'],
+  'pinned': ['pinned','pin','reel','explore karte','profil-reel'],
+  'warn': ['warn','verwarnung','warning','strafe','sperre','ban','gebannt'],
+  'support': ['support','hilfe','help','kontakt','admin'],
+};
+function cbHelperFindTopic(q){
+  const lq = q.toLowerCase();
+  let best=null, bestScore=0;
+  for (const [tid, kws] of Object.entries(CB_HELP_KEYWORDS)){
+    let s=0; for (const kw of kws){ if (lq.includes(kw)) s += kw.length; }
+    if (s > bestScore) { bestScore = s; best = tid; }
+  }
+  return bestScore >= 3 ? best : null;
+}
+async function cbHelperAsk(){
+  const inp = document.getElementById('cb-helper-input');
+  const btn = document.getElementById('cb-helper-send');
+  const q = (inp.value||'').trim();
+  if (!q) return;
+  btn.disabled = true; btn.textContent = '⏳';
+  inp.value = '';
+  const body = document.getElementById('cb-helper-body');
+  const chips = document.getElementById('cb-helper-chips');
+  // User-Bubble
+  const u = document.createElement('div'); u.className='cb-msg user'; u.textContent = q;
+  body.appendChild(u);
+  chips.innerHTML = '';
+  // Typing
+  const t = document.createElement('div'); t.className='cb-typing';
+  t.innerHTML='<span></span><span></span><span></span>';
+  body.appendChild(t);
+  body.scrollTop = body.scrollHeight;
+  // Search first
+  await new Promise(r => setTimeout(r, 600));
+  const topicId = cbHelperFindTopic(q);
+  t.remove();
+  if (topicId && CB_HELP[topicId]) {
+    // Found → show topic answer
+    const node = CB_HELP[topicId];
+    const a = document.createElement('div'); a.className='cb-msg bot';
+    a.innerHTML = '<div style="font-size:11px;color:var(--muted);margin-bottom:4px">📚 Gefunden im Topic <b>'+ (node.q||'') +'</b>:</div>' + node.a;
+    body.appendChild(a);
+    // Chips: confirm + follow-ups + ask-admin
+    chips.innerHTML = '';
+    const yes = document.createElement('button'); yes.className='cb-chip'; yes.textContent='✅ Hat geholfen';
+    yes.onclick = ()=>{ chips.innerHTML=''; cbHelperShow('_back'); };
+    chips.appendChild(yes);
+    const no = document.createElement('button'); no.className='cb-chip'; no.textContent='❌ Frag Admin';
+    no.onclick = ()=>cbHelperForwardToAdmin(q);
+    chips.appendChild(no);
+    (node.next||[]).slice(0,3).forEach(nid => {
+      const nx = CB_HELP[nid]; if(!nx) return;
+      const c = document.createElement('button'); c.className='cb-chip'; c.textContent = nx.q || '→';
+      c.onclick = ()=>cbHelperShow(nid);
+      chips.appendChild(c);
+    });
+  } else {
+    // No match → forward to admin
+    cbHelperForwardToAdmin(q);
+  }
+  body.scrollTop = body.scrollHeight;
+  btn.disabled = false; btn.textContent = '→';
+}
+async function cbHelperForwardToAdmin(question){
+  const body = document.getElementById('cb-helper-body');
+  const chips = document.getElementById('cb-helper-chips');
+  chips.innerHTML = '';
+  const t = document.createElement('div'); t.className='cb-typing';
+  t.innerHTML='<span></span><span></span><span></span>';
+  body.appendChild(t);
+  body.scrollTop = body.scrollHeight;
+  try {
+    const r = await fetch('/api/helper-ask', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question})});
+    const j = await r.json();
+    t.remove();
+    const a = document.createElement('div'); a.className='cb-msg bot';
+    if (j.ok) {
+      a.innerHTML = '✅ <b>Frage an Admin gesendet!</b><br><br>Die Antwort kommt als DM von <b>CreatorBoost</b> direkt in deine Nachrichten — schau bei /nachrichten/creatorboost rein.<br><br>Meistens innerhalb von 1 Stunde.';
+    } else {
+      a.innerHTML = '❌ Konnte die Frage nicht an den Admin schicken: '+(j.error||'Fehler')+'<br><br>Versuch\\'s direkt: <a href="/nachrichten/creatorboost" style="color:#a78bfa;font-weight:700">→ DM an CreatorBoost</a>';
+    }
+    body.appendChild(a);
+    const back = document.createElement('button'); back.className='cb-chip back'; back.textContent='← Zur Übersicht';
+    back.onclick = ()=>cbHelperShow('_back');
+    chips.appendChild(back);
+  } catch(e){
+    t.remove();
+    const a = document.createElement('div'); a.className='cb-msg bot';
+    a.innerHTML = '❌ Netzwerk-Fehler. Versuch\\'s nochmal oder direkt: <a href="/nachrichten/creatorboost" style="color:#a78bfa;font-weight:700">→ DM an CreatorBoost</a>';
+    body.appendChild(a);
+  }
+  body.scrollTop = body.scrollHeight;
+}
+// Enter im Input = senden
+setTimeout(()=>{ const inp=document.getElementById('cb-helper-input'); if(inp){ inp.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); cbHelperAsk(); } }); } }, 500);
 // Beim ersten Mal Badge zeigen, nach Click ausblenden
 try{ if(localStorage.getItem('cb_helper_seen')==='1'){ const b=document.getElementById('cb-helper-badge'); if(b)b.style.display='none'; } }catch(e){}
 </script>
