@@ -16081,6 +16081,239 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
     }
 
     // ── RANKING ──
+    // ── PROFESSIONAL INSIGHTS DASHBOARD (für alle User) ──
+    if (path === '/insights') {
+        if (!session) return redirect('/login');
+        // Daten holen
+        const myLinks = Object.values(d.links||{}).filter(l => String(l.user_id) === String(myUid));
+        const now = Date.now();
+        const D30 = 30 * 24 * 60 * 60 * 1000;
+        const D7 = 7 * 24 * 60 * 60 * 1000;
+        const recent30 = myLinks.filter(l => (now - (l.timestamp||0)) < D30);
+        const recent7 = myLinks.filter(l => (now - (l.timestamp||0)) < D7);
+        // Top Engagers: zähle wer hat meine Posts am meisten geliked
+        const engagerCounts = {};
+        for (const l of myLinks) {
+            const likes = Array.isArray(l.likes) ? l.likes : (l.likes instanceof Set ? [...l.likes] : []);
+            for (const lid of likes) {
+                if (String(lid) === String(myUid)) continue;
+                engagerCounts[lid] = (engagerCounts[lid] || 0) + 1;
+            }
+        }
+        const topEngagers = Object.entries(engagerCounts)
+            .sort((a,b) => b[1] - a[1])
+            .slice(0, 10)
+            .map(([uid, count]) => ({ uid, count, user: d.users?.[uid] || {} }));
+        // Beste Posts: top 5 by likes
+        const bestPosts = myLinks
+            .map(l => ({ ...l, likeCount: Array.isArray(l.likes) ? l.likes.length : (l.likes?.size || 0) }))
+            .sort((a,b) => b.likeCount - a.likeCount)
+            .slice(0, 5);
+        // Posting Time Analysis: gruppiere meine Posts nach Stunde-of-day
+        const hourStats = Array.from({length:24}, () => ({ posts: 0, totalLikes: 0 }));
+        for (const l of myLinks) {
+            const h = new Date(l.timestamp||0).getHours();
+            hourStats[h].posts++;
+            const lc = Array.isArray(l.likes) ? l.likes.length : (l.likes?.size || 0);
+            hourStats[h].totalLikes += lc;
+        }
+        const hourAvgLikes = hourStats.map(s => s.posts > 0 ? s.totalLikes/s.posts : 0);
+        const maxHourAvg = Math.max(0.01, ...hourAvgLikes);
+        const bestHour = hourAvgLikes.indexOf(maxHourAvg);
+        // Online-Heatmap: wann sind User online?
+        const onlineHourBuckets = Array(24).fill(0);
+        for (const s of sessions.values()) {
+            if (!s.lastSeen) continue;
+            const h = new Date(s.lastSeen).getHours();
+            onlineHourBuckets[h]++;
+        }
+        const maxOnline = Math.max(1, ...onlineHourBuckets);
+        // Engagement Trend (30d)
+        const dayBuckets = Array(30).fill(0);
+        const today = new Date(); today.setHours(0,0,0,0);
+        for (const l of myLinks) {
+            const lc = Array.isArray(l.likes) ? l.likes.length : (l.likes?.size || 0);
+            const daysAgo = Math.floor((today.getTime() - new Date(l.timestamp||0).setHours(0,0,0,0)) / (24*60*60*1000));
+            if (daysAgo >= 0 && daysAgo < 30) dayBuckets[29 - daysAgo] += lc;
+        }
+        const maxDayLikes = Math.max(1, ...dayBuckets);
+        // Total Stats
+        const total30Likes = recent30.reduce((s,l) => s + (Array.isArray(l.likes) ? l.likes.length : (l.likes?.size || 0)), 0);
+        const total7Likes = recent7.reduce((s,l) => s + (Array.isArray(l.likes) ? l.likes.length : (l.likes?.size || 0)), 0);
+        const avgLikesPerPost = recent30.length > 0 ? Math.round(total30Likes / recent30.length * 10) / 10 : 0;
+        const followerGrowth = (myUser.followers || []).length;
+
+        return html(`
+<style>
+.ins-wrap{padding:14px 16px 80px;background:var(--bg);min-height:100vh}
+.ins-head{margin-bottom:18px}
+.ins-h1{font-size:22px;font-weight:800;letter-spacing:-.4px;margin-bottom:3px}
+.ins-sub{font-size:12.5px;color:var(--muted)}
+.ins-stat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:18px}
+.ins-stat{padding:14px;background:var(--bg3);border:1px solid var(--border2);border-radius:14px;position:relative;overflow:hidden}
+.ins-stat::before{content:'';position:absolute;left:0;top:0;width:3px;height:100%;background:var(--accent,#a78bfa)}
+.ins-stat.purple::before{background:#a78bfa}
+.ins-stat.green::before{background:#22c55e}
+.ins-stat.orange::before{background:#f59e0b}
+.ins-stat.pink::before{background:#ec4899}
+.ins-stat-num{font-size:24px;font-weight:800;letter-spacing:-.3px;line-height:1.1}
+.ins-stat-lbl{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-top:5px}
+.ins-stat-trend{font-size:10.5px;color:#22c55e;margin-top:3px;font-weight:600}
+.ins-section{margin-bottom:22px;padding:16px;background:var(--bg3);border:1px solid var(--border2);border-radius:16px}
+.ins-section-title{font-size:14px;font-weight:800;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.ins-section-sub{font-size:11.5px;color:var(--muted);margin-top:-8px;margin-bottom:14px;font-weight:500}
+.ins-bar-chart{display:flex;align-items:flex-end;gap:3px;height:120px;padding:6px 0;margin-bottom:6px}
+.ins-bar{flex:1;background:linear-gradient(180deg,#a78bfa,#7c3aed);border-radius:4px 4px 1px 1px;min-height:3px;position:relative;transition:filter .15s}
+.ins-bar:hover{filter:brightness(1.2)}
+.ins-bar.best{background:linear-gradient(180deg,#22c55e,#16a34a);box-shadow:0 0 12px rgba(34,197,94,.4)}
+.ins-bar-labels{display:flex;justify-content:space-between;font-size:9.5px;color:var(--muted);font-weight:600;font-variant-numeric:tabular-nums}
+.ins-engagers{display:flex;flex-direction:column;gap:8px}
+.ins-engager-row{display:flex;align-items:center;gap:11px;padding:8px;background:var(--bg);border-radius:11px;text-decoration:none;color:inherit;transition:transform .12s}
+.ins-engager-row:hover{transform:translateX(2px);background:var(--bg4)}
+.ins-engager-rank{width:24px;font-size:13px;font-weight:800;color:var(--muted);text-align:center;flex-shrink:0}
+.ins-engager-rank.gold{color:#f59e0b}.ins-engager-rank.silver{color:#94a3b8}.ins-engager-rank.bronze{color:#b45309}
+.ins-engager-avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#a78bfa,#7c3aed);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px;overflow:hidden;position:relative;flex-shrink:0}
+.ins-engager-avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.ins-engager-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13.5px;font-weight:600}
+.ins-engager-count{display:flex;align-items:center;gap:4px;font-size:13px;font-weight:800;color:#ec4899;flex-shrink:0}
+.ins-best-post{display:flex;gap:11px;padding:11px;background:var(--bg);border-radius:11px;margin-bottom:8px;text-decoration:none;color:inherit;transition:background .12s}
+.ins-best-post:hover{background:var(--bg4)}
+.ins-best-post:last-child{margin-bottom:0}
+.ins-best-post-rank{width:22px;font-size:14px;font-weight:800;color:var(--muted);flex-shrink:0;text-align:center}
+.ins-best-post-info{flex:1;min-width:0}
+.ins-best-post-url{font-size:12px;color:#4dabf7;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:3px}
+.ins-best-post-meta{font-size:10.5px;color:var(--muted);font-weight:500}
+.ins-best-post-likes{display:flex;align-items:center;gap:3px;font-size:14px;font-weight:800;color:#ef4444;flex-shrink:0}
+.ins-best-open{padding:6px 10px;background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;border-radius:7px;font-size:11px;font-weight:700;text-decoration:none;flex-shrink:0;white-space:nowrap;align-self:center;display:inline-flex;align-items:center;gap:3px}
+.ins-insight-card{padding:11px 14px;background:linear-gradient(135deg,rgba(34,197,94,.08),rgba(167,139,250,.06));border:1px solid rgba(34,197,94,.25);border-radius:11px;margin-top:10px;font-size:12.5px;line-height:1.5}
+.ins-insight-card b{color:#22c55e}
+.ins-empty{padding:24px;text-align:center;color:var(--muted);font-size:13px}
+</style>
+<div class="topbar"><a href="/profil" class="icon-btn" style="font-size:22px">‹</a><div style="font-size:15px;font-weight:600">📊 Pro-Insights</div><div style="width:36px"></div></div>
+<div class="ins-wrap">
+  <div class="ins-head">
+    <div class="ins-h1">Deine Insights</div>
+    <div class="ins-sub">So performst du · Letzte 30 Tage</div>
+  </div>
+
+  <!-- Top-Stats -->
+  <div class="ins-stat-grid">
+    <div class="ins-stat purple">
+      <div class="ins-stat-num">${total30Likes.toLocaleString('de-DE')}</div>
+      <div class="ins-stat-lbl">Likes (30d)</div>
+      ${total7Likes ? `<div class="ins-stat-trend">↗ ${total7Likes} diese Woche</div>` : ''}
+    </div>
+    <div class="ins-stat green">
+      <div class="ins-stat-num">${recent30.length}</div>
+      <div class="ins-stat-lbl">Posts (30d)</div>
+      ${recent7.length ? `<div class="ins-stat-trend">↗ ${recent7.length} diese Woche</div>` : ''}
+    </div>
+    <div class="ins-stat orange">
+      <div class="ins-stat-num">${avgLikesPerPost}</div>
+      <div class="ins-stat-lbl">⌀ Likes / Post</div>
+    </div>
+    <div class="ins-stat pink">
+      <div class="ins-stat-num">${followerGrowth}</div>
+      <div class="ins-stat-lbl">Follower</div>
+    </div>
+  </div>
+
+  <!-- Top Engagers -->
+  <div class="ins-section">
+    <div class="ins-section-title">🏆 Top Engagers <span style="font-size:11px;color:var(--muted);font-weight:500">· Wer liked dich am meisten</span></div>
+    ${topEngagers.length === 0 ? '<div class="ins-empty">Noch keine Likes auf deine Posts — sobald du postest, siehst du hier wer dich pusht.</div>' : (
+      '<div class="ins-engagers">' + topEngagers.map((e, i) => {
+        const u = e.user;
+        const name = htmlEsc(u.spitzname || u.name || 'User');
+        const pic = ladeBild(e.uid, 'profilepic') ? `/appbild/${e.uid}/profilepic` : (u.instagram ? `https://unavatar.io/instagram/${encodeURIComponent(u.instagram)}` : '');
+        const init = htmlEsc((u.spitzname || u.name || '?').slice(0,1).toUpperCase());
+        const rankCls = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
+        return `<a href="/profil/${e.uid}" class="ins-engager-row">
+          <div class="ins-engager-rank ${rankCls}">${i===0?'🥇':i===1?'🥈':i===2?'🥉':'#'+(i+1)}</div>
+          <div class="ins-engager-avatar">${pic?`<img src="${pic}" alt="" loading="lazy">`:init}</div>
+          <div class="ins-engager-name">${name}</div>
+          <div class="ins-engager-count">❤️ ${e.count}</div>
+        </a>`;
+      }).join('') + '</div>'
+    )}
+  </div>
+
+  <!-- Beste Posts -->
+  <div class="ins-section">
+    <div class="ins-section-title">🔥 Deine Top-Posts <span style="font-size:11px;color:var(--muted);font-weight:500">· Nach Likes</span></div>
+    ${bestPosts.length === 0 || bestPosts[0].likeCount === 0 ? '<div class="ins-empty">Poste deinen ersten Reel — Top-Posts erscheinen hier.</div>' : (
+      bestPosts.filter(p => p.likeCount > 0).map((p, i) => `<a href="${htmlEsc(safeUrl(p.text||''))}" target="_blank" rel="noopener noreferrer" class="ins-best-post">
+        <div class="ins-best-post-rank">${i===0?'🥇':i===1?'🥈':i===2?'🥉':'#'+(i+1)}</div>
+        <div class="ins-best-post-info">
+          <div class="ins-best-post-url">${htmlEsc(String(p.text||'').replace(/^https?:\/\//,'').slice(0,45))}</div>
+          <div class="ins-best-post-meta">📅 ${fmtRelative(p.timestamp||0)}</div>
+        </div>
+        <div class="ins-best-post-likes">❤️ ${p.likeCount}</div>
+        <span class="ins-best-open">→ Öffnen</span>
+      </a>`).join('')
+    )}
+  </div>
+
+  <!-- Posting Time Analysis -->
+  <div class="ins-section">
+    <div class="ins-section-title">⏰ Wann performen deine Posts am besten?</div>
+    <div class="ins-section-sub">Durchschnittliche Likes pro Post je Stunde (deine Daten)</div>
+    <div class="ins-bar-chart">
+      ${hourAvgLikes.map((v, h) => {
+        const pct = (v / maxHourAvg) * 100;
+        const isBest = h === bestHour && v > 0;
+        return `<div class="ins-bar ${isBest?'best':''}" style="height:${Math.max(3, pct)}%" title="${h}:00 — ⌀ ${v.toFixed(1)} Likes"></div>`;
+      }).join('')}
+    </div>
+    <div class="ins-bar-labels"><span>00</span><span>06</span><span>12</span><span>18</span><span>23</span></div>
+    ${maxHourAvg > 0 ? `<div class="ins-insight-card">💡 Deine Posts um <b>${String(bestHour).padStart(2,'0')}:00 Uhr</b> performen am besten — ⌀ <b>${maxHourAvg.toFixed(1)} Likes</b>.</div>` : ''}
+  </div>
+
+  <!-- Online-Heatmap -->
+  <div class="ins-section">
+    <div class="ins-section-title">🟢 Wann sind die meisten User online?</div>
+    <div class="ins-section-sub">Aktive User je Stunde (Community-weit, basierend auf letzter Aktivität)</div>
+    <div class="ins-bar-chart">
+      ${onlineHourBuckets.map((v, h) => {
+        const pct = (v / maxOnline) * 100;
+        return `<div class="ins-bar" style="height:${Math.max(3, pct)}%;background:linear-gradient(180deg,#22c55e,#16a34a)" title="${h}:00 — ${v} User"></div>`;
+      }).join('')}
+    </div>
+    <div class="ins-bar-labels"><span>00</span><span>06</span><span>12</span><span>18</span><span>23</span></div>
+    ${(() => {
+      const peakHour = onlineHourBuckets.indexOf(maxOnline);
+      return maxOnline > 1 ? `<div class="ins-insight-card">💡 Peak-Zeit: <b>${String(peakHour).padStart(2,'0')}:00 Uhr</b> — am besten posten kurz davor.</div>` : '';
+    })()}
+  </div>
+
+  <!-- 30-Day Trend -->
+  <div class="ins-section">
+    <div class="ins-section-title">📈 30-Tage Trend</div>
+    <div class="ins-section-sub">Tägliche Likes auf deine Posts</div>
+    <div class="ins-bar-chart">
+      ${dayBuckets.map((v, i) => {
+        const pct = (v / maxDayLikes) * 100;
+        return `<div class="ins-bar" style="height:${Math.max(3, pct)}%;background:linear-gradient(180deg,#ec4899,#a855f7)" title="vor ${29-i}d: ${v} Likes"></div>`;
+      }).join('')}
+    </div>
+    <div class="ins-bar-labels"><span>vor 30d</span><span>vor 15d</span><span>heute</span></div>
+  </div>
+</div>
+${(()=>{
+  // Helper für relative Zeit
+  return '';
+})()}
+<script>
+// Bei kleinen Charts: leichtes Entry-Animation
+document.querySelectorAll('.ins-bar').forEach((b, i) => {
+  const targetHeight = b.style.height;
+  b.style.height = '0%';
+  setTimeout(() => { b.style.transition = 'height .6s cubic-bezier(.16,1,.3,1)'; b.style.height = targetHeight; }, 30 + i * 5);
+});
+</script>
+`, 'profil');
+    }
+
     if (path === '/ranking') {
         const sorted = Object.entries(d.users||{})
             .filter(([id,u])=>!adminIds.includes(Number(id))&&isAppVisible(u))
