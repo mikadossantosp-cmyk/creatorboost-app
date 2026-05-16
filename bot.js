@@ -627,8 +627,11 @@ async function postBot(path, body) {
             });
         });
         req.on('error',()=>resolve(null));
-        // 5-Sek Timeout (vorher unbounded — Bot-Hang würde App-Request blockieren)
-        req.setTimeout(5000, () => { req.destroy(); resolve(null); });
+        // 15-Sek Timeout: Mainbot's speichern() ist sync writeFileSync — bei grossen
+        // data-Files kann das mal >5s dauern (besonders bei /create-email-user-api).
+        // Vorher 5s → manche Signups failten still + User sah generischen Fehler trotz
+        // erfolgreichem Account-Anlegen im Bot.
+        req.setTimeout(15000, () => { req.destroy(); resolve(null); });
         req.write(data); req.end();
     });
     const _ms = Date.now() - _t0;
