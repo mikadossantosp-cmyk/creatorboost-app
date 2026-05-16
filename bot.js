@@ -9241,6 +9241,124 @@ async function submitSuperLink(){
   setInterval(refresh, 30000);
 })();
 </script>
+
+<!-- ── CREATORX HELPER BOT (FAQ-Chatbot, popup im Feed) ─────────────── -->
+<style>
+#cb-helper-fab{position:fixed;bottom:calc(90px + env(safe-area-inset-bottom,0px));right:14px;width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;border:none;font-size:24px;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:8500;box-shadow:0 8px 24px rgba(124,58,237,.5),inset 0 1px 0 rgba(255,255,255,.3);animation:cb-helper-bob 3s ease-in-out infinite}
+@keyframes cb-helper-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+#cb-helper-fab:hover{transform:scale(1.08)}
+#cb-helper-fab .badge{position:absolute;top:-2px;right:-2px;width:18px;height:18px;border-radius:50%;background:#ef4444;color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;border:2px solid var(--bg)}
+#cb-helper-modal{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:9000;display:none;align-items:flex-end;justify-content:center;animation:cb-helper-fade .2s ease}
+#cb-helper-modal.open{display:flex}
+@keyframes cb-helper-fade{from{opacity:0}to{opacity:1}}
+@keyframes cb-helper-slide{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.cb-helper-box{background:var(--bg);border-radius:20px 20px 0 0;width:100%;max-width:520px;max-height:88vh;display:flex;flex-direction:column;animation:cb-helper-slide .3s cubic-bezier(.34,1.56,.64,1);box-shadow:0 -20px 60px rgba(0,0,0,.5)}
+@media(min-width:600px){.cb-helper-box{border-radius:20px;margin:auto;max-height:80vh}}
+.cb-helper-hdr{display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--border2);background:linear-gradient(180deg,var(--bg2),var(--bg))}
+.cb-helper-avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#a78bfa,#7c3aed);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;box-shadow:0 0 12px rgba(167,139,250,.4)}
+.cb-helper-hdr-title{flex:1;min-width:0}
+.cb-helper-hdr-title b{font-size:14.5px;color:var(--text);display:block}
+.cb-helper-hdr-title span{font-size:11px;color:#22c55e;display:flex;align-items:center;gap:5px}
+.cb-helper-hdr-title span::before{content:'';width:6px;height:6px;border-radius:50%;background:#22c55e;box-shadow:0 0 6px #22c55e}
+.cb-helper-close{background:rgba(255,255,255,.06);border:none;color:var(--text);width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:15px;font-family:inherit}
+.cb-helper-body{flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.cb-msg{max-width:85%;padding:11px 14px;border-radius:16px;font-size:13.5px;line-height:1.5;animation:cb-msg-in .2s ease-out}
+@keyframes cb-msg-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.cb-msg.bot{background:var(--bg3);color:var(--text);border-bottom-left-radius:4px;align-self:flex-start}
+.cb-msg.user{background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;border-bottom-right-radius:4px;align-self:flex-end;font-weight:600}
+.cb-msg b{color:#a78bfa}
+.cb-msg.bot b{color:#a78bfa}
+.cb-msg.user b{color:#fff;text-decoration:underline}
+.cb-msg ul{margin:6px 0 0;padding-left:18px}
+.cb-msg li{margin:3px 0}
+.cb-helper-chips{display:flex;flex-wrap:wrap;gap:6px;padding:10px 16px 14px;border-top:1px solid var(--border2);background:var(--bg2)}
+.cb-chip{background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:8px 14px;border-radius:99px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .12s}
+.cb-chip:hover{background:rgba(167,139,250,.15);border-color:#a78bfa;color:#a78bfa}
+.cb-chip.back{color:var(--muted)}
+.cb-typing{display:inline-flex;gap:3px;align-items:center;padding:11px 14px;background:var(--bg3);border-radius:16px;border-bottom-left-radius:4px;align-self:flex-start}
+.cb-typing span{width:6px;height:6px;border-radius:50%;background:var(--muted);animation:cb-typing-dot 1.2s infinite ease-in-out}
+.cb-typing span:nth-child(2){animation-delay:.2s}
+.cb-typing span:nth-child(3){animation-delay:.4s}
+@keyframes cb-typing-dot{0%,60%,100%{opacity:.3;transform:scale(.85)}30%{opacity:1;transform:scale(1)}}
+</style>
+<button id="cb-helper-fab" onclick="cbHelperOpen()" aria-label="Helper öffnen">💬<span class="badge" id="cb-helper-badge">?</span></button>
+<div id="cb-helper-modal" onclick="if(event.target===this)cbHelperClose()">
+  <div class="cb-helper-box" role="dialog" aria-labelledby="cb-helper-title">
+    <div class="cb-helper-hdr">
+      <div class="cb-helper-avatar">🤖</div>
+      <div class="cb-helper-hdr-title">
+        <b id="cb-helper-title">CreatorX Helper</b>
+        <span>online · antwortet sofort</span>
+      </div>
+      <button class="cb-helper-close" onclick="cbHelperClose()" aria-label="Schließen">✕</button>
+    </div>
+    <div class="cb-helper-body" id="cb-helper-body"></div>
+    <div class="cb-helper-chips" id="cb-helper-chips"></div>
+  </div>
+</div>
+<script>
+// Q&A-Tree: id → {q, a, next: [childIds]}
+const CB_HELP = {
+  '_root': { q:null, a:'Hey! 👋 Ich helfe dir mit der App. Was willst du wissen?', next:['m','xp','diamond','superlink','kollab','pinned','warn','support'] },
+  'm': { q:'🎯 Wie funktionieren Missionen (M1/M2/M3)?', a:'Jeden Tag gibt es 3 Missionen:<br><br><b>M1:</b> Like mindestens <b>5 Posts</b> → <b>+5 XP</b><br><b>M2:</b> Like <b>80%</b> der heute geposteten Links → <b>+5 XP</b><br><b>M3:</b> Like <b>ALLE</b> Posts heute → <b>+5 XP + 💎 1 Diamant</b><br><br><b>Wochen-Bonus:</b> Wenn du eine Mission 7 Tage in Folge machst, gibts extra XP + Diamanten!<br><br>⚠️ Wenn du <b>postest aber M1 nicht erfüllst</b>, gibts eine Verwarnung.', next:['warn','xp','_back'] },
+  'xp': { q:'⚡ Wie kriege ich XP?', a:'XP gibt\\'s für:<br><ul><li>👍 <b>Liken</b>: 1 XP pro Like (max 20/Tag)</li><li>📌 <b>Posten</b>: 5 XP pro Post (max 3/Tag)</li><li>🎯 <b>Missionen</b>: bis zu 25 XP/Tag</li><li>🏆 <b>Wochen-Missionen</b>: bis zu 45 XP + 3💎/Woche</li><li>🎁 <b>Daily Bonus</b>: 10-30 XP zufällig</li><li>🌟 <b>First-Post-Bonus</b> als Newcomer: +20 XP</li></ul>Mit XP steigst du Level + Rolle auf (🆕 New → 🌟 Elite+).', next:['m','diamond','_back'] },
+  'diamond': { q:'💎 Was sind Diamanten?', a:'Diamanten = Premium-Währung. Du kriegst sie durch:<br><ul><li>🎯 <b>M3</b>: +1💎/Tag</li><li>🏆 <b>Wochen-M2/M3</b>: +1-2💎</li><li>📌 <b>Pinned-Post engagieren</b>: +1💎 (1× pro Owner)</li><li>💎 <b>Diamantlink liken</b>: +3💎 pro Post</li><li>🎰 <b>Roulette/Gewinnspiel</b>: zufällige Gewinne</li></ul>Ausgeben für:<br><ul><li>💎 <b>Diamantlink posten</b>: 30💎 → 3 Tage Feed-Top</li><li>🛍 <b>Shop-Items</b> (Banner, Rings, Trophys)</li></ul>', next:['superlink','m','_back'] },
+  'superlink': { q:'⚡ Was ist ein Superlink?', a:'Ein Superlink ist ein <b>Premium-Post</b> der für die ganze Woche besonders sichtbar ist + alle Member kriegen eine Pflicht-Engagement-Aufforderung.<br><br>Limit: <b>1× pro Woche</b> (Elite+ darf 2×).<br><br>So postest du einen Superlink:<br>1. Im Feed auf <b>+</b> tippen<br>2. <b>⚡ Superlink posten</b><br>3. Instagram-URL + Caption<br><br>Member die deinen Superlink liken kriegen XP, du als Poster kriegst Wochen-Tracking.', next:['diamond','m','_back'] },
+  'kollab': { q:'🤝 Wie funktionieren Kollab-Posts?', a:'Kollabs sind <b>Doppel-Posts</b> mit einem Partner:<br><ol><li>Verbinde dich auf seinem Profil ("🤝 Kollab anfragen")</li><li>Partner bestätigt</li><li>Einer postet im Feed → <b>+</b> → <b>🤝 Kollab posten</b></li></ol>Limit: <b>1× pro Woche</b> pro Kollab-Paar.<br><br>Jeder Liker bekommt <b>+1 💎</b>. Pflicht-Engagement: LIKEN + KOMMENT + SPEICHERN + TEILEN auf Instagram.', next:['diamond','support','_back'] },
+  'pinned': { q:'📌 Was ist Pinned Reel?', a:'Du kannst <b>einen Reel</b> als deinen "Pinned" markieren — er erscheint dann <b>auf deiner Creator-Karte</b> in Explore.<br><br>So:<br>1. Geh auf <b>/einstellungen</b><br>2. <b>📌 Pinned Reel Link</b> Feld<br>3. Instagram-URL einfügen → speichern<br><br>⚠️ Du kannst nur <b>1× pro 30 Tage</b> ändern (Admins jederzeit).<br><br>Liker deines Pinned-Posts bekommen <b>+1💎</b> (max 1× pro Owner-Paar).', next:['superlink','diamond','_back'] },
+  'warn': { q:'⚠️ Wann krieg ich Verwarnungen?', a:'Verwarnungen bekommst du wenn du:<br><ul><li>📌 Postest, aber M1 (5 Likes) <b>nicht erfüllst</b></li><li>🚩 Schein-Engagement betreibst (Like ohne echtes Engagement)</li><li>Admin dich manuell verwarnt</li></ul><br><b>Eskalation:</b><br>• <b>3. Verwarnung</b> → ausführliche DM mit Aufklärung<br>• <b>4. Verwarnung</b> → "letzte Chance"-DM<br>• <b>5. Verwarnung</b> → <b>permanenter Bann</b>! 🚫<br><br><b>Warnungen abbauen</b>: 5 Tage in Folge M1 erfüllen → 1 Warn weg.', next:['m','support','_back'] },
+  'support': { q:'💬 Support / Hilfe', a:'Brauchst du persönliche Hilfe?<br><br>📨 DM uns via In-App-Chat: gehe auf <b>Profil → Nachrichten</b> und schreib <b>CreatorBoost</b> an.<br><br>📧 Email: <b>mindset.stories_@outlook.de</b><br><br>📜 Regeln + FAQ: <b>/explore → Regeln-Tab</b>', next:['_back'] },
+  '_back': { q:'← Zurück zur Übersicht', a:'Was willst du wissen?', next:['m','xp','diamond','superlink','kollab','pinned','warn','support'] },
+};
+function cbHelperOpen(){
+  const m = document.getElementById('cb-helper-modal');
+  m.classList.add('open');
+  document.body.style.overflow='hidden';
+  if (!m.dataset.init){
+    m.dataset.init='1';
+    cbHelperShow('_root');
+  }
+  try{ localStorage.setItem('cb_helper_seen','1'); const b=document.getElementById('cb-helper-badge'); if(b)b.style.display='none'; }catch(e){}
+}
+function cbHelperClose(){
+  document.getElementById('cb-helper-modal').classList.remove('open');
+  document.body.style.overflow='';
+}
+function cbHelperShow(id){
+  const node = CB_HELP[id];
+  if (!node) return;
+  const body = document.getElementById('cb-helper-body');
+  const chips = document.getElementById('cb-helper-chips');
+  // Falls schon Frage (= User hat geklickt), zeige User-Bubble
+  if (node.q) {
+    const u = document.createElement('div'); u.className='cb-msg user'; u.textContent = node.q;
+    body.appendChild(u);
+  }
+  // Typing-Indikator
+  const t = document.createElement('div'); t.className='cb-typing';
+  t.innerHTML='<span></span><span></span><span></span>';
+  body.appendChild(t);
+  body.scrollTop = body.scrollHeight;
+  chips.innerHTML = '';
+  setTimeout(()=>{
+    t.remove();
+    const a = document.createElement('div'); a.className='cb-msg bot'; a.innerHTML = node.a;
+    body.appendChild(a);
+    body.scrollTop = body.scrollHeight;
+    // Chips
+    chips.innerHTML = '';
+    (node.next||[]).forEach(nid => {
+      const nx = CB_HELP[nid]; if(!nx) return;
+      const c = document.createElement('button'); c.className = 'cb-chip' + (nid==='_back'?' back':''); c.textContent = nx.q || '→';
+      c.onclick = ()=>cbHelperShow(nid);
+      chips.appendChild(c);
+    });
+  }, Math.min(700, 200 + node.a.length*5));
+}
+// Beim ersten Mal Badge zeigen, nach Click ausblenden
+try{ if(localStorage.getItem('cb_helper_seen')==='1'){ const b=document.getElementById('cb-helper-badge'); if(b)b.style.display='none'; } }catch(e){}
+</script>
+<!-- ── /CREATORX HELPER BOT ───────────────────────────────────────── -->
 `, 'feed');
     }
 
