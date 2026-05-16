@@ -4481,6 +4481,7 @@ document.addEventListener('DOMContentLoaded', function(){
         // Sign-In: NUR existierende User. Neue User müssen über /signup gehen.
         const result = await postBot('/auth-email-password', { email, password });
         const isNewSignup = false;
+        const didSetupPassword = false; // Legacy-Variable für Funnel-Tracking — auto-PW-Setup wurde aus Security-Gründen entfernt
         if (!result || !result.ok) {
             // SECURITY-FIX: Vorher wurde bei "noch kein Passwort gesetzt" das Passwort des
             // Angreifers direkt gespeichert und der Account übernommen. Jetzt muss der User
@@ -4521,19 +4522,12 @@ document.addEventListener('DOMContentLoaded', function(){
         const botData = await fetchBot('/data');
         const u = botData?.users?.[result.uid];
         if (!u) return json({ok:false, error:'User nicht gefunden'}, 404);
-        let sid = null;
-        for (const [s, sess] of sessions.entries()) {
-            if (sess.uid === String(result.uid)) { sid = s; break; }
-        }
-        if (!sid) {
-            sid = genSid();
-            const validSubUid = u.subUid && botData.users?.[u.subUid] ? String(u.subUid) : null;
-            sessions.set(sid, { uid: String(result.uid), name: u.name, username: u.username||null, theme: 'light', lang: 'de', createdAt: Date.now(), subUid: validSubUid, activeUid: String(result.uid), loginVia: 'email' });
-            saveSessions();
-        } else {
-            // Bestehende Session: loginVia auf 'email' aktualisieren — wichtig für Insta-Gate
-            const existing = sessions.get(sid); if (existing) { existing.loginVia = 'email'; sessions.set(sid, existing); saveSessions(); }
-        }
+        // SECURITY: IMMER neue Session — kein Reuse über Geräte hinweg.
+        // Vorher konnte alte Session mit activeUid=Sub übernommen werden.
+        const sid = genSid();
+        const validSubUid = u.subUid && botData.users?.[u.subUid] ? String(u.subUid) : null;
+        sessions.set(sid, { uid: String(result.uid), name: u.name, username: u.username||null, theme: 'light', lang: 'de', createdAt: Date.now(), subUid: validSubUid, activeUid: String(result.uid), loginVia: 'email' });
+        saveSessions();
         // Funnel: Login erfolgreich
         postBot('/track-funnel', { event: 'login-success', uid: String(result.uid), meta: { method: didSetupPassword ? 'first-pw' : 'email-pw' } }).catch(()=>{});
         // Email-User Redirect-Chain (mit /feed?tour=1 als finales Ziel damit Tour autostartet)
@@ -5192,9 +5186,8 @@ try { fetch('/api/track-funnel',{method:'POST',headers:{'Content-Type':'applicat
         postBot('/log-email-login', { email: entry.email, success: true, method: 'magic-link', uid: String(entry.uid), ip: _ip2, ua: _ua2 }).catch(()=>{});
         const u = botData.users[entry.uid];
         let sid = null;
-        for (const [s, sess] of sessions.entries()) {
-            if (sess.uid === String(entry.uid)) { sid = s; break; }
-        }
+        // SECURITY: kein Session-Reuse — IMMER neuen sid generieren
+        sid = null;
         if (!sid) {
             sid = genSid();
             const validSubUid = u.subUid && botData.users?.[u.subUid] ? String(u.subUid) : null;
@@ -5672,9 +5665,8 @@ function submitPw(ev){
             if (found) {
                 const [uid, u] = found;
                 let sid = null;
-                for (const [s, sess] of sessions.entries()) {
-                    if (sess.uid === String(uid)) { sid = s; break; }
-                }
+                // SECURITY: kein Session-Reuse — IMMER neuen sid generieren
+                sid = null;
                 if (!sid) {
                     sid = genSid();
                     const validSubUid = u.subUid && botData.users?.[u.subUid] ? String(u.subUid) : null;
@@ -5711,9 +5703,8 @@ function submitPw(ev){
         const [uid, u] = found;
         // Bestehende Session wiederverwenden falls da, sonst neue.
         let sid = null;
-        for (const [s, sess] of sessions.entries()) {
-            if (sess.uid === String(uid)) { sid = s; break; }
-        }
+        // SECURITY: kein Session-Reuse — IMMER neuen sid generieren
+        sid = null;
         if (!sid) {
             sid = genSid();
             const validSubUid = u.subUid && botData.users?.[u.subUid] ? String(u.subUid) : null;
