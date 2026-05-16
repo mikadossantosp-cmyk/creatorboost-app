@@ -2479,6 +2479,14 @@ function showBanner(opts){
 // Engagement-Quality-Control: User muss erst Link besuchen, bevor er liken darf.
 // Status pro Link wird in localStorage gespeichert (cb_visited_links: { lid: timestamp }).
 function markLinkVisited(lid){try{const v=JSON.parse(localStorage.getItem('cb_visited_links')||'{}');v[String(lid)]=Date.now();localStorage.setItem('cb_visited_links',JSON.stringify(v));}catch(e){}}
+function openPostUrl(lid){
+  const el = document.getElementById('post-'+lid) || document.querySelector('[onclick*="openPostUrl(\\''+lid+'\\')"]');
+  let url = el && el.getAttribute('data-url');
+  if (!url) return;
+  // Nur whitelisted protocols zulassen
+  try { const u = new URL(url, location.origin); if (!/^https?:$/.test(u.protocol)) return; } catch(e) { return; }
+  window.open(url, '_blank', 'noopener,noreferrer');
+}
 function hasLinkVisited(lid){try{const v=JSON.parse(localStorage.getItem('cb_visited_links')||'{}');return !!v[String(lid)];}catch(e){return false;}}
 function setTheme(t){document.documentElement.setAttribute('data-theme',t);try{localStorage.setItem('cbTheme4',t);}catch(e){}document.querySelectorAll('[title="Theme"]').forEach(b=>b.textContent=t==='dark'?'☀️':'🌙');fetch('/api/theme',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({theme:t})}).catch(()=>{});}
 try{const t=localStorage.getItem('cbTheme4');if(t){document.documentElement.setAttribute('data-theme',t);}}catch(e){}
@@ -7717,11 +7725,22 @@ p{line-height:1.65;color:var(--muted)}
             const w = String(body.website).trim();
             updateData.website = w === '' ? '' : (/^https?:\/\//i.test(w) ? w.slice(0, 100) : '');
         }
-        if (body.tiktok !== undefined) updateData.tiktok = body.tiktok;
-        if (body.youtube !== undefined) updateData.youtube = body.youtube;
-        if (body.twitter !== undefined) updateData.twitter = body.twitter;
-        if (body.instagram !== undefined) updateData.instagram = body.instagram;
-        if (body.banner !== undefined) updateData.banner = body.banner;
+        // Social-Handle-Validation: nur safe chars, max 30 Zeichen.
+        // Vorher waren diese Felder un-validiert → Stored-XSS via HTML/JS-Injection in Profil.
+        const sanitizeHandle = v => String(v||'').replace(/^@/,'').replace(/[^A-Za-z0-9._-]/g,'').slice(0,30);
+        if (body.tiktok !== undefined) updateData.tiktok = sanitizeHandle(body.tiktok);
+        if (body.youtube !== undefined) updateData.youtube = sanitizeHandle(body.youtube);
+        if (body.twitter !== undefined) updateData.twitter = sanitizeHandle(body.twitter);
+        if (body.instagram !== undefined) updateData.instagram = sanitizeHandle(body.instagram);
+        // Banner: entweder valides Gradient/Color-Token (Pattern-Whitelist) ODER data:image base64
+        // (max 200KB Roh-Equivalent — schützt vor DB-Bloat). Sonst leerstring.
+        if (body.banner !== undefined) {
+            const b = String(body.banner||'');
+            const isGradient = /^linear-gradient\([^)]{1,300}\)$/i.test(b);
+            const isColor = /^#[0-9a-f]{3,8}$/i.test(b);
+            const isDataImg = /^data:image\/(png|jpeg|jpg|webp);base64,[A-Za-z0-9+/=]+$/.test(b) && b.length < 280000;
+            updateData.banner = (b === '' || isGradient || isColor || isDataImg) ? b : '';
+        }
         // Email für Magic-Link-Login. Format-Validation auf Bot-Seite, Eindeutigkeits-Check ebenso.
         // Lock-Check: wenn User schon BEIDES (email + password) hat, braucht er Unlock-Window
         const _curBd = await fetchBot('/data');
@@ -8493,7 +8512,7 @@ p{line-height:1.65;color:var(--muted)}
             // Extract Instagram shortcode for reel embed
             const instaShortcode = (()=>{ const m=(link.text||'').match(/instagram\.com\/(?:reel|p|tv)\/([A-Za-z0-9_-]+)/); return m?m[1]:null; })();
 
-            return '<div class="post fade-up" id="post-'+msgId+'" data-url="'+link.text+'" data-ts="'+(link.timestamp||0)+'" style="position:relative">\n'+
+            return '<div class="post fade-up" id="post-'+msgId+'" data-url="'+htmlEsc(link.text)+'" data-ts="'+(link.timestamp||0)+'" style="position:relative">\n'+
 '  <div style="position:absolute;left:0;top:0;bottom:0;width:3px;background:'+grad+';border-radius:18px 0 0 18px"></div>\n'+
 // Category badge + timestamp row
 '  <div style="display:flex;align-items:center;justify-content:flex-end;padding:10px 16px 0">\n'+
@@ -8507,20 +8526,20 @@ p{line-height:1.65;color:var(--muted)}
 '    <div style="position:relative;width:40px;height:40px;flex-shrink:0">\n'+
 '      '+crownOverlay(link.user_id, 'sm')+'\n'+
 '      <div style="position:relative;width:40px;height:40px;border-radius:50%;overflow:hidden;background:'+grad+';display:flex;align-items:center;justify-content:center">\n'+
-'        <span style="color:#fff;font-weight:700;font-size:15px;position:absolute">'+(poster.name||'?').slice(0,1)+'</span>\n'+
+'        <span style="color:#fff;font-weight:700;font-size:15px;position:absolute">'+htmlEsc((poster.name||'?').slice(0,1))+'</span>\n'+
 '        '+avatarSmall+'\n'+
 '      </div>\n'+
 '    </div>\n'+
 '    <div class="post-user-info">\n'+
 '      <div class="post-name" style="display:flex;align-items:center;gap:5px">\n'+
-'        '+(poster.spitzname||poster.name||'User')+'\n'+
+'        '+htmlEsc(poster.spitzname||poster.name||'User')+'\n'+
 '        '+(isOnline?'<span style="width:7px;height:7px;border-radius:50%;background:#00c851;display:inline-block;flex-shrink:0"></span>':'')+'\n'+
 '      </div>\n'+
-'      <div class="post-badge">'+cleanRole(poster.role)+(insta?'<span style="color:var(--muted2)"> · @'+poster.instagram+'</span>':'')+'</div>\n'+
+'      <div class="post-badge">'+cleanRole(poster.role)+(insta?'<span style="color:var(--muted2)"> · @'+htmlEsc(poster.instagram)+'</span>':'')+'</div>\n'+
 '    </div>\n'+
 '  </div>\n'+
 // Reel video preview card
-'  <div style="margin:0 16px;border-radius:14px;overflow:hidden;background:#000;border:1.5px solid;border-image:linear-gradient(135deg,#f9a825,#e91e63,#9c27b0) 1;cursor:pointer;box-shadow:0 6px 20px rgba(233,30,99,0.10)" onclick="markLinkVisited(\''+lid1+'\');window.open(\''+link.text+'\',\'_blank\')">\n'+
+'  <div style="margin:0 16px;border-radius:14px;overflow:hidden;background:#000;border:1.5px solid;border-image:linear-gradient(135deg,#f9a825,#e91e63,#9c27b0) 1;cursor:pointer;box-shadow:0 6px 20px rgba(233,30,99,0.10)" onclick="markLinkVisited(\''+lid1+'\');openPostUrl(\''+lid1+'\')" data-url="'+htmlEsc(link.text||'')+'">\n'+
 '    <div style="position:relative;width:100%;padding-top:62%;background:'+bannerBg+';overflow:hidden">\n'+
 '      '+bannerImg.replace('position:absolute;inset:0;','position:absolute;inset:0;')+'\n'+
 '      <div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.1) 0%,rgba(0,0,0,.55) 100%)"></div>\n'+
@@ -8538,13 +8557,13 @@ p{line-height:1.65;color:var(--muted)}
 '            '+crownOverlay(link.user_id, 'xs')+'\n'+
 '            <div style="width:32px;height:32px;border-radius:50%;border:2px solid rgba(255,255,255,.5);overflow:hidden;background:'+grad+';display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff">'+profPic+'</div>\n'+
 '          </div>\n'+
-'          <div style="font-size:12px;font-weight:700;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.6)">'+(poster.spitzname||poster.name||'User')+'</div>\n'+
+'          <div style="font-size:12px;font-weight:700;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.6)">'+htmlEsc(poster.spitzname||poster.name||'User')+'</div>\n'+
 '        </a>\n'+
 '      </div>\n'+
 '    </div>\n'+
 (link.caption?'    <div style="padding:8px 12px;font-size:12px;color:var(--muted);line-height:1.4;border-top:1px solid rgba(255,255,255,.06)">'+String(link.caption).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</div>\n':'')+
 '    <div style="padding:6px 12px 8px;display:flex;align-items:center;gap:6px">\n'+
-'      <div style="font-size:10px;color:var(--muted2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+link.text.replace('https://www.','').replace('https://','').slice(0,50)+'</div>\n'+
+'      <div style="font-size:10px;color:var(--muted2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+htmlEsc(String(link.text||'').replace('https://www.','').replace('https://','').slice(0,50))+'</div>\n'+
 '      <div style="font-size:10px;color:var(--accent);font-weight:700">Ansehen →</div>\n'+
 '    </div>\n'+
 '  </div>\n'+
@@ -8608,10 +8627,10 @@ commentsBox+
                 +'</div>\n'
                 +'<div class="post-header" style="padding-top:8px">\n'
                 +'<div style="position:relative;width:40px;height:40px;flex-shrink:0">'+crownOverlay(sl.uid,'sm')+'<div style="position:relative;width:40px;height:40px;border-radius:50%;overflow:hidden;background:'+grad+';display:flex;align-items:center;justify-content:center">\n'
-                +'<span style="color:#fff;font-weight:700;font-size:15px;position:absolute">'+(poster.name||'?')[0]+'</span>\n'
+                +'<span style="color:#fff;font-weight:700;font-size:15px;position:absolute">'+htmlEsc((poster.name||'?')[0])+'</span>\n'
                 +avatarSmall+'\n</div></div>\n'
                 +'<div class="post-user-info">\n'
-                +'<div class="post-name">'+(poster.spitzname||poster.name||'User')+'</div>\n'
+                +'<div class="post-name">'+htmlEsc(poster.spitzname||poster.name||'User')+'</div>\n'
                 +'<div class="post-badge">'+cleanRole(poster.role)+(insta?'<span style="color:var(--muted2)"> · @'+insta+'</span>':'')+'</div>\n'
                 +'</div>\n</div>\n'
                 +'<div style="margin:8px 16px;padding:8px 12px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:10px;font-size:11px;color:rgba(245,158,11,.9);font-weight:600">🔄 Bitte Liken, Kommentieren, Teilen und Speichern</div>\n'
