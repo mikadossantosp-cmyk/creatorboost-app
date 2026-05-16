@@ -3326,14 +3326,16 @@ ${(()=>{
   const wkKey = (()=>{const n=new Date();const dd=n.getDay();const mon=new Date(n);mon.setDate(n.getDate()-(dd===0?6:dd-1));return mon.getFullYear()+'-'+String(mon.getMonth()+1).padStart(2,'0')+'-'+String(mon.getDate()).padStart(2,'0');})();
   const slMaxC = (u.role === '🌟 Elite+') ? 2 : 1;
   const slCountC = Object.values(d.superlinks||{}).filter(s=>s.uid===uid&&s.week===wkKey).length;
-  const slLeftC = Math.max(0, slMaxC - slCountC);
+  const slStdLeft = Math.max(0, slMaxC - slCountC);
+  const slCredits = Number(u.superlinkCredits||0);
+  const slTotalLeft = slStdLeft + slCredits;
   const bonusC = (d.bonusLinks||{})[uid] || 0;
   return `<div class="profile-slots">
     <div class="profile-slot-card">
       <div class="profile-slot-icon">⭐</div>
       <div class="profile-slot-info">
         <div class="profile-slot-label">Superlink</div>
-        <div class="profile-slot-val ${slLeftC>0?'ok':'zero'}">${slLeftC} <span class="small">/ ${slMaxC} verfügbar</span></div>
+        <div class="profile-slot-val ${slTotalLeft>0?'ok':'zero'}">${slTotalLeft} <span class="small">verfügbar${slCredits>0?` <span style="color:#f59e0b;font-weight:700">(+${slCredits} 🎁)</span>`:''}</span></div>
       </div>
     </div>
     <div class="profile-slot-card lnk">
@@ -17849,6 +17851,11 @@ ${(function(){
         <label class="pf-field-label">Nische (optional)</label>
         <input class="pf-input" id="pfNische" maxlength="50" placeholder="z.B. Fitness, Travel, Mode" value="${htmlEsc(u.nische || '')}">
       </div>
+      <div class="pf-field">
+        <label class="pf-field-label">📌 Pinned Reel-Link</label>
+        <input class="pf-input" id="pfPinnedLink" type="url" maxlength="200" placeholder="https://instagram.com/reel/..." value="${htmlEsc(currentPinnedLink || '')}">
+        <div class="pf-counter" style="text-align:left;color:var(--muted)">${_pinDaysLeft > 0 && !_isAdminPinUI ? `⏳ Änderung erst in ${_pinDaysLeft} Tag${_pinDaysLeft===1?'':'en'} möglich` : '✓ Änderbar (1× pro 30 Tage)'}</div>
+      </div>
     </div>
     <div class="pf-sheet-actions">
       <button class="pf-cancel-btn" onclick="pfCloseModal()">Abbrechen</button>
@@ -17891,16 +17898,30 @@ async function pfSaveProfile(){
     website: document.getElementById('pfWebsite').value.trim().slice(0,100),
     nische: document.getElementById('pfNische').value.trim().slice(0,50),
   };
+  const pinnedEl = document.getElementById('pfPinnedLink');
+  const pinnedVal = pinnedEl ? pinnedEl.value.trim() : null;
   try {
     const r = await fetch('/api/save-profile', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
     const j = await r.json();
-    if (j.ok) {
-      pfToast('✅ Profil aktualisiert');
-      setTimeout(()=>location.reload(), 800);
-    } else {
+    if (!j.ok) {
       pfToast('❌ ' + (j.error || 'Fehler'), true);
       btn.disabled = false; btn.textContent = '💾 Speichern';
+      return;
     }
+    // Pinned-Reel-Link separat speichern wenn geändert (eigener Rate-Limit-Check)
+    if (pinnedVal !== null) {
+      try {
+        const r2 = await fetch('/api/set-pinned-link', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({url: pinnedVal})});
+        const j2 = await r2.json();
+        if (!j2.ok && j2.error && !/unchanged|same|gleich/i.test(j2.error)) {
+          pfToast('⚠️ Profil OK, Pinned-Reel: ' + j2.error, true);
+          setTimeout(()=>location.reload(), 1800);
+          return;
+        }
+      } catch(e) {}
+    }
+    pfToast('✅ Profil aktualisiert');
+    setTimeout(()=>location.reload(), 800);
   } catch(e) {
     pfToast('❌ Netzwerk-Fehler', true);
     btn.disabled = false; btn.textContent = '💾 Speichern';
@@ -18017,23 +18038,7 @@ async function pfHandleAvatarFile(input){
   <button class="btn btn-outline btn-full" style="margin-top:8px;font-size:13px" onclick="saveAppCode()">🔑 Code speichern</button>
   <div id="app-code-msg" style="margin-top:6px;font-size:11.5px;line-height:1.4"></div>
 </div>
-<div style="padding:16px;border-bottom:1px solid var(--border2)">
-<!-- Instagram / Nische / Persönlicher Link entfernt — sind im Hero-Edit-Sheet -->
-<div style="padding:16px;border-bottom:1px solid var(--border2)">
-  <div class="form-label">📌 Pinned Reel Link</div>
-  <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Dieser Reel wird auf der Explore-Seite bei deiner Creator-Karte angezeigt.</div>
-  <input type="url" class="form-input" id="inp-pinned-link" placeholder="https://www.instagram.com/reel/..." value="${htmlEsc(currentPinnedLink)}">
-  ${myRecentLinks.length ? `
-  <div style="margin-top:8px">
-    <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Letzte Links:</div>
-    <div style="display:flex;flex-direction:column;gap:4px">
-      ${myRecentLinks.map(l=>`<button onclick="document.getElementById('inp-pinned-link').value='${l.replace(/'/g,"\\'")}" style="background:var(--bg4);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:5px 10px;font-size:11px;text-align:left;cursor:pointer;font-family:var(--font);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${l.replace('https://www.instagram.com/','ig.com/')}</button>`).join('')}
-    </div>
-  </div>` : ''}
-  <button class="btn btn-outline btn-full" style="margin-top:10px;font-size:13px" onclick="savePinnedLink()" ${(_pinDaysLeft>0 && !_isAdminPinUI)?'disabled':''}>📌 Reel anpinnen</button>
-  ${(_pinDaysLeft > 0 && !_isAdminPinUI) ? `<div style="margin-top:8px;padding:8px 12px;background:rgba(245,158,11,0.10);border:1px solid rgba(245,158,11,0.25);border-radius:10px;font-size:11.5px;color:#f59e0b;font-weight:600;line-height:1.45">⏳ Du kannst deinen Pin nur 1× pro Monat ändern. Noch <b>${_pinDaysLeft}</b> Tag${_pinDaysLeft===1?'':'e'} bis zur nächsten Änderung.</div>` : ''}
-  ${currentPinnedLink ? `<button onclick="removePinnedLink()" ${(_pinDaysLeft>0 && !_isAdminPinUI)?'disabled':''} style="background:none;border:none;color:var(--muted);font-size:11px;cursor:${(_pinDaysLeft>0 && !_isAdminPinUI)?'not-allowed':'pointer'};margin-top:6px;display:block;${(_pinDaysLeft>0 && !_isAdminPinUI)?'opacity:0.5':''}">🗑️ Pin entfernen</button>` : ''}
-</div>
+<!-- Pinned-Reel-Link entfernt — ist jetzt im Hero-Edit-Sheet (pfPinnedLink) -->
 <div style="padding:16px;border-bottom:1px solid var(--border2)">
   <div class="form-label">Banner</div>
   <div style="margin-bottom:12px">
