@@ -12455,6 +12455,7 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
         <button class="dash-btn" onclick="openEventModal('xp')" style="border-color:rgba(245,158,11,0.40);color:#fbbf24">✨ XP-Event starten</button>
         <button class="dash-btn" onclick="openEventModal('diamond')" style="border-color:rgba(6,182,212,0.40);color:#06b6d4">💎 Diamond-Event starten</button>
         <button class="dash-btn dash-btn-primary" onclick="openBroadcastModal()">📢 Broadcast DM</button>
+        <button class="dash-btn" id="dash-top-tickets-btn" onclick="jumpToHelperInbox()" style="border-color:rgba(245,158,11,0.55);color:#f59e0b;font-weight:700">🎫 Tickets <span id="dash-top-tickets-badge" style="display:none;margin-left:6px;padding:2px 7px;border-radius:99px;background:#f59e0b;color:#1a0f00;font-size:11px;font-weight:900">0</span></button>
       </div>
     </div>
 
@@ -13877,13 +13878,28 @@ async function refreshHelperBadge(){
     const r = await fetch('/api/admin/helper-questions?status=open');
     const j = await r.json();
     if (!j.ok) return;
-    const badge = document.getElementById('dash-tickets-badge');
     const openN = j.open || 0;
+    const badge = document.getElementById('dash-tickets-badge');
     if (badge) { badge.textContent = openN; badge.style.display = openN > 0 ? 'inline-block' : 'none'; }
+    const topBadge = document.getElementById('dash-top-tickets-badge');
+    if (topBadge) { topBadge.textContent = openN; topBadge.style.display = openN > 0 ? 'inline-block' : 'none'; }
+    const topBtn = document.getElementById('dash-top-tickets-btn');
+    if (topBtn) {
+      if (openN > 0) topBtn.style.boxShadow = '0 0 0 2px rgba(245,158,11,0.35), 0 4px 16px rgba(245,158,11,0.35)';
+      else topBtn.style.boxShadow = '';
+    }
   } catch(e) {}
 }
 setInterval(refreshHelperBadge, 30000);
 setTimeout(refreshHelperBadge, 2000);
+function jumpToHelperInbox(){
+  const tab = document.querySelector('.dash-tab[data-tab="helper-inbox"]');
+  if (tab) tab.click();
+  setTimeout(()=>{
+    const el = document.getElementById('dash-helper-inbox');
+    if (el) el.scrollIntoView({ behavior:'smooth', block:'start' });
+  }, 120);
+}
 
 async function loadDiamondLinksAdmin(){
   const root = document.getElementById('dash-diamond-links');
