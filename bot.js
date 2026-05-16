@@ -3072,73 +3072,195 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
     const isAdmin = adminIds.includes(Number(uid));
     const rank = isAdmin ? 0 : sorted.findIndex(([id])=>id===uid)+1;
     const _t3 = getTop3Uids(d, adminIds);
-    const _t1 = _t3.top1;
-    const _myRankCrown = rankOf(uid, _t3); // 1, 2, 3 oder 0
+    const _myRankCrown = rankOf(uid, _t3);
     const crown = makeCrown(_t3);
     const crownOverlay = makeCrownOverlay(_t3);
+    const _posts = Object.values(d.links||{}).filter(l => String(l.user_id) === String(uid)).length;
+    const _followers = (u.followers||[]).length;
+    const _diamonds = u.diamonds || 0;
+    const _picUrl = (picData||ladeBild(uid,'profilepic')) ? `/appbild/${uid}/profilepic` : (u.instagram ? `https://unavatar.io/instagram/${u.instagram}` : '');
+    const _initial = htmlEsc((u.spitzname||u.name||'?').slice(0,1).toUpperCase());
+    const _isFollowing = false;
+    const _roleBadge = htmlEsc(cleanRole(u.role, uid, adminIds));
 
     return `
-<div style="position:relative">
-  <div class="profile-banner" style="${bannerIsGrad ? 'background:'+banner : ''}">
-    ${!bannerIsGrad ? '<img src="'+banner+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">' : ''}
-    <div class="profile-banner-overlay"></div>
-  </div>
-  <div class="profile-avatar-wrap">
-    ${_myRankCrown ? `<div style="position:absolute;left:48px;top:-26px;font-size:28px;line-height:1;filter:${_myRankCrown===1?'drop-shadow(0 3px 8px rgba(245,158,11,0.5))':_myRankCrown===2?'grayscale(100%) brightness(1.45) contrast(0.9) drop-shadow(0 3px 8px rgba(148,163,184,0.55))':'sepia(100%) saturate(700%) hue-rotate(-22deg) brightness(0.55) contrast(1.15) drop-shadow(0 3px 8px rgba(180,83,9,0.6))'};animation:crown-bob 2.4s ease-in-out infinite;z-index:6;transform:translateX(-50%) rotate(-3deg);pointer-events:none">👑</div>` : ''}
-    ${(picData||ladeBild(uid,'profilepic'))
-      ? `<img src="${picData||ladeBild(uid,'profilepic')}" class="profile-avatar" style="${getRingBoxShadow(u)}" onerror="this.style.display='none'" alt="">`
-      : u.instagram
-      ? `<img src="https://unavatar.io/instagram/${u.instagram}" class="profile-avatar" style="${getRingBoxShadow(u)}" onerror="this.style.display='none'" alt="">`
-      : `<div class="profile-avatar" style="display:flex;align-items:center;justify-content:center;font-size:34px;font-weight:800;background:${grad};color:#fff${getRingBoxShadow(u)}">${(u.name||'?').slice(0,2).toUpperCase()}</div>`}
-    ${isUidOnline(uid)?'<div class="profile-online-dot" title="Online"></div>':''}
-    ${![...sessions.values()].some(s=>String(s.uid)===String(uid))?`<div style="position:absolute;bottom:6px;right:6px;background:rgba(15,15,15,.92);border:1.5px solid #555;border-radius:20px;padding:2px 7px;font-size:10px;color:#888;z-index:2;font-weight:600;white-space:nowrap">Kein Web</div>`:''}
-  </div>
-  ${isOwn?`<div style="position:absolute;top:12px;right:12px;display:flex;gap:8px;z-index:3">
-    ${isAdmin?`<a href="/dashboard" class="profile-action-pill" title="Admin Dashboard" style="background:linear-gradient(135deg,#f5d76e,#d4a946 55%,#8b6914);color:#000;border-color:rgba(212,175,55,.55)"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2l9 4v6c0 5-3.8 9.4-9 10-5.2-.6-9-5-9-10V6l9-4z"/></svg><span>Dashboard</span></a>`:''}
-    <a href="/einstellungen" class="profile-action-pill" title="Bearbeiten"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg><span>Bearbeiten</span></a>
-  </div>`:''}
+<style>
+.ipf-banner{position:relative;width:100%;height:130px;overflow:hidden}
+.ipf-banner-bg{position:absolute;inset:0;background-size:cover;background-position:center}
+.ipf-banner-overlay{position:absolute;inset:0;background:linear-gradient(180deg,transparent 50%,rgba(0,0,0,.2));pointer-events:none}
+.ipf{padding:14px 18px 8px;background:var(--bg);position:relative;margin-top:-30px;border-radius:24px 24px 0 0}
+.ipf-top{display:flex;align-items:center;gap:18px;margin-bottom:14px;margin-top:-30px}
+.ipf-avatar-wrap{position:relative;width:84px;height:84px;flex-shrink:0;margin-top:0}
+.ipf-avatar{width:100%;height:100%;border-radius:50%;background:linear-gradient(135deg,#a78bfa,#7c3aed);background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:32px;overflow:hidden;position:relative;border:4px solid var(--bg);box-shadow:0 4px 18px rgba(0,0,0,.25)}
+.ipf-avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.ipf-avatar-dot{position:absolute;bottom:2px;right:2px;width:18px;height:18px;border-radius:50%;background:#22c55e;border:3px solid var(--bg);box-shadow:0 0 8px rgba(34,197,94,.5)}
+.ipf-avatar-crown{position:absolute;top:-22px;left:50%;transform:translateX(-50%) rotate(-4deg);font-size:30px;line-height:1;animation:crown-bob 2.4s ease-in-out infinite;pointer-events:none;z-index:5}
+.ipf-stats{flex:1;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center}
+.ipf-stat{cursor:default;text-decoration:none;color:inherit;padding:4px 0;transition:transform .12s}
+.ipf-stat[href]:active{transform:scale(.96)}
+.ipf-stat-num{font-size:18px;font-weight:700;color:var(--text);line-height:1.1;letter-spacing:-.2px}
+.ipf-stat-lbl{font-size:11.5px;color:var(--muted);margin-top:3px;font-weight:500}
+.ipf-name-row{margin-bottom:6px}
+.ipf-name-row .nm{font-size:16px;font-weight:700;color:var(--text);line-height:1.2;display:inline-flex;align-items:center;gap:6px}
+.ipf-name-row .badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:99px;font-size:10.5px;font-weight:800;letter-spacing:.4px;margin-left:6px;vertical-align:middle}
+.ipf-handle{font-size:13px;color:var(--muted);margin-top:2px;font-weight:500}
+.ipf-bio{font-size:13.5px;color:var(--text);line-height:1.5;margin:10px 0;white-space:pre-wrap;word-break:break-word}
+.ipf-meta{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 4px;align-items:center}
+.ipf-link{display:inline-flex;align-items:center;gap:5px;font-size:13px;color:#4dabf7;text-decoration:none;font-weight:600}
+.ipf-chip{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;background:var(--surface-tint);border:1px solid var(--border2);border-radius:9px;font-size:12px;color:var(--text);text-decoration:none;font-weight:500}
+.ipf-chip:hover{background:var(--bg2)}
+.ipf-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:14px 0 10px}
+.ipf-btn{padding:9px 12px;background:var(--bg3);border:1px solid var(--border2);color:var(--text);border-radius:9px;font-size:13.5px;font-weight:600;cursor:pointer;font-family:inherit;text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .12s;line-height:1}
+.ipf-btn:hover{background:var(--bg4)}
+.ipf-btn:active{transform:scale(.98)}
+.ipf-btn-primary{background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;border-color:transparent;box-shadow:0 2px 8px rgba(124,58,237,.25)}
+.ipf-btn-primary:hover{filter:brightness(1.05)}
+.ipf-trophy-row{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 4px;padding:10px 12px;background:linear-gradient(135deg,rgba(245,158,11,.06),rgba(167,139,250,.06));border:1px solid rgba(245,158,11,.18);border-radius:12px}
+.ipf-trophy{font-size:18px;line-height:1}
+/* Account-Switcher Dropdown (Insta-Style) */
+.ipf-switcher-wrap{position:relative;padding:10px 18px 4px;background:var(--bg)}
+.ipf-switcher{display:inline-flex;align-items:center;gap:8px;background:transparent;border:none;color:var(--text);font-size:16px;font-weight:700;cursor:pointer;padding:6px 10px;border-radius:10px;font-family:inherit}
+.ipf-switcher:hover{background:var(--bg3)}
+.ipf-switcher-arrow{transition:transform .2s}
+.ipf-switcher.open .ipf-switcher-arrow{transform:rotate(180deg)}
+.ipf-switcher-menu{position:absolute;top:calc(100% + 4px);left:18px;min-width:240px;background:var(--bg3);border:1px solid var(--border2);border-radius:14px;box-shadow:0 12px 32px rgba(0,0,0,.18);overflow:hidden;z-index:50;display:none;animation:ipfDrop .18s ease}
+.ipf-switcher-menu.open{display:block}
+@keyframes ipfDrop{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+.ipf-switcher-item{display:flex;align-items:center;gap:11px;padding:11px 14px;text-decoration:none;color:var(--text);cursor:pointer;border:none;background:none;width:100%;font-family:inherit;font-size:14px;text-align:left;transition:background .12s}
+.ipf-switcher-item:hover{background:var(--bg4)}
+.ipf-switcher-item.active{background:rgba(167,139,250,.08)}
+.ipf-switcher-item-avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#a78bfa,#7c3aed);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px;overflow:hidden;position:relative;flex-shrink:0}
+.ipf-switcher-item-avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.ipf-switcher-item-name{flex:1;min-width:0;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ipf-switcher-item-check{color:#a78bfa;font-size:18px;font-weight:700}
+.ipf-switcher-divider{height:1px;background:var(--border2)}
+.ipf-switcher-add{display:flex;align-items:center;gap:11px;padding:11px 14px;color:#a78bfa;cursor:pointer;border:none;background:none;width:100%;font-family:inherit;font-size:13.5px;font-weight:600;text-align:left}
+.ipf-switcher-add:hover{background:var(--bg4)}
+</style>
+
+${isOwn ? (function(){
+  // Account-Switcher (nur auf eigenem Profil sichtbar)
+  const _curSessUid = String(session?.uid || uid);
+  const _activeUid = String(session?.activeUid || uid);
+  const _allAccs = [{uid: _curSessUid, isParent: true}];
+  for (const [sid, su] of Object.entries(d.users||{})) {
+    if (String(su.parent_uid||'') === _curSessUid && sid !== _curSessUid) {
+      _allAccs.push({uid: sid, isParent: false});
+    }
+  }
+  if (_allAccs.length < 2) return ''; // kein Switcher wenn nur Parent
+  const _curU = d.users?.[_activeUid] || u;
+  const _curName = htmlEsc(_curU.spitzname || _curU.name || 'User');
+  return '<div class="ipf-switcher-wrap">' +
+    '<button class="ipf-switcher" onclick="ipfToggleSwitcher(this)" id="ipf-sw-btn">' +
+      htmlEsc(_curName) + ' <span class="ipf-switcher-arrow">▼</span>' +
+    '</button>' +
+    '<div class="ipf-switcher-menu" id="ipf-sw-menu">' +
+      _allAccs.map(a => {
+        const au = d.users?.[a.uid] || {};
+        const aName = htmlEsc(au.spitzname || au.name || 'User');
+        const aInit = htmlEsc((au.spitzname || au.name || '?').slice(0,1).toUpperCase());
+        const aPic = ladeBild(a.uid, 'profilepic') ? '/appbild/' + a.uid + '/profilepic' : (au.instagram ? 'https://unavatar.io/instagram/' + encodeURIComponent(au.instagram) : '');
+        const isActive = a.uid === _activeUid;
+        return '<button class="ipf-switcher-item' + (isActive?' active':'') + '" onclick="ipfSwitchAcc(' + JSON.stringify(a.uid) + ')">' +
+          '<div class="ipf-switcher-item-avatar">' + (aPic ? '<img src="'+aPic+'" alt="">' : aInit) + '</div>' +
+          '<div class="ipf-switcher-item-name">' + aName + (a.isParent?'':' <span style="font-size:11px;color:var(--muted);font-weight:500"> · Sub</span>') + '</div>' +
+          (isActive ? '<span class="ipf-switcher-item-check">✓</span>' : '') +
+        '</button>';
+      }).join('') +
+      '<div class="ipf-switcher-divider"></div>' +
+      '<button class="ipf-switcher-add" onclick="ipfAddSub()">➕ Neuen Sub-Account erstellen</button>' +
+    '</div>' +
+  '</div>';
+})() : ''}
+
+<div class="ipf-banner">
+  <div class="ipf-banner-bg" style="${bannerIsGrad ? 'background:'+banner : 'background-image:url('+JSON.stringify(banner).slice(1,-1)+')'}"></div>
+  <div class="ipf-banner-overlay"></div>
 </div>
-<div class="profile-info">
-  <div class="profile-name-row">
-    <div class="profile-name">${htmlEsc(u.spitzname||u.name||'User')}</div>
-    <div class="profile-badge" style="background:${grad};color:#fff">${htmlEsc(cleanRole(u.role, uid, adminIds))}</div>
-  </div>
-  ${u.username||u.spitzname?`<div class="profile-username">${u.spitzname?htmlEsc(u.name||''):''}${u.username?(u.spitzname?' · ':'')+'@'+htmlEsc(u.username):''}</div>`:''}
-  <div style="display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap">
-    ${isUidOnline(uid) ? '<span class="profile-status-pill online">● Online</span>' : '<span class="profile-status-pill offline">○ Offline</span>'}
-    ${rank>0?`<span class="profile-status-pill"><span style="opacity:0.65">Rang</span> #${rank}</span>`:''}
-  </div>
-  ${u.bio?`<div class="profile-bio">${htmlEsc(u.bio)}</div>`:''}
-  <div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap">
-    ${u.nische?`<span class="profile-meta-chip"><span style="opacity:0.7">🎯</span> ${htmlEsc(u.nische)}</span>`:''}
-    ${(()=>{const sw=safeUrl(u.website);return sw?`<a href="${htmlEsc(sw)}" target="_blank" rel="noopener noreferrer" class="profile-meta-chip" style="text-decoration:none">🔗 ${htmlEsc(sw.replace(/^https?:\/\//i,'').replace(/\/$/, '').slice(0,30))}</a>`:'';})()}
-    ${instaUrl?`<a href="${htmlEsc(instaUrl)}" target="_blank" rel="noopener noreferrer" class="profile-meta-chip" style="text-decoration:none">📸 @${htmlEsc(u.instagram)}</a>`:''}
-  </div>
-  ${u.trophies&&u.trophies.length?`
-  <div style="margin-top:14px;padding:12px 14px;background:linear-gradient(135deg,rgba(245,158,11,0.06),rgba(167,139,250,0.06));border:1px solid rgba(245,158,11,0.18);border-radius:14px">
-    <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1.4px;margin-bottom:8px;font-weight:800">🏆 Trophäen</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
-      ${u.trophies.map(t=>`<span style="font-size:22px;background:var(--bg4);border-radius:8px;padding:4px 8px">${t}</span>`).join('')}
+<div class="ipf">
+  <div class="ipf-top">
+    <div class="ipf-avatar-wrap">
+      ${_myRankCrown ? `<div class="ipf-avatar-crown" style="filter:${_myRankCrown===1?'drop-shadow(0 3px 8px rgba(245,158,11,0.5))':_myRankCrown===2?'grayscale(100%) brightness(1.45) contrast(0.9) drop-shadow(0 3px 8px rgba(148,163,184,0.55))':'sepia(100%) saturate(700%) hue-rotate(-22deg) brightness(0.55) contrast(1.15) drop-shadow(0 3px 8px rgba(180,83,9,0.6))'}">👑</div>` : ''}
+      <div class="ipf-avatar">
+        ${_picUrl ? `<img src="${htmlEsc(_picUrl)}" alt="" loading="eager" onerror="this.style.display='none'">` : _initial}
+      </div>
+      ${isUidOnline(uid) ? '<div class="ipf-avatar-dot" title="Online"></div>' : ''}
     </div>
-  </div>`:''}
+    <div class="ipf-stats">
+      <div class="ipf-stat"><div class="ipf-stat-num" data-count="${_posts}">0</div><div class="ipf-stat-lbl">Posts</div></div>
+      <div class="ipf-stat"><div class="ipf-stat-num" data-count="${_followers}">0</div><div class="ipf-stat-lbl">Follower</div></div>
+      <a href="/diamanten" class="ipf-stat"><div class="ipf-stat-num">💎 <span data-count="${_diamonds}">0</span></div><div class="ipf-stat-lbl">Diamanten</div></a>
+    </div>
+  </div>
+  <div class="ipf-name-row">
+    <span class="nm">${htmlEsc(u.spitzname||u.name||'User')}${_roleBadge?`<span class="badge" style="background:${grad};color:#fff">${_roleBadge}</span>`:''}</span>
+    <div class="ipf-handle">${u.instagram ? '@'+htmlEsc(u.instagram) : (rank>0?'Rang #'+rank:'')}</div>
+  </div>
+  ${u.bio?`<div class="ipf-bio">${htmlEsc(u.bio)}</div>`:''}
+  <div class="ipf-meta">
+    ${(()=>{const sw=safeUrl(u.website);return sw?`<a href="${htmlEsc(sw)}" target="_blank" rel="noopener noreferrer" class="ipf-link">🔗 ${htmlEsc(sw.replace(/^https?:\/\//i,'').replace(/\/$/, '').slice(0,30))}</a>`:'';})()}
+    ${u.nische?`<span class="ipf-chip">🎯 ${htmlEsc(u.nische)}</span>`:''}
+    ${instaUrl && !u.website ? `<a href="${htmlEsc(instaUrl)}" target="_blank" rel="noopener noreferrer" class="ipf-chip">📸 @${htmlEsc(u.instagram)}</a>` : ''}
+  </div>
+  <div class="ipf-actions">
+    ${isOwn ? `
+      <a href="/einstellungen" class="ipf-btn ipf-btn-primary">✏️ Profil bearbeiten</a>
+      <button class="ipf-btn" onclick="ipfShare()">📤 Profil teilen</button>
+    ` : `
+      <a href="/nachrichten/${uid}" class="ipf-btn ipf-btn-primary">💬 Nachricht</a>
+      <button class="ipf-btn" onclick="ipfFollow(this,'${uid}')" id="ipf-follow-btn">${_isFollowing ? '✓ Folge ich' : '➕ Folgen'}</button>
+    `}
+  </div>
+  ${u.trophies&&u.trophies.length?`<div class="ipf-trophy-row"><span style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-weight:800;width:100%;margin-bottom:2px">🏆 Trophäen</span>${u.trophies.map(t=>`<span class="ipf-trophy">${t}</span>`).join('')}</div>`:''}
+  ${isOwn && isAdmin ? '<div style="margin-top:6px"><a href="/dashboard" class="ipf-btn" style="background:linear-gradient(135deg,#f5d76e,#d4a946 55%,#8b6914);color:#000;border-color:rgba(212,175,55,.55);font-weight:700">🛡️ Admin Dashboard</a></div>' : ''}
 </div>
-<div class="profile-stats">
-  ${!isAdmin?`<div class="profile-stat"><div class="profile-stat-val" data-count="${xp}">0</div><div class="profile-stat-label">XP</div></div>`:''}
-  <div class="profile-stat"><div class="profile-stat-val" data-count="${u.links||0}">0</div><div class="profile-stat-label">Links</div></div>
-  <div class="profile-stat"><div class="profile-stat-val" data-count="${(u.followers||[]).length}">0</div><div class="profile-stat-label">Follower</div></div>
-  <div class="profile-stat"><div class="profile-stat-val">🔥 <span data-count="${u.streak||0}">0</span></div><div class="profile-stat-label">Streak</div></div>
-  <a href="/diamanten" class="profile-stat" style="text-decoration:none;color:inherit;cursor:pointer"><div class="profile-stat-val">💎 <span data-count="${u.diamonds||0}">0</span></div><div class="profile-stat-label" style="display:flex;align-items:center;justify-content:center;gap:3px">Diamanten <span style="font-size:9px;opacity:0.6">ⓘ</span></div></a>
-  ${(() => {
-    const _credits = Number(u.superlinkCredits||0);
-    const _maxStd = (u.role === '🌟 Elite+') ? 2 : 1;
-    // Wochen-Verbrauch berechnen
-    const _curMon = (() => { const n=new Date(); const day=n.getDay(); const mon=new Date(n); mon.setDate(n.getDate()-(day===0?6:day-1)); return mon.toISOString().slice(0,10); })();
-    const _usedThisWeek = Object.values(d.superlinks||{}).filter(s => String(s.uid) === String(uid) && s.week === _curMon).length;
-    const _available = Math.max(0, _maxStd - _usedThisWeek) + _credits;
-    if (_available <= 0 && _credits <= 0) return '';
-    return '<div class="profile-stat" title="Verfügbar / Standard pro Woche (Credits aus Roulette/Gewinnspiel + wöchentlicher Gratis-Bonus)"><div class="profile-stat-val" style="color:#f59e0b">⚡ <span>' + _available + '</span>/' + _maxStd + '</div><div class="profile-stat-label">Superlinks</div></div>';
-  })()}
-</div>
+<script>
+function ipfShare(){
+  const url = window.location.origin + '/profil/${uid}';
+  const title = '${(u.spitzname||u.name||'CreatorX User').replace(/'/g,"\\'")}';
+  if (navigator.share) { navigator.share({title:title+' · CreatorX', url}).catch(()=>{}); }
+  else { navigator.clipboard.writeText(url).then(()=>{const t=document.createElement('div');t.textContent='✅ Link kopiert';t.style.cssText='position:fixed;top:60px;left:50%;transform:translateX(-50%);background:#22c55e;color:#fff;padding:10px 18px;border-radius:10px;font-size:13px;font-weight:700;z-index:9999;box-shadow:0 8px 24px rgba(34,197,94,.4)';document.body.appendChild(t);setTimeout(()=>t.remove(),1800);}).catch(()=>{}); }
+}
+async function ipfFollow(btn, targetUid){
+  btn.disabled = true;
+  try {
+    const r = await fetch('/api/follow', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({targetUid})});
+    const j = await r.json();
+    if (j.ok) btn.innerHTML = j.following ? '✓ Folge ich' : '➕ Folgen';
+  } catch(e) {}
+  btn.disabled = false;
+}
+function ipfToggleSwitcher(btn){
+  const menu = document.getElementById('ipf-sw-menu');
+  if (!menu) return;
+  const isOpen = menu.classList.toggle('open');
+  btn.classList.toggle('open', isOpen);
+  if (isOpen) {
+    setTimeout(()=>{
+      const close = e => { if (!menu.contains(e.target) && e.target !== btn && !btn.contains(e.target)) { menu.classList.remove('open'); btn.classList.remove('open'); document.removeEventListener('click', close); } };
+      document.addEventListener('click', close);
+    }, 0);
+  }
+}
+async function ipfSwitchAcc(targetUid){
+  try {
+    const r = await fetch('/api/switch-account', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({uid: targetUid})});
+    const j = await r.json();
+    if (j.ok) location.reload();
+    else alert('Wechsel fehlgeschlagen: ' + (j.error || ''));
+  } catch(e) { alert('Netzwerk-Fehler'); }
+}
+function ipfAddSub(){
+  const name = prompt('Name für neuen Sub-Account:');
+  if (!name) return;
+  fetch('/api/sub-account-new', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({name})})
+    .then(r=>r.json()).then(j=>{
+      if (j.ok) location.reload();
+      else alert('Fehler: ' + (j.error || 'unbekannt'));
+    }).catch(()=>alert('Netzwerk-Fehler'));
+}
+</script>
 <script>(function(){
   if (window.__cbStatCountUp) return; window.__cbStatCountUp = true;
   function animOne(el){
@@ -3185,6 +3307,18 @@ ${(()=>{
 ${nb?`
 <div class="profile-xp-bar"><div class="profile-xp-fill" style="width:${nb.pct}%;background:${grad}"></div></div>
 <div class="profile-xp-info"><span>Noch <b>${nb.fehlend}</b> XP bis <b>${nb.ziel}</b></span><span>${nb.pct}%</span></div>`:'<div style="margin:14px 16px;padding:12px 16px;background:linear-gradient(135deg,rgba(255,212,59,.10),rgba(255,165,0,.04));border:1px solid rgba(255,212,59,.3);border-radius:14px;font-size:12.5px;font-weight:700;color:#a16207;display:flex;align-items:center;gap:8px"><span style="font-size:18px">👑</span>Maximales Level erreicht!</div>'}
+${(()=>{
+  const pl = ladePinnedLink(uid);
+  if (!pl) return '';
+  return `<div style="margin:10px 16px;padding:12px 14px;background:linear-gradient(135deg,rgba(236,72,153,.08),rgba(168,85,247,.06));border:1px solid rgba(236,72,153,.25);border-radius:14px;display:flex;align-items:center;gap:10px">
+    <div style="font-size:22px;flex-shrink:0">📌</div>
+    <div style="flex:1;min-width:0">
+      <div style="font-size:11px;font-weight:700;color:#ec4899;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px">Angepinnter Reel</div>
+      <a href="${htmlEsc(safeUrl(pl))}" target="_blank" rel="noopener noreferrer" style="font-size:12.5px;color:#4dabf7;word-break:break-all;text-decoration:none;font-weight:500;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${htmlEsc(String(pl).replace(/^https?:\/\//,'').slice(0,55))}</a>
+    </div>
+    <a href="${htmlEsc(safeUrl(pl))}" target="_blank" rel="noopener noreferrer" style="padding:6px 12px;background:linear-gradient(135deg,#ec4899,#a855f7);color:#fff;border-radius:8px;font-size:11.5px;font-weight:700;text-decoration:none;white-space:nowrap;flex-shrink:0">→ Öffnen</a>
+  </div>`;
+})()}
 ${(()=>{
   const weekKey = (() => { const n=new Date(); const d=n.getDay(); const mon=new Date(n); mon.setDate(n.getDate()-(d===0?6:d-1)); return mon.toISOString().slice(0,10); })();
   const mySuperlink = Object.values(d.superlinks||{}).find(s=>s.uid===uid&&s.week===weekKey);
