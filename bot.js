@@ -17311,6 +17311,58 @@ ${_setSubHead('⭐ Pro-Features', 'Premium-Tools für ernsthafte Creator. <b sty
   <div style="width:36px"></div>
 </div>
 <style>
+/* ── Profil-Hero-Karte (Instagram-Style: kein Banner, Avatar links, Stats horizontal) ── */
+.pf-hero{margin:14px 16px 12px;padding:18px 16px;background:var(--bg3);border:1px solid var(--border2);border-radius:16px;box-shadow:0 4px 14px rgba(0,0,0,.05)}
+.pf-top{display:flex;align-items:center;gap:18px;margin-bottom:14px}
+.pf-avatar-wrap{position:relative;width:78px;height:78px;flex-shrink:0}
+.pf-avatar{width:100%;height:100%;border-radius:50%;background:linear-gradient(135deg,#a78bfa,#7c3aed);background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:28px;overflow:hidden;cursor:pointer;position:relative;border:2.5px solid var(--bg3);box-shadow:0 2px 8px rgba(0,0,0,.1)}
+.pf-avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.pf-avatar-edit{position:absolute;bottom:0;right:0;width:26px;height:26px;border-radius:50%;background:#a78bfa;border:2px solid var(--bg3);display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;cursor:pointer;z-index:2;box-shadow:0 1px 4px rgba(0,0,0,.15)}
+.pf-stats{flex:1;display:grid;grid-template-columns:repeat(3,1fr);gap:6px;text-align:center}
+.pf-stat{cursor:default}
+.pf-stat-num{font-size:18px;font-weight:700;color:var(--text);line-height:1.1}
+.pf-stat-lbl{font-size:11px;color:var(--muted);margin-top:2px;font-weight:500}
+.pf-name-row{margin-bottom:8px}
+.pf-name{font-size:16px;font-weight:700;color:var(--text);line-height:1.2}
+.pf-handle{font-size:13px;color:var(--muted);margin-top:2px;font-weight:500}
+.pf-bio{font-size:13.5px;color:var(--text);line-height:1.5;margin-bottom:10px;white-space:pre-wrap}
+.pf-bio:empty::before{content:"Keine Bio gesetzt";color:var(--muted2);font-style:italic}
+.pf-link-row{display:flex;align-items:center;gap:6px;font-size:13px;color:#4dabf7;margin-bottom:14px;font-weight:600}
+.pf-link-row a{color:inherit;text-decoration:none}
+.pf-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.pf-action-btn{padding:9px 14px;background:var(--bg);border:1px solid var(--border2);color:var(--text);border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .12s;text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:6px}
+.pf-action-btn:hover{background:var(--bg4);border-color:var(--accent)}
+.pf-action-btn.primary{background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;border-color:transparent;box-shadow:0 2px 8px rgba(124,58,237,.25)}
+/* ── Edit-Modal (slide-up sheet wie Insta) ── */
+.pf-modal{position:fixed;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);z-index:9000;display:none;align-items:flex-end;animation:pfFade .2s ease}
+.pf-modal.open{display:flex}
+.pf-sheet{width:100%;max-width:560px;margin:0 auto;background:var(--bg);border-radius:20px 20px 0 0;max-height:90vh;overflow-y:auto;animation:pfSlide .25s cubic-bezier(.4,0,.2,1)}
+@keyframes pfFade{from{opacity:0}to{opacity:1}}
+@keyframes pfSlide{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.pf-sheet-hdr{position:sticky;top:0;padding:16px 18px;background:var(--bg);border-bottom:1px solid var(--border2);display:flex;align-items:center;justify-content:space-between;z-index:2}
+.pf-sheet-title{font-size:16px;font-weight:700;color:var(--text)}
+.pf-sheet-close{width:32px;height:32px;border-radius:50%;background:var(--bg3);border:none;color:var(--text);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.pf-sheet-body{padding:18px}
+.pf-field{margin-bottom:16px}
+.pf-field:last-child{margin-bottom:0}
+.pf-field-label{display:block;font-size:11.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px}
+.pf-input{width:100%;padding:12px 14px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:11px;color:var(--text);font-size:14.5px;font-family:inherit;outline:none;transition:border-color .15s;font-weight:500;box-sizing:border-box}
+.pf-input:focus{border-color:#a78bfa}
+.pf-input::placeholder{color:var(--muted2)}
+.pf-textarea{min-height:80px;resize:vertical;line-height:1.5}
+.pf-input-with-icon{position:relative}
+.pf-input-with-icon .pf-input{padding-left:32px}
+.pf-input-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:14px;font-weight:600;pointer-events:none}
+.pf-counter{font-size:10.5px;color:var(--muted);text-align:right;margin-top:4px}
+.pf-counter.warn{color:#f59e0b}
+.pf-counter.over{color:#ef4444}
+.pf-sheet-actions{padding:14px 18px;border-top:1px solid var(--border2);background:var(--bg);position:sticky;bottom:0;display:flex;gap:10px}
+.pf-save-btn{flex:1;padding:13px;background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;border:none;border-radius:11px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(124,58,237,.3);font-family:inherit}
+.pf-save-btn:disabled{opacity:.5;cursor:not-allowed}
+.pf-cancel-btn{padding:13px 18px;background:var(--bg3);border:1.5px solid var(--border2);color:var(--text);border-radius:11px;font-size:13.5px;font-weight:600;cursor:pointer;font-family:inherit}
+.pf-toast{position:fixed;top:60px;left:50%;transform:translateX(-50%) translateY(-20px);background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;padding:10px 18px;border-radius:11px;font-size:13px;font-weight:700;opacity:0;pointer-events:none;transition:all .25s;z-index:9999;box-shadow:0 8px 24px rgba(34,197,94,.4)}
+.pf-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.pf-toast.err{background:linear-gradient(135deg,#ef4444,#dc2626);box-shadow:0 8px 24px rgba(239,68,68,.4)}
 .set-hub-grid{display:grid;grid-template-columns:1fr;gap:8px;padding:14px 16px;border-bottom:1px solid var(--border2)}
 .set-hub-card{display:flex;align-items:center;gap:14px;padding:14px;background:var(--bg3);border:1px solid var(--border2);border-radius:14px;text-decoration:none;color:var(--text);transition:all .15s}
 .set-hub-card:hover{background:var(--bg4);border-color:var(--accent)}
@@ -17322,6 +17374,169 @@ ${_setSubHead('⭐ Pro-Features', 'Premium-Tools für ernsthafte Creator. <b sty
 .set-hub-arrow{color:var(--muted);font-size:18px;flex-shrink:0}
 .set-hub-badge{background:#ef4444;color:#fff;font-size:10px;font-weight:800;padding:2px 7px;border-radius:99px;margin-left:6px}
 </style>
+
+<!-- ── Profil-Hero-Karte (Instagram-Style) ── -->
+${(function(){
+  const _u = u || {};
+  const _name = htmlEsc(_u.spitzname || _u.name || 'CreatorX User');
+  const _handle = _u.instagram ? '@' + htmlEsc(_u.instagram) : '@' + htmlEsc((_u.name || 'user').toLowerCase().replace(/[^a-z0-9._]/g,''));
+  const _bio = htmlEsc(_u.bio || '');
+  const _website = _u.website ? htmlEsc(_u.website) : '';
+  const _hasPic = !!(session?.profilePicData || ladeBild(String(myUid),'profilepic'));
+  const _picSrc = _hasPic ? '/appbild/' + myUid + '/profilepic' : (_u.instagram ? 'https://unavatar.io/instagram/' + encodeURIComponent(_u.instagram) : '');
+  const _initial = htmlEsc((_u.spitzname || _u.name || 'C').slice(0,1).toUpperCase());
+  const _xp = Number(_u.xp || 0);
+  const _diamonds = Number(_u.diamonds || 0);
+  const _posts = Object.values(d.links||{}).filter(l => String(l.user_id) === String(myUid)).length;
+  return '<div class="pf-hero">' +
+    '<div class="pf-top">' +
+      '<div class="pf-avatar-wrap">' +
+        '<div class="pf-avatar" onclick="pfOpenEditAvatar()">' +
+          (_picSrc ? '<img src="' + _picSrc + '" alt="" loading="eager">' : _initial) +
+        '</div>' +
+        '<button class="pf-avatar-edit" onclick="pfOpenEditAvatar();return false" aria-label="Profilbild ändern">📷</button>' +
+      '</div>' +
+      '<div class="pf-stats">' +
+        '<div class="pf-stat"><div class="pf-stat-num">' + _posts + '</div><div class="pf-stat-lbl">Posts</div></div>' +
+        '<div class="pf-stat"><div class="pf-stat-num">' + _xp.toLocaleString('de-DE') + '</div><div class="pf-stat-lbl">XP</div></div>' +
+        '<div class="pf-stat"><div class="pf-stat-num">' + _diamonds + ' 💎</div><div class="pf-stat-lbl">Diamanten</div></div>' +
+      '</div>' +
+    '</div>' +
+    '<div class="pf-name-row">' +
+      '<div class="pf-name">' + _name + '</div>' +
+      '<div class="pf-handle">' + _handle + '</div>' +
+    '</div>' +
+    '<div class="pf-bio">' + _bio + '</div>' +
+    (_website ? '<div class="pf-link-row">🔗 <a href="' + safeUrl(_website) + '" target="_blank" rel="noopener noreferrer">' + _website.replace(/^https?:\/\//,'') + '</a></div>' : '') +
+    '<div class="pf-actions">' +
+      '<button class="pf-action-btn primary" onclick="pfOpenEditProfile();return false">✏️ Profil bearbeiten</button>' +
+      '<a class="pf-action-btn" href="/profil/' + myUid + '">👤 Profil ansehen</a>' +
+    '</div>' +
+  '</div>';
+})()}
+
+<!-- ── Edit-Sheet (slide-up modal) ── -->
+<div class="pf-modal" id="pfModal" onclick="if(event.target===this)pfCloseModal()">
+  <div class="pf-sheet">
+    <div class="pf-sheet-hdr">
+      <div class="pf-sheet-title">Profil bearbeiten</div>
+      <button class="pf-sheet-close" onclick="pfCloseModal()">✕</button>
+    </div>
+    <div class="pf-sheet-body">
+      <div class="pf-field">
+        <label class="pf-field-label">Spitzname</label>
+        <input class="pf-input" id="pfName" maxlength="30" placeholder="Dein Anzeigename" value="${htmlEsc(u.spitzname || u.name || '')}" oninput="pfUpdateCounter('pfName','pfNameCnt',30)">
+        <div class="pf-counter" id="pfNameCnt"></div>
+      </div>
+      <div class="pf-field">
+        <label class="pf-field-label">Bio</label>
+        <textarea class="pf-input pf-textarea" id="pfBio" maxlength="100" placeholder="Was machst du? (max 100 Zeichen)" oninput="pfUpdateCounter('pfBio','pfBioCnt',100)">${htmlEsc(u.bio || '')}</textarea>
+        <div class="pf-counter" id="pfBioCnt"></div>
+      </div>
+      <div class="pf-field">
+        <label class="pf-field-label">Instagram-Handle</label>
+        <div class="pf-input-with-icon">
+          <span class="pf-input-icon">@</span>
+          <input class="pf-input" id="pfInsta" maxlength="30" placeholder="dein_handle (ohne @)" value="${htmlEsc(u.instagram || '')}">
+        </div>
+      </div>
+      <div class="pf-field">
+        <label class="pf-field-label">Website</label>
+        <input class="pf-input" id="pfWebsite" type="url" maxlength="100" placeholder="https://..." value="${htmlEsc(u.website || '')}">
+      </div>
+      <div class="pf-field">
+        <label class="pf-field-label">Nische (optional)</label>
+        <input class="pf-input" id="pfNische" maxlength="50" placeholder="z.B. Fitness, Travel, Mode" value="${htmlEsc(u.nische || '')}">
+      </div>
+    </div>
+    <div class="pf-sheet-actions">
+      <button class="pf-cancel-btn" onclick="pfCloseModal()">Abbrechen</button>
+      <button class="pf-save-btn" id="pfSaveBtn" onclick="pfSaveProfile()">💾 Speichern</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Avatar-Upload Hidden Input ── -->
+<input type="file" id="pfAvatarFile" accept="image/*" style="display:none" onchange="pfHandleAvatarFile(this)">
+
+<div class="pf-toast" id="pfToast"></div>
+
+<script>
+function pfOpenEditProfile(){ document.getElementById('pfModal').classList.add('open'); document.body.style.overflow='hidden'; ['pfName','pfBio'].forEach(id=>{const e=document.getElementById(id);if(e)pfUpdateCounter(id,id.replace('pf','pf')+'Cnt',e.maxLength);}); }
+function pfCloseModal(){ document.getElementById('pfModal').classList.remove('open'); document.body.style.overflow=''; }
+function pfOpenEditAvatar(){ document.getElementById('pfAvatarFile').click(); }
+function pfUpdateCounter(inputId, counterId, max){
+  const inp = document.getElementById(inputId);
+  const cnt = document.getElementById(counterId);
+  if (!inp || !cnt) return;
+  const n = inp.value.length;
+  cnt.textContent = n + ' / ' + max;
+  cnt.className = 'pf-counter' + (n > max * 0.9 ? (n >= max ? ' over' : ' warn') : '');
+}
+function pfToast(msg, isErr){
+  const t = document.getElementById('pfToast');
+  if (!t) return;
+  t.textContent = msg;
+  t.className = 'pf-toast show' + (isErr ? ' err' : '');
+  setTimeout(()=>{ t.className = 'pf-toast' + (isErr ? ' err' : ''); }, 2500);
+}
+async function pfSaveProfile(){
+  const btn = document.getElementById('pfSaveBtn');
+  btn.disabled = true; btn.textContent = 'Speichere…';
+  const payload = {
+    spitzname: document.getElementById('pfName').value.trim().slice(0,30),
+    bio: document.getElementById('pfBio').value.trim().slice(0,100),
+    instagram: document.getElementById('pfInsta').value.trim().replace(/^@/,'').slice(0,30),
+    website: document.getElementById('pfWebsite').value.trim().slice(0,100),
+    nische: document.getElementById('pfNische').value.trim().slice(0,50),
+  };
+  try {
+    const r = await fetch('/api/save-profile', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
+    const j = await r.json();
+    if (j.ok) {
+      pfToast('✅ Profil aktualisiert');
+      setTimeout(()=>location.reload(), 800);
+    } else {
+      pfToast('❌ ' + (j.error || 'Fehler'), true);
+      btn.disabled = false; btn.textContent = '💾 Speichern';
+    }
+  } catch(e) {
+    pfToast('❌ Netzwerk-Fehler', true);
+    btn.disabled = false; btn.textContent = '💾 Speichern';
+  }
+}
+async function pfHandleAvatarFile(input){
+  const f = input.files && input.files[0];
+  if (!f) return;
+  if (!/^image\\//.test(f.type)) { pfToast('❌ Nur Bilder erlaubt', true); return; }
+  if (f.size > 4 * 1024 * 1024) { pfToast('❌ Max 4MB', true); return; }
+  // Client-side Resize auf 512px für Profilbild
+  const reader = new FileReader();
+  reader.onload = async e => {
+    const img = new Image();
+    img.onload = async () => {
+      const max = 512;
+      const scale = Math.min(1, max / Math.max(img.width, img.height));
+      const w = Math.round(img.width * scale);
+      const h = Math.round(img.height * scale);
+      const cnv = document.createElement('canvas');
+      cnv.width = w; cnv.height = h;
+      cnv.getContext('2d').drawImage(img, 0, 0, w, h);
+      const dataUrl = cnv.toDataURL('image/jpeg', 0.85);
+      pfToast('📤 Lade hoch…');
+      try {
+        const r = await fetch('/api/upload-profilepic', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({imageData: dataUrl})});
+        const j = await r.json();
+        if (j.ok) { pfToast('✅ Profilbild aktualisiert'); setTimeout(()=>location.reload(), 800); }
+        else pfToast('❌ ' + (j.error || 'Upload fehlgeschlagen'), true);
+      } catch(e) { pfToast('❌ Netzwerk-Fehler', true); }
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(f);
+}
+</script>
+
 <div class="set-hub-grid">
   <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);padding:4px 0 6px">Schnellzugriff</div>
   <a href="/einstellungen/account" class="set-hub-card">
