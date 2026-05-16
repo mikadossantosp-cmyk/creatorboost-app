@@ -7813,6 +7813,31 @@ p{line-height:1.65;color:var(--muted)}
         return json(result || {ok:false, error:'Mainbot offline'});
     }
 
+    // Admin Mission-Report: Compliance-Auswertung (M1/M2/M3 per Tag + Aktionen)
+    if (path === '/api/admin/mission-report' && req.method === 'GET') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
+        const date = String(query.date || 'yesterday');
+        const result = await fetchBotRaw('/admin-mission-report-api?date=' + encodeURIComponent(date));
+        return json(result || {ok:false, error:'Mainbot offline'});
+    }
+    if (path === '/api/admin/suspend-posting' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
+        const body = await parseBody(req);
+        const r = await postBot('/admin-suspend-posting-api', {
+            uid: String(body.uid||''), days: Number(body.days||0), reason: String(body.reason||''),
+        });
+        return json(r || {ok:false, error:'Mainbot offline'});
+    }
+    if (path === '/api/admin/warn-user' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
+        const body = await parseBody(req);
+        const r = await postBot('/admin-warn-user-api', { uid: String(body.uid||''), reason: String(body.reason||'') });
+        return json(r || {ok:false, error:'Mainbot offline'});
+    }
+
     if (path === '/api/admin/report-action' && req.method === 'POST') {
         if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
         if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
@@ -11824,11 +11849,13 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
           <button class="dash-tab" data-tab="subs">👶 Sub-Accounts</button>
           <button class="dash-tab" data-tab="engagement-log">📋 Engagement-Log</button>
           <button class="dash-tab" data-tab="reports">🚩 Meldungen <span id="dash-reports-badge" style="display:none;margin-left:4px;padding:1px 6px;border-radius:99px;background:#ef4444;color:#fff;font-size:10px;font-weight:800"></span></button>
+          <button class="dash-tab" data-tab="compliance">📊 Compliance</button>
           <button class="dash-tab" data-tab="diamond-links">💎 Diamantlinks</button>
         </div>
 
         <div id="dash-engagement-log" style="display:none"></div>
         <div id="dash-reports" style="display:none"></div>
+        <div id="dash-compliance" style="display:none"></div>
         <div id="dash-diamond-links" style="display:none"></div>
         <div class="dash-list" id="dash-list">
           <div class="dash-skel"><div class="dash-skel-avatar"></div><div style="flex:1"><div class="dash-skel-line" style="width:160px;margin-bottom:6px"></div><div class="dash-skel-line" style="width:240px"></div></div></div>
@@ -12956,6 +12983,7 @@ document.querySelectorAll('.dash-tab').forEach(btn => {
       document.getElementById('dash-list').style.display = 'none';
       document.getElementById('dash-engagement-log').style.display = 'none';
       const rp = document.getElementById('dash-reports'); if (rp) rp.style.display = 'none';
+      const cp = document.getElementById('dash-compliance'); if (cp) cp.style.display = 'none';
       const dl = document.getElementById('dash-diamond-links'); if (dl) dl.style.display = 'none';
     };
     if (CUR_TAB === 'engagement-log') {
@@ -12966,6 +12994,10 @@ document.querySelectorAll('.dash-tab').forEach(btn => {
       hideAll();
       const rp = document.getElementById('dash-reports'); if (rp) rp.style.display = 'block';
       loadReports();
+    } else if (CUR_TAB === 'compliance') {
+      hideAll();
+      const cp = document.getElementById('dash-compliance'); if (cp) cp.style.display = 'block';
+      loadCompliance();
     } else if (CUR_TAB === 'diamond-links') {
       hideAll();
       const dl = document.getElementById('dash-diamond-links'); if (dl) dl.style.display = 'block';
@@ -13203,6 +13235,166 @@ async function reportAction(reportId, action, btn) {
     if (j.ok) loadReports();
     else { btn.disabled = false; btn.textContent = oldText; alert('❌ ' + (j.error || 'Fehler')); }
   } catch(e) { btn.disabled = false; btn.textContent = oldText; alert('❌ ' + e.message); }
+}
+
+// ── Compliance / Mission-Report Tab ──
+let LAST_COMPLIANCE = null;
+let CUR_COMP_FILTER = 'failedM1';
+
+async function loadCompliance(date) {
+  const root = document.getElementById('dash-compliance');
+  if (!root) return;
+  root.innerHTML = '<div style="padding:24px;text-align:center;color:var(--dsub)">⏳ Lade Mission-Report…</div>';
+  const dateParam = date || 'yesterday';
+  try {
+    const r = await fetch('/api/admin/mission-report?date=' + encodeURIComponent(dateParam));
+    const j = await r.json();
+    if (!j.ok) { root.innerHTML = '<div style="padding:24px;text-align:center;color:#ef4444">'+(j.error||'Fehler')+'</div>'; return; }
+    LAST_COMPLIANCE = j;
+    renderCompliance();
+  } catch(e) { root.innerHTML = '<div style="padding:24px;text-align:center;color:#ef4444">'+e.message+'</div>'; }
+}
+
+function renderCompliance() {
+  const root = document.getElementById('dash-compliance');
+  if (!root || !LAST_COMPLIANCE) return;
+  const j = LAST_COMPLIANCE;
+  const s = j.summary;
+  const all = j.users || [];
+
+  const groups = {
+    failedM1: all.filter(u => u.postedButFailedM1),
+    onlyPosters: all.filter(u => u.onlyPoster),
+    onlyLikers: all.filter(u => u.onlyLiker),
+    inactive: all.filter(u => u.inactive),
+    suspended: all.filter(u => u.postSuspendedUntil && u.postSuspendedUntil > Date.now()),
+    m1: all.filter(u => u.m1),
+    m2: all.filter(u => u.m2),
+    m3: all.filter(u => u.m3),
+    all: all.slice().sort((a,b) => (b.likedToday||0) - (a.likedToday||0)),
+  };
+
+  const tabBtn = (key, label, count, color) =>
+    '<button onclick="setComplianceFilter(\\''+key+'\\')" class="dash-tab'+(CUR_COMP_FILTER===key?' active':'')+'" style="'+(CUR_COMP_FILTER===key?'':'color:'+color+';')+'flex-shrink:0">'+label+' <b style="margin-left:4px;opacity:.7">'+count+'</b></button>';
+
+  let html =
+    '<div style="display:flex;gap:8px;align-items:center;margin:8px 0 14px;flex-wrap:wrap">' +
+      '<input type="date" id="comp-date-input" style="background:var(--dink);border:1px solid var(--dline);color:#fff;padding:7px 10px;border-radius:8px;font-family:inherit;font-size:13px" value="'+(j.summary.date ? new Date(j.summary.date).toISOString().slice(0,10) : '')+'">' +
+      '<button onclick="loadCompliance(document.getElementById(\\'comp-date-input\\').value)" class="dash-btn">→ Laden</button>' +
+      '<button onclick="loadCompliance(\\'yesterday\\')" class="dash-btn">Gestern</button>' +
+      '<button onclick="loadCompliance(\\'today\\')" class="dash-btn">Heute</button>' +
+      '<div style="flex:1"></div>' +
+      '<div style="font-size:11px;color:var(--dsub)">'+j.summary.totalUsers+' aktive User · '+j.summary.totalLinks+' Links gepostet · '+j.summary.date+'</div>' +
+    '</div>';
+
+  // Summary-Stats Row
+  const stat = (lbl, val, color) =>
+    '<div style="flex:1;min-width:120px;padding:10px 12px;background:var(--dink);border:1px solid var(--dline);border-radius:10px"><div style="font-size:10px;font-weight:800;letter-spacing:1.2px;color:var(--dsub);text-transform:uppercase">'+lbl+'</div><div style="font-size:20px;font-weight:800;color:'+color+';margin-top:2px">'+val+'</div></div>';
+  html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">' +
+    stat('M1 erfüllt', s.m1Done + '/' + s.totalUsers, '#4ade80') +
+    stat('M2 erfüllt', s.m2Done + '/' + s.totalUsers, '#22c55e') +
+    stat('M3 erfüllt', s.m3Done + '/' + s.totalUsers, '#06b6d4') +
+    stat('M1 verletzt', s.postedButFailedM1, '#ef4444') +
+    stat('Nur Poster', s.onlyPosters, '#f59e0b') +
+    stat('Nur Liker', s.onlyLikers, '#a78bfa') +
+    stat('Inaktiv', s.inactive, '#6b7280') +
+    stat('Gesperrt', s.currentlyPostSuspended, '#dc2626') +
+  '</div>';
+
+  // Filter-Tabs
+  html += '<div class="dash-tabs" style="margin:8px 0 12px">' +
+    tabBtn('failedM1', '🔴 Posted ohne M1', groups.failedM1.length, '#f87171') +
+    tabBtn('onlyPosters', '⚠️ Nur Poster', groups.onlyPosters.length, '#fbbf24') +
+    tabBtn('onlyLikers', '✨ Nur Liker', groups.onlyLikers.length, '#a78bfa') +
+    tabBtn('inactive', '⚪ Inaktiv', groups.inactive.length, '#9ca3af') +
+    tabBtn('suspended', '🚫 Gesperrt', groups.suspended.length, '#dc2626') +
+    tabBtn('m1', '✅ M1', groups.m1.length, '#4ade80') +
+    tabBtn('m2', '✅ M2', groups.m2.length, '#22c55e') +
+    tabBtn('m3', '✅ M3', groups.m3.length, '#06b6d4') +
+    tabBtn('all', '📋 Alle', groups.all.length, '#e7e7ea') +
+  '</div>';
+
+  const list = groups[CUR_COMP_FILTER] || [];
+  if (!list.length) {
+    html += '<div style="padding:32px;text-align:center;color:var(--dsub);font-size:13px">Keine User in diesem Filter.</div>';
+  } else {
+    for (const u of list) {
+      const pills = [];
+      if (u.m1) pills.push('<span class="dash-pill ok">M1 ✅</span>');
+      if (u.m2) pills.push('<span class="dash-pill ok">M2 ✅</span>');
+      if (u.m3) pills.push('<span class="dash-pill ok">M3 ✅</span>');
+      if (u.warnings >= 3) pills.push('<span class="dash-pill err">⚠️ '+u.warnings+'/5</span>');
+      else if (u.warnings > 0) pills.push('<span class="dash-pill warn">⚠️ '+u.warnings+'/5</span>');
+      if (u.postSuspendedUntil && u.postSuspendedUntil > Date.now()) {
+        const daysLeft = Math.ceil((u.postSuspendedUntil - Date.now())/86400000);
+        pills.push('<span class="dash-pill err">🚫 '+daysLeft+'d gesperrt</span>');
+      }
+      html += '<div style="margin:0 0 8px;padding:12px 14px;background:var(--dink2);border:1px solid var(--dline);border-radius:12px">' +
+        '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">' +
+          '<a href="javascript:openUser(\\''+esc(u.uid)+'\\')" style="font-size:14px;font-weight:700;color:#fff;text-decoration:none">'+esc(u.name)+'</a>' +
+          (u.instagram?'<span style="font-size:12px;color:#06b6d4">@'+esc(u.instagram)+'</span>':'') +
+          '<div style="flex:1"></div>' +
+          pills.join(' ') +
+        '</div>' +
+        '<div style="font-size:12px;color:var(--dsub);display:flex;gap:14px;flex-wrap:wrap;margin-bottom:8px">' +
+          '<span><b style="color:#4dabf7">'+u.postedToday+'</b> Posts</span>' +
+          '<span><b style="color:#f59e0b">'+u.likedToday+'</b>/'+u.othersAvailable+' Likes</span>' +
+          '<span><b>'+u.xp+'</b> XP</span>' +
+          '<span>Wo: M1 '+u.weekM1+'/7 · M2 '+u.weekM2+'/7 · M3 '+u.weekM3+'/7</span>' +
+        '</div>' +
+        '<div style="display:flex;gap:6px;flex-wrap:wrap">' +
+          '<button onclick="warnUserPrompt(\\''+esc(u.uid)+'\\',\\''+esc(u.name)+'\\')" class="dash-act" style="border-color:rgba(245,158,11,0.4);color:#fbbf24">⚠️ Verwarnen</button>' +
+          (u.postSuspendedUntil && u.postSuspendedUntil > Date.now()
+            ? '<button onclick="suspendPostingPrompt(\\''+esc(u.uid)+'\\',\\''+esc(u.name)+'\\',0)" class="dash-act" style="border-color:rgba(34,197,94,0.4);color:#22c55e">✅ Sperre aufheben</button>'
+            : '<button onclick="suspendPostingPrompt(\\''+esc(u.uid)+'\\',\\''+esc(u.name)+'\\',3)" class="dash-act danger">🚫 Posten sperren</button>') +
+          '<button onclick="openUser(\\''+esc(u.uid)+'\\')" class="dash-act" style="margin-left:auto">👁️ Profil</button>' +
+        '</div>' +
+      '</div>';
+    }
+  }
+  root.innerHTML = html;
+}
+
+function setComplianceFilter(key) { CUR_COMP_FILTER = key; renderCompliance(); }
+
+async function warnUserPrompt(uid, name) {
+  const reason = prompt('Verwarnung an ' + name + ' — Grund (optional):');
+  if (reason === null) return;
+  try {
+    const r = await fetch('/api/admin/warn-user', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({uid, reason}) });
+    const j = await r.json();
+    if (j.ok) {
+      if (typeof dToast === 'function') dToast('✅ Verwarnt — Warns: ' + j.warnings + '/5', 'success');
+      else alert('✅ Verwarnt — Warns: ' + j.warnings + '/5');
+      loadCompliance();
+    } else alert('❌ ' + (j.error || 'Fehler'));
+  } catch(e) { alert('❌ ' + e.message); }
+}
+
+async function suspendPostingPrompt(uid, name, defaultDays) {
+  let days;
+  if (defaultDays === 0) {
+    if (!confirm('Sperre für ' + name + ' aufheben?')) return;
+    days = 0;
+  } else {
+    const inp = prompt('Posten sperren für ' + name + ' — Tage (1-365):', String(defaultDays));
+    if (inp === null) return;
+    days = parseInt(inp, 10);
+    if (!days || days < 1 || days > 365) { alert('❌ Ungültige Tage-Anzahl'); return; }
+  }
+  let reason = '';
+  if (days > 0) {
+    reason = prompt('Grund (wird User per DM mitgeteilt):') || '';
+  }
+  try {
+    const r = await fetch('/api/admin/suspend-posting', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({uid, days, reason}) });
+    const j = await r.json();
+    if (j.ok) {
+      if (typeof dToast === 'function') dToast(days > 0 ? '🚫 Gesperrt für ' + days + 'd' : '✅ Sperre aufgehoben', 'success');
+      else alert(days > 0 ? '🚫 Gesperrt für ' + days + 'd' : '✅ Sperre aufgehoben');
+      loadCompliance();
+    } else alert('❌ ' + (j.error || 'Fehler'));
+  } catch(e) { alert('❌ ' + e.message); }
 }
 
 document.getElementById('dash-q').addEventListener('input', e => { CUR_Q = e.target.value; renderList(); });
