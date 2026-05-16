@@ -9493,39 +9493,78 @@ function cbHelperShow(id){
 }
 // Keywords pro Topic für Search
 const CB_HELP_KEYWORDS = {
-  'm': ['mission','m1','m2','m3','aufgabe','ziele','task','daily mission'],
-  'xp': ['xp','punkte','level','rolle','badge','rang','rank','erfahrung'],
-  'diamond': ['diamant','diamond','💎','währung','wallet','geld','reward','belohnung'],
-  'superlink': ['superlink','super link','superpost','premium post','top'],
-  'kollab': ['kollab','kollabo','collab','partner','zusammenarbeit'],
-  'pinned': ['pinned','pin','reel','explore karte','profil-reel'],
-  'warn': ['warn','verwarnung','warning','strafe','sperre','ban','gebannt'],
-  'support': ['support','hilfe','help','kontakt','admin'],
-  // Banale Fragen direkt beantworten:
-  '_h_profilbild': ['profilbild','foto','avatar','pic','profil bild','bild ändern','bild hochladen','profilfoto'],
-  '_h_banner': ['banner','header','titelbild','cover','hintergrund profil'],
-  '_h_bio': ['bio','beschreibung','about','steckbrief','über mich','text profil'],
-  '_h_spitzname': ['spitzname','nickname','anzeigename','user name','display name'],
-  '_h_email': ['email ändern','email setzen','email-adresse','mail ändern','neue email','meine email'],
-  '_h_passwort': ['passwort','password','pw','login passwort','passwort ändern','passwort setzen','pw setzen'],
-  '_h_insta': ['instagram handle','insta handle','insta verlinken','insta einstellen','meine instagram'],
-  '_h_logout': ['ausloggen','logout','abmelden','sign out'],
-  '_h_delete': ['account löschen','account weg','konto löschen','dsgvo','daten löschen'],
-  '_h_post': ['posten','wie poste','wie post','link teilen','link posten','reel posten','reel teilen'],
-  '_h_block': ['blockieren','blocken','user blockieren','blocked','blockliste','geblockt'],
-  '_h_notif': ['benachrichtigung','notification','push','notif','alarm','meldung anstellen'],
-  '_h_sub': ['sub account','zweitaccount','sub','second account','neuer account','zweit acc'],
-  '_h_install': ['app installieren','installieren','apk','download','app runter','homescreen'],
-  '_h_dark': ['dark mode','dark theme','dunkel','nachtmodus','dunkler hintergrund'],
+  'm': ['mission','m1','m2','m3','aufgabe','aufgaben','ziele','task','daily mission','missionen','tagesziel','quest'],
+  'xp': ['xp','punkte','level','rolle','badge','rang','rank','erfahrung','exp','stufe','aufsteigen','levelup'],
+  'diamond': ['diamant','diamanten','diamond','💎','währung','wallet','geld','reward','belohnung','rewards','kristall'],
+  'superlink': ['superlink','super link','superpost','premium post','superlinks','star link'],
+  'kollab': ['kollab','kollabo','collab','partner','zusammenarbeit','collaboration','kooperation','duo post'],
+  'pinned': ['pinned','pin reel','angepinnt','explore karte','profil-reel','lieblings reel','haupt reel'],
+  'warn': ['warn','verwarnung','warning','strafe','sperre','ban','gebannt','verwarnt','warnung','warns'],
+  'support': ['support','hilfe','help','kontakt','admin','helfen','helpdesk'],
+  '_h_profilbild': ['profilbild','foto','avatar','pic','profil bild','bild ändern','bild hochladen','profilfoto','profilpic','profile pic','prof bild'],
+  '_h_banner': ['banner','header','titelbild','cover','hintergrund profil','banner ändern','banner hochladen'],
+  '_h_bio': ['bio','beschreibung','about','steckbrief','über mich','text profil','bio ändern','profiltext'],
+  '_h_spitzname': ['spitzname','nickname','anzeigename','user name','display name','username','nick','spitznamen'],
+  '_h_email': ['email','e-mail','mail','email ändern','email setzen','email-adresse','mail ändern','neue email','meine email','mailadresse'],
+  '_h_passwort': ['passwort','password','pw','login passwort','passwort ändern','passwort setzen','pw setzen','passwort vergessen','passwort neu'],
+  '_h_insta': ['instagram handle','insta handle','insta verlinken','insta einstellen','meine instagram','instagram account','insta acc','ig handle','instagram name'],
+  '_h_logout': ['ausloggen','auslogen','ausloggn','aussloggen','ausslogen','auslogen','logout','log out','abmelden','sign out','signout','rausgehen','raus gehen','rauslogen','abmelden','log aus'],
+  '_h_delete': ['account löschen','account weg','konto löschen','dsgvo','daten löschen','account loeschen','konto loeschen','account entfernen','profil löschen'],
+  '_h_post': ['posten','wie poste','wie post','link teilen','link posten','reel posten','reel teilen','hochladen','reel hochladen','beitrag erstellen','neuer post'],
+  '_h_block': ['blockieren','blocken','user blockieren','blocked','blockliste','geblockt','sperren user'],
+  '_h_notif': ['benachrichtigung','notification','push','notif','alarm','meldung anstellen','benachrichtigungen','push notification','mitteilung'],
+  '_h_sub': ['sub account','zweitaccount','sub','second account','neuer account','zweit acc','subaccount','nebenaccount','zweit account'],
+  '_h_install': ['app installieren','installieren','apk','download','app runter','homescreen','app laden','app handy','startbildschirm'],
+  '_h_dark': ['dark mode','dark theme','dunkel','nachtmodus','dunkler hintergrund','darkmode','schwarz mode','hell mode'],
 };
+// Levenshtein-Distance (max 2) für Typo-Toleranz
+function cbHelperLev(a, b){
+  if (a === b) return 0;
+  if (!a.length || !b.length) return Math.max(a.length, b.length);
+  if (Math.abs(a.length - b.length) > 2) return 3;
+  const prev = new Array(b.length + 1);
+  const curr = new Array(b.length + 1);
+  for (let j = 0; j <= b.length; j++) prev[j] = j;
+  for (let i = 1; i <= a.length; i++) {
+    curr[0] = i;
+    for (let j = 1; j <= b.length; j++) {
+      const cost = a[i-1] === b[j-1] ? 0 : 1;
+      curr[j] = Math.min(curr[j-1]+1, prev[j]+1, prev[j-1]+cost);
+    }
+    for (let j = 0; j <= b.length; j++) prev[j] = curr[j];
+  }
+  return prev[b.length];
+}
+// Fuzzy-Match: substring ODER ein Token im Query liegt ≤2 Edits zum Keyword
+function cbHelperKwScore(q, kw){
+  if (q.includes(kw)) return kw.length * 2; // exakt = doppelter Score
+  // Wort-für-Wort fuzzy
+  const tokens = q.split(/[\s,.!?;:]+/).filter(t => t.length >= 3);
+  const kwTokens = kw.split(/\s+/);
+  let total = 0;
+  for (const kwT of kwTokens) {
+    if (kwT.length < 3) continue;
+    let best = 99;
+    for (const t of tokens) {
+      const d = cbHelperLev(t, kwT);
+      if (d < best) best = d;
+    }
+    // Toleranz: 0 Edits = voller Score, 1 Edit = 70%, 2 Edits = 40%
+    if (best === 0) total += kwT.length;
+    else if (best === 1 && kwT.length >= 4) total += Math.floor(kwT.length * 0.7);
+    else if (best === 2 && kwT.length >= 6) total += Math.floor(kwT.length * 0.4);
+  }
+  return total;
+}
 function cbHelperFindTopic(q){
   const lq = q.toLowerCase();
   let best=null, bestScore=0;
   for (const [tid, kws] of Object.entries(CB_HELP_KEYWORDS)){
-    let s=0; for (const kw of kws){ if (lq.includes(kw)) s += kw.length; }
+    let s = 0;
+    for (const kw of kws) { s += cbHelperKwScore(lq, kw); }
     if (s > bestScore) { bestScore = s; best = tid; }
   }
-  return bestScore >= 3 ? best : null;
+  return bestScore >= 4 ? best : null;
 }
 async function cbHelperAsk(){
   const inp = document.getElementById('cb-helper-input');
