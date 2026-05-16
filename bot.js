@@ -12636,12 +12636,14 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
           <button class="dash-tab" data-tab="reports">🚩 Meldungen <span id="dash-reports-badge" style="display:none;margin-left:4px;padding:1px 6px;border-radius:99px;background:#ef4444;color:#fff;font-size:10px;font-weight:800"></span></button>
           <button class="dash-tab" data-tab="compliance">📊 Compliance</button>
           <button class="dash-tab" data-tab="diamond-links">💎 Diamantlinks</button>
+          <button class="dash-tab" data-tab="helper-inbox">🎫 Tickets <span id="dash-tickets-badge" style="display:none;margin-left:4px;padding:1px 6px;border-radius:99px;background:#f59e0b;color:#fff;font-size:10px;font-weight:800"></span></button>
         </div>
 
         <div id="dash-engagement-log" style="display:none"></div>
         <div id="dash-reports" style="display:none"></div>
         <div id="dash-compliance" style="display:none"></div>
         <div id="dash-diamond-links" style="display:none"></div>
+        <div id="dash-helper-inbox" style="display:none"></div>
         <div class="dash-list" id="dash-list">
           <div class="dash-skel"><div class="dash-skel-avatar"></div><div style="flex:1"><div class="dash-skel-line" style="width:160px;margin-bottom:6px"></div><div class="dash-skel-line" style="width:240px"></div></div></div>
           <div class="dash-skel"><div class="dash-skel-avatar"></div><div style="flex:1"><div class="dash-skel-line" style="width:140px;margin-bottom:6px"></div><div class="dash-skel-line" style="width:200px"></div></div></div>
@@ -13770,6 +13772,7 @@ document.querySelectorAll('.dash-tab').forEach(btn => {
       const rp = document.getElementById('dash-reports'); if (rp) rp.style.display = 'none';
       const cp = document.getElementById('dash-compliance'); if (cp) cp.style.display = 'none';
       const dl = document.getElementById('dash-diamond-links'); if (dl) dl.style.display = 'none';
+      const hi = document.getElementById('dash-helper-inbox'); if (hi) hi.style.display = 'none';
     };
     if (CUR_TAB === 'engagement-log') {
       hideAll();
@@ -13787,6 +13790,10 @@ document.querySelectorAll('.dash-tab').forEach(btn => {
       hideAll();
       const dl = document.getElementById('dash-diamond-links'); if (dl) dl.style.display = 'block';
       loadDiamondLinksAdmin();
+    } else if (CUR_TAB === 'helper-inbox') {
+      hideAll();
+      const hi = document.getElementById('dash-helper-inbox'); if (hi) hi.style.display = 'block';
+      loadHelperInbox();
     } else {
       hideAll();
       document.getElementById('dash-list').style.display = '';
@@ -13794,6 +13801,89 @@ document.querySelectorAll('.dash-tab').forEach(btn => {
     }
   });
 });
+
+// ── Helper-Inbox (Tickets vom Helper-Bot) ──
+let HELPER_INBOX_FILTER = 'open';
+async function loadHelperInbox(){
+  const root = document.getElementById('dash-helper-inbox');
+  if (!root) return;
+  root.innerHTML = '<div style="padding:24px;text-align:center;color:var(--dsub)">Lädt Tickets…</div>';
+  try {
+    const r = await fetch('/api/admin/helper-questions?status=' + encodeURIComponent(HELPER_INBOX_FILTER));
+    const j = await r.json();
+    if (!j.ok) { root.innerHTML = '<div style="padding:24px;text-align:center;color:#ef4444">Fehler: '+(j.error||'?')+'</div>'; return; }
+    const total = j.total || 0;
+    const openN = j.open || 0;
+    const items = j.questions || [];
+    const filterBtn = (key, label, count) =>
+      '<button onclick="HELPER_INBOX_FILTER=\\''+key+'\\';loadHelperInbox()" class="dash-tab'+(HELPER_INBOX_FILTER===key?' active':'')+'">'+label+' <b style="margin-left:4px;opacity:.7">'+count+'</b></button>';
+    let html = '<div style="margin-bottom:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">' +
+      '<div style="font-size:13px;color:var(--dsub)">Insgesamt: <b style="color:#fff">'+total+'</b> · Offen: <b style="color:#f59e0b">'+openN+'</b></div>' +
+      '<div class="dash-tabs" style="margin-left:auto">' +
+        filterBtn('open', '🎫 Offen', openN) +
+        filterBtn('answered', '✅ Beantwortet', total - openN) +
+        filterBtn('all', '📋 Alle', total) +
+      '</div></div>';
+    if (items.length === 0) {
+      html += '<div style="padding:32px;text-align:center;color:var(--dsub);background:var(--dink2);border:1px solid var(--dline);border-radius:14px">📭 Keine Tickets in dieser Ansicht.</div>';
+    } else {
+      html += '<div style="display:flex;flex-direction:column;gap:10px">';
+      for (const t of items) {
+        const isOpen = !t.answeredAt;
+        const dt = new Date(t.ts || 0).toLocaleString('de-DE', {hour:'2-digit', minute:'2-digit', day:'2-digit', month:'2-digit'});
+        const followUpsN = Array.isArray(t.followUps) ? t.followUps.length : 0;
+        const followsHtml = followUpsN > 0 ? '<div style="margin-top:8px;padding:8px 10px;background:rgba(167,139,250,0.06);border-left:2px solid #a78bfa;border-radius:6px;font-size:11.5px"><b>💬 '+followUpsN+' Follow-up'+(followUpsN===1?'':'s')+':</b><br>' +
+          t.followUps.map(f => '· ' + escapeHtmlDash(String(f.text||'')).slice(0,200)).join('<br>') + '</div>' : '';
+        const answerHtml = !isOpen ? '<div style="margin-top:10px;padding:10px;background:rgba(34,197,94,0.08);border-left:2px solid #22c55e;border-radius:6px;font-size:12px"><b style="color:#22c55e">✅ Antwort:</b><br>'+escapeHtmlDash(String(t.answer||'')).replace(/\\n/g,'<br>')+'</div>' : '';
+        const replyBox = isOpen ? '<div style="margin-top:10px;display:flex;gap:8px"><textarea id="hi-reply-'+t.id+'" placeholder="Antwort an '+escapeHtmlDash(t.name||'User')+'…" style="flex:1;padding:9px 11px;background:var(--dink);border:1px solid var(--dline);border-radius:8px;color:#fff;font-size:12.5px;font-family:inherit;resize:vertical;min-height:60px"></textarea><button onclick="sendHelperReply(\\''+t.id+'\\')" class="dash-btn dash-btn-primary" style="white-space:nowrap;height:fit-content">📨 Senden</button></div>' : '';
+        html += '<div style="padding:14px 16px;background:var(--dink2);border:1px solid '+(isOpen?'rgba(245,158,11,0.3)':'var(--dline)')+';border-radius:12px">' +
+          '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">' +
+          '<div style="font-size:11px;font-weight:700;padding:3px 8px;border-radius:99px;background:'+(isOpen?'rgba(245,158,11,0.18);color:#f59e0b':'rgba(34,197,94,0.18);color:#22c55e')+'">'+(isOpen?'🎫 OFFEN':'✅ BEANTWORTET')+'</div>' +
+          '<div style="font-size:12.5px;font-weight:700">'+escapeHtmlDash(t.name||'User')+' <span style="color:var(--dsub);font-weight:400">· UID '+t.uid+'</span></div>' +
+          '<div style="margin-left:auto;font-size:11px;color:var(--dsub)">'+dt+'</div>' +
+          '</div>' +
+          '<div style="font-size:13px;line-height:1.5;color:#e7e7ea">'+escapeHtmlDash(String(t.question||''))+'</div>' +
+          followsHtml + answerHtml + replyBox +
+          '<div style="margin-top:6px;font-size:10.5px;color:var(--dsub);font-family:monospace">' + t.id + '</div>' +
+          '</div>';
+      }
+      html += '</div>';
+    }
+    root.innerHTML = html;
+    // Update badge
+    const badge = document.getElementById('dash-tickets-badge');
+    if (badge) { badge.textContent = openN; badge.style.display = openN > 0 ? 'inline-block' : 'none'; }
+  } catch (e) {
+    root.innerHTML = '<div style="padding:24px;text-align:center;color:#ef4444">Fehler: '+e.message+'</div>';
+  }
+}
+function escapeHtmlDash(s){ return String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+async function sendHelperReply(qId){
+  const ta = document.getElementById('hi-reply-' + qId);
+  if (!ta) return;
+  const answer = (ta.value || '').trim();
+  if (!answer) { ta.focus(); return; }
+  ta.disabled = true;
+  try {
+    const r = await fetch('/api/admin/helper-answer', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({qId, answer})});
+    const j = await r.json();
+    if (j.ok) { loadHelperInbox(); }
+    else { alert('Fehler: ' + (j.error || '?')); ta.disabled = false; }
+  } catch (e) { alert('Netzwerk: ' + e.message); ta.disabled = false; }
+}
+// Auto-refresh Badge alle 30s (zeigt im Tab-Header die Anzahl offener Tickets)
+async function refreshHelperBadge(){
+  try {
+    const r = await fetch('/api/admin/helper-questions?status=open');
+    const j = await r.json();
+    if (!j.ok) return;
+    const badge = document.getElementById('dash-tickets-badge');
+    const openN = j.open || 0;
+    if (badge) { badge.textContent = openN; badge.style.display = openN > 0 ? 'inline-block' : 'none'; }
+  } catch(e) {}
+}
+setInterval(refreshHelperBadge, 30000);
+setTimeout(refreshHelperBadge, 2000);
 
 async function loadDiamondLinksAdmin(){
   const root = document.getElementById('dash-diamond-links');
