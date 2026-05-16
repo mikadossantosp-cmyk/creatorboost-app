@@ -3323,7 +3323,7 @@ function ipfAddSub(){
   else run();
 })();</script>
 ${(()=>{
-  const wkKey = (()=>{const n=new Date();const dd=n.getDay();const mon=new Date(n);mon.setDate(n.getDate()-(dd===0?6:dd-1));return mon.toISOString().slice(0,10);})();
+  const wkKey = (()=>{const n=new Date();const dd=n.getDay();const mon=new Date(n);mon.setDate(n.getDate()-(dd===0?6:dd-1));return mon.getFullYear()+'-'+String(mon.getMonth()+1).padStart(2,'0')+'-'+String(mon.getDate()).padStart(2,'0');})();
   const slMaxC = (u.role === '🌟 Elite+') ? 2 : 1;
   const slCountC = Object.values(d.superlinks||{}).filter(s=>s.uid===uid&&s.week===wkKey).length;
   const slLeftC = Math.max(0, slMaxC - slCountC);
@@ -3379,7 +3379,7 @@ ${(()=>{
   </div>`;
 })()}
 ${(()=>{
-  const weekKey = (() => { const n=new Date(); const d=n.getDay(); const mon=new Date(n); mon.setDate(n.getDate()-(d===0?6:d-1)); return mon.toISOString().slice(0,10); })();
+  const weekKey = (() => { const n=new Date(); const d=n.getDay(); const mon=new Date(n); mon.setDate(n.getDate()-(d===0?6:d-1)); return mon.getFullYear()+'-'+String(mon.getMonth()+1).padStart(2,'0')+'-'+String(mon.getDate()).padStart(2,'0'); })();
   const mySuperlink = Object.values(d.superlinks||{}).find(s=>s.uid===uid&&s.week===weekKey);
   if (!mySuperlink) return '';
   return `<div style="margin:10px 16px;padding:12px 14px;background:linear-gradient(135deg,rgba(167,139,250,.08),rgba(124,58,237,.04));border:1px solid rgba(167,139,250,.25);border-radius:14px">
@@ -8842,7 +8842,7 @@ commentsBox+
         const _bDay = _bNow.getDay();
         const _bOff = _bDay === 0 ? -6 : 1 - _bDay;
         const _bMon = new Date(_bNow); _bMon.setDate(_bNow.getDate() + _bOff);
-        const slWeekKey = _bMon.toISOString().slice(0,10);
+        const slWeekKey = _bMon.getFullYear()+'-'+String(_bMon.getMonth()+1).padStart(2,'0')+'-'+String(_bMon.getDate()).padStart(2,'0');
         const mySlMax = (d.users[myUid]?.role === '🌟 Elite+') ? 2 : 1;
         const mySlCount = Object.values(d.superlinks||{}).filter(s=>s.uid===myUid&&s.week===slWeekKey).length;
         const myWeekSuperlink = mySlCount > 0;
@@ -8907,7 +8907,7 @@ commentsBox+
 
         const allSuperLinks = Object.values(d.superlinks||{}).sort((a,b)=>b.timestamp-a.timestamp);
         // Aktueller Berlin-Wochenkey (Mo-Datum als YYYY-MM-DD) — Superlinks alter Wochen ausblenden
-        const _curWeekKey = (() => { const n=new Date(); const day=n.getDay(); const mon=new Date(n); mon.setDate(n.getDate()-(day===0?6:day-1)); return mon.toISOString().slice(0,10); })();
+        const _curWeekKey = (() => { const n=new Date(); const day=n.getDay(); const mon=new Date(n); mon.setDate(n.getDate()-(day===0?6:day-1)); return mon.getFullYear()+'-'+String(mon.getMonth()+1).padStart(2,'0')+'-'+String(mon.getDate()).padStart(2,'0'); })();
         // Liked-Sort: ungelikt zuerst, gelikt rutscht ans Ende
         const allSuperLinksWeek = allSuperLinks
             .filter(sl => !sl.week || sl.week === _curWeekKey)
@@ -16552,7 +16552,7 @@ ${rest.map(([id,u],idx)=>{
                 const bNow2 = new Date(new Date().toLocaleString('en-US',{timeZone:'Europe/Berlin'}));
                 const bDay2 = bNow2.getDay(); const bOff2 = bDay2===0?-6:1-bDay2;
                 const bMon2 = new Date(bNow2); bMon2.setDate(bNow2.getDate()+bOff2);
-                const wKey2 = bMon2.toISOString().slice(0,10);
+                const wKey2 = bMon2.getFullYear()+'-'+String(bMon2.getMonth()+1).padStart(2,'0')+'-'+String(bMon2.getDate()).padStart(2,'0');
                 const slMax2 = (d.users[myUid]?.role === '🌟 Elite+') ? 2 : 1;
                 const slCount2 = Object.values(d.superlinks||{}).filter(s=>s.uid===myUid&&s.week===wKey2).length;
                 const slLeft2 = Math.max(0, slMax2 - slCount2);
