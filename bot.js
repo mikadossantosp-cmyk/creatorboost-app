@@ -196,6 +196,7 @@ async function sendSignupConfirmationEmail(uid, email, hostHeader) {
         const exp = Date.now() + 7 * 24 * 60 * 60 * 1000;
         pendingEmailConfirms.set(String(uid), { token, email, exp });
         savePendingEmailConfirms();
+        console.log('[email-confirm] Signup-Token gesetzt für uid=' + uid + ' email=' + email + ' tokenPrefix=' + token.slice(0,12) + '…');
         const baseUrl = (process.env.APP_URL || ('https://' + (hostHeader || 'www.creatorboostx.de'))).replace(/\/$/, '');
         const confirmUrl = baseUrl + '/auth/confirm-email?token=' + encodeURIComponent(token);
         const userName = String(email||'').split('@')[0].replace(/[<>]/g,'').slice(0,30);
@@ -4704,8 +4705,10 @@ document.addEventListener('DOMContentLoaded', function(){
         const token = String(query.token || '').trim();
         const baseHtml = (icon, title, msg, color) => `<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><style>body{margin:0;font-family:-apple-system,BlinkMacSystemFont,Inter,sans-serif;background:#0b0b0e;color:#fff;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}.box{background:linear-gradient(180deg,#1c1c1e,#0f0f11);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:40px 28px;max-width:420px;text-align:center;box-shadow:0 30px 80px rgba(0,0,0,.5)}.ic{font-size:64px;margin-bottom:16px}.t{font-size:22px;font-weight:800;margin-bottom:10px;letter-spacing:-.4px;color:${color}}.m{font-size:14px;color:rgba(255,255,255,.7);line-height:1.55;margin-bottom:24px}.btn{display:inline-block;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;padding:13px 28px;border-radius:12px;text-decoration:none;font-weight:800;font-size:14px}</style></head><body><div class="box"><div class="ic">${icon}</div><div class="t">${title}</div><div class="m">${msg}</div><a href="/feed" class="btn">→ Zur App</a></div></body></html>`;
         if (!token) { res.writeHead(400, {'Content-Type':'text/html'}); return res.end(baseHtml('⚠️','Ungültiger Link','Der Bestätigungslink ist ungültig oder unvollständig.','#f59e0b')); }
+        console.log('[email-confirm] Got token:', token.slice(0,12)+'…', 'len:', token.length, 'maps: ect=' + emailConfirmTokens.size + ' pec=' + pendingEmailConfirms.size);
         // Erst in emailConfirmTokens (token-keyed) suchen → Email-Change-Flow
         let entry = emailConfirmTokens.get(token);
+        if (entry) console.log('[email-confirm] Found in emailConfirmTokens, exp in', Math.round((entry.exp - Date.now())/60000), 'min');
         if (entry && entry.exp >= Date.now()) {
             emailConfirmTokens.delete(token);
             savePendingEmailConfirms();
@@ -4722,6 +4725,8 @@ document.addEventListener('DOMContentLoaded', function(){
         for (const [uid, e] of pendingEmailConfirms.entries()) {
             if (e && e.token === token) { signupUid = uid; signupEntry = e; break; }
         }
+        if (signupEntry) console.log('[email-confirm] Found in pendingEmailConfirms uid=' + signupUid + ', exp in', Math.round((signupEntry.exp - Date.now())/60000), 'min');
+        else console.log('[email-confirm] NOT found in either map. Token prefix:', token.slice(0,12)+'…');
         if (signupEntry && signupEntry.exp >= Date.now()) {
             pendingEmailConfirms.delete(signupUid);
             savePendingEmailConfirms();
