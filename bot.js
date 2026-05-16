@@ -9012,7 +9012,8 @@ async function refreshLikes() {
         }
     } catch(e) {}
 }
-setInterval(refreshLikes, 30000);
+setInterval(()=>{if(!document.hidden)refreshLikes();}, 30000);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)try{refreshLikes();}catch(e){}});
 // Stories: Click-Cancel beim horizontalen Wischen — Swipe scrollt, kein Tap-zum-Profil
 (function(){
   const stories=document.querySelector('.stories');
@@ -10711,7 +10712,8 @@ async function acPoll() {
     }
   } catch(e) {}
 }
-setInterval(acPoll, 3000);
+setInterval(()=>{if(!document.hidden)acPoll();}, 3000);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)try{acPoll();}catch(e){}});
 fetch('/api/app-presence', {method:'POST'}).catch(()=>{});
 // Bei Tab-Wechsel zurück: sofort syncen
 document.addEventListener('visibilitychange', () => { if (!document.hidden) acPoll(); });
@@ -11596,7 +11598,7 @@ async function createThread(){
 </div>
 ${cards}
 <script>
-setInterval(async()=>{try{const r=await fetch(location.href,{headers:{'X-Poll':'1'}});if(r.ok&&r.redirected)location.reload();}catch(e){}},15000);
+setInterval(async()=>{if(document.hidden)return;try{const r=await fetch(location.href,{headers:{'X-Poll':'1'}});if(r.ok&&r.redirected)location.reload();}catch(e){}},15000);
 async function renameThread(tid,current){
   const name=prompt('Neuer Thread-Name:',current);
   if(!name||!name.trim())return;
@@ -14014,7 +14016,7 @@ async function refreshHelperBadge(){
     }
   } catch(e) {}
 }
-setInterval(refreshHelperBadge, 30000);
+setInterval(()=>{if(!document.hidden)refreshHelperBadge();}, 30000);
 setTimeout(refreshHelperBadge, 2000);
 function jumpToHelperInbox(){
   const tab = document.querySelector('.dash-tab[data-tab="helper-inbox"]');
