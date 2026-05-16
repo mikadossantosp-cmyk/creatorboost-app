@@ -3228,6 +3228,7 @@ ${isOwn ? (function(){
       <button class="ipf-btn" onclick="ipfFollow(this,'${uid}')" id="ipf-follow-btn">${_isFollowing ? '✓ Folge ich' : '➕ Folgen'}</button>
     `}
   </div>
+  ${isOwn ? `<a href="/insights" class="ipf-btn" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:11px;background:linear-gradient(135deg,rgba(34,197,94,.10),rgba(167,139,250,.08));border:1px solid rgba(34,197,94,.30);color:#22c55e;border-radius:9px;font-size:13.5px;font-weight:700;text-decoration:none;margin-bottom:10px"><span style="font-size:16px">📊</span> Professional Insights · Top Engagers · Best Times <span style="margin-left:auto;color:#22c55e;font-size:14px">→</span></a>` : ''}
   ${u.trophies&&u.trophies.length?`<div class="ipf-trophy-row"><span style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-weight:800;width:100%;margin-bottom:2px">🏆 Trophäen</span>${u.trophies.map(t=>`<span class="ipf-trophy">${t}</span>`).join('')}</div>`:''}
   ${isOwn && isAdmin ? '<div style="margin-top:6px"><a href="/dashboard" class="ipf-btn" style="background:linear-gradient(135deg,#f5d76e,#d4a946 55%,#8b6914);color:#000;border-color:rgba(212,175,55,.55);font-weight:700">🛡️ Admin Dashboard</a></div>' : ''}
 </div>
@@ -3266,6 +3267,28 @@ async function ipfSwitchAcc(targetUid){
     if (j.ok) location.reload();
     else alert('Wechsel fehlgeschlagen: ' + (j.error || ''));
   } catch(e) { alert('Netzwerk-Fehler'); }
+}
+async function pinnedEngageClick(ownerUid, btn){
+  const visitTs = window['_pvisit_' + ownerUid];
+  if (!visitTs || (Date.now() - visitTs) < 1500) {
+    alert('Bitte erst auf "📸 Auf Instagram öffnen" tippen + auf Insta LIKEN, KOMMENTIEREN, SPEICHERN, TEILEN.');
+    return;
+  }
+  if (!confirm('📌 Pinned-Post engagieren\n\nDu bestätigst:\n✓ Du hast auf Instagram GELIKT\n✓ Du hast KOMMENTIERT\n✓ Du hast GETEILT\n✓ Du hast GESPEICHERT\n\n→ Belohnung: +1 💎\n→ Bei Schein-Engagement: Sanktionen\n\nFortfahren?')) return;
+  btn.disabled = true; btn.textContent = '⏳ Bestätige …';
+  try {
+    const r = await fetch('/api/engage-pinned-post', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ownerUid})});
+    const j = await r.json();
+    if (j.ok || j.alreadyDone) {
+      btn.style.background = 'rgba(34,197,94,.12)';
+      btn.style.borderColor = '#22c55e';
+      btn.style.color = '#22c55e';
+      btn.innerHTML = '✅ Engagiert';
+    } else {
+      btn.disabled = false; btn.innerHTML = '❤️ Engagiert · +1💎';
+      alert('❌ ' + (j.error || 'Fehler'));
+    }
+  } catch(e) { btn.disabled = false; btn.innerHTML = '❤️ Engagiert · +1💎'; alert('❌ Netzwerk-Fehler'); }
 }
 function ipfAddSub(){
   // Wenn das existierende modal vorhanden ist (auf /profil), nutze das
@@ -3328,13 +3351,31 @@ ${nb?`
 ${(()=>{
   const pl = ladePinnedLink(uid);
   if (!pl) return '';
-  return `<div style="margin:10px 16px;padding:12px 14px;background:linear-gradient(135deg,rgba(236,72,153,.08),rgba(168,85,247,.06));border:1px solid rgba(236,72,153,.25);border-radius:14px;display:flex;align-items:center;gap:10px">
-    <div style="font-size:22px;flex-shrink:0">📌</div>
-    <div style="flex:1;min-width:0">
-      <div style="font-size:11px;font-weight:700;color:#ec4899;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px">Angepinnter Reel</div>
-      <a href="${htmlEsc(safeUrl(pl))}" target="_blank" rel="noopener noreferrer" style="font-size:12.5px;color:#4dabf7;word-break:break-all;text-decoration:none;font-weight:500;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${htmlEsc(String(pl).replace(/^https?:\/\//,'').slice(0,55))}</a>
+  // Hat aktueller Viewer den pinned-post schon engaged?
+  const _engagedSet = (d.pinnedEngages||{});
+  const _hasEngaged = isOwn ? false : Object.values(_engagedSet).some(arr => Array.isArray(arr) && arr.includes(String(uid)) && _engagedSet[String(adminIds[0]||'')]?.includes && false); // placeholder
+  // Vereinfacht: nicht zuverlässig prüfbar ohne session — wird vom Server beim Klick gechecked (alreadyDone)
+  return `<div style="margin:10px 16px;padding:14px;background:linear-gradient(135deg,rgba(236,72,153,.08),rgba(168,85,247,.06));border:1px solid rgba(236,72,153,.25);border-radius:14px">
+    <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:${isOwn?'0':'10'}px">
+      <div style="font-size:22px;flex-shrink:0">📌</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:11px;font-weight:700;color:#ec4899;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px">Angepinnter Reel${isOwn?'':' · +1💎 bei Engagement'}</div>
+        <div style="font-size:12.5px;color:#4dabf7;word-break:break-all;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${htmlEsc(String(pl).replace(/^https?:\/\//,'').slice(0,55))}</div>
+      </div>
     </div>
-    <a href="${htmlEsc(safeUrl(pl))}" target="_blank" rel="noopener noreferrer" style="padding:6px 12px;background:linear-gradient(135deg,#ec4899,#a855f7);color:#fff;border-radius:8px;font-size:11.5px;font-weight:700;text-decoration:none;white-space:nowrap;flex-shrink:0">→ Öffnen</a>
+    ${isOwn ? `<a href="${htmlEsc(safeUrl(pl))}" target="_blank" rel="noopener noreferrer" style="display:block;text-align:center;padding:9px;background:linear-gradient(135deg,#ec4899,#a855f7);color:#fff;border-radius:9px;font-size:12.5px;font-weight:700;text-decoration:none">→ Reel öffnen</a>` : `
+    <div style="display:flex;gap:8px">
+      <a href="${htmlEsc(safeUrl(pl))}" target="_blank" rel="noopener noreferrer" id="pinned-visit-${uid}" onclick="window._pvisit_${uid}=Date.now()" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:10px;background:linear-gradient(135deg,#ec4899,#a855f7);color:#fff;border-radius:9px;font-size:12.5px;font-weight:700;text-decoration:none;position:relative">
+        <span style="position:absolute;left:8px;top:50%;transform:translateY(-50%);width:18px;height:18px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900">1</span>
+        📸 Auf Instagram öffnen
+      </a>
+      <button onclick="pinnedEngageClick('${uid}', this)" id="pinned-engage-btn-${uid}" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:10px;background:var(--bg3);border:1.5px solid #ec4899;color:#ec4899;border-radius:9px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;position:relative">
+        <span style="position:absolute;left:8px;top:50%;transform:translateY(-50%);width:18px;height:18px;border-radius:50%;background:rgba(236,72,153,.18);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900">2</span>
+        ❤️ Engagiert · +1💎
+      </button>
+    </div>
+    <div style="font-size:10.5px;color:var(--muted);margin-top:8px;line-height:1.4">⚠️ <b>Pflicht:</b> Auf Insta liken + kommentieren + speichern + teilen. Erst auf <b>📸 Öffnen</b> tippen, dann zurückkommen + Like-Button drücken.</div>
+    `}
   </div>`;
 })()}
 ${(()=>{
