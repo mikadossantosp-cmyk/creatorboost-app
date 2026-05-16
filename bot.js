@@ -254,7 +254,9 @@ if (webpush) webpush.setVapidDetails('mailto:admin@creatorx.app', VAPID_PUBLIC, 
 
 // ── Google Gemini API (Helper-Bot AI, kostenloser Tier) ──
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
-const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
+// Default: gemini-2.5-flash-lite — Free-Tier 1000 RPD vs 200 RPD bei 2.0-flash
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash-lite';
+const GEMINI_MODEL_FALLBACK = process.env.GEMINI_MODEL_FALLBACK || 'gemini-2.0-flash-lite';
 if (GEMINI_API_KEY) {
     console.log('[AI] Gemini Helper-AI aktiv (Modell:', GEMINI_MODEL + ')');
 } else {
@@ -364,6 +366,34 @@ Verboten: fremde Reels, Affiliate/Spam, Wiederholungen. Self-Like → temporäre
 # Ton
 Locker, du-Form, hilfsbereit, sparsam mit Emoji. Bei Frust: empathisch ("Ärgerlich! Lass uns das fixen…").`;
 
+function geminiCall(model, payload) {
+    return new Promise((resolve, reject) => {
+        const opts = {
+            hostname: 'generativelanguage.googleapis.com',
+            path: '/v1beta/models/' + encodeURIComponent(model) + ':generateContent?key=' + encodeURIComponent(GEMINI_API_KEY),
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) },
+        };
+        const req = https.request(opts, res => {
+            let buf = '';
+            res.on('data', c => buf += c);
+            res.on('end', () => {
+                try {
+                    const j = JSON.parse(buf);
+                    if (res.statusCode !== 200) {
+                        const err = new Error('Gemini ' + res.statusCode + ': ' + (j.error && j.error.message || buf.slice(0,200)));
+                        err.statusCode = res.statusCode;
+                        return reject(err);
+                    }
+                    resolve(j);
+                } catch (e) { reject(new Error('Gemini parse: ' + e.message)); }
+            });
+        });
+        req.on('error', reject);
+        req.setTimeout(20000, () => { req.destroy(new Error('Gemini timeout')); });
+        req.write(payload); req.end();
+    });
+}
 async function helperAiAnswer(question, history) {
     if (!GEMINI_API_KEY) throw new Error('AI not configured');
     const stripHtml = s => String(s||'').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
@@ -387,28 +417,18 @@ async function helperAiAnswer(question, history) {
             { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' },
         ],
     });
-    const result = await new Promise((resolve, reject) => {
-        const opts = {
-            hostname: 'generativelanguage.googleapis.com',
-            path: '/v1beta/models/' + encodeURIComponent(GEMINI_MODEL) + ':generateContent?key=' + encodeURIComponent(GEMINI_API_KEY),
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) },
-        };
-        const req = https.request(opts, res => {
-            let buf = '';
-            res.on('data', c => buf += c);
-            res.on('end', () => {
-                try {
-                    const j = JSON.parse(buf);
-                    if (res.statusCode !== 200) return reject(new Error('Gemini ' + res.statusCode + ': ' + (j.error && j.error.message || buf.slice(0,200))));
-                    resolve(j);
-                } catch (e) { reject(new Error('Gemini parse: ' + e.message)); }
-            });
-        });
-        req.on('error', reject);
-        req.setTimeout(20000, () => { req.destroy(new Error('Gemini timeout')); });
-        req.write(payload); req.end();
-    });
+    // Bei 429 (Quota) → versuche Fallback-Model
+    let result;
+    try {
+        result = await geminiCall(GEMINI_MODEL, payload);
+    } catch (e) {
+        if (e.statusCode === 429 && GEMINI_MODEL_FALLBACK && GEMINI_MODEL_FALLBACK !== GEMINI_MODEL) {
+            console.log('[AI] Primary model quota hit, trying fallback:', GEMINI_MODEL_FALLBACK);
+            result = await geminiCall(GEMINI_MODEL_FALLBACK, payload);
+        } else {
+            throw e;
+        }
+    }
     const cand = (result.candidates || [])[0];
     if (!cand) throw new Error('Gemini: keine Antwort');
     if (cand.finishReason === 'SAFETY') throw new Error('Gemini: Safety-Block');
@@ -9866,6 +9886,29 @@ async function cbHelperAsk(){
     }
     // AI nicht verfügbar oder Fehler → schwächeres Keyword-Match probieren, dann Admin
     if (j.fallback) {
+      // Bei Quota-Errors: kurzer Hinweis statt stille Weiterleitung
+      const isQuota = /quota|rate.?limit|429/i.test(String(j.error||''));
+      if (isQuota) {
+        t.remove();
+        const a = document.createElement('div'); a.className='cb-msg bot';
+        const htmlA = '⏳ <b>KI-Limit erreicht</b> für heute (Free-Tier).<br><br>Warte ~1 Min oder ich frag direkt den Admin für dich.';
+        a.innerHTML = htmlA;
+        body.appendChild(a);
+        cbHelperPersist('bot', htmlA);
+        chips.innerHTML = '';
+        const adminBtn = document.createElement('button'); adminBtn.className='cb-chip'; adminBtn.textContent='📨 Admin fragen';
+        adminBtn.onclick = ()=>cbHelperForwardToAdmin(q);
+        chips.appendChild(adminBtn);
+        const retry = document.createElement('button'); retry.className='cb-chip'; retry.textContent='🔁 Nochmal versuchen';
+        retry.onclick = ()=>{ const inp=document.getElementById('cb-helper-input'); inp.value=q; cbHelperAsk(); };
+        chips.appendChild(retry);
+        const back = document.createElement('button'); back.className='cb-chip back'; back.textContent='← Übersicht';
+        back.onclick = ()=>cbHelperShow('_back');
+        chips.appendChild(back);
+        body.scrollTop = body.scrollHeight;
+        btn.disabled = false; btn.textContent = '→';
+        return;
+      }
       if (topicId && CB_HELP[topicId]) {
         t.remove();
         const node = CB_HELP[topicId];
