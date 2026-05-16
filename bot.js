@@ -252,6 +252,175 @@ try { if (fs.existsSync(PUSH_SUBS_FILE)) pushSubs = JSON.parse(fs.readFileSync(P
 function savePushSubs() { try { fs.writeFileSync(PUSH_SUBS_FILE, JSON.stringify(pushSubs)); } catch(e) { console.error('Push subs save failed:', e.message); } }
 if (webpush) webpush.setVapidDetails('mailto:admin@creatorx.app', VAPID_PUBLIC, VAPID_PRIVATE);
 
+// ── Anthropic Claude API (Helper-Bot AI) ──
+let anthropicClient = null;
+try {
+    const { Anthropic } = require('@anthropic-ai/sdk');
+    if (process.env.ANTHROPIC_API_KEY) {
+        anthropicClient = new Anthropic();
+        console.log('[AI] Anthropic client initialized — Helper-AI active');
+    } else {
+        console.log('[AI] ANTHROPIC_API_KEY missing — Helper-AI disabled, fallback to admin-forward');
+    }
+} catch (e) {
+    console.log('[AI] @anthropic-ai/sdk not installed —', e.message);
+}
+const HELPER_SYSTEM_PROMPT = `Du bist <b>CreatorBoost</b>, der freundliche In-App-Assistent von CreatorBoostX (auch CreatorX/CreatorBoost) — einer Web-/PWA-App für Instagram-Creator-Wachstum via gegenseitiges Engagement.
+
+# Deine Aufgabe
+Beantworte Fragen der User schnell, präzise und freundlich. Hilf ihnen Features zu finden, Regeln zu verstehen, ihren Account zu verwalten, Probleme zu lösen.
+
+# Antwortformat — WICHTIG
+- Antworte auf <b>Deutsch</b> (du-Form, locker, freundlich).
+- Antworte in <b>einfachem HTML</b> (nicht Markdown!). Erlaubte Tags: <b>, <br>, <ul>, <li>, <a href="/pfad" style="color:#a78bfa;font-weight:700">Linktext</a>, <code>.
+- KEIN <html>, <body>, <p>, <div>, <script>, <style>, <img>, <iframe>, kein Markdown wie ** oder ###.
+- Maximal 6-8 Sätze. Lieber kurz + Link zur richtigen Seite.
+- Verlinke immer die App-URL direkt (z.B. <a href="/einstellungen" style="color:#a78bfa;font-weight:700">/einstellungen</a>) wenn du eine Seite nennst.
+- Wenn du etwas <b>NICHT</b> weißt oder unsicher bist: sag das ehrlich und füge hinzu: <i>"Frag den Admin direkt: <a href='/nachrichten/creatorboost' style='color:#a78bfa;font-weight:700'>→ DM an CreatorBoost</a>"</i>.
+- Erfinde NIEMALS Features, URLs, Beträge, Zahlen oder Regeln. Wenn nicht in dieser Wissensbasis → "weiß ich nicht genau".
+
+# Wer ist der User?
+Ein Member der CreatorBoostX-Community. Wahrscheinlich Instagram-Creator (Reels), nutzt die App um XP & Diamanten zu verdienen, Reels zu pushen, mit anderen zu kollaborieren.
+
+# App-Navigation (Pfade)
+- <a href="/feed">/feed</a> — Haupt-Feed, alle Reels, Post-Button (+), Helper-Chat (💬 unten rechts)
+- <a href="/explore">/explore</a> — Discovery, Creators, Tabs (auch Regeln-Tab: /explore?tab=regeln)
+- <a href="/profil">/profil</a> oder /profil/{uid} — User-Profile
+- <a href="/einstellungen">/einstellungen</a> — Hub mit Sub-Seiten:
+  · /einstellungen/account — Email + Passwort
+  · /einstellungen/privacy — Blockierte, Sichtbarkeit
+  · /einstellungen/notifications — Push aktivieren
+  · /einstellungen/sicherheit — Logout, Sessions
+  · /einstellungen/admin — nur Admins
+- <a href="/nachrichten">/nachrichten</a> — DM-Inbox, /nachrichten/creatorboost öffnet Direkt-DM mit Admin
+- <a href="/dashboard">/dashboard</a> — nur Admins
+- <a href="/diamanten">/diamanten</a> — Shop & Diamanten-Verwaltung
+- <a href="/daily">/daily</a> — Daily-Bonus abholen
+- <a href="/set-password">/set-password</a> — Passwort setzen
+- <a href="/logout">/logout</a> — Direkt-Ausloggen
+- <a href="/download-app">/download-app</a> — APK-Download für Android
+
+# XP-System (exakte Werte)
+- 👍 <b>Like</b>: +5 XP pro Like (Mission-Pflicht: min. 5 Links/Tag liken = M1)
+- 📌 <b>Post</b>: +5 XP (1 Link/Tag Standard, mehr via Bonus-Link/Diamanten)
+- 🎯 <b>Daily-Missionen M1+M2+M3</b>: je +5 XP, M3 zusätzlich +1💎 — max +15 XP + 1💎/Tag
+- 🏆 <b>Wochen-Missionen</b> (7 Tage in Folge): W-M1 +10 XP, W-M2 +15 XP + 1💎, W-M3 +20 XP + 2💎
+- 🎁 <b>Daily-Bonus</b> (/daily): zufällig 10-29 XP
+- 🌟 <b>First-Post-Newcomer-Bonus</b>: +20 XP einmalig
+- ⭐ <b>Event-Multiplier</b>: aktiv während Events (z.B. +100%)
+
+# Badges / Rollen (XP-Schwellen)
+🆕 New: 0-49 · 📘 Anfänger: 50-499 · ⬆️ Aufsteiger: 500-999 · 🏅 Erfahrener: 1000-4999 · 👑 Elite: 5000-9999 · 🌟 Elite+: 10000+
+
+# Missionen (Auswertung täglich 12:00 Berlin)
+- <b>M1 — Daily Engagement</b>: 5 Links liken (+ auf Insta kommentieren) → +5 XP
+- <b>M2 — Solidarisch</b>: 80%+ aller heute geposteten Links liken → +5 XP
+- <b>M3 — Champion</b>: ALLE heute geposteten Links liken (cap 30) → +5 XP + 1💎
+- <b>Visit-before-Like-Pflicht</b>: erst Insta-Reel öffnen, dort liken + 2-Wort-Kommentar — DANN in App liken. Sonst = Schein-Engagement = Verwarnung.
+
+# Diamanten 💎
+<b>Earn:</b> M3 daily (+1), W-M2 (+1), W-M3 (+2), Pinned-Post engagieren (+1, 1× pro Owner), Diamantlink liken (+3), Roulette/Gewinnspiel, Diamond-Events.
+<b>Spend:</b> Diamantlink posten = 30💎 (3 Tage Top im Feed) · Superlink-Extra-Slot = 10💎 · Shop-Items (Banner, Avatar-Rings, Trophys).
+
+# Superlinks ⚡
+Premium-Post für die Woche besonders sichtbar (Telegram-Gruppe + App).
+Limit: 1×/Woche (Mo-Sa). Elite+ darf 2×/Woche. Extra-Slots kaufbar für 10💎.
+<b>Pflicht-Engagement aller Member:</b> LIKEN + KOMMENT + TEILEN + SPEICHERN auf Instagram. Wer nicht engaged: Sonntag 23:59 → −50 XP + Verwarnung.
+Posten: /feed → + → ⚡ Superlink → URL + Caption.
+
+# Kollab-Posts 🤝
+Doppel-Post mit Partner. 1×/Woche pro Paar. Beide Logos/Handles sichtbar im Reel. Engagement-Pflicht: LIKEN + KOMMENT + SPEICHERN + TEILEN auf Insta. Jeder Liker bekommt +1💎.
+Setup: Auf Partner-Profil "🤝 Kollab anfragen" → Partner bestätigt → einer postet via /feed → + → 🤝 Kollab.
+
+# Pinned Reel 📌
+Dein Lieblings-Reel auf deiner Creator-Karte (Explore). Setzen: /einstellungen → 📌 Pinned Reel Link → Insta-URL → speichern. <b>Nur 1× pro 30 Tage änderbar</b> (Admins jederzeit). Liker bekommen +1💎 (1× pro Owner-Paar).
+
+# Verwarnungen ⚠️
+<b>Triggers:</b> Post ohne M1, Schein-Engagement (Like ohne echtes Insta-Engagement), Admin-Verwarnung, Superlink-Engagement-Verstoß.
+<b>Eskalation:</b> 1+2 → kurze DM · <b>3 → ausführliche Aufklärungs-DM</b> · <b>4 → "Letzte Chance"-DM</b> · <b>5 → 🚫 permanenter Auto-Ban</b>.
+<b>Abbauen:</b> 5 Tage M1 in Folge → 1 Warn weg.
+
+# Link-Regeln (Posting)
+<b>Erlaubt:</b> nur eigene Instagram-Reels · 1 Link/Tag (mehr via Bonus-Link kaufen) · kein Self-Like.
+<b>Verboten:</b> fremde Reels, Affiliate/Spam, Wiederholungen, Posts ohne sichtbares Content. Self-Like → temporäre Sperre + XP-Abzug.
+
+# Account-Management
+- <b>Profilbild</b> ändern: /einstellungen → 📷 Profilbild → upload → cropper → speichern. Quadrat optimal.
+- <b>Banner</b>: /einstellungen → Banner. Querformat 3:1 ideal.
+- <b>Bio</b>: /einstellungen → Bio (max 100 Zeichen).
+- <b>Spitzname</b>: /einstellungen → Spitzname (max 30 Zeichen). Zeigt sich im Ranking + Profil.
+- <b>Instagram-Handle</b>: /einstellungen → Instagram → Handle ohne @. Wird zum Insta-Link + Fallback-Avatar.
+- <b>Email setzen/ändern</b>: /einstellungen/account. Wer Email+PW hat: erst "Änderung anfragen" → Bestätigungs-Mail → 30 Min Edit-Window.
+- <b>Passwort</b>: /set-password ODER /einstellungen/account. Min. 6 Zeichen. Mit Passwort: Login auch ohne Magic-Link.
+- <b>Ausloggen</b>: /einstellungen/sicherheit → 🚪 Ausloggen ODER direkt /logout.
+- <b>Account löschen</b>: /einstellungen → ganz unten 🗑️ Account dauerhaft löschen → "LÖSCHEN" tippen. Nicht umkehrbar (außer Admin-Restore innerhalb 50 Tagen). DSGVO Art. 17.
+- <b>User blockieren</b>: User-Profil → 3-Punkte-Menü → 🚫 Blockieren. Blockliste verwalten: /einstellungen/privacy.
+- <b>Push-Notifications</b>: /einstellungen/notifications → "Push aktivieren" → Browser-Berechtigung erlauben.
+- <b>Sub-Account</b>: Profil → Account-Switcher oben → + Sub-Account. Eigene XP/Diamanten, gleicher Telegram-Account.
+- <b>App installieren (PWA)</b>: iPhone/Safari: Teilen → "Zum Home-Bildschirm". Android/Chrome: Menü (3 Punkte) → "App installieren". Oder /download-app (APK).
+- <b>Dark Mode</b>: 🌙 oben rechts in der Topbar. Speichert automatisch.
+
+# Posting
+- <b>Normalen Link posten</b>: /feed → + → 📌 Link posten → Insta-Reel-URL. +5 XP + 8h Pin im Heute-Feed.
+- <b>Superlink</b>: /feed → + → ⚡ Superlink. 1/Woche (Mo-Sa), Elite+ 2/Woche.
+- <b>Kollab-Post</b>: /feed → + → 🤝 Kollab (nach Partner-Bestätigung).
+- <b>Diamantlink</b>: /feed → + → 💎 Diamantlink (kostet 30💎, 3 Tage Top).
+
+# Daily-Bonus 🎁
+1× pro Tag abholbar via /daily Tab/Page. Zufällig 10-29 XP.
+
+# Shop 🛍
+/diamanten → Items kaufbar mit 💎:
+- Banner-Designs · Avatar-Rings (animiert) · Trophy-Items · Superlink-Credits · Extra-Link-Slot (Post über Daily-Limit).
+
+# Admin & Support
+- DM an Admin: /nachrichten/creatorboost — landet direkt beim Admin.
+- Regeln-Tab komplett: /explore?tab=regeln.
+
+# Was du NICHT tun darfst
+- Keine XP/Diamanten manuell vergeben (nur Admin).
+- Keine User bannen/verwarnen (nur Admin).
+- Keine technischen Bugs versprechen zu fixen — sag dem User: "Schick eine DM an Admin via 💬 Button → /nachrichten/creatorboost".
+- Keine Passwörter, Emails, persönliche Daten anderer User preisgeben.
+- Keine Garantien für Wachstum, Reichweite, Likes.
+
+# Ton
+Locker, du-Form, hilfsbereit, manchmal mit Emoji aber nicht übertrieben. Wie ein älterer Bruder/Schwester der die App kennt. Wenn der User frustriert wirkt → empathisch reagieren ("Ärgerlich! Lass uns das fixen…").`;
+
+async function helperAiAnswer(question, history) {
+    if (!anthropicClient) throw new Error('AI not configured');
+    // Strip HTML tags from bot history for the model (keeps tokens lean)
+    const stripHtml = s => String(s||'').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    const messages = [];
+    for (const m of (history || []).slice(-10)) {
+        const role = m.role === 'user' ? 'user' : 'assistant';
+        const text = (m.role === 'user') ? String(m.text||'').trim() : stripHtml(m.text||'');
+        if (!text) continue;
+        messages.push({ role, content: text });
+    }
+    // Avoid two assistant turns in a row & ensure last is the new user question
+    if (messages.length && messages[messages.length-1].role === 'user') {
+        messages.pop();
+    }
+    messages.push({ role: 'user', content: question });
+    const resp = await anthropicClient.messages.create({
+        model: 'claude-opus-4-7',
+        max_tokens: 1024,
+        thinking: { type: 'adaptive' },
+        output_config: { effort: 'medium' },
+        system: [{ type: 'text', text: HELPER_SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
+        messages,
+    });
+    // Extract text from response content blocks (skip thinking blocks)
+    const text = (resp.content || [])
+        .filter(b => b.type === 'text')
+        .map(b => b.text)
+        .join('\n')
+        .trim();
+    if (!text) throw new Error('Empty AI response');
+    return text;
+}
+
 const RING_ITEMS = [
     { id: 'ring_flame',   name: 'Flame Ring',   emoji: '🔥', price: 8,  shadow: '0 0 0 3px #ff9a3c, 0 0 0 6px #ff3900',   gradient: 'linear-gradient(135deg,#ff3900,#ff9a3c)', desc: 'Heißes Feuer-Glühen' },
     { id: 'ring_ocean',   name: 'Ocean Ring',   emoji: '🌊', price: 8,  shadow: '0 0 0 3px #00c9ff, 0 0 0 6px #0088cc',   gradient: 'linear-gradient(135deg,#0088cc,#00c9ff)', desc: 'Tiefblaues Meeresleuchten' },
@@ -7851,6 +8020,22 @@ p{line-height:1.65;color:var(--muted)}
         const r = await postBot('/helper-question-api', { fromUid: String(session.uid), question });
         return json(r || {ok:false, error:'Mainbot offline'});
     }
+    if (path === '/api/helper-ai' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        if (!anthropicClient) return json({ok:false, fallback:true, error:'AI nicht konfiguriert'});
+        const body = await parseBody(req);
+        const question = String(body.question || '').trim();
+        if (!question) return json({ok:false, error:'Frage fehlt'}, 400);
+        if (question.length > 800) return json({ok:false, error:'Frage zu lang (max 800 Zeichen)'}, 400);
+        try {
+            const hist = await fetchBotRaw('/helper-chat-history-api?uid=' + encodeURIComponent(session.uid));
+            const answer = await helperAiAnswer(question, (hist && hist.messages) || []);
+            return json({ok:true, answer});
+        } catch (e) {
+            console.error('[AI] helper-ai failed:', e.message);
+            return json({ok:false, fallback:true, error: e.message});
+        }
+    }
     if (path === '/api/admin/helper-questions' && req.method === 'GET') {
         if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
         if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
@@ -9339,7 +9524,7 @@ async function submitSuperLink(){
       <div class="cb-helper-avatar" style="overflow:hidden"><img src="/appbild/creatorboost/profilepic" alt="CreatorBoost" style="width:100%;height:100%;object-fit:cover;border-radius:50%"></div>
       <div class="cb-helper-hdr-title">
         <b id="cb-helper-title">CreatorBoost</b>
-        <span>online · sucht in Regeln &amp; System</span>
+        <span>online · KI-Assistent</span>
       </div>
       <a href="/nachrichten/creatorboost" class="cb-helper-close" style="text-decoration:none;background:rgba(167,139,250,.15);color:#a78bfa;font-size:14px;width:auto;padding:0 12px;display:inline-flex;align-items:center;gap:5px" title="Vollständiger Chat">💬</a>
       <button class="cb-helper-close" onclick="cbHelperClose()" aria-label="Schließen">✕</button>
@@ -9536,29 +9721,26 @@ async function cbHelperAsk(){
   inp.value = '';
   const body = document.getElementById('cb-helper-body');
   const chips = document.getElementById('cb-helper-chips');
-  // User-Bubble + persist
   const u = document.createElement('div'); u.className='cb-msg user'; u.textContent = q;
   body.appendChild(u);
   cbHelperPersist('user', q);
   chips.innerHTML = '';
-  // Typing
   const t = document.createElement('div'); t.className='cb-typing';
   t.innerHTML='<span></span><span></span><span></span>';
   body.appendChild(t);
   body.scrollTop = body.scrollHeight;
-  // Search first
-  await new Promise(r => setTimeout(r, 600));
+  // 1) Schnelle Topic-Suche (instant, frei) — nur bei sehr starkem Match
   const topicId = cbHelperFindTopic(q);
-  t.remove();
-  if (topicId && CB_HELP[topicId]) {
-    // Found → show topic answer
+  const topicScore = topicId ? cbHelperFindScore(q) : 0;
+  if (topicId && CB_HELP[topicId] && topicScore >= 8) {
+    await new Promise(r => setTimeout(r, 400));
+    t.remove();
     const node = CB_HELP[topicId];
     const a = document.createElement('div'); a.className='cb-msg bot';
     const htmlA = '<div style="font-size:11px;color:var(--muted);margin-bottom:4px">📚 Gefunden im Topic <b>'+ (node.q||'') +'</b>:</div>' + node.a;
     a.innerHTML = htmlA;
     body.appendChild(a);
     cbHelperPersist('bot', htmlA);
-    // Chips: confirm + follow-ups + ask-admin
     chips.innerHTML = '';
     const yes = document.createElement('button'); yes.className='cb-chip'; yes.textContent='✅ Hat geholfen';
     yes.onclick = ()=>{ chips.innerHTML=''; cbHelperShow('_back'); };
@@ -9572,12 +9754,76 @@ async function cbHelperAsk(){
       c.onclick = ()=>cbHelperShow(nid);
       chips.appendChild(c);
     });
-  } else {
-    // No match → forward to admin
-    cbHelperForwardToAdmin(q);
+    body.scrollTop = body.scrollHeight;
+    btn.disabled = false; btn.textContent = '→';
+    return;
   }
-  body.scrollTop = body.scrollHeight;
-  btn.disabled = false; btn.textContent = '→';
+  // 2) AI-Helper (echtes LLM) versuchen
+  try {
+    const r = await fetch('/api/helper-ai', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question: q})});
+    const j = await r.json();
+    if (j.ok && j.answer) {
+      t.remove();
+      const a = document.createElement('div'); a.className='cb-msg bot';
+      const htmlA = '<div style="font-size:11px;color:var(--muted);margin-bottom:4px">🤖 CreatorBoost (AI):</div>' + j.answer;
+      a.innerHTML = htmlA;
+      body.appendChild(a);
+      cbHelperPersist('bot', htmlA);
+      chips.innerHTML = '';
+      const yes = document.createElement('button'); yes.className='cb-chip'; yes.textContent='✅ Hat geholfen';
+      yes.onclick = ()=>{ chips.innerHTML=''; cbHelperShow('_back'); };
+      chips.appendChild(yes);
+      const no = document.createElement('button'); no.className='cb-chip'; no.textContent='❌ Doch Admin fragen';
+      no.onclick = ()=>cbHelperForwardToAdmin(q);
+      chips.appendChild(no);
+      const back = document.createElement('button'); back.className='cb-chip back'; back.textContent='← Übersicht';
+      back.onclick = ()=>cbHelperShow('_back');
+      chips.appendChild(back);
+      body.scrollTop = body.scrollHeight;
+      btn.disabled = false; btn.textContent = '→';
+      return;
+    }
+    // AI nicht verfügbar oder Fehler → Fallback
+    if (j.fallback) {
+      // Wenn vorher ein schwächeres Topic-Match gab, nutze das jetzt als Notlösung
+      if (topicId && CB_HELP[topicId]) {
+        t.remove();
+        const node = CB_HELP[topicId];
+        const a = document.createElement('div'); a.className='cb-msg bot';
+        const htmlA = '<div style="font-size:11px;color:var(--muted);margin-bottom:4px">📚 Vielleicht meinst du <b>'+ (node.q||'') +'</b>:</div>' + node.a;
+        a.innerHTML = htmlA;
+        body.appendChild(a);
+        cbHelperPersist('bot', htmlA);
+        chips.innerHTML = '';
+        const no = document.createElement('button'); no.className='cb-chip'; no.textContent='❌ Nicht das — Frag Admin';
+        no.onclick = ()=>cbHelperForwardToAdmin(q);
+        chips.appendChild(no);
+        const back = document.createElement('button'); back.className='cb-chip back'; back.textContent='← Übersicht';
+        back.onclick = ()=>cbHelperShow('_back');
+        chips.appendChild(back);
+        body.scrollTop = body.scrollHeight;
+        btn.disabled = false; btn.textContent = '→';
+        return;
+      }
+      t.remove();
+      cbHelperForwardToAdmin(q);
+      btn.disabled = false; btn.textContent = '→';
+      return;
+    }
+    throw new Error(j.error || 'AI failed');
+  } catch(e) {
+    t.remove();
+    cbHelperForwardToAdmin(q);
+    btn.disabled = false; btn.textContent = '→';
+  }
+}
+function cbHelperFindScore(q){
+  const lq = (q||'').toLowerCase(); let best = 0;
+  for (const kws of Object.values(CB_HELP_KEYWORDS)){
+    let s=0; for (const kw of kws){ if (lq.includes(kw)) s += kw.length; }
+    if (s > best) best = s;
+  }
+  return best;
 }
 async function cbHelperForwardToAdmin(question){
   const body = document.getElementById('cb-helper-body');
