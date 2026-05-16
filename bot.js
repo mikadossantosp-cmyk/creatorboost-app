@@ -3178,7 +3178,7 @@ ${isOwn ? (function(){
         const aInit = htmlEsc((au.spitzname || au.name || '?').slice(0,1).toUpperCase());
         const aPic = ladeBild(a.uid, 'profilepic') ? '/appbild/' + a.uid + '/profilepic' : (au.instagram ? 'https://unavatar.io/instagram/' + encodeURIComponent(au.instagram) : '');
         const isActive = a.uid === _activeUid;
-        return '<button class="ipf-switcher-item' + (isActive?' active':'') + '" onclick="ipfSwitchAcc(&quot;'+htmlEsc(a.uid)+'&quot;)">' +
+        return '<button class="ipf-switcher-item' + (isActive?' active':'') + '" onclick="ipfSwitchAcc(\''+htmlEsc(a.uid)+'\')">' +
           '<div class="ipf-switcher-item-avatar">' + (aPic ? '<img src="'+aPic+'" alt="">' : aInit) + '</div>' +
           '<div class="ipf-switcher-item-name">' + aName + (a.isParent?'':' <span style="font-size:11px;color:var(--muted);font-weight:500"> · Sub</span>') + '</div>' +
           (isActive ? '<span class="ipf-switcher-item-check">✓</span>' : '') +
@@ -17972,30 +17972,7 @@ async function pfHandleAvatarFile(input){
     <div class="set-hub-arrow">›</div>
   </a>` : ''}
 </div>
-<div style="padding:14px 16px 4px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted)">Profil bearbeiten</div>
-<div style="padding:16px;border-bottom:1px solid var(--border2)">
-  <div class="form-label">Profilbild</div>
-  <div style="display:flex;align-items:center;gap:16px;margin-top:8px">
-    <div style="width:72px;height:72px;border-radius:50%;overflow:hidden;background:var(--bg4);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700" id="pic-preview">
-      ${myUser?.instagram ? `<img src="https://unavatar.io/instagram/${myUser.instagram}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'" alt="">` : (myUser?.name||'?').slice(0,2).toUpperCase()}
-    </div>
-    <div style="flex:1">
-      <label style="display:inline-flex;align-items:center;gap:8px;background:var(--bg4);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;cursor:pointer;font-size:13px">
-        📷 Foto hochladen
-        <input type="file" accept="image/*" style="display:none" onchange="uploadProfilePic(this)">
-      </label>
-    </div>
-  </div>
-</div>
-<div style="padding:16px;border-bottom:1px solid var(--border2)">
-  <div class="form-label">Bio</div>
-  <textarea class="form-input" id="inp-bio" placeholder="Schreib etwas über dich..." maxlength="100">${htmlEsc(u.bio||'')}</textarea>
-  <div class="form-hint">${u.bio?.length||0}/100</div>
-</div>
-<div style="padding:16px;border-bottom:1px solid var(--border2)">
-  <div class="form-label">Spitzname</div>
-  <input type="text" class="form-input" id="inp-spitzname" placeholder="Dein Spitzname" maxlength="30" value="${htmlEsc(u.spitzname||'')}">
-</div>
+<!-- Profilbild / Bio / Spitzname entfernt — sind im Hero-Edit-Sheet -->
 <div style="padding:16px;border-bottom:1px solid var(--border2)">
   <div class="form-label">🔐 Account-Login <span style="font-size:10px;color:var(--muted);font-weight:500">(Email + Passwort)</span></div>
   ${(() => {
@@ -18041,21 +18018,7 @@ async function pfHandleAvatarFile(input){
   <div id="app-code-msg" style="margin-top:6px;font-size:11.5px;line-height:1.4"></div>
 </div>
 <div style="padding:16px;border-bottom:1px solid var(--border2)">
-  <div class="form-label">Instagram</div>
-  <div style="position:relative">
-    <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:14px;pointer-events:none">@</span>
-    <input type="text" class="form-input" id="inp-instagram" placeholder="dein.instagram" maxlength="50" value="${htmlEsc((u.instagram||'').replace(/^@/,''))}" style="padding-left:30px" autocapitalize="none" spellcheck="false">
-  </div>
-  <div class="form-hint">Wird als Profilbild & Verlinkung genutzt</div>
-</div>
-<div style="padding:16px;border-bottom:1px solid var(--border2)">
-  <div class="form-label">Nische</div>
-  <input type="text" class="form-input" id="inp-nische" placeholder="z.B. Fitness, Food, Travel..." maxlength="50" value="${htmlEsc(u.nische||'')}">
-</div>
-<div style="padding:16px;border-bottom:1px solid var(--border2)">
-  <div class="form-label">Persönlicher Link</div>
-  <input type="url" class="form-input" id="inp-website" placeholder="https://deine-website.de" maxlength="100" value="${htmlEsc(u.website||'')}">
-</div>
+<!-- Instagram / Nische / Persönlicher Link entfernt — sind im Hero-Edit-Sheet -->
 <div style="padding:16px;border-bottom:1px solid var(--border2)">
   <div class="form-label">📌 Pinned Reel Link</div>
   <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Dieser Reel wird auf der Explore-Seite bei deiner Creator-Karte angezeigt.</div>
@@ -18267,19 +18230,24 @@ async function uploadBanner(input) {
     reader.readAsDataURL(file);
 }
 async function saveProfile() {
-    const bio = document.getElementById('inp-bio')?.value || '';
-    const spitzname = document.getElementById('inp-spitzname')?.value || '';
+    // Bio/Spitzname/Insta/Nische/Website werden jetzt im Hero-Edit-Sheet
+    // gespeichert (pfSaveProfile). saveProfile schickt diese Felder NUR wenn
+    // die Inputs noch existieren — sonst überschreibt sie sonst die echten
+    // Werte mit leer.
     const themeToggle = document.getElementById('theme-toggle');
     const theme = themeToggle?.classList.contains('on') ? 'dark' : 'light';
     const btn = document.querySelector('[onclick="saveProfile()"]');
     if(btn) { btn.textContent = '⏳ Speichern...'; btn.disabled = true; }
     try {
-        const nische = document.getElementById('inp-nische')?.value?.trim()||'';
-        const website = document.getElementById('inp-website')?.value?.trim()||'';
-        const instagram = (document.getElementById('inp-instagram')?.value||'').replace(/^@/,'').trim();
         const emailEl = document.getElementById('inp-email');
         const pwEl = document.getElementById('inp-password');
-        const payload = {bio, spitzname, accentColor: selectedAccent, theme, nische, website, instagram};
+        const payload = {accentColor: selectedAccent, theme};
+        // Nur Felder mitschicken die im DOM existieren — sonst leerstring würde Profil leeren
+        const bioEl = document.getElementById('inp-bio'); if (bioEl) payload.bio = bioEl.value || '';
+        const spitzEl = document.getElementById('inp-spitzname'); if (spitzEl) payload.spitzname = spitzEl.value || '';
+        const nischeEl = document.getElementById('inp-nische'); if (nischeEl) payload.nische = nischeEl.value?.trim() || '';
+        const websiteEl = document.getElementById('inp-website'); if (websiteEl) payload.website = websiteEl.value?.trim() || '';
+        const instaEl = document.getElementById('inp-instagram'); if (instaEl) payload.instagram = (instaEl.value || '').replace(/^@/,'').trim();
         if (emailEl) payload.email = (emailEl.value||'').toLowerCase().trim();
         if (pwEl && pwEl.value) payload.password = pwEl.value;
         if (selectedBanner) payload.banner = selectedBanner;
