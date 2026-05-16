@@ -4704,21 +4704,36 @@ document.addEventListener('DOMContentLoaded', function(){
         const token = String(query.token || '').trim();
         const baseHtml = (icon, title, msg, color) => `<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><style>body{margin:0;font-family:-apple-system,BlinkMacSystemFont,Inter,sans-serif;background:#0b0b0e;color:#fff;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}.box{background:linear-gradient(180deg,#1c1c1e,#0f0f11);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:40px 28px;max-width:420px;text-align:center;box-shadow:0 30px 80px rgba(0,0,0,.5)}.ic{font-size:64px;margin-bottom:16px}.t{font-size:22px;font-weight:800;margin-bottom:10px;letter-spacing:-.4px;color:${color}}.m{font-size:14px;color:rgba(255,255,255,.7);line-height:1.55;margin-bottom:24px}.btn{display:inline-block;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;padding:13px 28px;border-radius:12px;text-decoration:none;font-weight:800;font-size:14px}</style></head><body><div class="box"><div class="ic">${icon}</div><div class="t">${title}</div><div class="m">${msg}</div><a href="/feed" class="btn">→ Zur App</a></div></body></html>`;
         if (!token) { res.writeHead(400, {'Content-Type':'text/html'}); return res.end(baseHtml('⚠️','Ungültiger Link','Der Bestätigungslink ist ungültig oder unvollständig.','#f59e0b')); }
-        const entry = emailConfirmTokens.get(token);
-        if (!entry || entry.exp < Date.now()) {
+        // Erst in emailConfirmTokens (token-keyed) suchen → Email-Change-Flow
+        let entry = emailConfirmTokens.get(token);
+        if (entry && entry.exp >= Date.now()) {
             emailConfirmTokens.delete(token);
-            res.writeHead(400, {'Content-Type':'text/html'});
-            return res.end(baseHtml('⏰','Link abgelaufen','Der Bestätigungslink ist abgelaufen oder schon benutzt. Geh in die Einstellungen und sende einen neuen.','#ef4444'));
+            savePendingEmailConfirms();
+            const result = await postBot('/update-profile-api', { uid: entry.uid, confirmEmail: entry.email });
+            if (!result || result.ok === false) {
+                res.writeHead(500, {'Content-Type':'text/html'});
+                return res.end(baseHtml('❌','Fehler','Bestätigung konnte nicht gespeichert werden. Bitte später erneut versuchen.','#ef4444'));
+            }
+            res.writeHead(200, {'Content-Type':'text/html'});
+            return res.end(baseHtml('✅','Email bestätigt!','Deine Email <b style="color:#fff">'+entry.email+'</b> ist jetzt aktiv. Du kannst dich damit einloggen.','#22c55e'));
         }
-        emailConfirmTokens.delete(token);
-        // Bot anrufen → confirmEmail-Field setzen
-        const result = await postBot('/update-profile-api', { uid: entry.uid, confirmEmail: entry.email });
-        if (!result || result.ok === false) {
-            res.writeHead(500, {'Content-Type':'text/html'});
-            return res.end(baseHtml('❌','Fehler','Bestätigung konnte nicht gespeichert werden. Bitte später erneut versuchen.','#ef4444'));
+        // Sonst in pendingEmailConfirms (uid-keyed mit token im entry) suchen → Signup-Flow
+        let signupUid = null, signupEntry = null;
+        for (const [uid, e] of pendingEmailConfirms.entries()) {
+            if (e && e.token === token) { signupUid = uid; signupEntry = e; break; }
         }
-        res.writeHead(200, {'Content-Type':'text/html'});
-        return res.end(baseHtml('✅','Email bestätigt!','Deine Email <b style="color:#fff">'+entry.email+'</b> ist jetzt aktiv. Du kannst dich damit einloggen.','#22c55e'));
+        if (signupEntry && signupEntry.exp >= Date.now()) {
+            pendingEmailConfirms.delete(signupUid);
+            savePendingEmailConfirms();
+            console.log('[email-confirm] Signup confirmed uid:', signupUid, 'email:', signupEntry.email);
+            res.writeHead(200, {'Content-Type':'text/html'});
+            return res.end(baseHtml('✅','Email bestätigt!','Deine Email <b style="color:#fff">'+signupEntry.email+'</b> ist bestätigt. Willkommen bei CreatorX!','#22c55e'));
+        }
+        // Beide nicht gefunden oder abgelaufen
+        if (entry) { emailConfirmTokens.delete(token); savePendingEmailConfirms(); }
+        if (signupUid) { pendingEmailConfirms.delete(signupUid); savePendingEmailConfirms(); }
+        res.writeHead(400, {'Content-Type':'text/html'});
+        return res.end(baseHtml('⏰','Link abgelaufen','Der Bestätigungslink ist abgelaufen oder schon benutzt. Geh in die Einstellungen und sende einen neuen.','#ef4444'));
     }
     // Email-Magic-Link Verify: User klickt Link → Session erstellen.
     // ── /signup: Separate Signup-Page für neue User ──
