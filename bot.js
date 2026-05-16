@@ -7831,6 +7831,18 @@ p{line-height:1.65;color:var(--muted)}
         return json(r || {ok:false, error:'Mainbot offline'});
     }
     // ── Helper-Bot Fallback (User-Frage an Admin forwarden) ──
+    // Helper-Chat History (persistent, server-side)
+    if (path === '/api/helper-history' && req.method === 'GET') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        const r = await fetchBotRaw('/helper-chat-history-api?uid=' + encodeURIComponent(session.uid));
+        return json(r || {ok:true, messages:[]});
+    }
+    if (path === '/api/helper-append' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        const body = await parseBody(req);
+        const r = await postBot('/helper-chat-append-api', { uid: String(session.uid), role: String(body.role||''), text: String(body.text||'') });
+        return json(r || {ok:false});
+    }
     if (path === '/api/helper-ask' && req.method === 'POST') {
         if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
         const body = await parseBody(req);
@@ -9373,16 +9385,74 @@ const CB_HELP = {
   'start24h': { q:'⏰ Mein Plan für die ersten 24h', a:'1. <b>Profil komplett:</b> Pic, Spitzname, Insta, Bio<br>2. <b>Ersten Reel posten</b> (max 1/Tag)<br>3. <b>5 Reels liken</b> auf Insta + App (M1 ✅)<br>4. <b>Daily Bonus</b> nicht vergessen (+10-30 XP)<br>5. <b>Pinned Reel</b> in Einstellungen setzen<br><br>Bei 5/5 → Levelaufstieg garantiert!', next:['m','xp','_back'] },
   'support': { q:'💬 Direkter Support', a:'Geht\\'s mit mir nicht weiter?<br><br>📨 <a href="/nachrichten/creatorboost" style="color:#a78bfa;font-weight:700">→ Direkt mit CreatorBoost chatten</a><br>(das bin ich, aber als richtige DM)<br><br>Stell hier unten deine Frage rein — wenn ich sie nicht selbst beantworten kann, leite ich sie sofort an den Admin weiter. Antwort kommt zurück als DM.', next:['_back'] },
   '_back': { q:'← Zurück zur Übersicht', a:'Was willst du wissen?', next:['_start','rules','data','support','_more'] },
+  // ── Banale How-Tos (Direkt-Antworten via Keyword-Search) ──
+  '_h_profilbild': { q:'📷 Profilbild ändern', a:'Geh zu <a href="/einstellungen" style="color:#a78bfa;font-weight:700">/einstellungen</a> → <b>📷 Profilbild</b> → Foto hochladen → Bild zuschneiden → fertig.<br><br>Tipp: Quadrat-Bild funktioniert am besten.', next:['_h_banner','_h_bio','_back'] },
+  '_h_banner': { q:'🖼 Banner ändern', a:'In <a href="/einstellungen" style="color:#a78bfa;font-weight:700">/einstellungen</a> → Banner-Bereich. Lade ein Querformat-Bild hoch (3:1 ist ideal).', next:['_h_profilbild','_back'] },
+  '_h_bio': { q:'📝 Bio / Beschreibung ändern', a:'<a href="/einstellungen" style="color:#a78bfa;font-weight:700">/einstellungen</a> → <b>Bio</b> Feld → bis zu 100 Zeichen → speichern.', next:['_h_spitzname','_back'] },
+  '_h_spitzname': { q:'🏷 Spitzname ändern', a:'<a href="/einstellungen" style="color:#a78bfa;font-weight:700">/einstellungen</a> → <b>Spitzname</b> Feld → bis zu 30 Zeichen → speichern.<br><br>Der Spitzname erscheint im Ranking und auf deinem Profil.', next:['_h_bio','_back'] },
+  '_h_email': { q:'📧 Email ändern / setzen', a:'<a href="/einstellungen/account" style="color:#a78bfa;font-weight:700">/einstellungen/account</a> → Email-Feld.<br><br>⚠️ Wenn du schon Email + Passwort gesetzt hast: erst <b>"Änderung anfragen"</b> klicken → Bestätigungs-Mail kommt → dann hast du 30 Min Edit-Window.', next:['_h_passwort','_back'] },
+  '_h_passwort': { q:'🔐 Passwort setzen / ändern', a:'<a href="/set-password" style="color:#a78bfa;font-weight:700">/set-password</a> oder in <a href="/einstellungen/account" style="color:#a78bfa;font-weight:700">/einstellungen/account</a>.<br><br>Min. 6 Zeichen. Wenn du eins gesetzt hast, kannst du dich auch ohne Magic-Link einloggen.', next:['_h_email','_back'] },
+  '_h_insta': { q:'📸 Instagram-Handle einstellen', a:'<a href="/einstellungen" style="color:#a78bfa;font-weight:700">/einstellungen</a> → <b>Instagram</b> Feld → dein Handle (ohne @) → speichern.<br><br>Wird im Profil als Link angezeigt + nutzt das Insta-Avatar als Fallback wenn du kein Profilbild hast.', next:['_h_profilbild','_back'] },
+  '_h_logout': { q:'🚪 Ausloggen', a:'<a href="/einstellungen/sicherheit" style="color:#a78bfa;font-weight:700">/einstellungen/sicherheit</a> → <b>🚪 Ausloggen</b> Button.<br><br>Oder direkt: <a href="/logout" style="color:#a78bfa;font-weight:700">/logout</a>', next:['_back'] },
+  '_h_delete': { q:'🗑 Account löschen', a:'<a href="/einstellungen" style="color:#a78bfa;font-weight:700">/einstellungen</a> → ganz unten <b>🗑️ Account dauerhaft löschen</b>.<br><br>⚠️ <b>Nicht umkehrbar</b> (außer Admin macht innerhalb 50 Tagen Restore). Du musst "LÖSCHEN" tippen zur Bestätigung.<br><br>DSGVO Art. 17 — alle Daten weg.', next:['_back'] },
+  '_h_post': { q:'📌 Wie poste ich einen Link?', a:'<a href="/feed" style="color:#a78bfa;font-weight:700">/feed</a> → <b>+</b> Button (Mitte unten) → <b>📌 Link posten</b> → Instagram-Reel-URL einfügen.<br><br>Limits:<br>• Nur Instagram-Reels (eigene)<br>• 1 Link/Tag<br>• Kein Self-Like<br><br>Du kriegst <b>+5 XP</b> + 8h Pin im Heute-Feed.', next:['m','_h_post_super','_back'] },
+  '_h_post_super': { q:'⚡ Superlink posten', a:'Im <a href="/feed" style="color:#a78bfa;font-weight:700">Feed</a> → <b>+</b> → <b>⚡ Superlink</b>. 1/Woche (Mo-Sa), Elite+ 2/Woche.', next:['superlink','_h_post','_back'] },
+  '_h_block': { q:'🚫 User blockieren', a:'Auf dem Profil des Users (z.B. <code>/profil/123</code>) → <b>3-Punkte-Menü</b> → <b>🚫 Blockieren</b>.<br><br>Blockierte siehst du in <a href="/einstellungen/privacy" style="color:#a78bfa;font-weight:700">/einstellungen/privacy</a> — dort auch wieder entblocken.', next:['_back'] },
+  '_h_notif': { q:'🔔 Push-Notifications einstellen', a:'<a href="/einstellungen/notifications" style="color:#a78bfa;font-weight:700">/einstellungen/notifications</a> → <b>Push aktivieren</b>.<br><br>Browser fragt dich nach Berechtigung — auf "Erlauben" tippen. Danach kriegst du Push wenn jemand liked, kommentiert, oder ein Event startet.', next:['_back'] },
+  '_h_sub': { q:'👶 Sub-Account erstellen', a:'Auf deinem Profil → <b>Account-Switcher</b> oben → <b>+ Sub-Account</b>.<br><br>Ein Sub teilt deinen Telegram-Account aber hat eigene XP/Diamanten. Nützlich wenn du mehrere Insta-Profile bedienst.', next:['_back'] },
+  '_h_install': { q:'📲 App auf Handy installieren', a:'<b>iPhone/Safari:</b> Teilen-Button → "Zum Home-Bildschirm".<br><br><b>Android/Chrome:</b> Menü (3 Punkte) → "App installieren".<br><br>Oder Direkt-Download: <a href="/download-app" style="color:#a78bfa;font-weight:700">/download-app</a>', next:['_back'] },
+  '_h_dark': { q:'🌙 Dark Mode', a:'Klick auf <b>🌙</b> oben rechts in der Topbar → Theme switched zwischen Hell und Dunkel. Wird automatisch gespeichert.', next:['_back'] },
 };
-function cbHelperOpen(){
+async function cbHelperOpen(){
   const m = document.getElementById('cb-helper-modal');
   m.classList.add('open');
   document.body.style.overflow='hidden';
   if (!m.dataset.init){
     m.dataset.init='1';
-    cbHelperShow('_root');
+    // History laden + rendern, sonst _root anzeigen
+    await cbHelperLoadHistory();
   }
   try{ localStorage.setItem('cb_helper_seen','1'); const b=document.getElementById('cb-helper-badge'); if(b)b.style.display='none'; }catch(e){}
+}
+async function cbHelperLoadHistory(){
+  const body = document.getElementById('cb-helper-body');
+  const chips = document.getElementById('cb-helper-chips');
+  try {
+    const r = await fetch('/api/helper-history');
+    const j = await r.json();
+    if (j.ok && Array.isArray(j.messages) && j.messages.length > 0) {
+      body.innerHTML = '';
+      for (const m of j.messages) {
+        const el = document.createElement('div');
+        el.className = 'cb-msg ' + (m.role === 'user' ? 'user' : 'bot');
+        if (m.fromAdmin) { el.style.border = '1px solid rgba(167,139,250,0.4)'; }
+        el.innerHTML = (m.role === 'bot') ? m.text : escapeHtml(m.text);
+        body.appendChild(el);
+      }
+      const hint = document.createElement('div');
+      hint.style.cssText = 'text-align:center;padding:8px;font-size:11px;color:var(--muted);font-style:italic';
+      hint.textContent = '— Stelle eine Frage oder wähle ein Thema —';
+      body.appendChild(hint);
+      cbHelperShowMenu();
+      body.scrollTop = body.scrollHeight;
+      return;
+    }
+  } catch(e) {}
+  cbHelperShow('_root');
+}
+function escapeHtml(s){return String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function cbHelperShowMenu(){
+  const chips = document.getElementById('cb-helper-chips');
+  chips.innerHTML = '';
+  ['_start','rules','data','support','_more'].forEach(nid => {
+    const nx = CB_HELP[nid]; if(!nx) return;
+    const c = document.createElement('button'); c.className = 'cb-chip'; c.textContent = nx.q || '→';
+    c.onclick = ()=>cbHelperShow(nid);
+    chips.appendChild(c);
+  });
+}
+async function cbHelperPersist(role, text){
+  try { await fetch('/api/helper-append', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({role, text})}); } catch(e) {}
 }
 function cbHelperClose(){
   document.getElementById('cb-helper-modal').classList.remove('open');
@@ -9393,10 +9463,11 @@ function cbHelperShow(id){
   if (!node) return;
   const body = document.getElementById('cb-helper-body');
   const chips = document.getElementById('cb-helper-chips');
-  // Falls schon Frage (= User hat geklickt), zeige User-Bubble
+  // Falls schon Frage (= User hat geklickt), zeige User-Bubble + persist
   if (node.q) {
     const u = document.createElement('div'); u.className='cb-msg user'; u.textContent = node.q;
     body.appendChild(u);
+    cbHelperPersist('user', node.q);
   }
   // Typing-Indikator
   const t = document.createElement('div'); t.className='cb-typing';
@@ -9408,6 +9479,7 @@ function cbHelperShow(id){
     t.remove();
     const a = document.createElement('div'); a.className='cb-msg bot'; a.innerHTML = node.a;
     body.appendChild(a);
+    cbHelperPersist('bot', node.a);
     body.scrollTop = body.scrollHeight;
     // Chips
     chips.innerHTML = '';
@@ -9429,6 +9501,22 @@ const CB_HELP_KEYWORDS = {
   'pinned': ['pinned','pin','reel','explore karte','profil-reel'],
   'warn': ['warn','verwarnung','warning','strafe','sperre','ban','gebannt'],
   'support': ['support','hilfe','help','kontakt','admin'],
+  // Banale Fragen direkt beantworten:
+  '_h_profilbild': ['profilbild','foto','avatar','pic','profil bild','bild ändern','bild hochladen','profilfoto'],
+  '_h_banner': ['banner','header','titelbild','cover','hintergrund profil'],
+  '_h_bio': ['bio','beschreibung','about','steckbrief','über mich','text profil'],
+  '_h_spitzname': ['spitzname','nickname','anzeigename','user name','display name'],
+  '_h_email': ['email ändern','email setzen','email-adresse','mail ändern','neue email','meine email'],
+  '_h_passwort': ['passwort','password','pw','login passwort','passwort ändern','passwort setzen','pw setzen'],
+  '_h_insta': ['instagram handle','insta handle','insta verlinken','insta einstellen','meine instagram'],
+  '_h_logout': ['ausloggen','logout','abmelden','sign out'],
+  '_h_delete': ['account löschen','account weg','konto löschen','dsgvo','daten löschen'],
+  '_h_post': ['posten','wie poste','wie post','link teilen','link posten','reel posten','reel teilen'],
+  '_h_block': ['blockieren','blocken','user blockieren','blocked','blockliste','geblockt'],
+  '_h_notif': ['benachrichtigung','notification','push','notif','alarm','meldung anstellen'],
+  '_h_sub': ['sub account','zweitaccount','sub','second account','neuer account','zweit acc'],
+  '_h_install': ['app installieren','installieren','apk','download','app runter','homescreen'],
+  '_h_dark': ['dark mode','dark theme','dunkel','nachtmodus','dunkler hintergrund'],
 };
 function cbHelperFindTopic(q){
   const lq = q.toLowerCase();
@@ -9448,9 +9536,10 @@ async function cbHelperAsk(){
   inp.value = '';
   const body = document.getElementById('cb-helper-body');
   const chips = document.getElementById('cb-helper-chips');
-  // User-Bubble
+  // User-Bubble + persist
   const u = document.createElement('div'); u.className='cb-msg user'; u.textContent = q;
   body.appendChild(u);
+  cbHelperPersist('user', q);
   chips.innerHTML = '';
   // Typing
   const t = document.createElement('div'); t.className='cb-typing';
@@ -9465,8 +9554,10 @@ async function cbHelperAsk(){
     // Found → show topic answer
     const node = CB_HELP[topicId];
     const a = document.createElement('div'); a.className='cb-msg bot';
-    a.innerHTML = '<div style="font-size:11px;color:var(--muted);margin-bottom:4px">📚 Gefunden im Topic <b>'+ (node.q||'') +'</b>:</div>' + node.a;
+    const htmlA = '<div style="font-size:11px;color:var(--muted);margin-bottom:4px">📚 Gefunden im Topic <b>'+ (node.q||'') +'</b>:</div>' + node.a;
+    a.innerHTML = htmlA;
     body.appendChild(a);
+    cbHelperPersist('bot', htmlA);
     // Chips: confirm + follow-ups + ask-admin
     chips.innerHTML = '';
     const yes = document.createElement('button'); yes.className='cb-chip'; yes.textContent='✅ Hat geholfen';
@@ -9501,12 +9592,15 @@ async function cbHelperForwardToAdmin(question){
     const j = await r.json();
     t.remove();
     const a = document.createElement('div'); a.className='cb-msg bot';
+    let htmlA;
     if (j.ok) {
-      a.innerHTML = '✅ <b>Frage an Admin gesendet!</b><br><br>Die Antwort kommt als DM von <b>CreatorBoost</b> direkt in deine Nachrichten — schau bei /nachrichten/creatorboost rein.<br><br>Meistens innerhalb von 1 Stunde.';
+      htmlA = '✅ <b>Frage an Admin gesendet!</b><br><br>Du kriegst die Antwort hier im Chat — der Verlauf bleibt gespeichert.<br>Auch als CreatorBoost-DM in <a href="/nachrichten/creatorboost" style="color:#a78bfa;font-weight:700">/nachrichten</a>.<br><br>Meistens innerhalb von 1 Stunde.';
     } else {
-      a.innerHTML = '❌ Konnte die Frage nicht an den Admin schicken: '+(j.error||'Fehler')+'<br><br>Versuch\\'s direkt: <a href="/nachrichten/creatorboost" style="color:#a78bfa;font-weight:700">→ DM an CreatorBoost</a>';
+      htmlA = '❌ Konnte die Frage nicht an den Admin schicken: '+(j.error||'Fehler')+'<br><br>Versuch\\'s direkt: <a href="/nachrichten/creatorboost" style="color:#a78bfa;font-weight:700">→ DM an CreatorBoost</a>';
     }
+    a.innerHTML = htmlA;
     body.appendChild(a);
+    cbHelperPersist('bot', htmlA);
     const back = document.createElement('button'); back.className='cb-chip back'; back.textContent='← Zur Übersicht';
     back.onclick = ()=>cbHelperShow('_back');
     chips.appendChild(back);
