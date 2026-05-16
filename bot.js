@@ -9541,12 +9541,11 @@ async function submitSuperLink(){
 
 <!-- ── CREATORX HELPER BOT (FAQ-Chatbot, popup im Feed) ─────────────── -->
 <style>
-#cb-helper-fab{position:fixed;bottom:calc(90px + env(safe-area-inset-bottom,0px));right:14px;width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;border:none;padding:3px;cursor:pointer;z-index:8500;box-shadow:0 8px 24px rgba(124,58,237,.5);animation:cb-helper-bob 3s ease-in-out infinite;overflow:visible}
+#cb-helper-fab{position:fixed;bottom:calc(78px + env(safe-area-inset-bottom,0px));right:8px;width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;border:none;padding:1.5px;cursor:pointer;z-index:8500;box-shadow:0 2px 6px rgba(0,0,0,.18);opacity:.55;transition:opacity .25s, transform .15s;overflow:visible}
 #cb-helper-fab img{display:block;width:100%;height:100%;border-radius:50%;object-fit:cover;background:var(--bg)}
-#cb-helper-fab .chat-tail{position:absolute;bottom:-2px;right:-2px;width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,#a78bfa,#7c3aed);display:flex;align-items:center;justify-content:center;font-size:13px;border:2px solid var(--bg);box-shadow:0 2px 6px rgba(0,0,0,.3);color:#fff}
-@keyframes cb-helper-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
-#cb-helper-fab:hover{transform:scale(1.08)}
-#cb-helper-fab .badge{position:absolute;top:-2px;right:-2px;width:18px;height:18px;border-radius:50%;background:#ef4444;color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;border:2px solid var(--bg)}
+#cb-helper-fab .chat-tail{position:absolute;bottom:-1px;right:-1px;width:12px;height:12px;border-radius:50%;background:linear-gradient(135deg,#a78bfa,#7c3aed);display:flex;align-items:center;justify-content:center;font-size:7px;border:1px solid var(--bg);color:#fff}
+#cb-helper-fab:hover,#cb-helper-fab:active{opacity:1;transform:scale(1.1)}
+#cb-helper-fab .badge{position:absolute;top:-2px;right:-2px;width:12px;height:12px;border-radius:50%;background:#ef4444;color:#fff;font-size:7px;font-weight:800;display:flex;align-items:center;justify-content:center;border:1px solid var(--bg)}
 #cb-helper-modal{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:9000;display:none;align-items:flex-end;justify-content:center;animation:cb-helper-fade .2s ease}
 #cb-helper-modal.open{display:flex}
 @keyframes cb-helper-fade{from{opacity:0}to{opacity:1}}
