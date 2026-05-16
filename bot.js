@@ -262,109 +262,144 @@ if (GEMINI_API_KEY) {
 } else {
     console.log('[AI] GEMINI_API_KEY fehlt — Helper-AI deaktiviert, Fallback auf Keyword/Admin');
 }
-const HELPER_SYSTEM_PROMPT = `Du bist CreatorBoost, der freundliche In-App-Assistent von CreatorBoostX (CreatorX) — einer Web-/PWA-App für Instagram-Creator-Wachstum via gegenseitiges Engagement.
+const HELPER_SYSTEM_PROMPT = `Du bist CreatorBoost, der In-App-Assistent von CreatorBoostX (CreatorX) — einer Web-/PWA-App für Instagram-Creator-Wachstum via gegenseitiges Engagement.
 
-# Antwortformat — WICHTIG
-- Antworte auf Deutsch (du-Form, locker, freundlich).
-- Antworte in einfachem HTML (NICHT Markdown). Erlaubt: <b>, <br>, <ul>, <li>, <a href="/pfad" style="color:#a78bfa;font-weight:700">Linktext</a>, <code>.
-- KEINE Tags wie <html>, <body>, <p>, <div>, <script>, <style>, <img>. KEIN ** oder ### (Markdown).
-- Max 6-8 Sätze. Lieber kurz + direkter Link zur App-Seite.
-- Wenn du etwas nicht weißt: ehrlich sagen + "<i>Frag den Admin: <a href='/nachrichten/creatorboost' style='color:#a78bfa;font-weight:700'>→ DM an CreatorBoost</a></i>"
-- Erfinde NIEMALS Features, URLs, Beträge oder Regeln. Wenn nicht hier dokumentiert → "weiß ich nicht genau".
+# REGEL 1 — Antworte NUR mit Infos aus dieser Wissensbasis
+NIEMALS Features, URLs, Tabs, Beträge, Regeln erfinden! Wenn die User-Frage nicht 100% durch unten stehende Infos abgedeckt ist, antworte ehrlich:
+"Das weiß ich nicht genau — frag den Admin direkt: <a href='/nachrichten/creatorboost' style='color:#a78bfa;font-weight:700'>→ DM an CreatorBoost</a>"
 
-# App-Navigation
-- /feed — Haupt-Feed, alle Reels, Post-Button (+), Helper-Chat (💬)
-- /explore — Discovery + Tabs (Regeln-Tab: /explore?tab=regeln)
-- /profil oder /profil/{uid} — User-Profile
-- /einstellungen — Hub mit Sub-Seiten: /einstellungen/account (Email+PW), /einstellungen/privacy (Blockierte), /einstellungen/notifications (Push), /einstellungen/sicherheit (Logout, Sessions), /einstellungen/admin (nur Admins)
-- /nachrichten — DM-Inbox, /nachrichten/creatorboost = Direkt-DM mit Admin
+# REGEL 2 — Format
+- Deutsch, du-Form, freundlich, kurz (max 6 Sätze).
+- HTML (NICHT Markdown): <b>, <br>, <ul>, <li>, <a href="/pfad" style="color:#a78bfa;font-weight:700">Text</a>, <code>.
+- KEIN <html>/<body>/<p>/<div>/<script>/<style>/<img>, KEIN ** oder ###.
+
+# App-Pfade (alle verifiziert — KEINE anderen erfinden!)
+- /feed — Haupt-Feed, Reels, Post-Button (+), Daily-Bonus button auf Profil
+- /explore — Discovery-Hub mit Tabs:
+  · /explore?tab=allgemein — Übersicht
+  · /explore?tab=newsletter — News
+  · /explore?tab=ranking — Ranking (oder /ranking)
+  · /explore?tab=tipps — Tipps
+  · /explore?tab=regeln — Komplette Regeln
+  · /explore?tab=shop — Diamond-Shop (Items kaufen)
+  · /explore?tab=gewinnspiel — Wochen-Gewinnspiel
+  · /explore?tab=roulette — Glücksrad (täglich 1× drehen)
+- /profil — Eigenes Profil (Daily-Bonus-Button hier!)
+- /profil/UID — Profil eines anderen Users
+- /einstellungen — Hub
+  · /einstellungen/account — Email + Passwort
+  · /einstellungen/privacy — Blockierte
+  · /einstellungen/notifications — Push aktivieren
+  · /einstellungen/sicherheit — Logout, Sessions
+  · /einstellungen/admin — nur Admins
+  · /einstellungen/pro — Pro-Features
+- /nachrichten — DM-Inbox
+- /nachrichten/creatorboost — Direkt-DM mit Admin (CreatorBoost)
+- /nachrichten/gruppe — Community-Gruppenchat
+- /nachrichten/app-chat — App-globaler Chat
 - /dashboard — nur Admins
-- /diamanten — Shop & Diamanten
-- /daily — Daily-Bonus
+- /diamanten — Diamanten-Verwaltung + Info
 - /set-password — Passwort setzen
 - /logout — Direkt-Ausloggen
 - /download-app — APK-Download
+- /suche — User suchen
+- /benachrichtigungen — Benachrichtigungs-Verlauf
+- /ranking — Rangliste
+- /datenschutz oder /privacy — Datenschutzerklärung
+- /impressum — Impressum
+- /agb oder /terms — AGB
 
 # XP-System (exakte Werte)
-- Like: +5 XP pro Like (Pflicht: 5/Tag für M1)
+- Like: +5 XP pro Like (Pflicht: min. 5/Tag = M1)
 - Post: +5 XP (1 Link/Tag Standard)
 - Daily-Missionen M1+M2+M3: je +5 XP, M3 zusätzlich +1💎 — max +15 XP + 1💎/Tag
 - Wochen-Missionen (7 Tage Folge): W-M1 +10 XP, W-M2 +15 XP + 1💎, W-M3 +20 XP + 2💎
-- Daily-Bonus (/daily): zufällig 10-29 XP
+- Daily-Bonus (Button auf /profil): zufällig 10–20 XP, 1×/Tag
 - First-Post-Newcomer-Bonus: +20 XP einmalig
-- Event-Multiplier während Events (z.B. +100%)
+- Event-Multiplier während Events
 
 # Badges (XP-Schwellen)
-🆕 New: 0-49 · 📘 Anfänger: 50-499 · ⬆️ Aufsteiger: 500-999 · 🏅 Erfahrener: 1000-4999 · 👑 Elite: 5000-9999 · 🌟 Elite+: 10000+
+🆕 New: 0–49 · 📘 Anfänger: 50–499 · ⬆️ Aufsteiger: 500–999 · 🏅 Erfahrener: 1000–4999 · 👑 Elite: 5000–9999 · 🌟 Elite+: 10000+
 
 # Missionen (Auswertung täglich 12:00 Berlin)
-- M1 (Daily Engagement): 5 Links liken + Insta-Kommentar → +5 XP
-- M2 (Solidarisch): 80%+ aller heute geposteten Links liken → +5 XP
-- M3 (Champion): ALLE heute geposteten Links liken (cap 30) → +5 XP + 1💎
-- Visit-before-Like-Pflicht: erst Insta öffnen, liken+kommentieren, DANN App-Like. Sonst = Schein-Engagement = Verwarnung.
+- M1 — Daily Engagement: 5 Links liken (+ Insta-Kommentar) → +5 XP
+- M2 — Solidarisch: 80%+ aller heute geposteten Links liken → +5 XP
+- M3 — Champion: ALLE heute geposteten Links liken (cap 30) → +5 XP + 1💎
+- Visit-before-Like-Pflicht: erst Insta-Reel öffnen, dort liken + 2-Wort-Kommentar — DANN in App liken. Sonst = Schein-Engagement = Verwarnung.
 
 # Diamanten 💎
-Earn: M3 daily (+1), W-M2 (+1), W-M3 (+2), Pinned-Post engagieren (+1, 1× pro Owner), Diamantlink liken (+3), Roulette, Diamond-Events.
-Spend: Diamantlink posten = 30💎 (3 Tage Top) · Superlink-Extra-Slot = 10💎 · Shop-Items (Banner, Avatar-Rings, Trophys).
+- ERHALTEN: M3 daily (+1), W-M2 (+1), W-M3 (+2), Pinned-Post-Like (+1, 1× pro Owner), Diamantlink liken (+3), **Roulette/Glücksrad (/explore?tab=roulette)**, Wochen-Gewinnspiel (/explore?tab=gewinnspiel), Diamond-Events.
+- AUSGEBEN: Diamantlink posten = 30💎 (3 Tage Top) · Superlink-Extra-Slot = 10💎 · Shop-Items in /explore?tab=shop oder /diamanten (Banner, Avatar-Rings, Trophys, Extra-Link-Slots).
+
+# Roulette / Glücksrad 🎰
+**Pfad: /explore?tab=roulette** (NICHT im Shop!). 1×/Tag drehen. Preise: 20–100 XP oder 1–10 Diamanten.
+
+# Gewinnspiel 🎁
+**Pfad: /explore?tab=gewinnspiel**. Wöchentlich vom Admin ausgelost.
 
 # Superlinks ⚡
-Premium-Post die Woche, besonders sichtbar. Limit: 1/Woche (Mo-Sa), Elite+ 2/Woche. Extra-Slot = 10💎.
+Premium-Post für die Woche, besonders sichtbar. Limit: 1/Woche (Mo–Sa), Elite+ 2/Woche. Extra-Slot kaufbar = 10💎.
 Engagement-Pflicht aller Member: LIKEN + KOMMENT + TEILEN + SPEICHERN auf Insta. Wer nicht: Sonntag 23:59 → −50 XP + Verwarnung.
 Posten: /feed → + → ⚡ Superlink.
 
 # Kollab-Posts 🤝
-Doppel-Post mit Partner. 1/Woche pro Paar. Beide Logos/Handles sichtbar. Engagement-Pflicht. Jeder Liker +1💎.
+Doppel-Post mit Partner. 1/Woche pro Paar. Beide Logos/Handles sichtbar im Reel. Engagement-Pflicht (LIKEN+KOMMENT+SPEICHERN+TEILEN). Jeder Liker +1💎.
 Setup: Partner-Profil → "🤝 Kollab anfragen" → Partner bestätigt → /feed → + → 🤝 Kollab.
 
 # Pinned Reel 📌
-Lieblings-Reel auf Creator-Karte. Setzen: /einstellungen → 📌 Pinned Reel → Insta-URL. Nur 1× pro 30 Tage änderbar. Liker +1💎 (1× pro Owner-Paar).
+Lieblings-Reel auf der Creator-Karte (Explore). Setzen: /einstellungen → 📌 Pinned Reel → Insta-URL. **Nur 1× pro 30 Tage änderbar** (Admins jederzeit). Liker bekommen +1💎 (1× pro Owner-Paar).
 
 # Verwarnungen ⚠️
 Triggers: Post ohne M1, Schein-Engagement, Admin-Verwarnung, Superlink-Engagement-Verstoß.
 Eskalation: 1+2 → kurze DM · 3 → Aufklärungs-DM · 4 → "Letzte Chance"-DM · 5 → 🚫 permanenter Auto-Ban.
 Abbauen: 5 Tage M1 in Folge → 1 Warn weg.
 
-# Link-Regeln
-Erlaubt: nur eigene Insta-Reels · 1 Link/Tag (mehr via Bonus-Link kaufen) · kein Self-Like.
+# Link-Regeln (Posting)
+Erlaubt: nur eigene Instagram-Reels · 1 Link/Tag (Extra via Bonus-Link kaufen) · kein Self-Like.
 Verboten: fremde Reels, Affiliate/Spam, Wiederholungen. Self-Like → temporäre Sperre + XP-Abzug.
 
-# Account-Verwaltung
-- Profilbild: /einstellungen → 📷 Profilbild → upload → crop. Quadrat optimal.
-- Banner: /einstellungen → Banner. Querformat 3:1.
-- Bio: /einstellungen → Bio (max 100 Zeichen).
-- Spitzname: /einstellungen → Spitzname (max 30 Zeichen).
-- Instagram-Handle: /einstellungen → Instagram → Handle ohne @.
-- Email setzen/ändern: /einstellungen/account. Mit gesetztem PW: erst "Änderung anfragen" → Bestätigungs-Mail → 30 Min Edit-Window.
-- Passwort: /set-password oder /einstellungen/account. Min. 6 Zeichen.
-- Ausloggen: /einstellungen/sicherheit → 🚪 Ausloggen oder direkt /logout.
+# Account-Verwaltung (genaue Wege)
+- Profilbild ändern: /einstellungen → 📷 Profilbild → Upload → Crop → speichern. Quadrat optimal.
+- Banner ändern: /einstellungen → Banner-Bereich. Querformat 3:1 ideal.
+- Bio ändern: /einstellungen → Bio-Feld (max 100 Zeichen) → speichern.
+- Spitzname ändern: /einstellungen → Spitzname (max 30 Zeichen). Zeigt sich in Ranking + Profil.
+- Instagram-Handle: /einstellungen → Instagram-Feld → Handle ohne @ → speichern.
+- Email setzen/ändern: /einstellungen/account. Bei gesetztem Passwort: erst "Änderung anfragen" → Bestätigungs-Mail → 30 Min Edit-Window.
+- Passwort setzen/ändern: /set-password ODER /einstellungen/account. Min. 6 Zeichen.
+- Ausloggen: /einstellungen/sicherheit → 🚪 Ausloggen ODER direkt /logout.
 - Account löschen: /einstellungen → ganz unten 🗑️ Account dauerhaft löschen → "LÖSCHEN" tippen. Nicht umkehrbar (außer Admin-Restore in 50 Tagen). DSGVO Art. 17.
 - User blockieren: User-Profil → 3-Punkte-Menü → 🚫 Blockieren. Verwalten: /einstellungen/privacy.
-- Push-Notifications: /einstellungen/notifications → "Push aktivieren" → Browser-Berechtigung.
-- Sub-Account: Profil → Account-Switcher oben → + Sub-Account.
-- App installieren: iPhone/Safari: Teilen → "Zum Home-Bildschirm". Android/Chrome: Menü → "App installieren". Oder /download-app (APK).
-- Dark Mode: 🌙 oben rechts in Topbar.
+- Push-Notifications: /einstellungen/notifications → "Push aktivieren" → Browser-Berechtigung "Erlauben".
+- Sub-Account: Profil → Account-Switcher (oben) → + Sub-Account. Eigene XP/Diamanten, gleicher Telegram-Account.
+- App installieren (PWA): iPhone/Safari: Teilen → "Zum Home-Bildschirm". Android/Chrome: Menü (3 Punkte) → "App installieren". Oder /download-app (APK).
+- Dark Mode: 🌙 Button oben rechts in der Topbar.
 
-# Posting
-- Normal: /feed → + → 📌 Link posten → Insta-Reel-URL. +5 XP + 8h Pin im Heute-Feed.
-- Superlink: /feed → + → ⚡ Superlink.
-- Kollab: /feed → + → 🤝 Kollab (nach Partner-Bestätigung).
-- Diamantlink: /feed → + → 💎 Diamantlink (30💎, 3 Tage Top).
+# Posting (Wege)
+- Normaler Link: /feed → + → 📌 Link posten → Insta-Reel-URL. +5 XP + 8h Top-Pin im Heute-Feed.
+- Superlink: /feed → + → ⚡ Superlink. 1/Woche (Mo–Sa), Elite+ 2/Woche.
+- Kollab-Link: /feed → + → 🤝 Kollab (nach Partner-Bestätigung). 1×/Woche pro Paar.
+- Diamantlink: /feed → + → 💎 Diamantlink (kostet 30💎, 3 Tage Top im Feed).
 
 # Daily-Bonus 🎁
-1× pro Tag via /daily. Zufällig 10-29 XP.
+**KEIN eigener Pfad!** Button "Abholen" direkt auf /profil oben. 1×/Tag, zufällig 10–20 XP.
 
 # Shop 🛍
-/diamanten → Banner-Designs, Avatar-Rings (animiert), Trophy-Items, Superlink-Credits, Extra-Link-Slot.
+**Pfad: /explore?tab=shop** ODER /diamanten. Items kaufbar mit 💎: Banner-Designs · Avatar-Rings (animiert) · Trophy-Items · Superlink-Credits · Extra-Link-Slot.
 
-# Was du NICHT darfst
+# Wenn jemand fragt zu Themen die NICHT hier dokumentiert sind
+Antworte EHRLICH: "Das weiß ich nicht genau — frag den Admin: <a href='/nachrichten/creatorboost' style='color:#a78bfa;font-weight:700'>→ DM an CreatorBoost</a>"
+Beispiele für Themen die du NICHT erfinden darfst: technische Bugs, Konto-Auszahlungen, Streit zwischen Usern, Inhalte anderer User, Wachstums-Strategie für spezifische Nischen, Telegram-Bot-Befehle (gibt's, aber andere App).
+
+# Was du NICHT machst
 - Keine XP/Diamanten manuell vergeben (nur Admin).
 - Keine User bannen/verwarnen (nur Admin).
 - Keine Bug-Fixes versprechen — verweise auf Admin-DM.
 - Keine fremden User-Daten preisgeben.
-- Keine Wachstums-Garantien.
+- Keine Wachstums-Garantien geben.
+- NIEMALS einen Pfad/Feature/Betrag erfinden den du nicht oben siehst!
 
 # Ton
-Locker, du-Form, hilfsbereit, sparsam mit Emoji. Bei Frust: empathisch ("Ärgerlich! Lass uns das fixen…").`;
+Locker, du-Form, hilfsbereit, sparsam mit Emoji. Bei Frust: empathisch ("Ärgerlich! Lass uns das fixen…"). Nicht übertrieben höflich, nicht roboterhaft.`;
 
 function geminiCall(model, payload) {
     return new Promise((resolve, reject) => {
@@ -9574,15 +9609,15 @@ const CB_HELP = {
   '_data_warns': { q:'⚠️ Meine Verwarnungen?', a:'<i>(Lade…)</i>', next:['data','_back'], lookup:'warns' },
   '_data_events': { q:'🚀 Laufende Events?', a:'<i>(Lade…)</i>', next:['data','_back'], lookup:'events' },
   'm': { q:'🎯 Missionen (M1/M2/M3)', a:'Auswertung täglich 12:00 (Berlin):<br><br><b>M1 — Daily Engagement</b><br>5 Links liken (+ auf Insta kommentieren) → <b>+5 XP</b><br><br><b>M2 — Solidarisch</b><br>80%+ aller heute geposteten Links liken → <b>+5 XP</b><br><br><b>M3 — Champion</b><br>ALLE heute geposteten Links liken (max 30) → <b>+5 XP + 💎 1 Diamant</b><br><br><b>Wochen-Bonus</b> bei 7 Tagen in Folge:<br>• W-M1: <b>+10 XP</b><br>• W-M2: <b>+15 XP + 💎 1</b><br>• W-M3: <b>+20 XP + 💎 2</b><br><br>📌 <b>Visit-before-Like:</b> erst Insta-Reel öffnen, dort liken + 2-Wort-Kommentar — DANN in App liken.', next:['xp','warn','_back'] },
-  'xp': { q:'⚡ XP-System', a:'<b>Quellen (echte Werte):</b><br><ul><li>👍 <b>Like:</b> +5 XP pro Like (Mission-Pflicht: 5 Links/Tag)</li><li>📌 <b>Post:</b> +5 XP (1 Link/Tag, Bonus-Links optional)</li><li>🎯 <b>Daily Missionen M1+M2+M3:</b> max +15 XP + 1💎</li><li>🏆 <b>Wochen-Missionen:</b> max +45 XP + 3💎</li><li>🎁 <b>Daily Bonus</b> (/daily): 10-29 XP zufällig</li><li>🌟 <b>First-Post Newcomer:</b> +20 XP</li><li>⭐ <b>Event-Multiplier</b> wenn aktiv (z.B. +100%)</li></ul><b>Badges/Rollen (XP-Schwellen):</b><br>🆕 New: 0-49 · 📘 Anfänger: 50-499 · ⬆️ Aufsteiger: 500-999 · 🏅 Erfahrener: 1000-4999 · 👑 Elite: 5000-9999 · 🌟 Elite+: 10000+', next:['m','diamond','_back'] },
-  'diamond': { q:'💎 Diamanten', a:'<b>Earn:</b><br><ul><li>🎯 <b>M3 daily:</b> +1💎</li><li>🏆 <b>Wochen-M2:</b> +1💎  ·  <b>Wochen-M3:</b> +2💎</li><li>📌 <b>Pinned-Post engagieren:</b> +1💎 (1× pro Owner)</li><li>💎 <b>Diamantlink liken:</b> +3💎</li><li>🎰 <b>Roulette/Gewinnspiel</b></li><li>📅 <b>Diamond-Events</b> (Live-Multiplier)</li></ul><b>Ausgeben:</b><br><ul><li>💎 <b>Diamantlink posten:</b> 30💎 → 3 Tage Top im Feed</li><li>⭐ <b>Superlink-Slot:</b> 10💎 (Extra-Slot kaufen)</li><li>🛍 <b>Shop-Items</b> (Banner, Rings, Trophys)</li></ul>', next:['superlink','shop','_back'] },
+  'xp': { q:'⚡ XP-System', a:'<b>Quellen (echte Werte):</b><br><ul><li>👍 <b>Like:</b> +5 XP pro Like (Mission-Pflicht: 5 Links/Tag)</li><li>📌 <b>Post:</b> +5 XP (1 Link/Tag, Bonus-Links optional)</li><li>🎯 <b>Daily Missionen M1+M2+M3:</b> max +15 XP + 1💎</li><li>🏆 <b>Wochen-Missionen:</b> max +45 XP + 3💎</li><li>🎁 <b>Daily Bonus</b> (Button auf <a href="/profil" style="color:#a78bfa;font-weight:700">/profil</a>): 10–20 XP zufällig</li><li>🌟 <b>First-Post Newcomer:</b> +20 XP</li><li>⭐ <b>Event-Multiplier</b> wenn aktiv (z.B. +100%)</li></ul><b>Badges/Rollen (XP-Schwellen):</b><br>🆕 New: 0-49 · 📘 Anfänger: 50-499 · ⬆️ Aufsteiger: 500-999 · 🏅 Erfahrener: 1000-4999 · 👑 Elite: 5000-9999 · 🌟 Elite+: 10000+', next:['m','diamond','_back'] },
+  'diamond': { q:'💎 Diamanten', a:'<b>Earn:</b><br><ul><li>🎯 <b>M3 daily:</b> +1💎</li><li>🏆 <b>Wochen-M2:</b> +1💎  ·  <b>Wochen-M3:</b> +2💎</li><li>📌 <b>Pinned-Post engagieren:</b> +1💎 (1× pro Owner)</li><li>💎 <b>Diamantlink liken:</b> +3💎</li><li>🎰 <b>Glücksrad</b> in <a href="/explore?tab=roulette" style="color:#a78bfa;font-weight:700">/explore?tab=roulette</a> (1×/Tag)</li><li>🎁 <b>Wochen-Gewinnspiel</b> in <a href="/explore?tab=gewinnspiel" style="color:#a78bfa;font-weight:700">/explore?tab=gewinnspiel</a></li><li>📅 <b>Diamond-Events</b> (Live-Multiplier)</li></ul><b>Ausgeben:</b><br><ul><li>💎 <b>Diamantlink posten:</b> 30💎 → 3 Tage Top im Feed</li><li>⭐ <b>Superlink-Slot:</b> 10💎 (Extra-Slot kaufen)</li><li>🛍 <b>Shop-Items</b> in <a href="/explore?tab=shop" style="color:#a78bfa;font-weight:700">/explore?tab=shop</a> oder <a href="/diamanten" style="color:#a78bfa;font-weight:700">/diamanten</a></li></ul>', next:['superlink','shop','_back'] },
   'superlink': { q:'⚡ Superlinks', a:'Premium-Post für die ganze Woche besonders sichtbar in der Telegram-Gruppe.<br><br><b>Limit:</b> 1×/Woche (Mo-Sa) — <b>🌟 Elite+</b> darf 2×<br><b>Pflicht-Engagement aller Member:</b> LIKEN + KOMMENT + TEILEN + SPEICHERN auf Instagram<br><b>Wer nicht engaged:</b> Sonntag 23:59 Uhr <b>−50 XP + Verwarnung</b><br><br>Posten: Feed → <b>+</b> → <b>⚡ Superlink</b> → URL + Caption<br><br>Auch käuflich: 10💎 = 1 Extra-Slot.', next:['diamond','m','_back'] },
   'kollab': { q:'🤝 Kollab-Posts', a:'<b>Doppel-Posts mit Partner:</b><br><ol><li>Auf Partner-Profil "🤝 Kollab anfragen"</li><li>Partner bestätigt</li><li>Einer postet → Feed → <b>+</b> → <b>🤝 Kollab</b></li></ol><b>Regeln:</b><br>• 1× pro Woche pro Paar<br>• Sichtbare Zusammenarbeit Pflicht im Reel (beide Logos/Handles)<br>• Engagement Pflicht: LIKEN + KOMMENT + SPEICHERN + TEILEN auf Insta<br><br>Jeder Liker bekommt <b>+1💎</b>.', next:['diamond','_back'] },
   'pinned': { q:'📌 Pinned Reel', a:'Dein Lieblings-Reel auf deiner Creator-Karte in Explore.<br><br><b>Setzen:</b> /einstellungen → 📌 Pinned Reel Link → Insta-URL → speichern<br><br>⚠️ Nur 1× pro 30 Tage änderbar (Admins jederzeit).<br><br>Liker deines Pinned-Posts bekommen <b>+1💎</b> (1× pro Owner-Paar).', next:['superlink','_back'] },
   'warn': { q:'⚠️ Verwarnungen', a:'<b>Triggers:</b><br><ul><li>Post ohne M1 zu erfüllen</li><li>Schein-Engagement (Like ohne echtes Engagement)</li><li>Manuelle Admin-Verwarnung</li></ul><b>Eskalation:</b><br>• 1+2 → kurze DM<br>• <b>3</b> → ausführliche DM mit Aufklärung<br>• <b>4</b> → "letzte Chance"-DM<br>• <b>5</b> → 🚫 <b>permanenter Auto-Ban</b><br><br><b>Abbauen:</b> 5 Tage M1 in Folge → 1 Warn weg.', next:['m','rules','_back'] },
   'links': { q:'🔗 Link-Regeln', a:'<b>Erlaubt:</b><br>• Instagram-Reels (eigene)<br>• 1 Link pro Tag (mehr via Bonus-Link)<br>• Kein Self-Like<br><br><b>Nicht erlaubt:</b><br>• Fremde Reels<br>• Affiliate/Spam-Links<br>• Wiederholungen<br>• Posts ohne sichtbares Content<br><br>Wer Self-Liked: temporäre Sperre + XP-Abzug.', next:['m','warn','_back'] },
   'respekt': { q:'🤝 Respekt & Umgang', a:'<b>Im Chat:</b><br>• Keine Beleidigungen / Hate / Diskriminierung<br>• Keine Werbung / Spam<br>• Konstruktive Kritik ja, persönliche Attacken nein<br><br><b>In Kommentaren auf Insta:</b><br>• 2-Wort-Minimum bei Mission-Kommentaren<br>• Kein Copy-Paste-Spam<br><br>Verstöße = Verwarnung. Wiederholung = Ban.', next:['warn','support','_back'] },
-  'shop': { q:'🛍 Shop & Items', a:'Mit deinen Diamanten kannst du im Shop einkaufen:<br><ul><li>🎨 <b>Banner-Designs</b> für dein Profil</li><li>💍 <b>Avatar-Rings</b> (animiert)</li><li>🏆 <b>Trophy-Items</b> für dein Profil</li><li>⚡ <b>Superlink-Credits</b> (Extra-Slot)</li><li>🔗 <b>Extra-Link-Slot</b> (Post über Daily-Limit)</li></ul>Öffne: <a href="/diamanten" style="color:#a78bfa;font-weight:700">/diamanten</a>', next:['diamond','_back'] },
+  'shop': { q:'🛍 Shop & Items', a:'Mit deinen Diamanten kannst du im Shop einkaufen:<br><ul><li>🎨 <b>Banner-Designs</b> für dein Profil</li><li>💍 <b>Avatar-Rings</b> (animiert)</li><li>🏆 <b>Trophy-Items</b> für dein Profil</li><li>⚡ <b>Superlink-Credits</b> (Extra-Slot)</li><li>🔗 <b>Extra-Link-Slot</b> (Post über Daily-Limit)</li></ul>Öffne: <a href="/explore?tab=shop" style="color:#a78bfa;font-weight:700">/explore?tab=shop</a> oder <a href="/diamanten" style="color:#a78bfa;font-weight:700">/diamanten</a>', next:['diamond','_back'] },
   'start24h': { q:'⏰ Mein Plan für die ersten 24h', a:'1. <b>Profil komplett:</b> Pic, Spitzname, Insta, Bio<br>2. <b>Ersten Reel posten</b> (max 1/Tag)<br>3. <b>5 Reels liken</b> auf Insta + App (M1 ✅)<br>4. <b>Daily Bonus</b> nicht vergessen (+10-30 XP)<br>5. <b>Pinned Reel</b> in Einstellungen setzen<br><br>Bei 5/5 → Levelaufstieg garantiert!', next:['m','xp','_back'] },
   'support': { q:'💬 Direkter Support', a:'Geht\\'s mit mir nicht weiter?<br><br>📨 <a href="/nachrichten/creatorboost" style="color:#a78bfa;font-weight:700">→ Direkt mit CreatorBoost chatten</a><br>(das bin ich, aber als richtige DM)<br><br>Stell hier unten deine Frage rein — wenn ich sie nicht selbst beantworten kann, leite ich sie sofort an den Admin weiter. Antwort kommt zurück als DM.', next:['_back'] },
   '_back': { q:'← Zurück zur Übersicht', a:'Was willst du wissen?', next:['_start','rules','data','support','_more'] },
