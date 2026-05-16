@@ -3139,9 +3139,12 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
 </style>
 
 ${isOwn ? (function(){
-  // Account-Switcher (nur auf eigenem Profil sichtbar)
-  const _curSessUid = String(session?.uid || uid);
-  const _activeUid = String(session?.activeUid || uid);
+  // Account-Switcher (nur auf eigenem Profil sichtbar).
+  // BUGFIX: session ist nicht in profileCard()-scope verfügbar — ableiten aus uid + u.parent_uid.
+  // - uid = die UID des Users, dessen Profil gerade angezeigt wird (= active UID wenn isOwn).
+  // - parent UID = u.parent_uid wenn u ein Sub ist, sonst uid selbst.
+  const _curSessUid = String(u.parent_uid || uid);
+  const _activeUid = String(uid);
   const _allAccs = [{uid: _curSessUid, isParent: true}];
   for (const [sid, su] of Object.entries(d.users||{})) {
     if (String(su.parent_uid||'') === _curSessUid && sid !== _curSessUid) {
