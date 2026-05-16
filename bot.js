@@ -3118,12 +3118,17 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
 .ipf-trophy-row{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 4px;padding:10px 12px;background:linear-gradient(135deg,rgba(245,158,11,.06),rgba(167,139,250,.06));border:1px solid rgba(245,158,11,.18);border-radius:12px}
 .ipf-trophy{font-size:18px;line-height:1}
 /* Account-Switcher Dropdown (Insta-Style) */
-.ipf-switcher-wrap{position:relative;padding:10px 18px 4px;background:var(--bg)}
-.ipf-switcher{display:inline-flex;align-items:center;gap:8px;background:transparent;border:none;color:var(--text);font-size:16px;font-weight:700;cursor:pointer;padding:6px 10px;border-radius:10px;font-family:inherit}
-.ipf-switcher:hover{background:var(--bg3)}
-.ipf-switcher-arrow{transition:transform .2s}
+.ipf-switcher-wrap{position:relative;margin:12px 16px 0;background:var(--bg)}
+.ipf-switcher{display:flex;align-items:center;gap:12px;width:100%;background:linear-gradient(135deg,rgba(167,139,250,.08),rgba(124,58,237,.04));border:1.5px solid rgba(167,139,250,.30);color:var(--text);font-size:14px;font-weight:600;cursor:pointer;padding:10px 14px;border-radius:14px;font-family:inherit;transition:all .15s;box-shadow:0 2px 8px rgba(124,58,237,.06)}
+.ipf-switcher:hover{background:linear-gradient(135deg,rgba(167,139,250,.14),rgba(124,58,237,.08));border-color:rgba(167,139,250,.55);transform:translateY(-1px)}
+.ipf-switcher-mini-avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#a78bfa,#7c3aed);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;overflow:hidden;position:relative;flex-shrink:0;border:2px solid var(--bg3)}
+.ipf-switcher-mini-avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.ipf-switcher-label{flex:1;text-align:left;min-width:0}
+.ipf-switcher-label-top{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;font-weight:700;margin-bottom:1px}
+.ipf-switcher-label-name{font-size:14px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ipf-switcher-arrow{transition:transform .2s;color:#a78bfa;font-size:14px;flex-shrink:0}
 .ipf-switcher.open .ipf-switcher-arrow{transform:rotate(180deg)}
-.ipf-switcher-menu{position:absolute;top:calc(100% + 4px);left:18px;min-width:240px;background:var(--bg3);border:1px solid var(--border2);border-radius:14px;box-shadow:0 12px 32px rgba(0,0,0,.18);overflow:hidden;z-index:50;display:none;animation:ipfDrop .18s ease}
+.ipf-switcher-menu{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--bg3);border:1.5px solid rgba(167,139,250,.30);border-radius:14px;box-shadow:0 12px 32px rgba(0,0,0,.18);overflow:hidden;z-index:50;display:none;animation:ipfDrop .18s ease}
 .ipf-switcher-menu.open{display:block}
 @keyframes ipfDrop{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
 .ipf-switcher-item{display:flex;align-items:center;gap:11px;padding:11px 14px;text-decoration:none;color:var(--text);cursor:pointer;border:none;background:none;width:100%;font-family:inherit;font-size:14px;text-align:left;transition:background .12s}
@@ -3154,9 +3159,17 @@ ${isOwn ? (function(){
   if (_allAccs.length < 2) return ''; // kein Switcher wenn nur Parent
   const _curU = d.users?.[_activeUid] || u;
   const _curName = htmlEsc(_curU.spitzname || _curU.name || 'User');
+  const _curPic = ladeBild(_activeUid, 'profilepic') ? '/appbild/' + _activeUid + '/profilepic' : (_curU.instagram ? 'https://unavatar.io/instagram/' + encodeURIComponent(_curU.instagram) : '');
+  const _curInit = htmlEsc((_curU.spitzname || _curU.name || '?').slice(0,1).toUpperCase());
+  const _subCount = _allAccs.length - 1;
   return '<div class="ipf-switcher-wrap">' +
     '<button class="ipf-switcher" onclick="ipfToggleSwitcher(this)" id="ipf-sw-btn">' +
-      htmlEsc(_curName) + ' <span class="ipf-switcher-arrow">▼</span>' +
+      '<div class="ipf-switcher-mini-avatar">' + (_curPic ? '<img src="' + _curPic + '" alt="" loading="lazy">' : _curInit) + '</div>' +
+      '<div class="ipf-switcher-label">' +
+        '<div class="ipf-switcher-label-top">🔄 Account-Switcher · ' + _subCount + ' Sub' + (_subCount===1?'':'s') + '</div>' +
+        '<div class="ipf-switcher-label-name">' + _curName + '</div>' +
+      '</div>' +
+      '<span class="ipf-switcher-arrow">▼</span>' +
     '</button>' +
     '<div class="ipf-switcher-menu" id="ipf-sw-menu">' +
       _allAccs.map(a => {
@@ -3165,7 +3178,7 @@ ${isOwn ? (function(){
         const aInit = htmlEsc((au.spitzname || au.name || '?').slice(0,1).toUpperCase());
         const aPic = ladeBild(a.uid, 'profilepic') ? '/appbild/' + a.uid + '/profilepic' : (au.instagram ? 'https://unavatar.io/instagram/' + encodeURIComponent(au.instagram) : '');
         const isActive = a.uid === _activeUid;
-        return '<button class="ipf-switcher-item' + (isActive?' active':'') + '" onclick="ipfSwitchAcc(' + JSON.stringify(a.uid) + ')">' +
+        return '<button class="ipf-switcher-item' + (isActive?' active':'') + '" onclick="ipfSwitchAcc(&quot;'+htmlEsc(a.uid)+'&quot;)">' +
           '<div class="ipf-switcher-item-avatar">' + (aPic ? '<img src="'+aPic+'" alt="">' : aInit) + '</div>' +
           '<div class="ipf-switcher-item-name">' + aName + (a.isParent?'':' <span style="font-size:11px;color:var(--muted);font-weight:500"> · Sub</span>') + '</div>' +
           (isActive ? '<span class="ipf-switcher-item-check">✓</span>' : '') +
@@ -3255,6 +3268,8 @@ async function ipfSwitchAcc(targetUid){
   } catch(e) { alert('Netzwerk-Fehler'); }
 }
 function ipfAddSub(){
+  // Wenn das existierende modal vorhanden ist (auf /profil), nutze das
+  if (typeof openCreateSubModal === 'function') { openCreateSubModal(); return; }
   const name = prompt('Name für neuen Sub-Account:');
   if (!name) return;
   fetch('/api/sub-account-new', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({name})})
@@ -3326,11 +3341,17 @@ ${(()=>{
   const weekKey = (() => { const n=new Date(); const d=n.getDay(); const mon=new Date(n); mon.setDate(n.getDate()-(d===0?6:d-1)); return mon.toISOString().slice(0,10); })();
   const mySuperlink = Object.values(d.superlinks||{}).find(s=>s.uid===uid&&s.week===weekKey);
   if (!mySuperlink) return '';
-  return `<div style="margin:0 16px 16px;background:var(--bg3);border:1px solid rgba(167,139,250,.3);border-radius:16px;padding:14px">
-  <div style="font-size:11px;font-weight:700;color:#a78bfa;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">⭐ Superlink dieser Woche</div>
-  <a href="${htmlEsc(safeUrl(mySuperlink.url))}" target="_blank" rel="noopener noreferrer" style="font-size:13px;color:#4dabf7;word-break:break-all;display:block;margin-bottom:6px;text-decoration:none">${htmlEsc(String(mySuperlink.url||'').replace('https://www.instagram.com/','ig.com/').slice(0,50))}</a>
-  ${mySuperlink.caption?`<div style="font-size:12px;color:var(--muted)">${htmlEsc(String(mySuperlink.caption).slice(0,80))}</div>`:''}
-  <div style="font-size:11px;color:var(--muted);margin-top:6px">❤️ ${mySuperlink.likes?.length||0} Likes</div>
+  return `<div style="margin:10px 16px;padding:12px 14px;background:linear-gradient(135deg,rgba(167,139,250,.08),rgba(124,58,237,.04));border:1px solid rgba(167,139,250,.25);border-radius:14px">
+  <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:${mySuperlink.caption?'6':'0'}px">
+    <div style="font-size:22px;flex-shrink:0">⭐</div>
+    <div style="flex:1;min-width:0">
+      <div style="font-size:11px;font-weight:700;color:#a78bfa;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px">Superlink dieser Woche</div>
+      <a href="${htmlEsc(safeUrl(mySuperlink.url))}" target="_blank" rel="noopener noreferrer" style="font-size:12.5px;color:#4dabf7;word-break:break-all;text-decoration:none;font-weight:500;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${htmlEsc(String(mySuperlink.url||'').replace(/^https?:\/\//,'').slice(0,55))}</a>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px">❤️ ${mySuperlink.likes?.length||0} Likes</div>
+    </div>
+    <a href="${htmlEsc(safeUrl(mySuperlink.url))}" target="_blank" rel="noopener noreferrer" style="padding:6px 12px;background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;border-radius:8px;font-size:11.5px;font-weight:700;text-decoration:none;white-space:nowrap;flex-shrink:0">→ Öffnen</a>
+  </div>
+  ${mySuperlink.caption?`<div style="font-size:12px;color:var(--muted);margin-top:6px;padding-left:32px">${htmlEsc(String(mySuperlink.caption).slice(0,80))}</div>`:''}
 </div>`;
 })()}`;
 }
@@ -16304,38 +16325,7 @@ ${profileCard(myUid, myUser, d, true, lang, adminIds, myBannerData, myPicData)}
   </div>
   <button id="daily-xp-btn" onclick="claimDailyXP()" style="flex-shrink:0;padding:9px 16px;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(34,197,94,0.3);transition:transform .12s">Abholen</button>
 </div>
-<div class="acc-switcher" style="margin:8px 12px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:6px">
-  <div class="acc-row${isParentActive?' active':''}" onclick="switchAcc('${parentUid}')" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;cursor:pointer;transition:background 0.15s">
-    <div style="width:36px;height:36px;border-radius:50%;overflow:hidden;background:linear-gradient(135deg,#a78bfa,#7c3aed);display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;flex-shrink:0">
-      ${parentPic ? `<img src="/appbild/${parentUid}/profilepic" style="width:100%;height:100%;object-fit:cover" alt="">` : (parentUser.name||'?').slice(0,1).toUpperCase()}
-    </div>
-    <div style="flex:1;min-width:0">
-      <div style="font-size:13.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${(parentUser.spitzname||parentUser.name||'Hauptaccount').replace(/[<>"]/g,'')}</div>
-      <div style="font-size:11px;color:var(--muted)">Hauptaccount · ${parentUser.xp||0} XP</div>
-    </div>
-    ${isParentActive?'<div style="font-size:10px;font-weight:700;color:#22c55e;background:rgba(34,197,94,0.15);border-radius:999px;padding:3px 8px">aktiv</div>':'<div style="font-size:18px;color:var(--muted)">→</div>'}
-  </div>
-  ${allMySubs.map(({ uid: sid, user: sUser }) => {
-    const isActive = String(myUid) === sid;
-    const sPic = ladeBild(sid, 'profilepic');
-    return `
-  <div class="acc-row${isActive?' active':''}" onclick="switchAcc('${sid}')" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;cursor:pointer;transition:background 0.15s;margin-top:4px">
-    <div style="width:36px;height:36px;border-radius:50%;overflow:hidden;background:linear-gradient(135deg,#fb923c,#f59e0b);display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;flex-shrink:0">
-      ${sPic ? `<img src="/appbild/${sid}/profilepic" style="width:100%;height:100%;object-fit:cover" alt="">` : (sUser.name||'?').slice(0,1).toUpperCase()}
-    </div>
-    <div style="flex:1;min-width:0">
-      <div style="font-size:13.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${(sUser.spitzname||sUser.name||'Sub').replace(/[<>"]/g,'')}</div>
-      <div style="font-size:11px;color:var(--muted)">Sub-Account · ${sUser.xp||0} XP</div>
-    </div>
-    ${isActive?'<div style="font-size:10px;font-weight:700;color:#22c55e;background:rgba(34,197,94,0.15);border-radius:999px;padding:3px 8px">aktiv</div>':'<div style="font-size:18px;color:var(--muted)">→</div>'}
-  </div>`;
-  }).join('')}
-  ${isParentActive && allMySubs.length ? `<div style="display:flex;justify-content:flex-end;padding:4px 10px 2px"><button onclick="deleteSubAcc()" style="background:none;border:none;color:#ef4444;font-size:11px;cursor:pointer">Sub-Account löschen</button></div>` : ''}
-  ${_myIsAdmin || !allMySubs.length ? `
-  <div onclick="openCreateSubModal()" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:10px;margin-top:4px;border-radius:10px;cursor:pointer;border:1.5px dashed rgba(167,139,250,0.4);color:#a78bfa;font-size:13px;font-weight:600">
-    <span style="font-size:18px;line-height:1">＋</span> ${allMySubs.length ? 'Weiteren Sub erstellen' : 'Neuen Account erstellen'}
-  </div>` : ''}
-</div>
+<!-- old .acc-switcher block removed — moved to top of profileCard as ipf-switcher -->
 <div id="create-sub-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(8px)">
   <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:18px;padding:20px;width:100%;max-width:340px">
     <div style="font-size:16px;font-weight:700;margin-bottom:6px">Neuen Account erstellen</div>
