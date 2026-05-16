@@ -4717,9 +4717,16 @@ try { fetch('/api/track-funnel',{method:'POST',headers:{'Content-Type':'applicat
         }
         // Account anlegen (mit Age-Gate + Terms-Akzeptanz für DSGVO/Play-Store-Audit)
         const created = await postBot('/create-email-user-api', { email, password, ageConfirmedAt: Date.now(), termsAcceptedAt: Date.now(), termsVersion: '2026-05' });
-        if (!created || !created.ok || !created.uid) {
-            postBot('/log-email-login', { email, success: false, method: 'signup-fail', uid: '', ip: _ip, ua: _ua }).catch(()=>{});
-            return json({ok:false, error: (created && created.error) || 'Account konnte nicht erstellt werden'}, 500);
+        if (!created) {
+            // postBot returnt null bei Mainbot-Timeout/Crash/Network-Error → User klare Meldung geben
+            console.error('[signup-fail] Mainbot unreachable for email:', email, 'ip:', _ip);
+            postBot('/log-email-login', { email, success: false, method: 'signup-mainbot-down', uid: '', ip: _ip, ua: _ua }).catch(()=>{});
+            return json({ok:false, error:'⚠️ Server gerade nicht erreichbar. Bitte in 1 Minute nochmal versuchen.'}, 503);
+        }
+        if (!created.ok || !created.uid) {
+            console.error('[signup-fail] Mainbot rejected:', email, 'error:', created.error, 'full:', JSON.stringify(created));
+            postBot('/log-email-login', { email, success: false, method: 'signup-fail', uid: '', ip: _ip, ua: _ua, err: created.error||'no-error' }).catch(()=>{});
+            return json({ok:false, error: created.error || 'Account-Erstellung fehlgeschlagen — bitte Support kontaktieren falls das mehrfach passiert.'}, 500);
         }
         postBot('/log-email-login', { email, success: true, method: 'signup', uid: String(created.uid), ip: _ip, ua: _ua }).catch(()=>{});
         // Funnel-Event: Signup abgeschlossen
