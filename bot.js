@@ -8835,22 +8835,25 @@ async function submitSuperLink(){
         const liked = !!p.liked;
         const aName = esc(p.authorA?.name||'User');
         const bName = esc(p.authorB?.name||'User');
-        html += '<div style="margin:0 16px 14px;padding:14px;background:var(--bg3);border:1px solid var(--border2);border-radius:14px">' +
+        html += '<div style="position:relative;margin:0 16px 14px;background:linear-gradient(180deg,var(--bg3),var(--bg2));border:1.5px solid rgba(236,72,153,0.40);border-radius:16px;overflow:hidden;box-shadow:0 4px 20px rgba(236,72,153,0.10)">' +
+          '<div style="padding:14px">' +
           '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">' +
-            '<div style="font-size:11px;color:#ec4899;font-weight:800;letter-spacing:1px;text-transform:uppercase">🤝 Kollab-Post</div>' +
+            '<span style="font-size:10.5px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#ec4899;background:rgba(236,72,153,0.14);padding:4px 10px;border-radius:99px;border:1px solid rgba(236,72,153,0.35)">🤝 KOLLAB · +1 💎</span>' +
             '<div style="flex:1"></div>' +
             '<div style="font-size:11px;color:var(--muted)">'+new Date(p.createdAt).toLocaleDateString('de-DE',{day:'2-digit',month:'short'})+'</div>' +
           '</div>' +
-          '<div style="font-size:13px;font-weight:700;margin-bottom:6px"><a href="/profil/'+esc(p.uid)+'" style="color:var(--text);text-decoration:none">'+aName+'</a> × <a href="/profil/'+esc(p.partnerUid)+'" style="color:var(--text);text-decoration:none">'+bName+'</a></div>' +
+          '<div style="font-size:14px;font-weight:700;margin-bottom:6px"><a href="/profil/'+esc(p.uid)+'" style="color:var(--text);text-decoration:none">'+aName+'</a> <span style="color:#ec4899">×</span> <a href="/profil/'+esc(p.partnerUid)+'" style="color:var(--text);text-decoration:none">'+bName+'</a></div>' +
           (p.caption ? '<div style="font-size:13px;color:var(--text);line-height:1.5;margin:6px 0 10px">'+esc(p.caption)+'</div>' : '') +
-          '<a href="'+esc(p.url)+'" target="_blank" rel="noopener noreferrer" onclick="window._kvisit_'+p.id+'=Date.now()" style="display:block;padding:11px 13px;background:rgba(236,72,153,0.10);border:1px solid rgba(236,72,153,0.30);border-radius:10px;font-size:12.5px;color:#ec4899;font-weight:700;word-break:break-all;text-decoration:none;margin-bottom:10px">🔗 Auf Instagram öffnen</a>' +
+          '<a href="'+esc(p.url)+'" target="_blank" rel="noopener noreferrer" onclick="window._kvisit_'+p.id+'=Date.now()" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:16px;background:linear-gradient(135deg,#ec4899,#a855f7);color:#fff;border-radius:12px;font-size:14.5px;font-weight:800;text-decoration:none;margin-bottom:10px;box-shadow:0 6px 18px rgba(236,72,153,.45);position:relative"><span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900">1</span><span style="color:#fff;font-weight:800">📸 Auf Instagram öffnen</span><span style="font-size:18px;margin-left:4px">→</span></a>' +
+          '<div style="font-size:11px;color:#f59e0b;background:rgba(245,158,11,0.08);border-left:3px solid #f59e0b;border-radius:6px;padding:8px 10px;margin-bottom:10px;line-height:1.5"><b>⚠️ Pflicht:</b> LIKEN + KOMMENTIEREN + SPEICHERN + TEILEN auf Instagram.</div>' +
           (isMine
             ? '<div style="padding:10px 12px;background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.35);border-radius:10px;font-size:12px;color:#ef4444;font-weight:700;text-align:center">🚫 Kein Self-Like für Kollaboratoren · Dies ist dein Post</div>'
             : liked
-            ? '<div style="padding:11px;background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.35);border-radius:10px;font-size:13px;color:#22c55e;font-weight:700;text-align:center">✅ Engagiert · +1 💎</div>'
-            : '<button onclick="kollabLike(\\''+p.id+'\\', this)" style="display:block;width:100%;padding:12px;background:linear-gradient(135deg,#ec4899,#a21caf);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer">❤️ Engagiert · +1 💎</button>'
+            ? '<div style="padding:13px;background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.35);border-radius:12px;font-size:13.5px;color:#22c55e;font-weight:800;text-align:center">✅ Engagiert · +1 💎 in deiner Wallet</div>'
+            : '<button onclick="kollabLike(\\''+p.id+'\\', this)" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;background:linear-gradient(135deg,#ec4899,#a21caf);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 0 18px rgba(236,72,153,0.35);position:relative"><span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900">2</span><span>❤️ Engagiert · +1 💎</span></button>'
           ) +
           '<div style="font-size:11px;color:var(--muted);margin-top:8px;text-align:center">'+p.likeCount+' Engagements</div>' +
+          '</div>' +
         '</div>';
       }
     }
@@ -8927,10 +8930,13 @@ async function submitSuperLink(){
     return '<div class="diamond-card" data-post-id="'+esc(p.id)+'">' +
       '<div class="diamond-card-glow"></div>' +
       '<div class="diamond-card-body">' +
-        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">' +
-          '<span style="font-size:10.5px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#06b6d4;background:rgba(6,182,212,0.12);padding:4px 10px;border-radius:99px;border:1px solid rgba(6,182,212,0.30)">💎 DIAMANTLINK · +'+(p.reward||3)+' 💎</span>' +
-          '<div style="flex:1"></div>' +
-          '<div style="font-size:11px;color:#06b6d4;font-weight:700">⏱ '+fmtRemaining(remaining)+'</div>' +
+        '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;padding:10px 14px;background:linear-gradient(135deg,rgba(6,182,212,0.18),rgba(167,139,250,0.12));border:1.5px solid rgba(6,182,212,0.45);border-radius:14px;box-shadow:0 0 16px rgba(6,182,212,0.25)">' +
+          '<span style="font-size:24px;line-height:1;filter:drop-shadow(0 2px 6px rgba(6,182,212,.5))">💎</span>' +
+          '<div style="flex:1;min-width:0">' +
+            '<div style="font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#06b6d4">DIAMANTLINK · BELOHNUNG</div>' +
+            '<div style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-0.5px;line-height:1.15;margin-top:2px">+'+(p.reward||3)+' 💎 <span style="font-size:11px;color:var(--muted);font-weight:600;letter-spacing:0">für ein echtes Engagement</span></div>' +
+          '</div>' +
+          '<div style="font-size:11px;color:#06b6d4;font-weight:700;text-align:right;flex-shrink:0">⏱<br>'+fmtRemaining(remaining)+'</div>' +
         '</div>' +
         '<div style="font-size:13.5px;font-weight:700"><a href="/profil/'+esc(p.uid)+'" style="color:var(--text);text-decoration:none">'+aName+'</a> '+(aHandle?'<span style="color:#06b6d4;font-weight:500;font-size:12px">'+aHandle+'</span>':'')+'</div>' +
         (p.caption ? '<div style="font-size:13px;color:var(--text);line-height:1.5;margin:6px 0 8px">'+esc(p.caption)+'</div>' : '') +
