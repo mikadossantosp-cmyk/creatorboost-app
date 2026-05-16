@@ -3234,8 +3234,8 @@ ${isOwn ? (function(){
 </div>
 <script>
 function ipfShare(){
-  const url = window.location.origin + '/profil/${uid}';
-  const title = '${(u.spitzname||u.name||'CreatorX User').replace(/'/g,"\\'")}';
+  const url = window.location.origin + '/profil/' + ${JSON.stringify(String(uid))};
+  const title = ${JSON.stringify(String(u.spitzname||u.name||'CreatorX User'))};
   if (navigator.share) { navigator.share({title:title+' · CreatorX', url}).catch(()=>{}); }
   else { navigator.clipboard.writeText(url).then(()=>{const t=document.createElement('div');t.textContent='✅ Link kopiert';t.style.cssText='position:fixed;top:60px;left:50%;transform:translateX(-50%);background:#22c55e;color:#fff;padding:10px 18px;border-radius:10px;font-size:13px;font-weight:700;z-index:9999;box-shadow:0 8px 24px rgba(34,197,94,.4)';document.body.appendChild(t);setTimeout(()=>t.remove(),1800);}).catch(()=>{}); }
 }
@@ -8818,9 +8818,9 @@ p{line-height:1.65;color:var(--muted)}
 '      </div>\n'+
 '    </div>\n'+
 (link.caption?'    <div style="padding:8px 12px;font-size:12px;color:var(--muted);line-height:1.4;border-top:1px solid rgba(255,255,255,.06)">'+String(link.caption).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</div>\n':'')+
-'    <div style="padding:6px 12px 8px;display:flex;align-items:center;gap:6px">\n'+
-'      <div style="font-size:10px;color:var(--muted2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+link.text.replace('https://www.','').replace('https://','').slice(0,50)+'</div>\n'+
-'      <div style="font-size:10px;color:var(--accent);font-weight:700">Ansehen →</div>\n'+
+'    <div style="padding:8px 12px 10px;display:flex;align-items:center;gap:8px">\n'+
+'      <div style="font-size:11px;color:var(--muted2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500">'+htmlEsc(String(link.text||'').replace(/^https?:\/\//,'').slice(0,40))+'</div>\n'+
+'      <a href="'+htmlEsc(safeUrl(link.text||''))+'" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();markLinkVisited(\''+lid1+'\')" style="padding:6px 12px;background:linear-gradient(135deg,#f9a825,#e91e63,#9c27b0);color:#fff;border-radius:8px;font-size:11px;font-weight:700;text-decoration:none;white-space:nowrap;flex-shrink:0;box-shadow:0 2px 8px rgba(233,30,99,.25)">→ Öffnen</a>\n'+
 '    </div>\n'+
 '  </div>\n'+
 // Likes counter + XP badge
@@ -16287,7 +16287,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
         <div class="ins-best-post-rank">${i===0?'🥇':i===1?'🥈':i===2?'🥉':'#'+(i+1)}</div>
         <div class="ins-best-post-info">
           <div class="ins-best-post-url">${htmlEsc(String(p.text||'').replace(/^https?:\/\//,'').slice(0,45))}</div>
-          <div class="ins-best-post-meta">📅 ${fmtRelative(p.timestamp||0)}</div>
+          <div class="ins-best-post-meta">📅 ${(()=>{const t=p.timestamp||0;if(!t)return '–';const d=Date.now()-t;if(d<60000)return 'gerade';if(d<3600000)return Math.floor(d/60000)+' Min';if(d<86400000)return Math.floor(d/3600000)+'h';return Math.floor(d/86400000)+'d';})()}</div>
         </div>
         <div class="ins-best-post-likes">❤️ ${p.likeCount}</div>
         <span class="ins-best-open">→ Öffnen</span>
