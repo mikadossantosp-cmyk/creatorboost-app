@@ -152,20 +152,31 @@ function saveSessions() {
 setInterval(saveSessions, 60000);
 
 // Pending Email-Confirmations laden + speichern
+// Datei enthält BEIDE Maps: pendingEmailConfirms (uid→{token,email,exp})
+// UND emailConfirmTokens (token→{email,uid,exp}). Vor diesem Fix wurde
+// emailConfirmTokens nur im RAM gehalten → Server-Restart = alle Tokens weg
+// = User sah "Link abgelaufen" auch direkt nach Anforderung.
 try {
     if (fs.existsSync(PENDING_CONFIRMS_FILE)) {
         const raw = JSON.parse(fs.readFileSync(PENDING_CONFIRMS_FILE, 'utf8'));
         const now = Date.now();
-        for (const [uid, v] of Object.entries(raw || {})) {
+        const pec = raw && raw.pendingEmailConfirms ? raw.pendingEmailConfirms : raw; // legacy format
+        const ect = raw && raw.emailConfirmTokens ? raw.emailConfirmTokens : {};
+        for (const [uid, v] of Object.entries(pec || {})) {
             if (v && v.exp > now) pendingEmailConfirms.set(String(uid), v);
         }
-        console.log('✅ Pending email-confirms geladen:', pendingEmailConfirms.size);
+        for (const [token, v] of Object.entries(ect || {})) {
+            if (v && v.exp > now) emailConfirmTokens.set(String(token), v);
+        }
+        console.log('✅ Email-Confirms geladen: pendingChange=' + pendingEmailConfirms.size + ' tokens=' + emailConfirmTokens.size);
     }
 } catch(e) { console.error('PendingConfirms load failed:', e.message); }
 function savePendingEmailConfirms() {
-    const obj = {};
-    for (const [k,v] of pendingEmailConfirms.entries()) obj[k] = v;
-    try { fs.writeFileSync(PENDING_CONFIRMS_FILE, JSON.stringify(obj)); } catch(e) { console.error('PendingConfirms save failed:', e.message); }
+    const pec = {};
+    for (const [k,v] of pendingEmailConfirms.entries()) pec[k] = v;
+    const ect = {};
+    for (const [k,v] of emailConfirmTokens.entries()) ect[k] = v;
+    try { fs.writeFileSync(PENDING_CONFIRMS_FILE, JSON.stringify({ pendingEmailConfirms: pec, emailConfirmTokens: ect })); } catch(e) { console.error('PendingConfirms save failed:', e.message); }
 }
 setInterval(savePendingEmailConfirms, 60000);
 // Cleanup expired entries every 5 min
@@ -5850,6 +5861,7 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
         const baseUrl = (process.env.APP_URL || ('https://' + (req.headers.host || 'web-production-7981d.up.railway.app'))).replace(/\/$/, '');
         const token = crypto.randomBytes(24).toString('hex');
         emailConfirmTokens.set(token, { email, uid, exp: Date.now() + EMAIL_TOKEN_TTL });
+        savePendingEmailConfirms();
         const confirmUrl = baseUrl + '/auth/confirm-email?token=' + encodeURIComponent(token);
         const userName = u.spitzname || u.name || 'CreatorX User';
         const mailHtml = `<!DOCTYPE html><html><body style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#000;color:#fff;padding:0"><div style="max-width:560px;margin:0 auto;padding:32px 24px"><div style="text-align:center;margin-bottom:24px"><img src="${baseUrl}/cx-logo-256.png" width="80" height="80" style="border-radius:18px" alt="CreatorX"></div><h1 style="font-size:26px;font-weight:700;margin:0 0 12px;text-align:center;color:#fff">Hi ${userName.replace(/[<>]/g,'')}!</h1><p style="font-size:15px;color:#a8a39a;line-height:1.6;text-align:center;margin:0 0 28px">Bestaetige deine Email-Adresse <b style="color:#fff">${email}</b> fuer deinen CreatorX-Account.</p><div style="text-align:center;margin:32px 0"><a href="${confirmUrl}" style="display:inline-block;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px">\u2705 Email bestätigen</a></div><p style="font-size:12px;color:#605c54;text-align:center;margin-top:32px;border-top:1px solid #221f1a;padding-top:20px">Link 1h gueltig \u00b7 einmalig nutzbar</p></div></body></html>`;
@@ -5870,6 +5882,7 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
             try {
                 const token = crypto.randomBytes(24).toString('hex');
                 emailConfirmTokens.set(token, { email, uid: String(uid), exp: Date.now() + EMAIL_TOKEN_TTL });
+                savePendingEmailConfirms();
                 const confirmUrl = baseUrl + '/auth/confirm-email?token=' + encodeURIComponent(token);
                 const userName = u.spitzname || u.name || 'CreatorX User';
                 const mailHtml = `<!DOCTYPE html><html><body style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#000;color:#fff;padding:0"><div style="max-width:560px;margin:0 auto;padding:32px 24px"><h1 style="font-size:22px;font-weight:700;text-align:center;color:#fff">Hi ${userName.replace(/[<>]/g,'')}!</h1><p style="font-size:14px;color:#a8a39a;text-align:center;margin:16px 0">Bestaetige deine Email <b style="color:#fff">${email}</b>.</p><div style="text-align:center;margin:24px 0"><a href="${confirmUrl}" style="display:inline-block;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;padding:12px 28px;border-radius:10px;text-decoration:none;font-weight:700;font-size:14px">\u2705 Bestätigen</a></div></div></body></html>`;
@@ -7739,6 +7752,7 @@ p{line-height:1.65;color:var(--muted)}
                 try {
                     const token = crypto.randomBytes(24).toString('hex');
                     emailConfirmTokens.set(token, { email: updateData.email, uid: String(myUid), exp: Date.now() + EMAIL_TOKEN_TTL });
+                    savePendingEmailConfirms();
                     const baseUrl = (process.env.APP_URL || ('https://' + (req.headers.host || 'web-production-7981d.up.railway.app'))).replace(/\/$/, '');
                     const confirmUrl = baseUrl + '/auth/confirm-email?token=' + encodeURIComponent(token);
                     const userName = _u.spitzname || _u.name || 'CreatorX User';
