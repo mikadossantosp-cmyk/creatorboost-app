@@ -2921,8 +2921,8 @@ ${(()=>{
   if (!mySuperlink) return '';
   return `<div style="margin:0 16px 16px;background:var(--bg3);border:1px solid rgba(167,139,250,.3);border-radius:16px;padding:14px">
   <div style="font-size:11px;font-weight:700;color:#a78bfa;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">⭐ Superlink dieser Woche</div>
-  <a href="${mySuperlink.url}" target="_blank" style="font-size:13px;color:#4dabf7;word-break:break-all;display:block;margin-bottom:6px;text-decoration:none">${mySuperlink.url.replace('https://www.instagram.com/','ig.com/').slice(0,50)}</a>
-  ${mySuperlink.caption?`<div style="font-size:12px;color:var(--muted)">${mySuperlink.caption.slice(0,80)}</div>`:''}
+  <a href="${htmlEsc(safeUrl(mySuperlink.url))}" target="_blank" rel="noopener noreferrer" style="font-size:13px;color:#4dabf7;word-break:break-all;display:block;margin-bottom:6px;text-decoration:none">${htmlEsc(String(mySuperlink.url||'').replace('https://www.instagram.com/','ig.com/').slice(0,50))}</a>
+  ${mySuperlink.caption?`<div style="font-size:12px;color:var(--muted)">${htmlEsc(String(mySuperlink.caption).slice(0,80))}</div>`:''}
   <div style="font-size:11px;color:var(--muted);margin-top:6px">❤️ ${mySuperlink.likes?.length||0} Likes</div>
 </div>`;
 })()}`;
@@ -7967,7 +7967,7 @@ p{line-height:1.65;color:var(--muted)}
           ${(ladeBild(id,"profilepic")||insta)?`<img src="${ladeBild(id,"profilepic")?"/appbild/"+id+"/profilepic":"https://unavatar.io/instagram/"+insta}" style="width:100%;height:100%;object-fit:cover" alt="">`:`<span>${(u.name||"?")[0]}</span>`}
         </div>
       </div>
-      <div class="story-name">${u.spitzname||u.name||'?'}</div>
+      <div class="story-name">${htmlEsc(u.spitzname||u.name||'?')}</div>
     </a>`;
   }).join('')}
 </div>
@@ -13240,10 +13240,10 @@ fetch('/api/admin/engagement-log').then(r=>r.json()).then(j=>{ if (j.ok) { LAST_
     ${picFile?`<img src="/appbild/${id}/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1" loading="lazy" alt="">`:insta?`<img src="https://unavatar.io/instagram/${insta}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1" loading="lazy" onerror="this.style.display='none'" alt="">`:''}
   </div>
   <div class="creator-card-info">
-    <div class="creator-card-name" style="margin-top:4px">${u.spitzname||u.name||'User'}</div>
-    ${insta?`<span onclick="event.stopPropagation();window.open('https://instagram.com/${insta}','_blank')" style="font-size:10px;color:#4dabf7;margin-top:2px;display:block;cursor:pointer">@${insta}</span>`:''}
+    <div class="creator-card-name" style="margin-top:4px">${htmlEsc(u.spitzname||u.name||'User')}</div>
+    ${insta?`<span onclick="event.stopPropagation();window.open('https://instagram.com/'+encodeURIComponent(${JSON.stringify(String(insta))}),'_blank')" style="font-size:10px;color:#4dabf7;margin-top:2px;display:block;cursor:pointer">@${htmlEsc(insta)}</span>`:''}
     <div class="creator-card-xp">⚡ ${u.xp||0} XP</div>
-    ${pinnedLink?`<a href="${pinnedLink}" target="_blank" onclick="event.stopPropagation()" style="display:block;font-size:10px;color:var(--accent);margin-top:5px;padding:3px 8px;background:rgba(255,107,107,.15);border:1px solid rgba(255,107,107,.2);border-radius:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-decoration:none">📌 Reel ansehen</a>`:''}
+    ${pinnedLink?`<a href="${htmlEsc(safeUrl(pinnedLink))}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" style="display:block;font-size:10px;color:var(--accent);margin-top:5px;padding:3px 8px;background:rgba(255,107,107,.15);border:1px solid rgba(255,107,107,.2);border-radius:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-decoration:none">📌 Reel ansehen</a>`:''}
   </div>
 </a>`;
         }).join('');
@@ -14774,8 +14774,8 @@ ${rest.map(([id,u],idx)=>{
             return '<div class="proj-card" onclick="openProjDetail('+i+')">'
                 +(projImg ? '<img class="proj-card-img" src="'+projImg+'" alt="">' : '<div class="proj-card-placeholder">'+(docIcon||'🚀')+'</div>')
                 +'<div class="proj-card-body">'
-                +'<div class="proj-card-title">'+proj.title+'</div>'
-                +(proj.description?'<div class="proj-card-desc">'+proj.description+'</div>':'')
+                +'<div class="proj-card-title">'+htmlEsc(proj.title)+'</div>'
+                +(proj.description?'<div class="proj-card-desc">'+htmlEsc(proj.description)+'</div>':'')
                 +'</div></div>';
         }).join('');
         const addCardHtml = canAddProject
@@ -15368,13 +15368,13 @@ async function submitPost(){const _spBtn=document.querySelector('[onclick="submi
             return '<div class="proj-card" onclick="openTProjDetail('+i+')">'
                 +(projImg?'<img class="proj-card-img" src="'+projImg+'" alt="">':'<div class="proj-card-placeholder">'+(docIcon||'🚀')+'</div>')
                 +'<div class="proj-card-body">'
-                +'<div class="proj-card-title">'+proj.title+'</div>'
-                +(proj.description?'<div class="proj-card-desc">'+proj.description+'</div>':'')
+                +'<div class="proj-card-title">'+htmlEsc(proj.title)+'</div>'
+                +(proj.description?'<div class="proj-card-desc">'+htmlEsc(proj.description)+'</div>':'')
                 +'</div></div>';
         }).join('');
 
         const theirLinksHtml = Object.values(d.links||{}).filter(l=>l.user_id===Number(uid)).sort((a,b)=>(b.timestamp||0)-(a.timestamp||0))
-            .map(l=>'<div style="padding:12px 16px;border-top:1px solid var(--border2)"><a href="'+l.text+'" target="_blank" style="color:var(--blue);font-size:12px;word-break:break-all">'+l.text+'</a><div style="font-size:11px;color:var(--muted);margin-top:4px">❤️ '+(Array.isArray(l.likes)?l.likes.length:0)+' Likes · '+new Date(l.timestamp).toLocaleDateString('de-DE')+'</div></div>').join('')
+            .map(l => { const sUrl = safeUrl(l.text); return '<div style="padding:12px 16px;border-top:1px solid var(--border2)">'+(sUrl?'<a href="'+htmlEsc(sUrl)+'" target="_blank" rel="noopener noreferrer" style="color:var(--blue);font-size:12px;word-break:break-all">':'<span style="color:var(--muted);font-size:12px;word-break:break-all">')+htmlEsc(l.text||'')+(sUrl?'</a>':'</span>')+'<div style="font-size:11px;color:var(--muted);margin-top:4px">❤️ '+(Array.isArray(l.likes)?l.likes.length:0)+' Likes · '+new Date(l.timestamp).toLocaleDateString('de-DE')+'</div></div>'; }).join('')
             || '<div class="empty"><div class="empty-icon">🔗</div><div class="empty-text">Noch keine Links</div></div>';
 
         const theirAboutHtml = '<div style="padding:16px;display:flex;flex-direction:column;gap:12px;padding-bottom:100px">'
@@ -15399,7 +15399,7 @@ async function submitPost(){const _spBtn=document.querySelector('[onclick="submi
         return html(`
 <div class="topbar">
   <a href="javascript:history.back()" class="icon-btn" style="font-size:22px">‹</a>
-  <div style="font-size:15px;font-weight:600">${u.spitzname||u.name||'User'}</div>
+  <div style="font-size:15px;font-weight:600">${htmlEsc(u.spitzname||u.name||'User')}</div>
   <div style="display:flex;gap:8px">
     <button onclick="toggleFollow('${uid}',this)" style="background:${isFollowing?'var(--bg4)':'var(--accent)'};color:${isFollowing?'var(--muted)':'#fff'};border:1px solid var(--border);border-radius:20px;padding:6px 16px;font-size:13px;font-weight:600;cursor:pointer">${isFollowing?'Gefolgt':'Folgen'}</button>
     ${(()=>{
@@ -16101,12 +16101,12 @@ ${_setSubHead('⭐ Pro-Features', 'Premium-Tools für ernsthafte Creator. <b sty
 </div>
 <div style="padding:16px;border-bottom:1px solid var(--border2)">
   <div class="form-label">Bio</div>
-  <textarea class="form-input" id="inp-bio" placeholder="Schreib etwas über dich..." maxlength="100">${u.bio||''}</textarea>
+  <textarea class="form-input" id="inp-bio" placeholder="Schreib etwas über dich..." maxlength="100">${htmlEsc(u.bio||'')}</textarea>
   <div class="form-hint">${u.bio?.length||0}/100</div>
 </div>
 <div style="padding:16px;border-bottom:1px solid var(--border2)">
   <div class="form-label">Spitzname</div>
-  <input type="text" class="form-input" id="inp-spitzname" placeholder="Dein Spitzname" maxlength="30" value="${u.spitzname||''}">
+  <input type="text" class="form-input" id="inp-spitzname" placeholder="Dein Spitzname" maxlength="30" value="${htmlEsc(u.spitzname||'')}">
 </div>
 <div style="padding:16px;border-bottom:1px solid var(--border2)">
   <div class="form-label">🔐 Account-Login <span style="font-size:10px;color:var(--muted);font-weight:500">(Email + Passwort)</span></div>
@@ -16130,7 +16130,7 @@ ${_setSubHead('⭐ Pro-Features', 'Premium-Tools für ernsthafte Creator. <b sty
     return `<div style="display:flex;flex-direction:column;gap:14px">
       <div>
         <div style="font-size:11.5px;color:var(--muted);font-weight:700;margin-bottom:6px">📧 EMAIL</div>
-        <input type="email" class="form-input" id="inp-email" placeholder="deine@email.de" maxlength="200" value="${u.email||u.pendingEmail||''}" autocapitalize="none" spellcheck="false">
+        <input type="email" class="form-input" id="inp-email" placeholder="deine@email.de" maxlength="200" value="${htmlEsc(u.email||u.pendingEmail||'')}" autocapitalize="none" spellcheck="false">
         ${hasPending ? `<div style="margin-top:8px;padding:9px 11px;background:rgba(245,158,11,0.10);border:1px solid rgba(245,158,11,0.30);border-radius:10px;font-size:11.5px;color:#f59e0b;line-height:1.45"><b>⏳ Bestätigung ausstehend.</b> Bestätigungs-Link an <b>${htmlEsc(u.pendingEmail)}</b> gesendet — schau ins Postfach (auch Spam).</div>` : ''}
         ${hasEmail ? `<div style="margin-top:8px;padding:9px 11px;background:rgba(34,197,94,0.10);border:1px solid rgba(34,197,94,0.25);border-radius:10px;font-size:11.5px;color:#22c55e;line-height:1.45"><b>✓ Email bestätigt.</b></div>` : ''}
       </div>
@@ -16146,7 +16146,7 @@ ${_setSubHead('⭐ Pro-Features', 'Premium-Tools für ernsthafte Creator. <b sty
 <div style="padding:16px;border-bottom:1px solid var(--border2)">
   <div class="form-label">🔑 Eigener App-Code <span style="font-size:10px;color:var(--muted);font-weight:500">(für /mycode &amp; Login-Link)</span></div>
   <div style="position:relative">
-    <input type="text" class="form-input" id="inp-app-code" placeholder="z.B. dein-name" maxlength="30" value="${(u.appCode||'')}" autocapitalize="none" spellcheck="false" style="font-family:JetBrains Mono,monospace;letter-spacing:0.5px">
+    <input type="text" class="form-input" id="inp-app-code" placeholder="z.B. dein-name" maxlength="30" value="${htmlEsc(u.appCode||'')}" autocapitalize="none" spellcheck="false" style="font-family:JetBrains Mono,monospace;letter-spacing:0.5px">
   </div>
   <div class="form-hint">4–30 Zeichen, nur a–z, 0–9, _ oder -. Eindeutig. Wird auch für deinen persönlichen Login-Link benutzt.</div>
   <button class="btn btn-outline btn-full" style="margin-top:8px;font-size:13px" onclick="saveAppCode()">🔑 Code speichern</button>
@@ -16156,22 +16156,22 @@ ${_setSubHead('⭐ Pro-Features', 'Premium-Tools für ernsthafte Creator. <b sty
   <div class="form-label">Instagram</div>
   <div style="position:relative">
     <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:14px;pointer-events:none">@</span>
-    <input type="text" class="form-input" id="inp-instagram" placeholder="dein.instagram" maxlength="50" value="${(u.instagram||'').replace(/^@/,'')}" style="padding-left:30px" autocapitalize="none" spellcheck="false">
+    <input type="text" class="form-input" id="inp-instagram" placeholder="dein.instagram" maxlength="50" value="${htmlEsc((u.instagram||'').replace(/^@/,''))}" style="padding-left:30px" autocapitalize="none" spellcheck="false">
   </div>
   <div class="form-hint">Wird als Profilbild & Verlinkung genutzt</div>
 </div>
 <div style="padding:16px;border-bottom:1px solid var(--border2)">
   <div class="form-label">Nische</div>
-  <input type="text" class="form-input" id="inp-nische" placeholder="z.B. Fitness, Food, Travel..." maxlength="50" value="${u.nische||''}">
+  <input type="text" class="form-input" id="inp-nische" placeholder="z.B. Fitness, Food, Travel..." maxlength="50" value="${htmlEsc(u.nische||'')}">
 </div>
 <div style="padding:16px;border-bottom:1px solid var(--border2)">
   <div class="form-label">Persönlicher Link</div>
-  <input type="url" class="form-input" id="inp-website" placeholder="https://deine-website.de" maxlength="100" value="${u.website||''}">
+  <input type="url" class="form-input" id="inp-website" placeholder="https://deine-website.de" maxlength="100" value="${htmlEsc(u.website||'')}">
 </div>
 <div style="padding:16px;border-bottom:1px solid var(--border2)">
   <div class="form-label">📌 Pinned Reel Link</div>
   <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Dieser Reel wird auf der Explore-Seite bei deiner Creator-Karte angezeigt.</div>
-  <input type="url" class="form-input" id="inp-pinned-link" placeholder="https://www.instagram.com/reel/..." value="${currentPinnedLink}">
+  <input type="url" class="form-input" id="inp-pinned-link" placeholder="https://www.instagram.com/reel/..." value="${htmlEsc(currentPinnedLink)}">
   ${myRecentLinks.length ? `
   <div style="margin-top:8px">
     <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Letzte Links:</div>
