@@ -18292,9 +18292,16 @@ async function requestAccountChange(){
         if (btn) { btn.disabled = false; btn.textContent = '📨 Änderung anfragen'; }
     }
 }
-document.getElementById('inp-bio').addEventListener('input', function() {
-    this.nextElementSibling.textContent = this.value.length + '/100';
-});
+// inp-bio wurde aus /einstellungen entfernt (jetzt im Hero-Edit-Sheet) —
+// Counter-Listener nur attachen wenn Element noch existiert
+(function(){
+  const _bioInput = document.getElementById('inp-bio');
+  if (_bioInput) {
+    _bioInput.addEventListener('input', function() {
+      if (this.nextElementSibling) this.nextElementSibling.textContent = this.value.length + '/100';
+    });
+  }
+})();
 async function savePinnedLink() {
     const url = document.getElementById('inp-pinned-link')?.value?.trim() || '';
     if (url && !url.includes('instagram.com')) { toast('❌ Nur Instagram Links erlaubt'); return; }
