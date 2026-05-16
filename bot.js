@@ -16523,15 +16523,8 @@ ${rest.map(([id,u],idx)=>{
         })();
 
         const myPinnedLink = ladePinnedLink(myUid);
-        const myPinnedHtml = myPinnedLink
-            ? '<div style="padding:12px 16px;border-bottom:2px solid var(--accent);background:linear-gradient(135deg,rgba(255,107,107,.08),rgba(255,165,0,.04));margin-bottom:4px">'
-              +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'
-              +'<span style="font-size:11px;font-weight:700;color:var(--accent);background:rgba(255,107,107,.15);padding:3px 10px;border-radius:20px">📌 Angepinnter Post</span>'
-              +'</div>'
-              +'<a href="'+myPinnedLink+'" target="_blank" style="display:block;font-size:13px;color:var(--blue);word-break:break-all;margin-bottom:8px">'+myPinnedLink.replace('https://www.instagram.com/','ig.com/').slice(0,60)+'...</a>'
-              +'<div style="font-size:12px;color:var(--muted)">Dies ist mein wichtigster Beitrag. Danke für deine Unterstützung 🙏</div>'
-              +'</div>'
-            : '';
+        // Pinned-Post wird jetzt im profileCard zwischen XP und Superlink angezeigt — kein Duplikat hier
+        const myPinnedHtml = '';
 
         const linksHtml = Object.values(d.links||{}).filter(l=>l.user_id===Number(myUid)).sort((a,b)=>(b.timestamp||0)-(a.timestamp||0))
             .map(l=>'<div style="padding:12px 16px;border-top:1px solid var(--border2)"><a href="'+l.text+'" target="_blank" style="color:var(--blue);font-size:12px;word-break:break-all">'+l.text+'</a><div style="font-size:11px;color:var(--muted);margin-top:4px">❤️ '+(Array.isArray(l.likes)?l.likes.length:0)+' Likes · '+new Date(l.timestamp).toLocaleDateString('de-DE')+'</div></div>').join('')
