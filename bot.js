@@ -2649,7 +2649,7 @@ if(typeof window.pinnedEngageClick==='undefined'){
       alert('Bitte erst auf „📸 Auf Instagram öffnen" tippen und auf Instagram LIKEN + KOMMENTIEREN + SPEICHERN + TEILEN.');
       return;
     }
-    if(!confirm('📌 Pinned-Post engagieren\n\nDu bestätigst:\n✓ Auf Instagram GELIKT\n✓ KOMMENTIERT\n✓ GETEILT\n✓ GESPEICHERT\n\n→ Belohnung: +1 💎\n→ Schein-Engagement: Sanktionen\n\nFortfahren?'))return;
+    if(!confirm('📌 Pinned-Post engagieren\\n\\nDu bestätigst:\\n✓ Auf Instagram GELIKT\\n✓ KOMMENTIERT\\n✓ GETEILT\\n✓ GESPEICHERT\\n\\n→ Belohnung: +1 💎\\n→ Schein-Engagement: Sanktionen\\n\\nFortfahren?'))return;
     btn.disabled=true;btn.dataset.engaged='1';btn.innerHTML='⏳ Bestätige …';
     try{
       const r=await fetch('/api/engage-pinned-post',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ownerUid})});
