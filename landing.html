@@ -21,8 +21,8 @@
 <meta name="twitter:title" content="CreatorX — Deine Community. Dein Wachstum.">
 <meta name="twitter:description" content="Die kuratierte Community für Instagram Creators. Kostenlos.">
 <meta name="twitter:image" content="https://www.creatorboostx.de/community-banner.png">
-<link rel="icon" type="image/png" href="/cx-logo-256.png">
-<link rel="apple-touch-icon" href="/cx-logo-256.png">
+<link rel="icon" type="image/png" href="/cx-icon.png">
+<link rel="apple-touch-icon" href="/cx-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Cormorant+Garamond:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
@@ -58,10 +58,7 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;line-height
 nav{position:sticky;top:0;z-index:50;backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);background:rgba(0,0,0,0.78);border-bottom:1px solid var(--line)}
 .nav-inner{max-width:1120px;margin:0 auto;padding:14px 28px;display:flex;align-items:center;justify-content:space-between}
 .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:var(--text)}
-.brand-mark{width:34px;height:34px;border-radius:9px;background:radial-gradient(circle at 30% 25%,#1a1407 0%,#0a0907 70%);border:1px solid rgba(212,169,70,0.30);position:relative;overflow:hidden;flex-shrink:0;box-shadow:inset 0 1px 0 rgba(255,255,255,0.06),0 4px 14px rgba(0,0,0,0.6),0 0 0 0.5px rgba(212,169,70,0.10)}
-.brand-mark::before,.brand-mark::after{content:'';position:absolute;left:50%;top:50%;width:60%;height:2.4px;border-radius:2px;background:linear-gradient(90deg,transparent 0%,#8b6914 14%,#d4a946 35%,#fff5d4 50%,#d4a946 65%,#8b6914 86%,transparent 100%);box-shadow:0 0 8px rgba(212,169,70,0.35)}
-.brand-mark::before{transform:translate(-50%,-50%) rotate(45deg)}
-.brand-mark::after{transform:translate(-50%,-50%) rotate(-45deg)}
+.brand-mark{width:34px;height:34px;border-radius:9px;background:#000 url('/cx-icon.png') center/cover no-repeat;border:1px solid rgba(212,169,70,0.30);flex-shrink:0;box-shadow:inset 0 1px 0 rgba(255,255,255,0.06),0 4px 14px rgba(0,0,0,0.6),0 0 0 0.5px rgba(212,169,70,0.10)}
 .brand-name{font-family:'Syne',sans-serif;font-weight:800;font-size:18px;letter-spacing:-0.3px;background:linear-gradient(135deg,#d4a946 0%,#fff5d4 50%,#d4a946 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
 .nav-right{display:flex;align-items:center;gap:4px}
 .nav-link{font-size:13px;color:var(--text-2);text-decoration:none;font-weight:500;padding:9px 14px;border-radius:8px;transition:all 0.15s;letter-spacing:0.2px}
@@ -85,11 +82,8 @@ nav{position:sticky;top:0;z-index:50;backdrop-filter:saturate(180%) blur(20px);-
 .hero-bg{position:absolute;inset:0;pointer-events:none;display:flex;align-items:center;justify-content:center;z-index:0}
 .hero-bg::before{content:'';position:absolute;width:1100px;height:600px;background:radial-gradient(ellipse,rgba(212,169,70,0.10) 0%,transparent 60%)}
 .hero-inner{position:relative;z-index:2;max-width:780px;margin:0 auto}
-.hero-mark{width:104px;height:104px;margin:0 auto 36px;border-radius:26px;background:radial-gradient(circle at 30% 25%,#1a1407 0%,#0a0907 65%,#000 100%);border:1px solid rgba(212,169,70,0.30);position:relative;overflow:hidden;box-shadow:inset 0 1px 0 rgba(255,255,255,0.08),inset 0 -1px 0 rgba(0,0,0,0.5),0 0 0 1px rgba(212,169,70,0.12),0 20px 60px rgba(212,169,70,0.18),0 8px 24px rgba(0,0,0,0.85)}
-.hero-mark::before,.hero-mark::after{content:'';position:absolute;left:50%;top:50%;width:62%;height:6.5px;border-radius:4px;background:linear-gradient(90deg,transparent 0%,#8b6914 12%,#d4a946 32%,#fff5d4 50%,#d4a946 68%,#8b6914 88%,transparent 100%);box-shadow:0 0 24px rgba(212,169,70,0.45),0 0 8px rgba(255,245,212,0.30)}
-.hero-mark::before{transform:translate(-50%,-50%) rotate(45deg)}
-.hero-mark::after{transform:translate(-50%,-50%) rotate(-45deg)}
-.hero-mark .glow{position:absolute;inset:0;border-radius:26px;background:radial-gradient(circle at 50% 50%,rgba(212,169,70,0.15) 0%,transparent 60%);pointer-events:none}
+.hero-mark{width:128px;height:128px;margin:0 auto 36px;border-radius:30px;background:#000 url('/cx-icon.png') center/cover no-repeat;border:1px solid rgba(212,169,70,0.30);position:relative;overflow:hidden;box-shadow:inset 0 1px 0 rgba(255,255,255,0.08),inset 0 -1px 0 rgba(0,0,0,0.5),0 0 0 1px rgba(212,169,70,0.12),0 20px 60px rgba(212,169,70,0.28),0 8px 24px rgba(0,0,0,0.85)}
+.hero-mark .glow{position:absolute;inset:0;border-radius:30px;background:radial-gradient(circle at 50% 25%,rgba(255,245,212,0.15) 0%,transparent 55%);pointer-events:none}
 .hero-tag{display:inline-block;font-size:11px;font-weight:600;color:var(--gold);letter-spacing:3px;text-transform:uppercase;margin-bottom:24px;padding:6px 16px;border:1px solid rgba(212,169,70,0.25);border-radius:999px;background:rgba(212,169,70,0.04)}
 h1{font-family:'Cormorant Garamond',serif;font-size:clamp(48px,8vw,88px);font-weight:500;letter-spacing:-1px;line-height:1.05;margin-bottom:28px;color:var(--text)}
 h1 .accent{font-style:italic;font-weight:600;background:linear-gradient(180deg,#fff5d4 0%,#f5d76e 30%,#d4a946 65%,#8b6914 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;display:inline-block;padding-right:10px}
@@ -232,7 +226,8 @@ footer{border-top:1px solid var(--line);padding:48px 0 56px;background:var(--bg)
     <div class="nav-right">
       <a class="nav-link" href="#how">Funktion</a>
       <a class="nav-link" href="#faq">FAQ</a>
-      <a class="nav-cta" href="https://t.me/+w-V2QL-igJw5YjY0" target="_blank" rel="noopener">Beitreten</a>
+      <a class="nav-link" href="/login">Login</a>
+      <a class="nav-cta" href="/signup">Beitreten</a>
     </div>
   </div>
 </nav>
@@ -255,11 +250,11 @@ footer{border-top:1px solid var(--line);padding:48px 0 56px;background:var(--bg)
       </h1>
       <p class="subhead">CreatorX ist eine kuratierte Community von <b>Instagram Creators</b>, die sich gegenseitig stärken — strukturiert, transparent und ohne versteckte Kosten.</p>
       <div class="hero-ctas">
-        <a href="https://t.me/+w-V2QL-igJw5YjY0" class="btn btn-primary" target="_blank" rel="noopener">
+        <a href="/signup" class="btn btn-primary" target="_blank" rel="noopener">
           Community beitreten
           <svg class="btn-arrow" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
         </a>
-        <a href="https://web-production-7981d.up.railway.app/" class="btn btn-secondary">App öffnen</a>
+        <a href="/login" class="btn btn-secondary">Schon dabei? Login</a>
       </div>
     </div>
   </div>
@@ -299,7 +294,7 @@ footer{border-top:1px solid var(--line);padding:48px 0 56px;background:var(--bg)
             <div class="feature-desc">Missionen, XP, Badges, Diamanten.</div>
           </div>
         </div>
-        <a href="https://t.me/+w-V2QL-igJw5YjY0" class="preview-cta" target="_blank" rel="noopener">
+        <a href="/signup" class="preview-cta" target="_blank" rel="noopener">
           Jetzt beitreten
           <svg class="btn-arrow" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
         </a>
@@ -374,8 +369,8 @@ footer{border-top:1px solid var(--line);padding:48px 0 56px;background:var(--bg)
       <div class="step reveal">
         <div class="step-num"><span>I</span></div>
         <div class="step-content">
-          <div class="step-title">Telegram beitreten</div>
-          <div class="step-desc">Klick den Button und tritt der Telegram-Community bei. Kostenlos, ohne Anmeldung, ohne E-Mail.</div>
+          <div class="step-title">Account erstellen</div>
+          <div class="step-desc">In unter einer Minute angemeldet. Kostenlos, ohne Kreditkarte, ohne versteckte Kosten.</div>
         </div>
       </div>
       <div class="step reveal">
@@ -441,11 +436,11 @@ footer{border-top:1px solid var(--line);padding:48px 0 56px;background:var(--bg)
     <h2>Werde Teil <span class="em serif">der Bewegung</span>.</h2>
     <p>Tritt bei und finde heraus, wie weit du mit der richtigen Community kommst.</p>
     <div class="hero-ctas">
-      <a href="https://t.me/+w-V2QL-igJw5YjY0" class="btn btn-primary" target="_blank" rel="noopener">
+      <a href="/signup" class="btn btn-primary" target="_blank" rel="noopener">
         Jetzt beitreten
         <svg class="btn-arrow" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
       </a>
-      <a href="https://web-production-7981d.up.railway.app/" class="btn btn-secondary">App öffnen</a>
+      <a href="/login" class="btn btn-secondary">Schon dabei? Login</a>
     </div>
   </div>
 </section>
@@ -460,9 +455,8 @@ footer{border-top:1px solid var(--line);padding:48px 0 56px;background:var(--bg)
     <div class="footer-links">
       <a href="#how">Funktion</a>
       <a href="#faq">FAQ</a>
-      <a href="https://t.me/+w-V2QL-igJw5YjY0" target="_blank" rel="noopener">Telegram</a>
-      <a href="https://web-production-7981d.up.railway.app/">App</a>
-      <a href="https://web-production-7981d.up.railway.app/system-info">Doku</a>
+      <a href="/login">Login</a>
+      <a href="/signup">Beitreten</a>
     </div>
     <div class="footer-meta">© MMXXVI · CreatorX · v7.2</div>
   </div>
