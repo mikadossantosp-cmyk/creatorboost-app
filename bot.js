@@ -6583,6 +6583,21 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
         lifetime.lastSnapshotLikes = totalLikes;
         try { fs.writeFileSync(LIFETIME_FILE, JSON.stringify(lifetime)); } catch(e) {}
 
+        // Online jetzt — unique UIDs mit aktiver Session in den letzten ONLINE_WINDOW_MS.
+        // Admins ausgenommen, damit Landing-Page-Zahl die echte Creator-Aktivität zeigt.
+        let onlineNow = 0;
+        try {
+            const now = Date.now();
+            const seenUids = new Set();
+            for (const s of sessions.values()) {
+                if (!s || !s.uid) continue;
+                if ((now - (s.lastSeen || 0)) >= ONLINE_WINDOW_MS) continue;
+                if (adminIds.includes(Number(s.uid))) continue;
+                seenUids.add(String(s.uid));
+            }
+            onlineNow = seenUids.size;
+        } catch(e) {}
+
         res.writeHead(200, {
             'Content-Type': 'application/json',
             'Access-Control-Allow-Origin': '*',
@@ -6594,7 +6609,8 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
             totalPosts: lifetime.posts,
             // Fallbacks für Landing-Page (zeigt was wenn lifetime noch 0)
             currentPosts,
-            currentLikes: totalLikes
+            currentLikes: totalLikes,
+            onlineNow
         }));
     }
 
