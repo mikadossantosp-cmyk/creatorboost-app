@@ -8435,6 +8435,50 @@ p{line-height:1.65;color:var(--muted)}
         return json(result || {ok:false, error:'Mainbot offline'});
     }
 
+    // Admin: Gewinnspiel-Gewinner manuell eintragen (z.B. wenn Cron-Eintrag fehlt)
+    if (path === '/api/admin/raffle-winner' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
+        const body = await parseBody(req);
+        const uid = String(body.uid || '').trim();
+        const prize = String(body.prize || '').trim();
+        const prizeEmoji = String(body.prizeEmoji || '🎁').trim();
+        if (!uid || !prize) return json({ok:false, error:'uid und prize sind Pflicht'}, 400);
+        const bd = await fetchBot('/data');
+        const user = bd?.users?.[uid];
+        if (!user) return json({ok:false, error:'User nicht gefunden'}, 404);
+        const ts = body.timestamp ? Number(body.timestamp) : Date.now();
+        const weekKey = new Date(ts).toISOString().slice(0,10);
+        const xp = (bd.weeklyXP||{})[uid] || user.xpThisWeek || user.weeklyXp || 0;
+        const entry = {
+            uid,
+            name: user.spitzname || user.name || 'Creator',
+            handle: user.ig_handle || user.username || '',
+            rang: user.rang || '',
+            prize, prizeEmoji,
+            xp, participants: 0,
+            timestamp: ts, week: weekKey,
+            manual: true
+        };
+        const hist = loadRaffleHistory();
+        hist.lastWinner = entry;
+        hist.history = [entry, ...(hist.history || [])].slice(0, 12);
+        saveRaffleHistory(hist);
+        return json({ok:true, entry});
+    }
+
+    // Admin: letzten Gewinnspiel-Eintrag löschen
+    if (path === '/api/admin/raffle-winner-undo' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
+        const hist = loadRaffleHistory();
+        if (!hist.history || !hist.history.length) return json({ok:false, error:'Keine Historie'}, 400);
+        hist.history.shift();
+        hist.lastWinner = hist.history[0] || null;
+        saveRaffleHistory(hist);
+        return json({ok:true});
+    }
+
     if (path === '/api/admin/ban' && req.method === 'POST') {
         if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
         if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
@@ -15651,6 +15695,7 @@ async function msAdminRestore(uid,name){if(!confirm(name+' zurück auf die Warte
                 const timeLeft = Math.max(0, nextSunday.getTime() - Date.now());
                 const hoursLeft = Math.floor(timeLeft / 3600000);
                 const prizes = ['🔗 1 Extra-Link','⚡ 1 Superlink','✨ 500 XP','💎 5 Diamanten'];
+                const isAdmin = adminIds.includes(Number(myUid));
                 // Letzter Gewinner — wird Sonntag 20:00 vom Cron in raffle-winners.json geschrieben
                 const raffleHist = (()=>{ try { return JSON.parse(fs.readFileSync(RAFFLE_FILE,'utf8')); } catch(e) { return { lastWinner:null, history:[] }; } })();
                 const lw = raffleHist.lastWinner;
@@ -15714,6 +15759,69 @@ async function msAdminRestore(uid,name){if(!confirm(name+' zurück auf die Warte
       5. <b style="color:var(--text)">Montag 00:00 Uhr</b> → Wochen-XP wird zurückgesetzt
     </div>
   </div>
+  ${isAdmin ? (()=>{
+    const userOpts = Object.entries(d.users||{})
+      .filter(([id,u])=>u && u.started && !u.parent_uid && !adminIds.includes(Number(id)))
+      .sort((a,b)=>String(a[1].spitzname||a[1].name||'').localeCompare(String(b[1].spitzname||b[1].name||'')))
+      .map(([id,u])=>{
+        const name = htmlEsc(u.spitzname || u.name || ('User '+id));
+        const handle = u.ig_handle ? ' (@'+htmlEsc(u.ig_handle)+')' : '';
+        return '<option value="'+htmlEsc(id)+'">'+name+handle+'</option>';
+      }).join('');
+    const histRows = (raffleHist.history||[]).slice(0,5).map(h=>{
+      const ts = new Date(h.timestamp||0);
+      const dStr = String(ts.getDate()).padStart(2,'0')+'.'+String(ts.getMonth()+1).padStart(2,'0')+'.';
+      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:rgba(255,255,255,0.03);border:1px solid var(--border2);border-radius:8px;font-size:11.5px"><span style="color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0">'+htmlEsc(h.name||'?')+(h.manual?' <span style="color:#f59e0b;font-size:10px">(manuell)</span>':'')+'</span><span style="color:var(--muted);font-size:10.5px;margin:0 8px;white-space:nowrap">'+dStr+'</span><span style="color:var(--text);font-weight:600;white-space:nowrap">'+htmlEsc((h.prizeEmoji||'🎁')+' '+(h.prize||''))+'</span></div>';
+    }).join('');
+    return `
+  <div style="background:linear-gradient(135deg,rgba(245,158,11,0.08),rgba(245,158,11,0.02));border:1px dashed rgba(245,158,11,0.40);border-radius:16px;padding:16px;margin-top:12px">
+    <div style="font-size:11px;font-weight:800;color:#f59e0b;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px">🛠️ Admin: Gewinner manuell eintragen</div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <select id="raffle-uid" style="width:100%;padding:10px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text);font-size:13px">
+        <option value="">— User wählen —</option>
+        ${userOpts}
+      </select>
+      <select id="raffle-prize" style="width:100%;padding:10px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text);font-size:13px">
+        <option value="">— Preis wählen —</option>
+        <option value="🔗|1 Extra-Link">🔗 1 Extra-Link</option>
+        <option value="⚡|1 Superlink">⚡ 1 Superlink</option>
+        <option value="✨|500 XP">✨ 500 XP</option>
+        <option value="💎|5 Diamanten">💎 5 Diamanten</option>
+      </select>
+      <button onclick="raffleSet()" style="background:linear-gradient(180deg,#f59e0b,#d97706);color:#000;border:none;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer">📌 Als Gewinner eintragen</button>
+      <div id="raffle-result" style="font-size:12px;text-align:center;min-height:16px"></div>
+    </div>
+    ${histRows ? `
+    <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border2)">
+      <div style="font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Letzte Ziehungen</div>
+      <div style="display:flex;flex-direction:column;gap:6px">${histRows}</div>
+      <button onclick="raffleUndo()" style="margin-top:10px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.30);color:#ef4444;border-radius:8px;padding:6px 12px;font-size:11.5px;font-weight:600;cursor:pointer;width:100%">↶ Letzten Eintrag entfernen</button>
+    </div>` : ''}
+  </div>
+  <script>
+  async function raffleSet(){
+    const uid = document.getElementById('raffle-uid').value;
+    const prizeRaw = document.getElementById('raffle-prize').value;
+    const r = document.getElementById('raffle-result');
+    if (!uid || !prizeRaw) { r.textContent='❌ User & Preis auswählen'; r.style.color='#ef4444'; return; }
+    const [prizeEmoji, prize] = prizeRaw.split('|');
+    r.textContent='Speichere…'; r.style.color='var(--muted)';
+    try {
+      const res = await fetch('/api/admin/raffle-winner',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({uid,prize,prizeEmoji})});
+      const d = await res.json();
+      if (d.ok) { r.textContent='✅ Eingetragen'; r.style.color='#22c55e'; setTimeout(()=>location.reload(),700); }
+      else { r.textContent='❌ '+(d.error||'Fehler'); r.style.color='#ef4444'; }
+    } catch(e) { r.textContent='❌ Netzwerk'; r.style.color='#ef4444'; }
+  }
+  async function raffleUndo(){
+    if (!confirm('Letzten Gewinner-Eintrag wirklich löschen?')) return;
+    const res = await fetch('/api/admin/raffle-winner-undo',{method:'POST'});
+    const d = await res.json();
+    if (d.ok) location.reload();
+    else alert('Fehler: '+(d.error||''));
+  }
+  </script>`;
+  })() : ''}
 </div>`;
             })(),
             roulette: `
