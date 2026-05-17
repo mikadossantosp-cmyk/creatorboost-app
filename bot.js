@@ -1329,8 +1329,10 @@ textarea.form-input{resize:none;min-height:80px}
 .proflink-thumb-overlay{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.05),rgba(0,0,0,.35));pointer-events:none}
 .proflink-play{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.95);font-size:22px;text-shadow:0 2px 6px rgba(0,0,0,.5);pointer-events:none}
 .proflink-actions{display:flex;align-items:center;gap:4px;padding:5px 5px 6px}
-.proflink-like{display:inline-flex;align-items:center;gap:3px;background:none;border:none;cursor:pointer;color:var(--text);font-size:10.5px;font-weight:600;font-family:inherit;padding:2px 4px}
-.proflink-like.liked{color:#ef4444;cursor:default}
+.proflink-like{display:inline-flex;align-items:center;gap:3px;background:none;border:none;cursor:pointer;color:var(--text);font-size:10.5px;font-weight:600;font-family:inherit;padding:2px 4px;transition:opacity .2s}
+.proflink-like:not(.liked):not(.visited){opacity:.45}
+.proflink-like.visited{opacity:1}
+.proflink-like.liked{color:#ef4444;cursor:default;opacity:1}
 .proflink-likes{font-size:10.5px;color:var(--muted);padding:2px 4px;font-weight:500}
 .proflink-open{flex:1;text-align:center;padding:5px 6px;background:linear-gradient(135deg,#f9a825,#e91e63,#9c27b0);color:#fff !important;border-radius:6px;font-size:10px;font-weight:700;text-decoration:none;white-space:nowrap;box-shadow:0 1px 4px rgba(233,30,99,.25)}
 .toast{position:fixed;top:80px;left:50%;transform:translateX(-50%);background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:10px 20px;font-size:13px;font-weight:500;z-index:999;box-shadow:var(--shadow);opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap}
@@ -2522,8 +2524,66 @@ function showBanner(opts){
 }
 // Engagement-Quality-Control: User muss erst Link besuchen, bevor er liken darf.
 // Status pro Link wird in localStorage gespeichert (cb_visited_links: { lid: timestamp }).
-function markLinkVisited(lid){try{const v=JSON.parse(localStorage.getItem('cb_visited_links')||'{}');v[String(lid)]=Date.now();localStorage.setItem('cb_visited_links',JSON.stringify(v));}catch(e){}}
+function markLinkVisited(lid){
+  try{const v=JSON.parse(localStorage.getItem('cb_visited_links')||'{}');v[String(lid)]=Date.now();localStorage.setItem('cb_visited_links',JSON.stringify(v));}catch(e){}
+  // Sofortiges UI-Feedback: alle Like-Buttons für diesen Link freischalten
+  try{document.querySelectorAll('.proflink-like[data-msgid="'+lid+'"], .post-action-btn[data-msgid="'+lid+'"]').forEach(b=>{b.classList.add('visited');});}catch(e){}
+}
 function hasLinkVisited(lid){try{const v=JSON.parse(localStorage.getItem('cb_visited_links')||'{}');return !!v[String(lid)];}catch(e){return false;}}
+// Beim Page-Load alle bereits besuchten Links markieren (visited-Class für CSS)
+(function _hydrateVisitedLikes(){
+  function run(){
+    try{
+      const v=JSON.parse(localStorage.getItem('cb_visited_links')||'{}');
+      document.querySelectorAll('.proflink-like[data-msgid], .post-action-btn[data-msgid]').forEach(b=>{
+        const mid=b.getAttribute('data-msgid');
+        if(mid && v[String(mid)])b.classList.add('visited');
+      });
+    }catch(e){}
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run);
+  else run();
+})();
+// Shared likePost — wird auf /profil, /profil/{uid} und /feed verwendet.
+// Auf /feed wird sie später von einer komplexeren Version mit Offline-Queue überschrieben.
+if(typeof window.likePost==='undefined'){
+  window.likePost=async function(msgId, btn){
+    if(!btn||btn.dataset.busy==='1')return;
+    if(btn.classList.contains('liked')){
+      if(window.showBanner)showBanner({type:'success',title:'Schon geliked ❤️',subtitle:'Du hast diesen Link bereits geliked.',dur:2500});
+      return;
+    }
+    if(!hasLinkVisited(msgId)){
+      if(window.showBanner)showBanner({type:'warn',icon:'⚠️',title:'Erst den Link besuchen!',subtitle:'Tap auf „→ Öffnen" → auf Instagram liken & kommentieren → dann hier liken.',dur:5000});
+      return;
+    }
+    btn.dataset.busy='1';
+    const countEl=document.getElementById('likes-'+msgId);
+    btn.classList.add('liked');
+    const svg=btn.querySelector('svg');if(svg)svg.setAttribute('fill','currentColor');
+    if(countEl)countEl.textContent=Number(countEl.textContent||0)+1;
+    btn.disabled=true;
+    try{
+      const ctrl=new AbortController();const tmo=setTimeout(()=>ctrl.abort(),8000);
+      const res=await fetch('/api/like',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({msgId}),signal:ctrl.signal});
+      clearTimeout(tmo);
+      const data=await res.json();
+      if(data.ok){
+        if(countEl&&data.likes!==undefined)countEl.textContent=data.likes;
+        if(window.showBanner)showBanner({type:'success',title:'Like registriert ❤️',subtitle:'Vergiss nicht: Auf Instagram liken & 2-Wort-Kommentar.',dur:4000});
+      }else if(data.missingInstagram){
+        btn.classList.remove('liked');if(svg)svg.setAttribute('fill','none');
+        if(countEl)countEl.textContent=Math.max(0,Number(countEl.textContent)-1);
+        btn.disabled=false;btn.dataset.busy='0';
+        if(window.showBanner)showBanner({type:'warn',icon:'❌',title:'Like fehlgeschlagen',subtitle:data.error||'Insta in Einstellungen setzen.',dur:4500});
+      }else{
+        if(window.showBanner)showBanner({type:'warn',icon:'⚠️',title:'Like fehlgeschlagen',subtitle:data.error||'Versuch es nochmal.',dur:3500});
+      }
+    }catch(e){
+      if(window.showBanner)showBanner({type:'warn',icon:'📡',title:'Netzwerkfehler',subtitle:'Versuch es nochmal sobald du wieder Online bist.',dur:3500});
+    }
+  };
+}
 function setTheme(t){document.documentElement.setAttribute('data-theme',t);try{localStorage.setItem('cbTheme4',t);}catch(e){}document.querySelectorAll('[title="Theme"]').forEach(b=>b.textContent=t==='dark'?'☀️':'🌙');fetch('/api/theme',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({theme:t})}).catch(()=>{});}
 try{const t=localStorage.getItem('cbTheme4');if(t){document.documentElement.setAttribute('data-theme',t);}}catch(e){}
 function setLang(l){fetch('/api/lang',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lang:l})}).then(()=>location.reload()).catch(()=>{try{document.cookie='cbLang='+l+';path=/;max-age=31536000';}catch(e){}location.reload();});}
@@ -17113,7 +17173,7 @@ ${profileCard(uid, u, d, false, lang, adminIds)}
   <div class="tab" onclick="showTPTab('about',this)">👤 About</div>
 </div>
 <div id="tptab-links" style="padding-bottom:100px">${theirLinksHtml}</div>
-<div id="tptab-posts" style="display:none;padding-bottom:100px">${theirPinnedHtml}${theirPostsHtml}</div>
+<div id="tptab-posts" style="display:none;padding-bottom:100px">${theirPostsHtml}</div>
 <div id="tptab-projekte" style="display:none;padding-bottom:100px">
   ${theirProjects.length>0?'<div class="proj-grid">'+theirProjCardsHtml+'</div>':'<div class="empty"><div class="empty-icon">🚀</div><div class="empty-text">Noch keine Projekte</div></div>'}
 </div>
