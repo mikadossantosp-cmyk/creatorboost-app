@@ -9108,22 +9108,22 @@ window.onPinVisitStory = function(uid){
 (_myIsAdmin ? '      <button onclick=\'adminDelLink("'+msgId+'",this)\' title="Link löschen (Admin)" style="background:none;border:none;color:#ef4444;font-size:15px;cursor:pointer;padding:0 0 0 4px;line-height:1">🗑️</button>\n' : '')+
 '    </div>\n'+
 '  </div>\n'+
-// Post header
+// Post header — Avatar + Name → /profil/{uid}
 '  <div class="post-header" style="padding-top:8px">\n'+
-'    <div style="position:relative;width:40px;height:40px;flex-shrink:0">\n'+
+'    <a href="/profil/'+link.user_id+'" style="position:relative;width:40px;height:40px;flex-shrink:0;text-decoration:none">\n'+
 '      '+crownOverlay(link.user_id, 'sm')+'\n'+
 '      <div style="position:relative;width:40px;height:40px;border-radius:50%;overflow:hidden;background:'+grad+';display:flex;align-items:center;justify-content:center">\n'+
 '        <span style="color:#fff;font-weight:700;font-size:15px;position:absolute">'+(poster.name||'?').slice(0,1)+'</span>\n'+
 '        '+avatarSmall+'\n'+
 '      </div>\n'+
-'    </div>\n'+
-'    <div class="post-user-info">\n'+
+'    </a>\n'+
+'    <a href="/profil/'+link.user_id+'" class="post-user-info" style="text-decoration:none;color:inherit">\n'+
 '      <div class="post-name" style="display:flex;align-items:center;gap:5px">\n'+
 '        '+(poster.spitzname||poster.name||'User')+'\n'+
 '        '+(isOnline?'<span style="width:7px;height:7px;border-radius:50%;background:#00c851;display:inline-block;flex-shrink:0"></span>':'')+'\n'+
 '      </div>\n'+
 '      <div class="post-badge">'+cleanRole(poster.role)+(insta?'<span style="color:var(--muted2)"> · @'+poster.instagram+'</span>':'')+'</div>\n'+
-'    </div>\n'+
+'    </a>\n'+
 '  </div>\n'+
 // Reel video preview card
 '  <div style="margin:0 16px;border-radius:14px;overflow:hidden;background:#000;border:1.5px solid;border-image:linear-gradient(135deg,#f9a825,#e91e63,#9c27b0) 1;cursor:pointer;box-shadow:0 6px 20px rgba(233,30,99,0.10)" onclick="markLinkVisited(\''+lid1+'\');window.open(\''+link.text+'\',\'_blank\')">\n'+
@@ -9212,13 +9212,13 @@ commentsBox+
                 +'<span class="post-time">'+dateStr+' '+time+'</span>\n'
                 +'</div>\n'
                 +'<div class="post-header" style="padding-top:8px">\n'
-                +'<div style="position:relative;width:40px;height:40px;flex-shrink:0">'+crownOverlay(sl.uid,'sm')+'<div style="position:relative;width:40px;height:40px;border-radius:50%;overflow:hidden;background:'+grad+';display:flex;align-items:center;justify-content:center">\n'
+                +'<a href="/profil/'+sl.uid+'" style="position:relative;width:40px;height:40px;flex-shrink:0;text-decoration:none">'+crownOverlay(sl.uid,'sm')+'<div style="position:relative;width:40px;height:40px;border-radius:50%;overflow:hidden;background:'+grad+';display:flex;align-items:center;justify-content:center">\n'
                 +'<span style="color:#fff;font-weight:700;font-size:15px;position:absolute">'+(poster.name||'?')[0]+'</span>\n'
-                +avatarSmall+'\n</div></div>\n'
-                +'<div class="post-user-info">\n'
+                +avatarSmall+'\n</div></a>\n'
+                +'<a href="/profil/'+sl.uid+'" class="post-user-info" style="text-decoration:none;color:inherit">\n'
                 +'<div class="post-name">'+(poster.spitzname||poster.name||'User')+'</div>\n'
                 +'<div class="post-badge">'+cleanRole(poster.role)+(insta?'<span style="color:var(--muted2)"> · @'+insta+'</span>':'')+'</div>\n'
-                +'</div>\n</div>\n'
+                +'</a>\n</div>\n'
                 +'<div style="margin:8px 16px;padding:8px 12px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:10px;font-size:11px;color:rgba(245,158,11,.9);font-weight:600">🔄 Bitte Liken, Kommentieren, Teilen und Speichern</div>\n'
                 +'<div style="margin:0 16px 8px;border-radius:14px;overflow:hidden;background:var(--bg3);border:1px solid rgba(255,255,255,.08)">\n'
                 +(sl.thumbnail
@@ -12337,7 +12337,23 @@ document.getElementById('user-search-input')?.addEventListener('input',filterSea
             .sort((a, b) => (b.lastMsg?.timestamp||0)-(a.lastMsg?.timestamp||0));
         // Threads sind aus der App entfernt — keine Unread/List mehr nötig
         const lastAppChat = (appChatData?.messages || []).filter(m => !m.deleted).slice(-1)[0] || null;
-        const convHtml = require('./chat-list-render')({ myConvos, botData, myUid, ladeBild, adminIds, onlineUids: getOnlineUids(), crown, appChatPreview: lastAppChat ? { name: lastAppChat.name, text: lastAppChat.text, image: lastAppChat.image, timestamp: lastAppChat.ts } : null, appChatUnread: appChatData?.unread || 0, appChatMembers: appChatData?.memberCount || 0 });
+        // Stories: nur gefolgte User mit Pinned Reel (gleiche Logik wie /feed)
+        const _myFollowingSet = new Set((botData.users?.[myUid]?.following || []).map(String));
+        const _myEngagedOwnersDM = (botData.pinnedEngages?.[String(myUid)] || []).map(String);
+        const _pinnedStoriesDM = Object.entries(botData.users || {})
+            .filter(([id, u]) => _myFollowingSet.has(String(id)) && !adminIds.includes(Number(id)) && isAppVisible(u))
+            .map(([id, u]) => ({ id, u, pinnedUrl: ladePinnedLink(id) }))
+            .filter(x => !!x.pinnedUrl)
+            .map(x => ({
+                uid: x.id,
+                name: x.u.spitzname || x.u.name || 'User',
+                avatar: ladeBild(x.id, 'profilepic') ? '/appbild/' + x.id + '/profilepic' : (x.u.instagram ? 'https://unavatar.io/instagram/' + encodeURIComponent(x.u.instagram) : ''),
+                thumb: ((x.pinnedUrl || '').match(/instagram\.com\/(?:reel|p|tv)\/([A-Za-z0-9_-]+)/) ? '/insta-thumb?u=' + encodeURIComponent(x.pinnedUrl) : ''),
+                engaged: _myEngagedOwnersDM.includes(String(x.id)) || String(x.id) === String(myUid),
+                isOwn: String(x.id) === String(myUid)
+            }))
+            .sort((a, b) => (a.engaged === b.engaged) ? 0 : (a.engaged ? 1 : -1));
+        const convHtml = require('./chat-list-render')({ myConvos, botData, myUid, ladeBild, adminIds, onlineUids: getOnlineUids(), crown, appChatPreview: lastAppChat ? { name: lastAppChat.name, text: lastAppChat.text, image: lastAppChat.image, timestamp: lastAppChat.ts } : null, appChatUnread: appChatData?.unread || 0, appChatMembers: appChatData?.memberCount || 0, pinnedStories: _pinnedStoriesDM });
         return html(`<div class="topbar"><div class="topbar-logo">Nachrichten</div><div class="topbar-actions"><a href="/suche" class="icon-btn" title="User suchen" style="text-decoration:none"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></a></div></div><div style="padding-bottom:80px">${convHtml}</div>`, 'messages');
     }
 

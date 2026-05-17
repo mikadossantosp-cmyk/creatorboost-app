@@ -27,39 +27,28 @@ function esc(s) {
 }
 
 module.exports = function renderChatList(opts) {
-    const { myConvos = [], botData = {}, myUid = '', feedPreview = '', totalThreadUnread = 0, ladeBild = () => null, onlineUids, threadsList = [], threadLastRead = {}, crown = () => '', appChatPreview = null, appChatUnread = 0, appChatMembers = 0 } = opts || {};
+    const { myConvos = [], botData = {}, myUid = '', feedPreview = '', totalThreadUnread = 0, ladeBild = () => null, onlineUids, threadsList = [], threadLastRead = {}, crown = () => '', appChatPreview = null, appChatUnread = 0, appChatMembers = 0, pinnedStories = [] } = opts || {};
     const adminIds = (typeof opts.adminIds !== 'undefined') ? opts.adminIds : [];
     const isAdminUser = (Array.isArray(adminIds) ? adminIds : []).map(Number).includes(Number(myUid));
     const onlineSet = onlineUids instanceof Set ? onlineUids : (Array.isArray(onlineUids) ? new Set(onlineUids.map(String)) : new Set());
     const onlineArr = [...onlineSet];
 
-    let storiesArr = [];
-    try {
-        const users = botData.users || {};
-        storiesArr = Object.entries(users)
-            .filter(([id, u]) => {
-                if (String(id) === String(myUid)) return false;
-                if (Array.isArray(adminIds) && adminIds.includes(Number(id))) return false;
-                if (!u || !u.started) return false;
-                return true;
-            })
-            .sort((a, b) => (b[1].xp || 0) - (a[1].xp || 0))
-            .slice(0, 14);
-    } catch (e) { storiesArr = []; }
+    // Stories: nur gefolgte User mit Pinned Reel. Wenn keine pinnedStories übergeben → leer.
+    const storiesArr = Array.isArray(pinnedStories) ? pinnedStories : [];
 
-    const storiesHtml = storiesArr.map(([id, u]) => {
-        const insta = u.instagram;
-        const pic = ladeBild(id, 'profilepic');
-        const name = u.spitzname || u.name || '?';
+    const storiesHtml = storiesArr.map((item) => {
+        const id = item.uid;
+        const name = item.name || '?';
         const isOnline = onlineSet.has(String(id));
+        const ringExtraClass = item.engaged ? ' pinned-engaged' : ' pinned-glow';
         let avatarInner = '<span class="sa-fb">' + esc(name.slice(0, 1)) + '</span>';
-        if (pic) avatarInner = '<img src="/appbild/' + id + '/profilepic" alt="" loading="lazy">';
-        else if (insta) avatarInner = '<img src="https://unavatar.io/instagram/' + esc(insta) + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">';
-        return '<a href="/profil/' + id + '" class="dm-story-item">' +
-            '<div class="dm-story-ring' + (isOnline ? ' online' : '') + '"><div class="dm-story-avatar">' + avatarInner + '</div></div>' +
+        if (item.avatar) avatarInner = '<img src="' + esc(item.avatar) + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">';
+        return '<button type="button" class="dm-story-item" onclick="openPinnedStory(\'' + esc(id) + '\')">' +
+            '<div class="dm-story-ring' + (isOnline ? ' online' : '') + ringExtraClass + '"><div class="dm-story-avatar">' + avatarInner + '</div></div>' +
             '<div class="dm-story-name">' + esc(name.slice(0, 10)) + '</div>' +
-            '</a>';
+            '</button>';
     }).join('');
+    const pinnedStoriesJson = JSON.stringify(storiesArr).replace(/<\/(script)/gi, '<\\/$1');
 
     // Pinned-Row: App-Community-Chat (globale Gruppe für alle App-User).
     // Immer ganz oben sichtbar, unabhängig von DMs.
@@ -260,7 +249,11 @@ module.exports = function renderChatList(opts) {
         '.dm-stories-section .dm-stories-wrap::-webkit-scrollbar { display: none !important; }' +
         '.dm-stories-section .dm-story-item { flex-shrink: 0 !important; text-align: center !important; text-decoration: none !important; color: inherit !important; min-width: 68px !important; transition: transform 0.15s !important; outline: none !important; position: relative; }' +
         '.dm-stories-section .dm-story-item:active { transform: scale(0.93) !important; }' +
+        '.dm-stories-section .dm-story-item { background: none !important; border: none !important; padding: 0 !important; font-family: inherit !important; cursor: pointer !important; }' +
         '.dm-stories-section .dm-story-item .dm-story-ring { width: 64px !important; height: 64px !important; padding: 2.5px !important; border-radius: 50% !important; background: linear-gradient(135deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%) !important; margin: 0 auto !important; border: 0 !important; outline: 0 !important; box-shadow: none !important; position: relative; }' +
+        '.dm-stories-section .dm-story-item .dm-story-ring.pinned-glow { background: linear-gradient(135deg,#f9a825,#e91e63,#9c27b0,#3b82f6) !important; background-size: 300% 300% !important; box-shadow: 0 4px 16px rgba(233,30,99,0.4) !important; animation: dmPinnedBlink 1.8s ease-in-out infinite; }' +
+        '.dm-stories-section .dm-story-item .dm-story-ring.pinned-engaged { background: linear-gradient(135deg,#9ca3af,#6b7280) !important; box-shadow: none !important; opacity: 0.55; }' +
+        '@keyframes dmPinnedBlink { 0%,100% { background-position: 0% 50%; box-shadow: 0 4px 14px rgba(233,30,99,0.4); opacity: 1; } 50% { background-position: 100% 50%; box-shadow: 0 6px 22px rgba(233,30,99,0.75); opacity: 0.7; } }' +
         '.dm-stories-section .dm-story-item .dm-story-ring.online::after { content: "" !important; position: absolute !important; bottom: 0 !important; right: 0 !important; width: 14px !important; height: 14px !important; border-radius: 50% !important; background: #22c55e !important; border: 2.5px solid var(--bg) !important; z-index: 5 !important; }' +
         '.dm-stories-section .dm-story-item .dm-story-ring .dm-story-avatar { width: 100% !important; height: 100% !important; border-radius: 50% !important; background: var(--bg) !important; padding: 2.5px !important; display: block !important; position: relative !important; overflow: hidden !important; box-sizing: border-box !important; border: 0 !important; outline: 0 !important; }' +
         '.dm-stories-section .dm-story-item .dm-story-ring .dm-story-avatar > img { position: absolute !important; inset: 2.5px !important; width: calc(100% - 5px) !important; height: calc(100% - 5px) !important; border-radius: 50% !important; object-fit: cover !important; border: 0 !important; outline: 0 !important; }' +
@@ -330,6 +323,7 @@ module.exports = function renderChatList(opts) {
         '</div>' +
 
         (storiesArr.length ? '<div class="dm-stories-section"><div class="dm-stories-wrap">' + storiesHtml + '</div></div>' : '') +
+        (storiesArr.length ? '<div id="pinned-story-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);z-index:9999;align-items:flex-end;justify-content:center" onclick="if(event.target===this)closePinnedStory()"><div id="pinned-story-sheet" style="background:var(--bg2);width:100%;max-width:480px;border-radius:24px 24px 0 0;padding:18px 16px 28px;max-height:88vh;overflow-y:auto"></div></div>' : '') +
 
         '<div class="dm-list" id="dm-list-chats">' +
             appCommunityRow +
@@ -342,6 +336,43 @@ module.exports = function renderChatList(opts) {
         '</button>' +
 
         '<script>' +
+            // ── Pinned-Story Modal (gleiche Logik wie im Feed) ──
+            'window._pinnedStoriesData = ' + pinnedStoriesJson + ';' +
+            'window.openPinnedStory = function(uid){' +
+              'const s=(window._pinnedStoriesData||[]).find(x=>String(x.uid)===String(uid));' +
+              'if(!s)return;' +
+              'const m=document.getElementById("pinned-story-modal");const sh=document.getElementById("pinned-story-sheet");' +
+              'if(!m||!sh)return;' +
+              'const _esc=t=>String(t==null?"":t).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/\'/g,"&#39;");' +
+              'sh.innerHTML="<div style=\\"width:36px;height:4px;background:#666;border-radius:4px;margin:0 auto 14px\\"></div>"+' +
+                '"<div style=\\"display:flex;align-items:center;gap:10px;margin-bottom:14px\\">"+' +
+                  '"<a href=\\"/profil/"+_esc(s.uid)+"\\" style=\\"width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#a78bfa,#7c3aed);overflow:hidden;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:18px;flex-shrink:0;text-decoration:none\\">"+(s.avatar?"<img src=\\""+_esc(s.avatar)+"\\" style=\\"width:100%;height:100%;object-fit:cover\\" alt=\\"\\">":_esc((s.name||"?").slice(0,1)))+"</a>"+' +
+                  '"<div style=\\"flex:1;min-width:0\\">"+' +
+                    '"<a href=\\"/profil/"+_esc(s.uid)+"\\" style=\\"font-size:15px;font-weight:700;color:var(--text);text-decoration:none;display:block\\">"+_esc(s.name)+"</a>"+' +
+                    '"<div style=\\"font-size:11px;color:#ec4899;text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-top:1px\\">📌 Pinned Reel"+(s.engaged?" · Engagiert ✓":"")+"</div>"+' +
+                  '"</div>"+' +
+                  '"<button onclick=\\"closePinnedStory()\\" style=\\"background:var(--bg4);border:none;width:32px;height:32px;border-radius:50%;color:var(--text);font-size:18px;cursor:pointer;flex-shrink:0\\">×</button>"+' +
+                '"</div>"+' +
+                '(s.thumb?' +
+                  '"<a href=\\"javascript:void(0)\\" onclick=\\"onPinVisitStory(\'"+_esc(s.uid)+"\')\\" style=\\"display:block;position:relative;width:100%;padding-top:62%;overflow:hidden;background:#000;border-radius:14px;margin-bottom:12px;text-decoration:none\\">"+' +
+                    '"<img src=\\""+_esc(s.thumb)+"\\" referrerpolicy=\\"no-referrer\\" style=\\"position:absolute;inset:0;width:100%;height:100%;object-fit:cover\\" loading=\\"lazy\\" onerror=\\"this.style.display=\'none\'\\" alt=\\"\\">"+' +
+                    '"<div style=\\"position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.05),rgba(0,0,0,.4));pointer-events:none\\"></div>"+' +
+                    '"<div style=\\"position:absolute;inset:0;display:flex;align-items:center;justify-content:center\\"><div style=\\"width:54px;height:54px;border-radius:50%;background:rgba(255,255,255,.92);display:flex;align-items:center;justify-content:center\\"><div style=\\"width:0;height:0;border-style:solid;border-width:11px 0 11px 20px;border-color:transparent transparent transparent #000;margin-left:4px\\"></div></div></div>"+' +
+                  '"</a>"' +
+                ':"<div style=\\"margin-bottom:12px;padding:30px;background:linear-gradient(135deg,#1a1a2e,#16213e);border-radius:14px;text-align:center;font-size:14px;color:rgba(255,255,255,.6)\\">📸 Instagram Reel</div>")+' +
+                '(s.isOwn?' +
+                  '"<div style=\\"padding:12px 14px;background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.25);border-radius:12px;font-size:13px;color:var(--muted);line-height:1.5\\">👤 Das ist dein eigener Pinned Reel.</div>"' +
+                ':"<div style=\\"display:flex;gap:8px;margin-bottom:10px\\"><a href=\\"javascript:void(0)\\" onclick=\\"onPinVisitStory(\'"+_esc(s.uid)+"\')\\" id=\\"pin-visit-link-story\\" style=\\"flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:11px 12px;background:linear-gradient(135deg,#ec4899,#a855f7);color:#fff;border-radius:10px;font-size:13px;font-weight:700;text-decoration:none\\">📸 Auf Instagram öffnen</a>"+' +
+                  '(s.engaged?"<button disabled style=\\"flex:1;padding:11px 12px;border-radius:10px;border:1px solid #22c55e;background:rgba(34,197,94,.12);color:#22c55e;font-size:13px;font-weight:700;font-family:inherit;cursor:default\\">✅ Engagiert</button>":"<button onclick=\\"pinnedEngageClick(\'"+_esc(s.uid)+"\',this)\\" id=\\"pin-engage-btn-story\\" disabled data-locked=\\"1\\" style=\\"flex:1;padding:11px 12px;border-radius:10px;border:1px solid rgba(255,107,107,.35);background:rgba(255,107,107,.10);color:#ff6b6b;font-size:13px;font-weight:700;font-family:inherit;cursor:not-allowed;opacity:0.55\\">🔒 Erst Insta öffnen</button>")+' +
+                  '"</div><div style=\\"padding:12px 14px;background:linear-gradient(135deg,rgba(34,197,94,.10),rgba(167,139,250,.06));border:1px solid rgba(34,197,94,.25);border-radius:12px;font-size:12.5px;color:var(--text);line-height:1.55\\"><div style=\\"font-weight:700;color:#22c55e;margin-bottom:4px\\">💎 +1 Diamant für Engagement</div><div style=\\"color:var(--muted)\\">Auf Instagram <b>LIKEN + KOMMENTIEREN + TEILEN + SPEICHERN</b> → komme zurück → tippe „Engagiert\\" → +1 💎 für dich.</div></div>");' +
+              'm.style.display="flex";' +
+            '};' +
+            'window.closePinnedStory=function(){const m=document.getElementById("pinned-story-modal");if(m)m.style.display="none";};' +
+            'window.onPinVisitStory=function(uid){' +
+              'window["_pvisit_"+uid]=Date.now();' +
+              'window.open("/pinned-redirect?uid="+encodeURIComponent(uid),"_blank","noopener,noreferrer");' +
+              'setTimeout(()=>{const b=document.getElementById("pin-engage-btn-story");if(b&&!b.dataset.engaged){b.disabled=false;b.style.cursor="pointer";b.style.opacity="1";b.removeAttribute("data-locked");b.innerHTML="❤️ Engagiert · +1💎";}},1500);' +
+            '};' +
             'let dmSearchTimer = null;' +
             'function dmSearch(q) {' +
                 'clearTimeout(dmSearchTimer);' +
