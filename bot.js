@@ -1322,6 +1322,17 @@ textarea.form-input{resize:none;min-height:80px}
 .empty-icon{font-size:48px;margin-bottom:12px}
 .empty-text{font-size:15px;font-weight:600;margin-bottom:6px;color:var(--text)}
 .empty-sub{font-size:13px}
+.proflink-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:8px 10px}
+.proflink-card{border-radius:10px;overflow:hidden;background:var(--bg3);border:1px solid var(--border2);display:flex;flex-direction:column}
+.proflink-thumb{position:relative;width:100%;padding-top:130%;background:linear-gradient(135deg,#1a1a2e,#16213e);overflow:hidden;cursor:pointer}
+.proflink-thumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.proflink-thumb-overlay{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.05),rgba(0,0,0,.35));pointer-events:none}
+.proflink-play{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.95);font-size:22px;text-shadow:0 2px 6px rgba(0,0,0,.5);pointer-events:none}
+.proflink-actions{display:flex;align-items:center;gap:4px;padding:5px 5px 6px}
+.proflink-like{display:inline-flex;align-items:center;gap:3px;background:none;border:none;cursor:pointer;color:var(--text);font-size:10.5px;font-weight:600;font-family:inherit;padding:2px 4px}
+.proflink-like.liked{color:#ef4444;cursor:default}
+.proflink-likes{font-size:10.5px;color:var(--muted);padding:2px 4px;font-weight:500}
+.proflink-open{flex:1;text-align:center;padding:5px 6px;background:linear-gradient(135deg,#f9a825,#e91e63,#9c27b0);color:#fff !important;border-radius:6px;font-size:10px;font-weight:700;text-decoration:none;white-space:nowrap;box-shadow:0 1px 4px rgba(233,30,99,.25)}
 .toast{position:fixed;top:80px;left:50%;transform:translateX(-50%);background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:10px 20px;font-size:13px;font-weight:500;z-index:999;box-shadow:var(--shadow);opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap}
 .toast.show{opacity:1}
 .cb-banner{position:fixed;top:0;left:0;right:0;z-index:9999;padding:20px 24px;color:#fff;text-align:center;font-family:var(--font);transform:translateY(-100%);transition:transform .4s cubic-bezier(.2,.8,.2,1);box-shadow:0 12px 32px rgba(0,0,0,0.5);pointer-events:none;display:flex;align-items:center;justify-content:center;gap:14px;letter-spacing:0.2px}
@@ -8924,11 +8935,10 @@ commentsBox+
                 +(sl.thumbnail
                     ? '<a href="'+htmlEsc(safeUrl(sl.url||''))+'" target="_blank" rel="noopener noreferrer" onclick="markLinkVisited(\''+sl.id+'\')" style="display:block;position:relative;width:100%;padding-top:62%;overflow:hidden;background:#000"><img src="/insta-thumb?u='+encodeURIComponent(sl.thumbnail)+'" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.parentElement.style.display=\'none\'" alt=""><div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.05),rgba(0,0,0,.55))"></div><div style="position:absolute;top:10px;left:12px;background:rgba(0,0,0,.55);border-radius:8px;padding:4px 9px;font-size:11px;color:#fff;font-weight:600;backdrop-filter:blur(4px)">📸 Instagram</div></a>\n'
                     : '')
-                +'<a href="'+htmlEsc(safeUrl(sl.url||''))+'" target="_blank" rel="noopener noreferrer" onclick="markLinkVisited(\''+sl.id+'\')" style="display:block;padding:12px 14px;text-decoration:none">\n'
-                +'<div style="font-size:13px;color:var(--blue);word-break:break-all;margin-bottom:4px">'+htmlEsc(String(sl.url||'').replace('https://www.','').replace('https://','').slice(0,60))+'</div>\n'
-                +(sl.caption?'<div style="font-size:12px;color:var(--muted);margin-top:4px">'+String(sl.caption).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</div>':'')+'\n'
-                +'<div style="font-size:11px;color:var(--accent);font-weight:700;margin-top:6px">Ansehen →</div>\n'
-                +'</a></div>\n'
+                +'<div style="padding:10px 14px">\n'
+                +(sl.caption?'<div style="font-size:12px;color:var(--muted);line-height:1.4;margin-bottom:8px">'+String(sl.caption).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</div>':'')+'\n'
+                +'<a href="'+htmlEsc(safeUrl(sl.url||''))+'" target="_blank" rel="noopener noreferrer" onclick="markLinkVisited(\''+sl.id+'\')" style="display:inline-flex;align-items:center;gap:5px;padding:7px 14px;background:linear-gradient(135deg,#f59e0b,#a78bfa);color:#fff;border-radius:10px;font-size:12px;font-weight:700;text-decoration:none">→ Öffnen</a>\n'
+                +'</div></div>\n'
                 +'<div class="post-likes-row"><span class="post-like-count">❤️ <span id="sl-likes-'+sl.id+'">'+likes.length+'</span></span></div>\n'
                 +'<div id="sl-liker-rows-'+sl.id+'" style="display:none">'+likerRows+'</div>\n'
                 +'<div class="post-actions" style="gap:8px;padding:8px 16px 12px">'+likeBtn+whoLikedBtn+'</div>\n'
@@ -16546,40 +16556,28 @@ ${rest.map(([id,u],idx)=>{
         // Pinned-Post wird jetzt im profileCard zwischen XP und Superlink angezeigt — kein Duplikat hier
         const myPinnedHtml = '';
 
-        // Feed-Style Link-Cards mit Reel-Banner + Like-Button + Öffnen-Button
+        // Compact 3-column Link-Cards — nur Thumbnail + Like + Öffnen, keine URL sichtbar
         const renderProfileLinkCard = (l, msgId, isOwn) => {
             const likes = Array.isArray(l.likes) ? l.likes : (l.likes instanceof Set ? [...l.likes] : []);
             const likeCount = likes.length;
             const hasLiked = !isOwn && likes.map(String).includes(String(myUid));
             const shortcode = (l.text||'').match(/instagram\.com\/(?:reel|p|tv)\/([A-Za-z0-9_-]+)/);
             const thumbUrl = shortcode ? '/insta-thumb?u=' + encodeURIComponent(l.text) : '';
-            const dateStr = new Date(l.timestamp||0).toLocaleDateString('de-DE', {day:'2-digit', month:'short', year:'numeric'});
-            return '<div class="post fade-up" data-url="'+htmlEsc(l.text||'')+'" style="position:relative;margin:0 0 14px">'
-              + '<div style="margin:0 16px;border-radius:14px;overflow:hidden;background:#000;border:1.5px solid;border-image:linear-gradient(135deg,#f9a825,#e91e63,#9c27b0) 1;cursor:pointer;box-shadow:0 6px 20px rgba(233,30,99,0.10)" onclick="openPostUrl(\''+msgId+'\')" id="post-'+msgId+'">'
-              + '<div style="position:relative;width:100%;padding-top:62%;background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);overflow:hidden">'
-              + (thumbUrl ? '<img src="'+thumbUrl+'" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.style.display=\'none\'" alt="">' : '')
-              + '<div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.1) 0%,rgba(0,0,0,.55) 100%)"></div>'
-              + '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none">'
-              + '<div style="width:54px;height:54px;border-radius:50%;background:rgba(255,255,255,.92);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 16px rgba(0,0,0,.35)">'
-              + '<div style="width:0;height:0;border-style:solid;border-width:11px 0 11px 20px;border-color:transparent transparent transparent #000;margin-left:4px"></div>'
-              + '</div></div>'
-              + '<div style="position:absolute;top:10px;left:12px;background:rgba(0,0,0,.55);border-radius:8px;padding:4px 9px;display:flex;align-items:center;gap:5px;backdrop-filter:blur(4px)">'
-              + '<span style="font-size:13px">📸</span><span style="font-size:11px;color:#fff;font-weight:600">Instagram Reel</span>'
-              + '</div></div>'
-              + (l.caption?'<div style="padding:8px 12px;font-size:12px;color:var(--muted);line-height:1.4;border-top:1px solid rgba(255,255,255,.06);background:var(--bg3)">'+htmlEsc(String(l.caption).slice(0,200))+'</div>':'')
-              + '<div style="padding:8px 12px 10px;display:flex;align-items:center;gap:8px;background:var(--bg3)">'
-              + '<div style="font-size:11px;color:var(--muted2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500">'+htmlEsc(String(l.text||'').replace(/^https?:\/\//,'').slice(0,40))+'</div>'
-              + '<a href="'+htmlEsc(safeUrl(l.text||''))+'" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();markLinkVisited(\''+msgId+'\')" style="padding:6px 12px;background:linear-gradient(135deg,#f9a825,#e91e63,#9c27b0);color:#fff;border-radius:8px;font-size:11px;font-weight:700;text-decoration:none;white-space:nowrap;flex-shrink:0;box-shadow:0 2px 8px rgba(233,30,99,.25)">→ Öffnen</a>'
-              + '</div></div>'
-              + '<div class="post-likes-row" style="padding:6px 28px 0;display:flex;align-items:center;gap:10px;font-size:12px;color:var(--muted)">'
-              + (isOwn ? '<span style="color:var(--muted);font-weight:600">👤 Dein Link</span>'
-                       : '<button class="post-action-btn '+(hasLiked?'liked':'')+'" onclick="likePost(\''+msgId+'\',this)" data-msgid="'+msgId+'" '+(hasLiked?'disabled':'')+' style="display:inline-flex;align-items:center;gap:5px;background:none;border:none;cursor:'+(hasLiked?'default':'pointer')+';color:'+(hasLiked?'#ef4444':'var(--text)')+';font-size:12px;font-weight:600;font-family:inherit;padding:4px 0"><svg width="16" height="16" viewBox="0 0 24 24" fill="'+(hasLiked?'currentColor':'none')+'" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg> Like</button>')
-              + '<span style="font-size:12px;color:var(--muted);margin-left:auto">❤️ <span id="likes-'+msgId+'">'+likeCount+'</span> · '+dateStr+'</span>'
+            return '<div class="proflink-card fade-up" data-url="'+htmlEsc(l.text||'')+'">'
+              + '<div class="proflink-thumb" onclick="openPostUrl(\''+msgId+'\')" id="post-'+msgId+'">'
+              + (thumbUrl ? '<img src="'+thumbUrl+'" referrerpolicy="no-referrer" loading="lazy" onerror="this.style.display=\'none\'" alt="">' : '')
+              + '<div class="proflink-thumb-overlay"></div>'
+              + '<div class="proflink-play">▶</div>'
+              + '</div>'
+              + '<div class="proflink-actions">'
+              + (isOwn ? '<span class="proflink-likes">❤️ <span id="likes-'+msgId+'">'+likeCount+'</span></span>'
+                       : '<button class="proflink-like '+(hasLiked?'liked':'')+'" onclick="likePost(\''+msgId+'\',this)" data-msgid="'+msgId+'" '+(hasLiked?'disabled':'')+'><svg width="13" height="13" viewBox="0 0 24 24" fill="'+(hasLiked?'currentColor':'none')+'" stroke="currentColor" stroke-width="2.4"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg><span id="likes-'+msgId+'">'+likeCount+'</span></button>')
+              + '<a href="'+htmlEsc(safeUrl(l.text||''))+'" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();markLinkVisited(\''+msgId+'\')" class="proflink-open">→ Öffnen</a>'
               + '</div></div>';
         };
         const myLinks = Object.entries(d.links||{}).filter(([,l])=>String(l.user_id)===String(myUid)).sort((a,b)=>(b[1].timestamp||0)-(a[1].timestamp||0));
         const linksHtml = myLinks.length
-            ? myLinks.map(([msgId, l]) => renderProfileLinkCard(l, msgId, true)).join('')
+            ? '<div class="proflink-grid">'+myLinks.map(([msgId, l]) => renderProfileLinkCard(l, msgId, true)).join('')+'</div>'
             : '<div class="empty"><div class="empty-icon">🔗</div><div class="empty-text">Noch keine Links</div><div class="empty-sub">Poste deinen ersten Reel im Feed!</div></div>';
 
         const aboutHtml = '<div style="padding:16px;display:flex;flex-direction:column;gap:12px;padding-bottom:100px">'
@@ -16634,15 +16632,14 @@ ${rest.map(([id,u],idx)=>{
     </a><a href="/admin/emails?key=" class="icon-btn" title="Email Dashboard" style="background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border-color:rgba(34,197,94,0.5)" onclick="event.preventDefault();location.href='/admin/emails?key='+prompt('Bridge Secret:')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="18" height="18"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 4l-10 8L2 4"/></svg>
     </a>` : ''}
+    ${(() => {
+      const _claimedToday = hasClaimed('dailyxp', myUid);
+      return '<button id="daily-xp-fab" class="icon-btn" onclick="claimDailyXP()" title="'+(_claimedToday?'Heute schon abgeholt':'Täglicher XP-Bonus abholen')+'"'+(_claimedToday?' disabled':'')+' style="position:relative;background:'+(_claimedToday?'var(--bg4)':'linear-gradient(135deg,#22c55e,#16a34a)')+';color:'+(_claimedToday?'var(--muted)':'#fff')+';border-color:'+(_claimedToday?'var(--border)':'rgba(34,197,94,0.5)')+';font-size:16px;cursor:'+(_claimedToday?'default':'pointer')+';opacity:'+(_claimedToday?'0.55':'1')+'">'+(_claimedToday?'✓':'🎁')+(_claimedToday?'':'<span id="daily-xp-fab-dot" style="position:absolute;top:-2px;right:-2px;width:9px;height:9px;border-radius:50%;background:#ef4444;border:2px solid var(--bg);animation:dxpPulse 2s ease-in-out infinite"></span>')+'</button>';
+    })()}
     <a href="/einstellungen" class="icon-btn">⚙️</a>
   </div>
 </div>
 ${profileCard(myUid, myUser, d, true, lang, adminIds, myBannerData, myPicData)}
-<!-- Daily-XP-Bonus jetzt als Floating-Button oben rechts (klein, kompakt) -->
-${(() => {
-    const _claimedToday = hasClaimed('dailyxp', myUid);
-    return '<button id="daily-xp-fab" onclick="claimDailyXP()" title="'+( _claimedToday?'Heute schon abgeholt':'Täglicher XP-Bonus abholen')+'"'+( _claimedToday?' disabled':'')+' style="position:fixed;top:62px;right:14px;width:42px;height:42px;border-radius:50%;background:'+( _claimedToday?'var(--bg4)':'linear-gradient(135deg,#22c55e,#16a34a)')+';color:'+( _claimedToday?'var(--muted)':'#fff')+';border:2px solid var(--bg);display:flex;align-items:center;justify-content:center;font-size:18px;cursor:'+( _claimedToday?'default':'pointer')+';box-shadow:'+( _claimedToday?'none':'0 4px 16px rgba(34,197,94,0.4)')+';z-index:90;font-family:inherit;opacity:'+( _claimedToday?'0.55':'1')+'">'+( _claimedToday?'✓':'🎁')+( _claimedToday?'':'<span id="daily-xp-fab-dot" style="position:absolute;top:-2px;right:-2px;width:10px;height:10px;border-radius:50%;background:#ef4444;border:2px solid var(--bg);animation:dxpPulse 2s ease-in-out infinite"></span>')+'</button>';
-})()}
 <style>@keyframes dxpPulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(.85);opacity:.6}}</style>
 <!-- old .acc-switcher block removed — moved to top of profileCard as ipf-switcher -->
 <div id="create-sub-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(8px)">
@@ -17043,39 +17040,27 @@ async function submitPost(){const _spBtn=document.querySelector('[onclick="submi
                 +'</div></div>';
         }).join('');
 
-        // Feed-Style Link-Cards (gleiche Optik wie eigenes Profil, mit Like-Button da fremder User)
+        // Compact 3-column Link-Cards (Like-Button da fremder User)
         const renderTheirLinkCard = (l, msgId) => {
             const likes = Array.isArray(l.likes) ? l.likes : (l.likes instanceof Set ? [...l.likes] : []);
             const likeCount = likes.length;
             const hasLiked = likes.map(String).includes(String(myUid));
             const shortcode = (l.text||'').match(/instagram\.com\/(?:reel|p|tv)\/([A-Za-z0-9_-]+)/);
             const thumbUrl = shortcode ? '/insta-thumb?u=' + encodeURIComponent(l.text) : '';
-            const dateStr = new Date(l.timestamp||0).toLocaleDateString('de-DE', {day:'2-digit', month:'short', year:'numeric'});
-            return '<div class="post fade-up" data-url="'+htmlEsc(l.text||'')+'" style="position:relative;margin:0 0 14px">'
-              + '<div style="margin:0 16px;border-radius:14px;overflow:hidden;background:#000;border:1.5px solid;border-image:linear-gradient(135deg,#f9a825,#e91e63,#9c27b0) 1;cursor:pointer;box-shadow:0 6px 20px rgba(233,30,99,0.10)" onclick="openPostUrl(\''+msgId+'\')" id="post-'+msgId+'">'
-              + '<div style="position:relative;width:100%;padding-top:62%;background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);overflow:hidden">'
-              + (thumbUrl ? '<img src="'+thumbUrl+'" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.style.display=\'none\'" alt="">' : '')
-              + '<div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.1) 0%,rgba(0,0,0,.55) 100%)"></div>'
-              + '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none">'
-              + '<div style="width:54px;height:54px;border-radius:50%;background:rgba(255,255,255,.92);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 16px rgba(0,0,0,.35)">'
-              + '<div style="width:0;height:0;border-style:solid;border-width:11px 0 11px 20px;border-color:transparent transparent transparent #000;margin-left:4px"></div>'
-              + '</div></div>'
-              + '<div style="position:absolute;top:10px;left:12px;background:rgba(0,0,0,.55);border-radius:8px;padding:4px 9px;display:flex;align-items:center;gap:5px;backdrop-filter:blur(4px)">'
-              + '<span style="font-size:13px">📸</span><span style="font-size:11px;color:#fff;font-weight:600">Instagram Reel</span>'
-              + '</div></div>'
-              + (l.caption?'<div style="padding:8px 12px;font-size:12px;color:var(--muted);line-height:1.4;border-top:1px solid rgba(255,255,255,.06);background:var(--bg3)">'+htmlEsc(String(l.caption).slice(0,200))+'</div>':'')
-              + '<div style="padding:8px 12px 10px;display:flex;align-items:center;gap:8px;background:var(--bg3)">'
-              + '<div style="font-size:11px;color:var(--muted2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500">'+htmlEsc(String(l.text||'').replace(/^https?:\/\//,'').slice(0,40))+'</div>'
-              + '<a href="'+htmlEsc(safeUrl(l.text||''))+'" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();markLinkVisited(\''+msgId+'\')" style="padding:6px 12px;background:linear-gradient(135deg,#f9a825,#e91e63,#9c27b0);color:#fff;border-radius:8px;font-size:11px;font-weight:700;text-decoration:none;white-space:nowrap;flex-shrink:0;box-shadow:0 2px 8px rgba(233,30,99,.25)">→ Öffnen</a>'
-              + '</div></div>'
-              + '<div class="post-likes-row" style="padding:6px 28px 0;display:flex;align-items:center;gap:10px;font-size:12px;color:var(--muted)">'
-              + '<button class="post-action-btn '+(hasLiked?'liked':'')+'" onclick="likePost(\''+msgId+'\',this)" data-msgid="'+msgId+'" '+(hasLiked?'disabled':'')+' style="display:inline-flex;align-items:center;gap:5px;background:none;border:none;cursor:'+(hasLiked?'default':'pointer')+';color:'+(hasLiked?'#ef4444':'var(--text)')+';font-size:12px;font-weight:600;font-family:inherit;padding:4px 0"><svg width="16" height="16" viewBox="0 0 24 24" fill="'+(hasLiked?'currentColor':'none')+'" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg> Like</button>'
-              + '<span style="font-size:12px;color:var(--muted);margin-left:auto">❤️ <span id="likes-'+msgId+'">'+likeCount+'</span> · '+dateStr+'</span>'
+            return '<div class="proflink-card fade-up" data-url="'+htmlEsc(l.text||'')+'">'
+              + '<div class="proflink-thumb" onclick="openPostUrl(\''+msgId+'\')" id="post-'+msgId+'">'
+              + (thumbUrl ? '<img src="'+thumbUrl+'" referrerpolicy="no-referrer" loading="lazy" onerror="this.style.display=\'none\'" alt="">' : '')
+              + '<div class="proflink-thumb-overlay"></div>'
+              + '<div class="proflink-play">▶</div>'
+              + '</div>'
+              + '<div class="proflink-actions">'
+              + '<button class="proflink-like '+(hasLiked?'liked':'')+'" onclick="likePost(\''+msgId+'\',this)" data-msgid="'+msgId+'" '+(hasLiked?'disabled':'')+'><svg width="13" height="13" viewBox="0 0 24 24" fill="'+(hasLiked?'currentColor':'none')+'" stroke="currentColor" stroke-width="2.4"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg><span id="likes-'+msgId+'">'+likeCount+'</span></button>'
+              + '<a href="'+htmlEsc(safeUrl(l.text||''))+'" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();markLinkVisited(\''+msgId+'\')" class="proflink-open">→ Öffnen</a>'
               + '</div></div>';
         };
         const theirLinkEntries = Object.entries(d.links||{}).filter(([,l])=>String(l.user_id)===String(uid)).sort((a,b)=>(b[1].timestamp||0)-(a[1].timestamp||0));
         const theirLinksHtml = theirLinkEntries.length
-            ? theirLinkEntries.map(([msgId, l]) => renderTheirLinkCard(l, msgId)).join('')
+            ? '<div class="proflink-grid">'+theirLinkEntries.map(([msgId, l]) => renderTheirLinkCard(l, msgId)).join('')+'</div>'
             : '<div class="empty"><div class="empty-icon">🔗</div><div class="empty-text">Noch keine Links</div></div>';
 
         const theirAboutHtml = '<div style="padding:16px;display:flex;flex-direction:column;gap:12px;padding-bottom:100px">'
