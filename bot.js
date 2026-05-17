@@ -3228,54 +3228,17 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
 .ipf-switcher-divider{height:1px;background:var(--border2)}
 .ipf-switcher-add{display:flex;align-items:center;gap:11px;padding:11px 14px;color:#a78bfa;cursor:pointer;border:none;background:none;width:100%;font-family:inherit;font-size:13.5px;font-weight:600;text-align:left}
 .ipf-switcher-add:hover{background:var(--bg4)}
+/* Topbar-Switcher (kompakt) */
+.tb-switcher-wrap{position:relative;display:inline-block}
+.tb-switcher{display:inline-flex;align-items:center;gap:7px;background:var(--surface-tint);border:1px solid var(--border2);color:var(--text);padding:4px 10px 4px 4px;border-radius:99px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;max-width:200px}
+.tb-switcher:hover{background:var(--bg4)}
+.tb-switcher-avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#a78bfa,#7c3aed);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:12px;overflow:hidden;position:relative;flex-shrink:0}
+.tb-switcher-avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.tb-switcher-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100px}
+.tb-switcher-arrow{font-size:10px;color:var(--muted);transition:transform .2s;flex-shrink:0}
+.tb-switcher.open .tb-switcher-arrow{transform:rotate(180deg)}
+.tb-switcher-wrap .ipf-switcher-menu{position:absolute;top:calc(100% + 6px);right:0;left:auto;min-width:220px}
 </style>
-
-${isOwn ? (function(){
-  // Account-Switcher (nur auf eigenem Profil sichtbar).
-  // BUGFIX: session ist nicht in profileCard()-scope verfügbar — ableiten aus uid + u.parent_uid.
-  // - uid = die UID des Users, dessen Profil gerade angezeigt wird (= active UID wenn isOwn).
-  // - parent UID = u.parent_uid wenn u ein Sub ist, sonst uid selbst.
-  const _curSessUid = String(u.parent_uid || uid);
-  const _activeUid = String(uid);
-  const _allAccs = [{uid: _curSessUid, isParent: true}];
-  for (const [sid, su] of Object.entries(d.users||{})) {
-    if (String(su.parent_uid||'') === _curSessUid && sid !== _curSessUid) {
-      _allAccs.push({uid: sid, isParent: false});
-    }
-  }
-  if (_allAccs.length < 2) return ''; // kein Switcher wenn nur Parent
-  const _curU = d.users?.[_activeUid] || u;
-  const _curName = htmlEsc(_curU.spitzname || _curU.name || 'User');
-  const _curPic = ladeBild(_activeUid, 'profilepic') ? '/appbild/' + _activeUid + '/profilepic' : (_curU.instagram ? 'https://unavatar.io/instagram/' + encodeURIComponent(_curU.instagram) : '');
-  const _curInit = htmlEsc((_curU.spitzname || _curU.name || '?').slice(0,1).toUpperCase());
-  const _subCount = _allAccs.length - 1;
-  return '<div class="ipf-switcher-wrap">' +
-    '<button class="ipf-switcher" onclick="ipfToggleSwitcher(this)" id="ipf-sw-btn">' +
-      '<div class="ipf-switcher-mini-avatar">' + (_curPic ? '<img src="' + _curPic + '" alt="" loading="lazy">' : _curInit) + '</div>' +
-      '<div class="ipf-switcher-label">' +
-        '<div class="ipf-switcher-label-top">🔄 Account-Switcher · ' + _subCount + ' Sub' + (_subCount===1?'':'s') + '</div>' +
-        '<div class="ipf-switcher-label-name">' + _curName + '</div>' +
-      '</div>' +
-      '<span class="ipf-switcher-arrow">▼</span>' +
-    '</button>' +
-    '<div class="ipf-switcher-menu" id="ipf-sw-menu">' +
-      _allAccs.map(a => {
-        const au = d.users?.[a.uid] || {};
-        const aName = htmlEsc(au.spitzname || au.name || 'User');
-        const aInit = htmlEsc((au.spitzname || au.name || '?').slice(0,1).toUpperCase());
-        const aPic = ladeBild(a.uid, 'profilepic') ? '/appbild/' + a.uid + '/profilepic' : (au.instagram ? 'https://unavatar.io/instagram/' + encodeURIComponent(au.instagram) : '');
-        const isActive = a.uid === _activeUid;
-        return '<button class="ipf-switcher-item' + (isActive?' active':'') + '" onclick="ipfSwitchAcc(\''+htmlEsc(a.uid)+'\')">' +
-          '<div class="ipf-switcher-item-avatar">' + (aPic ? '<img src="'+aPic+'" alt="">' : aInit) + '</div>' +
-          '<div class="ipf-switcher-item-name">' + aName + (a.isParent?'':' <span style="font-size:11px;color:var(--muted);font-weight:500"> · Sub</span>') + '</div>' +
-          (isActive ? '<span class="ipf-switcher-item-check">✓</span>' : '') +
-        '</button>';
-      }).join('') +
-      '<div class="ipf-switcher-divider"></div>' +
-      '<button class="ipf-switcher-add" onclick="ipfAddSub()">➕ Neuen Sub-Account erstellen</button>' +
-    '</div>' +
-  '</div>';
-})() : ''}
 
 <div class="ipf-banner">
   <div class="ipf-banner-bg" style="${bannerIsGrad ? 'background:'+banner : 'background-image:url('+JSON.stringify(banner).slice(1,-1)+')'}"></div>
@@ -3485,6 +3448,49 @@ ${(()=>{
   ${mySuperlink.caption?`<div style="font-size:12px;color:var(--muted);margin-top:6px;padding-left:32px">${htmlEsc(String(mySuperlink.caption).slice(0,80))}</div>`:''}
 </div>`;
 })()}`;
+}
+
+// Kompakter Account-Switcher für die /profil-Topbar.
+// Returnt leeren String wenn keine Sub-Accounts existieren.
+function buildTopbarSwitcher(myUid, d) {
+  const _curSessUid = String(myUid);
+  const me = (d.users||{})[_curSessUid] || {};
+  // Wenn aktive UID ein Sub ist, ist parent_uid der echte session-Owner
+  const _ownerUid = String(me.parent_uid || _curSessUid);
+  const _allAccs = [{uid: _ownerUid, isParent: true}];
+  for (const [sid, su] of Object.entries(d.users||{})) {
+    if (String(su.parent_uid||'') === _ownerUid && sid !== _ownerUid) {
+      _allAccs.push({uid: sid, isParent: false});
+    }
+  }
+  if (_allAccs.length < 2) return '';
+  const _curU = d.users?.[_curSessUid] || me;
+  const _curName = htmlEsc(_curU.spitzname || _curU.name || 'User');
+  const _curPic = ladeBild(_curSessUid, 'profilepic') ? '/appbild/' + _curSessUid + '/profilepic' : (_curU.instagram ? 'https://unavatar.io/instagram/' + encodeURIComponent(_curU.instagram) : '');
+  const _curInit = htmlEsc((_curU.spitzname || _curU.name || '?').slice(0,1).toUpperCase());
+  return '<div class="tb-switcher-wrap">' +
+    '<button class="tb-switcher" onclick="ipfToggleSwitcher(this)" id="ipf-sw-btn">' +
+      '<div class="tb-switcher-avatar">' + (_curPic ? '<img src="' + _curPic + '" alt="" loading="lazy">' : _curInit) + '</div>' +
+      '<span class="tb-switcher-name">' + _curName + '</span>' +
+      '<span class="tb-switcher-arrow">▼</span>' +
+    '</button>' +
+    '<div class="ipf-switcher-menu" id="ipf-sw-menu">' +
+      _allAccs.map(a => {
+        const au = d.users?.[a.uid] || {};
+        const aName = htmlEsc(au.spitzname || au.name || 'User');
+        const aInit = htmlEsc((au.spitzname || au.name || '?').slice(0,1).toUpperCase());
+        const aPic = ladeBild(a.uid, 'profilepic') ? '/appbild/' + a.uid + '/profilepic' : (au.instagram ? 'https://unavatar.io/instagram/' + encodeURIComponent(au.instagram) : '');
+        const isActive = a.uid === _curSessUid;
+        return '<button class="ipf-switcher-item' + (isActive?' active':'') + '" onclick="ipfSwitchAcc(\''+htmlEsc(a.uid)+'\')">' +
+          '<div class="ipf-switcher-item-avatar">' + (aPic ? '<img src="'+aPic+'" alt="">' : aInit) + '</div>' +
+          '<div class="ipf-switcher-item-name">' + aName + (a.isParent?'':' <span style="font-size:11px;color:var(--muted);font-weight:500"> · Sub</span>') + '</div>' +
+          (isActive ? '<span class="ipf-switcher-item-check">✓</span>' : '') +
+        '</button>';
+      }).join('') +
+      '<div class="ipf-switcher-divider"></div>' +
+      '<button class="ipf-switcher-add" onclick="ipfAddSub()">➕ Neuen Sub-Account erstellen</button>' +
+    '</div>' +
+  '</div>';
 }
 
 // ================================
@@ -16680,25 +16686,15 @@ ${rest.map(([id,u],idx)=>{
         return html(`
 <div class="topbar">
   <div class="topbar-logo">Creator Hub</div>
-  <div style="display:flex;gap:6px;align-items:center">
-    <a href="/suche" class="icon-btn">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+  <div style="display:flex;gap:8px;align-items:center">
+    ${buildTopbarSwitcher(myUid, d)}
+    <a href="/einstellungen" class="icon-btn" title="Einstellungen" aria-label="Menü">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" width="20" height="20"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
     </a>
-    <a href="/benachrichtigungen" class="icon-btn" style="position:relative">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-      <span id="notif-badge-profil" style="display:none;position:absolute;top:0;right:0;background:var(--accent);color:#fff;font-size:9px;font-weight:700;border-radius:50%;width:14px;height:14px;align-items:center;justify-content:center;line-height:14px;text-align:center"></span>
-    </a>
-    ${_myIsAdmin ? `<a href="${process.env.ADMIN_DASHBOARD_URL || 'https://dashboard-production-bda4.up.railway.app/dashboard'}" target="_blank" rel="noopener" class="icon-btn" title="Admin-Dashboard" style="background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;border-color:rgba(167,139,250,0.5)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="18" height="18"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-    </a><a href="/admin/emails?key=" class="icon-btn" title="Email Dashboard" style="background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border-color:rgba(34,197,94,0.5)" onclick="event.preventDefault();location.href='/admin/emails?key='+prompt('Bridge Secret:')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="18" height="18"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 4l-10 8L2 4"/></svg>
-    </a>` : ''}
-    <a href="/einstellungen" class="icon-btn">⚙️</a>
   </div>
 </div>
 ${profileCard(myUid, myUser, d, true, lang, adminIds, myBannerData, myPicData)}
 <style>@keyframes dxpPulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(.85);opacity:.6}}</style>
-<!-- old .acc-switcher block removed — moved to top of profileCard as ipf-switcher -->
 <div id="create-sub-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(8px)">
   <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:18px;padding:20px;width:100%;max-width:340px">
     <div style="font-size:16px;font-weight:700;margin-bottom:6px">Neuen Account erstellen</div>
