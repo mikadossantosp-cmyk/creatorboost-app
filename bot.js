@@ -47,6 +47,22 @@ const emailLoginTokens = new Map();   // token → { email, uid, exp }
 const emailConfirmTokens = new Map(); // token → { email, uid, exp } (für /einstellungen Email-Bestätigung)
 const accountUnlockTokens = new Map(); // token → { uid, exp } — nach Klick im Mail Settings-Edit freischalten
 const emailRateLimit = new Map();      // email → lastRequestTs (Cooldown gegen Spam)
+// AppCode-Brute-Force-Schutz: pro IP max 10 versch. Codes / 10 Min
+const _codeBruteMap = new Map();       // ip → { codes: Set, ts: Date.now() }
+function _codeBruteCheck(ip, code) {
+    if (!ip) return true;
+    const now = Date.now();
+    const WINDOW = 10 * 60 * 1000;
+    let entry = _codeBruteMap.get(ip);
+    if (!entry || now - entry.ts > WINDOW) entry = { codes: new Set(), ts: now };
+    entry.codes.add(code);
+    _codeBruteMap.set(ip, entry);
+    if (_codeBruteMap.size > 1000) {
+        for (const [k, v] of _codeBruteMap) if (now - v.ts > WINDOW) _codeBruteMap.delete(k);
+    }
+    return entry.codes.size <= 10;
+}
+function _codeBruteReset(ip) { if (ip) _codeBruteMap.delete(ip); }
 // In-Memory LRU für /appbild/* — vorher 180 sync Disk-Reads pro Feed-Render
 const _appbildBufCache = new Map();    // cacheKey → {buf, mime, etag, ts}
 const _APPBILD_LRU_MAX = 500;
@@ -5939,28 +5955,28 @@ function submitPw(ev){
     if (path.startsWith('/i/') && req.method === 'GET') {
         const code = path.slice(3).toLowerCase().trim().slice(0, 60);
         if (!code) { res.writeHead(302,{'Location':'/'}); return res.end(); }
-        // Wenn schon eingeloggt → kurz weiter zu /feed.
         if (session) { res.writeHead(302,{'Location':'/feed'}); return res.end(); }
-        // User mit appCode == code finden → automatisch einloggen.
+        // SECURITY: AppCode-Brute-Force-Schutz — pro IP max 10 versch. Codes / 10 Min.
+        // Vorher unbegrenzt → mit wordlist konnte jeder Account übernommen werden.
+        const _ip = String(req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '').split(',')[0].trim().slice(0, 64);
+        if (_ip && !_codeBruteCheck(_ip, code)) {
+            res.writeHead(429, {'Content-Type':'text/html; charset=utf-8'});
+            return res.end('<h1>⏳ Zu viele Versuche</h1><p>Bitte 10 Min warten oder über /login einloggen.</p>');
+        }
         let botData = await fetchBot('/data');
         if (botData) {
             const found = Object.entries(botData.users||{}).find(([,u]) => u.appCode === code);
             if (found) {
                 const [uid, u] = found;
-                let sid = null;
-                // SECURITY: kein Session-Reuse — IMMER neuen sid generieren
-                sid = null;
-                if (!sid) {
-                    sid = genSid();
-                    const validSubUid = u.subUid && botData.users?.[u.subUid] ? String(u.subUid) : null;
-                    sessions.set(sid, { uid: String(uid), name: u.name, username: u.username||null, theme: 'light', lang: 'de', createdAt: Date.now(), subUid: validSubUid, activeUid: String(uid), loginVia: 'telegram' });
-                    saveSessions();
-                }
+                const sid = genSid();
+                const validSubUid = u.subUid && botData.users?.[u.subUid] ? String(u.subUid) : null;
+                sessions.set(sid, { uid: String(uid), name: u.name, username: u.username||null, theme: 'light', lang: 'de', createdAt: Date.now(), subUid: validSubUid, activeUid: String(uid), loginVia: 'telegram' });
+                saveSessions();
+                _codeBruteReset(_ip);
                 res.writeHead(302,{'Set-Cookie':`cbsid=${sid}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=157680000`,'Location':'/feed'});
                 return res.end();
             }
         }
-        // Generischer Invite (Code passt zu keinem User) → Landing mit Invite-Cookie.
         res.writeHead(302, {
             'Set-Cookie': `cbInvite=${encodeURIComponent(code)}; Path=/; Max-Age=2592000`,
             'Location': '/?invite=' + encodeURIComponent(code)
@@ -5973,6 +5989,11 @@ function submitPw(ev){
         const rawRedirect = (query.redirect || '/feed').toString();
         const safeRedirect = (rawRedirect.startsWith('/') && !rawRedirect.startsWith('//')) ? rawRedirect : '/feed';
         if (!code) { res.writeHead(302,{'Location':'/login?error=nocode'}); return res.end(); }
+        // SECURITY: AppCode-Brute-Force-Schutz
+        const _ipA = String(req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '').split(',')[0].trim().slice(0, 64);
+        if (_ipA && !_codeBruteCheck(_ipA, code)) {
+            res.writeHead(429,{'Location':'/login?error=ratelimit'}); return res.end();
+        }
         let botData = await fetchBot('/data');
         if (!botData) { res.writeHead(302,{'Location':'/login?error=503'}); return res.end(); }
         let found = Object.entries(botData.users||{}).find(([,u]) => u.appCode === code);
@@ -7092,14 +7113,21 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
         try { body = JSON.parse(await readBody(req, 100000)); } catch(e) { return json({error:'Ungültig'},400); }
         const { chatKey, timestamp, newText } = body;
         if (!chatKey || !timestamp || typeof newText !== 'string') return json({error:'Ungültig'}, 400);
+        // SECURITY (IDOR-Fix): chatKey muss myUid enthalten — sonst kann Angreifer mit fremder
+        // chatKey + eigener uid Messages von anderen Usern editieren.
+        const [_a, _b] = String(chatKey).split('_');
+        if (_a !== String(myUid) && _b !== String(myUid)) return json({error:'Kein Zugriff'}, 403);
         const result = await postBot('/edit-message-api', { uid: myUid, chatKey, timestamp, newText });
         return json(result || {ok:false});
     }
 
     if (path === '/api/mark-messages-read' && req.method === 'POST') {
         if (!session) return json({error:'Nicht eingeloggt'}, 401);
-        const myUid = getMyUid(session); // FIX: war undefined
+        const myUid = getMyUid(session);
         const body = await parseBody(req);
+        // SECURITY (IDOR): chatKey muss myUid enthalten
+        const [_ka, _kb] = String(body.chatKey || '').split('_');
+        if (_ka !== String(myUid) && _kb !== String(myUid)) return json({error:'Kein Zugriff'}, 403);
         await postBot('/mark-messages-read', { uid: myUid, chatKey: body.chatKey });
         return json({ok: true});
     }
@@ -8894,10 +8922,10 @@ commentsBox+
                 +'<div style="margin:8px 16px;padding:8px 12px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:10px;font-size:11px;color:rgba(245,158,11,.9);font-weight:600">🔄 Bitte Liken, Kommentieren, Teilen und Speichern</div>\n'
                 +'<div style="margin:0 16px 8px;border-radius:14px;overflow:hidden;background:var(--bg3);border:1px solid rgba(255,255,255,.08)">\n'
                 +(sl.thumbnail
-                    ? '<a href="'+(sl.url||'').replace(/"/g,'%22')+'" target="_blank" rel="noopener" onclick="markLinkVisited(\''+sl.id+'\')" style="display:block;position:relative;width:100%;padding-top:62%;overflow:hidden;background:#000"><img src="/insta-thumb?u='+encodeURIComponent(sl.thumbnail)+'" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.parentElement.style.display=\'none\'" alt=""><div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.05),rgba(0,0,0,.55))"></div><div style="position:absolute;top:10px;left:12px;background:rgba(0,0,0,.55);border-radius:8px;padding:4px 9px;font-size:11px;color:#fff;font-weight:600;backdrop-filter:blur(4px)">📸 Instagram</div></a>\n'
+                    ? '<a href="'+htmlEsc(safeUrl(sl.url||''))+'" target="_blank" rel="noopener noreferrer" onclick="markLinkVisited(\''+sl.id+'\')" style="display:block;position:relative;width:100%;padding-top:62%;overflow:hidden;background:#000"><img src="/insta-thumb?u='+encodeURIComponent(sl.thumbnail)+'" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.parentElement.style.display=\'none\'" alt=""><div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.05),rgba(0,0,0,.55))"></div><div style="position:absolute;top:10px;left:12px;background:rgba(0,0,0,.55);border-radius:8px;padding:4px 9px;font-size:11px;color:#fff;font-weight:600;backdrop-filter:blur(4px)">📸 Instagram</div></a>\n'
                     : '')
-                +'<a href="'+(sl.url||'').replace(/"/g,'%22')+'" target="_blank" rel="noopener" onclick="markLinkVisited(\''+sl.id+'\')" style="display:block;padding:12px 14px;text-decoration:none">\n'
-                +'<div style="font-size:13px;color:var(--blue);word-break:break-all;margin-bottom:4px">'+(sl.url||'').replace('https://www.','').replace('https://','').slice(0,60)+'</div>\n'
+                +'<a href="'+htmlEsc(safeUrl(sl.url||''))+'" target="_blank" rel="noopener noreferrer" onclick="markLinkVisited(\''+sl.id+'\')" style="display:block;padding:12px 14px;text-decoration:none">\n'
+                +'<div style="font-size:13px;color:var(--blue);word-break:break-all;margin-bottom:4px">'+htmlEsc(String(sl.url||'').replace('https://www.','').replace('https://','').slice(0,60))+'</div>\n'
                 +(sl.caption?'<div style="font-size:12px;color:var(--muted);margin-top:4px">'+String(sl.caption).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</div>':'')+'\n'
                 +'<div style="font-size:11px;color:var(--accent);font-weight:700;margin-top:6px">Ansehen →</div>\n'
                 +'</a></div>\n'
@@ -16767,9 +16795,9 @@ function showPTab(tab,el){
 function openProjDetail(idx){
   const p=PROJECTS[idx]; if(!p) return; _curProjIdx=idx;
   document.getElementById('proj-detail-title').textContent=p.title;
-  document.getElementById('proj-detail-img-wrap').innerHTML=p.img?'<img src="'+p.img+'" style="width:100%;object-fit:contain;display:block;background:#0a0a0a" alt="">':'';
+  (function(){const w=document.getElementById('proj-detail-img-wrap');if(!w)return;w.textContent='';if(p.img&&/^(data:image|https?:\/\/)/.test(p.img)){const im=document.createElement('img');im.src=p.img;im.alt='';im.style.cssText='width:100%;object-fit:contain;display:block;background:#0a0a0a';w.appendChild(im);}})();
   document.getElementById('proj-detail-desc').textContent=p.description||'';
-  document.getElementById('proj-detail-link').innerHTML=p.link?'<a href="'+p.link+'" target="_blank" style="color:var(--blue);font-size:13px;word-break:break-all">🔗 '+p.link+'</a>':'';
+  (function(){const w=document.getElementById('proj-detail-link');if(!w)return;w.textContent='';if(p.link&&/^https?:\/\//i.test(p.link)){const a=document.createElement('a');a.href=p.link;a.target='_blank';a.rel='noopener noreferrer';a.style.cssText='color:var(--blue);font-size:13px;word-break:break-all';a.textContent='🔗 '+p.link;w.appendChild(a);}})();
   const docEl=document.getElementById('proj-detail-doc');
   if(p.docName){const icon=p.docName.endsWith('.pptx')?'📊':'📄';docEl.innerHTML='<a href="/api/download-project-doc/'+_SESSION_UID+'/'+p.id+'" style="display:inline-flex;align-items:center;gap:8px;background:var(--bg4);border:1px solid var(--border);border-radius:10px;padding:8px 14px;font-size:13px;font-weight:600;color:var(--text);text-decoration:none">'+icon+' '+p.docName+' herunterladen</a>';}
   else docEl.innerHTML='';
@@ -16802,7 +16830,7 @@ function openEditProj(idx){
   document.getElementById('proj-desc').value=p.description||'';
   document.getElementById('proj-link').value=p.link||'';
   const imgPrev=document.getElementById('proj-img-preview');
-  if(p.img){imgPrev.innerHTML='<img src="'+p.img+'" style="width:100%;height:100%;object-fit:cover">';imgPrev._data=p.img;}
+  if(p.img&&/^(data:image|https?:\/\/)/.test(p.img)){imgPrev.textContent='';const im=document.createElement('img');im.src=p.img;im.style.cssText='width:100%;height:100%;object-fit:cover';imgPrev.appendChild(im);imgPrev._data=p.img;}
   else{imgPrev.innerHTML='📷';imgPrev._data=null;}
   const docPrev=document.getElementById('proj-doc-preview');
   docPrev._data=null;docPrev._name=null;
@@ -17128,9 +17156,9 @@ function showTPTab(tab,el){
 function openTProjDetail(idx){
   const p=TPROJECTS[idx]; if(!p) return;
   document.getElementById('tproj-title').textContent=p.title;
-  document.getElementById('tproj-img-wrap').innerHTML=p.img?'<img src="'+p.img+'" style="width:100%;object-fit:contain;display:block;background:#0a0a0a" alt="">':'';
+  (function(){const w=document.getElementById('tproj-img-wrap');if(!w)return;w.textContent='';if(p.img&&/^(data:image|https?:\/\/)/.test(p.img)){const im=document.createElement('img');im.src=p.img;im.alt='';im.style.cssText='width:100%;object-fit:contain;display:block;background:#0a0a0a';w.appendChild(im);}})();
   document.getElementById('tproj-desc').textContent=p.description||'';
-  document.getElementById('tproj-link').innerHTML=p.link?'<a href="'+p.link+'" target="_blank" style="color:var(--blue);font-size:13px;word-break:break-all">🔗 '+p.link+'</a>':'';
+  (function(){const w=document.getElementById('tproj-link');if(!w)return;w.textContent='';if(p.link&&/^https?:\/\//i.test(p.link)){const a=document.createElement('a');a.href=p.link;a.target='_blank';a.rel='noopener noreferrer';a.style.cssText='color:var(--blue);font-size:13px;word-break:break-all';a.textContent='🔗 '+p.link;w.appendChild(a);}})();
   const docEl=document.getElementById('tproj-doc');
   if(p.docName){const icon=p.docName.endsWith('.pptx')?'📊':'📄';docEl.innerHTML='<a href="/api/download-project-doc/'+_TUID+'/'+p.id+'" style="display:inline-flex;align-items:center;gap:8px;background:var(--bg4);border:1px solid var(--border);border-radius:10px;padding:8px 14px;font-size:13px;font-weight:600;color:var(--text);text-decoration:none">'+icon+' '+p.docName+' herunterladen</a>';}
   else docEl.innerHTML='';
