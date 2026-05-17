@@ -1322,6 +1322,17 @@ textarea.form-input{resize:none;min-height:80px}
 .empty-icon{font-size:48px;margin-bottom:12px}
 .empty-text{font-size:15px;font-weight:600;margin-bottom:6px;color:var(--text)}
 .empty-sub{font-size:13px}
+.proflink-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:8px 10px}
+.proflink-card{border-radius:10px;overflow:hidden;background:var(--bg3);border:1px solid var(--border2);display:flex;flex-direction:column}
+.proflink-thumb{position:relative;width:100%;padding-top:130%;background:linear-gradient(135deg,#1a1a2e,#16213e);overflow:hidden;cursor:pointer}
+.proflink-thumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.proflink-thumb-overlay{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.05),rgba(0,0,0,.35));pointer-events:none}
+.proflink-play{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.95);font-size:22px;text-shadow:0 2px 6px rgba(0,0,0,.5);pointer-events:none}
+.proflink-actions{display:flex;align-items:center;gap:4px;padding:5px 5px 6px}
+.proflink-like{display:inline-flex;align-items:center;gap:3px;background:none;border:none;cursor:pointer;color:var(--text);font-size:10.5px;font-weight:600;font-family:inherit;padding:2px 4px}
+.proflink-like.liked{color:#ef4444;cursor:default}
+.proflink-likes{font-size:10.5px;color:var(--muted);padding:2px 4px;font-weight:500}
+.proflink-open{flex:1;text-align:center;padding:5px 6px;background:linear-gradient(135deg,#f9a825,#e91e63,#9c27b0);color:#fff !important;border-radius:6px;font-size:10px;font-weight:700;text-decoration:none;white-space:nowrap;box-shadow:0 1px 4px rgba(233,30,99,.25)}
 .toast{position:fixed;top:80px;left:50%;transform:translateX(-50%);background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:10px 20px;font-size:13px;font-weight:500;z-index:999;box-shadow:var(--shadow);opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap}
 .toast.show{opacity:1}
 .cb-banner{position:fixed;top:0;left:0;right:0;z-index:9999;padding:20px 24px;color:#fff;text-align:center;font-family:var(--font);transform:translateY(-100%);transition:transform .4s cubic-bezier(.2,.8,.2,1);box-shadow:0 12px 32px rgba(0,0,0,0.5);pointer-events:none;display:flex;align-items:center;justify-content:center;gap:14px;letter-spacing:0.2px}
@@ -2032,8 +2043,8 @@ ${session ? `
     {page:'/feed', q:'[data-tour="feed"]',                       eyebrow:'Bottom-Nav',         h:'🏠 Feed (du bist hier)',                s:'Der Haupt-Feed mit allen heutigen Reel-Posts.'},
     {page:'/feed', q:'[data-tour="post"]',                       eyebrow:'Bottom-Nav',         h:'➕ Hier postest du deinen Reel',        s:'Tippe + um deinen Insta-Reel-Link zu teilen. Andere Creator engagen sofort mit dir.'},
     // ── EXPLORE PAGE ─────────────────────────────────────────────────────
-    {page:'/explore', q:'.explore-tabs',                         eyebrow:'Explore · Tabs',     h:'🧭 News, Ranking, Tipps &amp; Shop',    s:'Wir sind jetzt im Hub. Hier findest du alle Übersichts-Bereiche: Newsletter, Ranking, Tipps, Regeln und Diamanten-Shop.'},
-    {page:'/explore', q:'.action-grid',                          eyebrow:'Explore · Aktionen', h:'🚀 Was möchtest du tun?',                s:'Schnell-Zugriff auf Ranking, Tipps, Regeln, Shop und Newsletter — alles auf einen Blick.'},
+    {page:'/explore', q:'#mission-widget-explore',               eyebrow:'Explore · Missionen',h:'🎯 Deine Missionen',                     s:'Hier siehst du deine täglichen und wöchentlichen Missionen. Auswertung jeden Tag um 12:00 (Berlin).'},
+    {page:'/explore', q:'.explore-tabs',                         eyebrow:'Explore · Tabs',     h:'🧭 News, Ranking, Tipps &amp; Shop',    s:'Hier findest du alle Übersichts-Bereiche: Newsletter, Ranking, Tipps, Regeln und Diamanten-Shop.'},
     // ── REGELN (Pflicht-Lese-Step) ───────────────────────────────────────
     {page:'/explore?tab=regeln', q:'.regeln-wrap, .regeln-tabnav, .regeln-card', eyebrow:'⚠️ Regeln · PFLICHT', h:'📋 Regeln lesen — bitte alles anschauen',  s:'<b>Wichtig:</b> Wer einen Link postet muss 5 andere zurück-liken &amp; kommentieren. Vor dem Like in der App: Insta öffnen → dort liken &amp; kommentieren. Du musst die Regeln am Ende der Tour bestätigen.', requiresScroll:true},
     // ── MESSAGES PAGE ────────────────────────────────────────────────────
@@ -8924,11 +8935,10 @@ commentsBox+
                 +(sl.thumbnail
                     ? '<a href="'+htmlEsc(safeUrl(sl.url||''))+'" target="_blank" rel="noopener noreferrer" onclick="markLinkVisited(\''+sl.id+'\')" style="display:block;position:relative;width:100%;padding-top:62%;overflow:hidden;background:#000"><img src="/insta-thumb?u='+encodeURIComponent(sl.thumbnail)+'" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.parentElement.style.display=\'none\'" alt=""><div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.05),rgba(0,0,0,.55))"></div><div style="position:absolute;top:10px;left:12px;background:rgba(0,0,0,.55);border-radius:8px;padding:4px 9px;font-size:11px;color:#fff;font-weight:600;backdrop-filter:blur(4px)">📸 Instagram</div></a>\n'
                     : '')
-                +'<a href="'+htmlEsc(safeUrl(sl.url||''))+'" target="_blank" rel="noopener noreferrer" onclick="markLinkVisited(\''+sl.id+'\')" style="display:block;padding:12px 14px;text-decoration:none">\n'
-                +'<div style="font-size:13px;color:var(--blue);word-break:break-all;margin-bottom:4px">'+htmlEsc(String(sl.url||'').replace('https://www.','').replace('https://','').slice(0,60))+'</div>\n'
-                +(sl.caption?'<div style="font-size:12px;color:var(--muted);margin-top:4px">'+String(sl.caption).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</div>':'')+'\n'
-                +'<div style="font-size:11px;color:var(--accent);font-weight:700;margin-top:6px">Ansehen →</div>\n'
-                +'</a></div>\n'
+                +'<div style="padding:10px 14px">\n'
+                +(sl.caption?'<div style="font-size:12px;color:var(--muted);line-height:1.4;margin-bottom:8px">'+String(sl.caption).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</div>':'')+'\n'
+                +'<a href="'+htmlEsc(safeUrl(sl.url||''))+'" target="_blank" rel="noopener noreferrer" onclick="markLinkVisited(\''+sl.id+'\')" style="display:inline-flex;align-items:center;gap:5px;padding:7px 14px;background:linear-gradient(135deg,#f59e0b,#a78bfa);color:#fff;border-radius:10px;font-size:12px;font-weight:700;text-decoration:none">→ Öffnen</a>\n'
+                +'</div></div>\n'
                 +'<div class="post-likes-row"><span class="post-like-count">❤️ <span id="sl-likes-'+sl.id+'">'+likes.length+'</span></span></div>\n'
                 +'<div id="sl-liker-rows-'+sl.id+'" style="display:none">'+likerRows+'</div>\n'
                 +'<div class="post-actions" style="gap:8px;padding:8px 16px 12px">'+likeBtn+whoLikedBtn+'</div>\n'
@@ -14872,46 +14882,16 @@ fetch('/api/admin/engagement-log').then(r=>r.json()).then(j=>{ if (j.ok) { LAST_
         const _newsAgeStr = _newsAge==null ? '' : (_newsAge < 86400000 ? 'heute' : _newsAge < 7*86400000 ? Math.floor(_newsAge/86400000)+'d' : new Date(_latestNews.timestamp).toLocaleDateString('de-DE',{day:'2-digit',month:'short'}));
         const tabContent = {
             allgemein: `
-<div style="margin:4px 16px 20px;border-radius:22px;overflow:hidden;position:relative;background:linear-gradient(135deg,#7c3aed 0%,#a78bfa 50%,#4dabf7 100%)">
-  <div style="position:absolute;inset:0;background:radial-gradient(circle at 80% -20%,rgba(167,139,250,0.45),transparent 55%),radial-gradient(circle at 10% 110%,rgba(77,171,247,0.35),transparent 50%);pointer-events:none"></div>
-  <div style="position:absolute;top:-30px;right:-30px;width:140px;height:140px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,0.08),transparent 70%);pointer-events:none"></div>
-  <div style="position:relative;padding:22px 20px 18px">
-    <div style="display:flex;align-items:center;gap:6px;margin-bottom:14px">
-      <span style="width:7px;height:7px;border-radius:50%;background:#22c55e;box-shadow:0 0 8px rgba(34,197,94,0.6);display:inline-block"></span>
-      <span style="font-size:10px;font-weight:700;letter-spacing:2px;color:rgba(255,255,255,0.55);text-transform:uppercase">Community live</span>
-    </div>
-    <div style="font-size:13px;color:rgba(255,255,255,0.55);font-weight:500;letter-spacing:0.3px">${_greet},</div>
-    <div style="font-size:26px;font-weight:800;color:#fff;font-family:var(--font-display);line-height:1.1;margin-top:2px;letter-spacing:-0.5px">${htmlEsc(_greetName)} 👋</div>
-    <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
-      <div style="display:inline-flex;align-items:center;gap:5px;padding:6px 11px;background:rgba(255,255,255,0.08);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.1);border-radius:999px;font-size:11.5px;color:#fff;font-weight:600">⭐ ${_me.xp||0} XP</div>
-      ${myRank>0?`<div style="display:inline-flex;align-items:center;gap:5px;padding:6px 11px;background:rgba(255,255,255,0.08);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.1);border-radius:999px;font-size:11.5px;color:#fff;font-weight:600">🏆 Rang #${myRank}</div>`:''}
-      <div style="display:inline-flex;align-items:center;gap:5px;padding:6px 11px;background:rgba(255,255,255,0.08);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.1);border-radius:999px;font-size:11.5px;color:#fff;font-weight:600">💎 ${_me.diamonds||0}</div>
-    </div>
-    ${_latestNews ? `<a href="/explore?tab=newsletter" style="display:flex;align-items:center;gap:12px;margin-top:18px;padding:13px 14px;background:rgba(255,255,255,0.08);backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,0.12);border-radius:14px;text-decoration:none;color:#fff;transition:transform 0.18s">
-      <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#4dabf7,#1d6fa5);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">📩</div>
-      <div style="flex:1;min-width:0">
-        <div style="display:flex;align-items:center;gap:6px;font-size:10px;font-weight:700;letter-spacing:1.2px;color:rgba(255,255,255,0.6);text-transform:uppercase">Neuste News${_newsAgeStr?' · '+_newsAgeStr:''}</div>
-        <div style="font-size:13px;font-weight:700;color:#fff;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${htmlEsc(_latestNews.title || _latestNews.content || '').slice(0,60)}</div>
-      </div>
-      <div style="font-size:18px;color:rgba(255,255,255,0.5)">→</div>
-    </a>` : `<a href="/explore?tab=newsletter" style="display:flex;align-items:center;gap:10px;margin-top:18px;padding:13px 14px;background:rgba(255,255,255,0.08);backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,0.12);border-radius:14px;text-decoration:none;color:#fff">
-      <div style="font-size:22px">📩</div>
-      <div style="flex:1"><div style="font-size:13px;font-weight:700;color:#fff">News & Updates entdecken</div><div style="font-size:11px;color:rgba(255,255,255,0.6);margin-top:1px">Bleib up-to-date</div></div>
-      <div style="font-size:18px;color:rgba(255,255,255,0.5)">→</div>
-    </a>`}
+${_latestNews ? `<a href="/explore?tab=newsletter" class="highlight-card" style="margin:0 16px 12px;background:linear-gradient(135deg,rgba(77,171,247,.10),rgba(29,111,165,.05));border:1px solid rgba(77,171,247,.30)">
+  <div class="highlight-icon" style="background:linear-gradient(135deg,#4dabf7,#1d6fa5);color:#fff">📩</div>
+  <div style="flex:1;min-width:0">
+    <div style="display:flex;align-items:center;gap:6px;font-size:10px;font-weight:700;letter-spacing:1.2px;color:var(--muted);text-transform:uppercase">Neuste News${_newsAgeStr?' · '+_newsAgeStr:''}</div>
+    <div style="font-size:13px;font-weight:700;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${htmlEsc(_latestNews.title || _latestNews.content || '').slice(0,60)}</div>
   </div>
-</div>
-${''/* Personen-die-du-kennen-koenntest-Section ist umgezogen nach /suche (siehe Nachrichten-Topbar) */}
+  <div style="font-size:16px;color:var(--muted)">›</div>
+</a>` : ''}
 <div style="padding:0 16px 14px">
   <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">⚡ Aktuelle Highlights</div>
-  <a href="/explore?tab=ranking" class="highlight-card">
-    <div class="highlight-icon" style="background:linear-gradient(135deg,rgba(255,214,0,.25),rgba(255,170,0,.15))">🏆</div>
-    <div style="flex:1;min-width:0">
-      <div style="font-size:13px;font-weight:700">Rangliste aktualisiert</div>
-      <div style="font-size:11px;color:var(--muted);margin-top:3px">Schau wer gerade vorne liegt</div>
-    </div>
-    <div style="font-size:16px;color:rgba(255,255,255,.2)">›</div>
-  </a>
   <a href="/feed" class="highlight-card">
     <div class="highlight-icon" style="background:linear-gradient(135deg,rgba(255,107,107,.25),rgba(204,93,232,.15))">📸</div>
     <div style="flex:1;min-width:0">
@@ -14920,50 +14900,12 @@ ${''/* Personen-die-du-kennen-koenntest-Section ist umgezogen nach /suche (siehe
     </div>
     <div style="font-size:16px;color:rgba(255,255,255,.2)">›</div>
   </a>
-  <a href="/explore?tab=shop" class="highlight-card">
-    <div class="highlight-icon" style="background:linear-gradient(135deg,rgba(0,200,130,.25),rgba(0,150,100,.15))">🎁</div>
-    <div style="flex:1;min-width:0">
-      <div style="font-size:13px;font-weight:700">💎 Diamant Shop</div>
-      <div style="font-size:11px;color:var(--muted);margin-top:3px">Tausche Diamanten gegen Vorteile</div>
-    </div>
-    <div style="font-size:10px;color:#a78bfa;font-weight:700;background:rgba(167,139,250,.12);padding:2px 8px;border-radius:10px;white-space:nowrap">💎 ${d.users[myUid]?.diamonds||0}</div>
-  </a>
 </div>
 <div style="padding:0 16px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between">
   <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:1px">⭐ Top Creator</div>
   <a href="/explore?tab=ranking" style="font-size:12px;color:var(--accent);font-weight:600">Alle →</a>
 </div>
-<div class="creator-scroll" style="padding-bottom:4px">${topCreators||'<div style="color:var(--muted);font-size:13px;padding:0 16px">Noch keine Creator</div>'}</div>
-<div style="padding:20px 16px 12px">
-  <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:1px;margin-bottom:14px">🚀 Was möchtest du tun?</div>
-</div>
-<div class="action-grid">
-  <a href="/explore?tab=ranking" class="action-card">
-    <div class="action-card-icon" style="background:linear-gradient(135deg,rgba(255,214,0,.2),rgba(255,170,0,.1))">🏆</div>
-    <div class="action-card-title">Ranking ansehen</div>
-    <div class="action-card-sub">Rang: ${myRank>0?'#'+myRank:'👑 Admin'}</div>
-  </a>
-  <a href="/explore?tab=tipps" class="action-card">
-    <div class="action-card-icon" style="background:linear-gradient(135deg,rgba(100,180,255,.2),rgba(60,130,255,.1))">💡</div>
-    <div class="action-card-title">Tipps entdecken</div>
-    <div class="action-card-sub">Wachse als Creator</div>
-  </a>
-  <a href="/explore?tab=regeln" class="action-card">
-    <div class="action-card-icon" style="background:linear-gradient(135deg,rgba(150,100,255,.2),rgba(100,60,200,.1))">📋</div>
-    <div class="action-card-title">Regeln lesen</div>
-    <div class="action-card-sub">Community Guidelines</div>
-  </a>
-  <a href="/explore?tab=shop" class="action-card">
-    <div class="action-card-icon" style="background:linear-gradient(135deg,rgba(100,180,255,.2),rgba(60,130,255,.1))">💎</div>
-    <div class="action-card-title">Diamant Shop</div>
-    <div class="action-card-sub">💎 ${d.users[myUid]?.diamonds||0} Diamanten</div>
-  </a>
-  <a href="/explore?tab=newsletter" class="action-card">
-    <div class="action-card-icon" style="background:linear-gradient(135deg,rgba(255,165,0,.2),rgba(255,130,0,.1))">📩</div>
-    <div class="action-card-title">Newsletter</div>
-    <div class="action-card-sub">Neuigkeiten & Updates</div>
-  </a>
-</div>`,
+<div class="creator-scroll" style="padding-bottom:16px">${topCreators||'<div style="color:var(--muted);font-size:13px;padding:0 16px">Noch keine Creator</div>'}</div>`,
             ranking: `
 <div style="padding:12px 16px 8px;display:flex;align-items:center;justify-content:space-between">
   <div style="font-size:13px;font-weight:700">⭐ Rangliste</div>
@@ -15931,13 +15873,27 @@ function showErr(msg){
     <button class="icon-btn" onclick="setTheme(document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark')" title="Theme">🌙</button>
   </div>
 </div>
-<div style="padding:18px 16px 6px">
-  <div style="display:flex;align-items:center;gap:8px;font-size:10px;font-weight:800;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:6px">
-    <span style="display:inline-block;width:18px;height:1.5px;background:linear-gradient(90deg,#a78bfa,transparent)"></span>
-    Creator Hub
+<div style="margin:14px 16px 14px;border-radius:22px;overflow:hidden;position:relative;background:linear-gradient(135deg,#f9a825 0%,#e91e63 55%,#9c27b0 100%)">
+  <div style="position:absolute;inset:0;background:radial-gradient(circle at 85% -15%,rgba(255,255,255,0.20),transparent 55%),radial-gradient(circle at 5% 110%,rgba(0,0,0,0.18),transparent 55%);pointer-events:none"></div>
+  <div style="position:relative;padding:20px 20px 18px">
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:12px">
+      <span style="width:7px;height:7px;border-radius:50%;background:#22ff88;box-shadow:0 0 8px rgba(34,255,136,0.7);display:inline-block"></span>
+      <span style="font-size:10px;font-weight:700;letter-spacing:2px;color:rgba(255,255,255,0.7);text-transform:uppercase">Community live</span>
+    </div>
+    <div style="font-size:13px;color:rgba(255,255,255,0.78);font-weight:500;letter-spacing:0.3px">${_greet},</div>
+    <div style="font-size:26px;font-weight:800;color:#fff;font-family:var(--font-display);line-height:1.1;margin-top:2px;letter-spacing:-0.5px">${htmlEsc(_greetName)} 👋</div>
+    <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
+      <div style="display:inline-flex;align-items:center;gap:5px;padding:6px 11px;background:rgba(255,255,255,0.18);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.22);border-radius:999px;font-size:11.5px;color:#fff;font-weight:600">⭐ ${_me.xp||0} XP</div>
+      ${myRank>0?`<div style="display:inline-flex;align-items:center;gap:5px;padding:6px 11px;background:rgba(255,255,255,0.18);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.22);border-radius:999px;font-size:11.5px;color:#fff;font-weight:600">🏆 Rang #${myRank}</div>`:''}
+      <div style="display:inline-flex;align-items:center;gap:5px;padding:6px 11px;background:rgba(255,255,255,0.18);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.22);border-radius:999px;font-size:11.5px;color:#fff;font-weight:600">💎 ${_me.diamonds||0}</div>
+    </div>
   </div>
-  <h1 style="font-size:30px;font-weight:800;font-family:var(--font-display);letter-spacing:-0.8px;line-height:1.05;margin:0;color:var(--text)">Deine Community.<br><span style="background:linear-gradient(135deg,#a78bfa,#4dabf7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Dein Wachstum.</span></h1>
-  <div style="font-size:12.5px;color:var(--muted);margin-top:8px;line-height:1.5;letter-spacing:0.1px">News, Rankings, Tipps & Shop — alles an einem Ort.</div>
+</div>
+<div id="mission-widget-explore" style="margin:0 16px 14px">
+  <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:14px 16px;animation:shimmer 1.5s infinite">
+    <div style="height:12px;background:var(--bg4);border-radius:6px;width:60%;margin-bottom:8px"></div>
+    <div style="height:10px;background:var(--bg4);border-radius:6px;width:80%"></div>
+  </div>
 </div>
 <div class="explore-tabs">
   ${tabs.map(t=>`<button class="explore-tab${tab===t.id?' active':''}" style="--et-c1:${t.c1};--et-c2:${t.c2};--et-shadow:${t.shadow}" onclick="location.href='/explore?tab=${t.id}'"><span class="et-icon">${t.emoji}</span><span class="et-label">${t.label}</span></button>`).join('')}
@@ -15945,6 +15901,54 @@ function showErr(msg){
 <div id="explore-content" style="padding-bottom:${tab==='allgemein'?'0':'80px'}">
   ${tabContent[tab]||tabContent.allgemein}
 </div>
+<script>
+(async function loadMissionWidgetExplore(){
+  const w=document.getElementById('mission-widget-explore');
+  if(!w)return;
+  try{
+    const r=await fetch('/api/mission-status');
+    const d=await r.json();
+    if(!d.ok){w.innerHTML='';return;}
+    const now=new Date();
+    const nextSettle=new Date();
+    nextSettle.setHours(12,0,0,0);
+    if(now>=nextSettle)nextSettle.setDate(nextSettle.getDate()+1);
+    const diff=nextSettle-now;
+    const hh=Math.floor(diff/3600000);const mm=Math.floor((diff%3600000)/60000);
+    const settleStr=hh+'h '+mm+'m';
+    const {daily,weekly}=d;
+    const bar=(val,max,col)=>'<div style="background:var(--bg4);border-radius:4px;height:5px;overflow:hidden;margin-top:4px"><div style="height:100%;width:'+Math.min(100,Math.round(val/max*100))+'%;background:'+col+';border-radius:4px;transition:width .5s ease"></div></div>';
+    const mChip=(done,label)=>'<div style="display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:'+(done?'#22c55e':'var(--muted)')+'">'+
+      '<span style="font-size:14px">'+(done?'✅':'⬜')+'</span>'+label+'</div>';
+    w.innerHTML='<div style="background:linear-gradient(135deg,rgba(167,139,250,.1),rgba(124,58,237,.07));border:1px solid rgba(167,139,250,.25);border-radius:14px;padding:14px 16px">'
+      +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'
+      +'<div style="font-size:13px;font-weight:700">🎯 Meine Missionen</div>'
+      +'<div style="font-size:10px;color:var(--muted);background:var(--bg4);padding:3px 8px;border-radius:8px">⏱ Abrechnung in '+settleStr+'</div>'
+      +'</div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'
+      +'<div style="background:var(--bg3);border-radius:10px;padding:10px 12px">'
+      +'<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Heute</div>'
+      +mChip(daily.m1,'M1: '+daily.likesGegeben+'/5 geliked')
+      +bar(daily.likesGegeben,5,'#a78bfa')
+      +'<div style="margin-top:6px">'+mChip(daily.m2,'M2: '+daily.prozent+'% (≥80%)')+'</div>'
+      +bar(daily.prozent,100,'#818cf8')
+      +'<div style="margin-top:6px">'+mChip(daily.m3,'M3: '+(daily.gesamtLinks>0?Math.min(daily.gelikedLinks,daily.m3Target||daily.gesamtLinks)+'/'+(daily.m3Target||daily.gesamtLinks)+' '+(daily.gesamtLinks>(daily.m3Cap||30)?'(max 30)':'alle'):'–'))+'</div>'
+      +(daily.m3?'<div style="font-size:10px;color:#a78bfa;margin-top:4px">+5 XP + 💎 1 bei Abrechnung</div>':'')
+      +'</div>'
+      +'<div style="background:var(--bg3);border-radius:10px;padding:10px 12px">'
+      +'<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Wöchentlich</div>'
+      +mChip(weekly.m1Tage>=7,'W-M1: '+weekly.m1Tage+'/7 Tage')
+      +bar(weekly.m1Tage,7,'#60a5fa')
+      +'<div style="margin-top:6px">'+mChip(weekly.m2Tage>=7,'W-M2: '+weekly.m2Tage+'/7 → 💎')+'</div>'
+      +bar(weekly.m2Tage,7,'#34d399')
+      +'<div style="margin-top:6px">'+mChip(weekly.m3Tage>=7,'W-M3: '+weekly.m3Tage+'/7 → 💎💎')+'</div>'
+      +bar(weekly.m3Tage,7,'#fbbf24')
+      +'</div>'
+      +'</div>'
+      +'</div>';
+  }catch(e){const w2=document.getElementById('mission-widget-explore');if(w2)w2.innerHTML='';}
+})();
+<\/script>
 `, 'explore');
     }
 
@@ -16552,40 +16556,28 @@ ${rest.map(([id,u],idx)=>{
         // Pinned-Post wird jetzt im profileCard zwischen XP und Superlink angezeigt — kein Duplikat hier
         const myPinnedHtml = '';
 
-        // Feed-Style Link-Cards mit Reel-Banner + Like-Button + Öffnen-Button
+        // Compact 3-column Link-Cards — nur Thumbnail + Like + Öffnen, keine URL sichtbar
         const renderProfileLinkCard = (l, msgId, isOwn) => {
             const likes = Array.isArray(l.likes) ? l.likes : (l.likes instanceof Set ? [...l.likes] : []);
             const likeCount = likes.length;
             const hasLiked = !isOwn && likes.map(String).includes(String(myUid));
             const shortcode = (l.text||'').match(/instagram\.com\/(?:reel|p|tv)\/([A-Za-z0-9_-]+)/);
             const thumbUrl = shortcode ? '/insta-thumb?u=' + encodeURIComponent(l.text) : '';
-            const dateStr = new Date(l.timestamp||0).toLocaleDateString('de-DE', {day:'2-digit', month:'short', year:'numeric'});
-            return '<div class="post fade-up" data-url="'+htmlEsc(l.text||'')+'" style="position:relative;margin:0 0 14px">'
-              + '<div style="margin:0 16px;border-radius:14px;overflow:hidden;background:#000;border:1.5px solid;border-image:linear-gradient(135deg,#f9a825,#e91e63,#9c27b0) 1;cursor:pointer;box-shadow:0 6px 20px rgba(233,30,99,0.10)" onclick="openPostUrl(\''+msgId+'\')" id="post-'+msgId+'">'
-              + '<div style="position:relative;width:100%;padding-top:62%;background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);overflow:hidden">'
-              + (thumbUrl ? '<img src="'+thumbUrl+'" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.style.display=\'none\'" alt="">' : '')
-              + '<div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.1) 0%,rgba(0,0,0,.55) 100%)"></div>'
-              + '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none">'
-              + '<div style="width:54px;height:54px;border-radius:50%;background:rgba(255,255,255,.92);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 16px rgba(0,0,0,.35)">'
-              + '<div style="width:0;height:0;border-style:solid;border-width:11px 0 11px 20px;border-color:transparent transparent transparent #000;margin-left:4px"></div>'
-              + '</div></div>'
-              + '<div style="position:absolute;top:10px;left:12px;background:rgba(0,0,0,.55);border-radius:8px;padding:4px 9px;display:flex;align-items:center;gap:5px;backdrop-filter:blur(4px)">'
-              + '<span style="font-size:13px">📸</span><span style="font-size:11px;color:#fff;font-weight:600">Instagram Reel</span>'
-              + '</div></div>'
-              + (l.caption?'<div style="padding:8px 12px;font-size:12px;color:var(--muted);line-height:1.4;border-top:1px solid rgba(255,255,255,.06);background:var(--bg3)">'+htmlEsc(String(l.caption).slice(0,200))+'</div>':'')
-              + '<div style="padding:8px 12px 10px;display:flex;align-items:center;gap:8px;background:var(--bg3)">'
-              + '<div style="font-size:11px;color:var(--muted2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500">'+htmlEsc(String(l.text||'').replace(/^https?:\/\//,'').slice(0,40))+'</div>'
-              + '<a href="'+htmlEsc(safeUrl(l.text||''))+'" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();markLinkVisited(\''+msgId+'\')" style="padding:6px 12px;background:linear-gradient(135deg,#f9a825,#e91e63,#9c27b0);color:#fff;border-radius:8px;font-size:11px;font-weight:700;text-decoration:none;white-space:nowrap;flex-shrink:0;box-shadow:0 2px 8px rgba(233,30,99,.25)">→ Öffnen</a>'
-              + '</div></div>'
-              + '<div class="post-likes-row" style="padding:6px 28px 0;display:flex;align-items:center;gap:10px;font-size:12px;color:var(--muted)">'
-              + (isOwn ? '<span style="color:var(--muted);font-weight:600">👤 Dein Link</span>'
-                       : '<button class="post-action-btn '+(hasLiked?'liked':'')+'" onclick="likePost(\''+msgId+'\',this)" data-msgid="'+msgId+'" '+(hasLiked?'disabled':'')+' style="display:inline-flex;align-items:center;gap:5px;background:none;border:none;cursor:'+(hasLiked?'default':'pointer')+';color:'+(hasLiked?'#ef4444':'var(--text)')+';font-size:12px;font-weight:600;font-family:inherit;padding:4px 0"><svg width="16" height="16" viewBox="0 0 24 24" fill="'+(hasLiked?'currentColor':'none')+'" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg> Like</button>')
-              + '<span style="font-size:12px;color:var(--muted);margin-left:auto">❤️ <span id="likes-'+msgId+'">'+likeCount+'</span> · '+dateStr+'</span>'
+            return '<div class="proflink-card fade-up" data-url="'+htmlEsc(l.text||'')+'">'
+              + '<div class="proflink-thumb" onclick="openPostUrl(\''+msgId+'\')" id="post-'+msgId+'">'
+              + (thumbUrl ? '<img src="'+thumbUrl+'" referrerpolicy="no-referrer" loading="lazy" onerror="this.style.display=\'none\'" alt="">' : '')
+              + '<div class="proflink-thumb-overlay"></div>'
+              + '<div class="proflink-play">▶</div>'
+              + '</div>'
+              + '<div class="proflink-actions">'
+              + (isOwn ? '<span class="proflink-likes">❤️ <span id="likes-'+msgId+'">'+likeCount+'</span></span>'
+                       : '<button class="proflink-like '+(hasLiked?'liked':'')+'" onclick="likePost(\''+msgId+'\',this)" data-msgid="'+msgId+'" '+(hasLiked?'disabled':'')+'><svg width="13" height="13" viewBox="0 0 24 24" fill="'+(hasLiked?'currentColor':'none')+'" stroke="currentColor" stroke-width="2.4"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg><span id="likes-'+msgId+'">'+likeCount+'</span></button>')
+              + '<a href="'+htmlEsc(safeUrl(l.text||''))+'" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();markLinkVisited(\''+msgId+'\')" class="proflink-open">→ Öffnen</a>'
               + '</div></div>';
         };
         const myLinks = Object.entries(d.links||{}).filter(([,l])=>String(l.user_id)===String(myUid)).sort((a,b)=>(b[1].timestamp||0)-(a[1].timestamp||0));
         const linksHtml = myLinks.length
-            ? myLinks.map(([msgId, l]) => renderProfileLinkCard(l, msgId, true)).join('')
+            ? '<div class="proflink-grid">'+myLinks.map(([msgId, l]) => renderProfileLinkCard(l, msgId, true)).join('')+'</div>'
             : '<div class="empty"><div class="empty-icon">🔗</div><div class="empty-text">Noch keine Links</div><div class="empty-sub">Poste deinen ersten Reel im Feed!</div></div>';
 
         const aboutHtml = '<div style="padding:16px;display:flex;flex-direction:column;gap:12px;padding-bottom:100px">'
@@ -16640,15 +16632,14 @@ ${rest.map(([id,u],idx)=>{
     </a><a href="/admin/emails?key=" class="icon-btn" title="Email Dashboard" style="background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border-color:rgba(34,197,94,0.5)" onclick="event.preventDefault();location.href='/admin/emails?key='+prompt('Bridge Secret:')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="18" height="18"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 4l-10 8L2 4"/></svg>
     </a>` : ''}
+    ${(() => {
+      const _claimedToday = hasClaimed('dailyxp', myUid);
+      return '<button id="daily-xp-fab" class="icon-btn" onclick="claimDailyXP()" title="'+(_claimedToday?'Heute schon abgeholt':'Täglicher XP-Bonus abholen')+'"'+(_claimedToday?' disabled':'')+' style="position:relative;background:'+(_claimedToday?'var(--bg4)':'linear-gradient(135deg,#22c55e,#16a34a)')+';color:'+(_claimedToday?'var(--muted)':'#fff')+';border-color:'+(_claimedToday?'var(--border)':'rgba(34,197,94,0.5)')+';font-size:16px;cursor:'+(_claimedToday?'default':'pointer')+';opacity:'+(_claimedToday?'0.55':'1')+'">'+(_claimedToday?'✓':'🎁')+(_claimedToday?'':'<span id="daily-xp-fab-dot" style="position:absolute;top:-2px;right:-2px;width:9px;height:9px;border-radius:50%;background:#ef4444;border:2px solid var(--bg);animation:dxpPulse 2s ease-in-out infinite"></span>')+'</button>';
+    })()}
     <a href="/einstellungen" class="icon-btn">⚙️</a>
   </div>
 </div>
 ${profileCard(myUid, myUser, d, true, lang, adminIds, myBannerData, myPicData)}
-<!-- Daily-XP-Bonus jetzt als Floating-Button oben rechts (klein, kompakt) -->
-${(() => {
-    const _claimedToday = hasClaimed('dailyxp', myUid);
-    return '<button id="daily-xp-fab" onclick="claimDailyXP()" title="'+( _claimedToday?'Heute schon abgeholt':'Täglicher XP-Bonus abholen')+'"'+( _claimedToday?' disabled':'')+' style="position:fixed;top:62px;right:14px;width:42px;height:42px;border-radius:50%;background:'+( _claimedToday?'var(--bg4)':'linear-gradient(135deg,#22c55e,#16a34a)')+';color:'+( _claimedToday?'var(--muted)':'#fff')+';border:2px solid var(--bg);display:flex;align-items:center;justify-content:center;font-size:18px;cursor:'+( _claimedToday?'default':'pointer')+';box-shadow:'+( _claimedToday?'none':'0 4px 16px rgba(34,197,94,0.4)')+';z-index:90;font-family:inherit;opacity:'+( _claimedToday?'0.55':'1')+'">'+( _claimedToday?'✓':'🎁')+( _claimedToday?'':'<span id="daily-xp-fab-dot" style="position:absolute;top:-2px;right:-2px;width:10px;height:10px;border-radius:50%;background:#ef4444;border:2px solid var(--bg);animation:dxpPulse 2s ease-in-out infinite"></span>')+'</button>';
-})()}
 <style>@keyframes dxpPulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(.85);opacity:.6}}</style>
 <!-- old .acc-switcher block removed — moved to top of profileCard as ipf-switcher -->
 <div id="create-sub-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(8px)">
@@ -16725,12 +16716,6 @@ async function deleteSubAcc(){
 }
 </script>
 ${completionHtml}
-<div id="mission-widget" style="margin:0 12px 4px">
-  <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:14px 16px;animation:shimmer 1.5s infinite">
-    <div style="height:12px;background:var(--bg4);border-radius:6px;width:60%;margin-bottom:8px"></div>
-    <div style="height:10px;background:var(--bg4);border-radius:6px;width:80%"></div>
-  </div>
-</div>
 <div class="tabs" style="position:sticky;top:57px;z-index:50;background:var(--bg)">
   <div class="tab active" onclick="showPTab('links',this)">🔗 Links</div>
   <div class="tab" onclick="showPTab('posts',this)">📝 Posts</div>
@@ -16942,52 +16927,6 @@ async function submitPost(){const _spBtn=document.querySelector('[onclick="submi
   if(data.ok){toast('✅ Post veröffentlicht!');setTimeout(()=>location.reload(),250);}
   else{toast('❌ '+(data.error||'Fehler'));btn.disabled=false;btn.textContent='📝 Posten';}
 }
-(async function loadMissionWidget(){
-  const w=document.getElementById('mission-widget');
-  if(!w)return;
-  try{
-    const r=await fetch('/api/mission-status');
-    const d=await r.json();
-    if(!d.ok){w.innerHTML='';return;}
-    const now=new Date();
-    const nextSettle=new Date();
-    nextSettle.setHours(12,0,0,0);
-    if(now>=nextSettle)nextSettle.setDate(nextSettle.getDate()+1);
-    const diff=nextSettle-now;
-    const hh=Math.floor(diff/3600000);const mm=Math.floor((diff%3600000)/60000);
-    const settleStr=hh+'h '+mm+'m';
-    const {daily,weekly}=d;
-    const bar=(val,max,col)=>'<div style="background:var(--bg4);border-radius:4px;height:5px;overflow:hidden;margin-top:4px"><div style="height:100%;width:'+Math.min(100,Math.round(val/max*100))+'%;background:'+col+';border-radius:4px;transition:width .5s ease"></div></div>';
-    const mChip=(done,label)=>'<div style="display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:'+(done?'#22c55e':'var(--muted)')+'">'+
-      '<span style="font-size:14px">'+(done?'✅':'⬜')+'</span>'+label+'</div>';
-    w.innerHTML='<div style="background:linear-gradient(135deg,rgba(167,139,250,.1),rgba(124,58,237,.07));border:1px solid rgba(167,139,250,.25);border-radius:14px;padding:14px 16px">'
-      +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'
-      +'<div style="font-size:13px;font-weight:700">🎯 Meine Missionen</div>'
-      +'<div style="font-size:10px;color:var(--muted);background:var(--bg4);padding:3px 8px;border-radius:8px">⏱ Abrechnung in '+settleStr+'</div>'
-      +'</div>'
-      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">'
-      +'<div style="background:var(--bg3);border-radius:10px;padding:10px 12px">'
-      +'<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Heute</div>'
-      +mChip(daily.m1,'M1: '+daily.likesGegeben+'/5 geliked')
-      +bar(daily.likesGegeben,5,'#a78bfa')
-      +'<div style="margin-top:6px">'+mChip(daily.m2,'M2: '+daily.prozent+'% (≥80%)')+'</div>'
-      +bar(daily.prozent,100,'#818cf8')
-      +'<div style="margin-top:6px">'+mChip(daily.m3,'M3: '+(daily.gesamtLinks>0?Math.min(daily.gelikedLinks,daily.m3Target||daily.gesamtLinks)+'/'+(daily.m3Target||daily.gesamtLinks)+' '+(daily.gesamtLinks>(daily.m3Cap||30)?'(max 30)':'alle'):'–'))+'</div>'
-      +(daily.m3?'<div style="font-size:10px;color:#a78bfa;margin-top:4px">+5 XP + 💎 1 Diamant bei Abrechnung</div>':'')
-      +'</div>'
-      +'<div style="background:var(--bg3);border-radius:10px;padding:10px 12px">'
-      +'<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Wöchentlich</div>'
-      +mChip(weekly.m1Tage>=7,'W-M1: '+weekly.m1Tage+'/7 Tage')
-      +bar(weekly.m1Tage,7,'#60a5fa')
-      +'<div style="margin-top:6px">'+mChip(weekly.m2Tage>=7,'W-M2: '+weekly.m2Tage+'/7 → 💎')+'</div>'
-      +bar(weekly.m2Tage,7,'#34d399')
-      +'<div style="margin-top:6px">'+mChip(weekly.m3Tage>=7,'W-M3: '+weekly.m3Tage+'/7 → 💎💎')+'</div>'
-      +bar(weekly.m3Tage,7,'#fbbf24')
-      +'</div>'
-      +'</div>'
-      +'</div>';
-  }catch(e){const w2=document.getElementById('mission-widget');if(w2)w2.innerHTML='';}
-})();
 </script>`, 'profile');
     }
 
@@ -17101,39 +17040,27 @@ async function submitPost(){const _spBtn=document.querySelector('[onclick="submi
                 +'</div></div>';
         }).join('');
 
-        // Feed-Style Link-Cards (gleiche Optik wie eigenes Profil, mit Like-Button da fremder User)
+        // Compact 3-column Link-Cards (Like-Button da fremder User)
         const renderTheirLinkCard = (l, msgId) => {
             const likes = Array.isArray(l.likes) ? l.likes : (l.likes instanceof Set ? [...l.likes] : []);
             const likeCount = likes.length;
             const hasLiked = likes.map(String).includes(String(myUid));
             const shortcode = (l.text||'').match(/instagram\.com\/(?:reel|p|tv)\/([A-Za-z0-9_-]+)/);
             const thumbUrl = shortcode ? '/insta-thumb?u=' + encodeURIComponent(l.text) : '';
-            const dateStr = new Date(l.timestamp||0).toLocaleDateString('de-DE', {day:'2-digit', month:'short', year:'numeric'});
-            return '<div class="post fade-up" data-url="'+htmlEsc(l.text||'')+'" style="position:relative;margin:0 0 14px">'
-              + '<div style="margin:0 16px;border-radius:14px;overflow:hidden;background:#000;border:1.5px solid;border-image:linear-gradient(135deg,#f9a825,#e91e63,#9c27b0) 1;cursor:pointer;box-shadow:0 6px 20px rgba(233,30,99,0.10)" onclick="openPostUrl(\''+msgId+'\')" id="post-'+msgId+'">'
-              + '<div style="position:relative;width:100%;padding-top:62%;background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);overflow:hidden">'
-              + (thumbUrl ? '<img src="'+thumbUrl+'" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.style.display=\'none\'" alt="">' : '')
-              + '<div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.1) 0%,rgba(0,0,0,.55) 100%)"></div>'
-              + '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none">'
-              + '<div style="width:54px;height:54px;border-radius:50%;background:rgba(255,255,255,.92);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 16px rgba(0,0,0,.35)">'
-              + '<div style="width:0;height:0;border-style:solid;border-width:11px 0 11px 20px;border-color:transparent transparent transparent #000;margin-left:4px"></div>'
-              + '</div></div>'
-              + '<div style="position:absolute;top:10px;left:12px;background:rgba(0,0,0,.55);border-radius:8px;padding:4px 9px;display:flex;align-items:center;gap:5px;backdrop-filter:blur(4px)">'
-              + '<span style="font-size:13px">📸</span><span style="font-size:11px;color:#fff;font-weight:600">Instagram Reel</span>'
-              + '</div></div>'
-              + (l.caption?'<div style="padding:8px 12px;font-size:12px;color:var(--muted);line-height:1.4;border-top:1px solid rgba(255,255,255,.06);background:var(--bg3)">'+htmlEsc(String(l.caption).slice(0,200))+'</div>':'')
-              + '<div style="padding:8px 12px 10px;display:flex;align-items:center;gap:8px;background:var(--bg3)">'
-              + '<div style="font-size:11px;color:var(--muted2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500">'+htmlEsc(String(l.text||'').replace(/^https?:\/\//,'').slice(0,40))+'</div>'
-              + '<a href="'+htmlEsc(safeUrl(l.text||''))+'" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();markLinkVisited(\''+msgId+'\')" style="padding:6px 12px;background:linear-gradient(135deg,#f9a825,#e91e63,#9c27b0);color:#fff;border-radius:8px;font-size:11px;font-weight:700;text-decoration:none;white-space:nowrap;flex-shrink:0;box-shadow:0 2px 8px rgba(233,30,99,.25)">→ Öffnen</a>'
-              + '</div></div>'
-              + '<div class="post-likes-row" style="padding:6px 28px 0;display:flex;align-items:center;gap:10px;font-size:12px;color:var(--muted)">'
-              + '<button class="post-action-btn '+(hasLiked?'liked':'')+'" onclick="likePost(\''+msgId+'\',this)" data-msgid="'+msgId+'" '+(hasLiked?'disabled':'')+' style="display:inline-flex;align-items:center;gap:5px;background:none;border:none;cursor:'+(hasLiked?'default':'pointer')+';color:'+(hasLiked?'#ef4444':'var(--text)')+';font-size:12px;font-weight:600;font-family:inherit;padding:4px 0"><svg width="16" height="16" viewBox="0 0 24 24" fill="'+(hasLiked?'currentColor':'none')+'" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg> Like</button>'
-              + '<span style="font-size:12px;color:var(--muted);margin-left:auto">❤️ <span id="likes-'+msgId+'">'+likeCount+'</span> · '+dateStr+'</span>'
+            return '<div class="proflink-card fade-up" data-url="'+htmlEsc(l.text||'')+'">'
+              + '<div class="proflink-thumb" onclick="openPostUrl(\''+msgId+'\')" id="post-'+msgId+'">'
+              + (thumbUrl ? '<img src="'+thumbUrl+'" referrerpolicy="no-referrer" loading="lazy" onerror="this.style.display=\'none\'" alt="">' : '')
+              + '<div class="proflink-thumb-overlay"></div>'
+              + '<div class="proflink-play">▶</div>'
+              + '</div>'
+              + '<div class="proflink-actions">'
+              + '<button class="proflink-like '+(hasLiked?'liked':'')+'" onclick="likePost(\''+msgId+'\',this)" data-msgid="'+msgId+'" '+(hasLiked?'disabled':'')+'><svg width="13" height="13" viewBox="0 0 24 24" fill="'+(hasLiked?'currentColor':'none')+'" stroke="currentColor" stroke-width="2.4"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg><span id="likes-'+msgId+'">'+likeCount+'</span></button>'
+              + '<a href="'+htmlEsc(safeUrl(l.text||''))+'" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();markLinkVisited(\''+msgId+'\')" class="proflink-open">→ Öffnen</a>'
               + '</div></div>';
         };
         const theirLinkEntries = Object.entries(d.links||{}).filter(([,l])=>String(l.user_id)===String(uid)).sort((a,b)=>(b[1].timestamp||0)-(a[1].timestamp||0));
         const theirLinksHtml = theirLinkEntries.length
-            ? theirLinkEntries.map(([msgId, l]) => renderTheirLinkCard(l, msgId)).join('')
+            ? '<div class="proflink-grid">'+theirLinkEntries.map(([msgId, l]) => renderTheirLinkCard(l, msgId)).join('')+'</div>'
             : '<div class="empty"><div class="empty-icon">🔗</div><div class="empty-text">Noch keine Links</div></div>';
 
         const theirAboutHtml = '<div style="padding:16px;display:flex;flex-direction:column;gap:12px;padding-bottom:100px">'
