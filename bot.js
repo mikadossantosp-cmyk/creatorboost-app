@@ -16795,9 +16795,9 @@ function showPTab(tab,el){
 function openProjDetail(idx){
   const p=PROJECTS[idx]; if(!p) return; _curProjIdx=idx;
   document.getElementById('proj-detail-title').textContent=p.title;
-  (function(){const w=document.getElementById('proj-detail-img-wrap');if(!w)return;w.textContent='';if(p.img&&/^(data:image|https?:\/\/)/.test(p.img)){const im=document.createElement('img');im.src=p.img;im.alt='';im.style.cssText='width:100%;object-fit:contain;display:block;background:#0a0a0a';w.appendChild(im);}})();
+  (function(){const w=document.getElementById('proj-detail-img-wrap');if(!w)return;w.textContent='';if(p.img&&/^(data:image|https?:\\/\\/)/.test(p.img)){const im=document.createElement('img');im.src=p.img;im.alt='';im.style.cssText='width:100%;object-fit:contain;display:block;background:#0a0a0a';w.appendChild(im);}})();
   document.getElementById('proj-detail-desc').textContent=p.description||'';
-  (function(){const w=document.getElementById('proj-detail-link');if(!w)return;w.textContent='';if(p.link&&/^https?:\/\//i.test(p.link)){const a=document.createElement('a');a.href=p.link;a.target='_blank';a.rel='noopener noreferrer';a.style.cssText='color:var(--blue);font-size:13px;word-break:break-all';a.textContent='🔗 '+p.link;w.appendChild(a);}})();
+  (function(){const w=document.getElementById('proj-detail-link');if(!w)return;w.textContent='';if(p.link&&/^https?:\\/\\//i.test(p.link)){const a=document.createElement('a');a.href=p.link;a.target='_blank';a.rel='noopener noreferrer';a.style.cssText='color:var(--blue);font-size:13px;word-break:break-all';a.textContent='🔗 '+p.link;w.appendChild(a);}})();
   const docEl=document.getElementById('proj-detail-doc');
   if(p.docName){const icon=p.docName.endsWith('.pptx')?'📊':'📄';docEl.innerHTML='<a href="/api/download-project-doc/'+_SESSION_UID+'/'+p.id+'" style="display:inline-flex;align-items:center;gap:8px;background:var(--bg4);border:1px solid var(--border);border-radius:10px;padding:8px 14px;font-size:13px;font-weight:600;color:var(--text);text-decoration:none">'+icon+' '+p.docName+' herunterladen</a>';}
   else docEl.innerHTML='';
@@ -16830,7 +16830,7 @@ function openEditProj(idx){
   document.getElementById('proj-desc').value=p.description||'';
   document.getElementById('proj-link').value=p.link||'';
   const imgPrev=document.getElementById('proj-img-preview');
-  if(p.img&&/^(data:image|https?:\/\/)/.test(p.img)){imgPrev.textContent='';const im=document.createElement('img');im.src=p.img;im.style.cssText='width:100%;height:100%;object-fit:cover';imgPrev.appendChild(im);imgPrev._data=p.img;}
+  if(p.img&&/^(data:image|https?:\\/\\/)/.test(p.img)){imgPrev.textContent='';const im=document.createElement('img');im.src=p.img;im.style.cssText='width:100%;height:100%;object-fit:cover';imgPrev.appendChild(im);imgPrev._data=p.img;}
   else{imgPrev.innerHTML='📷';imgPrev._data=null;}
   const docPrev=document.getElementById('proj-doc-preview');
   docPrev._data=null;docPrev._name=null;
@@ -17156,9 +17156,9 @@ function showTPTab(tab,el){
 function openTProjDetail(idx){
   const p=TPROJECTS[idx]; if(!p) return;
   document.getElementById('tproj-title').textContent=p.title;
-  (function(){const w=document.getElementById('tproj-img-wrap');if(!w)return;w.textContent='';if(p.img&&/^(data:image|https?:\/\/)/.test(p.img)){const im=document.createElement('img');im.src=p.img;im.alt='';im.style.cssText='width:100%;object-fit:contain;display:block;background:#0a0a0a';w.appendChild(im);}})();
+  (function(){const w=document.getElementById('tproj-img-wrap');if(!w)return;w.textContent='';if(p.img&&/^(data:image|https?:\\/\\/)/.test(p.img)){const im=document.createElement('img');im.src=p.img;im.alt='';im.style.cssText='width:100%;object-fit:contain;display:block;background:#0a0a0a';w.appendChild(im);}})();
   document.getElementById('tproj-desc').textContent=p.description||'';
-  (function(){const w=document.getElementById('tproj-link');if(!w)return;w.textContent='';if(p.link&&/^https?:\/\//i.test(p.link)){const a=document.createElement('a');a.href=p.link;a.target='_blank';a.rel='noopener noreferrer';a.style.cssText='color:var(--blue);font-size:13px;word-break:break-all';a.textContent='🔗 '+p.link;w.appendChild(a);}})();
+  (function(){const w=document.getElementById('tproj-link');if(!w)return;w.textContent='';if(p.link&&/^https?:\\/\\//i.test(p.link)){const a=document.createElement('a');a.href=p.link;a.target='_blank';a.rel='noopener noreferrer';a.style.cssText='color:var(--blue);font-size:13px;word-break:break-all';a.textContent='🔗 '+p.link;w.appendChild(a);}})();
   const docEl=document.getElementById('tproj-doc');
   if(p.docName){const icon=p.docName.endsWith('.pptx')?'📊':'📄';docEl.innerHTML='<a href="/api/download-project-doc/'+_TUID+'/'+p.id+'" style="display:inline-flex;align-items:center;gap:8px;background:var(--bg4);border:1px solid var(--border);border-radius:10px;padding:8px 14px;font-size:13px;font-weight:600;color:var(--text);text-decoration:none">'+icon+' '+p.docName+' herunterladen</a>';}
   else docEl.innerHTML='';
