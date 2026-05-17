@@ -1178,8 +1178,9 @@ button{cursor:pointer;border:none;outline:none;font-family:var(--font)}
 .story-item:active{transform:scale(0.92);transition:transform 0.15s}
 .story-ring{width:68px;height:68px;border-radius:50%;padding:3.5px;background:linear-gradient(135deg,#1d4ed8,#3b82f6,#0ea5e9);position:relative;box-shadow:0 4px 14px rgba(29,78,216,0.45)}
 .story-ring.seen{background:linear-gradient(135deg,#93c5fd,#60a5fa);box-shadow:0 2px 8px rgba(96,165,250,0.35)}
-.story-ring.pinned-glow{background:linear-gradient(135deg,#f9a825,#e91e63,#9c27b0,#3b82f6);background-size:300% 300%;box-shadow:0 4px 18px rgba(233,30,99,0.45);animation:pinnedGlow 2.4s ease-in-out infinite}
-@keyframes pinnedGlow{0%,100%{background-position:0% 50%;box-shadow:0 4px 16px rgba(233,30,99,0.45)}50%{background-position:100% 50%;box-shadow:0 8px 24px rgba(233,30,99,0.7)}}
+.story-ring.pinned-engaged{background:linear-gradient(135deg,#9ca3af,#6b7280);box-shadow:none;opacity:0.55}
+.story-ring.pinned-glow{background:linear-gradient(135deg,#f9a825,#e91e63,#9c27b0,#3b82f6);background-size:300% 300%;box-shadow:0 4px 18px rgba(233,30,99,0.45);animation:pinnedBlink 1.8s ease-in-out infinite}
+@keyframes pinnedBlink{0%,100%{background-position:0% 50%;box-shadow:0 4px 14px rgba(233,30,99,0.4);opacity:1}50%{background-position:100% 50%;box-shadow:0 6px 22px rgba(233,30,99,0.75);opacity:0.7}}
 .story-inner{width:100%;height:100%;border-radius:50%;border:2.5px solid var(--bg);overflow:hidden;position:relative;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:#fff}
 [data-theme=light] .story-ring{box-shadow:0 6px 20px rgba(29,78,216,0.5),0 1px 4px rgba(15,23,42,0.12)}
 [data-theme=light] .story-ring.seen{box-shadow:0 3px 10px rgba(15,23,42,0.18)}
@@ -8736,7 +8737,7 @@ p{line-height:1.65;color:var(--muted)}
   ${pinnedStories.map(item => {
     const id = item.id, u = item.u, engaged = item.engaged;
     const insta = u.instagram;
-    const ringClass = engaged ? 'seen' : 'pinned-glow';
+    const ringClass = engaged ? 'pinned-engaged' : 'pinned-glow';
     return `<button type="button" class="story-item" onclick="openPinnedStory('${id}')" style="background:none;border:none;padding:0;cursor:pointer;font-family:inherit">
       <div class="story-ring ${ringClass}">
         ${crownOverlay(id, 'sm')}
