@@ -7031,7 +7031,53 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
     // ── PWA MANIFEST ──
     if (path === '/manifest.json') {
         res.writeHead(200,{'Content-Type':'application/manifest+json','Cache-Control':'no-store','Access-Control-Allow-Origin':'*'});
-        return res.end(JSON.stringify({name:'CreatorX',short_name:'CreatorX',description:'Die kreative Community für Instagram Creators',start_url:'/launch',scope:'/',display:'standalone',background_color:'#000000',theme_color:'#000000',orientation:'portrait',categories:['social','lifestyle'],prefer_related_applications:false,screenshots:[],icons:[{src:'/icon-192.png?v=26',sizes:'192x192',type:'image/png',purpose:'any'},{src:'/icon-512.png?v=26',sizes:'512x512',type:'image/png',purpose:'any maskable'}]}));
+        return res.end(JSON.stringify({
+            id: '/',
+            name: 'CreatorX',
+            short_name: 'CreatorX',
+            description: 'CreatorX — die kreative Community für Instagram Creators. Teile deine Reels, like andere Posts, sammle XP und wachse mit echter Community-Power.',
+            start_url: '/launch',
+            scope: '/',
+            display: 'standalone',
+            display_override: ['standalone', 'minimal-ui'],
+            background_color: '#000000',
+            theme_color: '#000000',
+            orientation: 'portrait',
+            lang: 'de',
+            dir: 'ltr',
+            categories: ['social', 'lifestyle'],
+            prefer_related_applications: false,
+            screenshots: [],
+            icons: [
+                { src: '/icon-192.png?v=26', sizes: '192x192', type: 'image/png', purpose: 'any' },
+                { src: '/icon-512.png?v=26', sizes: '512x512', type: 'image/png', purpose: 'any' },
+                { src: '/icon-512.png?v=26', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
+            ],
+            shortcuts: [
+                { name: 'Feed', short_name: 'Feed', url: '/feed', icons: [{ src: '/icon-192.png?v=26', sizes: '192x192' }] },
+                { name: 'Profil', short_name: 'Profil', url: '/profil', icons: [{ src: '/icon-192.png?v=26', sizes: '192x192' }] }
+            ]
+        }));
+    }
+
+    // Digital Asset Links — Pflicht für TWA (Trusted Web Activity).
+    // Verifiziert dass die App `com.creatorx.app` zur Domain creatorboostx.de gehört.
+    // SHA256-Fingerprint kommt vom Signing-Key (kann aus dem Bubblewrap-Build oder Play Console ausgelesen werden).
+    if (path === '/.well-known/assetlinks.json') {
+        const _twaFingerprint = process.env.TWA_SHA256_FINGERPRINT || '';
+        const _statements = [];
+        if (_twaFingerprint) {
+            _statements.push({
+                relation: ['delegate_permission/common.handle_all_urls'],
+                target: {
+                    namespace: 'android_app',
+                    package_name: 'com.creatorx.app',
+                    sha256_cert_fingerprints: [_twaFingerprint]
+                }
+            });
+        }
+        res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=600', 'Access-Control-Allow-Origin': '*' });
+        return res.end(JSON.stringify(_statements));
     }
 
     if (path === '/api/vapid-public-key') {
