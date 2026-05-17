@@ -106,7 +106,8 @@ h1 .accent{font-style:italic;font-weight:600;background:linear-gradient(180deg,#
 .preview{padding:120px 0 100px;position:relative;overflow:hidden;border-top:1px solid var(--line);background:linear-gradient(180deg,var(--bg),var(--bg-2) 40%,var(--bg))}
 .preview-bg{position:absolute;inset:0;pointer-events:none;display:flex;align-items:center;justify-content:center;z-index:0}
 .preview-bg::before{content:'';position:absolute;width:900px;height:900px;background:radial-gradient(circle,rgba(212,169,70,0.07) 0%,transparent 65%);filter:blur(40px)}
-.preview-inner{position:relative;z-index:2;display:grid;grid-template-columns:1fr;gap:80px;align-items:center;max-width:1080px;margin:0 auto}
+.preview-inner{position:relative;z-index:2;display:grid;grid-template-columns:minmax(0,1fr);gap:80px;align-items:center;max-width:1080px;margin:0 auto}
+.preview-inner>*{min-width:0}
 .preview-image{position:relative;display:flex;justify-content:center;align-items:center;user-select:none}
 .preview-image::before{content:'';position:absolute;inset:-30px;background:radial-gradient(ellipse at center,rgba(212,169,70,0.22) 0%,transparent 60%);filter:blur(30px);z-index:-1;pointer-events:none}
 
@@ -135,7 +136,7 @@ h1 .accent{font-style:italic;font-weight:600;background:linear-gradient(180deg,#
 .preview-content h2{font-family:'Cormorant Garamond',serif;font-size:clamp(34px,4.6vw,52px);font-weight:500;letter-spacing:-0.5px;line-height:1.12;color:var(--text);margin-bottom:18px}
 .preview-content h2 .em{font-style:italic;background:linear-gradient(180deg,#fff5d4,#d4a946);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
 .preview-content p{font-size:16px;color:var(--text-2);line-height:1.7;margin-bottom:32px}
-.feature-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px;margin-bottom:36px}
+.feature-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-bottom:36px}
 .feature-cell{background:rgba(212,169,70,0.04);border:1px solid var(--line-2);border-radius:12px;padding:18px 14px;text-align:left;transition:all 0.25s}
 .feature-cell:hover{background:rgba(212,169,70,0.08);transform:translateY(-2px);border-color:rgba(212,169,70,0.40)}
 .feature-icon{width:34px;height:34px;border-radius:9px;background:linear-gradient(180deg,rgba(245,215,110,0.20),rgba(139,105,20,0.08));border:1px solid rgba(212,169,70,0.40);display:flex;align-items:center;justify-content:center;font-size:18px;margin-bottom:10px}
@@ -236,6 +237,14 @@ footer{border-top:1px solid var(--line);padding:48px 0 56px;background:var(--bg)
   .nav-link{display:none}
   .step{gap:18px}
   .step-num{width:40px;height:40px;font-size:18px}
+  .preview-inner{gap:48px}
+  .feature-grid{grid-template-columns:1fr;gap:12px;margin-bottom:28px}
+  .feature-cell{padding:16px 16px;display:flex;gap:14px;align-items:center;text-align:left}
+  .feature-icon{margin-bottom:0;flex-shrink:0}
+  .feature-title{margin-bottom:2px}
+  .preview-content h2{font-size:34px}
+  .preview-content p{font-size:15px}
+  .wrap{padding:0 20px}
 }
 
 /* ── GAMIFICATION ── */
