@@ -1124,6 +1124,7 @@ forced-color-adjust:none;
 --text:#0f172a;--muted:#64748b;--muted2:#94a3b8;
 --accent:#3b82f6;--accent2:#1d4ed8;
 --green:#00c851;--blue:#4dabf7;--purple:#cc5de8;--gold:#ffd43b;
+--avatar-fallback-bg:#ffffff;--avatar-fallback-color:rgba(15,23,42,.30);--avatar-fallback-border:rgba(15,23,42,.10);
 --radius:16px;--radius-sm:10px;--radius-xs:6px;
 --font:'DM Sans',sans-serif;--font-display:'Syne',sans-serif;
 --shadow:0 8px 32px rgba(15,23,42,.06);
@@ -1143,6 +1144,7 @@ color-scheme:dark;
 --bg:#000000;--bg2:#000000;--bg3:#000000;--bg4:#000000;
 --border:rgba(255,255,255,.1);--border2:rgba(255,255,255,.06);
 --text:#fff;--muted:#a3a8b3;--muted2:#6e7280;
+--avatar-fallback-bg:#ffffff;--avatar-fallback-color:rgba(15,23,42,.35);--avatar-fallback-border:rgba(255,255,255,.20);
 --shadow:0 8px 32px rgba(0,0,0,.4);
 --glass-bg:#000000;--surface-tint:rgba(255,255,255,0.04);--hover-tint:rgba(255,255,255,0.08);
 }
@@ -1163,13 +1165,14 @@ button{cursor:pointer;border:none;outline:none;font-family:var(--font)}
 .icon-btn{width:36px;height:36px;border-radius:50%;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--text)}
 /* Feed-Tab-Dropdown im Topbar (gleiche Optik wie /profil Account-Switcher .tb-switcher) */
 .ft-wrap{position:relative;display:inline-flex}
-.ft-trigger{display:inline-flex;align-items:center;gap:7px;background:var(--surface-tint);border:1px solid var(--border2);color:var(--text);padding:5px 12px 5px 9px;border-radius:99px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;max-width:200px;transition:background .15s,border-color .15s,box-shadow .15s;position:relative}
+.ft-trigger{display:inline-flex;align-items:center;gap:9px;background:var(--surface-tint);border:1.5px solid var(--border2);color:var(--text);padding:9px 18px 9px 16px;border-radius:99px;font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;max-width:220px;transition:background .15s,border-color .15s,box-shadow .15s;position:relative;line-height:1.1}
 .ft-trigger:hover{background:var(--bg4);border-color:rgba(124,58,237,.35)}
-.ft-trigger-label{display:inline-flex;align-items:center;gap:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:.1px}
-.ft-trigger-arrow{font-size:10px;color:var(--muted);transition:transform .2s;flex-shrink:0}
+.ft-trigger-label{display:inline-flex;align-items:center;gap:7px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:.1px}
+.ft-trigger-arrow{font-size:11px;color:var(--muted);transition:transform .2s;flex-shrink:0}
 .ft-wrap.open .ft-trigger-arrow{transform:rotate(180deg)}
 .ft-wrap.open .ft-trigger{background:var(--bg4);border-color:rgba(124,58,237,.40)}
-.ft-trigger-badge{position:absolute;top:-5px;right:-5px;min-width:18px;height:18px;line-height:14px;padding:0 5px;border-radius:99px;background:#ef4444;color:#fff;font-size:10px;font-weight:800;border:2px solid var(--bg);box-shadow:0 2px 6px rgba(239,68,68,.4);text-align:center}
+.ft-trigger-badge{position:absolute;top:-6px;right:-6px;min-width:20px;height:20px;line-height:16px;padding:0 6px;border-radius:99px;background:#ef4444;color:#fff;font-size:11px;font-weight:800;border:2px solid var(--bg);box-shadow:0 2px 8px rgba(239,68,68,.45);text-align:center;animation:ftBadgePulse 2s ease-in-out infinite}
+@keyframes ftBadgePulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
 .ft-menu{position:absolute;top:calc(100% + 8px);left:50%;transform:translateX(-50%);background:var(--bg3);border:1.5px solid var(--border2);border-radius:14px;box-shadow:0 12px 32px rgba(0,0,0,.22);min-width:260px;padding:6px;z-index:120;display:none;animation:ftDrop .18s ease}
 .ft-wrap.open .ft-menu{display:block}
 @keyframes ftDrop{from{opacity:0;transform:translateX(-50%) translateY(-6px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
@@ -3358,7 +3361,7 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
 .ipf{padding:14px 18px 8px;background:var(--bg);position:relative;margin-top:-30px;border-radius:24px 24px 0 0}
 .ipf-top{display:flex;align-items:center;gap:18px;margin-bottom:14px;margin-top:-30px}
 .ipf-avatar-wrap{position:relative;width:84px;height:84px;flex-shrink:0;margin-top:0}
-.ipf-avatar{width:100%;height:100%;border-radius:50%;background:linear-gradient(135deg,#a78bfa,#7c3aed);background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:32px;overflow:hidden;position:relative;border:4px solid var(--bg);box-shadow:0 4px 18px rgba(0,0,0,.25)}
+.ipf-avatar{width:100%;height:100%;border-radius:50%;background:var(--avatar-fallback-bg);background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;color:var(--avatar-fallback-color);font-weight:700;font-size:32px;overflow:hidden;position:relative;border:4px solid var(--bg);box-shadow:0 4px 18px rgba(0,0,0,.25)}
 .ipf-avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .ipf-avatar-dot{position:absolute;bottom:2px;right:2px;width:18px;height:18px;border-radius:50%;background:#22c55e;border:3px solid var(--bg);box-shadow:0 0 8px rgba(34,197,94,.5)}
 .ipf-avatar-crown{position:absolute;top:-22px;left:50%;transform:translateX(-50%) rotate(-4deg);font-size:30px;line-height:1;animation:crown-bob 2.4s ease-in-out infinite;pointer-events:none;z-index:5}
@@ -3388,7 +3391,7 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
 .ipf-switcher-wrap{position:relative;margin:12px 16px 0;background:var(--bg)}
 .ipf-switcher{display:flex;align-items:center;gap:12px;width:100%;background:linear-gradient(135deg,rgba(167,139,250,.08),rgba(124,58,237,.04));border:1.5px solid rgba(167,139,250,.30);color:var(--text);font-size:14px;font-weight:600;cursor:pointer;padding:10px 14px;border-radius:14px;font-family:inherit;transition:all .15s;box-shadow:0 2px 8px rgba(124,58,237,.06)}
 .ipf-switcher:hover{background:linear-gradient(135deg,rgba(167,139,250,.14),rgba(124,58,237,.08));border-color:rgba(167,139,250,.55);transform:translateY(-1px)}
-.ipf-switcher-mini-avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#a78bfa,#7c3aed);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;overflow:hidden;position:relative;flex-shrink:0;border:2px solid var(--bg3)}
+.ipf-switcher-mini-avatar{width:32px;height:32px;border-radius:50%;background:var(--avatar-fallback-bg);display:flex;align-items:center;justify-content:center;color:var(--avatar-fallback-color);font-weight:700;font-size:13px;overflow:hidden;position:relative;flex-shrink:0;border:2px solid var(--bg3)}
 .ipf-switcher-mini-avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .ipf-switcher-label{flex:1;text-align:left;min-width:0}
 .ipf-switcher-label-top{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;font-weight:700;margin-bottom:1px}
@@ -3401,7 +3404,7 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
 .ipf-switcher-item{display:flex;align-items:center;gap:11px;padding:11px 14px;text-decoration:none;color:var(--text);cursor:pointer;border:none;background:none;width:100%;font-family:inherit;font-size:14px;text-align:left;transition:background .12s}
 .ipf-switcher-item:hover{background:var(--bg4)}
 .ipf-switcher-item.active{background:rgba(167,139,250,.08)}
-.ipf-switcher-item-avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#a78bfa,#7c3aed);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px;overflow:hidden;position:relative;flex-shrink:0}
+.ipf-switcher-item-avatar{width:36px;height:36px;border-radius:50%;background:var(--avatar-fallback-bg);display:flex;align-items:center;justify-content:center;color:var(--avatar-fallback-color);font-weight:700;font-size:14px;overflow:hidden;position:relative;flex-shrink:0}
 .ipf-switcher-item-avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .ipf-switcher-item-name{flex:1;min-width:0;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ipf-switcher-item-check{color:#a78bfa;font-size:18px;font-weight:700}
@@ -3412,7 +3415,7 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
 .tb-switcher-wrap{position:relative;display:inline-block}
 .tb-switcher{display:inline-flex;align-items:center;gap:7px;background:var(--surface-tint);border:1px solid var(--border2);color:var(--text);padding:4px 10px 4px 4px;border-radius:99px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;max-width:200px}
 .tb-switcher:hover{background:var(--bg4)}
-.tb-switcher-avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#a78bfa,#7c3aed);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:12px;overflow:hidden;position:relative;flex-shrink:0}
+.tb-switcher-avatar{width:28px;height:28px;border-radius:50%;background:var(--avatar-fallback-bg);display:flex;align-items:center;justify-content:center;color:var(--avatar-fallback-color);font-weight:700;font-size:12px;overflow:hidden;position:relative;flex-shrink:0;border:1px solid var(--avatar-fallback-border)}
 .tb-switcher-avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .tb-switcher-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100px}
 .tb-switcher-arrow{font-size:10px;color:var(--muted);transition:transform .2s;flex-shrink:0}
@@ -8867,15 +8870,21 @@ p{line-height:1.65;color:var(--muted)}
         });
 
         // Stories: nur User mit Pinned Reel anzeigen (Insta-Style).
-        // Unengagete Pinned-Reels glühen, engagete sind grau.
+        // Eigene Familie (Hauptaccount + Sub-Accounts) wird komplett ausgeblendet.
         const myEngagedOwners = (d.pinnedEngages?.[String(myUid)] || []).map(String);
+        const _myFamilyRoot = String(session?.uid || myUid);
+        const _isFamily = (id, u) => {
+            if (String(id) === _myFamilyRoot) return true;
+            if (u && String(u.parent_uid||'') === _myFamilyRoot) return true;
+            return false;
+        };
         const pinnedStories = Object.entries(d.users||{})
-            .filter(([id,u])=>!adminIds.includes(Number(id))&&isAppVisible(u))
+            .filter(([id,u])=>!_isFamily(id,u)&&!adminIds.includes(Number(id))&&isAppVisible(u))
             .map(([id,u])=>({id, u, pinnedUrl: ladePinnedLink(id)}))
             .filter(x => !!x.pinnedUrl)
             .map(x => ({
                 ...x,
-                engaged: myEngagedOwners.includes(String(x.id)) || String(x.id) === String(myUid)
+                engaged: myEngagedOwners.includes(String(x.id))
             }))
             .sort((a,b)=>{
                 if (a.engaged !== b.engaged) return a.engaged ? 1 : -1;
@@ -9181,8 +9190,8 @@ window.onPinVisitStory = function(uid){
 '  <div class="post-header" style="padding-top:8px">\n'+
 '    <a href="/profil/'+link.user_id+'" style="position:relative;width:40px;height:40px;flex-shrink:0;text-decoration:none">\n'+
 '      '+crownOverlay(link.user_id, 'sm')+'\n'+
-'      <div style="position:relative;width:40px;height:40px;border-radius:50%;overflow:hidden;background:'+grad+';display:flex;align-items:center;justify-content:center">\n'+
-'        <span style="color:#fff;font-weight:700;font-size:15px;position:absolute">'+(poster.name||'?').slice(0,1)+'</span>\n'+
+'      <div style="position:relative;width:40px;height:40px;border-radius:50%;overflow:hidden;background:var(--avatar-fallback-bg);border:1px solid var(--avatar-fallback-border);display:flex;align-items:center;justify-content:center">\n'+
+'        <span style="color:var(--avatar-fallback-color);font-weight:700;font-size:15px;position:absolute">'+(poster.name||'?').slice(0,1)+'</span>\n'+
 '        '+avatarSmall+'\n'+
 '      </div>\n'+
 '    </a>\n'+
@@ -9281,8 +9290,8 @@ commentsBox+
                 +'<span class="post-time">'+dateStr+' '+time+'</span>\n'
                 +'</div>\n'
                 +'<div class="post-header" style="padding-top:8px">\n'
-                +'<a href="/profil/'+sl.uid+'" style="position:relative;width:40px;height:40px;flex-shrink:0;text-decoration:none">'+crownOverlay(sl.uid,'sm')+'<div style="position:relative;width:40px;height:40px;border-radius:50%;overflow:hidden;background:'+grad+';display:flex;align-items:center;justify-content:center">\n'
-                +'<span style="color:#fff;font-weight:700;font-size:15px;position:absolute">'+(poster.name||'?')[0]+'</span>\n'
+                +'<a href="/profil/'+sl.uid+'" style="position:relative;width:40px;height:40px;flex-shrink:0;text-decoration:none">'+crownOverlay(sl.uid,'sm')+'<div style="position:relative;width:40px;height:40px;border-radius:50%;overflow:hidden;background:var(--avatar-fallback-bg);border:1px solid var(--avatar-fallback-border);display:flex;align-items:center;justify-content:center">\n'
+                +'<span style="color:var(--avatar-fallback-color);font-weight:700;font-size:15px;position:absolute">'+(poster.name||'?')[0]+'</span>\n'
                 +avatarSmall+'\n</div></a>\n'
                 +'<a href="/profil/'+sl.uid+'" class="post-user-info" style="text-decoration:none;color:inherit">\n'
                 +'<div class="post-name">'+(poster.spitzname||poster.name||'User')+'</div>\n'
@@ -9417,14 +9426,14 @@ ${(() => {
     {id:'diamond', emoji:'💎', label:'Diamond', count:0},
   ];
   const _curTab = _tabsMeta.find(t=>t.id===tab) || _tabsMeta[0];
-  const _totalOtherCount = _tabsMeta.filter(t=>t.id!==_curTab.id).reduce((s,t)=>s+(t.count||0),0);
+  const _totalAllCount = _tabsMeta.reduce((s,t)=>s+(t.count||0),0);
   return `<div class="topbar">
   <div class="topbar-logo">CreatorX</div>
   <div class="ft-wrap" id="ft-wrap">
     <button class="ft-trigger" type="button" onclick="ftToggle(this)" aria-haspopup="true">
       <span class="ft-trigger-label">${_curTab.emoji} ${htmlEsc(_curTab.label)}</span>
       <span class="ft-trigger-arrow">▼</span>
-      ${_totalOtherCount > 0 ? `<span class="ft-trigger-badge">${_totalOtherCount > 99 ? '99+' : _totalOtherCount}</span>` : ''}
+      ${_totalAllCount > 0 ? `<span class="ft-trigger-badge">${_totalAllCount > 99 ? '99+' : _totalAllCount}</span>` : ''}
     </button>
     <div class="ft-menu" id="ft-menu">
       ${_tabsMeta.map(t => `<a href="/feed?tab=${t.id}" class="ft-item${t.id===_curTab.id?' active':''}"><span class="ft-item-emoji">${t.emoji}</span><span class="ft-item-label">${htmlEsc(t.label)}</span>${t.count > 0 ? `<span class="ft-item-badge">${t.count > 99 ? '99+' : t.count}</span>` : ''}${t.id===_curTab.id ? '<span class="ft-item-check">✓</span>' : ''}</a>`).join('')}
@@ -12422,10 +12431,13 @@ document.getElementById('user-search-input')?.addEventListener('input',filterSea
         // Threads sind aus der App entfernt — keine Unread/List mehr nötig
         const lastAppChat = (appChatData?.messages || []).filter(m => !m.deleted).slice(-1)[0] || null;
         // Stories: nur gefolgte User mit Pinned Reel (gleiche Logik wie /feed)
+        // Eigene Familie (Hauptaccount + Sub-Accounts) wird komplett ausgeblendet.
         const _myFollowingSet = new Set((botData.users?.[myUid]?.following || []).map(String));
         const _myEngagedOwnersDM = (botData.pinnedEngages?.[String(myUid)] || []).map(String);
+        const _myFamilyRootDM = String(session?.uid || myUid);
+        const _isFamilyDM = (id, u) => String(id) === _myFamilyRootDM || (u && String(u.parent_uid||'') === _myFamilyRootDM);
         const _pinnedStoriesDM = Object.entries(botData.users || {})
-            .filter(([id, u]) => _myFollowingSet.has(String(id)) && !adminIds.includes(Number(id)) && isAppVisible(u))
+            .filter(([id, u]) => !_isFamilyDM(id, u) && _myFollowingSet.has(String(id)) && !adminIds.includes(Number(id)) && isAppVisible(u))
             .map(([id, u]) => ({ id, u, pinnedUrl: ladePinnedLink(id) }))
             .filter(x => !!x.pinnedUrl)
             .map(x => ({
@@ -12433,7 +12445,7 @@ document.getElementById('user-search-input')?.addEventListener('input',filterSea
                 name: x.u.spitzname || x.u.name || 'User',
                 avatar: ladeBild(x.id, 'profilepic') ? '/appbild/' + x.id + '/profilepic' : (x.u.instagram ? 'https://unavatar.io/instagram/' + encodeURIComponent(x.u.instagram) : ''),
                 thumb: ((x.pinnedUrl || '').match(/instagram\.com\/(?:reel|p|tv)\/([A-Za-z0-9_-]+)/) ? '/insta-thumb?u=' + encodeURIComponent(x.pinnedUrl) : ''),
-                engaged: _myEngagedOwnersDM.includes(String(x.id)) || String(x.id) === String(myUid),
+                engaged: _myEngagedOwnersDM.includes(String(x.id)),
                 isOwn: String(x.id) === String(myUid)
             }))
             .sort((a, b) => (a.engaged === b.engaged) ? 0 : (a.engaged ? 1 : -1));
@@ -18181,7 +18193,7 @@ ${_setSubHead('⭐ Pro-Features', 'Premium-Tools für ernsthafte Creator. <b sty
 .pf-hero{margin:14px 16px 12px;padding:18px 16px;background:var(--bg3);border:1px solid var(--border2);border-radius:16px;box-shadow:0 4px 14px rgba(0,0,0,.05)}
 .pf-top{display:flex;align-items:center;gap:18px;margin-bottom:14px}
 .pf-avatar-wrap{position:relative;width:78px;height:78px;flex-shrink:0}
-.pf-avatar{width:100%;height:100%;border-radius:50%;background:linear-gradient(135deg,#a78bfa,#7c3aed);background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:28px;overflow:hidden;cursor:pointer;position:relative;border:2.5px solid var(--bg3);box-shadow:0 2px 8px rgba(0,0,0,.1)}
+.pf-avatar{width:100%;height:100%;border-radius:50%;background:var(--avatar-fallback-bg);background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;color:var(--avatar-fallback-color);font-weight:700;font-size:28px;overflow:hidden;cursor:pointer;position:relative;border:2.5px solid var(--bg3);box-shadow:0 2px 8px rgba(0,0,0,.1)}
 .pf-avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .pf-avatar-edit{position:absolute;bottom:0;right:0;width:26px;height:26px;border-radius:50%;background:#a78bfa;border:2px solid var(--bg3);display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;cursor:pointer;z-index:2;box-shadow:0 1px 4px rgba(0,0,0,.15)}
 .pf-stats{flex:1;display:grid;grid-template-columns:repeat(3,1fr);gap:6px;text-align:center}
