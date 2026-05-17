@@ -17504,31 +17504,52 @@ ${sub ? `<div style="padding:12px 16px;font-size:12.5px;color:var(--muted);line-
         const hasEmail = !!u.email;
         const hasPw = !!u.password_hash;
         const emailConfirmed = !!u.emailConfirmedAt;
+        const hasPending = u.pendingEmail && u.pendingEmail !== u.email;
+        const isLocked = hasEmail && hasPw && (!session || !session.accountUnlockUntil || Number(session.accountUnlockUntil) < Date.now());
         return html(`
 <div class="subset-page">
-${_setSubHead('🔐 Account', 'Email-Adresse, Passwort und Login-Methoden')}
+${_setSubHead('🔐 Account', 'Email, Passwort, App-Code und Login-Methoden')}
+
 <div class="subset-section">
-  <div class="subset-section-title">Email</div>
-  <div class="subset-row">
-    <div class="subset-row-icon">📧</div>
-    <div class="subset-row-body">
-      <div class="subset-row-title">${hasEmail ? htmlEsc(u.email) : 'Keine Email gesetzt'}</div>
-      <div class="subset-row-sub">${hasEmail ? (emailConfirmed ? '<span style="color:#22c55e">✓ Bestätigt</span>' : '<span style="color:#fbbf24">⚠️ Nicht bestätigt</span>') : 'Setze eine Email-Adresse für Login + Sicherheit.'}</div>
+  <div class="subset-section-title">Account-Login (Email + Passwort)</div>
+  ${isLocked ? `
+    <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:14px;margin-top:6px">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px"><div style="font-size:24px">🔒</div><div><div style="font-weight:800;font-size:14px;color:var(--text)">Account-Login gesperrt</div><div style="font-size:12px;color:var(--muted);margin-top:2px">Email + Passwort sind gesetzt. Änderungen brauchen eine Bestätigung per Mail.</div></div></div>
+      <div style="display:flex;flex-direction:column;gap:6px;font-size:13px;margin-bottom:12px">
+        <div style="display:flex;align-items:center;gap:8px;color:var(--text)"><span style="color:var(--muted);font-weight:600;min-width:90px">📧 Email:</span><span style="font-family:JetBrains Mono,monospace;font-size:12.5px">${htmlEsc(u.email)}</span><span style="color:#22c55e;font-size:11px;margin-left:auto">✓ bestätigt</span></div>
+        <div style="display:flex;align-items:center;gap:8px;color:var(--text)"><span style="color:var(--muted);font-weight:600;min-width:90px">🔐 Passwort:</span><span style="font-family:JetBrains Mono,monospace;font-size:12.5px">••••••••</span><span style="color:#22c55e;font-size:11px;margin-left:auto">✓ gesetzt</span></div>
+      </div>
+      <button class="btn btn-outline btn-full" id="ep-request-change-btn" onclick="requestAccountChange()" style="font-size:13px;display:flex">📨 Änderung anfragen</button>
+      <div id="ep-request-msg" style="font-size:11.5px;color:var(--muted);margin-top:8px;line-height:1.4">Klick → wir senden einen Bestätigungs-Link an deine Email. 30 Min nach Klick kannst du Email/Passwort ändern.</div>
     </div>
-  </div>
-  <a href="/einstellungen#account" class="btn btn-outline btn-full" style="margin-top:6px;text-decoration:none;text-align:center">${hasEmail ? '✏️ Email ändern' : '➕ Email setzen'}</a>
+  ` : `
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div>
+        <div style="font-size:11.5px;color:var(--muted);font-weight:700;margin-bottom:6px">📧 EMAIL</div>
+        <input type="email" class="form-input" id="inp-email" placeholder="deine@email.de" maxlength="200" value="${htmlEsc(u.email||u.pendingEmail||'')}" autocapitalize="none" spellcheck="false">
+        ${hasPending ? `<div style="margin-top:8px;padding:9px 11px;background:rgba(245,158,11,0.10);border:1px solid rgba(245,158,11,0.30);border-radius:10px;font-size:11.5px;color:#f59e0b;line-height:1.45"><b>⏳ Bestätigung ausstehend.</b> Bestätigungs-Link an <b>${htmlEsc(u.pendingEmail)}</b> gesendet — schau ins Postfach.</div>` : ''}
+        ${hasEmail ? `<div style="margin-top:8px;padding:9px 11px;background:rgba(34,197,94,0.10);border:1px solid rgba(34,197,94,0.25);border-radius:10px;font-size:11.5px;color:#22c55e;line-height:1.45"><b>✓ Email bestätigt.</b></div>` : ''}
+      </div>
+      <div>
+        <div style="font-size:11.5px;color:var(--muted);font-weight:700;margin-bottom:6px">🔐 PASSWORT ${hasPw ? '<span style="color:#22c55e;font-weight:600;margin-left:4px">(gesetzt)</span>' : '<span style="color:var(--muted-2);font-weight:500;margin-left:4px">(optional)</span>'}</div>
+        <input type="password" class="form-input" id="inp-password" placeholder="${hasPw ? 'Neues Passwort (leer = unverändert)' : 'Min. 6 Zeichen'}" minlength="6" maxlength="200" autocomplete="new-password">
+        <div style="font-size:11.5px;color:var(--muted);margin-top:6px;line-height:1.45">Mit Passwort kannst du dich direkt einloggen — ohne Magic-Link. Min. 6 Zeichen.</div>
+      </div>
+      <button class="btn btn-primary btn-full" onclick="saveAccount()" style="font-size:14px">💾 Email & Passwort speichern</button>
+      <div id="account-save-msg" style="font-size:12px;text-align:center;color:var(--muted)"></div>
+      ${hasPw ? '<button onclick="removePwAcct()" class="btn btn-outline btn-full" style="color:#ef4444">🗑️ Passwort entfernen</button>' : ''}
+    </div>
+  `}
 </div>
+
 <div class="subset-section">
-  <div class="subset-section-title">Passwort</div>
-  <div class="subset-row">
-    <div class="subset-row-icon">🔑</div>
-    <div class="subset-row-body">
-      <div class="subset-row-title">${hasPw ? '••••••••' : 'Kein Passwort gesetzt'}</div>
-      <div class="subset-row-sub">${hasPw ? 'Direct-Login per Email + Passwort möglich.' : 'Mit Passwort kannst du dich direkt einloggen (statt nur per Magic-Link).'}</div>
-    </div>
-  </div>
-  <a href="/einstellungen#account" class="btn btn-outline btn-full" style="margin-top:6px;text-decoration:none;text-align:center">${hasPw ? '✏️ Passwort ändern' : '➕ Passwort setzen'}</a>
+  <div class="subset-section-title">Eigener App-Code <span style="font-size:11px;color:var(--muted);font-weight:500">(für /mycode &amp; Login-Link)</span></div>
+  <input type="text" class="form-input" id="inp-app-code" placeholder="z.B. dein-name" maxlength="30" value="${htmlEsc(u.appCode||'')}" autocapitalize="none" spellcheck="false" style="font-family:JetBrains Mono,monospace;letter-spacing:0.5px">
+  <div style="font-size:11.5px;color:var(--muted);margin-top:6px;line-height:1.45">4–30 Zeichen, nur a–z, 0–9, _ oder -. Eindeutig.</div>
+  <button class="btn btn-outline btn-full" style="margin-top:10px;font-size:13px" onclick="saveAppCode()">🔑 Code speichern</button>
+  <div id="app-code-msg" style="margin-top:6px;font-size:11.5px;line-height:1.4"></div>
 </div>
+
 <div class="subset-section">
   <div class="subset-section-title">Telegram-Verknüpfung</div>
   <div class="subset-row">
@@ -17539,11 +17560,69 @@ ${_setSubHead('🔐 Account', 'Email-Adresse, Passwort und Login-Methoden')}
     </div>
   </div>
 </div>
+
 <div class="subset-section">
   <div class="subset-section-title" style="color:#ef4444">⚠️ Gefahrenzone</div>
-  <a href="/einstellungen#danger" class="btn btn-outline btn-full" style="border-color:rgba(239,68,68,.35);color:#ef4444;text-decoration:none;text-align:center">🗑️ Account löschen</a>
+  <button onclick="deleteAccountDsgvo()" class="btn btn-outline btn-full" style="border-color:rgba(239,68,68,.35);color:#ef4444">🗑️ Account dauerhaft löschen</button>
 </div>
 </div>
+<script>
+async function saveAccount(){
+  const em=document.getElementById('inp-email').value.trim();
+  const pw=document.getElementById('inp-password').value;
+  const msg=document.getElementById('account-save-msg');
+  msg.textContent='⏳ Speichere…';msg.style.color='var(--muted)';
+  try{
+    const r=await fetch('/api/profile-update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:em,password:pw||undefined})});
+    const j=await r.json();
+    if(j&&j.ok){msg.textContent='✅ Gespeichert';msg.style.color='#22c55e';setTimeout(()=>location.reload(),900);}
+    else{msg.textContent='❌ '+(j&&j.error||'Fehler');msg.style.color='#ef4444';}
+  }catch(e){msg.textContent='❌ Netzwerkfehler';msg.style.color='#ef4444';}
+}
+async function saveAppCode(){
+  const code=document.getElementById('inp-app-code').value.trim();
+  const msg=document.getElementById('app-code-msg');
+  msg.textContent='⏳ Speichere…';msg.style.color='var(--muted)';
+  try{
+    const r=await fetch('/api/set-app-code',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code})});
+    const j=await r.json();
+    if(j&&j.ok){msg.textContent='✅ Gespeichert';msg.style.color='#22c55e';}
+    else{msg.textContent='❌ '+(j&&j.error||'Fehler');msg.style.color='#ef4444';}
+  }catch(e){msg.textContent='❌ Netzwerkfehler';msg.style.color='#ef4444';}
+}
+async function removePwAcct(){
+  if(!confirm('Passwort wirklich entfernen? Du kannst dich danach nur noch über Magic-Link einloggen.'))return;
+  try{
+    const r=await fetch('/api/auth/set-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:''})});
+    const j=await r.json();
+    if(j&&j.ok){alert('🗑️ Passwort entfernt');location.reload();}
+    else alert('❌ '+(j&&j.error||'Fehler'));
+  }catch(e){alert('❌ Netzwerkfehler');}
+}
+async function requestAccountChange(){
+  const btn=document.getElementById('ep-request-change-btn');
+  const msg=document.getElementById('ep-request-msg');
+  btn.disabled=true;btn.textContent='⏳ Sende…';
+  try{
+    const r=await fetch('/api/account/request-change',{method:'POST'});
+    const j=await r.json();
+    if(j&&j.ok){msg.textContent='✅ Email gesendet. Klick den Link in deiner Mail, dann bist du 30 Min lang änderbar.';msg.style.color='#22c55e';}
+    else{btn.disabled=false;btn.textContent='📨 Änderung anfragen';msg.textContent='❌ '+(j&&j.error||'Fehler');msg.style.color='#ef4444';}
+  }catch(e){btn.disabled=false;btn.textContent='📨 Änderung anfragen';msg.textContent='❌ Netzwerkfehler';msg.style.color='#ef4444';}
+}
+async function deleteAccountDsgvo(){
+  if(!confirm('⚠️ Account dauerhaft löschen?\\n\\nDies entfernt:\\n• Dein Profil + alle Sub-Accounts\\n• Alle deine Posts + Likes + Kommentare\\n• Alle XP, Diamanten, Items\\n\\nDie Löschung kann NICHT rückgängig gemacht werden.'))return;
+  if(!confirm('Wirklich? Alle Daten gehen für immer verloren.'))return;
+  const code=prompt('Tippe LÖSCHEN um zu bestätigen:');
+  if(code!=='LÖSCHEN'){alert('Abgebrochen.');return;}
+  try{
+    const r=await fetch('/api/delete-my-account',{method:'POST'});
+    const j=await r.json();
+    if(j.ok){alert('✅ Account-Löschung gestartet. Du wirst jetzt ausgeloggt.');location.href='/logout';}
+    else alert('❌ '+(j.error||'Fehler'));
+  }catch(e){alert('❌ Netzwerk: '+e.message);}
+}
+</script>
 `, 'settings-account');
     }
 
@@ -18036,6 +18115,33 @@ ${(function(){
         <input class="pf-input" id="pfPinnedLink" type="url" maxlength="200" placeholder="https://instagram.com/reel/..." value="${htmlEsc(currentPinnedLink || '')}">
         <div class="pf-counter" style="text-align:left;color:var(--muted)">${_pinDaysLeft > 0 && !_isAdminPinUI ? `⏳ Änderung erst in ${_pinDaysLeft} Tag${_pinDaysLeft===1?'':'en'} möglich` : '✓ Änderbar (1× pro 30 Tage)'}</div>
       </div>
+      <div class="pf-field">
+        <label class="pf-field-label">🎨 Banner</label>
+        <label style="display:flex;align-items:center;gap:10px;background:var(--bg4);border:1px dashed var(--border);border-radius:10px;padding:11px;cursor:pointer;font-size:13px;font-weight:500;margin-bottom:10px">
+          <span style="font-size:20px">📷</span><span>Eigenes Foto hochladen</span>
+          <input type="file" accept="image/*" style="display:none" onchange="uploadBanner(this)">
+        </label>
+        <div class="gradient-grid">
+          ${gradients.map((g)=>`<div class="gradient-opt ${(u.banner||gradients[0])===g?'selected':''}" style="background:${g}" onclick="selectBanner('${g}',this)"></div>`).join('')}
+        </div>
+        ${(() => {
+            const ownedBanners = BANNER_ITEMS.filter(b => myInventory.includes(b.id));
+            if (!ownedBanners.length) return `<div style="font-size:11px;color:var(--muted);margin-top:10px">🛍️ Premium-Banner im Shop kaufen — je 💎 1 Diamant</div>`;
+            return `<div style="margin-top:12px"><div style="font-size:11px;color:var(--muted);margin-bottom:6px">🛍️ Gekaufte Premium-Banner</div><div class="gradient-grid">${ownedBanners.map(b=>`<div class="gradient-opt ${(u.banner||'')===b.gradient?'selected':''}" style="background:${b.gradient}" title="${b.name}" onclick="selectBanner('${b.gradient}',this)"></div>`).join('')}</div></div>`;
+        })()}
+      </div>
+      <div class="pf-field">
+        <label class="pf-field-label">🎨 Akzentfarbe</label>
+        <div class="color-grid">
+          ${accentColors.map(c=>`<div class="color-opt ${(u.accentColor||'#ff6b6b')===c?'selected':''}" style="background:${c}" onclick="selectAccent('${c}',this)">${(u.accentColor||'#ff6b6b')===c?'✓':''}</div>`).join('')}
+        </div>
+      </div>
+      <div class="pf-field">
+        <div class="setting-row" style="padding:0;display:flex;align-items:center;justify-content:space-between">
+          <div><div class="pf-field-label" style="margin:0">🌙 Dark Mode</div></div>
+          <button class="toggle ${(session?.theme||'light')==='dark'?'on':''}" id="theme-toggle" onclick="toggleTheme(this)"></button>
+        </div>
+      </div>
     </div>
     <div class="pf-sheet-actions">
       <button class="pf-cancel-btn" onclick="pfCloseModal()">Abbrechen</button>
@@ -18077,6 +18183,8 @@ async function pfSaveProfile(){
     instagram: document.getElementById('pfInsta').value.trim().replace(/^@/,'').slice(0,30),
     website: document.getElementById('pfWebsite').value.trim().slice(0,100),
     nische: document.getElementById('pfNische').value.trim().slice(0,50),
+    banner: (typeof selectedBanner !== 'undefined') ? selectedBanner : undefined,
+    accentColor: (typeof selectedAccent !== 'undefined') ? selectedAccent : undefined,
   };
   const pinnedEl = document.getElementById('pfPinnedLink');
   const pinnedVal = pinnedEl ? pinnedEl.value.trim() : null;
@@ -18173,84 +18281,10 @@ async function pfHandleAvatarFile(input){
     <div class="set-hub-arrow">›</div>
   </a>` : ''}
 </div>
-<!-- Profilbild / Bio / Spitzname entfernt — sind im Hero-Edit-Sheet -->
-<div style="padding:16px;border-bottom:1px solid var(--border2)">
-  <div class="form-label">🔐 Account-Login <span style="font-size:10px;color:var(--muted);font-weight:500">(Email + Passwort)</span></div>
-  ${(() => {
-    const hasEmail = !!u.email;
-    const hasPw = !!u.password_hash;
-    const hasPending = u.pendingEmail && u.pendingEmail !== u.email;
-    const isLocked = hasEmail && hasPw && (!session || !session.accountUnlockUntil || Number(session.accountUnlockUntil) < Date.now());
-    if (isLocked) {
-      return `<div style="background:var(--bh,var(--bg3));border:1px solid var(--border2);border-radius:14px;padding:14px;margin-top:6px">
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px"><div style="font-size:24px">🔒</div><div><div style="font-weight:800;font-size:14px;color:var(--text)">Account-Login gesperrt</div><div style="font-size:12px;color:var(--muted);margin-top:2px">Email + Passwort sind gesetzt. Änderungen brauchen eine Bestätigung per Mail.</div></div></div>
-        <div style="display:flex;flex-direction:column;gap:6px;font-size:13px;margin-bottom:12px">
-          <div style="display:flex;align-items:center;gap:8px;color:var(--text)"><span style="color:var(--muted);font-weight:600;min-width:90px">📧 Email:</span><span style="font-family:JetBrains Mono,monospace;font-size:12.5px">${htmlEsc(u.email)}</span><span style="color:#22c55e;font-size:11px;margin-left:auto">✓ bestätigt</span></div>
-          <div style="display:flex;align-items:center;gap:8px;color:var(--text)"><span style="color:var(--muted);font-weight:600;min-width:90px">🔐 Passwort:</span><span style="font-family:JetBrains Mono,monospace;font-size:12.5px">••••••••</span><span style="color:#22c55e;font-size:11px;margin-left:auto">✓ gesetzt</span></div>
-        </div>
-        <button class="btn btn-outline btn-full" id="ep-request-change-btn" onclick="requestAccountChange()" style="font-size:13px;display:flex">📨 Änderung anfragen</button>
-        <div id="ep-request-msg" style="font-size:11.5px;color:var(--muted);margin-top:8px;line-height:1.4">Klick → wir senden einen Bestätigungs-Link an deine Email. 30 Min nach Klick kannst du Email/Passwort ändern.</div>
-      </div>`;
-    }
-    // Edit-State (kein Lock oder Unlock-Window aktiv)
-    return `<div style="display:flex;flex-direction:column;gap:14px">
-      <div>
-        <div style="font-size:11.5px;color:var(--muted);font-weight:700;margin-bottom:6px">📧 EMAIL</div>
-        <input type="email" class="form-input" id="inp-email" placeholder="deine@email.de" maxlength="200" value="${htmlEsc(u.email||u.pendingEmail||'')}" autocapitalize="none" spellcheck="false">
-        ${hasPending ? `<div style="margin-top:8px;padding:9px 11px;background:rgba(245,158,11,0.10);border:1px solid rgba(245,158,11,0.30);border-radius:10px;font-size:11.5px;color:#f59e0b;line-height:1.45"><b>⏳ Bestätigung ausstehend.</b> Bestätigungs-Link an <b>${htmlEsc(u.pendingEmail)}</b> gesendet — schau ins Postfach (auch Spam).</div>` : ''}
-        ${hasEmail ? `<div style="margin-top:8px;padding:9px 11px;background:rgba(34,197,94,0.10);border:1px solid rgba(34,197,94,0.25);border-radius:10px;font-size:11.5px;color:#22c55e;line-height:1.45"><b>✓ Email bestätigt.</b></div>` : ''}
-      </div>
-      <div>
-        <div style="font-size:11.5px;color:var(--muted);font-weight:700;margin-bottom:6px">🔐 PASSWORT ${hasPw ? '<span style="color:#22c55e;font-weight:600;margin-left:4px">(gesetzt)</span>' : '<span style="color:var(--muted-2);font-weight:500;margin-left:4px">(optional)</span>'}</div>
-        <input type="password" class="form-input" id="inp-password" placeholder="${hasPw ? 'Neues Passwort (leer = unverändert)' : 'Min. 6 Zeichen'}" minlength="6" maxlength="200" autocomplete="new-password">
-        <div style="font-size:11.5px;color:var(--muted);margin-top:6px;line-height:1.45">Mit Passwort kannst du dich direkt einloggen — ohne Magic-Link. Min. 6 Zeichen.</div>
-      </div>
-      ${hasEmail && hasPw ? `<div style="padding:10px 12px;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.25);border-radius:10px;font-size:11.5px;color:#22c55e;line-height:1.5"><b>✓ Edit-Window aktiv (30 Min).</b> Speichere deine Änderungen jetzt — danach wird der Block wieder gesperrt.</div>` : ''}
-    </div>`;
-  })()}
-</div>
-<div style="padding:16px;border-bottom:1px solid var(--border2)">
-  <div class="form-label">🔑 Eigener App-Code <span style="font-size:10px;color:var(--muted);font-weight:500">(für /mycode &amp; Login-Link)</span></div>
-  <div style="position:relative">
-    <input type="text" class="form-input" id="inp-app-code" placeholder="z.B. dein-name" maxlength="30" value="${htmlEsc(u.appCode||'')}" autocapitalize="none" spellcheck="false" style="font-family:JetBrains Mono,monospace;letter-spacing:0.5px">
-  </div>
-  <div class="form-hint">4–30 Zeichen, nur a–z, 0–9, _ oder -. Eindeutig. Wird auch für deinen persönlichen Login-Link benutzt.</div>
-  <button class="btn btn-outline btn-full" style="margin-top:8px;font-size:13px" onclick="saveAppCode()">🔑 Code speichern</button>
-  <div id="app-code-msg" style="margin-top:6px;font-size:11.5px;line-height:1.4"></div>
-</div>
-<!-- Pinned-Reel-Link entfernt — ist jetzt im Hero-Edit-Sheet (pfPinnedLink) -->
-<div style="padding:16px;border-bottom:1px solid var(--border2)">
-  <div class="form-label">Banner</div>
-  <div style="margin-bottom:12px">
-    <label style="display:flex;align-items:center;gap:10px;background:var(--bg4);border:1px dashed var(--border);border-radius:var(--radius-sm);padding:12px;cursor:pointer;font-size:13px;font-weight:500">
-      <span style="font-size:20px">📷</span><span>Eigenes Foto hochladen</span>
-      <input type="file" accept="image/*" style="display:none" onchange="uploadBanner(this)">
-    </label>
-  </div>
-  <div class="gradient-grid">
-    ${gradients.map((g)=>`<div class="gradient-opt ${(u.banner||gradients[0])===g?'selected':''}" style="background:${g}" onclick="selectBanner('${g}',this)"></div>`).join('')}
-  </div>
-  ${(() => {
-      const ownedBanners = BANNER_ITEMS.filter(b => myInventory.includes(b.id));
-      if (!ownedBanners.length) return `<div style="font-size:11px;color:var(--muted);margin-top:10px">🛍️ Premium-Banner im Shop kaufen — je 💎 1 Diamant</div>`;
-      return `<div style="margin-top:12px"><div style="font-size:11px;color:var(--muted);margin-bottom:6px">🛍️ Gekaufte Premium-Banner</div><div class="gradient-grid">${ownedBanners.map(b=>`<div class="gradient-opt ${(u.banner||'')===b.gradient?'selected':''}" style="background:${b.gradient}" title="${b.name}" onclick="selectBanner('${b.gradient}',this)"></div>`).join('')}</div></div>`;
-  })()}
-</div>
-<div style="padding:16px;border-bottom:1px solid var(--border2)">
-  <div class="form-label">Akzentfarbe</div>
-  <div class="color-grid">
-    ${accentColors.map(c=>`<div class="color-opt ${(u.accentColor||'#ff6b6b')===c?'selected':''}" style="background:${c}" onclick="selectAccent('${c}',this)">${(u.accentColor||'#ff6b6b')===c?'✓':''}</div>`).join('')}
-  </div>
-</div>
-<div style="padding:16px;border-bottom:1px solid var(--border2)">
-  <div class="setting-row" style="padding:0">
-    <div><div class="setting-label">Dark Mode</div></div>
-    <button class="toggle ${(session?.theme||'light')==='dark'?'on':''}" id="theme-toggle" onclick="toggleTheme(this)"></button>
-  </div>
-</div>
-<div style="padding:16px;border-bottom:1px solid var(--border2)">
-  <button class="btn btn-primary btn-full" onclick="saveProfile()">💾 Speichern</button>
-</div>
+<!-- Profilbild / Bio / Spitzname / Banner / Akzentfarbe / Dark Mode → im Hero-Edit-Sheet (Profil bearbeiten) -->
+<!-- Email / Passwort / App-Code → /einstellungen/account -->
+<!-- Pinned-Reel-Link → Hero-Edit-Sheet (pfPinnedLink) -->
+
 ${myInventory.length > 0 ? `
 <div style="padding:16px;border-bottom:1px solid var(--border2)">
   <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">🎒 Meine Items</div>
@@ -18274,12 +18308,7 @@ ${myInventory.length > 0 ? `
   <div style="font-size:12px;color:var(--muted);margin-bottom:10px">${u.appBriefingSeenV2 ? 'Du hast die Tour schon einmal gesehen.' : 'Du hast die Tour noch nicht gesehen — sie startet beim nächsten Feed-Open automatisch.'}</div>
   <a href="/feed?tour=1" class="btn btn-outline btn-full" style="display:flex;align-items:center;justify-content:center;gap:8px">🎯 Tour erneut anschauen</a>
 </div>
-<div style="padding:16px;border-bottom:1px solid var(--border2)">
-  <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">🔐 Passwort</div>
-  <div style="font-size:12px;color:var(--muted);margin-bottom:10px">${u.password_hash ? 'Du hast ein Passwort gesetzt — du kannst dich auch ohne Magic-Link einloggen.' : 'Setz ein Passwort, um dich nächstes Mal direkt mit Email + Passwort einzuloggen (ohne Magic-Link).'}</div>
-  <a href="/set-password" class="btn btn-outline btn-full" style="display:flex;align-items:center;justify-content:center;gap:8px">${u.password_hash ? '🔄 Passwort ändern' : '🔐 Passwort setzen'}</a>
-  ${u.password_hash ? '<button onclick="removePw()" class="btn btn-outline btn-full" style="margin-top:8px;color:#ef4444;display:flex;align-items:center;justify-content:center;gap:8px">🗑️ Passwort entfernen</button>' : ''}
-</div>
+<!-- Passwort-Section entfernt — Duplikat. Email/Passwort sind jetzt in /einstellungen/account -->
 <div style="padding:16px">
   <a href="/logout" class="btn btn-outline btn-full" style="color:var(--accent)">🚪 Ausloggen</a>
 </div>
