@@ -1178,6 +1178,8 @@ button{cursor:pointer;border:none;outline:none;font-family:var(--font)}
 .story-item:active{transform:scale(0.92);transition:transform 0.15s}
 .story-ring{width:68px;height:68px;border-radius:50%;padding:3.5px;background:linear-gradient(135deg,#1d4ed8,#3b82f6,#0ea5e9);position:relative;box-shadow:0 4px 14px rgba(29,78,216,0.45)}
 .story-ring.seen{background:linear-gradient(135deg,#93c5fd,#60a5fa);box-shadow:0 2px 8px rgba(96,165,250,0.35)}
+.story-ring.pinned-glow{background:linear-gradient(135deg,#f9a825,#e91e63,#9c27b0,#3b82f6);background-size:300% 300%;box-shadow:0 4px 18px rgba(233,30,99,0.45);animation:pinnedGlow 2.4s ease-in-out infinite}
+@keyframes pinnedGlow{0%,100%{background-position:0% 50%;box-shadow:0 4px 16px rgba(233,30,99,0.45)}50%{background-position:100% 50%;box-shadow:0 8px 24px rgba(233,30,99,0.7)}}
 .story-inner{width:100%;height:100%;border-radius:50%;border:2.5px solid var(--bg);overflow:hidden;position:relative;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:#fff}
 [data-theme=light] .story-ring{box-shadow:0 6px 20px rgba(29,78,216,0.5),0 1px 4px rgba(15,23,42,0.12)}
 [data-theme=light] .story-ring.seen{box-shadow:0 3px 10px rgba(15,23,42,0.18)}
@@ -6767,6 +6769,20 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
         }));
     }
 
+    // Pinned-Reel-Redirect: leitet zur pinned URL des angegebenen User weiter.
+    // Nur whitelist-validierte Instagram-URLs erlaubt. Wird vom Story-Modal genutzt.
+    if (path === '/pinned-redirect' && req.method === 'GET') {
+        if (!session) return redirect('/login');
+        const tUid = String(query.uid || '').trim();
+        if (!tUid) { res.writeHead(400); return res.end('missing uid'); }
+        const pl = ladePinnedLink(tUid);
+        if (!pl) { res.writeHead(404); return res.end('no pinned link'); }
+        const sUrl = safeUrl(pl);
+        if (!sUrl) { res.writeHead(400); return res.end('invalid pinned url'); }
+        res.writeHead(302, { Location: sUrl, 'Cache-Control': 'no-store' });
+        return res.end();
+    }
+
     // Instagram-Thumbnail-Proxy: lädt das Bild server-seitig OHNE Referer und
     // streamed es an den Client. Umgeht den Hotlink-Schutz des Instagram-CDN.
     // GET /insta-thumb?u=<encoded-url>
@@ -8672,11 +8688,34 @@ p{line-height:1.65;color:var(--muted)}
             return true;
         });
 
-        const myFollowing = (d.users[myUid]?.following||[]).map(String);
-        const topUsers = Object.entries(d.users||{})
-            .filter(([id,u])=>!adminIds.includes(Number(id))&&isAppVisible(u)&&(myFollowing.includes(String(id))||String(id)===String(myUid)))
-            .sort((a,b)=>(b[1].xp||0)-(a[1].xp||0))
-            .slice(0,10);
+        // Stories: nur User mit Pinned Reel anzeigen (Insta-Style).
+        // Unengagete Pinned-Reels glühen, engagete sind grau.
+        const myEngagedOwners = (d.pinnedEngages?.[String(myUid)] || []).map(String);
+        const pinnedStories = Object.entries(d.users||{})
+            .filter(([id,u])=>!adminIds.includes(Number(id))&&isAppVisible(u))
+            .map(([id,u])=>({id, u, pinnedUrl: ladePinnedLink(id)}))
+            .filter(x => !!x.pinnedUrl)
+            .map(x => ({
+                ...x,
+                engaged: myEngagedOwners.includes(String(x.id)) || String(x.id) === String(myUid)
+            }))
+            .sort((a,b)=>{
+                if (a.engaged !== b.engaged) return a.engaged ? 1 : -1;
+                return (b.u.xp||0)-(a.u.xp||0);
+            })
+            .slice(0,20);
+        // JSON-Daten für client-side Modal — sanitized gegen </script>-Injection
+        const _pinnedStoriesJson = JSON.stringify(pinnedStories.map(x => {
+            const sh = (x.pinnedUrl||'').match(/instagram\.com\/(?:reel|p|tv)\/([A-Za-z0-9_-]+)/);
+            return {
+                uid: x.id,
+                name: x.u.spitzname || x.u.name || 'User',
+                avatar: ladeBild(x.id,'profilepic') ? '/appbild/'+x.id+'/profilepic' : (x.u.instagram?'https://unavatar.io/instagram/'+encodeURIComponent(x.u.instagram):''),
+                thumb: sh ? '/insta-thumb?u='+encodeURIComponent(x.pinnedUrl) : '',
+                engaged: x.engaged,
+                isOwn: String(x.id) === String(myUid)
+            };
+        })).replace(/<\/(script)/gi, '<\\/$1');
 
         // Latest newsletter for bot story-bubble
         const _latestNews = (d.newsletter||[]).slice().sort((a,b)=>(b.timestamp||0)-(a.timestamp||0))[0];
@@ -8694,20 +8733,95 @@ p{line-height:1.65;color:var(--muted)}
 
         const storiesHtml = `<div class="stories" data-tour="stories">
   ${_botBubbleHtml}
-  ${topUsers.map(([id,u])=>{
+  ${pinnedStories.map(item => {
+    const id = item.id, u = item.u, engaged = item.engaged;
     const insta = u.instagram;
-    const hasLink = Object.values(d.links||{}).some(l=>l.user_id===Number(id)&&new Date(l.timestamp).toDateString()===today);
-    return `<a href="/profil/${id}" class="story-item">
-      <div class="story-ring ${hasLink?'':'seen'}">
+    const ringClass = engaged ? 'seen' : 'pinned-glow';
+    return `<button type="button" class="story-item" onclick="openPinnedStory('${id}')" style="background:none;border:none;padding:0;cursor:pointer;font-family:inherit">
+      <div class="story-ring ${ringClass}">
         ${crownOverlay(id, 'sm')}
         <div style="width:58px;height:58px;border-radius:50%;overflow:hidden;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:#fff;border:2px solid var(--bg)">
           ${(ladeBild(id,"profilepic")||insta)?`<img src="${ladeBild(id,"profilepic")?"/appbild/"+id+"/profilepic":"https://unavatar.io/instagram/"+insta}" style="width:100%;height:100%;object-fit:cover" alt="">`:`<span>${(u.name||"?")[0]}</span>`}
         </div>
       </div>
       <div class="story-name">${htmlEsc(u.spitzname||u.name||'?')}</div>
-    </a>`;
+    </button>`;
   }).join('')}
 </div>
+<div id="pinned-story-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);z-index:9999;align-items:flex-end;justify-content:center" onclick="if(event.target===this)closePinnedStory()">
+  <div id="pinned-story-sheet" style="background:var(--bg2);width:100%;max-width:480px;border-radius:24px 24px 0 0;padding:18px 16px 28px;max-height:88vh;overflow-y:auto"></div>
+</div>
+<script>
+window._pinnedStoriesData = ${_pinnedStoriesJson};
+window.openPinnedStory = function(uid){
+  const s = (window._pinnedStoriesData||[]).find(x=>String(x.uid)===String(uid));
+  if(!s)return;
+  const m = document.getElementById('pinned-story-modal');
+  const sh = document.getElementById('pinned-story-sheet');
+  if(!m||!sh)return;
+  const _esc = t=>String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  sh.innerHTML = '<div style="width:36px;height:4px;background:#666;border-radius:4px;margin:0 auto 14px"></div>'+
+    '<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">'+
+      '<a href="/profil/'+_esc(s.uid)+'" style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#a78bfa,#7c3aed);overflow:hidden;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:18px;flex-shrink:0;text-decoration:none">'+
+        (s.avatar?'<img src="'+_esc(s.avatar)+'" style="width:100%;height:100%;object-fit:cover" alt="">':_esc((s.name||'?').slice(0,1)))+
+      '</a>'+
+      '<div style="flex:1;min-width:0">'+
+        '<a href="/profil/'+_esc(s.uid)+'" style="font-size:15px;font-weight:700;color:var(--text);text-decoration:none;display:block">'+_esc(s.name)+'</a>'+
+        '<div style="font-size:11px;color:#ec4899;text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-top:1px">📌 Pinned Reel'+(s.engaged?' · Engagiert ✓':'')+'</div>'+
+      '</div>'+
+      '<button onclick="closePinnedStory()" style="background:var(--bg4);border:none;width:32px;height:32px;border-radius:50%;color:var(--text);font-size:18px;cursor:pointer;flex-shrink:0">×</button>'+
+    '</div>'+
+    (s.thumb ?
+      '<a href="javascript:void(0)" onclick="onPinVisitStory(\\''+_esc(s.uid)+'\\')" style="display:block;position:relative;width:100%;padding-top:62%;overflow:hidden;background:#000;border-radius:14px;margin-bottom:12px;text-decoration:none">'+
+        '<img src="'+_esc(s.thumb)+'" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.style.display=\\'none\\'" alt="">'+
+        '<div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.05),rgba(0,0,0,.4));pointer-events:none"></div>'+
+        '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center"><div style="width:54px;height:54px;border-radius:50%;background:rgba(255,255,255,.92);display:flex;align-items:center;justify-content:center"><div style="width:0;height:0;border-style:solid;border-width:11px 0 11px 20px;border-color:transparent transparent transparent #000;margin-left:4px"></div></div></div>'+
+      '</a>'
+    : '<div style="margin-bottom:12px;padding:30px;background:linear-gradient(135deg,#1a1a2e,#16213e);border-radius:14px;text-align:center;font-size:14px;color:rgba(255,255,255,.6)">📸 Instagram Reel</div>')+
+    (s.isOwn ?
+      '<div style="padding:12px 14px;background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.25);border-radius:12px;font-size:13px;color:var(--muted);line-height:1.5">👤 Das ist dein eigener Pinned Reel. Andere User können ihn engagen und du bekommst Reichweite.</div>'
+    :
+      '<div style="display:flex;gap:8px;margin-bottom:10px">'+
+        '<a href="javascript:void(0)" onclick="onPinVisitStory(\\''+_esc(s.uid)+'\\')" id="pin-visit-link-story" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:11px 12px;background:linear-gradient(135deg,#ec4899,#a855f7);color:#fff;border-radius:10px;font-size:13px;font-weight:700;text-decoration:none">📸 Auf Instagram öffnen</a>'+
+        (s.engaged ?
+          '<button disabled style="flex:1;padding:11px 12px;border-radius:10px;border:1px solid #22c55e;background:rgba(34,197,94,.12);color:#22c55e;font-size:13px;font-weight:700;font-family:inherit;cursor:default">✅ Engagiert</button>'
+        :
+          '<button onclick="pinnedEngageClick(\\''+_esc(s.uid)+'\\',this)" id="pin-engage-btn-story" disabled data-locked="1" style="flex:1;padding:11px 12px;border-radius:10px;border:1px solid rgba(255,107,107,.35);background:rgba(255,107,107,.10);color:#ff6b6b;font-size:13px;font-weight:700;font-family:inherit;cursor:not-allowed;opacity:0.55">🔒 Erst Insta öffnen</button>'
+        )+
+      '</div>'+
+      '<div style="padding:12px 14px;background:linear-gradient(135deg,rgba(34,197,94,.10),rgba(167,139,250,.06));border:1px solid rgba(34,197,94,.25);border-radius:12px;font-size:12.5px;color:var(--text);line-height:1.55">'+
+        '<div style="font-weight:700;color:#22c55e;margin-bottom:4px">💎 +1 Diamant für Engagement</div>'+
+        '<div style="color:var(--muted)">Auf Instagram <b>LIKEN + KOMMENTIEREN + TEILEN + SPEICHERN</b> → komme zurück → tippe „Engagiert" → +1 💎 für dich.</div>'+
+      '</div>'
+    );
+  m.style.display = 'flex';
+};
+window.closePinnedStory = function(){
+  const m = document.getElementById('pinned-story-modal');
+  if(m)m.style.display = 'none';
+};
+window.onPinVisitStory = function(uid){
+  // Mark visit-timestamp, then open Instagram URL in new tab
+  window['_pvisit_'+uid] = Date.now();
+  const s = (window._pinnedStoriesData||[]).find(x=>String(x.uid)===String(uid));
+  if(!s)return;
+  // Get pinned URL from server-rendered data — already in JSON? No, we stripped it for privacy.
+  // Need to fetch it. Or include the URL in the JSON.
+  // For now: open via window.open with a server-side redirect endpoint
+  window.open('/pinned-redirect?uid='+encodeURIComponent(uid), '_blank', 'noopener,noreferrer');
+  // Enable Engagiert-Button after 1.5s
+  setTimeout(()=>{
+    const b = document.getElementById('pin-engage-btn-story');
+    if(b && !b.dataset.engaged){
+      b.disabled = false;
+      b.style.cursor = 'pointer';
+      b.style.opacity = '1';
+      b.removeAttribute('data-locked');
+      b.innerHTML = '❤️ Engagiert · +1💎';
+    }
+  }, 1500);
+};
+<\/script>
 <script>
 (function(){
   // Bot-Story nur zeigen wenn news ungelesen sind
