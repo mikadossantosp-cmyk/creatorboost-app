@@ -1324,7 +1324,7 @@ textarea.form-input{resize:none;min-height:80px}
 .empty-sub{font-size:13px}
 .proflink-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:8px 10px}
 .proflink-card{border-radius:10px;overflow:hidden;background:var(--bg3);border:1px solid var(--border2);display:flex;flex-direction:column}
-.proflink-thumb{position:relative;width:100%;padding-top:130%;background:linear-gradient(135deg,#1a1a2e,#16213e);overflow:hidden;cursor:pointer}
+.proflink-thumb{display:block;position:relative;width:100%;padding-top:130%;background:linear-gradient(135deg,#1a1a2e,#16213e);overflow:hidden;cursor:pointer;text-decoration:none}
 .proflink-thumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .proflink-thumb-overlay{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.05),rgba(0,0,0,.35));pointer-events:none}
 .proflink-play{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.95);font-size:22px;text-shadow:0 2px 6px rgba(0,0,0,.5);pointer-events:none}
@@ -3237,7 +3237,10 @@ ${isOwn ? (function(){
     </div>
   </div>
   <div class="ipf-name-row">
-    <span class="nm">${htmlEsc(u.spitzname||u.name||'User')}${_roleBadge?`<span class="badge" style="background:${grad};color:#fff">${_roleBadge}</span>`:''}</span>
+    <span class="nm">${htmlEsc(u.spitzname||u.name||'User')}${_roleBadge?`<span class="badge" style="background:${grad};color:#fff">${_roleBadge}</span>`:''}${isOwn?(()=>{
+      const _claimedToday = hasClaimed('dailyxp', uid);
+      return '<button id="daily-xp-fab" onclick="claimDailyXP()" title="'+(_claimedToday?'Heute schon abgeholt':'Täglicher XP-Bonus abholen')+'"'+(_claimedToday?' disabled':'')+' style="position:relative;display:inline-flex;align-items:center;justify-content:center;margin-left:8px;width:30px;height:30px;border-radius:50%;background:'+(_claimedToday?'var(--bg4)':'linear-gradient(135deg,#22c55e,#16a34a)')+';color:'+(_claimedToday?'var(--muted)':'#fff')+';border:1.5px solid '+(_claimedToday?'var(--border)':'rgba(34,197,94,0.5)')+';font-size:15px;cursor:'+(_claimedToday?'default':'pointer')+';font-family:inherit;vertical-align:middle;opacity:'+(_claimedToday?'0.55':'1')+'">'+(_claimedToday?'✓':'🎁')+(_claimedToday?'':'<span id="daily-xp-fab-dot" style="position:absolute;top:-3px;right:-3px;width:9px;height:9px;border-radius:50%;background:#ef4444;border:2px solid var(--bg);animation:dxpPulse 2s ease-in-out infinite"></span>')+'</button>';
+    })():''}</span>
     <div class="ipf-handle">${u.instagram ? '@'+htmlEsc(u.instagram) : (rank>0?'Rang #'+rank:'')}</div>
   </div>
   ${u.bio?`<div class="ipf-bio">${htmlEsc(u.bio)}</div>`:''}
@@ -3385,11 +3388,10 @@ ${(()=>{
   const _hasEngaged = isOwn ? false : Object.values(_engagedSet).some(arr => Array.isArray(arr) && arr.includes(String(uid)) && _engagedSet[String(adminIds[0]||'')]?.includes && false); // placeholder
   // Vereinfacht: nicht zuverlässig prüfbar ohne session — wird vom Server beim Klick gechecked (alreadyDone)
   return `<div style="margin:10px 16px;padding:14px;background:linear-gradient(135deg,rgba(236,72,153,.08),rgba(168,85,247,.06));border:1px solid rgba(236,72,153,.25);border-radius:14px">
-    <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:${isOwn?'0':'10'}px">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:${isOwn?'0':'10'}px">
       <div style="font-size:22px;flex-shrink:0">📌</div>
       <div style="flex:1;min-width:0">
-        <div style="font-size:11px;font-weight:700;color:#ec4899;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px">Angepinnter Reel${isOwn?'':' · +1💎 bei Engagement'}</div>
-        <div style="font-size:12.5px;color:#4dabf7;word-break:break-all;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${htmlEsc(String(pl).replace(/^https?:\/\//,'').slice(0,55))}</div>
+        <div style="font-size:11px;font-weight:700;color:#ec4899;text-transform:uppercase;letter-spacing:1px">Angepinnter Reel${isOwn?'':' · +1💎 bei Engagement'}</div>
       </div>
     </div>
     ${isOwn ? `<a href="${htmlEsc(safeUrl(pl))}" target="_blank" rel="noopener noreferrer" style="display:block;text-align:center;padding:9px;background:linear-gradient(135deg,#ec4899,#a855f7);color:#fff;border-radius:9px;font-size:12.5px;font-weight:700;text-decoration:none">→ Reel öffnen</a>` : `
@@ -3412,14 +3414,13 @@ ${(()=>{
   const mySuperlink = Object.values(d.superlinks||{}).find(s=>s.uid===uid&&s.week===weekKey);
   if (!mySuperlink) return '';
   return `<div style="margin:10px 16px;padding:12px 14px;background:linear-gradient(135deg,rgba(167,139,250,.08),rgba(124,58,237,.04));border:1px solid rgba(167,139,250,.25);border-radius:14px">
-  <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:${mySuperlink.caption?'6':'0'}px">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:${mySuperlink.caption?'6':'0'}px">
     <div style="font-size:22px;flex-shrink:0">⭐</div>
     <div style="flex:1;min-width:0">
-      <div style="font-size:11px;font-weight:700;color:#a78bfa;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px">Superlink dieser Woche</div>
-      <a href="${htmlEsc(safeUrl(mySuperlink.url))}" target="_blank" rel="noopener noreferrer" style="font-size:12.5px;color:#4dabf7;word-break:break-all;text-decoration:none;font-weight:500;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${htmlEsc(String(mySuperlink.url||'').replace(/^https?:\/\//,'').slice(0,55))}</a>
-      <div style="font-size:11px;color:var(--muted);margin-top:4px">❤️ ${mySuperlink.likes?.length||0} Likes</div>
+      <div style="font-size:11px;font-weight:700;color:#a78bfa;text-transform:uppercase;letter-spacing:1px">Superlink dieser Woche</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:2px">❤️ ${mySuperlink.likes?.length||0} Likes</div>
     </div>
-    <a href="${htmlEsc(safeUrl(mySuperlink.url))}" target="_blank" rel="noopener noreferrer" style="padding:6px 12px;background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;border-radius:8px;font-size:11.5px;font-weight:700;text-decoration:none;white-space:nowrap;flex-shrink:0">→ Öffnen</a>
+    <a href="${htmlEsc(safeUrl(mySuperlink.url))}" target="_blank" rel="noopener noreferrer" style="padding:7px 14px;background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;border-radius:9px;font-size:12px;font-weight:700;text-decoration:none;white-space:nowrap;flex-shrink:0">→ Öffnen</a>
   </div>
   ${mySuperlink.caption?`<div style="font-size:12px;color:var(--muted);margin-top:6px;padding-left:32px">${htmlEsc(String(mySuperlink.caption).slice(0,80))}</div>`:''}
 </div>`;
@@ -8859,9 +8860,8 @@ p{line-height:1.65;color:var(--muted)}
 '      </div>\n'+
 '    </div>\n'+
 (link.caption?'    <div style="padding:8px 12px;font-size:12px;color:var(--muted);line-height:1.4;border-top:1px solid rgba(255,255,255,.06)">'+String(link.caption).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</div>\n':'')+
-'    <div style="padding:8px 12px 10px;display:flex;align-items:center;gap:8px">\n'+
-'      <div style="font-size:11px;color:var(--muted2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500">'+htmlEsc(String(link.text||'').replace(/^https?:\/\//,'').slice(0,40))+'</div>\n'+
-'      <a href="'+htmlEsc(safeUrl(link.text||''))+'" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();markLinkVisited(\''+lid1+'\')" style="padding:6px 12px;background:linear-gradient(135deg,#f9a825,#e91e63,#9c27b0);color:#fff;border-radius:8px;font-size:11px;font-weight:700;text-decoration:none;white-space:nowrap;flex-shrink:0;box-shadow:0 2px 8px rgba(233,30,99,.25)">→ Öffnen</a>\n'+
+'    <div style="padding:8px 12px 10px;display:flex;align-items:center;justify-content:flex-end">\n'+
+'      <a href="'+htmlEsc(safeUrl(link.text||''))+'" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();markLinkVisited(\''+lid1+'\')" style="padding:7px 16px;background:linear-gradient(135deg,#f9a825,#e91e63,#9c27b0);color:#fff;border-radius:9px;font-size:12px;font-weight:700;text-decoration:none;white-space:nowrap;box-shadow:0 2px 8px rgba(233,30,99,.25)">→ Öffnen</a>\n'+
 '    </div>\n'+
 '  </div>\n'+
 // Likes counter + XP badge
@@ -16563,16 +16563,17 @@ ${rest.map(([id,u],idx)=>{
             const hasLiked = !isOwn && likes.map(String).includes(String(myUid));
             const shortcode = (l.text||'').match(/instagram\.com\/(?:reel|p|tv)\/([A-Za-z0-9_-]+)/);
             const thumbUrl = shortcode ? '/insta-thumb?u=' + encodeURIComponent(l.text) : '';
+            const sUrl = safeUrl(l.text||'');
             return '<div class="proflink-card fade-up" data-url="'+htmlEsc(l.text||'')+'">'
-              + '<div class="proflink-thumb" onclick="openPostUrl(\''+msgId+'\')" id="post-'+msgId+'">'
+              + '<a href="'+htmlEsc(sUrl)+'" target="_blank" rel="noopener noreferrer" onclick="markLinkVisited(\''+msgId+'\')" class="proflink-thumb" id="post-'+msgId+'">'
               + (thumbUrl ? '<img src="'+thumbUrl+'" referrerpolicy="no-referrer" loading="lazy" onerror="this.style.display=\'none\'" alt="">' : '')
               + '<div class="proflink-thumb-overlay"></div>'
               + '<div class="proflink-play">▶</div>'
-              + '</div>'
+              + '</a>'
               + '<div class="proflink-actions">'
               + (isOwn ? '<span class="proflink-likes">❤️ <span id="likes-'+msgId+'">'+likeCount+'</span></span>'
                        : '<button class="proflink-like '+(hasLiked?'liked':'')+'" onclick="likePost(\''+msgId+'\',this)" data-msgid="'+msgId+'" '+(hasLiked?'disabled':'')+'><svg width="13" height="13" viewBox="0 0 24 24" fill="'+(hasLiked?'currentColor':'none')+'" stroke="currentColor" stroke-width="2.4"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg><span id="likes-'+msgId+'">'+likeCount+'</span></button>')
-              + '<a href="'+htmlEsc(safeUrl(l.text||''))+'" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();markLinkVisited(\''+msgId+'\')" class="proflink-open">→ Öffnen</a>'
+              + '<a href="'+htmlEsc(sUrl)+'" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();markLinkVisited(\''+msgId+'\')" class="proflink-open">→ Öffnen</a>'
               + '</div></div>';
         };
         const myLinks = Object.entries(d.links||{}).filter(([,l])=>String(l.user_id)===String(myUid)).sort((a,b)=>(b[1].timestamp||0)-(a[1].timestamp||0));
@@ -16632,10 +16633,6 @@ ${rest.map(([id,u],idx)=>{
     </a><a href="/admin/emails?key=" class="icon-btn" title="Email Dashboard" style="background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border-color:rgba(34,197,94,0.5)" onclick="event.preventDefault();location.href='/admin/emails?key='+prompt('Bridge Secret:')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="18" height="18"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 4l-10 8L2 4"/></svg>
     </a>` : ''}
-    ${(() => {
-      const _claimedToday = hasClaimed('dailyxp', myUid);
-      return '<button id="daily-xp-fab" class="icon-btn" onclick="claimDailyXP()" title="'+(_claimedToday?'Heute schon abgeholt':'Täglicher XP-Bonus abholen')+'"'+(_claimedToday?' disabled':'')+' style="position:relative;background:'+(_claimedToday?'var(--bg4)':'linear-gradient(135deg,#22c55e,#16a34a)')+';color:'+(_claimedToday?'var(--muted)':'#fff')+';border-color:'+(_claimedToday?'var(--border)':'rgba(34,197,94,0.5)')+';font-size:16px;cursor:'+(_claimedToday?'default':'pointer')+';opacity:'+(_claimedToday?'0.55':'1')+'">'+(_claimedToday?'✓':'🎁')+(_claimedToday?'':'<span id="daily-xp-fab-dot" style="position:absolute;top:-2px;right:-2px;width:9px;height:9px;border-radius:50%;background:#ef4444;border:2px solid var(--bg);animation:dxpPulse 2s ease-in-out infinite"></span>')+'</button>';
-    })()}
     <a href="/einstellungen" class="icon-btn">⚙️</a>
   </div>
 </div>
@@ -16993,7 +16990,7 @@ async function submitPost(){const _spBtn=document.querySelector('[onclick="submi
         const theirPinnedHtml = theirPinnedLink
             ? '<div style="padding:14px 16px;border-bottom:2px solid var(--accent);background:linear-gradient(135deg,rgba(255,107,107,.08),rgba(255,165,0,.04));margin-bottom:4px">'
               +'<span style="font-size:11px;font-weight:700;color:var(--accent);background:rgba(255,107,107,.15);padding:3px 10px;border-radius:20px;display:inline-block;margin-bottom:10px">📌 Wichtigster Post</span>'
-              +'<a id="pin-insta-link" href="'+theirPinnedLink+'" target="_blank" rel="noopener noreferrer" onclick="onPinVisit()" style="display:block;padding:11px 13px;background:rgba(77,171,247,.10);border:1px solid rgba(77,171,247,.30);border-radius:10px;font-size:13px;color:#4dabf7;font-weight:700;word-break:break-all;text-decoration:none;margin-bottom:8px">🔗 '+theirPinnedLink.replace('https://www.instagram.com/','ig.com/')+'</a>'
+              +'<a id="pin-insta-link" href="'+htmlEsc(safeUrl(theirPinnedLink))+'" target="_blank" rel="noopener noreferrer" onclick="onPinVisit()" style="display:flex;align-items:center;justify-content:center;gap:6px;padding:11px 13px;background:rgba(77,171,247,.10);border:1px solid rgba(77,171,247,.30);border-radius:10px;font-size:13px;color:#4dabf7;font-weight:700;text-decoration:none;margin-bottom:8px">🔗 Auf Instagram öffnen</a>'
               +'<div id="pin-hint" style="font-size:11.5px;color:var(--muted);margin-bottom:12px;line-height:1.5;padding:10px 12px;background:rgba(245,158,11,0.08);border-left:3px solid #f59e0b;border-radius:6px"><b style="color:#f59e0b">Schritt 1:</b> Tippe auf den Link → auf Instagram <b>LIKEN + KOMMENTIEREN + TEILEN + SPEICHERN</b>.<br><b style="color:#f59e0b">Schritt 2:</b> Komme zurück und tippe auf den ✅-Button — du bekommst <b>1 💎</b>.</div>'
               +'<div style="display:flex;gap:8px;align-items:center">'
                 +'<button id="pin-like-btn" onclick="likePinnedPost(\''+uid+'\',this)" '+(_myEngaged?'disabled':'data-locked="1" disabled')+' style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;padding:11px 14px;border-radius:14px;border:1px solid '+(_myEngaged?'#22c55e':'rgba(255,107,107,.35)')+';background:'+(_myEngaged?'rgba(34,197,94,.12)':'rgba(255,107,107,.10)')+';color:'+(_myEngaged?'#22c55e':'#ff6b6b')+';font-size:13px;font-weight:700;cursor:'+(_myEngaged?'default':'not-allowed')+';font-family:var(--font);transition:all .15s;opacity:'+(_myEngaged?'1':'0.55')+'">'+(_myEngaged?'✅ Engagiert':'🔒 Erst Insta öffnen')+(_myEngaged?'':'')+'</button>'
@@ -17047,15 +17044,16 @@ async function submitPost(){const _spBtn=document.querySelector('[onclick="submi
             const hasLiked = likes.map(String).includes(String(myUid));
             const shortcode = (l.text||'').match(/instagram\.com\/(?:reel|p|tv)\/([A-Za-z0-9_-]+)/);
             const thumbUrl = shortcode ? '/insta-thumb?u=' + encodeURIComponent(l.text) : '';
+            const sUrl = safeUrl(l.text||'');
             return '<div class="proflink-card fade-up" data-url="'+htmlEsc(l.text||'')+'">'
-              + '<div class="proflink-thumb" onclick="openPostUrl(\''+msgId+'\')" id="post-'+msgId+'">'
+              + '<a href="'+htmlEsc(sUrl)+'" target="_blank" rel="noopener noreferrer" onclick="markLinkVisited(\''+msgId+'\')" class="proflink-thumb" id="post-'+msgId+'">'
               + (thumbUrl ? '<img src="'+thumbUrl+'" referrerpolicy="no-referrer" loading="lazy" onerror="this.style.display=\'none\'" alt="">' : '')
               + '<div class="proflink-thumb-overlay"></div>'
               + '<div class="proflink-play">▶</div>'
-              + '</div>'
+              + '</a>'
               + '<div class="proflink-actions">'
               + '<button class="proflink-like '+(hasLiked?'liked':'')+'" onclick="likePost(\''+msgId+'\',this)" data-msgid="'+msgId+'" '+(hasLiked?'disabled':'')+'><svg width="13" height="13" viewBox="0 0 24 24" fill="'+(hasLiked?'currentColor':'none')+'" stroke="currentColor" stroke-width="2.4"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg><span id="likes-'+msgId+'">'+likeCount+'</span></button>'
-              + '<a href="'+htmlEsc(safeUrl(l.text||''))+'" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();markLinkVisited(\''+msgId+'\')" class="proflink-open">→ Öffnen</a>'
+              + '<a href="'+htmlEsc(sUrl)+'" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();markLinkVisited(\''+msgId+'\')" class="proflink-open">→ Öffnen</a>'
               + '</div></div>';
         };
         const theirLinkEntries = Object.entries(d.links||{}).filter(([,l])=>String(l.user_id)===String(uid)).sort((a,b)=>(b[1].timestamp||0)-(a[1].timestamp||0));
