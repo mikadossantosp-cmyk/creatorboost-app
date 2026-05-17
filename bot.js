@@ -259,6 +259,13 @@ async function sendSignupConfirmationEmail(uid, email, hostHeader) {
 
 // Weekly raffle (Gewinnspiel): runs every minute, triggers Sunday 20:00 Berlin time
 let _lastRaffleTrigger = '';
+const RAFFLE_FILE = (typeof DATA_DIR !== 'undefined' ? DATA_DIR : __dirname) + '/raffle-winners.json';
+function loadRaffleHistory() {
+    try { return JSON.parse(fs.readFileSync(RAFFLE_FILE, 'utf8')); } catch(e) { return { lastWinner: null, history: [] }; }
+}
+function saveRaffleHistory(d) {
+    try { fs.writeFileSync(RAFFLE_FILE, JSON.stringify(d)); } catch(e) { console.error('[Gewinnspiel] Save error:', e.message); }
+}
 setInterval(async () => {
     try {
         const now = new Date(new Date().toLocaleString('en-US', {timeZone:'Europe/Berlin'}));
@@ -275,15 +282,33 @@ setInterval(async () => {
         const winner = eligible[Math.floor(Math.random() * eligible.length)];
         const [winnerUid, winnerUser] = winner;
         const prizes = [
-            { name: '1 Extra-Link', action: '/add-extra-link' },
-            { name: '1 Superlink', action: '/add-superlink' },
-            { name: '500 XP', action: '/add-xp', data: { amount: 500, reason: 'gewinnspiel' } },
-            { name: '5 Diamanten', action: '/add-diamonds', data: { amount: 5, reason: 'gewinnspiel' } }
+            { name: '1 Extra-Link', action: '/add-extra-link', emoji: '🔗' },
+            { name: '1 Superlink', action: '/add-superlink', emoji: '⚡' },
+            { name: '500 XP', action: '/add-xp', emoji: '✨', data: { amount: 500, reason: 'gewinnspiel' } },
+            { name: '5 Diamanten', action: '/add-diamonds', emoji: '💎', data: { amount: 5, reason: 'gewinnspiel' } }
         ];
         const prize = prizes[Math.floor(Math.random() * prizes.length)];
         const payload = { uid: winnerUid, ...(prize.data || {}), reason: prize.data?.reason || 'gewinnspiel' };
         await postBot(prize.action, payload);
-        console.log(`[Gewinnspiel] Gewinner: ${winnerUser.spitzname || winnerUser.name} (${winnerUid}) — Preis: ${prize.name}`);
+        // Gewinner persistieren — Frontend kann jetzt "Letzter Gewinner" anzeigen
+        const winnerXP = weeklyXP[winnerUid] || winnerUser.xpThisWeek || winnerUser.weeklyXp || 0;
+        const entry = {
+            uid: String(winnerUid),
+            name: winnerUser.spitzname || winnerUser.name || 'Creator',
+            handle: winnerUser.ig_handle || winnerUser.username || '',
+            rang: winnerUser.rang || '',
+            prize: prize.name,
+            prizeEmoji: prize.emoji,
+            xp: winnerXP,
+            participants: eligible.length,
+            timestamp: Date.now(),
+            week: key
+        };
+        const hist = loadRaffleHistory();
+        hist.lastWinner = entry;
+        hist.history = [entry, ...(hist.history || [])].slice(0, 12);
+        saveRaffleHistory(hist);
+        console.log(`[Gewinnspiel] Gewinner: ${entry.name} (${winnerUid}) — Preis: ${prize.name} · ${eligible.length} Teilnehmer`);
     } catch(e) { console.error('[Gewinnspiel] Fehler:', e.message); }
 }, 60000);
 
@@ -15626,8 +15651,38 @@ async function msAdminRestore(uid,name){if(!confirm(name+' zurück auf die Warte
                 const timeLeft = Math.max(0, nextSunday.getTime() - Date.now());
                 const hoursLeft = Math.floor(timeLeft / 3600000);
                 const prizes = ['🔗 1 Extra-Link','⚡ 1 Superlink','✨ 500 XP','💎 5 Diamanten'];
+                // Letzter Gewinner — wird Sonntag 20:00 vom Cron in raffle-winners.json geschrieben
+                const raffleHist = (()=>{ try { return JSON.parse(fs.readFileSync(RAFFLE_FILE,'utf8')); } catch(e) { return { lastWinner:null, history:[] }; } })();
+                const lw = raffleHist.lastWinner;
+                const lwHtml = lw ? (()=>{
+                    const ts = new Date(lw.timestamp || Date.now());
+                    const dateStr = String(ts.getDate()).padStart(2,'0') + '.' + String(ts.getMonth()+1).padStart(2,'0') + '.' + ts.getFullYear();
+                    const handleStr = lw.handle ? '@'+String(lw.handle).replace(/^@/,'') : '';
+                    const safeName = String(lw.name||'Creator').replace(/[<>&"]/g, c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
+                    const safeHandle = handleStr.replace(/[<>&"]/g, c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
+                    const safePrize = String(lw.prize||'').replace(/[<>&"]/g, c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
+                    const initials = safeName.split(/\s+/).map(s=>s[0]||'').join('').slice(0,2).toUpperCase() || 'C';
+                    return `
+  <div style="background:linear-gradient(135deg,rgba(245,215,110,0.14),rgba(212,169,70,0.04));border:1px solid rgba(245,215,110,0.40);border-radius:18px;padding:16px;margin-bottom:14px;position:relative;overflow:hidden">
+    <div style="position:absolute;inset:0;background:radial-gradient(circle at 90% 0%,rgba(245,215,110,0.18),transparent 50%);pointer-events:none"></div>
+    <div style="position:relative;display:flex;align-items:center;gap:12px">
+      <div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#f5d76e 0%,#d4a946 50%,#8b6914 100%);color:#000;font-weight:800;font-size:17px;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:inset 0 1px 0 rgba(255,255,255,0.4),0 4px 12px rgba(212,169,70,0.3)">${initials}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:10.5px;color:#d4a946;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:2px">🏆 Letzter Gewinner</div>
+        <div style="font-size:15px;font-weight:700;color:var(--text);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${safeName}</div>
+        ${safeHandle?`<div style="font-size:11.5px;color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${safeHandle}</div>`:''}
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:2px">${dateStr}</div>
+        <div style="font-size:13px;font-weight:700;color:var(--text);background:rgba(255,255,255,0.05);border:1px solid var(--border2);border-radius:8px;padding:4px 9px;white-space:nowrap">${lw.prizeEmoji||'🎁'} ${safePrize}</div>
+      </div>
+    </div>
+    ${(raffleHist.history||[]).length>1?`<div style="position:relative;margin-top:12px;padding-top:10px;border-top:1px solid rgba(245,215,110,0.18);font-size:11px;color:var(--muted)">Insgesamt <b style="color:var(--text)">${raffleHist.history.length}</b> Ziehungen</div>`:''}
+  </div>`;
+                })() : '';
                 return `
 <div style="padding:16px">
+  ${lwHtml}
   <div style="background:linear-gradient(135deg,rgba(245,158,11,0.1),rgba(239,68,68,0.05));border:1px solid rgba(245,158,11,0.3);border-radius:20px;padding:24px 20px;text-align:center;margin-bottom:16px">
     <div style="font-size:42px;margin-bottom:12px">🎰</div>
     <h2 style="font-size:20px;font-weight:800;margin:0 0 6px;letter-spacing:-0.3px">Wöchentliches Gewinnspiel</h2>
@@ -15655,7 +15710,8 @@ async function msAdminRestore(uid,name){if(!confirm(name+' zurück auf die Warte
       1. Sammle mindestens <b style="color:var(--text)">750 XP</b> in einer Woche<br>
       2. Du nimmst automatisch am Gewinnspiel teil<br>
       3. Jeden <b style="color:var(--text)">Sonntag um 20:00 Uhr</b> wird gezogen<br>
-      4. Der Gewinn wird dir automatisch gutgeschrieben
+      4. Der Gewinn wird dir automatisch gutgeschrieben<br>
+      5. <b style="color:var(--text)">Montag 00:00 Uhr</b> → Wochen-XP wird zurückgesetzt
     </div>
   </div>
 </div>`;
