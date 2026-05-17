@@ -1161,6 +1161,25 @@ button{cursor:pointer;border:none;outline:none;font-family:var(--font)}
 .topbar .icon-btn:active{transform:scale(0.92)}
 .topbar .icon-btn:hover{background:var(--hover-tint)}
 .icon-btn{width:36px;height:36px;border-radius:50%;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--text)}
+/* Feed-Tab-Dropdown im Topbar (gleiche Optik wie /profil Account-Switcher .tb-switcher) */
+.ft-wrap{position:relative;display:inline-flex}
+.ft-trigger{display:inline-flex;align-items:center;gap:7px;background:var(--surface-tint);border:1px solid var(--border2);color:var(--text);padding:5px 12px 5px 9px;border-radius:99px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;max-width:200px;transition:background .15s,border-color .15s,box-shadow .15s;position:relative}
+.ft-trigger:hover{background:var(--bg4);border-color:rgba(124,58,237,.35)}
+.ft-trigger-label{display:inline-flex;align-items:center;gap:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:.1px}
+.ft-trigger-arrow{font-size:10px;color:var(--muted);transition:transform .2s;flex-shrink:0}
+.ft-wrap.open .ft-trigger-arrow{transform:rotate(180deg)}
+.ft-wrap.open .ft-trigger{background:var(--bg4);border-color:rgba(124,58,237,.40)}
+.ft-trigger-badge{position:absolute;top:-5px;right:-5px;min-width:18px;height:18px;line-height:14px;padding:0 5px;border-radius:99px;background:#ef4444;color:#fff;font-size:10px;font-weight:800;border:2px solid var(--bg);box-shadow:0 2px 6px rgba(239,68,68,.4);text-align:center}
+.ft-menu{position:absolute;top:calc(100% + 8px);left:50%;transform:translateX(-50%);background:var(--bg3);border:1.5px solid var(--border2);border-radius:14px;box-shadow:0 12px 32px rgba(0,0,0,.22);min-width:260px;padding:6px;z-index:120;display:none;animation:ftDrop .18s ease}
+.ft-wrap.open .ft-menu{display:block}
+@keyframes ftDrop{from{opacity:0;transform:translateX(-50%) translateY(-6px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+.ft-item{display:flex;align-items:center;gap:11px;width:100%;padding:11px 14px;text-decoration:none;color:var(--text);font-family:inherit;font-size:14px;font-weight:600;border:none;background:none;cursor:pointer;border-radius:10px;text-align:left;transition:background .12s;box-sizing:border-box}
+.ft-item:hover{background:var(--bg4)}
+.ft-item.active{background:rgba(167,139,250,.10)}
+.ft-item-emoji{font-size:18px;flex-shrink:0;line-height:1}
+.ft-item-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ft-item-badge{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:18px;padding:0 7px;border-radius:99px;background:#ef4444;color:#fff;font-size:10.5px;font-weight:800;flex-shrink:0}
+.ft-item-check{color:#a78bfa;font-size:18px;font-weight:700;flex-shrink:0}
 .bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:var(--glass-bg);border-top:1px solid var(--border2);display:flex;justify-content:space-around;padding:10px 0 calc(10px + var(--safe-bottom));z-index:100;backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%)}
 .nav-item{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:9.5px;font-weight:600;letter-spacing:0.2px;color:var(--accent);padding:4px 14px;transition:color .2s,transform .12s;text-decoration:none}
 .nav-item svg{stroke:var(--accent)}
@@ -3399,23 +3418,6 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
 .tb-switcher-arrow{font-size:10px;color:var(--muted);transition:transform .2s;flex-shrink:0}
 .tb-switcher.open .tb-switcher-arrow{transform:rotate(180deg)}
 .tb-switcher-wrap .ipf-switcher-menu{position:absolute;top:calc(100% + 6px);right:0;left:auto;min-width:220px}
-/* Feed-Tab-Dropdown im Topbar (zentriert) */
-.ft-wrap{position:relative;flex:1;display:flex;justify-content:center;max-width:240px;margin:0 auto}
-.ft-trigger{display:inline-flex;align-items:center;gap:8px;padding:7px 12px 7px 12px;background:var(--surface-tint);border:1px solid var(--border2);border-radius:99px;color:var(--text);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;max-width:100%;transition:background .15s,border-color .15s;position:relative}
-.ft-trigger:hover{background:var(--bg4)}
-.ft-trigger-label{display:inline-flex;align-items:center;gap:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:.1px}
-.ft-trigger-arrow{font-size:10px;color:var(--muted);transition:transform .2s;flex-shrink:0}
-.ft-wrap.open .ft-trigger-arrow{transform:rotate(180deg)}
-.ft-trigger-badge{position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;line-height:14px;padding:0 5px;border-radius:99px;background:#ef4444;color:#fff;font-size:10px;font-weight:800;border:2px solid var(--bg);box-shadow:0 2px 6px rgba(239,68,68,.4)}
-.ft-menu{position:absolute;top:calc(100% + 8px);left:50%;transform:translateX(-50%);background:var(--bg);border:1px solid var(--border2);border-radius:14px;box-shadow:0 16px 40px rgba(0,0,0,.18);min-width:240px;max-width:90vw;padding:6px;z-index:60;display:none;animation:ftDrop .18s ease}
-.ft-wrap.open .ft-menu{display:block}
-@keyframes ftDrop{from{opacity:0;transform:translateX(-50%) translateY(-6px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
-.ft-item{display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;text-decoration:none;color:var(--text);font-family:inherit;font-size:13.5px;font-weight:600;border:none;background:none;cursor:pointer;border-radius:10px;text-align:left;transition:background .12s}
-.ft-item:hover{background:var(--bg4)}
-.ft-item.active{background:rgba(124,58,237,.10);color:var(--text)}
-.ft-item-emoji{font-size:16px;flex-shrink:0}
-.ft-item-label{flex:1;min-width:0}
-.ft-item-badge{display:inline-block;min-width:18px;padding:1px 7px;border-radius:99px;background:#ef4444;color:#fff;font-size:10px;font-weight:800;text-align:center}
 </style>
 
 <div class="ipf-banner">
@@ -9425,7 +9427,7 @@ ${(() => {
       ${_totalOtherCount > 0 ? `<span class="ft-trigger-badge">${_totalOtherCount > 99 ? '99+' : _totalOtherCount}</span>` : ''}
     </button>
     <div class="ft-menu" id="ft-menu">
-      ${_tabsMeta.map(t => `<a href="/feed?tab=${t.id}" class="ft-item${t.id===_curTab.id?' active':''}"><span class="ft-item-emoji">${t.emoji}</span><span class="ft-item-label">${htmlEsc(t.label)}</span>${t.count > 0 ? `<span class="ft-item-badge">${t.count > 99 ? '99+' : t.count}</span>` : ''}</a>`).join('')}
+      ${_tabsMeta.map(t => `<a href="/feed?tab=${t.id}" class="ft-item${t.id===_curTab.id?' active':''}"><span class="ft-item-emoji">${t.emoji}</span><span class="ft-item-label">${htmlEsc(t.label)}</span>${t.count > 0 ? `<span class="ft-item-badge">${t.count > 99 ? '99+' : t.count}</span>` : ''}${t.id===_curTab.id ? '<span class="ft-item-check">✓</span>' : ''}</a>`).join('')}
     </div>
   </div>
   <div class="topbar-actions">
