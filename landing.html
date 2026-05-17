@@ -3,12 +3,26 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>CreatorX — Wir wachsen gemeinsam</title>
-<meta name="description" content="Eine kuratierte Community für Instagram Creators. Kostenlos.">
+<title>CreatorX — Die Community für Instagram Creators</title>
+<meta name="description" content="CreatorX ist die kuratierte Community für Instagram Creators in Deutschland. Mehr Reichweite, echte Engagement, strukturiertes Wachstum — kostenlos.">
 <meta name="theme-color" content="#000000">
-<meta property="og:title" content="CreatorX — Wir wachsen gemeinsam">
-<meta property="og:description" content="Eine kuratierte Community für Instagram Creators.">
+<meta name="author" content="CreatorX">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="https://www.creatorboostx.de/">
+<meta property="og:title" content="CreatorX — Deine Community. Dein Wachstum.">
+<meta property="og:description" content="Die kuratierte Community für Instagram Creators. Strukturiertes Wachstum, echte Engagement, kostenlos.">
 <meta property="og:type" content="website">
+<meta property="og:url" content="https://www.creatorboostx.de/">
+<meta property="og:image" content="https://www.creatorboostx.de/community-banner.png">
+<meta property="og:image:width" content="941">
+<meta property="og:image:height" content="1672">
+<meta property="og:locale" content="de_DE">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="CreatorX — Deine Community. Dein Wachstum.">
+<meta name="twitter:description" content="Die kuratierte Community für Instagram Creators. Kostenlos.">
+<meta name="twitter:image" content="https://www.creatorboostx.de/community-banner.png">
+<link rel="icon" type="image/png" href="/cx-logo-256.png">
+<link rel="apple-touch-icon" href="/cx-logo-256.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Cormorant+Garamond:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
@@ -89,6 +103,35 @@ h1 .accent{font-style:italic;font-weight:600;background:linear-gradient(180deg,#
 .btn-secondary:hover{border-color:rgba(212,169,70,0.40);color:var(--gold)}
 .btn-arrow{width:14px;height:14px;transition:transform 0.18s}
 .btn:hover .btn-arrow{transform:translateX(2px)}
+
+/* ── APP-PREVIEW ── */
+.preview{padding:120px 0 100px;position:relative;overflow:hidden;border-top:1px solid var(--line);background:linear-gradient(180deg,var(--bg),var(--bg-2) 40%,var(--bg))}
+.preview-bg{position:absolute;inset:0;pointer-events:none;display:flex;align-items:center;justify-content:center;z-index:0}
+.preview-bg::before{content:'';position:absolute;width:900px;height:900px;background:radial-gradient(circle,rgba(212,169,70,0.07) 0%,transparent 65%);filter:blur(40px)}
+.preview-inner{position:relative;z-index:2;display:grid;grid-template-columns:1fr;gap:80px;align-items:center;max-width:1080px;margin:0 auto}
+.preview-image{position:relative;display:flex;justify-content:center}
+.preview-image::before{content:'';position:absolute;inset:-30px;background:radial-gradient(ellipse at center,rgba(212,169,70,0.22) 0%,transparent 60%);filter:blur(30px);z-index:-1;pointer-events:none}
+.preview-image img{max-width:100%;width:100%;max-height:680px;height:auto;object-fit:contain;border-radius:18px;box-shadow:0 30px 90px -20px rgba(212,169,70,0.32),0 0 0 1px rgba(212,169,70,0.16),0 18px 50px rgba(0,0,0,0.55);display:block}
+.preview-content{max-width:480px;margin:0 auto;text-align:center}
+.preview-content .s-eyebrow{margin-bottom:18px}
+.preview-content h2{font-family:'Cormorant Garamond',serif;font-size:clamp(34px,4.6vw,52px);font-weight:500;letter-spacing:-0.5px;line-height:1.12;color:var(--text);margin-bottom:18px}
+.preview-content h2 .em{font-style:italic;background:linear-gradient(180deg,#fff5d4,#d4a946);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.preview-content p{font-size:16px;color:var(--text-2);line-height:1.7;margin-bottom:32px}
+.feature-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px;margin-bottom:36px}
+.feature-cell{background:rgba(212,169,70,0.04);border:1px solid var(--line-2);border-radius:12px;padding:18px 14px;text-align:left;transition:all 0.25s}
+.feature-cell:hover{background:rgba(212,169,70,0.08);transform:translateY(-2px);border-color:rgba(212,169,70,0.40)}
+.feature-icon{width:34px;height:34px;border-radius:9px;background:linear-gradient(180deg,rgba(245,215,110,0.20),rgba(139,105,20,0.08));border:1px solid rgba(212,169,70,0.40);display:flex;align-items:center;justify-content:center;font-size:18px;margin-bottom:10px}
+.feature-title{font-size:13px;font-weight:700;color:var(--silver-bright);letter-spacing:0.3px;margin-bottom:4px;line-height:1.3}
+.feature-desc{font-size:11.5px;color:var(--text-3);line-height:1.5;letter-spacing:0.2px}
+.preview-cta{display:inline-flex;align-items:center;gap:9px;padding:13px 26px;border-radius:8px;font-size:14px;font-weight:600;text-decoration:none;background:linear-gradient(180deg,#f5d76e 0%,#d4a946 50%,#8b6914 100%);color:#000;box-shadow:0 4px 20px rgba(212,169,70,0.30),inset 0 1px 0 rgba(255,255,255,0.4),inset 0 -1px 0 rgba(0,0,0,0.2);transition:all 0.2s;letter-spacing:0.3px}
+.preview-cta:hover{transform:translateY(-1px);box-shadow:0 8px 28px rgba(212,169,70,0.45),inset 0 1px 0 rgba(255,255,255,0.4)}
+
+@media (min-width:840px){
+  .preview-inner{grid-template-columns:0.95fr 1fr;gap:64px}
+  .preview-image{justify-content:flex-end}
+  .preview-image img{max-width:420px}
+  .preview-content{margin:0;text-align:left}
+}
 
 /* ── TRUST STRIP ── */
 .trust{padding:64px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--bg-2),var(--bg))}
@@ -217,6 +260,49 @@ footer{border-top:1px solid var(--line);padding:48px 0 56px;background:var(--bg)
           <svg class="btn-arrow" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
         </a>
         <a href="https://web-production-7981d.up.railway.app/" class="btn btn-secondary">App öffnen</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- APP PREVIEW -->
+<section class="preview">
+  <div class="preview-bg"></div>
+  <div class="wrap">
+    <div class="preview-inner">
+      <div class="preview-image reveal">
+        <img src="/community-banner.png" alt="CreatorX App — Community, Wachstum, alles an einem Ort" loading="lazy" decoding="async" width="941" height="1672">
+      </div>
+      <div class="preview-content reveal">
+        <span class="s-eyebrow">Die App</span>
+        <h2>Deine Community.<br><span class="em">Dein Wachstum.</span></h2>
+        <p>Alles, was du als Creator brauchst — in einer App. Strukturiert, sauber, ohne Ablenkung.</p>
+        <div class="feature-grid">
+          <div class="feature-cell">
+            <div class="feature-icon">🔗</div>
+            <div class="feature-title">Unbegrenzte Links</div>
+            <div class="feature-desc">Poste deine Reels &amp; Posts ohne Limit.</div>
+          </div>
+          <div class="feature-cell">
+            <div class="feature-icon">👥</div>
+            <div class="feature-title">Aktive Community</div>
+            <div class="feature-desc">Echte Creators, die zurück engagen.</div>
+          </div>
+          <div class="feature-cell">
+            <div class="feature-icon">📈</div>
+            <div class="feature-title">Mehr Reichweite</div>
+            <div class="feature-desc">Likes &amp; Views von Tag eins an.</div>
+          </div>
+          <div class="feature-cell">
+            <div class="feature-icon">⭐</div>
+            <div class="feature-title">Exklusive Vorteile</div>
+            <div class="feature-desc">Missionen, XP, Badges, Diamanten.</div>
+          </div>
+        </div>
+        <a href="https://t.me/+w-V2QL-igJw5YjY0" class="preview-cta" target="_blank" rel="noopener">
+          Jetzt beitreten
+          <svg class="btn-arrow" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
+        </a>
       </div>
     </div>
   </div>
