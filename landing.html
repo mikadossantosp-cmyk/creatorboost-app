@@ -84,7 +84,11 @@ nav{position:sticky;top:0;z-index:50;backdrop-filter:saturate(180%) blur(20px);-
 .hero-inner{position:relative;z-index:2;max-width:780px;margin:0 auto}
 .hero-mark{width:128px;height:128px;margin:0 auto 36px;border-radius:30px;background:#000 url('/cx-icon.png') center/cover no-repeat;border:1px solid rgba(212,169,70,0.30);position:relative;overflow:hidden;box-shadow:inset 0 1px 0 rgba(255,255,255,0.08),inset 0 -1px 0 rgba(0,0,0,0.5),0 0 0 1px rgba(212,169,70,0.12),0 20px 60px rgba(212,169,70,0.28),0 8px 24px rgba(0,0,0,0.85)}
 .hero-mark .glow{position:absolute;inset:0;border-radius:30px;background:radial-gradient(circle at 50% 25%,rgba(255,245,212,0.15) 0%,transparent 55%);pointer-events:none}
-.hero-tag{display:inline-block;font-size:11px;font-weight:600;color:var(--gold);letter-spacing:3px;text-transform:uppercase;margin-bottom:24px;padding:6px 16px;border:1px solid rgba(212,169,70,0.25);border-radius:999px;background:rgba(212,169,70,0.04)}
+.hero-tag{display:inline-block;font-size:11px;font-weight:600;color:var(--gold);letter-spacing:3px;text-transform:uppercase;margin-bottom:14px;padding:6px 16px;border:1px solid rgba(212,169,70,0.25);border-radius:999px;background:rgba(212,169,70,0.04)}
+.hero-live{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;font-weight:500;color:var(--text-2);margin-bottom:24px;padding:5px 13px 5px 11px;border-radius:999px;background:rgba(34,197,94,0.06);border:1px solid rgba(34,197,94,0.22)}
+.hero-live b{color:var(--silver-bright);font-weight:700;font-variant-numeric:tabular-nums}
+.hero-live-dot{width:7px;height:7px;border-radius:50%;background:#22c55e;box-shadow:0 0 8px #22c55e;flex-shrink:0;animation:livePulse 1.6s ease-in-out infinite}
+@keyframes livePulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.55;transform:scale(.78)}}
 h1{font-family:'Cormorant Garamond',serif;font-size:clamp(48px,8vw,88px);font-weight:500;letter-spacing:-1px;line-height:1.05;margin-bottom:28px;color:var(--text)}
 h1 .accent{font-style:italic;font-weight:600;background:linear-gradient(180deg,#fff5d4 0%,#f5d76e 30%,#d4a946 65%,#8b6914 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;display:inline-block;padding-right:10px}
 .subhead{font-size:clamp(16px,1.8vw,19px);color:var(--text-2);font-weight:400;max-width:560px;margin:0 auto 44px;letter-spacing:0;line-height:1.7}
@@ -213,6 +217,32 @@ footer{border-top:1px solid var(--line);padding:48px 0 56px;background:var(--bg)
   .step{gap:18px}
   .step-num{width:40px;height:40px;font-size:18px}
 }
+
+/* ── GAMIFICATION ── */
+.gami{padding:110px 0;position:relative;border-top:1px solid var(--line);background:radial-gradient(ellipse at top,rgba(212,169,70,0.06) 0%,transparent 50%),var(--bg)}
+.gami-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:48px}
+.gami-tile{position:relative;padding:24px 22px;background:linear-gradient(180deg,rgba(212,169,70,0.05),rgba(212,169,70,0.02));border:1px solid var(--line-2);border-radius:14px;overflow:hidden;transition:all 0.3s cubic-bezier(0.25,0.46,0.45,0.94)}
+.gami-tile::after{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(212,169,70,0.45),transparent);opacity:0;transition:opacity 0.3s}
+.gami-tile:hover{transform:translateY(-4px);border-color:rgba(212,169,70,0.45);background:linear-gradient(180deg,rgba(212,169,70,0.10),rgba(212,169,70,0.03));box-shadow:0 18px 50px -12px rgba(212,169,70,0.18)}
+.gami-tile:hover::after{opacity:1}
+.gami-emoji{font-size:34px;line-height:1;margin-bottom:14px;display:inline-block;filter:drop-shadow(0 4px 12px rgba(212,169,70,0.25))}
+.gami-title{font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:600;line-height:1.15;letter-spacing:-0.3px;color:var(--silver-bright);margin-bottom:8px}
+.gami-title .em{font-style:italic;background:linear-gradient(180deg,#fff5d4,#d4a946);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.gami-desc{font-size:13.5px;color:var(--text-2);line-height:1.6}
+
+/* ── TESTIMONIALS ── */
+.testi{padding:110px 0;border-top:1px solid var(--line);background:var(--bg-2)}
+.testi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px;margin-top:48px}
+.testi-card{position:relative;padding:30px 26px 26px;background:linear-gradient(180deg,rgba(255,255,255,0.025),rgba(255,255,255,0.005));border:1px solid var(--line-2);border-radius:16px;transition:all 0.3s;display:flex;flex-direction:column;gap:18px}
+.testi-card::before{content:'\201C';position:absolute;top:6px;right:18px;font-family:'Cormorant Garamond',serif;font-size:90px;line-height:1;color:rgba(212,169,70,0.18);font-weight:500;pointer-events:none}
+.testi-card:hover{transform:translateY(-3px);border-color:rgba(212,169,70,0.30);box-shadow:0 14px 40px -16px rgba(212,169,70,0.18)}
+.testi-stars{display:flex;gap:1.5px;color:#f5d76e;font-size:13.5px;letter-spacing:0.8px}
+.testi-quote{font-size:14.5px;color:var(--text);line-height:1.65;font-style:italic;font-weight:400;flex:1}
+.testi-author{display:flex;align-items:center;gap:11px;padding-top:14px;border-top:1px solid var(--line)}
+.testi-avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#f5d76e 0%,#d4a946 50%,#8b6914 100%);color:#000;font-size:13.5px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;letter-spacing:-0.3px;box-shadow:inset 0 1px 0 rgba(255,255,255,0.4),0 4px 12px rgba(212,169,70,0.25)}
+.testi-meta{display:flex;flex-direction:column;line-height:1.3}
+.testi-name{font-size:13.5px;font-weight:600;color:var(--text);letter-spacing:0.1px}
+.testi-handle{font-size:11.5px;color:var(--text-3);font-weight:500;margin-top:1px}
 </style>
 </head>
 <body>
@@ -243,7 +273,11 @@ footer{border-top:1px solid var(--line);padding:48px 0 56px;background:var(--bg)
   <div class="wrap">
     <div class="hero-inner">
       <div class="hero-mark"><span class="glow"></span></div>
-      <div class="hero-tag">Free · Invite-Only Community</div>
+      <div class="hero-tag">Free · Für Instagram Creators</div>
+      <div class="hero-live" id="hero-live" hidden>
+        <span class="hero-live-dot"></span>
+        <b id="hero-live-count">–</b>&nbsp;Creators gerade online
+      </div>
       <h1>
         Wachsen ist<br>
         <span class="accent serif">kein Solosport.</span>
@@ -275,8 +309,8 @@ footer{border-top:1px solid var(--line);padding:48px 0 56px;background:var(--bg)
         <div class="feature-grid">
           <div class="feature-cell">
             <div class="feature-icon">🔗</div>
-            <div class="feature-title">Unbegrenzte Links</div>
-            <div class="feature-desc">Poste deine Reels &amp; Posts ohne Limit.</div>
+            <div class="feature-title">Tägliche Boosts</div>
+            <div class="feature-desc">1 Link pro Tag · mehr Slots durch Rang &amp; XP.</div>
           </div>
           <div class="feature-cell">
             <div class="feature-icon">👥</div>
@@ -391,12 +425,101 @@ footer{border-top:1px solid var(--line);padding:48px 0 56px;background:var(--bg)
   </div>
 </section>
 
+<!-- GAMIFICATION -->
+<section class="gami" id="features">
+  <div class="wrap">
+    <div class="s-head reveal">
+      <span class="s-eyebrow">Was dich erwartet</span>
+      <h2 class="s-title">Mehr als nur <span class="em">eine Community</span>.</h2>
+      <p class="s-sub">Posten, liken, leveln — jede Aktion zählt. CreatorX kombiniert echtes Engagement mit Spielmechaniken, die dich weiterbringen.</p>
+    </div>
+    <div class="gami-grid">
+      <div class="gami-tile reveal">
+        <div class="gami-emoji">⚡</div>
+        <div class="gami-title"><span class="em">XP</span>-System</div>
+        <div class="gami-desc">Sammle Erfahrung mit jedem Like, jeder Mission, jedem Post. Steige im Rang, schalte neue Slots frei.</div>
+      </div>
+      <div class="gami-tile reveal">
+        <div class="gami-emoji">💎</div>
+        <div class="gami-title"><span class="em">Diamanten</span></div>
+        <div class="gami-desc">Die Währung im Shop. Verdiene sie durch Aktivität, kaufe Extralinks, Superlinks und Premium-Features.</div>
+      </div>
+      <div class="gami-tile reveal">
+        <div class="gami-emoji">🏆</div>
+        <div class="gami-title"><span class="em">Badges</span> &amp; Ränge</div>
+        <div class="gami-desc">Von Newcomer zu Elite+. Jeder Rang bringt mehr Reichweite, mehr Slots, mehr Privilegien.</div>
+      </div>
+      <div class="gami-tile reveal">
+        <div class="gami-emoji">🎯</div>
+        <div class="gami-title">Tägliche <span class="em">Missionen</span></div>
+        <div class="gami-desc">Klare Aufgaben, klare Belohnung. Komme jeden Tag zurück und sammle XP &amp; Diamanten ein.</div>
+      </div>
+      <div class="gami-tile reveal">
+        <div class="gami-emoji">⭐</div>
+        <div class="gami-title"><span class="em">Superlinks</span></div>
+        <div class="gami-desc">Premium-Post für die ganze Woche. Pflicht-Engagement von allen sorgt für garantierten Boost.</div>
+      </div>
+      <div class="gami-tile reveal">
+        <div class="gami-emoji">👥</div>
+        <div class="gami-title"><span class="em">Sub-Accounts</span></div>
+        <div class="gami-desc">Mehrere Insta-Profile? Verwalte sie alle parallel — eigene XP, eigene Stats, ein Login.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- QUOTE -->
 <section class="quote-section">
   <div class="wrap">
     <div class="quote-mark reveal">"</div>
     <p class="quote-text reveal">Allein bist du ein Creator.<br><span class="em">Mit uns bist du eine Bewegung.</span></p>
     <div class="quote-cite">— CreatorX Manifest —</div>
+  </div>
+</section>
+
+<!-- TESTIMONIALS -->
+<section class="testi">
+  <div class="wrap">
+    <div class="s-head reveal">
+      <span class="s-eyebrow">Echte Stimmen</span>
+      <h2 class="s-title">Was Creators <span class="em">sagen</span>.</h2>
+      <p class="s-sub">Das sagen unsere aktiven Mitglieder.</p>
+    </div>
+    <div class="testi-grid">
+      <div class="testi-card reveal">
+        <div class="testi-stars">★ ★ ★ ★ ★</div>
+        <p class="testi-quote">Endlich eine Gruppe, in der Leute wirklich engagen. Meine Reels haben in zwei Wochen mehr Reichweite bekommen als im halben Jahr davor.</p>
+        <div class="testi-author">
+          <div class="testi-avatar">LM</div>
+          <div class="testi-meta">
+            <span class="testi-name">Lena M.</span>
+            <span class="testi-handle">Lifestyle · 12k Follower</span>
+          </div>
+        </div>
+      </div>
+      <div class="testi-card reveal">
+        <div class="testi-stars">★ ★ ★ ★ ★</div>
+        <p class="testi-quote">Struktur, klare Regeln, faires System. Das XP- &amp; Rang-Modell motiviert mich täglich dabei zu sein — und es lohnt sich.</p>
+        <div class="testi-author">
+          <div class="testi-avatar">JK</div>
+          <div class="testi-meta">
+            <span class="testi-name">Jonas K.</span>
+            <span class="testi-handle">Fitness · 28k Follower</span>
+          </div>
+        </div>
+      </div>
+      <div class="testi-card reveal">
+        <div class="testi-stars">★ ★ ★ ★ ★</div>
+        <p class="testi-quote">Kein Spam, keine Bots, keine versteckten Kosten. Einfach eine Community, die zusammenhält. Genau das, was im Algorithmus-Zeitalter fehlt.</p>
+        <div class="testi-author">
+          <div class="testi-avatar">SR</div>
+          <div class="testi-meta">
+            <span class="testi-name">Sara R.</span>
+            <span class="testi-handle">Travel · 6k Follower</span>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -471,6 +594,13 @@ footer{border-top:1px solid var(--line);padding:48px 0 56px;background:var(--bg)
     setStat('stat-members', d.members || 0, false);
     setStat('stat-likes', d.totalLikes || 0, true);
     setStat('stat-posts', d.totalPosts || 0, true);
+    // Live-Counter im Hero — nur einblenden wenn jemand online ist (sonst peinlich)
+    const onlineEl = document.getElementById('hero-live');
+    const onlineCount = document.getElementById('hero-live-count');
+    if (onlineEl && onlineCount && (d.onlineNow || 0) > 0) {
+      onlineCount.textContent = d.onlineNow;
+      onlineEl.hidden = false;
+    }
   } catch(e) {}
 })();
 
