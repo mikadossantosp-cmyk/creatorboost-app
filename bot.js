@@ -1539,10 +1539,56 @@ textarea.form-input{resize:none;min-height:80px}
 .action-card-title{font-size:13px;font-weight:700}
 .action-card-sub{font-size:11px;color:var(--muted);margin-top:3px}
 /* ── PLUS SHEET ── */
-.plus-sheet{position:fixed;inset:0;z-index:500;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.55);backdrop-filter:blur(4px);opacity:0;pointer-events:none;transition:opacity .25s}
+.plus-sheet{position:fixed;inset:0;z-index:500;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.55);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);opacity:0;pointer-events:none;transition:opacity .25s}
 .plus-sheet.open{opacity:1;pointer-events:all}
-.plus-sheet-inner{width:100%;max-width:480px;background:var(--bg3);border-radius:20px 20px 0 0;padding:20px 20px 40px;transform:translateY(100%);transition:transform .3s cubic-bezier(.4,0,.2,1)}
+.plus-sheet-inner{width:100%;max-width:520px;background:var(--bg);border:1px solid var(--border2);border-bottom:0;border-radius:22px 22px 0 0;padding:8px 22px 36px;transform:translateY(100%);transition:transform .32s cubic-bezier(.32,.72,.24,1);max-height:92vh;overflow-y:auto;box-shadow:0 -12px 40px rgba(0,0,0,.25)}
 .plus-sheet.open .plus-sheet-inner{transform:translateY(0)}
+.ps-grabber{width:38px;height:4px;border-radius:4px;background:var(--border2);margin:6px auto 14px}
+.ps-head{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:18px;gap:12px}
+.ps-eyebrow{font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1.6px;margin-bottom:2px}
+.ps-title{font-size:19px;font-weight:800;color:var(--text);letter-spacing:-.3px;line-height:1.15}
+.ps-sub{font-size:12.5px;color:var(--muted);margin-top:3px;line-height:1.45}
+.ps-close{background:var(--bg3);border:1px solid var(--border2);width:32px;height:32px;border-radius:50%;color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s}
+.ps-close:hover{background:var(--bg4)}
+.ps-status{display:flex;align-items:center;gap:8px;padding:9px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:11px;font-size:12px;color:var(--muted);font-weight:500;margin-bottom:14px}
+.ps-field{margin-bottom:14px}
+.ps-field-label{display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.9px;margin-bottom:7px}
+.ps-optional{font-weight:500;text-transform:none;letter-spacing:0;color:var(--muted2);font-size:11px;margin-left:4px}
+.ps-input{width:100%;padding:12px 14px;background:var(--bg3);border:1.5px solid var(--border2);color:var(--text);border-radius:11px;font-size:14px;font-family:inherit;outline:none;transition:border-color .15s,background .15s;box-sizing:border-box}
+.ps-input:focus{border-color:var(--accent);background:var(--bg)}
+.ps-input::placeholder{color:var(--muted2)}
+.ps-textarea{min-height:64px;resize:vertical;line-height:1.5}
+.ps-toggle{display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:11px;cursor:pointer;margin-bottom:16px;transition:border-color .15s,background .15s}
+.ps-toggle:hover{border-color:var(--accent)}
+.ps-toggle input[type="checkbox"]{width:18px;height:18px;accent-color:var(--accent);cursor:pointer;flex-shrink:0}
+.ps-toggle-body{flex:1;min-width:0}
+.ps-toggle-title{font-size:13.5px;font-weight:600;color:var(--text);line-height:1.2}
+.ps-toggle-sub{font-size:11.5px;color:var(--muted);margin-top:2px;line-height:1.4}
+.ps-cta{width:100%;padding:13px 16px;background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;border:none;border-radius:12px;font-size:14.5px;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:.1px;box-shadow:0 4px 14px rgba(124,58,237,.25);transition:transform .12s,box-shadow .15s}
+.ps-cta:hover{box-shadow:0 6px 18px rgba(124,58,237,.35)}
+.ps-cta:active{transform:scale(.985)}
+.ps-cta.diamond{background:linear-gradient(135deg,#06b6d4,#0e7490);box-shadow:0 4px 14px rgba(6,182,212,.30)}
+.ps-cta.diamond:hover{box-shadow:0 6px 18px rgba(6,182,212,.45)}
+.ps-cta.kollab{background:linear-gradient(135deg,#ec4899,#a21caf);box-shadow:0 4px 14px rgba(236,72,153,.25)}
+.ps-cta.kollab:hover{box-shadow:0 6px 18px rgba(236,72,153,.40)}
+.ps-result{margin-top:10px;font-size:12px;text-align:center;color:var(--muted);min-height:16px}
+.ps-info{padding:11px 13px;background:var(--bg3);border-left:3px solid var(--accent);border-radius:8px;font-size:12px;line-height:1.55;color:var(--text);margin-bottom:14px}
+.ps-info.diamond{border-left-color:#06b6d4}
+.ps-info.kollab{border-left-color:#ec4899}
+.ps-info b{color:var(--accent)}
+.ps-info.diamond b{color:#06b6d4}
+.ps-info.kollab b{color:#ec4899}
+.ps-divider{height:1px;background:var(--border2);margin:18px -22px 16px}
+.ps-section-eyebrow{margin-bottom:10px}
+.ps-card{display:flex;align-items:center;gap:13px;width:100%;padding:12px 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:13px;font-family:inherit;cursor:pointer;color:var(--text);text-align:left;margin-bottom:8px;transition:background .15s,border-color .15s,transform .1s}
+.ps-card:hover{background:var(--bg4);border-color:var(--accent)}
+.ps-card:active{transform:scale(.99)}
+.ps-card-icon{width:40px;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,.12)}
+.ps-card-body{flex:1;min-width:0}
+.ps-card-title{font-size:13.5px;font-weight:700;color:var(--text);line-height:1.25;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.ps-card-badge{font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:99px;background:rgba(6,182,212,.12);color:#06b6d4;letter-spacing:.2px}
+.ps-card-sub{font-size:11.5px;color:var(--muted);margin-top:3px;line-height:1.4}
+.ps-card-arrow{color:var(--muted);flex-shrink:0}
 /* 5-item nav fit */
 .nav-item{padding:4px 6px}
 .nav-plus{width:32px;height:32px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;color:#fff;border:none;cursor:pointer;align-self:center;margin-top:-2px;flex-shrink:0}
@@ -1706,62 +1752,124 @@ async function cbResendConfirm(btn){
 </script>
 <div class="plus-sheet" id="plus-sheet" onclick="if(event.target===this)closePlusSheet()">
   <div class="plus-sheet-inner">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-      <span style="font-size:16px;font-weight:700">📸 Reel Link teilen</span>
-      <button onclick="closePlusSheet()" style="background:var(--bg4);border:none;color:var(--text);border-radius:50%;width:28px;height:28px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>
+    <div class="ps-grabber"></div>
+    <div class="ps-head">
+      <div>
+        <div class="ps-eyebrow">Neuer Post</div>
+        <div class="ps-title">Reel teilen</div>
+        <div class="ps-sub">Teile deinen Instagram-Reel mit der Community</div>
+      </div>
+      <button class="ps-close" onclick="closePlusSheet()" aria-label="Schließen">
+        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+      </button>
     </div>
-    <div id="plus-link-status" style="border-radius:10px;padding:10px 13px;margin-bottom:12px;font-size:12px;font-weight:600;display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08)">
+    <div id="plus-link-status" class="ps-status">
       <span id="plus-link-status-icon">⏳</span>
-      <span id="plus-link-status-text" style="color:var(--muted)">Wird geladen...</span>
+      <span id="plus-link-status-text">Wird geladen…</span>
     </div>
-    <input type="url" id="plus-link-input" class="form-input" placeholder="https://www.instagram.com/reel/..." style="margin-bottom:8px">
-    <textarea id="plus-link-caption" class="form-input" placeholder="Beschreibung (optional)..." maxlength="200" rows="2" style="margin-bottom:8px"></textarea>
-    <label style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--bg4);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;margin-bottom:12px">
-      <input type="checkbox" id="plus-pin-toggle" style="width:18px;height:18px;accent-color:var(--accent);cursor:pointer">
-      <div><div style="font-size:13px;font-weight:600">📌 Als angepinnten Post setzen</div><div style="font-size:11px;color:var(--muted);margin-top:2px">Erscheint oben im Profil · max 1 Pin</div></div>
+    <div class="ps-field">
+      <label class="ps-field-label">Instagram-URL</label>
+      <input type="url" id="plus-link-input" class="ps-input" placeholder="https://www.instagram.com/reel/…">
+    </div>
+    <div class="ps-field">
+      <label class="ps-field-label">Beschreibung <span class="ps-optional">optional</span></label>
+      <textarea id="plus-link-caption" class="ps-input ps-textarea" placeholder="Erzähl was über deinen Reel…" maxlength="200" rows="2"></textarea>
+    </div>
+    <label class="ps-toggle">
+      <input type="checkbox" id="plus-pin-toggle">
+      <div class="ps-toggle-body">
+        <div class="ps-toggle-title">Als Pinned-Post setzen</div>
+        <div class="ps-toggle-sub">Wird oben in deinem Profil angezeigt · max 1 Pin</div>
+      </div>
     </label>
-    <button class="btn btn-primary btn-full" id="plus-post-btn" onclick="plusPostLink()">📸 Link teilen</button>
-    <div id="plus-link-result" style="margin-top:8px;font-size:12px;text-align:center;color:var(--muted)"></div>
-    <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border2)">
-      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Engagement</div>
-      <button class="btn btn-full" onclick="closePlusSheet();setTimeout(()=>{if(typeof openSLSheet==='function')openSLSheet();else location.href='/feed?tab=engagement&opensl=1';},200)" style="background:linear-gradient(135deg,rgba(245,158,11,.15),rgba(245,158,11,.05));border:1px solid rgba(245,158,11,.3);color:#f59e0b;font-weight:700">⭐ Superlink posten</button>
-      <div style="font-size:11px;color:var(--muted);margin-top:6px;text-align:center;margin-bottom:14px">Alle Mitglieder müssen deinen Link liken, kommentieren & teilen</div>
-      <button class="btn btn-full" onclick="closePlusSheet();setTimeout(openKollabSheet,200)" style="background:linear-gradient(135deg,rgba(236,72,153,.15),rgba(236,72,153,.05));border:1px solid rgba(236,72,153,.3);color:#ec4899;font-weight:700">🤝 Kollab-Link posten</button>
-      <div style="font-size:11px;color:var(--muted);margin-top:6px;text-align:center;margin-bottom:14px">Mit deinem Kollab-Partner gemeinsam · 1× pro Woche</div>
-      <button class="btn btn-full" onclick="closePlusSheet();setTimeout(openDiamondSheet,200)" style="background:linear-gradient(135deg,rgba(6,182,212,.18),rgba(6,182,212,.04));border:1px solid rgba(6,182,212,.45);color:#06b6d4;font-weight:700;box-shadow:0 0 14px rgba(6,182,212,.18)">💎 Diamantlink posten <span style="font-weight:500;opacity:.85;font-size:11.5px;margin-left:6px">(-30 💎)</span></button>
-      <div style="font-size:11px;color:var(--muted);margin-top:6px;text-align:center">3 Tage Feed-Top · Liker bekommen +3 💎</div>
-    </div>
+    <button class="ps-cta" id="plus-post-btn" onclick="plusPostLink()">Reel teilen</button>
+    <div id="plus-link-result" class="ps-result"></div>
+    <div class="ps-divider"></div>
+    <div class="ps-eyebrow ps-section-eyebrow">Erweiterte Engagement-Optionen</div>
+    <button class="ps-card" onclick="closePlusSheet();setTimeout(()=>{if(typeof openSLSheet==='function')openSLSheet();else location.href='/feed?tab=engagement&opensl=1';},200)">
+      <div class="ps-card-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff">⭐</div>
+      <div class="ps-card-body">
+        <div class="ps-card-title">Superlink posten</div>
+        <div class="ps-card-sub">Alle Mitglieder liken, kommentieren &amp; teilen deinen Link</div>
+      </div>
+      <svg class="ps-card-arrow" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"><polyline points="9 6 15 12 9 18"/></svg>
+    </button>
+    <button class="ps-card" onclick="closePlusSheet();setTimeout(openKollabSheet,200)">
+      <div class="ps-card-icon" style="background:linear-gradient(135deg,#ec4899,#a21caf);color:#fff">🤝</div>
+      <div class="ps-card-body">
+        <div class="ps-card-title">Kollab-Link posten</div>
+        <div class="ps-card-sub">Mit deinem Kollab-Partner · 1× pro Woche</div>
+      </div>
+      <svg class="ps-card-arrow" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"><polyline points="9 6 15 12 9 18"/></svg>
+    </button>
+    <button class="ps-card" onclick="closePlusSheet();setTimeout(openDiamondSheet,200)">
+      <div class="ps-card-icon" style="background:linear-gradient(135deg,#06b6d4,#0e7490);color:#fff">💎</div>
+      <div class="ps-card-body">
+        <div class="ps-card-title">Diamantlink posten <span class="ps-card-badge">−30 💎</span></div>
+        <div class="ps-card-sub">3 Tage Feed-Top · Liker erhalten +3 💎</div>
+      </div>
+      <svg class="ps-card-arrow" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"><polyline points="9 6 15 12 9 18"/></svg>
+    </button>
   </div>
 </div>
 <div class="plus-sheet" id="diamond-sheet" onclick="if(event.target===this)closeDiamondSheet()">
   <div class="plus-sheet-inner">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-      <span style="font-size:16px;font-weight:700">💎 Diamantlink posten</span>
-      <button onclick="closeDiamondSheet()" style="background:var(--bg4);border:none;color:var(--text);border-radius:50%;width:28px;height:28px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>
+    <div class="ps-grabber"></div>
+    <div class="ps-head">
+      <div>
+        <div class="ps-eyebrow">Premium Boost</div>
+        <div class="ps-title">💎 Diamantlink</div>
+        <div class="ps-sub">3 Tage ganz oben im Feed</div>
+      </div>
+      <button class="ps-close" onclick="closeDiamondSheet()" aria-label="Schließen">
+        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+      </button>
     </div>
-    <div id="diamond-info" style="border-radius:10px;padding:11px 13px;margin-bottom:12px;font-size:12px;line-height:1.5;background:rgba(6,182,212,.10);border:1px solid rgba(6,182,212,.30);color:var(--text)">
-      <b style="color:#06b6d4">Kostet 30 💎</b> · 3 Tage Feed-Top · ältester Diamantlink steht ganz oben.<br>
+    <div id="diamond-info" class="ps-info diamond">
+      <b>Kostet 30 💎</b> · 3 Tage Feed-Top · ältester Diamantlink steht oben.<br>
       Jeder Liker bekommt <b>+3 💎</b> Belohnung.<br>
-      <b style="color:#f59e0b">Pflicht: FULL ENGAGED</b> — wer schein-likt wird hart sanktioniert.
+      <b style="color:#f59e0b">Pflicht: FULL ENGAGED</b> — Schein-Likes werden hart sanktioniert.
     </div>
-    <input type="url" id="diamond-url" class="form-input" placeholder="https://www.instagram.com/reel/..." style="margin-bottom:8px">
-    <textarea id="diamond-caption" class="form-input" placeholder="Beschreibung (optional)" maxlength="500" rows="2" style="margin-bottom:8px"></textarea>
-    <button class="btn btn-full" id="diamond-post-btn" onclick="postDiamondLink()" style="background:linear-gradient(135deg,#06b6d4,#0e7490);color:#fff;font-weight:800;box-shadow:0 0 20px rgba(6,182,212,.45)">💎 Diamantlink veröffentlichen (-30 💎)</button>
-    <div id="diamond-result" style="margin-top:8px;font-size:12px;text-align:center;color:var(--muted)"></div>
+    <div class="ps-field">
+      <label class="ps-field-label">Instagram-URL</label>
+      <input type="url" id="diamond-url" class="ps-input" placeholder="https://www.instagram.com/reel/…">
+    </div>
+    <div class="ps-field">
+      <label class="ps-field-label">Beschreibung <span class="ps-optional">optional</span></label>
+      <textarea id="diamond-caption" class="ps-input ps-textarea" placeholder="Beschreibung…" maxlength="500" rows="2"></textarea>
+    </div>
+    <button class="ps-cta diamond" id="diamond-post-btn" onclick="postDiamondLink()">💎 Veröffentlichen <span style="opacity:.85;font-weight:600">· −30 💎</span></button>
+    <div id="diamond-result" class="ps-result"></div>
   </div>
 </div>
 <div class="plus-sheet" id="kollab-sheet" onclick="if(event.target===this)closeKollabSheet()">
   <div class="plus-sheet-inner">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-      <span style="font-size:16px;font-weight:700">🤝 Kollab-Link posten</span>
-      <button onclick="closeKollabSheet()" style="background:var(--bg4);border:none;color:var(--text);border-radius:50%;width:28px;height:28px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>
+    <div class="ps-grabber"></div>
+    <div class="ps-head">
+      <div>
+        <div class="ps-eyebrow">Gemeinsam posten</div>
+        <div class="ps-title">🤝 Kollab-Link</div>
+        <div class="ps-sub">1× pro Woche mit deinem Kollab-Partner</div>
+      </div>
+      <button class="ps-close" onclick="closeKollabSheet()" aria-label="Schließen">
+        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+      </button>
     </div>
-    <div id="kollab-info" style="border-radius:10px;padding:10px 13px;margin-bottom:12px;font-size:12px;font-weight:600;background:rgba(236,72,153,.10);border:1px solid rgba(236,72,153,.3);color:#ec4899">Lädt Kollab-Partner …</div>
-    <select id="kollab-partner" class="form-input" style="margin-bottom:8px"></select>
-    <input type="url" id="kollab-url" class="form-input" placeholder="https://www.instagram.com/reel/..." style="margin-bottom:8px">
-    <textarea id="kollab-caption" class="form-input" placeholder="Beschreibung (optional)" maxlength="400" rows="2" style="margin-bottom:8px"></textarea>
-    <button class="btn btn-full" id="kollab-post-btn" onclick="postKollabLink()" style="background:linear-gradient(135deg,#ec4899,#a21caf);color:#fff;font-weight:700">🤝 Kollab-Link veröffentlichen</button>
-    <div id="kollab-result" style="margin-top:8px;font-size:12px;text-align:center;color:var(--muted)"></div>
+    <div id="kollab-info" class="ps-info kollab">Lädt Kollab-Partner …</div>
+    <div class="ps-field">
+      <label class="ps-field-label">Kollab-Partner</label>
+      <select id="kollab-partner" class="ps-input"></select>
+    </div>
+    <div class="ps-field">
+      <label class="ps-field-label">Instagram-URL</label>
+      <input type="url" id="kollab-url" class="ps-input" placeholder="https://www.instagram.com/reel/…">
+    </div>
+    <div class="ps-field">
+      <label class="ps-field-label">Beschreibung <span class="ps-optional">optional</span></label>
+      <textarea id="kollab-caption" class="ps-input ps-textarea" placeholder="Beschreibung…" maxlength="400" rows="2"></textarea>
+    </div>
+    <button class="ps-cta kollab" id="kollab-post-btn" onclick="postKollabLink()">🤝 Veröffentlichen</button>
+    <div id="kollab-result" class="ps-result"></div>
   </div>
 </div>
 <div class="liker-modal" id="liker-modal" onclick="if(event.target===this)closeLikerModal()">
