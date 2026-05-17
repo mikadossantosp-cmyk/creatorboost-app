@@ -15082,11 +15082,7 @@ ${_latestNews ? `<a href="/explore?tab=newsletter" class="highlight-card" style=
     <div style="font-size:16px;color:rgba(255,255,255,.2)">›</div>
   </a>
 </div>
-<div style="padding:0 16px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between">
-  <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:1px">⭐ Top Creator</div>
-  <a href="/explore?tab=ranking" style="font-size:12px;color:var(--accent);font-weight:600">Alle →</a>
-</div>
-<div class="creator-scroll" style="padding-bottom:16px">${topCreators||'<div style="color:var(--muted);font-size:13px;padding:0 16px">Noch keine Creator</div>'}</div>`,
+`,
             ranking: `
 <div style="padding:12px 16px 8px;display:flex;align-items:center;justify-content:space-between">
   <div style="font-size:13px;font-weight:700">⭐ Rangliste</div>
