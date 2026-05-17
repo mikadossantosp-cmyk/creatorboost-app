@@ -1178,6 +1178,8 @@ button{cursor:pointer;border:none;outline:none;font-family:var(--font)}
 .story-item:active{transform:scale(0.92);transition:transform 0.15s}
 .story-ring{width:68px;height:68px;border-radius:50%;padding:3.5px;background:linear-gradient(135deg,#1d4ed8,#3b82f6,#0ea5e9);position:relative;box-shadow:0 4px 14px rgba(29,78,216,0.45)}
 .story-ring.seen{background:linear-gradient(135deg,#93c5fd,#60a5fa);box-shadow:0 2px 8px rgba(96,165,250,0.35)}
+.story-ring.pinned-glow{background:linear-gradient(135deg,#f9a825,#e91e63,#9c27b0,#3b82f6);background-size:300% 300%;box-shadow:0 4px 18px rgba(233,30,99,0.45);animation:pinnedGlow 2.4s ease-in-out infinite}
+@keyframes pinnedGlow{0%,100%{background-position:0% 50%;box-shadow:0 4px 16px rgba(233,30,99,0.45)}50%{background-position:100% 50%;box-shadow:0 8px 24px rgba(233,30,99,0.7)}}
 .story-inner{width:100%;height:100%;border-radius:50%;border:2.5px solid var(--bg);overflow:hidden;position:relative;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:#fff}
 [data-theme=light] .story-ring{box-shadow:0 6px 20px rgba(29,78,216,0.5),0 1px 4px rgba(15,23,42,0.12)}
 [data-theme=light] .story-ring.seen{box-shadow:0 3px 10px rgba(15,23,42,0.18)}
@@ -1329,8 +1331,10 @@ textarea.form-input{resize:none;min-height:80px}
 .proflink-thumb-overlay{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.05),rgba(0,0,0,.35));pointer-events:none}
 .proflink-play{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.95);font-size:22px;text-shadow:0 2px 6px rgba(0,0,0,.5);pointer-events:none}
 .proflink-actions{display:flex;align-items:center;gap:4px;padding:5px 5px 6px}
-.proflink-like{display:inline-flex;align-items:center;gap:3px;background:none;border:none;cursor:pointer;color:var(--text);font-size:10.5px;font-weight:600;font-family:inherit;padding:2px 4px}
-.proflink-like.liked{color:#ef4444;cursor:default}
+.proflink-like{display:inline-flex;align-items:center;gap:3px;background:none;border:none;cursor:pointer;color:var(--text);font-size:10.5px;font-weight:600;font-family:inherit;padding:2px 4px;transition:opacity .2s}
+.proflink-like:not(.liked):not(.visited){opacity:.45}
+.proflink-like.visited{opacity:1}
+.proflink-like.liked{color:#ef4444;cursor:default;opacity:1}
 .proflink-likes{font-size:10.5px;color:var(--muted);padding:2px 4px;font-weight:500}
 .proflink-open{flex:1;text-align:center;padding:5px 6px;background:linear-gradient(135deg,#f9a825,#e91e63,#9c27b0);color:#fff !important;border-radius:6px;font-size:10px;font-weight:700;text-decoration:none;white-space:nowrap;box-shadow:0 1px 4px rgba(233,30,99,.25)}
 .toast{position:fixed;top:80px;left:50%;transform:translateX(-50%);background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:10px 20px;font-size:13px;font-weight:500;z-index:999;box-shadow:var(--shadow);opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap}
@@ -2522,8 +2526,66 @@ function showBanner(opts){
 }
 // Engagement-Quality-Control: User muss erst Link besuchen, bevor er liken darf.
 // Status pro Link wird in localStorage gespeichert (cb_visited_links: { lid: timestamp }).
-function markLinkVisited(lid){try{const v=JSON.parse(localStorage.getItem('cb_visited_links')||'{}');v[String(lid)]=Date.now();localStorage.setItem('cb_visited_links',JSON.stringify(v));}catch(e){}}
+function markLinkVisited(lid){
+  try{const v=JSON.parse(localStorage.getItem('cb_visited_links')||'{}');v[String(lid)]=Date.now();localStorage.setItem('cb_visited_links',JSON.stringify(v));}catch(e){}
+  // Sofortiges UI-Feedback: alle Like-Buttons für diesen Link freischalten
+  try{document.querySelectorAll('.proflink-like[data-msgid="'+lid+'"], .post-action-btn[data-msgid="'+lid+'"]').forEach(b=>{b.classList.add('visited');});}catch(e){}
+}
 function hasLinkVisited(lid){try{const v=JSON.parse(localStorage.getItem('cb_visited_links')||'{}');return !!v[String(lid)];}catch(e){return false;}}
+// Beim Page-Load alle bereits besuchten Links markieren (visited-Class für CSS)
+(function _hydrateVisitedLikes(){
+  function run(){
+    try{
+      const v=JSON.parse(localStorage.getItem('cb_visited_links')||'{}');
+      document.querySelectorAll('.proflink-like[data-msgid], .post-action-btn[data-msgid]').forEach(b=>{
+        const mid=b.getAttribute('data-msgid');
+        if(mid && v[String(mid)])b.classList.add('visited');
+      });
+    }catch(e){}
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run);
+  else run();
+})();
+// Shared likePost — wird auf /profil, /profil/{uid} und /feed verwendet.
+// Auf /feed wird sie später von einer komplexeren Version mit Offline-Queue überschrieben.
+if(typeof window.likePost==='undefined'){
+  window.likePost=async function(msgId, btn){
+    if(!btn||btn.dataset.busy==='1')return;
+    if(btn.classList.contains('liked')){
+      if(window.showBanner)showBanner({type:'success',title:'Schon geliked ❤️',subtitle:'Du hast diesen Link bereits geliked.',dur:2500});
+      return;
+    }
+    if(!hasLinkVisited(msgId)){
+      if(window.showBanner)showBanner({type:'warn',icon:'⚠️',title:'Erst den Link besuchen!',subtitle:'Tap auf „→ Öffnen" → auf Instagram liken & kommentieren → dann hier liken.',dur:5000});
+      return;
+    }
+    btn.dataset.busy='1';
+    const countEl=document.getElementById('likes-'+msgId);
+    btn.classList.add('liked');
+    const svg=btn.querySelector('svg');if(svg)svg.setAttribute('fill','currentColor');
+    if(countEl)countEl.textContent=Number(countEl.textContent||0)+1;
+    btn.disabled=true;
+    try{
+      const ctrl=new AbortController();const tmo=setTimeout(()=>ctrl.abort(),8000);
+      const res=await fetch('/api/like',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({msgId}),signal:ctrl.signal});
+      clearTimeout(tmo);
+      const data=await res.json();
+      if(data.ok){
+        if(countEl&&data.likes!==undefined)countEl.textContent=data.likes;
+        if(window.showBanner)showBanner({type:'success',title:'Like registriert ❤️',subtitle:'Vergiss nicht: Auf Instagram liken & 2-Wort-Kommentar.',dur:4000});
+      }else if(data.missingInstagram){
+        btn.classList.remove('liked');if(svg)svg.setAttribute('fill','none');
+        if(countEl)countEl.textContent=Math.max(0,Number(countEl.textContent)-1);
+        btn.disabled=false;btn.dataset.busy='0';
+        if(window.showBanner)showBanner({type:'warn',icon:'❌',title:'Like fehlgeschlagen',subtitle:data.error||'Insta in Einstellungen setzen.',dur:4500});
+      }else{
+        if(window.showBanner)showBanner({type:'warn',icon:'⚠️',title:'Like fehlgeschlagen',subtitle:data.error||'Versuch es nochmal.',dur:3500});
+      }
+    }catch(e){
+      if(window.showBanner)showBanner({type:'warn',icon:'📡',title:'Netzwerkfehler',subtitle:'Versuch es nochmal sobald du wieder Online bist.',dur:3500});
+    }
+  };
+}
 function setTheme(t){document.documentElement.setAttribute('data-theme',t);try{localStorage.setItem('cbTheme4',t);}catch(e){}document.querySelectorAll('[title="Theme"]').forEach(b=>b.textContent=t==='dark'?'☀️':'🌙');fetch('/api/theme',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({theme:t})}).catch(()=>{});}
 try{const t=localStorage.getItem('cbTheme4');if(t){document.documentElement.setAttribute('data-theme',t);}}catch(e){}
 function setLang(l){fetch('/api/lang',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lang:l})}).then(()=>location.reload()).catch(()=>{try{document.cookie='cbLang='+l+';path=/;max-age=31536000';}catch(e){}location.reload();});}
@@ -3168,54 +3230,17 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
 .ipf-switcher-divider{height:1px;background:var(--border2)}
 .ipf-switcher-add{display:flex;align-items:center;gap:11px;padding:11px 14px;color:#a78bfa;cursor:pointer;border:none;background:none;width:100%;font-family:inherit;font-size:13.5px;font-weight:600;text-align:left}
 .ipf-switcher-add:hover{background:var(--bg4)}
+/* Topbar-Switcher (kompakt) */
+.tb-switcher-wrap{position:relative;display:inline-block}
+.tb-switcher{display:inline-flex;align-items:center;gap:7px;background:var(--surface-tint);border:1px solid var(--border2);color:var(--text);padding:4px 10px 4px 4px;border-radius:99px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;max-width:200px}
+.tb-switcher:hover{background:var(--bg4)}
+.tb-switcher-avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#a78bfa,#7c3aed);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:12px;overflow:hidden;position:relative;flex-shrink:0}
+.tb-switcher-avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.tb-switcher-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100px}
+.tb-switcher-arrow{font-size:10px;color:var(--muted);transition:transform .2s;flex-shrink:0}
+.tb-switcher.open .tb-switcher-arrow{transform:rotate(180deg)}
+.tb-switcher-wrap .ipf-switcher-menu{position:absolute;top:calc(100% + 6px);right:0;left:auto;min-width:220px}
 </style>
-
-${isOwn ? (function(){
-  // Account-Switcher (nur auf eigenem Profil sichtbar).
-  // BUGFIX: session ist nicht in profileCard()-scope verfügbar — ableiten aus uid + u.parent_uid.
-  // - uid = die UID des Users, dessen Profil gerade angezeigt wird (= active UID wenn isOwn).
-  // - parent UID = u.parent_uid wenn u ein Sub ist, sonst uid selbst.
-  const _curSessUid = String(u.parent_uid || uid);
-  const _activeUid = String(uid);
-  const _allAccs = [{uid: _curSessUid, isParent: true}];
-  for (const [sid, su] of Object.entries(d.users||{})) {
-    if (String(su.parent_uid||'') === _curSessUid && sid !== _curSessUid) {
-      _allAccs.push({uid: sid, isParent: false});
-    }
-  }
-  if (_allAccs.length < 2) return ''; // kein Switcher wenn nur Parent
-  const _curU = d.users?.[_activeUid] || u;
-  const _curName = htmlEsc(_curU.spitzname || _curU.name || 'User');
-  const _curPic = ladeBild(_activeUid, 'profilepic') ? '/appbild/' + _activeUid + '/profilepic' : (_curU.instagram ? 'https://unavatar.io/instagram/' + encodeURIComponent(_curU.instagram) : '');
-  const _curInit = htmlEsc((_curU.spitzname || _curU.name || '?').slice(0,1).toUpperCase());
-  const _subCount = _allAccs.length - 1;
-  return '<div class="ipf-switcher-wrap">' +
-    '<button class="ipf-switcher" onclick="ipfToggleSwitcher(this)" id="ipf-sw-btn">' +
-      '<div class="ipf-switcher-mini-avatar">' + (_curPic ? '<img src="' + _curPic + '" alt="" loading="lazy">' : _curInit) + '</div>' +
-      '<div class="ipf-switcher-label">' +
-        '<div class="ipf-switcher-label-top">🔄 Account-Switcher · ' + _subCount + ' Sub' + (_subCount===1?'':'s') + '</div>' +
-        '<div class="ipf-switcher-label-name">' + _curName + '</div>' +
-      '</div>' +
-      '<span class="ipf-switcher-arrow">▼</span>' +
-    '</button>' +
-    '<div class="ipf-switcher-menu" id="ipf-sw-menu">' +
-      _allAccs.map(a => {
-        const au = d.users?.[a.uid] || {};
-        const aName = htmlEsc(au.spitzname || au.name || 'User');
-        const aInit = htmlEsc((au.spitzname || au.name || '?').slice(0,1).toUpperCase());
-        const aPic = ladeBild(a.uid, 'profilepic') ? '/appbild/' + a.uid + '/profilepic' : (au.instagram ? 'https://unavatar.io/instagram/' + encodeURIComponent(au.instagram) : '');
-        const isActive = a.uid === _activeUid;
-        return '<button class="ipf-switcher-item' + (isActive?' active':'') + '" onclick="ipfSwitchAcc(\''+htmlEsc(a.uid)+'\')">' +
-          '<div class="ipf-switcher-item-avatar">' + (aPic ? '<img src="'+aPic+'" alt="">' : aInit) + '</div>' +
-          '<div class="ipf-switcher-item-name">' + aName + (a.isParent?'':' <span style="font-size:11px;color:var(--muted);font-weight:500"> · Sub</span>') + '</div>' +
-          (isActive ? '<span class="ipf-switcher-item-check">✓</span>' : '') +
-        '</button>';
-      }).join('') +
-      '<div class="ipf-switcher-divider"></div>' +
-      '<button class="ipf-switcher-add" onclick="ipfAddSub()">➕ Neuen Sub-Account erstellen</button>' +
-    '</div>' +
-  '</div>';
-})() : ''}
 
 <div class="ipf-banner">
   <div class="ipf-banner-bg" style="${bannerIsGrad ? 'background:'+banner : 'background-image:url('+JSON.stringify(banner).slice(1,-1)+')'}"></div>
@@ -3425,6 +3450,49 @@ ${(()=>{
   ${mySuperlink.caption?`<div style="font-size:12px;color:var(--muted);margin-top:6px;padding-left:32px">${htmlEsc(String(mySuperlink.caption).slice(0,80))}</div>`:''}
 </div>`;
 })()}`;
+}
+
+// Kompakter Account-Switcher für die /profil-Topbar.
+// Returnt leeren String wenn keine Sub-Accounts existieren.
+function buildTopbarSwitcher(myUid, d) {
+  const _curSessUid = String(myUid);
+  const me = (d.users||{})[_curSessUid] || {};
+  // Wenn aktive UID ein Sub ist, ist parent_uid der echte session-Owner
+  const _ownerUid = String(me.parent_uid || _curSessUid);
+  const _allAccs = [{uid: _ownerUid, isParent: true}];
+  for (const [sid, su] of Object.entries(d.users||{})) {
+    if (String(su.parent_uid||'') === _ownerUid && sid !== _ownerUid) {
+      _allAccs.push({uid: sid, isParent: false});
+    }
+  }
+  if (_allAccs.length < 2) return '';
+  const _curU = d.users?.[_curSessUid] || me;
+  const _curName = htmlEsc(_curU.spitzname || _curU.name || 'User');
+  const _curPic = ladeBild(_curSessUid, 'profilepic') ? '/appbild/' + _curSessUid + '/profilepic' : (_curU.instagram ? 'https://unavatar.io/instagram/' + encodeURIComponent(_curU.instagram) : '');
+  const _curInit = htmlEsc((_curU.spitzname || _curU.name || '?').slice(0,1).toUpperCase());
+  return '<div class="tb-switcher-wrap">' +
+    '<button class="tb-switcher" onclick="ipfToggleSwitcher(this)" id="ipf-sw-btn">' +
+      '<div class="tb-switcher-avatar">' + (_curPic ? '<img src="' + _curPic + '" alt="" loading="lazy">' : _curInit) + '</div>' +
+      '<span class="tb-switcher-name">' + _curName + '</span>' +
+      '<span class="tb-switcher-arrow">▼</span>' +
+    '</button>' +
+    '<div class="ipf-switcher-menu" id="ipf-sw-menu">' +
+      _allAccs.map(a => {
+        const au = d.users?.[a.uid] || {};
+        const aName = htmlEsc(au.spitzname || au.name || 'User');
+        const aInit = htmlEsc((au.spitzname || au.name || '?').slice(0,1).toUpperCase());
+        const aPic = ladeBild(a.uid, 'profilepic') ? '/appbild/' + a.uid + '/profilepic' : (au.instagram ? 'https://unavatar.io/instagram/' + encodeURIComponent(au.instagram) : '');
+        const isActive = a.uid === _curSessUid;
+        return '<button class="ipf-switcher-item' + (isActive?' active':'') + '" onclick="ipfSwitchAcc(\''+htmlEsc(a.uid)+'\')">' +
+          '<div class="ipf-switcher-item-avatar">' + (aPic ? '<img src="'+aPic+'" alt="">' : aInit) + '</div>' +
+          '<div class="ipf-switcher-item-name">' + aName + (a.isParent?'':' <span style="font-size:11px;color:var(--muted);font-weight:500"> · Sub</span>') + '</div>' +
+          (isActive ? '<span class="ipf-switcher-item-check">✓</span>' : '') +
+        '</button>';
+      }).join('') +
+      '<div class="ipf-switcher-divider"></div>' +
+      '<button class="ipf-switcher-add" onclick="ipfAddSub()">➕ Neuen Sub-Account erstellen</button>' +
+    '</div>' +
+  '</div>';
 }
 
 // ================================
@@ -6701,6 +6769,20 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
         }));
     }
 
+    // Pinned-Reel-Redirect: leitet zur pinned URL des angegebenen User weiter.
+    // Nur whitelist-validierte Instagram-URLs erlaubt. Wird vom Story-Modal genutzt.
+    if (path === '/pinned-redirect' && req.method === 'GET') {
+        if (!session) return redirect('/login');
+        const tUid = String(query.uid || '').trim();
+        if (!tUid) { res.writeHead(400); return res.end('missing uid'); }
+        const pl = ladePinnedLink(tUid);
+        if (!pl) { res.writeHead(404); return res.end('no pinned link'); }
+        const sUrl = safeUrl(pl);
+        if (!sUrl) { res.writeHead(400); return res.end('invalid pinned url'); }
+        res.writeHead(302, { Location: sUrl, 'Cache-Control': 'no-store' });
+        return res.end();
+    }
+
     // Instagram-Thumbnail-Proxy: lädt das Bild server-seitig OHNE Referer und
     // streamed es an den Client. Umgeht den Hotlink-Schutz des Instagram-CDN.
     // GET /insta-thumb?u=<encoded-url>
@@ -8606,11 +8688,34 @@ p{line-height:1.65;color:var(--muted)}
             return true;
         });
 
-        const myFollowing = (d.users[myUid]?.following||[]).map(String);
-        const topUsers = Object.entries(d.users||{})
-            .filter(([id,u])=>!adminIds.includes(Number(id))&&isAppVisible(u)&&(myFollowing.includes(String(id))||String(id)===String(myUid)))
-            .sort((a,b)=>(b[1].xp||0)-(a[1].xp||0))
-            .slice(0,10);
+        // Stories: nur User mit Pinned Reel anzeigen (Insta-Style).
+        // Unengagete Pinned-Reels glühen, engagete sind grau.
+        const myEngagedOwners = (d.pinnedEngages?.[String(myUid)] || []).map(String);
+        const pinnedStories = Object.entries(d.users||{})
+            .filter(([id,u])=>!adminIds.includes(Number(id))&&isAppVisible(u))
+            .map(([id,u])=>({id, u, pinnedUrl: ladePinnedLink(id)}))
+            .filter(x => !!x.pinnedUrl)
+            .map(x => ({
+                ...x,
+                engaged: myEngagedOwners.includes(String(x.id)) || String(x.id) === String(myUid)
+            }))
+            .sort((a,b)=>{
+                if (a.engaged !== b.engaged) return a.engaged ? 1 : -1;
+                return (b.u.xp||0)-(a.u.xp||0);
+            })
+            .slice(0,20);
+        // JSON-Daten für client-side Modal — sanitized gegen </script>-Injection
+        const _pinnedStoriesJson = JSON.stringify(pinnedStories.map(x => {
+            const sh = (x.pinnedUrl||'').match(/instagram\.com\/(?:reel|p|tv)\/([A-Za-z0-9_-]+)/);
+            return {
+                uid: x.id,
+                name: x.u.spitzname || x.u.name || 'User',
+                avatar: ladeBild(x.id,'profilepic') ? '/appbild/'+x.id+'/profilepic' : (x.u.instagram?'https://unavatar.io/instagram/'+encodeURIComponent(x.u.instagram):''),
+                thumb: sh ? '/insta-thumb?u='+encodeURIComponent(x.pinnedUrl) : '',
+                engaged: x.engaged,
+                isOwn: String(x.id) === String(myUid)
+            };
+        })).replace(/<\/(script)/gi, '<\\/$1');
 
         // Latest newsletter for bot story-bubble
         const _latestNews = (d.newsletter||[]).slice().sort((a,b)=>(b.timestamp||0)-(a.timestamp||0))[0];
@@ -8628,20 +8733,95 @@ p{line-height:1.65;color:var(--muted)}
 
         const storiesHtml = `<div class="stories" data-tour="stories">
   ${_botBubbleHtml}
-  ${topUsers.map(([id,u])=>{
+  ${pinnedStories.map(item => {
+    const id = item.id, u = item.u, engaged = item.engaged;
     const insta = u.instagram;
-    const hasLink = Object.values(d.links||{}).some(l=>l.user_id===Number(id)&&new Date(l.timestamp).toDateString()===today);
-    return `<a href="/profil/${id}" class="story-item">
-      <div class="story-ring ${hasLink?'':'seen'}">
+    const ringClass = engaged ? 'seen' : 'pinned-glow';
+    return `<button type="button" class="story-item" onclick="openPinnedStory('${id}')" style="background:none;border:none;padding:0;cursor:pointer;font-family:inherit">
+      <div class="story-ring ${ringClass}">
         ${crownOverlay(id, 'sm')}
         <div style="width:58px;height:58px;border-radius:50%;overflow:hidden;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:#fff;border:2px solid var(--bg)">
           ${(ladeBild(id,"profilepic")||insta)?`<img src="${ladeBild(id,"profilepic")?"/appbild/"+id+"/profilepic":"https://unavatar.io/instagram/"+insta}" style="width:100%;height:100%;object-fit:cover" alt="">`:`<span>${(u.name||"?")[0]}</span>`}
         </div>
       </div>
       <div class="story-name">${htmlEsc(u.spitzname||u.name||'?')}</div>
-    </a>`;
+    </button>`;
   }).join('')}
 </div>
+<div id="pinned-story-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);z-index:9999;align-items:flex-end;justify-content:center" onclick="if(event.target===this)closePinnedStory()">
+  <div id="pinned-story-sheet" style="background:var(--bg2);width:100%;max-width:480px;border-radius:24px 24px 0 0;padding:18px 16px 28px;max-height:88vh;overflow-y:auto"></div>
+</div>
+<script>
+window._pinnedStoriesData = ${_pinnedStoriesJson};
+window.openPinnedStory = function(uid){
+  const s = (window._pinnedStoriesData||[]).find(x=>String(x.uid)===String(uid));
+  if(!s)return;
+  const m = document.getElementById('pinned-story-modal');
+  const sh = document.getElementById('pinned-story-sheet');
+  if(!m||!sh)return;
+  const _esc = t=>String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  sh.innerHTML = '<div style="width:36px;height:4px;background:#666;border-radius:4px;margin:0 auto 14px"></div>'+
+    '<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">'+
+      '<a href="/profil/'+_esc(s.uid)+'" style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#a78bfa,#7c3aed);overflow:hidden;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:18px;flex-shrink:0;text-decoration:none">'+
+        (s.avatar?'<img src="'+_esc(s.avatar)+'" style="width:100%;height:100%;object-fit:cover" alt="">':_esc((s.name||'?').slice(0,1)))+
+      '</a>'+
+      '<div style="flex:1;min-width:0">'+
+        '<a href="/profil/'+_esc(s.uid)+'" style="font-size:15px;font-weight:700;color:var(--text);text-decoration:none;display:block">'+_esc(s.name)+'</a>'+
+        '<div style="font-size:11px;color:#ec4899;text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-top:1px">📌 Pinned Reel'+(s.engaged?' · Engagiert ✓':'')+'</div>'+
+      '</div>'+
+      '<button onclick="closePinnedStory()" style="background:var(--bg4);border:none;width:32px;height:32px;border-radius:50%;color:var(--text);font-size:18px;cursor:pointer;flex-shrink:0">×</button>'+
+    '</div>'+
+    (s.thumb ?
+      '<a href="javascript:void(0)" onclick="onPinVisitStory(\\''+_esc(s.uid)+'\\')" style="display:block;position:relative;width:100%;padding-top:62%;overflow:hidden;background:#000;border-radius:14px;margin-bottom:12px;text-decoration:none">'+
+        '<img src="'+_esc(s.thumb)+'" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.style.display=\\'none\\'" alt="">'+
+        '<div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.05),rgba(0,0,0,.4));pointer-events:none"></div>'+
+        '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center"><div style="width:54px;height:54px;border-radius:50%;background:rgba(255,255,255,.92);display:flex;align-items:center;justify-content:center"><div style="width:0;height:0;border-style:solid;border-width:11px 0 11px 20px;border-color:transparent transparent transparent #000;margin-left:4px"></div></div></div>'+
+      '</a>'
+    : '<div style="margin-bottom:12px;padding:30px;background:linear-gradient(135deg,#1a1a2e,#16213e);border-radius:14px;text-align:center;font-size:14px;color:rgba(255,255,255,.6)">📸 Instagram Reel</div>')+
+    (s.isOwn ?
+      '<div style="padding:12px 14px;background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.25);border-radius:12px;font-size:13px;color:var(--muted);line-height:1.5">👤 Das ist dein eigener Pinned Reel. Andere User können ihn engagen und du bekommst Reichweite.</div>'
+    :
+      '<div style="display:flex;gap:8px;margin-bottom:10px">'+
+        '<a href="javascript:void(0)" onclick="onPinVisitStory(\\''+_esc(s.uid)+'\\')" id="pin-visit-link-story" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:11px 12px;background:linear-gradient(135deg,#ec4899,#a855f7);color:#fff;border-radius:10px;font-size:13px;font-weight:700;text-decoration:none">📸 Auf Instagram öffnen</a>'+
+        (s.engaged ?
+          '<button disabled style="flex:1;padding:11px 12px;border-radius:10px;border:1px solid #22c55e;background:rgba(34,197,94,.12);color:#22c55e;font-size:13px;font-weight:700;font-family:inherit;cursor:default">✅ Engagiert</button>'
+        :
+          '<button onclick="pinnedEngageClick(\\''+_esc(s.uid)+'\\',this)" id="pin-engage-btn-story" disabled data-locked="1" style="flex:1;padding:11px 12px;border-radius:10px;border:1px solid rgba(255,107,107,.35);background:rgba(255,107,107,.10);color:#ff6b6b;font-size:13px;font-weight:700;font-family:inherit;cursor:not-allowed;opacity:0.55">🔒 Erst Insta öffnen</button>'
+        )+
+      '</div>'+
+      '<div style="padding:12px 14px;background:linear-gradient(135deg,rgba(34,197,94,.10),rgba(167,139,250,.06));border:1px solid rgba(34,197,94,.25);border-radius:12px;font-size:12.5px;color:var(--text);line-height:1.55">'+
+        '<div style="font-weight:700;color:#22c55e;margin-bottom:4px">💎 +1 Diamant für Engagement</div>'+
+        '<div style="color:var(--muted)">Auf Instagram <b>LIKEN + KOMMENTIEREN + TEILEN + SPEICHERN</b> → komme zurück → tippe „Engagiert" → +1 💎 für dich.</div>'+
+      '</div>'
+    );
+  m.style.display = 'flex';
+};
+window.closePinnedStory = function(){
+  const m = document.getElementById('pinned-story-modal');
+  if(m)m.style.display = 'none';
+};
+window.onPinVisitStory = function(uid){
+  // Mark visit-timestamp, then open Instagram URL in new tab
+  window['_pvisit_'+uid] = Date.now();
+  const s = (window._pinnedStoriesData||[]).find(x=>String(x.uid)===String(uid));
+  if(!s)return;
+  // Get pinned URL from server-rendered data — already in JSON? No, we stripped it for privacy.
+  // Need to fetch it. Or include the URL in the JSON.
+  // For now: open via window.open with a server-side redirect endpoint
+  window.open('/pinned-redirect?uid='+encodeURIComponent(uid), '_blank', 'noopener,noreferrer');
+  // Enable Engagiert-Button after 1.5s
+  setTimeout(()=>{
+    const b = document.getElementById('pin-engage-btn-story');
+    if(b && !b.dataset.engaged){
+      b.disabled = false;
+      b.style.cursor = 'pointer';
+      b.style.opacity = '1';
+      b.removeAttribute('data-locked');
+      b.innerHTML = '❤️ Engagiert · +1💎';
+    }
+  }, 1500);
+};
+<\/script>
 <script>
 (function(){
   // Bot-Story nur zeigen wenn news ungelesen sind
@@ -16620,25 +16800,15 @@ ${rest.map(([id,u],idx)=>{
         return html(`
 <div class="topbar">
   <div class="topbar-logo">Creator Hub</div>
-  <div style="display:flex;gap:6px;align-items:center">
-    <a href="/suche" class="icon-btn">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+  <div style="display:flex;gap:8px;align-items:center">
+    ${buildTopbarSwitcher(myUid, d)}
+    <a href="/einstellungen" class="icon-btn" title="Einstellungen" aria-label="Menü">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" width="20" height="20"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
     </a>
-    <a href="/benachrichtigungen" class="icon-btn" style="position:relative">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-      <span id="notif-badge-profil" style="display:none;position:absolute;top:0;right:0;background:var(--accent);color:#fff;font-size:9px;font-weight:700;border-radius:50%;width:14px;height:14px;align-items:center;justify-content:center;line-height:14px;text-align:center"></span>
-    </a>
-    ${_myIsAdmin ? `<a href="${process.env.ADMIN_DASHBOARD_URL || 'https://dashboard-production-bda4.up.railway.app/dashboard'}" target="_blank" rel="noopener" class="icon-btn" title="Admin-Dashboard" style="background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;border-color:rgba(167,139,250,0.5)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="18" height="18"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-    </a><a href="/admin/emails?key=" class="icon-btn" title="Email Dashboard" style="background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border-color:rgba(34,197,94,0.5)" onclick="event.preventDefault();location.href='/admin/emails?key='+prompt('Bridge Secret:')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="18" height="18"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 4l-10 8L2 4"/></svg>
-    </a>` : ''}
-    <a href="/einstellungen" class="icon-btn">⚙️</a>
   </div>
 </div>
 ${profileCard(myUid, myUser, d, true, lang, adminIds, myBannerData, myPicData)}
 <style>@keyframes dxpPulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(.85);opacity:.6}}</style>
-<!-- old .acc-switcher block removed — moved to top of profileCard as ipf-switcher -->
 <div id="create-sub-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(8px)">
   <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:18px;padding:20px;width:100%;max-width:340px">
     <div style="font-size:16px;font-weight:700;margin-bottom:6px">Neuen Account erstellen</div>
@@ -17113,7 +17283,7 @@ ${profileCard(uid, u, d, false, lang, adminIds)}
   <div class="tab" onclick="showTPTab('about',this)">👤 About</div>
 </div>
 <div id="tptab-links" style="padding-bottom:100px">${theirLinksHtml}</div>
-<div id="tptab-posts" style="display:none;padding-bottom:100px">${theirPinnedHtml}${theirPostsHtml}</div>
+<div id="tptab-posts" style="display:none;padding-bottom:100px">${theirPostsHtml}</div>
 <div id="tptab-projekte" style="display:none;padding-bottom:100px">
   ${theirProjects.length>0?'<div class="proj-grid">'+theirProjCardsHtml+'</div>':'<div class="empty"><div class="empty-icon">🚀</div><div class="empty-text">Noch keine Projekte</div></div>'}
 </div>
