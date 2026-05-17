@@ -1539,56 +1539,65 @@ textarea.form-input{resize:none;min-height:80px}
 .action-card-title{font-size:13px;font-weight:700}
 .action-card-sub{font-size:11px;color:var(--muted);margin-top:3px}
 /* ── PLUS SHEET ── */
-.plus-sheet{position:fixed;inset:0;z-index:500;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.55);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);opacity:0;pointer-events:none;transition:opacity .25s}
+.plus-sheet{position:fixed;inset:0;z-index:500;display:flex;align-items:flex-end;justify-content:center;background:rgba(15,23,42,.45);backdrop-filter:blur(14px) saturate(1.2);-webkit-backdrop-filter:blur(14px) saturate(1.2);opacity:0;pointer-events:none;transition:opacity .25s}
 .plus-sheet.open{opacity:1;pointer-events:all}
-.plus-sheet-inner{width:100%;max-width:520px;background:var(--bg);border:1px solid var(--border2);border-bottom:0;border-radius:22px 22px 0 0;padding:8px 22px 36px;transform:translateY(100%);transition:transform .32s cubic-bezier(.32,.72,.24,1);max-height:92vh;overflow-y:auto;box-shadow:0 -12px 40px rgba(0,0,0,.25)}
+.plus-sheet-inner{width:100%;max-width:540px;background:var(--bg);border-bottom:0;border-radius:26px 26px 0 0;padding:6px 22px 32px;transform:translateY(100%);transition:transform .35s cubic-bezier(.32,.72,.24,1);max-height:92vh;overflow-y:auto;box-shadow:0 -24px 60px rgba(0,0,0,.18),0 -1px 0 var(--border2) inset}
 .plus-sheet.open .plus-sheet-inner{transform:translateY(0)}
-.ps-grabber{width:38px;height:4px;border-radius:4px;background:var(--border2);margin:6px auto 14px}
-.ps-head{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:18px;gap:12px}
-.ps-eyebrow{font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1.6px;margin-bottom:2px}
-.ps-title{font-size:19px;font-weight:800;color:var(--text);letter-spacing:-.3px;line-height:1.15}
-.ps-sub{font-size:12.5px;color:var(--muted);margin-top:3px;line-height:1.45}
-.ps-close{background:var(--bg3);border:1px solid var(--border2);width:32px;height:32px;border-radius:50%;color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s}
-.ps-close:hover{background:var(--bg4)}
-.ps-status{display:flex;align-items:center;gap:8px;padding:9px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:11px;font-size:12px;color:var(--muted);font-weight:500;margin-bottom:14px}
-.ps-field{margin-bottom:14px}
-.ps-field-label{display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.9px;margin-bottom:7px}
-.ps-optional{font-weight:500;text-transform:none;letter-spacing:0;color:var(--muted2);font-size:11px;margin-left:4px}
-.ps-input{width:100%;padding:12px 14px;background:var(--bg3);border:1.5px solid var(--border2);color:var(--text);border-radius:11px;font-size:14px;font-family:inherit;outline:none;transition:border-color .15s,background .15s;box-sizing:border-box}
-.ps-input:focus{border-color:var(--accent);background:var(--bg)}
-.ps-input::placeholder{color:var(--muted2)}
-.ps-textarea{min-height:64px;resize:vertical;line-height:1.5}
-.ps-toggle{display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:11px;cursor:pointer;margin-bottom:16px;transition:border-color .15s,background .15s}
+.ps-grabber{width:42px;height:4px;border-radius:4px;background:var(--border2);margin:8px auto 18px;opacity:.7}
+.ps-head{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:22px;gap:12px}
+.ps-head-text{flex:1;min-width:0}
+.ps-eyebrow{font-size:10.5px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1.8px;margin-bottom:4px;line-height:1}
+.ps-title{font-size:22px;font-weight:800;color:var(--text);letter-spacing:-.5px;line-height:1.1}
+.ps-sub{font-size:13px;color:var(--muted);margin-top:5px;line-height:1.45;font-weight:500}
+.ps-close{background:var(--bg3);border:1px solid var(--border2);width:34px;height:34px;border-radius:50%;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s,color .15s}
+.ps-close:hover{background:var(--bg4);color:var(--text)}
+.ps-status{display:inline-flex;align-items:center;gap:7px;padding:6px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:99px;font-size:11.5px;color:var(--muted);font-weight:600;margin-bottom:18px}
+.ps-status-admin{background:linear-gradient(135deg,rgba(245,158,11,.08),rgba(245,158,11,.02));border-color:rgba(245,158,11,.30);color:#f59e0b}
+.ps-field{margin-bottom:16px}
+.ps-field-label{display:block;font-size:10.5px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
+.ps-optional{font-weight:500;text-transform:none;letter-spacing:0;color:var(--muted2);font-size:11px;margin-left:6px}
+.ps-input{width:100%;padding:13px 15px;background:var(--bg3);border:1.5px solid var(--border2);color:var(--text);border-radius:12px;font-size:14.5px;font-family:inherit;outline:none;transition:border-color .18s,background .18s,box-shadow .18s;box-sizing:border-box;font-weight:500}
+.ps-input:focus{border-color:rgba(124,58,237,.55);background:var(--bg);box-shadow:0 0 0 4px rgba(124,58,237,.08)}
+.ps-input::placeholder{color:var(--muted2);font-weight:400}
+.ps-textarea{min-height:72px;resize:vertical;line-height:1.5}
+/* iOS-style toggle switch */
+.ps-toggle{display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:14px;cursor:pointer;margin-bottom:18px;transition:border-color .15s,background .15s}
 .ps-toggle:hover{border-color:var(--accent)}
-.ps-toggle input[type="checkbox"]{width:18px;height:18px;accent-color:var(--accent);cursor:pointer;flex-shrink:0}
+.ps-toggle input[type="checkbox"]{position:absolute;opacity:0;pointer-events:none}
+.ps-toggle-switch{position:relative;width:42px;height:24px;background:var(--bg4);border:1px solid var(--border2);border-radius:99px;flex-shrink:0;transition:background .2s,border-color .2s}
+.ps-toggle-switch::after{content:'';position:absolute;top:1.5px;left:1.5px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.18);transition:transform .2s cubic-bezier(.4,0,.2,1)}
+.ps-toggle input[type="checkbox"]:checked + .ps-toggle-switch{background:linear-gradient(135deg,#a78bfa,#7c3aed);border-color:transparent}
+.ps-toggle input[type="checkbox"]:checked + .ps-toggle-switch::after{transform:translateX(18px)}
 .ps-toggle-body{flex:1;min-width:0}
-.ps-toggle-title{font-size:13.5px;font-weight:600;color:var(--text);line-height:1.2}
-.ps-toggle-sub{font-size:11.5px;color:var(--muted);margin-top:2px;line-height:1.4}
-.ps-cta{width:100%;padding:13px 16px;background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;border:none;border-radius:12px;font-size:14.5px;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:.1px;box-shadow:0 4px 14px rgba(124,58,237,.25);transition:transform .12s,box-shadow .15s}
-.ps-cta:hover{box-shadow:0 6px 18px rgba(124,58,237,.35)}
+.ps-toggle-title{font-size:14px;font-weight:700;color:var(--text);line-height:1.2}
+.ps-toggle-sub{font-size:11.5px;color:var(--muted);margin-top:3px;line-height:1.4;font-weight:500}
+.ps-cta{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px 18px;background:linear-gradient(135deg,#a78bfa 0%,#7c3aed 100%);color:#fff;border:none;border-radius:14px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:.1px;box-shadow:0 8px 24px -6px rgba(124,58,237,.5),0 2px 4px rgba(0,0,0,.06);transition:transform .12s,box-shadow .18s,filter .15s}
+.ps-cta:hover{box-shadow:0 12px 28px -6px rgba(124,58,237,.6),0 2px 4px rgba(0,0,0,.06);filter:brightness(1.04)}
 .ps-cta:active{transform:scale(.985)}
-.ps-cta.diamond{background:linear-gradient(135deg,#06b6d4,#0e7490);box-shadow:0 4px 14px rgba(6,182,212,.30)}
-.ps-cta.diamond:hover{box-shadow:0 6px 18px rgba(6,182,212,.45)}
-.ps-cta.kollab{background:linear-gradient(135deg,#ec4899,#a21caf);box-shadow:0 4px 14px rgba(236,72,153,.25)}
-.ps-cta.kollab:hover{box-shadow:0 6px 18px rgba(236,72,153,.40)}
-.ps-result{margin-top:10px;font-size:12px;text-align:center;color:var(--muted);min-height:16px}
-.ps-info{padding:11px 13px;background:var(--bg3);border-left:3px solid var(--accent);border-radius:8px;font-size:12px;line-height:1.55;color:var(--text);margin-bottom:14px}
+.ps-cta.diamond{background:linear-gradient(135deg,#06b6d4,#0e7490);box-shadow:0 8px 24px -6px rgba(6,182,212,.5),0 2px 4px rgba(0,0,0,.06)}
+.ps-cta.diamond:hover{box-shadow:0 12px 28px -6px rgba(6,182,212,.6),0 2px 4px rgba(0,0,0,.06)}
+.ps-cta.kollab{background:linear-gradient(135deg,#ec4899,#a21caf);box-shadow:0 8px 24px -6px rgba(236,72,153,.5),0 2px 4px rgba(0,0,0,.06)}
+.ps-cta.kollab:hover{box-shadow:0 12px 28px -6px rgba(236,72,153,.6),0 2px 4px rgba(0,0,0,.06)}
+.ps-cta svg{width:18px;height:18px}
+.ps-result{margin-top:10px;font-size:12px;text-align:center;color:var(--muted);min-height:16px;font-weight:500}
+.ps-info{padding:12px 14px;background:var(--bg3);border-left:3px solid var(--accent);border-radius:10px;font-size:12.5px;line-height:1.55;color:var(--text);margin-bottom:16px;font-weight:500}
 .ps-info.diamond{border-left-color:#06b6d4}
 .ps-info.kollab{border-left-color:#ec4899}
-.ps-info b{color:var(--accent)}
+.ps-info b{color:var(--accent);font-weight:700}
 .ps-info.diamond b{color:#06b6d4}
 .ps-info.kollab b{color:#ec4899}
-.ps-divider{height:1px;background:var(--border2);margin:18px -22px 16px}
-.ps-section-eyebrow{margin-bottom:10px}
-.ps-card{display:flex;align-items:center;gap:13px;width:100%;padding:12px 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:13px;font-family:inherit;cursor:pointer;color:var(--text);text-align:left;margin-bottom:8px;transition:background .15s,border-color .15s,transform .1s}
-.ps-card:hover{background:var(--bg4);border-color:var(--accent)}
+.ps-divider{height:1px;background:var(--border2);margin:24px -22px 18px}
+.ps-section-eyebrow{margin-bottom:12px;padding:0 2px}
+.ps-card{display:flex;align-items:center;gap:14px;width:100%;padding:12px 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:14px;font-family:inherit;cursor:pointer;color:var(--text);text-align:left;margin-bottom:8px;transition:background .15s,border-color .15s,transform .1s,box-shadow .15s}
+.ps-card:hover{background:var(--bg4);border-color:rgba(124,58,237,.35);box-shadow:0 4px 12px -4px rgba(0,0,0,.08)}
 .ps-card:active{transform:scale(.99)}
-.ps-card-icon{width:40px;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,.12)}
+.ps-card-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;box-shadow:0 4px 14px -4px rgba(0,0,0,.25)}
 .ps-card-body{flex:1;min-width:0}
-.ps-card-title{font-size:13.5px;font-weight:700;color:var(--text);line-height:1.25;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-.ps-card-badge{font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:99px;background:rgba(6,182,212,.12);color:#06b6d4;letter-spacing:.2px}
-.ps-card-sub{font-size:11.5px;color:var(--muted);margin-top:3px;line-height:1.4}
-.ps-card-arrow{color:var(--muted);flex-shrink:0}
+.ps-card-title{font-size:14px;font-weight:700;color:var(--text);line-height:1.25;display:flex;align-items:center;gap:6px;flex-wrap:wrap;letter-spacing:-.1px}
+.ps-card-badge{font-size:10px;font-weight:800;padding:2px 8px;border-radius:99px;background:rgba(6,182,212,.12);color:#06b6d4;letter-spacing:.3px}
+.ps-card-sub{font-size:12px;color:var(--muted);margin-top:3px;line-height:1.4;font-weight:500}
+.ps-card-arrow{color:var(--muted2);flex-shrink:0;transition:transform .15s,color .15s}
+.ps-card:hover .ps-card-arrow{color:var(--text);transform:translateX(2px)}
 /* 5-item nav fit */
 .nav-item{padding:4px 6px}
 .nav-plus{width:32px;height:32px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;color:#fff;border:none;cursor:pointer;align-self:center;margin-top:-2px;flex-shrink:0}
@@ -1754,13 +1763,13 @@ async function cbResendConfirm(btn){
   <div class="plus-sheet-inner">
     <div class="ps-grabber"></div>
     <div class="ps-head">
-      <div>
+      <div class="ps-head-text">
         <div class="ps-eyebrow">Neuer Post</div>
         <div class="ps-title">Reel teilen</div>
         <div class="ps-sub">Teile deinen Instagram-Reel mit der Community</div>
       </div>
       <button class="ps-close" onclick="closePlusSheet()" aria-label="Schließen">
-        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+        <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
       </button>
     </div>
     <div id="plus-link-status" class="ps-status">
@@ -1777,12 +1786,16 @@ async function cbResendConfirm(btn){
     </div>
     <label class="ps-toggle">
       <input type="checkbox" id="plus-pin-toggle">
+      <span class="ps-toggle-switch"></span>
       <div class="ps-toggle-body">
         <div class="ps-toggle-title">Als Pinned-Post setzen</div>
         <div class="ps-toggle-sub">Wird oben in deinem Profil angezeigt · max 1 Pin</div>
       </div>
     </label>
-    <button class="ps-cta" id="plus-post-btn" onclick="plusPostLink()">Reel teilen</button>
+    <button class="ps-cta" id="plus-post-btn" onclick="plusPostLink()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12v7a2 2 0 002 2h14a2 2 0 002-2v-7"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+      Reel teilen
+    </button>
     <div id="plus-link-result" class="ps-result"></div>
     <div class="ps-divider"></div>
     <div class="ps-eyebrow ps-section-eyebrow">Erweiterte Engagement-Optionen</div>
@@ -1816,13 +1829,13 @@ async function cbResendConfirm(btn){
   <div class="plus-sheet-inner">
     <div class="ps-grabber"></div>
     <div class="ps-head">
-      <div>
+      <div class="ps-head-text">
         <div class="ps-eyebrow">Premium Boost</div>
         <div class="ps-title">💎 Diamantlink</div>
         <div class="ps-sub">3 Tage ganz oben im Feed</div>
       </div>
       <button class="ps-close" onclick="closeDiamondSheet()" aria-label="Schließen">
-        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+        <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
       </button>
     </div>
     <div id="diamond-info" class="ps-info diamond">
@@ -1846,13 +1859,13 @@ async function cbResendConfirm(btn){
   <div class="plus-sheet-inner">
     <div class="ps-grabber"></div>
     <div class="ps-head">
-      <div>
+      <div class="ps-head-text">
         <div class="ps-eyebrow">Gemeinsam posten</div>
         <div class="ps-title">🤝 Kollab-Link</div>
         <div class="ps-sub">1× pro Woche mit deinem Kollab-Partner</div>
       </div>
       <button class="ps-close" onclick="closeKollabSheet()" aria-label="Schließen">
-        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+        <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
       </button>
     </div>
     <div id="kollab-info" class="ps-info kollab">Lädt Kollab-Partner …</div>
@@ -2732,21 +2745,23 @@ async function openPlusSheet(){
     const st=await r.json();
     const icon=document.getElementById('plus-link-status-icon');
     const txt=document.getElementById('plus-link-status-text');
+    const wrap=document.getElementById('plus-link-status');
     const btn=document.getElementById('plus-post-btn');
+    if(wrap)wrap.className='ps-status';
     if(st.isAdmin){
-      icon.textContent='👑';txt.textContent='Admin — unbegrenzte Links';txt.style.color='#ffd43b';
+      icon.textContent='👑';txt.textContent='Admin · unbegrenzt';if(wrap)wrap.classList.add('ps-status-admin');
       if(btn)btn.disabled=false;
     } else if(st.canPost && st.todayCount===0){
-      icon.textContent='✅';txt.textContent='1 kostenloser Link heute verfügbar';txt.style.color='#00c851';
+      icon.textContent='✅';txt.textContent='1 kostenloser Link heute verfügbar';
       if(btn)btn.disabled=false;
     } else if(st.canPost && st.bonusLinks>0){
-      icon.textContent='💎';txt.textContent=st.bonusLinks+' Extra-Link'+(st.bonusLinks>1?'s':'')+' verfügbar — wird nach dem Posten verbraucht';txt.style.color='#a78bfa';
+      icon.textContent='💎';txt.textContent=st.bonusLinks+' Extra-Link'+(st.bonusLinks>1?'s':'')+' verfügbar';
       if(btn)btn.disabled=false;
     } else if(st.canPost && st.badgeBonus>0){
-      icon.textContent='🏅';txt.textContent='Erfahrener Extra-Link heute verfügbar';txt.style.color='#8b5cf6';
+      icon.textContent='🏅';txt.textContent='Erfahrener Extra-Link heute verfügbar';
       if(btn)btn.disabled=false;
     } else {
-      icon.textContent='❌';txt.textContent='Limit erreicht — kein Extra-Link vorhanden. Im Shop kaufen: 5 💎';txt.style.color='rgba(239,68,68,.9)';
+      icon.textContent='❌';txt.textContent='Limit erreicht — Extra-Link im Shop: 5 💎';
       if(btn){btn.disabled=true;btn.style.opacity='.45';}
     }
   }catch(e){
