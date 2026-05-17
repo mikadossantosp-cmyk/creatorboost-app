@@ -2641,6 +2641,29 @@ function markLinkVisited(lid){
   try{document.querySelectorAll('.proflink-like[data-msgid="'+lid+'"], .post-action-btn[data-msgid="'+lid+'"]').forEach(b=>{b.classList.add('visited');});}catch(e){}
 }
 function hasLinkVisited(lid){try{const v=JSON.parse(localStorage.getItem('cb_visited_links')||'{}');return !!v[String(lid)];}catch(e){return false;}}
+// Shared pinnedEngageClick — wird im /feed Pinned-Story-Modal und auf /profil/{uid} genutzt.
+if(typeof window.pinnedEngageClick==='undefined'){
+  window.pinnedEngageClick=async function(ownerUid, btn){
+    const visitTs=window['_pvisit_'+ownerUid];
+    if(!visitTs||(Date.now()-visitTs)<1500){
+      alert('Bitte erst auf „📸 Auf Instagram öffnen" tippen und auf Instagram LIKEN + KOMMENTIEREN + SPEICHERN + TEILEN.');
+      return;
+    }
+    if(!confirm('📌 Pinned-Post engagieren\n\nDu bestätigst:\n✓ Auf Instagram GELIKT\n✓ KOMMENTIERT\n✓ GETEILT\n✓ GESPEICHERT\n\n→ Belohnung: +1 💎\n→ Schein-Engagement: Sanktionen\n\nFortfahren?'))return;
+    btn.disabled=true;btn.dataset.engaged='1';btn.innerHTML='⏳ Bestätige …';
+    try{
+      const r=await fetch('/api/engage-pinned-post',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ownerUid})});
+      const j=await r.json();
+      if(j.ok||j.alreadyDone){
+        btn.style.background='rgba(34,197,94,.12)';btn.style.borderColor='#22c55e';btn.style.color='#22c55e';btn.innerHTML='✅ Engagiert';
+        if(window.showBanner)showBanner({type:'success',icon:'❤️',title:'Pinned-Post engagiert!',subtitle:'+1 💎 in deiner Wallet.',dur:4000});
+      }else{
+        btn.disabled=false;delete btn.dataset.engaged;btn.innerHTML='❤️ Engagiert · +1💎';
+        alert('❌ '+(j.error||'Fehler'));
+      }
+    }catch(e){btn.disabled=false;delete btn.dataset.engaged;btn.innerHTML='❤️ Engagiert · +1💎';alert('❌ Netzwerk-Fehler');}
+  };
+}
 // Beim Page-Load alle bereits besuchten Links markieren (visited-Class für CSS)
 (function _hydrateVisitedLikes(){
   function run(){
