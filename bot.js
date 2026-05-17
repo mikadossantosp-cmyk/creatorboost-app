@@ -2654,6 +2654,18 @@ function markLinkVisited(lid){
   try{document.querySelectorAll('.proflink-like[data-msgid="'+lid+'"], .post-action-btn[data-msgid="'+lid+'"]').forEach(b=>{b.classList.add('visited');});}catch(e){}
 }
 function hasLinkVisited(lid){try{const v=JSON.parse(localStorage.getItem('cb_visited_links')||'{}');return !!v[String(lid)];}catch(e){return false;}}
+// Feed-Tab-Dropdown im Topbar (öffnet/schließt das ft-menu).
+function ftToggle(btn){
+  const wrap = btn.closest('.ft-wrap');
+  if (!wrap) return;
+  const isOpen = wrap.classList.toggle('open');
+  if (isOpen) {
+    setTimeout(()=>{
+      const close = (e) => { if (!wrap.contains(e.target)) { wrap.classList.remove('open'); document.removeEventListener('click', close); } };
+      document.addEventListener('click', close);
+    }, 0);
+  }
+}
 // Shared pinnedEngageClick — wird im /feed Pinned-Story-Modal und auf /profil/{uid} genutzt.
 if(typeof window.pinnedEngageClick==='undefined'){
   window.pinnedEngageClick=async function(ownerUid, btn){
@@ -3387,6 +3399,23 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
 .tb-switcher-arrow{font-size:10px;color:var(--muted);transition:transform .2s;flex-shrink:0}
 .tb-switcher.open .tb-switcher-arrow{transform:rotate(180deg)}
 .tb-switcher-wrap .ipf-switcher-menu{position:absolute;top:calc(100% + 6px);right:0;left:auto;min-width:220px}
+/* Feed-Tab-Dropdown im Topbar (zentriert) */
+.ft-wrap{position:relative;flex:1;display:flex;justify-content:center;max-width:240px;margin:0 auto}
+.ft-trigger{display:inline-flex;align-items:center;gap:8px;padding:7px 12px 7px 12px;background:var(--surface-tint);border:1px solid var(--border2);border-radius:99px;color:var(--text);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;max-width:100%;transition:background .15s,border-color .15s;position:relative}
+.ft-trigger:hover{background:var(--bg4)}
+.ft-trigger-label{display:inline-flex;align-items:center;gap:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:.1px}
+.ft-trigger-arrow{font-size:10px;color:var(--muted);transition:transform .2s;flex-shrink:0}
+.ft-wrap.open .ft-trigger-arrow{transform:rotate(180deg)}
+.ft-trigger-badge{position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;line-height:14px;padding:0 5px;border-radius:99px;background:#ef4444;color:#fff;font-size:10px;font-weight:800;border:2px solid var(--bg);box-shadow:0 2px 6px rgba(239,68,68,.4)}
+.ft-menu{position:absolute;top:calc(100% + 8px);left:50%;transform:translateX(-50%);background:var(--bg);border:1px solid var(--border2);border-radius:14px;box-shadow:0 16px 40px rgba(0,0,0,.18);min-width:240px;max-width:90vw;padding:6px;z-index:60;display:none;animation:ftDrop .18s ease}
+.ft-wrap.open .ft-menu{display:block}
+@keyframes ftDrop{from{opacity:0;transform:translateX(-50%) translateY(-6px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+.ft-item{display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;text-decoration:none;color:var(--text);font-family:inherit;font-size:13.5px;font-weight:600;border:none;background:none;cursor:pointer;border-radius:10px;text-align:left;transition:background .12s}
+.ft-item:hover{background:var(--bg4)}
+.ft-item.active{background:rgba(124,58,237,.10);color:var(--text)}
+.ft-item-emoji{font-size:16px;flex-shrink:0}
+.ft-item-label{flex:1;min-width:0}
+.ft-item-badge{display:inline-block;min-width:18px;padding:1px 7px;border-radius:99px;background:#ef4444;color:#fff;font-size:10px;font-weight:800;text-align:center}
 </style>
 
 <div class="ipf-banner">
@@ -9377,8 +9406,28 @@ setTimeout(function(){
   if(typeof window.cbStartTour === 'function') window.cbStartTour();
 },800);
 </script>` : ''}
-<div class="topbar">
+${(() => {
+  const _tabsMeta = [
+    {id:'heute', emoji:'📅', label:'Heute', count:_unlikedCountHeute},
+    {id:'aelter', emoji:'🕐', label:'Älter', count:_unlikedCountAelter},
+    {id:'engagement', emoji:'⭐', label:'Engagement', count:_unlikedCountSuper},
+    {id:'kollabs', emoji:'🤝', label:'Kollabs', count:0},
+    {id:'diamond', emoji:'💎', label:'Diamond', count:0},
+  ];
+  const _curTab = _tabsMeta.find(t=>t.id===tab) || _tabsMeta[0];
+  const _totalOtherCount = _tabsMeta.filter(t=>t.id!==_curTab.id).reduce((s,t)=>s+(t.count||0),0);
+  return `<div class="topbar">
   <div class="topbar-logo">CreatorX</div>
+  <div class="ft-wrap" id="ft-wrap">
+    <button class="ft-trigger" type="button" onclick="ftToggle(this)" aria-haspopup="true">
+      <span class="ft-trigger-label">${_curTab.emoji} ${htmlEsc(_curTab.label)}</span>
+      <span class="ft-trigger-arrow">▼</span>
+      ${_totalOtherCount > 0 ? `<span class="ft-trigger-badge">${_totalOtherCount > 99 ? '99+' : _totalOtherCount}</span>` : ''}
+    </button>
+    <div class="ft-menu" id="ft-menu">
+      ${_tabsMeta.map(t => `<a href="/feed?tab=${t.id}" class="ft-item${t.id===_curTab.id?' active':''}"><span class="ft-item-emoji">${t.emoji}</span><span class="ft-item-label">${htmlEsc(t.label)}</span>${t.count > 0 ? `<span class="ft-item-badge">${t.count > 99 ? '99+' : t.count}</span>` : ''}</a>`).join('')}
+    </div>
+  </div>
   <div class="topbar-actions">
     <a href="/benachrichtigungen" class="icon-btn" title="Benachrichtigungen" style="position:relative;text-decoration:none;color:inherit">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
@@ -9386,7 +9435,8 @@ setTimeout(function(){
     </a>
     <button class="icon-btn" onclick="setTheme(document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark')" title="Theme">🌙</button>
   </div>
-</div>
+</div>`;
+})()}
 <script>(async()=>{try{const r=await fetch('/api/notifications/count');const j=await r.json();const b=document.getElementById('notif-badge-feed');if(b&&j.count>0){b.textContent=j.count>9?'9+':j.count;b.style.display='block';}}catch(e){}})();</script>
 <!-- Event-Banner: aktive XP/Diamond-Events mit Countdown -->
 <div id="event-banner" style="display:none"></div>
@@ -9410,13 +9460,7 @@ ${(()=>{
   }
   return '';
 })()}
-<div data-tour="feed-tabs" style="display:flex;gap:6px;padding:6px 16px 14px;width:100%;box-sizing:border-box;flex-wrap:wrap">
-  <a href="/feed?tab=heute" class="feed-pill ${tab==='heute'?'active':''}" style="flex:1;min-width:80px;padding:9px 6px;font-size:12px;font-weight:800;text-align:center;text-decoration:none;border-radius:999px;${tab==='heute'?'background:linear-gradient(135deg,#3b82f6,#60a5fa);color:#fff;box-shadow:0 4px 14px rgba(59,130,246,0.35)':'background:rgba(59,130,246,0.10);color:#3b82f6;border:1px solid rgba(59,130,246,0.35)'};letter-spacing:0.2px">📅 Heute${tabBadge(_unlikedCountHeute)}</a>
-  <a href="/feed?tab=aelter" class="feed-pill ${tab==='aelter'?'active':''}" style="flex:1;min-width:80px;padding:9px 6px;font-size:12px;font-weight:800;text-align:center;text-decoration:none;border-radius:999px;${tab==='aelter'?'background:linear-gradient(135deg,#4dabf7,#1d6fa5);color:#fff;box-shadow:0 4px 14px rgba(77,171,247,0.3)':'background:var(--surface-tint);color:var(--muted);border:1px solid var(--border)'};letter-spacing:0.2px">🕐 Älter${tabBadge(_unlikedCountAelter)}</a>
-  <a href="/feed?tab=engagement" class="feed-pill ${tab==='engagement'?'active':''}" style="flex:1;min-width:80px;padding:9px 6px;font-size:12px;font-weight:800;text-align:center;text-decoration:none;border-radius:999px;${tab==='engagement'?'background:linear-gradient(135deg,#f59e0b,#a78bfa);color:#fff;box-shadow:0 4px 14px rgba(245,158,11,0.3)':'background:var(--surface-tint);color:var(--muted);border:1px solid var(--border)'};letter-spacing:0.2px">⭐ Engagement${tabBadge(_unlikedCountSuper)}</a>
-  <a href="/feed?tab=kollabs" class="feed-pill ${tab==='kollabs'?'active':''}" style="flex:1;min-width:80px;padding:9px 6px;font-size:12px;font-weight:800;text-align:center;text-decoration:none;border-radius:999px;${tab==='kollabs'?'background:linear-gradient(135deg,#ec4899,#a21caf);color:#fff;box-shadow:0 4px 14px rgba(236,72,153,0.35)':'background:rgba(236,72,153,0.10);color:#ec4899;border:1px solid rgba(236,72,153,0.35)'};letter-spacing:0.2px">🤝 Kollabs<span id="tab-badge-kollabs"></span></a>
-  <a href="/feed?tab=diamond" class="feed-pill ${tab==='diamond'?'active':''}" style="flex:1;min-width:80px;padding:9px 6px;font-size:12px;font-weight:800;text-align:center;text-decoration:none;border-radius:999px;${tab==='diamond'?'background:linear-gradient(135deg,#06b6d4,#0e7490);color:#fff;box-shadow:0 4px 16px rgba(6,182,212,0.50)':'background:rgba(6,182,212,0.10);color:#06b6d4;border:1px solid rgba(6,182,212,0.40)'};letter-spacing:0.2px">💎 Diamond<span id="tab-badge-diamond"></span></a>
-</div>
+<!-- Tabs entfernt — sind jetzt im Topbar-Dropdown (.ft-wrap) -->
 ${tab==='engagement' ? `<div style="padding:12px 16px 4px">
   ${slAvailable > 0
     ? `<button onclick="openSLSheet()" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;background:linear-gradient(135deg,#f59e0b,#a78bfa);color:#fff;border:none;border-radius:14px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font)">⭐ Superlink teilen (${slAvailable} verfügbar)</button>`
