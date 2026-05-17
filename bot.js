@@ -8897,7 +8897,7 @@ p{line-height:1.65;color:var(--muted)}
             return {
                 uid: x.id,
                 name: x.u.spitzname || x.u.name || 'User',
-                avatar: ladeBild(x.id,'profilepic') ? '/appbild/'+x.id+'/profilepic' : (x.u.instagram?'https://unavatar.io/instagram/'+encodeURIComponent(x.u.instagram):''),
+                avatar: ladeBild(x.id,'profilepic') ? '/appbild/'+x.id+'/profilepic' : '',
                 thumb: sh ? '/insta-thumb?u='+encodeURIComponent(x.pinnedUrl) : '',
                 engaged: x.engaged,
                 isOwn: String(x.id) === String(myUid)
@@ -8924,11 +8924,14 @@ p{line-height:1.65;color:var(--muted)}
     const id = item.id, u = item.u, engaged = item.engaged;
     const insta = u.instagram;
     const ringClass = engaged ? 'pinned-engaged' : 'pinned-glow';
+    const _hasLocalPic = !!ladeBild(id, 'profilepic');
+    const _picSrc = _hasLocalPic ? '/appbild/'+id+'/profilepic' : '';
     return `<button type="button" class="story-item" onclick="openPinnedStory('${id}')" style="background:none;border:none;padding:0;cursor:pointer;font-family:inherit">
       <div class="story-ring ${ringClass}">
         ${crownOverlay(id, 'sm')}
-        <div style="width:58px;height:58px;border-radius:50%;overflow:hidden;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:#fff;border:2px solid var(--bg)">
-          ${(ladeBild(id,"profilepic")||insta)?`<img src="${ladeBild(id,"profilepic")?"/appbild/"+id+"/profilepic":"https://unavatar.io/instagram/"+insta}" style="width:100%;height:100%;object-fit:cover" alt="">`:`<span>${(u.name||"?")[0]}</span>`}
+        <div style="position:relative;width:58px;height:58px;border-radius:50%;overflow:hidden;background:var(--avatar-fallback-bg);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:var(--avatar-fallback-color);border:2px solid var(--bg)">
+          <span>${htmlEsc((u.name||u.spitzname||"?").slice(0,1))}</span>
+          ${_picSrc ? `<img src="${_picSrc}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="" onerror="this.remove()">` : ''}
         </div>
       </div>
       <div class="story-name">${htmlEsc(u.spitzname||u.name||'?')}</div>
@@ -12443,7 +12446,7 @@ document.getElementById('user-search-input')?.addEventListener('input',filterSea
             .map(x => ({
                 uid: x.id,
                 name: x.u.spitzname || x.u.name || 'User',
-                avatar: ladeBild(x.id, 'profilepic') ? '/appbild/' + x.id + '/profilepic' : (x.u.instagram ? 'https://unavatar.io/instagram/' + encodeURIComponent(x.u.instagram) : ''),
+                avatar: ladeBild(x.id, 'profilepic') ? '/appbild/' + x.id + '/profilepic' : '',
                 thumb: ((x.pinnedUrl || '').match(/instagram\.com\/(?:reel|p|tv)\/([A-Za-z0-9_-]+)/) ? '/insta-thumb?u=' + encodeURIComponent(x.pinnedUrl) : ''),
                 engaged: _myEngagedOwnersDM.includes(String(x.id)),
                 isOwn: String(x.id) === String(myUid)

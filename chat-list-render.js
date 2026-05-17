@@ -41,8 +41,12 @@ module.exports = function renderChatList(opts) {
         const name = item.name || '?';
         const isOnline = onlineSet.has(String(id));
         const ringExtraClass = item.engaged ? ' pinned-engaged' : ' pinned-glow';
+        // Render Fallback-Letter immer; Img nur wenn ECHTES Profilbild (lokal). Img liegt darüber, onerror=this.remove() → Letter zeigt sich wieder.
+        const isLocalPic = item.avatar && item.avatar.indexOf('/appbild/') === 0;
         let avatarInner = '<span class="sa-fb">' + esc(name.slice(0, 1)) + '</span>';
-        if (item.avatar) avatarInner = '<img src="' + esc(item.avatar) + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">';
+        if (isLocalPic) {
+            avatarInner += '<img src="' + esc(item.avatar) + '" alt="" loading="lazy" onerror="this.remove()">';
+        }
         return '<button type="button" class="dm-story-item" onclick="openPinnedStory(\'' + esc(id) + '\')">' +
             '<div class="dm-story-ring' + (isOnline ? ' online' : '') + ringExtraClass + '"><div class="dm-story-avatar">' + avatarInner + '</div></div>' +
             '<div class="dm-story-name">' + esc(name.slice(0, 10)) + '</div>' +
@@ -98,9 +102,9 @@ module.exports = function renderChatList(opts) {
         const previewText = (isOwn && !c.lastMsg?.image && !c.lastMsg?.audio ? 'Du: ' : '') + previewRaw;
         const isOnline = onlineSet.has(String(c.otherUid));
 
+        // Fallback-Letter immer; Img nur wenn echtes lokales Profilbild vorhanden — kein unavatar.io mehr (broken-image vermeiden).
         let avatarInner = '<span class="dm-avatar-fb">' + esc((c.otherName || '?').slice(0, 1)) + '</span>';
-        if (pic) avatarInner = '<img src="/appbild/' + c.otherUid + '/profilepic" alt="" loading="lazy">';
-        else if (insta) avatarInner = '<img src="https://unavatar.io/instagram/' + esc(insta) + '" alt="" loading="lazy">';
+        if (pic) avatarInner += '<img src="/appbild/' + c.otherUid + '/profilepic" alt="" loading="lazy" onerror="this.remove()" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:50%">';
 
         const unreadClass = (c.unread > 0 ? ' unread' : '');
         const tickHtml = (isOwn && !c.unread) ? '<div class="dm-tick' + (isRead ? ' read' : '') + '">' + (isRead ? '✓✓' : '✓') + '</div>' : '';
