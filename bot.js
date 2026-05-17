@@ -16233,7 +16233,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .ins-section{margin-bottom:22px;padding:16px;background:var(--bg3);border:1px solid var(--border2);border-radius:16px}
 .ins-section-title{font-size:14px;font-weight:800;margin-bottom:12px;display:flex;align-items:center;gap:8px}
 .ins-section-sub{font-size:11.5px;color:var(--muted);margin-top:-8px;margin-bottom:14px;font-weight:500}
-.ins-bar-chart{display:flex;align-items:flex-end;gap:3px;height:120px;padding:6px 0;margin-bottom:6px}
+.ins-bar-chart{display:flex;align-items:flex-end;gap:2px;height:70px;padding:4px 0;margin-bottom:6px}
+.ins-charts-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:22px}
+.ins-charts-grid .ins-section{margin-bottom:0;padding:11px}
+.ins-charts-grid .ins-section-title{font-size:11.5px;margin-bottom:6px;gap:4px;flex-wrap:wrap}
+.ins-charts-grid .ins-section-title span{display:none}
+.ins-charts-grid .ins-section-sub{display:none}
+.ins-charts-grid .ins-bar-labels{font-size:8.5px}
+.ins-charts-grid .ins-insight-card{padding:7px 9px;font-size:10.5px;margin-top:6px;line-height:1.4}
 .ins-bar{flex:1;background:linear-gradient(180deg,#a78bfa,#7c3aed);border-radius:4px 4px 1px 1px;min-height:3px;position:relative;transition:filter .15s}
 .ins-bar:hover{filter:brightness(1.2)}
 .ins-bar.best{background:linear-gradient(180deg,#22c55e,#16a34a);box-shadow:0 0 12px rgba(34,197,94,.4)}
@@ -16325,49 +16332,48 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
     )}
   </div>
 
-  <!-- Posting Time Analysis -->
-  <div class="ins-section">
-    <div class="ins-section-title">⏰ Wann performen deine Posts am besten?</div>
-    <div class="ins-section-sub">Durchschnittliche Likes pro Post je Stunde (deine Daten)</div>
-    <div class="ins-bar-chart">
-      ${hourAvgLikes.map((v, h) => {
-        const pct = (v / maxHourAvg) * 100;
-        const isBest = h === bestHour && v > 0;
-        return `<div class="ins-bar ${isBest?'best':''}" style="height:${Math.max(3, pct)}%" title="${h}:00 — ⌀ ${v.toFixed(1)} Likes"></div>`;
-      }).join('')}
+  <div class="ins-charts-grid">
+    <!-- Posting Time Analysis -->
+    <div class="ins-section">
+      <div class="ins-section-title">⏰ Beste Posting-Zeit</div>
+      <div class="ins-bar-chart">
+        ${hourAvgLikes.map((v, h) => {
+          const pct = (v / maxHourAvg) * 100;
+          const isBest = h === bestHour && v > 0;
+          return `<div class="ins-bar ${isBest?'best':''}" style="height:${Math.max(3, pct)}%" title="${h}:00 — ⌀ ${v.toFixed(1)} Likes"></div>`;
+        }).join('')}
+      </div>
+      <div class="ins-bar-labels"><span>00</span><span>12</span><span>23</span></div>
+      ${maxHourAvg > 0 ? `<div class="ins-insight-card"><b>${String(bestHour).padStart(2,'0')}:00</b> · ⌀ ${maxHourAvg.toFixed(1)}❤️</div>` : ''}
     </div>
-    <div class="ins-bar-labels"><span>00</span><span>06</span><span>12</span><span>18</span><span>23</span></div>
-    ${maxHourAvg > 0 ? `<div class="ins-insight-card">💡 Deine Posts um <b>${String(bestHour).padStart(2,'0')}:00 Uhr</b> performen am besten — ⌀ <b>${maxHourAvg.toFixed(1)} Likes</b>.</div>` : ''}
-  </div>
 
-  <!-- Online-Heatmap -->
-  <div class="ins-section">
-    <div class="ins-section-title">🟢 Wann sind die meisten User online?</div>
-    <div class="ins-section-sub">Aktive User je Stunde (Community-weit, basierend auf letzter Aktivität)</div>
-    <div class="ins-bar-chart">
-      ${onlineHourBuckets.map((v, h) => {
-        const pct = (v / maxOnline) * 100;
-        return `<div class="ins-bar" style="height:${Math.max(3, pct)}%;background:linear-gradient(180deg,#22c55e,#16a34a)" title="${h}:00 — ${v} User"></div>`;
-      }).join('')}
+    <!-- Online-Heatmap -->
+    <div class="ins-section">
+      <div class="ins-section-title">🟢 Online-Peak</div>
+      <div class="ins-bar-chart">
+        ${onlineHourBuckets.map((v, h) => {
+          const pct = (v / maxOnline) * 100;
+          return `<div class="ins-bar" style="height:${Math.max(3, pct)}%;background:linear-gradient(180deg,#22c55e,#16a34a)" title="${h}:00 — ${v} User"></div>`;
+        }).join('')}
+      </div>
+      <div class="ins-bar-labels"><span>00</span><span>12</span><span>23</span></div>
+      ${(() => {
+        const peakHour = onlineHourBuckets.indexOf(maxOnline);
+        return maxOnline > 1 ? `<div class="ins-insight-card">Peak: <b>${String(peakHour).padStart(2,'0')}:00</b></div>` : '';
+      })()}
     </div>
-    <div class="ins-bar-labels"><span>00</span><span>06</span><span>12</span><span>18</span><span>23</span></div>
-    ${(() => {
-      const peakHour = onlineHourBuckets.indexOf(maxOnline);
-      return maxOnline > 1 ? `<div class="ins-insight-card">💡 Peak-Zeit: <b>${String(peakHour).padStart(2,'0')}:00 Uhr</b> — am besten posten kurz davor.</div>` : '';
-    })()}
-  </div>
 
-  <!-- 30-Day Trend -->
-  <div class="ins-section">
-    <div class="ins-section-title">📈 30-Tage Trend</div>
-    <div class="ins-section-sub">Tägliche Likes auf deine Posts</div>
-    <div class="ins-bar-chart">
-      ${dayBuckets.map((v, i) => {
-        const pct = (v / maxDayLikes) * 100;
-        return `<div class="ins-bar" style="height:${Math.max(3, pct)}%;background:linear-gradient(180deg,#ec4899,#a855f7)" title="vor ${29-i}d: ${v} Likes"></div>`;
-      }).join('')}
+    <!-- 30-Day Trend -->
+    <div class="ins-section">
+      <div class="ins-section-title">📈 30-Tage Trend</div>
+      <div class="ins-bar-chart">
+        ${dayBuckets.map((v, i) => {
+          const pct = (v / maxDayLikes) * 100;
+          return `<div class="ins-bar" style="height:${Math.max(3, pct)}%;background:linear-gradient(180deg,#ec4899,#a855f7)" title="vor ${29-i}d: ${v} Likes"></div>`;
+        }).join('')}
+      </div>
+      <div class="ins-bar-labels"><span>30d</span><span>15d</span><span>heute</span></div>
     </div>
-    <div class="ins-bar-labels"><span>vor 30d</span><span>vor 15d</span><span>heute</span></div>
   </div>
 </div>
 ${(()=>{
@@ -16527,15 +16533,7 @@ ${rest.map(([id,u],idx)=>{
         const completionDone = completionChecks.filter(c=>c[0]).length;
         const completionPct = Math.round(completionDone/completionChecks.length*100);
         const completionHtml = (()=>{
-            if (completionPct === 100) {
-                const alreadyRewarded = myUser?.profileCompletionRewarded;
-                return '<div class="fade-in" style="margin:12px 16px;padding:12px 14px;background:linear-gradient(135deg,rgba(0,200,81,.12),rgba(0,200,81,.06));border:1px solid rgba(0,200,81,.35);border-radius:14px;display:flex;align-items:center;gap:12px">'
-                    +'<div style="font-size:28px">🏆</div>'
-                    +'<div style="flex:1"><div style="font-size:13px;font-weight:700;color:var(--green)">Profil 100% vollständig!</div>'
-                    +'<div style="font-size:11px;color:var(--muted);margin-top:2px">'+(alreadyRewarded?'Belohnung bereits erhalten':'💎 +1 Diamant erhalten!')+'</div></div>'
-                    +'<div style="font-size:11px;font-weight:700;color:var(--green)">100%</div>'
-                    +'</div>';
-            }
+            if (completionPct === 100) return '';
             const next = completionChecks.find(c=>!c[0]);
             return '<div style="margin:12px 16px;padding:12px 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:14px">'
                 +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">'
@@ -16554,9 +16552,41 @@ ${rest.map(([id,u],idx)=>{
         // Pinned-Post wird jetzt im profileCard zwischen XP und Superlink angezeigt — kein Duplikat hier
         const myPinnedHtml = '';
 
-        const linksHtml = Object.values(d.links||{}).filter(l=>l.user_id===Number(myUid)).sort((a,b)=>(b.timestamp||0)-(a.timestamp||0))
-            .map(l=>'<div style="padding:12px 16px;border-top:1px solid var(--border2)"><a href="'+l.text+'" target="_blank" style="color:var(--blue);font-size:12px;word-break:break-all">'+l.text+'</a><div style="font-size:11px;color:var(--muted);margin-top:4px">❤️ '+(Array.isArray(l.likes)?l.likes.length:0)+' Likes · '+new Date(l.timestamp).toLocaleDateString('de-DE')+'</div></div>').join('')
-            || '<div class="empty"><div class="empty-icon">🔗</div><div class="empty-text">Noch keine Links</div></div>';
+        // Feed-Style Link-Cards mit Reel-Banner + Like-Button + Öffnen-Button
+        const renderProfileLinkCard = (l, msgId, isOwn) => {
+            const likes = Array.isArray(l.likes) ? l.likes : (l.likes instanceof Set ? [...l.likes] : []);
+            const likeCount = likes.length;
+            const hasLiked = !isOwn && likes.map(String).includes(String(myUid));
+            const shortcode = (l.text||'').match(/instagram\.com\/(?:reel|p|tv)\/([A-Za-z0-9_-]+)/);
+            const thumbUrl = shortcode ? '/insta-thumb?u=' + encodeURIComponent(l.text) : '';
+            const dateStr = new Date(l.timestamp||0).toLocaleDateString('de-DE', {day:'2-digit', month:'short', year:'numeric'});
+            return '<div class="post fade-up" data-url="'+htmlEsc(l.text||'')+'" style="position:relative;margin:0 0 14px">'
+              + '<div style="margin:0 16px;border-radius:14px;overflow:hidden;background:#000;border:1.5px solid;border-image:linear-gradient(135deg,#f9a825,#e91e63,#9c27b0) 1;cursor:pointer;box-shadow:0 6px 20px rgba(233,30,99,0.10)" onclick="openPostUrl(\''+msgId+'\')" id="post-'+msgId+'">'
+              + '<div style="position:relative;width:100%;padding-top:62%;background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);overflow:hidden">'
+              + (thumbUrl ? '<img src="'+thumbUrl+'" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.style.display=\'none\'" alt="">' : '')
+              + '<div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.1) 0%,rgba(0,0,0,.55) 100%)"></div>'
+              + '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none">'
+              + '<div style="width:54px;height:54px;border-radius:50%;background:rgba(255,255,255,.92);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 16px rgba(0,0,0,.35)">'
+              + '<div style="width:0;height:0;border-style:solid;border-width:11px 0 11px 20px;border-color:transparent transparent transparent #000;margin-left:4px"></div>'
+              + '</div></div>'
+              + '<div style="position:absolute;top:10px;left:12px;background:rgba(0,0,0,.55);border-radius:8px;padding:4px 9px;display:flex;align-items:center;gap:5px;backdrop-filter:blur(4px)">'
+              + '<span style="font-size:13px">📸</span><span style="font-size:11px;color:#fff;font-weight:600">Instagram Reel</span>'
+              + '</div></div>'
+              + (l.caption?'<div style="padding:8px 12px;font-size:12px;color:var(--muted);line-height:1.4;border-top:1px solid rgba(255,255,255,.06);background:var(--bg3)">'+htmlEsc(String(l.caption).slice(0,200))+'</div>':'')
+              + '<div style="padding:8px 12px 10px;display:flex;align-items:center;gap:8px;background:var(--bg3)">'
+              + '<div style="font-size:11px;color:var(--muted2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500">'+htmlEsc(String(l.text||'').replace(/^https?:\/\//,'').slice(0,40))+'</div>'
+              + '<a href="'+htmlEsc(safeUrl(l.text||''))+'" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();markLinkVisited(\''+msgId+'\')" style="padding:6px 12px;background:linear-gradient(135deg,#f9a825,#e91e63,#9c27b0);color:#fff;border-radius:8px;font-size:11px;font-weight:700;text-decoration:none;white-space:nowrap;flex-shrink:0;box-shadow:0 2px 8px rgba(233,30,99,.25)">→ Öffnen</a>'
+              + '</div></div>'
+              + '<div class="post-likes-row" style="padding:6px 28px 0;display:flex;align-items:center;gap:10px;font-size:12px;color:var(--muted)">'
+              + (isOwn ? '<span style="color:var(--muted);font-weight:600">👤 Dein Link</span>'
+                       : '<button class="post-action-btn '+(hasLiked?'liked':'')+'" onclick="likePost(\''+msgId+'\',this)" data-msgid="'+msgId+'" '+(hasLiked?'disabled':'')+' style="display:inline-flex;align-items:center;gap:5px;background:none;border:none;cursor:'+(hasLiked?'default':'pointer')+';color:'+(hasLiked?'#ef4444':'var(--text)')+';font-size:12px;font-weight:600;font-family:inherit;padding:4px 0"><svg width="16" height="16" viewBox="0 0 24 24" fill="'+(hasLiked?'currentColor':'none')+'" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg> Like</button>')
+              + '<span style="font-size:12px;color:var(--muted);margin-left:auto">❤️ <span id="likes-'+msgId+'">'+likeCount+'</span> · '+dateStr+'</span>'
+              + '</div></div>';
+        };
+        const myLinks = Object.entries(d.links||{}).filter(([,l])=>String(l.user_id)===String(myUid)).sort((a,b)=>(b[1].timestamp||0)-(a[1].timestamp||0));
+        const linksHtml = myLinks.length
+            ? myLinks.map(([msgId, l]) => renderProfileLinkCard(l, msgId, true)).join('')
+            : '<div class="empty"><div class="empty-icon">🔗</div><div class="empty-text">Noch keine Links</div><div class="empty-sub">Poste deinen ersten Reel im Feed!</div></div>';
 
         const aboutHtml = '<div style="padding:16px;display:flex;flex-direction:column;gap:12px;padding-bottom:100px">'
             +(myUser?.bio?'<div style="background:var(--bg3);border-radius:14px;padding:14px 16px"><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Bio</div><div style="font-size:14px;line-height:1.6">'+myUser.bio+'</div></div>':'')
@@ -16614,14 +16644,12 @@ ${rest.map(([id,u],idx)=>{
   </div>
 </div>
 ${profileCard(myUid, myUser, d, true, lang, adminIds, myBannerData, myPicData)}
-<div id="daily-xp-box" style="margin:10px 12px;background:linear-gradient(135deg,rgba(34,197,94,0.08),rgba(34,197,94,0.02));border:1px solid rgba(34,197,94,0.25);border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:12px">
-  <div style="font-size:28px">🎁</div>
-  <div style="flex:1;min-width:0">
-    <div style="font-size:13px;font-weight:700">Täglicher XP-Bonus</div>
-    <div style="font-size:11px;color:var(--muted);margin-top:2px">Hol dir 10–20 Gratis-XP — einmal pro Tag!</div>
-  </div>
-  <button id="daily-xp-btn" onclick="claimDailyXP()" style="flex-shrink:0;padding:9px 16px;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(34,197,94,0.3);transition:transform .12s">Abholen</button>
-</div>
+<!-- Daily-XP-Bonus jetzt als Floating-Button oben rechts (klein, kompakt) -->
+${(() => {
+    const _claimedToday = hasClaimed('dailyxp', myUid);
+    return '<button id="daily-xp-fab" onclick="claimDailyXP()" title="'+( _claimedToday?'Heute schon abgeholt':'Täglicher XP-Bonus abholen')+'"'+( _claimedToday?' disabled':'')+' style="position:fixed;top:62px;right:14px;width:42px;height:42px;border-radius:50%;background:'+( _claimedToday?'var(--bg4)':'linear-gradient(135deg,#22c55e,#16a34a)')+';color:'+( _claimedToday?'var(--muted)':'#fff')+';border:2px solid var(--bg);display:flex;align-items:center;justify-content:center;font-size:18px;cursor:'+( _claimedToday?'default':'pointer')+';box-shadow:'+( _claimedToday?'none':'0 4px 16px rgba(34,197,94,0.4)')+';z-index:90;font-family:inherit;opacity:'+( _claimedToday?'0.55':'1')+'">'+( _claimedToday?'✓':'🎁')+( _claimedToday?'':'<span id="daily-xp-fab-dot" style="position:absolute;top:-2px;right:-2px;width:10px;height:10px;border-radius:50%;background:#ef4444;border:2px solid var(--bg);animation:dxpPulse 2s ease-in-out infinite"></span>')+'</button>';
+})()}
+<style>@keyframes dxpPulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(.85);opacity:.6}}</style>
 <!-- old .acc-switcher block removed — moved to top of profileCard as ipf-switcher -->
 <div id="create-sub-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(8px)">
   <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:18px;padding:20px;width:100%;max-width:340px">
@@ -16636,22 +16664,26 @@ ${profileCard(myUid, myUser, d, true, lang, adminIds, myBannerData, myPicData)}
 </div>
 <script>
 async function claimDailyXP(){
-  var btn=document.getElementById('daily-xp-btn');
-  btn.disabled=true;btn.textContent='...';
+  var btn=document.getElementById('daily-xp-fab');
+  if(!btn||btn.disabled)return;
+  btn.disabled=true;btn.style.cursor='default';
+  var dot=document.getElementById('daily-xp-fab-dot');
+  if(dot)dot.style.display='none';
   try{
     var r=await fetch('/api/claim-daily-xp',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
-    var _t=await r.text();var d;try{d=JSON.parse(_t);}catch(_pe){btn.textContent='Fehler ('+r.status+')';return;}
+    var _t=await r.text();var d;try{d=JSON.parse(_t);}catch(_pe){btn.innerHTML='⚠️';btn.title='Fehler ('+r.status+')';return;}
     if(d.ok){
-      btn.textContent='✅ +'+d.xp+' XP';btn.style.background='#333';
-      // Update XP display on profile immediately
+      btn.innerHTML='+'+d.xp;
+      btn.style.fontSize='12px';btn.style.fontWeight='800';
+      btn.title='+'+d.xp+' XP erhalten';
       var xpEls=document.querySelectorAll('[data-xp-value]');
       xpEls.forEach(function(el){var cur=parseInt(el.textContent.replace(/\D/g,''))||0;el.textContent=(cur+d.xp).toLocaleString('de-DE');});
       var statEls=document.querySelectorAll('.stat-value, .xp-num, .profile-xp');
       statEls.forEach(function(el){if(el.textContent.includes('XP')){var m=el.textContent.match(/[\d.]+/);if(m){var cur=parseInt(m[0].replace(/\./g,''))||0;el.textContent=el.textContent.replace(m[0],(cur+d.xp).toLocaleString('de-DE'));}}});
-      setTimeout(function(){btn.textContent='Erledigt ✓';},1500);
+      setTimeout(function(){btn.innerHTML='✓';btn.style.fontSize='18px';btn.style.background='var(--bg4)';btn.style.color='var(--muted)';btn.style.opacity='0.55';btn.style.boxShadow='none';},1800);
     }
-    else{btn.textContent=d.error||'Fehler';setTimeout(function(){btn.textContent='Abholen';btn.disabled=false;},2500);}
-  }catch(e){btn.textContent='Fehler';setTimeout(function(){btn.textContent='Abholen';btn.disabled=false;},2500);}
+    else{btn.innerHTML='⚠️';btn.title=d.error||'Fehler';setTimeout(function(){btn.innerHTML='🎁';btn.disabled=false;btn.style.cursor='pointer';if(dot)dot.style.display='';},2500);}
+  }catch(e){btn.innerHTML='⚠️';btn.title='Netzwerkfehler';setTimeout(function(){btn.innerHTML='🎁';btn.disabled=false;btn.style.cursor='pointer';if(dot)dot.style.display='';},2500);}
 }
 async function switchAcc(uid){
   try {
@@ -16700,12 +16732,15 @@ ${completionHtml}
   </div>
 </div>
 <div class="tabs" style="position:sticky;top:57px;z-index:50;background:var(--bg)">
-  <div class="tab active" onclick="showPTab('posts',this)">📝 Posts</div>
-  <div class="tab" onclick="showPTab('links',this)">🔗 Links</div>
+  <div class="tab active" onclick="showPTab('links',this)">🔗 Links</div>
+  <div class="tab" onclick="showPTab('posts',this)">📝 Posts</div>
   <div class="tab" onclick="showPTab('projekte',this)">🗂️ Projekte</div>
   <div class="tab" onclick="showPTab('about',this)">👤 About</div>
 </div>
-<div id="ptab-posts" style="padding-bottom:100px">
+<div id="ptab-links" style="padding-bottom:100px">
+  ${linksHtml}
+</div>
+<div id="ptab-posts" style="display:none;padding-bottom:100px">
   <div style="padding:12px 16px">
     <textarea id="new-post" class="form-input" placeholder="Was denkst du gerade? (max 300 Zeichen)" maxlength="300" rows="3"></textarea>
     <button class="btn btn-primary btn-full" style="margin-top:8px" onclick="submitPost()">📝 Posten</button>
@@ -16716,9 +16751,6 @@ ${completionHtml}
 <div id="ptab-projekte" style="display:none;padding-bottom:100px">
   <div class="proj-grid">${projCardsHtml}${addCardHtml}</div>
   ${myProjects.length===0?'<div style="padding:4px 16px 32px;text-align:center;font-size:12px;color:var(--muted)">Zeig der Community, woran du arbeitest</div>':''}
-</div>
-<div id="ptab-links" style="display:none;padding-bottom:100px">
-  ${linksHtml}
 </div>
 <div id="ptab-about" style="display:none">
   ${aboutHtml}
@@ -17069,9 +17101,40 @@ async function submitPost(){const _spBtn=document.querySelector('[onclick="submi
                 +'</div></div>';
         }).join('');
 
-        const theirLinksHtml = Object.values(d.links||{}).filter(l=>l.user_id===Number(uid)).sort((a,b)=>(b.timestamp||0)-(a.timestamp||0))
-            .map(l => { const sUrl = safeUrl(l.text); return '<div style="padding:12px 16px;border-top:1px solid var(--border2)">'+(sUrl?'<a href="'+htmlEsc(sUrl)+'" target="_blank" rel="noopener noreferrer" style="color:var(--blue);font-size:12px;word-break:break-all">':'<span style="color:var(--muted);font-size:12px;word-break:break-all">')+htmlEsc(l.text||'')+(sUrl?'</a>':'</span>')+'<div style="font-size:11px;color:var(--muted);margin-top:4px">❤️ '+(Array.isArray(l.likes)?l.likes.length:0)+' Likes · '+new Date(l.timestamp).toLocaleDateString('de-DE')+'</div></div>'; }).join('')
-            || '<div class="empty"><div class="empty-icon">🔗</div><div class="empty-text">Noch keine Links</div></div>';
+        // Feed-Style Link-Cards (gleiche Optik wie eigenes Profil, mit Like-Button da fremder User)
+        const renderTheirLinkCard = (l, msgId) => {
+            const likes = Array.isArray(l.likes) ? l.likes : (l.likes instanceof Set ? [...l.likes] : []);
+            const likeCount = likes.length;
+            const hasLiked = likes.map(String).includes(String(myUid));
+            const shortcode = (l.text||'').match(/instagram\.com\/(?:reel|p|tv)\/([A-Za-z0-9_-]+)/);
+            const thumbUrl = shortcode ? '/insta-thumb?u=' + encodeURIComponent(l.text) : '';
+            const dateStr = new Date(l.timestamp||0).toLocaleDateString('de-DE', {day:'2-digit', month:'short', year:'numeric'});
+            return '<div class="post fade-up" data-url="'+htmlEsc(l.text||'')+'" style="position:relative;margin:0 0 14px">'
+              + '<div style="margin:0 16px;border-radius:14px;overflow:hidden;background:#000;border:1.5px solid;border-image:linear-gradient(135deg,#f9a825,#e91e63,#9c27b0) 1;cursor:pointer;box-shadow:0 6px 20px rgba(233,30,99,0.10)" onclick="openPostUrl(\''+msgId+'\')" id="post-'+msgId+'">'
+              + '<div style="position:relative;width:100%;padding-top:62%;background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);overflow:hidden">'
+              + (thumbUrl ? '<img src="'+thumbUrl+'" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.style.display=\'none\'" alt="">' : '')
+              + '<div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.1) 0%,rgba(0,0,0,.55) 100%)"></div>'
+              + '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none">'
+              + '<div style="width:54px;height:54px;border-radius:50%;background:rgba(255,255,255,.92);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 16px rgba(0,0,0,.35)">'
+              + '<div style="width:0;height:0;border-style:solid;border-width:11px 0 11px 20px;border-color:transparent transparent transparent #000;margin-left:4px"></div>'
+              + '</div></div>'
+              + '<div style="position:absolute;top:10px;left:12px;background:rgba(0,0,0,.55);border-radius:8px;padding:4px 9px;display:flex;align-items:center;gap:5px;backdrop-filter:blur(4px)">'
+              + '<span style="font-size:13px">📸</span><span style="font-size:11px;color:#fff;font-weight:600">Instagram Reel</span>'
+              + '</div></div>'
+              + (l.caption?'<div style="padding:8px 12px;font-size:12px;color:var(--muted);line-height:1.4;border-top:1px solid rgba(255,255,255,.06);background:var(--bg3)">'+htmlEsc(String(l.caption).slice(0,200))+'</div>':'')
+              + '<div style="padding:8px 12px 10px;display:flex;align-items:center;gap:8px;background:var(--bg3)">'
+              + '<div style="font-size:11px;color:var(--muted2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500">'+htmlEsc(String(l.text||'').replace(/^https?:\/\//,'').slice(0,40))+'</div>'
+              + '<a href="'+htmlEsc(safeUrl(l.text||''))+'" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();markLinkVisited(\''+msgId+'\')" style="padding:6px 12px;background:linear-gradient(135deg,#f9a825,#e91e63,#9c27b0);color:#fff;border-radius:8px;font-size:11px;font-weight:700;text-decoration:none;white-space:nowrap;flex-shrink:0;box-shadow:0 2px 8px rgba(233,30,99,.25)">→ Öffnen</a>'
+              + '</div></div>'
+              + '<div class="post-likes-row" style="padding:6px 28px 0;display:flex;align-items:center;gap:10px;font-size:12px;color:var(--muted)">'
+              + '<button class="post-action-btn '+(hasLiked?'liked':'')+'" onclick="likePost(\''+msgId+'\',this)" data-msgid="'+msgId+'" '+(hasLiked?'disabled':'')+' style="display:inline-flex;align-items:center;gap:5px;background:none;border:none;cursor:'+(hasLiked?'default':'pointer')+';color:'+(hasLiked?'#ef4444':'var(--text)')+';font-size:12px;font-weight:600;font-family:inherit;padding:4px 0"><svg width="16" height="16" viewBox="0 0 24 24" fill="'+(hasLiked?'currentColor':'none')+'" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg> Like</button>'
+              + '<span style="font-size:12px;color:var(--muted);margin-left:auto">❤️ <span id="likes-'+msgId+'">'+likeCount+'</span> · '+dateStr+'</span>'
+              + '</div></div>';
+        };
+        const theirLinkEntries = Object.entries(d.links||{}).filter(([,l])=>String(l.user_id)===String(uid)).sort((a,b)=>(b[1].timestamp||0)-(a[1].timestamp||0));
+        const theirLinksHtml = theirLinkEntries.length
+            ? theirLinkEntries.map(([msgId, l]) => renderTheirLinkCard(l, msgId)).join('')
+            : '<div class="empty"><div class="empty-icon">🔗</div><div class="empty-text">Noch keine Links</div></div>';
 
         const theirAboutHtml = '<div style="padding:16px;display:flex;flex-direction:column;gap:12px;padding-bottom:100px">'
             +(u?.bio?'<div style="background:var(--bg3);border-radius:14px;padding:14px 16px"><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Bio</div><div style="font-size:14px;line-height:1.6">'+u.bio+'</div></div>':'')
@@ -17119,16 +17182,16 @@ ${String(uid) !== String(myUid) ? `
 ` : ''}
 ${profileCard(uid, u, d, false, lang, adminIds)}
 <div class="tabs" style="position:sticky;top:57px;z-index:50;background:var(--bg)">
-  <div class="tab active" onclick="showTPTab('posts',this)">📝 Posts</div>
-  <div class="tab" onclick="showTPTab('links',this)">🔗 Links</div>
+  <div class="tab active" onclick="showTPTab('links',this)">🔗 Links</div>
+  <div class="tab" onclick="showTPTab('posts',this)">📝 Posts</div>
   <div class="tab" onclick="showTPTab('projekte',this)">🗂️ Projekte</div>
   <div class="tab" onclick="showTPTab('about',this)">👤 About</div>
 </div>
-<div id="tptab-posts" style="padding-bottom:100px">${theirPinnedHtml}${theirPostsHtml}</div>
+<div id="tptab-links" style="padding-bottom:100px">${theirLinksHtml}</div>
+<div id="tptab-posts" style="display:none;padding-bottom:100px">${theirPinnedHtml}${theirPostsHtml}</div>
 <div id="tptab-projekte" style="display:none;padding-bottom:100px">
   ${theirProjects.length>0?'<div class="proj-grid">'+theirProjCardsHtml+'</div>':'<div class="empty"><div class="empty-icon">🚀</div><div class="empty-text">Noch keine Projekte</div></div>'}
 </div>
-<div id="tptab-links" style="display:none;padding-bottom:100px">${theirLinksHtml}</div>
 <div id="tptab-about" style="display:none">${theirAboutHtml}</div>
 
 <div id="tproj-detail-modal" class="proj-modal-overlay" onclick="if(event.target===this)closeTProj()">
