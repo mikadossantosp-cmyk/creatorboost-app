@@ -108,7 +108,7 @@ h1 .accent{font-style:italic;font-weight:600;background:linear-gradient(180deg,#
 .preview-bg::before{content:'';position:absolute;width:900px;height:900px;background:radial-gradient(circle,rgba(212,169,70,0.07) 0%,transparent 65%);filter:blur(40px)}
 .preview-inner{position:relative;z-index:2;display:grid;grid-template-columns:minmax(0,1fr);gap:80px;align-items:center;max-width:1080px;margin:0 auto}
 .preview-inner>*{min-width:0}
-.preview-image{position:relative;display:flex;justify-content:center;align-items:center;user-select:none}
+.preview-image{position:relative;display:flex;flex-direction:column;justify-content:center;align-items:center;user-select:none;width:100%;max-width:100%}
 .preview-image::before{content:'';position:absolute;inset:-30px;background:radial-gradient(ellipse at center,rgba(212,169,70,0.22) 0%,transparent 60%);filter:blur(30px);z-index:-1;pointer-events:none}
 
 /* Phone-Frame */
@@ -147,7 +147,7 @@ h1 .accent{font-style:italic;font-weight:600;background:linear-gradient(180deg,#
 
 @media (min-width:840px){
   .preview-inner{grid-template-columns:0.95fr 1fr;gap:64px}
-  .preview-image{justify-content:flex-end}
+  .preview-image{align-items:flex-end}
   .phone{width:320px}
   .preview-content{margin:0;text-align:left}
 }
