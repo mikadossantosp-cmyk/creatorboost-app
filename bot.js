@@ -1155,13 +1155,30 @@ function ladeProjectDoc(uid, projectId) {
     return null;
 }
 
+// _pinCache mit 60s TTL — pinned-Links aendern sich nur 1x pro 30 Tage.
+// Vorher: bei /feed-Render wurden bis zu 1000 fs.existsSync + fs.readFileSync (1 pro User)
+// gemacht -> riesiger Disk-IO Hit. Mit 60s TTL erfolgt das nur 1x/Minute pro User.
+const _pinCache = new Map();
+const _PIN_CACHE_TTL = 60000;
+const _PIN_CACHE_MAX = 500;
 function ladePinnedLink(uid) {
+    const key = String(uid);
+    const hit = _pinCache.get(key);
+    if (hit && Date.now() - hit.ts < _PIN_CACHE_TTL) return hit.v;
+    let v = null;
     try {
-        const f = DATA_DIR + '/pinnedlink_' + uid + '.txt';
-        if (fs.existsSync(f)) return fs.readFileSync(f, 'utf8').trim();
+        const f = DATA_DIR + '/pinnedlink_' + key + '.txt';
+        if (fs.existsSync(f)) v = fs.readFileSync(f, 'utf8').trim();
     } catch(e) {}
-    return null;
+    if (_pinCache.size >= _PIN_CACHE_MAX) {
+        // FIFO-Eviction: aelteste Eintrage zuerst
+        const it = _pinCache.keys();
+        for (let i = 0; i < 50; i++) _pinCache.delete(it.next().value);
+    }
+    _pinCache.set(key, { v, ts: Date.now() });
+    return v;
 }
+function _invalidatePinCache(uid) { _pinCache.delete(String(uid)); }
 
 const CSS = `
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -6762,6 +6779,7 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
             } else {
                 if (fs.existsSync(f)) fs.unlinkSync(f);
             }
+            _invalidatePinCache(_myUidPin);  // Cache: damit /feed sofort die neue Version sieht
             // Timestamp aktualisieren (auch bei Admin damit es konsistent bleibt)
             try { fs.writeFileSync(tsFile, String(Date.now())); } catch(e) {}
             return json({ok:true});
@@ -6806,10 +6824,16 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
         if (!session) return json({links:[]}, 401);
         const botData = await fetchBot('/data');
         if (!botData) return json({links:[]});
-        const today = new Date().toDateString();
+        // Perf: Numerischer mtime-Check statt new Date(...).toDateString() pro Link.
+        // Vorher: 500 Date-Allokationen + ToString-Calls pro Request × 30s-Poll = ~1000/min CPU-Waste.
+        const _todayStart = new Date(); _todayStart.setHours(0,0,0,0);
+        const todayStartMs = _todayStart.getTime();
+        const tomorrowStartMs = todayStartMs + 86400000;
         const byUrl = {};
         Object.entries(botData.links||{}).forEach(([id,l]) => {
-            if (!l.text || new Date(l.timestamp).toDateString() !== today) return;
+            if (!l.text) return;
+            const ts = +l.timestamp;
+            if (!(ts >= todayStartMs && ts < tomorrowStartMs)) return;
             const u = l.text.trim();
             if (!byUrl[u]) byUrl[u] = {likes:0, ids:[], likerNames:[]};
             const lkCount = Array.isArray(l.likes) ? l.likes.length : 0;
