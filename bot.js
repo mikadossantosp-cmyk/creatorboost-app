@@ -2998,7 +2998,7 @@ function confirmCrop(){
   if('caches' in window){
     caches.keys().then(names=>{
       names.forEach(n=>{
-        if(n.startsWith('cb-images-') && !n.includes('v201-appbild-network-first')){
+        if(n.startsWith('cb-images-') && !n.includes('v202-appbild-no-cache')){
           caches.delete(n).catch(()=>{});
         }
       });
@@ -3855,7 +3855,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v201-appbild-network-first';
+const SW_VERSION='v202-appbild-no-cache';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
@@ -3874,15 +3874,11 @@ self.addEventListener('fetch',e=>{
     e.respondWith(fetch(req).catch(()=>new Response('<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Offline · CreatorX</title></head><body style="font-family:system-ui,-apple-system,sans-serif;background:#000;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center;padding:24px"><div><div style="font-size:48px;margin-bottom:16px">📡</div><div style="font-size:18px;font-weight:700;margin-bottom:8px">Offline</div><div style="font-size:13px;color:#999;line-height:1.5;margin-bottom:18px">Server antwortet nicht. Bitte Internetverbindung prüfen oder kurz später nochmal versuchen.</div><button onclick="location.reload()" style="background:#3b82f6;color:#fff;border:none;border-radius:10px;padding:12px 22px;font-size:14px;font-weight:700;cursor:pointer">🔄 Neu laden</button></div></body></html>',{headers:{'Content-Type':'text/html; charset=utf-8'}})));
     return;
   }
-  // Profilbilder + Banner — network-first (ETag/no-cache vom Server greift → 304 wenn unchanged, neu wenn geaendert).
-  // Vorher war hier stale-while-revalidate → User sah immer das ALTE Bild aus SW-Cache, neue erst beim naechsten Aufruf.
+  // Profilbilder + Banner — KOMPLETT KEIN SW-CACHE. Server-Cache-Header (no-cache + ETag)
+  // entscheiden alleine. SW wuerde sonst zwischen original URL (ohne ?v=) und 302-Target
+  // (mit ?v=mtime) inkonsistent cachen + alte Bilder ausliefern.
   if(url.pathname.startsWith('/appbild/')){
-    e.respondWith(
-      fetch(req).then(net=>{
-        if(net&&net.ok){caches.open(IMAGE_CACHE).then(c=>c.put(req,net.clone())).catch(()=>{});}
-        return net;
-      }).catch(()=>caches.match(req).then(c=>c||new Response('',{status:503})))
-    );
+    e.respondWith(fetch(req, {cache: 'no-store'}));
     return;
   }
   // Logos/Icons/statische Bilder — stale-while-revalidate (aendern sich nie)
