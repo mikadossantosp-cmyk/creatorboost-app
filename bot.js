@@ -2090,6 +2090,19 @@ ${session ? `
 // kontrolliert wenn ein neuer SW im Hintergrund installed wurde.
 </script>
 <script>
+// Early-Stubs fuer Funktionen die in Inline-onclick-Handlern verwendet werden — verhindern
+// ReferenceError falls der User auf einen Link klickt BEVOR das Haupt-Script geladen ist.
+// Werden spaeter (im Hauptscript ~Zeile 2700+) mit der echten Implementierung ueberschrieben.
+if(typeof window.markLinkVisited!=='function'){
+  window.markLinkVisited=function(lid){
+    try{const v=JSON.parse(localStorage.getItem('cb_visited_links')||'{}');v[String(lid)]=Date.now();localStorage.setItem('cb_visited_links',JSON.stringify(v));}catch(e){}
+  };
+}
+if(typeof window.hasLinkVisited!=='function'){
+  window.hasLinkVisited=function(lid){try{const v=JSON.parse(localStorage.getItem('cb_visited_links')||'{}');return !!v[String(lid)];}catch(e){return false;}};
+}
+</script>
+<script>
 // Legacy-Onboarding-Cleanup + iOS-PWA-Cache-Bust.
 (function(){
   try { localStorage.setItem('cb_onboarded','1'); } catch(e){}
