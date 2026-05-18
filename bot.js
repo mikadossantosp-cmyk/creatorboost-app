@@ -12095,6 +12095,25 @@ window.sugDismiss = function(btn){
                 if (isAdminNL) {
                     const waitlistArr = Object.entries(ms.waitlist||{}).sort((a,b)=>(a[1].joinedAt||0)-(b[1].joinedAt||0));
                     const doneArr = Object.entries(ms.done||{}).sort((a,b)=>(b[1].featuredAt||0)-(a[1].featuredAt||0));
+                    // DM-Status: für eine Pick-uid die letzte System-DM von "creatorboost" finden,
+                    // die nach pickedAt versendet wurde. Zeigt: gesendet/nicht-gesendet + gelesen.
+                    const msDmStatus = (uid, sinceTs) => {
+                        if (!uid) return { sent:false, ts:null, read:false };
+                        const ck = ['creatorboost', String(uid)].sort().join('_');
+                        const msgs = (d.messages && d.messages[ck]) || [];
+                        const floor = (sinceTs || 0) - 5000;
+                        for (let i = msgs.length - 1; i >= 0; i--) {
+                            const m = msgs[i];
+                            if (String(m.from) === 'creatorboost' && String(m.to) === String(uid) && m.system && (m.timestamp || 0) >= floor) {
+                                return { sent:true, ts:m.timestamp, read:!!m.read };
+                            }
+                        }
+                        return { sent:false, ts:null, read:false };
+                    };
+                    const msFmtDate = ts => new Date(ts).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+                    const msDmBadge = st => st.sent
+                        ? '<span style="color:'+(st.read?'#22c55e':'#f59e0b')+';font-weight:600">'+(st.read?'👁️ gelesen':'📭 ungelesen')+' · '+msFmtDate(st.ts)+'</span>'
+                        : '<span style="color:#ef4444;font-weight:600">⚠️ keine DM gefunden</span>';
                     const waitlistHtml = waitlistArr.length
                         ? waitlistArr.map(([uid,v],i)=>{
                             const u = d.users?.[uid] || {};
@@ -12108,13 +12127,20 @@ window.sugDismiss = function(btn){
                         }).join('')
                         : '<div style="padding:14px;text-align:center;color:var(--muted);font-size:12.5px">Warteliste leer</div>';
                     const doneHtml = doneArr.length
-                        ? doneArr.slice(0,20).map(([uid,v])=>`<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--bg4);border-radius:10px;margin-bottom:5px;font-size:12px">
-  <div style="flex:1"><b>${htmlEsc(v.name||'?')}</b> · <span style="color:var(--muted);font-size:11px">KW ${(v.week||'').slice(5,10)}</span></div>
+                        ? doneArr.slice(0,20).map(([uid,v])=>{
+                            const st = msDmStatus(uid, v.featuredAt);
+                            return `<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--bg4);border-radius:10px;margin-bottom:5px;font-size:12px">
+  <div style="flex:1;min-width:0">
+    <div><b>${htmlEsc(v.name||'?')}</b> · <span style="color:var(--muted);font-size:11px">KW ${(v.week||'').slice(5,10)}</span></div>
+    <div style="font-size:10.5px;margin-top:2px">${msDmBadge(st)}</div>
+  </div>
   <button onclick="msAdminRestore('${uid}','${htmlEsc(v.name||'?')}')" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:3px 8px;font-size:10.5px;cursor:pointer">↩ Zurück</button>
-</div>`).join('')
+</div>`;
+                        }).join('')
                         : '<div style="padding:14px;text-align:center;color:var(--muted);font-size:12.5px">Noch keine vorgestellten User</div>';
+                    const _curPickSt = msCurrentPickedUid ? msDmStatus(msCurrentPickedUid, ms.weeklyState?.pickedAt || 0) : null;
                     const currentPickHtml = msCurrentPickedUid
-                        ? `<div style="padding:12px;background:linear-gradient(135deg,rgba(245,158,11,0.15),rgba(236,72,153,0.1));border:1px solid rgba(245,158,11,0.3);border-radius:12px;margin-bottom:10px"><div style="font-size:11px;color:#f59e0b;font-weight:700;letter-spacing:1px;text-transform:uppercase">⭐ Diese Woche</div><div style="font-size:14px;font-weight:800;margin-top:4px">${msPickedName}</div></div>`
+                        ? `<div style="padding:12px;background:linear-gradient(135deg,rgba(245,158,11,0.15),rgba(236,72,153,0.1));border:1px solid rgba(245,158,11,0.3);border-radius:12px;margin-bottom:10px"><div style="font-size:11px;color:#f59e0b;font-weight:700;letter-spacing:1px;text-transform:uppercase">⭐ Diese Woche</div><div style="font-size:14px;font-weight:800;margin-top:4px">${msPickedName}</div><div style="font-size:11px;margin-top:4px">${msDmBadge(_curPickSt)}</div></div>`
                         : (msStateIsCurrent && ms.weeklyState?.skipped)
                         ? '<div style="padding:10px;background:var(--bg4);border-radius:10px;margin-bottom:10px;font-size:12.5px;color:var(--muted);text-align:center">Diese Woche übersprungen</div>'
                         : '<div style="padding:10px;background:var(--bg4);border-radius:10px;margin-bottom:10px;font-size:12.5px;color:var(--muted);text-align:center">Noch nicht gepickt (Sonntag 20:00)</div>';
