@@ -450,7 +450,7 @@ Verboten: fremde Reels, Affiliate/Spam, Wiederholungen. Self-Like → temporäre
 
 # Account-Verwaltung (genaue Wege)
 - Profilbild ändern: /einstellungen → 📷 Profilbild → Upload → Crop → speichern. Quadrat optimal.
-- Banner ändern: /einstellungen → Banner-Bereich. Querformat 3:1 ideal.
+- Banner ändern: /einstellungen → ✏️ Profil bearbeiten → 🎨 Banner. Querformat 3:1 ideal.
 - Bio ändern: /einstellungen → Bio-Feld (max 100 Zeichen) → speichern.
 - Spitzname ändern: /einstellungen → Spitzname (max 30 Zeichen). Zeigt sich in Ranking + Profil.
 - Instagram-Handle: /einstellungen → Instagram-Feld → Handle ohne @ → speichern.
@@ -645,7 +645,7 @@ const ADMIN_FULLTOUR_JS = `(function(){
     { url: '/preview/email-login?fulltour=1', sel: 'a[href*="auth/email-login"]', title: '📨 Magic-Link Email', text: 'So sieht die Login-Mail aus. Klick → Single-Use-Token → eingeloggt.' },
     { url: '/onboarding-instagram?preview=1&fulltour=1', sel: '#inp-instagram, input[type="text"]', title: '📸 Onboarding: Instagram', text: 'PFLICHT für Email-User: Instagram-Handle eintragen bevor liken/posten geht.' },
     { url: '/set-password?first=1&fulltour=1', sel: 'input[type="password"], #pw1', title: '🔐 Passwort setzen', text: 'Optional für Email-User: Passwort für Direct-Login. Skippbar.' },
-    { url: '/feed?fulltour=1', sel: '.post-action-btn, [data-tour="messages"]', title: '🏠 Feed', text: 'Erster Blick eingeloggt: Posts, Like-Buttons, Stories oben, Bottom-Nav unten.' },
+    { url: '/feed?fulltour=1', sel: '.ft-wrap, .post-action-btn', title: '🏠 Feed', text: 'Erster Blick eingeloggt: Posts, Like-Buttons, Stories oben, Bottom-Nav unten, Tab-Dropdown oben (Heute/Älter/Engagement/Kollabs/Diamond).' },
     { url: '/einstellungen?fulltour=1', sel: '#inp-instagram, .form-label, #inp-email', title: '⚙️ Einstellungen', text: 'Bio, Spitzname, Insta, Email, App-Code, Pinned Reel, Banner — alles anpassbar.' },
     { url: '/profil?fulltour=1', sel: '.profile-avatar, .profile-banner, h1, h2', title: '👤 Profil-Seite', text: 'Fertiges Profil: Banner, Avatar, XP, Badge, Stats, Posts. Ende der Tour 🎉' }
   ];
@@ -2222,7 +2222,7 @@ ${session ? `
   var STEPS = [
     // ── FEED PAGE ────────────────────────────────────────────────────────
     {page:'/feed', q:'[data-tour="stories"]',                    eyebrow:'Feed · Stories',     h:'📷 Aktive Creator von heute',           s:'Hier siehst du Creator die heute schon gepostet haben. Tippe eine Story-Bubble um auf ihr Profil zu kommen.'},
-    {page:'/feed', q:'[data-tour="feed-tabs"]',                  eyebrow:'Feed · Filter',      h:'📅 Heute · 🕐 Älter · ⭐ Engagement',   s:'Wechsle zwischen heutigen Posts, älteren Posts und der Engagement-Pflicht-Liste.'},
+    {page:'/feed', q:'.ft-wrap',                                eyebrow:'Feed · Filter',      h:'📅 Heute · 🕐 Älter · ⭐ Engagement · 🤝 Kollabs · 💎 Diamond',   s:'Tippe das Tab-Dropdown oben links um zwischen Tabs zu wechseln: heutigen Posts, älteren Posts, Engagement-Pflicht-Liste, Kollabs und Diamond-Posts.'},
     {page:'/feed', q:'.post.fade-up',                            eyebrow:'Feed · Post',        h:'🎬 So sieht ein Reel-Post aus',         s:'Tippe das Reel-Preview → Instagram öffnet sich. Dort musst du <b>liken UND kommentieren</b> — erst dann kannst du in der App den Like vergeben (Visit-before-Like).'},
     {page:'/feed', q:'.post.fade-up .post-action-btn',           eyebrow:'Feed · Like',        h:'❤️ So likest du',                        s:'Erst Insta-Reel öffnen → dort liken UND kommentieren. Dann hier Like tippen — DU bekommst XP, der Poster bekommt echtes Insta-Engagement.'},
     {page:'/feed', q:'[data-tour="feed"]',                       eyebrow:'Bottom-Nav',         h:'🏠 Feed (du bist hier)',                s:'Der Haupt-Feed mit allen heutigen Reel-Posts.'},
@@ -2235,15 +2235,13 @@ ${session ? `
     // ── MESSAGES PAGE ────────────────────────────────────────────────────
     {page:'/nachrichten', q:'[data-tour="messages"]',            eyebrow:'Bottom-Nav',         h:'💬 Direktnachrichten',                  s:'Wir sind jetzt im Nachrichten-Bereich. Hier laufen alle Privatchats mit anderen Creatorn — schreib direkt mit ihnen für Kollabs, Feedback oder einfach zum Quatschen.'},
     // ── PROFIL PAGE ──────────────────────────────────────────────────────
-    {page:'/profil', q:'.profile-avatar-wrap',                   eyebrow:'Profil · Avatar',    h:'👤 Dein Profil-Avatar',                  s:'Banner + Profilbild + Online-Status. Wenn du Top-1 bist, schwebt eine 👑 darüber.'},
-    {page:'/profil', q:'.profile-stats',                         eyebrow:'Profil · Stats',     h:'📊 XP, Links, Followers, Diamanten',     s:'Deine Live-Stats: XP-Stand, Anzahl Links, Followers, Streak und 💎 Diamanten.'},
-    {page:'/profil', q:'.acc-switcher',                          eyebrow:'Profil · Switcher',  h:'🔄 Account &amp; Sub-Account',          s:'Hauptaccount + optional ein Sub-Account. Schalte hier zwischen ihnen um (oder erstelle einen neuen).'},
-    {page:'/profil', q:'a[href="/einstellungen"]',               eyebrow:'Profil · Bearbeiten',h:'✏️ Hier kommst du in Einstellungen',     s:'Über diesen Stift kommst du zu allen Einstellungen — Profil, Email, Passwort, Spitzname, Pinned-Reel.'},
+    {page:'/profil', q:'.ipf-avatar-wrap',                       eyebrow:'Profil · Avatar',    h:'👤 Dein Profil-Avatar',                  s:'Banner + Profilbild + Online-Status. Wenn du Top-1 bist, schwebt eine 👑 darüber.'},
+    {page:'/profil', q:'.ipf-stats',                             eyebrow:'Profil · Stats',     h:'📊 Posts, Follower, Diamanten',          s:'Deine Live-Stats: Posts, Follower und 💎 Diamanten. Tippe auf 💎 für den Diamanten-Shop.'},
+    {page:'/profil', q:'.tb-switcher-wrap',                      eyebrow:'Profil · Switcher',  h:'🔄 Account &amp; Sub-Account',          s:'Oben in der Topbar: Hauptaccount + optional ein Sub-Account. Tippe um zwischen ihnen zu wechseln.'},
+    {page:'/profil', q:'a[href="/einstellungen"]',               eyebrow:'Profil · Bearbeiten',h:'✏️ Hier kommst du in Einstellungen',     s:'Über diesen Button kommst du zu allen Einstellungen — Profil, Account, Privacy, Sicherheit und mehr.'},
     // ── EINSTELLUNGEN PAGE ───────────────────────────────────────────────
-    {page:'/einstellungen', q:'#pic-preview',                    eyebrow:'Einstellungen · Bild',h:'📷 Profilbild ändern',                   s:'Tippe "📷 Foto hochladen" um dein Profilbild zu setzen. Wird auch im Insta-Avatar verwendet wenn du keinen Insta-Handle hast.'},
-    {page:'/einstellungen', q:'#inp-bio',                        eyebrow:'Einstellungen · Bio',h:'✍️ Bio &amp; Spitzname',                 s:'Schreib was über dich. Spitzname wird statt deines echten Namens angezeigt.'},
-    {page:'/einstellungen', q:'#inp-email',                      eyebrow:'Einstellungen · Email',h:'📧 Email für Magic-Link Login',         s:'Mit Email gesetzt kannst du dich auch ohne Telegram einloggen — über den Email-Tab auf der Login-Page.'},
-    {page:'/einstellungen', q:'#inp-instagram',                  eyebrow:'Einstellungen · Insta',h:'📸 Instagram-Handle',                    s:'Pflicht zum Posten/Liken. Wird für Engagement-Tracking gebraucht.'}
+    {page:'/einstellungen', q:'.pf-action-btn.primary',          eyebrow:'Einstellungen · Profil',h:'✏️ Profil bearbeiten — alles in einem',s:'Tippe hier um Profilbild, Bio, Spitzname, Instagram, Nische, Website, Pinned-Reel, Banner, Akzentfarbe und Dark Mode zu ändern.'},
+    {page:'/einstellungen/account', q:'#inp-email',              eyebrow:'Account · Email',    h:'📧 Email für Magic-Link Login',          s:'Mit Email gesetzt kannst du dich auch ohne Telegram einloggen — über den Email-Tab auf der Login-Page.'}
   ];
   var idx = 0;
   try{ idx = parseInt(sessionStorage.getItem('cb_tour_idx'),10) || 0; }catch(e){}
@@ -3896,7 +3894,7 @@ ${isPreview?'<div class="ob-pb">👀 Admin Vorschau &nbsp;·&nbsp; <a href="/ein
       <div class="ob-content">
         <div class="ob-step" style="color:#fbbf24">04 / 05</div>
         <div class="ob-title">Full <span style="background:linear-gradient(135deg,#fbbf24,#f59e0b);-webkit-background-clip:text;-webkit-text-fill-color:transparent">Engagement</span></div>
-        <div class="ob-desc">Jeden Monat postet jeder einen <b style="color:#fff">Superlink</b>. Alle liken, kommentieren, teilen &amp; speichern gegenseitig.</div>
+        <div class="ob-desc">Jede Woche (Mo–Sa) postet jeder einen <b style="color:#fff">Superlink</b>. Alle liken, kommentieren, teilen &amp; speichern gegenseitig.</div>
         <div class="ob-facts">
           <div class="ob-fact"><span class="ob-fact-i">✅</span><div class="ob-fact-t">Mitmachen = <b>XP + Diamanten</b> für alle Beteiligten</div></div>
           <div class="ob-fact" style="border-color:rgba(239,68,68,.2);background:rgba(239,68,68,.06)"><span class="ob-fact-i">⚠️</span><div class="ob-fact-t">Nicht dabei bis Sonntag = <b style="color:#ef4444">−50 XP</b> Strafe</div></div>
@@ -4260,7 +4258,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v200-asset-cache';
+const SW_VERSION='v201-appbild-network-first';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
@@ -4278,8 +4276,19 @@ self.addEventListener('fetch',e=>{
     e.respondWith(fetch(req).catch(()=>new Response('<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Offline · CreatorX</title></head><body style="font-family:system-ui,-apple-system,sans-serif;background:#000;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center;padding:24px"><div><div style="font-size:48px;margin-bottom:16px">📡</div><div style="font-size:18px;font-weight:700;margin-bottom:8px">Offline</div><div style="font-size:13px;color:#999;line-height:1.5;margin-bottom:18px">Server antwortet nicht. Bitte Internetverbindung prüfen oder kurz später nochmal versuchen.</div><button onclick="location.reload()" style="background:#3b82f6;color:#fff;border:none;border-radius:10px;padding:12px 22px;font-size:14px;font-weight:700;cursor:pointer">🔄 Neu laden</button></div></body></html>',{headers:{'Content-Type':'text/html; charset=utf-8'}})));
     return;
   }
-  // Bilder (/appbild/*, Logos, Icons) — stale-while-revalidate
-  if(url.pathname.startsWith('/appbild/')||url.pathname.startsWith('/cx-logo')||url.pathname.startsWith('/icon-')||url.pathname.startsWith('/icon.')||url.pathname.startsWith('/favicon')||url.pathname.endsWith('.png')||url.pathname.endsWith('.jpg')||url.pathname.endsWith('.webp')){
+  // Profilbilder + Banner — network-first (ETag/no-cache vom Server greift → 304 wenn unchanged, neu wenn geaendert).
+  // Vorher war hier stale-while-revalidate → User sah immer das ALTE Bild aus SW-Cache, neue erst beim naechsten Aufruf.
+  if(url.pathname.startsWith('/appbild/')){
+    e.respondWith(
+      fetch(req).then(net=>{
+        if(net&&net.ok){caches.open(IMAGE_CACHE).then(c=>c.put(req,net.clone())).catch(()=>{});}
+        return net;
+      }).catch(()=>caches.match(req).then(c=>c||new Response('',{status:503})))
+    );
+    return;
+  }
+  // Logos/Icons/statische Bilder — stale-while-revalidate (aendern sich nie)
+  if(url.pathname.startsWith('/cx-logo')||url.pathname.startsWith('/icon-')||url.pathname.startsWith('/icon.')||url.pathname.startsWith('/favicon')||url.pathname.endsWith('.png')||url.pathname.endsWith('.jpg')||url.pathname.endsWith('.webp')){
     e.respondWith(caches.open(IMAGE_CACHE).then(async cache=>{
       const cached=await cache.match(req);
       const fetchPromise=fetch(req).then(net=>{
@@ -10239,7 +10248,7 @@ const CB_HELP = {
   '_back': { q:'← Zurück zur Übersicht', a:'Was willst du wissen?', next:['_start','rules','data','support','_more'] },
   // ── Banale How-Tos (Direkt-Antworten via Keyword-Search) ──
   '_h_profilbild': { q:'📷 Profilbild ändern', a:'Geh zu <a href="/einstellungen" style="color:#a78bfa;font-weight:700">/einstellungen</a> → <b>📷 Profilbild</b> → Foto hochladen → Bild zuschneiden → fertig.<br><br>Tipp: Quadrat-Bild funktioniert am besten.', next:['_h_banner','_h_bio','_back'] },
-  '_h_banner': { q:'🖼 Banner ändern', a:'In <a href="/einstellungen" style="color:#a78bfa;font-weight:700">/einstellungen</a> → Banner-Bereich. Lade ein Querformat-Bild hoch (3:1 ist ideal).', next:['_h_profilbild','_back'] },
+  '_h_banner': { q:'🖼 Banner ändern', a:'In <a href="/einstellungen" style="color:#a78bfa;font-weight:700">/einstellungen</a> → <b>✏️ Profil bearbeiten</b> → <b>🎨 Banner</b>. Lade ein Querformat-Bild hoch (3:1 ist ideal).', next:['_h_profilbild','_back'] },
   '_h_bio': { q:'📝 Bio / Beschreibung ändern', a:'<a href="/einstellungen" style="color:#a78bfa;font-weight:700">/einstellungen</a> → <b>Bio</b> Feld → bis zu 100 Zeichen → speichern.', next:['_h_spitzname','_back'] },
   '_h_spitzname': { q:'🏷 Spitzname ändern', a:'<a href="/einstellungen" style="color:#a78bfa;font-weight:700">/einstellungen</a> → <b>Spitzname</b> Feld → bis zu 30 Zeichen → speichern.<br><br>Der Spitzname erscheint im Ranking und auf deinem Profil.', next:['_h_bio','_back'] },
   '_h_email': { q:'📧 Email ändern / setzen', a:'<a href="/einstellungen/account" style="color:#a78bfa;font-weight:700">/einstellungen/account</a> → Email-Feld.<br><br>⚠️ Wenn du schon Email + Passwort gesetzt hast: erst <b>"Änderung anfragen"</b> klicken → Bestätigungs-Mail kommt → dann hast du 30 Min Edit-Window.', next:['_h_passwort','_back'] },
