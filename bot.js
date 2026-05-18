@@ -1974,6 +1974,20 @@ async function cbResendConfirm(btn){
     </div>
   </div>
 </div>
+<script>
+// Early-Stubs fuer Funktionen die in Inline-onclick-Handlern verwendet werden — verhindern
+// ReferenceError falls profileCard/feed-content sie aufruft BEVOR das Haupt-Script geladen ist.
+// Muss VOR \${content} stehen, weil profileCard-HTML inline-onclick-Handler enthalten kann.
+// Werden spaeter (im Hauptscript ~Zeile 2700+) mit der echten Implementierung ueberschrieben.
+if(typeof window.markLinkVisited!=='function'){
+  window.markLinkVisited=function(lid){
+    try{const v=JSON.parse(localStorage.getItem('cb_visited_links')||'{}');v[String(lid)]=Date.now();localStorage.setItem('cb_visited_links',JSON.stringify(v));}catch(e){}
+  };
+}
+if(typeof window.hasLinkVisited!=='function'){
+  window.hasLinkVisited=function(lid){try{const v=JSON.parse(localStorage.getItem('cb_visited_links')||'{}');return !!v[String(lid)];}catch(e){return false;}};
+}
+</script>
 ${content}
 ${session ? `
 <nav class="bottom-nav">
@@ -2088,19 +2102,6 @@ ${session ? `
 // wenn localStorage write fehlschlaegt oder Promise haengt.
 // Stattdessen: Update-Banner-System (weiter unten) macht den SW-Switch
 // kontrolliert wenn ein neuer SW im Hintergrund installed wurde.
-</script>
-<script>
-// Early-Stubs fuer Funktionen die in Inline-onclick-Handlern verwendet werden — verhindern
-// ReferenceError falls der User auf einen Link klickt BEVOR das Haupt-Script geladen ist.
-// Werden spaeter (im Hauptscript ~Zeile 2700+) mit der echten Implementierung ueberschrieben.
-if(typeof window.markLinkVisited!=='function'){
-  window.markLinkVisited=function(lid){
-    try{const v=JSON.parse(localStorage.getItem('cb_visited_links')||'{}');v[String(lid)]=Date.now();localStorage.setItem('cb_visited_links',JSON.stringify(v));}catch(e){}
-  };
-}
-if(typeof window.hasLinkVisited!=='function'){
-  window.hasLinkVisited=function(lid){try{const v=JSON.parse(localStorage.getItem('cb_visited_links')||'{}');return !!v[String(lid)];}catch(e){return false;}};
-}
 </script>
 <script>
 // Legacy-Onboarding-Cleanup + iOS-PWA-Cache-Bust.
@@ -3576,10 +3577,13 @@ function ipfShare(){
 async function ipfFollow(btn, targetUid){
   btn.disabled = true;
   try {
-    const r = await fetch('/api/follow', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({targetUid})});
+    const r = await fetch('/api/follow', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({uid: String(targetUid)})});
     const j = await r.json();
-    if (j.ok) btn.innerHTML = j.following ? '✓ Folge ich' : '➕ Folgen';
-  } catch(e) {}
+    if (j.ok) btn.innerHTML = (j.action === 'follow') ? '✓ Folge ich' : '➕ Folgen';
+    else if (j.error) { try { toast('❌ ' + j.error); } catch(e){} }
+  } catch(e) {
+    try { toast('❌ Netzwerk-Fehler'); } catch(_){}
+  }
   btn.disabled = false;
 }
 function ipfToggleSwitcher(btn){
@@ -8269,7 +8273,10 @@ p{line-height:1.65;color:var(--muted)}
     if (path === '/api/helper-append' && req.method === 'POST') {
         if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
         const body = await parseBody(req);
-        const r = await postBot('/helper-chat-append-api', { uid: String(session.uid), role: String(body.role||''), text: String(body.text||'') });
+        // SECURITY: Client darf nur 'user' Rolle posten — sonst kann er beliebiges HTML
+        // als 'bot' speichern und es wird spaeter unescaped im Helper-Chat-Render gezeigt.
+        const role = (String(body.role||'') === 'bot') ? 'user' : String(body.role||'user');
+        const r = await postBot('/helper-chat-append-api', { uid: String(session.uid), role, text: String(body.text||'') });
         return json(r || {ok:false});
     }
     if (path === '/api/helper-ask' && req.method === 'POST') {
@@ -9596,9 +9603,11 @@ async function submitSuperLink(){
           const rest = cnt > 3 ? ' und ' + (cnt-3) + ' weiteren' : '';
           const namesTxt = 'Gefällt ' + top + rest;
           const rows = lkrs.map(u => {
-            const av = u.instagram ? '<img src="https://unavatar.io/instagram/'+esc(u.instagram)+'" style="width:34px;height:34px;border-radius:50%;object-fit:cover" alt="" loading="lazy">'
-                                   : '<div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#06b6d4,#0e7490);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px">'+esc((u.name||'?')[0])+'</div>';
-            return '<a href="/profil/'+esc(u.uid)+'" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--border2);text-decoration:none">'+av+'<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:var(--text)">'+esc(u.name||'User')+'</div>'+(u.instagram?'<div style="font-size:11px;color:#06b6d4">@'+esc(u.instagram)+'</div>':'')+'</div><div style="font-size:11px;color:var(--accent)">→</div></a>';
+            // Avatar: in-App-Profilbild zuerst (mit onerror-Fallback), dann Insta-Avatar, dann Initial-Bubble
+            const initial = '<div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#06b6d4,#0e7490);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;position:relative;overflow:hidden">'+esc((u.name||'?')[0])+
+              (u.uid ? '<img src="/appbild/'+esc(u.uid)+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.remove()" alt="">' : '')+
+              '</div>';
+            return '<a href="/profil/'+esc(u.uid)+'" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--border2);text-decoration:none">'+initial+'<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:var(--text)">'+esc(u.name||'User')+'</div>'+(u.instagram?'<div style="font-size:11px;color:#06b6d4">@'+esc(u.instagram)+'</div>':'')+'</div><div style="font-size:11px;color:var(--accent)">→</div></a>';
           }).join('');
           return '<div id="liker-rows-dl-'+esc(p.id)+'" style="display:none">'+rows+'</div>' +
             '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px;padding:0 4px">' +
@@ -10247,7 +10256,9 @@ async function cbHelperAsk(){
     if (j.ok && j.answer) {
       t.remove();
       const a = document.createElement('div'); a.className='cb-msg bot';
-      const htmlA = '<div style="font-size:11px;color:var(--muted);margin-bottom:4px">🤖 CreatorBoost (KI):</div>' + j.answer;
+      // SECURITY: j.answer kommt von der Gemini-AI -> HTML-escape gegen Script-Injection
+      const safeAnswer = escapeHtml(String(j.answer));
+      const htmlA = '<div style="font-size:11px;color:var(--muted);margin-bottom:4px">🤖 CreatorBoost (KI):</div>' + safeAnswer;
       a.innerHTML = htmlA;
       body.appendChild(a);
       cbHelperPersist('bot', htmlA);
