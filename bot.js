@@ -3385,7 +3385,7 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
     const _posts = Object.values(d.links||{}).filter(l => String(l.user_id) === String(uid)).length;
     const _followers = (u.followers||[]).length;
     const _diamonds = u.diamonds || 0;
-    const _picUrl = (picData||ladeBild(uid,'profilepic')) ? `/appbild/${uid}/profilepic` : (u.instagram ? `https://unavatar.io/instagram/${u.instagram}` : '');
+    const _picUrl = (picData||ladeBild(uid,'profilepic')) ? (appbildSrc(String(uid),'profilepic') || `/appbild/${uid}/profilepic`) : (u.instagram ? `https://unavatar.io/instagram/${u.instagram}` : '');
     const _initial = htmlEsc((u.spitzname||u.name||'?').slice(0,1).toUpperCase());
     const _isFollowing = false;
     const _roleBadge = htmlEsc(cleanRole(u.role, uid, adminIds));
