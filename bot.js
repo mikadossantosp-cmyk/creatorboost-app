@@ -1958,7 +1958,7 @@ async function cbResendConfirm(btn){
     </div>
   </div>
 </div>
-<div id="crop-overlay" style="position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.93);display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s;padding:16px">
+<div id="crop-overlay" style="position:fixed;inset:0;z-index:9500;background:rgba(0,0,0,.93);display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s;padding:16px">
   <div style="width:100%;max-width:380px">
     <div style="text-align:center;font-size:15px;font-weight:700;color:#fff;margin-bottom:16px">Bild positionieren</div>
     <div id="crop-vp" style="position:relative;overflow:hidden;background:#111;border-radius:12px;border:2px solid rgba(255,255,255,.15);cursor:grab;touch-action:none;user-select:none;width:100%;aspect-ratio:1">
