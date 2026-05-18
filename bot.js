@@ -9603,9 +9603,11 @@ async function submitSuperLink(){
           const rest = cnt > 3 ? ' und ' + (cnt-3) + ' weiteren' : '';
           const namesTxt = 'Gefällt ' + top + rest;
           const rows = lkrs.map(u => {
-            const av = u.instagram ? '<img src="https://unavatar.io/instagram/'+esc(u.instagram)+'" style="width:34px;height:34px;border-radius:50%;object-fit:cover" alt="" loading="lazy">'
-                                   : '<div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#06b6d4,#0e7490);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px">'+esc((u.name||'?')[0])+'</div>';
-            return '<a href="/profil/'+esc(u.uid)+'" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--border2);text-decoration:none">'+av+'<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:var(--text)">'+esc(u.name||'User')+'</div>'+(u.instagram?'<div style="font-size:11px;color:#06b6d4">@'+esc(u.instagram)+'</div>':'')+'</div><div style="font-size:11px;color:var(--accent)">→</div></a>';
+            // Avatar: in-App-Profilbild zuerst (mit onerror-Fallback), dann Insta-Avatar, dann Initial-Bubble
+            const initial = '<div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#06b6d4,#0e7490);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;position:relative;overflow:hidden">'+esc((u.name||'?')[0])+
+              (u.uid ? '<img src="/appbild/'+esc(u.uid)+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.remove()" alt="">' : '')+
+              '</div>';
+            return '<a href="/profil/'+esc(u.uid)+'" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--border2);text-decoration:none">'+initial+'<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:var(--text)">'+esc(u.name||'User')+'</div>'+(u.instagram?'<div style="font-size:11px;color:#06b6d4">@'+esc(u.instagram)+'</div>':'')+'</div><div style="font-size:11px;color:var(--accent)">→</div></a>';
           }).join('');
           return '<div id="liker-rows-dl-'+esc(p.id)+'" style="display:none">'+rows+'</div>' +
             '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px;padding:0 4px">' +
