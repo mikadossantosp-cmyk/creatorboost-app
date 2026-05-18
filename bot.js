@@ -2081,32 +2081,11 @@ ${session ? `
 </div>
 
 <script>
-// ── EINMALIGER FORCED-RESET fuer SW v200 -> v201 ──
-// Loescht den alten Service Worker + alle Caches + reloadet einmal.
-// Wirkt garantiert auch wenn alter SW v200 noch /appbild Requests
-// abfaengt (mit altem stale-while-revalidate Cache).
-// Nur EINMAL pro User-Browser via localStorage-Flag.
-// Flag-Version v3 — frueher konnte Flag gesetzt sein OHNE dass Reset komplett lief.
-(function(){
-  try {
-    if (localStorage.getItem('cb_sw_reset_v3_done') === '1') return;
-    if (!('serviceWorker' in navigator)) { localStorage.setItem('cb_sw_reset_v3_done','1'); return; }
-    // Flag erst NACH erfolgreichem Reset setzen — falls reload nicht laeuft, retry beim naechsten Mal
-    navigator.serviceWorker.getRegistrations().then(function(regs){
-      return Promise.all(regs.map(function(r){ return r.unregister().catch(function(){}); }));
-    }).then(function(){
-      if ('caches' in window) {
-        return caches.keys().then(function(ks){
-          return Promise.all(ks.map(function(k){ return caches.delete(k).catch(function(){}); }));
-        });
-      }
-    }).then(function(){
-      try { localStorage.setItem('cb_sw_reset_v3_done','1'); } catch(e){}
-      // Sofort reloaden — ab jetzt frischer SW v201 + frische Bilder
-      setTimeout(function(){ location.reload(); }, 50);
-    }).catch(function(){ try{ location.reload(); }catch(e){} });
-  } catch(e) {}
-})();
+// ── FORCED-RESET DEAKTIVIERT (Notfall-Hotfix) ──
+// Das vorherige Forced-Reset Skript konnte einen Reload-Loop verursachen
+// wenn localStorage write fehlschlaegt oder Promise haengt.
+// Stattdessen: Update-Banner-System (weiter unten) macht den SW-Switch
+// kontrolliert wenn ein neuer SW im Hintergrund installed wurde.
 </script>
 <script>
 // Legacy-Onboarding-Cleanup + iOS-PWA-Cache-Bust.
