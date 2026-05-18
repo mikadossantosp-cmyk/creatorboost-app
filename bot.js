@@ -6523,6 +6523,13 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
             _appbildBufCache.delete(_uidU + '/profilepic');
             _bildCache.delete(_uidU + '_profilepic');
             if (!_writeOk) return json({ok:false, error:'Disk-Write fehlgeschlagen — Datei konnte nicht gespeichert werden'}, 500);
+            // Sync zum Mainbot: andere User laden Bilder ueber Mainbot-Proxy wenn die
+            // App-Instanz die Datei nicht lokal hat (Multi-Volume-Setup). Ohne diesen
+            // Sync sieht jeder ANDERE User weiter das alte Bild aus Mainbot-Cache.
+            try {
+                const _syncResult = await postBot('/upload-bild-api', { uid: _uidU, type: 'profilepic', imageData });
+                console.log('[upload-profilepic] mainbot-sync result:', _syncResult?.ok ? 'ok' : (_syncResult?.error || 'failed'));
+            } catch(e) { console.error('[upload-profilepic] mainbot-sync threw:', e.message); }
             checkProfileCompletion(_uidU, session);
             return json({ok:true, writtenTo: _filePic, mtime: Date.now()});
         } catch(e) { return json({ok:false, error:e.message},500); }
@@ -6564,6 +6571,11 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
             _appbildBufCache.delete(_uidB + '/banner');
             _bildCache.delete(_uidB + '_banner');
             if (!_writeOkB) return json({ok:false, error:'Disk-Write fehlgeschlagen — Datei konnte nicht gespeichert werden'}, 500);
+            // Sync zum Mainbot — gleiche Logik wie bei profilepic (Multi-Volume-Setup).
+            try {
+                const _syncResultB = await postBot('/upload-bild-api', { uid: _uidB, type: 'banner', imageData });
+                console.log('[upload-banner] mainbot-sync result:', _syncResultB?.ok ? 'ok' : (_syncResultB?.error || 'failed'));
+            } catch(e) { console.error('[upload-banner] mainbot-sync threw:', e.message); }
             checkProfileCompletion(_uidB, session);
             return json({ok:true, writtenTo: _fileBan, mtime: Date.now()});
         } catch(e) { return json({ok:false, error:e.message},500); }
