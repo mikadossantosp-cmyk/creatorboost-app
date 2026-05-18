@@ -3412,8 +3412,13 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
     // Jetzt: alle Cache-Fixes vom /appbild Handler greifen (302-Auto-Cache-Bust + ETag).
     const _hasBannerFile = !!ladeBild(uid, 'banner');
     const _bannerUrl = _hasBannerFile ? (appbildSrc(String(uid), 'banner') || ('/appbild/' + uid + '/banner')) : null;
-    const banner = _bannerUrl || u.banner || 'linear-gradient(135deg,#667eea,#764ba2)';
-    const bannerIsGrad = !banner.startsWith('http') && !banner.startsWith('/appbild');
+    let _ub = u.banner;
+    // Mainbot setzt u.banner = '/bild/UID/banner' (Legacy-Pfad vom Mainbot-direkt-Serve).
+    // Auf '/appbild/...' umschreiben damit unsere Cache-Fixes greifen statt Legacy-Pfad.
+    if (typeof _ub === 'string' && _ub.startsWith('/bild/')) _ub = '/appbild' + _ub.substring(5);
+    const banner = _bannerUrl || _ub || 'linear-gradient(135deg,#667eea,#764ba2)';
+    // Gradient-Check: alles was wie eine URL aussieht (http, /appbild, /bild) gilt NICHT als Gradient.
+    const bannerIsGrad = !banner.startsWith('http') && !banner.startsWith('/appbild') && !banner.startsWith('/bild') && !banner.startsWith('data:');
     const instaUrl = u.instagram ? `https://instagram.com/${u.instagram}` : null;
     const sorted = Object.entries(d.users||{}).filter(([,u])=>!/admin/i.test(String(u.role||''))).sort((a,b)=>(b[1].xp||0)-(a[1].xp||0));
     const isAdmin = adminIds.includes(Number(uid));
