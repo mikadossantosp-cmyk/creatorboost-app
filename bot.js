@@ -3506,7 +3506,10 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
 </style>
 
 <div class="ipf-banner">
-  <div class="ipf-banner-bg" style="${bannerIsGrad ? 'background:'+banner : 'background-image:url('+JSON.stringify(banner).slice(1,-1)+')'}"></div>
+  ${bannerIsGrad
+      ? `<div class="ipf-banner-bg" style="background:${banner}"></div>`
+      : `<div class="ipf-banner-bg" style="background:linear-gradient(135deg,#667eea,#764ba2)"></div><img src="${htmlEsc(banner)}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1" onerror="this.style.display='none'">`
+  }
   <div class="ipf-banner-overlay"></div>
 </div>
 <div class="ipf">
