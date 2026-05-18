@@ -6550,7 +6550,7 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
         if (!session) return json({ok:false, error:'Nicht eingeloggt'},401);
         const chunks = [];
         let total = 0;
-        const HARD_LIMIT = 4 * 1024 * 1024;
+        const HARD_LIMIT = 8 * 1024 * 1024; // 8MB roh — Banner koennen 3:1 Querformat 3-5MB sein
         let aborted = false;
         try {
             for await (const chunk of req) {
@@ -6559,11 +6559,18 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
                 chunks.push(chunk);
             }
         } catch(e) { aborted = true; }
-        if (aborted) return json({ok:false, error:'Datei zu groß (max 4MB)'},413);
+        if (aborted) {
+            console.error('[upload-banner] aborted: body > 8MB');
+            return json({ok:false, error:'Datei zu groß (max 8MB roh, ~6MB Bild)'},413);
+        }
         try {
             const { imageData } = JSON.parse(Buffer.concat(chunks).toString());
             if (!imageData?.startsWith('data:image/')) return json({ok:false, error:'Kein Bild'},400);
-            if (imageData.length > 3000000) return json({ok:false, error:'Max 2MB'},400);
+            // Limit: 6MB data-URL = ca. 4.5MB binary nach Base64-Decode (Banner kann breit sein)
+            if (imageData.length > 6000000) {
+                console.error('[upload-banner] too large:', imageData.length, 'bytes');
+                return json({ok:false, error:'Banner zu groß (max ~4.5MB) — bitte komprimieren'},400);
+            }
             session.bannerData = imageData;
             saveSessions();
             const _uidB = getMyUid(session);
