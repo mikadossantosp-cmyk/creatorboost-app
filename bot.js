@@ -3406,8 +3406,14 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
     const xp = u.xp||0;
     const nb = xpNext(xp);
     const grad = badgeGradient(u.role);
-    const banner = bannerData || ladeBild(uid, 'banner') || u.banner || 'linear-gradient(135deg,#667eea,#764ba2)';
-    const bannerIsGrad = !banner.startsWith('data:image') && !banner.startsWith('http');
+    // Banner: IMMER als /appbild URL rendern (kein inline data:image mehr).
+    // Vorher: 3MB data-URL pro Render im HTML + Cache-Probleme weil session.bannerData
+    // stale werden kann nach Upload + Account-Wechsel.
+    // Jetzt: alle Cache-Fixes vom /appbild Handler greifen (302-Auto-Cache-Bust + ETag).
+    const _hasBannerFile = !!ladeBild(uid, 'banner');
+    const _bannerUrl = _hasBannerFile ? (appbildSrc(String(uid), 'banner') || ('/appbild/' + uid + '/banner')) : null;
+    const banner = _bannerUrl || u.banner || 'linear-gradient(135deg,#667eea,#764ba2)';
+    const bannerIsGrad = !banner.startsWith('http') && !banner.startsWith('/appbild');
     const instaUrl = u.instagram ? `https://instagram.com/${u.instagram}` : null;
     const sorted = Object.entries(d.users||{}).filter(([,u])=>!/admin/i.test(String(u.role||''))).sort((a,b)=>(b[1].xp||0)-(a[1].xp||0));
     const isAdmin = adminIds.includes(Number(uid));
