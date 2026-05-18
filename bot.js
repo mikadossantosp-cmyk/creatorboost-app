@@ -6854,6 +6854,7 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
             try { await fs.promises.writeFile(DATA_DIR + '/bild_' + getMyUid(session) + '_profilepic.txt', imageData); } catch(e) { console.error('profilepic write failed:', e.message); }
             // Cache-Invalidation: damit /appbild/UID/profilepic sofort die neue Version zeigt
             _appbildBufCache.delete(getMyUid(session) + '/profilepic');
+            _bildCache.delete(getMyUid(session) + '_profilepic');
             checkProfileCompletion(getMyUid(session), session);
             return json({ok:true});
         } catch(e) { return json({ok:false, error:e.message},500); }
@@ -6882,6 +6883,7 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
             saveSessions();
             try { await fs.promises.writeFile(DATA_DIR + '/bild_' + getMyUid(session) + '_banner.txt', imageData); } catch(e) { console.error('banner write failed:', e.message); }
             _appbildBufCache.delete(getMyUid(session) + '/banner');
+            _bildCache.delete(getMyUid(session) + '_banner');
             checkProfileCompletion(getMyUid(session), session);
             return json({ok:true});
         } catch(e) { return json({ok:false, error:e.message},500); }
