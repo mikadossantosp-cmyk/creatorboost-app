@@ -15006,8 +15006,25 @@ ${_latestNews ? `<a href="/explore?tab=newsletter" class="highlight-card" style=
   <button onclick="switchRanking('weekly',this)" id="rtab-weekly" style="flex:1;background:var(--bg3);color:var(--muted);border:1px solid var(--border2);border-radius:10px;padding:7px;font-size:12px;font-weight:700;cursor:pointer">📆 Woche</button>
 </div>
 <div id="rlist-gesamt" style="padding-bottom:100px">${rankingRows}</div>
-<div id="rlist-daily" style="display:none;padding-bottom:100px">${dailyRows}</div>
-<div id="rlist-weekly" style="display:none;padding-bottom:100px">${weeklyRows}</div>
+<div id="rlist-daily" style="display:none;padding-bottom:100px">
+  <div style="margin:0 16px 12px;padding:12px 14px;background:linear-gradient(135deg,rgba(245,158,11,0.12),rgba(167,139,250,0.08));border:1px solid rgba(245,158,11,0.30);border-radius:12px;font-size:12.5px;line-height:1.55">
+    <div style="font-weight:800;color:#f59e0b;margin-bottom:6px">🏆 Tages-Preise (Reset 00:00)</div>
+    <div>🥇 <b>+10 XP · +5 💎 · 1 Extra-Link</b></div>
+    <div>🥈 <b>+5 XP · +3 💎</b></div>
+    <div>🥉 <b>+2 XP · +1 💎</b></div>
+  </div>
+  ${dailyRows}
+</div>
+<div id="rlist-weekly" style="display:none;padding-bottom:100px">
+  <div style="margin:0 16px 12px;padding:12px 14px;background:linear-gradient(135deg,rgba(167,139,250,0.14),rgba(245,158,11,0.10));border:1px solid rgba(167,139,250,0.35);border-radius:12px;font-size:12.5px;line-height:1.55">
+    <div style="font-weight:800;color:#a78bfa;margin-bottom:6px">🏆 Wochen-Preise (Mo–So, Reset Montag)</div>
+    <div>🥇 <b>+50 XP · +50 💎 · 2 Extra-Links</b></div>
+    <div>🥈 <b>+30 XP · +30 💎 · 1 Extra-Link</b></div>
+    <div>🥉 <b>+15 XP · +15 💎 · 1 Extra-Link</b></div>
+    <div style="margin-top:6px;font-size:11px;color:var(--muted)">Sieger werden automatisch benachrichtigt + Preise gutgeschrieben.</div>
+  </div>
+  ${weeklyRows}
+</div>
 <script>
 function switchRanking(tab, btn) {
   ['gesamt','daily','weekly'].forEach(t=>{
