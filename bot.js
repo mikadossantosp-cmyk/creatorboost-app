@@ -3577,10 +3577,13 @@ function ipfShare(){
 async function ipfFollow(btn, targetUid){
   btn.disabled = true;
   try {
-    const r = await fetch('/api/follow', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({targetUid})});
+    const r = await fetch('/api/follow', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({uid: String(targetUid)})});
     const j = await r.json();
-    if (j.ok) btn.innerHTML = j.following ? '✓ Folge ich' : '➕ Folgen';
-  } catch(e) {}
+    if (j.ok) btn.innerHTML = (j.action === 'follow') ? '✓ Folge ich' : '➕ Folgen';
+    else if (j.error) { try { toast('❌ ' + j.error); } catch(e){} }
+  } catch(e) {
+    try { toast('❌ Netzwerk-Fehler'); } catch(_){}
+  }
   btn.disabled = false;
 }
 function ipfToggleSwitcher(btn){
@@ -8270,7 +8273,10 @@ p{line-height:1.65;color:var(--muted)}
     if (path === '/api/helper-append' && req.method === 'POST') {
         if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
         const body = await parseBody(req);
-        const r = await postBot('/helper-chat-append-api', { uid: String(session.uid), role: String(body.role||''), text: String(body.text||'') });
+        // SECURITY: Client darf nur 'user' Rolle posten — sonst kann er beliebiges HTML
+        // als 'bot' speichern und es wird spaeter unescaped im Helper-Chat-Render gezeigt.
+        const role = (String(body.role||'') === 'bot') ? 'user' : String(body.role||'user');
+        const r = await postBot('/helper-chat-append-api', { uid: String(session.uid), role, text: String(body.text||'') });
         return json(r || {ok:false});
     }
     if (path === '/api/helper-ask' && req.method === 'POST') {
@@ -10248,7 +10254,9 @@ async function cbHelperAsk(){
     if (j.ok && j.answer) {
       t.remove();
       const a = document.createElement('div'); a.className='cb-msg bot';
-      const htmlA = '<div style="font-size:11px;color:var(--muted);margin-bottom:4px">🤖 CreatorBoost (KI):</div>' + j.answer;
+      // SECURITY: j.answer kommt von der Gemini-AI -> HTML-escape gegen Script-Injection
+      const safeAnswer = escapeHtml(String(j.answer));
+      const htmlA = '<div style="font-size:11px;color:var(--muted);margin-bottom:4px">🤖 CreatorBoost (KI):</div>' + safeAnswer;
       a.innerHTML = htmlA;
       body.appendChild(a);
       cbHelperPersist('bot', htmlA);
