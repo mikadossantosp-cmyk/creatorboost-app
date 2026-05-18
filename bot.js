@@ -3440,9 +3440,9 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
 .ipf-banner{position:relative;width:100%;height:130px;overflow:hidden}
 .ipf-banner-bg{position:absolute;inset:0;background-size:cover;background-position:center}
 .ipf-banner-overlay{position:absolute;inset:0;background:linear-gradient(180deg,transparent 50%,rgba(0,0,0,.2));pointer-events:none}
-.ipf{padding:14px 18px 8px;background:var(--bg);position:relative;margin-top:-30px;border-radius:24px 24px 0 0}
-.ipf-top{display:flex;align-items:center;gap:18px;margin-bottom:14px;margin-top:-30px}
-.ipf-avatar-wrap{position:relative;width:84px;height:84px;flex-shrink:0;margin-top:0}
+.ipf{padding:14px 18px 8px;background:var(--bg);position:relative;margin-top:-30px;border-radius:24px 24px 0 0;z-index:5}
+.ipf-top{display:flex;align-items:center;gap:18px;margin-bottom:14px;margin-top:-30px;position:relative;z-index:10}
+.ipf-avatar-wrap{position:relative;width:84px;height:84px;flex-shrink:0;margin-top:0;z-index:10}
 .ipf-avatar{width:100%;height:100%;border-radius:50%;background:var(--avatar-fallback-bg);background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;color:var(--avatar-fallback-color);font-weight:700;font-size:32px;overflow:hidden;position:relative;border:4px solid var(--bg);box-shadow:0 4px 18px rgba(0,0,0,.25)}
 .ipf-avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .ipf-avatar-dot{position:absolute;bottom:2px;right:2px;width:18px;height:18px;border-radius:50%;background:#22c55e;border:3px solid var(--bg);box-shadow:0 0 8px rgba(34,197,94,.5)}
@@ -3508,7 +3508,7 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
 <div class="ipf-banner">
   ${bannerIsGrad
       ? `<div class="ipf-banner-bg" style="background:${banner}"></div>`
-      : `<div class="ipf-banner-bg" style="background:linear-gradient(135deg,#667eea,#764ba2)"></div><img src="${htmlEsc(banner)}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1" onerror="this.style.display='none'">`
+      : `<div class="ipf-banner-bg" style="background:linear-gradient(135deg,#667eea,#764ba2)"></div><img src="${htmlEsc(banner)}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'">`
   }
   <div class="ipf-banner-overlay"></div>
 </div>
