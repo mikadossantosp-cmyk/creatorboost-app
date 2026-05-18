@@ -3972,6 +3972,23 @@ self.addEventListener('notificationclick',e=>{
         if (!/^(\d+|creatorboost)$/.test(buid||'') || !/^(profilepic|banner)$/.test(btype||'')) {
             res.writeHead(400); return res.end('bad request');
         }
+        // ── AUTO-CACHE-BUST: ohne ?v= -> 302 nach ?v=<mtime> ──
+        // Damit profitieren ALLE 22+ Render-Stellen automatisch von Cache-Busting,
+        // ohne dass jede Stelle einzeln auf appbildSrc() umgestellt werden muss.
+        // Browser folgt 302 und cached die finale URL mit Versions-Query.
+        if (!query.v && buid !== 'creatorboost') {
+            try {
+                const f = DATA_DIR + '/bild_' + buid + '_' + btype + '.txt';
+                if (fs.existsSync(f)) {
+                    const m = Math.floor(fs.statSync(f).mtimeMs);
+                    res.writeHead(302, {
+                        'Location': '/appbild/' + buid + '/' + btype + '?v=' + m,
+                        'Cache-Control': 'no-store'
+                    });
+                    return res.end();
+                }
+            } catch(e) {}
+        }
         // ── PERF: In-Memory LRU + ETag — vorher 180 sync Disk-Reads pro Feed ──
         const cacheKey = buid + '/' + btype;
         const cached = _appbildBufCache.get(cacheKey);
