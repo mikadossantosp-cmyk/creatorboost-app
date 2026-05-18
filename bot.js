@@ -1974,6 +1974,20 @@ async function cbResendConfirm(btn){
     </div>
   </div>
 </div>
+<script>
+// Early-Stubs fuer Funktionen die in Inline-onclick-Handlern verwendet werden — verhindern
+// ReferenceError falls profileCard/feed-content sie aufruft BEVOR das Haupt-Script geladen ist.
+// Muss VOR \${content} stehen, weil profileCard-HTML inline-onclick-Handler enthalten kann.
+// Werden spaeter (im Hauptscript ~Zeile 2700+) mit der echten Implementierung ueberschrieben.
+if(typeof window.markLinkVisited!=='function'){
+  window.markLinkVisited=function(lid){
+    try{const v=JSON.parse(localStorage.getItem('cb_visited_links')||'{}');v[String(lid)]=Date.now();localStorage.setItem('cb_visited_links',JSON.stringify(v));}catch(e){}
+  };
+}
+if(typeof window.hasLinkVisited!=='function'){
+  window.hasLinkVisited=function(lid){try{const v=JSON.parse(localStorage.getItem('cb_visited_links')||'{}');return !!v[String(lid)];}catch(e){return false;}};
+}
+</script>
 ${content}
 ${session ? `
 <nav class="bottom-nav">
@@ -2088,19 +2102,6 @@ ${session ? `
 // wenn localStorage write fehlschlaegt oder Promise haengt.
 // Stattdessen: Update-Banner-System (weiter unten) macht den SW-Switch
 // kontrolliert wenn ein neuer SW im Hintergrund installed wurde.
-</script>
-<script>
-// Early-Stubs fuer Funktionen die in Inline-onclick-Handlern verwendet werden — verhindern
-// ReferenceError falls der User auf einen Link klickt BEVOR das Haupt-Script geladen ist.
-// Werden spaeter (im Hauptscript ~Zeile 2700+) mit der echten Implementierung ueberschrieben.
-if(typeof window.markLinkVisited!=='function'){
-  window.markLinkVisited=function(lid){
-    try{const v=JSON.parse(localStorage.getItem('cb_visited_links')||'{}');v[String(lid)]=Date.now();localStorage.setItem('cb_visited_links',JSON.stringify(v));}catch(e){}
-  };
-}
-if(typeof window.hasLinkVisited!=='function'){
-  window.hasLinkVisited=function(lid){try{const v=JSON.parse(localStorage.getItem('cb_visited_links')||'{}');return !!v[String(lid)];}catch(e){return false;}};
-}
 </script>
 <script>
 // Legacy-Onboarding-Cleanup + iOS-PWA-Cache-Bust.
