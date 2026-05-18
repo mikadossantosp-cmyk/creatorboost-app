@@ -450,7 +450,7 @@ Verboten: fremde Reels, Affiliate/Spam, Wiederholungen. Self-Like → temporäre
 
 # Account-Verwaltung (genaue Wege)
 - Profilbild ändern: /einstellungen → 📷 Profilbild → Upload → Crop → speichern. Quadrat optimal.
-- Banner ändern: /einstellungen → Banner-Bereich. Querformat 3:1 ideal.
+- Banner ändern: /einstellungen → ✏️ Profil bearbeiten → 🎨 Banner. Querformat 3:1 ideal.
 - Bio ändern: /einstellungen → Bio-Feld (max 100 Zeichen) → speichern.
 - Spitzname ändern: /einstellungen → Spitzname (max 30 Zeichen). Zeigt sich in Ranking + Profil.
 - Instagram-Handle: /einstellungen → Instagram-Feld → Handle ohne @ → speichern.
@@ -645,7 +645,7 @@ const ADMIN_FULLTOUR_JS = `(function(){
     { url: '/preview/email-login?fulltour=1', sel: 'a[href*="auth/email-login"]', title: '📨 Magic-Link Email', text: 'So sieht die Login-Mail aus. Klick → Single-Use-Token → eingeloggt.' },
     { url: '/onboarding-instagram?preview=1&fulltour=1', sel: '#inp-instagram, input[type="text"]', title: '📸 Onboarding: Instagram', text: 'PFLICHT für Email-User: Instagram-Handle eintragen bevor liken/posten geht.' },
     { url: '/set-password?first=1&fulltour=1', sel: 'input[type="password"], #pw1', title: '🔐 Passwort setzen', text: 'Optional für Email-User: Passwort für Direct-Login. Skippbar.' },
-    { url: '/feed?fulltour=1', sel: '.post-action-btn, [data-tour="messages"]', title: '🏠 Feed', text: 'Erster Blick eingeloggt: Posts, Like-Buttons, Stories oben, Bottom-Nav unten.' },
+    { url: '/feed?fulltour=1', sel: '.ft-wrap, .post-action-btn', title: '🏠 Feed', text: 'Erster Blick eingeloggt: Posts, Like-Buttons, Stories oben, Bottom-Nav unten, Tab-Dropdown oben (Heute/Älter/Engagement/Kollabs/Diamond).' },
     { url: '/einstellungen?fulltour=1', sel: '#inp-instagram, .form-label, #inp-email', title: '⚙️ Einstellungen', text: 'Bio, Spitzname, Insta, Email, App-Code, Pinned Reel, Banner — alles anpassbar.' },
     { url: '/profil?fulltour=1', sel: '.profile-avatar, .profile-banner, h1, h2', title: '👤 Profil-Seite', text: 'Fertiges Profil: Banner, Avatar, XP, Badge, Stats, Posts. Ende der Tour 🎉' }
   ];
@@ -3896,7 +3896,7 @@ ${isPreview?'<div class="ob-pb">👀 Admin Vorschau &nbsp;·&nbsp; <a href="/ein
       <div class="ob-content">
         <div class="ob-step" style="color:#fbbf24">04 / 05</div>
         <div class="ob-title">Full <span style="background:linear-gradient(135deg,#fbbf24,#f59e0b);-webkit-background-clip:text;-webkit-text-fill-color:transparent">Engagement</span></div>
-        <div class="ob-desc">Jeden Monat postet jeder einen <b style="color:#fff">Superlink</b>. Alle liken, kommentieren, teilen &amp; speichern gegenseitig.</div>
+        <div class="ob-desc">Jede Woche (Mo–Sa) postet jeder einen <b style="color:#fff">Superlink</b>. Alle liken, kommentieren, teilen &amp; speichern gegenseitig.</div>
         <div class="ob-facts">
           <div class="ob-fact"><span class="ob-fact-i">✅</span><div class="ob-fact-t">Mitmachen = <b>XP + Diamanten</b> für alle Beteiligten</div></div>
           <div class="ob-fact" style="border-color:rgba(239,68,68,.2);background:rgba(239,68,68,.06)"><span class="ob-fact-i">⚠️</span><div class="ob-fact-t">Nicht dabei bis Sonntag = <b style="color:#ef4444">−50 XP</b> Strafe</div></div>
@@ -10250,7 +10250,7 @@ const CB_HELP = {
   '_back': { q:'← Zurück zur Übersicht', a:'Was willst du wissen?', next:['_start','rules','data','support','_more'] },
   // ── Banale How-Tos (Direkt-Antworten via Keyword-Search) ──
   '_h_profilbild': { q:'📷 Profilbild ändern', a:'Geh zu <a href="/einstellungen" style="color:#a78bfa;font-weight:700">/einstellungen</a> → <b>📷 Profilbild</b> → Foto hochladen → Bild zuschneiden → fertig.<br><br>Tipp: Quadrat-Bild funktioniert am besten.', next:['_h_banner','_h_bio','_back'] },
-  '_h_banner': { q:'🖼 Banner ändern', a:'In <a href="/einstellungen" style="color:#a78bfa;font-weight:700">/einstellungen</a> → Banner-Bereich. Lade ein Querformat-Bild hoch (3:1 ist ideal).', next:['_h_profilbild','_back'] },
+  '_h_banner': { q:'🖼 Banner ändern', a:'In <a href="/einstellungen" style="color:#a78bfa;font-weight:700">/einstellungen</a> → <b>✏️ Profil bearbeiten</b> → <b>🎨 Banner</b>. Lade ein Querformat-Bild hoch (3:1 ist ideal).', next:['_h_profilbild','_back'] },
   '_h_bio': { q:'📝 Bio / Beschreibung ändern', a:'<a href="/einstellungen" style="color:#a78bfa;font-weight:700">/einstellungen</a> → <b>Bio</b> Feld → bis zu 100 Zeichen → speichern.', next:['_h_spitzname','_back'] },
   '_h_spitzname': { q:'🏷 Spitzname ändern', a:'<a href="/einstellungen" style="color:#a78bfa;font-weight:700">/einstellungen</a> → <b>Spitzname</b> Feld → bis zu 30 Zeichen → speichern.<br><br>Der Spitzname erscheint im Ranking und auf deinem Profil.', next:['_h_bio','_back'] },
   '_h_email': { q:'📧 Email ändern / setzen', a:'<a href="/einstellungen/account" style="color:#a78bfa;font-weight:700">/einstellungen/account</a> → Email-Feld.<br><br>⚠️ Wenn du schon Email + Passwort gesetzt hast: erst <b>"Änderung anfragen"</b> klicken → Bestätigungs-Mail kommt → dann hast du 30 Min Edit-Window.', next:['_h_passwort','_back'] },
