@@ -4383,7 +4383,7 @@ self.addEventListener('notificationclick',e=>{
             if (reqEtag === cached.etag) {
                 res.writeHead(304, {'ETag': cached.etag}); return res.end();
             }
-            res.writeHead(200, {'Content-Type': cached.mime, 'Cache-Control':'public, max-age=300, must-revalidate', 'ETag': cached.etag, 'Content-Length': cached.buf.length});
+            res.writeHead(200, {'Content-Type': cached.mime, 'Cache-Control':'public, no-cache', 'ETag': cached.etag, 'Content-Length': cached.buf.length});
             return res.end(cached.buf);
         }
         // CreatorBoost-System-User: gebundeltes Avatar aus Repo (data-URL .txt) statt /data-Volume,
@@ -4412,7 +4412,7 @@ self.addEventListener('notificationclick',e=>{
             const etag = '"' + buid + '-' + btype + '-' + Math.round(stat.mtimeMs) + '"';
             _appbildLRUSet(cacheKey, { buf, mime, etag, ts: Date.now() });
             if (reqEtag === etag) { res.writeHead(304, {'ETag': etag}); return res.end(); }
-            res.writeHead(200, {'Content-Type': mime, 'Cache-Control': 'public, max-age=300, must-revalidate', 'ETag': etag, 'Content-Length': buf.length});
+            res.writeHead(200, {'Content-Type': mime, 'Cache-Control': 'public, no-cache', 'ETag': etag, 'Content-Length': buf.length});
             return res.end(buf);
         } catch(e) {}
         // Proxy to telegram-bot (separate Railway volume)
@@ -4431,7 +4431,7 @@ self.addEventListener('notificationclick',e=>{
                             const etag = '"proxy-' + buid + '-' + btype + '-' + buf.length + '"';
                             _appbildLRUSet(cacheKey, { buf, mime, etag, ts: Date.now() });
                             if (reqEtag === etag) { res.writeHead(304, {'ETag': etag}); return res.end(); }
-                            res.writeHead(200, { 'Content-Type': mime, 'Cache-Control': 'public, max-age=300, must-revalidate', 'ETag': etag, 'Content-Length': buf.length });
+                            res.writeHead(200, { 'Content-Type': mime, 'Cache-Control': 'public, no-cache', 'ETag': etag, 'Content-Length': buf.length });
                             res.end(buf);
                             resolve();
                         });
