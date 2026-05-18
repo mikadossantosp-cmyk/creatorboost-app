@@ -2222,7 +2222,7 @@ ${session ? `
   var STEPS = [
     // ── FEED PAGE ────────────────────────────────────────────────────────
     {page:'/feed', q:'[data-tour="stories"]',                    eyebrow:'Feed · Stories',     h:'📷 Aktive Creator von heute',           s:'Hier siehst du Creator die heute schon gepostet haben. Tippe eine Story-Bubble um auf ihr Profil zu kommen.'},
-    {page:'/feed', q:'[data-tour="feed-tabs"]',                  eyebrow:'Feed · Filter',      h:'📅 Heute · 🕐 Älter · ⭐ Engagement',   s:'Wechsle zwischen heutigen Posts, älteren Posts und der Engagement-Pflicht-Liste.'},
+    {page:'/feed', q:'.ft-wrap',                                eyebrow:'Feed · Filter',      h:'📅 Heute · 🕐 Älter · ⭐ Engagement · 🤝 Kollabs · 💎 Diamond',   s:'Tippe das Tab-Dropdown oben links um zwischen Tabs zu wechseln: heutigen Posts, älteren Posts, Engagement-Pflicht-Liste, Kollabs und Diamond-Posts.'},
     {page:'/feed', q:'.post.fade-up',                            eyebrow:'Feed · Post',        h:'🎬 So sieht ein Reel-Post aus',         s:'Tippe das Reel-Preview → Instagram öffnet sich. Dort musst du <b>liken UND kommentieren</b> — erst dann kannst du in der App den Like vergeben (Visit-before-Like).'},
     {page:'/feed', q:'.post.fade-up .post-action-btn',           eyebrow:'Feed · Like',        h:'❤️ So likest du',                        s:'Erst Insta-Reel öffnen → dort liken UND kommentieren. Dann hier Like tippen — DU bekommst XP, der Poster bekommt echtes Insta-Engagement.'},
     {page:'/feed', q:'[data-tour="feed"]',                       eyebrow:'Bottom-Nav',         h:'🏠 Feed (du bist hier)',                s:'Der Haupt-Feed mit allen heutigen Reel-Posts.'},
@@ -2235,15 +2235,13 @@ ${session ? `
     // ── MESSAGES PAGE ────────────────────────────────────────────────────
     {page:'/nachrichten', q:'[data-tour="messages"]',            eyebrow:'Bottom-Nav',         h:'💬 Direktnachrichten',                  s:'Wir sind jetzt im Nachrichten-Bereich. Hier laufen alle Privatchats mit anderen Creatorn — schreib direkt mit ihnen für Kollabs, Feedback oder einfach zum Quatschen.'},
     // ── PROFIL PAGE ──────────────────────────────────────────────────────
-    {page:'/profil', q:'.profile-avatar-wrap',                   eyebrow:'Profil · Avatar',    h:'👤 Dein Profil-Avatar',                  s:'Banner + Profilbild + Online-Status. Wenn du Top-1 bist, schwebt eine 👑 darüber.'},
-    {page:'/profil', q:'.profile-stats',                         eyebrow:'Profil · Stats',     h:'📊 XP, Links, Followers, Diamanten',     s:'Deine Live-Stats: XP-Stand, Anzahl Links, Followers, Streak und 💎 Diamanten.'},
-    {page:'/profil', q:'.acc-switcher',                          eyebrow:'Profil · Switcher',  h:'🔄 Account &amp; Sub-Account',          s:'Hauptaccount + optional ein Sub-Account. Schalte hier zwischen ihnen um (oder erstelle einen neuen).'},
-    {page:'/profil', q:'a[href="/einstellungen"]',               eyebrow:'Profil · Bearbeiten',h:'✏️ Hier kommst du in Einstellungen',     s:'Über diesen Stift kommst du zu allen Einstellungen — Profil, Email, Passwort, Spitzname, Pinned-Reel.'},
+    {page:'/profil', q:'.ipf-avatar-wrap',                       eyebrow:'Profil · Avatar',    h:'👤 Dein Profil-Avatar',                  s:'Banner + Profilbild + Online-Status. Wenn du Top-1 bist, schwebt eine 👑 darüber.'},
+    {page:'/profil', q:'.ipf-stats',                             eyebrow:'Profil · Stats',     h:'📊 Posts, Follower, Diamanten',          s:'Deine Live-Stats: Posts, Follower und 💎 Diamanten. Tippe auf 💎 für den Diamanten-Shop.'},
+    {page:'/profil', q:'.tb-switcher-wrap',                      eyebrow:'Profil · Switcher',  h:'🔄 Account &amp; Sub-Account',          s:'Oben in der Topbar: Hauptaccount + optional ein Sub-Account. Tippe um zwischen ihnen zu wechseln.'},
+    {page:'/profil', q:'a[href="/einstellungen"]',               eyebrow:'Profil · Bearbeiten',h:'✏️ Hier kommst du in Einstellungen',     s:'Über diesen Button kommst du zu allen Einstellungen — Profil, Account, Privacy, Sicherheit und mehr.'},
     // ── EINSTELLUNGEN PAGE ───────────────────────────────────────────────
-    {page:'/einstellungen', q:'#pic-preview',                    eyebrow:'Einstellungen · Bild',h:'📷 Profilbild ändern',                   s:'Tippe "📷 Foto hochladen" um dein Profilbild zu setzen. Wird auch im Insta-Avatar verwendet wenn du keinen Insta-Handle hast.'},
-    {page:'/einstellungen', q:'#inp-bio',                        eyebrow:'Einstellungen · Bio',h:'✍️ Bio &amp; Spitzname',                 s:'Schreib was über dich. Spitzname wird statt deines echten Namens angezeigt.'},
-    {page:'/einstellungen', q:'#inp-email',                      eyebrow:'Einstellungen · Email',h:'📧 Email für Magic-Link Login',         s:'Mit Email gesetzt kannst du dich auch ohne Telegram einloggen — über den Email-Tab auf der Login-Page.'},
-    {page:'/einstellungen', q:'#inp-instagram',                  eyebrow:'Einstellungen · Insta',h:'📸 Instagram-Handle',                    s:'Pflicht zum Posten/Liken. Wird für Engagement-Tracking gebraucht.'}
+    {page:'/einstellungen', q:'.pf-action-btn.primary',          eyebrow:'Einstellungen · Profil',h:'✏️ Profil bearbeiten — alles in einem',s:'Tippe hier um Profilbild, Bio, Spitzname, Instagram, Nische, Website, Pinned-Reel, Banner, Akzentfarbe und Dark Mode zu ändern.'},
+    {page:'/einstellungen/account', q:'#inp-email',              eyebrow:'Account · Email',    h:'📧 Email für Magic-Link Login',          s:'Mit Email gesetzt kannst du dich auch ohne Telegram einloggen — über den Email-Tab auf der Login-Page.'}
   ];
   var idx = 0;
   try{ idx = parseInt(sessionStorage.getItem('cb_tour_idx'),10) || 0; }catch(e){}
