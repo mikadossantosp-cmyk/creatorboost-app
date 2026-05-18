@@ -6506,12 +6506,25 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
             if (imageData.length > 3000000) return json({ok:false, error:'Max 2MB'},400);
             session.profilePicData = imageData;
             saveSessions();
-            try { await fs.promises.writeFile(DATA_DIR + '/bild_' + getMyUid(session) + '_profilepic.txt', imageData); } catch(e) { console.error('profilepic write failed:', e.message); }
+            const _uidU = getMyUid(session);
+            const _filePic = DATA_DIR + '/bild_' + _uidU + '_profilepic.txt';
+            let _writeOk = false;
+            try {
+                await fs.promises.writeFile(_filePic, imageData);
+                // mtime explizit setzen — manche Filesystems aktualisieren mtime nicht zuverlaessig
+                const _now = new Date();
+                try { fs.utimesSync(_filePic, _now, _now); } catch(e) {}
+                _writeOk = true;
+                console.log('[upload-profilepic] wrote', _filePic, 'size=' + imageData.length, 'uid=' + _uidU);
+            } catch(e) {
+                console.error('[upload-profilepic] write FAILED:', e.message, 'file=' + _filePic);
+            }
             // Cache-Invalidation: damit /appbild/UID/profilepic sofort die neue Version zeigt
-            _appbildBufCache.delete(getMyUid(session) + '/profilepic');
-            _bildCache.delete(getMyUid(session) + '_profilepic');
-            checkProfileCompletion(getMyUid(session), session);
-            return json({ok:true});
+            _appbildBufCache.delete(_uidU + '/profilepic');
+            _bildCache.delete(_uidU + '_profilepic');
+            if (!_writeOk) return json({ok:false, error:'Disk-Write fehlgeschlagen — Datei konnte nicht gespeichert werden'}, 500);
+            checkProfileCompletion(_uidU, session);
+            return json({ok:true, writtenTo: _filePic, mtime: Date.now()});
         } catch(e) { return json({ok:false, error:e.message},500); }
     }
 
@@ -6536,11 +6549,23 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
             if (imageData.length > 3000000) return json({ok:false, error:'Max 2MB'},400);
             session.bannerData = imageData;
             saveSessions();
-            try { await fs.promises.writeFile(DATA_DIR + '/bild_' + getMyUid(session) + '_banner.txt', imageData); } catch(e) { console.error('banner write failed:', e.message); }
-            _appbildBufCache.delete(getMyUid(session) + '/banner');
-            _bildCache.delete(getMyUid(session) + '_banner');
-            checkProfileCompletion(getMyUid(session), session);
-            return json({ok:true});
+            const _uidB = getMyUid(session);
+            const _fileBan = DATA_DIR + '/bild_' + _uidB + '_banner.txt';
+            let _writeOkB = false;
+            try {
+                await fs.promises.writeFile(_fileBan, imageData);
+                const _nowB = new Date();
+                try { fs.utimesSync(_fileBan, _nowB, _nowB); } catch(e) {}
+                _writeOkB = true;
+                console.log('[upload-banner] wrote', _fileBan, 'size=' + imageData.length, 'uid=' + _uidB);
+            } catch(e) {
+                console.error('[upload-banner] write FAILED:', e.message, 'file=' + _fileBan);
+            }
+            _appbildBufCache.delete(_uidB + '/banner');
+            _bildCache.delete(_uidB + '_banner');
+            if (!_writeOkB) return json({ok:false, error:'Disk-Write fehlgeschlagen — Datei konnte nicht gespeichert werden'}, 500);
+            checkProfileCompletion(_uidB, session);
+            return json({ok:true, writtenTo: _fileBan, mtime: Date.now()});
         } catch(e) { return json({ok:false, error:e.message},500); }
     }
 
