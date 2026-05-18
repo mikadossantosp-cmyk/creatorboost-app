@@ -181,12 +181,22 @@ if (sessions.size === 0) {
     } catch(e) { console.error('Sessions load failed:', e.message); }
 }
 
+// Debounced + async Sessions-Save — blockiert nicht mehr den Event-Loop.
+// Vorher: writeFileSync (sync, blockiert bei 89 Sessions x bis-zu-3MB-bannerData ~250ms+)
+// Plus: bei jedem Login/Upload wurde direkt sync geschrieben.
+// Jetzt: async fs.promises.writeFile (non-blocking) + 500ms-Debounce damit Burst-Calls
+// (z.B. login -> profile-update -> ...) zu einem Write zusammengefasst werden.
+let _saveSessionsTimer = null;
 function saveSessions() {
-    const obj = {};
-    for (const [k,v] of sessions.entries()) obj[k] = v;
-    const data = JSON.stringify(obj);
-    try { fs.writeFileSync(SESSIONS_FILE, data); } catch(e) { console.error('Sessions save failed (primary):', e.message); }
-    try { fs.writeFileSync(LOCAL_SESSIONS, data); } catch(e) { console.error('Sessions save failed (local):', e.message); }
+    if (_saveSessionsTimer) return;  // Debounce: ein Write pro 500ms reicht
+    _saveSessionsTimer = setTimeout(() => {
+        _saveSessionsTimer = null;
+        const obj = {};
+        for (const [k,v] of sessions.entries()) obj[k] = v;
+        const data = JSON.stringify(obj);
+        fs.promises.writeFile(SESSIONS_FILE, data).catch(e => console.error('Sessions save failed (primary):', e.message));
+        fs.promises.writeFile(LOCAL_SESSIONS, data).catch(e => console.error('Sessions save failed (local):', e.message));
+    }, 500);
 }
 setInterval(saveSessions, 60000);
 
@@ -2652,8 +2662,9 @@ async function checkNotifBadge(){
         }
     } catch(e){}
 }
-// Perf: nicht-kritisch — defer 2s nach Page-Load damit initial-render nicht blockiert wird
-setTimeout(() => { checkNotifBadge(); setInterval(checkNotifBadge, 60000); }, 2000);
+// Perf: nicht-kritisch — defer 2s nach Page-Load damit initial-render nicht blockiert wird.
+// Plus: nur pollen wenn Tab sichtbar (Hintergrund-Tabs erzeugen sonst sinnlose Requests).
+setTimeout(() => { checkNotifBadge(); setInterval(() => { if (!document.hidden) checkNotifBadge(); }, 60000); }, 2000);
 
 // Bfcache-Fix: wenn der User von Instagram/anderer Seite zurückkommt
 window.addEventListener('pageshow', function(ev){
@@ -2706,8 +2717,9 @@ async function checkMsgBadge(){
         if(b){if(d.count>0){b.textContent=d.count>9?'9+':d.count;b.style.display='flex';}else b.style.display='none';}
     }catch(e){}
 }
-// Perf: defer 2.5s damit initial-render nicht von Hintergrund-Fetches blockiert wird
-setTimeout(() => { checkMsgBadge(); setInterval(checkMsgBadge, 30000); }, 2500);
+// Perf: defer 2.5s damit initial-render nicht von Hintergrund-Fetches blockiert wird.
+// Plus: nur pollen wenn Tab sichtbar, sonst halbieren wir Server-Traffic von idle Tabs.
+setTimeout(() => { checkMsgBadge(); setInterval(() => { if (!document.hidden) checkMsgBadge(); }, 30000); }, 2500);
 function toast(msg,dur=2500){const t=document.getElementById('toast');if(!t)return;t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),dur);}
 // Großes Banner oben für wichtige Notifications (warn/success/info).
 // showBanner({title, subtitle?, type='warn', dur=4500, icon?})
@@ -2912,7 +2924,9 @@ async function openKollabSheet(){
     }
     info.textContent='Wähle deinen Kollab-Partner für diesen Post:';
     sel.style.display='block';
-    sel.innerHTML=j.partners.map(p=>'<option value="'+p.uid+'">'+(p.name||'User')+(p.instagram?' · @'+p.instagram:'')+'</option>').join('');
+    // SECURITY: p.name + p.instagram sind User-Eingaben -> HTML-escape gegen XSS
+    const _esc=s=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    sel.innerHTML=j.partners.map(p=>'<option value="'+_esc(p.uid)+'">'+_esc(p.name||'User')+(p.instagram?' · @'+_esc(p.instagram):'')+'</option>').join('');
     document.getElementById('kollab-post-btn').disabled=false;
   } catch(e){ info.textContent='❌ '+e.message; }
 }
@@ -11824,7 +11838,7 @@ async function createThread(){
 </div>
 ${cards}
 <script>
-setInterval(async()=>{if(document.hidden)return;try{const r=await fetch(location.href,{headers:{'X-Poll':'1'}});if(r.ok&&r.redirected)location.reload();}catch(e){}},15000);
+setInterval(async()=>{if(document.hidden)return;try{const r=await fetch(location.href,{headers:{'X-Poll':'1'}});if(r.ok&&r.redirected)location.reload();}catch(e){}},45000);
 async function renameThread(tid,current){
   const name=prompt('Neuer Thread-Name:',current);
   if(!name||!name.trim())return;
@@ -14127,7 +14141,8 @@ async function loadOnlineUsers() {
     console.warn('[online-users] fail', e);
   }
 }
-setInterval(loadOnlineUsers, 15000);
+// Online-Users-Poll: nur wenn Tab sichtbar + langsameres Intervall (war 15s -> 30s)
+setInterval(() => { if (!document.hidden) loadOnlineUsers(); }, 30000);
 
 async function loadSyncHealth() {
   try {
