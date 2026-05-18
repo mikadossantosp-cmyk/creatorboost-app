@@ -2086,11 +2086,12 @@ ${session ? `
 // Wirkt garantiert auch wenn alter SW v200 noch /appbild Requests
 // abfaengt (mit altem stale-while-revalidate Cache).
 // Nur EINMAL pro User-Browser via localStorage-Flag.
+// Flag-Version v3 — frueher konnte Flag gesetzt sein OHNE dass Reset komplett lief.
 (function(){
   try {
-    if (localStorage.getItem('cb_sw_reset_v201') === '1') return;
-    if (!('serviceWorker' in navigator)) { localStorage.setItem('cb_sw_reset_v201','1'); return; }
-    localStorage.setItem('cb_sw_reset_v201','1');
+    if (localStorage.getItem('cb_sw_reset_v3_done') === '1') return;
+    if (!('serviceWorker' in navigator)) { localStorage.setItem('cb_sw_reset_v3_done','1'); return; }
+    // Flag erst NACH erfolgreichem Reset setzen — falls reload nicht laeuft, retry beim naechsten Mal
     navigator.serviceWorker.getRegistrations().then(function(regs){
       return Promise.all(regs.map(function(r){ return r.unregister().catch(function(){}); }));
     }).then(function(){
@@ -2100,6 +2101,7 @@ ${session ? `
         });
       }
     }).then(function(){
+      try { localStorage.setItem('cb_sw_reset_v3_done','1'); } catch(e){}
       // Sofort reloaden — ab jetzt frischer SW v201 + frische Bilder
       setTimeout(function(){ location.reload(); }, 50);
     }).catch(function(){ try{ location.reload(); }catch(e){} });
@@ -3987,6 +3989,39 @@ self.addEventListener('notificationclick',e=>{
             res.end(`Fehler: ${e.message}<br><br>Northflank muss zuerst gestartet werden!`);
         }
         return;
+    }
+
+    // ── DEBUG: zeigt Bild-Datei-Status fuer einen User ──
+    // Aufruf: /api/debug-bild?uid=123&type=profilepic
+    // Zeigt: Datei existiert, mtime, size, ETag, Cache-Status
+    if (path === '/api/debug-bild') {
+        if (!session) return json({error:'Login required'}, 401);
+        const dbgUid = String(query.uid || getMyUid(session) || '');
+        const dbgType = String(query.type || 'profilepic');
+        const dbgFile = DATA_DIR + '/bild_' + dbgUid + '_' + dbgType + '.txt';
+        const info = { uid: dbgUid, type: dbgType, file: dbgFile, DATA_DIR };
+        try {
+            const stat = fs.statSync(dbgFile);
+            info.exists = true;
+            info.mtime = new Date(stat.mtimeMs).toISOString();
+            info.mtimeMs = Math.floor(stat.mtimeMs);
+            info.size = stat.size;
+            const data = fs.readFileSync(dbgFile, 'utf8');
+            info.mime = (data.split(';')[0] || '').replace('data:','');
+            info.dataLength = data.length;
+            info.cacheBustUrl = '/appbild/' + dbgUid + '/' + dbgType + '?v=' + info.mtimeMs;
+        } catch(e) { info.exists = false; info.error = e.message; }
+        const ramCache = _appbildBufCache.get(dbgUid + '/' + dbgType);
+        info.ramCache = ramCache ? { etag: ramCache.etag, bufLen: ramCache.buf.length, ts: new Date(ramCache.ts).toISOString() } : null;
+        const bildC = _bildCache.get(dbgUid + '_' + dbgType);
+        info.bildCacheHit = !!bildC;
+        if (bildC) info.bildCacheTs = new Date(bildC.ts).toISOString();
+        info.session_profilePicData = !!session.profilePicData;
+        info.session_bannerData = !!session.bannerData;
+        info.session_activeUid = String(session.activeUid || '');
+        info.session_uid = String(session.uid || '');
+        info.getMyUid = getMyUid(session);
+        return json(info);
     }
 
     // ── APP BILD ENDPOINT ──
