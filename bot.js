@@ -2980,12 +2980,39 @@ function confirmCrop(){
 <script>
 (function(){
   if(!('serviceWorker' in navigator))return;
+  // ── HOTFIX: ALTE SW-IMAGE-CACHES SOFORT LOESCHEN ──
+  // Alter SW v200 hatte stale-while-revalidate fuer /appbild/* und hielt alte
+  // Profilbilder/Banner monatelang im Browser. Selbst nach SW-Update auf v201
+  // (network-first) bleibt der alte Cache aktiv bis der neue SW activated.
+  // Loesche ALLE alten image caches direkt von der Page aus — wirkt sofort,
+  // auch wenn alter SW noch controller ist.
+  if('caches' in window){
+    caches.keys().then(names=>{
+      names.forEach(n=>{
+        if(n.startsWith('cb-images-') && !n.includes('v201-appbild-network-first')){
+          caches.delete(n).catch(()=>{});
+        }
+      });
+    }).catch(()=>{});
+  }
   // Alte SWs entfernen die noch gecacht haben
   navigator.serviceWorker.getRegistrations().then(regs=>{
     regs.forEach(r=>{if(r.active&&r.active.scriptURL&&!r.active.scriptURL.includes('/sw.js'))r.unregister();});
   });
   navigator.serviceWorker.register('/sw.js').then(async reg=>{
     reg.update();
+    // Wenn schon ein neuer SW wartet -> sofort aktivieren statt zu warten
+    if(reg.waiting){
+      try{ reg.waiting.postMessage({type:'SKIP_WAITING'}); }catch(e){}
+    }
+    // Auto-reload sobald neuer SW uebernimmt (nur einmal pro Session)
+    let __swReloaded = false;
+    navigator.serviceWorker.addEventListener('controllerchange', ()=>{
+      if(__swReloaded) return; __swReloaded = true;
+      try{ caches.keys().then(ks=>Promise.all(ks.map(k=>k.startsWith('cb-images-')&&!k.includes('v201')?caches.delete(k):null))); }catch(e){}
+      // sanftes reload um Profilbilder/Banner sofort zu erneuern
+      setTimeout(()=>location.reload(), 100);
+    });
     // Update-Banner: wenn neuer SW im hintergrund installiert wird, kurzen prompt zeigen
     let __updPromptShown = false;
     function showUpdatePrompt(){
@@ -4262,6 +4289,7 @@ const SW_VERSION='v201-appbild-network-first';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
+self.addEventListener('message',e=>{ if(e.data&&e.data.type==='SKIP_WAITING') self.skipWaiting(); });
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(
     keys.filter(k=>k!==STATIC_CACHE && k!==IMAGE_CACHE).map(k=>caches.delete(k))
