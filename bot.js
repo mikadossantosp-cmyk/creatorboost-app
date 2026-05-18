@@ -1737,7 +1737,7 @@ ${buildErrorHandler(_isAdmin)}
 <link rel="dns-prefetch" href="https://instagram.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" media="print" onload="this.media='all'">
 ${session ? `<link rel="prefetch" href="/feed"><link rel="prefetch" href="/explore"><link rel="prefetch" href="/nachrichten"><link rel="prefetch" href="/profil">` : ''}
-<style>${CSS}</style>
+<link rel="stylesheet" href="/static/main.css?v=237">
 </head>
 <body>
 ${_emailUnconfirmed ? `<div id="cb-email-confirm-bar" style="position:sticky;top:0;left:0;right:0;z-index:9998;background:linear-gradient(90deg,#f59e0b,#eab308);color:#000;padding:10px 14px;display:flex;align-items:center;justify-content:center;gap:12px;font-family:Inter,sans-serif;font-size:13px;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,0.15)">
@@ -3881,6 +3881,12 @@ async function handleRequest(req, res) {
     if (path === '/static/admin-fulltour.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Cache-Control':'public, max-age=86400, immutable'});
         return res.end(ADMIN_FULLTOUR_JS);
+    }
+    // Haupt-CSS extern ausliefern (statt 56KB inline pro Page-Load).
+    // Cache-Buster ?v=VERSION wechselt mit jedem Deploy -> alte Cache automatisch invalidiert.
+    if (path === '/static/main.css') {
+        res.writeHead(200, {'Content-Type':'text/css','Cache-Control':'public, max-age=86400, immutable'});
+        return res.end(CSS);
     }
 
     if (path === '/sw.js') {
@@ -18179,7 +18185,7 @@ ${(function(){
 <div class="pf-toast" id="pfToast"></div>
 
 <script>
-function pfOpenEditProfile(){ document.getElementById('pfModal').classList.add('open'); document.body.style.overflow='hidden'; ['pfName','pfBio'].forEach(id=>{const e=document.getElementById(id);if(e)pfUpdateCounter(id,id.replace('pf','pf')+'Cnt',e.maxLength);}); }
+function pfOpenEditProfile(){ document.getElementById('pfModal').classList.add('open'); document.body.style.overflow='hidden'; ['pfName','pfBio'].forEach(id=>{const e=document.getElementById(id);if(e)pfUpdateCounter(id,id+'Cnt',e.maxLength);}); }
 function pfCloseModal(){ document.getElementById('pfModal').classList.remove('open'); document.body.style.overflow=''; }
 function pfOpenEditAvatar(){ document.getElementById('pfAvatarFile').click(); }
 function pfUpdateCounter(inputId, counterId, max){
