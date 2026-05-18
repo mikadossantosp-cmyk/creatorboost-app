@@ -6872,22 +6872,27 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
     if (path === '/api/messages-count') {
         if (!session) return json({count:0});
         const myUid = getMyUid(session);
-        const botData = await fetchBot('/data');
+        // Perf: beide Bot-Calls PARALLEL statt sequenziell (~halbiert Latenz auf Badge-Poll).
+        const [botData, ac] = await Promise.all([
+            fetchBot('/data').catch(() => null),
+            fetchBot('/app-chat?uid=' + encodeURIComponent(myUid)).catch(() => null),
+        ]);
         if (!botData) return json({count:0});
-        // Count unread DMs
+        // Count unread DMs — Key-Prefilter (myUid muss im Key vorkommen) statt full-scan + split
         const convos = botData.messages || {};
         let unreadDMs = 0;
-        Object.entries(convos).forEach(([key, msgs]) => {
-            const [a,b] = key.split('_');
-            if (a === myUid || b === myUid)
-                unreadDMs += msgs.filter(m=>m.to===myUid&&!m.read).length;
-        });
-        // App-Community-Chat unread (Threads sind aus der App entfernt)
-        let unreadAppChat = 0;
-        try {
-            const ac = await fetchBot('/app-chat?uid=' + encodeURIComponent(myUid));
-            unreadAppChat = ac?.unread || 0;
-        } catch(e) {}
+        const prefix = myUid + '_';
+        const suffix = '_' + myUid;
+        for (const key in convos) {
+            if (!key.startsWith(prefix) && !key.endsWith(suffix)) continue;
+            const msgs = convos[key];
+            if (!Array.isArray(msgs)) continue;
+            for (let i = 0; i < msgs.length; i++) {
+                const m = msgs[i];
+                if (m && m.to === myUid && !m.read) unreadDMs++;
+            }
+        }
+        const unreadAppChat = ac?.unread || 0;
         return json({count: unreadDMs + unreadAppChat, dms: unreadDMs, appChat: unreadAppChat});
     }
 
