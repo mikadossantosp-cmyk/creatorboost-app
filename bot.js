@@ -3510,7 +3510,7 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
       ? `<div class="ipf-banner-bg" style="background:${banner}"></div>`
       : `<div class="ipf-banner-bg" style="background:linear-gradient(135deg,#667eea,#764ba2)"></div><img src="${htmlEsc(banner)}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1" onerror="this.style.display='none'">`
   }
-  <div class="ipf-banner-overlay"></div>
+  <div class="ipf-banner-overlay" style="z-index:2"></div>
 </div>
 <div class="ipf">
   <div class="ipf-top">
