@@ -15024,8 +15024,8 @@ ${_latestNews ? `<a href="/explore?tab=newsletter" class="highlight-card" style=
 <div id="rlist-daily" style="display:none;padding-bottom:100px">
   <div style="margin:0 16px 12px;padding:12px 14px;background:linear-gradient(135deg,rgba(245,158,11,0.12),rgba(167,139,250,0.08));border:1px solid rgba(245,158,11,0.30);border-radius:12px;font-size:12.5px;line-height:1.55">
     <div style="font-weight:800;color:#f59e0b;margin-bottom:6px">🏆 Tages-Preise (Reset 00:00)</div>
-    <div>🥇 <b>+10 XP · +5 💎 · 1 Extra-Link</b></div>
-    <div>🥈 <b>+5 XP · +3 💎</b></div>
+    <div>🥇 <b>+10 XP · +2 💎 · 1 Extra-Link</b></div>
+    <div>🥈 <b>+5 XP · +2 💎</b></div>
     <div>🥉 <b>+2 XP · +1 💎</b></div>
   </div>
   ${dailyRows}
