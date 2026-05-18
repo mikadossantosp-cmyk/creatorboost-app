@@ -1,6 +1,6 @@
 {
-  "packageId": "app.creatorx.twa",
-  "host": "PUT_YOUR_PWA_HOST_HERE.onrender.com",
+  "packageId": "com.creatorx.app",
+  "host": "www.creatorboostx.de",
   "name": "CreatorX",
   "launcherName": "CreatorX",
   "display": "standalone",
@@ -11,20 +11,33 @@
   "navigationDividerColorDark": "#000000",
   "backgroundColor": "#000000",
   "enableNotifications": true,
-  "startUrl": "/?ver=1",
-  "iconUrl": "https://PUT_YOUR_PWA_HOST_HERE.onrender.com/icon-512.png?v=25",
-  "maskableIconUrl": "https://PUT_YOUR_PWA_HOST_HERE.onrender.com/icon-512.png?v=25",
-  "monochromeIconUrl": "https://PUT_YOUR_PWA_HOST_HERE.onrender.com/icon-512.png?v=25",
+  "startUrl": "/launch",
+  "iconUrl": "https://www.creatorboostx.de/icon-512.png?v=26",
+  "maskableIconUrl": "https://www.creatorboostx.de/icon-512.png?v=26",
+  "monochromeIconUrl": "https://www.creatorboostx.de/icon-512.png?v=26",
   "splashScreenFadeOutDuration": 300,
-  "shortcuts": [],
+  "shortcuts": [
+    {
+      "name": "Feed",
+      "shortName": "Feed",
+      "url": "/feed",
+      "chosenIconUrl": "https://www.creatorboostx.de/icon-192.png?v=26"
+    },
+    {
+      "name": "Profil",
+      "shortName": "Profil",
+      "url": "/profil",
+      "chosenIconUrl": "https://www.creatorboostx.de/icon-192.png?v=26"
+    }
+  ],
   "appVersionName": "1.0.0",
   "appVersionCode": 1,
   "shareTarget": null,
   "orientation": "portrait",
   "fingerprints": [],
-  "additionalTrustedOrigins": [],
+  "additionalTrustedOrigins": ["creatorboostx.de"],
   "retainedBundles": [],
-  "fullScopeUrl": "https://PUT_YOUR_PWA_HOST_HERE.onrender.com/",
+  "fullScopeUrl": "https://www.creatorboostx.de/",
   "minSdkVersion": 21,
   "isMetaQuest": false,
   "fallbackType": "customtabs",
@@ -35,6 +48,5 @@
   "alphaDependencies": { "enabled": false },
   "enableSiteSettingsShortcut": true,
   "isChromeOSOnly": false,
-  "isMetaQuest": false,
   "generatorApp": "bubblewrap-cli"
 }

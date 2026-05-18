@@ -35,8 +35,10 @@ const BOT_USERNAME  = process.env.BOT_USERNAME  || 'Creator_Boostbot';
 const PORT          = process.env.PORT          || 3000;
 
 const fs = require('fs');
+const zlib = require('zlib');
 const DATA_DIR = fs.existsSync('/data') ? '/data' : __dirname;
 const SESSIONS_FILE = DATA_DIR + '/cb_sessions.json';
+const PENDING_CONFIRMS_FILE = DATA_DIR + '/email_confirm_pending.json';
 
 // Sessions von Disk laden
 const sessions = new Map();
@@ -45,23 +47,63 @@ const emailLoginTokens = new Map();   // token → { email, uid, exp }
 const emailConfirmTokens = new Map(); // token → { email, uid, exp } (für /einstellungen Email-Bestätigung)
 const accountUnlockTokens = new Map(); // token → { uid, exp } — nach Klick im Mail Settings-Edit freischalten
 const emailRateLimit = new Map();      // email → lastRequestTs (Cooldown gegen Spam)
+// AppCode-Brute-Force-Schutz: pro IP max 10 versch. Codes / 10 Min
+const _codeBruteMap = new Map();       // ip → { codes: Set, ts: Date.now() }
+function _codeBruteCheck(ip, code) {
+    if (!ip) return true;
+    const now = Date.now();
+    const WINDOW = 10 * 60 * 1000;
+    let entry = _codeBruteMap.get(ip);
+    if (!entry || now - entry.ts > WINDOW) entry = { codes: new Set(), ts: now };
+    entry.codes.add(code);
+    _codeBruteMap.set(ip, entry);
+    if (_codeBruteMap.size > 1000) {
+        for (const [k, v] of _codeBruteMap) if (now - v.ts > WINDOW) _codeBruteMap.delete(k);
+    }
+    return entry.codes.size <= 10;
+}
+function _codeBruteReset(ip) { if (ip) _codeBruteMap.delete(ip); }
+// In-Memory LRU für /appbild/* — vorher 180 sync Disk-Reads pro Feed-Render
+const _appbildBufCache = new Map();    // cacheKey → {buf, mime, etag, ts}
+const _APPBILD_LRU_MAX = 500;
+function _appbildLRUSet(key, val) {
+    if (_appbildBufCache.size >= _APPBILD_LRU_MAX) {
+        // Älteste Einträge zuerst rauswerfen (Map preserved insertion order)
+        const toRemove = Math.floor(_APPBILD_LRU_MAX * 0.1);
+        let removed = 0;
+        for (const k of _appbildBufCache.keys()) {
+            if (removed >= toRemove) break;
+            _appbildBufCache.delete(k); removed++;
+        }
+    }
+    _appbildBufCache.set(key, val);
+}
+// Bei Profilbild/Banner-Upload invalidate: in /api/upload-profilepic und /api/upload-banner
+// wird _appbildBufCache.delete(uid + '/' + type) gesetzt (separate Edit).
 const signupIpRateLimit = new Map();   // ip → { ts, n } — gegen Fake-Account-Spam + Email-Enumeration
+// Signup-Email-Confirmation: tracking unconfirmed Users LOCAL (Mainbot wird NICHT angefasst).
+// uid → { token, email, exp }. Persisted to disk via savePendingEmailConfirms.
+const pendingEmailConfirms = new Map();
 const SIGNUP_RATE_LIMIT_WINDOW = 60 * 60 * 1000; // 1 Stunde Fenster
 const SIGNUP_RATE_LIMIT_MAX = 5;       // max 5 Signups pro Stunde pro IP
 const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
 const EMAIL_FROM = process.env.EMAIL_FROM || 'CreatorX <onboarding@resend.dev>';
-const EMAIL_TOKEN_TTL = 60 * 60 * 1000;       // 1 Stunde
+const EMAIL_TOKEN_TTL = 24 * 60 * 60 * 1000;  // 24 Stunden (war 1h, zu kurz wenn Mail spät zugestellt)
 const ACCOUNT_UNLOCK_TTL = 30 * 60 * 1000;    // 30 Min Edit-Window nach Unlock-Klick
 const MAGIC_LINK_RATE_LIMIT = 30 * 1000;      // 30 Sek zwischen Magic-Link-Requests pro Email
 const PW_RESET_RATE_LIMIT = 5 * 60 * 1000;    // 5 Min zwischen Password-Reset-Requests pro Email
 const EMAIL_RATE_LIMIT = MAGIC_LINK_RATE_LIMIT; // Backward-compat alias
 setInterval(() => {
     const now = Date.now();
+    let confirmsRemoved = 0;
     for (const [t, v] of emailLoginTokens.entries()) if (v.exp < now) emailLoginTokens.delete(t);
-    for (const [t, v] of emailConfirmTokens.entries()) if (v.exp < now) emailConfirmTokens.delete(t);
+    for (const [t, v] of emailConfirmTokens.entries()) { if (v.exp < now) { emailConfirmTokens.delete(t); confirmsRemoved++; } }
     for (const [t, v] of accountUnlockTokens.entries()) if (v.exp < now) accountUnlockTokens.delete(t);
-    for (const [e, ts] of emailRateLimit.entries()) if (now - ts > EMAIL_RATE_LIMIT * 2) emailRateLimit.delete(e);
+    for (const [e, ts] of emailRateLimit.entries()) { if (typeof ts === 'number' && now - ts > EMAIL_RATE_LIMIT * 2) emailRateLimit.delete(e); }
     for (const [ip, v] of signupIpRateLimit.entries()) if (now - v.ts > SIGNUP_RATE_LIMIT_WINDOW) signupIpRateLimit.delete(ip);
+    // Wenn Email-Confirm-Tokens gelöscht wurden: sofort auf Disk persistieren
+    // (sonst werden expired tokens nach Restart aus alter Datei wiedergeladen — würde aber unten gefiltert, also nur Inkonsistenz)
+    if (confirmsRemoved > 0) { try { savePendingEmailConfirms(); } catch(e) {} }
 }, 5 * 60 * 1000);
 
 // Daily claims tracker (persisted to file, keyed by "type:uid:date")
@@ -146,8 +188,84 @@ function saveSessions() {
 }
 setInterval(saveSessions, 60000);
 
+// Pending Email-Confirmations laden + speichern
+// Datei enthält BEIDE Maps: pendingEmailConfirms (uid→{token,email,exp})
+// UND emailConfirmTokens (token→{email,uid,exp}). Vor diesem Fix wurde
+// emailConfirmTokens nur im RAM gehalten → Server-Restart = alle Tokens weg
+// = User sah "Link abgelaufen" auch direkt nach Anforderung.
+try {
+    if (fs.existsSync(PENDING_CONFIRMS_FILE)) {
+        const raw = JSON.parse(fs.readFileSync(PENDING_CONFIRMS_FILE, 'utf8'));
+        const now = Date.now();
+        const pec = raw && raw.pendingEmailConfirms ? raw.pendingEmailConfirms : raw; // legacy format
+        const ect = raw && raw.emailConfirmTokens ? raw.emailConfirmTokens : {};
+        for (const [uid, v] of Object.entries(pec || {})) {
+            if (v && v.exp > now) pendingEmailConfirms.set(String(uid), v);
+        }
+        for (const [token, v] of Object.entries(ect || {})) {
+            if (v && v.exp > now) emailConfirmTokens.set(String(token), v);
+        }
+        console.log('✅ Email-Confirms geladen: pendingChange=' + pendingEmailConfirms.size + ' tokens=' + emailConfirmTokens.size);
+    }
+} catch(e) { console.error('PendingConfirms load failed:', e.message); }
+function savePendingEmailConfirms() {
+    const pec = {};
+    for (const [k,v] of pendingEmailConfirms.entries()) pec[k] = v;
+    const ect = {};
+    for (const [k,v] of emailConfirmTokens.entries()) ect[k] = v;
+    try { fs.writeFileSync(PENDING_CONFIRMS_FILE, JSON.stringify({ pendingEmailConfirms: pec, emailConfirmTokens: ect })); } catch(e) { console.error('PendingConfirms save failed:', e.message); }
+}
+setInterval(savePendingEmailConfirms, 60000);
+// Cleanup expired entries every 5 min
+setInterval(() => {
+    const now = Date.now();
+    let removed = 0;
+    for (const [uid, v] of pendingEmailConfirms.entries()) {
+        if (!v || v.exp < now) { pendingEmailConfirms.delete(uid); removed++; }
+    }
+    if (removed) { savePendingEmailConfirms(); console.log('PendingConfirms expired cleanup:', removed); }
+}, 5 * 60 * 1000);
+
+// Helper: Bestätigungs-Email versenden für einen User. Fire-and-forget vom Signup-Pfad.
+async function sendSignupConfirmationEmail(uid, email, hostHeader) {
+    try {
+        const token = crypto.randomBytes(24).toString('hex');
+        const exp = Date.now() + 7 * 24 * 60 * 60 * 1000;
+        // Token-keyed Map (Source of Truth fürs Lookup) — alte Tokens BLEIBEN bis sie
+        // expirieren. So funktioniert "Resend" ohne dass die alte Email-Link tot wird.
+        emailConfirmTokens.set(token, { email, uid: String(uid), exp, kind: 'signup' });
+        // UID-keyed Helper (nur für Banner-Check + Resend-Anzeige). Wird auch nicht
+        // overwritten als kritischer Pfad — alte Token sind via emailConfirmTokens noch valid.
+        pendingEmailConfirms.set(String(uid), { token, email, exp });
+        savePendingEmailConfirms();
+        console.log('[email-confirm] Signup-Token gesetzt für uid=' + uid + ' email=' + email + ' tokenPrefix=' + token.slice(0,12) + '…');
+        const baseUrl = (process.env.APP_URL || ('https://' + (hostHeader || 'www.creatorboostx.de'))).replace(/\/$/, '');
+        const confirmUrl = baseUrl + '/auth/confirm-email?token=' + encodeURIComponent(token);
+        const userName = String(email||'').split('@')[0].replace(/[<>]/g,'').slice(0,30);
+        const html = '<!DOCTYPE html><html><body style="margin:0;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',sans-serif;background:#000;color:#fff;padding:0">'+
+            '<div style="max-width:560px;margin:0 auto;padding:32px 24px">'+
+            '<div style="text-align:center;margin-bottom:24px"><img src="'+baseUrl+'/cx-logo-256.png" width="80" height="80" style="border-radius:18px" alt="CreatorX"></div>'+
+            '<h1 style="font-size:26px;font-weight:700;margin:0 0 12px;text-align:center;color:#fff">Willkommen bei CreatorX! 🎉</h1>'+
+            '<p style="font-size:15px;color:#a8a39a;line-height:1.6;text-align:center;margin:0 0 28px">Hi '+userName+', klick den Button um deine Email-Adresse zu bestätigen.</p>'+
+            '<div style="text-align:center;margin:32px 0"><a href="'+confirmUrl+'" style="display:inline-block;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px;letter-spacing:0.3px">✅ Email bestätigen</a></div>'+
+            '<p style="font-size:12px;color:#605c54;line-height:1.5;text-align:center;margin:32px 0 0;border-top:1px solid #221f1a;padding-top:20px">Link 7 Tage gültig, einmalig nutzbar.<br>Falls du das nicht warst, ignoriere diese Email.</p>'+
+            '</div></body></html>';
+        const ok = await sendEmail(email, '🎉 Willkommen bei CreatorX — Email bestätigen', html);
+        console.log('[email-confirm] Sent to', email, '→', ok ? 'OK' : 'FAILED');
+    } catch(e) {
+        console.error('[email-confirm] sendSignupConfirmationEmail error:', e.message, 'uid:', uid, 'email:', email);
+    }
+}
+
 // Weekly raffle (Gewinnspiel): runs every minute, triggers Sunday 20:00 Berlin time
 let _lastRaffleTrigger = '';
+const RAFFLE_FILE = (typeof DATA_DIR !== 'undefined' ? DATA_DIR : __dirname) + '/raffle-winners.json';
+function loadRaffleHistory() {
+    try { return JSON.parse(fs.readFileSync(RAFFLE_FILE, 'utf8')); } catch(e) { return { lastWinner: null, history: [] }; }
+}
+function saveRaffleHistory(d) {
+    try { fs.writeFileSync(RAFFLE_FILE, JSON.stringify(d)); } catch(e) { console.error('[Gewinnspiel] Save error:', e.message); }
+}
 setInterval(async () => {
     try {
         const now = new Date(new Date().toLocaleString('en-US', {timeZone:'Europe/Berlin'}));
@@ -164,15 +282,33 @@ setInterval(async () => {
         const winner = eligible[Math.floor(Math.random() * eligible.length)];
         const [winnerUid, winnerUser] = winner;
         const prizes = [
-            { name: '1 Extra-Link', action: '/add-extra-link' },
-            { name: '1 Superlink', action: '/add-superlink' },
-            { name: '500 XP', action: '/add-xp', data: { amount: 500, reason: 'gewinnspiel' } },
-            { name: '5 Diamanten', action: '/add-diamonds', data: { amount: 5, reason: 'gewinnspiel' } }
+            { name: '1 Extra-Link', action: '/add-extra-link', emoji: '🔗' },
+            { name: '1 Superlink', action: '/add-superlink', emoji: '⚡' },
+            { name: '500 XP', action: '/add-xp', emoji: '✨', data: { amount: 500, reason: 'gewinnspiel' } },
+            { name: '5 Diamanten', action: '/add-diamonds', emoji: '💎', data: { amount: 5, reason: 'gewinnspiel' } }
         ];
         const prize = prizes[Math.floor(Math.random() * prizes.length)];
         const payload = { uid: winnerUid, ...(prize.data || {}), reason: prize.data?.reason || 'gewinnspiel' };
         await postBot(prize.action, payload);
-        console.log(`[Gewinnspiel] Gewinner: ${winnerUser.spitzname || winnerUser.name} (${winnerUid}) — Preis: ${prize.name}`);
+        // Gewinner persistieren — Frontend kann jetzt "Letzter Gewinner" anzeigen
+        const winnerXP = weeklyXP[winnerUid] || winnerUser.xpThisWeek || winnerUser.weeklyXp || 0;
+        const entry = {
+            uid: String(winnerUid),
+            name: winnerUser.spitzname || winnerUser.name || 'Creator',
+            handle: winnerUser.ig_handle || winnerUser.username || '',
+            rang: winnerUser.rang || '',
+            prize: prize.name,
+            prizeEmoji: prize.emoji,
+            xp: winnerXP,
+            participants: eligible.length,
+            timestamp: Date.now(),
+            week: key
+        };
+        const hist = loadRaffleHistory();
+        hist.lastWinner = entry;
+        hist.history = [entry, ...(hist.history || [])].slice(0, 12);
+        saveRaffleHistory(hist);
+        console.log(`[Gewinnspiel] Gewinner: ${entry.name} (${winnerUid}) — Preis: ${prize.name} · ${eligible.length} Teilnehmer`);
     } catch(e) { console.error('[Gewinnspiel] Fehler:', e.message); }
 }, 60000);
 
@@ -194,6 +330,238 @@ let pushSubs = {};
 try { if (fs.existsSync(PUSH_SUBS_FILE)) pushSubs = JSON.parse(fs.readFileSync(PUSH_SUBS_FILE, 'utf8')); } catch(e) { console.error('Push subs load failed:', e.message); }
 function savePushSubs() { try { fs.writeFileSync(PUSH_SUBS_FILE, JSON.stringify(pushSubs)); } catch(e) { console.error('Push subs save failed:', e.message); } }
 if (webpush) webpush.setVapidDetails('mailto:admin@creatorx.app', VAPID_PUBLIC, VAPID_PRIVATE);
+
+// ── Google Gemini API (Helper-Bot AI, kostenloser Tier) ──
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
+// Default: gemini-2.5-flash-lite — Free-Tier 1000 RPD vs 200 RPD bei 2.0-flash
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash-lite';
+const GEMINI_MODEL_FALLBACK = process.env.GEMINI_MODEL_FALLBACK || 'gemini-2.0-flash-lite';
+if (GEMINI_API_KEY) {
+    console.log('[AI] Gemini Helper-AI aktiv (Modell:', GEMINI_MODEL + ')');
+} else {
+    console.log('[AI] GEMINI_API_KEY fehlt — Helper-AI deaktiviert, Fallback auf Keyword/Admin');
+}
+const HELPER_SYSTEM_PROMPT = `Du bist CreatorBoost, der In-App-Assistent von CreatorBoostX (CreatorX) — einer Web-/PWA-App für Instagram-Creator-Wachstum via gegenseitiges Engagement.
+
+# REGEL 1 — Antworte NUR mit Infos aus dieser Wissensbasis
+NIEMALS Features, URLs, Tabs, Beträge, Regeln erfinden! Wenn die User-Frage nicht 100% durch unten stehende Infos abgedeckt ist, antworte ehrlich z.B.:
+"Das weiß ich nicht genau. Klick unten auf <b>❌ Doch Admin fragen</b> — ich leite es weiter, du kriegst die Antwort direkt hier in diesem Chat."
+
+NIEMALS sagen "DM an CreatorBoost", "/nachrichten/creatorboost öffnen" oder ähnlich! Dieser Helper-Chat IST der Kanal, der Admin antwortet direkt hier. User muss nirgendwo hinklicken oder eine andere Seite öffnen.
+
+# REGEL 2 — Format
+- Deutsch, du-Form, freundlich, kurz (max 6 Sätze).
+- HTML (NICHT Markdown): <b>, <br>, <ul>, <li>, <a href="/pfad" style="color:#a78bfa;font-weight:700">Text</a>, <code>.
+- KEIN <html>/<body>/<p>/<div>/<script>/<style>/<img>, KEIN ** oder ###.
+
+# REGEL 3 — JEDER Pfad MUSS ein klickbarer Link sein (NIE als reiner Text!)
+- Wenn deine Antwort einen Pfad/Seite/Feature erwähnt (z.B. /einstellungen, /feed, /explore?tab=roulette) → IMMER als <a href="..."> Link mit Style.
+- FALSCH: "Geh zu /einstellungen → Profilbild" (toter Text)
+- RICHTIG: "Geh zu <a href='/einstellungen' style='color:#a78bfa;font-weight:700'>/einstellungen</a> → Profilbild"
+- Jede Antwort sollte mindestens 1 klickbaren Link enthalten zum direkten Hinklicken.
+- Bei mehreren Schritten: jeden erwähnten Pfad einzeln verlinken.
+- Auch Tab-URLs verlinken: <a href='/explore?tab=roulette' style='color:#a78bfa;font-weight:700'>/explore?tab=roulette</a>
+- Buttons im Profil (wie "Daily-Bonus") → link zur Seite wo der Button ist: <a href='/profil' style='color:#a78bfa;font-weight:700'>/profil</a>
+
+# App-Pfade (alle verifiziert — KEINE anderen erfinden!)
+- /feed — Haupt-Feed, Reels, Post-Button (+), Daily-Bonus button auf Profil
+- /explore — Discovery-Hub mit Tabs:
+  · /explore?tab=allgemein — Übersicht
+  · /explore?tab=newsletter — News
+  · /explore?tab=ranking — Ranking (oder /ranking)
+  · /explore?tab=tipps — Tipps
+  · /explore?tab=regeln — Komplette Regeln
+  · /explore?tab=shop — Diamond-Shop (Items kaufen)
+  · /explore?tab=gewinnspiel — Wochen-Gewinnspiel
+  · /explore?tab=roulette — Glücksrad (täglich 1× drehen)
+- /profil — Eigenes Profil (Daily-Bonus-Button hier!)
+- /profil/UID — Profil eines anderen Users
+- /einstellungen — Hub
+  · /einstellungen/account — Email + Passwort
+  · /einstellungen/privacy — Blockierte
+  · /einstellungen/notifications — Push aktivieren
+  · /einstellungen/sicherheit — Logout, Sessions
+  · /einstellungen/admin — nur Admins
+  · /einstellungen/pro — Pro-Features
+- /nachrichten — DM-Inbox
+- /nachrichten/creatorboost — Direkt-DM mit Admin (CreatorBoost)
+- /nachrichten/gruppe — Community-Gruppenchat
+- /nachrichten/app-chat — App-globaler Chat
+- /dashboard — nur Admins
+- /diamanten — Diamanten-Verwaltung + Info
+- /set-password — Passwort setzen
+- /logout — Direkt-Ausloggen
+- /download-app — APK-Download
+- /suche — User suchen
+- /benachrichtigungen — Benachrichtigungs-Verlauf
+- /ranking — Rangliste
+- /datenschutz oder /privacy — Datenschutzerklärung
+- /impressum — Impressum
+- /agb oder /terms — AGB
+
+# XP-System (exakte Werte)
+- Like: +5 XP pro Like (Pflicht: min. 5/Tag = M1)
+- Post: +5 XP (1 Link/Tag Standard)
+- Daily-Missionen M1+M2+M3: je +5 XP, M3 zusätzlich +1💎 — max +15 XP + 1💎/Tag
+- Wochen-Missionen (7 Tage Folge): W-M1 +10 XP, W-M2 +15 XP + 1💎, W-M3 +20 XP + 2💎
+- Daily-Bonus (Button auf /profil): zufällig 10–20 XP, 1×/Tag
+- First-Post-Newcomer-Bonus: +20 XP einmalig
+- Event-Multiplier während Events
+
+# Badges (XP-Schwellen)
+🆕 New: 0–49 · 📘 Anfänger: 50–499 · ⬆️ Aufsteiger: 500–999 · 🏅 Erfahrener: 1000–4999 · 👑 Elite: 5000–9999 · 🌟 Elite+: 10000+
+
+# Missionen (Auswertung täglich 12:00 Berlin)
+- M1 — Daily Engagement: 5 Links liken (+ Insta-Kommentar) → +5 XP
+- M2 — Solidarisch: 80%+ aller heute geposteten Links liken → +5 XP
+- M3 — Champion: ALLE heute geposteten Links liken (cap 30) → +5 XP + 1💎
+- Visit-before-Like-Pflicht: erst Insta-Reel öffnen, dort liken + 2-Wort-Kommentar — DANN in App liken. Sonst = Schein-Engagement = Verwarnung.
+
+# Diamanten 💎
+- ERHALTEN: M3 daily (+1), W-M2 (+1), W-M3 (+2), Pinned-Post-Like (+1, 1× pro Owner), Diamantlink liken (+3), **Roulette/Glücksrad (/explore?tab=roulette)**, Wochen-Gewinnspiel (/explore?tab=gewinnspiel), Diamond-Events.
+- AUSGEBEN: Diamantlink posten = 30💎 (3 Tage Top) · Superlink-Extra-Slot = 10💎 · Shop-Items in /explore?tab=shop oder /diamanten (Banner, Avatar-Rings, Trophys, Extra-Link-Slots).
+
+# Roulette / Glücksrad 🎰
+**Pfad: /explore?tab=roulette** (NICHT im Shop!). 1×/Tag drehen. Preise: 20–100 XP oder 1–10 Diamanten.
+
+# Gewinnspiel 🎁
+**Pfad: /explore?tab=gewinnspiel**. Wöchentlich vom Admin ausgelost.
+
+# Superlinks ⚡
+Premium-Post für die Woche, besonders sichtbar. Limit: 1/Woche (Mo–Sa), Elite+ 2/Woche. Extra-Slot kaufbar = 10💎.
+Engagement-Pflicht aller Member: LIKEN + KOMMENT + TEILEN + SPEICHERN auf Insta. Wer nicht: Sonntag 23:59 → −50 XP + Verwarnung.
+Posten: /feed → + → ⚡ Superlink.
+
+# Kollab-Posts 🤝
+Doppel-Post mit Partner. 1/Woche pro Paar. Beide Logos/Handles sichtbar im Reel. Engagement-Pflicht (LIKEN+KOMMENT+SPEICHERN+TEILEN). Jeder Liker +1💎.
+Setup: Partner-Profil → "🤝 Kollab anfragen" → Partner bestätigt → /feed → + → 🤝 Kollab.
+
+# Pinned Reel 📌
+Lieblings-Reel auf der Creator-Karte (Explore). Setzen: /einstellungen → 📌 Pinned Reel → Insta-URL. **Nur 1× pro 30 Tage änderbar** (Admins jederzeit). Liker bekommen +1💎 (1× pro Owner-Paar).
+
+# Verwarnungen ⚠️
+Triggers: Post ohne M1, Schein-Engagement, Admin-Verwarnung, Superlink-Engagement-Verstoß.
+Eskalation: 1+2 → kurze DM · 3 → Aufklärungs-DM · 4 → "Letzte Chance"-DM · 5 → 🚫 permanenter Auto-Ban.
+Abbauen: 5 Tage M1 in Folge → 1 Warn weg.
+
+# Link-Regeln (Posting)
+Erlaubt: nur eigene Instagram-Reels · 1 Link/Tag (Extra via Bonus-Link kaufen) · kein Self-Like.
+Verboten: fremde Reels, Affiliate/Spam, Wiederholungen. Self-Like → temporäre Sperre + XP-Abzug.
+
+# Account-Verwaltung (genaue Wege)
+- Profilbild ändern: /einstellungen → 📷 Profilbild → Upload → Crop → speichern. Quadrat optimal.
+- Banner ändern: /einstellungen → Banner-Bereich. Querformat 3:1 ideal.
+- Bio ändern: /einstellungen → Bio-Feld (max 100 Zeichen) → speichern.
+- Spitzname ändern: /einstellungen → Spitzname (max 30 Zeichen). Zeigt sich in Ranking + Profil.
+- Instagram-Handle: /einstellungen → Instagram-Feld → Handle ohne @ → speichern.
+- Email setzen/ändern: /einstellungen/account. Bei gesetztem Passwort: erst "Änderung anfragen" → Bestätigungs-Mail → 30 Min Edit-Window.
+- Passwort setzen/ändern: /set-password ODER /einstellungen/account. Min. 6 Zeichen.
+- Ausloggen: /einstellungen/sicherheit → 🚪 Ausloggen ODER direkt /logout.
+- Account löschen: /einstellungen → ganz unten 🗑️ Account dauerhaft löschen → "LÖSCHEN" tippen. Nicht umkehrbar (außer Admin-Restore in 50 Tagen). DSGVO Art. 17.
+- User blockieren: User-Profil → 3-Punkte-Menü → 🚫 Blockieren. Verwalten: /einstellungen/privacy.
+- Push-Notifications: /einstellungen/notifications → "Push aktivieren" → Browser-Berechtigung "Erlauben".
+- Sub-Account: Profil → Account-Switcher (oben) → + Sub-Account. Eigene XP/Diamanten, gleicher Telegram-Account.
+- App installieren (PWA): iPhone/Safari: Teilen → "Zum Home-Bildschirm". Android/Chrome: Menü (3 Punkte) → "App installieren". Oder /download-app (APK).
+- Dark Mode: 🌙 Button oben rechts in der Topbar.
+
+# Posting (Wege)
+- Normaler Link: /feed → + → 📌 Link posten → Insta-Reel-URL. +5 XP + 8h Top-Pin im Heute-Feed.
+- Superlink: /feed → + → ⚡ Superlink. 1/Woche (Mo–Sa), Elite+ 2/Woche.
+- Kollab-Link: /feed → + → 🤝 Kollab (nach Partner-Bestätigung). 1×/Woche pro Paar.
+- Diamantlink: /feed → + → 💎 Diamantlink (kostet 30💎, 3 Tage Top im Feed).
+
+# Daily-Bonus 🎁
+**KEIN eigener Pfad!** Button "Abholen" direkt auf /profil oben. 1×/Tag, zufällig 10–20 XP.
+
+# Shop 🛍
+**Pfad: /explore?tab=shop** ODER /diamanten. Items kaufbar mit 💎: Banner-Designs · Avatar-Rings (animiert) · Trophy-Items · Superlink-Credits · Extra-Link-Slot.
+
+# Wenn jemand fragt zu Themen die NICHT hier dokumentiert sind
+Antworte EHRLICH und KURZ: "Das weiß ich nicht genau. Klick unten auf <b>❌ Doch Admin fragen</b> — ich leite die Frage weiter, die Antwort kommt direkt hier im Chat."
+Beispiele für Themen die du NICHT erfinden darfst: technische Bugs, Konto-Auszahlungen, Streit zwischen Usern, Inhalte anderer User, Wachstums-Strategie für spezifische Nischen, Telegram-Bot-Befehle (gibt's, aber andere App).
+WICHTIG: NIEMALS sagen "DM an CreatorBoost" oder "/nachrichten/creatorboost öffnen" — der User ist BEREITS im richtigen Chat mit CreatorBoost (du bist es!).
+
+# Was du NICHT machst
+- Keine XP/Diamanten manuell vergeben (nur Admin).
+- Keine User bannen/verwarnen (nur Admin).
+- Keine Bug-Fixes versprechen — verweise auf Admin-DM.
+- Keine fremden User-Daten preisgeben.
+- Keine Wachstums-Garantien geben.
+- NIEMALS einen Pfad/Feature/Betrag erfinden den du nicht oben siehst!
+
+# Ton
+Locker, du-Form, hilfsbereit, sparsam mit Emoji. Bei Frust: empathisch ("Ärgerlich! Lass uns das fixen…"). Nicht übertrieben höflich, nicht roboterhaft.`;
+
+function geminiCall(model, payload) {
+    return new Promise((resolve, reject) => {
+        const opts = {
+            hostname: 'generativelanguage.googleapis.com',
+            path: '/v1beta/models/' + encodeURIComponent(model) + ':generateContent?key=' + encodeURIComponent(GEMINI_API_KEY),
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) },
+        };
+        const req = https.request(opts, res => {
+            let buf = '';
+            res.on('data', c => buf += c);
+            res.on('end', () => {
+                try {
+                    const j = JSON.parse(buf);
+                    if (res.statusCode !== 200) {
+                        const err = new Error('Gemini ' + res.statusCode + ': ' + (j.error && j.error.message || buf.slice(0,200)));
+                        err.statusCode = res.statusCode;
+                        return reject(err);
+                    }
+                    resolve(j);
+                } catch (e) { reject(new Error('Gemini parse: ' + e.message)); }
+            });
+        });
+        req.on('error', reject);
+        req.setTimeout(20000, () => { req.destroy(new Error('Gemini timeout')); });
+        req.write(payload); req.end();
+    });
+}
+async function helperAiAnswer(question, history) {
+    if (!GEMINI_API_KEY) throw new Error('AI not configured');
+    const stripHtml = s => String(s||'').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    const contents = [];
+    for (const m of (history || []).slice(-10)) {
+        const role = m.role === 'user' ? 'user' : 'model';
+        const text = (m.role === 'user') ? String(m.text||'').trim() : stripHtml(m.text||'');
+        if (!text) continue;
+        contents.push({ role, parts: [{ text }] });
+    }
+    if (contents.length && contents[contents.length-1].role === 'user') contents.pop();
+    contents.push({ role: 'user', parts: [{ text: question }] });
+    const payload = JSON.stringify({
+        system_instruction: { parts: [{ text: HELPER_SYSTEM_PROMPT }] },
+        contents,
+        generationConfig: { temperature: 0.7, maxOutputTokens: 1024 },
+        safetySettings: [
+            { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
+            { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
+            { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
+            { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' },
+        ],
+    });
+    // Bei 429 (Quota) → versuche Fallback-Model
+    let result;
+    try {
+        result = await geminiCall(GEMINI_MODEL, payload);
+    } catch (e) {
+        if (e.statusCode === 429 && GEMINI_MODEL_FALLBACK && GEMINI_MODEL_FALLBACK !== GEMINI_MODEL) {
+            console.log('[AI] Primary model quota hit, trying fallback:', GEMINI_MODEL_FALLBACK);
+            result = await geminiCall(GEMINI_MODEL_FALLBACK, payload);
+        } else {
+            throw e;
+        }
+    }
+    const cand = (result.candidates || [])[0];
+    if (!cand) throw new Error('Gemini: keine Antwort');
+    if (cand.finishReason === 'SAFETY') throw new Error('Gemini: Safety-Block');
+    const text = ((cand.content && cand.content.parts) || []).map(p => p.text || '').join('\n').trim();
+    if (!text) throw new Error('Gemini: leere Antwort');
+    return text;
+}
 
 const RING_ITEMS = [
     { id: 'ring_flame',   name: 'Flame Ring',   emoji: '🔥', price: 8,  shadow: '0 0 0 3px #ff9a3c, 0 0 0 6px #ff3900',   gradient: 'linear-gradient(135deg,#ff3900,#ff9a3c)', desc: 'Heißes Feuer-Glühen' },
@@ -268,11 +636,12 @@ function isAppVisible(u) {
 // JS-Body OHNE <script>-Tags (wird über /static/admin-fulltour.js gecached
 // ausgeliefert statt inline pro Page → spart ~7.8KB Bytes pro Page-Load).
 const ADMIN_FULLTOUR_JS = `(function(){
+  // PUBLIC LEGAL PAGES: Tour darf hier NIE auto-redirecten (sonst kann der Google-Play-Reviewer die Pflichtseiten nicht öffnen).
+  if(/^\\/(datenschutz|privacy|impressum|agb|terms)$/.test(location.pathname)) return;
   const FT_STEPS = [
-    { url: '/willkommen?fulltour=1', sel: 'h1, .hero, .lp-h, .lp-hero', title: '🌐 Landing-Page', text: 'Was ein neuer Besucher zuerst sieht — Hero, Telegram-CTA, Email-Form. Hier startet die User-Journey.' },
-    { url: '/willkommen?fulltour=1', sel: 'a[href*="t.me/"]', title: '✈️ Telegram-CTA', text: 'Direkter Beitritt der Gruppe. Telegram öffnet → User chattet mit Bot → /start.' },
-    { url: '/?fulltour=1', sel: '.tg-card, form[action="/auth/code-form"], #code-input', title: '🔑 Code-Login', text: 'User aus Telegram trägt seinen Code aus /mycode hier ein → bekommt Session.' },
-    { url: '/?fulltour=1', sel: '#email-input, #email-magic-btn', title: '📧 Email-Login', text: 'Alternative ohne Telegram: Email + Magic-Link oder Passwort.' },
+    { url: '/willkommen?fulltour=1', sel: 'h1, .hero, .lp-h, .lp-hero', title: '🌐 Landing-Page', text: 'Was ein neuer Besucher zuerst sieht — Hero, Signup-CTA, App-Preview. Hier startet die User-Journey.' },
+    { url: '/willkommen?fulltour=1', sel: 'a[href="/signup"]', title: '✨ Signup-CTA', text: 'Primary-Aktion: User klickt "Beitreten" → landet auf der Email-Signup-Page.' },
+    { url: '/?fulltour=1', sel: '#email-input, #email-magic-btn', title: '📧 Email-Login', text: 'Login per Email + Magic-Link oder Passwort — der primäre Einstieg.' },
     { url: '/preview/email-login?fulltour=1', sel: 'a[href*="auth/email-login"]', title: '📨 Magic-Link Email', text: 'So sieht die Login-Mail aus. Klick → Single-Use-Token → eingeloggt.' },
     { url: '/onboarding-instagram?preview=1&fulltour=1', sel: '#inp-instagram, input[type="text"]', title: '📸 Onboarding: Instagram', text: 'PFLICHT für Email-User: Instagram-Handle eintragen bevor liken/posten geht.' },
     { url: '/set-password?first=1&fulltour=1', sel: 'input[type="password"], #pw1', title: '🔐 Passwort setzen', text: 'Optional für Email-User: Passwort für Direct-Login. Skippbar.' },
@@ -332,7 +701,7 @@ const ADMIN_FULLTOUR_JS = `(function(){
 // Tag-Wrapper für Inline-Use in /willkommen (statisches HTML, kann nicht via <script src> geladen werden ohne Edit)
 const ADMIN_FULLTOUR_SCRIPT = '<script>' + ADMIN_FULLTOUR_JS + '</script>';
 // Externe Reference (für layout()): cached, parallel-loadable.
-const ADMIN_FULLTOUR_SCRIPT_TAG = '<script src="/static/admin-fulltour.js?v=221" defer></script>';
+const ADMIN_FULLTOUR_SCRIPT_TAG = '<script src="/static/admin-fulltour.js?v=222-legal-bailout" defer></script>';
 // In-Memory Cache für landing.html (mit Injektion). Wird beim ersten Request gefüllt.
 let _cachedLandingHtml = null;
 
@@ -446,6 +815,62 @@ let _appDbLastRefreshOk = null;  // ISO-Time des letzten erfolgreichen Mainbot-P
 let _appDbLastRefreshTry = null; // letzter Versuch (auch fehlgeschlagen)
 let _appDbRefreshFailures = 0;   // fortlaufende Fehlschläge (für Health-Check)
 
+// ── Phase 2: Write-Audit-Log + Sync-Health ──
+// Jede postBot-Mutation wird protokolliert (Rolling 5000 Einträge). Plus
+// Fail-Counter für Mainbot-Calls damit ein Banner zeigt wann Bridge degraded ist.
+const APP_WRITES_LOG = DATA_DIR + '/app_writes_log.json';
+const _writeLog = [];           // in-memory, last 5000 entries
+let _writeLogSaveTimer = null;
+let _mainbotConsecutiveFails = 0;
+let _lastMainbotSuccessAt = Date.now();
+let _lastMainbotCallAt = 0;
+function logWrite(endpoint, body, response, success, durationMs) {
+    const entry = {
+        ts: Date.now(),
+        endpoint: String(endpoint||'').slice(0, 80),
+        uid: String(body?.uid || body?.fromUid || body?.reporterUid || ''),
+        success: !!success,
+        ms: Number(durationMs)||0,
+        responseOk: success && response && response.ok !== false,
+        error: success ? null : 'no-response',
+    };
+    _writeLog.push(entry);
+    if (_writeLog.length > 5000) _writeLog.splice(0, _writeLog.length - 5000);
+    if (_writeLogSaveTimer) return;
+    _writeLogSaveTimer = setTimeout(() => {
+        _writeLogSaveTimer = null;
+        try {
+            const tmp = APP_WRITES_LOG + '.tmp';
+            fs.writeFileSync(tmp, JSON.stringify(_writeLog.slice(-5000)));
+            fs.renameSync(tmp, APP_WRITES_LOG);
+        } catch(e) {
+            console.error('app_writes_log save failed:', e.message);
+        }
+    }, 3000);
+}
+function loadWriteLogFromDisk() {
+    try {
+        if (!fs.existsSync(APP_WRITES_LOG)) return;
+        const raw = fs.readFileSync(APP_WRITES_LOG, 'utf8');
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+            _writeLog.push(...parsed.slice(-5000));
+            console.log('✅ app_writes_log.json geladen (' + _writeLog.length + ' Einträge)');
+        }
+    } catch(e) {
+        console.error('app_writes_log load failed:', e.message);
+    }
+}
+function _markMainbotSuccess() {
+    _mainbotConsecutiveFails = 0;
+    _lastMainbotSuccessAt = Date.now();
+    _lastMainbotCallAt = Date.now();
+}
+function _markMainbotFail() {
+    _mainbotConsecutiveFails++;
+    _lastMainbotCallAt = Date.now();
+}
+
 function persistAppDb() {
     // Debounce 2s — schützt vor disk-thrash bei rapid-fire refreshes
     if (_appDbSaveTimer) return;
@@ -483,6 +908,7 @@ function loadAppDbFromDisk() {
 // Boot-time: Disk laden BEVOR der Mainbot überhaupt erreichbar sein muss.
 // Damit ist die App auch ohne Mainbot start-fähig.
 loadAppDbFromDisk();
+loadWriteLogFromDisk();
 
 async function fetchBotRawOnce(path, timeoutMs) {
     return new Promise(resolve => {
@@ -503,6 +929,7 @@ async function fetchBotRawOnce(path, timeoutMs) {
 async function fetchBotRaw(path) {
     let r = await fetchBotRawOnce(path, 5000);
     if (r === null) r = await fetchBotRawOnce(path, 8000);
+    if (r !== null) _markMainbotSuccess(); else _markMainbotFail();
     return r;
 }
 
@@ -548,6 +975,7 @@ async function fetchBot(path) {
 setInterval(refreshDataCache, 45000);
 
 async function postBot(path, body) {
+    const _t0 = Date.now();
     const result = await new Promise(resolve => {
         const fullUrl = MAINBOT_URL + path;
         if (!fullUrl.startsWith('http')) return resolve(null);
@@ -565,10 +993,17 @@ async function postBot(path, body) {
             });
         });
         req.on('error',()=>resolve(null));
-        // 5-Sek Timeout (vorher unbounded — Bot-Hang würde App-Request blockieren)
-        req.setTimeout(5000, () => { req.destroy(); resolve(null); });
+        // 15-Sek Timeout: Mainbot's speichern() ist sync writeFileSync — bei grossen
+        // data-Files kann das mal >5s dauern (besonders bei /create-email-user-api).
+        // Vorher 5s → manche Signups failten still + User sah generischen Fehler trotz
+        // erfolgreichem Account-Anlegen im Bot.
+        req.setTimeout(15000, () => { req.destroy(); resolve(null); });
         req.write(data); req.end();
     });
+    const _ms = Date.now() - _t0;
+    const _ok = result !== null;
+    if (_ok) _markMainbotSuccess(); else _markMainbotFail();
+    logWrite(path, body, result, _ok, _ms);
     _dataCache = null; _dataCacheTime = 0;
     refreshDataCache().catch(()=>{});
     return result;
@@ -713,6 +1148,7 @@ forced-color-adjust:none;
 --text:#0f172a;--muted:#64748b;--muted2:#94a3b8;
 --accent:#3b82f6;--accent2:#1d4ed8;
 --green:#00c851;--blue:#4dabf7;--purple:#cc5de8;--gold:#ffd43b;
+--avatar-fallback-bg:#ffffff;--avatar-fallback-color:rgba(15,23,42,.30);--avatar-fallback-border:rgba(15,23,42,.10);
 --radius:16px;--radius-sm:10px;--radius-xs:6px;
 --font:'DM Sans',sans-serif;--font-display:'Syne',sans-serif;
 --shadow:0 8px 32px rgba(15,23,42,.06);
@@ -732,6 +1168,7 @@ color-scheme:dark;
 --bg:#000000;--bg2:#000000;--bg3:#000000;--bg4:#000000;
 --border:rgba(255,255,255,.1);--border2:rgba(255,255,255,.06);
 --text:#fff;--muted:#a3a8b3;--muted2:#6e7280;
+--avatar-fallback-bg:#ffffff;--avatar-fallback-color:rgba(15,23,42,.35);--avatar-fallback-border:rgba(255,255,255,.20);
 --shadow:0 8px 32px rgba(0,0,0,.4);
 --glass-bg:#000000;--surface-tint:rgba(255,255,255,0.04);--hover-tint:rgba(255,255,255,0.08);
 }
@@ -750,6 +1187,26 @@ button{cursor:pointer;border:none;outline:none;font-family:var(--font)}
 .topbar .icon-btn:active{transform:scale(0.92)}
 .topbar .icon-btn:hover{background:var(--hover-tint)}
 .icon-btn{width:36px;height:36px;border-radius:50%;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--text)}
+/* Feed-Tab-Dropdown im Topbar (gleiche Optik wie /profil Account-Switcher .tb-switcher) */
+.ft-wrap{position:relative;display:inline-flex}
+.ft-trigger{display:inline-flex;align-items:center;gap:9px;background:var(--surface-tint);border:1.5px solid var(--border2);color:var(--text);padding:9px 18px 9px 16px;border-radius:99px;font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;max-width:220px;transition:background .15s,border-color .15s,box-shadow .15s;position:relative;line-height:1.1}
+.ft-trigger:hover{background:var(--bg4);border-color:rgba(124,58,237,.35)}
+.ft-trigger-label{display:inline-flex;align-items:center;gap:7px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:.1px}
+.ft-trigger-arrow{font-size:11px;color:var(--muted);transition:transform .2s;flex-shrink:0}
+.ft-wrap.open .ft-trigger-arrow{transform:rotate(180deg)}
+.ft-wrap.open .ft-trigger{background:var(--bg4);border-color:rgba(124,58,237,.40)}
+.ft-trigger-badge{position:absolute;top:-6px;right:-6px;min-width:20px;height:20px;line-height:16px;padding:0 6px;border-radius:99px;background:#ef4444;color:#fff;font-size:11px;font-weight:800;border:2px solid var(--bg);box-shadow:0 2px 8px rgba(239,68,68,.45);text-align:center;animation:ftBadgePulse 2s ease-in-out infinite}
+@keyframes ftBadgePulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+.ft-menu{position:absolute;top:calc(100% + 8px);left:50%;transform:translateX(-50%);background:var(--bg3);border:1.5px solid var(--border2);border-radius:14px;box-shadow:0 12px 32px rgba(0,0,0,.22);min-width:260px;padding:6px;z-index:120;display:none;animation:ftDrop .18s ease}
+.ft-wrap.open .ft-menu{display:block}
+@keyframes ftDrop{from{opacity:0;transform:translateX(-50%) translateY(-6px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+.ft-item{display:flex;align-items:center;gap:11px;width:100%;padding:11px 14px;text-decoration:none;color:var(--text);font-family:inherit;font-size:14px;font-weight:600;border:none;background:none;cursor:pointer;border-radius:10px;text-align:left;transition:background .12s;box-sizing:border-box}
+.ft-item:hover{background:var(--bg4)}
+.ft-item.active{background:rgba(167,139,250,.10)}
+.ft-item-emoji{font-size:18px;flex-shrink:0;line-height:1}
+.ft-item-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ft-item-badge{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:18px;padding:0 7px;border-radius:99px;background:#ef4444;color:#fff;font-size:10.5px;font-weight:800;flex-shrink:0}
+.ft-item-check{color:#a78bfa;font-size:18px;font-weight:700;flex-shrink:0}
 .bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:var(--glass-bg);border-top:1px solid var(--border2);display:flex;justify-content:space-around;padding:10px 0 calc(10px + var(--safe-bottom));z-index:100;backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%)}
 .nav-item{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:9.5px;font-weight:600;letter-spacing:0.2px;color:var(--accent);padding:4px 14px;transition:color .2s,transform .12s;text-decoration:none}
 .nav-item svg{stroke:var(--accent)}
@@ -767,6 +1224,9 @@ button{cursor:pointer;border:none;outline:none;font-family:var(--font)}
 .story-item:active{transform:scale(0.92);transition:transform 0.15s}
 .story-ring{width:68px;height:68px;border-radius:50%;padding:3.5px;background:linear-gradient(135deg,#1d4ed8,#3b82f6,#0ea5e9);position:relative;box-shadow:0 4px 14px rgba(29,78,216,0.45)}
 .story-ring.seen{background:linear-gradient(135deg,#93c5fd,#60a5fa);box-shadow:0 2px 8px rgba(96,165,250,0.35)}
+.story-ring.pinned-engaged{background:linear-gradient(135deg,#9ca3af,#6b7280);box-shadow:none;opacity:0.55}
+.story-ring.pinned-glow{background:linear-gradient(135deg,#f9a825,#e91e63,#9c27b0,#3b82f6);background-size:300% 300%;box-shadow:0 4px 18px rgba(233,30,99,0.45);animation:pinnedBlink 1.8s ease-in-out infinite}
+@keyframes pinnedBlink{0%,100%{background-position:0% 50%;box-shadow:0 4px 14px rgba(233,30,99,0.4);opacity:1}50%{background-position:100% 50%;box-shadow:0 6px 22px rgba(233,30,99,0.75);opacity:0.7}}
 .story-inner{width:100%;height:100%;border-radius:50%;border:2.5px solid var(--bg);overflow:hidden;position:relative;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:#fff}
 [data-theme=light] .story-ring{box-shadow:0 6px 20px rgba(29,78,216,0.5),0 1px 4px rgba(15,23,42,0.12)}
 [data-theme=light] .story-ring.seen{box-shadow:0 3px 10px rgba(15,23,42,0.18)}
@@ -911,6 +1371,19 @@ textarea.form-input{resize:none;min-height:80px}
 .empty-icon{font-size:48px;margin-bottom:12px}
 .empty-text{font-size:15px;font-weight:600;margin-bottom:6px;color:var(--text)}
 .empty-sub{font-size:13px}
+.proflink-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:8px 10px}
+.proflink-card{border-radius:10px;overflow:hidden;background:var(--bg3);border:1px solid var(--border2);display:flex;flex-direction:column}
+.proflink-thumb{display:block;position:relative;width:100%;padding-top:130%;background:linear-gradient(135deg,#1a1a2e,#16213e);overflow:hidden;cursor:pointer;text-decoration:none}
+.proflink-thumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.proflink-thumb-overlay{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.05),rgba(0,0,0,.35));pointer-events:none}
+.proflink-play{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.95);font-size:22px;text-shadow:0 2px 6px rgba(0,0,0,.5);pointer-events:none}
+.proflink-actions{display:flex;align-items:center;gap:4px;padding:5px 5px 6px}
+.proflink-like{display:inline-flex;align-items:center;gap:3px;background:none;border:none;cursor:pointer;color:var(--text);font-size:10.5px;font-weight:600;font-family:inherit;padding:2px 4px;transition:opacity .2s}
+.proflink-like:not(.liked):not(.visited){opacity:.45}
+.proflink-like.visited{opacity:1}
+.proflink-like.liked{color:#ef4444;cursor:default;opacity:1}
+.proflink-likes{font-size:10.5px;color:var(--muted);padding:2px 4px;font-weight:500}
+.proflink-open{flex:1;text-align:center;padding:5px 6px;background:linear-gradient(135deg,#f9a825,#e91e63,#9c27b0);color:#fff !important;border-radius:6px;font-size:10px;font-weight:700;text-decoration:none;white-space:nowrap;box-shadow:0 1px 4px rgba(233,30,99,.25)}
 .toast{position:fixed;top:80px;left:50%;transform:translateX(-50%);background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:10px 20px;font-size:13px;font-weight:500;z-index:999;box-shadow:var(--shadow);opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap}
 .toast.show{opacity:1}
 .cb-banner{position:fixed;top:0;left:0;right:0;z-index:9999;padding:20px 24px;color:#fff;text-align:center;font-family:var(--font);transform:translateY(-100%);transition:transform .4s cubic-bezier(.2,.8,.2,1);box-shadow:0 12px 32px rgba(0,0,0,0.5);pointer-events:none;display:flex;align-items:center;justify-content:center;gap:14px;letter-spacing:0.2px}
@@ -1112,10 +1585,65 @@ textarea.form-input{resize:none;min-height:80px}
 .action-card-title{font-size:13px;font-weight:700}
 .action-card-sub{font-size:11px;color:var(--muted);margin-top:3px}
 /* ── PLUS SHEET ── */
-.plus-sheet{position:fixed;inset:0;z-index:500;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.55);backdrop-filter:blur(4px);opacity:0;pointer-events:none;transition:opacity .25s}
+.plus-sheet{position:fixed;inset:0;z-index:500;display:flex;align-items:flex-end;justify-content:center;background:rgba(15,23,42,.45);backdrop-filter:blur(14px) saturate(1.2);-webkit-backdrop-filter:blur(14px) saturate(1.2);opacity:0;pointer-events:none;transition:opacity .25s}
 .plus-sheet.open{opacity:1;pointer-events:all}
-.plus-sheet-inner{width:100%;max-width:480px;background:var(--bg3);border-radius:20px 20px 0 0;padding:20px 20px 40px;transform:translateY(100%);transition:transform .3s cubic-bezier(.4,0,.2,1)}
+.plus-sheet-inner{width:100%;max-width:540px;background:var(--bg);border-bottom:0;border-radius:26px 26px 0 0;padding:6px 22px 32px;transform:translateY(100%);transition:transform .35s cubic-bezier(.32,.72,.24,1);max-height:92vh;overflow-y:auto;box-shadow:0 -24px 60px rgba(0,0,0,.18),0 -1px 0 var(--border2) inset}
 .plus-sheet.open .plus-sheet-inner{transform:translateY(0)}
+.ps-grabber{width:42px;height:4px;border-radius:4px;background:var(--border2);margin:8px auto 18px;opacity:.7}
+.ps-head{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:22px;gap:12px}
+.ps-head-text{flex:1;min-width:0}
+.ps-eyebrow{font-size:10.5px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1.8px;margin-bottom:4px;line-height:1}
+.ps-title{font-size:22px;font-weight:800;color:var(--text);letter-spacing:-.5px;line-height:1.1}
+.ps-sub{font-size:13px;color:var(--muted);margin-top:5px;line-height:1.45;font-weight:500}
+.ps-close{background:var(--bg3);border:1px solid var(--border2);width:34px;height:34px;border-radius:50%;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s,color .15s}
+.ps-close:hover{background:var(--bg4);color:var(--text)}
+.ps-status{display:inline-flex;align-items:center;gap:7px;padding:6px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:99px;font-size:11.5px;color:var(--muted);font-weight:600;margin-bottom:18px}
+.ps-status-admin{background:linear-gradient(135deg,rgba(245,158,11,.08),rgba(245,158,11,.02));border-color:rgba(245,158,11,.30);color:#f59e0b}
+.ps-field{margin-bottom:16px}
+.ps-field-label{display:block;font-size:10.5px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
+.ps-optional{font-weight:500;text-transform:none;letter-spacing:0;color:var(--muted2);font-size:11px;margin-left:6px}
+.ps-input{width:100%;padding:13px 15px;background:var(--bg3);border:1.5px solid var(--border2);color:var(--text);border-radius:12px;font-size:14.5px;font-family:inherit;outline:none;transition:border-color .18s,background .18s,box-shadow .18s;box-sizing:border-box;font-weight:500}
+.ps-input:focus{border-color:rgba(124,58,237,.55);background:var(--bg);box-shadow:0 0 0 4px rgba(124,58,237,.08)}
+.ps-input::placeholder{color:var(--muted2);font-weight:400}
+.ps-textarea{min-height:72px;resize:vertical;line-height:1.5}
+/* iOS-style toggle switch */
+.ps-toggle{display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:14px;cursor:pointer;margin-bottom:18px;transition:border-color .15s,background .15s}
+.ps-toggle:hover{border-color:var(--accent)}
+.ps-toggle input[type="checkbox"]{position:absolute;opacity:0;pointer-events:none}
+.ps-toggle-switch{position:relative;width:42px;height:24px;background:var(--bg4);border:1px solid var(--border2);border-radius:99px;flex-shrink:0;transition:background .2s,border-color .2s}
+.ps-toggle-switch::after{content:'';position:absolute;top:1.5px;left:1.5px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.18);transition:transform .2s cubic-bezier(.4,0,.2,1)}
+.ps-toggle input[type="checkbox"]:checked + .ps-toggle-switch{background:linear-gradient(135deg,#a78bfa,#7c3aed);border-color:transparent}
+.ps-toggle input[type="checkbox"]:checked + .ps-toggle-switch::after{transform:translateX(18px)}
+.ps-toggle-body{flex:1;min-width:0}
+.ps-toggle-title{font-size:14px;font-weight:700;color:var(--text);line-height:1.2}
+.ps-toggle-sub{font-size:11.5px;color:var(--muted);margin-top:3px;line-height:1.4;font-weight:500}
+.ps-cta{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px 18px;background:linear-gradient(135deg,#a78bfa 0%,#7c3aed 100%);color:#fff;border:none;border-radius:14px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:.1px;box-shadow:0 8px 24px -6px rgba(124,58,237,.5),0 2px 4px rgba(0,0,0,.06);transition:transform .12s,box-shadow .18s,filter .15s}
+.ps-cta:hover{box-shadow:0 12px 28px -6px rgba(124,58,237,.6),0 2px 4px rgba(0,0,0,.06);filter:brightness(1.04)}
+.ps-cta:active{transform:scale(.985)}
+.ps-cta.diamond{background:linear-gradient(135deg,#06b6d4,#0e7490);box-shadow:0 8px 24px -6px rgba(6,182,212,.5),0 2px 4px rgba(0,0,0,.06)}
+.ps-cta.diamond:hover{box-shadow:0 12px 28px -6px rgba(6,182,212,.6),0 2px 4px rgba(0,0,0,.06)}
+.ps-cta.kollab{background:linear-gradient(135deg,#ec4899,#a21caf);box-shadow:0 8px 24px -6px rgba(236,72,153,.5),0 2px 4px rgba(0,0,0,.06)}
+.ps-cta.kollab:hover{box-shadow:0 12px 28px -6px rgba(236,72,153,.6),0 2px 4px rgba(0,0,0,.06)}
+.ps-cta svg{width:18px;height:18px}
+.ps-result{margin-top:10px;font-size:12px;text-align:center;color:var(--muted);min-height:16px;font-weight:500}
+.ps-info{padding:12px 14px;background:var(--bg3);border-left:3px solid var(--accent);border-radius:10px;font-size:12.5px;line-height:1.55;color:var(--text);margin-bottom:16px;font-weight:500}
+.ps-info.diamond{border-left-color:#06b6d4}
+.ps-info.kollab{border-left-color:#ec4899}
+.ps-info b{color:var(--accent);font-weight:700}
+.ps-info.diamond b{color:#06b6d4}
+.ps-info.kollab b{color:#ec4899}
+.ps-divider{height:1px;background:var(--border2);margin:24px -22px 18px}
+.ps-section-eyebrow{margin-bottom:12px;padding:0 2px}
+.ps-card{display:flex;align-items:center;gap:14px;width:100%;padding:12px 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:14px;font-family:inherit;cursor:pointer;color:var(--text);text-align:left;margin-bottom:8px;transition:background .15s,border-color .15s,transform .1s,box-shadow .15s}
+.ps-card:hover{background:var(--bg4);border-color:rgba(124,58,237,.35);box-shadow:0 4px 12px -4px rgba(0,0,0,.08)}
+.ps-card:active{transform:scale(.99)}
+.ps-card-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;box-shadow:0 4px 14px -4px rgba(0,0,0,.25)}
+.ps-card-body{flex:1;min-width:0}
+.ps-card-title{font-size:14px;font-weight:700;color:var(--text);line-height:1.25;display:flex;align-items:center;gap:6px;flex-wrap:wrap;letter-spacing:-.1px}
+.ps-card-badge{font-size:10px;font-weight:800;padding:2px 8px;border-radius:99px;background:rgba(6,182,212,.12);color:#06b6d4;letter-spacing:.3px}
+.ps-card-sub{font-size:12px;color:var(--muted);margin-top:3px;line-height:1.4;font-weight:500}
+.ps-card-arrow{color:var(--muted2);flex-shrink:0;transition:transform .15s,color .15s}
+.ps-card:hover .ps-card-arrow{color:var(--text);transform:translateX(2px)}
 /* 5-item nav fit */
 .nav-item{padding:4px 6px}
 .nav-plus{width:32px;height:32px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;color:#fff;border:none;cursor:pointer;align-self:center;margin-top:-2px;flex-shrink:0}
@@ -1159,10 +1687,17 @@ function layout(content, session, page='feed', lang='de') {
     // gemeinsame Sicht auf "geliked" haben.
     const _meUid = session ? String(session.activeUid || session.uid || '') : '';
     let _isAdmin = false;
+    let _emailUnconfirmed = false;
     try {
         const _adm = Array.isArray(_dataCache?._adminIds) ? _dataCache._adminIds.map(Number) : [];
         if (_meUid && _adm.includes(Number(_meUid))) _isAdmin = true;
         if (!_isAdmin && _dataCache?.users?.[_meUid]?.role && /admin/i.test(String(_dataCache.users[_meUid].role))) _isAdmin = true;
+        // Email-Confirmation-Banner: User hat noch nicht auf Bestätigungs-Link geklickt
+        // (lokales Tracking, Mainbot ist nicht involviert).
+        if (_meUid) {
+            const _pec = pendingEmailConfirms.get(String(session?.uid || _meUid));
+            if (_pec && _pec.exp > Date.now()) _emailUnconfirmed = true;
+        }
     } catch (e) {}
     return `<!DOCTYPE html><html lang="${lang}" data-theme="light">
 <head>
@@ -1182,11 +1717,30 @@ ${buildErrorHandler(_isAdmin)}
 <title>CreatorX</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://unavatar.io" crossorigin>
+<link rel="dns-prefetch" href="https://scontent-cdninstagram.com">
+<link rel="dns-prefetch" href="https://instagram.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" media="print" onload="this.media='all'">
 ${session ? `<link rel="prefetch" href="/feed"><link rel="prefetch" href="/explore"><link rel="prefetch" href="/nachrichten"><link rel="prefetch" href="/profil">` : ''}
 <style>${CSS}</style>
 </head>
 <body>
+${_emailUnconfirmed ? `<div id="cb-email-confirm-bar" style="position:sticky;top:0;left:0;right:0;z-index:9998;background:linear-gradient(90deg,#f59e0b,#eab308);color:#000;padding:10px 14px;display:flex;align-items:center;justify-content:center;gap:12px;font-family:Inter,sans-serif;font-size:13px;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,0.15)">
+  <span style="font-size:16px;flex-shrink:0">📧</span>
+  <span style="flex:1;min-width:0">Bestätige deine Email-Adresse</span>
+  <button onclick="cbResendConfirm(this)" style="background:rgba(0,0,0,0.20);border:1px solid rgba(0,0,0,0.30);color:#000;padding:5px 12px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0">Erneut senden</button>
+</div>
+<script>
+async function cbResendConfirm(btn){
+  btn.disabled=true;btn.textContent='⏳';
+  try{
+    const r=await fetch('/api/resend-confirmation',{method:'POST'});
+    const j=await r.json();
+    if(j&&j.ok){btn.textContent='✓ Gesendet';btn.style.background='rgba(34,197,94,0.4)';setTimeout(()=>{btn.textContent='Erneut senden';btn.disabled=false;btn.style.background='rgba(0,0,0,0.20)';},5000);}
+    else{btn.textContent='Erneut senden';btn.disabled=false;alert('❌ '+(j&&j.error||'Fehler beim Senden'));}
+  }catch(e){btn.textContent='Erneut senden';btn.disabled=false;alert('❌ Netzwerkfehler');}
+}
+</script>` : ''}
 <div class="toast" id="toast"></div>
 <div class="cb-banner" id="cb-banner" role="alert" aria-live="assertive"></div>
 <a href="/download-app" id="apk-download-btn" style="display:none;position:fixed;bottom:calc(120px + var(--safe-bottom,0px));left:50%;transform:translateX(-50%);background:#22c55e;color:#fff;border-radius:24px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;z-index:9997;text-decoration:none;white-space:nowrap;box-shadow:0 4px 16px rgba(34,197,94,.4)">📦 APK herunterladen</a>
@@ -1253,62 +1807,128 @@ ${session ? `<link rel="prefetch" href="/feed"><link rel="prefetch" href="/explo
 </script>
 <div class="plus-sheet" id="plus-sheet" onclick="if(event.target===this)closePlusSheet()">
   <div class="plus-sheet-inner">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-      <span style="font-size:16px;font-weight:700">📸 Reel Link teilen</span>
-      <button onclick="closePlusSheet()" style="background:var(--bg4);border:none;color:var(--text);border-radius:50%;width:28px;height:28px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>
+    <div class="ps-grabber"></div>
+    <div class="ps-head">
+      <div class="ps-head-text">
+        <div class="ps-eyebrow">Neuer Post</div>
+        <div class="ps-title">Reel teilen</div>
+        <div class="ps-sub">Teile deinen Instagram-Reel mit der Community</div>
+      </div>
+      <button class="ps-close" onclick="closePlusSheet()" aria-label="Schließen">
+        <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+      </button>
     </div>
-    <div id="plus-link-status" style="border-radius:10px;padding:10px 13px;margin-bottom:12px;font-size:12px;font-weight:600;display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08)">
+    <div id="plus-link-status" class="ps-status">
       <span id="plus-link-status-icon">⏳</span>
-      <span id="plus-link-status-text" style="color:var(--muted)">Wird geladen...</span>
+      <span id="plus-link-status-text">Wird geladen…</span>
     </div>
-    <input type="url" id="plus-link-input" class="form-input" placeholder="https://www.instagram.com/reel/..." style="margin-bottom:8px">
-    <textarea id="plus-link-caption" class="form-input" placeholder="Beschreibung (optional)..." maxlength="200" rows="2" style="margin-bottom:8px"></textarea>
-    <label style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--bg4);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;margin-bottom:12px">
-      <input type="checkbox" id="plus-pin-toggle" style="width:18px;height:18px;accent-color:var(--accent);cursor:pointer">
-      <div><div style="font-size:13px;font-weight:600">📌 Als angepinnten Post setzen</div><div style="font-size:11px;color:var(--muted);margin-top:2px">Erscheint oben im Profil · max 1 Pin</div></div>
+    <div class="ps-field">
+      <label class="ps-field-label">Instagram-URL</label>
+      <input type="url" id="plus-link-input" class="ps-input" placeholder="https://www.instagram.com/reel/…">
+    </div>
+    <div class="ps-field">
+      <label class="ps-field-label">Beschreibung <span class="ps-optional">optional</span></label>
+      <textarea id="plus-link-caption" class="ps-input ps-textarea" placeholder="Erzähl was über deinen Reel…" maxlength="200" rows="2"></textarea>
+    </div>
+    <label class="ps-toggle">
+      <input type="checkbox" id="plus-pin-toggle">
+      <span class="ps-toggle-switch"></span>
+      <div class="ps-toggle-body">
+        <div class="ps-toggle-title">Als Pinned-Post setzen</div>
+        <div class="ps-toggle-sub">Wird oben in deinem Profil angezeigt · max 1 Pin</div>
+      </div>
     </label>
-    <button class="btn btn-primary btn-full" id="plus-post-btn" onclick="plusPostLink()">📸 Link teilen</button>
-    <div id="plus-link-result" style="margin-top:8px;font-size:12px;text-align:center;color:var(--muted)"></div>
-    <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border2)">
-      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Engagement</div>
-      <button class="btn btn-full" onclick="closePlusSheet();setTimeout(()=>{if(typeof openSLSheet==='function')openSLSheet();else location.href='/feed?tab=engagement&opensl=1';},200)" style="background:linear-gradient(135deg,rgba(245,158,11,.15),rgba(245,158,11,.05));border:1px solid rgba(245,158,11,.3);color:#f59e0b;font-weight:700">⭐ Superlink posten</button>
-      <div style="font-size:11px;color:var(--muted);margin-top:6px;text-align:center;margin-bottom:14px">Alle Mitglieder müssen deinen Link liken, kommentieren & teilen</div>
-      <button class="btn btn-full" onclick="closePlusSheet();setTimeout(openKollabSheet,200)" style="background:linear-gradient(135deg,rgba(236,72,153,.15),rgba(236,72,153,.05));border:1px solid rgba(236,72,153,.3);color:#ec4899;font-weight:700">🤝 Kollab-Link posten</button>
-      <div style="font-size:11px;color:var(--muted);margin-top:6px;text-align:center;margin-bottom:14px">Mit deinem Kollab-Partner gemeinsam · 1× pro Woche</div>
-      <button class="btn btn-full" onclick="closePlusSheet();setTimeout(openDiamondSheet,200)" style="background:linear-gradient(135deg,rgba(6,182,212,.18),rgba(6,182,212,.04));border:1px solid rgba(6,182,212,.45);color:#06b6d4;font-weight:700;box-shadow:0 0 14px rgba(6,182,212,.18)">💎 Diamantlink posten <span style="font-weight:500;opacity:.85;font-size:11.5px;margin-left:6px">(-30 💎)</span></button>
-      <div style="font-size:11px;color:var(--muted);margin-top:6px;text-align:center">3 Tage Feed-Top · Liker bekommen +3 💎</div>
-    </div>
+    <button class="ps-cta" id="plus-post-btn" onclick="plusPostLink()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12v7a2 2 0 002 2h14a2 2 0 002-2v-7"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+      Reel teilen
+    </button>
+    <div id="plus-link-result" class="ps-result"></div>
+    <div class="ps-divider"></div>
+    <div class="ps-eyebrow ps-section-eyebrow">Erweiterte Engagement-Optionen</div>
+    <button class="ps-card" onclick="closePlusSheet();setTimeout(()=>{if(typeof openSLSheet==='function')openSLSheet();else location.href='/feed?tab=engagement&opensl=1';},200)">
+      <div class="ps-card-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff">⭐</div>
+      <div class="ps-card-body">
+        <div class="ps-card-title">Superlink posten</div>
+        <div class="ps-card-sub">Alle Mitglieder liken, kommentieren &amp; teilen deinen Link</div>
+      </div>
+      <svg class="ps-card-arrow" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"><polyline points="9 6 15 12 9 18"/></svg>
+    </button>
+    <button class="ps-card" onclick="closePlusSheet();setTimeout(openKollabSheet,200)">
+      <div class="ps-card-icon" style="background:linear-gradient(135deg,#ec4899,#a21caf);color:#fff">🤝</div>
+      <div class="ps-card-body">
+        <div class="ps-card-title">Kollab-Link posten</div>
+        <div class="ps-card-sub">Mit deinem Kollab-Partner · 1× pro Woche</div>
+      </div>
+      <svg class="ps-card-arrow" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"><polyline points="9 6 15 12 9 18"/></svg>
+    </button>
+    <button class="ps-card" onclick="closePlusSheet();setTimeout(openDiamondSheet,200)">
+      <div class="ps-card-icon" style="background:linear-gradient(135deg,#06b6d4,#0e7490);color:#fff">💎</div>
+      <div class="ps-card-body">
+        <div class="ps-card-title">Diamantlink posten <span class="ps-card-badge">−30 💎</span></div>
+        <div class="ps-card-sub">3 Tage Feed-Top · Liker erhalten +3 💎</div>
+      </div>
+      <svg class="ps-card-arrow" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"><polyline points="9 6 15 12 9 18"/></svg>
+    </button>
   </div>
 </div>
 <div class="plus-sheet" id="diamond-sheet" onclick="if(event.target===this)closeDiamondSheet()">
   <div class="plus-sheet-inner">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-      <span style="font-size:16px;font-weight:700">💎 Diamantlink posten</span>
-      <button onclick="closeDiamondSheet()" style="background:var(--bg4);border:none;color:var(--text);border-radius:50%;width:28px;height:28px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>
+    <div class="ps-grabber"></div>
+    <div class="ps-head">
+      <div class="ps-head-text">
+        <div class="ps-eyebrow">Premium Boost</div>
+        <div class="ps-title">💎 Diamantlink</div>
+        <div class="ps-sub">3 Tage ganz oben im Feed</div>
+      </div>
+      <button class="ps-close" onclick="closeDiamondSheet()" aria-label="Schließen">
+        <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+      </button>
     </div>
-    <div id="diamond-info" style="border-radius:10px;padding:11px 13px;margin-bottom:12px;font-size:12px;line-height:1.5;background:rgba(6,182,212,.10);border:1px solid rgba(6,182,212,.30);color:var(--text)">
-      <b style="color:#06b6d4">Kostet 30 💎</b> · 3 Tage Feed-Top · ältester Diamantlink steht ganz oben.<br>
+    <div id="diamond-info" class="ps-info diamond">
+      <b>Kostet 30 💎</b> · 3 Tage Feed-Top · ältester Diamantlink steht oben.<br>
       Jeder Liker bekommt <b>+3 💎</b> Belohnung.<br>
-      <b style="color:#f59e0b">Pflicht: FULL ENGAGED</b> — wer schein-likt wird hart sanktioniert.
+      <b style="color:#f59e0b">Pflicht: FULL ENGAGED</b> — Schein-Likes werden hart sanktioniert.
     </div>
-    <input type="url" id="diamond-url" class="form-input" placeholder="https://www.instagram.com/reel/..." style="margin-bottom:8px">
-    <textarea id="diamond-caption" class="form-input" placeholder="Beschreibung (optional)" maxlength="500" rows="2" style="margin-bottom:8px"></textarea>
-    <button class="btn btn-full" id="diamond-post-btn" onclick="postDiamondLink()" style="background:linear-gradient(135deg,#06b6d4,#0e7490);color:#fff;font-weight:800;box-shadow:0 0 20px rgba(6,182,212,.45)">💎 Diamantlink veröffentlichen (-30 💎)</button>
-    <div id="diamond-result" style="margin-top:8px;font-size:12px;text-align:center;color:var(--muted)"></div>
+    <div class="ps-field">
+      <label class="ps-field-label">Instagram-URL</label>
+      <input type="url" id="diamond-url" class="ps-input" placeholder="https://www.instagram.com/reel/…">
+    </div>
+    <div class="ps-field">
+      <label class="ps-field-label">Beschreibung <span class="ps-optional">optional</span></label>
+      <textarea id="diamond-caption" class="ps-input ps-textarea" placeholder="Beschreibung…" maxlength="500" rows="2"></textarea>
+    </div>
+    <button class="ps-cta diamond" id="diamond-post-btn" onclick="postDiamondLink()">💎 Veröffentlichen <span style="opacity:.85;font-weight:600">· −30 💎</span></button>
+    <div id="diamond-result" class="ps-result"></div>
   </div>
 </div>
 <div class="plus-sheet" id="kollab-sheet" onclick="if(event.target===this)closeKollabSheet()">
   <div class="plus-sheet-inner">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-      <span style="font-size:16px;font-weight:700">🤝 Kollab-Link posten</span>
-      <button onclick="closeKollabSheet()" style="background:var(--bg4);border:none;color:var(--text);border-radius:50%;width:28px;height:28px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>
+    <div class="ps-grabber"></div>
+    <div class="ps-head">
+      <div class="ps-head-text">
+        <div class="ps-eyebrow">Gemeinsam posten</div>
+        <div class="ps-title">🤝 Kollab-Link</div>
+        <div class="ps-sub">1× pro Woche mit deinem Kollab-Partner</div>
+      </div>
+      <button class="ps-close" onclick="closeKollabSheet()" aria-label="Schließen">
+        <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+      </button>
     </div>
-    <div id="kollab-info" style="border-radius:10px;padding:10px 13px;margin-bottom:12px;font-size:12px;font-weight:600;background:rgba(236,72,153,.10);border:1px solid rgba(236,72,153,.3);color:#ec4899">Lädt Kollab-Partner …</div>
-    <select id="kollab-partner" class="form-input" style="margin-bottom:8px"></select>
-    <input type="url" id="kollab-url" class="form-input" placeholder="https://www.instagram.com/reel/..." style="margin-bottom:8px">
-    <textarea id="kollab-caption" class="form-input" placeholder="Beschreibung (optional)" maxlength="400" rows="2" style="margin-bottom:8px"></textarea>
-    <button class="btn btn-full" id="kollab-post-btn" onclick="postKollabLink()" style="background:linear-gradient(135deg,#ec4899,#a21caf);color:#fff;font-weight:700">🤝 Kollab-Link veröffentlichen</button>
-    <div id="kollab-result" style="margin-top:8px;font-size:12px;text-align:center;color:var(--muted)"></div>
+    <div id="kollab-info" class="ps-info kollab">Lädt Kollab-Partner …</div>
+    <div class="ps-field">
+      <label class="ps-field-label">Kollab-Partner</label>
+      <select id="kollab-partner" class="ps-input"></select>
+    </div>
+    <div class="ps-field">
+      <label class="ps-field-label">Instagram-URL</label>
+      <input type="url" id="kollab-url" class="ps-input" placeholder="https://www.instagram.com/reel/…">
+    </div>
+    <div class="ps-field">
+      <label class="ps-field-label">Beschreibung <span class="ps-optional">optional</span></label>
+      <textarea id="kollab-caption" class="ps-input ps-textarea" placeholder="Beschreibung…" maxlength="400" rows="2"></textarea>
+    </div>
+    <button class="ps-cta kollab" id="kollab-post-btn" onclick="postKollabLink()">🤝 Veröffentlichen</button>
+    <div id="kollab-result" class="ps-result"></div>
   </div>
 </div>
 <div class="liker-modal" id="liker-modal" onclick="if(event.target===this)closeLikerModal()">
@@ -1464,6 +2084,12 @@ ${session ? `
   // Multi-Page Tour: läuft über mehrere Seiten (Feed → Explore → Profil → Einstellungen).
   // Active-State + Index in sessionStorage damit Navigation funktioniert.
   // Server-State (u.appBriefingSeenV2) entscheidet ob Tour beim ersten Login automatisch startet.
+  // ── PUBLIC LEGAL PAGES: Tour darf hier NIEMALS redirecten — sonst werden
+  //    /datenschutz, /impressum, /agb für eingeloggte User mit aktiver Tour
+  //    auf /feed?tour=continue umgeleitet (Bug: Google-Play-Reviewer kann die
+  //    Pflicht-Pages nicht öffnen). State bleibt erhalten, Tour pausiert nur hier.
+  //    Backslash doppelt — wir sind in einem layout()-Template-Literal.
+  if(/^\\/(datenschutz|privacy|impressum|agb|terms)$/.test(location.pathname)) return;
   function _tourLog(msg){ try{ console.log('[TOUR]', msg); }catch(e){} }
   function _safeRun(fn, label){
     try { fn(); } catch(e) { _tourLog('ERROR in '+label+': '+(e.message||e)); try{ console.error(e); }catch(_){} _showTourErrorBanner(label, e); }
@@ -1589,8 +2215,8 @@ ${session ? `
     {page:'/feed', q:'[data-tour="feed"]',                       eyebrow:'Bottom-Nav',         h:'🏠 Feed (du bist hier)',                s:'Der Haupt-Feed mit allen heutigen Reel-Posts.'},
     {page:'/feed', q:'[data-tour="post"]',                       eyebrow:'Bottom-Nav',         h:'➕ Hier postest du deinen Reel',        s:'Tippe + um deinen Insta-Reel-Link zu teilen. Andere Creator engagen sofort mit dir.'},
     // ── EXPLORE PAGE ─────────────────────────────────────────────────────
-    {page:'/explore', q:'.explore-tabs',                         eyebrow:'Explore · Tabs',     h:'🧭 News, Ranking, Tipps &amp; Shop',    s:'Wir sind jetzt im Hub. Hier findest du alle Übersichts-Bereiche: Newsletter, Ranking, Tipps, Regeln und Diamanten-Shop.'},
-    {page:'/explore', q:'.action-grid',                          eyebrow:'Explore · Aktionen', h:'🚀 Was möchtest du tun?',                s:'Schnell-Zugriff auf Ranking, Tipps, Regeln, Shop und Newsletter — alles auf einen Blick.'},
+    {page:'/explore', q:'#mission-widget-explore',               eyebrow:'Explore · Missionen',h:'🎯 Deine Missionen',                     s:'Hier siehst du deine täglichen und wöchentlichen Missionen. Auswertung jeden Tag um 12:00 (Berlin).'},
+    {page:'/explore', q:'.explore-tabs',                         eyebrow:'Explore · Tabs',     h:'🧭 News, Ranking, Tipps &amp; Shop',    s:'Hier findest du alle Übersichts-Bereiche: Newsletter, Ranking, Tipps, Regeln und Diamanten-Shop.'},
     // ── REGELN (Pflicht-Lese-Step) ───────────────────────────────────────
     {page:'/explore?tab=regeln', q:'.regeln-wrap, .regeln-tabnav, .regeln-card', eyebrow:'⚠️ Regeln · PFLICHT', h:'📋 Regeln lesen — bitte alles anschauen',  s:'<b>Wichtig:</b> Wer einen Link postet muss 5 andere zurück-liken &amp; kommentieren. Vor dem Like in der App: Insta öffnen → dort liken &amp; kommentieren. Du musst die Regeln am Ende der Tour bestätigen.', requiresScroll:true},
     // ── MESSAGES PAGE ────────────────────────────────────────────────────
@@ -1992,8 +2618,8 @@ async function checkNotifBadge(){
         }
     } catch(e){}
 }
-checkNotifBadge();
-setInterval(checkNotifBadge, 60000);
+// Perf: nicht-kritisch — defer 2s nach Page-Load damit initial-render nicht blockiert wird
+setTimeout(() => { checkNotifBadge(); setInterval(checkNotifBadge, 60000); }, 2000);
 
 // Bfcache-Fix: wenn der User von Instagram/anderer Seite zurückkommt
 window.addEventListener('pageshow', function(ev){
@@ -2046,8 +2672,8 @@ async function checkMsgBadge(){
         if(b){if(d.count>0){b.textContent=d.count>9?'9+':d.count;b.style.display='flex';}else b.style.display='none';}
     }catch(e){}
 }
-checkMsgBadge();
-setInterval(checkMsgBadge,30000);
+// Perf: defer 2.5s damit initial-render nicht von Hintergrund-Fetches blockiert wird
+setTimeout(() => { checkMsgBadge(); setInterval(checkMsgBadge, 30000); }, 2500);
 function toast(msg,dur=2500){const t=document.getElementById('toast');if(!t)return;t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),dur);}
 // Großes Banner oben für wichtige Notifications (warn/success/info).
 // showBanner({title, subtitle?, type='warn', dur=4500, icon?})
@@ -2068,8 +2694,101 @@ function showBanner(opts){
 }
 // Engagement-Quality-Control: User muss erst Link besuchen, bevor er liken darf.
 // Status pro Link wird in localStorage gespeichert (cb_visited_links: { lid: timestamp }).
-function markLinkVisited(lid){try{const v=JSON.parse(localStorage.getItem('cb_visited_links')||'{}');v[String(lid)]=Date.now();localStorage.setItem('cb_visited_links',JSON.stringify(v));}catch(e){}}
+function markLinkVisited(lid){
+  try{const v=JSON.parse(localStorage.getItem('cb_visited_links')||'{}');v[String(lid)]=Date.now();localStorage.setItem('cb_visited_links',JSON.stringify(v));}catch(e){}
+  // Sofortiges UI-Feedback: alle Like-Buttons für diesen Link freischalten
+  try{document.querySelectorAll('.proflink-like[data-msgid="'+lid+'"], .post-action-btn[data-msgid="'+lid+'"]').forEach(b=>{b.classList.add('visited');});}catch(e){}
+}
 function hasLinkVisited(lid){try{const v=JSON.parse(localStorage.getItem('cb_visited_links')||'{}');return !!v[String(lid)];}catch(e){return false;}}
+// Feed-Tab-Dropdown im Topbar (öffnet/schließt das ft-menu).
+function ftToggle(btn){
+  const wrap = btn.closest('.ft-wrap');
+  if (!wrap) return;
+  const isOpen = wrap.classList.toggle('open');
+  if (isOpen) {
+    setTimeout(()=>{
+      const close = (e) => { if (!wrap.contains(e.target)) { wrap.classList.remove('open'); document.removeEventListener('click', close); } };
+      document.addEventListener('click', close);
+    }, 0);
+  }
+}
+// Shared pinnedEngageClick — wird im /feed Pinned-Story-Modal und auf /profil/{uid} genutzt.
+if(typeof window.pinnedEngageClick==='undefined'){
+  window.pinnedEngageClick=async function(ownerUid, btn){
+    const visitTs=window['_pvisit_'+ownerUid];
+    if(!visitTs||(Date.now()-visitTs)<1500){
+      alert('Bitte erst auf „📸 Auf Instagram öffnen" tippen und auf Instagram LIKEN + KOMMENTIEREN + SPEICHERN + TEILEN.');
+      return;
+    }
+    if(!confirm('📌 Pinned-Post engagieren\\n\\nDu bestätigst:\\n✓ Auf Instagram GELIKT\\n✓ KOMMENTIERT\\n✓ GETEILT\\n✓ GESPEICHERT\\n\\n→ Belohnung: +1 💎\\n→ Schein-Engagement: Sanktionen\\n\\nFortfahren?'))return;
+    btn.disabled=true;btn.dataset.engaged='1';btn.innerHTML='⏳ Bestätige …';
+    try{
+      const r=await fetch('/api/engage-pinned-post',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ownerUid})});
+      const j=await r.json();
+      if(j.ok||j.alreadyDone){
+        btn.style.background='rgba(34,197,94,.12)';btn.style.borderColor='#22c55e';btn.style.color='#22c55e';btn.innerHTML='✅ Engagiert';
+        if(window.showBanner)showBanner({type:'success',icon:'❤️',title:'Pinned-Post engagiert!',subtitle:'+1 💎 in deiner Wallet.',dur:4000});
+      }else{
+        btn.disabled=false;delete btn.dataset.engaged;btn.innerHTML='❤️ Engagiert · +1💎';
+        alert('❌ '+(j.error||'Fehler'));
+      }
+    }catch(e){btn.disabled=false;delete btn.dataset.engaged;btn.innerHTML='❤️ Engagiert · +1💎';alert('❌ Netzwerk-Fehler');}
+  };
+}
+// Beim Page-Load alle bereits besuchten Links markieren (visited-Class für CSS)
+(function _hydrateVisitedLikes(){
+  function run(){
+    try{
+      const v=JSON.parse(localStorage.getItem('cb_visited_links')||'{}');
+      document.querySelectorAll('.proflink-like[data-msgid], .post-action-btn[data-msgid]').forEach(b=>{
+        const mid=b.getAttribute('data-msgid');
+        if(mid && v[String(mid)])b.classList.add('visited');
+      });
+    }catch(e){}
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run);
+  else run();
+})();
+// Shared likePost — wird auf /profil, /profil/{uid} und /feed verwendet.
+// Auf /feed wird sie später von einer komplexeren Version mit Offline-Queue überschrieben.
+if(typeof window.likePost==='undefined'){
+  window.likePost=async function(msgId, btn){
+    if(!btn||btn.dataset.busy==='1')return;
+    if(btn.classList.contains('liked')){
+      if(window.showBanner)showBanner({type:'success',title:'Schon geliked ❤️',subtitle:'Du hast diesen Link bereits geliked.',dur:2500});
+      return;
+    }
+    if(!hasLinkVisited(msgId)){
+      if(window.showBanner)showBanner({type:'warn',icon:'⚠️',title:'Erst den Link besuchen!',subtitle:'Tap auf „→ Öffnen" → auf Instagram liken & kommentieren → dann hier liken.',dur:5000});
+      return;
+    }
+    btn.dataset.busy='1';
+    const countEl=document.getElementById('likes-'+msgId);
+    btn.classList.add('liked');
+    const svg=btn.querySelector('svg');if(svg)svg.setAttribute('fill','currentColor');
+    if(countEl)countEl.textContent=Number(countEl.textContent||0)+1;
+    btn.disabled=true;
+    try{
+      const ctrl=new AbortController();const tmo=setTimeout(()=>ctrl.abort(),8000);
+      const res=await fetch('/api/like',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({msgId}),signal:ctrl.signal});
+      clearTimeout(tmo);
+      const data=await res.json();
+      if(data.ok){
+        if(countEl&&data.likes!==undefined)countEl.textContent=data.likes;
+        if(window.showBanner)showBanner({type:'success',title:'Like registriert ❤️',subtitle:'Vergiss nicht: Auf Instagram liken & 2-Wort-Kommentar.',dur:4000});
+      }else if(data.missingInstagram){
+        btn.classList.remove('liked');if(svg)svg.setAttribute('fill','none');
+        if(countEl)countEl.textContent=Math.max(0,Number(countEl.textContent)-1);
+        btn.disabled=false;btn.dataset.busy='0';
+        if(window.showBanner)showBanner({type:'warn',icon:'❌',title:'Like fehlgeschlagen',subtitle:data.error||'Insta in Einstellungen setzen.',dur:4500});
+      }else{
+        if(window.showBanner)showBanner({type:'warn',icon:'⚠️',title:'Like fehlgeschlagen',subtitle:data.error||'Versuch es nochmal.',dur:3500});
+      }
+    }catch(e){
+      if(window.showBanner)showBanner({type:'warn',icon:'📡',title:'Netzwerkfehler',subtitle:'Versuch es nochmal sobald du wieder Online bist.',dur:3500});
+    }
+  };
+}
 function setTheme(t){document.documentElement.setAttribute('data-theme',t);try{localStorage.setItem('cbTheme4',t);}catch(e){}document.querySelectorAll('[title="Theme"]').forEach(b=>b.textContent=t==='dark'?'☀️':'🌙');fetch('/api/theme',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({theme:t})}).catch(()=>{});}
 try{const t=localStorage.getItem('cbTheme4');if(t){document.documentElement.setAttribute('data-theme',t);}}catch(e){}
 function setLang(l){fetch('/api/lang',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lang:l})}).then(()=>location.reload()).catch(()=>{try{document.cookie='cbLang='+l+';path=/;max-age=31536000';}catch(e){}location.reload();});}
@@ -2084,21 +2803,23 @@ async function openPlusSheet(){
     const st=await r.json();
     const icon=document.getElementById('plus-link-status-icon');
     const txt=document.getElementById('plus-link-status-text');
+    const wrap=document.getElementById('plus-link-status');
     const btn=document.getElementById('plus-post-btn');
+    if(wrap)wrap.className='ps-status';
     if(st.isAdmin){
-      icon.textContent='👑';txt.textContent='Admin — unbegrenzte Links';txt.style.color='#ffd43b';
+      icon.textContent='👑';txt.textContent='Admin · unbegrenzt';if(wrap)wrap.classList.add('ps-status-admin');
       if(btn)btn.disabled=false;
     } else if(st.canPost && st.todayCount===0){
-      icon.textContent='✅';txt.textContent='1 kostenloser Link heute verfügbar';txt.style.color='#00c851';
+      icon.textContent='✅';txt.textContent='1 kostenloser Link heute verfügbar';
       if(btn)btn.disabled=false;
     } else if(st.canPost && st.bonusLinks>0){
-      icon.textContent='💎';txt.textContent=st.bonusLinks+' Extra-Link'+(st.bonusLinks>1?'s':'')+' verfügbar — wird nach dem Posten verbraucht';txt.style.color='#a78bfa';
+      icon.textContent='💎';txt.textContent=st.bonusLinks+' Extra-Link'+(st.bonusLinks>1?'s':'')+' verfügbar';
       if(btn)btn.disabled=false;
     } else if(st.canPost && st.badgeBonus>0){
-      icon.textContent='🏅';txt.textContent='Erfahrener Extra-Link heute verfügbar';txt.style.color='#8b5cf6';
+      icon.textContent='🏅';txt.textContent='Erfahrener Extra-Link heute verfügbar';
       if(btn)btn.disabled=false;
     } else {
-      icon.textContent='❌';txt.textContent='Limit erreicht — kein Extra-Link vorhanden. Im Shop kaufen: 5 💎';txt.style.color='rgba(239,68,68,.9)';
+      icon.textContent='❌';txt.textContent='Limit erreicht — Extra-Link im Shop: 5 💎';
       if(btn){btn.disabled=true;btn.style.opacity='.45';}
     }
   }catch(e){
@@ -2645,63 +3366,202 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
     const isAdmin = adminIds.includes(Number(uid));
     const rank = isAdmin ? 0 : sorted.findIndex(([id])=>id===uid)+1;
     const _t3 = getTop3Uids(d, adminIds);
-    const _t1 = _t3.top1;
-    const _myRankCrown = rankOf(uid, _t3); // 1, 2, 3 oder 0
+    const _myRankCrown = rankOf(uid, _t3);
     const crown = makeCrown(_t3);
     const crownOverlay = makeCrownOverlay(_t3);
+    const _posts = Object.values(d.links||{}).filter(l => String(l.user_id) === String(uid)).length;
+    const _followers = (u.followers||[]).length;
+    const _diamonds = u.diamonds || 0;
+    const _picUrl = (picData||ladeBild(uid,'profilepic')) ? `/appbild/${uid}/profilepic` : (u.instagram ? `https://unavatar.io/instagram/${u.instagram}` : '');
+    const _initial = htmlEsc((u.spitzname||u.name||'?').slice(0,1).toUpperCase());
+    const _isFollowing = false;
+    const _roleBadge = htmlEsc(cleanRole(u.role, uid, adminIds));
 
     return `
-<div style="position:relative">
-  <div class="profile-banner" style="${bannerIsGrad ? 'background:'+banner : ''}">
-    ${!bannerIsGrad ? '<img src="'+banner+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">' : ''}
-    <div class="profile-banner-overlay"></div>
-  </div>
-  <div class="profile-avatar-wrap">
-    ${_myRankCrown ? `<div style="position:absolute;left:48px;top:-26px;font-size:28px;line-height:1;filter:${_myRankCrown===1?'drop-shadow(0 3px 8px rgba(245,158,11,0.5))':_myRankCrown===2?'grayscale(100%) brightness(1.45) contrast(0.9) drop-shadow(0 3px 8px rgba(148,163,184,0.55))':'sepia(100%) saturate(700%) hue-rotate(-22deg) brightness(0.55) contrast(1.15) drop-shadow(0 3px 8px rgba(180,83,9,0.6))'};animation:crown-bob 2.4s ease-in-out infinite;z-index:6;transform:translateX(-50%) rotate(-3deg);pointer-events:none">👑</div>` : ''}
-    ${(picData||ladeBild(uid,'profilepic'))
-      ? `<img src="${picData||ladeBild(uid,'profilepic')}" class="profile-avatar" style="${getRingBoxShadow(u)}" onerror="this.style.display='none'" alt="">`
-      : u.instagram
-      ? `<img src="https://unavatar.io/instagram/${u.instagram}" class="profile-avatar" style="${getRingBoxShadow(u)}" onerror="this.style.display='none'" alt="">`
-      : `<div class="profile-avatar" style="display:flex;align-items:center;justify-content:center;font-size:34px;font-weight:800;background:${grad};color:#fff${getRingBoxShadow(u)}">${(u.name||'?').slice(0,2).toUpperCase()}</div>`}
-    ${isUidOnline(uid)?'<div class="profile-online-dot" title="Online"></div>':''}
-    ${![...sessions.values()].some(s=>String(s.uid)===String(uid))?`<div style="position:absolute;bottom:6px;right:6px;background:rgba(15,15,15,.92);border:1.5px solid #555;border-radius:20px;padding:2px 7px;font-size:10px;color:#888;z-index:2;font-weight:600;white-space:nowrap">Kein Web</div>`:''}
-  </div>
-  ${isOwn?`<div style="position:absolute;top:12px;right:12px;display:flex;gap:8px;z-index:3">
-    ${isAdmin?`<a href="/dashboard" class="profile-action-pill" title="Admin Dashboard" style="background:linear-gradient(135deg,#f5d76e,#d4a946 55%,#8b6914);color:#000;border-color:rgba(212,175,55,.55)"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2l9 4v6c0 5-3.8 9.4-9 10-5.2-.6-9-5-9-10V6l9-4z"/></svg><span>Dashboard</span></a>`:''}
-    <a href="/einstellungen" class="profile-action-pill" title="Bearbeiten"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg><span>Bearbeiten</span></a>
-  </div>`:''}
+<style>
+.ipf-banner{position:relative;width:100%;height:130px;overflow:hidden}
+.ipf-banner-bg{position:absolute;inset:0;background-size:cover;background-position:center}
+.ipf-banner-overlay{position:absolute;inset:0;background:linear-gradient(180deg,transparent 50%,rgba(0,0,0,.2));pointer-events:none}
+.ipf{padding:14px 18px 8px;background:var(--bg);position:relative;margin-top:-30px;border-radius:24px 24px 0 0}
+.ipf-top{display:flex;align-items:center;gap:18px;margin-bottom:14px;margin-top:-30px}
+.ipf-avatar-wrap{position:relative;width:84px;height:84px;flex-shrink:0;margin-top:0}
+.ipf-avatar{width:100%;height:100%;border-radius:50%;background:var(--avatar-fallback-bg);background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;color:var(--avatar-fallback-color);font-weight:700;font-size:32px;overflow:hidden;position:relative;border:4px solid var(--bg);box-shadow:0 4px 18px rgba(0,0,0,.25)}
+.ipf-avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.ipf-avatar-dot{position:absolute;bottom:2px;right:2px;width:18px;height:18px;border-radius:50%;background:#22c55e;border:3px solid var(--bg);box-shadow:0 0 8px rgba(34,197,94,.5)}
+.ipf-avatar-crown{position:absolute;top:-22px;left:50%;transform:translateX(-50%) rotate(-4deg);font-size:30px;line-height:1;animation:crown-bob 2.4s ease-in-out infinite;pointer-events:none;z-index:5}
+.ipf-stats{flex:1;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center}
+.ipf-stat{cursor:default;text-decoration:none;color:inherit;padding:4px 0;transition:transform .12s}
+.ipf-stat[href]:active{transform:scale(.96)}
+.ipf-stat-num{font-size:18px;font-weight:700;color:var(--text);line-height:1.1;letter-spacing:-.2px}
+.ipf-stat-lbl{font-size:11.5px;color:var(--muted);margin-top:3px;font-weight:500}
+.ipf-name-row{margin-bottom:6px}
+.ipf-name-row .nm{font-size:16px;font-weight:700;color:var(--text);line-height:1.2;display:inline-flex;align-items:center;gap:6px}
+.ipf-name-row .badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:99px;font-size:10.5px;font-weight:800;letter-spacing:.4px;margin-left:6px;vertical-align:middle}
+.ipf-handle{font-size:13px;color:var(--muted);margin-top:2px;font-weight:500}
+.ipf-bio{font-size:13.5px;color:var(--text);line-height:1.5;margin:10px 0;white-space:pre-wrap;word-break:break-word}
+.ipf-meta{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 4px;align-items:center}
+.ipf-link{display:inline-flex;align-items:center;gap:5px;font-size:13px;color:#4dabf7;text-decoration:none;font-weight:600}
+.ipf-chip{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;background:var(--surface-tint);border:1px solid var(--border2);border-radius:9px;font-size:12px;color:var(--text);text-decoration:none;font-weight:500}
+.ipf-chip:hover{background:var(--bg2)}
+.ipf-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:14px 0 10px}
+.ipf-btn{padding:9px 12px;background:var(--bg3);border:1px solid var(--border2);color:var(--text);border-radius:9px;font-size:13.5px;font-weight:600;cursor:pointer;font-family:inherit;text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .12s;line-height:1}
+.ipf-btn:hover{background:var(--bg4)}
+.ipf-btn:active{transform:scale(.98)}
+.ipf-btn-primary{background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;border-color:transparent;box-shadow:0 2px 8px rgba(124,58,237,.25)}
+.ipf-btn-primary:hover{filter:brightness(1.05)}
+.ipf-trophy-row{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 4px;padding:10px 12px;background:linear-gradient(135deg,rgba(245,158,11,.06),rgba(167,139,250,.06));border:1px solid rgba(245,158,11,.18);border-radius:12px}
+.ipf-trophy{font-size:18px;line-height:1}
+/* Account-Switcher Dropdown (Insta-Style) */
+.ipf-switcher-wrap{position:relative;margin:12px 16px 0;background:var(--bg)}
+.ipf-switcher{display:flex;align-items:center;gap:12px;width:100%;background:linear-gradient(135deg,rgba(167,139,250,.08),rgba(124,58,237,.04));border:1.5px solid rgba(167,139,250,.30);color:var(--text);font-size:14px;font-weight:600;cursor:pointer;padding:10px 14px;border-radius:14px;font-family:inherit;transition:all .15s;box-shadow:0 2px 8px rgba(124,58,237,.06)}
+.ipf-switcher:hover{background:linear-gradient(135deg,rgba(167,139,250,.14),rgba(124,58,237,.08));border-color:rgba(167,139,250,.55);transform:translateY(-1px)}
+.ipf-switcher-mini-avatar{width:32px;height:32px;border-radius:50%;background:var(--avatar-fallback-bg);display:flex;align-items:center;justify-content:center;color:var(--avatar-fallback-color);font-weight:700;font-size:13px;overflow:hidden;position:relative;flex-shrink:0;border:2px solid var(--bg3)}
+.ipf-switcher-mini-avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.ipf-switcher-label{flex:1;text-align:left;min-width:0}
+.ipf-switcher-label-top{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;font-weight:700;margin-bottom:1px}
+.ipf-switcher-label-name{font-size:14px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ipf-switcher-arrow{transition:transform .2s;color:#a78bfa;font-size:14px;flex-shrink:0}
+.ipf-switcher.open .ipf-switcher-arrow{transform:rotate(180deg)}
+.ipf-switcher-menu{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--bg3);border:1.5px solid rgba(167,139,250,.30);border-radius:14px;box-shadow:0 12px 32px rgba(0,0,0,.18);overflow:hidden;z-index:50;display:none;animation:ipfDrop .18s ease}
+.ipf-switcher-menu.open{display:block}
+@keyframes ipfDrop{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+.ipf-switcher-item{display:flex;align-items:center;gap:11px;padding:11px 14px;text-decoration:none;color:var(--text);cursor:pointer;border:none;background:none;width:100%;font-family:inherit;font-size:14px;text-align:left;transition:background .12s}
+.ipf-switcher-item:hover{background:var(--bg4)}
+.ipf-switcher-item.active{background:rgba(167,139,250,.08)}
+.ipf-switcher-item-avatar{width:36px;height:36px;border-radius:50%;background:var(--avatar-fallback-bg);display:flex;align-items:center;justify-content:center;color:var(--avatar-fallback-color);font-weight:700;font-size:14px;overflow:hidden;position:relative;flex-shrink:0}
+.ipf-switcher-item-avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.ipf-switcher-item-name{flex:1;min-width:0;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ipf-switcher-item-check{color:#a78bfa;font-size:18px;font-weight:700}
+.ipf-switcher-divider{height:1px;background:var(--border2)}
+.ipf-switcher-add{display:flex;align-items:center;gap:11px;padding:11px 14px;color:#a78bfa;cursor:pointer;border:none;background:none;width:100%;font-family:inherit;font-size:13.5px;font-weight:600;text-align:left}
+.ipf-switcher-add:hover{background:var(--bg4)}
+/* Topbar-Switcher (kompakt) */
+.tb-switcher-wrap{position:relative;display:inline-block}
+.tb-switcher{display:inline-flex;align-items:center;gap:7px;background:var(--surface-tint);border:1px solid var(--border2);color:var(--text);padding:4px 10px 4px 4px;border-radius:99px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;max-width:200px}
+.tb-switcher:hover{background:var(--bg4)}
+.tb-switcher-avatar{width:28px;height:28px;border-radius:50%;background:var(--avatar-fallback-bg);display:flex;align-items:center;justify-content:center;color:var(--avatar-fallback-color);font-weight:700;font-size:12px;overflow:hidden;position:relative;flex-shrink:0;border:1px solid var(--avatar-fallback-border)}
+.tb-switcher-avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.tb-switcher-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100px}
+.tb-switcher-arrow{font-size:10px;color:var(--muted);transition:transform .2s;flex-shrink:0}
+.tb-switcher.open .tb-switcher-arrow{transform:rotate(180deg)}
+.tb-switcher-wrap .ipf-switcher-menu{position:absolute;top:calc(100% + 6px);right:0;left:auto;min-width:220px}
+</style>
+
+<div class="ipf-banner">
+  <div class="ipf-banner-bg" style="${bannerIsGrad ? 'background:'+banner : 'background-image:url('+JSON.stringify(banner).slice(1,-1)+')'}"></div>
+  <div class="ipf-banner-overlay"></div>
 </div>
-<div class="profile-info">
-  <div class="profile-name-row">
-    <div class="profile-name">${htmlEsc(u.spitzname||u.name||'User')}</div>
-    <div class="profile-badge" style="background:${grad};color:#fff">${htmlEsc(cleanRole(u.role, uid, adminIds))}</div>
-  </div>
-  ${u.username||u.spitzname?`<div class="profile-username">${u.spitzname?htmlEsc(u.name||''):''}${u.username?(u.spitzname?' · ':'')+'@'+htmlEsc(u.username):''}</div>`:''}
-  <div style="display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap">
-    ${isUidOnline(uid) ? '<span class="profile-status-pill online">● Online</span>' : '<span class="profile-status-pill offline">○ Offline</span>'}
-    ${rank>0?`<span class="profile-status-pill"><span style="opacity:0.65">Rang</span> #${rank}</span>`:''}
-  </div>
-  ${u.bio?`<div class="profile-bio">${htmlEsc(u.bio)}</div>`:''}
-  <div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap">
-    ${u.nische?`<span class="profile-meta-chip"><span style="opacity:0.7">🎯</span> ${htmlEsc(u.nische)}</span>`:''}
-    ${(()=>{const sw=safeUrl(u.website);return sw?`<a href="${htmlEsc(sw)}" target="_blank" rel="noopener noreferrer" class="profile-meta-chip" style="text-decoration:none">🔗 ${htmlEsc(sw.replace(/^https?:\/\//i,'').replace(/\/$/, '').slice(0,30))}</a>`:'';})()}
-    ${instaUrl?`<a href="${htmlEsc(instaUrl)}" target="_blank" rel="noopener noreferrer" class="profile-meta-chip" style="text-decoration:none">📸 @${htmlEsc(u.instagram)}</a>`:''}
-  </div>
-  ${u.trophies&&u.trophies.length?`
-  <div style="margin-top:14px;padding:12px 14px;background:linear-gradient(135deg,rgba(245,158,11,0.06),rgba(167,139,250,0.06));border:1px solid rgba(245,158,11,0.18);border-radius:14px">
-    <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1.4px;margin-bottom:8px;font-weight:800">🏆 Trophäen</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
-      ${u.trophies.map(t=>`<span style="font-size:22px;background:var(--bg4);border-radius:8px;padding:4px 8px">${t}</span>`).join('')}
+<div class="ipf">
+  <div class="ipf-top">
+    <div class="ipf-avatar-wrap">
+      ${_myRankCrown ? `<div class="ipf-avatar-crown" style="filter:${_myRankCrown===1?'drop-shadow(0 3px 8px rgba(245,158,11,0.5))':_myRankCrown===2?'grayscale(100%) brightness(1.45) contrast(0.9) drop-shadow(0 3px 8px rgba(148,163,184,0.55))':'sepia(100%) saturate(700%) hue-rotate(-22deg) brightness(0.55) contrast(1.15) drop-shadow(0 3px 8px rgba(180,83,9,0.6))'}">👑</div>` : ''}
+      <div class="ipf-avatar">
+        ${_picUrl ? `<img src="${htmlEsc(_picUrl)}" alt="" loading="eager" onerror="this.style.display='none'">` : _initial}
+      </div>
+      ${isUidOnline(uid) ? '<div class="ipf-avatar-dot" title="Online"></div>' : ''}
     </div>
-  </div>`:''}
+    <div class="ipf-stats">
+      <div class="ipf-stat"><div class="ipf-stat-num" data-count="${_posts}">0</div><div class="ipf-stat-lbl">Posts</div></div>
+      <div class="ipf-stat"><div class="ipf-stat-num" data-count="${_followers}">0</div><div class="ipf-stat-lbl">Follower</div></div>
+      <a href="/diamanten" class="ipf-stat"><div class="ipf-stat-num">💎 <span data-count="${_diamonds}">0</span></div><div class="ipf-stat-lbl">Diamanten</div></a>
+    </div>
+  </div>
+  <div class="ipf-name-row">
+    <span class="nm">${htmlEsc(u.spitzname||u.name||'User')}${_roleBadge?`<span class="badge" style="background:${grad};color:#fff">${_roleBadge}</span>`:''}${isOwn?(()=>{
+      const _claimedToday = hasClaimed('dailyxp', uid);
+      return '<button id="daily-xp-fab" onclick="claimDailyXP()" title="'+(_claimedToday?'Heute schon abgeholt':'Täglicher XP-Bonus abholen')+'"'+(_claimedToday?' disabled':'')+' style="position:relative;display:inline-flex;align-items:center;justify-content:center;margin-left:8px;width:30px;height:30px;border-radius:50%;background:'+(_claimedToday?'var(--bg4)':'linear-gradient(135deg,#22c55e,#16a34a)')+';color:'+(_claimedToday?'var(--muted)':'#fff')+';border:1.5px solid '+(_claimedToday?'var(--border)':'rgba(34,197,94,0.5)')+';font-size:15px;cursor:'+(_claimedToday?'default':'pointer')+';font-family:inherit;vertical-align:middle;opacity:'+(_claimedToday?'0.55':'1')+'">'+(_claimedToday?'✓':'🎁')+(_claimedToday?'':'<span id="daily-xp-fab-dot" style="position:absolute;top:-3px;right:-3px;width:9px;height:9px;border-radius:50%;background:#ef4444;border:2px solid var(--bg);animation:dxpPulse 2s ease-in-out infinite"></span>')+'</button>';
+    })():''}</span>
+    <div class="ipf-handle">${u.instagram ? '@'+htmlEsc(u.instagram) : (rank>0?'Rang #'+rank:'')}</div>
+  </div>
+  ${u.bio?`<div class="ipf-bio">${htmlEsc(u.bio)}</div>`:''}
+  <div class="ipf-meta">
+    ${(()=>{const sw=safeUrl(u.website);return sw?`<a href="${htmlEsc(sw)}" target="_blank" rel="noopener noreferrer" class="ipf-link">🔗 ${htmlEsc(sw.replace(/^https?:\/\//i,'').replace(/\/$/, '').slice(0,30))}</a>`:'';})()}
+    ${u.nische?`<span class="ipf-chip">🎯 ${htmlEsc(u.nische)}</span>`:''}
+    ${instaUrl && !u.website ? `<a href="${htmlEsc(instaUrl)}" target="_blank" rel="noopener noreferrer" class="ipf-chip">📸 @${htmlEsc(u.instagram)}</a>` : ''}
+  </div>
+  <div class="ipf-actions">
+    ${isOwn ? `
+      <a href="/einstellungen" class="ipf-btn ipf-btn-primary">✏️ Profil bearbeiten</a>
+      <button class="ipf-btn" onclick="ipfShare()">📤 Profil teilen</button>
+    ` : `
+      <a href="/nachrichten/${uid}" class="ipf-btn ipf-btn-primary">💬 Nachricht</a>
+      <button class="ipf-btn" onclick="ipfFollow(this,'${uid}')" id="ipf-follow-btn">${_isFollowing ? '✓ Folge ich' : '➕ Folgen'}</button>
+    `}
+  </div>
+  ${isOwn ? `<a href="/insights" class="ipf-btn" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:11px;background:linear-gradient(135deg,rgba(34,197,94,.10),rgba(167,139,250,.08));border:1px solid rgba(34,197,94,.30);color:#22c55e;border-radius:9px;font-size:13.5px;font-weight:700;text-decoration:none;margin-bottom:10px"><span style="font-size:16px">📊</span> Professional Insights · Top Engagers · Best Times <span style="margin-left:auto;color:#22c55e;font-size:14px">→</span></a>` : ''}
+  ${u.trophies&&u.trophies.length?`<div class="ipf-trophy-row"><span style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-weight:800;width:100%;margin-bottom:2px">🏆 Trophäen</span>${u.trophies.map(t=>`<span class="ipf-trophy">${t}</span>`).join('')}</div>`:''}
+  ${isOwn && isAdmin ? '<div style="margin-top:6px"><a href="/dashboard" class="ipf-btn" style="background:linear-gradient(135deg,#f5d76e,#d4a946 55%,#8b6914);color:#000;border-color:rgba(212,175,55,.55);font-weight:700">🛡️ Admin Dashboard</a></div>' : ''}
 </div>
-<div class="profile-stats">
-  ${!isAdmin?`<div class="profile-stat"><div class="profile-stat-val" data-count="${xp}">0</div><div class="profile-stat-label">XP</div></div>`:''}
-  <div class="profile-stat"><div class="profile-stat-val" data-count="${u.links||0}">0</div><div class="profile-stat-label">Links</div></div>
-  <div class="profile-stat"><div class="profile-stat-val" data-count="${(u.followers||[]).length}">0</div><div class="profile-stat-label">Follower</div></div>
-  <div class="profile-stat"><div class="profile-stat-val">🔥 <span data-count="${u.streak||0}">0</span></div><div class="profile-stat-label">Streak</div></div>
-  <a href="/diamanten" class="profile-stat" style="text-decoration:none;color:inherit;cursor:pointer"><div class="profile-stat-val">💎 <span data-count="${u.diamonds||0}">0</span></div><div class="profile-stat-label" style="display:flex;align-items:center;justify-content:center;gap:3px">Diamanten <span style="font-size:9px;opacity:0.6">ⓘ</span></div></a>
-</div>
+<script>
+function ipfShare(){
+  const url = window.location.origin + '/profil/' + ${JSON.stringify(String(uid))};
+  const title = ${JSON.stringify(String(u.spitzname||u.name||'CreatorX User'))};
+  if (navigator.share) { navigator.share({title:title+' · CreatorX', url}).catch(()=>{}); }
+  else { navigator.clipboard.writeText(url).then(()=>{const t=document.createElement('div');t.textContent='✅ Link kopiert';t.style.cssText='position:fixed;top:60px;left:50%;transform:translateX(-50%);background:#22c55e;color:#fff;padding:10px 18px;border-radius:10px;font-size:13px;font-weight:700;z-index:9999;box-shadow:0 8px 24px rgba(34,197,94,.4)';document.body.appendChild(t);setTimeout(()=>t.remove(),1800);}).catch(()=>{}); }
+}
+async function ipfFollow(btn, targetUid){
+  btn.disabled = true;
+  try {
+    const r = await fetch('/api/follow', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({targetUid})});
+    const j = await r.json();
+    if (j.ok) btn.innerHTML = j.following ? '✓ Folge ich' : '➕ Folgen';
+  } catch(e) {}
+  btn.disabled = false;
+}
+function ipfToggleSwitcher(btn){
+  const menu = document.getElementById('ipf-sw-menu');
+  if (!menu) return;
+  const isOpen = menu.classList.toggle('open');
+  btn.classList.toggle('open', isOpen);
+  if (isOpen) {
+    setTimeout(()=>{
+      const close = e => { if (!menu.contains(e.target) && e.target !== btn && !btn.contains(e.target)) { menu.classList.remove('open'); btn.classList.remove('open'); document.removeEventListener('click', close); } };
+      document.addEventListener('click', close);
+    }, 0);
+  }
+}
+async function ipfSwitchAcc(targetUid){
+  try {
+    const r = await fetch('/api/switch-account', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({uid: targetUid})});
+    const j = await r.json();
+    if (j.ok) location.reload();
+    else alert('Wechsel fehlgeschlagen: ' + (j.error || ''));
+  } catch(e) { alert('Netzwerk-Fehler'); }
+}
+async function pinnedEngageClick(ownerUid, btn){
+  const visitTs = window['_pvisit_' + ownerUid];
+  if (!visitTs || (Date.now() - visitTs) < 1500) {
+    alert('Bitte erst auf "📸 Auf Instagram öffnen" tippen + auf Insta LIKEN, KOMMENTIEREN, SPEICHERN, TEILEN.');
+    return;
+  }
+  if (!confirm('📌 Pinned-Post engagieren\\n\\nDu bestätigst:\\n✓ Du hast auf Instagram GELIKT\\n✓ Du hast KOMMENTIERT\\n✓ Du hast GETEILT\\n✓ Du hast GESPEICHERT\\n\\n→ Belohnung: +1 💎\\n→ Bei Schein-Engagement: Sanktionen\\n\\nFortfahren?')) return;
+  btn.disabled = true; btn.textContent = '⏳ Bestätige …';
+  try {
+    const r = await fetch('/api/engage-pinned-post', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ownerUid})});
+    const j = await r.json();
+    if (j.ok || j.alreadyDone) {
+      btn.style.background = 'rgba(34,197,94,.12)';
+      btn.style.borderColor = '#22c55e';
+      btn.style.color = '#22c55e';
+      btn.innerHTML = '✅ Engagiert';
+    } else {
+      btn.disabled = false; btn.innerHTML = '❤️ Engagiert · +1💎';
+      alert('❌ ' + (j.error || 'Fehler'));
+    }
+  } catch(e) { btn.disabled = false; btn.innerHTML = '❤️ Engagiert · +1💎'; alert('❌ Netzwerk-Fehler'); }
+}
+function ipfAddSub(){
+  // Wenn das existierende modal vorhanden ist (auf /profil), nutze das
+  if (typeof openCreateSubModal === 'function') { openCreateSubModal(); return; }
+  const name = prompt('Name für neuen Sub-Account:');
+  if (!name) return;
+  fetch('/api/sub-account-new', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({name})})
+    .then(r=>r.json()).then(j=>{
+      if (j.ok) location.reload();
+      else alert('Fehler: ' + (j.error || 'unbekannt'));
+    }).catch(()=>alert('Netzwerk-Fehler'));
+}
+</script>
 <script>(function(){
   if (window.__cbStatCountUp) return; window.__cbStatCountUp = true;
   function animOne(el){
@@ -2723,17 +3583,19 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
   else run();
 })();</script>
 ${(()=>{
-  const wkKey = (()=>{const n=new Date();const dd=n.getDay();const mon=new Date(n);mon.setDate(n.getDate()-(dd===0?6:dd-1));return mon.toISOString().slice(0,10);})();
+  const wkKey = (()=>{const n=new Date();const dd=n.getDay();const mon=new Date(n);mon.setDate(n.getDate()-(dd===0?6:dd-1));return mon.getFullYear()+'-'+String(mon.getMonth()+1).padStart(2,'0')+'-'+String(mon.getDate()).padStart(2,'0');})();
   const slMaxC = (u.role === '🌟 Elite+') ? 2 : 1;
   const slCountC = Object.values(d.superlinks||{}).filter(s=>s.uid===uid&&s.week===wkKey).length;
-  const slLeftC = Math.max(0, slMaxC - slCountC);
+  const slStdLeft = Math.max(0, slMaxC - slCountC);
+  const slCredits = Number(u.superlinkCredits||0);
+  const slTotalLeft = slStdLeft + slCredits;
   const bonusC = (d.bonusLinks||{})[uid] || 0;
   return `<div class="profile-slots">
     <div class="profile-slot-card">
       <div class="profile-slot-icon">⭐</div>
       <div class="profile-slot-info">
         <div class="profile-slot-label">Superlink</div>
-        <div class="profile-slot-val ${slLeftC>0?'ok':'zero'}">${slLeftC} <span class="small">/ ${slMaxC} verfügbar</span></div>
+        <div class="profile-slot-val ${slTotalLeft>0?'ok':'zero'}">${slTotalLeft} <span class="small">verfügbar${slCredits>0?` <span style="color:#f59e0b;font-weight:700">(+${slCredits} 🎁)</span>`:''}</span></div>
       </div>
     </div>
     <div class="profile-slot-card lnk">
@@ -2749,16 +3611,93 @@ ${nb?`
 <div class="profile-xp-bar"><div class="profile-xp-fill" style="width:${nb.pct}%;background:${grad}"></div></div>
 <div class="profile-xp-info"><span>Noch <b>${nb.fehlend}</b> XP bis <b>${nb.ziel}</b></span><span>${nb.pct}%</span></div>`:'<div style="margin:14px 16px;padding:12px 16px;background:linear-gradient(135deg,rgba(255,212,59,.10),rgba(255,165,0,.04));border:1px solid rgba(255,212,59,.3);border-radius:14px;font-size:12.5px;font-weight:700;color:#a16207;display:flex;align-items:center;gap:8px"><span style="font-size:18px">👑</span>Maximales Level erreicht!</div>'}
 ${(()=>{
-  const weekKey = (() => { const n=new Date(); const d=n.getDay(); const mon=new Date(n); mon.setDate(n.getDate()-(d===0?6:d-1)); return mon.toISOString().slice(0,10); })();
+  const pl = ladePinnedLink(uid);
+  if (!pl) return '';
+  // Hat aktueller Viewer den pinned-post schon engaged?
+  const _engagedSet = (d.pinnedEngages||{});
+  const _hasEngaged = isOwn ? false : Object.values(_engagedSet).some(arr => Array.isArray(arr) && arr.includes(String(uid)) && _engagedSet[String(adminIds[0]||'')]?.includes && false); // placeholder
+  // Vereinfacht: nicht zuverlässig prüfbar ohne session — wird vom Server beim Klick gechecked (alreadyDone)
+  return `<div style="margin:10px 16px;padding:14px;background:linear-gradient(135deg,rgba(236,72,153,.08),rgba(168,85,247,.06));border:1px solid rgba(236,72,153,.25);border-radius:14px">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:${isOwn?'0':'10'}px">
+      <div style="font-size:22px;flex-shrink:0">📌</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:11px;font-weight:700;color:#ec4899;text-transform:uppercase;letter-spacing:1px">Angepinnter Reel${isOwn?'':' · +1💎 bei Engagement'}</div>
+      </div>
+    </div>
+    ${isOwn ? `<a href="${htmlEsc(safeUrl(pl))}" target="_blank" rel="noopener noreferrer" style="display:block;text-align:center;padding:9px;background:linear-gradient(135deg,#ec4899,#a855f7);color:#fff;border-radius:9px;font-size:12.5px;font-weight:700;text-decoration:none">→ Reel öffnen</a>` : `
+    <div style="display:flex;gap:8px">
+      <a href="${htmlEsc(safeUrl(pl))}" target="_blank" rel="noopener noreferrer" id="pinned-visit-${uid}" onclick="window._pvisit_${uid}=Date.now()" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:10px;background:linear-gradient(135deg,#ec4899,#a855f7);color:#fff;border-radius:9px;font-size:12.5px;font-weight:700;text-decoration:none;position:relative">
+        <span style="position:absolute;left:8px;top:50%;transform:translateY(-50%);width:18px;height:18px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900">1</span>
+        📸 Auf Instagram öffnen
+      </a>
+      <button onclick="pinnedEngageClick('${uid}', this)" id="pinned-engage-btn-${uid}" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:10px;background:var(--bg3);border:1.5px solid #ec4899;color:#ec4899;border-radius:9px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;position:relative">
+        <span style="position:absolute;left:8px;top:50%;transform:translateY(-50%);width:18px;height:18px;border-radius:50%;background:rgba(236,72,153,.18);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900">2</span>
+        ❤️ Engagiert · +1💎
+      </button>
+    </div>
+    <div style="font-size:10.5px;color:var(--muted);margin-top:8px;line-height:1.4">⚠️ <b>Pflicht:</b> Auf Insta liken + kommentieren + speichern + teilen. Erst auf <b>📸 Öffnen</b> tippen, dann zurückkommen + Like-Button drücken.</div>
+    `}
+  </div>`;
+})()}
+${(()=>{
+  const weekKey = (() => { const n=new Date(); const d=n.getDay(); const mon=new Date(n); mon.setDate(n.getDate()-(d===0?6:d-1)); return mon.getFullYear()+'-'+String(mon.getMonth()+1).padStart(2,'0')+'-'+String(mon.getDate()).padStart(2,'0'); })();
   const mySuperlink = Object.values(d.superlinks||{}).find(s=>s.uid===uid&&s.week===weekKey);
   if (!mySuperlink) return '';
-  return `<div style="margin:0 16px 16px;background:var(--bg3);border:1px solid rgba(167,139,250,.3);border-radius:16px;padding:14px">
-  <div style="font-size:11px;font-weight:700;color:#a78bfa;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">⭐ Superlink dieser Woche</div>
-  <a href="${mySuperlink.url}" target="_blank" style="font-size:13px;color:#4dabf7;word-break:break-all;display:block;margin-bottom:6px;text-decoration:none">${mySuperlink.url.replace('https://www.instagram.com/','ig.com/').slice(0,50)}</a>
-  ${mySuperlink.caption?`<div style="font-size:12px;color:var(--muted)">${mySuperlink.caption.slice(0,80)}</div>`:''}
-  <div style="font-size:11px;color:var(--muted);margin-top:6px">❤️ ${mySuperlink.likes?.length||0} Likes</div>
+  return `<div style="margin:10px 16px;padding:12px 14px;background:linear-gradient(135deg,rgba(167,139,250,.08),rgba(124,58,237,.04));border:1px solid rgba(167,139,250,.25);border-radius:14px">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:${mySuperlink.caption?'6':'0'}px">
+    <div style="font-size:22px;flex-shrink:0">⭐</div>
+    <div style="flex:1;min-width:0">
+      <div style="font-size:11px;font-weight:700;color:#a78bfa;text-transform:uppercase;letter-spacing:1px">Superlink dieser Woche</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:2px">❤️ ${mySuperlink.likes?.length||0} Likes</div>
+    </div>
+    <a href="${htmlEsc(safeUrl(mySuperlink.url))}" target="_blank" rel="noopener noreferrer" style="padding:7px 14px;background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;border-radius:9px;font-size:12px;font-weight:700;text-decoration:none;white-space:nowrap;flex-shrink:0">→ Öffnen</a>
+  </div>
+  ${mySuperlink.caption?`<div style="font-size:12px;color:var(--muted);margin-top:6px;padding-left:32px">${htmlEsc(String(mySuperlink.caption).slice(0,80))}</div>`:''}
 </div>`;
 })()}`;
+}
+
+// Kompakter Account-Switcher für die /profil-Topbar.
+// Returnt leeren String wenn keine Sub-Accounts existieren.
+function buildTopbarSwitcher(myUid, d) {
+  const _curSessUid = String(myUid);
+  const me = (d.users||{})[_curSessUid] || {};
+  // Wenn aktive UID ein Sub ist, ist parent_uid der echte session-Owner
+  const _ownerUid = String(me.parent_uid || _curSessUid);
+  const _allAccs = [{uid: _ownerUid, isParent: true}];
+  for (const [sid, su] of Object.entries(d.users||{})) {
+    if (String(su.parent_uid||'') === _ownerUid && sid !== _ownerUid) {
+      _allAccs.push({uid: sid, isParent: false});
+    }
+  }
+  if (_allAccs.length < 2) return '';
+  const _curU = d.users?.[_curSessUid] || me;
+  const _curName = htmlEsc(_curU.spitzname || _curU.name || 'User');
+  const _curPic = ladeBild(_curSessUid, 'profilepic') ? '/appbild/' + _curSessUid + '/profilepic' : (_curU.instagram ? 'https://unavatar.io/instagram/' + encodeURIComponent(_curU.instagram) : '');
+  const _curInit = htmlEsc((_curU.spitzname || _curU.name || '?').slice(0,1).toUpperCase());
+  return '<div class="tb-switcher-wrap">' +
+    '<button class="tb-switcher" onclick="ipfToggleSwitcher(this)" id="ipf-sw-btn">' +
+      '<div class="tb-switcher-avatar">' + (_curPic ? '<img src="' + _curPic + '" alt="" loading="lazy">' : _curInit) + '</div>' +
+      '<span class="tb-switcher-name">' + _curName + '</span>' +
+      '<span class="tb-switcher-arrow">▼</span>' +
+    '</button>' +
+    '<div class="ipf-switcher-menu" id="ipf-sw-menu">' +
+      _allAccs.map(a => {
+        const au = d.users?.[a.uid] || {};
+        const aName = htmlEsc(au.spitzname || au.name || 'User');
+        const aInit = htmlEsc((au.spitzname || au.name || '?').slice(0,1).toUpperCase());
+        const aPic = ladeBild(a.uid, 'profilepic') ? '/appbild/' + a.uid + '/profilepic' : (au.instagram ? 'https://unavatar.io/instagram/' + encodeURIComponent(au.instagram) : '');
+        const isActive = a.uid === _curSessUid;
+        return '<button class="ipf-switcher-item' + (isActive?' active':'') + '" onclick="ipfSwitchAcc(\''+htmlEsc(a.uid)+'\')">' +
+          '<div class="ipf-switcher-item-avatar">' + (aPic ? '<img src="'+aPic+'" alt="">' : aInit) + '</div>' +
+          '<div class="ipf-switcher-item-name">' + aName + (a.isParent?'':' <span style="font-size:11px;color:var(--muted);font-weight:500"> · Sub</span>') + '</div>' +
+          (isActive ? '<span class="ipf-switcher-item-check">✓</span>' : '') +
+        '</button>';
+      }).join('') +
+      '<div class="ipf-switcher-divider"></div>' +
+      '<button class="ipf-switcher-add" onclick="ipfAddSub()">➕ Neuen Sub-Account erstellen</button>' +
+    '</div>' +
+  '</div>';
 }
 
 // ================================
@@ -3228,6 +4167,56 @@ async function handleRequest(req, res) {
     const path = pu.pathname;
     const query = pu.query;
 
+    // ── DIAGNOSE: Mainbot live testen (für Admin-Debugging von Signup-Fehlern) ──
+    if (path === '/api/diag/signup') {
+        const testEmail = String(query.email || '').toLowerCase().trim() || 'diag-test-' + Date.now() + '@example.invalid';
+        const t0 = Date.now();
+        // 1) Mainbot /data erreichbar?
+        const dataT0 = Date.now();
+        const bd = await fetchBotRaw('/data');
+        const dataMs = Date.now() - dataT0;
+        // 2) Email bereits in d.users[]?
+        let emailExists = null;
+        if (bd && bd.users) {
+            const found = Object.entries(bd.users).find(([, u]) =>
+                String(u.email||'').toLowerCase() === testEmail ||
+                String(u.pendingEmail||'').toLowerCase() === testEmail
+            );
+            if (found) emailExists = { uid: found[0], state: found[1].email === testEmail ? 'active' : 'pending', emailConfirmedAt: found[1].emailConfirmedAt || null };
+        }
+        // 3) ACTIVE Mainbot-POST-Test: invalider Request → erwarte 400 mit error-message
+        //    Wenn das null returnt = POST-Pfad zu Mainbot ist tot.
+        //    Wenn das einen JSON-Body returnt = Mainbot lebt und antwortet auf POSTs.
+        const postT0 = Date.now();
+        const postTest = await postBot('/create-email-user-api', {
+            email: '__diag_invalid__',   // invalid email → mainbot returnt 400 mit "Ungültige Email"
+            password: 'x',                // zu kurz, aber email-check feuert zuerst
+        });
+        const postMs = Date.now() - postT0;
+        // 4) Detailed mainbot status
+        const mainbotPostAlive = postTest !== null;
+        const mainbotPostExpected400 = postTest && postTest.ok === false && /Ungültige Email/i.test(String(postTest.error||''));
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({
+            ok: true,
+            ts: new Date().toISOString(),
+            totalMs: Date.now() - t0,
+            mainbotConfigured: !!MAINBOT_URL,
+            mainbotUrl: MAINBOT_URL ? MAINBOT_URL.replace(/^https?:\/\//,'').slice(0,30) + '...' : null,
+            tests: {
+                dataFetch: { ok: !!bd, ms: dataMs, userCount: bd?.users ? Object.keys(bd.users).length : null },
+                postAlive: { ok: mainbotPostAlive, ms: postMs, expectedResponse: mainbotPostExpected400, response: postTest },
+            },
+            testEmail,
+            emailExists,
+            verdict: !bd ? '❌ Mainbot /data GET schlägt fehl — Mainbot komplett down'
+                : !mainbotPostAlive ? '❌ Mainbot POST schlägt fehl (GET geht aber POST nicht) — Mainbot ist halb-tot, vermutlich CPU/Memory-Issue auf Railway'
+                : !mainbotPostExpected400 ? '⚠️ Mainbot antwortet auf POST aber nicht wie erwartet. Response: ' + JSON.stringify(postTest).slice(0, 200)
+                : emailExists ? ('⚠️ Email existiert schon als UID ' + emailExists.uid + ' (' + emailExists.state + '). User soll → Sign-In.')
+                : '✅ Mainbot OK + Email frei — Signup sollte klappen. Wenn nicht: Browser-DevTools/Network-Tab checken.',
+        }, null, 2));
+    }
+
     // ── HEALTH-CHECK — antwortet IMMER 200 auch wenn Mainbot down ist.
     // Railway healthchecks brauchen das damit der Container nicht killed wird.
     if (path === '/api/health' || path === '/healthz' || path === '/health') {
@@ -3258,14 +4247,48 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v120-offline-utf8-reload';
+const SW_VERSION='v200-asset-cache';
+const STATIC_CACHE='cb-static-' + SW_VERSION;
+const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(
-  caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>clients.claim())
+  caches.keys().then(keys=>Promise.all(
+    keys.filter(k=>k!==STATIC_CACHE && k!==IMAGE_CACHE).map(k=>caches.delete(k))
+  )).then(()=>clients.claim())
 ));
 self.addEventListener('fetch',e=>{
-  if(e.request.mode==='navigate'){e.respondWith(fetch(e.request).catch(()=>new Response('<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Offline · CreatorX</title></head><body style="font-family:system-ui,-apple-system,sans-serif;background:#000;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center;padding:24px"><div><div style="font-size:48px;margin-bottom:16px">📡</div><div style="font-size:18px;font-weight:700;margin-bottom:8px">Offline</div><div style="font-size:13px;color:#999;line-height:1.5;margin-bottom:18px">Server antwortet nicht. Bitte Internetverbindung prüfen oder kurz später nochmal versuchen.</div><button onclick="location.reload()" style="background:#3b82f6;color:#fff;border:none;border-radius:10px;padding:12px 22px;font-size:14px;font-weight:700;cursor:pointer">🔄 Neu laden</button></div></body></html>',{headers:{'Content-Type':'text/html; charset=utf-8'}})));return;}
-  e.respondWith(fetch(e.request).catch(()=>new Response('',{status:503})));
+  const req=e.request;
+  if(req.method!=='GET'){return;}
+  const url=new URL(req.url);
+  // Navigation requests — network-first mit Offline-Fallback
+  if(req.mode==='navigate'){
+    e.respondWith(fetch(req).catch(()=>new Response('<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Offline · CreatorX</title></head><body style="font-family:system-ui,-apple-system,sans-serif;background:#000;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center;padding:24px"><div><div style="font-size:48px;margin-bottom:16px">📡</div><div style="font-size:18px;font-weight:700;margin-bottom:8px">Offline</div><div style="font-size:13px;color:#999;line-height:1.5;margin-bottom:18px">Server antwortet nicht. Bitte Internetverbindung prüfen oder kurz später nochmal versuchen.</div><button onclick="location.reload()" style="background:#3b82f6;color:#fff;border:none;border-radius:10px;padding:12px 22px;font-size:14px;font-weight:700;cursor:pointer">🔄 Neu laden</button></div></body></html>',{headers:{'Content-Type':'text/html; charset=utf-8'}})));
+    return;
+  }
+  // Bilder (/appbild/*, Logos, Icons) — stale-while-revalidate
+  if(url.pathname.startsWith('/appbild/')||url.pathname.startsWith('/cx-logo')||url.pathname.startsWith('/icon-')||url.pathname.startsWith('/icon.')||url.pathname.startsWith('/favicon')||url.pathname.endsWith('.png')||url.pathname.endsWith('.jpg')||url.pathname.endsWith('.webp')){
+    e.respondWith(caches.open(IMAGE_CACHE).then(async cache=>{
+      const cached=await cache.match(req);
+      const fetchPromise=fetch(req).then(net=>{
+        if(net&&net.ok){cache.put(req,net.clone()).catch(()=>{});}
+        return net;
+      }).catch(()=>cached||new Response('',{status:503}));
+      return cached||fetchPromise;
+    }));
+    return;
+  }
+  // Static (Fonts, CSS-Bundles, JS-Bundles in /static/*) — cache-first
+  if(url.pathname.startsWith('/static/')||url.pathname.endsWith('.css')||url.pathname.endsWith('.woff2')||url.pathname.endsWith('.woff')){
+    e.respondWith(caches.open(STATIC_CACHE).then(async cache=>{
+      const cached=await cache.match(req);
+      if(cached)return cached;
+      try{const net=await fetch(req);if(net&&net.ok){cache.put(req,net.clone()).catch(()=>{});}return net;}
+      catch(e){return new Response('',{status:503});}
+    }));
+    return;
+  }
+  // Rest: network-only mit silent error
+  e.respondWith(fetch(req).catch(()=>new Response('',{status:503})));
 });
 self.addEventListener('push',e=>{
   const data=e.data?.json()||{title:'CreatorX',body:'Neue Aktivität!'};
@@ -3315,6 +4338,8 @@ self.addEventListener('notificationclick',e=>{
             const images = await resp.json();
             let count = 0;
             for (const [filename, content] of Object.entries(images)) {
+                // Path-Traversal-Schutz: nur reine Filenames erlauben, keine '../' oder absolute Pfade.
+                if (!filename || /[/\\]/.test(filename) || filename.includes('..') || filename.startsWith('.')) continue;
                 fs.writeFileSync(DATA_DIR + '/' + filename, content, 'utf8');
                 count++;
             }
@@ -3336,6 +4361,18 @@ self.addEventListener('notificationclick',e=>{
         if (!/^(\d+|creatorboost)$/.test(buid||'') || !/^(profilepic|banner)$/.test(btype||'')) {
             res.writeHead(400); return res.end('bad request');
         }
+        // ── PERF: In-Memory LRU + ETag — vorher 180 sync Disk-Reads pro Feed ──
+        const cacheKey = buid + '/' + btype;
+        const cached = _appbildBufCache.get(cacheKey);
+        const reqEtag = req.headers['if-none-match'];
+        if (cached) {
+            // 304 wenn Browser noch frische Version hat
+            if (reqEtag === cached.etag) {
+                res.writeHead(304, {'ETag': cached.etag}); return res.end();
+            }
+            res.writeHead(200, {'Content-Type': cached.mime, 'Cache-Control':'public, max-age=86400, immutable', 'ETag': cached.etag, 'Content-Length': cached.buf.length});
+            return res.end(cached.buf);
+        }
         // CreatorBoost-System-User: gebundeltes Avatar aus Repo (data-URL .txt) statt /data-Volume,
         // damit es nach jedem Deploy verfügbar ist.
         if (buid === 'creatorboost' && btype === 'profilepic') {
@@ -3343,8 +4380,11 @@ self.addEventListener('notificationclick',e=>{
                 const data = fs.readFileSync(__dirname + '/creatorboost-avatar.txt', 'utf8');
                 const mime = data.split(';')[0].replace('data:','');
                 const base64 = data.split(',')[1];
-                res.writeHead(200, {'Content-Type': mime, 'Cache-Control': 'public, max-age=86400'});
-                return res.end(Buffer.from(base64, 'base64'));
+                const buf = Buffer.from(base64, 'base64');
+                const etag = '"cb-' + buf.length + '"';
+                _appbildLRUSet(cacheKey, { buf, mime, etag, ts: Date.now() });
+                res.writeHead(200, {'Content-Type': mime, 'Cache-Control': 'public, max-age=86400, immutable', 'ETag': etag, 'Content-Length': buf.length});
+                return res.end(buf);
             } catch(e) { res.writeHead(404); return res.end('not found'); }
         }
         const bildFile = DATA_DIR + '/bild_' + buid + '_' + btype + '.txt';
@@ -3353,8 +4393,13 @@ self.addEventListener('notificationclick',e=>{
             const data = fs.readFileSync(bildFile, 'utf8');
             const mime = data.split(';')[0].replace('data:','');
             const base64 = data.split(',')[1];
-            res.writeHead(200, {'Content-Type': mime, 'Cache-Control': 'public, max-age=86400, immutable'});
-            return res.end(Buffer.from(base64, 'base64'));
+            const buf = Buffer.from(base64, 'base64');
+            const stat = fs.statSync(bildFile);
+            const etag = '"' + buid + '-' + btype + '-' + Math.round(stat.mtimeMs) + '"';
+            _appbildLRUSet(cacheKey, { buf, mime, etag, ts: Date.now() });
+            if (reqEtag === etag) { res.writeHead(304, {'ETag': etag}); return res.end(); }
+            res.writeHead(200, {'Content-Type': mime, 'Cache-Control': 'public, max-age=86400, immutable', 'ETag': etag, 'Content-Length': buf.length});
+            return res.end(buf);
         } catch(e) {}
         // Proxy to telegram-bot (separate Railway volume)
         if (MAINBOT_URL) {
@@ -3363,12 +4408,23 @@ self.addEventListener('notificationclick',e=>{
                 const lib = botUrl.startsWith('https') ? https : http;
                 lib.get(botUrl, { headers: {'x-bridge-secret': BRIDGE_SECRET} }, (bres) => {
                     if (bres.statusCode === 200) {
-                        res.writeHead(200, { 'Content-Type': bres.headers['content-type'] || 'image/jpeg', 'Cache-Control': 'public, max-age=3600' });
-                        bres.pipe(res);
+                        // Stream + buffer für Cache
+                        const chunks = [];
+                        bres.on('data', c => chunks.push(c));
+                        bres.on('end', () => {
+                            const buf = Buffer.concat(chunks);
+                            const mime = bres.headers['content-type'] || 'image/jpeg';
+                            const etag = '"proxy-' + buid + '-' + btype + '-' + buf.length + '"';
+                            _appbildLRUSet(cacheKey, { buf, mime, etag, ts: Date.now() });
+                            if (reqEtag === etag) { res.writeHead(304, {'ETag': etag}); return res.end(); }
+                            res.writeHead(200, { 'Content-Type': mime, 'Cache-Control': 'public, max-age=3600', 'ETag': etag, 'Content-Length': buf.length });
+                            res.end(buf);
+                            resolve();
+                        });
                     } else {
                         res.writeHead(404); res.end('not found');
+                        resolve();
                     }
-                    resolve();
                 }).on('error', () => { res.writeHead(404); res.end('not found'); resolve(); });
             });
         }
@@ -3392,399 +4448,62 @@ self.addEventListener('notificationclick',e=>{
     }
 
     function redirect(to) { res.writeHead(302,{'Location':to}); res.end(); }
-    function html(content, page) { res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'237'}); res.end(layout(content,session,page,lang)); }
-    function json(data, status=200) { res.writeHead(status,{'Content-Type':'application/json'}); res.end(JSON.stringify(data)); }
-    function text(content, status=200) { res.writeHead(status,{'Content-Type':'text/plain; charset=utf-8'}); res.end(String(content)); }
+    function _writeCompressed(status, headers, body) {
+        // Gzip-Compression nur für Text-Responses > 1KB UND wenn Client gzip akzeptiert.
+        // Spart 70-80% bei JSON/HTML — der größte Speed-Win bei großen /data und Feed-Renders.
+        try {
+            const buf = Buffer.isBuffer(body) ? body : Buffer.from(String(body), 'utf8');
+            const ae = String(req.headers['accept-encoding']||'');
+            if (buf.length >= 1024 && ae.includes('gzip')) {
+                const gz = zlib.gzipSync(buf, { level: 6 });
+                const h = Object.assign({}, headers, {
+                    'Content-Encoding': 'gzip',
+                    'Content-Length': gz.length,
+                    'Vary': 'Accept-Encoding',
+                });
+                res.writeHead(status, h);
+                return res.end(gz);
+            }
+            res.writeHead(status, headers);
+            return res.end(buf);
+        } catch(e) {
+            try { res.writeHead(status, headers); res.end(body); } catch(e2) {}
+        }
+    }
+    function html(content, page) { _writeCompressed(200, {'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-App-Version':'237'}, layout(content,session,page,lang)); }
+    function json(data, status=200) { _writeCompressed(status, {'Content-Type':'application/json'}, JSON.stringify(data)); }
+    function text(content, status=200) { _writeCompressed(status, {'Content-Type':'text/plain; charset=utf-8'}, String(content)); }
 
     // ── LANDING ──
     if (path === '/' || path === '') {
         // Admin-Vorschau via ?preview=1 — überspringt den /feed-Redirect für eingeloggte User.
         const _isPreview = (query.preview === '1');
         if (session && !_isPreview) return redirect('/feed');
+        // TWA-Detection: installierte App-Icon-Launches haben referer 'android-app://...'.
+        // Diese ausgeloggten User landen sonst auf der Marketing-Landing — was
+        // unprofessionell ist (App-User wollen direkt auf Login, nicht Marketing).
+        // ?preview=1 bypassed Detection für Admin-Vorschau der Marketing-Page.
+        const _ref = String(req.headers['referer'] || '');
+        if (!_isPreview && _ref.startsWith('android-app://')) {
+            return redirect('/login');
+        }
         // Landing-Page-View tracken (Server-Side, anonym)
         try {
             const ref = String(req.headers['referer'] || '').slice(0, 300);
             const ua = String(req.headers['user-agent'] || '').slice(0, 200);
             postBot('/track-funnel', { event: 'landing-view', meta: { ref, ua } }).catch(()=>{});
         } catch(e) {}
-        res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','Pragma':'no-cache','Expires':'0','X-App-Version':'20'});
-        return res.end(`<!DOCTYPE html><html lang="de"><head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>CreatorX — Die Creator-Engagement-Engine</title>
-<meta name="description" content="Wachse mit echtem Engagement von echten Creatorn. Likes, Kommentare, Shares — täglich. Beitreten, posten, ranken.">
-<link rel="manifest" href="/manifest.json">
-<link rel="icon" type="image/png" href="/icon-512.png?v=26">
-<link rel="apple-touch-icon" href="/icon-512.png?v=26">
-<meta name="theme-color" content="#000000">
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
-<style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --gold:#d4af37; --gold-dim:#a3852a; --silver:#c0c0c0;
-  --bg:#000; --bg-soft:#0a0a0a; --bg-card:rgba(255,255,255,0.025); --border:rgba(255,255,255,0.08); --border-strong:rgba(212,175,55,0.25);
-  --text:#fff; --muted:rgba(255,255,255,0.55); --muted-2:rgba(255,255,255,0.38);
-}
-html,body{background:var(--bg);color:var(--text);font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh;overflow-x:hidden}
-a{color:inherit;text-decoration:none}
-
-/* Mesh-gradient background */
-.mesh{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
-.mesh::before{content:'';position:absolute;width:80vw;height:80vw;left:-20vw;top:-20vw;background:radial-gradient(circle at center,rgba(212,175,55,0.18) 0%,transparent 55%);filter:blur(40px);animation:meshA 22s ease-in-out infinite alternate}
-.mesh::after{content:'';position:absolute;width:70vw;height:70vw;right:-25vw;bottom:-25vw;background:radial-gradient(circle at center,rgba(167,139,250,0.10) 0%,transparent 55%);filter:blur(40px);animation:meshB 26s ease-in-out infinite alternate}
-@keyframes meshA{0%{transform:translate(0,0) scale(1)}100%{transform:translate(8vw,12vh) scale(1.1)}}
-@keyframes meshB{0%{transform:translate(0,0) scale(1)}100%{transform:translate(-10vw,-8vh) scale(0.95)}}
-.grain{position:fixed;inset:0;z-index:1;pointer-events:none;opacity:0.04;mix-blend-mode:overlay;background-image:repeating-linear-gradient(0deg,#fff 0,#fff 1px,transparent 1px,transparent 3px)}
-
-.shell{position:relative;z-index:2;min-height:100vh;max-width:480px;margin:0 auto;padding:0 20px 80px}
-
-/* Top nav */
-.nav{display:flex;align-items:center;justify-content:space-between;padding:18px 4px 0}
-.nav-brand{display:flex;align-items:center;gap:9px;font-weight:800;font-size:16px;letter-spacing:-0.3px}
-.nav-brand .nav-logo{width:28px;height:28px;border-radius:8px;background:url('/cx-logo-256.png') center/cover no-repeat,#0a0a0a;flex-shrink:0;box-shadow:0 2px 10px rgba(212,175,55,0.25),inset 0 0 0 1px rgba(212,175,55,0.3)}
-.nav-cta{font-size:12px;font-weight:600;color:var(--muted);padding:7px 13px;border:1px solid var(--border);border-radius:99px;transition:all .15s}
-.nav-cta:hover{color:var(--text);border-color:var(--border-strong)}
-
-/* Hero */
-.hero{padding:48px 0 8px;text-align:center}
-.hero-mark{width:108px;height:108px;margin:0 auto 24px;position:relative;border-radius:24px;background:url('/cx-logo.png') center/contain no-repeat,#0a0a0a;box-shadow:0 22px 60px -12px rgba(212,175,55,0.45),0 0 0 1px rgba(212,175,55,0.18),inset 0 0 0 1px rgba(255,255,255,0.05)}
-.hero-mark::after{content:'';position:absolute;inset:-2px;border-radius:26px;background:conic-gradient(from 0deg,transparent,rgba(212,175,55,0.6),transparent 30%);animation:spin 6s linear infinite;z-index:-1;filter:blur(8px)}
-@keyframes spin{to{transform:rotate(360deg)}}
-.hero-eyebrow{display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:600;color:var(--muted);letter-spacing:2px;text-transform:uppercase;background:rgba(255,255,255,0.04);border:1px solid var(--border);padding:6px 12px;border-radius:99px;margin-bottom:18px}
-.hero-eyebrow .dot{width:6px;height:6px;border-radius:50%;background:#22c55e;box-shadow:0 0 10px rgba(34,197,94,0.7);animation:pulse 1.6s ease-in-out infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
-.hero-h1{font-family:'Syne',sans-serif;font-size:42px;line-height:1.05;font-weight:800;letter-spacing:-1.2px;margin-bottom:14px;background:linear-gradient(180deg,#fff 0%,#d4af37 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-.hero-sub{font-size:15px;line-height:1.6;color:var(--muted);max-width:340px;margin:0 auto 26px}
-.hero-sub b{color:var(--text);font-weight:600}
-
-/* Stats */
-.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:24px 0 8px}
-.stat{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:14px 8px;text-align:center;backdrop-filter:blur(10px);transition:border-color .2s}
-.stat:hover{border-color:var(--border-strong)}
-.stat-num{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:600;color:var(--text);letter-spacing:-0.5px;line-height:1}
-.stat-num .plus{color:var(--gold);margin-left:1px}
-.stat-lbl{font-size:9.5px;color:var(--muted-2);text-transform:uppercase;letter-spacing:1.5px;margin-top:6px;font-weight:600}
-
-/* Section title */
-.sec-title{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:2.5px;text-transform:uppercase;margin:36px 0 14px;display:flex;align-items:center;gap:10px}
-.sec-title::before{content:'';width:18px;height:1px;background:var(--gold)}
-
-/* Feature grid */
-.feat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.feat{background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:10px;transition:all .2s;position:relative;overflow:hidden}
-.feat:hover{border-color:var(--border-strong);transform:translateY(-2px)}
-.feat::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(212,175,55,0.4),transparent);opacity:0;transition:opacity .2s}
-.feat:hover::before{opacity:1}
-.feat-icon{font-size:22px;width:38px;height:38px;background:linear-gradient(135deg,rgba(212,175,55,0.15),rgba(212,175,55,0.05));border:1px solid rgba(212,175,55,0.2);border-radius:10px;display:flex;align-items:center;justify-content:center}
-.feat-t{font-size:13px;font-weight:700;letter-spacing:-0.2px}
-.feat-s{font-size:11.5px;color:var(--muted);line-height:1.5}
-
-/* Telegram CTA */
-.tg-card{background:linear-gradient(135deg,rgba(0,136,204,0.12),rgba(0,136,204,0.04));border:1px solid rgba(0,136,204,0.25);border-radius:16px;padding:16px;display:flex;align-items:center;gap:12px;margin-top:10px;transition:all .2s}
-.tg-card:hover{border-color:rgba(0,136,204,0.5);transform:translateY(-1px)}
-.tg-card-icon{width:42px;height:42px;background:#0088cc;border-radius:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 6px 18px -4px rgba(0,136,204,0.5)}
-.tg-card-t{font-size:14px;font-weight:700;letter-spacing:-0.2px}
-.tg-card-s{font-size:11.5px;color:var(--muted);margin-top:1px}
-.tg-card-arrow{margin-left:auto;color:rgba(0,136,204,0.7);font-size:18px}
-
-/* Login card */
-.login-card{margin-top:28px;background:linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.01));border:1px solid var(--border);border-radius:20px;padding:20px;backdrop-filter:blur(20px);box-shadow:0 30px 80px -30px rgba(212,175,55,0.18)}
-.login-h{font-size:18px;font-weight:700;letter-spacing:-0.4px;margin-bottom:4px}
-.login-sub{font-size:12.5px;color:var(--muted);margin-bottom:18px}
-
-/* Tabs */
-.tabs{display:flex;gap:4px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:12px;padding:4px;margin-bottom:16px}
-.tab{flex:1;padding:9px 8px;text-align:center;font-size:12.5px;font-weight:600;color:var(--muted);border-radius:8px;cursor:pointer;border:none;background:transparent;font-family:inherit;transition:all .18s;letter-spacing:-0.1px}
-.tab.active{background:linear-gradient(180deg,rgba(212,175,55,0.18),rgba(212,175,55,0.08));color:var(--gold);box-shadow:inset 0 0 0 1px rgba(212,175,55,0.3),0 4px 12px -4px rgba(212,175,55,0.3)}
-
-.code-hint,.email-hint{font-size:11.5px;color:var(--muted-2);text-align:center;line-height:1.55;margin-top:10px}
-.code-hint b,.email-hint b{color:var(--gold);font-weight:600}
-
-/* Inputs */
-.in{width:100%;background:rgba(255,255,255,0.04);border:1.5px solid var(--border);color:var(--text);border-radius:12px;padding:13px 15px;font-size:14px;outline:none;transition:all .18s;font-family:inherit;font-weight:500}
-.in:focus{border-color:var(--gold);background:rgba(212,175,55,0.04);box-shadow:0 0 0 3px rgba(212,175,55,0.15)}
-.in.code-in{font-family:'JetBrains Mono',monospace;text-align:center;letter-spacing:5px;font-size:16px;text-transform:lowercase}
-.in+.in{margin-top:8px}
-
-/* Primary button */
-.btn-p{background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;border:none;border-radius:12px;padding:14px;font-size:14px;font-weight:700;width:100%;cursor:pointer;margin-top:10px;font-family:inherit;letter-spacing:0.2px;box-shadow:0 8px 24px -8px rgba(212,175,55,0.6),inset 0 1px 0 rgba(255,255,255,0.5);transition:all .15s}
-.btn-p:hover{transform:translateY(-1px);box-shadow:0 12px 30px -8px rgba(212,175,55,0.7),inset 0 1px 0 rgba(255,255,255,0.5)}
-.btn-p:active{transform:translateY(0)}
-.btn-p:disabled{opacity:0.55;cursor:not-allowed;transform:none}
-
-.btn-link{background:transparent;border:none;color:var(--muted);font-size:12px;cursor:pointer;width:100%;padding:11px 0;margin-top:4px;font-family:inherit;text-decoration:underline;text-decoration-color:rgba(255,255,255,0.2);transition:color .15s}
-.btn-link:hover{color:var(--text)}
-
-.msg{padding:10px 13px;font-size:12.5px;border-radius:10px;text-align:center;margin-bottom:12px;display:none;font-weight:500}
-.msg.show{display:block}
-.msg.ok{background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);color:#4ade80}
-.msg.err{background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#f87171}
-
-/* Trust strip */
-.trust{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:22px}
-.trust-avs{display:flex}
-.trust-avs .av{width:30px;height:30px;border-radius:50%;border:2px solid #000;margin-left:-8px;background-size:cover;background-position:center;background-repeat:no-repeat;box-shadow:0 4px 10px rgba(0,0,0,0.5)}
-.trust-avs .av:first-child{margin-left:0}
-.trust-avs .av-1{background:linear-gradient(135deg,#fb923c,#ef4444)}
-.trust-avs .av-2{background:linear-gradient(135deg,#a78bfa,#7c3aed)}
-.trust-avs .av-3{background:linear-gradient(135deg,#06b6d4,#3b82f6)}
-.trust-avs .av-4{background:linear-gradient(135deg,#22c55e,#10b981)}
-.trust-avs .av-5{background:linear-gradient(135deg,#f5d76e,#d4a946);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:#000}
-.trust-text{font-size:12px;color:var(--muted);line-height:1.4}
-.trust-text b{color:var(--text);font-weight:700}
-
-/* How it works */
-.how{display:flex;flex-direction:column;gap:10px;counter-reset:step}
-.how-step{display:flex;align-items:flex-start;gap:14px;padding:16px;background:var(--bg-card);border:1px solid var(--border);border-radius:14px;position:relative;transition:all .2s}
-.how-step:hover{border-color:var(--border-strong)}
-.how-num{width:32px;height:32px;border-radius:10px;background:linear-gradient(135deg,#f5d76e,#8b6914);color:#000;font-weight:800;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 6px 16px -6px rgba(212,175,55,0.5),inset 0 1px 0 rgba(255,255,255,0.5);font-family:'JetBrains Mono',monospace}
-.how-body{flex:1;padding-top:1px}
-.how-t{font-size:14px;font-weight:700;letter-spacing:-0.2px;margin-bottom:3px}
-.how-s{font-size:12px;color:var(--muted);line-height:1.55}
-
-/* Quote / Social proof */
-.quote{margin-top:20px;background:linear-gradient(135deg,rgba(212,175,55,0.06),rgba(167,139,250,0.04));border:1px solid var(--border-strong);border-radius:18px;padding:22px;position:relative}
-.quote::before{content:'"';position:absolute;top:-8px;left:18px;font-family:'Syne',serif;font-size:80px;color:rgba(212,175,55,0.2);line-height:1;font-weight:800}
-.quote-text{font-size:14.5px;line-height:1.6;color:rgba(255,255,255,0.85);font-style:italic;font-weight:500;position:relative;z-index:1}
-.quote-meta{display:flex;align-items:center;gap:10px;margin-top:14px;padding-top:14px;border-top:1px solid var(--border)}
-.quote-av{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#fb923c,#ef4444);display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;font-size:14px;flex-shrink:0}
-.quote-name{font-size:13px;font-weight:700}
-.quote-role{font-size:11px;color:var(--muted)}
-
-/* Bigger CTA at bottom */
-.bottom-cta{margin-top:28px;background:linear-gradient(135deg,rgba(212,175,55,0.08),rgba(212,175,55,0.02));border:1px solid var(--border-strong);border-radius:20px;padding:24px;text-align:center}
-.bottom-cta-h{font-size:18px;font-weight:800;letter-spacing:-0.4px;margin-bottom:6px}
-.bottom-cta-s{font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.5}
-
-/* Footer */
-.foot{margin-top:48px;padding-top:24px;border-top:1px solid var(--border);text-align:center}
-.foot-text{font-size:11px;color:var(--muted-2);line-height:1.7}
-.foot-links{display:flex;justify-content:center;gap:16px;margin-top:10px;font-size:11px;color:var(--muted-2)}
-.foot-links a{transition:color .15s}
-.foot-links a:hover{color:var(--text)}
-
-/* Admin preview banner */
-.admin-pb{position:sticky;top:0;left:0;right:0;background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;padding:10px 14px;font-size:12px;font-weight:700;text-align:center;z-index:99;letter-spacing:0.3px}
-.admin-pb a{color:rgba(255,255,255,0.85);text-decoration:underline}
-
-@media (min-width:480px){.hero-h1{font-size:48px}.hero-sub{font-size:16px;max-width:420px}}
-@media (min-width:768px){
-  .shell{max-width:680px;padding:0 32px 80px}
-  .hero{padding:64px 0 16px}
-  .hero-mark{width:128px;height:128px;border-radius:28px}
-  .hero-h1{font-size:54px}
-  .hero-sub{font-size:17px;max-width:480px}
-  .stats{grid-template-columns:repeat(3,1fr);gap:12px}
-  .stat{padding:20px 12px}
-  .stat-num{font-size:28px}
-  .feat-grid{gap:12px}
-  .feat{padding:20px}
-  .how-step{padding:20px}
-  .login-card{padding:28px;max-width:440px;margin-left:auto;margin-right:auto}
-  .bottom-cta{padding:32px;max-width:440px;margin-left:auto;margin-right:auto}
-  .quote{max-width:540px;margin-left:auto;margin-right:auto}
-}
-@media (min-width:1024px){
-  .shell{max-width:900px;padding:0 48px 100px}
-  .hero{padding:80px 0 24px}
-  .hero-mark{width:140px;height:140px}
-  .hero-h1{font-size:62px}
-  .hero-sub{font-size:18px;max-width:520px}
-  .stats{gap:16px;max-width:600px;margin-left:auto;margin-right:auto}
-  .stat{padding:24px 16px}
-  .stat-num{font-size:32px}
-  .feat-grid{grid-template-columns:repeat(4,1fr);gap:14px}
-  .how{flex-direction:row;gap:14px}
-  .how-step{flex:1}
-  .login-card{max-width:460px}
-  .trust-text{font-size:13px}
-  .nav{padding:24px 4px 0}
-}
-</style></head><body>
-${_isPreview ? '<div class="admin-pb">👀 Admin-Vorschau · Login-Page &nbsp;·&nbsp; <a href="/einstellungen">← Zurück</a></div>' : ''}
-<div class="mesh"></div>
-<div class="grain"></div>
-<div class="shell">
-  <nav class="nav">
-    <div class="nav-brand"><div class="nav-logo"></div>CreatorX</div>
-    <a href="#login" class="nav-cta">Einloggen →</a>
-  </nav>
-
-  <section class="hero">
-    <div class="hero-mark"></div>
-    <div class="hero-eyebrow"><span class="dot"></span><span>Live · Creator-Community</span></div>
-    <h1 class="hero-h1">Dein Instagram-<br>Wachstum startet hier.</h1>
-    <p class="hero-sub">Echte Likes, echte Kommentare, echtes Engagement — <b>jeden Tag</b>. Eine exklusive Community von Creatorn die sich gegenseitig nach oben pushen.</p>
-    <div class="trust">
-      <div class="trust-avs">
-        <div class="av av-1"></div>
-        <div class="av av-2"></div>
-        <div class="av av-3"></div>
-        <div class="av av-4"></div>
-        <div class="av av-5">+</div>
-      </div>
-      <div class="trust-text"><b id="trust-count">—</b> aktive Creator<br><span style="color:var(--muted-2);font-size:11px">Heute online &amp; engaged</span></div>
-    </div>
-  </section>
-
-  <div class="stats" id="stats">
-    <div class="stat"><div class="stat-num" data-stat="members">—</div><div class="stat-lbl">Creator</div></div>
-    <div class="stat"><div class="stat-num" data-stat="posts">—</div><div class="stat-lbl">Posts</div></div>
-    <div class="stat"><div class="stat-num" data-stat="likes">—</div><div class="stat-lbl">Likes</div></div>
-  </div>
-
-  <div class="sec-title">So einfach geht's</div>
-  <div class="how">
-    <div class="how-step">
-      <div class="how-num">1</div>
-      <div class="how-body">
-        <div class="how-t">Account erstellen</div>
-        <div class="how-s">Email + Passwort — in 30 Sekunden startklar.</div>
-      </div>
-    </div>
-    <div class="how-step">
-      <div class="how-num">2</div>
-      <div class="how-body">
-        <div class="how-t">Posten &amp; Liken</div>
-        <div class="how-s">Teile deine Insta-Reels im Feed. Like andere zurück. Verdiene XP.</div>
-      </div>
-    </div>
-    <div class="how-step">
-      <div class="how-num">3</div>
-      <div class="how-body">
-        <div class="how-t">Aufsteigen</div>
-        <div class="how-s">Sammle XP, klettere im Ranking. Top-1 bekommt 👑 überall in der App.</div>
-      </div>
-    </div>
-  </div>
-
-  <div class="sec-title">Was du bekommst</div>
-  <div class="feat-grid">
-    <div class="feat"><div class="feat-icon">🚀</div><div><div class="feat-t">Echtes Wachstum</div><div class="feat-s">Engagement von echten Creatorn — täglich.</div></div></div>
-    <div class="feat"><div class="feat-icon">❤️</div><div><div class="feat-t">Like &amp; Like-back</div><div class="feat-s">Gegenseitige Unterstützung als System.</div></div></div>
-    <div class="feat"><div class="feat-icon">🏆</div><div><div class="feat-t">Rang &amp; Badges</div><div class="feat-s">Steig auf zur Elite. 👑 für Top-1.</div></div></div>
-    <div class="feat"><div class="feat-icon">📊</div><div><div class="feat-t">Creator-Profil</div><div class="feat-s">Banner, Stats, Feed &amp; Follower.</div></div></div>
-  </div>
-
-  <div id="login" class="login-card" style="margin-top:24px">
-    <div class="login-h">Willkommen zurück</div>
-    <div class="login-sub">Logge dich mit Email &amp; Passwort ein.</div>
-
-    ${query.error==='email-expired' ? '<div class="msg show err">⚠️ Login-Link abgelaufen oder schon benutzt.</div>' : ''}
-    ${query.error==='email-invalid' ? '<div class="msg show err">⚠️ Login-Link ungültig.</div>' : ''}
-    ${query.error==='email-userlost' ? '<div class="msg show err">⚠️ Account nicht mehr verfügbar.</div>' : ''}
-    ${query.error==='1' ? '<div class="msg show err">⚠️ Code falsch oder unbekannt. Hol dir mit /mycode im Bot einen frischen Code.</div>' : ''}
-
-    <div class="msg" id="email-msg"></div>
-    <form id="email-form" onsubmit="return submitEmail(event)">
-      <input type="email" id="email-input" class="in" placeholder="deine@email.de" autocomplete="email" autocapitalize="none" spellcheck="false" required maxlength="200">
-      <input type="password" id="email-pw" class="in" placeholder="Passwort" autocomplete="current-password" maxlength="200" required>
-      <button type="submit" class="btn-p" id="email-btn">Sign In →</button>
-    </form>
-    <button class="btn-link" id="pw-reset-btn" onclick="resetPassword()">Passwort vergessen?</button>
-    <div style="text-align:center;margin-top:18px;padding-top:18px;border-top:1px solid var(--border)">
-      <div style="font-size:12.5px;color:var(--muted);margin-bottom:8px">Noch keinen Account?</div>
-      <a href="/signup" style="display:inline-flex;align-items:center;gap:6px;color:var(--gold);font-weight:700;text-decoration:none;font-size:13.5px">→ Jetzt Sign Up</a>
-    </div>
-  </div>
-
-  <div class="bottom-cta">
-    <div class="bottom-cta-h">Bereit durchzustarten?</div>
-    <div class="bottom-cta-s">Erstelle deinen Account und sieh deine ersten echten Likes innerhalb von Minuten.</div>
-    <a href="/signup" class="btn-p" style="display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;margin:0">🚀 Jetzt kostenlos starten</a>
-  </div>
-
-  <footer class="foot">
-    <div class="foot-text">© ${new Date().getFullYear()} CreatorX · Built for real creators</div>
-    <div class="foot-links">
-      <a href="/willkommen">Über uns</a>
-    </div>
-  </footer>
-</div>
-<script>
-// Stats async laden + Count-up animieren
-(function(){
-  function animNum(el, target){
-    if(!el||target==null)return;
-    var dur=900,start=performance.now();
-    function tick(now){
-      var p=Math.min(1,(now-start)/dur),eased=1-Math.pow(1-p,3),val=Math.round(target*eased);
-      el.textContent=val.toLocaleString('de-DE');
-      if(p<1) requestAnimationFrame(tick);
-    }
-    requestAnimationFrame(tick);
-  }
-  fetch('/api/community-stats',{cache:'no-store'}).then(function(r){return r.json();}).then(function(s){
-    document.querySelectorAll('[data-stat]').forEach(function(el){
-      var k=el.getAttribute('data-stat');
-      var v=0;
-      if(k==='members') v=s.members||0;
-      else if(k==='posts') v=s.totalPosts||s.currentPosts||0;
-      else if(k==='likes') v=s.totalLikes||s.currentLikes||0;
-      if(v>0) animNum(el,v); else el.textContent='—';
-    });
-    var tc=document.getElementById('trust-count');
-    if(tc){ var m=s.members||0; if(m>0) animNum(tc,m); else tc.textContent='—'; }
-  }).catch(function(){
-    document.querySelectorAll('[data-stat]').forEach(function(el){el.textContent='—';});
-  });
-})();
-function submitEmail(ev){
-  ev.preventDefault();
-  var inp=document.getElementById('email-input'),pwInp=document.getElementById('email-pw'),btn=document.getElementById('email-btn'),msg=document.getElementById('email-msg');
-  var em=(inp.value||'').trim().toLowerCase();
-  var pw=(pwInp.value||'');
-  if(!em) return false;
-  msg.classList.remove('show','ok','err');
-  if(!pw || pw.length < 6){
-    msg.textContent='Passwort muss mindestens 6 Zeichen haben.';msg.classList.add('show','err');
-    return false;
-  }
-  btn.disabled=true;btn.textContent='Wird verarbeitet...';
-  fetch('/api/auth/email-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:em,password:pw})})
-    .then(function(r){return r.json().then(function(j){return{s:r.status,j:j};});})
-    .then(function(o){
-      if(o.j&&o.j.ok&&o.j.redirect){
-        msg.textContent='✅ Eingeloggt — leite weiter...';msg.classList.add('show','ok');
-        setTimeout(function(){window.location.href=o.j.redirect;},400);
-      } else {
-        msg.textContent=(o.j&&o.j.error)||'Login fehlgeschlagen.';
-        msg.classList.add('show','err');
-        btn.disabled=false;btn.textContent='Sign In →';
-      }
-    })
-    .catch(function(){msg.textContent='Netzwerkfehler.';msg.classList.add('show','err');btn.disabled=false;btn.textContent='Sign In →';});
-  return false;
-}
-function resetPassword(){
-  var inp=document.getElementById('email-input'),msg=document.getElementById('email-msg'),btn=document.getElementById('pw-reset-btn');
-  var em=(inp.value||'').trim().toLowerCase();
-  if(!em){msg.textContent='Bitte zuerst deine Email-Adresse eingeben.';msg.classList.add('show','err');inp.focus();return;}
-  msg.classList.remove('show','ok','err');btn.disabled=true;btn.textContent='Wird gesendet...';
-  fetch('/api/auth/password-reset',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:em})})
-    .then(function(r){return r.json();})
-    .then(function(d){
-      if(d.ok){msg.textContent='✅ Reset-Link an deine Email gesendet. Prüfe auch den Spam-Ordner.';msg.classList.add('show','ok');}
-      else{msg.textContent=d.error||'Fehler beim Senden.';msg.classList.add('show','err');}
-    })
-    .catch(function(){msg.textContent='Netzwerkfehler.';msg.classList.add('show','err');})
-    .finally(function(){btn.disabled=false;btn.textContent='Passwort vergessen?';});
-}
-// Funnel-Tracking: Landing-CTAs
-function _trackFn(ev, meta){ try{ navigator.sendBeacon ? navigator.sendBeacon('/api/track-funnel', new Blob([JSON.stringify({event:ev,meta:meta||{}})],{type:'application/json'})) : fetch('/api/track-funnel',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({event:ev,meta:meta||{}}),keepalive:true}); }catch(e){} }
-document.addEventListener('DOMContentLoaded', function(){
-  // Telegram-CTA-Klicks
-  document.querySelectorAll('a[href*="t.me/"]').forEach(function(a){
-    a.addEventListener('click', function(){ _trackFn('telegram-click', {href: a.getAttribute('href')||''}); });
-  });
-  // Code-Form-Submit (Login mit Code)
-  var cf = document.querySelector('form[action="/auth/code-form"]');
-  if (cf) cf.addEventListener('submit', function(){ _trackFn('login-code-submit', {}); });
-  // Email-Submit
-  var eb = document.getElementById('email-btn');
-  if (eb) eb.addEventListener('click', function(){ _trackFn('email-submit', {}); });
-});
-</script>
-</body></html>`);
+        // Landing-Page wird aus landing.html geliefert (Single-Source-of-Truth, statt
+        // zwei parallele Inline-Versionen wie früher).
+        try {
+            if (!_cachedLandingHtml) {
+                const raw = fs.readFileSync(__dirname + '/landing.html', 'utf8');
+                _cachedLandingHtml = raw.replace('</body>', LANDING_TRACK_SCRIPT + '</body>');
+            }
+            return _writeCompressed(200, {'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','Pragma':'no-cache','Expires':'0','X-App-Version':'20'}, _cachedLandingHtml);
+        } catch(e) {
+            res.writeHead(500); return res.end('Landing-Page nicht verfügbar');
+        }
     }
 
     // ── CODE AUTH (Form POST) ──
@@ -3808,13 +4527,21 @@ document.addEventListener('DOMContentLoaded', function(){
         if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
         const body = await parseBody(req);
         const target = String(body.uid||'');
-        if (target !== String(session.uid) && target !== String(session.subUid)) {
+        // Allow switching to: parent (session.uid) OR any user whose parent_uid === session.uid
+        // (statt nur session.subUid — damit Admins mit mehreren Subs alle switchen können
+        // UND vergessene/orphaned Subs erreichbar bleiben).
+        // Daten via fetchBot('/data') statt globalem 'd' (existiert in App nicht).
+        const _switchData = await fetchBot('/data');
+        const _users = (_switchData && _switchData.users) || {};
+        const targetUser = _users[target];
+        const isOwnParent = target === String(session.uid);
+        const isOwnSub = targetUser && String(targetUser.parent_uid||'') === String(session.uid);
+        if (!isOwnParent && !isOwnSub) {
             return json({ok:false, error:'Account gehört nicht zur Session'}, 403);
         }
         // Verifizieren dass Ziel-User noch existiert (orphan-subUid: Sub wurde im Bot gelöscht
         // aber session weiß noch nichts davon)
-        const botData = await fetchBot('/data');
-        if (botData && !botData.users?.[target]) {
+        if (_switchData && !_users[target]) {
             if (target === String(session.subUid)) { delete session.subUid; saveSessions(); }
             return json({ok:false, error:'Account existiert nicht mehr'}, 410);
         }
@@ -3826,6 +4553,39 @@ document.addEventListener('DOMContentLoaded', function(){
         saveSessions();
         return json({ok:true, activeUid: target});
     }
+    // ── DSGVO: Account-Selbstlöschung (Art. 17 + Google Play Pflicht seit 2024) ──
+    if (path === '/api/delete-my-account' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        const result = await postBot('/user-delete-self-api', { uid: String(session.uid) });
+        if (result && result.ok) {
+            // Session aus dem In-Memory-Store + Disk entfernen
+            try {
+                if (typeof sessions !== 'undefined' && sessions instanceof Map) {
+                    for (const [sid, s] of sessions.entries()) {
+                        if (String(s.uid) === String(session.uid)) sessions.delete(sid);
+                    }
+                    saveSessions();
+                }
+            } catch(e) {}
+            return json({ok:true, deletedAt: new Date().toISOString(), deletedSubs: result.deletedSubs || 0});
+        }
+        return json(result || {ok:false, error:'Mainbot offline'});
+    }
+
+    // ── DSGVO: Datenexport (Art. 20 Datenübertragbarkeit) ──
+    if (path === '/api/datenexport' && req.method === 'GET') {
+        if (!session) return text('Nicht eingeloggt', 401);
+        const result = await fetchBotRaw('/user-data-export-api?uid=' + encodeURIComponent(session.uid));
+        if (!result || !result.ok) return text('Export-Fehler: ' + (result?.error || 'Mainbot offline'), 500);
+        const fname = 'creatorx-datenexport-' + session.uid + '-' + new Date().toISOString().slice(0,10) + '.json';
+        res.writeHead(200, {
+            'Content-Type': 'application/json; charset=utf-8',
+            'Content-Disposition': 'attachment; filename="' + fname + '"',
+            'Cache-Control': 'no-store',
+        });
+        return res.end(JSON.stringify(result, null, 2));
+    }
+
     // Sub komplett löschen (nur vom Parent aus). Switcht zurück auf Parent.
     if (path === '/api/delete-subaccount' && req.method === 'POST') {
         if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
@@ -3850,9 +4610,9 @@ document.addEventListener('DOMContentLoaded', function(){
     if (path === '/auth/code-form' && req.method === 'POST') {
         const body = await parseBody(req);
         const code = (body.code||'').toLowerCase().trim();
-        if (!code) { res.writeHead(302,{'Location':'/?error=1'}); return res.end(); }
+        if (!code) { res.writeHead(302,{'Location':'/login?error=1'}); return res.end(); }
         let botData = await fetchBot('/data');
-        if (!botData) { res.writeHead(302,{'Location':'/?error=1'}); return res.end(); }
+        if (!botData) { res.writeHead(302,{'Location':'/login?error=1'}); return res.end(); }
         let found = Object.entries(botData.users||{}).find(([,u]) => u.appCode === code);
         // Cache-Miss: Code könnte gerade frisch im Bot generiert sein und unser /data-Cache ist stale.
         // Einmal Force-Refresh, dann nochmal suchen, bevor wir 'falscher Code' sagen.
@@ -3862,7 +4622,7 @@ document.addEventListener('DOMContentLoaded', function(){
             botData = _dataCache;
             if (botData) found = Object.entries(botData.users||{}).find(([,u]) => u.appCode === code);
         }
-        if (!found) { res.writeHead(302,{'Location':'/?error=1'}); return res.end(); }
+        if (!found) { res.writeHead(302,{'Location':'/login?error=1'}); return res.end(); }
         const [uid, u] = found;
         const sid = genSid();
         // subUid nur übernehmen wenn der Sub im Bot wirklich noch existiert (sonst orphan → Switch crashed)
@@ -3887,7 +4647,7 @@ document.addEventListener('DOMContentLoaded', function(){
             botData = _dataCache;
             if (botData) found = Object.entries(botData.users||{}).find(([, u]) => u.appCode === code);
         }
-        if (!found) { res.writeHead(302,{'Location':'/?error=1'}); return res.end(); }
+        if (!found) { res.writeHead(302,{'Location':'/login?error=1'}); return res.end(); }
         const [uid, u] = found;
         const sid = genSid();
         // subUid nur übernehmen wenn der Sub im Bot wirklich noch existiert (sonst orphan → Switch crashed)
@@ -3954,31 +4714,40 @@ document.addEventListener('DOMContentLoaded', function(){
         // Sign-In: NUR existierende User. Neue User müssen über /signup gehen.
         const result = await postBot('/auth-email-password', { email, password });
         const isNewSignup = false;
-        let didSetupPassword = false;
+        const didSetupPassword = false; // Legacy-Variable für Funnel-Tracking — auto-PW-Setup wurde aus Security-Gründen entfernt
         if (!result || !result.ok) {
-            // Spezialfall: User existiert mit Email aber HAT NOCH KEIN PASSWORT (z.B. alter TG-User
-            // mit Email aber ohne PW). First-time Sign In setzt das Passwort direkt + loggt ein.
+            // SECURITY-FIX: Vorher wurde bei "noch kein Passwort gesetzt" das Passwort des
+            // Angreifers direkt gespeichert und der Account übernommen. Jetzt muss der User
+            // Email-Zugang beweisen — wir schicken einen Magic-Link. Nach Login kann er in
+            // /einstellungen ein Passwort setzen.
             if (result && /noch kein Passwort gesetzt/i.test(String(result.error||''))) {
-                const _bd = await fetchBot('/data');
-                const _ex = Object.entries(_bd?.users || {}).find(([, u]) => String(u.email||'').toLowerCase() === email);
-                if (_ex) {
-                    const [_uid] = _ex;
-                    const setPw = await postBot('/set-user-password', { uid: _uid, password });
-                    if (setPw && setPw.ok) {
-                        // Jetzt nochmal Login versuchen
-                        const result2 = await postBot('/auth-email-password', { email, password });
-                        if (result2 && result2.ok) {
-                            postBot('/log-email-login', { email, success: true, method: 'first-time-pw', uid: String(result2.uid), ip: _ip, ua: _ua }).catch(()=>{});
-                            Object.assign(result || {}, result2);
-                            didSetupPassword = true;
-                        }
+                postBot('/log-email-login', { email, success: false, method: 'pw-attempted-no-pw-set', uid: '', ip: _ip, ua: _ua }).catch(()=>{});
+                // Magic-Link triggern (gleicher Code-Pfad wie /api/auth/email-login intern)
+                try {
+                    const _bd = await fetchBot('/data');
+                    const _ex = Object.entries(_bd?.users || {}).find(([, u]) => String(u.email||'').toLowerCase() === email);
+                    if (_ex) {
+                        const [_uid, _u] = _ex;
+                        const _token = crypto.randomBytes(24).toString('hex');
+                        emailLoginTokens.set(_token, { email, uid: String(_uid), exp: Date.now() + EMAIL_TOKEN_TTL });
+                        const _baseUrl = (process.env.APP_URL || ('https://' + (req.headers.host || 'www.creatorboostx.de'))).replace(/\/$/, '');
+                        const _loginUrl = _baseUrl + '/auth/email-login?token=' + encodeURIComponent(_token) + '&setpw=1';
+                        const _userName = String(_u.spitzname || _u.name || 'CreatorX User').replace(/[<>]/g,'').slice(0,30);
+                        const _html = '<!DOCTYPE html><html><body style="margin:0;font-family:-apple-system,sans-serif;background:#000;color:#fff;padding:0">' +
+                            '<div style="max-width:560px;margin:0 auto;padding:32px 24px">' +
+                            '<div style="text-align:center;margin-bottom:24px"><img src="' + _baseUrl + '/cx-logo-256.png" width="80" height="80" style="border-radius:18px" alt=""></div>' +
+                            '<h1 style="font-size:24px;font-weight:700;margin:0 0 12px;text-align:center">Hi ' + _userName + '!</h1>' +
+                            '<p style="font-size:14px;color:#a8a39a;line-height:1.6;text-align:center;margin:0 0 24px">Du hast noch kein Passwort gesetzt. Klick auf den Button um dich einzuloggen — danach kannst du in den Einstellungen ein Passwort hinterlegen.</p>' +
+                            '<div style="text-align:center;margin:28px 0"><a href="' + _loginUrl + '" style="display:inline-block;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px">🔓 Login + Passwort setzen</a></div>' +
+                            '<p style="font-size:11px;color:#605c54;text-align:center;margin:24px 0 0;border-top:1px solid #221f1a;padding-top:18px">Wenn du das nicht angefordert hast, ignorier die Mail — niemand kann dein Konto übernehmen.<br><br>Link: <span style="word-break:break-all;color:#a8a39a">' + _loginUrl + '</span></p>' +
+                            '</div></body></html>';
+                        sendEmail(email, '🔐 Dein CreatorX Login-Link', _html).catch(()=>{});
                     }
-                }
+                } catch(e) { console.error('[email-password] magic-link fallback failed:', e.message); }
+                return json({ok:false, requiresMagicLink:true, error:'Du hast noch kein Passwort. Wir haben dir einen Login-Link an deine Email geschickt — klick drauf und setze danach in /einstellungen ein Passwort.'}, 200);
             }
-            if (!didSetupPassword) {
-                postBot('/log-email-login', { email, success: false, method: 'password', uid: '', ip: _ip, ua: _ua }).catch(()=>{});
-                return json({ok:false, error: (result && result.error) || 'Email oder Passwort falsch — oder noch kein Account? Sign Up unter /signup', notRegistered: result?.error?.includes('falsch')}, 401);
-            }
+            postBot('/log-email-login', { email, success: false, method: 'password', uid: '', ip: _ip, ua: _ua }).catch(()=>{});
+            return json({ok:false, error: (result && result.error) || 'Email oder Passwort falsch — oder noch kein Account? Sign Up unter /signup', notRegistered: !!(result && result.notRegistered)}, 401);
         }
         postBot('/log-email-login', { email, success: true, method: 'password', uid: String(result.uid), ip: _ip, ua: _ua }).catch(()=>{});
         // Reset rate-limit on success.
@@ -3986,19 +4755,12 @@ document.addEventListener('DOMContentLoaded', function(){
         const botData = await fetchBot('/data');
         const u = botData?.users?.[result.uid];
         if (!u) return json({ok:false, error:'User nicht gefunden'}, 404);
-        let sid = null;
-        for (const [s, sess] of sessions.entries()) {
-            if (sess.uid === String(result.uid)) { sid = s; break; }
-        }
-        if (!sid) {
-            sid = genSid();
-            const validSubUid = u.subUid && botData.users?.[u.subUid] ? String(u.subUid) : null;
-            sessions.set(sid, { uid: String(result.uid), name: u.name, username: u.username||null, theme: 'light', lang: 'de', createdAt: Date.now(), subUid: validSubUid, activeUid: String(result.uid), loginVia: 'email' });
-            saveSessions();
-        } else {
-            // Bestehende Session: loginVia auf 'email' aktualisieren — wichtig für Insta-Gate
-            const existing = sessions.get(sid); if (existing) { existing.loginVia = 'email'; sessions.set(sid, existing); saveSessions(); }
-        }
+        // SECURITY: IMMER neue Session — kein Reuse über Geräte hinweg.
+        // Vorher konnte alte Session mit activeUid=Sub übernommen werden.
+        const sid = genSid();
+        const validSubUid = u.subUid && botData.users?.[u.subUid] ? String(u.subUid) : null;
+        sessions.set(sid, { uid: String(result.uid), name: u.name, username: u.username||null, theme: 'light', lang: 'de', createdAt: Date.now(), subUid: validSubUid, activeUid: String(result.uid), loginVia: 'email' });
+        saveSessions();
         // Funnel: Login erfolgreich
         postBot('/track-funnel', { event: 'login-success', uid: String(result.uid), meta: { method: didSetupPassword ? 'first-pw' : 'email-pw' } }).catch(()=>{});
         // Email-User Redirect-Chain (mit /feed?tour=1 als finales Ziel damit Tour autostartet)
@@ -4189,19 +4951,44 @@ document.addEventListener('DOMContentLoaded', function(){
         const token = String(query.token || '').trim();
         const baseHtml = (icon, title, msg, color) => `<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><style>body{margin:0;font-family:-apple-system,BlinkMacSystemFont,Inter,sans-serif;background:#0b0b0e;color:#fff;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}.box{background:linear-gradient(180deg,#1c1c1e,#0f0f11);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:40px 28px;max-width:420px;text-align:center;box-shadow:0 30px 80px rgba(0,0,0,.5)}.ic{font-size:64px;margin-bottom:16px}.t{font-size:22px;font-weight:800;margin-bottom:10px;letter-spacing:-.4px;color:${color}}.m{font-size:14px;color:rgba(255,255,255,.7);line-height:1.55;margin-bottom:24px}.btn{display:inline-block;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;padding:13px 28px;border-radius:12px;text-decoration:none;font-weight:800;font-size:14px}</style></head><body><div class="box"><div class="ic">${icon}</div><div class="t">${title}</div><div class="m">${msg}</div><a href="/feed" class="btn">→ Zur App</a></div></body></html>`;
         if (!token) { res.writeHead(400, {'Content-Type':'text/html'}); return res.end(baseHtml('⚠️','Ungültiger Link','Der Bestätigungslink ist ungültig oder unvollständig.','#f59e0b')); }
-        const entry = emailConfirmTokens.get(token);
-        if (!entry || entry.exp < Date.now()) {
-            emailConfirmTokens.delete(token);
+        console.log('[email-confirm] Got token:', token.slice(0,12)+'…', 'len:', token.length, 'ect-size:', emailConfirmTokens.size);
+        // SINGLE token-keyed lookup (Source of Truth). Signup + Email-Change beide hier.
+        let entry = emailConfirmTokens.get(token);
+        if (!entry) {
+            // Legacy fallback: alte Tokens nur in pendingEmailConfirms (uid-keyed mit token in entry)
+            // Können noch da sein für User die vor dem Refactor signupt haben.
+            for (const [uid, e] of pendingEmailConfirms.entries()) {
+                if (e && e.token === token) { entry = { ...e, uid, kind: 'signup' }; break; }
+            }
+        }
+        if (!entry) {
+            console.log('[email-confirm] NOT found in any map. Token prefix:', token.slice(0,12)+'…');
             res.writeHead(400, {'Content-Type':'text/html'});
-            return res.end(baseHtml('⏰','Link abgelaufen','Der Bestätigungslink ist abgelaufen oder schon benutzt. Geh in die Einstellungen und sende einen neuen.','#ef4444'));
+            return res.end(baseHtml('⏰','Link abgelaufen','Der Bestätigungslink ist ungültig oder schon benutzt. Geh in die Einstellungen und sende einen neuen.','#ef4444'));
         }
+        if (entry.exp < Date.now()) {
+            console.log('[email-confirm] Token expired (was', Math.round((Date.now()-entry.exp)/60000), 'min ago)');
+            emailConfirmTokens.delete(token);
+            for (const [uid, e] of pendingEmailConfirms.entries()) if (e && e.token === token) pendingEmailConfirms.delete(uid);
+            savePendingEmailConfirms();
+            res.writeHead(400, {'Content-Type':'text/html'});
+            return res.end(baseHtml('⏰','Link abgelaufen','Der Bestätigungslink ist abgelaufen. Geh in die Einstellungen und sende einen neuen.','#ef4444'));
+        }
+        // Gültig — Token einlösen
         emailConfirmTokens.delete(token);
-        // Bot anrufen → confirmEmail-Field setzen
-        const result = await postBot('/update-profile-api', { uid: entry.uid, confirmEmail: entry.email });
-        if (!result || result.ok === false) {
-            res.writeHead(500, {'Content-Type':'text/html'});
-            return res.end(baseHtml('❌','Fehler','Bestätigung konnte nicht gespeichert werden. Bitte später erneut versuchen.','#ef4444'));
+        for (const [uid, e] of pendingEmailConfirms.entries()) if (e && e.token === token) pendingEmailConfirms.delete(uid);
+        savePendingEmailConfirms();
+        const isSignup = entry.kind === 'signup';
+        console.log('[email-confirm] Confirmed (' + (isSignup ? 'signup' : 'change') + ') uid:', entry.uid, 'email:', entry.email);
+        if (!isSignup) {
+            // Email-Change-Flow: Mainbot setzt confirmEmail-Field
+            const result = await postBot('/update-profile-api', { uid: entry.uid, confirmEmail: entry.email });
+            if (!result || result.ok === false) {
+                res.writeHead(500, {'Content-Type':'text/html'});
+                return res.end(baseHtml('❌','Fehler','Bestätigung konnte nicht gespeichert werden ('+(result && result.error || 'unbekannt')+'). Bitte später erneut versuchen.','#ef4444'));
+            }
         }
+        // Signup-Flow: Mainbot hat emailConfirmedAt schon beim Signup gesetzt — kein API-Call nötig
         res.writeHead(200, {'Content-Type':'text/html'});
         return res.end(baseHtml('✅','Email bestätigt!','Deine Email <b style="color:#fff">'+entry.email+'</b> ist jetzt aktiv. Du kannst dich damit einloggen.','#22c55e'));
     }
@@ -4267,6 +5054,10 @@ h1{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;line-height:1.1;
   <form id="signup-form" onsubmit="return submitSignup(event)">
     <input type="email" id="signup-email" class="in" placeholder="Email-Adresse" autocomplete="email" autocapitalize="none" spellcheck="false" required maxlength="200">
     <input type="password" id="signup-pw" class="in" placeholder="Passwort (min. 6 Zeichen)" autocomplete="new-password" minlength="6" maxlength="200" required>
+    <label style="display:flex;align-items:flex-start;gap:10px;margin:6px 2px 4px;cursor:pointer;font-size:12.5px;color:var(--muted);line-height:1.5">
+      <input type="checkbox" id="signup-age" required style="margin-top:3px;flex-shrink:0;width:16px;height:16px;accent-color:#d4a946;cursor:pointer">
+      <span>Ich bestätige, dass ich <b style="color:#fff">mindestens 16 Jahre alt</b> bin und die <a href="/datenschutz" target="_blank" style="color:#d4a946;text-decoration:underline">Datenschutzerklärung</a> sowie die <a href="/agb" target="_blank" style="color:#d4a946;text-decoration:underline">AGB</a> akzeptiere.</span>
+    </label>
     <button type="submit" class="btn" id="signup-btn">Kostenlos starten →</button>
   </form>
   <div class="hint">Kein Spam, keine versteckten Kosten. Jederzeit löschbar.</div>
@@ -4283,11 +5074,13 @@ function submitSignup(ev){
   ev.preventDefault();
   var em=(document.getElementById('signup-email').value||'').trim().toLowerCase();
   var pw=document.getElementById('signup-pw').value||'';
+  var ageOk=document.getElementById('signup-age').checked;
   var btn=document.getElementById('signup-btn'),msg=document.getElementById('signup-msg');
   msg.classList.remove('show','ok','err');
   if(!em || pw.length<6){msg.textContent='Email + Passwort (min. 6 Zeichen) erforderlich';msg.classList.add('show','err');return false;}
+  if(!ageOk){msg.textContent='Bitte bestätige dein Alter und akzeptiere Datenschutz + AGB';msg.classList.add('show','err');return false;}
   btn.disabled=true;btn.textContent='⏳ Account wird erstellt...';
-  fetch('/api/auth/email-signup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:em,password:pw})})
+  fetch('/api/auth/email-signup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:em,password:pw,ageConfirmed:true,termsAccepted:true})})
     .then(function(r){return r.json().then(function(j){return{s:r.status,j:j};});})
     .then(function(o){
       if(o.j&&o.j.ok&&o.j.redirect){
@@ -4304,11 +5097,234 @@ function submitSignup(ev){
 </script>
 </body></html>`);
     }
+
+    // ── SMART LAUNCH (PWA/TWA start_url) ──
+    // Wenn PWA/TWA gestartet wird, lädt diese Route. Mit Session → /feed,
+    // ohne → /login. So sieht ausgeloggte User direkt die Login-Page statt
+    // der Marketing-Landing (war Verhalten vor diesem Route).
+    if (path === '/launch' && req.method === 'GET') {
+        if (session) return redirect('/feed');
+        return redirect('/login');
+    }
+
+    // ── PROFESSIONAL LOGIN PAGE (/login) ──
+    // Fokussierte Login-Page für returning Users. Standalone HTML (kein layout(),
+    // kein Tour-JS), damit nichts redirecten kann. Eigene Route /login, von der
+    // Marketing-Landing (/) verlinkt via 'Einloggen →'.
+    if (path === '/login' && req.method === 'GET') {
+        if (session && (query.preview !== '1')) return redirect('/feed');
+        res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0'});
+        return res.end(`<!DOCTYPE html><html lang="de" data-theme="dark"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Anmelden · CreatorX</title>
+<meta name="description" content="Melde dich bei CreatorX an — der Creator-Engagement-Community.">
+<link rel="icon" type="image/png" href="/cx-logo-256.png">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --gold:#d4af37;--gold-bright:#f5d76e;--gold-deep:#8b6914;
+  --text:#fff;--muted:rgba(255,255,255,0.55);--muted2:rgba(255,255,255,0.38);
+  --border:rgba(255,255,255,0.08);--border-strong:rgba(212,175,55,0.30);
+  --success:#22c55e;--danger:#ef4444;
+}
+html,body{background:#000;color:#fff;font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh;overflow-x:hidden}
+.mesh{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+.mesh::before{content:'';position:absolute;width:60vw;height:60vw;left:-15vw;top:-10vw;background:radial-gradient(circle,rgba(212,175,55,0.14),transparent 60%);filter:blur(40px);animation:mA 22s ease-in-out infinite alternate}
+.mesh::after{content:'';position:absolute;width:50vw;height:50vw;right:-20vw;bottom:-15vw;background:radial-gradient(circle,rgba(167,139,250,0.10),transparent 60%);filter:blur(40px);animation:mB 26s ease-in-out infinite alternate}
+@keyframes mA{0%{transform:translate(0,0)}100%{transform:translate(6vw,8vh)}}
+@keyframes mB{0%{transform:translate(0,0)}100%{transform:translate(-8vw,-6vh)}}
+
+.page{position:relative;z-index:1;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:32px 20px}
+.card{width:100%;max-width:420px;background:rgba(255,255,255,0.025);border:1px solid var(--border);border-radius:24px;padding:36px 24px 28px;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);box-shadow:0 30px 80px -20px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.04)}
+
+.brand{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:24px}
+.brand-logo{width:40px;height:40px;border-radius:11px;background:url('/cx-logo-256.png') center/cover,#0a0a0a;box-shadow:0 6px 20px rgba(212,175,55,0.35),inset 0 0 0 1px rgba(212,175,55,0.3)}
+.brand-name{font-family:'Syne',sans-serif;font-size:19px;font-weight:800;letter-spacing:-0.4px;background:linear-gradient(180deg,#fff,#d4af37);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+
+h1{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;line-height:1.1;letter-spacing:-0.7px;margin-bottom:6px;text-align:center;color:#fff}
+.sub{font-size:13.5px;color:var(--muted);line-height:1.55;margin-bottom:22px;text-align:center}
+
+.trust{display:flex;align-items:center;justify-content:center;gap:8px;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.20);border-radius:99px;padding:6px 14px;margin:0 auto 20px;font-size:11.5px;color:rgba(34,197,94,0.95);font-weight:600;width:fit-content}
+.trust .dot{width:6px;height:6px;border-radius:50%;background:#22c55e;box-shadow:0 0 8px rgba(34,197,94,0.7);animation:pls 1.6s ease-in-out infinite}
+@keyframes pls{0%,100%{opacity:1}50%{opacity:0.45}}
+
+.field{position:relative;margin-bottom:11px}
+.field-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--muted2);pointer-events:none;width:18px;height:18px;display:flex;align-items:center;justify-content:center}
+.in{width:100%;background:rgba(255,255,255,0.04);border:1.5px solid var(--border);color:#fff;border-radius:12px;padding:14px 16px 14px 44px;font-size:15px;outline:none;font-family:inherit;transition:all .18s;font-weight:500}
+.in:focus{border-color:var(--gold);background:rgba(212,175,55,0.04);box-shadow:0 0 0 3px rgba(212,175,55,0.12)}
+.in::placeholder{color:var(--muted2)}
+.in.pw{padding-right:48px}
+
+.pw-toggle{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--muted);cursor:pointer;padding:8px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.pw-toggle:hover{color:var(--gold);background:rgba(212,175,55,0.06)}
+.pw-toggle svg{width:18px;height:18px}
+
+.btn{margin-top:6px;width:100%;padding:14px;font-size:15px;font-weight:700;border-radius:12px;border:none;cursor:pointer;font-family:inherit;letter-spacing:0.2px;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;box-shadow:0 8px 24px -8px rgba(212,175,55,0.6),inset 0 1px 0 rgba(255,255,255,0.5);transition:all .15s;display:flex;align-items:center;justify-content:center;gap:8px;position:relative}
+.btn:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 12px 30px -8px rgba(212,175,55,0.7)}
+.btn:active:not(:disabled){transform:translateY(0)}
+.btn:disabled{opacity:.6;cursor:not-allowed;transform:none}
+.btn .spin{width:16px;height:16px;border:2px solid rgba(0,0,0,0.3);border-top-color:#000;border-radius:50%;animation:spin 0.7s linear infinite;display:none}
+.btn.loading .spin{display:inline-block}
+
+.row-link{display:flex;justify-content:flex-end;margin:2px 2px 12px}
+.link-btn{background:none;border:none;color:var(--muted);font-size:12.5px;cursor:pointer;font-family:inherit;padding:4px;transition:color .15s}
+.link-btn:hover{color:var(--gold)}
+
+.msg{font-size:13px;padding:11px 14px;border-radius:10px;margin-bottom:12px;display:none;line-height:1.5;font-weight:500}
+.msg.show{display:block;animation:slideIn 0.25s ease}
+.msg.ok{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.30);color:#4ade80}
+.msg.err{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.30);color:#f87171}
+@keyframes slideIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.div-or{display:flex;align-items:center;gap:12px;margin:20px 0 16px;color:var(--muted2);font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase}
+.div-or::before,.div-or::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--border),transparent)}
+
+.alt-btn{width:100%;padding:12px 14px;background:rgba(255,255,255,0.03);border:1px solid var(--border);color:#fff;border-radius:12px;font-family:inherit;font-size:13.5px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:all .15s;text-decoration:none}
+.alt-btn:hover:not(:disabled){background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.16);transform:translateY(-1px)}
+.alt-btn:disabled{opacity:.6;cursor:not-allowed}
+.alt-btn-icon{font-size:16px;display:flex;align-items:center;justify-content:center}
+
+.bottom{text-align:center;margin-top:22px;padding-top:18px;border-top:1px solid var(--border)}
+.bottom-lbl{font-size:12.5px;color:var(--muted);margin-bottom:4px}
+.bottom a{color:var(--gold);font-weight:700;text-decoration:none;font-size:13.5px;display:inline-flex;align-items:center;gap:4px;transition:opacity .15s}
+.bottom a:hover{opacity:.8}
+
+.foot{text-align:center;margin-top:20px;font-size:10.5px;color:var(--muted2);line-height:1.7}
+.foot a{color:var(--muted);text-decoration:none;border-bottom:1px dotted var(--muted2);transition:color .15s}
+.foot a:hover{color:var(--gold);border-bottom-color:var(--gold)}
+
+@media(min-width:768px){
+  .card{padding:42px 36px 32px;max-width:440px}
+  h1{font-size:29px}
+  .sub{font-size:14.5px}
+}
+</style></head><body>
+<div class="mesh"></div>
+<div class="page">
+  <div class="card">
+    <div class="brand"><div class="brand-logo"></div><div class="brand-name">CreatorX</div></div>
+
+    <h1>Willkommen zurück</h1>
+    <div class="sub">Melde dich an um in der Community weiterzumachen.</div>
+
+    <div class="trust"><span class="dot"></span><span><b id="trust-count">…</b> Creator gerade aktiv</span></div>
+
+    ${query.error==='email-expired' ? '<div class="msg show err">⚠️ Login-Link abgelaufen oder bereits benutzt.</div>' : ''}
+    ${query.error==='email-invalid' ? '<div class="msg show err">⚠️ Login-Link ungültig.</div>' : ''}
+    ${query.error==='email-userlost' ? '<div class="msg show err">⚠️ Account nicht mehr verfügbar.</div>' : ''}
+    ${query.error==='1' || query.error==='invalidcode' ? '<div class="msg show err">⚠️ Login-Code falsch oder unbekannt.</div>' : ''}
+    ${query.error==='nocode' ? '<div class="msg show err">⚠️ Kein Login-Code übergeben.</div>' : ''}
+    ${query.error==='503' ? '<div class="msg show err">⚠️ Server nicht erreichbar. Bitte später nochmal versuchen.</div>' : ''}
+    ${query.logout==='1' ? '<div class="msg show ok">✅ Erfolgreich ausgeloggt.</div>' : ''}
+
+    <div class="msg" id="login-msg"></div>
+
+    <form id="login-form" onsubmit="return submitLogin(event)" novalidate>
+      <div class="field">
+        <span class="field-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></span>
+        <input type="email" id="login-email" class="in" placeholder="deine@email.de" autocomplete="email" autocapitalize="none" spellcheck="false" required maxlength="200" autofocus>
+      </div>
+      <div class="field">
+        <span class="field-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><rect x="3" y="11" width="18" height="11" rx="2"/><circle cx="12" cy="16" r="1"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+        <input type="password" id="login-pw" class="in pw" placeholder="Passwort" autocomplete="current-password" maxlength="200" required>
+        <button type="button" class="pw-toggle" onclick="togglePw()" aria-label="Passwort anzeigen">
+          <svg id="pw-eye-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          <svg id="pw-eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+        </button>
+      </div>
+      <div class="row-link"><button type="button" class="link-btn" id="pw-reset-btn" onclick="resetPassword()">Passwort vergessen?</button></div>
+      <button type="submit" class="btn" id="login-btn"><span class="spin"></span><span>Anmelden</span></button>
+    </form>
+
+    <div class="bottom">
+      <div class="bottom-lbl">Noch keinen Account?</div>
+      <a href="/signup">Jetzt kostenlos registrieren →</a>
+    </div>
+
+    <div class="foot">
+      Mit der Anmeldung akzeptierst du die <a href="/agb" target="_blank" rel="noopener">AGB</a> und die <a href="/datenschutz" target="_blank" rel="noopener">Datenschutzerklärung</a>.<br>
+      <a href="/impressum" target="_blank" rel="noopener">Impressum</a>
+    </div>
+  </div>
+</div>
+
+<script>
+fetch('/api/community-stats',{cache:'no-store'}).then(r=>r.json()).then(s=>{
+  const el=document.getElementById('trust-count');
+  if(el&&s&&s.members){el.textContent=Number(s.members).toLocaleString('de-DE');}else if(el){el.textContent='—';}
+}).catch(()=>{const el=document.getElementById('trust-count');if(el)el.textContent='—';});
+
+function togglePw(){
+  const inp=document.getElementById('login-pw');
+  const on=document.getElementById('pw-eye-on');
+  const off=document.getElementById('pw-eye-off');
+  if(inp.type==='password'){inp.type='text';on.style.display='none';off.style.display='block';}
+  else{inp.type='password';on.style.display='block';off.style.display='none';}
+}
+
+function showMsg(text,type){
+  const m=document.getElementById('login-msg');
+  m.className='msg show '+type;
+  m.textContent=text;
+}
+function clearMsg(){document.getElementById('login-msg').className='msg';}
+function setBtnLoading(btn,on){
+  if(on){btn.disabled=true;btn.classList.add('loading');}
+  else{btn.disabled=false;btn.classList.remove('loading');}
+}
+
+function submitLogin(ev){
+  ev.preventDefault();clearMsg();
+  const email=(document.getElementById('login-email').value||'').trim().toLowerCase();
+  const pw=document.getElementById('login-pw').value||'';
+  const btn=document.getElementById('login-btn');
+  if(!email||!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)){showMsg('Bitte gültige Email eingeben.','err');return false;}
+  if(pw.length<6){showMsg('Passwort muss mindestens 6 Zeichen haben.','err');return false;}
+  setBtnLoading(btn,true);
+  fetch('/api/auth/email-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:pw})})
+    .then(r=>r.json().then(j=>({s:r.status,j})))
+    .then(o=>{
+      if(o.j&&o.j.ok&&o.j.redirect){
+        showMsg('✅ Eingeloggt — leite weiter...','ok');
+        setTimeout(()=>{window.location.href=o.j.redirect;},400);
+      } else {
+        showMsg(o.j&&o.j.error||'Login fehlgeschlagen.','err');
+        setBtnLoading(btn,false);
+      }
+    })
+    .catch(()=>{showMsg('Netzwerkfehler — bitte später nochmal.','err');setBtnLoading(btn,false);});
+  return false;
+}
+
+function resetPassword(){
+  const email=(document.getElementById('login-email').value||'').trim().toLowerCase();
+  const btn=document.getElementById('pw-reset-btn');
+  if(!email){showMsg('Bitte zuerst deine Email-Adresse eingeben.','err');document.getElementById('login-email').focus();return;}
+  clearMsg();btn.disabled=true;btn.textContent='Wird gesendet...';
+  fetch('/api/auth/password-reset',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})})
+    .then(r=>r.json())
+    .then(d=>{
+      if(d.ok){showMsg('✅ Reset-Link an deine Email gesendet. Schau auch im Spam-Ordner.','ok');}
+      else{showMsg(d.error||'Fehler beim Senden.','err');}
+    })
+    .catch(()=>{showMsg('Netzwerkfehler.','err');})
+    .finally(()=>{btn.disabled=false;btn.textContent='Passwort vergessen?';});
+}
+
+try { fetch('/api/track-funnel',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({event:'login-view',meta:{ref:document.referrer.slice(0,200)}}),keepalive:true}); } catch(e) {}
+</script>
+</body></html>`);
+    }
+
     // ── /api/auth/email-signup: erstellt neuen Account (Email + Passwort) ──
     if (path === '/api/auth/email-signup' && req.method === 'POST') {
         const body = await parseBody(req);
         const email = String(body.email || '').toLowerCase().trim();
         const password = String(body.password || '');
+        // DSGVO + Google-Play: Altersbestätigung (≥16) und AGB/Datenschutz-Zustimmung sind Pflicht.
+        if (!body.ageConfirmed || !body.termsAccepted) return json({ok:false, error:'Altersbestätigung (16+) und Zustimmung zu Datenschutz/AGB erforderlich'}, 400);
         if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json({ok:false, error:'Ungültige Email-Adresse'}, 400);
         if (password.length < 6 || password.length > 200) return json({ok:false, error:'Passwort muss 6–200 Zeichen lang sein'}, 400);
         const _ip = String(req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '').split(',')[0].trim().slice(0, 64);
@@ -4328,11 +5344,18 @@ function submitSignup(ev){
             postBot('/log-email-login', { email, success: false, method: 'signup-exists', uid: String(_exists[0]), ip: _ip, ua: _ua }).catch(()=>{});
             return json({ok:false, error:'Diese Email ist bereits registriert. Bitte → Sign In.', existed:true}, 409);
         }
-        // Account anlegen
-        const created = await postBot('/create-email-user-api', { email, password });
-        if (!created || !created.ok || !created.uid) {
-            postBot('/log-email-login', { email, success: false, method: 'signup-fail', uid: '', ip: _ip, ua: _ua }).catch(()=>{});
-            return json({ok:false, error: (created && created.error) || 'Account konnte nicht erstellt werden'}, 500);
+        // Account anlegen (mit Age-Gate + Terms-Akzeptanz für DSGVO/Play-Store-Audit)
+        const created = await postBot('/create-email-user-api', { email, password, ageConfirmedAt: Date.now(), termsAcceptedAt: Date.now(), termsVersion: '2026-05' });
+        if (!created) {
+            // postBot returnt null bei Mainbot-Timeout/Crash/Network-Error → User klare Meldung geben
+            console.error('[signup-fail] Mainbot unreachable for email:', email, 'ip:', _ip);
+            postBot('/log-email-login', { email, success: false, method: 'signup-mainbot-down', uid: '', ip: _ip, ua: _ua }).catch(()=>{});
+            return json({ok:false, error:'⚠️ Server gerade nicht erreichbar. Bitte in 1 Minute nochmal versuchen.'}, 503);
+        }
+        if (!created.ok || !created.uid) {
+            console.error('[signup-fail] Mainbot rejected:', email, 'error:', created.error, 'full:', JSON.stringify(created));
+            postBot('/log-email-login', { email, success: false, method: 'signup-fail', uid: '', ip: _ip, ua: _ua, err: created.error||'no-error' }).catch(()=>{});
+            return json({ok:false, error: created.error || 'Account-Erstellung fehlgeschlagen — bitte Support kontaktieren falls das mehrfach passiert.'}, 500);
         }
         postBot('/log-email-login', { email, success: true, method: 'signup', uid: String(created.uid), ip: _ip, ua: _ua }).catch(()=>{});
         // Funnel-Event: Signup abgeschlossen
@@ -4346,15 +5369,44 @@ function submitSignup(ev){
         saveSessions();
         // → Onboarding-Flow (Insta first)
         res.writeHead(200, {'Set-Cookie':`cbsid=${sid}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=157680000`,'Content-Type':'application/json'});
-        return res.end(JSON.stringify({ok:true, redirect:'/onboarding-instagram?first=1'}));
+        res.end(JSON.stringify({ok:true, redirect:'/onboarding-instagram?first=1'}));
+        // Email-Confirmation NACH Response — fire-and-forget, blockt Signup NICHT.
+        // Mainbot bleibt unberührt; Pending-State + Token leben lokal im App-Bot.
+        setImmediate(() => {
+            sendSignupConfirmationEmail(created.uid, email, req.headers.host).catch(e =>
+                console.error('[signup] confirm-email send failed:', e.message)
+            );
+        });
+        return;
     }
+    // ── EMAIL-CONFIRMATION: Klick aus Bestätigungs-Mail ──
+    // (Toter Handler /auth/confirm-email entfernt — der primary Handler weiter oben in der
+    // Route-Reihenfolge (Z. 4713) matched zuerst und behandelt jetzt beide Flows: Signup +
+    // Email-Change. Single Source of Truth = emailConfirmTokens.)
+
+    // Resend Bestätigungsmail für eingeloggten User
+    if (path === '/api/resend-confirmation' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        const uid = String(session.uid);
+        const bd = await fetchBot('/data');
+        const u = bd?.users?.[uid];
+        if (!u || !u.email) return json({ok:false, error:'Keine Email gesetzt'}, 400);
+        // Rate-Limit: max 1 Resend pro Minute pro User
+        const prev = pendingEmailConfirms.get(uid);
+        if (prev && prev.exp - (7 * 24 * 60 * 60 * 1000 - 60 * 1000) > Date.now()) {
+            return json({ok:false, error:'Bitte warte 1 Minute bevor du erneut sendest.'});
+        }
+        await sendSignupConfirmationEmail(uid, u.email, req.headers.host);
+        return json({ok:true});
+    }
+
     if (path === '/auth/email-login' && req.method === 'GET') {
         const token = String(query.token || '').trim();
-        if (!token) { res.writeHead(302,{'Location':'/?error=email-invalid'}); return res.end(); }
+        if (!token) { res.writeHead(302,{'Location':'/login?error=email-invalid'}); return res.end(); }
         const entry = emailLoginTokens.get(token);
         if (!entry || entry.exp < Date.now()) {
             emailLoginTokens.delete(token);
-            res.writeHead(302,{'Location':'/?error=email-expired'}); return res.end();
+            res.writeHead(302,{'Location':'/login?error=email-expired'}); return res.end();
         }
         emailLoginTokens.delete(token); // single-use
         const _ip2 = String(req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '').split(',')[0].trim().slice(0, 64);
@@ -4362,14 +5414,13 @@ function submitSignup(ev){
         const botData = await fetchBot('/data');
         if (!botData || !botData.users?.[entry.uid]) {
             postBot('/log-email-login', { email: entry.email, success: false, method: 'magic-link', uid: '', ip: _ip2, ua: _ua2 }).catch(()=>{});
-            res.writeHead(302,{'Location':'/?error=email-userlost'}); return res.end();
+            res.writeHead(302,{'Location':'/login?error=email-userlost'}); return res.end();
         }
         postBot('/log-email-login', { email: entry.email, success: true, method: 'magic-link', uid: String(entry.uid), ip: _ip2, ua: _ua2 }).catch(()=>{});
         const u = botData.users[entry.uid];
         let sid = null;
-        for (const [s, sess] of sessions.entries()) {
-            if (sess.uid === String(entry.uid)) { sid = s; break; }
-        }
+        // SECURITY: kein Session-Reuse — IMMER neuen sid generieren
+        sid = null;
         if (!sid) {
             sid = genSid();
             const validSubUid = u.subUid && botData.users?.[u.subUid] ? String(u.subUid) : null;
@@ -4838,29 +5889,28 @@ function submitPw(ev){
     if (path.startsWith('/i/') && req.method === 'GET') {
         const code = path.slice(3).toLowerCase().trim().slice(0, 60);
         if (!code) { res.writeHead(302,{'Location':'/'}); return res.end(); }
-        // Wenn schon eingeloggt → kurz weiter zu /feed.
         if (session) { res.writeHead(302,{'Location':'/feed'}); return res.end(); }
-        // User mit appCode == code finden → automatisch einloggen.
+        // SECURITY: AppCode-Brute-Force-Schutz — pro IP max 10 versch. Codes / 10 Min.
+        // Vorher unbegrenzt → mit wordlist konnte jeder Account übernommen werden.
+        const _ip = String(req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '').split(',')[0].trim().slice(0, 64);
+        if (_ip && !_codeBruteCheck(_ip, code)) {
+            res.writeHead(429, {'Content-Type':'text/html; charset=utf-8'});
+            return res.end('<h1>⏳ Zu viele Versuche</h1><p>Bitte 10 Min warten oder über /login einloggen.</p>');
+        }
         let botData = await fetchBot('/data');
         if (botData) {
             const found = Object.entries(botData.users||{}).find(([,u]) => u.appCode === code);
             if (found) {
                 const [uid, u] = found;
-                let sid = null;
-                for (const [s, sess] of sessions.entries()) {
-                    if (sess.uid === String(uid)) { sid = s; break; }
-                }
-                if (!sid) {
-                    sid = genSid();
-                    const validSubUid = u.subUid && botData.users?.[u.subUid] ? String(u.subUid) : null;
-                    sessions.set(sid, { uid: String(uid), name: u.name, username: u.username||null, theme: 'light', lang: 'de', createdAt: Date.now(), subUid: validSubUid, activeUid: String(uid), loginVia: 'telegram' });
-                    saveSessions();
-                }
+                const sid = genSid();
+                const validSubUid = u.subUid && botData.users?.[u.subUid] ? String(u.subUid) : null;
+                sessions.set(sid, { uid: String(uid), name: u.name, username: u.username||null, theme: 'light', lang: 'de', createdAt: Date.now(), subUid: validSubUid, activeUid: String(uid), loginVia: 'telegram' });
+                saveSessions();
+                _codeBruteReset(_ip);
                 res.writeHead(302,{'Set-Cookie':`cbsid=${sid}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=157680000`,'Location':'/feed'});
                 return res.end();
             }
         }
-        // Generischer Invite (Code passt zu keinem User) → Landing mit Invite-Cookie.
         res.writeHead(302, {
             'Set-Cookie': `cbInvite=${encodeURIComponent(code)}; Path=/; Max-Age=2592000`,
             'Location': '/?invite=' + encodeURIComponent(code)
@@ -4872,9 +5922,14 @@ function submitPw(ev){
         const code = (query.code||'').toString().toLowerCase().trim();
         const rawRedirect = (query.redirect || '/feed').toString();
         const safeRedirect = (rawRedirect.startsWith('/') && !rawRedirect.startsWith('//')) ? rawRedirect : '/feed';
-        if (!code) { res.writeHead(302,{'Location':'/?error=nocode'}); return res.end(); }
+        if (!code) { res.writeHead(302,{'Location':'/login?error=nocode'}); return res.end(); }
+        // SECURITY: AppCode-Brute-Force-Schutz
+        const _ipA = String(req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '').split(',')[0].trim().slice(0, 64);
+        if (_ipA && !_codeBruteCheck(_ipA, code)) {
+            res.writeHead(429,{'Location':'/login?error=ratelimit'}); return res.end();
+        }
         let botData = await fetchBot('/data');
-        if (!botData) { res.writeHead(302,{'Location':'/?error=503'}); return res.end(); }
+        if (!botData) { res.writeHead(302,{'Location':'/login?error=503'}); return res.end(); }
         let found = Object.entries(botData.users||{}).find(([,u]) => u.appCode === code);
         if (!found) {
             _dataCache = null; _dataCacheTime = 0;
@@ -4882,13 +5937,12 @@ function submitPw(ev){
             botData = _dataCache;
             if (botData) found = Object.entries(botData.users||{}).find(([,u]) => u.appCode === code);
         }
-        if (!found) { res.writeHead(302,{'Location':'/?error=invalidcode'}); return res.end(); }
+        if (!found) { res.writeHead(302,{'Location':'/login?error=invalidcode'}); return res.end(); }
         const [uid, u] = found;
         // Bestehende Session wiederverwenden falls da, sonst neue.
         let sid = null;
-        for (const [s, sess] of sessions.entries()) {
-            if (sess.uid === String(uid)) { sid = s; break; }
-        }
+        // SECURITY: kein Session-Reuse — IMMER neuen sid generieren
+        sid = null;
         if (!sid) {
             sid = genSid();
             const validSubUid = u.subUid && botData.users?.[u.subUid] ? String(u.subUid) : null;
@@ -4903,7 +5957,7 @@ function submitPw(ev){
     if (path === '/logout') {
         const sid = getSid(req);
         if(sid) { sessions.delete(sid); saveSessions(); }
-        res.writeHead(302,{'Set-Cookie':'cbsid=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0','Location':'/'});
+        res.writeHead(302,{'Set-Cookie':'cbsid=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0','Location':'/login?logout=1'});
         return res.end();
     }
 
@@ -5054,6 +6108,7 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
         const baseUrl = (process.env.APP_URL || ('https://' + (req.headers.host || 'web-production-7981d.up.railway.app'))).replace(/\/$/, '');
         const token = crypto.randomBytes(24).toString('hex');
         emailConfirmTokens.set(token, { email, uid, exp: Date.now() + EMAIL_TOKEN_TTL });
+        savePendingEmailConfirms();
         const confirmUrl = baseUrl + '/auth/confirm-email?token=' + encodeURIComponent(token);
         const userName = u.spitzname || u.name || 'CreatorX User';
         const mailHtml = `<!DOCTYPE html><html><body style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#000;color:#fff;padding:0"><div style="max-width:560px;margin:0 auto;padding:32px 24px"><div style="text-align:center;margin-bottom:24px"><img src="${baseUrl}/cx-logo-256.png" width="80" height="80" style="border-radius:18px" alt="CreatorX"></div><h1 style="font-size:26px;font-weight:700;margin:0 0 12px;text-align:center;color:#fff">Hi ${userName.replace(/[<>]/g,'')}!</h1><p style="font-size:15px;color:#a8a39a;line-height:1.6;text-align:center;margin:0 0 28px">Bestaetige deine Email-Adresse <b style="color:#fff">${email}</b> fuer deinen CreatorX-Account.</p><div style="text-align:center;margin:32px 0"><a href="${confirmUrl}" style="display:inline-block;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px">\u2705 Email bestätigen</a></div><p style="font-size:12px;color:#605c54;text-align:center;margin-top:32px;border-top:1px solid #221f1a;padding-top:20px">Link 1h gueltig \u00b7 einmalig nutzbar</p></div></body></html>`;
@@ -5074,6 +6129,7 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
             try {
                 const token = crypto.randomBytes(24).toString('hex');
                 emailConfirmTokens.set(token, { email, uid: String(uid), exp: Date.now() + EMAIL_TOKEN_TTL });
+                savePendingEmailConfirms();
                 const confirmUrl = baseUrl + '/auth/confirm-email?token=' + encodeURIComponent(token);
                 const userName = u.spitzname || u.name || 'CreatorX User';
                 const mailHtml = `<!DOCTYPE html><html><body style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#000;color:#fff;padding:0"><div style="max-width:560px;margin:0 auto;padding:32px 24px"><h1 style="font-size:22px;font-weight:700;text-align:center;color:#fff">Hi ${userName.replace(/[<>]/g,'')}!</h1><p style="font-size:14px;color:#a8a39a;text-align:center;margin:16px 0">Bestaetige deine Email <b style="color:#fff">${email}</b>.</p><div style="text-align:center;margin:24px 0"><a href="${confirmUrl}" style="display:inline-block;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;padding:12px 28px;border-radius:10px;text-decoration:none;font-weight:700;font-size:14px">\u2705 Bestätigen</a></div></div></body></html>`;
@@ -5552,6 +6608,21 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
         lifetime.lastSnapshotLikes = totalLikes;
         try { fs.writeFileSync(LIFETIME_FILE, JSON.stringify(lifetime)); } catch(e) {}
 
+        // Online jetzt — unique UIDs mit aktiver Session in den letzten ONLINE_WINDOW_MS.
+        // Admins ausgenommen, damit Landing-Page-Zahl die echte Creator-Aktivität zeigt.
+        let onlineNow = 0;
+        try {
+            const now = Date.now();
+            const seenUids = new Set();
+            for (const s of sessions.values()) {
+                if (!s || !s.uid) continue;
+                if ((now - (s.lastSeen || 0)) >= ONLINE_WINDOW_MS) continue;
+                if (adminIds.includes(Number(s.uid))) continue;
+                seenUids.add(String(s.uid));
+            }
+            onlineNow = seenUids.size;
+        } catch(e) {}
+
         res.writeHead(200, {
             'Content-Type': 'application/json',
             'Access-Control-Allow-Origin': '*',
@@ -5563,8 +6634,23 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
             totalPosts: lifetime.posts,
             // Fallbacks für Landing-Page (zeigt was wenn lifetime noch 0)
             currentPosts,
-            currentLikes: totalLikes
+            currentLikes: totalLikes,
+            onlineNow
         }));
+    }
+
+    // Pinned-Reel-Redirect: leitet zur pinned URL des angegebenen User weiter.
+    // Nur whitelist-validierte Instagram-URLs erlaubt. Wird vom Story-Modal genutzt.
+    if (path === '/pinned-redirect' && req.method === 'GET') {
+        if (!session) return redirect('/login');
+        const tUid = String(query.uid || '').trim();
+        if (!tUid) { res.writeHead(400); return res.end('missing uid'); }
+        const pl = ladePinnedLink(tUid);
+        if (!pl) { res.writeHead(404); return res.end('no pinned link'); }
+        const sUrl = safeUrl(pl);
+        if (!sUrl) { res.writeHead(400); return res.end('invalid pinned url'); }
+        res.writeHead(302, { Location: sUrl, 'Cache-Control': 'no-store' });
+        return res.end();
     }
 
     // Instagram-Thumbnail-Proxy: lädt das Bild server-seitig OHNE Referer und
@@ -5575,8 +6661,12 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
         if (!targetRaw) { res.writeHead(400); return res.end('missing u'); }
         let target;
         try { target = new URL(targetRaw); } catch(e) { res.writeHead(400); return res.end('bad url'); }
-        // Whitelist: nur Instagram/Facebook CDN-Hosts erlauben.
-        const okHost = /(\.cdninstagram\.com|\.fbcdn\.net|\.facebook\.com|instagram\.com)$/i.test(target.hostname);
+        // Whitelist: nur Instagram/Facebook CDN-Hosts erlauben. Führender Punkt VOR jedem Hostname-
+        // Suffix WICHTIG — sonst matched 'attacker-instagram.com' (SSRF). Apex 'instagram.com' / 'facebook.com'
+        // separat erlauben via ^pattern.
+        const h = target.hostname.toLowerCase();
+        const okHost = /(\.cdninstagram\.com|\.fbcdn\.net|\.facebook\.com|\.instagram\.com)$/.test(h)
+            || h === 'instagram.com' || h === 'facebook.com';
         if (!okHost) { res.writeHead(400); return res.end('host not allowed'); }
         const lib = target.protocol === 'https:' ? https : http;
         const upstreamReq = lib.request({
@@ -5630,7 +6720,53 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
     // ── PWA MANIFEST ──
     if (path === '/manifest.json') {
         res.writeHead(200,{'Content-Type':'application/manifest+json','Cache-Control':'no-store','Access-Control-Allow-Origin':'*'});
-        return res.end(JSON.stringify({name:'CreatorX',short_name:'CreatorX',description:'Die kreative Community für Instagram Creators',start_url:'/',scope:'/',display:'standalone',background_color:'#000000',theme_color:'#000000',orientation:'portrait',categories:['social','lifestyle'],prefer_related_applications:false,screenshots:[],icons:[{src:'/icon-192.png?v=26',sizes:'192x192',type:'image/png',purpose:'any'},{src:'/icon-512.png?v=26',sizes:'512x512',type:'image/png',purpose:'any maskable'}]}));
+        return res.end(JSON.stringify({
+            id: '/',
+            name: 'CreatorX',
+            short_name: 'CreatorX',
+            description: 'CreatorX — die kreative Community für Instagram Creators. Teile deine Reels, like andere Posts, sammle XP und wachse mit echter Community-Power.',
+            start_url: '/launch',
+            scope: '/',
+            display: 'standalone',
+            display_override: ['standalone', 'minimal-ui'],
+            background_color: '#000000',
+            theme_color: '#000000',
+            orientation: 'portrait',
+            lang: 'de',
+            dir: 'ltr',
+            categories: ['social', 'lifestyle'],
+            prefer_related_applications: false,
+            screenshots: [],
+            icons: [
+                { src: '/icon-192.png?v=26', sizes: '192x192', type: 'image/png', purpose: 'any' },
+                { src: '/icon-512.png?v=26', sizes: '512x512', type: 'image/png', purpose: 'any' },
+                { src: '/icon-512.png?v=26', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
+            ],
+            shortcuts: [
+                { name: 'Feed', short_name: 'Feed', url: '/feed', icons: [{ src: '/icon-192.png?v=26', sizes: '192x192' }] },
+                { name: 'Profil', short_name: 'Profil', url: '/profil', icons: [{ src: '/icon-192.png?v=26', sizes: '192x192' }] }
+            ]
+        }));
+    }
+
+    // Digital Asset Links — Pflicht für TWA (Trusted Web Activity).
+    // Verifiziert dass die App `com.creatorx.app` zur Domain creatorboostx.de gehört.
+    // SHA256-Fingerprint kommt vom Signing-Key (kann aus dem Bubblewrap-Build oder Play Console ausgelesen werden).
+    if (path === '/.well-known/assetlinks.json') {
+        const _twaFingerprint = process.env.TWA_SHA256_FINGERPRINT || '';
+        const _statements = [];
+        if (_twaFingerprint) {
+            _statements.push({
+                relation: ['delegate_permission/common.handle_all_urls'],
+                target: {
+                    namespace: 'android_app',
+                    package_name: 'com.creatorx.app',
+                    sha256_cert_fingerprints: [_twaFingerprint]
+                }
+            });
+        }
+        res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=600', 'Access-Control-Allow-Origin': '*' });
+        return res.end(JSON.stringify(_statements));
     }
 
     if (path === '/api/vapid-public-key') {
@@ -5650,6 +6786,28 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
         try {
             const buf = fs.readFileSync(file);
             res.writeHead(200, {'Content-Type':'image/png','Cache-Control':'public, max-age=86400, immutable'});
+            return res.end(buf);
+        } catch(e) { res.writeHead(404); return res.end('not found'); }
+    }
+    if (path === '/community-banner.png') {
+        try {
+            const buf = fs.readFileSync(__dirname + '/community-banner.png');
+            res.writeHead(200, {'Content-Type':'image/png','Cache-Control':'public, max-age=86400, immutable'});
+            return res.end(buf);
+        } catch(e) { res.writeHead(404); return res.end('not found'); }
+    }
+    if (path === '/cx-icon.png') {
+        try {
+            const buf = fs.readFileSync(__dirname + '/cx-icon.png');
+            res.writeHead(200, {'Content-Type':'image/png','Cache-Control':'public, max-age=86400, immutable'});
+            return res.end(buf);
+        } catch(e) { res.writeHead(404); return res.end('not found'); }
+    }
+    // Landing-Screens (App-Screenshots für Slider) — Whitelist gegen Path-Traversal
+    if (path.startsWith('/landing-screens/') && /^\/landing-screens\/[0-9]-[a-z]+\.jpg$/.test(path)) {
+        try {
+            const buf = fs.readFileSync(__dirname + path);
+            res.writeHead(200, {'Content-Type':'image/jpeg','Cache-Control':'public, max-age=86400, immutable'});
             return res.end(buf);
         } catch(e) { res.writeHead(404); return res.end('not found'); }
     }
@@ -5680,6 +6838,8 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
             session.profilePicData = imageData;
             saveSessions();
             try { await fs.promises.writeFile(DATA_DIR + '/bild_' + getMyUid(session) + '_profilepic.txt', imageData); } catch(e) { console.error('profilepic write failed:', e.message); }
+            // Cache-Invalidation: damit /appbild/UID/profilepic sofort die neue Version zeigt
+            _appbildBufCache.delete(getMyUid(session) + '/profilepic');
             checkProfileCompletion(getMyUid(session), session);
             return json({ok:true});
         } catch(e) { return json({ok:false, error:e.message},500); }
@@ -5707,6 +6867,7 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
             session.bannerData = imageData;
             saveSessions();
             try { await fs.promises.writeFile(DATA_DIR + '/bild_' + getMyUid(session) + '_banner.txt', imageData); } catch(e) { console.error('banner write failed:', e.message); }
+            _appbildBufCache.delete(getMyUid(session) + '/banner');
             checkProfileCompletion(getMyUid(session), session);
             return json({ok:true});
         } catch(e) { return json({ok:false, error:e.message},500); }
@@ -5780,6 +6941,11 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
         const parts = path.replace('/api/download-project-doc/','').split('/');
         const docUid = parts[0], docProjId = parts[1];
         if (!docUid || !docProjId) return text('Nicht gefunden', 404);
+        // Path-Traversal-Schutz: uid + projId müssen alphanumeric (+ underscore/dash) sein.
+        // Sonst kann '../../etc/whatever' arbitrary files vom DATA_DIR lesen.
+        if (!/^[a-zA-Z0-9_-]+$/.test(docUid) || !/^[a-zA-Z0-9_-]+$/.test(docProjId)) {
+            return text('Nicht gefunden', 404);
+        }
         const docBase64 = ladeProjectDoc(docUid, docProjId);
         if (!docBase64) return text('Nicht gefunden', 404);
         const botData = await fetchBot('/data');
@@ -5979,14 +7145,21 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
         try { body = JSON.parse(await readBody(req, 100000)); } catch(e) { return json({error:'Ungültig'},400); }
         const { chatKey, timestamp, newText } = body;
         if (!chatKey || !timestamp || typeof newText !== 'string') return json({error:'Ungültig'}, 400);
+        // SECURITY (IDOR-Fix): chatKey muss myUid enthalten — sonst kann Angreifer mit fremder
+        // chatKey + eigener uid Messages von anderen Usern editieren.
+        const [_a, _b] = String(chatKey).split('_');
+        if (_a !== String(myUid) && _b !== String(myUid)) return json({error:'Kein Zugriff'}, 403);
         const result = await postBot('/edit-message-api', { uid: myUid, chatKey, timestamp, newText });
         return json(result || {ok:false});
     }
 
     if (path === '/api/mark-messages-read' && req.method === 'POST') {
         if (!session) return json({error:'Nicht eingeloggt'}, 401);
-        const myUid = getMyUid(session); // FIX: war undefined
+        const myUid = getMyUid(session);
         const body = await parseBody(req);
+        // SECURITY (IDOR): chatKey muss myUid enthalten
+        const [_ka, _kb] = String(body.chatKey || '').split('_');
+        if (_ka !== String(myUid) && _kb !== String(myUid)) return json({error:'Kein Zugriff'}, 403);
         await postBot('/mark-messages-read', { uid: myUid, chatKey: body.chatKey });
         return json({ok: true});
     }
@@ -6736,7 +7909,15 @@ p{line-height:1.65;color:var(--muted)}
 
 
     // ── AUTH REQUIRED ──
-    if (!session) return redirect('/');
+    // Public Pages, die OHNE Session erreichbar sein müssen (Legal-Pflicht, sonst
+    // landet Google-Play-Reviewer beim Aufruf von /datenschutz auf /).
+    // Diese 5 Routes sind hier im File weiter unten definiert (~Z. 13900+), würden
+    // also von der Auth-Gate gekapert ohne die Whitelist.
+    if (!session) {
+        if (!/^\/(datenschutz|privacy|impressum|agb|terms)$/.test(path)) {
+            return redirect('/login');
+        }
+    }
 
     const d = await fetchBot('/data');
     if (!d) {
@@ -6768,6 +7949,43 @@ p{line-height:1.65;color:var(--muted)}
         pushSubs[hash] = { uid: String(session.uid), sub };
         savePushSubs();
         return json({ok:true});
+    }
+
+    // Push-Subscription für aktuellen Parent-User aufheben (alle Geräte dieses Users).
+    // Falls Client den endpoint kennt → nur diese eine Sub löschen. Sonst alle.
+    if (path === '/api/push-unsubscribe' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        const body = await parseBody(req).catch(()=>({}));
+        const endpoint = body && body.endpoint;
+        if (endpoint) {
+            const hash = crypto.createHash('sha256').update(endpoint).digest('hex').slice(0,16);
+            if (pushSubs[hash] && String(pushSubs[hash].uid) === String(session.uid)) delete pushSubs[hash];
+        } else {
+            for (const [k, v] of Object.entries(pushSubs)) {
+                if (String(v.uid) === String(session.uid)) delete pushSubs[k];
+            }
+        }
+        savePushSubs();
+        return json({ok:true});
+    }
+
+    // Alle anderen Sessions dieses Users abmelden (außer aktuelle).
+    if (path === '/api/logout-all-others' && req.method === 'POST') {
+        if (!session) {
+            res.writeHead(302, { 'Location': '/login' });
+            return res.end();
+        }
+        const currentSid = getSid(req);
+        let killed = 0;
+        for (const [sid, s] of sessions) {
+            if (s && String(s.uid) === String(session.uid) && sid !== currentSid) {
+                sessions.delete(sid);
+                killed++;
+            }
+        }
+        if (killed) saveSessions();
+        res.writeHead(302, { 'Location': '/einstellungen/sicherheit?cleared=' + killed });
+        return res.end();
     }
 
     // Server-to-server push (vom main bot getriggert) — komplett zusätzlich, ändert nichts Bestehendes
@@ -6889,6 +8107,7 @@ p{line-height:1.65;color:var(--muted)}
                 try {
                     const token = crypto.randomBytes(24).toString('hex');
                     emailConfirmTokens.set(token, { email: updateData.email, uid: String(myUid), exp: Date.now() + EMAIL_TOKEN_TTL });
+                    savePendingEmailConfirms();
                     const baseUrl = (process.env.APP_URL || ('https://' + (req.headers.host || 'web-production-7981d.up.railway.app'))).replace(/\/$/, '');
                     const confirmUrl = baseUrl + '/auth/confirm-email?token=' + encodeURIComponent(token);
                     const userName = _u.spitzname || _u.name || 'CreatorX User';
@@ -7058,6 +8277,18 @@ p{line-height:1.65;color:var(--muted)}
         return json({ok:!!result?.ok, alreadyDone: result?.alreadyDone||false, error: result?.error || null});
     }
 
+    // Admin-Check für alle /api/admin/*-Routen unten — muss BEVOR die Routen
+    // referenziert werden, sonst Temporal-Dead-Zone-Error → HTTP 500.
+    // (Es gibt eine zweite Definition weiter unten — die ist redundant aber
+    //  überschreibt diese nicht da const block-scoped ist; deshalb hier _early.)
+    const _dashIsAdmin = (() => {
+        const parentUid = String(session?.uid || '');
+        return adminIds.includes(Number(myUid))
+            || adminIds.includes(Number(parentUid))
+            || String(d.users?.[myUid]?.role||'').includes('Admin')
+            || String(d.users?.[parentUid]?.role||'').includes('Admin');
+    })();
+
     // ── Report user (Schein-Engagement, Spam, etc.) ──
     if (path === '/api/report-user' && req.method === 'POST') {
         if (!session) return json({ok:false, error:'Nicht eingeloggt'},401);
@@ -7066,6 +8297,74 @@ p{line-height:1.65;color:var(--muted)}
         if (!targetUid || targetUid === myUid) return json({ok:false, error:'Ungültig'},400);
         const result = await postBot('/report-user-api', { reporterUid: myUid, targetUid, reason: String(body.reason||''), context: String(body.context||'') });
         return json(result || {ok:false, error:'Mainbot offline'});
+    }
+
+    // ── BLOCK / UNBLOCK / LIST BLOCKED USERS (Google-Play UGC-Pflicht) ──
+    // Persistenz im Mainbot (Bridge), damit Block über Sub-Accounts hinweg + Server-Side
+    // gefiltert wird. Bei Mainbot-Offline: best-effort, Fail mit Hinweis.
+    if (path === '/api/block-user' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        const body = await parseBody(req);
+        const targetUid = String(body.targetUid||'').trim();
+        if (!targetUid || targetUid === myUid) return json({ok:false, error:'Ungültige Ziel-ID'}, 400);
+        const result = await postBot('/block-user-api', { blockerUid: myUid, targetUid });
+        return json(result || {ok:false, error:'Mainbot offline — Block konnte nicht gespeichert werden, bitte später nochmal'});
+    }
+
+    if (path === '/api/unblock-user' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        const body = await parseBody(req);
+        const targetUid = String(body.targetUid||'').trim();
+        if (!targetUid) return json({ok:false, error:'Ungültige Ziel-ID'}, 400);
+        const result = await postBot('/unblock-user-api', { blockerUid: myUid, targetUid });
+        return json(result || {ok:false, error:'Mainbot offline'});
+    }
+
+    if (path === '/api/blocked-users' && req.method === 'GET') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        // Aus d.users[myUid].blockedUsers lesen — wird vom Mainbot beim Block geschrieben.
+        const blocked = Array.isArray(d.users?.[myUid]?.blockedUsers) ? d.users[myUid].blockedUsers.map(String) : [];
+        return json({ok:true, blocked});
+    }
+
+    // ── Admin: User als Sub-Account verknüpfen (z.B. Elitedrop → mein 3. Sub) ──
+    if (path === '/api/admin/link-as-sub' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
+        const body = await parseBody(req);
+        const target_uid = String(body.target_uid||'').trim();
+        if (!target_uid) return json({ok:false, error:'target_uid erforderlich'},400);
+        const r = await postBot('/admin-link-as-sub-api', { parent_uid: String(session.uid), target_uid });
+        return json(r || {ok:false, error:'Mainbot offline'});
+    }
+
+    // ── Sync-Health (Phase 2 Smart-Mirror) ──
+    if (path === '/api/admin/sync-health' && req.method === 'GET') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
+        const now = Date.now();
+        const todayStr = new Date().toDateString();
+        const writesToday = _writeLog.filter(w => new Date(w.ts).toDateString() === todayStr).length;
+        const writesFailed24h = _writeLog.filter(w => !w.success && (now - w.ts) < 86400000).length;
+        const successRate = _writeLog.length > 0
+            ? Math.round((_writeLog.filter(w => w.success).length / _writeLog.length) * 100)
+            : 100;
+        return json({
+            ok: true,
+            cacheAgeSec: _dataCacheTime ? Math.round((now - _dataCacheTime) / 1000) : null,
+            mainbotLastSuccessAt: _lastMainbotSuccessAt,
+            mainbotConsecutiveFails: _mainbotConsecutiveFails,
+            mainbotDegraded: _mainbotConsecutiveFails >= 3,
+            mainbotLastCallAt: _lastMainbotCallAt,
+            writesTotal: _writeLog.length,
+            writesToday,
+            writesFailed24h,
+            successRate,
+            appDbLastSaveOk: _appDbLastSaveOk,
+            appDbLastRefreshOk: _appDbLastRefreshOk,
+            appDbRefreshFailures: _appDbRefreshFailures,
+            lastWrites: _writeLog.slice(-30).reverse(),
+        });
     }
 
     // ── Admin Engagement-Log (pinned + collab + reports) ──
@@ -7083,6 +8382,44 @@ p{line-height:1.65;color:var(--muted)}
         return json(result || {ok:false, error:'Mainbot offline'});
     }
 
+    // Aktuell eingeloggte User (in-memory sessions). Aggregiert nach UID
+    // (ein User kann mehrere Tabs/Geräte = mehrere Sessions haben).
+    if (path === '/api/admin/online-users' && req.method === 'GET') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
+        const now = Date.now();
+        const byUid = new Map();
+        for (const s of sessions.values()) {
+            if (!s || !s.uid) continue;
+            const uid = String(s.uid);
+            const last = s.lastSeen || 0;
+            const ageMs = last ? (now - last) : Infinity;
+            const cur = byUid.get(uid);
+            if (!cur || last > cur.lastSeen) {
+                byUid.set(uid, {
+                    uid,
+                    name: s.name || '–',
+                    username: s.username || null,
+                    loginVia: s.loginVia || 'unknown',
+                    activeUid: s.activeUid ? String(s.activeUid) : uid,
+                    isSubActive: s.activeUid && String(s.activeUid) !== uid,
+                    sessionsCount: (cur ? cur.sessionsCount : 0) + 1,
+                    lastSeen: last,
+                    ageSec: Math.floor(ageMs / 1000),
+                    sessionStart: s.createdAt || null,
+                    online: ageMs < ONLINE_WINDOW_MS,
+                });
+            } else {
+                cur.sessionsCount += 1;
+            }
+        }
+        const list = Array.from(byUid.values())
+            .sort((a, b) => (b.lastSeen || 0) - (a.lastSeen || 0));
+        const onlineNow = list.filter(u => u.online).length;
+        const totalSessions = sessions.size;
+        return json({ ok: true, list, onlineNow, totalSessions, windowSec: Math.floor(ONLINE_WINDOW_MS / 1000) });
+    }
+
     if (path === '/api/admin/funnel-debug' && req.method === 'GET') {
         if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
         if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
@@ -7098,11 +8435,166 @@ p{line-height:1.65;color:var(--muted)}
         return json(result || {ok:false, error:'Mainbot offline'});
     }
 
+    // Admin: Gewinnspiel-Gewinner manuell eintragen (z.B. wenn Cron-Eintrag fehlt)
+    if (path === '/api/admin/raffle-winner' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
+        const body = await parseBody(req);
+        const uid = String(body.uid || '').trim();
+        const prize = String(body.prize || '').trim();
+        const prizeEmoji = String(body.prizeEmoji || '🎁').trim();
+        if (!uid || !prize) return json({ok:false, error:'uid und prize sind Pflicht'}, 400);
+        const bd = await fetchBot('/data');
+        const user = bd?.users?.[uid];
+        if (!user) return json({ok:false, error:'User nicht gefunden'}, 404);
+        const ts = body.timestamp ? Number(body.timestamp) : Date.now();
+        const weekKey = new Date(ts).toISOString().slice(0,10);
+        const xp = (bd.weeklyXP||{})[uid] || user.xpThisWeek || user.weeklyXp || 0;
+        const entry = {
+            uid,
+            name: user.spitzname || user.name || 'Creator',
+            handle: user.ig_handle || user.username || '',
+            rang: user.rang || '',
+            prize, prizeEmoji,
+            xp, participants: 0,
+            timestamp: ts, week: weekKey,
+            manual: true
+        };
+        const hist = loadRaffleHistory();
+        hist.lastWinner = entry;
+        hist.history = [entry, ...(hist.history || [])].slice(0, 12);
+        saveRaffleHistory(hist);
+        return json({ok:true, entry});
+    }
+
+    // Admin: letzten Gewinnspiel-Eintrag löschen
+    if (path === '/api/admin/raffle-winner-undo' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
+        const hist = loadRaffleHistory();
+        if (!hist.history || !hist.history.length) return json({ok:false, error:'Keine Historie'}, 400);
+        hist.history.shift();
+        hist.lastWinner = hist.history[0] || null;
+        saveRaffleHistory(hist);
+        return json({ok:true});
+    }
+
     if (path === '/api/admin/ban' && req.method === 'POST') {
         if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
         if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
         const body = await parseBody(req);
         const r = await postBot(body.unban ? '/unban-user-api' : '/ban-user-api', { uid: String(body.uid||'') });
+        return json(r || {ok:false, error:'Mainbot offline'});
+    }
+
+    if (path === '/api/admin/user-detail' && req.method === 'GET') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
+        const targetUid = String(query.uid || '');
+        if (!targetUid) return json({ok:false, error:'uid fehlt'}, 400);
+        const result = await fetchBotRaw('/admin-user-detail-api?uid=' + encodeURIComponent(targetUid));
+        return json(result || {ok:false, error:'Mainbot offline'});
+    }
+
+    // Admin Mission-Report: Compliance-Auswertung (M1/M2/M3 per Tag + Aktionen)
+    if (path === '/api/admin/mission-report' && req.method === 'GET') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
+        const date = String(query.date || 'yesterday');
+        const result = await fetchBotRaw('/admin-mission-report-api?date=' + encodeURIComponent(date));
+        return json(result || {ok:false, error:'Mainbot offline'});
+    }
+    if (path === '/api/admin/suspend-posting' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
+        const body = await parseBody(req);
+        const r = await postBot('/admin-suspend-posting-api', {
+            uid: String(body.uid||''), days: Number(body.days||0), reason: String(body.reason||''),
+        });
+        return json(r || {ok:false, error:'Mainbot offline'});
+    }
+    // ── Helper-Bot Fallback (User-Frage an Admin forwarden) ──
+    // Helper-Chat History (persistent, server-side)
+    if (path === '/api/helper-history' && req.method === 'GET') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        const r = await fetchBotRaw('/helper-chat-history-api?uid=' + encodeURIComponent(session.uid));
+        return json(r || {ok:true, messages:[]});
+    }
+    if (path === '/api/helper-append' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        const body = await parseBody(req);
+        const r = await postBot('/helper-chat-append-api', { uid: String(session.uid), role: String(body.role||''), text: String(body.text||'') });
+        return json(r || {ok:false});
+    }
+    if (path === '/api/helper-ask' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        const body = await parseBody(req);
+        const question = String(body.question || '').trim();
+        if (!question) return json({ok:false, error:'Frage fehlt'}, 400);
+        const r = await postBot('/helper-question-api', { fromUid: String(session.uid), question });
+        return json(r || {ok:false, error:'Mainbot offline'});
+    }
+    if (path === '/api/helper-ai' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        if (!GEMINI_API_KEY) return json({ok:false, fallback:true, error:'AI nicht konfiguriert'});
+        const body = await parseBody(req);
+        const question = String(body.question || '').trim();
+        if (!question) return json({ok:false, error:'Frage fehlt'}, 400);
+        if (question.length > 800) return json({ok:false, error:'Frage zu lang (max 800 Zeichen)'}, 400);
+        try {
+            const hist = await fetchBotRaw('/helper-chat-history-api?uid=' + encodeURIComponent(session.uid));
+            const answer = await helperAiAnswer(question, (hist && hist.messages) || []);
+            return json({ok:true, answer});
+        } catch (e) {
+            console.error('[AI] helper-ai failed:', e.message);
+            return json({ok:false, fallback:true, error: e.message});
+        }
+    }
+    if (path === '/api/admin/helper-questions' && req.method === 'GET') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
+        const status = String(query.status || 'open');
+        const r = await fetchBotRaw('/admin-helper-questions-api?status=' + encodeURIComponent(status));
+        return json(r || {ok:false, error:'Mainbot offline'});
+    }
+    if (path === '/api/admin/helper-answer' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
+        const body = await parseBody(req);
+        const r = await postBot('/admin-helper-answer-api', { qId: String(body.qId||''), answer: String(body.answer||'') });
+        return json(r || {ok:false, error:'Mainbot offline'});
+    }
+    if (path === '/api/admin/schedule-event' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
+        const body = await parseBody(req);
+        const r = await postBot('/admin-schedule-event-api', {
+            type: String(body.type||''),
+            amount: Number(body.amount||0),
+            durationMs: Number(body.durationMs||0),
+            startAt: Number(body.startAt||0),
+            label: String(body.label||''),
+        });
+        return json(r || {ok:false, error:'Mainbot offline'});
+    }
+
+    if (path === '/api/admin/warn-user' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
+        const body = await parseBody(req);
+        const r = await postBot('/admin-warn-user-api', { uid: String(body.uid||''), reason: String(body.reason||'') });
+        return json(r || {ok:false, error:'Mainbot offline'});
+    }
+
+    if (path === '/api/admin/report-action' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
+        const body = await parseBody(req);
+        const r = await postBot('/admin-report-action-api', {
+            reportId: String(body.reportId||''),
+            action: String(body.action||''),
+            adminUid: String(myUid||''),
+        });
         return json(r || {ok:false, error:'Mainbot offline'});
     }
 
@@ -7216,11 +8708,40 @@ p{line-height:1.65;color:var(--muted)}
             return true;
         });
 
-        const myFollowing = (d.users[myUid]?.following||[]).map(String);
-        const topUsers = Object.entries(d.users||{})
-            .filter(([id,u])=>!adminIds.includes(Number(id))&&isAppVisible(u)&&(myFollowing.includes(String(id))||String(id)===String(myUid)))
-            .sort((a,b)=>(b[1].xp||0)-(a[1].xp||0))
-            .slice(0,10);
+        // Stories: nur User mit Pinned Reel anzeigen (Insta-Style).
+        // Eigene Familie (Hauptaccount + Sub-Accounts) wird komplett ausgeblendet.
+        const myEngagedOwners = (d.pinnedEngages?.[String(myUid)] || []).map(String);
+        const _myFamilyRoot = String(session?.uid || myUid);
+        const _isFamily = (id, u) => {
+            if (String(id) === _myFamilyRoot) return true;
+            if (u && String(u.parent_uid||'') === _myFamilyRoot) return true;
+            return false;
+        };
+        const pinnedStories = Object.entries(d.users||{})
+            .filter(([id,u])=>!_isFamily(id,u)&&!adminIds.includes(Number(id))&&isAppVisible(u))
+            .map(([id,u])=>({id, u, pinnedUrl: ladePinnedLink(id)}))
+            .filter(x => !!x.pinnedUrl)
+            .map(x => ({
+                ...x,
+                engaged: myEngagedOwners.includes(String(x.id))
+            }))
+            .sort((a,b)=>{
+                if (a.engaged !== b.engaged) return a.engaged ? 1 : -1;
+                return (b.u.xp||0)-(a.u.xp||0);
+            })
+            .slice(0,20);
+        // JSON-Daten für client-side Modal — sanitized gegen </script>-Injection
+        const _pinnedStoriesJson = JSON.stringify(pinnedStories.map(x => {
+            const sh = (x.pinnedUrl||'').match(/instagram\.com\/(?:reel|p|tv)\/([A-Za-z0-9_-]+)/);
+            return {
+                uid: x.id,
+                name: x.u.spitzname || x.u.name || 'User',
+                avatar: ladeBild(x.id,'profilepic') ? '/appbild/'+x.id+'/profilepic' : '',
+                thumb: sh ? '/insta-thumb?u='+encodeURIComponent(x.pinnedUrl) : '',
+                engaged: x.engaged,
+                isOwn: String(x.id) === String(myUid)
+            };
+        })).replace(/<\/(script)/gi, '<\\/$1');
 
         // Latest newsletter for bot story-bubble
         const _latestNews = (d.newsletter||[]).slice().sort((a,b)=>(b.timestamp||0)-(a.timestamp||0))[0];
@@ -7238,20 +8759,98 @@ p{line-height:1.65;color:var(--muted)}
 
         const storiesHtml = `<div class="stories" data-tour="stories">
   ${_botBubbleHtml}
-  ${topUsers.map(([id,u])=>{
+  ${pinnedStories.map(item => {
+    const id = item.id, u = item.u, engaged = item.engaged;
     const insta = u.instagram;
-    const hasLink = Object.values(d.links||{}).some(l=>l.user_id===Number(id)&&new Date(l.timestamp).toDateString()===today);
-    return `<a href="/profil/${id}" class="story-item">
-      <div class="story-ring ${hasLink?'':'seen'}">
+    const ringClass = engaged ? 'pinned-engaged' : 'pinned-glow';
+    const _hasLocalPic = !!ladeBild(id, 'profilepic');
+    const _picSrc = _hasLocalPic ? '/appbild/'+id+'/profilepic' : '';
+    return `<button type="button" class="story-item" onclick="openPinnedStory('${id}')" style="background:none;border:none;padding:0;cursor:pointer;font-family:inherit">
+      <div class="story-ring ${ringClass}">
         ${crownOverlay(id, 'sm')}
-        <div style="width:58px;height:58px;border-radius:50%;overflow:hidden;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:#fff;border:2px solid var(--bg)">
-          ${(ladeBild(id,"profilepic")||insta)?`<img src="${ladeBild(id,"profilepic")?"/appbild/"+id+"/profilepic":"https://unavatar.io/instagram/"+insta}" style="width:100%;height:100%;object-fit:cover" alt="">`:`<span>${(u.name||"?")[0]}</span>`}
+        <div style="position:relative;width:58px;height:58px;border-radius:50%;overflow:hidden;background:var(--avatar-fallback-bg);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:var(--avatar-fallback-color);border:2px solid var(--bg)">
+          <span>${htmlEsc((u.name||u.spitzname||"?").slice(0,1))}</span>
+          ${_picSrc ? `<img src="${_picSrc}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="" onerror="this.remove()">` : ''}
         </div>
       </div>
-      <div class="story-name">${u.spitzname||u.name||'?'}</div>
-    </a>`;
+      <div class="story-name">${htmlEsc(u.spitzname||u.name||'?')}</div>
+    </button>`;
   }).join('')}
 </div>
+<div id="pinned-story-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);z-index:9999;align-items:flex-end;justify-content:center" onclick="if(event.target===this)closePinnedStory()">
+  <div id="pinned-story-sheet" style="background:var(--bg2);width:100%;max-width:480px;border-radius:24px 24px 0 0;padding:18px 16px 28px;max-height:88vh;overflow-y:auto"></div>
+</div>
+<script>
+window._pinnedStoriesData = ${_pinnedStoriesJson};
+window.openPinnedStory = function(uid){
+  const s = (window._pinnedStoriesData||[]).find(x=>String(x.uid)===String(uid));
+  if(!s)return;
+  const m = document.getElementById('pinned-story-modal');
+  const sh = document.getElementById('pinned-story-sheet');
+  if(!m||!sh)return;
+  const _esc = t=>String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  sh.innerHTML = '<div style="width:36px;height:4px;background:#666;border-radius:4px;margin:0 auto 14px"></div>'+
+    '<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">'+
+      '<a href="/profil/'+_esc(s.uid)+'" style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#a78bfa,#7c3aed);overflow:hidden;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:18px;flex-shrink:0;text-decoration:none">'+
+        (s.avatar?'<img src="'+_esc(s.avatar)+'" style="width:100%;height:100%;object-fit:cover" alt="">':_esc((s.name||'?').slice(0,1)))+
+      '</a>'+
+      '<div style="flex:1;min-width:0">'+
+        '<a href="/profil/'+_esc(s.uid)+'" style="font-size:15px;font-weight:700;color:var(--text);text-decoration:none;display:block">'+_esc(s.name)+'</a>'+
+        '<div style="font-size:11px;color:#ec4899;text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-top:1px">📌 Pinned Reel'+(s.engaged?' · Engagiert ✓':'')+'</div>'+
+      '</div>'+
+      '<button onclick="closePinnedStory()" style="background:var(--bg4);border:none;width:32px;height:32px;border-radius:50%;color:var(--text);font-size:18px;cursor:pointer;flex-shrink:0">×</button>'+
+    '</div>'+
+    (s.thumb ?
+      '<a href="javascript:void(0)" onclick="onPinVisitStory(\\''+_esc(s.uid)+'\\')" style="display:block;position:relative;width:100%;padding-top:62%;overflow:hidden;background:#000;border-radius:14px;margin-bottom:12px;text-decoration:none">'+
+        '<img src="'+_esc(s.thumb)+'" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.style.display=\\'none\\'" alt="">'+
+        '<div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.05),rgba(0,0,0,.4));pointer-events:none"></div>'+
+        '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center"><div style="width:54px;height:54px;border-radius:50%;background:rgba(255,255,255,.92);display:flex;align-items:center;justify-content:center"><div style="width:0;height:0;border-style:solid;border-width:11px 0 11px 20px;border-color:transparent transparent transparent #000;margin-left:4px"></div></div></div>'+
+      '</a>'
+    : '<div style="margin-bottom:12px;padding:30px;background:linear-gradient(135deg,#1a1a2e,#16213e);border-radius:14px;text-align:center;font-size:14px;color:rgba(255,255,255,.6)">📸 Instagram Reel</div>')+
+    (s.isOwn ?
+      '<div style="padding:12px 14px;background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.25);border-radius:12px;font-size:13px;color:var(--muted);line-height:1.5">👤 Das ist dein eigener Pinned Reel. Andere User können ihn engagen und du bekommst Reichweite.</div>'
+    :
+      '<div style="display:flex;gap:8px;margin-bottom:10px">'+
+        '<a href="javascript:void(0)" onclick="onPinVisitStory(\\''+_esc(s.uid)+'\\')" id="pin-visit-link-story" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:11px 12px;background:linear-gradient(135deg,#ec4899,#a855f7);color:#fff;border-radius:10px;font-size:13px;font-weight:700;text-decoration:none">📸 Auf Instagram öffnen</a>'+
+        (s.engaged ?
+          '<button disabled style="flex:1;padding:11px 12px;border-radius:10px;border:1px solid #22c55e;background:rgba(34,197,94,.12);color:#22c55e;font-size:13px;font-weight:700;font-family:inherit;cursor:default">✅ Engagiert</button>'
+        :
+          '<button onclick="pinnedEngageClick(\\''+_esc(s.uid)+'\\',this)" id="pin-engage-btn-story" disabled data-locked="1" style="flex:1;padding:11px 12px;border-radius:10px;border:1px solid rgba(255,107,107,.35);background:rgba(255,107,107,.10);color:#ff6b6b;font-size:13px;font-weight:700;font-family:inherit;cursor:not-allowed;opacity:0.55">🔒 Erst Insta öffnen</button>'
+        )+
+      '</div>'+
+      '<div style="padding:12px 14px;background:linear-gradient(135deg,rgba(34,197,94,.10),rgba(167,139,250,.06));border:1px solid rgba(34,197,94,.25);border-radius:12px;font-size:12.5px;color:var(--text);line-height:1.55">'+
+        '<div style="font-weight:700;color:#22c55e;margin-bottom:4px">💎 +1 Diamant für Engagement</div>'+
+        '<div style="color:var(--muted)">Auf Instagram <b>LIKEN + KOMMENTIEREN + TEILEN + SPEICHERN</b> → komme zurück → tippe „Engagiert" → +1 💎 für dich.</div>'+
+      '</div>'
+    );
+  m.style.display = 'flex';
+};
+window.closePinnedStory = function(){
+  const m = document.getElementById('pinned-story-modal');
+  if(m)m.style.display = 'none';
+};
+window.onPinVisitStory = function(uid){
+  // Mark visit-timestamp, then open Instagram URL in new tab
+  window['_pvisit_'+uid] = Date.now();
+  const s = (window._pinnedStoriesData||[]).find(x=>String(x.uid)===String(uid));
+  if(!s)return;
+  // Get pinned URL from server-rendered data — already in JSON? No, we stripped it for privacy.
+  // Need to fetch it. Or include the URL in the JSON.
+  // For now: open via window.open with a server-side redirect endpoint
+  window.open('/pinned-redirect?uid='+encodeURIComponent(uid), '_blank', 'noopener,noreferrer');
+  // Enable Engagiert-Button after 1.5s
+  setTimeout(()=>{
+    const b = document.getElementById('pin-engage-btn-story');
+    if(b && !b.dataset.engaged){
+      b.disabled = false;
+      b.style.cursor = 'pointer';
+      b.style.opacity = '1';
+      b.removeAttribute('data-locked');
+      b.innerHTML = '❤️ Engagiert · +1💎';
+    }
+  }, 1500);
+};
+<\/script>
 <script>
 (function(){
   // Bot-Story nur zeigen wenn news ungelesen sind
@@ -7268,6 +8867,47 @@ p{line-height:1.65;color:var(--muted)}
         const todayStr = new Date().toDateString();
         const heuteLinks = dedupLinks.filter(([,l])=>new Date(l.timestamp||0).toDateString()===todayStr);
         const aelterLinks = dedupLinks.filter(([,l])=>new Date(l.timestamp||0).toDateString()!==todayStr);
+
+        // First-Post-Pin: NUR der allererste Post eines NEUEN Members (8h sichtbar).
+        // Vorher buggy: nahm earliest timestamp aus d.links — aber d.links ist
+        // rolling 500-Limit, alte Links werden evicted → 'erfahrener' User wurden
+        // fälschlich als 'erster Post' markiert.
+        // Neu: u.links === 1 (Counter inkrementiert je gepostetem Link, NIE
+        // resettet) + joinDate ≤ 7 Tage (echter Newcomer).
+        const FIRST_POST_PIN_MS = 8 * 3600 * 1000;
+        const NEW_MEMBER_MAX_AGE_MS = 7 * 24 * 3600 * 1000;
+        const _nowMs = Date.now();
+        function _isPinnedFirstPost([, link]) {
+            if (!link || !link.timestamp) return false;
+            if ((_nowMs - link.timestamp) >= FIRST_POST_PIN_MS) return false;
+            // Wenn User schon liked → raus aus Pin, fällt in Regular-Feed wo Liked-Sort
+            // den Post ans Ende rutscht.
+            if (Array.isArray(link.likes) && link.likes.map(String).includes(String(myUid))) return false;
+            const u = d.users[String(link.user_id)];
+            if (!u) return false;
+            // Counter exakt 1 → user's allererster Post ever
+            if (Number(u.links||0) !== 1) return false;
+            // Plus: User muss frisch sein (joinDate < 7 Tage)
+            if (!u.joinDate || (_nowMs - u.joinDate) > NEW_MEMBER_MAX_AGE_MS) return false;
+            return true;
+        }
+        const pinnedFirstPosts = heuteLinks.filter(_isPinnedFirstPost);
+        // Liked-Sort: für die jeweilige User-Sicht — ungelikte Posts kommen oben,
+        // gelikte rutschen ans Ende. Eigene Posts (kein Self-Like möglich)
+        // bleiben in ihrer Timestamp-Position.
+        function _likedByMe([, l]) {
+            return Array.isArray(l.likes) && l.likes.map(String).includes(String(myUid));
+        }
+        function _byLikedThenTimestamp(a, b) {
+            const aLiked = _likedByMe(a) ? 1 : 0;
+            const bLiked = _likedByMe(b) ? 1 : 0;
+            if (aLiked !== bLiked) return aLiked - bLiked;     // ungelikt zuerst
+            return (b[1].timestamp||0) - (a[1].timestamp||0); // dann newest first
+        }
+        const heuteLinksRegular = heuteLinks
+            .filter(l => !_isPinnedFirstPost(l))
+            .sort(_byLikedThenTimestamp);
+        const aelterLinks2 = [...aelterLinks].sort(_byLikedThenTimestamp);
 
         function renderLink([msgId, link]){
             const poster = d.users[String(link.user_id)]||{};
@@ -7382,29 +9022,28 @@ p{line-height:1.65;color:var(--muted)}
             return '<div class="post fade-up" id="post-'+msgId+'" data-url="'+link.text+'" data-ts="'+(link.timestamp||0)+'" style="position:relative">\n'+
 '  <div style="position:absolute;left:0;top:0;bottom:0;width:3px;background:'+grad+';border-radius:18px 0 0 18px"></div>\n'+
 // Category badge + timestamp row
-'  <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px 0">\n'+
-(isNewForUser ? '    <span class="post-category-label" style="background:linear-gradient(135deg,var(--accent),var(--accent2))">📸 Neuer Link</span>\n' : '    <span></span>\n')+
+'  <div style="display:flex;align-items:center;justify-content:flex-end;padding:10px 16px 0">\n'+
 '    <div style="display:flex;align-items:center;gap:8px">\n'+
 '      <span class="post-time">'+new Date(link.timestamp).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})+'</span>\n'+
 (_myIsAdmin ? '      <button onclick=\'adminDelLink("'+msgId+'",this)\' title="Link löschen (Admin)" style="background:none;border:none;color:#ef4444;font-size:15px;cursor:pointer;padding:0 0 0 4px;line-height:1">🗑️</button>\n' : '')+
 '    </div>\n'+
 '  </div>\n'+
-// Post header
+// Post header — Avatar + Name → /profil/{uid}
 '  <div class="post-header" style="padding-top:8px">\n'+
-'    <div style="position:relative;width:40px;height:40px;flex-shrink:0">\n'+
+'    <a href="/profil/'+link.user_id+'" style="position:relative;width:40px;height:40px;flex-shrink:0;text-decoration:none">\n'+
 '      '+crownOverlay(link.user_id, 'sm')+'\n'+
-'      <div style="position:relative;width:40px;height:40px;border-radius:50%;overflow:hidden;background:'+grad+';display:flex;align-items:center;justify-content:center">\n'+
-'        <span style="color:#fff;font-weight:700;font-size:15px;position:absolute">'+(poster.name||'?').slice(0,1)+'</span>\n'+
+'      <div style="position:relative;width:40px;height:40px;border-radius:50%;overflow:hidden;background:var(--avatar-fallback-bg);border:1px solid var(--avatar-fallback-border);display:flex;align-items:center;justify-content:center">\n'+
+'        <span style="color:var(--avatar-fallback-color);font-weight:700;font-size:15px;position:absolute">'+(poster.name||'?').slice(0,1)+'</span>\n'+
 '        '+avatarSmall+'\n'+
 '      </div>\n'+
-'    </div>\n'+
-'    <div class="post-user-info">\n'+
+'    </a>\n'+
+'    <a href="/profil/'+link.user_id+'" class="post-user-info" style="text-decoration:none;color:inherit">\n'+
 '      <div class="post-name" style="display:flex;align-items:center;gap:5px">\n'+
 '        '+(poster.spitzname||poster.name||'User')+'\n'+
 '        '+(isOnline?'<span style="width:7px;height:7px;border-radius:50%;background:#00c851;display:inline-block;flex-shrink:0"></span>':'')+'\n'+
 '      </div>\n'+
 '      <div class="post-badge">'+cleanRole(poster.role)+(insta?'<span style="color:var(--muted2)"> · @'+poster.instagram+'</span>':'')+'</div>\n'+
-'    </div>\n'+
+'    </a>\n'+
 '  </div>\n'+
 // Reel video preview card
 '  <div style="margin:0 16px;border-radius:14px;overflow:hidden;background:#000;border:1.5px solid;border-image:linear-gradient(135deg,#f9a825,#e91e63,#9c27b0) 1;cursor:pointer;box-shadow:0 6px 20px rgba(233,30,99,0.10)" onclick="markLinkVisited(\''+lid1+'\');window.open(\''+link.text+'\',\'_blank\')">\n'+
@@ -7430,9 +9069,8 @@ p{line-height:1.65;color:var(--muted)}
 '      </div>\n'+
 '    </div>\n'+
 (link.caption?'    <div style="padding:8px 12px;font-size:12px;color:var(--muted);line-height:1.4;border-top:1px solid rgba(255,255,255,.06)">'+String(link.caption).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</div>\n':'')+
-'    <div style="padding:6px 12px 8px;display:flex;align-items:center;gap:6px">\n'+
-'      <div style="font-size:10px;color:var(--muted2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+link.text.replace('https://www.','').replace('https://','').slice(0,50)+'</div>\n'+
-'      <div style="font-size:10px;color:var(--accent);font-weight:700">Ansehen →</div>\n'+
+'    <div style="padding:8px 12px 10px;display:flex;align-items:center;justify-content:flex-end">\n'+
+'      <a href="'+htmlEsc(safeUrl(link.text||''))+'" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();markLinkVisited(\''+lid1+'\')" style="padding:7px 16px;background:linear-gradient(135deg,#f9a825,#e91e63,#9c27b0);color:#fff;border-radius:9px;font-size:12px;font-weight:700;text-decoration:none;white-space:nowrap;box-shadow:0 2px 8px rgba(233,30,99,.25)">→ Öffnen</a>\n'+
 '    </div>\n'+
 '  </div>\n'+
 // Likes counter + XP badge
@@ -7454,11 +9092,14 @@ commentsBox+
         const _bDay = _bNow.getDay();
         const _bOff = _bDay === 0 ? -6 : 1 - _bDay;
         const _bMon = new Date(_bNow); _bMon.setDate(_bNow.getDate() + _bOff);
-        const slWeekKey = _bMon.toISOString().slice(0,10);
+        const slWeekKey = _bMon.getFullYear()+'-'+String(_bMon.getMonth()+1).padStart(2,'0')+'-'+String(_bMon.getDate()).padStart(2,'0');
         const mySlMax = (d.users[myUid]?.role === '🌟 Elite+') ? 2 : 1;
         const mySlCount = Object.values(d.superlinks||{}).filter(s=>s.uid===myUid&&s.week===slWeekKey).length;
         const myWeekSuperlink = mySlCount > 0;
-        const slAvailable = Math.max(0, mySlMax - mySlCount);
+        const mySlCredits = Number(d.users[myUid]?.superlinkCredits||0);
+        // Superlink-Credits (aus Roulette/Gewinnspiel/Admin) ignorieren das
+        // Wochenlimit → werden zur 'zur Verfügung'-Anzeige addiert.
+        const slAvailable = Math.max(0, mySlMax - mySlCount) + mySlCredits;
 
         function renderSuperLink(sl) {
             const poster = d.users[String(sl.uid)]||{};
@@ -7491,23 +9132,22 @@ commentsBox+
                 +'<span class="post-time">'+dateStr+' '+time+'</span>\n'
                 +'</div>\n'
                 +'<div class="post-header" style="padding-top:8px">\n'
-                +'<div style="position:relative;width:40px;height:40px;flex-shrink:0">'+crownOverlay(sl.uid,'sm')+'<div style="position:relative;width:40px;height:40px;border-radius:50%;overflow:hidden;background:'+grad+';display:flex;align-items:center;justify-content:center">\n'
-                +'<span style="color:#fff;font-weight:700;font-size:15px;position:absolute">'+(poster.name||'?')[0]+'</span>\n'
-                +avatarSmall+'\n</div></div>\n'
-                +'<div class="post-user-info">\n'
+                +'<a href="/profil/'+sl.uid+'" style="position:relative;width:40px;height:40px;flex-shrink:0;text-decoration:none">'+crownOverlay(sl.uid,'sm')+'<div style="position:relative;width:40px;height:40px;border-radius:50%;overflow:hidden;background:var(--avatar-fallback-bg);border:1px solid var(--avatar-fallback-border);display:flex;align-items:center;justify-content:center">\n'
+                +'<span style="color:var(--avatar-fallback-color);font-weight:700;font-size:15px;position:absolute">'+(poster.name||'?')[0]+'</span>\n'
+                +avatarSmall+'\n</div></a>\n'
+                +'<a href="/profil/'+sl.uid+'" class="post-user-info" style="text-decoration:none;color:inherit">\n'
                 +'<div class="post-name">'+(poster.spitzname||poster.name||'User')+'</div>\n'
                 +'<div class="post-badge">'+cleanRole(poster.role)+(insta?'<span style="color:var(--muted2)"> · @'+insta+'</span>':'')+'</div>\n'
-                +'</div>\n</div>\n'
+                +'</a>\n</div>\n'
                 +'<div style="margin:8px 16px;padding:8px 12px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:10px;font-size:11px;color:rgba(245,158,11,.9);font-weight:600">🔄 Bitte Liken, Kommentieren, Teilen und Speichern</div>\n'
                 +'<div style="margin:0 16px 8px;border-radius:14px;overflow:hidden;background:var(--bg3);border:1px solid rgba(255,255,255,.08)">\n'
                 +(sl.thumbnail
-                    ? '<a href="'+(sl.url||'').replace(/"/g,'%22')+'" target="_blank" rel="noopener" onclick="markLinkVisited(\''+sl.id+'\')" style="display:block;position:relative;width:100%;padding-top:62%;overflow:hidden;background:#000"><img src="/insta-thumb?u='+encodeURIComponent(sl.thumbnail)+'" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.parentElement.style.display=\'none\'" alt=""><div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.05),rgba(0,0,0,.55))"></div><div style="position:absolute;top:10px;left:12px;background:rgba(0,0,0,.55);border-radius:8px;padding:4px 9px;font-size:11px;color:#fff;font-weight:600;backdrop-filter:blur(4px)">📸 Instagram</div></a>\n'
+                    ? '<a href="'+htmlEsc(safeUrl(sl.url||''))+'" target="_blank" rel="noopener noreferrer" onclick="markLinkVisited(\''+sl.id+'\')" style="display:block;position:relative;width:100%;padding-top:62%;overflow:hidden;background:#000"><img src="/insta-thumb?u='+encodeURIComponent(sl.thumbnail)+'" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.parentElement.style.display=\'none\'" alt=""><div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.05),rgba(0,0,0,.55))"></div><div style="position:absolute;top:10px;left:12px;background:rgba(0,0,0,.55);border-radius:8px;padding:4px 9px;font-size:11px;color:#fff;font-weight:600;backdrop-filter:blur(4px)">📸 Instagram</div></a>\n'
                     : '')
-                +'<a href="'+(sl.url||'').replace(/"/g,'%22')+'" target="_blank" rel="noopener" onclick="markLinkVisited(\''+sl.id+'\')" style="display:block;padding:12px 14px;text-decoration:none">\n'
-                +'<div style="font-size:13px;color:var(--blue);word-break:break-all;margin-bottom:4px">'+(sl.url||'').replace('https://www.','').replace('https://','').slice(0,60)+'</div>\n'
-                +(sl.caption?'<div style="font-size:12px;color:var(--muted);margin-top:4px">'+String(sl.caption).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</div>':'')+'\n'
-                +'<div style="font-size:11px;color:var(--accent);font-weight:700;margin-top:6px">Ansehen →</div>\n'
-                +'</a></div>\n'
+                +'<div style="padding:10px 14px">\n'
+                +(sl.caption?'<div style="font-size:12px;color:var(--muted);line-height:1.4;margin-bottom:8px">'+String(sl.caption).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</div>':'')+'\n'
+                +'<a href="'+htmlEsc(safeUrl(sl.url||''))+'" target="_blank" rel="noopener noreferrer" onclick="markLinkVisited(\''+sl.id+'\')" style="display:inline-flex;align-items:center;gap:5px;padding:7px 14px;background:linear-gradient(135deg,#f59e0b,#a78bfa);color:#fff;border-radius:10px;font-size:12px;font-weight:700;text-decoration:none">→ Öffnen</a>\n'
+                +'</div></div>\n'
                 +'<div class="post-likes-row"><span class="post-like-count">❤️ <span id="sl-likes-'+sl.id+'">'+likes.length+'</span></span></div>\n'
                 +'<div id="sl-liker-rows-'+sl.id+'" style="display:none">'+likerRows+'</div>\n'
                 +'<div class="post-actions" style="gap:8px;padding:8px 16px 12px">'+likeBtn+whoLikedBtn+'</div>\n'
@@ -7515,23 +9155,95 @@ commentsBox+
         }
 
         const allSuperLinks = Object.values(d.superlinks||{}).sort((a,b)=>b.timestamp-a.timestamp);
-        const engagementHtml = allSuperLinks.length
-            ? '<div style="padding:8px 0 80px">'+allSuperLinks.map(renderSuperLink).join('')+'</div>'
+        // Aktueller Berlin-Wochenkey (Mo-Datum als YYYY-MM-DD) — Superlinks alter Wochen ausblenden
+        const _curWeekKey = (() => { const n=new Date(); const day=n.getDay(); const mon=new Date(n); mon.setDate(n.getDate()-(day===0?6:day-1)); return mon.getFullYear()+'-'+String(mon.getMonth()+1).padStart(2,'0')+'-'+String(mon.getDate()).padStart(2,'0'); })();
+        // Liked-Sort: ungelikt zuerst, gelikt rutscht ans Ende
+        const allSuperLinksWeek = allSuperLinks
+            .filter(sl => !sl.week || sl.week === _curWeekKey)
+            .sort((a, b) => {
+                const aLiked = Array.isArray(a.likes) && a.likes.map(String).includes(String(myUid)) ? 1 : 0;
+                const bLiked = Array.isArray(b.likes) && b.likes.map(String).includes(String(myUid)) ? 1 : 0;
+                if (aLiked !== bLiked) return aLiked - bLiked;
+                return (b.timestamp||0) - (a.timestamp||0);
+            });
+        // Tab-Badges: Anzahl ungelikte Posts. Eigene Posts (inkl. Sub-/Parent-Konten)
+        // werden ausgeschlossen — diese können nicht geliked werden und sollen nicht
+        // zählen. _getRoot bringt jeden uid auf den Hauptaccount-uid.
+        const _getRoot = (uid) => {
+            const u = d.users?.[String(uid)];
+            return u && u.parent_uid ? String(u.parent_uid) : String(uid);
+        };
+        const _myRoot = _getRoot(myUid);
+        const _otherUser = (uid) => _getRoot(uid) !== _myRoot;
+        const _isUnliked = (likesArr, uid) => !(Array.isArray(likesArr) && likesArr.map(String).includes(String(uid)));
+        const _unlikedCountHeute = heuteLinks.filter(([,l]) => _otherUser(l.user_id) && _isUnliked(l.likes, myUid)).length;
+        const _unlikedCountAelter = aelterLinks.filter(([,l]) => _otherUser(l.user_id) && _isUnliked(l.likes, myUid)).length;
+        const _unlikedCountSuper = allSuperLinksWeek.filter(sl => _otherUser(sl.uid) && _isUnliked(sl.likes, myUid)).length;
+        const tabBadge = (count) => count > 0
+            ? '<span style="display:inline-block;min-width:18px;height:16px;line-height:16px;padding:0 5px;border-radius:99px;background:#ef4444;color:#fff;font-size:9.5px;font-weight:800;vertical-align:middle;margin-left:4px;box-shadow:0 2px 6px rgba(239,68,68,0.45)">'+count+'</span>'
+            : '';
+        const engagementHtml = allSuperLinksWeek.length
+            ? '<div style="padding:8px 0 80px">'+allSuperLinksWeek.map(renderSuperLink).join('')+'</div>'
             : '<div style="text-align:center;padding:48px 24px;padding-bottom:80px"><div style="font-size:56px;margin-bottom:16px">⭐</div><div style="font-size:17px;font-weight:700;margin-bottom:8px">Noch keine Superlinks</div><div style="font-size:13px;color:var(--muted);margin-bottom:24px">Teile deinen Instagram-Link für maximales Engagement mit der Community.</div></div>';
 
-        const heuteHtml = heuteLinks.length ? heuteLinks.map(renderLink).join('') : `
+        // Pinned-First-Posts: jeder Post bekommt einen 'Star-Frame' mit gold-purple
+        // Gradient-Border + Star-Topbar (kein Overlay mehr auf der Post-Card selbst).
+        // Topbar enthält: 🌟 ERSTER POST · +20 XP für Liker · ⏱ Countdown
+        function _firstPostWrapper([id, l]) {
+            const endTs = (l.firstPostBonusUntil || (l.timestamp + 8*3600*1000)) || 0;
+            return (
+              '<div class="first-post-star" data-first-post-end="'+endTs+'" style="margin:0 14px 14px;position:relative">' +
+                '<div class="first-post-star-frame"></div>' +
+                '<div class="first-post-star-inner">' +
+                  '<div class="first-post-star-topbar">' +
+                    '<span class="first-post-star-pill"><span style="font-size:13px">🌟</span> ERSTER POST</span>' +
+                    '<span class="first-post-star-pill bonus">+20 XP für Liker</span>' +
+                    '<span class="first-post-star-cd">⏱ <b data-first-post-cd>—</b></span>' +
+                  '</div>' +
+                  '<div class="first-post-star-card">' + renderLink([id, l]) + '</div>' +
+                '</div>' +
+              '</div>'
+            );
+        }
+        const pinnedHtml = pinnedFirstPosts.length
+            ? '<style>'+
+                '.first-post-star{border-radius:22px;overflow:hidden}'+
+                '.first-post-star-frame{position:absolute;inset:0;border-radius:22px;padding:3px;background:conic-gradient(from 0deg,#f59e0b,#fcd34d,#a855f7,#ec4899,#f59e0b,#fcd34d,#f59e0b);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;animation:fp-rot 6s linear infinite;pointer-events:none}'+
+                '@keyframes fp-rot{to{transform:rotate(360deg)}}'+
+                '.first-post-star-inner{position:relative;background:linear-gradient(180deg,rgba(245,158,11,0.10),rgba(245,158,11,0));border-radius:20px;margin:3px;padding:10px 8px 6px}'+
+                '[data-theme="dark"] .first-post-star-inner{background:linear-gradient(180deg,rgba(245,158,11,0.18),rgba(0,0,0,0));}' +
+                '.first-post-star-topbar{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:0 6px 8px}'+
+                '.first-post-star-pill{display:inline-flex;align-items:center;gap:4px;background:linear-gradient(135deg,#f59e0b,#a855f7);color:#fff;font-size:10px;font-weight:800;letter-spacing:0.6px;padding:4px 10px;border-radius:99px;box-shadow:0 3px 10px rgba(245,158,11,0.45)}'+
+                '.first-post-star-pill.bonus{background:linear-gradient(135deg,#22c55e,#16a34a);box-shadow:0 3px 10px rgba(34,197,94,0.45)}'+
+                '.first-post-star-cd{margin-left:auto;font-size:11px;font-weight:700;color:#f59e0b;font-variant-numeric:tabular-nums;display:inline-flex;align-items:center;gap:4px}'+
+                '.first-post-star-card{position:relative;border-radius:16px;overflow:hidden}'+
+                '.first-post-star-card .post{margin:0!important;border:0!important;border-radius:16px!important}'+
+              '</style>' +
+              pinnedFirstPosts.map(_firstPostWrapper).join('') +
+              '<script>(function(){function tick(){const now=Date.now();document.querySelectorAll(".first-post-star").forEach(card=>{const ts=Number(card.dataset.firstPostEnd)||0;const r=ts-now;const cd=card.querySelector("[data-first-post-cd]");if(!cd)return;if(r<=0){cd.textContent="beendet";return;}const h=Math.floor(r/3600000);const m=Math.floor((r%3600000)/60000);const s=Math.floor((r%60000)/1000);cd.textContent=h+":"+(m<10?"0":"")+m+":"+(s<10?"0":"")+s;});}tick();setInterval(tick,1000);})();</script>'
+            : '';
+        const regularHeuteHtml = heuteLinksRegular.length ? heuteLinksRegular.map(renderLink).join('') : (pinnedFirstPosts.length ? '' : `
 <div style="text-align:center;padding:48px 24px">
   <div style="font-size:56px;margin-bottom:16px">📸</div>
   <div style="font-size:17px;font-weight:700;margin-bottom:8px">Noch keine Links heute</div>
   <div style="font-size:13px;color:var(--muted);margin-bottom:24px">${genderize(d.users[myUid], 'Sei der Erste!', 'Sei die Erste!', 'Mach den Anfang!')} Teile deinen Instagram Link mit der Community.</div>
   <button onclick="openPlusSheet()" style="display:inline-flex;align-items:center;gap:8px;background:var(--accent);color:#fff;padding:12px 24px;border-radius:12px;font-size:14px;font-weight:700;border:none;cursor:pointer;font-family:var(--font)">📸 Jetzt Link teilen</button>
-</div>`;
-        const aelterHtml = aelterLinks.length ? aelterLinks.map(renderLink).join('') : '<div class="empty" style="margin-top:40px"><div class="empty-icon">🕐</div><div class="empty-text">Keine älteren Links</div></div>';
+</div>`);
+        const heuteHtml = pinnedHtml + regularHeuteHtml;
+        const aelterHtml = aelterLinks2.length ? aelterLinks2.map(renderLink).join('') : '<div class="empty" style="margin-top:40px"><div class="empty-icon">🕐</div><div class="empty-text">Keine älteren Links</div></div>';
         const kollabsHtml = '<div id="kollabs-tab-root" style="padding:8px 0 80px"><div style="padding:48px 24px;text-align:center;color:var(--muted);font-size:13px">⏳ Lade Kollab-Posts…</div></div>';
         const diamondHtml = '<div id="diamond-tab-root" style="padding:8px 0 80px"><div style="padding:48px 24px;text-align:center;color:var(--muted);font-size:13px">⏳ Lade Diamantlinks…</div></div>';
         // Diamantlink-Top-Strip nur im 'heute'-Tab — älteste Diamantlinks ganz oben.
+        // Stack-Order Heute-Tab:
+        //   1. Diamond-Top-Strip (#diamond-top-strip)
+        //   2. First-Post-Pin (im heuteHtml, vor dem regulären Feed)
+        //   3. Kollab-Boost-Strip (#collab-boost-strip) — alle 4h 20min lang
+        //   4. Reguläre Heute-Links
+        // First-Post-Pin steht oben im heuteHtml. Boost-Strip kommt zwischen
+        // First-Post-Pin und regulärer Feed → wir splitten heuteHtml in
+        // pinnedHtml + regularHeuteHtml, dann boost-strip dazwischen.
         const heuteWithDiamondTop = tab === 'heute'
-            ? '<div id="diamond-top-strip"></div><div style="padding:8px 0 80px">'+heuteHtml+'</div>'
+            ? '<div id="diamond-top-strip"></div>'+pinnedHtml+'<div id="collab-boost-strip"></div><div style="padding:8px 0 80px">'+regularHeuteHtml+'</div>'
             : '<div style="padding:8px 0 80px">'+heuteHtml+'</div>';
         const postsHtml = tab === 'aelter' ? '<div style="padding:8px 0 80px">'+aelterHtml+'</div>'
             : tab === 'engagement' ? engagementHtml
@@ -7547,12 +9259,38 @@ setTimeout(function(){
   if(typeof window.cbStartTour === 'function') window.cbStartTour();
 },800);
 </script>` : ''}
-<div class="topbar">
+${(() => {
+  const _tabsMeta = [
+    {id:'heute', emoji:'📅', label:'Heute', count:_unlikedCountHeute},
+    {id:'aelter', emoji:'🕐', label:'Älter', count:_unlikedCountAelter},
+    {id:'engagement', emoji:'⭐', label:'Engagement', count:_unlikedCountSuper},
+    {id:'kollabs', emoji:'🤝', label:'Kollabs', count:0},
+    {id:'diamond', emoji:'💎', label:'Diamond', count:0},
+  ];
+  const _curTab = _tabsMeta.find(t=>t.id===tab) || _tabsMeta[0];
+  const _totalAllCount = _tabsMeta.reduce((s,t)=>s+(t.count||0),0);
+  return `<div class="topbar">
   <div class="topbar-logo">CreatorX</div>
+  <div class="ft-wrap" id="ft-wrap">
+    <button class="ft-trigger" type="button" onclick="ftToggle(this)" aria-haspopup="true">
+      <span class="ft-trigger-label">${_curTab.emoji} ${htmlEsc(_curTab.label)}</span>
+      <span class="ft-trigger-arrow">▼</span>
+      ${_totalAllCount > 0 ? `<span class="ft-trigger-badge">${_totalAllCount > 99 ? '99+' : _totalAllCount}</span>` : ''}
+    </button>
+    <div class="ft-menu" id="ft-menu">
+      ${_tabsMeta.map(t => `<a href="/feed?tab=${t.id}" class="ft-item${t.id===_curTab.id?' active':''}"><span class="ft-item-emoji">${t.emoji}</span><span class="ft-item-label">${htmlEsc(t.label)}</span>${t.count > 0 ? `<span class="ft-item-badge">${t.count > 99 ? '99+' : t.count}</span>` : ''}${t.id===_curTab.id ? '<span class="ft-item-check">✓</span>' : ''}</a>`).join('')}
+    </div>
+  </div>
   <div class="topbar-actions">
+    <a href="/benachrichtigungen" class="icon-btn" title="Benachrichtigungen" style="position:relative;text-decoration:none;color:inherit">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      <span id="notif-badge-feed" style="display:none;position:absolute;top:2px;right:2px;background:#ef4444;color:#fff;font-size:9px;font-weight:800;border-radius:50%;min-width:14px;height:14px;line-height:14px;text-align:center;padding:0 3px;box-shadow:0 2px 6px rgba(239,68,68,0.45)"></span>
+    </a>
     <button class="icon-btn" onclick="setTheme(document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark')" title="Theme">🌙</button>
   </div>
-</div>
+</div>`;
+})()}
+<script>(async()=>{try{const r=await fetch('/api/notifications/count');const j=await r.json();const b=document.getElementById('notif-badge-feed');if(b&&j.count>0){b.textContent=j.count>9?'9+':j.count;b.style.display='block';}}catch(e){}})();</script>
 <!-- Event-Banner: aktive XP/Diamond-Events mit Countdown -->
 <div id="event-banner" style="display:none"></div>
 <div style="width:100%">${storiesHtml}</div>
@@ -7575,13 +9313,7 @@ ${(()=>{
   }
   return '';
 })()}
-<div data-tour="feed-tabs" style="display:flex;gap:6px;padding:6px 16px 14px;width:100%;box-sizing:border-box;flex-wrap:wrap">
-  <a href="/feed?tab=heute" class="feed-pill ${tab==='heute'?'active':''}" style="flex:1;min-width:80px;padding:9px 6px;font-size:12px;font-weight:800;text-align:center;text-decoration:none;border-radius:999px;${tab==='heute'?'background:linear-gradient(135deg,#3b82f6,#60a5fa);color:#fff;box-shadow:0 4px 14px rgba(59,130,246,0.35)':'background:rgba(59,130,246,0.10);color:#3b82f6;border:1px solid rgba(59,130,246,0.35)'};letter-spacing:0.2px">📅 Heute</a>
-  <a href="/feed?tab=aelter" class="feed-pill ${tab==='aelter'?'active':''}" style="flex:1;min-width:80px;padding:9px 6px;font-size:12px;font-weight:800;text-align:center;text-decoration:none;border-radius:999px;${tab==='aelter'?'background:linear-gradient(135deg,#4dabf7,#1d6fa5);color:#fff;box-shadow:0 4px 14px rgba(77,171,247,0.3)':'background:var(--surface-tint);color:var(--muted);border:1px solid var(--border)'};letter-spacing:0.2px">🕐 Älter</a>
-  <a href="/feed?tab=engagement" class="feed-pill ${tab==='engagement'?'active':''}" style="flex:1;min-width:80px;padding:9px 6px;font-size:12px;font-weight:800;text-align:center;text-decoration:none;border-radius:999px;${tab==='engagement'?'background:linear-gradient(135deg,#f59e0b,#a78bfa);color:#fff;box-shadow:0 4px 14px rgba(245,158,11,0.3)':'background:var(--surface-tint);color:var(--muted);border:1px solid var(--border)'};letter-spacing:0.2px">⭐ Engagement</a>
-  <a href="/feed?tab=kollabs" class="feed-pill ${tab==='kollabs'?'active':''}" style="flex:1;min-width:80px;padding:9px 6px;font-size:12px;font-weight:800;text-align:center;text-decoration:none;border-radius:999px;${tab==='kollabs'?'background:linear-gradient(135deg,#ec4899,#a21caf);color:#fff;box-shadow:0 4px 14px rgba(236,72,153,0.35)':'background:rgba(236,72,153,0.10);color:#ec4899;border:1px solid rgba(236,72,153,0.35)'};letter-spacing:0.2px">🤝 Kollabs</a>
-  <a href="/feed?tab=diamond" class="feed-pill ${tab==='diamond'?'active':''}" style="flex:1;min-width:80px;padding:9px 6px;font-size:12px;font-weight:800;text-align:center;text-decoration:none;border-radius:999px;${tab==='diamond'?'background:linear-gradient(135deg,#06b6d4,#0e7490);color:#fff;box-shadow:0 4px 16px rgba(6,182,212,0.50)':'background:rgba(6,182,212,0.10);color:#06b6d4;border:1px solid rgba(6,182,212,0.40)'};letter-spacing:0.2px">💎 Diamond</a>
-</div>
+<!-- Tabs entfernt — sind jetzt im Topbar-Dropdown (.ft-wrap) -->
 ${tab==='engagement' ? `<div style="padding:12px 16px 4px">
   ${slAvailable > 0
     ? `<button onclick="openSLSheet()" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;background:linear-gradient(135deg,#f59e0b,#a78bfa);color:#fff;border:none;border-radius:14px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font)">⭐ Superlink teilen (${slAvailable} verfügbar)</button>`
@@ -7743,7 +9475,8 @@ async function refreshLikes() {
         }
     } catch(e) {}
 }
-setInterval(refreshLikes, 30000);
+setInterval(()=>{if(!document.hidden)refreshLikes();}, 30000);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)try{refreshLikes();}catch(e){}});
 // Stories: Click-Cancel beim horizontalen Wischen — Swipe scrollt, kein Tap-zum-Profil
 (function(){
   const stories=document.querySelector('.stories');
@@ -7996,26 +9729,35 @@ async function submitSuperLink(){
         const liked = !!p.liked;
         const aName = esc(p.authorA?.name||'User');
         const bName = esc(p.authorB?.name||'User');
-        html += '<div style="margin:0 16px 14px;padding:14px;background:var(--bg3);border:1px solid var(--border2);border-radius:14px">' +
+        html += '<div style="position:relative;margin:0 16px 14px;background:linear-gradient(180deg,var(--bg3),var(--bg2));border:1.5px solid rgba(236,72,153,0.40);border-radius:16px;overflow:hidden;box-shadow:0 4px 20px rgba(236,72,153,0.10)">' +
+          '<div style="padding:14px">' +
           '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">' +
-            '<div style="font-size:11px;color:#ec4899;font-weight:800;letter-spacing:1px;text-transform:uppercase">🤝 Kollab-Post</div>' +
+            '<span style="font-size:10.5px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#ec4899;background:rgba(236,72,153,0.14);padding:4px 10px;border-radius:99px;border:1px solid rgba(236,72,153,0.35)">🤝 KOLLAB · +1 💎</span>' +
             '<div style="flex:1"></div>' +
             '<div style="font-size:11px;color:var(--muted)">'+new Date(p.createdAt).toLocaleDateString('de-DE',{day:'2-digit',month:'short'})+'</div>' +
           '</div>' +
-          '<div style="font-size:13px;font-weight:700;margin-bottom:6px"><a href="/profil/'+esc(p.uid)+'" style="color:var(--text);text-decoration:none">'+aName+'</a> × <a href="/profil/'+esc(p.partnerUid)+'" style="color:var(--text);text-decoration:none">'+bName+'</a></div>' +
+          '<div style="font-size:14px;font-weight:700;margin-bottom:6px"><a href="/profil/'+esc(p.uid)+'" style="color:var(--text);text-decoration:none">'+aName+'</a> <span style="color:#ec4899">×</span> <a href="/profil/'+esc(p.partnerUid)+'" style="color:var(--text);text-decoration:none">'+bName+'</a></div>' +
           (p.caption ? '<div style="font-size:13px;color:var(--text);line-height:1.5;margin:6px 0 10px">'+esc(p.caption)+'</div>' : '') +
-          '<a href="'+esc(p.url)+'" target="_blank" rel="noopener noreferrer" onclick="window._kvisit_'+p.id+'=Date.now()" style="display:block;padding:11px 13px;background:rgba(236,72,153,0.10);border:1px solid rgba(236,72,153,0.30);border-radius:10px;font-size:12.5px;color:#ec4899;font-weight:700;word-break:break-all;text-decoration:none;margin-bottom:10px">🔗 Auf Instagram öffnen</a>' +
+          '<a href="'+esc(p.url)+'" target="_blank" rel="noopener noreferrer" onclick="window._kvisit_'+p.id+'=Date.now()" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:16px;background:linear-gradient(135deg,#ec4899,#a855f7);color:#fff;border-radius:12px;font-size:14.5px;font-weight:800;text-decoration:none;margin-bottom:10px;box-shadow:0 6px 18px rgba(236,72,153,.45);position:relative"><span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900">1</span><span style="color:#fff;font-weight:800">📸 Auf Instagram öffnen</span><span style="font-size:18px;margin-left:4px">→</span></a>' +
+          '<div style="font-size:11px;color:#f59e0b;background:rgba(245,158,11,0.08);border-left:3px solid #f59e0b;border-radius:6px;padding:8px 10px;margin-bottom:10px;line-height:1.5"><b>⚠️ Pflicht:</b> LIKEN + KOMMENTIEREN + SPEICHERN + TEILEN auf Instagram.</div>' +
           (isMine
             ? '<div style="padding:10px 12px;background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.35);border-radius:10px;font-size:12px;color:#ef4444;font-weight:700;text-align:center">🚫 Kein Self-Like für Kollaboratoren · Dies ist dein Post</div>'
             : liked
-            ? '<div style="padding:11px;background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.35);border-radius:10px;font-size:13px;color:#22c55e;font-weight:700;text-align:center">✅ Engagiert · +1 💎</div>'
-            : '<button onclick="kollabLike(\\''+p.id+'\\', this)" style="display:block;width:100%;padding:12px;background:linear-gradient(135deg,#ec4899,#a21caf);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer">❤️ Engagiert · +1 💎</button>'
+            ? '<div style="padding:13px;background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.35);border-radius:12px;font-size:13.5px;color:#22c55e;font-weight:800;text-align:center">✅ Engagiert · +1 💎 in deiner Wallet</div>'
+            : '<button onclick="kollabLike(\\''+p.id+'\\', this)" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;background:linear-gradient(135deg,#ec4899,#a21caf);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 0 18px rgba(236,72,153,0.35);position:relative"><span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900">2</span><span>❤️ Engagiert · +1 💎</span></button>'
           ) +
           '<div style="font-size:11px;color:var(--muted);margin-top:8px;text-align:center">'+p.likeCount+' Engagements</div>' +
+          '</div>' +
         '</div>';
       }
     }
     root.innerHTML = html;
+    // Tab-Badge: Anzahl noch ungelikter Kollab-Posts (ohne eigene)
+    const unliked = (posts||[]).filter(p => !p.liked && !p.isSelf).length;
+    const badgeEl = document.getElementById('tab-badge-kollabs');
+    if (badgeEl) badgeEl.innerHTML = unliked > 0
+      ? '<span style="display:inline-block;min-width:18px;height:16px;line-height:16px;padding:0 5px;border-radius:99px;background:#ef4444;color:#fff;font-size:9.5px;font-weight:800;vertical-align:middle;margin-left:4px;box-shadow:0 2px 6px rgba(239,68,68,0.45)">'+unliked+'</span>'
+      : '';
   }
   function showRulesModal(){
     const bg = document.createElement('div');
@@ -8082,22 +9824,42 @@ async function submitSuperLink(){
     return '<div class="diamond-card" data-post-id="'+esc(p.id)+'">' +
       '<div class="diamond-card-glow"></div>' +
       '<div class="diamond-card-body">' +
-        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">' +
-          '<span style="font-size:10.5px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#06b6d4;background:rgba(6,182,212,0.12);padding:4px 10px;border-radius:99px;border:1px solid rgba(6,182,212,0.30)">💎 DIAMANTLINK · +'+(p.reward||3)+' 💎</span>' +
-          '<div style="flex:1"></div>' +
-          '<div style="font-size:11px;color:#06b6d4;font-weight:700">⏱ '+fmtRemaining(remaining)+'</div>' +
+        '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;padding:10px 14px;background:linear-gradient(135deg,rgba(6,182,212,0.18),rgba(167,139,250,0.12));border:1.5px solid rgba(6,182,212,0.45);border-radius:14px;box-shadow:0 0 16px rgba(6,182,212,0.25)">' +
+          '<span style="font-size:24px;line-height:1;filter:drop-shadow(0 2px 6px rgba(6,182,212,.5))">💎</span>' +
+          '<div style="flex:1;min-width:0">' +
+            '<div style="font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#06b6d4">DIAMANTLINK · BELOHNUNG</div>' +
+            '<div style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-0.5px;line-height:1.15;margin-top:2px">+'+(p.reward||3)+' 💎 <span style="font-size:11px;color:var(--muted);font-weight:600;letter-spacing:0">für ein echtes Engagement</span></div>' +
+          '</div>' +
+          '<div style="font-size:11px;color:#06b6d4;font-weight:700;text-align:right;flex-shrink:0">⏱<br>'+fmtRemaining(remaining)+'</div>' +
         '</div>' +
         '<div style="font-size:13.5px;font-weight:700"><a href="/profil/'+esc(p.uid)+'" style="color:var(--text);text-decoration:none">'+aName+'</a> '+(aHandle?'<span style="color:#06b6d4;font-weight:500;font-size:12px">'+aHandle+'</span>':'')+'</div>' +
         (p.caption ? '<div style="font-size:13px;color:var(--text);line-height:1.5;margin:6px 0 8px">'+esc(p.caption)+'</div>' : '') +
-        '<a href="'+esc(p.url)+'" target="_blank" rel="noopener noreferrer" onclick="window._dvisit_'+p.id+'=Date.now()" style="display:block;padding:11px 13px;background:rgba(6,182,212,0.10);border:1px solid rgba(6,182,212,0.35);border-radius:10px;font-size:12.5px;color:#06b6d4;font-weight:700;word-break:break-all;text-decoration:none;margin-bottom:10px">🔗 Auf Instagram öffnen</a>' +
+        '<a href="'+esc(p.url)+'" target="_blank" rel="noopener noreferrer" onclick="window._dvisit_'+p.id+'=Date.now()" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:16px;background:linear-gradient(135deg,#ec4899,#a855f7);color:#fff;border-radius:12px;font-size:14.5px;font-weight:800;text-decoration:none;margin-bottom:10px;box-shadow:0 6px 18px rgba(236,72,153,.45);position:relative"><span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900">1</span><span style="color:#fff;font-weight:800">📸 Auf Instagram öffnen</span><span style="font-size:18px;margin-left:4px">→</span></a>' +
         '<div style="font-size:11px;color:#f59e0b;background:rgba(245,158,11,0.08);border-left:3px solid #f59e0b;border-radius:6px;padding:8px 10px;margin-bottom:10px;line-height:1.5"><b>⚠️ Pflicht:</b> LIKEN + KOMMENTIEREN + TEILEN + SPEICHERN. Bei Schein-Likes: XP-Abzug + Diamonds-Reset + Bann!</div>' +
         (isMine
           ? '<div style="padding:11px;background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.35);border-radius:10px;font-size:12.5px;color:#ef4444;font-weight:700;text-align:center">🚫 Kein Self-Like — dein eigener Post</div>'
           : liked
           ? '<div style="padding:11px;background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.35);border-radius:10px;font-size:13px;color:#22c55e;font-weight:700;text-align:center">✅ Engagiert · +'+(p.reward||3)+' 💎</div>'
-          : '<button onclick="diamondLikeClick(\\''+p.id+'\\', this)" style="display:block;width:100%;padding:12px;background:linear-gradient(135deg,#06b6d4,#0e7490);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 0 18px rgba(6,182,212,0.35)">💎 Engagiert · +'+(p.reward||3)+' 💎</button>'
+          : '<button onclick="diamondLikeClick(\\''+p.id+'\\', this)" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;background:linear-gradient(135deg,#06b6d4,#0e7490);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 0 18px rgba(6,182,212,0.35);position:relative"><span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900">2</span><span>💎 Engagiert · +'+(p.reward||3)+' 💎</span></button>'
         ) +
-        '<div style="font-size:11px;color:var(--muted);margin-top:8px;text-align:center">'+p.likeCount+' Engagements</div>' +
+        (function(){
+          const lkrs = Array.isArray(p.likers) ? p.likers : [];
+          const cnt = p.likeCount || lkrs.length;
+          if (cnt === 0) return '<div style="font-size:11px;color:var(--muted);margin-top:8px;text-align:center">Noch keine Engagements</div>';
+          const top = lkrs.slice(0,3).map(u => '<b style="color:var(--text)">'+esc(u.name||'User')+'</b>').join(', ');
+          const rest = cnt > 3 ? ' und ' + (cnt-3) + ' weiteren' : '';
+          const namesTxt = 'Gefällt ' + top + rest;
+          const rows = lkrs.map(u => {
+            const av = u.instagram ? '<img src="https://unavatar.io/instagram/'+esc(u.instagram)+'" style="width:34px;height:34px;border-radius:50%;object-fit:cover" alt="" loading="lazy">'
+                                   : '<div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#06b6d4,#0e7490);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px">'+esc((u.name||'?')[0])+'</div>';
+            return '<a href="/profil/'+esc(u.uid)+'" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--border2);text-decoration:none">'+av+'<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:var(--text)">'+esc(u.name||'User')+'</div>'+(u.instagram?'<div style="font-size:11px;color:#06b6d4">@'+esc(u.instagram)+'</div>':'')+'</div><div style="font-size:11px;color:var(--accent)">→</div></a>';
+          }).join('');
+          return '<div id="liker-rows-dl-'+esc(p.id)+'" style="display:none">'+rows+'</div>' +
+            '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px;padding:0 4px">' +
+              '<div style="font-size:12px;color:var(--muted);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+namesTxt+'</div>' +
+              '<button onclick="showLikerModal(\\'dl-'+esc(p.id)+'\\')" style="background:rgba(6,182,212,0.10);border:1px solid rgba(6,182,212,0.35);color:#06b6d4;font-size:11px;font-weight:700;padding:5px 10px;border-radius:8px;cursor:pointer;white-space:nowrap;flex-shrink:0">👥 Wer hat engagiert? ('+cnt+')</button>' +
+            '</div>';
+        })() +
       '</div>' +
     '</div>';
   }
@@ -8118,9 +9880,18 @@ async function submitSuperLink(){
       const j = await r.json();
       TAB_RULES_OK = !!j.rulesAccepted;
       const posts = j.posts || [];
-      // Top-Strip im Heute-Tab: alle Diamantlinks oben, älteste zuerst (j.posts ist schon ASC sortiert)
+      // Tab-Badge: Anzahl noch ungelikter Diamantlinks (ohne eigene)
+      const unliked = posts.filter(p => !p.liked && !p.isSelf).length;
+      const badgeEl = document.getElementById('tab-badge-diamond');
+      if (badgeEl) badgeEl.innerHTML = unliked > 0
+        ? '<span style="display:inline-block;min-width:18px;height:16px;line-height:16px;padding:0 5px;border-radius:99px;background:#ef4444;color:#fff;font-size:9.5px;font-weight:800;vertical-align:middle;margin-left:4px;box-shadow:0 2px 6px rgba(239,68,68,0.45)">'+unliked+'</span>'
+        : '';
+      // Top-Strip im Heute-Tab: alle Diamantlinks oben, älteste zuerst (j.posts ist schon ASC sortiert).
+      // Liked-by-me Diamantlinks werden NICHT mehr im Top-Strip gezeigt — User hat
+      // den Boost-Reward schon kassiert, kein Re-Engagement mehr nötig.
       if (stripEl) {
-        if (posts.length) stripEl.innerHTML = posts.map(p => renderCard(p)).join('');
+        const stripPosts = posts.filter(p => !p.liked);
+        if (stripPosts.length) stripEl.innerHTML = stripPosts.map(p => renderCard(p)).join('');
         else stripEl.innerHTML = '';
       }
       // Diamond-Tab: zeigt zusätzlich Erst-Visit-Modal wenn !rulesAccepted
@@ -8180,6 +9951,109 @@ async function submitSuperLink(){
   }, 60000);
 })();
 
+// ── KOLLAB-BOOST-STRIP (Heute-Feed, alle 4h 20min) ──
+(function initCollabBoostStrip(){
+  const root = document.getElementById('collab-boost-strip');
+  if (!root) return;
+  function esc(s){ return String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  function fmtMs(ms){
+    if (ms <= 0) return '0:00';
+    const s = Math.floor(ms/1000);
+    const m = Math.floor(s/60);
+    const sec = s%60;
+    return m+':'+(sec<10?'0':'')+sec;
+  }
+  function injectCss(){
+    if (document.getElementById('collab-boost-css')) return;
+    const s = document.createElement('style'); s.id='collab-boost-css';
+    s.textContent =
+      '.cb-card{position:relative;margin:0 16px 14px;border-radius:18px;overflow:hidden;background:var(--bg2);isolation:isolate}'+
+      '.cb-glow{position:absolute;inset:-2px;border-radius:20px;padding:2px;background:conic-gradient(from 0deg,#ec4899,#f59e0b,#a855f7,#ec4899,#f59e0b,#ec4899);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;animation:cb-rot 4s linear infinite;pointer-events:none}'+
+      '@keyframes cb-rot{to{transform:rotate(360deg)}}'+
+      '.cb-body{position:relative;padding:14px;background:linear-gradient(180deg,rgba(236,72,153,0.06),var(--bg3));border-radius:16px;margin:2px}'+
+      '.cb-banner{display:flex;align-items:center;gap:10px;padding:10px 12px;margin-bottom:12px;background:linear-gradient(135deg,rgba(236,72,153,0.18),rgba(168,85,247,0.12));border:1px solid rgba(236,72,153,0.40);border-radius:10px;animation:cb-pulse 2s ease-in-out infinite}'+
+      '@keyframes cb-pulse{0%,100%{box-shadow:0 0 0 0 rgba(236,72,153,0.45)}50%{box-shadow:0 0 0 8px rgba(236,72,153,0)}}'+
+      '.cb-btn{display:block;width:100%;padding:13px;background:linear-gradient(135deg,#ec4899,#a21caf);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 0 20px rgba(236,72,153,0.45);position:relative;overflow:hidden}'+
+      '.cb-btn::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.18),transparent);transform:translateX(-100%);animation:cb-shimmer 2.5s ease-in-out infinite}'+
+      '@keyframes cb-shimmer{50%{transform:translateX(100%)}}';
+    document.head.appendChild(s);
+  }
+  function renderCard(p){
+    const aName = esc(p.authorA?.name||'User'), bName = esc(p.authorB?.name||'User');
+    const aHandle = p.authorA?.instagram ? '@'+esc(p.authorA.instagram) : '';
+    const bHandle = p.authorB?.instagram ? '@'+esc(p.authorB.instagram) : '';
+    const isMine = !!p.isSelf;
+    const liked = !!p.liked;
+    return '<div class="cb-card" data-post-id="'+esc(p.id)+'" data-boost-end="'+(p.boostEndsAt||0)+'">' +
+      '<div class="cb-glow"></div>' +
+      '<div class="cb-body">' +
+        '<div class="cb-banner">' +
+          '<div style="font-size:18px">🤝⚡</div>' +
+          '<div style="flex:1;min-width:0">' +
+            '<div style="font-size:10.5px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;color:#ec4899">KOLLAB BOOST · +1 💎 EXTRA</div>' +
+            '<div style="font-size:11px;color:var(--muted);margin-top:1px">Engagiere jetzt für Bonus · noch <b style="color:#ec4899" data-boost-timer>—</b></div>' +
+          '</div>' +
+        '</div>' +
+        '<div style="font-size:13.5px;font-weight:700;margin-bottom:6px"><a href="/profil/'+esc(p.uid)+'" style="color:var(--text);text-decoration:none">'+aName+'</a> '+(aHandle?'<span style="color:#ec4899;font-weight:500;font-size:12px">'+aHandle+'</span>':'')+' × <a href="/profil/'+esc(p.partnerUid)+'" style="color:var(--text);text-decoration:none">'+bName+'</a> '+(bHandle?'<span style="color:#ec4899;font-weight:500;font-size:12px">'+bHandle+'</span>':'')+'</div>' +
+        (p.caption ? '<div style="font-size:13px;color:var(--text);line-height:1.5;margin:6px 0 10px">'+esc(p.caption)+'</div>' : '') +
+        '<a href="'+esc(p.url)+'" target="_blank" rel="noopener noreferrer" onclick="window._cbvisit_'+p.id+'=Date.now()" style="display:block;padding:11px 13px;background:rgba(236,72,153,0.08);border:1px solid rgba(236,72,153,0.30);border-radius:10px;font-size:12.5px;color:#ec4899;font-weight:700;word-break:break-all;text-decoration:none;margin-bottom:10px">🔗 Auf Instagram öffnen</a>' +
+        (isMine
+          ? '<div style="padding:11px;background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.35);border-radius:10px;font-size:12.5px;color:#ef4444;font-weight:700;text-align:center">🚫 Kein Self-Like — Dein Kollab-Post</div>'
+          : liked
+          ? '<div style="padding:13px;background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.40);border-radius:10px;font-size:13.5px;color:#22c55e;font-weight:800;text-align:center;cursor:not-allowed;opacity:.92">✅ Bereits engagiert<div style="font-size:11px;font-weight:600;color:#22c55e;opacity:.85;margin-top:3px">Diamanten erhalten · nicht mehr klickbar</div></div>'
+          : '<button class="cb-btn" onclick="collabBoostLike(\\''+p.id+'\\', this)">⚡ Engagiere jetzt · +1(+1) 💎</button>'
+        ) +
+        '<div style="font-size:11px;color:var(--muted);margin-top:8px;text-align:center">'+p.likeCount+' Engagements gesamt</div>' +
+      '</div>' +
+    '</div>';
+  }
+  async function load(){
+    injectCss();
+    try {
+      const r = await fetch('/api/collab/feed');
+      const j = await r.json();
+      if (!j.ok) { root.innerHTML = ''; return; }
+      // Boost-Strip: aktive + nicht-expired + nicht-schon-geliked vom User.
+      // Liked Posts verschwinden aus dem Boost-Strip (Reward bereits kassiert).
+      const boostPosts = (j.posts||[]).filter(p => p.boostActive && !p.boostExpired && !p.liked);
+      if (!boostPosts.length) { root.innerHTML = ''; return; }
+      root.innerHTML = boostPosts.map(renderCard).join('');
+      tick();
+    } catch(e) {
+      console.warn('[collab-boost] load error', e);
+    }
+  }
+  function tick(){
+    const now = Date.now();
+    let anyExpired = false;
+    root.querySelectorAll('[data-boost-end]').forEach(card => {
+      const endsAt = Number(card.dataset.boostEnd) || 0;
+      const remaining = endsAt - now;
+      const tEl = card.querySelector('[data-boost-timer]');
+      if (tEl) tEl.textContent = remaining > 0 ? fmtMs(remaining) : 'beendet';
+      if (remaining <= 0) anyExpired = true;
+    });
+    if (anyExpired) { setTimeout(load, 200); return; }
+  }
+  window.collabBoostLike = async function(postId, btn){
+    const visitTs = window['_cbvisit_'+postId];
+    if (!visitTs || (Date.now() - visitTs) < 1500) {
+      alert('Bitte erst auf den Instagram-Link tippen und LIKEN + KOMMENTIEREN + TEILEN + SPEICHERN.');
+      return;
+    }
+    btn.disabled = true; btn.textContent = '⏳ Bestätige …';
+    try {
+      const r = await fetch('/api/collab/like', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ postId }) });
+      const j = await r.json();
+      if (j.ok) { load(); }
+      else { btn.disabled=false; btn.textContent='⚡ Engagiere jetzt · +2 💎'; alert('❌ '+(j.message||j.error||'Fehler')); }
+    } catch(e) { btn.disabled=false; btn.textContent='⚡ Engagiere jetzt · +2 💎'; alert('❌ '+e.message); }
+  };
+  load();
+  setInterval(load, 60000);  // 1min für neue Boost-Slots
+  setInterval(tick, 1000);   // 1s Countdown-Update
+})();
+
 // ── EVENT-BANNER (Feed-Top) ──
 // Zeigt aktive XP/Diamond-Events mit Live-Countdown. Refresh alle 30s.
 (function initEventBanner(){
@@ -8205,10 +10079,14 @@ async function submitSuperLink(){
       const remaining = e.end - now;
       if (remaining <= 0) return null;
       const isDiamond = e.type === 'diamond';
-      const isMult = e.type === 'xp-multiplier';
-      const grad = isDiamond ? 'linear-gradient(135deg,#06b6d4,#0e7490)' : isMult ? 'linear-gradient(135deg,#8b5cf6,#6d28d9)' : 'linear-gradient(135deg,#f59e0b,#d97706)';
-      const emoji = isDiamond ? '💎' : isMult ? '⚡' : '✨';
-      const valueLabel = isMult ? ('XP × '+e.multiplier) : ('+' + e.amount + ' ' + (isDiamond?'💎':'XP') + ' pro Post');
+      const isPercentXP = e.type === 'xp' && (e.mode === 'percent' || e.bonusPercent);
+      const isLegacyMult = e.type === 'xp-multiplier';
+      const grad = isDiamond ? 'linear-gradient(135deg,#06b6d4,#0e7490)' : (isPercentXP||isLegacyMult) ? 'linear-gradient(135deg,#8b5cf6,#6d28d9)' : 'linear-gradient(135deg,#f59e0b,#d97706)';
+      const emoji = isDiamond ? '💎' : (isPercentXP||isLegacyMult) ? '⚡' : '✨';
+      const valueLabel = isPercentXP ? ('+' + (e.bonusPercent || e.amount) + '% XP pro Like')
+        : isLegacyMult ? ('XP × ' + e.multiplier)
+        : isDiamond ? ('+' + e.amount + ' 💎 pro Post')
+        : ('+' + e.amount + ' XP pro Post');
       return '<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:'+grad+';color:#fff;font-weight:700">' +
         '<div style="font-size:24px;line-height:1">'+emoji+'</div>' +
         '<div style="flex:1;min-width:0">' +
@@ -8249,6 +10127,493 @@ async function submitSuperLink(){
   setInterval(refresh, 30000);
 })();
 </script>
+
+<!-- ── CREATORX HELPER BOT (FAQ-Chatbot, popup im Feed) ─────────────── -->
+<style>
+#cb-helper-fab{position:fixed;bottom:calc(78px + env(safe-area-inset-bottom,0px));right:8px;width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;border:none;padding:1.5px;cursor:pointer;z-index:8500;box-shadow:0 2px 6px rgba(0,0,0,.18);opacity:.55;transition:opacity .25s, transform .15s;overflow:visible}
+#cb-helper-fab img{display:block;width:100%;height:100%;border-radius:50%;object-fit:cover;background:var(--bg)}
+#cb-helper-fab .chat-tail{position:absolute;bottom:-1px;right:-1px;width:12px;height:12px;border-radius:50%;background:linear-gradient(135deg,#a78bfa,#7c3aed);display:flex;align-items:center;justify-content:center;font-size:7px;border:1px solid var(--bg);color:#fff}
+#cb-helper-fab:hover,#cb-helper-fab:active{opacity:1;transform:scale(1.1)}
+#cb-helper-fab .badge{position:absolute;top:-2px;right:-2px;width:12px;height:12px;border-radius:50%;background:#ef4444;color:#fff;font-size:7px;font-weight:800;display:flex;align-items:center;justify-content:center;border:1px solid var(--bg)}
+#cb-helper-modal{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:9000;display:none;align-items:flex-end;justify-content:center;animation:cb-helper-fade .2s ease}
+#cb-helper-modal.open{display:flex}
+@keyframes cb-helper-fade{from{opacity:0}to{opacity:1}}
+@keyframes cb-helper-slide{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.cb-helper-box{background:var(--bg);border-radius:20px 20px 0 0;width:100%;max-width:520px;max-height:88vh;display:flex;flex-direction:column;animation:cb-helper-slide .3s cubic-bezier(.34,1.56,.64,1);box-shadow:0 -20px 60px rgba(0,0,0,.5)}
+@media(min-width:600px){.cb-helper-box{border-radius:20px;margin:auto;max-height:80vh}}
+.cb-helper-hdr{display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--border2);background:linear-gradient(180deg,var(--bg2),var(--bg))}
+.cb-helper-avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#a78bfa,#7c3aed);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;box-shadow:0 0 12px rgba(167,139,250,.4)}
+.cb-helper-hdr-title{flex:1;min-width:0}
+.cb-helper-hdr-title b{font-size:14.5px;color:var(--text);display:block}
+.cb-helper-hdr-title span{font-size:11px;color:#22c55e;display:flex;align-items:center;gap:5px}
+.cb-helper-hdr-title span::before{content:'';width:6px;height:6px;border-radius:50%;background:#22c55e;box-shadow:0 0 6px #22c55e}
+.cb-helper-close{background:rgba(255,255,255,.06);border:none;color:var(--text);width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:15px;font-family:inherit}
+.cb-helper-body{flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.cb-msg{max-width:85%;padding:11px 14px;border-radius:16px;font-size:13.5px;line-height:1.5;animation:cb-msg-in .2s ease-out}
+@keyframes cb-msg-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.cb-msg.bot{background:var(--bg3);color:var(--text);border-bottom-left-radius:4px;align-self:flex-start}
+.cb-msg.user{background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;border-bottom-right-radius:4px;align-self:flex-end;font-weight:600}
+.cb-msg b{color:#a78bfa}
+.cb-msg.bot b{color:#a78bfa}
+.cb-msg.user b{color:#fff;text-decoration:underline}
+.cb-msg ul{margin:6px 0 0;padding-left:18px}
+.cb-msg li{margin:3px 0}
+.cb-helper-chips{display:flex;flex-wrap:wrap;gap:6px;padding:10px 16px 14px;border-top:1px solid var(--border2);background:var(--bg2)}
+.cb-chip{background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:8px 14px;border-radius:99px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .12s}
+.cb-chip:hover{background:rgba(167,139,250,.15);border-color:#a78bfa;color:#a78bfa}
+.cb-chip.back{color:var(--muted)}
+.cb-typing{display:inline-flex;gap:3px;align-items:center;padding:11px 14px;background:var(--bg3);border-radius:16px;border-bottom-left-radius:4px;align-self:flex-start}
+.cb-typing span{width:6px;height:6px;border-radius:50%;background:var(--muted);animation:cb-typing-dot 1.2s infinite ease-in-out}
+.cb-typing span:nth-child(2){animation-delay:.2s}
+.cb-typing span:nth-child(3){animation-delay:.4s}
+@keyframes cb-typing-dot{0%,60%,100%{opacity:.3;transform:scale(.85)}30%{opacity:1;transform:scale(1)}}
+</style>
+<button id="cb-helper-fab" onclick="cbHelperOpen()" aria-label="CreatorBoost öffnen"><img src="/appbild/creatorboost/profilepic" alt=""><span class="chat-tail">💬</span><span class="badge" id="cb-helper-badge">?</span></button>
+<div id="cb-helper-modal" onclick="if(event.target===this)cbHelperClose()">
+  <div class="cb-helper-box" role="dialog" aria-labelledby="cb-helper-title">
+    <div class="cb-helper-hdr">
+      <div class="cb-helper-avatar" style="overflow:hidden"><img src="/appbild/creatorboost/profilepic" alt="CreatorBoost" style="width:100%;height:100%;object-fit:cover;border-radius:50%"></div>
+      <div class="cb-helper-hdr-title">
+        <b id="cb-helper-title">CreatorBoost</b>
+        <span>online · KI-Assistent</span>
+      </div>
+      <a href="/nachrichten/creatorboost" class="cb-helper-close" style="text-decoration:none;background:rgba(167,139,250,.15);color:#a78bfa;font-size:14px;width:auto;padding:0 12px;display:inline-flex;align-items:center;gap:5px" title="Vollständiger Chat">💬</a>
+      <button class="cb-helper-close" onclick="cbHelperClose()" aria-label="Schließen">✕</button>
+    </div>
+    <div class="cb-helper-body" id="cb-helper-body"></div>
+    <div class="cb-helper-chips" id="cb-helper-chips"></div>
+    <div class="cb-helper-input-row">
+      <input type="text" id="cb-helper-input" placeholder="Eigene Frage stellen…" maxlength="500" autocomplete="off">
+      <button id="cb-helper-send" onclick="cbHelperAsk()" aria-label="Senden">→</button>
+    </div>
+  </div>
+</div>
+<style>
+.cb-helper-input-row{display:flex;gap:8px;padding:10px 14px;border-top:1px solid var(--border2);background:var(--bg)}
+#cb-helper-input{flex:1;background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:10px 14px;border-radius:99px;font-size:13.5px;font-family:inherit;outline:none}
+#cb-helper-input:focus{border-color:#a78bfa}
+#cb-helper-send{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;border:none;font-size:18px;cursor:pointer;font-weight:800;font-family:inherit;flex-shrink:0}
+#cb-helper-send:disabled{opacity:.5;cursor:wait}
+</style>
+<script>
+// Q&A-Tree: id → {q, a, next: [childIds]}
+// Deckt alle 11 Regel-Sections + 4 Live-Daten-Lookups + Start-Help ab.
+const CB_HELP = {
+  '_root': { q:null, a:'Hey! 👋 Ich bin <b>CreatorBoost</b> — ich helfe dir mit Regeln, Features & deinem Account. Was willst du wissen?', next:['_start','rules','data','support','_more'] },
+  '_more': { q:'➕ Mehr Themen', a:'Wähle ein Thema:', next:['m','xp','diamond','superlink','kollab','pinned','warn','links','respekt','shop','start24h','_back'] },
+  '_start': { q:'🚀 Neu hier?', a:'Willkommen! Dein Plan für die ersten 24h:<br><ol><li><b>Profilbild + Spitzname</b> setzen → <a href="/einstellungen" style="color:#a78bfa;font-weight:700">Einstellungen</a></li><li><b>Instagram-Handle</b> eintragen</li><li><b>Ersten Reel posten</b> → <a href="/feed" style="color:#a78bfa;font-weight:700">Feed</a> → <b>+</b></li><li><b>5 andere Reels liken</b> (Mission M1) — erst auf Instagram öffnen, dort liken + kommentieren, DANN hier in der App liken</li></ol>Tu das, kriegst du <b>Daily-Bonus + Mission-XP + First-Post-Bonus (+20 XP)</b>. Bei Fragen → ich bin hier!', next:['rules','m','xp','_back'] },
+  'rules': { q:'📜 Alle Regeln', a:'Komplette Regeln im Regeln-Tab: <a href="/explore?tab=regeln" style="color:#a78bfa;font-weight:700">→ Regeln öffnen</a><br><br>Wichtigste 3:<br><b>1.</b> Vor App-Like erst auf Instagram <b>liken + kommentieren</b><br><b>2.</b> Postest du, musst du M1 (5 Likes) erfüllen — sonst Verwarnung<br><b>3.</b> Schein-Engagement = sofortige Sanktionen', next:['links','respekt','warn','_back'] },
+  'data': { q:'📊 Mein Konto', a:'Schau dir deine Live-Daten an:', next:['_data_diamond','_data_xp','_data_warns','_data_events','_back'] },
+  '_data_diamond': { q:'💎 Meine Diamanten?', a:'<i>(Lade…)</i>', next:['data','_back'], lookup:'diamonds' },
+  '_data_xp': { q:'⚡ XP heute/gesamt?', a:'<i>(Lade…)</i>', next:['data','_back'], lookup:'xp' },
+  '_data_warns': { q:'⚠️ Meine Verwarnungen?', a:'<i>(Lade…)</i>', next:['data','_back'], lookup:'warns' },
+  '_data_events': { q:'🚀 Laufende Events?', a:'<i>(Lade…)</i>', next:['data','_back'], lookup:'events' },
+  'm': { q:'🎯 Missionen (M1/M2/M3)', a:'Auswertung täglich 12:00 (Berlin):<br><br><b>M1 — Daily Engagement</b><br>5 Links liken (+ auf Insta kommentieren) → <b>+5 XP</b><br><br><b>M2 — Solidarisch</b><br>80%+ aller heute geposteten Links liken → <b>+5 XP</b><br><br><b>M3 — Champion</b><br>ALLE heute geposteten Links liken (max 30) → <b>+5 XP + 💎 1 Diamant</b><br><br><b>Wochen-Bonus</b> bei 7 Tagen in Folge:<br>• W-M1: <b>+10 XP</b><br>• W-M2: <b>+15 XP + 💎 1</b><br>• W-M3: <b>+20 XP + 💎 2</b><br><br>📌 <b>Visit-before-Like:</b> erst Insta-Reel öffnen, dort liken + 2-Wort-Kommentar — DANN in App liken.', next:['xp','warn','_back'] },
+  'xp': { q:'⚡ XP-System', a:'<b>Quellen (echte Werte):</b><br><ul><li>👍 <b>Like:</b> +5 XP pro Like (Mission-Pflicht: 5 Links/Tag)</li><li>📌 <b>Post:</b> +5 XP (1 Link/Tag, Bonus-Links optional)</li><li>🎯 <b>Daily Missionen M1+M2+M3:</b> max +15 XP + 1💎</li><li>🏆 <b>Wochen-Missionen:</b> max +45 XP + 3💎</li><li>🎁 <b>Daily Bonus</b> (Button auf <a href="/profil" style="color:#a78bfa;font-weight:700">/profil</a>): 10–20 XP zufällig</li><li>🌟 <b>First-Post Newcomer:</b> +20 XP</li><li>⭐ <b>Event-Multiplier</b> wenn aktiv (z.B. +100%)</li></ul><b>Badges/Rollen (XP-Schwellen):</b><br>🆕 New: 0-49 · 📘 Anfänger: 50-499 · ⬆️ Aufsteiger: 500-999 · 🏅 Erfahrener: 1000-4999 · 👑 Elite: 5000-9999 · 🌟 Elite+: 10000+', next:['m','diamond','_back'] },
+  'diamond': { q:'💎 Diamanten', a:'<b>Earn:</b><br><ul><li>🎯 <b>M3 daily:</b> +1💎</li><li>🏆 <b>Wochen-M2:</b> +1💎  ·  <b>Wochen-M3:</b> +2💎</li><li>📌 <b>Pinned-Post engagieren:</b> +1💎 (1× pro Owner)</li><li>💎 <b>Diamantlink liken:</b> +3💎</li><li>🎰 <b>Glücksrad</b> in <a href="/explore?tab=roulette" style="color:#a78bfa;font-weight:700">/explore?tab=roulette</a> (1×/Tag)</li><li>🎁 <b>Wochen-Gewinnspiel</b> in <a href="/explore?tab=gewinnspiel" style="color:#a78bfa;font-weight:700">/explore?tab=gewinnspiel</a></li><li>📅 <b>Diamond-Events</b> (Live-Multiplier)</li></ul><b>Ausgeben:</b><br><ul><li>💎 <b>Diamantlink posten:</b> 30💎 → 3 Tage Top im Feed</li><li>⭐ <b>Superlink-Slot:</b> 10💎 (Extra-Slot kaufen)</li><li>🛍 <b>Shop-Items</b> in <a href="/explore?tab=shop" style="color:#a78bfa;font-weight:700">/explore?tab=shop</a> oder <a href="/diamanten" style="color:#a78bfa;font-weight:700">/diamanten</a></li></ul>', next:['superlink','shop','_back'] },
+  'superlink': { q:'⚡ Superlinks', a:'Premium-Post für die ganze Woche besonders sichtbar in der Telegram-Gruppe.<br><br><b>Limit:</b> 1×/Woche (Mo-Sa) — <b>🌟 Elite+</b> darf 2×<br><b>Pflicht-Engagement aller Member:</b> LIKEN + KOMMENT + TEILEN + SPEICHERN auf Instagram<br><b>Wer nicht engaged:</b> Sonntag 23:59 Uhr <b>−50 XP + Verwarnung</b><br><br>Posten: Feed → <b>+</b> → <b>⚡ Superlink</b> → URL + Caption<br><br>Auch käuflich: 10💎 = 1 Extra-Slot.', next:['diamond','m','_back'] },
+  'kollab': { q:'🤝 Kollab-Posts', a:'<b>Doppel-Posts mit Partner:</b><br><ol><li>Auf Partner-Profil "🤝 Kollab anfragen"</li><li>Partner bestätigt</li><li>Einer postet → Feed → <b>+</b> → <b>🤝 Kollab</b></li></ol><b>Regeln:</b><br>• 1× pro Woche pro Paar<br>• Sichtbare Zusammenarbeit Pflicht im Reel (beide Logos/Handles)<br>• Engagement Pflicht: LIKEN + KOMMENT + SPEICHERN + TEILEN auf Insta<br><br>Jeder Liker bekommt <b>+1💎</b>.', next:['diamond','_back'] },
+  'pinned': { q:'📌 Pinned Reel', a:'Dein Lieblings-Reel auf deiner Creator-Karte in Explore.<br><br><b>Setzen:</b> /einstellungen → 📌 Pinned Reel Link → Insta-URL → speichern<br><br>⚠️ Nur 1× pro 30 Tage änderbar (Admins jederzeit).<br><br>Liker deines Pinned-Posts bekommen <b>+1💎</b> (1× pro Owner-Paar).', next:['superlink','_back'] },
+  'warn': { q:'⚠️ Verwarnungen', a:'<b>Triggers:</b><br><ul><li>Post ohne M1 zu erfüllen</li><li>Schein-Engagement (Like ohne echtes Engagement)</li><li>Manuelle Admin-Verwarnung</li></ul><b>Eskalation:</b><br>• 1+2 → kurze DM<br>• <b>3</b> → ausführliche DM mit Aufklärung<br>• <b>4</b> → "letzte Chance"-DM<br>• <b>5</b> → 🚫 <b>permanenter Auto-Ban</b><br><br><b>Abbauen:</b> 5 Tage M1 in Folge → 1 Warn weg.', next:['m','rules','_back'] },
+  'links': { q:'🔗 Link-Regeln', a:'<b>Erlaubt:</b><br>• Instagram-Reels (eigene)<br>• 1 Link pro Tag (mehr via Bonus-Link)<br>• Kein Self-Like<br><br><b>Nicht erlaubt:</b><br>• Fremde Reels<br>• Affiliate/Spam-Links<br>• Wiederholungen<br>• Posts ohne sichtbares Content<br><br>Wer Self-Liked: temporäre Sperre + XP-Abzug.', next:['m','warn','_back'] },
+  'respekt': { q:'🤝 Respekt & Umgang', a:'<b>Im Chat:</b><br>• Keine Beleidigungen / Hate / Diskriminierung<br>• Keine Werbung / Spam<br>• Konstruktive Kritik ja, persönliche Attacken nein<br><br><b>In Kommentaren auf Insta:</b><br>• 2-Wort-Minimum bei Mission-Kommentaren<br>• Kein Copy-Paste-Spam<br><br>Verstöße = Verwarnung. Wiederholung = Ban.', next:['warn','support','_back'] },
+  'shop': { q:'🛍 Shop & Items', a:'Mit deinen Diamanten kannst du im Shop einkaufen:<br><ul><li>🎨 <b>Banner-Designs</b> für dein Profil</li><li>💍 <b>Avatar-Rings</b> (animiert)</li><li>🏆 <b>Trophy-Items</b> für dein Profil</li><li>⚡ <b>Superlink-Credits</b> (Extra-Slot)</li><li>🔗 <b>Extra-Link-Slot</b> (Post über Daily-Limit)</li></ul>Öffne: <a href="/explore?tab=shop" style="color:#a78bfa;font-weight:700">/explore?tab=shop</a> oder <a href="/diamanten" style="color:#a78bfa;font-weight:700">/diamanten</a>', next:['diamond','_back'] },
+  'start24h': { q:'⏰ Mein Plan für die ersten 24h', a:'1. <b>Profil komplett:</b> Pic, Spitzname, Insta, Bio<br>2. <b>Ersten Reel posten</b> (max 1/Tag)<br>3. <b>5 Reels liken</b> auf Insta + App (M1 ✅)<br>4. <b>Daily Bonus</b> nicht vergessen (+10-30 XP)<br>5. <b>Pinned Reel</b> in Einstellungen setzen<br><br>Bei 5/5 → Levelaufstieg garantiert!', next:['m','xp','_back'] },
+  'support': { q:'💬 Direkter Support', a:'Geht\\'s mit mir nicht weiter?<br><br>📨 <a href="/nachrichten/creatorboost" style="color:#a78bfa;font-weight:700">→ Direkt mit CreatorBoost chatten</a><br>(das bin ich, aber als richtige DM)<br><br>Stell hier unten deine Frage rein — wenn ich sie nicht selbst beantworten kann, leite ich sie sofort an den Admin weiter. Antwort kommt zurück als DM.', next:['_back'] },
+  '_back': { q:'← Zurück zur Übersicht', a:'Was willst du wissen?', next:['_start','rules','data','support','_more'] },
+  // ── Banale How-Tos (Direkt-Antworten via Keyword-Search) ──
+  '_h_profilbild': { q:'📷 Profilbild ändern', a:'Geh zu <a href="/einstellungen" style="color:#a78bfa;font-weight:700">/einstellungen</a> → <b>📷 Profilbild</b> → Foto hochladen → Bild zuschneiden → fertig.<br><br>Tipp: Quadrat-Bild funktioniert am besten.', next:['_h_banner','_h_bio','_back'] },
+  '_h_banner': { q:'🖼 Banner ändern', a:'In <a href="/einstellungen" style="color:#a78bfa;font-weight:700">/einstellungen</a> → Banner-Bereich. Lade ein Querformat-Bild hoch (3:1 ist ideal).', next:['_h_profilbild','_back'] },
+  '_h_bio': { q:'📝 Bio / Beschreibung ändern', a:'<a href="/einstellungen" style="color:#a78bfa;font-weight:700">/einstellungen</a> → <b>Bio</b> Feld → bis zu 100 Zeichen → speichern.', next:['_h_spitzname','_back'] },
+  '_h_spitzname': { q:'🏷 Spitzname ändern', a:'<a href="/einstellungen" style="color:#a78bfa;font-weight:700">/einstellungen</a> → <b>Spitzname</b> Feld → bis zu 30 Zeichen → speichern.<br><br>Der Spitzname erscheint im Ranking und auf deinem Profil.', next:['_h_bio','_back'] },
+  '_h_email': { q:'📧 Email ändern / setzen', a:'<a href="/einstellungen/account" style="color:#a78bfa;font-weight:700">/einstellungen/account</a> → Email-Feld.<br><br>⚠️ Wenn du schon Email + Passwort gesetzt hast: erst <b>"Änderung anfragen"</b> klicken → Bestätigungs-Mail kommt → dann hast du 30 Min Edit-Window.', next:['_h_passwort','_back'] },
+  '_h_passwort': { q:'🔐 Passwort setzen / ändern', a:'<a href="/set-password" style="color:#a78bfa;font-weight:700">/set-password</a> oder in <a href="/einstellungen/account" style="color:#a78bfa;font-weight:700">/einstellungen/account</a>.<br><br>Min. 6 Zeichen. Wenn du eins gesetzt hast, kannst du dich auch ohne Magic-Link einloggen.', next:['_h_email','_back'] },
+  '_h_insta': { q:'📸 Instagram-Handle einstellen', a:'<a href="/einstellungen" style="color:#a78bfa;font-weight:700">/einstellungen</a> → <b>Instagram</b> Feld → dein Handle (ohne @) → speichern.<br><br>Wird im Profil als Link angezeigt + nutzt das Insta-Avatar als Fallback wenn du kein Profilbild hast.', next:['_h_profilbild','_back'] },
+  '_h_logout': { q:'🚪 Ausloggen', a:'<a href="/einstellungen/sicherheit" style="color:#a78bfa;font-weight:700">/einstellungen/sicherheit</a> → <b>🚪 Ausloggen</b> Button.<br><br>Oder direkt: <a href="/logout" style="color:#a78bfa;font-weight:700">/logout</a>', next:['_back'] },
+  '_h_delete': { q:'🗑 Account löschen', a:'<a href="/einstellungen" style="color:#a78bfa;font-weight:700">/einstellungen</a> → ganz unten <b>🗑️ Account dauerhaft löschen</b>.<br><br>⚠️ <b>Nicht umkehrbar</b> (außer Admin macht innerhalb 50 Tagen Restore). Du musst "LÖSCHEN" tippen zur Bestätigung.<br><br>DSGVO Art. 17 — alle Daten weg.', next:['_back'] },
+  '_h_post': { q:'📌 Wie poste ich einen Link?', a:'<a href="/feed" style="color:#a78bfa;font-weight:700">/feed</a> → <b>+</b> Button (Mitte unten) → <b>📌 Link posten</b> → Instagram-Reel-URL einfügen.<br><br>Limits:<br>• Nur Instagram-Reels (eigene)<br>• 1 Link/Tag<br>• Kein Self-Like<br><br>Du kriegst <b>+5 XP</b> + 8h Pin im Heute-Feed.', next:['m','_h_post_super','_back'] },
+  '_h_post_super': { q:'⚡ Superlink posten', a:'Im <a href="/feed" style="color:#a78bfa;font-weight:700">Feed</a> → <b>+</b> → <b>⚡ Superlink</b>. 1/Woche (Mo-Sa), Elite+ 2/Woche.', next:['superlink','_h_post','_back'] },
+  '_h_block': { q:'🚫 User blockieren', a:'Auf dem Profil des Users (z.B. <code>/profil/123</code>) → <b>3-Punkte-Menü</b> → <b>🚫 Blockieren</b>.<br><br>Blockierte siehst du in <a href="/einstellungen/privacy" style="color:#a78bfa;font-weight:700">/einstellungen/privacy</a> — dort auch wieder entblocken.', next:['_back'] },
+  '_h_notif': { q:'🔔 Push-Notifications einstellen', a:'<a href="/einstellungen/notifications" style="color:#a78bfa;font-weight:700">/einstellungen/notifications</a> → <b>Push aktivieren</b>.<br><br>Browser fragt dich nach Berechtigung — auf "Erlauben" tippen. Danach kriegst du Push wenn jemand liked, kommentiert, oder ein Event startet.', next:['_back'] },
+  '_h_sub': { q:'👶 Sub-Account erstellen', a:'Auf deinem Profil → <b>Account-Switcher</b> oben → <b>+ Sub-Account</b>.<br><br>Ein Sub teilt deinen Telegram-Account aber hat eigene XP/Diamanten. Nützlich wenn du mehrere Insta-Profile bedienst.', next:['_back'] },
+  '_h_install': { q:'📲 App auf Handy installieren', a:'<b>iPhone/Safari:</b> Teilen-Button → "Zum Home-Bildschirm".<br><br><b>Android/Chrome:</b> Menü (3 Punkte) → "App installieren".<br><br>Oder Direkt-Download: <a href="/download-app" style="color:#a78bfa;font-weight:700">/download-app</a>', next:['_back'] },
+  '_h_dark': { q:'🌙 Dark Mode', a:'Klick auf <b>🌙</b> oben rechts in der Topbar → Theme switched zwischen Hell und Dunkel. Wird automatisch gespeichert.', next:['_back'] },
+};
+async function cbHelperOpen(){
+  const m = document.getElementById('cb-helper-modal');
+  m.classList.add('open');
+  document.body.style.overflow='hidden';
+  if (!m.dataset.init){
+    m.dataset.init='1';
+    // History laden + rendern, sonst _root anzeigen
+    await cbHelperLoadHistory();
+  }
+  try{ localStorage.setItem('cb_helper_seen','1'); const b=document.getElementById('cb-helper-badge'); if(b)b.style.display='none'; }catch(e){}
+  // Polling für neue Admin-Antworten alle 8s solang der Chat offen ist
+  if (!window._cbHelperPoll) {
+    window._cbHelperPoll = setInterval(()=>{
+      const open = document.getElementById('cb-helper-modal').classList.contains('open');
+      if (!open) { clearInterval(window._cbHelperPoll); window._cbHelperPoll = null; return; }
+      cbHelperPollNew();
+    }, 8000);
+  }
+}
+async function cbHelperPollNew(){
+  try {
+    const r = await fetch('/api/helper-history');
+    const j = await r.json();
+    if (!j.ok || !Array.isArray(j.messages)) return;
+    const body = document.getElementById('cb-helper-body');
+    const lastTsAttr = body.dataset.lastTs ? Number(body.dataset.lastTs) : 0;
+    let maxTs = lastTsAttr;
+    let appendedAny = false;
+    for (const m of j.messages) {
+      const ts = Number(m.ts || 0);
+      if (ts <= lastTsAttr) continue;
+      if (ts > maxTs) maxTs = ts;
+      // Nur Admin-Antworten dynamisch nachreichen — User-Bubbles + Bot-Replies
+      // sind schon lokal angezeigt
+      if (!m.fromAdmin) continue;
+      const el = document.createElement('div');
+      el.className = 'cb-msg bot';
+      el.style.border = '1px solid rgba(167,139,250,0.4)';
+      el.innerHTML = m.text;
+      body.appendChild(el);
+      appendedAny = true;
+    }
+    if (maxTs > lastTsAttr) body.dataset.lastTs = String(maxTs);
+    if (appendedAny) body.scrollTop = body.scrollHeight;
+  } catch(e) {}
+}
+async function cbHelperLoadHistory(){
+  const body = document.getElementById('cb-helper-body');
+  const chips = document.getElementById('cb-helper-chips');
+  try {
+    const r = await fetch('/api/helper-history');
+    const j = await r.json();
+    if (j.ok && Array.isArray(j.messages) && j.messages.length > 0) {
+      body.innerHTML = '';
+      let maxTs = 0;
+      for (const m of j.messages) {
+        const el = document.createElement('div');
+        el.className = 'cb-msg ' + (m.role === 'user' ? 'user' : 'bot');
+        if (m.fromAdmin) { el.style.border = '1px solid rgba(167,139,250,0.4)'; }
+        el.innerHTML = (m.role === 'bot') ? m.text : escapeHtml(m.text);
+        body.appendChild(el);
+        const ts = Number(m.ts || 0); if (ts > maxTs) maxTs = ts;
+      }
+      body.dataset.lastTs = String(maxTs);
+      const hint = document.createElement('div');
+      hint.style.cssText = 'text-align:center;padding:8px;font-size:11px;color:var(--muted);font-style:italic';
+      hint.textContent = '— Stelle eine Frage oder wähle ein Thema —';
+      body.appendChild(hint);
+      cbHelperShowMenu();
+      body.scrollTop = body.scrollHeight;
+      return;
+    }
+  } catch(e) {}
+  cbHelperShow('_root');
+}
+function escapeHtml(s){return String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function cbHelperShowMenu(){
+  const chips = document.getElementById('cb-helper-chips');
+  chips.innerHTML = '';
+  ['_start','rules','data','support','_more'].forEach(nid => {
+    const nx = CB_HELP[nid]; if(!nx) return;
+    const c = document.createElement('button'); c.className = 'cb-chip'; c.textContent = nx.q || '→';
+    c.onclick = ()=>cbHelperShow(nid);
+    chips.appendChild(c);
+  });
+}
+async function cbHelperPersist(role, text){
+  try { await fetch('/api/helper-append', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({role, text})}); } catch(e) {}
+}
+function cbHelperClose(){
+  document.getElementById('cb-helper-modal').classList.remove('open');
+  document.body.style.overflow='';
+}
+function cbHelperShow(id){
+  const node = CB_HELP[id];
+  if (!node) return;
+  const body = document.getElementById('cb-helper-body');
+  const chips = document.getElementById('cb-helper-chips');
+  // Falls schon Frage (= User hat geklickt), zeige User-Bubble + persist
+  if (node.q) {
+    const u = document.createElement('div'); u.className='cb-msg user'; u.textContent = node.q;
+    body.appendChild(u);
+    cbHelperPersist('user', node.q);
+  }
+  // Typing-Indikator
+  const t = document.createElement('div'); t.className='cb-typing';
+  t.innerHTML='<span></span><span></span><span></span>';
+  body.appendChild(t);
+  body.scrollTop = body.scrollHeight;
+  chips.innerHTML = '';
+  setTimeout(()=>{
+    t.remove();
+    const a = document.createElement('div'); a.className='cb-msg bot'; a.innerHTML = node.a;
+    body.appendChild(a);
+    cbHelperPersist('bot', node.a);
+    body.scrollTop = body.scrollHeight;
+    // Chips
+    chips.innerHTML = '';
+    (node.next||[]).forEach(nid => {
+      const nx = CB_HELP[nid]; if(!nx) return;
+      const c = document.createElement('button'); c.className = 'cb-chip' + (nid==='_back'?' back':''); c.textContent = nx.q || '→';
+      c.onclick = ()=>cbHelperShow(nid);
+      chips.appendChild(c);
+    });
+  }, Math.min(700, 200 + node.a.length*5));
+}
+// Keywords pro Topic für Search
+const CB_HELP_KEYWORDS = {
+  'm': ['mission','m1','m2','m3','aufgabe','aufgaben','ziele','task','daily mission','missionen','tagesziel','quest'],
+  'xp': ['xp','punkte','level','rolle','badge','rang','rank','erfahrung','exp','stufe','aufsteigen','levelup'],
+  'diamond': ['diamant','diamanten','diamond','💎','währung','wallet','geld','reward','belohnung','rewards','kristall'],
+  'superlink': ['superlink','super link','superpost','premium post','superlinks','star link'],
+  'kollab': ['kollab','kollabo','collab','partner','zusammenarbeit','collaboration','kooperation','duo post'],
+  'pinned': ['pinned','pin reel','angepinnt','explore karte','profil-reel','lieblings reel','haupt reel'],
+  'warn': ['warn','verwarnung','warning','strafe','sperre','ban','gebannt','verwarnt','warnung','warns'],
+  'support': ['support','hilfe','help','kontakt','admin','helfen','helpdesk'],
+  '_h_profilbild': ['profilbild','foto','avatar','pic','profil bild','bild ändern','bild hochladen','profilfoto','profilpic','profile pic','prof bild'],
+  '_h_banner': ['banner','header','titelbild','cover','hintergrund profil','banner ändern','banner hochladen'],
+  '_h_bio': ['bio','beschreibung','about','steckbrief','über mich','text profil','bio ändern','profiltext'],
+  '_h_spitzname': ['spitzname','nickname','anzeigename','user name','display name','username','nick','spitznamen'],
+  '_h_email': ['email','e-mail','mail','email ändern','email setzen','email-adresse','mail ändern','neue email','meine email','mailadresse'],
+  '_h_passwort': ['passwort','password','pw','login passwort','passwort ändern','passwort setzen','pw setzen','passwort vergessen','passwort neu'],
+  '_h_insta': ['instagram handle','insta handle','insta verlinken','insta einstellen','meine instagram','instagram account','insta acc','ig handle','instagram name'],
+  '_h_logout': ['ausloggen','auslogen','ausloggn','aussloggen','ausslogen','auslogen','logout','log out','abmelden','sign out','signout','rausgehen','raus gehen','rauslogen','abmelden','log aus'],
+  '_h_delete': ['account löschen','account weg','konto löschen','dsgvo','daten löschen','account loeschen','konto loeschen','account entfernen','profil löschen'],
+  '_h_post': ['posten','wie poste','wie post','link teilen','link posten','reel posten','reel teilen','hochladen','reel hochladen','beitrag erstellen','neuer post'],
+  '_h_block': ['blockieren','blocken','user blockieren','blocked','blockliste','geblockt','sperren user'],
+  '_h_notif': ['benachrichtigung','notification','push','notif','alarm','meldung anstellen','benachrichtigungen','push notification','mitteilung'],
+  '_h_sub': ['sub account','zweitaccount','sub','second account','neuer account','zweit acc','subaccount','nebenaccount','zweit account'],
+  '_h_install': ['app installieren','installieren','apk','download','app runter','homescreen','app laden','app handy','startbildschirm'],
+  '_h_dark': ['dark mode','dark theme','dunkel','nachtmodus','dunkler hintergrund','darkmode','schwarz mode','hell mode'],
+};
+// Levenshtein-Distance (max 2) für Typo-Toleranz
+function cbHelperLev(a, b){
+  if (a === b) return 0;
+  if (!a.length || !b.length) return Math.max(a.length, b.length);
+  if (Math.abs(a.length - b.length) > 2) return 3;
+  const prev = new Array(b.length + 1);
+  const curr = new Array(b.length + 1);
+  for (let j = 0; j <= b.length; j++) prev[j] = j;
+  for (let i = 1; i <= a.length; i++) {
+    curr[0] = i;
+    for (let j = 1; j <= b.length; j++) {
+      const cost = a[i-1] === b[j-1] ? 0 : 1;
+      curr[j] = Math.min(curr[j-1]+1, prev[j]+1, prev[j-1]+cost);
+    }
+    for (let j = 0; j <= b.length; j++) prev[j] = curr[j];
+  }
+  return prev[b.length];
+}
+// Fuzzy-Match: substring ODER ein Token im Query liegt ≤2 Edits zum Keyword
+function cbHelperKwScore(q, kw){
+  if (q.includes(kw)) return kw.length * 2; // exakt = doppelter Score
+  // Wort-für-Wort fuzzy
+  const tokens = q.split(/[\s,.!?;:]+/).filter(t => t.length >= 3);
+  const kwTokens = kw.split(/\s+/);
+  let total = 0;
+  for (const kwT of kwTokens) {
+    if (kwT.length < 3) continue;
+    let best = 99;
+    for (const t of tokens) {
+      const d = cbHelperLev(t, kwT);
+      if (d < best) best = d;
+    }
+    // Toleranz: 0 Edits = voller Score, 1 Edit = 70%, 2 Edits = 40%
+    if (best === 0) total += kwT.length;
+    else if (best === 1 && kwT.length >= 4) total += Math.floor(kwT.length * 0.7);
+    else if (best === 2 && kwT.length >= 6) total += Math.floor(kwT.length * 0.4);
+  }
+  return total;
+}
+function cbHelperFindTopic(q){
+  const lq = q.toLowerCase();
+  let best=null, bestScore=0;
+  for (const [tid, kws] of Object.entries(CB_HELP_KEYWORDS)){
+    let s = 0;
+    for (const kw of kws) { s += cbHelperKwScore(lq, kw); }
+    if (s > bestScore) { bestScore = s; best = tid; }
+  }
+  return bestScore >= 4 ? best : null;
+}
+function cbHelperFindScore(q){
+  const lq = (q||'').toLowerCase(); let best = 0;
+  for (const kws of Object.values(CB_HELP_KEYWORDS)){
+    let s=0; for (const kw of kws){ s += cbHelperKwScore(lq, kw); }
+    if (s > best) best = s;
+  }
+  return best;
+}
+async function cbHelperAsk(){
+  const inp = document.getElementById('cb-helper-input');
+  const btn = document.getElementById('cb-helper-send');
+  const q = (inp.value||'').trim();
+  if (!q) return;
+  btn.disabled = true; btn.textContent = '⏳';
+  inp.value = '';
+  const body = document.getElementById('cb-helper-body');
+  const chips = document.getElementById('cb-helper-chips');
+  const u = document.createElement('div'); u.className='cb-msg user'; u.textContent = q;
+  body.appendChild(u);
+  cbHelperPersist('user', q);
+  chips.innerHTML = '';
+  const t = document.createElement('div'); t.className='cb-typing';
+  t.innerHTML='<span></span><span></span><span></span>';
+  body.appendChild(t);
+  body.scrollTop = body.scrollHeight;
+  // 1) Schnelle Topic-Suche (instant, gratis) — nur bei sehr starkem Match direkt antworten
+  const topicId = cbHelperFindTopic(q);
+  const topicScore = cbHelperFindScore(q);
+  if (topicId && CB_HELP[topicId] && topicScore >= 12) {
+    await new Promise(r => setTimeout(r, 400));
+    t.remove();
+    const node = CB_HELP[topicId];
+    const a = document.createElement('div'); a.className='cb-msg bot';
+    const htmlA = '<div style="font-size:11px;color:var(--muted);margin-bottom:4px">📚 Gefunden im Topic <b>'+ (node.q||'') +'</b>:</div>' + node.a;
+    a.innerHTML = htmlA;
+    body.appendChild(a);
+    cbHelperPersist('bot', htmlA);
+    chips.innerHTML = '';
+    const yes = document.createElement('button'); yes.className='cb-chip'; yes.textContent='✅ Hat geholfen';
+    yes.onclick = ()=>{ chips.innerHTML=''; cbHelperShow('_back'); };
+    chips.appendChild(yes);
+    const no = document.createElement('button'); no.className='cb-chip'; no.textContent='❌ Frag Admin';
+    no.onclick = ()=>cbHelperForwardToAdmin(q);
+    chips.appendChild(no);
+    (node.next||[]).slice(0,3).forEach(nid => {
+      const nx = CB_HELP[nid]; if(!nx) return;
+      const c = document.createElement('button'); c.className='cb-chip'; c.textContent = nx.q || '→';
+      c.onclick = ()=>cbHelperShow(nid);
+      chips.appendChild(c);
+    });
+    body.scrollTop = body.scrollHeight;
+    btn.disabled = false; btn.textContent = '→';
+    return;
+  }
+  // 2) AI (Gemini) versuchen
+  try {
+    const r = await fetch('/api/helper-ai', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question: q})});
+    const j = await r.json();
+    if (j.ok && j.answer) {
+      t.remove();
+      const a = document.createElement('div'); a.className='cb-msg bot';
+      const htmlA = '<div style="font-size:11px;color:var(--muted);margin-bottom:4px">🤖 CreatorBoost (KI):</div>' + j.answer;
+      a.innerHTML = htmlA;
+      body.appendChild(a);
+      cbHelperPersist('bot', htmlA);
+      chips.innerHTML = '';
+      const yes = document.createElement('button'); yes.className='cb-chip'; yes.textContent='✅ Hat geholfen';
+      yes.onclick = ()=>{ chips.innerHTML=''; cbHelperShow('_back'); };
+      chips.appendChild(yes);
+      const no = document.createElement('button'); no.className='cb-chip'; no.textContent='❌ Doch Admin fragen';
+      no.onclick = ()=>cbHelperForwardToAdmin(q);
+      chips.appendChild(no);
+      const back = document.createElement('button'); back.className='cb-chip back'; back.textContent='← Übersicht';
+      back.onclick = ()=>cbHelperShow('_back');
+      chips.appendChild(back);
+      body.scrollTop = body.scrollHeight;
+      btn.disabled = false; btn.textContent = '→';
+      return;
+    }
+    // AI nicht verfügbar oder Fehler → schwächeres Keyword-Match probieren, dann Admin
+    if (j.fallback) {
+      // Bei Quota-Errors: kurzer Hinweis statt stille Weiterleitung
+      const isQuota = /quota|rate.?limit|429/i.test(String(j.error||''));
+      if (isQuota) {
+        t.remove();
+        const a = document.createElement('div'); a.className='cb-msg bot';
+        const htmlA = '⏳ <b>KI-Limit erreicht</b> für heute (Free-Tier).<br><br>Warte ~1 Min oder ich frag direkt den Admin für dich.';
+        a.innerHTML = htmlA;
+        body.appendChild(a);
+        cbHelperPersist('bot', htmlA);
+        chips.innerHTML = '';
+        const adminBtn = document.createElement('button'); adminBtn.className='cb-chip'; adminBtn.textContent='📨 Admin fragen';
+        adminBtn.onclick = ()=>cbHelperForwardToAdmin(q);
+        chips.appendChild(adminBtn);
+        const retry = document.createElement('button'); retry.className='cb-chip'; retry.textContent='🔁 Nochmal versuchen';
+        retry.onclick = ()=>{ const inp=document.getElementById('cb-helper-input'); inp.value=q; cbHelperAsk(); };
+        chips.appendChild(retry);
+        const back = document.createElement('button'); back.className='cb-chip back'; back.textContent='← Übersicht';
+        back.onclick = ()=>cbHelperShow('_back');
+        chips.appendChild(back);
+        body.scrollTop = body.scrollHeight;
+        btn.disabled = false; btn.textContent = '→';
+        return;
+      }
+      if (topicId && CB_HELP[topicId]) {
+        t.remove();
+        const node = CB_HELP[topicId];
+        const a = document.createElement('div'); a.className='cb-msg bot';
+        const htmlA = '<div style="font-size:11px;color:var(--muted);margin-bottom:4px">📚 Vielleicht meinst du <b>'+ (node.q||'') +'</b>:</div>' + node.a;
+        a.innerHTML = htmlA;
+        body.appendChild(a);
+        cbHelperPersist('bot', htmlA);
+        chips.innerHTML = '';
+        const no = document.createElement('button'); no.className='cb-chip'; no.textContent='❌ Nicht das — Admin fragen';
+        no.onclick = ()=>cbHelperForwardToAdmin(q);
+        chips.appendChild(no);
+        const back = document.createElement('button'); back.className='cb-chip back'; back.textContent='← Übersicht';
+        back.onclick = ()=>cbHelperShow('_back');
+        chips.appendChild(back);
+        body.scrollTop = body.scrollHeight;
+        btn.disabled = false; btn.textContent = '→';
+        return;
+      }
+      t.remove();
+      cbHelperForwardToAdmin(q);
+      btn.disabled = false; btn.textContent = '→';
+      return;
+    }
+    throw new Error(j.error || 'AI failed');
+  } catch(e) {
+    t.remove();
+    cbHelperForwardToAdmin(q);
+    btn.disabled = false; btn.textContent = '→';
+  }
+}
+async function cbHelperForwardToAdmin(question){
+  const body = document.getElementById('cb-helper-body');
+  const chips = document.getElementById('cb-helper-chips');
+  chips.innerHTML = '';
+  const t = document.createElement('div'); t.className='cb-typing';
+  t.innerHTML='<span></span><span></span><span></span>';
+  body.appendChild(t);
+  body.scrollTop = body.scrollHeight;
+  try {
+    const r = await fetch('/api/helper-ask', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question})});
+    const j = await r.json();
+    t.remove();
+    const a = document.createElement('div'); a.className='cb-msg bot';
+    let htmlA;
+    if (j.ok) {
+      htmlA = '✅ <b>Frage an Admin gesendet!</b><br><br>Du kriegst die Antwort hier im Chat — der Verlauf bleibt gespeichert.<br>Auch als CreatorBoost-DM in <a href="/nachrichten/creatorboost" style="color:#a78bfa;font-weight:700">/nachrichten</a>.<br><br>Meistens innerhalb von 1 Stunde.';
+    } else {
+      htmlA = '❌ Konnte die Frage nicht an den Admin schicken: '+(j.error||'Fehler')+'<br><br>Versuch\\'s direkt: <a href="/nachrichten/creatorboost" style="color:#a78bfa;font-weight:700">→ DM an CreatorBoost</a>';
+    }
+    a.innerHTML = htmlA;
+    body.appendChild(a);
+    cbHelperPersist('bot', htmlA);
+    const back = document.createElement('button'); back.className='cb-chip back'; back.textContent='← Zur Übersicht';
+    back.onclick = ()=>cbHelperShow('_back');
+    chips.appendChild(back);
+  } catch(e){
+    t.remove();
+    const a = document.createElement('div'); a.className='cb-msg bot';
+    a.innerHTML = '❌ Netzwerk-Fehler. Versuch\\'s nochmal oder direkt: <a href="/nachrichten/creatorboost" style="color:#a78bfa;font-weight:700">→ DM an CreatorBoost</a>';
+    body.appendChild(a);
+  }
+  body.scrollTop = body.scrollHeight;
+}
+// Enter im Input = senden
+setTimeout(()=>{ const inp=document.getElementById('cb-helper-input'); if(inp){ inp.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); cbHelperAsk(); } }); } }, 500);
+// Beim ersten Mal Badge zeigen, nach Click ausblenden
+try{ if(localStorage.getItem('cb_helper_seen')==='1'){ const b=document.getElementById('cb-helper-badge'); if(b)b.style.display='none'; } }catch(e){}
+</script>
+<!-- ── /CREATORX HELPER BOT ───────────────────────────────────────── -->
 `, 'feed');
     }
 
@@ -8810,7 +11175,8 @@ async function acPoll() {
     }
   } catch(e) {}
 }
-setInterval(acPoll, 3000);
+setInterval(()=>{if(!document.hidden)acPoll();}, 3000);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)try{acPoll();}catch(e){}});
 fetch('/api/app-presence', {method:'POST'}).catch(()=>{});
 // Bei Tab-Wechsel zurück: sofort syncen
 document.addEventListener('visibilitychange', () => { if (!document.hidden) acPoll(); });
@@ -9695,7 +12061,7 @@ async function createThread(){
 </div>
 ${cards}
 <script>
-setInterval(async()=>{try{const r=await fetch(location.href,{headers:{'X-Poll':'1'}});if(r.ok&&r.redirected)location.reload();}catch(e){}},15000);
+setInterval(async()=>{if(document.hidden)return;try{const r=await fetch(location.href,{headers:{'X-Poll':'1'}});if(r.ok&&r.redirected)location.reload();}catch(e){}},15000);
 async function renameThread(tid,current){
   const name=prompt('Neuer Thread-Name:',current);
   if(!name||!name.trim())return;
@@ -9906,7 +12272,26 @@ document.getElementById('user-search-input')?.addEventListener('input',filterSea
             .sort((a, b) => (b.lastMsg?.timestamp||0)-(a.lastMsg?.timestamp||0));
         // Threads sind aus der App entfernt — keine Unread/List mehr nötig
         const lastAppChat = (appChatData?.messages || []).filter(m => !m.deleted).slice(-1)[0] || null;
-        const convHtml = require('./chat-list-render')({ myConvos, botData, myUid, ladeBild, adminIds, onlineUids: getOnlineUids(), crown, appChatPreview: lastAppChat ? { name: lastAppChat.name, text: lastAppChat.text, image: lastAppChat.image, timestamp: lastAppChat.ts } : null, appChatUnread: appChatData?.unread || 0, appChatMembers: appChatData?.memberCount || 0 });
+        // Stories: nur gefolgte User mit Pinned Reel (gleiche Logik wie /feed)
+        // Eigene Familie (Hauptaccount + Sub-Accounts) wird komplett ausgeblendet.
+        const _myFollowingSet = new Set((botData.users?.[myUid]?.following || []).map(String));
+        const _myEngagedOwnersDM = (botData.pinnedEngages?.[String(myUid)] || []).map(String);
+        const _myFamilyRootDM = String(session?.uid || myUid);
+        const _isFamilyDM = (id, u) => String(id) === _myFamilyRootDM || (u && String(u.parent_uid||'') === _myFamilyRootDM);
+        const _pinnedStoriesDM = Object.entries(botData.users || {})
+            .filter(([id, u]) => !_isFamilyDM(id, u) && _myFollowingSet.has(String(id)) && !adminIds.includes(Number(id)) && isAppVisible(u))
+            .map(([id, u]) => ({ id, u, pinnedUrl: ladePinnedLink(id) }))
+            .filter(x => !!x.pinnedUrl)
+            .map(x => ({
+                uid: x.id,
+                name: x.u.spitzname || x.u.name || 'User',
+                avatar: ladeBild(x.id, 'profilepic') ? '/appbild/' + x.id + '/profilepic' : '',
+                thumb: ((x.pinnedUrl || '').match(/instagram\.com\/(?:reel|p|tv)\/([A-Za-z0-9_-]+)/) ? '/insta-thumb?u=' + encodeURIComponent(x.pinnedUrl) : ''),
+                engaged: _myEngagedOwnersDM.includes(String(x.id)),
+                isOwn: String(x.id) === String(myUid)
+            }))
+            .sort((a, b) => (a.engaged === b.engaged) ? 0 : (a.engaged ? 1 : -1));
+        const convHtml = require('./chat-list-render')({ myConvos, botData, myUid, ladeBild, adminIds, onlineUids: getOnlineUids(), crown, appChatPreview: lastAppChat ? { name: lastAppChat.name, text: lastAppChat.text, image: lastAppChat.image, timestamp: lastAppChat.ts } : null, appChatUnread: appChatData?.unread || 0, appChatMembers: appChatData?.memberCount || 0, pinnedStories: _pinnedStoriesDM });
         return html(`<div class="topbar"><div class="topbar-logo">Nachrichten</div><div class="topbar-actions"><a href="/suche" class="icon-btn" title="User suchen" style="text-decoration:none"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></a></div></div><div style="padding-bottom:80px">${convHtml}</div>`, 'messages');
     }
 
@@ -10307,14 +12692,6 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
 
     // ── ADMIN DASHBOARD (App-side, holt Daten via /admin-userlist-api, schreibt via /add-xp etc.) ──
     // Sichtbar nur für Admins (CB-Bot Admin-IDs ODER role enthält 'Admin'). Auch über Sub-Account ok.
-    const _dashIsAdmin = (() => {
-        const parentUid = String(session?.uid || '');
-        return adminIds.includes(Number(myUid))
-            || adminIds.includes(Number(parentUid))
-            || String(d.users?.[myUid]?.role||'').includes('Admin')
-            || String(d.users?.[parentUid]?.role||'').includes('Admin');
-    })();
-
     // ── Admin: Listet alle User mit Onboarding-Status; Filter ?new=1 → letzte 3 Tage. ──
     if (path === '/api/admin/users' && req.method === 'GET') {
         if (!session) return json({error:'Nicht eingeloggt'}, 401);
@@ -10680,11 +13057,18 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
       <div class="dash-top-actions">
         <button class="dash-btn dash-btn-ghost" onclick="runMissionBackfill()">🔁 Backfill</button>
         <button class="dash-btn" onclick="openFunnelDebug()">🔬 Funnel Debug</button>
+        <button class="dash-btn" onclick="openStatsDebug()">📊 Stats Debug</button>
+        <button class="dash-btn" onclick="openKollabBoostPreview()" style="border-color:rgba(236,72,153,0.40);color:#ec4899">🎨 Kollab-Boost Preview</button>
+        <button class="dash-btn" onclick="adminCreateNewSub()" style="border-color:rgba(167,139,250,0.45);color:#a78bfa">🆕 Neuen Sub erstellen</button>
         <button class="dash-btn" onclick="openEventModal('xp')" style="border-color:rgba(245,158,11,0.40);color:#fbbf24">✨ XP-Event starten</button>
         <button class="dash-btn" onclick="openEventModal('diamond')" style="border-color:rgba(6,182,212,0.40);color:#06b6d4">💎 Diamond-Event starten</button>
         <button class="dash-btn dash-btn-primary" onclick="openBroadcastModal()">📢 Broadcast DM</button>
+        <button class="dash-btn" id="dash-top-tickets-btn" onclick="jumpToHelperInbox()" style="border-color:rgba(245,158,11,0.55);color:#f59e0b;font-weight:700">🎫 Tickets <span id="dash-top-tickets-badge" style="display:none;margin-left:6px;padding:2px 7px;border-radius:99px;background:#f59e0b;color:#1a0f00;font-size:11px;font-weight:900">0</span></button>
       </div>
     </div>
+
+    <!-- Sync-Health Banner (Phase 2 Smart-Mirror) -->
+    <div id="sync-health-banner" style="display:none;margin-bottom:16px"></div>
 
     <!-- Live Metrics -->
     <div class="dash-stat-grid">
@@ -10714,6 +13098,30 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
         <div class="dash-stat-val" id="stat-banned">–</div>
         <div class="dash-stat-sub">deaktivierte Accounts</div>
       </div>
+      <div class="dash-stat danger" id="stat-reports-card" onclick="jumpToReports()" style="cursor:pointer">
+        <div class="dash-stat-lbl">🚩 Offene Meldungen</div>
+        <div class="dash-stat-val" id="stat-reports-open">–</div>
+        <div class="dash-stat-sub">→ Tab "Meldungen" öffnen</div>
+      </div>
+    </div>
+
+    <!-- Activity heute vs gestern: XP / Likes / Links -->
+    <div class="dash-stat-grid">
+      <div class="dash-stat">
+        <div class="dash-stat-lbl">📊 XP heute</div>
+        <div class="dash-stat-val" id="stat-xp-today">–</div>
+        <div class="dash-stat-sub">gestern: <span id="stat-xp-yesterday">–</span> <span id="stat-xp-trend"></span></div>
+      </div>
+      <div class="dash-stat">
+        <div class="dash-stat-lbl">❤️ Likes heute</div>
+        <div class="dash-stat-val" id="stat-likes-today">–</div>
+        <div class="dash-stat-sub">gestern: <span id="stat-likes-yesterday">–</span> <span id="stat-likes-trend"></span></div>
+      </div>
+      <div class="dash-stat">
+        <div class="dash-stat-lbl">🔗 Links heute</div>
+        <div class="dash-stat-val" id="stat-links-today">–</div>
+        <div class="dash-stat-sub">gestern: <span id="stat-links-yesterday">–</span> <span id="stat-links-trend"></span></div>
+      </div>
     </div>
 
     <!-- Activity heute vs gestern: XP / Likes / Links -->
@@ -10740,8 +13148,78 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
       <div class="dash-stat"><div class="dash-stat-lbl">✅ Aktive (started)</div><div class="dash-stat-val" id="stat-active">–</div></div>
       <div class="dash-stat warn"><div class="dash-stat-lbl">✨ Neu ≤ 3 Tage</div><div class="dash-stat-val" id="stat-new">–</div></div>
       <div class="dash-stat"><div class="dash-stat-lbl">📧 Email bestätigt</div><div class="dash-stat-val" id="stat-email">–</div></div>
-      <div class="dash-stat"><div class="dash-stat-lbl">🪪 Ex-Telegram</div><div class="dash-stat-val" id="stat-extg">–</div></div>
     </div>
+
+    <!-- 30-Tage Trend-Chart -->
+    <section class="dash-section">
+      <div class="dash-section-hdr">
+        <div class="dash-section-title">📈 30-Tage Trend</div>
+        <div class="dash-section-sub">Landing · Signups · Logins · Likes</div>
+        <div class="dash-section-grow"></div>
+        <div style="display:flex;gap:14px;font-size:11px;font-weight:700">
+          <span style="color:#3b82f6">● Landing</span>
+          <span style="color:#d4af37">● Signups</span>
+          <span style="color:#22c55e">● Logins</span>
+          <span style="color:#ef4444">● Likes</span>
+        </div>
+      </div>
+      <div class="dash-section-body">
+        <svg id="trend-chart" viewBox="0 0 600 180" preserveAspectRatio="none" style="width:100%;height:180px;display:block"></svg>
+        <div id="trend-chart-xlabels" style="display:flex;justify-content:space-between;margin-top:6px;font-size:10px;color:var(--dsub);font-variant-numeric:tabular-nums"></div>
+      </div>
+    </section>
+
+    <!-- Top Creators heute + Source-Vergleich -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px;margin-bottom:18px">
+      <section class="dash-section" style="margin:0">
+        <div class="dash-section-hdr">
+          <div class="dash-section-title">🏆 Top Creator heute</div>
+          <div class="dash-section-sub">XP-Gewinn seit Mitternacht</div>
+        </div>
+        <div class="dash-section-body">
+          <div id="top-creators-list" style="display:flex;flex-direction:column;gap:6px">
+            <div style="padding:18px;text-align:center;color:var(--dsub);font-size:12.5px">Lädt …</div>
+          </div>
+        </div>
+      </section>
+      <section class="dash-section" style="margin:0">
+        <div class="dash-section-hdr">
+          <div class="dash-section-title">📱 Source-Vergleich</div>
+          <div class="dash-section-sub">letzte 7 Tage · Signups → 7d-Aktiv</div>
+        </div>
+        <div class="dash-section-body">
+          <div id="source-funnel-content" style="display:flex;flex-direction:column;gap:14px">
+            <div style="padding:14px;text-align:center;color:var(--dsub);font-size:12.5px">Lädt …</div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Live Activity Feed -->
+    <section class="dash-section">
+      <div class="dash-section-hdr">
+        <div class="dash-section-title">⚡ Live Activity</div>
+        <div class="dash-section-sub">letzte 20 Funnel-Events · Live-Refresh 60s</div>
+      </div>
+      <div class="dash-section-body">
+        <div id="activity-feed" style="display:flex;flex-direction:column;gap:4px;max-height:280px;overflow-y:auto">
+          <div style="padding:18px;text-align:center;color:var(--dsub);font-size:12.5px">Lädt …</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Aktuell eingeloggte User -->
+    <section class="dash-section">
+      <div class="dash-section-hdr">
+        <div class="dash-section-title">🟢 Aktuell eingeloggt</div>
+        <div class="dash-section-sub"><span id="online-now-count">–</span> jetzt online · <span id="online-total-sessions">–</span> Sessions · Refresh 15s</div>
+      </div>
+      <div class="dash-section-body">
+        <div id="online-users-list" style="display:flex;flex-direction:column;gap:6px;max-height:380px;overflow-y:auto">
+          <div style="padding:18px;text-align:center;color:var(--dsub);font-size:12.5px">Lädt …</div>
+        </div>
+      </div>
+    </section>
 
     <!-- Funnel: Landing → CTA → Signup → Login (last 7d) -->
     <section class="dash-section">
@@ -10757,7 +13235,7 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
           <div style="padding:14px;background:linear-gradient(180deg,rgba(212,175,55,0.12),var(--dink));border:1px solid rgba(212,175,55,0.30);border-radius:12px"><div style="font-size:10px;font-weight:700;color:#d4af37;text-transform:uppercase;letter-spacing:1.4px">4️⃣ Registriert</div><div style="font-size:24px;font-weight:800;color:#fff;margin-top:4px" id="fn-signup-complete">–</div><div style="font-size:11px;color:var(--dsub);margin-top:2px"><span id="fn-signup-complete-pct">–</span>% von Signup-Seite</div></div>
           <div style="padding:14px;background:linear-gradient(180deg,rgba(34,197,94,0.10),var(--dink));border:1px solid rgba(34,197,94,0.30);border-radius:12px"><div style="font-size:10px;font-weight:700;color:#22c55e;text-transform:uppercase;letter-spacing:1.4px">5️⃣ Logins</div><div style="font-size:24px;font-weight:800;color:#fff;margin-top:4px" id="fn-login">–</div><div style="font-size:11px;color:var(--dsub);margin-top:2px">erfolgreiche Logins</div></div>
         </div>
-        <div style="font-size:12px;color:var(--dsub);line-height:1.6">📌 <b style="color:#fff">Tipp:</b> Landing-Drop-Off heute: <span id="fn-dropoff" style="color:#fff;font-weight:700">–</span> · Telegram-Klicks: <span id="fn-tg-today" style="color:#fff;font-weight:700">–</span> · Email-Submits: <span id="fn-email-today" style="color:#fff;font-weight:700">–</span></div>
+        <div style="font-size:12px;color:var(--dsub);line-height:1.6">📌 <b style="color:#fff">Tipp:</b> Landing-Drop-Off heute: <span id="fn-dropoff" style="color:#fff;font-weight:700">–</span> · Email-Submits: <span id="fn-email-today" style="color:#fff;font-weight:700">–</span></div>
       </div>
     </section>
 
@@ -10793,12 +13271,19 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
           <button class="dash-tab" data-tab="email">📧 Email</button>
           <button class="dash-tab" data-tab="incomplete">⚠️ Unvollständig</button>
           <button class="dash-tab" data-tab="ranking">🏆 Top XP</button>
+          <button class="dash-tab" data-tab="subs">👶 Sub-Accounts</button>
           <button class="dash-tab" data-tab="engagement-log">📋 Engagement-Log</button>
+          <button class="dash-tab" data-tab="reports">🚩 Meldungen <span id="dash-reports-badge" style="display:none;margin-left:4px;padding:1px 6px;border-radius:99px;background:#ef4444;color:#fff;font-size:10px;font-weight:800"></span></button>
+          <button class="dash-tab" data-tab="compliance">📊 Compliance</button>
           <button class="dash-tab" data-tab="diamond-links">💎 Diamantlinks</button>
+          <button class="dash-tab" data-tab="helper-inbox">🎫 Tickets <span id="dash-tickets-badge" style="display:none;margin-left:4px;padding:1px 6px;border-radius:99px;background:#f59e0b;color:#fff;font-size:10px;font-weight:800"></span></button>
         </div>
 
         <div id="dash-engagement-log" style="display:none"></div>
+        <div id="dash-reports" style="display:none"></div>
+        <div id="dash-compliance" style="display:none"></div>
         <div id="dash-diamond-links" style="display:none"></div>
+        <div id="dash-helper-inbox" style="display:none"></div>
         <div class="dash-list" id="dash-list">
           <div class="dash-skel"><div class="dash-skel-avatar"></div><div style="flex:1"><div class="dash-skel-line" style="width:160px;margin-bottom:6px"></div><div class="dash-skel-line" style="width:240px"></div></div></div>
           <div class="dash-skel"><div class="dash-skel-avatar"></div><div style="flex:1"><div class="dash-skel-line" style="width:140px;margin-bottom:6px"></div><div class="dash-skel-line" style="width:200px"></div></div></div>
@@ -10835,6 +13320,7 @@ function renderList() {
   else if (CUR_TAB === 'email') list = list.filter(u => u.hasEmail);
   else if (CUR_TAB === 'incomplete') list = list.filter(u => !u.hasInstagram || !u.hasBio || !u.hasSpitzname);
   else if (CUR_TAB === 'ranking') list = list.filter(u => !u.isAdmin).sort((a,b) => (b.xp||0) - (a.xp||0));
+  else if (CUR_TAB === 'subs') list = list.filter(u => u.isSub);
 
   const q = CUR_Q.toLowerCase().trim();
   if (q) {
@@ -10858,6 +13344,7 @@ function renderList() {
     onb.push(pill(u.hasFirstLink?'🔗':'🔗 –', u.hasFirstLink?'ok':'muted'));
     onb.push(pill(u.inGruppe?'TG':'TG ✗', u.inGruppe?'ok':'err'));
     if (u.isAdmin) onb.push(pill('🛡 Admin','gold'));
+    if (u.isSub) onb.push(pill('👶 Sub','muted'));
     if ((u.warnings||0) > 0) onb.push(pill('⚠️ '+u.warnings+'/5', (u.warnings||0)>=3?'err':'warn'));
     const ageMs = u.joinDate ? (Date.now() - u.joinDate) : null;
     const name = u.spitzname || u.name || ('User '+u.uid);
@@ -10915,67 +13402,237 @@ function dToast(msg, kind) {
   setTimeout(() => { el.style.opacity = '0'; el.style.transform = 'translateX(20px)'; el.style.transition = 'all .25s'; setTimeout(()=>el.remove(), 280); }, 3500);
 }
 
+function fmtRelative(ts) {
+  if (!ts) return '–';
+  const diff = Date.now() - ts;
+  if (diff < 60000) return 'gerade eben';
+  if (diff < 3600000) return Math.floor(diff/60000) + ' Min';
+  if (diff < 86400000) return Math.floor(diff/3600000) + ' Std';
+  const days = Math.floor(diff/86400000);
+  if (days < 30) return days + ' Tag' + (days!==1?'e':'');
+  const months = Math.floor(days/30);
+  if (months < 12) return months + ' Mon';
+  return Math.floor(months/12) + ' J';
+}
+function fmtTs(ts) {
+  if (!ts) return '–';
+  return new Date(ts).toLocaleString('de-DE', { day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit' });
+}
+
 function openUser(uid) {
-  const u = ALL_USERS.find(x => String(x.uid) === String(uid));
-  if (!u) return;
+  const baseUser = ALL_USERS.find(x => String(x.uid) === String(uid));
+  if (!baseUser) return;
   const bg = document.createElement('div');
   bg.className = 'dash-modal-bg';
   bg.onclick = e => { if (e.target === bg) bg.remove(); };
-  const onb = [
-    {label:'📧 Email gesetzt', ok: u.hasEmail},
-    {label:'✓ Email bestätigt', ok: u.emailConfirmed},
-    {label:'📸 Instagram', ok: u.hasInstagram},
-    {label:'🏷 Spitzname', ok: u.hasSpitzname},
-    {label:'📝 Bio', ok: u.hasBio},
-    {label:'🎯 Nische', ok: u.hasNische},
-    {label:'❤ Erster Like', ok: u.hasFirstLike},
-    {label:'🔗 Erster Link', ok: u.hasFirstLink},
-  ];
-  const meta = [];
-  if (u.email) meta.push('📧 '+esc(u.email)+(u.emailConfirmed?'':' (unbestätigt)'));
-  if (u.instagram) meta.push('📸 @'+esc(u.instagram));
-  if (u.signupSource) meta.push('🪪 '+u.signupSource);
-  meta.push('UID '+u.uid);
+  // Initial skeleton mit Basisdaten, dann Detail-Fetch ergänzt
   bg.innerHTML =
-    '<div class="dash-modal">' +
-      '<h3>'+esc(u.spitzname||u.name||'User')+(u.isAdmin?' <span class="dash-pill warn">Admin</span>':'')+'</h3>' +
-      '<div class="dash-modal-meta">'+meta.join(' · ')+'</div>' +
-      '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;text-align:center;margin-bottom:14px">' +
-        '<div><div style="font-size:18px;font-weight:800">'+(u.xp||0)+'</div><div style="font-size:10.5px;color:var(--muted)">XP</div></div>' +
-        '<div><div style="font-size:18px;font-weight:800">'+(u.diamonds||0)+'</div><div style="font-size:10.5px;color:var(--muted)">💎</div></div>' +
-        '<div><div style="font-size:18px;font-weight:800">'+(u.totalLikes||0)+'</div><div style="font-size:10.5px;color:var(--muted)">❤ Likes</div></div>' +
-        '<div><div style="font-size:18px;font-weight:800">'+(u.links||0)+'</div><div style="font-size:10.5px;color:var(--muted)">🔗 Links</div></div>' +
+    '<div class="dash-modal" id="user-modal-content">' +
+      '<div style="padding:24px;text-align:center;color:var(--dsub)">' +
+        '<div style="font-size:14px;font-weight:700;color:#fff;margin-bottom:6px">'+esc(baseUser.spitzname||baseUser.name||'User')+'</div>' +
+        '<div style="font-size:12px">⏳ Lade Insights …</div>' +
       '</div>' +
-      '<div class="dash-onboarding">' +
-        onb.map(o => '<div class="dash-onb-row">'+(o.ok?'✅':'⬜')+' '+o.label+'</div>').join('') +
-      '</div>' +
-      '<div style="margin-top:14px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:8px">⚙️ Aktionen</div>' +
-      '<div style="font-size:11px;color:var(--muted);margin-bottom:6px">Warns: <b style="color:'+((u.warnings||0)>=3?'#ef4444':'var(--text)')+'">'+(u.warnings||0)+'/5</b></div>' +
-      '<div class="dash-action-grid">' +
-        '<button class="dash-act" onclick="grant(\\''+u.uid+'\\',\\'add-xp\\')">+ XP</button>' +
-        '<button class="dash-act danger" onclick="grant(\\''+u.uid+'\\',\\'remove-xp\\')">− XP</button>' +
-        '<button class="dash-act" onclick="grant(\\''+u.uid+'\\',\\'add-diamonds\\')">+ 💎</button>' +
-        '<button class="dash-act danger" onclick="grant(\\''+u.uid+'\\',\\'remove-diamonds\\')">− 💎</button>' +
-        '<button class="dash-act danger" onclick="grantNoAmount(\\''+u.uid+'\\',\\'add-warn\\')">+ ⚠️ Warn</button>' +
-        '<button class="dash-act" onclick="grantNoAmount(\\''+u.uid+'\\',\\'remove-warn\\')">− ⚠️ Warn</button>' +
-        '<button class="dash-act" onclick="grantNoAmount(\\''+u.uid+'\\',\\'add-extra-link\\')">+ 🔗 Extra-Link</button>' +
-        '<button class="dash-act" onclick="grantNoAmount(\\''+u.uid+'\\',\\'add-superlink\\')">+ ⚡ Superlink-Slot</button>' +
-      '</div>' +
-      '<div style="font-size:11px;font-weight:700;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin:14px 0 8px">📨 Kommunikation</div>' +
-      '<div class="dash-action-grid">' +
-        '<button class="dash-act" onclick="sendDmTo(\\''+u.uid+'\\',\\''+esc(u.spitzname||u.name||'User')+'\\')">📨 DM senden</button>' +
-        '<button class="dash-act" onclick="window.open(\\'/nachrichten/'+u.uid+'\\',\\'_blank\\')">💬 Chat öffnen</button>' +
-      '</div>' +
-      '<div style="font-size:11px;font-weight:700;letter-spacing:1px;color:#ef4444;text-transform:uppercase;margin:14px 0 8px">⚠️ Gefährliche Aktionen</div>' +
-      '<div class="dash-action-grid">' +
-        '<button class="dash-act danger" onclick="resetUserConfirm(\\''+u.uid+'\\',\\''+esc(u.spitzname||u.name||'User')+'\\')">♻️ XP-Reset</button>' +
-        (u.banned ? '<button class="dash-act" onclick="banUser(\\''+u.uid+'\\',false)">✅ Entbannen</button>'
-                  : '<button class="dash-act danger" onclick="banUser(\\''+u.uid+'\\',true)">🚫 Bannen</button>') +
-      '</div>' +
-      '<a href="/profil/'+u.uid+'" target="_blank" class="dash-act" style="display:block;margin:12px 0 8px;text-decoration:none">→ Profil ansehen</a>' +
-      '<button class="dash-close" onclick="this.closest(\\'.dash-modal-bg\\').remove()">Schließen</button>' +
     '</div>';
   document.body.appendChild(bg);
+
+  fetch('/api/admin/user-detail?uid=' + encodeURIComponent(uid))
+    .then(r => r.json())
+    .then(j => {
+      if (!j.ok) {
+        document.getElementById('user-modal-content').innerHTML =
+          '<div style="padding:24px;text-align:center;color:#ef4444">'+esc(j.error||'Fehler beim Laden')+'</div>' +
+          '<button class="dash-close" onclick="this.closest(\\'.dash-modal-bg\\').remove()">Schließen</button>';
+        return;
+      }
+      renderUserDetail(j);
+    })
+    .catch(e => {
+      const c = document.getElementById('user-modal-content');
+      if (c) c.innerHTML = '<div style="padding:24px;text-align:center;color:#ef4444">'+esc(e.message)+'</div>';
+    });
+}
+
+function renderUserDetail(j) {
+  const u = j.user || {};
+  const act = j.activity || {};
+  const eng = j.engagement || {};
+  const ra = j.reportsAgainst || [];
+  const rm = j.reportsMade || [];
+  const subs = j.subAccounts || [];
+  const parent = j.parent || null;
+  const notifs = j.notifications || [];
+
+  const reportsAgainstOpen = ra.filter(r => (r.status||'open') === 'open').length;
+  const pinnedReel = u.pinnedReel || '';
+
+  const meta = [];
+  if (u.email) meta.push('📧 '+esc(u.email)+(u.emailConfirmedAt?'':' <span style="color:#fbbf24">(unbestätigt)</span>'));
+  if (u.instagram) meta.push('<a href="https://instagram.com/'+esc(u.instagram)+'" target="_blank" style="color:#06b6d4;text-decoration:none">📸 @'+esc(u.instagram)+'</a>');
+  if (u.signupSource) meta.push('🪪 '+esc(u.signupSource));
+  meta.push('UID '+esc(u.uid));
+
+  const pills = [];
+  if (u.isAdmin) pills.push('<span class="dash-pill warn">👑 Admin</span>');
+  if (u.banned) pills.push('<span class="dash-pill err">🚫 Gebannt '+fmtRelative(u.bannedAt)+'</span>');
+  if (u.warnings >= 3) pills.push('<span class="dash-pill err">⚠️ '+u.warnings+'/5 Warns</span>');
+  else if (u.warnings > 0) pills.push('<span class="dash-pill warn">⚠️ '+u.warnings+'/5</span>');
+  if (parent) pills.push('<span class="dash-pill muted">👶 Sub von '+esc(parent.name)+'</span>');
+  if (subs.length) pills.push('<span class="dash-pill gold">👥 '+subs.length+' Sub'+(subs.length!==1?'s':'')+'</span>');
+  if (reportsAgainstOpen) pills.push('<span class="dash-pill err">🚩 '+reportsAgainstOpen+' offen</span>');
+
+  const lastSeenStr = act.lastSeen ? fmtRelative(act.lastSeen) : 'nie';
+  const isOnline = act.lastSeen && (Date.now() - act.lastSeen) < 5*60*1000;
+
+  const stat = (val, lbl, color) => '<div style="text-align:center;padding:8px 4px"><div style="font-size:17px;font-weight:800;color:'+(color||'#fff')+'">'+val+'</div><div style="font-size:9.5px;color:var(--dsub);text-transform:uppercase;letter-spacing:1px;margin-top:3px">'+lbl+'</div></div>';
+
+  const sectionLbl = (text, danger) =>
+    '<div class="dash-act-section-lbl'+(danger?' danger':'')+'">'+text+'</div>';
+
+  let html = '<div class="dash-modal-hdr" style="display:flex;align-items:center;gap:14px">' +
+    '<div style="width:54px;height:54px;border-radius:16px;background:'+avatarColorFor(u.uid)+';display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;color:#fff;flex-shrink:0;overflow:hidden;position:relative">' +
+      '<img src="/appbild/'+esc(u.uid)+'/profilepic" onerror="this.style.display=\\'none\\'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">' +
+      '<span style="position:relative;z-index:0">'+esc((u.spitzname||u.name||'?').slice(0,1).toUpperCase())+'</span>' +
+      (isOnline ? '<span style="position:absolute;bottom:-2px;right:-2px;width:14px;height:14px;border-radius:50%;background:#22c55e;border:2px solid var(--dink2);z-index:2"></span>' : '') +
+    '</div>' +
+    '<div style="flex:1;min-width:0">' +
+      '<h3 style="margin:0">'+esc(u.spitzname||u.name||'User')+' '+pills.join(' ')+'</h3>' +
+      '<div class="dash-modal-meta">'+meta.join(' · ')+'</div>' +
+      '<div style="font-size:11px;color:var(--dsub);margin-top:4px">📅 Joined '+fmtRelative(u.joinDate)+' · 🕒 zuletzt aktiv '+(isOnline?'<b style="color:#22c55e">jetzt online</b>':'vor '+lastSeenStr)+'</div>' +
+    '</div>' +
+    '<button onclick="this.closest(\\'.dash-modal-bg\\').remove()" style="background:rgba(255,255,255,0.06);border:1px solid var(--dline);color:var(--dsub);width:32px;height:32px;border-radius:10px;cursor:pointer;font-size:16px;flex-shrink:0">✕</button>' +
+  '</div>';
+
+  html += '<div class="dash-modal-body">';
+
+  // Top Stats
+  html += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;background:var(--dink);border:1px solid var(--dline);border-radius:12px;padding:8px;margin-bottom:14px">' +
+    stat(u.xp, 'XP', '#f5d76e') +
+    stat(u.diamonds, '💎 Diamanten', '#06b6d4') +
+    stat(u.totalLikes, '❤ Likes', '#ec4899') +
+    stat(u.links, '🔗 Links', '#a78bfa') +
+  '</div>';
+
+  // Activity section
+  if (act && act.lastSeen) {
+    html += sectionLbl('📊 App-Aktivität');
+    html += '<div style="background:var(--dink);border:1px solid var(--dline);border-radius:12px;padding:12px;margin-bottom:14px;font-size:12.5px;line-height:1.6">' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">' +
+        '<div><span style="color:var(--dsub)">Sessions:</span> <b>'+(act.sessions||0)+'</b></div>' +
+        '<div><span style="color:var(--dsub)">API-Calls:</span> <b>'+(act.totalCalls||0)+'</b></div>' +
+        '<div><span style="color:var(--dsub)">Erst gesehen:</span> <b>'+fmtRelative(act.firstSeen)+'</b></div>' +
+        '<div><span style="color:var(--dsub)">Letzter Endpoint:</span> <code style="font-size:11px;color:#a78bfa">'+esc(act.lastEndpoint||'?')+'</code></div>' +
+      '</div>' +
+      ((act.topEndpoints||[]).length ? '<div style="margin-top:8px;font-size:11px;color:var(--dsub)"><b>Top:</b> ' +
+        act.topEndpoints.map(([k,v])=>'<span style="color:#e7e7ea">'+esc(k)+'</span>·'+v).join(' · ') + '</div>' : '') +
+    '</div>';
+  }
+
+  // Engagement section
+  html += sectionLbl('🤝 Engagement');
+  html += '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px;background:var(--dink);border:1px solid var(--dline);border-radius:12px;padding:12px;margin-bottom:14px;font-size:12.5px">' +
+    '<div><span style="color:var(--dsub)">📌 Pinned engaged:</span> <b>'+eng.pinnedEngaged+'</b></div>' +
+    '<div><span style="color:var(--dsub)">📌 Pinned erhalten:</span> <b>'+eng.pinnedReceived+'</b></div>' +
+    '<div><span style="color:var(--dsub)">🤝 Kollab engaged:</span> <b>'+eng.collabEngaged+'</b></div>' +
+    '<div><span style="color:var(--dsub)">🤝 Kollab erhalten:</span> <b>'+eng.collabReceived+'</b></div>' +
+  '</div>';
+
+  // Family (parent + subs)
+  if (parent || subs.length) {
+    html += sectionLbl('👨‍👩‍👧 Account-Familie');
+    html += '<div style="background:var(--dink);border:1px solid var(--dline);border-radius:12px;padding:10px;margin-bottom:14px">';
+    if (parent) html += '<div style="font-size:12.5px;margin-bottom:6px"><span style="color:var(--dsub)">Parent:</span> <a href="javascript:openUser(\\''+esc(parent.uid)+'\\')" style="color:#a78bfa;font-weight:700;text-decoration:none">'+esc(parent.name)+'</a></div>';
+    if (subs.length) {
+      html += '<div style="font-size:11px;color:var(--dsub);margin-bottom:4px">Sub-Accounts:</div>';
+      for (const s of subs) {
+        html += '<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:var(--dink2);border-radius:8px;margin-top:4px;font-size:12.5px">' +
+          '<a href="javascript:openUser(\\''+esc(s.uid)+'\\')" style="flex:1;color:#fff;text-decoration:none"><b>'+esc(s.name)+'</b></a>' +
+          '<span style="color:var(--dsub);font-size:11px">'+s.xp+' XP</span>' +
+          (s.banned ? '<span class="dash-pill err">🚫</span>' : '') +
+        '</div>';
+      }
+    }
+    html += '</div>';
+  }
+
+  // Reports against
+  if (ra.length) {
+    html += sectionLbl('🚩 Meldungen gegen diesen User ('+ra.length+(reportsAgainstOpen?' · '+reportsAgainstOpen+' offen':'')+')', true);
+    html += '<div style="background:rgba(239,68,68,0.05);border:1px solid rgba(239,68,68,0.20);border-radius:12px;padding:10px;margin-bottom:14px;max-height:180px;overflow-y:auto">';
+    for (const r of ra.slice(0, 10)) {
+      const pill = r.status === 'open' ? '<span class="dash-pill err">offen</span>'
+        : r.status === 'resolved' ? '<span class="dash-pill ok">erledigt'+(r.action?'·'+esc(r.action):'')+'</span>'
+        : '<span class="dash-pill muted">verworfen</span>';
+      html += '<div style="font-size:12px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.04)">' +
+        pill + ' <b>'+esc(r.reporterName)+'</b>: '+esc(r.reason||'(kein Grund)') +
+        '<div style="font-size:10.5px;color:var(--dsub);margin-top:2px">'+fmtTs(r.ts)+'</div>' +
+      '</div>';
+    }
+    html += '</div>';
+  }
+
+  // Reports made
+  if (rm.length) {
+    html += sectionLbl('📣 Meldungen erstellt ('+rm.length+')');
+    html += '<div style="background:var(--dink);border:1px solid var(--dline);border-radius:12px;padding:10px;margin-bottom:14px;max-height:140px;overflow-y:auto;font-size:11.5px">';
+    for (const r of rm.slice(0, 10)) {
+      html += '<div style="padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.04)">' +
+        '<b>→ '+esc(r.targetName)+':</b> '+esc(r.reason||'(kein Grund)') +
+        ' <span style="color:var(--dsub)">'+fmtRelative(r.ts)+'</span></div>';
+    }
+    html += '</div>';
+  }
+
+  // Notifications
+  if (notifs.length) {
+    html += sectionLbl('🔔 Letzte Notifs (' + notifs.length + ')');
+    html += '<details style="background:var(--dink);border:1px solid var(--dline);border-radius:12px;padding:8px 12px;margin-bottom:14px;font-size:11.5px">' +
+      '<summary style="cursor:pointer;color:var(--dsub);outline:none">Ausklappen</summary>' +
+      '<div style="margin-top:8px;max-height:200px;overflow-y:auto">';
+    for (const n of notifs.slice(0, 15)) {
+      html += '<div style="padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.04)">' +
+        (n.icon||'') + ' ' + esc(n.text||'') +
+        ' <span style="color:var(--dsub);font-size:10.5px;float:right">'+(n.ts?fmtRelative(n.ts):'')+'</span></div>';
+    }
+    html += '</div></details>';
+  }
+
+  // Pinned Reel preview
+  if (pinnedReel) {
+    html += sectionLbl('📌 Pinned Reel');
+    html += '<a href="'+esc(pinnedReel)+'" target="_blank" style="display:block;background:var(--dink);border:1px solid var(--dline);border-radius:12px;padding:10px;margin-bottom:14px;font-size:12px;color:#06b6d4;word-break:break-all;text-decoration:none">🔗 '+esc(pinnedReel)+'</a>';
+  }
+
+  // ── Aktionen ──
+  html += sectionLbl('⚙️ XP / Diamanten / Warns');
+  html += '<div class="dash-action-grid">' +
+    '<button class="dash-act" onclick="grant(\\''+esc(u.uid)+'\\',\\'add-xp\\')">+ XP</button>' +
+    '<button class="dash-act danger" onclick="grant(\\''+esc(u.uid)+'\\',\\'remove-xp\\')">− XP</button>' +
+    '<button class="dash-act" onclick="grant(\\''+esc(u.uid)+'\\',\\'add-diamonds\\')">+ 💎</button>' +
+    '<button class="dash-act danger" onclick="grant(\\''+esc(u.uid)+'\\',\\'remove-diamonds\\')">− 💎</button>' +
+    '<button class="dash-act danger" onclick="grantNoAmount(\\''+esc(u.uid)+'\\',\\'add-warn\\')">+ ⚠️ Warn</button>' +
+    '<button class="dash-act" onclick="grantNoAmount(\\''+esc(u.uid)+'\\',\\'remove-warn\\')">− ⚠️ Warn</button>' +
+    '<button class="dash-act" onclick="grantNoAmount(\\''+esc(u.uid)+'\\',\\'add-extra-link\\')">+ 🔗 Extra-Link</button>' +
+    '<button class="dash-act" onclick="grantNoAmount(\\''+esc(u.uid)+'\\',\\'add-superlink\\')">+ ⚡ Superlink-Slot</button>' +
+    '<button class="dash-act" onclick="linkAsSub(\\''+esc(u.uid)+'\\',\\''+esc(u.spitzname||u.name||u.uid)+'\\')" style="background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;border-color:transparent">🔗 Als mein Sub linken</button>' +
+  '</div>';
+
+  html += sectionLbl('📨 Kommunikation');
+  html += '<div class="dash-action-grid">' +
+    '<button class="dash-act" onclick="sendDmTo(\\''+esc(u.uid)+'\\',\\''+esc(u.spitzname||u.name||'User')+'\\')">📨 DM senden</button>' +
+    '<button class="dash-act" onclick="window.open(\\'/nachrichten/'+esc(u.uid)+'\\',\\'_blank\\')">💬 Chat öffnen</button>' +
+  '</div>';
+
+  html += sectionLbl('⚠️ Gefährliche Aktionen', true);
+  html += '<div class="dash-action-grid">' +
+    '<button class="dash-act danger" onclick="resetUserConfirm(\\''+esc(u.uid)+'\\',\\''+esc(u.spitzname||u.name||'User')+'\\')">♻️ XP-Reset</button>' +
+    (u.banned ? '<button class="dash-act" onclick="banUser(\\''+esc(u.uid)+'\\',false)">✅ Entbannen</button>'
+              : '<button class="dash-act danger" onclick="banUser(\\''+esc(u.uid)+'\\',true)">🚫 Bannen</button>') +
+  '</div>';
+
+  html += '<a href="/profil/'+esc(u.uid)+'" target="_blank" class="dash-act" style="display:block;margin:14px 0 0;text-decoration:none;text-align:center">→ Public Profil ansehen</a>';
+  html += '</div>'; // close dash-modal-body
+
+  document.getElementById('user-modal-content').innerHTML = html;
 }
 
 async function sendDmTo(uid, name) {
@@ -11043,6 +13700,166 @@ async function openFunnelDebug() {
     '</div>';
   document.body.appendChild(bg);
 }
+async function openKollabBoostPreview() {
+  // CSS einmal injecten
+  if (!document.getElementById('kbp-css')) {
+    const s = document.createElement('style'); s.id='kbp-css';
+    s.textContent =
+      '.kbp-card{position:relative;margin:0;border-radius:18px;overflow:hidden;background:#0a0a0a;isolation:isolate}'+
+      '.kbp-glow{position:absolute;inset:-2px;border-radius:20px;padding:2px;background:conic-gradient(from 0deg,#ec4899,#f59e0b,#a855f7,#ec4899,#f59e0b,#ec4899);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;animation:kbp-rot 4s linear infinite;pointer-events:none}'+
+      '@keyframes kbp-rot{to{transform:rotate(360deg)}}'+
+      '.kbp-body{position:relative;padding:14px;background:linear-gradient(180deg,rgba(236,72,153,0.08),#161618);border-radius:16px;margin:2px;color:#e7e7ea}'+
+      '.kbp-banner{display:flex;align-items:center;gap:10px;padding:10px 12px;margin-bottom:12px;background:linear-gradient(135deg,rgba(236,72,153,0.20),rgba(168,85,247,0.14));border:1px solid rgba(236,72,153,0.45);border-radius:10px;animation:kbp-pulse 2s ease-in-out infinite}'+
+      '@keyframes kbp-pulse{0%,100%{box-shadow:0 0 0 0 rgba(236,72,153,0.45)}50%{box-shadow:0 0 0 8px rgba(236,72,153,0)}}'+
+      '.kbp-btn{display:block;width:100%;padding:13px;background:linear-gradient(135deg,#ec4899,#a21caf);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 0 20px rgba(236,72,153,0.45);position:relative;overflow:hidden;font-family:inherit}'+
+      '.kbp-btn::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.18),transparent);transform:translateX(-100%);animation:kbp-shimmer 2.5s ease-in-out infinite}'+
+      '@keyframes kbp-shimmer{50%{transform:translateX(100%)}}'+
+      '.kbp-rule{display:flex;align-items:center;gap:6px;font-size:11.5px;color:#fcd34d;margin:3px 0}'+
+      '.kbp-modeswitch{display:flex;gap:6px;margin-bottom:14px}'+
+      '.kbp-modeswitch button{flex:1;padding:8px 12px;background:var(--dink);border:1px solid var(--dline);color:var(--dsub);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s}'+
+      '.kbp-modeswitch button.active{background:rgba(236,72,153,0.15);border-color:#ec4899;color:#ec4899}';
+    document.head.appendChild(s);
+  }
+  const bg = document.createElement('div');
+  bg.className = 'dash-modal-bg';
+  bg.onclick = e => { if (e.target===bg) bg.remove(); };
+  const fakePost = {
+    id: 'preview-demo',
+    uid: '111111',
+    partnerUid: '222222',
+    url: 'https://www.instagram.com/reel/DPreviewMockupABC123/',
+    caption: 'Unser Sonntag-Stretch Kollab — beide Profile sichtbar im Reel.',
+    likeCount: 12,
+    authorA: { name: 'Caro', instagram: 'caro_yoga' },
+    authorB: { name: 'Dennis', instagram: 'dennis_disziplin' },
+  };
+  function renderActive(secondsRemaining, alreadyEngaged){
+    return '<div class="kbp-card">'+
+      '<div class="kbp-glow"></div>'+
+      '<div class="kbp-body">'+
+        '<div class="kbp-banner">'+
+          '<div style="font-size:20px">🤝⚡</div>'+
+          '<div style="flex:1;min-width:0">'+
+            '<div style="font-size:11px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;color:#ec4899">KOLLAB BOOST · NUR JETZT</div>'+
+            '<div style="font-size:11.5px;margin-top:1px;opacity:.95">+1 💎 Base · +1 💎 Extra · noch <b style="color:#ec4899" id="kbp-countdown">'+fmtKbp(secondsRemaining)+'</b></div>'+
+          '</div>'+
+        '</div>'+
+        '<div style="font-size:13.5px;font-weight:700;margin-bottom:4px">'+fakePost.authorA.name+' × '+fakePost.authorB.name+'</div>'+
+        '<div style="font-size:12px;color:#ec4899;margin-bottom:8px">@'+fakePost.authorA.instagram+' × @'+fakePost.authorB.instagram+'</div>'+
+        '<div style="font-size:13px;line-height:1.5;margin:6px 0 10px;opacity:.95">"'+fakePost.caption+'"</div>'+
+        '<a href="#" onclick="return false" style="display:block;padding:11px 13px;background:rgba(236,72,153,0.10);border:1px solid rgba(236,72,153,0.35);border-radius:10px;font-size:12.5px;color:#ec4899;font-weight:700;word-break:break-all;text-decoration:none;margin-bottom:10px">🔗 Auf Instagram öffnen</a>'+
+        '<div style="font-size:11px;color:#f59e0b;background:rgba(245,158,11,0.10);border-left:3px solid #f59e0b;border-radius:6px;padding:9px 11px;margin-bottom:10px;line-height:1.55">'+
+          '<b style="color:#fbbf24">⚠️ Pflicht für +1(+1) 💎:</b><br>'+
+          '<div class="kbp-rule">✓ LIKEN auf Instagram</div>'+
+          '<div class="kbp-rule">✓ KOMMENTIEREN</div>'+
+          '<div class="kbp-rule">✓ SPEICHERN</div>'+
+          '<div class="kbp-rule">✓ TEILEN</div>'+
+          '<div style="font-size:10.5px;color:#fbbf24;margin-top:5px;opacity:.85">Beide Creator müssen im Reel sichtbar sein. Schein-Likes → Sanktionen.</div>'+
+        '</div>'+
+        (alreadyEngaged
+          ? '<div style="padding:13px;background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.40);border-radius:10px;font-size:13.5px;color:#22c55e;font-weight:800;text-align:center;cursor:not-allowed;opacity:.92">✅ Bereits engagiert<div style="font-size:11px;font-weight:600;color:#22c55e;opacity:.85;margin-top:3px">Diamanten erhalten · nicht mehr klickbar</div></div>'
+          : '<button class="kbp-btn">⚡ Engagiere jetzt · +1(+1) 💎</button>')+
+        '<div style="font-size:11px;color:var(--dsub);margin-top:8px;text-align:center">'+fakePost.likeCount+' Engagements gesamt</div>'+
+      '</div>'+
+    '</div>';
+  }
+  function renderTab(boostActive){
+    const banner = boostActive
+      ? '<div style="font-size:11px;color:#ec4899;font-weight:800;background:rgba(236,72,153,0.18);border:1px solid rgba(236,72,153,0.40);padding:5px 10px;border-radius:99px">⚡ BOOST AKTIV · +1 💎 Extra</div>'
+      : '<div style="font-size:11px;color:var(--dsub)">11. März</div>';
+    return '<div style="padding:14px;background:#161618;border:1px solid rgba(255,255,255,0.06);border-radius:14px;color:#e7e7ea">'+
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">'+
+        '<div style="font-size:11px;color:#ec4899;font-weight:800;letter-spacing:1px;text-transform:uppercase">🤝 Kollab-Post</div>'+
+        '<div style="flex:1"></div>'+
+        banner+
+      '</div>'+
+      '<div style="font-size:13px;font-weight:700;margin-bottom:6px">'+fakePost.authorA.name+' × '+fakePost.authorB.name+'</div>'+
+      '<div style="font-size:13px;line-height:1.5;margin-bottom:10px;opacity:.9">"'+fakePost.caption+'"</div>'+
+      '<a href="#" onclick="return false" style="display:block;padding:11px 13px;background:rgba(236,72,153,0.10);border:1px solid rgba(236,72,153,0.30);border-radius:10px;font-size:12.5px;color:#ec4899;font-weight:700;text-decoration:none;margin-bottom:10px">🔗 Auf Instagram öffnen</a>'+
+      '<button style="display:block;width:100%;padding:12px;background:linear-gradient(135deg,#ec4899,#a21caf);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit">❤️ Engagiert · +'+(boostActive?'2':'1')+' 💎</button>'+
+      '<div style="font-size:11px;color:var(--dsub);margin-top:8px;text-align:center">'+fakePost.likeCount+' Engagements</div>'+
+    '</div>';
+  }
+  function fmtKbp(s){ const m=Math.floor(s/60), sec=s%60; return m+':'+(sec<10?'0':'')+sec; }
+  bg.innerHTML = '<div class="dash-modal" style="max-width:540px;max-height:92vh;overflow-y:auto">'+
+    '<div class="dash-modal-hdr"><h3>🎨 Kollab-Boost Live-Preview</h3><div class="dash-modal-meta">Echtes Rendering — wie es im Feed aussieht</div></div>'+
+    '<div class="dash-modal-body">'+
+      '<div class="kbp-modeswitch">'+
+        '<button id="kbp-mode-feed" class="active" onclick="window._kbpSwitch(\\'feed\\')">🤝⚡ Feed (Boost)</button>'+
+        '<button id="kbp-mode-feed-done" onclick="window._kbpSwitch(\\'feed-done\\')">✅ Feed (bereits engagiert)</button>'+
+        '<button id="kbp-mode-tab" onclick="window._kbpSwitch(\\'tab\\')">🤝 Kollab-Tab (Boost)</button>'+
+        '<button id="kbp-mode-tab-off" onclick="window._kbpSwitch(\\'tab-off\\')">🤝 Tab (normal)</button>'+
+      '</div>'+
+      '<div id="kbp-stage" style="padding:6px">' + renderActive(20*60) + '</div>'+
+    '</div>'+
+    '<div class="dash-modal-foot"><button class="dash-btn dash-btn-primary" onclick="this.closest(\\'.dash-modal-bg\\').remove();window._kbpStop&&window._kbpStop()">Schließen</button></div>'+
+  '</div>';
+  window._kbpRenderActive = renderActive;
+  window._kbpRenderTab = renderTab;
+  window._kbpSwitch = (mode) => {
+    const stage = document.getElementById('kbp-stage'); if (!stage) return;
+    const all = ['feed','feed-done','tab','tab-off'];
+    all.forEach(m => {
+      const btn = document.getElementById('kbp-mode-' + m);
+      if (btn) btn.classList.toggle('active', m === mode);
+    });
+    if (mode === 'feed') stage.innerHTML = renderActive(20*60, false);
+    else if (mode === 'feed-done') stage.innerHTML = renderActive(20*60, true);
+    else if (mode === 'tab') stage.innerHTML = renderTab(true);
+    else stage.innerHTML = renderTab(false);
+  };
+  document.body.appendChild(bg);
+  // Live-Countdown 1s
+  let remaining = 20*60;
+  const tickHandle = setInterval(() => {
+    remaining--;
+    if (remaining <= 0) remaining = 20*60; // loop für demo
+    const el = document.getElementById('kbp-countdown');
+    if (el) el.textContent = fmtKbp(remaining);
+    if (!bg.isConnected) { clearInterval(tickHandle); }
+  }, 1000);
+  window._kbpStop = () => clearInterval(tickHandle);
+}
+
+async function openStatsDebug() {
+  const r = await fetch('/api/admin/stats');
+  const httpStatus = r.status;
+  const responseText = await r.text();
+  let j;
+  try { j = JSON.parse(responseText); } catch(e) { j = {ok:false, _parseError: e.message, _raw: responseText.slice(0,500)}; }
+  const bg = document.createElement('div');
+  bg.className = 'dash-modal-bg';
+  bg.onclick = e => { if (e.target===bg) bg.remove(); };
+  const fields = [
+    ['online', j.online], ['activeToday', j.activeToday], ['app24h', j.app24h],
+    ['app7d', j.app7d], ['app30d', j.app30d],
+    ['xpToday', j.xpToday], ['xpYesterday', j.xpYesterday],
+    ['likesToday', j.likesToday], ['likesYesterday', j.likesYesterday],
+    ['linksToday', j.linksToday], ['linksYesterday', j.linksYesterday],
+    ['totalUsers', j.totalUsers], ['newUsersToday', j.newUsersToday],
+    ['banned', j.banned], ['landingToday', j.landingToday],
+    ['signupToday', j.signupToday], ['loginSuccessToday', j.loginSuccessToday],
+  ];
+  const fieldRows = fields.map(([k,v]) => '<tr><td style="padding:4px 8px;color:#9ca3af">'+esc(k)+'</td><td style="padding:4px 8px;color:'+(v===undefined||v===0?'#6b7280':'#22c55e')+';font-weight:700;text-align:right">'+(v===undefined?'<i>undefined</i>':String(v))+'</td></tr>').join('');
+  const errBanner = (j.ok && r.ok) ? '' :
+    '<div style="padding:12px 14px;background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.35);border-radius:8px;margin-bottom:12px;color:#f87171;font-weight:700">' +
+      '❌ Response NICHT ok · HTTP '+httpStatus+' · error: '+esc(j.error||j._parseError||'unbekannt') +
+      '<br><br><b style="color:#fff">Bedeutung:</b> Wenn "Mainbot offline" → Bridge zwischen App und Telegram-Bot ist kaputt. Prüfe BRIDGE_SECRET/MAINBOT_URL env-vars + Mainbot-Health.' +
+    '</div>';
+  bg.innerHTML = '<div class="dash-modal" style="max-width:560px"><div class="dash-modal-hdr"><h3>📊 Stats-Debug</h3><div class="dash-modal-meta">Roh-Antwort von /api/admin/stats (Mainbot-Bridge)</div></div>' +
+    '<div class="dash-modal-body" style="font-family:ui-monospace,monospace;font-size:11.5px">' +
+      errBanner +
+      '<div style="padding:10px 12px;background:var(--dink);border-radius:8px;margin-bottom:10px">' +
+        '<b style="color:#f5d76e">HTTP-Status:</b> '+httpStatus+' · <b style="color:#f5d76e">response.ok:</b> '+(j.ok===true)+'<br>' +
+        '<b style="color:#f5d76e">Recent Signups:</b> '+((j.recentSignups||[]).length)+
+      '</div>' +
+      '<table style="width:100%;border-collapse:collapse;background:var(--dink);border-radius:8px;overflow:hidden">'+fieldRows+'</table>' +
+      '<div style="font-size:10px;color:#9ca3af;margin-top:8px">Grün = Wert > 0 · Grau = 0 oder undefined</div>' +
+    '</div>' +
+    '<div class="dash-modal-foot"><button class="dash-btn dash-btn-primary" onclick="this.closest(\\'.dash-modal-bg\\').remove()">Schließen</button></div>' +
+    '</div>';
+  document.body.appendChild(bg);
+}
 async function testFunnelFire(btn) {
   btn.disabled = true; btn.textContent = '⏳';
   const r = await fetch('/api/admin/funnel-test', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ event: 'admin-test' }) });
@@ -11058,19 +13875,28 @@ async function openEventModal(type) {
   const bg = document.createElement('div');
   bg.className = 'dash-modal-bg';
   bg.onclick = e => { if (e.target===bg) bg.remove(); };
+  const xpModeNote = isDiamond
+    ? 'Flat-Bonus pro veröffentlichtem Post.'
+    : 'Prozent-Bonus pro Like (z.B. 100 → +100% = 2× XP). Wirkt automatisch auf alle Likes während des Events.';
+  const labelText = isDiamond ? 'Bonus pro Post (💎)' : 'Bonus pro Like (%)';
+  const placeholder = isDiamond ? '1' : '100';
+  const maxVal = isDiamond ? '10' : '500';
+  const activeText = active && !isDiamond
+    ? '+' + (active.bonusPercent || active.amount) + '% XP pro Like'
+    : active ? '+' + active.amount + ' 💎 pro Post' : '';
   bg.innerHTML = '<div class="dash-modal" style="max-width:480px">' +
     '<div class="dash-modal-hdr"><h3>'+(isDiamond?'💎 Diamond-Event':'✨ XP-Event')+'</h3>' +
-      '<div class="dash-modal-meta">Flat-Bonus pro veröffentlichtem Post für eine bestimmte Zeit. Alle aktiven User sehen einen Live-Banner im Feed mit Countdown.</div>' +
+      '<div class="dash-modal-meta">'+xpModeNote+' Alle aktiven User sehen einen Live-Banner im Feed mit Countdown.</div>' +
     '</div>' +
     '<div class="dash-modal-body">' +
       (active
         ? '<div style="padding:14px;background:rgba(34,197,94,0.10);border:1px solid rgba(34,197,94,0.35);border-radius:12px;margin-bottom:14px">' +
             '<div style="font-size:11px;font-weight:700;color:#22c55e;letter-spacing:1px;text-transform:uppercase">⏱ Läuft gerade</div>' +
-            '<div style="font-size:14px;font-weight:700;margin-top:4px">+'+active.amount+(isDiamond?' 💎':' XP')+' pro Post · noch '+Math.round(active.remainingMs/60000)+' min</div>' +
+            '<div style="font-size:14px;font-weight:700;margin-top:4px">'+activeText+' · noch '+Math.round(active.remainingMs/60000)+' min</div>' +
           '</div>'
         : '') +
-      '<label style="font-size:11px;font-weight:700;letter-spacing:1.4px;color:var(--dsub);text-transform:uppercase;display:block;margin-bottom:6px">Bonus pro Post</label>' +
-      '<input type="number" id="evt-amount" min="1" max="'+(isDiamond?'10':'1000')+'" placeholder="'+(isDiamond?'1':'10')+'" style="width:100%;padding:11px 14px;background:var(--dink);border:1px solid var(--dline);border-radius:10px;color:#fff;font-size:14px;margin-bottom:12px;font-family:inherit">' +
+      '<label style="font-size:11px;font-weight:700;letter-spacing:1.4px;color:var(--dsub);text-transform:uppercase;display:block;margin-bottom:6px">'+labelText+'</label>' +
+      '<input type="number" id="evt-amount" min="1" max="'+maxVal+'" placeholder="'+placeholder+'" style="width:100%;padding:11px 14px;background:var(--dink);border:1px solid var(--dline);border-radius:10px;color:#fff;font-size:14px;margin-bottom:12px;font-family:inherit">' +
       '<label style="font-size:11px;font-weight:700;letter-spacing:1.4px;color:var(--dsub);text-transform:uppercase;display:block;margin-bottom:6px">Dauer</label>' +
       '<select id="evt-duration" style="width:100%;padding:11px 14px;background:var(--dink);border:1px solid var(--dline);border-radius:10px;color:#fff;font-size:14px;margin-bottom:12px;font-family:inherit">' +
         '<option value="1800000">30 Minuten</option>' +
@@ -11098,18 +13924,39 @@ async function startEvent(type, btn) {
   const label = document.getElementById('evt-label').value || '';
   if (!Number.isFinite(amount) || amount <= 0) { alert('Bitte gültigen Betrag eingeben'); return; }
   btn.disabled = true; btn.textContent = '⏳';
-  const r = await fetch('/api/admin/event-start', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ type, amount, durationMs, label }) });
-  const j = await r.json().catch(()=>({}));
-  if (j.ok) { dToast('🚀 Event gestartet · '+amount+(type==='diamond'?' 💎':' XP')+' pro Post für '+Math.round(durationMs/60000)+' min','ok'); document.querySelectorAll('.dash-modal-bg').forEach(m=>m.remove()); }
-  else { btn.disabled = false; btn.textContent = '🚀 Starten'; alert('❌ '+(j.error||'Fehler')); }
+  try {
+    const r = await fetch('/api/admin/event-start', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ type, amount, durationMs, label }) });
+    const raw = await r.text();
+    let j; try { j = JSON.parse(raw); } catch(e) { j = { _raw: raw.slice(0, 200) }; }
+    if (j.ok) {
+      const summary = type === 'diamond'
+        ? '+'+amount+' 💎 pro Post'
+        : '+'+amount+'% XP pro Like';
+      dToast('🚀 Event gestartet · '+summary+' für '+Math.round(durationMs/60000)+' min','ok');
+      document.querySelectorAll('.dash-modal-bg').forEach(m=>m.remove());
+    } else {
+      btn.disabled = false; btn.textContent = '🚀 Starten';
+      const detail = j.error || j._raw || 'unbekannt';
+      alert('❌ HTTP '+r.status+'\\n\\n'+detail);
+    }
+  } catch(e) {
+    btn.disabled = false; btn.textContent = '🚀 Starten';
+    alert('❌ Network: '+e.message);
+  }
 }
 async function stopEvent(type, btn) {
   if (!confirm('Event sofort beenden?')) return;
   btn.disabled = true; btn.textContent = '⏳';
-  const r = await fetch('/api/admin/event-stop', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ type }) });
-  const j = await r.json().catch(()=>({}));
-  if (j.ok) { dToast('🛑 Event gestoppt','info'); document.querySelectorAll('.dash-modal-bg').forEach(m=>m.remove()); }
-  else { btn.disabled = false; btn.textContent = '🛑 Event stoppen'; alert('❌ '+(j.error||'Fehler')); }
+  try {
+    const r = await fetch('/api/admin/event-stop', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ type }) });
+    const raw = await r.text();
+    let j; try { j = JSON.parse(raw); } catch(e) { j = { _raw: raw.slice(0, 200) }; }
+    if (j.ok) { dToast('🛑 Event gestoppt','info'); document.querySelectorAll('.dash-modal-bg').forEach(m=>m.remove()); }
+    else { btn.disabled = false; btn.textContent = '🛑 Event stoppen'; alert('❌ HTTP '+r.status+'\\n\\n'+(j.error||j._raw||'unbekannt')); }
+  } catch(e) {
+    btn.disabled = false; btn.textContent = '🛑 Event stoppen';
+    alert('❌ Network: '+e.message);
+  }
 }
 
 async function openBroadcastModal() {
@@ -11138,6 +13985,36 @@ async function grant(uid, action) {
   if (j.ok) { alert('✅ ' + labelMap[action] + ' erfolgt'); refreshUsers(); document.querySelectorAll('.dash-modal-bg').forEach(m => m.remove()); }
   else alert('❌ '+ (j.error||'Fehler'));
 }
+async function adminCreateNewSub() {
+  const name = prompt('🆕 Neuen Sub-Account erstellen\\n\\nName des neuen Sub-Accounts (z.B. "Elitedrop"):');
+  if (!name || !name.trim()) return;
+  try {
+    const r = await fetch('/api/create-subaccount', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name: name.trim() }) });
+    const j = await r.json().catch(()=>({}));
+    if (j.ok) {
+      dToast('🆕 Sub erstellt · UID ' + j.sub_uid, 'ok');
+      // Reload damit der neue Sub in ALL_USERS auftaucht
+      setTimeout(() => location.reload(), 800);
+    } else {
+      alert('❌ ' + (j.error||'Fehler'));
+    }
+  } catch(e) { alert('❌ Netzwerk: '+e.message); }
+}
+
+async function linkAsSub(targetUid, targetName) {
+  if (!confirm('User "' + targetName + '" (UID ' + targetUid + ') als deinen Sub-Account verknüpfen?\\n\\nDieser User wird Teil deiner Account-Familie. Alle Posts/XP bleiben erhalten — aber er gilt fortan als dein Sub.')) return;
+  try {
+    const r = await fetch('/api/admin/link-as-sub', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ target_uid: targetUid }) });
+    const j = await r.json().catch(()=>({}));
+    if (j.ok) {
+      dToast('🔗 ' + targetName + ' ist jetzt dein Sub · ' + (j.allSubs?.length||0) + ' Subs total', 'ok');
+      document.querySelectorAll('.dash-modal-bg').forEach(m=>m.remove());
+    } else {
+      alert('❌ ' + (j.error||'Fehler'));
+    }
+  } catch(e) { alert('❌ Netzwerk: '+e.message); }
+}
+
 async function grantNoAmount(uid, action) {
   if (!confirm('Aktion ausführen: '+action+'?')) return;
   const res = await fetch('/api/admin/grant', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ uid, action }) });
@@ -11191,10 +14068,11 @@ async function refreshUsers() {
     document.getElementById('stat-active').textContent = ALL_USERS.filter(u => u.started).length;
     document.getElementById('stat-new').textContent = ALL_USERS.filter(u => u.isNew).length;
     document.getElementById('stat-email').textContent = ALL_USERS.filter(u => u.emailConfirmed).length;
-    document.getElementById('stat-extg').textContent = ALL_USERS.filter(u => u.hasEmail && !u.inGruppe).length;
     renderList();
     // Live-Stats vom Mainbot (online, landing, signup, banned)
     loadStatsOverview();
+    // Aktive Sessions — eingeloggte User
+    loadOnlineUsers();
   } catch(e) {
     showErr('Network: '+e.message);
   }
@@ -11202,7 +14080,7 @@ async function refreshUsers() {
 
 // IDs die loadStatsOverview() befüllt. Bei jeder API-Failure auf '0' setzen damit
 // klar ist 'Daten leer' statt 'lädt noch'.
-const _DASH_STAT_IDS = ['stat-online','stat-active-today','stat-app24h','stat-app7d','stat-app30d','stat-landing-today','stat-landing-yesterday','stat-signup-today','stat-banned','stat-xp-today','stat-xp-yesterday','stat-likes-today','stat-likes-yesterday','stat-links-today','stat-links-yesterday','fn-landing','fn-cta','fn-cta-pct','fn-signup-view','fn-signup-view-pct','fn-signup-complete','fn-signup-complete-pct','fn-login','fn-dropoff','fn-tg-today','fn-email-today','newusers-count','newusers-today'];
+const _DASH_STAT_IDS = ['stat-online','stat-active-today','stat-app24h','stat-app7d','stat-app30d','stat-landing-today','stat-landing-yesterday','stat-signup-today','stat-banned','stat-xp-today','stat-xp-yesterday','stat-likes-today','stat-likes-yesterday','stat-links-today','stat-links-yesterday','fn-landing','fn-cta','fn-cta-pct','fn-signup-view','fn-signup-view-pct','fn-signup-complete','fn-signup-complete-pct','fn-login','fn-dropoff','fn-email-today','newusers-count','newusers-today'];
 function _dashStatsFallback(reason){
   console.warn('[dashboard stats] fallback to 0 ('+reason+')');
   // Force-set ALL stat IDs to '0' — wenn API failed darf nichts mehr '—' stehen.
@@ -11273,7 +14151,6 @@ async function loadStatsOverview() {
     setText('fn-signup-complete-pct', f.signupCompletePct||0);
     setText('fn-login', (f.loginSuccess||0).toLocaleString('de-DE'));
     setText('fn-dropoff', ((s.landingToday||0) - (s.ctaClickToday||0)).toLocaleString('de-DE'));
-    setText('fn-tg-today', (s.telegramClickToday||0).toLocaleString('de-DE'));
     setText('fn-email-today', (s.emailSubmitToday||0).toLocaleString('de-DE'));
 
     // Recent Signups
@@ -11307,10 +14184,255 @@ async function loadStatsOverview() {
         '</div>';
       }).join('');
     }
+
+    // 30-Tage Trend-Chart
+    drawTrendChart(s.last30Days || []);
+    // Top Creators heute
+    renderTopCreators(s.topXpToday || []);
+    // Source-Vergleich
+    renderSourceFunnel(s.sourceFunnel || {});
+    // Live Activity Feed
+    renderActivityFeed(s.recentActivity || []);
+    // Phase 2: Sync-Health
+    loadSyncHealth();
   } catch(e) {
     console.warn('[dashboard stats] error at stage '+_stage+':', e);
     _dashStatsFallback('exception at '+_stage);
   }
+}
+
+function drawTrendChart(last30Days) {
+  const svg = document.getElementById('trend-chart');
+  const xlbl = document.getElementById('trend-chart-xlabels');
+  if (!svg || !last30Days.length) return;
+  const W = 600, H = 180, pad = 8;
+  const n = last30Days.length;
+  const dx = (W - pad*2) / Math.max(1, n - 1);
+  // Series: landing, signups, logins, likes (likes computed from xp-related event 'like' if present, else 0)
+  const series = [
+    { key: 'landing-view', label: 'Landing', color: '#3b82f6' },
+    { key: 'signup-complete', label: 'Signups', color: '#d4af37' },
+    { key: 'login-success', label: 'Logins', color: '#22c55e' },
+    { key: 'like', label: 'Likes', color: '#ef4444' },
+  ];
+  const allValues = series.flatMap(s => last30Days.map(d => d.events[s.key]||0));
+  const max = Math.max(1, ...allValues);
+  let svgContent = '';
+  // Grid-lines (4 horizontal)
+  for (let i = 1; i < 5; i++) {
+    const y = pad + (H - pad*2) * (i/5);
+    svgContent += '<line x1="'+pad+'" y1="'+y.toFixed(1)+'" x2="'+(W-pad)+'" y2="'+y.toFixed(1)+'" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>';
+  }
+  for (const s of series) {
+    const pts = last30Days.map((d, i) => [pad + i*dx, H - pad - ((d.events[s.key]||0)/max) * (H - pad*2)]);
+    const linePath = 'M' + pts.map(p => p[0].toFixed(1)+','+p[1].toFixed(1)).join(' L');
+    svgContent += '<path d="'+linePath+'" fill="none" stroke="'+s.color+'" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>';
+    // last point dot
+    const last = pts[pts.length-1];
+    svgContent += '<circle cx="'+last[0].toFixed(1)+'" cy="'+last[1].toFixed(1)+'" r="3" fill="'+s.color+'"/>';
+  }
+  svg.innerHTML = svgContent;
+  // X-Labels (alle 5 Tage)
+  xlbl.innerHTML = last30Days.map((d, i) => {
+    if (i === 0 || i === n-1 || i % 5 === 0) {
+      const date = new Date(d.day);
+      return '<span>'+date.getDate()+'.'+(date.getMonth()+1)+'.</span>';
+    }
+    return '<span style="width:0"></span>';
+  }).join('');
+}
+
+function renderTopCreators(list) {
+  const el = document.getElementById('top-creators-list'); if (!el) return;
+  if (!list.length) { el.innerHTML = '<div style="padding:18px;text-align:center;color:var(--dsub);font-size:12.5px">Heute noch keine XP-Gewinne</div>'; return; }
+  el.innerHTML = list.slice(0, 5).map((r, idx) => {
+    const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : '<span style="color:var(--dsub);font-weight:700;width:18px;display:inline-block;text-align:center">'+(idx+1)+'</span>';
+    const subBadge = r.isSub ? '<span style="font-size:9.5px;background:rgba(167,139,250,0.15);color:#a78bfa;padding:1.5px 6px;border-radius:99px;font-weight:700;letter-spacing:0.5px;margin-left:6px">SUB</span>' : '';
+    return '<div class="dash-row" onclick="openUser(\\''+r.uid+'\\')" style="cursor:pointer">' +
+      '<div style="width:28px;text-align:center;font-size:18px;flex-shrink:0">'+medal+'</div>' +
+      '<div class="dash-row-name" style="flex:1;min-width:0">' +
+        '<b>'+esc(r.name)+'</b>'+subBadge +
+        '<div class="dash-row-sub">' +
+          (r.instagram?'<span>@'+esc(r.instagram)+'</span><span class="dash-row-sub-dot">·</span>':'') +
+          '<span style="color:#22c55e;font-weight:700">+'+r.xpGained.toLocaleString('de-DE')+' XP heute</span>' +
+          '<span class="dash-row-sub-dot">·</span>' +
+          '<span>'+r.xpTotal.toLocaleString('de-DE')+' gesamt</span>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function renderSourceFunnel(sf) {
+  const el = document.getElementById('source-funnel-content'); if (!el) return;
+  const tg = sf.telegram || { signups:0, active7d:0, retentionPct:0 };
+  const em = sf.email || { signups:0, active7d:0, retentionPct:0 };
+  function row(emoji, label, data, color) {
+    const bar = Math.min(100, data.retentionPct||0);
+    return '<div>' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">' +
+        '<div style="font-size:12.5px;font-weight:700">'+emoji+' '+label+'</div>' +
+        '<div style="font-size:11px;color:var(--dsub)">'+data.signups+' Signups · <b style="color:'+color+'">'+data.active7d+'</b> aktiv</div>' +
+      '</div>' +
+      '<div style="height:8px;background:var(--dink);border-radius:99px;overflow:hidden">' +
+        '<div style="height:100%;width:'+bar+'%;background:'+color+';transition:width .5s"></div>' +
+      '</div>' +
+      '<div style="font-size:10.5px;color:var(--dsub);margin-top:3px;text-align:right">7d-Retention: <b style="color:'+color+'">'+data.retentionPct+'%</b></div>' +
+    '</div>';
+  }
+  el.innerHTML = row('✈️', 'Telegram', tg, '#0088cc') + row('📧', 'Email', em, '#d4af37');
+}
+
+function renderActivityFeed(events) {
+  const el = document.getElementById('activity-feed'); if (!el) return;
+  if (!events.length) { el.innerHTML = '<div style="padding:18px;text-align:center;color:var(--dsub);font-size:12.5px">Noch keine Events</div>'; return; }
+  const eventIcons = {
+    'landing-view': ['🌐','#3b82f6'],
+    'landing-cta-click': ['👆','#a78bfa'],
+    'signup-view': ['📝','#f59e0b'],
+    'signup-complete': ['✅','#22c55e'],
+    'login-success': ['🔓','#22c55e'],
+    'login-fail': ['🚫','#ef4444'],
+    'email-submit': ['📧','#d4af37'],
+    'telegram-click': ['✈️','#0088cc'],
+    'admin-test': ['🧪','#a78bfa'],
+  };
+  el.innerHTML = events.map(e => {
+    const [icon, color] = eventIcons[e.event] || ['•','#9ca3af'];
+    const ts = new Date(e.ts);
+    const timeStr = ts.toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+    const dateStr = ts.toDateString() === new Date().toDateString() ? 'heute' : ts.toLocaleDateString('de-DE', {day:'2-digit', month:'2-digit'});
+    return '<div style="display:flex;align-items:center;gap:10px;padding:7px 10px;background:var(--dink);border-radius:8px;font-size:12px">' +
+      '<div style="width:24px;height:24px;border-radius:50%;background:'+color+'22;color:'+color+';display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0">'+icon+'</div>' +
+      '<div style="flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis"><b style="color:#fff">'+esc(e.event)+'</b><span style="color:var(--dsub);margin-left:8px">·</span><span style="color:var(--dsub);margin-left:8px">'+esc(e.name||'anonym')+'</span></div>' +
+      '<div style="font-size:10.5px;color:var(--dsub);font-variant-numeric:tabular-nums;flex-shrink:0">'+dateStr+' '+timeStr+'</div>' +
+    '</div>';
+  }).join('');
+}
+
+async function loadOnlineUsers() {
+  try {
+    const r = await fetch('/api/admin/online-users');
+    if (!r.ok) return;
+    const d = await r.json();
+    if (!d.ok) return;
+    const list = Array.isArray(d.list) ? d.list : [];
+    const elCount = document.getElementById('online-now-count');
+    const elTotal = document.getElementById('online-total-sessions');
+    const elList = document.getElementById('online-users-list');
+    if (elCount) elCount.textContent = d.onlineNow || 0;
+    if (elTotal) elTotal.textContent = d.totalSessions || 0;
+    if (!elList) return;
+    if (!list.length) {
+      elList.innerHTML = '<div style="padding:18px;text-align:center;color:var(--dsub);font-size:12.5px">Niemand eingeloggt</div>';
+      return;
+    }
+    elList.innerHTML = list.map(u => {
+      const fresh = u.online;
+      const ageSec = u.ageSec || 0;
+      const last = ageSec < 60 ? 'gerade eben' : ageSec < 3600 ? Math.floor(ageSec/60)+' min' : Math.floor(ageSec/3600)+' h';
+      const dot = fresh
+        ? '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#22c55e;box-shadow:0 0 6px #22c55e;flex-shrink:0"></span>'
+        : '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#6b7280;flex-shrink:0"></span>';
+      const handle = u.username ? '@'+esc(u.username) : 'uid '+esc(u.uid);
+      const subTag = u.isSubActive ? '<span style="margin-left:6px;font-size:9.5px;font-weight:700;color:#a78bfa;background:rgba(167,139,250,0.12);padding:1.5px 6px;border-radius:99px;letter-spacing:0.3px">SUB</span>' : '';
+      const viaTag = u.loginVia === 'email'
+        ? '<span style="margin-left:6px;font-size:9.5px;font-weight:700;color:#d4af37;background:rgba(212,175,55,0.12);padding:1.5px 6px;border-radius:99px;letter-spacing:0.3px">EMAIL</span>'
+        : '';
+      const sessTag = u.sessionsCount > 1 ? '<span style="margin-left:6px;font-size:9.5px;font-weight:700;color:#9ca3af;background:rgba(255,255,255,0.06);padding:1.5px 6px;border-radius:99px">'+u.sessionsCount+' Sessions</span>' : '';
+      return '<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--dink);border:1px solid var(--dline);border-radius:9px">'
+        + dot
+        + '<div style="flex:1;min-width:0;overflow:hidden">'
+        +   '<div style="font-size:13px;color:#fff;font-weight:600;display:flex;align-items:center;flex-wrap:wrap;gap:2px">'
+        +     '<span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:240px">'+esc(u.name||'–')+'</span>'
+        +     viaTag + subTag + sessTag
+        +   '</div>'
+        +   '<div style="font-size:11px;color:var(--dsub);margin-top:2px">'+handle+'</div>'
+        + '</div>'
+        + '<div style="font-size:11px;color:'+(fresh?'#22c55e':'var(--dsub)')+';font-weight:600;flex-shrink:0;text-align:right">'+last+'</div>'
+      + '</div>';
+    }).join('');
+  } catch(e) {
+    console.warn('[online-users] fail', e);
+  }
+}
+setInterval(loadOnlineUsers, 15000);
+
+async function loadSyncHealth() {
+  try {
+    const r = await fetch('/api/admin/sync-health');
+    if (!r.ok) return;
+    const h = await r.json();
+    if (!h.ok) return;
+    const banner = document.getElementById('sync-health-banner');
+    if (!banner) return;
+    const cacheAge = h.cacheAgeSec ?? '?';
+    const writesT = h.writesToday || 0;
+    const successRate = h.successRate ?? 100;
+    const degraded = !!h.mainbotDegraded;
+    if (degraded) {
+      banner.style.display = 'block';
+      banner.innerHTML = '<div style="padding:14px 16px;background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.40);border-radius:12px;display:flex;align-items:center;gap:12px">' +
+        '<div style="font-size:20px">⚠️</div>' +
+        '<div style="flex:1;min-width:0">' +
+          '<div style="font-size:13px;font-weight:800;color:#ef4444">Mainbot-Sync DEGRADED</div>' +
+          '<div style="font-size:11.5px;color:var(--dsub);margin-top:2px">'+h.mainbotConsecutiveFails+' Calls in Folge fehlgeschlagen · Cache-Age: '+cacheAge+'s · Schreibvorgänge schlagen evtl. fehl</div>' +
+        '</div>' +
+        '<button class="dash-btn" onclick="openSyncHealthDetail()">📋 Details</button>' +
+      '</div>';
+    } else {
+      // Kompakter OK-Banner
+      banner.style.display = 'block';
+      banner.innerHTML = '<div style="padding:8px 14px;background:rgba(34,197,94,0.06);border:1px solid rgba(34,197,94,0.20);border-radius:10px;display:flex;align-items:center;gap:10px;font-size:11.5px">' +
+        '<span style="color:#22c55e;font-weight:800">●</span>' +
+        '<span style="color:var(--dsub)">Bridge-Sync OK · Cache-Age <b style="color:#fff">'+cacheAge+'s</b> · '+writesT+' Writes heute · '+successRate+'% Success-Rate</span>' +
+        '<div style="flex:1"></div>' +
+        '<button class="dash-btn" style="padding:4px 10px;font-size:11px" onclick="openSyncHealthDetail()">📋 Details</button>' +
+      '</div>';
+    }
+  } catch(e) {}
+}
+async function openSyncHealthDetail() {
+  const r = await fetch('/api/admin/sync-health');
+  const h = await r.json().catch(()=>({}));
+  const bg = document.createElement('div');
+  bg.className = 'dash-modal-bg';
+  bg.onclick = e => { if (e.target===bg) bg.remove(); };
+  const writes = h.lastWrites || [];
+  const writesHtml = writes.length
+    ? writes.map(w => {
+        const color = w.success ? '#22c55e' : '#ef4444';
+        const ts = new Date(w.ts).toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+        return '<tr><td style="padding:4px 8px;color:var(--dsub)">'+ts+'</td><td style="padding:4px 8px;color:#fff">'+esc(w.endpoint)+'</td><td style="padding:4px 8px;color:var(--dsub);font-size:10.5px">'+esc(w.uid||'-')+'</td><td style="padding:4px 8px;color:'+color+';font-weight:700;text-align:right">'+(w.success?'✓':'✗')+' '+w.ms+'ms</td></tr>';
+      }).join('')
+    : '<tr><td colspan="4" style="padding:14px;text-align:center;color:var(--dsub)">Noch keine Writes</td></tr>';
+  bg.innerHTML = '<div class="dash-modal" style="max-width:760px"><div class="dash-modal-hdr"><h3>📋 Sync-Health (Phase 2)</h3><div class="dash-modal-meta">Live-Mirror-Status der App↔Mainbot Bridge</div></div>' +
+    '<div class="dash-modal-body" style="font-family:ui-monospace,monospace;font-size:11.5px">' +
+      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:14px">' +
+        statCard('Cache-Age', (h.cacheAgeSec??'-')+'s', h.cacheAgeSec > 300 ? '#f59e0b' : '#22c55e') +
+        statCard('Bridge-Fails (Reihe)', h.mainbotConsecutiveFails??0, h.mainbotConsecutiveFails > 0 ? '#ef4444' : '#22c55e') +
+        statCard('Writes heute', h.writesToday??0, '#3b82f6') +
+        statCard('Writes total', h.writesTotal??0, '#a78bfa') +
+        statCard('Success-Rate', (h.successRate??100)+'%', h.successRate < 95 ? '#ef4444' : '#22c55e') +
+        statCard('Fehler 24h', h.writesFailed24h??0, h.writesFailed24h > 0 ? '#f59e0b' : '#22c55e') +
+      '</div>' +
+      '<div style="padding:10px 12px;background:var(--dink);border-radius:8px;margin-bottom:14px">' +
+        '<b style="color:#f5d76e">app_db.json letzter Save:</b> '+(h.appDbLastSaveOk||'nie')+'<br>' +
+        '<b style="color:#f5d76e">/data letzter Pull:</b> '+(h.appDbLastRefreshOk||'nie')+'<br>' +
+        '<b style="color:#f5d76e">Mainbot last success:</b> '+new Date(h.mainbotLastSuccessAt||0).toLocaleString('de-DE') +
+      '</div>' +
+      '<div style="font-size:10.5px;color:#22c55e;letter-spacing:1px;text-transform:uppercase;margin:14px 0 6px;font-weight:700">Letzte 30 Writes</div>' +
+      '<div style="background:var(--dink);border-radius:8px;overflow:hidden;max-height:360px;overflow-y:auto"><table style="width:100%;border-collapse:collapse">'+writesHtml+'</table></div>' +
+    '</div>' +
+    '<div class="dash-modal-foot"><button class="dash-btn dash-btn-primary" onclick="this.closest(\\'.dash-modal-bg\\').remove()">Schließen</button></div>' +
+    '</div>';
+  document.body.appendChild(bg);
+}
+function statCard(label, value, color) {
+  return '<div style="padding:10px 12px;background:var(--dink);border-radius:8px;border-left:3px solid '+color+'">' +
+    '<div style="font-size:9.5px;font-weight:700;color:var(--dsub);text-transform:uppercase;letter-spacing:1px">'+label+'</div>' +
+    '<div style="font-size:18px;font-weight:800;color:'+color+';margin-top:2px">'+value+'</div>' +
+  '</div>';
 }
 
 function drawSparkline(id, data, color) {
@@ -11335,16 +14457,31 @@ document.querySelectorAll('.dash-tab').forEach(btn => {
     const hideAll = () => {
       document.getElementById('dash-list').style.display = 'none';
       document.getElementById('dash-engagement-log').style.display = 'none';
+      const rp = document.getElementById('dash-reports'); if (rp) rp.style.display = 'none';
+      const cp = document.getElementById('dash-compliance'); if (cp) cp.style.display = 'none';
       const dl = document.getElementById('dash-diamond-links'); if (dl) dl.style.display = 'none';
+      const hi = document.getElementById('dash-helper-inbox'); if (hi) hi.style.display = 'none';
     };
     if (CUR_TAB === 'engagement-log') {
       hideAll();
       document.getElementById('dash-engagement-log').style.display = 'block';
       loadEngagementLog();
+    } else if (CUR_TAB === 'reports') {
+      hideAll();
+      const rp = document.getElementById('dash-reports'); if (rp) rp.style.display = 'block';
+      loadReports();
+    } else if (CUR_TAB === 'compliance') {
+      hideAll();
+      const cp = document.getElementById('dash-compliance'); if (cp) cp.style.display = 'block';
+      loadCompliance();
     } else if (CUR_TAB === 'diamond-links') {
       hideAll();
       const dl = document.getElementById('dash-diamond-links'); if (dl) dl.style.display = 'block';
       loadDiamondLinksAdmin();
+    } else if (CUR_TAB === 'helper-inbox') {
+      hideAll();
+      const hi = document.getElementById('dash-helper-inbox'); if (hi) hi.style.display = 'block';
+      loadHelperInbox();
     } else {
       hideAll();
       document.getElementById('dash-list').style.display = '';
@@ -11352,6 +14489,104 @@ document.querySelectorAll('.dash-tab').forEach(btn => {
     }
   });
 });
+
+// ── Helper-Inbox (Tickets vom Helper-Bot) ──
+let HELPER_INBOX_FILTER = 'open';
+async function loadHelperInbox(){
+  const root = document.getElementById('dash-helper-inbox');
+  if (!root) return;
+  root.innerHTML = '<div style="padding:24px;text-align:center;color:var(--dsub)">Lädt Tickets…</div>';
+  try {
+    const r = await fetch('/api/admin/helper-questions?status=' + encodeURIComponent(HELPER_INBOX_FILTER));
+    const j = await r.json();
+    if (!j.ok) { root.innerHTML = '<div style="padding:24px;text-align:center;color:#ef4444">Fehler: '+(j.error||'?')+'</div>'; return; }
+    const total = j.total || 0;
+    const openN = j.open || 0;
+    const items = j.questions || [];
+    const filterBtn = (key, label, count) =>
+      '<button onclick="HELPER_INBOX_FILTER=\\''+key+'\\';loadHelperInbox()" class="dash-tab'+(HELPER_INBOX_FILTER===key?' active':'')+'">'+label+' <b style="margin-left:4px;opacity:.7">'+count+'</b></button>';
+    let html = '<div style="margin-bottom:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">' +
+      '<div style="font-size:13px;color:var(--dsub)">Insgesamt: <b style="color:#fff">'+total+'</b> · Offen: <b style="color:#f59e0b">'+openN+'</b></div>' +
+      '<div class="dash-tabs" style="margin-left:auto">' +
+        filterBtn('open', '🎫 Offen', openN) +
+        filterBtn('answered', '✅ Beantwortet', total - openN) +
+        filterBtn('all', '📋 Alle', total) +
+      '</div></div>';
+    if (items.length === 0) {
+      html += '<div style="padding:32px;text-align:center;color:var(--dsub);background:var(--dink2);border:1px solid var(--dline);border-radius:14px">📭 Keine Tickets in dieser Ansicht.</div>';
+    } else {
+      html += '<div style="display:flex;flex-direction:column;gap:10px">';
+      for (const t of items) {
+        const isOpen = !t.answeredAt;
+        const dt = new Date(t.ts || 0).toLocaleString('de-DE', {hour:'2-digit', minute:'2-digit', day:'2-digit', month:'2-digit'});
+        const followUpsN = Array.isArray(t.followUps) ? t.followUps.length : 0;
+        const followsHtml = followUpsN > 0 ? '<div style="margin-top:8px;padding:8px 10px;background:rgba(167,139,250,0.06);border-left:2px solid #a78bfa;border-radius:6px;font-size:11.5px"><b>💬 '+followUpsN+' Follow-up'+(followUpsN===1?'':'s')+':</b><br>' +
+          t.followUps.map(f => '· ' + escapeHtmlDash(String(f.text||'')).slice(0,200)).join('<br>') + '</div>' : '';
+        const answerHtml = !isOpen ? '<div style="margin-top:10px;padding:10px;background:rgba(34,197,94,0.08);border-left:2px solid #22c55e;border-radius:6px;font-size:12px"><b style="color:#22c55e">✅ Antwort:</b><br>'+escapeHtmlDash(String(t.answer||'')).replace(/\\n/g,'<br>')+'</div>' : '';
+        const replyBox = isOpen ? '<div style="margin-top:10px;display:flex;gap:8px"><textarea id="hi-reply-'+t.id+'" placeholder="Antwort an '+escapeHtmlDash(t.name||'User')+'…" style="flex:1;padding:9px 11px;background:var(--dink);border:1px solid var(--dline);border-radius:8px;color:#fff;font-size:12.5px;font-family:inherit;resize:vertical;min-height:60px"></textarea><button onclick="sendHelperReply(\\''+t.id+'\\')" class="dash-btn dash-btn-primary" style="white-space:nowrap;height:fit-content">📨 Senden</button></div>' : '';
+        html += '<div style="padding:14px 16px;background:var(--dink2);border:1px solid '+(isOpen?'rgba(245,158,11,0.3)':'var(--dline)')+';border-radius:12px">' +
+          '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">' +
+          '<div style="font-size:11px;font-weight:700;padding:3px 8px;border-radius:99px;background:'+(isOpen?'rgba(245,158,11,0.18);color:#f59e0b':'rgba(34,197,94,0.18);color:#22c55e')+'">'+(isOpen?'🎫 OFFEN':'✅ BEANTWORTET')+'</div>' +
+          '<div style="font-size:12.5px;font-weight:700">'+escapeHtmlDash(t.name||'User')+' <span style="color:var(--dsub);font-weight:400">· UID '+t.uid+'</span></div>' +
+          '<div style="margin-left:auto;font-size:11px;color:var(--dsub)">'+dt+'</div>' +
+          '</div>' +
+          '<div style="font-size:13px;line-height:1.5;color:#e7e7ea">'+escapeHtmlDash(String(t.question||''))+'</div>' +
+          followsHtml + answerHtml + replyBox +
+          '<div style="margin-top:6px;font-size:10.5px;color:var(--dsub);font-family:monospace">' + t.id + '</div>' +
+          '</div>';
+      }
+      html += '</div>';
+    }
+    root.innerHTML = html;
+    // Update badge
+    const badge = document.getElementById('dash-tickets-badge');
+    if (badge) { badge.textContent = openN; badge.style.display = openN > 0 ? 'inline-block' : 'none'; }
+  } catch (e) {
+    root.innerHTML = '<div style="padding:24px;text-align:center;color:#ef4444">Fehler: '+e.message+'</div>';
+  }
+}
+function escapeHtmlDash(s){ return String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+async function sendHelperReply(qId){
+  const ta = document.getElementById('hi-reply-' + qId);
+  if (!ta) return;
+  const answer = (ta.value || '').trim();
+  if (!answer) { ta.focus(); return; }
+  ta.disabled = true;
+  try {
+    const r = await fetch('/api/admin/helper-answer', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({qId, answer})});
+    const j = await r.json();
+    if (j.ok) { loadHelperInbox(); }
+    else { alert('Fehler: ' + (j.error || '?')); ta.disabled = false; }
+  } catch (e) { alert('Netzwerk: ' + e.message); ta.disabled = false; }
+}
+// Auto-refresh Badge alle 30s (zeigt im Tab-Header die Anzahl offener Tickets)
+async function refreshHelperBadge(){
+  try {
+    const r = await fetch('/api/admin/helper-questions?status=open');
+    const j = await r.json();
+    if (!j.ok) return;
+    const openN = j.open || 0;
+    const badge = document.getElementById('dash-tickets-badge');
+    if (badge) { badge.textContent = openN; badge.style.display = openN > 0 ? 'inline-block' : 'none'; }
+    const topBadge = document.getElementById('dash-top-tickets-badge');
+    if (topBadge) { topBadge.textContent = openN; topBadge.style.display = openN > 0 ? 'inline-block' : 'none'; }
+    const topBtn = document.getElementById('dash-top-tickets-btn');
+    if (topBtn) {
+      if (openN > 0) topBtn.style.boxShadow = '0 0 0 2px rgba(245,158,11,0.35), 0 4px 16px rgba(245,158,11,0.35)';
+      else topBtn.style.boxShadow = '';
+    }
+  } catch(e) {}
+}
+setInterval(()=>{if(!document.hidden)refreshHelperBadge();}, 30000);
+setTimeout(refreshHelperBadge, 2000);
+function jumpToHelperInbox(){
+  const tab = document.querySelector('.dash-tab[data-tab="helper-inbox"]');
+  if (tab) tab.click();
+  setTimeout(()=>{
+    const el = document.getElementById('dash-helper-inbox');
+    if (el) el.scrollIntoView({ behavior:'smooth', block:'start' });
+  }, 120);
+}
 
 async function loadDiamondLinksAdmin(){
   const root = document.getElementById('dash-diamond-links');
@@ -11440,23 +14675,369 @@ async function loadEngagementLog(){
         '</div>';
       }
     }
-    // Reports
+    // Reports-Hint (Details im dedizierten Tab)
     if (j.reports?.length) {
-      html += '<div style="padding:18px 16px 8px;font-size:11px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;color:#ef4444">🚩 Meldungen (' + j.reports.length + ')</div>';
-      for (const r of j.reports) {
-        html += '<div style="margin:0 16px 8px;padding:10px 12px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);border-radius:10px;font-size:12.5px;line-height:1.5">' +
-          '<div><b>'+esc(r.reporterUid)+'</b> meldet <b>'+esc(r.targetUid)+'</b> — '+esc(r.reason||'(kein Grund)')+(r.context?' · '+esc(r.context):'')+'</div>' +
-          '<div style="font-size:11px;color:var(--muted);margin-top:4px">'+fmtTs(r.ts)+'</div>' +
-        '</div>';
-      }
+      const open = j.reports.filter(r => (r.status||'open') === 'open').length;
+      html += '<div style="padding:18px 16px 8px;font-size:11px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;color:#ef4444">🚩 ' + j.reports.length + ' Meldungen ' + (open ? '· '+open+' offen' : '') + ' → siehe Tab "Meldungen"</div>';
     }
     root.innerHTML = html;
+    updateReportsBadge(j.reports || []);
   } catch(e) { root.innerHTML = '<div style="padding:24px;text-align:center;color:#ef4444">'+e.message+'</div>'; }
 }
+
+let LAST_REPORTS = [];
+let CUR_REPORT_FILTER = 'open';
+
+function updateReportsBadge(reports) {
+  const open = (reports||[]).filter(r => (r.status||'open') === 'open').length;
+  const badge = document.getElementById('dash-reports-badge');
+  if (badge) {
+    if (open > 0) { badge.style.display = ''; badge.textContent = String(open); }
+    else badge.style.display = 'none';
+  }
+  const statVal = document.getElementById('stat-reports-open');
+  if (statVal) statVal.textContent = String(open);
+}
+
+function jumpToReports() {
+  const tabBtn = document.querySelector('.dash-tab[data-tab="reports"]');
+  if (tabBtn) {
+    tabBtn.click();
+    tabBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+}
+
+async function loadReports() {
+  const root = document.getElementById('dash-reports');
+  if (!root) return;
+  root.innerHTML = '<div style="padding:24px;text-align:center;color:var(--dsub)">⏳ Lade Meldungen…</div>';
+  try {
+    const r = await fetch('/api/admin/engagement-log');
+    const j = await r.json();
+    if (!j.ok) { root.innerHTML = '<div style="padding:24px;text-align:center;color:#ef4444">'+(j.error||'Fehler')+'</div>'; return; }
+    LAST_REPORTS = j.reports || [];
+    updateReportsBadge(LAST_REPORTS);
+    renderReports();
+  } catch(e) { root.innerHTML = '<div style="padding:24px;text-align:center;color:#ef4444">'+e.message+'</div>'; }
+}
+
+function renderReports() {
+  const root = document.getElementById('dash-reports');
+  if (!root) return;
+  const fmtTs = (ts) => ts ? new Date(ts).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '–';
+  const all = LAST_REPORTS;
+  const counts = {
+    open: all.filter(r => (r.status||'open') === 'open').length,
+    resolved: all.filter(r => r.status === 'resolved').length,
+    dismissed: all.filter(r => r.status === 'dismissed').length,
+    all: all.length,
+  };
+  const filtered = CUR_REPORT_FILTER === 'all' ? all : all.filter(r => (r.status||'open') === CUR_REPORT_FILTER);
+  const tabBtn = (key, label, count, color) =>
+    '<button onclick="setReportFilter(\\''+key+'\\')" class="dash-tab'+(CUR_REPORT_FILTER===key?' active':'')+'" style="'+(CUR_REPORT_FILTER===key?'':'color:'+color)+'">'+label+' <b style="margin-left:4px;opacity:.7">'+count+'</b></button>';
+
+  let html = '<div class="dash-tabs" style="margin:8px 0 12px">' +
+    tabBtn('open', '🔴 Offen', counts.open, '#f87171') +
+    tabBtn('resolved', '✅ Erledigt', counts.resolved, '#4ade80') +
+    tabBtn('dismissed', '⚪ Verworfen', counts.dismissed, '#9ca3af') +
+    tabBtn('all', '📋 Alle', counts.all, '#e7e7ea') +
+  '</div>';
+
+  if (!filtered.length) {
+    html += '<div style="padding:32px;text-align:center;color:var(--dsub);font-size:13px">' +
+      (CUR_REPORT_FILTER === 'open' ? '🎉 Keine offenen Meldungen.' : 'Keine Einträge in diesem Filter.') +
+    '</div>';
+    root.innerHTML = html;
+    return;
+  }
+
+  for (const r of filtered) {
+    const status = r.status || 'open';
+    const isOpen = status === 'open';
+    const statusPill = status === 'open' ? '<span class="dash-pill err">🔴 Offen</span>'
+      : status === 'resolved' ? '<span class="dash-pill ok">✅ Erledigt'+(r.action?' · '+esc(r.action):'')+'</span>'
+      : '<span class="dash-pill muted">⚪ Verworfen</span>';
+    const warnPill = r.targetWarnings > 0 ? '<span class="dash-pill warn">⚠️ '+r.targetWarnings+'/5 Warns</span>' : '';
+    const banPill = r.targetBanned ? '<span class="dash-pill err">🚫 Bereits gebannt</span>' : '';
+
+    html += '<div style="margin:0 0 10px;padding:14px 16px;background:'+(isOpen?'rgba(239,68,68,0.06)':'var(--dink2)')+';border:1px solid '+(isOpen?'rgba(239,68,68,0.20)':'var(--dline)')+';border-radius:12px">' +
+      '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px">' +
+        statusPill + warnPill + banPill +
+        '<div style="flex:1"></div>' +
+        '<span style="font-size:11px;color:var(--dsub)">'+fmtTs(r.ts)+'</span>' +
+      '</div>' +
+      '<div style="font-size:13.5px;line-height:1.5;margin-bottom:6px">' +
+        '<a href="/profil/'+esc(r.reporterUid)+'" style="color:#a78bfa;font-weight:700;text-decoration:none">'+esc(r.reporterName)+'</a>' +
+        (r.reporterInstagram?' <span style="color:#06b6d4;font-size:12px">@'+esc(r.reporterInstagram)+'</span>':'') +
+        ' <span style="color:var(--dsub)">→ meldet</span> ' +
+        '<a href="/profil/'+esc(r.targetUid)+'" style="color:#f87171;font-weight:700;text-decoration:none">'+esc(r.targetName)+'</a>' +
+        (r.targetInstagram?' <span style="color:#06b6d4;font-size:12px">@'+esc(r.targetInstagram)+'</span>':'') +
+      '</div>' +
+      (r.reason ? '<div style="font-size:12.5px;color:#e7e7ea;margin-bottom:4px"><b style="color:var(--dsub);font-weight:600">Grund:</b> '+esc(r.reason)+'</div>' : '') +
+      (r.context ? '<div style="font-size:12px;color:var(--dsub);margin-bottom:8px">Kontext: '+esc(r.context)+'</div>' : '') +
+      (r.resolvedAt ? '<div style="font-size:11px;color:var(--dsub);margin-bottom:8px">Bearbeitet '+fmtTs(r.resolvedAt)+(r.resolvedBy?' · von UID '+esc(r.resolvedBy):'')+'</div>' : '') +
+      (isOpen
+        ? '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">' +
+            '<button onclick="reportAction(\\''+esc(r.id)+'\\',\\'dismiss\\',this)" class="dash-act">⚪ Verwerfen</button>' +
+            '<button onclick="reportAction(\\''+esc(r.id)+'\\',\\'resolve\\',this)" class="dash-act">✅ Erledigt (keine Aktion)</button>' +
+            '<button onclick="reportAction(\\''+esc(r.id)+'\\',\\'warn\\',this)" class="dash-act" style="border-color:rgba(245,158,11,0.35);color:#fbbf24">⚠️ Verwarnen</button>' +
+            (r.targetBanned ? '' : '<button onclick="reportAction(\\''+esc(r.id)+'\\',\\'ban\\',this)" class="dash-act danger">🚫 Bannen</button>') +
+            '<button onclick="reportAction(\\''+esc(r.id)+'\\',\\'delete\\',this)" class="dash-act" style="margin-left:auto;color:var(--dsub)">🗑️</button>' +
+          '</div>'
+        : '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">' +
+            '<button onclick="reportAction(\\''+esc(r.id)+'\\',\\'delete\\',this)" class="dash-act" style="color:var(--dsub)">🗑️ Löschen</button>' +
+          '</div>'
+      ) +
+    '</div>';
+  }
+  root.innerHTML = html;
+}
+
+function setReportFilter(key) { CUR_REPORT_FILTER = key; renderReports(); }
+
+async function reportAction(reportId, action, btn) {
+  const labels = { dismiss:'Verwerfen', resolve:'Erledigen', warn:'Verwarnen', ban:'Bannen', delete:'Löschen' };
+  if (action === 'ban' || action === 'delete') {
+    if (!confirm(labels[action] + '? Diese Aktion ist nicht rückgängig zu machen.')) return;
+  }
+  btn.disabled = true;
+  const oldText = btn.textContent;
+  btn.textContent = '⏳';
+  try {
+    const r = await fetch('/api/admin/report-action', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reportId, action }),
+    });
+    const j = await r.json();
+    if (j.ok) loadReports();
+    else { btn.disabled = false; btn.textContent = oldText; alert('❌ ' + (j.error || 'Fehler')); }
+  } catch(e) { btn.disabled = false; btn.textContent = oldText; alert('❌ ' + e.message); }
+}
+
+// ── Compliance / Mission-Report Tab ──
+let LAST_COMPLIANCE = null;
+let CUR_COMP_FILTER = 'failedM1';
+
+async function loadCompliance(date) {
+  const root = document.getElementById('dash-compliance');
+  if (!root) return;
+  root.innerHTML = '<div style="padding:24px;text-align:center;color:var(--dsub)">⏳ Lade Mission-Report…</div>';
+  const dateParam = date || 'yesterday';
+  try {
+    const r = await fetch('/api/admin/mission-report?date=' + encodeURIComponent(dateParam));
+    const j = await r.json();
+    if (!j.ok) { root.innerHTML = '<div style="padding:24px;text-align:center;color:#ef4444">'+(j.error||'Fehler')+'</div>'; return; }
+    LAST_COMPLIANCE = j;
+    renderCompliance();
+  } catch(e) { root.innerHTML = '<div style="padding:24px;text-align:center;color:#ef4444">'+e.message+'</div>'; }
+}
+
+function renderCompliance() {
+  const root = document.getElementById('dash-compliance');
+  if (!root || !LAST_COMPLIANCE) return;
+  const j = LAST_COMPLIANCE;
+  const s = j.summary;
+  const all = j.users || [];
+
+  // Warnung-Gruppe + Sortier-Defaults
+  const groups = {
+    failedM1: all.filter(u => u.postedButFailedM1),
+    warnings: all.filter(u => u.warnings > 0).sort((a,b)=>b.warnings-a.warnings),
+    onlyPosters: all.filter(u => u.onlyPoster),
+    onlyLikers: all.filter(u => u.onlyLiker),
+    inactive: all.filter(u => u.inactive),
+    suspended: all.filter(u => u.postSuspendedUntil && u.postSuspendedUntil > Date.now()),
+    m1: all.filter(u => u.m1),
+    m2: all.filter(u => u.m2),
+    m3: all.filter(u => u.m3),
+    all: all.slice().sort((a,b) => (b.likedToday||0) - (a.likedToday||0)),
+  };
+  const totalWarnings = groups.warnings.length;
+  const criticalWarnings = all.filter(u => u.warnings >= 3).length;
+
+  const tabBtn = (key, label, count, color) =>
+    '<button onclick="setComplianceFilter(\\''+key+'\\')" class="dash-tab'+(CUR_COMP_FILTER===key?' active':'')+'" style="'+(CUR_COMP_FILTER===key?'':'color:'+color+';')+'flex-shrink:0">'+label+' <b style="margin-left:4px;opacity:.7">'+count+'</b></button>';
+
+  // ── Header mit Datums-Picker und Hero-Banner ──
+  let html =
+    '<div style="margin:6px 0 18px;padding:18px 20px;background:linear-gradient(135deg,rgba(167,139,250,0.10),rgba(6,182,212,0.04));border:1px solid rgba(167,139,250,0.30);border-radius:16px">' +
+      '<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">' +
+        '<div style="font-size:32px">📊</div>' +
+        '<div style="flex:1;min-width:200px">' +
+          '<div style="font-size:18px;font-weight:800;color:#fff">Compliance-Report</div>' +
+          '<div style="font-size:12.5px;color:var(--dsub);margin-top:2px">Mission-Auswertung, Posting/Liking-Verhältnis, Verwarnungen — '+esc(j.summary.date)+'</div>' +
+        '</div>' +
+        '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">' +
+          '<input type="date" id="comp-date-input" style="background:var(--dink);border:1px solid var(--dline);color:#fff;padding:8px 12px;border-radius:8px;font-family:inherit;font-size:13px" value="'+(j.summary.date ? new Date(j.summary.date).toISOString().slice(0,10) : '')+'">' +
+          '<button onclick="loadCompliance(document.getElementById(\\'comp-date-input\\').value)" class="dash-btn">→ Laden</button>' +
+          '<button onclick="loadCompliance(\\'yesterday\\')" class="dash-btn">Gestern</button>' +
+          '<button onclick="loadCompliance(\\'today\\')" class="dash-btn">Heute</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+
+  // ── Big Summary-Stats Grid (4 große Cards für Mission-Status) ──
+  const bigStat = (lbl, val, sub, color, bg, icon) =>
+    '<div style="padding:18px 20px;background:'+bg+';border:1.5px solid '+color+';border-radius:14px">' +
+      '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">' +
+        '<div><div style="font-size:11px;font-weight:800;letter-spacing:1.5px;color:'+color+';text-transform:uppercase">'+lbl+'</div>' +
+        '<div style="font-size:32px;font-weight:900;color:#fff;line-height:1;margin-top:4px;letter-spacing:-0.5px">'+val+'</div>' +
+        '<div style="font-size:11.5px;color:var(--dsub);margin-top:4px;line-height:1.3">'+sub+'</div></div>' +
+        '<div style="font-size:28px;opacity:.4">'+icon+'</div>' +
+      '</div>' +
+    '</div>';
+  html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-bottom:14px">' +
+    bigStat('Mission 1 erfüllt', s.m1Done+'/'+s.totalUsers, '5 Likes geliked (Pflicht)', '#22c55e', 'rgba(34,197,94,0.07)', '✅') +
+    bigStat('Mission 2 erfüllt', s.m2Done+'/'+s.totalUsers, '80% der Posts geliked', '#10b981', 'rgba(16,185,129,0.07)', '✅') +
+    bigStat('Mission 3 erfüllt', s.m3Done+'/'+s.totalUsers, 'ALLE Posts geliked (+1💎)', '#06b6d4', 'rgba(6,182,212,0.07)', '💎') +
+    bigStat('M1 VERLETZT', String(s.postedButFailedM1), 'Posted, aber M1 nicht erfüllt (auto-Warn)', '#ef4444', 'rgba(239,68,68,0.07)', '🚨') +
+  '</div>';
+
+  // ── 2. Reihe: Verhalten + Warnungen ──
+  html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:18px">' +
+    bigStat('Nur Poster', String(s.onlyPosters), 'Posten ohne zu liken', '#f59e0b', 'rgba(245,158,11,0.06)', '⚠️') +
+    bigStat('Nur Liker', String(s.onlyLikers), 'Liken ohne zu posten', '#a78bfa', 'rgba(167,139,250,0.06)', '✨') +
+    bigStat('Inaktiv', String(s.inactive), 'Weder posted noch geliked', '#6b7280', 'rgba(107,114,128,0.05)', '⚪') +
+    bigStat('Verwarnt', String(totalWarnings), criticalWarnings+' davon kritisch (3+)', '#fbbf24', 'rgba(251,191,36,0.06)', '⚠️') +
+    bigStat('Gesperrt', String(s.currentlyPostSuspended), 'Aktive Post-Sperren', '#dc2626', 'rgba(220,38,38,0.07)', '🚫') +
+  '</div>';
+
+  // ── Warnung-Eskalations-Hinweis ──
+  html += '<div style="margin-bottom:14px;padding:12px 14px;background:rgba(245,158,11,0.06);border-left:3px solid #f59e0b;border-radius:8px;font-size:12px;color:#fbbf24;line-height:1.5"><b>⚠️ Auto-Eskalation:</b> 3. Verwarnung = ausführliche DM-Aufklärung · 4. = "letzte Chance"-DM · 5. = automatischer permanenter Bann. User kann 1 Warn abbauen via 5 Tage M1-Streak.</div>';
+
+  // ── Filter-Tabs ──
+  html += '<div class="dash-tabs" style="margin:8px 0 12px">' +
+    tabBtn('failedM1', '🔴 M1-Verletzt', groups.failedM1.length, '#f87171') +
+    tabBtn('warnings', '⚠️ Verwarnt', groups.warnings.length, '#fbbf24') +
+    tabBtn('onlyPosters', '⚠️ Nur Poster', groups.onlyPosters.length, '#fbbf24') +
+    tabBtn('onlyLikers', '✨ Nur Liker', groups.onlyLikers.length, '#a78bfa') +
+    tabBtn('inactive', '⚪ Inaktiv', groups.inactive.length, '#9ca3af') +
+    tabBtn('suspended', '🚫 Gesperrt', groups.suspended.length, '#dc2626') +
+    tabBtn('m1', '✅ M1', groups.m1.length, '#4ade80') +
+    tabBtn('m2', '✅ M2', groups.m2.length, '#22c55e') +
+    tabBtn('m3', '✅ M3', groups.m3.length, '#06b6d4') +
+    tabBtn('all', '📋 Alle', groups.all.length, '#e7e7ea') +
+  '</div>';
+
+  const list = groups[CUR_COMP_FILTER] || [];
+  if (!list.length) {
+    html += '<div style="padding:48px 24px;text-align:center;color:var(--dsub);font-size:14px">✨ Keine User in diesem Filter.</div>';
+  } else {
+    const fmtAgo = (ts) => {
+      if (!ts) return '–';
+      const diff = Date.now() - ts;
+      if (diff < 60000) return 'gerade';
+      if (diff < 3600000) return Math.floor(diff/60000)+'min';
+      if (diff < 86400000) return Math.floor(diff/3600000)+'h';
+      return Math.floor(diff/86400000)+'d';
+    };
+    for (const u of list) {
+      // Warnungs-Anzeige in groß als eigene Sektion
+      const warnLevel = u.warnings >= 5 ? 'CRITICAL' : u.warnings >= 4 ? 'HIGH' : u.warnings >= 3 ? 'MED' : u.warnings > 0 ? 'LOW' : 'NONE';
+      const warnColor = warnLevel === 'CRITICAL' ? '#dc2626' : warnLevel === 'HIGH' ? '#ef4444' : warnLevel === 'MED' ? '#f59e0b' : warnLevel === 'LOW' ? '#fbbf24' : '#4ade80';
+      const warnBg = warnLevel === 'NONE' ? 'rgba(34,197,94,0.08)' : warnLevel === 'LOW' ? 'rgba(251,191,36,0.10)' : 'rgba(239,68,68,0.10)';
+      const warnDots = '<div style="display:inline-flex;gap:3px;vertical-align:middle">' +
+        Array.from({length:5}, (_,i)=> '<div style="width:8px;height:8px;border-radius:50%;background:'+(i < u.warnings ? warnColor : 'rgba(255,255,255,0.15)')+';'+(i<u.warnings?'box-shadow:0 0 6px '+warnColor:'')+'"></div>').join('') +
+      '</div>';
+      const missionPills = [];
+      if (u.m1) missionPills.push('<span style="padding:3px 8px;border-radius:6px;background:rgba(34,197,94,0.18);color:#4ade80;font-size:10.5px;font-weight:800;letter-spacing:0.5px">M1 ✅</span>');
+      else if (u.postedToday > 0) missionPills.push('<span style="padding:3px 8px;border-radius:6px;background:rgba(239,68,68,0.18);color:#f87171;font-size:10.5px;font-weight:800;letter-spacing:0.5px">M1 ❌</span>');
+      if (u.m2) missionPills.push('<span style="padding:3px 8px;border-radius:6px;background:rgba(16,185,129,0.18);color:#22c55e;font-size:10.5px;font-weight:800;letter-spacing:0.5px">M2 ✅</span>');
+      if (u.m3) missionPills.push('<span style="padding:3px 8px;border-radius:6px;background:rgba(6,182,212,0.18);color:#06b6d4;font-size:10.5px;font-weight:800;letter-spacing:0.5px">M3 💎</span>');
+      const suspended = u.postSuspendedUntil && u.postSuspendedUntil > Date.now();
+      const daysLeft = suspended ? Math.ceil((u.postSuspendedUntil - Date.now())/86400000) : 0;
+
+      html += '<div style="margin:0 0 10px;padding:14px 16px;background:var(--dink2);border:1px solid '+(u.warnings>=3?'rgba(239,68,68,0.30)':'var(--dline)')+';border-radius:14px">' +
+        // Row 1: Name + Insta + Mission-Pills + Last Seen
+        '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">' +
+          '<a href="javascript:openUser(\\''+esc(u.uid)+'\\')" style="font-size:15px;font-weight:800;color:#fff;text-decoration:none">'+esc(u.name)+'</a>' +
+          (u.instagram?'<span style="font-size:12.5px;color:#06b6d4">@'+esc(u.instagram)+'</span>':'') +
+          '<div style="display:flex;gap:4px;flex-wrap:wrap">'+missionPills.join('')+'</div>' +
+          '<div style="flex:1"></div>' +
+          (u.lastSeen ? '<span style="font-size:10.5px;color:var(--dsub)">🕒 '+fmtAgo(u.lastSeen)+'</span>' : '') +
+          (u.banned ? '<span class="dash-pill err">🚫 GEBANNT</span>' : '') +
+        '</div>' +
+        // Row 2: Big stat grid
+        '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(80px,1fr));gap:6px;margin-bottom:10px">' +
+          '<div style="padding:8px;background:var(--dink);border-radius:8px;text-align:center"><div style="font-size:9.5px;color:var(--dsub);font-weight:700;text-transform:uppercase;letter-spacing:0.8px">Posts</div><div style="font-size:18px;font-weight:800;color:#4dabf7;margin-top:1px">'+u.postedToday+'</div></div>' +
+          '<div style="padding:8px;background:var(--dink);border-radius:8px;text-align:center"><div style="font-size:9.5px;color:var(--dsub);font-weight:700;text-transform:uppercase;letter-spacing:0.8px">Likes</div><div style="font-size:18px;font-weight:800;color:#f59e0b;margin-top:1px">'+u.likedToday+'</div><div style="font-size:9.5px;color:var(--dsub)">/'+u.othersAvailable+'</div></div>' +
+          '<div style="padding:8px;background:var(--dink);border-radius:8px;text-align:center"><div style="font-size:9.5px;color:var(--dsub);font-weight:700;text-transform:uppercase;letter-spacing:0.8px">XP heute</div><div style="font-size:18px;font-weight:800;color:#a78bfa;margin-top:1px">'+(u.dailyXP||0)+'</div></div>' +
+          '<div style="padding:8px;background:var(--dink);border-radius:8px;text-align:center"><div style="font-size:9.5px;color:var(--dsub);font-weight:700;text-transform:uppercase;letter-spacing:0.8px">XP gesamt</div><div style="font-size:18px;font-weight:800;color:#fff;margin-top:1px">'+(u.xp||0)+'</div></div>' +
+          '<div style="padding:8px;background:var(--dink);border-radius:8px;text-align:center"><div style="font-size:9.5px;color:var(--dsub);font-weight:700;text-transform:uppercase;letter-spacing:0.8px">💎</div><div style="font-size:18px;font-weight:800;color:#06b6d4;margin-top:1px">'+(u.diamonds||0)+'</div></div>' +
+          '<div style="padding:8px;background:var(--dink);border-radius:8px;text-align:center"><div style="font-size:9.5px;color:var(--dsub);font-weight:700;text-transform:uppercase;letter-spacing:0.8px">❤ Total</div><div style="font-size:18px;font-weight:800;color:#ec4899;margin-top:1px">'+(u.totalLikes||0)+'</div></div>' +
+        '</div>' +
+        // Row 3: Warnings (BIG VISIBLE)
+        '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:'+warnBg+';border:1px solid '+warnColor+'33;border-radius:10px;margin-bottom:8px">' +
+          '<div style="font-size:12px;font-weight:800;color:'+warnColor+';min-width:100px">⚠️ '+u.warnings+'/5 Warns</div>' +
+          warnDots +
+          '<div style="flex:1;text-align:right;font-size:11px;color:var(--dsub)">Wochen: M1 <b>'+u.weekM1+'</b>/7 · M2 <b>'+u.weekM2+'</b>/7 · M3 <b>'+u.weekM3+'</b>/7</div>' +
+        '</div>' +
+        // Row 4: Suspended-Banner falls aktiv
+        (suspended ? '<div style="margin-bottom:8px;padding:8px 12px;background:rgba(220,38,38,0.10);border-left:3px solid #dc2626;border-radius:6px;font-size:11.5px;color:#fca5a5">🚫 <b>Posting gesperrt</b> noch '+daysLeft+'d'+(u.postSuspendReason?' — '+esc(u.postSuspendReason):'')+'</div>' : '') +
+        // Row 5: Aktionen
+        '<div style="display:flex;gap:6px;flex-wrap:wrap">' +
+          '<button onclick="warnUserPrompt(\\''+esc(u.uid)+'\\',\\''+esc(u.name)+'\\')" class="dash-act" style="border-color:rgba(245,158,11,0.4);color:#fbbf24"><b>⚠️ Verwarnen</b></button>' +
+          (suspended
+            ? '<button onclick="suspendPostingPrompt(\\''+esc(u.uid)+'\\',\\''+esc(u.name)+'\\',0)" class="dash-act" style="border-color:rgba(34,197,94,0.4);color:#22c55e"><b>✅ Sperre auf</b></button>'
+            : '<button onclick="suspendPostingPrompt(\\''+esc(u.uid)+'\\',\\''+esc(u.name)+'\\',3)" class="dash-act danger"><b>🚫 Posten sperren</b></button>') +
+          '<button onclick="sendDmTo(\\''+esc(u.uid)+'\\',\\''+esc(u.name)+'\\')" class="dash-act">📨 DM</button>' +
+          '<button onclick="openUser(\\''+esc(u.uid)+'\\')" class="dash-act" style="margin-left:auto"><b>👁️ Profil</b></button>' +
+        '</div>' +
+      '</div>';
+    }
+  }
+  root.innerHTML = html;
+}
+
+function setComplianceFilter(key) { CUR_COMP_FILTER = key; renderCompliance(); }
+
+async function warnUserPrompt(uid, name) {
+  const reason = prompt('Verwarnung an ' + name + ' — Grund (optional):');
+  if (reason === null) return;
+  try {
+    const r = await fetch('/api/admin/warn-user', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({uid, reason}) });
+    const j = await r.json();
+    if (j.ok) {
+      if (typeof dToast === 'function') dToast('✅ Verwarnt — Warns: ' + j.warnings + '/5', 'success');
+      else alert('✅ Verwarnt — Warns: ' + j.warnings + '/5');
+      loadCompliance();
+    } else alert('❌ ' + (j.error || 'Fehler'));
+  } catch(e) { alert('❌ ' + e.message); }
+}
+
+async function suspendPostingPrompt(uid, name, defaultDays) {
+  let days;
+  if (defaultDays === 0) {
+    if (!confirm('Sperre für ' + name + ' aufheben?')) return;
+    days = 0;
+  } else {
+    const inp = prompt('Posten sperren für ' + name + ' — Tage (1-365):', String(defaultDays));
+    if (inp === null) return;
+    days = parseInt(inp, 10);
+    if (!days || days < 1 || days > 365) { alert('❌ Ungültige Tage-Anzahl'); return; }
+  }
+  let reason = '';
+  if (days > 0) {
+    reason = prompt('Grund (wird User per DM mitgeteilt):') || '';
+  }
+  try {
+    const r = await fetch('/api/admin/suspend-posting', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({uid, days, reason}) });
+    const j = await r.json();
+    if (j.ok) {
+      if (typeof dToast === 'function') dToast(days > 0 ? '🚫 Gesperrt für ' + days + 'd' : '✅ Sperre aufgehoben', 'success');
+      else alert(days > 0 ? '🚫 Gesperrt für ' + days + 'd' : '✅ Sperre aufgehoben');
+      loadCompliance();
+    } else alert('❌ ' + (j.error || 'Fehler'));
+  } catch(e) { alert('❌ ' + e.message); }
+}
+
 document.getElementById('dash-q').addEventListener('input', e => { CUR_Q = e.target.value; renderList(); });
 
 refreshUsers();
 setInterval(refreshUsers, 60000);
+// Initial-Badge für offene Meldungen (lazy, ohne UI zu blockieren)
+fetch('/api/admin/engagement-log').then(r=>r.json()).then(j=>{ if (j.ok) { LAST_REPORTS = j.reports||[]; updateReportsBadge(LAST_REPORTS); } }).catch(()=>{});
 </script>
 `, 'dashboard');
     }
@@ -11492,10 +15073,10 @@ setInterval(refreshUsers, 60000);
     ${picFile?`<img src="/appbild/${id}/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1" loading="lazy" alt="">`:insta?`<img src="https://unavatar.io/instagram/${insta}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1" loading="lazy" onerror="this.style.display='none'" alt="">`:''}
   </div>
   <div class="creator-card-info">
-    <div class="creator-card-name" style="margin-top:4px">${u.spitzname||u.name||'User'}</div>
-    ${insta?`<span onclick="event.stopPropagation();window.open('https://instagram.com/${insta}','_blank')" style="font-size:10px;color:#4dabf7;margin-top:2px;display:block;cursor:pointer">@${insta}</span>`:''}
+    <div class="creator-card-name" style="margin-top:4px">${htmlEsc(u.spitzname||u.name||'User')}</div>
+    ${insta?`<span onclick="event.stopPropagation();window.open('https://instagram.com/'+encodeURIComponent(${JSON.stringify(String(insta))}),'_blank')" style="font-size:10px;color:#4dabf7;margin-top:2px;display:block;cursor:pointer">@${htmlEsc(insta)}</span>`:''}
     <div class="creator-card-xp">⚡ ${u.xp||0} XP</div>
-    ${pinnedLink?`<a href="${pinnedLink}" target="_blank" onclick="event.stopPropagation()" style="display:block;font-size:10px;color:var(--accent);margin-top:5px;padding:3px 8px;background:rgba(255,107,107,.15);border:1px solid rgba(255,107,107,.2);border-radius:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-decoration:none">📌 Reel ansehen</a>`:''}
+    ${pinnedLink?`<a href="${htmlEsc(safeUrl(pinnedLink))}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" style="display:block;font-size:10px;color:var(--accent);margin-top:5px;padding:3px 8px;background:rgba(255,107,107,.15);border:1px solid rgba(255,107,107,.2);border-radius:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-decoration:none">📌 Reel ansehen</a>`:''}
   </div>
 </a>`;
         }).join('');
@@ -11623,46 +15204,16 @@ setInterval(refreshUsers, 60000);
         const _newsAgeStr = _newsAge==null ? '' : (_newsAge < 86400000 ? 'heute' : _newsAge < 7*86400000 ? Math.floor(_newsAge/86400000)+'d' : new Date(_latestNews.timestamp).toLocaleDateString('de-DE',{day:'2-digit',month:'short'}));
         const tabContent = {
             allgemein: `
-<div style="margin:4px 16px 20px;border-radius:22px;overflow:hidden;position:relative;background:linear-gradient(135deg,#7c3aed 0%,#a78bfa 50%,#4dabf7 100%)">
-  <div style="position:absolute;inset:0;background:radial-gradient(circle at 80% -20%,rgba(167,139,250,0.45),transparent 55%),radial-gradient(circle at 10% 110%,rgba(77,171,247,0.35),transparent 50%);pointer-events:none"></div>
-  <div style="position:absolute;top:-30px;right:-30px;width:140px;height:140px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,0.08),transparent 70%);pointer-events:none"></div>
-  <div style="position:relative;padding:22px 20px 18px">
-    <div style="display:flex;align-items:center;gap:6px;margin-bottom:14px">
-      <span style="width:7px;height:7px;border-radius:50%;background:#22c55e;box-shadow:0 0 8px rgba(34,197,94,0.6);display:inline-block"></span>
-      <span style="font-size:10px;font-weight:700;letter-spacing:2px;color:rgba(255,255,255,0.55);text-transform:uppercase">Community live</span>
-    </div>
-    <div style="font-size:13px;color:rgba(255,255,255,0.55);font-weight:500;letter-spacing:0.3px">${_greet},</div>
-    <div style="font-size:26px;font-weight:800;color:#fff;font-family:var(--font-display);line-height:1.1;margin-top:2px;letter-spacing:-0.5px">${htmlEsc(_greetName)} 👋</div>
-    <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
-      <div style="display:inline-flex;align-items:center;gap:5px;padding:6px 11px;background:rgba(255,255,255,0.08);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.1);border-radius:999px;font-size:11.5px;color:#fff;font-weight:600">⭐ ${_me.xp||0} XP</div>
-      ${myRank>0?`<div style="display:inline-flex;align-items:center;gap:5px;padding:6px 11px;background:rgba(255,255,255,0.08);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.1);border-radius:999px;font-size:11.5px;color:#fff;font-weight:600">🏆 Rang #${myRank}</div>`:''}
-      <div style="display:inline-flex;align-items:center;gap:5px;padding:6px 11px;background:rgba(255,255,255,0.08);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.1);border-radius:999px;font-size:11.5px;color:#fff;font-weight:600">💎 ${_me.diamonds||0}</div>
-    </div>
-    ${_latestNews ? `<a href="/explore?tab=newsletter" style="display:flex;align-items:center;gap:12px;margin-top:18px;padding:13px 14px;background:rgba(255,255,255,0.08);backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,0.12);border-radius:14px;text-decoration:none;color:#fff;transition:transform 0.18s">
-      <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#4dabf7,#1d6fa5);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">📩</div>
-      <div style="flex:1;min-width:0">
-        <div style="display:flex;align-items:center;gap:6px;font-size:10px;font-weight:700;letter-spacing:1.2px;color:rgba(255,255,255,0.6);text-transform:uppercase">Neuste News${_newsAgeStr?' · '+_newsAgeStr:''}</div>
-        <div style="font-size:13px;font-weight:700;color:#fff;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${htmlEsc(_latestNews.title || _latestNews.content || '').slice(0,60)}</div>
-      </div>
-      <div style="font-size:18px;color:rgba(255,255,255,0.5)">→</div>
-    </a>` : `<a href="/explore?tab=newsletter" style="display:flex;align-items:center;gap:10px;margin-top:18px;padding:13px 14px;background:rgba(255,255,255,0.08);backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,0.12);border-radius:14px;text-decoration:none;color:#fff">
-      <div style="font-size:22px">📩</div>
-      <div style="flex:1"><div style="font-size:13px;font-weight:700;color:#fff">News & Updates entdecken</div><div style="font-size:11px;color:rgba(255,255,255,0.6);margin-top:1px">Bleib up-to-date</div></div>
-      <div style="font-size:18px;color:rgba(255,255,255,0.5)">→</div>
-    </a>`}
+${_latestNews ? `<a href="/explore?tab=newsletter" class="highlight-card" style="margin:0 16px 12px;background:linear-gradient(135deg,rgba(77,171,247,.10),rgba(29,111,165,.05));border:1px solid rgba(77,171,247,.30)">
+  <div class="highlight-icon" style="background:linear-gradient(135deg,#4dabf7,#1d6fa5);color:#fff">📩</div>
+  <div style="flex:1;min-width:0">
+    <div style="display:flex;align-items:center;gap:6px;font-size:10px;font-weight:700;letter-spacing:1.2px;color:var(--muted);text-transform:uppercase">Neuste News${_newsAgeStr?' · '+_newsAgeStr:''}</div>
+    <div style="font-size:13px;font-weight:700;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${htmlEsc(_latestNews.title || _latestNews.content || '').slice(0,60)}</div>
   </div>
-</div>
-${''/* Personen-die-du-kennen-koenntest-Section ist umgezogen nach /suche (siehe Nachrichten-Topbar) */}
+  <div style="font-size:16px;color:var(--muted)">›</div>
+</a>` : ''}
 <div style="padding:0 16px 14px">
   <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">⚡ Aktuelle Highlights</div>
-  <a href="/explore?tab=ranking" class="highlight-card">
-    <div class="highlight-icon" style="background:linear-gradient(135deg,rgba(255,214,0,.25),rgba(255,170,0,.15))">🏆</div>
-    <div style="flex:1;min-width:0">
-      <div style="font-size:13px;font-weight:700">Rangliste aktualisiert</div>
-      <div style="font-size:11px;color:var(--muted);margin-top:3px">Schau wer gerade vorne liegt</div>
-    </div>
-    <div style="font-size:16px;color:rgba(255,255,255,.2)">›</div>
-  </a>
   <a href="/feed" class="highlight-card">
     <div class="highlight-icon" style="background:linear-gradient(135deg,rgba(255,107,107,.25),rgba(204,93,232,.15))">📸</div>
     <div style="flex:1;min-width:0">
@@ -11671,50 +15222,8 @@ ${''/* Personen-die-du-kennen-koenntest-Section ist umgezogen nach /suche (siehe
     </div>
     <div style="font-size:16px;color:rgba(255,255,255,.2)">›</div>
   </a>
-  <a href="/explore?tab=shop" class="highlight-card">
-    <div class="highlight-icon" style="background:linear-gradient(135deg,rgba(0,200,130,.25),rgba(0,150,100,.15))">🎁</div>
-    <div style="flex:1;min-width:0">
-      <div style="font-size:13px;font-weight:700">💎 Diamant Shop</div>
-      <div style="font-size:11px;color:var(--muted);margin-top:3px">Tausche Diamanten gegen Vorteile</div>
-    </div>
-    <div style="font-size:10px;color:#a78bfa;font-weight:700;background:rgba(167,139,250,.12);padding:2px 8px;border-radius:10px;white-space:nowrap">💎 ${d.users[myUid]?.diamonds||0}</div>
-  </a>
 </div>
-<div style="padding:0 16px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between">
-  <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:1px">⭐ Top Creator</div>
-  <a href="/explore?tab=ranking" style="font-size:12px;color:var(--accent);font-weight:600">Alle →</a>
-</div>
-<div class="creator-scroll" style="padding-bottom:4px">${topCreators||'<div style="color:var(--muted);font-size:13px;padding:0 16px">Noch keine Creator</div>'}</div>
-<div style="padding:20px 16px 12px">
-  <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:1px;margin-bottom:14px">🚀 Was möchtest du tun?</div>
-</div>
-<div class="action-grid">
-  <a href="/explore?tab=ranking" class="action-card">
-    <div class="action-card-icon" style="background:linear-gradient(135deg,rgba(255,214,0,.2),rgba(255,170,0,.1))">🏆</div>
-    <div class="action-card-title">Ranking ansehen</div>
-    <div class="action-card-sub">Rang: ${myRank>0?'#'+myRank:'👑 Admin'}</div>
-  </a>
-  <a href="/explore?tab=tipps" class="action-card">
-    <div class="action-card-icon" style="background:linear-gradient(135deg,rgba(100,180,255,.2),rgba(60,130,255,.1))">💡</div>
-    <div class="action-card-title">Tipps entdecken</div>
-    <div class="action-card-sub">Wachse als Creator</div>
-  </a>
-  <a href="/explore?tab=regeln" class="action-card">
-    <div class="action-card-icon" style="background:linear-gradient(135deg,rgba(150,100,255,.2),rgba(100,60,200,.1))">📋</div>
-    <div class="action-card-title">Regeln lesen</div>
-    <div class="action-card-sub">Community Guidelines</div>
-  </a>
-  <a href="/explore?tab=shop" class="action-card">
-    <div class="action-card-icon" style="background:linear-gradient(135deg,rgba(100,180,255,.2),rgba(60,130,255,.1))">💎</div>
-    <div class="action-card-title">Diamant Shop</div>
-    <div class="action-card-sub">💎 ${d.users[myUid]?.diamonds||0} Diamanten</div>
-  </a>
-  <a href="/explore?tab=newsletter" class="action-card">
-    <div class="action-card-icon" style="background:linear-gradient(135deg,rgba(255,165,0,.2),rgba(255,130,0,.1))">📩</div>
-    <div class="action-card-title">Newsletter</div>
-    <div class="action-card-sub">Neuigkeiten & Updates</div>
-  </a>
-</div>`,
+`,
             ranking: `
 <div style="padding:12px 16px 8px;display:flex;align-items:center;justify-content:space-between">
   <div style="font-size:13px;font-weight:700">⭐ Rangliste</div>
@@ -12231,8 +15740,39 @@ async function msAdminRestore(uid,name){if(!confirm(name+' zurück auf die Warte
                 const timeLeft = Math.max(0, nextSunday.getTime() - Date.now());
                 const hoursLeft = Math.floor(timeLeft / 3600000);
                 const prizes = ['🔗 1 Extra-Link','⚡ 1 Superlink','✨ 500 XP','💎 5 Diamanten'];
+                const isAdmin = adminIds.includes(Number(myUid));
+                // Letzter Gewinner — wird Sonntag 20:00 vom Cron in raffle-winners.json geschrieben
+                const raffleHist = (()=>{ try { return JSON.parse(fs.readFileSync(RAFFLE_FILE,'utf8')); } catch(e) { return { lastWinner:null, history:[] }; } })();
+                const lw = raffleHist.lastWinner;
+                const lwHtml = lw ? (()=>{
+                    const ts = new Date(lw.timestamp || Date.now());
+                    const dateStr = String(ts.getDate()).padStart(2,'0') + '.' + String(ts.getMonth()+1).padStart(2,'0') + '.' + ts.getFullYear();
+                    const handleStr = lw.handle ? '@'+String(lw.handle).replace(/^@/,'') : '';
+                    const safeName = String(lw.name||'Creator').replace(/[<>&"]/g, c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
+                    const safeHandle = handleStr.replace(/[<>&"]/g, c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
+                    const safePrize = String(lw.prize||'').replace(/[<>&"]/g, c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
+                    const initials = safeName.split(/\s+/).map(s=>s[0]||'').join('').slice(0,2).toUpperCase() || 'C';
+                    return `
+  <div style="background:linear-gradient(135deg,rgba(245,215,110,0.14),rgba(212,169,70,0.04));border:1px solid rgba(245,215,110,0.40);border-radius:18px;padding:16px;margin-bottom:14px;position:relative;overflow:hidden">
+    <div style="position:absolute;inset:0;background:radial-gradient(circle at 90% 0%,rgba(245,215,110,0.18),transparent 50%);pointer-events:none"></div>
+    <div style="position:relative;display:flex;align-items:center;gap:12px">
+      <div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#f5d76e 0%,#d4a946 50%,#8b6914 100%);color:#000;font-weight:800;font-size:17px;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:inset 0 1px 0 rgba(255,255,255,0.4),0 4px 12px rgba(212,169,70,0.3)">${initials}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:10.5px;color:#d4a946;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:2px">🏆 Letzter Gewinner</div>
+        <div style="font-size:15px;font-weight:700;color:var(--text);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${safeName}</div>
+        ${safeHandle?`<div style="font-size:11.5px;color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${safeHandle}</div>`:''}
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:2px">${dateStr}</div>
+        <div style="font-size:13px;font-weight:700;color:var(--text);background:rgba(255,255,255,0.05);border:1px solid var(--border2);border-radius:8px;padding:4px 9px;white-space:nowrap">${lw.prizeEmoji||'🎁'} ${safePrize}</div>
+      </div>
+    </div>
+    ${(raffleHist.history||[]).length>1?`<div style="position:relative;margin-top:12px;padding-top:10px;border-top:1px solid rgba(245,215,110,0.18);font-size:11px;color:var(--muted)">Insgesamt <b style="color:var(--text)">${raffleHist.history.length}</b> Ziehungen</div>`:''}
+  </div>`;
+                })() : '';
                 return `
 <div style="padding:16px">
+  ${lwHtml}
   <div style="background:linear-gradient(135deg,rgba(245,158,11,0.1),rgba(239,68,68,0.05));border:1px solid rgba(245,158,11,0.3);border-radius:20px;padding:24px 20px;text-align:center;margin-bottom:16px">
     <div style="font-size:42px;margin-bottom:12px">🎰</div>
     <h2 style="font-size:20px;font-weight:800;margin:0 0 6px;letter-spacing:-0.3px">Wöchentliches Gewinnspiel</h2>
@@ -12260,9 +15800,73 @@ async function msAdminRestore(uid,name){if(!confirm(name+' zurück auf die Warte
       1. Sammle mindestens <b style="color:var(--text)">750 XP</b> in einer Woche<br>
       2. Du nimmst automatisch am Gewinnspiel teil<br>
       3. Jeden <b style="color:var(--text)">Sonntag um 20:00 Uhr</b> wird gezogen<br>
-      4. Der Gewinn wird dir automatisch gutgeschrieben
+      4. Der Gewinn wird dir automatisch gutgeschrieben<br>
+      5. <b style="color:var(--text)">Montag 00:00 Uhr</b> → Wochen-XP wird zurückgesetzt
     </div>
   </div>
+  ${isAdmin ? (()=>{
+    const userOpts = Object.entries(d.users||{})
+      .filter(([id,u])=>u && u.started && !u.parent_uid && !adminIds.includes(Number(id)))
+      .sort((a,b)=>String(a[1].spitzname||a[1].name||'').localeCompare(String(b[1].spitzname||b[1].name||'')))
+      .map(([id,u])=>{
+        const name = htmlEsc(u.spitzname || u.name || ('User '+id));
+        const handle = u.ig_handle ? ' (@'+htmlEsc(u.ig_handle)+')' : '';
+        return '<option value="'+htmlEsc(id)+'">'+name+handle+'</option>';
+      }).join('');
+    const histRows = (raffleHist.history||[]).slice(0,5).map(h=>{
+      const ts = new Date(h.timestamp||0);
+      const dStr = String(ts.getDate()).padStart(2,'0')+'.'+String(ts.getMonth()+1).padStart(2,'0')+'.';
+      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:rgba(255,255,255,0.03);border:1px solid var(--border2);border-radius:8px;font-size:11.5px"><span style="color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0">'+htmlEsc(h.name||'?')+(h.manual?' <span style="color:#f59e0b;font-size:10px">(manuell)</span>':'')+'</span><span style="color:var(--muted);font-size:10.5px;margin:0 8px;white-space:nowrap">'+dStr+'</span><span style="color:var(--text);font-weight:600;white-space:nowrap">'+htmlEsc((h.prizeEmoji||'🎁')+' '+(h.prize||''))+'</span></div>';
+    }).join('');
+    return `
+  <div style="background:linear-gradient(135deg,rgba(245,158,11,0.08),rgba(245,158,11,0.02));border:1px dashed rgba(245,158,11,0.40);border-radius:16px;padding:16px;margin-top:12px">
+    <div style="font-size:11px;font-weight:800;color:#f59e0b;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px">🛠️ Admin: Gewinner manuell eintragen</div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <select id="raffle-uid" style="width:100%;padding:10px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text);font-size:13px">
+        <option value="">— User wählen —</option>
+        ${userOpts}
+      </select>
+      <select id="raffle-prize" style="width:100%;padding:10px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text);font-size:13px">
+        <option value="">— Preis wählen —</option>
+        <option value="🔗|1 Extra-Link">🔗 1 Extra-Link</option>
+        <option value="⚡|1 Superlink">⚡ 1 Superlink</option>
+        <option value="✨|500 XP">✨ 500 XP</option>
+        <option value="💎|5 Diamanten">💎 5 Diamanten</option>
+      </select>
+      <button onclick="raffleSet()" style="background:linear-gradient(180deg,#f59e0b,#d97706);color:#000;border:none;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer">📌 Als Gewinner eintragen</button>
+      <div id="raffle-result" style="font-size:12px;text-align:center;min-height:16px"></div>
+    </div>
+    ${histRows ? `
+    <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border2)">
+      <div style="font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Letzte Ziehungen</div>
+      <div style="display:flex;flex-direction:column;gap:6px">${histRows}</div>
+      <button onclick="raffleUndo()" style="margin-top:10px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.30);color:#ef4444;border-radius:8px;padding:6px 12px;font-size:11.5px;font-weight:600;cursor:pointer;width:100%">↶ Letzten Eintrag entfernen</button>
+    </div>` : ''}
+  </div>
+  <script>
+  async function raffleSet(){
+    const uid = document.getElementById('raffle-uid').value;
+    const prizeRaw = document.getElementById('raffle-prize').value;
+    const r = document.getElementById('raffle-result');
+    if (!uid || !prizeRaw) { r.textContent='❌ User & Preis auswählen'; r.style.color='#ef4444'; return; }
+    const [prizeEmoji, prize] = prizeRaw.split('|');
+    r.textContent='Speichere…'; r.style.color='var(--muted)';
+    try {
+      const res = await fetch('/api/admin/raffle-winner',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({uid,prize,prizeEmoji})});
+      const d = await res.json();
+      if (d.ok) { r.textContent='✅ Eingetragen'; r.style.color='#22c55e'; setTimeout(()=>location.reload(),700); }
+      else { r.textContent='❌ '+(d.error||'Fehler'); r.style.color='#ef4444'; }
+    } catch(e) { r.textContent='❌ Netzwerk'; r.style.color='#ef4444'; }
+  }
+  async function raffleUndo(){
+    if (!confirm('Letzten Gewinner-Eintrag wirklich löschen?')) return;
+    const res = await fetch('/api/admin/raffle-winner-undo',{method:'POST'});
+    const d = await res.json();
+    if (d.ok) location.reload();
+    else alert('Fehler: '+(d.error||''));
+  }
+  </script>`;
+  })() : ''}
 </div>`;
             })(),
             roulette: `
@@ -12708,13 +16312,27 @@ function showErr(msg){
     <button class="icon-btn" onclick="setTheme(document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark')" title="Theme">🌙</button>
   </div>
 </div>
-<div style="padding:18px 16px 6px">
-  <div style="display:flex;align-items:center;gap:8px;font-size:10px;font-weight:800;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:6px">
-    <span style="display:inline-block;width:18px;height:1.5px;background:linear-gradient(90deg,#a78bfa,transparent)"></span>
-    Creator Hub
+<div style="margin:14px 16px 14px;border-radius:22px;overflow:hidden;position:relative;background:linear-gradient(135deg,#f9a825 0%,#e91e63 55%,#9c27b0 100%)">
+  <div style="position:absolute;inset:0;background:radial-gradient(circle at 85% -15%,rgba(255,255,255,0.20),transparent 55%),radial-gradient(circle at 5% 110%,rgba(0,0,0,0.18),transparent 55%);pointer-events:none"></div>
+  <div style="position:relative;padding:20px 20px 18px">
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:12px">
+      <span style="width:7px;height:7px;border-radius:50%;background:#22ff88;box-shadow:0 0 8px rgba(34,255,136,0.7);display:inline-block"></span>
+      <span style="font-size:10px;font-weight:700;letter-spacing:2px;color:rgba(255,255,255,0.7);text-transform:uppercase">Community live</span>
+    </div>
+    <div style="font-size:13px;color:rgba(255,255,255,0.78);font-weight:500;letter-spacing:0.3px">${_greet},</div>
+    <div style="font-size:26px;font-weight:800;color:#fff;font-family:var(--font-display);line-height:1.1;margin-top:2px;letter-spacing:-0.5px">${htmlEsc(_greetName)} 👋</div>
+    <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
+      <div style="display:inline-flex;align-items:center;gap:5px;padding:6px 11px;background:rgba(255,255,255,0.18);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.22);border-radius:999px;font-size:11.5px;color:#fff;font-weight:600">⭐ ${_me.xp||0} XP</div>
+      ${myRank>0?`<div style="display:inline-flex;align-items:center;gap:5px;padding:6px 11px;background:rgba(255,255,255,0.18);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.22);border-radius:999px;font-size:11.5px;color:#fff;font-weight:600">🏆 Rang #${myRank}</div>`:''}
+      <div style="display:inline-flex;align-items:center;gap:5px;padding:6px 11px;background:rgba(255,255,255,0.18);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.22);border-radius:999px;font-size:11.5px;color:#fff;font-weight:600">💎 ${_me.diamonds||0}</div>
+    </div>
   </div>
-  <h1 style="font-size:30px;font-weight:800;font-family:var(--font-display);letter-spacing:-0.8px;line-height:1.05;margin:0;color:var(--text)">Deine Community.<br><span style="background:linear-gradient(135deg,#a78bfa,#4dabf7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Dein Wachstum.</span></h1>
-  <div style="font-size:12.5px;color:var(--muted);margin-top:8px;line-height:1.5;letter-spacing:0.1px">News, Rankings, Tipps & Shop — alles an einem Ort.</div>
+</div>
+<div id="mission-widget-explore" style="margin:0 16px 14px">
+  <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:14px 16px;animation:shimmer 1.5s infinite">
+    <div style="height:12px;background:var(--bg4);border-radius:6px;width:60%;margin-bottom:8px"></div>
+    <div style="height:10px;background:var(--bg4);border-radius:6px;width:80%"></div>
+  </div>
 </div>
 <div class="explore-tabs">
   ${tabs.map(t=>`<button class="explore-tab${tab===t.id?' active':''}" style="--et-c1:${t.c1};--et-c2:${t.c2};--et-shadow:${t.shadow}" onclick="location.href='/explore?tab=${t.id}'"><span class="et-icon">${t.emoji}</span><span class="et-label">${t.label}</span></button>`).join('')}
@@ -12722,10 +16340,500 @@ function showErr(msg){
 <div id="explore-content" style="padding-bottom:${tab==='allgemein'?'0':'80px'}">
   ${tabContent[tab]||tabContent.allgemein}
 </div>
+<script>
+(async function loadMissionWidgetExplore(){
+  const w=document.getElementById('mission-widget-explore');
+  if(!w)return;
+  try{
+    const r=await fetch('/api/mission-status');
+    const d=await r.json();
+    if(!d.ok){w.innerHTML='';return;}
+    const now=new Date();
+    const nextSettle=new Date();
+    nextSettle.setHours(12,0,0,0);
+    if(now>=nextSettle)nextSettle.setDate(nextSettle.getDate()+1);
+    const diff=nextSettle-now;
+    const hh=Math.floor(diff/3600000);const mm=Math.floor((diff%3600000)/60000);
+    const settleStr=hh+'h '+mm+'m';
+    const {daily,weekly}=d;
+    const bar=(val,max,col)=>'<div style="background:var(--bg4);border-radius:4px;height:5px;overflow:hidden;margin-top:4px"><div style="height:100%;width:'+Math.min(100,Math.round(val/max*100))+'%;background:'+col+';border-radius:4px;transition:width .5s ease"></div></div>';
+    const mChip=(done,label)=>'<div style="display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:'+(done?'#22c55e':'var(--muted)')+'">'+
+      '<span style="font-size:14px">'+(done?'✅':'⬜')+'</span>'+label+'</div>';
+    w.innerHTML='<div style="background:linear-gradient(135deg,rgba(167,139,250,.1),rgba(124,58,237,.07));border:1px solid rgba(167,139,250,.25);border-radius:14px;padding:14px 16px">'
+      +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'
+      +'<div style="font-size:13px;font-weight:700">🎯 Meine Missionen</div>'
+      +'<div style="font-size:10px;color:var(--muted);background:var(--bg4);padding:3px 8px;border-radius:8px">⏱ Abrechnung in '+settleStr+'</div>'
+      +'</div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'
+      +'<div style="background:var(--bg3);border-radius:10px;padding:10px 12px">'
+      +'<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Heute</div>'
+      +mChip(daily.m1,'M1: '+daily.likesGegeben+'/5 geliked')
+      +bar(daily.likesGegeben,5,'#a78bfa')
+      +'<div style="margin-top:6px">'+mChip(daily.m2,'M2: '+daily.prozent+'% (≥80%)')+'</div>'
+      +bar(daily.prozent,100,'#818cf8')
+      +'<div style="margin-top:6px">'+mChip(daily.m3,'M3: '+(daily.gesamtLinks>0?Math.min(daily.gelikedLinks,daily.m3Target||daily.gesamtLinks)+'/'+(daily.m3Target||daily.gesamtLinks)+' '+(daily.gesamtLinks>(daily.m3Cap||30)?'(max 30)':'alle'):'–'))+'</div>'
+      +(daily.m3?'<div style="font-size:10px;color:#a78bfa;margin-top:4px">+5 XP + 💎 1 bei Abrechnung</div>':'')
+      +'</div>'
+      +'<div style="background:var(--bg3);border-radius:10px;padding:10px 12px">'
+      +'<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Wöchentlich</div>'
+      +mChip(weekly.m1Tage>=7,'W-M1: '+weekly.m1Tage+'/7 Tage')
+      +bar(weekly.m1Tage,7,'#60a5fa')
+      +'<div style="margin-top:6px">'+mChip(weekly.m2Tage>=7,'W-M2: '+weekly.m2Tage+'/7 → 💎')+'</div>'
+      +bar(weekly.m2Tage,7,'#34d399')
+      +'<div style="margin-top:6px">'+mChip(weekly.m3Tage>=7,'W-M3: '+weekly.m3Tage+'/7 → 💎💎')+'</div>'
+      +bar(weekly.m3Tage,7,'#fbbf24')
+      +'</div>'
+      +'</div>'
+      +'</div>';
+  }catch(e){const w2=document.getElementById('mission-widget-explore');if(w2)w2.innerHTML='';}
+})();
+<\/script>
 `, 'explore');
     }
 
+    // ── LEGAL: Datenschutz / Impressum / AGB ──
+    // STANDALONE: keine layout() / html() Wrapper, KEINE Scripts, KEIN Tour-Code.
+    // Diese Pages müssen für Google-Play-Reviewer (unangemeldet) IMMER erreichbar sein,
+    // unabhängig von SessionStorage-State, Service-Worker oder Tour-Logic.
+    function _legalPage(title, body){
+        return `<!DOCTYPE html><html lang="de"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${title} · CreatorX</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#fff;color:#1a1a1a;line-height:1.65}
+.tb{position:sticky;top:0;background:#fff;border-bottom:1px solid #e5e5e5;padding:14px 16px;display:flex;align-items:center;font-weight:600;font-size:15px;z-index:10}
+.tb a{color:#1a1a1a;text-decoration:none;font-size:22px;margin-right:12px}
+.wrap{padding:16px;max-width:720px;margin:0 auto;font-size:14px}
+.wrap h1{font-size:22px;margin-bottom:12px;font-weight:800}
+.wrap h2{font-size:16px;margin:20px 0 8px;font-weight:700}
+.wrap p,.wrap ul{margin-bottom:10px}
+.wrap ul{padding-left:18px}
+.wrap a{color:#0066cc}
+.wrap code{background:#f4f4f4;padding:2px 5px;border-radius:3px;font-size:13px}
+.stamp{color:#888;font-size:12px;margin-bottom:18px}
+.foot{margin-top:32px;padding-top:18px;border-top:1px solid #e5e5e5;font-size:11.5px;color:#888;text-align:center}
+.foot a{color:#0066cc;text-decoration:none;margin:0 7px}
+@media(prefers-color-scheme:dark){
+  body{background:#0b0b0e;color:#e8e8e8}
+  .tb{background:#0b0b0e;border-bottom-color:#1f1f24}
+  .tb a{color:#e8e8e8}
+  .wrap a,.foot a{color:#8ab4f8}
+  .wrap code{background:#1f1f24}
+  .foot{border-top-color:#1f1f24}
+}
+</style>
+</head>
+<body>
+<div class="tb"><a href="/">‹</a><span>${title}</span></div>
+<div class="wrap">${body}</div>
+</body>
+</html>`;
+    }
+    function _sendLegal(title, body){
+        res.writeHead(200, {'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','X-Cb-Route':'legal-standalone-v4'});
+        res.end(_legalPage(title, body));
+    }
+
+    if (path === '/datenschutz' || path === '/privacy') {
+        return _sendLegal('Datenschutz', `
+<h1 style="font-size:22px;font-weight:800;margin:0 0 8px">Datenschutzerklärung</h1>
+<p style="color:var(--muted);font-size:12px;margin:0 0 18px">Stand: ${new Date().toLocaleDateString('de-DE')}</p>
+
+<h2 style="font-size:16px;margin:20px 0 8px">1. Verantwortlicher</h2>
+<p>Michael Dos Santos Pexioto<br>33b Haaptstrooss<br>L-9835 Luxembourg<br>E-Mail: mindset.stories_@outlook.de</p>
+
+<h2 style="font-size:16px;margin:20px 0 8px">2. Welche Daten wir verarbeiten</h2>
+<ul style="padding-left:18px">
+  <li><b>Account-Daten:</b> Name/Spitzname, optional E-Mail, optional Instagram-Username</li>
+  <li><b>Authentifizierung:</b> Passwort-Hash (gesalzen + gehashed, kein Klartext)</li>
+  <li><b>Inhalte:</b> von dir geteilte Instagram-Links, Posts, Kommentare, Like-Aktivität</li>
+  <li><b>Profilbild + Banner:</b> falls hochgeladen (auf unseren Servern gespeichert)</li>
+  <li><b>Nutzung:</b> Login-Zeitpunkte, App-Aktivität (für 'Online jetzt'-Anzeige), letzter Besuch</li>
+  <li><b>Funnel-Tracking:</b> anonymisierte Page-Views (Landing, Signup, Login) zur Optimierung</li>
+  <li><b>Push-Tokens:</b> nur wenn du Benachrichtigungen aktivierst</li>
+  <li><b>Technisches:</b> IP-Adresse (für Anti-Missbrauch), User-Agent</li>
+</ul>
+
+<h2 style="font-size:16px;margin:20px 0 8px">3. Zweck der Verarbeitung</h2>
+<p>Bereitstellung der App-Funktionen (Feed, Likes, Profile), Authentifizierung, Spam-Schutz, Service-Verbesserung. Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO (Vertragserfüllung).</p>
+
+<h2 style="font-size:16px;margin:20px 0 8px">4. Cookies und lokale Speicherung</h2>
+<p>Wir nutzen einen technisch notwendigen Session-Cookie (<code>cbsid</code>) zur Anmeldung. Kein Tracking-Cookie, kein Werbe-Cookie. <code>localStorage</code> wird genutzt für UI-Einstellungen (Theme, Sprache).</p>
+
+<h2 style="font-size:16px;margin:20px 0 8px">5. Drittanbieter</h2>
+<ul style="padding-left:18px">
+  <li><b>Telegram Bot API:</b> für Kontoverknüpfung und DMs (wenn du dich via Telegram anmeldest). Telegram-Datenschutzerklärung: <a href="https://telegram.org/privacy" target="_blank" style="color:var(--accent)">telegram.org/privacy</a></li>
+  <li><b>Instagram-CDN (unavatar.io, scontent-cdninstagram.com):</b> nur zum Anzeigen von öffentlichen Insta-Avataren — kein Datentransfer von dir an Meta</li>
+  <li><b>Railway.app (Hosting, EU):</b> Server-Hosting in europäischen Rechenzentren</li>
+  <li><b>Web-Push (VAPID):</b> nur wenn du Benachrichtigungen erlaubst</li>
+</ul>
+
+<h2 style="font-size:16px;margin:20px 0 8px">6. Speicherdauer</h2>
+<p>Account-Daten werden gespeichert solange dein Account aktiv ist. Bei Löschung deines Accounts werden alle persönlichen Daten innerhalb von 30 Tagen entfernt. Funnel-Daten werden 60 Tage gespeichert (anonymisiert), Sicherheits-Logs 90 Tage.</p>
+
+<h2 style="font-size:16px;margin:20px 0 8px">7. Deine Rechte (DSGVO)</h2>
+<ul style="padding-left:18px">
+  <li><b>Auskunft</b> (Art. 15): du kannst jederzeit eine Kopie deiner Daten anfordern → <a href="/api/datenexport" style="color:var(--accent);font-weight:700">Datenexport herunterladen</a></li>
+  <li><b>Berichtigung</b> (Art. 16): Profil-Einstellungen anpassen</li>
+  <li><b>Löschung</b> (Art. 17): <a href="/einstellungen#delete-account" style="color:var(--accent);font-weight:700">Account löschen</a></li>
+  <li><b>Datenübertragbarkeit</b> (Art. 20): JSON-Export deiner Daten</li>
+  <li><b>Widerspruch</b> (Art. 21): Email an Verantwortlichen</li>
+  <li><b>Beschwerde</b>: CNPD (Commission nationale pour la protection des données, Luxembourg — <a href="https://cnpd.public.lu" target="_blank" style="color:var(--accent)">cnpd.public.lu</a>) oder deine lokale Datenschutzbehörde</li>
+</ul>
+
+<h2 style="font-size:16px;margin:20px 0 8px">8. Sicherheit</h2>
+<p>Übertragung via HTTPS/TLS. Passwörter werden mit bcrypt gehashed. Session-Cookies sind HTTP-only + SameSite=Lax.</p>
+
+<h2 style="font-size:16px;margin:20px 0 8px">9. Minderjährige</h2>
+<p>Die App ist für Personen ab 16 Jahren. Jüngere User dürfen den Service nicht ohne Zustimmung ihrer Erziehungsberechtigten nutzen.</p>
+
+<h2 style="font-size:16px;margin:20px 0 8px">10. Änderungen</h2>
+<p>Wir behalten uns vor, diese Datenschutzerklärung anzupassen. Bei wesentlichen Änderungen informieren wir dich in der App.</p>
+
+<div class="foot">
+<a href="/impressum">Impressum</a>
+<a href="/agb">AGB</a>
+</div>`);
+    }
+
+    if (path === '/impressum') {
+        return _sendLegal('Impressum', `
+<h1>Impressum</h1>
+<p>Angaben gemäß § 5 DDG (Deutschland) und Art. 5 LCEN (Luxemburg):</p>
+
+<h2 style="font-size:16px;margin:18px 0 8px">Anbieter</h2>
+<p>Michael Dos Santos Pexioto<br>33b Haaptstrooss<br>L-9835 Luxembourg</p>
+
+<h2 style="font-size:16px;margin:18px 0 8px">Kontakt</h2>
+<p>E-Mail: mindset.stories_@outlook.de</p>
+
+<h2 style="font-size:16px;margin:18px 0 8px">Rechtsform</h2>
+<p>Privatperson — derzeit kein gewerblicher Betrieb. Die App wird als Hobby-Projekt ohne Gewinnerzielungsabsicht betrieben. Keine Umsatzsteuer-Pflicht (keine wirtschaftliche Tätigkeit i.S.d. Art. 4 MwStG).</p>
+
+<h2 style="font-size:16px;margin:18px 0 8px">Verantwortlich für Inhalt</h2>
+<p>nach § 18 Abs. 2 MStV: Michael Dos Santos Pexioto, Anschrift wie oben.</p>
+
+<h2 style="font-size:16px;margin:18px 0 8px">EU-Streitschlichtung</h2>
+<p>Plattform der EU-Kommission zur Online-Streitbeilegung: <a href="https://ec.europa.eu/consumers/odr" target="_blank" style="color:var(--accent)">ec.europa.eu/consumers/odr</a>. Wir sind nicht verpflichtet und nicht bereit, an einem Streitbeilegungsverfahren teilzunehmen.</p>
+
+<h2 style="font-size:16px;margin:18px 0 8px">Haftung für Inhalte</h2>
+<p>Als Diensteanbieter sind wir für eigene Inhalte verantwortlich. Wir sind nicht verpflichtet, übermittelte oder gespeicherte fremde Informationen zu überwachen (§§ 7 bis 10 DDG bzw. Art. 60-64 LCEN). Verpflichtungen zur Entfernung oder Sperrung bei Kenntnis einer Rechtsverletzung bleiben unberührt.</p>
+
+<h2 style="font-size:16px;margin:18px 0 8px">Haftung für Links</h2>
+<p>Externe Links unterliegen der Verantwortung des jeweiligen Betreibers. Wir haben keinen Einfluss auf deren Inhalte.</p>
+
+<h2 style="font-size:16px;margin:18px 0 8px">Urheberrecht</h2>
+<p>Die durch uns erstellten Inhalte und Werke unterliegen luxemburgischem und deutschem Urheberrecht. User-generierte Inhalte verbleiben bei den jeweiligen Erstellern.</p>
+
+<div class="foot">
+<a href="/datenschutz">Datenschutz</a>
+<a href="/agb">AGB</a>
+</div>`);
+    }
+
+    if (path === '/agb' || path === '/terms') {
+        return _sendLegal('AGB', `
+<h1>Allgemeine Nutzungsbedingungen</h1>
+<p class="stamp">Stand: ${new Date().toLocaleDateString('de-DE')}</p>
+
+<h2 style="font-size:16px;margin:18px 0 8px">§ 1 Geltungsbereich</h2>
+<p>Diese Nutzungsbedingungen regeln die Nutzung der CreatorX App (die "App") zwischen dem Betreiber (siehe <a href="/impressum" style="color:var(--accent)">Impressum</a>) und dem Nutzer.</p>
+
+<h2 style="font-size:16px;margin:18px 0 8px">§ 2 Account & Mindestalter</h2>
+<p>Die Nutzung der App ist Personen ab 16 Jahren erlaubt. Mit der Registrierung versicherst du, dass du dieses Alter erreicht hast. Pro Person ist nur ein Hauptaccount erlaubt. Sub-Accounts dürfen nur für eigene Personas verwendet werden, nicht für Drittpersonen.</p>
+
+<h2 style="font-size:16px;margin:18px 0 8px">§ 3 Verhaltensregeln</h2>
+<ul style="padding-left:18px">
+  <li>Keine Spam-Posts, keine doppelten Links</li>
+  <li>Keine Schein-Likes — wer in der App liked muss auch auf Instagram echt engagieren (Liken, Kommentieren, Teilen, Speichern)</li>
+  <li>Kein Self-Like auf eigene Account-Familie</li>
+  <li>Kein Manipulationsversuch von XP/Diamanten</li>
+  <li>Keine illegalen, beleidigenden, diskriminierenden oder pornographischen Inhalte</li>
+  <li>Keine Werbung ohne unsere ausdrückliche Erlaubnis</li>
+</ul>
+
+<h2 style="font-size:16px;margin:18px 0 8px">§ 4 Diamanten & XP (Gamification)</h2>
+<p><b>XP und Diamanten sind reine Spiel-Punkte ohne monetären Wert.</b> Sie sind:</p>
+<ul style="padding-left:18px">
+  <li>nicht auszahlbar in Echtgeld</li>
+  <li>nicht handelbar zwischen Usern (außer In-App-Geschenken)</li>
+  <li>nicht übertragbar bei Account-Löschung</li>
+  <li>können von uns jederzeit angepasst, reduziert oder zurückgesetzt werden (z.B. bei Verstößen)</li>
+</ul>
+
+<h2 style="font-size:16px;margin:18px 0 8px">§ 5 User-generierte Inhalte</h2>
+<p>Du behältst alle Rechte an deinen Beiträgen. Du räumst uns das nicht-exklusive Recht ein, deine Inhalte innerhalb der App anzuzeigen. Beim Löschen deines Accounts werden alle eigenen Inhalte entfernt. Beleidigende oder rechtswidrige Inhalte werden auf Hinweis hin entfernt — Meldung über die in-App Report-Funktion.</p>
+
+<h2 style="font-size:16px;margin:18px 0 8px">§ 6 Sanktionen</h2>
+<p>Bei Verstößen können wir folgende Maßnahmen ergreifen:</p>
+<ul style="padding-left:18px">
+  <li>Verwarnung (max. 5 → automatischer Bann)</li>
+  <li>XP-Abzug</li>
+  <li>Diamanten-Reset</li>
+  <li>Temporärer oder dauerhafter Bann</li>
+  <li>Account-Löschung</li>
+</ul>
+
+<h2 style="font-size:16px;margin:18px 0 8px">§ 7 Haftung</h2>
+<p>Wir haften nur für Vorsatz und grobe Fahrlässigkeit. Für leichte Fahrlässigkeit nur bei Verletzung wesentlicher Vertragspflichten. Die App wird "as is" angeboten — wir geben keine Garantie auf jederzeitige Verfügbarkeit oder Fehlerfreiheit.</p>
+
+<h2 style="font-size:16px;margin:18px 0 8px">§ 8 Beendigung</h2>
+<p>Du kannst deinen Account jederzeit über die <a href="/einstellungen#delete-account" style="color:var(--accent)">Einstellungen</a> löschen. Wir können den Account bei wiederholten Verstößen kündigen.</p>
+
+<h2 style="font-size:16px;margin:18px 0 8px">§ 9 Änderungen der Nutzungsbedingungen</h2>
+<p>Wir können diese Bedingungen anpassen. Bei wesentlichen Änderungen informieren wir dich in der App mindestens 30 Tage vor Inkrafttreten. Wenn du den Änderungen nicht zustimmst, kannst du den Vertrag kündigen.</p>
+
+<h2 style="font-size:16px;margin:18px 0 8px">§ 10 Schlussbestimmungen</h2>
+<p>Es gilt luxemburgisches Recht. Bei Verbrauchern (Art. 6 Rom-I-VO) gelten zusätzlich die zwingenden Verbraucherschutzbestimmungen ihres Wohnsitzlandes. Gerichtsstand ist Luxemburg-Stadt. Sollte eine Bestimmung unwirksam sein, bleiben die übrigen davon unberührt.</p>
+
+<div class="foot">
+<a href="/datenschutz">Datenschutz</a>
+<a href="/impressum">Impressum</a>
+</div>`);
+    }
+
     // ── RANKING ──
+    // ── PROFESSIONAL INSIGHTS DASHBOARD (für alle User) ──
+    if (path === '/insights') {
+        if (!session) return redirect('/login');
+        // Daten holen
+        const myLinks = Object.values(d.links||{}).filter(l => String(l.user_id) === String(myUid));
+        const now = Date.now();
+        const D30 = 30 * 24 * 60 * 60 * 1000;
+        const D7 = 7 * 24 * 60 * 60 * 1000;
+        const recent30 = myLinks.filter(l => (now - (l.timestamp||0)) < D30);
+        const recent7 = myLinks.filter(l => (now - (l.timestamp||0)) < D7);
+        // Top Engagers: zähle wer hat meine Posts am meisten geliked
+        const engagerCounts = {};
+        for (const l of myLinks) {
+            const likes = Array.isArray(l.likes) ? l.likes : (l.likes instanceof Set ? [...l.likes] : []);
+            for (const lid of likes) {
+                if (String(lid) === String(myUid)) continue;
+                engagerCounts[lid] = (engagerCounts[lid] || 0) + 1;
+            }
+        }
+        const topEngagers = Object.entries(engagerCounts)
+            .sort((a,b) => b[1] - a[1])
+            .slice(0, 10)
+            .map(([uid, count]) => ({ uid, count, user: d.users?.[uid] || {} }));
+        // Beste Posts: top 5 by likes
+        const bestPosts = myLinks
+            .map(l => ({ ...l, likeCount: Array.isArray(l.likes) ? l.likes.length : (l.likes?.size || 0) }))
+            .sort((a,b) => b.likeCount - a.likeCount)
+            .slice(0, 5);
+        // Posting Time Analysis: gruppiere meine Posts nach Stunde-of-day
+        const hourStats = Array.from({length:24}, () => ({ posts: 0, totalLikes: 0 }));
+        for (const l of myLinks) {
+            const h = new Date(l.timestamp||0).getHours();
+            hourStats[h].posts++;
+            const lc = Array.isArray(l.likes) ? l.likes.length : (l.likes?.size || 0);
+            hourStats[h].totalLikes += lc;
+        }
+        const hourAvgLikes = hourStats.map(s => s.posts > 0 ? s.totalLikes/s.posts : 0);
+        const maxHourAvg = Math.max(0.01, ...hourAvgLikes);
+        const bestHour = hourAvgLikes.indexOf(maxHourAvg);
+        // Online-Heatmap: wann sind User online?
+        const onlineHourBuckets = Array(24).fill(0);
+        for (const s of sessions.values()) {
+            if (!s.lastSeen) continue;
+            const h = new Date(s.lastSeen).getHours();
+            onlineHourBuckets[h]++;
+        }
+        const maxOnline = Math.max(1, ...onlineHourBuckets);
+        // Engagement Trend (30d)
+        const dayBuckets = Array(30).fill(0);
+        const today = new Date(); today.setHours(0,0,0,0);
+        for (const l of myLinks) {
+            const lc = Array.isArray(l.likes) ? l.likes.length : (l.likes?.size || 0);
+            const daysAgo = Math.floor((today.getTime() - new Date(l.timestamp||0).setHours(0,0,0,0)) / (24*60*60*1000));
+            if (daysAgo >= 0 && daysAgo < 30) dayBuckets[29 - daysAgo] += lc;
+        }
+        const maxDayLikes = Math.max(1, ...dayBuckets);
+        // Total Stats
+        const total30Likes = recent30.reduce((s,l) => s + (Array.isArray(l.likes) ? l.likes.length : (l.likes?.size || 0)), 0);
+        const total7Likes = recent7.reduce((s,l) => s + (Array.isArray(l.likes) ? l.likes.length : (l.likes?.size || 0)), 0);
+        const avgLikesPerPost = recent30.length > 0 ? Math.round(total30Likes / recent30.length * 10) / 10 : 0;
+        const followerGrowth = (myUser.followers || []).length;
+
+        return html(`
+<style>
+.ins-wrap{padding:14px 16px 80px;background:var(--bg);min-height:100vh}
+.ins-head{margin-bottom:18px}
+.ins-h1{font-size:22px;font-weight:800;letter-spacing:-.4px;margin-bottom:3px}
+.ins-sub{font-size:12.5px;color:var(--muted)}
+.ins-stat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:18px}
+.ins-stat{padding:14px;background:var(--bg3);border:1px solid var(--border2);border-radius:14px;position:relative;overflow:hidden}
+.ins-stat::before{content:'';position:absolute;left:0;top:0;width:3px;height:100%;background:var(--accent,#a78bfa)}
+.ins-stat.purple::before{background:#a78bfa}
+.ins-stat.green::before{background:#22c55e}
+.ins-stat.orange::before{background:#f59e0b}
+.ins-stat.pink::before{background:#ec4899}
+.ins-stat-num{font-size:24px;font-weight:800;letter-spacing:-.3px;line-height:1.1}
+.ins-stat-lbl{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-top:5px}
+.ins-stat-trend{font-size:10.5px;color:#22c55e;margin-top:3px;font-weight:600}
+.ins-section{margin-bottom:22px;padding:16px;background:var(--bg3);border:1px solid var(--border2);border-radius:16px}
+.ins-section-title{font-size:14px;font-weight:800;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.ins-section-sub{font-size:11.5px;color:var(--muted);margin-top:-8px;margin-bottom:14px;font-weight:500}
+.ins-bar-chart{display:flex;align-items:flex-end;gap:2px;height:70px;padding:4px 0;margin-bottom:6px}
+.ins-charts-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:22px}
+.ins-charts-grid .ins-section{margin-bottom:0;padding:11px}
+.ins-charts-grid .ins-section-title{font-size:11.5px;margin-bottom:6px;gap:4px;flex-wrap:wrap}
+.ins-charts-grid .ins-section-title span{display:none}
+.ins-charts-grid .ins-section-sub{display:none}
+.ins-charts-grid .ins-bar-labels{font-size:8.5px}
+.ins-charts-grid .ins-insight-card{padding:7px 9px;font-size:10.5px;margin-top:6px;line-height:1.4}
+.ins-bar{flex:1;background:linear-gradient(180deg,#a78bfa,#7c3aed);border-radius:4px 4px 1px 1px;min-height:3px;position:relative;transition:filter .15s}
+.ins-bar:hover{filter:brightness(1.2)}
+.ins-bar.best{background:linear-gradient(180deg,#22c55e,#16a34a);box-shadow:0 0 12px rgba(34,197,94,.4)}
+.ins-bar-labels{display:flex;justify-content:space-between;font-size:9.5px;color:var(--muted);font-weight:600;font-variant-numeric:tabular-nums}
+.ins-engagers{display:flex;flex-direction:column;gap:8px}
+.ins-engager-row{display:flex;align-items:center;gap:11px;padding:8px;background:var(--bg);border-radius:11px;text-decoration:none;color:inherit;transition:transform .12s}
+.ins-engager-row:hover{transform:translateX(2px);background:var(--bg4)}
+.ins-engager-rank{width:24px;font-size:13px;font-weight:800;color:var(--muted);text-align:center;flex-shrink:0}
+.ins-engager-rank.gold{color:#f59e0b}.ins-engager-rank.silver{color:#94a3b8}.ins-engager-rank.bronze{color:#b45309}
+.ins-engager-avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#a78bfa,#7c3aed);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px;overflow:hidden;position:relative;flex-shrink:0}
+.ins-engager-avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.ins-engager-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13.5px;font-weight:600}
+.ins-engager-count{display:flex;align-items:center;gap:4px;font-size:13px;font-weight:800;color:#ec4899;flex-shrink:0}
+.ins-best-post{display:flex;gap:11px;padding:11px;background:var(--bg);border-radius:11px;margin-bottom:8px;text-decoration:none;color:inherit;transition:background .12s}
+.ins-best-post:hover{background:var(--bg4)}
+.ins-best-post:last-child{margin-bottom:0}
+.ins-best-post-rank{width:22px;font-size:14px;font-weight:800;color:var(--muted);flex-shrink:0;text-align:center}
+.ins-best-post-info{flex:1;min-width:0}
+.ins-best-post-url{font-size:12px;color:#4dabf7;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:3px}
+.ins-best-post-meta{font-size:10.5px;color:var(--muted);font-weight:500}
+.ins-best-post-likes{display:flex;align-items:center;gap:3px;font-size:14px;font-weight:800;color:#ef4444;flex-shrink:0}
+.ins-best-open{padding:6px 10px;background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;border-radius:7px;font-size:11px;font-weight:700;text-decoration:none;flex-shrink:0;white-space:nowrap;align-self:center;display:inline-flex;align-items:center;gap:3px}
+.ins-insight-card{padding:11px 14px;background:linear-gradient(135deg,rgba(34,197,94,.08),rgba(167,139,250,.06));border:1px solid rgba(34,197,94,.25);border-radius:11px;margin-top:10px;font-size:12.5px;line-height:1.5}
+.ins-insight-card b{color:#22c55e}
+.ins-empty{padding:24px;text-align:center;color:var(--muted);font-size:13px}
+</style>
+<div class="topbar"><a href="/profil" class="icon-btn" style="font-size:22px">‹</a><div style="font-size:15px;font-weight:600">📊 Pro-Insights</div><div style="width:36px"></div></div>
+<div class="ins-wrap">
+  <div class="ins-head">
+    <div class="ins-h1">Deine Insights</div>
+    <div class="ins-sub">So performst du · Letzte 30 Tage</div>
+  </div>
+
+  <!-- Top-Stats -->
+  <div class="ins-stat-grid">
+    <div class="ins-stat purple">
+      <div class="ins-stat-num">${total30Likes.toLocaleString('de-DE')}</div>
+      <div class="ins-stat-lbl">Likes (30d)</div>
+      ${total7Likes ? `<div class="ins-stat-trend">↗ ${total7Likes} diese Woche</div>` : ''}
+    </div>
+    <div class="ins-stat green">
+      <div class="ins-stat-num">${recent30.length}</div>
+      <div class="ins-stat-lbl">Posts (30d)</div>
+      ${recent7.length ? `<div class="ins-stat-trend">↗ ${recent7.length} diese Woche</div>` : ''}
+    </div>
+    <div class="ins-stat orange">
+      <div class="ins-stat-num">${avgLikesPerPost}</div>
+      <div class="ins-stat-lbl">⌀ Likes / Post</div>
+    </div>
+    <div class="ins-stat pink">
+      <div class="ins-stat-num">${followerGrowth}</div>
+      <div class="ins-stat-lbl">Follower</div>
+    </div>
+  </div>
+
+  <!-- Top Engagers -->
+  <div class="ins-section">
+    <div class="ins-section-title">🏆 Top Engagers <span style="font-size:11px;color:var(--muted);font-weight:500">· Wer liked dich am meisten</span></div>
+    ${topEngagers.length === 0 ? '<div class="ins-empty">Noch keine Likes auf deine Posts — sobald du postest, siehst du hier wer dich pusht.</div>' : (
+      '<div class="ins-engagers">' + topEngagers.map((e, i) => {
+        const u = e.user;
+        const name = htmlEsc(u.spitzname || u.name || 'User');
+        const pic = ladeBild(e.uid, 'profilepic') ? `/appbild/${e.uid}/profilepic` : (u.instagram ? `https://unavatar.io/instagram/${encodeURIComponent(u.instagram)}` : '');
+        const init = htmlEsc((u.spitzname || u.name || '?').slice(0,1).toUpperCase());
+        const rankCls = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
+        return `<a href="/profil/${e.uid}" class="ins-engager-row">
+          <div class="ins-engager-rank ${rankCls}">${i===0?'🥇':i===1?'🥈':i===2?'🥉':'#'+(i+1)}</div>
+          <div class="ins-engager-avatar">${pic?`<img src="${pic}" alt="" loading="lazy">`:init}</div>
+          <div class="ins-engager-name">${name}</div>
+          <div class="ins-engager-count">❤️ ${e.count}</div>
+        </a>`;
+      }).join('') + '</div>'
+    )}
+  </div>
+
+  <!-- Beste Posts -->
+  <div class="ins-section">
+    <div class="ins-section-title">🔥 Deine Top-Posts <span style="font-size:11px;color:var(--muted);font-weight:500">· Nach Likes</span></div>
+    ${bestPosts.length === 0 || bestPosts[0].likeCount === 0 ? '<div class="ins-empty">Poste deinen ersten Reel — Top-Posts erscheinen hier.</div>' : (
+      bestPosts.filter(p => p.likeCount > 0).map((p, i) => `<a href="${htmlEsc(safeUrl(p.text||''))}" target="_blank" rel="noopener noreferrer" class="ins-best-post">
+        <div class="ins-best-post-rank">${i===0?'🥇':i===1?'🥈':i===2?'🥉':'#'+(i+1)}</div>
+        <div class="ins-best-post-info">
+          <div class="ins-best-post-url">${htmlEsc(String(p.text||'').replace(/^https?:\/\//,'').slice(0,45))}</div>
+          <div class="ins-best-post-meta">📅 ${(()=>{const t=p.timestamp||0;if(!t)return '–';const d=Date.now()-t;if(d<60000)return 'gerade';if(d<3600000)return Math.floor(d/60000)+' Min';if(d<86400000)return Math.floor(d/3600000)+'h';return Math.floor(d/86400000)+'d';})()}</div>
+        </div>
+        <div class="ins-best-post-likes">❤️ ${p.likeCount}</div>
+        <span class="ins-best-open">→ Öffnen</span>
+      </a>`).join('')
+    )}
+  </div>
+
+  <div class="ins-charts-grid">
+    <!-- Posting Time Analysis -->
+    <div class="ins-section">
+      <div class="ins-section-title">⏰ Beste Posting-Zeit</div>
+      <div class="ins-bar-chart">
+        ${hourAvgLikes.map((v, h) => {
+          const pct = (v / maxHourAvg) * 100;
+          const isBest = h === bestHour && v > 0;
+          return `<div class="ins-bar ${isBest?'best':''}" style="height:${Math.max(3, pct)}%" title="${h}:00 — ⌀ ${v.toFixed(1)} Likes"></div>`;
+        }).join('')}
+      </div>
+      <div class="ins-bar-labels"><span>00</span><span>12</span><span>23</span></div>
+      ${maxHourAvg > 0 ? `<div class="ins-insight-card"><b>${String(bestHour).padStart(2,'0')}:00</b> · ⌀ ${maxHourAvg.toFixed(1)}❤️</div>` : ''}
+    </div>
+
+    <!-- Online-Heatmap -->
+    <div class="ins-section">
+      <div class="ins-section-title">🟢 Online-Peak</div>
+      <div class="ins-bar-chart">
+        ${onlineHourBuckets.map((v, h) => {
+          const pct = (v / maxOnline) * 100;
+          return `<div class="ins-bar" style="height:${Math.max(3, pct)}%;background:linear-gradient(180deg,#22c55e,#16a34a)" title="${h}:00 — ${v} User"></div>`;
+        }).join('')}
+      </div>
+      <div class="ins-bar-labels"><span>00</span><span>12</span><span>23</span></div>
+      ${(() => {
+        const peakHour = onlineHourBuckets.indexOf(maxOnline);
+        return maxOnline > 1 ? `<div class="ins-insight-card">Peak: <b>${String(peakHour).padStart(2,'0')}:00</b></div>` : '';
+      })()}
+    </div>
+
+    <!-- 30-Day Trend -->
+    <div class="ins-section">
+      <div class="ins-section-title">📈 30-Tage Trend</div>
+      <div class="ins-bar-chart">
+        ${dayBuckets.map((v, i) => {
+          const pct = (v / maxDayLikes) * 100;
+          return `<div class="ins-bar" style="height:${Math.max(3, pct)}%;background:linear-gradient(180deg,#ec4899,#a855f7)" title="vor ${29-i}d: ${v} Likes"></div>`;
+        }).join('')}
+      </div>
+      <div class="ins-bar-labels"><span>30d</span><span>15d</span><span>heute</span></div>
+    </div>
+  </div>
+</div>
+${(()=>{
+  // Helper für relative Zeit
+  return '';
+})()}
+<script>
+// Bei kleinen Charts: leichtes Entry-Animation
+document.querySelectorAll('.ins-bar').forEach((b, i) => {
+  const targetHeight = b.style.height;
+  b.style.height = '0%';
+  setTimeout(() => { b.style.transition = 'height .6s cubic-bezier(.16,1,.3,1)'; b.style.height = targetHeight; }, 30 + i * 5);
+});
+</script>
+`, 'profil');
+    }
+
     if (path === '/ranking') {
         const sorted = Object.entries(d.users||{})
             .filter(([id,u])=>!adminIds.includes(Number(id))&&isAppVisible(u))
@@ -12801,14 +16909,22 @@ ${rest.map(([id,u],idx)=>{
         // worden sein während der Sub im Bot weiterhin existiert (Render-Bug → Switcher leer).
         const parentUid = String(session.uid);
         const parentUser = (d.users||{})[parentUid] || {};
-        const subUidFromBot = parentUser.subUid && (d.users||{})[parentUser.subUid] ? String(parentUser.subUid) : null;
+        // Alle Subs via Reverse-Lookup (parent_uid === me). Robust gegen subUid-Bug
+        // (parent.subUid wird beim Sub-Erstellen überschrieben → alte Subs blieben
+        // 'orphaned' im UI, jetzt sichtbar via reverse-lookup).
+        const allMySubs = Object.entries(d.users||{})
+            .filter(([sid, su]) => su && String(su.parent_uid||'') === parentUid)
+            .map(([sid, su]) => ({ uid: String(sid), user: su }));
+        // Legacy: subUid (singular) für alte Code-Pfade
+        const subUidFromBot = parentUser.subUid && (d.users||{})[parentUser.subUid] ? String(parentUser.subUid) : (allMySubs[0]?.uid || null);
         const subUid = subUidFromBot;
         // Self-heal: wenn Bot-Wahrheit von Session abweicht, syncen.
         if (session.subUid !== subUid) {
             if (subUid) session.subUid = subUid; else delete session.subUid;
-            if (String(session.activeUid) !== parentUid && String(session.activeUid) !== subUid) {
-                session.activeUid = parentUid;
-            }
+            // activeUid: nur reset wenn er nicht auf einen gültigen Sub zeigt
+            const activeIsValid = String(session.activeUid) === parentUid ||
+                allMySubs.some(s => s.uid === String(session.activeUid));
+            if (!activeIsValid) session.activeUid = parentUid;
             saveSessions();
         }
         const subUser = subUid ? (d.users||{})[subUid] : null;
@@ -12841,8 +16957,8 @@ ${rest.map(([id,u],idx)=>{
             return '<div class="proj-card" onclick="openProjDetail('+i+')">'
                 +(projImg ? '<img class="proj-card-img" src="'+projImg+'" alt="">' : '<div class="proj-card-placeholder">'+(docIcon||'🚀')+'</div>')
                 +'<div class="proj-card-body">'
-                +'<div class="proj-card-title">'+proj.title+'</div>'
-                +(proj.description?'<div class="proj-card-desc">'+proj.description+'</div>':'')
+                +'<div class="proj-card-title">'+htmlEsc(proj.title)+'</div>'
+                +(proj.description?'<div class="proj-card-desc">'+htmlEsc(proj.description)+'</div>':'')
                 +'</div></div>';
         }).join('');
         const addCardHtml = canAddProject
@@ -12860,15 +16976,7 @@ ${rest.map(([id,u],idx)=>{
         const completionDone = completionChecks.filter(c=>c[0]).length;
         const completionPct = Math.round(completionDone/completionChecks.length*100);
         const completionHtml = (()=>{
-            if (completionPct === 100) {
-                const alreadyRewarded = myUser?.profileCompletionRewarded;
-                return '<div class="fade-in" style="margin:12px 16px;padding:12px 14px;background:linear-gradient(135deg,rgba(0,200,81,.12),rgba(0,200,81,.06));border:1px solid rgba(0,200,81,.35);border-radius:14px;display:flex;align-items:center;gap:12px">'
-                    +'<div style="font-size:28px">🏆</div>'
-                    +'<div style="flex:1"><div style="font-size:13px;font-weight:700;color:var(--green)">Profil 100% vollständig!</div>'
-                    +'<div style="font-size:11px;color:var(--muted);margin-top:2px">'+(alreadyRewarded?'Belohnung bereits erhalten':'💎 +1 Diamant erhalten!')+'</div></div>'
-                    +'<div style="font-size:11px;font-weight:700;color:var(--green)">100%</div>'
-                    +'</div>';
-            }
+            if (completionPct === 100) return '';
             const next = completionChecks.find(c=>!c[0]);
             return '<div style="margin:12px 16px;padding:12px 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:14px">'
                 +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">'
@@ -12884,19 +16992,33 @@ ${rest.map(([id,u],idx)=>{
         })();
 
         const myPinnedLink = ladePinnedLink(myUid);
-        const myPinnedHtml = myPinnedLink
-            ? '<div style="padding:12px 16px;border-bottom:2px solid var(--accent);background:linear-gradient(135deg,rgba(255,107,107,.08),rgba(255,165,0,.04));margin-bottom:4px">'
-              +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'
-              +'<span style="font-size:11px;font-weight:700;color:var(--accent);background:rgba(255,107,107,.15);padding:3px 10px;border-radius:20px">📌 Angepinnter Post</span>'
-              +'</div>'
-              +'<a href="'+myPinnedLink+'" target="_blank" style="display:block;font-size:13px;color:var(--blue);word-break:break-all;margin-bottom:8px">'+myPinnedLink.replace('https://www.instagram.com/','ig.com/').slice(0,60)+'...</a>'
-              +'<div style="font-size:12px;color:var(--muted)">Dies ist mein wichtigster Beitrag. Danke für deine Unterstützung 🙏</div>'
-              +'</div>'
-            : '';
+        // Pinned-Post wird jetzt im profileCard zwischen XP und Superlink angezeigt — kein Duplikat hier
+        const myPinnedHtml = '';
 
-        const linksHtml = Object.values(d.links||{}).filter(l=>l.user_id===Number(myUid)).sort((a,b)=>(b.timestamp||0)-(a.timestamp||0))
-            .map(l=>'<div style="padding:12px 16px;border-top:1px solid var(--border2)"><a href="'+l.text+'" target="_blank" style="color:var(--blue);font-size:12px;word-break:break-all">'+l.text+'</a><div style="font-size:11px;color:var(--muted);margin-top:4px">❤️ '+(Array.isArray(l.likes)?l.likes.length:0)+' Likes · '+new Date(l.timestamp).toLocaleDateString('de-DE')+'</div></div>').join('')
-            || '<div class="empty"><div class="empty-icon">🔗</div><div class="empty-text">Noch keine Links</div></div>';
+        // Compact 3-column Link-Cards — nur Thumbnail + Like + Öffnen, keine URL sichtbar
+        const renderProfileLinkCard = (l, msgId, isOwn) => {
+            const likes = Array.isArray(l.likes) ? l.likes : (l.likes instanceof Set ? [...l.likes] : []);
+            const likeCount = likes.length;
+            const hasLiked = !isOwn && likes.map(String).includes(String(myUid));
+            const shortcode = (l.text||'').match(/instagram\.com\/(?:reel|p|tv)\/([A-Za-z0-9_-]+)/);
+            const thumbUrl = shortcode ? '/insta-thumb?u=' + encodeURIComponent(l.text) : '';
+            const sUrl = safeUrl(l.text||'');
+            return '<div class="proflink-card fade-up" data-url="'+htmlEsc(l.text||'')+'">'
+              + '<a href="'+htmlEsc(sUrl)+'" target="_blank" rel="noopener noreferrer" onclick="markLinkVisited(\''+msgId+'\')" class="proflink-thumb" id="post-'+msgId+'">'
+              + (thumbUrl ? '<img src="'+thumbUrl+'" referrerpolicy="no-referrer" loading="lazy" onerror="this.style.display=\'none\'" alt="">' : '')
+              + '<div class="proflink-thumb-overlay"></div>'
+              + '<div class="proflink-play">▶</div>'
+              + '</a>'
+              + '<div class="proflink-actions">'
+              + (isOwn ? '<span class="proflink-likes">❤️ <span id="likes-'+msgId+'">'+likeCount+'</span></span>'
+                       : '<button class="proflink-like '+(hasLiked?'liked':'')+'" onclick="likePost(\''+msgId+'\',this)" data-msgid="'+msgId+'" '+(hasLiked?'disabled':'')+'><svg width="13" height="13" viewBox="0 0 24 24" fill="'+(hasLiked?'currentColor':'none')+'" stroke="currentColor" stroke-width="2.4"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg><span id="likes-'+msgId+'">'+likeCount+'</span></button>')
+              + '<a href="'+htmlEsc(sUrl)+'" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();markLinkVisited(\''+msgId+'\')" class="proflink-open">→ Öffnen</a>'
+              + '</div></div>';
+        };
+        const myLinks = Object.entries(d.links||{}).filter(([,l])=>String(l.user_id)===String(myUid)).sort((a,b)=>(b[1].timestamp||0)-(a[1].timestamp||0));
+        const linksHtml = myLinks.length
+            ? '<div class="proflink-grid">'+myLinks.map(([msgId, l]) => renderProfileLinkCard(l, msgId, true)).join('')+'</div>'
+            : '<div class="empty"><div class="empty-icon">🔗</div><div class="empty-text">Noch keine Links</div><div class="empty-sub">Poste deinen ersten Reel im Feed!</div></div>';
 
         const aboutHtml = '<div style="padding:16px;display:flex;flex-direction:column;gap:12px;padding-bottom:100px">'
             +(myUser?.bio?'<div style="background:var(--bg3);border-radius:14px;padding:14px 16px"><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Bio</div><div style="font-size:14px;line-height:1.6">'+myUser.bio+'</div></div>':'')
@@ -12915,7 +17037,7 @@ ${rest.map(([id,u],idx)=>{
                 const bNow2 = new Date(new Date().toLocaleString('en-US',{timeZone:'Europe/Berlin'}));
                 const bDay2 = bNow2.getDay(); const bOff2 = bDay2===0?-6:1-bDay2;
                 const bMon2 = new Date(bNow2); bMon2.setDate(bNow2.getDate()+bOff2);
-                const wKey2 = bMon2.toISOString().slice(0,10);
+                const wKey2 = bMon2.getFullYear()+'-'+String(bMon2.getMonth()+1).padStart(2,'0')+'-'+String(bMon2.getDate()).padStart(2,'0');
                 const slMax2 = (d.users[myUid]?.role === '🌟 Elite+') ? 2 : 1;
                 const slCount2 = Object.values(d.superlinks||{}).filter(s=>s.uid===myUid&&s.week===wKey2).length;
                 const slLeft2 = Math.max(0, slMax2 - slCount2);
@@ -12937,59 +17059,15 @@ ${rest.map(([id,u],idx)=>{
         return html(`
 <div class="topbar">
   <div class="topbar-logo">Creator Hub</div>
-  <div style="display:flex;gap:6px;align-items:center">
-    <a href="/suche" class="icon-btn">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+  <div style="display:flex;gap:8px;align-items:center">
+    ${buildTopbarSwitcher(myUid, d)}
+    <a href="/einstellungen" class="icon-btn" title="Einstellungen" aria-label="Menü">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" width="20" height="20"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
     </a>
-    <a href="/benachrichtigungen" class="icon-btn" style="position:relative">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-      <span id="notif-badge-profil" style="display:none;position:absolute;top:0;right:0;background:var(--accent);color:#fff;font-size:9px;font-weight:700;border-radius:50%;width:14px;height:14px;align-items:center;justify-content:center;line-height:14px;text-align:center"></span>
-    </a>
-    ${_myIsAdmin ? `<a href="${process.env.ADMIN_DASHBOARD_URL || 'https://dashboard-production-bda4.up.railway.app/dashboard'}" target="_blank" rel="noopener" class="icon-btn" title="Admin-Dashboard" style="background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;border-color:rgba(167,139,250,0.5)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="18" height="18"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-    </a><a href="/admin/emails?key=" class="icon-btn" title="Email Dashboard" style="background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border-color:rgba(34,197,94,0.5)" onclick="event.preventDefault();location.href='/admin/emails?key='+prompt('Bridge Secret:')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="18" height="18"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 4l-10 8L2 4"/></svg>
-    </a>` : ''}
-    <a href="/einstellungen" class="icon-btn">⚙️</a>
   </div>
 </div>
 ${profileCard(myUid, myUser, d, true, lang, adminIds, myBannerData, myPicData)}
-<div id="daily-xp-box" style="margin:10px 12px;background:linear-gradient(135deg,rgba(34,197,94,0.08),rgba(34,197,94,0.02));border:1px solid rgba(34,197,94,0.25);border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:12px">
-  <div style="font-size:28px">🎁</div>
-  <div style="flex:1;min-width:0">
-    <div style="font-size:13px;font-weight:700">Täglicher XP-Bonus</div>
-    <div style="font-size:11px;color:var(--muted);margin-top:2px">Hol dir 10–20 Gratis-XP — einmal pro Tag!</div>
-  </div>
-  <button id="daily-xp-btn" onclick="claimDailyXP()" style="flex-shrink:0;padding:9px 16px;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(34,197,94,0.3);transition:transform .12s">Abholen</button>
-</div>
-<div class="acc-switcher" style="margin:8px 12px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:6px">
-  <div class="acc-row${isParentActive?' active':''}" onclick="switchAcc('${parentUid}')" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;cursor:pointer;transition:background 0.15s">
-    <div style="width:36px;height:36px;border-radius:50%;overflow:hidden;background:linear-gradient(135deg,#a78bfa,#7c3aed);display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;flex-shrink:0">
-      ${parentPic ? `<img src="/appbild/${parentUid}/profilepic" style="width:100%;height:100%;object-fit:cover" alt="">` : (parentUser.name||'?').slice(0,1).toUpperCase()}
-    </div>
-    <div style="flex:1;min-width:0">
-      <div style="font-size:13.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${(parentUser.spitzname||parentUser.name||'Hauptaccount').replace(/[<>"]/g,'')}</div>
-      <div style="font-size:11px;color:var(--muted)">Hauptaccount · ${parentUser.xp||0} XP</div>
-    </div>
-    ${isParentActive?'<div style="font-size:10px;font-weight:700;color:#22c55e;background:rgba(34,197,94,0.15);border-radius:999px;padding:3px 8px">aktiv</div>':'<div style="font-size:18px;color:var(--muted)">→</div>'}
-  </div>
-  ${subUid && subUser ? `
-  <div class="acc-row${!isParentActive?' active':''}" onclick="switchAcc('${subUid}')" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;cursor:pointer;transition:background 0.15s;margin-top:4px">
-    <div style="width:36px;height:36px;border-radius:50%;overflow:hidden;background:linear-gradient(135deg,#fb923c,#f59e0b);display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;flex-shrink:0">
-      ${subPic ? `<img src="/appbild/${subUid}/profilepic" style="width:100%;height:100%;object-fit:cover" alt="">` : (subUser.name||'?').slice(0,1).toUpperCase()}
-    </div>
-    <div style="flex:1;min-width:0">
-      <div style="font-size:13.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${(subUser.spitzname||subUser.name||'Sub').replace(/[<>"]/g,'')}</div>
-      <div style="font-size:11px;color:var(--muted)">Sub-Account · ${subUser.xp||0} XP</div>
-    </div>
-    ${!isParentActive?'<div style="font-size:10px;font-weight:700;color:#22c55e;background:rgba(34,197,94,0.15);border-radius:999px;padding:3px 8px">aktiv</div>':'<div style="font-size:18px;color:var(--muted)">→</div>'}
-  </div>
-  ${isParentActive ? `<div style="display:flex;justify-content:flex-end;padding:4px 10px 2px"><button onclick="deleteSubAcc()" style="background:none;border:none;color:#ef4444;font-size:11px;cursor:pointer">Sub-Account löschen</button></div>` : ''}
-  ` : `
-  <div onclick="openCreateSubModal()" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:10px;margin-top:4px;border-radius:10px;cursor:pointer;border:1.5px dashed rgba(167,139,250,0.4);color:#a78bfa;font-size:13px;font-weight:600">
-    <span style="font-size:18px;line-height:1">＋</span> Neuen Account erstellen
-  </div>`}
-</div>
+<style>@keyframes dxpPulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(.85);opacity:.6}}</style>
 <div id="create-sub-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(8px)">
   <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:18px;padding:20px;width:100%;max-width:340px">
     <div style="font-size:16px;font-weight:700;margin-bottom:6px">Neuen Account erstellen</div>
@@ -13003,22 +17081,26 @@ ${profileCard(myUid, myUser, d, true, lang, adminIds, myBannerData, myPicData)}
 </div>
 <script>
 async function claimDailyXP(){
-  var btn=document.getElementById('daily-xp-btn');
-  btn.disabled=true;btn.textContent='...';
+  var btn=document.getElementById('daily-xp-fab');
+  if(!btn||btn.disabled)return;
+  btn.disabled=true;btn.style.cursor='default';
+  var dot=document.getElementById('daily-xp-fab-dot');
+  if(dot)dot.style.display='none';
   try{
     var r=await fetch('/api/claim-daily-xp',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
-    var _t=await r.text();var d;try{d=JSON.parse(_t);}catch(_pe){btn.textContent='Fehler ('+r.status+')';return;}
+    var _t=await r.text();var d;try{d=JSON.parse(_t);}catch(_pe){btn.innerHTML='⚠️';btn.title='Fehler ('+r.status+')';return;}
     if(d.ok){
-      btn.textContent='✅ +'+d.xp+' XP';btn.style.background='#333';
-      // Update XP display on profile immediately
+      btn.innerHTML='+'+d.xp;
+      btn.style.fontSize='12px';btn.style.fontWeight='800';
+      btn.title='+'+d.xp+' XP erhalten';
       var xpEls=document.querySelectorAll('[data-xp-value]');
       xpEls.forEach(function(el){var cur=parseInt(el.textContent.replace(/\D/g,''))||0;el.textContent=(cur+d.xp).toLocaleString('de-DE');});
       var statEls=document.querySelectorAll('.stat-value, .xp-num, .profile-xp');
       statEls.forEach(function(el){if(el.textContent.includes('XP')){var m=el.textContent.match(/[\d.]+/);if(m){var cur=parseInt(m[0].replace(/\./g,''))||0;el.textContent=el.textContent.replace(m[0],(cur+d.xp).toLocaleString('de-DE'));}}});
-      setTimeout(function(){btn.textContent='Erledigt ✓';},1500);
+      setTimeout(function(){btn.innerHTML='✓';btn.style.fontSize='18px';btn.style.background='var(--bg4)';btn.style.color='var(--muted)';btn.style.opacity='0.55';btn.style.boxShadow='none';},1800);
     }
-    else{btn.textContent=d.error||'Fehler';setTimeout(function(){btn.textContent='Abholen';btn.disabled=false;},2500);}
-  }catch(e){btn.textContent='Fehler';setTimeout(function(){btn.textContent='Abholen';btn.disabled=false;},2500);}
+    else{btn.innerHTML='⚠️';btn.title=d.error||'Fehler';setTimeout(function(){btn.innerHTML='🎁';btn.disabled=false;btn.style.cursor='pointer';if(dot)dot.style.display='';},2500);}
+  }catch(e){btn.innerHTML='⚠️';btn.title='Netzwerkfehler';setTimeout(function(){btn.innerHTML='🎁';btn.disabled=false;btn.style.cursor='pointer';if(dot)dot.style.display='';},2500);}
 }
 async function switchAcc(uid){
   try {
@@ -13060,19 +17142,16 @@ async function deleteSubAcc(){
 }
 </script>
 ${completionHtml}
-<div id="mission-widget" style="margin:0 12px 4px">
-  <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:14px 16px;animation:shimmer 1.5s infinite">
-    <div style="height:12px;background:var(--bg4);border-radius:6px;width:60%;margin-bottom:8px"></div>
-    <div style="height:10px;background:var(--bg4);border-radius:6px;width:80%"></div>
-  </div>
-</div>
 <div class="tabs" style="position:sticky;top:57px;z-index:50;background:var(--bg)">
-  <div class="tab active" onclick="showPTab('posts',this)">📝 Posts</div>
-  <div class="tab" onclick="showPTab('links',this)">🔗 Links</div>
+  <div class="tab active" onclick="showPTab('links',this)">🔗 Links</div>
+  <div class="tab" onclick="showPTab('posts',this)">📝 Posts</div>
   <div class="tab" onclick="showPTab('projekte',this)">🗂️ Projekte</div>
   <div class="tab" onclick="showPTab('about',this)">👤 About</div>
 </div>
-<div id="ptab-posts" style="padding-bottom:100px">
+<div id="ptab-links" style="padding-bottom:100px">
+  ${linksHtml}
+</div>
+<div id="ptab-posts" style="display:none;padding-bottom:100px">
   <div style="padding:12px 16px">
     <textarea id="new-post" class="form-input" placeholder="Was denkst du gerade? (max 300 Zeichen)" maxlength="300" rows="3"></textarea>
     <button class="btn btn-primary btn-full" style="margin-top:8px" onclick="submitPost()">📝 Posten</button>
@@ -13083,9 +17162,6 @@ ${completionHtml}
 <div id="ptab-projekte" style="display:none;padding-bottom:100px">
   <div class="proj-grid">${projCardsHtml}${addCardHtml}</div>
   ${myProjects.length===0?'<div style="padding:4px 16px 32px;text-align:center;font-size:12px;color:var(--muted)">Zeig der Community, woran du arbeitest</div>':''}
-</div>
-<div id="ptab-links" style="display:none;padding-bottom:100px">
-  ${linksHtml}
 </div>
 <div id="ptab-about" style="display:none">
   ${aboutHtml}
@@ -13162,9 +17238,9 @@ function showPTab(tab,el){
 function openProjDetail(idx){
   const p=PROJECTS[idx]; if(!p) return; _curProjIdx=idx;
   document.getElementById('proj-detail-title').textContent=p.title;
-  document.getElementById('proj-detail-img-wrap').innerHTML=p.img?'<img src="'+p.img+'" style="width:100%;object-fit:contain;display:block;background:#0a0a0a" alt="">':'';
+  (function(){const w=document.getElementById('proj-detail-img-wrap');if(!w)return;w.textContent='';if(p.img&&/^(data:image|https?:\\/\\/)/.test(p.img)){const im=document.createElement('img');im.src=p.img;im.alt='';im.style.cssText='width:100%;object-fit:contain;display:block;background:#0a0a0a';w.appendChild(im);}})();
   document.getElementById('proj-detail-desc').textContent=p.description||'';
-  document.getElementById('proj-detail-link').innerHTML=p.link?'<a href="'+p.link+'" target="_blank" style="color:var(--blue);font-size:13px;word-break:break-all">🔗 '+p.link+'</a>':'';
+  (function(){const w=document.getElementById('proj-detail-link');if(!w)return;w.textContent='';if(p.link&&/^https?:\\/\\//i.test(p.link)){const a=document.createElement('a');a.href=p.link;a.target='_blank';a.rel='noopener noreferrer';a.style.cssText='color:var(--blue);font-size:13px;word-break:break-all';a.textContent='🔗 '+p.link;w.appendChild(a);}})();
   const docEl=document.getElementById('proj-detail-doc');
   if(p.docName){const icon=p.docName.endsWith('.pptx')?'📊':'📄';docEl.innerHTML='<a href="/api/download-project-doc/'+_SESSION_UID+'/'+p.id+'" style="display:inline-flex;align-items:center;gap:8px;background:var(--bg4);border:1px solid var(--border);border-radius:10px;padding:8px 14px;font-size:13px;font-weight:600;color:var(--text);text-decoration:none">'+icon+' '+p.docName+' herunterladen</a>';}
   else docEl.innerHTML='';
@@ -13197,7 +17273,7 @@ function openEditProj(idx){
   document.getElementById('proj-desc').value=p.description||'';
   document.getElementById('proj-link').value=p.link||'';
   const imgPrev=document.getElementById('proj-img-preview');
-  if(p.img){imgPrev.innerHTML='<img src="'+p.img+'" style="width:100%;height:100%;object-fit:cover">';imgPrev._data=p.img;}
+  if(p.img&&/^(data:image|https?:\\/\\/)/.test(p.img)){imgPrev.textContent='';const im=document.createElement('img');im.src=p.img;im.style.cssText='width:100%;height:100%;object-fit:cover';imgPrev.appendChild(im);imgPrev._data=p.img;}
   else{imgPrev.innerHTML='📷';imgPrev._data=null;}
   const docPrev=document.getElementById('proj-doc-preview');
   docPrev._data=null;docPrev._name=null;
@@ -13277,52 +17353,6 @@ async function submitPost(){const _spBtn=document.querySelector('[onclick="submi
   if(data.ok){toast('✅ Post veröffentlicht!');setTimeout(()=>location.reload(),250);}
   else{toast('❌ '+(data.error||'Fehler'));btn.disabled=false;btn.textContent='📝 Posten';}
 }
-(async function loadMissionWidget(){
-  const w=document.getElementById('mission-widget');
-  if(!w)return;
-  try{
-    const r=await fetch('/api/mission-status');
-    const d=await r.json();
-    if(!d.ok){w.innerHTML='';return;}
-    const now=new Date();
-    const nextSettle=new Date();
-    nextSettle.setHours(12,0,0,0);
-    if(now>=nextSettle)nextSettle.setDate(nextSettle.getDate()+1);
-    const diff=nextSettle-now;
-    const hh=Math.floor(diff/3600000);const mm=Math.floor((diff%3600000)/60000);
-    const settleStr=hh+'h '+mm+'m';
-    const {daily,weekly}=d;
-    const bar=(val,max,col)=>'<div style="background:var(--bg4);border-radius:4px;height:5px;overflow:hidden;margin-top:4px"><div style="height:100%;width:'+Math.min(100,Math.round(val/max*100))+'%;background:'+col+';border-radius:4px;transition:width .5s ease"></div></div>';
-    const mChip=(done,label)=>'<div style="display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:'+(done?'#22c55e':'var(--muted)')+'">'+
-      '<span style="font-size:14px">'+(done?'✅':'⬜')+'</span>'+label+'</div>';
-    w.innerHTML='<div style="background:linear-gradient(135deg,rgba(167,139,250,.1),rgba(124,58,237,.07));border:1px solid rgba(167,139,250,.25);border-radius:14px;padding:14px 16px">'
-      +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'
-      +'<div style="font-size:13px;font-weight:700">🎯 Meine Missionen</div>'
-      +'<div style="font-size:10px;color:var(--muted);background:var(--bg4);padding:3px 8px;border-radius:8px">⏱ Abrechnung in '+settleStr+'</div>'
-      +'</div>'
-      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">'
-      +'<div style="background:var(--bg3);border-radius:10px;padding:10px 12px">'
-      +'<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Heute</div>'
-      +mChip(daily.m1,'M1: '+daily.likesGegeben+'/5 geliked')
-      +bar(daily.likesGegeben,5,'#a78bfa')
-      +'<div style="margin-top:6px">'+mChip(daily.m2,'M2: '+daily.prozent+'% (≥80%)')+'</div>'
-      +bar(daily.prozent,100,'#818cf8')
-      +'<div style="margin-top:6px">'+mChip(daily.m3,'M3: '+(daily.gesamtLinks>0?Math.min(daily.gelikedLinks,daily.m3Target||daily.gesamtLinks)+'/'+(daily.m3Target||daily.gesamtLinks)+' '+(daily.gesamtLinks>(daily.m3Cap||30)?'(max 30)':'alle'):'–'))+'</div>'
-      +(daily.m3?'<div style="font-size:10px;color:#a78bfa;margin-top:4px">+5 XP + 💎 1 Diamant bei Abrechnung</div>':'')
-      +'</div>'
-      +'<div style="background:var(--bg3);border-radius:10px;padding:10px 12px">'
-      +'<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Wöchentlich</div>'
-      +mChip(weekly.m1Tage>=7,'W-M1: '+weekly.m1Tage+'/7 Tage')
-      +bar(weekly.m1Tage,7,'#60a5fa')
-      +'<div style="margin-top:6px">'+mChip(weekly.m2Tage>=7,'W-M2: '+weekly.m2Tage+'/7 → 💎')+'</div>'
-      +bar(weekly.m2Tage,7,'#34d399')
-      +'<div style="margin-top:6px">'+mChip(weekly.m3Tage>=7,'W-M3: '+weekly.m3Tage+'/7 → 💎💎')+'</div>'
-      +bar(weekly.m3Tage,7,'#fbbf24')
-      +'</div>'
-      +'</div>'
-      +'</div>';
-  }catch(e){const w2=document.getElementById('mission-widget');if(w2)w2.innerHTML='';}
-})();
 </script>`, 'profile');
     }
 
@@ -13389,7 +17419,7 @@ async function submitPost(){const _spBtn=document.querySelector('[onclick="submi
         const theirPinnedHtml = theirPinnedLink
             ? '<div style="padding:14px 16px;border-bottom:2px solid var(--accent);background:linear-gradient(135deg,rgba(255,107,107,.08),rgba(255,165,0,.04));margin-bottom:4px">'
               +'<span style="font-size:11px;font-weight:700;color:var(--accent);background:rgba(255,107,107,.15);padding:3px 10px;border-radius:20px;display:inline-block;margin-bottom:10px">📌 Wichtigster Post</span>'
-              +'<a id="pin-insta-link" href="'+theirPinnedLink+'" target="_blank" rel="noopener noreferrer" onclick="onPinVisit()" style="display:block;padding:11px 13px;background:rgba(77,171,247,.10);border:1px solid rgba(77,171,247,.30);border-radius:10px;font-size:13px;color:#4dabf7;font-weight:700;word-break:break-all;text-decoration:none;margin-bottom:8px">🔗 '+theirPinnedLink.replace('https://www.instagram.com/','ig.com/')+'</a>'
+              +'<a id="pin-insta-link" href="'+htmlEsc(safeUrl(theirPinnedLink))+'" target="_blank" rel="noopener noreferrer" onclick="onPinVisit()" style="display:flex;align-items:center;justify-content:center;gap:6px;padding:11px 13px;background:rgba(77,171,247,.10);border:1px solid rgba(77,171,247,.30);border-radius:10px;font-size:13px;color:#4dabf7;font-weight:700;text-decoration:none;margin-bottom:8px">🔗 Auf Instagram öffnen</a>'
               +'<div id="pin-hint" style="font-size:11.5px;color:var(--muted);margin-bottom:12px;line-height:1.5;padding:10px 12px;background:rgba(245,158,11,0.08);border-left:3px solid #f59e0b;border-radius:6px"><b style="color:#f59e0b">Schritt 1:</b> Tippe auf den Link → auf Instagram <b>LIKEN + KOMMENTIEREN + TEILEN + SPEICHERN</b>.<br><b style="color:#f59e0b">Schritt 2:</b> Komme zurück und tippe auf den ✅-Button — du bekommst <b>1 💎</b>.</div>'
               +'<div style="display:flex;gap:8px;align-items:center">'
                 +'<button id="pin-like-btn" onclick="likePinnedPost(\''+uid+'\',this)" '+(_myEngaged?'disabled':'data-locked="1" disabled')+' style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;padding:11px 14px;border-radius:14px;border:1px solid '+(_myEngaged?'#22c55e':'rgba(255,107,107,.35)')+';background:'+(_myEngaged?'rgba(34,197,94,.12)':'rgba(255,107,107,.10)')+';color:'+(_myEngaged?'#22c55e':'#ff6b6b')+';font-size:13px;font-weight:700;cursor:'+(_myEngaged?'default':'not-allowed')+';font-family:var(--font);transition:all .15s;opacity:'+(_myEngaged?'1':'0.55')+'">'+(_myEngaged?'✅ Engagiert':'🔒 Erst Insta öffnen')+(_myEngaged?'':'')+'</button>'
@@ -13431,14 +17461,34 @@ async function submitPost(){const _spBtn=document.querySelector('[onclick="submi
             return '<div class="proj-card" onclick="openTProjDetail('+i+')">'
                 +(projImg?'<img class="proj-card-img" src="'+projImg+'" alt="">':'<div class="proj-card-placeholder">'+(docIcon||'🚀')+'</div>')
                 +'<div class="proj-card-body">'
-                +'<div class="proj-card-title">'+proj.title+'</div>'
-                +(proj.description?'<div class="proj-card-desc">'+proj.description+'</div>':'')
+                +'<div class="proj-card-title">'+htmlEsc(proj.title)+'</div>'
+                +(proj.description?'<div class="proj-card-desc">'+htmlEsc(proj.description)+'</div>':'')
                 +'</div></div>';
         }).join('');
 
-        const theirLinksHtml = Object.values(d.links||{}).filter(l=>l.user_id===Number(uid)).sort((a,b)=>(b.timestamp||0)-(a.timestamp||0))
-            .map(l=>'<div style="padding:12px 16px;border-top:1px solid var(--border2)"><a href="'+l.text+'" target="_blank" style="color:var(--blue);font-size:12px;word-break:break-all">'+l.text+'</a><div style="font-size:11px;color:var(--muted);margin-top:4px">❤️ '+(Array.isArray(l.likes)?l.likes.length:0)+' Likes · '+new Date(l.timestamp).toLocaleDateString('de-DE')+'</div></div>').join('')
-            || '<div class="empty"><div class="empty-icon">🔗</div><div class="empty-text">Noch keine Links</div></div>';
+        // Compact 3-column Link-Cards (Like-Button da fremder User)
+        const renderTheirLinkCard = (l, msgId) => {
+            const likes = Array.isArray(l.likes) ? l.likes : (l.likes instanceof Set ? [...l.likes] : []);
+            const likeCount = likes.length;
+            const hasLiked = likes.map(String).includes(String(myUid));
+            const shortcode = (l.text||'').match(/instagram\.com\/(?:reel|p|tv)\/([A-Za-z0-9_-]+)/);
+            const thumbUrl = shortcode ? '/insta-thumb?u=' + encodeURIComponent(l.text) : '';
+            const sUrl = safeUrl(l.text||'');
+            return '<div class="proflink-card fade-up" data-url="'+htmlEsc(l.text||'')+'">'
+              + '<a href="'+htmlEsc(sUrl)+'" target="_blank" rel="noopener noreferrer" onclick="markLinkVisited(\''+msgId+'\')" class="proflink-thumb" id="post-'+msgId+'">'
+              + (thumbUrl ? '<img src="'+thumbUrl+'" referrerpolicy="no-referrer" loading="lazy" onerror="this.style.display=\'none\'" alt="">' : '')
+              + '<div class="proflink-thumb-overlay"></div>'
+              + '<div class="proflink-play">▶</div>'
+              + '</a>'
+              + '<div class="proflink-actions">'
+              + '<button class="proflink-like '+(hasLiked?'liked':'')+'" onclick="likePost(\''+msgId+'\',this)" data-msgid="'+msgId+'" '+(hasLiked?'disabled':'')+'><svg width="13" height="13" viewBox="0 0 24 24" fill="'+(hasLiked?'currentColor':'none')+'" stroke="currentColor" stroke-width="2.4"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg><span id="likes-'+msgId+'">'+likeCount+'</span></button>'
+              + '<a href="'+htmlEsc(sUrl)+'" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();markLinkVisited(\''+msgId+'\')" class="proflink-open">→ Öffnen</a>'
+              + '</div></div>';
+        };
+        const theirLinkEntries = Object.entries(d.links||{}).filter(([,l])=>String(l.user_id)===String(uid)).sort((a,b)=>(b[1].timestamp||0)-(a[1].timestamp||0));
+        const theirLinksHtml = theirLinkEntries.length
+            ? '<div class="proflink-grid">'+theirLinkEntries.map(([msgId, l]) => renderTheirLinkCard(l, msgId)).join('')+'</div>'
+            : '<div class="empty"><div class="empty-icon">🔗</div><div class="empty-text">Noch keine Links</div></div>';
 
         const theirAboutHtml = '<div style="padding:16px;display:flex;flex-direction:column;gap:12px;padding-bottom:100px">'
             +(u?.bio?'<div style="background:var(--bg3);border-radius:14px;padding:14px 16px"><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Bio</div><div style="font-size:14px;line-height:1.6">'+u.bio+'</div></div>':'')
@@ -13462,7 +17512,7 @@ async function submitPost(){const _spBtn=document.querySelector('[onclick="submi
         return html(`
 <div class="topbar">
   <a href="javascript:history.back()" class="icon-btn" style="font-size:22px">‹</a>
-  <div style="font-size:15px;font-weight:600">${u.spitzname||u.name||'User'}</div>
+  <div style="font-size:15px;font-weight:600">${htmlEsc(u.spitzname||u.name||'User')}</div>
   <div style="display:flex;gap:8px">
     <button onclick="toggleFollow('${uid}',this)" style="background:${isFollowing?'var(--bg4)':'var(--accent)'};color:${isFollowing?'var(--muted)':'#fff'};border:1px solid var(--border);border-radius:20px;padding:6px 16px;font-size:13px;font-weight:600;cursor:pointer">${isFollowing?'Gefolgt':'Folgen'}</button>
     ${(()=>{
@@ -13474,20 +17524,28 @@ async function submitPost(){const _spBtn=document.querySelector('[onclick="submi
       return `<button id="collab-btn" onclick="collabRequest('${uid}',this)" title="Kollaboration anfragen" style="background:linear-gradient(135deg,#ec4899,#a21caf);color:#fff;border:none;border-radius:20px;padding:6px 14px;font-size:13px;font-weight:700;cursor:pointer">🤝</button>`;
     })()}
     <a href="/nachrichten/${uid}" style="background:var(--bg4);border:1px solid var(--border);border-radius:20px;padding:6px 14px;font-size:13px;font-weight:600;color:var(--text);text-decoration:none">💬</a>
+    ${String(uid) !== String(myUid) ? `<button id="profile-more-btn" onclick="toggleProfileMore()" title="Mehr Optionen" style="background:var(--bg4);border:1px solid var(--border);border-radius:20px;width:32px;height:32px;font-size:18px;color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;line-height:1">⋮</button>` : ''}
   </div>
 </div>
+${String(uid) !== String(myUid) ? `
+<div id="profile-more-menu" style="display:none;position:fixed;top:60px;right:12px;background:var(--bg);border:1px solid var(--border);border-radius:14px;box-shadow:0 12px 32px rgba(0,0,0,0.3);z-index:9999;overflow:hidden;min-width:180px">
+  <button onclick="reportThisUser('${uid}')" style="display:flex;align-items:center;gap:10px;width:100%;background:none;border:none;border-bottom:1px solid var(--border);padding:13px 16px;font-size:14px;color:var(--text);cursor:pointer;text-align:left;font-family:inherit"><span>🚩</span><span>Nutzer melden</span></button>
+  <button onclick="blockThisUser('${uid}')" style="display:flex;align-items:center;gap:10px;width:100%;background:none;border:none;padding:13px 16px;font-size:14px;color:#ef4444;cursor:pointer;text-align:left;font-family:inherit"><span>🚫</span><span>Nutzer blockieren</span></button>
+</div>
+<div id="profile-more-backdrop" style="display:none;position:fixed;inset:0;z-index:9998" onclick="toggleProfileMore()"></div>
+` : ''}
 ${profileCard(uid, u, d, false, lang, adminIds)}
 <div class="tabs" style="position:sticky;top:57px;z-index:50;background:var(--bg)">
-  <div class="tab active" onclick="showTPTab('posts',this)">📝 Posts</div>
-  <div class="tab" onclick="showTPTab('links',this)">🔗 Links</div>
+  <div class="tab active" onclick="showTPTab('links',this)">🔗 Links</div>
+  <div class="tab" onclick="showTPTab('posts',this)">📝 Posts</div>
   <div class="tab" onclick="showTPTab('projekte',this)">🗂️ Projekte</div>
   <div class="tab" onclick="showTPTab('about',this)">👤 About</div>
 </div>
-<div id="tptab-posts" style="padding-bottom:100px">${theirPinnedHtml}${theirPostsHtml}</div>
+<div id="tptab-links" style="padding-bottom:100px">${theirLinksHtml}</div>
+<div id="tptab-posts" style="display:none;padding-bottom:100px">${theirPostsHtml}</div>
 <div id="tptab-projekte" style="display:none;padding-bottom:100px">
   ${theirProjects.length>0?'<div class="proj-grid">'+theirProjCardsHtml+'</div>':'<div class="empty"><div class="empty-icon">🚀</div><div class="empty-text">Noch keine Projekte</div></div>'}
 </div>
-<div id="tptab-links" style="display:none;padding-bottom:100px">${theirLinksHtml}</div>
 <div id="tptab-about" style="display:none">${theirAboutHtml}</div>
 
 <div id="tproj-detail-modal" class="proj-modal-overlay" onclick="if(event.target===this)closeTProj()">
@@ -13515,15 +17573,44 @@ function showTPTab(tab,el){
 function openTProjDetail(idx){
   const p=TPROJECTS[idx]; if(!p) return;
   document.getElementById('tproj-title').textContent=p.title;
-  document.getElementById('tproj-img-wrap').innerHTML=p.img?'<img src="'+p.img+'" style="width:100%;object-fit:contain;display:block;background:#0a0a0a" alt="">':'';
+  (function(){const w=document.getElementById('tproj-img-wrap');if(!w)return;w.textContent='';if(p.img&&/^(data:image|https?:\\/\\/)/.test(p.img)){const im=document.createElement('img');im.src=p.img;im.alt='';im.style.cssText='width:100%;object-fit:contain;display:block;background:#0a0a0a';w.appendChild(im);}})();
   document.getElementById('tproj-desc').textContent=p.description||'';
-  document.getElementById('tproj-link').innerHTML=p.link?'<a href="'+p.link+'" target="_blank" style="color:var(--blue);font-size:13px;word-break:break-all">🔗 '+p.link+'</a>':'';
+  (function(){const w=document.getElementById('tproj-link');if(!w)return;w.textContent='';if(p.link&&/^https?:\\/\\//i.test(p.link)){const a=document.createElement('a');a.href=p.link;a.target='_blank';a.rel='noopener noreferrer';a.style.cssText='color:var(--blue);font-size:13px;word-break:break-all';a.textContent='🔗 '+p.link;w.appendChild(a);}})();
   const docEl=document.getElementById('tproj-doc');
   if(p.docName){const icon=p.docName.endsWith('.pptx')?'📊':'📄';docEl.innerHTML='<a href="/api/download-project-doc/'+_TUID+'/'+p.id+'" style="display:inline-flex;align-items:center;gap:8px;background:var(--bg4);border:1px solid var(--border);border-radius:10px;padding:8px 14px;font-size:13px;font-weight:600;color:var(--text);text-decoration:none">'+icon+' '+p.docName+' herunterladen</a>';}
   else docEl.innerHTML='';
   document.getElementById('tproj-detail-modal').classList.add('open');
 }
 function closeTProj(){document.getElementById('tproj-detail-modal').classList.remove('open');}
+function toggleProfileMore(){
+  const m=document.getElementById('profile-more-menu');
+  const b=document.getElementById('profile-more-backdrop');
+  if(!m||!b)return;
+  const show=m.style.display==='none';
+  m.style.display=show?'block':'none';
+  b.style.display=show?'block':'none';
+}
+async function reportThisUser(uid){
+  toggleProfileMore();
+  const reason=prompt('Warum meldest du diesen Nutzer? (Spam, Belästigung, Fake-Account, illegale Inhalte, …)');
+  if(!reason||!reason.trim())return;
+  try{
+    const r=await fetch('/api/report-user',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({targetUid:uid,reason:reason.trim(),context:'profile'})});
+    const j=await r.json().catch(()=>({}));
+    if(j&&j.ok){alert('✅ Meldung verschickt. Danke! Wir prüfen den Vorgang innerhalb von 24h.');}
+    else{alert('❌ '+(j&&j.error||'Meldung fehlgeschlagen — bitte später nochmal'));}
+  }catch(e){alert('❌ Netzwerk-Fehler — bitte später nochmal');}
+}
+async function blockThisUser(uid){
+  toggleProfileMore();
+  if(!confirm('Diesen Nutzer blockieren?\\n\\n• Du siehst seine Posts und Kommentare nicht mehr\\n• Er kann dir keine Nachrichten mehr schicken\\n• Du kannst die Blockierung jederzeit in den Einstellungen aufheben'))return;
+  try{
+    const r=await fetch('/api/block-user',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({targetUid:uid})});
+    const j=await r.json().catch(()=>({}));
+    if(j&&j.ok){alert('🚫 Nutzer blockiert. Du wirst seine Inhalte nicht mehr sehen.');location.href='/feed';}
+    else{alert('❌ '+(j&&j.error||'Blockieren fehlgeschlagen — bitte später nochmal'));}
+  }catch(e){alert('❌ Netzwerk-Fehler — bitte später nochmal');}
+}
 async function toggleFollow(uid,btn){
   const isFollowing=btn.textContent.trim()==='Gefolgt';
   btn.textContent=isFollowing?'Folgen':'Gefolgt';
@@ -13591,6 +17678,12 @@ async function collabRequest(targetUid, btn){
       }
     }
     root.innerHTML = html;
+    // Tab-Badge: Anzahl noch ungelikter Kollab-Posts (ohne eigene)
+    const unliked = (posts||[]).filter(p => !p.liked && !p.isSelf).length;
+    const badgeEl = document.getElementById('tab-badge-kollabs');
+    if (badgeEl) badgeEl.innerHTML = unliked > 0
+      ? '<span style="display:inline-block;min-width:18px;height:16px;line-height:16px;padding:0 5px;border-radius:99px;background:#ef4444;color:#fff;font-size:9.5px;font-weight:800;vertical-align:middle;margin-left:4px;box-shadow:0 2px 6px rgba(239,68,68,0.45)">'+unliked+'</span>'
+      : '';
   }
   function showRulesModal(){
     const bg = document.createElement('div');
@@ -13639,6 +17732,464 @@ async function collabRequest(targetUid, btn){
 </script>`, 'feed');
     }
 
+    // ── EINSTELLUNGEN: Sub-Pages (Instagram-Style Hub) ──
+    // Gemeinsamer Wrapper für Sub-Pages: konsistente Topbar mit Back-Link + Titel.
+    const _setSubHead = (title, sub) => `
+<style>
+.subset-page{min-height:100vh;background:var(--bg)}
+.subset-section{padding:16px;border-bottom:1px solid var(--border2)}
+.subset-section-title{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:10px}
+.subset-row{display:flex;align-items:center;gap:14px;padding:12px 16px;background:var(--bg3);border:1px solid var(--border2);border-radius:12px;margin-bottom:8px}
+.subset-row-icon{width:36px;height:36px;border-radius:10px;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.subset-row-body{flex:1;min-width:0}
+.subset-row-title{font-size:14px;font-weight:700}
+.subset-row-sub{font-size:11.5px;color:var(--muted);margin-top:2px;line-height:1.4}
+.subset-toggle{position:relative;width:42px;height:24px;background:var(--bg4);border-radius:99px;cursor:pointer;transition:background .2s;flex-shrink:0;border:1px solid var(--border)}
+.subset-toggle::after{content:'';position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.subset-toggle.on{background:#22c55e;border-color:#16a34a}
+.subset-toggle.on::after{transform:translateX(18px)}
+.subset-empty{padding:32px 16px;text-align:center;color:var(--muted);font-size:13px}
+</style>
+<div class="topbar">
+  <a href="/einstellungen" class="icon-btn" style="font-size:22px">‹</a>
+  <div style="font-size:15px;font-weight:600">${title}</div>
+  <div style="width:36px"></div>
+</div>
+${sub ? `<div style="padding:12px 16px;font-size:12.5px;color:var(--muted);line-height:1.5;border-bottom:1px solid var(--border2)">${sub}</div>` : ''}`;
+
+    if (path === '/einstellungen/account') {
+        const u = myUser || {};
+        const hasEmail = !!u.email;
+        const hasPw = !!u.password_hash;
+        const emailConfirmed = !!u.emailConfirmedAt;
+        const hasPending = u.pendingEmail && u.pendingEmail !== u.email;
+        const isLocked = hasEmail && hasPw && (!session || !session.accountUnlockUntil || Number(session.accountUnlockUntil) < Date.now());
+        return html(`
+<div class="subset-page">
+${_setSubHead('🔐 Account', 'Email, Passwort, App-Code und Login-Methoden')}
+
+<div class="subset-section">
+  <div class="subset-section-title">Account-Login (Email + Passwort)</div>
+  ${isLocked ? `
+    <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:14px;margin-top:6px">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px"><div style="font-size:24px">🔒</div><div><div style="font-weight:800;font-size:14px;color:var(--text)">Account-Login gesperrt</div><div style="font-size:12px;color:var(--muted);margin-top:2px">Email + Passwort sind gesetzt. Änderungen brauchen eine Bestätigung per Mail.</div></div></div>
+      <div style="display:flex;flex-direction:column;gap:6px;font-size:13px;margin-bottom:12px">
+        <div style="display:flex;align-items:center;gap:8px;color:var(--text)"><span style="color:var(--muted);font-weight:600;min-width:90px">📧 Email:</span><span style="font-family:JetBrains Mono,monospace;font-size:12.5px">${htmlEsc(u.email)}</span><span style="color:#22c55e;font-size:11px;margin-left:auto">✓ bestätigt</span></div>
+        <div style="display:flex;align-items:center;gap:8px;color:var(--text)"><span style="color:var(--muted);font-weight:600;min-width:90px">🔐 Passwort:</span><span style="font-family:JetBrains Mono,monospace;font-size:12.5px">••••••••</span><span style="color:#22c55e;font-size:11px;margin-left:auto">✓ gesetzt</span></div>
+      </div>
+      <button class="btn btn-outline btn-full" id="ep-request-change-btn" onclick="requestAccountChange()" style="font-size:13px;display:flex">📨 Änderung anfragen</button>
+      <div id="ep-request-msg" style="font-size:11.5px;color:var(--muted);margin-top:8px;line-height:1.4">Klick → wir senden einen Bestätigungs-Link an deine Email. 30 Min nach Klick kannst du Email/Passwort ändern.</div>
+    </div>
+  ` : `
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div>
+        <div style="font-size:11.5px;color:var(--muted);font-weight:700;margin-bottom:6px">📧 EMAIL</div>
+        <input type="email" class="form-input" id="inp-email" placeholder="deine@email.de" maxlength="200" value="${htmlEsc(u.email||u.pendingEmail||'')}" autocapitalize="none" spellcheck="false">
+        ${hasPending ? `<div style="margin-top:8px;padding:9px 11px;background:rgba(245,158,11,0.10);border:1px solid rgba(245,158,11,0.30);border-radius:10px;font-size:11.5px;color:#f59e0b;line-height:1.45"><b>⏳ Bestätigung ausstehend.</b> Bestätigungs-Link an <b>${htmlEsc(u.pendingEmail)}</b> gesendet — schau ins Postfach.</div>` : ''}
+        ${hasEmail ? `<div style="margin-top:8px;padding:9px 11px;background:rgba(34,197,94,0.10);border:1px solid rgba(34,197,94,0.25);border-radius:10px;font-size:11.5px;color:#22c55e;line-height:1.45"><b>✓ Email bestätigt.</b></div>` : ''}
+      </div>
+      <div>
+        <div style="font-size:11.5px;color:var(--muted);font-weight:700;margin-bottom:6px">🔐 PASSWORT ${hasPw ? '<span style="color:#22c55e;font-weight:600;margin-left:4px">(gesetzt)</span>' : '<span style="color:var(--muted-2);font-weight:500;margin-left:4px">(optional)</span>'}</div>
+        <input type="password" class="form-input" id="inp-password" placeholder="${hasPw ? 'Neues Passwort (leer = unverändert)' : 'Min. 6 Zeichen'}" minlength="6" maxlength="200" autocomplete="new-password">
+        <div style="font-size:11.5px;color:var(--muted);margin-top:6px;line-height:1.45">Mit Passwort kannst du dich direkt einloggen — ohne Magic-Link. Min. 6 Zeichen.</div>
+      </div>
+      <button class="btn btn-primary btn-full" onclick="saveAccount()" style="font-size:14px">💾 Email & Passwort speichern</button>
+      <div id="account-save-msg" style="font-size:12px;text-align:center;color:var(--muted)"></div>
+      ${hasPw ? '<button onclick="removePwAcct()" class="btn btn-outline btn-full" style="color:#ef4444">🗑️ Passwort entfernen</button>' : ''}
+    </div>
+  `}
+</div>
+
+<div class="subset-section">
+  <div class="subset-section-title">Eigener App-Code <span style="font-size:11px;color:var(--muted);font-weight:500">(für /mycode &amp; Login-Link)</span></div>
+  <input type="text" class="form-input" id="inp-app-code" placeholder="z.B. dein-name" maxlength="30" value="${htmlEsc(u.appCode||'')}" autocapitalize="none" spellcheck="false" style="font-family:JetBrains Mono,monospace;letter-spacing:0.5px">
+  <div style="font-size:11.5px;color:var(--muted);margin-top:6px;line-height:1.45">4–30 Zeichen, nur a–z, 0–9, _ oder -. Eindeutig.</div>
+  <button class="btn btn-outline btn-full" style="margin-top:10px;font-size:13px" onclick="saveAppCode()">🔑 Code speichern</button>
+  <div id="app-code-msg" style="margin-top:6px;font-size:11.5px;line-height:1.4"></div>
+</div>
+
+<div class="subset-section">
+  <div class="subset-section-title">Telegram-Verknüpfung</div>
+  <div class="subset-row">
+    <div class="subset-row-icon">📲</div>
+    <div class="subset-row-body">
+      <div class="subset-row-title">${u.username ? '@'+htmlEsc(u.username) : 'UID '+htmlEsc(myUid)}</div>
+      <div class="subset-row-sub">Telegram ist deine Master-Verknüpfung. UID kann nicht geändert werden.</div>
+    </div>
+  </div>
+</div>
+
+<div class="subset-section">
+  <div class="subset-section-title" style="color:#ef4444">⚠️ Gefahrenzone</div>
+  <button onclick="deleteAccountDsgvo()" class="btn btn-outline btn-full" style="border-color:rgba(239,68,68,.35);color:#ef4444">🗑️ Account dauerhaft löschen</button>
+</div>
+</div>
+<script>
+async function saveAccount(){
+  const em=document.getElementById('inp-email').value.trim();
+  const pw=document.getElementById('inp-password').value;
+  const msg=document.getElementById('account-save-msg');
+  msg.textContent='⏳ Speichere…';msg.style.color='var(--muted)';
+  try{
+    const r=await fetch('/api/profile-update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:em,password:pw||undefined})});
+    const j=await r.json();
+    if(j&&j.ok){msg.textContent='✅ Gespeichert';msg.style.color='#22c55e';setTimeout(()=>location.reload(),900);}
+    else{msg.textContent='❌ '+(j&&j.error||'Fehler');msg.style.color='#ef4444';}
+  }catch(e){msg.textContent='❌ Netzwerkfehler';msg.style.color='#ef4444';}
+}
+async function saveAppCode(){
+  const code=document.getElementById('inp-app-code').value.trim();
+  const msg=document.getElementById('app-code-msg');
+  msg.textContent='⏳ Speichere…';msg.style.color='var(--muted)';
+  try{
+    const r=await fetch('/api/set-app-code',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code})});
+    const j=await r.json();
+    if(j&&j.ok){msg.textContent='✅ Gespeichert';msg.style.color='#22c55e';}
+    else{msg.textContent='❌ '+(j&&j.error||'Fehler');msg.style.color='#ef4444';}
+  }catch(e){msg.textContent='❌ Netzwerkfehler';msg.style.color='#ef4444';}
+}
+async function removePwAcct(){
+  if(!confirm('Passwort wirklich entfernen? Du kannst dich danach nur noch über Magic-Link einloggen.'))return;
+  try{
+    const r=await fetch('/api/auth/set-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:''})});
+    const j=await r.json();
+    if(j&&j.ok){alert('🗑️ Passwort entfernt');location.reload();}
+    else alert('❌ '+(j&&j.error||'Fehler'));
+  }catch(e){alert('❌ Netzwerkfehler');}
+}
+async function requestAccountChange(){
+  const btn=document.getElementById('ep-request-change-btn');
+  const msg=document.getElementById('ep-request-msg');
+  btn.disabled=true;btn.textContent='⏳ Sende…';
+  try{
+    const r=await fetch('/api/account/request-change',{method:'POST'});
+    const j=await r.json();
+    if(j&&j.ok){msg.textContent='✅ Email gesendet. Klick den Link in deiner Mail, dann bist du 30 Min lang änderbar.';msg.style.color='#22c55e';}
+    else{btn.disabled=false;btn.textContent='📨 Änderung anfragen';msg.textContent='❌ '+(j&&j.error||'Fehler');msg.style.color='#ef4444';}
+  }catch(e){btn.disabled=false;btn.textContent='📨 Änderung anfragen';msg.textContent='❌ Netzwerkfehler';msg.style.color='#ef4444';}
+}
+async function deleteAccountDsgvo(){
+  if(!confirm('⚠️ Account dauerhaft löschen?\\n\\nDies entfernt:\\n• Dein Profil + alle Sub-Accounts\\n• Alle deine Posts + Likes + Kommentare\\n• Alle XP, Diamanten, Items\\n\\nDie Löschung kann NICHT rückgängig gemacht werden.'))return;
+  if(!confirm('Wirklich? Alle Daten gehen für immer verloren.'))return;
+  const code=prompt('Tippe LÖSCHEN um zu bestätigen:');
+  if(code!=='LÖSCHEN'){alert('Abgebrochen.');return;}
+  try{
+    const r=await fetch('/api/delete-my-account',{method:'POST'});
+    const j=await r.json();
+    if(j.ok){alert('✅ Account-Löschung gestartet. Du wirst jetzt ausgeloggt.');location.href='/logout';}
+    else alert('❌ '+(j.error||'Fehler'));
+  }catch(e){alert('❌ Netzwerk: '+e.message);}
+}
+</script>
+`, 'settings-account');
+    }
+
+    if (path === '/einstellungen/privacy') {
+        const u = myUser || {};
+        const blocked = Array.isArray(u.blockedUsers) ? u.blockedUsers : [];
+        const blockedRows = blocked.map(bUid => {
+            const bU = d.users?.[bUid] || {};
+            const name = bU.spitzname || bU.name || ('User '+bUid);
+            const insta = bU.instagram || '';
+            return `
+<div class="subset-row" id="blocked-row-${htmlEsc(bUid)}">
+  <div class="subset-row-icon">🚫</div>
+  <div class="subset-row-body">
+    <div class="subset-row-title">${htmlEsc(name)}</div>
+    <div class="subset-row-sub">${insta ? '@'+htmlEsc(insta)+' · ' : ''}UID ${htmlEsc(bUid)}</div>
+  </div>
+  <button onclick="unblockSub('${htmlEsc(bUid)}', this)" class="btn btn-outline" style="font-size:12px;padding:7px 12px">Entsperren</button>
+</div>`;
+        }).join('');
+        return html(`
+<div class="subset-page">
+${_setSubHead('🔒 Privatsphäre', 'Wer kann was über dich sehen und mit dir interagieren.')}
+<div class="subset-section">
+  <div class="subset-section-title">Blockierte Nutzer (${blocked.length})</div>
+  ${blocked.length ? blockedRows : '<div class="subset-empty">Du hast niemanden blockiert.<br><span style="font-size:11px;color:var(--muted)">Block-Button auf Profilen oder in Chats nutzen.</span></div>'}
+</div>
+<div class="subset-section">
+  <div class="subset-section-title">Profilsichtbarkeit</div>
+  <div class="subset-row">
+    <div class="subset-row-icon">👁️</div>
+    <div class="subset-row-body">
+      <div class="subset-row-title">Profil öffentlich</div>
+      <div class="subset-row-sub">Jeder eingeloggte User sieht dein Profil. (Bald: Privat-Modus toggle)</div>
+    </div>
+    <div class="subset-toggle on" style="opacity:.5;cursor:not-allowed" title="Coming soon"></div>
+  </div>
+  <div class="subset-row">
+    <div class="subset-row-icon">💬</div>
+    <div class="subset-row-body">
+      <div class="subset-row-title">DMs von allen</div>
+      <div class="subset-row-sub">Jeder kann dir Nachrichten schicken. (Bald: nur Follower)</div>
+    </div>
+    <div class="subset-toggle on" style="opacity:.5;cursor:not-allowed" title="Coming soon"></div>
+  </div>
+</div>
+<script>
+async function unblockSub(uid, btn){
+  if(!confirm('Wirklich entsperren?')) return;
+  btn.disabled=true; btn.textContent='⏳';
+  const r=await fetch('/api/unblock-user',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({targetUid:uid})});
+  const j=await r.json().catch(()=>({}));
+  if(j.ok){ document.getElementById('blocked-row-'+uid).remove(); }
+  else { btn.disabled=false; btn.textContent='Entsperren'; alert('❌ '+(j.error||'Fehler')); }
+}
+</script>
+</div>
+`, 'settings-privacy');
+    }
+
+    if (path === '/einstellungen/notifications') {
+        return html(`
+<div class="subset-page">
+${_setSubHead('🔔 Benachrichtigungen', 'Push-Benachrichtigungen, In-App-Notifs und Email-Newsletter.')}
+<div class="subset-section">
+  <div class="subset-section-title">Push-Benachrichtigungen</div>
+  <div class="subset-row">
+    <div class="subset-row-icon">📱</div>
+    <div class="subset-row-body">
+      <div class="subset-row-title">Push aktiv</div>
+      <div class="subset-row-sub" id="push-status-sub">Wird geprüft …</div>
+    </div>
+    <div class="subset-toggle" id="push-toggle" onclick="togglePush(this)"></div>
+  </div>
+  <div style="font-size:11px;color:var(--muted);padding:6px 4px 0;line-height:1.5">
+    Du bekommst Benachrichtigungen bei Likes, Kommentaren, Followern und neuen Pinned-Engagements.
+  </div>
+</div>
+<div class="subset-section">
+  <div class="subset-section-title">Per-Event (bald)</div>
+  <div class="subset-row" style="opacity:.55">
+    <div class="subset-row-icon">❤️</div>
+    <div class="subset-row-body"><div class="subset-row-title">Likes</div><div class="subset-row-sub">Wenn jemand deinen Post liked</div></div>
+    <div class="subset-toggle on" style="cursor:not-allowed"></div>
+  </div>
+  <div class="subset-row" style="opacity:.55">
+    <div class="subset-row-icon">💬</div>
+    <div class="subset-row-body"><div class="subset-row-title">Kommentare & Replies</div><div class="subset-row-sub">Wenn jemand auf deinen Post antwortet</div></div>
+    <div class="subset-toggle on" style="cursor:not-allowed"></div>
+  </div>
+  <div class="subset-row" style="opacity:.55">
+    <div class="subset-row-icon">📌</div>
+    <div class="subset-row-body"><div class="subset-row-title">Pinned-Engagement</div><div class="subset-row-sub">Wenn jemand deinen Pinned-Post engagiert</div></div>
+    <div class="subset-toggle on" style="cursor:not-allowed"></div>
+  </div>
+  <div class="subset-row" style="opacity:.55">
+    <div class="subset-row-icon">📩</div>
+    <div class="subset-row-body"><div class="subset-row-title">Newsletter & Updates</div><div class="subset-row-sub">App-Updates und Newsletter</div></div>
+    <div class="subset-toggle on" style="cursor:not-allowed"></div>
+  </div>
+</div>
+<script>
+async function togglePush(t){
+  if(!('Notification' in window) || !('serviceWorker' in navigator)){ alert('Browser unterstützt keine Push-Notifications.'); return; }
+  const isOn = t.classList.contains('on');
+  if(isOn){
+    if(!confirm('Push-Benachrichtigungen wirklich abschalten?')) return;
+    try{
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.getSubscription();
+      if(sub) await sub.unsubscribe();
+      await fetch('/api/push-unsubscribe',{method:'POST'}).catch(()=>{});
+      t.classList.remove('on');
+      document.getElementById('push-status-sub').textContent='Aus';
+    } catch(e){ alert('Fehler: '+e.message); }
+  } else {
+    const p = await Notification.requestPermission();
+    if(p !== 'granted'){ alert('Berechtigung verweigert. In Browser-Settings erlauben.'); return; }
+    try{
+      const reg = await navigator.serviceWorker.ready;
+      const vk = await fetch('/push-vapid-key').then(r=>r.text());
+      const bytes = Uint8Array.from(atob(vk.replace(/-/g,'+').replace(/_/g,'/')), c=>c.charCodeAt(0));
+      const sub = await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:bytes});
+      await fetch('/api/push-subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sub:sub.toJSON()})});
+      t.classList.add('on');
+      document.getElementById('push-status-sub').textContent='Aktiv auf diesem Gerät';
+    } catch(e){ alert('Fehler: '+e.message); }
+  }
+}
+(async function initPushStatus(){
+  if(!('serviceWorker' in navigator)){ document.getElementById('push-status-sub').textContent='Nicht unterstützt'; return; }
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    if(sub && Notification.permission === 'granted'){
+      document.getElementById('push-toggle').classList.add('on');
+      document.getElementById('push-status-sub').textContent='Aktiv auf diesem Gerät';
+    } else {
+      document.getElementById('push-status-sub').textContent='Aus';
+    }
+  } catch(e){ document.getElementById('push-status-sub').textContent='Status unbekannt'; }
+})();
+</script>
+</div>
+`, 'settings-notifications');
+    }
+
+    if (path === '/einstellungen/sicherheit') {
+        // Sessions dieses Users zählen (inkl. aktiver)
+        let mySessions = 0;
+        for (const s of sessions.values()) {
+            if (s && String(s.uid) === String(myUid)) mySessions++;
+        }
+        const ua = (req.headers['user-agent'] || '').slice(0, 200);
+        const device = /iphone|ipad|ios/i.test(ua) ? '📱 iPhone/iPad'
+            : /android/i.test(ua) ? '🤖 Android'
+            : /macintosh|mac os/i.test(ua) ? '💻 Mac'
+            : /windows/i.test(ua) ? '🪟 Windows'
+            : /linux/i.test(ua) ? '🐧 Linux'
+            : '🖥️ Unbekannt';
+        return html(`
+<div class="subset-page">
+${_setSubHead('🛡️ Sicherheit & Sessions', 'Aktive Geräte und Logout-Optionen.')}
+<div class="subset-section">
+  <div class="subset-section-title">Dieses Gerät</div>
+  <div class="subset-row">
+    <div class="subset-row-icon" style="background:rgba(34,197,94,.14);color:#22c55e">${device.split(' ')[0]}</div>
+    <div class="subset-row-body">
+      <div class="subset-row-title">${device.split(' ').slice(1).join(' ') || device} <span style="color:#22c55e;font-size:11px;margin-left:6px">● Aktiv</span></div>
+      <div class="subset-row-sub" style="font-size:11px;font-family:JetBrains Mono,monospace;word-break:break-all">${htmlEsc(ua.slice(0,80))}…</div>
+    </div>
+  </div>
+</div>
+<div class="subset-section">
+  <div class="subset-section-title">Alle Sessions</div>
+  <div class="subset-row">
+    <div class="subset-row-icon">🔢</div>
+    <div class="subset-row-body">
+      <div class="subset-row-title">${mySessions} aktive Session${mySessions===1?'':'s'}</div>
+      <div class="subset-row-sub">Inklusive Sub-Accounts. Detaillierte Liste pro Device kommt.</div>
+    </div>
+  </div>
+  <form method="POST" action="/api/logout-all-others" onsubmit="return confirm('Alle anderen Sessions abmelden? Du bleibst auf diesem Gerät eingeloggt.')">
+    <button type="submit" class="btn btn-outline btn-full" style="margin-top:8px;border-color:rgba(245,158,11,.35);color:#fbbf24">🚪 Alle anderen Geräte abmelden</button>
+  </form>
+</div>
+<div class="subset-section">
+  <div class="subset-section-title">Login-Historie</div>
+  <div class="subset-empty" style="padding:18px;font-size:12.5px">📜 Login-Log kommt in einer der nächsten Versionen.<br><span style="font-size:11px">Aktivität jetzt nur Admin-seitig im Dashboard sichtbar.</span></div>
+</div>
+<div class="subset-section">
+  <div class="subset-section-title">Ausloggen</div>
+  <form method="POST" action="/logout">
+    <button type="submit" class="btn btn-outline btn-full" style="border-color:rgba(239,68,68,.35);color:#ef4444">🚪 Von diesem Gerät abmelden</button>
+  </form>
+</div>
+</div>
+`, 'settings-security');
+    }
+
+    if (path === '/einstellungen/admin') {
+        const isAdmin = adminIds.includes(Number(myUid));
+        if (!isAdmin) return text('🛡️ Nur Admins.', 403);
+        return html(`
+<div class="subset-page">
+${_setSubHead('🛡️ Admin-Tools', 'Live-Tour, Page-Vorschauen und FE-Thread-Tools — nur für Admins sichtbar.')}
+<div class="subset-section">
+  <div class="subset-section-title">🎬 Live-Tour</div>
+  <button onclick="if(window.ftStart)window.ftStart();else alert('Tour-Script nicht geladen — Page reload bitte');" class="btn btn-primary btn-full" style="margin-bottom:8px;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;box-shadow:0 6px 18px rgba(212,175,55,0.4);font-weight:800;display:flex;align-items:center;justify-content:center;gap:8px">🎬 Komplette User-Journey-Tour starten</button>
+  <div style="font-size:11.5px;color:var(--muted);line-height:1.4;margin-top:6px">10-Step Walkthrough: Landing → Telegram → Email → Login → Insta → Password → Feed → Einstellungen → Profil. Highlighted-Spot + Beschreibung pro Stage.</div>
+</div>
+<div class="subset-section">
+  <div class="subset-section-title">👀 Vorschauen</div>
+  <a href="/?preview=1" target="_blank" class="btn btn-outline btn-full" style="margin-bottom:8px;display:flex">🔐 Login-Page (App)</a>
+  <a href="/willkommen" target="_blank" class="btn btn-outline btn-full" style="margin-bottom:8px;display:flex">🌐 Public Landing-Page</a>
+  <a href="/onboarding-instagram?preview=1" target="_blank" class="btn btn-outline btn-full" style="margin-bottom:8px;display:flex">🚀 Email-Onboarding (3-Step Wizard)</a>
+  <a href="/feed?tour=1" target="_blank" class="btn btn-outline btn-full" style="margin-bottom:8px;display:flex">🎯 In-App Tour (Pfeile)</a>
+  <a href="/preview/email-login" target="_blank" class="btn btn-outline btn-full" style="margin-bottom:8px;display:flex">📧 Magic-Link Email</a>
+</div>
+<div class="subset-section">
+  <div class="subset-section-title">⚙️ FE-Thread Tools</div>
+  <button onclick="createFeThread(this)" class="btn btn-outline btn-full" style="margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:8px">⭐ Full Engagement Thread erstellen</button>
+  <button onclick="announceFeThread(this)" class="btn btn-outline btn-full" style="margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:8px">📢 Ankündigung in FE-Thread senden</button>
+  <div id="fethread-result" style="display:none;font-size:12px;padding:8px;border-radius:8px;margin-top:4px"></div>
+</div>
+<div class="subset-section">
+  <div class="subset-section-title">🛡️ Dashboard</div>
+  <a href="/dashboard" class="btn btn-primary btn-full" style="background:linear-gradient(135deg,#f5d76e,#d4a946 55%,#8b6914);color:#000;font-weight:800;display:flex;align-items:center;justify-content:center;gap:8px">🛡️ Admin-Dashboard öffnen</a>
+  <div style="font-size:11.5px;color:var(--muted);line-height:1.4;margin-top:6px">User-Verwaltung, Moderation-Queue, Stats, Engagement-Log und mehr.</div>
+</div>
+<script>
+async function createFeThread(btn){
+  btn.disabled=true;btn.textContent='⏳ Erstelle Thread...';
+  const r=document.getElementById('fethread-result');
+  try{
+    const res=await fetch('/api/admin/create-fethread',{method:'POST'});
+    const data=await res.json();
+    r.style.display='block';
+    if(data.ok){r.style.background='rgba(34,197,94,.15)';r.style.color='#22c55e';r.textContent='✅ Thread erstellt! ID: '+data.threadId;}
+    else{r.style.background='rgba(239,68,68,.15)';r.style.color='#ef4444';r.textContent='❌ '+data.error;}
+  }catch(e){r.style.display='block';r.style.color='#ef4444';r.textContent='❌ '+e.message;}
+  btn.disabled=false;btn.textContent='⭐ Full Engagement Thread erstellen';
+}
+async function announceFeThread(btn){
+  btn.disabled=true;btn.textContent='⏳ Sende...';
+  const r=document.getElementById('fethread-result');
+  try{
+    const res=await fetch('/api/admin/announce-fethread',{method:'POST'});
+    const data=await res.json();
+    r.style.display='block';
+    if(data.ok){r.style.background='rgba(34,197,94,.15)';r.style.color='#22c55e';r.textContent='✅ '+(data.message||'Ankündigung gesendet');}
+    else{r.style.background='rgba(239,68,68,.15)';r.style.color='#ef4444';r.textContent='❌ '+data.error;}
+  }catch(e){r.style.display='block';r.style.color='#ef4444';r.textContent='❌ '+e.message;}
+  btn.disabled=false;btn.textContent='📢 Ankündigung in FE-Thread senden';
+}
+</script>
+</div>
+`, 'settings-admin');
+    }
+
+    if (path === '/einstellungen/pro') {
+        return html(`
+<div class="subset-page">
+${_setSubHead('⭐ Pro-Features', 'Premium-Tools für ernsthafte Creator. <b style="color:#f5d76e">In Entwicklung.</b>')}
+<div class="subset-section">
+  <div class="subset-section-title">Kommt bald</div>
+  <div class="subset-row" style="background:linear-gradient(135deg,rgba(245,215,110,.08),rgba(212,175,55,.04));border-color:rgba(212,175,55,.30)">
+    <div class="subset-row-icon" style="background:linear-gradient(135deg,#f5d76e,#d4af37);color:#000">📊</div>
+    <div class="subset-row-body">
+      <div class="subset-row-title">Deep-Analytics</div>
+      <div class="subset-row-sub">Engagement-Rate pro Post · Cohort-Curves · Audience-Demographics · Heatmaps</div>
+    </div>
+  </div>
+  <div class="subset-row" style="background:linear-gradient(135deg,rgba(245,215,110,.08),rgba(212,175,55,.04));border-color:rgba(212,175,55,.30)">
+    <div class="subset-row-icon" style="background:linear-gradient(135deg,#f5d76e,#d4af37);color:#000">📅</div>
+    <div class="subset-row-body">
+      <div class="subset-row-title">Post-Scheduler</div>
+      <div class="subset-row-sub">Pinned-Reel und Diamantlinks zeitlich planen</div>
+    </div>
+  </div>
+  <div class="subset-row" style="background:linear-gradient(135deg,rgba(245,215,110,.08),rgba(212,175,55,.04));border-color:rgba(212,175,55,.30)">
+    <div class="subset-row-icon" style="background:linear-gradient(135deg,#f5d76e,#d4af37);color:#000">🤝</div>
+    <div class="subset-row-body">
+      <div class="subset-row-title">Kollab-Manager</div>
+      <div class="subset-row-sub">Mehrere Kollabs gleichzeitig tracken + auto-Reminder</div>
+    </div>
+  </div>
+  <div class="subset-row" style="background:linear-gradient(135deg,rgba(245,215,110,.08),rgba(212,175,55,.04));border-color:rgba(212,175,55,.30)">
+    <div class="subset-row-icon" style="background:linear-gradient(135deg,#f5d76e,#d4af37);color:#000">🎨</div>
+    <div class="subset-row-body">
+      <div class="subset-row-title">Custom-Branding</div>
+      <div class="subset-row-sub">Profil-Theme, Banner-Animationen, Pro-Badge</div>
+    </div>
+  </div>
+  <div class="subset-row" style="background:linear-gradient(135deg,rgba(245,215,110,.08),rgba(212,175,55,.04));border-color:rgba(212,175,55,.30)">
+    <div class="subset-row-icon" style="background:linear-gradient(135deg,#f5d76e,#d4af37);color:#000">🔌</div>
+    <div class="subset-row-body">
+      <div class="subset-row-title">API-Zugang</div>
+      <div class="subset-row-sub">Eigene Stats abrufen, Webhooks, Zapier-Integration</div>
+    </div>
+  </div>
+  <div style="font-size:12px;color:var(--muted);padding:14px 4px 0;text-align:center;line-height:1.5">
+    Interesse? <a href="/nachrichten" style="color:var(--accent);font-weight:700">DM an CreatorBoost</a> — Early-Access-Liste verfügbar.
+  </div>
+</div>
+</div>
+`, 'settings-pro');
+    }
+
     // ── EINSTELLUNGEN ──
     if (path === '/einstellungen') {
         const u = myUser || {};
@@ -13679,136 +18230,319 @@ async function collabRequest(targetUid, btn){
   <div style="font-size:15px;font-weight:600">Einstellungen</div>
   <div style="width:36px"></div>
 </div>
-<div style="padding:16px;border-bottom:1px solid var(--border2)">
-  <div class="form-label">Profilbild</div>
-  <div style="display:flex;align-items:center;gap:16px;margin-top:8px">
-    <div style="width:72px;height:72px;border-radius:50%;overflow:hidden;background:var(--bg4);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700" id="pic-preview">
-      ${myUser?.instagram ? `<img src="https://unavatar.io/instagram/${myUser.instagram}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'" alt="">` : (myUser?.name||'?').slice(0,2).toUpperCase()}
+<style>
+/* ── Profil-Hero-Karte (Instagram-Style: kein Banner, Avatar links, Stats horizontal) ── */
+.pf-hero{margin:14px 16px 12px;padding:18px 16px;background:var(--bg3);border:1px solid var(--border2);border-radius:16px;box-shadow:0 4px 14px rgba(0,0,0,.05)}
+.pf-top{display:flex;align-items:center;gap:18px;margin-bottom:14px}
+.pf-avatar-wrap{position:relative;width:78px;height:78px;flex-shrink:0}
+.pf-avatar{width:100%;height:100%;border-radius:50%;background:var(--avatar-fallback-bg);background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;color:var(--avatar-fallback-color);font-weight:700;font-size:28px;overflow:hidden;cursor:pointer;position:relative;border:2.5px solid var(--bg3);box-shadow:0 2px 8px rgba(0,0,0,.1)}
+.pf-avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.pf-avatar-edit{position:absolute;bottom:0;right:0;width:26px;height:26px;border-radius:50%;background:#a78bfa;border:2px solid var(--bg3);display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;cursor:pointer;z-index:2;box-shadow:0 1px 4px rgba(0,0,0,.15)}
+.pf-stats{flex:1;display:grid;grid-template-columns:repeat(3,1fr);gap:6px;text-align:center}
+.pf-stat{cursor:default}
+.pf-stat-num{font-size:18px;font-weight:700;color:var(--text);line-height:1.1}
+.pf-stat-lbl{font-size:11px;color:var(--muted);margin-top:2px;font-weight:500}
+.pf-name-row{margin-bottom:8px}
+.pf-name{font-size:16px;font-weight:700;color:var(--text);line-height:1.2}
+.pf-handle{font-size:13px;color:var(--muted);margin-top:2px;font-weight:500}
+.pf-bio{font-size:13.5px;color:var(--text);line-height:1.5;margin-bottom:10px;white-space:pre-wrap}
+.pf-bio:empty::before{content:"Keine Bio gesetzt";color:var(--muted2);font-style:italic}
+.pf-link-row{display:flex;align-items:center;gap:6px;font-size:13px;color:#4dabf7;margin-bottom:14px;font-weight:600}
+.pf-link-row a{color:inherit;text-decoration:none}
+.pf-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.pf-action-btn{padding:9px 14px;background:var(--bg);border:1px solid var(--border2);color:var(--text);border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .12s;text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:6px}
+.pf-action-btn:hover{background:var(--bg4);border-color:var(--accent)}
+.pf-action-btn.primary{background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;border-color:transparent;box-shadow:0 2px 8px rgba(124,58,237,.25)}
+/* ── Edit-Modal (slide-up sheet wie Insta) ── */
+.pf-modal{position:fixed;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);z-index:9000;display:none;align-items:flex-end;animation:pfFade .2s ease}
+.pf-modal.open{display:flex}
+.pf-sheet{width:100%;max-width:560px;margin:0 auto;background:var(--bg);border-radius:20px 20px 0 0;max-height:90vh;overflow-y:auto;animation:pfSlide .25s cubic-bezier(.4,0,.2,1)}
+@keyframes pfFade{from{opacity:0}to{opacity:1}}
+@keyframes pfSlide{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.pf-sheet-hdr{position:sticky;top:0;padding:16px 18px;background:var(--bg);border-bottom:1px solid var(--border2);display:flex;align-items:center;justify-content:space-between;z-index:2}
+.pf-sheet-title{font-size:16px;font-weight:700;color:var(--text)}
+.pf-sheet-close{width:32px;height:32px;border-radius:50%;background:var(--bg3);border:none;color:var(--text);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.pf-sheet-body{padding:18px}
+.pf-field{margin-bottom:16px}
+.pf-field:last-child{margin-bottom:0}
+.pf-field-label{display:block;font-size:11.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px}
+.pf-input{width:100%;padding:12px 14px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:11px;color:var(--text);font-size:14.5px;font-family:inherit;outline:none;transition:border-color .15s;font-weight:500;box-sizing:border-box}
+.pf-input:focus{border-color:#a78bfa}
+.pf-input::placeholder{color:var(--muted2)}
+.pf-textarea{min-height:80px;resize:vertical;line-height:1.5}
+.pf-input-with-icon{position:relative}
+.pf-input-with-icon .pf-input{padding-left:32px}
+.pf-input-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:14px;font-weight:600;pointer-events:none}
+.pf-counter{font-size:10.5px;color:var(--muted);text-align:right;margin-top:4px}
+.pf-counter.warn{color:#f59e0b}
+.pf-counter.over{color:#ef4444}
+.pf-sheet-actions{padding:14px 18px;border-top:1px solid var(--border2);background:var(--bg);position:sticky;bottom:0;display:flex;gap:10px}
+.pf-save-btn{flex:1;padding:13px;background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;border:none;border-radius:11px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(124,58,237,.3);font-family:inherit}
+.pf-save-btn:disabled{opacity:.5;cursor:not-allowed}
+.pf-cancel-btn{padding:13px 18px;background:var(--bg3);border:1.5px solid var(--border2);color:var(--text);border-radius:11px;font-size:13.5px;font-weight:600;cursor:pointer;font-family:inherit}
+.pf-toast{position:fixed;top:60px;left:50%;transform:translateX(-50%) translateY(-20px);background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;padding:10px 18px;border-radius:11px;font-size:13px;font-weight:700;opacity:0;pointer-events:none;transition:all .25s;z-index:9999;box-shadow:0 8px 24px rgba(34,197,94,.4)}
+.pf-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.pf-toast.err{background:linear-gradient(135deg,#ef4444,#dc2626);box-shadow:0 8px 24px rgba(239,68,68,.4)}
+.set-hub-grid{display:grid;grid-template-columns:1fr;gap:8px;padding:14px 16px;border-bottom:1px solid var(--border2)}
+.set-hub-card{display:flex;align-items:center;gap:14px;padding:14px;background:var(--bg3);border:1px solid var(--border2);border-radius:14px;text-decoration:none;color:var(--text);transition:all .15s}
+.set-hub-card:hover{background:var(--bg4);border-color:var(--accent)}
+.set-hub-card:active{transform:scale(.98)}
+.set-hub-icon{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.set-hub-content{flex:1;min-width:0}
+.set-hub-title{font-size:14.5px;font-weight:700;margin-bottom:2px}
+.set-hub-sub{font-size:11.5px;color:var(--muted);line-height:1.4}
+.set-hub-arrow{color:var(--muted);font-size:18px;flex-shrink:0}
+.set-hub-badge{background:#ef4444;color:#fff;font-size:10px;font-weight:800;padding:2px 7px;border-radius:99px;margin-left:6px}
+</style>
+
+<!-- ── Profil-Hero-Karte (Instagram-Style) ── -->
+${(function(){
+  const _u = u || {};
+  const _name = htmlEsc(_u.spitzname || _u.name || 'CreatorX User');
+  const _handle = _u.instagram ? '@' + htmlEsc(_u.instagram) : '@' + htmlEsc((_u.name || 'user').toLowerCase().replace(/[^a-z0-9._]/g,''));
+  const _bio = htmlEsc(_u.bio || '');
+  const _website = _u.website ? htmlEsc(_u.website) : '';
+  const _hasPic = !!(session?.profilePicData || ladeBild(String(myUid),'profilepic'));
+  const _picSrc = _hasPic ? '/appbild/' + myUid + '/profilepic' : (_u.instagram ? 'https://unavatar.io/instagram/' + encodeURIComponent(_u.instagram) : '');
+  const _initial = htmlEsc((_u.spitzname || _u.name || 'C').slice(0,1).toUpperCase());
+  const _xp = Number(_u.xp || 0);
+  const _diamonds = Number(_u.diamonds || 0);
+  const _posts = Object.values(d.links||{}).filter(l => String(l.user_id) === String(myUid)).length;
+  return '<div class="pf-hero">' +
+    '<div class="pf-top">' +
+      '<div class="pf-avatar-wrap">' +
+        '<div class="pf-avatar" onclick="pfOpenEditAvatar()">' +
+          (_picSrc ? '<img src="' + _picSrc + '" alt="" loading="eager">' : _initial) +
+        '</div>' +
+        '<button class="pf-avatar-edit" onclick="pfOpenEditAvatar();return false" aria-label="Profilbild ändern">📷</button>' +
+      '</div>' +
+      '<div class="pf-stats">' +
+        '<div class="pf-stat"><div class="pf-stat-num">' + _posts + '</div><div class="pf-stat-lbl">Posts</div></div>' +
+        '<div class="pf-stat"><div class="pf-stat-num">' + _xp.toLocaleString('de-DE') + '</div><div class="pf-stat-lbl">XP</div></div>' +
+        '<div class="pf-stat"><div class="pf-stat-num">' + _diamonds + ' 💎</div><div class="pf-stat-lbl">Diamanten</div></div>' +
+      '</div>' +
+    '</div>' +
+    '<div class="pf-name-row">' +
+      '<div class="pf-name">' + _name + '</div>' +
+      '<div class="pf-handle">' + _handle + '</div>' +
+    '</div>' +
+    '<div class="pf-bio">' + _bio + '</div>' +
+    (_website ? '<div class="pf-link-row">🔗 <a href="' + safeUrl(_website) + '" target="_blank" rel="noopener noreferrer">' + _website.replace(/^https?:\/\//,'') + '</a></div>' : '') +
+    '<div class="pf-actions">' +
+      '<button class="pf-action-btn primary" onclick="pfOpenEditProfile();return false">✏️ Profil bearbeiten</button>' +
+      '<a class="pf-action-btn" href="/profil/' + myUid + '">👤 Profil ansehen</a>' +
+    '</div>' +
+  '</div>';
+})()}
+
+<!-- ── Edit-Sheet (slide-up modal) ── -->
+<div class="pf-modal" id="pfModal" onclick="if(event.target===this)pfCloseModal()">
+  <div class="pf-sheet">
+    <div class="pf-sheet-hdr">
+      <div class="pf-sheet-title">Profil bearbeiten</div>
+      <button class="pf-sheet-close" onclick="pfCloseModal()">✕</button>
     </div>
-    <div style="flex:1">
-      <label style="display:inline-flex;align-items:center;gap:8px;background:var(--bg4);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;cursor:pointer;font-size:13px">
-        📷 Foto hochladen
-        <input type="file" accept="image/*" style="display:none" onchange="uploadProfilePic(this)">
-      </label>
-    </div>
-  </div>
-</div>
-<div style="padding:16px;border-bottom:1px solid var(--border2)">
-  <div class="form-label">Bio</div>
-  <textarea class="form-input" id="inp-bio" placeholder="Schreib etwas über dich..." maxlength="100">${u.bio||''}</textarea>
-  <div class="form-hint">${u.bio?.length||0}/100</div>
-</div>
-<div style="padding:16px;border-bottom:1px solid var(--border2)">
-  <div class="form-label">Spitzname</div>
-  <input type="text" class="form-input" id="inp-spitzname" placeholder="Dein Spitzname" maxlength="30" value="${u.spitzname||''}">
-</div>
-<div style="padding:16px;border-bottom:1px solid var(--border2)">
-  <div class="form-label">🔐 Account-Login <span style="font-size:10px;color:var(--muted);font-weight:500">(Email + Passwort)</span></div>
-  ${(() => {
-    const hasEmail = !!u.email;
-    const hasPw = !!u.password_hash;
-    const hasPending = u.pendingEmail && u.pendingEmail !== u.email;
-    const isLocked = hasEmail && hasPw && (!session || !session.accountUnlockUntil || Number(session.accountUnlockUntil) < Date.now());
-    if (isLocked) {
-      return `<div style="background:var(--bh,var(--bg3));border:1px solid var(--border2);border-radius:14px;padding:14px;margin-top:6px">
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px"><div style="font-size:24px">🔒</div><div><div style="font-weight:800;font-size:14px;color:var(--text)">Account-Login gesperrt</div><div style="font-size:12px;color:var(--muted);margin-top:2px">Email + Passwort sind gesetzt. Änderungen brauchen eine Bestätigung per Mail.</div></div></div>
-        <div style="display:flex;flex-direction:column;gap:6px;font-size:13px;margin-bottom:12px">
-          <div style="display:flex;align-items:center;gap:8px;color:var(--text)"><span style="color:var(--muted);font-weight:600;min-width:90px">📧 Email:</span><span style="font-family:JetBrains Mono,monospace;font-size:12.5px">${htmlEsc(u.email)}</span><span style="color:#22c55e;font-size:11px;margin-left:auto">✓ bestätigt</span></div>
-          <div style="display:flex;align-items:center;gap:8px;color:var(--text)"><span style="color:var(--muted);font-weight:600;min-width:90px">🔐 Passwort:</span><span style="font-family:JetBrains Mono,monospace;font-size:12.5px">••••••••</span><span style="color:#22c55e;font-size:11px;margin-left:auto">✓ gesetzt</span></div>
+    <div class="pf-sheet-body">
+      <div class="pf-field">
+        <label class="pf-field-label">Spitzname</label>
+        <input class="pf-input" id="pfName" maxlength="30" placeholder="Dein Anzeigename" value="${htmlEsc(u.spitzname || u.name || '')}" oninput="pfUpdateCounter('pfName','pfNameCnt',30)">
+        <div class="pf-counter" id="pfNameCnt"></div>
+      </div>
+      <div class="pf-field">
+        <label class="pf-field-label">Bio</label>
+        <textarea class="pf-input pf-textarea" id="pfBio" maxlength="100" placeholder="Was machst du? (max 100 Zeichen)" oninput="pfUpdateCounter('pfBio','pfBioCnt',100)">${htmlEsc(u.bio || '')}</textarea>
+        <div class="pf-counter" id="pfBioCnt"></div>
+      </div>
+      <div class="pf-field">
+        <label class="pf-field-label">Instagram-Handle</label>
+        <div class="pf-input-with-icon">
+          <span class="pf-input-icon">@</span>
+          <input class="pf-input" id="pfInsta" maxlength="30" placeholder="dein_handle (ohne @)" value="${htmlEsc(u.instagram || '')}">
         </div>
-        <button class="btn btn-outline btn-full" id="ep-request-change-btn" onclick="requestAccountChange()" style="font-size:13px;display:flex">📨 Änderung anfragen</button>
-        <div id="ep-request-msg" style="font-size:11.5px;color:var(--muted);margin-top:8px;line-height:1.4">Klick → wir senden einen Bestätigungs-Link an deine Email. 30 Min nach Klick kannst du Email/Passwort ändern.</div>
-      </div>`;
-    }
-    // Edit-State (kein Lock oder Unlock-Window aktiv)
-    return `<div style="display:flex;flex-direction:column;gap:14px">
-      <div>
-        <div style="font-size:11.5px;color:var(--muted);font-weight:700;margin-bottom:6px">📧 EMAIL</div>
-        <input type="email" class="form-input" id="inp-email" placeholder="deine@email.de" maxlength="200" value="${u.email||u.pendingEmail||''}" autocapitalize="none" spellcheck="false">
-        ${hasPending ? `<div style="margin-top:8px;padding:9px 11px;background:rgba(245,158,11,0.10);border:1px solid rgba(245,158,11,0.30);border-radius:10px;font-size:11.5px;color:#f59e0b;line-height:1.45"><b>⏳ Bestätigung ausstehend.</b> Bestätigungs-Link an <b>${htmlEsc(u.pendingEmail)}</b> gesendet — schau ins Postfach (auch Spam).</div>` : ''}
-        ${hasEmail ? `<div style="margin-top:8px;padding:9px 11px;background:rgba(34,197,94,0.10);border:1px solid rgba(34,197,94,0.25);border-radius:10px;font-size:11.5px;color:#22c55e;line-height:1.45"><b>✓ Email bestätigt.</b></div>` : ''}
       </div>
-      <div>
-        <div style="font-size:11.5px;color:var(--muted);font-weight:700;margin-bottom:6px">🔐 PASSWORT ${hasPw ? '<span style="color:#22c55e;font-weight:600;margin-left:4px">(gesetzt)</span>' : '<span style="color:var(--muted-2);font-weight:500;margin-left:4px">(optional)</span>'}</div>
-        <input type="password" class="form-input" id="inp-password" placeholder="${hasPw ? 'Neues Passwort (leer = unverändert)' : 'Min. 6 Zeichen'}" minlength="6" maxlength="200" autocomplete="new-password">
-        <div style="font-size:11.5px;color:var(--muted);margin-top:6px;line-height:1.45">Mit Passwort kannst du dich direkt einloggen — ohne Magic-Link. Min. 6 Zeichen.</div>
+      <div class="pf-field">
+        <label class="pf-field-label">Website</label>
+        <input class="pf-input" id="pfWebsite" type="url" maxlength="100" placeholder="https://..." value="${htmlEsc(u.website || '')}">
       </div>
-      ${hasEmail && hasPw ? `<div style="padding:10px 12px;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.25);border-radius:10px;font-size:11.5px;color:#22c55e;line-height:1.5"><b>✓ Edit-Window aktiv (30 Min).</b> Speichere deine Änderungen jetzt — danach wird der Block wieder gesperrt.</div>` : ''}
-    </div>`;
-  })()}
-</div>
-<div style="padding:16px;border-bottom:1px solid var(--border2)">
-  <div class="form-label">🔑 Eigener App-Code <span style="font-size:10px;color:var(--muted);font-weight:500">(für /mycode &amp; Login-Link)</span></div>
-  <div style="position:relative">
-    <input type="text" class="form-input" id="inp-app-code" placeholder="z.B. dein-name" maxlength="30" value="${(u.appCode||'')}" autocapitalize="none" spellcheck="false" style="font-family:JetBrains Mono,monospace;letter-spacing:0.5px">
-  </div>
-  <div class="form-hint">4–30 Zeichen, nur a–z, 0–9, _ oder -. Eindeutig. Wird auch für deinen persönlichen Login-Link benutzt.</div>
-  <button class="btn btn-outline btn-full" style="margin-top:8px;font-size:13px" onclick="saveAppCode()">🔑 Code speichern</button>
-  <div id="app-code-msg" style="margin-top:6px;font-size:11.5px;line-height:1.4"></div>
-</div>
-<div style="padding:16px;border-bottom:1px solid var(--border2)">
-  <div class="form-label">Instagram</div>
-  <div style="position:relative">
-    <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:14px;pointer-events:none">@</span>
-    <input type="text" class="form-input" id="inp-instagram" placeholder="dein.instagram" maxlength="50" value="${(u.instagram||'').replace(/^@/,'')}" style="padding-left:30px" autocapitalize="none" spellcheck="false">
-  </div>
-  <div class="form-hint">Wird als Profilbild & Verlinkung genutzt</div>
-</div>
-<div style="padding:16px;border-bottom:1px solid var(--border2)">
-  <div class="form-label">Nische</div>
-  <input type="text" class="form-input" id="inp-nische" placeholder="z.B. Fitness, Food, Travel..." maxlength="50" value="${u.nische||''}">
-</div>
-<div style="padding:16px;border-bottom:1px solid var(--border2)">
-  <div class="form-label">Persönlicher Link</div>
-  <input type="url" class="form-input" id="inp-website" placeholder="https://deine-website.de" maxlength="100" value="${u.website||''}">
-</div>
-<div style="padding:16px;border-bottom:1px solid var(--border2)">
-  <div class="form-label">📌 Pinned Reel Link</div>
-  <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Dieser Reel wird auf der Explore-Seite bei deiner Creator-Karte angezeigt.</div>
-  <input type="url" class="form-input" id="inp-pinned-link" placeholder="https://www.instagram.com/reel/..." value="${currentPinnedLink}">
-  ${myRecentLinks.length ? `
-  <div style="margin-top:8px">
-    <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Letzte Links:</div>
-    <div style="display:flex;flex-direction:column;gap:4px">
-      ${myRecentLinks.map(l=>`<button onclick="document.getElementById('inp-pinned-link').value='${l.replace(/'/g,"\\'")}" style="background:var(--bg4);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:5px 10px;font-size:11px;text-align:left;cursor:pointer;font-family:var(--font);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${l.replace('https://www.instagram.com/','ig.com/')}</button>`).join('')}
+      <div class="pf-field">
+        <label class="pf-field-label">Nische (optional)</label>
+        <input class="pf-input" id="pfNische" maxlength="50" placeholder="z.B. Fitness, Travel, Mode" value="${htmlEsc(u.nische || '')}">
+      </div>
+      <div class="pf-field">
+        <label class="pf-field-label">📌 Pinned Reel-Link</label>
+        <input class="pf-input" id="pfPinnedLink" type="url" maxlength="200" placeholder="https://instagram.com/reel/..." value="${htmlEsc(currentPinnedLink || '')}">
+        <div class="pf-counter" style="text-align:left;color:var(--muted)">${_pinDaysLeft > 0 && !_isAdminPinUI ? `⏳ Änderung erst in ${_pinDaysLeft} Tag${_pinDaysLeft===1?'':'en'} möglich` : '✓ Änderbar (1× pro 30 Tage)'}</div>
+      </div>
+      <div class="pf-field">
+        <label class="pf-field-label">🎨 Banner</label>
+        <label style="display:flex;align-items:center;gap:10px;background:var(--bg4);border:1px dashed var(--border);border-radius:10px;padding:11px;cursor:pointer;font-size:13px;font-weight:500;margin-bottom:10px">
+          <span style="font-size:20px">📷</span><span>Eigenes Foto hochladen</span>
+          <input type="file" accept="image/*" style="display:none" onchange="uploadBanner(this)">
+        </label>
+        <div class="gradient-grid">
+          ${gradients.map((g)=>`<div class="gradient-opt ${(u.banner||gradients[0])===g?'selected':''}" style="background:${g}" onclick="selectBanner('${g}',this)"></div>`).join('')}
+        </div>
+        ${(() => {
+            const ownedBanners = BANNER_ITEMS.filter(b => myInventory.includes(b.id));
+            if (!ownedBanners.length) return `<div style="font-size:11px;color:var(--muted);margin-top:10px">🛍️ Premium-Banner im Shop kaufen — je 💎 1 Diamant</div>`;
+            return `<div style="margin-top:12px"><div style="font-size:11px;color:var(--muted);margin-bottom:6px">🛍️ Gekaufte Premium-Banner</div><div class="gradient-grid">${ownedBanners.map(b=>`<div class="gradient-opt ${(u.banner||'')===b.gradient?'selected':''}" style="background:${b.gradient}" title="${b.name}" onclick="selectBanner('${b.gradient}',this)"></div>`).join('')}</div></div>`;
+        })()}
+      </div>
+      <div class="pf-field">
+        <label class="pf-field-label">🎨 Akzentfarbe</label>
+        <div class="color-grid">
+          ${accentColors.map(c=>`<div class="color-opt ${(u.accentColor||'#ff6b6b')===c?'selected':''}" style="background:${c}" onclick="selectAccent('${c}',this)">${(u.accentColor||'#ff6b6b')===c?'✓':''}</div>`).join('')}
+        </div>
+      </div>
+      <div class="pf-field">
+        <div class="setting-row" style="padding:0;display:flex;align-items:center;justify-content:space-between">
+          <div><div class="pf-field-label" style="margin:0">🌙 Dark Mode</div></div>
+          <button class="toggle ${(session?.theme||'light')==='dark'?'on':''}" id="theme-toggle" onclick="toggleTheme(this)"></button>
+        </div>
+      </div>
     </div>
-  </div>` : ''}
-  <button class="btn btn-outline btn-full" style="margin-top:10px;font-size:13px" onclick="savePinnedLink()" ${(_pinDaysLeft>0 && !_isAdminPinUI)?'disabled':''}>📌 Reel anpinnen</button>
-  ${(_pinDaysLeft > 0 && !_isAdminPinUI) ? `<div style="margin-top:8px;padding:8px 12px;background:rgba(245,158,11,0.10);border:1px solid rgba(245,158,11,0.25);border-radius:10px;font-size:11.5px;color:#f59e0b;font-weight:600;line-height:1.45">⏳ Du kannst deinen Pin nur 1× pro Monat ändern. Noch <b>${_pinDaysLeft}</b> Tag${_pinDaysLeft===1?'':'e'} bis zur nächsten Änderung.</div>` : ''}
-  ${currentPinnedLink ? `<button onclick="removePinnedLink()" ${(_pinDaysLeft>0 && !_isAdminPinUI)?'disabled':''} style="background:none;border:none;color:var(--muted);font-size:11px;cursor:${(_pinDaysLeft>0 && !_isAdminPinUI)?'not-allowed':'pointer'};margin-top:6px;display:block;${(_pinDaysLeft>0 && !_isAdminPinUI)?'opacity:0.5':''}">🗑️ Pin entfernen</button>` : ''}
-</div>
-<div style="padding:16px;border-bottom:1px solid var(--border2)">
-  <div class="form-label">Banner</div>
-  <div style="margin-bottom:12px">
-    <label style="display:flex;align-items:center;gap:10px;background:var(--bg4);border:1px dashed var(--border);border-radius:var(--radius-sm);padding:12px;cursor:pointer;font-size:13px;font-weight:500">
-      <span style="font-size:20px">📷</span><span>Eigenes Foto hochladen</span>
-      <input type="file" accept="image/*" style="display:none" onchange="uploadBanner(this)">
-    </label>
-  </div>
-  <div class="gradient-grid">
-    ${gradients.map((g)=>`<div class="gradient-opt ${(u.banner||gradients[0])===g?'selected':''}" style="background:${g}" onclick="selectBanner('${g}',this)"></div>`).join('')}
-  </div>
-  ${(() => {
-      const ownedBanners = BANNER_ITEMS.filter(b => myInventory.includes(b.id));
-      if (!ownedBanners.length) return `<div style="font-size:11px;color:var(--muted);margin-top:10px">🛍️ Premium-Banner im Shop kaufen — je 💎 1 Diamant</div>`;
-      return `<div style="margin-top:12px"><div style="font-size:11px;color:var(--muted);margin-bottom:6px">🛍️ Gekaufte Premium-Banner</div><div class="gradient-grid">${ownedBanners.map(b=>`<div class="gradient-opt ${(u.banner||'')===b.gradient?'selected':''}" style="background:${b.gradient}" title="${b.name}" onclick="selectBanner('${b.gradient}',this)"></div>`).join('')}</div></div>`;
-  })()}
-</div>
-<div style="padding:16px;border-bottom:1px solid var(--border2)">
-  <div class="form-label">Akzentfarbe</div>
-  <div class="color-grid">
-    ${accentColors.map(c=>`<div class="color-opt ${(u.accentColor||'#ff6b6b')===c?'selected':''}" style="background:${c}" onclick="selectAccent('${c}',this)">${(u.accentColor||'#ff6b6b')===c?'✓':''}</div>`).join('')}
+    <div class="pf-sheet-actions">
+      <button class="pf-cancel-btn" onclick="pfCloseModal()">Abbrechen</button>
+      <button class="pf-save-btn" id="pfSaveBtn" onclick="pfSaveProfile()">💾 Speichern</button>
+    </div>
   </div>
 </div>
-<div style="padding:16px;border-bottom:1px solid var(--border2)">
-  <div class="setting-row" style="padding:0">
-    <div><div class="setting-label">Dark Mode</div></div>
-    <button class="toggle ${(session?.theme||'light')==='dark'?'on':''}" id="theme-toggle" onclick="toggleTheme(this)"></button>
-  </div>
+
+<!-- ── Avatar-Upload Hidden Input ── -->
+<input type="file" id="pfAvatarFile" accept="image/*" style="display:none" onchange="pfHandleAvatarFile(this)">
+
+<div class="pf-toast" id="pfToast"></div>
+
+<script>
+function pfOpenEditProfile(){ document.getElementById('pfModal').classList.add('open'); document.body.style.overflow='hidden'; ['pfName','pfBio'].forEach(id=>{const e=document.getElementById(id);if(e)pfUpdateCounter(id,id.replace('pf','pf')+'Cnt',e.maxLength);}); }
+function pfCloseModal(){ document.getElementById('pfModal').classList.remove('open'); document.body.style.overflow=''; }
+function pfOpenEditAvatar(){ document.getElementById('pfAvatarFile').click(); }
+function pfUpdateCounter(inputId, counterId, max){
+  const inp = document.getElementById(inputId);
+  const cnt = document.getElementById(counterId);
+  if (!inp || !cnt) return;
+  const n = inp.value.length;
+  cnt.textContent = n + ' / ' + max;
+  cnt.className = 'pf-counter' + (n > max * 0.9 ? (n >= max ? ' over' : ' warn') : '');
+}
+function pfToast(msg, isErr){
+  const t = document.getElementById('pfToast');
+  if (!t) return;
+  t.textContent = msg;
+  t.className = 'pf-toast show' + (isErr ? ' err' : '');
+  setTimeout(()=>{ t.className = 'pf-toast' + (isErr ? ' err' : ''); }, 2500);
+}
+async function pfSaveProfile(){
+  const btn = document.getElementById('pfSaveBtn');
+  btn.disabled = true; btn.textContent = 'Speichere…';
+  const payload = {
+    spitzname: document.getElementById('pfName').value.trim().slice(0,30),
+    bio: document.getElementById('pfBio').value.trim().slice(0,100),
+    instagram: document.getElementById('pfInsta').value.trim().replace(/^@/,'').slice(0,30),
+    website: document.getElementById('pfWebsite').value.trim().slice(0,100),
+    nische: document.getElementById('pfNische').value.trim().slice(0,50),
+    banner: (typeof selectedBanner !== 'undefined') ? selectedBanner : undefined,
+    accentColor: (typeof selectedAccent !== 'undefined') ? selectedAccent : undefined,
+  };
+  const pinnedEl = document.getElementById('pfPinnedLink');
+  const pinnedVal = pinnedEl ? pinnedEl.value.trim() : null;
+  try {
+    const r = await fetch('/api/save-profile', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
+    const j = await r.json();
+    if (!j.ok) {
+      pfToast('❌ ' + (j.error || 'Fehler'), true);
+      btn.disabled = false; btn.textContent = '💾 Speichern';
+      return;
+    }
+    // Pinned-Reel-Link separat speichern wenn geändert (eigener Rate-Limit-Check)
+    if (pinnedVal !== null) {
+      try {
+        const r2 = await fetch('/api/set-pinned-link', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({url: pinnedVal})});
+        const j2 = await r2.json();
+        if (!j2.ok && j2.error && !/unchanged|same|gleich/i.test(j2.error)) {
+          pfToast('⚠️ Profil OK, Pinned-Reel: ' + j2.error, true);
+          setTimeout(()=>location.reload(), 1800);
+          return;
+        }
+      } catch(e) {}
+    }
+    pfToast('✅ Profil aktualisiert');
+    setTimeout(()=>location.reload(), 800);
+  } catch(e) {
+    pfToast('❌ Netzwerk-Fehler', true);
+    btn.disabled = false; btn.textContent = '💾 Speichern';
+  }
+}
+async function pfHandleAvatarFile(input){
+  const f = input.files && input.files[0];
+  if (!f) return;
+  if (!/^image\\//.test(f.type)) { pfToast('❌ Nur Bilder erlaubt', true); return; }
+  if (f.size > 4 * 1024 * 1024) { pfToast('❌ Max 4MB', true); return; }
+  // Client-side Resize auf 512px für Profilbild
+  const reader = new FileReader();
+  reader.onload = async e => {
+    const img = new Image();
+    img.onload = async () => {
+      const max = 512;
+      const scale = Math.min(1, max / Math.max(img.width, img.height));
+      const w = Math.round(img.width * scale);
+      const h = Math.round(img.height * scale);
+      const cnv = document.createElement('canvas');
+      cnv.width = w; cnv.height = h;
+      cnv.getContext('2d').drawImage(img, 0, 0, w, h);
+      const dataUrl = cnv.toDataURL('image/jpeg', 0.85);
+      pfToast('📤 Lade hoch…');
+      try {
+        const r = await fetch('/api/upload-profilepic', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({imageData: dataUrl})});
+        const j = await r.json();
+        if (j.ok) { pfToast('✅ Profilbild aktualisiert'); setTimeout(()=>location.reload(), 800); }
+        else pfToast('❌ ' + (j.error || 'Upload fehlgeschlagen'), true);
+      } catch(e) { pfToast('❌ Netzwerk-Fehler', true); }
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(f);
+}
+</script>
+
+<div class="set-hub-grid">
+  <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);padding:4px 0 6px">Schnellzugriff</div>
+  <a href="/einstellungen/account" class="set-hub-card">
+    <div class="set-hub-icon" style="background:linear-gradient(135deg,#4dabf7,#1971c2)">🔐</div>
+    <div class="set-hub-content"><div class="set-hub-title">Account</div><div class="set-hub-sub">Email · Passwort · Telefon</div></div>
+    <div class="set-hub-arrow">›</div>
+  </a>
+  <a href="/einstellungen/privacy" class="set-hub-card">
+    <div class="set-hub-icon" style="background:linear-gradient(135deg,#9775fa,#6741d9)">🔒</div>
+    <div class="set-hub-content"><div class="set-hub-title">Privatsphäre</div><div class="set-hub-sub">Blockierte Nutzer · Sichtbarkeit</div></div>
+    <div class="set-hub-arrow">›</div>
+  </a>
+  <a href="/einstellungen/notifications" class="set-hub-card">
+    <div class="set-hub-icon" style="background:linear-gradient(135deg,#ff8787,#e03131)">🔔</div>
+    <div class="set-hub-content"><div class="set-hub-title">Benachrichtigungen</div><div class="set-hub-sub">Push · In-App · Email</div></div>
+    <div class="set-hub-arrow">›</div>
+  </a>
+  <a href="/einstellungen/sicherheit" class="set-hub-card">
+    <div class="set-hub-icon" style="background:linear-gradient(135deg,#51cf66,#2f9e44)">🛡️</div>
+    <div class="set-hub-content"><div class="set-hub-title">Sicherheit & Sessions</div><div class="set-hub-sub">Aktive Geräte · Logout</div></div>
+    <div class="set-hub-arrow">›</div>
+  </a>
+  <a href="/einstellungen/pro" class="set-hub-card">
+    <div class="set-hub-icon" style="background:linear-gradient(135deg,#f5d76e,#d4af37 50%,#8b6914);color:#000">⭐</div>
+    <div class="set-hub-content"><div class="set-hub-title">Pro-Features <span style="font-size:9.5px;background:linear-gradient(135deg,#f5d76e,#d4af37);color:#000;padding:2px 6px;border-radius:6px;font-weight:800;letter-spacing:0.5px;margin-left:4px">SOON</span></div><div class="set-hub-sub">Analytics · Scheduler · API · mehr</div></div>
+    <div class="set-hub-arrow">›</div>
+  </a>
+  ${adminIds.includes(Number(myUid)) ? `
+  <a href="/einstellungen/admin" class="set-hub-card" style="background:linear-gradient(135deg,rgba(245,215,110,0.10),rgba(212,175,55,0.04));border-color:rgba(212,175,55,0.40)">
+    <div class="set-hub-icon" style="background:linear-gradient(135deg,#d4af37,#8b6914);color:#000">🛡️</div>
+    <div class="set-hub-content"><div class="set-hub-title">Admin-Tools <span style="font-size:9.5px;background:rgba(212,175,55,0.20);color:#d4af37;padding:2px 6px;border-radius:6px;font-weight:800;letter-spacing:0.5px;margin-left:4px;border:1px solid rgba(212,175,55,0.30)">ADMIN</span></div><div class="set-hub-sub">Live-Tour · Vorschauen · FE-Thread · Dashboard</div></div>
+    <div class="set-hub-arrow">›</div>
+  </a>` : ''}
 </div>
-<div style="padding:16px;border-bottom:1px solid var(--border2)">
-  <button class="btn btn-primary btn-full" onclick="saveProfile()">💾 Speichern</button>
-</div>
+<!-- Profilbild / Bio / Spitzname / Banner / Akzentfarbe / Dark Mode → im Hero-Edit-Sheet (Profil bearbeiten) -->
+<!-- Email / Passwort / App-Code → /einstellungen/account -->
+<!-- Pinned-Reel-Link → Hero-Edit-Sheet (pfPinnedLink) -->
+
 ${myInventory.length > 0 ? `
 <div style="padding:16px;border-bottom:1px solid var(--border2)">
   <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">🎒 Meine Items</div>
@@ -13826,40 +18560,63 @@ ${myInventory.length > 0 ? `
     }).join('')}
   </div>
 </div>` : ''}
-${adminIds.includes(Number(myUid)) ? `
-<div style="padding:16px;border-bottom:1px solid var(--border2)">
-  <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">🎬 Live-Tour (Admin)</div>
-  <button onclick="if(window.ftStart)window.ftStart();else alert('Tour-Script nicht geladen — Page reload bitte');" class="btn btn-primary btn-full" style="margin-bottom:8px;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;box-shadow:0 6px 18px rgba(212,175,55,0.4);font-weight:800;display:flex;align-items:center;justify-content:center;gap:8px">🎬 Komplette User-Journey-Tour starten</button>
-  <div style="font-size:11.5px;color:var(--muted);line-height:1.4;margin-top:6px">10-Step Walkthrough: Landing → Telegram → Email → Login → Insta → Password → Feed → Einstellungen → Profil. Highlighted-Spot + Beschreibung pro Stage.</div>
-</div>
-<div style="padding:16px;border-bottom:1px solid var(--border2)">
-  <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">👀 Vorschauen</div>
-  <a href="/?preview=1" target="_blank" class="btn btn-outline btn-full" style="margin-bottom:8px;display:flex">🔐 Login-Page (App)</a>
-  <a href="/willkommen" target="_blank" class="btn btn-outline btn-full" style="margin-bottom:8px;display:flex">🌐 Public Landing-Page</a>
-  <a href="/onboarding-instagram?preview=1" target="_blank" class="btn btn-outline btn-full" style="margin-bottom:8px;display:flex">🚀 Email-Onboarding (3-Step Wizard)</a>
-  <a href="/feed?tour=1" target="_blank" class="btn btn-outline btn-full" style="margin-bottom:8px;display:flex">🎯 In-App Tour (Pfeile)</a>
-  <a href="/preview/email-login" target="_blank" class="btn btn-outline btn-full" style="margin-bottom:8px;display:flex">📧 Magic-Link Email</a>
-</div>
-<div style="padding:16px;border-bottom:1px solid var(--border2)">
-  <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">⚙️ Admin Tools</div>
-  <button onclick="createFeThread(this)" class="btn btn-outline btn-full" style="margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:8px">⭐ Full Engagement Thread erstellen</button>
-  <button onclick="announceFeThread(this)" class="btn btn-outline btn-full" style="margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:8px">📢 Ankündigung in FE-Thread senden</button>
-  <div id="fethread-result" style="display:none;font-size:12px;padding:8px;border-radius:8px;margin-top:4px"></div>
-</div>` : ''}
+<!-- Admin-Sections wurden nach /einstellungen/admin verschoben (siehe Admin-Card oben im Hub) -->
 <div style="padding:16px;border-bottom:1px solid var(--border2)">
   <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">🎯 App-Tour</div>
   <div style="font-size:12px;color:var(--muted);margin-bottom:10px">${u.appBriefingSeenV2 ? 'Du hast die Tour schon einmal gesehen.' : 'Du hast die Tour noch nicht gesehen — sie startet beim nächsten Feed-Open automatisch.'}</div>
   <a href="/feed?tour=1" class="btn btn-outline btn-full" style="display:flex;align-items:center;justify-content:center;gap:8px">🎯 Tour erneut anschauen</a>
 </div>
-<div style="padding:16px;border-bottom:1px solid var(--border2)">
-  <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">🔐 Passwort</div>
-  <div style="font-size:12px;color:var(--muted);margin-bottom:10px">${u.password_hash ? 'Du hast ein Passwort gesetzt — du kannst dich auch ohne Magic-Link einloggen.' : 'Setz ein Passwort, um dich nächstes Mal direkt mit Email + Passwort einzuloggen (ohne Magic-Link).'}</div>
-  <a href="/set-password" class="btn btn-outline btn-full" style="display:flex;align-items:center;justify-content:center;gap:8px">${u.password_hash ? '🔄 Passwort ändern' : '🔐 Passwort setzen'}</a>
-  ${u.password_hash ? '<button onclick="removePw()" class="btn btn-outline btn-full" style="margin-top:8px;color:#ef4444;display:flex;align-items:center;justify-content:center;gap:8px">🗑️ Passwort entfernen</button>' : ''}
-</div>
+<!-- Passwort-Section entfernt — Duplikat. Email/Passwort sind jetzt in /einstellungen/account -->
 <div style="padding:16px">
   <a href="/logout" class="btn btn-outline btn-full" style="color:var(--accent)">🚪 Ausloggen</a>
 </div>
+<div style="padding:0 16px 14px;display:flex;flex-direction:column;gap:6px;font-size:12px">
+  <div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin:14px 0 4px">Rechtliches</div>
+  <a href="/datenschutz" style="color:var(--muted);text-decoration:none;padding:8px 0;border-bottom:1px solid var(--border2)">🔒 Datenschutzerklärung</a>
+  <a href="/agb" style="color:var(--muted);text-decoration:none;padding:8px 0;border-bottom:1px solid var(--border2)">📜 Nutzungsbedingungen (AGB)</a>
+  <a href="/impressum" style="color:var(--muted);text-decoration:none;padding:8px 0;border-bottom:1px solid var(--border2)">ℹ️ Impressum</a>
+  <a href="/api/datenexport" style="color:var(--muted);text-decoration:none;padding:8px 0;border-bottom:1px solid var(--border2)">📦 Meine Daten exportieren (DSGVO)</a>
+  <button onclick="loadBlockedUsers()" id="show-blocked-btn" style="background:none;border:none;color:var(--muted);text-align:left;padding:8px 0;font-size:12px;cursor:pointer;font-family:inherit;border-bottom:1px solid var(--border2)">🚫 Blockierte Nutzer verwalten</button>
+  <div id="blocked-users-list" style="display:none;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;margin:6px 0;padding:8px;font-size:12.5px"></div>
+  <button onclick="deleteAccountDsgvo()" id="delete-account" style="background:none;border:none;color:#ef4444;text-align:left;padding:8px 0;font-size:12px;cursor:pointer;font-family:inherit">🗑️ Account dauerhaft löschen</button>
+</div>
+<script>
+async function loadBlockedUsers(){
+  const box=document.getElementById('blocked-users-list');
+  if(box.style.display==='block'){box.style.display='none';return;}
+  box.style.display='block';box.innerHTML='<div style="padding:8px;color:var(--muted)">Lädt…</div>';
+  try{
+    const r=await fetch('/api/blocked-users');
+    const j=await r.json();
+    if(!j||!j.ok){box.innerHTML='<div style="padding:8px;color:#ef4444">❌ '+(j&&j.error||'Fehler beim Laden')+'</div>';return;}
+    if(!j.blocked||!j.blocked.length){box.innerHTML='<div style="padding:8px;color:var(--muted)">Du hast aktuell niemanden blockiert.</div>';return;}
+    box.innerHTML=j.blocked.map(function(uid){
+      return '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 4px;border-top:1px solid var(--border2)"><a href="/profil/'+uid+'" style="color:var(--text);text-decoration:none;font-weight:600">User #'+uid+'</a><button onclick="unblockUser(\\''+uid+'\\',this)" style="background:rgba(34,197,94,0.10);border:1px solid rgba(34,197,94,0.35);color:#22c55e;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer">Aufheben</button></div>';
+    }).join('');
+  }catch(e){box.innerHTML='<div style="padding:8px;color:#ef4444">❌ Netzwerk-Fehler</div>';}
+}
+async function unblockUser(uid,btn){
+  btn.disabled=true;btn.textContent='…';
+  try{
+    const r=await fetch('/api/unblock-user',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({targetUid:uid})});
+    const j=await r.json();
+    if(j&&j.ok){btn.textContent='✓';setTimeout(loadBlockedUsers,300);loadBlockedUsers();}
+    else{btn.disabled=false;btn.textContent='Aufheben';alert('❌ '+(j&&j.error||'Fehler'));}
+  }catch(e){btn.disabled=false;btn.textContent='Aufheben';alert('❌ Netzwerk-Fehler');}
+}
+async function deleteAccountDsgvo(){
+  if(!confirm('⚠️ Account dauerhaft löschen?\\n\\nDies entfernt:\\n• Dein Profil + alle Sub-Accounts\\n• Alle deine Posts + Likes + Kommentare\\n• Alle XP, Diamanten, Items\\n• Notifications + Chats\\n\\nDie Löschung kann NICHT rückgängig gemacht werden. Sie erfolgt innerhalb von 30 Tagen (DSGVO Art. 17).')) return;
+  if(!confirm('Wirklich? Alle Daten gehen für immer verloren.')) return;
+  const code = prompt('Tippe LÖSCHEN um zu bestätigen:');
+  if(code !== 'LÖSCHEN'){ alert('Abgebrochen.'); return; }
+  try{
+    const r = await fetch('/api/delete-my-account', {method:'POST'});
+    const j = await r.json();
+    if(j.ok){ alert('✅ Account-Löschung gestartet. Du wirst jetzt ausgeloggt.'); location.href='/logout'; }
+    else{ alert('❌ '+(j.error||'Fehler')); }
+  }catch(e){ alert('❌ Netzwerk: '+e.message); }
+}
+</script>
 <script>
 async function createFeThread(btn){
   btn.disabled=true;btn.textContent='⏳ Erstelle Thread...';
@@ -13945,19 +18702,24 @@ async function uploadBanner(input) {
     reader.readAsDataURL(file);
 }
 async function saveProfile() {
-    const bio = document.getElementById('inp-bio')?.value || '';
-    const spitzname = document.getElementById('inp-spitzname')?.value || '';
+    // Bio/Spitzname/Insta/Nische/Website werden jetzt im Hero-Edit-Sheet
+    // gespeichert (pfSaveProfile). saveProfile schickt diese Felder NUR wenn
+    // die Inputs noch existieren — sonst überschreibt sie sonst die echten
+    // Werte mit leer.
     const themeToggle = document.getElementById('theme-toggle');
     const theme = themeToggle?.classList.contains('on') ? 'dark' : 'light';
     const btn = document.querySelector('[onclick="saveProfile()"]');
     if(btn) { btn.textContent = '⏳ Speichern...'; btn.disabled = true; }
     try {
-        const nische = document.getElementById('inp-nische')?.value?.trim()||'';
-        const website = document.getElementById('inp-website')?.value?.trim()||'';
-        const instagram = (document.getElementById('inp-instagram')?.value||'').replace(/^@/,'').trim();
         const emailEl = document.getElementById('inp-email');
         const pwEl = document.getElementById('inp-password');
-        const payload = {bio, spitzname, accentColor: selectedAccent, theme, nische, website, instagram};
+        const payload = {accentColor: selectedAccent, theme};
+        // Nur Felder mitschicken die im DOM existieren — sonst leerstring würde Profil leeren
+        const bioEl = document.getElementById('inp-bio'); if (bioEl) payload.bio = bioEl.value || '';
+        const spitzEl = document.getElementById('inp-spitzname'); if (spitzEl) payload.spitzname = spitzEl.value || '';
+        const nischeEl = document.getElementById('inp-nische'); if (nischeEl) payload.nische = nischeEl.value?.trim() || '';
+        const websiteEl = document.getElementById('inp-website'); if (websiteEl) payload.website = websiteEl.value?.trim() || '';
+        const instaEl = document.getElementById('inp-instagram'); if (instaEl) payload.instagram = (instaEl.value || '').replace(/^@/,'').trim();
         if (emailEl) payload.email = (emailEl.value||'').toLowerCase().trim();
         if (pwEl && pwEl.value) payload.password = pwEl.value;
         if (selectedBanner) payload.banner = selectedBanner;
@@ -14004,9 +18766,16 @@ async function requestAccountChange(){
         if (btn) { btn.disabled = false; btn.textContent = '📨 Änderung anfragen'; }
     }
 }
-document.getElementById('inp-bio').addEventListener('input', function() {
-    this.nextElementSibling.textContent = this.value.length + '/100';
-});
+// inp-bio wurde aus /einstellungen entfernt (jetzt im Hero-Edit-Sheet) —
+// Counter-Listener nur attachen wenn Element noch existiert
+(function(){
+  const _bioInput = document.getElementById('inp-bio');
+  if (_bioInput) {
+    _bioInput.addEventListener('input', function() {
+      if (this.nextElementSibling) this.nextElementSibling.textContent = this.value.length + '/100';
+    });
+  }
+})();
 async function savePinnedLink() {
     const url = document.getElementById('inp-pinned-link')?.value?.trim() || '';
     if (url && !url.includes('instagram.com')) { toast('❌ Nur Instagram Links erlaubt'); return; }
@@ -14172,11 +18941,20 @@ async function setRing(ringId) {
         const botUrl = MAINBOT_URL + '/tg-file/' + encodeURIComponent(fileId);
         return new Promise((resolve) => {
             const lib = botUrl.startsWith('https') ? require('https') : require('http');
-            lib.get(botUrl, { headers: { 'x-bridge-secret': BRIDGE_SECRET } }, (bres) => {
-                res.writeHead(bres.statusCode, { 'Content-Type': bres.headers['content-type'] || 'image/jpeg', 'Cache-Control': 'public,max-age=86400' });
-                bres.pipe(res);
-                resolve();
-            }).on('error', () => { res.writeHead(404); res.end(); resolve(); });
+            const upstream = lib.get(botUrl, { headers: { 'x-bridge-secret': BRIDGE_SECRET } }, (bres) => {
+                try {
+                    const status = bres.statusCode || 502;
+                    res.writeHead(status, { 'Content-Type': bres.headers['content-type'] || 'image/jpeg', 'Cache-Control': 'public,max-age=86400' });
+                    bres.pipe(res);
+                    bres.on('error', () => { try { res.end(); } catch(e) {} resolve(); });
+                    bres.on('end', resolve);
+                } catch(e) {
+                    try { res.writeHead(502); res.end(); } catch(_) {}
+                    resolve();
+                }
+            });
+            upstream.on('error', () => { try { res.writeHead(404); res.end(); } catch(e) {} resolve(); });
+            upstream.setTimeout(15000, () => { try { upstream.destroy(); res.writeHead(504); res.end(); } catch(e) {} resolve(); });
         });
     }
 
@@ -14305,6 +19083,8 @@ server.listen(PORT, async () => {
                 const images = await resp.json();
                 let count = 0;
                 for (const [filename, content] of Object.entries(images)) {
+                    // Path-Traversal-Schutz: nur reine Filenames erlauben.
+                    if (!filename || /[/\\]/.test(filename) || filename.includes('..') || filename.startsWith('.')) continue;
                     fs.writeFileSync(DATA_DIR + '/' + filename, content, 'utf8');
                     count++;
                 }
