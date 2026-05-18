@@ -1737,7 +1737,7 @@ ${buildErrorHandler(_isAdmin)}
 <link rel="dns-prefetch" href="https://instagram.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" media="print" onload="this.media='all'">
 ${session ? `<link rel="prefetch" href="/feed"><link rel="prefetch" href="/explore"><link rel="prefetch" href="/nachrichten"><link rel="prefetch" href="/profil">` : ''}
-<style>${CSS}</style>
+<link rel="stylesheet" href="/static/main.css?v=237">
 </head>
 <body>
 ${_emailUnconfirmed ? `<div id="cb-email-confirm-bar" style="position:sticky;top:0;left:0;right:0;z-index:9998;background:linear-gradient(90deg,#f59e0b,#eab308);color:#000;padding:10px 14px;display:flex;align-items:center;justify-content:center;gap:12px;font-family:Inter,sans-serif;font-size:13px;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,0.15)">
@@ -3881,6 +3881,12 @@ async function handleRequest(req, res) {
     if (path === '/static/admin-fulltour.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Cache-Control':'public, max-age=86400, immutable'});
         return res.end(ADMIN_FULLTOUR_JS);
+    }
+    // Haupt-CSS extern ausliefern (statt 56KB inline pro Page-Load).
+    // Cache-Buster ?v=VERSION wechselt mit jedem Deploy -> alte Cache automatisch invalidiert.
+    if (path === '/static/main.css') {
+        res.writeHead(200, {'Content-Type':'text/css','Cache-Control':'public, max-age=86400, immutable'});
+        return res.end(CSS);
     }
 
     if (path === '/sw.js') {
@@ -15000,8 +15006,25 @@ ${_latestNews ? `<a href="/explore?tab=newsletter" class="highlight-card" style=
   <button onclick="switchRanking('weekly',this)" id="rtab-weekly" style="flex:1;background:var(--bg3);color:var(--muted);border:1px solid var(--border2);border-radius:10px;padding:7px;font-size:12px;font-weight:700;cursor:pointer">📆 Woche</button>
 </div>
 <div id="rlist-gesamt" style="padding-bottom:100px">${rankingRows}</div>
-<div id="rlist-daily" style="display:none;padding-bottom:100px">${dailyRows}</div>
-<div id="rlist-weekly" style="display:none;padding-bottom:100px">${weeklyRows}</div>
+<div id="rlist-daily" style="display:none;padding-bottom:100px">
+  <div style="margin:0 16px 12px;padding:12px 14px;background:linear-gradient(135deg,rgba(245,158,11,0.12),rgba(167,139,250,0.08));border:1px solid rgba(245,158,11,0.30);border-radius:12px;font-size:12.5px;line-height:1.55">
+    <div style="font-weight:800;color:#f59e0b;margin-bottom:6px">🏆 Tages-Preise (Reset 00:00)</div>
+    <div>🥇 <b>+10 XP · +5 💎 · 1 Extra-Link</b></div>
+    <div>🥈 <b>+5 XP · +3 💎</b></div>
+    <div>🥉 <b>+2 XP · +1 💎</b></div>
+  </div>
+  ${dailyRows}
+</div>
+<div id="rlist-weekly" style="display:none;padding-bottom:100px">
+  <div style="margin:0 16px 12px;padding:12px 14px;background:linear-gradient(135deg,rgba(167,139,250,0.14),rgba(245,158,11,0.10));border:1px solid rgba(167,139,250,0.35);border-radius:12px;font-size:12.5px;line-height:1.55">
+    <div style="font-weight:800;color:#a78bfa;margin-bottom:6px">🏆 Wochen-Preise (Mo–So, Reset Montag)</div>
+    <div>🥇 <b>+50 XP · +3 💎 · 2 Extra-Links</b></div>
+    <div>🥈 <b>+30 XP · +2 💎 · 1 Extra-Link</b></div>
+    <div>🥉 <b>+15 XP · +1 💎 · 1 Extra-Link</b></div>
+    <div style="margin-top:6px;font-size:11px;color:var(--muted)">Sieger werden automatisch benachrichtigt + Preise gutgeschrieben.</div>
+  </div>
+  ${weeklyRows}
+</div>
 <script>
 function switchRanking(tab, btn) {
   ['gesamt','daily','weekly'].forEach(t=>{
@@ -18179,7 +18202,7 @@ ${(function(){
 <div class="pf-toast" id="pfToast"></div>
 
 <script>
-function pfOpenEditProfile(){ document.getElementById('pfModal').classList.add('open'); document.body.style.overflow='hidden'; ['pfName','pfBio'].forEach(id=>{const e=document.getElementById(id);if(e)pfUpdateCounter(id,id.replace('pf','pf')+'Cnt',e.maxLength);}); }
+function pfOpenEditProfile(){ document.getElementById('pfModal').classList.add('open'); document.body.style.overflow='hidden'; ['pfName','pfBio'].forEach(id=>{const e=document.getElementById(id);if(e)pfUpdateCounter(id,id+'Cnt',e.maxLength);}); }
 function pfCloseModal(){ document.getElementById('pfModal').classList.remove('open'); document.body.style.overflow=''; }
 function pfOpenEditAvatar(){ document.getElementById('pfAvatarFile').click(); }
 function pfUpdateCounter(inputId, counterId, max){
