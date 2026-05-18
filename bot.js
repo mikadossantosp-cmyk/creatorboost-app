@@ -66,6 +66,8 @@ function _codeBruteReset(ip) { if (ip) _codeBruteMap.delete(ip); }
 // In-Memory LRU für /appbild/* — vorher 180 sync Disk-Reads pro Feed-Render
 const _appbildBufCache = new Map();    // cacheKey → {buf, mime, etag, ts}
 const _APPBILD_LRU_MAX = 500;
+const _APPBILD_CACHE_TTL = 60000;  // 60s — danach Cache-Eintrag wegwerfen damit Mainbot-Updates sichtbar werden
+const _APPBILD_BOOT_TS = Date.now();  // Server-Start-Timestamp fuer Cache-Bust wenn lokale Datei fehlt
 function _appbildLRUSet(key, val) {
     if (_appbildBufCache.size >= _APPBILD_LRU_MAX) {
         // Älteste Einträge zuerst rauswerfen (Map preserved insertion order)
@@ -4012,26 +4014,32 @@ self.addEventListener('notificationclick',e=>{
         if (!/^(\d+|creatorboost)$/.test(buid||'') || !/^(profilepic|banner)$/.test(btype||'')) {
             res.writeHead(400); return res.end('bad request');
         }
-        // ── AUTO-CACHE-BUST: ohne ?v= -> 302 nach ?v=<mtime> ──
+        // ── AUTO-CACHE-BUST: ohne ?v= -> 302 nach ?v=<bust> ──
         // Damit profitieren ALLE 22+ Render-Stellen automatisch von Cache-Busting,
         // ohne dass jede Stelle einzeln auf appbildSrc() umgestellt werden muss.
         // Browser folgt 302 und cached die finale URL mit Versions-Query.
         if (!query.v && buid !== 'creatorboost') {
             try {
                 const f = DATA_DIR + '/bild_' + buid + '_' + btype + '.txt';
+                let bust = _APPBILD_BOOT_TS;  // Fallback: Server-Start-Timestamp wenn Datei lokal nicht da (Mainbot-Proxy-Pfad)
                 if (fs.existsSync(f)) {
-                    const m = Math.floor(fs.statSync(f).mtimeMs);
-                    res.writeHead(302, {
-                        'Location': '/appbild/' + buid + '/' + btype + '?v=' + m,
-                        'Cache-Control': 'no-store'
-                    });
-                    return res.end();
+                    bust = Math.floor(fs.statSync(f).mtimeMs);
                 }
+                res.writeHead(302, {
+                    'Location': '/appbild/' + buid + '/' + btype + '?v=' + bust,
+                    'Cache-Control': 'no-store'
+                });
+                return res.end();
             } catch(e) {}
         }
         // ── PERF: In-Memory LRU + ETag — vorher 180 sync Disk-Reads pro Feed ──
         const cacheKey = buid + '/' + btype;
-        const cached = _appbildBufCache.get(cacheKey);
+        let cached = _appbildBufCache.get(cacheKey);
+        // TTL: nach 60s den Cache-Eintrag verwerfen damit Mainbot-Updates sichtbar werden
+        if (cached && (Date.now() - cached.ts) > _APPBILD_CACHE_TTL) {
+            _appbildBufCache.delete(cacheKey);
+            cached = null;
+        }
         const reqEtag = req.headers['if-none-match'];
         if (cached) {
             // 304 wenn Browser noch frische Version hat
