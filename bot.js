@@ -1114,6 +1114,19 @@ function ladeBild(uid, type) {
     return v;
 }
 
+// /appbild/UID/TYPE URL mit ?v=<mtime> Cache-Buster, damit Browser nach
+// Upload sofort die neue Version laedt (Cache-Control kann lang bleiben).
+// Gibt null zurueck wenn keine Datei existiert.
+function appbildSrc(uid, type) {
+    if (uid === 'creatorboost' && type === 'profilepic') return '/appbild/creatorboost/profilepic';
+    try {
+        const f = DATA_DIR + '/bild_' + uid + '_' + type + '.txt';
+        if (!fs.existsSync(f)) return null;
+        const m = Math.floor(fs.statSync(f).mtimeMs);
+        return '/appbild/' + uid + '/' + type + '?v=' + m;
+    } catch(e) { return null; }
+}
+
 function ladeProjectBild(uid, projectId) {
     try {
         const f = DATA_DIR + '/bild_' + uid + '_proj_' + projectId + '.txt';
@@ -3673,7 +3686,7 @@ function buildTopbarSwitcher(myUid, d) {
   if (_allAccs.length < 2) return '';
   const _curU = d.users?.[_curSessUid] || me;
   const _curName = htmlEsc(_curU.spitzname || _curU.name || 'User');
-  const _curPic = ladeBild(_curSessUid, 'profilepic') ? '/appbild/' + _curSessUid + '/profilepic' : (_curU.instagram ? 'https://unavatar.io/instagram/' + encodeURIComponent(_curU.instagram) : '');
+  const _curPic = appbildSrc(_curSessUid, 'profilepic') || (_curU.instagram ? 'https://unavatar.io/instagram/' + encodeURIComponent(_curU.instagram) : '');
   const _curInit = htmlEsc((_curU.spitzname || _curU.name || '?').slice(0,1).toUpperCase());
   return '<div class="tb-switcher-wrap">' +
     '<button class="tb-switcher" onclick="ipfToggleSwitcher(this)" id="ipf-sw-btn">' +
@@ -4370,7 +4383,7 @@ self.addEventListener('notificationclick',e=>{
             if (reqEtag === cached.etag) {
                 res.writeHead(304, {'ETag': cached.etag}); return res.end();
             }
-            res.writeHead(200, {'Content-Type': cached.mime, 'Cache-Control':'public, max-age=86400, immutable', 'ETag': cached.etag, 'Content-Length': cached.buf.length});
+            res.writeHead(200, {'Content-Type': cached.mime, 'Cache-Control':'public, max-age=300, must-revalidate', 'ETag': cached.etag, 'Content-Length': cached.buf.length});
             return res.end(cached.buf);
         }
         // CreatorBoost-System-User: gebundeltes Avatar aus Repo (data-URL .txt) statt /data-Volume,
@@ -4385,6 +4398,7 @@ self.addEventListener('notificationclick',e=>{
                 _appbildLRUSet(cacheKey, { buf, mime, etag, ts: Date.now() });
                 res.writeHead(200, {'Content-Type': mime, 'Cache-Control': 'public, max-age=86400, immutable', 'ETag': etag, 'Content-Length': buf.length});
                 return res.end(buf);
+                // CreatorBoost-Avatar ist gebundelt + aendert sich nie -> immutable bleibt.
             } catch(e) { res.writeHead(404); return res.end('not found'); }
         }
         const bildFile = DATA_DIR + '/bild_' + buid + '_' + btype + '.txt';
@@ -4398,7 +4412,7 @@ self.addEventListener('notificationclick',e=>{
             const etag = '"' + buid + '-' + btype + '-' + Math.round(stat.mtimeMs) + '"';
             _appbildLRUSet(cacheKey, { buf, mime, etag, ts: Date.now() });
             if (reqEtag === etag) { res.writeHead(304, {'ETag': etag}); return res.end(); }
-            res.writeHead(200, {'Content-Type': mime, 'Cache-Control': 'public, max-age=86400, immutable', 'ETag': etag, 'Content-Length': buf.length});
+            res.writeHead(200, {'Content-Type': mime, 'Cache-Control': 'public, max-age=300, must-revalidate', 'ETag': etag, 'Content-Length': buf.length});
             return res.end(buf);
         } catch(e) {}
         // Proxy to telegram-bot (separate Railway volume)
@@ -4417,7 +4431,7 @@ self.addEventListener('notificationclick',e=>{
                             const etag = '"proxy-' + buid + '-' + btype + '-' + buf.length + '"';
                             _appbildLRUSet(cacheKey, { buf, mime, etag, ts: Date.now() });
                             if (reqEtag === etag) { res.writeHead(304, {'ETag': etag}); return res.end(); }
-                            res.writeHead(200, { 'Content-Type': mime, 'Cache-Control': 'public, max-age=3600', 'ETag': etag, 'Content-Length': buf.length });
+                            res.writeHead(200, { 'Content-Type': mime, 'Cache-Control': 'public, max-age=300, must-revalidate', 'ETag': etag, 'Content-Length': buf.length });
                             res.end(buf);
                             resolve();
                         });
@@ -6840,6 +6854,7 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
             try { await fs.promises.writeFile(DATA_DIR + '/bild_' + getMyUid(session) + '_profilepic.txt', imageData); } catch(e) { console.error('profilepic write failed:', e.message); }
             // Cache-Invalidation: damit /appbild/UID/profilepic sofort die neue Version zeigt
             _appbildBufCache.delete(getMyUid(session) + '/profilepic');
+            _bildCache.delete(getMyUid(session) + '_profilepic');
             checkProfileCompletion(getMyUid(session), session);
             return json({ok:true});
         } catch(e) { return json({ok:false, error:e.message},500); }
@@ -6868,6 +6883,7 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
             saveSessions();
             try { await fs.promises.writeFile(DATA_DIR + '/bild_' + getMyUid(session) + '_banner.txt', imageData); } catch(e) { console.error('banner write failed:', e.message); }
             _appbildBufCache.delete(getMyUid(session) + '/banner');
+            _bildCache.delete(getMyUid(session) + '_banner');
             checkProfileCompletion(getMyUid(session), session);
             return json({ok:true});
         } catch(e) { return json({ok:false, error:e.message},500); }
@@ -18303,7 +18319,7 @@ ${(function(){
   const _bio = htmlEsc(_u.bio || '');
   const _website = _u.website ? htmlEsc(_u.website) : '';
   const _hasPic = !!(session?.profilePicData || ladeBild(String(myUid),'profilepic'));
-  const _picSrc = _hasPic ? '/appbild/' + myUid + '/profilepic' : (_u.instagram ? 'https://unavatar.io/instagram/' + encodeURIComponent(_u.instagram) : '');
+  const _picSrc = _hasPic ? (appbildSrc(String(myUid), 'profilepic') || ('/appbild/' + myUid + '/profilepic')) : (_u.instagram ? 'https://unavatar.io/instagram/' + encodeURIComponent(_u.instagram) : '');
   const _initial = htmlEsc((_u.spitzname || _u.name || 'C').slice(0,1).toUpperCase());
   const _xp = Number(_u.xp || 0);
   const _diamonds = Number(_u.diamonds || 0);
