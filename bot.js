@@ -11958,10 +11958,16 @@ document.getElementById('user-search-input')?.addEventListener('input',filterSea
     if (path === '/nachrichten') {
         // Presence-Ping: beim Öffnen von Nachrichten gilt User als aktiv (Member-Count)
         postBot('/app-presence', { uid: myUid }).catch(()=>{});
-        const [botData, appChatData] = await Promise.all([
-            fetchBot('/data'),
-            fetchBot('/app-chat?uid=' + encodeURIComponent(myUid) + '&limit=1')
-        ]);
+        // Defensive: Promise.all mit catch — wenn ein Bot-Call rejects, soll die Seite trotzdem laden
+        let botData = null, appChatData = null;
+        try {
+            const results = await Promise.all([
+                fetchBot('/data').catch(() => null),
+                fetchBot('/app-chat?uid=' + encodeURIComponent(myUid) + '&limit=1').catch(() => null),
+            ]);
+            botData = results[0];
+            appChatData = results[1];
+        } catch(e) { console.error('[/nachrichten] fetchBot failed:', e.message); }
         if (!botData) return redirect('/feed');
         const convos = botData.messages || {};
         const myConvos = Object.entries(convos)
@@ -11979,7 +11985,9 @@ document.getElementById('user-search-input')?.addEventListener('input',filterSea
             })
             .sort((a, b) => (b.lastMsg?.timestamp||0)-(a.lastMsg?.timestamp||0));
         // Threads sind aus der App entfernt — keine Unread/List mehr nötig
-        const lastAppChat = (appChatData?.messages || []).filter(m => !m.deleted).slice(-1)[0] || null;
+        // Defensive: appChatData?.messages kann Object oder undefined sein
+        const appChatMsgs = Array.isArray(appChatData?.messages) ? appChatData.messages : [];
+        const lastAppChat = appChatMsgs.filter(m => m && !m.deleted).slice(-1)[0] || null;
         // Stories: nur gefolgte User mit Pinned Reel (gleiche Logik wie /feed)
         // Eigene Familie (Hauptaccount + Sub-Accounts) wird komplett ausgeblendet.
         const _myFollowingSet = new Set((botData.users?.[myUid]?.following || []).map(String));
