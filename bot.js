@@ -9978,9 +9978,10 @@ async function submitSuperLink(){
 
 <!-- ── MISSIONS-FAB + MODAL ── (Floating-Icon das die Missionen overlay zeigt) -->
 <style>
-#cb-mission-fab{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));left:10px;width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#f59e0b,#a78bfa);color:#fff;border:none;cursor:pointer;z-index:8500;box-shadow:0 2px 5px rgba(0,0,0,.18);opacity:.7;transition:opacity .2s, transform .15s;display:flex;align-items:center;justify-content:center;font-size:14px;line-height:1}
-#cb-mission-fab:hover,#cb-mission-fab:active{opacity:1;transform:scale(1.1)}
-#cb-mission-fab .m-badge{position:absolute;top:-3px;right:-3px;min-width:13px;height:13px;border-radius:99px;background:#22c55e;color:#fff;font-size:8.5px;font-weight:800;display:none;align-items:center;justify-content:center;border:1.5px solid var(--bg);padding:0 3px}
+#cb-mission-fab{position:fixed;top:35%;left:10px;width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#f59e0b,#a78bfa);color:#fff;border:none;cursor:pointer;z-index:8500;box-shadow:0 4px 14px rgba(245,158,11,.45),0 0 0 0 rgba(245,158,11,.6);opacity:1;transition:transform .15s;display:flex;align-items:center;justify-content:center;font-size:20px;line-height:1;animation:cb-mfab-pulse 2.4s ease-in-out infinite}
+#cb-mission-fab:hover,#cb-mission-fab:active{transform:scale(1.12);animation-play-state:paused}
+#cb-mission-fab .m-badge{position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;border-radius:99px;background:#ef4444;color:#fff;font-size:10px;font-weight:800;display:none;align-items:center;justify-content:center;border:2px solid var(--bg);padding:0 4px;box-shadow:0 2px 6px rgba(239,68,68,.5)}
+@keyframes cb-mfab-pulse{0%,100%{box-shadow:0 4px 14px rgba(245,158,11,.45),0 0 0 0 rgba(245,158,11,.6)}50%{box-shadow:0 4px 18px rgba(245,158,11,.55),0 0 0 10px rgba(245,158,11,0)}}
 #cb-mission-modal{position:fixed;inset:0;z-index:9100;background:rgba(0,0,0,0.55);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:none;align-items:flex-end;animation:cbMfFade .2s ease}
 #cb-mission-modal.open{display:flex}
 @keyframes cbMfFade{from{opacity:0}to{opacity:1}}
