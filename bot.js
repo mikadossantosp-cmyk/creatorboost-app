@@ -1750,32 +1750,40 @@ ${buildErrorHandler(_isAdmin)}
 <script async src="https://telegram.org/js/telegram-web-app.js"></script>
 <script>
 // cbOpenExternal(url) — oeffnet externe Links bestmoeglich:
-// - In Telegram WebApp: nativer In-App-Browser (Zurueck-Button zur App)
-// - In Android TWA: Chrome Custom Tab (mit X-Button zur App)
-// - In iOS PWA Standalone: Safari (System-Verhalten)
-// - In Browser: neuer Tab
-// Plus: window.open() override damit existierende window.open(url,'_blank') Calls automatisch profitieren.
+// - In Telegram WebApp: nativer Telegram-In-App-Browser (Zurueck-Button zur App)
+// - Sonst: eigener In-App-Browser (cb-browser-overlay, mit iframe + Fallback)
+// - Fallback wenn nicht verfuegbar: window.open (System-Browser)
 (function(){
   window.cbOpenExternal = function(url){
     try {
       if (typeof url !== 'string' || !url) return;
+      // Telegram-WebApp: deren In-App-Browser ist nativer und besser fuer Telegram-User
       if (window.Telegram && window.Telegram.WebApp && typeof window.Telegram.WebApp.openLink === 'function') {
-        // try_instant_view=false damit Instagram/etc. korrekt geladen wird (nicht im Reader-Mode)
         window.Telegram.WebApp.openLink(url, { try_instant_view: false });
         return;
       }
+      // Eigener In-App-Browser-Modal (iframe + Fallback)
+      if (typeof window.cbBrowserOpen === 'function') {
+        window.cbBrowserOpen(url);
+        return;
+      }
+      // Last resort: System-Browser
       window.open(url, '_blank', 'noopener,noreferrer');
     } catch(e) {
       try { window.open(url, '_blank', 'noopener,noreferrer'); } catch(_) {}
     }
   };
-  // Auto-Upgrade: window.open(url, '_blank', ...) im Telegram-WebApp-Kontext via openLink ersetzen,
-  // damit existierende Code-Pfade (auch Third-Party-Snippets) den In-App-Browser nutzen.
+  // Auto-Upgrade: window.open(url, '_blank', ...) -> eigener / Telegram In-App-Browser
+  // damit existierende Code-Pfade (Feed-Reel-Click, Insta-Profile, Diamond-/Kollab-Links) automatisch profitieren.
   var _origOpen = window.open;
   window.open = function(url, target, features){
-    if (target === '_blank' && typeof url === 'string' && /^https?:/.test(url) &&
-        window.Telegram && window.Telegram.WebApp && typeof window.Telegram.WebApp.openLink === 'function') {
-      try { window.Telegram.WebApp.openLink(url, { try_instant_view: false }); return null; } catch(e) {}
+    if (target === '_blank' && typeof url === 'string' && /^https?:/.test(url)) {
+      // Eigener Browser hat Prioritaet (User-Wunsch: 'eigener Browser')
+      if (window.Telegram && window.Telegram.WebApp && typeof window.Telegram.WebApp.openLink === 'function') {
+        try { window.Telegram.WebApp.openLink(url, { try_instant_view: false }); return null; } catch(e) {}
+      } else if (typeof window.cbBrowserOpen === 'function') {
+        try { window.cbBrowserOpen(url); return null; } catch(e) {}
+      }
     }
     return _origOpen.call(window, url, target, features);
   };
@@ -2021,6 +2029,97 @@ async function cbResendConfirm(btn){
     </div>
   </div>
 </div>
+<!-- ── IN-APP-BROWSER MODAL ──
+     Eigener Browser-Overlay in der App. iframe-basiert, mit Fallback wenn die Seite
+     iframe-Embedding blockiert (Instagram, viele Banking-/Auth-Seiten).
+     Aufruf: cbBrowserOpen(url, title?)
+-->
+<div id="cb-browser-overlay" style="position:fixed;inset:0;z-index:9600;background:#000;display:flex;flex-direction:column;opacity:0;pointer-events:none;transition:opacity .25s">
+  <div style="display:flex;align-items:center;gap:8px;padding:env(safe-area-inset-top,12px) 12px 10px;padding-top:calc(env(safe-area-inset-top,0px) + 10px);background:linear-gradient(180deg,#1a1a1f,#0f0f12);border-bottom:1px solid rgba(255,255,255,0.08);flex-shrink:0">
+    <button onclick="cbBrowserClose()" aria-label="Schliessen" style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.08);border:none;color:#fff;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">×</button>
+    <div style="flex:1;min-width:0;overflow:hidden">
+      <div id="cb-browser-title" style="font-size:13px;font-weight:700;color:#fff;text-overflow:ellipsis;overflow:hidden;white-space:nowrap">Lade …</div>
+      <div id="cb-browser-url" style="font-size:11px;color:rgba(255,255,255,0.5);text-overflow:ellipsis;overflow:hidden;white-space:nowrap"></div>
+    </div>
+    <button id="cb-browser-extern-btn" onclick="cbBrowserExternal()" aria-label="In System-Browser" title="In System-Browser oeffnen" style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.08);border:none;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">↗</button>
+  </div>
+  <div style="flex:1;position:relative;background:#fff">
+    <div id="cb-browser-loading" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#fff;color:#0f172a;font-family:Inter,sans-serif;gap:14px;z-index:2">
+      <div style="width:36px;height:36px;border:3px solid #e2e8f0;border-top-color:#a78bfa;border-radius:50%;animation:cb-br-spin .8s linear infinite"></div>
+      <div style="font-size:13px;color:#64748b">Lade Seite …</div>
+    </div>
+    <div id="cb-browser-error" style="position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;background:#fff;color:#0f172a;font-family:Inter,sans-serif;gap:14px;padding:24px;text-align:center;z-index:2">
+      <div style="font-size:48px">🔒</div>
+      <div style="font-size:15px;font-weight:700">Diese Seite kann nicht im In-App-Browser angezeigt werden</div>
+      <div style="font-size:12px;color:#64748b;line-height:1.5;max-width:280px">Manche Anbieter (z.B. Instagram, Banken) blockieren die Einbettung. Du kannst sie im System-Browser oeffnen — der Zurueck-Button bringt dich zurueck zur App.</div>
+      <button onclick="cbBrowserExternal()" style="margin-top:8px;background:linear-gradient(135deg,#a78bfa,#7c3aed);border:none;color:#fff;padding:12px 22px;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">↗ Im Browser oeffnen</button>
+    </div>
+    <iframe id="cb-browser-iframe" referrerpolicy="no-referrer" sandbox="allow-scripts allow-forms allow-popups allow-same-origin allow-presentation" style="position:absolute;inset:0;width:100%;height:100%;border:0;background:#fff"></iframe>
+  </div>
+</div>
+<style>@keyframes cb-br-spin{to{transform:rotate(360deg)}}</style>
+<script>
+(function(){
+  let _cbCurUrl = '';
+  let _cbLoadTimer = null;
+  let _cbLoaded = false;
+  window.cbBrowserOpen = function(url, title){
+    if (typeof url !== 'string' || !/^https?:/.test(url)) return;
+    _cbCurUrl = url;
+    _cbLoaded = false;
+    const ov = document.getElementById('cb-browser-overlay');
+    const f = document.getElementById('cb-browser-iframe');
+    const ld = document.getElementById('cb-browser-loading');
+    const er = document.getElementById('cb-browser-error');
+    const tt = document.getElementById('cb-browser-title');
+    const uu = document.getElementById('cb-browser-url');
+    try { tt.textContent = title || 'Lade …'; } catch(e){}
+    try { uu.textContent = url; } catch(e){}
+    er.style.display = 'none';
+    ld.style.display = 'flex';
+    f.style.display = 'block';
+    f.onload = function(){ _cbLoaded = true; ld.style.display = 'none'; };
+    f.onerror = function(){ _cbShowErr(); };
+    f.src = url;
+    ov.style.opacity = '1';
+    ov.style.pointerEvents = 'all';
+    document.body.style.overflow = 'hidden';
+    // Timeout-Fallback: wenn iframe nach 4s nicht onload triggert,
+    // wahrscheinlich blockiert (X-Frame-Options o. CSP) -> Error-View.
+    clearTimeout(_cbLoadTimer);
+    _cbLoadTimer = setTimeout(function(){ if (!_cbLoaded) _cbShowErr(); }, 4000);
+  };
+  window.cbBrowserClose = function(){
+    const ov = document.getElementById('cb-browser-overlay');
+    const f = document.getElementById('cb-browser-iframe');
+    ov.style.opacity = '0';
+    ov.style.pointerEvents = 'none';
+    document.body.style.overflow = '';
+    try { f.src = 'about:blank'; } catch(e){}
+    clearTimeout(_cbLoadTimer);
+  };
+  window.cbBrowserExternal = function(){
+    if (!_cbCurUrl) return;
+    cbBrowserClose();
+    // cbOpenExternal (siehe oben) — nutzt Telegram-WebApp-Browser falls verfuegbar,
+    // sonst window.open. Auf TWA Android -> Chrome Custom Tab.
+    if (typeof window.cbOpenExternal === 'function') window.cbOpenExternal(_cbCurUrl);
+    else window.open(_cbCurUrl, '_blank', 'noopener,noreferrer');
+  };
+  function _cbShowErr(){
+    document.getElementById('cb-browser-loading').style.display = 'none';
+    document.getElementById('cb-browser-error').style.display = 'flex';
+    document.getElementById('cb-browser-iframe').style.display = 'none';
+  }
+  // Zurueck-Button-Hardware (Android): wenn In-App-Browser offen + User druecket Zurueck,
+  // schliesse erst den Browser statt zur Vorseite zu navigieren.
+  window.addEventListener('popstate', function(){
+    const ov = document.getElementById('cb-browser-overlay');
+    if (ov && ov.style.opacity === '1') cbBrowserClose();
+  });
+})();
+</script>
+
 <div id="crop-overlay" style="position:fixed;inset:0;z-index:9500;background:rgba(0,0,0,.93);display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s;padding:16px">
   <div style="width:100%;max-width:380px">
     <div style="text-align:center;font-size:15px;font-weight:700;color:#fff;margin-bottom:16px">Bild positionieren</div>
