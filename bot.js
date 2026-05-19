@@ -13929,11 +13929,16 @@ async function openEventModal(type) {
       '<input type="number" id="evt-amount" min="1" max="'+maxVal+'" placeholder="'+placeholder+'" style="width:100%;padding:11px 14px;background:var(--dink);border:1px solid var(--dline);border-radius:10px;color:#fff;font-size:14px;margin-bottom:12px;font-family:inherit">' +
       '<label style="font-size:11px;font-weight:700;letter-spacing:1.4px;color:var(--dsub);text-transform:uppercase;display:block;margin-bottom:6px">Dauer</label>' +
       '<select id="evt-duration" style="width:100%;padding:11px 14px;background:var(--dink);border:1px solid var(--dline);border-radius:10px;color:#fff;font-size:14px;margin-bottom:12px;font-family:inherit">' +
+        '<option value="900000">15 Minuten</option>' +
         '<option value="1800000">30 Minuten</option>' +
         '<option value="3600000" selected>1 Stunde</option>' +
         '<option value="7200000">2 Stunden</option>' +
+        '<option value="10800000">3 Stunden</option>' +
+        '<option value="14400000">4 Stunden</option>' +
         '<option value="21600000">6 Stunden</option>' +
+        '<option value="43200000">12 Stunden</option>' +
         '<option value="86400000">1 Tag</option>' +
+        '<option value="172800000">2 Tage</option>' +
         '<option value="259200000">3 Tage</option>' +
         '<option value="604800000">7 Tage</option>' +
       '</select>' +
