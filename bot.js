@@ -9242,6 +9242,8 @@ async function likePost(msgId, btn) {
             _dequeueLike(msgId);
             if (countEl && data.likes !== undefined) countEl.textContent = data.likes;
             showBanner({ type:'success', title:'Like registriert ❤️', subtitle:'Vergiss nicht: Auf Instagram liken & mit 2 Wörter kommentieren. Danke!', dur:5000 });
+            // Sofortiger Sync: Mission-FAB-Badge + andere Counter refreshen ohne Wait auf 2min-Poll.
+            try { document.dispatchEvent(new CustomEvent('cb-state-changed', { detail: { type:'like', msgId } })); } catch(e){}
         } else if (data.missingInstagram) {
             // Echte Server-Ablehnung → revert lokal (Like nicht erlaubt)
             _dequeueLike(msgId);
@@ -10075,6 +10077,43 @@ async function submitSuperLink(){
   }
   setTimeout(_refreshBadge, 3000);
   setInterval(() => { if (!document.hidden) _refreshBadge(); }, 120000);
+  // SOFORT-Sync: bei Like/Post/etc. (cb-state-changed Event) sofort Badge + ggf. Modal refreshen.
+  document.addEventListener('cb-state-changed', function(ev){
+    _refreshBadge();
+    // Wenn Modal offen ist: kompletten Mission-Inhalt auch refreshen (nicht nur Badge)
+    const m = document.getElementById('cb-mission-modal');
+    if (m && m.classList.contains('open')) {
+      const body = document.getElementById('cb-mission-body');
+      if (body) loadMissions(body);
+    }
+    // Plus: Notif- und Msg-Badges auch (Layout-Funktionen, falls verfuegbar)
+    try { if (typeof checkNotifBadge === 'function') checkNotifBadge(); } catch(e){}
+    try { if (typeof checkMsgBadge === 'function') checkMsgBadge(); } catch(e){}
+    // Feed-Tab-Counter: ein ungelikter Post weniger -> Badge dekrementieren ohne Reload
+    if (ev && ev.detail && ev.detail.type === 'like') {
+      try {
+        const badge = document.querySelector('.ft-trigger-badge');
+        if (badge) {
+          const cur = parseInt(badge.textContent.replace(/[^0-9]/g,''), 10);
+          if (!isNaN(cur) && cur > 0) {
+            const next = cur - 1;
+            if (next <= 0) badge.style.display = 'none';
+            else badge.textContent = next > 99 ? '99+' : String(next);
+          }
+        }
+        // Tab-Item-Badge (im Dropdown) fuer aktiven Tab dekrementieren
+        const activeItemBadge = document.querySelector('.ft-item.active .ft-item-badge');
+        if (activeItemBadge) {
+          const c = parseInt(activeItemBadge.textContent.replace(/[^0-9]/g,''), 10);
+          if (!isNaN(c) && c > 0) {
+            const n = c - 1;
+            if (n <= 0) activeItemBadge.remove();
+            else activeItemBadge.textContent = n > 99 ? '99+' : String(n);
+          }
+        }
+      } catch(e){}
+    }
+  });
 })();
 </script>
 <div id="cb-helper-modal" onclick="if(event.target===this)cbHelperClose()">
