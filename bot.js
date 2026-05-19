@@ -3043,7 +3043,7 @@ function confirmCrop(){
   if('caches' in window){
     caches.keys().then(names=>{
       names.forEach(n=>{
-        if(n.startsWith('cb-images-') && !n.includes('v202-appbild-no-cache')){
+        if(n.startsWith('cb-images-') && !n.includes('v203-appbild-revalidate')){
           caches.delete(n).catch(()=>{});
         }
       });
@@ -3923,7 +3923,7 @@ async function handleRequest(req, res) {
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v202-appbild-no-cache';
+const SW_VERSION='v203-appbild-revalidate';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
@@ -3942,11 +3942,13 @@ self.addEventListener('fetch',e=>{
     e.respondWith(fetch(req).catch(()=>new Response('<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Offline · CreatorX</title></head><body style="font-family:system-ui,-apple-system,sans-serif;background:#000;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center;padding:24px"><div><div style="font-size:48px;margin-bottom:16px">📡</div><div style="font-size:18px;font-weight:700;margin-bottom:8px">Offline</div><div style="font-size:13px;color:#999;line-height:1.5;margin-bottom:18px">Server antwortet nicht. Bitte Internetverbindung prüfen oder kurz später nochmal versuchen.</div><button onclick="location.reload()" style="background:#3b82f6;color:#fff;border:none;border-radius:10px;padding:12px 22px;font-size:14px;font-weight:700;cursor:pointer">🔄 Neu laden</button></div></body></html>',{headers:{'Content-Type':'text/html; charset=utf-8'}})));
     return;
   }
-  // Profilbilder + Banner — KOMPLETT KEIN SW-CACHE. Server-Cache-Header (no-cache + ETag)
-  // entscheiden alleine. SW wuerde sonst zwischen original URL (ohne ?v=) und 302-Target
-  // (mit ?v=mtime) inkonsistent cachen + alte Bilder ausliefern.
+  // Profilbilder + Banner — SW nicht im Weg. Browser-HTTP-Cache (no-cache+ETag vom Server)
+  // entscheidet alleine. Mit ETag-Revalidation kommen unveraenderte Bilder als 304 zurueck
+  // (winziger Response), nur geaenderte Bilder werden voll geladen.
+  // Vorher: cache:'no-store' zwang jeden Bild-Request zur Full-Download -> 50x bei Feed-Render
+  // = langsam. Jetzt: ETag-304 fuer unveraenderte Bilder = schnell.
   if(url.pathname.startsWith('/appbild/')){
-    e.respondWith(fetch(req, {cache: 'no-store'}));
+    e.respondWith(fetch(req));
     return;
   }
   // Logos/Icons/statische Bilder — stale-while-revalidate (aendern sich nie)
@@ -9978,10 +9980,10 @@ async function submitSuperLink(){
 
 <!-- ── MISSIONS-FAB + MODAL ── (Floating-Icon das die Missionen overlay zeigt) -->
 <style>
-#cb-mission-fab{position:fixed;top:35%;left:10px;width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#f59e0b,#a78bfa);color:#fff;border:none;cursor:pointer;z-index:8500;box-shadow:0 4px 14px rgba(245,158,11,.45),0 0 0 0 rgba(245,158,11,.6);opacity:1;transition:transform .15s;display:flex;align-items:center;justify-content:center;font-size:20px;line-height:1;animation:cb-mfab-pulse 2.4s ease-in-out infinite}
-#cb-mission-fab:hover,#cb-mission-fab:active{transform:scale(1.12);animation-play-state:paused}
-#cb-mission-fab .m-badge{position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;border-radius:99px;background:#ef4444;color:#fff;font-size:10px;font-weight:800;display:none;align-items:center;justify-content:center;border:2px solid var(--bg);padding:0 4px;box-shadow:0 2px 6px rgba(239,68,68,.5)}
-@keyframes cb-mfab-pulse{0%,100%{box-shadow:0 4px 14px rgba(245,158,11,.45),0 0 0 0 rgba(245,158,11,.6)}50%{box-shadow:0 4px 18px rgba(245,158,11,.55),0 0 0 10px rgba(245,158,11,0)}}
+#cb-mission-fab{position:fixed;top:24%;left:10px;width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#f59e0b,#a78bfa);color:#fff;border:none;cursor:pointer;z-index:8500;box-shadow:0 3px 10px rgba(245,158,11,.32),0 0 0 0 rgba(245,158,11,.5);opacity:.92;transition:transform .15s, opacity .2s;display:flex;align-items:center;justify-content:center;font-size:19px;line-height:1;animation:cb-mfab-pulse 3s ease-in-out infinite}
+#cb-mission-fab:hover,#cb-mission-fab:active{transform:scale(1.1);opacity:1;animation-play-state:paused}
+#cb-mission-fab .m-badge{position:absolute;top:-4px;right:-4px;min-width:17px;height:17px;border-radius:99px;background:#ef4444;color:#fff;font-size:10px;font-weight:800;display:none;align-items:center;justify-content:center;border:2px solid var(--bg);padding:0 4px;box-shadow:0 2px 5px rgba(239,68,68,.45)}
+@keyframes cb-mfab-pulse{0%,100%{box-shadow:0 3px 10px rgba(245,158,11,.32),0 0 0 0 rgba(245,158,11,.4)}50%{box-shadow:0 3px 12px rgba(245,158,11,.38),0 0 0 6px rgba(245,158,11,0)}}
 #cb-mission-modal{position:fixed;inset:0;z-index:9100;background:rgba(0,0,0,0.55);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:none;align-items:flex-end;animation:cbMfFade .2s ease}
 #cb-mission-modal.open{display:flex}
 @keyframes cbMfFade{from{opacity:0}to{opacity:1}}
@@ -16304,66 +16306,13 @@ function showErr(msg){
     </div>
   </div>
 </div>
-<div id="mission-widget-explore" style="margin:0 16px 14px">
-  <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:14px 16px;animation:shimmer 1.5s infinite">
-    <div style="height:12px;background:var(--bg4);border-radius:6px;width:60%;margin-bottom:8px"></div>
-    <div style="height:10px;background:var(--bg4);border-radius:6px;width:80%"></div>
-  </div>
-</div>
+<!-- Missionen sind jetzt im Floating-Mission-FAB (oben links) verfuegbar — kein separates Widget mehr auf /explore. -->
 <div class="explore-tabs">
   ${tabs.map(t=>`<button class="explore-tab${tab===t.id?' active':''}" style="--et-c1:${t.c1};--et-c2:${t.c2};--et-shadow:${t.shadow}" onclick="location.href='/explore?tab=${t.id}'"><span class="et-icon">${t.emoji}</span><span class="et-label">${t.label}</span></button>`).join('')}
 </div>
 <div id="explore-content" style="padding-bottom:${tab==='allgemein'?'0':'80px'}">
   ${tabContent[tab]||tabContent.allgemein}
 </div>
-<script>
-(async function loadMissionWidgetExplore(){
-  const w=document.getElementById('mission-widget-explore');
-  if(!w)return;
-  try{
-    const r=await fetch('/api/mission-status');
-    const d=await r.json();
-    if(!d.ok){w.innerHTML='';return;}
-    const now=new Date();
-    const nextSettle=new Date();
-    nextSettle.setHours(12,0,0,0);
-    if(now>=nextSettle)nextSettle.setDate(nextSettle.getDate()+1);
-    const diff=nextSettle-now;
-    const hh=Math.floor(diff/3600000);const mm=Math.floor((diff%3600000)/60000);
-    const settleStr=hh+'h '+mm+'m';
-    const {daily,weekly}=d;
-    const bar=(val,max,col)=>'<div style="background:var(--bg4);border-radius:4px;height:5px;overflow:hidden;margin-top:4px"><div style="height:100%;width:'+Math.min(100,Math.round(val/max*100))+'%;background:'+col+';border-radius:4px;transition:width .5s ease"></div></div>';
-    const mChip=(done,label)=>'<div style="display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:'+(done?'#22c55e':'var(--muted)')+'">'+
-      '<span style="font-size:14px">'+(done?'✅':'⬜')+'</span>'+label+'</div>';
-    w.innerHTML='<div style="background:linear-gradient(135deg,rgba(167,139,250,.1),rgba(124,58,237,.07));border:1px solid rgba(167,139,250,.25);border-radius:14px;padding:14px 16px">'
-      +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'
-      +'<div style="font-size:13px;font-weight:700">🎯 Meine Missionen</div>'
-      +'<div style="font-size:10px;color:var(--muted);background:var(--bg4);padding:3px 8px;border-radius:8px">⏱ Abrechnung in '+settleStr+'</div>'
-      +'</div>'
-      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'
-      +'<div style="background:var(--bg3);border-radius:10px;padding:10px 12px">'
-      +'<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Heute</div>'
-      +mChip(daily.m1,'M1: '+daily.likesGegeben+'/5 geliked')
-      +bar(daily.likesGegeben,5,'#a78bfa')
-      +'<div style="margin-top:6px">'+mChip(daily.m2,'M2: '+daily.prozent+'% (≥80%)')+'</div>'
-      +bar(daily.prozent,100,'#818cf8')
-      +'<div style="margin-top:6px">'+mChip(daily.m3,'M3: '+(daily.gesamtLinks>0?Math.min(daily.gelikedLinks,daily.m3Target||daily.gesamtLinks)+'/'+(daily.m3Target||daily.gesamtLinks)+' '+(daily.gesamtLinks>(daily.m3Cap||30)?'(max 30)':'alle'):'–'))+'</div>'
-      +(daily.m3?'<div style="font-size:10px;color:#a78bfa;margin-top:4px">+5 XP + 💎 1 bei Abrechnung</div>':'')
-      +'</div>'
-      +'<div style="background:var(--bg3);border-radius:10px;padding:10px 12px">'
-      +'<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Wöchentlich</div>'
-      +mChip(weekly.m1Tage>=7,'W-M1: '+weekly.m1Tage+'/7 Tage')
-      +bar(weekly.m1Tage,7,'#60a5fa')
-      +'<div style="margin-top:6px">'+mChip(weekly.m2Tage>=7,'W-M2: '+weekly.m2Tage+'/7 → 💎')+'</div>'
-      +bar(weekly.m2Tage,7,'#34d399')
-      +'<div style="margin-top:6px">'+mChip(weekly.m3Tage>=7,'W-M3: '+weekly.m3Tage+'/7 → 💎💎')+'</div>'
-      +bar(weekly.m3Tage,7,'#fbbf24')
-      +'</div>'
-      +'</div>'
-      +'</div>';
-  }catch(e){const w2=document.getElementById('mission-widget-explore');if(w2)w2.innerHTML='';}
-})();
-<\/script>
 `, 'explore');
     }
 
