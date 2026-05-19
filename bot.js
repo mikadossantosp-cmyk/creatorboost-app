@@ -13937,6 +13937,9 @@ async function openEventModal(type) {
         '<option value="259200000">3 Tage</option>' +
         '<option value="604800000">7 Tage</option>' +
       '</select>' +
+      '<label style="font-size:11px;font-weight:700;letter-spacing:1.4px;color:var(--dsub);text-transform:uppercase;display:block;margin-bottom:6px">Start (optional — leer = sofort)</label>' +
+      '<input type="datetime-local" id="evt-startat" style="width:100%;padding:11px 14px;background:var(--dink);border:1px solid var(--dline);border-radius:10px;color:#fff;font-size:14px;margin-bottom:6px;font-family:inherit;color-scheme:dark">' +
+      '<div style="font-size:11px;color:var(--dsub);margin-bottom:12px;line-height:1.5">Wenn gesetzt: alle User bekommen JETZT eine Ankuendigungs-DM mit Datum + Uhrzeit, 1h vorher und 30 Min vorher einen Reminder, und beim Start eine Push.</div>' +
       '<label style="font-size:11px;font-weight:700;letter-spacing:1.4px;color:var(--dsub);text-transform:uppercase;display:block;margin-bottom:6px">Label (optional)</label>' +
       '<input type="text" id="evt-label" placeholder="z.B. \\'Wochenend-Bonus\\'" maxlength="60" style="width:100%;padding:11px 14px;background:var(--dink);border:1px solid var(--dline);border-radius:10px;color:#fff;font-size:14px;margin-bottom:6px;font-family:inherit">' +
       '<div style="font-size:11px;color:var(--dsub);margin-top:8px;line-height:1.5">Während des Events erscheint ein Live-Banner im Feed bei jedem User. Bei jedem Post wird der Bonus automatisch gutgeschrieben + In-App-DM gesendet.</div>' +
@@ -13952,20 +13955,33 @@ async function startEvent(type, btn) {
   const amount = parseInt(document.getElementById('evt-amount').value, 10);
   const durationMs = parseInt(document.getElementById('evt-duration').value, 10);
   const label = document.getElementById('evt-label').value || '';
+  const startAtRaw = document.getElementById('evt-startat')?.value || '';
   if (!Number.isFinite(amount) || amount <= 0) { alert('Bitte gültigen Betrag eingeben'); return; }
+  // Wenn datetime-local gesetzt -> Schedule-Pfad mit Ankuendigung. Sonst Sofort-Start.
+  let startAtMs = 0;
+  if (startAtRaw) {
+    startAtMs = new Date(startAtRaw).getTime();
+    if (!Number.isFinite(startAtMs)) { alert('Ungueltiges Datum'); return; }
+    if (startAtMs < Date.now() + 5*60*1000) { alert('Start muss min. 5 Min in der Zukunft sein'); return; }
+  }
   btn.disabled = true; btn.textContent = '⏳';
   try {
-    const r = await fetch('/api/admin/event-start', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ type, amount, durationMs, label }) });
+    const endpoint = startAtMs ? '/api/admin/schedule-event' : '/api/admin/event-start';
+    const body = startAtMs
+      ? JSON.stringify({ type, amount, durationMs, label, startAt: startAtMs })
+      : JSON.stringify({ type, amount, durationMs, label });
+    const r = await fetch(endpoint, { method:'POST', headers:{'Content-Type':'application/json'}, body });
     const raw = await r.text();
     let j; try { j = JSON.parse(raw); } catch(e) { j = { _raw: raw.slice(0, 200) }; }
     if (j.ok) {
       const summary = type === 'diamond'
         ? '+'+amount+' 💎 pro Post'
         : '+'+amount+'% XP pro Like';
-      dToast('🚀 Event gestartet · '+summary+' für '+Math.round(durationMs/60000)+' min','ok');
+      const when = startAtMs ? ' am '+new Date(startAtMs).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
+      dToast((startAtMs?'📅 Event geplant · ':'🚀 Event gestartet · ')+summary+when+' für '+Math.round(durationMs/60000)+' min','ok');
       document.querySelectorAll('.dash-modal-bg').forEach(m=>m.remove());
     } else {
-      btn.disabled = false; btn.textContent = '🚀 Starten';
+      btn.disabled = false; btn.textContent = startAtMs ? '📅 Planen' : '🚀 Starten';
       const detail = j.error || j._raw || 'unbekannt';
       alert('❌ HTTP '+r.status+'\\n\\n'+detail);
     }
