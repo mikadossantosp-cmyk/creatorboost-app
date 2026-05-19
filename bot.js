@@ -9954,6 +9954,28 @@ async function submitSuperLink(){
     banner.style.display='block';
     const now = Date.now();
     const cards = CUR_EVENTS.map(e => {
+      // 'pending' Events: laufen noch nicht — Countdown bis Start zeigen
+      if (e.pending) {
+        const startIn = e.start - now;
+        if (startIn <= 0) return null;
+        const isDiamond = e.type === 'diamond';
+        const grad = isDiamond ? 'linear-gradient(135deg,#06b6d4,#0e7490)' : 'linear-gradient(135deg,#8b5cf6,#6d28d9)';
+        const emoji = isDiamond ? '💎' : '⚡';
+        const valueLabel = isDiamond ? ('+' + e.amount + ' 💎 pro Post') : ('+' + (e.bonusPercent || e.amount) + '% XP pro Like');
+        const startStr = new Date(e.start).toLocaleString('de-DE', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+        // Dezenter Style fuer geplante Events (weniger auffaellig als aktive)
+        return '<div style="display:flex;align-items:center;gap:12px;padding:9px 14px;background:'+grad+';color:#fff;font-weight:700;opacity:.85">' +
+          '<div style="font-size:20px;line-height:1">📅</div>' +
+          '<div style="flex:1;min-width:0">' +
+            '<div style="font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;opacity:.9">'+emoji+' GEPLANT · ' + startStr + '</div>' +
+            '<div style="font-size:13px;font-weight:800;margin-top:1px">'+valueLabel+'</div>' +
+          '</div>' +
+          '<div style="text-align:right">' +
+            '<div style="font-size:9px;opacity:.85;letter-spacing:1px;text-transform:uppercase">Startet in</div>' +
+            '<div style="font-size:13px;font-weight:800;font-variant-numeric:tabular-nums" data-event-start="'+e.start+'">'+fmtRemaining(startIn)+'</div>' +
+          '</div>' +
+        '</div>';
+      }
       const remaining = e.end - now;
       if (remaining <= 0) return null;
       const isDiamond = e.type === 'diamond';
@@ -9988,14 +10010,26 @@ async function submitSuperLink(){
         const remaining = parseInt(el.dataset.eventEnd,10) - now;
         el.textContent = fmtRemaining(remaining);
       });
-      if (CUR_EVENTS.some(e => (e.end - now) <= 0)) { CUR_EVENTS = CUR_EVENTS.filter(e => (e.end - now) > 0); render(); }
+      // Pending Events: Countdown bis Start
+      banner.querySelectorAll('[data-event-start]').forEach(el=>{
+        const remaining = parseInt(el.dataset.eventStart,10) - now;
+        el.textContent = fmtRemaining(remaining);
+      });
+      // Cleanup beendete + gestartete Events: refresh damit aus 'pending' aktiv wird
+      const anyEnded = CUR_EVENTS.some(e => !e.pending && (e.end - now) <= 0);
+      const anyStarted = CUR_EVENTS.some(e => e.pending && (e.start - now) <= 0);
+      if (anyEnded || anyStarted) refresh();
     }, 1000);
   }
   async function refresh(){
     try {
       const r = await fetch('/api/events/status');
       const j = await r.json();
-      CUR_EVENTS = (j.events || []).filter(e => e.end > Date.now());
+      const active = (j.events || []).filter(e => e.end > Date.now());
+      // Upcoming-Events: zukunftige Events (startAt > now) — als 'pending' markiert
+      const upcoming = (j.upcoming || []).filter(e => e.start > Date.now())
+        .map(e => Object.assign({}, e, { pending: true }));
+      CUR_EVENTS = [...active, ...upcoming];
       render();
       if (CUR_EVENTS.length) startTick();
       else if (_tickHandle) { clearInterval(_tickHandle); _tickHandle = null; }
