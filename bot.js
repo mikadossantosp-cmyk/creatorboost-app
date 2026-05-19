@@ -8713,13 +8713,21 @@ window.onPinVisitStory = function(uid){
             .sort(_byLikedThenTimestamp);
         const aelterLinks2 = [...aelterLinks].sort(_byLikedThenTimestamp);
 
+        // Perf-FIX: Pre-Aggregate likes pro URL EINMAL (O(n)) statt in renderLink O(n²) zu iterieren.
+        // Vorher: 50 Posts x 1000 Links = 50.000 iterations pro Feed-Render. Jetzt: 1000.
+        const _linksByText = new Map();
+        for (const l of Object.values(d.links || {})) {
+            if (!l || !l.text) continue;
+            let agg = _linksByText.get(l.text);
+            if (!agg) { agg = { likes: new Set() }; _linksByText.set(l.text, agg); }
+            if (Array.isArray(l.likes)) for (const id of l.likes) agg.likes.add(String(id));
+        }
+
         function renderLink([msgId, link]){
             const poster = d.users[String(link.user_id)]||{};
-            const allLinksForUrl = Object.values(d.links||{}).filter(l=>l.text===link.text);
-            const allLikes = new Set();
-            allLinksForUrl.forEach(l=>{(Array.isArray(l.likes)?l.likes:[]).forEach(id=>allLikes.add(id));});
-            const likes = [...allLikes];
-            const hasLiked = likes.map(String).includes(String(myUid));
+            const _agg = _linksByText.get(link.text);
+            const likes = _agg ? [..._agg.likes] : [];
+            const hasLiked = _agg ? _agg.likes.has(String(myUid)) : false;
             const isNewForUser = !hasLiked && link.timestamp && new Date(link.timestamp).toDateString() === new Date().toDateString();
             const insta = poster.instagram;
             const grad = badgeGradient(poster.role);
@@ -9099,9 +9107,23 @@ ${(() => {
 <div id="event-banner" style="display:none"></div>
 <div style="width:100%">${storiesHtml}</div>
 ${(()=>{
-  const todayLiked = Object.values(d.links||{}).some(l=>Array.isArray(l.likes)&&l.likes.map(String).includes(String(myUid))&&new Date(l.timestamp).toDateString()===today);
+  // Perf: einmaliger Pass durch d.links statt 2x Object.values().some()+.filter()
+  // mit jeweils l.likes.map(String).includes() (O(n*m)) -> 1x O(n) mit Set.has() (O(n)).
+  const _todayStr = today;
+  const _myUidStr = String(myUid);
+  let _myTodayLikes = 0;
+  let _todayLiked = false;
+  for (const l of Object.values(d.links||{})) {
+    if (!l || !Array.isArray(l.likes)) continue;
+    if (new Date(l.timestamp).toDateString() !== _todayStr) continue;
+    // l.likes ist Set oder Array — Set.has ist O(1), array indexOf ist O(n)
+    const lset = (l.likes instanceof Set) ? l.likes : null;
+    const isInList = lset ? lset.has(_myUidStr) : l.likes.some(id => String(id) === _myUidStr);
+    if (isInList) { _myTodayLikes++; _todayLiked = true; }
+  }
+  const todayLiked = _todayLiked;
   const todayTotal = dedupLinks.filter(([,l])=>new Date(l.timestamp||0).toDateString()===today).length;
-  const myTodayLikes = Object.values(d.links||{}).filter(l=>Array.isArray(l.likes)&&l.likes.map(String).includes(String(myUid))&&new Date(l.timestamp).toDateString()===today).length;
+  const myTodayLikes = _myTodayLikes;
   const remaining = Math.max(0, todayTotal - myTodayLikes);
   if (remaining > 0 && !todayLiked) {
     return `<div style="margin:8px 16px;padding:10px 14px;background:linear-gradient(135deg,rgba(255,107,107,.15),rgba(255,165,0,.1));border:1px solid rgba(255,107,107,.3);border-radius:12px;display:flex;align-items:center;gap:10px">
