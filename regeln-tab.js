@@ -57,6 +57,7 @@ module.exports = `
     <button data-target="r-diamond">💎 Diamantlinks</button>
     <button data-target="r-warns">⚠️ Warns</button>
     <button data-target="r-xp">📈 XP</button>
+    <button data-target="r-badges">🏆 Badges</button>
     <button data-target="r-shop">💎 Shop</button>
   </nav>
 
@@ -262,13 +263,110 @@ module.exports = `
       <div class="regeln-row"><span>Weekly Streaks</span><span class="konsequenz k-xp">+15 / +20 XP</span></div>
       <p style="font-size:12px;color:var(--muted);margin-top:10px">Level = XP / 100 + 1</p>
 
-      <h3>Badges</h3>
-      <div class="badge-row"><span>🆕</span><span class="b-name">New</span><span class="b-xp">0 — 49</span></div>
-      <div class="badge-row"><span>📘</span><span class="b-name">Anfänger</span><span class="b-xp">50 — 499</span></div>
-      <div class="badge-row"><span>⬆️</span><span class="b-name">Aufsteiger</span><span class="b-xp">500 — 999</span></div>
-      <div class="badge-row"><span>🏅</span><span class="b-name">Erfahrener</span><span class="b-xp">1.000 — 4.999</span><span class="b-perk">🎁 +1 Link/Tag</span></div>
-      <div class="badge-row"><span>👑</span><span class="b-name">Elite</span><span class="b-xp">5.000 — 9.999</span><span class="b-perk">🎁 +1 + Mo Bonus</span></div>
-      <div class="badge-row"><span>🌟</span><span class="b-name">Elite+</span><span class="b-xp">ab 10.000</span><span class="b-perk">🌟 2 SL/Woche</span></div>
+      <p style="font-size:12px;color:var(--muted);margin-top:10px">→ Detail-Übersicht aller Stufen &amp; Belohnungen im <b style="color:#a78bfa">🏆 Badges</b>-Tab.</p>
+    </div>
+  </section>
+
+  <section id="r-badges" class="regeln-section">
+    <div class="regeln-card">
+      <h2>🏆 Badge-System</h2>
+      <p>Es gibt <b>6 Stufen</b>. Du levelst durch <b>XP</b> hoch und schaltest mit jeder Stufe neue Belohnungen frei. Höhere Badges = mehr Links, mehr Superlinks &amp; Bonus-Links die nicht ablaufen.</p>
+    </div>
+
+    <div class="badge-detail" style="background:linear-gradient(135deg,rgba(148,163,184,0.10),rgba(71,85,105,0.05));border:1px solid rgba(148,163,184,0.30);border-radius:18px;padding:16px;margin-bottom:12px">
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:10px">
+        <div style="font-size:38px;line-height:1">🆕</div>
+        <div style="flex:1">
+          <div style="font-size:17px;font-weight:800;color:var(--text)">New</div>
+          <div style="font-size:11.5px;color:var(--muted);font-weight:600">0 – 49 XP · Startphase</div>
+        </div>
+      </div>
+      <ul style="list-style:none;padding:0;margin:0;font-size:13px;line-height:1.8">
+        <li>🔗 <b>1 Link/Tag</b> (läuft täglich ab)</li>
+        <li>🌟 <b>1 Superlink/Woche</b> (läuft wöchentlich ab)</li>
+      </ul>
+    </div>
+
+    <div class="badge-detail" style="background:linear-gradient(135deg,rgba(77,171,247,0.10),rgba(29,111,165,0.05));border:1px solid rgba(77,171,247,0.30);border-radius:18px;padding:16px;margin-bottom:12px">
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:10px">
+        <div style="font-size:38px;line-height:1">📘</div>
+        <div style="flex:1">
+          <div style="font-size:17px;font-weight:800;color:var(--text)">Anfänger</div>
+          <div style="font-size:11.5px;color:var(--muted);font-weight:600">50 – 499 XP</div>
+        </div>
+      </div>
+      <ul style="list-style:none;padding:0;margin:0;font-size:13px;line-height:1.8">
+        <li>🔗 <b>1 Link/Tag</b> (läuft täglich ab)</li>
+        <li>🌟 <b>1 Superlink/Woche</b> (läuft wöchentlich ab)</li>
+      </ul>
+    </div>
+
+    <div class="badge-detail" style="background:linear-gradient(135deg,rgba(34,197,94,0.10),rgba(21,128,61,0.05));border:1px solid rgba(34,197,94,0.30);border-radius:18px;padding:16px;margin-bottom:12px">
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:10px">
+        <div style="font-size:38px;line-height:1">⬆️</div>
+        <div style="flex:1">
+          <div style="font-size:17px;font-weight:800;color:var(--text)">Aufsteiger</div>
+          <div style="font-size:11.5px;color:var(--muted);font-weight:600">500 – 999 XP</div>
+        </div>
+      </div>
+      <ul style="list-style:none;padding:0;margin:0;font-size:13px;line-height:1.8">
+        <li>🔗 <b>1 Link/Tag</b> (läuft täglich ab)</li>
+        <li>🌟 <b>1 Superlink/Woche</b> (läuft wöchentlich ab)</li>
+      </ul>
+    </div>
+
+    <div class="badge-detail" style="background:linear-gradient(135deg,rgba(245,158,11,0.10),rgba(217,119,6,0.05));border:1px solid rgba(245,158,11,0.30);border-radius:18px;padding:16px;margin-bottom:12px">
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:10px">
+        <div style="font-size:38px;line-height:1">🏅</div>
+        <div style="flex:1">
+          <div style="font-size:17px;font-weight:800;color:var(--text)">Erfahrener</div>
+          <div style="font-size:11.5px;color:var(--muted);font-weight:600">1.000 – 4.999 XP</div>
+        </div>
+      </div>
+      <ul style="list-style:none;padding:0;margin:0;font-size:13px;line-height:1.8">
+        <li>🔗 <b>2 Links/Tag</b> 🎁 <span style="color:#f59e0b;font-weight:700">+1 Bonus</span> (laufen täglich ab)</li>
+        <li>🌟 <b>1 Superlink/Woche</b> (läuft wöchentlich ab)</li>
+      </ul>
+    </div>
+
+    <div class="badge-detail" style="background:linear-gradient(135deg,rgba(212,175,55,0.15),rgba(180,134,30,0.08));border:1px solid rgba(212,175,55,0.45);border-radius:18px;padding:16px;margin-bottom:12px;box-shadow:0 4px 16px rgba(212,175,55,0.10)">
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:10px">
+        <div style="font-size:38px;line-height:1">👑</div>
+        <div style="flex:1">
+          <div style="font-size:17px;font-weight:800;color:var(--text)">Elite</div>
+          <div style="font-size:11.5px;color:#d4af37;font-weight:700">5.000 – 9.999 XP</div>
+        </div>
+      </div>
+      <ul style="list-style:none;padding:0;margin:0;font-size:13px;line-height:1.8">
+        <li>🔗 <b>2 Links/Tag</b> 🎁 <span style="color:#f59e0b;font-weight:700">+1 Bonus</span> (laufen täglich ab)</li>
+        <li>🌟 <b>1 Superlink/Woche</b> (läuft wöchentlich ab)</li>
+        <li>💾 <b style="color:#d4af37">+1 Extra-Link jeden Montag</b> — wird gespeichert &amp; läuft NIE ab!</li>
+      </ul>
+    </div>
+
+    <div class="badge-detail" style="background:linear-gradient(135deg,rgba(236,72,153,0.12),rgba(162,28,175,0.06));border:1px solid rgba(236,72,153,0.40);border-radius:18px;padding:16px;margin-bottom:12px;box-shadow:0 4px 20px rgba(236,72,153,0.15)">
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:10px">
+        <div style="font-size:38px;line-height:1">🌟</div>
+        <div style="flex:1">
+          <div style="font-size:17px;font-weight:800;background:linear-gradient(135deg,#ec4899,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Elite+</div>
+          <div style="font-size:11.5px;color:#ec4899;font-weight:700">ab 10.000 XP · Maximum</div>
+        </div>
+      </div>
+      <ul style="list-style:none;padding:0;margin:0;font-size:13px;line-height:1.8">
+        <li>🔗 <b>2 Links/Tag</b> 🎁 <span style="color:#f59e0b;font-weight:700">+1 Bonus</span> (laufen täglich ab)</li>
+        <li>🌟 <b style="color:#ec4899">2 Superlinks/Woche</b> statt 1 (laufen wöchentlich ab)</li>
+        <li>💾 <b style="color:#d4af37">+1 Extra-Link jeden Montag</b> — wird gespeichert &amp; läuft NIE ab!</li>
+      </ul>
+    </div>
+
+    <div class="regeln-card">
+      <h3 style="margin-top:0">💡 Wie funktionieren die Link-Arten?</h3>
+      <ul>
+        <li>🔗 <b>Standard-Link</b> — täglicher Slot. Wird nicht genutzt → läuft um Mitternacht ab.</li>
+        <li>🌟 <b>Superlink (Full-Engagement)</b> — wöchentlicher Premium-Slot. Wird nicht genutzt → läuft am Sonntag ab.</li>
+        <li>💾 <b>Bonus-Link (Elite-Belohnung)</b> — wird im Account <b>gespeichert</b>. Bleibt liegen bis du ihn benutzt — kein Ablaufdatum.</li>
+      </ul>
+      <div class="why-box">💎 <b>Tipp:</b> Bonus-Links kannst du dir aufsparen für deinen wichtigsten Post oder zusätzlich neben deinem täglichen Slot benutzen.</div>
     </div>
   </section>
 
