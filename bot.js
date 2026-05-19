@@ -3447,6 +3447,23 @@ ${ADMIN_FULLTOUR_SCRIPT_TAG}
 </body></html>`;
 }
 
+// Post-Count Cache (45s TTL synchron mit _dataCache): vermeidet Object.values(d.links).filter()
+// O(n) bei jedem profileCard-Render. Verschiedene Profile gleicher Render-Phase nutzen einen
+// Index pro 'd' Referenz statt jedes Mal neu zu iterieren.
+let _postCountCache = null;  // { dRef, byUid: Map<uid,count>, ts }
+function _getPostCount(d, uid) {
+    if (!d || !d.links) return 0;
+    if (!_postCountCache || _postCountCache.dRef !== d || (Date.now() - _postCountCache.ts) > 45000) {
+        const byUid = new Map();
+        for (const l of Object.values(d.links)) {
+            if (!l) continue;
+            const u = String(l.user_id || '');
+            byUid.set(u, (byUid.get(u) || 0) + 1);
+        }
+        _postCountCache = { dRef: d, byUid, ts: Date.now() };
+    }
+    return _postCountCache.byUid.get(String(uid)) || 0;
+}
 function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=null, picData=null) {
     const xp = u.xp||0;
     const nb = xpNext(xp);
@@ -3472,7 +3489,7 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
     const _myRankCrown = rankOf(uid, _t3);
     const crown = makeCrown(_t3);
     const crownOverlay = makeCrownOverlay(_t3);
-    const _posts = Object.values(d.links||{}).filter(l => String(l.user_id) === String(uid)).length;
+    const _posts = _getPostCount(d, uid);
     const _followers = (u.followers||[]).length;
     const _diamonds = u.diamonds || 0;
     const _picUrl = (picData||ladeBild(uid,'profilepic')) ? (appbildSrc(String(uid),'profilepic') || `/appbild/${uid}/profilepic`) : (u.instagram ? `https://unavatar.io/instagram/${u.instagram}` : '');
@@ -4192,20 +4209,51 @@ self.addEventListener('notificationclick',e=>{
 
     function redirect(to) { res.writeHead(302,{'Location':to}); res.end(); }
     function _writeCompressed(status, headers, body) {
-        // Gzip-Compression nur für Text-Responses > 1KB UND wenn Client gzip akzeptiert.
-        // Spart 70-80% bei JSON/HTML — der größte Speed-Win bei großen /data und Feed-Renders.
+        // Async-Compression — vorher sync zlib.gzipSync blockierte den Event-Loop fuer
+        // 50-200ms bei grossen HTML/JSON Responses (Feed ~100-300KB).
+        // Brotli (br) waere 15-25% kleiner als gzip — wenn vom Client akzeptiert.
         try {
             const buf = Buffer.isBuffer(body) ? body : Buffer.from(String(body), 'utf8');
+            if (buf.length < 1024) {
+                res.writeHead(status, headers);
+                return res.end(buf);
+            }
             const ae = String(req.headers['accept-encoding']||'');
-            if (buf.length >= 1024 && ae.includes('gzip')) {
-                const gz = zlib.gzipSync(buf, { level: 6 });
-                const h = Object.assign({}, headers, {
-                    'Content-Encoding': 'gzip',
-                    'Content-Length': gz.length,
-                    'Vary': 'Accept-Encoding',
+            // Praeferenz: brotli > gzip
+            if (ae.includes('br') && zlib.brotliCompress) {
+                zlib.brotliCompress(buf, {
+                    params: {
+                        [zlib.constants.BROTLI_PARAM_QUALITY]: 4,  // ausgewogen: speed vs size
+                        [zlib.constants.BROTLI_PARAM_SIZE_HINT]: buf.length,
+                    }
+                }, (err, compressed) => {
+                    if (err || !compressed) {
+                        try { res.writeHead(status, headers); res.end(buf); } catch(e2){}
+                        return;
+                    }
+                    const h = Object.assign({}, headers, {
+                        'Content-Encoding': 'br',
+                        'Content-Length': compressed.length,
+                        'Vary': 'Accept-Encoding',
+                    });
+                    try { res.writeHead(status, h); res.end(compressed); } catch(e2){}
                 });
-                res.writeHead(status, h);
-                return res.end(gz);
+                return;
+            }
+            if (ae.includes('gzip')) {
+                zlib.gzip(buf, { level: 5 }, (err, compressed) => {
+                    if (err || !compressed) {
+                        try { res.writeHead(status, headers); res.end(buf); } catch(e2){}
+                        return;
+                    }
+                    const h = Object.assign({}, headers, {
+                        'Content-Encoding': 'gzip',
+                        'Content-Length': compressed.length,
+                        'Vary': 'Accept-Encoding',
+                    });
+                    try { res.writeHead(status, h); res.end(compressed); } catch(e2){}
+                });
+                return;
             }
             res.writeHead(status, headers);
             return res.end(buf);
