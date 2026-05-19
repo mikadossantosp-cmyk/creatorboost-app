@@ -1745,6 +1745,42 @@ function layout(content, session, page='feed', lang='de') {
 <head>
 ${buildErrorHandler(_isAdmin)}
 <script>window.MY_UID=${JSON.stringify(_meUid)};</script>
+<!-- Telegram WebApp JS — bei Telegram-WebApp-Usern: 'window.Telegram.WebApp.openLink()' verfuegbar
+     fuer In-App-Browser (Zurueck-Button geht zurueck zur App). Bei Non-Telegram-Usern: kein Effekt. -->
+<script async src="https://telegram.org/js/telegram-web-app.js"></script>
+<script>
+// cbOpenExternal(url) — oeffnet externe Links bestmoeglich:
+// - In Telegram WebApp: nativer In-App-Browser (Zurueck-Button zur App)
+// - In Android TWA: Chrome Custom Tab (mit X-Button zur App)
+// - In iOS PWA Standalone: Safari (System-Verhalten)
+// - In Browser: neuer Tab
+// Plus: window.open() override damit existierende window.open(url,'_blank') Calls automatisch profitieren.
+(function(){
+  window.cbOpenExternal = function(url){
+    try {
+      if (typeof url !== 'string' || !url) return;
+      if (window.Telegram && window.Telegram.WebApp && typeof window.Telegram.WebApp.openLink === 'function') {
+        // try_instant_view=false damit Instagram/etc. korrekt geladen wird (nicht im Reader-Mode)
+        window.Telegram.WebApp.openLink(url, { try_instant_view: false });
+        return;
+      }
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } catch(e) {
+      try { window.open(url, '_blank', 'noopener,noreferrer'); } catch(_) {}
+    }
+  };
+  // Auto-Upgrade: window.open(url, '_blank', ...) im Telegram-WebApp-Kontext via openLink ersetzen,
+  // damit existierende Code-Pfade (auch Third-Party-Snippets) den In-App-Browser nutzen.
+  var _origOpen = window.open;
+  window.open = function(url, target, features){
+    if (target === '_blank' && typeof url === 'string' && /^https?:/.test(url) &&
+        window.Telegram && window.Telegram.WebApp && typeof window.Telegram.WebApp.openLink === 'function') {
+      try { window.Telegram.WebApp.openLink(url, { try_instant_view: false }); return null; } catch(e) {}
+    }
+    return _origOpen.call(window, url, target, features);
+  };
+})();
+</script>
 <script>try{var t=localStorage.getItem('cbTheme4');var dark=(t==='dark');document.documentElement.setAttribute('data-theme',dark?'dark':'light');setTimeout(function(){var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute('content',dark?'#0b0b0e':'#ffffff');var sb=document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');if(sb)sb.setAttribute('content',dark?'black-translucent':'default');},0);}catch(e){document.documentElement.setAttribute('data-theme','light');}</script>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
