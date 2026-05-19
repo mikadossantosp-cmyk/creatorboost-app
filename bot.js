@@ -9242,6 +9242,8 @@ async function likePost(msgId, btn) {
             _dequeueLike(msgId);
             if (countEl && data.likes !== undefined) countEl.textContent = data.likes;
             showBanner({ type:'success', title:'Like registriert ❤️', subtitle:'Vergiss nicht: Auf Instagram liken & mit 2 Wörter kommentieren. Danke!', dur:5000 });
+            // Sofortiger Sync: Mission-FAB-Badge + andere Counter refreshen ohne Wait auf 2min-Poll.
+            try { document.dispatchEvent(new CustomEvent('cb-state-changed', { detail: { type:'like', msgId } })); } catch(e){}
         } else if (data.missingInstagram) {
             // Echte Server-Ablehnung → revert lokal (Like nicht erlaubt)
             _dequeueLike(msgId);
@@ -9973,6 +9975,147 @@ async function submitSuperLink(){
 @keyframes cb-typing-dot{0%,60%,100%{opacity:.3;transform:scale(.85)}30%{opacity:1;transform:scale(1)}}
 </style>
 <button id="cb-helper-fab" onclick="cbHelperOpen()" aria-label="CreatorBoost öffnen"><img src="/appbild/creatorboost/profilepic" alt=""><span class="chat-tail">💬</span><span class="badge" id="cb-helper-badge">?</span></button>
+
+<!-- ── MISSIONS-FAB + MODAL ── (Floating-Icon das die Missionen overlay zeigt) -->
+<style>
+#cb-mission-fab{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));left:10px;width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#f59e0b,#a78bfa);color:#fff;border:none;cursor:pointer;z-index:8500;box-shadow:0 2px 5px rgba(0,0,0,.18);opacity:.7;transition:opacity .2s, transform .15s;display:flex;align-items:center;justify-content:center;font-size:14px;line-height:1}
+#cb-mission-fab:hover,#cb-mission-fab:active{opacity:1;transform:scale(1.1)}
+#cb-mission-fab .m-badge{position:absolute;top:-3px;right:-3px;min-width:13px;height:13px;border-radius:99px;background:#22c55e;color:#fff;font-size:8.5px;font-weight:800;display:none;align-items:center;justify-content:center;border:1.5px solid var(--bg);padding:0 3px}
+#cb-mission-modal{position:fixed;inset:0;z-index:9100;background:rgba(0,0,0,0.55);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:none;align-items:flex-end;animation:cbMfFade .2s ease}
+#cb-mission-modal.open{display:flex}
+@keyframes cbMfFade{from{opacity:0}to{opacity:1}}
+#cb-mission-modal .m-card{background:var(--bg);width:100%;max-width:480px;margin:0 auto;border-radius:22px 22px 0 0;padding:18px 16px calc(24px + env(safe-area-inset-bottom,0px));max-height:80vh;overflow-y:auto;animation:cbMfUp .25s ease}
+@keyframes cbMfUp{from{transform:translateY(40px)}to{transform:translateY(0)}}
+#cb-mission-modal .m-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+#cb-mission-modal .m-title{font-size:16px;font-weight:800;color:var(--text)}
+#cb-mission-modal .m-x{width:32px;height:32px;border-radius:50%;background:var(--bg4);border:none;color:var(--text);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+</style>
+<button id="cb-mission-fab" onclick="cbMissionOpen()" aria-label="Missionen anzeigen">🎯<span class="m-badge" id="cb-mission-badge"></span></button>
+<div id="cb-mission-modal" onclick="if(event.target===this)cbMissionClose()">
+  <div class="m-card">
+    <div class="m-hdr">
+      <div class="m-title">🎯 Meine Missionen</div>
+      <button class="m-x" onclick="cbMissionClose()" aria-label="Schliessen">×</button>
+    </div>
+    <div id="cb-mission-body">
+      <div style="padding:30px 12px;text-align:center;color:var(--muted);font-size:13px">Lade Missionen …</div>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+  let _mLoaded = 0;
+  async function loadMissions(targetEl){
+    try{
+      const r = await fetch('/api/mission-status', {cache:'no-store'});
+      const d = await r.json();
+      if(!d || !d.ok){ targetEl.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">Konnte Missionen nicht laden.</div>'; return; }
+      const now = new Date();
+      const nextSettle = new Date(); nextSettle.setHours(12,0,0,0);
+      if(now>=nextSettle) nextSettle.setDate(nextSettle.getDate()+1);
+      const diff = nextSettle - now;
+      const hh = Math.floor(diff/3600000), mm = Math.floor((diff%3600000)/60000);
+      const settleStr = hh+'h '+mm+'m';
+      const {daily, weekly} = d;
+      const bar = (val,max,col)=>'<div style="background:var(--bg4);border-radius:4px;height:5px;overflow:hidden;margin-top:4px"><div style="height:100%;width:'+Math.min(100,Math.round(val/max*100))+'%;background:'+col+';border-radius:4px;transition:width .5s ease"></div></div>';
+      const mChip = (done,label)=>'<div style="display:flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;color:'+(done?'#22c55e':'var(--muted)')+'">'+
+        '<span style="font-size:14px">'+(done?'✅':'⬜')+'</span>'+label+'</div>';
+      targetEl.innerHTML =
+        '<div style="font-size:11px;color:var(--muted);background:var(--bg4);padding:5px 10px;border-radius:8px;display:inline-block;margin-bottom:14px">⏱ Abrechnung in '+settleStr+'</div>'
+        +'<div style="display:grid;grid-template-columns:1fr;gap:12px">'
+        +  '<div style="background:var(--bg3);border:1px solid var(--border2);border-radius:12px;padding:12px 14px">'
+        +    '<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Heute</div>'
+        +    mChip(daily.m1,'M1: '+daily.likesGegeben+'/5 geliked')
+        +    bar(daily.likesGegeben,5,'#a78bfa')
+        +    '<div style="margin-top:8px">'+mChip(daily.m2,'M2: '+daily.prozent+'% (≥80%)')+'</div>'
+        +    bar(daily.prozent,100,'#818cf8')
+        +    '<div style="margin-top:8px">'+mChip(daily.m3,'M3: '+(daily.gesamtLinks>0?Math.min(daily.gelikedLinks,daily.m3Target||daily.gesamtLinks)+'/'+(daily.m3Target||daily.gesamtLinks)+' '+(daily.gesamtLinks>(daily.m3Cap||30)?'(max 30)':'alle'):'–'))+'</div>'
+        +    (daily.m3?'<div style="font-size:11px;color:#a78bfa;margin-top:6px">+5 XP + 💎 1 bei Abrechnung</div>':'')
+        +  '</div>'
+        +  '<div style="background:var(--bg3);border:1px solid var(--border2);border-radius:12px;padding:12px 14px">'
+        +    '<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Diese Woche</div>'
+        +    mChip(weekly.m1Tage>=7,'W-M1: '+weekly.m1Tage+'/7 Tage')
+        +    bar(weekly.m1Tage,7,'#60a5fa')
+        +    '<div style="margin-top:8px">'+mChip(weekly.m2Tage>=7,'W-M2: '+weekly.m2Tage+'/7 → 💎')+'</div>'
+        +    bar(weekly.m2Tage,7,'#34d399')
+        +    '<div style="margin-top:8px">'+mChip(weekly.m3Tage>=7,'W-M3: '+weekly.m3Tage+'/7 → 💎💎')+'</div>'
+        +    bar(weekly.m3Tage,7,'#fbbf24')
+        +  '</div>'
+        +'</div>'
+        +'<a href="/explore?tab=ranking" style="display:block;margin-top:14px;text-align:center;color:#a78bfa;font-size:12.5px;font-weight:700;text-decoration:none">→ Ranking + Preise ansehen</a>';
+      // Badge: offene Missionen zaehlen
+      const open = [daily.m1, daily.m2, daily.m3].filter(x => !x).length;
+      const b = document.getElementById('cb-mission-badge');
+      if (b) { if (open > 0) { b.textContent = open; b.style.display = 'flex'; } else { b.style.display = 'none'; } }
+    } catch(e){
+      targetEl.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">Konnte Missionen nicht laden.</div>';
+    }
+  }
+  window.cbMissionOpen = function(){
+    const m = document.getElementById('cb-mission-modal');
+    const body = document.getElementById('cb-mission-body');
+    m.classList.add('open');
+    document.body.style.overflow = 'hidden';
+    // immer fresh laden
+    loadMissions(body);
+    _mLoaded = Date.now();
+  };
+  window.cbMissionClose = function(){
+    const m = document.getElementById('cb-mission-modal');
+    m.classList.remove('open');
+    document.body.style.overflow = '';
+  };
+  // Badge initial laden (max 1x pro 60s; nicht wenn FAB gerade ausgeblendet)
+  function _refreshBadge(){
+    if (document.hidden) return;
+    fetch('/api/mission-status', {cache:'no-store'}).then(r=>r.json()).then(d => {
+      if (!d || !d.ok || !d.daily) return;
+      const open = [d.daily.m1, d.daily.m2, d.daily.m3].filter(x => !x).length;
+      const b = document.getElementById('cb-mission-badge');
+      if (b) { if (open > 0) { b.textContent = open; b.style.display = 'flex'; } else { b.style.display = 'none'; } }
+    }).catch(()=>{});
+  }
+  setTimeout(_refreshBadge, 3000);
+  setInterval(() => { if (!document.hidden) _refreshBadge(); }, 120000);
+  // SOFORT-Sync: bei Like/Post/etc. (cb-state-changed Event) sofort Badge + ggf. Modal refreshen.
+  document.addEventListener('cb-state-changed', function(ev){
+    _refreshBadge();
+    // Wenn Modal offen ist: kompletten Mission-Inhalt auch refreshen (nicht nur Badge)
+    const m = document.getElementById('cb-mission-modal');
+    if (m && m.classList.contains('open')) {
+      const body = document.getElementById('cb-mission-body');
+      if (body) loadMissions(body);
+    }
+    // Plus: Notif- und Msg-Badges auch (Layout-Funktionen, falls verfuegbar)
+    try { if (typeof checkNotifBadge === 'function') checkNotifBadge(); } catch(e){}
+    try { if (typeof checkMsgBadge === 'function') checkMsgBadge(); } catch(e){}
+    // Feed-Tab-Counter: ein ungelikter Post weniger -> Badge dekrementieren ohne Reload
+    if (ev && ev.detail && ev.detail.type === 'like') {
+      try {
+        const badge = document.querySelector('.ft-trigger-badge');
+        if (badge) {
+          const cur = parseInt(badge.textContent.replace(/[^0-9]/g,''), 10);
+          if (!isNaN(cur) && cur > 0) {
+            const next = cur - 1;
+            if (next <= 0) badge.style.display = 'none';
+            else badge.textContent = next > 99 ? '99+' : String(next);
+          }
+        }
+        // Tab-Item-Badge (im Dropdown) fuer aktiven Tab dekrementieren
+        const activeItemBadge = document.querySelector('.ft-item.active .ft-item-badge');
+        if (activeItemBadge) {
+          const c = parseInt(activeItemBadge.textContent.replace(/[^0-9]/g,''), 10);
+          if (!isNaN(c) && c > 0) {
+            const n = c - 1;
+            if (n <= 0) activeItemBadge.remove();
+            else activeItemBadge.textContent = n > 99 ? '99+' : String(n);
+          }
+        }
+      } catch(e){}
+    }
+  });
+})();
+</script>
 <div id="cb-helper-modal" onclick="if(event.target===this)cbHelperClose()">
   <div class="cb-helper-box" role="dialog" aria-labelledby="cb-helper-title">
     <div class="cb-helper-hdr">
