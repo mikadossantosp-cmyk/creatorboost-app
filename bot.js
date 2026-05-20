@@ -8625,8 +8625,10 @@ p{line-height:1.65;color:var(--muted)}
             return true;
         });
 
-        // Stories: nur User mit Pinned Reel anzeigen (Insta-Style).
+        // Stories: ALLE User mit Pinned Reel anzeigen (Insta-Style).
         // Eigene Familie (Hauptaccount + Sub-Accounts) wird komplett ausgeblendet.
+        // Filter: nur !banned + !family — KEIN isAppVisible/started/inGruppe-Filter
+        // und KEIN Following-Filter mehr. Wer einen Pinned-Link hat erscheint.
         const myEngagedOwners = (d.pinnedEngages?.[String(myUid)] || []).map(String);
         const _myFamilyRoot = String(session?.uid || myUid);
         const _isFamily = (id, u) => {
@@ -8635,7 +8637,7 @@ p{line-height:1.65;color:var(--muted)}
             return false;
         };
         const pinnedStories = Object.entries(d.users||{})
-            .filter(([id,u])=>!_isFamily(id,u)&&!adminIds.includes(Number(id))&&isAppVisible(u))
+            .filter(([id,u])=>!_isFamily(id,u)&&!adminIds.includes(Number(id))&&u&&!u.banned)
             .map(([id,u])=>({id, u, pinnedUrl: ladePinnedLink(id)}))
             .filter(x => !!x.pinnedUrl)
             .map(x => ({
@@ -8646,7 +8648,7 @@ p{line-height:1.65;color:var(--muted)}
                 if (a.engaged !== b.engaged) return a.engaged ? 1 : -1;
                 return (b.u.xp||0)-(a.u.xp||0);
             })
-            .slice(0,20);
+            .slice(0,50);
         // JSON-Daten für client-side Modal — sanitized gegen </script>-Injection
         const _pinnedStoriesJson = JSON.stringify(pinnedStories.map(x => {
             const sh = (x.pinnedUrl||'').match(/instagram\.com\/(?:reel|p|tv)\/([A-Za-z0-9_-]+)/);
