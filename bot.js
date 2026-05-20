@@ -10138,7 +10138,7 @@ async function submitSuperLink(){
         +    bar(daily.likesGegeben,5,'#a78bfa')
         +    '<div style="margin-top:8px">'+mChip(daily.m2,'M2: '+daily.prozent+'% (≥80%)')+'</div>'
         +    bar(daily.prozent,100,'#818cf8')
-        +    '<div style="margin-top:8px">'+mChip(daily.m3,'M3: '+Math.min(daily.gelikedLinks||0, daily.m3Target||(daily.m3Cap||30))+'/'+(daily.m3Target||(daily.m3Cap||30))+' geliked')+'</div>'
+        +    '<div style="margin-top:8px">'+mChip(daily.m3,'M3: '+Math.min(daily.gelikedLinks||0, daily.m3Target||(daily.m3Cap||30))+'/'+(daily.m3Target||(daily.m3Cap||30))+' (max 30)')+'</div>'
         +    bar(Math.min(daily.gelikedLinks||0, daily.m3Target||(daily.m3Cap||30)), daily.m3Target||(daily.m3Cap||30), '#fbbf24')
         +    (daily.m3?'<div style="font-size:11px;color:#a78bfa;margin-top:6px">+5 XP + 💎 1 bei Abrechnung</div>':'')
         +  '</div>'
