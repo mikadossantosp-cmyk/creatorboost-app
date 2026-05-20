@@ -55,6 +55,7 @@ module.exports = `
     <button data-target="r-superlinks">🌟 Superlinks</button>
     <button data-target="r-kollabs">🤝 Kollabs</button>
     <button data-target="r-diamond">💎 Diamantlinks</button>
+    <button data-target="r-prisma">💠 Prismalinks</button>
     <button data-target="r-warns">⚠️ Warns</button>
     <button data-target="r-xp">📈 XP</button>
     <button data-target="r-badges">🏆 Badges</button>
@@ -238,6 +239,45 @@ module.exports = `
 
       <h3>🎯 Ziel</h3>
       <p>Premium-Reichweite für wichtige Posts. Wer 30 💎 investiert bekommt 3 Tage echte Sichtbarkeit + Full-Engagement von der Community.</p>
+    </div>
+  </section>
+
+  <section id="r-prisma" class="regeln-section">
+    <div class="regeln-card" style="border:1px solid rgba(168,85,247,0.30);background:linear-gradient(135deg,rgba(239,68,68,0.04),rgba(245,158,11,0.04),rgba(34,197,94,0.04),rgba(6,182,212,0.04),rgba(168,85,247,0.04))">
+      <h2 style="background:linear-gradient(135deg,#ef4444,#f59e0b,#22c55e,#06b6d4,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">💠 Prismalinks · Premium-Stufe</h2>
+      <p style="background:linear-gradient(135deg,rgba(239,68,68,0.06),rgba(168,85,247,0.06));border-left:3px solid #a855f7;padding:10px 12px;border-radius:6px;margin-bottom:14px">Die <b>höchste Premium-Stufe</b>. <b>100 💎 Kosten</b> · <b>7 Tage</b> im Feed an erster Stelle mit Holographic-Glow · jeder Liker bekommt <b>+7 💎</b>.</p>
+
+      <h3>📋 Regeln</h3>
+      <ul>
+        <li>• Posten kostet <b>100 💎</b></li>
+        <li>• Prismalinks stehen <b>7 Tage</b> oben im Feed mit Prismatic-Glow</li>
+        <li>• <b>1× pro Woche</b> pro User erlaubt — exklusiv!</li>
+        <li>• Jeder Liker bekommt <b style="color:#a855f7">+7 💎</b> Belohnung</li>
+        <li>• <b>Engagement-Pflicht beim Liker:</b> LIKEN + KOMMENTIEREN + TEILEN + SPEICHERN</li>
+        <li>• Self-Like auf eigenen Prismalink ist <b>blockiert</b></li>
+        <li>• <b>Sehr hohe Strafen bei Betrug:</b> XP-Abzug + Diamonds-Reset + Bann</li>
+        <li>• Prismalinks werden gründlich kontrolliert — gespeichert bleiben sie für immer im Admin-Log</li>
+      </ul>
+
+      <h3>🚀 So postest du einen Prismalink</h3>
+      <ul>
+        <li>1. Tippe auf <b>+</b> unten in der Navi</li>
+        <li>2. Wähle <b>💠 Prismalink posten</b></li>
+        <li>3. Insta-URL + optionale Beschreibung eingeben</li>
+        <li>4. 100 💎 werden abgezogen, Post geht für 7 Tage live</li>
+      </ul>
+
+      <h3>❤️ So engagierst du einen Prismalink</h3>
+      <ul>
+        <li>1. Im Feed → 💠 Prisma Tab oder oben im normalen Heute-Tab</li>
+        <li>2. Tippe auf <b>🔗 Auf Instagram öffnen</b></li>
+        <li>3. Auf Instagram <b>liken + kommentieren + teilen + speichern</b></li>
+        <li>4. Zurück in die App, tippe auf <b>💠 Engagiert · +7 💎</b></li>
+        <li>5. Bestätige im Popup, dass du alle 4 Aktionen ausgeführt hast → +7 💎</li>
+      </ul>
+
+      <h3>🎯 Ziel</h3>
+      <p>Die ultimative Premium-Reichweite. Wer 100 💎 investiert bekommt eine ganze Woche echte Sichtbarkeit + Full-Engagement von der Community + extra-Glow im Feed.</p>
     </div>
   </section>
 
