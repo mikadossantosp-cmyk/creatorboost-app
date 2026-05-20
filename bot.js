@@ -10151,7 +10151,10 @@ async function submitSuperLink(){
         +    bar(weekly.m3Tage,7,'#fbbf24')
         +    (weekly.superlinks ? (
               '<div style="margin-top:12px;padding-top:10px;border-top:1px dashed var(--border2)">'
-            +   mChip(weekly.superlinks.alleGeliked, '🌟 Alle Superlinks: '+weekly.superlinks.geliked+'/'+weekly.superlinks.total+' → +500 XP + 💎💎')
+            +   '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px">'
+            +     '<div style="flex:1;min-width:0">'+mChip(weekly.superlinks.alleGeliked, '🌟 Alle Superlinks: '+weekly.superlinks.geliked+'/'+weekly.superlinks.total+' → +500 XP + 💎💎')+'</div>'
+            +     '<a href="/feed?tab=engagement" style="flex-shrink:0;display:inline-flex;align-items:center;gap:3px;padding:5px 9px;background:rgba(236,72,153,0.12);border:1px solid rgba(236,72,153,0.35);border-radius:8px;font-size:11px;font-weight:700;color:#ec4899;text-decoration:none">→ Superlinks</a>'
+            +   '</div>'
             +   bar(weekly.superlinks.geliked, Math.max(1, weekly.superlinks.total), '#ec4899')
             +   (weekly.superlinks.granted ? '<div style="font-size:11px;color:#22c55e;margin-top:6px;font-weight:700">✅ Belohnung erhalten</div>' : '<div style="font-size:11px;color:var(--muted);margin-top:6px">⏱ Auswertung Sonntag 23:59</div>')
             + '</div>'
