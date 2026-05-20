@@ -1,14 +1,11 @@
-# Schlankes Multi-Stage Dockerfile (~150 MB)
-# Ohne JDK/apksigner/zipalign — APK ist bereits signiert, /api/sign-apk
-# wird nicht mehr aktiv genutzt. Falls spaeter wieder noetig: einfach
-# default-jre-headless + apksigner + zipalign in Stage 2 hinzufuegen.
+FROM node:20-bookworm-slim
 
-# ── STAGE 1: BUILDER ──
-FROM node:20-bookworm-slim AS builder
+# Java + apksigner für APK-Signierung (v2/v3 scheme)
+RUN apt-get update && apt-get install -y --no-install-recommends default-jdk-headless apksigner zipalign && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Dependencies installieren (production-only)
+# Dependencies installieren
 COPY package*.json ./
 RUN npm install --omit=dev
 
@@ -18,15 +15,7 @@ COPY . .
 # bot.js mit Regeln-Tab patchen (build-time)
 RUN node patch-bot.js
 
-
-# ── STAGE 2: RUNTIME (slim) ──
-FROM node:20-bookworm-slim
-
-WORKDIR /app
-
-# Fertige App vom Builder (inkl. node_modules + gepatchte bot.js)
-COPY --from=builder /app /app
-
 EXPOSE 3000
 
+# Direkt bot.js starten - kein Loader notig weil Patch schon im Build geschah
 CMD ["node", "bot.js"]
