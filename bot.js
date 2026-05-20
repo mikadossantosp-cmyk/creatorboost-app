@@ -1913,6 +1913,14 @@ async function cbResendConfirm(btn){
       </div>
       <svg class="ps-card-arrow" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"><polyline points="9 6 15 12 9 18"/></svg>
     </button>
+    <button class="ps-card" disabled style="position:relative;overflow:hidden;opacity:0.55;cursor:not-allowed" onclick="alert('💠 Prismalink ist noch in Bearbeitung — bald verfügbar!')">
+      <div class="ps-card-icon" style="background:linear-gradient(135deg,#ef4444,#f59e0b 25%,#22c55e 50%,#06b6d4 75%,#a855f7);color:#fff">💠</div>
+      <div class="ps-card-body">
+        <div class="ps-card-title">Prismalink posten <span class="ps-card-badge" style="background:linear-gradient(135deg,#94a3b8,#64748b);color:#fff;font-size:9px">COMING SOON</span></div>
+        <div class="ps-card-sub">7 Tage Feed-Top · Liker erhalten +7 💎 · 1×/Woche · -100 💎</div>
+      </div>
+      <svg class="ps-card-arrow" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" style="opacity:0.4"><polyline points="9 6 15 12 9 18"/></svg>
+    </button>
   </div>
 </div>
 <div class="plus-sheet" id="diamond-sheet" onclick="if(event.target===this)closeDiamondSheet()">
@@ -1943,6 +1951,36 @@ async function cbResendConfirm(btn){
     </div>
     <button class="ps-cta diamond" id="diamond-post-btn" onclick="postDiamondLink()">💎 Veröffentlichen <span style="opacity:.85;font-weight:600">· −30 💎</span></button>
     <div id="diamond-result" class="ps-result"></div>
+  </div>
+</div>
+<div class="plus-sheet" id="prisma-sheet" onclick="if(event.target===this)closePrismaSheet()">
+  <div class="plus-sheet-inner">
+    <div class="ps-grabber"></div>
+    <div class="ps-head">
+      <div class="ps-head-text">
+        <div class="ps-eyebrow" style="background:linear-gradient(135deg,#ef4444,#f59e0b,#22c55e,#06b6d4,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-weight:800">Premium Plus</div>
+        <div class="ps-title">💠 Prismalink</div>
+        <div class="ps-sub">7 Tage ganz oben im Feed mit Holographic-Glow</div>
+      </div>
+      <button class="ps-close" onclick="closePrismaSheet()" aria-label="Schließen">
+        <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+      </button>
+    </div>
+    <div id="prisma-info" class="ps-info" style="background:linear-gradient(135deg,rgba(239,68,68,0.08),rgba(168,85,247,0.08));border:1px solid rgba(168,85,247,0.30);color:var(--text)">
+      <b>Kostet 100 💎</b> · <b>7 Tage</b> Feed-Top · <b>1× pro Woche</b> erlaubt.<br>
+      Jeder Liker bekommt <b style="color:#a855f7">+7 💎</b> Belohnung.<br>
+      <b style="background:linear-gradient(135deg,#ef4444,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Pflicht: FULL ENGAGED</b> — Schein-Likes werden hart sanktioniert.
+    </div>
+    <div class="ps-field">
+      <label class="ps-field-label">Instagram-URL</label>
+      <input type="url" id="prisma-url" class="ps-input" placeholder="https://www.instagram.com/reel/…">
+    </div>
+    <div class="ps-field">
+      <label class="ps-field-label">Beschreibung <span class="ps-optional">optional</span></label>
+      <textarea id="prisma-caption" class="ps-input ps-textarea" placeholder="Beschreibung…" maxlength="500" rows="2"></textarea>
+    </div>
+    <button class="ps-cta" id="prisma-post-btn" onclick="postPrismaLink()" style="background:linear-gradient(135deg,#ef4444,#f59e0b,#22c55e,#06b6d4,#a855f7);color:#fff">💠 Veröffentlichen <span style="opacity:.85;font-weight:600">· −100 💎</span></button>
+    <div id="prisma-result" class="ps-result"></div>
   </div>
 </div>
 <div class="plus-sheet" id="kollab-sheet" onclick="if(event.target===this)closeKollabSheet()">
@@ -2917,6 +2955,31 @@ async function postDiamondLink(){
     if(j.ok){ result.style.color='#06b6d4'; result.textContent='✅ Diamantlink live!'; setTimeout(()=>{ closeDiamondSheet(); location.href='/feed?tab=diamond'; },800); }
     else { result.style.color='#ef4444'; result.textContent='❌ '+(j.error||'Fehler'); btn.disabled=false; btn.textContent='💎 Diamantlink veröffentlichen (-30 💎)'; }
   } catch(e){ result.style.color='#ef4444'; result.textContent='❌ '+e.message; btn.disabled=false; btn.textContent='💎 Diamantlink veröffentlichen (-30 💎)'; }
+}
+
+function openPrismaSheet(){
+  const s=document.getElementById('prisma-sheet'); if(!s) return;
+  s.classList.add('open'); document.body.style.overflow='hidden';
+  document.getElementById('prisma-url').value='';
+  document.getElementById('prisma-caption').value='';
+  document.getElementById('prisma-result').textContent='';
+  const btn=document.getElementById('prisma-post-btn'); btn.disabled=false; btn.innerHTML='💠 Veröffentlichen <span style="opacity:.85;font-weight:600">· −100 💎</span>';
+}
+function closePrismaSheet(){const s=document.getElementById('prisma-sheet');if(s){s.classList.remove('open');document.body.style.overflow='';}}
+async function postPrismaLink(){
+  const url=(document.getElementById('prisma-url').value||'').trim();
+  const caption=(document.getElementById('prisma-caption').value||'').trim();
+  const result=document.getElementById('prisma-result');
+  if(!url){result.textContent='❌ Bitte Instagram-Link eingeben';return;}
+  if(!url.includes('instagram.com')){result.textContent='❌ Nur Instagram-Links erlaubt';return;}
+  if(!confirm('💠 Prismalink veröffentlichen?\\n\\nKostet 100 💎. 7 Tage Feed-Top mit Holographic-Glow, jeder Liker bekommt +7 💎. Nur 1× pro Woche. Bei Schein-Engagement folgen harte Strafen.')) return;
+  const btn=document.getElementById('prisma-post-btn'); btn.disabled=true; btn.textContent='⏳ Wird veröffentlicht …';
+  try {
+    const r=await fetch('/api/prisma-link/create',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url,caption})});
+    const j=await r.json();
+    if(j.ok){ result.style.color='#a855f7'; result.textContent='✅ Prismalink live!'; setTimeout(()=>{ closePrismaSheet(); location.href='/feed?tab=prisma'; },800); }
+    else { result.style.color='#ef4444'; result.textContent='❌ '+(j.error||'Fehler'); btn.disabled=false; btn.innerHTML='💠 Veröffentlichen <span style="opacity:.85;font-weight:600">· −100 💎</span>'; }
+  } catch(e){ result.style.color='#ef4444'; result.textContent='❌ '+e.message; btn.disabled=false; btn.innerHTML='💠 Veröffentlichen <span style="opacity:.85;font-weight:600">· −100 💎</span>'; }
 }
 
 async function openKollabSheet(){
@@ -9095,6 +9158,7 @@ commentsBox+
         const aelterHtml = aelterLinks2.length ? aelterLinks2.map(renderLink).join('') : '<div class="empty" style="margin-top:40px"><div class="empty-icon">🕐</div><div class="empty-text">Keine älteren Links</div></div>';
         const kollabsHtml = '<div id="kollabs-tab-root" style="padding:8px 0 80px"><div style="padding:48px 24px;text-align:center;color:var(--muted);font-size:13px">⏳ Lade Kollab-Posts…</div></div>';
         const diamondHtml = '<div id="diamond-tab-root" style="padding:8px 0 80px"><div style="padding:48px 24px;text-align:center;color:var(--muted);font-size:13px">⏳ Lade Diamantlinks…</div></div>';
+        const prismaHtml = '<div id="prisma-tab-root" style="padding:8px 0 80px"><div style="padding:60px 24px;text-align:center"><div style="font-size:64px;margin-bottom:16px;background:linear-gradient(135deg,#ef4444,#f59e0b,#22c55e,#06b6d4,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">💠</div><div style="font-size:18px;font-weight:800;background:linear-gradient(135deg,#ef4444,#f59e0b,#22c55e,#06b6d4,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:8px">Prismalink</div><div style="font-size:13px;color:var(--muted);max-width:320px;margin:0 auto;line-height:1.6">Die ultimative Premium-Stufe — 100💎 zum Posten · 7 Tage Feed-Top · 7💎 Reward pro Liker · 1×/Woche.</div><div style="margin-top:24px;display:inline-block;padding:8px 18px;background:linear-gradient(135deg,#94a3b8,#64748b);color:#fff;border-radius:999px;font-size:12px;font-weight:800;letter-spacing:1px">⏳ COMING SOON</div></div></div>';
         // Diamantlink-Top-Strip nur im 'heute'-Tab — älteste Diamantlinks ganz oben.
         // Stack-Order Heute-Tab:
         //   1. Diamond-Top-Strip (#diamond-top-strip)
@@ -9105,12 +9169,13 @@ commentsBox+
         // First-Post-Pin und regulärer Feed → wir splitten heuteHtml in
         // pinnedHtml + regularHeuteHtml, dann boost-strip dazwischen.
         const heuteWithDiamondTop = tab === 'heute'
-            ? '<div id="diamond-top-strip"></div>'+pinnedHtml+'<div id="collab-boost-strip"></div><div style="padding:8px 0 80px">'+regularHeuteHtml+'</div>'
+            ? '<div id="prisma-top-strip"></div><div id="diamond-top-strip"></div>'+pinnedHtml+'<div id="collab-boost-strip"></div><div style="padding:8px 0 80px">'+regularHeuteHtml+'</div>'
             : '<div style="padding:8px 0 80px">'+heuteHtml+'</div>';
         const postsHtml = tab === 'aelter' ? '<div style="padding:8px 0 80px">'+aelterHtml+'</div>'
             : tab === 'engagement' ? engagementHtml
             : tab === 'kollabs' ? kollabsHtml
             : tab === 'diamond' ? diamondHtml
+            : tab === 'prisma' ? prismaHtml
             : heuteWithDiamondTop;
 
         return html(`
@@ -9128,6 +9193,7 @@ ${(() => {
     {id:'engagement', emoji:'⭐', label:'Engagement', count:_unlikedCountSuper},
     {id:'kollabs', emoji:'🤝', label:'Kollabs', count:0},
     {id:'diamond', emoji:'💎', label:'Diamond', count:0},
+    {id:'prisma', emoji:'💠', label:'Prisma', count:0, comingSoon:true},
   ];
   const _curTab = _tabsMeta.find(t=>t.id===tab) || _tabsMeta[0];
   const _totalAllCount = _tabsMeta.reduce((s,t)=>s+(t.count||0),0);
@@ -9140,7 +9206,7 @@ ${(() => {
       ${_totalAllCount > 0 ? `<span class="ft-trigger-badge">${_totalAllCount > 99 ? '99+' : _totalAllCount}</span>` : ''}
     </button>
     <div class="ft-menu" id="ft-menu">
-      ${_tabsMeta.map(t => `<a href="/feed?tab=${t.id}" class="ft-item${t.id===_curTab.id?' active':''}"><span class="ft-item-emoji">${t.emoji}</span><span class="ft-item-label">${htmlEsc(t.label)}</span>${t.count > 0 ? `<span class="ft-item-badge">${t.count > 99 ? '99+' : t.count}</span>` : ''}${t.id===_curTab.id ? '<span class="ft-item-check">✓</span>' : ''}</a>`).join('')}
+      ${_tabsMeta.map(t => t.comingSoon ? `<a href="javascript:void(0)" onclick="alert('💠 Prismalink ist noch in Bearbeitung — bald verfügbar!');return false;" class="ft-item" style="opacity:0.5;cursor:not-allowed"><span class="ft-item-emoji">${t.emoji}</span><span class="ft-item-label">${htmlEsc(t.label)}</span><span class="ft-item-badge" style="background:linear-gradient(135deg,#94a3b8,#64748b);color:#fff;font-size:9px;padding:2px 7px">SOON</span></a>` : `<a href="/feed?tab=${t.id}" class="ft-item${t.id===_curTab.id?' active':''}"><span class="ft-item-emoji">${t.emoji}</span><span class="ft-item-label">${htmlEsc(t.label)}</span>${t.count > 0 ? `<span class="ft-item-badge">${t.count > 99 ? '99+' : t.count}</span>` : ''}${t.id===_curTab.id ? '<span class="ft-item-check">✓</span>' : ''}</a>`).join('')}
     </div>
   </div>
   <div class="topbar-actions">
@@ -9831,6 +9897,113 @@ async function submitSuperLink(){
   }, 60000);
 })();
 
+// ── PRISMALINK MODULE (Heute-Top-Strip + Prisma-Tab) ──
+// Analog Diamantlink, aber mit Holographic-Glow + hideEngaged=1 (engaged Posts verschwinden vom User-Feed)
+(function initPrismaLinks(){
+  const stripEl = document.getElementById('prisma-top-strip');
+  const tabEl = document.getElementById('prisma-tab-root');
+  if (!stripEl && !tabEl) return;
+  // Wenn Prisma-Tab-Root da ist, NICHT laden — der Tab zeigt nur Coming-Soon Placeholder.
+  // Nur Top-Strip rendern (= Heute-Feed Anzeige).
+  if (!stripEl) return;
+  function esc(s){ return String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  function fmtRemaining(ms){
+    if (ms <= 0) return 'abgelaufen';
+    const s = Math.floor(ms/1000), d=Math.floor(s/86400), h=Math.floor((s%86400)/3600), m=Math.floor((s%3600)/60);
+    if (d > 0) return d+'d '+h+'h';
+    if (h > 0) return h+'h '+m+'m';
+    return m+'m';
+  }
+  function prismaCss(){
+    if (document.getElementById('prisma-css')) return;
+    const s = document.createElement('style'); s.id='prisma-css';
+    s.textContent = '.prisma-card{position:relative;margin:0 16px 14px;border-radius:18px;overflow:hidden;background:linear-gradient(180deg,var(--bg3),var(--bg2));isolation:isolate}'+
+      '.prisma-card-glow{position:absolute;inset:-2px;border-radius:20px;padding:2px;background:conic-gradient(from 0deg,#ef4444,#f59e0b,#22c55e,#06b6d4,#a855f7,#ef4444);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;animation:pl-glow 5s linear infinite;pointer-events:none}'+
+      '@keyframes pl-glow{to{transform:rotate(360deg)}}'+
+      '.prisma-card-body{position:relative;padding:14px;background:var(--bg3);border-radius:16px;margin:2px}';
+    document.head.appendChild(s);
+  }
+  function renderCard(p){
+    const isMine = !!p.isSelf;
+    const liked = !!p.liked;
+    const aName = esc(p.author?.name||'User');
+    const aHandle = p.author?.instagram ? '@'+esc(p.author.instagram) : '';
+    const remaining = p.remainingMs;
+    return '<div class="prisma-card" data-post-id="'+esc(p.id)+'">' +
+      '<div class="prisma-card-glow"></div>' +
+      '<div class="prisma-card-body">' +
+        '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;padding:10px 14px;background:linear-gradient(135deg,rgba(239,68,68,0.10),rgba(245,158,11,0.10),rgba(34,197,94,0.10),rgba(6,182,212,0.10),rgba(168,85,247,0.14));border:1.5px solid rgba(168,85,247,0.45);border-radius:14px;box-shadow:0 0 18px rgba(168,85,247,0.25)">' +
+          '<span style="font-size:24px;line-height:1;filter:drop-shadow(0 2px 6px rgba(168,85,247,.5))">💠</span>' +
+          '<div style="flex:1;min-width:0">' +
+            '<div style="font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;background:linear-gradient(135deg,#ef4444,#f59e0b,#22c55e,#06b6d4,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">PRISMALINK · PREMIUM</div>' +
+            '<div style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-0.5px;line-height:1.15;margin-top:2px">+'+(p.reward||7)+' 💎 <span style="font-size:11px;color:var(--muted);font-weight:600;letter-spacing:0">für ein echtes Engagement</span></div>' +
+          '</div>' +
+          '<div style="font-size:11px;color:#a855f7;font-weight:700;text-align:right;flex-shrink:0">⏱<br>'+fmtRemaining(remaining)+'</div>' +
+        '</div>' +
+        '<div style="font-size:13.5px;font-weight:700"><a href="/profil/'+esc(p.uid)+'" style="color:var(--text);text-decoration:none">'+aName+'</a> '+(aHandle?'<span style="color:#a855f7;font-weight:500;font-size:12px">'+aHandle+'</span>':'')+'</div>' +
+        (p.caption ? '<div style="font-size:13px;color:var(--text);line-height:1.5;margin:6px 0 8px">'+esc(p.caption)+'</div>' : '') +
+        '<a href="'+esc(p.url)+'" target="_blank" rel="noopener noreferrer" onclick="window._pvisit_'+p.id+'=Date.now()" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:16px;background:linear-gradient(135deg,#ec4899,#a855f7);color:#fff;border-radius:12px;font-size:14.5px;font-weight:800;text-decoration:none;margin-bottom:10px;box-shadow:0 6px 18px rgba(168,85,247,.45);position:relative"><span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900">1</span><span style="color:#fff;font-weight:800">📸 Auf Instagram öffnen</span><span style="font-size:18px;margin-left:4px">→</span></a>' +
+        '<div style="font-size:11px;color:#f59e0b;background:rgba(245,158,11,0.08);border-left:3px solid #f59e0b;border-radius:6px;padding:8px 10px;margin-bottom:10px;line-height:1.5"><b>⚠️ Pflicht:</b> LIKEN + KOMMENTIEREN + TEILEN + SPEICHERN. Bei Schein-Likes: XP-Abzug + Diamonds-Reset + Bann!</div>' +
+        (isMine
+          ? '<div style="padding:11px;background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.35);border-radius:10px;font-size:12.5px;color:#ef4444;font-weight:700;text-align:center">🚫 Kein Self-Like — dein eigener Post</div>'
+          : liked
+          ? '<div style="padding:11px;background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.35);border-radius:10px;font-size:13px;color:#22c55e;font-weight:700;text-align:center">✅ Engagiert · +'+(p.reward||7)+' 💎</div>'
+          : '<button onclick="prismaLikeClick(\\''+p.id+'\\', this)" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;background:linear-gradient(135deg,#ef4444,#f59e0b,#22c55e,#06b6d4,#a855f7);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 0 18px rgba(168,85,247,0.40);position:relative"><span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900">2</span><span>💠 Engagiert · +'+(p.reward||7)+' 💎</span></button>'
+        ) +
+        (function(){
+          const lkrs = Array.isArray(p.likers) ? p.likers : [];
+          const cnt = p.likeCount || lkrs.length;
+          if (cnt === 0) return '<div style="font-size:11px;color:var(--muted);margin-top:8px;text-align:center">Noch keine Engagements</div>';
+          const top = lkrs.slice(0,3).map(u => '<b style="color:var(--text)">'+esc(u.name||'User')+'</b>').join(', ');
+          const rest = cnt > 3 ? ' und ' + (cnt-3) + ' weiteren' : '';
+          const namesTxt = 'Gefällt ' + top + rest;
+          const rows = lkrs.map(u => {
+            const initial = '<div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#a855f7,#06b6d4);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;position:relative;overflow:hidden">'+esc((u.name||'?')[0])+
+              (u.uid ? '<img src="/appbild/'+esc(u.uid)+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.remove()" alt="">' : '')+
+              '</div>';
+            return '<a href="/profil/'+esc(u.uid)+'" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--border2);text-decoration:none">'+initial+'<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:var(--text)">'+esc(u.name||'User')+'</div>'+(u.instagram?'<div style="font-size:11px;color:#a855f7">@'+esc(u.instagram)+'</div>':'')+'</div><div style="font-size:11px;color:var(--accent)">→</div></a>';
+          }).join('');
+          return '<div id="liker-rows-pl-'+esc(p.id)+'" style="display:none">'+rows+'</div>' +
+            '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px;padding:0 4px">' +
+              '<div style="font-size:12px;color:var(--muted);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+namesTxt+'</div>' +
+              '<button onclick="showLikerModal(\\'pl-'+esc(p.id)+'\\')" style="background:rgba(168,85,247,0.10);border:1px solid rgba(168,85,247,0.35);color:#a855f7;font-size:11px;font-weight:700;padding:5px 10px;border-radius:8px;cursor:pointer;white-space:nowrap;flex-shrink:0">👥 Wer hat engagiert? ('+cnt+')</button>' +
+            '</div>';
+        })() +
+      '</div>' +
+    '</div>';
+  }
+  async function load(){
+    prismaCss();
+    try {
+      // hideEngaged=1 → bereits engagete Prismalinks verschwinden vom User-Feed
+      const r = await fetch('/api/prisma-link/feed?hideEngaged=1');
+      const j = await r.json();
+      const posts = j.posts || [];
+      if (stripEl) {
+        if (posts.length) stripEl.innerHTML = posts.map(p => renderCard(p)).join('');
+        else stripEl.innerHTML = '';
+      }
+    } catch(e) { console.warn('[prisma] load error', e); }
+  }
+  window.prismaLikeClick = async function(postId, btn){
+    const visitTs = window['_pvisit_'+postId];
+    if (!visitTs || (Date.now() - visitTs) < 1500) {
+      alert('Bitte erst auf den Instagram-Link tippen und LIKEN + KOMMENTIEREN + TEILEN + SPEICHERN.');
+      return;
+    }
+    if (!confirm('💠 Prismalink engagieren\\n\\nDu bestätigst mit deinem Like:\\n✓ Du hast den Post auf Instagram GELIKT\\n✓ Du hast KOMMENTIERT\\n✓ Du hast den Post GETEILT\\n✓ Du hast den Post GESPEICHERT\\n\\n→ Belohnung: +7 💎\\n→ Strafe bei Betrug: XP-Abzug + Diamonds-Reset + Bann\\n\\nFortfahren?')) return;
+    btn.disabled = true; btn.textContent = '⏳ Bestätige …';
+    try {
+      const r = await fetch('/api/prisma-link/like', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ postId }) });
+      const j = await r.json();
+      if (j.ok) { load(); }
+      else { btn.disabled=false; btn.innerHTML='💠 Engagiert · +7 💎'; alert('❌ '+(j.message||j.error||'Fehler')); }
+    } catch(e) { btn.disabled=false; btn.innerHTML='💠 Engagiert · +7 💎'; alert('❌ '+e.message); }
+  };
+  load();
+  setInterval(load, 60000);
+})();
+
 // ── KOLLAB-BOOST-STRIP (Heute-Feed, alle 4h 20min) ──
 (function initCollabBoostStrip(){
   const root = document.getElementById('collab-boost-strip');
@@ -10277,7 +10450,7 @@ const CB_HELP = {
   '_data_events': { q:'🚀 Laufende Events?', a:'<i>(Lade…)</i>', next:['data','_back'], lookup:'events' },
   'm': { q:'🎯 Missionen (M1/M2/M3)', a:'Auswertung täglich 12:00 (Berlin):<br><br><b>M1 — Daily Engagement</b><br>5 Links liken (+ auf Insta kommentieren) → <b>+5 XP</b><br><br><b>M2 — Solidarisch</b><br>80%+ aller heute geposteten Links liken → <b>+5 XP</b><br><br><b>M3 — Champion</b><br>ALLE heute geposteten Links liken (max 30) → <b>+5 XP + 💎 1 Diamant</b><br><br><b>Wochen-Bonus</b> bei 7 Tagen in Folge:<br>• W-M1: <b>+10 XP</b><br>• W-M2: <b>+15 XP + 💎 1</b><br>• W-M3: <b>+20 XP + 💎 2</b><br><br>📌 <b>Visit-before-Like:</b> erst Insta-Reel öffnen, dort liken + 2-Wort-Kommentar — DANN in App liken.', next:['xp','warn','_back'] },
   'xp': { q:'⚡ XP-System', a:'<b>Quellen (echte Werte):</b><br><ul><li>👍 <b>Like:</b> +5 XP pro Like (Mission-Pflicht: 5 Links/Tag)</li><li>📌 <b>Post:</b> +5 XP (1 Link/Tag, Bonus-Links optional)</li><li>🎯 <b>Daily Missionen M1+M2+M3:</b> max +15 XP + 1💎</li><li>🏆 <b>Wochen-Missionen:</b> max +45 XP + 3💎</li><li>🎁 <b>Daily Bonus</b> (Button auf <a href="/profil" style="color:#a78bfa;font-weight:700">/profil</a>): 10–20 XP zufällig</li><li>🌟 <b>First-Post Newcomer:</b> +20 XP</li><li>⭐ <b>Event-Multiplier</b> wenn aktiv (z.B. +100%)</li></ul><b>Badges/Rollen (XP-Schwellen):</b><br>🆕 New: 0-49 · 📘 Anfänger: 50-499 · ⬆️ Aufsteiger: 500-999 · 🏅 Erfahrener: 1000-4999 · 👑 Elite: 5000-9999 (+1 Bonus-Link/Woche) · 🌟 Elite+: 10000-24999 (2 Superlinks + 1 Bonus-Link/Woche) · 💎 Legende: 25000+ (alles wie Elite+ + 30 💎/Monat)', next:['m','diamond','_back'] },
-  'diamond': { q:'💎 Diamanten', a:'<b>Earn:</b><br><ul><li>🎯 <b>M3 daily:</b> +1💎</li><li>🏆 <b>Wochen-M2:</b> +1💎  ·  <b>Wochen-M3:</b> +2💎</li><li>📌 <b>Pinned-Post engagieren:</b> +1💎 (1× pro Owner)</li><li>💎 <b>Diamantlink liken:</b> +3💎</li><li>🎰 <b>Glücksrad</b> in <a href="/explore?tab=roulette" style="color:#a78bfa;font-weight:700">/explore?tab=roulette</a> (1×/Tag)</li><li>🎁 <b>Wochen-Gewinnspiel</b> in <a href="/explore?tab=gewinnspiel" style="color:#a78bfa;font-weight:700">/explore?tab=gewinnspiel</a></li><li>📅 <b>Diamond-Events</b> (Live-Multiplier)</li></ul><b>Ausgeben:</b><br><ul><li>💎 <b>Diamantlink posten:</b> 30💎 → 3 Tage Top im Feed</li><li>⭐ <b>Superlink-Slot:</b> 10💎 (Extra-Slot kaufen)</li><li>🛍 <b>Shop-Items</b> in <a href="/explore?tab=shop" style="color:#a78bfa;font-weight:700">/explore?tab=shop</a> oder <a href="/diamanten" style="color:#a78bfa;font-weight:700">/diamanten</a></li></ul>', next:['superlink','shop','_back'] },
+  'diamond': { q:'💎 Diamanten', a:'<b>Earn:</b><br><ul><li>🎯 <b>M3 daily:</b> +1💎</li><li>🏆 <b>Wochen-M2:</b> +1💎  ·  <b>Wochen-M3:</b> +2💎</li><li>📌 <b>Pinned-Post engagieren:</b> +1💎 (1× pro Owner)</li><li>💎 <b>Diamantlink liken:</b> +3💎</li><li>💠 <b>Prismalink liken:</b> +7💎 (Premium, Coming Soon)</li><li>🎰 <b>Glücksrad</b> in <a href="/explore?tab=roulette" style="color:#a78bfa;font-weight:700">/explore?tab=roulette</a> (1×/Tag)</li><li>🎁 <b>Wochen-Gewinnspiel</b> in <a href="/explore?tab=gewinnspiel" style="color:#a78bfa;font-weight:700">/explore?tab=gewinnspiel</a></li><li>📅 <b>Diamond-Events</b> (Live-Multiplier)</li></ul><b>Ausgeben:</b><br><ul><li>💎 <b>Diamantlink posten:</b> 30💎 → 3 Tage Top im Feed</li><li>💠 <b>Prismalink posten:</b> 100💎 → 7 Tage Feed-Top · 1×/Woche</li><li>⭐ <b>Superlink-Slot:</b> 10💎 (Extra-Slot kaufen)</li><li>🛍 <b>Shop-Items</b> in <a href="/explore?tab=shop" style="color:#a78bfa;font-weight:700">/explore?tab=shop</a> oder <a href="/diamanten" style="color:#a78bfa;font-weight:700">/diamanten</a></li></ul>', next:['superlink','shop','_back'] },
   'superlink': { q:'⚡ Superlinks', a:'Premium-Post für die ganze Woche besonders sichtbar in der Telegram-Gruppe.<br><br><b>Limit:</b> 1×/Woche (Mo-Sa) — <b>🌟 Elite+</b> darf 2×<br><b>Pflicht-Engagement aller Member:</b> LIKEN + KOMMENT + TEILEN + SPEICHERN auf Instagram<br><b>Wer nicht engaged:</b> Sonntag 23:59 Uhr <b>−50 XP + Verwarnung</b><br><br>Posten: Feed → <b>+</b> → <b>⚡ Superlink</b> → URL + Caption<br><br>Auch käuflich: 10💎 = 1 Extra-Slot.', next:['diamond','m','_back'] },
   'kollab': { q:'🤝 Kollab-Posts', a:'<b>Doppel-Posts mit Partner:</b><br><ol><li>Auf Partner-Profil "🤝 Kollab anfragen"</li><li>Partner bestätigt</li><li>Einer postet → Feed → <b>+</b> → <b>🤝 Kollab</b></li></ol><b>Regeln:</b><br>• 1× pro Woche pro Paar<br>• Sichtbare Zusammenarbeit Pflicht im Reel (beide Logos/Handles)<br>• Engagement Pflicht: LIKEN + KOMMENT + SPEICHERN + TEILEN auf Insta<br><br>Jeder Liker bekommt <b>+1💎</b>.', next:['diamond','_back'] },
   'pinned': { q:'📌 Pinned Reel', a:'Dein Lieblings-Reel auf deiner Creator-Karte in Explore.<br><br><b>Setzen:</b> /einstellungen → 📌 Pinned Reel Link → Insta-URL → speichern<br><br>⚠️ Nur 1× pro 30 Tage änderbar (Admins jederzeit).<br><br>Liker deines Pinned-Posts bekommen <b>+1💎</b> (1× pro Owner-Paar).', next:['superlink','_back'] },
@@ -12868,6 +13041,46 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
         const r = await postBot('/diamond-link-admin-delete-api', { postId: String(body.postId||'') });
         return json(r || {ok:false, error:'Mainbot offline'});
     }
+
+    // ── PRISMALINK API (Premium: 100💎 · 7 Tage · 7💎 Reward · 1×/Woche) ──
+    if (path === '/api/prisma-link/feed' && req.method === 'GET') {
+        if (!session) return json({error:'Nicht eingeloggt'}, 401);
+        // User-Feed: hideEngaged=1 → bereits geengaged Posts verschwinden
+        const hideEngaged = url.searchParams.get('hideEngaged') === '1' ? '&hideEngaged=1' : '';
+        const r = await fetchBotRaw('/prisma-link-feed-api?uid=' + encodeURIComponent(myUid) + hideEngaged);
+        return json(r || {ok:false, error:'Mainbot offline'});
+    }
+    if (path === '/api/prisma-link/create' && req.method === 'POST') {
+        if (!session) return json({error:'Nicht eingeloggt'}, 401);
+        const body = await parseBody(req);
+        const r = await postBot('/prisma-link-create-api', { uid: myUid, url: String(body.url||''), caption: String(body.caption||'') });
+        return json(r || {ok:false, error:'Mainbot offline'});
+    }
+    if (path === '/api/prisma-link/like' && req.method === 'POST') {
+        if (!session) return json({error:'Nicht eingeloggt'}, 401);
+        const body = await parseBody(req);
+        const r = await postBot('/prisma-link-like-api', { uid: myUid, postId: String(body.postId||'') });
+        return json(r || {ok:false, error:'Mainbot offline'});
+    }
+    if (path === '/api/prisma-link/accept-rules' && req.method === 'POST') {
+        if (!session) return json({error:'Nicht eingeloggt'}, 401);
+        const r = await postBot('/prisma-link-accept-rules-api', { uid: myUid });
+        return json(r || {ok:false, error:'Mainbot offline'});
+    }
+    if (path === '/api/admin/prisma-link/list' && req.method === 'GET') {
+        if (!session) return json({error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({error:'Nur Admins'}, 403);
+        const r = await fetchBotRaw('/prisma-link-admin-list-api');
+        return json(r || {ok:false, error:'Mainbot offline'});
+    }
+    if (path === '/api/admin/prisma-link/delete' && req.method === 'POST') {
+        if (!session) return json({error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({error:'Nur Admins'}, 403);
+        const body = await parseBody(req);
+        const r = await postBot('/prisma-link-admin-delete-api', { postId: String(body.postId||'') });
+        return json(r || {ok:false, error:'Mainbot offline'});
+    }
+
     if (path === '/api/collab/request' && req.method === 'POST') {
         if (!session) return json({error:'Nicht eingeloggt'}, 401);
         const body = await parseBody(req);
@@ -13353,6 +13566,7 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
           <button class="dash-tab" data-tab="reports">🚩 Meldungen <span id="dash-reports-badge" style="display:none;margin-left:4px;padding:1px 6px;border-radius:99px;background:#ef4444;color:#fff;font-size:10px;font-weight:800"></span></button>
           <button class="dash-tab" data-tab="compliance">📊 Compliance</button>
           <button class="dash-tab" data-tab="diamond-links">💎 Diamantlinks</button>
+          <button class="dash-tab" data-tab="prisma-links">💠 Prismalinks</button>
           <button class="dash-tab" data-tab="helper-inbox">🎫 Tickets <span id="dash-tickets-badge" style="display:none;margin-left:4px;padding:1px 6px;border-radius:99px;background:#f59e0b;color:#fff;font-size:10px;font-weight:800"></span></button>
         </div>
 
@@ -13360,6 +13574,7 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
         <div id="dash-reports" style="display:none"></div>
         <div id="dash-compliance" style="display:none"></div>
         <div id="dash-diamond-links" style="display:none"></div>
+        <div id="dash-prisma-links" style="display:none"></div>
         <div id="dash-helper-inbox" style="display:none"></div>
         <div class="dash-list" id="dash-list">
           <div class="dash-skel"><div class="dash-skel-avatar"></div><div style="flex:1"><div class="dash-skel-line" style="width:160px;margin-bottom:6px"></div><div class="dash-skel-line" style="width:240px"></div></div></div>
@@ -14559,6 +14774,7 @@ document.querySelectorAll('.dash-tab').forEach(btn => {
       const rp = document.getElementById('dash-reports'); if (rp) rp.style.display = 'none';
       const cp = document.getElementById('dash-compliance'); if (cp) cp.style.display = 'none';
       const dl = document.getElementById('dash-diamond-links'); if (dl) dl.style.display = 'none';
+      const pl = document.getElementById('dash-prisma-links'); if (pl) pl.style.display = 'none';
       const hi = document.getElementById('dash-helper-inbox'); if (hi) hi.style.display = 'none';
     };
     if (CUR_TAB === 'engagement-log') {
@@ -14577,6 +14793,10 @@ document.querySelectorAll('.dash-tab').forEach(btn => {
       hideAll();
       const dl = document.getElementById('dash-diamond-links'); if (dl) dl.style.display = 'block';
       loadDiamondLinksAdmin();
+    } else if (CUR_TAB === 'prisma-links') {
+      hideAll();
+      const pl = document.getElementById('dash-prisma-links'); if (pl) pl.style.display = 'block';
+      loadPrismaLinksAdmin();
     } else if (CUR_TAB === 'helper-inbox') {
       hideAll();
       const hi = document.getElementById('dash-helper-inbox'); if (hi) hi.style.display = 'block';
@@ -14737,6 +14957,61 @@ async function deleteDiamondLink(postId, btn){
   const r = await fetch('/api/admin/diamond-link/delete', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ postId }) });
   const j = await r.json().catch(()=>({}));
   if (j.ok) loadDiamondLinksAdmin();
+  else { btn.disabled=false; btn.textContent='🗑️ Löschen'; alert('❌ '+(j.error||'Fehler')); }
+}
+
+async function loadPrismaLinksAdmin(){
+  const root = document.getElementById('dash-prisma-links');
+  if (!root) return;
+  root.innerHTML = '<div style="padding:24px;text-align:center;color:var(--dsub)">⏳ Lade Prismalinks …</div>';
+  try {
+    const r = await fetch('/api/admin/prisma-link/list');
+    const j = await r.json();
+    if (!j.ok) { root.innerHTML = '<div style="padding:24px;text-align:center;color:#ef4444">'+(j.error||'Fehler')+'</div>'; return; }
+    const fmtTs = (ts) => ts ? new Date(ts).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '–';
+    const posts = j.posts || [];
+    if (!posts.length) { root.innerHTML = '<div style="padding:32px;text-align:center;color:var(--dsub);font-size:13px">Noch keine Prismalinks gepostet</div>'; return; }
+    let html = '<div style="padding:14px 16px 8px;font-size:11px;color:var(--dsub);text-transform:uppercase;letter-spacing:1.4px;font-weight:700">💠 Alle Prismalinks · '+posts.length+' insgesamt · '+posts.filter(p=>p.active).length+' aktiv · 100💎 Kosten · 7💎 Reward</div>';
+    for (const p of posts) {
+      const a = p.author||{};
+      const status = p.deletedAt ? '<span class="dash-pill err">🗑️ gelöscht</span>'
+        : p.active ? '<span class="dash-pill ok" style="background:linear-gradient(135deg,rgba(168,85,247,0.15),rgba(6,182,212,0.15));color:#a855f7;border-color:rgba(168,85,247,0.35)">🟢 aktiv</span>'
+        : '<span class="dash-pill muted">⏱ abgelaufen</span>';
+      const engagersHtml = (p.engagers||[]).length
+        ? '<div style="margin-top:8px;display:flex;flex-direction:column;gap:4px">'+p.engagers.map(e =>
+            '<div style="display:flex;align-items:center;gap:8px;padding:5px 10px;background:var(--dink);border-radius:6px;font-size:11.5px">' +
+              '<a href="/profil/'+esc(e.uid)+'" style="color:var(--text);text-decoration:none;font-weight:600">'+esc(e.name)+'</a>'+
+              (e.instagram?'<a href="https://instagram.com/'+esc(e.instagram)+'" target="_blank" rel="noopener" style="color:#a855f7;text-decoration:none">@'+esc(e.instagram)+'</a>':'')+
+              '<span style="background:linear-gradient(135deg,#a855f7,#06b6d4);color:#fff;padding:2px 7px;border-radius:99px;font-size:10px;font-weight:800">+7💎</span>'+
+              '<div style="flex:1"></div>'+
+              '<span style="color:var(--dsub);font-size:10.5px">'+fmtTs(e.engagedAt)+'</span>'+
+            '</div>'
+          ).join('')+'</div>'
+        : '<div style="font-size:11px;color:var(--dsub);margin-top:6px;font-style:italic">Noch keine Engagements</div>';
+      html += '<div style="margin:0 16px 12px;padding:14px;background:var(--dink2);border:1px solid rgba(168,85,247,0.30);border-radius:12px;position:relative;overflow:hidden">' +
+        '<div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#ef4444,#f59e0b,#22c55e,#06b6d4,#a855f7)"></div>'+
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;margin-top:6px">' +
+          status +
+          '<span style="font-size:11px;color:var(--dsub)">'+fmtTs(p.createdAt)+' · endet '+fmtTs(p.expiresAt)+'</span>'+
+          '<div style="flex:1"></div>'+
+          (!p.deletedAt ? '<button onclick="deletePrismaLink(\\''+esc(p.id)+'\\', this)" style="background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.35);color:#ef4444;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer">🗑️ Löschen</button>' : '')+
+        '</div>'+
+        '<div style="font-size:13px;font-weight:700;margin-bottom:6px"><a href="/profil/'+esc(p.uid)+'" style="color:var(--text);text-decoration:none">'+esc(a.name||'User')+'</a>'+(a.instagram?'<a href="https://instagram.com/'+esc(a.instagram)+'" target="_blank" rel="noopener" style="color:#a855f7;text-decoration:none;font-weight:500;font-size:12px;margin-left:6px">@'+esc(a.instagram)+'</a>':'')+'</div>'+
+        '<a href="'+esc(p.url)+'" target="_blank" style="display:block;font-size:12px;color:#a855f7;word-break:break-all;text-decoration:none;margin-bottom:6px">🔗 '+esc(p.url)+'</a>'+
+        (p.caption?'<div style="font-size:12px;color:var(--text);margin-bottom:8px">'+esc(p.caption)+'</div>':'')+
+        '<div style="font-size:11px;color:var(--dsub);margin-top:8px"><b>'+p.likeCount+' Engagements</b> · jeder +7💎 erhalten:</div>'+
+        engagersHtml+
+      '</div>';
+    }
+    root.innerHTML = html;
+  } catch(e) { root.innerHTML = '<div style="padding:24px;text-align:center;color:#ef4444">'+e.message+'</div>'; }
+}
+async function deletePrismaLink(postId, btn){
+  if (!confirm('Prismalink wirklich löschen? Soft-Delete — Post bleibt im Log, wird aber nicht mehr im Feed angezeigt.')) return;
+  btn.disabled = true; btn.textContent = '⏳';
+  const r = await fetch('/api/admin/prisma-link/delete', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ postId }) });
+  const j = await r.json().catch(()=>({}));
+  if (j.ok) loadPrismaLinksAdmin();
   else { btn.disabled=false; btn.textContent='🗑️ Löschen'; alert('❌ '+(j.error||'Fehler')); }
 }
 
