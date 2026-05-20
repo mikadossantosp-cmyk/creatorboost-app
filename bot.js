@@ -1913,6 +1913,14 @@ async function cbResendConfirm(btn){
       </div>
       <svg class="ps-card-arrow" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"><polyline points="9 6 15 12 9 18"/></svg>
     </button>
+    <button class="ps-card" onclick="closePlusSheet();setTimeout(openPrismaSheet,200)" style="position:relative;overflow:hidden">
+      <div class="ps-card-icon" style="background:linear-gradient(135deg,#ef4444,#f59e0b 25%,#22c55e 50%,#06b6d4 75%,#a855f7);color:#fff">💠</div>
+      <div class="ps-card-body">
+        <div class="ps-card-title">Prismalink posten <span class="ps-card-badge" style="background:linear-gradient(135deg,#ef4444,#a855f7);color:#fff">−100 💎</span></div>
+        <div class="ps-card-sub">7 Tage Feed-Top · Liker erhalten +7 💎 · 1×/Woche</div>
+      </div>
+      <svg class="ps-card-arrow" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"><polyline points="9 6 15 12 9 18"/></svg>
+    </button>
   </div>
 </div>
 <div class="plus-sheet" id="diamond-sheet" onclick="if(event.target===this)closeDiamondSheet()">
@@ -1943,6 +1951,36 @@ async function cbResendConfirm(btn){
     </div>
     <button class="ps-cta diamond" id="diamond-post-btn" onclick="postDiamondLink()">💎 Veröffentlichen <span style="opacity:.85;font-weight:600">· −30 💎</span></button>
     <div id="diamond-result" class="ps-result"></div>
+  </div>
+</div>
+<div class="plus-sheet" id="prisma-sheet" onclick="if(event.target===this)closePrismaSheet()">
+  <div class="plus-sheet-inner">
+    <div class="ps-grabber"></div>
+    <div class="ps-head">
+      <div class="ps-head-text">
+        <div class="ps-eyebrow" style="background:linear-gradient(135deg,#ef4444,#f59e0b,#22c55e,#06b6d4,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-weight:800">Premium Plus</div>
+        <div class="ps-title">💠 Prismalink</div>
+        <div class="ps-sub">7 Tage ganz oben im Feed mit Holographic-Glow</div>
+      </div>
+      <button class="ps-close" onclick="closePrismaSheet()" aria-label="Schließen">
+        <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+      </button>
+    </div>
+    <div id="prisma-info" class="ps-info" style="background:linear-gradient(135deg,rgba(239,68,68,0.08),rgba(168,85,247,0.08));border:1px solid rgba(168,85,247,0.30);color:var(--text)">
+      <b>Kostet 100 💎</b> · <b>7 Tage</b> Feed-Top · <b>1× pro Woche</b> erlaubt.<br>
+      Jeder Liker bekommt <b style="color:#a855f7">+7 💎</b> Belohnung.<br>
+      <b style="background:linear-gradient(135deg,#ef4444,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Pflicht: FULL ENGAGED</b> — Schein-Likes werden hart sanktioniert.
+    </div>
+    <div class="ps-field">
+      <label class="ps-field-label">Instagram-URL</label>
+      <input type="url" id="prisma-url" class="ps-input" placeholder="https://www.instagram.com/reel/…">
+    </div>
+    <div class="ps-field">
+      <label class="ps-field-label">Beschreibung <span class="ps-optional">optional</span></label>
+      <textarea id="prisma-caption" class="ps-input ps-textarea" placeholder="Beschreibung…" maxlength="500" rows="2"></textarea>
+    </div>
+    <button class="ps-cta" id="prisma-post-btn" onclick="postPrismaLink()" style="background:linear-gradient(135deg,#ef4444,#f59e0b,#22c55e,#06b6d4,#a855f7);color:#fff">💠 Veröffentlichen <span style="opacity:.85;font-weight:600">· −100 💎</span></button>
+    <div id="prisma-result" class="ps-result"></div>
   </div>
 </div>
 <div class="plus-sheet" id="kollab-sheet" onclick="if(event.target===this)closeKollabSheet()">
@@ -2917,6 +2955,31 @@ async function postDiamondLink(){
     if(j.ok){ result.style.color='#06b6d4'; result.textContent='✅ Diamantlink live!'; setTimeout(()=>{ closeDiamondSheet(); location.href='/feed?tab=diamond'; },800); }
     else { result.style.color='#ef4444'; result.textContent='❌ '+(j.error||'Fehler'); btn.disabled=false; btn.textContent='💎 Diamantlink veröffentlichen (-30 💎)'; }
   } catch(e){ result.style.color='#ef4444'; result.textContent='❌ '+e.message; btn.disabled=false; btn.textContent='💎 Diamantlink veröffentlichen (-30 💎)'; }
+}
+
+function openPrismaSheet(){
+  const s=document.getElementById('prisma-sheet'); if(!s) return;
+  s.classList.add('open'); document.body.style.overflow='hidden';
+  document.getElementById('prisma-url').value='';
+  document.getElementById('prisma-caption').value='';
+  document.getElementById('prisma-result').textContent='';
+  const btn=document.getElementById('prisma-post-btn'); btn.disabled=false; btn.innerHTML='💠 Veröffentlichen <span style="opacity:.85;font-weight:600">· −100 💎</span>';
+}
+function closePrismaSheet(){const s=document.getElementById('prisma-sheet');if(s){s.classList.remove('open');document.body.style.overflow='';}}
+async function postPrismaLink(){
+  const url=(document.getElementById('prisma-url').value||'').trim();
+  const caption=(document.getElementById('prisma-caption').value||'').trim();
+  const result=document.getElementById('prisma-result');
+  if(!url){result.textContent='❌ Bitte Instagram-Link eingeben';return;}
+  if(!url.includes('instagram.com')){result.textContent='❌ Nur Instagram-Links erlaubt';return;}
+  if(!confirm('💠 Prismalink veröffentlichen?\\n\\nKostet 100 💎. 7 Tage Feed-Top mit Holographic-Glow, jeder Liker bekommt +7 💎. Nur 1× pro Woche. Bei Schein-Engagement folgen harte Strafen.')) return;
+  const btn=document.getElementById('prisma-post-btn'); btn.disabled=true; btn.textContent='⏳ Wird veröffentlicht …';
+  try {
+    const r=await fetch('/api/prisma-link/create',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url,caption})});
+    const j=await r.json();
+    if(j.ok){ result.style.color='#a855f7'; result.textContent='✅ Prismalink live!'; setTimeout(()=>{ closePrismaSheet(); location.href='/feed?tab=prisma'; },800); }
+    else { result.style.color='#ef4444'; result.textContent='❌ '+(j.error||'Fehler'); btn.disabled=false; btn.innerHTML='💠 Veröffentlichen <span style="opacity:.85;font-weight:600">· −100 💎</span>'; }
+  } catch(e){ result.style.color='#ef4444'; result.textContent='❌ '+e.message; btn.disabled=false; btn.innerHTML='💠 Veröffentlichen <span style="opacity:.85;font-weight:600">· −100 💎</span>'; }
 }
 
 async function openKollabSheet(){
@@ -12868,6 +12931,44 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
         const r = await postBot('/diamond-link-admin-delete-api', { postId: String(body.postId||'') });
         return json(r || {ok:false, error:'Mainbot offline'});
     }
+
+    // ── PRISMALINK API (Premium: 100💎 · 7 Tage · 7💎 Reward · 1×/Woche) ──
+    if (path === '/api/prisma-link/feed' && req.method === 'GET') {
+        if (!session) return json({error:'Nicht eingeloggt'}, 401);
+        const r = await fetchBotRaw('/prisma-link-feed-api?uid=' + encodeURIComponent(myUid));
+        return json(r || {ok:false, error:'Mainbot offline'});
+    }
+    if (path === '/api/prisma-link/create' && req.method === 'POST') {
+        if (!session) return json({error:'Nicht eingeloggt'}, 401);
+        const body = await parseBody(req);
+        const r = await postBot('/prisma-link-create-api', { uid: myUid, url: String(body.url||''), caption: String(body.caption||'') });
+        return json(r || {ok:false, error:'Mainbot offline'});
+    }
+    if (path === '/api/prisma-link/like' && req.method === 'POST') {
+        if (!session) return json({error:'Nicht eingeloggt'}, 401);
+        const body = await parseBody(req);
+        const r = await postBot('/prisma-link-like-api', { uid: myUid, postId: String(body.postId||'') });
+        return json(r || {ok:false, error:'Mainbot offline'});
+    }
+    if (path === '/api/prisma-link/accept-rules' && req.method === 'POST') {
+        if (!session) return json({error:'Nicht eingeloggt'}, 401);
+        const r = await postBot('/prisma-link-accept-rules-api', { uid: myUid });
+        return json(r || {ok:false, error:'Mainbot offline'});
+    }
+    if (path === '/api/admin/prisma-link/list' && req.method === 'GET') {
+        if (!session) return json({error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({error:'Nur Admins'}, 403);
+        const r = await fetchBotRaw('/prisma-link-admin-list-api');
+        return json(r || {ok:false, error:'Mainbot offline'});
+    }
+    if (path === '/api/admin/prisma-link/delete' && req.method === 'POST') {
+        if (!session) return json({error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({error:'Nur Admins'}, 403);
+        const body = await parseBody(req);
+        const r = await postBot('/prisma-link-admin-delete-api', { postId: String(body.postId||'') });
+        return json(r || {ok:false, error:'Mainbot offline'});
+    }
+
     if (path === '/api/collab/request' && req.method === 'POST') {
         if (!session) return json({error:'Nicht eingeloggt'}, 401);
         const body = await parseBody(req);
