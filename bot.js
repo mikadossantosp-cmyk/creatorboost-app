@@ -1241,7 +1241,7 @@ button{cursor:pointer;border:none;outline:none;font-family:var(--font)}
 .ft-wrap.open .ft-trigger{background:var(--bg4);border-color:rgba(124,58,237,.40)}
 .ft-trigger-badge{position:absolute;top:-6px;right:-6px;min-width:20px;height:20px;line-height:16px;padding:0 6px;border-radius:99px;background:#ef4444;color:#fff;font-size:11px;font-weight:800;border:2px solid var(--bg);box-shadow:0 2px 8px rgba(239,68,68,.45);text-align:center;animation:ftBadgePulse 2s ease-in-out infinite}
 @keyframes ftBadgePulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
-.ft-menu{position:absolute;top:calc(100% + 8px);left:0;background:var(--bg3);border:1.5px solid var(--border2);border-radius:14px;box-shadow:0 12px 32px rgba(0,0,0,.22);min-width:260px;padding:6px;z-index:120;display:none;animation:ftDrop .18s ease}
+.ft-menu{position:absolute;top:calc(100% + 8px);left:0;background:var(--bg3);border:1.5px solid var(--border2);border-radius:14px;box-shadow:0 12px 32px rgba(0,0,0,.22);min-width:260px;max-width:calc(100vw - 24px);padding:6px;z-index:120;display:none;animation:ftDrop .18s ease}
 .ft-wrap.open .ft-menu{display:block}
 @keyframes ftDrop{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
 .ft-item{display:flex;align-items:center;gap:11px;width:100%;padding:11px 14px;text-decoration:none;color:var(--text);font-family:inherit;font-size:14px;font-weight:600;border:none;background:none;cursor:pointer;border-radius:10px;text-align:left;transition:background .12s;box-sizing:border-box}
