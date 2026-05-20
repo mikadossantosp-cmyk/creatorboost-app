@@ -15549,6 +15549,29 @@ fetch('/api/admin/engagement-log').then(r=>r.json()).then(j=>{ if (j.ok) { LAST_
             '</div>'
           : '';
 
+        // Sieger Letzte Woche: aus weeklyAwardsLog (idempotent persistiert vom Wochen-Reset Mo 00:05)
+        // Zeige Top-3 der letzten Woche als Highlight-Banner ueber dem Weekly-Ranking.
+        const _lastWeekAwards = ((d.weeklyAwardsLog||[]).slice().reverse());
+        const _lastWeekKey = _lastWeekAwards.length ? _lastWeekAwards[0].weekKey : null;
+        const _lastWeekTop3 = _lastWeekKey ? _lastWeekAwards.filter(a => a.weekKey === _lastWeekKey).sort((a,b)=>a.place-b.place) : [];
+        const _lastWeekWinnerHtml = _lastWeekTop3.length
+          ? '<div style="margin:0 16px 12px;padding:14px;background:linear-gradient(135deg,rgba(167,139,250,0.18),rgba(124,58,237,0.10));border:1px solid rgba(167,139,250,0.50);border-radius:12px;position:relative;overflow:hidden">' +
+              '<div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#a78bfa,#7c3aed,#a78bfa)"></div>' +
+              '<div style="font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#a78bfa;margin-bottom:8px;display:flex;align-items:center;gap:6px"><span>🏆</span><span>SIEGER LETZTE WOCHE (' + htmlEsc(_lastWeekKey) + ')</span></div>' +
+              _lastWeekTop3.map(a => {
+                const u = d.users[a.uid] || {};
+                const medal = a.place === 1 ? '🥇' : a.place === 2 ? '🥈' : '🥉';
+                const name = htmlEsc(u.spitzname || u.name || a.name || 'User');
+                const reward = '+' + a.xp + ' XP · +' + a.dia + ' 💎' + (a.links ? ' · 🔗×' + a.links : '');
+                return '<a href="/profil/' + htmlEsc(a.uid) + '" style="display:flex;align-items:center;gap:10px;padding:7px 0;text-decoration:none;color:var(--text);font-size:13px">' +
+                  '<span style="font-size:18px;flex-shrink:0">' + medal + '</span>' +
+                  '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700">' + name + '</span>' +
+                  '<span style="font-size:11px;color:#a78bfa;font-weight:700;flex-shrink:0">' + reward + '</span>' +
+                '</a>';
+              }).join('') +
+            '</div>'
+          : '';
+
         // ── PERSONEN DIE DU KENNEN KÖNNTEST ──
         const myFollowingSet = new Set((d.users[myUid]?.following||[]).map(String));
         const suggestions = [];
@@ -15662,6 +15685,7 @@ ${_latestNews ? `<a href="/explore?tab=newsletter" class="highlight-card" style=
     <div>🥉 <b>+15 XP · +1 💎 · 1 Extra-Link</b></div>
     <div style="margin-top:6px;font-size:11px;color:var(--muted)">Sieger werden automatisch benachrichtigt + Preise gutgeschrieben.</div>
   </div>
+  ${_lastWeekWinnerHtml}
   ${weeklyRows}
 </div>
 <script>
