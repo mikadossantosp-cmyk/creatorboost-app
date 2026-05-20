@@ -15526,6 +15526,28 @@ fetch('/api/admin/engagement-log').then(r=>r.json()).then(j=>{ if (j.ok) { LAST_
             .sort((a,b)=>(d.weeklyXP[b[0]]||0)-(d.weeklyXP[a[0]]||0));
         const dailyRows = makeRankSection(dailySorted, (id)=>d.dailyXP[id]||0, 'Heute noch keine XP');
         const weeklyRows = makeRankSection(weeklySorted, (id)=>d.weeklyXP[id]||0, 'Diese Woche noch keine XP');
+        // Sieger Gestern: aus dailyAwardsLog (idempotent persistiert in dailyRankingAbschluss).
+        // Zeige Top-3 von gestern als Highlight-Banner ueber dem Daily-Ranking.
+        const _yesterday = new Date(Date.now() - 86400000);
+        const _yesterdayKey = _yesterday.toISOString().slice(0,10);
+        const _yesterdayAwards = ((d.dailyAwardsLog||[]).filter(a => a.dayKey === _yesterdayKey)).sort((a,b)=>a.place-b.place);
+        const _yesterdayWinnerHtml = _yesterdayAwards.length
+          ? '<div style="margin:0 16px 12px;padding:14px;background:linear-gradient(135deg,rgba(251,191,36,0.18),rgba(245,158,11,0.10));border:1px solid rgba(251,191,36,0.50);border-radius:12px;position:relative;overflow:hidden">' +
+              '<div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#fbbf24,#f59e0b,#fbbf24)"></div>' +
+              '<div style="font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#fbbf24;margin-bottom:8px;display:flex;align-items:center;gap:6px"><span>🏆</span><span>SIEGER GESTERN (' + _yesterdayKey + ')</span></div>' +
+              _yesterdayAwards.map(a => {
+                const u = d.users[a.uid] || {};
+                const medal = a.place === 1 ? '🥇' : a.place === 2 ? '🥈' : '🥉';
+                const name = htmlEsc(u.spitzname || u.name || a.name || 'User');
+                const reward = '+' + a.xp + ' XP · +' + a.dia + ' 💎' + (a.links ? ' · 🔗' : '');
+                return '<a href="/profil/' + htmlEsc(a.uid) + '" style="display:flex;align-items:center;gap:10px;padding:7px 0;text-decoration:none;color:var(--text);font-size:13px">' +
+                  '<span style="font-size:18px;flex-shrink:0">' + medal + '</span>' +
+                  '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700">' + name + '</span>' +
+                  '<span style="font-size:11px;color:#fbbf24;font-weight:700;flex-shrink:0">' + reward + '</span>' +
+                '</a>';
+              }).join('') +
+            '</div>'
+          : '';
 
         // ── PERSONEN DIE DU KENNEN KÖNNTEST ──
         const myFollowingSet = new Set((d.users[myUid]?.following||[]).map(String));
@@ -15629,6 +15651,7 @@ ${_latestNews ? `<a href="/explore?tab=newsletter" class="highlight-card" style=
     <div>🥈 <b>+5 XP · +2 💎</b></div>
     <div>🥉 <b>+2 XP · +1 💎</b></div>
   </div>
+  ${_yesterdayWinnerHtml}
   ${dailyRows}
 </div>
 <div id="rlist-weekly" style="display:none;padding-bottom:100px">
