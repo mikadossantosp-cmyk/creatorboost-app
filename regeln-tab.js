@@ -147,10 +147,12 @@ module.exports = `
       <div class="warn-bar k-warn" style="margin-top:8px"><span>⚠️</span><span>Link gepostet ohne M1 → Verwarnung</span></div>
 
       <h3>📆 Weekly — Reset Montag 00:05 Uhr</h3>
+      <div class="regeln-row"><span>M1 Streak — 7 Tage M1 geschafft</span><span class="konsequenz k-xp">+10 XP</span></div>
       <div class="regeln-row"><span>M2 Streak — 7 Tage 80%</span><span class="konsequenz k-xp">+15 XP + 1 💎</span></div>
       <div class="regeln-row"><span>M3 Streak — 7 Tage 100%</span><span class="konsequenz k-xp">+20 XP + 2 💎</span></div>
+      <div class="regeln-row" style="background:rgba(236,72,153,0.08);border-left:3px solid #ec4899;padding-left:8px;border-radius:4px"><span><b style="color:#ec4899">🌟 Alle Superlinks der Woche liken</b><br><span style="font-size:11px;color:var(--muted)">Auswertung Sonntag 23:59</span></span><span class="konsequenz k-xp" style="background:rgba(236,72,153,0.18);color:#ec4899">+500 XP + 2 💎</span></div>
 
-      <div class="why-box">💡 <b>Warum?</b> Engagement-Streaks = echtes Wachstum. Wer dranbleibt wird belohnt.</div>
+      <div class="why-box">💡 <b>Warum?</b> Engagement-Streaks = echtes Wachstum. Wer dranbleibt &amp; alle Superlinks supportet, wird ueberproportional belohnt.</div>
     </div>
   </section>
 
@@ -349,13 +351,32 @@ module.exports = `
         <div style="font-size:38px;line-height:1">🌟</div>
         <div style="flex:1">
           <div style="font-size:17px;font-weight:800;background:linear-gradient(135deg,#ec4899,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Elite+</div>
-          <div style="font-size:11.5px;color:#ec4899;font-weight:700">ab 10.000 XP · Maximum</div>
+          <div style="font-size:11.5px;color:#ec4899;font-weight:700">10.000 – 24.999 XP</div>
         </div>
       </div>
       <ul style="list-style:none;padding:0;margin:0;font-size:13px;line-height:1.8">
         <li>🔗 <b>2 Links/Tag</b> 🎁 <span style="color:#f59e0b;font-weight:700">+1 Bonus</span> (laufen täglich ab)</li>
         <li>🌟 <b style="color:#ec4899">2 Superlinks/Woche</b> statt 1 (laufen wöchentlich ab)</li>
         <li>💾 <b style="color:#d4af37">+1 Extra-Link jeden Montag</b> — wird gespeichert &amp; läuft NIE ab!</li>
+      </ul>
+    </div>
+
+    <div class="badge-detail" style="background:linear-gradient(135deg,rgba(6,182,212,0.14),rgba(8,145,178,0.07));border:1px solid rgba(6,182,212,0.45);border-radius:18px;padding:16px;margin-bottom:12px;box-shadow:0 4px 24px rgba(6,182,212,0.20);position:relative;overflow:hidden">
+      <div style="position:absolute;top:-10px;right:-10px;width:80px;height:80px;background:radial-gradient(circle,rgba(103,232,249,0.30),transparent 70%);pointer-events:none"></div>
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:10px;position:relative">
+        <div style="font-size:38px;line-height:1">💎</div>
+        <div style="flex:1">
+          <div style="font-size:17px;font-weight:800;background:linear-gradient(135deg,#06b6d4,#0891b2,#67e8f9);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Legende</div>
+          <div style="font-size:11.5px;color:#06b6d4;font-weight:700">ab 25.000 XP · MYTHISCH</div>
+        </div>
+      </div>
+      <ul style="list-style:none;padding:0;margin:0;font-size:13px;line-height:1.8;position:relative">
+        <li>🔗 <b>2 Links/Tag</b> 🎁 <span style="color:#f59e0b;font-weight:700">+1 Bonus</span> (laufen täglich ab)</li>
+        <li>🌟 <b style="color:#ec4899">2 Superlinks/Woche</b> (laufen wöchentlich ab)</li>
+        <li>💾 <b style="color:#d4af37">+1 Extra-Link jeden Montag</b> — gespeichert, läuft NIE ab!</li>
+        <li>💎 <b style="color:#06b6d4">+30 Diamanten jeden Monat</b> — automatisch am 1. des Monats!</li>
+        <li>✨ <b style="color:#67e8f9">Legenden-Glow</b> ums Profilbild &amp; Posts</li>
+        <li>🏷️ <b style="color:#67e8f9">"LEGENDE"-Title</b> im Ranking &amp; Feed</li>
       </ul>
     </div>
 

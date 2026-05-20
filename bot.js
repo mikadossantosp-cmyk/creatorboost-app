@@ -416,12 +416,13 @@ NIEMALS sagen "DM an CreatorBoost", "/nachrichten/creatorboost öffnen" oder äh
 - Post: +5 XP (1 Link/Tag Standard)
 - Daily-Missionen M1+M2+M3: je +5 XP, M3 zusätzlich +1💎 — max +15 XP + 1💎/Tag
 - Wochen-Missionen (7 Tage Folge): W-M1 +10 XP, W-M2 +15 XP + 1💎, W-M3 +20 XP + 2💎
+- Wochen-Bonus: Alle Superlinks der Woche liken (Sonntag 23:59 Auswertung) → +500 XP + 2💎
 - Daily-Bonus (Button auf /profil): zufällig 10–20 XP, 1×/Tag
 - First-Post-Newcomer-Bonus: +20 XP einmalig
 - Event-Multiplier während Events
 
 # Badges (XP-Schwellen)
-🆕 New: 0–49 · 📘 Anfänger: 50–499 · ⬆️ Aufsteiger: 500–999 · 🏅 Erfahrener: 1000–4999 · 👑 Elite: 5000–9999 · 🌟 Elite+: 10000+
+🆕 New: 0–49 · 📘 Anfänger: 50–499 · ⬆️ Aufsteiger: 500–999 · 🏅 Erfahrener: 1000–4999 · 👑 Elite: 5000–9999 · 🌟 Elite+: 10000–24999 · 💎 Legende: 25000+ (+30 💎/Monat)
 
 # Missionen (Auswertung täglich 12:00 Berlin)
 - M1 — Daily Engagement: 5 Links liken (+ Insta-Kommentar) → +5 XP
@@ -1086,6 +1087,7 @@ function xpNext(xp) {
 }
 
 function badgeGradient(role) {
+    if(role?.includes('Legende')) return 'linear-gradient(135deg,#06b6d4,#0891b2,#67e8f9)';
     if(role?.includes('Elite+')) return 'linear-gradient(135deg,#00b4db,#a855f7,#f59e0b)';
     if(role?.includes('Elite')) return 'linear-gradient(135deg,#f59e0b,#ef4444)';
     if(role?.includes('Erfahrener')) return 'linear-gradient(135deg,#8b5cf6,#3b82f6)';
@@ -3710,7 +3712,7 @@ function ipfAddSub(){
 })();</script>
 ${(()=>{
   const wkKey = (()=>{const n=new Date();const dd=n.getDay();const mon=new Date(n);mon.setDate(n.getDate()-(dd===0?6:dd-1));return mon.getFullYear()+'-'+String(mon.getMonth()+1).padStart(2,'0')+'-'+String(mon.getDate()).padStart(2,'0');})();
-  const slMaxC = (u.role === '🌟 Elite+') ? 2 : 1;
+  const slMaxC = (u.role === '🌟 Elite+' || u.role === '💎 Legende') ? 2 : 1;
   const slCountC = Object.values(d.superlinks||{}).filter(s=>s.uid===uid&&s.week===wkKey).length;
   const slStdLeft = Math.max(0, slMaxC - slCountC);
   const slCredits = Number(u.superlinkCredits||0);
@@ -8953,7 +8955,7 @@ commentsBox+
         const _bOff = _bDay === 0 ? -6 : 1 - _bDay;
         const _bMon = new Date(_bNow); _bMon.setDate(_bNow.getDate() + _bOff);
         const slWeekKey = _bMon.getFullYear()+'-'+String(_bMon.getMonth()+1).padStart(2,'0')+'-'+String(_bMon.getDate()).padStart(2,'0');
-        const mySlMax = (d.users[myUid]?.role === '🌟 Elite+') ? 2 : 1;
+        const mySlMax = (d.users[myUid]?.role === '🌟 Elite+' || d.users[myUid]?.role === '💎 Legende') ? 2 : 1;
         const mySlCount = Object.values(d.superlinks||{}).filter(s=>s.uid===myUid&&s.week===slWeekKey).length;
         const myWeekSuperlink = mySlCount > 0;
         const mySlCredits = Number(d.users[myUid]?.superlinkCredits||0);
@@ -10147,6 +10149,13 @@ async function submitSuperLink(){
         +    bar(weekly.m2Tage,7,'#34d399')
         +    '<div style="margin-top:8px">'+mChip(weekly.m3Tage>=7,'W-M3: '+weekly.m3Tage+'/7 → 💎💎')+'</div>'
         +    bar(weekly.m3Tage,7,'#fbbf24')
+        +    (weekly.superlinks ? (
+              '<div style="margin-top:12px;padding-top:10px;border-top:1px dashed var(--border2)">'
+            +   mChip(weekly.superlinks.alleGeliked, '🌟 Alle Superlinks: '+weekly.superlinks.geliked+'/'+weekly.superlinks.total+' → +500 XP + 💎💎')
+            +   bar(weekly.superlinks.geliked, Math.max(1, weekly.superlinks.total), '#ec4899')
+            +   (weekly.superlinks.granted ? '<div style="font-size:11px;color:#22c55e;margin-top:6px;font-weight:700">✅ Belohnung erhalten</div>' : '<div style="font-size:11px;color:var(--muted);margin-top:6px">⏱ Auswertung Sonntag 23:59</div>')
+            + '</div>'
+            ) : '')
         +  '</div>'
         +'</div>'
         +'<a href="/explore?tab=ranking" style="display:block;margin-top:14px;text-align:center;color:#a78bfa;font-size:12.5px;font-weight:700;text-decoration:none">→ Ranking + Preise ansehen</a>';
@@ -10263,7 +10272,7 @@ const CB_HELP = {
   '_data_warns': { q:'⚠️ Meine Verwarnungen?', a:'<i>(Lade…)</i>', next:['data','_back'], lookup:'warns' },
   '_data_events': { q:'🚀 Laufende Events?', a:'<i>(Lade…)</i>', next:['data','_back'], lookup:'events' },
   'm': { q:'🎯 Missionen (M1/M2/M3)', a:'Auswertung täglich 12:00 (Berlin):<br><br><b>M1 — Daily Engagement</b><br>5 Links liken (+ auf Insta kommentieren) → <b>+5 XP</b><br><br><b>M2 — Solidarisch</b><br>80%+ aller heute geposteten Links liken → <b>+5 XP</b><br><br><b>M3 — Champion</b><br>ALLE heute geposteten Links liken (max 30) → <b>+5 XP + 💎 1 Diamant</b><br><br><b>Wochen-Bonus</b> bei 7 Tagen in Folge:<br>• W-M1: <b>+10 XP</b><br>• W-M2: <b>+15 XP + 💎 1</b><br>• W-M3: <b>+20 XP + 💎 2</b><br><br>📌 <b>Visit-before-Like:</b> erst Insta-Reel öffnen, dort liken + 2-Wort-Kommentar — DANN in App liken.', next:['xp','warn','_back'] },
-  'xp': { q:'⚡ XP-System', a:'<b>Quellen (echte Werte):</b><br><ul><li>👍 <b>Like:</b> +5 XP pro Like (Mission-Pflicht: 5 Links/Tag)</li><li>📌 <b>Post:</b> +5 XP (1 Link/Tag, Bonus-Links optional)</li><li>🎯 <b>Daily Missionen M1+M2+M3:</b> max +15 XP + 1💎</li><li>🏆 <b>Wochen-Missionen:</b> max +45 XP + 3💎</li><li>🎁 <b>Daily Bonus</b> (Button auf <a href="/profil" style="color:#a78bfa;font-weight:700">/profil</a>): 10–20 XP zufällig</li><li>🌟 <b>First-Post Newcomer:</b> +20 XP</li><li>⭐ <b>Event-Multiplier</b> wenn aktiv (z.B. +100%)</li></ul><b>Badges/Rollen (XP-Schwellen):</b><br>🆕 New: 0-49 · 📘 Anfänger: 50-499 · ⬆️ Aufsteiger: 500-999 · 🏅 Erfahrener: 1000-4999 · 👑 Elite: 5000-9999 (+1 Bonus-Link/Woche) · 🌟 Elite+: 10000+ (2 Superlinks + 1 Bonus-Link/Woche)', next:['m','diamond','_back'] },
+  'xp': { q:'⚡ XP-System', a:'<b>Quellen (echte Werte):</b><br><ul><li>👍 <b>Like:</b> +5 XP pro Like (Mission-Pflicht: 5 Links/Tag)</li><li>📌 <b>Post:</b> +5 XP (1 Link/Tag, Bonus-Links optional)</li><li>🎯 <b>Daily Missionen M1+M2+M3:</b> max +15 XP + 1💎</li><li>🏆 <b>Wochen-Missionen:</b> max +45 XP + 3💎</li><li>🎁 <b>Daily Bonus</b> (Button auf <a href="/profil" style="color:#a78bfa;font-weight:700">/profil</a>): 10–20 XP zufällig</li><li>🌟 <b>First-Post Newcomer:</b> +20 XP</li><li>⭐ <b>Event-Multiplier</b> wenn aktiv (z.B. +100%)</li></ul><b>Badges/Rollen (XP-Schwellen):</b><br>🆕 New: 0-49 · 📘 Anfänger: 50-499 · ⬆️ Aufsteiger: 500-999 · 🏅 Erfahrener: 1000-4999 · 👑 Elite: 5000-9999 (+1 Bonus-Link/Woche) · 🌟 Elite+: 10000-24999 (2 Superlinks + 1 Bonus-Link/Woche) · 💎 Legende: 25000+ (alles wie Elite+ + 30 💎/Monat)', next:['m','diamond','_back'] },
   'diamond': { q:'💎 Diamanten', a:'<b>Earn:</b><br><ul><li>🎯 <b>M3 daily:</b> +1💎</li><li>🏆 <b>Wochen-M2:</b> +1💎  ·  <b>Wochen-M3:</b> +2💎</li><li>📌 <b>Pinned-Post engagieren:</b> +1💎 (1× pro Owner)</li><li>💎 <b>Diamantlink liken:</b> +3💎</li><li>🎰 <b>Glücksrad</b> in <a href="/explore?tab=roulette" style="color:#a78bfa;font-weight:700">/explore?tab=roulette</a> (1×/Tag)</li><li>🎁 <b>Wochen-Gewinnspiel</b> in <a href="/explore?tab=gewinnspiel" style="color:#a78bfa;font-weight:700">/explore?tab=gewinnspiel</a></li><li>📅 <b>Diamond-Events</b> (Live-Multiplier)</li></ul><b>Ausgeben:</b><br><ul><li>💎 <b>Diamantlink posten:</b> 30💎 → 3 Tage Top im Feed</li><li>⭐ <b>Superlink-Slot:</b> 10💎 (Extra-Slot kaufen)</li><li>🛍 <b>Shop-Items</b> in <a href="/explore?tab=shop" style="color:#a78bfa;font-weight:700">/explore?tab=shop</a> oder <a href="/diamanten" style="color:#a78bfa;font-weight:700">/diamanten</a></li></ul>', next:['superlink','shop','_back'] },
   'superlink': { q:'⚡ Superlinks', a:'Premium-Post für die ganze Woche besonders sichtbar in der Telegram-Gruppe.<br><br><b>Limit:</b> 1×/Woche (Mo-Sa) — <b>🌟 Elite+</b> darf 2×<br><b>Pflicht-Engagement aller Member:</b> LIKEN + KOMMENT + TEILEN + SPEICHERN auf Instagram<br><b>Wer nicht engaged:</b> Sonntag 23:59 Uhr <b>−50 XP + Verwarnung</b><br><br>Posten: Feed → <b>+</b> → <b>⚡ Superlink</b> → URL + Caption<br><br>Auch käuflich: 10💎 = 1 Extra-Slot.', next:['diamond','m','_back'] },
   'kollab': { q:'🤝 Kollab-Posts', a:'<b>Doppel-Posts mit Partner:</b><br><ol><li>Auf Partner-Profil "🤝 Kollab anfragen"</li><li>Partner bestätigt</li><li>Einer postet → Feed → <b>+</b> → <b>🤝 Kollab</b></li></ol><b>Regeln:</b><br>• 1× pro Woche pro Paar<br>• Sichtbare Zusammenarbeit Pflicht im Reel (beide Logos/Handles)<br>• Engagement Pflicht: LIKEN + KOMMENT + SPEICHERN + TEILEN auf Insta<br><br>Jeder Liker bekommt <b>+1💎</b>.', next:['diamond','_back'] },
@@ -17088,7 +17097,7 @@ ${rest.map(([id,u],idx)=>{
                 const bDay2 = bNow2.getDay(); const bOff2 = bDay2===0?-6:1-bDay2;
                 const bMon2 = new Date(bNow2); bMon2.setDate(bNow2.getDate()+bOff2);
                 const wKey2 = bMon2.getFullYear()+'-'+String(bMon2.getMonth()+1).padStart(2,'0')+'-'+String(bMon2.getDate()).padStart(2,'0');
-                const slMax2 = (d.users[myUid]?.role === '🌟 Elite+') ? 2 : 1;
+                const slMax2 = (d.users[myUid]?.role === '🌟 Elite+' || d.users[myUid]?.role === '💎 Legende') ? 2 : 1;
                 const slCount2 = Object.values(d.superlinks||{}).filter(s=>s.uid===myUid&&s.week===wKey2).length;
                 const slLeft2 = Math.max(0, slMax2 - slCount2);
                 const myBonusLinksProf = d.bonusLinks?.[myUid]||0;
