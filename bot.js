@@ -9211,7 +9211,6 @@ ${(() => {
   const _curTab = _tabsMeta.find(t=>t.id===tab) || _tabsMeta[0];
   const _totalAllCount = _tabsMeta.reduce((s,t)=>s+(t.count||0),0);
   return `<div class="topbar">
-  <div class="topbar-logo">CreatorX</div>
   <div class="ft-wrap" id="ft-wrap">
     <button class="ft-trigger" type="button" onclick="ftToggle(this)" aria-haspopup="true">
       <span class="ft-trigger-label">${_curTab.emoji} ${htmlEsc(_curTab.label)}</span>
@@ -9223,6 +9222,8 @@ ${(() => {
     </div>
   </div>
   <div class="topbar-actions">
+    <a href="/diamanten" title="Diamanten" style="display:inline-flex;align-items:center;gap:4px;padding:5px 9px;background:rgba(6,182,212,0.10);border:1px solid rgba(6,182,212,0.30);border-radius:99px;text-decoration:none;color:#06b6d4;font-size:12px;font-weight:700">💎 ${(d.users[myUid]?.diamonds||0)}</a>
+    ${(d.users[myUid]?.warnings||0) > 0 ? `<a href="/profil" title="Verwarnungen" style="display:inline-flex;align-items:center;gap:4px;padding:5px 9px;background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.35);border-radius:99px;text-decoration:none;color:#ef4444;font-size:12px;font-weight:700">⚠️ ${d.users[myUid].warnings}/5</a>` : ''}
     <a href="/benachrichtigungen" class="icon-btn" title="Benachrichtigungen" style="position:relative;text-decoration:none;color:inherit">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
       <span id="notif-badge-feed" style="display:none;position:absolute;top:2px;right:2px;background:#ef4444;color:#fff;font-size:9px;font-weight:800;border-radius:50%;min-width:14px;height:14px;line-height:14px;text-align:center;padding:0 3px;box-shadow:0 2px 6px rgba(239,68,68,0.45)"></span>
