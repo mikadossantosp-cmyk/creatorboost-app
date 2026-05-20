@@ -9217,7 +9217,7 @@ ${(() => {
       <span class="ft-trigger-arrow">▼</span>
       ${_totalAllCount > 0 ? `<span class="ft-trigger-badge">${_totalAllCount > 99 ? '99+' : _totalAllCount}</span>` : ''}
     </button>
-    <div class="ft-menu" id="ft-menu">
+    <div class="ft-menu" id="ft-menu" style="left:0 !important;right:auto !important;transform:none !important;max-width:calc(100vw - 24px) !important">
       ${_tabsMeta.map(t => t.comingSoon ? `<a href="javascript:void(0)" onclick="alert('💠 Prismalink ist noch in Bearbeitung — bald verfügbar!');return false;" class="ft-item" style="opacity:0.5;cursor:not-allowed"><span class="ft-item-emoji">${t.emoji}</span><span class="ft-item-label">${htmlEsc(t.label)}</span><span class="ft-item-badge" style="background:linear-gradient(135deg,#94a3b8,#64748b);color:#fff;font-size:9px;padding:2px 7px">SOON</span></a>` : `<a href="/feed?tab=${t.id}" class="ft-item${t.id===_curTab.id?' active':''}"><span class="ft-item-emoji">${t.emoji}</span><span class="ft-item-label">${htmlEsc(t.label)}</span>${t.count > 0 ? `<span class="ft-item-badge">${t.count > 99 ? '99+' : t.count}</span>` : ''}${t.id===_curTab.id ? '<span class="ft-item-check">✓</span>' : ''}</a>`).join('')}
     </div>
   </div>
