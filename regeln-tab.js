@@ -142,14 +142,14 @@ module.exports = `
       <h3>📅 Daily — Auswertung 12:00 Uhr</h3>
       <div class="regeln-row"><span>M1 — 5 Links liken &amp; kommentieren</span><span class="konsequenz k-xp">+5 XP</span></div>
       <div class="regeln-row"><span>M2 — 80% aller Links liken &amp; kommentieren</span><span class="konsequenz k-xp">+5 XP</span></div>
-      <div class="regeln-row"><span>M3 — 100% aller Links liken &amp; kommentieren</span><span class="konsequenz k-xp">+5 XP + 💎</span></div>
+      <div class="regeln-row"><span>M3 — Alle Links liken &amp; kommentieren (max 30)</span><span class="konsequenz k-xp">+5 XP + 💎</span></div>
       <div class="why-box" style="margin-top:8px">📌 <b>Visit-before-Like:</b> Erst auf Instagram liken &amp; kommentieren — dann zählt der Like in der App.</div>
       <div class="warn-bar k-warn" style="margin-top:8px"><span>⚠️</span><span>Link gepostet ohne M1 → Verwarnung</span></div>
 
       <h3>📆 Weekly — Reset Montag 00:05 Uhr</h3>
       <div class="regeln-row"><span>M1 Streak — 7 Tage M1 geschafft</span><span class="konsequenz k-xp">+10 XP</span></div>
       <div class="regeln-row"><span>M2 Streak — 7 Tage 80%</span><span class="konsequenz k-xp">+15 XP + 1 💎</span></div>
-      <div class="regeln-row"><span>M3 Streak — 7 Tage 100%</span><span class="konsequenz k-xp">+20 XP + 2 💎</span></div>
+      <div class="regeln-row"><span>M3 Streak — 7 Tage M3 (max 30/Tag)</span><span class="konsequenz k-xp">+20 XP + 2 💎</span></div>
       <div class="regeln-row" style="background:rgba(236,72,153,0.08);border-left:3px solid #ec4899;padding-left:8px;border-radius:4px"><span><b style="color:#ec4899">🌟 Alle Superlinks der Woche liken</b><br><span style="font-size:11px;color:var(--muted)">Auswertung Sonntag 23:59</span></span><span class="konsequenz k-xp" style="background:rgba(236,72,153,0.18);color:#ec4899">+500 XP + 2 💎</span></div>
 
       <div class="why-box">💡 <b>Warum?</b> Engagement-Streaks = echtes Wachstum. Wer dranbleibt &amp; alle Superlinks supportet, wird ueberproportional belohnt.</div>
