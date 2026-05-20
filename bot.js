@@ -8629,6 +8629,8 @@ p{line-height:1.65;color:var(--muted)}
         // Eigene Familie (Hauptaccount + Sub-Accounts) wird komplett ausgeblendet.
         // Filter: nur !banned + !family — KEIN isAppVisible/started/inGruppe-Filter
         // und KEIN Following-Filter mehr. Wer einen Pinned-Link hat erscheint.
+        // Auto-Expire: Pinned-Link verschwindet aus Story-Bar nach 30 Tagen
+        // (anhand pinnedlink_<uid>_changed.txt Timestamp). User muss neu setzen.
         const myEngagedOwners = (d.pinnedEngages?.[String(myUid)] || []).map(String);
         const _myFamilyRoot = String(session?.uid || myUid);
         const _isFamily = (id, u) => {
@@ -8636,10 +8638,19 @@ p{line-height:1.65;color:var(--muted)}
             if (u && String(u.parent_uid||'') === _myFamilyRoot) return true;
             return false;
         };
+        const PIN_EXPIRE_MS = 30 * 24 * 3600 * 1000;
+        const _pinIsRecent = (uid) => {
+            try {
+                const tsFile = DATA_DIR + '/pinnedlink_' + uid + '_changed.txt';
+                if (!fs.existsSync(tsFile)) return true; // legacy ohne ts → noch zeigen
+                const ts = parseInt(fs.readFileSync(tsFile, 'utf8'), 10) || 0;
+                return (Date.now() - ts) < PIN_EXPIRE_MS;
+            } catch(e) { return true; }
+        };
         const pinnedStories = Object.entries(d.users||{})
             .filter(([id,u])=>!_isFamily(id,u)&&!adminIds.includes(Number(id))&&u&&!u.banned)
             .map(([id,u])=>({id, u, pinnedUrl: ladePinnedLink(id)}))
-            .filter(x => !!x.pinnedUrl)
+            .filter(x => !!x.pinnedUrl && _pinIsRecent(x.id))
             .map(x => ({
                 ...x,
                 engaged: myEngagedOwners.includes(String(x.id))
