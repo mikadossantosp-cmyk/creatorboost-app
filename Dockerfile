@@ -1,10 +1,7 @@
-# Multi-Stage Dockerfile — loest Disk-Space-Probleme beim Build
-# UND behaelt apksigner + zipalign fuer die Live-/api/sign-apk Funktion.
-#
-# Stage 1 (Builder): Nur Node-Tools fuer npm install + patch-bot.js
-# Stage 2 (Runtime): Schlankes JRE + apksigner + zipalign + fertige App
-#
-# Spart ~150 MB durch JRE statt JDK + Multi-Stage Pruning beim Build.
+# Schlankes Multi-Stage Dockerfile (~150 MB)
+# Ohne JDK/apksigner/zipalign — APK ist bereits signiert, /api/sign-apk
+# wird nicht mehr aktiv genutzt. Falls spaeter wieder noetig: einfach
+# default-jre-headless + apksigner + zipalign in Stage 2 hinzufuegen.
 
 # ── STAGE 1: BUILDER ──
 FROM node:20-bookworm-slim AS builder
@@ -18,22 +15,16 @@ RUN npm install --omit=dev
 # App-Code kopieren
 COPY . .
 
-# bot.js mit Regeln-Tab patchen (build-time, kein Java noetig)
+# bot.js mit Regeln-Tab patchen (build-time)
 RUN node patch-bot.js
 
 
-# ── STAGE 2: RUNTIME ──
+# ── STAGE 2: RUNTIME (slim) ──
 FROM node:20-bookworm-slim
-
-# JRE (statt JDK, ~150MB kleiner) + apksigner + zipalign fuer Live-Signing
-# der /api/sign-apk Endpoint benoetigt diese Tools zur Laufzeit.
-RUN apt-get update && apt-get install -y --no-install-recommends \
-        default-jre-headless apksigner zipalign \
-    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Fertige App vom Builder kopieren (inkl. node_modules + gepatchte bot.js)
+# Fertige App vom Builder (inkl. node_modules + gepatchte bot.js)
 COPY --from=builder /app /app
 
 EXPOSE 3000
