@@ -9222,6 +9222,7 @@ ${(() => {
     </div>
   </div>
   <div class="topbar-actions">
+    <a href="/profil" title="XP" style="display:inline-flex;align-items:center;gap:4px;padding:5px 9px;background:rgba(167,139,250,0.10);border:1px solid rgba(167,139,250,0.30);border-radius:99px;text-decoration:none;color:#a78bfa;font-size:12px;font-weight:700">⭐ ${(d.users[myUid]?.xp||0).toLocaleString('de-DE')}</a>
     <a href="/diamanten" title="Diamanten" style="display:inline-flex;align-items:center;gap:4px;padding:5px 9px;background:rgba(6,182,212,0.10);border:1px solid rgba(6,182,212,0.30);border-radius:99px;text-decoration:none;color:#06b6d4;font-size:12px;font-weight:700">💎 ${(d.users[myUid]?.diamonds||0)}</a>
     ${(d.users[myUid]?.warnings||0) > 0 ? `<a href="/profil" title="Verwarnungen" style="display:inline-flex;align-items:center;gap:4px;padding:5px 9px;background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.35);border-radius:99px;text-decoration:none;color:#ef4444;font-size:12px;font-weight:700">⚠️ ${d.users[myUid].warnings}/5</a>` : ''}
     <a href="/benachrichtigungen" class="icon-btn" title="Benachrichtigungen" style="position:relative;text-decoration:none;color:inherit">
