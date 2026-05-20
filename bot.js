@@ -416,6 +416,7 @@ NIEMALS sagen "DM an CreatorBoost", "/nachrichten/creatorboost öffnen" oder äh
 - Post: +5 XP (1 Link/Tag Standard)
 - Daily-Missionen M1+M2+M3: je +5 XP, M3 zusätzlich +1💎 — max +15 XP + 1💎/Tag
 - Wochen-Missionen (7 Tage Folge): W-M1 +10 XP, W-M2 +15 XP + 1💎, W-M3 +20 XP + 2💎
+- Wochen-Bonus: Alle Superlinks der Woche liken (Sonntag 23:59 Auswertung) → +500 XP + 2💎
 - Daily-Bonus (Button auf /profil): zufällig 10–20 XP, 1×/Tag
 - First-Post-Newcomer-Bonus: +20 XP einmalig
 - Event-Multiplier während Events
@@ -10148,6 +10149,13 @@ async function submitSuperLink(){
         +    bar(weekly.m2Tage,7,'#34d399')
         +    '<div style="margin-top:8px">'+mChip(weekly.m3Tage>=7,'W-M3: '+weekly.m3Tage+'/7 → 💎💎')+'</div>'
         +    bar(weekly.m3Tage,7,'#fbbf24')
+        +    (weekly.superlinks ? (
+              '<div style="margin-top:12px;padding-top:10px;border-top:1px dashed var(--border2)">'
+            +   mChip(weekly.superlinks.alleGeliked, '🌟 Alle Superlinks: '+weekly.superlinks.geliked+'/'+weekly.superlinks.total+' → +500 XP + 💎💎')
+            +   bar(weekly.superlinks.geliked, Math.max(1, weekly.superlinks.total), '#ec4899')
+            +   (weekly.superlinks.granted ? '<div style="font-size:11px;color:#22c55e;margin-top:6px;font-weight:700">✅ Belohnung erhalten</div>' : '<div style="font-size:11px;color:var(--muted);margin-top:6px">⏱ Auswertung Sonntag 23:59</div>')
+            + '</div>'
+            ) : '')
         +  '</div>'
         +'</div>'
         +'<a href="/explore?tab=ranking" style="display:block;margin-top:14px;text-align:center;color:#a78bfa;font-size:12.5px;font-weight:700;text-decoration:none">→ Ranking + Preise ansehen</a>';
