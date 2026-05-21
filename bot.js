@@ -2825,6 +2825,22 @@ function showBanner(opts){
   clearTimeout(b._t);
   b._t=setTimeout(()=>b.classList.remove('show'),dur);
 }
+// Browser-side cleanInstagramUrl: gleiche Logik wie server-side, fuer Inline-JS
+// das im Browser laeuft (IIFEs wie initDiamondLinks/initPrismaLinks/initKollabs).
+// Ohne diese Definition crashen die renderCard-Funktionen mit ReferenceError und
+// der "Lade..."-Spinner bleibt fuer immer stehen.
+function cleanInstagramUrl(u){
+  var s=String(u||'').trim();
+  if(!s) return s;
+  var norm=s.replace(/instagr\.am/i,'instagram.com');
+  var m;
+  if((m=norm.match(/instagram\.com\/(?:reel|reels)\/([A-Za-z0-9_-]+)/i))) return 'https://www.instagram.com/reel/'+m[1]+'/';
+  if((m=norm.match(/instagram\.com\/p\/([A-Za-z0-9_-]+)/i))) return 'https://www.instagram.com/p/'+m[1]+'/';
+  if((m=norm.match(/instagram\.com\/tv\/([A-Za-z0-9_-]+)/i))) return 'https://www.instagram.com/tv/'+m[1]+'/';
+  if((m=norm.match(/instagram\.com\/stories\/([A-Za-z0-9_.]+)\/(\d+)/i))) return 'https://www.instagram.com/stories/'+m[1]+'/'+m[2]+'/';
+  if((m=norm.match(/instagram\.com\/([A-Za-z0-9_.]+)\/?$/i))) return 'https://www.instagram.com/'+m[1]+'/';
+  return s;
+}
 // Engagement-Quality-Control: User muss erst Link besuchen, bevor er liken darf.
 // Status pro Link wird in localStorage gespeichert (cb_visited_links: { lid: timestamp }).
 function markLinkVisited(lid){
@@ -10129,8 +10145,16 @@ async function submitSuperLink(){
   async function load(){
     diamondCss();
     try {
-      const r = await fetch('/api/diamond-link/feed');
-      const j = await r.json();
+      // 12s timeout — wenn der Bot redeployed oder offline ist, haengt fetch sonst unendlich.
+      // AbortController bricht ab und der catch-Block zeigt einen Error-State mit Retry.
+      const ctrl = new AbortController();
+      const to = setTimeout(()=>ctrl.abort(), 12000);
+      let r, j;
+      try {
+        r = await fetch('/api/diamond-link/feed', { signal: ctrl.signal });
+        j = await r.json();
+      } finally { clearTimeout(to); }
+      if (!r.ok || j.error) throw new Error(j.error || ('HTTP '+r.status));
       TAB_RULES_OK = !!j.rulesAccepted;
       const posts = j.posts || [];
       // Tab-Badge: Anzahl noch ungelikter Diamantlinks (ohne eigene + ohne family)
@@ -10152,8 +10176,17 @@ async function submitSuperLink(){
         const header = '<div style="margin:0 16px 14px;padding:14px;background:rgba(6,182,212,0.06);border:1px solid rgba(6,182,212,0.25);border-radius:14px;font-size:12.5px;line-height:1.6"><b style="color:#06b6d4">💎 Diamantlinks</b> · 30 💎 zum Posten, 3 Tage Feed-Top, jeder Liker bekommt 3 💎. Engagement-Pflicht: LIKEN + KOMMENTIEREN + TEILEN + SPEICHERN. <a href="/explore?tab=regeln#diamond" style="color:#06b6d4;font-weight:700">→ Regeln</a></div>';
         tabEl.innerHTML = header + (posts.length ? posts.map(p => renderCard(p)).join('') : '<div style="padding:48px 24px;text-align:center;color:var(--muted)">Noch keine Diamantlinks. Werde der erste — + Menü → 💎 Diamantlink posten.</div>');
       }
-    } catch(e) { console.warn('[diamond] load error', e); }
+    } catch(e) {
+      console.warn('[diamond] load error', e);
+      // Error-State im Tab: ohne diesen blieb der 'Lade…'-Spinner ewig stehen,
+      // wenn der Bot redeployed oder das Netzwerk weg ist.
+      if (tabEl) {
+        const msg = (e && e.name === 'AbortError') ? 'Server antwortet nicht (Timeout)' : (e && e.message) || 'Verbindungsfehler';
+        tabEl.innerHTML = '<div style="padding:48px 24px;text-align:center;color:var(--muted);font-size:13px"><div style="font-size:36px;margin-bottom:10px">⚠️</div><div style="margin-bottom:14px">Diamantlinks konnten nicht geladen werden.<br><span style="font-size:11px;opacity:0.7">'+esc(msg)+'</span></div><button onclick="(function(){const el=document.getElementById(\\'diamond-tab-root\\');if(el)el.innerHTML=\\'<div style=\\\\\\'padding:48px 24px;text-align:center;color:var(--muted);font-size:13px\\\\\\'>⏳ Lade…</div>\\';})();window.__diamondReload&&window.__diamondReload()" style="background:#06b6d4;color:#fff;border:none;border-radius:10px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer">🔄 Erneut versuchen</button></div>';
+      }
+    }
   }
+  window.__diamondReload = load;
   function showRulesModal(){
     if (document.getElementById('diamond-rules-modal')) return;
     const bg = document.createElement('div');
