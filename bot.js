@@ -741,6 +741,36 @@ function cleanRole(r, uid, adminIds) {
 }
 // Sicherer URL-Check: nur http(s)-Links erlaubt, kein javascript:/data:/vbscript:.
 function safeUrl(u) { const s = String(u||'').trim(); return /^https?:\/\//i.test(s) ? s : ''; }
+// cleanInstagramUrl: extrahiert die Reel/Post/TV/Profile-ID aus einer Instagram-URL
+// und baut eine saubere Standard-URL OHNE Tracking-Parameter.
+// Hintergrund: Instagram veraltet ?igshid=, ?utm_source= etc. → wenn diese veraltet
+// sind, oeffnet Instagram die Home-Page statt dem korrekten Post → User landet
+// auf falschem Reel. Standardisierte URLs (instagram.com/reel/ABC/) sind immer
+// stabil und oeffnen den richtigen Post.
+function cleanInstagramUrl(u) {
+    const s = String(u||'').trim();
+    if (!/^https?:\/\//i.test(s)) return s;
+    if (!/instagram\.com/i.test(s)) return s; // andere URL → unveraendert lassen
+    // Reel: /reel/ID oder /reels/ID
+    let m = s.match(/instagram\.com\/(?:reel|reels)\/([A-Za-z0-9_-]+)/i);
+    if (m) return 'https://www.instagram.com/reel/' + m[1] + '/';
+    // Post: /p/ID
+    m = s.match(/instagram\.com\/p\/([A-Za-z0-9_-]+)/i);
+    if (m) return 'https://www.instagram.com/p/' + m[1] + '/';
+    // TV: /tv/ID
+    m = s.match(/instagram\.com\/tv\/([A-Za-z0-9_-]+)/i);
+    if (m) return 'https://www.instagram.com/tv/' + m[1] + '/';
+    // Stories
+    m = s.match(/instagram\.com\/stories\/([A-Za-z0-9_.]+)\/(\d+)/i);
+    if (m) return 'https://www.instagram.com/stories/' + m[1] + '/' + m[2] + '/';
+    // Profile: /username (ohne post)
+    m = s.match(/instagram\.com\/([A-Za-z0-9_.]+)\/?$/i);
+    if (m) return 'https://www.instagram.com/' + m[1] + '/';
+    return s; // unbekanntes Format → unveraendert
+}
+// JS-String-Escape: macht Strings sicher fuer Inline-onclick-Handler.
+// Verhindert dass Anfuehrungszeichen oder Backslashes in der URL das JS brechen.
+function jsEsc(s) { return String(s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'\\"').replace(/\n/g,'\\n').replace(/\r/g,''); }
 
 // 👑 Top-3 User mit höchstem XP (ohne Admins, Subs, System).
 // Top1 = gold, Top2 = silber, Top3 = bronze — wird ÜBERALL angezeigt wo Username gerendert wird.
@@ -9216,7 +9246,7 @@ window.onPinVisitStory = function(uid){
             // Extract Instagram shortcode for reel embed
             const instaShortcode = (()=>{ const m=(link.text||'').match(/instagram\.com\/(?:reel|p|tv)\/([A-Za-z0-9_-]+)/); return m?m[1]:null; })();
 
-            return '<div class="post fade-up" id="post-'+msgId+'" data-url="'+link.text+'" data-ts="'+(link.timestamp||0)+'" style="position:relative">\n'+
+            return '<div class="post fade-up" id="post-'+msgId+'" data-url="'+htmlEsc(cleanInstagramUrl(link.text||''))+'" data-ts="'+(link.timestamp||0)+'" style="position:relative">\n'+
 '  <div style="position:absolute;left:0;top:0;bottom:0;width:3px;background:'+grad+';border-radius:18px 0 0 18px"></div>\n'+
 // Category badge + timestamp row
 '  <div style="display:flex;align-items:center;justify-content:flex-end;padding:10px 16px 0">\n'+
@@ -9242,8 +9272,8 @@ window.onPinVisitStory = function(uid){
 '      <div class="post-badge">'+cleanRole(poster.role)+(insta?'<span style="color:var(--muted2)"> · @'+poster.instagram+'</span>':'')+'</div>\n'+
 '    </a>\n'+
 '  </div>\n'+
-// Reel video preview card
-'  <div style="margin:0 16px;border-radius:14px;overflow:hidden;background:#000;border:1.5px solid;border-image:linear-gradient(135deg,#f9a825,#e91e63,#9c27b0) 1;cursor:pointer;box-shadow:0 6px 20px rgba(233,30,99,0.10)" onclick="markLinkVisited(\''+lid1+'\');window.open(\''+link.text+'\',\'_blank\')">\n'+
+// Reel video preview card — cleanInstagramUrl entfernt Tracking-Params, jsEsc verhindert JS-Break bei Sonderzeichen
+'  <div style="margin:0 16px;border-radius:14px;overflow:hidden;background:#000;border:1.5px solid;border-image:linear-gradient(135deg,#f9a825,#e91e63,#9c27b0) 1;cursor:pointer;box-shadow:0 6px 20px rgba(233,30,99,0.10)" onclick="markLinkVisited(\''+lid1+'\');window.open(\''+jsEsc(cleanInstagramUrl(link.text||''))+'\',\'_blank\')">\n'+
 '    <div style="position:relative;width:100%;padding-top:62%;background:'+bannerBg+';overflow:hidden">\n'+
 '      '+bannerImg.replace('position:absolute;inset:0;','position:absolute;inset:0;')+'\n'+
 '      <div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.1) 0%,rgba(0,0,0,.55) 100%)"></div>\n'+
@@ -9267,7 +9297,7 @@ window.onPinVisitStory = function(uid){
 '    </div>\n'+
 (link.caption?'    <div style="padding:8px 12px;font-size:12px;color:var(--muted);line-height:1.4;border-top:1px solid rgba(255,255,255,.06)">'+String(link.caption).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</div>\n':'')+
 '    <div style="padding:8px 12px 10px;display:flex;align-items:center;justify-content:flex-end">\n'+
-'      <a href="'+htmlEsc(safeUrl(link.text||''))+'" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();markLinkVisited(\''+lid1+'\')" style="padding:7px 16px;background:linear-gradient(135deg,#f9a825,#e91e63,#9c27b0);color:#fff;border-radius:9px;font-size:12px;font-weight:700;text-decoration:none;white-space:nowrap;box-shadow:0 2px 8px rgba(233,30,99,.25)">→ Öffnen</a>\n'+
+'      <a href="'+htmlEsc(cleanInstagramUrl(link.text||''))+'" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();markLinkVisited(\''+lid1+'\')" style="padding:7px 16px;background:linear-gradient(135deg,#f9a825,#e91e63,#9c27b0);color:#fff;border-radius:9px;font-size:12px;font-weight:700;text-decoration:none;white-space:nowrap;box-shadow:0 2px 8px rgba(233,30,99,.25)">→ Öffnen</a>\n'+
 '    </div>\n'+
 '  </div>\n'+
 // Likes counter + XP badge
