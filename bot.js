@@ -9369,11 +9369,11 @@ commentsBox+
                 +'<div style="margin:8px 16px;padding:8px 12px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:10px;font-size:11px;color:rgba(245,158,11,.9);font-weight:600">🔄 Bitte Liken, Kommentieren, Teilen und Speichern</div>\n'
                 +'<div style="margin:0 16px 8px;border-radius:14px;overflow:hidden;background:var(--bg3);border:1px solid rgba(255,255,255,.08)">\n'
                 +(sl.thumbnail
-                    ? '<a href="'+htmlEsc(safeUrl(sl.url||''))+'" target="_blank" rel="noopener noreferrer" onclick="markLinkVisited(\''+sl.id+'\')" style="display:block;position:relative;width:100%;padding-top:62%;overflow:hidden;background:#000"><img src="/insta-thumb?u='+encodeURIComponent(sl.thumbnail)+'" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.parentElement.style.display=\'none\'" alt=""><div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.05),rgba(0,0,0,.55))"></div><div style="position:absolute;top:10px;left:12px;background:rgba(0,0,0,.55);border-radius:8px;padding:4px 9px;font-size:11px;color:#fff;font-weight:600;backdrop-filter:blur(4px)">📸 Instagram</div></a>\n'
+                    ? '<a href="'+htmlEsc(cleanInstagramUrl(sl.url||''))+'" target="_blank" rel="noopener noreferrer" onclick="markLinkVisited(\''+sl.id+'\')" style="display:block;position:relative;width:100%;padding-top:62%;overflow:hidden;background:#000"><img src="/insta-thumb?u='+encodeURIComponent(sl.thumbnail)+'" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.parentElement.style.display=\'none\'" alt=""><div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.05),rgba(0,0,0,.55))"></div><div style="position:absolute;top:10px;left:12px;background:rgba(0,0,0,.55);border-radius:8px;padding:4px 9px;font-size:11px;color:#fff;font-weight:600;backdrop-filter:blur(4px)">📸 Instagram</div></a>\n'
                     : '')
                 +'<div style="padding:10px 14px">\n'
                 +(sl.caption?'<div style="font-size:12px;color:var(--muted);line-height:1.4;margin-bottom:8px">'+String(sl.caption).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</div>':'')+'\n'
-                +'<a href="'+htmlEsc(safeUrl(sl.url||''))+'" target="_blank" rel="noopener noreferrer" onclick="markLinkVisited(\''+sl.id+'\')" style="display:inline-flex;align-items:center;gap:5px;padding:7px 14px;background:linear-gradient(135deg,#f59e0b,#a78bfa);color:#fff;border-radius:10px;font-size:12px;font-weight:700;text-decoration:none">→ Öffnen</a>\n'
+                +'<a href="'+htmlEsc(cleanInstagramUrl(sl.url||''))+'" target="_blank" rel="noopener noreferrer" onclick="markLinkVisited(\''+sl.id+'\')" style="display:inline-flex;align-items:center;gap:5px;padding:7px 14px;background:linear-gradient(135deg,#f59e0b,#a78bfa);color:#fff;border-radius:10px;font-size:12px;font-weight:700;text-decoration:none">→ Öffnen</a>\n'
                 +'</div></div>\n'
                 +'<div class="post-likes-row"><span class="post-like-count">❤️ <span id="sl-likes-'+sl.id+'">'+likes.length+'</span></span></div>\n'
                 +'<div id="sl-liker-rows-'+sl.id+'" style="display:none">'+likerRows+'</div>\n'
@@ -9986,7 +9986,7 @@ async function submitSuperLink(){
           '</div>' +
           '<div style="font-size:14px;font-weight:700;margin-bottom:6px"><a href="/profil/'+esc(p.uid)+'" style="color:var(--text);text-decoration:none">'+aName+'</a> <span style="color:#ec4899">×</span> <a href="/profil/'+esc(p.partnerUid)+'" style="color:var(--text);text-decoration:none">'+bName+'</a></div>' +
           (p.caption ? '<div style="font-size:13px;color:var(--text);line-height:1.5;margin:6px 0 10px">'+esc(p.caption)+'</div>' : '') +
-          '<a href="'+esc(p.url)+'" target="_blank" rel="noopener noreferrer" onclick="window._kvisit_'+p.id+'=Date.now()" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:16px;background:linear-gradient(135deg,#ec4899,#a855f7);color:#fff;border-radius:12px;font-size:14.5px;font-weight:800;text-decoration:none;margin-bottom:10px;box-shadow:0 6px 18px rgba(236,72,153,.45);position:relative"><span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900">1</span><span style="color:#fff;font-weight:800">📸 Auf Instagram öffnen</span><span style="font-size:18px;margin-left:4px">→</span></a>' +
+          '<a href="'+esc(cleanInstagramUrl(p.url))+'" target="_blank" rel="noopener noreferrer" onclick="window._kvisit_'+p.id+'=Date.now()" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:16px;background:linear-gradient(135deg,#ec4899,#a855f7);color:#fff;border-radius:12px;font-size:14.5px;font-weight:800;text-decoration:none;margin-bottom:10px;box-shadow:0 6px 18px rgba(236,72,153,.45);position:relative"><span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900">1</span><span style="color:#fff;font-weight:800">📸 Auf Instagram öffnen</span><span style="font-size:18px;margin-left:4px">→</span></a>' +
           '<div style="font-size:11px;color:#f59e0b;background:rgba(245,158,11,0.08);border-left:3px solid #f59e0b;border-radius:6px;padding:8px 10px;margin-bottom:10px;line-height:1.5"><b>⚠️ Pflicht:</b> LIKEN + KOMMENTIEREN + SPEICHERN + TEILEN auf Instagram.</div>' +
           (isMine
             ? '<div style="padding:10px 12px;background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.35);border-radius:10px;font-size:12px;color:#ef4444;font-weight:700;text-align:center">🚫 Kein Self-Like für Kollaboratoren · Dies ist dein Post</div>'
@@ -10082,7 +10082,7 @@ async function submitSuperLink(){
         '</div>' +
         '<div style="font-size:13.5px;font-weight:700"><a href="/profil/'+esc(p.uid)+'" style="color:var(--text);text-decoration:none">'+aName+'</a> '+(aHandle?'<span style="color:#06b6d4;font-weight:500;font-size:12px">'+aHandle+'</span>':'')+'</div>' +
         (p.caption ? '<div style="font-size:13px;color:var(--text);line-height:1.5;margin:6px 0 8px">'+esc(p.caption)+'</div>' : '') +
-        '<a href="'+esc(p.url)+'" target="_blank" rel="noopener noreferrer" onclick="window._dvisit_'+p.id+'=Date.now()" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:16px;background:linear-gradient(135deg,#ec4899,#a855f7);color:#fff;border-radius:12px;font-size:14.5px;font-weight:800;text-decoration:none;margin-bottom:10px;box-shadow:0 6px 18px rgba(236,72,153,.45);position:relative"><span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900">1</span><span style="color:#fff;font-weight:800">📸 Auf Instagram öffnen</span><span style="font-size:18px;margin-left:4px">→</span></a>' +
+        '<a href="'+esc(cleanInstagramUrl(p.url))+'" target="_blank" rel="noopener noreferrer" onclick="window._dvisit_'+p.id+'=Date.now()" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:16px;background:linear-gradient(135deg,#ec4899,#a855f7);color:#fff;border-radius:12px;font-size:14.5px;font-weight:800;text-decoration:none;margin-bottom:10px;box-shadow:0 6px 18px rgba(236,72,153,.45);position:relative"><span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900">1</span><span style="color:#fff;font-weight:800">📸 Auf Instagram öffnen</span><span style="font-size:18px;margin-left:4px">→</span></a>' +
         '<div style="font-size:11px;color:#f59e0b;background:rgba(245,158,11,0.08);border-left:3px solid #f59e0b;border-radius:6px;padding:8px 10px;margin-bottom:10px;line-height:1.5"><b>⚠️ Pflicht:</b> LIKEN + KOMMENTIEREN + TEILEN + SPEICHERN. Bei Schein-Likes: XP-Abzug + Diamonds-Reset + Bann!</div>' +
         (isMine
           ? '<div style="padding:11px;background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.35);border-radius:10px;font-size:12.5px;color:#ef4444;font-weight:700;text-align:center">🚫 Kein Self-Like — dein eigener Post</div>'
@@ -10246,7 +10246,7 @@ async function submitSuperLink(){
         '</div>' +
         '<div style="font-size:13.5px;font-weight:700"><a href="/profil/'+esc(p.uid)+'" style="color:var(--text);text-decoration:none">'+aName+'</a> '+(aHandle?'<span style="color:#a855f7;font-weight:500;font-size:12px">'+aHandle+'</span>':'')+'</div>' +
         (p.caption ? '<div style="font-size:13px;color:var(--text);line-height:1.5;margin:6px 0 8px">'+esc(p.caption)+'</div>' : '') +
-        '<a href="'+esc(p.url)+'" target="_blank" rel="noopener noreferrer" onclick="window._pvisit_'+p.id+'=Date.now()" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:16px;background:linear-gradient(135deg,#ec4899,#a855f7);color:#fff;border-radius:12px;font-size:14.5px;font-weight:800;text-decoration:none;margin-bottom:10px;box-shadow:0 6px 18px rgba(168,85,247,.45);position:relative"><span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900">1</span><span style="color:#fff;font-weight:800">📸 Auf Instagram öffnen</span><span style="font-size:18px;margin-left:4px">→</span></a>' +
+        '<a href="'+esc(cleanInstagramUrl(p.url))+'" target="_blank" rel="noopener noreferrer" onclick="window._pvisit_'+p.id+'=Date.now()" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:16px;background:linear-gradient(135deg,#ec4899,#a855f7);color:#fff;border-radius:12px;font-size:14.5px;font-weight:800;text-decoration:none;margin-bottom:10px;box-shadow:0 6px 18px rgba(168,85,247,.45);position:relative"><span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900">1</span><span style="color:#fff;font-weight:800">📸 Auf Instagram öffnen</span><span style="font-size:18px;margin-left:4px">→</span></a>' +
         '<div style="font-size:11px;color:#f59e0b;background:rgba(245,158,11,0.08);border-left:3px solid #f59e0b;border-radius:6px;padding:8px 10px;margin-bottom:10px;line-height:1.5"><b>⚠️ Pflicht:</b> LIKEN + KOMMENTIEREN + TEILEN + SPEICHERN. Bei Schein-Likes: XP-Abzug + Diamonds-Reset + Bann!</div>' +
         (isMine
           ? '<div style="padding:11px;background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.35);border-radius:10px;font-size:12.5px;color:#ef4444;font-weight:700;text-align:center">🚫 Kein Self-Like — dein eigener Post</div>'
@@ -10353,7 +10353,7 @@ async function submitSuperLink(){
         '</div>' +
         '<div style="font-size:13.5px;font-weight:700;margin-bottom:6px"><a href="/profil/'+esc(p.uid)+'" style="color:var(--text);text-decoration:none">'+aName+'</a> '+(aHandle?'<span style="color:#ec4899;font-weight:500;font-size:12px">'+aHandle+'</span>':'')+' × <a href="/profil/'+esc(p.partnerUid)+'" style="color:var(--text);text-decoration:none">'+bName+'</a> '+(bHandle?'<span style="color:#ec4899;font-weight:500;font-size:12px">'+bHandle+'</span>':'')+'</div>' +
         (p.caption ? '<div style="font-size:13px;color:var(--text);line-height:1.5;margin:6px 0 10px">'+esc(p.caption)+'</div>' : '') +
-        '<a href="'+esc(p.url)+'" target="_blank" rel="noopener noreferrer" onclick="window._cbvisit_'+p.id+'=Date.now()" style="display:block;padding:11px 13px;background:rgba(236,72,153,0.08);border:1px solid rgba(236,72,153,0.30);border-radius:10px;font-size:12.5px;color:#ec4899;font-weight:700;word-break:break-all;text-decoration:none;margin-bottom:10px">🔗 Auf Instagram öffnen</a>' +
+        '<a href="'+esc(cleanInstagramUrl(p.url))+'" target="_blank" rel="noopener noreferrer" onclick="window._cbvisit_'+p.id+'=Date.now()" style="display:block;padding:11px 13px;background:rgba(236,72,153,0.08);border:1px solid rgba(236,72,153,0.30);border-radius:10px;font-size:12.5px;color:#ec4899;font-weight:700;word-break:break-all;text-decoration:none;margin-bottom:10px">🔗 Auf Instagram öffnen</a>' +
         (isMine
           ? '<div style="padding:11px;background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.35);border-radius:10px;font-size:12.5px;color:#ef4444;font-weight:700;text-align:center">🚫 Kein Self-Like — Dein Kollab-Post</div>'
           : liked
@@ -15248,7 +15248,7 @@ async function loadDiamondLinksAdmin(){
           (!p.deletedAt ? '<button onclick="deleteDiamondLink(\\''+esc(p.id)+'\\', this)" style="background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.35);color:#ef4444;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer">🗑️ Löschen</button>' : '')+
         '</div>'+
         '<div style="font-size:13px;font-weight:700;margin-bottom:6px"><a href="/profil/'+esc(p.uid)+'" style="color:var(--text);text-decoration:none">'+esc(a.name||'User')+'</a>'+(a.instagram?'<span style="color:#06b6d4;font-weight:500;font-size:12px;margin-left:6px">@'+esc(a.instagram)+'</span>':'')+'</div>'+
-        '<a href="'+esc(p.url)+'" target="_blank" style="display:block;font-size:12px;color:#06b6d4;word-break:break-all;text-decoration:none;margin-bottom:6px">🔗 '+esc(p.url)+'</a>'+
+        '<a href="'+esc(cleanInstagramUrl(p.url))+'" target="_blank" style="display:block;font-size:12px;color:#06b6d4;word-break:break-all;text-decoration:none;margin-bottom:6px">🔗 '+esc(p.url)+'</a>'+
         (p.caption?'<div style="font-size:12px;color:var(--text);margin-bottom:8px">'+esc(p.caption)+'</div>':'')+
         '<div style="font-size:11px;color:var(--dsub);margin-top:8px">'+p.likeCount+' Engagements:</div>'+
         engagersHtml+
@@ -15303,7 +15303,7 @@ async function loadPrismaLinksAdmin(){
           (!p.deletedAt ? '<button onclick="deletePrismaLink(\\''+esc(p.id)+'\\', this)" style="background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.35);color:#ef4444;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer">🗑️ Löschen</button>' : '')+
         '</div>'+
         '<div style="font-size:13px;font-weight:700;margin-bottom:6px"><a href="/profil/'+esc(p.uid)+'" style="color:var(--text);text-decoration:none">'+esc(a.name||'User')+'</a>'+(a.instagram?'<a href="https://instagram.com/'+esc(a.instagram)+'" target="_blank" rel="noopener" style="color:#a855f7;text-decoration:none;font-weight:500;font-size:12px;margin-left:6px">@'+esc(a.instagram)+'</a>':'')+'</div>'+
-        '<a href="'+esc(p.url)+'" target="_blank" style="display:block;font-size:12px;color:#a855f7;word-break:break-all;text-decoration:none;margin-bottom:6px">🔗 '+esc(p.url)+'</a>'+
+        '<a href="'+esc(cleanInstagramUrl(p.url))+'" target="_blank" style="display:block;font-size:12px;color:#a855f7;word-break:break-all;text-decoration:none;margin-bottom:6px">🔗 '+esc(p.url)+'</a>'+
         (p.caption?'<div style="font-size:12px;color:var(--text);margin-bottom:8px">'+esc(p.caption)+'</div>':'')+
         '<div style="font-size:11px;color:var(--dsub);margin-top:8px"><b>'+p.likeCount+' Engagements</b> · jeder +7💎 erhalten:</div>'+
         engagersHtml+
@@ -15338,7 +15338,7 @@ async function loadEngagementLog(){
       for (const e of j.pinned) {
         html += '<div style="margin:0 16px 8px;padding:10px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;font-size:12.5px;line-height:1.5">' +
           '<div><a href="/profil/'+esc(e.engagerUid)+'" style="color:#ec4899;font-weight:700;text-decoration:none">'+esc(e.engagerName)+'</a>'+(e.engagerInstagram?' · @'+esc(e.engagerInstagram):'')+' → engagierte Pinned von <a href="/profil/'+esc(e.ownerUid)+'" style="color:#a78bfa;font-weight:700;text-decoration:none">'+esc(e.ownerName)+'</a></div>' +
-          (e.pinnedUrl ? '<div style="margin-top:4px"><a href="'+esc(e.pinnedUrl)+'" target="_blank" style="color:var(--muted);font-size:11px;word-break:break-all">'+esc(e.pinnedUrl)+'</a></div>' : '') +
+          (e.pinnedUrl ? '<div style="margin-top:4px"><a href="'+esc(cleanInstagramUrl(e.pinnedUrl))+'" target="_blank" style="color:var(--muted);font-size:11px;word-break:break-all">'+esc(e.pinnedUrl)+'</a></div>' : '') +
           '<div style="font-size:11px;color:var(--muted);margin-top:4px">'+fmtTs(e.ts)+'</div>' +
         '</div>';
       }
@@ -15350,7 +15350,7 @@ async function loadEngagementLog(){
       for (const e of j.collabs) {
         html += '<div style="margin:0 16px 8px;padding:10px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;font-size:12.5px;line-height:1.5">' +
           '<div><a href="/profil/'+esc(e.engagerUid)+'" style="color:#ec4899;font-weight:700;text-decoration:none">'+esc(e.engagerName)+'</a>'+(e.engagerInstagram?' · @'+esc(e.engagerInstagram):'')+' → engagierte Kollab von <a href="/profil/'+esc(e.authorA.uid)+'" style="color:#a78bfa;font-weight:700;text-decoration:none">'+esc(e.authorA.name)+'</a> × <a href="/profil/'+esc(e.authorB.uid)+'" style="color:#a78bfa;font-weight:700;text-decoration:none">'+esc(e.authorB.name)+'</a></div>' +
-          (e.url ? '<div style="margin-top:4px"><a href="'+esc(e.url)+'" target="_blank" style="color:var(--muted);font-size:11px;word-break:break-all">'+esc(e.url)+'</a></div>' : '') +
+          (e.url ? '<div style="margin-top:4px"><a href="'+esc(cleanInstagramUrl(e.url))+'" target="_blank" style="color:var(--muted);font-size:11px;word-break:break-all">'+esc(e.url)+'</a></div>' : '') +
           '<div style="font-size:11px;color:var(--muted);margin-top:4px">Woche '+esc(e.week||'?')+'</div>' +
         '</div>';
       }
@@ -17693,8 +17693,8 @@ ${rest.map(([id,u],idx)=>{
             const hasLiked = !isOwn && likes.map(String).includes(String(myUid));
             const shortcode = (l.text||'').match(/instagram\.com\/(?:reel|p|tv)\/([A-Za-z0-9_-]+)/);
             const thumbUrl = shortcode ? '/insta-thumb?u=' + encodeURIComponent(l.text) : '';
-            const sUrl = safeUrl(l.text||'');
-            return '<div class="proflink-card fade-up" data-url="'+htmlEsc(l.text||'')+'">'
+            const sUrl = cleanInstagramUrl(l.text||'');
+            return '<div class="proflink-card fade-up" data-url="'+htmlEsc(sUrl)+'">'
               + '<a href="'+htmlEsc(sUrl)+'" target="_blank" rel="noopener noreferrer" onclick="markLinkVisited(\''+msgId+'\')" class="proflink-thumb" id="post-'+msgId+'">'
               + (thumbUrl ? '<img src="'+thumbUrl+'" referrerpolicy="no-referrer" loading="lazy" onerror="this.style.display=\'none\'" alt="">' : '')
               + '<div class="proflink-thumb-overlay"></div>'
@@ -18164,8 +18164,8 @@ async function submitPost(){const _spBtn=document.querySelector('[onclick="submi
             const hasLiked = likes.map(String).includes(String(myUid));
             const shortcode = (l.text||'').match(/instagram\.com\/(?:reel|p|tv)\/([A-Za-z0-9_-]+)/);
             const thumbUrl = shortcode ? '/insta-thumb?u=' + encodeURIComponent(l.text) : '';
-            const sUrl = safeUrl(l.text||'');
-            return '<div class="proflink-card fade-up" data-url="'+htmlEsc(l.text||'')+'">'
+            const sUrl = cleanInstagramUrl(l.text||'');
+            return '<div class="proflink-card fade-up" data-url="'+htmlEsc(sUrl)+'">'
               + '<a href="'+htmlEsc(sUrl)+'" target="_blank" rel="noopener noreferrer" onclick="markLinkVisited(\''+msgId+'\')" class="proflink-thumb" id="post-'+msgId+'">'
               + (thumbUrl ? '<img src="'+thumbUrl+'" referrerpolicy="no-referrer" loading="lazy" onerror="this.style.display=\'none\'" alt="">' : '')
               + '<div class="proflink-thumb-overlay"></div>'
@@ -18357,7 +18357,7 @@ async function collabRequest(targetUid, btn){
           '</div>' +
           '<div style="font-size:13px;font-weight:700;margin-bottom:6px"><a href="/profil/'+esc(p.uid)+'" style="color:var(--text);text-decoration:none">'+aName+'</a> × <a href="/profil/'+esc(p.partnerUid)+'" style="color:var(--text);text-decoration:none">'+bName+'</a></div>' +
           (p.caption ? '<div style="font-size:13px;color:var(--text);line-height:1.5;margin:6px 0 10px">'+esc(p.caption)+'</div>' : '') +
-          '<a href="'+esc(p.url)+'" target="_blank" rel="noopener noreferrer" onclick="window._kvisit_'+p.id+'=Date.now()" style="display:block;padding:11px 13px;background:rgba(236,72,153,0.10);border:1px solid rgba(236,72,153,0.30);border-radius:10px;font-size:12.5px;color:#ec4899;font-weight:700;word-break:break-all;text-decoration:none;margin-bottom:10px">🔗 Auf Instagram öffnen</a>' +
+          '<a href="'+esc(cleanInstagramUrl(p.url))+'" target="_blank" rel="noopener noreferrer" onclick="window._kvisit_'+p.id+'=Date.now()" style="display:block;padding:11px 13px;background:rgba(236,72,153,0.10);border:1px solid rgba(236,72,153,0.30);border-radius:10px;font-size:12.5px;color:#ec4899;font-weight:700;word-break:break-all;text-decoration:none;margin-bottom:10px">🔗 Auf Instagram öffnen</a>' +
           (isMine
             ? '<div style="padding:10px 12px;background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.35);border-radius:10px;font-size:12px;color:#ef4444;font-weight:700;text-align:center">🚫 Kein Self-Like für Kollaboratoren · Dies ist dein Post mit '+(p.uid===window._myUid?bName:aName)+'</div>'
             : liked
