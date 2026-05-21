@@ -1776,7 +1776,7 @@ function layout(content, session, page='feed', lang='de') {
     return `<!DOCTYPE html><html lang="${lang}" data-theme="light">
 <head>
 ${buildErrorHandler(_isAdmin)}
-<script>window.MY_UID=${JSON.stringify(_meUid)};</script>
+<script>window.MY_UID=${JSON.stringify(_meUid)};window.__IS_ADMIN=${_isAdmin ? 'true' : 'false'};</script>
 <script>try{var t=localStorage.getItem('cbTheme4');var dark=(t==='dark');document.documentElement.setAttribute('data-theme',dark?'dark':'light');setTimeout(function(){var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute('content',dark?'#0b0b0e':'#ffffff');var sb=document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');if(sb)sb.setAttribute('content',dark?'black-translucent':'default');},0);}catch(e){document.documentElement.setAttribute('data-theme','light');}</script>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -10111,6 +10111,7 @@ async function submitSuperLink(){
           ? '<div style="padding:11px;background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.35);border-radius:10px;font-size:13px;color:#22c55e;font-weight:700;text-align:center">✅ Engagiert · +'+(p.reward||3)+' 💎</div>'
           : '<button onclick="diamondLikeClick(\\''+p.id+'\\', this)" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;background:linear-gradient(135deg,#06b6d4,#0e7490);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 0 18px rgba(6,182,212,0.35);position:relative"><span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900">2</span><span>💎 Engagiert · +'+(p.reward||3)+' 💎</span></button>'
         ) +
+        (window.__IS_ADMIN ? '<button onclick="diamondAdminDelete(\\''+p.id+'\\', this)" style="display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:9px;margin-top:8px;background:transparent;color:#ef4444;border:1px dashed rgba(239,68,68,0.50);border-radius:9px;font-size:12px;font-weight:700;cursor:pointer">🛡️ Admin: Löschen</button>' : '') +
         (function(){
           const lkrs = Array.isArray(p.likers) ? p.likers : [];
           const cnt = p.likeCount || lkrs.length;
@@ -10231,6 +10232,17 @@ async function submitSuperLink(){
       else { btn.disabled=false; btn.innerHTML='💎 Engagiert · +3 💎'; alert('❌ '+(j.message||j.error||'Fehler')); }
     } catch(e) { btn.disabled=false; btn.innerHTML='💎 Engagiert · +3 💎'; alert('❌ '+e.message); }
   };
+  window.diamondAdminDelete = async function(postId, btn){
+    if (!window.__IS_ADMIN) return;
+    if (!confirm('🛡️ Admin: Diamantlink löschen?\\n\\nDer Post verschwindet sofort aus allen Feeds.')) return;
+    btn.disabled = true; btn.textContent = '⏳ Lösche …';
+    try {
+      const r = await fetch('/api/admin/diamond-link/delete', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ postId }) });
+      const j = await r.json();
+      if (j.ok) { load(); }
+      else { btn.disabled=false; btn.innerHTML='🛡️ Admin: Löschen'; alert('❌ '+(j.message||j.error||'Fehler')); }
+    } catch(e) { btn.disabled=false; btn.innerHTML='🛡️ Admin: Löschen'; alert('❌ '+e.message); }
+  };
   load();
   setInterval(() => {
     // Countdown tick — re-render alle 60s damit Restzeit aktuell bleibt
@@ -10294,6 +10306,7 @@ async function submitSuperLink(){
           ? '<div style="padding:11px;background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.35);border-radius:10px;font-size:13px;color:#22c55e;font-weight:700;text-align:center">✅ Engagiert · +'+(p.reward||7)+' 💎</div>'
           : '<button onclick="prismaLikeClick(\\''+p.id+'\\', this)" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;background:linear-gradient(135deg,#ef4444,#f59e0b,#22c55e,#06b6d4,#a855f7);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 0 18px rgba(168,85,247,0.40);position:relative"><span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900">2</span><span>💠 Engagiert · +'+(p.reward||7)+' 💎</span></button>'
         ) +
+        (window.__IS_ADMIN ? '<button onclick="prismaAdminDelete(\\''+p.id+'\\', this)" style="display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:9px;margin-top:8px;background:transparent;color:#ef4444;border:1px dashed rgba(239,68,68,0.50);border-radius:9px;font-size:12px;font-weight:700;cursor:pointer">🛡️ Admin: Löschen</button>' : '') +
         (function(){
           const lkrs = Array.isArray(p.likers) ? p.likers : [];
           const cnt = p.likeCount || lkrs.length;
@@ -10345,6 +10358,17 @@ async function submitSuperLink(){
       if (j.ok) { load(); }
       else { btn.disabled=false; btn.innerHTML='💠 Engagiert · +7 💎'; alert('❌ '+(j.message||j.error||'Fehler')); }
     } catch(e) { btn.disabled=false; btn.innerHTML='💠 Engagiert · +7 💎'; alert('❌ '+e.message); }
+  };
+  window.prismaAdminDelete = async function(postId, btn){
+    if (!window.__IS_ADMIN) return;
+    if (!confirm('🛡️ Admin: Prismalink löschen?\\n\\nDer Post verschwindet sofort aus allen Feeds.')) return;
+    btn.disabled = true; btn.textContent = '⏳ Lösche …';
+    try {
+      const r = await fetch('/api/admin/prisma-link/delete', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ postId }) });
+      const j = await r.json();
+      if (j.ok) { load(); }
+      else { btn.disabled=false; btn.innerHTML='🛡️ Admin: Löschen'; alert('❌ '+(j.message||j.error||'Fehler')); }
+    } catch(e) { btn.disabled=false; btn.innerHTML='🛡️ Admin: Löschen'; alert('❌ '+e.message); }
   };
   load();
   setInterval(load, 60000);
