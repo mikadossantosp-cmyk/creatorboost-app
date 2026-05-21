@@ -29,9 +29,9 @@
     .btn-secondary { display: inline-flex; align-items: center; gap: 8px; background: transparent; color: #1a1410; padding: 16px 24px; border: 1.5px solid #d4c5b0; border-radius: 999px; text-decoration: none; font-weight: 500; font-size: 14px; transition: border-color 0.15s ease; }
     .btn-secondary:hover { border-color: #1a1410; }
     .book-frame { position: relative; perspective: 1200px; display: flex; justify-content: center; }
-    .book-cover { position: relative; width: 100%; max-width: 320px; aspect-ratio: 2 / 3; box-shadow: 0 1px 1px rgba(0,0,0,0.1), 0 4px 8px rgba(0,0,0,0.12), 0 20px 40px rgba(60, 40, 20, 0.18), 0 30px 60px rgba(60, 40, 20, 0.10); border-radius: 4px 8px 8px 4px; overflow: hidden; background: linear-gradient(135deg, #2c2418 0%, #1a1410 100%); transform: rotate(-1.5deg); transition: transform 0.4s ease; }
+    .book-cover { position: relative; width: 100%; max-width: 320px; box-shadow: 0 1px 1px rgba(0,0,0,0.1), 0 4px 8px rgba(0,0,0,0.12), 0 20px 40px rgba(60, 40, 20, 0.18), 0 30px 60px rgba(60, 40, 20, 0.10); border-radius: 4px 8px 8px 4px; overflow: hidden; background: #1a1410; transform: rotate(-1.5deg); transition: transform 0.4s ease; }
     .book-cover:hover { transform: rotate(0deg) translateY(-4px); }
-    .book-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .book-cover img { width: 100%; height: 100%; object-fit: contain; display: block; background: #1a1410; }
     .book-cover-placeholder { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 28px; color: #f5f0e8; text-align: center; }
     .book-cover-placeholder .ph-eyebrow { font-size: 10px; letter-spacing: 4px; text-transform: uppercase; color: #b8946c; margin-bottom: 32px; font-weight: 600; }
     .book-cover-placeholder .ph-title { font-family: 'Cormorant Garamond', serif; font-size: 32px; font-weight: 600; line-height: 1.05; margin-bottom: 20px; letter-spacing: -0.5px; }
@@ -134,14 +134,55 @@
   </section>
   <section class="cta-section" id="download">
     <div class="container">
-      <div class="cta-card">
+      <div class="cta-card" id="cta-card">
         <h2>Lies das Buch jetzt — kostenlos</h2>
         <p>Lade das Buch herunter und nimm dir die Zeit, die du brauchst. Es kostet nichts außer ein bisschen Aufmerksamkeit.</p>
-        <a href="buch.txt" download="Noch-nicht-aufgegeben.txt" class="btn-primary" style="font-size:16px;padding:18px 36px">↓ Buch herunterladen (.txt)</a>
-        <div class="download-meta">Kostenlos · Keine Anmeldung nötig · Sofort verfügbar</div>
+        <a id="download-btn" href="buch.epub" download="Noch-nicht-aufgegeben.epub" class="btn-primary" style="font-size:16px;padding:18px 36px" onclick="trackDownload()">↓ Buch herunterladen (.epub)</a>
+        <div class="download-meta"><span id="download-counter">⏳ Lade Counter…</span> · <span id="countdown">⏰ Lade Countdown…</span></div>
+        <div style="margin-top:14px;font-size:11px;color:#95897a;letter-spacing:0.3px">Kostenlos · Keine Anmeldung · Für jeden E-Reader, Apple Books, Google Play Books</div>
+      </div>
+      <div class="cta-card" id="expired-card" style="display:none">
+        <div style="font-size:48px;margin-bottom:14px">📖</div>
+        <h2>Lies das Buch jetzt</h2>
+        <p>Die kostenlose 14-Tage-Aktion ist vorbei. Du kannst das Buch jetzt für einen fairen Preis bekommen — und unterstützt damit weitere Projekte.</p>
+        <a id="buy-btn" href="https://gumroad.com/PLACEHOLDER" target="_blank" rel="noopener" class="btn-primary" style="font-size:16px;padding:18px 36px">🛒 Jetzt kaufen · 3,99€</a>
+        <div style="margin-top:18px;font-size:11px;color:#95897a;letter-spacing:0.3px">Einmalkauf · Sofort verfügbar · EPUB für alle E-Reader</div>
       </div>
     </div>
   </section>
+  <script>
+    const START_DATE = new Date('2026-05-21T00:00:00');
+    const EXPIRY_DAYS = 14;
+    const expiryMs = START_DATE.getTime() + EXPIRY_DAYS * 24 * 60 * 60 * 1000;
+    const remainingMs = expiryMs - Date.now();
+    const remainingDays = Math.ceil(remainingMs / (24 * 60 * 60 * 1000));
+    if (remainingMs <= 0) {
+      document.getElementById('cta-card').style.display = 'none';
+      document.getElementById('expired-card').style.display = 'block';
+    } else {
+      const countdownEl = document.getElementById('countdown');
+      if (countdownEl) countdownEl.innerHTML = '⏰ Noch <b>' + remainingDays + ' Tag' + (remainingDays===1?'':'e') + '</b> verfügbar';
+    }
+    const COUNTER_NAMESPACE = 'noch-nicht-aufgegeben';
+    const COUNTER_KEY = 'downloads';
+    fetch('https://abacus.jasoncameron.dev/get/' + COUNTER_NAMESPACE + '/' + COUNTER_KEY)
+      .then(r => r.json())
+      .then(d => {
+        const el = document.getElementById('download-counter');
+        if (el && typeof d.value === 'number') el.innerHTML = '📥 <b>' + d.value.toLocaleString('de-DE') + '</b> Downloads';
+        else if (el) el.innerHTML = '📥 <b>0</b> Downloads';
+      })
+      .catch(() => { const el = document.getElementById('download-counter'); if (el) el.innerHTML = '📥 Downloads laufen'; });
+    function trackDownload() {
+      fetch('https://abacus.jasoncameron.dev/hit/' + COUNTER_NAMESPACE + '/' + COUNTER_KEY)
+        .then(r => r.json())
+        .then(d => {
+          const el = document.getElementById('download-counter');
+          if (el && typeof d.value === 'number') el.innerHTML = '📥 <b>' + d.value.toLocaleString('de-DE') + '</b> Downloads';
+        })
+        .catch(() => {});
+    }
+  </script>
   <footer>
     <div class="container">
       <div>© <span id="year"></span> · Noch nicht aufgegeben</div>
