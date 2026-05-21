@@ -5965,9 +5965,19 @@ async function sendAllUnverified(){if(!confirm('Allen unbestaetigten Usern Besta
 async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)return;try{const r=await fetch('/api/admin/send-test',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:K,to})});const d=await r.json();toast(d.ok?'\u2705 Testmail gesendet':'\u274c '+(d.error||'Fehler'),d.ok);}catch(e){toast('\u274c '+e.message,false);}}
 </script></body></html>`);
     }
+    // Admin-Auth Helper: erlaubt key=BRIDGE_SECRET ODER Admin-Session via cbsid Cookie
+    async function _adminAuthCheck(bodyOrQuery) {
+        if ((bodyOrQuery?.key || '') === BRIDGE_SECRET) return true;
+        const _sess = getSession(req);
+        const _sessUid = _sess?.uid ? String(_sess.uid) : null;
+        if (!_sessUid) return false;
+        const _bd = await fetchBot('/data');
+        const _adminIds = (Array.isArray(_bd?._adminIds) ? _bd._adminIds.map(Number) : []);
+        return _adminIds.includes(Number(_sessUid)) || String(_bd?.users?.[_sessUid]?.role||'').includes('Admin');
+    }
     if (path === '/api/admin/send-confirmation' && req.method === 'POST') {
         const body = await parseBody(req);
-        if ((body.key || '') !== BRIDGE_SECRET) return json({error:'Kein Zugriff'}, 403);
+        if (!(await _adminAuthCheck(body))) return json({error:'Kein Zugriff'}, 403);
         const bd = await fetchBot('/data');
         if (!bd) return json({error:'MainBot nicht erreichbar'}, 503);
         const uid = String(body.uid || '');
@@ -5987,7 +5997,7 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
     }
     if (path === '/api/admin/send-all-unverified' && req.method === 'POST') {
         const body = await parseBody(req);
-        if ((body.key || '') !== BRIDGE_SECRET) return json({error:'Kein Zugriff'}, 403);
+        if (!(await _adminAuthCheck(body))) return json({error:'Kein Zugriff'}, 403);
         const bd = await fetchBot('/data');
         if (!bd) return json({error:'MainBot nicht erreichbar'}, 503);
         const targets = Object.entries(bd.users || {}).filter(([, u]) => u.pendingEmail || (u.email && !u.password_hash));
@@ -6012,7 +6022,7 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
     }
     if (path === '/api/admin/send-test' && req.method === 'POST') {
         const body = await parseBody(req);
-        if ((body.key || '') !== BRIDGE_SECRET) return json({error:'Kein Zugriff'}, 403);
+        if (!(await _adminAuthCheck(body))) return json({error:'Kein Zugriff'}, 403);
         const to = String(body.to || '').trim();
         if (!to || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) return json({error:'Ungueltige Email'}, 400);
         const sent = await sendEmail(to, '\ud83e\uddea CreatorX Testmail', '<!DOCTYPE html><html><body style="margin:0;font-family:sans-serif;background:#000;color:#fff;padding:32px;text-align:center"><h1>Testmail \u2705</h1><p>Das Mailsystem funktioniert.</p><p style="color:#888;font-size:12px">Gesendet: '+new Date().toISOString()+'</p></body></html>');
