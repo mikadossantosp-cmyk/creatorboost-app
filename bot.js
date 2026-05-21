@@ -10065,6 +10065,7 @@ async function submitSuperLink(){
   }
   function renderCard(p, opts){
     const isMine = !!p.isSelf;
+    const isFamily = !!p.isFamily;
     const liked = !!p.liked;
     const aName = esc(p.author?.name||'User');
     const aHandle = p.author?.instagram ? '@'+esc(p.author.instagram) : '';
@@ -10086,6 +10087,8 @@ async function submitSuperLink(){
         '<div style="font-size:11px;color:#f59e0b;background:rgba(245,158,11,0.08);border-left:3px solid #f59e0b;border-radius:6px;padding:8px 10px;margin-bottom:10px;line-height:1.5"><b>⚠️ Pflicht:</b> LIKEN + KOMMENTIEREN + TEILEN + SPEICHERN. Bei Schein-Likes: XP-Abzug + Diamonds-Reset + Bann!</div>' +
         (isMine
           ? '<div style="padding:11px;background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.35);border-radius:10px;font-size:12.5px;color:#ef4444;font-weight:700;text-align:center">🚫 Kein Self-Like — dein eigener Post</div>'
+          : isFamily
+          ? '<div style="padding:11px;background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.35);border-radius:10px;font-size:12.5px;color:#ef4444;font-weight:700;text-align:center">🚫 Family-Account — kein Like möglich</div>'
           : liked
           ? '<div style="padding:11px;background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.35);border-radius:10px;font-size:13px;color:#22c55e;font-weight:700;text-align:center">✅ Engagiert · +'+(p.reward||3)+' 💎</div>'
           : '<button onclick="diamondLikeClick(\\''+p.id+'\\', this)" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;background:linear-gradient(135deg,#06b6d4,#0e7490);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 0 18px rgba(6,182,212,0.35);position:relative"><span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900">2</span><span>💎 Engagiert · +'+(p.reward||3)+' 💎</span></button>'
@@ -10130,17 +10133,16 @@ async function submitSuperLink(){
       const j = await r.json();
       TAB_RULES_OK = !!j.rulesAccepted;
       const posts = j.posts || [];
-      // Tab-Badge: Anzahl noch ungelikter Diamantlinks (ohne eigene)
-      const unliked = posts.filter(p => !p.liked && !p.isSelf).length;
+      // Tab-Badge: Anzahl noch ungelikter Diamantlinks (ohne eigene + ohne family)
+      const unliked = posts.filter(p => !p.liked && !p.isSelf && !p.isFamily).length;
       const badgeEl = document.getElementById('tab-badge-diamond');
       if (badgeEl) badgeEl.innerHTML = unliked > 0
         ? '<span style="display:inline-block;min-width:18px;height:16px;line-height:16px;padding:0 5px;border-radius:99px;background:#ef4444;color:#fff;font-size:9.5px;font-weight:800;vertical-align:middle;margin-left:4px;box-shadow:0 2px 6px rgba(239,68,68,0.45)">'+unliked+'</span>'
         : '';
-      // Top-Strip im Heute-Tab: alle Diamantlinks oben, älteste zuerst (j.posts ist schon ASC sortiert).
-      // Liked-by-me Diamantlinks werden NICHT mehr im Top-Strip gezeigt — User hat
-      // den Boost-Reward schon kassiert, kein Re-Engagement mehr nötig.
+      // Top-Strip im Heute-Tab: nur likbare Posts (nicht eigene, nicht family, nicht schon geliked).
+      // Eigene/Family-Posts erscheinen im Diamond-Tab selbst, aber nicht im Strip oben.
       if (stripEl) {
-        const stripPosts = posts.filter(p => !p.liked);
+        const stripPosts = posts.filter(p => !p.liked && !p.isSelf && !p.isFamily);
         if (stripPosts.length) stripEl.innerHTML = stripPosts.map(p => renderCard(p)).join('');
         else stripEl.innerHTML = '';
       }
@@ -10229,6 +10231,7 @@ async function submitSuperLink(){
   }
   function renderCard(p){
     const isMine = !!p.isSelf;
+    const isFamily = !!p.isFamily;
     const liked = !!p.liked;
     const aName = esc(p.author?.name||'User');
     const aHandle = p.author?.instagram ? '@'+esc(p.author.instagram) : '';
@@ -10250,6 +10253,8 @@ async function submitSuperLink(){
         '<div style="font-size:11px;color:#f59e0b;background:rgba(245,158,11,0.08);border-left:3px solid #f59e0b;border-radius:6px;padding:8px 10px;margin-bottom:10px;line-height:1.5"><b>⚠️ Pflicht:</b> LIKEN + KOMMENTIEREN + TEILEN + SPEICHERN. Bei Schein-Likes: XP-Abzug + Diamonds-Reset + Bann!</div>' +
         (isMine
           ? '<div style="padding:11px;background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.35);border-radius:10px;font-size:12.5px;color:#ef4444;font-weight:700;text-align:center">🚫 Kein Self-Like — dein eigener Post</div>'
+          : isFamily
+          ? '<div style="padding:11px;background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.35);border-radius:10px;font-size:12.5px;color:#ef4444;font-weight:700;text-align:center">🚫 Family-Account — kein Like möglich</div>'
           : liked
           ? '<div style="padding:11px;background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.35);border-radius:10px;font-size:13px;color:#22c55e;font-weight:700;text-align:center">✅ Engagiert · +'+(p.reward||7)+' 💎</div>'
           : '<button onclick="prismaLikeClick(\\''+p.id+'\\', this)" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;background:linear-gradient(135deg,#ef4444,#f59e0b,#22c55e,#06b6d4,#a855f7);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 0 18px rgba(168,85,247,0.40);position:relative"><span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900">2</span><span>💠 Engagiert · +'+(p.reward||7)+' 💎</span></button>'
@@ -10283,8 +10288,10 @@ async function submitSuperLink(){
       const r = await fetch('/api/prisma-link/feed?hideEngaged=1');
       const j = await r.json();
       const posts = j.posts || [];
+      // Heute-Strip: nur likbare Posts (nicht eigene, nicht family)
       if (stripEl) {
-        if (posts.length) stripEl.innerHTML = posts.map(p => renderCard(p)).join('');
+        const stripPosts = posts.filter(p => !p.isSelf && !p.isFamily);
+        if (stripPosts.length) stripEl.innerHTML = stripPosts.map(p => renderCard(p)).join('');
         else stripEl.innerHTML = '';
       }
     } catch(e) { console.warn('[prisma] load error', e); }
