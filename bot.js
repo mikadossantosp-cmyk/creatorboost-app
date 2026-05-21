@@ -5819,7 +5819,21 @@ function submitPw(ev){
 
     // ── ADMIN: Email Dashboard (before auth gate — uses query.key) ──
     if (path === '/admin/emails') {
-        if ((query.key || '') !== BRIDGE_SECRET) { res.writeHead(403); return res.end('Kein Zugriff'); }
+        // Admin-Auth: entweder via key=BRIDGE_SECRET (Direktlink) ODER via Admin-Session (Dashboard-Button)
+        let isAuthed = false;
+        if ((query.key || '') === BRIDGE_SECRET) isAuthed = true;
+        else {
+            const _sess = getSession(req);
+            const _sessUid = _sess?.uid ? String(_sess.uid) : null;
+            if (_sessUid) {
+                const _bd = await fetchBot('/data');
+                const _adminIds = (Array.isArray(_bd?._adminIds) ? _bd._adminIds.map(Number) : []);
+                if (_adminIds.includes(Number(_sessUid)) || String(_bd?.users?.[_sessUid]?.role||'').includes('Admin')) {
+                    isAuthed = true;
+                }
+            }
+        }
+        if (!isAuthed) { res.writeHead(403); return res.end('Kein Zugriff'); }
         const page = Math.max(1, parseInt(query.page) || 1);
         const perPage = 50;
         const filterMode = query.filter || 'all';
@@ -13361,6 +13375,7 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
       </div>
       <div class="dash-top-actions">
         <button class="dash-btn dash-btn-ghost" onclick="runMissionBackfill()">🔁 Backfill</button>
+        <button class="dash-btn" onclick="window.open('/admin/emails','_blank')" style="border-color:rgba(167,139,250,0.40);color:#a78bfa">📧 Email Dashboard</button>
         <button class="dash-btn" onclick="openFunnelDebug()">🔬 Funnel Debug</button>
         <button class="dash-btn" onclick="openStatsDebug()">📊 Stats Debug</button>
         <button class="dash-btn" onclick="openKollabBoostPreview()" style="border-color:rgba(236,72,153,0.40);color:#ec4899">🎨 Kollab-Boost Preview</button>
