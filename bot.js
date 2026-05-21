@@ -5817,6 +5817,241 @@ function submitPw(ev){
         return res.end();
     }
 
+    // ── ADMIN: Play Store Listing Helper ──
+    if (path === '/admin/play-listing') {
+        let isAuthed = false;
+        if ((query.key || '') === BRIDGE_SECRET) isAuthed = true;
+        else {
+            const _sess = getSession(req);
+            const _sessUid = _sess?.uid ? String(_sess.uid) : null;
+            if (_sessUid) {
+                const _bd = await fetchBot('/data');
+                const _adminIds = (Array.isArray(_bd?._adminIds) ? _bd._adminIds.map(Number) : []);
+                if (_adminIds.includes(Number(_sessUid)) || String(_bd?.users?.[_sessUid]?.role||'').includes('Admin')) {
+                    isAuthed = true;
+                }
+            }
+        }
+        if (!isAuthed) { res.writeHead(403); return res.end('Kein Zugriff'); }
+
+        const fullDesc = `CreatorX ist die Community-App für Instagram-Creator die ehrlich wachsen wollen.
+
+🎯 SO FUNKTIONIERT'S
+Bei CreatorX hilfst du anderen Creators — und sie helfen dir. Jeder Like, Kommentar und Repost ist echt. Kein Bot, keine Fake-Engagement, sondern echte Menschen die deine Inhalte sehen.
+
+🔗 LINK-SYSTEM
+• 1 Standard-Link pro Tag posten
+• 1 Superlink pro Woche (Full-Engagement)
+• Diamantlink (30 💎) für 3-Tage-Top-Platzierung
+• Prismalink (100 💎) für 7-Tage-Top mit Holographic-Glow
+
+🏆 BADGE-SYSTEM
+🆕 New → 📘 Anfänger → ⬆️ Aufsteiger → 🏅 Erfahrener → 👑 Elite → 🌟 Elite+ → 💎 Legende
+Mehr Aktivität = mehr Status = mehr Privilegien (Extra-Links, mehr Superlinks, Bonus-Diamanten)
+
+🎯 MISSIONEN
+Tägliche & wöchentliche Missionen geben XP + Diamanten. Konstante Aktivität wird belohnt.
+
+🏅 RANKING-SYSTEM
+• Daily-Ranking: Top 3 bekommen +10 XP, +2 💎, +1 Extra-Link
+• Weekly-Ranking: Top 3 bekommen bis zu +50 XP, +3 💎, +2 Extra-Links
+• Wochen-Gewinnspiel: Random-Winner bekommt Extra-Link
+
+💎 DIAMANTEN-SHOP
+Verdiente Diamanten investieren in Extra-Links, Superlink-Slots, Profil-Banner oder Premium-Posts.
+
+🤝 KOLLABORATIONEN
+Mit anderen Creators Kollab-Posts machen — 1× pro Woche.
+
+⚙️ FEATURES
+• Direkte Nachrichten
+• Push-Benachrichtigungen
+• Custom Profilbanner & Ringe
+• Pinned Reel (Story-Highlight)
+• XP- & Diamanten-Events
+• Multi-Account (Sub-Accounts)
+
+🔒 PRIVATSPHÄRE
+Wir sammeln nur was nötig ist. Keine Werbung. Keine Tracker. Deine Daten gehören dir.
+
+📲 Direkt von Instagram zu CreatorX: starte mit @creatorx_bot auf Telegram.
+
+Ab 16 Jahren. Datenschutz: creatorboostx.de/datenschutz`;
+
+        const shortDesc = 'Engagement-Community für Instagram-Creator. Echtes Wachstum durch gegenseitige Unterstützung.';
+        const whatsNew = `🎉 Neues Update!
+
+💠 NEU: Prismalink (Premium-Stufe über Diamantlink)
+💎 NEU: Legende-Badge ab 25.000 XP mit monatlichem 30💎-Bonus
+🏆 NEU: Tägliche & wöchentliche Sieger-Banner im Ranking
+🌟 NEU: Wochen-Mission "Alle Superlinks liken" → +500 XP
+📌 Pinned-Link Auto-Expire nach 30 Tagen
+🎯 Neuer Feed-Header mit Tab-Switcher, XP, Diamanten & Verwarnungen
+🔥 Performance-Verbesserungen + Bugfixes`;
+
+        const dataSafety = [
+            { type: 'Persönliche Identifikation', items: ['Name (optional)', 'Email-Adresse (für Login)', 'User-ID'], purpose: 'Account-Verwaltung, Authentifizierung', shared: false, optional: true },
+            { type: 'Bilder', items: ['Profilbild', 'Banner', 'Reel-Cover'], purpose: 'App-Funktionalität (Profil, Feed)', shared: false, optional: true },
+            { type: 'App-Aktivität', items: ['Likes', 'Posts', 'Klicks'], purpose: 'Core-Funktion (XP, Ranking, Missionen)', shared: false, optional: false },
+            { type: 'Kontaktinformationen', items: ['Instagram-Handle'], purpose: 'User-Verifikation, Profil-Display', shared: false, optional: true },
+        ];
+
+        const esc = s => String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+        res.writeHead(200, {'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});
+        return res.end(`<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Play Store Listing</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0a0a0a;color:#e5e5e5;padding:16px;font-size:13px;line-height:1.5;max-width:900px;margin:0 auto}
+h1{font-size:22px;font-weight:800;margin-bottom:4px;background:linear-gradient(135deg,#34d399,#10b981);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+h2{font-size:16px;font-weight:700;margin:24px 0 10px;color:#34d399;display:flex;align-items:center;gap:8px}
+.muted{color:#888;font-size:12px;margin-bottom:14px}
+.card{background:#111;border:1px solid #222;border-radius:12px;padding:16px;margin-bottom:14px}
+.field-label{font-size:11px;color:#888;text-transform:uppercase;letter-spacing:0.7px;font-weight:700;margin-bottom:6px}
+.field-meta{font-size:11px;color:#666;margin-top:6px}
+pre{background:#0a0a0a;border:1px solid #1a1a1a;border-radius:8px;padding:12px;font-size:11.5px;line-height:1.6;white-space:pre-wrap;word-break:break-word;color:#cbd5e1;font-family:'SF Mono',Monaco,monospace;max-height:300px;overflow-y:auto}
+.copy-btn{display:inline-flex;align-items:center;gap:6px;background:#22c55e;color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit}
+.copy-btn:active{background:#16a34a}
+.checklist{list-style:none;padding:0}
+.checklist li{padding:10px 0;border-bottom:1px solid #1a1a1a;display:flex;align-items:flex-start;gap:10px;font-size:13px}
+.checklist li:last-child{border-bottom:0}
+.checklist input{margin-top:3px;width:18px;height:18px;accent-color:#34d399;cursor:pointer;flex-shrink:0}
+.checklist label{flex:1;cursor:pointer}
+.checklist .desc{display:block;font-size:11px;color:#888;margin-top:3px}
+.checklist .link{color:#34d399;text-decoration:underline}
+.link{color:#34d399;text-decoration:underline}
+.stat-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #1a1a1a;font-size:12.5px}
+.stat-row:last-child{border-bottom:0}
+.stat-key{color:#888}
+.stat-val{color:#e5e5e5;font-weight:600;text-align:right}
+.warn{background:#1f1408;border:1px solid #92400e;border-radius:8px;padding:12px;margin:8px 0;font-size:12px;color:#fbbf24}
+.toast{position:fixed;bottom:20px;right:20px;padding:10px 16px;border-radius:10px;font-size:13px;font-weight:600;color:#fff;background:#10b981;z-index:999;opacity:0;transition:opacity .25s}
+.toast.show{opacity:1}
+</style></head><body>
+<h1>📲 Play Store Listing Helper</h1>
+<p class="muted">Texte + Checkliste für deinen Google Play Console Eintrag</p>
+
+<h2>📝 1. Listing-Texte (zum Copy-Paste)</h2>
+<div class="card">
+  <div class="field-label">App-Name (max 30 Zeichen)</div>
+  <pre id="t1">CreatorX</pre>
+  <button class="copy-btn" onclick="copyText('t1')">📋 Kopieren</button>
+  <div class="field-meta">aktuell 8/30 Zeichen</div>
+</div>
+<div class="card">
+  <div class="field-label">Kurzbeschreibung (max 80 Zeichen)</div>
+  <pre id="t2">${esc(shortDesc)}</pre>
+  <button class="copy-btn" onclick="copyText('t2')">📋 Kopieren</button>
+  <div class="field-meta">aktuell ${shortDesc.length}/80 Zeichen</div>
+</div>
+<div class="card">
+  <div class="field-label">Vollständige Beschreibung (max 4000 Zeichen)</div>
+  <pre id="t3">${esc(fullDesc)}</pre>
+  <button class="copy-btn" onclick="copyText('t3')">📋 Kopieren</button>
+  <div class="field-meta">aktuell ${fullDesc.length}/4000 Zeichen</div>
+</div>
+<div class="card">
+  <div class="field-label">Was-ist-neu (Update-Notes, max 500 Zeichen)</div>
+  <pre id="t4">${esc(whatsNew)}</pre>
+  <button class="copy-btn" onclick="copyText('t4')">📋 Kopieren</button>
+  <div class="field-meta">aktuell ${whatsNew.length}/500 Zeichen</div>
+</div>
+
+<h2>🔒 2. Data Safety Form (Antworten)</h2>
+<div class="card">
+${dataSafety.map(d => `
+  <div style="padding:10px 0;border-bottom:1px solid #1a1a1a">
+    <div style="font-weight:700;color:#34d399;margin-bottom:4px">${esc(d.type)}</div>
+    <div style="font-size:12px;color:#cbd5e1;margin-bottom:4px"><b>Items:</b> ${d.items.map(esc).join(', ')}</div>
+    <div style="font-size:11.5px;color:#888"><b>Zweck:</b> ${esc(d.purpose)} · <b>Geteilt:</b> ${d.shared?'Ja':'Nein'} · <b>Optional:</b> ${d.optional?'Ja':'Nein'}</div>
+  </div>
+`).join('')}
+<div style="padding:10px 0;font-size:12px;color:#fbbf24">
+<b>⚠️ Wichtig:</b> Diese App sammelt keine Daten zu Werbezwecken, teilt keine Daten mit Dritten, hat keine Trackings.
+</div>
+</div>
+
+<h2>📊 3. URLs (für Play Console)</h2>
+<div class="card">
+<div class="stat-row"><span class="stat-key">Privacy Policy</span><span class="stat-val">creatorboostx.de/datenschutz</span></div>
+<div class="stat-row"><span class="stat-key">Terms / AGB</span><span class="stat-val">creatorboostx.de/agb</span></div>
+<div class="stat-row"><span class="stat-key">Impressum</span><span class="stat-val">creatorboostx.de/impressum</span></div>
+<div class="stat-row"><span class="stat-key">Support Email</span><span class="stat-val">deine@email.de (anpassen!)</span></div>
+<div class="stat-row"><span class="stat-key">Website</span><span class="stat-val">creatorboostx.de</span></div>
+</div>
+
+<h2>🎨 4. Visuelle Assets (selbst hochladen)</h2>
+<div class="card">
+<div class="stat-row"><span class="stat-key">App-Icon</span><span class="stat-val">512×512px PNG</span></div>
+<div class="stat-row"><span class="stat-key">Feature Graphic</span><span class="stat-val">1024×500px PNG</span></div>
+<div class="stat-row"><span class="stat-key">Phone Screenshots</span><span class="stat-val">min 2, max 8 · 16:9 oder 9:16</span></div>
+<div class="stat-row"><span class="stat-key">Tablet Screenshots</span><span class="stat-val">optional aber empfohlen</span></div>
+</div>
+
+<h2>⚙️ 5. App-Settings (Play Console)</h2>
+<div class="card">
+<div class="stat-row"><span class="stat-key">App-Kategorie</span><span class="stat-val">Social / Lifestyle</span></div>
+<div class="stat-row"><span class="stat-key">Content Rating</span><span class="stat-val">Teen (13+) oder Mature 17+</span></div>
+<div class="stat-row"><span class="stat-key">Target Audience</span><span class="stat-val">16+ (App-AGB-Mindestalter)</span></div>
+<div class="stat-row"><span class="stat-key">Country/Region</span><span class="stat-val">Deutschland + Österreich</span></div>
+<div class="stat-row"><span class="stat-key">Pricing</span><span class="stat-val">Free</span></div>
+<div class="stat-row"><span class="stat-key">In-App-Purchases</span><span class="stat-val">Nein (Diamanten verdient nicht gekauft)</span></div>
+</div>
+
+<h2>✅ 6. Checkliste</h2>
+<div class="warn">
+<b>Wichtig:</b> <code>TWA_SHA256_FINGERPRINT</code> Environment-Variable in Railway setzen! Sonst kann die App nicht via TWA gestartet werden. Den Fingerprint bekommst du aus Bubblewrap oder Play Console.
+</div>
+<ul class="checklist" id="checklist">
+${[
+  {id:'c1', text:'Google Play Console Account angelegt (€25 einmalig)', desc:'play.google.com/console'},
+  {id:'c2', text:'Neue App in Play Console erstellt', desc:'App-Name: CreatorX · Default-Sprache: Deutsch'},
+  {id:'c3', text:'APK/AAB hochgeladen', desc:'Build via PWABuilder + signiert via creatorboostx.de/sign-apk'},
+  {id:'c4', text:'App-Icon + Feature Graphic hochgeladen', desc:'512×512 + 1024×500 PNG'},
+  {id:'c5', text:'Min. 2 Phone Screenshots hochgeladen', desc:'9:16 Format'},
+  {id:'c6', text:'Listing-Texte eingefügt', desc:'App-Name, Kurzbeschreibung, Vollständige Beschreibung'},
+  {id:'c7', text:'App-Kategorie + Tags ausgewählt', desc:'Social / Lifestyle'},
+  {id:'c8', text:'Privacy Policy URL eingegeben', desc:'creatorboostx.de/datenschutz'},
+  {id:'c9', text:'Data Safety Form ausgefüllt', desc:'Siehe Sektion oben'},
+  {id:'c10', text:'Content Rating Quiz beantwortet', desc:'~10 Fragen — Teen oder 17+'},
+  {id:'c11', text:'Target Audience definiert', desc:'16+ Jahre'},
+  {id:'c12', text:'Pricing & Distribution = Free, Deutschland', desc:'Mind. DE+AT auswählen'},
+  {id:'c13', text:'TWA_SHA256_FINGERPRINT in Railway gesetzt', desc:'Wichtig für TWA-Verifizierung!'},
+  {id:'c14', text:'Test-Track Release angelegt', desc:'Erstmal interner Test bevor Production'},
+  {id:'c15', text:'Submitted for Review', desc:'Review dauert 1-7 Tage'},
+].map(c => `
+<li><input type="checkbox" id="${c.id}" onchange="saveCheck()"><label for="${c.id}">${esc(c.text)}<span class="desc">${esc(c.desc)}</span></label></li>
+`).join('')}
+</ul>
+
+<h2>🔗 Hilfe-Links</h2>
+<div class="card">
+<a href="https://play.google.com/console" target="_blank" class="link">📱 Google Play Console öffnen</a><br>
+<a href="https://www.pwabuilder.com" target="_blank" class="link">📦 PWABuilder (AAB/APK generieren)</a><br>
+<a href="/sign-apk?key=${esc(query.key||'')}" target="_blank" class="link">🔐 APK Signieren</a><br>
+<a href="/build-apk?key=${esc(query.key||'')}" target="_blank" class="link">🔧 APK Build (PWABuilder ZIP hochladen)</a>
+</div>
+
+<div class="toast" id="toast">✅ Kopiert!</div>
+<script>
+function copyText(id){
+  const el=document.getElementById(id);
+  const text=el.textContent;
+  if(navigator.clipboard){navigator.clipboard.writeText(text).then(()=>showToast());}
+  else{const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();showToast();}
+}
+function showToast(){const t=document.getElementById('toast');t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1500);}
+function saveCheck(){
+  const state={};
+  document.querySelectorAll('.checklist input[type=checkbox]').forEach(c=>state[c.id]=c.checked);
+  localStorage.setItem('playListingChecklist',JSON.stringify(state));
+}
+(function loadCheck(){
+  try{const state=JSON.parse(localStorage.getItem('playListingChecklist')||'{}');
+  Object.entries(state).forEach(([id,val])=>{const el=document.getElementById(id);if(el)el.checked=val;});}catch(e){}
+})();
+</script>
+</body></html>`);
+    }
+
     // ── ADMIN: Email Dashboard (before auth gate — uses query.key) ──
     if (path === '/admin/emails') {
         // Admin-Auth: entweder via key=BRIDGE_SECRET (Direktlink) ODER via Admin-Session (Dashboard-Button)
@@ -13386,6 +13621,7 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
       <div class="dash-top-actions">
         <button class="dash-btn dash-btn-ghost" onclick="runMissionBackfill()">🔁 Backfill</button>
         <button class="dash-btn" onclick="window.open('/admin/emails','_blank')" style="border-color:rgba(167,139,250,0.40);color:#a78bfa">📧 Email Dashboard</button>
+        <button class="dash-btn" onclick="window.open('/admin/play-listing','_blank')" style="border-color:rgba(52,211,153,0.40);color:#34d399">📲 Play Store Listing</button>
         <button class="dash-btn" onclick="openFunnelDebug()">🔬 Funnel Debug</button>
         <button class="dash-btn" onclick="openStatsDebug()">📊 Stats Debug</button>
         <button class="dash-btn" onclick="openKollabBoostPreview()" style="border-color:rgba(236,72,153,0.40);color:#ec4899">🎨 Kollab-Boost Preview</button>
