@@ -2827,18 +2827,20 @@ function showBanner(opts){
 }
 // Browser-side cleanInstagramUrl: gleiche Logik wie server-side, fuer Inline-JS
 // das im Browser laeuft (IIFEs wie initDiamondLinks/initPrismaLinks/initKollabs).
-// Ohne diese Definition crashen die renderCard-Funktionen mit ReferenceError und
-// der "Lade..."-Spinner bleibt fuer immer stehen.
+// WICHTIG: Dieser Code steht innerhalb eines Template-Literals (\`...\`) — Backslashes
+// muessen verdoppelt werden (\\. statt \., \\d statt \d, \\/ statt \/) sonst werden
+// sie vom Template-Literal geschluckt und die Regex ist im Browser kaputt → JS crash
+// → ganze Page broken (Tab-Wechsel etc.).
 function cleanInstagramUrl(u){
   var s=String(u||'').trim();
   if(!s) return s;
-  var norm=s.replace(/instagr\.am/i,'instagram.com');
+  var norm=s.replace(/instagr\\.am/i,'instagram.com');
   var m;
-  if((m=norm.match(/instagram\.com\/(?:reel|reels)\/([A-Za-z0-9_-]+)/i))) return 'https://www.instagram.com/reel/'+m[1]+'/';
-  if((m=norm.match(/instagram\.com\/p\/([A-Za-z0-9_-]+)/i))) return 'https://www.instagram.com/p/'+m[1]+'/';
-  if((m=norm.match(/instagram\.com\/tv\/([A-Za-z0-9_-]+)/i))) return 'https://www.instagram.com/tv/'+m[1]+'/';
-  if((m=norm.match(/instagram\.com\/stories\/([A-Za-z0-9_.]+)\/(\d+)/i))) return 'https://www.instagram.com/stories/'+m[1]+'/'+m[2]+'/';
-  if((m=norm.match(/instagram\.com\/([A-Za-z0-9_.]+)\/?$/i))) return 'https://www.instagram.com/'+m[1]+'/';
+  if((m=norm.match(/instagram\\.com\\/(?:reel|reels)\\/([A-Za-z0-9_-]+)/i))) return 'https://www.instagram.com/reel/'+m[1]+'/';
+  if((m=norm.match(/instagram\\.com\\/p\\/([A-Za-z0-9_-]+)/i))) return 'https://www.instagram.com/p/'+m[1]+'/';
+  if((m=norm.match(/instagram\\.com\\/tv\\/([A-Za-z0-9_-]+)/i))) return 'https://www.instagram.com/tv/'+m[1]+'/';
+  if((m=norm.match(/instagram\\.com\\/stories\\/([A-Za-z0-9_.]+)\\/(\\d+)/i))) return 'https://www.instagram.com/stories/'+m[1]+'/'+m[2]+'/';
+  if((m=norm.match(/instagram\\.com\\/([A-Za-z0-9_.]+)\\/?$/i))) return 'https://www.instagram.com/'+m[1]+'/';
   return s;
 }
 // Engagement-Quality-Control: User muss erst Link besuchen, bevor er liken darf.
