@@ -1761,11 +1761,24 @@ function layout(content, session, page='feed', lang='de') {
     // gemeinsame Sicht auf "geliked" haben.
     const _meUid = session ? String(session.activeUid || session.uid || '') : '';
     let _isAdmin = false;
+    let _isAdminReason = 'none';
     let _emailUnconfirmed = false;
     try {
-        const _adm = Array.isArray(_dataCache?._adminIds) ? _dataCache._adminIds.map(Number) : [];
-        if (_meUid && _adm.includes(Number(_meUid))) _isAdmin = true;
-        if (!_isAdmin && _dataCache?.users?.[_meUid]?.role && /admin/i.test(String(_dataCache.users[_meUid].role))) _isAdmin = true;
+        // Check 1: _adminIds als Number-Array
+        const _admNum = Array.isArray(_dataCache?._adminIds) ? _dataCache._adminIds.map(Number).filter(Boolean) : [];
+        if (_meUid && _admNum.includes(Number(_meUid))) { _isAdmin = true; _isAdminReason = 'adminIds-num'; }
+        // Check 2: _adminIds als String-Array (Telegram-Bot speichert als String)
+        if (!_isAdmin) {
+            const _admStr = Array.isArray(_dataCache?._adminIds) ? _dataCache._adminIds.map(String) : [];
+            if (_meUid && _admStr.includes(String(_meUid))) { _isAdmin = true; _isAdminReason = 'adminIds-str'; }
+        }
+        // Check 3: role enthaelt "admin" (case-insensitive)
+        if (!_isAdmin && _dataCache?.users?.[_meUid]?.role && /admin/i.test(String(_dataCache.users[_meUid].role))) { _isAdmin = true; _isAdminReason = 'role-match'; }
+        // Check 4: Fallback — durch alle User iterieren und role-match suchen
+        if (!_isAdmin && _meUid && _dataCache?.users) {
+            const u = _dataCache.users[_meUid] || _dataCache.users[String(_meUid)] || _dataCache.users[Number(_meUid)];
+            if (u?.role && /admin/i.test(String(u.role))) { _isAdmin = true; _isAdminReason = 'role-fallback'; }
+        }
         // Email-Confirmation-Banner: User hat noch nicht auf Bestätigungs-Link geklickt
         // (lokales Tracking, Mainbot ist nicht involviert).
         if (_meUid) {
@@ -1776,7 +1789,7 @@ function layout(content, session, page='feed', lang='de') {
     return `<!DOCTYPE html><html lang="${lang}" data-theme="light">
 <head>
 ${buildErrorHandler(_isAdmin)}
-<script>window.MY_UID=${JSON.stringify(_meUid)};window.__IS_ADMIN=${_isAdmin ? 'true' : 'false'};</script>
+<script>window.MY_UID=${JSON.stringify(_meUid)};window.__IS_ADMIN=${_isAdmin ? 'true' : 'false'};window.__IS_ADMIN_REASON=${JSON.stringify(_isAdminReason)};</script>
 <script>try{var t=localStorage.getItem('cbTheme4');var dark=(t==='dark');document.documentElement.setAttribute('data-theme',dark?'dark':'light');setTimeout(function(){var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute('content',dark?'#0b0b0e':'#ffffff');var sb=document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');if(sb)sb.setAttribute('content',dark?'black-translucent':'default');},0);}catch(e){document.documentElement.setAttribute('data-theme','light');}</script>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
