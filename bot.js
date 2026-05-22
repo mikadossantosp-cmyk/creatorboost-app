@@ -6143,8 +6143,7 @@ function saveCheck(){
         const needed = 12;
         const remaining = Math.max(0, needed - list.length);
         const savedOptinLink = _betaTesters.__meta?.optinLink || '';
-        const sentCount = list.filter(t => t.optinSentAt).length;
-        const unsentCount = list.length - sentCount;
+        const sentCount = list.filter(t => t.optinNotifiedAt).length;
         res.writeHead(200, {'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});
         return res.end(`<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Beta-Tester</title>
 <style>
@@ -6187,20 +6186,19 @@ pre{background:#0a0a0a;border:1px solid #1a1a1a;border-radius:8px;padding:12px;f
   </div>
 </div>
 
-<h2 style="font-size:16px;margin:20px 0 10px;color:#a78bfa">📨 Opt-in-Link an Tester senden</h2>
+<h2 style="font-size:16px;margin:20px 0 10px;color:#a78bfa">📲 Opt-in-Link in der App ausspielen</h2>
 <div class="card">
   <div style="font-size:12px;color:var(--muted,#888);line-height:1.6;margin-bottom:14px">
-    Sobald du den Opt-in-Link von Google bekommst (Play Console → Tests → Geschlossener Test → Tester → "Link zum Anmelden kopieren"), trag ihn hier ein → wir senden ihn <b>automatisch per Telegram-DM</b> an alle ${list.length} angemeldeten Tester.
+    Sobald du den Opt-in-Link von Google bekommst (Play Console → Tests → Geschlossener Test → Tester → "Link zum Anmelden kopieren"), trag ihn hier ein und klicke <b>"In-App ausspielen"</b>. Alle ${list.length} angemeldeten Tester sehen dann beim n&auml;chsten App-&Ouml;ffnen ein gr&uuml;nes Banner mit dem Link.
   </div>
-  <label style="display:block;font-size:11px;color:#a78bfa;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Opt-in-Link</label>
+  <label style="display:block;font-size:11px;color:#a78bfa;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Opt-in-Link aus der Play Console</label>
   <input id="optinLink" type="url" placeholder="https://play.google.com/apps/testing/de.creatorx" value="${esc(savedOptinLink)}" style="width:100%;padding:11px 14px;background:#0a0a0a;border:1px solid rgba(167,139,250,.30);border-radius:8px;font-size:12.5px;color:#e5e5e5;font-family:inherit;margin-bottom:10px">
   <div style="display:flex;gap:10px;flex-wrap:wrap">
-    <button class="copy-btn" style="background:#a78bfa" onclick="saveLink()">💾 Link speichern</button>
-    <button class="copy-btn" style="background:#22c55e" onclick="sendOptin(false)" ${list.length===0?'disabled':''}>📨 An alle ${list.length} senden</button>
-    ${unsentCount > 0 && sentCount > 0 ? `<button class="copy-btn" style="background:#3b82f6" onclick="sendOptin(true)">🔄 Nur an ${unsentCount} ungesendete</button>` : ''}
+    <button class="copy-btn" style="background:#a78bfa" onclick="saveLink()">💾 Nur speichern</button>
+    <button class="copy-btn" style="background:#22c55e" onclick="publishOptin()" ${list.length===0?'disabled':''}>📲 In-App ausspielen (${list.length})</button>
   </div>
-  <div style="margin-top:12px;font-size:11px;color:#888">
-    Bereits gesendet: <b style="color:${sentCount>0?'#22c55e':'#888'}">${sentCount}</b> · Ausstehend: <b style="color:${unsentCount>0?'#fbbf24':'#888'}">${unsentCount}</b>
+  <div style="margin-top:12px;font-size:11px;color:#888;line-height:1.7">
+    Banner angezeigt: <b style="color:${sentCount>0?'#22c55e':'#888'}">${sentCount}</b> · Link geöffnet: <b style="color:${list.filter(t=>t.linkOpenedAt).length>0?'#22c55e':'#888'}">${list.filter(t=>t.linkOpenedAt).length}</b> / ${list.length}
   </div>
 </div>
 
@@ -6209,7 +6207,10 @@ pre{background:#0a0a0a;border:1px solid #1a1a1a;border-radius:8px;padding:12px;f
 ${list.length === 0 ? '<div style="text-align:center;padding:20px;color:#666">Noch keine Tester angemeldet. Schalte das Banner im Feed frei → User können sich selbst eintragen.</div>' : list.map(t => {
     const dt = new Date(t.signedUpAt||0);
     const when = dt.toLocaleString('de-DE', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
-    const sentBadge = t.optinSentAt ? '<span style="display:inline-block;padding:2px 8px;background:rgba(34,197,94,.15);color:#22c55e;border-radius:99px;font-size:10px;font-weight:700;margin-left:6px">📨 Link gesendet</span>' : '<span style="display:inline-block;padding:2px 8px;background:rgba(251,191,36,.15);color:#fbbf24;border-radius:99px;font-size:10px;font-weight:700;margin-left:6px">⏳ ausstehend</span>';
+    let sentBadge = '';
+    if (t.linkOpenedAt) sentBadge = '<span style="display:inline-block;padding:2px 8px;background:rgba(34,197,94,.20);color:#22c55e;border-radius:99px;font-size:10px;font-weight:700;margin-left:6px">✓ Link geöffnet</span>';
+    else if (t.optinNotifiedAt) sentBadge = '<span style="display:inline-block;padding:2px 8px;background:rgba(167,139,250,.18);color:#a78bfa;border-radius:99px;font-size:10px;font-weight:700;margin-left:6px">📲 Banner aktiv</span>';
+    else sentBadge = '<span style="display:inline-block;padding:2px 8px;background:rgba(251,191,36,.15);color:#fbbf24;border-radius:99px;font-size:10px;font-weight:700;margin-left:6px">⏳ wartet auf Link</span>';
     return `<div class="tester-row"><div class="tester-info"><div class="tester-email">${esc(t.email)}${sentBadge}</div><div class="tester-meta">UID ${esc(t.uid)} · ${when}</div></div><button class="del-btn" onclick="removeTester('${esc(t.uid)}')">Entfernen</button></div>`;
 }).join('')}
 </div>
@@ -6220,7 +6221,7 @@ function copyText(id){const el=document.getElementById(id);const text=el.textCon
 function showToast(){const t=document.getElementById('toast');t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1500);}
 async function removeTester(uid){if(!confirm('Tester wirklich entfernen?'))return;try{const r=await fetch('/api/admin/beta-testers/remove',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({uid})});const j=await r.json();if(j.ok)location.reload();else alert('Fehler: '+(j.error||'?'));}catch(e){alert('Fehler: '+e.message);}}
 async function saveLink(){const link=document.getElementById('optinLink').value.trim();try{const r=await fetch('/api/admin/beta-testers/save-link',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({link})});const j=await r.json();if(j.ok){const t=document.getElementById('toast');t.textContent='💾 Link gespeichert';t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1500);}else alert('Fehler: '+(j.error||'?'));}catch(e){alert('Fehler: '+e.message);}}
-async function sendOptin(onlyUnsent){const link=document.getElementById('optinLink').value.trim();if(!link){alert('Bitte erst den Opt-in-Link eintragen');return;}if(!/^https?:\\/\\//i.test(link)){alert('Ungültiger Link (muss mit https:// beginnen)');return;}const target=onlyUnsent?'nur ungesendete':'ALLE';if(!confirm('Wirklich Opt-in-Link per Telegram-DM an '+target+' Tester senden?'))return;try{const r=await fetch('/api/admin/beta-testers/send-optin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({link,onlyUnsent})});const j=await r.json();if(j.ok){alert('✅ Versand: '+j.sent+' erfolgreich, '+j.failed+' fehlgeschlagen (von '+j.total+' Total)');location.reload();}else alert('Fehler: '+(j.error||'?'));}catch(e){alert('Fehler: '+e.message);}}
+async function publishOptin(){const link=document.getElementById('optinLink').value.trim();if(!link){alert('Bitte erst den Opt-in-Link eintragen');return;}if(!/^https?:\\/\\//i.test(link)){alert('Ungültiger Link (muss mit https:// beginnen)');return;}if(!confirm('Opt-in-Link wirklich an ALLE angemeldeten Tester in-app ausspielen?\\n\\nSie sehen beim nächsten Öffnen der App ein grünes Banner mit dem Link.'))return;try{const r=await fetch('/api/admin/beta-testers/send-optin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({link})});const j=await r.json();if(j.ok){alert('✅ Banner wird '+j.notified+' Testern ausgespielt');location.reload();}else alert('Fehler: '+(j.error||'?'));}catch(e){alert('Fehler: '+e.message);}}
 </script>
 </body></html>`);
     }
@@ -10376,23 +10377,56 @@ async function submitSuperLink(){
 })();
 
 // ── BETA-TESTER-BANNER (Heute-Feed) ──
-// Sammelt Google-Play-Emails fuer Closed Testing. User klickt 'Mitmachen',
-// gibt seine Email ein → landet in der /admin/beta-testers Liste.
-// Dismissible via localStorage (per User-UID).
+// Zwei Zustaende:
+//  1. Sammelphase: User nicht angemeldet → "Werde Beta-Tester" (Email-Signup)
+//  2. Opt-in-Phase: User angemeldet + Admin hat Opt-in-Link gepublished
+//     → "Dein Beta-Zugang ist da!" mit klickbarem Link
+// Dismissible via localStorage (per User-UID + per Phase).
 (function initBetaTesterBanner(){
   const root = document.getElementById('beta-tester-banner');
   if (!root) return;
   const myUid = String(window.MY_UID||'');
   const dismissKey = 'betaTesterDismiss_'+myUid;
   const signedKey = 'betaTesterSigned_'+myUid;
-  if (localStorage.getItem(signedKey) === '1') return; // schon angemeldet
-  // Check status (server) — falls auf anderem Device angemeldet, hier auch ausblenden
+  const linkDismissKey = 'betaTesterLinkDismiss_'+myUid;
+  // Check status (server) — Source-of-Truth
   fetch('/api/beta-tester/status').then(r=>r.json()).then(j=>{
-    if (j.signedUp) { localStorage.setItem(signedKey,'1'); return; }
-    if (localStorage.getItem(dismissKey)) return; // user hat 'spaeter' geklickt
-    render();
+    if (j.signedUp) localStorage.setItem(signedKey,'1');
+    // Phase 2: Opt-in-Link wurde published
+    if (j.signedUp && j.optinLink) {
+      if (j.linkOpenedAt && localStorage.getItem(linkDismissKey)) return; // schon geoeffnet + dismissed
+      renderOptinReady(j.optinLink, j.email);
+      return;
+    }
+    // Phase 1: Sammelphase
+    if (j.signedUp) return; // schon angemeldet, kein Link da → nichts zeigen
+    if (localStorage.getItem(dismissKey)) return;
+    renderSignup();
   }).catch(()=>{});
-  function render(){
+  function renderOptinReady(link, email){
+    root.innerHTML = '<div style="margin:8px 16px 14px;padding:16px;background:linear-gradient(135deg,rgba(34,197,94,0.14),rgba(168,85,247,0.10));border:1.5px solid rgba(34,197,94,0.50);border-radius:14px;position:relative;animation:betaPulse 2.5s ease-in-out infinite">'+
+      '<button onclick="event.stopPropagation();window.__betaLinkDismiss()" style="position:absolute;top:8px;right:10px;background:transparent;border:none;color:#888;font-size:18px;font-weight:700;cursor:pointer;padding:4px 8px">×</button>'+
+      '<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">'+
+        '<div style="font-size:32px;flex-shrink:0">🎉</div>'+
+        '<div style="flex:1;min-width:0">'+
+          '<div style="font-size:14.5px;font-weight:800;color:#22c55e;margin-bottom:3px">Dein Beta-Zugang ist da!</div>'+
+          '<div style="font-size:12px;color:var(--muted);line-height:1.5">Tippe auf den Button → akzeptiere → installiere die App über Google Play.</div>'+
+        '</div>'+
+      '</div>'+
+      '<button onclick="window.__betaOpenLink()" style="width:100%;padding:13px;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:none;border-radius:10px;font-size:13.5px;font-weight:800;cursor:pointer;box-shadow:0 4px 14px rgba(34,197,94,0.35)">📲 Beta-Test öffnen →</button>'+
+      '<div style="margin-top:10px;padding:8px 10px;background:rgba(0,0,0,0.25);border-radius:8px;font-size:11px;color:var(--muted);line-height:1.5"><b style="color:#fbbf24">⚠️ Wichtig:</b> Logge dich auf dem Android-Handy mit <b style="color:#e5e5e5">'+escapeHtml(email||'')+'</b> bei Google Play ein — sonst klappt das Opt-in nicht.</div>'+
+    '</div><style>@keyframes betaPulse{0%,100%{box-shadow:0 0 0 0 rgba(34,197,94,0.0)}50%{box-shadow:0 0 0 8px rgba(34,197,94,0.10)}}</style>';
+    window.__betaOpenLink = function(){
+      fetch('/api/beta-tester/link-opened', {method:'POST'}).catch(()=>{});
+      window.open(link, '_blank');
+    };
+    window.__betaLinkDismiss = function(){
+      localStorage.setItem(linkDismissKey, '1');
+      root.innerHTML = '';
+    };
+  }
+  function escapeHtml(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+  function renderSignup(){
     root.innerHTML = '<div style="margin:8px 16px 14px;padding:14px 16px;background:linear-gradient(135deg,rgba(52,211,153,0.10),rgba(168,85,247,0.10));border:1.5px solid rgba(52,211,153,0.40);border-radius:14px;position:relative;cursor:pointer" onclick="window.__betaShow()">'+
       '<button onclick="event.stopPropagation();window.__betaDismiss()" style="position:absolute;top:8px;right:10px;background:transparent;border:none;color:#888;font-size:18px;font-weight:700;cursor:pointer;padding:4px 8px">×</button>'+
       '<div style="display:flex;align-items:center;gap:12px">'+
@@ -13629,7 +13663,23 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
     if (path === '/api/beta-tester/status' && req.method === 'GET') {
         if (!session) return json({error:'Nicht eingeloggt'}, 401);
         const entry = _betaTesters[String(myUid)];
-        return json({ok:true, signedUp: !!entry, email: entry?.email || null});
+        const meta = _betaTesters.__meta || {};
+        const hasLink = !!meta.optinLink && !!entry?.optinNotifiedAt;
+        return json({
+            ok:true,
+            signedUp: !!entry,
+            email: entry?.email || null,
+            optinLink: hasLink ? meta.optinLink : null,
+            linkOpenedAt: entry?.linkOpenedAt || null,
+        });
+    }
+    if (path === '/api/beta-tester/link-opened' && req.method === 'POST') {
+        if (!session) return json({error:'Nicht eingeloggt'}, 401);
+        if (_betaTesters[String(myUid)]) {
+            _betaTesters[String(myUid)].linkOpenedAt = Date.now();
+            saveBetaTesters();
+        }
+        return json({ok:true});
     }
     if (path === '/api/beta-tester/dismiss' && req.method === 'POST') {
         // User klickt 'Spaeter' → wir merken uns das (kein DB-Eintrag noetig, Client-seitig)
@@ -13655,33 +13705,22 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
         if (!_dashIsAdmin) return json({error:'Nur Admins'}, 403);
         const body = await parseBody(req);
         const link = String(body.link||'').trim();
-        const onlyUnsent = !!body.onlyUnsent;
         if (!/^https?:\/\//i.test(link) || link.length > 500) {
             return json({ok:false, error:'Ungültiger Link'});
         }
-        const targets = Object.values(_betaTesters).filter(t => t && t.uid && t.email && (onlyUnsent ? !t.optinSentAt : true));
-        let sent = 0, failed = 0;
-        for (const t of targets) {
-            const msg = '🧪 *CreatorX Beta-Test ist live!*\n\n'
-                + 'Hey! Du hast dich als Beta-Tester angemeldet — danke 🙏\n\n'
-                + '*So machst du mit (2 Min):*\n'
-                + '1️⃣ Tippe auf den Link unten\n'
-                + '2️⃣ Klick auf "Tester werden"\n'
-                + '3️⃣ Installiere die App über Google Play\n'
-                + '4️⃣ Behalte sie 14 Tage drauf\n\n'
-                + '🔗 ' + link + '\n\n'
-                + '💎 Nach 14 Tagen schalten wir dir +100 Diamanten frei.\n\n'
-                + '_Wichtig: Nutze deine angegebene Email-Adresse (' + t.email + ') beim Login auf dem Android-Handy._';
-            try {
-                const r = await postBot('/send-dm-single-api', { uid: t.uid, text: msg });
-                if (r?.ok) {
-                    _betaTesters[t.uid].optinSentAt = Date.now();
-                    sent++;
-                } else { failed++; }
-            } catch(e) { failed++; }
+        // In-App Notification: setzt Timestamp pro Tester. Beim naechsten App-Oeffnen
+        // sehen alle angemeldeten Tester ein Banner mit dem Opt-in-Link.
+        _betaTesters.__meta = _betaTesters.__meta || {};
+        _betaTesters.__meta.optinLink = link;
+        _betaTesters.__meta.linkPublishedAt = Date.now();
+        let count = 0;
+        for (const t of Object.values(_betaTesters)) {
+            if (!t || !t.uid || !t.email) continue;
+            t.optinNotifiedAt = Date.now();
+            count++;
         }
         saveBetaTesters();
-        return json({ok:true, sent, failed, total: targets.length});
+        return json({ok:true, notified: count});
     }
     if (path === '/api/admin/beta-testers/save-link' && req.method === 'POST') {
         if (!session) return json({error:'Nicht eingeloggt'}, 401);
