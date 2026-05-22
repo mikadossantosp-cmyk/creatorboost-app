@@ -10471,6 +10471,17 @@ async function submitSuperLink(){
       renderConfirmPending(j.email);
       return;
     }
+    // Phase 4: 14+ Tage seit Tracking-Start → Geschafft!
+    if (j.signedUp && j.daysSinceTracking !== null && j.daysSinceTracking >= 14) {
+      if (localStorage.getItem('betaSuccessSeen_'+myUid)) return;
+      renderSuccess(j.daysSinceTracking);
+      return;
+    }
+    // Phase 3.5: 7-13 Tage → Halbzeit-Reminder (verhindert vorzeitiges Deinstallieren)
+    if (j.signedUp && j.daysSinceTracking !== null && j.daysSinceTracking >= 7 && j.linkOpenedAt) {
+      renderReminder(j.daysSinceTracking);
+      return;
+    }
     // Phase 3: Opt-in-Link wurde published
     if (j.signedUp && j.optinLink) {
       if (j.linkOpenedAt && localStorage.getItem(linkDismissKey)) return; // schon geoeffnet + dismissed
@@ -10618,6 +10629,31 @@ async function submitSuperLink(){
     };
   }
   function escapeHtml(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+  function renderReminder(days){
+    const daysLeft = Math.max(1, 14 - days);
+    root.innerHTML = '<div style="margin:8px 16px 14px;padding:14px 16px;background:linear-gradient(135deg,rgba(251,191,36,0.12),rgba(251,146,60,0.08));border:1.5px solid rgba(251,191,36,0.45);border-radius:14px">'+
+      '<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">'+
+        '<div style="font-size:30px;flex-shrink:0">⏰</div>'+
+        '<div style="flex:1;min-width:0">'+
+          '<div style="font-size:14px;font-weight:800;color:#fbbf24;margin-bottom:3px">Halbzeit! Bleib noch '+daysLeft+' Tag'+(daysLeft===1?'':'e')+' drin</div>'+
+          '<div style="font-size:11.5px;color:var(--muted);line-height:1.5">Du testest seit '+days+' Tagen 🎉 — bitte deinstalliere die App <b style="color:#e5e5e5">jetzt noch nicht</b>. Wenn du rausgehst, startet Google den 14-Tage-Counter neu — und wir kommen nicht in den offiziellen Play Store.</div>'+
+        '</div>'+
+      '</div>'+
+      '<div style="background:rgba(34,197,94,0.10);border:1px solid rgba(34,197,94,0.25);border-radius:8px;padding:8px 12px;font-size:11.5px;color:var(--text);line-height:1.5"><b style="color:#22c55e">💎 Belohnung:</b> Nach 14 Tagen schalten wir dir +100 Diamanten frei. Du bist fast da!</div>'+
+    '</div>';
+  }
+  function renderSuccess(days){
+    root.innerHTML = '<div style="margin:8px 16px 14px;padding:16px;background:linear-gradient(135deg,rgba(34,197,94,0.14),rgba(52,211,153,0.08));border:1.5px solid rgba(34,197,94,0.50);border-radius:14px;position:relative">'+
+      '<button onclick="event.stopPropagation();localStorage.setItem(\\'betaSuccessSeen_\\'+\\''+myUid+'\\',\\'1\\');this.parentElement.remove()" style="position:absolute;top:8px;right:10px;background:transparent;border:none;color:#888;font-size:18px;font-weight:700;cursor:pointer;padding:4px 8px">×</button>'+
+      '<div style="display:flex;align-items:center;gap:12px">'+
+        '<div style="font-size:34px;flex-shrink:0">🎉</div>'+
+        '<div style="flex:1;min-width:0">'+
+          '<div style="font-size:14.5px;font-weight:800;color:#22c55e;margin-bottom:3px">Du hast es geschafft!</div>'+
+          '<div style="font-size:12px;color:var(--muted);line-height:1.5">Danke dass du '+days+' Tage als Beta-Tester dabei warst 🙏 Wir reichen die App jetzt für den offiziellen Play Store ein. Dein <b style="color:#22c55e">+100 💎 Bonus</b> kommt in den nächsten Tagen auf dein Konto.</div>'+
+        '</div>'+
+      '</div>'+
+    '</div>';
+  }
   function renderSignup(){
     root.innerHTML = '<div style="margin:8px 16px 14px;padding:14px 16px;background:linear-gradient(135deg,rgba(52,211,153,0.10),rgba(168,85,247,0.10));border:1.5px solid rgba(52,211,153,0.40);border-radius:14px">'+
       '<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">'+
@@ -13926,6 +13962,16 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
                 needsConfirm = meEmail !== entry.email.toLowerCase();
             } catch(e) {}
         }
+        // Tracking-Start: zaehlt ab dem fruehesten Moment wo der User wusste vom Test
+        // (linkOpenedAt > linkEmailedAt > optinNotifiedAt). Damit kein Tester unbemerkt
+        // unter die 14-Tage-Grenze faellt.
+        const trackingStart = Math.max(
+            entry?.linkOpenedAt || 0,
+            entry?.linkEmailedAt || 0,
+            entry?.optinNotifiedAt || 0
+        );
+        const DAY = 86400000;
+        const daysSinceTracking = trackingStart ? Math.floor((Date.now() - trackingStart) / DAY) : null;
         return json({
             ok:true,
             signedUp: !!entry,
@@ -13934,6 +13980,7 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
             linkOpenedAt: entry?.linkOpenedAt || null,
             needsConfirm,
             declined: !!declinedAt,
+            daysSinceTracking,
         });
     }
     if (path === '/api/beta-tester/change-email' && req.method === 'POST') {
