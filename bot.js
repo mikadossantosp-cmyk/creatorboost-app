@@ -1032,10 +1032,13 @@ function loadAppDbFromDisk() {
         if (!fs.existsSync(APP_DB_FILE)) return false;
         const raw = fs.readFileSync(APP_DB_FILE, 'utf8');
         const parsed = JSON.parse(raw);
+        const stat = fs.statSync(APP_DB_FILE);
         if (parsed && typeof parsed === 'object') {
             _dataCache = parsed;
-            _dataCacheTime = Date.now();
-            console.log('✅ app_db.json geladen (' + Object.keys(parsed.users||{}).length + ' user)');
+            // MIGRATION-PHASE-1: Cache-Time vom File-Modified setzen, nicht Date.now().
+            // Sonst denkt fetchBot() Cache ist frisch (45s TTL) und refreshed nicht sofort.
+            _dataCacheTime = stat.mtimeMs;
+            console.log('✅ app_db.json geladen (' + Object.keys(parsed.users||{}).length + ' users, age=' + Math.round((Date.now()-stat.mtimeMs)/1000) + 's)');
             return true;
         }
     } catch(e) {
@@ -1046,8 +1049,15 @@ function loadAppDbFromDisk() {
 
 // Boot-time: Disk laden BEVOR der Mainbot überhaupt erreichbar sein muss.
 // Damit ist die App auch ohne Mainbot start-fähig.
-loadAppDbFromDisk();
+const _bootHadDisk = loadAppDbFromDisk();
 loadWriteLogFromDisk();
+// MIGRATION-PHASE-1: Falls Boot ohne Snapshot UND ohne Mainbot — wenigstens leeres Skelett
+// damit die App nicht crashed bei _dataCache.users[uid] Access.
+if (!_bootHadDisk && !_dataCache) {
+    _dataCache = { users: {}, _adminIds: [], _bootEmptyFallback: true };
+    _dataCacheTime = 0;  // sofort als stale markiert, erster Mainbot-Refresh überschreibt
+    console.log('⚠️  Boot ohne app_db.json + ohne Mainbot-Connect — leeres Skelett initialisiert.');
+}
 
 async function fetchBotRawOnce(path, timeoutMs) {
     return new Promise(resolve => {
@@ -1143,7 +1153,10 @@ async function postBot(path, body) {
     const _ok = result !== null;
     if (_ok) _markMainbotSuccess(); else _markMainbotFail();
     logWrite(path, body, result, _ok, _ms);
-    _dataCache = null; _dataCacheTime = 0;
+    // MIGRATION-PHASE-1: Cache NICHT mehr auf null setzen — sonst gibt es kurz Zeitfenster
+    // wo Reads scheitern bevor der Refresh durch ist. Stattdessen Cache stale markieren
+    // (TTL=0 erzwingt sofortigen Refresh beim nächsten fetchBot-Call). Refresh läuft async.
+    _dataCacheTime = 0;
     refreshDataCache().catch(()=>{});
     return result;
 }
@@ -4083,6 +4096,34 @@ async function handleRequest(req, res) {
             'X-Cb-Route': 'konto-loeschen-v2'
         });
         return res.end(`<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Konto löschen · CreatorX</title><style>body{margin:0;font-family:-apple-system,BlinkMacSystemFont,Inter,sans-serif;background:#0b0b0e;color:#fff;line-height:1.6;padding:20px}main{max-width:680px;margin:24px auto;background:linear-gradient(180deg,#1c1c1e,#0f0f11);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:28px 24px;box-shadow:0 20px 60px rgba(0,0,0,.5)}h1{font-size:24px;font-weight:800;margin:0 0 8px;letter-spacing:-.5px}h2{font-size:16px;font-weight:700;margin:24px 0 8px;color:#d4a946}p{font-size:14px;color:rgba(255,255,255,.8);margin:8px 0}ol,ul{padding-left:20px;font-size:14px;color:rgba(255,255,255,.8)}li{margin:6px 0}a{color:#d4a946;font-weight:600}code{background:rgba(255,255,255,.08);padding:2px 6px;border-radius:4px;font-size:13px}.btn{display:inline-block;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;padding:13px 28px;border-radius:12px;text-decoration:none;font-weight:800;font-size:14px;margin:14px 0}.foot{margin-top:28px;padding-top:18px;border-top:1px solid rgba(255,255,255,.08);font-size:12px;color:rgba(255,255,255,.5);text-align:center}.foot a{margin:0 10px;color:rgba(255,255,255,.5);font-weight:500}</style></head><body><main><h1>🗑️ Konto + Daten löschen</h1><p>Du kannst dein CreatorX-Konto jederzeit löschen. Alle deine persönlichen Daten werden dauerhaft entfernt.</p><h2>🚀 In der App löschen</h2><ol><li>Login bei <a href="/login">creatorboostx.de/login</a></li><li>Profil → <b>Einstellungen ⚙️</b></li><li>Scroll ganz nach unten</li><li>Klick <b>🗑️ Account dauerhaft löschen</b></li><li>Bestätige mit <code>LÖSCHEN</code></li></ol><p><a class="btn" href="/login">→ Jetzt einloggen + löschen</a></p><h2>✉️ Per E-Mail (App nicht mehr zugänglich)</h2><p>Schreib an <a href="mailto:mindset.stories_@outlook.de?subject=Konto-L%C3%B6schung%20CreatorX">mindset.stories_@outlook.de</a> mit Betreff <b>"Konto-Löschung CreatorX"</b>.</p><p>Gib in der Mail an:</p><ul><li>Deine in der App registrierte E-Mail</li><li>(Optional) dein Username/Spitzname</li></ul><p>Bearbeitung innerhalb von <b>72 Stunden</b>.</p><h2>🗑️ Was wird gelöscht?</h2><ul><li><b>Sofort:</b> Account, Email, Profil, Bio, Avatar, Banner, Instagram-Handle, App-Code, Posts, Likes, Kommentare, Follows</li><li><b>Anonymisiert:</b> Statistik-Aggregate (ohne User-Bezug)</li><li><b>Aufbewahrt (Pflicht):</b> Login-Logs für 30 Tage (Sicherheit), danach automatisch gelöscht</li></ul><h2>⚠️ Wichtig</h2><ul><li>Löschung ist <b>endgültig</b> (Admin-Restore nur in Ausnahmen innerhalb 50 Tagen)</li><li>Alle XP, Diamanten, Badges, Stufen verloren</li><li>Sub-Accounts werden mit gelöscht</li><li>Neu-Registrierung jederzeit möglich (als neuer User)</li></ul><h2>📊 Nur einzelne Daten löschen (DSGVO Art. 17)</h2><p>Du kannst auch nur bestimmte Daten löschen lassen (z.B. nur deinen Instagram-Handle, einzelne Posts) — schreib uns per E-Mail.</p><div class="foot"><a href="/datenschutz">Datenschutz</a> · <a href="/agb">AGB</a> · <a href="/impressum">Impressum</a></div></main></body></html>`);
+    }
+
+    // ── HEALTH: Public Health-Check für Monitoring / Uptime-Bots ──
+    // Lightweight, kein Auth, kein Mainbot-Call — nur lokaler State.
+    if (path === '/api/health') {
+        const cacheAge = _dataCacheTime ? Math.round((Date.now() - _dataCacheTime) / 1000) : null;
+        const mainbotHealthy = _mainbotConsecutiveFails < 3;
+        const status = (_dataCache && cacheAge !== null && cacheAge < 600) ? 'ok'
+                       : (_dataCache ? 'degraded' : 'critical');
+        const httpStatus = status === 'critical' ? 503 : 200;
+        res.writeHead(httpStatus, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+        return res.end(JSON.stringify({
+            status,
+            ts: new Date().toISOString(),
+            uptime_s: Math.round(process.uptime()),
+            cache: {
+                hasData: !!_dataCache,
+                ageSeconds: cacheAge,
+                userCount: _dataCache?.users ? Object.keys(_dataCache.users).length : 0,
+                isBootFallback: !!(_dataCache && _dataCache._bootEmptyFallback),
+            },
+            mainbot: {
+                configured: !!MAINBOT_URL,
+                healthy: mainbotHealthy,
+                consecutiveFails: _mainbotConsecutiveFails,
+                lastSuccess: _lastMainbotSuccessAt ? new Date(_lastMainbotSuccessAt).toISOString() : null,
+            },
+        }));
     }
 
     // ── DIAGNOSE: Mainbot live testen (für Admin-Debugging von Signup-Fehlern) ──
