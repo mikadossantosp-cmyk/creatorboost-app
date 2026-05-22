@@ -10782,7 +10782,7 @@ async function submitSuperLink(){
       '</div>'+
       '<label style="display:block;font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Deine Google-Play-Email</label>'+
       '<input id="betaEmailInput" type="email" placeholder="deine.email@gmail.com" autocomplete="email" inputmode="email" style="width:100%;padding:12px 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;font-size:14px;color:var(--text);font-family:inherit;margin-bottom:6px">'+
-      '<div style="font-size:11px;color:var(--muted);line-height:1.5;margin-bottom:16px">→ Welche Email nutzt du im Google Play Store? Meistens deine Gmail-Adresse.</div>'+
+      '<div style="font-size:11px;color:var(--muted);line-height:1.5;margin-bottom:16px">⚠️ <b style="color:#fbbf24">Nur Gmail-Adressen</b> — Google Play akzeptiert nur Google-Konten. Andere Anbieter (web.de, gmx.de) funktionieren leider nicht.</div>'+
       '<div style="display:flex;gap:10px">'+
         '<button onclick="window.__betaCancel()" style="flex:1;padding:12px;background:transparent;color:var(--text);border:1px solid var(--border2);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">Später</button>'+
         '<button id="betaSubmitBtn" onclick="window.__betaSubmit()" style="flex:2;padding:12px;background:linear-gradient(135deg,#34d399,#10b981);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer">📱 Anmelden</button>'+
@@ -10792,10 +10792,11 @@ async function submitSuperLink(){
     document.body.appendChild(bg);
     window.__betaCancel = function(){ bg.remove(); };
     window.__betaSubmit = async function(){
-      const email = document.getElementById('betaEmailInput').value.trim();
+      const email = document.getElementById('betaEmailInput').value.trim().toLowerCase();
       const err = document.getElementById('betaError');
       const btn = document.getElementById('betaSubmitBtn');
       if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) { err.textContent = '✗ Bitte gib eine gültige Email ein'; return; }
+      if (!email.endsWith('@gmail.com')) { err.textContent = '✗ Nur Gmail-Adressen — Play Store braucht ein Google-Konto'; return; }
       btn.disabled = true; btn.textContent = '⏳ Anmeldung läuft …';
       try {
         const r = await fetch('/api/beta-tester/signup', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email }) });
@@ -13982,6 +13983,12 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 200) {
             return json({ok:false, error:'Ungültige Email'});
         }
+        // Google Play Beta erlaubt NUR Google-Konten. Non-Gmail-Adressen
+        // (web.de, gmx.de, etc.) wuerden zwar in die Tester-Liste rein,
+        // aber der User koennte sich nicht im Play Store einloggen.
+        if (!email.endsWith('@gmail.com')) {
+            return json({ok:false, error:'Für Google Play Beta brauchst du eine Gmail-Adresse. Andere Anbieter (web.de, gmx.de, etc.) funktionieren leider nicht — Google verlangt ein Google-Konto.'});
+        }
         // Account-Verknuepfung: Email wird auf u.pendingEmail gesetzt → User
         // klickt Confirm-Link → u.email = email + emailConfirmedAt. Danach
         // kann er sich auf jedem Device mit dieser Gmail einloggen und
@@ -14076,6 +14083,9 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
         const newEmail = String(body.email||'').trim().toLowerCase();
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail) || newEmail.length > 200) {
             return json({ok:false, error:'Ungültige Email'});
+        }
+        if (!newEmail.endsWith('@gmail.com')) {
+            return json({ok:false, error:'Nur Gmail-Adressen — Google Play akzeptiert nichts anderes.'});
         }
         const botData = await fetchBot('/data');
         if (!botData?.users) return json({ok:false, error:'Server nicht erreichbar'}, 503);
