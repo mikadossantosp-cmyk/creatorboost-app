@@ -10380,9 +10380,11 @@ async function submitSuperLink(){
 })();
 
 // ── BETA-TESTER-BANNER (Heute-Feed) ──
-// Zwei Zustaende:
+// Drei Zustaende:
 //  1. Sammelphase: User nicht angemeldet → "Werde Beta-Tester" (Email-Signup)
-//  2. Opt-in-Phase: User angemeldet + Admin hat Opt-in-Link gepublished
+//  2. Confirm-Pending: User angemeldet, aber Email-Confirm noch nicht geklickt
+//     → "Bestätige deine Email!" mit Resend-Button (NICHT dismissable)
+//  3. Opt-in-Phase: User angemeldet + Email bestaetigt + Admin hat Link gepublished
 //     → "Dein Beta-Zugang ist da!" mit klickbarem Link
 // Dismissible via localStorage (per User-UID + per Phase).
 (function initBetaTesterBanner(){
@@ -10395,7 +10397,13 @@ async function submitSuperLink(){
   // Check status (server) — Source-of-Truth
   fetch('/api/beta-tester/status').then(r=>r.json()).then(j=>{
     if (j.signedUp) localStorage.setItem(signedKey,'1');
-    // Phase 2: Opt-in-Link wurde published
+    // Phase 2: Email-Confirm steht noch aus — Banner ist NICHT dismissable
+    // (Nur abdrehen wenn er fertig confirmed hat)
+    if (j.signedUp && j.needsConfirm) {
+      renderConfirmPending(j.email);
+      return;
+    }
+    // Phase 3: Opt-in-Link wurde published
     if (j.signedUp && j.optinLink) {
       if (j.linkOpenedAt && localStorage.getItem(linkDismissKey)) return; // schon geoeffnet + dismissed
       renderOptinReady(j.optinLink, j.email);
@@ -10406,6 +10414,37 @@ async function submitSuperLink(){
     if (localStorage.getItem(dismissKey)) return;
     renderSignup();
   }).catch(()=>{});
+  function renderConfirmPending(email){
+    root.innerHTML = '<div style="margin:8px 16px 14px;padding:14px 16px;background:linear-gradient(135deg,rgba(251,146,60,0.16),rgba(251,191,36,0.10));border:1.5px solid rgba(251,146,60,0.55);border-radius:14px;position:relative">'+
+      '<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">'+
+        '<div style="font-size:28px;flex-shrink:0">📧</div>'+
+        '<div style="flex:1;min-width:0">'+
+          '<div style="font-size:14px;font-weight:800;color:#fb923c;margin-bottom:3px">Bestätige deine Email!</div>'+
+          '<div style="font-size:11.5px;color:var(--muted);line-height:1.5">Wir haben einen Bestätigungs-Link an <b style="color:#e5e5e5">'+escapeHtml(email||'')+'</b> gesendet. Ohne Klick keine Verknüpfung — und du landest nach dem Play-Store-Install auf einem leeren Account.</div>'+
+        '</div>'+
+      '</div>'+
+      '<div style="display:flex;gap:8px">'+
+        '<button onclick="window.__betaResend()" id="betaResendBtn" style="flex:1;padding:10px;background:rgba(251,146,60,0.20);color:#fb923c;border:1px solid rgba(251,146,60,0.45);border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer">📧 Email erneut senden</button>'+
+        '<button onclick="window.__betaCheckAgain()" style="flex:1;padding:10px;background:rgba(34,197,94,0.20);color:#22c55e;border:1px solid rgba(34,197,94,0.45);border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer">✓ Ich habe geklickt</button>'+
+      '</div>'+
+    '</div>';
+    window.__betaResend = async function(){
+      const btn = document.getElementById('betaResendBtn');
+      if (!btn) return;
+      btn.disabled = true; btn.textContent = '⏳ Sende …';
+      try {
+        const r = await fetch('/api/beta-tester/resend-confirm', {method:'POST'});
+        const j = await r.json();
+        btn.textContent = j.ok ? '✓ Email gesendet!' : '✗ Fehler';
+        setTimeout(()=>{ btn.textContent = '📧 Email erneut senden'; btn.disabled = false; }, 3000);
+      } catch(e) {
+        btn.textContent = '✗ Fehler'; btn.disabled = false;
+      }
+    };
+    window.__betaCheckAgain = function(){
+      location.reload();
+    };
+  }
   function renderOptinReady(link, email){
     root.innerHTML = '<div style="margin:8px 16px 14px;padding:16px;background:linear-gradient(135deg,rgba(34,197,94,0.14),rgba(168,85,247,0.10));border:1.5px solid rgba(34,197,94,0.50);border-radius:14px;position:relative;animation:betaPulse 2.5s ease-in-out infinite">'+
       '<button onclick="event.stopPropagation();window.__betaLinkDismiss()" style="position:absolute;top:8px;right:10px;background:transparent;border:none;color:#888;font-size:18px;font-weight:700;cursor:pointer;padding:4px 8px">×</button>'+
@@ -13710,13 +13749,35 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
         const entry = _betaTesters[String(myUid)];
         const meta = _betaTesters.__meta || {};
         const hasLink = !!meta.optinLink && !!entry?.optinNotifiedAt;
+        // Check: Email confirmed? — User landet nur dann auf seinem Account
+        // wenn er die Bestaetigungs-Email geklickt hat.
+        let needsConfirm = false;
+        if (entry?.email) {
+            try {
+                const botData = await fetchBot('/data');
+                const me = botData?.users?.[String(myUid)];
+                const meEmail = String(me?.email||'').toLowerCase();
+                needsConfirm = meEmail !== entry.email.toLowerCase();
+            } catch(e) {}
+        }
         return json({
             ok:true,
             signedUp: !!entry,
             email: entry?.email || null,
             optinLink: hasLink ? meta.optinLink : null,
             linkOpenedAt: entry?.linkOpenedAt || null,
+            needsConfirm,
         });
+    }
+    if (path === '/api/beta-tester/resend-confirm' && req.method === 'POST') {
+        if (!session) return json({error:'Nicht eingeloggt'}, 401);
+        const entry = _betaTesters[String(myUid)];
+        if (!entry?.email) return json({ok:false, error:'Keine Beta-Email gespeichert'});
+        try {
+            await postBot('/update-profile-api', { uid: String(myUid), email: entry.email });
+            await sendSignupConfirmationEmail(String(myUid), entry.email, req.headers.host);
+        } catch(e) {}
+        return json({ok:true});
     }
     if (path === '/api/beta-tester/link-opened' && req.method === 'POST') {
         if (!session) return json({error:'Nicht eingeloggt'}, 401);
