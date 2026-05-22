@@ -10491,7 +10491,7 @@ async function submitSuperLink(){
     // Phase 1: Sammelphase
     if (j.signedUp) return; // schon angemeldet, kein Link da → nichts zeigen
     if (localStorage.getItem(dismissKey)) return;
-    renderSignup();
+    renderSignup(j.accountEmail);
   }).catch(()=>{});
   function renderConfirmPending(email){
     root.innerHTML = '<div style="margin:8px 16px 14px;padding:14px 16px;background:linear-gradient(135deg,rgba(251,146,60,0.16),rgba(251,191,36,0.10));border:1.5px solid rgba(251,146,60,0.55);border-radius:14px;position:relative">'+
@@ -10654,21 +10654,49 @@ async function submitSuperLink(){
       '</div>'+
     '</div>';
   }
-  function renderSignup(){
+  function renderSignup(accountEmail){
+    const hasEmail = !!accountEmail;
+    const subText = hasEmail
+      ? 'Werde Beta-Tester mit <b style="color:#34d399">'+escapeHtml(accountEmail)+'</b> — ein Klick reicht. <b style="color:#22c55e">+100 💎</b> nach 14 Tagen.'
+      : 'Werde Beta-Tester und nutze die App vor allen anderen. <b style="color:#22c55e">+100 💎 Bonus</b> nach 14 Tagen.';
+    const ctaLabel = hasEmail ? '✓ Mit dieser Email mitmachen' : '✓ Ja, mitmachen';
+    const onclick = hasEmail
+      ? "window.__betaQuickJoin('"+escapeHtml(accountEmail).replace(/'/g,"\\'")+"')"
+      : 'window.__betaShow()';
     root.innerHTML = '<div style="margin:8px 16px 14px;padding:14px 16px;background:linear-gradient(135deg,rgba(52,211,153,0.10),rgba(168,85,247,0.10));border:1.5px solid rgba(52,211,153,0.40);border-radius:14px">'+
       '<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">'+
         '<div style="font-size:30px;flex-shrink:0">📱</div>'+
         '<div style="flex:1;min-width:0">'+
           '<div style="font-size:14px;font-weight:800;color:#34d399;margin-bottom:3px">CreatorX kommt in den Play Store!</div>'+
-          '<div style="font-size:12px;color:var(--muted);line-height:1.5">Werde Beta-Tester und nutze die App vor allen anderen. <b style="color:#22c55e">+100 💎 Bonus</b> nach 14 Tagen.</div>'+
+          '<div style="font-size:12px;color:var(--muted);line-height:1.5">'+subText+'</div>'+
         '</div>'+
       '</div>'+
       '<div style="display:flex;gap:8px">'+
         '<button onclick="window.__betaDismiss()" style="flex:1;padding:10px;background:transparent;color:var(--muted);border:1px solid var(--border2,#333);border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer">Nein, danke</button>'+
-        '<button onclick="window.__betaShow()" style="flex:2;padding:10px;background:linear-gradient(135deg,#34d399,#10b981);color:#fff;border:none;border-radius:8px;font-size:12.5px;font-weight:800;cursor:pointer">✓ Ja, mitmachen</button>'+
+        '<button onclick="'+onclick+'" style="flex:2;padding:10px;background:linear-gradient(135deg,#34d399,#10b981);color:#fff;border:none;border-radius:8px;font-size:12.5px;font-weight:800;cursor:pointer">'+ctaLabel+'</button>'+
       '</div>'+
+      (hasEmail ? '<div style="margin-top:8px;text-align:center"><a onclick="window.__betaShow()" style="font-size:11px;color:var(--muted);cursor:pointer;text-decoration:underline">Andere Email nutzen</a></div>' : '')+
     '</div>';
   }
+  // Quick-Join: User hat schon eine verifizierte Email im Account → direkter Signup
+  // ohne extra Modal. Spart ihm Eingabe + Confirm-Mail-Schritt.
+  window.__betaQuickJoin = async function(email){
+    try {
+      const r = await fetch('/api/beta-tester/signup', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ email })
+      });
+      const j = await r.json();
+      if (!j.ok) { alert('Fehler: '+(j.error||'?')); return; }
+      localStorage.setItem(signedKey, '1');
+      // Direkter Erfolgs-Screen ohne Confirm-Pending (Email ist ja schon verifiziert)
+      const bg = document.createElement('div');
+      bg.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.78);backdrop-filter:blur(8px);z-index:9100;display:flex;align-items:center;justify-content:center;padding:18px';
+      bg.innerHTML = '<div style="background:var(--bg2);border:1px solid rgba(34,197,94,0.45);border-radius:18px;padding:32px 24px;max-width:480px;width:100%;text-align:center"><div style="font-size:54px;margin-bottom:12px">🎉</div><div style="font-size:18px;font-weight:800;color:#22c55e;margin-bottom:10px">Du bist dabei!</div><div style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:18px">Wir spielen dir den Opt-in-Link in der App aus, sobald wir 12 Tester zusammen haben.</div><button onclick="this.closest(\\'div[style*=fixed]\\').remove()" style="background:#22c55e;color:#fff;border:none;border-radius:10px;padding:12px 28px;font-size:13px;font-weight:800;cursor:pointer">Verstanden</button></div>';
+      document.body.appendChild(bg);
+      root.innerHTML = '';
+    } catch(e) { alert('Fehler: '+e.message); }
+  };
   window.__betaDismiss = function(){
     localStorage.setItem(dismissKey, '1');
     root.innerHTML = '';
@@ -13951,17 +13979,15 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
         const meta = _betaTesters.__meta || {};
         const declinedAt = _betaTesters.__declined?.[String(myUid)] || 0;
         const hasLink = !!meta.optinLink && !!entry?.optinNotifiedAt;
-        // Check: Email confirmed? — User landet nur dann auf seinem Account
-        // wenn er die Bestaetigungs-Email geklickt hat.
-        let needsConfirm = false;
-        if (entry?.email) {
-            try {
-                const botData = await fetchBot('/data');
-                const me = botData?.users?.[String(myUid)];
-                const meEmail = String(me?.email||'').toLowerCase();
-                needsConfirm = meEmail !== entry.email.toLowerCase();
-            } catch(e) {}
-        }
+        // Mainbot-Daten EINMAL holen fuer needsConfirm + accountEmail
+        let me = null;
+        try { const botData = await fetchBot('/data'); me = botData?.users?.[String(myUid)] || null; } catch(e) {}
+        const meEmailLower = String(me?.email||'').toLowerCase();
+        const needsConfirm = !!entry?.email && meEmailLower !== entry.email.toLowerCase();
+        // Quick-Join nur bei Gmail-Adressen: andere Emails (web.de, gmx.de etc.)
+        // funktionieren NICHT fuer Google Play Beta → User muss seine echte Gmail eingeben.
+        const accountEmail = (me?.email && me?.emailConfirmedAt && meEmailLower.endsWith('@gmail.com'))
+            ? meEmailLower : null;
         // Tracking-Start: zaehlt ab dem fruehesten Moment wo der User wusste vom Test
         // (linkOpenedAt > linkEmailedAt > optinNotifiedAt). Damit kein Tester unbemerkt
         // unter die 14-Tage-Grenze faellt.
@@ -13976,6 +14002,7 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
             ok:true,
             signedUp: !!entry,
             email: entry?.email || null,
+            accountEmail,
             optinLink: hasLink ? meta.optinLink : null,
             linkOpenedAt: entry?.linkOpenedAt || null,
             needsConfirm,
