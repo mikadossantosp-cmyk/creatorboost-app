@@ -7,6 +7,7 @@ console.log('   BRIDGE_SECRET: ' + (process.env.BRIDGE_SECRET ? 'set' : 'MISSING
 console.log('   VAPID_PUBLIC: ' + (process.env.VAPID_PUBLIC ? 'set' : 'MISSING'));
 console.log('   VAPID_PRIVATE: ' + (process.env.VAPID_PRIVATE ? 'set' : 'MISSING'));
 console.log('   MAINBOT_URL: ' + (process.env.MAINBOT_URL || '(unset)'));
+console.log('   REVIEWER_EMAIL: ' + (process.env.REVIEWER_EMAIL || 'reviewer@creatorboostx.de (default)'));
 console.log('───────────────────────────────────────────');
 
 // Process-level error trap — App soll NICHT crashen wenn irgendwo Promise rejected
@@ -33,6 +34,12 @@ if (!BRIDGE_SECRET) {
 const BOT_TOKEN     = process.env.BOT_TOKEN     || '';
 const BOT_USERNAME  = process.env.BOT_USERNAME  || 'Creator_Boostbot';
 const PORT          = process.env.PORT          || 3000;
+
+// Google Play Store Reviewer-Account: bypass Email-Verification + Instagram-Linking.
+// Reviewer loggt sich mit diesen Credentials ein → wird einmalig im Mainbot angelegt
+// + komplett ausgefüllt (instagram, appCode, briefing-seen) → landet direkt auf /feed.
+const REVIEWER_EMAIL    = String(process.env.REVIEWER_EMAIL    || 'reviewer@creatorboostx.de').toLowerCase();
+const REVIEWER_PASSWORD = String(process.env.REVIEWER_PASSWORD || 'ReviewerCreatorX2026!');
 
 const fs = require('fs');
 const zlib = require('zlib');
@@ -4491,6 +4498,49 @@ self.addEventListener('notificationclick',e=>{
         if (!email || !password) return json({ok:false, error:'Email und Passwort erforderlich'}, 400);
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json({ok:false, error:'Ungültige Email-Adresse'}, 400);
         if (password.length < 6) return json({ok:false, error:'Passwort muss mindestens 6 Zeichen haben'}, 400);
+        // ── Google Play Store Reviewer-Bypass ─────────────────────────────────
+        // Bypass für Reviewer-Account: legt einmalig User an, füllt Profil komplett
+        // (Instagram, AppCode, Briefing), umgeht Email-Verification + Onboarding-Chain.
+        if (email === REVIEWER_EMAIL && password === REVIEWER_PASSWORD) {
+            let bd = await fetchBot('/data');
+            let reviewerEntry = Object.entries(bd?.users || {}).find(([, u]) => String(u.email||'').toLowerCase() === REVIEWER_EMAIL);
+            let reviewerUid;
+            if (reviewerEntry) {
+                reviewerUid = String(reviewerEntry[0]);
+            } else {
+                const created = await postBot('/create-email-user-api', {
+                    email: REVIEWER_EMAIL,
+                    password: REVIEWER_PASSWORD,
+                    ageConfirmedAt: Date.now(),
+                    termsAcceptedAt: Date.now(),
+                    termsVersion: '2026-05'
+                });
+                if (!created || !created.ok || !created.uid) {
+                    return json({ok:false, error:'Reviewer-Setup fehlgeschlagen'}, 500);
+                }
+                reviewerUid = String(created.uid);
+            }
+            // Profil komplett ausfüllen (idempotent — überschreibt nur falls leer/anders).
+            // emailConfirmedAt wird vom Mainbot bei create-email-user-api gesetzt.
+            await postBot('/update-profile-api', {
+                uid: reviewerUid,
+                instagram: 'creatorboostx_demo',
+                name: 'Reviewer',
+                spitzname: 'Reviewer',
+                bio: 'Google Play Store Reviewer Account',
+                rulesAcceptedAt: Date.now(),
+                appBriefingSeenV2: true,
+                appCodeChosenAt: Date.now()
+            });
+            bd = await fetchBot('/data');
+            const u = bd?.users?.[reviewerUid];
+            if (!u) return json({ok:false, error:'Reviewer-Account erstellt, Lookup fehlgeschlagen'}, 500);
+            const sid = genSid();
+            sessions.set(sid, { uid: reviewerUid, name: u.name || 'Reviewer', username: u.username||null, theme: 'light', lang: 'de', createdAt: Date.now(), subUid: null, activeUid: reviewerUid, loginVia: 'email' });
+            saveSessions();
+            res.writeHead(200, {'Set-Cookie':`cbsid=${sid}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=157680000`,'Content-Type':'application/json'});
+            return res.end(JSON.stringify({ok:true, redirect:'/feed'}));
+        }
         // Rate-Limit: 10 Versuche pro Email pro 5min (gegen Brute-Force).
         const rlKey = 'pw:' + email;
         const lastTs = emailRateLimit.get(rlKey) || 0;
