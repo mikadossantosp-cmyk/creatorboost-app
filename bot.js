@@ -4907,15 +4907,17 @@ self.addEventListener('notificationclick',e=>{
         savePendingEmailConfirms();
         const isSignup = entry.kind === 'signup';
         console.log('[email-confirm] Confirmed (' + (isSignup ? 'signup' : 'change') + ') uid:', entry.uid, 'email:', entry.email);
-        if (!isSignup) {
-            // Email-Change-Flow: Mainbot setzt confirmEmail-Field
-            const result = await postBot('/update-profile-api', { uid: entry.uid, confirmEmail: entry.email });
-            if (!result || result.ok === false) {
-                res.writeHead(500, {'Content-Type':'text/html'});
-                return res.end(baseHtml('❌','Fehler','Bestätigung konnte nicht gespeichert werden ('+(result && result.error || 'unbekannt')+'). Bitte später erneut versuchen.','#ef4444'));
-            }
+        // IMMER confirmEmail bei Mainbot setzen — idempotent.
+        // Vorher war das nur fuer kind='change' der Fall, mit der Annahme dass
+        // beim Signup emailConfirmedAt schon im User-Create gesetzt wurde. Stimmt
+        // aber nicht fuer Beta-Tester-Signups (Email wird nachtraeglich via
+        // pendingEmail gesetzt) → u.email + emailConfirmedAt blieben leer →
+        // needsConfirm-Banner ging nie weg trotz Klick.
+        const result = await postBot('/update-profile-api', { uid: entry.uid, confirmEmail: entry.email });
+        if (!result || result.ok === false) {
+            res.writeHead(500, {'Content-Type':'text/html'});
+            return res.end(baseHtml('❌','Fehler','Bestätigung konnte nicht gespeichert werden ('+(result && result.error || 'unbekannt')+'). Bitte später erneut versuchen.','#ef4444'));
         }
-        // Signup-Flow: Mainbot hat emailConfirmedAt schon beim Signup gesetzt — kein API-Call nötig
         res.writeHead(200, {'Content-Type':'text/html'});
         return res.end(baseHtml('✅','Email bestätigt!','Deine Email <b style="color:#fff">'+entry.email+'</b> ist jetzt aktiv. Du kannst dich damit einloggen.','#22c55e'));
     }
