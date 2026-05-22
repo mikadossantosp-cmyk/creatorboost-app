@@ -18351,6 +18351,57 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 </div>`);
     }
 
+    // ── GOOGLE PLAY PFLICHT: öffentlich zugängliche Konto-Lösch-URL ──
+    // Auch nicht-eingeloggte User (z.B. nach App-Deinstall) müssen Anweisung
+    // bekommen wie sie ihr Konto + Daten löschen lassen können.
+    if (path === '/konto-loeschen' || path === '/delete-account') {
+        return _sendLegal('Konto löschen', `
+<h1>Konto löschen</h1>
+<p>Du kannst dein CreatorX-Konto jederzeit löschen. Alle deine persönlichen Daten werden dauerhaft entfernt.</p>
+
+<h2 style="font-size:16px;margin:18px 0 8px">🚀 Variante 1: In der App löschen (empfohlen)</h2>
+<ol style="padding-left:18px;line-height:1.7">
+  <li>Login bei <a href="/login" style="color:var(--accent);font-weight:700">creatorboostx.de/login</a></li>
+  <li>Geh zu <b>Einstellungen</b> (Profil → Zahnrad-Icon ⚙️)</li>
+  <li>Scroll ganz nach unten</li>
+  <li>Klick auf <b>🗑️ Account dauerhaft löschen</b></li>
+  <li>Bestätige mit Eingabe von <code>LÖSCHEN</code></li>
+</ol>
+<p style="margin-top:14px"><a href="/login" style="display:inline-block;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;padding:12px 24px;border-radius:10px;text-decoration:none;font-weight:700">→ Jetzt einloggen + löschen</a></p>
+
+<h2 style="font-size:16px;margin:18px 0 8px">✉️ Variante 2: Per E-Mail (falls App nicht mehr zugänglich)</h2>
+<p>Schreib eine E-Mail an <a href="mailto:mindset.stories_@outlook.de?subject=Konto-Löschung%20CreatorX" style="color:var(--accent);font-weight:700">mindset.stories_@outlook.de</a> mit dem Betreff <b>"Konto-Löschung CreatorX"</b>.</p>
+<p>Gib in der Mail an:</p>
+<ul style="padding-left:18px">
+  <li>Deine in der App registrierte E-Mail-Adresse</li>
+  <li>(Optional) dein Username / Spitzname</li>
+</ul>
+<p>Wir bearbeiten deine Anfrage innerhalb von <b>72 Stunden</b>.</p>
+
+<h2 style="font-size:16px;margin:18px 0 8px">🗑️ Was wird gelöscht?</h2>
+<ul style="padding-left:18px;line-height:1.7">
+  <li><b>Sofort gelöscht:</b> Account, Email, Profil, Bio, Avatar, Banner, Instagram-Handle, App-Code, alle Verlinkungen (Posts, Likes, Kommentare, Follows)</li>
+  <li><b>Anonymisiert:</b> Statistik-Aggregate (Anzahl Likes/Posts ohne User-Bezug)</li>
+  <li><b>Aufbewahrt (gesetzliche Pflicht):</b> Login-Logs für 30 Tage (Sicherheitszwecke), danach automatisch gelöscht</li>
+</ul>
+
+<h2 style="font-size:16px;margin:18px 0 8px">⚠️ Wichtig zu wissen</h2>
+<ul style="padding-left:18px;line-height:1.7">
+  <li>Die Löschung ist <b>endgültig + nicht umkehrbar</b> (ausser Admin macht innerhalb 50 Tagen Restore in Ausnahmefällen)</li>
+  <li>Du verlierst alle gesammelten XP, Diamanten, Badges und Stufen</li>
+  <li>Sub-Accounts (Personas) werden mit gelöscht</li>
+  <li>Du kannst dich danach jederzeit neu registrieren — aber als neuer User</li>
+</ul>
+
+<h2 style="font-size:16px;margin:18px 0 8px">📊 Nur einzelne Daten löschen? (DSGVO Art. 17)</h2>
+<p>Du kannst auch <b>nur bestimmte Daten</b> löschen lassen (z.B. nur deinen Instagram-Handle oder einen einzelnen Post) — schreib uns dazu per E-Mail an die oben genannte Adresse.</p>
+
+<div class="foot">
+<a href="/datenschutz">Datenschutz</a>
+<a href="/agb">AGB</a>
+<a href="/impressum">Impressum</a>
+</div>`);
+    }
     if (path === '/impressum') {
         return _sendLegal('Impressum', `
 <h1>Impressum</h1>
