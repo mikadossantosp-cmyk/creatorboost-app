@@ -13984,7 +13984,10 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
         try { const botData = await fetchBot('/data'); me = botData?.users?.[String(myUid)] || null; } catch(e) {}
         const meEmailLower = String(me?.email||'').toLowerCase();
         const needsConfirm = !!entry?.email && meEmailLower !== entry.email.toLowerCase();
-        const accountEmail = (me?.email && me?.emailConfirmedAt) ? meEmailLower : null;
+        // Quick-Join nur bei Gmail-Adressen: andere Emails (web.de, gmx.de etc.)
+        // funktionieren NICHT fuer Google Play Beta → User muss seine echte Gmail eingeben.
+        const accountEmail = (me?.email && me?.emailConfirmedAt && meEmailLower.endsWith('@gmail.com'))
+            ? meEmailLower : null;
         // Tracking-Start: zaehlt ab dem fruehesten Moment wo der User wusste vom Test
         // (linkOpenedAt > linkEmailedAt > optinNotifiedAt). Damit kein Tester unbemerkt
         // unter die 14-Tage-Grenze faellt.
