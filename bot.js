@@ -6156,6 +6156,7 @@ function saveCheck(){
             }
         } catch(e) {}
         const openedCount = list.filter(t => t.linkOpenedAt).length;
+        const emailedCount = list.filter(t => t.linkEmailedAt).length;
         const declinedCount = Object.keys(_betaTesters.__declined || {}).length;
 
         // Auto-Threshold: wenn confirmedCount erstmals 12 erreicht → timestamp setzen
@@ -6210,6 +6211,7 @@ pre{background:#0a0a0a;border:1px solid #1a1a1a;border-radius:8px;padding:12px;f
   <div class="stat-row"><span class="stat-key">📥 Eingetragen</span><span class="stat-val">${list.length}</span></div>
   <div class="stat-row"><span class="stat-key">🔗 Email-Verknüpfung confirmed</span><span class="stat-val" style="color:${confirmedCount>=needed?'#22c55e':'#fbbf24'}">${confirmedCount} / ${needed}</span></div>
   <div class="stat-row"><span class="stat-key">📲 Opt-in-Link geöffnet</span><span class="stat-val">${openedCount}</span></div>
+  <div class="stat-row"><span class="stat-key">📧 Link per Email gesendet</span><span class="stat-val" style="color:#888">${emailedCount}</span></div>
   <div class="stat-row"><span class="stat-key">👎 'Nein, danke' geklickt</span><span class="stat-val" style="color:#888">${declinedCount}</span></div>
   <div class="progress"><div class="progress-fill" style="width:${Math.min(100, (confirmedCount/needed)*100)}%"></div></div>
   <div style="margin-top:14px;padding-top:12px;border-top:1px solid #1a1a1a">
@@ -10521,31 +10523,71 @@ async function submitSuperLink(){
         '</div>'+
       '</div>'+
       '<button onclick="window.__betaShowSteps()" style="width:100%;padding:13px;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:none;border-radius:10px;font-size:13.5px;font-weight:800;cursor:pointer;box-shadow:0 4px 14px rgba(34,197,94,0.35)">📲 Beta-Test öffnen →</button>'+
-      '<div style="margin-top:10px;padding:8px 10px;background:rgba(0,0,0,0.25);border-radius:8px;font-size:11px;color:var(--muted);line-height:1.5"><b style="color:#fbbf24">⚠️ Wichtig:</b> Falls du schon eine alte App-Version hast, musst du sie zuerst löschen. Details im nächsten Schritt.</div>'+
+      '<div style="margin-top:10px;padding:8px 10px;background:rgba(0,0,0,0.25);border-radius:8px;font-size:11px;color:var(--muted);line-height:1.5"><b style="color:#fbbf24">⚠️ Wichtig:</b> Im nächsten Schritt sicherst du den Link (Email oder Clipboard), löschst die alte APK und installierst neu. Account bleibt erhalten.</div>'+
     '</div><style>@keyframes betaPulse{0%,100%{box-shadow:0 0 0 0 rgba(34,197,94,0.0)}50%{box-shadow:0 0 0 8px rgba(34,197,94,0.10)}}</style>';
     window.__betaShowSteps = function(){
       const bg = document.createElement('div');
       bg.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.82);backdrop-filter:blur(8px);z-index:9200;display:flex;align-items:center;justify-content:center;padding:18px';
-      bg.innerHTML = '<div style="background:var(--bg2);border:1px solid rgba(34,197,94,0.35);border-radius:18px;padding:22px;max-width:480px;width:100%;max-height:92vh;overflow-y:auto">'+
+      const escLink = escapeHtml(link);
+      bg.innerHTML = '<div style="background:var(--bg2);border:1px solid rgba(34,197,94,0.35);border-radius:18px;padding:22px;max-width:520px;width:100%;max-height:92vh;overflow-y:auto">'+
         '<div style="font-size:38px;text-align:center;margin-bottom:6px">📲</div>'+
-        '<div style="font-size:17px;font-weight:800;text-align:center;margin-bottom:18px;color:var(--text)">So installierst du die Beta-App</div>'+
-        '<div style="background:rgba(239,68,68,0.10);border:1.5px solid rgba(239,68,68,0.40);border-radius:12px;padding:12px 14px;margin-bottom:14px">'+
-          '<div style="font-size:13px;font-weight:800;color:#ef4444;margin-bottom:6px">⚠️ Schritt 0 — Falls du die alte APK hast</div>'+
-          '<div style="font-size:12px;color:var(--text);line-height:1.6">Hast du CreatorX bereits als APK installiert? Dann <b>lösche sie zuerst</b> (Apps → CreatorX → Deinstallieren). Sonst kommt eine Fehlermeldung beim Play-Store-Install.</div>'+
-          '<div style="font-size:11px;color:var(--muted);line-height:1.6;margin-top:6px">💾 Dein Account bleibt: nach dem Install loggst du dich mit <b style="color:#e5e5e5">'+escapeHtml(email||'')+'</b> ein und alles ist wieder da.</div>'+
+        '<div style="font-size:17px;font-weight:800;text-align:center;margin-bottom:6px;color:var(--text)">So installierst du die Beta-App</div>'+
+        '<div style="font-size:11.5px;color:var(--muted);text-align:center;margin-bottom:16px;line-height:1.5">Sichere dir den Link bevor du die APK löschst</div>'+
+        // Backup-Sektion: Link auf 3 Wegen verfuegbar machen
+        '<div style="background:rgba(52,211,153,0.10);border:1.5px solid rgba(52,211,153,0.40);border-radius:12px;padding:12px 14px;margin-bottom:14px">'+
+          '<div style="font-size:13px;font-weight:800;color:#34d399;margin-bottom:8px">🔒 Schritt 1 — Link sichern</div>'+
+          '<div style="font-size:11.5px;color:var(--text);line-height:1.55;margin-bottom:10px">Damit du den Link nach dem APK-Löschen wiederfindest, mach <b>mindestens eines davon</b>:</div>'+
+          '<div style="display:grid;gap:6px;margin-bottom:8px">'+
+            '<button id="betaMailMe" onclick="window.__betaMailLink()" style="padding:10px 12px;background:rgba(52,211,153,0.18);color:#34d399;border:1px solid rgba(52,211,153,0.45);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;text-align:left">📧 Link an '+escapeHtml(email||'')+' senden</button>'+
+            '<button id="betaCopy" onclick="window.__betaCopyLink()" style="padding:10px 12px;background:rgba(167,139,250,0.18);color:#a78bfa;border:1px solid rgba(167,139,250,0.45);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;text-align:left">📋 Link in Zwischenablage kopieren</button>'+
+          '</div>'+
+          '<div style="font-size:10.5px;color:var(--muted);line-height:1.5;margin-top:4px">💡 Du kannst diesen Link auch <b>jetzt sofort öffnen</b> (ganz unten) — dann erst APK löschen, danach Play Store wieder öffnen.</div>'+
         '</div>'+
+        // Schritt 2: APK loeschen
+        '<div style="background:rgba(239,68,68,0.10);border:1.5px solid rgba(239,68,68,0.40);border-radius:12px;padding:12px 14px;margin-bottom:14px">'+
+          '<div style="font-size:13px;font-weight:800;color:#ef4444;margin-bottom:6px">⚠️ Schritt 2 — Alte APK löschen</div>'+
+          '<div style="font-size:12px;color:var(--text);line-height:1.6">Falls du CreatorX bereits als APK hast: Einstellungen → Apps → CreatorX → <b>Deinstallieren</b>. Ohne diesen Schritt blockt Google den Play-Store-Install.</div>'+
+          '<div style="font-size:11px;color:var(--muted);line-height:1.6;margin-top:6px">💾 Dein Account bleibt erhalten — die Daten liegen auf unserem Server, nicht in der App.</div>'+
+        '</div>'+
+        // Schritt 3-6: Install Steps
+        '<div style="font-size:13px;font-weight:800;color:#22c55e;margin-bottom:10px">📲 Schritt 3-6 — Installation</div>'+
         '<div style="display:grid;gap:10px;margin-bottom:18px">'+
-          '<div style="display:flex;gap:10px;align-items:flex-start;padding:10px 12px;background:var(--bg3,#1a1a1a);border-radius:10px"><div style="font-size:22px;font-weight:800;color:#22c55e;flex-shrink:0;line-height:1">1</div><div style="font-size:12.5px;line-height:1.5;color:var(--text)"><b>Tippe auf "Zum Play Store"</b> unten<br><span style="font-size:11px;color:var(--muted)">Du landest auf der Beta-Test-Seite von Google</span></div></div>'+
-          '<div style="display:flex;gap:10px;align-items:flex-start;padding:10px 12px;background:var(--bg3,#1a1a1a);border-radius:10px"><div style="font-size:22px;font-weight:800;color:#22c55e;flex-shrink:0;line-height:1">2</div><div style="font-size:12.5px;line-height:1.5;color:var(--text)"><b>Stelle sicher dass du mit '+escapeHtml(email||'')+' eingeloggt bist</b><br><span style="font-size:11px;color:var(--muted)">Oben rechts in Google Play prüfen</span></div></div>'+
-          '<div style="display:flex;gap:10px;align-items:flex-start;padding:10px 12px;background:var(--bg3,#1a1a1a);border-radius:10px"><div style="font-size:22px;font-weight:800;color:#22c55e;flex-shrink:0;line-height:1">3</div><div style="font-size:12.5px;line-height:1.5;color:var(--text)"><b>Klick "Tester werden"</b><br><span style="font-size:11px;color:var(--muted)">Bestätigung dauert manchmal ein paar Minuten</span></div></div>'+
-          '<div style="display:flex;gap:10px;align-items:flex-start;padding:10px 12px;background:var(--bg3,#1a1a1a);border-radius:10px"><div style="font-size:22px;font-weight:800;color:#22c55e;flex-shrink:0;line-height:1">4</div><div style="font-size:12.5px;line-height:1.5;color:var(--text)"><b>Installiere die App</b> aus dem Play Store<br><span style="font-size:11px;color:var(--muted)">Logge dich danach mit '+escapeHtml(email||'')+' ein</span></div></div>'+
+          '<div style="display:flex;gap:10px;align-items:flex-start;padding:10px 12px;background:var(--bg3,#1a1a1a);border-radius:10px"><div style="font-size:22px;font-weight:800;color:#22c55e;flex-shrink:0;line-height:1">3</div><div style="font-size:12.5px;line-height:1.5;color:var(--text)"><b>Öffne den Link</b> aus deiner Email oder Zwischenablage<br><span style="font-size:11px;color:var(--muted)">Du landest auf der Beta-Test-Seite von Google</span></div></div>'+
+          '<div style="display:flex;gap:10px;align-items:flex-start;padding:10px 12px;background:var(--bg3,#1a1a1a);border-radius:10px"><div style="font-size:22px;font-weight:800;color:#22c55e;flex-shrink:0;line-height:1">4</div><div style="font-size:12.5px;line-height:1.5;color:var(--text)"><b>Eingeloggt mit '+escapeHtml(email||'')+'?</b> Oben rechts checken.<br><span style="font-size:11px;color:var(--muted)">Falls nein: Account wechseln</span></div></div>'+
+          '<div style="display:flex;gap:10px;align-items:flex-start;padding:10px 12px;background:var(--bg3,#1a1a1a);border-radius:10px"><div style="font-size:22px;font-weight:800;color:#22c55e;flex-shrink:0;line-height:1">5</div><div style="font-size:12.5px;line-height:1.5;color:var(--text)"><b>Klick "Tester werden"</b><br><span style="font-size:11px;color:var(--muted)">Bestätigung dauert manchmal ein paar Minuten</span></div></div>'+
+          '<div style="display:flex;gap:10px;align-items:flex-start;padding:10px 12px;background:var(--bg3,#1a1a1a);border-radius:10px"><div style="font-size:22px;font-weight:800;color:#22c55e;flex-shrink:0;line-height:1">6</div><div style="font-size:12.5px;line-height:1.5;color:var(--text)"><b>Installiere die App</b> aus dem Play Store<br><span style="font-size:11px;color:var(--muted)">Logge dich danach mit '+escapeHtml(email||'')+' ein → Account ist wieder da</span></div></div>'+
         '</div>'+
         '<div style="display:flex;gap:10px">'+
           '<button onclick="this.closest(\\'div[style*=fixed]\\').remove()" style="flex:1;padding:12px;background:transparent;color:var(--text);border:1px solid var(--border2,#333);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">Später</button>'+
-          '<button onclick="window.__betaOpenLink();this.closest(\\'div[style*=fixed]\\').remove()" style="flex:2;padding:12px;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer">📲 Zum Play Store</button>'+
+          '<button onclick="window.__betaOpenLink();this.closest(\\'div[style*=fixed]\\').remove()" style="flex:2;padding:12px;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer">📲 Jetzt Link öffnen</button>'+
         '</div>'+
       '</div>';
       document.body.appendChild(bg);
+      window.__betaMailLink = async function(){
+        const btn = document.getElementById('betaMailMe');
+        if (!btn) return;
+        btn.disabled = true; btn.textContent = '⏳ Sende ...';
+        try {
+          const r = await fetch('/api/beta-tester/email-link', {method:'POST'});
+          const j = await r.json();
+          btn.textContent = j.ok ? '✓ Email gesendet — check dein Postfach!' : '✗ Fehler: '+(j.error||'?');
+          btn.style.background = j.ok ? 'rgba(34,197,94,0.25)' : 'rgba(239,68,68,0.18)';
+        } catch(e) { btn.textContent = '✗ Netzwerk-Fehler'; }
+      };
+      window.__betaCopyLink = function(){
+        const btn = document.getElementById('betaCopy');
+        if (!btn) return;
+        const doCopy = () => {
+          btn.textContent = '✓ Link kopiert — irgendwo speichern!';
+          btn.style.background = 'rgba(34,197,94,0.25)';
+          btn.style.color = '#22c55e';
+          btn.style.borderColor = 'rgba(34,197,94,0.45)';
+        };
+        if (navigator.clipboard) navigator.clipboard.writeText(link).then(doCopy, ()=>{
+          const ta=document.createElement('textarea'); ta.value=link; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); doCopy();
+        });
+        else { const ta=document.createElement('textarea'); ta.value=link; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); doCopy(); }
+      };
     };
     window.__betaOpenLink = function(){
       fetch('/api/beta-tester/link-opened', {method:'POST'}).catch(()=>{});
@@ -13882,6 +13924,37 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
             _betaTesters[String(myUid)].linkOpenedAt = Date.now();
             saveBetaTesters();
         }
+        return json({ok:true});
+    }
+    if (path === '/api/beta-tester/email-link' && req.method === 'POST') {
+        // Schickt den Opt-in-Link per Email an die Beta-Tester-Adresse.
+        // Wichtig: User muss den Link auch behalten koennen wenn er die APK
+        // loescht (sonst kommt er nicht mehr auf die Test-Seite).
+        if (!session) return json({error:'Nicht eingeloggt'}, 401);
+        const entry = _betaTesters[String(myUid)];
+        const meta = _betaTesters.__meta || {};
+        if (!entry?.email) return json({ok:false, error:'Keine Beta-Email gespeichert'});
+        if (!meta.optinLink) return json({ok:false, error:'Noch kein Opt-in-Link verfügbar'});
+        const link = meta.optinLink;
+        const baseUrl = ('https://' + (req.headers.host || 'www.creatorboostx.de')).replace(/\/$/, '');
+        const userName = String(entry.email||'').split('@')[0].replace(/[<>]/g,'').slice(0,30);
+        const html = '<!DOCTYPE html><html><body style="margin:0;font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#000;color:#fff;padding:0">'+
+            '<div style="max-width:560px;margin:0 auto;padding:32px 24px">'+
+            '<div style="text-align:center;margin-bottom:24px"><img src="'+baseUrl+'/cx-logo-256.png" width="80" height="80" style="border-radius:18px" alt="CreatorX"></div>'+
+            '<h1 style="font-size:24px;font-weight:700;margin:0 0 12px;text-align:center;color:#fff">Dein Beta-Zugangslink 🧪</h1>'+
+            '<p style="font-size:15px;color:#a8a39a;line-height:1.6;text-align:center;margin:0 0 24px">Hi '+userName+', hier ist dein persönlicher Link um Beta-Tester für CreatorX zu werden:</p>'+
+            '<div style="background:#0f0f0f;border:1px solid #2a2a2a;border-radius:12px;padding:18px;margin:0 0 24px"><div style="font-size:12px;color:#a8a39a;text-transform:uppercase;letter-spacing:.5px;font-weight:700;margin-bottom:8px">📲 Beta-Test öffnen</div><a href="'+link+'" style="color:#34d399;font-size:13px;word-break:break-all;font-weight:600;text-decoration:none">'+link+'</a></div>'+
+            '<div style="background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.30);border-radius:10px;padding:14px 16px;margin:0 0 20px">'+
+                '<div style="font-size:13px;font-weight:700;color:#ef4444;margin-bottom:6px">⚠️ Falls du die alte APK hast</div>'+
+                '<div style="font-size:12.5px;color:#cbd5e1;line-height:1.55">Lösche sie zuerst (Apps → CreatorX → Deinstallieren). Sonst kommt eine Fehlermeldung beim Play-Store-Install. Dein Account bleibt — du loggst dich danach mit dieser Email ein.</div>'+
+            '</div>'+
+            '<div style="font-size:13px;color:#cbd5e1;line-height:1.7;margin:0 0 24px"><b style="color:#fff">So gehts:</b><br>1. APK löschen (falls vorhanden)<br>2. Auf den Link oben tippen<br>3. "Tester werden" klicken<br>4. App über Play Store installieren<br>5. Mit <b style="color:#34d399">'+entry.email+'</b> einloggen → Account ist wieder da!</div>'+
+            '<p style="font-size:11px;color:#605c54;line-height:1.5;text-align:center;margin:32px 0 0;border-top:1px solid #221f1a;padding-top:20px">Diese Email ist nur fuer dich. Bitte nicht teilen — der Link ist persönlich.</p>'+
+            '</div></body></html>';
+        const ok = await sendEmail(entry.email, '🧪 Dein CreatorX Beta-Zugangslink', html);
+        if (!ok) return json({ok:false, error:'Email-Versand fehlgeschlagen'});
+        entry.linkEmailedAt = Date.now();
+        saveBetaTesters();
         return json({ok:true});
     }
     if (path === '/api/beta-tester/dismiss' && req.method === 'POST') {
