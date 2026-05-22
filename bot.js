@@ -858,6 +858,7 @@ const BETA_TESTERS_FILE = DATA_DIR + '/beta_testers.json';
 // Closed Testing der App opt-in machen. Eigenes File (nicht in app_db.json)
 // damit Mainbot-Reloads nichts ueberschreiben.
 let _betaTesters = {};
+const _betaEmailLinkRate = new Map(); // uid → { last: timestamp, count24h: n, dayStart: ts }
 function loadBetaTesters() {
     try {
         if (fs.existsSync(BETA_TESTERS_FILE)) {
@@ -10490,10 +10491,11 @@ async function submitSuperLink(){
           '<div style="font-size:11.5px;color:var(--muted);line-height:1.5">Wir haben einen Bestätigungs-Link an <b style="color:#e5e5e5">'+escapeHtml(email||'')+'</b> gesendet. Ohne Klick keine Verknüpfung — und du landest nach dem Play-Store-Install auf einem leeren Account.</div>'+
         '</div>'+
       '</div>'+
-      '<div style="display:flex;gap:8px">'+
-        '<button onclick="window.__betaResend()" id="betaResendBtn" style="flex:1;padding:10px;background:rgba(251,146,60,0.20);color:#fb923c;border:1px solid rgba(251,146,60,0.45);border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer">📧 Email erneut senden</button>'+
+      '<div style="display:flex;gap:8px;margin-bottom:8px">'+
+        '<button onclick="window.__betaResend()" id="betaResendBtn" style="flex:1;padding:10px;background:rgba(251,146,60,0.20);color:#fb923c;border:1px solid rgba(251,146,60,0.45);border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer">📧 Erneut senden</button>'+
         '<button onclick="window.__betaCheckAgain()" style="flex:1;padding:10px;background:rgba(34,197,94,0.20);color:#22c55e;border:1px solid rgba(34,197,94,0.45);border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer">✓ Ich habe geklickt</button>'+
       '</div>'+
+      '<button onclick="window.__betaChangeEmail()" style="width:100%;padding:8px;background:transparent;color:var(--muted);border:1px dashed var(--border2,#333);border-radius:8px;font-size:11.5px;font-weight:700;cursor:pointer">✏️ Tippfehler? Email ändern</button>'+
     '</div>';
     window.__betaResend = async function(){
       const btn = document.getElementById('betaResendBtn');
@@ -10510,6 +10512,20 @@ async function submitSuperLink(){
     };
     window.__betaCheckAgain = function(){
       location.reload();
+    };
+    window.__betaChangeEmail = function(){
+      const newEmail = prompt('Tippfehler korrigieren — neue Email eingeben:', email || '');
+      if (!newEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail.trim())) {
+        if (newEmail !== null) alert('Bitte gib eine gültige Email ein');
+        return;
+      }
+      fetch('/api/beta-tester/change-email', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ email: newEmail.trim().toLowerCase() })
+      }).then(r=>r.json()).then(j=>{
+        if (j.ok) { alert('✅ Email geändert! Check dein neues Postfach.'); location.reload(); }
+        else { alert('Fehler: ' + (j.error||'?')); }
+      }).catch(e => alert('Fehler: '+e.message));
     };
   }
   function renderOptinReady(link, email){
@@ -10556,6 +10572,9 @@ async function submitSuperLink(){
           '<div style="display:flex;gap:10px;align-items:flex-start;padding:10px 12px;background:var(--bg3,#1a1a1a);border-radius:10px"><div style="font-size:22px;font-weight:800;color:#22c55e;flex-shrink:0;line-height:1">4</div><div style="font-size:12.5px;line-height:1.5;color:var(--text)"><b>Eingeloggt mit '+escapeHtml(email||'')+'?</b> Oben rechts checken.<br><span style="font-size:11px;color:var(--muted)">Falls nein: Account wechseln</span></div></div>'+
           '<div style="display:flex;gap:10px;align-items:flex-start;padding:10px 12px;background:var(--bg3,#1a1a1a);border-radius:10px"><div style="font-size:22px;font-weight:800;color:#22c55e;flex-shrink:0;line-height:1">5</div><div style="font-size:12.5px;line-height:1.5;color:var(--text)"><b>Klick "Tester werden"</b><br><span style="font-size:11px;color:var(--muted)">Bestätigung dauert manchmal ein paar Minuten</span></div></div>'+
           '<div style="display:flex;gap:10px;align-items:flex-start;padding:10px 12px;background:var(--bg3,#1a1a1a);border-radius:10px"><div style="font-size:22px;font-weight:800;color:#22c55e;flex-shrink:0;line-height:1">6</div><div style="font-size:12.5px;line-height:1.5;color:var(--text)"><b>Installiere die App</b> aus dem Play Store<br><span style="font-size:11px;color:var(--muted)">Logge dich danach mit '+escapeHtml(email||'')+' ein → Account ist wieder da</span></div></div>'+
+        '</div>'+
+        '<div style="background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.25);border-radius:10px;padding:10px 12px;margin-bottom:14px;font-size:11.5px;color:var(--text);line-height:1.55">'+
+          '<b style="color:#3b82f6">💡 Geduld bei "Beta nicht verfügbar":</b> Manchmal braucht Google 1-2 Stunden um deinen Tester-Status zu syncen. Falls die Beta-Seite "nicht verfügbar" sagt → warte etwas und probier nochmal.'+
         '</div>'+
         '<div style="display:flex;gap:10px">'+
           '<button onclick="this.closest(\\'div[style*=fixed]\\').remove()" style="flex:1;padding:12px;background:transparent;color:var(--text);border:1px solid var(--border2,#333);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">Später</button>'+
@@ -13855,6 +13874,15 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
         if (taken) {
             return json({ok:false, error:'Diese Email gehört bereits zu einem anderen CreatorX-Account. Bitte nutze eine andere Email — oder logge dich auf dem anderen Account ein.'});
         }
+        // Duplikat-Check innerhalb der Beta-Tester-Liste: keine zwei UIDs sollen
+        // dieselbe Email haben (sonst importieren wir Duplikate in Play Console).
+        const dupBeta = Object.entries(_betaTesters).find(([uid, t]) =>
+            uid !== '__meta' && uid !== '__declined' &&
+            uid !== String(myUid) &&
+            t && String(t.email||'').toLowerCase() === email);
+        if (dupBeta) {
+            return json({ok:false, error:'Diese Email wurde bereits von einem anderen Tester eingetragen. Bitte nutze deine eigene Gmail-Adresse.'});
+        }
         let mode = 'new';
         const currentConfirmed = String(me?.email||'').toLowerCase();
         const currentPending = String(me?.pendingEmail||'').toLowerCase();
@@ -13908,6 +13936,36 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
             declined: !!declinedAt,
         });
     }
+    if (path === '/api/beta-tester/change-email' && req.method === 'POST') {
+        // User hat Tippfehler bemerkt → neue Email setzen + neue Confirmation
+        if (!session) return json({error:'Nicht eingeloggt'}, 401);
+        const body = await parseBody(req);
+        const newEmail = String(body.email||'').trim().toLowerCase();
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail) || newEmail.length > 200) {
+            return json({ok:false, error:'Ungültige Email'});
+        }
+        const botData = await fetchBot('/data');
+        if (!botData?.users) return json({ok:false, error:'Server nicht erreichbar'}, 503);
+        const taken = Object.entries(botData.users).find(([oid, x]) =>
+            String(oid) !== String(myUid) &&
+            (String(x.email||'').toLowerCase() === newEmail || String(x.pendingEmail||'').toLowerCase() === newEmail));
+        if (taken) return json({ok:false, error:'Diese Email gehört bereits zu einem anderen Account'});
+        const dupBeta = Object.entries(_betaTesters).find(([uid, t]) =>
+            uid !== '__meta' && uid !== '__declined' && uid !== String(myUid) &&
+            t && String(t.email||'').toLowerCase() === newEmail);
+        if (dupBeta) return json({ok:false, error:'Diese Email wurde bereits von einem anderen Tester eingetragen'});
+        if (!_betaTesters[String(myUid)]) return json({ok:false, error:'Du bist nicht als Beta-Tester registriert'});
+        _betaTesters[String(myUid)].email = newEmail;
+        _betaTesters[String(myUid)].emailLinkMode = 'new-confirm-sent';
+        delete _betaTesters[String(myUid)].linkOpenedAt;
+        delete _betaTesters[String(myUid)].linkEmailedAt;
+        saveBetaTesters();
+        try {
+            await postBot('/update-profile-api', { uid: String(myUid), email: newEmail });
+            await sendSignupConfirmationEmail(String(myUid), newEmail, req.headers.host);
+        } catch(e) {}
+        return json({ok:true});
+    }
     if (path === '/api/beta-tester/resend-confirm' && req.method === 'POST') {
         if (!session) return json({error:'Nicht eingeloggt'}, 401);
         const entry = _betaTesters[String(myUid)];
@@ -13935,6 +13993,17 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
         const meta = _betaTesters.__meta || {};
         if (!entry?.email) return json({ok:false, error:'Keine Beta-Email gespeichert'});
         if (!meta.optinLink) return json({ok:false, error:'Noch kein Opt-in-Link verfügbar'});
+        // Rate-Limit: max 1 Mail pro 60s, max 5 pro 24h pro User
+        const now = Date.now();
+        const rec = _betaEmailLinkRate.get(String(myUid)) || { last:0, count24h:0, dayStart:now };
+        if (now - rec.dayStart > 86400000) { rec.count24h = 0; rec.dayStart = now; }
+        if (now - rec.last < 60000) {
+            const wait = Math.ceil((60000 - (now - rec.last)) / 1000);
+            return json({ok:false, error:`Bitte warte noch ${wait}s vor dem nächsten Versand.`});
+        }
+        if (rec.count24h >= 5) {
+            return json({ok:false, error:'Max. 5 Email-Versände pro Tag erreicht. Versuche es morgen wieder.'});
+        }
         const link = meta.optinLink;
         const baseUrl = ('https://' + (req.headers.host || 'www.creatorboostx.de')).replace(/\/$/, '');
         const userName = String(entry.email||'').split('@')[0].replace(/[<>]/g,'').slice(0,30);
@@ -13955,6 +14024,9 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
         if (!ok) return json({ok:false, error:'Email-Versand fehlgeschlagen'});
         entry.linkEmailedAt = Date.now();
         saveBetaTesters();
+        rec.last = now;
+        rec.count24h++;
+        _betaEmailLinkRate.set(String(myUid), rec);
         return json({ok:true});
     }
     if (path === '/api/beta-tester/dismiss' && req.method === 'POST') {
