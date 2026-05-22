@@ -1123,6 +1123,108 @@ async function fetchBot(path) {
 // Pre-warm cache on startup and refresh every 45 seconds
 setInterval(refreshDataCache, 45000);
 
+// ── MIGRATION-PHASE-2: Write-Queue für Mainbot-Down-Failover ──
+// Bei Mainbot-Timeout/Down werden idempotente Writes gequeued + alle 30s retried.
+// Nicht-idempotente Writes (Signup, Password, Like) scheitern weiterhin direkt.
+const WRITE_QUEUE_FILE = DATA_DIR + '/write_queue.json';
+const _writeQueue = [];   // { id, ts, path, body, attempts, lastError }
+const RETRYABLE_PATHS = new Set([
+    '/update-profile-api',     // Profile-Edits (idempotent via uid+fields)
+    '/log-email-login',         // Analytics
+    '/log-funnel-api',          // Funnel-Tracking
+    '/track-funnel',            // Funnel-Tracking
+    '/app-presence',            // Heartbeat
+    '/mark-post-seen',          // View-Stats
+    '/complete-profile-api',    // Profile-Completion-Flag
+    '/report-nonengager-api',   // Report (Konflikt nur bei doppelter Meldung)
+]);
+const MAX_QUEUE_ATTEMPTS = 20;  // ~10h max retries (jeder Versuch 30s apart)
+const MAX_QUEUE_SIZE = 1000;    // unbounded growth verhindern
+
+function loadWriteQueue() {
+    try {
+        if (!fs.existsSync(WRITE_QUEUE_FILE)) return;
+        const parsed = JSON.parse(fs.readFileSync(WRITE_QUEUE_FILE, 'utf8'));
+        if (Array.isArray(parsed)) {
+            _writeQueue.push(...parsed.slice(0, MAX_QUEUE_SIZE));
+            if (_writeQueue.length > 0) console.log('📥 Write-Queue geladen: ' + _writeQueue.length + ' Einträge');
+        }
+    } catch(e) { console.error('Write-queue load failed:', e.message); }
+}
+let _writeQueueSaveTimer = null;
+function saveWriteQueue() {
+    if (_writeQueueSaveTimer) return;
+    _writeQueueSaveTimer = setTimeout(() => {
+        _writeQueueSaveTimer = null;
+        fs.writeFile(WRITE_QUEUE_FILE, JSON.stringify(_writeQueue), () => {});
+    }, 1000);
+}
+function enqueueWrite(path, body) {
+    if (_writeQueue.length >= MAX_QUEUE_SIZE) {
+        console.warn('⚠️  Write-Queue voll (>' + MAX_QUEUE_SIZE + '), drop oldest');
+        _writeQueue.shift();
+    }
+    _writeQueue.push({
+        id: crypto.randomBytes(8).toString('hex'),
+        ts: Date.now(),
+        path,
+        body,
+        attempts: 0,
+        lastError: null,
+    });
+    saveWriteQueue();
+}
+loadWriteQueue();
+
+// Internal: low-level postBot WITHOUT queueing (used by retry-worker so it doesn't re-enqueue)
+async function _postBotRaw(path, body) {
+    return new Promise(resolve => {
+        const fullUrl = MAINBOT_URL + path;
+        if (!fullUrl.startsWith('http')) return resolve(null);
+        const lib = fullUrl.startsWith('https')?https:http;
+        const data = JSON.stringify(body);
+        const u = new url.URL(fullUrl);
+        const opts = {hostname:u.hostname,path:u.pathname+u.search,method:'POST',headers:{'Content-Type':'application/json','x-bridge-secret':BRIDGE_SECRET,'Content-Length':Buffer.byteLength(data)}};
+        const req = lib.request(opts, res=>{
+            let buf=''; res.on('data',c=>buf+=c);
+            res.on('end',()=>{ try { resolve(JSON.parse(buf)); } catch(e) { resolve(null); } });
+        });
+        req.on('error',()=>resolve(null));
+        req.setTimeout(15000, () => { req.destroy(); resolve(null); });
+        req.write(data); req.end();
+    });
+}
+
+// Background worker — alle 30s versucht queue abzuarbeiten
+setInterval(async () => {
+    if (_writeQueue.length === 0) return;
+    if (_mainbotConsecutiveFails > 0) return;  // Mainbot scheint down, warten bis fetchBot wieder erfolgreich
+    const batch = _writeQueue.splice(0, 10);
+    let processed = 0, requeued = 0, dropped = 0;
+    for (const item of batch) {
+        const result = await _postBotRaw(item.path, item.body);
+        if (result !== null) {
+            processed++;
+            _markMainbotSuccess();
+        } else {
+            item.attempts++;
+            item.lastError = 'mainbot-timeout';
+            _markMainbotFail();
+            if (item.attempts >= MAX_QUEUE_ATTEMPTS) {
+                dropped++;
+                console.error('[write-queue] DROPPED after ' + MAX_QUEUE_ATTEMPTS + ' attempts: ' + item.path + ' (id=' + item.id + ')');
+            } else {
+                _writeQueue.push(item);  // an Ende zurück
+                requeued++;
+            }
+        }
+    }
+    if (processed > 0 || dropped > 0) {
+        console.log('[write-queue] processed=' + processed + ' requeued=' + requeued + ' dropped=' + dropped + ' remaining=' + _writeQueue.length);
+        saveWriteQueue();
+    }
+}, 30000);
+
 async function postBot(path, body) {
     const _t0 = Date.now();
     const result = await new Promise(resolve => {
@@ -1158,6 +1260,12 @@ async function postBot(path, body) {
     // (TTL=0 erzwingt sofortigen Refresh beim nächsten fetchBot-Call). Refresh läuft async.
     _dataCacheTime = 0;
     refreshDataCache().catch(()=>{});
+    // MIGRATION-PHASE-2: Wenn Mainbot down war + Path ist idempotent → in Queue für Retry.
+    // Caller bekommt synthetic-ok zurück (optimistic) damit User keinen Fehler sieht.
+    if (!_ok && RETRYABLE_PATHS.has(path)) {
+        enqueueWrite(path, body);
+        return { ok: true, queued: true };
+    }
     return result;
 }
 
@@ -4122,6 +4230,11 @@ async function handleRequest(req, res) {
                 healthy: mainbotHealthy,
                 consecutiveFails: _mainbotConsecutiveFails,
                 lastSuccess: _lastMainbotSuccessAt ? new Date(_lastMainbotSuccessAt).toISOString() : null,
+            },
+            writeQueue: {
+                size: _writeQueue.length,
+                oldestAgeSec: _writeQueue.length > 0 ? Math.round((Date.now() - _writeQueue[0].ts) / 1000) : 0,
+                stuckCount: _writeQueue.filter(e => e.attempts >= 3).length,
             },
         }));
     }
