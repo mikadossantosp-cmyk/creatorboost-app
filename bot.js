@@ -201,7 +201,7 @@ function markClaimed(type, uid) {
     const today = getBerlinDate();
     _dailyClaims[type + ':' + uid + ':' + today] = Date.now();
     for (const k of Object.keys(_dailyClaims)) { const d = k.split(':').pop(); if (d !== today) delete _dailyClaims[k]; }
-    try { fs.writeFileSync(DAILY_CLAIMS_FILE, JSON.stringify(_dailyClaims)); } catch(e) {}
+    fs.writeFile(DAILY_CLAIMS_FILE, JSON.stringify(_dailyClaims), () => {});
 }
 
 // In-memory email send log (last 200 entries, not persisted across restarts)
@@ -298,7 +298,7 @@ function savePendingEmailConfirms() {
     for (const [k,v] of pendingEmailConfirms.entries()) pec[k] = v;
     const ect = {};
     for (const [k,v] of emailConfirmTokens.entries()) ect[k] = v;
-    try { fs.writeFileSync(PENDING_CONFIRMS_FILE, JSON.stringify({ pendingEmailConfirms: pec, emailConfirmTokens: ect })); } catch(e) { console.error('PendingConfirms save failed:', e.message); }
+    fs.writeFile(PENDING_CONFIRMS_FILE, JSON.stringify({ pendingEmailConfirms: pec, emailConfirmTokens: ect }), (e) => { if (e) console.error('PendingConfirms save failed:', e.message); });
 }
 setInterval(savePendingEmailConfirms, 60000);
 // Cleanup expired entries every 5 min
@@ -349,7 +349,7 @@ function loadRaffleHistory() {
     try { return JSON.parse(fs.readFileSync(RAFFLE_FILE, 'utf8')); } catch(e) { return { lastWinner: null, history: [] }; }
 }
 function saveRaffleHistory(d) {
-    try { fs.writeFileSync(RAFFLE_FILE, JSON.stringify(d)); } catch(e) { console.error('[Gewinnspiel] Save error:', e.message); }
+    fs.writeFile(RAFFLE_FILE, JSON.stringify(d), (e) => { if (e) console.error('[Gewinnspiel] Save error:', e.message); });
 }
 setInterval(async () => {
     try {
@@ -413,7 +413,7 @@ if (!VAPID_PUBLIC || !VAPID_PRIVATE) {
 const PUSH_SUBS_FILE = DATA_DIR + '/push_subscriptions.json';
 let pushSubs = {};
 try { if (fs.existsSync(PUSH_SUBS_FILE)) pushSubs = JSON.parse(fs.readFileSync(PUSH_SUBS_FILE, 'utf8')); } catch(e) { console.error('Push subs load failed:', e.message); }
-function savePushSubs() { try { fs.writeFileSync(PUSH_SUBS_FILE, JSON.stringify(pushSubs)); } catch(e) { console.error('Push subs save failed:', e.message); } }
+function savePushSubs() { fs.writeFile(PUSH_SUBS_FILE, JSON.stringify(pushSubs), (e) => { if (e) console.error('Push subs save failed:', e.message); }); }
 if (webpush) webpush.setVapidDetails('mailto:admin@creatorx.app', VAPID_PUBLIC, VAPID_PRIVATE);
 
 // ── Google Gemini API (Helper-Bot AI, kostenloser Tier) ──
@@ -940,11 +940,11 @@ function loadBetaTesters() {
     } catch (e) { console.error('beta_testers load failed:', e.message); _betaTesters = {}; }
 }
 function saveBetaTesters() {
-    try {
-        const tmp = BETA_TESTERS_FILE + '.tmp';
-        fs.writeFileSync(tmp, JSON.stringify(_betaTesters, null, 2));
-        fs.renameSync(tmp, BETA_TESTERS_FILE);
-    } catch (e) { console.error('beta_testers save failed:', e.message); }
+    const tmp = BETA_TESTERS_FILE + '.tmp';
+    fs.writeFile(tmp, JSON.stringify(_betaTesters, null, 2), (e) => {
+        if (e) { console.error('beta_testers save failed:', e.message); return; }
+        fs.rename(tmp, BETA_TESTERS_FILE, (re) => { if (re) console.error('beta_testers rename failed:', re.message); });
+    });
 }
 loadBetaTesters();
 
@@ -978,13 +978,11 @@ function logWrite(endpoint, body, response, success, durationMs) {
     if (_writeLogSaveTimer) return;
     _writeLogSaveTimer = setTimeout(() => {
         _writeLogSaveTimer = null;
-        try {
-            const tmp = APP_WRITES_LOG + '.tmp';
-            fs.writeFileSync(tmp, JSON.stringify(_writeLog.slice(-5000)));
-            fs.renameSync(tmp, APP_WRITES_LOG);
-        } catch(e) {
-            console.error('app_writes_log save failed:', e.message);
-        }
+        const tmp = APP_WRITES_LOG + '.tmp';
+        fs.writeFile(tmp, JSON.stringify(_writeLog.slice(-5000)), (e) => {
+            if (e) { console.error('app_writes_log save failed:', e.message); return; }
+            fs.rename(tmp, APP_WRITES_LOG, (re) => { if (re) console.error('app_writes_log rename failed:', re.message); });
+        });
     }, 3000);
 }
 function loadWriteLogFromDisk() {
@@ -1016,14 +1014,16 @@ function persistAppDb() {
     _appDbSaveTimer = setTimeout(() => {
         _appDbSaveTimer = null;
         if (!_dataCache) return;
-        try {
-            const tmp = APP_DB_FILE + '.tmp';
-            fs.writeFileSync(tmp, JSON.stringify(_dataCache));
-            fs.renameSync(tmp, APP_DB_FILE);  // atomic
-            _appDbLastSaveOk = new Date().toISOString();
-        } catch(e) {
-            console.error('app_db save failed:', e.message);
-        }
+        // PERFORMANCE: async write — vorher sync writeFileSync blockierte Event-Loop
+        // bei Multi-MB JSON oft 100-500ms (auf Railway 512MB-Instances).
+        const tmp = APP_DB_FILE + '.tmp';
+        fs.writeFile(tmp, JSON.stringify(_dataCache), (e) => {
+            if (e) { console.error('app_db save failed:', e.message); return; }
+            fs.rename(tmp, APP_DB_FILE, (re) => {
+                if (re) { console.error('app_db rename failed:', re.message); return; }
+                _appDbLastSaveOk = new Date().toISOString();
+            });
+        });
     }, 2000);
 }
 
@@ -7266,7 +7266,7 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
         lifetime.peakMembers = Math.max(lifetime.peakMembers || 0, members);
         lifetime.lastSnapshotPosts = currentPosts;
         lifetime.lastSnapshotLikes = totalLikes;
-        try { fs.writeFileSync(LIFETIME_FILE, JSON.stringify(lifetime)); } catch(e) {}
+        fs.writeFile(LIFETIME_FILE, JSON.stringify(lifetime), () => {});
 
         // Online jetzt — unique UIDs mit aktiver Session in den letzten ONLINE_WINDOW_MS.
         // Admins ausgenommen, damit Landing-Page-Zahl die echte Creator-Aktivität zeigt.
@@ -7700,7 +7700,7 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
             }
             _invalidatePinCache(_myUidPin);  // Cache: damit /feed sofort die neue Version sieht
             // Timestamp aktualisieren (auch bei Admin damit es konsistent bleibt)
-            try { fs.writeFileSync(tsFile, String(Date.now())); } catch(e) {}
+            fs.writeFile(tsFile, String(Date.now()), () => {});
             return json({ok:true});
         } catch(e) { return json({error:e.message},500); }
     }
@@ -12953,690 +12953,7 @@ setInterval(async()=>{
         res.writeHead(302, {'Location':'/nachrichten','Cache-Control':'no-store'});
         return res.end();
     }
-    if (path === '/nachrichten/gruppe/neu') {
-        return html(`
-<div class="topbar" style="background:linear-gradient(135deg,#0088cc,#006699)">
-  <a href="/nachrichten/gruppe" style="padding:8px;color:#fff;display:flex;align-items:center;text-decoration:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20"><polyline points="15 18 9 12 15 6"/></svg></a>
-  <div style="flex:1;text-align:center;font-weight:800;font-size:15px;color:#fff">Neuen Thread erstellen</div>
-  <div style="width:36px"></div>
-</div>
-<div style="padding:24px 16px 100px">
-  <div style="background:var(--bg2);border-radius:16px;padding:20px">
-    <div style="margin-bottom:16px">
-      <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">EMOJI</label>
-      <input id="neu-emoji" maxlength="2" value="💬" style="width:60px;font-size:24px;text-align:center;background:var(--bg4);border:1px solid var(--border);border-radius:10px;padding:8px;color:var(--text);outline:none">
-    </div>
-    <div style="margin-bottom:24px">
-      <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">THREAD NAME</label>
-      <input id="neu-name" placeholder="z.B. Ankündigungen" maxlength="128" style="width:100%;box-sizing:border-box;background:var(--bg4);border:1px solid var(--border);border-radius:10px;padding:12px 14px;color:var(--text);font-size:14px;outline:none">
-    </div>
-    <button onclick="createThread()" style="width:100%;padding:14px;background:linear-gradient(135deg,#0088cc,#006699);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer">Thread erstellen ✈️</button>
-    <div id="neu-status" style="margin-top:12px;text-align:center;font-size:13px;color:var(--muted)"></div>
-  </div>
-</div>
-<script>
-async function createThread(){
-  const name=document.getElementById('neu-name').value.trim();
-  const emoji=document.getElementById('neu-emoji').value.trim()||'💬';
-  if(!name)return;
-  document.getElementById('neu-status').textContent='Erstelle...';
-  const r=await fetch('/api/create-thread',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,emoji})});
-  const d=await r.json();
-  if(d.ok){setTimeout(()=>location.href='/nachrichten/gruppe',800);}
-  else document.getElementById('neu-status').textContent='❌ '+(d.error||'Fehler');
-}
-</script>`, 'messages');
-    }
-
-    // ── THREAD DETAIL ──
-    if (path.startsWith('/nachrichten/gruppe/') && path.length > '/nachrichten/gruppe/'.length) {
-        const threadId = decodeURIComponent(path.slice('/nachrichten/gruppe/'.length).split('?')[0]);
-        const botData = await fetchBot('/data');
-        if (!botData) return redirect('/nachrichten/gruppe');
-        // Letzten Lesestand SICHERN bevor wir mark-read aufrufen — für Ungelesen-Banner
-        const myLastReadTs = (botData.threadLastRead?.[myUid]?.[threadId]) || 0;
-        // Mark as read
-        await postBot('/mark-read', { uid: myUid, thread_id: threadId });
-        const threadEmojiPaletteD = ['🎯','🚀','💡','📊','🎨','🔥','⚡','🌟','📝','🎭','🏆','🎵','🧠','💎','🌈','🎮','📣','🛠️','🌍','🎬','📚','🍕','☕','🌙','🎁','🌊','⚽','🚴','🍀','✨','📷','🦄','🪐','🍎','🛸','🎪','🪄','🎲','🛹','🧭'];
-        function _isValidEmojiD(e){ return e && e.length >= 1 && e.length <= 4 && !/^\d+$/.test(e); }
-        // Greedy unique emoji assignment über alle Threads, damit Header-Emoji mit Listen-Emoji übereinstimmt
-        const _allThreads = botData.threads || [];
-        const _thrUsedD = new Set();
-        const _thrEmojiMapD = new Map();
-        _allThreads.forEach(t => {
-            const id = String(t.id);
-            if (id === 'general') { _thrEmojiMapD.set(id, '💬'); _thrUsedD.add('💬'); return; }
-            if (_isValidEmojiD(t.emoji)) { _thrEmojiMapD.set(id, t.emoji); _thrUsedD.add(t.emoji); }
-        });
-        _allThreads.forEach(t => {
-            const id = String(t.id);
-            if (_thrEmojiMapD.has(id)) return;
-            let h = 0;
-            for (let i = 0; i < id.length; i++) h = (h*31 + id.charCodeAt(i)) >>> 0;
-            let emoji = null;
-            for (let i = 0; i < threadEmojiPaletteD.length; i++) {
-                const cand = threadEmojiPaletteD[(h + i) % threadEmojiPaletteD.length];
-                if (!_thrUsedD.has(cand)) { emoji = cand; break; }
-            }
-            if (!emoji) emoji = threadEmojiPaletteD[h % threadEmojiPaletteD.length];
-            _thrEmojiMapD.set(id, emoji);
-            _thrUsedD.add(emoji);
-        });
-        const thrInfoRaw = _allThreads.find(t=>String(t.id)===threadId);
-        const thrInfo = {
-            name: thrInfoRaw?.name || (threadId==='general' ? 'Allgemein' : 'Thread '+threadId),
-            emoji: _thrEmojiMapD.get(threadId) || (threadId==='general' ? '💬' : threadEmojiPaletteD[0])
-        };
-        // Get messages: general uses communityFeed as fallback
-        let msgs = (botData.threadMessages||{})[threadId] || [];
-        if (!msgs.length && threadId==='general' && botData.communityFeed?.length) {
-            msgs = botData.communityFeed.map(m=>({ uid:'', tgName:m.username||null, name:m.name||m.username||'User', role:null, type:'text', text:m.text||'', mediaId:null, timestamp:m.timestamp, msg_id:m.msg_id }));
-        }
-        const msgsJson = JSON.stringify(msgs).replace(/<\/script>/gi, '<\\/script>');
-        const _adminIdsList = Array.isArray(botData._adminIds) ? botData._adminIds.map(Number) : [];
-        const isAdmin = _adminIdsList.includes(Number(myUid)) || ((botData.users?.[myUid]) && String(botData.users[myUid].role||'').includes('Admin'));
-        const ringMap = {};
-        Object.entries(botData.users||{}).forEach(([uid, u]) => { const s=getRingBoxShadow(u); if(s) ringMap[uid]=s; });
-        const ringMapJson = JSON.stringify(ringMap);
-        // Server-seitiges HTML-Rendering der Nachrichten (zuverlässig, kein JS nötig)
-        const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-        const COLORS_SSR = ['#ff6b6b','#cc5de8','#4dabf7','#ffd43b','#00c851','#ff9f43','#0088cc'];
-        const colSSR = n => COLORS_SSR[((n||'').charCodeAt(0)||0)%COLORS_SSR.length];
-        let unreadInsertedSSR = false;
-        const initialMsgsHtml = msgs.length
-            ? [...msgs].reverse().map((m, mi, arr) => {
-                const c = colSSR(m.name);
-                const ini = ((m.name||'?').replace(/^@/,'')||'?')[0].toUpperCase();
-                const ring = m.uid && ringMap[m.uid] ? ringMap[m.uid] : '';
-                const ts = new Date(m.timestamp);
-                const timeStr = String(ts.getHours()).padStart(2,'0')+':'+String(ts.getMinutes()).padStart(2,'0');
-                const isMeS = m.uid && String(m.uid) === String(myUid);
-                // Avatar nur bei letzter Nachricht der Sender-Serie (Telegram-Style)
-                const next = arr[mi + 1];
-                const isLastInSeries = !next || String(next.uid) !== String(m.uid) || ((next.timestamp||0) - (m.timestamp||0)) > 5*60*1000;
-                const showAvatar = isLastInSeries;
-                // Reply-Quote
-                const replyBlock = m.replyTo ? `<div class="thr-reply-quote" style="border-left:3px solid ${isMeS?'rgba(255,255,255,0.7)':c};padding:5px 9px;margin:0 0 5px 0;border-radius:0 6px 6px 0;font-size:12.5px;line-height:1.4"><div style="font-weight:800;font-size:11.5px;${isMeS?'color:rgba(255,255,255,0.95)':'color:'+c}">${esc(m.replyTo.name||'?')}</div><div style="opacity:0.85;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc((m.replyTo.text||'').slice(0,80))}</div></div>` : '';
-                // Bubble theme-aware: own = lila Gradient (rechts), other = neutral
-                const nameInBubble = isMeS ? '' : (m.uid
-                    ? `<a href="/profil/${esc(m.uid)}" style="font-size:15.5px;font-weight:800;color:${c};text-decoration:none;display:block;margin-bottom:3px">${m.role?esc(m.role)+' ':''}${esc(m.name)}</a>`
-                    : `<div style="font-size:15.5px;font-weight:800;color:${c};margin-bottom:3px">${m.role?esc(m.role)+' ':''}${esc(m.name)}</div>`);
-                const textBody = m.text ? `<div class="thr-text" style="font-size:19px;line-height:1.45;word-break:break-word">${esc(m.text)}</div>` : '';
-                const timeFooter = `<div class="thr-time" style="font-size:11px;text-align:right;margin-top:3px;font-variant-numeric:tabular-nums;opacity:0.65">${timeStr}</div>`;
-                const canDelSSR = (m.uid && String(m.uid) === String(myUid)) || isAdmin;
-                const swipeAttrs = ` data-del-ts="${m.timestamp}" data-del-mid="${m.msg_id||0}"${canDelSSR ? ' data-can-del="1"' : ''}`;
-                const bubble = `<div class="thr-bubble${isMeS?' thr-bubble-me':''}">${nameInBubble}${replyBlock}${textBody}${timeFooter}</div>`;
-                const avatarSlot = showAvatar
-                    ? `<a href="/profil/${esc(m.uid)}" style="text-decoration:none;flex-shrink:0"><div style="width:30px;height:30px;border-radius:50%;background:${c};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;position:relative;overflow:hidden${ring}">${ini}${m.uid?`<img src="/appbild/${esc(m.uid)}/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" onerror="this.remove()" loading="lazy">`:''}</div></a>`
-                    : `<div style="width:30px;flex-shrink:0"></div>`;
-                let bannerPrefix = '', firstUnreadId = '';
-                if (!unreadInsertedSSR && myLastReadTs > 0 && (m.timestamp||0) > myLastReadTs && !isMeS) {
-                    bannerPrefix = `<div id="unread-divider" class="thread-unread-divider" onclick="document.getElementById('first-unread')?.scrollIntoView({behavior:'smooth',block:'center'})"><span>Ungelesene Nachrichten</span><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg></div>`;
-                    firstUnreadId = ' id="first-unread"';
-                    unreadInsertedSSR = true;
-                }
-                const trashEl = '<div class="thr-swipe-trash" aria-hidden="true">↩️</div>';
-                return bannerPrefix + `<div class="thr-row${isMeS?' thr-row-me':''}"${swipeAttrs}${firstUnreadId}>${avatarSlot}<div class="thr-row-inner">${bubble}</div>${trashEl}</div>`;
-              }).join('')
-            : '<div style="text-align:center;padding:60px 20px;color:var(--muted)"><div style="font-size:40px;margin-bottom:12px">💬</div><div style="font-size:14px">Noch keine Nachrichten.<br>Schreib die erste!</div></div>';
-        return html(`
-<div class="topbar" style="position:sticky;top:0;z-index:10;background:linear-gradient(135deg,#0088cc,#006699)">
-  <a href="/nachrichten/gruppe" style="padding:8px;color:#fff;display:flex;align-items:center;text-decoration:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20"><polyline points="15 18 9 12 15 6"/></svg></a>
-  <div style="flex:1;text-align:center">
-    <div style="font-weight:800;font-size:18px;color:#fff;letter-spacing:-0.2px">${thrInfo.emoji} ${thrInfo.name}</div>
-    <div style="font-size:12.5px;color:rgba(255,255,255,0.75);font-weight:600;margin-top:1px">${msgs.length} Nachrichten</div>
-  </div>
-  <div style="width:36px"></div>
-</div>
-<style>
-.thread-unread-divider{display:flex;align-items:center;justify-content:center;gap:6px;margin:14px 0 6px;padding:8px 12px;background:rgba(8,102,255,0.12);border:1px solid rgba(8,102,255,0.25);border-radius:12px;color:#4dabf7;font-size:12.5px;font-weight:700;letter-spacing:0.2px;cursor:pointer;transition:background 0.15s,transform 0.15s}
-.thread-unread-divider:active{background:rgba(8,102,255,0.18);transform:scale(0.98)}
-.thr-row{position:relative;overflow:visible;touch-action:pan-y;display:flex;gap:8px;align-items:flex-end;animation:thr-row-in 0.2s ease}
-@keyframes thr-row-in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
-.thr-row .thr-row-inner{flex:1;min-width:0;display:flex;justify-content:flex-start;transition:transform 0.25s cubic-bezier(0.34,1.56,0.64,1)}
-.thr-row.swiping .thr-row-inner{transition:none}
-.thr-row-me{flex-direction:row-reverse}
-.thr-row-me .thr-row-inner{justify-content:flex-end}
-.thr-bubble{position:relative;display:inline-block;max-width:78%;padding:9px 13px 7px 13px;border-radius:16px;background:#e5e5ea;color:#0f172a;box-shadow:0 1px 2px rgba(15,23,42,0.06)}
-[data-theme=dark] .thr-bubble{background:#2c2c2e;color:#f5f5f7;box-shadow:0 1px 2px rgba(0,0,0,0.3)}
-.thr-bubble-me{background:linear-gradient(135deg,#a78bfa,#7c3aed)!important;color:#fff!important;box-shadow:0 4px 14px rgba(124,58,237,0.20)!important}
-.thr-row-me .thr-bubble{border-radius:16px 16px 4px 16px}
-.thr-row:not(.thr-row-me) .thr-bubble{border-radius:16px 16px 16px 4px}
-.thr-bubble-me .thr-time{color:rgba(255,255,255,0.85)}
-.thr-bubble-me .thr-reply-quote{background:rgba(255,255,255,0.18)}
-.thr-bubble:not(.thr-bubble-me) .thr-reply-quote{background:rgba(15,23,42,0.06)}
-.thr-swipe-trash{position:absolute;right:14px;top:50%;transform:translateY(-50%);width:42px;height:42px;border-radius:50%;background:var(--surface-tint);border:1px solid var(--border2);color:var(--text);font-size:20px;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.15s,transform 0.15s;z-index:1}
-.thr-row-me .thr-swipe-trash{right:auto;left:14px}
-.thr-row.selected .thr-bubble{box-shadow:0 0 0 2px rgba(167,139,250,0.5),0 8px 32px rgba(15,23,42,0.18);transform:scale(1.02)}
-.thr-del-btn{display:none}
-/* Telegram-Style Action-Menu für Threads — Unified Picker */
-.thr-react-picker{position:fixed;z-index:9999;background:var(--bg);border:1px solid var(--border);border-radius:16px;padding:8px;box-shadow:0 16px 40px rgba(15,23,42,0.20);display:none;flex-direction:column;gap:4px;min-width:220px;max-width:280px}
-.thr-react-picker.show{display:flex;animation:thr-pop 0.25s cubic-bezier(0.34,1.56,0.64,1)}
-.thr-react-picker .crp-emojis{display:flex;gap:2px;padding:2px 4px 6px;border-bottom:1px solid var(--border2);justify-content:space-between}
-.thr-react-picker .crp-emojis button{background:none;border:none;font-size:26px;padding:4px;cursor:pointer;transition:transform 0.18s cubic-bezier(0.34,1.56,0.64,1);border-radius:50%;flex:1}
-.thr-react-picker .crp-emojis button:active{transform:scale(1.4)}
-.thr-react-picker .crp-actions{display:flex;flex-direction:column;padding-top:4px;gap:1px}
-.thr-react-picker .crp-action{display:flex;align-items:center;gap:12px;padding:11px 14px;background:none;border:none;color:var(--text);font-size:15px;font-weight:600;cursor:pointer;border-radius:10px;transition:background 0.12s;text-align:left;width:100%}
-.thr-react-picker .crp-action:active{background:var(--surface-tint)}
-.thr-react-picker .crp-action.danger{color:#ef4444}
-.thr-react-picker .crp-action .crp-icon{font-size:18px;width:24px;text-align:center}
-@keyframes thr-pop{from{transform:scale(0.85) translateY(8px);opacity:0}to{transform:scale(1) translateY(0);opacity:1}}
-.thr-select-bd{position:fixed;inset:0;background:rgba(0,0,0,0.42);backdrop-filter:blur(2px);z-index:9998;display:none}
-.thr-select-bd.show{display:block;animation:thr-fade .18s ease}
-@keyframes thr-fade{from{opacity:0}to{opacity:1}}
-</style>
-<div id="thr-react-picker" class="thr-react-picker">
-  <div class="crp-emojis">
-    <button type="button" onclick="thrReactWith('❤️')">❤️</button>
-    <button type="button" onclick="thrReactWith('😂')">😂</button>
-    <button type="button" onclick="thrReactWith('😮')">😮</button>
-    <button type="button" onclick="thrReactWith('😢')">😢</button>
-    <button type="button" onclick="thrReactWith('👏')">👏</button>
-    <button type="button" onclick="thrReactWith('🔥')">🔥</button>
-  </div>
-  <div class="crp-actions">
-    <button type="button" class="crp-action" onclick="thrDoReply()"><span class="crp-icon">↩️</span><span>Antworten</span></button>
-    <button type="button" class="crp-action" onclick="thrDoCopy()"><span class="crp-icon">📋</span><span>Kopieren</span></button>
-    <button type="button" class="crp-action danger" id="thr-del-btn" onclick="thrDoDelete()" style="display:none"><span class="crp-icon">🗑️</span><span>Löschen</span></button>
-  </div>
-</div>
-<div id="msgs" style="padding:12px 12px 165px;display:flex;flex-direction:column;gap:10px;overflow-x:hidden;min-width:0;width:100%">${initialMsgsHtml}</div>
-<script>
-(function(){
-  const TID='${threadId}';
-  function scrollInit(){
-    const ud=document.getElementById('unread-divider');
-    if(ud) ud.scrollIntoView({behavior:'instant',block:'center'});
-    else window.scrollTo(0,document.body.scrollHeight);
-  }
-  scrollInit();
-  window.addEventListener('load', scrollInit);
-  const LONG_PRESS_MS=480, LP_ABORT_PX=8, SWIPE_START_PX=4, SWIPE_VERT_ABORT_PX=14, SWIPE_COMMIT_PX=40, SWIPE_CAP_PX=90;
-  // Swipe-Trash-Element wird zur Reply-Pfeil
-  document.querySelectorAll('.thr-swipe-trash').forEach(el => { el.textContent = '↩️'; });
-  let _activeRow = null, _lastShow = 0;
-  function thrShowMenu(row){
-    if (!row) return;
-    _activeRow = row;
-    _lastShow = Date.now();
-    const canDel = row.dataset.canDel === '1';
-    document.getElementById('thr-del-btn').style.display = canDel ? 'flex' : 'none';
-    // Backdrop — onclick delayed
-    let bd = document.getElementById('thr-select-bd');
-    if (!bd) { bd = document.createElement('div'); bd.id = 'thr-select-bd'; bd.className = 'thr-select-bd'; document.body.appendChild(bd); }
-    bd.onclick = null;
-    bd.classList.add('show');
-    setTimeout(() => { if (bd) bd.onclick = thrHideMenu; }, 320);
-    // Picker oben oder unten neben bubble
-    const picker = document.getElementById('thr-react-picker');
-    const bubble = row.querySelector('.thr-bubble');
-    document.querySelectorAll('.thr-row.selected').forEach(r => r.classList.remove('selected'));
-    row.classList.add('selected');
-    picker.classList.add('show');
-    if (bubble) {
-      const r = bubble.getBoundingClientRect();
-      const ph = picker.offsetHeight || 200;
-      const pw = picker.offsetWidth || 240;
-      const left = Math.max(8, Math.min(window.innerWidth - pw - 8, r.left + r.width / 2 - pw / 2));
-      picker.style.left = left + 'px';
-      const above = r.top - ph - 12;
-      const below = r.bottom + 12;
-      picker.style.top = (above >= 12 ? above : Math.min(below, window.innerHeight - ph - 12)) + 'px';
-    }
-    if (navigator.vibrate) navigator.vibrate(15);
-  }
-  function thrHideMenu(){
-    document.getElementById('thr-react-picker')?.classList.remove('show');
-    document.getElementById('thr-select-bd')?.classList.remove('show');
-    document.querySelectorAll('.thr-row.selected').forEach(r => r.classList.remove('selected'));
-    _activeRow = null;
-  }
-  window.thrDoReply = function(){
-    if (!_activeRow) return;
-    const ts = Number(_activeRow.dataset.delTs);
-    thrHideMenu();
-    if (typeof window.setReply === 'function') window.setReply(ts);
-  };
-  window.thrDoCopy = async function(){
-    if (!_activeRow) return;
-    const txt = _activeRow.querySelector('.thr-bubble div[style*="line-height:1.42"]')?.textContent?.trim()
-      || _activeRow.querySelector('.thr-bubble')?.textContent?.trim() || '';
-    thrHideMenu();
-    if (!txt) return;
-    try { await navigator.clipboard.writeText(txt);
-      const t=document.getElementById('toast'); if(t){t.textContent='📋 Kopiert';t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1400);}
-    } catch(e){ alert('Kopieren fehlgeschlagen'); }
-  };
-  window.thrDoDelete = async function(){
-    if (!_activeRow) return;
-    if (!confirm('Nachricht wirklich löschen?')) return;
-    const ts = _activeRow.dataset.delTs, mid = _activeRow.dataset.delMid || 0;
-    const target = _activeRow;
-    thrHideMenu();
-    try {
-      const r = await fetch('/api/delete-thread-msg', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({threadId: TID, timestamp: Number(ts), msgId: Number(mid)||null}) });
-      const d = await r.json();
-      if (d.ok) { target.style.transition='all 0.2s'; target.style.opacity='0'; target.style.transform='translateX(-100%)'; setTimeout(()=>target.remove(),200); }
-      else alert('Fehler: '+(d.error||'unbekannt'));
-    } catch(e2) { alert('Netzwerkfehler: '+e2.message); }
-  };
-  window.thrReactWith = function(emoji){
-    if (!_activeRow) return;
-    const ts = Number(_activeRow.dataset.delTs);
-    thrHideMenu();
-    if (!ts) return;
-    fetch('/api/react-thread-msg',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({threadId:TID,timestamp:ts,emoji})}).catch(()=>{});
-  };
-  document.addEventListener('click', e => {
-    if (Date.now() - _lastShow < 350) return;
-    const picker = document.getElementById('thr-react-picker');
-    if (picker?.classList.contains('show') && !picker.contains(e.target) && !e.target.closest('.thr-bubble')) thrHideMenu();
-  });
-  // Pointer-State für Long-Press UND Swipe-Reply
-  let row=null, x0=0, y0=0, pid=null, lpTimer=null, swiping=false, committed=false;
-  function reset(commit){
-    if (!row) return;
-    const inner = row.querySelector('.thr-row-inner'), tr = row.querySelector('.thr-swipe-trash');
-    if (inner) { inner.style.transition='transform 0.22s'; inner.style.transform = ''; }
-    if (tr) tr.style.opacity = '0';
-    row.classList.remove('swiping');
-    if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; }
-    row = null; pid = null; swiping = false; committed = false;
-  }
-  document.addEventListener('pointerdown', e => {
-    if (e.pointerType==='mouse' && e.button!==0) return;
-    const r = e.target.closest && e.target.closest('.thr-row');
-    if (!r) return;
-    row = r; x0 = e.clientX; y0 = e.clientY; pid = e.pointerId; swiping = false; committed = false;
-    const inner = r.querySelector('.thr-row-inner');
-    if (inner) inner.style.transition = 'none';
-    lpTimer = setTimeout(() => {
-      if (!row || swiping) return;
-      committed = true;
-      thrShowMenu(row);
-      reset(false);
-    }, LONG_PRESS_MS);
-  }, { passive: true, capture: true });
-  document.addEventListener('pointermove', e => {
-    if (!row || e.pointerId !== pid) return;
-    const dx = e.clientX - x0, dy = e.clientY - y0;
-    if (!swiping && (Math.abs(dx) > LP_ABORT_PX || Math.abs(dy) > LP_ABORT_PX) && lpTimer) { clearTimeout(lpTimer); lpTimer = null; }
-    if (!swiping && Math.abs(dy) > SWIPE_VERT_ABORT_PX && Math.abs(dy) > Math.abs(dx)) { reset(false); return; }
-    if (dx < -SWIPE_START_PX && Math.abs(dx) > Math.abs(dy)) {
-      swiping = true;
-      row.classList.add('swiping');
-      const cap = Math.max(-SWIPE_CAP_PX, dx);
-      const inner = row.querySelector('.thr-row-inner');
-      if (inner) inner.style.transform = 'translateX(' + cap + 'px)';
-      const tr = row.querySelector('.thr-swipe-trash');
-      if (tr) tr.style.opacity = String(Math.min(1, Math.abs(cap)/55));
-    }
-  }, { passive: true, capture: true });
-  document.addEventListener('pointerup', e => {
-    if (!row || committed) return;
-    if (!swiping) { reset(false); return; }
-    const dx = e.clientX - x0;
-    const ts = Number(row.dataset.delTs);
-    if (dx <= -SWIPE_COMMIT_PX) {
-      reset(false);
-      if (navigator.vibrate) navigator.vibrate(15);
-      if (typeof window.setReply === 'function' && ts) window.setReply(ts);
-    } else reset(false);
-  }, { passive: true, capture: true });
-  document.addEventListener('pointercancel', () => reset(false), { passive: true });
-})();
-</script>
-<div id="reply-bar" style="display:none;position:fixed;bottom:calc(108px + var(--safe-bottom));left:8px;right:8px;padding:10px 12px 10px 14px;background:var(--bg);border:1px solid var(--border);border-left:3px solid #a78bfa;border-radius:14px;align-items:center;gap:10px;z-index:6;box-sizing:border-box;box-shadow:0 -4px 18px rgba(15,23,42,.10)">
-  <div style="font-size:18px;flex-shrink:0">↩️</div>
-  <div style="flex:1;min-width:0"><span id="reply-name" style="font-size:13px;font-weight:800;color:#a78bfa;display:block;letter-spacing:0.1px"></span><span id="reply-text" style="font-size:13px;color:var(--text);display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:calc(100vw - 90px);font-weight:500;margin-top:1px"></span></div>
-  <button onclick="cancelReply()" style="background:var(--surface-tint);border:1px solid var(--border2);color:var(--text);font-size:14px;cursor:pointer;flex-shrink:0;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center">✕</button>
-</div>
-<div id="react-picker" style="display:none;position:fixed;bottom:calc(112px + var(--safe-bottom));left:50%;transform:translateX(-50%);background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:10px 14px;z-index:10;box-shadow:0 4px 24px rgba(0,0,0,.5)">
-  <div style="display:flex;gap:6px;align-items:center">
-    ${['👍','❤️','😂','😮','🔥','💎'].map(e=>`<button onclick="pickReact('${e}')" style="background:none;border:none;font-size:24px;cursor:pointer;padding:4px;border-radius:10px;transition:transform .15s" onmouseenter="this.style.transform='scale(1.3)'" onmouseleave="this.style.transform=''">${e}</button>`).join('')}
-    <button onclick="closeReactPicker()" style="background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer;padding:4px 8px;margin-left:4px">✕</button>
-  </div>
-</div>
-<div style="position:fixed;bottom:calc(60px + var(--safe-bottom));left:0;right:0;padding:8px 12px;background:var(--bg2);border-top:1px solid var(--border);display:flex;gap:8px;align-items:flex-end;z-index:5;box-sizing:border-box;max-width:100vw">
-  <textarea id="inp" placeholder="Schreibe etwas..." rows="1" style="flex:1;background:var(--bg4);border:1px solid #0088cc44;border-radius:20px;padding:10px 16px;color:var(--text);font-size:14px;resize:none;outline:none;line-height:1.4;max-height:120px" oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px'" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();send();}"></textarea>
-  <button onclick="send()" style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#0088cc,#006699);border:none;color:#fff;font-size:18px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center">✈️</button>
-</div>
-<script>
-(function(){
-  const TID='${threadId}';
-  const MY_UID='${myUid}';
-  const MY_LAST_READ=${myLastReadTs};
-  const IS_ADMIN=${isAdmin};
-  const RING_MAP=${ringMapJson};
-  const COLORS=['#ff6b6b','#cc5de8','#4dabf7','#ffd43b','#00c851','#ff9f43','#0088cc'];
-  function col(n){return COLORS[((n||'').charCodeAt(0)||0)%COLORS.length];}
-  function ini(n){return((n||'?').replace(/^@/,'')||'?')[0].toUpperCase();}
-  function t(ts){const d=new Date(ts);return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');}
-  function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-  let knownHash='';
-  let replyState=null;
-  window._lastMsgs=[];
-  function msgHash(msgs){return msgs.reduce((a,m)=>a+'|'+m.timestamp+(m.reactions?JSON.stringify(m.reactions):''),'')}
-  function render(msgs){
-    const el=document.getElementById('msgs');
-    if(!el)return;
-    const h=msgHash(msgs);
-    if(h===knownHash)return;
-    const atBottom=window.innerHeight+window.scrollY>=document.body.scrollHeight-80;
-    knownHash=h;
-    window._lastMsgs=msgs;
-    if(!msgs.length){el.innerHTML='<div style="text-align:center;padding:60px 20px;color:var(--muted)"><div style="font-size:40px;margin-bottom:12px">💬</div><div style="font-size:14px">Noch keine Nachrichten.<br>Schreib die erste!</div></div>';return;}
-    let unreadInsertedJS=false;
-    el.innerHTML=[...msgs].reverse().map((m, mi, arr)=>{
-      const c=col(m.name);
-      const ts=t(m.timestamp);
-      const isMe = m.uid && String(m.uid) === String(MY_UID);
-      const next = arr[mi + 1];
-      const isLastInSeries = !next || String(next.uid) !== String(m.uid) || ((next.timestamp||0) - (m.timestamp||0)) > 5*60*1000;
-      const showAvatar = isLastInSeries;
-      const nameInBubble = isMe ? '' : (m.uid
-        ? '<a href="/profil/'+m.uid+'" style="font-size:15.5px;font-weight:800;color:'+c+';text-decoration:none;display:block;margin-bottom:3px">'+(m.role?esc(m.role)+' ':'')+esc(m.name)+'</a>'
-        : '<div style="font-size:15.5px;font-weight:800;color:'+c+';margin-bottom:3px">'+(m.role?esc(m.role)+' ':'')+esc(m.name)+'</div>');
-      const replyBlock = m.replyTo ? '<div class="thr-reply-quote" style="border-left:3px solid '+(isMe?'rgba(255,255,255,0.7)':c)+';padding:5px 9px;margin:0 0 5px 0;border-radius:0 6px 6px 0;font-size:12.5px;line-height:1.4"><div style="font-weight:800;font-size:11.5px;'+(isMe?'color:rgba(255,255,255,0.95)':'color:'+c)+'">'+esc(m.replyTo.name||'?')+'</div><div style="opacity:0.85;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc((m.replyTo.text||'').slice(0,80))+'</div></div>' : '';
-      let media='';
-      if(m.type==='photo'&&m.mediaId)media='<img src="/api/tg-file/'+m.mediaId+'" style="max-width:100%;border-radius:10px;margin:0 0 5px;display:block" loading="lazy">';
-      else if(m.type==='sticker'&&m.mediaId)media='<img src="/api/tg-file/'+m.mediaId+'" style="width:80px;height:80px;object-fit:contain;display:block;margin:0 0 5px" loading="lazy">';
-      else if(m.type==='video')media='<div style="background:rgba(0,0,0,.3);border-radius:10px;padding:8px 12px;font-size:12px;color:var(--muted);margin:0 0 5px">🎬 Video — öffne Telegram zum Ansehen</div>';
-      const textBody = m.text ? '<div class="thr-text" style="font-size:19px;line-height:1.45;word-break:break-word">'+esc(m.text)+'</div>' : '';
-      const timeFooter = '<div class="thr-time" style="font-size:11px;text-align:right;margin-top:3px;font-variant-numeric:tabular-nums;opacity:0.65">'+ts+'</div>';
-      const canDel=(m.uid&&String(m.uid)===String(MY_UID))||IS_ADMIN;
-      const swipeAttrsJS = ' data-del-ts="'+m.timestamp+'" data-del-mid="'+(m.msg_id||0)+'"'+(canDel ? ' data-can-del="1"' : '');
-      const reactBadges=m.reactions&&Object.keys(m.reactions).length?'<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:5px">'+Object.entries(m.reactions).map(([em,uids])=>'<button onclick="react('+m.timestamp+',\''+em+'\')" style="background:'+(uids.includes(MY_UID)?'rgba(167,139,250,.25)':'var(--surface-tint)')+';border:1px solid var(--border2);border-radius:20px;padding:2px 7px;font-size:11px;cursor:pointer;color:var(--text)">'+em+' '+uids.length+'</button>').join('')+'</div>':'';
-      const ring=m.uid&&RING_MAP[m.uid]?RING_MAP[m.uid]:'';
-      const bubble = '<div class="thr-bubble'+(isMe?' thr-bubble-me':'')+'">'+nameInBubble+replyBlock+media+textBody+timeFooter+'</div>';
-      const avatarSlot = showAvatar
-        ? '<a href="/profil/'+m.uid+'" style="text-decoration:none;flex-shrink:0"><div style="width:30px;height:30px;border-radius:50%;background:'+c+';display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;position:relative;overflow:hidden'+ring+'">'+ini(m.name)+(m.uid?'<img src="/appbild/'+m.uid+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" onerror="this.remove()" loading="lazy">':'')+'</div></a>'
-        : '<div style="width:30px;flex-shrink:0"></div>';
-      let banner='', firstUnreadId='';
-      if (!unreadInsertedJS && MY_LAST_READ > 0 && (m.timestamp||0) > MY_LAST_READ && !isMe) {
-        banner = '<div id="unread-divider" class="thread-unread-divider" onclick="document.getElementById(\'first-unread\')?.scrollIntoView({behavior:\'smooth\',block:\'center\'})"><span>Ungelesene Nachrichten</span><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg></div>';
-        firstUnreadId=' id="first-unread"';
-        unreadInsertedJS=true;
-      }
-      const trashElJS = '<div class="thr-swipe-trash" aria-hidden="true">↩️</div>';
-      return banner+'<div class="thr-row'+(isMe?' thr-row-me':'')+'"'+swipeAttrsJS+firstUnreadId+'>'+avatarSlot+'<div class="thr-row-inner">'+bubble+reactBadges+'</div>'+trashElJS+'</div>';
-    }).join('');
-    if(atBottom){
-      const ud=document.getElementById('unread-divider');
-      if(ud&&!window._thrUnreadScrolled){ ud.scrollIntoView({behavior:'instant',block:'center'}); window._thrUnreadScrolled=true; }
-      else window.scrollTo(0,document.body.scrollHeight);
-    }
-  }
-  // ── Event-Delegation für Mülleimer-Button (robuster als inline onclick) ──
-  document.addEventListener('click', function(ev){
-    const btn = ev.target.closest && ev.target.closest('[data-trash-ts]');
-    if (!btn) return;
-    ev.preventDefault(); ev.stopPropagation();
-    const ts = Number(btn.dataset.trashTs); const mid = Number(btn.dataset.trashMid)||0;
-    if (typeof window.deleteMsg === 'function') window.deleteMsg(ts, mid);
-  }, true);
-  document.addEventListener('touchend', function(ev){
-    const btn = ev.target.closest && ev.target.closest('[data-trash-ts]');
-    if (!btn) return;
-    ev.preventDefault(); ev.stopPropagation();
-    const ts = Number(btn.dataset.trashTs); const mid = Number(btn.dataset.trashMid)||0;
-    if (typeof window.deleteMsg === 'function') window.deleteMsg(ts, mid);
-  }, { capture: true, passive: false });
-
-  // ── Swipe-to-Delete (für Admins, iOS-Style) ──
-  if (IS_ADMIN) {
-    let swRow = null, swStartX = 0, swStartY = 0, swActive = false, swMid = 0, swTs = 0;
-    document.addEventListener('touchstart', function(e){
-      const row = e.target.closest && e.target.closest('#msgs > div');
-      if (!row) return;
-      const btn = row.querySelector('[data-trash-ts]'); if (!btn) return;
-      swRow = row; swActive = false;
-      swStartX = e.touches[0].clientX; swStartY = e.touches[0].clientY;
-      swTs = Number(btn.dataset.trashTs); swMid = Number(btn.dataset.trashMid)||0;
-      row.style.transition = 'none';
-    }, { passive: true });
-    document.addEventListener('touchmove', function(e){
-      if (!swRow) return;
-      const dx = e.touches[0].clientX - swStartX;
-      const dy = Math.abs(e.touches[0].clientY - swStartY);
-      if (dy > 18) { swRow.style.transform = ''; swRow.style.background = ''; swRow = null; return; }
-      const cap = Math.max(-150, Math.min(0, dx));
-      if (cap < -8) {
-        swActive = true;
-        swRow.style.transform = 'translateX(' + cap + 'px)';
-        const intensity = Math.min(1, Math.abs(cap)/120);
-        swRow.style.background = 'linear-gradient(90deg, transparent ' + (100 - intensity*40) + '%, rgba(239,68,68,' + (intensity*0.6) + '))';
-      }
-    }, { passive: true });
-    document.addEventListener('touchend', function(){
-      if (!swRow) return;
-      const t = swRow.style.transform || '';
-      const m = t.match(/translateX\((-?\d+)px\)/);
-      const dx = m ? Number(m[1]) : 0;
-      swRow.style.transition = 'transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.2s';
-      if (swActive && dx <= -100 && swTs) {
-        swRow.style.transform = 'translateX(-100%)';
-        swRow.style.background = 'rgba(239,68,68,0.4)';
-        if (navigator.vibrate) navigator.vibrate(20);
-        setTimeout(() => { if (typeof window.deleteMsg === 'function') window.deleteMsg(swTs, swMid); }, 100);
-      } else {
-        swRow.style.transform = ''; swRow.style.background = '';
-      }
-      swRow = null; swActive = false;
-    });
-  }
-
-  // Initial render already done server-side; set knownHash to avoid blank re-render
-  render(${msgsJson});
-  // Scroll to bottom on load
-  window.scrollTo(0,document.body.scrollHeight);
-  async function load(){
-    try{
-      const r=await fetch('/api/thread-messages/'+encodeURIComponent(TID));
-      if(r.ok){const d=await r.json();if(d.messages?.length)render(d.messages);}
-    }catch(e){}
-  }
-  load();
-  window.send=async function(){
-    const el=document.getElementById('inp');const text=el.value.trim();if(!text)return;
-    el.value='';el.style.height='auto';
-    const body={text,thread_id:TID};
-    if(replyState)body.replyTo=replyState;
-    const r=await fetch('/api/send-thread-message',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-    const d=await r.json();
-    if(!d.ok){el.value=text;toast('❌ '+(d.error||'Fehler'));}
-    else{cancelReply();setTimeout(load,1200);}
-  };
-  window.deleteMsg=function(ts,msgId){
-    let modal=document.getElementById('del-modal');
-    if(!modal){
-      modal=document.createElement('div');
-      modal.id='del-modal';
-      modal.style.cssText='position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.6);display:flex;align-items:flex-end;justify-content:center;padding-bottom:calc(20px + var(--safe-bottom,0px))';
-      document.body.appendChild(modal);
-    }
-    modal.innerHTML='<div style="background:var(--bg3);border-radius:20px 20px 16px 16px;padding:20px 20px 12px;width:100%;max-width:420px;text-align:center"><div style="font-size:15px;font-weight:700;margin-bottom:6px">Nachricht löschen?</div><div style="font-size:13px;color:var(--muted);margin-bottom:18px">Diese Aktion kann nicht rückgängig gemacht werden.</div><div style="display:flex;gap:10px"><button onclick="document.getElementById(\'del-modal\').style.display=\'none\'" style="flex:1;padding:12px;border-radius:12px;border:1px solid var(--border2);background:var(--bg4);color:var(--text);font-size:14px;font-weight:600;cursor:pointer">Abbrechen</button><button id="del-confirm-btn" style="flex:1;padding:12px;border-radius:12px;border:none;background:#ef4444;color:#fff;font-size:14px;font-weight:700;cursor:pointer">🗑️ Löschen</button></div></div>';
-    modal.style.display='flex';
-    document.getElementById('del-confirm-btn').onclick=async function(){
-      modal.style.display='none';
-      const r=await fetch('/api/delete-thread-msg',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({threadId:TID,timestamp:ts,msgId:msgId||null})});
-      const d=await r.json();
-      if(d.ok){knownHash='';await load();toast('✅ Gelöscht');}else toast('❌ '+(d.error||'Fehler'));
-    };
-  };
-  window.setReply=function(ts){
-    const m=(window._lastMsgs||[]).find(m=>m.timestamp===ts);
-    if(!m)return;
-    replyState={ts:m.timestamp,msgId:m.msg_id||0,name:m.name||'?',text:m.text||''};
-    const bar=document.getElementById('reply-bar');
-    bar.style.display='flex';
-    document.getElementById('reply-name').textContent=(m.name||'?')+' antworten';
-    document.getElementById('reply-text').textContent=(m.text||'').slice(0,80);
-    document.getElementById('inp').focus();
-  };
-  window.cancelReply=function(){
-    replyState=null;
-    document.getElementById('reply-bar').style.display='none';
-  };
-  window.react=async function(ts,emoji){
-    knownHash='';
-    await fetch('/api/react-thread-msg',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({threadId:TID,timestamp:ts,emoji})});
-    await load();
-  };
-  window.openReact=function(ts){
-    const p=document.getElementById('react-picker');
-    p.dataset.ts=ts;p.style.display='flex';
-  };
-  window.pickReact=async function(emoji){
-    const ts=Number(document.getElementById('react-picker').dataset.ts);
-    closeReactPicker();
-    await react(ts,emoji);
-  };
-  window.closeReactPicker=function(){document.getElementById('react-picker').style.display='none';};
-  document.addEventListener('click',e=>{const p=document.getElementById('react-picker');if(p&&p.style.display!=='none'&&!p.contains(e.target))p.style.display='none';});
-  setInterval(load,10000);
-})();
-</script>`, 'messages');
-    }
-
-    // ── TELEGRAM GRUPPE THREAD-LISTE ──
-    if (path === '/nachrichten/gruppe') {
-        const [botData, ftData] = await Promise.all([fetchBot('/data'), fetchBot('/forum-topics').catch(()=>null)]);
-        if (!botData) return html('<div style="padding:40px;text-align:center;color:var(--muted)">Bot nicht erreichbar</div>', 'messages');
-        const adminUser = botData.users?.[myUid];
-        const _adm2 = Array.isArray(botData._adminIds) ? botData._adminIds.map(Number) : [];
-        const isAdmin = _adm2.includes(Number(myUid)) || (adminUser && String(adminUser.role||'').includes('Admin'));
-        const lastRead = botData.threadLastRead?.[myUid] || {};
-        const threadMsgs = botData.threadMessages || {};
-        const communityFeed = botData.communityFeed || [];
-        let apiTopics = {};
-        try { if (ftData?.threads) ftData.threads.forEach(t => { apiTopics[String(t.id)] = t; }); } catch(e) {}
-        // Lokale thread-overrides laden (admin-set custom name + emoji)
-        let threadOverrides = {};
-        try { threadOverrides = JSON.parse(fs.readFileSync(DATA_DIR + '/thread-overrides.json', 'utf8')); } catch(e) {}
-        // Build thread list
-        let threads = botData.threads || [];
-        const threadEmojiPalette = ['🎯','🚀','💡','📊','🎨','🔥','⚡','🌟','📝','🎭','🏆','🎵','🧠','💎','🌈','🎮','📣','🛠️','🌍','🎬'];
-        function threadEmoji(tid) { let h=0;for(const c of String(tid))h=(h*31+c.charCodeAt(0))>>>0;return threadEmojiPalette[h%threadEmojiPalette.length]; }
-        if (!threads.length) {
-            threads = Object.keys(threadMsgs).map(tid => ({ id:tid, name:tid==='general'?'Allgemein':'Thread '+tid, emoji:tid==='general'?'💬':threadEmoji(tid), last_msg:threadMsgs[tid]?.[0]||null, msg_count:threadMsgs[tid]?.length||0 }));
-        }
-        // Merge: 1) lokale overrides (höchste prio), 2) Telegram API, 3) auto-emoji
-        threads = threads.map(t => {
-            const ov = threadOverrides[String(t.id)] || {};
-            const api = apiTopics[String(t.id)];
-            const emoji = ov.emoji || (String(t.id)==='general' ? '💬' : (api?.emoji && api.emoji.length>1 ? api.emoji : threadEmoji(t.id)));
-            const name = ov.name || api?.name || t.name;
-            return {...t, name, emoji, _hidden: ov.hidden === true};
-        });
-        // Versteckte threads ausfiltern (general bleibt immer sichtbar)
-        threads = threads.filter(t => String(t.id) === 'general' || !t._hidden);
-        if (!threads.find(t=>String(t.id)==='general')) {
-            const lastCF = communityFeed[0];
-            threads.unshift({ id:'general', name:'Allgemein', emoji:'💬', last_msg:lastCF?{text:lastCF.text,name:lastCF.name||lastCF.username}:null, msg_count:Math.max(communityFeed.length, threadMsgs['general']?.length||0) });
-        }
-        const cards = require('./thread-list-render')({ threads, threadMsgs, lastRead, communityFeed, isAdmin });
-        return html(`
-<div class="topbar" style="position:sticky;top:0;z-index:10;background:linear-gradient(135deg,#0088cc,#006699)">
-  <a href="/nachrichten" style="padding:8px;color:#fff;display:flex;align-items:center;text-decoration:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20"><polyline points="15 18 9 12 15 6"/></svg></a>
-  <div style="flex:1;text-align:center">
-    <div style="font-weight:800;font-size:15px;color:#fff">✈️ Telegram Gruppe</div>
-    <div style="font-size:11px;color:rgba(255,255,255,0.7)">Live ●</div>
-  </div>
-  ${isAdmin?'<a href="/nachrichten/gruppe/neu" style="padding:8px 12px;color:#fff;text-decoration:none;font-size:22px;font-weight:300">+</a>':'<div style="width:44px"></div>'}
-</div>
-${cards}
-<script>
-setInterval(async()=>{if(document.hidden)return;try{const r=await fetch(location.href,{headers:{'X-Poll':'1'}});if(r.ok&&r.redirected)location.reload();}catch(e){}},45000);
-async function renameThread(tid,current){
-  const name=prompt('Neuer Thread-Name:',current);
-  if(!name||!name.trim())return;
-  const r=await fetch('/api/rename-thread',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({thread_id:tid,name:name.trim()})});
-  const data=await r.json();
-  if(data.ok)location.reload();
-  else alert(data.error||'Fehler beim Umbenennen');
-}
-async function customizeThread(tid, currentName, currentEmoji){
-  // Modal dynamisch
-  const old=document.getElementById('thr-cust-modal'); if(old)old.remove();
-  const m=document.createElement('div');
-  m.id='thr-cust-modal';
-  m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(6px);z-index:9999;display:flex;align-items:flex-end;justify-content:center';
-  const palette=['💬','💡','❓','🗣️','📣','📈','📋','🛡️','📤','🎨','📢','🛍️','🏆','📸','🎥','🎵','🗳️','👋','🌟','🔥','⚡','🎯','🚀','📝','🎭','🧠','💎','🌈','🎮','🛠️','🎬','📱','📚','⭐','✨','👀','💼','🪄','📊','🎉'];
-  m.innerHTML='<div style="background:var(--bg2);border-radius:24px 24px 0 0;padding:22px 20px 30px;width:100%;max-width:480px;border-top:3px solid #0088cc"><div style="width:36px;height:4px;background:#666;border-radius:4px;margin:0 auto 18px"></div><div style="font-size:16px;font-weight:800;text-align:center;margin-bottom:6px">Thread anpassen</div><div style="font-size:12px;color:var(--muted);text-align:center;margin-bottom:18px">Icon + Name für diesen Thread</div><label style="font-size:12px;color:var(--muted);font-weight:600;display:block;margin-bottom:6px">Name</label><input type="text" id="thr-cust-name" value="'+(currentName||'').replace(/"/g,'&quot;')+'" style="width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:12px;padding:11px 14px;font-size:14px;outline:none;margin-bottom:14px"><label style="font-size:12px;color:var(--muted);font-weight:600;display:block;margin-bottom:6px">Icon — getipptes Emoji oder unten auswählen</label><input type="text" id="thr-cust-emoji" value="'+(currentEmoji||'')+'" maxlength="6" style="width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:12px;padding:11px 14px;font-size:18px;outline:none;margin-bottom:14px;text-align:center"><div style="display:grid;grid-template-columns:repeat(8,1fr);gap:6px;max-height:180px;overflow-y:auto;background:var(--bg3);border-radius:12px;padding:10px;margin-bottom:18px">'+palette.map(e=>'<button type="button" onclick="document.getElementById(\'thr-cust-emoji\').value=\''+e+'\'" style="background:var(--bg2);border:1px solid var(--border2);border-radius:10px;font-size:22px;padding:8px;cursor:pointer">'+e+'</button>').join('')+'</div><div style="display:flex;gap:10px"><button onclick="document.getElementById(\'thr-cust-modal\').remove()" style="flex:1;padding:13px;border-radius:12px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:14px;font-weight:600;cursor:pointer">Abbrechen</button><button onclick="saveThreadCustom(\''+tid+'\')" style="flex:1;padding:13px;border-radius:12px;border:none;background:linear-gradient(135deg,#0088cc,#00c6ff);color:#fff;font-size:14px;font-weight:800;cursor:pointer">Speichern</button></div></div>';
-  document.body.appendChild(m);
-}
-async function saveThreadCustom(tid){
-  const name=document.getElementById('thr-cust-name').value.trim();
-  const emoji=document.getElementById('thr-cust-emoji').value.trim();
-  if(!name && !emoji){alert('Name oder Icon angeben');return;}
-  const r=await fetch('/api/set-thread-meta',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({thread_id:tid,name,emoji})});
-  const data=await r.json();
-  if(data.ok){document.getElementById('thr-cust-modal').remove();location.reload();}
-  else alert(data.error||'Fehler beim Speichern');
-}
-async function deleteThread(tid, name){
-  if(!confirm('Thread "'+name+'" wirklich aus der App verstecken?\\n\\n(Erscheint dann nicht mehr in der Liste — auf Telegram bleibt er bestehen.)'))return;
-  const r=await fetch('/api/hide-thread',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({thread_id:tid})});
-  const data=await r.json();
-  if(data.ok)location.reload();
-  else alert(data.error||'Fehler');
-}
-function showThreadActions(tid, currentName, currentEmoji){
-  const old=document.getElementById('thr-actions-modal'); if(old)old.remove();
-  const m=document.createElement('div');
-  m.id='thr-actions-modal';
-  m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(6px);z-index:9999;display:flex;align-items:flex-end;justify-content:center';
-  m.onclick=function(e){if(e.target===m)m.remove();};
-  m.innerHTML='<div style="background:var(--bg2);border-radius:24px 24px 0 0;padding:18px 16px 30px;width:100%;max-width:480px"><div style="width:36px;height:4px;background:#666;border-radius:4px;margin:0 auto 14px"></div><div style="font-size:14px;font-weight:700;text-align:center;color:var(--muted);margin-bottom:12px;text-transform:uppercase;letter-spacing:0.5px">'+currentEmoji+' '+currentName+'</div><button onclick="document.getElementById(\'thr-actions-modal\').remove();renameThread(\''+tid+'\',\''+currentName.replace(/\'/g,"\\\'")+'\')" style="width:100%;padding:16px;border-radius:14px;border:none;background:var(--bg3);color:var(--text);font-size:15px;font-weight:600;cursor:pointer;margin-bottom:8px;text-align:left;display:flex;align-items:center;gap:14px">✏️ Umbenennen</button><button onclick="document.getElementById(\'thr-actions-modal\').remove();customizeThread(\''+tid+'\',\''+currentName.replace(/\'/g,"\\\'")+'\',\''+currentEmoji+'\')" style="width:100%;padding:16px;border-radius:14px;border:none;background:var(--bg3);color:var(--text);font-size:15px;font-weight:600;cursor:pointer;margin-bottom:8px;text-align:left;display:flex;align-items:center;gap:14px">😀 Symbol ändern</button><button onclick="document.getElementById(\'thr-actions-modal\').remove();deleteThread(\''+tid+'\',\''+currentName.replace(/\'/g,"\\\'")+'\')" style="width:100%;padding:16px;border-radius:14px;border:none;background:rgba(239,68,68,0.12);color:#ef4444;font-size:15px;font-weight:700;cursor:pointer;text-align:left;display:flex;align-items:center;gap:14px">🗑️ Löschen (verstecken)</button><button onclick="document.getElementById(\'thr-actions-modal\').remove()" style="width:100%;padding:13px;border-radius:14px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:14px;font-weight:600;cursor:pointer;margin-top:10px">Abbrechen</button></div>';
-  document.body.appendChild(m);
-}
-// Thread-card touch + long-press handling
-(function(){
-  const isAdmin = ${isAdmin};
-  let pressTimer=null, didLongPress=false, startCard=null;
-  function start(card){
-    didLongPress=false;
-    startCard=card;
-    if (!isAdmin) return;
-    pressTimer=setTimeout(()=>{
-      didLongPress=true;
-      if(navigator.vibrate)navigator.vibrate(40);
-      const tid=card.getAttribute('data-tid');
-      const name=card.getAttribute('data-name')||'';
-      const emoji=card.getAttribute('data-emoji')||'';
-      showThreadActions(tid, name, emoji);
-    }, 480);
-  }
-  function cancel(){if(pressTimer){clearTimeout(pressTimer);pressTimer=null;}}
-  function navigate(card){
-    if (didLongPress) { didLongPress=false; return; }
-    const href = card.getAttribute('data-href');
-    if (href) location.href = href;
-  }
-  document.addEventListener('touchstart',e=>{const c=e.target.closest('.thr-card');if(c)start(c);},{passive:true});
-  document.addEventListener('touchend',e=>{
-    cancel();
-    const c=e.target.closest('.thr-card');
-    if(c && c===startCard && !didLongPress){
-      e.preventDefault();
-      navigate(c);
-    }
-    startCard=null;
-  });
-  document.addEventListener('touchmove',cancel);
-  document.addEventListener('touchcancel',()=>{cancel();startCard=null;});
-  // Desktop / non-touch: simple click
-  document.addEventListener('click',e=>{
-    const c=e.target.closest('.thr-card');
-    if(c && !('ontouchstart' in window)) navigate(c);
-  });
-  document.addEventListener('contextmenu',e=>{if(e.target.closest('.thr-card')){e.preventDefault();e.stopPropagation();return false;}},true);
-  document.addEventListener('selectstart',e=>{if(e.target.closest('.thr-card')){e.preventDefault();return false;}},true);
-  document.addEventListener('dragstart',e=>{if(e.target.closest('.thr-card')){e.preventDefault();return false;}},true);
-})();
-</script>`, 'messages');
-    }
+    // (Dead code removed: /nachrichten/gruppe/* routes — superseded by redirect above.)
 
 
 
