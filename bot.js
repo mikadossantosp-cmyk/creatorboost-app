@@ -6156,6 +6156,7 @@ function saveCheck(){
             }
         } catch(e) {}
         const openedCount = list.filter(t => t.linkOpenedAt).length;
+        const declinedCount = Object.keys(_betaTesters.__declined || {}).length;
 
         // Auto-Threshold: wenn confirmedCount erstmals 12 erreicht → timestamp setzen
         if (confirmedCount >= 12 && !_betaTesters.__meta?.thresholdReachedAt) {
@@ -6209,6 +6210,7 @@ pre{background:#0a0a0a;border:1px solid #1a1a1a;border-radius:8px;padding:12px;f
   <div class="stat-row"><span class="stat-key">📥 Eingetragen</span><span class="stat-val">${list.length}</span></div>
   <div class="stat-row"><span class="stat-key">🔗 Email-Verknüpfung confirmed</span><span class="stat-val" style="color:${confirmedCount>=needed?'#22c55e':'#fbbf24'}">${confirmedCount} / ${needed}</span></div>
   <div class="stat-row"><span class="stat-key">📲 Opt-in-Link geöffnet</span><span class="stat-val">${openedCount}</span></div>
+  <div class="stat-row"><span class="stat-key">👎 'Nein, danke' geklickt</span><span class="stat-val" style="color:#888">${declinedCount}</span></div>
   <div class="progress"><div class="progress-fill" style="width:${Math.min(100, (confirmedCount/needed)*100)}%"></div></div>
   <div style="margin-top:14px;padding-top:12px;border-top:1px solid #1a1a1a">
     <div class="stat-row"><span class="stat-key">⏰ 14-Tage-Counter</span>
@@ -10445,6 +10447,12 @@ async function submitSuperLink(){
 (function initBetaTesterBanner(){
   const root = document.getElementById('beta-tester-banner');
   if (!root) return;
+  // iOS-User sehen kein Banner — Play Store gibts nur fuer Android.
+  // (Edge: iPadOS 13+ gibt sich als Mac aus → maxTouchPoints check.)
+  const ua = navigator.userAgent || '';
+  const isIOS = /iPad|iPhone|iPod/.test(ua)
+    || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  if (isIOS) return;
   const myUid = String(window.MY_UID||'');
   const dismissKey = 'betaTesterDismiss_'+myUid;
   const signedKey = 'betaTesterSigned_'+myUid;
@@ -10452,6 +10460,8 @@ async function submitSuperLink(){
   // Check status (server) — Source-of-Truth
   fetch('/api/beta-tester/status').then(r=>r.json()).then(j=>{
     if (j.signedUp) localStorage.setItem(signedKey,'1');
+    // Wer 'Nein, danke' geklickt hat → nie wieder anzeigen
+    if (j.declined) return;
     // Phase 2: Email-Confirm steht noch aus — Banner ist NICHT dismissable
     // (Nur abdrehen wenn er fertig confirmed hat)
     if (j.signedUp && j.needsConfirm) {
@@ -10524,21 +10534,24 @@ async function submitSuperLink(){
   }
   function escapeHtml(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
   function renderSignup(){
-    root.innerHTML = '<div style="margin:8px 16px 14px;padding:14px 16px;background:linear-gradient(135deg,rgba(52,211,153,0.10),rgba(168,85,247,0.10));border:1.5px solid rgba(52,211,153,0.40);border-radius:14px;position:relative;cursor:pointer" onclick="window.__betaShow()">'+
-      '<button onclick="event.stopPropagation();window.__betaDismiss()" style="position:absolute;top:8px;right:10px;background:transparent;border:none;color:#888;font-size:18px;font-weight:700;cursor:pointer;padding:4px 8px">×</button>'+
-      '<div style="display:flex;align-items:center;gap:12px">'+
+    root.innerHTML = '<div style="margin:8px 16px 14px;padding:14px 16px;background:linear-gradient(135deg,rgba(52,211,153,0.10),rgba(168,85,247,0.10));border:1.5px solid rgba(52,211,153,0.40);border-radius:14px">'+
+      '<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">'+
         '<div style="font-size:30px;flex-shrink:0">📱</div>'+
         '<div style="flex:1;min-width:0">'+
           '<div style="font-size:14px;font-weight:800;color:#34d399;margin-bottom:3px">CreatorX kommt in den Play Store!</div>'+
           '<div style="font-size:12px;color:var(--muted);line-height:1.5">Werde Beta-Tester und nutze die App vor allen anderen. <b style="color:#22c55e">+100 💎 Bonus</b> nach 14 Tagen.</div>'+
         '</div>'+
-        '<div style="font-size:18px;color:#34d399;flex-shrink:0">→</div>'+
+      '</div>'+
+      '<div style="display:flex;gap:8px">'+
+        '<button onclick="window.__betaDismiss()" style="flex:1;padding:10px;background:transparent;color:var(--muted);border:1px solid var(--border2,#333);border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer">Nein, danke</button>'+
+        '<button onclick="window.__betaShow()" style="flex:2;padding:10px;background:linear-gradient(135deg,#34d399,#10b981);color:#fff;border:none;border-radius:8px;font-size:12.5px;font-weight:800;cursor:pointer">✓ Ja, mitmachen</button>'+
       '</div>'+
     '</div>';
   }
   window.__betaDismiss = function(){
     localStorage.setItem(dismissKey, '1');
     root.innerHTML = '';
+    fetch('/api/beta-tester/dismiss', {method:'POST'}).catch(()=>{});
   };
   window.__betaShow = function(){
     const bg = document.createElement('div');
@@ -13803,6 +13816,7 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
         if (!session) return json({error:'Nicht eingeloggt'}, 401);
         const entry = _betaTesters[String(myUid)];
         const meta = _betaTesters.__meta || {};
+        const declinedAt = _betaTesters.__declined?.[String(myUid)] || 0;
         const hasLink = !!meta.optinLink && !!entry?.optinNotifiedAt;
         // Check: Email confirmed? — User landet nur dann auf seinem Account
         // wenn er die Bestaetigungs-Email geklickt hat.
@@ -13822,6 +13836,7 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
             optinLink: hasLink ? meta.optinLink : null,
             linkOpenedAt: entry?.linkOpenedAt || null,
             needsConfirm,
+            declined: !!declinedAt,
         });
     }
     if (path === '/api/beta-tester/resend-confirm' && req.method === 'POST') {
@@ -13843,8 +13858,12 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
         return json({ok:true});
     }
     if (path === '/api/beta-tester/dismiss' && req.method === 'POST') {
-        // User klickt 'Spaeter' → wir merken uns das (kein DB-Eintrag noetig, Client-seitig)
         if (!session) return json({error:'Nicht eingeloggt'}, 401);
+        // Nein-Klick wird gemerkt → ist server-side persistent, damit User
+        // auch nach Cache-Clear nicht erneut angesprochen wird.
+        _betaTesters.__declined = _betaTesters.__declined || {};
+        _betaTesters.__declined[String(myUid)] = Date.now();
+        saveBetaTesters();
         return json({ok:true});
     }
     if (path === '/api/admin/beta-testers/list' && req.method === 'GET') {
