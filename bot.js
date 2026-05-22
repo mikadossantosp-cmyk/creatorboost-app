@@ -6211,7 +6211,10 @@ ${list.length === 0 ? '<div style="text-align:center;padding:20px;color:#666">No
     if (t.linkOpenedAt) sentBadge = '<span style="display:inline-block;padding:2px 8px;background:rgba(34,197,94,.20);color:#22c55e;border-radius:99px;font-size:10px;font-weight:700;margin-left:6px">✓ Link geöffnet</span>';
     else if (t.optinNotifiedAt) sentBadge = '<span style="display:inline-block;padding:2px 8px;background:rgba(167,139,250,.18);color:#a78bfa;border-radius:99px;font-size:10px;font-weight:700;margin-left:6px">📲 Banner aktiv</span>';
     else sentBadge = '<span style="display:inline-block;padding:2px 8px;background:rgba(251,191,36,.15);color:#fbbf24;border-radius:99px;font-size:10px;font-weight:700;margin-left:6px">⏳ wartet auf Link</span>';
-    return `<div class="tester-row"><div class="tester-info"><div class="tester-email">${esc(t.email)}${sentBadge}</div><div class="tester-meta">UID ${esc(t.uid)} · ${when}</div></div><button class="del-btn" onclick="removeTester('${esc(t.uid)}')">Entfernen</button></div>`;
+    let linkBadge = '';
+    if (t.emailLinkMode === 'already-confirmed') linkBadge = '<span style="display:inline-block;padding:2px 8px;background:rgba(34,197,94,.20);color:#22c55e;border-radius:99px;font-size:10px;font-weight:700;margin-left:6px">🔗 verknüpft</span>';
+    else if (t.emailLinkMode === 'new-confirm-sent' || t.emailLinkMode === 'resend-confirm') linkBadge = '<span style="display:inline-block;padding:2px 8px;background:rgba(251,146,60,.18);color:#fb923c;border-radius:99px;font-size:10px;font-weight:700;margin-left:6px">📧 Confirm offen</span>';
+    return `<div class="tester-row"><div class="tester-info"><div class="tester-email">${esc(t.email)}${linkBadge}${sentBadge}</div><div class="tester-meta">UID ${esc(t.uid)} · ${when}</div></div><button class="del-btn" onclick="removeTester('${esc(t.uid)}')">Entfernen</button></div>`;
 }).join('')}
 </div>
 
@@ -10450,12 +10453,15 @@ async function submitSuperLink(){
       '<div style="font-size:38px;text-align:center;margin-bottom:8px">📱</div>'+
       '<div style="font-size:18px;font-weight:800;text-align:center;margin-bottom:6px;color:var(--text)">Werde Beta-Tester</div>'+
       '<div style="font-size:12.5px;color:var(--muted);text-align:center;margin-bottom:18px;line-height:1.6">CreatorX kommt in den Google Play Store. Als Beta-Tester nutzt du die App vor allen anderen.</div>'+
-      '<div style="background:rgba(34,197,94,0.10);border:1px solid rgba(34,197,94,0.30);border-radius:12px;padding:12px 14px;font-size:12px;line-height:1.7;color:var(--text);margin-bottom:16px">'+
+      '<div style="background:rgba(34,197,94,0.10);border:1px solid rgba(34,197,94,0.30);border-radius:12px;padding:12px 14px;font-size:12px;line-height:1.7;color:var(--text);margin-bottom:14px">'+
         '<b style="color:#22c55e">✓ Was du bekommst:</b><br>'+
         '• Frühen Zugang zur App<br>'+
         '• <b>+100 💎 Bonus</b> nach 14 Tagen Mitmachen<br>'+
         '• Dein Feedback bestimmt die finale Version<br>'+
         '• Dein CreatorX-Account bleibt 1:1 erhalten'+
+      '</div>'+
+      '<div style="background:rgba(167,139,250,0.10);border:1px solid rgba(167,139,250,0.30);border-radius:12px;padding:10px 14px;font-size:11.5px;line-height:1.6;color:var(--text);margin-bottom:16px">'+
+        '<b style="color:#a78bfa">🔗 Account-Verknüpfung:</b> Wir verbinden diese Gmail mit deinem CreatorX-Account. Sobald die App im Play Store ist und du dich mit dieser Gmail einloggst, landest du <b>automatisch hier auf deinem Account</b> (XP, 💎, Posts — alles bleibt).'+
       '</div>'+
       '<label style="display:block;font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Deine Google-Play-Email</label>'+
       '<input id="betaEmailInput" type="email" placeholder="deine.email@gmail.com" autocomplete="email" inputmode="email" style="width:100%;padding:12px 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;font-size:14px;color:var(--text);font-family:inherit;margin-bottom:6px">'+
@@ -10479,7 +10485,15 @@ async function submitSuperLink(){
         const j = await r.json();
         if (j.ok) {
           localStorage.setItem(signedKey, '1');
-          bg.innerHTML = '<div style="background:var(--bg2);border:1px solid rgba(34,197,94,0.45);border-radius:18px;padding:32px 24px;max-width:480px;width:100%;text-align:center"><div style="font-size:54px;margin-bottom:12px">🎉</div><div style="font-size:18px;font-weight:800;color:#22c55e;margin-bottom:10px">Du bist dabei!</div><div style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:18px">Wir senden dir den Beta-Zugangslink sobald wir die 12 Tester zusammen haben. Halte dein Google-Play-Konto bereit.</div><button onclick="document.querySelector(\\'div[style*=\\\\\\'position:fixed\\\\\\']\\').remove()" style="background:#22c55e;color:#fff;border:none;border-radius:10px;padding:12px 28px;font-size:13px;font-weight:800;cursor:pointer">Schließen</button></div>';
+          let title, body;
+          if (j.mode === 'already-confirmed') {
+            title = '🎉 Du bist dabei!';
+            body = 'Diese Gmail ist bereits mit deinem Account verknüpft. Wir spielen dir den Opt-in-Link automatisch in der App aus sobald wir 12 Tester zusammen haben.';
+          } else {
+            title = '📧 Check deine Email!';
+            body = 'Wir haben dir gerade einen Bestätigungs-Link an <b style="color:#e5e5e5">'+email+'</b> gesendet. Klick den Link → deine Gmail wird mit deinem CreatorX-Account verknüpft. <b style="color:#fbbf24">Wichtig:</b> ohne Klick keine Verknüpfung — und kein Beta-Zugang.';
+          }
+          bg.innerHTML = '<div style="background:var(--bg2);border:1px solid rgba(34,197,94,0.45);border-radius:18px;padding:32px 24px;max-width:480px;width:100%;text-align:center"><div style="font-size:54px;margin-bottom:12px">'+(j.mode==='already-confirmed'?'🎉':'📧')+'</div><div style="font-size:18px;font-weight:800;color:#22c55e;margin-bottom:10px">'+title+'</div><div style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:18px">'+body+'</div><button onclick="document.querySelector(\\'div[style*=\\\\\\'position:fixed\\\\\\']\\').remove()" style="background:#22c55e;color:#fff;border:none;border-radius:10px;padding:12px 28px;font-size:13px;font-weight:800;cursor:pointer">Verstanden</button></div>';
           root.innerHTML = '';
         } else {
           err.textContent = '✗ ' + (j.error || 'Fehler');
@@ -13651,14 +13665,45 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 200) {
             return json({ok:false, error:'Ungültige Email'});
         }
+        // Account-Verknuepfung: Email wird auf u.pendingEmail gesetzt → User
+        // klickt Confirm-Link → u.email = email + emailConfirmedAt. Danach
+        // kann er sich auf jedem Device mit dieser Gmail einloggen und
+        // landet IMMER auf demselben UID-Account.
+        const botData = await fetchBot('/data');
+        if (!botData?.users) return json({ok:false, error:'Server nicht erreichbar'}, 503);
+        const me = botData.users[String(myUid)];
+        // 1. Email gehoert bereits einem anderen Account?
+        const taken = Object.entries(botData.users).find(([oid, x]) =>
+            String(oid) !== String(myUid) &&
+            (String(x.email||'').toLowerCase() === email || String(x.pendingEmail||'').toLowerCase() === email));
+        if (taken) {
+            return json({ok:false, error:'Diese Email gehört bereits zu einem anderen CreatorX-Account. Bitte nutze eine andere Email — oder logge dich auf dem anderen Account ein.'});
+        }
+        let mode = 'new';
+        const currentConfirmed = String(me?.email||'').toLowerCase();
+        const currentPending = String(me?.pendingEmail||'').toLowerCase();
+        if (currentConfirmed === email) {
+            mode = 'already-confirmed';
+        } else if (currentPending === email) {
+            mode = 'resend-confirm';
+        } else {
+            // Setze als pendingEmail beim Mainbot
+            try { await postBot('/update-profile-api', { uid: String(myUid), email }); } catch(e) {}
+            mode = 'new-confirm-sent';
+        }
+        // Confirmation senden falls noetig (new oder resend)
+        if (mode === 'new-confirm-sent' || mode === 'resend-confirm') {
+            try { await sendSignupConfirmationEmail(String(myUid), email, req.headers.host); } catch(e) {}
+        }
         _betaTesters[String(myUid)] = {
             uid: String(myUid),
             email,
             signedUpAt: Date.now(),
+            emailLinkMode: mode,
             bonusGiven: !!_betaTesters[String(myUid)]?.bonusGiven,
         };
         saveBetaTesters();
-        return json({ok:true});
+        return json({ok:true, mode});
     }
     if (path === '/api/beta-tester/status' && req.method === 'GET') {
         if (!session) return json({error:'Nicht eingeloggt'}, 401);
