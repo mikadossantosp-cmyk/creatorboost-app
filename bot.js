@@ -6966,6 +6966,48 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
         }
     }
 
+    // ── AAB SIGN PAGE ── (für Google Play Store Upload)
+    // Analog zu /apk-sign, aber fuer AAB-Bundles. Signiert mit dem gleichen
+    // Server-Keystore wie die APK → identische Signatur → User die schon die
+    // APK installiert haben muessen NICHT deinstallieren.
+    if (path === '/aab-sign') {
+        if ((query.key || '') !== BRIDGE_SECRET) { res.writeHead(403); return res.end('Kein Zugriff'); }
+        res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});
+        return res.end(`<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AAB Signieren</title><style>*{box-sizing:border-box;margin:0;padding:0}body{background:#000;color:#fff;font-family:sans-serif;padding:24px;min-height:100vh}h1{font-size:20px;margin-bottom:8px}p{font-size:13px;color:#aaa;margin-bottom:16px;line-height:1.5}.box{background:#111;border-radius:16px;padding:20px;margin-bottom:16px}.btn{background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:none;border-radius:12px;padding:14px 24px;font-size:15px;font-weight:700;cursor:pointer;width:100%}.btn:disabled{opacity:.5;cursor:default}#status{margin-top:16px;font-size:13px;color:#aaa;text-align:left;line-height:1.6;white-space:pre-wrap;background:#0a0a0a;border-radius:10px;padding:14px;display:none}#status.visible{display:block}a.dl{display:block;background:#22c55e;color:#fff;text-align:center;border-radius:12px;padding:14px;font-weight:700;font-size:15px;text-decoration:none;margin-top:16px}.info{background:#0a2540;border-left:3px solid #3b82f6;border-radius:8px;padding:12px;font-size:12px;color:#93c5fd;margin-bottom:14px;line-height:1.5}</style></head><body><h1>📦 AAB Signieren (für Play Store)</h1><p>Lade die <b>unsigned AAB</b> von PWA Builder hoch (CreatorX-unsigned.aab). Server signiert mit dem gleichen Server-Keystore wie alle APKs.</p><div class="info">✓ Gleiche Signatur wie alte APK → User müssen nicht deinstallieren<br>✓ Beim Play Console Upload: "Eigenen Signaturschlüssel nutzen" wählen (NICHT Play App Signing)</div><div class="box"><input type="file" id="f" accept=".aab" style="width:100%;padding:10px;background:#222;color:#fff;border:none;border-radius:8px;margin-bottom:12px"><button class="btn" id="btn" onclick="sign()">📦 AAB Signieren</button><div id="status"></div><a class="dl" id="dl" style="display:none" href="#" download="CreatorX-signed.aab">⬇️ Signierte AAB herunterladen</a></div><script>async function sign(){const f=document.getElementById('f').files[0];if(!f){alert('Bitte AAB auswählen');return;}const btn=document.getElementById('btn');const st=document.getElementById('status');btn.disabled=true;st.classList.add('visible');st.textContent='AAB wird gelesen ('+(f.size/1024/1024).toFixed(2)+' MB)...';const b64=await new Promise(r=>{const fr=new FileReader();fr.onload=e=>r(e.target.result.split(',')[1]);fr.readAsDataURL(f);});st.textContent='AAB wird signiert mit jarsigner... (10-30 Sek)';try{const res=await fetch('/api/sign-aab',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({aab:b64,key:'${query.key || ''}'})});if(!res.ok){const t=await res.text();st.textContent='❌ Fehler: '+t;btn.disabled=false;return;}const blob=await res.blob();const url=URL.createObjectURL(blob);const dl=document.getElementById('dl');dl.href=url;dl.style.display='block';st.textContent='✅ Fertig! AAB signiert mit Server-Keystore (creatorx-alias).\\nLade sie jetzt in Play Console hoch.';}catch(e){st.textContent='❌ '+e.message;btn.disabled=false;}}</script></body></html>`);
+    }
+    // ── AAB SIGN API ──
+    if (path === '/api/sign-aab' && req.method === 'POST') {
+        const body = await new Promise(r=>{let b='';req.on('data',d=>b+=d);req.on('end',()=>r(b));});
+        let parsed;
+        try { parsed = JSON.parse(body); } catch(e) { res.writeHead(400); return res.end('Bad JSON'); }
+        if ((parsed.key || '') !== BRIDGE_SECRET) { res.writeHead(403); return res.end('Kein Zugriff'); }
+        if (!parsed.aab) { res.writeHead(400); return res.end('Kein AAB'); }
+        try {
+            const { execSync } = require('child_process');
+            const tmpDir = require('os').tmpdir() + '/aab-sign-' + Date.now();
+            fs.mkdirSync(tmpDir, { recursive: true });
+            const ksPath = tmpDir + '/creatorx.keystore';
+            const aabPath = tmpDir + '/unsigned.aab';
+            const KEYSTORE_B64 = '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';
+            fs.writeFileSync(ksPath, Buffer.from(KEYSTORE_B64, 'base64'));
+            fs.writeFileSync(aabPath, Buffer.from(parsed.aab, 'base64'));
+            // jarsigner signiert AAB IN-PLACE (das ist beabsichtigt fuer JAR-Format)
+            execSync(`jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 -keystore "${ksPath}" -storepass creatorx2024 -keypass creatorx2024 "${aabPath}" creatorx`, {timeout:120000});
+            const signedBuf = fs.readFileSync(aabPath);
+            try { fs.writeFileSync(DATA_DIR + '/CreatorX-signed.aab', signedBuf); } catch(e) {}
+            try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch(e) {}
+            res.writeHead(200, {
+                'Content-Type': 'application/octet-stream',
+                'Content-Disposition': 'attachment; filename="CreatorX-signed.aab"',
+                'Content-Length': signedBuf.length,
+                'Cache-Control': 'no-store'
+            });
+            return res.end(signedBuf);
+        } catch(e) {
+            res.writeHead(500); return res.end('AAB-Signierfehler: ' + e.message);
+        }
+    }
+
     // ── APK DOWNLOAD ──
     if (path === '/download-app') {
         const apkPath = DATA_DIR + '/CreatorX-signed.apk';
