@@ -852,6 +852,28 @@ const DATA_CACHE_TTL = 60000; // 60 seconds
 // beim Startup wird's wieder geladen. Writes laufen weiter über Mainbot (postBot).
 // Nächste Phase: Writes spiegeln, dann Reads autonom, dann Mainbot pulled von App.
 const APP_DB_FILE = DATA_DIR + '/app_db.json';
+const BETA_TESTERS_FILE = DATA_DIR + '/beta_testers.json';
+
+// Beta-Tester-Storage: sammelt Google-Play-Emails von Usern die fuer das
+// Closed Testing der App opt-in machen. Eigenes File (nicht in app_db.json)
+// damit Mainbot-Reloads nichts ueberschreiben.
+let _betaTesters = {};
+function loadBetaTesters() {
+    try {
+        if (fs.existsSync(BETA_TESTERS_FILE)) {
+            _betaTesters = JSON.parse(fs.readFileSync(BETA_TESTERS_FILE, 'utf8')) || {};
+        }
+    } catch (e) { console.error('beta_testers load failed:', e.message); _betaTesters = {}; }
+}
+function saveBetaTesters() {
+    try {
+        const tmp = BETA_TESTERS_FILE + '.tmp';
+        fs.writeFileSync(tmp, JSON.stringify(_betaTesters, null, 2));
+        fs.renameSync(tmp, BETA_TESTERS_FILE);
+    } catch (e) { console.error('beta_testers save failed:', e.message); }
+}
+loadBetaTesters();
+
 let _appDbSaveTimer = null;
 let _appDbLastSaveOk = null;     // ISO-Time des letzten erfolgreichen Schreibens
 let _appDbLastRefreshOk = null;  // ISO-Time des letzten erfolgreichen Mainbot-Pulls
@@ -6100,6 +6122,86 @@ function saveCheck(){
 </body></html>`);
     }
 
+    // ── ADMIN: Beta-Tester-Liste (Sammelt In-App-Signups fuer Closed-Test) ──
+    if (path === '/admin/beta-testers') {
+        let isAuthed = false;
+        if ((query.key || '') === BRIDGE_SECRET) isAuthed = true;
+        else {
+            const _sess = getSession(req);
+            const _sessUid = _sess?.uid ? String(_sess.uid) : null;
+            if (_sessUid) {
+                const _bd = await fetchBot('/data');
+                const _adminIds = (Array.isArray(_bd?._adminIds) ? _bd._adminIds.map(Number) : []);
+                if (_adminIds.includes(Number(_sessUid)) || /admin/i.test(String(_bd?.users?.[_sessUid]?.role||''))) isAuthed = true;
+            }
+        }
+        if (!isAuthed) { res.writeHead(403); return res.end('Kein Zugriff'); }
+
+        const list = Object.values(_betaTesters).sort((a,b)=>(b.signedUpAt||0)-(a.signedUpAt||0));
+        const esc = s => String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+        const emailsOnly = list.map(t => t.email).join('\n');
+        const needed = 12;
+        const remaining = Math.max(0, needed - list.length);
+        res.writeHead(200, {'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});
+        return res.end(`<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Beta-Tester</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0a0a0a;color:#e5e5e5;padding:16px;font-size:13px;line-height:1.5;max-width:900px;margin:0 auto}
+h1{font-size:22px;font-weight:800;margin-bottom:4px;background:linear-gradient(135deg,#34d399,#10b981);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.muted{color:#888;font-size:12px;margin-bottom:14px}
+.card{background:#111;border:1px solid #222;border-radius:12px;padding:16px;margin-bottom:14px}
+.progress{height:8px;background:#1a1a1a;border-radius:99px;overflow:hidden;margin:10px 0}
+.progress-fill{height:100%;background:linear-gradient(90deg,#34d399,#10b981);transition:width .3s}
+.stat-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #1a1a1a;font-size:12.5px}
+.stat-row:last-child{border-bottom:0}
+.stat-key{color:#888}.stat-val{color:#e5e5e5;font-weight:600}
+pre{background:#0a0a0a;border:1px solid #1a1a1a;border-radius:8px;padding:12px;font-size:11.5px;line-height:1.6;white-space:pre-wrap;word-break:break-word;color:#cbd5e1;font-family:'SF Mono',Monaco,monospace;max-height:400px;overflow-y:auto}
+.copy-btn{display:inline-flex;align-items:center;gap:6px;background:#22c55e;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:8px}
+.tester-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #1a1a1a}
+.tester-row:last-child{border-bottom:0}
+.tester-info{flex:1;min-width:0}
+.tester-email{font-weight:600;color:#e5e5e5;font-size:13px}
+.tester-meta{font-size:11px;color:#888;margin-top:2px}
+.del-btn{background:transparent;color:#ef4444;border:1px solid rgba(239,68,68,.4);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer}
+.toast{position:fixed;bottom:20px;right:20px;padding:10px 16px;border-radius:10px;font-size:13px;font-weight:600;color:#fff;background:#10b981;z-index:999;opacity:0;transition:opacity .25s}
+.toast.show{opacity:1}
+</style></head><body>
+<h1>🧪 Beta-Tester (${list.length}/${needed})</h1>
+<p class="muted">User-Signups f&uuml;r das Closed Testing in der Play Console</p>
+
+<div class="card">
+  <div class="stat-row"><span class="stat-key">Aktuell angemeldet</span><span class="stat-val">${list.length} Tester</span></div>
+  <div class="stat-row"><span class="stat-key">Noch nötig</span><span class="stat-val">${remaining} Tester</span></div>
+  <div class="progress"><div class="progress-fill" style="width:${Math.min(100, (list.length/needed)*100)}%"></div></div>
+  <div class="stat-row"><span class="stat-key">Status</span><span class="stat-val" style="color:${list.length>=needed?'#22c55e':'#fbbf24'}">${list.length>=needed?'✅ Bereit für Play Console Import':'⏳ Noch sammeln'}</span></div>
+</div>
+
+<h2 style="font-size:16px;margin:20px 0 10px;color:#34d399">📋 Email-Liste (Copy-Paste in Play Console)</h2>
+<div class="card">
+  <pre id="emails">${esc(emailsOnly) || '(noch keine Tester)'}</pre>
+  <button class="copy-btn" onclick="copyText('emails')">📋 Alle ${list.length} Emails kopieren</button>
+  <div style="margin-top:14px;font-size:11px;color:#888;line-height:1.6">
+    <b style="color:#fbbf24">So einfügen:</b> Play Console → Test &amp; Veröffentlichung → Tests → Geschlossener Test → Tester → Email-Liste → Emails einfügen (eine pro Zeile).
+  </div>
+</div>
+
+<h2 style="font-size:16px;margin:20px 0 10px;color:#34d399">👥 Tester-Details</h2>
+<div class="card">
+${list.length === 0 ? '<div style="text-align:center;padding:20px;color:#666">Noch keine Tester angemeldet. Schalte das Banner im Feed frei → User können sich selbst eintragen.</div>' : list.map(t => {
+    const dt = new Date(t.signedUpAt||0);
+    const when = dt.toLocaleString('de-DE', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+    return `<div class="tester-row"><div class="tester-info"><div class="tester-email">${esc(t.email)}</div><div class="tester-meta">UID ${esc(t.uid)} · ${when}</div></div><button class="del-btn" onclick="removeTester('${esc(t.uid)}')">Entfernen</button></div>`;
+}).join('')}
+</div>
+
+<div class="toast" id="toast">✅ Kopiert!</div>
+<script>
+function copyText(id){const el=document.getElementById(id);const text=el.textContent;if(navigator.clipboard){navigator.clipboard.writeText(text).then(()=>showToast());}else{const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();showToast();}}
+function showToast(){const t=document.getElementById('toast');t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1500);}
+async function removeTester(uid){if(!confirm('Tester wirklich entfernen?'))return;try{const r=await fetch('/api/admin/beta-testers/remove',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({uid})});const j=await r.json();if(j.ok)location.reload();else alert('Fehler: '+(j.error||'?'));}catch(e){alert('Fehler: '+e.message);}}
+</script>
+</body></html>`);
+    }
+
     // ── ADMIN: Email Dashboard (before auth gate — uses query.key) ──
     if (path === '/admin/emails') {
         // Admin-Auth: entweder via key=BRIDGE_SECRET (Direktlink) ODER via Admin-Session (Dashboard-Button)
@@ -9489,7 +9591,7 @@ commentsBox+
         // First-Post-Pin und regulärer Feed → wir splitten heuteHtml in
         // pinnedHtml + regularHeuteHtml, dann boost-strip dazwischen.
         const heuteWithDiamondTop = tab === 'heute'
-            ? '<div id="prisma-top-strip"></div><div id="diamond-top-strip"></div>'+pinnedHtml+'<div id="collab-boost-strip"></div><div style="padding:8px 0 80px">'+regularHeuteHtml+'</div>'
+            ? '<div id="beta-tester-banner"></div><div id="prisma-top-strip"></div><div id="diamond-top-strip"></div>'+pinnedHtml+'<div id="collab-boost-strip"></div><div style="padding:8px 0 80px">'+regularHeuteHtml+'</div>'
             : '<div style="padding:8px 0 80px">'+heuteHtml+'</div>';
         const postsHtml = tab === 'aelter' ? '<div style="padding:8px 0 80px">'+aelterHtml+'</div>'
             : tab === 'engagement' ? engagementHtml
@@ -10248,6 +10350,91 @@ async function submitSuperLink(){
     // Countdown tick — re-render alle 60s damit Restzeit aktuell bleibt
     load();
   }, 60000);
+})();
+
+// ── BETA-TESTER-BANNER (Heute-Feed) ──
+// Sammelt Google-Play-Emails fuer Closed Testing. User klickt 'Mitmachen',
+// gibt seine Email ein → landet in der /admin/beta-testers Liste.
+// Dismissible via localStorage (per User-UID).
+(function initBetaTesterBanner(){
+  const root = document.getElementById('beta-tester-banner');
+  if (!root) return;
+  const myUid = String(window.MY_UID||'');
+  const dismissKey = 'betaTesterDismiss_'+myUid;
+  const signedKey = 'betaTesterSigned_'+myUid;
+  if (localStorage.getItem(signedKey) === '1') return; // schon angemeldet
+  // Check status (server) — falls auf anderem Device angemeldet, hier auch ausblenden
+  fetch('/api/beta-tester/status').then(r=>r.json()).then(j=>{
+    if (j.signedUp) { localStorage.setItem(signedKey,'1'); return; }
+    if (localStorage.getItem(dismissKey)) return; // user hat 'spaeter' geklickt
+    render();
+  }).catch(()=>{});
+  function render(){
+    root.innerHTML = '<div style="margin:8px 16px 14px;padding:14px 16px;background:linear-gradient(135deg,rgba(52,211,153,0.10),rgba(168,85,247,0.10));border:1.5px solid rgba(52,211,153,0.40);border-radius:14px;position:relative;cursor:pointer" onclick="window.__betaShow()">'+
+      '<button onclick="event.stopPropagation();window.__betaDismiss()" style="position:absolute;top:8px;right:10px;background:transparent;border:none;color:#888;font-size:18px;font-weight:700;cursor:pointer;padding:4px 8px">×</button>'+
+      '<div style="display:flex;align-items:center;gap:12px">'+
+        '<div style="font-size:30px;flex-shrink:0">📱</div>'+
+        '<div style="flex:1;min-width:0">'+
+          '<div style="font-size:14px;font-weight:800;color:#34d399;margin-bottom:3px">CreatorX kommt in den Play Store!</div>'+
+          '<div style="font-size:12px;color:var(--muted);line-height:1.5">Werde Beta-Tester und nutze die App vor allen anderen. <b style="color:#22c55e">+100 💎 Bonus</b> nach 14 Tagen.</div>'+
+        '</div>'+
+        '<div style="font-size:18px;color:#34d399;flex-shrink:0">→</div>'+
+      '</div>'+
+    '</div>';
+  }
+  window.__betaDismiss = function(){
+    localStorage.setItem(dismissKey, '1');
+    root.innerHTML = '';
+  };
+  window.__betaShow = function(){
+    const bg = document.createElement('div');
+    bg.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.78);backdrop-filter:blur(8px);z-index:9100;display:flex;align-items:center;justify-content:center;padding:18px';
+    bg.innerHTML = '<div style="background:var(--bg2);border:1px solid rgba(52,211,153,0.35);border-radius:18px;padding:24px;max-width:480px;width:100%;max-height:92vh;overflow-y:auto;box-shadow:0 24px 60px rgba(52,211,153,0.20)">'+
+      '<div style="font-size:38px;text-align:center;margin-bottom:8px">📱</div>'+
+      '<div style="font-size:18px;font-weight:800;text-align:center;margin-bottom:6px;color:var(--text)">Werde Beta-Tester</div>'+
+      '<div style="font-size:12.5px;color:var(--muted);text-align:center;margin-bottom:18px;line-height:1.6">CreatorX kommt in den Google Play Store. Als Beta-Tester nutzt du die App vor allen anderen.</div>'+
+      '<div style="background:rgba(34,197,94,0.10);border:1px solid rgba(34,197,94,0.30);border-radius:12px;padding:12px 14px;font-size:12px;line-height:1.7;color:var(--text);margin-bottom:16px">'+
+        '<b style="color:#22c55e">✓ Was du bekommst:</b><br>'+
+        '• Frühen Zugang zur App<br>'+
+        '• <b>+100 💎 Bonus</b> nach 14 Tagen Mitmachen<br>'+
+        '• Dein Feedback bestimmt die finale Version<br>'+
+        '• Dein CreatorX-Account bleibt 1:1 erhalten'+
+      '</div>'+
+      '<label style="display:block;font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Deine Google-Play-Email</label>'+
+      '<input id="betaEmailInput" type="email" placeholder="deine.email@gmail.com" autocomplete="email" inputmode="email" style="width:100%;padding:12px 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;font-size:14px;color:var(--text);font-family:inherit;margin-bottom:6px">'+
+      '<div style="font-size:11px;color:var(--muted);line-height:1.5;margin-bottom:16px">→ Welche Email nutzt du im Google Play Store? Meistens deine Gmail-Adresse.</div>'+
+      '<div style="display:flex;gap:10px">'+
+        '<button onclick="window.__betaCancel()" style="flex:1;padding:12px;background:transparent;color:var(--text);border:1px solid var(--border2);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">Später</button>'+
+        '<button id="betaSubmitBtn" onclick="window.__betaSubmit()" style="flex:2;padding:12px;background:linear-gradient(135deg,#34d399,#10b981);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer">📱 Anmelden</button>'+
+      '</div>'+
+      '<div id="betaError" style="margin-top:10px;font-size:12px;color:#ef4444;text-align:center;min-height:18px"></div>'+
+    '</div>';
+    document.body.appendChild(bg);
+    window.__betaCancel = function(){ bg.remove(); };
+    window.__betaSubmit = async function(){
+      const email = document.getElementById('betaEmailInput').value.trim();
+      const err = document.getElementById('betaError');
+      const btn = document.getElementById('betaSubmitBtn');
+      if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) { err.textContent = '✗ Bitte gib eine gültige Email ein'; return; }
+      btn.disabled = true; btn.textContent = '⏳ Anmeldung läuft …';
+      try {
+        const r = await fetch('/api/beta-tester/signup', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email }) });
+        const j = await r.json();
+        if (j.ok) {
+          localStorage.setItem(signedKey, '1');
+          bg.innerHTML = '<div style="background:var(--bg2);border:1px solid rgba(34,197,94,0.45);border-radius:18px;padding:32px 24px;max-width:480px;width:100%;text-align:center"><div style="font-size:54px;margin-bottom:12px">🎉</div><div style="font-size:18px;font-weight:800;color:#22c55e;margin-bottom:10px">Du bist dabei!</div><div style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:18px">Wir senden dir den Beta-Zugangslink sobald wir die 12 Tester zusammen haben. Halte dein Google-Play-Konto bereit.</div><button onclick="document.querySelector(\\'div[style*=\\\\\\'position:fixed\\\\\\']\\').remove()" style="background:#22c55e;color:#fff;border:none;border-radius:10px;padding:12px 28px;font-size:13px;font-weight:800;cursor:pointer">Schließen</button></div>';
+          root.innerHTML = '';
+        } else {
+          err.textContent = '✗ ' + (j.error || 'Fehler');
+          btn.disabled = false; btn.textContent = '📱 Anmelden';
+        }
+      } catch(e) {
+        err.textContent = '✗ Netzwerk-Fehler — bitte erneut versuchen';
+        btn.disabled = false; btn.textContent = '📱 Anmelden';
+      }
+    };
+    setTimeout(()=>{ const i=document.getElementById('betaEmailInput'); if(i) i.focus(); }, 50);
+  };
 })();
 
 // ── PRISMALINK MODULE (Heute-Top-Strip + Prisma-Tab) ──
@@ -13398,6 +13585,48 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
         const r = await postBot('/diamond-link-accept-rules-api', { uid: myUid });
         return json(r || {ok:false, error:'Mainbot offline'});
     }
+
+    // ── BETA-TESTER API ──
+    if (path === '/api/beta-tester/signup' && req.method === 'POST') {
+        if (!session) return json({error:'Nicht eingeloggt'}, 401);
+        const body = await parseBody(req);
+        const email = String(body.email||'').trim().toLowerCase();
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 200) {
+            return json({ok:false, error:'Ungültige Email'});
+        }
+        _betaTesters[String(myUid)] = {
+            uid: String(myUid),
+            email,
+            signedUpAt: Date.now(),
+            bonusGiven: !!_betaTesters[String(myUid)]?.bonusGiven,
+        };
+        saveBetaTesters();
+        return json({ok:true});
+    }
+    if (path === '/api/beta-tester/status' && req.method === 'GET') {
+        if (!session) return json({error:'Nicht eingeloggt'}, 401);
+        const entry = _betaTesters[String(myUid)];
+        return json({ok:true, signedUp: !!entry, email: entry?.email || null});
+    }
+    if (path === '/api/beta-tester/dismiss' && req.method === 'POST') {
+        // User klickt 'Spaeter' → wir merken uns das (kein DB-Eintrag noetig, Client-seitig)
+        if (!session) return json({error:'Nicht eingeloggt'}, 401);
+        return json({ok:true});
+    }
+    if (path === '/api/admin/beta-testers/list' && req.method === 'GET') {
+        if (!session) return json({error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({error:'Nur Admins'}, 403);
+        const list = Object.values(_betaTesters).sort((a,b)=>(b.signedUpAt||0)-(a.signedUpAt||0));
+        return json({ok:true, list, count: list.length});
+    }
+    if (path === '/api/admin/beta-testers/remove' && req.method === 'POST') {
+        if (!session) return json({error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({error:'Nur Admins'}, 403);
+        const body = await parseBody(req);
+        const uid = String(body.uid||'');
+        if (_betaTesters[uid]) { delete _betaTesters[uid]; saveBetaTesters(); }
+        return json({ok:true});
+    }
     if (path === '/api/admin/diamond-link/list' && req.method === 'GET') {
         if (!session) return json({error:'Nicht eingeloggt'}, 401);
         if (!_dashIsAdmin) return json({error:'Nur Admins'}, 403);
@@ -13718,6 +13947,7 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
         <button class="dash-btn dash-btn-ghost" onclick="runMissionBackfill()">🔁 Backfill</button>
         <button class="dash-btn" onclick="window.open('/admin/emails','_blank')" style="border-color:rgba(167,139,250,0.40);color:#a78bfa">📧 Email Dashboard</button>
         <button class="dash-btn" onclick="window.open('/admin/play-listing','_blank')" style="border-color:rgba(52,211,153,0.40);color:#34d399">📲 Play Store Listing</button>
+        <button class="dash-btn" onclick="window.open('/admin/beta-testers','_blank')" style="border-color:rgba(52,211,153,0.40);color:#34d399">🧪 Beta-Tester</button>
         <button class="dash-btn" onclick="openFunnelDebug()">🔬 Funnel Debug</button>
         <button class="dash-btn" onclick="openStatsDebug()">📊 Stats Debug</button>
         <button class="dash-btn" onclick="openKollabBoostPreview()" style="border-color:rgba(236,72,153,0.40);color:#ec4899">🎨 Kollab-Boost Preview</button>
