@@ -69,6 +69,9 @@ const ACCOUNT_UNLOCK_TOKENS_FILE = DATA_DIR + '/account_unlock_tokens.json';
 
 // Sessions von Disk laden
 const sessions = new Map();
+// PERF: Cache statischer HTML-Files in Memory (geladen beim ersten Request).
+let _cachedSystemInfoHtml = null;
+let _cachedDiamantenInfoHtml = null;
 // Email-Magic-Link: persistiert (gegen Restart-Expiry).
 const emailLoginTokens = new Map();   // token → { email, uid, exp }
 const emailConfirmTokens = new Map(); // token → { email, uid, exp } (für /einstellungen Email-Bestätigung)
@@ -239,7 +242,14 @@ async function sendEmail(to, subject, html) {
 try {
     if (fs.existsSync(SESSIONS_FILE)) {
         const raw = JSON.parse(fs.readFileSync(SESSIONS_FILE, 'utf8'));
-        for (const [k,v] of Object.entries(raw)) sessions.set(k, v);
+        for (const [k,v] of Object.entries(raw)) {
+            // SESSION-BLOAT-FIX: Alte Image-Blobs aus persistierten Sessions ausräumen.
+            if (v && (v.profilePicData || v.bannerData)) {
+                delete v.profilePicData;
+                delete v.bannerData;
+            }
+            sessions.set(k, v);
+        }
         console.log('✅ Sessions geladen:', sessions.size);
     }
 } catch(e) { console.log('Sessions Ladefehler:', e.message); }
@@ -248,7 +258,13 @@ if (sessions.size === 0) {
     try {
         if (fs.existsSync(LOCAL_SESSIONS)) {
             const raw = JSON.parse(fs.readFileSync(LOCAL_SESSIONS, 'utf8'));
-            for (const [k,v] of Object.entries(raw)) sessions.set(k, v);
+            for (const [k,v] of Object.entries(raw)) {
+                if (v && (v.profilePicData || v.bannerData)) {
+                    delete v.profilePicData;
+                    delete v.bannerData;
+                }
+                sessions.set(k, v);
+            }
             console.log('✅ Sessions (lokal) geladen:', sessions.size);
         }
     } catch(e) { console.error('Sessions load failed:', e.message); }
@@ -5621,7 +5637,7 @@ try { fetch('/api/track-funnel',{method:'POST',headers:{'Content-Type':'applicat
         // Rate-Limit: max 1 Resend pro Minute pro User
         const prev = pendingEmailConfirms.get(uid);
         if (prev && prev.exp - (7 * 24 * 60 * 60 * 1000 - 60 * 1000) > Date.now()) {
-            return json({ok:false, error:'Bitte warte 1 Minute bevor du erneut sendest.'});
+            return json({ok:false, error:'Bitte warte 1 Minute bevor du erneut sendest.'}, 429);
         }
         await sendSignupConfirmationEmail(uid, u.email, req.headers.host);
         return json({ok:true});
@@ -6960,11 +6976,12 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
 
     // ── APK UPLOAD PAGE (für schon-signierte APKs aus Bubblewrap) ──
     // ── Diamanten-Info Public-Page (zum Teilen mit Usern) ──
+    // PERF: einmal beim ersten Request laden, dann aus Memory (Datei ändert sich nie zur Laufzeit).
     if (path === '/diamanten-info' || path === '/info/diamanten') {
         try {
-            const html = fs.readFileSync(__dirname + '/diamanten-info.html', 'utf8');
-            res.writeHead(200, {'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0'});
-            return res.end(html);
+            if (!_cachedDiamantenInfoHtml) _cachedDiamantenInfoHtml = fs.readFileSync(__dirname + '/diamanten-info.html', 'utf8');
+            res.writeHead(200, {'Content-Type':'text/html; charset=utf-8','Cache-Control':'public, max-age=300'});
+            return res.end(_cachedDiamantenInfoHtml);
         } catch(e) {
             res.writeHead(500); return res.end('Datei nicht gefunden');
         }
@@ -6972,9 +6989,9 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
     // ── System-Übersicht Public-Page (Telegram + App erklärt) ──
     if (path === '/system-info' || path === '/info' || path === '/info/system') {
         try {
-            const html = fs.readFileSync(__dirname + '/system-info.html', 'utf8');
-            res.writeHead(200, {'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','Pragma':'no-cache','Expires':'0'});
-            return res.end(html);
+            if (!_cachedSystemInfoHtml) _cachedSystemInfoHtml = fs.readFileSync(__dirname + '/system-info.html', 'utf8');
+            res.writeHead(200, {'Content-Type':'text/html; charset=utf-8','Cache-Control':'public, max-age=300'});
+            return res.end(_cachedSystemInfoHtml);
         } catch(e) {
             res.writeHead(500); return res.end('Datei nicht gefunden');
         }
@@ -7649,8 +7666,8 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
             const { imageData } = JSON.parse(Buffer.concat(chunks).toString());
             if (!imageData?.startsWith('data:image/')) return json({ok:false, error:'Kein Bild'},400);
             if (imageData.length > 3000000) return json({ok:false, error:'Max 2MB'},400);
-            session.profilePicData = imageData;
-            saveSessions();
+            // SESSION-BLOAT-FIX: profilePicData NICHT mehr in Session speichern (war ~2MB pro User).
+            // Quelle der Wahrheit ist die Datei. ladeBild() hat eigenes In-Memory-Cache.
             const _uidU = getMyUid(session);
             const _filePic = DATA_DIR + '/bild_' + _uidU + '_profilepic.txt';
             let _writeOk = false;
@@ -7706,8 +7723,7 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
                 console.error('[upload-banner] too large:', imageData.length, 'bytes');
                 return json({ok:false, error:'Banner zu groß (max ~4.5MB) — bitte komprimieren'},400);
             }
-            session.bannerData = imageData;
-            saveSessions();
+            // SESSION-BLOAT-FIX: bannerData NICHT mehr in Session speichern (war bis 4.5MB pro User).
             const _uidB = getMyUid(session);
             const _fileBan = DATA_DIR + '/bild_' + _uidB + '_banner.txt';
             let _writeOkB = false;
@@ -7735,8 +7751,15 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
 
     if (path === '/api/add-project' && req.method === 'POST') {
         if (!session) return json({error:'Nicht eingeloggt'}, 401);
+        // HARD-LIMIT: image=4MB + doc=10MB + slack → 18MB total. Vorher unbounded → OOM-Vektor.
+        const HARD_LIMIT = 18 * 1024 * 1024;
         const chunks = [];
-        for await (const chunk of req) chunks.push(chunk);
+        let total = 0;
+        for await (const chunk of req) {
+            total += chunk.length;
+            if (total > HARD_LIMIT) { req.destroy(); return json({error:'Payload zu groß (max 18MB)'}, 413); }
+            chunks.push(chunk);
+        }
         try {
             const { imageData, title, description, link, docData, docName } = JSON.parse(Buffer.concat(chunks).toString());
             if (!title?.trim()) return json({error:'Titel fehlt'}, 400);
@@ -8904,12 +8927,12 @@ p{line-height:1.65;color:var(--muted)}
 
     if (path === '/api/theme' && req.method === 'POST') {
         const body = await parseBody(req);
-        if(session) { session.theme = body.theme||'dark'; saveSessions(); }
+        if(session && body.theme) { session.theme = String(body.theme); saveSessions(); }
         return json({ok:true});
     }
     if (path === '/api/lang' && req.method === 'POST') {
         const body = await parseBody(req);
-        if(session) { session.lang = body.lang||'de'; saveSessions(); }
+        if(session && body.lang) { session.lang = String(body.lang); saveSessions(); }
         return json({ok:true});
     }
     if (path === '/api/save-profile' && req.method === 'POST') {
@@ -8937,9 +8960,11 @@ p{line-height:1.65;color:var(--muted)}
         const _curUser = _curBd?.users?.[myUid] || {};
         const _isFullySet = !!_curUser.email && !!_curUser.password_hash;
         const _unlockActive = !!session && Number(session.accountUnlockUntil||0) > Date.now();
+        let _emailActuallyChanged = false;
         if (body.email !== undefined) {
             const em = String(body.email||'').toLowerCase().trim();
             const emChanged = String(_curUser.email||'').toLowerCase() !== em;
+            _emailActuallyChanged = emChanged;
             if (emChanged && _isFullySet && !_unlockActive) {
                 return json({ok:false, error:'Email-Änderung gesperrt. Klick "Änderung anfragen" — wir senden dir einen Link zur Email zum Freischalten.', locked:true}, 423);
             }
@@ -9002,8 +9027,9 @@ p{line-height:1.65;color:var(--muted)}
             saveSessions();
         }
         await checkProfileCompletion(myUid, session);
-        // Wenn Unlock-Window aktiv UND Email/Passwort geändert wurden → Window schließen (single-use)
-        if (session && _unlockActive && (body.email !== undefined || _pwUpdated)) {
+        // Wenn Unlock-Window aktiv UND Email TATSÄCHLICH geändert ODER PW geändert → Window schließen.
+        // Bug-Fix: vorher hat jedes body.email-Resubmit (auch unverändert) das Window geschlossen.
+        if (session && _unlockActive && (_emailActuallyChanged || _pwUpdated)) {
             session.accountUnlockUntil = 0; saveSessions();
         }
         return json({ok:true, emailPending: _emailPending, pwUpdated: _pwUpdated});
@@ -9564,6 +9590,7 @@ p{line-height:1.65;color:var(--muted)}
     }
 
     if (path === '/api/comment' && req.method === 'POST') {
+        if (!session) return json({error:'Nicht eingeloggt'}, 401);
         const body = await parseBody(req);
         const { postId, text } = body;
         if (!postId || !text?.trim()) return json({ok:false, error:'Ungültig'},400);
