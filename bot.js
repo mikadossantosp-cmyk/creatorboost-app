@@ -10594,8 +10594,19 @@ async function submitSuperLink(){
         btn.textContent = '✗ Fehler'; btn.disabled = false;
       }
     };
-    window.__betaCheckAgain = function(){
-      location.reload();
+    window.__betaCheckAgain = async function(){
+      // Check Server-Status: wenn confirmed → reload, sonst Toast mit Hinweis
+      try {
+        const r = await fetch('/api/beta-tester/status');
+        const j = await r.json();
+        if (j.ok && !j.needsConfirm) { location.reload(); return; }
+        // Noch nicht confirmed → kleines Hint-Toast
+        const t = document.createElement('div');
+        t.textContent = '⏳ Noch nicht bestätigt — checke deine Email und klick den Link';
+        t.style.cssText = 'position:fixed;top:80px;left:50%;transform:translateX(-50%);background:#fb923c;color:#fff;padding:12px 18px;border-radius:10px;font-size:13px;font-weight:700;z-index:9999;box-shadow:0 8px 24px rgba(251,146,60,.4);max-width:90%;text-align:center';
+        document.body.appendChild(t);
+        setTimeout(()=>t.remove(), 4000);
+      } catch(e) { location.reload(); }
     };
     window.__betaChangeEmail = function(){
       const newEmail = prompt('Tippfehler korrigieren — neue Email eingeben:', email || '');
@@ -10627,6 +10638,7 @@ async function submitSuperLink(){
     '</div><style>@keyframes betaPulse{0%,100%{box-shadow:0 0 0 0 rgba(34,197,94,0.0)}50%{box-shadow:0 0 0 8px rgba(34,197,94,0.10)}}</style>';
     window.__betaShowSteps = function(){
       const bg = document.createElement('div');
+      bg.className = 'beta-modal-bg';
       bg.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.82);backdrop-filter:blur(8px);z-index:9200;display:flex;align-items:center;justify-content:center;padding:18px';
       const escLink = escapeHtml(link);
       bg.innerHTML = '<div style="background:var(--bg2);border:1px solid rgba(34,197,94,0.35);border-radius:18px;padding:22px;max-width:520px;width:100%;max-height:92vh;overflow-y:auto">'+
@@ -10661,8 +10673,8 @@ async function submitSuperLink(){
           '<b style="color:#3b82f6">💡 Geduld bei "Beta nicht verfügbar":</b> Manchmal braucht Google 1-2 Stunden um deinen Tester-Status zu syncen. Falls die Beta-Seite "nicht verfügbar" sagt → warte etwas und probier nochmal.'+
         '</div>'+
         '<div style="display:flex;gap:10px">'+
-          '<button onclick="this.closest(\\'div[style*=fixed]\\').remove()" style="flex:1;padding:12px;background:transparent;color:var(--text);border:1px solid var(--border2,#333);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">Später</button>'+
-          '<button onclick="window.__betaOpenLink();this.closest(\\'div[style*=fixed]\\').remove()" style="flex:2;padding:12px;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer">📲 Jetzt Link öffnen</button>'+
+          '<button onclick="this.closest(\\'.beta-modal-bg\\').remove()" style="flex:1;padding:12px;background:transparent;color:var(--text);border:1px solid var(--border2,#333);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">Später</button>'+
+          '<button onclick="window.__betaOpenLink();this.closest(\\'.beta-modal-bg\\').remove()" style="flex:2;padding:12px;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer">📲 Jetzt Link öffnen</button>'+
         '</div>'+
       '</div>';
       document.body.appendChild(bg);
@@ -10749,6 +10761,7 @@ async function submitSuperLink(){
   };
   window.__betaShow = function(){
     const bg = document.createElement('div');
+    bg.className = 'beta-modal-bg';
     bg.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.78);backdrop-filter:blur(8px);z-index:9100;display:flex;align-items:center;justify-content:center;padding:18px';
     bg.innerHTML = '<div style="background:var(--bg2);border:1px solid rgba(52,211,153,0.35);border-radius:18px;padding:24px;max-width:480px;width:100%;max-height:92vh;overflow-y:auto;box-shadow:0 24px 60px rgba(52,211,153,0.20)">'+
       '<div style="font-size:38px;text-align:center;margin-bottom:8px">📱</div>'+
@@ -10797,7 +10810,7 @@ async function submitSuperLink(){
             title = '📧 Check deine Email!';
             body = 'Wir haben dir gerade einen Bestätigungs-Link an <b style="color:#e5e5e5">'+email+'</b> gesendet. Klick den Link → deine Gmail wird mit deinem CreatorX-Account verknüpft. <b style="color:#fbbf24">Wichtig:</b> ohne Klick keine Verknüpfung — und kein Beta-Zugang.';
           }
-          bg.innerHTML = '<div style="background:var(--bg2);border:1px solid rgba(34,197,94,0.45);border-radius:18px;padding:32px 24px;max-width:480px;width:100%;text-align:center"><div style="font-size:54px;margin-bottom:12px">'+(j.mode==='already-confirmed'?'🎉':'📧')+'</div><div style="font-size:18px;font-weight:800;color:#22c55e;margin-bottom:10px">'+title+'</div><div style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:18px">'+body+'</div><button onclick="document.querySelector(\\'div[style*=\\\\\\'position:fixed\\\\\\']\\').remove()" style="background:#22c55e;color:#fff;border:none;border-radius:10px;padding:12px 28px;font-size:13px;font-weight:800;cursor:pointer">Verstanden</button></div>';
+          bg.innerHTML = '<div style="background:var(--bg2);border:1px solid rgba(34,197,94,0.45);border-radius:18px;padding:32px 24px;max-width:480px;width:100%;text-align:center"><div style="font-size:54px;margin-bottom:12px">'+(j.mode==='already-confirmed'?'🎉':'📧')+'</div><div style="font-size:18px;font-weight:800;color:#22c55e;margin-bottom:10px">'+title+'</div><div style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:18px">'+body+'</div><button onclick="this.closest(\\'.beta-modal-bg\\').remove()" style="background:#22c55e;color:#fff;border:none;border-radius:10px;padding:12px 28px;font-size:13px;font-weight:800;cursor:pointer">Verstanden</button></div>';
           root.innerHTML = '';
         } else {
           err.textContent = '✗ ' + (j.error || 'Fehler');
