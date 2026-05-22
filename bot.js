@@ -5037,7 +5037,7 @@ h1{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;line-height:1.1;
     <input type="password" id="signup-pw" class="in" placeholder="Passwort (min. 6 Zeichen)" autocomplete="new-password" minlength="6" maxlength="200" required>
     <label style="display:flex;align-items:flex-start;gap:10px;margin:6px 2px 4px;cursor:pointer;font-size:12.5px;color:var(--muted);line-height:1.5">
       <input type="checkbox" id="signup-age" required style="margin-top:3px;flex-shrink:0;width:16px;height:16px;accent-color:#d4a946;cursor:pointer">
-      <span>Ich bestätige, dass ich <b style="color:#fff">mindestens 16 Jahre alt</b> bin und die <a href="/datenschutz" target="_blank" style="color:#d4a946;text-decoration:underline">Datenschutzerklärung</a> sowie die <a href="/agb" target="_blank" style="color:#d4a946;text-decoration:underline">AGB</a> akzeptiere.</span>
+      <span>Ich bestätige, dass ich <b style="color:#fff">mindestens 18 Jahre alt</b> bin und die <a href="/datenschutz" target="_blank" style="color:#d4a946;text-decoration:underline">Datenschutzerklärung</a> sowie die <a href="/agb" target="_blank" style="color:#d4a946;text-decoration:underline">AGB</a> akzeptiere.</span>
     </label>
     <button type="submit" class="btn" id="signup-btn">Kostenlos starten →</button>
   </form>
@@ -5304,8 +5304,8 @@ try { fetch('/api/track-funnel',{method:'POST',headers:{'Content-Type':'applicat
         const body = await parseBody(req);
         const email = String(body.email || '').toLowerCase().trim();
         const password = String(body.password || '');
-        // DSGVO + Google-Play: Altersbestätigung (≥16) und AGB/Datenschutz-Zustimmung sind Pflicht.
-        if (!body.ageConfirmed || !body.termsAccepted) return json({ok:false, error:'Altersbestätigung (16+) und Zustimmung zu Datenschutz/AGB erforderlich'}, 400);
+        // DSGVO + Google-Play: Altersbestätigung (≥18) und AGB/Datenschutz-Zustimmung sind Pflicht.
+        if (!body.ageConfirmed || !body.termsAccepted) return json({ok:false, error:'Altersbestätigung (18+) und Zustimmung zu Datenschutz/AGB erforderlich'}, 400);
         if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json({ok:false, error:'Ungültige Email-Adresse'}, 400);
         if (password.length < 6 || password.length > 200) return json({ok:false, error:'Passwort muss 6–200 Zeichen lang sein'}, 400);
         const _ip = String(req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '').split(',')[0].trim().slice(0, 64);
@@ -6001,7 +6001,7 @@ Wir sammeln nur was nötig ist. Keine Werbung. Keine Tracker. Deine Daten gehör
 
 📲 Direkt von Instagram zu CreatorX: starte mit @creatorx_bot auf Telegram.
 
-Ab 16 Jahren. Datenschutz: creatorboostx.de/datenschutz`;
+Ab 18 Jahren. Datenschutz: creatorboostx.de/datenschutz`;
 
         const shortDesc = 'Engagement-Community für Instagram-Creator. Echtes Wachstum durch gegenseitige Unterstützung.';
         const whatsNew = `🎉 Neues Update!
@@ -6115,7 +6115,7 @@ ${dataSafety.map(d => `
 <div class="card">
 <div class="stat-row"><span class="stat-key">App-Kategorie</span><span class="stat-val">Social / Lifestyle</span></div>
 <div class="stat-row"><span class="stat-key">Content Rating</span><span class="stat-val">Teen (13+) oder Mature 17+</span></div>
-<div class="stat-row"><span class="stat-key">Target Audience</span><span class="stat-val">16+ (App-AGB-Mindestalter)</span></div>
+<div class="stat-row"><span class="stat-key">Target Audience</span><span class="stat-val">18+ (App-AGB-Mindestalter)</span></div>
 <div class="stat-row"><span class="stat-key">Country/Region</span><span class="stat-val">Deutschland + Österreich</span></div>
 <div class="stat-row"><span class="stat-key">Pricing</span><span class="stat-val">Free</span></div>
 <div class="stat-row"><span class="stat-key">In-App-Purchases</span><span class="stat-val">Nein (Diamanten verdient nicht gekauft)</span></div>
@@ -6137,7 +6137,7 @@ ${[
   {id:'c8', text:'Privacy Policy URL eingegeben', desc:'creatorboostx.de/datenschutz'},
   {id:'c9', text:'Data Safety Form ausgefüllt', desc:'Siehe Sektion oben'},
   {id:'c10', text:'Content Rating Quiz beantwortet', desc:'~10 Fragen — Teen oder 17+'},
-  {id:'c11', text:'Target Audience definiert', desc:'16+ Jahre'},
+  {id:'c11', text:'Target Audience definiert', desc:'18+ Jahre'},
   {id:'c12', text:'Pricing & Distribution = Free, Deutschland', desc:'Mind. DE+AT auswählen'},
   {id:'c13', text:'TWA_SHA256_FINGERPRINT in Railway gesetzt', desc:'Wichtig für TWA-Verifizierung!'},
   {id:'c14', text:'Test-Track Release angelegt', desc:'Erstmal interner Test bevor Production'},
@@ -18340,7 +18340,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 <p>Übertragung via HTTPS/TLS. Passwörter werden mit bcrypt gehashed. Session-Cookies sind HTTP-only + SameSite=Lax.</p>
 
 <h2 style="font-size:16px;margin:20px 0 8px">9. Minderjährige</h2>
-<p>Die App ist für Personen ab 16 Jahren. Jüngere User dürfen den Service nicht ohne Zustimmung ihrer Erziehungsberechtigten nutzen.</p>
+<p>Die App ist für Personen ab 18 Jahren. Jüngere User dürfen den Service nicht nutzen.</p>
 
 <h2 style="font-size:16px;margin:20px 0 8px">10. Änderungen</h2>
 <p>Wir behalten uns vor, diese Datenschutzerklärung anzupassen. Bei wesentlichen Änderungen informieren wir dich in der App.</p>
@@ -18395,7 +18395,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 <p>Diese Nutzungsbedingungen regeln die Nutzung der CreatorX App (die "App") zwischen dem Betreiber (siehe <a href="/impressum" style="color:var(--accent)">Impressum</a>) und dem Nutzer.</p>
 
 <h2 style="font-size:16px;margin:18px 0 8px">§ 2 Account & Mindestalter</h2>
-<p>Die Nutzung der App ist Personen ab 16 Jahren erlaubt. Mit der Registrierung versicherst du, dass du dieses Alter erreicht hast. Pro Person ist nur ein Hauptaccount erlaubt. Sub-Accounts dürfen nur für eigene Personas verwendet werden, nicht für Drittpersonen.</p>
+<p>Die Nutzung der App ist Personen ab 18 Jahren erlaubt. Mit der Registrierung versicherst du, dass du dieses Alter erreicht hast. Pro Person ist nur ein Hauptaccount erlaubt. Sub-Accounts dürfen nur für eigene Personas verwendet werden, nicht für Drittpersonen.</p>
 
 <h2 style="font-size:16px;margin:18px 0 8px">§ 3 Verhaltensregeln</h2>
 <ul style="padding-left:18px">
