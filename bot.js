@@ -7372,10 +7372,9 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
     }
 
     // ── ASSETLINKS (für APK/TWA) ──
-    if (path === '/.well-known/assetlinks.json') {
-        res.writeHead(200,{'Content-Type':'application/json','Cache-Control':'no-cache'});
-        return res.end('[]');
-    }
+    // (Hier war ein Duplikat von /.well-known/assetlinks.json das '[]' returnte.
+    // Die echte Implementierung mit Fingerprint kommt weiter unten — ohne den Duplikat
+    // ist die TWA korrekt verifiziert + die URL-Bar in der App verschwindet.)
 
     // ── APK VERSION ── (für In-App-Update-Banner)
     // BuildId = mtime der APK-Datei. Neue APK hochladen → buildId ändert sich → Banner triggert automatisch.
@@ -7584,17 +7583,22 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
     // Verifiziert dass die App `com.creatorx.app` zur Domain creatorboostx.de gehört.
     // SHA256-Fingerprint kommt vom Signing-Key (kann aus dem Bubblewrap-Build oder Play Console ausgelesen werden).
     if (path === '/.well-known/assetlinks.json') {
-        const _twaFingerprint = process.env.TWA_SHA256_FINGERPRINT || '';
+        // Unterstützt MEHRERE Fingerprints (comma-separated) für Upload-Key + Google-Play-Signing-Key
+        // sowie mehrere Package-Names (falls Du parallel zwei Apps releasen willst).
+        const _fps = String(process.env.TWA_SHA256_FINGERPRINT || '').split(',').map(s => s.trim()).filter(Boolean);
+        const _packages = String(process.env.TWA_PACKAGE_NAMES || 'de.creatorboostx.www.twa,com.creatorx.app').split(',').map(s => s.trim()).filter(Boolean);
         const _statements = [];
-        if (_twaFingerprint) {
-            _statements.push({
-                relation: ['delegate_permission/common.handle_all_urls'],
-                target: {
-                    namespace: 'android_app',
-                    package_name: 'com.creatorx.app',
-                    sha256_cert_fingerprints: [_twaFingerprint]
-                }
-            });
+        if (_fps.length > 0) {
+            for (const pkg of _packages) {
+                _statements.push({
+                    relation: ['delegate_permission/common.handle_all_urls'],
+                    target: {
+                        namespace: 'android_app',
+                        package_name: pkg,
+                        sha256_cert_fingerprints: _fps
+                    }
+                });
+            }
         }
         res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=600', 'Access-Control-Allow-Origin': '*' });
         return res.end(JSON.stringify(_statements));
