@@ -46,13 +46,49 @@ const zlib = require('zlib');
 const DATA_DIR = fs.existsSync('/data') ? '/data' : __dirname;
 const SESSIONS_FILE = DATA_DIR + '/cb_sessions.json';
 const PENDING_CONFIRMS_FILE = DATA_DIR + '/email_confirm_pending.json';
+// BUG-FIX: Magic-Link + Unlock-Tokens werden jetzt persistiert (vorher in-memory → bei jedem Railway-Deploy expired).
+const EMAIL_LOGIN_TOKENS_FILE = DATA_DIR + '/email_login_tokens.json';
+const ACCOUNT_UNLOCK_TOKENS_FILE = DATA_DIR + '/account_unlock_tokens.json';
 
 // Sessions von Disk laden
 const sessions = new Map();
-// Email-Magic-Link: in-memory (Token nur 1h gültig, Server-Restart ist OK).
+// Email-Magic-Link: persistiert (gegen Restart-Expiry).
 const emailLoginTokens = new Map();   // token → { email, uid, exp }
 const emailConfirmTokens = new Map(); // token → { email, uid, exp } (für /einstellungen Email-Bestätigung)
 const accountUnlockTokens = new Map(); // token → { uid, exp } — nach Klick im Mail Settings-Edit freischalten
+// Hilfsfunktionen für Token-Persistierung
+function _loadTokenMap(file, map) {
+    try {
+        if (!fs.existsSync(file)) return;
+        const raw = JSON.parse(fs.readFileSync(file, 'utf8'));
+        const now = Date.now();
+        for (const [t, v] of Object.entries(raw || {})) {
+            if (v && v.exp && v.exp > now) map.set(t, v);
+        }
+    } catch(e) {}
+}
+function _saveTokenMap(file, map) {
+    try {
+        const obj = {};
+        for (const [t, v] of map.entries()) obj[t] = v;
+        fs.writeFile(file, JSON.stringify(obj), () => {});
+    } catch(e) {}
+}
+_loadTokenMap(EMAIL_LOGIN_TOKENS_FILE, emailLoginTokens);
+_loadTokenMap(ACCOUNT_UNLOCK_TOKENS_FILE, accountUnlockTokens);
+function saveEmailLoginTokens() { _saveTokenMap(EMAIL_LOGIN_TOKENS_FILE, emailLoginTokens); }
+function saveAccountUnlockTokens() { _saveTokenMap(ACCOUNT_UNLOCK_TOKENS_FILE, accountUnlockTokens); }
+// Auto-persist bei JEDER Mutation (Map.prototype patchen): wrappt set/delete mit debounced save.
+let _emailLoginSaveT = null;
+let _accountUnlockSaveT = null;
+const _origELSet = emailLoginTokens.set.bind(emailLoginTokens);
+const _origELDel = emailLoginTokens.delete.bind(emailLoginTokens);
+emailLoginTokens.set = (k, v) => { const r = _origELSet(k, v); clearTimeout(_emailLoginSaveT); _emailLoginSaveT = setTimeout(saveEmailLoginTokens, 2000); return r; };
+emailLoginTokens.delete = (k) => { const r = _origELDel(k); clearTimeout(_emailLoginSaveT); _emailLoginSaveT = setTimeout(saveEmailLoginTokens, 2000); return r; };
+const _origAUSet = accountUnlockTokens.set.bind(accountUnlockTokens);
+const _origAUDel = accountUnlockTokens.delete.bind(accountUnlockTokens);
+accountUnlockTokens.set = (k, v) => { const r = _origAUSet(k, v); clearTimeout(_accountUnlockSaveT); _accountUnlockSaveT = setTimeout(saveAccountUnlockTokens, 2000); return r; };
+accountUnlockTokens.delete = (k) => { const r = _origAUDel(k); clearTimeout(_accountUnlockSaveT); _accountUnlockSaveT = setTimeout(saveAccountUnlockTokens, 2000); return r; };
 const emailRateLimit = new Map();      // email → lastRequestTs (Cooldown gegen Spam)
 // AppCode-Brute-Force-Schutz: pro IP max 10 versch. Codes / 10 Min
 const _codeBruteMap = new Map();       // ip → { codes: Set, ts: Date.now() }
@@ -105,14 +141,27 @@ const EMAIL_RATE_LIMIT = MAGIC_LINK_RATE_LIMIT; // Backward-compat alias
 setInterval(() => {
     const now = Date.now();
     let confirmsRemoved = 0;
-    for (const [t, v] of emailLoginTokens.entries()) if (v.exp < now) emailLoginTokens.delete(t);
+    let loginRemoved = 0;
+    let unlockRemoved = 0;
+    for (const [t, v] of emailLoginTokens.entries()) if (v.exp < now) { emailLoginTokens.delete(t); loginRemoved++; }
     for (const [t, v] of emailConfirmTokens.entries()) { if (v.exp < now) { emailConfirmTokens.delete(t); confirmsRemoved++; } }
-    for (const [t, v] of accountUnlockTokens.entries()) if (v.exp < now) accountUnlockTokens.delete(t);
-    for (const [e, ts] of emailRateLimit.entries()) { if (typeof ts === 'number' && now - ts > EMAIL_RATE_LIMIT * 2) emailRateLimit.delete(e); }
+    for (const [t, v] of accountUnlockTokens.entries()) if (v.exp < now) { accountUnlockTokens.delete(t); unlockRemoved++; }
+    // BUG-FIX: Cleanup darf KEINE ':n'-Counter-Keys löschen (das sind Versuchszähler, kein Timestamp).
+    // Sonst wurde der Brute-Force-Schutz alle 5min zurückgesetzt — effektiv kein Limit.
+    for (const [e, ts] of emailRateLimit.entries()) {
+        if (typeof e === 'string' && e.endsWith(':n')) continue;
+        if (typeof ts === 'number' && now - ts > EMAIL_RATE_LIMIT * 2) {
+            emailRateLimit.delete(e);
+            emailRateLimit.delete(e + ':n');  // auch zugehörigen Counter mit löschen
+            emailRateLimit.delete('pw:' + e + ':n');
+        }
+    }
     for (const [ip, v] of signupIpRateLimit.entries()) if (now - v.ts > SIGNUP_RATE_LIMIT_WINDOW) signupIpRateLimit.delete(ip);
     // Wenn Email-Confirm-Tokens gelöscht wurden: sofort auf Disk persistieren
     // (sonst werden expired tokens nach Restart aus alter Datei wiedergeladen — würde aber unten gefiltert, also nur Inkonsistenz)
     if (confirmsRemoved > 0) { try { savePendingEmailConfirms(); } catch(e) {} }
+    if (loginRemoved > 0) saveEmailLoginTokens();
+    if (unlockRemoved > 0) saveAccountUnlockTokens();
 }, 5 * 60 * 1000);
 
 // Daily claims tracker (persisted to file, keyed by "type:uid:date")
@@ -4020,7 +4069,11 @@ async function handleRequest(req, res) {
     }
 
     // ── DIAGNOSE: Mainbot live testen (für Admin-Debugging von Signup-Fehlern) ──
+    // SECURITY: nur via BRIDGE_SECRET (per query) — verhindert Email-Enumeration durch beliebige User.
     if (path === '/api/diag/signup') {
+        if (String(query.key || '') !== BRIDGE_SECRET || !BRIDGE_SECRET) {
+            res.writeHead(404); return res.end('Not Found');
+        }
         const testEmail = String(query.email || '').toLowerCase().trim() || 'diag-test-' + Date.now() + '@example.invalid';
         const t0 = Date.now();
         // 1) Mainbot /data erreichbar?
@@ -5929,7 +5982,8 @@ function submitPw(ev){
         // SECURITY: AppCode-Brute-Force-Schutz
         const _ipA = String(req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '').split(',')[0].trim().slice(0, 64);
         if (_ipA && !_codeBruteCheck(_ipA, code)) {
-            res.writeHead(429,{'Location':'/login?error=ratelimit'}); return res.end();
+            // Browser folgen kein Location-Header bei 429 — daher 302 zur Login-Page mit error param.
+            res.writeHead(302,{'Location':'/login?error=ratelimit'}); return res.end();
         }
         let botData = await fetchBot('/data');
         if (!botData) { res.writeHead(302,{'Location':'/login?error=503'}); return res.end(); }
@@ -9318,22 +9372,26 @@ p{line-height:1.65;color:var(--muted)}
     }
     if (path === '/api/mindset-admin/pick' && req.method === 'POST') {
         if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
         const body = await parseBody(req);
         const result = await postBot('/mindset-admin-pick-api', { callerUid: myUid, targetUid: body.targetUid });
         return json(result || {ok:false, error:'Bot offline'});
     }
     if (path === '/api/mindset-admin/skip' && req.method === 'POST') {
         if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
         const result = await postBot('/mindset-admin-skip-api', { callerUid: myUid });
         return json(result || {ok:false, error:'Bot offline'});
     }
     if (path === '/api/mindset-admin/blast' && req.method === 'POST') {
         if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
         const result = await postBot('/mindset-admin-blast-api', { callerUid: myUid });
         return json(result || {ok:false, error:'Bot offline'});
     }
     if (path === '/api/mindset-admin/restore' && req.method === 'POST') {
         if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
         const body = await parseBody(req);
         const result = await postBot('/mindset-admin-restore-api', { callerUid: myUid, targetUid: body.targetUid });
         return json(result || {ok:false, error:'Bot offline'});
