@@ -5063,7 +5063,7 @@ self.addEventListener('notificationclick',e=>{
             return res.end(baseHtml('❌','Fehler','Bestätigung konnte nicht gespeichert werden ('+(result && result.error || 'unbekannt')+'). Bitte später erneut versuchen.','#ef4444'));
         }
         res.writeHead(200, {'Content-Type':'text/html'});
-        return res.end(baseHtml('✅','Email bestätigt!','Deine Email <b style="color:#fff">'+entry.email+'</b> ist jetzt aktiv. Du kannst dich damit einloggen.','#22c55e'));
+        return res.end(baseHtml('✅','Email bestätigt!','Deine Email <b style="color:#fff">'+htmlEsc(entry.email)+'</b> ist jetzt aktiv. Du kannst dich damit einloggen.','#22c55e'));
     }
     // Email-Magic-Link Verify: User klickt Link → Session erstellen.
     // ── /signup: Separate Signup-Page für neue User ──
@@ -9704,7 +9704,7 @@ window.onPinVisitStory = function(uid){
                 const lu=d.users[String(lid)]; const lg=badgeGradient(lu&&lu.role);
                 const lf=ladeBild(String(lid),'profilepic'); const li=lu&&lu.instagram;
                 const limg=lf?'<img src="/appbild/'+lid+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" alt="">':li?'<img src="https://unavatar.io/instagram/'+li+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" alt="">':'';
-                return '<a href="/profil/'+lid+'" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--border2);text-decoration:none;background:'+(i%2===0?'transparent':'rgba(255,255,255,.02)')+'"><div style="position:relative;width:34px;height:34px;flex-shrink:0">'+crownOverlay(lid,'xs')+'<div style="position:relative;width:34px;height:34px;border-radius:50%;background:'+lg+';overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff"><span style="position:absolute">'+(lu&&lu.name||'?')[0]+'</span>'+limg+'</div></div><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:var(--text)">'+(lu&&(lu.spitzname||lu.name)||'User')+'</div><div style="font-size:10px;color:var(--muted)">'+cleanRole(lu&&lu.role)+'</div></div><div style="font-size:11px;color:var(--accent)">→</div></a>';
+                return '<a href="/profil/'+lid+'" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--border2);text-decoration:none;background:'+(i%2===0?'transparent':'rgba(255,255,255,.02)')+'"><div style="position:relative;width:34px;height:34px;flex-shrink:0">'+crownOverlay(lid,'xs')+'<div style="position:relative;width:34px;height:34px;border-radius:50%;background:'+lg+';overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff"><span style="position:absolute">'+(lu&&lu.name||'?')[0]+'</span>'+limg+'</div></div><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:var(--text)">'+htmlEsc(lu&&(lu.spitzname||lu.name)||'User')+'</div><div style="font-size:10px;color:var(--muted)">'+cleanRole(lu&&lu.role)+'</div></div><div style="font-size:11px;color:var(--accent)">→</div></a>';
             }).join('');
 
             // Comments
@@ -9715,7 +9715,7 @@ window.onPinVisitStory = function(uid){
                 : allComments.map(c=>{
                     const cu=d.users[String(c.uid)]||{}; const cg=badgeGradient(cu.role);
                     const cf=ladeBild(String(c.uid),'profilepic'); const ci=cu.instagram;
-                    const cimg=cf?'<img src="/appbild/'+c.uid+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" alt="">':ci?'<img src="https://unavatar.io/instagram/'+ci+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" alt="">':'';
+                    const cimg=cf?'<img src="/appbild/'+c.uid+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" alt="">':ci?'<img src="https://unavatar.io/instagram/'+encodeURIComponent(ci)+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" alt="">':'';
                     const ct=new Date(c.timestamp||0).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
                     return '<div style="display:flex;gap:8px;padding:8px 12px;border-bottom:1px solid var(--border2)"><div style="position:relative;width:28px;height:28px;flex-shrink:0">'+crownOverlay(c.uid,'xs')+'<div style="position:relative;width:28px;height:28px;border-radius:50%;background:'+cg+';overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff"><span style="position:absolute">'+htmlEsc((cu.name||'?')[0])+'</span>'+cimg+'</div></div><div style="flex:1;min-width:0"><div style="font-size:11px;font-weight:700">'+htmlEsc(cu.spitzname||cu.name||'User')+' <span style="font-size:10px;color:var(--muted);font-weight:400">'+ct+'</span></div><div style="font-size:12px;color:var(--text);margin-top:2px">'+htmlEsc(c.text)+'</div></div></div>';
                 }).join('');
@@ -9785,10 +9785,10 @@ window.onPinVisitStory = function(uid){
 '    </a>\n'+
 '    <a href="/profil/'+link.user_id+'" class="post-user-info" style="text-decoration:none;color:inherit">\n'+
 '      <div class="post-name" style="display:flex;align-items:center;gap:5px">\n'+
-'        '+(poster.spitzname||poster.name||'User')+'\n'+
+'        '+htmlEsc(poster.spitzname||poster.name||'User')+'\n'+
 '        '+(isOnline?'<span style="width:7px;height:7px;border-radius:50%;background:#00c851;display:inline-block;flex-shrink:0"></span>':'')+'\n'+
 '      </div>\n'+
-'      <div class="post-badge">'+cleanRole(poster.role)+(insta?'<span style="color:var(--muted2)"> · @'+poster.instagram+'</span>':'')+'</div>\n'+
+'      <div class="post-badge">'+cleanRole(poster.role)+(insta?'<span style="color:var(--muted2)"> · @'+htmlEsc(poster.instagram)+'</span>':'')+'</div>\n'+
 '    </a>\n'+
 '  </div>\n'+
 // Reel video preview card — cleanInstagramUrl entfernt Tracking-Params, jsEsc verhindert JS-Break bei Sonderzeichen
@@ -9810,7 +9810,7 @@ window.onPinVisitStory = function(uid){
 '            '+crownOverlay(link.user_id, 'xs')+'\n'+
 '            <div style="width:32px;height:32px;border-radius:50%;border:2px solid rgba(255,255,255,.5);overflow:hidden;background:'+grad+';display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff">'+profPic+'</div>\n'+
 '          </div>\n'+
-'          <div style="font-size:12px;font-weight:700;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.6)">'+(poster.spitzname||poster.name||'User')+'</div>\n'+
+'          <div style="font-size:12px;font-weight:700;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.6)">'+htmlEsc(poster.spitzname||poster.name||'User')+'</div>\n'+
 '        </a>\n'+
 '      </div>\n'+
 '    </div>\n'+
@@ -9864,7 +9864,7 @@ commentsBox+
                 const limg=lf?'<img src="/appbild/'+lid+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" alt="">':li?'<img src="https://unavatar.io/instagram/'+li+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" alt="">':'';
                 const rName = ((lu&&(lu.spitzname||lu.name))||'User').replace(/'/g,'&#39;');
                 const reportBtn = isOwnPost ? '<button onclick="reportNonEngager(\''+sl.id+'\',\''+lid+'\',\''+rName+'\')" style="background:none;border:1px solid rgba(255,59,48,.5);color:rgba(255,59,48,.8);border-radius:8px;padding:3px 8px;font-size:10px;font-weight:600;cursor:pointer;flex-shrink:0">Melden</button>' : '';
-                return '<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--border2)"><div style="position:relative;width:34px;height:34px;flex-shrink:0">'+crownOverlay(lid,'xs')+'<div style="position:relative;width:34px;height:34px;border-radius:50%;background:'+lg+';overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff"><span style="position:absolute">'+(lu&&lu.name||'?')[0]+'</span>'+limg+'</div></div><div style="flex:1;min-width:0;font-size:13px;font-weight:600;color:var(--text)">'+(lu&&(lu.spitzname||lu.name)||'User')+'</div>'+reportBtn+'</div>';
+                return '<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--border2)"><div style="position:relative;width:34px;height:34px;flex-shrink:0">'+crownOverlay(lid,'xs')+'<div style="position:relative;width:34px;height:34px;border-radius:50%;background:'+lg+';overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff"><span style="position:absolute">'+(lu&&lu.name||'?')[0]+'</span>'+limg+'</div></div><div style="flex:1;min-width:0;font-size:13px;font-weight:600;color:var(--text)">'+htmlEsc(lu&&(lu.spitzname||lu.name)||'User')+'</div>'+reportBtn+'</div>';
             }).join('');
             const likeBtn = isOwnPost
                 ? '<div style="font-size:12px;color:var(--muted);padding:7px 0">👤 Dein Superlink</div>'
@@ -9882,7 +9882,7 @@ commentsBox+
                 +'<span style="color:var(--avatar-fallback-color);font-weight:700;font-size:15px;position:absolute">'+(poster.name||'?')[0]+'</span>\n'
                 +avatarSmall+'\n</div></a>\n'
                 +'<a href="/profil/'+sl.uid+'" class="post-user-info" style="text-decoration:none;color:inherit">\n'
-                +'<div class="post-name">'+(poster.spitzname||poster.name||'User')+'</div>\n'
+                +'<div class="post-name">'+htmlEsc(poster.spitzname||poster.name||'User')+'</div>\n'
                 +'<div class="post-badge">'+cleanRole(poster.role)+(insta?'<span style="color:var(--muted2)"> · @'+insta+'</span>':'')+'</div>\n'
                 +'</a>\n</div>\n'
                 +'<div style="margin:8px 16px;padding:8px 12px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:10px;font-size:11px;color:rgba(245,158,11,.9);font-weight:600">🔄 Bitte Liken, Kommentieren, Teilen und Speichern</div>\n'
@@ -18966,12 +18966,12 @@ ${rest.map(([id,u],idx)=>{
             : '<div class="empty"><div class="empty-icon">🔗</div><div class="empty-text">Noch keine Links</div><div class="empty-sub">Poste deinen ersten Reel im Feed!</div></div>';
 
         const aboutHtml = '<div style="padding:16px;display:flex;flex-direction:column;gap:12px;padding-bottom:100px">'
-            +(myUser?.bio?'<div style="background:var(--bg3);border-radius:14px;padding:14px 16px"><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Bio</div><div style="font-size:14px;line-height:1.6">'+myUser.bio+'</div></div>':'')
-            +(myUser?.nische?'<div style="background:var(--bg3);border-radius:14px;padding:14px 16px"><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Nische</div><div style="font-size:14px;color:var(--accent)">🎯 '+myUser.nische+'</div></div>':'')
+            +(myUser?.bio?'<div style="background:var(--bg3);border-radius:14px;padding:14px 16px"><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Bio</div><div style="font-size:14px;line-height:1.6">'+htmlEsc(myUser.bio)+'</div></div>':'')
+            +(myUser?.nische?'<div style="background:var(--bg3);border-radius:14px;padding:14px 16px"><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Nische</div><div style="font-size:14px;color:var(--accent)">🎯 '+htmlEsc(myUser.nische)+'</div></div>':'')
             +'<div style="background:var(--bg3);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:10px">'
             +'<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:2px">Social &amp; Links</div>'
-            +(myUser?.instagram?'<a href="https://instagram.com/'+myUser.instagram+'" target="_blank" style="display:flex;align-items:center;gap:10px;text-decoration:none"><span style="font-size:20px">📸</span><span style="color:var(--blue);font-size:14px">@'+myUser.instagram+'</span></a>':'<div style="font-size:13px;color:var(--muted)">Noch kein Instagram verknüpft</div>')
-            +(myUser?.website?'<a href="'+myUser.website+'" target="_blank" style="display:flex;align-items:center;gap:10px;text-decoration:none"><span style="font-size:20px">🔗</span><span style="color:var(--blue);font-size:14px">'+myUser.website.replace('https://','').replace('http://','').slice(0,40)+'</span></a>':'')
+            +(myUser?.instagram?'<a href="https://instagram.com/'+encodeURIComponent(myUser.instagram)+'" target="_blank" style="display:flex;align-items:center;gap:10px;text-decoration:none"><span style="font-size:20px">📸</span><span style="color:var(--blue);font-size:14px">@'+htmlEsc(myUser.instagram)+'</span></a>':'<div style="font-size:13px;color:var(--muted)">Noch kein Instagram verknüpft</div>')
+            +(myUser?.website?'<a href="'+encodeURI(myUser.website)+'" target="_blank" style="display:flex;align-items:center;gap:10px;text-decoration:none"><span style="font-size:20px">🔗</span><span style="color:var(--blue);font-size:14px">'+htmlEsc(myUser.website.replace('https://','').replace('http://','').slice(0,40))+'</span></a>':'')
             +'</div>'
             +'<div style="background:var(--bg3);border-radius:14px;padding:14px 16px">'
             +'<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Status</div>'
@@ -19436,12 +19436,12 @@ async function submitPost(){const _spBtn=document.querySelector('[onclick="submi
             : '<div class="empty"><div class="empty-icon">🔗</div><div class="empty-text">Noch keine Links</div></div>';
 
         const theirAboutHtml = '<div style="padding:16px;display:flex;flex-direction:column;gap:12px;padding-bottom:100px">'
-            +(u?.bio?'<div style="background:var(--bg3);border-radius:14px;padding:14px 16px"><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Bio</div><div style="font-size:14px;line-height:1.6">'+u.bio+'</div></div>':'')
-            +(u?.nische?'<div style="background:var(--bg3);border-radius:14px;padding:14px 16px"><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Nische</div><div style="font-size:14px;color:var(--accent)">🎯 '+u.nische+'</div></div>':'')
+            +(u?.bio?'<div style="background:var(--bg3);border-radius:14px;padding:14px 16px"><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Bio</div><div style="font-size:14px;line-height:1.6">'+htmlEsc(u.bio)+'</div></div>':'')
+            +(u?.nische?'<div style="background:var(--bg3);border-radius:14px;padding:14px 16px"><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Nische</div><div style="font-size:14px;color:var(--accent)">🎯 '+htmlEsc(u.nische)+'</div></div>':'')
             +'<div style="background:var(--bg3);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:10px">'
             +'<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:2px">Social &amp; Links</div>'
-            +(u?.instagram?'<a href="https://instagram.com/'+u.instagram+'" target="_blank" style="display:flex;align-items:center;gap:10px;text-decoration:none"><span style="font-size:20px">📸</span><span style="color:var(--blue);font-size:14px">@'+u.instagram+'</span></a>':'<div style="font-size:13px;color:var(--muted)">Kein Instagram verknüpft</div>')
-            +(u?.website?'<a href="'+u.website+'" target="_blank" style="display:flex;align-items:center;gap:10px;text-decoration:none"><span style="font-size:20px">🔗</span><span style="color:var(--blue);font-size:14px">'+u.website.replace('https://','').replace('http://','').slice(0,40)+'</span></a>':'')
+            +(u?.instagram?'<a href="https://instagram.com/'+encodeURIComponent(u.instagram)+'" target="_blank" style="display:flex;align-items:center;gap:10px;text-decoration:none"><span style="font-size:20px">📸</span><span style="color:var(--blue);font-size:14px">@'+htmlEsc(u.instagram)+'</span></a>':'<div style="font-size:13px;color:var(--muted)">Kein Instagram verknüpft</div>')
+            +(u?.website?'<a href="'+encodeURI(u.website)+'" target="_blank" style="display:flex;align-items:center;gap:10px;text-decoration:none"><span style="font-size:20px">🔗</span><span style="color:var(--blue);font-size:14px">'+htmlEsc(u.website.replace('https://','').replace('http://','').slice(0,40))+'</span></a>':'')
             +'</div>'
             +'<div style="background:var(--bg3);border-radius:14px;padding:14px 16px">'
             +'<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Status</div>'
