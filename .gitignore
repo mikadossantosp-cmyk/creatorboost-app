@@ -2,3 +2,4 @@ node_modules/
 sessions.json
 cb_sessions.json
 *.session
+.keystore_value_DO_NOT_COMMIT.txt
