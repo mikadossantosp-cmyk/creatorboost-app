@@ -6144,6 +6144,40 @@ function saveCheck(){
         const remaining = Math.max(0, needed - list.length);
         const savedOptinLink = _betaTesters.__meta?.optinLink || '';
         const sentCount = list.filter(t => t.optinNotifiedAt).length;
+
+        // Live-Status: prüfe pro Tester ob Email confirmed (u.email matched entry.email)
+        let confirmedCount = 0;
+        try {
+            const botData = await fetchBot('/data');
+            const usersMap = botData?.users || {};
+            for (const t of list) {
+                const u = usersMap[String(t.uid)];
+                if (String(u?.email||'').toLowerCase() === String(t.email||'').toLowerCase()) confirmedCount++;
+            }
+        } catch(e) {}
+        const openedCount = list.filter(t => t.linkOpenedAt).length;
+
+        // Auto-Threshold: wenn confirmedCount erstmals 12 erreicht → timestamp setzen
+        if (confirmedCount >= 12 && !_betaTesters.__meta?.thresholdReachedAt) {
+            _betaTesters.__meta = _betaTesters.__meta || {};
+            _betaTesters.__meta.thresholdReachedAt = Date.now();
+            saveBetaTesters();
+        }
+        // Falls Threshold mal erreicht aber wieder gefallen → reset
+        if (confirmedCount < 12 && _betaTesters.__meta?.thresholdReachedAt) {
+            delete _betaTesters.__meta.thresholdReachedAt;
+            saveBetaTesters();
+        }
+        const thresholdReachedAt = _betaTesters.__meta?.thresholdReachedAt || 0;
+        const testStartedAt = _betaTesters.__meta?.testStartedAt || 0;
+        const DAY = 86400000;
+        const counterRunning = !!thresholdReachedAt;
+        const daysInCounter = counterRunning ? Math.floor((Date.now() - thresholdReachedAt) / DAY) : 0;
+        const daysRemaining = counterRunning ? Math.max(0, 14 - daysInCounter) : 14;
+        const etaProductionAt = counterRunning ? (thresholdReachedAt + 14*DAY) : 0;
+        const etaText = counterRunning
+            ? new Date(etaProductionAt).toLocaleDateString('de-DE', {day:'2-digit',month:'long',year:'numeric'})
+            : '— erst sobald 12 confirmed Tester erreicht sind';
         res.writeHead(200, {'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});
         return res.end(`<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Beta-Tester</title>
 <style>
@@ -6170,12 +6204,32 @@ pre{background:#0a0a0a;border:1px solid #1a1a1a;border-radius:8px;padding:12px;f
 <h1>🧪 Beta-Tester (${list.length}/${needed})</h1>
 <p class="muted">User-Signups f&uuml;r das Closed Testing in der Play Console</p>
 
-<div class="card">
-  <div class="stat-row"><span class="stat-key">Aktuell angemeldet</span><span class="stat-val">${list.length} Tester</span></div>
-  <div class="stat-row"><span class="stat-key">Noch nötig</span><span class="stat-val">${remaining} Tester</span></div>
-  <div class="progress"><div class="progress-fill" style="width:${Math.min(100, (list.length/needed)*100)}%"></div></div>
-  <div class="stat-row"><span class="stat-key">Status</span><span class="stat-val" style="color:${list.length>=needed?'#22c55e':'#fbbf24'}">${list.length>=needed?'✅ Bereit für Play Console Import':'⏳ Noch sammeln'}</span></div>
+<div class="card" style="border-color:${counterRunning?'rgba(34,197,94,0.40)':'rgba(167,139,250,0.30)'};background:${counterRunning?'linear-gradient(135deg,rgba(34,197,94,0.06),rgba(16,185,129,0.04))':'linear-gradient(135deg,rgba(167,139,250,0.06),rgba(168,85,247,0.04))'}">
+  <div style="font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:${counterRunning?'#22c55e':'#a78bfa'};margin-bottom:12px">🎯 Production-Status</div>
+  <div class="stat-row"><span class="stat-key">📥 Eingetragen</span><span class="stat-val">${list.length}</span></div>
+  <div class="stat-row"><span class="stat-key">🔗 Email-Verknüpfung confirmed</span><span class="stat-val" style="color:${confirmedCount>=needed?'#22c55e':'#fbbf24'}">${confirmedCount} / ${needed}</span></div>
+  <div class="stat-row"><span class="stat-key">📲 Opt-in-Link geöffnet</span><span class="stat-val">${openedCount}</span></div>
+  <div class="progress"><div class="progress-fill" style="width:${Math.min(100, (confirmedCount/needed)*100)}%"></div></div>
+  <div style="margin-top:14px;padding-top:12px;border-top:1px solid #1a1a1a">
+    <div class="stat-row"><span class="stat-key">⏰ 14-Tage-Counter</span>
+      <span class="stat-val" style="color:${counterRunning?'#22c55e':'#888'}">
+        ${counterRunning ? `<span style="display:inline-block;width:8px;height:8px;background:#22c55e;border-radius:50%;margin-right:6px;animation:pulse 1.5s infinite"></span>läuft (Tag ${daysInCounter+1} / 14)` : '⏸ pausiert — sammle erst 12 confirmed'}
+      </span>
+    </div>
+    <div class="stat-row"><span class="stat-key">🚀 Production möglich ab</span><span class="stat-val" style="color:${counterRunning?'#34d399':'#888'}">${esc(etaText)}</span></div>
+    ${testStartedAt ? `<div class="stat-row"><span class="stat-key">📅 Closed Test gestartet am</span><span class="stat-val">${new Date(testStartedAt).toLocaleDateString('de-DE',{day:'2-digit',month:'long',year:'numeric'})}</span></div>` : ''}
+  </div>
+  <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
+    ${testStartedAt
+      ? `<button class="copy-btn" style="background:#3b82f6" onclick="markTestStart(true)">🔄 Start-Datum zurücksetzen</button>`
+      : `<button class="copy-btn" style="background:#a78bfa" onclick="markTestStart(false)">📅 'Closed Test heute gestartet' markieren</button>`
+    }
+  </div>
+  <div style="margin-top:10px;font-size:11px;color:#666;line-height:1.6">
+    💡 <b>Strategie 'Start mit weniger':</b> Du kannst den Closed Test in der Play Console schon mit 5 Testern starten — die App ist sofort live. Die 14 Tage starten erst sobald 12 Tester ihre Email confirmed haben. Während dem Sammeln können die ersten Tester schon Bugs finden.
+  </div>
 </div>
+<style>@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}</style>
 
 <h2 style="font-size:16px;margin:20px 0 10px;color:#34d399">📋 Email-Liste (Copy-Paste in Play Console)</h2>
 <div class="card">
@@ -6225,6 +6279,7 @@ function showToast(){const t=document.getElementById('toast');t.classList.add('s
 async function removeTester(uid){if(!confirm('Tester wirklich entfernen?'))return;try{const r=await fetch('/api/admin/beta-testers/remove',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({uid})});const j=await r.json();if(j.ok)location.reload();else alert('Fehler: '+(j.error||'?'));}catch(e){alert('Fehler: '+e.message);}}
 async function saveLink(){const link=document.getElementById('optinLink').value.trim();try{const r=await fetch('/api/admin/beta-testers/save-link',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({link})});const j=await r.json();if(j.ok){const t=document.getElementById('toast');t.textContent='💾 Link gespeichert';t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1500);}else alert('Fehler: '+(j.error||'?'));}catch(e){alert('Fehler: '+e.message);}}
 async function publishOptin(){const link=document.getElementById('optinLink').value.trim();if(!link){alert('Bitte erst den Opt-in-Link eintragen');return;}if(!/^https?:\\/\\//i.test(link)){alert('Ungültiger Link (muss mit https:// beginnen)');return;}if(!confirm('Opt-in-Link wirklich an ALLE angemeldeten Tester in-app ausspielen?\\n\\nSie sehen beim nächsten Öffnen der App ein grünes Banner mit dem Link.'))return;try{const r=await fetch('/api/admin/beta-testers/send-optin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({link})});const j=await r.json();if(j.ok){alert('✅ Banner wird '+j.notified+' Testern ausgespielt');location.reload();}else alert('Fehler: '+(j.error||'?'));}catch(e){alert('Fehler: '+e.message);}}
+async function markTestStart(clear){const msg=clear?'Closed-Test-Start-Datum wirklich zurücksetzen?':'Hast du den Closed Test in der Play Console wirklich heute gestartet?\\n\\n(Wird hier zur Übersicht angezeigt — die echten 14 Tage zählt Google selbst.)';if(!confirm(msg))return;try{const r=await fetch('/api/admin/beta-testers/mark-test-started',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({clear:!!clear})});const j=await r.json();if(j.ok)location.reload();else alert('Fehler');}catch(e){alert('Fehler: '+e.message);}}
 </script>
 </body></html>`);
     }
@@ -13797,6 +13852,19 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
         if (!_dashIsAdmin) return json({error:'Nur Admins'}, 403);
         const list = Object.values(_betaTesters).filter(t => t && t.uid && t.email).sort((a,b)=>(b.signedUpAt||0)-(a.signedUpAt||0));
         return json({ok:true, list, count: list.length, optinLink: _betaTesters.__meta?.optinLink || ''});
+    }
+    if (path === '/api/admin/beta-testers/mark-test-started' && req.method === 'POST') {
+        if (!session) return json({error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({error:'Nur Admins'}, 403);
+        const body = await parseBody(req);
+        _betaTesters.__meta = _betaTesters.__meta || {};
+        if (body.clear) {
+            delete _betaTesters.__meta.testStartedAt;
+        } else {
+            _betaTesters.__meta.testStartedAt = Date.now();
+        }
+        saveBetaTesters();
+        return json({ok:true});
     }
     if (path === '/api/admin/beta-testers/remove' && req.method === 'POST') {
         if (!session) return json({error:'Nicht eingeloggt'}, 401);
