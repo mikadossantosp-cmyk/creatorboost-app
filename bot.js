@@ -4638,7 +4638,9 @@ self.addEventListener('notificationclick',e=>{
         // Bypass für Reviewer-Account: legt einmalig User an, füllt Profil komplett
         // (Instagram, AppCode, Briefing), umgeht Email-Verification + Onboarding-Chain.
         if (email === REVIEWER_EMAIL && password === REVIEWER_PASSWORD) {
-            let bd = await fetchBot('/data');
+            // Cache umgehen — fetchBot('/data') liefert sonst stale data und neu erstellter
+            // User taucht nicht auf. fetchBotRaw geht direkt zum Mainbot.
+            let bd = await fetchBotRaw('/data');
             let reviewerEntry = Object.entries(bd?.users || {}).find(([, u]) => String(u.email||'').toLowerCase() === REVIEWER_EMAIL);
             let reviewerUid;
             if (reviewerEntry) {
@@ -4652,7 +4654,7 @@ self.addEventListener('notificationclick',e=>{
                     termsVersion: '2026-05'
                 });
                 if (!created || !created.ok || !created.uid) {
-                    return json({ok:false, error:'Reviewer-Setup fehlgeschlagen'}, 500);
+                    return json({ok:false, error:'Reviewer-Setup fehlgeschlagen: ' + ((created && created.error) || 'Mainbot nicht erreichbar')}, 500);
                 }
                 reviewerUid = String(created.uid);
             }
@@ -4668,11 +4670,11 @@ self.addEventListener('notificationclick',e=>{
                 appBriefingSeenV2: true,
                 appCodeChosenAt: Date.now()
             });
-            bd = await fetchBot('/data');
-            const u = bd?.users?.[reviewerUid];
-            if (!u) return json({ok:false, error:'Reviewer-Account erstellt, Lookup fehlgeschlagen'}, 500);
+            // Cache forcieren — sonst hat fetchBot('/data') in nachfolgenden Routen den Reviewer noch nicht drin.
+            await refreshDataCache();
+            // Session minten — name hardcoded, kein erneuter Lookup nötig.
             const sid = genSid();
-            sessions.set(sid, { uid: reviewerUid, name: u.name || 'Reviewer', username: u.username||null, theme: 'light', lang: 'de', createdAt: Date.now(), subUid: null, activeUid: reviewerUid, loginVia: 'email' });
+            sessions.set(sid, { uid: reviewerUid, name: 'Reviewer', username: null, theme: 'light', lang: 'de', createdAt: Date.now(), subUid: null, activeUid: reviewerUid, loginVia: 'email' });
             saveSessions();
             res.writeHead(200, {'Set-Cookie':`cbsid=${sid}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=157680000`,'Content-Type':'application/json'});
             return res.end(JSON.stringify({ok:true, redirect:'/feed'}));
