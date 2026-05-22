@@ -6159,6 +6159,9 @@ function saveCheck(){
         const openedCount = list.filter(t => t.linkOpenedAt).length;
         const emailedCount = list.filter(t => t.linkEmailedAt).length;
         const declinedCount = Object.keys(_betaTesters.__declined || {}).length;
+        const nonGmailList = list.filter(t => !String(t.email||'').toLowerCase().endsWith('@gmail.com'));
+        const nonGmailCount = nonGmailList.length;
+        const nonGmailUnnotified = nonGmailList.filter(t => !t.nonGmailNotifiedAt).length;
 
         // Auto-Threshold: wenn confirmedCount erstmals 12 erreicht → timestamp setzen
         if (confirmedCount >= 12 && !_betaTesters.__meta?.thresholdReachedAt) {
@@ -6214,6 +6217,8 @@ pre{background:#0a0a0a;border:1px solid #1a1a1a;border-radius:8px;padding:12px;f
   <div class="stat-row"><span class="stat-key">📲 Opt-in-Link geöffnet</span><span class="stat-val">${openedCount}</span></div>
   <div class="stat-row"><span class="stat-key">📧 Link per Email gesendet</span><span class="stat-val" style="color:#888">${emailedCount}</span></div>
   <div class="stat-row"><span class="stat-key">👎 'Nein, danke' geklickt</span><span class="stat-val" style="color:#888">${declinedCount}</span></div>
+  <div class="stat-row"><span class="stat-key">⚠️ Non-Gmail-Tester</span><span class="stat-val" style="color:${nonGmailCount>0?'#fb923c':'#888'}">${nonGmailCount}${nonGmailUnnotified>0?' ('+nonGmailUnnotified+' unbenachrichtigt)':''}</span></div>
+  ${nonGmailCount > 0 ? `<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap"><button class="copy-btn" style="background:#fb923c" onclick="notifyNonGmail(false)">📧 Alle ${nonGmailCount} Non-Gmail benachrichtigen</button>${nonGmailUnnotified > 0 && nonGmailUnnotified < nonGmailCount ? `<button class="copy-btn" style="background:#3b82f6" onclick="notifyNonGmail(true)">🔄 Nur ${nonGmailUnnotified} unbenachrichtigte</button>` : ''}</div>` : ''}
   <div class="progress"><div class="progress-fill" style="width:${Math.min(100, (confirmedCount/needed)*100)}%"></div></div>
   <div style="margin-top:14px;padding-top:12px;border-top:1px solid #1a1a1a">
     <div class="stat-row"><span class="stat-key">⏰ 14-Tage-Counter</span>
@@ -6285,6 +6290,7 @@ async function removeTester(uid){if(!confirm('Tester wirklich entfernen?'))retur
 async function saveLink(){const link=document.getElementById('optinLink').value.trim();try{const r=await fetch('/api/admin/beta-testers/save-link',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({link})});const j=await r.json();if(j.ok){const t=document.getElementById('toast');t.textContent='💾 Link gespeichert';t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1500);}else alert('Fehler: '+(j.error||'?'));}catch(e){alert('Fehler: '+e.message);}}
 async function publishOptin(){const link=document.getElementById('optinLink').value.trim();if(!link){alert('Bitte erst den Opt-in-Link eintragen');return;}if(!/^https?:\\/\\//i.test(link)){alert('Ungültiger Link (muss mit https:// beginnen)');return;}if(!confirm('Opt-in-Link wirklich an ALLE angemeldeten Tester in-app ausspielen?\\n\\nSie sehen beim nächsten Öffnen der App ein grünes Banner mit dem Link.'))return;try{const r=await fetch('/api/admin/beta-testers/send-optin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({link})});const j=await r.json();if(j.ok){alert('✅ Banner wird '+j.notified+' Testern ausgespielt');location.reload();}else alert('Fehler: '+(j.error||'?'));}catch(e){alert('Fehler: '+e.message);}}
 async function markTestStart(clear){const msg=clear?'Closed-Test-Start-Datum wirklich zurücksetzen?':'Hast du den Closed Test in der Play Console wirklich heute gestartet?\\n\\n(Wird hier zur Übersicht angezeigt — die echten 14 Tage zählt Google selbst.)';if(!confirm(msg))return;try{const r=await fetch('/api/admin/beta-testers/mark-test-started',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({clear:!!clear})});const j=await r.json();if(j.ok)location.reload();else alert('Fehler');}catch(e){alert('Fehler: '+e.message);}}
+async function notifyNonGmail(onlyUnnotified){const target=onlyUnnotified?'nur unbenachrichtigte':'ALLE';if(!confirm('Email an '+target+' Non-Gmail-Tester senden?\\n\\nText: \"Leider können wir nur Gmail annehmen. Trag deine Gmail hier ein und bestätige.\"'))return;try{const r=await fetch('/api/admin/beta-testers/notify-non-gmail',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({onlyUnnotified:!!onlyUnnotified})});const j=await r.json();if(j.ok){alert('✅ Versendet: '+j.sent+' Emails ('+j.failed+' fehlgeschlagen, von '+j.total+' Total)');location.reload();}else alert('Fehler: '+(j.error||'?'));}catch(e){alert('Fehler: '+e.message);}}
 </script>
 </body></html>`);
     }
@@ -10540,6 +10546,11 @@ async function submitSuperLink(){
     if (j.declined) return;
     // Phase 2: Email-Confirm steht noch aus — Banner ist NICHT dismissable
     // (Nur abdrehen wenn er fertig confirmed hat)
+    // PRIORITAET: Non-Gmail → User muss erst seine Gmail nachreichen
+    if (j.signedUp && j.isNonGmail) {
+      renderNonGmail(j.email);
+      return;
+    }
     if (j.signedUp && j.needsConfirm) {
       renderConfirmPending(j.email);
       return;
@@ -10714,6 +10725,32 @@ async function submitSuperLink(){
     };
   }
   function escapeHtml(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+  function renderNonGmail(email){
+    root.innerHTML = '<div style="margin:8px 16px 14px;padding:14px 16px;background:linear-gradient(135deg,rgba(251,146,60,0.16),rgba(239,68,68,0.08));border:1.5px solid rgba(251,146,60,0.55);border-radius:14px;position:relative">'+
+      '<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">'+
+        '<div style="font-size:28px;flex-shrink:0">⚠️</div>'+
+        '<div style="flex:1;min-width:0">'+
+          '<div style="font-size:14px;font-weight:800;color:#fb923c;margin-bottom:3px">Bitte Gmail nachreichen</div>'+
+          '<div style="font-size:11.5px;color:var(--muted);line-height:1.5">Deine Email <b style="color:#e5e5e5">'+escapeHtml(email||'')+'</b> funktioniert leider nicht für Google Play. Wir brauchen eine <b style="color:#fb923c">@gmail.com</b>-Adresse — sonst kannst du nicht als Tester teilnehmen.</div>'+
+        '</div>'+
+      '</div>'+
+      '<button onclick="window.__betaSwitchToGmail()" style="width:100%;padding:11px;background:linear-gradient(135deg,#34d399,#10b981);color:#fff;border:none;border-radius:8px;font-size:12.5px;font-weight:800;cursor:pointer">✉️ Gmail-Adresse eintragen</button>'+
+    '</div>';
+    window.__betaSwitchToGmail = function(){
+      const newEmail = prompt('Trag deine Gmail-Adresse ein (muss auf @gmail.com enden):', '');
+      if (!newEmail) return;
+      const v = newEmail.trim().toLowerCase();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) { alert('Bitte gib eine gültige Email ein'); return; }
+      if (!v.endsWith('@gmail.com')) { alert('Nur @gmail.com-Adressen funktionieren bei Google Play'); return; }
+      fetch('/api/beta-tester/change-email', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ email: v })
+      }).then(r=>r.json()).then(j=>{
+        if (j.ok) { alert('✅ Gespeichert! Check dein Postfach für den Bestätigungs-Link.'); location.reload(); }
+        else alert('Fehler: '+(j.error||'?'));
+      }).catch(e => alert('Fehler: '+e.message));
+    };
+  }
   function renderReminder(days){
     const daysLeft = Math.max(1, 14 - days);
     root.innerHTML = '<div style="margin:8px 16px 14px;padding:14px 16px;background:linear-gradient(135deg,rgba(251,191,36,0.12),rgba(251,146,60,0.08));border:1.5px solid rgba(251,191,36,0.45);border-radius:14px">'+
@@ -10810,7 +10847,7 @@ async function submitSuperLink(){
       '</div>'+
       '<label style="display:block;font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Deine Google-Play-Email</label>'+
       '<input id="betaEmailInput" type="email" placeholder="deine.email@gmail.com" autocomplete="email" inputmode="email" style="width:100%;padding:12px 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;font-size:14px;color:var(--text);font-family:inherit;margin-bottom:6px">'+
-      '<div style="font-size:11px;color:var(--muted);line-height:1.5;margin-bottom:16px">→ Welche Email nutzt du im Google Play Store? Meistens deine Gmail-Adresse.</div>'+
+      '<div style="font-size:11px;color:var(--muted);line-height:1.5;margin-bottom:16px">⚠️ <b style="color:#fbbf24">Nur Gmail-Adressen</b> — Google Play akzeptiert nur Google-Konten. Andere Anbieter (web.de, gmx.de) funktionieren leider nicht.</div>'+
       '<div style="display:flex;gap:10px">'+
         '<button onclick="window.__betaCancel()" style="flex:1;padding:12px;background:transparent;color:var(--text);border:1px solid var(--border2);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">Später</button>'+
         '<button id="betaSubmitBtn" onclick="window.__betaSubmit()" style="flex:2;padding:12px;background:linear-gradient(135deg,#34d399,#10b981);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer">📱 Anmelden</button>'+
@@ -10820,10 +10857,11 @@ async function submitSuperLink(){
     document.body.appendChild(bg);
     window.__betaCancel = function(){ bg.remove(); };
     window.__betaSubmit = async function(){
-      const email = document.getElementById('betaEmailInput').value.trim();
+      const email = document.getElementById('betaEmailInput').value.trim().toLowerCase();
       const err = document.getElementById('betaError');
       const btn = document.getElementById('betaSubmitBtn');
       if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) { err.textContent = '✗ Bitte gib eine gültige Email ein'; return; }
+      if (!email.endsWith('@gmail.com')) { err.textContent = '✗ Nur Gmail-Adressen — Play Store braucht ein Google-Konto'; return; }
       btn.disabled = true; btn.textContent = '⏳ Anmeldung läuft …';
       try {
         const r = await fetch('/api/beta-tester/signup', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email }) });
@@ -14010,6 +14048,12 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 200) {
             return json({ok:false, error:'Ungültige Email'});
         }
+        // Google Play Beta erlaubt NUR Google-Konten. Non-Gmail-Adressen
+        // (web.de, gmx.de, etc.) wuerden zwar in die Tester-Liste rein,
+        // aber der User koennte sich nicht im Play Store einloggen.
+        if (!email.endsWith('@gmail.com')) {
+            return json({ok:false, error:'Für Google Play Beta brauchst du eine Gmail-Adresse. Andere Anbieter (web.de, gmx.de, etc.) funktionieren leider nicht — Google verlangt ein Google-Konto.'});
+        }
         // Account-Verknuepfung: Email wird auf u.pendingEmail gesetzt → User
         // klickt Confirm-Link → u.email = email + emailConfirmedAt. Danach
         // kann er sich auf jedem Device mit dieser Gmail einloggen und
@@ -14084,11 +14128,13 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
         );
         const DAY = 86400000;
         const daysSinceTracking = trackingStart ? Math.floor((Date.now() - trackingStart) / DAY) : null;
+        const isNonGmail = !!entry?.email && !String(entry.email).toLowerCase().endsWith('@gmail.com');
         return json({
             ok:true,
             signedUp: !!entry,
             email: entry?.email || null,
             accountEmail,
+            isNonGmail,
             optinLink: hasLink ? meta.optinLink : null,
             linkOpenedAt: entry?.linkOpenedAt || null,
             needsConfirm,
@@ -14103,6 +14149,9 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
         const newEmail = String(body.email||'').trim().toLowerCase();
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail) || newEmail.length > 200) {
             return json({ok:false, error:'Ungültige Email'});
+        }
+        if (!newEmail.endsWith('@gmail.com')) {
+            return json({ok:false, error:'Nur Gmail-Adressen — Google Play akzeptiert nichts anderes.'});
         }
         const botData = await fetchBot('/data');
         if (!botData?.users) return json({ok:false, error:'Server nicht erreichbar'}, 503);
@@ -14216,6 +14265,49 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
         }
         saveBetaTesters();
         return json({ok:true});
+    }
+    if (path === '/api/admin/beta-testers/notify-non-gmail' && req.method === 'POST') {
+        if (!session) return json({error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({error:'Nur Admins'}, 403);
+        const body = await parseBody(req);
+        const onlyUnnotified = !!body.onlyUnnotified;
+        const targets = Object.values(_betaTesters).filter(t =>
+            t && t.uid && t.email &&
+            !String(t.email).toLowerCase().endsWith('@gmail.com') &&
+            (onlyUnnotified ? !t.nonGmailNotifiedAt : true));
+        const baseUrl = ('https://' + (req.headers.host || 'www.creatorboostx.de')).replace(/\/$/, '');
+        let sent = 0, failed = 0;
+        for (const t of targets) {
+            const userName = String(t.email).split('@')[0].replace(/[<>]/g,'').slice(0,30);
+            const html = '<!DOCTYPE html><html><body style="margin:0;font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#000;color:#fff;padding:0">'+
+                '<div style="max-width:560px;margin:0 auto;padding:32px 24px">'+
+                '<div style="text-align:center;margin-bottom:24px"><img src="'+baseUrl+'/cx-logo-256.png" width="80" height="80" style="border-radius:18px" alt="CreatorX"></div>'+
+                '<h1 style="font-size:22px;font-weight:700;text-align:center;margin:0 0 12px;color:#fff">Hi '+userName+' 👋</h1>'+
+                '<p style="font-size:15px;color:#a8a39a;line-height:1.6;text-align:center;margin:0 0 22px">Danke dass du Beta-Tester werden möchtest! 🙏</p>'+
+                '<div style="background:rgba(251,146,60,0.10);border:1.5px solid rgba(251,146,60,0.40);border-radius:12px;padding:14px 18px;margin-bottom:22px">'+
+                    '<div style="font-size:14px;font-weight:700;color:#fb923c;margin-bottom:8px">⚠️ Eine Sache noch</div>'+
+                    '<div style="font-size:13.5px;color:#cbd5e1;line-height:1.6">Leider können wir nur <b style="color:#fff">Gmail-Adressen</b> als Tester akzeptieren — Google Play verlangt ein Google-Konto. Deine Email <b style="color:#fff">'+escapeHtml(t.email)+'</b> funktioniert dort leider nicht.</div>'+
+                '</div>'+
+                '<p style="font-size:14px;color:#cbd5e1;line-height:1.7;margin:0 0 24px"><b style="color:#fff">So gehts:</b><br>'+
+                '1. Öffne CreatorX in der App<br>'+
+                '2. Klick im Heute-Feed auf den Beta-Tester-Banner<br>'+
+                '3. Trag deine <b style="color:#34d399">@gmail.com</b>-Adresse ein<br>'+
+                '4. Bestätige die neue Email per Klick im Postfach<br>'+
+                '<br>Wir machen den Rest automatisch.</p>'+
+                '<div style="text-align:center;margin:24px 0"><a href="'+baseUrl+'" style="display:inline-block;background:linear-gradient(180deg,#34d399,#10b981 50%,#059669);color:#000;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px">📱 Zur App</a></div>'+
+                '<p style="font-size:12px;color:#605c54;text-align:center;margin:32px 0 0;border-top:1px solid #221f1a;padding-top:20px">Falls du keine Gmail hast: in 2 Min kostenlos erstellen auf <a href="https://gmail.com" style="color:#34d399">gmail.com</a>. Sorry für den Umweg — Google ist da streng!<br><br>Danke 💚<br>CreatorX-Team</p>'+
+                '</div></body></html>';
+            try {
+                const ok = await sendEmail(t.email, '⚠️ Gmail benötigt für CreatorX Beta-Test', html);
+                if (ok) {
+                    t.nonGmailNotifiedAt = Date.now();
+                    sent++;
+                } else { failed++; }
+            } catch(e) { failed++; }
+            await new Promise(r => setTimeout(r, 300)); // rate-limit gentle
+        }
+        saveBetaTesters();
+        return json({ok:true, sent, failed, total: targets.length});
     }
     if (path === '/api/admin/beta-testers/remove' && req.method === 'POST') {
         if (!session) return json({error:'Nicht eingeloggt'}, 401);
