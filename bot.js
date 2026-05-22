@@ -6347,7 +6347,7 @@ async function markTestStart(clear){const msg=clear?'Closed-Test-Start-Datum wir
 <td><span class="badge ${e.verified?'ok':'no'}">${e.verified?'Ja':'Nein'}</span></td>
 <td>${e.appCode?esc(e.appCode):'\u2014'}</td>
 <td>${lastLog?'<small>'+(lastLog.ok?'\u2705':'\u274c')+' '+new Date(lastLog.ts).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})+(lastLog.error?' \u2014 '+esc(lastLog.error):'')+'</small>':'\u2014'}</td>
-<td>${e.emails.length && e.emails[0].addr?'<button class="btn-send" onclick="sendOne(this,\''+esc(e.uid)+'\')">Senden</button>':'\u2014'}</td>
+<td>${e.emails.length && e.emails[0].addr?'<button class="btn-send" onclick="sendOne(this,\''+esc(e.uid)+'\')">Senden</button>':'\u2014'}${e.emails.length?' <button class="btn-move" onclick="moveEmail(\''+esc(e.uid)+'\',\''+esc(e.emails[0].addr).replace(/'/g,"\\'")+'\')">\u279c</button> <button class="btn-del" onclick="delEmail(\''+esc(e.uid)+'\',\''+esc(e.emails[0].addr).replace(/'/g,"\\'")+'\')">\ud83d\uddd1\ufe0f</button>':''}</td>
 </tr>`;
         }).join('');
         let pagination = '';
@@ -6372,6 +6372,9 @@ h1{font-size:20px;font-weight:800;margin-bottom:4px}h2{font-size:15px;font-weigh
 input[type=text]{background:#161616;border:1px solid #333;border-radius:8px;padding:8px 12px;color:#e5e5e5;font-size:13px;flex:1;min-width:180px}
 .btn{padding:7px 14px;border-radius:8px;border:none;font-size:12px;font-weight:700;cursor:pointer;transition:transform .1s}.btn:active{transform:scale(.96)}
 .btn-primary{background:#7c3aed;color:#fff}.btn-danger{background:#ef4444;color:#fff}.btn-send{background:#22c55e;color:#fff;padding:5px 10px;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer}
+.btn-move{background:#3b82f6;color:#fff;padding:5px 8px;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;margin-left:4px}
+.btn-del{background:rgba(239,68,68,.15);color:#ef4444;border:1px solid rgba(239,68,68,.4);padding:4px 8px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;margin-left:4px}
+.btn-move:disabled,.btn-del:disabled{opacity:.5;cursor:default}
 .btn-send:disabled{opacity:.5;cursor:default}
 .filter-bar{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}.filter-bar a{padding:5px 12px;border-radius:999px;font-size:11px;font-weight:700;text-decoration:none;border:1px solid #333;color:#888;transition:all .15s}
 .filter-bar a.active{background:#7c3aed;color:#fff;border-color:#7c3aed}
@@ -6433,6 +6436,8 @@ ${pagination}
 const K='${esc(query.key)}';
 function toast(msg,ok){const d=document.createElement('div');d.className='toast';d.style.background=ok?'#22c55e':'#ef4444';d.textContent=msg;document.body.appendChild(d);setTimeout(()=>d.remove(),3500);}
 async function sendOne(btn,uid){btn.disabled=true;btn.textContent='\u2026';try{const r=await fetch('/api/admin/send-confirmation',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:K,uid})});const d=await r.json();if(d.ok)toast('\u2705 Gesendet an '+d.to,true);else toast('\u274c '+(d.error||'Fehler'),false);}catch(e){toast('\u274c '+e.message,false);}finally{btn.disabled=false;btn.textContent='Senden';}}
+async function delEmail(uid,email){if(!confirm('Email "'+email+'" wirklich komplett l\u00f6schen?\\n\\nUser UID: '+uid+'\\n\\nDer User kann sich danach nicht mehr per Email einloggen.\\nFalls Beta-Tester: auch dort entfernt.'))return;try{const r=await fetch('/api/admin/email-delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:K,uid})});const d=await r.json();if(d.ok){toast('\ud83d\uddd1\ufe0f Email gel\u00f6scht: '+d.deleted,true);setTimeout(()=>location.reload(),800);}else toast('\u274c '+(d.error||'Fehler'),false);}catch(e){toast('\u274c '+e.message,false);}}
+async function moveEmail(fromUid,email){const toUid=prompt('Email "'+email+'" auf welchen User verschieben?\\n\\nGib die Ziel-UID ein:');if(!toUid||!toUid.trim())return;const targetUid=toUid.trim();if(targetUid===fromUid){alert('Ziel-UID ist identisch mit Quell-UID');return;}try{let r=await fetch('/api/admin/email-move',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:K,fromUid,toUid:targetUid})});let d=await r.json();if(d.needOverride){if(!confirm('\u26a0\ufe0f Ziel-User hat bereits eine Email: '+d.targetCurrentEmail+'\\n\\nDiese wird \u00dcBERSCHRIEBEN. Trotzdem fortfahren?'))return;r=await fetch('/api/admin/email-move',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:K,fromUid,toUid:targetUid,override:true})});d=await r.json();}if(d.ok){toast('\u279c Email verschoben: '+d.email+' \u2192 '+d.toUid,true);setTimeout(()=>location.reload(),800);}else toast('\u274c '+(d.error||'Fehler'),false);}catch(e){toast('\u274c '+e.message,false);}}
 async function sendAllUnverified(){if(!confirm('Allen unbestaetigten Usern Bestaetigungsmail senden?'))return;const el=document.getElementById('bulk-status');el.style.display='block';el.textContent='Starte Sammelversand...';try{const r=await fetch('/api/admin/send-all-unverified',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:K})});const d=await r.json();el.textContent='Fertig: '+d.sent+' gesendet, '+d.failed+' fehlgeschlagen, '+d.skipped+' uebersprungen';toast('Sammelversand abgeschlossen',d.failed===0);}catch(e){el.textContent='Fehler: '+e.message;toast('\u274c '+e.message,false);}}
 async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)return;try{const r=await fetch('/api/admin/send-test',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:K,to})});const d=await r.json();toast(d.ok?'\u2705 Testmail gesendet':'\u274c '+(d.error||'Fehler'),d.ok);}catch(e){toast('\u274c '+e.message,false);}}
 </script></body></html>`);
@@ -6499,6 +6504,74 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
         if (!to || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) return json({error:'Ungueltige Email'}, 400);
         const sent = await sendEmail(to, '\ud83e\uddea CreatorX Testmail', '<!DOCTYPE html><html><body style="margin:0;font-family:sans-serif;background:#000;color:#fff;padding:32px;text-align:center"><h1>Testmail \u2705</h1><p>Das Mailsystem funktioniert.</p><p style="color:#888;font-size:12px">Gesendet: '+new Date().toISOString()+'</p></body></html>');
         return json(sent ? {ok:true} : {ok:false, error:'Versand fehlgeschlagen'});
+    }
+    // \u2500\u2500 EMAIL DELETE \u2500\u2500 Loescht beide (email + pendingEmail) vom User.
+    // Cleanup: aus Beta-Tester-Liste auch entfernen, sonst inkonsistenter State.
+    if (path === '/api/admin/email-delete' && req.method === 'POST') {
+        const body = await parseBody(req);
+        if (!(await _adminAuthCheck(body))) return json({error:'Kein Zugriff'}, 403);
+        const uid = String(body.uid || '');
+        if (!uid) return json({error:'uid fehlt'}, 400);
+        const bd = await fetchBot('/data');
+        if (!bd) return json({error:'MainBot nicht erreichbar'}, 503);
+        const u = bd.users?.[uid];
+        if (!u) return json({error:'User nicht gefunden'}, 404);
+        const oldEmail = u.email || u.pendingEmail || '';
+        // Mainbot: email='' loescht beide Felder (siehe update-profile-api)
+        try { await postBot('/update-profile-api', { uid, email: '' }); } catch(e) {}
+        // Cleanup Beta-Tester
+        if (_betaTesters[uid]) { delete _betaTesters[uid]; saveBetaTesters(); }
+        return json({ok:true, deleted: oldEmail});
+    }
+    // \u2500\u2500 EMAIL MOVE \u2500\u2500 Verschiebt eine Email von einem User zu einem anderen.
+    // fromUid verliert die Email, toUid bekommt sie als BESTAETIGT (confirmEmail).
+    // Voraussetzung: toUid hat noch keine bestaetigte Email \u2014 sonst sagen wir
+    // explizit Bescheid (override-Flag).
+    if (path === '/api/admin/email-move' && req.method === 'POST') {
+        const body = await parseBody(req);
+        if (!(await _adminAuthCheck(body))) return json({error:'Kein Zugriff'}, 403);
+        const fromUid = String(body.fromUid || '');
+        const toUid = String(body.toUid || '');
+        const override = !!body.override;
+        if (!fromUid || !toUid) return json({error:'fromUid und toUid noetig'}, 400);
+        if (fromUid === toUid) return json({error:'fromUid und toUid sind identisch'}, 400);
+        const bd = await fetchBot('/data');
+        if (!bd) return json({error:'MainBot nicht erreichbar'}, 503);
+        const fromUser = bd.users?.[fromUid];
+        const toUser = bd.users?.[toUid];
+        if (!fromUser) return json({error:'fromUid existiert nicht'}, 404);
+        if (!toUser) return json({error:'toUid existiert nicht'}, 404);
+        const emailToMove = String(fromUser.email || fromUser.pendingEmail || '').toLowerCase().trim();
+        if (!emailToMove) return json({error:'fromUid hat keine Email zum Verschieben'}, 400);
+        // Override-Check: toUid hat schon eine Email
+        if ((toUser.email || toUser.pendingEmail) && !override) {
+            return json({
+                ok:false,
+                error:'Ziel-User hat bereits eine Email ('+(toUser.email||toUser.pendingEmail)+'). Sende mit override:true um zu \u00fcberschreiben.',
+                needOverride: true,
+                targetCurrentEmail: toUser.email || toUser.pendingEmail,
+            });
+        }
+        // Schritt 1: Email beim Ziel-User loeschen falls override (clean slate)
+        if (override && (toUser.email || toUser.pendingEmail)) {
+            try { await postBot('/update-profile-api', { uid: toUid, email: '' }); } catch(e) {}
+        }
+        // Schritt 2: Email beim Quell-User loeschen
+        try { await postBot('/update-profile-api', { uid: fromUid, email: '' }); } catch(e) {}
+        // Schritt 3: Email beim Ziel-User als BESTAETIGT setzen (kein erneuter Confirm-Flow)
+        try { await postBot('/update-profile-api', { uid: toUid, confirmEmail: emailToMove }); } catch(e) {}
+        // Cleanup Beta-Tester: Eintrag wandert mit
+        if (_betaTesters[fromUid]) {
+            const entry = _betaTesters[fromUid];
+            delete _betaTesters[fromUid];
+            // Wenn der Ziel-User noch keinen Beta-Tester-Eintrag hat \u2192 uebernehmen
+            if (!_betaTesters[toUid]) {
+                entry.uid = toUid;
+                _betaTesters[toUid] = entry;
+            }
+            saveBetaTesters();
+        }
+        return json({ok:true, email: emailToMove, fromUid, toUid});
     }
 
     // ── DEBUG ──
