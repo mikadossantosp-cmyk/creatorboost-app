@@ -10520,9 +10520,33 @@ async function submitSuperLink(){
           '<div style="font-size:12px;color:var(--muted);line-height:1.5">Tippe auf den Button → akzeptiere → installiere die App über Google Play.</div>'+
         '</div>'+
       '</div>'+
-      '<button onclick="window.__betaOpenLink()" style="width:100%;padding:13px;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:none;border-radius:10px;font-size:13.5px;font-weight:800;cursor:pointer;box-shadow:0 4px 14px rgba(34,197,94,0.35)">📲 Beta-Test öffnen →</button>'+
-      '<div style="margin-top:10px;padding:8px 10px;background:rgba(0,0,0,0.25);border-radius:8px;font-size:11px;color:var(--muted);line-height:1.5"><b style="color:#fbbf24">⚠️ Wichtig:</b> Logge dich auf dem Android-Handy mit <b style="color:#e5e5e5">'+escapeHtml(email||'')+'</b> bei Google Play ein — sonst klappt das Opt-in nicht.</div>'+
+      '<button onclick="window.__betaShowSteps()" style="width:100%;padding:13px;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:none;border-radius:10px;font-size:13.5px;font-weight:800;cursor:pointer;box-shadow:0 4px 14px rgba(34,197,94,0.35)">📲 Beta-Test öffnen →</button>'+
+      '<div style="margin-top:10px;padding:8px 10px;background:rgba(0,0,0,0.25);border-radius:8px;font-size:11px;color:var(--muted);line-height:1.5"><b style="color:#fbbf24">⚠️ Wichtig:</b> Falls du schon eine alte App-Version hast, musst du sie zuerst löschen. Details im nächsten Schritt.</div>'+
     '</div><style>@keyframes betaPulse{0%,100%{box-shadow:0 0 0 0 rgba(34,197,94,0.0)}50%{box-shadow:0 0 0 8px rgba(34,197,94,0.10)}}</style>';
+    window.__betaShowSteps = function(){
+      const bg = document.createElement('div');
+      bg.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.82);backdrop-filter:blur(8px);z-index:9200;display:flex;align-items:center;justify-content:center;padding:18px';
+      bg.innerHTML = '<div style="background:var(--bg2);border:1px solid rgba(34,197,94,0.35);border-radius:18px;padding:22px;max-width:480px;width:100%;max-height:92vh;overflow-y:auto">'+
+        '<div style="font-size:38px;text-align:center;margin-bottom:6px">📲</div>'+
+        '<div style="font-size:17px;font-weight:800;text-align:center;margin-bottom:18px;color:var(--text)">So installierst du die Beta-App</div>'+
+        '<div style="background:rgba(239,68,68,0.10);border:1.5px solid rgba(239,68,68,0.40);border-radius:12px;padding:12px 14px;margin-bottom:14px">'+
+          '<div style="font-size:13px;font-weight:800;color:#ef4444;margin-bottom:6px">⚠️ Schritt 0 — Falls du die alte APK hast</div>'+
+          '<div style="font-size:12px;color:var(--text);line-height:1.6">Hast du CreatorX bereits als APK installiert? Dann <b>lösche sie zuerst</b> (Apps → CreatorX → Deinstallieren). Sonst kommt eine Fehlermeldung beim Play-Store-Install.</div>'+
+          '<div style="font-size:11px;color:var(--muted);line-height:1.6;margin-top:6px">💾 Dein Account bleibt: nach dem Install loggst du dich mit <b style="color:#e5e5e5">'+escapeHtml(email||'')+'</b> ein und alles ist wieder da.</div>'+
+        '</div>'+
+        '<div style="display:grid;gap:10px;margin-bottom:18px">'+
+          '<div style="display:flex;gap:10px;align-items:flex-start;padding:10px 12px;background:var(--bg3,#1a1a1a);border-radius:10px"><div style="font-size:22px;font-weight:800;color:#22c55e;flex-shrink:0;line-height:1">1</div><div style="font-size:12.5px;line-height:1.5;color:var(--text)"><b>Tippe auf "Zum Play Store"</b> unten<br><span style="font-size:11px;color:var(--muted)">Du landest auf der Beta-Test-Seite von Google</span></div></div>'+
+          '<div style="display:flex;gap:10px;align-items:flex-start;padding:10px 12px;background:var(--bg3,#1a1a1a);border-radius:10px"><div style="font-size:22px;font-weight:800;color:#22c55e;flex-shrink:0;line-height:1">2</div><div style="font-size:12.5px;line-height:1.5;color:var(--text)"><b>Stelle sicher dass du mit '+escapeHtml(email||'')+' eingeloggt bist</b><br><span style="font-size:11px;color:var(--muted)">Oben rechts in Google Play prüfen</span></div></div>'+
+          '<div style="display:flex;gap:10px;align-items:flex-start;padding:10px 12px;background:var(--bg3,#1a1a1a);border-radius:10px"><div style="font-size:22px;font-weight:800;color:#22c55e;flex-shrink:0;line-height:1">3</div><div style="font-size:12.5px;line-height:1.5;color:var(--text)"><b>Klick "Tester werden"</b><br><span style="font-size:11px;color:var(--muted)">Bestätigung dauert manchmal ein paar Minuten</span></div></div>'+
+          '<div style="display:flex;gap:10px;align-items:flex-start;padding:10px 12px;background:var(--bg3,#1a1a1a);border-radius:10px"><div style="font-size:22px;font-weight:800;color:#22c55e;flex-shrink:0;line-height:1">4</div><div style="font-size:12.5px;line-height:1.5;color:var(--text)"><b>Installiere die App</b> aus dem Play Store<br><span style="font-size:11px;color:var(--muted)">Logge dich danach mit '+escapeHtml(email||'')+' ein</span></div></div>'+
+        '</div>'+
+        '<div style="display:flex;gap:10px">'+
+          '<button onclick="this.closest(\\'div[style*=fixed]\\').remove()" style="flex:1;padding:12px;background:transparent;color:var(--text);border:1px solid var(--border2,#333);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">Später</button>'+
+          '<button onclick="window.__betaOpenLink();this.closest(\\'div[style*=fixed]\\').remove()" style="flex:2;padding:12px;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer">📲 Zum Play Store</button>'+
+        '</div>'+
+      '</div>';
+      document.body.appendChild(bg);
+    };
     window.__betaOpenLink = function(){
       fetch('/api/beta-tester/link-opened', {method:'POST'}).catch(()=>{});
       window.open(link, '_blank');
@@ -10567,8 +10591,11 @@ async function submitSuperLink(){
         '• Dein Feedback bestimmt die finale Version<br>'+
         '• Dein CreatorX-Account bleibt 1:1 erhalten'+
       '</div>'+
-      '<div style="background:rgba(167,139,250,0.10);border:1px solid rgba(167,139,250,0.30);border-radius:12px;padding:10px 14px;font-size:11.5px;line-height:1.6;color:var(--text);margin-bottom:16px">'+
+      '<div style="background:rgba(167,139,250,0.10);border:1px solid rgba(167,139,250,0.30);border-radius:12px;padding:10px 14px;font-size:11.5px;line-height:1.6;color:var(--text);margin-bottom:10px">'+
         '<b style="color:#a78bfa">🔗 Account-Verknüpfung:</b> Wir verbinden diese Gmail mit deinem CreatorX-Account. Sobald die App im Play Store ist und du dich mit dieser Gmail einloggst, landest du <b>automatisch hier auf deinem Account</b> (XP, 💎, Posts — alles bleibt).'+
+      '</div>'+
+      '<div style="background:rgba(251,146,60,0.08);border:1px solid rgba(251,146,60,0.28);border-radius:12px;padding:10px 14px;font-size:11.5px;line-height:1.6;color:var(--text);margin-bottom:16px">'+
+        '<b style="color:#fb923c">📲 Hast du schon eine APK?</b> Falls du CreatorX bereits als APK installiert hast, musst du sie vor dem Beta-Install kurz löschen — wir erklären dir den Schritt sobald der Beta-Zugang da ist.'+
       '</div>'+
       '<label style="display:block;font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Deine Google-Play-Email</label>'+
       '<input id="betaEmailInput" type="email" placeholder="deine.email@gmail.com" autocomplete="email" inputmode="email" style="width:100%;padding:12px 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;font-size:14px;color:var(--text);font-family:inherit;margin-bottom:6px">'+
