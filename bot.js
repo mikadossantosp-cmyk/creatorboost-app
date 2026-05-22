@@ -6148,9 +6148,10 @@ function saveCheck(){
 
         // Live-Status: prüfe pro Tester ob Email confirmed (u.email matched entry.email)
         let confirmedCount = 0;
+        let usersMap = {};
         try {
             const botData = await fetchBot('/data');
-            const usersMap = botData?.users || {};
+            usersMap = botData?.users || {};
             for (const t of list) {
                 const u = usersMap[String(t.uid)];
                 if (String(u?.email||'').toLowerCase() === String(t.email||'').toLowerCase()) confirmedCount++;
@@ -6271,8 +6272,12 @@ ${list.length === 0 ? '<div style="text-align:center;padding:20px;color:#666">No
     else if (t.optinNotifiedAt) sentBadge = '<span style="display:inline-block;padding:2px 8px;background:rgba(167,139,250,.18);color:#a78bfa;border-radius:99px;font-size:10px;font-weight:700;margin-left:6px">📲 Banner aktiv</span>';
     else sentBadge = '<span style="display:inline-block;padding:2px 8px;background:rgba(251,191,36,.15);color:#fbbf24;border-radius:99px;font-size:10px;font-weight:700;margin-left:6px">⏳ wartet auf Link</span>';
     let linkBadge = '';
-    if (t.emailLinkMode === 'already-confirmed') linkBadge = '<span style="display:inline-block;padding:2px 8px;background:rgba(34,197,94,.20);color:#22c55e;border-radius:99px;font-size:10px;font-weight:700;margin-left:6px">🔗 verknüpft</span>';
-    else if (t.emailLinkMode === 'new-confirm-sent' || t.emailLinkMode === 'resend-confirm') linkBadge = '<span style="display:inline-block;padding:2px 8px;background:rgba(251,146,60,.18);color:#fb923c;border-radius:99px;font-size:10px;font-weight:700;margin-left:6px">📧 Confirm offen</span>';
+    // LIVE-Check statt cached emailLinkMode — sonst zeigt das Dashboard
+    // 'Confirm offen' obwohl User längst bestätigt hat.
+    const liveU = usersMap[String(t.uid)] || {};
+    const liveConfirmed = String(liveU.email||'').toLowerCase() === String(t.email||'').toLowerCase();
+    if (liveConfirmed) linkBadge = '<span style="display:inline-block;padding:2px 8px;background:rgba(34,197,94,.20);color:#22c55e;border-radius:99px;font-size:10px;font-weight:700;margin-left:6px">🔗 verknüpft</span>';
+    else linkBadge = '<span style="display:inline-block;padding:2px 8px;background:rgba(251,146,60,.18);color:#fb923c;border-radius:99px;font-size:10px;font-weight:700;margin-left:6px">📧 Confirm offen</span>';
     return `<div class="tester-row"><div class="tester-info"><div class="tester-email">${esc(t.email)}${linkBadge}${sentBadge}</div><div class="tester-meta">UID ${esc(t.uid)} · ${when}</div></div><button class="del-btn" onclick="removeTester('${esc(t.uid)}')">Entfernen</button></div>`;
 }).join('')}
 </div>
