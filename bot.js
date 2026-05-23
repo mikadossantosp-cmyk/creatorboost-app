@@ -2243,22 +2243,25 @@ document.addEventListener('error', function(e) {
   }
 }, true);
 
+// Globaler Zähler-Setter: aktualisiert ALLE Elemente mit der gegebenen ID.
+// Wichtig, weil pro Link mehrere Spans dieselbe id="likes-…" haben (Button + Likes-Zeile) —
+// getElementById würde nur das erste treffen → inkonsistente Zahlen (Button 6, Zeile 7).
+window.cbSetCount = function(fullId, val){
+  if (val === undefined || val === null || fullId == null) return;
+  var sel = '[id="' + String(fullId).replace(/["\\]/g, '\\$&') + '"]';
+  try { document.querySelectorAll(sel).forEach(function(el){ if (el.textContent !== String(val)) el.textContent = String(val); }); } catch(e){}
+};
 // ── SSE: Echtzeit-Likes (Server-Push, kein Polling-Delay) ──
 // Aktualisiert Like-Zähler sofort sobald irgendwer liked. EventSource reconnectet selbst.
 (function(){
   if (!window.EventSource || !window.MY_UID) return;
-  function setCount(id, val){
-    if (val === undefined || id == null) return;
-    var sel = '[id="' + String(id).replace(/["\\]/g, '\\$&') + '"]';
-    try { document.querySelectorAll(sel).forEach(function(el){ if (el.textContent !== String(val)) el.textContent = String(val); }); } catch(e){}
-  }
   var es;
   try { es = new EventSource('/api/events'); } catch(e){ return; }
   es.addEventListener('like', function(ev){
-    try { var d = JSON.parse(ev.data); (d.ids||[]).forEach(function(id){ setCount('likes-'+id, d.likes); }); } catch(e){}
+    try { var d = JSON.parse(ev.data); (d.ids||[]).forEach(function(id){ window.cbSetCount('likes-'+id, d.likes); }); } catch(e){}
   });
   es.addEventListener('superlike', function(ev){
-    try { var d = JSON.parse(ev.data); setCount('sl-likes-'+d.slId, d.likes); } catch(e){}
+    try { var d = JSON.parse(ev.data); window.cbSetCount('sl-likes-'+d.slId, d.likes); } catch(e){}
   });
 })();
 </script>
@@ -3322,7 +3325,7 @@ if(typeof window.likePost==='undefined'){
     const countEl=document.getElementById('likes-'+msgId);
     btn.classList.add('liked');
     const svg=btn.querySelector('svg');if(svg)svg.setAttribute('fill','currentColor');
-    if(countEl)countEl.textContent=Number(countEl.textContent||0)+1;
+    if(countEl&&window.cbSetCount)window.cbSetCount('likes-'+msgId,Number(countEl.textContent||0)+1);
     btn.disabled=true;
     try{
       const ctrl=new AbortController();const tmo=setTimeout(()=>ctrl.abort(),8000);
@@ -3330,11 +3333,11 @@ if(typeof window.likePost==='undefined'){
       clearTimeout(tmo);
       const data=await res.json();
       if(data.ok){
-        if(countEl&&data.likes!==undefined)countEl.textContent=data.likes;
+        if(data.likes!==undefined&&window.cbSetCount)window.cbSetCount('likes-'+msgId,data.likes);
         if(window.showBanner)showBanner({type:'success',title:'Like registriert ❤️',subtitle:'Vergiss nicht: Auf Instagram liken & 2-Wort-Kommentar.',dur:4000});
       }else if(data.missingInstagram){
         btn.classList.remove('liked');if(svg)svg.setAttribute('fill','none');
-        if(countEl)countEl.textContent=Math.max(0,Number(countEl.textContent)-1);
+        if(countEl&&window.cbSetCount)window.cbSetCount('likes-'+msgId,Math.max(0,Number(countEl.textContent||0)-1));
         btn.disabled=false;btn.dataset.busy='0';
         if(window.showBanner)showBanner({type:'warn',icon:'❌',title:'Like fehlgeschlagen',subtitle:data.error||'Insta in Einstellungen setzen.',dur:4500});
       }else{
@@ -4809,10 +4812,15 @@ self.addEventListener('notificationclick',e=>{
             'Connection': 'keep-alive',
             'X-Accel-Buffering': 'no'
         });
+        try { res.flushHeaders(); } catch(e) {}
+        try { req.socket.setNoDelay(true); req.socket.setTimeout(0); } catch(e) {}
+        // 2KB Padding-Kommentar: zwingt puffernde Proxies (Railway/CDN) den Stream sofort
+        // durchzureichen, statt bis zu einem internen Buffer-Threshold zu warten.
+        res.write(':' + new Array(2049).join(' ') + '\n');
         res.write('retry: 3000\n\n');
         const client = { res };
         sseClients.add(client);
-        const ping = setInterval(() => { try { res.write(':ping\n\n'); } catch(e) { clearInterval(ping); sseClients.delete(client); } }, 25000);
+        const ping = setInterval(() => { try { res.write(':ping\n\n'); } catch(e) { clearInterval(ping); sseClients.delete(client); } }, 20000);
         req.on('close', () => { clearInterval(ping); sseClients.delete(client); });
         return;
     }
@@ -10645,7 +10653,7 @@ async function likePost(msgId, btn) {
     const countEl = document.getElementById('likes-'+msgId);
     btn.classList.add('liked');
     btn.querySelector('svg').setAttribute('fill', 'currentColor');
-    if (countEl) countEl.textContent = Number(countEl.textContent) + 1;
+    if (countEl && window.cbSetCount) window.cbSetCount('likes-'+msgId, Number(countEl.textContent||0) + 1);
     btn.style.animation='pulse .3s ease';
     btn.disabled = true;
     setTimeout(()=>btn.style.animation='',300);
@@ -10657,7 +10665,7 @@ async function likePost(msgId, btn) {
         const data = await res.json();
         if (data.ok) {
             _dequeueLike(msgId);
-            if (countEl && data.likes !== undefined) countEl.textContent = data.likes;
+            if (data.likes !== undefined && window.cbSetCount) window.cbSetCount('likes-'+msgId, data.likes);
             showBanner({ type:'success', title:'Like registriert ❤️', subtitle:'Vergiss nicht: Auf Instagram liken & mit 2 Wörter kommentieren. Danke!', dur:5000 });
             // Sofortiger Sync: Mission-FAB-Badge + andere Counter refreshen ohne Wait auf 2min-Poll.
             try { document.dispatchEvent(new CustomEvent('cb-state-changed', { detail: { type:'like', msgId } })); } catch(e){}
@@ -10667,7 +10675,7 @@ async function likePost(msgId, btn) {
             try { const v = JSON.parse(localStorage.getItem(_kLikes())||'{}'); delete v[String(msgId)]; localStorage.setItem(_kLikes(), JSON.stringify(v)); } catch(e){}
             btn.classList.remove('liked');
             btn.querySelector('svg').setAttribute('fill', 'none');
-            if (countEl) countEl.textContent = Math.max(0, Number(countEl.textContent) - 1);
+            if (countEl && window.cbSetCount) window.cbSetCount('likes-'+msgId, Math.max(0, Number(countEl.textContent||0) - 1));
             btn.disabled = false;
             btn.dataset.busy = '0';
             showBanner({ type:'warn', icon:'❌', title:'Like fehlgeschlagen', subtitle: data.error || 'Insta in Einstellungen setzen.', dur:4500 });
@@ -10687,10 +10695,7 @@ async function refreshLikes() {
         if (data.links) {
             data.links.forEach(l => {
                 l.ids.forEach(tryId => {
-                    const countEl = document.getElementById('likes-' + tryId);
-                    if (countEl && countEl.textContent !== String(l.likes)) {
-                        countEl.textContent = l.likes;
-                    }
+                    if (window.cbSetCount) window.cbSetCount('likes-' + tryId, l.likes);
                 });
             });
         }
