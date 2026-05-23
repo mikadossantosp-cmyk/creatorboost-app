@@ -8994,10 +8994,17 @@ p{line-height:1.65;color:var(--muted)}
             const w = String(body.website).trim();
             updateData.website = w === '' ? '' : (/^https?:\/\//i.test(w) ? w.slice(0, 100) : '');
         }
-        if (body.tiktok !== undefined) updateData.tiktok = body.tiktok;
-        if (body.youtube !== undefined) updateData.youtube = body.youtube;
-        if (body.twitter !== undefined) updateData.twitter = body.twitter;
-        if (body.instagram !== undefined) updateData.instagram = body.instagram;
+        // Social-Handles: nur alphanumerisch + . _ - zugelassen, max 30 Zeichen (alle Plattformen).
+        // Vorher: any-string durch → könnte HTML/JS-Strings enthalten (XSS-Output-Fix existiert, aber Defense-in-depth).
+        const _sanitizeHandle = (v) => {
+            const s = String(v||'').trim().replace(/^@/, '').slice(0, 30);
+            // Nur a-z A-Z 0-9 . _ - erlaubt (Instagram/TikTok/YouTube/Twitter alle erlauben diese).
+            return /^[a-zA-Z0-9._-]*$/.test(s) ? s : '';
+        };
+        if (body.tiktok !== undefined) updateData.tiktok = _sanitizeHandle(body.tiktok);
+        if (body.youtube !== undefined) updateData.youtube = _sanitizeHandle(body.youtube);
+        if (body.twitter !== undefined) updateData.twitter = _sanitizeHandle(body.twitter);
+        if (body.instagram !== undefined) updateData.instagram = _sanitizeHandle(body.instagram);
         if (body.banner !== undefined) updateData.banner = body.banner;
         // Email für Magic-Link-Login. Format-Validation auf Bot-Seite, Eindeutigkeits-Check ebenso.
         // Lock-Check: wenn User schon BEIDES (email + password) hat, braucht er Unlock-Window
@@ -20555,6 +20562,14 @@ const EXPORT_PATH = '/export-images';
 
 server.listen(PORT, async () => {
     console.log('🌐 CreatorX App läuft auf Port ' + PORT);
+    // SECURITY: Timeouts gegen Slowloris-DoS (Connections die request bytes langsam senden).
+    // headersTimeout: max 30s für komplette Request-Headers (default Node.js 60s, halbiert)
+    // requestTimeout: max 120s für komplette Request (default 300s, ein Drittel)
+    // keepAliveTimeout: 10s für keep-alive idle connections (default 5s, leicht erhöht damit Browser-Reuse klappt)
+    server.headersTimeout = 30_000;
+    server.requestTimeout = 120_000;
+    server.keepAliveTimeout = 10_000;
+    server.timeout = 0;  // socket idle timeout disabled (requestTimeout cover the case)
     // Pre-warm data cache
     refreshDataCache().then(() => console.log('✅ Data cache vorgewärmt'));
     // (Backfill entfernt: hatte alle Sessions als 'gerade online' markiert via
