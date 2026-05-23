@@ -2214,66 +2214,6 @@ async function cbResendConfirm(btn){
 <div class="cb-banner" id="cb-banner" role="alert" aria-live="assertive"></div>
 <a href="/download-app" id="apk-download-btn" style="display:none;position:fixed;bottom:calc(120px + var(--safe-bottom,0px));left:50%;transform:translateX(-50%);background:#22c55e;color:#fff;border-radius:24px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;z-index:9997;text-decoration:none;white-space:nowrap;box-shadow:0 4px 16px rgba(34,197,94,.4)">📦 APK herunterladen</a>
 <div id="pwa-install-btn" onclick="installPWA()" style="display:none;position:fixed;bottom:calc(70px + var(--safe-bottom,0px));left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#ff6b6b,#cc5de8);color:#fff;border:none;border-radius:24px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;z-index:9998;gap:8px;align-items:center;box-shadow:0 4px 16px rgba(255,107,107,.4);white-space:nowrap">📲 App installieren</div>
-<script>
-// ── APK Update-Banner (standalone, läuft sofort, unabhängig von SW) ──
-(function(){
-  try {
-    var qs = new URLSearchParams(location.search);
-    var force = qs.get('force-update') === '1';
-    var refTWA = (document.referrer || '').indexOf('android-app://') === 0;
-    var standaloneAndroid = /Android/i.test(navigator.userAgent) && (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
-    var persisted = false;
-    try { persisted = localStorage.getItem('cb_is_twa') === '1'; } catch(e){}
-    if (refTWA) { try{ localStorage.setItem('cb_is_twa','1'); }catch(e){} persisted = true; }
-    var maybeTWA = refTWA || persisted || standaloneAndroid;
-    if (!force && !maybeTWA) return;
-
-    function show(srv){
-      if (document.getElementById('cx-apk-upd')) return;
-      var b = document.createElement('div');
-      b.id = 'cx-apk-upd';
-      b.style.cssText = 'position:fixed;left:8px;right:8px;bottom:90px;z-index:99999;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:12px;box-shadow:0 16px 40px rgba(22,163,74,0.45);max-width:460px;margin-left:auto;margin-right:auto';
-      var notes = ((srv && srv.releaseNotes) || 'Neue Features + Bugfixes').replace(/[<>&]/g, function(c){return ({"<":"&lt;",">":"&gt;","&":"&amp;"})[c];});
-      b.innerHTML = '<span style="font-size:28px">📦</span><div style="flex:1;min-width:0"><div style="font-size:14.5px;font-weight:800">Update verfügbar</div><div style="font-size:12px;font-weight:500;opacity:.92;margin-top:2px;line-height:1.35">'+notes+'</div></div><button id="cx-apk-skip" style="background:rgba(255,255,255,.18);border:none;color:#fff;width:30px;height:30px;border-radius:50%;font-size:14px;cursor:pointer;flex-shrink:0">✕</button><button id="cx-apk-go" style="background:#fff;color:#16a34a;border:none;font-weight:800;padding:9px 16px;border-radius:999px;font-size:13px;cursor:pointer;flex-shrink:0;box-shadow:0 4px 12px rgba(0,0,0,0.15)">Installieren</button>';
-      document.body.appendChild(b);
-      document.getElementById('cx-apk-skip').onclick = function(){
-        try{ localStorage.setItem('cb_apk_dismissed', (srv && srv.buildId) || ''); }catch(e){}
-        b.remove();
-      };
-      document.getElementById('cx-apk-go').onclick = function(){
-        try{ localStorage.setItem('cb_apk_build', (srv && srv.buildId) || ''); }catch(e){}
-        var a = document.createElement('a');
-        a.href = (srv && srv.downloadUrl) || '/download-app';
-        a.setAttribute('download','');
-        a.style.display='none';
-        document.body.appendChild(a);
-        a.click();
-        setTimeout(function(){ a.remove(); }, 100);
-        b.style.opacity='0.5';
-      };
-    }
-
-    function check(){
-      fetch('/api/app-version', { cache: 'no-store' })
-        .then(function(r){ return r.ok ? r.json() : null; })
-        .then(function(srv){
-          if (!srv) { if (force) show({}); return; }
-          if (!srv.available && !force) return;
-          var installed = ''; var dismissed = '';
-          try { installed = localStorage.getItem('cb_apk_build') || ''; dismissed = localStorage.getItem('cb_apk_dismissed') || ''; } catch(e){}
-          if (force || (srv.buildId !== installed && srv.buildId !== dismissed)) show(srv);
-        })
-        .catch(function(){ if (force) show({}); });
-    }
-
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', function(){ setTimeout(check, force ? 100 : 1500); });
-    } else {
-      setTimeout(check, force ? 100 : 1500);
-    }
-  } catch(e) {}
-})();
-</script>
 <div class="plus-sheet" id="plus-sheet" onclick="if(event.target===this)closePlusSheet()">
   <div class="plus-sheet-inner">
     <div class="ps-grabber"></div>
@@ -3616,71 +3556,6 @@ function confirmCrop(){
   // APK-Download-Button deaktiviert (User-Wunsch)
   if(false){fetch('/download-app',{method:'HEAD'}).then(r=>{if(r.ok){const b=document.getElementById('apk-download-btn');if(b)b.style.display='block';}}).catch(()=>{});}
 
-  // ── APK-User: Update-Banner mit One-Tap-Install ──
-  // TWA-Detection mit Persistierung (Referrer ist nur beim 1. Nav 'android-app://')
-  let __isTWA = false;
-  try {
-    const __refTWA = document.referrer.startsWith('android-app://');
-    const __urlVer = new URLSearchParams(location.search).get('ver');
-    const __urlForce = new URLSearchParams(location.search).get('force-update') === '1';
-    const __persisted = localStorage.getItem('cb_is_twa') === '1';
-    if (__refTWA) localStorage.setItem('cb_is_twa', '1');
-    if (__urlVer) { localStorage.setItem('cb_apk_ver', __urlVer); localStorage.setItem('cb_is_twa', '1'); }
-    __isTWA = __refTWA || __persisted || !!__urlVer || __urlForce;
-    // Heuristik-Fallback: standalone-Mode auf Android UND beforeinstallprompt feuert nicht (TWA-Indiz)
-    if (!__isTWA && /Android/i.test(navigator.userAgent) && window.matchMedia('(display-mode: standalone)').matches) {
-      // Markiere Verdacht — bestätigt sich falls beforeinstallprompt 4s lang nicht feuert
-      let __bipFired = false;
-      window.addEventListener('beforeinstallprompt', () => { __bipFired = true; }, { once: true });
-      setTimeout(() => {
-        if (!__bipFired) { localStorage.setItem('cb_is_twa', '1'); checkApkVersion(); }
-      }, 4000);
-    }
-  } catch(e) {}
-  async function checkApkVersion() {
-    try {
-      const r = await fetch('/api/app-version', { cache: 'no-store' });
-      if (!r.ok) return;
-      const srv = await r.json();
-      const force = new URLSearchParams(location.search).get('force-update') === '1';
-      if (!srv.available && !force) return;
-      const installed = localStorage.getItem('cb_apk_build') || '';
-      const dismissed = localStorage.getItem('cb_apk_dismissed') || '';
-      // Zeige Banner falls: kein Match mit installierter Version UND nicht für diesen Build weggeklickt
-      if (force || (srv.buildId !== installed && srv.buildId !== dismissed)) {
-        showApkUpdateBanner(srv);
-      }
-    } catch(e) {}
-  }
-  if (__isTWA) setTimeout(checkApkVersion, 1500);
-  function showApkUpdateBanner(srv){
-    if (document.getElementById('cx-apk-upd')) return;
-    const b = document.createElement('div');
-    b.id = 'cx-apk-upd';
-    b.style.cssText = 'position:fixed;left:8px;right:8px;bottom:80px;z-index:99998;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:12px;box-shadow:0 16px 40px rgba(22,163,74,0.45);max-width:460px;margin:0 auto;animation:cx-up-in .4s cubic-bezier(.16,1,.3,1)';
-    const notes = (srv.releaseNotes || 'Neue Features + Bugfixes').replace(/[<>&]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;"}[c]));
-    b.innerHTML = '<span style="font-size:28px">📦</span><div style="flex:1;min-width:0"><div style="font-size:14.5px;font-weight:800;letter-spacing:-0.1px">Update verfügbar</div><div style="font-size:12px;font-weight:500;opacity:.92;margin-top:2px;line-height:1.35">'+notes+'</div></div><button id="cx-apk-skip" style="background:rgba(255,255,255,.18);border:none;color:#fff;width:30px;height:30px;border-radius:50%;font-size:14px;cursor:pointer;flex-shrink:0">✕</button><button id="cx-apk-go" style="background:#fff;color:#16a34a;border:none;font-weight:800;padding:9px 16px;border-radius:999px;font-size:13px;cursor:pointer;flex-shrink:0;letter-spacing:0.2px;box-shadow:0 4px 12px rgba(0,0,0,0.15)">Installieren</button>';
-    document.body.appendChild(b);
-    document.getElementById('cx-apk-skip').onclick = () => {
-      try{ localStorage.setItem('cb_apk_dismissed', srv.buildId || ''); }catch(e){}
-      b.remove();
-    };
-    document.getElementById('cx-apk-go').onclick = () => {
-      // Sofort als installiert markieren (egal ob System-Dialog dann abgebrochen wird — dann manuell neu downloaden)
-      try{ localStorage.setItem('cb_apk_build', srv.buildId || ''); }catch(e){}
-      // Direkt-Download löst Android Package-Installer aus (1-Tap-Install)
-      const a = document.createElement('a');
-      a.href = srv.downloadUrl || '/download-app';
-      a.setAttribute('download','');
-      a.style.display='none';
-      document.body.appendChild(a);
-      a.click();
-      setTimeout(()=>a.remove(), 100);
-      b.style.opacity='0.5';
-      const txt = b.querySelector('div div:first-child');
-      if (txt) txt.textContent = 'APK wird heruntergeladen…';
-    };
-  }
   let _installPrompt=null;
   window.addEventListener('beforeinstallprompt',e=>{
     e.preventDefault();
