@@ -72,6 +72,30 @@ const sessions = new Map();
 // PERF: Cache statischer HTML-Files in Memory (geladen beim ersten Request).
 let _cachedSystemInfoHtml = null;
 let _cachedDiamantenInfoHtml = null;
+
+// ── GLOBAL IP RATE-LIMIT (gegen DoS/Scraper/Brute-Force) ──
+// Sliding window 60s, 300 req/min (~5/sec sustained). Excess → 429.
+const _globalIpRateMap = new Map();   // ip → timestamps[]
+const _GLOBAL_RATE_WINDOW_MS = 60_000;
+const _GLOBAL_RATE_MAX = 300;
+function _globalIpRateCheck(ip) {
+    if (!ip) return true;
+    const now = Date.now();
+    let arr = _globalIpRateMap.get(ip);
+    if (!arr) { arr = []; _globalIpRateMap.set(ip, arr); }
+    // Drop expired entries
+    while (arr.length > 0 && now - arr[0] > _GLOBAL_RATE_WINDOW_MS) arr.shift();
+    if (arr.length >= _GLOBAL_RATE_MAX) return false;
+    arr.push(now);
+    return true;
+}
+// Cleanup alle 5 Min: IPs ohne Aktivität entfernen.
+setInterval(() => {
+    const cutoff = Date.now() - _GLOBAL_RATE_WINDOW_MS * 2;
+    for (const [ip, arr] of _globalIpRateMap.entries()) {
+        if (arr.length === 0 || arr[arr.length - 1] < cutoff) _globalIpRateMap.delete(ip);
+    }
+}, 5 * 60 * 1000);
 // Email-Magic-Link: persistiert (gegen Restart-Expiry).
 const emailLoginTokens = new Map();   // token → { email, uid, exp }
 const emailConfirmTokens = new Map(); // token → { email, uid, exp } (für /einstellungen Email-Bestätigung)
@@ -4323,11 +4347,28 @@ async function handleRequest(req, res) {
         }));
     }
 
+    // ── GLOBAL IP-RATE-LIMIT (gegen DoS, Brute-Force, Scraper) ──
+    // 300 req/min pro IP (sustained ~5/sec). Health-Check + statische Assets ausgenommen.
+    if (!path.startsWith('/api/health') && !path.startsWith('/icon-') && !path.startsWith('/static/') && path !== '/manifest.json' && path !== '/sw.js' && path !== '/.well-known/assetlinks.json') {
+        const _gRipIp = String(req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '').split(',')[0].trim().slice(0, 64);
+        if (_gRipIp && !_globalIpRateCheck(_gRipIp)) {
+            res.writeHead(429, {'Content-Type': 'text/plain', 'Retry-After': '60'});
+            return res.end('Too Many Requests');
+        }
+    }
+
     // ── SECURITY HEADERS (global, per Response) ──
     res.setHeader('X-Frame-Options', 'DENY');
     res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    // HSTS mit preload-ready + 2 Jahre (max für browser-preload-list).
+    res.setHeader('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    // Permissions-Policy: deaktiviert sensible APIs die wir NICHT brauchen.
+    res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=()');
+    // X-Permitted-Cross-Domain-Policies: blockiert Adobe Flash + Acrobat cross-domain access.
+    res.setHeader('X-Permitted-Cross-Domain-Policies', 'none');
+    // Cross-Origin-Resource-Policy: nur same-origin darf unsere resources einbetten (gegen Spectre-like attacks).
+    res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
 
     // ── SERVICE WORKER ──
     // Admin-Fulltour Script — extern + cached (spart pro Page-Load 7.8KB)
