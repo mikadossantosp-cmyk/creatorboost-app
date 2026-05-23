@@ -19945,7 +19945,9 @@ ${(function(){
     '<div class="pf-top">' +
       '<div class="pf-avatar-wrap">' +
         '<div class="pf-avatar" onclick="pfOpenEditAvatar()">' +
-          (_picSrc ? '<img src="' + _picSrc + '" alt="" loading="eager">' : _initial) +
+          (_picSrc
+            ? '<img src="' + _picSrc + '" alt="" loading="eager" onerror="this.remove();this.parentNode.textContent=\'' + _initial + '\'">'
+            : _initial) +
         '</div>' +
         '<button class="pf-avatar-edit" onclick="pfOpenEditAvatar();return false" aria-label="Profilbild ändern">📷</button>' +
       '</div>' +
