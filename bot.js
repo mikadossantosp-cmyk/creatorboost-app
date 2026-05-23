@@ -11344,8 +11344,8 @@ async function submitSuperLink(){
           '<div style="font-size:12px;color:var(--muted);line-height:1.5">Tippe auf den Button → akzeptiere → installiere die App über Google Play.</div>'+
         '</div>'+
       '</div>'+
-      '<button onclick="window.open(\\'/beta-zugang\\',\\'_blank\\')" style="width:100%;padding:13px;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:none;border-radius:10px;font-size:13.5px;font-weight:800;cursor:pointer;box-shadow:0 4px 14px rgba(34,197,94,0.35)">📲 Beta-Test im Browser öffnen →</button>'+
-      '<div style="margin-top:10px;padding:8px 10px;background:rgba(0,0,0,0.25);border-radius:8px;font-size:11px;color:var(--muted);line-height:1.5"><b style="color:#fbbf24">⚠️ Öffnet im Browser</b> — damit die Anleitung offen bleibt während du die App löschst. Dort: bestätigen → Beta-Link erscheint.</div>'+
+      '<button onclick="window.__betaShowSteps()" style="width:100%;padding:13px;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:none;border-radius:10px;font-size:13.5px;font-weight:800;cursor:pointer;box-shadow:0 4px 14px rgba(34,197,94,0.35)">📲 Beta-Test öffnen →</button>'+
+      '<div style="margin-top:10px;padding:8px 10px;background:rgba(0,0,0,0.25);border-radius:8px;font-size:11px;color:var(--muted);line-height:1.5"><b style="color:#fbbf24">⚠️ Wichtig:</b> Erst Link per Email/Kopie sichern, alte App löschen, dann öffnet der Link den <b>Play Store</b> (extern).</div>'+
     '</div><style>@keyframes betaPulse{0%,100%{box-shadow:0 0 0 0 rgba(34,197,94,0.0)}50%{box-shadow:0 0 0 8px rgba(34,197,94,0.10)}}</style>';
     window.__betaShowSteps = function(){
       const bg = document.createElement('div');
@@ -11418,7 +11418,12 @@ async function submitSuperLink(){
     };
     window.__betaOpenLink = function(){
       fetch('/api/beta-tester/link-opened', {method:'POST'}).catch(()=>{});
-      window.open(link, '_blank');
+      // authuser hängt die Tester-Gmail an → Google wählt das richtige Konto vor.
+      var u = link + (link.indexOf('?')>-1?'&':'?') + 'authuser=' + encodeURIComponent(email||'');
+      // Anker-Klick statt window.open: zwingt die TWA/PWA, den (fremd-domain) Play-Store-Link
+      // an Android weiterzureichen → öffnet EXTERN (Play Store / Chrome), nicht im App-Browser.
+      var a=document.createElement('a'); a.href=u; a.target='_blank'; a.rel='noopener noreferrer';
+      document.body.appendChild(a); a.click(); setTimeout(function(){a.remove();},100);
     };
     window.__betaLinkDismiss = function(){
       localStorage.setItem(linkDismissKey, '1');
