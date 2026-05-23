@@ -119,11 +119,9 @@ module.exports = `
     requestAnimationFrame(() => modal.classList.add('show'));
   }
 
-  function maybeShowUpdate() {
-    if (location.pathname === '/' || location.pathname === '/login' || location.pathname === '/register') return;
-    setTimeout(showUpdateBanner, 1500);
-  }
-  if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', maybeShowUpdate); } else { maybeShowUpdate(); }
+  // "Neues App-Icon!"-Banner deaktiviert (einmalige Icon-Umstellung ist durch — User-Wunsch).
+  // showUpdateBanner/showUpdateModal bleiben ungenutzt definiert, werden nicht mehr aufgerufen.
+  function maybeShowUpdate() { return; }
 
   const seen = new Set();
   function maybePrefetch(href) {
