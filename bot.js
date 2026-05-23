@@ -2246,10 +2246,17 @@ document.addEventListener('error', function(e) {
 // Globaler Zähler-Setter: aktualisiert ALLE Elemente mit der gegebenen ID.
 // Wichtig, weil pro Link mehrere Spans dieselbe id="likes-…" haben (Button + Likes-Zeile) —
 // getElementById würde nur das erste treffen → inkonsistente Zahlen (Button 6, Zeile 7).
-window.cbSetCount = function(fullId, val){
+// Likes sind monoton (kein Unlike): Poll/SSE/Antwort dürfen den Zähler nur ERHÖHEN,
+// nie senken — sonst überschreibt ein verspätetes, veraltetes Update den frischen Like
+// wieder ("geht rauf, dann zurück"). force=true nur für den expliziten Reject-Revert.
+window.cbSetCount = function(fullId, val, force){
   if (val === undefined || val === null || fullId == null) return;
+  var n = Number(val); if (!isFinite(n)) return;
   var sel = '[id="' + String(fullId).replace(/["\\]/g, '\\$&') + '"]';
-  try { document.querySelectorAll(sel).forEach(function(el){ if (el.textContent !== String(val)) el.textContent = String(val); }); } catch(e){}
+  try { document.querySelectorAll(sel).forEach(function(el){
+    var cur = Number(el.textContent);
+    if (force || !isFinite(cur) || n >= cur) { if (el.textContent !== String(n)) el.textContent = String(n); }
+  }); } catch(e){}
 };
 // ── SSE: Echtzeit-Likes (Server-Push, kein Polling-Delay) ──
 // Aktualisiert Like-Zähler sofort sobald irgendwer liked. EventSource reconnectet selbst.
@@ -3337,7 +3344,7 @@ if(typeof window.likePost==='undefined'){
         if(window.showBanner)showBanner({type:'success',title:'Like registriert ❤️',subtitle:'Vergiss nicht: Auf Instagram liken & 2-Wort-Kommentar.',dur:4000});
       }else if(data.missingInstagram){
         btn.classList.remove('liked');if(svg)svg.setAttribute('fill','none');
-        if(countEl&&window.cbSetCount)window.cbSetCount('likes-'+msgId,Math.max(0,Number(countEl.textContent||0)-1));
+        if(countEl&&window.cbSetCount)window.cbSetCount('likes-'+msgId,Math.max(0,Number(countEl.textContent||0)-1),true);
         btn.disabled=false;btn.dataset.busy='0';
         if(window.showBanner)showBanner({type:'warn',icon:'❌',title:'Like fehlgeschlagen',subtitle:data.error||'Insta in Einstellungen setzen.',dur:4500});
       }else{
@@ -10675,7 +10682,7 @@ async function likePost(msgId, btn) {
             try { const v = JSON.parse(localStorage.getItem(_kLikes())||'{}'); delete v[String(msgId)]; localStorage.setItem(_kLikes(), JSON.stringify(v)); } catch(e){}
             btn.classList.remove('liked');
             btn.querySelector('svg').setAttribute('fill', 'none');
-            if (countEl && window.cbSetCount) window.cbSetCount('likes-'+msgId, Math.max(0, Number(countEl.textContent||0) - 1));
+            if (countEl && window.cbSetCount) window.cbSetCount('likes-'+msgId, Math.max(0, Number(countEl.textContent||0) - 1), true);
             btn.disabled = false;
             btn.dataset.busy = '0';
             showBanner({ type:'warn', icon:'❌', title:'Like fehlgeschlagen', subtitle: data.error || 'Insta in Einstellungen setzen.', dur:4500 });
