@@ -1189,6 +1189,38 @@ function _patchCacheSuperlinkLike(slId, uid) {
     if (!sl.likes.map(String).includes(String(uid))) sl.likes.push(String(uid));
 }
 
+// ── SSE (Server-Sent Events): Echtzeit-Push an alle offenen Clients ──
+// Single-Instance: alle Likes laufen durch diesen Prozess (/api/like), daher
+// erreicht ein Broadcast jeden verbundenen Client sofort — kein Polling-Delay.
+const sseClients = new Set(); // { res }
+function sseBroadcast(event, data) {
+    const payload = 'event: ' + event + '\ndata: ' + JSON.stringify(data) + '\n\n';
+    for (const c of sseClients) {
+        try { c.res.write(payload); } catch(e) { sseClients.delete(c); }
+    }
+}
+// Like-Event: aggregierte Unique-Liker-Zahl + alle Element-IDs der gleichen URL broadcasten.
+function sseBroadcastLike(msgId) {
+    if (!_dataCache || !_dataCache.links) return;
+    const links = _dataCache.links;
+    const lnk = links[msgId] || links['B_'+msgId] || links['C_'+msgId]
+        || Object.values(links).find(l => String(l.counter_msg_id) === String(msgId));
+    if (!lnk) return;
+    const set = new Set(); const ids = [];
+    for (const [k,l] of Object.entries(links)) {
+        if (l && l.text === lnk.text) {
+            if (Array.isArray(l.likes)) for (const x of l.likes) set.add(String(x));
+            ids.push(String(l.counter_msg_id||k)); ids.push(k);
+        }
+    }
+    sseBroadcast('like', { ids: [...new Set(ids)], likes: set.size });
+}
+function sseBroadcastSuperlike(slId) {
+    const sl = _dataCache && _dataCache.superlinks && _dataCache.superlinks[slId];
+    if (!sl) return;
+    sseBroadcast('superlike', { slId: String(slId), likes: Array.isArray(sl.likes) ? sl.likes.length : 0 });
+}
+
 // Pre-warm cache on startup and refresh every 45 seconds
 setInterval(refreshDataCache, 45000);
 
@@ -2210,6 +2242,25 @@ document.addEventListener('error', function(e) {
     img.style.display = 'none';
   }
 }, true);
+
+// ── SSE: Echtzeit-Likes (Server-Push, kein Polling-Delay) ──
+// Aktualisiert Like-Zähler sofort sobald irgendwer liked. EventSource reconnectet selbst.
+(function(){
+  if (!window.EventSource || !window.MY_UID) return;
+  function setCount(id, val){
+    if (val === undefined || id == null) return;
+    var sel = '[id="' + String(id).replace(/["\\]/g, '\\$&') + '"]';
+    try { document.querySelectorAll(sel).forEach(function(el){ if (el.textContent !== String(val)) el.textContent = String(val); }); } catch(e){}
+  }
+  var es;
+  try { es = new EventSource('/api/events'); } catch(e){ return; }
+  es.addEventListener('like', function(ev){
+    try { var d = JSON.parse(ev.data); (d.ids||[]).forEach(function(id){ setCount('likes-'+id, d.likes); }); } catch(e){}
+  });
+  es.addEventListener('superlike', function(ev){
+    try { var d = JSON.parse(ev.data); setCount('sl-likes-'+d.slId, d.likes); } catch(e){}
+  });
+})();
 </script>
 </head>
 <body>
@@ -4419,6 +4470,7 @@ async function handleRequest(req, res) {
         path === '/api/messages-count' ||
         path === '/api/notifications/count' ||
         path === '/api/likes-update' ||
+        path === '/api/events' ||
         path === '/api/app-presence' ||
         path === '/api/push-broadcast' ||
         path === '/api/push-notify' ||
@@ -4747,6 +4799,24 @@ self.addEventListener('notificationclick',e=>{
     }
 
     const session = getSession(req);
+
+    // ── SSE: Echtzeit-Event-Stream (Live-Likes etc.) ──
+    if (path === '/api/events') {
+        if (!session) { res.writeHead(401); return res.end(); }
+        res.writeHead(200, {
+            'Content-Type': 'text/event-stream',
+            'Cache-Control': 'no-cache, no-transform',
+            'Connection': 'keep-alive',
+            'X-Accel-Buffering': 'no'
+        });
+        res.write('retry: 3000\n\n');
+        const client = { res };
+        sseClients.add(client);
+        const ping = setInterval(() => { try { res.write(':ping\n\n'); } catch(e) { clearInterval(ping); sseClients.delete(client); } }, 25000);
+        req.on('close', () => { clearInterval(ping); sseClients.delete(client); });
+        return;
+    }
+
     const lang = session?.lang || 'de';
     // lastSeen nur bei echten Aktionen erneuern, nicht bei Hintergrund-Polling — sonst gilt User
     // ewig als online, weil eigene Polls die eigene Session ständig refreshen.
@@ -7125,7 +7195,7 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
         // Erfolgreicher Like → Cache SOFORT lokal patchen (instant, kein Refetch-Wait), damit
         // der 30s-Poll (/api/likes-update) und ein Reload den Like ohne Verzögerung zeigen.
         // Voller Refresh läuft im Hintergrund nach (gleicht die Wahrheit vom Mainbot ab).
-        if (result.ok !== false) { _patchCacheLike(msgId, _likeUid); refreshDataCache().catch(()=>{}); }
+        if (result.ok !== false) { _patchCacheLike(msgId, _likeUid); sseBroadcastLike(msgId); refreshDataCache().catch(()=>{}); }
         return json({ok: result.ok !== false, liked: result.liked, likes: result.likes, error: result.error});
     }
 
@@ -10626,7 +10696,8 @@ async function refreshLikes() {
         }
     } catch(e) {}
 }
-setInterval(()=>{if(!document.hidden)refreshLikes();}, 10000);
+// Fallback-Poll (Safety-Net falls SSE vom Proxy geblockt wird) — SSE liefert sonst live.
+setInterval(()=>{if(!document.hidden)refreshLikes();}, 20000);
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)try{refreshLikes();}catch(e){}});
 // Stories: Click-Cancel beim horizontalen Wischen — Swipe scrollt, kein Tap-zum-Profil
 (function(){
@@ -20626,7 +20697,7 @@ async function setRing(ringId) {
         const { slId } = body;
         if (!slId) return json({ok:false});
         const result = await postBot('/like-superlink-api', { uid: myUid, slId });
-        if (result && result.ok !== false) { _patchCacheSuperlinkLike(slId, myUid); refreshDataCache().catch(()=>{}); }
+        if (result && result.ok !== false) { _patchCacheSuperlinkLike(slId, myUid); sseBroadcastSuperlike(slId); refreshDataCache().catch(()=>{}); }
         return json(result || {ok:false});
     }
 
