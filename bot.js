@@ -18450,68 +18450,9 @@ document.querySelectorAll('.ins-bar').forEach((b, i) => {
     }
 
     if (path === '/ranking') {
-        const sorted = Object.entries(d.users||{})
-            .filter(([id,u])=>!adminIds.includes(Number(id))&&isAppVisible(u))
-            .sort((a,b)=>(b[1].xp||0)-(a[1].xp||0));
-        const isAdminUser = adminIds.includes(Number(myUid));
-        const myRank = isAdminUser ? 0 : sorted.findIndex(([id])=>id===myUid)+1;
-        const top3 = sorted.slice(0,3);
-        const rest = sorted.slice(3);
-        const podiumSlot = (entry, place) => {
-            if (!entry) return `<div class="podium-slot p${place}"></div>`;
-            const [id,u] = entry;
-            const grad = badgeGradient(u.role);
-            const insta = u.instagram;
-            const initial = (u.name||'?').slice(0,2).toUpperCase();
-            const img = ladeBild(id,'profilepic')
-                ? `<img src="/appbild/${id}/profilepic" loading="lazy" alt="">`
-                : insta ? `<img src="https://unavatar.io/instagram/${htmlEsc(insta)}" loading="lazy" onerror="this.remove()" alt="">` : '';
-            const crownCls = place===1 ? '' : (place===2 ? ' rank-silver' : (place===3 ? ' rank-bronze' : ''));
-            const crown = (place===1||place===2||place===3) ? '<div class="podium-crown'+crownCls+'">👑</div>' : '';
-            return `<a href="/profil/${id}" class="podium-slot p${place}">
-              ${crown}
-              <div class="podium-avatar" style="background:${grad}"><span>${initial}</span>${img}</div>
-              <div class="podium-name">${htmlEsc(u.spitzname||u.name||'User')}${id===myUid?' (Du)':''}</div>
-              <div class="podium-xp">${(u.xp||0).toLocaleString('de-DE')} XP</div>
-              <div class="podium-block">${place}</div>
-            </a>`;
-        };
-        const podium = top3.length ? `<div class="podium-wrap">
-          <div class="podium-row">
-            ${podiumSlot(top3[1], 2)}
-            ${podiumSlot(top3[0], 1)}
-            ${podiumSlot(top3[2], 3)}
-          </div>
-        </div>` : '';
-        return html(`
-<div class="topbar">
-  <div class="topbar-logo">Rangliste</div>
-  <div style="font-size:12px;color:var(--muted)">Dein Rang: #${myRank}</div>
-</div>
-<div class="tabs"><div class="tab active">⭐ Gesamt</div></div>
-${podium}
-${rest.map(([id,u],idx)=>{
-    const i = idx + 3;
-    const isMe = id===myUid;
-    const insta = u.instagram;
-    const grad = badgeGradient(u.role);
-    return `<a href="/profil/${id}" class="rank-item ${isMe?'rank-me':''}">
-    <div class="rank-pos"><span class="rank-num">${i+1}</span></div>
-    <div style="position:relative;width:40px;height:40px;border-radius:50%;overflow:hidden;background:${grad};flex-shrink:0;display:flex;align-items:center;justify-content:center">
-      <span style="color:#fff;font-weight:700;font-size:14px;position:absolute">${(u.name||'?').slice(0,2).toUpperCase()}</span>
-      ${ladeBild(id,'profilepic')
-        ? `<img src="/appbild/${id}/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" alt="">`
-        : insta
-        ? `<img src="https://unavatar.io/instagram/${htmlEsc(insta)}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.remove()" alt="">`
-        : ''}
-    </div>
-    <div class="rank-info">
-      <div class="rank-name">${htmlEsc(u.spitzname||u.name||'User')}${isMe?' (Du)':''}</div>
-      <div class="rank-badge">${htmlEsc(cleanRole(u.role))}</div>
-    </div>
-    <div class="rank-xp">${(u.xp||0).toLocaleString('de-DE')} XP</div>
-  </a>`;
-}).join('')}`, 'ranking');
+        // Kanonische Rangliste lebt unter /explore?tab=ranking (Gesamt + Daily + Woche
+        // + Sieger gestern/letzte Woche). Diese Route war ein veraltetes Duplikat (nur Gesamt).
+        return redirect('/explore?tab=ranking');
     }
 
     // ── EIGENES PROFIL ──
