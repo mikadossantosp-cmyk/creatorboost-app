@@ -1170,6 +1170,25 @@ async function fetchBot(path) {
     return fetchBotRaw(path);
 }
 
+// Optimistisches Cache-Patching nach einem Like: schreibt den Like SOFORT in den
+// lokalen _dataCache, damit Feed-Poll/Reload ihn ohne Verzögerung zeigen — ohne auf
+// einen vollen /data-Refetch warten zu müssen. Der Hintergrund-Refresh gleicht danach ab.
+function _patchCacheLike(msgId, uid) {
+    if (!_dataCache || !_dataCache.links) return;
+    const links = _dataCache.links;
+    const lnk = links[msgId] || links['B_'+msgId] || links['C_'+msgId]
+        || Object.values(links).find(l => String(l.counter_msg_id) === String(msgId));
+    if (!lnk) return;
+    if (!Array.isArray(lnk.likes)) lnk.likes = [];
+    if (!lnk.likes.map(String).includes(String(uid))) lnk.likes.push(String(uid));
+}
+function _patchCacheSuperlinkLike(slId, uid) {
+    const sl = _dataCache && _dataCache.superlinks && _dataCache.superlinks[slId];
+    if (!sl) return;
+    if (!Array.isArray(sl.likes)) sl.likes = [];
+    if (!sl.likes.map(String).includes(String(uid))) sl.likes.push(String(uid));
+}
+
 // Pre-warm cache on startup and refresh every 45 seconds
 setInterval(refreshDataCache, 45000);
 
@@ -7098,12 +7117,13 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
             const _myLk = _bdLk?.users?.[getMyUid(session)] || {};
             if (!_myLk.instagram) return json({ok:false, error:'Bitte zuerst deinen Instagram-Username in den Einstellungen setzen, um liken zu können.', missingInstagram:true}, 403);
         }
-        const result = await fetchBot('/like-from-app?uid=' + getMyUid(session) + '&msgId=' + encodeURIComponent(msgId));
+        const _likeUid = getMyUid(session);
+        const result = await fetchBot('/like-from-app?uid=' + _likeUid + '&msgId=' + encodeURIComponent(msgId));
         if (!result) return json({ok:false, error:'Bot offline'}, 502);
-        // Erfolgreicher Like → App-Datencache SOFORT frisch ziehen, BEVOR wir antworten.
-        // Sonst liest der 30s-Poll (/api/likes-update) bzw. ein Reload den 60s-stale Cache
-        // und setzt den Zähler wieder auf den alten Wert zurück ("geht hoch, dann zurück").
-        if (result.ok !== false) { _dataCacheTime = 0; await refreshDataCache().catch(()=>{}); }
+        // Erfolgreicher Like → Cache SOFORT lokal patchen (instant, kein Refetch-Wait), damit
+        // der 30s-Poll (/api/likes-update) und ein Reload den Like ohne Verzögerung zeigen.
+        // Voller Refresh läuft im Hintergrund nach (gleicht die Wahrheit vom Mainbot ab).
+        if (result.ok !== false) { _patchCacheLike(msgId, _likeUid); refreshDataCache().catch(()=>{}); }
         return json({ok: result.ok !== false, liked: result.liked, likes: result.likes, error: result.error});
     }
 
@@ -20634,7 +20654,7 @@ async function setRing(ringId) {
         const { slId } = body;
         if (!slId) return json({ok:false});
         const result = await postBot('/like-superlink-api', { uid: myUid, slId });
-        if (result && result.ok !== false) { _dataCacheTime = 0; await refreshDataCache().catch(()=>{}); }
+        if (result && result.ok !== false) { _patchCacheSuperlinkLike(slId, myUid); refreshDataCache().catch(()=>{}); }
         return json(result || {ok:false});
     }
 
