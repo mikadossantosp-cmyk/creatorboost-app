@@ -11229,6 +11229,13 @@ async function submitSuperLink(){
 (function initBetaTesterBanner(){
   const root = document.getElementById('beta-tester-banner');
   if (!root) return;
+  // Play-Store-Install erkannt → Beta-Banner NIE zeigen (User ist schon migriert).
+  // Marker kommt aus der Launch-URL des Play-Store-AAB (?src=play) und wird persistiert,
+  // damit er auch nach In-App-Navigation (ohne den Param) erhalten bleibt.
+  try {
+    if (new URLSearchParams(location.search).get('src') === 'play') localStorage.setItem('cb_from_play','1');
+    if (localStorage.getItem('cb_from_play') === '1') { root.innerHTML=''; return; }
+  } catch(e){}
   // iOS-User sehen kein Banner — Play Store gibts nur fuer Android.
   // (Edge: iPadOS 13+ gibt sich als Mac aus → maxTouchPoints check.)
   const ua = navigator.userAgent || '';
