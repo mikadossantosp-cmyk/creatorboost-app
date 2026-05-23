@@ -3454,7 +3454,9 @@ async function plusPostLink(){
   }catch(e){result.textContent='❌ Netzwerkfehler';}
   if(btn){btn.disabled=false;btn.style.opacity='';btn.textContent='📸 Link teilen';}
 }
-function showLikerModal(msgId){const modal=document.getElementById('liker-modal');const content=document.getElementById('liker-modal-content');const rows=document.getElementById('liker-rows-'+msgId);if(!modal||!rows)return;content.innerHTML=rows.innerHTML||'<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">Noch niemand geliked</div>';modal.classList.add('open');document.body.style.overflow='hidden';}
+function showLikerModal(msgId){const modal=document.getElementById('liker-modal');const content=document.getElementById('liker-modal-content');if(!modal||!content)return;const cached=document.getElementById('liker-rows-'+msgId);content.innerHTML=(cached&&cached.innerHTML)||'<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">Lädt…</div>';modal.classList.add('open');document.body.style.overflow='hidden';
+  // Live nachladen, damit die Liste auch ohne Page-Reload aktuell ist.
+  fetch('/api/link-likers?msgId='+encodeURIComponent(msgId)).then(r=>r.json()).then(j=>{if(j&&typeof j.html==='string'){content.innerHTML=j.html||'<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">Noch niemand geliked</div>';}}).catch(()=>{});}
 function closeLikerModal(){const modal=document.getElementById('liker-modal');if(modal){modal.classList.remove('open');document.body.style.overflow='';} }
 // ── CROP MODAL ──
 let _cropCb=null,_cropDrag={on:false,sx:0,sy:0,ox:0,oy:0},_cropPinch=0;
@@ -8098,6 +8100,35 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
         return json({links});
     }
 
+    // ── LIVE LIKER-LISTE (für "Wer hat geliked?"-Modal) ──
+    // Liefert frisch gerenderte Liker-Rows, damit das Modal ohne Page-Reload aktuell ist.
+    if (path === '/api/link-likers') {
+        if (!session) return json({html:'', count:0}, 401);
+        const reqMsgId = String(query.msgId||'');
+        const botData = await fetchBot('/data');
+        if (!botData || !reqMsgId) return json({html:'', count:0});
+        const allLinks = botData.links||{};
+        const lnk = allLinks[reqMsgId] || allLinks['B_'+reqMsgId] || allLinks['C_'+reqMsgId]
+            || Object.values(allLinks).find(l => String(l.counter_msg_id) === String(reqMsgId));
+        if (!lnk) return json({html:'', count:0});
+        // Likers über alle Link-Einträge gleicher URL aggregieren (wie im Feed).
+        const likerSet = new Set();
+        for (const l of Object.values(allLinks)) {
+            if (l && l.text === lnk.text && Array.isArray(l.likes)) for (const id of l.likes) likerSet.add(String(id));
+        }
+        const likes = [...likerSet];
+        const usersMap = botData.users||{};
+        const _admins = Array.isArray(botData._adminIds) ? botData._adminIds.map(Number) : [];
+        const crownOverlay = makeCrownOverlay(getTop3Uids(botData, _admins));
+        const rows = likes.map((lid,i)=>{
+            const lu=usersMap[String(lid)]; const lg=badgeGradient(lu&&lu.role);
+            const lf=ladeBild(String(lid),'profilepic'); const li=lu&&lu.instagram;
+            const limg=lf?'<img src="/appbild/'+lid+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" alt="">':li?'<img src="https://unavatar.io/instagram/'+li+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" alt="">':'';
+            return '<a href="/profil/'+lid+'" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--border2);text-decoration:none;background:'+(i%2===0?'transparent':'rgba(255,255,255,.02)')+'"><div style="position:relative;width:34px;height:34px;flex-shrink:0">'+crownOverlay(lid,'xs')+'<div style="position:relative;width:34px;height:34px;border-radius:50%;background:'+lg+';overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff"><span style="position:absolute">'+(lu&&lu.name||'?')[0]+'</span>'+limg+'</div></div><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:var(--text)">'+htmlEsc(lu&&(lu.spitzname||lu.name)||'User')+'</div><div style="font-size:10px;color:var(--muted)">'+cleanRole(lu&&lu.role)+'</div></div><div style="font-size:11px;color:var(--accent)">→</div></a>';
+        }).join('');
+        return json({html: rows, count: likes.length});
+    }
+
     // ── BENACHRICHTIGUNGEN API ──
     if (path === '/api/notifications') {
         if (!session) return json({notifications:[]});
@@ -10595,7 +10626,7 @@ async function refreshLikes() {
         }
     } catch(e) {}
 }
-setInterval(()=>{if(!document.hidden)refreshLikes();}, 30000);
+setInterval(()=>{if(!document.hidden)refreshLikes();}, 10000);
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)try{refreshLikes();}catch(e){}});
 // Stories: Click-Cancel beim horizontalen Wischen — Swipe scrollt, kein Tap-zum-Profil
 (function(){
