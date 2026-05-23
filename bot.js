@@ -11383,9 +11383,10 @@ async function submitSuperLink(){
         '<div style="background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.25);border-radius:10px;padding:10px 12px;margin-bottom:14px;font-size:11.5px;color:var(--text);line-height:1.55">'+
           '<b style="color:#3b82f6">💡 Geduld bei "Beta nicht verfügbar":</b> Manchmal braucht Google 1-2 Stunden um deinen Tester-Status zu syncen. Falls die Beta-Seite "nicht verfügbar" sagt → warte etwas und probier nochmal.'+
         '</div>'+
+        '<label style="display:flex;align-items:center;gap:9px;margin-bottom:12px;padding:11px 13px;background:rgba(239,68,68,0.12);border:1.5px solid rgba(239,68,68,0.45);border-radius:10px;font-size:12px;color:var(--text);cursor:pointer;line-height:1.45"><input type="checkbox" id="betaDeletedChk" onchange="var b=document.getElementById(\\'betaOpenBtn\\');b.disabled=!this.checked;b.style.opacity=this.checked?\\'1\\':\\'0.45\\';b.style.cursor=this.checked?\\'pointer\\':\\'not-allowed\\'" style="width:19px;height:19px;flex-shrink:0;accent-color:#22c55e"><span>Ich habe die alte CreatorX-App <b>deinstalliert</b> (oder hatte keine) — sonst blockt Google den Play-Store-Install.</span></label>'+
         '<div style="display:flex;gap:10px">'+
           '<button onclick="this.closest(\\'.beta-modal-bg\\').remove()" style="flex:1;padding:12px;background:transparent;color:var(--text);border:1px solid var(--border2,#333);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">Später</button>'+
-          '<button onclick="window.__betaOpenLink();this.closest(\\'.beta-modal-bg\\').remove()" style="flex:2;padding:12px;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer">📲 Jetzt Link öffnen</button>'+
+          '<button id="betaOpenBtn" disabled onclick="window.__betaOpenLink();this.closest(\\'.beta-modal-bg\\').remove()" style="flex:2;padding:12px;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:not-allowed;opacity:0.45">📲 Jetzt Link öffnen</button>'+
         '</div>'+
       '</div>';
       document.body.appendChild(bg);
