@@ -4246,7 +4246,7 @@ async function readBody(req, maxBytes=25000000) {
 
 const server = http.createServer((req, res) => {
     handleRequest(req, res).catch(e => {
-        console.error('Request error:', e.message);
+        console.error('Request error:', req.method, req.url, '—', e.message, '\n', e.stack);
         if (!res.headersSent) { res.writeHead(500); res.end('Server Error'); }
     });
 });
