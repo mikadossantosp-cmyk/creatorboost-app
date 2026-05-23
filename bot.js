@@ -11353,7 +11353,13 @@ async function submitSuperLink(){
       '</div>'+
       '<button onclick="window.__betaShowSteps()" style="width:100%;padding:13px;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:none;border-radius:10px;font-size:13.5px;font-weight:800;cursor:pointer;box-shadow:0 4px 14px rgba(34,197,94,0.35)">📲 Beta-Test öffnen →</button>'+
       '<div style="margin-top:10px;padding:8px 10px;background:rgba(0,0,0,0.25);border-radius:8px;font-size:11px;color:var(--muted);line-height:1.5"><b style="color:#fbbf24">⚠️ Wichtig:</b> Erst Link per Email/Kopie sichern, alte App löschen, dann öffnet der Link den <b>Play Store</b> (extern).</div>'+
+      '<button onclick="window.__betaMarkInstalled()" style="width:100%;margin-top:8px;padding:9px;background:transparent;color:var(--muted);border:1px solid var(--border2,#333);border-radius:9px;font-size:12px;font-weight:700;cursor:pointer">✓ Bin schon im Play Store — Banner ausblenden</button>'+
     '</div><style>@keyframes betaPulse{0%,100%{box-shadow:0 0 0 0 rgba(34,197,94,0.0)}50%{box-shadow:0 0 0 8px rgba(34,197,94,0.10)}}</style>';
+    window.__betaMarkInstalled = function(){
+      try{ localStorage.setItem('cb_from_play','1'); }catch(e){}
+      const r = document.getElementById('beta-tester-banner'); if (r) r.innerHTML = '';
+      const m = document.querySelector('.beta-modal-bg'); if (m) m.remove();
+    };
     window.__betaShowSteps = function(){
       const bg = document.createElement('div');
       bg.className = 'beta-modal-bg';
@@ -11389,6 +11395,7 @@ async function submitSuperLink(){
           '<button id="betaOpenBtn" disabled onclick="window.__betaOpenLink();this.closest(\\'.beta-modal-bg\\').remove()" style="flex:2;padding:12px;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:not-allowed;opacity:0.45">📲 Im Play Store öffnen</button>'+
         '</div>'+
         '<div id="betaOpenHint" style="font-size:11px;color:var(--muted);text-align:center;margin-top:8px">⬆️ Erst „Verstanden" drücken, dann wird der Link klickbar.</div>'+
+        '<button onclick="window.__betaMarkInstalled()" style="width:100%;margin-top:12px;padding:9px;background:transparent;color:var(--muted);border:1px solid var(--border2,#333);border-radius:9px;font-size:12px;font-weight:700;cursor:pointer">✓ Bin schon im Play Store — nicht mehr anzeigen</button>'+
       '</div>';
       document.body.appendChild(bg);
       window.__betaMailLink = async function(){
