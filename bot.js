@@ -7100,6 +7100,9 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
         }
         const result = await fetchBot('/like-from-app?uid=' + getMyUid(session) + '&msgId=' + encodeURIComponent(msgId));
         if (!result) return json({ok:false, error:'Bot offline'}, 502);
+        // Erfolgreicher Like → App-Datencache invalidieren, damit Feed-Reload den Like sofort zeigt
+        // (sonst bis zu 60s stale-while-revalidate → Like "springt beim Neuladen zurück").
+        if (result.ok !== false) { _dataCacheTime = 0; refreshDataCache().catch(()=>{}); }
         return json({ok: result.ok !== false, liked: result.liked, likes: result.likes, error: result.error});
     }
 
@@ -20630,6 +20633,7 @@ async function setRing(ringId) {
         const { slId } = body;
         if (!slId) return json({ok:false});
         const result = await postBot('/like-superlink-api', { uid: myUid, slId });
+        if (result && result.ok !== false) { _dataCacheTime = 0; refreshDataCache().catch(()=>{}); }
         return json(result || {ok:false});
     }
 
