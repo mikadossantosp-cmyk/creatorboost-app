@@ -4369,6 +4369,28 @@ async function handleRequest(req, res) {
     res.setHeader('X-Permitted-Cross-Domain-Policies', 'none');
     // Cross-Origin-Resource-Policy: nur same-origin darf unsere resources einbetten (gegen Spectre-like attacks).
     res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
+    // Content-Security-Policy: defense-in-depth gegen XSS.
+    // 'unsafe-inline' für script + style notwendig wegen vieler inline-handlers in der App;
+    // alle anderen Vektoren werden trotzdem blockiert (frame-ancestors, object, base-uri, form-action).
+    // img-src lässt: eigene Domain, data-URLs (für base64-images), https: (Instagram-CDN-Avatare).
+    // connect-src: eigene Domain (Mainbot-Bridge geht serverseitig, nicht über Browser).
+    res.setHeader('Content-Security-Policy', [
+        "default-src 'self'",
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+        "img-src 'self' data: blob: https:",
+        "font-src 'self' data: https://fonts.gstatic.com",
+        "connect-src 'self' https:",
+        "media-src 'self' data: blob: https:",
+        "object-src 'none'",
+        "base-uri 'self'",
+        "form-action 'self'",
+        "frame-ancestors 'none'",
+        "frame-src 'self' https://www.youtube.com https://www.instagram.com",
+        "manifest-src 'self'",
+        "worker-src 'self'",
+        "upgrade-insecure-requests",
+    ].join('; '));
 
     // ── SERVICE WORKER ──
     // Admin-Fulltour Script — extern + cached (spart pro Page-Load 7.8KB)
