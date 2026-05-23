@@ -7100,9 +7100,10 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
         }
         const result = await fetchBot('/like-from-app?uid=' + getMyUid(session) + '&msgId=' + encodeURIComponent(msgId));
         if (!result) return json({ok:false, error:'Bot offline'}, 502);
-        // Erfolgreicher Like → App-Datencache invalidieren, damit Feed-Reload den Like sofort zeigt
-        // (sonst bis zu 60s stale-while-revalidate → Like "springt beim Neuladen zurück").
-        if (result.ok !== false) { _dataCacheTime = 0; refreshDataCache().catch(()=>{}); }
+        // Erfolgreicher Like → App-Datencache SOFORT frisch ziehen, BEVOR wir antworten.
+        // Sonst liest der 30s-Poll (/api/likes-update) bzw. ein Reload den 60s-stale Cache
+        // und setzt den Zähler wieder auf den alten Wert zurück ("geht hoch, dann zurück").
+        if (result.ok !== false) { _dataCacheTime = 0; await refreshDataCache().catch(()=>{}); }
         return json({ok: result.ok !== false, liked: result.liked, likes: result.likes, error: result.error});
     }
 
@@ -20633,7 +20634,7 @@ async function setRing(ringId) {
         const { slId } = body;
         if (!slId) return json({ok:false});
         const result = await postBot('/like-superlink-api', { uid: myUid, slId });
-        if (result && result.ok !== false) { _dataCacheTime = 0; refreshDataCache().catch(()=>{}); }
+        if (result && result.ok !== false) { _dataCacheTime = 0; await refreshDataCache().catch(()=>{}); }
         return json(result || {ok:false});
     }
 
