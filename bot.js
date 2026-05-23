@@ -6673,13 +6673,13 @@ pre{background:#0a0a0a;border:1px solid #1a1a1a;border-radius:8px;padding:12px;f
 .toast{position:fixed;bottom:20px;right:20px;padding:10px 16px;border-radius:10px;font-size:13px;font-weight:600;color:#fff;background:#10b981;z-index:999;opacity:0;transition:opacity .25s}
 .toast.show{opacity:1}
 </style></head><body>
-<h1>🧪 Beta-Tester (${list.length}/${needed})</h1>
-<p class="muted">User-Signups f&uuml;r das Closed Testing in der Play Console</p>
+<h1>🧪 Beta-Tester · ${list.length} eingetragen${confirmedCount>=needed?' · min. ✓':''}</h1>
+<p class="muted">User-Signups f&uuml;r das Closed Testing in der Play Console · unbegrenzt sammeln (min. ${needed} f&uuml;r den Countdown)</p>
 
 <div class="card" style="border-color:${counterRunning?'rgba(34,197,94,0.40)':'rgba(167,139,250,0.30)'};background:${counterRunning?'linear-gradient(135deg,rgba(34,197,94,0.06),rgba(16,185,129,0.04))':'linear-gradient(135deg,rgba(167,139,250,0.06),rgba(168,85,247,0.04))'}">
   <div style="font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:${counterRunning?'#22c55e':'#a78bfa'};margin-bottom:12px">🎯 Production-Status</div>
   <div class="stat-row"><span class="stat-key">📥 Eingetragen</span><span class="stat-val">${list.length}</span></div>
-  <div class="stat-row"><span class="stat-key">🔗 Email-Verknüpfung confirmed</span><span class="stat-val" style="color:${confirmedCount>=needed?'#22c55e':'#fbbf24'}">${confirmedCount} / ${needed}</span></div>
+  <div class="stat-row"><span class="stat-key">🔗 Email-Verknüpfung confirmed</span><span class="stat-val" style="color:${confirmedCount>=needed?'#22c55e':'#fbbf24'}">${confirmedCount}${confirmedCount>=needed?' ✓ (Minimum '+needed+' erreicht — gerne mehr)':' / '+needed+' (Google-Minimum)'}</span></div>
   <div class="stat-row"><span class="stat-key">📲 Opt-in-Link geöffnet</span><span class="stat-val">${openedCount}</span></div>
   <div class="stat-row"><span class="stat-key">📧 Link per Email gesendet</span><span class="stat-val" style="color:#888">${emailedCount}</span></div>
   <div class="stat-row"><span class="stat-key">👎 'Nein, danke' geklickt</span><span class="stat-val" style="color:#888">${declinedCount}</span></div>
