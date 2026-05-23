@@ -11344,8 +11344,8 @@ async function submitSuperLink(){
           '<div style="font-size:12px;color:var(--muted);line-height:1.5">Tippe auf den Button → akzeptiere → installiere die App über Google Play.</div>'+
         '</div>'+
       '</div>'+
-      '<button onclick="location.href=\\'/beta-zugang\\'" style="width:100%;padding:13px;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:none;border-radius:10px;font-size:13.5px;font-weight:800;cursor:pointer;box-shadow:0 4px 14px rgba(34,197,94,0.35)">📲 Beta-Test öffnen →</button>'+
-      '<div style="margin-top:10px;padding:8px 10px;background:rgba(0,0,0,0.25);border-radius:8px;font-size:11px;color:var(--muted);line-height:1.5"><b style="color:#fbbf24">⚠️ Wichtig:</b> Auf der nächsten Seite musst du erst bestätigen, dass du die alte App gelöscht hast — dann erscheint der Beta-Link.</div>'+
+      '<button onclick="window.open(\\'/beta-zugang\\',\\'_blank\\')" style="width:100%;padding:13px;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:none;border-radius:10px;font-size:13.5px;font-weight:800;cursor:pointer;box-shadow:0 4px 14px rgba(34,197,94,0.35)">📲 Beta-Test im Browser öffnen →</button>'+
+      '<div style="margin-top:10px;padding:8px 10px;background:rgba(0,0,0,0.25);border-radius:8px;font-size:11px;color:var(--muted);line-height:1.5"><b style="color:#fbbf24">⚠️ Öffnet im Browser</b> — damit die Anleitung offen bleibt während du die App löschst. Dort: bestätigen → Beta-Link erscheint.</div>'+
     '</div><style>@keyframes betaPulse{0%,100%{box-shadow:0 0 0 0 rgba(34,197,94,0.0)}50%{box-shadow:0 0 0 8px rgba(34,197,94,0.10)}}</style>';
     window.__betaShowSteps = function(){
       const bg = document.createElement('div');
@@ -14066,7 +14066,14 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
         const _bzMeta = _betaTesters.__meta || {};
         const optinLink = _bzMeta.optinLink || '';
         const hasLink = !!optinLink && !!_bzEntry?.optinNotifiedAt;
-        const linkSafe = htmlEsc(optinLink);
+        const _bzEmail = String(_bzEntry?.email || '').toLowerCase();
+        const emailSafe = htmlEsc(_bzEmail);
+        // authuser-Hint: hängt die Tester-Gmail an, damit Google im Browser direkt das richtige
+        // Konto vorwählt (löst den häufigen "falsches Google-Konto"-Fehler bei mehreren Konten).
+        const authLink = (optinLink && _bzEmail)
+            ? optinLink + (optinLink.includes('?') ? '&' : '?') + 'authuser=' + encodeURIComponent(_bzEmail)
+            : optinLink;
+        const linkSafe = htmlEsc(authLink);
         res.writeHead(200, {'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});
         return res.end(`<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Beta-Zugang · CreatorX</title>
 <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,sans-serif;background:#0a0a0e;color:#e9e9ee;line-height:1.55;padding:20px;min-height:100vh}main{max-width:540px;margin:0 auto}h1{font-size:21px;font-weight:800;margin-bottom:10px}.warn{background:rgba(239,68,68,0.12);border:1.5px solid rgba(239,68,68,0.5);border-radius:16px;padding:18px 18px 16px;margin-bottom:18px}.warn h1{color:#f87171}.warn p{font-size:14px;color:#e9e9ee;margin:8px 0}.warn ol{padding-left:20px;font-size:13.5px;color:#c9c9d2;margin-top:10px}.warn li{margin:6px 0}.note{font-size:12.5px;color:#9a9aa6;margin-top:10px}.btn{display:block;width:100%;padding:15px;border:none;border-radius:14px;font-size:15px;font-weight:800;cursor:pointer;text-align:center;text-decoration:none}.btn-confirm{background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;box-shadow:0 6px 20px rgba(34,197,94,.35)}.btn-confirm:active{transform:scale(.98)}.link-sec{margin-top:20px;animation:fade .3s ease}.btn-open{background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;margin-bottom:10px}.btn-copy{background:rgba(167,139,250,.18);color:#a78bfa;border:1px solid rgba(167,139,250,.45)}.hint{font-size:12.5px;color:#9a9aa6;margin-top:12px;line-height:1.6;background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.25);border-radius:10px;padding:11px 13px}.lbl{font-size:13px;font-weight:700;color:#22c55e;margin-bottom:10px}.back{display:inline-block;margin-top:22px;color:#8a8a96;font-size:13px;text-decoration:none}@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}</style>
@@ -14081,12 +14088,18 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
     </ol>
   </div>
   ${hasLink ? `
+  <div style="background:rgba(34,197,94,0.10);border:1px solid rgba(34,197,94,0.35);border-radius:12px;padding:12px 14px;margin-bottom:16px;font-size:13px;color:#e9e9ee;line-height:1.55">✅ Diese Seite ist jetzt in deinem <b>Browser</b> — du kannst die CreatorX-App jetzt gefahrlos vom Handy löschen, diese Anleitung bleibt offen.</div>
   <button class="btn btn-confirm" id="confirmBtn" onclick="document.getElementById('linkSec').style.display='block';this.style.display='none';">✅ Ich habe die App gelöscht — weiter</button>
   <div class="link-sec" id="linkSec" style="display:none">
+    ${_bzEmail ? `<div style="background:rgba(245,158,11,0.12);border:1.5px solid rgba(245,158,11,0.45);border-radius:12px;padding:13px 15px;margin-bottom:14px">
+      <div style="font-size:12.5px;font-weight:800;color:#fbbf24;margin-bottom:6px">📧 Richtiges Google-Konto!</div>
+      <div style="font-size:13px;color:#e9e9ee;line-height:1.55">Dein Browser muss mit <b style="color:#fbbf24;word-break:break-all">${emailSafe}</b> angemeldet sein — sonst sagt Google „Beta nicht verfügbar".</div>
+      <div style="font-size:11.5px;color:#9a9aa6;margin-top:7px;line-height:1.55">Falsches/kein Konto? Oben rechts in Chrome aufs Profil tippen → zu dieser Gmail wechseln. (Der Link unten wählt sie automatisch vor.)</div>
+    </div>` : ''}
     <div class="lbl">🎉 Dein Beta-Zugang:</div>
     <a class="btn btn-open" id="betaOptinAnchor" href="${linkSafe}" target="_blank" rel="noopener noreferrer" onclick="fetch('/api/beta-tester/link-opened',{method:'POST'}).catch(()=>{})">📲 Beta-Test im Play Store öffnen</a>
     <button class="btn btn-copy" onclick="(function(b){var l=document.getElementById('betaOptinAnchor').getAttribute('href');function ok(){b.textContent='✓ Link kopiert!';}if(navigator.clipboard){navigator.clipboard.writeText(l).then(ok,function(){var t=document.createElement('textarea');t.value=l;document.body.appendChild(t);t.select();document.execCommand('copy');t.remove();ok();});}else{var t=document.createElement('textarea');t.value=l;document.body.appendChild(t);t.select();document.execCommand('copy');t.remove();ok();}})(this)">📋 Link kopieren</button>
-    <div class="hint">📱 Im Play Store mit deinem <b>Tester-Gmail</b> anmelden → „Tester werden" → installieren. Falls „Beta nicht verfügbar": ein paar Minuten warten (Google synct den Tester-Status).</div>
+    <div class="hint">📱 Im Play Store „Tester werden" → installieren. Falls „Beta nicht verfügbar": ein paar Minuten warten (Google synct den Tester-Status).</div>
   </div>` : `
   <div class="hint">Dein Beta-Zugang ist noch <b>nicht freigeschaltet</b>. Sobald der Opt-in-Link bereit ist, erscheint er hier. Bitte später nochmal vorbeischauen.</div>`}
   <a class="back" href="/feed">← Zurück zur App</a>
