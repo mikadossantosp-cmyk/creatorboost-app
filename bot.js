@@ -14375,7 +14375,7 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
     if (path === '/api/prisma-link/feed' && req.method === 'GET') {
         if (!session) return json({error:'Nicht eingeloggt'}, 401);
         // User-Feed: hideEngaged=1 → bereits geengaged Posts verschwinden
-        const hideEngaged = url.searchParams.get('hideEngaged') === '1' ? '&hideEngaged=1' : '';
+        const hideEngaged = query.hideEngaged === '1' ? '&hideEngaged=1' : '';
         const r = await fetchBotRaw('/prisma-link-feed-api?uid=' + encodeURIComponent(myUid) + hideEngaged);
         return json(r || {ok:false, error:'Mainbot offline'});
     }
