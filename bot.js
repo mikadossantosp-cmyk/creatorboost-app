@@ -1339,11 +1339,113 @@ async function appCronTick() {
                 console.log('📖 [Cron] Mainbot Response:', r ? JSON.stringify(r) : 'null');
             });
         }
+        // Tägliches Backup um 03:00.
+        if (h === 3 && m === 0) {
+            einmalig('dailyBackup', () => runDailyBackup().catch(e => console.error('[backup] Fehler:', e.message)));
+        }
         // Tageswechsel: alte einmalig-Keys aufräumen, damit der Speicher nicht wächst.
         for (const key of Object.keys(_appCronSeen)) { if (!key.endsWith(tagStr)) delete _appCronSeen[key]; }
     } catch (e) { console.log('appCronTick Fehler:', e.message); }
 }
 setInterval(appCronTick, 60000);
+
+// ── BACKUP-SYSTEM ──
+// Tägliches Snapshot der wichtigen Daten-Files in /data/backups/YYYY-MM-DD/.
+// Retention: 7 tägliche + 4 wöchentliche + 6 monatliche Backups.
+const BACKUP_DIR = DATA_DIR + '/backups';
+const BACKUP_FILES = [
+    'app_db.json',
+    'cb_sessions.json',
+    'email_confirm_pending.json',
+    'email_login_tokens.json',
+    'account_unlock_tokens.json',
+    'push_subscriptions.json',
+    'beta_testers.json',
+    'raffle-winners.json',
+    'write_queue.json',
+    'daily_claims.json',
+];
+async function runDailyBackup() {
+    const today = new Date();
+    const dateStr = today.toISOString().slice(0, 10); // YYYY-MM-DD
+    const backupDir = BACKUP_DIR + '/' + dateStr;
+    try {
+        await fs.promises.mkdir(backupDir, { recursive: true });
+    } catch (e) {
+        console.error('[backup] mkdir failed:', e.message);
+        return;
+    }
+    let copied = 0, skipped = 0, totalBytes = 0;
+    for (const fname of BACKUP_FILES) {
+        const src = DATA_DIR + '/' + fname;
+        const dst = backupDir + '/' + fname;
+        try {
+            if (!fs.existsSync(src)) { skipped++; continue; }
+            const data = await fs.promises.readFile(src);
+            await fs.promises.writeFile(dst, data);
+            copied++;
+            totalBytes += data.length;
+        } catch (e) {
+            console.error(`[backup] ${fname} failed:`, e.message);
+            skipped++;
+        }
+    }
+    console.log(`💾 [backup] ${dateStr}: ${copied} files copied (${(totalBytes/1024/1024).toFixed(2)} MB), ${skipped} skipped`);
+    await cleanupOldBackups();
+}
+async function cleanupOldBackups() {
+    // Retention: 7 tägliche + 4 wöchentliche (Sonntags) + 6 monatliche (1. Tag).
+    try {
+        if (!fs.existsSync(BACKUP_DIR)) return;
+        const dirs = await fs.promises.readdir(BACKUP_DIR);
+        const now = new Date();
+        const cutoffDaily = new Date(now.getTime() - 7 * 86400000);
+        const cutoffWeekly = new Date(now.getTime() - 4 * 7 * 86400000);
+        const cutoffMonthly = new Date(now.getTime() - 6 * 31 * 86400000);
+        let deleted = 0;
+        for (const dir of dirs) {
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(dir)) continue;
+            const d = new Date(dir);
+            if (isNaN(d.getTime())) continue;
+            const dayOfWeek = d.getDay();  // 0=Sunday
+            const dayOfMonth = d.getDate();
+            const keepAsMonthly = dayOfMonth === 1 && d > cutoffMonthly;
+            const keepAsWeekly  = dayOfWeek === 0 && d > cutoffWeekly;
+            const keepAsDaily   = d > cutoffDaily;
+            if (!keepAsDaily && !keepAsWeekly && !keepAsMonthly) {
+                try {
+                    const path = BACKUP_DIR + '/' + dir;
+                    const files = await fs.promises.readdir(path);
+                    for (const f of files) await fs.promises.unlink(path + '/' + f).catch(()=>{});
+                    await fs.promises.rmdir(path).catch(()=>{});
+                    deleted++;
+                } catch(e) { console.error(`[backup-cleanup] ${dir}:`, e.message); }
+            }
+        }
+        if (deleted > 0) console.log(`🗑️  [backup-cleanup] ${deleted} alte Backup-Verzeichnisse entfernt`);
+    } catch(e) { console.error('[backup-cleanup] failed:', e.message); }
+}
+async function listBackups() {
+    try {
+        if (!fs.existsSync(BACKUP_DIR)) return [];
+        const dirs = await fs.promises.readdir(BACKUP_DIR);
+        const result = [];
+        for (const dir of dirs.sort().reverse()) {
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(dir)) continue;
+            const path = BACKUP_DIR + '/' + dir;
+            try {
+                const files = await fs.promises.readdir(path);
+                let totalBytes = 0;
+                for (const f of files) {
+                    const st = await fs.promises.stat(path + '/' + f).catch(()=>null);
+                    if (st) totalBytes += st.size;
+                }
+                result.push({ date: dir, files: files.length, sizeBytes: totalBytes });
+            } catch(e) {}
+        }
+        return result;
+    } catch(e) { return []; }
+}
 
 const PARSE_BODY_MAX = 1024 * 1024; // 1MB cap; uploads use readBody with explicit limits
 function parseBody(req) {
@@ -4277,6 +4379,20 @@ async function handleRequest(req, res) {
                 stuckCount: _writeQueue.filter(e => e.attempts >= 3).length,
             },
         }));
+    }
+
+    // ── BACKUP-LIST + MANUAL-TRIGGER (admin) ──
+    // GET: Liste aller Backups. POST: manuelles Backup auslösen.
+    if (path === '/api/admin/backups' && (req.method === 'GET' || req.method === 'POST')) {
+        if (String(query.key || '') !== BRIDGE_SECRET || !BRIDGE_SECRET) {
+            res.writeHead(403, {'Content-Type':'application/json'}); return res.end('{"error":"Kein Zugriff"}');
+        }
+        if (req.method === 'POST') {
+            await runDailyBackup();
+        }
+        const backups = await listBackups();
+        res.writeHead(200, {'Content-Type':'application/json','Cache-Control':'no-store'});
+        return res.end(JSON.stringify({ ok: true, backups, dir: BACKUP_DIR }));
     }
 
     // ── DIAGNOSE: Mainbot live testen (für Admin-Debugging von Signup-Fehlern) ──
