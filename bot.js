@@ -78,6 +78,16 @@ let _cachedDiamantenInfoHtml = null;
 const _globalIpRateMap = new Map();   // ip → timestamps[]
 const _GLOBAL_RATE_WINDOW_MS = 60_000;
 const _GLOBAL_RATE_MAX = 300;
+// TRUST_PROXY env: nur wenn = '1', vertrauen wir X-Forwarded-For (Railway/Cloudflare setzen das).
+// Sonst ist der Header spoofbar → Angreifer könnte beliebige IPs sperren oder eigenes Limit umgehen.
+const _TRUST_PROXY = process.env.TRUST_PROXY === '1';
+function _clientIp(req) {
+    if (_TRUST_PROXY) {
+        const xff = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
+        if (xff) return xff.slice(0, 64);
+    }
+    return String(req.socket?.remoteAddress || '').slice(0, 64);
+}
 function _globalIpRateCheck(ip) {
     if (!ip) return true;
     const now = Date.now();
@@ -1339,9 +1349,10 @@ async function appCronTick() {
                 console.log('📖 [Cron] Mainbot Response:', r ? JSON.stringify(r) : 'null');
             });
         }
-        // Tägliches Backup um 03:00.
-        if (h === 3 && m === 0) {
-            einmalig('dailyBackup', () => runDailyBackup().catch(e => console.error('[backup] Fehler:', e.message)));
+        // Tägliches Backup: Window 03:00-03:05 (falls Server zu xx:00 nicht läuft, fängts in den 5 Min Catchup-Range).
+        // Catchup wird in einmalig-Logik dedupliziert via Datum, läuft also pro Tag genau 1×.
+        if (h === 3 && m <= 5) {
+            einmalig('dailyBackup_' + tagStr, () => runDailyBackup().catch(e => console.error('[backup] Fehler:', e.message)));
         }
         // Tageswechsel: alte einmalig-Keys aufräumen, damit der Speicher nicht wächst.
         for (const key of Object.keys(_appCronSeen)) { if (!key.endsWith(tagStr)) delete _appCronSeen[key]; }
@@ -1365,7 +1376,15 @@ const BACKUP_FILES = [
     'write_queue.json',
     'daily_claims.json',
 ];
+// Backup-Status für Health-Endpoint (damit Admin merkt wenn Backups silent failen).
+let _lastBackupStatus = { ts: null, copied: 0, skipped: 0, bytes: 0, errors: [] };
 async function runDailyBackup() {
+    // Nur wenn /data wirklich vorhanden ist — sonst sinnlos (Backups im Repo-Tree überleben Deploy nicht).
+    if (DATA_DIR !== '/data') {
+        console.warn('[backup] DATA_DIR != /data — Backups deaktiviert (kein persistent volume).');
+        _lastBackupStatus = { ts: Date.now(), copied: 0, skipped: 0, bytes: 0, errors: ['no_persistent_volume'] };
+        return;
+    }
     const today = new Date();
     const dateStr = today.toISOString().slice(0, 10); // YYYY-MM-DD
     const backupDir = BACKUP_DIR + '/' + dateStr;
@@ -1373,9 +1392,11 @@ async function runDailyBackup() {
         await fs.promises.mkdir(backupDir, { recursive: true });
     } catch (e) {
         console.error('[backup] mkdir failed:', e.message);
+        _lastBackupStatus = { ts: Date.now(), copied: 0, skipped: 0, bytes: 0, errors: ['mkdir:' + e.code] };
         return;
     }
     let copied = 0, skipped = 0, totalBytes = 0;
+    const errors = [];
     for (const fname of BACKUP_FILES) {
         const src = DATA_DIR + '/' + fname;
         const dst = backupDir + '/' + fname;
@@ -1387,10 +1408,13 @@ async function runDailyBackup() {
             totalBytes += data.length;
         } catch (e) {
             console.error(`[backup] ${fname} failed:`, e.message);
-            skipped++;
+            errors.push(`${fname}:${e.code || e.message}`);
+            // ENOSPC = disk voll: nicht weiter probieren, sonst tausende Errors.
+            if (e.code === 'ENOSPC') { errors.push('DISK_FULL_ABORTED'); break; }
         }
     }
-    console.log(`💾 [backup] ${dateStr}: ${copied} files copied (${(totalBytes/1024/1024).toFixed(2)} MB), ${skipped} skipped`);
+    _lastBackupStatus = { ts: Date.now(), copied, skipped, bytes: totalBytes, errors };
+    console.log(`💾 [backup] ${dateStr}: ${copied} files copied (${(totalBytes/1024/1024).toFixed(2)} MB), ${skipped} skipped, ${errors.length} errors`);
     await cleanupOldBackups();
 }
 async function cleanupOldBackups() {
@@ -2156,6 +2180,18 @@ ${buildErrorHandler(_isAdmin)}
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" media="print" onload="this.media='all'">
 ${session ? `<link rel="prefetch" href="/feed"><link rel="prefetch" href="/explore"><link rel="prefetch" href="/nachrichten"><link rel="prefetch" href="/profil">` : ''}
 <link rel="stylesheet" href="/static/main.css?v=237">
+<script>
+// Globaler Image-Error-Handler: wenn ein <img> nicht laden kann (404 von /appbild/,
+// blockierter externer Host, etc.) → display:none statt Broken-Image-Icon.
+// Capture-Phase damit jedes <img> erfasst wird, auch dynamisch eingefügte.
+document.addEventListener('error', function(e) {
+  var img = e.target;
+  if (img && img.tagName === 'IMG' && !img.dataset.errHandled) {
+    img.dataset.errHandled = '1';
+    img.style.display = 'none';
+  }
+}, true);
+</script>
 </head>
 <body>
 ${_emailUnconfirmed ? `<div id="cb-email-confirm-bar" style="position:sticky;top:0;left:0;right:0;z-index:9998;background:linear-gradient(90deg,#f59e0b,#eab308);color:#000;padding:10px 14px;display:flex;align-items:center;justify-content:center;gap:12px;font-family:Inter,sans-serif;font-size:13px;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,0.15)">
@@ -4452,6 +4488,9 @@ async function handleRequest(req, res) {
     // ── HEALTH-CHECK — antwortet IMMER 200 auch wenn Mainbot down ist.
     // Railway healthchecks brauchen das damit der Container nicht killed wird.
     if (path === '/api/health' || path === '/healthz' || path === '/health') {
+        // Backup-staleness signalisieren: wenn letztes Backup älter als 26h ist, ungesund.
+        const _bkAge = _lastBackupStatus.ts ? Math.round((Date.now() - _lastBackupStatus.ts)/1000) : null;
+        const _bkStale = _bkAge !== null && _bkAge > 26 * 3600;
         res.writeHead(200, { 'Content-Type': 'application/json' });
         return res.end(JSON.stringify({
             ok: true,
@@ -4460,14 +4499,50 @@ async function handleRequest(req, res) {
             cacheAge: _dataCacheTime ? Math.round((Date.now()-_dataCacheTime)/1000) : null,
             mainbotConfigured: !!MAINBOT_URL,
             sessions: sessions.size,
+            backup: {
+                lastRunAgoSec: _bkAge,
+                stale: _bkStale,
+                copied: _lastBackupStatus.copied,
+                errors: _lastBackupStatus.errors,
+            },
         }));
     }
 
     // ── GLOBAL IP-RATE-LIMIT (gegen DoS, Brute-Force, Scraper) ──
-    // 300 req/min pro IP (sustained ~5/sec). Health-Check + statische Assets ausgenommen.
-    if (!path.startsWith('/api/health') && !path.startsWith('/icon-') && !path.startsWith('/static/') && path !== '/manifest.json' && path !== '/sw.js' && path !== '/.well-known/assetlinks.json') {
-        const _gRipIp = String(req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '').split(',')[0].trim().slice(0, 64);
+    // 300 req/min pro IP (sustained ~5/sec).
+    // Ausgenommen: Health, statische Assets, hochfrequente Polls + /appbild/* (30-50 Calls pro Feed),
+    // damit NAT-Setups (Schule/Büro) mit mehreren legitimen Usern nicht ins Limit laufen.
+    const _rateExempt = (
+        path.startsWith('/api/health') ||
+        path.startsWith('/healthz') ||
+        path === '/health' ||
+        path.startsWith('/icon-') ||
+        path.startsWith('/static/') ||
+        path.startsWith('/appbild/') ||
+        path.startsWith('/api/messages/') ||
+        path === '/api/messages-count' ||
+        path === '/api/notifications/count' ||
+        path === '/api/likes-update' ||
+        path === '/api/app-presence' ||
+        path === '/api/push-broadcast' ||
+        path === '/api/push-notify' ||
+        path === '/manifest.json' ||
+        path === '/sw.js' ||
+        path === '/.well-known/assetlinks.json'
+    );
+    if (!_rateExempt) {
+        const _gRipIp = _clientIp(req);
         if (_gRipIp && !_globalIpRateCheck(_gRipIp)) {
+            // HTML-Page für Navigation; sonst JSON für API; Plaintext-Fallback.
+            const accept = String(req.headers['accept'] || '');
+            if (accept.includes('text/html')) {
+                res.writeHead(429, {'Content-Type': 'text/html; charset=utf-8', 'Retry-After': '60'});
+                return res.end('<!DOCTYPE html><html><head><meta charset="utf-8"><title>429 – Zu viele Anfragen</title><style>body{font-family:system-ui;text-align:center;padding:60px 20px;color:#1e293b}h1{font-size:24px;margin:0 0 10px}p{color:#64748b}a{color:#7c3aed}</style></head><body><h1>🛑 Zu viele Anfragen</h1><p>Bitte warte eine Minute und versuche es erneut.</p><p><a href="/">Zurück zur Startseite</a></p></body></html>');
+            }
+            if (path.startsWith('/api/')) {
+                res.writeHead(429, {'Content-Type': 'application/json', 'Retry-After': '60'});
+                return res.end('{"ok":false,"error":"Too Many Requests","retryAfter":60}');
+            }
             res.writeHead(429, {'Content-Type': 'text/plain', 'Retry-After': '60'});
             return res.end('Too Many Requests');
         }
@@ -9133,16 +9208,24 @@ p{line-height:1.65;color:var(--muted)}
             updateData.website = w === '' ? '' : (/^https?:\/\//i.test(w) ? w.slice(0, 100) : '');
         }
         // Social-Handles: nur alphanumerisch + . _ - zugelassen, max 30 Zeichen (alle Plattformen).
-        // Vorher: any-string durch → könnte HTML/JS-Strings enthalten (XSS-Output-Fix existiert, aber Defense-in-depth).
+        // Defense-in-depth gegen XSS-Strings — Output wird zwar geescaped, aber lieber am Boundary stoppen.
+        // Bei invalid input UND nicht-leerem Wert: undefined returnen → kein Update (Bestandsdaten bleiben).
+        // Bei leerem String '' explizit: leeren akzeptieren (User will Handle entfernen).
         const _sanitizeHandle = (v) => {
-            const s = String(v||'').trim().replace(/^@/, '').slice(0, 30);
+            const raw = String(v||'').trim();
+            if (raw === '') return '';  // leer = User entfernt Handle
+            const s = raw.replace(/^@/, '').slice(0, 30);
             // Nur a-z A-Z 0-9 . _ - erlaubt (Instagram/TikTok/YouTube/Twitter alle erlauben diese).
-            return /^[a-zA-Z0-9._-]*$/.test(s) ? s : '';
+            return /^[a-zA-Z0-9._-]+$/.test(s) ? s : undefined;  // undefined = kein Update
         };
-        if (body.tiktok !== undefined) updateData.tiktok = _sanitizeHandle(body.tiktok);
-        if (body.youtube !== undefined) updateData.youtube = _sanitizeHandle(body.youtube);
-        if (body.twitter !== undefined) updateData.twitter = _sanitizeHandle(body.twitter);
-        if (body.instagram !== undefined) updateData.instagram = _sanitizeHandle(body.instagram);
+        const _maybeSetHandle = (field, val) => {
+            const s = _sanitizeHandle(val);
+            if (s !== undefined) updateData[field] = s;
+        };
+        if (body.tiktok !== undefined)    _maybeSetHandle('tiktok', body.tiktok);
+        if (body.youtube !== undefined)   _maybeSetHandle('youtube', body.youtube);
+        if (body.twitter !== undefined)   _maybeSetHandle('twitter', body.twitter);
+        if (body.instagram !== undefined) _maybeSetHandle('instagram', body.instagram);
         if (body.banner !== undefined) updateData.banner = body.banner;
         // Email für Magic-Link-Login. Format-Validation auf Bot-Seite, Eindeutigkeits-Check ebenso.
         // Lock-Check: wenn User schon BEIDES (email + password) hat, braucht er Unlock-Window
