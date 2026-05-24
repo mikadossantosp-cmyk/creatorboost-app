@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "scripts": {
     "start": "node bot.js",
+    "check-endpoints": "node scripts/check-endpoints.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",

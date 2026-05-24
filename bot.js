@@ -20809,11 +20809,6 @@ async function setRing(ringId) {
         return json({ ok: true });
     }
 
-    if (path === '/api/forum-debug') {
-        const data = await fetchBot('/forum-debug');
-        return json(data || { error: 'Bot nicht erreichbar' });
-    }
-
     if (path === '/api/superlinks') {
         const data = await fetchBot('/superlinks');
         if (!data) return json({ superlinks: [] });
