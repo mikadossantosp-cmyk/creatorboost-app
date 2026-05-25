@@ -5605,7 +5605,8 @@ function submitSignup(ev){
         msg.textContent='🎉 Account erstellt — leite weiter...';msg.classList.add('show','ok');
         setTimeout(function(){window.location.href=o.j.redirect;},500);
       } else {
-        msg.textContent=(o.j&&o.j.error)||'Signup fehlgeschlagen.';msg.classList.add('show','err');
+        msg.innerHTML=((o.j&&o.j.error)||'Signup fehlgeschlagen.')+(o.j&&o.j.existed?' <a href="/login" style="color:#fff;text-decoration:underline;font-weight:800">→ Zum Login</a>':'');
+        msg.classList.add('show','err');
         btn.disabled=false;btn.textContent='🎉 Account erstellen →';
       }
     })
@@ -5855,12 +5856,14 @@ try { fetch('/api/track-funnel',{method:'POST',headers:{'Content-Type':'applicat
         }
         _sl.n += 1;
         signupIpRateLimit.set(_ip, _sl);
-        // Existiert die Email schon?
+        // Existiert die Email schon? — auch pendingEmail (= angemeldet aber noch nicht
+        // bestätigt) zählt, sonst legt ein zweiter Versuch verwirrend nochmal an / "bereits registriert".
         const _bd = await fetchBot('/data');
-        const _exists = Object.entries(_bd?.users || {}).find(([, u]) => String(u.email||'').toLowerCase() === email);
+        const _exists = Object.entries(_bd?.users || {}).find(([, u]) =>
+            String(u.email||'').toLowerCase() === email || String(u.pendingEmail||'').toLowerCase() === email);
         if (_exists) {
             postBot('/log-email-login', { email, success: false, method: 'signup-exists', uid: String(_exists[0]), ip: _ip, ua: _ua }).catch(()=>{});
-            return json({ok:false, error:'Diese Email ist bereits registriert. Bitte → Sign In.', existed:true}, 409);
+            return json({ok:false, error:'Diese Email ist schon angemeldet. Falls du dich gerade registriert hast, bestätige den Link in deiner Email (auch im Spam-Ordner). Sonst logg dich einfach ein:', existed:true}, 409);
         }
         // Account anlegen (mit Age-Gate + Terms-Akzeptanz für DSGVO/Play-Store-Audit)
         const created = await postBot('/create-email-user-api', { email, password, ageConfirmedAt: Date.now(), termsAcceptedAt: Date.now(), termsVersion: '2026-05' });
