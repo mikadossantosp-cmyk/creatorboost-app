@@ -6206,7 +6206,7 @@ ${_isPreview ? '<div class="admin-pb">👀 Admin-Vorschau · Email-Onboarding Wi
           <label class="form-label" for="ig">Dein Instagram-Username <span class="req">*</span></label>
           <div class="field">
             <span class="at">@</span>
-            <input type="text" id="ig" placeholder="dein.instagram" autocomplete="off" autocapitalize="none" spellcheck="false" required maxlength="50" pattern="[a-zA-Z0-9._]+" title="Nur Buchstaben, Zahlen, . und _">
+            <input type="text" id="ig" placeholder="dein.instagram" autocomplete="off" autocapitalize="none" spellcheck="false" required maxlength="50" pattern="@?[a-zA-Z0-9._]+" title="Nur Buchstaben, Zahlen, . und _ — das @ kannst du weglassen" oninput="this.value=this.value.replace(/[^a-zA-Z0-9._]/g,'')">
           </div>
           <div class="form-hint">Z.B. <span style="color:var(--gold);font-family:'JetBrains Mono',monospace">cristiano</span> wenn dein Insta <span style="color:var(--gold);font-family:'JetBrains Mono',monospace">@cristiano</span> ist. Kann später in Einstellungen geändert werden.</div>
         </div>
