@@ -88,10 +88,6 @@ nav{position:sticky;top:0;z-index:50;backdrop-filter:saturate(180%) blur(20px);-
 .hero-mark{width:128px;height:128px;margin:0 auto 36px;border-radius:30px;background:#000 url('/cx-icon.png') center/cover no-repeat;border:1px solid rgba(212,169,70,0.30);position:relative;overflow:hidden;box-shadow:inset 0 1px 0 rgba(255,255,255,0.08),inset 0 -1px 0 rgba(0,0,0,0.5),0 0 0 1px rgba(212,169,70,0.12),0 20px 60px rgba(212,169,70,0.28),0 8px 24px rgba(0,0,0,0.85)}
 .hero-mark .glow{position:absolute;inset:0;border-radius:30px;background:radial-gradient(circle at 50% 25%,rgba(255,245,212,0.15) 0%,transparent 55%);pointer-events:none}
 .hero-tag{display:inline-block;font-size:11px;font-weight:600;color:var(--gold);letter-spacing:3px;text-transform:uppercase;margin-bottom:14px;padding:6px 16px;border:1px solid rgba(212,169,70,0.25);border-radius:999px;background:rgba(212,169,70,0.04)}
-.hero-live{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;font-weight:500;color:var(--text-2);margin-bottom:24px;padding:5px 13px 5px 11px;border-radius:999px;background:rgba(34,197,94,0.06);border:1px solid rgba(34,197,94,0.22)}
-.hero-live b{color:var(--silver-bright);font-weight:700;font-variant-numeric:tabular-nums}
-.hero-live-dot{width:7px;height:7px;border-radius:50%;background:#22c55e;box-shadow:0 0 8px #22c55e;flex-shrink:0;animation:livePulse 1.6s ease-in-out infinite}
-@keyframes livePulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.55;transform:scale(.78)}}
 h1{font-family:'Cormorant Garamond',serif;font-size:clamp(48px,8vw,88px);font-weight:500;letter-spacing:-1px;line-height:1.05;margin-bottom:28px;color:var(--text)}
 h1 .accent{font-style:italic;font-weight:600;background:linear-gradient(180deg,#fff5d4 0%,#f5d76e 30%,#d4a946 65%,#8b6914 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;display:inline-block;padding-right:10px}
 .subhead{font-size:clamp(16px,1.8vw,19px);color:var(--text-2);font-weight:400;max-width:560px;margin:0 auto 44px;letter-spacing:0;line-height:1.7}
@@ -292,10 +288,6 @@ footer{border-top:1px solid var(--line);padding:48px 0 56px;background:var(--bg)
     <div class="hero-inner">
       <div class="hero-mark"><span class="glow"></span></div>
       <div class="hero-tag">Free · Für Instagram Creators</div>
-      <div class="hero-live" id="hero-live" hidden>
-        <span class="hero-live-dot"></span>
-        <b id="hero-live-count">–</b>&nbsp;Creators gerade online
-      </div>
       <h1>
         Wachsen ist<br>
         <span class="accent serif">kein Solosport.</span>
@@ -583,13 +575,6 @@ footer{border-top:1px solid var(--line);padding:48px 0 56px;background:var(--bg)
     setStat('stat-members', d.members || 0, false);
     setStat('stat-likes', d.totalLikes || 0, true);
     setStat('stat-posts', d.totalPosts || 0, true);
-    // Live-Counter im Hero — nur einblenden wenn jemand online ist (sonst peinlich)
-    const onlineEl = document.getElementById('hero-live');
-    const onlineCount = document.getElementById('hero-live-count');
-    if (onlineEl && onlineCount && (d.onlineNow || 0) > 0) {
-      onlineCount.textContent = d.onlineNow;
-      onlineEl.hidden = false;
-    }
   } catch(e) {}
 })();
 
