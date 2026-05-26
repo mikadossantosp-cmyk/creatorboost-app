@@ -4301,7 +4301,9 @@ function buildTopbarSwitcher(myUid, d) {
       _allAccs.push({uid: sid, isParent: false});
     }
   }
-  if (_allAccs.length < 2) return '';
+  // Auch mit nur EINEM Account anzeigen — sonst gibt es keinen Einstiegspunkt, um den
+  // ERSTEN Sub-Account zu erstellen (der "+ Sub erstellen"-Button lebt im Switcher-Menü).
+  if (_allAccs.length < 1) return '';
   const _curU = d.users?.[_curSessUid] || me;
   const _curName = htmlEsc(_curU.spitzname || _curU.name || 'User');
   const _curPic = appbildSrc(_curSessUid, 'profilepic') || (_curU.instagram ? 'https://unavatar.io/instagram/' + encodeURIComponent(_curU.instagram) : '');
