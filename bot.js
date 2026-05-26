@@ -13179,7 +13179,9 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) acPo
     // ── CHAT ──
     if (path.startsWith('/nachrichten/') && !path.startsWith('/nachrichten/gruppe') && !path.startsWith('/nachrichten/app-chat')) {
         const otherUid = path.replace('/nachrichten/', '');
-        const botData = await fetchBot('/data');
+        // Frisch laden (kein 60s-Cache) — sonst fehlt eine gerade eingetroffene DM beim Öffnen.
+        await refreshDataCache().catch(()=>{});
+        const botData = _dataCache;
         if (!botData) return redirect('/nachrichten');
         const otherUser = botData.users?.[otherUid] || {};
         const otherName = otherUser.spitzname || otherUser.name || 'User';
@@ -13560,6 +13562,8 @@ document.getElementById('user-search-input')?.addEventListener('input',filterSea
     if (path === '/nachrichten') {
         // Presence-Ping: beim Öffnen von Nachrichten gilt User als aktiv (Member-Count)
         postBot('/app-presence', { uid: myUid }).catch(()=>{});
+        // Frisch laden — neue DMs sollen sofort in der Liste auftauchen, nicht erst nach Cache-Ablauf.
+        await refreshDataCache().catch(()=>{});
         // Defensive: Promise.all mit catch — wenn ein Bot-Call rejects, soll die Seite trotzdem laden
         let botData = null, appChatData = null;
         try {
@@ -13710,7 +13714,7 @@ window.respondCollab = async function(reqId, accept, btn){
 <script>
 function relTime(ts){const m=Math.round((Date.now()-ts)/60000);if(m<1)return 'gerade eben';if(m<60)return 'vor '+m+' Min';const h=Math.round(m/60);if(h<24)return 'vor '+h+' Std';const d=Math.round(h/24);if(d<7)return 'vor '+d+'d';return new Date(ts).toLocaleDateString('de-DE',{day:'2-digit',month:'short'});}
 function classify(n){const t=(n.text||'').toLowerCase();const i=n.icon||'';if(i==='❤️'||t.includes('liked')||t.includes('gelikt'))return 'like';if(i==='👤'||t.includes('folgt')||t.includes('follow'))return 'follow';if(i==='📩'||t.includes('newsletter')||t.includes('news'))return 'news';if(i==='💎'||t.includes('diamant'))return 'diamond';if(i==='⚠️'||t.includes('warn')||t.includes('verwarnung'))return 'warn';if(i==='💬'||t.includes('kommentiert')||t.includes('nachricht'))return 'message';return '';}
-function targetUrl(n){const c=classify(n);if(c==='news')return '/explore?tab=newsletter';if(c==='diamond')return '/diamanten';if(c==='message')return '/nachrichten';if(c==='follow')return '/suche';return '/feed';}
+function targetUrl(n){const c=classify(n);if(c==='news')return '/explore?tab=newsletter';if(c==='diamond')return '/diamanten';if(c==='message'){if(n.actorUid && !((n.text||'').toLowerCase().includes('kommentiert'))) return '/nachrichten/'+n.actorUid;return '/nachrichten';}if(c==='follow')return '/suche';return '/feed';}
 // Gruppen-Key: classify + Aktions-Subtype — innerhalb 24h zusammenfassen
 function groupSubtype(n){
   const t=(n.text||'').toLowerCase();
