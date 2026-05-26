@@ -6268,8 +6268,8 @@ function showStep(n){
   window.scrollTo({top:0,behavior:'smooth'});
 }
 var _IS_PREVIEW = ${_isPreview ? 'true' : 'false'};
-function saveIg(ev){
-  ev.preventDefault();
+function saveIg(ev, force){
+  if(ev) ev.preventDefault();
   var inp=document.getElementById('ig'),btn=document.getElementById('btn-ig'),msg=document.getElementById('msg-2');
   var v=(inp.value||'').replace(/^@/,'').trim();
   if(!v){msg.textContent='Bitte Instagram-Username eingeben.';msg.classList.add('show','err');return false;}
@@ -6281,12 +6281,21 @@ function saveIg(ev){
     setTimeout(function(){msg.textContent='✅ (Vorschau) Instagram verknüpft!';msg.classList.add('show','ok');setTimeout(function(){showStep(3);msg.classList.remove('show','ok');btn.disabled=false;btn.textContent='Verknüpfen →';},400);},300);
     return false;
   }
-  fetch('/api/save-profile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({instagram:v})})
+  fetch('/api/save-profile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({instagram:v, forceInstagram: !!force})})
     .then(function(r){return r.json();})
     .then(function(j){
       if(j&&j.ok){
         msg.textContent='✅ Instagram verknüpft!';msg.classList.add('show','ok');
         setTimeout(function(){showStep(3);msg.classList.remove('show','ok');},400);
+      } else if(j&&j.instagramInvalid&&!force){
+        // Existenz-Check (Instagram kann Server-IPs fälschlich abweisen) → NICHT hart blocken:
+        // Override anbieten, damit ein echter User trotzdem weiterkommt.
+        btn.disabled=false;btn.textContent='Verknüpfen →';
+        if(confirm('Den Instagram-Namen "'+v+'" konnten wir nicht sicher finden.\\n\\nStimmt die Schreibweise genau so (ohne @)?\\n\\nOK = trotzdem verknüpfen\\nAbbrechen = nochmal prüfen')){
+          saveIg(null, true);
+        } else {
+          msg.textContent='Bitte Schreibweise prüfen — oder nochmal auf „Verknüpfen" für „trotzdem".';msg.classList.add('show','err');
+        }
       } else {
         msg.textContent=(j&&j.error)||'Fehler beim Speichern.';msg.classList.add('show','err');
         btn.disabled=false;btn.textContent='Verknüpfen →';
@@ -9293,11 +9302,14 @@ p{line-height:1.65;color:var(--muted)}
         const _curUser = _curBd?.users?.[myUid] || {};
         // Instagram-Existenz-Check: nur wenn der Handle WIRKLICH geändert wird auf einen neuen,
         // nicht-leeren Wert. Blockt nur wenn Instagram klar sagt "gibt's nicht" (fail-open sonst).
-        if (updateData.instagram !== undefined && updateData.instagram !== ''
+        // forceInstagram=true überspringt den Check → User kann nie hart hängenbleiben, falls
+        // Instagram unseren Server-Request fälschlich mit 404 abweist (Override aus der UI).
+        if (body.forceInstagram !== true
+            && updateData.instagram !== undefined && updateData.instagram !== ''
             && updateData.instagram.toLowerCase() !== String(_curUser.instagram||'').toLowerCase()) {
             const _igExists = await checkInstagramExists(updateData.instagram);
             if (_igExists === false) {
-                return json({ok:false, instagramInvalid:true, error:'Diesen Instagram-Namen gibt es nicht. Bitte prüfe die Schreibweise (ohne @, ohne Leerzeichen).'}, 400);
+                return json({ok:false, instagramInvalid:true, error:'Diesen Instagram-Namen konnten wir nicht finden. Prüfe die Schreibweise (ohne @, ohne Leerzeichen).'}, 400);
             }
         }
         const _isFullySet = !!_curUser.email && !!_curUser.password_hash;
