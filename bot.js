@@ -387,8 +387,10 @@ async function sendSignupConfirmationEmail(uid, email, hostHeader) {
             '</div></body></html>';
         const ok = await sendEmail(email, '🎉 Willkommen bei CreatorX — Email bestätigen', html);
         console.log('[email-confirm] Sent to', email, '→', ok ? 'OK' : 'FAILED');
+        return ok;
     } catch(e) {
         console.error('[email-confirm] sendSignupConfirmationEmail error:', e.message, 'uid:', uid, 'email:', email);
+        return false;
     }
 }
 
@@ -14102,6 +14104,30 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
         return json({ ok:true, result: r });
     }
 
+    // ── Admin: Willkommens-/Bestätigungsmail erneut an einen User senden ──
+    // Für Fälle wo der Signup-Flow die Mail nicht ausgelöst hat (z.B. alter
+    // "Lookup fehlgeschlagen"-Abbruch). Direkt-Fetch für frische User-Daten.
+    if (path === '/api/admin/resend-confirmation' && req.method === 'POST') {
+        if (!session) return json({error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({error:'Nur Admins'}, 403);
+        const body = await parseBody(req);
+        let targetUid = String(body.uid || '');
+        let email = String(body.email || '').toLowerCase().trim();
+        if (!targetUid && !email) return json({ok:false, error:'uid oder email erforderlich'}, 400);
+        const bd = await fetchBotRaw('/data');
+        let u = targetUid ? bd?.users?.[targetUid] : null;
+        if (!u && email) {
+            const found = Object.entries(bd?.users || {}).find(([, x]) => String(x.email||'').toLowerCase() === email);
+            if (found) { targetUid = String(found[0]); u = found[1]; }
+        }
+        if (!u) return json({ok:false, error:'User nicht gefunden'}, 404);
+        email = email || String(u.email||'').toLowerCase().trim();
+        if (!email) return json({ok:false, error:'User hat keine Email hinterlegt'}, 400);
+        const ok = await sendSignupConfirmationEmail(targetUid, email, req.headers.host);
+        if (!ok) return json({ok:false, error:'Versand fehlgeschlagen — Email-Provider prüfen'}, 502);
+        return json({ ok:true, email });
+    }
+
     // ── KOLLABORATIONS-POSTS API (proxy zu Mainbot) ──
     if (path === '/api/collab/list' && req.method === 'GET') {
         if (!session) return json({error:'Nicht eingeloggt'}, 401);
@@ -15387,6 +15413,7 @@ function renderUserDetail(j) {
   html += '<div class="dash-action-grid">' +
     '<button class="dash-act" onclick="sendDmTo(\\''+esc(u.uid)+'\\',\\''+esc(u.spitzname||u.name||'User')+'\\')">📨 DM senden</button>' +
     '<button class="dash-act" onclick="window.open(\\'/nachrichten/'+esc(u.uid)+'\\',\\'_blank\\')">💬 Chat öffnen</button>' +
+    (u.email ? '<button class="dash-act" onclick="resendConfirm(\\''+esc(u.uid)+'\\',\\''+esc(u.spitzname||u.name||'User')+'\\')">📧 Bestätigungsmail senden</button>' : '') +
   '</div>';
 
   html += sectionLbl('⚠️ Gefährliche Aktionen', true);
@@ -15408,6 +15435,12 @@ async function sendDmTo(uid, name) {
   const r = await fetch('/api/admin/send-dm-single', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ uid, text }) });
   const j = await r.json().catch(()=>({}));
   if (j.ok) alert('✅ DM an '+name+' gesendet'); else alert('❌ '+(j.error||'Fehler'));
+}
+async function resendConfirm(uid, name) {
+  if (!confirm('Willkommens-/Bestätigungsmail erneut an '+name+' senden?')) return;
+  const r = await fetch('/api/admin/resend-confirmation', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ uid }) });
+  const j = await r.json().catch(()=>({}));
+  if (j.ok) alert('✅ Bestätigungsmail an '+(j.email||name)+' gesendet'); else alert('❌ '+(j.error||'Fehler'));
 }
 async function resetUserConfirm(uid, name) {
   if (!confirm('XP von '+name+' wirklich auf 0 setzen? Das kann nicht rückgängig gemacht werden.')) return;
