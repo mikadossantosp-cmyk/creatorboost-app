@@ -5843,12 +5843,18 @@ try { fetch('/api/track-funnel',{method:'POST',headers:{'Content-Type':'applicat
         postBot('/log-email-login', { email, success: true, method: 'signup', uid: String(created.uid), ip: _ip, ua: _ua }).catch(()=>{});
         // Funnel-Event: Signup abgeschlossen
         postBot('/track-funnel', { event: 'signup-complete', uid: String(created.uid), meta: { method: 'email' } }).catch(()=>{});
-        // Session erstellen
-        const fresh = await fetchBot('/data');
+        // Session erstellen — DIREKT (uncached) /data holen: der _dataCache ist nach dem
+        // frischen Create u.U. noch stale (stale-while-revalidate) und enthält den gerade
+        // angelegten User NICHT → früher "Lookup fehlgeschlagen" = User ausgesperrt obwohl
+        // Account existiert. Direkt-Fetch umgeht das + aktualisiert den Cache.
+        const fresh = await fetchBotRaw('/data');
+        if (fresh) { _dataCache = fresh; _dataCacheTime = Date.now(); }
         const u = fresh?.users?.[created.uid];
-        if (!u) return json({ok:false, error:'Account angelegt aber Lookup fehlgeschlagen'}, 500);
+        // WICHTIG: Account ist angelegt (created.ok). Niemals aussperren, selbst wenn der
+        // Lookup hakt — Name notfalls aus der Email ableiten, Rest füllt das Onboarding.
+        const sessName = (u && u.name) || email.split('@')[0].slice(0, 30);
         const sid = genSid();
-        sessions.set(sid, { uid: String(created.uid), name: u.name, username: u.username||null, theme: 'light', lang: 'de', createdAt: Date.now(), subUid: null, activeUid: String(created.uid), loginVia: 'email' });
+        sessions.set(sid, { uid: String(created.uid), name: sessName, username: (u && u.username)||null, theme: 'light', lang: 'de', createdAt: Date.now(), subUid: null, activeUid: String(created.uid), loginVia: 'email' });
         saveSessions();
         // → Onboarding-Flow (Insta first)
         res.writeHead(200, {'Set-Cookie':`cbsid=${sid}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=157680000`,'Content-Type':'application/json'});
@@ -13599,10 +13605,12 @@ document.getElementById('user-search-input')?.addEventListener('input',filterSea
             .filter(([key, msgs]) => {
                 const [a,b] = key.split('_');
                 if (a === myUid || b === myUid) return true;
-                // Admin-Support-Postfach: alle creatorboost↔user-Chats, in denen der USER geschrieben
-                // hat (echte Support-Konversationen — keine reinen Auto-DMs), als Chat pro User.
+                // Admin-Support-Postfach: nur creatorboost↔user-Chats, in denen der USER WIRKLICH
+                // geschrieben hat (from === user). "!== creatorboost" war zu lose und matchte auch
+                // System-/Auto-Nachrichten ohne sauberes from → Inbox mit echten Support-Chats only.
                 if (_inboxIsAdmin && (a === 'creatorboost' || b === 'creatorboost')) {
-                    return Array.isArray(msgs) && msgs.some(m => m && String(m.from) !== 'creatorboost');
+                    const uOther = a === 'creatorboost' ? b : a;
+                    return Array.isArray(msgs) && msgs.some(m => m && String(m.from) === String(uOther));
                 }
                 return false;
             })
@@ -13616,8 +13624,8 @@ document.getElementById('user-search-input')?.addEventListener('input',filterSea
                 // CreatorBoost-System-User braucht Display-Namen weil nicht in d.users
                 const isSystemBot = otherUid === 'creatorboost';
                 const otherName = isSystemBot ? 'CreatorBoost' : (otherUser.spitzname||otherUser.name||'User');
-                // Unread: normaler Chat = Nachrichten an mich; Admin-Support = User-Nachrichten (nicht von creatorboost)
-                const unread = msgsArr.filter(m => m && !m.read && (mine ? String(m.to)===String(myUid) : String(m.from)!=='creatorboost')).length;
+                // Unread: normaler Chat = Nachrichten an mich; Admin-Support = ungelesene User-Nachrichten
+                const unread = msgsArr.filter(m => m && !m.read && (mine ? String(m.to)===String(myUid) : String(m.from)===String(otherUid))).length;
                 return { key, otherUid, otherName, lastMsg, isSystem: isSystemBot, unread };
             })
             .sort((a, b) => (b.lastMsg?.timestamp||0)-(a.lastMsg?.timestamp||0));
