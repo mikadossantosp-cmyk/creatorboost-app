@@ -10463,8 +10463,21 @@ commentsBox+
         // First-Post-Pin steht oben im heuteHtml. Boost-Strip kommt zwischen
         // First-Post-Pin und regulärer Feed → wir splitten heuteHtml in
         // pinnedHtml + regularHeuteHtml, dann boost-strip dazwischen.
+        // Nudge: User hat genug 💎 für einen Diamantlink (Kosten 30), aber noch nie einen gepostet.
+        const _myDiamonds = d.users[myUid]?.diamonds || 0;
+        const _postedDL = (d.users[myUid]?.diamondLinksPosted || 0) > 0
+            || Object.values(d.diamondLinks||{}).some(p => p && String(p.uid) === String(myUid));
+        const _dlNudge = (_myDiamonds >= 30 && !_postedDL)
+            ? '<div style="margin:8px 16px 12px;padding:14px 16px;background:linear-gradient(135deg,rgba(6,182,212,0.14),rgba(167,139,250,0.10));border:1.5px solid rgba(6,182,212,0.5);border-radius:14px;box-shadow:0 0 16px rgba(6,182,212,0.18)">'
+                + '<div style="display:flex;align-items:center;gap:12px">'
+                + '<div style="font-size:30px;flex-shrink:0">💎</div>'
+                + '<div style="flex:1;min-width:0"><div style="font-size:14.5px;font-weight:800;color:#06b6d4;line-height:1.2">Du hast '+_myDiamonds+' Diamanten!</div>'
+                + '<div style="font-size:12px;color:var(--muted);margin-top:3px;line-height:1.45">Poste deinen <b>ersten Diamantlink</b> — 3 Tage ganz oben im Feed, und jeder Liker gibt dir <b>+3 💎</b> zurück.</div></div></div>'
+                + '<button onclick="openDiamondSheet()" style="width:100%;margin-top:11px;padding:11px;background:linear-gradient(135deg,#06b6d4,#0e7490);color:#fff;border:none;border-radius:11px;font-size:13.5px;font-weight:800;cursor:pointer;box-shadow:0 4px 14px rgba(6,182,212,0.35)">💎 Ersten Diamantlink posten (−30 💎)</button>'
+                + '</div>'
+            : '';
         const heuteWithDiamondTop = tab === 'heute'
-            ? '<div id="beta-tester-banner"></div><div id="prisma-top-strip"></div><div id="diamond-top-strip"></div>'+pinnedHtml+'<div id="collab-boost-strip"></div><div style="padding:8px 0 80px">'+regularHeuteHtml+'</div>'
+            ? '<div id="beta-tester-banner"></div>'+_dlNudge+'<div id="prisma-top-strip"></div><div id="diamond-top-strip"></div>'+pinnedHtml+'<div id="collab-boost-strip"></div><div style="padding:8px 0 80px">'+regularHeuteHtml+'</div>'
             : '<div style="padding:8px 0 80px">'+heuteHtml+'</div>';
         const postsHtml = tab === 'aelter' ? '<div style="padding:8px 0 80px">'+aelterHtml+'</div>'
             : tab === 'engagement' ? engagementHtml
