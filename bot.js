@@ -1285,7 +1285,7 @@ async function _postBotRaw(path, body) {
         const lib = fullUrl.startsWith('https')?https:http;
         const data = JSON.stringify(body);
         const u = new url.URL(fullUrl);
-        const opts = {hostname:u.hostname,path:u.pathname+u.search,method:'POST',headers:{'Content-Type':'application/json','x-bridge-secret':BRIDGE_SECRET,'Content-Length':Buffer.byteLength(data)}};
+        const opts = {hostname:u.hostname,port:u.port||(u.protocol==='https:'?443:80),path:u.pathname+u.search,method:'POST',headers:{'Content-Type':'application/json','x-bridge-secret':BRIDGE_SECRET,'Content-Length':Buffer.byteLength(data)}};
         const req = lib.request(opts, res=>{
             let buf=''; res.on('data',c=>buf+=c);
             res.on('end',()=>{ try { resolve(JSON.parse(buf)); } catch(e) { resolve(null); } });
@@ -1334,7 +1334,7 @@ async function postBot(path, body) {
         const lib = fullUrl.startsWith('https')?https:http;
         const data = JSON.stringify(body);
         const u = new url.URL(fullUrl);
-        const opts = {hostname:u.hostname,path:u.pathname+u.search,method:'POST',headers:{'Content-Type':'application/json','x-bridge-secret':BRIDGE_SECRET,'Content-Length':Buffer.byteLength(data)}};
+        const opts = {hostname:u.hostname,port:u.port||(u.protocol==='https:'?443:80),path:u.pathname+u.search,method:'POST',headers:{'Content-Type':'application/json','x-bridge-secret':BRIDGE_SECRET,'Content-Length':Buffer.byteLength(data)}};
         const req = lib.request(opts, res=>{
             let buf='';
             res.on('data',c=>buf+=c);
@@ -8286,6 +8286,15 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
         try { body = JSON.parse(await readBody(req, 10000000)); } catch(e) { return json({error:'Ungültig'},400); }
         const { to, text, image, audio, replyTo } = body;
         if (!to || (!text?.trim() && !image && !audio)) return json({ok:false, error:'Ungültig'}, 400);
+        // Admin-Support: Antwort eines Admins an einen normalen User geht als CreatorBoost zurück
+        // (landet im creatorboost↔user-Chat, den der Admin sieht, + beim User als CreatorBoost-DM).
+        const _sendAdmins = Array.isArray(_dataCache?._adminIds) ? _dataCache._adminIds.map(String) : [];
+        if (_sendAdmins.includes(String(myUid)) && String(to) !== 'creatorboost' && !_sendAdmins.includes(String(to)) && text?.trim() && !image && !audio) {
+            const rcb = await postBot('/send-dm-single-api', { uid: String(to), text: text.trim().slice(0, 1500) });
+            const rok = !!(rcb && rcb.ok !== false);
+            if (rok) { _dataCacheTime = 0; refreshDataCache().catch(()=>{}); }
+            return json({ok: rok, error: rcb?.error || null});
+        }
         const result = await postBot('/send-message-api', {
             from: myUid,
             to,
@@ -8305,7 +8314,10 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
         const myUid = getMyUid(session); // FIX: war undefined
         const otherUid = path.replace('/api/messages/', '');
         const botData = await fetchBot('/data');
-        const chatKey = [myUid, otherUid].sort().join('_');
+        // Admin-Support: Chat mit einem normalen User = creatorboost↔user (siehe /nachrichten/:uid)
+        const _msgAdmins = Array.isArray(botData?._adminIds) ? botData._adminIds.map(String) : [];
+        const _asCB = _msgAdmins.includes(String(myUid)) && otherUid !== 'creatorboost' && !_msgAdmins.includes(String(otherUid));
+        const chatKey = _asCB ? ['creatorboost', otherUid].sort().join('_') : [myUid, otherUid].sort().join('_');
         const msgs = botData?.messages?.[chatKey] || [];
         return json({count: msgs.length, messages: msgs});
     }
@@ -13185,10 +13197,16 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) acPo
         if (!botData) return redirect('/nachrichten');
         const otherUser = botData.users?.[otherUid] || {};
         const otherName = otherUser.spitzname || otherUser.name || 'User';
-        const chatKey = [myUid, otherUid].sort().join('_');
+        // Admin operiert als CreatorBoost: ein Chat mit einem normalen User = der creatorboost↔user
+        // Support-Chat (alle User-Nachrichten an Support landen hier). So sieht der Admin jede
+        // User-Nachricht als Chat mit diesem User + antwortet als CreatorBoost.
+        const _viewerIsAdmin = adminIds.includes(Number(myUid));
+        const _asCB = _viewerIsAdmin && otherUid !== 'creatorboost' && !adminIds.includes(Number(otherUid));
+        const _selfUid = _asCB ? 'creatorboost' : myUid;
+        const chatKey = _asCB ? ['creatorboost', otherUid].sort().join('_') : [myUid, otherUid].sort().join('_');
         const msgs = (botData.messages?.[chatKey] || []);
-        postBot('/mark-messages-read', { uid: myUid, chatKey }).catch(()=>{});
-        const msgsHtml = require('./chat-detail-render')({ msgs, myUid, otherUid, otherUser, ladeBild, otherOnline: isUidOnline(otherUid) });
+        postBot('/mark-messages-read', { uid: _selfUid, chatKey }).catch(()=>{});
+        const msgsHtml = require('./chat-detail-render')({ msgs, myUid: _selfUid, otherUid, otherUser, ladeBild, otherOnline: isUidOnline(otherUid) });
         return html(`
 <div class="topbar" style="display:flex;align-items:center;gap:8px;padding:8px 10px">
   <a href="/nachrichten" class="icon-btn" style="font-size:26px;color:var(--accent);padding:6px 10px;text-decoration:none;display:flex;align-items:center">‹</a>
@@ -13576,18 +13594,31 @@ document.getElementById('user-search-input')?.addEventListener('input',filterSea
         } catch(e) { console.error('[/nachrichten] fetchBot failed:', e.message); }
         if (!botData) return redirect('/feed');
         const convos = botData.messages || {};
+        const _inboxIsAdmin = adminIds.includes(Number(myUid));
         const myConvos = Object.entries(convos)
-            .filter(([key]) => { const [a,b] = key.split('_'); return a === myUid || b === myUid; })
+            .filter(([key, msgs]) => {
+                const [a,b] = key.split('_');
+                if (a === myUid || b === myUid) return true;
+                // Admin-Support-Postfach: alle creatorboost↔user-Chats, in denen der USER geschrieben
+                // hat (echte Support-Konversationen — keine reinen Auto-DMs), als Chat pro User.
+                if (_inboxIsAdmin && (a === 'creatorboost' || b === 'creatorboost')) {
+                    return Array.isArray(msgs) && msgs.some(m => m && String(m.from) !== 'creatorboost');
+                }
+                return false;
+            })
             .map(([key, msgs]) => {
                 const msgsArr = Array.isArray(msgs) ? msgs : [];
                 const [a,b] = key.split('_');
-                const otherUid = a === myUid ? b : a;
+                const mine = (a === myUid || b === myUid);
+                const otherUid = mine ? (a === myUid ? b : a) : (a === 'creatorboost' ? b : a);
                 const otherUser = botData.users?.[otherUid] || {};
                 const lastMsg = msgsArr[msgsArr.length - 1];
                 // CreatorBoost-System-User braucht Display-Namen weil nicht in d.users
                 const isSystemBot = otherUid === 'creatorboost';
                 const otherName = isSystemBot ? 'CreatorBoost' : (otherUser.spitzname||otherUser.name||'User');
-                return { key, otherUid, otherName, lastMsg, isSystem: isSystemBot, unread: msgsArr.filter(m=>m.to===myUid&&!m.read).length };
+                // Unread: normaler Chat = Nachrichten an mich; Admin-Support = User-Nachrichten (nicht von creatorboost)
+                const unread = msgsArr.filter(m => m && !m.read && (mine ? String(m.to)===String(myUid) : String(m.from)!=='creatorboost')).length;
+                return { key, otherUid, otherName, lastMsg, isSystem: isSystemBot, unread };
             })
             .sort((a, b) => (b.lastMsg?.timestamp||0)-(a.lastMsg?.timestamp||0));
         // Threads sind aus der App entfernt — keine Unread/List mehr nötig
