@@ -1132,46 +1132,6 @@ async function fetchBotRaw(path) {
     return r;
 }
 
-// Best-Effort-Prüfung ob ein Instagram-Username existiert.
-// Rückgabe: true (existiert), false (Instagram sagt klar: gibt's nicht), null (unsicher → durchlassen).
-// Hinweis: Instagram blockt Rechenzentrums-IPs oft (429/Login-Wall) → dann null = fail-open,
-// damit echte User nicht fälschlich ausgesperrt werden.
-const _igCheckCache = new Map(); // username → { result, ts }
-function checkInstagramExists(username) {
-    const uname = String(username||'').trim().toLowerCase();
-    if (!uname) return Promise.resolve(null);
-    const hit = _igCheckCache.get(uname);
-    if (hit && (Date.now() - hit.ts) < 3600000) return Promise.resolve(hit.result); // 1h Cache
-    return new Promise(resolve => {
-        const done = (r) => { _igCheckCache.set(uname, { result: r, ts: Date.now() }); resolve(r); };
-        const req = https.get({
-            hostname: 'i.instagram.com',
-            path: '/api/v1/users/web_profile_info/?username=' + encodeURIComponent(uname),
-            headers: {
-                'x-ig-app-id': '936619743392459',
-                'User-Agent': 'Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Mobile Safari/537.36'
-            }
-        }, res => {
-            let data = '';
-            res.on('data', c => { data += c; if (data.length > 200000) req.destroy(); });
-            res.on('end', () => {
-                if (res.statusCode === 404) return done(false);
-                if (res.statusCode === 200) {
-                    try {
-                        const j = JSON.parse(data);
-                        if (j && j.data && j.data.user) return done(true);
-                        if (j && j.data && j.data.user === null) return done(false);
-                        return done(null);
-                    } catch(e) { return done(null); } // Login-Wall/HTML → unsicher
-                }
-                return done(null); // 429/403/etc → rate-limited → unsicher
-            });
-        });
-        req.on('error', () => done(null));
-        req.setTimeout(4500, () => { req.destroy(); done(null); });
-    });
-}
-
 let _refreshInFlight = null;
 function refreshDataCache() {
     if (_refreshInFlight) return _refreshInFlight;
@@ -6268,7 +6228,7 @@ function showStep(n){
   window.scrollTo({top:0,behavior:'smooth'});
 }
 var _IS_PREVIEW = ${_isPreview ? 'true' : 'false'};
-function saveIg(ev, force){
+function saveIg(ev){
   if(ev) ev.preventDefault();
   var inp=document.getElementById('ig'),btn=document.getElementById('btn-ig'),msg=document.getElementById('msg-2');
   var v=(inp.value||'').replace(/^@/,'').trim();
@@ -6281,21 +6241,12 @@ function saveIg(ev, force){
     setTimeout(function(){msg.textContent='✅ (Vorschau) Instagram verknüpft!';msg.classList.add('show','ok');setTimeout(function(){showStep(3);msg.classList.remove('show','ok');btn.disabled=false;btn.textContent='Verknüpfen →';},400);},300);
     return false;
   }
-  fetch('/api/save-profile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({instagram:v, forceInstagram: !!force})})
+  fetch('/api/save-profile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({instagram:v})})
     .then(function(r){return r.json();})
     .then(function(j){
       if(j&&j.ok){
         msg.textContent='✅ Instagram verknüpft!';msg.classList.add('show','ok');
         setTimeout(function(){showStep(3);msg.classList.remove('show','ok');},400);
-      } else if(j&&j.instagramInvalid&&!force){
-        // Existenz-Check (Instagram kann Server-IPs fälschlich abweisen) → NICHT hart blocken:
-        // Override anbieten, damit ein echter User trotzdem weiterkommt.
-        btn.disabled=false;btn.textContent='Verknüpfen →';
-        if(confirm('Den Instagram-Namen "'+v+'" konnten wir nicht sicher finden.\\n\\nStimmt die Schreibweise genau so (ohne @)?\\n\\nOK = trotzdem verknüpfen\\nAbbrechen = nochmal prüfen')){
-          saveIg(null, true);
-        } else {
-          msg.textContent='Bitte Schreibweise prüfen — oder nochmal auf „Verknüpfen" für „trotzdem".';msg.classList.add('show','err');
-        }
       } else {
         msg.textContent=(j&&j.error)||'Fehler beim Speichern.';msg.classList.add('show','err');
         btn.disabled=false;btn.textContent='Verknüpfen →';
@@ -9300,18 +9251,6 @@ p{line-height:1.65;color:var(--muted)}
         // Lock-Check: wenn User schon BEIDES (email + password) hat, braucht er Unlock-Window
         const _curBd = await fetchBot('/data');
         const _curUser = _curBd?.users?.[myUid] || {};
-        // Instagram-Existenz-Check: nur wenn der Handle WIRKLICH geändert wird auf einen neuen,
-        // nicht-leeren Wert. Blockt nur wenn Instagram klar sagt "gibt's nicht" (fail-open sonst).
-        // forceInstagram=true überspringt den Check → User kann nie hart hängenbleiben, falls
-        // Instagram unseren Server-Request fälschlich mit 404 abweist (Override aus der UI).
-        if (body.forceInstagram !== true
-            && updateData.instagram !== undefined && updateData.instagram !== ''
-            && updateData.instagram.toLowerCase() !== String(_curUser.instagram||'').toLowerCase()) {
-            const _igExists = await checkInstagramExists(updateData.instagram);
-            if (_igExists === false) {
-                return json({ok:false, instagramInvalid:true, error:'Diesen Instagram-Namen konnten wir nicht finden. Prüfe die Schreibweise (ohne @, ohne Leerzeichen).'}, 400);
-            }
-        }
         const _isFullySet = !!_curUser.email && !!_curUser.password_hash;
         const _unlockActive = !!session && Number(session.accountUnlockUntil||0) > Date.now();
         let _emailActuallyChanged = false;
