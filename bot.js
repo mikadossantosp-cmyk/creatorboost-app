@@ -3737,6 +3737,9 @@ function confirmCrop(){
   window.addEventListener('beforeinstallprompt',e=>{
     e.preventDefault();
     _installPrompt=e;
+    // Install-/Download-Angebot NUR fuer Android-Nutzer zeigen (die App ist eine Android-App).
+    // Auf Desktop/anderen Browsern feuert beforeinstallprompt zwar auch, soll aber nichts zeigen.
+    if(!/Android/i.test(navigator.userAgent||''))return;
     const b=document.getElementById('pwa-install-btn');
     if(b)b.style.display='flex';
   });
@@ -4712,7 +4715,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v206-like-state-from-server';
+const SW_VERSION='v207-install-android-only';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
