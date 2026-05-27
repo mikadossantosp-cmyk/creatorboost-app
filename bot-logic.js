@@ -718,6 +718,36 @@ function engagePinnedPostApi({ engagerUid, ownerUid }) {
     return { ok: true };
 }
 
+// ── Follow/Unfollow: 1:1 aus POST /follow-api ──
+function followApi({ followerUid, targetUid }) {
+    followerUid = followerUid ? String(followerUid) : '';
+    targetUid = targetUid ? String(targetUid) : '';
+    if (!followerUid || !targetUid) return { ok: false, error: 'Fehlende UIDs' };
+    if (!d.users[followerUid]) {
+        if (followerUid.length <= 12 && /^\d+$/.test(followerUid)) user(followerUid, '');
+        else return { ok: false, error: 'Follower-Account nicht gefunden (' + followerUid + ')' };
+    }
+    if (!d.users[targetUid]) return { ok: false, error: 'Ziel-User nicht gefunden (' + targetUid + ')' };
+    if (!Array.isArray(d.users[followerUid].following)) d.users[followerUid].following = [];
+    if (!Array.isArray(d.users[targetUid].followers)) d.users[targetUid].followers = [];
+    d.users[followerUid].following = d.users[followerUid].following.map(String);
+    d.users[targetUid].followers = d.users[targetUid].followers.map(String);
+    const idx = d.users[followerUid].following.indexOf(targetUid);
+    let action = '';
+    if (idx === -1) {
+        d.users[followerUid].following.push(targetUid);
+        if (!d.users[targetUid].followers.includes(followerUid)) d.users[targetUid].followers.push(followerUid);
+        const followerName = d.users[followerUid]?.spitzname || d.users[followerUid]?.name || 'Jemand';
+        try { addNotification(targetUid, '👤', followerName + ' folgt dir jetzt', String(followerUid)); } catch (e) {}
+        action = 'follow';
+    } else {
+        d.users[followerUid].following.splice(idx, 1);
+        d.users[targetUid].followers = d.users[targetUid].followers.filter(id => id !== followerUid);
+        action = 'unfollow';
+    }
+    return { ok: true, action };
+}
+
 // ── Wochen-Key (Berlin) — Prozess läuft mit TZ=Europe/Berlin ──
 function getBerlinWeekKey() {
     const now = new Date();
@@ -984,6 +1014,7 @@ function collabLikePost({ uid, postId }) {
 module.exports = {
     init, setThumbnailFetcher, setBildSaver,
     updateProfileApi, addProjectApi, updateProjectApi, deleteProjectApi, completeProfileApi, engagePinnedPostApi,
+    followApi,
     postLinkFromApp, createPostApi, deletePostApi, commentApi, deleteCommentApi,
     diamondLinkCreate, diamondLinkLike, diamondLinkAcceptRules, diamondLinkAdminDelete,
     prismaLinkCreate, prismaLinkLike, prismaLinkAcceptRules, prismaLinkAdminDelete,
