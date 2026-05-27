@@ -7374,7 +7374,9 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
             if (!_myLk.instagram) return json({ok:false, error:'Bitte zuerst deinen Instagram-Username in den Einstellungen setzen, um liken zu können.', missingInstagram:true}, 403);
         }
         const _likeUid = getMyUid(session);
-        const result = await fetchBot('/like-from-app?uid=' + _likeUid + '&msgId=' + encodeURIComponent(msgId));
+        const result = LOCAL_STORE
+            ? await localWrite(() => botLogic.likeFromApp(_likeUid, msgId))
+            : await fetchBot('/like-from-app?uid=' + _likeUid + '&msgId=' + encodeURIComponent(msgId));
         if (!result) return json({ok:false, error:'Bot offline'}, 502);
         // Erfolgreicher Like → Cache SOFORT lokal patchen (instant, kein Refetch-Wait), damit
         // der 30s-Poll (/api/likes-update) und ein Reload den Like ohne Verzögerung zeigen.
