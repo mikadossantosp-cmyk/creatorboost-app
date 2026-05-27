@@ -4712,7 +4712,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v203-appbild-revalidate';
+const SW_VERSION='v204-like-state-fresh';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
@@ -20870,30 +20870,6 @@ async function setRing(ringId) {
         }
         const result = await fetchBot('/mission-status-api?uid=' + myUid);
         return json(result || {ok:false});
-    }
-
-    // DIAGNOSE (read-only): zeigt Links, die der Feed ROT rendern würde, obwohl du
-    // KEIN echter Liker bist (= die "rot aber nicht likebar"-Fälle) + warum.
-    if (path === '/api/like-debug' && req.method === 'GET') {
-        if (!session) return json({ok:false},401);
-        const proj = LOCAL_STORE ? datastore.projectDataLikeBot(datastore.getData()) : (await fetchBot('/data')) || {};
-        const byText = new Map();
-        for (const l of Object.values(proj.links||{})) {
-            if (!l || !l.text) continue;
-            if (!byText.has(l.text)) byText.set(l.text, new Set());
-            if (Array.isArray(l.likes)) l.likes.forEach(x => byText.get(l.text).add(String(x)));
-        }
-        const today = new Date().toDateString();
-        const rows = [];
-        for (const [id,l] of Object.entries(proj.links||{})) {
-            if (!l || !l.text || !l.text.includes('instagram.com')) continue;
-            if (!l.timestamp || new Date(l.timestamp).toDateString() !== today) continue;
-            const agg = byText.get(l.text) || new Set();
-            const renderRed = agg.has(String(myUid));
-            const realLiker = (Array.isArray(l.likes)?l.likes.map(String):[]).includes(String(myUid));
-            if (renderRed && !realLiker) rows.push({ id, owner:String(l.user_id), text:l.text, projectedLikes:[...agg] });
-        }
-        return json({ ok:true, myUid, localStore: !!LOCAL_STORE, redButNotRealLiker: rows });
     }
 
     if (path === '/api/buy-item' && req.method === 'POST') {
