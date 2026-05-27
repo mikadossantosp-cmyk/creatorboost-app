@@ -75,6 +75,7 @@ function load() {
         if (!fs.existsSync(DATA_FILE)) return d;
         const geladen = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
         d = rehydrate(Object.assign(defaults(), geladen));
+        _normalizeUsers(d);
     } catch (e) { console.error('[datastore] load fehlgeschlagen:', e.message); }
     return d;
 }
@@ -109,8 +110,29 @@ function stats() {
 function importSnapshot(obj) {
     if (!obj || typeof obj !== 'object' || !obj.users) throw new Error('ungültiger Snapshot (kein users-Key)');
     d = rehydrate(Object.assign(defaults(), obj));
+    _normalizeUsers(d);
     save();
     return stats();
+}
+
+// User-Normalisierung 1:1 aus dem Bot-laden() — damit der In-Memory-Zustand
+// exakt dem des Bots entspricht (started/instagram/inGruppe/projects/diamonds
+// Defaults + Admin-Reset). Idempotent.
+const _CREATORBOOST_UID = 'creatorboost';
+function _normalizeUsers(data) {
+    const adminIds = (Array.isArray(data._adminIds) ? data._adminIds.map(String) : []);
+    for (const uid in (data.users || {})) {
+        const u = data.users[uid];
+        if (!u || typeof u !== 'object') continue;
+        if (uid !== _CREATORBOOST_UID && !u.isSystem) {
+            u.started = true;
+            if (!u.instagram) u.instagram = null;
+            if (adminIds.includes(String(uid))) { u.xp = 0; u.level = 1; u.role = '⚙️ Admin'; }
+        }
+        if (u.inGruppe === undefined) u.inGruppe = true;
+        if (!u.projects) u.projects = [];
+        if (u.diamonds === undefined) u.diamonds = 0;
+    }
 }
 
 function getData() { return d; }
