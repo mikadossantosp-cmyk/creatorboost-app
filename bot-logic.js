@@ -473,9 +473,125 @@ function deleteCommentApi({ uid, postId, commentIdx, commentTs }) {
     return { ok: true };
 }
 
+function _reasonLabel(r) {
+    if (r === 'roulette') return '🎡 Roulette';
+    if (r === 'daily-bonus') return '🎁 Daily Bonus';
+    if (r === 'gewinnspiel') return '🏆 Gewinnspiel';
+    if (r === 'admin') return '⚙️ Admin';
+    return '🎁';
+}
+
+// ── Diamanten / Shop / Extra-Links: 1:1 aus den Bot-Endpoints ──
+function addExtraLink({ uid, reason }) {
+    uid = String(uid || '');
+    if (!uid || !d.users[uid]) return { ok: false, error: 'User nicht gefunden' };
+    if (!d.bonusLinks) d.bonusLinks = {};
+    d.bonusLinks[uid] = (d.bonusLinks[uid] || 0) + 1;
+    try { dmUser(uid, `🔗 *+1 Extra-Link*\n\n${_reasonLabel(reason)}\nVerfügbar: ${d.bonusLinks[uid]} Extra-Links`); } catch (e) {}
+    return { ok: true };
+}
+function addSuperlink({ uid, reason }) {
+    uid = String(uid || '');
+    const u = d.users[uid];
+    if (!uid || !u) return { ok: false, error: 'User nicht gefunden' };
+    u.superlinkCredits = (u.superlinkCredits || 0) + 1;
+    try { dmUser(uid, `⚡ *+1 Superlink-Slot*\n\n${_reasonLabel(reason)}\nVerfügbar: ${u.superlinkCredits} Extra-Superlinks`); } catch (e) {}
+    return { ok: true, superlinkCredits: u.superlinkCredits };
+}
+function addDiamonds({ uid, amount, reason }) {
+    uid = String(uid || '');
+    amount = Number(amount);
+    const u = d.users[uid];
+    if (!uid || !u) return { ok: false, error: 'User nicht gefunden' };
+    if (!Number.isFinite(amount)) return { ok: false, error: 'amount erforderlich' };
+    u.diamonds = (u.diamonds || 0) + amount;
+    if (u.diamonds < 0) u.diamonds = 0;
+    if (amount > 0) {
+        try { dmUser(uid, `💎 *+${amount} Diamant${amount !== 1 ? 'en' : ''}*\n\n${_reasonLabel(reason)}\nAktuell: ${u.diamonds} 💎`); } catch (e) {}
+    }
+    return { ok: true, newDiamonds: u.diamonds };
+}
+function removeDiamonds({ uid, amount, reason }) {
+    uid = String(uid || '');
+    const raw = Number(amount);
+    const u = d.users[uid];
+    if (!uid || !u) return { ok: false, error: 'User nicht gefunden' };
+    if (!Number.isFinite(raw)) return { ok: false, error: 'amount erforderlich' };
+    const amt = Math.abs(raw);
+    u.diamonds = Math.max(0, (u.diamonds || 0) - amt);
+    try { dmUser(uid, `💎 *−${amt} Diamant${amt !== 1 ? 'en' : ''}*\n\n${_reasonLabel(reason)}\nAktuell: ${u.diamonds} 💎`); } catch (e) {}
+    return { ok: true, newDiamonds: u.diamonds };
+}
+const ITEM_PRICES = {
+    ring_flame: 8, ring_ocean: 8, ring_gold: 10, ring_purple: 12, ring_rainbow: 15, ring_diamond: 20,
+    banner_sunset: 5, banner_peach: 5, banner_mint: 5, banner_forest: 5,
+    banner_ocean: 7, banner_sky: 7, banner_lavender: 7, banner_rose: 7,
+    banner_gold: 10, banner_candy: 10, banner_coral: 10, banner_aurora: 10,
+};
+const ITEM_NAMES = {
+    ring_flame: '🔥 Flame Ring', ring_ocean: '🌊 Ocean Ring', ring_gold: '✨ Gold Ring', ring_purple: '🔮 Cosmic Ring', ring_rainbow: '🌈 Rainbow Ring', ring_diamond: '💎 Diamond Ring',
+    banner_sunset: '🌅 Sunset Banner', banner_ocean: '🌊 Ocean Banner', banner_forest: '🌿 Forest Banner', banner_candy: '🍭 Candy Banner',
+    banner_sky: '☁️ Sky Blue Banner', banner_lavender: '💜 Lavender Banner', banner_mint: '🌱 Mint Banner', banner_peach: '🍑 Peach Banner',
+    banner_gold: '✨ Golden Hour Banner', banner_coral: '🪸 Coral Banner', banner_aurora: '🌌 Aurora Banner', banner_rose: '🌹 Rose Gold Banner',
+};
+function buyItemApi({ uid, itemId }) {
+    if (!uid || !itemId) return { ok: false, error: 'Fehlende Parameter' };
+    const u = d.users[String(uid)];
+    if (!u) return { ok: false, error: 'User nicht gefunden' };
+    if (!u.inventory) u.inventory = [];
+    if (u.inventory.includes(itemId)) return { ok: false, error: 'Item bereits besessen' };
+    const price = ITEM_PRICES[itemId];
+    if (!price) return { ok: false, error: 'Unbekanntes Item' };
+    const isAdmin = istAdminId(Number(uid));
+    if (!isAdmin && (u.diamonds || 0) < price) return { ok: false, error: `Nicht genug Diamanten (benötigt: ${price})` };
+    if (!isAdmin) u.diamonds = (u.diamonds || 0) - price;
+    u.inventory.push(itemId);
+    addNotification(String(uid), '🎁', `${ITEM_NAMES[itemId] || itemId} gekauft! Wähle es in deinem Profil unter "Items" aus.${isAdmin ? ' (Admin – kostenlos)' : ` 💎 -${price} Diamanten.`}`);
+    return { ok: true, diamonds: u.diamonds, inventory: u.inventory };
+}
+function setActiveRingApi({ uid, ringId }) {
+    if (!uid) return { ok: false };
+    const u = d.users[String(uid)];
+    if (!u) return { ok: false };
+    if (ringId && !(u.inventory || []).includes(ringId)) return { ok: false, error: 'Item nicht im Inventar' };
+    u.activeRing = ringId || null;
+    return { ok: true, activeRing: u.activeRing };
+}
+function buyExtralinkApi({ uid }) {
+    if (!uid) return { ok: false, error: 'Fehlende UID' };
+    const u = d.users[String(uid)];
+    if (!u) return { ok: false, error: 'User nicht gefunden' };
+    const isAdminEl = istAdminId(Number(uid));
+    if (!isAdminEl && (u.diamonds || 0) < 5) return { ok: false, error: 'Nicht genug Diamanten (benötigt: 5)' };
+    if (!isAdminEl) u.diamonds = (u.diamonds || 0) - 5;
+    if (!d.bonusLinks) d.bonusLinks = {};
+    d.bonusLinks[String(uid)] = (d.bonusLinks[String(uid)] || 0) + 1;
+    addNotification(String(uid), '🔗', `Extra-Link gekauft! Du kannst heute einen zusätzlichen Link posten.${isAdminEl ? ' (Admin – kostenlos)' : ' 💎 -5 Diamanten.'}`);
+    return { ok: true, diamonds: u.diamonds, bonusLinks: d.bonusLinks[String(uid)] };
+}
+// ── Read-only Slot-Status (für UI): 1:1 aus GET /link-status-api ──
+function linkStatusApi(uid) {
+    uid = String(uid || '');
+    if (!uid) return { ok: false };
+    const heute = new Date().toDateString();
+    const todayCount = Object.values(d.links).filter(l =>
+        String(l.user_id) === String(uid) && new Date(l.timestamp).toDateString() === heute
+    ).length;
+    const bonusLinks = d.bonusLinks?.[uid] || 0;
+    const isAdmin = istAdminId(Number(uid));
+    const u = d.users[uid];
+    const badgeBonus = !isAdmin && badgeBonusLinks(u?.xp || 0) > 0 && (!d.badgeTracker?.[uid] || d.badgeTracker[uid] !== heute) ? 1 : 0;
+    const standardUsed = todayCount > 0;
+    const canPost = isAdmin || !standardUsed || bonusLinks > 0 || badgeBonus > 0;
+    const maxLinks = isAdmin ? 999 : todayCount + (standardUsed ? 0 : 1) + bonusLinks + badgeBonus;
+    return { ok: true, todayCount, bonusLinks, badgeBonus, maxLinks, canPost, isAdmin };
+}
+
 module.exports = {
     init, setThumbnailFetcher,
     postLinkFromApp, createPostApi, deletePostApi, commentApi, deleteCommentApi,
+    addExtraLink, addSuperlink, addDiamonds, removeDiamonds,
+    buyItemApi, setActiveRingApi, buyExtralinkApi, linkStatusApi,
     // Like-Flow + Kern (verbatim portiert):
     likeFromApp, xpAdd, xpAddMitDaily, xpAddNurGesamt, badge, level, user,
     istAdminId, getRootUid, isSubAccount, weekStart,
