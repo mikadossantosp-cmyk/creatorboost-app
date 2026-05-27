@@ -612,9 +612,216 @@ function linkStatusApi(uid) {
     return { ok: true, todayCount, bonusLinks, badgeBonus, maxLinks, canPost, isAdmin };
 }
 
+// ── Wochen-Key (Berlin) — Prozess läuft mit TZ=Europe/Berlin ──
+function getBerlinWeekKey() {
+    const now = new Date();
+    const day = now.getDay() || 7;
+    const monday = new Date(now);
+    monday.setDate(now.getDate() - (day - 1));
+    return monday.getFullYear() + '-' + String(monday.getMonth() + 1).padStart(2, '0') + '-' + String(monday.getDate()).padStart(2, '0');
+}
+
+// ════════ DIAMANTLINKS (30💎 · 3 Tage · 3💎 Reward) ════════
+const DIAMOND_LINK_COST = 30;
+const DIAMOND_LINK_REWARD = 3;
+const DIAMOND_LINK_LIFETIME_MS = 3 * 24 * 3600 * 1000;
+function _diamondEnsure() { if (!d.diamondLinks) d.diamondLinks = {}; }
+function _diamondActive(p) { return p && !p.deletedAt && p.expiresAt > Date.now(); }
+function diamondLinkCreate({ uid, url, caption }) {
+    _diamondEnsure();
+    uid = String(uid || '');
+    url = String(url || '').trim();
+    caption = String(caption || '').slice(0, 500);
+    const u = d.users[uid];
+    if (!u) return { ok: false, error: 'User nicht gefunden' };
+    if (!/https?:\/\/(www\.)?instagram\.com\//i.test(url) || url.length > 500) return { ok: false, error: 'Ungültige Instagram-URL' };
+    if ((u.diamonds || 0) < DIAMOND_LINK_COST && !istAdminId(uid)) return { ok: false, error: 'Du hast nur ' + (u.diamonds || 0) + ' 💎 — du brauchst ' + DIAMOND_LINK_COST + ' 💎' };
+    const wasAdmin = istAdminId(uid);
+    if (!wasAdmin) u.diamonds = (u.diamonds || 0) - DIAMOND_LINK_COST;
+    const id = 'dl_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+    const now = Date.now();
+    d.diamondLinks[id] = { id, uid, url, caption, createdAt: now, expiresAt: now + DIAMOND_LINK_LIFETIME_MS, likes: [], adminFree: wasAdmin || undefined };
+    u.diamondLinksPosted = (u.diamondLinksPosted || 0) + 1;
+    sendInAppDM(uid, '💎 Diamantlink veröffentlicht!\n\nDein Post ist 3 Tage im Feed an erster Stelle.\n' + (wasAdmin ? '⚙️ Admin: gratis (keine Kosten)\n' : 'Kosten: −' + DIAMOND_LINK_COST + ' 💎 (Aktuell: ' + u.diamonds + ' 💎)\n') + '\nJeder Liker bekommt +' + DIAMOND_LINK_REWARD + ' 💎. Der Post muss FULL ENGAGED werden (Like + Kommentar + Teilen + Speichern). Schein-Engagement wird hart sanktioniert.');
+    return { ok: true, id, adminFree: wasAdmin };
+}
+function diamondLinkLike({ uid, postId }) {
+    _diamondEnsure();
+    uid = String(uid || '');
+    postId = String(postId || '');
+    const u = d.users[uid];
+    const p = d.diamondLinks[postId];
+    if (!u) return { ok: false, error: 'User nicht gefunden' };
+    if (!p) return { ok: false, error: 'Post nicht gefunden' };
+    if (!_diamondActive(p)) return { ok: false, error: 'Post abgelaufen oder gelöscht' };
+    if (String(p.uid) === uid) return { ok: false, error: 'collaborator-self-like', message: 'Kein Self-Like für eigene Diamantlinks' };
+    if (getRootUid(uid) === getRootUid(p.uid)) return { ok: false, error: 'family-self-like', message: 'Kein Like auf Diamantlinks aus eigener Account-Familie' };
+    if (!Array.isArray(p.likes)) p.likes = [];
+    if (p.likes.includes(uid)) return { ok: true, liked: true, likeCount: p.likes.length, already: true };
+    p.likes.push(uid);
+    if (!p.engagedAt) p.engagedAt = {};
+    p.engagedAt[uid] = Date.now();
+    addDiamond(uid, DIAMOND_LINK_REWARD);
+    addNotification(p.uid, '💎', (u.spitzname || u.name || 'User') + ' hat deinen Diamantlink engagiert', uid);
+    sendInAppDM(uid, '💎 Diamantlink engagiert\n\nDu hast einen Diamantlink engagiert und +' + DIAMOND_LINK_REWARD + ' 💎 erhalten.\n\nDu bestätigst hiermit den Post:\n✓ geliked\n✓ kommentiert\n✓ geteilt\n✓ gespeichert\n\nDies wird kontrolliert. Bei Schein-Engagement: XP-Abzug + Diamonds-Reset + Bann.\n\nMehr im Explore → Regeln → 💎 Diamantlinks.');
+    return { ok: true, liked: true, likeCount: p.likes.length, diamondsTotal: u.diamonds || 0 };
+}
+function diamondLinkAcceptRules({ uid }) {
+    uid = String(uid || '');
+    const u = d.users[uid];
+    if (!u) return { ok: false, error: 'User nicht gefunden' };
+    if (!u.diamondRulesAcceptedAt) u.diamondRulesAcceptedAt = Date.now();
+    return { ok: true };
+}
+function diamondLinkAdminDelete({ postId }) {
+    _diamondEnsure();
+    const p = d.diamondLinks[String(postId || '')];
+    if (!p) return { ok: false, error: 'Post nicht gefunden' };
+    p.deletedAt = Date.now();
+    return { ok: true };
+}
+
+// ════════ PRISMALINKS (100💎 · 7 Tage · 7💎 Reward · 1×/Woche) ════════
+const PRISMA_LINK_COST = 100;
+const PRISMA_LINK_REWARD = 7;
+const PRISMA_LINK_LIFETIME_MS = 7 * 24 * 3600 * 1000;
+function _prismaEnsure() { if (!d.prismaLinks) d.prismaLinks = {}; }
+function _prismaActive(p) { return p && !p.deletedAt && p.expiresAt > Date.now(); }
+function prismaLinkCreate({ uid, url, caption }) {
+    _prismaEnsure();
+    uid = String(uid || '');
+    url = String(url || '').trim();
+    caption = String(caption || '').slice(0, 500);
+    const u = d.users[uid];
+    if (!u) return { ok: false, error: 'User nicht gefunden' };
+    if (!/https?:\/\/(www\.)?instagram\.com\//i.test(url) || url.length > 500) return { ok: false, error: 'Ungültige Instagram-URL' };
+    const week = getBerlinWeekKey();
+    if (u.prismaPostThisWeek === week && !istAdminId(uid)) return { ok: false, error: 'Du hast diese Woche schon einen Prismalink veröffentlicht. Nur 1×/Woche erlaubt.' };
+    if ((u.diamonds || 0) < PRISMA_LINK_COST && !istAdminId(uid)) return { ok: false, error: 'Du hast nur ' + (u.diamonds || 0) + ' 💎 — du brauchst ' + PRISMA_LINK_COST + ' 💎' };
+    const wasAdmin = istAdminId(uid);
+    if (!wasAdmin) u.diamonds = (u.diamonds || 0) - PRISMA_LINK_COST;
+    u.prismaPostThisWeek = week;
+    const id = 'pl_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+    const now = Date.now();
+    d.prismaLinks[id] = { id, uid, url, caption, createdAt: now, expiresAt: now + PRISMA_LINK_LIFETIME_MS, likes: [], adminFree: wasAdmin || undefined };
+    sendInAppDM(uid, '💠 Prismalink veröffentlicht!\n\nDein Post ist 7 Tage im Feed an erster Stelle mit Holographic-Glow.\n' + (wasAdmin ? '⚙️ Admin: gratis (keine Kosten)\n' : 'Kosten: −' + PRISMA_LINK_COST + ' 💎 (Aktuell: ' + u.diamonds + ' 💎)\n') + '\nJeder Liker bekommt +' + PRISMA_LINK_REWARD + ' 💎. Der Post muss FULL ENGAGED werden (Like + Kommentar + Teilen + Speichern). Schein-Engagement wird hart sanktioniert.');
+    return { ok: true, id, adminFree: wasAdmin };
+}
+function prismaLinkLike({ uid, postId }) {
+    _prismaEnsure();
+    uid = String(uid || '');
+    postId = String(postId || '');
+    const u = d.users[uid];
+    const p = d.prismaLinks[postId];
+    if (!u) return { ok: false, error: 'User nicht gefunden' };
+    if (!p) return { ok: false, error: 'Post nicht gefunden' };
+    if (!_prismaActive(p)) return { ok: false, error: 'Post abgelaufen oder gelöscht' };
+    if (String(p.uid) === uid) return { ok: false, error: 'self-like', message: 'Kein Self-Like für eigene Prismalinks' };
+    if (getRootUid(uid) === getRootUid(p.uid)) return { ok: false, error: 'family-self-like', message: 'Kein Like auf Prismalinks aus eigener Account-Familie' };
+    if (!Array.isArray(p.likes)) p.likes = [];
+    if (p.likes.includes(uid)) return { ok: true, liked: true, likeCount: p.likes.length, already: true };
+    p.likes.push(uid);
+    if (!p.engagedAt) p.engagedAt = {};
+    p.engagedAt[uid] = Date.now();
+    addDiamond(uid, PRISMA_LINK_REWARD);
+    addNotification(p.uid, '💠', (u.spitzname || u.name || 'User') + ' hat deinen Prismalink engagiert', uid);
+    sendInAppDM(uid, '💠 Prismalink engagiert\n\nDu hast einen Prismalink engagiert und +' + PRISMA_LINK_REWARD + ' 💎 erhalten.\n\nDu bestätigst hiermit den Post:\n✓ geliked\n✓ kommentiert\n✓ geteilt\n✓ gespeichert\n\nDies wird kontrolliert. Bei Schein-Engagement: XP-Abzug + Diamonds-Reset + Bann.\n\nMehr im Explore → Regeln → 💠 Prismalinks.');
+    return { ok: true, liked: true, likeCount: p.likes.length, diamondsTotal: u.diamonds || 0 };
+}
+function prismaLinkAcceptRules({ uid }) {
+    uid = String(uid || '');
+    const u = d.users[uid];
+    if (!u) return { ok: false, error: 'User nicht gefunden' };
+    if (!u.prismaRulesAcceptedAt) u.prismaRulesAcceptedAt = Date.now();
+    return { ok: true };
+}
+function prismaLinkAdminDelete({ postId }) {
+    _prismaEnsure();
+    const p = d.prismaLinks[String(postId || '')];
+    if (!p) return { ok: false, error: 'Post nicht gefunden' };
+    p.deletedAt = Date.now();
+    return { ok: true };
+}
+
+// ════════ KOLLAB-POSTS (Partner-basiert · Boost-Slots) ════════
+const COLLAB_BOOST_TOTAL_MS = 7 * 24 * 3600 * 1000;
+const COLLAB_BOOST_CYCLE_MS = 4 * 3600 * 1000;
+const COLLAB_BOOST_WINDOW_MS = 20 * 60 * 1000;
+function _collabEnsure() { if (!d.collabRequests) d.collabRequests = {}; if (!d.collabPosts) d.collabPosts = {}; }
+function _collabPartnerLink(uid) { const u = d.users[uid]; if (!u) return []; return Array.isArray(u.collaborations) ? u.collaborations.slice() : []; }
+function _collabHasPair(uidA, uidB) { return _collabPartnerLink(uidA).some(c => String(c.partnerUid) === String(uidB)); }
+function _collabValidUrl(url) { if (!url || typeof url !== 'string') return false; return /https?:\/\/(www\.)?instagram\.com\//i.test(url) && url.length <= 500; }
+function collabBoostState(post, now) {
+    now = now || Date.now();
+    const age = now - (post?.createdAt || 0);
+    if (age < 0 || age > COLLAB_BOOST_TOTAL_MS) return { active: false, endsAt: null, nextStartAt: null, expired: age > COLLAB_BOOST_TOTAL_MS };
+    const cyclePos = age % COLLAB_BOOST_CYCLE_MS;
+    if (cyclePos < COLLAB_BOOST_WINDOW_MS) return { active: true, endsAt: now + (COLLAB_BOOST_WINDOW_MS - cyclePos), nextStartAt: null, expired: false };
+    const nextStartAt = now + (COLLAB_BOOST_CYCLE_MS - cyclePos);
+    const nextSlotAge = age + (COLLAB_BOOST_CYCLE_MS - cyclePos);
+    return { active: false, endsAt: null, nextStartAt: nextSlotAge <= COLLAB_BOOST_TOTAL_MS ? nextStartAt : null, expired: false };
+}
+function collabCreatePost({ uid, partnerUid, url, caption }) {
+    _collabEnsure();
+    uid = String(uid || '');
+    partnerUid = String(partnerUid || '');
+    url = String(url || '').trim();
+    caption = String(caption || '').slice(0, 500);
+    if (!d.users[uid]) return { ok: false, error: 'User nicht gefunden' };
+    if (!d.users[partnerUid]) return { ok: false, error: 'Partner nicht gefunden' };
+    if (!_collabHasPair(uid, partnerUid)) return { ok: false, error: 'Keine Kollaboration mit diesem User' };
+    if (!_collabValidUrl(url)) return { ok: false, error: 'Ungültige Instagram-URL' };
+    const week = getBerlinWeekKey();
+    const u = d.users[uid], p = d.users[partnerUid];
+    if (u.collabPostThisWeek === week) return { ok: false, error: 'Du hast diese Woche schon einen Kollab-Post veröffentlicht' };
+    if (p.collabPostThisWeek === week) return { ok: false, error: 'Dein Partner hat diese Woche schon einen Kollab-Post veröffentlicht' };
+    const postId = 'cp_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+    d.collabPosts[postId] = { id: postId, uid, partnerUid, url, caption, likes: [], likeCount: 0, createdAt: Date.now(), week };
+    u.collabPostThisWeek = week;
+    p.collabPostThisWeek = week;
+    const fromName = u.spitzname || u.name || 'Dein Partner';
+    addNotification(partnerUid, '🤝', fromName + ' hat euren Kollab-Post veröffentlicht', uid);
+    sendInAppDM(partnerUid, '🤝 Kollab-Post live!\n\n' + fromName + ' hat euren gemeinsamen Kollab-Post veröffentlicht.\nUser können ihn jetzt im Feed → 🤝 Kollabs engagieren.');
+    return { ok: true, postId };
+}
+function collabLikePost({ uid, postId }) {
+    _collabEnsure();
+    uid = String(uid || '');
+    postId = String(postId || '');
+    const p = d.collabPosts[postId];
+    if (!p) return { ok: false, error: 'Post nicht gefunden' };
+    const u = d.users[uid];
+    if (!u) return { ok: false, error: 'User nicht gefunden' };
+    if (uid === String(p.uid) || uid === String(p.partnerUid)) return { ok: false, error: 'collaborator-self-like', message: 'Kein Self-Like für Kollaboratoren' };
+    if (getRootUid(uid) === getRootUid(p.uid) || getRootUid(uid) === getRootUid(p.partnerUid)) return { ok: false, error: 'family-self-like', message: 'Kein Like auf Collab-Posts aus eigener Account-Familie' };
+    if (!Array.isArray(p.likes)) p.likes = [];
+    if (p.likes.includes(uid)) return { ok: true, liked: true, likeCount: p.likes.length, already: true };
+    p.likes.push(uid);
+    p.likeCount = p.likes.length;
+    const boost = collabBoostState(p, Date.now());
+    let diamondsGiven = 1;
+    addDiamond(uid, 1);
+    if (boost.active) { addDiamond(uid, 1); diamondsGiven = 2; }
+    addNotification(p.uid, '🤝❤️', (u.spitzname || u.name || 'User') + ' hat euren Kollab-Post geliked' + (boost.active ? ' (Boost-Slot!)' : ''), uid);
+    addNotification(p.partnerUid, '🤝❤️', (u.spitzname || u.name || 'User') + ' hat euren Kollab-Post geliked' + (boost.active ? ' (Boost-Slot!)' : ''), uid);
+    let dmSentNow = false;
+    if (!u.collabRulesDMSent) {
+        sendInAppDM(uid, '🤝 Kollab-Post engagiert\n\nDu hast deinen ersten Kollab-Post engagiert! Die Regeln nochmal kurz:\n\n• Zuerst auf Instagram öffnen → LIKEN, KOMMENTIEREN, SPEICHERN und TEILEN\n• Dann hier in der App ✅ tippen\n• Pro engagiertem Kollab-Post bekommst du 1 💎 Diamant\n• Im Reel muss sichtbar sein, dass beide Parteien zusammenarbeiten (z.B. Logos beider Creator, gemeinsamer Branding-Frame oder beide @-Handles)\n• Reine Schein-Likes und Posts ohne sichtbare Zusammenarbeit werden sanktioniert\n\nMehr im Explore → Regeln → 🤝 Kollabs. Viel Erfolg!');
+        u.collabRulesDMSent = Date.now();
+        dmSentNow = true;
+    }
+    if (boost.active) {
+        sendInAppDM(uid, '🤝⚡ Kollab-Boost-Slot!\n\nDu hast den Kollab-Post während eines Boost-Slots engagiert → +1 💎 Extra-Diamant (' + diamondsGiven + ' total).\n\nKollab-Posts erscheinen 7 Tage lang alle 4h für 20 Minuten im Feed mit Boost-Bonus.');
+    }
+    return { ok: true, liked: true, likeCount: p.likes.length, diamondsTotal: u.diamonds || 0, rulesDmSent: dmSentNow, diamondsGiven, boostActive: boost.active };
+}
+
 module.exports = {
     init, setThumbnailFetcher,
     postLinkFromApp, createPostApi, deletePostApi, commentApi, deleteCommentApi,
+    diamondLinkCreate, diamondLinkLike, diamondLinkAcceptRules, diamondLinkAdminDelete,
+    prismaLinkCreate, prismaLinkLike, prismaLinkAcceptRules, prismaLinkAdminDelete,
+    collabCreatePost, collabLikePost, getBerlinWeekKey,
     addXp, addExtraLink, addSuperlink, addDiamonds, removeDiamonds,
     buyItemApi, setActiveRingApi, buyExtralinkApi, linkStatusApi,
     // Like-Flow + Kern (verbatim portiert):
