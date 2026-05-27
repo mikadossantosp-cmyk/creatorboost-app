@@ -60,6 +60,14 @@ async function localWrite(fn) {
     datastore.saveDebounced();
     return r;
 }
+// Wie localWrite, aber SOFORT (synchron, atomar) persistieren — fuer identitaets-/
+// sicherheitskritische Mutationen (Signup, Passwort), damit sie auch bei einem
+// harten Crash im 2s-Debounce-Fenster nicht verloren gehen.
+async function localWriteNow(fn) {
+    const r = await fn();
+    try { datastore.save(); } catch (e) { console.error('[localWriteNow] save-Fehler:', e.message); }
+    return r;
+}
 // Graceful Shutdown: ausstehende (debounced) Writes synchron flushen, damit bei
 // Railway-Redeploys/Restarts (SIGTERM) kein bis-zu-2s-Fenster verloren geht.
 let _shuttingDown = false;
@@ -5291,7 +5299,7 @@ self.addEventListener('notificationclick',e=>{
                 reviewerUid = String(reviewerEntry[0]);
             } else {
                 const _rev = { email: REVIEWER_EMAIL, password: REVIEWER_PASSWORD, ageConfirmedAt: Date.now(), termsAcceptedAt: Date.now(), termsVersion: '2026-05' };
-                const created = LOCAL_STORE ? await localWrite(() => botLogic.createEmailUserApi(_rev)) : await postBot('/create-email-user-api', _rev);
+                const created = LOCAL_STORE ? await localWriteNow(() => botLogic.createEmailUserApi(_rev)) : await postBot('/create-email-user-api', _rev);
                 if (!created || !created.ok || !created.uid) {
                     return json({ok:false, error:'Reviewer-Setup fehlgeschlagen: ' + ((created && created.error) || 'Mainbot nicht erreichbar')}, 500);
                 }
@@ -5403,7 +5411,7 @@ self.addEventListener('notificationclick',e=>{
         if (newPw.length > 0 && newPw.length < 6) return json({ok:false, error:'Passwort muss mindestens 6 Zeichen haben'}, 400);
         if (newPw.length > 200) return json({ok:false, error:'Passwort zu lang'}, 400);
         const result = LOCAL_STORE
-            ? await localWrite(() => botLogic.setUserPasswordApi({ uid: getMyUid(session), password: newPw }))
+            ? await localWriteNow(() => botLogic.setUserPasswordApi({ uid: getMyUid(session), password: newPw }))
             : await postBot('/set-user-password', { uid: getMyUid(session), password: newPw });
         if (!result || !result.ok) return json({ok:false, error: (result && result.error) || 'Speichern fehlgeschlagen'}, 500);
         return json({ok:true, cleared: !!result.cleared});
@@ -5992,7 +6000,7 @@ try { fetch('/api/track-funnel',{method:'POST',headers:{'Content-Type':'applicat
         }
         // Account anlegen (mit Age-Gate + Terms-Akzeptanz für DSGVO/Play-Store-Audit)
         const _cep = { email, password, ageConfirmedAt: Date.now(), termsAcceptedAt: Date.now(), termsVersion: '2026-05' };
-        const created = LOCAL_STORE ? await localWrite(() => botLogic.createEmailUserApi(_cep)) : await postBot('/create-email-user-api', _cep);
+        const created = LOCAL_STORE ? await localWriteNow(() => botLogic.createEmailUserApi(_cep)) : await postBot('/create-email-user-api', _cep);
         if (!created) {
             // postBot returnt null bei Mainbot-Timeout/Crash/Network-Error → User klare Meldung geben
             console.error('[signup-fail] Mainbot unreachable for email:', email, 'ip:', _ip);
@@ -9490,7 +9498,7 @@ p{line-height:1.65;color:var(--muted)}
                 return json({ok:false, error:'Passwort-Änderung gesperrt. Klick "Änderung anfragen" zum Freischalten.', locked:true}, 423);
             }
             const pwResult = LOCAL_STORE
-                ? await localWrite(() => botLogic.setUserPasswordApi({ uid: myUid, password: pw }))
+                ? await localWriteNow(() => botLogic.setUserPasswordApi({ uid: myUid, password: pw }))
                 : await postBot('/set-user-password', { uid: myUid, password: pw });
             if (!pwResult || !pwResult.ok) return json({ok:false, error: (pwResult && pwResult.error) || 'Passwort speichern fehlgeschlagen'}, 500);
             _pwUpdated = true;

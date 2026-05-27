@@ -521,7 +521,13 @@ function createPostApi({ uid, text, attachment, attachmentType }) {
     if (!uid || (!text && !attachment)) return { ok: false };
     if (!d.posts) d.posts = {};
     if (!d.posts[uid]) d.posts[uid] = [];
-    const post = { text: (text || '').slice(0, 300), timestamp: Date.now(), likes: [] };
+    const _text = (text || '').slice(0, 300);
+    // Doppel-Submit-Schutz: gleicher Text-only-Post < 5s → kein Duplikat.
+    if (!attachment) {
+        const last = d.posts[uid][d.posts[uid].length - 1];
+        if (last && !last.attachment && last.text === _text && (Date.now() - (last.timestamp || 0)) < 5000) return { ok: true, deduped: true };
+    }
+    const post = { text: _text, timestamp: Date.now(), likes: [] };
     if (attachment) { post.attachment = attachment; post.attachmentType = attachmentType; }
     d.posts[uid].push(post);
     if (d.posts[uid].length > 50) d.posts[uid].shift();
@@ -533,9 +539,11 @@ function deletePostApi({ uid, timestamp }) {
     d.posts[uid] = d.posts[uid].filter(p => p.timestamp !== Number(timestamp));
     return { ok: true };
 }
+// Prototype-Pollution-Schutz: User-gelieferte IDs werden als Objekt-Keys benutzt.
+function _unsafeKey(k) { k = String(k); return k === '__proto__' || k === 'constructor' || k === 'prototype'; }
 // ── Kommentar: 1:1 aus POST /comment-api ──
 function commentApi({ uid, name, linkId, text }) {
-    if (!uid || !text || !linkId) return { ok: false };
+    if (!uid || !text || !linkId || _unsafeKey(linkId)) return { ok: false };
     if (!d.comments) d.comments = {};
     if (!d.comments[linkId]) d.comments[linkId] = [];
     d.comments[linkId].push({ uid, name, text: text.slice(0, 200), timestamp: Date.now() });
@@ -551,7 +559,7 @@ function commentApi({ uid, name, linkId, text }) {
 }
 // ── Kommentar löschen: 1:1 aus POST /delete-comment-api ──
 function deleteCommentApi({ uid, postId, commentIdx, commentTs }) {
-    if (!uid || !postId || !d.comments?.[postId]) return { ok: false };
+    if (!uid || !postId || _unsafeKey(postId) || !d.comments?.[postId]) return { ok: false };
     const comments = d.comments[postId];
     let target = -1;
     if (commentTs) {
@@ -572,6 +580,7 @@ function deleteCommentApi({ uid, postId, commentIdx, commentTs }) {
 // Comments/DMs/pinnedEngages-Cleanup bleiben 1:1 erhalten.
 function deleteLinkApi({ linkId }) {
     const msgId = String(linkId || '');
+    if (_unsafeKey(msgId)) return { ok: false, error: 'Ungültige ID' };
     const link = d.links?.[msgId];
     if (!link) return { ok: false, error: 'Link nicht gefunden' };
     const heuteStr = new Date().toDateString();
@@ -768,14 +777,14 @@ function updateProfileApi(body) {
     const { uid, bio, spitzname, banner, accentColor, profilePic } = body;
     if (!uid || !d.users[uid]) return { ok: false, error: 'User nicht gefunden: ' + String(uid || '(leer)') };
     const u = d.users[uid];
-    if (bio !== undefined) u.bio = bio.slice(0, 100);
-    if (spitzname !== undefined) u.spitzname = spitzname.slice(0, 30);
-    if (accentColor !== undefined) u.accentColor = accentColor;
-    if (body.nische !== undefined) u.nische = body.nische.slice(0, 50);
-    if (body.website !== undefined) u.website = body.website.slice(0, 100);
-    if (body.tiktok !== undefined) u.tiktok = body.tiktok.replace('@', '').slice(0, 50);
-    if (body.youtube !== undefined) u.youtube = body.youtube.replace('@', '').slice(0, 50);
-    if (body.twitter !== undefined) u.twitter = body.twitter.replace('@', '').slice(0, 50);
+    if (bio !== undefined) u.bio = String(bio).slice(0, 100);
+    if (spitzname !== undefined) u.spitzname = String(spitzname).slice(0, 30);
+    if (accentColor !== undefined) u.accentColor = String(accentColor).slice(0, 32);
+    if (body.nische !== undefined) u.nische = String(body.nische).slice(0, 50);
+    if (body.website !== undefined) u.website = String(body.website).slice(0, 100);
+    if (body.tiktok !== undefined) u.tiktok = String(body.tiktok).replace('@', '').slice(0, 50);
+    if (body.youtube !== undefined) u.youtube = String(body.youtube).replace('@', '').slice(0, 50);
+    if (body.twitter !== undefined) u.twitter = String(body.twitter).replace('@', '').slice(0, 50);
     if (body.instagram !== undefined) u.instagram = String(body.instagram || '').replace(/^@/, '').replace(/[^a-zA-Z0-9._]/g, '').slice(0, 50);
     if (body.email !== undefined) {
         const newEmail = String(body.email || '').toLowerCase().trim();
