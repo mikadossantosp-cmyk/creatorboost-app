@@ -8196,7 +8196,8 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
                 if (docData.length > 15000000) return json({error:'Max 10MB für Dokument'}, 400);
                 try { await fs.promises.writeFile(DATA_DIR + '/doc_' + getMyUid(session) + '_proj_' + projectId + '.txt', docData); } catch(e) { console.error('project doc write failed:', e.message); }
             }
-            const result = await postBot('/add-project-api', { uid: getMyUid(session), projectId, title: title.trim(), description: (description||'').trim(), link: (link||'').trim(), docName: docName||'' });
+            const _pp = { uid: getMyUid(session), projectId, title: title.trim(), description: (description||'').trim(), link: (link||'').trim(), docName: docName||'' };
+            const result = LOCAL_STORE ? await localWrite(() => botLogic.addProjectApi(_pp)) : await postBot('/add-project-api', _pp);
             if (!result?.ok) return json({error: result?.error || 'Fehler'}, 400);
             return json({ok: true, projectId});
         } catch(e) { return json({error: e.message}, 500); }
@@ -8218,7 +8219,8 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
                 if (docData.length > 15000000) return json({error:'Max 10MB für Dokument'}, 400);
                 try { await fs.promises.writeFile(DATA_DIR + '/doc_' + getMyUid(session) + '_proj_' + projectId + '.txt', docData); } catch(e) { console.error('project doc write failed:', e.message); }
             }
-            const result = await postBot('/update-project-api', { uid: getMyUid(session), projectId, title: title.trim(), description: (description||'').trim(), link: (link||'').trim(), docName: docName||'' });
+            const _pp = { uid: getMyUid(session), projectId, title: title.trim(), description: (description||'').trim(), link: (link||'').trim(), docName: docName||'' };
+            const result = LOCAL_STORE ? await localWrite(() => botLogic.updateProjectApi(_pp)) : await postBot('/update-project-api', _pp);
             if (!result?.ok) return json({error: result?.error || 'Fehler'}, 400);
             return json({ok: true});
         } catch(e) { return json({error: e.message}, 500); }
@@ -8235,7 +8237,9 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
             const docF = DATA_DIR + '/doc_' + getMyUid(session) + '_proj_' + projectId + '.txt';
             if (fs.existsSync(docF)) fs.unlinkSync(docF);
         } catch(e) {}
-        const result = await postBot('/delete-project-api', { uid: getMyUid(session), projectId });
+        const result = LOCAL_STORE
+            ? await localWrite(() => botLogic.deleteProjectApi({ uid: getMyUid(session), projectId }))
+            : await postBot('/delete-project-api', { uid: getMyUid(session), projectId });
         return json({ok: !!result?.ok});
     }
 
