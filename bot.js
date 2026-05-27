@@ -25,6 +25,7 @@ const url = require('url');
 const crypto = require('crypto');
 const { genderize } = require('./gender-helper');
 const datastore = require('./datastore');
+const botLogic = require('./bot-logic');
 
 const MAINBOT_URL   = process.env.MAINBOT_URL   || '';
 const BRIDGE_SECRET = process.env.BRIDGE_SECRET || '';
@@ -41,8 +42,25 @@ const PORT          = process.env.PORT          || 3000;
 // Schreibpfade laufen in diesem Schritt noch über den Bot (Etappe 3).
 const LOCAL_STORE = process.env.LOCAL_STORE === '1';
 if (LOCAL_STORE) {
-    try { datastore.load(); console.log('[LOCAL_STORE] aktiv — /data kommt aus ' + datastore.DATA_FILE); }
-    catch (e) { console.error('[LOCAL_STORE] load fehlgeschlagen:', e.message); }
+    try {
+        datastore.load();
+        botLogic.init(datastore.getData());
+        console.log('[LOCAL_STORE] aktiv — /data + Schreibpfade + Cron laufen lokal aus ' + datastore.DATA_FILE);
+    }
+    catch (e) { console.error('[LOCAL_STORE] load/init fehlgeschlagen:', e.message); }
+    // App-eigener Cron-Scheduler (ersetzt den Telegram-Bot-zeitCheck). Alle 60s,
+    // idempotent (taeglich-Flags in d._lastEvents). Persistiert nur bei Aenderung.
+    setInterval(async () => {
+        try { await botLogic.zeitCheck(); datastore.saveDebounced(); }
+        catch (e) { console.error('[LOCAL_STORE] zeitCheck Fehler:', e.message); }
+    }, 60000);
+}
+// Hilfsfunktion: lokale bot-logic-Mutation ausfuehren + persistieren (LOCAL_STORE),
+// sonst null zurueck (Aufrufer faellt auf den Bot-Proxy zurueck).
+async function localWrite(fn) {
+    const r = await fn();
+    datastore.saveDebounced();
+    return r;
 }
 
 // Google Play Store Reviewer-Account: bypass Email-Verification + Instagram-Linking.
@@ -4473,6 +4491,9 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
             const backupFile = backupDir + '/daten-' + ts + '.json';
             fs.writeFileSync(backupFile, JSON.stringify(snap));
             const stats = datastore.importSnapshot(snap);
+            // importSnapshot ersetzt das Datastore-Objekt → bot-logic neu auf die
+            // frische Referenz binden, sonst mutiert es den alten (verworfenen) Stand.
+            botLogic.init(datastore.getData());
             res.writeHead(200, {'Content-Type':'application/json'});
             return res.end(JSON.stringify({ ok: true, backupFile, datastoreFile: datastore.DATA_FILE, stats }));
         } catch (e) {
