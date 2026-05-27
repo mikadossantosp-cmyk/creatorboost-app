@@ -13860,10 +13860,13 @@ document.getElementById('user-search-input')?.addEventListener('input',filterSea
     }
 
     if (path === '/nachrichten') {
-        // Presence-Ping: beim Öffnen von Nachrichten gilt User als aktiv (Member-Count)
-        postBot('/app-presence', { uid: myUid }).catch(()=>{});
-        // Frisch laden — neue DMs sollen sofort in der Liste auftauchen, nicht erst nach Cache-Ablauf.
-        await refreshDataCache().catch(()=>{});
+        // Mainbot-Aufrufe NUR im Proxy-Modus. Unter LOCAL_STORE sind die Daten lokal —
+        // ein await refreshDataCache() würde sonst (bei gesetzter MAINBOT_URL) bis zu 13s
+        // auf den toten Mainbot warten → "Seite geht nicht auf".
+        if (!LOCAL_STORE) {
+            postBot('/app-presence', { uid: myUid }).catch(()=>{});
+            await refreshDataCache().catch(()=>{});
+        }
         // Defensive: Promise.all mit catch — wenn ein Bot-Call rejects, soll die Seite trotzdem laden
         let botData = null, appChatData = null;
         try {
