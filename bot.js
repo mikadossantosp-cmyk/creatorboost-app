@@ -8477,20 +8477,17 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
         // (landet im creatorboost↔user-Chat, den der Admin sieht, + beim User als CreatorBoost-DM).
         const _sendAdmins = Array.isArray(_dataCache?._adminIds) ? _dataCache._adminIds.map(String) : [];
         if (_sendAdmins.includes(String(myUid)) && String(to) !== 'creatorboost' && !_sendAdmins.includes(String(to)) && text?.trim() && !image && !audio) {
-            const rcb = await postBot('/send-dm-single-api', { uid: String(to), text: text.trim().slice(0, 1500) });
+            const rcb = LOCAL_STORE
+                ? await localWrite(() => botLogic.sendDmSingleApi({ uid: String(to), text: text.trim().slice(0, 1500) }))
+                : await postBot('/send-dm-single-api', { uid: String(to), text: text.trim().slice(0, 1500) });
             const rok = !!(rcb && rcb.ok !== false);
             if (rok) { _dataCacheTime = 0; refreshDataCache().catch(()=>{}); }
             return json({ok: rok, error: rcb?.error || null});
         }
-        const result = await postBot('/send-message-api', {
-            from: myUid,
-            to,
-            text: text?.trim().slice(0, 500) || '',
-            image: image || null,
-            audio: audio || null,
-            replyTo: replyTo || null,
-            timestamp: Date.now()
-        });
+        const _smArgs = { from: myUid, to, text: text?.trim().slice(0, 500) || '', image: image || null, audio: audio || null, replyTo: replyTo || null };
+        const result = LOCAL_STORE
+            ? await localWrite(() => botLogic.sendMessageApi(_smArgs))
+            : await postBot('/send-message-api', { ..._smArgs, timestamp: Date.now() });
         // Vorher !!result → fake-true bei {ok:false, error}.
         return json({ok: result?.ok === true, error: result?.error || null});
     }
@@ -8521,7 +8518,9 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
         // chatKey + eigener uid Messages von anderen Usern editieren.
         const [_a, _b] = String(chatKey).split('_');
         if (_a !== String(myUid) && _b !== String(myUid)) return json({error:'Kein Zugriff'}, 403);
-        const result = await postBot('/edit-message-api', { uid: myUid, chatKey, timestamp, newText });
+        const result = LOCAL_STORE
+            ? await localWrite(() => botLogic.editMessageApi({ uid: myUid, chatKey, timestamp, newText }))
+            : await postBot('/edit-message-api', { uid: myUid, chatKey, timestamp, newText });
         return json(result || {ok:false});
     }
 
@@ -8532,7 +8531,8 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
         // SECURITY (IDOR): chatKey muss myUid enthalten
         const [_ka, _kb] = String(body.chatKey || '').split('_');
         if (_ka !== String(myUid) && _kb !== String(myUid)) return json({error:'Kein Zugriff'}, 403);
-        await postBot('/mark-messages-read', { uid: myUid, chatKey: body.chatKey });
+        if (LOCAL_STORE) { botLogic.markMessagesRead({ uid: myUid, chatKey: body.chatKey }); datastore.saveDebounced(); }
+        else await postBot('/mark-messages-read', { uid: myUid, chatKey: body.chatKey });
         return json({ok: true});
     }
 
@@ -8541,8 +8541,10 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
         if (!session) return json({error:'Nicht eingeloggt'}, 401);
         const myUid = getMyUid(session);
         const since = Number(query.since || 0);
-        const url = '/app-chat?uid=' + encodeURIComponent(myUid) + (since > 0 ? '&since=' + since : '&limit=200');
-        const data = await fetchBot(url);
+        const data = LOCAL_STORE
+            ? botLogic.getAppChat({ uid: myUid, since, limit: 200 })
+            : await fetchBot('/app-chat?uid=' + encodeURIComponent(myUid) + (since > 0 ? '&since=' + since : '&limit=200'));
+        if (LOCAL_STORE) datastore.saveDebounced();
         return json(data || { messages: [], unread: 0 });
     }
     if (path === '/api/app-chat/send' && req.method === 'POST') {
@@ -8553,21 +8555,26 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
         const image = body.image ? String(body.image).slice(0, 500000) : null;
         const replyToTs = Number(body.replyToTs || 0);
         if (!text && !image) return json({ok:false, error:'Leer'}, 400);
-        const result = await postBot('/app-chat-send', { uid: myUid, text, image, replyToTs });
+        const result = LOCAL_STORE
+            ? await localWrite(() => botLogic.appChatSend({ uid: myUid, text, image, replyToTs }))
+            : await postBot('/app-chat-send', { uid: myUid, text, image, replyToTs });
         if (!result || !result.ok) return json({ok:false, error: result?.error || 'Fehler'}, 500);
         return json({ok:true, message: result.message});
     }
     if (path === '/api/app-chat/mark-read' && req.method === 'POST') {
         if (!session) return json({ok:false}, 401);
         const myUid = getMyUid(session);
-        await postBot('/app-chat-mark-read', { uid: myUid });
+        if (LOCAL_STORE) { botLogic.appChatMarkRead({ uid: myUid }); datastore.saveDebounced(); }
+        else await postBot('/app-chat-mark-read', { uid: myUid });
         return json({ok:true});
     }
     if (path === '/api/app-chat/delete' && req.method === 'POST') {
         if (!session) return json({ok:false}, 401);
         const myUid = getMyUid(session);
         const body = await parseBody(req);
-        const result = await postBot('/app-chat-delete', { uid: myUid, ts: Number(body.ts || 0) });
+        const result = LOCAL_STORE
+            ? await localWrite(() => botLogic.appChatDelete({ uid: myUid, ts: Number(body.ts || 0) }))
+            : await postBot('/app-chat-delete', { uid: myUid, ts: Number(body.ts || 0) });
         if (!result || !result.ok) return json({ok:false, error: result?.error || 'Fehler'}, 403);
         return json({ok:true});
     }
@@ -8575,7 +8582,9 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
         if (!session) return json({ok:false}, 401);
         const myUid = getMyUid(session);
         const body = await parseBody(req);
-        const result = await postBot('/app-chat-react', { uid: myUid, ts: Number(body.ts || 0), emoji: String(body.emoji || '') });
+        const result = LOCAL_STORE
+            ? await localWrite(() => botLogic.appChatReact({ uid: myUid, ts: Number(body.ts || 0), emoji: String(body.emoji || '') }))
+            : await postBot('/app-chat-react', { uid: myUid, ts: Number(body.ts || 0), emoji: String(body.emoji || '') });
         if (!result || !result.ok) return json({ok:false, error: result?.error || 'Fehler'}, 400);
         return json({ok:true, reactions: result.reactions});
     }
@@ -9613,7 +9622,9 @@ p{line-height:1.65;color:var(--muted)}
         if (!chatKey || !timestamp) return json({ok:false, error:'Ungültig'}, 400);
         const [a, b] = chatKey.split('_');
         if (a !== myUid && b !== myUid) return json({ok:false, error:'Kein Zugriff'}, 403);
-        const result = await postBot('/delete-dm-api', { chatKey, timestamp: Number(timestamp), uid: myUid });
+        const result = LOCAL_STORE
+            ? await localWrite(() => botLogic.deleteDmApi({ chatKey, timestamp: Number(timestamp), uid: myUid }))
+            : await postBot('/delete-dm-api', { chatKey, timestamp: Number(timestamp), uid: myUid });
         // !!result war true für {ok:false, error} → fake-success.
         return json({ok: result?.ok === true, error: result?.error || null});
     }
@@ -10010,7 +10021,9 @@ p{line-height:1.65;color:var(--muted)}
         if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
         if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
         const body = await parseBody(req);
-        const r = await postBot('/send-dm-single-api', { uid: String(body.uid||''), text: String(body.text||'') });
+        const r = LOCAL_STORE
+            ? await localWrite(() => botLogic.sendDmSingleApi({ uid: String(body.uid||''), text: String(body.text||'') }))
+            : await postBot('/send-dm-single-api', { uid: String(body.uid||''), text: String(body.text||'') });
         return json(r || {ok:false, error:'Mainbot offline'});
     }
 
@@ -20910,7 +20923,9 @@ async function setRing(ringId) {
         const body = await parseBody(req);
         const { chatKey, timestamp, emoji } = body;
         if (!chatKey || !timestamp || !emoji) return json({ok:false});
-        const result = await postBot('/react-dm-msg-api', { chatKey, timestamp: Number(timestamp), emoji, uid: myUid });
+        const result = LOCAL_STORE
+            ? await localWrite(() => botLogic.reactDmMsgApi({ chatKey, timestamp: Number(timestamp), emoji, uid: myUid }))
+            : await postBot('/react-dm-msg-api', { chatKey, timestamp: Number(timestamp), emoji, uid: myUid });
         return json(result || {ok:false});
     }
 

@@ -1208,6 +1208,27 @@ function reactDmMsgApi({ chatKey, timestamp, emoji, uid }) {
     else msg.reactions[emoji].push(uidStr);
     return { ok: true };
 }
+function getAppChat({ uid, since, limit }) {
+    uid = String(uid || '');
+    since = Number(since || 0);
+    if (!d.appChat) d.appChat = [];
+    if (!d.appChatLastRead) d.appChatLastRead = {};
+    if (uid && d.users[uid]) d.users[uid].appLastSeen = Date.now();
+    const lim = Math.min(Number(limit) || 200, 500);
+    const msgs = since > 0 ? d.appChat.filter(m => (m.ts || 0) > since) : d.appChat.slice(-lim);
+    const lastRead = uid ? (d.appChatLastRead[uid] || 0) : 0;
+    const unread = uid ? d.appChat.filter(m => (m.ts || 0) > lastRead && String(m.uid) !== uid && !m.deleted).length : 0;
+    const memberCount = Object.entries(d.users || {}).filter(([u2, u]) => {
+        if (!u) return false;
+        if (u.parent_uid) return false;
+        if (u.appUser) return true;
+        if (u.appLastSeen) return true;
+        if (u.password_hash) return true;
+        if (d.appActivity && d.appActivity[u2]) return true;
+        return false;
+    }).length;
+    return { ok: true, messages: msgs, lastRead, unread, memberCount };
+}
 function appChatSend({ uid, text, image, replyToTs }) {
     uid = String(uid || '');
     text = String(text || '').trim().slice(0, 2000);
@@ -2188,7 +2209,7 @@ module.exports = {
     banUserApi, unbanUserApi, adminSuspendPostingApi,
     mergeUsers, deleteUser, userDeleteSelfApi,
     sendMessageApi, sendDmSingleApi, markMessagesRead, editMessageApi, deleteDmApi, reactDmMsgApi,
-    appChatSend, appChatMarkRead, appChatDelete, appChatReact,
+    appChatSend, appChatMarkRead, appChatDelete, appChatReact, getAppChat,
     mindsetSetAnswerApi, runMindsetPickApi, mindsetAdminPickApi, mindsetAdminSkipApi, mindsetAdminBlastApi, mindsetAdminRestoreApi, isMindsetLocked,
     helperChatAppendApi, helperQuestionApi, adminHelperAnswerApi,
     auswertenForUserDay, missionenAuswerten, backfillMissionenSinceMonday, thisWeekBackfillDays, applyWarningEscalation, xpBisNaechstesBadge,
