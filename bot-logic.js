@@ -257,13 +257,9 @@ function updateMissionProgress(uid) {
         istInstagramLink(l.text) && new Date(l.timestamp).toDateString() === heute && String(getRootUid(l.user_id)) !== String(getRootUid(uid))
     );
     heuteLinks.forEach(l => { if (!l.likes) l.likes = new Set(); });
-    const fam = new Set(familyUids(uid));
-    // URL-aggregiert wie der Feed: eindeutige heutige URLs, geliked wenn Family irgendeinen Eintrag der URL geliked hat.
-    const famLikedByText = _famLikedByTextMap(fam);
-    const todayTexts = new Set(heuteLinks.map(l => l.text));
-    const gesamt = todayTexts.size;
-    let geliked = 0;
-    for (const t of todayTexts) if (famLikedByText.get(t)) geliked++;
+    // Per-Account: nur Likes DIESES Kontos (exakte uid) zaehlen — Missionen sind pro Sub getrennt.
+    const gesamt = heuteLinks.length;
+    const geliked = heuteLinks.filter(l => l.likes.has(String(uid))).length;
     const m3Target = Math.min(M3_CAP, gesamt);
     if (gesamt > 0) { mission.m2 = geliked / gesamt >= 0.8; mission.m3 = m3Target > 0 && geliked >= m3Target; }
     else { mission.m2 = false; mission.m3 = false; }
@@ -298,18 +294,6 @@ function familyUids(uid) {
     }
     return [...set];
 }
-// Map text(URL) -> true, wenn IRGENDEIN Family-Konto IRGENDEINEN Link-Eintrag dieser
-// URL geliked hat. Aggregiert ueber ALLE d.links — genau wie der Feed (_linksByText),
-// damit "rotes Herz im Feed" == "geliked in der Mission" (auch bei doppelt geposteten URLs).
-function _famLikedByTextMap(famSet) {
-    const m = new Map();
-    for (const l of Object.values(d.links || {})) {
-        if (!l || !l.text || m.get(l.text)) continue;
-        const lk = l.likes instanceof Set ? l.likes : new Set((Array.isArray(l.likes) ? l.likes : []).map(String));
-        for (const f of famSet) if (lk.has(String(f))) { m.set(l.text, true); break; }
-    }
-    return m;
-}
 // ── Missions-Status: 1:1 aus telegram-bot GET /mission-status-api ──
 function missionStatusApi(uid) {
     uid = String(uid || '');
@@ -320,20 +304,13 @@ function missionStatusApi(uid) {
     const heuteLinks = Object.values(d.links).filter(l =>
         istInstagramLink(l.text) && new Date(l.timestamp).toDateString() === heute && String(getRootUid(l.user_id)) !== String(getRootUid(uid))
     );
-    // Family-aware: ein Link gilt als geliked, wenn IRGENDEIN Konto der Family (Du + Subs)
-    // ihn geliked hat — konsistent mit dem gesamt-Filter (der Family-Posts ausschliesst).
-    // Sonst zaehlen Likes ueber ein Sub-Konto nicht → M2/M3 bleiben bei z.B. 20/23.
-    const fam = new Set(familyUids(uid));
-    // URL-aggregiert wie der Feed (_linksByText): ein rotes Herz im Feed = geliked.
-    // Family-Like je URL über ALLE Link-Einträge (auch Duplikate/andere Tage) prüfen,
-    // sonst zählt ein doppelt gepostetes Reel als ungeliked obwohl das Herz rot ist.
-    const famLikedByText = _famLikedByTextMap(fam);
-    const todayTexts = new Set(heuteLinks.map(l => l.text));
-    const gesamt = todayTexts.size;
-    let geliked = 0;
-    for (const t of todayTexts) if (famLikedByText.get(t)) geliked++;
+    // Per-Account: jeder (Sub-)Account hat seine EIGENE Mission — es zaehlen nur die
+    // Likes DIESES Kontos (exakte uid), nicht der Family.
+    const _liked = (l) => l.likes instanceof Set ? l.likes.has(String(uid)) : (Array.isArray(l.likes) && l.likes.map(String).includes(String(uid)));
+    const gesamt = heuteLinks.length;
+    const geliked = heuteLinks.filter(_liked).length;
     const prozent = gesamt > 0 ? Math.round((geliked / gesamt) * 100) : 0;
-    const m1Live = (mission.likesGegeben || 0) >= 5 || geliked >= 5;
+    const m1Live = (mission.likesGegeben || 0) >= 5;
     const m2Live = gesamt > 0 && (geliked / gesamt) >= 0.8;
     const m3Target = Math.min(M3_CAP, gesamt);
     const m3Live = m3Target > 0 && geliked >= m3Target;
@@ -2547,38 +2524,6 @@ function mindsetStateApi(uid) {
     return out;
 }
 
-// ── DIAGNOSE v2 (read-only): per-Eintrag vs per-URL + same-text-Analyse ──
-function missionDebugApi(uid) {
-    uid = String(uid || '');
-    const heute = new Date().toDateString();
-    const fam = familyUids(uid);
-    const famSet = new Set(fam.map(String));
-    const likesOf = (l) => l.likes instanceof Set ? Array.from(l.likes).map(String) : (Array.isArray(l.likes) ? l.likes.map(String) : []);
-    const heuteLinks = Object.entries(d.links || {}).filter(([, l]) =>
-        l && istInstagramLink(l.text) && new Date(l.timestamp).toDateString() === heute && String(getRootUid(l.user_id)) !== String(getRootUid(uid)));
-    const famLikedByText = _famLikedByTextMap(famSet);
-    const detail = heuteLinks.map(([linkId, l]) => {
-        const sameEntries = Object.values(d.links || {}).filter(e => e && e.text === l.text);
-        return {
-            linkId, owner: String(l.user_id), text: l.text,
-            likedByMeThisEntry: likesOf(l).includes(uid),
-            thisEntryLikes: likesOf(l),
-            sameTextEntryCount: sameEntries.length,
-            sameTextLikedByMe: sameEntries.some(e => likesOf(e).includes(uid)),
-            sameTextFamLiked: !!famLikedByText.get(l.text),
-        };
-    });
-    const todayTexts = new Set(heuteLinks.map(([, l]) => l.text));
-    let gelikedUnique = 0; for (const t of todayTexts) if (famLikedByText.get(t)) gelikedUnique++;
-    return {
-        ok: true, uid, family: fam, today: heute,
-        // perUniqueURL == genau was missionStatusApi jetzt liefert:
-        perUniqueURL: { gesamt: todayTexts.size, geliked: gelikedUnique },
-        perEntry_alt: { gesamt: heuteLinks.length },
-        nichtGezaehlt: detail.filter(x => !x.sameTextFamLiked),
-    };
-}
-
 // ── AUTH: 1:1 aus telegram-bot portiert (PBKDF2). Security-kritisch — Schema
 //    pbkdf2$100000$salt$hash bleibt identisch, damit migrierte Hashes weiter gelten.
 function hashPasswordPBKDF2(password) {
@@ -3638,5 +3583,4 @@ module.exports = {
     adminStatsApi, adminUserlistApi, adminUserDetailApi, adminFunnelDebugApi, adminEngagementLogApi,
     adminMissionReportApi, adminHelperQuestionsApi, diamondLinkAdminListApi, prismaLinkAdminListApi,
     runWochenGewinnspielApi,
-    missionDebugApi,
 };

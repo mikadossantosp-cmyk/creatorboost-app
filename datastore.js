@@ -211,10 +211,10 @@ function projectDataLikeBot(d) {
     for (const [k, v] of Object.entries(d.links || {})) {
         const url = (v.text || '').trim();
         const merged = likesByUrl[url] || { likes: new Set(), likerNames: {} };
+        // KEIN Owner-Family-Padding mehr: vorher wurde familyUids(owner) in die Like-Liste
+        // injiziert → der Like-Button wurde rot obwohl der User NICHT in "wer hat geliked"
+        // steht (Desync). Jetzt enthaelt likes nur echte Liker.
         const likesArr = Array.from(merged.likes);
-        for (const fUid of _familyUids(d, String(v.user_id))) {
-            if (!likesArr.includes(fUid)) likesArr.push(fUid);
-        }
         out.links[k] = Object.assign({}, v, { likes: likesArr, likerNames: merged.likerNames });
     }
     return out;
