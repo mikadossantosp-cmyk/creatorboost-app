@@ -2102,7 +2102,7 @@ textarea.form-input{resize:none;min-height:80px}
 .post-category-label{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;padding:5px 11px;border-radius:999px;color:#fff;box-shadow:0 4px 12px rgba(255,107,107,0.25),inset 0 1px 0 rgba(255,255,255,0.15)}
 .post-likes-row{display:flex;align-items:center;gap:14px;padding:10px 16px 4px}
 .post-like-count{font-size:22px;font-weight:800;display:flex;align-items:center;gap:4px;color:var(--text)}
-.post-xp-pill{font-size:12px;font-weight:700;color:var(--gold);background:rgba(255,214,0,.12);padding:3px 10px;border-radius:20px}
+.post-xp-pill{font-size:12px;font-weight:700;color:var(--gold);background:rgba(255,214,0,.12);padding:3px 10px;border-radius:20px;display:inline-flex;align-items:center;gap:4px}
 .liker-modal{position:fixed;inset:0;z-index:500;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.55);backdrop-filter:blur(4px);opacity:0;pointer-events:none;transition:opacity .25s}
 .liker-modal.open{opacity:1;pointer-events:all}
 .liker-modal-sheet{width:100%;max-width:480px;background:var(--bg3);border-radius:20px 20px 0 0;max-height:70vh;overflow-y:auto;transform:translateY(100%);transition:transform .3s cubic-bezier(.4,0,.2,1)}
@@ -4718,7 +4718,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v214-sw-force-reload';
+const SW_VERSION='v215-feed-icons';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
@@ -10523,7 +10523,7 @@ window.onPinVisitStory = function(uid){
 '        </div>\n'+
 '      </div>\n'+
 '      <div style="position:absolute;top:10px;left:12px;background:rgba(0,0,0,.55);border-radius:8px;padding:4px 9px;display:flex;align-items:center;gap:5px;backdrop-filter:blur(4px)">\n'+
-'        <span style="font-size:13px">📸</span><span style="font-size:11px;color:#fff;font-weight:600">Instagram Reel</span>\n'+
+'        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" style="flex-shrink:0"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg><span style="font-size:11px;color:#fff;font-weight:600">Instagram Reel</span>\n'+
 '      </div>\n'+
 '      <div style="position:absolute;bottom:0;left:0;right:0;padding:10px 12px">\n'+
 '        <a href="/profil/'+link.user_id+'" onclick="event.stopPropagation()" style="display:flex;align-items:center;gap:8px;text-decoration:none">\n'+
@@ -10542,8 +10542,8 @@ window.onPinVisitStory = function(uid){
 '  </div>\n'+
 // Likes counter + XP badge
 '  <div class="post-likes-row">\n'+
-'    <span class="post-like-count">❤️ <span id="likes-'+lid1+'">'+likes.length+'</span></span>\n'+
-'    <span class="post-xp-pill">⚡ '+(poster.xp||0)+' XP</span>\n'+
+'    <span class="post-like-count"><svg width="20" height="20" viewBox="0 0 24 24" fill="#ef4444"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg><span id="likes-'+lid1+'">'+likes.length+'</span></span>\n'+
+'    <span class="post-xp-pill"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L3 14h7v8l10-12h-7z"/></svg>'+(poster.xp||0)+' XP</span>\n'+
 '  </div>\n'+
 // "Gefällt X und Y" text
 (likersNameText?'  <div class="post-likers">'+likersNameText+'</div>\n':'')+
@@ -10615,7 +10615,7 @@ commentsBox+
                 +(sl.caption?'<div style="font-size:12px;color:var(--muted);line-height:1.4;margin-bottom:8px">'+String(sl.caption).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</div>':'')+'\n'
                 +'<a href="'+htmlEsc(cleanInstagramUrl(sl.url||''))+'" target="_blank" rel="noopener noreferrer" onclick="markLinkVisited(\''+sl.id+'\')" style="display:inline-flex;align-items:center;gap:5px;padding:7px 14px;background:linear-gradient(135deg,#f59e0b,#a78bfa);color:#fff;border-radius:10px;font-size:12px;font-weight:700;text-decoration:none">→ Öffnen</a>\n'
                 +'</div></div>\n'
-                +'<div class="post-likes-row"><span class="post-like-count">❤️ <span id="sl-likes-'+sl.id+'">'+likes.length+'</span></span></div>\n'
+                +'<div class="post-likes-row"><span class="post-like-count"><svg width="20" height="20" viewBox="0 0 24 24" fill="#ef4444"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg><span id="sl-likes-'+sl.id+'">'+likes.length+'</span></span></div>\n'
                 +'<div id="sl-liker-rows-'+sl.id+'" style="display:none">'+likerRows+'</div>\n'
                 +'<div class="post-actions" style="gap:8px;padding:8px 16px 12px">'+likeBtn+whoLikedBtn+'</div>\n'
                 +'</div>';
