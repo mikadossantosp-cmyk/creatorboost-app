@@ -2887,6 +2887,649 @@ function collabAcceptFeedRulesApi({ uid }) {
     return { ok: true, acceptedAt: u.collabFeedRulesAcceptedAt };
 }
 
+// ════════ ADMIN-DASHBOARD READ-APIs (1:1 portiert aus telegram-bot) ════════
+// Reine Lese-Getter — KEINE Mutation, kein Telegram. Auth-Check macht die App-Route.
+
+// Dashboard-Stats: online (App-Presence ≤ 5min), today/week landing visits, signup-source breakdown, top stats.
+function adminStatsApi() {
+    const now = Date.now();
+    const ONLINE_THRESHOLD = 5 * 60 * 1000;
+    let online = 0, activeToday = 0, app24h = 0, app7d = 0, app30d = 0;
+    const sources = { telegram: 0, email: 0 };
+    let banned = 0;
+    const todayStartBerlin = (() => {
+        const parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Berlin', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).formatToParts(new Date());
+        const get = (t) => parts.find(p => p.type === t).value;
+        return new Date(get('year') + '-' + get('month') + '-' + get('day') + 'T00:00:00').getTime();
+    })();
+    for (const u of Object.values(d.users || {})) {
+        if (!u) continue;
+        if (u.appLastSeen) {
+            const age = now - u.appLastSeen;
+            if (age <= ONLINE_THRESHOLD) online++;
+            if (u.appLastSeen >= todayStartBerlin) activeToday++;
+            if (age <= 24 * 60 * 60 * 1000) app24h++;
+            if (age <= 7 * 24 * 60 * 60 * 1000) app7d++;
+            if (age <= 30 * 24 * 60 * 60 * 1000) app30d++;
+        }
+        if (!u.parent_uid) {
+            const src = u.signupSource || 'telegram';
+            sources[src] = (sources[src] || 0) + 1;
+            if (u.banned) banned++;
+        }
+    }
+    const todayStrLocal = new Date().toDateString();
+    const yesterdayStrLocal = new Date(Date.now() - 86400000).toDateString();
+    const xpTodaySum = Object.values(d.dailyXP || {}).reduce((s, v) => s + (Number(v) || 0), 0);
+    const xpYesterdaySum = Object.values(d.gesternDailyXP || {}).reduce((s, v) => s + (Number(v) || 0), 0);
+    let linksToday = 0, linksYesterday = 0, likesToday = 0, likesYesterday = 0;
+    for (const l of Object.values(d.links || {})) {
+        if (!l || !l.timestamp) continue;
+        const lDay = new Date(l.timestamp).toDateString();
+        const likeArr = Array.isArray(l.likes) ? l.likes : Array.from(l.likes || []);
+        const likeCount = likeArr.length;
+        if (lDay === todayStrLocal) linksToday++;
+        else if (lDay === yesterdayStrLocal) linksYesterday++;
+        if (lDay === yesterdayStrLocal) likesYesterday += likeCount;
+    }
+    const heuteToString = new Date().toDateString();
+    for (const m of Object.values(d.missionen || {})) {
+        if (m && m.date === heuteToString) likesToday += (Number(m.likesGegeben) || 0);
+    }
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const yesterdayStr = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    const daily = (d.funnel && d.funnel.daily) || {};
+    const last7Days = [];
+    for (let i = 6; i >= 0; i--) {
+        const day = new Date(Date.now() - i * 86400000).toISOString().slice(0, 10);
+        last7Days.push({ day, events: daily[day] || {} });
+    }
+    const last30Days = [];
+    for (let i = 29; i >= 0; i--) {
+        const day = new Date(Date.now() - i * 86400000).toISOString().slice(0, 10);
+        last30Days.push({ day, events: daily[day] || {} });
+    }
+    const last7DaysAggregated = {};
+    for (const d2 of last7Days) {
+        for (const [evt, count] of Object.entries(d2.events)) {
+            last7DaysAggregated[evt] = (last7DaysAggregated[evt] || 0) + count;
+        }
+    }
+    const today = daily[todayStr] || {};
+    const yesterday = daily[yesterdayStr] || {};
+    const f7 = last7DaysAggregated;
+    const conversion = (a, b) => (b > 0 ? Math.round((a / b) * 100) : 0);
+    const last30dCutoff = now - 30 * 24 * 60 * 60 * 1000;
+    const last7dCutoff = now - 7 * 24 * 60 * 60 * 1000;
+    let newUsers30d = 0, newUsers7d = 0, newUsersToday = 0;
+    const recentSignups = [];
+    for (const [uid, u] of Object.entries(d.users || {})) {
+        if (!u || u.parent_uid) continue;
+        const j = u.joinDate || 0;
+        if (j >= last30dCutoff) {
+            newUsers30d++;
+            if (j >= last7dCutoff) newUsers7d++;
+            if (new Date(j).toISOString().slice(0, 10) === todayStr) newUsersToday++;
+            recentSignups.push({
+                uid: String(uid),
+                name: u.spitzname || u.name || ('User ' + uid),
+                email: u.email || '',
+                instagram: u.instagram || '',
+                signupSource: u.signupSource || 'telegram',
+                joinDate: j,
+                emailConfirmed: !!u.emailConfirmedAt && !u.pendingEmail,
+                hasInstagram: !!u.instagram,
+            });
+        }
+    }
+    recentSignups.sort((a, b) => b.joinDate - a.joinDate);
+
+    const topXpToday = Object.entries(d.dailyXP || {})
+        .filter(([uid, xp]) => xp > 0 && d.users && d.users[uid] && !d.users[uid].banned)
+        .map(([uid, xp]) => {
+            const u = d.users[uid] || {};
+            return {
+                uid: String(uid),
+                name: u.spitzname || u.name || ('User ' + uid),
+                instagram: u.instagram || '',
+                role: u.role || '',
+                xpGained: Number(xp) || 0,
+                xpTotal: u.xp || 0,
+                isSub: !!u.parent_uid,
+            };
+        })
+        .sort((a, b) => b.xpGained - a.xpGained)
+        .slice(0, 10);
+
+    let tgSignups7d = 0, emSignups7d = 0;
+    for (const u of Object.values(d.users || {})) {
+        if (!u || u.parent_uid) continue;
+        if ((u.joinDate || 0) < last7dCutoff) continue;
+        if (u.signupSource === 'email') emSignups7d++;
+        else tgSignups7d++;
+    }
+    let tgActive7d = 0, emActive7d = 0;
+    for (const u of Object.values(d.users || {})) {
+        if (!u) continue;
+        if (!u.appLastSeen || (now - u.appLastSeen) > 7 * 86400000) continue;
+        if (u.signupSource === 'email') emActive7d++;
+        else tgActive7d++;
+    }
+    const sourceFunnel = {
+        telegram: { signups: tgSignups7d, active7d: tgActive7d, retentionPct: conversion(tgActive7d, tgSignups7d) },
+        email: { signups: emSignups7d, active7d: emActive7d, retentionPct: conversion(emActive7d, emSignups7d) },
+    };
+
+    const recentActivity = ((d.funnel && d.funnel.events) || [])
+        .slice(-30)
+        .reverse()
+        .slice(0, 20)
+        .map(e => ({
+            event: e.event,
+            ts: e.ts,
+            uid: (e.meta && e.meta.uid) || '',
+            name: e.meta && e.meta.uid && d.users && d.users[e.meta.uid]
+                ? (d.users[e.meta.uid].spitzname || d.users[e.meta.uid].name || 'User')
+                : ((e.meta && e.meta.email) || 'anonym'),
+        }));
+
+    return {
+        ok: true,
+        online,
+        activeToday,
+        app24h,
+        app7d,
+        app30d,
+        sources,
+        banned,
+        landingToday: today['landing-view'] || 0,
+        landingYesterday: yesterday['landing-view'] || 0,
+        signupViewToday: today['signup-view'] || 0,
+        signupCompleteToday: today['signup-complete'] || 0,
+        signupToday: (today['signup-complete'] || 0) + (today['signup'] || 0) + (today['email-signup'] || 0),
+        loginSuccessToday: today['login-success'] || 0,
+        emailSubmitToday: today['email-submit'] || 0,
+        telegramClickToday: today['telegram-click'] || 0,
+        ctaClickToday: today['landing-cta-click'] || 0,
+        funnel7d: {
+            landing: f7['landing-view'] || 0,
+            ctaClick: f7['landing-cta-click'] || 0,
+            signupView: f7['signup-view'] || 0,
+            signupComplete: f7['signup-complete'] || 0,
+            loginSuccess: f7['login-success'] || 0,
+            telegramClick: f7['telegram-click'] || 0,
+            emailSubmit: f7['email-submit'] || 0,
+            ctaPct: conversion(f7['landing-cta-click'] || 0, f7['landing-view'] || 0),
+            signupViewPct: conversion(f7['signup-view'] || 0, f7['landing-view'] || 0),
+            signupCompletePct: conversion(f7['signup-complete'] || 0, f7['signup-view'] || 0),
+            loginRetentionPct: conversion(f7['login-success'] || 0, f7['signup-complete'] || 0),
+        },
+        newUsersToday, newUsers7d, newUsers30d,
+        recentSignups: recentSignups.slice(0, 50),
+        last7Days,
+        last30Days,
+        last7DaysAggregated,
+        xpToday: xpTodaySum,
+        xpYesterday: xpYesterdaySum,
+        likesToday,
+        likesYesterday,
+        linksToday,
+        linksYesterday,
+        topXpToday,
+        sourceFunnel,
+        recentActivity,
+        totalUsers: Object.values(d.users || {}).filter(u => u && !u.parent_uid).length,
+    };
+}
+
+// User-Liste für App-Dashboard (Admin-only via App-side Check).
+function adminUserlistApi() {
+    const out = [];
+    const adminIds = Array.isArray(d._adminIds) ? d._adminIds.map(Number) : [];
+    for (const [uid, u] of Object.entries(d.users || {})) {
+        if (!u) continue;
+        out.push({
+            uid: String(uid),
+            name: u.name || '',
+            spitzname: u.spitzname || '',
+            instagram: u.instagram || '',
+            email: u.email || '',
+            pendingEmail: u.pendingEmail || '',
+            emailConfirmedAt: u.emailConfirmedAt || null,
+            xp: u.xp || 0,
+            diamonds: u.diamonds || 0,
+            role: u.role || '',
+            level: u.level || 1,
+            joinDate: u.joinDate || 0,
+            started: !!u.started,
+            inGruppe: u.inGruppe !== false,
+            likes: u.likes || 0,
+            totalLikes: u.totalLikes || 0,
+            links: u.links || 0,
+            bio: u.bio || '',
+            nische: u.nische || '',
+            signupSource: u.signupSource || 'telegram',
+            superlinkCredits: u.superlinkCredits || 0,
+            bonusLinks: (d.bonusLinks && d.bonusLinks[uid]) || 0,
+            warnings: u.warnings || 0,
+            appLastSeen: u.appLastSeen || null,
+            isAdmin: adminIds.includes(Number(uid)) || String(u.role || '').includes('Admin'),
+            isSub: !!u.parent_uid,
+            parentUid: u.parent_uid ? String(u.parent_uid) : null,
+            banned: !!u.banned,
+        });
+    }
+    return { ok: true, users: out };
+}
+
+// Detail-View eines einzelnen Users fürs Admin-Dashboard.
+function adminUserDetailApi(uid) {
+    uid = String(uid || '');
+    if (!uid) return { ok: false, error: 'uid erforderlich' };
+    const u = d.users[uid];
+    if (!u) return { ok: false, error: 'User nicht gefunden' };
+    const adminIds = Array.isArray(d._adminIds) ? d._adminIds.map(Number) : [];
+    const act = (d.appActivity && d.appActivity[uid]) || null;
+
+    const reports = Array.isArray(d.reports) ? d.reports : [];
+    const reportsAgainst = reports.filter(r => String(r.targetUid) === uid).map(r => ({
+        id: r.id, reporterUid: r.reporterUid,
+        reporterName: ((d.users[r.reporterUid] && (d.users[r.reporterUid].spitzname || d.users[r.reporterUid].name)) || ('User ' + r.reporterUid)),
+        reason: r.reason || '', context: r.context || '',
+        ts: r.ts, status: r.status || 'open', action: r.action || null,
+    }));
+    const reportsMade = reports.filter(r => String(r.reporterUid) === uid).map(r => ({
+        id: r.id, targetUid: r.targetUid,
+        targetName: ((d.users[r.targetUid] && (d.users[r.targetUid].spitzname || d.users[r.targetUid].name)) || ('User ' + r.targetUid)),
+        reason: r.reason || '', context: r.context || '',
+        ts: r.ts, status: r.status || 'open',
+    }));
+
+    let pinnedEngaged = 0, pinnedReceived = 0;
+    for (const e of (d.pinnedEngageLog || [])) {
+        if (String(e.engagerUid) === uid) pinnedEngaged++;
+        if (String(e.ownerUid) === uid) pinnedReceived++;
+    }
+    let collabEngaged = 0, collabReceived = 0;
+    for (const p of Object.values(d.collabPosts || {})) {
+        const likes = Array.isArray(p.likes) ? p.likes : [];
+        if (likes.includes(uid) || likes.includes(Number(uid))) collabEngaged++;
+        if (String(p.uid) === uid || String(p.partnerUid) === uid) collabReceived += likes.length;
+    }
+
+    const subAccounts = [];
+    for (const [oUid, oU] of Object.entries(d.users || {})) {
+        if (oU && String(oU.parent_uid) === uid) {
+            subAccounts.push({
+                uid: oUid, name: oU.spitzname || oU.name || ('Sub ' + oUid),
+                joinDate: oU.joinDate || null, xp: oU.xp || 0, banned: !!oU.banned,
+            });
+        }
+    }
+    const parent = u.parent_uid && d.users[u.parent_uid]
+        ? { uid: String(u.parent_uid), name: d.users[u.parent_uid].spitzname || d.users[u.parent_uid].name || ('User ' + u.parent_uid) }
+        : null;
+
+    const notifications = Array.isArray(d.notifications && d.notifications[uid])
+        ? d.notifications[uid].slice(-20).reverse().map(n => ({ icon: n.icon || '', text: n.text || '', ts: n.ts || n.timestamp || null }))
+        : [];
+
+    return {
+        ok: true,
+        user: {
+            uid, name: u.name || '', spitzname: u.spitzname || '', email: u.email || '',
+            instagram: u.instagram || '', bio: u.bio || '', nische: u.nische || '', gender: u.gender || '',
+            role: u.role || '', xp: u.xp || 0, level: u.level || 1, diamonds: u.diamonds || 0,
+            links: u.links || 0, totalLikes: u.totalLikes || 0, warnings: u.warnings || 0,
+            joinDate: u.joinDate || null, started: !!u.started, inGruppe: !!u.inGruppe,
+            banned: !!u.banned, bannedAt: u.bannedAt || null,
+            emailConfirmedAt: u.emailConfirmedAt || null,
+            signupSource: u.signup_source || u.signupSource || null,
+            profileCompletionRewarded: !!u.profileCompletionRewarded,
+            isAdmin: adminIds.includes(Number(uid)),
+            appUser: !!u.appUser,
+            pinnedReel: u.pinnedReel || null,
+            superlinkCredits: u.superlinkCredits || 0,
+            extraLinks: u.extraLinks || 0,
+        },
+        activity: act ? {
+            firstSeen: act.firstSeen, lastSeen: act.lastSeen, sessions: act.sessions || 0,
+            totalCalls: act.totalCalls || 0, lastEndpoint: act.lastEndpoint || '',
+            topEndpoints: Object.entries(act.endpoints || {}).sort((a, b) => b[1] - a[1]).slice(0, 5),
+        } : null,
+        engagement: {
+            pinnedEngaged, pinnedReceived,
+            collabEngaged, collabReceived,
+        },
+        reportsAgainst, reportsMade,
+        subAccounts, parent,
+        notifications,
+    };
+}
+
+// Debug: rohe Funnel-Daten (welche Events wann gespeichert wurden)
+function adminFunnelDebugApi() {
+    const funnel = d.funnel || { events: [], daily: {} };
+    const allEvents = funnel.events || [];
+    const last20 = allEvents.slice(-20).reverse().map(e => ({
+        event: e.event,
+        ts: e.ts,
+        date: new Date(e.ts).toISOString(),
+        meta: e.meta || {},
+    }));
+    const eventCounts = {};
+    for (const e of allEvents) eventCounts[e.event] = (eventCounts[e.event] || 0) + 1;
+    return {
+        ok: true,
+        totalEvents: allEvents.length,
+        funnelExists: !!d.funnel,
+        eventCounts,
+        last20Events: last20,
+        dailyKeys: Object.keys(funnel.daily || {}).sort(),
+        dailyToday: (funnel.daily && funnel.daily[new Date().toISOString().slice(0, 10)]) || {},
+        dailyBerlinToday: (funnel.daily && funnel.daily[(() => { const p = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Berlin', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date()); return p.find(x => x.type === 'year').value + '-' + p.find(x => x.type === 'month').value + '-' + p.find(x => x.type === 'day').value; })()]) || {},
+        nowUtc: new Date().toISOString(),
+        nowBerlin: new Date().toLocaleString('de-DE', { timeZone: 'Europe/Berlin' }),
+    };
+}
+
+// Dashboard-Datenquelle: alle Pinned-Engagements + Kollab-Likes + Reports mit Timestamps.
+function adminEngagementLogApi() {
+    const pinned = [];
+    for (const e of (d.pinnedEngageLog || []).slice(-500).reverse()) {
+        const eu = d.users[e.engagerUid] || {};
+        const ou = d.users[e.ownerUid] || {};
+        const pinnedUrl = ou.pinnedReel || null;
+        pinned.push({
+            engagerUid: e.engagerUid,
+            engagerName: eu.spitzname || eu.name || 'User ' + e.engagerUid,
+            engagerInstagram: eu.instagram || '',
+            ownerUid: e.ownerUid,
+            ownerName: ou.spitzname || ou.name || 'User ' + e.ownerUid,
+            ownerInstagram: ou.instagram || '',
+            ts: e.ts,
+            pinnedUrl,
+        });
+    }
+    const collabs = [];
+    for (const p of Object.values(d.collabPosts || {})) {
+        const a = d.users[p.uid] || {}, b = d.users[p.partnerUid] || {};
+        for (const lUid of (Array.isArray(p.likes) ? p.likes : [])) {
+            const lu = d.users[lUid] || {};
+            collabs.push({
+                postId: p.id, url: p.url, caption: (p.caption || '').slice(0, 100),
+                authorA: { uid: p.uid, name: a.spitzname || a.name || 'User', instagram: a.instagram || '' },
+                authorB: { uid: p.partnerUid, name: b.spitzname || b.name || 'User', instagram: b.instagram || '' },
+                engagerUid: String(lUid),
+                engagerName: lu.spitzname || lu.name || 'User ' + lUid,
+                engagerInstagram: lu.instagram || '',
+                createdAt: p.createdAt,
+                week: p.week,
+            });
+        }
+    }
+    collabs.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    const reports = [];
+    for (const r of (d.reports || []).slice().reverse()) {
+        const rep = d.users[r.reporterUid] || {};
+        const tgt = d.users[r.targetUid] || {};
+        reports.push({
+            id: r.id,
+            reporterUid: r.reporterUid,
+            reporterName: rep.spitzname || rep.name || ('User ' + r.reporterUid),
+            reporterInstagram: rep.instagram || '',
+            targetUid: r.targetUid,
+            targetName: tgt.spitzname || tgt.name || ('User ' + r.targetUid),
+            targetInstagram: tgt.instagram || '',
+            targetWarnings: Number(tgt.warnings || 0),
+            targetBanned: !!tgt.banned,
+            reason: r.reason || '',
+            context: r.context || '',
+            ts: r.ts,
+            status: r.status || 'open',
+            resolvedAt: r.resolvedAt || null,
+            resolvedBy: r.resolvedBy || null,
+            action: r.action || null,
+        });
+    }
+    return { ok: true, pinned: pinned.slice(0, 500), collabs: collabs.slice(0, 500), reports };
+}
+
+// Mission-Report: Compliance-Auswertung (M1/M2/M3 per Tag + Aktionen)
+function adminMissionReportApi(dateStr) {
+    dateStr = String(dateStr || '').trim();
+    if (!dateStr || dateStr === 'yesterday') {
+        const y = new Date(Date.now() - 86400000);
+        dateStr = y.toDateString();
+    } else if (dateStr === 'today') {
+        dateStr = new Date().toDateString();
+    } else if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+        dateStr = new Date(dateStr + 'T12:00:00').toDateString();
+    }
+    const adminIds = Array.isArray(d._adminIds) ? d._adminIds.map(Number) : [];
+    const dayLinks = Object.values(d.links || {}).filter(l =>
+        l && l.text && istInstagramLink(l.text) &&
+        new Date(l.timestamp).toDateString() === dateStr
+    );
+    const totalDayLinks = dayLinks.length;
+    const users = [];
+    for (const [uid, u] of Object.entries(d.users || {})) {
+        if (!u || u.parent_uid) continue;
+        if (adminIds.includes(Number(uid))) continue;
+        if (!u.started || u.banned) continue;
+        const userPostsToday = dayLinks.filter(l => String(l.user_id) === String(uid)).length;
+        const userLikesToday = dayLinks.filter(l => {
+            if (String(l.user_id) === String(uid)) return false;
+            const likes = l.likes instanceof Set ? Array.from(l.likes) : (Array.isArray(l.likes) ? l.likes : []);
+            return likes.includes(String(uid)) || likes.includes(Number(uid));
+        }).length;
+        const othersDayLinks = totalDayLinks - userPostsToday;
+        const m1Done = userLikesToday >= 5;
+        const m2Done = othersDayLinks > 0 && (userLikesToday / othersDayLinks) >= 0.8;
+        const m3Done = othersDayLinks > 0 && userLikesToday >= Math.min(M3_CAP, othersDayLinks);
+        const wMission = (d.wochenMissionen && d.wochenMissionen[uid]) || { m1Tage: 0, m2Tage: 0, m3Tage: 0 };
+        const act = (d.appActivity && d.appActivity[uid]) || null;
+        users.push({
+            uid,
+            name: u.spitzname || u.name || ('User ' + uid),
+            instagram: u.instagram || '',
+            warnings: Number(u.warnings || 0),
+            xp: Number(u.xp || 0),
+            diamonds: Number(u.diamonds || 0),
+            totalLikes: Number(u.totalLikes || 0),
+            links: Number(u.links || 0),
+            level: Number(u.level || 1),
+            role: u.role || '',
+            joinDate: u.joinDate || null,
+            postedToday: userPostsToday,
+            likedToday: userLikesToday,
+            othersAvailable: othersDayLinks,
+            dailyXP: Number((d.dailyXP && d.dailyXP[uid]) || 0),
+            weeklyXP: Number((d.weeklyXP && d.weeklyXP[uid]) || 0),
+            m1: m1Done,
+            m2: m2Done,
+            m3: m3Done,
+            weekM1: wMission.m1Tage || 0,
+            weekM2: wMission.m2Tage || 0,
+            weekM3: wMission.m3Tage || 0,
+            postSuspendedUntil: u.postSuspendedUntil || null,
+            postSuspendReason: u.postSuspendReason || null,
+            lastSeen: (act && act.lastSeen) || u.appLastSeen || null,
+            email: u.email || '',
+            postedButFailedM1: userPostsToday > 0 && !m1Done,
+            onlyPoster: userPostsToday > 0 && userLikesToday === 0,
+            onlyLiker: userPostsToday === 0 && userLikesToday > 0,
+            inactive: userPostsToday === 0 && userLikesToday === 0,
+            warningsCritical: Number(u.warnings || 0) >= 3,
+            warningsLast: Number(u.warnings || 0) >= 4,
+            banned: !!u.banned,
+        });
+    }
+    const summary = {
+        date: dateStr,
+        totalLinks: totalDayLinks,
+        totalUsers: users.length,
+        m1Done: users.filter(x => x.m1).length,
+        m2Done: users.filter(x => x.m2).length,
+        m3Done: users.filter(x => x.m3).length,
+        postedButFailedM1: users.filter(x => x.postedButFailedM1).length,
+        onlyPosters: users.filter(x => x.onlyPoster).length,
+        onlyLikers: users.filter(x => x.onlyLiker).length,
+        inactive: users.filter(x => x.inactive).length,
+        currentlyPostSuspended: users.filter(x => x.postSuspendedUntil && Number(x.postSuspendedUntil) > Date.now()).length,
+    };
+    return { ok: true, summary, users };
+}
+
+// Helper-Fragen-Queue (Filter: open/answered/all)
+function adminHelperQuestionsApi(status) {
+    status = String(status || 'open');
+    const all = Array.isArray(d.helperQuestions) ? d.helperQuestions : [];
+    const filtered = status === 'all' ? all
+        : status === 'answered' ? all.filter(q => !!q.answeredAt)
+        : all.filter(q => !q.answeredAt);
+    return { ok: true, total: all.length, open: all.filter(q => !q.answeredAt).length, questions: filtered.slice().reverse() };
+}
+
+// Admin-Liste aller Diamantlinks (inkl. Engager).
+function diamondLinkAdminListApi() {
+    _diamondEnsure();
+    const now = Date.now();
+    const out = Object.values(d.diamondLinks)
+        .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+        .map(p => {
+            const author = d.users[p.uid] || {};
+            const likes = Array.isArray(p.likes) ? p.likes : Array.from(p.likes || []);
+            const engagers = likes.map(lUid => {
+                const lu = d.users[lUid] || {};
+                return {
+                    uid: String(lUid),
+                    name: lu.spitzname || lu.name || ('User ' + lUid),
+                    instagram: lu.instagram || '',
+                    engagedAt: (p.engagedAt && p.engagedAt[lUid]) || null,
+                };
+            });
+            return {
+                id: p.id, uid: p.uid, url: p.url, caption: p.caption,
+                createdAt: p.createdAt, expiresAt: p.expiresAt, deletedAt: p.deletedAt || null,
+                active: !p.deletedAt && p.expiresAt > now,
+                likeCount: likes.length,
+                author: { uid: p.uid, name: author.spitzname || author.name || 'User', instagram: author.instagram || '' },
+                engagers,
+            };
+        });
+    return { ok: true, posts: out, cost: DIAMOND_LINK_COST, reward: DIAMOND_LINK_REWARD };
+}
+
+// Admin-Liste aller Prismalinks (inkl. Engager).
+function prismaLinkAdminListApi() {
+    _prismaEnsure();
+    const now = Date.now();
+    const out = Object.values(d.prismaLinks)
+        .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+        .map(p => {
+            const author = d.users[p.uid] || {};
+            const likes = Array.isArray(p.likes) ? p.likes : Array.from(p.likes || []);
+            const engagers = likes.map(lUid => {
+                const lu = d.users[lUid] || {};
+                return {
+                    uid: String(lUid),
+                    name: lu.spitzname || lu.name || ('User ' + lUid),
+                    instagram: lu.instagram || '',
+                    engagedAt: (p.engagedAt && p.engagedAt[lUid]) || null,
+                };
+            });
+            return {
+                id: p.id, uid: p.uid, url: p.url, caption: p.caption,
+                createdAt: p.createdAt, expiresAt: p.expiresAt, deletedAt: p.deletedAt || null,
+                active: !p.deletedAt && p.expiresAt > now,
+                likeCount: likes.length,
+                author: { uid: p.uid, name: author.spitzname || author.name || 'User', instagram: author.instagram || '' },
+                engagers,
+            };
+        });
+    return { ok: true, posts: out, cost: PRISMA_LINK_COST, reward: PRISMA_LINK_REWARD };
+}
+
+// ════════ WOCHEN-GEWINNSPIEL (Sonntag 20:00) — Write-Cron, 1:1 portiert ════════
+// Random-Winner aus weeklyXP (+1 Bonus-Link) + Wochen-Superlink-Engagement-Diamanten.
+// Hinweis: weeklyRankingDM (Top-3-Übersicht an alle gestarteten User) inline via dmUser.
+async function runWochenGewinnspielApi() {
+    try {
+        const adminIds = Array.isArray(d._adminIds) ? d._adminIds.map(Number) : [];
+        const isBot = (u) => !!(u && (u.is_bot === true || (u.username && /bot$/i.test(u.username))));
+        const teilnehmer = Object.entries(d.weeklyXP || {})
+            .filter(([uid]) => {
+                const u = d.users[uid];
+                if (!u || !u.started || u.inGruppe === false) return false;
+                if (adminIds.includes(Number(uid)) || istAdminId(uid)) return false;
+                if (isBot(u)) return false;
+                return d.weeklyXP[uid] > 0;
+            })
+            .map(([uid]) => uid);
+        let winnerId = null, winnerName = null;
+        if (teilnehmer.length) {
+            winnerId = teilnehmer[Math.floor(Math.random() * teilnehmer.length)];
+            const winner = d.users[winnerId];
+            winnerName = winner ? winner.name : '?';
+            if (!d.bonusLinks[winnerId]) d.bonusLinks[winnerId] = 0;
+            d.bonusLinks[winnerId] += 1;
+            if (!d.wochenGewinnspiel) d.wochenGewinnspiel = { gewinner: [] };
+            if (!Array.isArray(d.wochenGewinnspiel.gewinner)) d.wochenGewinnspiel.gewinner = [];
+            d.wochenGewinnspiel.gewinner.push({ name: winnerName, uid: winnerId, datum: new Date().toLocaleDateString() });
+            d.wochenGewinnspiel.letzteAuslosung = Date.now();
+            try { await dmUser(winnerId, '🎉 *Du hast das Wochen-Gewinnspiel gewonnen!*\n\n🎁 1 Extra Link nächste Woche!'); } catch (e) {}
+        } else {
+            console.log('❌ Wochen-Gewinnspiel: keine Teilnehmer');
+        }
+
+        // Wochen-Superlink-Engagement-Diamanten (wer alle Superlinks der Woche engagiert hat → +1 💎)
+        try {
+            const woche = Object.values(d.superlinks || {}).filter(sl => sl && sl.likes !== undefined);
+            if (woche.length >= 2) {
+                const slLikersPerSl = woche.map(sl => new Set((Array.isArray(sl.likes) ? sl.likes : Array.from(sl.likes || [])).map(String)));
+                const slPosters = new Set(woche.map(sl => String(sl.uid || sl.user_id || '')));
+                for (const [uid, u] of Object.entries(d.users || {})) {
+                    if (!u || istAdminId(uid) || u.parent_uid || u.inGruppe === false || !u.started) continue;
+                    if (slPosters.has(String(uid))) continue;
+                    const allEngaged = slLikersPerSl.every(set => set.has(String(uid)));
+                    if (allEngaged) {
+                        addDiamond(uid, 1);
+                        try { await dmUser(uid, '💎 *Wochenengagement-Bonus!*\n\nDu hast diese Woche ALLE Superlinks engagiert. +1 Diamant 🙏\nAktuell: ' + (d.users[uid].diamonds || 0) + ' 💎'); } catch (e) {}
+                    }
+                }
+            }
+        } catch (e) { console.log('Wochen-Engagement-Diamant Fehler:', e.message); }
+
+        // weeklyXP wird hier NICHT resettet — Reset läuft Montag 00:05 (wochenReset).
+        try { await runWochenGewinnspielRankingDM(); } catch (e) {}
+        return { ok: true, winnerId, winnerName, teilnehmer: teilnehmer.length };
+    } catch (e) {
+        console.log('Wochen-Gewinnspiel Fehler:', e.message);
+        return { ok: false, error: e.message };
+    }
+}
+
+// Weekly-Ranking-Übersicht an alle gestarteten Nicht-Admins (in-app DM, kein Telegram).
+async function runWochenGewinnspielRankingDM() {
+    const sorted = Object.entries(d.weeklyXP || {}).filter(([uid]) => d.users[uid] && !istAdminId(uid)).sort((a, b) => b[1] - a[1]);
+    if (!sorted.length) return;
+    const badges = ['🥇', '🥈', '🥉'];
+    for (const [uid] of Object.entries(d.users || {})) {
+        if (!d.users[uid].started || istAdminId(uid)) continue;
+        const rank = sorted.findIndex(([id]) => id === uid);
+        if (rank === -1) continue;
+        const xp = d.weeklyXP[uid] || 0;
+        const u = d.users[uid];
+        let text = '📆 *Weekly Ranking*\n━━━━━━━━━━━━━━\n\n';
+        text += (rank < 3 ? badges[rank] : '#' + (rank + 1)) + ' Platz ' + (rank + 1) + ' von ' + sorted.length + '\n';
+        text += '⭐ ' + xp + ' XP diese Woche\n\n━━━━━━━━━━━━━━\n🏆 *Top 3:*\n';
+        sorted.slice(0, 3).forEach(([tid, txp], i) => { text += badges[i] + ' ' + d.users[tid].name + '  ·  ' + txp + ' XP\n'; });
+        text += '\n🔥 Weiter so, ' + u.name + '!';
+        try { await dmUser(uid, text); } catch (e) {}
+    }
+}
+
 module.exports = {
     init, setThumbnailFetcher, setBildSaver,
     updateProfileApi, addProjectApi, updateProjectApi, deleteProjectApi, completeProfileApi, engagePinnedPostApi,
@@ -2925,4 +3568,7 @@ module.exports = {
     sendDmAllApi, createSubaccountApi, adminLinkAsSubApi, deleteSubaccountApi,
     reportUserApi, adminReportActionApi, adminScheduleEventApi,
     superlinksApi, helperChatHistoryApi, eventsStatusApi, userDataExportApi,
+    adminStatsApi, adminUserlistApi, adminUserDetailApi, adminFunnelDebugApi, adminEngagementLogApi,
+    adminMissionReportApi, adminHelperQuestionsApi, diamondLinkAdminListApi, prismaLinkAdminListApi,
+    runWochenGewinnspielApi,
 };

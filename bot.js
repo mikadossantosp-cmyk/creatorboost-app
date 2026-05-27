@@ -1468,7 +1468,7 @@ async function appCronTick() {
         if (wochentag === 0 && h === 20 && m === 0) {
             einmalig('wochenGewinnspiel', async () => {
                 console.log('🎰 [Cron] Trigger Wochen-Gewinnspiel → Mainbot');
-                const r = await postBot('/run-wochen-gewinnspiel-api', {});
+                const r = LOCAL_STORE ? await localWrite(() => botLogic.runWochenGewinnspielApi()) : await postBot('/run-wochen-gewinnspiel-api', {});
                 console.log('🎰 [Cron] Mainbot Response:', r ? JSON.stringify(r) : 'null');
             });
             einmalig('mindsetPick', async () => {
@@ -8117,7 +8117,8 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
             // App-Instanz die Datei nicht lokal hat (Multi-Volume-Setup). Ohne diesen
             // Sync sieht jeder ANDERE User weiter das alte Bild aus Mainbot-Cache.
             try {
-                const _syncResult = await postBot('/upload-bild-api', { uid: _uidU, type: 'profilepic', imageData });
+                // LOCAL_STORE: Bild ist bereits lokal gespeichert (oben) → Mainbot-Sync entfällt (no-op).
+                const _syncResult = LOCAL_STORE ? { ok: true } : await postBot('/upload-bild-api', { uid: _uidU, type: 'profilepic', imageData });
                 console.log('[upload-profilepic] mainbot-sync result:', _syncResult?.ok ? 'ok' : (_syncResult?.error || 'failed'));
             } catch(e) { console.error('[upload-profilepic] mainbot-sync threw:', e.message); }
             checkProfileCompletion(_uidU, session);
@@ -8169,7 +8170,8 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
             if (!_writeOkB) return json({ok:false, error:'Disk-Write fehlgeschlagen — Datei konnte nicht gespeichert werden'}, 500);
             // Sync zum Mainbot — gleiche Logik wie bei profilepic (Multi-Volume-Setup).
             try {
-                const _syncResultB = await postBot('/upload-bild-api', { uid: _uidB, type: 'banner', imageData });
+                // LOCAL_STORE: Bild ist bereits lokal gespeichert (oben) → Mainbot-Sync entfällt (no-op).
+                const _syncResultB = LOCAL_STORE ? { ok: true } : await postBot('/upload-bild-api', { uid: _uidB, type: 'banner', imageData });
                 console.log('[upload-banner] mainbot-sync result:', _syncResultB?.ok ? 'ok' : (_syncResultB?.error || 'failed'));
             } catch(e) { console.error('[upload-banner] mainbot-sync threw:', e.message); }
             checkProfileCompletion(_uidB, session);
@@ -9781,14 +9783,14 @@ p{line-height:1.65;color:var(--muted)}
     if (path === '/api/admin/engagement-log' && req.method === 'GET') {
         if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
         if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
-        const result = await fetchBotRaw('/admin-engagement-log-api');
+        const result = LOCAL_STORE ? botLogic.adminEngagementLogApi() : await fetchBotRaw('/admin-engagement-log-api');
         return json(result || {ok:false, error:'Mainbot offline'});
     }
 
     if (path === '/api/admin/stats' && req.method === 'GET') {
         if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
         if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
-        const result = await fetchBotRaw('/admin-stats-api');
+        const result = LOCAL_STORE ? botLogic.adminStatsApi() : await fetchBotRaw('/admin-stats-api');
         return json(result || {ok:false, error:'Mainbot offline'});
     }
 
@@ -9833,7 +9835,7 @@ p{line-height:1.65;color:var(--muted)}
     if (path === '/api/admin/funnel-debug' && req.method === 'GET') {
         if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
         if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
-        const result = await fetchBotRaw('/admin-funnel-debug-api');
+        const result = LOCAL_STORE ? botLogic.adminFunnelDebugApi() : await fetchBotRaw('/admin-funnel-debug-api');
         return json(result || {ok:false, error:'Mainbot offline'});
     }
 
@@ -9902,7 +9904,7 @@ p{line-height:1.65;color:var(--muted)}
         if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
         const targetUid = String(query.uid || '');
         if (!targetUid) return json({ok:false, error:'uid fehlt'}, 400);
-        const result = await fetchBotRaw('/admin-user-detail-api?uid=' + encodeURIComponent(targetUid));
+        const result = LOCAL_STORE ? botLogic.adminUserDetailApi(targetUid) : await fetchBotRaw('/admin-user-detail-api?uid=' + encodeURIComponent(targetUid));
         return json(result || {ok:false, error:'Mainbot offline'});
     }
 
@@ -9911,7 +9913,7 @@ p{line-height:1.65;color:var(--muted)}
         if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
         if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
         const date = String(query.date || 'yesterday');
-        const result = await fetchBotRaw('/admin-mission-report-api?date=' + encodeURIComponent(date));
+        const result = LOCAL_STORE ? botLogic.adminMissionReportApi(date) : await fetchBotRaw('/admin-mission-report-api?date=' + encodeURIComponent(date));
         return json(result || {ok:false, error:'Mainbot offline'});
     }
     if (path === '/api/admin/suspend-posting' && req.method === 'POST') {
@@ -9966,7 +9968,7 @@ p{line-height:1.65;color:var(--muted)}
         if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
         if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
         const status = String(query.status || 'open');
-        const r = await fetchBotRaw('/admin-helper-questions-api?status=' + encodeURIComponent(status));
+        const r = LOCAL_STORE ? botLogic.adminHelperQuestionsApi(status) : await fetchBotRaw('/admin-helper-questions-api?status=' + encodeURIComponent(status));
         return json(r || {ok:false, error:'Mainbot offline'});
     }
     if (path === '/api/admin/helper-answer' && req.method === 'POST') {
@@ -14259,7 +14261,7 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
     if (path === '/api/admin/users' && req.method === 'GET') {
         if (!session) return json({error:'Nicht eingeloggt'}, 401);
         if (!_dashIsAdmin) return json({error:'Nur Admins'}, 403);
-        const r = await fetchBotRaw('/admin-userlist-api');
+        const r = LOCAL_STORE ? botLogic.adminUserlistApi() : await fetchBotRaw('/admin-userlist-api');
         if (!r || !r.ok) return json({error:'Mainbot offline'}, 502);
         const threeDays = 3 * 24 * 3600 * 1000;
         const now = Date.now();
@@ -14735,7 +14737,7 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
     if (path === '/api/admin/diamond-link/list' && req.method === 'GET') {
         if (!session) return json({error:'Nicht eingeloggt'}, 401);
         if (!_dashIsAdmin) return json({error:'Nur Admins'}, 403);
-        const r = await fetchBotRaw('/diamond-link-admin-list-api');
+        const r = LOCAL_STORE ? botLogic.diamondLinkAdminListApi() : await fetchBotRaw('/diamond-link-admin-list-api');
         return json(r || {ok:false, error:'Mainbot offline'});
     }
     if (path === '/api/admin/diamond-link/delete' && req.method === 'POST') {
@@ -14780,7 +14782,7 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
     if (path === '/api/admin/prisma-link/list' && req.method === 'GET') {
         if (!session) return json({error:'Nicht eingeloggt'}, 401);
         if (!_dashIsAdmin) return json({error:'Nur Admins'}, 403);
-        const r = await fetchBotRaw('/prisma-link-admin-list-api');
+        const r = LOCAL_STORE ? botLogic.prismaLinkAdminListApi() : await fetchBotRaw('/prisma-link-admin-list-api');
         return json(r || {ok:false, error:'Mainbot offline'});
     }
     if (path === '/api/admin/prisma-link/delete' && req.method === 'POST') {
