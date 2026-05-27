@@ -481,6 +481,31 @@ function _reasonLabel(r) {
     return '🎁';
 }
 
+// ── Roher XP-Credit (Daily-Bonus/Roulette/Admin): 1:1 aus POST /add-xp ──
+// Unterscheidet sich bewusst von xpAdd: kein xpEvent-Multiplikator, kein
+// dailyXP, kein Trophy/Badge-Up-DM; setzt level+role direkt; weeklyXP nur wenn
+// !noRanking. (Daily-XP/Roulette nutzen noRanking:true.)
+function addXp({ uid, amount, noRanking, reason }) {
+    uid = String(uid || '');
+    amount = Number(amount);
+    noRanking = noRanking === true;
+    const u = d.users[uid];
+    if (!uid || !u) return { ok: false, error: 'User nicht gefunden' };
+    if (!Number.isFinite(amount)) return { ok: false, error: 'amount erforderlich' };
+    u.xp = (u.xp || 0) + amount;
+    if (u.xp < 0) u.xp = 0;
+    u.level = level(u.xp);
+    u.role = badge(u.xp);
+    if (!noRanking) {
+        if (!d.weeklyXP) d.weeklyXP = {};
+        d.weeklyXP[uid] = Math.max(0, (d.weeklyXP[uid] || 0) + amount);
+    }
+    if (amount > 0) {
+        try { dmUser(uid, `✨ *+${amount} XP*\n\n${_reasonLabel(reason)}\n⭐ Aktuell: ${u.xp} XP`); } catch (e) {}
+    }
+    return { ok: true, newXp: u.xp };
+}
+
 // ── Diamanten / Shop / Extra-Links: 1:1 aus den Bot-Endpoints ──
 function addExtraLink({ uid, reason }) {
     uid = String(uid || '');
@@ -590,7 +615,7 @@ function linkStatusApi(uid) {
 module.exports = {
     init, setThumbnailFetcher,
     postLinkFromApp, createPostApi, deletePostApi, commentApi, deleteCommentApi,
-    addExtraLink, addSuperlink, addDiamonds, removeDiamonds,
+    addXp, addExtraLink, addSuperlink, addDiamonds, removeDiamonds,
     buyItemApi, setActiveRingApi, buyExtralinkApi, linkStatusApi,
     // Like-Flow + Kern (verbatim portiert):
     likeFromApp, xpAdd, xpAddMitDaily, xpAddNurGesamt, badge, level, user,
