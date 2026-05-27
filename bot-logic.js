@@ -230,6 +230,18 @@ function istInstagramLink(text) {
     return t.includes('instagram.com') || t.includes('instagr.am');
 }
 
+function getWochenMission(uid) {
+    if (!d.wochenMissionen[uid]) d.wochenMissionen[uid] = { m1Tage: 0, m2Tage: 0, m3Tage: 0, letzterTag: null };
+    return d.wochenMissionen[uid];
+}
+function addWeeklyMissionDay(wMission, counterKey, dayKey) {
+    const lastKey = counterKey + 'LetzterTag';
+    if (wMission[lastKey] === dayKey) return false;
+    wMission[counterKey] = (wMission[counterKey] || 0) + 1;
+    wMission[lastKey] = dayKey;
+    wMission.letzterTag = dayKey;
+    return true;
+}
 function getMission(uid) {
     const heute = new Date().toDateString();
     if (!d.missionen[uid] || d.missionen[uid].date !== heute) {
@@ -716,6 +728,162 @@ function engagePinnedPostApi({ engagerUid, ownerUid }) {
     d.pinnedEngageLog.push({ engagerUid: String(engagerUid), ownerUid: String(ownerUid), ts: Date.now() });
     if (d.pinnedEngageLog.length > 2000) d.pinnedEngageLog = d.pinnedEngageLog.slice(-2000);
     return { ok: true };
+}
+
+// ════════ MISSIONS-AUSWERTUNG (12:00-Cron + Admin-Backfill) ════════
+function xpBisNaechstesBadge(xp) {
+    if (xp < 50) return { ziel: '📘 Anfänger', fehlend: 50 - xp };
+    if (xp < 500) return { ziel: '⬆️ Aufsteiger', fehlend: 500 - xp };
+    if (xp < 1000) return { ziel: '🏅 Erfahrener', fehlend: 1000 - xp };
+    if (xp < 5000) return { ziel: '👑 Elite', fehlend: 5000 - xp };
+    if (xp < 10000) return { ziel: '🌟 Elite+', fehlend: 10000 - xp };
+    if (xp < 25000) return { ziel: '💎 Legende', fehlend: 25000 - xp };
+    return null;
+}
+async function applyWarningEscalation(uid, reason, opts = {}) {
+    const u = d.users[uid];
+    if (!u) return { ok: false, error: 'User nicht gefunden' };
+    if (Array.isArray(d._adminIds) && d._adminIds.map(Number).includes(Number(uid))) return { ok: false, error: 'Admin-Accounts können nicht verwarnt werden' };
+    u.warnings = (Number(u.warnings || 0)) + 1;
+    const n = u.warnings;
+    let mainText;
+    const reasonText = reason ? '\n\n*Grund:* ' + reason : '';
+    if (n === 1 || n === 2) mainText = '⚠️ *Verwarnung ' + n + '/5*' + reasonText + '\n\nDu hast eine Verwarnung erhalten. Schau dass es nicht wieder passiert.';
+    else if (n === 3) mainText = '⚠️🚨 *3. VERWARNUNG (' + n + '/5)*' + reasonText + '\n\n*Wichtige Aufklärung:*\n• Bei der **5. Verwarnung** wirst du **automatisch gebannt** — kein manuelles Review.\n• Du kannst Verwarnungen abbauen: **5 Tage in Folge M1 erfüllen** → 1 Warnung weg.\n• Aktive Verwarnungen blocken Belohnungen nicht direkt, aber gefährden deinen Account.\n\nNimm das ernst.';
+    else if (n === 4) mainText = '⚠️🚨 *4. VERWARNUNG (' + n + '/5)*' + reasonText + '\n\n*LETZTE Warnung vor dem Bann!*\n• Eine weitere Verwarnung → **automatischer permanenter Bann**.\n• Du kannst 1 Warn abbauen: **5 Tage in Folge M1 erfüllen** → 1 Warnung weg.\n• Lies die Regeln gründlich.\n\nLetzte Chance — nutze sie.';
+    else if (n >= 5) mainText = '🚫 *Account permanent gebannt (' + n + '/5 Verwarnungen erreicht)*' + reasonText + '\n\nDu hast die maximale Anzahl an Verwarnungen erreicht und wurdest automatisch aus der Community entfernt.';
+    try { await dmUser(uid, mainText); } catch (e) {}
+    const notifIcon = n >= 5 ? '🚫' : (n >= 3 ? '🚨' : '⚠️');
+    addNotification(uid, notifIcon, (n >= 5 ? 'Account gebannt' : 'Verwarnung ' + n + '/5') + (reason ? ' (' + reason.slice(0, 40) + ')' : ''));
+    let autoBanned = false;
+    if (n >= 5 && !u.banned) {
+        u.banned = true; u.bannedAt = Date.now();
+        u.bannedReason = 'Auto-Ban: 5 Verwarnungen erreicht' + (reason ? ' (letzter Grund: ' + reason + ')' : '');
+        u.inGruppe = false; u.started = false;
+        if (d.dailyXP) delete d.dailyXP[uid];
+        if (d.weeklyXP) delete d.weeklyXP[uid];
+        if (d.bonusLinks) delete d.bonusLinks[uid];
+        if (d.missionen) delete d.missionen[uid];
+        if (d.wochenMissionen) delete d.wochenMissionen[uid];
+        if (d.userSessions) delete d.userSessions[uid];
+        for (const [, other] of Object.entries(d.users || {})) {
+            if (other && other.parent_uid && String(other.parent_uid) === uid) { other.banned = true; other.bannedAt = Date.now(); other.inGruppe = false; other.started = false; }
+        }
+        autoBanned = true;
+    }
+    return { ok: true, warnings: n, autoBanned };
+}
+async function auswertenForUserDay(uid, dayKey, opts) {
+    opts = opts || {};
+    if (!d.missionAuswertungProUser) d.missionAuswertungProUser = {};
+    const idemKey = uid + '_' + dayKey;
+    if (d.missionAuswertungProUser[idemKey]) return { skipped: 'already-processed' };
+    if (istAdminId(uid)) { d.missionAuswertungProUser[idemKey] = Date.now(); return { skipped: 'admin' }; }
+    const u = d.users[uid];
+    if (!u || !u.started) return { skipped: 'inactive' };
+    const name = u.name || '';
+    const wMission = getWochenMission(uid);
+    const queue = d.missionQueue[uid] || {};
+    const dayLinks = Object.values(d.links).filter(l => new Date(l.timestamp).toDateString() === dayKey);
+    const dayInstaLinks = dayLinks.filter(l => istInstagramLink(l.text) && String(getRootUid(l.user_id)) !== String(getRootUid(uid)));
+    const gesamtTag = dayInstaLinks.length;
+    const gelikedTag = dayInstaLinks.filter(l => l.likes && (l.likes instanceof Set ? l.likes.has(String(uid)) : Array.isArray(l.likes) && l.likes.includes(String(uid)))).length;
+    const prozentTag = gesamtTag > 0 ? gelikedTag / gesamtTag : 0;
+    const minLinksVorhanden = dayInstaLinks.length >= 5;
+    const storedMission = d.missionen?.[uid]?.date === dayKey ? d.missionen[uid] : null;
+    const m1Done = gelikedTag >= 5 || (queue.date === dayKey && !!queue.m1Pending) || !!storedMission?.m1;
+    const m2Done = gesamtTag > 0 && prozentTag >= 0.8;
+    const m3Target = Math.min(M3_CAP, gesamtTag);
+    const m3Done = m3Target > 0 && gelikedTag >= m3Target;
+    const anyDailyMissionDone = m1Done || m2Done || m3Done;
+    if (!anyDailyMissionDone && gesamtTag === 0 && !storedMission) { d.missionAuswertungProUser[idemKey] = Date.now(); return { skipped: 'no-activity' }; }
+    let meldungen = [];
+    let xpEarned = 0;
+    let diamondsEarned = 0;
+    if (m1Done) { xpAdd(uid, 5, name); xpEarned += 5; meldungen.push('✅ *Mission 1!*\n5 Links geliked → +5 XP'); }
+    if (anyDailyMissionDone && addWeeklyMissionDay(wMission, 'm1Tage', dayKey)) {
+        if (wMission.m1Tage >= 7) { xpAdd(uid, 10, name); xpEarned += 10; meldungen.push('🏆 *Wochen-M1!* +10 XP'); wMission.m1Tage = 0; }
+    }
+    if (m2Done) {
+        xpAdd(uid, 5, name); xpEarned += 5;
+        meldungen.push('✅ *Mission 2!*\n' + Math.round(prozentTag * 100) + '% geliked → +5 XP');
+        if (addWeeklyMissionDay(wMission, 'm2Tage', dayKey)) {
+            if (wMission.m2Tage >= 7) { xpAdd(uid, 15, name); xpEarned += 15; addDiamond(uid, 1); diamondsEarned += 1; meldungen.push('🏆 *Wochen-M2!* +15 XP + 💎 1 Diamant'); wMission.m2Tage = 0; }
+        }
+    }
+    if (m3Done) {
+        xpAdd(uid, 5, name); xpEarned += 5; addDiamond(uid, 1); diamondsEarned += 1;
+        meldungen.push('✅ *Mission 3!*\nAlle Links geliked → +5 XP + 💎 1 Diamant');
+        if (addWeeklyMissionDay(wMission, 'm3Tage', dayKey)) {
+            if (wMission.m3Tage >= 7) { xpAdd(uid, 20, name); xpEarned += 20; addDiamond(uid, 2); diamondsEarned += 2; meldungen.push('🏆 *Wochen-M3!* +20 XP + 💎 2 Diamanten'); wMission.m3Tage = 0; }
+        }
+    }
+    const hatTagLink = Object.values(d.links).some(l => istInstagramLink(l.text) && String(l.user_id) === String(uid) && new Date(l.timestamp).toDateString() === dayKey);
+    if (!d.m1Streak[uid]) d.m1Streak[uid] = { count: 0, letzterTag: null };
+    if (m1Done) {
+        if (d.m1Streak[uid].letzterTag !== dayKey) {
+            d.m1Streak[uid].count++;
+            d.m1Streak[uid].letzterTag = dayKey;
+            if (d.m1Streak[uid].count >= 5 && d.users[uid]?.warnings > 0) {
+                d.users[uid].warnings--;
+                d.m1Streak[uid].count = 0;
+                if (!opts.silent) { try { await dmUser(uid, '🎉 *Warn entfernt!*\n5 Tage M1 in Folge!\n\n⚠️ Warns: ' + d.users[uid].warnings + '/5'); } catch (e) {} }
+            }
+        }
+    } else if (!opts.skipStreakReset) { d.m1Streak[uid].count = 0; }
+    if (hatTagLink && !m1Done && minLinksVorhanden && d.users[uid] && !opts.silent) {
+        await applyWarningEscalation(String(uid), 'Link gepostet, aber M1 nicht erfüllt').catch(() => {});
+    }
+    if (!opts.silent) {
+        if (meldungen.length > 0 && d.users[uid]) {
+            const u2 = d.users[uid];
+            const nb = xpBisNaechstesBadge(u2.xp);
+            try { await dmUser(uid, '🎯 *Missions Auswertung*\n━━━━━━━━━━━━━━\n\n' + meldungen.join('\n\n') + '\n\n━━━━━━━━━━━━━━\n⭐ Gesamt: ' + u2.xp + ' XP' + (nb ? '  ·  ⬆️ Noch ' + nb.fehlend + ' bis ' + nb.ziel : '')); } catch (e) {}
+        } else if (hatTagLink && d.users[uid]?.started) {
+            try { await dmUser(uid, '📊 *Missions Auswertung*\n\n❌ Keine Mission erfüllt\n\nHeute neue Chance! 💪'); } catch (e) {}
+        }
+    }
+    if (d.missionQueue[uid] && d.missionQueue[uid].date === dayKey) delete d.missionQueue[uid];
+    d.missionAuswertungProUser[idemKey] = Date.now();
+    return { ok: true, m1Done, m2Done, m3Done, xpEarned, diamondsEarned, wMission: { ...wMission } };
+}
+async function missionenAuswerten() {
+    const heute = new Date().toDateString();
+    const gesternStr = new Date(Date.now() - 86400000).toDateString();
+    const jetzt12 = heute + '_12';
+    if (d.missionAuswertungErledigt?.[jetzt12]) return;
+    if (!d.missionAuswertungErledigt) d.missionAuswertungErledigt = {};
+    d.missionAuswertungErledigt[jetzt12] = true;
+    const candidates = new Set([...Object.keys(d.missionQueue || {}), ...Object.keys(d.users || {})]);
+    for (const uid of candidates) await auswertenForUserDay(uid, gesternStr, {});
+    d.missionAuswertungErledigt = { [jetzt12]: true };
+}
+function thisWeekBackfillDays() {
+    const now = new Date();
+    const day = now.getDay() || 7;
+    const monday = new Date(now);
+    monday.setDate(now.getDate() - (day - 1));
+    monday.setHours(0, 0, 0, 0);
+    const out = [];
+    const yesterdayCutoff = new Date(now); yesterdayCutoff.setDate(now.getDate() - 1); yesterdayCutoff.setHours(23, 59, 59, 999);
+    for (let d2 = new Date(monday); d2 <= yesterdayCutoff; d2.setDate(d2.getDate() + 1)) out.push(new Date(d2).toDateString());
+    return out;
+}
+async function backfillMissionenSinceMonday(opts) {
+    opts = Object.assign({ silent: true, skipStreakReset: true }, opts || {});
+    const days = thisWeekBackfillDays();
+    const stats = { days: days.length, users: 0, bumped: 0, xp: 0, diamonds: 0, skipped: 0 };
+    if (!days.length) return { ok: true, stats };
+    for (const [uid, u] of Object.entries(d.users || {})) {
+        if (!u || !u.started || istAdminId(uid)) continue;
+        stats.users++;
+        for (const dayKey of days) {
+            const r = await auswertenForUserDay(uid, dayKey, opts);
+            if (r && r.ok) { stats.bumped++; stats.xp += r.xpEarned || 0; stats.diamonds += r.diamondsEarned || 0; }
+            else if (r && r.skipped) stats.skipped++;
+        }
+    }
+    return { ok: true, days, stats };
 }
 
 // ════════ MINDSET-STORIES ════════
@@ -1639,6 +1807,7 @@ module.exports = {
     mergeUsers, deleteUser, userDeleteSelfApi,
     mindsetSetAnswerApi, runMindsetPickApi, mindsetAdminPickApi, mindsetAdminSkipApi, mindsetAdminBlastApi, mindsetAdminRestoreApi, isMindsetLocked,
     helperChatAppendApi, helperQuestionApi, adminHelperAnswerApi,
+    auswertenForUserDay, missionenAuswerten, backfillMissionenSinceMonday, thisWeekBackfillDays, applyWarningEscalation, xpBisNaechstesBadge,
     postLinkFromApp, createPostApi, deletePostApi, commentApi, deleteCommentApi,
     diamondLinkCreate, diamondLinkLike, diamondLinkAcceptRules, diamondLinkAdminDelete,
     prismaLinkCreate, prismaLinkLike, prismaLinkAcceptRules, prismaLinkAdminDelete,
