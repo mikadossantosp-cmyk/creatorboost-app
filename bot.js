@@ -36,6 +36,15 @@ const BOT_TOKEN     = process.env.BOT_TOKEN     || '';
 const BOT_USERNAME  = process.env.BOT_USERNAME  || 'Creator_Boostbot';
 const PORT          = process.env.PORT          || 3000;
 
+// ── MIGRATION: wenn LOCAL_STORE=1 liest die App /data aus dem eigenen
+// Datastore statt vom Bot. Default aus → kein Verhalten ändert sich.
+// Schreibpfade laufen in diesem Schritt noch über den Bot (Etappe 3).
+const LOCAL_STORE = process.env.LOCAL_STORE === '1';
+if (LOCAL_STORE) {
+    try { datastore.load(); console.log('[LOCAL_STORE] aktiv — /data kommt aus ' + datastore.DATA_FILE); }
+    catch (e) { console.error('[LOCAL_STORE] load fehlgeschlagen:', e.message); }
+}
+
 // Google Play Store Reviewer-Account: bypass Email-Verification + Instagram-Linking.
 // Reviewer loggt sich mit diesen Credentials ein → wird einmalig im Mainbot angelegt
 // + komplett ausgefüllt (instagram, appCode, briefing-seen) → landet direkt auf /feed.
@@ -1202,6 +1211,7 @@ function refreshDataCache() {
 }
 
 async function fetchBot(path) {
+    if (LOCAL_STORE && path === '/data') return datastore.projectDataLikeBot(datastore.getData());
     if (path === '/data') {
         const now = Date.now();
         // Boot-Fallback (leere User-Map, Mainbot war beim Start nicht erreichbar) NICHT als
@@ -4469,6 +4479,29 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
             res.writeHead(500, {'Content-Type':'application/json'});
             return res.end(JSON.stringify({ ok: false, error: e.message }));
         }
+    }
+
+    // ── MIGRATION: Parität prüfen — App-Datastore (projiziert wie der Bot)
+    //    vs. Live-Bot-/data. Differenzen = Drift seit dem letzten Backup.
+    if (path === '/api/admin/migration/compare' && req.method === 'GET') {
+        if (!(await _isAdminRequest(req, query))) { res.writeHead(403, {'Content-Type':'application/json'}); return res.end('{"ok":false,"error":"Kein Zugriff"}'); }
+        const bot = await fetchBotRaw('/data');
+        if (!bot || !bot.users) { res.writeHead(502, {'Content-Type':'application/json'}); return res.end('{"ok":false,"error":"Bot /data nicht erreichbar"}'); }
+        const local = datastore.projectDataLikeBot(datastore.getData());
+        const cnt = o => ({ users: Object.keys(o?.users || {}).length, links: Object.keys(o?.links || {}).length, superlinks: Object.keys(o?.superlinks || {}).length, threads: (o?.threads || []).length, notifications: Object.keys(o?.notifications || {}).length });
+        const botUsers = new Set(Object.keys(bot.users || {}));
+        const localUsers = new Set(Object.keys(local.users || {}));
+        res.writeHead(200, {'Content-Type':'application/json'});
+        return res.end(JSON.stringify({
+            ok: true,
+            bot: cnt(bot),
+            local: cnt(local),
+            drift: {
+                usersNurImBot: [...botUsers].filter(u => !localUsers.has(u)).slice(0, 30),
+                usersNurInApp: [...localUsers].filter(u => !botUsers.has(u)).slice(0, 30),
+            },
+            hinweis: 'Differenzen = Änderungen seit dem letzten Backup. Vor dem Cutover frisch ziehen.',
+        }, null, 2));
     }
 
     // ── DIAGNOSE: Mainbot live testen (für Admin-Debugging von Signup-Fehlern) ──

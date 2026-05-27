@@ -115,4 +115,68 @@ function importSnapshot(obj) {
 
 function getData() { return d; }
 
-module.exports = { DATA_DIR, DATA_FILE, defaults, getData, load, save, saveDebounced, stats, importSnapshot, serialize, rehydrate };
+// ── Family-Helfer (1:1 aus dem Bot portiert) — für die /data-Projektion. ──
+function _getRootUid(data, uid) { return data.users[uid]?.parent_uid ? String(data.users[uid].parent_uid) : String(uid); }
+function _familyUids(data, uid) {
+    const u = data.users[uid];
+    const set = new Set([String(uid)]);
+    if (!u) return [...set];
+    const rootUid = u.parent_uid ? String(u.parent_uid) : String(uid);
+    set.add(rootUid);
+    const root = data.users[rootUid];
+    if (root) {
+        if (root.subUid) set.add(String(root.subUid));
+        if (Array.isArray(root.subUids)) root.subUids.forEach(s => set.add(String(s)));
+    }
+    for (const [otherUid, otherUser] of Object.entries(data.users || {})) {
+        if (otherUser && String(otherUser.parent_uid || '') === rootUid) set.add(String(otherUid));
+    }
+    return [...set];
+}
+
+// Erzeugt EXAKT die Projektion, die der Bot über GET /data ausliefert:
+//   - sensitive Felder (password_hash/salt, Token-Maps) entfernt
+//   - Likes nach URL gemerged + Poster-Family in die Like-Liste injiziert
+//   - _adminIds durchgereicht
+// So bekommt der Rest der App im LOCAL_STORE-Modus die gewohnte /data-Form.
+function projectDataLikeBot(d) {
+    const out = Object.assign({}, d);
+    out._adminIds = d._adminIds;
+    if (out.users && typeof out.users === 'object') {
+        const safeUsers = {};
+        for (const [uid, u] of Object.entries(out.users)) {
+            if (!u || typeof u !== 'object') { safeUsers[uid] = u; continue; }
+            const { password_hash, password_salt, _password_hash, _password_salt, pendingEmailToken, emailLoginTokens, ...safe } = u;
+            safeUsers[uid] = safe;
+        }
+        out.users = safeUsers;
+    }
+    delete out.emailLoginTokens;
+    delete out.emailConfirmTokens;
+    delete out.pendingEmailConfirms;
+    delete out.accountUnlockTokens;
+    delete out.passwordResetTokens;
+
+    const likesByUrl = {};
+    for (const [, v] of Object.entries(d.links || {})) {
+        const url = (v.text || '').trim();
+        if (!url) continue;
+        if (!likesByUrl[url]) likesByUrl[url] = { likes: new Set(), likerNames: {} };
+        const vl = v.likes instanceof Set ? v.likes : new Set((Array.isArray(v.likes) ? v.likes : []).map(String));
+        vl.forEach(uid => likesByUrl[url].likes.add(String(uid)));
+        Object.assign(likesByUrl[url].likerNames, v.likerNames || {});
+    }
+    out.links = {};
+    for (const [k, v] of Object.entries(d.links || {})) {
+        const url = (v.text || '').trim();
+        const merged = likesByUrl[url] || { likes: new Set(), likerNames: {} };
+        const likesArr = Array.from(merged.likes);
+        for (const fUid of _familyUids(d, String(v.user_id))) {
+            if (!likesArr.includes(fUid)) likesArr.push(fUid);
+        }
+        out.links[k] = Object.assign({}, v, { likes: likesArr, likerNames: merged.likerNames });
+    }
+    return out;
+}
+
+module.exports = { DATA_DIR, DATA_FILE, defaults, getData, load, save, saveDebounced, stats, importSnapshot, serialize, rehydrate, projectDataLikeBot };
