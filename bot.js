@@ -1842,8 +1842,8 @@ button{cursor:pointer;border:none;outline:none;font-family:var(--font)}
 [data-theme=light] .liker-avatar,
 [data-theme=light] .profile-pic-img{box-shadow:0 0 0 1px rgba(15,23,42,0.10)}
 .story-name{font-size:11.5px;color:var(--text);max-width:74px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;letter-spacing:0.1px}
-.post{margin:0 12px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:18px;overflow:hidden;transition:border-color 0.2s,box-shadow 0.2s;box-shadow:0 4px 14px rgba(15,23,42,0.08),0 1px 3px rgba(15,23,42,0.05)}
-[data-theme=dark] .post{background:#121316;box-shadow:0 1px 3px rgba(0,0,0,0.4);border-color:var(--border2)}
+.post{margin:0 12px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;overflow:hidden;transition:border-color 0.2s,box-shadow 0.2s;box-shadow:0 1px 2px rgba(15,23,42,0.04),0 8px 24px rgba(15,23,42,0.06)}
+[data-theme=dark] .post{background:#121316;box-shadow:0 1px 2px rgba(0,0,0,0.5),0 8px 24px rgba(0,0,0,0.32);border-color:var(--border2)}
 .post:hover{border-color:var(--border);box-shadow:0 4px 14px rgba(15,23,42,0.06)}
 .post-header{display:flex;align-items:center;gap:11px;padding:14px 16px 10px}
 .post-user-info{flex:1;min-width:0}
@@ -4718,7 +4718,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v217-real-date';
+const SW_VERSION='v218-card-refine';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
@@ -10487,7 +10487,7 @@ window.onPinVisitStory = function(uid){
             const instaShortcode = (()=>{ const m=(link.text||'').match(/instagram\.com\/(?:reel|p|tv)\/([A-Za-z0-9_-]+)/); return m?m[1]:null; })();
 
             return '<div class="post fade-up" id="post-'+msgId+'" data-url="'+htmlEsc(cleanInstagramUrl(link.text||''))+'" data-ts="'+(link.timestamp||0)+'" style="position:relative">\n'+
-'  <div style="position:absolute;left:0;top:0;bottom:0;width:3px;background:'+grad+';border-radius:18px 0 0 18px"></div>\n'+
+''+
 // Category badge + timestamp row
 '  <div style="display:flex;align-items:center;justify-content:flex-end;padding:10px 16px 0">\n'+
 '    <div style="display:flex;align-items:center;gap:8px">\n'+
