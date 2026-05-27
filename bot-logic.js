@@ -793,6 +793,61 @@ function stopEvent({ type }) {
     return { ok: true };
 }
 
+function banUserApi({ uid }) {
+    uid = String(uid || '');
+    const u = d.users[uid];
+    if (!u) return { ok: false, error: 'User nicht gefunden (UID: ' + uid + ')' };
+    if (Array.isArray(d._adminIds) && d._adminIds.map(Number).includes(Number(uid))) return { ok: false, error: 'Admins können nicht gebannt werden' };
+    u.banned = true; u.bannedAt = Date.now(); u.inGruppe = false; u.started = false;
+    if (d.dailyXP) delete d.dailyXP[uid];
+    if (d.weeklyXP) delete d.weeklyXP[uid];
+    if (d.bonusLinks) delete d.bonusLinks[uid];
+    if (d.missionen) delete d.missionen[uid];
+    if (d.wochenMissionen) delete d.wochenMissionen[uid];
+    if (d.userSessions) delete d.userSessions[uid];
+    for (const [, other] of Object.entries(d.users || {})) {
+        if (other && other.parent_uid && String(other.parent_uid) === uid) {
+            other.banned = true; other.bannedAt = Date.now(); other.inGruppe = false; other.started = false;
+        }
+    }
+    try { dmUser(uid, `🚫 *Du wurdest gebannt*\n\nEin Admin hat dich aus der Community entfernt.`); } catch (e) {}
+    return { ok: true };
+}
+function unbanUserApi({ uid }) {
+    uid = String(uid || '');
+    const u = d.users[uid];
+    if (!u) return { ok: false, error: 'User nicht gefunden (UID: ' + uid + ')' };
+    u.banned = false; delete u.bannedAt; u.started = true; u.inGruppe = true;
+    for (const [, other] of Object.entries(d.users || {})) {
+        if (other && other.parent_uid && String(other.parent_uid) === uid) {
+            other.banned = false; delete other.bannedAt; other.inGruppe = true; other.started = true;
+        }
+    }
+    try { dmUser(uid, `✅ *Bann aufgehoben*\n\nDu bist wieder Teil der Community. Willkommen zurück!`); } catch (e) {}
+    return { ok: true };
+}
+function adminSuspendPostingApi({ uid, days, reason }) {
+    uid = String(uid || '');
+    days = Number(days || 0);
+    reason = String(reason || '').slice(0, 200);
+    if (!uid) return { ok: false, error: 'uid fehlt' };
+    const u = d.users[uid];
+    if (!u) return { ok: false, error: 'User nicht gefunden' };
+    if (Array.isArray(d._adminIds) && d._adminIds.map(Number).includes(Number(uid))) return { ok: false, error: 'Admins können nicht gesperrt werden' };
+    if (days <= 0) {
+        delete u.postSuspendedUntil; delete u.postSuspendReason;
+        try { dmUser(uid, '✅ *Posting-Sperre aufgehoben*\n\nDu kannst wieder posten.'); } catch (e) {}
+        return { ok: true, suspended: false };
+    }
+    if (days > 365) return { ok: false, error: 'Max 365 Tage' };
+    u.postSuspendedUntil = Date.now() + days * 86400000;
+    u.postSuspendReason = reason || null;
+    try {
+        dmUser(uid, '🚫 *Posten gesperrt für ' + days + ' Tag' + (days === 1 ? '' : 'e') + '*\n\n' + (reason ? 'Grund: ' + reason + '\n\n' : '') + 'Liken geht weiter — Likes zählen für deinen XP/Mission-Status. Sperre endet ' + new Date(u.postSuspendedUntil).toLocaleString('de-DE', { timeZone: 'Europe/Berlin' }) + '.');
+    } catch (e) {}
+    return { ok: true, suspended: true, until: u.postSuspendedUntil };
+}
+
 // ── Follow/Unfollow: 1:1 aus POST /follow-api ──
 function followApi({ followerUid, targetUid }) {
     followerUid = followerUid ? String(followerUid) : '';
@@ -1091,6 +1146,7 @@ module.exports = {
     updateProfileApi, addProjectApi, updateProjectApi, deleteProjectApi, completeProfileApi, engagePinnedPostApi,
     followApi,
     addWarn, removeWarn, resetUser, removeXp, startXpEvent, startDiamondEvent, stopEvent,
+    banUserApi, unbanUserApi, adminSuspendPostingApi,
     postLinkFromApp, createPostApi, deletePostApi, commentApi, deleteCommentApi,
     diamondLinkCreate, diamondLinkLike, diamondLinkAcceptRules, diamondLinkAdminDelete,
     prismaLinkCreate, prismaLinkLike, prismaLinkAcceptRules, prismaLinkAdminDelete,
