@@ -612,6 +612,112 @@ function linkStatusApi(uid) {
     return { ok: true, todayCount, bonusLinks, badgeBonus, maxLinks, canPost, isAdmin };
 }
 
+// Bild-Speicher: in der App schreiben die dedizierten Upload-Routen lokal.
+// Hier injizierbar; default setzt nur den Pfad (kein Datei-Write).
+let _saveBild = (uid, type /*, data */) => '/appbild/' + uid + '/' + type;
+function setBildSaver(fn) { _saveBild = fn; }
+
+// ── Profil-Feld-Updater: 1:1 aus POST /update-profile-api ──
+function updateProfileApi(body) {
+    body = body || {};
+    const { uid, bio, spitzname, banner, accentColor, profilePic } = body;
+    if (!uid || !d.users[uid]) return { ok: false, error: 'User nicht gefunden: ' + String(uid || '(leer)') };
+    const u = d.users[uid];
+    if (bio !== undefined) u.bio = bio.slice(0, 100);
+    if (spitzname !== undefined) u.spitzname = spitzname.slice(0, 30);
+    if (accentColor !== undefined) u.accentColor = accentColor;
+    if (body.nische !== undefined) u.nische = body.nische.slice(0, 50);
+    if (body.website !== undefined) u.website = body.website.slice(0, 100);
+    if (body.tiktok !== undefined) u.tiktok = body.tiktok.replace('@', '').slice(0, 50);
+    if (body.youtube !== undefined) u.youtube = body.youtube.replace('@', '').slice(0, 50);
+    if (body.twitter !== undefined) u.twitter = body.twitter.replace('@', '').slice(0, 50);
+    if (body.instagram !== undefined) u.instagram = String(body.instagram || '').replace(/^@/, '').replace(/[^a-zA-Z0-9._]/g, '').slice(0, 50);
+    if (body.email !== undefined) {
+        const newEmail = String(body.email || '').toLowerCase().trim();
+        if (newEmail === '') {
+            delete u.email; delete u.pendingEmail;
+        } else if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail) && newEmail.length <= 200) {
+            if (String(u.email || '').toLowerCase() === newEmail) {
+                delete u.pendingEmail;
+            } else {
+                const taken = Object.entries(d.users || {}).find(([oid, x]) =>
+                    String(oid) !== String(uid) &&
+                    (String(x.email || '').toLowerCase() === newEmail || String(x.pendingEmail || '').toLowerCase() === newEmail));
+                if (!taken) u.pendingEmail = newEmail;
+            }
+        }
+    }
+    if (body.confirmEmail !== undefined && body.confirmEmail) {
+        const conf = String(body.confirmEmail).toLowerCase().trim();
+        u.email = conf; u.emailConfirmedAt = Date.now(); delete u.pendingEmail;
+    }
+    if (body.appBriefingSeenV2 !== undefined) u.appBriefingSeenV2 = !!body.appBriefingSeenV2;
+    if (body.rulesAcceptedAt !== undefined) { const ts = Number(body.rulesAcceptedAt) || 0; if (ts > 0) u.rulesAcceptedAt = ts; }
+    if (banner !== undefined) {
+        if (banner.startsWith('data:image')) { _saveBild(uid, 'banner', banner); u.banner = '/bild/' + uid + '/banner'; }
+        else u.banner = banner;
+    }
+    if (profilePic !== undefined) {
+        if (profilePic.startsWith('data:image')) { _saveBild(uid, 'profilepic', profilePic); u.profilePic = '/bild/' + uid + '/profilepic'; }
+        else u.profilePic = profilePic;
+    }
+    return { ok: true };
+}
+// ── Projekte: 1:1 aus add/update/delete-project-api ──
+function addProjectApi({ uid, projectId, title, description, link, docName }) {
+    if (!uid || !projectId || !title?.trim()) return { ok: false, error: 'Fehlende Felder' };
+    const u = d.users[String(uid)];
+    if (!u) return { ok: false, error: 'User nicht gefunden' };
+    if (!u.projects) u.projects = [];
+    if (u.projects.length >= 2) return { ok: false, error: 'Max 2 Projekte erlaubt' };
+    u.projects.push({ id: projectId, title: title.trim(), description: (description || '').trim(), link: (link || '').trim(), docName: (docName || '').trim(), timestamp: Date.now() });
+    return { ok: true };
+}
+function updateProjectApi({ uid, projectId, title, description, link, docName }) {
+    if (!uid || !projectId || !title?.trim()) return { ok: false, error: 'Fehlende Felder' };
+    const u = d.users[String(uid)];
+    if (!u || !u.projects) return { ok: false, error: 'Projekt nicht gefunden' };
+    const proj = u.projects.find(p => p.id === String(projectId));
+    if (!proj) return { ok: false, error: 'Projekt nicht gefunden' };
+    proj.title = title.trim();
+    proj.description = (description || '').trim();
+    proj.link = (link || '').trim();
+    proj.docName = (docName || '').trim();
+    return { ok: true };
+}
+function deleteProjectApi({ uid, projectId }) {
+    if (!uid || !projectId) return { ok: false };
+    const u = d.users[String(uid)];
+    if (!u || !u.projects) return { ok: false };
+    u.projects = u.projects.filter(p => p.id !== String(projectId));
+    return { ok: true };
+}
+// ── Profil-100%-Belohnung: 1:1 aus complete-profile-api ──
+function completeProfileApi({ uid }) {
+    const u = d.users[String(uid)];
+    if (!u || u.profileCompletionRewarded) return { ok: false, alreadyRewarded: true };
+    u.profileCompletionRewarded = true;
+    u.diamonds = (u.diamonds || 0) + 1;
+    addNotification(String(uid), '🏆', 'Profil 100% vollständig! Du erhältst 💎 1 Diamant als Belohnung!');
+    return { ok: true, diamonds: u.diamonds };
+}
+// ── Pinned-Post engagen: 1:1 aus engage-pinned-post-api ──
+function engagePinnedPostApi({ engagerUid, ownerUid }) {
+    if (!engagerUid || !ownerUid || engagerUid === ownerUid) return { ok: false };
+    if (getRootUid(engagerUid) === getRootUid(ownerUid)) return { ok: false, error: 'Eigener Account-Familie' };
+    if (!d.pinnedEngages) d.pinnedEngages = {};
+    if (!d.pinnedEngages[engagerUid]) d.pinnedEngages[engagerUid] = [];
+    if (d.pinnedEngages[engagerUid].includes(String(ownerUid))) return { ok: false, alreadyDone: true };
+    d.pinnedEngages[engagerUid].push(String(ownerUid));
+    addDiamond(engagerUid, 1);
+    addNotification(engagerUid, '💎', 'Du hast einen Pinned-Post engagiert! +1 Diamant');
+    sendInAppDM(engagerUid, '📌 Pinned-Post engagiert\n\nDu hast einen pinned Link engagiert und 1 💎 Diamant erhalten.\n\nDu bestätigst hiermit den Post geliked, kommentiert, geteilt und gespeichert zu haben. Dies wird kontrolliert. Bei Schein-Engagement folgen Sanktionen.\n\nMehr im Explore → Regeln.');
+    if (!d.pinnedEngageLog) d.pinnedEngageLog = [];
+    d.pinnedEngageLog.push({ engagerUid: String(engagerUid), ownerUid: String(ownerUid), ts: Date.now() });
+    if (d.pinnedEngageLog.length > 2000) d.pinnedEngageLog = d.pinnedEngageLog.slice(-2000);
+    return { ok: true };
+}
+
 // ── Wochen-Key (Berlin) — Prozess läuft mit TZ=Europe/Berlin ──
 function getBerlinWeekKey() {
     const now = new Date();
@@ -876,7 +982,8 @@ function collabLikePost({ uid, postId }) {
 }
 
 module.exports = {
-    init, setThumbnailFetcher,
+    init, setThumbnailFetcher, setBildSaver,
+    updateProfileApi, addProjectApi, updateProjectApi, deleteProjectApi, completeProfileApi, engagePinnedPostApi,
     postLinkFromApp, createPostApi, deletePostApi, commentApi, deleteCommentApi,
     diamondLinkCreate, diamondLinkLike, diamondLinkAcceptRules, diamondLinkAdminDelete,
     prismaLinkCreate, prismaLinkLike, prismaLinkAcceptRules, prismaLinkAdminDelete,
