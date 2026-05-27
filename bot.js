@@ -1749,7 +1749,7 @@ forced-color-adjust:none;
 --bg:#ffffff;--bg2:#ffffff;--bg3:#ffffff;--bg4:#ffffff;
 --border:rgba(15,23,42,.10);--border2:rgba(15,23,42,.07);
 --text:#0f172a;--muted:#64748b;--muted2:#94a3b8;
---accent:#3b82f6;--accent2:#1d4ed8;
+--accent:#7c3aed;--accent2:#6d28d9;
 --green:#00c851;--blue:#4dabf7;--purple:#cc5de8;--gold:#ffd43b;
 --avatar-fallback-bg:#ffffff;--avatar-fallback-color:rgba(15,23,42,.30);--avatar-fallback-border:rgba(15,23,42,.10);
 --radius:16px;--radius-sm:10px;--radius-xs:6px;
@@ -1778,7 +1778,7 @@ color-scheme:dark;
 html{scroll-behavior:smooth;-webkit-tap-highlight-color:transparent}
 html{background:var(--bg) !important}
 body{font-family:var(--font);background:var(--bg) !important;color:var(--text);min-height:100vh;margin:0 auto;padding-bottom:calc(70px + var(--safe-bottom));overflow-x:hidden;overscroll-behavior-y:contain;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
-[data-theme=light] html, [data-theme=light] body{background:#f3f4f7 !important;background-image:none !important}
+[data-theme=light] html, [data-theme=light] body{background:#e8eaf0 !important;background-image:none !important}
 [data-theme=dark] html, [data-theme=dark] body{background:#000000 !important;background-image:none !important}
 a{color:inherit;text-decoration:none}
 img{display:block;max-width:100%}
@@ -1815,7 +1815,7 @@ button{cursor:pointer;border:none;outline:none;font-family:var(--font)}
 .nav-item svg{stroke:var(--accent)}
 .nav-item:active{transform:scale(0.92)}
 .nav-item.active{color:var(--text)}
-.nav-item.active svg{stroke:var(--accent);fill:rgba(59,130,246,0.12)}
+.nav-item.active svg{stroke:var(--accent);fill:rgba(124,58,237,0.12)}
 .nav-item svg{width:23px;height:23px;transition:stroke .2s,fill .2s}
 .nav-dot{width:4px;height:4px;border-radius:50%;background:var(--accent);margin:0 auto}
 .card{background:var(--bg3);border-radius:var(--radius);border:1px solid var(--border2);overflow:hidden}
@@ -4712,7 +4712,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v211-feed-premium';
+const SW_VERSION='v212-violet-accent';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
