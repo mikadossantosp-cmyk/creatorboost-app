@@ -8432,7 +8432,7 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
         // Perf: beide Bot-Calls PARALLEL statt sequenziell (~halbiert Latenz auf Badge-Poll).
         const [botData, ac] = await Promise.all([
             fetchBot('/data').catch(() => null),
-            fetchBot('/app-chat?uid=' + encodeURIComponent(myUid)).catch(() => null),
+            LOCAL_STORE ? Promise.resolve(botLogic.getAppChat({ uid: myUid })) : fetchBot('/app-chat?uid=' + encodeURIComponent(myUid)).catch(() => null),
         ]);
         if (!botData) return json({count:0});
         // Count unread DMs — Key-Prefilter (myUid muss im Key vorkommen) statt full-scan + split
@@ -12849,7 +12849,7 @@ try{ if(localStorage.getItem('cb_helper_seen')==='1'){ const b=document.getEleme
 
     // ── APP-COMMUNITY-CHAT (globale Gruppe) ──
     if (path === '/nachrichten/app-chat') {
-        const data = await fetchBot('/app-chat?uid=' + encodeURIComponent(myUid) + '&limit=200');
+        const data = LOCAL_STORE ? botLogic.getAppChat({ uid: myUid, limit: 200 }) : await fetchBot('/app-chat?uid=' + encodeURIComponent(myUid) + '&limit=200');
         const allMsgs = (data?.messages || []).filter(m => !m.deleted);
         const memberCount = data?.memberCount || 0;
         const lastTs = allMsgs.length ? allMsgs[allMsgs.length - 1].ts : 0;
@@ -13812,7 +13812,7 @@ document.getElementById('user-search-input')?.addEventListener('input',filterSea
         try {
             const results = await Promise.all([
                 fetchBot('/data').catch(() => null),
-                fetchBot('/app-chat?uid=' + encodeURIComponent(myUid) + '&limit=1').catch(() => null),
+                LOCAL_STORE ? Promise.resolve(botLogic.getAppChat({ uid: myUid, limit: 1 })) : fetchBot('/app-chat?uid=' + encodeURIComponent(myUid) + '&limit=1').catch(() => null),
             ]);
             botData = results[0];
             appChatData = results[1];
