@@ -257,8 +257,9 @@ function updateMissionProgress(uid) {
         istInstagramLink(l.text) && new Date(l.timestamp).toDateString() === heute && String(getRootUid(l.user_id)) !== String(getRootUid(uid))
     );
     heuteLinks.forEach(l => { if (!l.likes) l.likes = new Set(); });
+    const fam = new Set(familyUids(uid));
     const gesamt = heuteLinks.length;
-    const geliked = heuteLinks.filter(l => l.likes.has(String(uid))).length;
+    const geliked = heuteLinks.filter(l => { for (const f of fam) if (l.likes.has(String(f))) return true; return false; }).length;
     const m3Target = Math.min(M3_CAP, gesamt);
     if (gesamt > 0) { mission.m2 = geliked / gesamt >= 0.8; mission.m3 = m3Target > 0 && geliked >= m3Target; }
     else { mission.m2 = false; mission.m3 = false; }
@@ -303,11 +304,21 @@ function missionStatusApi(uid) {
     const heuteLinks = Object.values(d.links).filter(l =>
         istInstagramLink(l.text) && new Date(l.timestamp).toDateString() === heute && String(getRootUid(l.user_id)) !== String(getRootUid(uid))
     );
-    const likedBy = (l) => l.likes && (l.likes instanceof Set ? l.likes.has(String(uid)) : Array.isArray(l.likes) && l.likes.map(String).includes(String(uid)));
+    // Family-aware: ein Link gilt als geliked, wenn IRGENDEIN Konto der Family (Du + Subs)
+    // ihn geliked hat — konsistent mit dem gesamt-Filter (der Family-Posts ausschliesst).
+    // Sonst zaehlen Likes ueber ein Sub-Konto nicht → M2/M3 bleiben bei z.B. 20/23.
+    const fam = new Set(familyUids(uid));
+    const likedBy = (l) => {
+        if (!l.likes) return false;
+        if (l.likes instanceof Set) { for (const f of fam) if (l.likes.has(String(f))) return true; return false; }
+        const arr = Array.isArray(l.likes) ? l.likes.map(String) : [];
+        for (const f of fam) if (arr.includes(String(f))) return true;
+        return false;
+    };
     const gesamt = heuteLinks.length;
     const geliked = heuteLinks.filter(likedBy).length;
     const prozent = gesamt > 0 ? Math.round((geliked / gesamt) * 100) : 0;
-    const m1Live = (mission.likesGegeben || 0) >= 5;
+    const m1Live = (mission.likesGegeben || 0) >= 5 || geliked >= 5;
     const m2Live = gesamt > 0 && (geliked / gesamt) >= 0.8;
     const m3Target = Math.min(M3_CAP, gesamt);
     const m3Live = m3Target > 0 && geliked >= m3Target;
