@@ -1099,6 +1099,175 @@ async function backfillMissionenSinceMonday(opts) {
     return { ok: true, days, stats };
 }
 
+// ════════ NACHRICHTEN (User-DMs + App-Chat) ════════
+function sendDmSingleApi({ uid, text }) {
+    uid = String(uid || '');
+    text = String(text || '').trim();
+    if (!text) return { ok: false, error: 'Text fehlt' };
+    if (text.length > 1500) return { ok: false, error: 'Max 1500 Zeichen' };
+    if (!d.users[uid]) return { ok: false, error: 'User nicht gefunden' };
+    try { dmUser(uid, text); } catch (e) {}
+    return { ok: true };
+}
+// User→User DM (1:1 aus /send-message-api). Telegram-Weiterleitung entfernt;
+// Helper-Ticket-Auto-Forward (Admin→creatorboost) + Notifications bleiben.
+function sendMessageApi({ from, to, text, image, audio, replyTo }) {
+    if (!from || !to || (!text?.trim() && !image && !audio)) return { ok: false };
+    if (!d.messages) d.messages = {};
+    const fromIsAdmin = Array.isArray(d._adminIds) && d._adminIds.map(String).includes(String(from));
+    const toIsCreatorboost = String(to) === CREATORBOOST_UID;
+    let ticketForwarded = null;
+    if (fromIsAdmin && toIsCreatorboost && text && text.trim() && !image && !audio) {
+        const txt = text.trim();
+        if (!Array.isArray(d.helperQuestions)) d.helperQuestions = [];
+        let targetTicket = null;
+        let answerText = txt;
+        const mTagged = txt.match(/^\/t\s+(hq_[a-z0-9_]+)\s+([\s\S]+)$/i);
+        if (mTagged) { targetTicket = d.helperQuestions.find(q => q.id === mTagged[1]); answerText = mTagged[2].trim(); }
+        else { targetTicket = d.helperQuestions.filter(q => !q.answeredAt).sort((a, b) => (a.ts || 0) - (b.ts || 0))[0] || null; }
+        if (targetTicket && answerText) {
+            targetTicket.answeredAt = Date.now();
+            targetTicket.answer = answerText.slice(0, 1500);
+            targetTicket.answeredBy = String(from);
+            const userObj = d.users[targetTicket.uid];
+            const userName = userObj?.spitzname || userObj?.name || ('User ' + targetTicket.uid);
+            try { sendInAppDM(targetTicket.uid, '📨 *Antwort vom Admin auf deine Frage*\n\n_' + (targetTicket.question || '').slice(0, 140) + '_\n\n' + answerText); } catch (e) {}
+            if (!d.helperChats) d.helperChats = {};
+            if (!Array.isArray(d.helperChats[targetTicket.uid])) d.helperChats[targetTicket.uid] = [];
+            const _esc = s => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+            d.helperChats[targetTicket.uid].push({ role: 'bot', text: '📨 <b>Admin-Antwort</b> auf <i>"' + _esc((targetTicket.question || '').slice(0, 80)) + '"</i>:<br><br>' + _esc(String(answerText)).replace(/\n/g, '<br>'), ts: Date.now(), fromAdmin: true, ticketId: targetTicket.id });
+            if (d.helperChats[targetTicket.uid].length > 200) d.helperChats[targetTicket.uid] = d.helperChats[targetTicket.uid].slice(-200);
+            ticketForwarded = { id: targetTicket.id, userName, uid: targetTicket.uid, followUps: targetTicket.followUps || [] };
+        }
+    }
+    const chatKey = [String(from), String(to)].sort().join('_');
+    if (!d.messages[chatKey]) d.messages[chatKey] = [];
+    const msgEntry = { from: String(from), to: String(to), text: (text || '').slice(0, 500), image: image || null, audio: audio || null, timestamp: Date.now(), read: false };
+    if (replyTo && (replyTo.text || replyTo.name)) {
+        msgEntry.replyTo = { ts: Number(replyTo.ts) || 0, name: String(replyTo.name || '').slice(0, 40), text: String(replyTo.text || '').slice(0, 140) };
+    }
+    d.messages[chatKey].push(msgEntry);
+    if (d.messages[chatKey].length > 200) d.messages[chatKey].shift();
+    if (ticketForwarded) {
+        const stillOpen = d.helperQuestions.filter(q => !q.answeredAt).length;
+        const followUpsCount = Array.isArray(ticketForwarded.followUps) ? ticketForwarded.followUps.length : 0;
+        const followUpsTxt = followUpsCount > 0 ? ' (inkl. ' + followUpsCount + ' Follow-up' + (followUpsCount === 1 ? '' : 's') + ')' : '';
+        const confirm = '✅ Antwort an ' + ticketForwarded.userName + ' gesendet — Ticket ' + ticketForwarded.id + ' geschlossen' + followUpsTxt + '.' + (stillOpen > 0 ? '\n\n🎫 Noch ' + stillOpen + ' offene Ticket' + (stillOpen === 1 ? '' : 's') + ' — die nächste Nachricht hier geht an den nächsten User.' : '\n\n📭 Keine weiteren offenen Tickets.');
+        d.messages[chatKey].push({ from: CREATORBOOST_UID, to: String(from), text: confirm, image: null, audio: null, timestamp: Date.now() + 1, read: true, system: true });
+        if (d.messages[chatKey].length > 200) d.messages[chatKey].shift();
+    }
+    const fromUser = d.users[from];
+    const senderName = fromUser?.spitzname || fromUser?.name || 'Jemand';
+    if (fromUser) addNotification(String(to), '💬', senderName + (text ? ': ' + text.slice(0, 40) : ' hat dir etwas gesendet'), String(from));
+    if (String(to) === CREATORBOOST_UID && String(from) !== CREATORBOOST_UID) {
+        const preview = text ? ': ' + text.slice(0, 40) : (image ? ' 📷 Foto' : audio ? ' 🎤 Sprachnachricht' : '');
+        for (const adminId of (Array.isArray(d._adminIds) ? d._adminIds : [])) {
+            try { addNotification(String(adminId), '💬', '→ CreatorX: ' + senderName + preview, String(from)); } catch (e) {}
+        }
+    }
+    return { ok: true, ticketForwarded: ticketForwarded || null };
+}
+function markMessagesRead({ uid, chatKey }) {
+    if (!uid || !chatKey || !d.messages?.[chatKey]) return { ok: false };
+    d.messages[chatKey].forEach(m => { if (m.to === String(uid)) m.read = true; });
+    return { ok: true };
+}
+function editMessageApi({ uid, chatKey, timestamp, newText }) {
+    if (!uid || !chatKey || !timestamp || typeof newText !== 'string') return { ok: false, error: 'Fehlende Felder' };
+    const arr = d.messages?.[chatKey];
+    if (!arr) return { ok: false, error: 'Chat nicht gefunden' };
+    const msg = arr.find(m => Number(m.timestamp) === Number(timestamp) && String(m.from) === String(uid));
+    if (!msg) return { ok: false, error: 'Nachricht nicht gefunden oder nicht von dir' };
+    if (Date.now() - msg.timestamp > 5 * 60 * 1000) return { ok: false, error: 'Bearbeitungs-Limit (5 Min) überschritten' };
+    if (msg.image || msg.audio) return { ok: false, error: 'Nur Text-Nachrichten editierbar' };
+    const trimmed = String(newText || '').trim().slice(0, 500);
+    if (!trimmed) return { ok: false, error: 'Text darf nicht leer sein' };
+    msg.text = trimmed; msg.edited = true; msg.editedAt = Date.now();
+    return { ok: true };
+}
+function deleteDmApi({ chatKey, timestamp, uid }) {
+    if (!chatKey || !timestamp || !d.messages?.[chatKey]) return { ok: false };
+    const msg = d.messages[chatKey].find(m => m.timestamp === Number(timestamp));
+    if (!msg) return { ok: false };
+    const _admins = Array.isArray(d._adminIds) ? d._adminIds.map(String) : [];
+    const isAdmin = _admins.includes(String(uid)) || !!d.users?.[String(uid)]?.role?.includes('Admin');
+    if (msg.from !== String(uid) && !isAdmin) return { ok: false, error: 'Kein Zugriff' };
+    d.messages[chatKey] = d.messages[chatKey].filter(m => m.timestamp !== Number(timestamp));
+    return { ok: true };
+}
+function reactDmMsgApi({ chatKey, timestamp, emoji, uid }) {
+    if (!chatKey || !timestamp || !emoji || !uid) return { ok: false };
+    const msgs = d.messages?.[String(chatKey)] || [];
+    const msg = msgs.find(m => Number(m.timestamp) === Number(timestamp));
+    if (!msg) return { ok: false, error: 'Nachricht nicht gefunden' };
+    if (!msg.reactions) msg.reactions = {};
+    if (!msg.reactions[emoji]) msg.reactions[emoji] = [];
+    const uidStr = String(uid);
+    const idx = msg.reactions[emoji].indexOf(uidStr);
+    if (idx >= 0) { msg.reactions[emoji].splice(idx, 1); if (!msg.reactions[emoji].length) delete msg.reactions[emoji]; }
+    else msg.reactions[emoji].push(uidStr);
+    return { ok: true };
+}
+function appChatSend({ uid, text, image, replyToTs }) {
+    uid = String(uid || '');
+    text = String(text || '').trim().slice(0, 2000);
+    image = image ? String(image).slice(0, 500000) : null;
+    replyToTs = Number(replyToTs || 0);
+    if (!uid || !d.users[uid]) return { ok: false, error: 'User nicht gefunden' };
+    if (!text && !image) return { ok: false, error: 'Leer' };
+    if (!d.appChat) d.appChat = [];
+    const u = d.users[uid];
+    u.appLastSeen = Date.now();
+    const msg = { uid, name: u.spitzname || u.name || 'User', text, image: image || null, ts: Date.now() };
+    if (replyToTs) {
+        const parent = d.appChat.find(x => Number(x.ts) === replyToTs);
+        if (parent) msg.replyTo = { ts: Number(parent.ts), uid: String(parent.uid), name: parent.name || 'User', text: (parent.text || '').slice(0, 200), hasImage: !!parent.image };
+    }
+    d.appChat.push(msg);
+    if (d.appChat.length > 1000) d.appChat = d.appChat.slice(-1000);
+    return { ok: true, message: msg };
+}
+function appChatMarkRead({ uid }) {
+    uid = String(uid || '');
+    if (!uid) return { ok: false };
+    if (!d.appChatLastRead) d.appChatLastRead = {};
+    d.appChatLastRead[uid] = Date.now();
+    return { ok: true };
+}
+function appChatDelete({ uid, ts }) {
+    uid = String(uid || '');
+    ts = Number(ts || 0);
+    if (!uid || !ts) return { ok: false };
+    if (!d.appChat) d.appChat = [];
+    const idx = d.appChat.findIndex(m => Number(m.ts) === ts);
+    if (idx < 0) return { ok: false, error: 'Nicht gefunden' };
+    const m = d.appChat[idx];
+    const isOwner = String(m.uid) === uid;
+    const isAdmin = istAdminId(Number(uid));
+    if (!isOwner && !isAdmin) return { ok: false, error: 'Kein Zugriff' };
+    m.deleted = true; m.deletedAt = Date.now(); m.deletedBy = uid;
+    return { ok: true };
+}
+function appChatReact({ uid, ts, emoji }) {
+    uid = String(uid || '');
+    ts = Number(ts || 0);
+    emoji = String(emoji || '').slice(0, 8);
+    if (!uid || !ts || !emoji) return { ok: false };
+    if (!/[\p{Emoji}‍]+/u.test(emoji)) return { ok: false, error: 'Kein Emoji' };
+    if (!d.appChat) d.appChat = [];
+    const m = d.appChat.find(x => Number(x.ts) === ts);
+    if (!m) return { ok: false, error: 'Nicht gefunden' };
+    if (!m.reactions) m.reactions = {};
+    let hadSameEmoji = false;
+    for (const e of Object.keys(m.reactions)) {
+        const i = m.reactions[e].indexOf(uid);
+        if (i >= 0) { m.reactions[e].splice(i, 1); if (e === emoji) hadSameEmoji = true; if (m.reactions[e].length === 0) delete m.reactions[e]; }
+    }
+    if (!hadSameEmoji) { if (!m.reactions[emoji]) m.reactions[emoji] = []; m.reactions[emoji].push(uid); }
+    if (d.users[uid]) d.users[uid].appLastSeen = Date.now();
+    return { ok: true, reactions: m.reactions };
+}
+
 // ════════ MINDSET-STORIES ════════
 function _mindsetEnsure() {
     if (!d.mindsetStories) d.mindsetStories = { weeklyState: { week: null, pickedUid: null, pickedAt: null, locked: false }, waitlist: {}, rejected: {}, done: {} };
@@ -2018,6 +2187,8 @@ module.exports = {
     addWarn, removeWarn, resetUser, removeXp, startXpEvent, startDiamondEvent, stopEvent,
     banUserApi, unbanUserApi, adminSuspendPostingApi,
     mergeUsers, deleteUser, userDeleteSelfApi,
+    sendMessageApi, sendDmSingleApi, markMessagesRead, editMessageApi, deleteDmApi, reactDmMsgApi,
+    appChatSend, appChatMarkRead, appChatDelete, appChatReact,
     mindsetSetAnswerApi, runMindsetPickApi, mindsetAdminPickApi, mindsetAdminSkipApi, mindsetAdminBlastApi, mindsetAdminRestoreApi, isMindsetLocked,
     helperChatAppendApi, helperQuestionApi, adminHelperAnswerApi,
     auswertenForUserDay, missionenAuswerten, backfillMissionenSinceMonday, thisWeekBackfillDays, applyWarningEscalation, xpBisNaechstesBadge,
