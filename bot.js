@@ -3692,32 +3692,9 @@ function confirmCrop(){
       // sanftes reload um Profilbilder/Banner sofort zu erneuern
       setTimeout(()=>location.reload(), 100);
     });
-    // Update-Banner: wenn neuer SW im hintergrund installiert wird, kurzen prompt zeigen
-    let __updPromptShown = false;
-    function showUpdatePrompt(){
-      if (__updPromptShown) return; __updPromptShown = true;
-      let b = document.getElementById('cx-update-prompt');
-      if (b) return;
-      b = document.createElement('div');
-      b.id = 'cx-update-prompt';
-      b.style.cssText = 'position:fixed;left:50%;bottom:84px;transform:translateX(-50%);z-index:99999;background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;border-radius:14px;padding:10px 14px;display:flex;align-items:center;gap:12px;box-shadow:0 12px 30px rgba(124,58,237,0.45);max-width:340px;font-size:13.5px;font-weight:600;cursor:pointer;animation:cx-up-in .35s cubic-bezier(.16,1,.3,1)';
-      b.innerHTML = '<span style="font-size:20px">🔄</span><div style="flex:1;line-height:1.3">App aktualisiert<div style="font-size:11.5px;font-weight:500;opacity:.9;margin-top:1px">Tippe zum Neuladen</div></div><span style="font-size:14px;opacity:.85">→</span>';
-      b.onclick = ()=>{ try{ caches.keys().then(ks=>Promise.all(ks.map(k=>caches.delete(k)))); }catch(e){} location.reload(); };
-      document.body.appendChild(b);
-    }
-    if (!document.getElementById('cx-up-in-keyframes')) {
-      const s = document.createElement('style'); s.id='cx-up-in-keyframes';
-      s.textContent='@keyframes cx-up-in{from{opacity:0;transform:translateX(-50%) translateY(20px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}';
-      document.head.appendChild(s);
-    }
-    if (reg.waiting) showUpdatePrompt();
-    reg.addEventListener('updatefound',()=>{
-      const nw = reg.installing;
-      if (!nw) return;
-      nw.addEventListener('statechange',()=>{
-        if (nw.state === 'installed' && navigator.serviceWorker.controller) showUpdatePrompt();
-      });
-    });
+    // Kein Update-Banner mehr (User-Wunsch): Updates werden still eingespielt — der neue
+    // SW aktiviert sich via skipWaiting und der controllerchange-Listener oben laedt die
+    // Seite einmalig automatisch neu. Kein "App aktualisieren"-Prompt noetig.
     if(!('PushManager' in window))return;
     try{
       const kr=await fetch('/api/vapid-public-key');const {key}=await kr.json();
@@ -4715,7 +4692,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v207-install-android-only';
+const SW_VERSION='v208-no-update-banner';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
