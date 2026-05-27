@@ -8,4 +8,6 @@ app_db.json
 app_writes_log.json
 write_queue.json
 email_confirm_pending.json
+email_login_tokens.json
+account_unlock_tokens.json
 beta_testers.json
