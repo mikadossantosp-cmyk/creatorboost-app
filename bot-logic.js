@@ -2547,6 +2547,38 @@ function mindsetStateApi(uid) {
     return out;
 }
 
+// ── DIAGNOSE v2 (read-only): per-Eintrag vs per-URL + same-text-Analyse ──
+function missionDebugApi(uid) {
+    uid = String(uid || '');
+    const heute = new Date().toDateString();
+    const fam = familyUids(uid);
+    const famSet = new Set(fam.map(String));
+    const likesOf = (l) => l.likes instanceof Set ? Array.from(l.likes).map(String) : (Array.isArray(l.likes) ? l.likes.map(String) : []);
+    const heuteLinks = Object.entries(d.links || {}).filter(([, l]) =>
+        l && istInstagramLink(l.text) && new Date(l.timestamp).toDateString() === heute && String(getRootUid(l.user_id)) !== String(getRootUid(uid)));
+    const famLikedByText = _famLikedByTextMap(famSet);
+    const detail = heuteLinks.map(([linkId, l]) => {
+        const sameEntries = Object.values(d.links || {}).filter(e => e && e.text === l.text);
+        return {
+            linkId, owner: String(l.user_id), text: l.text,
+            likedByMeThisEntry: likesOf(l).includes(uid),
+            thisEntryLikes: likesOf(l),
+            sameTextEntryCount: sameEntries.length,
+            sameTextLikedByMe: sameEntries.some(e => likesOf(e).includes(uid)),
+            sameTextFamLiked: !!famLikedByText.get(l.text),
+        };
+    });
+    const todayTexts = new Set(heuteLinks.map(([, l]) => l.text));
+    let gelikedUnique = 0; for (const t of todayTexts) if (famLikedByText.get(t)) gelikedUnique++;
+    return {
+        ok: true, uid, family: fam, today: heute,
+        // perUniqueURL == genau was missionStatusApi jetzt liefert:
+        perUniqueURL: { gesamt: todayTexts.size, geliked: gelikedUnique },
+        perEntry_alt: { gesamt: heuteLinks.length },
+        nichtGezaehlt: detail.filter(x => !x.sameTextFamLiked),
+    };
+}
+
 // ── AUTH: 1:1 aus telegram-bot portiert (PBKDF2). Security-kritisch — Schema
 //    pbkdf2$100000$salt$hash bleibt identisch, damit migrierte Hashes weiter gelten.
 function hashPasswordPBKDF2(password) {
@@ -3606,4 +3638,5 @@ module.exports = {
     adminStatsApi, adminUserlistApi, adminUserDetailApi, adminFunnelDebugApi, adminEngagementLogApi,
     adminMissionReportApi, adminHelperQuestionsApi, diamondLinkAdminListApi, prismaLinkAdminListApi,
     runWochenGewinnspielApi,
+    missionDebugApi,
 };

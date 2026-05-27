@@ -20872,6 +20872,12 @@ async function setRing(ringId) {
         return json(result || {ok:false});
     }
 
+    if (path === '/api/mission-debug' && req.method === 'GET') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'},401);
+        if (LOCAL_STORE) return json(botLogic.missionDebugApi(myUid));
+        return json({ok:false, error:'nur LOCAL_STORE'});
+    }
+
     if (path === '/api/buy-item' && req.method === 'POST') {
         const body = await parseBody(req);
         const { itemId } = body;
