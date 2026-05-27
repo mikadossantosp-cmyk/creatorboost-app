@@ -421,9 +421,61 @@ async function postLinkFromApp({ uid, name, url, caption }) {
     return { ok: true, msgId: linkId };
 }
 
+// ── Community-Post: 1:1 aus POST /create-post-api ──
+function createPostApi({ uid, text, attachment, attachmentType }) {
+    if (!uid || (!text && !attachment)) return { ok: false };
+    if (!d.posts) d.posts = {};
+    if (!d.posts[uid]) d.posts[uid] = [];
+    const post = { text: (text || '').slice(0, 300), timestamp: Date.now(), likes: [] };
+    if (attachment) { post.attachment = attachment; post.attachmentType = attachmentType; }
+    d.posts[uid].push(post);
+    if (d.posts[uid].length > 50) d.posts[uid].shift();
+    return { ok: true };
+}
+// ── Community-Post löschen: 1:1 aus POST /delete-post-api ──
+function deletePostApi({ uid, timestamp }) {
+    if (!uid || !timestamp || !d.posts?.[uid]) return { ok: false };
+    d.posts[uid] = d.posts[uid].filter(p => p.timestamp !== Number(timestamp));
+    return { ok: true };
+}
+// ── Kommentar: 1:1 aus POST /comment-api ──
+function commentApi({ uid, name, linkId, text }) {
+    if (!uid || !text || !linkId) return { ok: false };
+    if (!d.comments) d.comments = {};
+    if (!d.comments[linkId]) d.comments[linkId] = [];
+    d.comments[linkId].push({ uid, name, text: text.slice(0, 200), timestamp: Date.now() });
+    if (d.comments[linkId].length > 100) d.comments[linkId].shift();
+    let postOwnerUid = null;
+    const lnk = d.links?.[linkId] || Object.values(d.links || {}).find(l => String(l.counter_msg_id) === String(linkId));
+    if (lnk?.user_id) postOwnerUid = String(lnk.user_id);
+    else if (typeof linkId === 'string' && linkId.includes('_')) postOwnerUid = linkId.split('_')[0];
+    if (postOwnerUid && String(postOwnerUid) !== String(uid) && d.users[postOwnerUid]) {
+        addNotification(postOwnerUid, '💬', (name || 'Jemand') + ' hat kommentiert: ' + text.slice(0, 40), String(uid));
+    }
+    return { ok: true };
+}
+// ── Kommentar löschen: 1:1 aus POST /delete-comment-api ──
+function deleteCommentApi({ uid, postId, commentIdx, commentTs }) {
+    if (!uid || !postId || !d.comments?.[postId]) return { ok: false };
+    const comments = d.comments[postId];
+    let target = -1;
+    if (commentTs) {
+        target = comments.findIndex(c => Number(c.timestamp) === Number(commentTs) && String(c.uid) === String(uid));
+        if (target < 0 && istAdminId(Number(uid))) {
+            target = comments.findIndex(c => Number(c.timestamp) === Number(commentTs));
+        }
+    } else if (Number.isInteger(commentIdx) && comments[commentIdx]) {
+        const c = comments[commentIdx];
+        if (String(c.uid) === String(uid) || istAdminId(Number(uid))) target = commentIdx;
+    }
+    if (target < 0) return { ok: false, error: 'Kommentar nicht gefunden oder keine Berechtigung' };
+    comments.splice(target, 1);
+    return { ok: true };
+}
+
 module.exports = {
     init, setThumbnailFetcher,
-    postLinkFromApp,
+    postLinkFromApp, createPostApi, deletePostApi, commentApi, deleteCommentApi,
     // Like-Flow + Kern (verbatim portiert):
     likeFromApp, xpAdd, xpAddMitDaily, xpAddNurGesamt, badge, level, user,
     istAdminId, getRootUid, isSubAccount, weekStart,
