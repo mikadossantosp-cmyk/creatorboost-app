@@ -718,6 +718,288 @@ function engagePinnedPostApi({ engagerUid, ownerUid }) {
     return { ok: true };
 }
 
+// ════════ USER MERGE / DELETE (Helfer 1:1 aus dem Bot) ════════
+function _findUser(query) {
+    const q = String(query).trim().toLowerCase().replace(/^@/, '');
+    if (!q) return null;
+    if (d.users[q]) return q;
+    if (d.users[query]) return query;
+    for (const [uid, u] of Object.entries(d.users)) {
+        if (String(u.username || '').toLowerCase() === q) return uid;
+        if (String(u.instagram || '').toLowerCase() === q) return uid;
+        if (String(u.name || '').toLowerCase() === q) return uid;
+        if (String(u.spitzname || '').toLowerCase() === q) return uid;
+        if (String(u.email || '').toLowerCase() === q) return uid;
+    }
+    return null;
+}
+function _purgeUidFromCollections(uid) {
+    const id = String(uid);
+    for (const key of [
+        'dailyXP', 'weeklyXP', 'gesternDailyXP', 'tracker', 'counter', 'badgeTracker',
+        'bonusLinks', 'missionen', 'wochenMissionen', 'missionQueue', 'm1Streak',
+        'dailyLogins', 'dailyGroupMsgs', 'threadLastRead', 'warteNachricht',
+        'instaWarte', 'dmNachrichten', 'appActivity', '_smartReminderSent'
+    ]) {
+        if (d[key] && d[key][id] !== undefined) delete d[key][id];
+    }
+    if (d.notifications) delete d.notifications[id];
+    if (d.appChatLastRead) delete d.appChatLastRead[id];
+    if (d.posts) delete d.posts[id];
+    if (d.pinnedEngages) delete d.pinnedEngages[id];
+    for (const u of Object.values(d.users || {})) {
+        if (Array.isArray(u.followers)) u.followers = u.followers.filter(x => String(x) !== id);
+        if (Array.isArray(u.following)) u.following = u.following.filter(x => String(x) !== id);
+    }
+    for (const [k, l] of Object.entries(d.links || {})) {
+        if (String(l.user_id) === id) { delete d.links[k]; continue; }
+        if (l.likes) {
+            if (typeof l.likes.delete === 'function') l.likes.delete(id);
+            else if (Array.isArray(l.likes)) l.likes = l.likes.filter(x => String(x) !== id);
+        }
+        if (l.likerNames && l.likerNames[id]) delete l.likerNames[id];
+    }
+    for (const [k, sl] of Object.entries(d.superlinks || {})) {
+        if (String(sl.uid) === id) { delete d.superlinks[k]; continue; }
+        if (Array.isArray(sl.likes)) sl.likes = sl.likes.filter(x => String(x) !== id);
+        if (sl.likerNames && sl.likerNames[id]) delete sl.likerNames[id];
+    }
+    if (d.comments && typeof d.comments === 'object') {
+        for (const cKey of Object.keys(d.comments)) {
+            if (Array.isArray(d.comments[cKey])) d.comments[cKey] = d.comments[cKey].filter(c => String(c.uid) !== id);
+        }
+    }
+    if (Array.isArray(d.appChat)) {
+        for (const m of d.appChat) {
+            if (String(m.uid) === id) { m.deleted = true; m.deletedAt = Date.now(); }
+            if (m.reactions) {
+                for (const emoji of Object.keys(m.reactions)) {
+                    if (Array.isArray(m.reactions[emoji])) {
+                        m.reactions[emoji] = m.reactions[emoji].filter(x => String(x) !== id);
+                        if (m.reactions[emoji].length === 0) delete m.reactions[emoji];
+                    }
+                }
+            }
+        }
+    }
+    if (d.threadMessages && typeof d.threadMessages === 'object') {
+        for (const tk of Object.keys(d.threadMessages)) {
+            if (Array.isArray(d.threadMessages[tk])) d.threadMessages[tk] = d.threadMessages[tk].filter(m => String(m.uid) !== id);
+        }
+    }
+    if (d.messages && typeof d.messages === 'object') {
+        for (const chatKey of Object.keys(d.messages)) {
+            if (chatKey.split('_').includes(id)) delete d.messages[chatKey];
+        }
+    }
+    if (d.notifications && typeof d.notifications === 'object') {
+        for (const nk of Object.keys(d.notifications)) {
+            if (Array.isArray(d.notifications[nk])) d.notifications[nk] = d.notifications[nk].filter(n => String(n.actorUid || '') !== id);
+        }
+    }
+    if (d.pinnedEngages && typeof d.pinnedEngages === 'object') {
+        for (const pk of Object.keys(d.pinnedEngages)) {
+            if (Array.isArray(d.pinnedEngages[pk])) d.pinnedEngages[pk] = d.pinnedEngages[pk].filter(x => String(x) !== id);
+        }
+    }
+    if (Array.isArray(d.emailLoginLog)) d.emailLoginLog = d.emailLoginLog.filter(e => String(e.uid || '') !== id);
+    if (d.mindsetStories) {
+        if (d.mindsetStories.waitlist) delete d.mindsetStories.waitlist[id];
+        if (d.mindsetStories.rejected) delete d.mindsetStories.rejected[id];
+        if (d.mindsetStories.done) delete d.mindsetStories.done[id];
+        if (d.mindsetStories.weeklyState && String(d.mindsetStories.weeklyState.pickedUid) === id) d.mindsetStories.weeklyState.pickedUid = null;
+    }
+    const u = d.users[id];
+    if (u && u.parent_uid && d.users[u.parent_uid]) delete d.users[u.parent_uid].subUid;
+    if (u && u.subUid && d.users[u.subUid]) delete d.users[u.subUid].parent_uid;
+}
+function _deleteUser(uid) {
+    const id = String(uid);
+    const u = d.users[id];
+    if (!u) return { ok: false, error: 'User nicht gefunden' };
+    if (!d._deleteLog) d._deleteLog = [];
+    d._deleteLog.push({ timestamp: Date.now(), uid: id, backup: JSON.parse(JSON.stringify(u)) });
+    while (d._deleteLog.length > 50) d._deleteLog.shift();
+    _purgeUidFromCollections(id);
+    delete d.users[id];
+    return { ok: true, name: u.name || u.email || id };
+}
+function _mergeUserData(sourceUid, targetUid) {
+    const src = d.users[String(sourceUid)];
+    const tgt = d.users[String(targetUid)];
+    if (!src || !tgt) return { ok: false, error: 'User nicht gefunden' };
+    const sId = String(sourceUid);
+    const tId = String(targetUid);
+    const log = [];
+    const profileFields = ['email', 'emailConfirmedAt', 'pendingEmail', 'password_hash',
+        'instagram', 'bio', 'nische', 'spitzname', 'website', 'tiktok', 'youtube', 'twitter',
+        'banner', 'profilePic', 'accentColor', 'appCode', 'appCodeChosenAt', 'signupSource'];
+    for (const f of profileFields) { if (src[f] && !tgt[f]) { tgt[f] = src[f]; log.push('Profil: ' + f + ' übertragen'); } }
+    if (src.xp > 0) { const oldXp = tgt.xp || 0; tgt.xp = (tgt.xp || 0) + src.xp; tgt.level = level(tgt.xp); tgt.role = badge(tgt.xp); log.push('XP: ' + oldXp + ' + ' + src.xp + ' = ' + tgt.xp); }
+    if (src.diamonds > 0) { tgt.diamonds = (tgt.diamonds || 0) + src.diamonds; log.push('Diamonds: +' + src.diamonds + ' = ' + tgt.diamonds); }
+    if (src.links > 0) { tgt.links = (tgt.links || 0) + src.links; log.push('Links: +' + src.links); }
+    if (src.totalLikes > 0) { tgt.totalLikes = (tgt.totalLikes || 0) + src.totalLikes; log.push('TotalLikes: +' + src.totalLikes); }
+    if (Array.isArray(src.followers)) {
+        if (!Array.isArray(tgt.followers)) tgt.followers = [];
+        const existing = new Set(tgt.followers.map(String));
+        for (const f of src.followers) { if (String(f) !== tId && !existing.has(String(f))) { tgt.followers.push(String(f)); existing.add(String(f)); } }
+        for (const fUid of src.followers) {
+            const fUser = d.users[String(fUid)];
+            if (fUser && Array.isArray(fUser.following)) { fUser.following = fUser.following.filter(x => String(x) !== sId); if (!fUser.following.map(String).includes(tId)) fUser.following.push(tId); }
+        }
+        log.push('Followers: ' + src.followers.length + ' zusammengeführt');
+    }
+    if (Array.isArray(src.following)) {
+        if (!Array.isArray(tgt.following)) tgt.following = [];
+        const existing = new Set(tgt.following.map(String));
+        for (const f of src.following) { if (String(f) !== tId && !existing.has(String(f))) { tgt.following.push(String(f)); existing.add(String(f)); } }
+        for (const fUid of src.following) {
+            const fUser = d.users[String(fUid)];
+            if (fUser && Array.isArray(fUser.followers)) { fUser.followers = fUser.followers.filter(x => String(x) !== sId); if (!fUser.followers.map(String).includes(tId)) fUser.followers.push(tId); }
+        }
+        log.push('Following: ' + src.following.length + ' zusammengeführt');
+    }
+    if (Array.isArray(tgt.followers)) tgt.followers = tgt.followers.filter(x => String(x) !== tId);
+    if (Array.isArray(tgt.following)) tgt.following = tgt.following.filter(x => String(x) !== tId);
+    if (Array.isArray(src.trophies) && src.trophies.length > 0) {
+        if (!Array.isArray(tgt.trophies)) tgt.trophies = [];
+        const existingT = new Set(tgt.trophies.map(JSON.stringify));
+        for (const t of src.trophies) { if (!existingT.has(JSON.stringify(t))) tgt.trophies.push(t); }
+        log.push('Trophies: zusammengeführt');
+    }
+    if (Array.isArray(src.inventory) && src.inventory.length > 0) { if (!Array.isArray(tgt.inventory)) tgt.inventory = []; tgt.inventory = tgt.inventory.concat(src.inventory); log.push('Inventar: +' + src.inventory.length + ' Items'); }
+    if (Array.isArray(src.projects) && src.projects.length > 0) { if (!Array.isArray(tgt.projects)) tgt.projects = []; tgt.projects = tgt.projects.concat(src.projects); log.push('Projekte: +' + src.projects.length); }
+    for (const key of ['dailyXP', 'weeklyXP', 'gesternDailyXP']) {
+        if (d[key] && d[key][sId]) { d[key][tId] = (d[key][tId] || 0) + d[key][sId]; delete d[key][sId]; log.push(key + ': zusammengeführt'); }
+    }
+    for (const key of ['tracker', 'counter', 'badgeTracker', 'bonusLinks', 'dailyLogins', 'dailyGroupMsgs', 'm1Streak']) {
+        if (d[key] && d[key][sId] !== undefined && d[key][tId] === undefined) { d[key][tId] = d[key][sId]; delete d[key][sId]; log.push(key + ': übertragen'); }
+        else if (d[key] && d[key][sId] !== undefined) delete d[key][sId];
+    }
+    for (const key of ['missionen', 'wochenMissionen', 'missionQueue']) {
+        if (d[key] && d[key][sId] && !d[key][tId]) { d[key][tId] = d[key][sId]; delete d[key][sId]; log.push(key + ': übertragen'); }
+        else if (d[key] && d[key][sId]) delete d[key][sId];
+    }
+    if (d.threadLastRead && d.threadLastRead[sId]) { if (!d.threadLastRead[tId]) d.threadLastRead[tId] = {}; Object.assign(d.threadLastRead[tId], d.threadLastRead[sId]); delete d.threadLastRead[sId]; log.push('ThreadLastRead: übertragen'); }
+    if (d.notifications && Array.isArray(d.notifications[sId])) { if (!d.notifications[tId]) d.notifications[tId] = []; d.notifications[tId] = d.notifications[tId].concat(d.notifications[sId]); if (d.notifications[tId].length > 50) d.notifications[tId] = d.notifications[tId].slice(-50); delete d.notifications[sId]; log.push('Benachrichtigungen: zusammengeführt'); }
+    if (d.appActivity && d.appActivity[sId]) {
+        if (!d.appActivity[tId]) d.appActivity[tId] = d.appActivity[sId];
+        else { const t = d.appActivity[tId], s = d.appActivity[sId]; t.firstSeen = Math.min(t.firstSeen || Infinity, s.firstSeen || Infinity); t.lastSeen = Math.max(t.lastSeen || 0, s.lastSeen || 0); t.sessions = (t.sessions || 0) + (s.sessions || 0); t.totalCalls = (t.totalCalls || 0) + (s.totalCalls || 0); }
+        delete d.appActivity[sId]; log.push('AppActivity: zusammengeführt');
+    }
+    if (d.appChatLastRead && d.appChatLastRead[sId]) { if (!d.appChatLastRead[tId] || d.appChatLastRead[sId] > d.appChatLastRead[tId]) d.appChatLastRead[tId] = d.appChatLastRead[sId]; delete d.appChatLastRead[sId]; }
+    let linksReassigned = 0;
+    for (const l of Object.values(d.links || {})) {
+        if (String(l.user_id) === sId) { l.user_id = /^\d+$/.test(tId) ? Number(tId) : tId; l.user_name = tgt.name; linksReassigned++; }
+        if (l.likes) {
+            if (typeof l.likes.delete === 'function' && l.likes.has(sId)) { l.likes.delete(sId); l.likes.add(tId); }
+            else if (Array.isArray(l.likes)) l.likes = l.likes.map(x => String(x) === sId ? tId : String(x));
+        }
+        if (l.likerNames && l.likerNames[sId]) { l.likerNames[tId] = l.likerNames[sId]; delete l.likerNames[sId]; }
+    }
+    if (linksReassigned > 0) log.push('Links: ' + linksReassigned + ' umgeschrieben');
+    let slReassigned = 0;
+    for (const sl of Object.values(d.superlinks || {})) {
+        if (String(sl.uid) === sId) { sl.uid = tId; slReassigned++; }
+        if (Array.isArray(sl.likes)) sl.likes = sl.likes.map(x => String(x) === sId ? tId : String(x));
+        if (sl.likerNames && sl.likerNames[sId]) { sl.likerNames[tId] = sl.likerNames[sId]; delete sl.likerNames[sId]; }
+    }
+    if (slReassigned > 0) log.push('Superlinks: ' + slReassigned + ' umgeschrieben');
+    if (d.comments) {
+        let cReassigned = 0;
+        for (const arr of Object.values(d.comments)) { if (Array.isArray(arr)) { for (const c of arr) { if (String(c.uid) === sId) { c.uid = tId; c.name = tgt.name; cReassigned++; } } } }
+        if (cReassigned > 0) log.push('Kommentare: ' + cReassigned + ' umgeschrieben');
+    }
+    if (d.posts && d.posts[sId]) { if (!d.posts[tId]) d.posts[tId] = []; d.posts[tId] = d.posts[tId].concat(d.posts[sId]); delete d.posts[sId]; log.push('Posts: zusammengeführt'); }
+    if (Array.isArray(d.appChat)) {
+        let chatReassigned = 0;
+        for (const m of d.appChat) {
+            if (String(m.uid) === sId) { m.uid = tId; m.name = tgt.name; chatReassigned++; }
+            if (m.reactions) { for (const emoji of Object.keys(m.reactions)) { if (Array.isArray(m.reactions[emoji])) { m.reactions[emoji] = m.reactions[emoji].map(x => String(x) === sId ? tId : String(x)); m.reactions[emoji] = [...new Set(m.reactions[emoji])]; } } }
+        }
+        if (chatReassigned > 0) log.push('AppChat: ' + chatReassigned + ' Nachrichten umgeschrieben');
+    }
+    if (d.threadMessages) {
+        let tmReassigned = 0;
+        for (const arr of Object.values(d.threadMessages)) { if (Array.isArray(arr)) { for (const m of arr) { if (String(m.uid) === sId) { m.uid = tId; m.name = tgt.name; tmReassigned++; } } } }
+        if (tmReassigned > 0) log.push('ThreadMessages: ' + tmReassigned + ' umgeschrieben');
+    }
+    if (d.messages) {
+        const keysToMigrate = Object.keys(d.messages).filter(k => k.split('_').includes(sId));
+        for (const oldKey of keysToMigrate) {
+            const newKey = [String(oldKey.split('_')[0]) === sId ? tId : oldKey.split('_')[0], String(oldKey.split('_')[1]) === sId ? tId : oldKey.split('_')[1]].sort().join('_');
+            for (const m of d.messages[oldKey]) { if (String(m.from) === sId) m.from = tId; if (String(m.to) === sId) m.to = tId; }
+            if (d.messages[newKey] && newKey !== oldKey) { d.messages[newKey] = d.messages[newKey].concat(d.messages[oldKey]); d.messages[newKey].sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0)); if (d.messages[newKey].length > 200) d.messages[newKey] = d.messages[newKey].slice(-200); }
+            else if (newKey !== oldKey) d.messages[newKey] = d.messages[oldKey];
+            if (newKey !== oldKey) delete d.messages[oldKey];
+        }
+        if (keysToMigrate.length > 0) log.push('DMs: ' + keysToMigrate.length + ' Chats migriert');
+    }
+    if (d.notifications) { for (const arr of Object.values(d.notifications)) { if (Array.isArray(arr)) { for (const n of arr) { if (String(n.actorUid || '') === sId) n.actorUid = tId; } } } }
+    if (d.pinnedEngages) {
+        if (d.pinnedEngages[sId]) { if (!d.pinnedEngages[tId]) d.pinnedEngages[tId] = []; d.pinnedEngages[tId] = [...new Set([...d.pinnedEngages[tId], ...d.pinnedEngages[sId]])]; delete d.pinnedEngages[sId]; }
+        for (const pk of Object.keys(d.pinnedEngages)) { if (Array.isArray(d.pinnedEngages[pk])) { d.pinnedEngages[pk] = d.pinnedEngages[pk].map(x => String(x) === sId ? tId : String(x)); d.pinnedEngages[pk] = [...new Set(d.pinnedEngages[pk])]; } }
+    }
+    if (d.mindsetStories) {
+        for (const cat of ['waitlist', 'rejected', 'done']) { if (d.mindsetStories[cat] && d.mindsetStories[cat][sId]) { if (!d.mindsetStories[cat][tId]) d.mindsetStories[cat][tId] = d.mindsetStories[cat][sId]; delete d.mindsetStories[cat][sId]; } }
+        if (d.mindsetStories.weeklyState && String(d.mindsetStories.weeklyState.pickedUid) === sId) d.mindsetStories.weeklyState.pickedUid = tId;
+    }
+    if (Array.isArray(d.emailLoginLog)) { for (const e of d.emailLoginLog) { if (String(e.uid || '') === sId) e.uid = tId; } log.push('EmailLoginLog: UIDs umgeschrieben'); }
+    for (const key of ['warteNachricht', 'instaWarte', 'dmNachrichten', '_smartReminderSent']) { if (d[key] && d[key][sId] !== undefined) delete d[key][sId]; }
+    if (src.subUid && d.users[src.subUid]) { if (!tgt.subUid) { tgt.subUid = src.subUid; d.users[src.subUid].parent_uid = tId; log.push('Sub-Account übertragen: ' + src.subUid); } }
+    if (src.parent_uid && d.users[src.parent_uid]) { d.users[src.parent_uid].subUid = tId; tgt.parent_uid = src.parent_uid; log.push('Parent-Beziehung übertragen'); }
+    if (src.appUser) tgt.appUser = true;
+    if (src.started) tgt.started = true;
+    if (src.inGruppe) tgt.inGruppe = true;
+    if (src.rulesAcceptedAt && !tgt.rulesAcceptedAt) tgt.rulesAcceptedAt = src.rulesAcceptedAt;
+    if (src.joinDate && (!tgt.joinDate || src.joinDate < tgt.joinDate)) tgt.joinDate = src.joinDate;
+    if (!d._mergeLog) d._mergeLog = [];
+    d._mergeLog.push({ timestamp: Date.now(), sourceUid: sId, targetUid: tId, sourceBackup: JSON.parse(JSON.stringify(src)), changes: log });
+    while (d._mergeLog.length > 50) d._mergeLog.shift();
+    delete d.users[sId];
+    return { ok: true, log };
+}
+function mergeUsers({ source_uid, target_uid }) {
+    const srcInput = source_uid ? String(source_uid) : '';
+    const tgtInput = target_uid ? String(target_uid) : '';
+    if (!srcInput || !tgtInput) return { ok: false, error: 'source_uid und target_uid erforderlich' };
+    const sourceUid = _findUser(srcInput);
+    const targetUid = _findUser(tgtInput);
+    if (!sourceUid) return { ok: false, error: 'Quell-User nicht gefunden: ' + srcInput };
+    if (!targetUid) return { ok: false, error: 'Ziel-User nicht gefunden: ' + tgtInput };
+    if (sourceUid === targetUid) return { ok: false, error: 'Quell und Ziel sind der gleiche User (' + sourceUid + ')' };
+    const srcName = d.users[sourceUid].spitzname || d.users[sourceUid].name || sourceUid;
+    const tgtName = d.users[targetUid].spitzname || d.users[targetUid].name || targetUid;
+    const result = _mergeUserData(sourceUid, targetUid);
+    if (!result.ok) return result;
+    return { ok: true, source: { uid: sourceUid, name: srcName }, target: { uid: targetUid, name: tgtName }, log: result.log };
+}
+function deleteUser({ uid }) {
+    const input = uid ? String(uid) : '';
+    if (!input) return { ok: false, error: 'uid erforderlich' };
+    const found = _findUser(input);
+    if (!found) return { ok: false, error: 'User nicht gefunden: ' + input };
+    if (istAdminId(Number(found))) return { ok: false, error: 'Admin-Accounts können nicht gelöscht werden' };
+    const userName = d.users[found].spitzname || d.users[found].name || found;
+    const result = _deleteUser(found);
+    if (!result.ok) return result;
+    return { ok: true, uid: found, name: userName };
+}
+function userDeleteSelfApi({ uid }) {
+    uid = String(uid || '');
+    if (!uid) return { ok: false, error: 'uid fehlt' };
+    const u = d.users[uid];
+    if (!u) return { ok: false, error: 'User nicht gefunden' };
+    if (Array.isArray(d._adminIds) && d._adminIds.map(Number).includes(Number(uid))) return { ok: false, error: 'Admin-Account kann nicht über App gelöscht werden' };
+    let deletedSubs = 0;
+    for (const [oUid, oU] of Object.entries(d.users || {})) {
+        if (oU && String(oU.parent_uid || '') === uid) { const r = _deleteUser(oUid); if (r && r.ok) deletedSubs++; }
+    }
+    const result = _deleteUser(uid);
+    if (!result || !result.ok) return { ok: false, error: (result && result.error) || 'Löschung fehlgeschlagen' };
+    return { ok: true, name: result.name, deletedSubs };
+}
+
 // ════════ ADMIN-AKTIONEN (clean: nur Daten + In-App-DM) ════════
 function addWarn({ uid, reason }) {
     uid = String(uid || '');
@@ -1147,6 +1429,7 @@ module.exports = {
     followApi,
     addWarn, removeWarn, resetUser, removeXp, startXpEvent, startDiamondEvent, stopEvent,
     banUserApi, unbanUserApi, adminSuspendPostingApi,
+    mergeUsers, deleteUser, userDeleteSelfApi,
     postLinkFromApp, createPostApi, deletePostApi, commentApi, deleteCommentApi,
     diamondLinkCreate, diamondLinkLike, diamondLinkAcceptRules, diamondLinkAdminDelete,
     prismaLinkCreate, prismaLinkLike, prismaLinkAcceptRules, prismaLinkAdminDelete,
