@@ -4718,7 +4718,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v213-update-on-focus';
+const SW_VERSION='v214-sw-force-reload';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
@@ -4726,7 +4726,10 @@ self.addEventListener('message',e=>{ if(e.data&&e.data.type==='SKIP_WAITING') se
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(
     keys.filter(k=>k!==STATIC_CACHE && k!==IMAGE_CACHE).map(k=>caches.delete(k))
-  )).then(()=>clients.claim())
+  )).then(()=>self.clients.claim())
+   .then(()=>self.clients.matchAll({type:'window'}))
+   .then(cs=>cs.forEach(c=>{ try{ c.navigate(c.url); }catch(e){} }))
+   .catch(()=>{})
 ));
 self.addEventListener('fetch',e=>{
   const req=e.request;
