@@ -16,6 +16,31 @@
 
 ---
 
+## 0. Cutover-Fortschritt (Stand fortlaufend aktualisiert)
+
+✅ **Standalone (LOCAL_STORE) — erledigt & auf `main`:**
+- Komplette User-App: Auth/Login, Profil/Bio, Posts, Likes, Kommentare, Follow,
+  Projekte, Missionen, Community-Chat (app-chat), Feeds (Diamond/Prisma/Collab/Mindset),
+  Superlinks, Helper-Chat, Events-Status, Daten-Export, Collab-Requests, pin-post.
+- Admin-Aktionen: Warns, Suspend, Reset-User, Ban/Report-Action, Block/Unblock,
+  Newsletter (add/edit/delete), Broadcast-DM, Mindset-Admin, Sub-Accounts,
+  Schedule-Event, Diamond/Prisma-Admin-Delete, Backfill-Missionen, Notifications-Read.
+- Forum/Threads entfernt (Telegram-Altlast).
+
+⏳ **Noch offen (Bot muss dafür laufen):**
+- **Admin-Dashboard-Lese-Listen** (admin-only): `/admin-stats-api` (~214 Z.),
+  `/admin-userlist-api`, `/admin-user-detail-api`, `/admin-funnel-debug-api`,
+  `/admin-engagement-log-api`, `/admin-mission-report-api`, `/admin-helper-questions-api`,
+  `/diamond-link-admin-list-api`, `/prisma-link-admin-list-api`.
+  → Reine Reads aus `d`; je eine Getter-Funktion in `bot-logic` + LOCAL_STORE-Zweig.
+- **2 Stragglers:** `/upload-bild-api` (Bild-Sync — App speichert Bilder via
+  `_saveBild` schon lokal, Sync ggf. nur no-oppen), `/run-wochen-gewinnspiel-api`
+  (Cron — Mapping auf `wochenResetUndAuszahlung` prüfen).
+- **Fire-and-forget (bleibt, unkritisch):** track-funnel, log-email-login,
+  app-presence, track-login.
+
+→ Sobald die Admin-Lese-Listen portiert sind, kann der telegram-bot **abgeschaltet** werden.
+
 ## 1. Architektur
 
 ```
