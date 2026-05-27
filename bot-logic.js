@@ -369,7 +369,7 @@ async function postLinkFromApp({ uid, name, url, caption }) {
     const linkId = generateSyntheticLinkId();
     const mapKey = linkId;
     const linkData = {
-        chat_id: Number(process.env.GROUP_A_ID),
+        chat_id: null, // Telegram entfällt — app-only Links haben keine Gruppen-Message
         user_id: /^\d+$/.test(String(uid)) ? Number(uid) : String(uid),
         user_name: u.spitzname || u.name || name,
         text: url,
