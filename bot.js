@@ -13930,7 +13930,13 @@ document.getElementById('user-search-input')?.addEventListener('input',filterSea
                 isOwn: String(x.id) === String(myUid)
             }))
             .sort((a, b) => (a.engaged === b.engaged) ? 0 : (a.engaged ? 1 : -1));
-        const convHtml = require('./chat-list-render')({ myConvos, botData, myUid, ladeBild, adminIds, onlineUids: getOnlineUids(), crown, appChatPreview: lastAppChat ? { name: lastAppChat.name, text: lastAppChat.text, image: lastAppChat.image, timestamp: lastAppChat.ts } : null, appChatUnread: appChatData?.unread || 0, appChatMembers: appChatData?.memberCount || 0, pinnedStories: _pinnedStoriesDM });
+        let convHtml;
+        try {
+            convHtml = require('./chat-list-render')({ myConvos, botData, myUid, ladeBild, adminIds, onlineUids: getOnlineUids(), crown, appChatPreview: lastAppChat ? { name: lastAppChat.name, text: lastAppChat.text, image: lastAppChat.image, timestamp: lastAppChat.ts } : null, appChatUnread: appChatData?.unread || 0, appChatMembers: appChatData?.memberCount || 0, pinnedStories: _pinnedStoriesDM });
+        } catch (_dmErr) {
+            console.error('[/nachrichten] render failed:', _dmErr && _dmErr.stack || _dmErr);
+            return html('<div class="topbar"><div class="topbar-logo">Nachrichten</div></div><div style="padding:20px"><div style="font-size:14px;font-weight:700;color:#ef4444;margin-bottom:10px">DM-Render-Fehler (Debug v224b)</div><div style="font-size:11px;color:var(--muted);white-space:pre-wrap;word-break:break-word;font-family:ui-monospace,monospace">'+htmlEsc(String(_dmErr && _dmErr.stack || _dmErr && _dmErr.message || _dmErr))+'</div></div>', 'messages');
+        }
         return html(`<div class="topbar"><div class="topbar-logo">Nachrichten</div><div class="topbar-actions"><a href="/suche" class="icon-btn" title="User suchen" style="text-decoration:none"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></a></div></div><div style="padding-bottom:80px">${convHtml}</div>`, 'messages');
     }
 
