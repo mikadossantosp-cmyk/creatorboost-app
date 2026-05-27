@@ -2547,28 +2547,6 @@ function mindsetStateApi(uid) {
     return out;
 }
 
-// ── DIAGNOSE (read-only): zeigt warum M2/M3 bei X/Y haengen ──
-function missionDebugApi(uid) {
-    uid = String(uid || '');
-    const heute = new Date().toDateString();
-    const fam = familyUids(uid);
-    const famSet = new Set(fam.map(String));
-    const rows = [];
-    for (const [linkId, l] of Object.entries(d.links || {})) {
-        if (!l || !istInstagramLink(l.text)) continue;
-        if (new Date(l.timestamp).toDateString() !== heute) continue;
-        if (String(getRootUid(l.user_id)) === String(getRootUid(uid))) continue; // Family-Post → nicht im Nenner
-        const likes = l.likes instanceof Set ? Array.from(l.likes).map(String) : (Array.isArray(l.likes) ? l.likes.map(String) : []);
-        rows.push({ linkId, owner: String(l.user_id), likeCount: likes.length, likes, famLiked: likes.some(x => famSet.has(x)) });
-    }
-    const nichtGeliked = rows.filter(r => !r.famLiked);
-    return {
-        ok: true, uid, family: fam, today: heute,
-        gesamt: rows.length, geliked: rows.length - nichtGeliked.length,
-        nichtGeliked, // die fehlenden Links: owner + wer sie geliked hat (leer = niemand)
-    };
-}
-
 // ── AUTH: 1:1 aus telegram-bot portiert (PBKDF2). Security-kritisch — Schema
 //    pbkdf2$100000$salt$hash bleibt identisch, damit migrierte Hashes weiter gelten.
 function hashPasswordPBKDF2(password) {
@@ -3628,5 +3606,4 @@ module.exports = {
     adminStatsApi, adminUserlistApi, adminUserDetailApi, adminFunnelDebugApi, adminEngagementLogApi,
     adminMissionReportApi, adminHelperQuestionsApi, diamondLinkAdminListApi, prismaLinkAdminListApi,
     runWochenGewinnspielApi,
-    missionDebugApi,
 };

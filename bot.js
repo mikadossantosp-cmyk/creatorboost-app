@@ -20872,13 +20872,6 @@ async function setRing(ringId) {
         return json(result || {ok:false});
     }
 
-    // DIAGNOSE (read-only): zeigt welche heutigen Links nicht (family-)geliked sind.
-    if (path === '/api/mission-debug' && req.method === 'GET') {
-        if (!session) return json({ok:false, error:'Nicht eingeloggt'},401);
-        if (LOCAL_STORE) return json(botLogic.missionDebugApi(myUid));
-        return json({ok:false, error:'nur im LOCAL_STORE-Modus'});
-    }
-
     if (path === '/api/buy-item' && req.method === 'POST') {
         const body = await parseBody(req);
         const { itemId } = body;
