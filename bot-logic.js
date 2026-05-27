@@ -2323,6 +2323,59 @@ function collabLikePost({ uid, postId }) {
     return { ok: true, liked: true, likeCount: p.likes.length, diamondsTotal: u.diamonds || 0, rulesDmSent: dmSentNow, diamondsGiven, boostActive: boost.active };
 }
 
+// ── Reads: superlinks / helper-history / events-status / data-export (reine Reads) ──
+function superlinksApi() {
+    const sls = Object.values(d.superlinks || {}).sort((a, b) => b.timestamp - a.timestamp);
+    return { superlinks: sls, fullEngagementThreadId: d.fullEngagementThreadId };
+}
+function helperChatHistoryApi(uid) {
+    uid = String(uid || '');
+    if (!uid) return { ok: false, error: 'uid fehlt' };
+    if (!d.helperChats) d.helperChats = {};
+    const messages = Array.isArray(d.helperChats[uid]) ? d.helperChats[uid].slice(-100) : [];
+    return { ok: true, messages };
+}
+function eventsStatusApi() {
+    const now = Date.now();
+    const out = { events: [], upcoming: [] };
+    if (d.xpEvent?.aktiv && d.xpEvent.multiplier > 1 && d.xpEvent.end && now < d.xpEvent.end) {
+        const pct = d.xpEvent.bonusPercent || Math.round((d.xpEvent.multiplier - 1) * 100);
+        out.events.push({ type: 'xp', mode: 'percent', bonusPercent: pct, multiplier: d.xpEvent.multiplier, amount: pct, label: d.xpEvent.label || ('+' + pct + '% XP pro Like'), end: d.xpEvent.end, remainingMs: d.xpEvent.end - now });
+    } else if (d.xpEvent?.bonusPerPost > 0 && d.xpEvent.end && now < d.xpEvent.end) {
+        out.events.push({ type: 'xp', mode: 'flat', amount: d.xpEvent.bonusPerPost, label: d.xpEvent.label || ('+' + d.xpEvent.bonusPerPost + ' XP pro Post'), end: d.xpEvent.end, remainingMs: d.xpEvent.end - now });
+    }
+    if (d.diamondEvent?.bonusPerPost > 0 && d.diamondEvent.end && now < d.diamondEvent.end) {
+        out.events.push({ type: 'diamond', amount: d.diamondEvent.bonusPerPost, label: d.diamondEvent.label || ('+' + d.diamondEvent.bonusPerPost + ' 💎 pro Post'), end: d.diamondEvent.end, remainingMs: d.diamondEvent.end - now });
+    }
+    if (d.xpEvent?.scheduled && d.xpEvent.start && d.xpEvent.start > now) {
+        const pct = d.xpEvent.bonusPercent || Math.round(((d.xpEvent.multiplier || 1) - 1) * 100);
+        out.upcoming.push({ type: 'xp', mode: 'percent', bonusPercent: pct, amount: pct, label: d.xpEvent.label || ('+' + pct + '% XP pro Like'), start: d.xpEvent.start, end: d.xpEvent.end, startInMs: d.xpEvent.start - now });
+    }
+    if (d.diamondEvent?.scheduled && d.diamondEvent.start && d.diamondEvent.start > now) {
+        const amt = d.diamondEvent.pendingBonusPerPost || d.diamondEvent.bonusPerPost;
+        out.upcoming.push({ type: 'diamond', amount: amt, label: d.diamondEvent.label || ('+' + amt + ' 💎 pro Post'), start: d.diamondEvent.start, end: d.diamondEvent.end, startInMs: d.diamondEvent.start - now });
+    }
+    return { ok: true, ...out };
+}
+function userDataExportApi(uid) {
+    uid = String(uid || '');
+    if (!uid) return { ok: false, error: 'uid fehlt' };
+    const u = d.users[uid];
+    if (!u) return { ok: false, error: 'User nicht gefunden' };
+    const out = {
+        ok: true, exportedAt: new Date().toISOString(), dsgvo: 'Art. 20 DSGVO — Recht auf Datenübertragbarkeit',
+        user: u, subAccounts: [], links: [], posts: (d.posts && d.posts[uid]) || [], notifications: (d.notifications && d.notifications[uid]) || [],
+        dailyXP: (d.dailyXP && d.dailyXP[uid]) || null, weeklyXP: (d.weeklyXP && d.weeklyXP[uid]) || null,
+        missionen: (d.missionen && d.missionen[uid]) || null, wochenMissionen: (d.wochenMissionen && d.wochenMissionen[uid]) || null,
+        appActivity: (d.appActivity && d.appActivity[uid]) || null,
+        reportsAgainst: Array.isArray(d.reports) ? d.reports.filter(r => String(r.targetUid) === uid) : [],
+        reportsMade: Array.isArray(d.reports) ? d.reports.filter(r => String(r.reporterUid) === uid) : [],
+    };
+    for (const [oUid, oU] of Object.entries(d.users || {})) if (oU && String(oU.parent_uid || '') === uid) out.subAccounts.push({ uid: oUid, user: oU });
+    for (const [lId, l] of Object.entries(d.links || {})) if (l && String(l.user_id || '') === uid) out.links.push({ id: lId, ...l, likes: Array.isArray(l.likes) ? l.likes : Array.from(l.likes || []) });
+    return out;
+}
+
 // ── Pin / Notifications / Block (1:1 aus telegram-bot portiert) ──
 function pinPostApi({ uid, timestamp }) {
     uid = String(uid || '');
@@ -2871,4 +2924,5 @@ module.exports = {
     addNewsletterApi, editNewsletterApi, deleteNewsletterApi,
     sendDmAllApi, createSubaccountApi, adminLinkAsSubApi, deleteSubaccountApi,
     reportUserApi, adminReportActionApi, adminScheduleEventApi,
+    superlinksApi, helperChatHistoryApi, eventsStatusApi, userDataExportApi,
 };

@@ -5143,7 +5143,7 @@ self.addEventListener('notificationclick',e=>{
     // ── DSGVO: Datenexport (Art. 20 Datenübertragbarkeit) ──
     if (path === '/api/datenexport' && req.method === 'GET') {
         if (!session) return text('Nicht eingeloggt', 401);
-        const result = await fetchBotRaw('/user-data-export-api?uid=' + encodeURIComponent(session.uid));
+        const result = LOCAL_STORE ? botLogic.userDataExportApi(session.uid) : await fetchBotRaw('/user-data-export-api?uid=' + encodeURIComponent(session.uid));
         if (!result || !result.ok) return text('Export-Fehler: ' + (result?.error || 'Mainbot offline'), 500);
         const fname = 'creatorx-datenexport-' + session.uid + '-' + new Date().toISOString().slice(0,10) + '.json';
         res.writeHead(200, {
@@ -9926,7 +9926,7 @@ p{line-height:1.65;color:var(--muted)}
     // Helper-Chat History (persistent, server-side)
     if (path === '/api/helper-history' && req.method === 'GET') {
         if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
-        const r = await fetchBotRaw('/helper-chat-history-api?uid=' + encodeURIComponent(session.uid));
+        const r = LOCAL_STORE ? botLogic.helperChatHistoryApi(session.uid) : await fetchBotRaw('/helper-chat-history-api?uid=' + encodeURIComponent(session.uid));
         return json(r || {ok:true, messages:[]});
     }
     if (path === '/api/helper-append' && req.method === 'POST') {
@@ -9954,7 +9954,7 @@ p{line-height:1.65;color:var(--muted)}
         if (!question) return json({ok:false, error:'Frage fehlt'}, 400);
         if (question.length > 800) return json({ok:false, error:'Frage zu lang (max 800 Zeichen)'}, 400);
         try {
-            const hist = await fetchBotRaw('/helper-chat-history-api?uid=' + encodeURIComponent(session.uid));
+            const hist = LOCAL_STORE ? botLogic.helperChatHistoryApi(session.uid) : await fetchBotRaw('/helper-chat-history-api?uid=' + encodeURIComponent(session.uid));
             const answer = await helperAiAnswer(question, (hist && hist.messages) || []);
             return json({ok:true, answer});
         } catch (e) {
@@ -14847,7 +14847,7 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
     // ── EVENT API ──
     // Public (für Feed-Banner — kein Admin-Check, jeder User darf laufende Events sehen)
     if (path === '/api/events/status' && req.method === 'GET') {
-        const r = await fetchBotRaw('/events-status-api');
+        const r = LOCAL_STORE ? botLogic.eventsStatusApi() : await fetchBotRaw('/events-status-api');
         return json(r || { ok:true, events: [] });
     }
     if (path === '/api/admin/event-start' && req.method === 'POST') {
@@ -20899,7 +20899,7 @@ async function setRing(ringId) {
     }
 
     if (path === '/api/superlinks') {
-        const data = await fetchBot('/superlinks');
+        const data = LOCAL_STORE ? botLogic.superlinksApi() : await fetchBot('/superlinks');
         if (!data) return json({ superlinks: [] });
         return json(data);
     }
