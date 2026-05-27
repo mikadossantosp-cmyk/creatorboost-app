@@ -798,7 +798,7 @@ async function checkProfileCompletion(uid, session) {
         const hasPic = !!(session?.profilePicData || ladeBild(String(uid),'profilepic'));
         const hasBanner = !!(session?.bannerData || ladeBild(String(uid),'banner'));
         const allDone = hasPic && hasBanner && !!(fu.bio?.trim()) && !!(fu.nische?.trim());
-        if (allDone) await postBot('/complete-profile-api', { uid: String(uid) });
+        if (allDone) { if (LOCAL_STORE) await localWrite(() => botLogic.completeProfileApi({ uid: String(uid) })); else await postBot('/complete-profile-api', { uid: String(uid) }); }
     } catch(e) { console.error('checkProfileCompletion failed:', e.message); }
 }
 function getSession(req) { const m=(req.headers.cookie||'').match(/cbsid=([^;]+)/); return m?sessions.get(m[1]):null; }
@@ -1473,7 +1473,7 @@ async function appCronTick() {
             });
             einmalig('mindsetPick', async () => {
                 console.log('📖 [Cron] Trigger Mindset-Stories-Pick → Mainbot');
-                const r = await postBot('/run-mindset-pick-api', {});
+                const r = LOCAL_STORE ? await localWrite(() => botLogic.runMindsetPickApi()) : await postBot('/run-mindset-pick-api', {});
                 console.log('📖 [Cron] Mainbot Response:', r ? JSON.stringify(r) : 'null');
             });
         }
@@ -5124,7 +5124,7 @@ self.addEventListener('notificationclick',e=>{
     // ── DSGVO: Account-Selbstlöschung (Art. 17 + Google Play Pflicht seit 2024) ──
     if (path === '/api/delete-my-account' && req.method === 'POST') {
         if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
-        const result = await postBot('/user-delete-self-api', { uid: String(session.uid) });
+        const result = LOCAL_STORE ? await localWrite(() => botLogic.userDeleteSelfApi({ uid: String(session.uid) })) : await postBot('/user-delete-self-api', { uid: String(session.uid) });
         if (result && result.ok) {
             // Session aus dem In-Memory-Store + Disk entfernen
             try {
@@ -9916,9 +9916,8 @@ p{line-height:1.65;color:var(--muted)}
         if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
         if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
         const body = await parseBody(req);
-        const r = await postBot('/admin-suspend-posting-api', {
-            uid: String(body.uid||''), days: Number(body.days||0), reason: String(body.reason||''),
-        });
+        const _sp = { uid: String(body.uid||''), days: Number(body.days||0), reason: String(body.reason||'') };
+        const r = LOCAL_STORE ? await localWrite(() => botLogic.adminSuspendPostingApi(_sp)) : await postBot('/admin-suspend-posting-api', _sp);
         return json(r || {ok:false, error:'Mainbot offline'});
     }
     // ── Helper-Bot Fallback (User-Frage an Admin forwarden) ──
@@ -9934,7 +9933,7 @@ p{line-height:1.65;color:var(--muted)}
         // SECURITY: Client darf nur 'user' Rolle posten — sonst kann er beliebiges HTML
         // als 'bot' speichern und es wird spaeter unescaped im Helper-Chat-Render gezeigt.
         const role = (String(body.role||'') === 'bot') ? 'user' : String(body.role||'user');
-        const r = await postBot('/helper-chat-append-api', { uid: String(session.uid), role, text: String(body.text||'') });
+        const r = LOCAL_STORE ? await localWrite(() => botLogic.helperChatAppendApi({ uid: String(session.uid), role, text: String(body.text||'') })) : await postBot('/helper-chat-append-api', { uid: String(session.uid), role, text: String(body.text||'') });
         return json(r || {ok:false});
     }
     if (path === '/api/helper-ask' && req.method === 'POST') {
@@ -9942,7 +9941,7 @@ p{line-height:1.65;color:var(--muted)}
         const body = await parseBody(req);
         const question = String(body.question || '').trim();
         if (!question) return json({ok:false, error:'Frage fehlt'}, 400);
-        const r = await postBot('/helper-question-api', { fromUid: String(session.uid), question });
+        const r = LOCAL_STORE ? await localWrite(() => botLogic.helperQuestionApi({ fromUid: String(session.uid), question })) : await postBot('/helper-question-api', { fromUid: String(session.uid), question });
         return json(r || {ok:false, error:'Mainbot offline'});
     }
     if (path === '/api/helper-ai' && req.method === 'POST') {
@@ -9972,7 +9971,7 @@ p{line-height:1.65;color:var(--muted)}
         if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
         if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
         const body = await parseBody(req);
-        const r = await postBot('/admin-helper-answer-api', { qId: String(body.qId||''), answer: String(body.answer||'') });
+        const r = LOCAL_STORE ? await localWrite(() => botLogic.adminHelperAnswerApi({ qId: String(body.qId||''), answer: String(body.answer||'') })) : await postBot('/admin-helper-answer-api', { qId: String(body.qId||''), answer: String(body.answer||'') });
         return json(r || {ok:false, error:'Mainbot offline'});
     }
     if (path === '/api/admin/schedule-event' && req.method === 'POST') {
@@ -9993,7 +9992,7 @@ p{line-height:1.65;color:var(--muted)}
         if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
         if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
         const body = await parseBody(req);
-        const r = await postBot('/admin-warn-user-api', { uid: String(body.uid||''), reason: String(body.reason||'') });
+        const r = LOCAL_STORE ? await localWrite(() => botLogic.addWarn({ uid: String(body.uid||''), reason: String(body.reason||'') })) : await postBot('/admin-warn-user-api', { uid: String(body.uid||''), reason: String(body.reason||'') });
         return json(r || {ok:false, error:'Mainbot offline'});
     }
 
@@ -10013,7 +10012,7 @@ p{line-height:1.65;color:var(--muted)}
         if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
         if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
         const body = await parseBody(req);
-        const r = await postBot('/reset-user', { uid: String(body.uid||'') });
+        const r = LOCAL_STORE ? await localWrite(() => botLogic.resetUser({ uid: String(body.uid||'') })) : await postBot('/reset-user', { uid: String(body.uid||'') });
         return json(r || {ok:false, error:'Mainbot offline'});
     }
 
@@ -10080,26 +10079,26 @@ p{line-height:1.65;color:var(--muted)}
         if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
         if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
         const body = await parseBody(req);
-        const result = await postBot('/mindset-admin-pick-api', { callerUid: myUid, targetUid: body.targetUid });
+        const result = LOCAL_STORE ? await localWrite(() => botLogic.mindsetAdminPickApi({ callerUid: myUid, targetUid: body.targetUid })) : await postBot('/mindset-admin-pick-api', { callerUid: myUid, targetUid: body.targetUid });
         return json(result || {ok:false, error:'Bot offline'});
     }
     if (path === '/api/mindset-admin/skip' && req.method === 'POST') {
         if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
         if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
-        const result = await postBot('/mindset-admin-skip-api', { callerUid: myUid });
+        const result = LOCAL_STORE ? await localWrite(() => botLogic.mindsetAdminSkipApi({ callerUid: myUid })) : await postBot('/mindset-admin-skip-api', { callerUid: myUid });
         return json(result || {ok:false, error:'Bot offline'});
     }
     if (path === '/api/mindset-admin/blast' && req.method === 'POST') {
         if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
         if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
-        const result = await postBot('/mindset-admin-blast-api', { callerUid: myUid });
+        const result = LOCAL_STORE ? await localWrite(() => botLogic.mindsetAdminBlastApi({ callerUid: myUid })) : await postBot('/mindset-admin-blast-api', { callerUid: myUid });
         return json(result || {ok:false, error:'Bot offline'});
     }
     if (path === '/api/mindset-admin/restore' && req.method === 'POST') {
         if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
         if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
         const body = await parseBody(req);
-        const result = await postBot('/mindset-admin-restore-api', { callerUid: myUid, targetUid: body.targetUid });
+        const result = LOCAL_STORE ? await localWrite(() => botLogic.mindsetAdminRestoreApi({ callerUid: myUid, targetUid: body.targetUid })) : await postBot('/mindset-admin-restore-api', { callerUid: myUid, targetUid: body.targetUid });
         return json(result || {ok:false, error:'Bot offline'});
     }
 
@@ -13416,7 +13415,8 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) acPo
         const _selfUid = _asCB ? 'creatorboost' : myUid;
         const chatKey = _asCB ? ['creatorboost', otherUid].sort().join('_') : [myUid, otherUid].sort().join('_');
         const msgs = (botData.messages?.[chatKey] || []);
-        postBot('/mark-messages-read', { uid: _selfUid, chatKey }).catch(()=>{});
+        if (LOCAL_STORE) await localWrite(() => botLogic.markMessagesRead({ uid: _selfUid, chatKey }));
+        else postBot('/mark-messages-read', { uid: _selfUid, chatKey }).catch(()=>{});
         const msgsHtml = require('./chat-detail-render')({ msgs, myUid: _selfUid, otherUid, otherUser, ladeBild, otherOnline: isUidOnline(otherUid) });
         return html(`
 <div class="topbar" style="display:flex;align-items:center;gap:8px;padding:8px 10px">
@@ -14746,7 +14746,7 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
         if (!session) return json({error:'Nicht eingeloggt'}, 401);
         if (!_dashIsAdmin) return json({error:'Nur Admins'}, 403);
         const body = await parseBody(req);
-        const r = await postBot('/diamond-link-admin-delete-api', { postId: String(body.postId||'') });
+        const r = LOCAL_STORE ? await localWrite(() => botLogic.diamondLinkAdminDelete({ postId: String(body.postId||'') })) : await postBot('/diamond-link-admin-delete-api', { postId: String(body.postId||'') });
         return json(r || {ok:false, error:'Mainbot offline'});
     }
 
@@ -14791,7 +14791,7 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
         if (!session) return json({error:'Nicht eingeloggt'}, 401);
         if (!_dashIsAdmin) return json({error:'Nur Admins'}, 403);
         const body = await parseBody(req);
-        const r = await postBot('/prisma-link-admin-delete-api', { postId: String(body.postId||'') });
+        const r = LOCAL_STORE ? await localWrite(() => botLogic.prismaLinkAdminDelete({ postId: String(body.postId||'') })) : await postBot('/prisma-link-admin-delete-api', { postId: String(body.postId||'') });
         return json(r || {ok:false, error:'Mainbot offline'});
     }
 
@@ -14873,7 +14873,7 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
         if (!session) return json({error:'Nicht eingeloggt'}, 401);
         if (!_dashIsAdmin) return json({error:'Nur Admins'}, 403);
         const body = await parseBody(req);
-        const r = await postBot('/admin-stop-event-api', { type: String(body.type||'') });
+        const r = LOCAL_STORE ? await localWrite(() => botLogic.stopEvent({ type: String(body.type||'') })) : await postBot('/admin-stop-event-api', { type: String(body.type||'') });
         return json(r || {ok:false,error:'Mainbot offline'});
     }
 
