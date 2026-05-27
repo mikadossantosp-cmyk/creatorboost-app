@@ -2323,6 +2323,45 @@ function collabLikePost({ uid, postId }) {
     return { ok: true, liked: true, likeCount: p.likes.length, diamondsTotal: u.diamonds || 0, rulesDmSent: dmSentNow, diamondsGiven, boostActive: boost.active };
 }
 
+// ── Pin / Notifications / Block (1:1 aus telegram-bot portiert) ──
+function pinPostApi({ uid, timestamp }) {
+    uid = String(uid || '');
+    if (!uid || !d.posts?.[uid]) return { ok: false };
+    const post = d.posts[uid].find(p => p.timestamp === Number(timestamp));
+    if (!post) return { ok: false };
+    d.posts[uid].forEach(p => p.pinned = false);
+    post.pinned = true;
+    return { ok: true };
+}
+function markNotificationsReadApi({ uid }) {
+    uid = String(uid || '');
+    if (!uid || !d.notifications?.[uid]) return { ok: false };
+    d.notifications[uid].forEach(n => n.read = true);
+    return { ok: true };
+}
+function blockUserApi({ blockerUid, targetUid }) {
+    if (process.env.FEATURE_BLOCK_USER !== '1') return { ok: false, error: 'Block-Feature ist noch nicht aktiviert (FEATURE_BLOCK_USER fehlt)', flagged: true };
+    if (!blockerUid || !targetUid) return { ok: false, error: 'blockerUid+targetUid erforderlich' };
+    if (String(blockerUid) === String(targetUid)) return { ok: false, error: 'Self-Block nicht erlaubt' };
+    if (!d.users[blockerUid] || !d.users[targetUid]) return { ok: false, error: 'User nicht gefunden' };
+    if (!Array.isArray(d.users[blockerUid].blockedUsers)) d.users[blockerUid].blockedUsers = [];
+    const tStr = String(targetUid);
+    if (!d.users[blockerUid].blockedUsers.map(String).includes(tStr)) {
+        d.users[blockerUid].blockedUsers.push(tStr);
+        if (Array.isArray(d.users[blockerUid].following)) d.users[blockerUid].following = d.users[blockerUid].following.filter(u => String(u) !== tStr);
+        if (Array.isArray(d.users[targetUid].followers)) d.users[targetUid].followers = d.users[targetUid].followers.filter(u => String(u) !== String(blockerUid));
+    }
+    return { ok: true };
+}
+function unblockUserApi({ blockerUid, targetUid }) {
+    if (process.env.FEATURE_BLOCK_USER !== '1') return { ok: false, error: 'Block-Feature ist noch nicht aktiviert (FEATURE_BLOCK_USER fehlt)', flagged: true };
+    if (!blockerUid || !targetUid) return { ok: false, error: 'blockerUid+targetUid erforderlich' };
+    if (!d.users[blockerUid]) return { ok: false, error: 'User nicht gefunden' };
+    if (!Array.isArray(d.users[blockerUid].blockedUsers)) d.users[blockerUid].blockedUsers = [];
+    d.users[blockerUid].blockedUsers = d.users[blockerUid].blockedUsers.filter(u => String(u) !== String(targetUid));
+    return { ok: true };
+}
+
 // ── READ-Getter: 1:1 aus telegram-bot Feed-Endpoints portiert (reine Reads) ──
 function diamondLinkFeedApi(callerUid) {
     _diamondEnsure();
@@ -2506,6 +2545,73 @@ function createEmailUserApi({ email, password, ageConfirmedAt, termsAcceptedAt, 
     return { ok: true, uid, existed: false };
 }
 
+// ── COLLAB-Requests (1:1 aus telegram-bot portiert) ──
+function collabRequestApi({ fromUid, toUid }) {
+    _collabEnsure();
+    fromUid = String(fromUid || '');
+    toUid = String(toUid || '');
+    if (!fromUid || !toUid) return { ok: false, error: 'fromUid + toUid erforderlich' };
+    if (fromUid === toUid) return { ok: false, error: 'Self-Collab nicht erlaubt' };
+    if (!d.users[fromUid] || !d.users[toUid]) return { ok: false, error: 'User nicht gefunden' };
+    if (_collabHasPair(fromUid, toUid)) return { ok: false, error: 'Ihr seid bereits Kollab-Partner' };
+    const existing = Object.entries(d.collabRequests).find(([, r]) =>
+        r.status === 'pending' && ((String(r.fromUid) === fromUid && String(r.toUid) === toUid) || (String(r.fromUid) === toUid && String(r.toUid) === fromUid)));
+    if (existing) return { ok: false, error: 'Anfrage existiert bereits', reqId: existing[0] };
+    const reqId = 'cr_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+    d.collabRequests[reqId] = { id: reqId, fromUid, toUid, ts: Date.now(), status: 'pending' };
+    const fromName = d.users[fromUid]?.spitzname || d.users[fromUid]?.name || 'Ein User';
+    addNotification(toUid, '🤝', fromName + ' möchte mit dir eine Kollaboration eingehen', fromUid);
+    sendInAppDM(toUid, `🤝 Kollab-Anfrage
+
+${fromName} möchte mit dir eine Kollaboration eingehen.
+Wenn du akzeptierst, dürft ihr gemeinsam 1× pro Woche einen Kollab-Post veröffentlichen.
+
+→ Öffne deine Benachrichtigungen um zu antworten.`);
+    return { ok: true, reqId };
+}
+function collabRespondApi({ reqId, accept, callerUid }) {
+    _collabEnsure();
+    reqId = String(reqId || '');
+    accept = !!accept;
+    callerUid = String(callerUid || '');
+    const r = d.collabRequests[reqId];
+    if (!r) return { ok: false, error: 'Anfrage nicht gefunden' };
+    if (r.status !== 'pending') return { ok: false, error: 'Anfrage schon beantwortet' };
+    if (String(r.toUid) !== callerUid) return { ok: false, error: 'Nur der Empfänger kann antworten' };
+    r.status = accept ? 'accepted' : 'declined';
+    r.respondedAt = Date.now();
+    const fromU = d.users[r.fromUid];
+    const toU = d.users[r.toUid];
+    if (accept && fromU && toU) {
+        if (!Array.isArray(fromU.collaborations)) fromU.collaborations = [];
+        if (!Array.isArray(toU.collaborations)) toU.collaborations = [];
+        if (!_collabHasPair(r.fromUid, r.toUid)) fromU.collaborations.push({ partnerUid: r.toUid, since: Date.now() });
+        if (!_collabHasPair(r.toUid, r.fromUid)) toU.collaborations.push({ partnerUid: r.fromUid, since: Date.now() });
+        const fromName = fromU.spitzname || fromU.name || 'Partner';
+        const toName = toU.spitzname || toU.name || 'Partner';
+        addNotification(r.fromUid, '🎉', toName + ' hat deine Kollab-Anfrage angenommen', r.toUid);
+        sendInAppDM(r.fromUid, `🎉 Kollaboration aktiv!
+
+Du bist jetzt Kollab-Partner mit ${toName}.
+Ihr könnt im + Menü "🤝 Kollab-Link" auswählen — 1× pro Woche.`);
+        sendInAppDM(r.toUid, `🎉 Kollaboration aktiv!
+
+Du bist jetzt Kollab-Partner mit ${fromName}.
+Ihr könnt im + Menü "🤝 Kollab-Link" auswählen — 1× pro Woche.`);
+    } else if (!accept && fromU) {
+        const toName = toU?.spitzname || toU?.name || 'Der User';
+        addNotification(r.fromUid, '❌', toName + ' hat deine Kollab-Anfrage abgelehnt', r.toUid);
+    }
+    return { ok: true, status: r.status };
+}
+function collabAcceptFeedRulesApi({ uid }) {
+    uid = String(uid || '');
+    const u = d.users[uid];
+    if (!u) return { ok: false, error: 'User nicht gefunden' };
+    if (!u.collabFeedRulesAcceptedAt) u.collabFeedRulesAcceptedAt = Date.now();
+    return { ok: true, acceptedAt: u.collabFeedRulesAcceptedAt };
+}
+
 module.exports = {
     init, setThumbnailFetcher, setBildSaver,
     updateProfileApi, addProjectApi, updateProjectApi, deleteProjectApi, completeProfileApi, engagePinnedPostApi,
@@ -2538,4 +2644,6 @@ module.exports = {
     authEmailPassword, setUserPasswordApi, setAppCodeApi, createEmailUserApi,
     hashPasswordPBKDF2, verifyPasswordPBKDF2,
     diamondLinkFeedApi, prismaLinkFeedApi, collabFeedApi, collabListApi, mindsetStateApi,
+    pinPostApi, markNotificationsReadApi, blockUserApi, unblockUserApi,
+    collabRequestApi, collabRespondApi, collabAcceptFeedRulesApi,
 };

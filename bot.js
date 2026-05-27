@@ -8422,7 +8422,8 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
                 actorHasPic: !!ladeBild(String(n.actorUid), 'profilepic')
             });
         });
-        await postBot('/mark-notifications-read', { uid: getMyUid(session) });
+        if (LOCAL_STORE) await localWrite(() => botLogic.markNotificationsReadApi({ uid: getMyUid(session) }));
+        else await postBot('/mark-notifications-read', { uid: getMyUid(session) });
         return json({notifications: enriched});
     }
 
@@ -9669,7 +9670,7 @@ p{line-height:1.65;color:var(--muted)}
 
     if (path === '/api/pin-post' && req.method === 'POST') {
         const body = await parseBody(req);
-        const result = await postBot('/pin-post-api', { uid: myUid, timestamp: body.timestamp });
+        const result = LOCAL_STORE ? await localWrite(() => botLogic.pinPostApi({ uid: myUid, timestamp: body.timestamp })) : await postBot('/pin-post-api', { uid: myUid, timestamp: body.timestamp });
         if (!result) return json({ok:false, error:'Bot offline'}, 502);
         return json(result);
     }
@@ -9715,7 +9716,7 @@ p{line-height:1.65;color:var(--muted)}
         const body = await parseBody(req);
         const targetUid = String(body.targetUid||'').trim();
         if (!targetUid || targetUid === myUid) return json({ok:false, error:'Ungültige Ziel-ID'}, 400);
-        const result = await postBot('/block-user-api', { blockerUid: myUid, targetUid });
+        const result = LOCAL_STORE ? await localWrite(() => botLogic.blockUserApi({ blockerUid: myUid, targetUid })) : await postBot('/block-user-api', { blockerUid: myUid, targetUid });
         return json(result || {ok:false, error:'Mainbot offline — Block konnte nicht gespeichert werden, bitte später nochmal'});
     }
 
@@ -9724,7 +9725,7 @@ p{line-height:1.65;color:var(--muted)}
         const body = await parseBody(req);
         const targetUid = String(body.targetUid||'').trim();
         if (!targetUid) return json({ok:false, error:'Ungültige Ziel-ID'}, 400);
-        const result = await postBot('/unblock-user-api', { blockerUid: myUid, targetUid });
+        const result = LOCAL_STORE ? await localWrite(() => botLogic.unblockUserApi({ blockerUid: myUid, targetUid })) : await postBot('/unblock-user-api', { blockerUid: myUid, targetUid });
         return json(result || {ok:false, error:'Mainbot offline'});
     }
 
@@ -14800,7 +14801,7 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
         const body = await parseBody(req);
         const targetUid = String(body.targetUid || '');
         if (!targetUid) return json({ok:false, error:'targetUid fehlt'}, 400);
-        const r = await postBot('/collab-request-api', { fromUid: myUid, toUid: targetUid });
+        const r = LOCAL_STORE ? await localWrite(() => botLogic.collabRequestApi({ fromUid: myUid, toUid: targetUid })) : await postBot('/collab-request-api', { fromUid: myUid, toUid: targetUid });
         if (!r) return json({ok:false, error:'Mainbot offline'}, 502);
         return json(r);
     }
@@ -14810,7 +14811,7 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
         const reqId = String(body.reqId || '');
         const accept = !!body.accept;
         if (!reqId) return json({ok:false, error:'reqId fehlt'}, 400);
-        const r = await postBot('/collab-respond-api', { reqId, accept, callerUid: myUid });
+        const r = LOCAL_STORE ? await localWrite(() => botLogic.collabRespondApi({ reqId, accept, callerUid: myUid })) : await postBot('/collab-respond-api', { reqId, accept, callerUid: myUid });
         if (!r) return json({ok:false, error:'Mainbot offline'}, 502);
         return json(r);
     }
@@ -14833,7 +14834,7 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
     }
     if (path === '/api/collab/accept-feed-rules' && req.method === 'POST') {
         if (!session) return json({error:'Nicht eingeloggt'}, 401);
-        const r = await postBot('/collab-accept-feed-rules-api', { uid: myUid });
+        const r = LOCAL_STORE ? await localWrite(() => botLogic.collabAcceptFeedRulesApi({ uid: myUid })) : await postBot('/collab-accept-feed-rules-api', { uid: myUid });
         if (!r) return json({ok:false, error:'Mainbot offline'}, 502);
         return json(r);
     }
