@@ -276,6 +276,78 @@ async function checkMissionen(uid, name) {
     }
     speichernDebounced();
 }
+// Family = Hauptaccount + alle Sub-Accounts (parent_uid/subUid/subUids + Reverse-Lookup).
+function familyUids(uid) {
+    const u = d.users[uid];
+    const set = new Set([String(uid)]);
+    if (!u) return [...set];
+    const rootUid = u.parent_uid ? String(u.parent_uid) : String(uid);
+    set.add(rootUid);
+    const root = d.users[rootUid];
+    if (root) {
+        if (root.subUid) set.add(String(root.subUid));
+        if (Array.isArray(root.subUids)) root.subUids.forEach(s => set.add(String(s)));
+    }
+    for (const [otherUid, otherUser] of Object.entries(d.users || {})) {
+        if (otherUser && String(otherUser.parent_uid || '') === rootUid) set.add(String(otherUid));
+    }
+    return [...set];
+}
+// ── Missions-Status: 1:1 aus telegram-bot GET /mission-status-api ──
+function missionStatusApi(uid) {
+    uid = String(uid || '');
+    if (!uid) return { ok: false };
+    const heute = new Date().toDateString();
+    const mission = getMission(uid);
+    const wMission = getWochenMission(uid);
+    const heuteLinks = Object.values(d.links).filter(l =>
+        istInstagramLink(l.text) && new Date(l.timestamp).toDateString() === heute && String(getRootUid(l.user_id)) !== String(getRootUid(uid))
+    );
+    const likedBy = (l) => l.likes && (l.likes instanceof Set ? l.likes.has(String(uid)) : Array.isArray(l.likes) && l.likes.map(String).includes(String(uid)));
+    const gesamt = heuteLinks.length;
+    const geliked = heuteLinks.filter(likedBy).length;
+    const prozent = gesamt > 0 ? Math.round((geliked / gesamt) * 100) : 0;
+    const m1Live = (mission.likesGegeben || 0) >= 5;
+    const m2Live = gesamt > 0 && (geliked / gesamt) >= 0.8;
+    const m3Target = Math.min(M3_CAP, gesamt);
+    const m3Live = m3Target > 0 && geliked >= m3Target;
+    if (mission.m1 !== m1Live) mission.m1 = m1Live;
+    if (mission.m2 !== m2Live) mission.m2 = m2Live;
+    if (mission.m3 !== m3Live) mission.m3 = m3Live;
+    const eigenePosts = Object.values(d.links).filter(l =>
+        istInstagramLink(l.text) && new Date(l.timestamp).toDateString() === heute && String(getRootUid(l.user_id)) === String(getRootUid(uid))
+    ).length;
+    return {
+        ok: true,
+        daily: {
+            likesGegeben: mission.likesGegeben || 0,
+            m1: m1Live, m2: m2Live, m3: m3Live,
+            gesamtLinks: gesamt, gelikedLinks: geliked,
+            m3Target, m3Cap: M3_CAP, prozent, eigenePosts,
+            totalInklEigene: gesamt + eigenePosts,
+            alleGeliked: gesamt > 0 && geliked === gesamt
+        },
+        weekly: {
+            m1Tage: wMission.m1Tage || 0,
+            m2Tage: wMission.m2Tage || 0,
+            m3Tage: wMission.m3Tage || 0,
+            superlinks: (() => {
+                const weekKey = getBerlinWeekKey();
+                const weekSL = Object.values(d.superlinks || {}).filter(s => s.week === weekKey);
+                if (!weekSL.length) return { total: 0, geliked: 0, alleGeliked: false, granted: false };
+                const fam = new Set(familyUids(uid));
+                const otherLinks = weekSL.filter(s => !fam.has(String(s.uid)));
+                const gelikedSL = otherLinks.filter(s => {
+                    if (!Array.isArray(s.likes)) return false;
+                    for (const f of fam) if (s.likes.includes(f)) return true;
+                    return false;
+                }).length;
+                const granted = !!(d.wochenSuperlinkMissionGranted && d.wochenSuperlinkMissionGranted[weekKey + ':' + uid]);
+                return { total: otherLinks.length, geliked: gelikedSL, alleGeliked: otherLinks.length > 0 && gelikedSL === otherLinks.length, granted };
+            })()
+        }
+    };
+}
 
 // ── Like-Operation: 1:1 aus GET /like-from-app (ohne Telegram-Teile). ──
 async function likeFromApp(uid, msgId) {
@@ -2275,7 +2347,7 @@ module.exports = {
     // Like-Flow + Kern (verbatim portiert):
     likeFromApp, xpAdd, xpAddMitDaily, xpAddNurGesamt, badge, level, user,
     istAdminId, getRootUid, isSubAccount, weekStart,
-    getMission, updateMissionProgress, checkMissionen,
+    getMission, updateMissionProgress, checkMissionen, missionStatusApi, familyUids,
     istInstagramLink, addDiamond, applyPostBonus,
     sendInAppDM, addNotification, dmUser, sendCreatorBoostDM, ensureCreatorBoostUser,
     badgeBonusLinks, generateSyntheticLinkId, tryFetchThumbnail,

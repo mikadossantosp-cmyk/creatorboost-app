@@ -20954,6 +20954,10 @@ async function setRing(ringId) {
 
     if (path === '/api/mission-status' && req.method === 'GET') {
         if (!session) return json({ok:false, error:'Nicht eingeloggt'},401);
+        if (LOCAL_STORE) {
+            const result = await localWrite(() => botLogic.missionStatusApi(myUid));
+            return json(result || {ok:false});
+        }
         const result = await fetchBot('/mission-status-api?uid=' + myUid);
         return json(result || {ok:false});
     }
