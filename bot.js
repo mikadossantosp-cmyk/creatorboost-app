@@ -4751,7 +4751,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v222-banner-polish';
+const SW_VERSION='v223-profile-heart';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
@@ -19130,7 +19130,7 @@ document.querySelectorAll('.ins-bar').forEach((b, i) => {
               + '<div class="proflink-play">▶</div>'
               + '</a>'
               + '<div class="proflink-actions">'
-              + (isOwn ? '<span class="proflink-likes">❤️ <span id="likes-'+msgId+'">'+likeCount+'</span></span>'
+              + (isOwn ? '<span class="proflink-likes"><svg width="12" height="12" viewBox="0 0 24 24" fill="#ef4444" style="vertical-align:-1px;margin-right:3px"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg><span id="likes-'+msgId+'">'+likeCount+'</span></span>'
                        : '<button class="proflink-like '+(hasLiked?'liked':'')+'" onclick="likePost(\''+msgId+'\',this)" data-msgid="'+msgId+'" '+(hasLiked?'disabled':'')+'><svg width="13" height="13" viewBox="0 0 24 24" fill="'+(hasLiked?'currentColor':'none')+'" stroke="currentColor" stroke-width="2.4"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg><span id="likes-'+msgId+'">'+likeCount+'</span></button>')
               + '<a href="'+htmlEsc(sUrl)+'" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();markLinkVisited(\''+msgId+'\')" class="proflink-open">→ Öffnen</a>'
               + '</div></div>';
