@@ -9,6 +9,7 @@
 //
 // Wird vom Server nur im LOCAL_STORE-Modus genutzt; ungenutzt = inert.
 // ────────────────────────────────────────────────────────────────────────
+const crypto = require('crypto');
 let detectGender;
 try { ({ detectGender } = require('./gender-helper')); } catch (e) { detectGender = () => null; }
 
@@ -23,6 +24,50 @@ function speichernDebounced() {}
 
 // ── datengetrieben statt env: _adminIds kommt aus dem Snapshot (= [...ADMIN_IDS]) ──
 function istAdminId(uid) { return Array.isArray(d._adminIds) && d._adminIds.map(String).includes(String(uid)); }
+
+function badgeBonusLinks(xp) { return xp >= 1000 ? 1 : 0; }
+function generateSyntheticLinkId() {
+    return 'app_' + Date.now().toString(36) + '_' + crypto.randomBytes(3).toString('hex');
+}
+function ensureCreatorBoostUser() {
+    if (!d.users) d.users = {};
+    if (!d.users[CREATORBOOST_UID]) {
+        d.users[CREATORBOOST_UID] = {
+            id: CREATORBOOST_UID, name: 'CreatorBoost', spitzname: 'CreatorBoost',
+            role: '🤖 System', xp: 0, joined: Date.now(), isSystem: true
+        };
+    }
+}
+// Web-Push entfällt im Logik-Modul (kein Zustand) — Verdrahtung übernimmt der Server.
+function sendCreatorBoostDM(toUid, text, options = {}) {
+    ensureCreatorBoostUser();
+    if (!d.messages) d.messages = {};
+    const chatKey = [CREATORBOOST_UID, String(toUid)].sort().join('_');
+    if (!d.messages[chatKey]) d.messages[chatKey] = [];
+    const msg = { from: CREATORBOOST_UID, to: String(toUid), text: String(text || '').slice(0, 1000), timestamp: Date.now(), read: false };
+    if (options.link?.url) {
+        msg.link = { url: String(options.link.url).slice(0, 500), label: String(options.link.label || 'Öffnen').slice(0, 60) };
+    }
+    d.messages[chatKey].push(msg);
+    if (d.messages[chatKey].length > 200) d.messages[chatKey].shift();
+    addNotification(String(toUid), '💬', 'CreatorBoost: ' + String(text || '').slice(0, 40), CREATORBOOST_UID);
+    speichernDebounced();
+}
+// Thumbnail-Fetch ist async/netzabhängig → optionaler Hook, default No-op.
+// Server kann via setThumbnailFetcher() einen echten Fetcher injizieren.
+let _fetchThumbnail = null;
+function setThumbnailFetcher(fn) { _fetchThumbnail = fn; }
+function tryFetchThumbnail(entry, urlField = 'text') {
+    if (!entry || !_fetchThumbnail) return;
+    const url = entry[urlField];
+    if (!url) return;
+    Promise.resolve(_fetchThumbnail(url)).then(thumb => {
+        if (!thumb) return;
+        entry.thumbnail = thumb;
+        entry.thumbnailFetchedAt = Date.now();
+        speichernDebounced();
+    }).catch(() => {});
+}
 
 function badge(xp) {
     if (xp >= 25000) return '💎 Legende';
@@ -273,13 +318,118 @@ async function likeFromApp(uid, msgId) {
     return { ok: true, liked: true, likes: lnk.likes.size };
 }
 
+// ── Link-Posten: 1:1 aus POST /post-link-from-app (ohne Telegram-Teile). ──
+async function postLinkFromApp({ uid, name, url, caption }) {
+    if (!uid || !url) return { ok: false, error: 'Ungültig' };
+    const u = d.users[uid];
+    if (!u) return { ok: false, error: 'User nicht gefunden' };
+
+    if (u.postSuspendedUntil && Number(u.postSuspendedUntil) > Date.now()) {
+        const daysLeft = Math.ceil((Number(u.postSuspendedUntil) - Date.now()) / 86400000);
+        const reason = u.postSuspendReason ? ' — Grund: ' + u.postSuspendReason : '';
+        return { ok: false, error: '🚫 Posten gesperrt für noch ' + daysLeft + ' Tag' + (daysLeft === 1 ? '' : 'e') + reason };
+    }
+
+    const heute = new Date().toDateString();
+    const norm = (t) => t.toLowerCase().replace(/\?.*$/, '').replace(/\/$/, '').trim();
+    const isDuplicate = Object.values(d.links).some(l => norm(l.text) === norm(url));
+    if (isDuplicate) return { ok: false, error: 'Dieser Link wurde bereits gepostet!' };
+
+    let usedBonusLink = false;
+    let usedBadgeBonus = false;
+    if (!istAdminId(uid)) {
+        const todayLinks = Object.values(d.links).filter(l =>
+            String(l.user_id) === String(uid) && new Date(l.timestamp).toDateString() === heute
+        ).length;
+        const bonusAvail = d.bonusLinks?.[uid] || 0;
+        const badgeAvailable = badgeBonusLinks(u.xp || 0) > 0 && (!d.badgeTracker?.[uid] || d.badgeTracker[uid] !== heute);
+        const standardUsed = todayLinks > 0;
+        const canPost = !standardUsed || bonusAvail > 0 || badgeAvailable;
+        if (!canPost) {
+            return { ok: false, error: 'Limit erreicht! Du hast heute schon gepostet. Kaufe einen Extra-Link im Shop (5 💎).' };
+        }
+        if (standardUsed) {
+            if (bonusAvail > 0) usedBonusLink = true;
+            else if (badgeAvailable) usedBadgeBonus = true;
+        }
+    }
+
+    const linkId = generateSyntheticLinkId();
+    const mapKey = linkId;
+    const linkData = {
+        chat_id: Number(process.env.GROUP_A_ID),
+        user_id: /^\d+$/.test(String(uid)) ? Number(uid) : String(uid),
+        user_name: u.spitzname || u.name || name,
+        text: url,
+        caption: caption || '',
+        likes: new Set(),
+        likerNames: {},
+        counter_msg_id: linkId,
+        timestamp: Date.now(),
+        origin: 'app',
+        appOnly: true,
+        likeSource: { app: 0, telegram: 0 }
+    };
+    d.links[mapKey] = linkData;
+    tryFetchThumbnail(linkData, 'text');
+
+    try {
+        const rulesUrl = ((process.env.APP_URL || 'https://web-production-7981d.up.railway.app').replace(/\/$/, '')) + '/explore?tab=regeln#r-links';
+        const linkRules = '✅ Dein Link ist gepostet!\n\n' +
+            '📋 *Link-Regeln (kurz):*\n' +
+            '• 1 Link pro Tag (Bonus-Links optional)\n' +
+            '• Andere Links musst du liken (Mission M1: 5 Likes/Tag)\n' +
+            '• Erst Insta-Reel öffnen, dann liken (Visit-before-Like)\n' +
+            '• 2-Wort-Kommentar = Pflicht (M2/M3 Missionen)\n' +
+            '• Mission-Auswertung 12:00 — sonst Verwarnung';
+        sendCreatorBoostDM(uid, linkRules, { link: { url: rulesUrl, label: '📖 Alle Link-Regeln' } });
+    } catch (e) {}
+
+    if (usedBonusLink && d.bonusLinks?.[uid] > 0) {
+        d.bonusLinks[uid]--;
+        if (d.bonusLinks[uid] <= 0) delete d.bonusLinks[uid];
+    }
+    if (usedBadgeBonus) {
+        if (!d.badgeTracker) d.badgeTracker = {};
+        d.badgeTracker[uid] = heute;
+    }
+
+    xpAddMitDaily(uid, 1, u.name || name);
+    u.links = (u.links || 0) + 1;
+
+    const NEW_MEMBER_MAX_AGE_MS = 7 * 24 * 3600 * 1000;
+    const isFirstPostEver = Number(u.links) === 1
+        && u.joinDate && (Date.now() - u.joinDate) <= NEW_MEMBER_MAX_AGE_MS
+        && !u.parent_uid;
+    if (isFirstPostEver) {
+        linkData.firstPostBonus = true;
+        linkData.firstPostBonusUntil = Date.now() + 8 * 3600 * 1000;
+        xpAdd(uid, 20, u.name || name);
+        try { sendInAppDM(uid, '🌟 Willkommen — dein erster Post ist live!\n\n+20 XP Welcome-Bonus erhalten.\nDein Post wird 8h lang ganz oben im Heute-Feed gepinned. Liker bekommen +20 XP extra.'); } catch (e) {}
+    }
+
+    const _evtBonus = applyPostBonus(uid, u.name || name);
+    if (_evtBonus.events.length) {
+        const parts = _evtBonus.events.map(e => e.type === 'diamond' ? ('+' + e.amount + ' 💎') : e.type === 'xp' ? ('+' + e.amount + ' XP') : '').filter(Boolean);
+        if (parts.length) { try { sendInAppDM(uid, '🎉 Event-Bonus für deinen Post!\n\n' + parts.join(' · ') + '\n\nLäuft noch — postet weiter!'); } catch (e) {} }
+    }
+
+    const mission = getMission(uid);
+    if (istInstagramLink(url)) mission.linksGepostet++;
+    await checkMissionen(uid, u.name || name);
+
+    return { ok: true, msgId: linkId };
+}
+
 module.exports = {
-    init,
+    init, setThumbnailFetcher,
+    postLinkFromApp,
     // Like-Flow + Kern (verbatim portiert):
     likeFromApp, xpAdd, xpAddMitDaily, xpAddNurGesamt, badge, level, user,
     istAdminId, getRootUid, isSubAccount, weekStart,
     getMission, updateMissionProgress, checkMissionen,
     istInstagramLink, addDiamond, applyPostBonus,
-    sendInAppDM, addNotification, dmUser,
+    sendInAppDM, addNotification, dmUser, sendCreatorBoostDM, ensureCreatorBoostUser,
+    badgeBonusLinks, generateSyntheticLinkId, tryFetchThumbnail,
     M3_CAP, CREATORBOOST_UID,
 };
