@@ -3712,6 +3712,12 @@ function confirmCrop(){
       // sanftes reload um Profilbilder/Banner sofort zu erneuern
       setTimeout(()=>location.reload(), 100);
     });
+    // Bei JEDEM App-Fokus auf neuen SW pruefen → Updates landen zuverlaessig auch in der
+    // installierten App (TWA), ohne dass der Nutzer manuell Cache/Storage leeren muss.
+    // Wartender SW wird sofort aktiviert; der controllerchange-Listener oben laedt dann neu.
+    function _cxCheckUpdate(){ try{ reg.update().then(()=>{ if(reg.waiting){ try{ reg.waiting.postMessage({type:'SKIP_WAITING'}); }catch(e){} } }).catch(()=>{}); }catch(e){} }
+    document.addEventListener('visibilitychange',()=>{ if(!document.hidden) _cxCheckUpdate(); });
+    window.addEventListener('focus', _cxCheckUpdate);
     // Kein Update-Banner mehr (User-Wunsch): Updates werden still eingespielt — der neue
     // SW aktiviert sich via skipWaiting und der controllerchange-Listener oben laedt die
     // Seite einmalig automatisch neu. Kein "App aktualisieren"-Prompt noetig.
@@ -4712,7 +4718,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v212-violet-accent';
+const SW_VERSION='v213-update-on-focus';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
