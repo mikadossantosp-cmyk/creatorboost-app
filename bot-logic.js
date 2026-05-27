@@ -718,6 +718,81 @@ function engagePinnedPostApi({ engagerUid, ownerUid }) {
     return { ok: true };
 }
 
+// ════════ ADMIN-AKTIONEN (clean: nur Daten + In-App-DM) ════════
+function addWarn({ uid, reason }) {
+    uid = String(uid || '');
+    const u = d.users[uid];
+    if (!u) return { ok: false, error: 'User nicht gefunden' };
+    u.warnings = (u.warnings || 0) + 1;
+    try { dmUser(uid, `⚠️ *Verwarnung!*\n\nWarn: ${u.warnings}/5${reason ? '\n\nGrund: ' + reason : ''}`); } catch (e) {}
+    return { ok: true, warnings: u.warnings };
+}
+function removeWarn({ uid }) {
+    uid = String(uid || '');
+    const u = d.users[uid];
+    if (!u) return { ok: false, error: 'User nicht gefunden' };
+    u.warnings = Math.max(0, (u.warnings || 0) - 1);
+    try { dmUser(uid, `✅ *Verwarnung entfernt*\n\nWarn: ${u.warnings}/5`); } catch (e) {}
+    return { ok: true, warnings: u.warnings };
+}
+function resetUser({ uid }) {
+    uid = String(uid || '');
+    const u = d.users[uid];
+    if (!u) return { ok: false, error: 'User nicht gefunden' };
+    u.xp = 0; u.level = 1; u.role = badge(0);
+    if (d.dailyXP) delete d.dailyXP[uid];
+    if (d.weeklyXP) delete d.weeklyXP[uid];
+    try { dmUser(uid, `♻️ *XP zurückgesetzt*\n\nEin Admin hat deinen XP-Stand auf 0 zurückgesetzt.`); } catch (e) {}
+    return { ok: true, xp: 0 };
+}
+function removeXp({ uid, amount, reason }) {
+    uid = String(uid || '');
+    const raw = Number(amount);
+    const u = d.users[uid];
+    if (!uid || !u) return { ok: false, error: 'User nicht gefunden' };
+    if (!Number.isFinite(raw)) return { ok: false, error: 'amount erforderlich' };
+    const amt = Math.abs(raw);
+    u.xp = Math.max(0, (u.xp || 0) - amt);
+    u.level = level(u.xp);
+    u.role = badge(u.xp);
+    if (!d.weeklyXP) d.weeklyXP = {};
+    d.weeklyXP[uid] = Math.max(0, (d.weeklyXP[uid] || 0) - amt);
+    try { dmUser(uid, `📉 *−${amt} XP*\n\n${_reasonLabel(reason)}\n⭐ Aktuell: ${u.xp} XP`); } catch (e) {}
+    return { ok: true, newXp: u.xp };
+}
+function startXpEvent({ amount, durationMs, label }) {
+    amount = parseInt(amount, 10);
+    durationMs = parseInt(durationMs, 10);
+    label = String(label || '').slice(0, 60);
+    if (!Number.isFinite(amount) || amount <= 0) return { ok: false, error: 'amount muss > 0 sein' };
+    if (!Number.isFinite(durationMs) || durationMs <= 0) return { ok: false, error: 'durationMs muss > 0 sein' };
+    if (durationMs > 7 * 24 * 3600 * 1000) return { ok: false, error: 'Max 7 Tage' };
+    const multiplier = 1 + (amount / 100);
+    d.xpEvent = { aktiv: true, multiplier, bonusPercent: amount, bonusPerPost: 0, end: Date.now() + durationMs, label: label || ('+' + amount + '% XP pro Like'), startedAt: Date.now() };
+    return { ok: true, event: d.xpEvent };
+}
+function startDiamondEvent({ amount, durationMs, label }) {
+    amount = parseInt(amount, 10);
+    durationMs = parseInt(durationMs, 10);
+    label = String(label || '').slice(0, 60);
+    if (!Number.isFinite(amount) || amount <= 0) return { ok: false, error: 'amount muss > 0 sein' };
+    if (!Number.isFinite(durationMs) || durationMs <= 0) return { ok: false, error: 'durationMs muss > 0 sein' };
+    if (durationMs > 7 * 24 * 3600 * 1000) return { ok: false, error: 'Max 7 Tage' };
+    d.diamondEvent = { bonusPerPost: amount, end: Date.now() + durationMs, label: label || ('+' + amount + ' 💎 pro Post'), startedAt: Date.now() };
+    return { ok: true, event: d.diamondEvent };
+}
+function stopEvent({ type }) {
+    type = String(type || '');
+    if (type === 'xp') {
+        if (d.xpEvent) { d.xpEvent.bonusPerPost = 0; d.xpEvent.end = null; d.xpEvent.aktiv = false; d.xpEvent.multiplier = 1; }
+    } else if (type === 'diamond') {
+        d.diamondEvent = { bonusPerPost: 0, end: null };
+    } else {
+        return { ok: false, error: 'type muss xp oder diamond sein' };
+    }
+    return { ok: true };
+}
+
 // ── Follow/Unfollow: 1:1 aus POST /follow-api ──
 function followApi({ followerUid, targetUid }) {
     followerUid = followerUid ? String(followerUid) : '';
@@ -1015,6 +1090,7 @@ module.exports = {
     init, setThumbnailFetcher, setBildSaver,
     updateProfileApi, addProjectApi, updateProjectApi, deleteProjectApi, completeProfileApi, engagePinnedPostApi,
     followApi,
+    addWarn, removeWarn, resetUser, removeXp, startXpEvent, startDiamondEvent, stopEvent,
     postLinkFromApp, createPostApi, deletePostApi, commentApi, deleteCommentApi,
     diamondLinkCreate, diamondLinkLike, diamondLinkAcceptRules, diamondLinkAdminDelete,
     prismaLinkCreate, prismaLinkLike, prismaLinkAcceptRules, prismaLinkAdminDelete,
