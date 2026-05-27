@@ -621,6 +621,65 @@ function getBerlinWeekKey() {
     return monday.getFullYear() + '-' + String(monday.getMonth() + 1).padStart(2, '0') + '-' + String(monday.getDate()).padStart(2, '0');
 }
 
+// ════════ SUPERLINKS (App-only — Telegram-Karte bewusst entfernt) ════════
+// Nutzer-Entscheidung: Superlinks leben nur im App-Feed. Logik (Wochenlimit
+// nach Rolle, Credits, 10💎-Extra-Slot, Mo–Sa-Fenster) bleibt 1:1; der
+// Telegram-Teil (Gruppen-Karte, Card-Updates, DMs an andere Poster) entfällt.
+function isSuperLinkPostingAllowed() {
+    const now = new Date();
+    const day = now.getDay();
+    if (day === 0) return false;
+    if (day === 6 && (now.getHours() === 23 && now.getMinutes() >= 59)) return false;
+    return day >= 1 && day <= 6;
+}
+function postSuperlinkApp({ uid, url, caption }) {
+    uid = String(uid || '');
+    const u = d.users[uid];
+    if (!uid || !url) return { ok: false, error: 'Fehlende Felder' };
+    if (!u) return { ok: false, error: 'User nicht gefunden' };
+    if (!u.instagram) return { ok: false, error: 'Bitte zuerst /setinsta im Bot setzen' };
+    if (!isSuperLinkPostingAllowed()) return { ok: false, error: 'Superlinks können nur Mo–Sa (bis 23:58) gepostet werden — Sonntag ist Auswertung' };
+    const week = getBerlinWeekKey();
+    const isElitePlusSL = u.role === '🌟 Elite+' || u.role === '💎 Legende';
+    const maxSL = isElitePlusSL ? 2 : 1;
+    const slThisWeekCount = Object.values(d.superlinks || {}).filter(s => s.uid === uid && s.week === week).length;
+    const hasSlCredit = Number(u.superlinkCredits || 0) > 0;
+    if (slThisWeekCount >= maxSL && !hasSlCredit) return { ok: false, error: 'Du hast diese Woche bereits ' + maxSL + ' Superlink(s) gepostet' };
+    const usesSlCredit = slThisWeekCount >= maxSL && hasSlCredit;
+    const isAdminSL = istAdminId(Number(uid));
+    const isExtraSlot = !usesSlCredit && slThisWeekCount > 0;
+    if (!isAdminSL && isExtraSlot && (u.diamonds || 0) < 10) return { ok: false, error: 'Nicht genug Diamanten (benötigt: 💎 10 für Extra-Superlink)' };
+    if (!url.includes('instagram.com')) return { ok: false, error: 'Nur Instagram-Links erlaubt' };
+    const slId = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    d.superlinks = d.superlinks || {};
+    const newSL = { id: slId, uid, url, caption: caption || '', msg_id: null, appOnly: true, timestamp: Date.now(), week, likes: [], likerNames: {} };
+    d.superlinks[slId] = newSL;
+    tryFetchThumbnail(newSL, 'url');
+    if (!isAdminSL && isExtraSlot) u.diamonds = (u.diamonds || 0) - 10;
+    if (usesSlCredit) u.superlinkCredits = Math.max(0, Number(u.superlinkCredits || 0) - 1);
+    try {
+        const rulesUrl = ((process.env.APP_URL || 'https://web-production-7981d.up.railway.app').replace(/\/$/, '')) + '/explore?tab=regeln#r-superlinks';
+        sendCreatorBoostDM(uid, '⭐ Dein Superlink wurde gepostet!\n\nDu hast heute einen Superlink gepostet — vergiss nicht: Du musst alle Superlinks dieser Woche engagieren (Liken, Kommentieren, Teilen, Speichern) bis Sonntag 23:59 Uhr.', { link: { url: rulesUrl, label: '📖 Superlink-Regeln' } });
+    } catch (e) {}
+    return { ok: true, slId };
+}
+function likeSuperlinkApi({ slId, uid }) {
+    if (!slId || !uid) return { ok: false, error: 'Fehlende Felder' };
+    const sl = d.superlinks?.[slId];
+    if (!sl) return { ok: false, error: 'Superlink nicht gefunden' };
+    if (String(sl.uid) === String(uid)) return { ok: false, error: 'Eigener Post' };
+    if (String(getRootUid(uid)) === String(getRootUid(sl.uid))) return { ok: false, error: 'Eigener Account — kein Self-Like' };
+    if (!Array.isArray(sl.likes)) sl.likes = [];
+    if (!sl.likerNames) sl.likerNames = {};
+    const idx = sl.likes.indexOf(String(uid));
+    if (idx >= 0) return { ok: true, liked: true, likes: sl.likes.length };
+    sl.likes.push(String(uid));
+    const u = d.users[String(uid)];
+    sl.likerNames[String(uid)] = u?.spitzname || u?.name || 'User';
+    addNotification(String(sl.uid), '❤️', (u?.spitzname || u?.name || 'User') + ' hat deinen Superlink geliked!');
+    return { ok: true, liked: idx < 0, likes: sl.likes.length };
+}
+
 // ════════ DIAMANTLINKS (30💎 · 3 Tage · 3💎 Reward) ════════
 const DIAMOND_LINK_COST = 30;
 const DIAMOND_LINK_REWARD = 3;
@@ -822,6 +881,7 @@ module.exports = {
     diamondLinkCreate, diamondLinkLike, diamondLinkAcceptRules, diamondLinkAdminDelete,
     prismaLinkCreate, prismaLinkLike, prismaLinkAcceptRules, prismaLinkAdminDelete,
     collabCreatePost, collabLikePost, getBerlinWeekKey,
+    postSuperlinkApp, likeSuperlinkApi, isSuperLinkPostingAllowed,
     addXp, addExtraLink, addSuperlink, addDiamonds, removeDiamonds,
     buyItemApi, setActiveRingApi, buyExtralinkApi, linkStatusApi,
     // Like-Flow + Kern (verbatim portiert):
