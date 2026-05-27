@@ -16,9 +16,25 @@
 
 ---
 
-## 0. Cutover-Fortschritt (Stand fortlaufend aktualisiert)
+## 0. Cutover-Fortschritt
 
-✅ **Standalone (LOCAL_STORE) — erledigt & auf `main`:**
+### ✅ CUTOVER KOMPLETT — App läuft vollständig standalone (LOCAL_STORE=1)
+Alle Schreib- UND Lese-Routen nutzen unter `LOCAL_STORE=1` den eigenen Datastore;
+der telegram-bot wird nicht mehr aufgerufen. Einzige verbleibende Bot-Calls sind
+fire-and-forget-Tracking (track-funnel, log-email-login, app-presence, track-login),
+die ohne Bot einfach ins Leere laufen und nichts brechen.
+
+**→ Der telegram-bot kann jetzt abgeschaltet werden** (nach einem letzten frischen
+Daten-Snapshot via `/admin/migration` + `compare`, damit keine seit dem Cutover
+entstandenen Bot-seitigen Änderungen fehlen).
+
+Zuletzt portiert: alle Admin-Dashboard-Lese-Listen (Stats, Userlist, User-Detail,
+Funnel, Engagement-Log, Mission-Report, Helper-Questions, Diamond-/Prisma-Admin-List)
++ run-wochen-gewinnspiel; upload-bild als lokaler No-op (Bild wird eh lokal gespeichert).
+
+---
+
+✅ **Standalone (LOCAL_STORE) — Details:**
 - Komplette User-App: Auth/Login, Profil/Bio, Posts, Likes, Kommentare, Follow,
   Projekte, Missionen, Community-Chat (app-chat), Feeds (Diamond/Prisma/Collab/Mindset),
   Superlinks, Helper-Chat, Events-Status, Daten-Export, Collab-Requests, pin-post.
