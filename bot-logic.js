@@ -730,6 +730,80 @@ function engagePinnedPostApi({ engagerUid, ownerUid }) {
     return { ok: true };
 }
 
+// ════════ CRON-DISPATCHER (App-eigener Scheduler, Telegram-Jobs raus) ════════
+function linkUrl(text) {
+    if (!text || typeof text !== 'string') return null;
+    const t = text.trim();
+    if (t.includes('http://') || t.includes('https://') || t.includes('www.') || t.includes('t.me/')) return t;
+    return null;
+}
+// Event-Announcement an alle aktiven User (In-App-DM). Web-Push entfällt (zustandslos).
+function announceEventToAllUsers(title, body) {
+    let count = 0;
+    for (const [uid, u] of Object.entries(d.users || {})) {
+        if (!u || u.parent_uid || u.banned || !u.started) continue;
+        if (Array.isArray(d._adminIds) && d._adminIds.map(Number).includes(Number(uid))) continue;
+        try { sendInAppDM(uid, body); count++; } catch (e) {}
+    }
+    return count;
+}
+// XP-/Diamond-Event Auto-Start/Stop + Vorab-Erinnerungen (nutzt Echtzeit wie der Bot).
+function eventAutoTick() {
+    const now = Date.now();
+    if (d.xpEvent?.start && d.xpEvent?.end) {
+        const xe = d.xpEvent;
+        if (xe.start - now > 0 && xe.start - now <= 60 * 60 * 1000 && !xe.announcedAt1hPre) { xe.announcedAt1hPre = Date.now(); const pct = Math.round((xe.multiplier - 1) * 100); announceEventToAllUsers('⏰ XP-Event in 1 Stunde!', '+' + pct + '% XP startet in 1h — sei dabei!'); }
+        if (xe.start - now > 0 && xe.start - now <= 30 * 60 * 1000 && !xe.announcedAt30mPre) { xe.announcedAt30mPre = Date.now(); const pct = Math.round((xe.multiplier - 1) * 100); announceEventToAllUsers('⏰ XP-Event in 30 Minuten!', '+' + pct + '% XP startet gleich — bereit sein!'); }
+        if (!xe.aktiv && now >= xe.start && now <= xe.end) { xe.aktiv = true; if (!xe.activatedAndAnnouncedAt) { xe.activatedAndAnnouncedAt = Date.now(); const pct = Math.round((xe.multiplier - 1) * 100); announceEventToAllUsers('🚀 XP-Event läuft JETZT!', '+' + pct + '% XP auf alle Aktionen — jetzt aktiv sein!'); } }
+        if (xe.aktiv && now > xe.end) { xe.aktiv = false; }
+    }
+    if (d.diamondEvent?.start && d.diamondEvent?.end) {
+        const de = d.diamondEvent;
+        if (de.start - now > 0 && de.start - now <= 60 * 60 * 1000 && !de.announcedAt1hPre) { de.announcedAt1hPre = Date.now(); announceEventToAllUsers('⏰ Diamond-Event in 1 Stunde!', '+' + (de.pendingBonusPerPost || de.bonusPerPost) + ' 💎 pro Post startet in 1h!'); }
+        if (de.start - now > 0 && de.start - now <= 30 * 60 * 1000 && !de.announcedAt30mPre) { de.announcedAt30mPre = Date.now(); announceEventToAllUsers('⏰ Diamond-Event in 30 Minuten!', '+' + (de.pendingBonusPerPost || de.bonusPerPost) + ' 💎 pro Post startet gleich!'); }
+        if (now >= de.start && now <= de.end && de.bonusPerPost === 0 && de.pendingBonusPerPost > 0) { de.bonusPerPost = de.pendingBonusPerPost; if (!de.activatedAndAnnouncedAt) { de.activatedAndAnnouncedAt = Date.now(); announceEventToAllUsers('💎 Diamond-Event läuft JETZT!', '+' + de.bonusPerPost + ' 💎 pro Post — jetzt posten lohnt!'); } }
+        if (now > de.end && de.bonusPerPost > 0) { de.bonusPerPost = 0; }
+    }
+}
+// Alte Links (>2 Tage) aufräumen. Telegram-Message-Deletes entfallen (app-only).
+function linkCleanup() {
+    const zweiTage = 2 * 24 * 60 * 60 * 1000;
+    for (const [k, l] of Object.entries(d.links)) {
+        if (Date.now() - l.timestamp > zweiTage) {
+            const mk = String(l.counter_msg_id);
+            if (d.dmNachrichten?.[mk]) delete d.dmNachrichten[mk];
+            const lu = linkUrl(l.text);
+            if (lu && Array.isArray(d.gepostet)) { const idx = d.gepostet.indexOf(lu); if (idx !== -1) d.gepostet.splice(idx, 1); }
+            delete d.links[k];
+        }
+    }
+}
+// App-Scheduler: 1:1-Dispatch aus dem Bot-zeitCheck — NUR Daten-Jobs.
+// Telegram-only Jobs (backup/memberCheck/topLinks/smartReminder/thread-sync) entfallen.
+// Aufruf alle 60s vom App-Server (setInterval) im LOCAL_STORE-Modus.
+async function zeitCheck(nowArg) {
+    try {
+        const jetzt = nowArg || new Date();
+        const h = jetzt.getHours();
+        const m = jetzt.getMinutes();
+        const tagStr = jetzt.toDateString();
+        if (!d._lastEvents) d._lastEvents = {};
+        const taeglich = (key) => {
+            const fullKey = `${key}_${h}_${tagStr}`;
+            if (d._lastEvents[fullKey]) return false;
+            d._lastEvents[fullKey] = true;
+            return true;
+        };
+        if (jetzt.getDay() === 1 && h === 0 && m < 10 && taeglich('wochenReset')) wochenResetUndAuszahlung(jetzt);
+        if (jetzt.getDate() === 1 && h === 0 && m < 10 && taeglich('legendenBonus')) legendenBonus();
+        if (h === 12 && m < 5 && taeglich('missionen')) await missionenAuswerten();
+        if (h === 23 && m >= 55 && taeglich('dailyRanking')) await dailyRankingAbschluss();
+        eventAutoTick();
+        linkCleanup();
+        for (const key of Object.keys(d._lastEvents)) { if (!key.endsWith(tagStr)) delete d._lastEvents[key]; }
+    } catch (e) { /* fehler im einzelnen Job darf Scheduler nicht killen */ }
+}
+
 // ════════ RANKING-AUSZAHLUNGEN (Tages-/Wochen-Cron) ════════
 async function aktivitaetsScore(uid) {
     const logins = d.dailyLogins[uid] || 0;
@@ -1948,6 +2022,7 @@ module.exports = {
     helperChatAppendApi, helperQuestionApi, adminHelperAnswerApi,
     auswertenForUserDay, missionenAuswerten, backfillMissionenSinceMonday, thisWeekBackfillDays, applyWarningEscalation, xpBisNaechstesBadge,
     dailyRankingAbschluss, aktivitaetsScore, archiveWeeklyXP, legendenBonus, wochenResetUndAuszahlung,
+    zeitCheck, eventAutoTick, linkCleanup, announceEventToAllUsers,
     postLinkFromApp, createPostApi, deletePostApi, commentApi, deleteCommentApi,
     diamondLinkCreate, diamondLinkLike, diamondLinkAcceptRules, diamondLinkAdminDelete,
     prismaLinkCreate, prismaLinkLike, prismaLinkAcceptRules, prismaLinkAdminDelete,
