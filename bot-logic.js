@@ -253,8 +253,9 @@ function updateMissionProgress(uid) {
     if (istAdminId(uid)) return;
     const heute = new Date().toDateString();
     const mission = getMission(uid);
+    const _famCache = new Map();
     const heuteLinks = Object.values(d.links).filter(l =>
-        istInstagramLink(l.text) && new Date(l.timestamp).toDateString() === heute && String(getRootUid(l.user_id)) !== String(getRootUid(uid))
+        istInstagramLink(l.text) && new Date(l.timestamp).toDateString() === heute && !_isFamilyPost(uid, l.user_id, _famCache)
     );
     heuteLinks.forEach(l => { if (!l.likes) l.likes = new Set(); });
     // Per-Account: nur Likes DIESES Kontos (exakte uid) zaehlen — Missionen sind pro Sub getrennt.
@@ -295,14 +296,26 @@ function familyUids(uid) {
     return [...set];
 }
 // ── Missions-Status: 1:1 aus telegram-bot GET /mission-status-api ──
+// Family-Post aus Sicht des Viewers: Viewer ist in familyUids(owner) — exakt die Posts,
+// die projectDataLikeBot als "geliked" padded (Family darf eigene Posts nicht liken).
+// Solche Posts gehoeren NICHT in den Missions-Nenner (sonst haengt 20/24 obwohl rot).
+// Konsistent mit getRootUid (deckt parent->sub) UND einseitigen subUids-Verknuepfungen.
+function _isFamilyPost(viewerUid, ownerUid, cache) {
+    ownerUid = String(ownerUid);
+    if (cache.has(ownerUid)) return cache.get(ownerUid);
+    const r = familyUids(ownerUid).map(String).includes(String(viewerUid));
+    cache.set(ownerUid, r);
+    return r;
+}
 function missionStatusApi(uid) {
     uid = String(uid || '');
     if (!uid) return { ok: false };
     const heute = new Date().toDateString();
     const mission = getMission(uid);
     const wMission = getWochenMission(uid);
+    const _famCache = new Map();
     const heuteLinks = Object.values(d.links).filter(l =>
-        istInstagramLink(l.text) && new Date(l.timestamp).toDateString() === heute && String(getRootUid(l.user_id)) !== String(getRootUid(uid))
+        istInstagramLink(l.text) && new Date(l.timestamp).toDateString() === heute && !_isFamilyPost(uid, l.user_id, _famCache)
     );
     // Per-Account: jeder (Sub-)Account hat seine EIGENE Mission — es zaehlen nur die
     // Likes DIESES Kontos (exakte uid), nicht der Family.
