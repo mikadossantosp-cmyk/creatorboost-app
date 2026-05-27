@@ -33,8 +33,6 @@ if (!BRIDGE_SECRET) {
     console.error('FATAL: BRIDGE_SECRET env-var nicht gesetzt. Server startet nicht.');
     process.exit(1);
 }
-const BOT_TOKEN     = process.env.BOT_TOKEN     || '';
-const BOT_USERNAME  = process.env.BOT_USERNAME  || 'Creator_Boostbot';
 const PORT          = process.env.PORT          || 3000;
 
 // ── MIGRATION: wenn LOCAL_STORE=1 liest die App /data aus dem eigenen
@@ -1006,17 +1004,6 @@ function getOnlineUids() {
         if ((now - (s.lastSeen||0)) < ONLINE_WINDOW_MS) out.add(String(s.uid));
     }
     return out;
-}
-
-function verifyTelegramLogin(data) {
-    try {
-        const { hash, ...rest } = data;
-        const secret = crypto.createHash('sha256').update(BOT_TOKEN).digest();
-        const str = Object.keys(rest).sort().map(k=>`${k}=${rest[k]}`).join('\n');
-        const hmac = crypto.createHmac('sha256', secret).update(str).digest('hex');
-        const age = Date.now()/1000 - Number(rest.auth_date||0);
-        return hmac === hash && age < 86400;
-    } catch(e) { return false; }
 }
 
 let _dataCache = null;
