@@ -2323,6 +2323,103 @@ function collabLikePost({ uid, postId }) {
     return { ok: true, liked: true, likeCount: p.likes.length, diamondsTotal: u.diamonds || 0, rulesDmSent: dmSentNow, diamondsGiven, boostActive: boost.active };
 }
 
+// ── READ-Getter: 1:1 aus telegram-bot Feed-Endpoints portiert (reine Reads) ──
+function diamondLinkFeedApi(callerUid) {
+    _diamondEnsure();
+    callerUid = String(callerUid || '');
+    const caller = d.users[callerUid] || {};
+    const now = Date.now();
+    const callerRoot = callerUid ? getRootUid(callerUid) : null;
+    const posts = Object.values(d.diamondLinks)
+        .filter(_diamondActive)
+        .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0))
+        .map(p => {
+            const author = d.users[p.uid] || {};
+            const likes = Array.isArray(p.likes) ? p.likes.map(String) : [];
+            const likers = likes.map(lid => { const u = d.users[lid] || {}; return { uid: lid, name: u.spitzname || u.name || 'User', instagram: u.instagram || '', role: u.role || '' }; });
+            const isSelf = !!(callerUid && String(p.uid) === callerUid);
+            const isFamily = !!(callerRoot && !isSelf && getRootUid(p.uid) === callerRoot);
+            return { id: p.id, uid: p.uid, url: p.url, caption: p.caption, createdAt: p.createdAt, expiresAt: p.expiresAt, remainingMs: Math.max(0, p.expiresAt - now), likeCount: likes.length, likers, liked: callerUid ? likes.includes(callerUid) : false, isSelf, isFamily, author: { uid: p.uid, name: author.spitzname || author.name || 'User', instagram: author.instagram || '' }, reward: DIAMOND_LINK_REWARD };
+        });
+    return { ok: true, posts, rulesAccepted: !!caller.diamondRulesAcceptedAt, cost: DIAMOND_LINK_COST, reward: DIAMOND_LINK_REWARD };
+}
+function prismaLinkFeedApi(callerUid, hideEngaged) {
+    _prismaEnsure();
+    callerUid = String(callerUid || '');
+    hideEngaged = !!hideEngaged;
+    const caller = d.users[callerUid] || {};
+    const now = Date.now();
+    const week = getBerlinWeekKey();
+    const callerRoot = callerUid ? getRootUid(callerUid) : null;
+    const callerFam = callerUid ? new Set(familyUids(callerUid)) : null;
+    const posts = Object.values(d.prismaLinks)
+        .filter(_prismaActive)
+        .filter(p => {
+            if (!callerUid || !hideEngaged) return true;
+            const likes = Array.isArray(p.likes) ? p.likes.map(String) : [];
+            for (const f of (callerFam || [])) if (likes.includes(f)) return false;
+            return true;
+        })
+        .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0))
+        .map(p => {
+            const author = d.users[p.uid] || {};
+            const likes = Array.isArray(p.likes) ? p.likes.map(String) : [];
+            const likers = likes.map(lid => { const u = d.users[lid] || {}; return { uid: lid, name: u.spitzname || u.name || 'User', instagram: u.instagram || '', role: u.role || '' }; });
+            const isSelf = !!(callerUid && String(p.uid) === callerUid);
+            const isFamily = !!(callerRoot && !isSelf && getRootUid(p.uid) === callerRoot);
+            return { id: p.id, uid: p.uid, url: p.url, caption: p.caption, createdAt: p.createdAt, expiresAt: p.expiresAt, remainingMs: Math.max(0, p.expiresAt - now), likeCount: likes.length, likers, liked: callerUid ? likes.includes(callerUid) : false, isSelf, isFamily, author: { uid: p.uid, name: author.spitzname || author.name || 'User', instagram: author.instagram || '' }, reward: PRISMA_LINK_REWARD };
+        });
+    return { ok: true, posts, rulesAccepted: !!caller.prismaRulesAcceptedAt, cost: PRISMA_LINK_COST, reward: PRISMA_LINK_REWARD, postedThisWeek: caller.prismaPostThisWeek === week };
+}
+function collabFeedApi(callerUid) {
+    _collabEnsure();
+    callerUid = String(callerUid || '');
+    const week = getBerlinWeekKey();
+    const _nowB = Date.now();
+    const out = Object.values(d.collabPosts || {})
+        .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+        .slice(0, 100)
+        .map(p => {
+            const likes = Array.isArray(p.likes) ? p.likes.map(String) : [];
+            const a = d.users[p.uid] || {}, b = d.users[p.partnerUid] || {};
+            const boost = collabBoostState(p, _nowB);
+            return { id: p.id, uid: p.uid, partnerUid: p.partnerUid, url: p.url, caption: p.caption, likeCount: likes.length, liked: callerUid ? likes.includes(callerUid) : false, isSelf: callerUid && (callerUid === String(p.uid) || callerUid === String(p.partnerUid)), createdAt: p.createdAt, week: p.week, authorA: { uid: p.uid, name: a.spitzname || a.name || 'User', instagram: a.instagram || '' }, authorB: { uid: p.partnerUid, name: b.spitzname || b.name || 'User', instagram: b.instagram || '' }, boostActive: boost.active, boostEndsAt: boost.endsAt, boostNextStartAt: boost.nextStartAt, boostExpired: boost.expired };
+        });
+    return { ok: true, posts: out, currentWeek: week, boostWindowMs: COLLAB_BOOST_WINDOW_MS, boostCycleMs: COLLAB_BOOST_CYCLE_MS };
+}
+function collabListApi(callerUid) {
+    _collabEnsure();
+    const uid = String(callerUid || '');
+    if (!uid) return { ok: false, error: 'uid fehlt' };
+    const u = d.users[uid] || {};
+    const partners = (u.collaborations || []).map(c => { const p = d.users[c.partnerUid] || {}; return { uid: c.partnerUid, name: p.spitzname || p.name || 'User', since: c.since, instagram: p.instagram || '' }; });
+    const pendingIn = Object.values(d.collabRequests).filter(r => r.status === 'pending' && String(r.toUid) === uid).map(r => { const f = d.users[r.fromUid] || {}; return { reqId: r.id, fromUid: r.fromUid, name: f.spitzname || f.name || 'User', instagram: f.instagram || '', ts: r.ts }; });
+    const pendingOut = Object.values(d.collabRequests).filter(r => r.status === 'pending' && String(r.fromUid) === uid).map(r => { const t = d.users[r.toUid] || {}; return { reqId: r.id, toUid: r.toUid, name: t.spitzname || t.name || 'User', instagram: t.instagram || '', ts: r.ts }; });
+    const week = getBerlinWeekKey();
+    return { ok: true, partners, pendingIn, pendingOut, postedThisWeek: u.collabPostThisWeek === week, currentWeek: week, rulesAccepted: !!u.collabFeedRulesAcceptedAt };
+}
+function mindsetStateApi(uid) {
+    uid = String(uid || '');
+    const ms = d.mindsetStories;
+    const isAdmin = uid && (istAdminId(uid) || String(d.users[uid]?.role || '').includes('Admin'));
+    const currentWeek = getBerlinWeekKey();
+    const stateIsCurrent = ms.weeklyState?.week === currentWeek;
+    const currentPickedUid = stateIsCurrent ? ms.weeklyState.pickedUid : null;
+    const myStatus = uid ? (currentPickedUid === uid ? 'picked' : ms.done[uid] ? 'done' : ms.waitlist[uid] ? 'yes' : ms.rejected[uid] ? 'no' : 'none') : 'none';
+    const out = {
+        ok: true, week: currentWeek, pickedUid: currentPickedUid,
+        pickedName: currentPickedUid ? (d.users[currentPickedUid]?.spitzname || d.users[currentPickedUid]?.name || '?') : null,
+        skipped: stateIsCurrent ? !!ms.weeklyState?.skipped : false,
+        locked: isMindsetLocked(), myStatus, myDoneWeek: ms.done[uid]?.week || null,
+        counts: { waitlist: Object.keys(ms.waitlist).length, rejected: Object.keys(ms.rejected).length, done: Object.keys(ms.done).length },
+    };
+    if (isAdmin) {
+        out.waitlist = Object.entries(ms.waitlist).sort((a, b) => (a[1].joinedAt || 0) - (b[1].joinedAt || 0)).map(([u, v]) => ({ uid: u, name: d.users[u]?.spitzname || d.users[u]?.name || '?', insta: d.users[u]?.instagram || '', joinedAt: v.joinedAt }));
+        out.done = Object.entries(ms.done).sort((a, b) => (b[1].featuredAt || 0) - (a[1].featuredAt || 0)).map(([u, v]) => ({ uid: u, name: v.name || d.users[u]?.spitzname || d.users[u]?.name || '?', week: v.week, featuredAt: v.featuredAt }));
+    }
+    return out;
+}
+
 // ── AUTH: 1:1 aus telegram-bot portiert (PBKDF2). Security-kritisch — Schema
 //    pbkdf2$100000$salt$hash bleibt identisch, damit migrierte Hashes weiter gelten.
 function hashPasswordPBKDF2(password) {
@@ -2440,4 +2537,5 @@ module.exports = {
     M3_CAP, CREATORBOOST_UID,
     authEmailPassword, setUserPasswordApi, setAppCodeApi, createEmailUserApi,
     hashPasswordPBKDF2, verifyPasswordPBKDF2,
+    diamondLinkFeedApi, prismaLinkFeedApi, collabFeedApi, collabListApi, mindsetStateApi,
 };

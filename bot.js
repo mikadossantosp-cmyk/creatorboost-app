@@ -10079,7 +10079,7 @@ p{line-height:1.65;color:var(--muted)}
     // ── MINDSET STORIES API ──
     if (path === '/api/mindset-state' && req.method === 'GET') {
         if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
-        const result = await fetchBot('/mindset-state-api?uid=' + encodeURIComponent(myUid));
+        const result = LOCAL_STORE ? botLogic.mindsetStateApi(myUid) : await fetchBot('/mindset-state-api?uid=' + encodeURIComponent(myUid));
         return json(result || {ok:false, error:'Bot offline'});
     }
     if (path === '/api/mindset-answer' && req.method === 'POST') {
@@ -14349,13 +14349,13 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
     // ── KOLLABORATIONS-POSTS API (proxy zu Mainbot) ──
     if (path === '/api/collab/list' && req.method === 'GET') {
         if (!session) return json({error:'Nicht eingeloggt'}, 401);
-        const r = await fetchBotRaw('/collab-list-api?uid=' + encodeURIComponent(myUid));
+        const r = LOCAL_STORE ? botLogic.collabListApi(myUid) : await fetchBotRaw('/collab-list-api?uid=' + encodeURIComponent(myUid));
         if (!r) return json({ok:false, error:'Mainbot offline'}, 502);
         return json(r);
     }
     if (path === '/api/collab/feed' && req.method === 'GET') {
         if (!session) return json({error:'Nicht eingeloggt'}, 401);
-        const r = await fetchBotRaw('/collab-feed-api?uid=' + encodeURIComponent(myUid));
+        const r = LOCAL_STORE ? botLogic.collabFeedApi(myUid) : await fetchBotRaw('/collab-feed-api?uid=' + encodeURIComponent(myUid));
         if (!r) return json({ok:false, error:'Mainbot offline'}, 502);
         return json(r);
     }
@@ -14363,7 +14363,7 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
     // ── DIAMANTLINK API ──
     if (path === '/api/diamond-link/feed' && req.method === 'GET') {
         if (!session) return json({error:'Nicht eingeloggt'}, 401);
-        const r = await fetchBotRaw('/diamond-link-feed-api?uid=' + encodeURIComponent(myUid));
+        const r = LOCAL_STORE ? botLogic.diamondLinkFeedApi(myUid) : await fetchBotRaw('/diamond-link-feed-api?uid=' + encodeURIComponent(myUid));
         return json(r || {ok:false, error:'Mainbot offline'});
     }
     if (path === '/api/diamond-link/create' && req.method === 'POST') {
@@ -14769,7 +14769,7 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
         if (!session) return json({error:'Nicht eingeloggt'}, 401);
         // User-Feed: hideEngaged=1 → bereits geengaged Posts verschwinden
         const hideEngaged = query.hideEngaged === '1' ? '&hideEngaged=1' : '';
-        const r = await fetchBotRaw('/prisma-link-feed-api?uid=' + encodeURIComponent(myUid) + hideEngaged);
+        const r = LOCAL_STORE ? botLogic.prismaLinkFeedApi(myUid, query.hideEngaged === '1') : await fetchBotRaw('/prisma-link-feed-api?uid=' + encodeURIComponent(myUid) + hideEngaged);
         return json(r || {ok:false, error:'Mainbot offline'});
     }
     if (path === '/api/prisma-link/create' && req.method === 'POST') {
