@@ -3631,6 +3631,9 @@ async function plusPostLink(){
   if(btn){btn.disabled=false;btn.style.opacity='';btn.textContent='📸 Link teilen';}
 }
 function showLikerModal(msgId){const modal=document.getElementById('liker-modal');const content=document.getElementById('liker-modal-content');if(!modal||!content)return;const cached=document.getElementById('liker-rows-'+msgId);content.innerHTML=(cached&&cached.innerHTML)||'<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">Lädt…</div>';modal.classList.add('open');document.body.style.overflow='hidden';
+  // Diamant-/Prismalinks rendern ihre Liker clientseitig in den Cache (liker-rows-dl-/pl-);
+  // der generische Live-Fetch findet diese IDs nicht und wuerde den Cache faelschlich leeren.
+  if(String(msgId).indexOf('dl-')===0||String(msgId).indexOf('pl-')===0)return;
   // Live nachladen, damit die Liste auch ohne Page-Reload aktuell ist.
   fetch('/api/link-likers?msgId='+encodeURIComponent(msgId)).then(r=>r.json()).then(j=>{if(j&&typeof j.html==='string'){content.innerHTML=j.html||'<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">Noch niemand geliked</div>';}}).catch(()=>{});}
 function closeLikerModal(){const modal=document.getElementById('liker-modal');if(modal){modal.classList.remove('open');document.body.style.overflow='';} }
@@ -4748,7 +4751,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v219-report-liker';
+const SW_VERSION='v220-report-diamond';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
@@ -11402,7 +11405,8 @@ async function submitSuperLink(){
             const initial = '<div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#06b6d4,#0e7490);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;position:relative;overflow:hidden">'+esc((u.name||'?')[0])+
               (u.uid ? '<img src="/appbild/'+esc(u.uid)+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.remove()" alt="">' : '')+
               '</div>';
-            return '<a href="/profil/'+esc(u.uid)+'" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--border2);text-decoration:none">'+initial+'<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:var(--text)">'+esc(u.name||'User')+'</div>'+(u.instagram?'<div style="font-size:11px;color:#06b6d4">@'+esc(u.instagram)+'</div>':'')+'</div><div style="font-size:11px;color:var(--accent)">→</div></a>';
+            const _dtail = isMine ? '<button onclick="reportLiker(\\''+esc(u.uid)+'\\',\\'Diamantlink '+esc(p.id)+'\\',1)" style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);color:#ef4444;border-radius:8px;padding:6px 11px;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0">Melden</button>' : '<div style="font-size:11px;color:var(--accent)">→</div>';
+            return '<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--border2)"><a href="/profil/'+esc(u.uid)+'" style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;text-decoration:none">'+initial+'<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:var(--text)">'+esc(u.name||'User')+'</div>'+(u.instagram?'<div style="font-size:11px;color:#06b6d4">@'+esc(u.instagram)+'</div>':'')+'</div></a>'+_dtail+'</div>';
           }).join('');
           return '<div id="liker-rows-dl-'+esc(p.id)+'" style="display:none">'+rows+'</div>' +
             '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px;padding:0 4px">' +
