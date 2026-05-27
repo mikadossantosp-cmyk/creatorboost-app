@@ -62,6 +62,14 @@ async function localWrite(fn) {
     datastore.saveDebounced();
     return r;
 }
+// Mappt die Roulette/Daily-Credit-Actions (Bot-Pfade) auf die lokalen bot-logic-Funktionen.
+function _localCreditAction(action, payload) {
+    if (action === '/add-xp') return botLogic.addXp(payload);
+    if (action === '/add-extra-link') return botLogic.addExtraLink(payload);
+    if (action === '/add-diamonds') return botLogic.addDiamonds(payload);
+    if (action === '/add-superlink') return botLogic.addSuperlink(payload);
+    return null;
+}
 
 // Google Play Store Reviewer-Account: bypass Email-Verification + Instagram-Linking.
 // Reviewer loggt sich mit diesen Credentials ein → wird einmalig im Mainbot angelegt
@@ -7325,10 +7333,15 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
         if (!_dxAdmins.includes(Number(myUid)) && hasClaimed('dailyxp', myUid)) return json({ok:false, error:'Schon abgeholt! Morgen wieder.'}, 429);
         const xpAmount = Math.floor(Math.random() * 11) + 10; // 10-20
         markClaimed('dailyxp', myUid);
-        // Fire-and-forget: respond immediately, credit XP in background
-        postBot('/add-xp', { uid: myUid, amount: xpAmount, reason: 'daily-bonus', noRanking: true }).then(r => {
-            if (!r || !r.ok) console.log('[DailyXP] Credit failed:', myUid, r);
-        }).catch(e => console.log('[DailyXP] Credit error:', e.message));
+        if (LOCAL_STORE) {
+            botLogic.addXp({ uid: myUid, amount: xpAmount, reason: 'daily-bonus', noRanking: true });
+            datastore.saveDebounced();
+        } else {
+            // Fire-and-forget: respond immediately, credit XP in background
+            postBot('/add-xp', { uid: myUid, amount: xpAmount, reason: 'daily-bonus', noRanking: true }).then(r => {
+                if (!r || !r.ok) console.log('[DailyXP] Credit failed:', myUid, r);
+            }).catch(e => console.log('[DailyXP] Credit error:', e.message));
+        }
         return json({ok:true, xp: xpAmount});
     }
 
@@ -7356,10 +7369,15 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
         for (const p of prizes) { rand -= p.weight; if (rand <= 0) { picked = p; break; } }
         const payload = { uid: myUid, ...picked.data };
         markClaimed('roulette', myUid);
-        // Fire-and-forget: don't await postBot (can take 5s+ on timeout)
-        postBot(picked.action, payload).then(r => {
-            if (!r || !r.ok) console.log('[Roulette] Prize credit failed:', picked.action, myUid, r);
-        }).catch(e => console.log('[Roulette] Prize credit error:', e.message));
+        if (LOCAL_STORE) {
+            _localCreditAction(picked.action, payload);
+            datastore.saveDebounced();
+        } else {
+            // Fire-and-forget: don't await postBot (can take 5s+ on timeout)
+            postBot(picked.action, payload).then(r => {
+                if (!r || !r.ok) console.log('[Roulette] Prize credit failed:', picked.action, myUid, r);
+            }).catch(e => console.log('[Roulette] Prize credit error:', e.message));
+        }
         return json({ok:true, prize: picked.label, segmentIndex: picked.idx});
     }
 
@@ -10040,7 +10058,9 @@ p{line-height:1.65;color:var(--muted)}
     if (path === '/api/mindset-answer' && req.method === 'POST') {
         if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
         const body = await parseBody(req);
-        const result = await postBot('/mindset-set-answer-api', { uid: myUid, answer: body.answer });
+        const result = LOCAL_STORE
+            ? await localWrite(() => botLogic.mindsetSetAnswerApi({ uid: myUid, answer: body.answer }))
+            : await postBot('/mindset-set-answer-api', { uid: myUid, answer: body.answer });
         return json(result || {ok:false, error:'Bot offline'});
     }
     if (path === '/api/mindset-admin/pick' && req.method === 'POST') {
@@ -20914,13 +20934,15 @@ async function setRing(ringId) {
 
     if (path === '/api/buy-extralink' && req.method === 'POST') {
         if (!session) return json({error:'Nicht eingeloggt'},401);
-        const result = await postBot('/buy-extralink-api', { uid: myUid });
+        const result = LOCAL_STORE
+            ? await localWrite(() => botLogic.buyExtralinkApi({ uid: myUid }))
+            : await postBot('/buy-extralink-api', { uid: myUid });
         return json(result || {ok:false, error:'Fehler'});
     }
 
     if (path === '/api/link-status' && req.method === 'GET') {
         if (!session) return json({ok:false, error:'Nicht eingeloggt'},401);
-        const result = await fetchBot('/link-status-api?uid=' + myUid);
+        const result = LOCAL_STORE ? botLogic.linkStatusApi(myUid) : await fetchBot('/link-status-api?uid=' + myUid);
         return json(result || {ok:false, canPost:false, todayCount:0, bonusLinks:0});
     }
 
@@ -20934,14 +20956,18 @@ async function setRing(ringId) {
         const body = await parseBody(req);
         const { itemId } = body;
         if (!itemId || !RING_ITEMS.find(r=>r.id===itemId)) return json({ok:false, error:'Unbekanntes Item'});
-        const result = await postBot('/buy-item-api', { uid: myUid, itemId });
+        const result = LOCAL_STORE
+            ? await localWrite(() => botLogic.buyItemApi({ uid: myUid, itemId }))
+            : await postBot('/buy-item-api', { uid: myUid, itemId });
         return json(result || {ok:false, error:'Fehler'});
     }
 
     if (path === '/api/set-active-ring' && req.method === 'POST') {
         const body = await parseBody(req);
         const { ringId } = body;
-        const result = await postBot('/set-active-ring-api', { uid: myUid, ringId: ringId || null });
+        const result = LOCAL_STORE
+            ? await localWrite(() => botLogic.setActiveRingApi({ uid: myUid, ringId: ringId || null }))
+            : await postBot('/set-active-ring-api', { uid: myUid, ringId: ringId || null });
         return json(result || {ok:false, error:'Fehler'});
     }
 
