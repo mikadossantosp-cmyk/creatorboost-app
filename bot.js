@@ -3335,6 +3335,26 @@ function showBanner(opts){
   clearTimeout(b._t);
   b._t=setTimeout(()=>b.classList.remove('show'),dur);
 }
+// Native alert() global durch das gestylte Banner ersetzen — ein Schritt, keine 167
+// Call-Sites anfassen. Faellt auf Toast bzw. natives alert zurueck, falls das Banner-
+// Element auf einer Seite fehlt. confirm()/prompt() bleiben nativ (synchroner Rueckgabewert).
+var _cxNativeAlert = (typeof window!=='undefined' && window.alert) ? window.alert.bind(window) : null;
+if(typeof window!=='undefined' && !window.__cxAlertPatched){
+  window.__cxAlertPatched=true;
+  window.alert=function(msg){
+    var s=String(msg==null?'':msg);
+    try{
+      if(typeof showBanner==='function' && document.getElementById('cb-banner')){
+        var low=s.toLowerCase();
+        var warn=s.indexOf('❌')>=0||s.indexOf('⚠')>=0||low.indexOf('fehl')>=0||low.indexOf('error')>=0;
+        showBanner({type:warn?'warn':'info',title:s,dur:4200});
+        return;
+      }
+      if(typeof toast==='function' && document.getElementById('toast')){toast(s);return;}
+    }catch(e){}
+    if(_cxNativeAlert)_cxNativeAlert(s);
+  };
+}
 // Browser-side cleanInstagramUrl: gleiche Logik wie server-side, fuer Inline-JS
 // das im Browser laeuft (IIFEs wie initDiamondLinks/initPrismaLinks/initKollabs).
 // WICHTIG: Dieser Code steht innerhalb eines Template-Literals (\`...\`) — Backslashes
@@ -4692,7 +4712,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v208-no-update-banner';
+const SW_VERSION='v209-styled-alerts';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
