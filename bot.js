@@ -4712,7 +4712,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v204-like-state-fresh';
+const SW_VERSION='v205-m3-total-links';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
@@ -12300,7 +12300,7 @@ async function submitSuperLink(){
         +    bar(daily.likesGegeben,5,'#a78bfa')
         +    '<div style="margin-top:8px">'+mChip(daily.m2,'M2: '+daily.prozent+'% (≥80%)')+'</div>'
         +    bar(daily.prozent,100,'#818cf8')
-        +    '<div style="margin-top:8px">'+mChip(daily.m3,'M3: '+Math.min(daily.gelikedLinks||0, daily.m3Target||(daily.m3Cap||30))+'/'+(daily.m3Target||(daily.m3Cap||30))+' (max 30)')+'</div>'
+        +    '<div style="margin-top:8px">'+mChip(daily.m3,'M3: '+(daily.gelikedLinks||0)+'/'+(daily.gesamtLinks||0)+' (max 30)')+'</div>'
         +    bar(Math.min(daily.gelikedLinks||0, daily.m3Target||(daily.m3Cap||30)), daily.m3Target||(daily.m3Cap||30), '#fbbf24')
         +    (daily.m3?'<div style="font-size:11px;color:#a78bfa;margin-top:6px">+5 XP + 💎 1 bei Abrechnung</div>':'')
         +  '</div>'
