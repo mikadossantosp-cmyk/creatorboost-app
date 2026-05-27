@@ -112,13 +112,16 @@ module.exports = function renderChatBubbles(opts) {
         const editedTag = '';
         let bubbleContent = '';
         if (m.image) {
-            bubbleContent = replyHtml + '<div class="chat-img-wrap" onclick="window.open(\'' + m.image + '\', \'_blank\')">' +
-                '<img src="' + m.image + '" alt="" loading="lazy">' +
+            // XSS-Schutz: URL NICHT in den onclick-JS-String einbetten (ein ' bricht trotz esc()
+            // aus, weil der HTML-Parser &#39; vorher zurückdecodiert). Stattdessen die bereits
+            // aufgelöste img.src zur Laufzeit lesen; das src-Attribut wird ge-esc()-t.
+            bubbleContent = replyHtml + '<div class="chat-img-wrap" onclick="window.open(this.querySelector(\'img\').src, \'_blank\')">' +
+                '<img src="' + esc(m.image) + '" alt="" loading="lazy">' +
                 (m.text ? '<div class="chat-img-caption">' + esc(m.text) + '</div>' : '') +
                 '</div>';
         } else if (m.audio) {
             bubbleContent = replyHtml + '<div class="chat-audio">' +
-                '<button class="chat-audio-btn" onclick="toggleAudio(this)" data-src="' + m.audio + '">▶</button>' +
+                '<button class="chat-audio-btn" onclick="toggleAudio(this)" data-src="' + esc(m.audio) + '">▶</button>' +
                 '<div class="chat-audio-info"><div class="chat-audio-bar"><div class="audio-prog"></div></div><div class="audio-dur">🎤 Sprachnachricht</div></div>' +
                 '</div>';
         } else {

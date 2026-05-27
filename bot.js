@@ -187,6 +187,22 @@ const SIGNUP_RATE_LIMIT_WINDOW = 60 * 60 * 1000; // 1 Stunde Fenster
 const SIGNUP_RATE_LIMIT_MAX = 5;       // max 5 Signups pro Stunde pro IP
 const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
 const EMAIL_FROM = process.env.EMAIL_FROM || 'CreatorX <onboarding@resend.dev>';
+// Auth-/Email-Links IMMER aus vertrauenswürdiger Quelle bauen — NIEMALS aus
+// req.headers.host (client-kontrolliert → Host-Injection kann Login-/Confirm-Tokens
+// auf eine fremde Domain umleiten = Token-Leak).
+const AUTH_BASE_URL = (process.env.APP_URL || 'https://www.creatorboostx.de').replace(/\/$/, '');
+// Chat-Medien-URLs streng validieren BEVOR sie gespeichert/gerendert werden — sonst
+// Stored-XSS (eine präparierte image/audio-URL bricht aus dem HTML-Attribut/onclick aus).
+// Erlaubt nur data:image/ , data:audio/ , https:// oder App-relative Pfade, und keine
+// Zeichen, mit denen man aus Attribut/JS-String ausbrechen könnte.
+function _safeMediaUrl(v, kind) {
+    if (typeof v !== 'string' || !v) return null;
+    if (v.length > 8000000) return null;
+    if (/["'<>`\s\\]/.test(v)) return null;
+    const okData = kind === 'image' ? v.startsWith('data:image/') : v.startsWith('data:audio/');
+    if (okData || v.startsWith('https://') || v.startsWith('/')) return v;
+    return null;
+}
 const EMAIL_TOKEN_TTL = 24 * 60 * 60 * 1000;  // 24 Stunden (war 1h, zu kurz wenn Mail spät zugestellt)
 const ACCOUNT_UNLOCK_TTL = 30 * 60 * 1000;    // 30 Min Edit-Window nach Unlock-Klick
 const MAGIC_LINK_RATE_LIMIT = 30 * 1000;      // 30 Sek zwischen Magic-Link-Requests pro Email
@@ -374,7 +390,7 @@ async function sendSignupConfirmationEmail(uid, email, hostHeader) {
         pendingEmailConfirms.set(String(uid), { token, email, exp });
         savePendingEmailConfirms();
         console.log('[email-confirm] Signup-Token gesetzt für uid=' + uid + ' email=' + email + ' tokenPrefix=' + token.slice(0,12) + '…');
-        const baseUrl = (process.env.APP_URL || ('https://' + (hostHeader || 'www.creatorboostx.de'))).replace(/\/$/, '');
+        const baseUrl = AUTH_BASE_URL;
         const confirmUrl = baseUrl + '/auth/confirm-email?token=' + encodeURIComponent(token);
         const userName = String(email||'').split('@')[0].replace(/[<>]/g,'').slice(0,30);
         const html = '<!DOCTYPE html><html><body style="margin:0;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',sans-serif;background:#000;color:#fff;padding:0">'+
@@ -1160,12 +1176,15 @@ function refreshDataCache() {
 async function fetchBot(path) {
     if (path === '/data') {
         const now = Date.now();
-        if (_dataCache) {
+        // Boot-Fallback (leere User-Map, Mainbot war beim Start nicht erreichbar) NICHT als
+        // gültigen Cache behandeln — sonst rendert die erste Anfrage gegen eine leere Userliste
+        // (User „ausgeloggt"/Admin-Listen leer). Erst auf einen echten Refresh warten.
+        if (_dataCache && !_dataCache._bootEmptyFallback) {
             // Return cached data immediately (stale-while-revalidate)
             if ((now - _dataCacheTime) > DATA_CACHE_TTL) refreshDataCache();
             return _dataCache;
         }
-        // No cache yet - must wait
+        // No real cache yet - must wait
         await refreshDataCache();
         return _dataCache;
     }
@@ -5168,9 +5187,11 @@ self.addEventListener('notificationclick',e=>{
                 spitzname: 'Reviewer',
                 bio: 'Google Play Store Reviewer Account',
                 rulesAcceptedAt: Date.now(),
-                appBriefingSeenV2: true,
-                appCodeChosenAt: Date.now()
+                appBriefingSeenV2: true
             });
+            // appCodeChosenAt setzt NUR /set-app-code-api (update-profile-api ignoriert das Feld
+            // → sonst wird der Reviewer trotzdem zur Code-Wahl geleitet).
+            await postBot('/set-app-code-api', { uid: reviewerUid, code: 'reviewerdemo' });
             // Cache forcieren — sonst hat fetchBot('/data') in nachfolgenden Routen den Reviewer noch nicht drin.
             await refreshDataCache();
             // Session minten — name hardcoded, kein erneuter Lookup nötig.
@@ -5210,7 +5231,7 @@ self.addEventListener('notificationclick',e=>{
                         const [_uid, _u] = _ex;
                         const _token = crypto.randomBytes(24).toString('hex');
                         emailLoginTokens.set(_token, { email, uid: String(_uid), exp: Date.now() + EMAIL_TOKEN_TTL });
-                        const _baseUrl = (process.env.APP_URL || ('https://' + (req.headers.host || 'www.creatorboostx.de'))).replace(/\/$/, '');
+                        const _baseUrl = AUTH_BASE_URL;
                         const _loginUrl = _baseUrl + '/auth/email-login?token=' + encodeURIComponent(_token) + '&setpw=1';
                         const _userName = String(_u.spitzname || _u.name || 'CreatorX User').replace(/[<>]/g,'').slice(0,30);
                         const _html = '<!DOCTYPE html><html><body style="margin:0;font-family:-apple-system,sans-serif;background:#000;color:#fff;padding:0">' +
@@ -5300,14 +5321,14 @@ self.addEventListener('notificationclick',e=>{
         const isNewSignup = false;
         const token = crypto.randomBytes(24).toString('hex');
         emailLoginTokens.set(token, { email, uid: String(uid), exp: Date.now() + EMAIL_TOKEN_TTL });
-        const baseUrl = (process.env.APP_URL || ('https://' + (req.headers.host || 'web-production-7981d.up.railway.app'))).replace(/\/$/, '');
+        const baseUrl = AUTH_BASE_URL;
         const loginUrl = baseUrl + '/auth/email-login?token=' + encodeURIComponent(token);
         const userName = u.spitzname || u.name || 'CreatorX User';
         const html = `<!DOCTYPE html><html><body style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#000;color:#fff;padding:0">
 <div style="max-width:560px;margin:0 auto;padding:32px 24px">
 <div style="text-align:center;margin-bottom:24px"><img src="${baseUrl}/cx-logo-256.png" width="80" height="80" style="border-radius:18px" alt="CreatorX"></div>
 <h1 style="font-size:26px;font-weight:700;margin:0 0 12px;text-align:center;color:#fff">Hi ${userName.replace(/[<>]/g,'')}!</h1>
-<p style="font-size:15px;color:#a8a39a;line-height:1.6;text-align:center;margin:0 0 28px">Klick auf den Button um dich in der CreatorX-App einzuloggen. Der Link ist 1 Stunde gültig und kann nur einmal benutzt werden.</p>
+<p style="font-size:15px;color:#a8a39a;line-height:1.6;text-align:center;margin:0 0 28px">Klick auf den Button um dich in der CreatorX-App einzuloggen. Der Link ist 24 Stunden gültig und kann nur einmal benutzt werden.</p>
 <div style="text-align:center;margin:32px 0"><a href="${loginUrl}" style="display:inline-block;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px;letter-spacing:0.3px">📲 In die App einloggen</a></div>
 <p style="font-size:12px;color:#605c54;line-height:1.5;text-align:center;margin:32px 0 0;border-top:1px solid #221f1a;padding-top:20px">Falls du das nicht angefragt hast, ignoriere die Email einfach. Niemand kann sich nur mit der Email-Anfrage einloggen.<br><br>Falls der Button nicht funktioniert, kopier diese URL in deinen Browser:<br><span style="color:#a8a39a;word-break:break-all;font-size:11px">${loginUrl}</span></p>
 </div></body></html>`;
@@ -5338,17 +5359,23 @@ self.addEventListener('notificationclick',e=>{
         const [uid, u] = found;
         const token = crypto.randomBytes(24).toString('hex');
         emailLoginTokens.set(token, { email, uid: String(uid), exp: Date.now() + EMAIL_TOKEN_TTL });
-        const baseUrl = (process.env.APP_URL || ('https://' + (req.headers.host || 'web-production-7981d.up.railway.app'))).replace(/\/$/, '');
+        const baseUrl = AUTH_BASE_URL;
         const loginUrl = baseUrl + '/auth/email-login?token=' + encodeURIComponent(token);
         const userName = u.spitzname || u.name || 'CreatorX User';
-        const mailHtml = `<!DOCTYPE html><html><body style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#000;color:#fff;padding:0"><div style="max-width:560px;margin:0 auto;padding:32px 24px"><div style="text-align:center;margin-bottom:24px"><img src="${baseUrl}/cx-logo-256.png" width="80" height="80" style="border-radius:18px" alt="CreatorX"></div><h1 style="font-size:26px;font-weight:700;margin:0 0 12px;text-align:center;color:#fff">Passwort zurücksetzen</h1><p style="font-size:15px;color:#a8a39a;line-height:1.6;text-align:center;margin:0 0 28px">Hi ${userName.replace(/[<>]/g,'')}, klick den Button um dich einzuloggen. Danach kannst du in den Einstellungen ein neues Passwort setzen.</p><div style="text-align:center;margin:32px 0"><a href="${loginUrl}" style="display:inline-block;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px">🔐 Einloggen & Passwort ändern</a></div><p style="font-size:12px;color:#605c54;text-align:center;margin-top:32px;border-top:1px solid #221f1a;padding-top:20px">Link 1h gültig, einmalig nutzbar. Falls du das nicht angefragt hast, ignoriere die Email.</p></div></body></html>`;
-        await sendEmail(email, '🔐 CreatorX: Passwort zurücksetzen', mailHtml);
+        const mailHtml = `<!DOCTYPE html><html><body style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#000;color:#fff;padding:0"><div style="max-width:560px;margin:0 auto;padding:32px 24px"><div style="text-align:center;margin-bottom:24px"><img src="${baseUrl}/cx-logo-256.png" width="80" height="80" style="border-radius:18px" alt="CreatorX"></div><h1 style="font-size:26px;font-weight:700;margin:0 0 12px;text-align:center;color:#fff">Passwort zurücksetzen</h1><p style="font-size:15px;color:#a8a39a;line-height:1.6;text-align:center;margin:0 0 28px">Hi ${userName.replace(/[<>]/g,'')}, klick den Button um dich einzuloggen. Danach kannst du in den Einstellungen ein neues Passwort setzen.</p><div style="text-align:center;margin:32px 0"><a href="${loginUrl}" style="display:inline-block;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px">🔐 Einloggen & Passwort ändern</a></div><p style="font-size:12px;color:#605c54;text-align:center;margin-top:32px;border-top:1px solid #221f1a;padding-top:20px">Link 24h gültig, einmalig nutzbar. Falls du das nicht angefragt hast, ignoriere die Email.</p></div></body></html>`;
+        const _resetSent = await sendEmail(email, '🔐 CreatorX: Passwort zurücksetzen', mailHtml);
+        if (!_resetSent) {
+            // Token wieder verwerfen (sonst hängt ein toter Token rum) + ehrliche Fehlermeldung,
+            // statt dem User „Link gesendet" vorzugaukeln obwohl Resend abgelehnt hat.
+            emailLoginTokens.delete(token);
+            return json({ok:false, error:'Email-Versand fehlgeschlagen — bitte später nochmal versuchen.'}, 502);
+        }
         return json({ok:true});
     }
 
     // Admin-Vorschau für die Magic-Link-Email (zeigt das HTML der Email mit Beispiel-Daten).
     if (path === '/preview/email-login' && req.method === 'GET') {
-        const baseUrl = (process.env.APP_URL || ('https://' + (req.headers.host || 'web-production-7981d.up.railway.app'))).replace(/\/$/, '');
+        const baseUrl = AUTH_BASE_URL;
         let exampleName = 'Max';
         if (session) {
             const _bd = await fetchBot('/data');
@@ -5361,7 +5388,7 @@ self.addEventListener('notificationclick',e=>{
 <div style="max-width:560px;margin:0 auto;padding:32px 24px">
 <div style="text-align:center;margin-bottom:24px"><img src="${baseUrl}/cx-logo-256.png" width="80" height="80" style="border-radius:18px" alt="CreatorX"></div>
 <h1 style="font-size:26px;font-weight:700;margin:0 0 12px;text-align:center;color:#fff">Hi ${exampleName.replace(/[<>]/g,'')}!</h1>
-<p style="font-size:15px;color:#a8a39a;line-height:1.6;text-align:center;margin:0 0 28px">Klick auf den Button um dich in der CreatorX-App einzuloggen. Der Link ist 1 Stunde gültig und kann nur einmal benutzt werden.</p>
+<p style="font-size:15px;color:#a8a39a;line-height:1.6;text-align:center;margin:0 0 28px">Klick auf den Button um dich in der CreatorX-App einzuloggen. Der Link ist 24 Stunden gültig und kann nur einmal benutzt werden.</p>
 <div style="text-align:center;margin:32px 0"><a href="${fakeUrl}" style="display:inline-block;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px;letter-spacing:0.3px">📲 In die App einloggen</a></div>
 <p style="font-size:12px;color:#605c54;line-height:1.5;text-align:center;margin:32px 0 0;border-top:1px solid #221f1a;padding-top:20px">Falls du das nicht angefragt hast, ignoriere die Email einfach. Niemand kann sich nur mit der Email-Anfrage einloggen.<br><br>Falls der Button nicht funktioniert, kopier diese URL in deinen Browser:<br><span style="color:#a8a39a;word-break:break-all;font-size:11px">${fakeUrl}</span></p>
 </div>
@@ -5386,7 +5413,7 @@ self.addEventListener('notificationclick',e=>{
         emailRateLimit.set(rlKey, Date.now());
         const token = crypto.randomBytes(24).toString('hex');
         accountUnlockTokens.set(token, { uid: String(myUid), exp: Date.now() + EMAIL_TOKEN_TTL });
-        const baseUrl = (process.env.APP_URL || ('https://' + (req.headers.host || 'web-production-7981d.up.railway.app'))).replace(/\/$/, '');
+        const baseUrl = AUTH_BASE_URL;
         const unlockUrl = baseUrl + '/auth/unlock-edit?token=' + encodeURIComponent(token);
         const userName = _u.spitzname || _u.name || 'CreatorX User';
         const html = `<!DOCTYPE html><html><body style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#000;color:#fff;padding:0">
@@ -5453,6 +5480,14 @@ self.addEventListener('notificationclick',e=>{
             savePendingEmailConfirms();
             res.writeHead(400, {'Content-Type':'text/html'});
             return res.end(baseHtml('⏰','Link abgelaufen','Der Bestätigungslink ist abgelaufen. Geh in die Einstellungen und sende einen neuen.','#ef4444'));
+        }
+        // Bei Email-ÄNDERUNG muss der eingeloggte Konto-Besitzer bestätigen — ein geleakter
+        // Link (Referrer/Weiterleitung) darf nicht von jemand anderem eingelöst werden und so
+        // eine fremde Email auf das Konto setzen. (Signup-Bestätigung bleibt offen, weil der
+        // User dort u.U. auf einem anderen Gerät klickt, wo er noch nicht eingeloggt ist.)
+        if (entry.kind === 'change' && (!session || String(getMyUid(session)) !== String(entry.uid))) {
+            res.writeHead(403, {'Content-Type':'text/html'});
+            return res.end(baseHtml('🔒','Anmeldung erforderlich','Bitte logg dich mit dem Konto ein, dessen Email du änderst, und klick den Bestätigungslink dann erneut.','#ef4444'));
         }
         // Gültig — Token einlösen
         emailConfirmTokens.delete(token);
@@ -5842,6 +5877,13 @@ try { fetch('/api/track-funnel',{method:'POST',headers:{'Content-Type':'applicat
             postBot('/log-email-login', { email, success: false, method: 'signup-fail', uid: '', ip: _ip, ua: _ua, err: created.error||'no-error' }).catch(()=>{});
             return json({ok:false, error: created.error || 'Account-Erstellung fehlgeschlagen — bitte Support kontaktieren falls das mehrfach passiert.'}, 500);
         }
+        // RACE-SCHUTZ: Der Dubletten-Vorcheck oben liest den (evtl. stale) Cache. Im Race-Fenster
+        // existiert die Email schon → Mainbot gibt {ok:true, existed:true} OHNE Passwort-Prüfung
+        // zurück. NIEMALS einloggen, sonst minten wir eine Session auf ein fremdes Konto.
+        if (created.existed) {
+            postBot('/log-email-login', { email, success: false, method: 'signup-race-existed', uid: String(created.uid), ip: _ip, ua: _ua }).catch(()=>{});
+            return json({ok:false, error:'Diese Email ist schon angemeldet. Bitte logg dich einfach ein.', existed:true}, 409);
+        }
         postBot('/log-email-login', { email, success: true, method: 'signup', uid: String(created.uid), ip: _ip, ua: _ua }).catch(()=>{});
         // Funnel-Event: Signup abgeschlossen
         postBot('/track-funnel', { event: 'signup-complete', uid: String(created.uid), meta: { method: 'email' } }).catch(()=>{});
@@ -5878,7 +5920,7 @@ try { fetch('/api/track-funnel',{method:'POST',headers:{'Content-Type':'applicat
     // Resend Bestätigungsmail für eingeloggten User
     if (path === '/api/resend-confirmation' && req.method === 'POST') {
         if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
-        const uid = String(session.uid);
+        const uid = String(getMyUid(session));
         const bd = await fetchBot('/data');
         const u = bd?.users?.[uid];
         if (!u || !u.email) return json({ok:false, error:'Keine Email gesetzt'}, 400);
@@ -7038,7 +7080,7 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
         if (!u) return json({error:'User nicht gefunden'}, 404);
         const email = u.pendingEmail || u.email;
         if (!email) return json({error:'User hat keine Email'}, 400);
-        const baseUrl = (process.env.APP_URL || ('https://' + (req.headers.host || 'web-production-7981d.up.railway.app'))).replace(/\/$/, '');
+        const baseUrl = AUTH_BASE_URL;
         const token = crypto.randomBytes(24).toString('hex');
         emailConfirmTokens.set(token, { email, uid, exp: Date.now() + EMAIL_TOKEN_TTL });
         savePendingEmailConfirms();
@@ -7055,7 +7097,7 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
         if (!bd) return json({error:'MainBot nicht erreichbar'}, 503);
         const targets = Object.entries(bd.users || {}).filter(([, u]) => u.pendingEmail || (u.email && !u.password_hash));
         let sent = 0, failed = 0, skipped = 0;
-        const baseUrl = (process.env.APP_URL || ('https://' + (req.headers.host || 'web-production-7981d.up.railway.app'))).replace(/\/$/, '');
+        const baseUrl = AUTH_BASE_URL;
         for (const [uid, u] of targets) {
             const email = u.pendingEmail || u.email;
             if (!email) { skipped++; continue; }
@@ -8292,7 +8334,10 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
         const myUid = getMyUid(session);
         let body;
         try { body = JSON.parse(await readBody(req, 10000000)); } catch(e) { return json({error:'Ungültig'},400); }
-        const { to, text, image, audio, replyTo } = body;
+        const { to, text, replyTo } = body;
+        const image = _safeMediaUrl(body.image, 'image');
+        const audio = _safeMediaUrl(body.audio, 'audio');
+        if ((body.image && !image) || (body.audio && !audio)) return json({ok:false, error:'Ungültiges Medien-Format'}, 400);
         if (!to || (!text?.trim() && !image && !audio)) return json({ok:false, error:'Ungültig'}, 400);
         // Admin-Support: Antwort eines Admins an einen normalen User geht als CreatorBoost zurück
         // (landet im creatorboost↔user-Chat, den der Admin sieht, + beim User als CreatorBoost-DM).
@@ -9306,7 +9351,10 @@ p{line-height:1.65;color:var(--muted)}
         // Email-Bestätigungs-Flow: wenn Email neu/geändert → Confirmation-Mail senden statt direkt zu speichern.
         let _emailPending = false;
         if (body.email !== undefined && updateData.email && updateData.email !== '') {
-            const _bd = await fetchBot('/data');
+            // DIREKT (uncached) lesen — der gerade via update-profile-api geschriebene
+            // pendingEmail ist im stale _dataCache noch nicht drin → sonst falsche
+            // „Email bereits vergeben"-Meldung bzw. Bestätigungsmail wird nie verschickt.
+            const _bd = await fetchBotRaw('/data');
             const _u = _bd?.users?.[myUid] || {};
             // Eindeutigkeit-Konflikt? (Bot hat es nicht gespeichert AND auch nicht als pending)
             if (String(_u.email||'').toLowerCase() !== updateData.email && String(_u.pendingEmail||'').toLowerCase() !== updateData.email) {
@@ -9318,14 +9366,14 @@ p{line-height:1.65;color:var(--muted)}
                     const token = crypto.randomBytes(24).toString('hex');
                     emailConfirmTokens.set(token, { email: updateData.email, uid: String(myUid), exp: Date.now() + EMAIL_TOKEN_TTL });
                     savePendingEmailConfirms();
-                    const baseUrl = (process.env.APP_URL || ('https://' + (req.headers.host || 'web-production-7981d.up.railway.app'))).replace(/\/$/, '');
+                    const baseUrl = AUTH_BASE_URL;
                     const confirmUrl = baseUrl + '/auth/confirm-email?token=' + encodeURIComponent(token);
                     const userName = _u.spitzname || _u.name || 'CreatorX User';
                     const html = `<!DOCTYPE html><html><body style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#000;color:#fff;padding:0">
 <div style="max-width:560px;margin:0 auto;padding:32px 24px">
 <div style="text-align:center;margin-bottom:24px"><img src="${baseUrl}/cx-logo-256.png" width="80" height="80" style="border-radius:18px" alt="CreatorX"></div>
 <h1 style="font-size:26px;font-weight:700;margin:0 0 12px;text-align:center;color:#fff">Hi ${userName.replace(/[<>]/g,'')}!</h1>
-<p style="font-size:15px;color:#a8a39a;line-height:1.6;text-align:center;margin:0 0 28px">Bestätige deine Email-Adresse <b style="color:#fff">${updateData.email}</b> für deinen CreatorX-Account. Klick den Button — der Link ist 1 Stunde gültig.</p>
+<p style="font-size:15px;color:#a8a39a;line-height:1.6;text-align:center;margin:0 0 28px">Bestätige deine Email-Adresse <b style="color:#fff">${updateData.email}</b> für deinen CreatorX-Account. Klick den Button — der Link ist 24 Stunden gültig.</p>
 <div style="text-align:center;margin:32px 0"><a href="${confirmUrl}" style="display:inline-block;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px;letter-spacing:0.3px">✅ Email bestätigen</a></div>
 <p style="font-size:12px;color:#605c54;line-height:1.5;text-align:center;margin:32px 0 0;border-top:1px solid #221f1a;padding-top:20px">Falls du diese Änderung nicht angefragt hast, ignoriere die Email — niemand kann deine Email-Adresse ohne Klick ändern.<br><br>Falls der Button nicht funktioniert, kopier diese URL in deinen Browser:<br><span style="color:#a8a39a;word-break:break-all;font-size:11px">${confirmUrl}</span></p>
 </div></body></html>`;
@@ -13606,6 +13654,7 @@ document.getElementById('user-search-input')?.addEventListener('input',filterSea
         const myConvos = Object.entries(convos)
             .filter(([key, msgs]) => {
                 const [a,b] = key.split('_');
+                if (a === myUid && b === myUid) return false; // Self-Chat (stray push) nicht anzeigen
                 if (a === myUid || b === myUid) return true;
                 // Admin-Support-Postfach: nur creatorboost↔user-Chats, in denen der USER WIRKLICH
                 // geschrieben hat (from === user). "!== creatorboost" war zu lose und matchte auch
@@ -14388,7 +14437,7 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
             return json({ok:false, error:'Max. 5 Email-Versände pro Tag erreicht. Versuche es morgen wieder.'});
         }
         const link = meta.optinLink;
-        const baseUrl = ('https://' + (req.headers.host || 'www.creatorboostx.de')).replace(/\/$/, '');
+        const baseUrl = AUTH_BASE_URL;
         const userName = String(entry.email||'').split('@')[0].replace(/[<>]/g,'').slice(0,30);
         const html = '<!DOCTYPE html><html><body style="margin:0;font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#000;color:#fff;padding:0">'+
             '<div style="max-width:560px;margin:0 auto;padding:32px 24px">'+
@@ -14449,7 +14498,7 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
             t && t.uid && t.email &&
             !String(t.email).toLowerCase().endsWith('@gmail.com') &&
             (onlyUnnotified ? !t.nonGmailNotifiedAt : true));
-        const baseUrl = ('https://' + (req.headers.host || 'www.creatorboostx.de')).replace(/\/$/, '');
+        const baseUrl = AUTH_BASE_URL;
         let sent = 0, failed = 0;
         for (const t of targets) {
             const userName = String(t.email).split('@')[0].replace(/[<>]/g,'').slice(0,30);
