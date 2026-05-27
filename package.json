@@ -4,6 +4,7 @@
   "scripts": {
     "start": "node bot.js",
     "check-endpoints": "node scripts/check-endpoints.js",
+    "migrate:snapshot": "node scripts/snapshot-from-bot.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
