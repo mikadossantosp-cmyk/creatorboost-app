@@ -258,8 +258,12 @@ function updateMissionProgress(uid) {
     );
     heuteLinks.forEach(l => { if (!l.likes) l.likes = new Set(); });
     const fam = new Set(familyUids(uid));
-    const gesamt = heuteLinks.length;
-    const geliked = heuteLinks.filter(l => { for (const f of fam) if (l.likes.has(String(f))) return true; return false; }).length;
+    // URL-aggregiert wie der Feed: eindeutige heutige URLs, geliked wenn Family irgendeinen Eintrag der URL geliked hat.
+    const famLikedByText = _famLikedByTextMap(fam);
+    const todayTexts = new Set(heuteLinks.map(l => l.text));
+    const gesamt = todayTexts.size;
+    let geliked = 0;
+    for (const t of todayTexts) if (famLikedByText.get(t)) geliked++;
     const m3Target = Math.min(M3_CAP, gesamt);
     if (gesamt > 0) { mission.m2 = geliked / gesamt >= 0.8; mission.m3 = m3Target > 0 && geliked >= m3Target; }
     else { mission.m2 = false; mission.m3 = false; }
@@ -294,6 +298,18 @@ function familyUids(uid) {
     }
     return [...set];
 }
+// Map text(URL) -> true, wenn IRGENDEIN Family-Konto IRGENDEINEN Link-Eintrag dieser
+// URL geliked hat. Aggregiert ueber ALLE d.links — genau wie der Feed (_linksByText),
+// damit "rotes Herz im Feed" == "geliked in der Mission" (auch bei doppelt geposteten URLs).
+function _famLikedByTextMap(famSet) {
+    const m = new Map();
+    for (const l of Object.values(d.links || {})) {
+        if (!l || !l.text || m.get(l.text)) continue;
+        const lk = l.likes instanceof Set ? l.likes : new Set((Array.isArray(l.likes) ? l.likes : []).map(String));
+        for (const f of famSet) if (lk.has(String(f))) { m.set(l.text, true); break; }
+    }
+    return m;
+}
 // ── Missions-Status: 1:1 aus telegram-bot GET /mission-status-api ──
 function missionStatusApi(uid) {
     uid = String(uid || '');
@@ -308,15 +324,14 @@ function missionStatusApi(uid) {
     // ihn geliked hat — konsistent mit dem gesamt-Filter (der Family-Posts ausschliesst).
     // Sonst zaehlen Likes ueber ein Sub-Konto nicht → M2/M3 bleiben bei z.B. 20/23.
     const fam = new Set(familyUids(uid));
-    const likedBy = (l) => {
-        if (!l.likes) return false;
-        if (l.likes instanceof Set) { for (const f of fam) if (l.likes.has(String(f))) return true; return false; }
-        const arr = Array.isArray(l.likes) ? l.likes.map(String) : [];
-        for (const f of fam) if (arr.includes(String(f))) return true;
-        return false;
-    };
-    const gesamt = heuteLinks.length;
-    const geliked = heuteLinks.filter(likedBy).length;
+    // URL-aggregiert wie der Feed (_linksByText): ein rotes Herz im Feed = geliked.
+    // Family-Like je URL über ALLE Link-Einträge (auch Duplikate/andere Tage) prüfen,
+    // sonst zählt ein doppelt gepostetes Reel als ungeliked obwohl das Herz rot ist.
+    const famLikedByText = _famLikedByTextMap(fam);
+    const todayTexts = new Set(heuteLinks.map(l => l.text));
+    const gesamt = todayTexts.size;
+    let geliked = 0;
+    for (const t of todayTexts) if (famLikedByText.get(t)) geliked++;
     const prozent = gesamt > 0 ? Math.round((geliked / gesamt) * 100) : 0;
     const m1Live = (mission.likesGegeben || 0) >= 5 || geliked >= 5;
     const m2Live = gesamt > 0 && (geliked / gesamt) >= 0.8;
