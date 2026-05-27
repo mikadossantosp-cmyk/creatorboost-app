@@ -9531,7 +9531,9 @@ p{line-height:1.65;color:var(--muted)}
         const targetUid = body && body.uid ? String(body.uid) : '';
         if (!targetUid) return json({ok:false, error:'Fehlende targetUid'},400);
         if (targetUid === myUid) return json({ok:false, error:'Kann dir nicht selbst folgen'},400);
-        const result = await postBot('/follow-api', { followerUid: String(myUid), targetUid });
+        const result = LOCAL_STORE
+            ? await localWrite(() => botLogic.followApi({ followerUid: String(myUid), targetUid }))
+            : await postBot('/follow-api', { followerUid: String(myUid), targetUid });
         console.log('[follow] me=' + myUid + ' → ' + targetUid + ' result=' + JSON.stringify(result));
         if (result && result.ok === true) return json({ok:true, action: result.action});
         return json({ok:false, error: (result && result.error) ? result.error : 'Bot-API fehlgeschlagen'}, 500);
@@ -9541,7 +9543,8 @@ p{line-height:1.65;color:var(--muted)}
         const targetUid = body && body.uid ? String(body.uid) : '';
         const back = body && body.back ? String(body.back) : '/explore';
         if (targetUid && targetUid !== myUid) {
-            await postBot('/follow-api', { followerUid: String(myUid), targetUid });
+            if (LOCAL_STORE) await localWrite(() => botLogic.followApi({ followerUid: String(myUid), targetUid }));
+            else await postBot('/follow-api', { followerUid: String(myUid), targetUid });
         }
         res.writeHead(302, { 'Location': back || '/explore' });
         return res.end();
@@ -9553,14 +9556,18 @@ p{line-height:1.65;color:var(--muted)}
         const { text, attachment, attachmentType } = body;
         if (!text?.trim() && !attachment) return json({ok:false, error:'Text oder Datei erforderlich'},400);
         if (text && text.length > 300) return json({ok:false, error:'Max 300 Zeichen'},400);
-        const result = await postBot('/create-post-api', { uid: myUid, text: (text||'').trim(), attachment, attachmentType });
+        const result = LOCAL_STORE
+            ? await localWrite(() => botLogic.createPostApi({ uid: myUid, text: (text||'').trim(), attachment, attachmentType }))
+            : await postBot('/create-post-api', { uid: myUid, text: (text||'').trim(), attachment, attachmentType });
         if (!result) return json({ok:false, error:'Bot offline'}, 502);
         return json(result);
     }
 
     if (path === '/api/delete-post' && req.method === 'POST') {
         const body = await parseBody(req);
-        const result = await postBot('/delete-post-api', { uid: myUid, timestamp: body.timestamp });
+        const result = LOCAL_STORE
+            ? await localWrite(() => botLogic.deletePostApi({ uid: myUid, timestamp: body.timestamp }))
+            : await postBot('/delete-post-api', { uid: myUid, timestamp: body.timestamp });
         return json({ok: result?.ok === true, error: result?.error || null});
     }
 
@@ -9622,7 +9629,9 @@ p{line-height:1.65;color:var(--muted)}
 
     if (path === '/api/delete-comment' && req.method === 'POST') {
         const body = await parseBody(req);
-        const result = await postBot('/delete-comment-api', { uid: myUid, postId: body.postId, commentIdx: body.commentIdx });
+        const result = LOCAL_STORE
+            ? await localWrite(() => botLogic.deleteCommentApi({ uid: myUid, postId: body.postId, commentIdx: body.commentIdx }))
+            : await postBot('/delete-comment-api', { uid: myUid, postId: body.postId, commentIdx: body.commentIdx });
         return json({ok: result?.ok === true, error: result?.error || null});
     }
 
