@@ -1778,7 +1778,7 @@ color-scheme:dark;
 html{scroll-behavior:smooth;-webkit-tap-highlight-color:transparent}
 html{background:var(--bg) !important}
 body{font-family:var(--font);background:var(--bg) !important;color:var(--text);min-height:100vh;margin:0 auto;padding-bottom:calc(70px + var(--safe-bottom));overflow-x:hidden;overscroll-behavior-y:contain;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
-[data-theme=light] html, [data-theme=light] body{background:#ffffff !important;background-image:none !important}
+[data-theme=light] html, [data-theme=light] body{background:#f3f4f7 !important;background-image:none !important}
 [data-theme=dark] html, [data-theme=dark] body{background:#000000 !important;background-image:none !important}
 a{color:inherit;text-decoration:none}
 img{display:block;max-width:100%}
@@ -1831,7 +1831,7 @@ button{cursor:pointer;border:none;outline:none;font-family:var(--font)}
 .story-ring.pinned-glow{background:linear-gradient(135deg,#f9a825,#e91e63,#9c27b0,#3b82f6);background-size:300% 300%;box-shadow:0 4px 18px rgba(233,30,99,0.45);animation:pinnedBlink 1.8s ease-in-out infinite}
 @keyframes pinnedBlink{0%,100%{background-position:0% 50%;box-shadow:0 4px 14px rgba(233,30,99,0.4);opacity:1}50%{background-position:100% 50%;box-shadow:0 6px 22px rgba(233,30,99,0.75);opacity:0.7}}
 .story-inner{width:100%;height:100%;border-radius:50%;border:2.5px solid var(--bg);overflow:hidden;position:relative;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:#fff}
-[data-theme=light] .story-ring{box-shadow:0 6px 20px rgba(29,78,216,0.5),0 1px 4px rgba(15,23,42,0.12)}
+[data-theme=light] .story-ring{box-shadow:0 2px 8px rgba(15,23,42,0.12)}
 [data-theme=light] .story-ring.seen{box-shadow:0 3px 10px rgba(15,23,42,0.18)}
 [data-theme=light] .story-inner{border-color:#ffffff;box-shadow:inset 0 0 0 1.5px rgba(15,23,42,0.18),0 1px 4px rgba(15,23,42,0.15)}
 [data-theme=light] .story-inner img{background:#f1f5f9}
@@ -1843,7 +1843,7 @@ button{cursor:pointer;border:none;outline:none;font-family:var(--font)}
 [data-theme=light] .profile-pic-img{box-shadow:0 0 0 1px rgba(15,23,42,0.10)}
 .story-name{font-size:11.5px;color:var(--text);max-width:74px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;letter-spacing:0.1px}
 .post{margin:0 12px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:18px;overflow:hidden;transition:border-color 0.2s,box-shadow 0.2s;box-shadow:0 4px 14px rgba(15,23,42,0.08),0 1px 3px rgba(15,23,42,0.05)}
-[data-theme=dark] .post{box-shadow:0 1px 3px rgba(0,0,0,0.4);border-color:var(--border2)}
+[data-theme=dark] .post{background:#121316;box-shadow:0 1px 3px rgba(0,0,0,0.4);border-color:var(--border2)}
 .post:hover{border-color:var(--border);box-shadow:0 4px 14px rgba(15,23,42,0.06)}
 .post-header{display:flex;align-items:center;gap:11px;padding:14px 16px 10px}
 .post-user-info{flex:1;min-width:0}
@@ -1855,10 +1855,10 @@ button{cursor:pointer;border:none;outline:none;font-family:var(--font)}
 .post-action-btn{display:flex;align-items:center;justify-content:center;gap:7px;padding:9px 16px;border-radius:14px;background:transparent;font-size:13.5px;font-weight:700;color:var(--muted);transition:all .15s;border:1px solid var(--border)!important;letter-spacing:0.1px;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
 .post-action-btn:active{transform:scale(0.95)}
 .post-action-btn:hover{background:var(--surface-tint);color:var(--text)}
-.post-action-btn.liked{color:#fff!important;background:#ff6b6b!important;border-color:#ff6b6b!important;box-shadow:0 6px 18px rgba(255,107,107,0.35)}
+.post-action-btn.liked{color:#fff!important;background:#ef4444!important;border-color:#ef4444!important}
 .post-action-btn.liked svg{fill:#fff!important;stroke:#fff!important}
-.post-action-btn[onclick*="showLikerModal"]{background:rgba(77,171,247,0.06);border-color:rgba(77,171,247,0.18)!important;color:var(--text)}
-.post-action-btn[onclick*="showLikerModal"]:active{background:rgba(77,171,247,0.12)}
+.post-action-btn[onclick*="showLikerModal"]{background:var(--surface-tint);border-color:var(--border)!important;color:var(--muted)}
+.post-action-btn[onclick*="showLikerModal"]:active{background:var(--hover-tint)}
 .post-action-btn svg{width:18px;height:18px;transition:fill 0.15s,stroke 0.15s}
 .post-likers{padding:0 16px 4px;font-size:12px;color:var(--muted)}
 .post-likers span{color:var(--text);font-weight:600}
@@ -4712,7 +4712,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v210-type-floor';
+const SW_VERSION='v211-feed-premium';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
@@ -10198,7 +10198,7 @@ p{line-height:1.65;color:var(--muted)}
         const _latestNewsTs = _latestNews?.timestamp || 0;
         const _latestNewsTitle = (_latestNews?.title || 'Neuer Newsletter').slice(0,30);
         const _botBubbleHtml = _latestNewsTs ? `<a href="/newsletter" class="story-item bot-story" data-news-ts="${_latestNewsTs}" id="bot-story-bubble" onclick="try{localStorage.setItem('cb_news_seen',String(${_latestNewsTs}));}catch(e){}">
-      <div class="story-ring" style="background:linear-gradient(135deg,#3b82f6,#0ea5e9,#06b6d4);box-shadow:0 4px 16px rgba(59,130,246,0.55)">
+      <div class="story-ring" style="background:linear-gradient(135deg,#3b82f6,#0ea5e9,#06b6d4);box-shadow:0 2px 8px rgba(15,23,42,0.12)">
         <div style="width:58px;height:58px;border-radius:50%;overflow:hidden;background:#0a1929;display:flex;align-items:center;justify-content:center;font-size:28px;border:2px solid var(--bg);position:relative">
           🤖
           <span style="position:absolute;bottom:-1px;right:-1px;width:14px;height:14px;border-radius:50%;background:#22c55e;border:2px solid var(--bg);box-shadow:0 0 6px rgba(34,197,94,0.6)"></span>
@@ -10504,7 +10504,7 @@ window.onPinVisitStory = function(uid){
 '    </a>\n'+
 '  </div>\n'+
 // Reel video preview card — cleanInstagramUrl entfernt Tracking-Params, jsEsc verhindert JS-Break bei Sonderzeichen
-'  <div style="margin:0 16px;border-radius:14px;overflow:hidden;background:#000;border:1.5px solid;border-image:linear-gradient(135deg,#f9a825,#e91e63,#9c27b0) 1;cursor:pointer;box-shadow:0 6px 20px rgba(233,30,99,0.10)" onclick="markLinkVisited(\''+lid1+'\');window.open(\''+jsEsc(cleanInstagramUrl(link.text||''))+'\',\'_blank\')">\n'+
+'  <div style="margin:0 16px;border-radius:14px;overflow:hidden;background:#000;border:1px solid var(--border);cursor:pointer;box-shadow:0 2px 10px rgba(15,23,42,0.06)" onclick="markLinkVisited(\''+lid1+'\');window.open(\''+jsEsc(cleanInstagramUrl(link.text||''))+'\',\'_blank\')">\n'+
 '    <div style="position:relative;width:100%;padding-top:62%;background:'+bannerBg+';overflow:hidden">\n'+
 '      '+bannerImg.replace('position:absolute;inset:0;','position:absolute;inset:0;')+'\n'+
 '      <div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.1) 0%,rgba(0,0,0,.55) 100%)"></div>\n'+
@@ -10528,7 +10528,7 @@ window.onPinVisitStory = function(uid){
 '    </div>\n'+
 (link.caption?'    <div style="padding:8px 12px;font-size:12px;color:var(--muted);line-height:1.4;border-top:1px solid rgba(255,255,255,.06)">'+String(link.caption).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</div>\n':'')+
 '    <div style="padding:8px 12px 10px;display:flex;align-items:center;justify-content:flex-end">\n'+
-'      <a href="'+htmlEsc(cleanInstagramUrl(link.text||''))+'" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();markLinkVisited(\''+lid1+'\')" style="padding:7px 16px;background:linear-gradient(135deg,#f9a825,#e91e63,#9c27b0);color:#fff;border-radius:9px;font-size:12px;font-weight:700;text-decoration:none;white-space:nowrap;box-shadow:0 2px 8px rgba(233,30,99,.25)">→ Öffnen</a>\n'+
+'      <a href="'+htmlEsc(cleanInstagramUrl(link.text||''))+'" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();markLinkVisited(\''+lid1+'\')" style="padding:8px 18px;background:#7c3aed;color:#fff;border-radius:10px;font-size:12px;font-weight:700;text-decoration:none;white-space:nowrap">→ Öffnen</a>\n'+
 '    </div>\n'+
 '  </div>\n'+
 // Likes counter + XP badge
