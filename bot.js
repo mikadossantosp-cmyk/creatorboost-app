@@ -4718,7 +4718,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v215-feed-icons';
+const SW_VERSION='v216-topbar-icons';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
@@ -10764,9 +10764,9 @@ ${(() => {
     </div>
   </div>
   <div class="topbar-actions">
-    <a href="/profil" title="XP" style="display:inline-flex;align-items:center;gap:4px;padding:5px 9px;background:rgba(167,139,250,0.10);border:1px solid rgba(167,139,250,0.30);border-radius:99px;text-decoration:none;color:#a78bfa;font-size:12px;font-weight:700">⭐ ${(d.users[myUid]?.xp||0).toLocaleString('de-DE')}</a>
-    <a href="/diamanten" title="Diamanten" style="display:inline-flex;align-items:center;gap:4px;padding:5px 9px;background:rgba(6,182,212,0.10);border:1px solid rgba(6,182,212,0.30);border-radius:99px;text-decoration:none;color:#06b6d4;font-size:12px;font-weight:700">💎 ${(d.users[myUid]?.diamonds||0)}</a>
-    ${(d.users[myUid]?.warnings||0) > 0 ? `<a href="/profil" title="Verwarnungen" style="display:inline-flex;align-items:center;gap:4px;padding:5px 9px;background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.35);border-radius:99px;text-decoration:none;color:#ef4444;font-size:12px;font-weight:700">⚠️ ${d.users[myUid].warnings}/5</a>` : ''}
+    <a href="/profil" title="XP" style="display:inline-flex;align-items:center;gap:4px;padding:5px 9px;background:rgba(167,139,250,0.10);border:1px solid rgba(167,139,250,0.30);border-radius:99px;text-decoration:none;color:#a78bfa;font-size:12px;font-weight:700"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>${(d.users[myUid]?.xp||0).toLocaleString('de-DE')}</a>
+    <a href="/diamanten" title="Diamanten" style="display:inline-flex;align-items:center;gap:4px;padding:5px 9px;background:rgba(6,182,212,0.10);border:1px solid rgba(6,182,212,0.30);border-radius:99px;text-decoration:none;color:#06b6d4;font-size:12px;font-weight:700"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0"><path d="M6 2h12l4 6-10 13L2 8z"/></svg>${(d.users[myUid]?.diamonds||0)}</a>
+    ${(d.users[myUid]?.warnings||0) > 0 ? `<a href="/profil" title="Verwarnungen" style="display:inline-flex;align-items:center;gap:4px;padding:5px 9px;background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.35);border-radius:99px;text-decoration:none;color:#ef4444;font-size:12px;font-weight:700"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>${d.users[myUid].warnings}/5</a>` : ''}
     <a href="/benachrichtigungen" class="icon-btn" title="Benachrichtigungen" style="position:relative;text-decoration:none;color:inherit">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
       <span id="notif-badge-feed" style="display:none;position:absolute;top:2px;right:2px;background:#ef4444;color:#fff;font-size:9px;font-weight:800;border-radius:50%;min-width:14px;height:14px;line-height:14px;text-align:center;padding:0 3px;box-shadow:0 2px 6px rgba(239,68,68,0.45)"></span>
