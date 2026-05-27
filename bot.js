@@ -4751,7 +4751,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v221-tab-icons';
+const SW_VERSION='v222-banner-polish';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
@@ -10849,8 +10849,8 @@ ${(()=>{
   }
   if (todayLiked && myTodayLikes >= todayTotal && todayTotal > 0) {
     return `<div style="margin:8px 16px;padding:10px 14px;background:rgba(0,200,81,.1);border:1px solid rgba(0,200,81,.25);border-radius:12px;display:flex;align-items:center;gap:10px">
-      <div style="font-size:22px">✅</div>
-      <div style="flex:1"><div style="font-size:13px;font-weight:700">Alle Links für heute geliked!</div><div style="font-size:11px;color:var(--muted);margin-top:2px">Komm morgen wieder 💪</div></div>
+      <div style="display:flex;flex-shrink:0"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#00c851" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12l2.5 2.5L16 9"/></svg></div>
+      <div style="flex:1"><div style="font-size:13px;font-weight:700">Alle Links für heute geliked!</div><div style="font-size:11px;color:var(--muted);margin-top:2px">Komm morgen wieder</div></div>
     </div>`;
   }
   return '';
@@ -12209,7 +12209,7 @@ async function submitSuperLink(){
       return '<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:'+grad+';color:#fff;font-weight:700">' +
         '<div style="font-size:24px;line-height:1">'+emoji+'</div>' +
         '<div style="flex:1;min-width:0">' +
-          '<div style="font-size:11px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;opacity:.9">🎉 EVENT AKTIV</div>' +
+          '<div style="font-size:11px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;opacity:.9">EVENT AKTIV</div>' +
           '<div style="font-size:14px;font-weight:800;margin-top:2px">'+valueLabel+'</div>' +
         '</div>' +
         '<div style="text-align:right">' +
