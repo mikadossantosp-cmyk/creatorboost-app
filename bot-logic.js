@@ -253,14 +253,15 @@ function updateMissionProgress(uid) {
     if (istAdminId(uid)) return;
     const heute = new Date().toDateString();
     const mission = getMission(uid);
-    const _famCache = new Map();
+    const _likedUrls = _likedByUrl(uid);
     const heuteLinks = Object.values(d.links).filter(l =>
-        istInstagramLink(l.text) && new Date(l.timestamp).toDateString() === heute && !_isFamilyPost(uid, l.user_id, _famCache)
+        istInstagramLink(l.text) && new Date(l.timestamp).toDateString() === heute
     );
     heuteLinks.forEach(l => { if (!l.likes) l.likes = new Set(); });
-    // Per-Account: nur Likes DIESES Kontos (exakte uid) zaehlen — Missionen sind pro Sub getrennt.
+    // "done" deckungsgleich mit dem Feed-Button (rotes Herz == erledigt).
+    const _liked = (l) => _likedUrls.has((l.text || '').trim());
     const gesamt = heuteLinks.length;
-    const geliked = heuteLinks.filter(l => l.likes.has(String(uid))).length;
+    const geliked = heuteLinks.filter(_liked).length;
     const m3Target = Math.min(M3_CAP, gesamt);
     if (gesamt > 0) { mission.m2 = geliked / gesamt >= 0.8; mission.m3 = m3Target > 0 && geliked >= m3Target; }
     else { mission.m2 = false; mission.m3 = false; }
@@ -307,19 +308,51 @@ function _isFamilyPost(viewerUid, ownerUid, cache) {
     cache.set(ownerUid, r);
     return r;
 }
+// Liefert die Menge der URLs, die fuer den Viewer als "geliked" gelten — EXAKT
+// deckungsgleich mit dem Feed-Button (rotes Herz). Der Feed liest projectDataLikeBot:
+// Likes werden pro URL (l.text) gemerged UND familyUids(owner) jedes Eintrags gepadded.
+// Die Migration kann dieselbe URL auf mehrere Link-Eintraege verteilt haben; der Feed
+// zeigt das Herz rot, sobald der Like auf IRGENDEINEM Eintrag dieser URL liegt — oder
+// der Viewer zur Family eines Owners dieser URL gehoert. Die Mission muss exakt so
+// zaehlen, sonst steht der Button rot, aber die Mission haengt (Like auf anderem Eintrag).
+function _likedByUrl(viewerUid) {
+    viewerUid = String(viewerUid);
+    const realLikers = new Map(); // url -> Set echte Liker
+    const owners = new Map();     // url -> Set owner-uids (fuer Family-Padding)
+    for (const v of Object.values(d.links || {})) {
+        const url = (v.text || '').trim();
+        if (!url) continue;
+        if (!realLikers.has(url)) { realLikers.set(url, new Set()); owners.set(url, new Set()); }
+        const ls = v.likes instanceof Set ? v.likes : new Set((Array.isArray(v.likes) ? v.likes : []).map(String));
+        const acc = realLikers.get(url);
+        ls.forEach(x => acc.add(String(x)));
+        owners.get(url).add(String(v.user_id));
+    }
+    const _famCache = new Map();
+    const set = new Set();
+    for (const url of realLikers.keys()) {
+        if (realLikers.get(url).has(viewerUid)) { set.add(url); continue; }
+        for (const o of owners.get(url)) {
+            if (_isFamilyPost(viewerUid, o, _famCache)) { set.add(url); break; }
+        }
+    }
+    return set;
+}
 function missionStatusApi(uid) {
     uid = String(uid || '');
     if (!uid) return { ok: false };
     const heute = new Date().toDateString();
     const mission = getMission(uid);
     const wMission = getWochenMission(uid);
-    const _famCache = new Map();
+    const _likedUrls = _likedByUrl(uid);
     const heuteLinks = Object.values(d.links).filter(l =>
-        istInstagramLink(l.text) && new Date(l.timestamp).toDateString() === heute && !_isFamilyPost(uid, l.user_id, _famCache)
+        istInstagramLink(l.text) && new Date(l.timestamp).toDateString() === heute
     );
-    // Per-Account: jeder (Sub-)Account hat seine EIGENE Mission — es zaehlen nur die
-    // Likes DIESES Kontos (exakte uid), nicht der Family.
-    const _liked = (l) => l.likes instanceof Set ? l.likes.has(String(uid)) : (Array.isArray(l.likes) && l.likes.map(String).includes(String(uid)));
+    // "done" = Like auf irgendeinem Eintrag dieser URL ODER Family-Post — beides ist in
+    // _likedByUrl gefaltet, exakt deckungsgleich mit dem Feed-Button (rotes Herz == done):
+    // was rot ist, zaehlt — auch wenn der echte Like in der Migration auf einem anderen
+    // Eintrag derselben URL landete oder der Viewer zur Owner-Family gehoert.
+    const _liked = (l) => _likedUrls.has((l.text || '').trim());
     const gesamt = heuteLinks.length;
     const geliked = heuteLinks.filter(_liked).length;
     const prozent = gesamt > 0 ? Math.round((geliked / gesamt) * 100) : 0;
@@ -1145,16 +1178,23 @@ async function auswertenForUserDay(uid, dayKey, opts) {
     const wMission = getWochenMission(uid);
     const queue = d.missionQueue[uid] || {};
     const dayLinks = Object.values(d.links).filter(l => new Date(l.timestamp).toDateString() === dayKey);
+    // M1 + Warnings: weiter auf Basis der FREMD-Posts (echte gegebene Likes) — unveraendert.
     const dayInstaLinks = dayLinks.filter(l => istInstagramLink(l.text) && String(getRootUid(l.user_id)) !== String(getRootUid(uid)));
-    const gesamtTag = dayInstaLinks.length;
     const gelikedTag = dayInstaLinks.filter(l => l.likes && (l.likes instanceof Set ? l.likes.has(String(uid)) : Array.isArray(l.likes) && l.likes.includes(String(uid)))).length;
-    const prozentTag = gesamtTag > 0 ? gelikedTag / gesamtTag : 0;
     const minLinksVorhanden = dayInstaLinks.length >= 5;
+    // M2/M3: EXAKT deckungsgleich mit missionStatusApi/Feed — Nenner = alle heutigen
+    // Insta-Links, "done" via URL-Merge + Family-Padding (was im Feed rot ist, zaehlt).
+    // Sonst weicht die Auszahlung vom angezeigten Status ab (Status sagt done, Reward bleibt aus).
+    const dayInstaLinksAll = dayLinks.filter(l => istInstagramLink(l.text));
+    const _likedUrls = _likedByUrl(uid);
+    const gesamtTag = dayInstaLinksAll.length;
+    const gelikedFeed = dayInstaLinksAll.filter(l => _likedUrls.has((l.text || '').trim())).length;
+    const prozentTag = gesamtTag > 0 ? gelikedFeed / gesamtTag : 0;
     const storedMission = d.missionen?.[uid]?.date === dayKey ? d.missionen[uid] : null;
     const m1Done = gelikedTag >= 5 || (queue.date === dayKey && !!queue.m1Pending) || !!storedMission?.m1;
     const m2Done = gesamtTag > 0 && prozentTag >= 0.8;
     const m3Target = Math.min(M3_CAP, gesamtTag);
-    const m3Done = m3Target > 0 && gelikedTag >= m3Target;
+    const m3Done = m3Target > 0 && gelikedFeed >= m3Target;
     const anyDailyMissionDone = m1Done || m2Done || m3Done;
     if (!anyDailyMissionDone && gesamtTag === 0 && !storedMission) { d.missionAuswertungProUser[idemKey] = Date.now(); return { skipped: 'no-activity' }; }
     let meldungen = [];
