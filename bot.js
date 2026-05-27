@@ -60,6 +60,16 @@ async function localWrite(fn) {
     datastore.saveDebounced();
     return r;
 }
+// Graceful Shutdown: ausstehende (debounced) Writes synchron flushen, damit bei
+// Railway-Redeploys/Restarts (SIGTERM) kein bis-zu-2s-Fenster verloren geht.
+let _shuttingDown = false;
+function _flushAndExit(sig) {
+    if (_shuttingDown) return; _shuttingDown = true;
+    try { if (LOCAL_STORE) { datastore.save(); console.log('[shutdown] datastore geflusht (' + sig + ')'); } } catch (e) { console.error('[shutdown] flush-Fehler:', e.message); }
+    process.exit(0);
+}
+process.on('SIGTERM', () => _flushAndExit('SIGTERM'));
+process.on('SIGINT', () => _flushAndExit('SIGINT'));
 // Profil-Update: unter LOCAL_STORE lokal via bot-logic, sonst Proxy an den Bot.
 // (updateProfileApi nimmt den ganzen Body: bio/spitzname/email/confirmEmail/… )
 async function _updateProfile(body) {
@@ -8594,7 +8604,7 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
     if (path === '/api/app-presence' && req.method === 'POST') {
         if (!session) return json({ok:false}, 401);
         const myUid = getMyUid(session);
-        await postBot('/app-presence', { uid: myUid }).catch(()=>{});
+        if (!LOCAL_STORE) postBot('/app-presence', { uid: myUid }).catch(()=>{});
         return json({ok:true});
     }
     // Anonymes Funnel-Tracking — auch ohne Session aufrufbar (Landing → Login → Telegram-CTA-Klick).
@@ -20896,7 +20906,7 @@ async function setRing(ringId) {
     }
 
     if (path === '/api/track-login' && req.method === 'POST') {
-        if (myUid) await postBot('/track-login', { uid: myUid });
+        if (myUid && !LOCAL_STORE) postBot('/track-login', { uid: myUid }).catch(()=>{});
         return json({ ok: true });
     }
 

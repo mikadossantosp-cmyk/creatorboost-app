@@ -70,18 +70,37 @@ function serialize(src) {
     return s;
 }
 
+let _loadFailed = false;
 function load() {
     try {
         if (!fs.existsSync(DATA_FILE)) return d;
         const geladen = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
         d = rehydrate(Object.assign(defaults(), geladen));
         _normalizeUsers(d);
-    } catch (e) { console.error('[datastore] load fehlgeschlagen:', e.message); }
+        return d;
+    } catch (e) {
+        console.error('[datastore] load fehlgeschlagen:', e.message);
+        // Recovery: neuestes Migrations-Backup laden statt mit leerem Store weiterzulaufen.
+        try {
+            const bdir = DATA_DIR + '/migration-backups';
+            const files = fs.existsSync(bdir) ? fs.readdirSync(bdir).filter(f => f.endsWith('.json')).sort().reverse() : [];
+            if (files[0]) {
+                d = rehydrate(Object.assign(defaults(), JSON.parse(fs.readFileSync(bdir + '/' + files[0], 'utf8'))));
+                _normalizeUsers(d);
+                console.error('[datastore] aus Backup wiederhergestellt:', files[0]);
+                return d;
+            }
+        } catch (e2) { console.error('[datastore] Backup-Recovery fehlgeschlagen:', e2.message); }
+        // Kein Backup → NICHT mit leerem Store weiterlaufen + die (evtl. rettbare) Datei überschreiben.
+        _loadFailed = true;
+        console.error('[datastore] KEIN Backup gefunden — save() wird blockiert, um Totalverlust zu verhindern.');
+    }
     return d;
 }
 
 let isSaving = false, savePending = false;
 function save() {
+    if (_loadFailed) { console.error('[datastore] save BLOCKIERT — Load war fehlgeschlagen, überschreibe die Datei nicht.'); return; }
     if (isSaving) { savePending = true; return; }
     isSaving = true;
     try {
