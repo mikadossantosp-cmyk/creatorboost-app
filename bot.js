@@ -4718,7 +4718,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v216-topbar-icons';
+const SW_VERSION='v217-real-date';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
@@ -10742,8 +10742,10 @@ setTimeout(function(){
 },800);
 </script>` : ''}
 ${(() => {
+  const _todayDay = new Date().toLocaleDateString('de-DE',{timeZone:'Europe/Berlin',day:'numeric'});
+  const _calIcon = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-3px;flex-shrink:0"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/><text x="12" y="17.5" font-size="9.5" text-anchor="middle" fill="currentColor" stroke="none" font-weight="700">'+_todayDay+'</text></svg>';
   const _tabsMeta = [
-    {id:'heute', emoji:'📅', label:'Heute', count:_unlikedCountHeute},
+    {id:'heute', emoji:_calIcon, label:'Heute', count:_unlikedCountHeute},
     {id:'aelter', emoji:'🕐', label:'Älter', count:_unlikedCountAelter},
     {id:'engagement', emoji:'⭐', label:'Engagement', count:_unlikedCountSuper},
     {id:'kollabs', emoji:'🤝', label:'Kollabs', count:0},
