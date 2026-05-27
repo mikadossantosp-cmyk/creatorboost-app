@@ -4712,7 +4712,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v205-m3-total-links';
+const SW_VERSION='v206-like-state-from-server';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
@@ -10834,25 +10834,22 @@ async function adminDelLink(linkId, btn){
 // jeweils nur ihre eigene Sicht auf "geliked" haben (sonst zeigt Hauptkonto
 // fälschlich "geliked" wenn der Sub geliked hat — gleiche localStorage-Domain).
 function _likeUid(){ try { return String(window.MY_UID||''); } catch(e) { return ''; } }
-function _kLikes(){ return 'cb_my_likes_' + (_likeUid()||'anon'); }
 function _kQueue(){ return 'cb_like_queue_' + (_likeUid()||'anon'); }
 function _kSlQueue(){ return 'cb_sl_like_queue_' + (_likeUid()||'anon'); }
-// Cleanup: alte unscoped Keys löschen (waren vermischt zwischen Sub und Main —
-// kein verlässlicher Migration-Pfad. Server ist Source-of-Truth, hasLiked wird
-// beim nächsten Render korrekt eingefärbt.)
+// Cleanup: den alten lokalen Like-Cache (cb_my_likes*) KOMPLETT vom Geraet entfernen.
+// Er hat Buttons dauerhaft rot gefaerbt, auch wenn der echte Like serverseitig fehlte
+// (z.B. bei der Migration verloren) → Post "ungeliked", Button aber rot + disabled, kein
+// Re-Like moeglich. Server ist Source-of-Truth; noch nicht bestaetigte Likes leben nur in
+// der Sende-Queue (cb_like_queue). Alte unscoped Queue-Keys ebenfalls mitnehmen.
 (function _cleanupLegacyLikeKeys(){
     try {
         ['cb_my_likes','cb_like_queue','cb_sl_like_queue'].forEach(k => localStorage.removeItem(k));
+        for (let i = localStorage.length - 1; i >= 0; i--) {
+            const k = localStorage.key(i);
+            if (k && k.indexOf('cb_my_likes') === 0) localStorage.removeItem(k);
+        }
     } catch(e) {}
 })();
-function _likedSet() { try { return new Set(Object.keys(JSON.parse(localStorage.getItem(_kLikes())||'{}'))); } catch(e) { return new Set(); } }
-function _markLikedLocal(msgId) {
-    try {
-        const v = JSON.parse(localStorage.getItem(_kLikes())||'{}');
-        v[String(msgId)] = Date.now();
-        localStorage.setItem(_kLikes(), JSON.stringify(v));
-    } catch(e) {}
-}
 function _queueLike(msgId) {
     try {
         const q = JSON.parse(localStorage.getItem(_kQueue())||'[]');
@@ -10875,18 +10872,27 @@ async function _flushLikeQueue() {
             const res = await fetch('/api/like', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({msgId}), signal: ctrl.signal });
             clearTimeout(tmo);
             const data = await res.json();
-            if (data.ok || data.missingInstagram) _dequeueLike(msgId);
+            // Dequeue bei Erfolg ODER unwiederbringlichem Fehler (Post existiert nicht mehr —
+            // sonst bleibt der Button ewig rot und die Queue retryt endlos).
+            const unrecoverable = !data.ok && typeof data.error === 'string' && /nicht gefunden/i.test(data.error);
+            if (data.ok || data.missingInstagram || unrecoverable) _dequeueLike(msgId);
         } catch(e) { /* keep in queue, retry next round */ }
     }
 }
-// Beim Laden: lokal-gelikte Posts in UI markieren — verhindert "Like weg nach Reload"
+// Beim Laden NUR noch AUSSTEHENDE (noch nicht bestaetigte) Likes aus der Sende-Queue
+// rot markieren — verhindert "Like weg nach Reload", OHNE den Server zu ueberschreiben.
+// Frueher wurde aus cb_my_likes hydriert: das faerbte Buttons dauerhaft rot, auch wenn
+// der echte Like (z.B. bei der Migration) serverseitig verloren ging → Post "ungeliked",
+// Button aber rot + disabled → kein Re-Like moeglich. Server ist Source-of-Truth.
 function _hydrateLikes(){
     try {
-        const liked = _likedSet();
-        if (liked.size === 0) return;
+        let q = [];
+        try { q = JSON.parse(localStorage.getItem(_kQueue())||'[]'); } catch(e){}
+        const pending = new Set(q.map(String));
+        if (pending.size === 0) return;
         document.querySelectorAll('.post-action-btn[data-msgid]').forEach(b => {
             const id = b.getAttribute('data-msgid');
-            if (id && liked.has(String(id)) && !b.classList.contains('liked')) {
+            if (id && pending.has(String(id)) && !b.classList.contains('liked')) {
                 b.classList.add('liked');
                 b.disabled = true;
                 const svg = b.querySelector('svg'); if (svg) svg.setAttribute('fill','currentColor');
@@ -10909,8 +10915,7 @@ async function likePost(msgId, btn) {
         showBanner({ type:'warn', title:'Erst den Link besuchen!', subtitle:'Tap auf den Post → Instagram öffnen → dann liken. So funktioniert echtes Engagement.', dur:5000 });
         return;
     }
-    // Sofort lokal speichern — überlebt Reload, Network-Fail, App-Restart.
-    _markLikedLocal(msgId);
+    // In die Sende-Queue — ueberlebt Reload, Network-Fail, App-Restart (bis Server bestaetigt).
     _queueLike(msgId);
     btn.dataset.busy = '1';
     const countEl = document.getElementById('likes-'+msgId);
@@ -10935,7 +10940,6 @@ async function likePost(msgId, btn) {
         } else if (data.missingInstagram) {
             // Echte Server-Ablehnung → revert lokal (Like nicht erlaubt)
             _dequeueLike(msgId);
-            try { const v = JSON.parse(localStorage.getItem(_kLikes())||'{}'); delete v[String(msgId)]; localStorage.setItem(_kLikes(), JSON.stringify(v)); } catch(e){}
             btn.classList.remove('liked');
             btn.querySelector('svg').setAttribute('fill', 'none');
             if (countEl && window.cbSetCount) window.cbSetCount('likes-'+msgId, Math.max(0, Number(countEl.textContent||0) - 1), true);
@@ -11083,8 +11087,7 @@ async function likeSuperLink(slId, btn) {
         showBanner({ type:'warn', title:'Erst den Link besuchen!', subtitle:'Tap auf den Superlink → Instagram öffnen → dann liken. Pflicht für Full-Engagement.', dur:5000 });
         return;
     }
-    // Sofort lokal markieren + queuen — Like überlebt Reload und Netzwerk-Fail.
-    _markLikedLocal(slId);
+    // In die Superlink-Sende-Queue — Like überlebt Reload und Netzwerk-Fail (bis Server bestaetigt).
     _queueSLLike(slId);
     btn.disabled = true;
     btn.classList.add('liked');
@@ -11102,7 +11105,6 @@ async function likeSuperLink(slId, btn) {
             showBanner({ type:'success', title:'Superlink geliked ❤️', subtitle:'Vergiss nicht: Auf Instagram liken & mit 2 Wörter kommentieren. Danke!', dur:5000 });
         } else if (data.missingInstagram) {
             _dequeueSLLike(slId);
-            try { const v = JSON.parse(localStorage.getItem(_kLikes())||'{}'); delete v[String(slId)]; localStorage.setItem(_kLikes(), JSON.stringify(v)); } catch(e){}
             btn.disabled=false;
             btn.classList.remove('liked');
             btn.querySelector('svg')?.setAttribute('fill','none');
