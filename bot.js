@@ -13875,6 +13875,7 @@ document.getElementById('user-search-input')?.addEventListener('input',filterSea
             appChatData = results[1];
         } catch(e) { console.error('[/nachrichten] fetchBot failed:', e.message); }
         if (!botData) return redirect('/feed');
+        const crown = makeCrown(getTop1Uid(botData, Array.isArray(botData._adminIds) ? botData._adminIds.map(Number) : []));
         const convos = botData.messages || {};
         const _inboxIsAdmin = adminIds.includes(Number(myUid));
         const myConvos = Object.entries(convos)
