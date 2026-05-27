@@ -484,6 +484,56 @@ function deleteCommentApi({ uid, postId, commentIdx, commentTs }) {
     comments.splice(target, 1);
     return { ok: true };
 }
+// ── Link löschen: portiert aus telegram-bot GET /delete-link.
+// Standalone: kein Telegram-Message-Delete mehr; XP/Daily/Weekly-Rollback +
+// Comments/DMs/pinnedEngages-Cleanup bleiben 1:1 erhalten.
+function deleteLinkApi({ linkId }) {
+    const msgId = String(linkId || '');
+    const link = d.links?.[msgId];
+    if (!link) return { ok: false, error: 'Link nicht gefunden' };
+    const heuteStr = new Date().toDateString();
+    const isToday = link.timestamp && new Date(link.timestamp).toDateString() === heuteStr;
+    try {
+        const likers = Array.from(link.likes instanceof Set ? link.likes : (Array.isArray(link.likes) ? link.likes : []));
+        for (const lUid of likers) {
+            if (!lUid || lUid === CREATORBOOST_UID || istAdminId(lUid)) continue;
+            const lu = d.users[lUid];
+            if (!lu) continue;
+            lu.xp = Math.max(0, (lu.xp || 0) - 5);
+            lu.level = level(lu.xp); lu.role = badge(lu.xp);
+            lu.totalLikes = Math.max(0, (lu.totalLikes || 0) - 1);
+            if (isToday) {
+                if (d.dailyXP) d.dailyXP[lUid] = Math.max(0, (d.dailyXP[lUid] || 0) - 5);
+                if (d.missionen?.[lUid]?.date === heuteStr) {
+                    d.missionen[lUid].likesGegeben = Math.max(0, (d.missionen[lUid].likesGegeben || 0) - 1);
+                }
+            }
+            if (d.weeklyXP) d.weeklyXP[lUid] = Math.max(0, (d.weeklyXP[lUid] || 0) - 5);
+        }
+        const posterUid = String(link.user_id || '');
+        if (posterUid && d.users[posterUid] && !istAdminId(posterUid)) {
+            const pu = d.users[posterUid];
+            pu.xp = Math.max(0, (pu.xp || 0) - 1);
+            pu.level = level(pu.xp); pu.role = badge(pu.xp);
+            pu.links = Math.max(0, (pu.links || 0) - 1);
+            if (isToday && d.dailyXP) d.dailyXP[posterUid] = Math.max(0, (d.dailyXP[posterUid] || 0) - 1);
+            if (d.weeklyXP) d.weeklyXP[posterUid] = Math.max(0, (d.weeklyXP[posterUid] || 0) - 1);
+        }
+    } catch (e) {}
+    if (d.dmNachrichten) delete d.dmNachrichten[String(link.counter_msg_id)];
+    if (d.comments) {
+        delete d.comments[msgId];
+        if (link.counter_msg_id) delete d.comments[String(link.counter_msg_id)];
+    }
+    if (d.likerNames) delete d.likerNames[msgId];
+    if (d.pinnedEngages) {
+        for (const k of Object.keys(d.pinnedEngages)) {
+            if (String(d.pinnedEngages[k]?.linkId || '') === String(msgId)) delete d.pinnedEngages[k];
+        }
+    }
+    delete d.links[msgId];
+    return { ok: true };
+}
 
 function _reasonLabel(r) {
     if (r === 'roulette') return '🎡 Roulette';
@@ -2215,7 +2265,7 @@ module.exports = {
     auswertenForUserDay, missionenAuswerten, backfillMissionenSinceMonday, thisWeekBackfillDays, applyWarningEscalation, xpBisNaechstesBadge,
     dailyRankingAbschluss, aktivitaetsScore, archiveWeeklyXP, legendenBonus, wochenResetUndAuszahlung,
     zeitCheck, eventAutoTick, linkCleanup, announceEventToAllUsers,
-    postLinkFromApp, createPostApi, deletePostApi, commentApi, deleteCommentApi,
+    postLinkFromApp, createPostApi, deletePostApi, deleteLinkApi, commentApi, deleteCommentApi,
     diamondLinkCreate, diamondLinkLike, diamondLinkAcceptRules, diamondLinkAdminDelete,
     prismaLinkCreate, prismaLinkLike, prismaLinkAcceptRules, prismaLinkAdminDelete,
     collabCreatePost, collabLikePost, getBerlinWeekKey,

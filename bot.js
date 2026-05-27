@@ -9590,6 +9590,10 @@ p{line-height:1.65;color:var(--muted)}
         const isAdmin = _adminIds.includes(Number(myUid));
         const isOwner = String(link.user_id) === String(myUid);
         if (!isAdmin) return json({ok:false, error:'Nur Admins dürfen Links löschen'}, 403);
+        if (LOCAL_STORE) {
+            const r = await localWrite(() => botLogic.deleteLinkApi({ linkId }));
+            return json({ ok: r?.ok === true, error: r?.error || null });
+        }
         // Bot's /delete-link Bridge-Endpoint aufrufen (DELETE_LINK macht TG-Cleanup + d.links delete)
         try {
             const url = (process.env.MAINBOT_URL || '').replace(/\/$/, '') + '/delete-link?id=' + encodeURIComponent(linkId);

@@ -7,6 +7,12 @@
 >
 > Diese Datei ist die dauerhafte Roadmap. Sie ersetzt die bisher nur im Chat
 > existierende Planung. **Stand: 2026-05-27** (aus dem Code-Audit rekonstruiert).
+>
+> **Endzustand-Entscheidung:** Der telegram-bot wird **komplett stillgelegt**.
+> Die App läuft vollständig standalone (`LOCAL_STORE`, eigener Datastore) und ruft
+> den Bot nicht mehr auf. Telegram-Features (Gruppe B / Superlink-in-TG, `tg-file`,
+> `/bild`-Proxy zum Bot, `GROUP_B_ID` & Co.) fallen weg und werden in BEIDEN Repos
+> ausgeräumt. Portierte Mutationen lassen den Telegram-Teil (Message-Delete etc.) weg.
 
 ---
 
@@ -68,8 +74,9 @@ Messpunkte im aktuellen `bot.js`:
 Für jede Route, die noch nur `postBot(path, body)` ruft, einen `LOCAL_STORE`-Zweig
 ergänzen, der die passende `bot-logic`-Mutation aufruft + `datastore.saveDebounced()`.
 Vorlage siehe bereits migrierte Routen (z. B. `/api/like`, Feed-Posts).
-- **Konkret offen u. a.: `/delete-link`** (`bot.js` ~Z. 9595) — ruft immer den Bot.
-  Lokal: `bot-logic` Link-Delete + Save. (TG-Cleanup entfällt im App-Backend-Modus.)
+- ✅ **`/delete-link` cutover erledigt** — `botLogic.deleteLinkApi()` neu in `bot-logic.js`
+  (XP/Daily/Weekly-Rollback + Comments/DMs/pinnedEngages-Cleanup, ohne TG-Delete),
+  Route mit `LOCAL_STORE`-Zweig verdrahtet. Unit- + Boot-getestet.
 - Vollständige Liste: `grep -nE '\bpostBot\(' bot.js` und prüfen, welche **nicht** in
   einem `if (LOCAL_STORE)`-Block stehen.
 
