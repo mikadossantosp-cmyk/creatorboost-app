@@ -3634,6 +3634,36 @@ function showLikerModal(msgId){const modal=document.getElementById('liker-modal'
   // Live nachladen, damit die Liste auch ohne Page-Reload aktuell ist.
   fetch('/api/link-likers?msgId='+encodeURIComponent(msgId)).then(r=>r.json()).then(j=>{if(j&&typeof j.html==='string'){content.innerHTML=j.html||'<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">Noch niemand geliked</div>';}}).catch(()=>{});}
 function closeLikerModal(){const modal=document.getElementById('liker-modal');if(modal){modal.classList.remove('open');document.body.style.overflow='';} }
+function closeReportModal(){var m=document.getElementById('report-modal');if(m)m.style.display='none';}
+function reportLiker(likerUid,contextLabel,special){
+  var m=document.getElementById('report-modal');
+  if(!m){
+    m=document.createElement('div');
+    m.id='report-modal';
+    m.style.cssText='position:fixed;inset:0;z-index:100000;background:rgba(0,0,0,.6);display:none;align-items:flex-end;justify-content:center';
+    m.onclick=function(e){if(e.target===m)closeReportModal();};
+    document.body.appendChild(m);
+  }
+  m.dataset.target=String(likerUid);
+  m.dataset.ctx=String(contextLabel);
+  var rs=['Nicht engagiert','Nur geliked'];
+  if(special)rs.push('Nicht full engagiert');
+  var btns=rs.map(function(r){return '<button data-reason="'+r+'" onclick="submitReport(this)" style="width:100%;text-align:left;padding:13px 15px;margin-bottom:8px;background:var(--surface-tint);border:1px solid var(--border2);border-radius:12px;color:var(--text);font-size:14px;font-weight:600;cursor:pointer">'+r+'</button>';}).join('');
+  m.innerHTML='<div style="background:var(--bg3);border-radius:20px 20px 0 0;padding:18px 16px calc(22px + var(--safe-bottom,0px));width:100%;max-width:480px;border-top:1px solid var(--border2);box-shadow:0 -8px 30px rgba(0,0,0,.2)"><div style="width:36px;height:4px;background:var(--border);border-radius:4px;margin:0 auto 16px"></div><div style="font-size:16px;font-weight:800;text-align:center;color:var(--text)">User melden</div><div style="font-size:12.5px;color:var(--muted);text-align:center;margin:4px 0 16px">Hat geliked, aber nicht richtig engagiert?</div>'+btns+'<button onclick="closeReportModal()" style="width:100%;padding:13px;margin-top:4px;background:none;border:none;color:var(--muted);font-size:14px;font-weight:700;cursor:pointer">Abbrechen</button></div>';
+  m.style.display='flex';
+}
+async function submitReport(btn){
+  var m=document.getElementById('report-modal');
+  if(!m)return;
+  var targetUid=m.dataset.target,ctx=m.dataset.ctx,reason=btn.getAttribute('data-reason');
+  closeReportModal();
+  try{
+    var res=await fetch('/api/report-user',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({targetUid:targetUid,reason:reason,context:ctx})});
+    var data=await res.json();
+    if(data.ok){if(window.showBanner)showBanner({type:'success',title:'Meldung abgeschickt',subtitle:'Danke — unser Team prüft das.',dur:3500});}
+    else{if(window.showBanner)showBanner({type:'warn',title:'Meldung fehlgeschlagen',subtitle:(data.error||'Versuch es nochmal.'),dur:3500});}
+  }catch(e){if(window.showBanner)showBanner({type:'warn',title:'Netzwerkfehler',subtitle:'Versuch es nochmal.',dur:3500});}
+}
 // ── CROP MODAL ──
 let _cropCb=null,_cropDrag={on:false,sx:0,sy:0,ox:0,oy:0},_cropPinch=0;
 let _cs={x:0,y:0,z:1,vpW:0,vpH:0,nw:0,nh:0};
@@ -4718,7 +4748,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v218-card-refine';
+const SW_VERSION='v219-report-liker';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
@@ -8422,11 +8452,15 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
         const usersMap = botData.users||{};
         const _admins = Array.isArray(botData._adminIds) ? botData._adminIds.map(Number) : [];
         const crownOverlay = makeCrownOverlay(getTop3Uids(botData, _admins));
+        const _isOwn = String(lnk.user_id)===String(getMyUid(session));
         const rows = likes.map((lid,i)=>{
             const lu=usersMap[String(lid)]; const lg=badgeGradient(lu&&lu.role);
             const lf=ladeBild(String(lid),'profilepic'); const li=lu&&lu.instagram;
             const limg=lf?'<img src="/appbild/'+lid+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" alt="">':li?'<img src="https://unavatar.io/instagram/'+li+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" alt="">':'';
-            return '<a href="/profil/'+lid+'" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--border2);text-decoration:none;background:'+(i%2===0?'transparent':'rgba(255,255,255,.02)')+'"><div style="position:relative;width:34px;height:34px;flex-shrink:0">'+crownOverlay(lid,'xs')+'<div style="position:relative;width:34px;height:34px;border-radius:50%;background:'+lg+';overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff"><span style="position:absolute">'+(lu&&lu.name||'?')[0]+'</span>'+limg+'</div></div><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:var(--text)">'+htmlEsc(lu&&(lu.spitzname||lu.name)||'User')+'</div><div style="font-size:10px;color:var(--muted)">'+cleanRole(lu&&lu.role)+'</div></div><div style="font-size:11px;color:var(--accent)">→</div></a>';
+            const _tail = _isOwn
+              ? '<button onclick="reportLiker(\''+lid+'\',\'Link '+reqMsgId+'\',0)" style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);color:#ef4444;border-radius:8px;padding:6px 11px;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0">Melden</button>'
+              : '<div style="font-size:11px;color:var(--accent)">→</div>';
+            return '<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--border2);background:'+(i%2===0?'transparent':'rgba(255,255,255,.02)')+'"><a href="/profil/'+lid+'" style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;text-decoration:none"><div style="position:relative;width:34px;height:34px;flex-shrink:0">'+crownOverlay(lid,'xs')+'<div style="position:relative;width:34px;height:34px;border-radius:50%;background:'+lg+';overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff"><span style="position:absolute">'+(lu&&lu.name||'?')[0]+'</span>'+limg+'</div></div><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:var(--text)">'+htmlEsc(lu&&(lu.spitzname||lu.name)||'User')+'</div><div style="font-size:10px;color:var(--muted)">'+cleanRole(lu&&lu.role)+'</div></div></a>'+_tail+'</div>';
         }).join('');
         return json({html: rows, count: likes.length});
     }
@@ -10425,7 +10459,10 @@ window.onPinVisitStory = function(uid){
                 const lu=d.users[String(lid)]; const lg=badgeGradient(lu&&lu.role);
                 const lf=ladeBild(String(lid),'profilepic'); const li=lu&&lu.instagram;
                 const limg=lf?'<img src="/appbild/'+lid+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" alt="">':li?'<img src="https://unavatar.io/instagram/'+li+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" alt="">':'';
-                return '<a href="/profil/'+lid+'" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--border2);text-decoration:none;background:'+(i%2===0?'transparent':'rgba(255,255,255,.02)')+'"><div style="position:relative;width:34px;height:34px;flex-shrink:0">'+crownOverlay(lid,'xs')+'<div style="position:relative;width:34px;height:34px;border-radius:50%;background:'+lg+';overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff"><span style="position:absolute">'+(lu&&lu.name||'?')[0]+'</span>'+limg+'</div></div><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:var(--text)">'+htmlEsc(lu&&(lu.spitzname||lu.name)||'User')+'</div><div style="font-size:10px;color:var(--muted)">'+cleanRole(lu&&lu.role)+'</div></div><div style="font-size:11px;color:var(--accent)">→</div></a>';
+                const _tail = (String(link.user_id)===String(myUid))
+                  ? '<button onclick="reportLiker(\''+lid+'\',\'Link '+lid1+'\',0)" style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);color:#ef4444;border-radius:8px;padding:6px 11px;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0">Melden</button>'
+                  : '<div style="font-size:11px;color:var(--accent)">→</div>';
+                return '<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--border2);background:'+(i%2===0?'transparent':'rgba(255,255,255,.02)')+'"><a href="/profil/'+lid+'" style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;text-decoration:none"><div style="position:relative;width:34px;height:34px;flex-shrink:0">'+crownOverlay(lid,'xs')+'<div style="position:relative;width:34px;height:34px;border-radius:50%;background:'+lg+';overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff"><span style="position:absolute">'+(lu&&lu.name||'?')[0]+'</span>'+limg+'</div></div><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:var(--text)">'+htmlEsc(lu&&(lu.spitzname||lu.name)||'User')+'</div><div style="font-size:10px;color:var(--muted)">'+cleanRole(lu&&lu.role)+'</div></div></a>'+_tail+'</div>';
             }).join('');
 
             // Comments
@@ -10584,7 +10621,7 @@ commentsBox+
                 const lf=ladeBild(String(lid),'profilepic'); const li=lu&&lu.instagram;
                 const limg=lf?'<img src="/appbild/'+lid+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" alt="">':li?'<img src="https://unavatar.io/instagram/'+li+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" alt="">':'';
                 const rName = ((lu&&(lu.spitzname||lu.name))||'User').replace(/'/g,'&#39;');
-                const reportBtn = isOwnPost ? '<button onclick="reportNonEngager(\''+sl.id+'\',\''+lid+'\',\''+rName+'\')" style="background:none;border:1px solid rgba(255,59,48,.5);color:rgba(255,59,48,.8);border-radius:8px;padding:3px 8px;font-size:10px;font-weight:600;cursor:pointer;flex-shrink:0">Melden</button>' : '';
+                const reportBtn = isOwnPost ? '<button onclick="reportLiker(\''+lid+'\',\'Superlink '+sl.id+'\',1)" style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);color:#ef4444;border-radius:8px;padding:6px 11px;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0">Melden</button>' : '';
                 return '<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--border2)"><div style="position:relative;width:34px;height:34px;flex-shrink:0">'+crownOverlay(lid,'xs')+'<div style="position:relative;width:34px;height:34px;border-radius:50%;background:'+lg+';overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff"><span style="position:absolute">'+(lu&&lu.name||'?')[0]+'</span>'+limg+'</div></div><div style="flex:1;min-width:0;font-size:13px;font-weight:600;color:var(--text)">'+htmlEsc(lu&&(lu.spitzname||lu.name)||'User')+'</div>'+reportBtn+'</div>';
             }).join('');
             const likeBtn = isOwnPost
