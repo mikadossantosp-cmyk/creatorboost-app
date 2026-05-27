@@ -2323,6 +2323,92 @@ function collabLikePost({ uid, postId }) {
     return { ok: true, liked: true, likeCount: p.likes.length, diamondsTotal: u.diamonds || 0, rulesDmSent: dmSentNow, diamondsGiven, boostActive: boost.active };
 }
 
+// ── AUTH: 1:1 aus telegram-bot portiert (PBKDF2). Security-kritisch — Schema
+//    pbkdf2$100000$salt$hash bleibt identisch, damit migrierte Hashes weiter gelten.
+function hashPasswordPBKDF2(password) {
+    const salt = crypto.randomBytes(16).toString('hex');
+    const hash = crypto.pbkdf2Sync(String(password), salt, 100000, 64, 'sha256').toString('hex');
+    return 'pbkdf2$100000$' + salt + '$' + hash;
+}
+function verifyPasswordPBKDF2(password, stored) {
+    if (!stored || typeof stored !== 'string') return false;
+    const parts = stored.split('$');
+    if (parts.length !== 4 || parts[0] !== 'pbkdf2') return false;
+    const iter = parseInt(parts[1], 10) || 100000;
+    const salt = parts[2], hash = parts[3];
+    if (!salt || !hash) return false;
+    try {
+        const compare = crypto.pbkdf2Sync(String(password), salt, iter, 64, 'sha256').toString('hex');
+        return crypto.timingSafeEqual(Buffer.from(hash, 'hex'), Buffer.from(compare, 'hex'));
+    } catch { return false; }
+}
+function authEmailPassword({ email, password }) {
+    email = String(email || '').toLowerCase().trim();
+    password = String(password || '');
+    if (!email || !password) return { ok: false, error: 'Email und Passwort erforderlich' };
+    const found = Object.entries(d.users || {}).find(([, u]) => String(u.email || '').toLowerCase() === email);
+    if (!found) return { ok: false, error: 'Email oder Passwort falsch', notRegistered: true };
+    const [uid, u] = found;
+    if (!u.password_hash) return { ok: false, error: 'noch kein Passwort gesetzt', noPassword: true };
+    if (!verifyPasswordPBKDF2(password, u.password_hash)) return { ok: false, error: 'Email oder Passwort falsch' };
+    u.appLastSeen = Date.now();
+    u.appUser = true;
+    return { ok: true, uid: String(uid), hasPassword: true };
+}
+function setUserPasswordApi({ uid, password }) {
+    uid = String(uid || '');
+    if (!uid || !d.users[uid]) return { ok: false, error: 'User nicht gefunden' };
+    const pw = String(password || '');
+    if (pw === '') { delete d.users[uid].password_hash; return { ok: true, cleared: true }; }
+    if (pw.length < 6) return { ok: false, error: 'Passwort muss mindestens 6 Zeichen haben' };
+    if (pw.length > 200) return { ok: false, error: 'Passwort zu lang' };
+    d.users[uid].password_hash = hashPasswordPBKDF2(pw);
+    return { ok: true };
+}
+function setAppCodeApi({ uid, code }) {
+    uid = String(uid || '').trim();
+    const raw = String(code || '').toLowerCase().trim();
+    if (!uid || !d.users[uid]) return { ok: false, error: 'User nicht gefunden' };
+    if (!/^[a-z0-9_-]{4,30}$/.test(raw)) return { ok: false, error: 'Code: 4–30 Zeichen, nur a–z, 0–9, _ oder -' };
+    const reserved = new Set(['admin', 'root', 'system', 'api', 'login', 'logout', 'feed', 'auth', 'signup', 'register', 'help', 'test']);
+    if (reserved.has(raw)) return { ok: false, error: 'Code reserviert — bitte anderen wählen' };
+    const taken = Object.entries(d.users || {}).find(([oid, x]) => String(oid) !== uid && String(x.appCode || '').toLowerCase() === raw);
+    if (taken) return { ok: false, error: 'Code schon vergeben — bitte anderen wählen' };
+    d.users[uid].appCode = raw;
+    d.users[uid].appCodeChosenAt = Date.now();
+    return { ok: true, code: raw };
+}
+function createEmailUserApi({ email, password, ageConfirmedAt, termsAcceptedAt, termsVersion }) {
+    email = String(email || '').toLowerCase().trim();
+    password = String(password || '');
+    ageConfirmedAt = Number(ageConfirmedAt || 0);
+    termsAcceptedAt = Number(termsAcceptedAt || 0);
+    termsVersion = String(termsVersion || '').slice(0, 30);
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 200) return { ok: false, error: 'Ungültige Email' };
+    const existing = Object.entries(d.users || {}).find(([, u]) =>
+        String(u.email || '').toLowerCase() === email || String(u.pendingEmail || '').toLowerCase() === email);
+    if (existing) return { ok: true, uid: String(existing[0]), existed: true };
+    if (password && (password.length < 6 || password.length > 200)) return { ok: false, error: 'Passwort muss 6–200 Zeichen lang sein' };
+    let uid = String(Date.now());
+    let attempts = 0;
+    while (d.users[uid] && attempts++ < 50) uid = String(Date.now()) + Math.floor(Math.random() * 1000);
+    if (d.users[uid]) return { ok: false, error: 'UID-Kollision' };
+    d.users[uid] = {
+        name: email.split('@')[0].slice(0, 30),
+        username: null, instagram: null, bio: null, nische: null, spitzname: null,
+        email, emailConfirmedAt: Date.now(),
+        trophies: [], xp: 0, level: 1, warnings: 0, started: true, links: 0, likes: 0,
+        role: '🆕 New', lastDaily: null, totalLikes: 0, chats: [], joinDate: Date.now(),
+        inGruppe: true, diamonds: 0, projects: [], profileCompletionRewarded: false,
+        inventory: [], activeRing: null, followers: [], following: [],
+        appUser: true, appLastSeen: Date.now(), signupSource: 'email',
+        ageConfirmedAt: ageConfirmedAt || null, termsAcceptedAt: termsAcceptedAt || null, termsVersion: termsVersion || null,
+        blockedUsers: [],
+    };
+    if (password) d.users[uid].password_hash = hashPasswordPBKDF2(password);
+    return { ok: true, uid, existed: false };
+}
+
 module.exports = {
     init, setThumbnailFetcher, setBildSaver,
     updateProfileApi, addProjectApi, updateProjectApi, deleteProjectApi, completeProfileApi, engagePinnedPostApi,
@@ -2352,4 +2438,6 @@ module.exports = {
     sendInAppDM, addNotification, dmUser, sendCreatorBoostDM, ensureCreatorBoostUser,
     badgeBonusLinks, generateSyntheticLinkId, tryFetchThumbnail,
     M3_CAP, CREATORBOOST_UID,
+    authEmailPassword, setUserPasswordApi, setAppCodeApi, createEmailUserApi,
+    hashPasswordPBKDF2, verifyPasswordPBKDF2,
 };

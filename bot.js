@@ -60,6 +60,11 @@ async function localWrite(fn) {
     datastore.saveDebounced();
     return r;
 }
+// Profil-Update: unter LOCAL_STORE lokal via bot-logic, sonst Proxy an den Bot.
+// (updateProfileApi nimmt den ganzen Body: bio/spitzname/email/confirmEmail/… )
+async function _updateProfile(body) {
+    return LOCAL_STORE ? await localWrite(() => botLogic.updateProfileApi(body)) : await _updateProfile(body);
+}
 // Mappt die Roulette/Daily-Credit-Actions (Bot-Pfade) auf die lokalen bot-logic-Funktionen.
 function _localCreditAction(action, payload) {
     if (action === '/add-xp') return botLogic.addXp(payload);
@@ -5244,14 +5249,14 @@ self.addEventListener('notificationclick',e=>{
     }
     if (path === '/api/dismiss-briefing' && req.method === 'POST') {
         if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
-        const result = await postBot('/update-profile-api', { uid: getMyUid(session), appBriefingSeenV2: true });
+        const result = await _updateProfile({ uid: getMyUid(session), appBriefingSeenV2: true });
         if (!result || result.ok === false) return json({ok:false, error: (result && result.error) || 'Speichern fehlgeschlagen'}, 500);
         return json({ok:true});
     }
     // Regeln akzeptieren — wird am Ende der Tour aufgerufen wenn User die Checkbox aktiviert.
     if (path === '/api/accept-rules' && req.method === 'POST') {
         if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
-        const result = await postBot('/update-profile-api', { uid: getMyUid(session), rulesAcceptedAt: Date.now() });
+        const result = await _updateProfile({ uid: getMyUid(session), rulesAcceptedAt: Date.now() });
         if (!result || result.ok === false) return json({ok:false, error: (result && result.error) || 'Speichern fehlgeschlagen'}, 500);
         return json({ok:true});
     }
@@ -5275,13 +5280,8 @@ self.addEventListener('notificationclick',e=>{
             if (reviewerEntry) {
                 reviewerUid = String(reviewerEntry[0]);
             } else {
-                const created = await postBot('/create-email-user-api', {
-                    email: REVIEWER_EMAIL,
-                    password: REVIEWER_PASSWORD,
-                    ageConfirmedAt: Date.now(),
-                    termsAcceptedAt: Date.now(),
-                    termsVersion: '2026-05'
-                });
+                const _rev = { email: REVIEWER_EMAIL, password: REVIEWER_PASSWORD, ageConfirmedAt: Date.now(), termsAcceptedAt: Date.now(), termsVersion: '2026-05' };
+                const created = LOCAL_STORE ? await localWrite(() => botLogic.createEmailUserApi(_rev)) : await postBot('/create-email-user-api', _rev);
                 if (!created || !created.ok || !created.uid) {
                     return json({ok:false, error:'Reviewer-Setup fehlgeschlagen: ' + ((created && created.error) || 'Mainbot nicht erreichbar')}, 500);
                 }
@@ -5289,7 +5289,7 @@ self.addEventListener('notificationclick',e=>{
             }
             // Profil komplett ausfüllen (idempotent — überschreibt nur falls leer/anders).
             // emailConfirmedAt wird vom Mainbot bei create-email-user-api gesetzt.
-            await postBot('/update-profile-api', {
+            await _updateProfile({
                 uid: reviewerUid,
                 instagram: 'creatorboostx_demo',
                 name: 'Reviewer',
@@ -5300,7 +5300,8 @@ self.addEventListener('notificationclick',e=>{
             });
             // appCodeChosenAt setzt NUR /set-app-code-api (update-profile-api ignoriert das Feld
             // → sonst wird der Reviewer trotzdem zur Code-Wahl geleitet).
-            await postBot('/set-app-code-api', { uid: reviewerUid, code: 'reviewerdemo' });
+            if (LOCAL_STORE) await localWrite(() => botLogic.setAppCodeApi({ uid: reviewerUid, code: 'reviewerdemo' }));
+            else await postBot('/set-app-code-api', { uid: reviewerUid, code: 'reviewerdemo' });
             // Cache forcieren — sonst hat fetchBot('/data') in nachfolgenden Routen den Reviewer noch nicht drin.
             await refreshDataCache();
             // Session minten — name hardcoded, kein erneuter Lookup nötig.
@@ -5322,7 +5323,9 @@ self.addEventListener('notificationclick',e=>{
         const _ip = String(req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '').split(',')[0].trim().slice(0, 64);
         const _ua = String(req.headers['user-agent'] || '').slice(0, 200);
         // Sign-In: NUR existierende User. Neue User müssen über /signup gehen.
-        const result = await postBot('/auth-email-password', { email, password });
+        const result = LOCAL_STORE
+            ? await localWrite(() => botLogic.authEmailPassword({ email, password }))
+            : await postBot('/auth-email-password', { email, password });
         const isNewSignup = false;
         const didSetupPassword = false; // Legacy-Variable für Funnel-Tracking — auto-PW-Setup wurde aus Security-Gründen entfernt
         if (!result || !result.ok) {
@@ -5389,7 +5392,9 @@ self.addEventListener('notificationclick',e=>{
         const newPw = String(body.password || '');
         if (newPw.length > 0 && newPw.length < 6) return json({ok:false, error:'Passwort muss mindestens 6 Zeichen haben'}, 400);
         if (newPw.length > 200) return json({ok:false, error:'Passwort zu lang'}, 400);
-        const result = await postBot('/set-user-password', { uid: getMyUid(session), password: newPw });
+        const result = LOCAL_STORE
+            ? await localWrite(() => botLogic.setUserPasswordApi({ uid: getMyUid(session), password: newPw }))
+            : await postBot('/set-user-password', { uid: getMyUid(session), password: newPw });
         if (!result || !result.ok) return json({ok:false, error: (result && result.error) || 'Speichern fehlgeschlagen'}, 500);
         return json({ok:true, cleared: !!result.cleared});
     }
@@ -5399,7 +5404,9 @@ self.addEventListener('notificationclick',e=>{
         const body = await parseBody(req);
         const code = String(body.code || '').toLowerCase().trim();
         if (!/^[a-z0-9_-]{4,30}$/.test(code)) return json({ok:false, error:'Code: 4–30 Zeichen, nur a–z, 0–9, _ oder -'}, 400);
-        const result = await postBot('/set-app-code-api', { uid: getMyUid(session), code });
+        const result = LOCAL_STORE
+            ? await localWrite(() => botLogic.setAppCodeApi({ uid: getMyUid(session), code }))
+            : await postBot('/set-app-code-api', { uid: getMyUid(session), code });
         if (!result || !result.ok) return json({ok:false, error: (result && result.error) || 'Speichern fehlgeschlagen'}, result?.error?.includes('vergeben') ? 409 : 400);
         return json({ok:true, code: result.code});
     }
@@ -5610,7 +5617,7 @@ self.addEventListener('notificationclick',e=>{
         // aber nicht fuer Beta-Tester-Signups (Email wird nachtraeglich via
         // pendingEmail gesetzt) → u.email + emailConfirmedAt blieben leer →
         // needsConfirm-Banner ging nie weg trotz Klick.
-        const result = await postBot('/update-profile-api', { uid: entry.uid, confirmEmail: entry.email });
+        const result = await _updateProfile({ uid: entry.uid, confirmEmail: entry.email });
         if (!result || result.ok === false) {
             res.writeHead(500, {'Content-Type':'text/html'});
             return res.end(baseHtml('❌','Fehler','Bestätigung konnte nicht gespeichert werden ('+(result && result.error || 'unbekannt')+'). Bitte später erneut versuchen.','#ef4444'));
@@ -5974,7 +5981,8 @@ try { fetch('/api/track-funnel',{method:'POST',headers:{'Content-Type':'applicat
             return json({ok:false, error:'Diese Email ist schon angemeldet. Falls du dich gerade registriert hast, bestätige den Link in deiner Email (auch im Spam-Ordner). Sonst logg dich einfach ein:', existed:true}, 409);
         }
         // Account anlegen (mit Age-Gate + Terms-Akzeptanz für DSGVO/Play-Store-Audit)
-        const created = await postBot('/create-email-user-api', { email, password, ageConfirmedAt: Date.now(), termsAcceptedAt: Date.now(), termsVersion: '2026-05' });
+        const _cep = { email, password, ageConfirmedAt: Date.now(), termsAcceptedAt: Date.now(), termsVersion: '2026-05' };
+        const created = LOCAL_STORE ? await localWrite(() => botLogic.createEmailUserApi(_cep)) : await postBot('/create-email-user-api', _cep);
         if (!created) {
             // postBot returnt null bei Mainbot-Timeout/Crash/Network-Error → User klare Meldung geben
             console.error('[signup-fail] Mainbot unreachable for email:', email, 'ip:', _ip);
@@ -7245,7 +7253,7 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
         if (!u) return json({error:'User nicht gefunden'}, 404);
         const oldEmail = u.email || u.pendingEmail || '';
         // Mainbot: email='' loescht beide Felder (siehe update-profile-api)
-        try { await postBot('/update-profile-api', { uid, email: '' }); } catch(e) {}
+        try { await _updateProfile({ uid, email: '' }); } catch(e) {}
         // Cleanup Beta-Tester
         if (_betaTesters[uid]) { delete _betaTesters[uid]; saveBetaTesters(); }
         return json({ok:true, deleted: oldEmail});
@@ -7281,12 +7289,12 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
         }
         // Schritt 1: Email beim Ziel-User loeschen falls override (clean slate)
         if (override && (toUser.email || toUser.pendingEmail)) {
-            try { await postBot('/update-profile-api', { uid: toUid, email: '' }); } catch(e) {}
+            try { await _updateProfile({ uid: toUid, email: '' }); } catch(e) {}
         }
         // Schritt 2: Email beim Quell-User loeschen
-        try { await postBot('/update-profile-api', { uid: fromUid, email: '' }); } catch(e) {}
+        try { await _updateProfile({ uid: fromUid, email: '' }); } catch(e) {}
         // Schritt 3: Email beim Ziel-User als BESTAETIGT setzen (kein erneuter Confirm-Flow)
-        try { await postBot('/update-profile-api', { uid: toUid, confirmEmail: emailToMove }); } catch(e) {}
+        try { await _updateProfile({ uid: toUid, confirmEmail: emailToMove }); } catch(e) {}
         // Cleanup Beta-Tester: Eintrag wandert mit
         if (_betaTesters[fromUid]) {
             const entry = _betaTesters[fromUid];
@@ -9474,11 +9482,13 @@ p{line-height:1.65;color:var(--muted)}
             if (_isFullySet && !_unlockActive) {
                 return json({ok:false, error:'Passwort-Änderung gesperrt. Klick "Änderung anfragen" zum Freischalten.', locked:true}, 423);
             }
-            const pwResult = await postBot('/set-user-password', { uid: myUid, password: pw });
+            const pwResult = LOCAL_STORE
+                ? await localWrite(() => botLogic.setUserPasswordApi({ uid: myUid, password: pw }))
+                : await postBot('/set-user-password', { uid: myUid, password: pw });
             if (!pwResult || !pwResult.ok) return json({ok:false, error: (pwResult && pwResult.error) || 'Passwort speichern fehlgeschlagen'}, 500);
             _pwUpdated = true;
         }
-        const updateResult = await postBot('/update-profile-api', updateData);
+        const updateResult = await _updateProfile(updateData);
         if (updateResult && updateResult.ok === false) {
             return json({ok:false, error: updateResult.error || 'Profile-Update fehlgeschlagen'});
         }
@@ -14474,7 +14484,7 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
             mode = 'resend-confirm';
         } else {
             // Setze als pendingEmail beim Mainbot
-            try { await postBot('/update-profile-api', { uid: String(myUid), email }); } catch(e) {}
+            try { await _updateProfile({ uid: String(myUid), email }); } catch(e) {}
             mode = 'new-confirm-sent';
         }
         // Confirmation senden falls noetig (new oder resend)
@@ -14558,7 +14568,7 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
         delete _betaTesters[String(myUid)].linkEmailedAt;
         saveBetaTesters();
         try {
-            await postBot('/update-profile-api', { uid: String(myUid), email: newEmail });
+            await _updateProfile({ uid: String(myUid), email: newEmail });
             await sendSignupConfirmationEmail(String(myUid), newEmail, req.headers.host);
         } catch(e) {}
         return json({ok:true});
@@ -14568,7 +14578,7 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
         const entry = _betaTesters[String(myUid)];
         if (!entry?.email) return json({ok:false, error:'Keine Beta-Email gespeichert'});
         try {
-            await postBot('/update-profile-api', { uid: String(myUid), email: entry.email });
+            await _updateProfile({ uid: String(myUid), email: entry.email });
             await sendSignupConfirmationEmail(String(myUid), entry.email, req.headers.host);
         } catch(e) {}
         return json({ok:true});
