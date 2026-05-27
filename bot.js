@@ -4751,7 +4751,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v223-profile-heart';
+const SW_VERSION='v224-mission-checks';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
@@ -12344,8 +12344,8 @@ async function submitSuperLink(){
       const settleStr = hh+'h '+mm+'m';
       const {daily, weekly} = d;
       const bar = (val,max,col)=>'<div style="background:var(--bg4);border-radius:4px;height:5px;overflow:hidden;margin-top:4px"><div style="height:100%;width:'+Math.min(100,Math.round(val/max*100))+'%;background:'+col+';border-radius:4px;transition:width .5s ease"></div></div>';
-      const mChip = (done,label)=>'<div style="display:flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;color:'+(done?'#22c55e':'var(--muted)')+'">'+
-        '<span style="font-size:14px">'+(done?'✅':'⬜')+'</span>'+label+'</div>';
+      const mChip = (done,label)=>'<div style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:'+(done?'#22c55e':'var(--muted)')+'">'+
+        (done?'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="12" cy="12" r="10"/><path d="M8 12l2.5 2.5L16 9"/></svg>':'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;opacity:.45"><circle cx="12" cy="12" r="10"/></svg>')+label+'</div>';
       targetEl.innerHTML =
         '<div style="font-size:11px;color:var(--muted);background:var(--bg4);padding:5px 10px;border-radius:8px;display:inline-block;margin-bottom:14px">⏱ Abrechnung in '+settleStr+'</div>'
         +'<div style="display:grid;grid-template-columns:1fr;gap:12px">'
@@ -19105,7 +19105,7 @@ document.querySelectorAll('.ins-bar').forEach((b, i) => {
                 +'<div style="background:var(--bg4);border-radius:4px;height:6px;overflow:hidden;margin-bottom:10px">'
                 +'<div style="height:100%;width:'+completionPct+'%;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:4px;transition:width .6s ease"></div></div>'
                 +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 8px;margin-bottom:10px">'
-                +completionChecks.map(([isDone,label,href])=>'<a href="'+(href||'#')+'" style="display:flex;align-items:center;gap:4px;font-size:11px;color:'+(isDone?'var(--green)':'var(--muted)')+';text-decoration:none">'+(isDone?'✅':'⬜')+' '+label+'</a>').join('')
+                +completionChecks.map(([isDone,label,href])=>'<a href="'+(href||'#')+'" style="display:flex;align-items:center;gap:6px;font-size:11px;color:'+(isDone?'var(--green)':'var(--muted)')+';text-decoration:none">'+(isDone?'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="12" cy="12" r="10"/><path d="M8 12l2.5 2.5L16 9"/></svg>':'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;opacity:.45"><circle cx="12" cy="12" r="10"/></svg>')+label+'</a>').join('')
                 +'</div>'
                 +(next&&next[2]?'<a href="'+next[2]+'" style="display:inline-flex;align-items:center;gap:6px;background:var(--accent);color:#fff;padding:7px 14px;border-radius:10px;font-size:12px;font-weight:700;text-decoration:none">✏️ '+next[1]+' hinzufügen</a>':'')
                 +'</div>';
