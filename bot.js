@@ -8623,7 +8623,6 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
         const u = (botData?.users||{})[myUid] || {};
         const stand = u.diamonds || 0;
         const appLikes = u.appLikeCount || 0;
-        const threadMsgs = u.threadMsgCount || 0;
         const profileDone = u.profileCompletionRewarded ? '✅' : '⏳';
         return html(`
 <div class="topbar"><a href="/newsletter" class="icon-btn" style="font-size:22px">‹</a><div style="font-size:15px;font-weight:600">Diamanten</div><div style="width:36px"></div></div>
@@ -8663,11 +8662,6 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
     <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--border2)">
       <div style="font-size:20px">📲</div>
       <div style="flex:1"><div style="font-size:13.5px;font-weight:700">100 Likes via App</div><div style="font-size:11.5px;color:var(--muted);margin-top:2px">Aktuell: ${appLikes}/${Math.ceil((appLikes+1)/100)*100}</div></div>
-      <div style="font-size:13px;font-weight:700;color:#a78bfa">+1 💎</div>
-    </div>
-    <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--border2)">
-      <div style="font-size:20px">💬</div>
-      <div style="flex:1"><div style="font-size:13.5px;font-weight:700">10 Thread-Nachrichten</div><div style="font-size:11.5px;color:var(--muted);margin-top:2px">Min 10 Zeichen, kein Spam · Aktuell: ${threadMsgs}/${Math.ceil((threadMsgs+1)/10)*10}</div></div>
       <div style="font-size:13px;font-weight:700;color:#a78bfa">+1 💎</div>
     </div>
     <div style="display:flex;align-items:center;gap:12px;padding:12px 14px">
@@ -9231,7 +9225,7 @@ p{line-height:1.65;color:var(--muted)}
 <!-- ════════════════════════════════════════════ NACHRICHTEN ════ -->
 <div class="section">
   <div class="section-label">Community</div>
-  <h2>Nachrichten &amp; <span class="grad-text">Threads</span></h2>
+  <h2><span class="grad-text">Nachrichten</span></h2>
   <p class="lead">Die Community-Kommunikation läuft direkt in der App. DMs an einzelne Mitglieder oder Gruppen-Threads für alle.</p>
 
   <div style="display:flex;flex-direction:column;gap:10px">
@@ -9618,14 +9612,6 @@ p{line-height:1.65;color:var(--muted)}
         } catch(e) {}
         refreshDataCache();
         return json({ok:true});
-    }
-
-    if (path === '/api/delete-thread-msg' && req.method === 'POST') {
-        const body = await parseBody(req);
-        const { threadId, timestamp, msgId } = body;
-        if (!threadId || !timestamp) return json({error:'Ungültig'}, 400);
-        const result = await postBot('/delete-thread-msg-api', { threadId, timestamp: Number(timestamp), msgId, uid: myUid });
-        return json({ok: result?.ok === true, error: result?.error || null});
     }
 
     if (path === '/api/delete-dm' && req.method === 'POST') {
@@ -20163,42 +20149,10 @@ ${_setSubHead('🛡️ Admin-Tools', 'Live-Tour, Page-Vorschauen und FE-Thread-T
   <a href="/preview/email-login" target="_blank" class="btn btn-outline btn-full" style="margin-bottom:8px;display:flex">📧 Magic-Link Email</a>
 </div>
 <div class="subset-section">
-  <div class="subset-section-title">⚙️ FE-Thread Tools</div>
-  <button onclick="createFeThread(this)" class="btn btn-outline btn-full" style="margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:8px">⭐ Full Engagement Thread erstellen</button>
-  <button onclick="announceFeThread(this)" class="btn btn-outline btn-full" style="margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:8px">📢 Ankündigung in FE-Thread senden</button>
-  <div id="fethread-result" style="display:none;font-size:12px;padding:8px;border-radius:8px;margin-top:4px"></div>
-</div>
-<div class="subset-section">
   <div class="subset-section-title">🛡️ Dashboard</div>
   <a href="/dashboard" class="btn btn-primary btn-full" style="background:linear-gradient(135deg,#f5d76e,#d4a946 55%,#8b6914);color:#000;font-weight:800;display:flex;align-items:center;justify-content:center;gap:8px">🛡️ Admin-Dashboard öffnen</a>
   <div style="font-size:11.5px;color:var(--muted);line-height:1.4;margin-top:6px">User-Verwaltung, Moderation-Queue, Stats, Engagement-Log und mehr.</div>
 </div>
-<script>
-async function createFeThread(btn){
-  btn.disabled=true;btn.textContent='⏳ Erstelle Thread...';
-  const r=document.getElementById('fethread-result');
-  try{
-    const res=await fetch('/api/admin/create-fethread',{method:'POST'});
-    const data=await res.json();
-    r.style.display='block';
-    if(data.ok){r.style.background='rgba(34,197,94,.15)';r.style.color='#22c55e';r.textContent='✅ Thread erstellt! ID: '+data.threadId;}
-    else{r.style.background='rgba(239,68,68,.15)';r.style.color='#ef4444';r.textContent='❌ '+data.error;}
-  }catch(e){r.style.display='block';r.style.color='#ef4444';r.textContent='❌ '+e.message;}
-  btn.disabled=false;btn.textContent='⭐ Full Engagement Thread erstellen';
-}
-async function announceFeThread(btn){
-  btn.disabled=true;btn.textContent='⏳ Sende...';
-  const r=document.getElementById('fethread-result');
-  try{
-    const res=await fetch('/api/admin/announce-fethread',{method:'POST'});
-    const data=await res.json();
-    r.style.display='block';
-    if(data.ok){r.style.background='rgba(34,197,94,.15)';r.style.color='#22c55e';r.textContent='✅ '+(data.message||'Ankündigung gesendet');}
-    else{r.style.background='rgba(239,68,68,.15)';r.style.color='#ef4444';r.textContent='❌ '+data.error;}
-  }catch(e){r.style.display='block';r.style.color='#ef4444';r.textContent='❌ '+e.message;}
-  btn.disabled=false;btn.textContent='📢 Ankündigung in FE-Thread senden';
-}
-</script>
 </div>
 `, 'settings-admin');
     }
@@ -20682,30 +20636,6 @@ async function deleteAccountDsgvo(){
 }
 </script>
 <script>
-async function createFeThread(btn){
-  btn.disabled=true;btn.textContent='⏳ Erstelle Thread...';
-  const r=document.getElementById('fethread-result');
-  try{
-    const res=await fetch('/api/admin/create-fethread',{method:'POST'});
-    const data=await res.json();
-    r.style.display='block';
-    if(data.ok){r.style.background='rgba(34,197,94,.15)';r.style.color='#22c55e';r.textContent='✅ Thread erstellt! ID: '+data.threadId;}
-    else{r.style.background='rgba(239,68,68,.15)';r.style.color='#ef4444';r.textContent='❌ '+data.error;}
-  }catch(e){r.style.display='block';r.style.color='#ef4444';r.textContent='❌ '+e.message;}
-  btn.disabled=false;btn.textContent='⭐ Full Engagement Thread erstellen';
-}
-async function announceFeThread(btn){
-  btn.disabled=true;btn.textContent='⏳ Sende...';
-  const r=document.getElementById('fethread-result');
-  try{
-    const res=await fetch('/api/admin/announce-fethread',{method:'POST'});
-    const data=await res.json();
-    r.style.display='block';
-    if(data.ok){r.style.background='rgba(34,197,94,.15)';r.style.color='#22c55e';r.textContent='✅ Ankündigung gesendet!';}
-    else{r.style.background='rgba(239,68,68,.15)';r.style.color='#ef4444';r.textContent='❌ '+data.error;}
-  }catch(e){r.style.display='block';r.style.color='#ef4444';r.textContent='❌ '+e.message;}
-  btn.disabled=false;btn.textContent='📢 Ankündigung in FE-Thread senden';
-}
 async function removePw(){
   if(!confirm('Passwort wirklich entfernen? Du kannst dich danach nur noch über Magic-Link einloggen.'))return;
   try{
@@ -20889,48 +20819,7 @@ async function setRing(ringId) {
 </script>`, 'settings');
     }
 
-    if (path === '/api/send-group-message' && req.method === 'POST') {
-        const body = await parseBody(req);
-        const { text } = body;
-        if (!text?.trim()) return json({ ok: false });
-        const ok = await postBot('/send-group-message', { uid: myUid, text });
-        return json({ ok: !!ok });
-    }
-
-    if (path === '/api/telegram-feed') {
-        const data = await fetchBot('/telegram-feed');
-        if (!data) return json({ messages: [] });
-        return json(data);
-    }
-
-    if (path === '/api/forum-topics') {
-        const data = await fetchBot('/forum-topics');
-        if (!data) return json({ threads: [] });
-        return json(data);
-    }
-
-    if (path.startsWith('/api/thread-messages/')) {
-        const threadId = path.split('/api/thread-messages/')[1];
-        const data = await fetchBot('/thread-messages/' + encodeURIComponent(threadId));
-        if (!data) return json({ messages: [] });
-        return json(data);
-    }
-
-    if (path === '/api/send-thread-message' && req.method === 'POST') {
-        const body = await parseBody(req);
-        const { text, thread_id, replyTo } = body;
-        if (!text?.trim()) return json({ ok: false });
-        const ok = await postBot('/send-thread-message', { uid: myUid, text, thread_id, replyTo: replyTo||null });
-        return json(ok || { ok: false });
-    }
-
-    if (path === '/api/react-thread-msg' && req.method === 'POST') {
-        const body = await parseBody(req);
-        const { threadId, timestamp, emoji } = body;
-        if (!threadId || !timestamp || !emoji) return json({ok:false});
-        const result = await postBot('/react-thread-msg-api', { threadId, timestamp: Number(timestamp), emoji, uid: myUid });
-        return json(result || {ok:false});
-    }
+    // (Forum/Thread- + Telegram-Feed-Routen entfernt — Telegram-Feature stillgelegt.)
     // DM-Reaktionen — frontend (chat-detail-render) ruft das, vorher fehlte der Endpoint komplett.
     if (path === '/api/react-message' && req.method === 'POST') {
         if (!session) return json({ok:false}, 401);
@@ -20941,24 +20830,6 @@ async function setRing(ringId) {
             ? await localWrite(() => botLogic.reactDmMsgApi({ chatKey, timestamp: Number(timestamp), emoji, uid: myUid }))
             : await postBot('/react-dm-msg-api', { chatKey, timestamp: Number(timestamp), emoji, uid: myUid });
         return json(result || {ok:false});
-    }
-
-    if (path === '/api/admin/create-fethread' && req.method === 'POST') {
-        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
-        const botData = await fetchBot('/data');
-        const isAdminUser = botData && String(botData.users?.[myUid]?.role||'').includes('Admin');
-        if (!isAdminUser) return json({ok:false, error:'Kein Admin'}, 403);
-        const result = await postBot('/fethread-setup-api', {});
-        return json(result || {ok:false, error:'Bot nicht erreichbar'});
-    }
-
-    if (path === '/api/admin/announce-fethread' && req.method === 'POST') {
-        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
-        const botData = await fetchBot('/data');
-        const isAdminUser = botData && String(botData.users?.[myUid]?.role||'').includes('Admin');
-        if (!isAdminUser) return json({ok:false, error:'Kein Admin'}, 403);
-        const result = await postBot('/fethread-announce-api', {});
-        return json(result || {ok:false, error:'Bot nicht erreichbar'});
     }
 
     if (path === '/api/buy-extralink' && req.method === 'POST') {
@@ -21004,14 +20875,6 @@ async function setRing(ringId) {
         return json(result || {ok:false, error:'Fehler'});
     }
 
-    if (path === '/api/create-thread' && req.method === 'POST') {
-        const body = await parseBody(req);
-        const { name, emoji } = body;
-        if (!name?.trim()) return json({ ok: false, error: 'Kein Name' });
-        const ok = await postBot('/create-thread', { uid: myUid, name, emoji });
-        return json(ok || { ok: false });
-    }
-
     if (path.startsWith('/api/tg-file/')) {
         const fileId = path.split('/api/tg-file/')[1];
         const botUrl = MAINBOT_URL + '/tg-file/' + encodeURIComponent(fileId);
@@ -21032,61 +20895,6 @@ async function setRing(ringId) {
             upstream.on('error', () => { try { res.writeHead(404); res.end(); } catch(e) {} resolve(); });
             upstream.setTimeout(15000, () => { try { upstream.destroy(); res.writeHead(504); res.end(); } catch(e) {} resolve(); });
         });
-    }
-
-    if (path === '/api/rename-thread' && req.method === 'POST') {
-        const body = await parseBody(req);
-        const { thread_id, name } = body;
-        if (!name?.trim() || !thread_id) return json({ ok: false });
-        const ok = await postBot('/rename-thread', { uid: myUid, thread_id, name: name.trim() });
-        return json(ok || { ok: false });
-    }
-
-    // ── THREAD META OVERRIDES (icon + name lokal) ──
-    // bot kann nicht alle Telegram-Topic-icons liefern → admin kann pro thread custom emoji/name setzen
-    if (path === '/api/set-thread-meta' && req.method === 'POST') {
-        const _data = await fetchBot('/data') || {};
-        const _adm = Array.isArray(_data._adminIds) ? _data._adminIds.map(Number) : [];
-        if (!_adm.includes(Number(myUid))) return json({ ok: false, error: 'Nur Admin' }, 403);
-        const body = await parseBody(req);
-        const { thread_id, name, emoji } = body;
-        if (!thread_id) return json({ ok: false, error: 'thread_id fehlt' });
-        const overridesPath = DATA_DIR + '/thread-overrides.json';
-        let overrides = {};
-        try { overrides = JSON.parse(fs.readFileSync(overridesPath, 'utf8')); } catch(e) {}
-        overrides[String(thread_id)] = overrides[String(thread_id)] || {};
-        if (typeof name === 'string' && name.trim()) overrides[String(thread_id)].name = name.trim().slice(0,40);
-        if (typeof emoji === 'string' && emoji.trim()) overrides[String(thread_id)].emoji = emoji.trim().slice(0,6);
-        try { fs.writeFileSync(overridesPath, JSON.stringify(overrides, null, 2)); } catch(e) { return json({ ok: false, error: 'Speichern fehlgeschlagen' }); }
-        return json({ ok: true });
-    }
-    if (path === '/api/get-thread-overrides') {
-        let overrides = {};
-        try { overrides = JSON.parse(fs.readFileSync(DATA_DIR + '/thread-overrides.json', 'utf8')); } catch(e) {}
-        return json(overrides);
-    }
-    // Thread aus App verstecken (nur admin)
-    if (path === '/api/hide-thread' && req.method === 'POST') {
-        const _dataH = await fetchBot('/data') || {};
-        const _admh = Array.isArray(_dataH._adminIds) ? _dataH._adminIds.map(Number) : [];
-        if (!_admh.includes(Number(myUid))) return json({ ok: false, error: 'Nur Admin' }, 403);
-        const body = await parseBody(req);
-        const { thread_id } = body;
-        if (!thread_id || String(thread_id) === 'general') return json({ ok: false, error: 'Ungültig' });
-        const overridesPath = DATA_DIR + '/thread-overrides.json';
-        let overrides = {};
-        try { overrides = JSON.parse(fs.readFileSync(overridesPath, 'utf8')); } catch(e) {}
-        overrides[String(thread_id)] = overrides[String(thread_id)] || {};
-        overrides[String(thread_id)].hidden = true;
-        try { fs.writeFileSync(overridesPath, JSON.stringify(overrides, null, 2)); } catch(e) { return json({ ok: false }); }
-        return json({ ok: true });
-    }
-
-    if (path === '/api/mark-read' && req.method === 'POST') {
-        const body = await parseBody(req);
-        const { thread_id } = body;
-        if (thread_id) await postBot('/mark-read', { uid: myUid, thread_id });
-        return json({ ok: true });
     }
 
     if (path === '/api/track-login' && req.method === 'POST') {
