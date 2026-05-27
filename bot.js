@@ -9612,7 +9612,9 @@ p{line-height:1.65;color:var(--muted)}
         const body = await parseBody(req);
         const { url: linkUrl, caption } = body;
         if (!linkUrl || !linkUrl.includes('instagram.com')) return json({ok:false, error:'Nur Instagram Links'},400);
-        const result = await postBot('/post-link-from-app', { uid: myUid, name: session.name, url: linkUrl.trim(), caption: body.caption||'' });
+        const result = LOCAL_STORE
+            ? await localWrite(() => botLogic.postLinkFromApp({ uid: myUid, name: session.name, url: linkUrl.trim(), caption: body.caption||'' }))
+            : await postBot('/post-link-from-app', { uid: myUid, name: session.name, url: linkUrl.trim(), caption: body.caption||'' });
         if (!result) return json({ok:false, error:'Fehler beim Senden'},500);
         // BUGFIX: Bot-Fehler korrekt forwarden statt fake-{ok:true} zu retournieren.
         // Auch Web-Push nur bei explizitem ok:true (nicht bei undefined ok).
@@ -9648,7 +9650,9 @@ p{line-height:1.65;color:var(--muted)}
         const body = await parseBody(req);
         const ownerUid = String(body.ownerUid||'');
         if (!ownerUid || ownerUid === myUid) return json({ok:false, error:'Ungültig'},400);
-        const result = await postBot('/engage-pinned-post-api', { engagerUid: myUid, ownerUid });
+        const result = LOCAL_STORE
+            ? await localWrite(() => botLogic.engagePinnedPostApi({ engagerUid: myUid, ownerUid }))
+            : await postBot('/engage-pinned-post-api', { engagerUid: myUid, ownerUid });
         return json({ok:!!result?.ok, alreadyDone: result?.alreadyDone||false, error: result?.error || null});
     }
 
@@ -10071,7 +10075,9 @@ p{line-height:1.65;color:var(--muted)}
         const body = await parseBody(req);
         const { postId, text } = body;
         if (!postId || !text?.trim()) return json({ok:false, error:'Ungültig'},400);
-        const result = await postBot('/comment-api', { uid: myUid, name: session.name||'User', linkId: postId, text: text.trim().slice(0,200) });
+        const result = LOCAL_STORE
+            ? await localWrite(() => botLogic.commentApi({ uid: myUid, name: session.name||'User', linkId: postId, text: text.trim().slice(0,200) }))
+            : await postBot('/comment-api', { uid: myUid, name: session.name||'User', linkId: postId, text: text.trim().slice(0,200) });
         if (!result) return json({ok:false, error:'Bot offline'}, 502);
         return json(result);
     }
@@ -14316,18 +14322,24 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
     if (path === '/api/diamond-link/create' && req.method === 'POST') {
         if (!session) return json({error:'Nicht eingeloggt'}, 401);
         const body = await parseBody(req);
-        const r = await postBot('/diamond-link-create-api', { uid: myUid, url: String(body.url||''), caption: String(body.caption||'') });
+        const r = LOCAL_STORE
+            ? await localWrite(() => botLogic.diamondLinkCreate({ uid: myUid, url: String(body.url||''), caption: String(body.caption||'') }))
+            : await postBot('/diamond-link-create-api', { uid: myUid, url: String(body.url||''), caption: String(body.caption||'') });
         return json(r || {ok:false, error:'Mainbot offline'});
     }
     if (path === '/api/diamond-link/like' && req.method === 'POST') {
         if (!session) return json({error:'Nicht eingeloggt'}, 401);
         const body = await parseBody(req);
-        const r = await postBot('/diamond-link-like-api', { uid: myUid, postId: String(body.postId||'') });
+        const r = LOCAL_STORE
+            ? await localWrite(() => botLogic.diamondLinkLike({ uid: myUid, postId: String(body.postId||'') }))
+            : await postBot('/diamond-link-like-api', { uid: myUid, postId: String(body.postId||'') });
         return json(r || {ok:false, error:'Mainbot offline'});
     }
     if (path === '/api/diamond-link/accept-rules' && req.method === 'POST') {
         if (!session) return json({error:'Nicht eingeloggt'}, 401);
-        const r = await postBot('/diamond-link-accept-rules-api', { uid: myUid });
+        const r = LOCAL_STORE
+            ? await localWrite(() => botLogic.diamondLinkAcceptRules({ uid: myUid }))
+            : await postBot('/diamond-link-accept-rules-api', { uid: myUid });
         return json(r || {ok:false, error:'Mainbot offline'});
     }
 
@@ -14716,18 +14728,24 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
     if (path === '/api/prisma-link/create' && req.method === 'POST') {
         if (!session) return json({error:'Nicht eingeloggt'}, 401);
         const body = await parseBody(req);
-        const r = await postBot('/prisma-link-create-api', { uid: myUid, url: String(body.url||''), caption: String(body.caption||'') });
+        const r = LOCAL_STORE
+            ? await localWrite(() => botLogic.prismaLinkCreate({ uid: myUid, url: String(body.url||''), caption: String(body.caption||'') }))
+            : await postBot('/prisma-link-create-api', { uid: myUid, url: String(body.url||''), caption: String(body.caption||'') });
         return json(r || {ok:false, error:'Mainbot offline'});
     }
     if (path === '/api/prisma-link/like' && req.method === 'POST') {
         if (!session) return json({error:'Nicht eingeloggt'}, 401);
         const body = await parseBody(req);
-        const r = await postBot('/prisma-link-like-api', { uid: myUid, postId: String(body.postId||'') });
+        const r = LOCAL_STORE
+            ? await localWrite(() => botLogic.prismaLinkLike({ uid: myUid, postId: String(body.postId||'') }))
+            : await postBot('/prisma-link-like-api', { uid: myUid, postId: String(body.postId||'') });
         return json(r || {ok:false, error:'Mainbot offline'});
     }
     if (path === '/api/prisma-link/accept-rules' && req.method === 'POST') {
         if (!session) return json({error:'Nicht eingeloggt'}, 401);
-        const r = await postBot('/prisma-link-accept-rules-api', { uid: myUid });
+        const r = LOCAL_STORE
+            ? await localWrite(() => botLogic.prismaLinkAcceptRules({ uid: myUid }))
+            : await postBot('/prisma-link-accept-rules-api', { uid: myUid });
         return json(r || {ok:false, error:'Mainbot offline'});
     }
     if (path === '/api/admin/prisma-link/list' && req.method === 'GET') {
@@ -14766,19 +14784,17 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
     if (path === '/api/collab/post-create' && req.method === 'POST') {
         if (!session) return json({error:'Nicht eingeloggt'}, 401);
         const body = await parseBody(req);
-        const r = await postBot('/collab-create-post-api', {
-            uid: myUid,
-            partnerUid: String(body.partnerUid||''),
-            url: String(body.url||''),
-            caption: String(body.caption||''),
-        });
+        const _collabArgs = { uid: myUid, partnerUid: String(body.partnerUid||''), url: String(body.url||''), caption: String(body.caption||'') };
+        const r = LOCAL_STORE ? await localWrite(() => botLogic.collabCreatePost(_collabArgs)) : await postBot('/collab-create-post-api', _collabArgs);
         if (!r) return json({ok:false, error:'Mainbot offline'}, 502);
         return json(r);
     }
     if (path === '/api/collab/like' && req.method === 'POST') {
         if (!session) return json({error:'Nicht eingeloggt'}, 401);
         const body = await parseBody(req);
-        const r = await postBot('/collab-like-post-api', { uid: myUid, postId: String(body.postId||'') });
+        const r = LOCAL_STORE
+            ? await localWrite(() => botLogic.collabLikePost({ uid: myUid, postId: String(body.postId||'') }))
+            : await postBot('/collab-like-post-api', { uid: myUid, postId: String(body.postId||'') });
         if (!r) return json({ok:false, error:'Mainbot offline'}, 502);
         return json(r);
     }
@@ -21032,7 +21048,9 @@ async function setRing(ringId) {
         const body = await parseBody(req);
         const { slId } = body;
         if (!slId) return json({ok:false});
-        const result = await postBot('/like-superlink-api', { uid: myUid, slId });
+        const result = LOCAL_STORE
+            ? await localWrite(() => botLogic.likeSuperlinkApi({ uid: myUid, slId }))
+            : await postBot('/like-superlink-api', { uid: myUid, slId });
         if (result && result.ok !== false) { _patchCacheSuperlinkLike(slId, myUid); sseBroadcastSuperlike(slId); refreshDataCache().catch(()=>{}); }
         return json(result || {ok:false});
     }
@@ -21042,7 +21060,9 @@ async function setRing(ringId) {
         const body = await parseBody(req);
         const { url, caption } = body;
         if (!url) return json({ok:false, error:'URL fehlt'});
-        const result = await postBot('/post-superlink-api', { uid: myUid, url, caption: caption||'' });
+        const result = LOCAL_STORE
+            ? await localWrite(() => botLogic.postSuperlinkApp({ uid: myUid, url, caption: caption||'' }))
+            : await postBot('/post-superlink-api', { uid: myUid, url, caption: caption||'' });
         return json(result || {ok:false});
     }
 
