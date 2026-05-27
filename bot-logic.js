@@ -2545,6 +2545,228 @@ function createEmailUserApi({ email, password, ageConfirmedAt, termsAcceptedAt, 
     return { ok: true, uid, existed: false };
 }
 
+// ── Report-Action (Moderation: dismiss/resolve/warn/ban — 1:1 portiert, ohne Telegram) ──
+async function adminReportActionApi({ reportId, action, adminUid }) {
+    reportId = String(reportId || ''); action = String(action || ''); adminUid = String(adminUid || '');
+    if (!reportId || !action) return { ok: false, error: 'reportId+action erforderlich' };
+    if (!Array.isArray(d.reports)) d.reports = [];
+    const idx = d.reports.findIndex(r => r && r.id === reportId);
+    if (idx < 0) return { ok: false, error: 'Report nicht gefunden' };
+    const rep = d.reports[idx];
+    if (action === 'delete') { d.reports.splice(idx, 1); return { ok: true }; }
+    if (action === 'dismiss') { rep.status = 'dismissed'; rep.resolvedAt = Date.now(); rep.resolvedBy = adminUid; return { ok: true }; }
+    if (action === 'resolve') { rep.status = 'resolved'; rep.resolvedAt = Date.now(); rep.resolvedBy = adminUid; return { ok: true }; }
+    if (action === 'warn') {
+        const u = d.users[rep.targetUid];
+        if (!u) return { ok: false, error: 'Target-User nicht gefunden' };
+        u.warnings = (u.warnings || 0) + 1;
+        rep.status = 'resolved'; rep.resolvedAt = Date.now(); rep.resolvedBy = adminUid; rep.action = 'warn';
+        try { dmUser(rep.targetUid, `⚠️ *Verwarnung!*
+
+Ein Admin hat dich verwarnt nach einer Meldung.
+
+⚠️ Warns: ${u.warnings}/5`); } catch (e) {}
+        addNotification(rep.targetUid, '⚠️', 'Du wurdest verwarnt nach einer Meldung. Warns: ' + u.warnings + '/5');
+        return { ok: true, warnings: u.warnings };
+    }
+    if (action === 'ban') {
+        const u = d.users[rep.targetUid];
+        if (!u) return { ok: false, error: 'Target-User nicht gefunden' };
+        if (Array.isArray(d._adminIds) && d._adminIds.map(Number).includes(Number(rep.targetUid))) return { ok: false, error: 'Admins können nicht gebannt werden' };
+        u.banned = true; u.bannedAt = Date.now(); u.inGruppe = false; u.started = false;
+        ['dailyXP', 'weeklyXP', 'bonusLinks', 'missionen', 'wochenMissionen', 'userSessions'].forEach(k => { if (d[k]) delete d[k][rep.targetUid]; });
+        for (const other of Object.values(d.users || {})) {
+            if (other && other.parent_uid && String(other.parent_uid) === rep.targetUid) { other.banned = true; other.bannedAt = Date.now(); other.inGruppe = false; other.started = false; }
+        }
+        rep.status = 'resolved'; rep.resolvedAt = Date.now(); rep.resolvedBy = adminUid; rep.action = 'ban';
+        try { dmUser(rep.targetUid, `🚫 *Du wurdest gebannt*
+
+Ein Admin hat dich nach einer Meldung aus der Community entfernt.`); } catch (e) {}
+        return { ok: true };
+    }
+    return { ok: false, error: 'Unbekannte Action: ' + action };
+}
+
+// ── Event planen (1:1 portiert, app-tauglich) ──
+async function adminScheduleEventApi({ type, amount, durationMs, startAt, label }) {
+    type = String(type || '');
+    amount = parseInt(amount, 10);
+    durationMs = parseInt(durationMs, 10);
+    startAt = parseInt(startAt, 10);
+    label = String(label || '').slice(0, 60);
+    if (type !== 'xp' && type !== 'diamond') return { ok: false, error: 'type muss xp oder diamond sein' };
+    if (!Number.isFinite(amount) || amount <= 0) return { ok: false, error: 'amount > 0' };
+    if (!Number.isFinite(durationMs) || durationMs <= 0 || durationMs > 7 * 24 * 3600 * 1000) return { ok: false, error: 'durationMs 1ms-7 Tage' };
+    if (!Number.isFinite(startAt) || startAt < Date.now() + 5 * 60 * 1000) return { ok: false, error: 'startAt muss min. 5 Min in der Zukunft sein' };
+    if (startAt > Date.now() + 90 * 24 * 3600 * 1000) return { ok: false, error: 'Max 90 Tage Vorlauf' };
+    const endAt = startAt + durationMs;
+    const eventLabel = label || (type === 'xp' ? ('+' + amount + '% XP pro Like') : ('+' + amount + ' 💎 pro Post'));
+    if (type === 'xp') {
+        d.xpEvent = { aktiv: false, multiplier: 1 + (amount / 100), bonusPercent: amount, bonusPerPost: 0, start: startAt, end: endAt, label: eventLabel, scheduled: true, announcedScheduledAt: Date.now(), announcedAt1hPre: null, announcedAt30mPre: null, activatedAndAnnouncedAt: null };
+    } else {
+        d.diamondEvent = { bonusPerPost: 0, pendingBonusPerPost: amount, start: startAt, end: endAt, label: eventLabel, scheduled: true, announcedScheduledAt: Date.now(), announcedAt1hPre: null, announcedAt30mPre: null, activatedAndAnnouncedAt: null };
+    }
+    const startStr = new Date(startAt).toLocaleString('de-DE', { timeZone: 'Europe/Berlin', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+    const icon = type === 'xp' ? '🚀' : '💎';
+    const evtTitle = type === 'xp' ? 'XP-Event geplant!' : 'Diamond-Event geplant!';
+    const msg = `${icon} *${evtTitle}*
+
+${eventLabel}
+
+📅 Start: *${startStr}* (Berlin-Zeit)
+⏱ Dauer: ${Math.round(durationMs / 60000)} Minuten
+
+Du kriegst 1h vorher eine Erinnerung + Push wenn das Event startet.`;
+    try { await announceEventToAllUsers(icon + ' ' + evtTitle, eventLabel + ' · Start ' + startStr, '/feed'); } catch (e) {}
+    for (const [uid, u] of Object.entries(d.users || {})) {
+        if (!u || u.parent_uid || u.banned || !u.started) continue;
+        if (Array.isArray(d._adminIds) && d._adminIds.map(Number).includes(Number(uid))) continue;
+        try { sendInAppDM(uid, msg); } catch (e) {}
+    }
+    return { ok: true, event: type === 'xp' ? d.xpEvent : d.diamondEvent };
+}
+
+// ── Report-User (1:1 portiert) ──
+function reportUserApi({ reporterUid, targetUid, reason, context }) {
+    reporterUid = String(reporterUid || ''); targetUid = String(targetUid || '');
+    if (!reporterUid || !targetUid) return { ok: false, error: 'reporterUid+targetUid erforderlich' };
+    if (reporterUid === targetUid) return { ok: false, error: 'Self-Report nicht erlaubt' };
+    if (!d.users[reporterUid] || !d.users[targetUid]) return { ok: false, error: 'User nicht gefunden' };
+    if (!d.reports) d.reports = [];
+    d.reports.push({ id: 'rep_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6), reporterUid, targetUid, reason: String(reason || '').slice(0, 200), context: String(context || '').slice(0, 200), ts: Date.now(), status: 'open' });
+    if (d.reports.length > 1000) d.reports = d.reports.slice(-1000);
+    const adminIds = Array.isArray(d._adminIds) ? d._adminIds : [];
+    const reporterName = d.users[reporterUid].spitzname || d.users[reporterUid].name || reporterUid;
+    const targetName = d.users[targetUid].spitzname || d.users[targetUid].name || targetUid;
+    for (const aId of adminIds) addNotification(String(aId), '🚩', reporterName + ' meldet ' + targetName + (reason ? ' (' + String(reason).slice(0, 40) + ')' : ''), reporterUid);
+    return { ok: true };
+}
+
+// ── Broadcast-DM + Sub-Accounts (1:1 portiert, app-tauglich) ──
+function sendDmAllApi({ text }) {
+    text = String(text || '').trim();
+    if (!text) return { ok: false, error: 'Text fehlt' };
+    if (text.length > 1500) return { ok: false, error: 'Max 1500 Zeichen' };
+    let sent = 0;
+    for (const [uid, u] of Object.entries(d.users || {})) {
+        if (!u || !u.started || u.banned || u.parent_uid) continue;
+        if (Array.isArray(d._adminIds) && d._adminIds.map(Number).includes(Number(uid))) continue;
+        try { dmUser(uid, text); sent++; } catch (e) {}
+    }
+    return { ok: true, sent };
+}
+function createSubaccountApi({ parent_uid, name }) {
+    parent_uid = String(parent_uid || '');
+    name = String(name || '').trim().slice(0, 30);
+    if (!parent_uid || !name) return { ok: false, error: 'parent_uid + name erforderlich' };
+    if (!d.users[parent_uid]) return { ok: false, error: 'Parent-User nicht gefunden' };
+    if (d.users[parent_uid].parent_uid) return { ok: false, error: 'Sub-Account kann keinen Sub-Account erstellen' };
+    const isAdm = istAdminId(parent_uid);
+    if (!isAdm && d.users[parent_uid].subUid && d.users[d.users[parent_uid].subUid]) {
+        return { ok: false, error: 'Du hast schon einen Sub-Account', sub_uid: String(d.users[parent_uid].subUid) };
+    }
+    let sub_uid = String(Date.now());
+    let attempts = 0;
+    while (d.users[sub_uid] && attempts++ < 50) sub_uid = String(Date.now()) + Math.floor(Math.random() * 1000);
+    if (d.users[sub_uid]) return { ok: false, error: 'Sub-UID-Kollision — bitte gleich nochmal versuchen' };
+    d.users[sub_uid] = {
+        name, username: null, instagram: null, bio: null, nische: null, spitzname: null,
+        trophies: [], xp: 0, level: 1, warnings: 0, started: true, links: 0, likes: 0,
+        role: '🆕 New', lastDaily: null, totalLikes: 0, chats: [], joinDate: Date.now(),
+        inGruppe: true, diamonds: 0, projects: [], profileCompletionRewarded: false,
+        inventory: [], activeRing: null, followers: [], following: [], parent_uid,
+    };
+    if (!Array.isArray(d.users[parent_uid].subUids)) d.users[parent_uid].subUids = [];
+    if (d.users[parent_uid].subUid && !d.users[parent_uid].subUids.includes(String(d.users[parent_uid].subUid))) d.users[parent_uid].subUids.push(String(d.users[parent_uid].subUid));
+    d.users[parent_uid].subUids.push(sub_uid);
+    if (!d.users[parent_uid].subUid) d.users[parent_uid].subUid = sub_uid;
+    return { ok: true, sub_uid, allSubs: d.users[parent_uid].subUids.slice() };
+}
+function adminLinkAsSubApi({ parent_uid, target_uid }) {
+    parent_uid = String(parent_uid || '');
+    target_uid = String(target_uid || '');
+    if (!parent_uid || !target_uid) return { ok: false, error: 'parent_uid + target_uid erforderlich' };
+    if (!istAdminId(parent_uid)) return { ok: false, error: 'Nur Admins können andere User als Sub linken' };
+    const parent = d.users[parent_uid], target = d.users[target_uid];
+    if (!parent) return { ok: false, error: 'Parent-User nicht gefunden' };
+    if (!target) return { ok: false, error: 'Target-User nicht gefunden' };
+    if (target_uid === parent_uid) return { ok: false, error: 'Kann sich nicht selbst als Sub linken' };
+    if (target.parent_uid && String(target.parent_uid) !== parent_uid) return { ok: false, error: 'User ist bereits Sub eines anderen Accounts (' + target.parent_uid + ')' };
+    target.parent_uid = parent_uid;
+    if (!Array.isArray(parent.subUids)) parent.subUids = [];
+    if (parent.subUid && !parent.subUids.includes(String(parent.subUid))) parent.subUids.push(String(parent.subUid));
+    if (!parent.subUids.includes(target_uid)) parent.subUids.push(target_uid);
+    if (!parent.subUid) parent.subUid = target_uid;
+    return { ok: true, parent_uid, target_uid, allSubs: parent.subUids.slice() };
+}
+function deleteSubaccountApi({ parent_uid, sub_uid }) {
+    parent_uid = String(parent_uid || '');
+    sub_uid = String(sub_uid || '');
+    if (!parent_uid || !sub_uid) return { ok: false, error: 'parent_uid + sub_uid erforderlich' };
+    const sub = d.users[sub_uid];
+    if (!sub || String(sub.parent_uid) !== parent_uid) return { ok: false, error: 'Sub gehört nicht zu diesem Parent' };
+    delete d.users[sub_uid];
+    if (d.users[parent_uid]) delete d.users[parent_uid].subUid;
+    for (const u of Object.values(d.users || {})) {
+        if (Array.isArray(u.followers)) u.followers = u.followers.filter(x => String(x) !== sub_uid);
+        if (Array.isArray(u.following)) u.following = u.following.filter(x => String(x) !== sub_uid);
+    }
+    if (d.dailyXP) delete d.dailyXP[sub_uid];
+    if (d.weeklyXP) delete d.weeklyXP[sub_uid];
+    if (d.links && typeof d.links === 'object') {
+        for (const [k, l] of Object.entries(d.links)) {
+            if (!l) continue;
+            if (String(l.user_id) === sub_uid) { delete d.links[k]; continue; }
+            if (l.likes && typeof l.likes.delete === 'function') l.likes.delete(sub_uid);
+            else if (Array.isArray(l.likes)) l.likes = l.likes.filter(x => String(x) !== sub_uid);
+            else if (l.likes && typeof l.likes === 'object') delete l.likes[sub_uid];
+            if (Array.isArray(l.comments)) l.comments = l.comments.filter(c => String(c.uid) !== sub_uid);
+        }
+    }
+    if (d.superlinks && typeof d.superlinks === 'object') for (const [k, s] of Object.entries(d.superlinks)) if (s && String(s.uid) === sub_uid) delete d.superlinks[k];
+    if (d.diamondLinks && typeof d.diamondLinks === 'object') for (const [k, p] of Object.entries(d.diamondLinks)) if (p && String(p.uid) === sub_uid) delete d.diamondLinks[k];
+    if (d.notifications && typeof d.notifications === 'object') {
+        delete d.notifications[sub_uid];
+        for (const k of Object.keys(d.notifications)) if (Array.isArray(d.notifications[k])) d.notifications[k] = d.notifications[k].filter(n => String(n.actorUid || '') !== sub_uid);
+    }
+    return { ok: true };
+}
+
+// ── Newsletter (portiert, app-tauglich: ohne Telegram-DM; Web-Push macht die App) ──
+function addNewsletterApi({ uid, title, content }) {
+    uid = String(uid || '');
+    if (!uid || !content || !content.trim()) return { ok: false, error: 'Inhalt fehlt' };
+    if (!istAdminId(Number(uid))) return { ok: false, error: 'Kein Admin' };
+    if (!d.newsletter) d.newsletter = [];
+    const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    const trimmedTitle = (title || '').trim();
+    const trimmedContent = content.trim();
+    d.newsletter.push({ id, title: trimmedTitle, content: trimmedContent, timestamp: Date.now() });
+    for (const [tUid, tU] of Object.entries(d.users || {})) {
+        if (istAdminId(Number(tUid)) || tU.parent_uid) continue;
+        addNotification(tUid, '📩', (trimmedTitle || 'Neuer Newsletter-Eintrag').slice(0, 60));
+    }
+    return { ok: true, id, title: trimmedTitle, content: trimmedContent };
+}
+function editNewsletterApi({ uid, id, title, content }) {
+    uid = String(uid || '');
+    if (!uid || !id || !content || !content.trim()) return { ok: false };
+    if (!istAdminId(Number(uid))) return { ok: false, error: 'Kein Admin' };
+    const entry = (d.newsletter || []).find(e => e.id === id);
+    if (!entry) return { ok: false, error: 'Nicht gefunden' };
+    entry.title = (title || '').trim();
+    entry.content = content.trim();
+    entry.editedAt = Date.now();
+    return { ok: true };
+}
+function deleteNewsletterApi({ uid, id }) {
+    uid = String(uid || '');
+    if (!uid || !id) return { ok: false };
+    if (!istAdminId(Number(uid))) return { ok: false, error: 'Kein Admin' };
+    d.newsletter = (d.newsletter || []).filter(e => e.id !== id);
+    return { ok: true };
+}
+
 // ── COLLAB-Requests (1:1 aus telegram-bot portiert) ──
 function collabRequestApi({ fromUid, toUid }) {
     _collabEnsure();
@@ -2646,4 +2868,7 @@ module.exports = {
     diamondLinkFeedApi, prismaLinkFeedApi, collabFeedApi, collabListApi, mindsetStateApi,
     pinPostApi, markNotificationsReadApi, blockUserApi, unblockUserApi,
     collabRequestApi, collabRespondApi, collabAcceptFeedRulesApi,
+    addNewsletterApi, editNewsletterApi, deleteNewsletterApi,
+    sendDmAllApi, createSubaccountApi, adminLinkAsSubApi, deleteSubaccountApi,
+    reportUserApi, adminReportActionApi, adminScheduleEventApi,
 };

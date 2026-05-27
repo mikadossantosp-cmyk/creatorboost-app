@@ -5083,7 +5083,7 @@ self.addEventListener('notificationclick',e=>{
         const body = await parseBody(req);
         const name = (body.name||'').toString().trim().slice(0, 30);
         if (!name) return json({ok:false, error:'Name erforderlich'}, 400);
-        const result = await postBot('/create-subaccount-api', { parent_uid: String(session.uid), name });
+        const result = LOCAL_STORE ? await localWrite(() => botLogic.createSubaccountApi({ parent_uid: String(session.uid), name })) : await postBot('/create-subaccount-api', { parent_uid: String(session.uid), name });
         if (!result || !result.ok) return json({ok:false, error: (result && result.error) || 'Erstellen fehlgeschlagen'}, 500);
         session.subUid = String(result.sub_uid);
         session.activeUid = String(result.sub_uid);
@@ -5160,7 +5160,7 @@ self.addEventListener('notificationclick',e=>{
         if (session.activeUid && String(session.activeUid) !== String(session.uid)) return json({ok:false, error:'Vorher zurück zum Hauptaccount switchen'}, 400);
         if (!session.subUid) return json({ok:false, error:'Kein Sub vorhanden'}, 400);
         const subUidToDelete = String(session.subUid);
-        const result = await postBot('/delete-subaccount-api', { parent_uid: String(session.uid), sub_uid: subUidToDelete });
+        const result = LOCAL_STORE ? await localWrite(() => botLogic.deleteSubaccountApi({ parent_uid: String(session.uid), sub_uid: subUidToDelete })) : await postBot('/delete-subaccount-api', { parent_uid: String(session.uid), sub_uid: subUidToDelete });
         if (!result || !result.ok) return json({ok:false, error: (result && result.error) || 'Löschen fehlgeschlagen'}, 500);
         // Auch andere Sessions desselben Parents aufräumen, sonst zeigen die noch den Sub
         for (const s of sessions.values()) {
@@ -9704,7 +9704,8 @@ p{line-height:1.65;color:var(--muted)}
         const body = await parseBody(req);
         const targetUid = String(body.targetUid||'');
         if (!targetUid || targetUid === myUid) return json({ok:false, error:'Ungültig'},400);
-        const result = await postBot('/report-user-api', { reporterUid: myUid, targetUid, reason: String(body.reason||''), context: String(body.context||'') });
+        const _rep = { reporterUid: myUid, targetUid, reason: String(body.reason||''), context: String(body.context||'') };
+        const result = LOCAL_STORE ? await localWrite(() => botLogic.reportUserApi(_rep)) : await postBot('/report-user-api', _rep);
         return json(result || {ok:false, error:'Mainbot offline'});
     }
 
@@ -9743,7 +9744,7 @@ p{line-height:1.65;color:var(--muted)}
         const body = await parseBody(req);
         const target_uid = String(body.target_uid||'').trim();
         if (!target_uid) return json({ok:false, error:'target_uid erforderlich'},400);
-        const r = await postBot('/admin-link-as-sub-api', { parent_uid: String(session.uid), target_uid });
+        const r = LOCAL_STORE ? await localWrite(() => botLogic.adminLinkAsSubApi({ parent_uid: String(session.uid), target_uid })) : await postBot('/admin-link-as-sub-api', { parent_uid: String(session.uid), target_uid });
         return json(r || {ok:false, error:'Mainbot offline'});
     }
 
@@ -9979,13 +9980,8 @@ p{line-height:1.65;color:var(--muted)}
         if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
         if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
         const body = await parseBody(req);
-        const r = await postBot('/admin-schedule-event-api', {
-            type: String(body.type||''),
-            amount: Number(body.amount||0),
-            durationMs: Number(body.durationMs||0),
-            startAt: Number(body.startAt||0),
-            label: String(body.label||''),
-        });
+        const _ev = { type: String(body.type||''), amount: Number(body.amount||0), durationMs: Number(body.durationMs||0), startAt: Number(body.startAt||0), label: String(body.label||'') };
+        const r = LOCAL_STORE ? await localWrite(() => botLogic.adminScheduleEventApi(_ev)) : await postBot('/admin-schedule-event-api', _ev);
         return json(r || {ok:false, error:'Mainbot offline'});
     }
 
@@ -10001,11 +9997,8 @@ p{line-height:1.65;color:var(--muted)}
         if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
         if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
         const body = await parseBody(req);
-        const r = await postBot('/admin-report-action-api', {
-            reportId: String(body.reportId||''),
-            action: String(body.action||''),
-            adminUid: String(myUid||''),
-        });
+        const _ra = { reportId: String(body.reportId||''), action: String(body.action||''), adminUid: String(myUid||'') };
+        const r = LOCAL_STORE ? await localWrite(() => botLogic.adminReportActionApi(_ra)) : await postBot('/admin-report-action-api', _ra);
         return json(r || {ok:false, error:'Mainbot offline'});
     }
 
@@ -10031,7 +10024,7 @@ p{line-height:1.65;color:var(--muted)}
         if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
         if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
         const body = await parseBody(req);
-        const r = await postBot('/send-dm-all-api', { text: String(body.text||'') });
+        const r = LOCAL_STORE ? await localWrite(() => botLogic.sendDmAllApi({ text: String(body.text||'') })) : await postBot('/send-dm-all-api', { text: String(body.text||'') });
         return json(r || {ok:false, error:'Mainbot offline'});
     }
 
@@ -10041,7 +10034,8 @@ p{line-height:1.65;color:var(--muted)}
         let title, content;
         try { ({ title, content } = JSON.parse(Buffer.concat(chunks).toString())); } catch(e) { return json({error:'Ungültiges JSON'},400); }
         if (!content?.trim()) return json({error:'Inhalt fehlt'},400);
-        const result = await postBot('/add-newsletter-api', { uid: myUid, title: (title||'').trim(), content: content.trim() });
+        const _nl = { uid: myUid, title: (title||'').trim(), content: content.trim() };
+        const result = LOCAL_STORE ? await localWrite(() => botLogic.addNewsletterApi(_nl)) : await postBot('/add-newsletter-api', _nl);
         return json({ok:!!result?.ok, error: result?.error});
     }
 
@@ -10051,14 +10045,15 @@ p{line-height:1.65;color:var(--muted)}
         let id, title, content;
         try { ({ id, title, content } = JSON.parse(Buffer.concat(chunks).toString())); } catch(e) { return json({error:'Ungültiges JSON'},400); }
         if (!id || !content?.trim()) return json({error:'Fehlend'},400);
-        const result = await postBot('/edit-newsletter-api', { uid: myUid, id, title: (title||'').trim(), content: content.trim() });
+        const _nl = { uid: myUid, id, title: (title||'').trim(), content: content.trim() };
+        const result = LOCAL_STORE ? await localWrite(() => botLogic.editNewsletterApi(_nl)) : await postBot('/edit-newsletter-api', _nl);
         return json({ok:!!result?.ok, error: result?.error});
     }
 
     if (path === '/api/newsletter-delete' && req.method === 'POST') {
         if (!session) return json({error:'Nicht eingeloggt'},401);
         const body = await parseBody(req);
-        const result = await postBot('/delete-newsletter-api', { uid: myUid, id: body.id });
+        const result = LOCAL_STORE ? await localWrite(() => botLogic.deleteNewsletterApi({ uid: myUid, id: body.id })) : await postBot('/delete-newsletter-api', { uid: myUid, id: body.id });
         return json({ok:!!result?.ok});
     }
 
@@ -14843,7 +14838,7 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
     if (path === '/api/admin/missionen-backfill' && req.method === 'POST') {
         if (!session) return json({error:'Nicht eingeloggt'}, 401);
         if (!_dashIsAdmin) return json({error:'Nur Admins'}, 403);
-        const r = await postBot('/admin-backfill-missionen-api', {});
+        const r = LOCAL_STORE ? await localWrite(() => botLogic.backfillMissionenSinceMonday({})) : await postBot('/admin-backfill-missionen-api', {});
         if (!r) return json({ok:false, error:'Mainbot offline'}, 502);
         if (r.ok === false) return json({ok:false, error: r.error || 'Mainbot lehnte ab'}, 400);
         return json(r);
