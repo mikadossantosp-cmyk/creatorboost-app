@@ -718,6 +718,213 @@ function engagePinnedPostApi({ engagerUid, ownerUid }) {
     return { ok: true };
 }
 
+// ════════ MINDSET-STORIES ════════
+function _mindsetEnsure() {
+    if (!d.mindsetStories) d.mindsetStories = { weeklyState: { week: null, pickedUid: null, pickedAt: null, locked: false }, waitlist: {}, rejected: {}, done: {} };
+    const ms = d.mindsetStories;
+    if (!ms.weeklyState) ms.weeklyState = { week: null, pickedUid: null, pickedAt: null, locked: false };
+    if (!ms.waitlist) ms.waitlist = {};
+    if (!ms.rejected) ms.rejected = {};
+    if (!ms.done) ms.done = {};
+}
+function isMindsetLocked() {
+    const now = new Date();
+    const day = now.getDay();
+    if (day === 0) return true;
+    if (day === 6 && now.getHours() >= 23 && now.getMinutes() >= 59) return true;
+    return false;
+}
+function _isAdminCaller(callerUid) {
+    return !!callerUid && (istAdminId(callerUid) || String(d.users[callerUid]?.role || '').includes('Admin'));
+}
+function sendMindsetWinnerDM(uid) {
+    const name = d.users[uid]?.spitzname || d.users[uid]?.name || '';
+    const greeting = name ? 'Hallo ' + name + ',' : 'Hallo,';
+    const text = greeting + '\n\n' +
+        'du wurdest diese Woche für die Mindset Stories auf @mindset.stories_ ausgewählt — herzlichen Glückwunsch. Du erscheinst am kommenden Sonntag bzw. Montag in den Stories.\n\n' +
+        'Damit ich dich gut vorstellen kann, benötige ich folgende Infos von dir:\n\n' +
+        '1. 1–2 Deckblätter (Bilder oder Grafiken, die zu dir passen)\n' +
+        '2. 1–2 Interessen oder Themen, die du abdeckst\n' +
+        '3. Eine kurze Beschreibung deines Kanals bzw. deiner Nische\n' +
+        '4. Was sollen meine Follower aus deinem Post mitnehmen?\n' +
+        '5. Bietest du etwas an (Kurse, Beratung, Coaching o.ä.)?\n' +
+        '6. Bist du auch auf YouTube oder TikTok aktiv? Falls ja, gerne mit Handles.\n\n' +
+        'Schick mir die Infos einfach hier in der DM zurück — ich erstelle daraus eine ansprechende Vorstellung.\n\n' +
+        'Bitte spätestens bis Samstag 23:59 zurückmelden, damit genug Zeit für die Vorbereitung bleibt.\n\n' +
+        'Viele Grüße';
+    sendInAppDM(uid, text);
+}
+function sendMindsetInviteDM(uid) {
+    const name = d.users[uid]?.spitzname || d.users[uid]?.name || '';
+    const greeting = name ? 'Hallo ' + name + ',' : 'Hallo,';
+    const text = greeting + '\n\n' +
+        'ich starte einen wöchentlichen Mindset-Stories-Slot auf meinem Instagram-Profil @mindset.stories_, in dem ich Creator aus unserer Community vorstelle.\n\n' +
+        'Ziel ist es, die Community zu pushen und gemeinsam mehr Reichweite zu generieren.\n\n' +
+        'Wenn du Interesse hast, kannst du dich gerne über die App eintragen. Ich wähle anschließend jede Woche einen User aus der Warteliste aus und stelle ihn am Sonntag/Montag auf @mindset.stories_ vor.\n\n' +
+        'So funktioniert\'s:\n' +
+        '1. App öffnen → Explore → News\n' +
+        '2. Bei "Mindset Stories" auf Ja oder Nein klicken\n' +
+        '3. Bei Ja: du bist auf der Warteliste, ich melde mich sobald du dran bist\n\n' +
+        'Ohne Druck — du kannst deine Antwort bis Samstag 23:59 jederzeit ändern.\n\n' +
+        'Viele Grüße';
+    sendInAppDM(uid, text);
+}
+function mindsetSetAnswerApi({ uid, answer }) {
+    _mindsetEnsure();
+    uid = String(uid || '');
+    answer = String(answer || '');
+    if (!uid || !d.users[uid]) return { ok: false, error: 'User nicht gefunden' };
+    if (!['yes', 'no'].includes(answer)) return { ok: false, error: 'Ungültige Antwort' };
+    if (!d.users[uid].instagram) return { ok: false, error: 'Erst Instagram-Username in den Einstellungen setzen' };
+    if (isMindsetLocked()) return { ok: false, error: 'Antworten für diese Woche bereits gefroren' };
+    if (d.mindsetStories.done[uid]) return { ok: false, error: 'Du wurdest bereits vorgestellt' };
+    const now = Date.now();
+    if (answer === 'yes') {
+        delete d.mindsetStories.rejected[uid];
+        const prev = d.mindsetStories.waitlist[uid];
+        d.mindsetStories.waitlist[uid] = { joinedAt: prev?.joinedAt || now, lastChangedAt: now };
+    } else {
+        delete d.mindsetStories.waitlist[uid];
+        d.mindsetStories.rejected[uid] = { rejectedAt: now };
+    }
+    return { ok: true };
+}
+function runMindsetPickApi() {
+    _mindsetEnsure();
+    const ms = d.mindsetStories;
+    const week = getBerlinWeekKey();
+    if (ms.weeklyState.week === week && ms.weeklyState.pickedUid) return { ok: true, already: true, pickedUid: ms.weeklyState.pickedUid };
+    const eligible = Object.keys(ms.waitlist).filter(uid => { const u = d.users[uid]; return u && u.instagram && !ms.done[uid]; });
+    if (!eligible.length) {
+        ms.weeklyState = { week, pickedUid: null, pickedAt: Date.now(), locked: true };
+        return { ok: true, pickedUid: null, reason: 'Niemand auf Warteliste' };
+    }
+    const winner = eligible[Math.floor(Math.random() * eligible.length)];
+    ms.weeklyState = { week, pickedUid: winner, pickedAt: Date.now(), locked: true };
+    delete ms.waitlist[winner];
+    ms.done[winner] = { week, featuredAt: Date.now(), name: d.users[winner]?.spitzname || d.users[winner]?.name || '?' };
+    try { sendMindsetWinnerDM(winner); } catch (e) {}
+    return { ok: true, pickedUid: winner, pickedName: d.users[winner]?.name };
+}
+function mindsetAdminPickApi({ callerUid, targetUid }) {
+    _mindsetEnsure();
+    callerUid = String(callerUid || '');
+    if (!_isAdminCaller(callerUid)) return { ok: false, error: 'Kein Admin' };
+    targetUid = String(targetUid || '');
+    if (!targetUid || !d.users[targetUid]) return { ok: false, error: 'User nicht gefunden' };
+    const ms = d.mindsetStories;
+    const week = getBerlinWeekKey();
+    if (ms.weeklyState.pickedUid && ms.weeklyState.pickedUid !== targetUid) {
+        const prev = ms.weeklyState.pickedUid;
+        if (ms.done[prev] && ms.done[prev].week === week) { delete ms.done[prev]; ms.waitlist[prev] = { joinedAt: Date.now(), lastChangedAt: Date.now() }; }
+    }
+    delete ms.waitlist[targetUid];
+    ms.weeklyState = { week, pickedUid: targetUid, pickedAt: Date.now(), locked: true };
+    ms.done[targetUid] = { week, featuredAt: Date.now(), name: d.users[targetUid]?.spitzname || d.users[targetUid]?.name || '?' };
+    try { sendMindsetWinnerDM(targetUid); } catch (e) {}
+    return { ok: true, pickedUid: targetUid };
+}
+function mindsetAdminSkipApi({ callerUid }) {
+    _mindsetEnsure();
+    if (!_isAdminCaller(String(callerUid || ''))) return { ok: false, error: 'Kein Admin' };
+    d.mindsetStories.weeklyState = { week: getBerlinWeekKey(), pickedUid: null, pickedAt: Date.now(), locked: true, skipped: true };
+    return { ok: true };
+}
+function mindsetAdminBlastApi({ callerUid }) {
+    _mindsetEnsure();
+    if (!_isAdminCaller(String(callerUid || ''))) return { ok: false, error: 'Kein Admin' };
+    const ms = d.mindsetStories;
+    const targets = Object.keys(d.users).filter(uid => {
+        const u = d.users[uid];
+        if (!u || !u.instagram || u.isSystem) return false;
+        if (istAdminId(uid)) return false;
+        if (ms.waitlist[uid] || ms.rejected[uid] || ms.done[uid]) return false;
+        return true;
+    });
+    let sent = 0;
+    for (const uid of targets) { try { sendMindsetInviteDM(uid); sent++; } catch (e) {} }
+    return { ok: true, queued: targets.length, sent };
+}
+function mindsetAdminRestoreApi({ callerUid, targetUid }) {
+    _mindsetEnsure();
+    if (!_isAdminCaller(String(callerUid || ''))) return { ok: false, error: 'Kein Admin' };
+    targetUid = String(targetUid || '');
+    if (!d.mindsetStories.done[targetUid]) return { ok: false, error: 'User nicht in Erledigt-Liste' };
+    if (d.mindsetStories.weeklyState?.pickedUid === targetUid) {
+        d.mindsetStories.weeklyState = { week: d.mindsetStories.weeklyState.week, pickedUid: null, pickedAt: null, locked: false };
+    }
+    delete d.mindsetStories.done[targetUid];
+    d.mindsetStories.waitlist[targetUid] = { joinedAt: Date.now(), lastChangedAt: Date.now() };
+    return { ok: true };
+}
+
+// ════════ HELPER-FRAGEN (Q&A-Tickets) ════════
+function helperChatAppendApi({ uid, role, text }) {
+    uid = String(uid || '');
+    role = String(role || '');
+    text = String(text || '').slice(0, 2000);
+    if (!uid || !text || (role !== 'user' && role !== 'bot')) return { ok: false, error: 'uid+role(user|bot)+text erforderlich' };
+    if (!d.helperChats) d.helperChats = {};
+    if (!Array.isArray(d.helperChats[uid])) d.helperChats[uid] = [];
+    d.helperChats[uid].push({ role, text, ts: Date.now() });
+    if (d.helperChats[uid].length > 200) d.helperChats[uid] = d.helperChats[uid].slice(-200);
+    return { ok: true };
+}
+function helperQuestionApi({ fromUid, question }) {
+    fromUid = String(fromUid || '');
+    question = String(question || '').trim().slice(0, 800);
+    if (!fromUid || !question) return { ok: false, error: 'fromUid + question erforderlich' };
+    const u = d.users[fromUid];
+    if (!u) return { ok: false, error: 'User nicht gefunden' };
+    if (!d.helperQuestions) d.helperQuestions = [];
+    const userName = u.spitzname || u.name || ('User ' + fromUid);
+    const userHandle = u.instagram ? ' (@' + u.instagram + ')' : '';
+    const openTicket = d.helperQuestions.filter(q => String(q.uid) === fromUid && !q.answeredAt).sort((a, b) => (a.ts || 0) - (b.ts || 0))[0];
+    if (openTicket) {
+        if (!Array.isArray(openTicket.followUps)) openTicket.followUps = [];
+        if (openTicket.followUps.length >= 10) return { ok: false, error: 'Schon 10 Follow-up-Fragen in diesem Ticket — bitte auf Admin-Antwort warten.' };
+        openTicket.followUps.push({ text: question, ts: Date.now() });
+        const adminIds = Array.isArray(d._adminIds) ? d._adminIds : [];
+        const followText = '💬 *Follow-up* zu Ticket `' + openTicket.id + '` von *' + userName + '*' + userHandle + '\n\n❓ _' + question + '_\n\n_Antworte hier im Chat — geht an ' + userName + '._';
+        for (const aId of adminIds) { addNotification(String(aId), '💬', userName + ' (Follow-up): ' + question.slice(0, 40), fromUid); try { sendInAppDM(String(aId), followText); } catch (e) {} }
+        if (!d.messages) d.messages = {};
+        const chatKey = [CREATORBOOST_UID, fromUid].sort().join('_');
+        if (!d.messages[chatKey]) d.messages[chatKey] = [];
+        d.messages[chatKey].push({ from: fromUid, to: CREATORBOOST_UID, text: '💬 Follow-up: ' + question, image: null, audio: null, timestamp: Date.now(), read: false, system: false });
+        if (d.messages[chatKey].length > 200) d.messages[chatKey].shift();
+        return { ok: true, qId: openTicket.id, followUp: true };
+    }
+    const qId = 'hq_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+    d.helperQuestions.push({ id: qId, uid: fromUid, name: userName, question, ts: Date.now(), answeredAt: null, answer: null, followUps: [] });
+    if (d.helperQuestions.length > 500) d.helperQuestions = d.helperQuestions.slice(-500);
+    if (!d.messages) d.messages = {};
+    const chatKey = [CREATORBOOST_UID, fromUid].sort().join('_');
+    if (!d.messages[chatKey]) d.messages[chatKey] = [];
+    d.messages[chatKey].push({ from: fromUid, to: CREATORBOOST_UID, text: '🤖 Helper-Frage: ' + question, image: null, audio: null, timestamp: Date.now(), read: false, system: false });
+    if (d.messages[chatKey].length > 200) d.messages[chatKey].shift();
+    sendInAppDM(fromUid, 'Frage erhalten — ich frag kurz nach und melde mich hier zurück. (Antwort kommt meistens in <1h)');
+    const adminIds = Array.isArray(d._adminIds) ? d._adminIds : [];
+    const adminAppDmText = '🎫 *NEUES TICKET* `' + qId + '`\n─────────────────────\n👤 Von: *' + userName + '*' + userHandle + ' (UID `' + fromUid + '`)\n\n❓ Frage:\n_' + question + '_\n─────────────────────\n💬 *Antworte einfach hier in diesem Chat* — geht direkt an den User.\n_Weitere Fragen vom User landen in DIESEM Ticket bis du antwortest._';
+    for (const aId of adminIds) { addNotification(String(aId), '🎫', 'Ticket ' + userName + ': ' + question.slice(0, 40), fromUid); try { sendInAppDM(String(aId), adminAppDmText); } catch (e) {} }
+    return { ok: true, qId };
+}
+function adminHelperAnswerApi({ qId, answer }) {
+    qId = String(qId || '');
+    answer = String(answer || '').trim().slice(0, 1500);
+    if (!qId || !answer) return { ok: false, error: 'qId + answer erforderlich' };
+    if (!Array.isArray(d.helperQuestions)) d.helperQuestions = [];
+    const q = d.helperQuestions.find(x => x.id === qId);
+    if (!q) return { ok: false, error: 'Frage nicht gefunden' };
+    q.answeredAt = Date.now();
+    q.answer = answer;
+    sendInAppDM(q.uid, '🤖 *Antwort vom Admin auf deine Frage*\n\n_' + (q.question || '').slice(0, 100) + '_\n\n' + answer);
+    if (!d.helperChats) d.helperChats = {};
+    if (!Array.isArray(d.helperChats[q.uid])) d.helperChats[q.uid] = [];
+    d.helperChats[q.uid].push({ role: 'bot', text: '📨 Admin-Antwort:\n\n' + answer, ts: Date.now(), fromAdmin: true });
+    if (d.helperChats[q.uid].length > 200) d.helperChats[q.uid] = d.helperChats[q.uid].slice(-200);
+    return { ok: true };
+}
+
 // ════════ USER MERGE / DELETE (Helfer 1:1 aus dem Bot) ════════
 function _findUser(query) {
     const q = String(query).trim().toLowerCase().replace(/^@/, '');
@@ -1430,6 +1637,8 @@ module.exports = {
     addWarn, removeWarn, resetUser, removeXp, startXpEvent, startDiamondEvent, stopEvent,
     banUserApi, unbanUserApi, adminSuspendPostingApi,
     mergeUsers, deleteUser, userDeleteSelfApi,
+    mindsetSetAnswerApi, runMindsetPickApi, mindsetAdminPickApi, mindsetAdminSkipApi, mindsetAdminBlastApi, mindsetAdminRestoreApi, isMindsetLocked,
+    helperChatAppendApi, helperQuestionApi, adminHelperAnswerApi,
     postLinkFromApp, createPostApi, deletePostApi, commentApi, deleteCommentApi,
     diamondLinkCreate, diamondLinkLike, diamondLinkAcceptRules, diamondLinkAdminDelete,
     prismaLinkCreate, prismaLinkLike, prismaLinkAcceptRules, prismaLinkAdminDelete,
