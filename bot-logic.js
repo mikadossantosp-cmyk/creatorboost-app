@@ -730,6 +730,145 @@ function engagePinnedPostApi({ engagerUid, ownerUid }) {
     return { ok: true };
 }
 
+// ════════ RANKING-AUSZAHLUNGEN (Tages-/Wochen-Cron) ════════
+async function aktivitaetsScore(uid) {
+    const logins = d.dailyLogins[uid] || 0;
+    const groupMsgs = d.dailyGroupMsgs[uid] || 0;
+    const m = d.missionen[uid];
+    const heute = new Date().toDateString();
+    const likesGegeben = (m?.date === heute ? m.likesGegeben || 0 : 0);
+    const missionen = (m?.date === heute ? (m.m1 ? 1 : 0) + (m.m2 ? 1 : 0) + (m.m3 ? 1 : 0) : 0);
+    return logins * 3 + groupMsgs * 2 + likesGegeben + missionen;
+}
+function archiveWeeklyXP(reason = 'auto') {
+    const snapshot = Object.assign({}, d.weeklyXP || {});
+    if (!Object.keys(snapshot).length) return false;
+    const total = Object.values(snapshot).reduce((s, x) => s + x, 0);
+    if (!d.weeklyHistory) d.weeklyHistory = [];
+    const sortedTop = Object.entries(snapshot).filter(([uid]) => d.users[uid] && !istAdminId(uid)).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([uid, xp]) => ({ uid, name: d.users[uid]?.name || '?', xp }));
+    d.weeklyHistory.push({ weekKey: getBerlinWeekKey(), endedAt: Date.now(), reason, total, top: sortedTop, snapshot });
+    while (d.weeklyHistory.length > 26) d.weeklyHistory.shift();
+    return true;
+}
+// Tages-Ranking-Abschluss (23:55). Telegram-Gruppen-/DM-Posts entfernt; In-App-DM +
+// Auszahlung + Resets bleiben. Bei Gleichstand: Verlosung nach Aktivität (Math.random
+// nur bei exakt gleichem XP — daher in Tests distinkte XP nutzen).
+async function dailyRankingAbschluss() {
+    const sorted = Object.entries(d.dailyXP).filter(([uid]) => d.users[uid] && d.dailyXP[uid] > 0 && !istAdminId(uid)).sort((a, b) => b[1] - a[1]);
+    if (!sorted.length) return;
+    const withScore = await Promise.all(sorted.map(async ([uid, xp]) => ({ uid, xp, score: await aktivitaetsScore(uid) })));
+    withScore.sort((a, b) => b.xp !== a.xp ? b.xp - a.xp : b.score !== a.score ? b.score - a.score : Math.random() - 0.5);
+    let i = 0;
+    while (i < withScore.length) {
+        const xp = withScore[i].xp;
+        let j = i + 1;
+        while (j < withScore.length && withScore[j].xp === xp) j++;
+        if (j > i + 1) {
+            const tiedGroup = withScore.slice(i, j);
+            for (let k = 0; k < tiedGroup.length; k++) {
+                const { uid } = tiedGroup[k];
+                const myRank = i + k + 1;
+                const otherNames = tiedGroup.filter((_, idx) => idx !== k).map(e => d.users[e.uid]?.spitzname || d.users[e.uid]?.name || 'User');
+                const othersStr = otherNames.length === 1 ? otherNames[0] : otherNames.slice(0, -1).join(', ') + ' und ' + otherNames[otherNames.length - 1];
+                const rankRange = `Platz ${i + 1}–${j}`;
+                const msg = myRank <= 3
+                    ? `🎲 *Gleichstand & Verlosung!*\n\nDu und ${othersStr} hattet alle *${xp} XP* und wärt auf ${rankRange} gleichauf.\n\nEine automatische Verlosung nach Aktivität hat stattgefunden — du hast gewonnen! 🎉\n\n🏆 *Dein aktueller Rang: Platz ${myRank}*\nTop ${myRank} Bonus folgt!`
+                    : `🎲 *Gleichstand & Verlosung!*\n\nDu und ${othersStr} hattet alle *${xp} XP* und wärt auf ${rankRange} gleichauf.\n\nEine automatische Verlosung nach Aktivität hat stattgefunden — diesmal war ${tiedGroup[0] && tiedGroup[0].uid !== uid ? (d.users[tiedGroup[0].uid]?.spitzname || d.users[tiedGroup[0].uid]?.name || 'ein anderer User') : othersStr} vorne.\n\n📊 *Dein aktueller Rang: Platz ${myRank}*\nMehr Aktivität morgen für einen besseren Platz! 💪`;
+                try { await dmUser(uid, msg); } catch (e) {}
+            }
+        }
+        i = j;
+    }
+    const bel = [
+        { xp: 10, links: 1, dia: 2, text: '🥇' },
+        { xp: 5, links: 0, dia: 2, text: '🥈' },
+        { xp: 2, links: 0, dia: 1, text: '🥉' },
+    ];
+    if (!d.dailyAwardsLog) d.dailyAwardsLog = [];
+    const dayKey = new Date().toISOString().slice(0, 10);
+    const alreadyPaidDaily = d.dailyAwardsLog.some(a => a.dayKey === dayKey);
+    if (!alreadyPaidDaily) for (let ii = 0; ii < Math.min(3, withScore.length); ii++) {
+        const { uid } = withScore[ii];
+        const u = d.users[uid];
+        const b = bel[ii];
+        try {
+            xpAdd(uid, b.xp, u.name);
+            if (b.dia > 0) addDiamond(uid, b.dia);
+            if (b.links > 0) { if (!d.bonusLinks[uid]) d.bonusLinks[uid] = 0; d.bonusLinks[uid] += b.links; }
+            d.dailyAwardsLog.push({ dayKey, place: ii + 1, uid, name: u.name, xp: b.xp, dia: b.dia, links: b.links || 0, at: Date.now() });
+            while (d.dailyAwardsLog.length > 500) d.dailyAwardsLog.shift();
+        } catch (e) { continue; }
+        try { sendInAppDM(uid, `🎉 *${b.text} im Tagesranking!*\n\nDeine Preise:\n⭐ +${b.xp} XP\n💎 +${b.dia} Diamanten${b.links ? '\n🔗 +1 Extra-Link für morgen' : ''}`); } catch (e) {}
+    }
+    d.gesternDailyXP = Object.assign({}, d.dailyXP);
+    d.dailyXP = {}; d.tracker = {}; d.counter = {}; d.badgeTracker = {};
+    d.dailyLogins = {}; d.dailyGroupMsgs = {};
+    d.dailyReset = Date.now();
+}
+// Legenden-Bonus (1. des Monats): +30💎 für User mit xp>=25000.
+function legendenBonus() {
+    let granted = 0;
+    for (const [uid, u] of Object.entries(d.users || {})) {
+        if (!u || u.parent_uid || u.banned || !u.started) continue;
+        if (istAdminId(uid)) continue;
+        if ((u.xp || 0) < 25000) continue;
+        u.diamonds = (Number(u.diamonds) || 0) + 30;
+        granted++;
+        try { dmUser(uid, '💎 *Legenden-Bonus*\n\n+30 Diamanten gutgeschrieben!\n\n━━━━━━━━━━━━━━\n💎 Guthaben: ' + u.diamonds + '\n━━━━━━━━━━━━━━\n\nDanke dass du Teil der Legenden-Elite bist! 🌟').catch(() => {}); } catch (e) {}
+    }
+    return granted;
+}
+// Wochen-Reset + Sieger-Auszahlung (Mo 00:00). Telegram-Gruppen-/DM-Posts entfernt.
+function wochenResetUndAuszahlung(jetzt) {
+    jetzt = jetzt || new Date();
+    d.wochenMissionen = {};
+    if (d.wochenSuperlinkMissionGranted) {
+        const cutoff = Date.now() - 28 * 24 * 60 * 60 * 1000;
+        for (const [k, ts] of Object.entries(d.wochenSuperlinkMissionGranted)) { if (ts < cutoff) delete d.wochenSuperlinkMissionGranted[k]; }
+    }
+    const wTop = Object.entries(d.weeklyXP || {})
+        .filter(([uid]) => d.users[uid] && !istAdminId(uid) && !d.users[uid].banned)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3);
+    const wPrize = [
+        { medal: '🥇', xp: 50, dia: 3, links: 2 },
+        { medal: '🥈', xp: 30, dia: 2, links: 1 },
+        { medal: '🥉', xp: 15, dia: 1, links: 1 },
+    ];
+    if (!d.weeklyAwardsLog) d.weeklyAwardsLog = [];
+    const weekKey = getBerlinWeekKey();
+    const alreadyPaid = d.weeklyAwardsLog.some(a => a.weekKey === weekKey);
+    if (!alreadyPaid) for (let i = 0; i < wTop.length; i++) {
+        const [uid, xp] = wTop[i];
+        const p = wPrize[i];
+        const u = d.users[uid] || {};
+        const name = u.spitzname || u.name || 'User';
+        let paidXP = 0, paidDia = 0;
+        try {
+            paidXP = xpAdd(uid, p.xp, name);
+            addDiamond(uid, p.dia); paidDia = p.dia;
+            if (p.links > 0) { if (!d.bonusLinks[uid]) d.bonusLinks[uid] = 0; d.bonusLinks[uid] += p.links; }
+            d.weeklyAwardsLog.push({ weekKey, place: i + 1, uid, name, xp: paidXP, dia: paidDia, links: p.links || 0, at: Date.now() });
+            while (d.weeklyAwardsLog.length > 200) d.weeklyAwardsLog.shift();
+        } catch (e) { continue; }
+        try { sendInAppDM(uid, `🏆 *${p.medal} Wochen-Ranking gewonnen!*\n\nDu hast diese Woche *${xp} XP* erreicht.\n\n*Deine Preise:*\n💎 +${p.dia} Diamanten\n⭐ +${p.xp} XP\n${p.links ? `🔗 +${p.links} Extra-Link${p.links > 1 ? 's' : ''}\n` : ''}\nGratulation! 🎉`); } catch (e) {}
+    }
+    archiveWeeklyXP('monday-reset');
+    d.weeklyXP = {};
+    d.weeklyReset = Date.now();
+    const lastWeekMonday = new Date(jetzt);
+    lastWeekMonday.setDate(jetzt.getDate() - 7);
+    const lastWeekKey = lastWeekMonday.getFullYear() + '-' + String(lastWeekMonday.getMonth() + 1).padStart(2, '0') + '-' + String(lastWeekMonday.getDate()).padStart(2, '0');
+    const postedLastWeekUids = new Set(Object.values(d.superlinks || {}).filter(s => s && s.week === lastWeekKey).map(s => String(s.uid)));
+    for (const [uid, u] of Object.entries(d.users || {})) {
+        if (!u || u.parent_uid || u.banned || !u.started) continue;
+        if (istAdminId(uid)) continue;
+        if ((u.xp || 0) >= 5000) { if (!d.bonusLinks[uid]) d.bonusLinks[uid] = 0; d.bonusLinks[uid] += 1; }
+        if (postedLastWeekUids.has(String(uid))) continue;
+        u.superlinkCredits = (Number(u.superlinkCredits) || 0) + 1;
+    }
+}
+
 // ════════ MISSIONS-AUSWERTUNG (12:00-Cron + Admin-Backfill) ════════
 function xpBisNaechstesBadge(xp) {
     if (xp < 50) return { ziel: '📘 Anfänger', fehlend: 50 - xp };
@@ -1808,6 +1947,7 @@ module.exports = {
     mindsetSetAnswerApi, runMindsetPickApi, mindsetAdminPickApi, mindsetAdminSkipApi, mindsetAdminBlastApi, mindsetAdminRestoreApi, isMindsetLocked,
     helperChatAppendApi, helperQuestionApi, adminHelperAnswerApi,
     auswertenForUserDay, missionenAuswerten, backfillMissionenSinceMonday, thisWeekBackfillDays, applyWarningEscalation, xpBisNaechstesBadge,
+    dailyRankingAbschluss, aktivitaetsScore, archiveWeeklyXP, legendenBonus, wochenResetUndAuszahlung,
     postLinkFromApp, createPostApi, deletePostApi, commentApi, deleteCommentApi,
     diamondLinkCreate, diamondLinkLike, diamondLinkAcceptRules, diamondLinkAdminDelete,
     prismaLinkCreate, prismaLinkLike, prismaLinkAcceptRules, prismaLinkAdminDelete,
