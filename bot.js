@@ -24,6 +24,7 @@ const http = require('http');
 const url = require('url');
 const crypto = require('crypto');
 const { genderize } = require('./gender-helper');
+const datastore = require('./datastore');
 
 const MAINBOT_URL   = process.env.MAINBOT_URL   || '';
 const BRIDGE_SECRET = process.env.BRIDGE_SECRET || '';
@@ -1148,6 +1149,33 @@ async function fetchBotRaw(path) {
     if (r === null) r = await fetchBotRawOnce(path, 8000);
     if (r !== null) _markMainbotSuccess(); else _markMainbotFail();
     return r;
+}
+
+// Admin-Gate für Migrations-Routen: ?key=BRIDGE_SECRET ODER eingeloggter Admin.
+async function _isAdminRequest(req, query) {
+    if ((query?.key || '') === BRIDGE_SECRET && BRIDGE_SECRET) return true;
+    const _sess = getSession(req);
+    const _sessUid = _sess?.uid ? String(_sess.uid) : null;
+    if (!_sessUid) return false;
+    const _bd = await fetchBot('/data');
+    const _adminIds = (Array.isArray(_bd?._adminIds) ? _bd._adminIds.map(Number) : []);
+    return _adminIds.includes(Number(_sessUid)) || /admin/i.test(String(_bd?.users?.[_sessUid]?.role || ''));
+}
+
+// Dedizierter Fetch für den (potenziell großen) Migrations-Abzug — eigener
+// langer Timeout statt fetchBotRaw (das ist auf kleines /data getunt).
+function fetchRawExport() {
+    return new Promise(resolve => {
+        const fullUrl = MAINBOT_URL + '/admin/raw-export';
+        if (!fullUrl.startsWith('http')) return resolve({ error: 'MAINBOT_URL nicht gesetzt' });
+        const lib = fullUrl.startsWith('https') ? https : http;
+        const r = lib.get(fullUrl, { headers: { 'x-bridge-secret': BRIDGE_SECRET } }, resp => {
+            if (resp.statusCode !== 200) { resp.resume(); return resolve({ error: 'Bot HTTP ' + resp.statusCode + (resp.statusCode === 404 ? ' — MIGRATION_EXPORT=1 am Bot gesetzt?' : '') }); }
+            let data = ''; resp.on('data', c => data += c); resp.on('end', () => { try { resolve(JSON.parse(data)); } catch (e) { resolve({ error: 'Antwort kein JSON: ' + e.message }); } });
+        });
+        r.on('error', e => resolve({ error: e.message }));
+        r.setTimeout(30000, () => { r.destroy(); resolve({ error: 'Timeout nach 30s' }); });
+    });
 }
 
 let _refreshInFlight = null;
@@ -4409,6 +4437,38 @@ async function handleRequest(req, res) {
         const backups = await listBackups();
         res.writeHead(200, {'Content-Type':'application/json','Cache-Control':'no-store'});
         return res.end(JSON.stringify({ ok: true, backups, dir: BACKUP_DIR }));
+    }
+
+    // ── MIGRATION Schritt 1: Backup-/Seed-Button (für Admins, kein Terminal nötig).
+    if (path === '/admin/migration' && req.method === 'GET') {
+        if (!(await _isAdminRequest(req, query))) { res.writeHead(403); return res.end('Kein Zugriff'); }
+        const keyQ = (query.key || '') === BRIDGE_SECRET ? ('?key=' + encodeURIComponent(query.key)) : '';
+        res.writeHead(200, {'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});
+        return res.end(`<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Daten-Migration · CreatorX</title><style>body{margin:0;font-family:-apple-system,BlinkMacSystemFont,Inter,sans-serif;background:#0b0b0e;color:#fff;line-height:1.6;padding:20px}main{max-width:560px;margin:24px auto;background:linear-gradient(180deg,#1c1c1e,#0f0f11);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:28px 24px}h1{font-size:22px;font-weight:800;margin:0 0 6px}p{font-size:14px;color:rgba(255,255,255,.8)}.btn{display:inline-block;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;padding:14px 28px;border-radius:12px;border:0;font-weight:800;font-size:15px;cursor:pointer;margin:14px 0}.btn:disabled{opacity:.5}#out{white-space:pre-wrap;background:rgba(255,255,255,.05);border-radius:12px;padding:14px;font-size:13px;margin-top:12px;display:none}.warn{font-size:13px;color:#d4a946;background:rgba(212,169,70,.1);border-radius:10px;padding:10px 12px;margin:10px 0}</style></head><body><main><h1>🗄️ Daten-Backup ziehen</h1><p>Holt einen vollständigen Live-Abzug der Bot-Daten, legt ein Backup an und befüllt den App-eigenen Datenspeicher. <b>Liest nur vom Bot — ändert dort nichts.</b></p><div class="warn">Voraussetzung: Am Bot-Service muss <b>MIGRATION_EXPORT=1</b> gesetzt sein.</div><button class="btn" id="b" onclick="run()">Backup jetzt ziehen</button><div id="out"></div></main><script>
+async function run(){var b=document.getElementById('b'),o=document.getElementById('out');b.disabled=true;b.textContent='Läuft …';o.style.display='block';o.textContent='Hole Daten vom Bot …';try{var r=await fetch('/api/admin/migration/snapshot${keyQ}',{method:'POST'});var j=await r.json();if(j.ok){o.textContent='✅ Fertig!\\n\\nBackup: '+j.backupFile+'\\nDatenspeicher: '+j.datastoreFile+'\\n\\nInhalt:\\n'+JSON.stringify(j.stats,null,2);b.textContent='Nochmal ziehen';}else{o.textContent='❌ Fehler: '+(j.error||'unbekannt');b.textContent='Erneut versuchen';}}catch(e){o.textContent='❌ Fehler: '+e.message;b.textContent='Erneut versuchen';}b.disabled=false;}
+</script></body></html>`);
+    }
+
+    if (path === '/api/admin/migration/snapshot' && req.method === 'POST') {
+        if (!(await _isAdminRequest(req, query))) { res.writeHead(403, {'Content-Type':'application/json'}); return res.end('{"ok":false,"error":"Kein Zugriff"}'); }
+        try {
+            const snap = await fetchRawExport();
+            if (!snap || snap.error || !snap.users) {
+                res.writeHead(502, {'Content-Type':'application/json'});
+                return res.end(JSON.stringify({ ok: false, error: (snap && snap.error) || 'Kein gültiger Export (kein users-Key)' }));
+            }
+            const backupDir = DATA_DIR + '/migration-backups';
+            fs.mkdirSync(backupDir, { recursive: true });
+            const ts = new Date().toISOString().replace(/[:.]/g, '-');
+            const backupFile = backupDir + '/daten-' + ts + '.json';
+            fs.writeFileSync(backupFile, JSON.stringify(snap));
+            const stats = datastore.importSnapshot(snap);
+            res.writeHead(200, {'Content-Type':'application/json'});
+            return res.end(JSON.stringify({ ok: true, backupFile, datastoreFile: datastore.DATA_FILE, stats }));
+        } catch (e) {
+            res.writeHead(500, {'Content-Type':'application/json'});
+            return res.end(JSON.stringify({ ok: false, error: e.message }));
+        }
     }
 
     // ── DIAGNOSE: Mainbot live testen (für Admin-Debugging von Signup-Fehlern) ──
