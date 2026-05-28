@@ -4799,7 +4799,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v249-plus-sheet-icons';
+const SW_VERSION='v250-surfaces-icons';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
@@ -6868,7 +6868,7 @@ ${dataSafety.map(d => `
   </div>
 `).join('')}
 <div style="padding:10px 0;font-size:12px;color:#fbbf24">
-<b>⚠️ Wichtig:</b> Diese App sammelt keine Daten zu Werbezwecken, teilt keine Daten mit Dritten, hat keine Trackings.
+<b style="display:inline-flex;align-items:center;gap:5px;vertical-align:-2px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 4 2 18.3A1.6 1.6 0 0 0 3.4 20.7h17.2A1.6 1.6 0 0 0 22 18.3L13.7 4a1.6 1.6 0 0 0-3.4 0z"/><line x1="12" y1="9.5" x2="12" y2="13.5"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Wichtig:</b> Diese App sammelt keine Daten zu Werbezwecken, teilt keine Daten mit Dritten, hat keine Trackings.
 </div>
 </div>
 
@@ -8755,38 +8755,38 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
       <div style="font-size:13px;font-weight:700;color:#a78bfa">+1 💎</div>
     </div>
     <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--border2)">
-      <div style="font-size:20px">📅</div>
+      <div style="display:flex;align-items:center;justify-content:center"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
       <div style="flex:1"><div style="font-size:13.5px;font-weight:700">Tagesmission M3</div><div style="font-size:11.5px;color:var(--muted);margin-top:2px">Alle Links des Tages liken</div></div>
       <div style="font-size:13px;font-weight:700;color:#a78bfa">+1 💎</div>
     </div>
     <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--border2)">
-      <div style="font-size:20px">📈</div>
+      <div style="display:flex;align-items:center;justify-content:center"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg></div>
       <div style="flex:1"><div style="font-size:13.5px;font-weight:700">Wochenmission M2</div><div style="font-size:11.5px;color:var(--muted);margin-top:2px">7 Tage je 80% liken</div></div>
       <div style="font-size:13px;font-weight:700;color:#a78bfa">+1 💎</div>
     </div>
     <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--border2)">
-      <div style="font-size:20px">🏆</div>
+      <div style="display:flex;align-items:center;justify-content:center"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h12v4a6 6 0 0 1-12 0z"/><path d="M6 6H3.5a2.5 2.5 0 0 0 4 2"/><path d="M18 6h2.5a2.5 2.5 0 0 1-4 2"/><line x1="12" y1="14" x2="12" y2="18"/><path d="M8.5 21h7"/><path d="M9 18h6"/></svg></div>
       <div style="flex:1"><div style="font-size:13.5px;font-weight:700">Wochenmission M3</div><div style="font-size:11.5px;color:var(--muted);margin-top:2px">7 Tage in Folge alle liken</div></div>
       <div style="font-size:13px;font-weight:700;color:#a78bfa">+2 💎</div>
     </div>
     <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--border2)">
-      <div style="font-size:20px">⭐</div>
+      <div style="display:flex;align-items:center;justify-content:center"><svg width="21" height="21" viewBox="0 0 24 24" fill="#a78bfa" stroke="#a78bfa" stroke-width="0" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
       <div style="flex:1"><div style="font-size:13.5px;font-weight:700">Alle Superlinks der Woche engagieren</div><div style="font-size:11.5px;color:var(--muted);margin-top:2px">Liken, Kommentieren, Teilen, Speichern</div></div>
       <div style="font-size:13px;font-weight:700;color:#a78bfa">+1 💎</div>
     </div>
     <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--border2)">
-      <div style="font-size:20px">📲</div>
+      <div style="display:flex;align-items:center;justify-content:center"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2.5"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg></div>
       <div style="flex:1"><div style="font-size:13.5px;font-weight:700">100 Likes via App</div><div style="font-size:11.5px;color:var(--muted);margin-top:2px">Aktuell: ${appLikes}/${Math.ceil((appLikes+1)/100)*100}</div></div>
       <div style="font-size:13px;font-weight:700;color:#a78bfa">+1 💎</div>
     </div>
     <div style="display:flex;align-items:center;gap:12px;padding:12px 14px">
-      <div style="font-size:20px">📌</div>
+      <div style="display:flex;align-items:center;justify-content:center"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
       <div style="flex:1"><div style="font-size:13.5px;font-weight:700">Pinned Post engagieren</div><div style="font-size:11.5px;color:var(--muted);margin-top:2px">Du bekommst 1 💎 wenn du einen angepinnten Link likest (1× pro Owner)</div></div>
       <div style="font-size:13px;font-weight:700;color:#a78bfa">+1 💎</div>
     </div>
   </div>
   <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);border-radius:12px;padding:14px;font-size:12.5px;line-height:1.55;color:var(--text)">
-    <b>⚠️ Wichtig:</b> Es gelten weiterhin die Standard-Regeln (1 Post = 5 Likes + Kommentar). Niemand muss alles machen — wer aber mehr engagiert, wird belohnt 🙏
+    <b style="display:inline-flex;align-items:center;gap:5px;vertical-align:-2px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 4 2 18.3A1.6 1.6 0 0 0 3.4 20.7h17.2A1.6 1.6 0 0 0 22 18.3L13.7 4a1.6 1.6 0 0 0-3.4 0z"/><line x1="12" y1="9.5" x2="12" y2="13.5"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Wichtig:</b> Es gelten weiterhin die Standard-Regeln (1 Post = 5 Likes + Kommentar). Niemand muss alles machen — wer aber mehr engagiert, wird belohnt 🙏
   </div>
   <div style="margin-top:18px;text-align:center"><a href="/explore?tab=shop" style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;padding:12px 22px;border-radius:14px;font-size:13px;font-weight:700;text-decoration:none;box-shadow:0 4px 14px rgba(167,139,250,0.4)">💎 Zum Shop</a></div>
 </div>`, 'diamanten');
@@ -13568,7 +13568,7 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) acPo
   </a>
 </div>
 <div id="chat-msgs" style="padding:12px 0 140px;display:flex;flex-direction:column">
-  ${msgsHtml || '<div class="empty" style="margin-top:60px"><div class="empty-icon">👋</div><div class="empty-text">Schreib eine Nachricht!</div></div>'}
+  ${msgsHtml || '<div class="empty" style="margin-top:60px"><div class="empty-icon"><svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="opacity:.5"><path d="M21 11.5a8.5 8.5 0 0 1-12.5 7.5L3 20.5l1.5-5.5A8.5 8.5 0 1 1 21 11.5z"/></svg></div><div class="empty-text">Schreib eine Nachricht!</div></div>'}
 </div>
 <div id="img-preview-wrap" style="display:none;position:fixed;bottom:120px;left:16px;right:16px;z-index:101">
   <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:12px;padding:8px;display:flex;align-items:center;gap:8px">
@@ -13600,9 +13600,9 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) acPo
   </button>
   <div style="flex:1;background:#3a3b3c;border-radius:22px;display:flex;align-items:center;padding:4px 4px 4px 14px;gap:6px;min-width:0">
     <input type="text" id="msg-input" placeholder="Nachricht senden..." style="flex:1;background:transparent;border:none;outline:none;color:#e4e6eb;font-size:15px;padding:8px 0;margin:0;min-width:0" onkeypress="if(event.key==='Enter')sendMsg()">
-    <button onclick="document.getElementById('msg-input').focus()" style="background:none;border:none;color:#e4e6eb;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-size:20px" title="Emoji">😊</button>
+    <button onclick="document.getElementById('msg-input').focus()" style="background:none;border:none;color:#e4e6eb;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0" title="Emoji"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg></button>
   </div>
-  <button id="send-btn" onclick="sendMsg()" style="width:38px;height:38px;border-radius:50%;background:transparent;color:#0866FF;border:none;font-size:22px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center" title="Senden">❤️</button>
+  <button id="send-btn" onclick="sendMsg()" style="width:38px;height:38px;border-radius:50%;background:transparent;color:#0866FF;border:none;font-size:22px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center" title="Senden"><svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></button>
 </div>
 <script>
 // Send-Button: Plane-Icon wenn Text ODER Foto/Audio bereit, sonst ❤️ (Quick-Like)
@@ -13612,7 +13612,7 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) acPo
   if (!inp || !btn) return;
   function hasContent(){ return (inp.value.trim().length > 0) || (typeof selectedImage !== 'undefined' && selectedImage); }
   function toggleSend(){
-    btn.innerHTML = hasContent() ? '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>' : '❤️';
+    btn.innerHTML = hasContent() ? '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>' : '<svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>';
   }
   inp.addEventListener('input', toggleSend);
   window._chatToggleSend = toggleSend;
@@ -14047,12 +14047,12 @@ document.getElementById('user-search-input')?.addEventListener('input',filterSea
 </style>
 <div class="notif-filters">
   <button class="notif-filter active" data-f="all">Alle</button>
-  <button class="notif-filter" data-f="like">❤️ Likes</button>
-  <button class="notif-filter" data-f="follow">👤 Follower</button>
-  <button class="notif-filter" data-f="news">📩 News</button>
-  <button class="notif-filter" data-f="diamond">💎 Diamanten</button>
-  <button class="notif-filter" data-f="message">💬 Nachrichten</button>
-  <button class="notif-filter" data-f="warn">⚠️ System</button>
+  <button class="notif-filter" data-f="like"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><path d="M20.8 5.1a5.4 5.4 0 0 0-7.7 0l-1.1 1.1-1.1-1.1A5.4 5.4 0 1 0 3.2 12.8l1.1 1.1L12 21.5l7.7-7.6 1.1-1.1a5.4 5.4 0 0 0 0-7.7z"/></svg>Likes</button>
+  <button class="notif-filter" data-f="follow"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Follower</button>
+  <button class="notif-filter" data-f="news"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 6-10 7L2 6"/></svg>News</button>
+  <button class="notif-filter" data-f="diamond"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><path d="M6 3h12l4 6-10 12L2 9z"/><path d="M2 9h20"/><path d="M9 3 6 9l6 12 6-12-3-6"/></svg>Diamanten</button>
+  <button class="notif-filter" data-f="message"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><path d="M21 11.5a8.5 8.5 0 0 1-12.5 7.5L3 20.5l1.5-5.5A8.5 8.5 0 1 1 21 11.5z"/></svg>Nachrichten</button>
+  <button class="notif-filter" data-f="warn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><path d="M10.3 4 2 18.3A1.6 1.6 0 0 0 3.4 20.7h17.2A1.6 1.6 0 0 0 22 18.3L13.7 4a1.6 1.6 0 0 0-3.4 0z"/><line x1="12" y1="9.5" x2="12" y2="13.5"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>System</button>
 </div>
 <div id="collab-pending" style="padding:0"></div>
 <div id="notif-list" style="padding:0 0 80px">
@@ -20467,7 +20467,7 @@ ${(function(){
             ? '<img src="' + _picSrc + '" alt="" loading="eager" onerror="this.remove();this.parentNode.textContent=\'' + _initial + '\'">'
             : _initial) +
         '</div>' +
-        '<button class="pf-avatar-edit" onclick="pfOpenEditAvatar();return false" aria-label="Profilbild ändern">📷</button>' +
+        '<button class="pf-avatar-edit" onclick="pfOpenEditAvatar();return false" aria-label="Profilbild ändern"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button>' +
       '</div>' +
       '<div class="pf-stats">' +
         '<div class="pf-stat"><div class="pf-stat-num">' + _posts + '</div><div class="pf-stat-lbl">Posts</div></div>' +
@@ -20480,7 +20480,7 @@ ${(function(){
       '<div class="pf-handle">' + _handle + '</div>' +
     '</div>' +
     '<div class="pf-bio">' + _bio + '</div>' +
-    (_website ? '<div class="pf-link-row">🔗 <a href="' + safeUrl(_website) + '" target="_blank" rel="noopener noreferrer">' + _website.replace(/^https?:\/\//,'') + '</a></div>' : '') +
+    (_website ? '<div class="pf-link-row"><span style="display:inline-flex;vertical-align:-2px;margin-right:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg></span><a href="' + safeUrl(_website) + '" target="_blank" rel="noopener noreferrer">' + _website.replace(/^https?:\/\//,'') + '</a></div>' : '') +
     '<div class="pf-actions">' +
       '<button class="pf-action-btn primary" onclick="pfOpenEditProfile();return false"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>Profil bearbeiten</button>' +
       '<a class="pf-action-btn" href="/profil/' + myUid + '"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>Profil ansehen</a>' +
@@ -20522,14 +20522,14 @@ ${(function(){
         <input class="pf-input" id="pfNische" maxlength="50" placeholder="z.B. Fitness, Travel, Mode" value="${htmlEsc(u.nische || '')}">
       </div>
       <div class="pf-field">
-        <label class="pf-field-label">📌 Pinned Reel-Link</label>
+        <label class="pf-field-label" style="display:inline-flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>Pinned Reel-Link</label>
         <input class="pf-input" id="pfPinnedLink" type="url" maxlength="200" placeholder="https://instagram.com/reel/..." value="${htmlEsc(currentPinnedLink || '')}">
         <div class="pf-counter" style="text-align:left;color:var(--muted)">${_pinDaysLeft > 0 && !_isAdminPinUI ? `⏳ Änderung erst in ${_pinDaysLeft} Tag${_pinDaysLeft===1?'':'en'} möglich` : '✓ Änderbar (1× pro 30 Tage)'}</div>
       </div>
       <div class="pf-field">
-        <label class="pf-field-label">🎨 Banner</label>
+        <label class="pf-field-label" style="display:inline-flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2.5"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>Banner</label>
         <label style="display:flex;align-items:center;gap:10px;background:var(--bg4);border:1px dashed var(--border);border-radius:10px;padding:11px;cursor:pointer;font-size:13px;font-weight:500;margin-bottom:10px">
-          <span style="font-size:20px">📷</span><span>Eigenes Foto hochladen</span>
+          <span style="display:flex"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></span><span>Eigenes Foto hochladen</span>
           <input type="file" accept="image/*" style="display:none" onchange="uploadBanner(this)">
         </label>
         <div class="gradient-grid">
@@ -20537,26 +20537,26 @@ ${(function(){
         </div>
         ${(() => {
             const ownedBanners = BANNER_ITEMS.filter(b => myInventory.includes(b.id));
-            if (!ownedBanners.length) return `<div style="font-size:11px;color:var(--muted);margin-top:10px">🛍️ Premium-Banner im Shop kaufen — je 💎 1 Diamant</div>`;
-            return `<div style="margin-top:12px"><div style="font-size:11px;color:var(--muted);margin-bottom:6px">🛍️ Gekaufte Premium-Banner</div><div class="gradient-grid">${ownedBanners.map(b=>`<div class="gradient-opt ${(u.banner||'')===b.gradient?'selected':''}" style="background:${b.gradient}" title="${b.name}" onclick="selectBanner('${b.gradient}',this)"></div>`).join('')}</div></div>`;
+            if (!ownedBanners.length) return `<div style="font-size:11px;color:var(--muted);margin-top:10px"><span style="display:inline-flex;vertical-align:-2px;margin-right:4px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg></span>Premium-Banner im Shop kaufen — je 💎 1 Diamant</div>`;
+            return `<div style="margin-top:12px"><div style="font-size:11px;color:var(--muted);margin-bottom:6px"><span style="display:inline-flex;vertical-align:-2px;margin-right:4px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg></span>Gekaufte Premium-Banner</div><div class="gradient-grid">${ownedBanners.map(b=>`<div class="gradient-opt ${(u.banner||'')===b.gradient?'selected':''}" style="background:${b.gradient}" title="${b.name}" onclick="selectBanner('${b.gradient}',this)"></div>`).join('')}</div></div>`;
         })()}
       </div>
       <div class="pf-field">
-        <label class="pf-field-label">🎨 Akzentfarbe</label>
+        <label class="pf-field-label" style="display:inline-flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.7 6.3 9a8 8 0 1 0 11.4 0z"/></svg>Akzentfarbe</label>
         <div class="color-grid">
           ${accentColors.map(c=>`<div class="color-opt ${(u.accentColor||'#ff6b6b')===c?'selected':''}" style="background:${c}" onclick="selectAccent('${c}',this)">${(u.accentColor||'#ff6b6b')===c?'✓':''}</div>`).join('')}
         </div>
       </div>
       <div class="pf-field">
         <div class="setting-row" style="padding:0;display:flex;align-items:center;justify-content:space-between">
-          <div><div class="pf-field-label" style="margin:0">🌙 Dark Mode</div></div>
+          <div><div class="pf-field-label" style="margin:0;display:inline-flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg>Dark Mode</div></div>
           <button class="toggle ${(session?.theme||'light')==='dark'?'on':''}" id="theme-toggle" onclick="toggleTheme(this)"></button>
         </div>
       </div>
     </div>
     <div class="pf-sheet-actions">
       <button class="pf-cancel-btn" onclick="pfCloseModal()">Abbrechen</button>
-      <button class="pf-save-btn" id="pfSaveBtn" onclick="pfSaveProfile()">💾 Speichern</button>
+      <button class="pf-save-btn" id="pfSaveBtn" onclick="pfSaveProfile()" style="display:inline-flex;align-items:center;justify-content:center;gap:7px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>Speichern</button>
     </div>
   </div>
 </div>
@@ -20604,7 +20604,7 @@ async function pfSaveProfile(){
     const j = await r.json();
     if (!j.ok) {
       pfToast('❌ ' + (j.error || 'Fehler'), true);
-      btn.disabled = false; btn.textContent = '💾 Speichern';
+      btn.disabled = false; btn.textContent = 'Speichern';
       return;
     }
     // Pinned-Reel-Link separat speichern wenn geändert (eigener Rate-Limit-Check)
@@ -20623,7 +20623,7 @@ async function pfSaveProfile(){
     setTimeout(()=>location.reload(), 800);
   } catch(e) {
     pfToast('❌ Netzwerk-Fehler', true);
-    btn.disabled = false; btn.textContent = '💾 Speichern';
+    btn.disabled = false; btn.textContent = 'Speichern';
   }
 }
 async function pfHandleAvatarFile(input){
@@ -20698,7 +20698,7 @@ async function pfHandleAvatarFile(input){
 
 ${myInventory.length > 0 ? `
 <div style="padding:16px;border-bottom:1px solid var(--border2)">
-  <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">🎒 Meine Items</div>
+  <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;display:inline-flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>Meine Items</div>
   <div style="display:flex;flex-direction:column;gap:10px">
     ${RING_ITEMS.filter(r=>myInventory.includes(r.id)).map(item=>{
         const isActive = myActiveRing === item.id;
@@ -20715,7 +20715,7 @@ ${myInventory.length > 0 ? `
 </div>` : ''}
 <!-- Admin-Sections wurden nach /einstellungen/admin verschoben (siehe Admin-Card oben im Hub) -->
 <div style="padding:16px;border-bottom:1px solid var(--border2)">
-  <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">🎯 App-Tour</div>
+  <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;display:inline-flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>App-Tour</div>
   <div style="font-size:12px;color:var(--muted);margin-bottom:10px">${u.appBriefingSeenV2 ? 'Du hast die Tour schon einmal gesehen.' : 'Du hast die Tour noch nicht gesehen — sie startet beim nächsten Feed-Open automatisch.'}</div>
   <a href="/feed?tour=1" class="btn btn-outline btn-full" style="display:flex;align-items:center;justify-content:center;gap:8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>Tour erneut anschauen</a>
 </div>
@@ -20874,7 +20874,7 @@ async function saveProfile() {
         }
         else { toast('❌ Fehler: ' + (data.error||'Unbekannt')); }
     } catch(e) { toast('❌ Netzwerkfehler'); }
-    if(btn) { btn.textContent = '💾 Speichern'; btn.disabled = false; }
+    if(btn) { btn.textContent = 'Speichern'; btn.disabled = false; }
 }
 async function requestAccountChange(){
     const btn = document.getElementById('ep-request-change-btn');
