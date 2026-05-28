@@ -1214,27 +1214,11 @@ if (LOCAL_STORE) {
     catch(e) { console.error('[LOCAL_STORE] _dataCache seed fehlgeschlagen:', e.message); }
 }
 
-async function fetchBotRawOnce(path, timeoutMs) {
-    return new Promise(resolve => {
-        const fullUrl = MAINBOT_URL + path;
-        if (!fullUrl.startsWith('http')) return resolve(null);
-        const lib = fullUrl.startsWith('https')?https:http;
-        const req = lib.get(fullUrl, {headers:{'x-bridge-secret':BRIDGE_SECRET}}, res => {
-            let data=''; res.on('data',c=>data+=c); res.on('end',()=>{
-                try { resolve(JSON.parse(data)); } catch(e){ resolve(null); }
-            });
-        });
-        req.on('error',()=>resolve(null));
-        req.setTimeout(timeoutMs || 5000, () => { req.destroy(); resolve(null); });
-    });
-}
-// Timeout auf 5s erhöht (war 3s — bei Mainbot-Slowness sofort 503).
-// Retry: bei null einmal nachfassen mit längerem Timeout. Reduziert intermittent 503s.
+// Mainbot stillgelegt: kein Bot-HTTP mehr. /data kommt aus dem lokalen Datastore,
+// alles andere existiert nicht mehr -> null.
 async function fetchBotRaw(path) {
-    let r = await fetchBotRawOnce(path, 5000);
-    if (r === null) r = await fetchBotRawOnce(path, 8000);
-    if (r !== null) _markMainbotSuccess(); else _markMainbotFail();
-    return r;
+    if (path === '/data') return datastore.projectDataLikeBot(datastore.getData());
+    return null;
 }
 
 // Admin-Gate für Migrations-Routen: ?key=BRIDGE_SECRET ODER eingeloggter Admin.
@@ -1251,17 +1235,7 @@ async function _isAdminRequest(req, query) {
 // Dedizierter Fetch für den (potenziell großen) Migrations-Abzug — eigener
 // langer Timeout statt fetchBotRaw (das ist auf kleines /data getunt).
 function fetchRawExport() {
-    return new Promise(resolve => {
-        const fullUrl = MAINBOT_URL + '/admin/raw-export';
-        if (!fullUrl.startsWith('http')) return resolve({ error: 'MAINBOT_URL nicht gesetzt' });
-        const lib = fullUrl.startsWith('https') ? https : http;
-        const r = lib.get(fullUrl, { headers: { 'x-bridge-secret': BRIDGE_SECRET } }, resp => {
-            if (resp.statusCode !== 200) { resp.resume(); return resolve({ error: 'Bot HTTP ' + resp.statusCode + (resp.statusCode === 404 ? ' — MIGRATION_EXPORT=1 am Bot gesetzt?' : '') }); }
-            let data = ''; resp.on('data', c => data += c); resp.on('end', () => { try { resolve(JSON.parse(data)); } catch (e) { resolve({ error: 'Antwort kein JSON: ' + e.message }); } });
-        });
-        r.on('error', e => resolve({ error: e.message }));
-        r.setTimeout(30000, () => { r.destroy(); resolve({ error: 'Timeout nach 30s' }); });
-    });
+    return Promise.resolve({ error: 'Mainbot stillgelegt — Migration nicht mehr verfuegbar' });
 }
 
 let _refreshInFlight = null;
@@ -1425,21 +1399,7 @@ loadWriteQueue();
 
 // Internal: low-level postBot WITHOUT queueing (used by retry-worker so it doesn't re-enqueue)
 async function _postBotRaw(path, body) {
-    return new Promise(resolve => {
-        const fullUrl = MAINBOT_URL + path;
-        if (!fullUrl.startsWith('http')) return resolve(null);
-        const lib = fullUrl.startsWith('https')?https:http;
-        const data = JSON.stringify(body);
-        const u = new url.URL(fullUrl);
-        const opts = {hostname:u.hostname,port:u.port||(u.protocol==='https:'?443:80),path:u.pathname+u.search,method:'POST',headers:{'Content-Type':'application/json','x-bridge-secret':BRIDGE_SECRET,'Content-Length':Buffer.byteLength(data)}};
-        const req = lib.request(opts, res=>{
-            let buf=''; res.on('data',c=>buf+=c);
-            res.on('end',()=>{ try { resolve(JSON.parse(buf)); } catch(e) { resolve(null); } });
-        });
-        req.on('error',()=>resolve(null));
-        req.setTimeout(15000, () => { req.destroy(); resolve(null); });
-        req.write(data); req.end();
-    });
+    return null;  // Mainbot stillgelegt — kein Bot-HTTP mehr.
 }
 
 // Background worker — alle 30s versucht queue abzuarbeiten
@@ -1472,48 +1432,10 @@ setInterval(async () => {
     }
 }, 30000);
 
+// Mainbot stillgelegt: Schreibpfade laufen lokal (LOCAL_STORE-Zweige). Dieser Stub
+// gibt null zurueck; die verbliebenen postBot-Aufrufe sind tote else-Zweige.
 async function postBot(path, body) {
-    const _t0 = Date.now();
-    const result = await new Promise(resolve => {
-        const fullUrl = MAINBOT_URL + path;
-        if (!fullUrl.startsWith('http')) return resolve(null);
-        const lib = fullUrl.startsWith('https')?https:http;
-        const data = JSON.stringify(body);
-        const u = new url.URL(fullUrl);
-        const opts = {hostname:u.hostname,port:u.port||(u.protocol==='https:'?443:80),path:u.pathname+u.search,method:'POST',headers:{'Content-Type':'application/json','x-bridge-secret':BRIDGE_SECRET,'Content-Length':Buffer.byteLength(data)}};
-        const req = lib.request(opts, res=>{
-            let buf='';
-            res.on('data',c=>buf+=c);
-            res.on('end',()=>{
-                // Vorher fallback {ok:true} — bei Bot-Crash/empty-response sah App
-                // jeden Call als Erfolg. Jetzt: null wie fetchBotRaw bei Parse-Fehler.
-                try { resolve(JSON.parse(buf)); } catch(e) { resolve(null); }
-            });
-        });
-        req.on('error',()=>resolve(null));
-        // 15-Sek Timeout: Mainbot's speichern() ist sync writeFileSync — bei grossen
-        // data-Files kann das mal >5s dauern (besonders bei /create-email-user-api).
-        // Vorher 5s → manche Signups failten still + User sah generischen Fehler trotz
-        // erfolgreichem Account-Anlegen im Bot.
-        req.setTimeout(15000, () => { req.destroy(); resolve(null); });
-        req.write(data); req.end();
-    });
-    const _ms = Date.now() - _t0;
-    const _ok = result !== null;
-    if (_ok) _markMainbotSuccess(); else _markMainbotFail();
-    logWrite(path, body, result, _ok, _ms);
-    // MIGRATION-PHASE-1: Cache NICHT mehr auf null setzen — sonst gibt es kurz Zeitfenster
-    // wo Reads scheitern bevor der Refresh durch ist. Stattdessen Cache stale markieren
-    // (TTL=0 erzwingt sofortigen Refresh beim nächsten fetchBot-Call). Refresh läuft async.
-    _dataCacheTime = 0;
-    refreshDataCache().catch(()=>{});
-    // MIGRATION-PHASE-2: Wenn Mainbot down war + Path ist idempotent → in Queue für Retry.
-    // Caller bekommt synthetic-ok zurück (optimistic) damit User keinen Fehler sieht.
-    if (!_ok && RETRYABLE_PATHS.has(path)) {
-        enqueueWrite(path, body);
-        return { ok: true, queued: true };
-    }
-    return result;
+    return null;
 }
 
 // Sonntag 20:00 (Berlin TZ, schon global gesetzt) triggert Wochen-Gewinnspiel
