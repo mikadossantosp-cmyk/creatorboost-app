@@ -59,13 +59,13 @@ module.exports = function renderChatList(opts) {
     const appChatPrev = appChatPreview ? smartPreview(appChatPreview) : 'Tippen, um mit allen App-Usern zu chatten…';
     const appChatPrevText = appChatPreview ? ((appChatPreview.name ? appChatPreview.name + ': ' : '') + appChatPrev) : appChatPrev;
     const appCommunityRow = '<a href="/nachrichten/app-chat" class="dm-row dm-pinned dm-app-community">' +
-        '<div class="dm-avatar dm-app-community-avatar">🌍</div>' +
+        '<div class="dm-avatar dm-app-community-avatar"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></div>' +
         '<div class="dm-content">' +
-          '<div class="dm-name">App Community <span style="font-size:10px;color:#a78bfa;font-weight:700;background:rgba(167,139,250,0.12);padding:2px 7px;border-radius:99px;margin-left:6px">📌 Pinned</span></div>' +
+          '<div class="dm-name">App Community <span style="font-size:10px;color:#a78bfa;font-weight:700;background:rgba(167,139,250,0.12);padding:2px 7px;border-radius:99px;margin-left:6px"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:3px"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>Pinned</span></div>' +
           '<div class="dm-preview">' + esc(appChatPrevText.slice(0, 70)) + '</div>' +
         '</div>' +
         '<div class="dm-meta">' +
-          (appChatMembers ? '<div class="dm-time">' + appChatMembers + ' 👥</div>' : '') +
+          (appChatMembers ? '<div class="dm-time">' + appChatMembers + ' <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>' : '') +
           (appChatUnread > 0 ? '<div class="dm-badge">' + (appChatUnread > 99 ? '99+' : appChatUnread) + '</div>' : '') +
         '</div>' +
         '</a>';
@@ -116,7 +116,7 @@ module.exports = function renderChatList(opts) {
         return '<a href="/nachrichten/' + c.otherUid + '" class="dm-row' + unreadClass + '" data-uid="' + c.otherUid + '" data-name="' + esc(c.otherName) + '" data-bucket="' + timeBucket(c.lastMsg && c.lastMsg.timestamp) + '" oncontextmenu="event.preventDefault(); dmCtxMenu(event,this)" ontouchstart="dmCtxStart(event,this)" ontouchend="dmCtxEnd()" ontouchmove="dmCtxEnd()">' +
             '<div class="dm-avatar' + (isOnline ? ' online' : '') + '">' + avatarInner + '</div>' +
             '<div class="dm-content">' +
-                '<div class="dm-name">' + crown(c.otherUid) + esc(c.otherName) + '<span class="dm-pin-marker">📌</span></div>' +
+                '<div class="dm-name">' + crown(c.otherUid) + esc(c.otherName) + '<span class="dm-pin-marker"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></span></div>' +
                 '<div class="dm-preview">' + previewHtml + '</div>' +
             '</div>' +
             '<div class="dm-meta">' +
@@ -144,7 +144,7 @@ module.exports = function renderChatList(opts) {
 
     const emptyState = (!myConvos || !myConvos.length) ?
         '<div class="dm-empty">' +
-            '<div class="dm-empty-icon">💬</div>' +
+            '<div class="dm-empty-icon"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-12.5 7.5L3 20.5l1.5-5.5A8.5 8.5 0 1 1 21 11.5z"/></svg></div>' +
             '<div class="dm-empty-text">Noch keine Nachrichten</div>' +
             '<div class="dm-empty-sub">Tippe auf einen Kreis oben um eine DM zu starten</div>' +
         '</div>' : '';
