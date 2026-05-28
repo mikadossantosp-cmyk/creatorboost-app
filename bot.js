@@ -949,12 +949,28 @@ function roleColor(roleText) {
   if (s.includes('Anfänger')) return '#10b981';
   return '#64748b';
 }
-// Einheitliches Stufen-Badge: dezent getönte Pille in der Stufenfarbe (überall gleich).
-// Reine Darstellung — Rollen/Stufen selbst bleiben unverändert.
+// Stufen-Icon: bedeutungsgleich zum bisherigen Emoji, damit der Rang erkennbar bleibt.
+// 📘→Buch, ⬆️→Aufwärtspfeil, 🏅→Medaille, 👑→Krone, 🌟→Stern, 💎→Edelstein, Admin→Schild.
+function roleIcon(roleText) {
+  const s = String(roleText || '');
+  const A = 'width="13" height="13" viewBox="0 0 24 24" style="flex-shrink:0"';
+  const L = ' fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
+  if (/admin/i.test(s)) return '<svg '+A+L+'><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>';
+  if (s.includes('Legende')) return '<svg '+A+' fill="currentColor"><path d="M6 2h12l4 6-10 13L2 8z"/></svg>';
+  if (s.includes('Elite+')) return '<svg '+A+' fill="currentColor"><path d="M12 2l2.9 6.3 6.6.6-5 4.4 1.5 6.5L12 16.9 5.5 20.3 7 13.8l-5-4.4 6.6-.6z"/></svg>';
+  if (s.includes('Elite')) return '<svg '+A+' fill="currentColor"><path d="M5 19h14l1.6-11-5 4-3.6-7-3.6 7-5-4z"/></svg>';
+  if (s.includes('Erfahrener')) return '<svg '+A+L+'><circle cx="12" cy="9" r="6"/><path d="M8.5 14L7 22l5-3 5 3-1.5-8"/></svg>';
+  if (s.includes('Aufsteiger')) return '<svg '+A+L+'><polyline points="3 17 9 11 13 15 21 7"/><polyline points="15 7 21 7 21 13"/></svg>';
+  if (s.includes('Anfänger')) return '<svg '+A+L+'><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 5v14"/></svg>';
+  return '<svg '+A+' fill="currentColor"><path d="M12 2l1.8 5.4L19 8l-4 3.6 1.3 5.4L12 14.5 7.7 17l1.3-5.4L5 8l5.2-.6z"/></svg>';
+}
+// Einheitliches Stufen-Badge: dezent getönte Pille in der Stufenfarbe + bedeutungsgleiches Icon.
+// Reine Darstellung — Rollen/Stufen/Namen selbst bleiben unverändert.
 function roleBadge(role, uid, adminIds) {
   const txt = cleanRole(role, uid, adminIds);
   const c = roleColor(txt);
-  return '<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:99px;background:'+c+'1f;color:'+c+';border:1px solid '+c+'40;font-size:11px;font-weight:700;letter-spacing:.1px;white-space:nowrap;line-height:1.5">'+txt+'</span>';
+  const name = txt.replace(/^[^\s]+\s+/, '') || txt;
+  return '<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:99px;background:'+c+'1f;color:'+c+';border:1px solid '+c+'40;font-size:11px;font-weight:700;letter-spacing:.1px;white-space:nowrap;line-height:1.5">'+roleIcon(txt)+name+'</span>';
 }
 // Sicherer URL-Check: nur http(s)-Links erlaubt, kein javascript:/data:/vbscript:.
 function safeUrl(u) { const s = String(u||'').trim(); return /^https?:\/\//i.test(s) ? s : ''; }
@@ -4780,7 +4796,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v238-calm-glows';
+const SW_VERSION='v239-role-tier-icons';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
