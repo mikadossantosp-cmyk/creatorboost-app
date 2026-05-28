@@ -4754,7 +4754,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v226-profil-open-install-polish';
+const SW_VERSION='v227-profile-icons';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
@@ -18569,9 +18569,9 @@ function showErr(msg){
     <div style="font-size:13px;color:rgba(255,255,255,0.78);font-weight:500;letter-spacing:0.3px">${_greet},</div>
     <div style="font-size:26px;font-weight:800;color:#fff;font-family:var(--font-display);line-height:1.1;margin-top:2px;letter-spacing:-0.5px">${htmlEsc(_greetName)} 👋</div>
     <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
-      <div style="display:inline-flex;align-items:center;gap:5px;padding:6px 11px;background:rgba(255,255,255,0.18);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.22);border-radius:999px;font-size:11.5px;color:#fff;font-weight:600">⭐ ${_me.xp||0} XP</div>
-      ${myRank>0?`<div style="display:inline-flex;align-items:center;gap:5px;padding:6px 11px;background:rgba(255,255,255,0.18);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.22);border-radius:999px;font-size:11.5px;color:#fff;font-weight:600">🏆 Rang #${myRank}</div>`:''}
-      <div style="display:inline-flex;align-items:center;gap:5px;padding:6px 11px;background:rgba(255,255,255,0.18);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.22);border-radius:999px;font-size:11.5px;color:#fff;font-weight:600">💎 ${_me.diamonds||0}</div>
+      <div style="display:inline-flex;align-items:center;gap:5px;padding:6px 11px;background:rgba(255,255,255,0.18);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.22);border-radius:999px;font-size:11.5px;color:#fff;font-weight:600"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>${_me.xp||0} XP</div>
+      ${myRank>0?`<div style="display:inline-flex;align-items:center;gap:5px;padding:6px 11px;background:rgba(255,255,255,0.18);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.22);border-radius:999px;font-size:11.5px;color:#fff;font-weight:600"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3"/><path d="M9 21h6M12 16v5"/></svg>Rang #${myRank}</div>`:''}
+      <div style="display:inline-flex;align-items:center;gap:5px;padding:6px 11px;background:rgba(255,255,255,0.18);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.22);border-radius:999px;font-size:11.5px;color:#fff;font-weight:600"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0"><path d="M6 2h12l4 6-10 13L2 8z"/></svg>${_me.diamonds||0}</div>
     </div>
   </div>
 </div>
@@ -19278,10 +19278,10 @@ async function deleteSubAcc(){
 </script>
 ${completionHtml}
 <div class="tabs" style="position:sticky;top:57px;z-index:50;background:var(--bg)">
-  <div class="tab active" onclick="showPTab('links',this)">🔗 Links</div>
-  <div class="tab" onclick="showPTab('posts',this)">📝 Posts</div>
-  <div class="tab" onclick="showPTab('projekte',this)">🗂️ Projekte</div>
-  <div class="tab" onclick="showPTab('about',this)">👤 About</div>
+  <div class="tab active" onclick="showPTab('links',this)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><path d="M9 17H7A5 5 0 0 1 7 7h2"/><path d="M15 7h2a5 5 0 0 1 0 10h-2"/><path d="M8 12h8"/></svg>Links</div>
+  <div class="tab" onclick="showPTab('posts',this)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>Posts</div>
+  <div class="tab" onclick="showPTab('projekte',this)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>Projekte</div>
+  <div class="tab" onclick="showPTab('about',this)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>About</div>
 </div>
 <div id="ptab-links" style="padding-bottom:100px">
   ${linksHtml}
@@ -19671,10 +19671,10 @@ ${String(uid) !== String(myUid) ? `
 ` : ''}
 ${profileCard(uid, u, d, false, lang, adminIds)}
 <div class="tabs" style="position:sticky;top:57px;z-index:50;background:var(--bg)">
-  <div class="tab active" onclick="showTPTab('links',this)">🔗 Links</div>
-  <div class="tab" onclick="showTPTab('posts',this)">📝 Posts</div>
-  <div class="tab" onclick="showTPTab('projekte',this)">🗂️ Projekte</div>
-  <div class="tab" onclick="showTPTab('about',this)">👤 About</div>
+  <div class="tab active" onclick="showTPTab('links',this)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><path d="M9 17H7A5 5 0 0 1 7 7h2"/><path d="M15 7h2a5 5 0 0 1 0 10h-2"/><path d="M8 12h8"/></svg>Links</div>
+  <div class="tab" onclick="showTPTab('posts',this)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>Posts</div>
+  <div class="tab" onclick="showTPTab('projekte',this)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>Projekte</div>
+  <div class="tab" onclick="showTPTab('about',this)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>About</div>
 </div>
 <div id="tptab-links" style="padding-bottom:100px">${theirLinksHtml}</div>
 <div id="tptab-posts" style="display:none;padding-bottom:100px">${theirPostsHtml}</div>
