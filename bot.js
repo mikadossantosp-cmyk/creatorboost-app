@@ -21257,7 +21257,9 @@ async function setRing(ringId) {
         const body = await parseBody(req);
         const { likerUid, slId } = body;
         if (!likerUid || !slId) return json({ok:false});
-        const result = await postBot('/report-nonengager-api', { reporterUid: myUid, likerUid, slId });
+        const result = LOCAL_STORE
+            ? await localWrite(() => botLogic.reportUserApi({ reporterUid: myUid, targetUid: String(likerUid), reason: 'Nicht-Engager (Superlink)', context: 'superlink:' + String(slId) }))
+            : await postBot('/report-nonengager-api', { reporterUid: myUid, likerUid, slId });
         return json(result || {ok:false});
     }
 
