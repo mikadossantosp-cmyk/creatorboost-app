@@ -42,34 +42,34 @@ module.exports = `
 <div class="regeln-wrap">
 
   <div class="regeln-header">
-    <div class="regeln-title">📜 Regeln</div>
+    <div class="regeln-title">Regeln</div>
     <div class="regeln-meta">Stand 02.05.2026 · v1.1</div>
   </div>
 
   <nav class="regeln-tabnav" id="regeln-tabs">
     <button data-target="r-mission" class="active">Mission</button>
-    <button data-target="r-start">🚀 Start</button>
+    <button data-target="r-start">Start</button>
     <button data-target="r-links">Links</button>
     <button data-target="r-respekt">Respekt</button>
     <button data-target="r-missionen">Missionen</button>
-    <button data-target="r-superlinks">🌟 Superlinks</button>
+    <button data-target="r-superlinks">Superlinks</button>
     <button data-target="r-kollabs">Kollabs</button>
     <button data-target="r-diamond">Diamantlinks</button>
     <button data-target="r-prisma">Prismalinks</button>
     <button data-target="r-warns">Warns</button>
-    <button data-target="r-xp">📈 XP</button>
+    <button data-target="r-xp">XP</button>
     <button data-target="r-badges">Badges</button>
     <button data-target="r-shop">Shop</button>
   </nav>
 
   <section id="r-mission" class="regeln-section active">
     <div class="regeln-card">
-      <h2>🎯 Unsere Mission</h2>
+      <h2>Unsere Mission</h2>
       <p>Wir sind eine Community, die sich gegenseitig auf Instagram pusht. Echte Likes, echte Kommentare, echtes Wachstum.</p>
       <ul>
-        <li>✅ Wir helfen uns gegenseitig</li>
-        <li>✅ Wir handeln natürlich — kein Bot-Verhalten</li>
-        <li>✅ Wir wachsen nachhaltig — nicht künstlich</li>
+        <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px;flex-shrink:0"><path d="M20 6L9 17l-5-5"/></svg>Wir helfen uns gegenseitig</li>
+        <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px;flex-shrink:0"><path d="M20 6L9 17l-5-5"/></svg>Wir handeln natürlich — kein Bot-Verhalten</li>
+        <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px;flex-shrink:0"><path d="M20 6L9 17l-5-5"/></svg>Wir wachsen nachhaltig — nicht künstlich</li>
       </ul>
       <p style="font-size:12px;color:var(--muted)">Das ist der Grund warum es Regeln gibt.</p>
     </div>
@@ -77,7 +77,7 @@ module.exports = `
 
   <section id="r-start" class="regeln-section">
     <div class="regeln-card">
-      <h2>🚀 Neu? Deine ersten 24h</h2>
+      <h2>Neu? Deine ersten 24h</h2>
       <ul>
         <li><b>1️⃣ Profilbild &amp; Spitzname</b> setzen → <a href="/einstellungen" style="color:#a78bfa">Einstellungen</a></li>
         <li><b>2️⃣ Instagram-Handle</b> setzen → <a href="/einstellungen" style="color:#a78bfa">Einstellungen</a></li>
@@ -91,21 +91,21 @@ module.exports = `
   <section id="r-links" class="regeln-section">
     <div class="regeln-card">
       <h2>Link-Regeln</h2>
-      <div class="regeln-row"><span>1. Nur 1 Link pro Tag</span><span class="konsequenz k-block">❌ blockiert</span></div>
-      <div class="regeln-row"><span>2. Nur Instagram-Links</span><span class="konsequenz k-block">❌ blockiert</span></div>
+      <div class="regeln-row"><span>1. Nur 1 Link pro Tag</span><span class="konsequenz k-block"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px;flex-shrink:0"><path d="M18 6L6 18M6 6l12 12"/></svg>blockiert</span></div>
+      <div class="regeln-row"><span>2. Nur Instagram-Links</span><span class="konsequenz k-block"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px;flex-shrink:0"><path d="M18 6L6 18M6 6l12 12"/></svg>blockiert</span></div>
       <div class="regeln-row"><span>3. Keine Duplikate</span><span class="konsequenz k-warn">Warnung</span></div>
       <div class="regeln-row"><span>4. Kein Self-Like</span><span class="konsequenz k-warn">Warnung</span></div>
-      <div class="regeln-row"><span>5. Sperrzeit So 20 — Mo 06</span><span class="konsequenz k-block">❌ blockiert</span></div>
+      <div class="regeln-row"><span>5. Sperrzeit So 20 — Mo 06</span><span class="konsequenz k-block"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px;flex-shrink:0"><path d="M18 6L6 18M6 6l12 12"/></svg>blockiert</span></div>
       <div class="regeln-row"><span>6. Links älter als 48h</span><span class="konsequenz k-trash">🗑️ Auto-Löschung</span></div>
 
-      <h3>✅ Erlaubt</h3>
+      <h3><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px;flex-shrink:0"><path d="M20 6L9 17l-5-5"/></svg>Erlaubt</h3>
       <div class="ok-card">
         • Posts: <code>instagram.com/p/...</code><br>
         • Reels: <code>instagram.com/reel/...</code><br>
         • Profile: <code>instagram.com/dein.profil</code>
       </div>
 
-      <h3>❌ Nicht erlaubt</h3>
+      <h3><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px;flex-shrink:0"><path d="M18 6L6 18M6 6l12 12"/></svg>Nicht erlaubt</h3>
       <div class="bad-card">
         • Story-Links (laufen nach 24h ab)<br>
         • TikTok · YouTube · Threads<br>
@@ -140,14 +140,14 @@ module.exports = `
     <div class="regeln-card">
       <h2>Missionen</h2>
 
-      <h3>📅 Daily — Auswertung 12:00 Uhr</h3>
+      <h3>Daily — Auswertung 12:00 Uhr</h3>
       <div class="regeln-row"><span>M1 — 5 Links liken &amp; kommentieren</span><span class="konsequenz k-xp">+5 XP</span></div>
       <div class="regeln-row"><span>M2 — 80% aller Links liken &amp; kommentieren</span><span class="konsequenz k-xp">+5 XP</span></div>
       <div class="regeln-row"><span>M3 — Alle Links liken &amp; kommentieren (max 30)</span><span class="konsequenz k-xp">+5 XP + 💎</span></div>
       <div class="why-box" style="margin-top:8px">📌 <b>Visit-before-Like:</b> Erst auf Instagram liken &amp; kommentieren — dann zählt der Like in der App.</div>
       <div class="warn-bar k-warn" style="margin-top:8px"><span>⚠️</span><span>Link gepostet ohne M1 → Verwarnung</span></div>
 
-      <h3>📆 Weekly — Reset Montag 00:05 Uhr</h3>
+      <h3>Weekly — Reset Montag 00:05 Uhr</h3>
       <div class="regeln-row"><span>M1 Streak — 7 Tage M1 geschafft</span><span class="konsequenz k-xp">+10 XP</span></div>
       <div class="regeln-row"><span>M2 Streak — 7 Tage 80%</span><span class="konsequenz k-xp">+15 XP + 1 💎</span></div>
       <div class="regeln-row"><span>M3 Streak — 7 Tage M3 (max 30/Tag)</span><span class="konsequenz k-xp">+20 XP + 2 💎</span></div>
@@ -159,19 +159,19 @@ module.exports = `
 
   <section id="r-superlinks" class="regeln-section">
     <div class="regeln-card">
-      <h2>🌟 Superlinks / Full Engagement</h2>
+      <h2>Superlinks / Full Engagement</h2>
       <ul>
         <li>• 1 Superlink pro Woche <b style="color:#a78bfa">(Elite+: 2!)</b></li>
         <li>• Nur Mo–Sa möglich</li>
         <li>• Instagram-Handle in <a href="/einstellungen" style="color:#a78bfa">Einstellungen</a> Pflicht</li>
         <li>• Wer postet MUSS alle anderen Superlinks der Woche liken</li>
       </ul>
-      <p style="font-size:12px;color:var(--muted)">⏰ Erinnerung Sonntag 21:00 · ✅ Auswertung Sonntag 23:59</p>
+      <p style="font-size:12px;color:var(--muted)">⏰ Erinnerung Sonntag 21:00 · <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px;flex-shrink:0"><path d="M20 6L9 17l-5-5"/></svg>Auswertung Sonntag 23:59</p>
 
       <h3>Verstöße</h3>
       <div class="regeln-row"><span>Engagement-Pflicht verletzt</span><span class="konsequenz k-warn">💀 −50 XP + ⚠️</span></div>
-      <div class="regeln-row"><span>Ohne Insta-Handle</span><span class="konsequenz k-block">❌ blockiert</span></div>
-      <div class="regeln-row"><span>Mehrfach pro Woche</span><span class="konsequenz k-block">❌ blockiert</span></div>
+      <div class="regeln-row"><span>Ohne Insta-Handle</span><span class="konsequenz k-block"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px;flex-shrink:0"><path d="M18 6L6 18M6 6l12 12"/></svg>blockiert</span></div>
+      <div class="regeln-row"><span>Mehrfach pro Woche</span><span class="konsequenz k-block"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px;flex-shrink:0"><path d="M18 6L6 18M6 6l12 12"/></svg>blockiert</span></div>
     </div>
   </section>
 
@@ -180,7 +180,7 @@ module.exports = `
       <h2>Kollaborations-Posts</h2>
       <p style="background:rgba(236,72,153,0.08);border-left:3px solid #ec4899;padding:10px 12px;border-radius:6px;margin-bottom:14px">Tretet einer Kollaboration bei. 1× wöchentlich erlaubt. 1 💎 wird an den User vergeben, der den Post engagiert. Kollaborations-Posts werden gründlich kontrolliert.</p>
 
-      <h3>📋 Regeln</h3>
+      <h3>Regeln</h3>
       <ul>
         <li>• <b>1× pro Woche</b> pro User darf ein Kollab-Post veröffentlicht werden</li>
         <li>• Vorher müsst ihr eine Kollaboration eingehen (Profil → Anfrage → Annahme)</li>
@@ -191,7 +191,7 @@ module.exports = `
         <li>• Kollab-Posts werden gründlich kontrolliert — Schein-Likes und Posts ohne sichtbare Zusammenarbeit werden sanktioniert</li>
       </ul>
 
-      <h3>🚀 So gehst du eine Kollaboration ein</h3>
+      <h3>So gehst du eine Kollaboration ein</h3>
       <ul>
         <li>1. Gehe auf das Profil deines Wunsch-Partners</li>
         <li>2. Klicke auf <b>Kollaboration anfragen</b></li>
@@ -209,7 +209,7 @@ module.exports = `
       <h2>Diamantlinks</h2>
       <p style="background:rgba(6,182,212,0.08);border-left:3px solid #06b6d4;padding:10px 12px;border-radius:6px;margin-bottom:14px">Premium-Posts mit Vollengagement. <b>30 💎 Kosten</b> · <b>3 Tage</b> im Feed an erster Stelle · jeder Liker bekommt <b>+3 💎</b>.</p>
 
-      <h3>📋 Regeln</h3>
+      <h3>Regeln</h3>
       <ul>
         <li>• Posten kostet <b>30 💎</b></li>
         <li>• Diamantlinks stehen <b>3 Tage</b> oben im Feed (älteste zuerst, dann zweitältester usw.)</li>
@@ -220,7 +220,7 @@ module.exports = `
         <li>• Diamantlinks werden gründlich kontrolliert — gespeichert bleiben sie für immer im Admin-Log</li>
       </ul>
 
-      <h3>🚀 So postest du einen Diamantlink</h3>
+      <h3>So postest du einen Diamantlink</h3>
       <ul>
         <li>1. Tippe auf <b>+</b> unten in der Navi</li>
         <li>2. Wähle <b>💎 Diamantlink posten</b></li>
@@ -228,7 +228,7 @@ module.exports = `
         <li>4. 30 💎 werden abgezogen, Post geht live</li>
       </ul>
 
-      <h3>❤️ So engagierst du einen Diamantlink</h3>
+      <h3>So engagierst du einen Diamantlink</h3>
       <ul>
         <li>1. Im Feed → 💎 Diamond Tab oder oben im normalen Heute-Tab</li>
         <li>2. Tippe auf <b>🔗 Auf Instagram öffnen</b></li>
@@ -244,10 +244,10 @@ module.exports = `
 
   <section id="r-prisma" class="regeln-section">
     <div class="regeln-card" style="border:1px solid rgba(168,85,247,0.30);background:linear-gradient(135deg,rgba(239,68,68,0.04),rgba(245,158,11,0.04),rgba(34,197,94,0.04),rgba(6,182,212,0.04),rgba(168,85,247,0.04))">
-      <h2 style="background:linear-gradient(135deg,#ef4444,#f59e0b,#22c55e,#06b6d4,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">💠 Prismalinks · Premium-Stufe</h2>
+      <h2 style="background:linear-gradient(135deg,#ef4444,#f59e0b,#22c55e,#06b6d4,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Prismalinks · Premium-Stufe</h2>
       <p style="background:linear-gradient(135deg,rgba(239,68,68,0.06),rgba(168,85,247,0.06));border-left:3px solid #a855f7;padding:10px 12px;border-radius:6px;margin-bottom:14px">Die <b>höchste Premium-Stufe</b>. <b>100 💎 Kosten</b> · <b>7 Tage</b> im Feed an erster Stelle mit Holographic-Glow · jeder Liker bekommt <b>+7 💎</b>.</p>
 
-      <h3>📋 Regeln</h3>
+      <h3>Regeln</h3>
       <ul>
         <li>• Posten kostet <b>100 💎</b></li>
         <li>• Prismalinks stehen <b>7 Tage</b> oben im Feed mit Prismatic-Glow</li>
@@ -259,7 +259,7 @@ module.exports = `
         <li>• Prismalinks werden gründlich kontrolliert — gespeichert bleiben sie für immer im Admin-Log</li>
       </ul>
 
-      <h3>🚀 So postest du einen Prismalink</h3>
+      <h3>So postest du einen Prismalink</h3>
       <ul>
         <li>1. Tippe auf <b>+</b> unten in der Navi</li>
         <li>2. Wähle <b>💠 Prismalink posten</b></li>
@@ -267,7 +267,7 @@ module.exports = `
         <li>4. 100 💎 werden abgezogen, Post geht für 7 Tage live</li>
       </ul>
 
-      <h3>❤️ So engagierst du einen Prismalink</h3>
+      <h3>So engagierst du einen Prismalink</h3>
       <ul>
         <li>1. Im Feed → 💠 Prisma Tab oder oben im normalen Heute-Tab</li>
         <li>2. Tippe auf <b>🔗 Auf Instagram öffnen</b></li>
@@ -283,7 +283,7 @@ module.exports = `
 
   <section id="r-warns" class="regeln-section">
     <div class="regeln-card">
-      <h2>⚠️ Verwarnungs-Limit</h2>
+      <h2>Verwarnungs-Limit</h2>
       <div class="regeln-row"><span><b>1 / 5</b></span><span style="color:var(--muted);font-size:12px">Hinweis</span></div>
       <div class="regeln-row"><span><b>2 / 5</b></span><span style="color:var(--muted);font-size:12px">Hinweis</span></div>
       <div class="regeln-row"><span><b>3 / 5</b></span><span style="color:#f59e0b;font-size:12px;font-weight:700">Letzte Chance</span></div>
@@ -295,7 +295,7 @@ module.exports = `
 
   <section id="r-xp" class="regeln-section">
     <div class="regeln-card">
-      <h2>📈 XP & Badges</h2>
+      <h2>XP & Badges</h2>
 
       <h3>XP sammeln</h3>
       <div class="regeln-row"><span>Link posten</span><span class="konsequenz k-xp">+1 XP</span></div>
@@ -311,7 +311,7 @@ module.exports = `
 
   <section id="r-badges" class="regeln-section">
     <div class="regeln-card">
-      <h2>🏆 Badge-System</h2>
+      <h2>Badge-System</h2>
       <p>Es gibt <b>6 Stufen</b>. Du levelst durch <b>XP</b> hoch und schaltest mit jeder Stufe neue Belohnungen frei. Höhere Badges = mehr Links, mehr Superlinks &amp; Bonus-Links die nicht ablaufen.</p>
     </div>
 
@@ -421,7 +421,7 @@ module.exports = `
     </div>
 
     <div class="regeln-card">
-      <h3 style="margin-top:0">💡 Wie funktionieren die Link-Arten?</h3>
+      <h3 style="margin-top:0">Wie funktionieren die Link-Arten?</h3>
       <ul>
         <li>🔗 <b>Standard-Link</b> — täglicher Slot. Wird nicht genutzt → läuft um Mitternacht ab.</li>
         <li>🌟 <b>Superlink (Full-Engagement)</b> — wöchentlicher Premium-Slot. Wird nicht genutzt → läuft am Sonntag ab.</li>
