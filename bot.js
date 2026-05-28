@@ -18917,7 +18917,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 </ul>
 
 <h2 style="font-size:16px;margin:20px 0 8px">8. Sicherheit</h2>
-<p>Übertragung via HTTPS/TLS. Passwörter werden mit bcrypt gehashed. Session-Cookies sind HTTP-only + SameSite=Lax.</p>
+<p>Übertragung via HTTPS/TLS. Passwörter werden mit PBKDF2 (100.000 Iterationen, SHA-256, mit Salt) gehasht. Session-Cookies sind HttpOnly + Secure + SameSite=Lax.</p>
 
 <h2 style="font-size:16px;margin:20px 0 8px">9. Minderjährige</h2>
 <p>Die App ist für Personen ab 18 Jahren. Jüngere User dürfen den Service nicht nutzen.</p>
