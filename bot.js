@@ -3373,7 +3373,7 @@ function showBanner(opts){
   const b=document.getElementById('cb-banner');if(!b)return;
   const o=typeof opts==='string'?{title:opts}:(opts||{});
   const type=o.type||'warn';
-  const icon=o.icon||(type==='warn'?'⚠️':type==='success'?'✅':'ℹ️');
+  const icon=o.icon||(type==='warn'?'<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 4 2 18.3A1.6 1.6 0 0 0 3.4 20.7h17.2A1.6 1.6 0 0 0 22 18.3L13.7 4a1.6 1.6 0 0 0-3.4 0z"/><line x1="12" y1="9.5" x2="12" y2="13.5"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>':type==='success'?'<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>':'<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>');
   const dur=o.dur||4500;
   b.className='cb-banner cb-banner-'+type;
   const title=String(o.title||'').replace(/[<>]/g,'');
@@ -4810,7 +4810,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v260-groupchat-search-icons';
+const SW_VERSION='v261-fix-like-banner';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
@@ -12129,7 +12129,7 @@ async function submitSuperLink(){
       '.cb-glow{position:absolute;inset:-2px;border-radius:20px;padding:2px;background:conic-gradient(from 0deg,#ec4899,#f59e0b,#a855f7,#ec4899,#f59e0b,#ec4899);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;animation:cb-rot 4s linear infinite;pointer-events:none}'+
       '@keyframes cb-rot{to{transform:rotate(360deg)}}'+
       '.cb-body{position:relative;padding:14px;background:linear-gradient(180deg,rgba(236,72,153,0.06),var(--bg3));border-radius:16px;margin:2px}'+
-      '.cb-banner{display:flex;align-items:center;gap:10px;padding:10px 12px;margin-bottom:12px;background:linear-gradient(135deg,rgba(236,72,153,0.18),rgba(168,85,247,0.12));border:1px solid rgba(236,72,153,0.40);border-radius:10px;animation:cb-pulse 2s ease-in-out infinite}'+
+      '.cb-boostbar{display:flex;align-items:center;gap:10px;padding:10px 12px;margin-bottom:12px;background:linear-gradient(135deg,rgba(236,72,153,0.18),rgba(168,85,247,0.12));border:1px solid rgba(236,72,153,0.40);border-radius:10px;animation:cb-pulse 2s ease-in-out infinite}'+
       '@keyframes cb-pulse{0%,100%{box-shadow:0 0 0 0 rgba(236,72,153,0.45)}50%{box-shadow:0 0 0 8px rgba(236,72,153,0)}}'+
       '.cb-btn{display:block;width:100%;padding:13px;background:linear-gradient(135deg,#ec4899,#a21caf);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 0 20px rgba(236,72,153,0.45);position:relative;overflow:hidden}'+
       '.cb-btn::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.18),transparent);transform:translateX(-100%);animation:cb-shimmer 2.5s ease-in-out infinite}'+
@@ -12145,8 +12145,8 @@ async function submitSuperLink(){
     return '<div class="cb-card" data-post-id="'+esc(p.id)+'" data-boost-end="'+(p.boostEndsAt||0)+'">' +
       '<div class="cb-glow"></div>' +
       '<div class="cb-body">' +
-        '<div class="cb-banner">' +
-          '<div style="font-size:18px">🤝⚡</div>' +
+        '<div class="cb-boostbar">' +
+          '<div style="display:flex;color:#ec4899"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m11 17 2 2a1 1 0 1 0 3-3"/><path d="m14 14 2.5 2.5a1 1 0 1 0 3-3l-3.88-3.88a3 3 0 0 0-4.24 0l-.88.88a1 1 0 1 1-3-3l2.81-2.81a5.79 5.79 0 0 1 7.06-.87l.47.28a2 2 0 0 0 1.42.25L21 4"/><path d="m21 3 1 11h-2"/><path d="M3 3 2 14l6.5 6.5a1 1 0 1 0 3-3"/><path d="M3 4h8"/></svg></div>' +
           '<div style="flex:1;min-width:0">' +
             '<div style="font-size:10.5px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;color:#ec4899">KOLLAB BOOST · +1 💎 EXTRA</div>' +
             '<div style="font-size:11px;color:var(--muted);margin-top:1px">Engagiere jetzt für Bonus · noch <b style="color:#ec4899" data-boost-timer>—</b></div>' +
