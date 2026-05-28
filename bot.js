@@ -2792,7 +2792,7 @@ ${session ? `
       var bx = document.createElement('div');
       bx.id = 'cb-tour-loading';
       bx.style.cssText = 'position:fixed;top:10px;left:10px;right:10px;z-index:99999;background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;padding:12px 16px;border-radius:12px;font-family:Inter,sans-serif;font-size:13px;font-weight:600;text-align:center;box-shadow:0 10px 28px rgba(124,58,237,.45);max-width:520px;margin:0 auto';
-      bx.innerHTML = '🎯 Tour wird vorbereitet…';
+      bx.innerHTML = 'Tour wird vorbereitet…';
       // append nach DOMContentLoaded falls body nicht ready
       if(document.body){ document.body.appendChild(bx); }
       else { document.addEventListener('DOMContentLoaded', function(){ document.body.appendChild(bx); }); }
@@ -2889,27 +2889,27 @@ ${session ? `
 
   var STEPS = [
     // ── FEED PAGE ────────────────────────────────────────────────────────
-    {page:'/feed', q:'[data-tour="stories"]',                    eyebrow:'Feed · Stories',     h:'📷 Aktive Creator von heute',           s:'Hier siehst du Creator die heute schon gepostet haben. Tippe eine Story-Bubble um auf ihr Profil zu kommen.'},
-    {page:'/feed', q:'.ft-wrap',                                eyebrow:'Feed · Filter',      h:'📅 Heute · 🕐 Älter · ⭐ Engagement · 🤝 Kollabs · 💎 Diamond',   s:'Tippe das Tab-Dropdown oben links um zwischen Tabs zu wechseln: heutigen Posts, älteren Posts, Engagement-Pflicht-Liste, Kollabs und Diamond-Posts.'},
-    {page:'/feed', q:'.post.fade-up',                            eyebrow:'Feed · Post',        h:'🎬 So sieht ein Reel-Post aus',         s:'Tippe das Reel-Preview → Instagram öffnet sich. Dort musst du <b>liken UND kommentieren</b> — erst dann kannst du in der App den Like vergeben (Visit-before-Like).'},
-    {page:'/feed', q:'.post.fade-up .post-action-btn',           eyebrow:'Feed · Like',        h:'❤️ So likest du',                        s:'Erst Insta-Reel öffnen → dort liken UND kommentieren. Dann hier Like tippen — DU bekommst XP, der Poster bekommt echtes Insta-Engagement.'},
-    {page:'/feed', q:'[data-tour="feed"]',                       eyebrow:'Bottom-Nav',         h:'🏠 Feed (du bist hier)',                s:'Der Haupt-Feed mit allen heutigen Reel-Posts.'},
-    {page:'/feed', q:'[data-tour="post"]',                       eyebrow:'Bottom-Nav',         h:'➕ Hier postest du deinen Reel',        s:'Tippe + um deinen Insta-Reel-Link zu teilen. Andere Creator engagen sofort mit dir.'},
+    {page:'/feed', q:'[data-tour="stories"]',                    eyebrow:'Feed · Stories',     h:'Aktive Creator von heute',           s:'Hier siehst du Creator die heute schon gepostet haben. Tippe eine Story-Bubble um auf ihr Profil zu kommen.'},
+    {page:'/feed', q:'.ft-wrap',                                eyebrow:'Feed · Filter',      h:'Heute · Älter · Engagement · Kollabs · Diamond',   s:'Tippe das Tab-Dropdown oben links um zwischen Tabs zu wechseln: heutigen Posts, älteren Posts, Engagement-Pflicht-Liste, Kollabs und Diamond-Posts.'},
+    {page:'/feed', q:'.post.fade-up',                            eyebrow:'Feed · Post',        h:'So sieht ein Reel-Post aus',         s:'Tippe das Reel-Preview → Instagram öffnet sich. Dort musst du <b>liken UND kommentieren</b> — erst dann kannst du in der App den Like vergeben (Visit-before-Like).'},
+    {page:'/feed', q:'.post.fade-up .post-action-btn',           eyebrow:'Feed · Like',        h:'So likest du',                        s:'Erst Insta-Reel öffnen → dort liken UND kommentieren. Dann hier Like tippen — DU bekommst XP, der Poster bekommt echtes Insta-Engagement.'},
+    {page:'/feed', q:'[data-tour="feed"]',                       eyebrow:'Bottom-Nav',         h:'Feed (du bist hier)',                s:'Der Haupt-Feed mit allen heutigen Reel-Posts.'},
+    {page:'/feed', q:'[data-tour="post"]',                       eyebrow:'Bottom-Nav',         h:'Hier postest du deinen Reel',        s:'Tippe + um deinen Insta-Reel-Link zu teilen. Andere Creator engagen sofort mit dir.'},
     // ── EXPLORE PAGE ─────────────────────────────────────────────────────
-    {page:'/explore', q:'#mission-widget-explore',               eyebrow:'Explore · Missionen',h:'🎯 Deine Missionen',                     s:'Hier siehst du deine täglichen und wöchentlichen Missionen. Auswertung jeden Tag um 12:00 (Berlin).'},
-    {page:'/explore', q:'.explore-tabs',                         eyebrow:'Explore · Tabs',     h:'🧭 News, Ranking, Tipps &amp; Shop',    s:'Hier findest du alle Übersichts-Bereiche: Newsletter, Ranking, Tipps, Regeln und Diamanten-Shop.'},
+    {page:'/explore', q:'#mission-widget-explore',               eyebrow:'Explore · Missionen',h:'Deine Missionen',                     s:'Hier siehst du deine täglichen und wöchentlichen Missionen. Auswertung jeden Tag um 12:00 (Berlin).'},
+    {page:'/explore', q:'.explore-tabs',                         eyebrow:'Explore · Tabs',     h:'News, Ranking, Tipps &amp; Shop',    s:'Hier findest du alle Übersichts-Bereiche: Newsletter, Ranking, Tipps, Regeln und Diamanten-Shop.'},
     // ── REGELN (Pflicht-Lese-Step) ───────────────────────────────────────
-    {page:'/explore?tab=regeln', q:'.regeln-wrap, .regeln-tabnav, .regeln-card', eyebrow:'⚠️ Regeln · PFLICHT', h:'📋 Regeln lesen — bitte alles anschauen',  s:'<b>Wichtig:</b> Wer einen Link postet muss 5 andere zurück-liken &amp; kommentieren. Vor dem Like in der App: Insta öffnen → dort liken &amp; kommentieren. Du musst die Regeln am Ende der Tour bestätigen.', requiresScroll:true},
+    {page:'/explore?tab=regeln', q:'.regeln-wrap, .regeln-tabnav, .regeln-card', eyebrow:'Regeln · PFLICHT', h:'Regeln lesen — bitte alles anschauen',  s:'<b>Wichtig:</b> Wer einen Link postet muss 5 andere zurück-liken &amp; kommentieren. Vor dem Like in der App: Insta öffnen → dort liken &amp; kommentieren. Du musst die Regeln am Ende der Tour bestätigen.', requiresScroll:true},
     // ── MESSAGES PAGE ────────────────────────────────────────────────────
-    {page:'/nachrichten', q:'[data-tour="messages"]',            eyebrow:'Bottom-Nav',         h:'💬 Direktnachrichten',                  s:'Wir sind jetzt im Nachrichten-Bereich. Hier laufen alle Privatchats mit anderen Creatorn — schreib direkt mit ihnen für Kollabs, Feedback oder einfach zum Quatschen.'},
+    {page:'/nachrichten', q:'[data-tour="messages"]',            eyebrow:'Bottom-Nav',         h:'Direktnachrichten',                  s:'Wir sind jetzt im Nachrichten-Bereich. Hier laufen alle Privatchats mit anderen Creatorn — schreib direkt mit ihnen für Kollabs, Feedback oder einfach zum Quatschen.'},
     // ── PROFIL PAGE ──────────────────────────────────────────────────────
-    {page:'/profil', q:'.ipf-avatar-wrap',                       eyebrow:'Profil · Avatar',    h:'👤 Dein Profil-Avatar',                  s:'Banner + Profilbild + Online-Status. Wenn du Top-1 bist, schwebt eine 👑 darüber.'},
-    {page:'/profil', q:'.ipf-stats',                             eyebrow:'Profil · Stats',     h:'📊 Posts, Follower, Diamanten',          s:'Deine Live-Stats: Posts, Follower und 💎 Diamanten. Tippe auf 💎 für den Diamanten-Shop.'},
-    {page:'/profil', q:'.tb-switcher-wrap',                      eyebrow:'Profil · Switcher',  h:'🔄 Account &amp; Sub-Account',          s:'Oben in der Topbar: Hauptaccount + optional ein Sub-Account. Tippe um zwischen ihnen zu wechseln.'},
-    {page:'/profil', q:'a[href="/einstellungen"]',               eyebrow:'Profil · Bearbeiten',h:'✏️ Hier kommst du in Einstellungen',     s:'Über diesen Button kommst du zu allen Einstellungen — Profil, Account, Privacy, Sicherheit und mehr.'},
+    {page:'/profil', q:'.ipf-avatar-wrap',                       eyebrow:'Profil · Avatar',    h:'Dein Profil-Avatar',                  s:'Banner + Profilbild + Online-Status. Wenn du Top-1 bist, schwebt eine 👑 darüber.'},
+    {page:'/profil', q:'.ipf-stats',                             eyebrow:'Profil · Stats',     h:'Posts, Follower, Diamanten',          s:'Deine Live-Stats: Posts, Follower und 💎 Diamanten. Tippe auf 💎 für den Diamanten-Shop.'},
+    {page:'/profil', q:'.tb-switcher-wrap',                      eyebrow:'Profil · Switcher',  h:'Account &amp; Sub-Account',          s:'Oben in der Topbar: Hauptaccount + optional ein Sub-Account. Tippe um zwischen ihnen zu wechseln.'},
+    {page:'/profil', q:'a[href="/einstellungen"]',               eyebrow:'Profil · Bearbeiten',h:'Hier kommst du in Einstellungen',     s:'Über diesen Button kommst du zu allen Einstellungen — Profil, Account, Privacy, Sicherheit und mehr.'},
     // ── EINSTELLUNGEN PAGE ───────────────────────────────────────────────
-    {page:'/einstellungen', q:'.pf-action-btn.primary',          eyebrow:'Einstellungen · Profil',h:'✏️ Profil bearbeiten — alles in einem',s:'Tippe hier um Profilbild, Bio, Spitzname, Instagram, Nische, Website, Pinned-Reel, Banner, Akzentfarbe und Dark Mode zu ändern.'},
-    {page:'/einstellungen/account', q:'#inp-email',              eyebrow:'Account · Email',    h:'📧 Email für Magic-Link Login',          s:'Mit Email gesetzt kannst du dich auch ohne Telegram einloggen — über den Email-Tab auf der Login-Page.'}
+    {page:'/einstellungen', q:'.pf-action-btn.primary',          eyebrow:'Einstellungen · Profil',h:'Profil bearbeiten — alles in einem',s:'Tippe hier um Profilbild, Bio, Spitzname, Instagram, Nische, Website, Pinned-Reel, Banner, Akzentfarbe und Dark Mode zu ändern.'},
+    {page:'/einstellungen/account', q:'#inp-email',              eyebrow:'Account · Email',    h:'Email für Magic-Link Login',          s:'Mit Email gesetzt kannst du dich auch ohne Telegram einloggen — über den Email-Tab auf der Login-Page.'}
   ];
   var idx = 0;
   try{ idx = parseInt(sessionStorage.getItem('cb_tour_idx'),10) || 0; }catch(e){}
@@ -4799,7 +4799,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v251-settings-subpages-icons';
+const SW_VERSION='v252-tour-feed-notif-icons';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
@@ -10556,11 +10556,11 @@ window.onPinVisitStory = function(uid){
             const commentsBox =
                 '<div style="margin:0 16px 12px">'+
                 '<button onclick="toggleComments(\''+lid1+'\')" style="background:none;border:none;color:var(--muted);font-size:12px;cursor:pointer;padding:0 0 6px 0">'+
-                '💬 '+(commentCount>0?commentCount+' ':'')+( commentCount===1?'Kommentar':'Kommentare')+
+                '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><path d="M21 11.5a8.5 8.5 0 0 1-12.5 7.5L3 20.5l1.5-5.5A8.5 8.5 0 1 1 21 11.5z"/></svg>'+(commentCount>0?commentCount+' ':'')+( commentCount===1?'Kommentar':'Kommentare')+
                 '</button>'+
                 '<div id="comments-box-'+lid1+'" style="display:none;border:1px solid var(--border2);border-radius:12px;overflow:hidden;background:var(--bg3);margin-top:4px">'+
                 '<div style="padding:8px 12px;border-bottom:1px solid var(--border2);font-size:11px;font-weight:700;color:var(--muted);display:flex;justify-content:space-between">'+
-                '<span>💬 Kommentare</span>'+
+                '<span style="display:inline-flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-12.5 7.5L3 20.5l1.5-5.5A8.5 8.5 0 1 1 21 11.5z"/></svg>Kommentare</span>'+
                 '<button onclick="toggleComments(\''+lid1+'\')" style="background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer">✕</button>'+
                 '</div>'+
                 '<div style="max-height:200px;overflow-y:auto">'+commentRows+'</div>'+
@@ -14172,7 +14172,7 @@ function renderList(){
   let items=_allNotifs;
   if(_currentFilter!=='all') items=items.filter(n=>classify(n)===_currentFilter);
   if(!items.length){
-    const map={all:['🔔','Alles ruhig','Hier erscheinen Likes, Follower,<br>News und Diamant-Belohnungen'],like:['❤️','Keine Likes bisher','Wenn dich jemand liked,<br>steht es hier'],follow:['👤','Keine neuen Follower','Sobald dir jemand folgt,<br>wirst du hier benachrichtigt'],news:['📩','Keine News','Newsletter-Einträge erscheinen hier'],diamond:['💎','Keine Belohnungen','Verdiene Diamanten durch Engagement'],message:['💬','Keine Nachrichten','Kommentare und DMs erscheinen hier'],warn:['⚠️','Alles im grünen Bereich','Keine System-Hinweise']};
+    const map={all:['<svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="opacity:.4"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>,'Alles ruhig','Hier erscheinen Likes, Follower,<br>News und Diamant-Belohnungen'],like:['<svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="opacity:.4"><path d="M20.8 5.1a5.4 5.4 0 0 0-7.7 0l-1.1 1.1-1.1-1.1A5.4 5.4 0 1 0 3.2 12.8l1.1 1.1L12 21.5l7.7-7.6 1.1-1.1a5.4 5.4 0 0 0 0-7.7z"/></svg>,'Keine Likes bisher','Wenn dich jemand liked,<br>steht es hier'],follow:['<svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="opacity:.4"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,'Keine neuen Follower','Sobald dir jemand folgt,<br>wirst du hier benachrichtigt'],news:['<svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="opacity:.4"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 6-10 7L2 6"/></svg>,'Keine News','Newsletter-Einträge erscheinen hier'],diamond:['<svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="opacity:.4"><path d="M6 3h12l4 6-10 12L2 9z"/><path d="M2 9h20"/><path d="M9 3 6 9l6 12 6-12-3-6"/></svg>,'Keine Belohnungen','Verdiene Diamanten durch Engagement'],message:['<svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="opacity:.4"><path d="M21 11.5a8.5 8.5 0 0 1-12.5 7.5L3 20.5l1.5-5.5A8.5 8.5 0 1 1 21 11.5z"/></svg>,'Keine Nachrichten','Kommentare und DMs erscheinen hier'],warn:['<svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="opacity:.4"><path d="M10.3 4 2 18.3A1.6 1.6 0 0 0 3.4 20.7h17.2A1.6 1.6 0 0 0 22 18.3L13.7 4a1.6 1.6 0 0 0-3.4 0z"/><line x1="12" y1="9.5" x2="12" y2="13.5"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,'Alles im grünen Bereich','Keine System-Hinweise']};
     const e=map[_currentFilter]||map.all;
     list.innerHTML='<div class="notif-empty"><div class="notif-empty-icon">'+e[0]+'</div><div class="notif-empty-text">'+e[1]+'</div><div class="notif-empty-sub">'+e[2]+'</div></div>';
     return;
