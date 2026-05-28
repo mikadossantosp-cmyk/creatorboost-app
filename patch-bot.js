@@ -28,10 +28,6 @@ if (!tryPatch('Regeln-Tab', /regeln: `<div style="padding:48px[\s\S]*?`,/, "rege
 
 tryPatch('DM-Liste', /const convHtml = `\s*\n<a href="\/nachrichten\/gruppe"[\s\S]*?<div class="empty-sub">Schreibe jemandem!<\/div><\/div>'\);/, "const convHtml = require('./chat-list-render')({ myConvos, botData, myUid, feedPreview, totalThreadUnread, ladeBild, adminIds, onlineUids: typeof sessions !== 'undefined' ? new Set([...sessions.values()].map(s => String(s.uid))) : new Set() });", "require('./chat-list-render')");
 
-tryPatch('Threads-Liste cards', /const cards = threads\.map\(thr => \{[\s\S]*?\}\)\.join\(''\);/, "const cards = require('./thread-list-render')({ threads, threadMsgs, lastRead, communityFeed, isAdmin });", "require('./thread-list-render')");
-
-tryPatch('Threads-Liste Container', /<div style="padding:12px 12px 100px;display:grid;grid-template-columns:1fr 1fr;gap:10px">\$\{cards\}<\/div>/, '${cards}', null);
-
 const CHAT_DETAIL_REPLACEMENT = "const msgsHtml = require('./chat-detail-render')({ msgs, myUid, otherUid, otherUser, ladeBild, otherOnline: typeof sessions !== 'undefined' ? [...sessions.values()].some(s => String(s.uid) === String(otherUid)) : false });";
 if (src.includes("otherOnline:")) { console.log('[patch-bot] Chat-Detail bereits'); }
 else if (src.includes("require('./chat-detail-render')")) { src = src.replace(/const msgsHtml = require\('\.\/chat-detail-render'\)\([^;]*\);/, CHAT_DETAIL_REPLACEMENT); console.log('[patch-bot] Chat-Detail upgraded'); changed = true; }

@@ -21216,28 +21216,6 @@ async function setRing(ringId) {
         return json(result || {ok:false, error:'Fehler'});
     }
 
-    if (path.startsWith('/api/tg-file/')) {
-        const fileId = path.split('/api/tg-file/')[1];
-        const botUrl = MAINBOT_URL + '/tg-file/' + encodeURIComponent(fileId);
-        return new Promise((resolve) => {
-            const lib = botUrl.startsWith('https') ? require('https') : require('http');
-            const upstream = lib.get(botUrl, { headers: { 'x-bridge-secret': BRIDGE_SECRET } }, (bres) => {
-                try {
-                    const status = bres.statusCode || 502;
-                    res.writeHead(status, { 'Content-Type': bres.headers['content-type'] || 'image/jpeg', 'Cache-Control': 'public,max-age=86400' });
-                    bres.pipe(res);
-                    bres.on('error', () => { try { res.end(); } catch(e) {} resolve(); });
-                    bres.on('end', resolve);
-                } catch(e) {
-                    try { res.writeHead(502); res.end(); } catch(_) {}
-                    resolve();
-                }
-            });
-            upstream.on('error', () => { try { res.writeHead(404); res.end(); } catch(e) {} resolve(); });
-            upstream.setTimeout(15000, () => { try { upstream.destroy(); res.writeHead(504); res.end(); } catch(e) {} resolve(); });
-        });
-    }
-
     if (path === '/api/track-login' && req.method === 'POST') {
         if (myUid && !LOCAL_STORE) postBot('/track-login', { uid: myUid }).catch(()=>{});
         return json({ ok: true });
