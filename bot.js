@@ -4780,7 +4780,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v236-avatar-fallback';
+const SW_VERSION='v237-empty-state-icons';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
@@ -10766,7 +10766,7 @@ commentsBox+
   <button onclick="openPlusSheet()" style="display:inline-flex;align-items:center;gap:8px;background:var(--accent);color:#fff;padding:12px 24px;border-radius:12px;font-size:14px;font-weight:700;border:none;cursor:pointer;font-family:var(--font)">📸 Jetzt Link teilen</button>
 </div>`);
         const heuteHtml = pinnedHtml + regularHeuteHtml;
-        const aelterHtml = aelterLinks2.length ? aelterLinks2.map(renderLink).join('') : '<div class="empty" style="margin-top:40px"><div class="empty-icon">🕐</div><div class="empty-text">Keine älteren Links</div></div>';
+        const aelterHtml = aelterLinks2.length ? aelterLinks2.map(renderLink).join('') : '<div class="empty" style="margin-top:40px"><div class="empty-icon"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 1.8"/></svg></div><div class="empty-text">Keine älteren Links</div></div>';
         const kollabsHtml = '<div id="kollabs-tab-root" style="padding:8px 0 80px"><div style="padding:48px 24px;text-align:center;color:var(--muted);font-size:13px">⏳ Lade Kollab-Posts…</div></div>';
         const diamondHtml = '<div id="diamond-tab-root" style="padding:8px 0 80px"><div style="padding:48px 24px;text-align:center;color:var(--muted);font-size:13px">⏳ Lade Diamantlinks…</div></div>';
         const prismaHtml = '<div id="prisma-tab-root" style="padding:8px 0 80px"><div style="padding:60px 24px;text-align:center"><div style="font-size:64px;margin-bottom:16px;background:linear-gradient(135deg,#ef4444,#f59e0b,#22c55e,#06b6d4,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">💠</div><div style="font-size:18px;font-weight:800;background:linear-gradient(135deg,#ef4444,#f59e0b,#22c55e,#06b6d4,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:8px">Prismalink</div><div style="font-size:13px;color:var(--muted);max-width:320px;margin:0 auto;line-height:1.6">Die ultimative Premium-Stufe — 100💎 zum Posten · 7 Tage Feed-Top · 7💎 Reward pro Liker · 1×/Woche.</div><div style="margin-top:24px;display:inline-block;padding:8px 18px;background:linear-gradient(135deg,#94a3b8,#64748b);color:#fff;border-radius:999px;font-size:12px;font-weight:800;letter-spacing:1px">⏳ COMING SOON</div></div></div>';
@@ -17337,7 +17337,7 @@ fetch('/api/admin/engagement-log').then(r=>r.json()).then(j=>{ if (j.ok) { LAST_
   </a>`;
         }).join('');
         const makeRankSection = (entries, xpFn, emptyHint) => {
-            if (!entries.length) return `<div class="empty" style="padding:48px 24px;text-align:center"><div class="empty-icon">🏆</div><div class="empty-text">${emptyHint}</div></div>`;
+            if (!entries.length) return `<div class="empty" style="padding:48px 24px;text-align:center"><div class="empty-icon"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3"/><path d="M9 21h6M12 16v5"/></svg></div><div class="empty-text">${emptyHint}</div></div>`;
             return makePodium(entries, xpFn) + makeRankRows(entries, xpFn);
         };
         const rankingRows = makeRankSection(sorted, (_,u)=>u.xp||0, 'Noch keine Daten');
@@ -17953,7 +17953,7 @@ window.sugDismiss = function(btn){
   <div style="font-size:13px;line-height:1.65;color:var(--text);white-space:pre-wrap">${htmlEsc(String(e.content||''))}</div>
   <div style="font-size:11px;color:var(--muted);margin-top:10px">${new Date(e.timestamp).toLocaleDateString('de-DE',{day:'2-digit',month:'short',year:'numeric'})}</div>
 </div>`).join('')
-                    : '<div class="empty" style="padding:48px 24px;text-align:center"><div class="empty-icon">📩</div><div class="empty-text">Noch keine Newsletter-Einträge</div></div>';
+                    : '<div class="empty" style="padding:48px 24px;text-align:center"><div class="empty-icon"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M3 6l9 7 9-7"/></svg></div><div class="empty-text">Noch keine Newsletter-Einträge</div></div>';
                 const adminForm = isAdminNL ? `
 <div id="nl-form" style="display:none;margin:0 16px 16px;padding:16px;background:var(--bg3);border:1px solid var(--border2);border-radius:14px">
   <input type="hidden" id="nl-edit-id">
@@ -19112,7 +19112,7 @@ document.querySelectorAll('.ins-bar').forEach((b, i) => {
                     +'<div style="font-size:11px;color:var(--muted);margin-top:6px">'+new Date(p.timestamp).toLocaleDateString('de-DE',{day:'2-digit',month:'short'})+'</div>'
                     +'</div>';
             }).join('')
-            : '<div class="empty"><div class="empty-icon">📝</div><div class="empty-text">Noch keine Posts</div></div>';
+            : '<div class="empty"><div class="empty-icon"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></div><div class="empty-text">Noch keine Posts</div></div>';
 
         const canAddProject = myProjects.length < 2;
         const projCardsHtml = myProjects.map((proj, i) => {
@@ -19182,7 +19182,7 @@ document.querySelectorAll('.ins-bar').forEach((b, i) => {
         const myLinks = Object.entries(d.links||{}).filter(([,l])=>String(l.user_id)===String(myUid)).sort((a,b)=>(b[1].timestamp||0)-(a[1].timestamp||0));
         const linksHtml = myLinks.length
             ? '<div class="proflink-grid">'+myLinks.map(([msgId, l]) => renderProfileLinkCard(l, msgId, true)).join('')+'</div>'
-            : '<div class="empty"><div class="empty-icon">🔗</div><div class="empty-text">Noch keine Links</div><div class="empty-sub">Poste deinen ersten Reel im Feed!</div></div>';
+            : '<div class="empty"><div class="empty-icon"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 17H7A5 5 0 0 1 7 7h2"/><path d="M15 7h2a5 5 0 0 1 0 10h-2"/><path d="M8 12h8"/></svg></div><div class="empty-text">Noch keine Links</div><div class="empty-sub">Poste deinen ersten Reel im Feed!</div></div>';
 
         const aboutHtml = '<div style="padding:16px;display:flex;flex-direction:column;gap:12px;padding-bottom:100px">'
             +(myUser?.bio?'<div style="background:var(--bg3);border-radius:14px;padding:14px 16px"><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Bio</div><div style="font-size:14px;line-height:1.6">'+htmlEsc(myUser.bio)+'</div></div>':'')
@@ -19614,7 +19614,7 @@ async function submitPost(){const _spBtn=document.querySelector('[onclick="submi
                     +'<div style="font-size:11px;color:var(--muted);margin-top:6px">'+new Date(p.timestamp).toLocaleDateString('de-DE',{day:'2-digit',month:'short'})+'</div>'
                     +'</div>';
             }).join('')
-            : '<div class="empty"><div class="empty-icon">📝</div><div class="empty-text">Noch keine Posts</div></div>';
+            : '<div class="empty"><div class="empty-icon"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></div><div class="empty-text">Noch keine Posts</div></div>';
 
         const theirProjCardsHtml = theirProjects.map((proj, i) => {
             const projImg = ladeProjectBild(uid, proj.id);
@@ -19649,7 +19649,7 @@ async function submitPost(){const _spBtn=document.querySelector('[onclick="submi
         const theirLinkEntries = Object.entries(d.links||{}).filter(([,l])=>String(l.user_id)===String(uid)).sort((a,b)=>(b[1].timestamp||0)-(a[1].timestamp||0));
         const theirLinksHtml = theirLinkEntries.length
             ? '<div class="proflink-grid">'+theirLinkEntries.map(([msgId, l]) => renderTheirLinkCard(l, msgId)).join('')+'</div>'
-            : '<div class="empty"><div class="empty-icon">🔗</div><div class="empty-text">Noch keine Links</div></div>';
+            : '<div class="empty"><div class="empty-icon"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 17H7A5 5 0 0 1 7 7h2"/><path d="M15 7h2a5 5 0 0 1 0 10h-2"/><path d="M8 12h8"/></svg></div><div class="empty-text">Noch keine Links</div></div>';
 
         const theirAboutHtml = '<div style="padding:16px;display:flex;flex-direction:column;gap:12px;padding-bottom:100px">'
             +(u?.bio?'<div style="background:var(--bg3);border-radius:14px;padding:14px 16px"><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Bio</div><div style="font-size:14px;line-height:1.6">'+htmlEsc(u.bio)+'</div></div>':'')
@@ -19705,7 +19705,7 @@ ${profileCard(uid, u, d, false, lang, adminIds)}
 <div id="tptab-links" style="padding-bottom:100px">${theirLinksHtml}</div>
 <div id="tptab-posts" style="display:none;padding-bottom:100px">${theirPostsHtml}</div>
 <div id="tptab-projekte" style="display:none;padding-bottom:100px">
-  ${theirProjects.length>0?'<div class="proj-grid">'+theirProjCardsHtml+'</div>':'<div class="empty"><div class="empty-icon">🚀</div><div class="empty-text">Noch keine Projekte</div></div>'}
+  ${theirProjects.length>0?'<div class="proj-grid">'+theirProjCardsHtml+'</div>':'<div class="empty"><div class="empty-icon"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></div><div class="empty-text">Noch keine Projekte</div></div>'}
 </div>
 <div id="tptab-about" style="display:none">${theirAboutHtml}</div>
 
