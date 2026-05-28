@@ -488,8 +488,9 @@ async function sendSignupConfirmationEmail(uid, email, hostHeader) {
     }
 }
 
-// Weekly raffle (Gewinnspiel): runs every minute, triggers Sunday 20:00 Berlin time
-let _lastRaffleTrigger = '';
+// Wochen-Gewinnspiel: Die Auslosung laeuft in appCronTick (botLogic.runWochenGewinnspielApi,
+// So 20:00). raffle-winners.json speist nur die "Letzter Gewinner"-Anzeige + Admin set/undo;
+// gefuettert wird sie nach der Auslosung in appCronTick mit dem echten Gewinner.
 const RAFFLE_FILE = (typeof DATA_DIR !== 'undefined' ? DATA_DIR : __dirname) + '/raffle-winners.json';
 function loadRaffleHistory() {
     try { return JSON.parse(fs.readFileSync(RAFFLE_FILE, 'utf8')); } catch(e) { return { lastWinner: null, history: [] }; }
@@ -497,51 +498,6 @@ function loadRaffleHistory() {
 function saveRaffleHistory(d) {
     fs.writeFile(RAFFLE_FILE, JSON.stringify(d), (e) => { if (e) console.error('[Gewinnspiel] Save error:', e.message); });
 }
-setInterval(async () => {
-    try {
-        const now = new Date(new Date().toLocaleString('en-US', {timeZone:'Europe/Berlin'}));
-        if (now.getDay() !== 0 || now.getHours() !== 20 || now.getMinutes() !== 0) return;
-        const key = now.toISOString().slice(0, 10);
-        if (_lastRaffleTrigger === key) return;
-        _lastRaffleTrigger = key;
-        const bd = await fetchBot('/data');
-        if (!bd) return;
-        const threshold = 750;
-        const weeklyXP = bd.weeklyXP || {};
-        const eligible = Object.entries(bd.users || {}).filter(([uid, u]) => (weeklyXP[uid] || u.xpThisWeek || u.weeklyXp || 0) >= threshold && u.started);
-        if (!eligible.length) { console.log('[Gewinnspiel] Keine qualifizierten Teilnehmer diese Woche'); return; }
-        const winner = eligible[Math.floor(Math.random() * eligible.length)];
-        const [winnerUid, winnerUser] = winner;
-        const prizes = [
-            { name: '1 Extra-Link', action: '/add-extra-link', emoji: '🔗' },
-            { name: '1 Superlink', action: '/add-superlink', emoji: '⚡' },
-            { name: '500 XP', action: '/add-xp', emoji: '✨', data: { amount: 500, reason: 'gewinnspiel' } },
-            { name: '5 Diamanten', action: '/add-diamonds', emoji: '💎', data: { amount: 5, reason: 'gewinnspiel' } }
-        ];
-        const prize = prizes[Math.floor(Math.random() * prizes.length)];
-        const payload = { uid: winnerUid, ...(prize.data || {}), reason: prize.data?.reason || 'gewinnspiel' };
-        await postBot(prize.action, payload);
-        // Gewinner persistieren — Frontend kann jetzt "Letzter Gewinner" anzeigen
-        const winnerXP = weeklyXP[winnerUid] || winnerUser.xpThisWeek || winnerUser.weeklyXp || 0;
-        const entry = {
-            uid: String(winnerUid),
-            name: winnerUser.spitzname || winnerUser.name || 'Creator',
-            handle: winnerUser.ig_handle || winnerUser.username || '',
-            rang: winnerUser.rang || '',
-            prize: prize.name,
-            prizeEmoji: prize.emoji,
-            xp: winnerXP,
-            participants: eligible.length,
-            timestamp: Date.now(),
-            week: key
-        };
-        const hist = loadRaffleHistory();
-        hist.lastWinner = entry;
-        hist.history = [entry, ...(hist.history || [])].slice(0, 12);
-        saveRaffleHistory(hist);
-        console.log(`[Gewinnspiel] Gewinner: ${entry.name} (${winnerUid}) — Preis: ${prize.name} · ${eligible.length} Teilnehmer`);
-    } catch(e) { console.error('[Gewinnspiel] Fehler:', e.message); }
-}, 60000);
 
 // Migrate all existing sessions to light theme
 for (const [k, v] of sessions.entries()) { if (!v.theme || v.theme === 'dark') { v.theme = 'light'; } }
@@ -1564,9 +1520,31 @@ async function appCronTick() {
         };
         if (wochentag === 0 && h === 20 && m === 0) {
             einmalig('wochenGewinnspiel', async () => {
-                console.log('🎰 [Cron] Trigger Wochen-Gewinnspiel → Mainbot');
+                console.log('🎰 [Cron] Trigger Wochen-Gewinnspiel');
                 const r = LOCAL_STORE ? await localWrite(() => botLogic.runWochenGewinnspielApi()) : await postBot('/run-wochen-gewinnspiel-api', {});
-                console.log('🎰 [Cron] Mainbot Response:', r ? JSON.stringify(r) : 'null');
+                console.log('🎰 [Cron] Response:', r ? JSON.stringify(r) : 'null');
+                // "Letzter Gewinner"-Anzeige (raffle-winners.json) mit dem ECHTEN Gewinner fuettern.
+                if (LOCAL_STORE && r && r.ok && r.winnerId) {
+                    try {
+                        const _d = datastore.getData();
+                        const wu = (_d.users || {})[String(r.winnerId)] || {};
+                        const entry = {
+                            uid: String(r.winnerId),
+                            name: r.winnerName || wu.spitzname || wu.name || 'Creator',
+                            handle: wu.ig_handle || wu.instagram || wu.username || '',
+                            rang: wu.rang || '',
+                            prize: '1 Extra-Link', prizeEmoji: '🔗',
+                            xp: (_d.weeklyXP || {})[String(r.winnerId)] || 0,
+                            participants: r.teilnehmer || 0,
+                            timestamp: Date.now(),
+                            week: new Date().toISOString().slice(0, 10)
+                        };
+                        const hist = loadRaffleHistory();
+                        hist.lastWinner = entry;
+                        hist.history = [entry, ...(hist.history || [])].slice(0, 12);
+                        saveRaffleHistory(hist);
+                    } catch(e) { console.error('[Gewinnspiel] Anzeige-Update Fehler:', e.message); }
+                }
             });
             einmalig('mindsetPick', async () => {
                 console.log('📖 [Cron] Trigger Mindset-Stories-Pick → Mainbot');
