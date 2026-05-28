@@ -18234,7 +18234,7 @@ window.sugDismiss = function(btn){
   <div style="font-size:var(--fs-sm);line-height:1.65;color:var(--text);white-space:pre-wrap">${htmlEsc(String(e.content||''))}</div>
   <div style="font-size:11px;color:var(--muted);margin-top:10px">${new Date(e.timestamp).toLocaleDateString('de-DE',{day:'2-digit',month:'short',year:'numeric'})}</div>
 </div>`).join('')
-                    : '<div class="empty" style="padding:48px 24px;text-align:center"><div class="empty-icon"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M3 6l9 7 9-7"/></svg></div><div class="empty-text">Noch keine Newsletter-Einträge</div></div>';
+                    : '<div class="empty" style="padding:48px 24px;text-align:center"><div class="empty-icon"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M3 6l9 7 9-7"/></svg></div><div class="empty-text">Noch keine Newsletter-Einträge</div><div class="empty-sub">Sobald News da sind, erscheinen sie hier.</div></div>';
                 const adminForm = isAdminNL ? `
 <div id="nl-form" style="display:none;margin:0 16px 16px;padding:16px;background:var(--bg3);border:1px solid var(--border2);border-radius:14px">
   <input type="hidden" id="nl-edit-id">
@@ -19986,7 +19986,7 @@ ${profileCard(uid, u, d, false, lang, adminIds)}
 <div id="tptab-links" style="padding-bottom:100px">${theirLinksHtml}</div>
 <div id="tptab-posts" style="display:none;padding-bottom:100px">${theirPostsHtml}</div>
 <div id="tptab-projekte" style="display:none;padding-bottom:100px">
-  ${theirProjects.length>0?'<div class="proj-grid">'+theirProjCardsHtml+'</div>':'<div class="empty"><div class="empty-icon"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></div><div class="empty-text">Noch keine Projekte</div></div>'}
+  ${theirProjects.length>0?'<div class="proj-grid">'+theirProjCardsHtml+'</div>':'<div class="empty"><div class="empty-icon"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></div><div class="empty-text">Noch keine Projekte</div><div class="empty-sub">Hat noch keine Projekte erstellt.</div></div>'}
 </div>
 <div id="tptab-about" style="display:none">${theirAboutHtml}</div>
 
