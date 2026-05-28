@@ -4773,7 +4773,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v228-role-badges';
+const SW_VERSION='v229-ranking-badges';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
@@ -17322,7 +17322,7 @@ fetch('/api/admin/engagement-log').then(r=>r.json()).then(j=>{ if (j.ok) { LAST_
     </div>
     <div class="rank-info">
       <div class="rank-name">${htmlEsc(u.spitzname||u.name||'User')}${isMe?' (Du)':''}</div>
-      <div class="rank-badge">${htmlEsc(cleanRole(u.role))}</div>
+      <div class="rank-badge">${roleBadge(u.role)}</div>
     </div>
     <div class="rank-xp">${(xp||0).toLocaleString('de-DE')} XP</div>
   </a>`;
