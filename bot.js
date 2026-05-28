@@ -1986,7 +1986,7 @@ textarea.form-input{resize:none;min-height:80px}
 .proflink-like.visited{opacity:1}
 .proflink-like.liked{color:#ef4444;cursor:default;opacity:1}
 .proflink-likes{font-size:11px;color:var(--muted);padding:2px 4px;font-weight:500}
-.proflink-open{flex:1;text-align:center;padding:5px 6px;background:linear-gradient(135deg,#f9a825,#e91e63,#9c27b0);color:#fff !important;border-radius:6px;font-size:11px;font-weight:700;text-decoration:none;white-space:nowrap;box-shadow:0 1px 4px rgba(233,30,99,.25)}
+.proflink-open{flex:1;text-align:center;padding:6px 6px;background:#7c3aed;color:#fff !important;border-radius:8px;font-size:11px;font-weight:700;text-decoration:none;white-space:nowrap}
 .toast{position:fixed;top:80px;left:50%;transform:translateX(-50%);background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:10px 20px;font-size:13px;font-weight:500;z-index:999;box-shadow:var(--shadow);opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap}
 .toast.show{opacity:1}
 .cb-banner{position:fixed;top:0;left:0;right:0;z-index:9999;padding:20px 24px;color:#fff;text-align:center;font-family:var(--font);transform:translateY(-100%);transition:transform .4s cubic-bezier(.2,.8,.2,1);box-shadow:0 12px 32px rgba(0,0,0,0.5);pointer-events:none;display:flex;align-items:center;justify-content:center;gap:14px;letter-spacing:0.2px}
@@ -3776,8 +3776,11 @@ function confirmCrop(){
     // Install-/Download-Angebot NUR fuer Android-Nutzer zeigen (die App ist eine Android-App).
     // Auf Desktop/anderen Browsern feuert beforeinstallprompt zwar auch, soll aber nichts zeigen.
     if(!/Android/i.test(navigator.userAgent||''))return;
+    // Nicht oefter als 1x/Tag, und nach 8s automatisch ausblenden — sonst ueberlagert
+    // der schwebende Button dauerhaft den Inhalt.
+    try{ if(Date.now() - Number(localStorage.getItem('cb_install_hidden')||0) < 86400000) return; }catch(e){}
     const b=document.getElementById('pwa-install-btn');
-    if(b)b.style.display='flex';
+    if(b){ b.style.display='flex'; setTimeout(()=>{ try{ b.style.display='none'; localStorage.setItem('cb_install_hidden', String(Date.now())); }catch(e){} }, 8000); }
   });
   window.installPWA=async function(){
     if(_installPrompt){
@@ -4751,7 +4754,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v225-explore-tab-icons';
+const SW_VERSION='v226-profil-open-install-polish';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
@@ -13940,7 +13943,7 @@ document.getElementById('user-search-input')?.addEventListener('input',filterSea
             convHtml = require('./chat-list-render')({ myConvos, botData, myUid, ladeBild, adminIds, onlineUids: getOnlineUids(), crown, appChatPreview: lastAppChat ? { name: lastAppChat.name, text: lastAppChat.text, image: lastAppChat.image, timestamp: lastAppChat.ts } : null, appChatUnread: appChatData?.unread || 0, appChatMembers: appChatData?.memberCount || 0, pinnedStories: _pinnedStoriesDM });
         } catch (_dmErr) {
             console.error('[/nachrichten] render failed:', _dmErr && _dmErr.stack || _dmErr);
-            return html('<div class="topbar"><div class="topbar-logo">Nachrichten</div></div><div style="padding:20px"><div style="font-size:14px;font-weight:700;color:#ef4444;margin-bottom:10px">DM-Render-Fehler (Debug v224b)</div><div style="font-size:11px;color:var(--muted);white-space:pre-wrap;word-break:break-word;font-family:ui-monospace,monospace">'+htmlEsc(String(_dmErr && _dmErr.stack || _dmErr && _dmErr.message || _dmErr))+'</div></div>', 'messages');
+            return html('<div class="topbar"><div class="topbar-logo">Nachrichten</div></div><div style="padding:48px 24px;text-align:center;color:var(--muted);font-size:13px;line-height:1.5">Nachrichten konnten gerade nicht geladen werden.<br>Bitte lade die Seite neu oder versuch es gleich nochmal.</div>', 'messages');
         }
         return html(`<div class="topbar"><div class="topbar-logo">Nachrichten</div><div class="topbar-actions"><a href="/suche" class="icon-btn" title="User suchen" style="text-decoration:none"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></a></div></div><div style="padding-bottom:80px">${convHtml}</div>`, 'messages');
     }
