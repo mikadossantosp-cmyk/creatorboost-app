@@ -471,11 +471,11 @@ async function sendSignupConfirmationEmail(uid, email, hostHeader) {
         const userName = String(email||'').split('@')[0].replace(/[<>]/g,'').slice(0,30);
         const html = '<!DOCTYPE html><html><body style="margin:0;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',sans-serif;background:#000;color:#fff;padding:0">'+
             '<div style="max-width:560px;margin:0 auto;padding:32px 24px">'+
-            '<div style="text-align:center;margin-bottom:24px"><img src="'+baseUrl+'/cx-logo-256.png" width="80" height="80" style="border-radius:18px" alt="CreatorX"></div>'+
+            '<div style="text-align:center;margin-bottom:var(--space-6)"><img src="'+baseUrl+'/cx-logo-256.png" width="80" height="80" style="border-radius:18px" alt="CreatorX"></div>'+
             '<h1 style="font-size:26px;font-weight:700;margin:0 0 12px;text-align:center;color:#fff">Willkommen bei CreatorX! 🎉</h1>'+
             '<p style="font-size:15px;color:#a8a39a;line-height:1.6;text-align:center;margin:0 0 28px">Hi '+userName+', klick den Button um deine Email-Adresse zu bestätigen.</p>'+
             '<div style="text-align:center;margin:32px 0"><a href="'+confirmUrl+'" style="display:inline-block;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px;letter-spacing:0.3px">✅ Email bestätigen</a></div>'+
-            '<p style="font-size:12px;color:#605c54;line-height:1.5;text-align:center;margin:32px 0 0;border-top:1px solid #221f1a;padding-top:20px">Link 7 Tage gültig, einmalig nutzbar.<br>Falls du das nicht warst, ignoriere diese Email.</p>'+
+            '<p style="font-size:12px;color:#605c54;line-height:1.5;text-align:center;margin:32px 0 0;border-top:1px solid #221f1a;padding-top:var(--space-5)">Link 7 Tage gültig, einmalig nutzbar.<br>Falls du das nicht warst, ignoriere diese Email.</p>'+
             '</div></body></html>';
         const ok = await sendEmail(email, '🎉 Willkommen bei CreatorX — Email bestätigen', html);
         console.log('[email-confirm] Sent to', email, '→', ok ? 'OK' : 'FAILED');
@@ -862,10 +862,10 @@ const ADMIN_FULLTOUR_JS = `(function(){
     card.style.cssText='position:fixed;left:50%;bottom:calc(28px + env(safe-area-inset-bottom));transform:translateX(-50%);width:calc(100% - 24px);max-width:440px;background:linear-gradient(180deg,rgba(28,28,30,0.97),rgba(15,15,17,0.97));border:1px solid rgba(212,175,55,0.4);color:#fff;border-radius:20px;padding:18px;box-shadow:0 30px 70px rgba(0,0,0,0.6),0 0 40px rgba(212,175,55,0.2);font-family:Inter,-apple-system,sans-serif;backdrop-filter:blur(28px) saturate(180%);-webkit-backdrop-filter:blur(28px) saturate(180%);z-index:99992;animation:ft-slide .35s cubic-bezier(.34,1.56,.64,1)';
     const dots=FT_STEPS.map(function(_,i){return '<div style="flex:1;height:3px;border-radius:99px;background:'+(i<idx?'rgba(212,175,55,0.4)':i===idx?'linear-gradient(90deg,#d4af37,#f5d76e)':'rgba(255,255,255,0.10)')+'"></div>';}).join('');
     card.innerHTML='<div style="display:flex;gap:3px;margin-bottom:14px">'+dots+'</div>'+
-      '<div style="font-size:10.5px;font-weight:800;color:#d4af37;text-transform:uppercase;letter-spacing:2px;margin-bottom:8px">ADMIN-FULLTOUR · Step '+(idx+1)+' / '+FT_STEPS.length+'</div>'+
-      '<div style="font-size:19px;font-weight:800;letter-spacing:-0.4px;line-height:1.25;margin-bottom:8px">'+step.title+'</div>'+
+      '<div style="font-size:10.5px;font-weight:800;color:#d4af37;text-transform:uppercase;letter-spacing:2px;margin-bottom:var(--space-2)">ADMIN-FULLTOUR · Step '+(idx+1)+' / '+FT_STEPS.length+'</div>'+
+      '<div style="font-size:19px;font-weight:800;letter-spacing:-0.4px;line-height:1.25;margin-bottom:var(--space-2)">'+step.title+'</div>'+
       '<div style="font-size:14px;color:rgba(255,255,255,0.8);line-height:1.55;margin-bottom:14px">'+step.text+'</div>'+
-      '<div style="display:flex;gap:8px">'+
+      '<div style="display:flex;gap:var(--space-2)">'+
         '<button id="ft-close" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.65);padding:11px 12px;font-size:13px;font-weight:700;border-radius:12px;cursor:pointer;font-family:inherit">✕</button>'+
         (isFirst?'':'<button id="ft-prev" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.7);padding:11px 14px;font-size:13px;font-weight:700;border-radius:12px;cursor:pointer;font-family:inherit">← Zurück</button>')+
         '<button id="ft-next" style="background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;border:none;padding:11px 14px;font-size:13.5px;font-weight:800;border-radius:12px;cursor:pointer;font-family:inherit;flex:1;letter-spacing:0.1px;box-shadow:0 6px 18px rgba(212,175,55,0.45)">'+(isLast?'🎉 Beenden':'Weiter →')+'</button>'+
@@ -945,7 +945,7 @@ function roleBadge(role, uid, adminIds) {
   const txt = cleanRole(role, uid, adminIds);
   const c = roleColor(txt);
   const name = txt.replace(/^[^\s]+\s+/, '') || txt;
-  return '<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:99px;background:'+c+'1f;color:'+c+';border:1px solid '+c+'40;font-size:11px;font-weight:700;letter-spacing:.1px;white-space:nowrap;line-height:1.5">'+roleIcon(txt)+name+'</span>';
+  return '<span style="display:inline-flex;align-items:center;gap:var(--space-1);padding:2px 9px;border-radius:99px;background:'+c+'1f;color:'+c+';border:1px solid '+c+'40;font-size:11px;font-weight:700;letter-spacing:.1px;white-space:nowrap;line-height:1.5">'+roleIcon(txt)+name+'</span>';
 }
 // Sicherer URL-Check: nur http(s)-Links erlaubt, kein javascript:/data:/vbscript:.
 function safeUrl(u) { const s = String(u||'').trim(); return /^https?:\/\//i.test(s) ? s : ''; }
@@ -1849,7 +1849,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible,
 .ft-item-badge{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:18px;padding:0 7px;border-radius:99px;background:#ef4444;color:#fff;font-size:11px;font-weight:800;flex-shrink:0}
 .ft-item-check{color:#a78bfa;font-size:18px;font-weight:700;flex-shrink:0}
 .bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:var(--glass-bg);border-top:1px solid var(--border2);display:flex;justify-content:space-around;padding:10px 0 calc(10px + var(--safe-bottom));z-index:100;backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%)}
-.nav-item{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;font-weight:600;letter-spacing:0.2px;color:var(--accent);padding:4px 14px;transition:color .2s,transform .12s;text-decoration:none}
+.nav-item{display:flex;flex-direction:column;align-items:center;gap:var(--space-1);font-size:11px;font-weight:600;letter-spacing:0.2px;color:var(--accent);padding:4px 14px;transition:color .2s,transform .12s;text-decoration:none}
 .nav-item svg{stroke:var(--accent)}
 .nav-item:active{transform:scale(0.92)}
 .nav-item.active{color:var(--text)}
@@ -1908,11 +1908,11 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible,
 .profile-action-pill:active{transform:scale(0.94)}
 .profile-action-pill:hover{background:var(--bg)}
 .profile-info{padding:54px 18px 12px}
-.profile-name-row{display:flex;align-items:flex-start;gap:8px;flex-wrap:wrap}
+.profile-name-row{display:flex;align-items:flex-start;gap:var(--space-2);flex-wrap:wrap}
 .profile-name{font-family:var(--font-display);font-size:26px;font-weight:800;letter-spacing:-0.5px;line-height:1.1;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.profile-username{font-size:13.5px;color:var(--muted);margin-top:4px;font-weight:500}
-.profile-bio{font-size:14px;color:var(--text);margin-top:12px;line-height:1.55;font-weight:500}
-.profile-status-pill{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:999px;font-size:11.5px;font-weight:700;background:var(--surface-tint);border:1px solid var(--border2);color:var(--muted);letter-spacing:0.1px}
+.profile-username{font-size:13.5px;color:var(--muted);margin-top:var(--space-1);font-weight:500}
+.profile-bio{font-size:14px;color:var(--text);margin-top:var(--space-3);line-height:1.55;font-weight:500}
+.profile-status-pill{display:inline-flex;align-items:center;gap:var(--space-1);padding:4px 10px;border-radius:999px;font-size:11.5px;font-weight:700;background:var(--surface-tint);border:1px solid var(--border2);color:var(--muted);letter-spacing:0.1px}
 .profile-status-pill.online{color:#22c55e;background:rgba(34,197,94,0.08);border-color:rgba(34,197,94,0.25)}
 .profile-status-pill.offline{color:var(--muted2);background:var(--surface-tint)}
 .profile-meta-chip{display:inline-flex;align-items:center;gap:5px;padding:6px 11px;background:var(--surface-tint);border:1px solid var(--border2);border-radius:10px;font-size:12px;font-weight:600;color:var(--text);letter-spacing:0.1px;transition:background 0.15s}
@@ -1924,7 +1924,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible,
 .profile-stat[href]:active{transform:scale(0.96)}
 .profile-stat:not(:last-child)::after{content:"";position:absolute;right:0;top:25%;bottom:25%;width:1px;background:linear-gradient(to bottom,transparent,var(--border2),transparent)}
 .profile-stat-val{font-size:18px;font-weight:800;color:var(--text);letter-spacing:-0.4px;font-variant-numeric:tabular-nums;line-height:1.1}
-.profile-stat-label{font-size:11px;color:var(--muted);margin-top:4px;font-weight:700;letter-spacing:0.6px;text-transform:uppercase}
+.profile-stat-label{font-size:11px;color:var(--muted);margin-top:var(--space-1);font-weight:700;letter-spacing:0.6px;text-transform:uppercase}
 .profile-stat-trend{display:inline-flex;align-items:center;gap:2px;font-size:11px;font-weight:800;padding:1px 5px;border-radius:8px;margin-left:3px;vertical-align:middle}
 .profile-stat-trend.up{background:rgba(34,197,94,.14);color:#16a34a}
 .profile-stat-trend.down{background:rgba(239,68,68,.14);color:#dc2626}
@@ -1949,7 +1949,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible,
 .profile-slot-val .small{font-size:11px;font-weight:600;color:var(--muted)}
 .profile-slot-val.ok{color:#16a34a}
 .profile-slot-val.zero{color:var(--muted)}
-.rank-item{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border2);text-decoration:none;color:inherit;transition:background .15s}
+.rank-item{display:flex;align-items:center;gap:var(--space-3);padding:12px 16px;border-bottom:1px solid var(--border2);text-decoration:none;color:inherit;transition:background .15s}
 .rank-item:active{background:var(--surface-tint)}
 .rank-pos{width:32px;text-align:center;font-size:18px;flex-shrink:0}
 .rank-num{font-size:14px;font-weight:700;color:var(--muted)}
@@ -1961,7 +1961,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible,
 /* Top-3-Podium */
 .podium-wrap{position:relative;padding:18px 12px 22px;background:linear-gradient(180deg,rgba(167,139,250,0.08),rgba(255,107,107,0.04) 60%,transparent);border-bottom:1px solid var(--border2);overflow:hidden}
 .podium-wrap::before{content:"";position:absolute;top:-40px;left:50%;width:240px;height:240px;transform:translateX(-50%);background:radial-gradient(circle,rgba(245,158,11,0.18),transparent 70%);pointer-events:none;filter:blur(8px)}
-.podium-row{position:relative;display:grid;grid-template-columns:1fr 1.2fr 1fr;align-items:end;gap:8px;max-width:380px;margin:0 auto}
+.podium-row{position:relative;display:grid;grid-template-columns:1fr 1.2fr 1fr;align-items:end;gap:var(--space-2);max-width:380px;margin:0 auto}
 .podium-slot{display:flex;flex-direction:column;align-items:center;text-decoration:none;color:inherit;cursor:pointer;animation:podium-rise .55s cubic-bezier(.16,1,.3,1) backwards}
 .podium-slot.p1{animation-delay:.18s}
 .podium-slot.p2{animation-delay:.05s}
@@ -1981,43 +1981,43 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible,
 .podium-slot.p1 .podium-avatar{width:84px;height:84px;font-size:24px;border:3px solid #f59e0b;box-shadow:0 0 0 4px rgba(245,158,11,0.18),0 12px 28px -8px rgba(245,158,11,0.45)}
 .podium-slot.p2 .podium-avatar{width:64px;height:64px;font-size:18px;border:3px solid #94a3b8;box-shadow:0 0 0 3px rgba(148,163,184,0.18),0 8px 22px -8px rgba(148,163,184,0.45)}
 .podium-slot.p3 .podium-avatar{width:64px;height:64px;font-size:18px;border:3px solid #d97706;box-shadow:0 0 0 3px rgba(217,119,6,0.18),0 8px 22px -8px rgba(217,119,6,0.45)}
-.podium-name{font-size:12.5px;font-weight:700;margin-top:8px;max-width:100%;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:-0.1px}
+.podium-name{font-size:12.5px;font-weight:700;margin-top:var(--space-2);max-width:100%;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:-0.1px}
 .podium-xp{font-size:11px;font-weight:700;color:var(--gold);margin-top:2px;font-variant-numeric:tabular-nums}
 .podium-block{margin-top:10px;width:88%;border-radius:10px 10px 0 0;display:flex;align-items:center;justify-content:center;font-family:var(--font-display,inherit);font-weight:900;color:#fff;letter-spacing:1px}
 .podium-slot.p1 .podium-block{height:64px;font-size:22px;background:linear-gradient(180deg,#fbbf24,#d97706);box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 -4px 14px -6px rgba(245,158,11,0.5)}
 .podium-slot.p2 .podium-block{height:46px;font-size:18px;background:linear-gradient(180deg,#cbd5e1,#64748b);box-shadow:inset 0 1px 0 rgba(255,255,255,.4)}
 .podium-slot.p3 .podium-block{height:36px;font-size:16px;background:linear-gradient(180deg,#fdba74,#9a3412);box-shadow:inset 0 1px 0 rgba(255,255,255,.4)}
-.form-section{padding:16px}
+.form-section{padding:var(--space-4)}
 .form-label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
 .form-input{width:100%;background:var(--bg4);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:12px 14px;font-size:14px;font-family:var(--font);outline:none;transition:border-color .2s}
 .form-input:focus{border-color:var(--accent)}
 textarea.form-input{resize:none;min-height:80px}
-.form-hint{font-size:11px;color:var(--muted2);margin-top:4px}
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 20px;border-radius:var(--radius-sm);font-size:14px;font-weight:600;font-family:var(--font);cursor:pointer;transition:all .15s;border:none}
+.form-hint{font-size:11px;color:var(--muted2);margin-top:var(--space-1)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:var(--space-2);padding:12px 20px;border-radius:var(--radius-sm);font-size:14px;font-weight:600;font-family:var(--font);cursor:pointer;transition:all .15s;border:none}
 .btn-primary{background:var(--accent);color:#fff}
 .btn-outline{background:transparent;border:1px solid var(--border);color:var(--text)}
 .btn-full{width:100%}
 .btn-sm{padding:8px 14px;font-size:12px}
-.color-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:8px;margin-top:8px}
+.color-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:var(--space-2);margin-top:8px}
 .color-opt{width:36px;height:36px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:all .15s;display:flex;align-items:center;justify-content:center}
 .color-opt.selected{border-color:var(--text);transform:scale(1.1)}
-.gradient-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
+.gradient-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-2);margin-top:8px}
 .gradient-opt{height:50px;border-radius:var(--radius-xs);cursor:pointer;border:2px solid transparent;transition:all .15s}
 .gradient-opt.selected{border-color:var(--text)}
 .tabs{display:flex;border-bottom:1px solid var(--border2)}
 .tab{flex:1;text-align:center;padding:10px 4px;font-size:12px;font-weight:600;color:var(--muted);border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tab.active{color:var(--text);border-bottom-color:var(--text)}
 .empty{text-align:center;padding:48px 24px;color:var(--muted)}
-.empty-icon{font-size:48px;margin-bottom:12px}
+.empty-icon{font-size:48px;margin-bottom:var(--space-3)}
 .empty-text{font-size:15px;font-weight:600;margin-bottom:6px;color:var(--text)}
 .empty-sub{font-size:13px}
-.proflink-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:8px 10px}
+.proflink-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-2);padding:8px 10px}
 .proflink-card{border-radius:10px;overflow:hidden;background:var(--bg3);border:1px solid var(--border2);display:flex;flex-direction:column}
 .proflink-thumb{display:block;position:relative;width:100%;padding-top:130%;background:linear-gradient(135deg,#1a1a2e,#16213e);overflow:hidden;cursor:pointer;text-decoration:none}
 .proflink-thumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .proflink-thumb-overlay{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.05),rgba(0,0,0,.35));pointer-events:none}
 .proflink-play{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.95);font-size:22px;text-shadow:0 2px 6px rgba(0,0,0,.5);pointer-events:none}
-.proflink-actions{display:flex;align-items:center;gap:4px;padding:5px 5px 6px}
+.proflink-actions{display:flex;align-items:center;gap:var(--space-1);padding:5px 5px 6px}
 .proflink-like{display:inline-flex;align-items:center;gap:3px;background:none;border:none;cursor:pointer;color:var(--text);font-size:11px;font-weight:600;font-family:inherit;padding:2px 4px;transition:opacity .2s}
 .proflink-like:not(.liked):not(.visited){opacity:.45}
 .proflink-like.visited{opacity:1}
@@ -2049,7 +2049,7 @@ textarea.form-input{resize:none;min-height:80px}
 .toggle.on{background:var(--accent)}
 .toggle::after{content:'';position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .2s}
 .toggle.on::after{transform:translateX(20px)}
-.proj-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;padding:16px}
+.proj-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:var(--space-3);padding:var(--space-4)}
 @media(min-width:480px){.proj-grid{grid-template-columns:repeat(3,1fr)}}
 @media(min-width:768px){.proj-grid{grid-template-columns:repeat(4,1fr)}}
 .proj-card{background:var(--bg3);border:1px solid var(--border2);border-radius:14px;overflow:hidden;cursor:pointer;transition:transform .15s,border-color .15s}
@@ -2059,13 +2059,13 @@ textarea.form-input{resize:none;min-height:80px}
 .proj-card-body{padding:10px}
 .proj-card-title{font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .proj-card-desc{font-size:11px;color:var(--muted);margin-top:3px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.proj-add-card{background:var(--bg3);border:2px dashed var(--border);border-radius:14px;cursor:pointer;transition:border-color .15s,color .15s;color:var(--muted);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:24px 0}
+.proj-add-card{background:var(--bg3);border:2px dashed var(--border);border-radius:14px;cursor:pointer;transition:border-color .15s,color .15s;color:var(--muted);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:var(--space-2);padding:24px 0}
 .proj-add-card:hover{border-color:var(--accent);color:var(--accent)}
 .proj-modal-overlay{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.75);display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s}
 .proj-modal-overlay.open{opacity:1;pointer-events:all}
 .proj-modal-sheet{background:var(--bg2);border-radius:24px 24px 0 0;width:100%;max-width:480px;max-height:85vh;overflow-y:auto;transform:translateY(100%);transition:transform .3s cubic-bezier(.32,1.25,.68,1)}
 .proj-modal-overlay.open .proj-modal-sheet{transform:translateY(0)}
-.proj-add-overlay{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s;padding:16px}
+.proj-add-overlay{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s;padding:var(--space-4)}
 .proj-add-overlay.open{opacity:1;pointer-events:all}
 .proj-add-sheet{background:var(--bg2);border-radius:var(--radius);width:100%;max-width:440px;max-height:90vh;overflow-y:auto;transform:scale(.95);transition:transform .25s}
 .proj-add-overlay.open .proj-add-sheet{transform:scale(1)}
@@ -2155,8 +2155,8 @@ textarea.form-input{resize:none;min-height:80px}
 }
 .post-category-label{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;padding:5px 11px;border-radius:999px;color:#fff;box-shadow:0 4px 12px rgba(255,107,107,0.25),inset 0 1px 0 rgba(255,255,255,0.15)}
 .post-likes-row{display:flex;align-items:center;gap:14px;padding:10px 16px 4px}
-.post-like-count{font-size:22px;font-weight:800;display:flex;align-items:center;gap:4px;color:var(--text)}
-.post-xp-pill{font-size:12px;font-weight:700;color:var(--gold);background:rgba(255,214,0,.12);padding:3px 10px;border-radius:20px;display:inline-flex;align-items:center;gap:4px}
+.post-like-count{font-size:22px;font-weight:800;display:flex;align-items:center;gap:var(--space-1);color:var(--text)}
+.post-xp-pill{font-size:12px;font-weight:700;color:var(--gold);background:rgba(255,214,0,.12);padding:3px 10px;border-radius:20px;display:inline-flex;align-items:center;gap:var(--space-1)}
 .liker-modal{position:fixed;inset:0;z-index:500;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.55);backdrop-filter:blur(4px);opacity:0;pointer-events:none;transition:opacity .25s}
 .liker-modal.open{opacity:1;pointer-events:all}
 .liker-modal-sheet{width:100%;max-width:480px;background:var(--bg3);border-radius:20px 20px 0 0;max-height:70vh;overflow-y:auto;transform:translateY(100%);transition:transform .3s cubic-bezier(.4,0,.2,1)}
@@ -2165,13 +2165,13 @@ textarea.form-input{resize:none;min-height:80px}
 .comm-feed{padding:12px 16px 80px}
 .comm-msg{background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:14px 16px;margin-bottom:10px;transition:background .2s}
 .comm-msg:active{background:var(--bg4)}
-.comm-msg-header{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.comm-msg-header{display:flex;align-items:center;gap:10px;margin-bottom:var(--space-2)}
 .comm-avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--purple));display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#fff;flex-shrink:0}
 .comm-username{font-size:13px;font-weight:700;color:var(--text)}
 .comm-time{font-size:11px;color:var(--muted);margin-left:auto}
 .comm-text{font-size:14px;color:var(--text);line-height:1.55;word-break:break-word}
 .comm-empty{padding:60px 24px;text-align:center;color:var(--muted)}
-.comm-empty-icon{font-size:48px;margin-bottom:12px}
+.comm-empty-icon{font-size:48px;margin-bottom:var(--space-3)}
 .comm-header{padding:12px 16px 4px;display:flex;align-items:center;justify-content:space-between}
 .comm-title{font-size:18px;font-weight:800}
 .comm-live{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:var(--green)}
@@ -2179,7 +2179,7 @@ textarea.form-input{resize:none;min-height:80px}
 @keyframes pulse-dot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.85)}}
 /* ── EXPLORE TABS — Premium Cards ── */
 .explore-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;padding:12px 14px 18px}
-.explore-tab{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:14px 6px 12px;border-radius:16px;background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.06);cursor:pointer;transition:transform 0.2s cubic-bezier(0.34,1.56,0.64,1),background 0.2s,border-color 0.2s;font-family:var(--font);text-align:center;overflow:hidden;min-height:84px;-webkit-tap-highlight-color:transparent}
+.explore-tab{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:var(--space-2);padding:14px 6px 12px;border-radius:16px;background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.06);cursor:pointer;transition:transform 0.2s cubic-bezier(0.34,1.56,0.64,1),background 0.2s,border-color 0.2s;font-family:var(--font);text-align:center;overflow:hidden;min-height:84px;-webkit-tap-highlight-color:transparent}
 .explore-tab::before{content:"";position:absolute;inset:0;border-radius:16px;background:linear-gradient(135deg,var(--et-c1,#a78bfa),var(--et-c2,#7c3aed));opacity:0;transition:opacity 0.25s;pointer-events:none}
 .explore-tab .et-icon{position:relative;z-index:1;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;background:linear-gradient(135deg,var(--et-c1,#a78bfa)33,var(--et-c2,#7c3aed)1a);transition:transform 0.25s cubic-bezier(0.34,1.56,0.64,1),background 0.2s;line-height:1}
 .explore-tab .et-label{position:relative;z-index:1;font-size:11.5px;font-weight:700;color:var(--text);letter-spacing:0.2px;line-height:1;opacity:0.9}
@@ -2193,10 +2193,10 @@ textarea.form-input{resize:none;min-height:80px}
 .explore-tab.active .et-icon{background:rgba(255,255,255,0.22);color:#fff;backdrop-filter:blur(6px);transform:scale(1.05)}
 .explore-tab.active .et-label{color:#fff;font-weight:800;letter-spacing:0.4px;opacity:1;text-shadow:0 1px 2px rgba(0,0,0,0.15)}
 .explore-welcome{margin:0 16px 16px;border-radius:16px;overflow:hidden;position:relative;min-height:220px;background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460)}
-.highlight-card{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:14px;display:flex;align-items:center;gap:12px;margin-bottom:8px;text-decoration:none;color:var(--text);transition:background .2s}
+.highlight-card{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:14px;display:flex;align-items:center;gap:var(--space-3);margin-bottom:var(--space-2);text-decoration:none;color:var(--text);transition:background .2s}
 .highlight-card:active{background:rgba(255,255,255,.08)}
 .highlight-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
-.creator-scroll{display:flex;gap:12px;padding:0 16px 12px;overflow-x:auto;scrollbar-width:none}
+.creator-scroll{display:flex;gap:var(--space-3);padding:0 16px 12px;overflow-x:auto;scrollbar-width:none}
 .creator-scroll::-webkit-scrollbar{display:none}
 .sug-list{display:flex;gap:11px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:6px 16px 12px;scroll-snap-type:x proximity}
 .sug-list::-webkit-scrollbar{display:none}
@@ -2247,17 +2247,17 @@ textarea.form-input{resize:none;min-height:80px}
 .plus-sheet-inner{width:100%;max-width:540px;background:var(--bg);border-bottom:0;border-radius:26px 26px 0 0;padding:6px 22px 32px;transform:translateY(100%);transition:transform .35s cubic-bezier(.32,.72,.24,1);max-height:92vh;overflow-y:auto;box-shadow:0 -24px 60px rgba(0,0,0,.18),0 -1px 0 var(--border2) inset}
 .plus-sheet.open .plus-sheet-inner{transform:translateY(0)}
 .ps-grabber{width:42px;height:4px;border-radius:4px;background:var(--border2);margin:8px auto 18px;opacity:.7}
-.ps-head{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:22px;gap:12px}
+.ps-head{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:22px;gap:var(--space-3)}
 .ps-head-text{flex:1;min-width:0}
-.ps-eyebrow{font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1.8px;margin-bottom:4px;line-height:1}
+.ps-eyebrow{font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1.8px;margin-bottom:var(--space-1);line-height:1}
 .ps-title{font-size:22px;font-weight:800;color:var(--text);letter-spacing:-.5px;line-height:1.1}
 .ps-sub{font-size:13px;color:var(--muted);margin-top:5px;line-height:1.45;font-weight:500}
 .ps-close{background:var(--bg3);border:1px solid var(--border2);width:34px;height:34px;border-radius:50%;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s,color .15s}
 .ps-close:hover{background:var(--bg4);color:var(--text)}
 .ps-status{display:inline-flex;align-items:center;gap:7px;padding:6px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:99px;font-size:11.5px;color:var(--muted);font-weight:600;margin-bottom:18px}
 .ps-status-admin{background:linear-gradient(135deg,rgba(245,158,11,.08),rgba(245,158,11,.02));border-color:rgba(245,158,11,.30);color:#f59e0b}
-.ps-field{margin-bottom:16px}
-.ps-field-label{display:block;font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
+.ps-field{margin-bottom:var(--space-4)}
+.ps-field-label{display:block;font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:var(--space-2)}
 .ps-optional{font-weight:500;text-transform:none;letter-spacing:0;color:var(--muted2);font-size:11px;margin-left:6px}
 .ps-input{width:100%;padding:13px 15px;background:var(--bg3);border:1.5px solid var(--border2);color:var(--text);border-radius:12px;font-size:14.5px;font-family:inherit;outline:none;transition:border-color .18s,background .18s,box-shadow .18s;box-sizing:border-box;font-weight:500}
 .ps-input:focus{border-color:rgba(124,58,237,.55);background:var(--bg);box-shadow:0 0 0 4px rgba(124,58,237,.08)}
@@ -2274,7 +2274,7 @@ textarea.form-input{resize:none;min-height:80px}
 .ps-toggle-body{flex:1;min-width:0}
 .ps-toggle-title{font-size:14px;font-weight:700;color:var(--text);line-height:1.2}
 .ps-toggle-sub{font-size:11.5px;color:var(--muted);margin-top:3px;line-height:1.4;font-weight:500}
-.ps-cta{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px 18px;background:linear-gradient(135deg,#a78bfa 0%,#7c3aed 100%);color:#fff;border:none;border-radius:14px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:.1px;box-shadow:0 8px 24px -6px rgba(124,58,237,.5),0 2px 4px rgba(0,0,0,.06);transition:transform .12s,box-shadow .18s,filter .15s}
+.ps-cta{display:flex;align-items:center;justify-content:center;gap:var(--space-2);width:100%;padding:14px 18px;background:linear-gradient(135deg,#a78bfa 0%,#7c3aed 100%);color:#fff;border:none;border-radius:14px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:.1px;box-shadow:0 8px 24px -6px rgba(124,58,237,.5),0 2px 4px rgba(0,0,0,.06);transition:transform .12s,box-shadow .18s,filter .15s}
 .ps-cta:hover{box-shadow:0 12px 28px -6px rgba(124,58,237,.6),0 2px 4px rgba(0,0,0,.06);filter:brightness(1.04)}
 .ps-cta:active{transform:scale(.985)}
 .ps-cta.diamond{background:linear-gradient(135deg,#06b6d4,#0e7490);box-shadow:0 8px 24px -6px rgba(6,182,212,.5),0 2px 4px rgba(0,0,0,.06)}
@@ -2283,15 +2283,15 @@ textarea.form-input{resize:none;min-height:80px}
 .ps-cta.kollab:hover{box-shadow:0 12px 28px -6px rgba(236,72,153,.6),0 2px 4px rgba(0,0,0,.06)}
 .ps-cta svg{width:18px;height:18px}
 .ps-result{margin-top:10px;font-size:12px;text-align:center;color:var(--muted);min-height:16px;font-weight:500}
-.ps-info{padding:12px 14px;background:var(--bg3);border-left:3px solid var(--accent);border-radius:10px;font-size:12.5px;line-height:1.55;color:var(--text);margin-bottom:16px;font-weight:500}
+.ps-info{padding:12px 14px;background:var(--bg3);border-left:3px solid var(--accent);border-radius:10px;font-size:12.5px;line-height:1.55;color:var(--text);margin-bottom:var(--space-4);font-weight:500}
 .ps-info.diamond{border-left-color:#06b6d4}
 .ps-info.kollab{border-left-color:#ec4899}
 .ps-info b{color:var(--accent);font-weight:700}
 .ps-info.diamond b{color:#06b6d4}
 .ps-info.kollab b{color:#ec4899}
 .ps-divider{height:1px;background:var(--border2);margin:24px -22px 18px}
-.ps-section-eyebrow{margin-bottom:12px;padding:0 2px}
-.ps-card{display:flex;align-items:center;gap:14px;width:100%;padding:12px 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:14px;font-family:inherit;cursor:pointer;color:var(--text);text-align:left;margin-bottom:8px;transition:background .15s,border-color .15s,transform .1s,box-shadow .15s}
+.ps-section-eyebrow{margin-bottom:var(--space-3);padding:0 2px}
+.ps-card{display:flex;align-items:center;gap:14px;width:100%;padding:12px 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:14px;font-family:inherit;cursor:pointer;color:var(--text);text-align:left;margin-bottom:var(--space-2);transition:background .15s,border-color .15s,transform .1s,box-shadow .15s}
 .ps-card:hover{background:var(--bg4);border-color:rgba(124,58,237,.35);box-shadow:0 4px 12px -4px rgba(0,0,0,.08)}
 .ps-card:active{transform:scale(.99)}
 .ps-card-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;box-shadow:0 4px 14px -4px rgba(0,0,0,.25)}
@@ -2423,7 +2423,7 @@ window.cbSetCount = function(fullId, val, force){
 </script>
 </head>
 <body>
-${_emailUnconfirmed ? `<div id="cb-email-confirm-bar" style="position:sticky;top:0;left:0;right:0;z-index:9998;background:linear-gradient(90deg,#f59e0b,#eab308);color:#000;padding:10px 14px;display:flex;align-items:center;justify-content:center;gap:12px;font-family:Inter,sans-serif;font-size:13px;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,0.15)">
+${_emailUnconfirmed ? `<div id="cb-email-confirm-bar" style="position:sticky;top:0;left:0;right:0;z-index:9998;background:linear-gradient(90deg,#f59e0b,#eab308);color:#000;padding:10px 14px;display:flex;align-items:center;justify-content:center;gap:var(--space-3);font-family:Inter,sans-serif;font-size:13px;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,0.15)">
   <span style="font-size:16px;flex-shrink:0">📧</span>
   <span style="flex:1;min-width:0">Bestätige deine Email-Adresse</span>
   <button onclick="cbResendConfirm(this)" style="background:rgba(0,0,0,0.20);border:1px solid rgba(0,0,0,0.30);color:#000;padding:5px 12px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0">Erneut senden</button>
@@ -2442,7 +2442,7 @@ async function cbResendConfirm(btn){
 <div class="toast" id="toast"></div>
 <div class="cb-banner" id="cb-banner" role="alert" aria-live="assertive"></div>
 <a href="/download-app" id="apk-download-btn" style="display:none;position:fixed;bottom:calc(120px + var(--safe-bottom,0px));left:50%;transform:translateX(-50%);background:#22c55e;color:#fff;border-radius:24px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;z-index:9997;text-decoration:none;white-space:nowrap;box-shadow:0 4px 16px rgba(34,197,94,.4)">📦 APK herunterladen</a>
-<div id="pwa-install-btn" onclick="installPWA()" style="display:none;position:fixed;bottom:calc(70px + var(--safe-bottom,0px));left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#ff6b6b,#cc5de8);color:#fff;border:none;border-radius:24px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;z-index:9998;gap:8px;align-items:center;box-shadow:0 4px 16px rgba(255,107,107,.4);white-space:nowrap">📲 App installieren</div>
+<div id="pwa-install-btn" onclick="installPWA()" style="display:none;position:fixed;bottom:calc(70px + var(--safe-bottom,0px));left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#ff6b6b,#cc5de8);color:#fff;border:none;border-radius:24px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;z-index:9998;gap:var(--space-2);align-items:center;box-shadow:0 4px 16px rgba(255,107,107,.4);white-space:nowrap">📲 App installieren</div>
 <div class="plus-sheet" id="plus-sheet" onclick="if(event.target===this)closePlusSheet()">
   <div class="plus-sheet-inner">
     <div class="ps-grabber"></div>
@@ -2523,7 +2523,7 @@ async function cbResendConfirm(btn){
     <div class="ps-head">
       <div class="ps-head-text">
         <div class="ps-eyebrow">Premium Boost</div>
-        <div class="ps-title" style="display:inline-flex;align-items:center;gap:8px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#06b6d4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12l4 6-10 12L2 9z"/><path d="M2 9h20"/><path d="M9 3 6 9l6 12 6-12-3-6"/></svg>Diamantlink</div>
+        <div class="ps-title" style="display:inline-flex;align-items:center;gap:var(--space-2)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#06b6d4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12l4 6-10 12L2 9z"/><path d="M2 9h20"/><path d="M9 3 6 9l6 12 6-12-3-6"/></svg>Diamantlink</div>
         <div class="ps-sub">3 Tage ganz oben im Feed</div>
       </div>
       <button class="ps-close" onclick="closeDiamondSheet()" aria-label="Schließen">
@@ -2583,7 +2583,7 @@ async function cbResendConfirm(btn){
     <div class="ps-head">
       <div class="ps-head-text">
         <div class="ps-eyebrow">Gemeinsam posten</div>
-        <div class="ps-title" style="display:inline-flex;align-items:center;gap:8px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ec4899" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m11 17 2 2a1 1 0 1 0 3-3"/><path d="m14 14 2.5 2.5a1 1 0 1 0 3-3l-3.88-3.88a3 3 0 0 0-4.24 0l-.88.88a1 1 0 1 1-3-3l2.81-2.81a5.79 5.79 0 0 1 7.06-.87l.47.28a2 2 0 0 0 1.42.25L21 4"/><path d="m21 3 1 11h-2"/><path d="M3 3 2 14l6.5 6.5a1 1 0 1 0 3-3"/><path d="M3 4h8"/></svg>Kollab-Link</div>
+        <div class="ps-title" style="display:inline-flex;align-items:center;gap:var(--space-2)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ec4899" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m11 17 2 2a1 1 0 1 0 3-3"/><path d="m14 14 2.5 2.5a1 1 0 1 0 3-3l-3.88-3.88a3 3 0 0 0-4.24 0l-.88.88a1 1 0 1 1-3-3l2.81-2.81a5.79 5.79 0 0 1 7.06-.87l.47.28a2 2 0 0 0 1.42.25L21 4"/><path d="m21 3 1 11h-2"/><path d="M3 3 2 14l6.5 6.5a1 1 0 1 0 3-3"/><path d="M3 4h8"/></svg>Kollab-Link</div>
         <div class="ps-sub">1× pro Woche mit deinem Kollab-Partner</div>
       </div>
       <button class="ps-close" onclick="closeKollabSheet()" aria-label="Schließen">
@@ -2615,23 +2615,23 @@ async function cbResendConfirm(btn){
     </div>
     <div id="liker-modal-content" style="padding:4px 0"></div>
     <div style="padding:12px 16px 28px">
-      <button onclick="closeLikerModal()" style="width:100%;background:var(--bg4);border:none;color:var(--text);border-radius:12px;padding:12px;font-size:14px;font-weight:600;cursor:pointer;font-family:var(--font)">Schließen</button>
+      <button onclick="closeLikerModal()" style="width:100%;background:var(--bg4);border:none;color:var(--text);border-radius:12px;padding:var(--space-3);font-size:14px;font-weight:600;cursor:pointer;font-family:var(--font)">Schließen</button>
     </div>
   </div>
 </div>
-<div id="crop-overlay" style="position:fixed;inset:0;z-index:9500;background:rgba(0,0,0,.93);display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s;padding:16px">
+<div id="crop-overlay" style="position:fixed;inset:0;z-index:9500;background:rgba(0,0,0,.93);display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s;padding:var(--space-4)">
   <div style="width:100%;max-width:380px">
-    <div style="text-align:center;font-size:15px;font-weight:700;color:#fff;margin-bottom:16px">Bild positionieren</div>
+    <div style="text-align:center;font-size:15px;font-weight:700;color:#fff;margin-bottom:var(--space-4)">Bild positionieren</div>
     <div id="crop-vp" style="position:relative;overflow:hidden;background:#111;border-radius:12px;border:2px solid rgba(255,255,255,.15);cursor:grab;touch-action:none;user-select:none;width:100%;aspect-ratio:1">
       <img id="crop-img" style="position:absolute;transform-origin:0 0;max-width:none;pointer-events:none;user-select:none" src="" alt="">
     </div>
-    <div style="margin-top:12px;display:flex;flex-direction:column;gap:4px">
+    <div style="margin-top:var(--space-3);display:flex;flex-direction:column;gap:var(--space-1)">
       <div style="font-size:11px;color:rgba(255,255,255,.5);text-align:center">Zoom</div>
       <input type="range" id="crop-zoom" style="width:100%;accent-color:var(--accent)" min="0.1" max="3" step="0.001" value="1" oninput="setCropZoom(parseFloat(this.value))">
     </div>
-    <div style="margin-top:14px;display:flex;gap:8px">
-      <button onclick="closeCropModal()" style="flex:1;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:#fff;border-radius:12px;padding:12px;font-size:14px;font-weight:600;cursor:pointer;font-family:var(--font)">Abbrechen</button>
-      <button onclick="confirmCrop()" style="flex:2;background:var(--accent);border:none;color:#fff;border-radius:12px;padding:12px;font-size:14px;font-weight:600;cursor:pointer;font-family:var(--font)">✅ Übernehmen</button>
+    <div style="margin-top:14px;display:flex;gap:var(--space-2)">
+      <button onclick="closeCropModal()" style="flex:1;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:#fff;border-radius:12px;padding:var(--space-3);font-size:14px;font-weight:600;cursor:pointer;font-family:var(--font)">Abbrechen</button>
+      <button onclick="confirmCrop()" style="flex:2;background:var(--accent);border:none;color:#fff;border-radius:12px;padding:var(--space-3);font-size:14px;font-weight:600;cursor:pointer;font-family:var(--font)">✅ Übernehmen</button>
     </div>
   </div>
 </div>
@@ -2687,7 +2687,7 @@ ${session ? `
 .tour-arrow{position:fixed;width:42px;height:42px;pointer-events:none;filter:drop-shadow(0 8px 22px rgba(212,175,55,0.9));animation:tour-bounce 1.4s ease-in-out infinite;transition:all .55s cubic-bezier(.16,1,.3,1);z-index:10000;will-change:transform}
 .tour-arrow svg{width:100%;height:100%;display:block}
 @keyframes tour-bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(10px)}}
-.tour-card{position:fixed;left:16px;right:16px;background:linear-gradient(180deg,rgba(28,28,30,0.97),rgba(15,15,17,0.97));border:1px solid rgba(212,175,55,0.4);border-radius:20px;padding:20px;box-shadow:0 30px 80px -10px rgba(0,0,0,0.75),0 0 0 1px rgba(255,255,255,0.04),0 0 40px rgba(212,175,55,0.22);transition:opacity .25s ease,transform .35s cubic-bezier(.16,1,.3,1);max-width:440px;margin:0 auto;font-family:'Inter',sans-serif;backdrop-filter:blur(28px) saturate(180%);-webkit-backdrop-filter:blur(28px) saturate(180%);pointer-events:auto;z-index:10001;overflow-y:auto;-webkit-overflow-scrolling:touch;max-height:calc(100dvh - 100px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));overscroll-behavior:contain}
+.tour-card{position:fixed;left:16px;right:16px;background:linear-gradient(180deg,rgba(28,28,30,0.97),rgba(15,15,17,0.97));border:1px solid rgba(212,175,55,0.4);border-radius:20px;padding:var(--space-5);box-shadow:0 30px 80px -10px rgba(0,0,0,0.75),0 0 0 1px rgba(255,255,255,0.04),0 0 40px rgba(212,175,55,0.22);transition:opacity .25s ease,transform .35s cubic-bezier(.16,1,.3,1);max-width:440px;margin:0 auto;font-family:'Inter',sans-serif;backdrop-filter:blur(28px) saturate(180%);-webkit-backdrop-filter:blur(28px) saturate(180%);pointer-events:auto;z-index:10001;overflow-y:auto;-webkit-overflow-scrolling:touch;max-height:calc(100dvh - 100px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));overscroll-behavior:contain}
 .tour-card::-webkit-scrollbar{width:5px}
 .tour-card::-webkit-scrollbar-thumb{background:rgba(212,175,55,0.45);border-radius:99px}
 .tour-card::-webkit-scrollbar-track{background:transparent}
@@ -2696,11 +2696,11 @@ ${session ? `
 .tour-card.transitioning{opacity:0;transform:translateY(8px) scale(0.985)}
 .tour-close{position:absolute;top:12px;right:12px;width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.65);font-size:18px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit;transition:all .18s}
 .tour-close:hover{background:rgba(255,255,255,0.13);color:#fff;border-color:rgba(255,255,255,0.24)}
-.tour-eyebrow{font-size:11px;font-weight:700;color:#d4af37;text-transform:uppercase;letter-spacing:2.2px;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.tour-eyebrow{font-size:11px;font-weight:700;color:#d4af37;text-transform:uppercase;letter-spacing:2.2px;margin-bottom:10px;display:flex;align-items:center;gap:var(--space-2)}
 .tour-eyebrow .step-num{font-family:'JetBrains Mono',monospace;background:linear-gradient(135deg,rgba(212,175,55,0.22),rgba(212,175,55,0.10));padding:3px 10px;border-radius:99px;font-size:11px;border:1px solid rgba(212,175,55,0.25);letter-spacing:0.5px}
-.tour-h{font-size:18px;font-weight:800;letter-spacing:-0.5px;color:#fff;margin-bottom:8px;padding-right:34px;line-height:1.3}
-.tour-s{font-size:13.5px;color:rgba(255,255,255,0.78);line-height:1.6;margin-bottom:16px}
-.tour-actions{display:flex;gap:8px}
+.tour-h{font-size:18px;font-weight:800;letter-spacing:-0.5px;color:#fff;margin-bottom:var(--space-2);padding-right:34px;line-height:1.3}
+.tour-s{font-size:13.5px;color:rgba(255,255,255,0.78);line-height:1.6;margin-bottom:var(--space-4)}
+.tour-actions{display:flex;gap:var(--space-2)}
 .tour-btn{padding:11px 14px;font-size:13px;font-weight:700;border-radius:12px;border:none;cursor:pointer;font-family:inherit;transition:all .18s;letter-spacing:0.1px}
 .tour-btn-skip{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.65);flex:0 0 auto}
 .tour-btn-skip:hover{background:rgba(255,255,255,0.1);color:#fff}
@@ -2796,7 +2796,7 @@ ${session ? `
     try{
       var b = document.createElement('div');
       b.style.cssText = 'position:fixed;top:10px;left:10px;right:10px;z-index:99999;background:#7c1d1d;color:#fff;padding:14px;border-radius:12px;font-family:Inter,sans-serif;font-size:13px;font-weight:600;box-shadow:0 12px 30px rgba(0,0,0,.6);max-width:600px;margin:0 auto;border:1px solid #ef4444';
-      b.innerHTML = '<b style="font-size:14px">⚠️ Tour-Error in '+label+'</b><div style="margin-top:6px;font-weight:400;font-size:12px;color:#fecaca">'+(err.message||err)+'</div><div style="margin-top:8px;font-size:11px;color:#fca5a5">Schick mir bitte einen Screenshot davon!</div>';
+      b.innerHTML = '<b style="font-size:14px">⚠️ Tour-Error in '+label+'</b><div style="margin-top:6px;font-weight:400;font-size:12px;color:#fecaca">'+(err.message||err)+'</div><div style="margin-top:var(--space-2);font-size:11px;color:#fca5a5">Schick mir bitte einen Screenshot davon!</div>';
       document.body.appendChild(b);
       setTimeout(function(){ b.style.transition='opacity .5s'; b.style.opacity='0'; setTimeout(function(){b.remove();}, 600); }, 12000);
     }catch(e){}
@@ -3104,7 +3104,7 @@ ${session ? `
       + '</div>'
       + '<div style="aspect-ratio:1.6/1;background:linear-gradient(135deg,rgba(167,139,250,0.18),rgba(59,130,246,0.18));border-radius:12px;margin-bottom:10px;display:flex;align-items:center;justify-content:center;font-size:32px">📸</div>'
       + '<div style="font-size:12px;color:rgba(255,255,255,0.7);margin-bottom:10px">So sieht ein Reel-Post in deinem Feed aus.</div>'
-      + '<div style="display:flex;gap:8px;align-items:center">'
+      + '<div style="display:flex;gap:var(--space-2);align-items:center">'
       + '  <button class="post-action-btn" style="display:inline-flex;align-items:center;gap:6px;padding:9px 14px;border:1px solid rgba(255,255,255,0.12);border-radius:11px;background:rgba(255,255,255,0.04);color:#fff;font-weight:700;font-size:13px;cursor:default"><span style="color:#ef4444">❤</span> Like · 0</button>'
       + '  <button class="post-comment-btn" style="display:inline-flex;align-items:center;gap:6px;padding:9px 14px;border:1px solid rgba(255,255,255,0.12);border-radius:11px;background:rgba(255,255,255,0.04);color:#fff;font-weight:700;font-size:13px;cursor:default">💬 Kommentar</button>'
       + '</div>';
@@ -3345,7 +3345,7 @@ document.addEventListener('visibilitychange', function(){
     if (document.getElementById('back-to-app-banner')) return;
     const b = document.createElement('div');
     b.id = 'back-to-app-banner';
-    b.style.cssText = 'position:fixed;top:max(10px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#0866FF,#0653cc);color:#fff;padding:11px 18px;border-radius:999px;font-size:13.5px;font-weight:700;box-shadow:0 8px 24px rgba(8,102,255,0.4);z-index:9999;display:flex;align-items:center;gap:8px;cursor:pointer;animation:btb-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)';
+    b.style.cssText = 'position:fixed;top:max(10px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#0866FF,#0653cc);color:#fff;padding:11px 18px;border-radius:999px;font-size:13.5px;font-weight:700;box-shadow:0 8px 24px rgba(8,102,255,0.4);z-index:9999;display:flex;align-items:center;gap:var(--space-2);cursor:pointer;animation:btb-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)';
     b.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg> Zurück zur App';
     b.onclick = () => b.remove();
     document.body.appendChild(b);
@@ -3691,12 +3691,12 @@ async function plusPostLink(){
   }catch(e){result.textContent='❌ Netzwerkfehler';}
   if(btn){btn.disabled=false;btn.style.opacity='';btn.textContent='📸 Link teilen';}
 }
-function showLikerModal(msgId){const modal=document.getElementById('liker-modal');const content=document.getElementById('liker-modal-content');if(!modal||!content)return;const cached=document.getElementById('liker-rows-'+msgId);content.innerHTML=(cached&&cached.innerHTML)||'<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">Lädt…</div>';modal.classList.add('open');document.body.style.overflow='hidden';
+function showLikerModal(msgId){const modal=document.getElementById('liker-modal');const content=document.getElementById('liker-modal-content');if(!modal||!content)return;const cached=document.getElementById('liker-rows-'+msgId);content.innerHTML=(cached&&cached.innerHTML)||'<div style="padding:var(--space-6);text-align:center;color:var(--muted);font-size:13px">Lädt…</div>';modal.classList.add('open');document.body.style.overflow='hidden';
   // Diamant-/Prismalinks rendern ihre Liker clientseitig in den Cache (liker-rows-dl-/pl-);
   // der generische Live-Fetch findet diese IDs nicht und wuerde den Cache faelschlich leeren.
   if(String(msgId).indexOf('dl-')===0||String(msgId).indexOf('pl-')===0||String(msgId).indexOf('cl-')===0)return;
   // Live nachladen, damit die Liste auch ohne Page-Reload aktuell ist.
-  fetch('/api/link-likers?msgId='+encodeURIComponent(msgId)).then(r=>r.json()).then(j=>{if(j&&typeof j.html==='string'){content.innerHTML=j.html||'<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">Noch niemand geliked</div>';}}).catch(()=>{});}
+  fetch('/api/link-likers?msgId='+encodeURIComponent(msgId)).then(r=>r.json()).then(j=>{if(j&&typeof j.html==='string'){content.innerHTML=j.html||'<div style="padding:var(--space-6);text-align:center;color:var(--muted);font-size:13px">Noch niemand geliked</div>';}}).catch(()=>{});}
 function closeLikerModal(){const modal=document.getElementById('liker-modal');if(modal){modal.classList.remove('open');document.body.style.overflow='';} }
 function closeReportModal(){var m=document.getElementById('report-modal');if(m)m.style.display='none';}
 function reportLiker(likerUid,contextLabel,special){
@@ -3712,8 +3712,8 @@ function reportLiker(likerUid,contextLabel,special){
   m.dataset.ctx=String(contextLabel);
   var rs=['Nicht engagiert','Nur geliked'];
   if(special)rs.push('Nicht full engagiert');
-  var btns=rs.map(function(r){return '<button data-reason="'+r+'" onclick="submitReport(this)" style="width:100%;text-align:left;padding:13px 15px;margin-bottom:8px;background:var(--surface-tint);border:1px solid var(--border2);border-radius:12px;color:var(--text);font-size:14px;font-weight:600;cursor:pointer">'+r+'</button>';}).join('');
-  m.innerHTML='<div style="background:var(--bg3);border-radius:20px 20px 0 0;padding:18px 16px calc(22px + var(--safe-bottom,0px));width:100%;max-width:480px;border-top:1px solid var(--border2);box-shadow:0 -8px 30px rgba(0,0,0,.2)"><div style="width:36px;height:4px;background:var(--border);border-radius:4px;margin:0 auto 16px"></div><div style="font-size:16px;font-weight:800;text-align:center;color:var(--text)">User melden</div><div style="font-size:12.5px;color:var(--muted);text-align:center;margin:4px 0 16px">Hat geliked, aber nicht richtig engagiert?</div>'+btns+'<button onclick="closeReportModal()" style="width:100%;padding:13px;margin-top:4px;background:none;border:none;color:var(--muted);font-size:14px;font-weight:700;cursor:pointer">Abbrechen</button></div>';
+  var btns=rs.map(function(r){return '<button data-reason="'+r+'" onclick="submitReport(this)" style="width:100%;text-align:left;padding:13px 15px;margin-bottom:var(--space-2);background:var(--surface-tint);border:1px solid var(--border2);border-radius:12px;color:var(--text);font-size:14px;font-weight:600;cursor:pointer">'+r+'</button>';}).join('');
+  m.innerHTML='<div style="background:var(--bg3);border-radius:20px 20px 0 0;padding:18px 16px calc(22px + var(--safe-bottom,0px));width:100%;max-width:480px;border-top:1px solid var(--border2);box-shadow:0 -8px 30px rgba(0,0,0,.2)"><div style="width:36px;height:4px;background:var(--border);border-radius:4px;margin:0 auto 16px"></div><div style="font-size:16px;font-weight:800;text-align:center;color:var(--text)">User melden</div><div style="font-size:12.5px;color:var(--muted);text-align:center;margin:4px 0 16px">Hat geliked, aber nicht richtig engagiert?</div>'+btns+'<button onclick="closeReportModal()" style="width:100%;padding:13px;margin-top:var(--space-1);background:none;border:none;color:var(--muted);font-size:14px;font-weight:700;cursor:pointer">Abbrechen</button></div>';
   m.style.display='flex';
 }
 async function submitReport(btn){
@@ -3860,9 +3860,9 @@ function confirmCrop(){
     const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent);
     m.innerHTML='<div style="background:#1a1a2e;border-radius:24px 24px 0 0;padding:24px 20px 40px;width:100%;max-width:480px;border-top:3px solid #ff6b6b"><div style="width:36px;height:4px;background:#444;border-radius:4px;margin:0 auto 20px"></div><div style="font-size:18px;font-weight:800;text-align:center;margin-bottom:6px">📲 App installieren</div><div style="font-size:13px;color:#aaa;text-align:center;margin-bottom:22px">So fügst du CreatorX zum Startbildschirm hinzu:</div>'
       +(isIOS
-        ?'<div style="display:flex;flex-direction:column;gap:12px"><div style="background:#fff1;border-radius:14px;padding:14px 16px;display:flex;gap:14px;align-items:center"><div style="font-size:26px">1️⃣</div><div><div style="font-weight:700;font-size:14px">Teilen-Symbol tippen ⬆️</div><div style="font-size:12px;color:#aaa">Unten in der Mitte der Leiste</div></div></div><div style="background:#fff1;border-radius:14px;padding:14px 16px;display:flex;gap:14px;align-items:center"><div style="font-size:26px">2️⃣</div><div><div style="font-weight:700;font-size:14px">„Zum Home-Bildschirm"</div><div style="font-size:12px;color:#aaa">Nach unten scrollen, antippen</div></div></div><div style="background:#fff1;border-radius:14px;padding:14px 16px;display:flex;gap:14px;align-items:center"><div style="font-size:26px">3️⃣</div><div><div style="font-weight:700;font-size:14px">„Hinzufügen" drücken</div><div style="font-size:12px;color:#aaa">App erscheint auf dem Homescreen</div></div></div></div>'
-        :'<div style="display:flex;flex-direction:column;gap:12px"><div style="background:#fff1;border-radius:14px;padding:14px 16px;display:flex;gap:14px;align-items:center"><div style="font-size:26px">1️⃣</div><div><div style="font-weight:700;font-size:14px">Oben rechts ⋮ tippen</div><div style="font-size:12px;color:#aaa">Die drei Punkte im Browser-Menü</div></div></div><div style="background:#fff1;border-radius:14px;padding:14px 16px;display:flex;gap:14px;align-items:center"><div style="font-size:26px">2️⃣</div><div><div style="font-weight:700;font-size:14px">„App installieren" wählen</div><div style="font-size:12px;color:#aaa">Oder „Zum Startbildschirm hinzufügen"</div></div></div><div style="background:#fff1;border-radius:14px;padding:14px 16px;display:flex;gap:14px;align-items:center"><div style="font-size:26px">3️⃣</div><div><div style="font-weight:700;font-size:14px">„Hinzufügen" bestätigen ✓</div><div style="font-size:12px;color:#aaa">App erscheint auf dem Homescreen</div></div></div></div>')
-      +'<button onclick="document.getElementById(\\'install-guide-modal\\').remove()" style="margin-top:20px;width:100%;padding:14px;border-radius:14px;border:none;background:#ff6b6b;color:#fff;font-size:15px;font-weight:700;cursor:pointer">Verstanden ✓</button></div>';
+        ?'<div style="display:flex;flex-direction:column;gap:var(--space-3)"><div style="background:#fff1;border-radius:14px;padding:14px 16px;display:flex;gap:14px;align-items:center"><div style="font-size:26px">1️⃣</div><div><div style="font-weight:700;font-size:14px">Teilen-Symbol tippen ⬆️</div><div style="font-size:12px;color:#aaa">Unten in der Mitte der Leiste</div></div></div><div style="background:#fff1;border-radius:14px;padding:14px 16px;display:flex;gap:14px;align-items:center"><div style="font-size:26px">2️⃣</div><div><div style="font-weight:700;font-size:14px">„Zum Home-Bildschirm"</div><div style="font-size:12px;color:#aaa">Nach unten scrollen, antippen</div></div></div><div style="background:#fff1;border-radius:14px;padding:14px 16px;display:flex;gap:14px;align-items:center"><div style="font-size:26px">3️⃣</div><div><div style="font-weight:700;font-size:14px">„Hinzufügen" drücken</div><div style="font-size:12px;color:#aaa">App erscheint auf dem Homescreen</div></div></div></div>'
+        :'<div style="display:flex;flex-direction:column;gap:var(--space-3)"><div style="background:#fff1;border-radius:14px;padding:14px 16px;display:flex;gap:14px;align-items:center"><div style="font-size:26px">1️⃣</div><div><div style="font-weight:700;font-size:14px">Oben rechts ⋮ tippen</div><div style="font-size:12px;color:#aaa">Die drei Punkte im Browser-Menü</div></div></div><div style="background:#fff1;border-radius:14px;padding:14px 16px;display:flex;gap:14px;align-items:center"><div style="font-size:26px">2️⃣</div><div><div style="font-weight:700;font-size:14px">„App installieren" wählen</div><div style="font-size:12px;color:#aaa">Oder „Zum Startbildschirm hinzufügen"</div></div></div><div style="background:#fff1;border-radius:14px;padding:14px 16px;display:flex;gap:14px;align-items:center"><div style="font-size:26px">3️⃣</div><div><div style="font-weight:700;font-size:14px">„Hinzufügen" bestätigen ✓</div><div style="font-size:12px;color:#aaa">App erscheint auf dem Homescreen</div></div></div></div>')
+      +'<button onclick="document.getElementById(\\'install-guide-modal\\').remove()" style="margin-top:var(--space-5);width:100%;padding:14px;border-radius:14px;border:none;background:#ff6b6b;color:#fff;font-size:15px;font-weight:700;cursor:pointer">Verstanden ✓</button></div>';
   };
   window.addEventListener('appinstalled',()=>{
     const b=document.getElementById('pwa-install-btn');
@@ -4065,14 +4065,14 @@ ${session ? `<!-- Telegram-User Reminder: Email + Passwort setzen -->
     if (!s.hasPassword) missing.push('Passwort');
     var b = document.createElement('div');
     b.id = 'tg-reminder-banner';
-    b.style.cssText = 'position:fixed;bottom:calc(78px + env(safe-area-inset-bottom));left:10px;right:10px;max-width:480px;margin:0 auto;background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;padding:14px 16px;border-radius:16px;font-family:Inter,-apple-system,sans-serif;font-size:13.5px;font-weight:600;box-shadow:0 12px 32px rgba(124,58,237,0.45);z-index:9990;display:flex;align-items:center;gap:12px;animation:tg-rem-in .35s cubic-bezier(.34,1.56,.64,1)';
+    b.style.cssText = 'position:fixed;bottom:calc(78px + env(safe-area-inset-bottom));left:10px;right:10px;max-width:480px;margin:0 auto;background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;padding:14px 16px;border-radius:16px;font-family:Inter,-apple-system,sans-serif;font-size:13.5px;font-weight:600;box-shadow:0 12px 32px rgba(124,58,237,0.45);z-index:9990;display:flex;align-items:center;gap:var(--space-3);animation:tg-rem-in .35s cubic-bezier(.34,1.56,.64,1)';
     b.innerHTML = '<div style="font-size:24px;flex-shrink:0">🔐</div>'
       + '<div style="flex:1;min-width:0;line-height:1.4">'
       +   '<div style="font-weight:800;letter-spacing:-0.1px;margin-bottom:2px">' + missing.join(' &amp; ') + ' setzen</div>'
       +   '<div style="font-size:12px;color:rgba(255,255,255,0.85);font-weight:500">Damit du auch ohne Telegram einloggen kannst.</div>'
       + '</div>'
       + '<a href="/einstellungen" style="background:rgba(255,255,255,0.25);color:#fff;border:1px solid rgba(255,255,255,0.4);padding:8px 14px;border-radius:99px;font-size:12.5px;font-weight:800;text-decoration:none;flex-shrink:0;backdrop-filter:blur(8px)">→ Setzen</a>'
-      + '<button id="tg-rem-x" style="background:transparent;border:none;color:rgba(255,255,255,0.7);font-size:18px;cursor:pointer;padding:4px;flex-shrink:0;line-height:1">✕</button>';
+      + '<button id="tg-rem-x" style="background:transparent;border:none;color:rgba(255,255,255,0.7);font-size:18px;cursor:pointer;padding:var(--space-1);flex-shrink:0;line-height:1">✕</button>';
     document.body.appendChild(b);
     var st = document.createElement('style');
     st.textContent = '@keyframes tg-rem-in{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}';
@@ -4172,21 +4172,21 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
 .ipf-avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .ipf-avatar-dot{position:absolute;bottom:2px;right:2px;width:18px;height:18px;border-radius:50%;background:#22c55e;border:3px solid var(--bg);box-shadow:0 0 8px rgba(34,197,94,.5)}
 .ipf-avatar-crown{position:absolute;top:-22px;left:50%;transform:translateX(-50%) rotate(-4deg);font-size:30px;line-height:1;animation:crown-bob 2.4s ease-in-out infinite;pointer-events:none;z-index:5}
-.ipf-stats{flex:1;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center}
+.ipf-stats{flex:1;display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-2);text-align:center}
 .ipf-stat{cursor:default;text-decoration:none;color:inherit;padding:4px 0;transition:transform .12s}
 .ipf-stat[href]:active{transform:scale(.96)}
 .ipf-stat-num{font-size:18px;font-weight:700;color:var(--text);line-height:1.1;letter-spacing:-.2px}
 .ipf-stat-lbl{font-size:11.5px;color:var(--muted);margin-top:3px;font-weight:500}
 .ipf-name-row{margin-bottom:6px}
 .ipf-name-row .nm{font-size:16px;font-weight:700;color:var(--text);line-height:1.2;display:inline-flex;align-items:center;gap:6px}
-.ipf-name-row .badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:99px;font-size:10.5px;font-weight:800;letter-spacing:.4px;margin-left:6px;vertical-align:middle}
+.ipf-name-row .badge{display:inline-flex;align-items:center;gap:var(--space-1);padding:3px 9px;border-radius:99px;font-size:10.5px;font-weight:800;letter-spacing:.4px;margin-left:6px;vertical-align:middle}
 .ipf-handle{font-size:13px;color:var(--muted);margin-top:2px;font-weight:500}
 .ipf-bio{font-size:13.5px;color:var(--text);line-height:1.5;margin:10px 0;white-space:pre-wrap;word-break:break-word}
-.ipf-meta{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 4px;align-items:center}
+.ipf-meta{display:flex;flex-wrap:wrap;gap:var(--space-2);margin:8px 0 4px;align-items:center}
 .ipf-link{display:inline-flex;align-items:center;gap:5px;font-size:13px;color:#4dabf7;text-decoration:none;font-weight:600}
 .ipf-chip{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;background:var(--surface-tint);border:1px solid var(--border2);border-radius:9px;font-size:12px;color:var(--text);text-decoration:none;font-weight:500}
 .ipf-chip:hover{background:var(--bg2)}
-.ipf-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:14px 0 10px}
+.ipf-actions{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-2);margin:14px 0 10px}
 .ipf-btn{padding:9px 12px;background:var(--bg3);border:1px solid var(--border2);color:var(--text);border-radius:9px;font-size:13.5px;font-weight:600;cursor:pointer;font-family:inherit;text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .12s;line-height:1}
 .ipf-btn:hover{background:var(--bg4)}
 .ipf-btn:active{transform:scale(.98)}
@@ -4196,7 +4196,7 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
 .ipf-trophy{font-size:18px;line-height:1}
 /* Account-Switcher Dropdown (Insta-Style) */
 .ipf-switcher-wrap{position:relative;margin:12px 16px 0;background:var(--bg)}
-.ipf-switcher{display:flex;align-items:center;gap:12px;width:100%;background:linear-gradient(135deg,rgba(167,139,250,.08),rgba(124,58,237,.04));border:1.5px solid rgba(167,139,250,.30);color:var(--text);font-size:14px;font-weight:600;cursor:pointer;padding:10px 14px;border-radius:14px;font-family:inherit;transition:all .15s;box-shadow:0 2px 8px rgba(124,58,237,.06)}
+.ipf-switcher{display:flex;align-items:center;gap:var(--space-3);width:100%;background:linear-gradient(135deg,rgba(167,139,250,.08),rgba(124,58,237,.04));border:1.5px solid rgba(167,139,250,.30);color:var(--text);font-size:14px;font-weight:600;cursor:pointer;padding:10px 14px;border-radius:14px;font-family:inherit;transition:all .15s;box-shadow:0 2px 8px rgba(124,58,237,.06)}
 .ipf-switcher:hover{background:linear-gradient(135deg,rgba(167,139,250,.14),rgba(124,58,237,.08));border-color:rgba(167,139,250,.55);transform:translateY(-1px)}
 .ipf-switcher-mini-avatar{width:32px;height:32px;border-radius:50%;background:var(--avatar-fallback-bg);display:flex;align-items:center;justify-content:center;color:var(--avatar-fallback-color);font-weight:700;font-size:13px;overflow:hidden;position:relative;flex-shrink:0;border:2px solid var(--bg3)}
 .ipf-switcher-mini-avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
@@ -4255,7 +4255,7 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
   <div class="ipf-name-row">
     <span class="nm">${htmlEsc(u.spitzname||u.name||'User')} ${_roleBadge}${isOwn?(()=>{
       const _claimedToday = hasClaimed('dailyxp', uid);
-      return '<button id="daily-xp-fab" onclick="claimDailyXP()" title="'+(_claimedToday?'Heute schon abgeholt':'Täglicher XP-Bonus abholen')+'"'+(_claimedToday?' disabled':'')+' style="position:relative;display:inline-flex;align-items:center;justify-content:center;margin-left:8px;width:30px;height:30px;border-radius:50%;background:'+(_claimedToday?'var(--bg4)':'linear-gradient(135deg,#22c55e,#16a34a)')+';color:'+(_claimedToday?'var(--muted)':'#fff')+';border:1.5px solid '+(_claimedToday?'var(--border)':'rgba(34,197,94,0.5)')+';font-size:15px;cursor:'+(_claimedToday?'default':'pointer')+';font-family:inherit;vertical-align:middle;opacity:'+(_claimedToday?'0.55':'1')+'">'+(_claimedToday?'✓':'🎁')+(_claimedToday?'':'<span id="daily-xp-fab-dot" style="position:absolute;top:-3px;right:-3px;width:9px;height:9px;border-radius:50%;background:#ef4444;border:2px solid var(--bg);animation:dxpPulse 2s ease-in-out infinite"></span>')+'</button>';
+      return '<button id="daily-xp-fab" onclick="claimDailyXP()" title="'+(_claimedToday?'Heute schon abgeholt':'Täglicher XP-Bonus abholen')+'"'+(_claimedToday?' disabled':'')+' style="position:relative;display:inline-flex;align-items:center;justify-content:center;margin-left:var(--space-2);width:30px;height:30px;border-radius:50%;background:'+(_claimedToday?'var(--bg4)':'linear-gradient(135deg,#22c55e,#16a34a)')+';color:'+(_claimedToday?'var(--muted)':'#fff')+';border:1.5px solid '+(_claimedToday?'var(--border)':'rgba(34,197,94,0.5)')+';font-size:15px;cursor:'+(_claimedToday?'default':'pointer')+';font-family:inherit;vertical-align:middle;opacity:'+(_claimedToday?'0.55':'1')+'">'+(_claimedToday?'✓':'🎁')+(_claimedToday?'':'<span id="daily-xp-fab-dot" style="position:absolute;top:-3px;right:-3px;width:9px;height:9px;border-radius:50%;background:#ef4444;border:2px solid var(--bg);animation:dxpPulse 2s ease-in-out infinite"></span>')+'</button>';
     })():''}</span>
     <div class="ipf-handle">${u.instagram ? '@'+htmlEsc(u.instagram) : (rank>0?'Rang #'+rank:'')}</div>
   </div>
@@ -4274,7 +4274,7 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
       <button class="ipf-btn" onclick="ipfFollow(this,'${uid}')" id="ipf-follow-btn">${_isFollowing ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><path d="M20 6L9 17l-5-5"/></svg>Folge ich' : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>Folgen'}</button>
     `}
   </div>
-  ${isOwn ? `<a href="/insights" class="ipf-btn" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:11px;background:linear-gradient(135deg,rgba(34,197,94,.10),rgba(167,139,250,.08));border:1px solid rgba(34,197,94,.30);color:#22c55e;border-radius:9px;font-size:13.5px;font-weight:700;text-decoration:none;margin-bottom:10px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="20" x2="6" y2="13"/><line x1="12" y1="20" x2="12" y2="7"/><line x1="18" y1="20" x2="18" y2="11"/></svg> Professional Insights · Top Engagers · Best Times <span style="margin-left:auto;color:#22c55e;font-size:14px">→</span></a>` : ''}
+  ${isOwn ? `<a href="/insights" class="ipf-btn" style="display:flex;align-items:center;justify-content:center;gap:var(--space-2);width:100%;padding:11px;background:linear-gradient(135deg,rgba(34,197,94,.10),rgba(167,139,250,.08));border:1px solid rgba(34,197,94,.30);color:#22c55e;border-radius:9px;font-size:13.5px;font-weight:700;text-decoration:none;margin-bottom:10px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="20" x2="6" y2="13"/><line x1="12" y1="20" x2="12" y2="7"/><line x1="18" y1="20" x2="18" y2="11"/></svg> Professional Insights · Top Engagers · Best Times <span style="margin-left:auto;color:#22c55e;font-size:14px">→</span></a>` : ''}
   ${u.trophies&&u.trophies.length?`<div class="ipf-trophy-row"><span style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-weight:800;width:100%;margin-bottom:2px;display:inline-flex;align-items:center;gap:5px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h12v4a6 6 0 0 1-12 0z"/><path d="M6 6H3.5a2.5 2.5 0 0 0 4 2"/><path d="M18 6h2.5a2.5 2.5 0 0 1-4 2"/><line x1="12" y1="14" x2="12" y2="18"/><path d="M8.5 21h7"/><path d="M9 18h6"/></svg>Trophäen</span>${u.trophies.map(t=>`<span class="ipf-trophy">${t}</span>`).join('')}</div>`:''}
   ${isOwn && isAdmin ? '<div style="margin-top:6px"><a href="/dashboard" class="ipf-btn" style="background:linear-gradient(135deg,#f5d76e,#d4a946 55%,#8b6914);color:#000;border-color:rgba(212,175,55,.55);font-weight:700;display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Admin Dashboard</a></div>' : ''}
 </div>
@@ -4398,7 +4398,7 @@ ${(()=>{
 })()}
 ${nb?`
 <div class="profile-xp-bar"><div class="profile-xp-fill" style="width:${nb.pct}%;background:${grad}"></div></div>
-<div class="profile-xp-info"><span>Noch <b>${nb.fehlend}</b> XP bis <b>${nb.ziel}</b></span><span>${nb.pct}%</span></div>`:'<div style="margin:14px 16px;padding:12px 16px;background:linear-gradient(135deg,rgba(255,212,59,.10),rgba(255,165,0,.04));border:1px solid rgba(255,212,59,.3);border-radius:14px;font-size:12.5px;font-weight:700;color:#a16207;display:flex;align-items:center;gap:8px"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M3 7l4 4 5-6 5 6 4-4-2 12H5z"/></svg>Maximales Level erreicht!</div>'}
+<div class="profile-xp-info"><span>Noch <b>${nb.fehlend}</b> XP bis <b>${nb.ziel}</b></span><span>${nb.pct}%</span></div>`:'<div style="margin:14px 16px;padding:12px 16px;background:linear-gradient(135deg,rgba(255,212,59,.10),rgba(255,165,0,.04));border:1px solid rgba(255,212,59,.3);border-radius:14px;font-size:12.5px;font-weight:700;color:#a16207;display:flex;align-items:center;gap:var(--space-2)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M3 7l4 4 5-6 5 6 4-4-2 12H5z"/></svg>Maximales Level erreicht!</div>'}
 ${(()=>{
   const pl = ladePinnedLink(uid);
   if (!pl) return '';
@@ -4414,7 +4414,7 @@ ${(()=>{
       </div>
     </div>
     ${isOwn ? `<a href="${htmlEsc(safeUrl(pl))}" target="_blank" rel="noopener noreferrer" style="display:block;text-align:center;padding:9px;background:linear-gradient(135deg,#ec4899,#a855f7);color:#fff;border-radius:9px;font-size:12.5px;font-weight:700;text-decoration:none">→ Reel öffnen</a>` : `
-    <div style="display:flex;gap:8px">
+    <div style="display:flex;gap:var(--space-2)">
       <a href="${htmlEsc(safeUrl(pl))}" target="_blank" rel="noopener noreferrer" id="pinned-visit-${uid}" onclick="window._pvisit_${uid}=Date.now()" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:10px;background:linear-gradient(135deg,#ec4899,#a855f7);color:#fff;border-radius:9px;font-size:12.5px;font-weight:700;text-decoration:none;position:relative">
         <span style="position:absolute;left:8px;top:50%;transform:translateY(-50%);width:18px;height:18px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900">1</span>
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17" cy="7" r="1.1" fill="currentColor" stroke="none"/></svg>Auf Instagram öffnen
@@ -4424,7 +4424,7 @@ ${(()=>{
         ❤️ Engagiert · +1💎
       </button>
     </div>
-    <div style="font-size:10.5px;color:var(--muted);margin-top:8px;line-height:1.4">⚠️ <b>Pflicht:</b> Auf Insta liken + kommentieren + speichern + teilen. Erst auf <b>📸 Öffnen</b> tippen, dann zurückkommen + Like-Button drücken.</div>
+    <div style="font-size:10.5px;color:var(--muted);margin-top:var(--space-2);line-height:1.4">⚠️ <b>Pflicht:</b> Auf Insta liken + kommentieren + speichern + teilen. Erst auf <b>📸 Öffnen</b> tippen, dann zurückkommen + Like-Button drücken.</div>
     `}
   </div>`;
 })()}
@@ -4441,7 +4441,7 @@ ${(()=>{
     </div>
     <a href="${htmlEsc(safeUrl(mySuperlink.url))}" target="_blank" rel="noopener noreferrer" style="padding:7px 14px;background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;border-radius:9px;font-size:12px;font-weight:700;text-decoration:none;white-space:nowrap;flex-shrink:0">→ Öffnen</a>
   </div>
-  ${mySuperlink.caption?`<div style="font-size:12px;color:var(--muted);margin-top:6px;padding-left:32px">${htmlEsc(String(mySuperlink.caption).slice(0,80))}</div>`:''}
+  ${mySuperlink.caption?`<div style="font-size:12px;color:var(--muted);margin-top:6px;padding-left:var(--space-8)">${htmlEsc(String(mySuperlink.caption).slice(0,80))}</div>`:''}
 </div>`;
 })()}`;
 }
@@ -4527,7 +4527,7 @@ async function handleRequest(req, res) {
             'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
             'X-Cb-Route': 'kinderschutz-v1'
         });
-        return res.end(`<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Kinderschutz-Standards · CreatorX</title><style>body{margin:0;font-family:-apple-system,BlinkMacSystemFont,Inter,sans-serif;background:#0b0b0e;color:#fff;line-height:1.6;padding:20px}main{max-width:720px;margin:24px auto;background:linear-gradient(180deg,#1c1c1e,#0f0f11);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:28px 24px;box-shadow:0 20px 60px rgba(0,0,0,.5)}h1{font-size:24px;font-weight:800;margin:0 0 8px;letter-spacing:-.5px}h2{font-size:17px;font-weight:700;margin:26px 0 8px;color:#d4a946}h3{font-size:14px;font-weight:700;margin:18px 0 6px;color:#fff}p{font-size:14px;color:rgba(255,255,255,.8);margin:8px 0}ol,ul{padding-left:22px;font-size:14px;color:rgba(255,255,255,.8)}li{margin:6px 0}a{color:#d4a946;font-weight:600}strong,b{color:#fff}.warn{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);border-radius:10px;padding:14px 16px;margin:18px 0}.warn p{margin:0;color:#fca5a5}.ok{background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.3);border-radius:10px;padding:14px 16px;margin:18px 0}.ok p{margin:0;color:#86efac}.contact{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:14px 16px;margin:14px 0;font-size:13px}.foot{margin-top:28px;padding-top:18px;border-top:1px solid rgba(255,255,255,.08);font-size:12px;color:rgba(255,255,255,.5);text-align:center}.foot a{margin:0 10px;color:rgba(255,255,255,.5);font-weight:500}.stand{font-size:11px;color:rgba(255,255,255,.5);margin:0 0 20px}</style></head><body><main><h1>🛡️ CreatorX Standards zum Schutz von Kindern</h1><p class="stand">Letzte Aktualisierung: ${new Date().toLocaleDateString('de-DE')} · Version 1.0</p><div class="warn"><p><b>⚠️ Zero-Tolerance-Politik:</b> CreatorX hat eine Null-Toleranz-Politik gegen jegliche Form von Kindesmissbrauchsmaterial (CSAM) sowie sexueller Ausbeutung oder Belästigung von Minderjährigen (CSAE). Jeder Verstoß wird sofort gemeldet und führt zur permanenten Sperrung.</p></div><h2>1. Geltungsbereich + Altersgrenze</h2><p>CreatorX ist eine App ausschließlich für Personen <b>ab 18 Jahren</b>. Bei der Registrierung muss jeder Nutzer eine Altersbestätigung abgeben (Pflicht-Häkchen). Trotz dieser Altersgrenze gelten in unserer Community strenge Standards zum Schutz von Kindern, die wir auf dieser Seite dokumentieren.</p><h2>2. Verbotene Inhalte (CSAE)</h2><p>Auf CreatorX sind strikt verboten:</p><ul><li>Sexualisierte Darstellungen, Missbrauchsmaterial oder Nacktheit von Minderjährigen unter 18 Jahren (CSAM)</li><li>Grooming-Versuche (Anbahnung sexueller Kontakte zu Minderjährigen)</li><li>Sextortion (Erpressung mit sexuellen Inhalten)</li><li>Werbung, Verlinkung oder Beschaffung von CSAM</li><li>Verlinkung externer Plattformen die solche Inhalte hosten</li><li>Inhalte die Minderjährige sexualisieren, fetischisieren oder objektivieren</li></ul><h2>3. Meldemechanismen in der App</h2><p>Jeder Nutzer kann verdächtige Inhalte oder andere Nutzer melden:</p><ol><li>Auf jedem Post-Detail-Screen: <b>"⚠️ Melden"</b>-Button</li><li>Auf jedem Profil: <b>"⋮ → Melden"</b> über das Drei-Punkte-Menü</li><li>In Kommentaren: Long-Press oder Drei-Punkte-Menü → <b>"Melden"</b></li><li>Per E-Mail an das Sicherheits-Team (siehe Kontakt unten)</li></ol><p>Meldungen werden innerhalb von <b>24 Stunden</b> geprüft. Bei Verdacht auf CSAM erfolgt die sofortige Sperrung des Inhalts und des Accounts.</p><h2>4. Proaktive Maßnahmen</h2><ul><li><b>Altersbestätigung:</b> Pflicht-Häkchen bei Registrierung (18+)</li><li><b>Email-Verifikation:</b> Account ist erst nach Email-Bestätigung voll nutzbar</li><li><b>Inhaltsüberwachung:</b> Verdächtige Inhalte werden automatisch markiert (Schlüsselwort-Filter)</li><li><b>Account-Sperrung:</b> Bei Verdacht auf Verstoß sofortige Suspendierung</li><li><b>Permanente Speicherung von Verstoß-Logs:</b> Beweissicherung für Behörden</li></ul><h2>5. Zusammenarbeit mit Behörden</h2><p>CreatorX kooperiert vollumfänglich mit Strafverfolgungsbehörden:</p><ul><li>Meldung von CSAM an das <b>NCMEC (National Center for Missing &amp; Exploited Children)</b> via CyberTipline</li><li>Meldung an deutsche Behörden (<b>BKA</b>) sowie luxemburgische Behörden (<b>BEE SECURE Stopline</b>)</li><li>Auskunft an Polizei bei richterlicher Anordnung</li><li>Sicherung von IP-Adressen, Login-Zeiten, Inhalts-Hashes</li></ul><div class="ok"><p><b>✓ Compliance:</b> CreatorX entspricht den Richtlinien des US-amerikanischen <i>18 U.S.C. § 2258A</i>, der EU-Verordnung 2021/1232 zur vorübergehenden Ausnahme von der ePrivacy-Richtlinie, sowie dem deutschen NetzDG und luxemburgischen Anti-CSAM-Gesetzen.</p></div><h2>6. Schulung &amp; Verantwortlichkeit</h2><p>Der Betreiber ist persönlich für die Einhaltung dieser Standards verantwortlich. Es gibt einen dedizierten Ansprechpartner (siehe Kontakt unten), der innerhalb von 24h auf Behörden-Anfragen reagiert.</p><h2>7. Externe Hilfsangebote</h2><p>Falls du Hilfe brauchst oder einen Verdacht melden möchtest:</p><ul><li><b>NCMEC CyberTipline</b> (international): <a href="https://report.cybertip.org" target="_blank">report.cybertip.org</a></li><li><b>BKA</b> (Deutschland): <a href="https://www.bka.de" target="_blank">www.bka.de</a> · Notruf 110</li><li><b>BEE SECURE Stopline</b> (Luxembourg): <a href="https://www.bee-secure.lu/de/stopline" target="_blank">bee-secure.lu/stopline</a></li><li><b>Hilfetelefon Sexueller Missbrauch</b> (DE): <b>0800-22 55 530</b> (kostenlos &amp; anonym)</li></ul><h2>8. Kontakt für Behörden, Eltern, Hinweisgeber</h2><div class="contact"><p><b>Sicherheits-Ansprechpartner:</b><br>Michael Dos Santos Pexioto<br>33b Haaptstrooss<br>L-9835 Luxembourg<br><br>📧 <a href="mailto:mindset.stories_@outlook.de?subject=Kinderschutz-Meldung%20CreatorX">mindset.stories_@outlook.de</a><br>(Betreff: "Kinderschutz-Meldung CreatorX")<br><br>⏱️ Reaktionszeit: <b>innerhalb 24 Stunden</b></p></div><h2>9. Aktualisierungen</h2><p>Diese Standards werden mindestens jährlich überprüft und an aktuelle Gesetze, Best-Practices und Google-Play-Richtlinien angepasst. Wesentliche Änderungen werden in der App und auf dieser Seite kommuniziert.</p><div class="foot"><a href="/datenschutz">Datenschutz</a> · <a href="/agb">AGB</a> · <a href="/impressum">Impressum</a> · <a href="/konto-loeschen">Konto löschen</a></div></main></body></html>`);
+        return res.end(`<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Kinderschutz-Standards · CreatorX</title><style>body{margin:0;font-family:-apple-system,BlinkMacSystemFont,Inter,sans-serif;background:#0b0b0e;color:#fff;line-height:1.6;padding:var(--space-5)}main{max-width:720px;margin:24px auto;background:linear-gradient(180deg,#1c1c1e,#0f0f11);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:28px 24px;box-shadow:0 20px 60px rgba(0,0,0,.5)}h1{font-size:24px;font-weight:800;margin:0 0 8px;letter-spacing:-.5px}h2{font-size:17px;font-weight:700;margin:26px 0 8px;color:#d4a946}h3{font-size:14px;font-weight:700;margin:18px 0 6px;color:#fff}p{font-size:14px;color:rgba(255,255,255,.8);margin:8px 0}ol,ul{padding-left:22px;font-size:14px;color:rgba(255,255,255,.8)}li{margin:6px 0}a{color:#d4a946;font-weight:600}strong,b{color:#fff}.warn{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);border-radius:10px;padding:14px 16px;margin:18px 0}.warn p{margin:0;color:#fca5a5}.ok{background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.3);border-radius:10px;padding:14px 16px;margin:18px 0}.ok p{margin:0;color:#86efac}.contact{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:14px 16px;margin:14px 0;font-size:13px}.foot{margin-top:28px;padding-top:18px;border-top:1px solid rgba(255,255,255,.08);font-size:12px;color:rgba(255,255,255,.5);text-align:center}.foot a{margin:0 10px;color:rgba(255,255,255,.5);font-weight:500}.stand{font-size:11px;color:rgba(255,255,255,.5);margin:0 0 20px}</style></head><body><main><h1>🛡️ CreatorX Standards zum Schutz von Kindern</h1><p class="stand">Letzte Aktualisierung: ${new Date().toLocaleDateString('de-DE')} · Version 1.0</p><div class="warn"><p><b>⚠️ Zero-Tolerance-Politik:</b> CreatorX hat eine Null-Toleranz-Politik gegen jegliche Form von Kindesmissbrauchsmaterial (CSAM) sowie sexueller Ausbeutung oder Belästigung von Minderjährigen (CSAE). Jeder Verstoß wird sofort gemeldet und führt zur permanenten Sperrung.</p></div><h2>1. Geltungsbereich + Altersgrenze</h2><p>CreatorX ist eine App ausschließlich für Personen <b>ab 18 Jahren</b>. Bei der Registrierung muss jeder Nutzer eine Altersbestätigung abgeben (Pflicht-Häkchen). Trotz dieser Altersgrenze gelten in unserer Community strenge Standards zum Schutz von Kindern, die wir auf dieser Seite dokumentieren.</p><h2>2. Verbotene Inhalte (CSAE)</h2><p>Auf CreatorX sind strikt verboten:</p><ul><li>Sexualisierte Darstellungen, Missbrauchsmaterial oder Nacktheit von Minderjährigen unter 18 Jahren (CSAM)</li><li>Grooming-Versuche (Anbahnung sexueller Kontakte zu Minderjährigen)</li><li>Sextortion (Erpressung mit sexuellen Inhalten)</li><li>Werbung, Verlinkung oder Beschaffung von CSAM</li><li>Verlinkung externer Plattformen die solche Inhalte hosten</li><li>Inhalte die Minderjährige sexualisieren, fetischisieren oder objektivieren</li></ul><h2>3. Meldemechanismen in der App</h2><p>Jeder Nutzer kann verdächtige Inhalte oder andere Nutzer melden:</p><ol><li>Auf jedem Post-Detail-Screen: <b>"⚠️ Melden"</b>-Button</li><li>Auf jedem Profil: <b>"⋮ → Melden"</b> über das Drei-Punkte-Menü</li><li>In Kommentaren: Long-Press oder Drei-Punkte-Menü → <b>"Melden"</b></li><li>Per E-Mail an das Sicherheits-Team (siehe Kontakt unten)</li></ol><p>Meldungen werden innerhalb von <b>24 Stunden</b> geprüft. Bei Verdacht auf CSAM erfolgt die sofortige Sperrung des Inhalts und des Accounts.</p><h2>4. Proaktive Maßnahmen</h2><ul><li><b>Altersbestätigung:</b> Pflicht-Häkchen bei Registrierung (18+)</li><li><b>Email-Verifikation:</b> Account ist erst nach Email-Bestätigung voll nutzbar</li><li><b>Inhaltsüberwachung:</b> Verdächtige Inhalte werden automatisch markiert (Schlüsselwort-Filter)</li><li><b>Account-Sperrung:</b> Bei Verdacht auf Verstoß sofortige Suspendierung</li><li><b>Permanente Speicherung von Verstoß-Logs:</b> Beweissicherung für Behörden</li></ul><h2>5. Zusammenarbeit mit Behörden</h2><p>CreatorX kooperiert vollumfänglich mit Strafverfolgungsbehörden:</p><ul><li>Meldung von CSAM an das <b>NCMEC (National Center for Missing &amp; Exploited Children)</b> via CyberTipline</li><li>Meldung an deutsche Behörden (<b>BKA</b>) sowie luxemburgische Behörden (<b>BEE SECURE Stopline</b>)</li><li>Auskunft an Polizei bei richterlicher Anordnung</li><li>Sicherung von IP-Adressen, Login-Zeiten, Inhalts-Hashes</li></ul><div class="ok"><p><b>✓ Compliance:</b> CreatorX entspricht den Richtlinien des US-amerikanischen <i>18 U.S.C. § 2258A</i>, der EU-Verordnung 2021/1232 zur vorübergehenden Ausnahme von der ePrivacy-Richtlinie, sowie dem deutschen NetzDG und luxemburgischen Anti-CSAM-Gesetzen.</p></div><h2>6. Schulung &amp; Verantwortlichkeit</h2><p>Der Betreiber ist persönlich für die Einhaltung dieser Standards verantwortlich. Es gibt einen dedizierten Ansprechpartner (siehe Kontakt unten), der innerhalb von 24h auf Behörden-Anfragen reagiert.</p><h2>7. Externe Hilfsangebote</h2><p>Falls du Hilfe brauchst oder einen Verdacht melden möchtest:</p><ul><li><b>NCMEC CyberTipline</b> (international): <a href="https://report.cybertip.org" target="_blank">report.cybertip.org</a></li><li><b>BKA</b> (Deutschland): <a href="https://www.bka.de" target="_blank">www.bka.de</a> · Notruf 110</li><li><b>BEE SECURE Stopline</b> (Luxembourg): <a href="https://www.bee-secure.lu/de/stopline" target="_blank">bee-secure.lu/stopline</a></li><li><b>Hilfetelefon Sexueller Missbrauch</b> (DE): <b>0800-22 55 530</b> (kostenlos &amp; anonym)</li></ul><h2>8. Kontakt für Behörden, Eltern, Hinweisgeber</h2><div class="contact"><p><b>Sicherheits-Ansprechpartner:</b><br>Michael Dos Santos Pexioto<br>33b Haaptstrooss<br>L-9835 Luxembourg<br><br>📧 <a href="mailto:mindset.stories_@outlook.de?subject=Kinderschutz-Meldung%20CreatorX">mindset.stories_@outlook.de</a><br>(Betreff: "Kinderschutz-Meldung CreatorX")<br><br>⏱️ Reaktionszeit: <b>innerhalb 24 Stunden</b></p></div><h2>9. Aktualisierungen</h2><p>Diese Standards werden mindestens jährlich überprüft und an aktuelle Gesetze, Best-Practices und Google-Play-Richtlinien angepasst. Wesentliche Änderungen werden in der App und auf dieser Seite kommuniziert.</p><div class="foot"><a href="/datenschutz">Datenschutz</a> · <a href="/agb">AGB</a> · <a href="/impressum">Impressum</a> · <a href="/konto-loeschen">Konto löschen</a></div></main></body></html>`);
     }
 
     // ── GOOGLE PLAY PFLICHT: Konto-Lösch-URL — MUSS allererste Route sein, damit
@@ -4538,7 +4538,7 @@ async function handleRequest(req, res) {
             'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
             'X-Cb-Route': 'konto-loeschen-v2'
         });
-        return res.end(`<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Konto löschen · CreatorX</title><style>body{margin:0;font-family:-apple-system,BlinkMacSystemFont,Inter,sans-serif;background:#0b0b0e;color:#fff;line-height:1.6;padding:20px}main{max-width:680px;margin:24px auto;background:linear-gradient(180deg,#1c1c1e,#0f0f11);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:28px 24px;box-shadow:0 20px 60px rgba(0,0,0,.5)}h1{font-size:24px;font-weight:800;margin:0 0 8px;letter-spacing:-.5px}h2{font-size:16px;font-weight:700;margin:24px 0 8px;color:#d4a946}p{font-size:14px;color:rgba(255,255,255,.8);margin:8px 0}ol,ul{padding-left:20px;font-size:14px;color:rgba(255,255,255,.8)}li{margin:6px 0}a{color:#d4a946;font-weight:600}code{background:rgba(255,255,255,.08);padding:2px 6px;border-radius:4px;font-size:13px}.btn{display:inline-block;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;padding:13px 28px;border-radius:12px;text-decoration:none;font-weight:800;font-size:14px;margin:14px 0}.foot{margin-top:28px;padding-top:18px;border-top:1px solid rgba(255,255,255,.08);font-size:12px;color:rgba(255,255,255,.5);text-align:center}.foot a{margin:0 10px;color:rgba(255,255,255,.5);font-weight:500}</style></head><body><main><h1>🗑️ Konto + Daten löschen</h1><p>Du kannst dein CreatorX-Konto jederzeit löschen. Alle deine persönlichen Daten werden dauerhaft entfernt.</p><h2>🚀 In der App löschen</h2><ol><li>Login bei <a href="/login">creatorboostx.de/login</a></li><li>Profil → <b>Einstellungen ⚙️</b></li><li>Scroll ganz nach unten</li><li>Klick <b>🗑️ Account dauerhaft löschen</b></li><li>Bestätige mit <code>LÖSCHEN</code></li></ol><p><a class="btn" href="/login">→ Jetzt einloggen + löschen</a></p><h2>✉️ Per E-Mail (App nicht mehr zugänglich)</h2><p>Schreib an <a href="mailto:mindset.stories_@outlook.de?subject=Konto-L%C3%B6schung%20CreatorX">mindset.stories_@outlook.de</a> mit Betreff <b>"Konto-Löschung CreatorX"</b>.</p><p>Gib in der Mail an:</p><ul><li>Deine in der App registrierte E-Mail</li><li>(Optional) dein Username/Spitzname</li></ul><p>Bearbeitung innerhalb von <b>72 Stunden</b>.</p><h2>🗑️ Was wird gelöscht?</h2><ul><li><b>Sofort:</b> Account, Email, Profil, Bio, Avatar, Banner, Instagram-Handle, App-Code, Posts, Likes, Kommentare, Follows</li><li><b>Anonymisiert:</b> Statistik-Aggregate (ohne User-Bezug)</li><li><b>Aufbewahrt (Pflicht):</b> Login-Logs für 30 Tage (Sicherheit), danach automatisch gelöscht</li></ul><h2>⚠️ Wichtig</h2><ul><li>Löschung ist <b>endgültig</b> (Admin-Restore nur in Ausnahmen innerhalb 50 Tagen)</li><li>Alle XP, Diamanten, Badges, Stufen verloren</li><li>Sub-Accounts werden mit gelöscht</li><li>Neu-Registrierung jederzeit möglich (als neuer User)</li></ul><h2>📊 Nur einzelne Daten löschen (DSGVO Art. 17)</h2><p>Du kannst auch nur bestimmte Daten löschen lassen (z.B. nur deinen Instagram-Handle, einzelne Posts) — schreib uns per E-Mail.</p><div class="foot"><a href="/datenschutz">Datenschutz</a> · <a href="/agb">AGB</a> · <a href="/impressum">Impressum</a></div></main></body></html>`);
+        return res.end(`<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Konto löschen · CreatorX</title><style>body{margin:0;font-family:-apple-system,BlinkMacSystemFont,Inter,sans-serif;background:#0b0b0e;color:#fff;line-height:1.6;padding:var(--space-5)}main{max-width:680px;margin:24px auto;background:linear-gradient(180deg,#1c1c1e,#0f0f11);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:28px 24px;box-shadow:0 20px 60px rgba(0,0,0,.5)}h1{font-size:24px;font-weight:800;margin:0 0 8px;letter-spacing:-.5px}h2{font-size:16px;font-weight:700;margin:24px 0 8px;color:#d4a946}p{font-size:14px;color:rgba(255,255,255,.8);margin:8px 0}ol,ul{padding-left:var(--space-5);font-size:14px;color:rgba(255,255,255,.8)}li{margin:6px 0}a{color:#d4a946;font-weight:600}code{background:rgba(255,255,255,.08);padding:2px 6px;border-radius:4px;font-size:13px}.btn{display:inline-block;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;padding:13px 28px;border-radius:12px;text-decoration:none;font-weight:800;font-size:14px;margin:14px 0}.foot{margin-top:28px;padding-top:18px;border-top:1px solid rgba(255,255,255,.08);font-size:12px;color:rgba(255,255,255,.5);text-align:center}.foot a{margin:0 10px;color:rgba(255,255,255,.5);font-weight:500}</style></head><body><main><h1>🗑️ Konto + Daten löschen</h1><p>Du kannst dein CreatorX-Konto jederzeit löschen. Alle deine persönlichen Daten werden dauerhaft entfernt.</p><h2>🚀 In der App löschen</h2><ol><li>Login bei <a href="/login">creatorboostx.de/login</a></li><li>Profil → <b>Einstellungen ⚙️</b></li><li>Scroll ganz nach unten</li><li>Klick <b>🗑️ Account dauerhaft löschen</b></li><li>Bestätige mit <code>LÖSCHEN</code></li></ol><p><a class="btn" href="/login">→ Jetzt einloggen + löschen</a></p><h2>✉️ Per E-Mail (App nicht mehr zugänglich)</h2><p>Schreib an <a href="mailto:mindset.stories_@outlook.de?subject=Konto-L%C3%B6schung%20CreatorX">mindset.stories_@outlook.de</a> mit Betreff <b>"Konto-Löschung CreatorX"</b>.</p><p>Gib in der Mail an:</p><ul><li>Deine in der App registrierte E-Mail</li><li>(Optional) dein Username/Spitzname</li></ul><p>Bearbeitung innerhalb von <b>72 Stunden</b>.</p><h2>🗑️ Was wird gelöscht?</h2><ul><li><b>Sofort:</b> Account, Email, Profil, Bio, Avatar, Banner, Instagram-Handle, App-Code, Posts, Likes, Kommentare, Follows</li><li><b>Anonymisiert:</b> Statistik-Aggregate (ohne User-Bezug)</li><li><b>Aufbewahrt (Pflicht):</b> Login-Logs für 30 Tage (Sicherheit), danach automatisch gelöscht</li></ul><h2>⚠️ Wichtig</h2><ul><li>Löschung ist <b>endgültig</b> (Admin-Restore nur in Ausnahmen innerhalb 50 Tagen)</li><li>Alle XP, Diamanten, Badges, Stufen verloren</li><li>Sub-Accounts werden mit gelöscht</li><li>Neu-Registrierung jederzeit möglich (als neuer User)</li></ul><h2>📊 Nur einzelne Daten löschen (DSGVO Art. 17)</h2><p>Du kannst auch nur bestimmte Daten löschen lassen (z.B. nur deinen Instagram-Handle, einzelne Posts) — schreib uns per E-Mail.</p><div class="foot"><a href="/datenschutz">Datenschutz</a> · <a href="/agb">AGB</a> · <a href="/impressum">Impressum</a></div></main></body></html>`);
     }
 
     // ── HEALTH: Public Health-Check für Monitoring / Uptime-Bots ──
@@ -4593,7 +4593,7 @@ async function handleRequest(req, res) {
         if (!(await _isAdminRequest(req, query))) { res.writeHead(403); return res.end('Kein Zugriff'); }
         const keyQ = (query.key || '') === BRIDGE_SECRET ? ('?key=' + encodeURIComponent(query.key)) : '';
         res.writeHead(200, {'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});
-        return res.end(`<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Daten-Migration · CreatorX</title><style>body{margin:0;font-family:-apple-system,BlinkMacSystemFont,Inter,sans-serif;background:#0b0b0e;color:#fff;line-height:1.6;padding:20px}main{max-width:560px;margin:24px auto;background:linear-gradient(180deg,#1c1c1e,#0f0f11);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:28px 24px}h1{font-size:22px;font-weight:800;margin:0 0 6px}p{font-size:14px;color:rgba(255,255,255,.8)}.btn{display:inline-block;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;padding:14px 28px;border-radius:12px;border:0;font-weight:800;font-size:15px;cursor:pointer;margin:14px 0}.btn:disabled{opacity:.5}#out{white-space:pre-wrap;background:rgba(255,255,255,.05);border-radius:12px;padding:14px;font-size:13px;margin-top:12px;display:none}.warn{font-size:13px;color:#d4a946;background:rgba(212,169,70,.1);border-radius:10px;padding:10px 12px;margin:10px 0}</style></head><body><main><h1>🗄️ Daten-Backup ziehen</h1><p>Holt einen vollständigen Live-Abzug der Bot-Daten, legt ein Backup an und befüllt den App-eigenen Datenspeicher. <b>Liest nur vom Bot — ändert dort nichts.</b></p><div class="warn">Voraussetzung: Am Bot-Service muss <b>MIGRATION_EXPORT=1</b> gesetzt sein.</div><button class="btn" id="b" onclick="run()">Backup jetzt ziehen</button><div id="out"></div></main><script>
+        return res.end(`<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Daten-Migration · CreatorX</title><style>body{margin:0;font-family:-apple-system,BlinkMacSystemFont,Inter,sans-serif;background:#0b0b0e;color:#fff;line-height:1.6;padding:var(--space-5)}main{max-width:560px;margin:24px auto;background:linear-gradient(180deg,#1c1c1e,#0f0f11);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:28px 24px}h1{font-size:22px;font-weight:800;margin:0 0 6px}p{font-size:14px;color:rgba(255,255,255,.8)}.btn{display:inline-block;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;padding:14px 28px;border-radius:12px;border:0;font-weight:800;font-size:15px;cursor:pointer;margin:14px 0}.btn:disabled{opacity:.5}#out{white-space:pre-wrap;background:rgba(255,255,255,.05);border-radius:12px;padding:14px;font-size:13px;margin-top:var(--space-3);display:none}.warn{font-size:13px;color:#d4a946;background:rgba(212,169,70,.1);border-radius:10px;padding:10px 12px;margin:10px 0}</style></head><body><main><h1>🗄️ Daten-Backup ziehen</h1><p>Holt einen vollständigen Live-Abzug der Bot-Daten, legt ein Backup an und befüllt den App-eigenen Datenspeicher. <b>Liest nur vom Bot — ändert dort nichts.</b></p><div class="warn">Voraussetzung: Am Bot-Service muss <b>MIGRATION_EXPORT=1</b> gesetzt sein.</div><button class="btn" id="b" onclick="run()">Backup jetzt ziehen</button><div id="out"></div></main><script>
 async function run(){var b=document.getElementById('b'),o=document.getElementById('out');b.disabled=true;b.textContent='Läuft …';o.style.display='block';o.textContent='Hole Daten vom Bot …';try{var r=await fetch('/api/admin/migration/snapshot${keyQ}',{method:'POST'});var j=await r.json();if(j.ok){o.textContent='✅ Fertig!\\n\\nBackup: '+j.backupFile+'\\nDatenspeicher: '+j.datastoreFile+'\\n\\nInhalt:\\n'+JSON.stringify(j.stats,null,2);b.textContent='Nochmal ziehen';}else{o.textContent='❌ Fehler: '+(j.error||'unbekannt');b.textContent='Erneut versuchen';}}catch(e){o.textContent='❌ Fehler: '+e.message;b.textContent='Erneut versuchen';}b.disabled=false;}
 </script></body></html>`);
     }
@@ -4834,7 +4834,7 @@ self.addEventListener('fetch',e=>{
   const url=new URL(req.url);
   // Navigation requests — network-first mit Offline-Fallback
   if(req.mode==='navigate'){
-    e.respondWith(fetch(req).catch(()=>new Response('<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Offline · CreatorX</title></head><body style="font-family:system-ui,-apple-system,sans-serif;background:#000;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center;padding:24px"><div><div style="font-size:48px;margin-bottom:16px">📡</div><div style="font-size:18px;font-weight:700;margin-bottom:8px">Offline</div><div style="font-size:13px;color:#999;line-height:1.5;margin-bottom:18px">Server antwortet nicht. Bitte Internetverbindung prüfen oder kurz später nochmal versuchen.</div><button onclick="location.reload()" style="background:#3b82f6;color:#fff;border:none;border-radius:10px;padding:12px 22px;font-size:14px;font-weight:700;cursor:pointer">🔄 Neu laden</button></div></body></html>',{headers:{'Content-Type':'text/html; charset=utf-8'}})));
+    e.respondWith(fetch(req).catch(()=>new Response('<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Offline · CreatorX</title></head><body style="font-family:system-ui,-apple-system,sans-serif;background:#000;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center;padding:var(--space-6)"><div><div style="font-size:48px;margin-bottom:var(--space-4)">📡</div><div style="font-size:18px;font-weight:700;margin-bottom:var(--space-2)">Offline</div><div style="font-size:13px;color:#999;line-height:1.5;margin-bottom:18px">Server antwortet nicht. Bitte Internetverbindung prüfen oder kurz später nochmal versuchen.</div><button onclick="location.reload()" style="background:#3b82f6;color:#fff;border:none;border-radius:10px;padding:12px 22px;font-size:14px;font-weight:700;cursor:pointer">🔄 Neu laden</button></div></body></html>',{headers:{'Content-Type':'text/html; charset=utf-8'}})));
     return;
   }
   // Profilbilder + Banner — SW nicht im Weg. Browser-HTTP-Cache (no-cache+ETag vom Server)
@@ -5446,7 +5446,7 @@ self.addEventListener('notificationclick',e=>{
                         const _userName = String(_u.spitzname || _u.name || 'CreatorX User').replace(/[<>]/g,'').slice(0,30);
                         const _html = '<!DOCTYPE html><html><body style="margin:0;font-family:-apple-system,sans-serif;background:#000;color:#fff;padding:0">' +
                             '<div style="max-width:560px;margin:0 auto;padding:32px 24px">' +
-                            '<div style="text-align:center;margin-bottom:24px"><img src="' + _baseUrl + '/cx-logo-256.png" width="80" height="80" style="border-radius:18px" alt=""></div>' +
+                            '<div style="text-align:center;margin-bottom:var(--space-6)"><img src="' + _baseUrl + '/cx-logo-256.png" width="80" height="80" style="border-radius:18px" alt=""></div>' +
                             '<h1 style="font-size:24px;font-weight:700;margin:0 0 12px;text-align:center">Hi ' + _userName + '!</h1>' +
                             '<p style="font-size:14px;color:#a8a39a;line-height:1.6;text-align:center;margin:0 0 24px">Du hast noch kein Passwort gesetzt. Klick auf den Button um dich einzuloggen — danach kannst du in den Einstellungen ein Passwort hinterlegen.</p>' +
                             '<div style="text-align:center;margin:28px 0"><a href="' + _loginUrl + '" style="display:inline-block;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px">🔓 Login + Passwort setzen</a></div>' +
@@ -5540,11 +5540,11 @@ self.addEventListener('notificationclick',e=>{
         const userName = u.spitzname || u.name || 'CreatorX User';
         const html = `<!DOCTYPE html><html><body style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#000;color:#fff;padding:0">
 <div style="max-width:560px;margin:0 auto;padding:32px 24px">
-<div style="text-align:center;margin-bottom:24px"><img src="${baseUrl}/cx-logo-256.png" width="80" height="80" style="border-radius:18px" alt="CreatorX"></div>
+<div style="text-align:center;margin-bottom:var(--space-6)"><img src="${baseUrl}/cx-logo-256.png" width="80" height="80" style="border-radius:18px" alt="CreatorX"></div>
 <h1 style="font-size:26px;font-weight:700;margin:0 0 12px;text-align:center;color:#fff">Hi ${userName.replace(/[<>]/g,'')}!</h1>
 <p style="font-size:15px;color:#a8a39a;line-height:1.6;text-align:center;margin:0 0 28px">Klick auf den Button um dich in der CreatorX-App einzuloggen. Der Link ist 24 Stunden gültig und kann nur einmal benutzt werden.</p>
 <div style="text-align:center;margin:32px 0"><a href="${loginUrl}" style="display:inline-block;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px;letter-spacing:0.3px">📲 In die App einloggen</a></div>
-<p style="font-size:12px;color:#605c54;line-height:1.5;text-align:center;margin:32px 0 0;border-top:1px solid #221f1a;padding-top:20px">Falls du das nicht angefragt hast, ignoriere die Email einfach. Niemand kann sich nur mit der Email-Anfrage einloggen.<br><br>Falls der Button nicht funktioniert, kopier diese URL in deinen Browser:<br><span style="color:#a8a39a;word-break:break-all;font-size:11px">${loginUrl}</span></p>
+<p style="font-size:12px;color:#605c54;line-height:1.5;text-align:center;margin:32px 0 0;border-top:1px solid #221f1a;padding-top:var(--space-5)">Falls du das nicht angefragt hast, ignoriere die Email einfach. Niemand kann sich nur mit der Email-Anfrage einloggen.<br><br>Falls der Button nicht funktioniert, kopier diese URL in deinen Browser:<br><span style="color:#a8a39a;word-break:break-all;font-size:11px">${loginUrl}</span></p>
 </div></body></html>`;
         const subject = isNewSignup ? '🎉 Willkommen bei CreatorX — Login-Link' : '🔐 Dein CreatorX Login-Link';
         const sent = await sendEmail(email, subject, html);
@@ -5576,7 +5576,7 @@ self.addEventListener('notificationclick',e=>{
         const baseUrl = AUTH_BASE_URL;
         const loginUrl = baseUrl + '/auth/email-login?token=' + encodeURIComponent(token);
         const userName = u.spitzname || u.name || 'CreatorX User';
-        const mailHtml = `<!DOCTYPE html><html><body style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#000;color:#fff;padding:0"><div style="max-width:560px;margin:0 auto;padding:32px 24px"><div style="text-align:center;margin-bottom:24px"><img src="${baseUrl}/cx-logo-256.png" width="80" height="80" style="border-radius:18px" alt="CreatorX"></div><h1 style="font-size:26px;font-weight:700;margin:0 0 12px;text-align:center;color:#fff">Passwort zurücksetzen</h1><p style="font-size:15px;color:#a8a39a;line-height:1.6;text-align:center;margin:0 0 28px">Hi ${userName.replace(/[<>]/g,'')}, klick den Button um dich einzuloggen. Danach kannst du in den Einstellungen ein neues Passwort setzen.</p><div style="text-align:center;margin:32px 0"><a href="${loginUrl}" style="display:inline-block;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px">🔐 Einloggen & Passwort ändern</a></div><p style="font-size:12px;color:#605c54;text-align:center;margin-top:32px;border-top:1px solid #221f1a;padding-top:20px">Link 24h gültig, einmalig nutzbar. Falls du das nicht angefragt hast, ignoriere die Email.</p></div></body></html>`;
+        const mailHtml = `<!DOCTYPE html><html><body style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#000;color:#fff;padding:0"><div style="max-width:560px;margin:0 auto;padding:32px 24px"><div style="text-align:center;margin-bottom:var(--space-6)"><img src="${baseUrl}/cx-logo-256.png" width="80" height="80" style="border-radius:18px" alt="CreatorX"></div><h1 style="font-size:26px;font-weight:700;margin:0 0 12px;text-align:center;color:#fff">Passwort zurücksetzen</h1><p style="font-size:15px;color:#a8a39a;line-height:1.6;text-align:center;margin:0 0 28px">Hi ${userName.replace(/[<>]/g,'')}, klick den Button um dich einzuloggen. Danach kannst du in den Einstellungen ein neues Passwort setzen.</p><div style="text-align:center;margin:32px 0"><a href="${loginUrl}" style="display:inline-block;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px">🔐 Einloggen & Passwort ändern</a></div><p style="font-size:12px;color:#605c54;text-align:center;margin-top:var(--space-8);border-top:1px solid #221f1a;padding-top:var(--space-5)">Link 24h gültig, einmalig nutzbar. Falls du das nicht angefragt hast, ignoriere die Email.</p></div></body></html>`;
         const _resetSent = await sendEmail(email, '🔐 CreatorX: Passwort zurücksetzen', mailHtml);
         if (!_resetSent) {
             // Token wieder verwerfen (sonst hängt ein toter Token rum) + ehrliche Fehlermeldung,
@@ -5600,11 +5600,11 @@ self.addEventListener('notificationclick',e=>{
 <div style="position:sticky;top:0;background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;padding:10px 14px;font-size:12px;font-weight:700;text-align:center;z-index:99">👀 Admin-Vorschau · Email-Magic-Link Mail &nbsp;·&nbsp; <a href="/einstellungen" style="color:rgba(255,255,255,.85)">← Zurück</a></div>
 <div style="background:#000;color:#fff">
 <div style="max-width:560px;margin:0 auto;padding:32px 24px">
-<div style="text-align:center;margin-bottom:24px"><img src="${baseUrl}/cx-logo-256.png" width="80" height="80" style="border-radius:18px" alt="CreatorX"></div>
+<div style="text-align:center;margin-bottom:var(--space-6)"><img src="${baseUrl}/cx-logo-256.png" width="80" height="80" style="border-radius:18px" alt="CreatorX"></div>
 <h1 style="font-size:26px;font-weight:700;margin:0 0 12px;text-align:center;color:#fff">Hi ${exampleName.replace(/[<>]/g,'')}!</h1>
 <p style="font-size:15px;color:#a8a39a;line-height:1.6;text-align:center;margin:0 0 28px">Klick auf den Button um dich in der CreatorX-App einzuloggen. Der Link ist 24 Stunden gültig und kann nur einmal benutzt werden.</p>
 <div style="text-align:center;margin:32px 0"><a href="${fakeUrl}" style="display:inline-block;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px;letter-spacing:0.3px">📲 In die App einloggen</a></div>
-<p style="font-size:12px;color:#605c54;line-height:1.5;text-align:center;margin:32px 0 0;border-top:1px solid #221f1a;padding-top:20px">Falls du das nicht angefragt hast, ignoriere die Email einfach. Niemand kann sich nur mit der Email-Anfrage einloggen.<br><br>Falls der Button nicht funktioniert, kopier diese URL in deinen Browser:<br><span style="color:#a8a39a;word-break:break-all;font-size:11px">${fakeUrl}</span></p>
+<p style="font-size:12px;color:#605c54;line-height:1.5;text-align:center;margin:32px 0 0;border-top:1px solid #221f1a;padding-top:var(--space-5)">Falls du das nicht angefragt hast, ignoriere die Email einfach. Niemand kann sich nur mit der Email-Anfrage einloggen.<br><br>Falls der Button nicht funktioniert, kopier diese URL in deinen Browser:<br><span style="color:#a8a39a;word-break:break-all;font-size:11px">${fakeUrl}</span></p>
 </div>
 </div></body></html>`;
         res.writeHead(200, {'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});
@@ -5632,11 +5632,11 @@ self.addEventListener('notificationclick',e=>{
         const userName = _u.spitzname || _u.name || 'CreatorX User';
         const html = `<!DOCTYPE html><html><body style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#000;color:#fff;padding:0">
 <div style="max-width:560px;margin:0 auto;padding:32px 24px">
-<div style="text-align:center;margin-bottom:24px"><img src="${baseUrl}/cx-logo-256.png" width="80" height="80" style="border-radius:18px" alt="CreatorX"></div>
+<div style="text-align:center;margin-bottom:var(--space-6)"><img src="${baseUrl}/cx-logo-256.png" width="80" height="80" style="border-radius:18px" alt="CreatorX"></div>
 <h1 style="font-size:26px;font-weight:700;margin:0 0 12px;text-align:center;color:#fff">Hi ${userName.replace(/[<>]/g,'')}!</h1>
 <p style="font-size:15px;color:#a8a39a;line-height:1.6;text-align:center;margin:0 0 28px">Du möchtest deine <b style="color:#fff">Email oder dein Passwort</b> in den CreatorX-Einstellungen ändern. Klick den Button um deinen Account-Login für 30 Minuten zur Bearbeitung freizuschalten.</p>
 <div style="text-align:center;margin:32px 0"><a href="${unlockUrl}" style="display:inline-block;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px;letter-spacing:0.3px">🔓 Änderung freischalten</a></div>
-<p style="font-size:12px;color:#605c54;line-height:1.5;text-align:center;margin:32px 0 0;border-top:1px solid #221f1a;padding-top:20px">Falls du diese Änderung nicht angefragt hast, ignoriere die Email — niemand kann deine Login-Daten ohne Klick ändern.<br><br>Link gültig 1 Stunde, einmal verwendbar.<br><br>Falls der Button nicht funktioniert, kopier diese URL in deinen Browser:<br><span style="color:#a8a39a;word-break:break-all;font-size:11px">${unlockUrl}</span></p>
+<p style="font-size:12px;color:#605c54;line-height:1.5;text-align:center;margin:32px 0 0;border-top:1px solid #221f1a;padding-top:var(--space-5)">Falls du diese Änderung nicht angefragt hast, ignoriere die Email — niemand kann deine Login-Daten ohne Klick ändern.<br><br>Link gültig 1 Stunde, einmal verwendbar.<br><br>Falls der Button nicht funktioniert, kopier diese URL in deinen Browser:<br><span style="color:#a8a39a;word-break:break-all;font-size:11px">${unlockUrl}</span></p>
 </div></body></html>`;
         const sent = await sendEmail(_u.email, '🔓 CreatorX: Account-Login Änderung freischalten', html);
         if (!sent) {
@@ -5648,7 +5648,7 @@ self.addEventListener('notificationclick',e=>{
     // Unlock-Edit: User klickt Link → 30 Min Edit-Window
     if (path === '/auth/unlock-edit' && req.method === 'GET') {
         const token = String(query.token || '').trim();
-        const baseHtml = (icon, title, msg, color, btn) => `<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><style>body{margin:0;font-family:-apple-system,BlinkMacSystemFont,Inter,sans-serif;background:#0b0b0e;color:#fff;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}.box{background:linear-gradient(180deg,#1c1c1e,#0f0f11);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:40px 28px;max-width:420px;text-align:center;box-shadow:0 30px 80px rgba(0,0,0,.5)}.ic{font-size:64px;margin-bottom:16px}.t{font-size:22px;font-weight:800;margin-bottom:10px;letter-spacing:-.4px;color:${color}}.m{font-size:14px;color:rgba(255,255,255,.7);line-height:1.55;margin-bottom:24px}.btn{display:inline-block;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;padding:13px 28px;border-radius:12px;text-decoration:none;font-weight:800;font-size:14px}</style></head><body><div class="box"><div class="ic">${icon}</div><div class="t">${title}</div><div class="m">${msg}</div>${btn||''}</div></body></html>`;
+        const baseHtml = (icon, title, msg, color, btn) => `<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><style>body{margin:0;font-family:-apple-system,BlinkMacSystemFont,Inter,sans-serif;background:#0b0b0e;color:#fff;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:var(--space-5)}.box{background:linear-gradient(180deg,#1c1c1e,#0f0f11);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:40px 28px;max-width:420px;text-align:center;box-shadow:0 30px 80px rgba(0,0,0,.5)}.ic{font-size:64px;margin-bottom:var(--space-4)}.t{font-size:22px;font-weight:800;margin-bottom:10px;letter-spacing:-.4px;color:${color}}.m{font-size:14px;color:rgba(255,255,255,.7);line-height:1.55;margin-bottom:var(--space-6)}.btn{display:inline-block;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;padding:13px 28px;border-radius:12px;text-decoration:none;font-weight:800;font-size:14px}</style></head><body><div class="box"><div class="ic">${icon}</div><div class="t">${title}</div><div class="m">${msg}</div>${btn||''}</div></body></html>`;
         if (!token) { res.writeHead(400, {'Content-Type':'text/html'}); return res.end(baseHtml('⚠️','Ungültiger Link','Der Unlock-Link ist ungültig.','#f59e0b','<a href="/einstellungen" class="btn">→ Einstellungen</a>')); }
         const entry = accountUnlockTokens.get(token);
         if (!entry || entry.exp < Date.now()) {
@@ -5670,7 +5670,7 @@ self.addEventListener('notificationclick',e=>{
     // Email-Confirmation: User klickt Bestätigungs-Link aus Settings-Email → email wird aktiviert.
     if (path === '/auth/confirm-email' && req.method === 'GET') {
         const token = String(query.token || '').trim();
-        const baseHtml = (icon, title, msg, color) => `<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><style>body{margin:0;font-family:-apple-system,BlinkMacSystemFont,Inter,sans-serif;background:#0b0b0e;color:#fff;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}.box{background:linear-gradient(180deg,#1c1c1e,#0f0f11);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:40px 28px;max-width:420px;text-align:center;box-shadow:0 30px 80px rgba(0,0,0,.5)}.ic{font-size:64px;margin-bottom:16px}.t{font-size:22px;font-weight:800;margin-bottom:10px;letter-spacing:-.4px;color:${color}}.m{font-size:14px;color:rgba(255,255,255,.7);line-height:1.55;margin-bottom:24px}.btn{display:inline-block;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;padding:13px 28px;border-radius:12px;text-decoration:none;font-weight:800;font-size:14px}</style></head><body><div class="box"><div class="ic">${icon}</div><div class="t">${title}</div><div class="m">${msg}</div><a href="/feed" class="btn">→ Zur App</a></div></body></html>`;
+        const baseHtml = (icon, title, msg, color) => `<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><style>body{margin:0;font-family:-apple-system,BlinkMacSystemFont,Inter,sans-serif;background:#0b0b0e;color:#fff;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:var(--space-5)}.box{background:linear-gradient(180deg,#1c1c1e,#0f0f11);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:40px 28px;max-width:420px;text-align:center;box-shadow:0 30px 80px rgba(0,0,0,.5)}.ic{font-size:64px;margin-bottom:var(--space-4)}.t{font-size:22px;font-weight:800;margin-bottom:10px;letter-spacing:-.4px;color:${color}}.m{font-size:14px;color:rgba(255,255,255,.7);line-height:1.55;margin-bottom:var(--space-6)}.btn{display:inline-block;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;padding:13px 28px;border-radius:12px;text-decoration:none;font-weight:800;font-size:14px}</style></head><body><div class="box"><div class="ic">${icon}</div><div class="t">${title}</div><div class="m">${msg}</div><a href="/feed" class="btn">→ Zur App</a></div></body></html>`;
         if (!token) { res.writeHead(400, {'Content-Type':'text/html'}); return res.end(baseHtml('⚠️','Ungültiger Link','Der Bestätigungslink ist ungültig oder unvollständig.','#f59e0b')); }
         console.log('[email-confirm] Got token:', token.slice(0,12)+'…', 'len:', token.length, 'ect-size:', emailConfirmTokens.size);
         // SINGLE token-keyed lookup (Source of Truth). Signup + Email-Change beide hier.
@@ -5745,25 +5745,25 @@ html,body{background:#000;color:#fff;font-family:'Inter',-apple-system,sans-seri
 .brand{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:28px}
 .brand-logo{width:36px;height:36px;border-radius:10px;background:url('/cx-logo-256.png') center/cover,#0a0a0a;box-shadow:0 4px 14px rgba(212,175,55,0.3)}
 .brand-name{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;letter-spacing:-0.3px}
-h1{font-family:'Cormorant Garamond',serif;font-size:40px;font-weight:600;line-height:1.05;letter-spacing:-0.5px;margin-bottom:8px;text-align:center;color:#fff}
-.sub{font-size:14px;color:var(--muted);line-height:1.6;margin-bottom:24px;text-align:center}
-.in{width:100%;background:rgba(255,255,255,0.04);border:1.5px solid var(--border);color:#fff;border-radius:12px;padding:14px 16px;font-size:15px;outline:none;margin-bottom:12px;font-family:inherit;transition:.18s;font-weight:500}
+h1{font-family:'Cormorant Garamond',serif;font-size:40px;font-weight:600;line-height:1.05;letter-spacing:-0.5px;margin-bottom:var(--space-2);text-align:center;color:#fff}
+.sub{font-size:14px;color:var(--muted);line-height:1.6;margin-bottom:var(--space-6);text-align:center}
+.in{width:100%;background:rgba(255,255,255,0.04);border:1.5px solid var(--border);color:#fff;border-radius:12px;padding:14px 16px;font-size:15px;outline:none;margin-bottom:var(--space-3);font-family:inherit;transition:.18s;font-weight:500}
 .in:focus{border-color:var(--gold);background:rgba(212,175,55,0.04);box-shadow:0 0 0 3px rgba(212,175,55,0.12)}
 .in::placeholder{color:var(--muted2)}
-.btn{margin-top:8px;width:100%;padding:15px;font-size:15px;font-weight:700;border-radius:12px;border:none;cursor:pointer;font-family:inherit;letter-spacing:0.2px;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;box-shadow:0 1px 2px rgba(0,0,0,0.20),0 6px 18px -6px rgba(212,175,55,0.40),inset 0 1px 0 rgba(255,255,255,0.5);transition:all .15s}
+.btn{margin-top:var(--space-2);width:100%;padding:15px;font-size:15px;font-weight:700;border-radius:12px;border:none;cursor:pointer;font-family:inherit;letter-spacing:0.2px;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;box-shadow:0 1px 2px rgba(0,0,0,0.20),0 6px 18px -6px rgba(212,175,55,0.40),inset 0 1px 0 rgba(255,255,255,0.5);transition:all .15s}
 .btn:hover{transform:translateY(-1px);box-shadow:0 2px 4px rgba(0,0,0,0.22),0 8px 22px -8px rgba(212,175,55,0.50)}
 .btn:active{transform:translateY(0)}
 .btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
-.msg{font-size:13px;padding:10px 14px;border-radius:10px;margin-bottom:12px;display:none;line-height:1.5;font-weight:500}
+.msg{font-size:13px;padding:10px 14px;border-radius:10px;margin-bottom:var(--space-3);display:none;line-height:1.5;font-weight:500}
 .msg.show{display:block}
 .msg.ok{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.25);color:#4ade80}
 .msg.err{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);color:#f87171}
-.perks{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:24px}
-.perk{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);font-weight:500}
+.perks{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-2);margin-bottom:var(--space-6)}
+.perk{display:flex;align-items:center;gap:var(--space-2);font-size:12px;color:var(--muted);font-weight:500}
 .perk-icon{font-size:16px;display:inline-flex;align-items:center;flex-shrink:0;color:var(--gold)}
 .fld-label{display:block;font-size:12.5px;font-weight:600;color:var(--text);margin:0 2px 7px;text-align:left}
 .hint{font-size:11px;color:var(--muted2);margin-top:10px;text-align:center;line-height:1.55}
-.bottom{text-align:center;margin-top:20px;padding-top:20px;border-top:1px solid var(--border)}
+.bottom{text-align:center;margin-top:var(--space-5);padding-top:20px;border-top:1px solid var(--border)}
 .bottom-lbl{font-size:12px;color:var(--muted);margin-bottom:6px}
 .bottom a{color:var(--gold);font-weight:700;text-decoration:none;font-size:14px;transition:opacity .15s}
 .bottom a:hover{opacity:.8}
@@ -5873,14 +5873,14 @@ html,body{background:#000;color:#fff;font-family:'Inter',-apple-system,BlinkMacS
 .page{position:relative;z-index:1;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:32px 20px}
 .card{width:100%;max-width:420px;background:rgba(255,255,255,0.025);border:1px solid var(--border);border-radius:24px;padding:36px 24px 28px;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);box-shadow:0 30px 80px -20px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.04)}
 
-.brand{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:24px}
+.brand{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:var(--space-6)}
 .brand-logo{width:40px;height:40px;border-radius:11px;background:url('/cx-logo-256.png') center/cover,#0a0a0a;box-shadow:0 6px 20px rgba(212,175,55,0.35),inset 0 0 0 1px rgba(212,175,55,0.3)}
 .brand-name{font-family:'Syne',sans-serif;font-size:19px;font-weight:800;letter-spacing:-0.4px;background:linear-gradient(180deg,#fff,#d4af37);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
 
 h1{font-family:'Cormorant Garamond',serif;font-size:40px;font-weight:600;line-height:1.05;letter-spacing:-0.5px;margin-bottom:6px;text-align:center;color:#fff}
 .sub{font-size:13.5px;color:var(--muted);line-height:1.55;margin-bottom:22px;text-align:center}
 
-.trust{display:flex;align-items:center;justify-content:center;gap:8px;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.20);border-radius:99px;padding:6px 14px;margin:0 auto 20px;font-size:11.5px;color:rgba(34,197,94,0.95);font-weight:600;width:fit-content}
+.trust{display:flex;align-items:center;justify-content:center;gap:var(--space-2);background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.20);border-radius:99px;padding:6px 14px;margin:0 auto 20px;font-size:11.5px;color:rgba(34,197,94,0.95);font-weight:600;width:fit-content}
 .trust .dot{width:6px;height:6px;border-radius:50%;background:#22c55e;box-shadow:0 0 8px rgba(34,197,94,0.7);animation:pls 1.6s ease-in-out infinite}
 @keyframes pls{0%,100%{opacity:1}50%{opacity:0.45}}
 
@@ -5889,13 +5889,13 @@ h1{font-family:'Cormorant Garamond',serif;font-size:40px;font-weight:600;line-he
 .in{width:100%;background:rgba(255,255,255,0.04);border:1.5px solid var(--border);color:#fff;border-radius:12px;padding:14px 16px 14px 44px;font-size:15px;outline:none;font-family:inherit;transition:all .18s;font-weight:500}
 .in:focus{border-color:var(--gold);background:rgba(212,175,55,0.04);box-shadow:0 0 0 3px rgba(212,175,55,0.12)}
 .in::placeholder{color:var(--muted2)}
-.in.pw{padding-right:48px}
+.in.pw{padding-right:var(--space-12)}
 
-.pw-toggle{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--muted);cursor:pointer;padding:8px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.pw-toggle{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--muted);cursor:pointer;padding:var(--space-2);border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all .15s}
 .pw-toggle:hover{color:var(--gold);background:rgba(212,175,55,0.06)}
 .pw-toggle svg{width:18px;height:18px}
 
-.btn{margin-top:6px;width:100%;padding:14px;font-size:15px;font-weight:700;border-radius:12px;border:none;cursor:pointer;font-family:inherit;letter-spacing:0.2px;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;box-shadow:0 1px 2px rgba(0,0,0,0.20),0 6px 18px -6px rgba(212,175,55,0.40),inset 0 1px 0 rgba(255,255,255,0.5);transition:all .15s;display:flex;align-items:center;justify-content:center;gap:8px;position:relative}
+.btn{margin-top:6px;width:100%;padding:14px;font-size:15px;font-weight:700;border-radius:12px;border:none;cursor:pointer;font-family:inherit;letter-spacing:0.2px;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;box-shadow:0 1px 2px rgba(0,0,0,0.20),0 6px 18px -6px rgba(212,175,55,0.40),inset 0 1px 0 rgba(255,255,255,0.5);transition:all .15s;display:flex;align-items:center;justify-content:center;gap:var(--space-2);position:relative}
 .btn:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 2px 4px rgba(0,0,0,0.22),0 8px 22px -8px rgba(212,175,55,0.50)}
 .btn:active:not(:disabled){transform:translateY(0)}
 .btn:disabled{opacity:.6;cursor:not-allowed;transform:none}
@@ -5903,17 +5903,17 @@ h1{font-family:'Cormorant Garamond',serif;font-size:40px;font-weight:600;line-he
 .btn.loading .spin{display:inline-block}
 
 .row-link{display:flex;justify-content:flex-end;margin:2px 2px 12px}
-.link-btn{background:none;border:none;color:var(--muted);font-size:12.5px;cursor:pointer;font-family:inherit;padding:4px;transition:color .15s}
+.link-btn{background:none;border:none;color:var(--muted);font-size:12.5px;cursor:pointer;font-family:inherit;padding:var(--space-1);transition:color .15s}
 .link-btn:hover{color:var(--gold)}
 
-.msg{font-size:13px;padding:11px 14px;border-radius:10px;margin-bottom:12px;display:none;line-height:1.5;font-weight:500}
+.msg{font-size:13px;padding:11px 14px;border-radius:10px;margin-bottom:var(--space-3);display:none;line-height:1.5;font-weight:500}
 .msg.show{display:block;animation:slideIn 0.25s ease}
 .msg.ok{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.30);color:#4ade80}
 .msg.err{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.30);color:#f87171}
 @keyframes slideIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
 @keyframes spin{to{transform:rotate(360deg)}}
 
-.div-or{display:flex;align-items:center;gap:12px;margin:20px 0 16px;color:var(--muted2);font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase}
+.div-or{display:flex;align-items:center;gap:var(--space-3);margin:20px 0 16px;color:var(--muted2);font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase}
 .div-or::before,.div-or::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--border),transparent)}
 
 .alt-btn{width:100%;padding:12px 14px;background:rgba(255,255,255,0.03);border:1px solid var(--border);color:#fff;border-radius:12px;font-family:inherit;font-size:13.5px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:all .15s;text-decoration:none}
@@ -5922,11 +5922,11 @@ h1{font-family:'Cormorant Garamond',serif;font-size:40px;font-weight:600;line-he
 .alt-btn-icon{font-size:16px;display:flex;align-items:center;justify-content:center}
 
 .bottom{text-align:center;margin-top:22px;padding-top:18px;border-top:1px solid var(--border)}
-.bottom-lbl{font-size:12.5px;color:var(--muted);margin-bottom:4px}
-.bottom a{color:var(--gold);font-weight:700;text-decoration:none;font-size:13.5px;display:inline-flex;align-items:center;gap:4px;transition:opacity .15s}
+.bottom-lbl{font-size:12.5px;color:var(--muted);margin-bottom:var(--space-1)}
+.bottom a{color:var(--gold);font-weight:700;text-decoration:none;font-size:13.5px;display:inline-flex;align-items:center;gap:var(--space-1);transition:opacity .15s}
 .bottom a:hover{opacity:.8}
 
-.foot{text-align:center;margin-top:20px;font-size:10.5px;color:var(--muted2);line-height:1.7}
+.foot{text-align:center;margin-top:var(--space-5);font-size:10.5px;color:var(--muted2);line-height:1.7}
 .foot a{color:var(--muted);text-decoration:none;border-bottom:1px dotted var(--muted2);transition:color .15s}
 .foot a:hover{color:var(--gold);border-bottom-color:var(--gold)}
 
@@ -6215,7 +6215,7 @@ try { fetch('/api/track-funnel',{method:'POST',headers:{'Content-Type':'applicat
 :root{--gold:#d4af37;--text:#fff;--muted:rgba(255,255,255,0.6);--border:rgba(255,255,255,0.08)}
 html,body{background:#000;color:var(--text);font-family:'Inter',-apple-system,sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh}
 .shell{max-width:480px;margin:0 auto;padding:24px 22px 60px;min-height:100vh;display:flex;flex-direction:column}
-.bar{display:flex;gap:6px;margin-bottom:32px;padding-top:8px}
+.bar{display:flex;gap:6px;margin-bottom:var(--space-8);padding-top:var(--space-2)}
 .dot{flex:1;height:4px;border-radius:99px;background:rgba(255,255,255,0.08)}
 .dot.done{background:rgba(212,175,55,0.4)}
 .dot.active{background:linear-gradient(90deg,#d4af37,#f5d76e)}
@@ -6227,8 +6227,8 @@ html,body{background:#000;color:var(--text);font-family:'Inter',-apple-system,sa
 .at{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--gold);font-size:15px;pointer-events:none;font-weight:700}
 input{width:100%;background:rgba(255,255,255,0.04);border:1.5px solid var(--border);color:#fff;border-radius:13px;padding:13px 15px 13px 34px;font-size:15px;outline:none;transition:.18s;font-family:'JetBrains Mono',monospace;font-weight:600;letter-spacing:0.5px}
 input:focus{border-color:var(--gold);background:rgba(212,175,55,0.04);box-shadow:0 0 0 3px rgba(212,175,55,0.12)}
-.hint{font-size:11.5px;color:var(--muted);margin-top:8px;line-height:1.55;text-align:center}
-.msg{font-size:13px;padding:10px 12px;border-radius:10px;margin-top:8px;display:none;line-height:1.5}
+.hint{font-size:11.5px;color:var(--muted);margin-top:var(--space-2);line-height:1.55;text-align:center}
+.msg{font-size:13px;padding:10px 12px;border-radius:10px;margin-top:var(--space-2);display:none;line-height:1.5}
 .msg.show{display:block}
 .msg.ok{background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.3);color:#22c55e}
 .msg.err{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);color:#ef4444}
@@ -6313,7 +6313,7 @@ a{color:inherit;text-decoration:none}
 .shell{position:relative;z-index:1;max-width:480px;margin:0 auto;padding:20px 22px 60px;min-height:100vh;display:flex;flex-direction:column}
 
 /* progress */
-.bar{display:flex;gap:6px;margin-bottom:32px;padding-top:8px}
+.bar{display:flex;gap:6px;margin-bottom:var(--space-8);padding-top:var(--space-2)}
 .dot{flex:1;height:4px;border-radius:99px;background:rgba(255,255,255,0.08);transition:background .3s}
 .dot.active{background:linear-gradient(90deg,#d4af37,#f5d76e)}
 .dot.done{background:rgba(212,175,55,0.4)}
@@ -6333,7 +6333,7 @@ a{color:inherit;text-decoration:none}
 .center{text-align:center}
 
 /* feature list (step 1) */
-.flist{display:flex;flex-direction:column;gap:10px;margin-bottom:24px}
+.flist{display:flex;flex-direction:column;gap:10px;margin-bottom:var(--space-6)}
 .fitem{display:flex;align-items:flex-start;gap:14px;padding:14px;background:var(--bg-card);border:1px solid var(--border);border-radius:14px;transition:all .15s}
 .fitem:hover{border-color:var(--border-strong)}
 .fitem-icon{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,rgba(212,175,55,0.15),rgba(212,175,55,0.05));border:1px solid rgba(212,175,55,0.2);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
@@ -6342,15 +6342,15 @@ a{color:inherit;text-decoration:none}
 .fitem-s{font-size:12px;color:var(--muted);line-height:1.5}
 
 /* form */
-.form-group{margin-bottom:16px}
-.form-label{display:block;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:8px}
-.form-label .req{color:#fb923c;margin-left:4px}
-.form-label .opt{color:var(--muted-2);font-weight:500;margin-left:4px;text-transform:none;letter-spacing:0}
+.form-group{margin-bottom:var(--space-4)}
+.form-label{display:block;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:var(--space-2)}
+.form-label .req{color:#fb923c;margin-left:var(--space-1)}
+.form-label .opt{color:var(--muted-2);font-weight:500;margin-left:var(--space-1);text-transform:none;letter-spacing:0}
 .field{position:relative}
 .field .at{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:rgba(255,255,255,0.45);font-size:15px;pointer-events:none;font-weight:600}
 input,textarea{width:100%;background:rgba(255,255,255,0.04);border:1.5px solid var(--border);color:#fff;border-radius:13px;padding:13px 15px;font-size:14.5px;outline:none;transition:all .18s;font-family:inherit;font-weight:500;resize:none}
 input:focus,textarea:focus{border-color:var(--gold);background:rgba(212,175,55,0.04);box-shadow:0 0 0 3px rgba(212,175,55,0.12)}
-.field input{padding-left:32px}
+.field input{padding-left:var(--space-8)}
 .form-hint{font-size:11.5px;color:var(--muted-2);margin-top:6px;line-height:1.5}
 
 /* warn box */
@@ -6359,7 +6359,7 @@ input:focus,textarea:focus{border-color:var(--gold);background:rgba(212,175,55,0
 .warn b{color:rgba(245,158,11,1);font-weight:700}
 
 /* nav buttons */
-.nav-row{display:flex;gap:8px;margin-top:12px}
+.nav-row{display:flex;gap:var(--space-2);margin-top:var(--space-3)}
 .btn{padding:14px;font-size:14px;font-weight:700;border-radius:13px;cursor:pointer;font-family:inherit;letter-spacing:0.2px;transition:all .15s;border:none;flex:1;text-align:center;display:flex;align-items:center;justify-content:center;gap:6px}
 .btn-p{background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;box-shadow:0 8px 22px -8px rgba(212,175,55,0.6),inset 0 1px 0 rgba(255,255,255,0.5)}
 .btn-p:hover{transform:translateY(-1px);box-shadow:0 12px 28px -8px rgba(212,175,55,0.7),inset 0 1px 0 rgba(255,255,255,0.5)}
@@ -6368,7 +6368,7 @@ input:focus,textarea:focus{border-color:var(--gold);background:rgba(212,175,55,0
 .btn-s:hover{color:var(--text);border-color:rgba(255,255,255,0.2)}
 
 /* msg */
-.msg{padding:11px 14px;margin-top:12px;font-size:12.5px;border-radius:11px;text-align:center;display:none;font-weight:500}
+.msg{padding:11px 14px;margin-top:var(--space-3);font-size:12.5px;border-radius:11px;text-align:center;display:none;font-weight:500}
 .msg.show{display:block}
 .msg.ok{background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);color:#4ade80}
 .msg.err{background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#f87171}
@@ -6577,16 +6577,16 @@ if(_bio&&_cnt){_bio.addEventListener('input',function(){_cnt.textContent=(_bio.v
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100vh;padding:24px;display:flex;flex-direction:column;font-variant-numeric:tabular-nums;text-rendering:optimizeLegibility}
+body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100vh;padding:var(--space-6);display:flex;flex-direction:column;font-variant-numeric:tabular-nums;text-rendering:optimizeLegibility}
 .wrap{max-width:420px;margin:0 auto;width:100%;flex:1;display:flex;flex-direction:column;justify-content:center}
 .icon{font-size:48px;text-align:center;margin-bottom:14px}
-h1{font-size:24px;font-weight:700;text-align:center;margin-bottom:8px}
-.sub{font-size:13px;color:rgba(255,255,255,.55);text-align:center;line-height:1.55;margin-bottom:24px}
-input{width:100%;background:rgba(255,255,255,.06);border:1.5px solid rgba(212,175,55,.3);color:#fff;border-radius:14px;padding:14px 16px;font-size:15px;outline:none;transition:border-color .2s;font-family:'DM Sans',sans-serif;margin-bottom:8px}
+h1{font-size:24px;font-weight:700;text-align:center;margin-bottom:var(--space-2)}
+.sub{font-size:13px;color:rgba(255,255,255,.55);text-align:center;line-height:1.55;margin-bottom:var(--space-6)}
+input{width:100%;background:rgba(255,255,255,.06);border:1.5px solid rgba(212,175,55,.3);color:#fff;border-radius:14px;padding:14px 16px;font-size:15px;outline:none;transition:border-color .2s;font-family:'DM Sans',sans-serif;margin-bottom:var(--space-2)}
 input:focus{border-color:#d4af37}
 button.primary{background:linear-gradient(135deg,#d4af37,#b8960c);color:#000;border:none;border-radius:14px;padding:15px;font-size:15px;font-weight:700;width:100%;cursor:pointer;margin-top:6px;font-family:'DM Sans',sans-serif}
 button.primary:disabled{opacity:.5;cursor:not-allowed}
-button.skip{background:transparent;border:none;color:rgba(255,255,255,.55);font-size:13px;text-decoration:underline;cursor:pointer;width:100%;padding:14px 0;margin-top:8px;font-family:'DM Sans',sans-serif}
+button.skip{background:transparent;border:none;color:rgba(255,255,255,.55);font-size:13px;text-decoration:underline;cursor:pointer;width:100%;padding:14px 0;margin-top:var(--space-2);font-family:'DM Sans',sans-serif}
 .msg{padding:10px 14px;margin-top:14px;font-size:13px;border-radius:12px;text-align:center;display:none}
 .msg.show{display:block}
 .msg.ok{background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.4);color:#22c55e}
@@ -6796,14 +6796,14 @@ Ab 18 Jahren. Datenschutz: creatorboostx.de/datenschutz`;
         res.writeHead(200, {'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});
         return res.end(`<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Play Store Listing</title>
 <style>
-*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0a0a0a;color:#e5e5e5;padding:16px;font-size:13px;line-height:1.5;max-width:900px;margin:0 auto}
-h1{font-size:22px;font-weight:800;margin-bottom:4px;background:linear-gradient(135deg,#34d399,#10b981);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-h2{font-size:16px;font-weight:700;margin:24px 0 10px;color:#34d399;display:flex;align-items:center;gap:8px}
+*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0a0a0a;color:#e5e5e5;padding:var(--space-4);font-size:13px;line-height:1.5;max-width:900px;margin:0 auto}
+h1{font-size:22px;font-weight:800;margin-bottom:var(--space-1);background:linear-gradient(135deg,#34d399,#10b981);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+h2{font-size:16px;font-weight:700;margin:24px 0 10px;color:#34d399;display:flex;align-items:center;gap:var(--space-2)}
 .muted{color:#888;font-size:12px;margin-bottom:14px}
-.card{background:#111;border:1px solid #222;border-radius:12px;padding:16px;margin-bottom:14px}
+.card{background:#111;border:1px solid #222;border-radius:12px;padding:var(--space-4);margin-bottom:14px}
 .field-label{font-size:11px;color:#888;text-transform:uppercase;letter-spacing:0.7px;font-weight:700;margin-bottom:6px}
 .field-meta{font-size:11px;color:#666;margin-top:6px}
-pre{background:#0a0a0a;border:1px solid #1a1a1a;border-radius:8px;padding:12px;font-size:11.5px;line-height:1.6;white-space:pre-wrap;word-break:break-word;color:#cbd5e1;font-family:'SF Mono',Monaco,monospace;max-height:300px;overflow-y:auto}
+pre{background:#0a0a0a;border:1px solid #1a1a1a;border-radius:8px;padding:var(--space-3);font-size:11.5px;line-height:1.6;white-space:pre-wrap;word-break:break-word;color:#cbd5e1;font-family:'SF Mono',Monaco,monospace;max-height:300px;overflow-y:auto}
 .copy-btn{display:inline-flex;align-items:center;gap:6px;background:#22c55e;color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit}
 .copy-btn:active{background:#16a34a}
 .checklist{list-style:none;padding:0}
@@ -6818,7 +6818,7 @@ pre{background:#0a0a0a;border:1px solid #1a1a1a;border-radius:8px;padding:12px;f
 .stat-row:last-child{border-bottom:0}
 .stat-key{color:#888}
 .stat-val{color:#e5e5e5;font-weight:600;text-align:right}
-.warn{background:#1f1408;border:1px solid #92400e;border-radius:8px;padding:12px;margin:8px 0;font-size:12px;color:#fbbf24}
+.warn{background:#1f1408;border:1px solid #92400e;border-radius:8px;padding:var(--space-3);margin:8px 0;font-size:12px;color:#fbbf24}
 .toast{position:fixed;bottom:20px;right:20px;padding:10px 16px;border-radius:10px;font-size:13px;font-weight:600;color:#fff;background:#10b981;z-index:999;opacity:0;transition:opacity .25s}
 .toast.show{opacity:1}
 </style></head><body>
@@ -6855,8 +6855,8 @@ pre{background:#0a0a0a;border:1px solid #1a1a1a;border-radius:8px;padding:12px;f
 <div class="card">
 ${dataSafety.map(d => `
   <div style="padding:10px 0;border-bottom:1px solid #1a1a1a">
-    <div style="font-weight:700;color:#34d399;margin-bottom:4px">${esc(d.type)}</div>
-    <div style="font-size:12px;color:#cbd5e1;margin-bottom:4px"><b>Items:</b> ${d.items.map(esc).join(', ')}</div>
+    <div style="font-weight:700;color:#34d399;margin-bottom:var(--space-1)">${esc(d.type)}</div>
+    <div style="font-size:12px;color:#cbd5e1;margin-bottom:var(--space-1)"><b>Items:</b> ${d.items.map(esc).join(', ')}</div>
     <div style="font-size:11.5px;color:#888"><b>Zweck:</b> ${esc(d.purpose)} · <b>Geteilt:</b> ${d.shared?'Ja':'Nein'} · <b>Optional:</b> ${d.optional?'Ja':'Nein'}</div>
   </div>
 `).join('')}
@@ -7013,18 +7013,18 @@ function saveCheck(){
         res.writeHead(200, {'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});
         return res.end(`<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Beta-Tester</title>
 <style>
-*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0a0a0a;color:#e5e5e5;padding:16px;font-size:13px;line-height:1.5;max-width:900px;margin:0 auto}
-h1{font-size:22px;font-weight:800;margin-bottom:4px;background:linear-gradient(135deg,#34d399,#10b981);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0a0a0a;color:#e5e5e5;padding:var(--space-4);font-size:13px;line-height:1.5;max-width:900px;margin:0 auto}
+h1{font-size:22px;font-weight:800;margin-bottom:var(--space-1);background:linear-gradient(135deg,#34d399,#10b981);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
 .muted{color:#888;font-size:12px;margin-bottom:14px}
-.card{background:#111;border:1px solid #222;border-radius:12px;padding:16px;margin-bottom:14px}
+.card{background:#111;border:1px solid #222;border-radius:12px;padding:var(--space-4);margin-bottom:14px}
 .progress{height:8px;background:#1a1a1a;border-radius:99px;overflow:hidden;margin:10px 0}
 .progress-fill{height:100%;background:linear-gradient(90deg,#34d399,#10b981);transition:width .3s}
 .stat-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #1a1a1a;font-size:12.5px}
 .stat-row:last-child{border-bottom:0}
 .stat-key{color:#888}.stat-val{color:#e5e5e5;font-weight:600}
-pre{background:#0a0a0a;border:1px solid #1a1a1a;border-radius:8px;padding:12px;font-size:11.5px;line-height:1.6;white-space:pre-wrap;word-break:break-word;color:#cbd5e1;font-family:'SF Mono',Monaco,monospace;max-height:400px;overflow-y:auto}
-.copy-btn{display:inline-flex;align-items:center;gap:6px;background:#22c55e;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:8px}
-.tester-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #1a1a1a}
+pre{background:#0a0a0a;border:1px solid #1a1a1a;border-radius:8px;padding:var(--space-3);font-size:11.5px;line-height:1.6;white-space:pre-wrap;word-break:break-word;color:#cbd5e1;font-family:'SF Mono',Monaco,monospace;max-height:400px;overflow-y:auto}
+.copy-btn{display:inline-flex;align-items:center;gap:6px;background:#22c55e;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:var(--space-2)}
+.tester-row{display:flex;align-items:center;gap:var(--space-3);padding:10px 0;border-bottom:1px solid #1a1a1a}
 .tester-row:last-child{border-bottom:0}
 .tester-info{flex:1;min-width:0}
 .tester-email{font-weight:600;color:#e5e5e5;font-size:13px}
@@ -7037,16 +7037,16 @@ pre{background:#0a0a0a;border:1px solid #1a1a1a;border-radius:8px;padding:12px;f
 <p class="muted">User-Signups f&uuml;r das Closed Testing in der Play Console · unbegrenzt sammeln (min. ${needed} f&uuml;r den Countdown)</p>
 
 <div class="card" style="border-color:${counterRunning?'rgba(34,197,94,0.40)':'rgba(167,139,250,0.30)'};background:${counterRunning?'linear-gradient(135deg,rgba(34,197,94,0.06),rgba(16,185,129,0.04))':'linear-gradient(135deg,rgba(167,139,250,0.06),rgba(168,85,247,0.04))'}">
-  <div style="font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:${counterRunning?'#22c55e':'#a78bfa'};margin-bottom:12px">🎯 Production-Status</div>
+  <div style="font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:${counterRunning?'#22c55e':'#a78bfa'};margin-bottom:var(--space-3)">🎯 Production-Status</div>
   <div class="stat-row"><span class="stat-key">📥 Eingetragen</span><span class="stat-val">${list.length}</span></div>
   <div class="stat-row"><span class="stat-key">🔗 Email-Verknüpfung confirmed</span><span class="stat-val" style="color:${confirmedCount>=needed?'#22c55e':'#fbbf24'}">${confirmedCount}${confirmedCount>=needed?' ✓ (Minimum '+needed+' erreicht — gerne mehr)':' / '+needed+' (Google-Minimum)'}</span></div>
   <div class="stat-row"><span class="stat-key">📲 Opt-in-Link geöffnet</span><span class="stat-val">${openedCount}</span></div>
   <div class="stat-row"><span class="stat-key">📧 Link per Email gesendet</span><span class="stat-val" style="color:#888">${emailedCount}</span></div>
   <div class="stat-row"><span class="stat-key">👎 'Nein, danke' geklickt</span><span class="stat-val" style="color:#888">${declinedCount}</span></div>
   <div class="stat-row"><span class="stat-key">⚠️ Non-Gmail-Tester</span><span class="stat-val" style="color:${nonGmailCount>0?'#fb923c':'#888'}">${nonGmailCount}${nonGmailUnnotified>0?' ('+nonGmailUnnotified+' unbenachrichtigt)':''}</span></div>
-  ${nonGmailCount > 0 ? `<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap"><button class="copy-btn" style="background:#fb923c" onclick="notifyNonGmail(false)">📧 Alle ${nonGmailCount} Non-Gmail benachrichtigen</button>${nonGmailUnnotified > 0 && nonGmailUnnotified < nonGmailCount ? `<button class="copy-btn" style="background:#3b82f6" onclick="notifyNonGmail(true)">🔄 Nur ${nonGmailUnnotified} unbenachrichtigte</button>` : ''}</div>` : ''}
+  ${nonGmailCount > 0 ? `<div style="margin-top:10px;display:flex;gap:var(--space-2);flex-wrap:wrap"><button class="copy-btn" style="background:#fb923c" onclick="notifyNonGmail(false)">📧 Alle ${nonGmailCount} Non-Gmail benachrichtigen</button>${nonGmailUnnotified > 0 && nonGmailUnnotified < nonGmailCount ? `<button class="copy-btn" style="background:#3b82f6" onclick="notifyNonGmail(true)">🔄 Nur ${nonGmailUnnotified} unbenachrichtigte</button>` : ''}</div>` : ''}
   <div class="progress"><div class="progress-fill" style="width:${Math.min(100, (confirmedCount/needed)*100)}%"></div></div>
-  <div style="margin-top:14px;padding-top:12px;border-top:1px solid #1a1a1a">
+  <div style="margin-top:14px;padding-top:var(--space-3);border-top:1px solid #1a1a1a">
     <div class="stat-row"><span class="stat-key">⏰ 14-Tage-Counter</span>
       <span class="stat-val" style="color:${counterRunning?'#22c55e':'#888'}">
         ${counterRunning ? `<span style="display:inline-block;width:8px;height:8px;background:#22c55e;border-radius:50%;margin-right:6px;animation:pulse 1.5s infinite"></span>läuft (Tag ${daysInCounter+1} / 14)` : '⏸ pausiert — sammle erst 12 confirmed'}
@@ -7055,7 +7055,7 @@ pre{background:#0a0a0a;border:1px solid #1a1a1a;border-radius:8px;padding:12px;f
     <div class="stat-row"><span class="stat-key">🚀 Production möglich ab</span><span class="stat-val" style="color:${counterRunning?'#34d399':'#888'}">${esc(etaText)}</span></div>
     ${testStartedAt ? `<div class="stat-row"><span class="stat-key">📅 Closed Test gestartet am</span><span class="stat-val">${new Date(testStartedAt).toLocaleDateString('de-DE',{day:'2-digit',month:'long',year:'numeric'})}</span></div>` : ''}
   </div>
-  <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
+  <div style="margin-top:14px;display:flex;gap:var(--space-2);flex-wrap:wrap">
     ${testStartedAt
       ? `<button class="copy-btn" style="background:#3b82f6" onclick="markTestStart(true)">🔄 Start-Datum zurücksetzen</button>`
       : `<button class="copy-btn" style="background:#a78bfa" onclick="markTestStart(false)">📅 'Closed Test heute gestartet' markieren</button>`
@@ -7087,14 +7087,14 @@ pre{background:#0a0a0a;border:1px solid #1a1a1a;border-radius:8px;padding:12px;f
     <button class="copy-btn" style="background:#a78bfa" onclick="saveLink()">💾 Nur speichern</button>
     <button class="copy-btn" style="background:#22c55e" onclick="publishOptin()" ${list.length===0?'disabled':''}>📲 In-App ausspielen (${list.length})</button>
   </div>
-  <div style="margin-top:12px;font-size:11px;color:#888;line-height:1.7">
+  <div style="margin-top:var(--space-3);font-size:11px;color:#888;line-height:1.7">
     Banner angezeigt: <b style="color:${sentCount>0?'#22c55e':'#888'}">${sentCount}</b> · Link geöffnet: <b style="color:${list.filter(t=>t.linkOpenedAt).length>0?'#22c55e':'#888'}">${list.filter(t=>t.linkOpenedAt).length}</b> / ${list.length}
   </div>
 </div>
 
 <h2 style="font-size:16px;margin:20px 0 10px;color:#34d399">👥 Tester-Details</h2>
 <div class="card">
-${list.length === 0 ? '<div style="text-align:center;padding:20px;color:#666">Noch keine Tester angemeldet. Schalte das Banner im Feed frei → User können sich selbst eintragen.</div>' : list.map(t => {
+${list.length === 0 ? '<div style="text-align:center;padding:var(--space-5);color:#666">Noch keine Tester angemeldet. Schalte das Banner im Feed frei → User können sich selbst eintragen.</div>' : list.map(t => {
     const dt = new Date(t.signedUpAt||0);
     const when = dt.toLocaleString('de-DE', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
     let sentBadge = '';
@@ -7198,18 +7198,18 @@ async function notifyNonGmail(onlyUnnotified){const target=onlyUnnotified?'nur u
         res.writeHead(200, {'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});
         return res.end(`<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Email Dashboard</title>
 <style>
-*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0a0a0a;color:#e5e5e5;padding:16px;font-size:13px;line-height:1.5}
-h1{font-size:20px;font-weight:800;margin-bottom:4px}h2{font-size:15px;font-weight:700;margin:24px 0 8px;color:#a78bfa}
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin:12px 0}
-.stat{background:#161616;border:1px solid #222;border-radius:10px;padding:12px}.stat-val{font-size:22px;font-weight:800}.stat-lbl{font-size:11px;color:#888;margin-top:2px}
+*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0a0a0a;color:#e5e5e5;padding:var(--space-4);font-size:13px;line-height:1.5}
+h1{font-size:20px;font-weight:800;margin-bottom:var(--space-1)}h2{font-size:15px;font-weight:700;margin:24px 0 8px;color:#a78bfa}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:var(--space-2);margin:12px 0}
+.stat{background:#161616;border:1px solid #222;border-radius:10px;padding:var(--space-3)}.stat-val{font-size:22px;font-weight:800}.stat-lbl{font-size:11px;color:#888;margin-top:2px}
 .mail-status{background:#161616;border:1px solid #222;border-radius:10px;padding:14px;margin:12px 0}
 .mail-status .provider{color:#a78bfa;font-weight:700}
-.bar{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0;align-items:center}
+.bar{display:flex;gap:var(--space-2);flex-wrap:wrap;margin:12px 0;align-items:center}
 input[type=text]{background:#161616;border:1px solid #333;border-radius:8px;padding:8px 12px;color:#e5e5e5;font-size:13px;flex:1;min-width:180px}
 .btn{padding:7px 14px;border-radius:8px;border:none;font-size:12px;font-weight:700;cursor:pointer;transition:transform .1s}.btn:active{transform:scale(.96)}
 .btn-primary{background:#7c3aed;color:#fff}.btn-danger{background:#ef4444;color:#fff}.btn-send{background:#22c55e;color:#fff;padding:5px 10px;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer}
-.btn-move{background:#3b82f6;color:#fff;padding:5px 8px;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;margin-left:4px}
-.btn-del{background:rgba(239,68,68,.15);color:#ef4444;border:1px solid rgba(239,68,68,.4);padding:4px 8px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;margin-left:4px}
+.btn-move{background:#3b82f6;color:#fff;padding:5px 8px;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;margin-left:var(--space-1)}
+.btn-del{background:rgba(239,68,68,.15);color:#ef4444;border:1px solid rgba(239,68,68,.4);padding:4px 8px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;margin-left:var(--space-1)}
 .btn-move:disabled,.btn-del:disabled{opacity:.5;cursor:default}
 .btn-send:disabled{opacity:.5;cursor:default}
 .filter-bar{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}.filter-bar a{padding:5px 12px;border-radius:999px;font-size:11px;font-weight:700;text-decoration:none;border:1px solid #333;color:#888;transition:all .15s}
@@ -7218,7 +7218,7 @@ table{width:100%;border-collapse:collapse;margin:8px 0}th,td{padding:8px 6px;tex
 th{font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.5px;font-weight:700;position:sticky;top:0;background:#0a0a0a}
 td{font-size:12px}.uid{color:#666;font-size:10px}.em-addr{display:block;font-size:12px}.em-addr.pending{color:#f59e0b}.em-none{color:#444}
 .badge{padding:2px 8px;border-radius:999px;font-size:10px;font-weight:700}.badge.ok{background:rgba(34,197,94,.15);color:#22c55e}.badge.no{background:rgba(239,68,68,.12);color:#ef4444}
-.pag{display:flex;gap:12px;align-items:center;justify-content:center;margin:16px 0}.pag a{color:#a78bfa;text-decoration:none;font-weight:600}.pag span{color:#888;font-size:12px}
+.pag{display:flex;gap:var(--space-3);align-items:center;justify-content:center;margin:16px 0}.pag a{color:#a78bfa;text-decoration:none;font-weight:600}.pag span{color:#888;font-size:12px}
 .log-table{margin:8px 0}.log-table td{font-size:11px}
 .toast{position:fixed;bottom:20px;right:20px;padding:10px 16px;border-radius:10px;font-size:13px;font-weight:600;color:#fff;z-index:999;animation:toast-in .3s ease}
 @keyframes toast-in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
@@ -7238,11 +7238,11 @@ Provider: <span class="provider">${RESEND_API_KEY ? 'Resend \u2705' : 'Nicht kon
 API-Key: ${RESEND_API_KEY ? '****' + RESEND_API_KEY.slice(-4) : 'Fehlt'} \u00b7 From: ${esc(EMAIL_FROM)}<br>
 ${lastOk ? 'Letzte OK: ' + new Date(lastOk.ts).toLocaleString('de-DE') + ' \u2192 ' + esc(lastOk.to) : 'Noch keine erfolgreiche Mail'}<br>
 ${lastErr ? '<span style="color:#ef4444">Letzter Fehler: ' + new Date(lastErr.ts).toLocaleString('de-DE') + ' \u2192 ' + esc(lastErr.error||'') + '</span>' : ''}
-<br><button class="btn btn-primary" style="margin-top:8px" onclick="sendTest()">Testmail senden</button>
+<br><button class="btn btn-primary" style="margin-top:var(--space-2)" onclick="sendTest()">Testmail senden</button>
 </div>
 <h2>User-Liste</h2>
 <div class="bar">
-<form method="GET" action="/admin/emails" style="display:flex;gap:8px;flex:1;flex-wrap:wrap">
+<form method="GET" action="/admin/emails" style="display:flex;gap:var(--space-2);flex:1;flex-wrap:wrap">
 <input type="hidden" name="key" value="${esc(query.key)}"><input type="hidden" name="filter" value="${filterMode}">
 <input type="text" name="q" value="${esc(searchQ)}" placeholder="Name, Email, UID oder @insta suchen...">
 <button class="btn btn-primary" type="submit">Suchen</button>
@@ -7260,7 +7260,7 @@ ${searchQ?`<a href="${buildUrl(1, filterMode, '')}" style="color:#888;font-size:
 <div class="bulk-status" id="bulk-status"></div>
 <div style="overflow-x:auto">
 <table><thead><tr><th>User</th><th>Email(s)</th><th>Verifiziert</th><th>Code</th><th>Letzter Versand</th><th>Aktion</th></tr></thead>
-<tbody>${rows || '<tr><td colspan="6" style="text-align:center;color:#666;padding:32px">Keine Eintraege</td></tr>'}</tbody></table>
+<tbody>${rows || '<tr><td colspan="6" style="text-align:center;color:#666;padding:var(--space-8)">Keine Eintraege</td></tr>'}</tbody></table>
 </div>
 ${pagination}
 <h2>Versand-Log (letzte 20)</h2>
@@ -7304,7 +7304,7 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
         savePendingEmailConfirms();
         const confirmUrl = baseUrl + '/auth/confirm-email?token=' + encodeURIComponent(token);
         const userName = u.spitzname || u.name || 'CreatorX User';
-        const mailHtml = `<!DOCTYPE html><html><body style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#000;color:#fff;padding:0"><div style="max-width:560px;margin:0 auto;padding:32px 24px"><div style="text-align:center;margin-bottom:24px"><img src="${baseUrl}/cx-logo-256.png" width="80" height="80" style="border-radius:18px" alt="CreatorX"></div><h1 style="font-size:26px;font-weight:700;margin:0 0 12px;text-align:center;color:#fff">Hi ${userName.replace(/[<>]/g,'')}!</h1><p style="font-size:15px;color:#a8a39a;line-height:1.6;text-align:center;margin:0 0 28px">Bestaetige deine Email-Adresse <b style="color:#fff">${email}</b> fuer deinen CreatorX-Account.</p><div style="text-align:center;margin:32px 0"><a href="${confirmUrl}" style="display:inline-block;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px">\u2705 Email bestätigen</a></div><p style="font-size:12px;color:#605c54;text-align:center;margin-top:32px;border-top:1px solid #221f1a;padding-top:20px">Link 1h gueltig \u00b7 einmalig nutzbar</p></div></body></html>`;
+        const mailHtml = `<!DOCTYPE html><html><body style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#000;color:#fff;padding:0"><div style="max-width:560px;margin:0 auto;padding:32px 24px"><div style="text-align:center;margin-bottom:var(--space-6)"><img src="${baseUrl}/cx-logo-256.png" width="80" height="80" style="border-radius:18px" alt="CreatorX"></div><h1 style="font-size:26px;font-weight:700;margin:0 0 12px;text-align:center;color:#fff">Hi ${userName.replace(/[<>]/g,'')}!</h1><p style="font-size:15px;color:#a8a39a;line-height:1.6;text-align:center;margin:0 0 28px">Bestaetige deine Email-Adresse <b style="color:#fff">${email}</b> fuer deinen CreatorX-Account.</p><div style="text-align:center;margin:32px 0"><a href="${confirmUrl}" style="display:inline-block;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px">\u2705 Email bestätigen</a></div><p style="font-size:12px;color:#605c54;text-align:center;margin-top:var(--space-8);border-top:1px solid #221f1a;padding-top:var(--space-5)">Link 1h gueltig \u00b7 einmalig nutzbar</p></div></body></html>`;
         const sent = await sendEmail(email, '\u2705 Bestaetige deine CreatorX-Email', mailHtml);
         return json(sent ? {ok:true, to:email} : {ok:false, error:'Versand fehlgeschlagen'});
     }
@@ -7338,7 +7338,7 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
         if (!(await _adminAuthCheck(body))) return json({error:'Kein Zugriff'}, 403);
         const to = String(body.to || '').trim();
         if (!to || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) return json({error:'Ungueltige Email'}, 400);
-        const sent = await sendEmail(to, '\ud83e\uddea CreatorX Testmail', '<!DOCTYPE html><html><body style="margin:0;font-family:sans-serif;background:#000;color:#fff;padding:32px;text-align:center"><h1>Testmail \u2705</h1><p>Das Mailsystem funktioniert.</p><p style="color:#888;font-size:12px">Gesendet: '+new Date().toISOString()+'</p></body></html>');
+        const sent = await sendEmail(to, '\ud83e\uddea CreatorX Testmail', '<!DOCTYPE html><html><body style="margin:0;font-family:sans-serif;background:#000;color:#fff;padding:var(--space-8);text-align:center"><h1>Testmail \u2705</h1><p>Das Mailsystem funktioniert.</p><p style="color:#888;font-size:12px">Gesendet: '+new Date().toISOString()+'</p></body></html>');
         return json(sent ? {ok:true} : {ok:false, error:'Versand fehlgeschlagen'});
     }
     // \u2500\u2500 EMAIL DELETE \u2500\u2500 Loescht beide (email + pendingEmail) vom User.
@@ -7627,7 +7627,7 @@ ${spaceScale.map(s=>`<div class="grow"><span class="gmeta">--space-${s}</span><d
     if (path === '/apk-upload') {
         if ((query.key || '') !== BRIDGE_SECRET) { res.writeHead(403); return res.end('Kein Zugriff'); }
         res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});
-        return res.end(`<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>APK Upload</title><style>*{box-sizing:border-box;margin:0;padding:0}body{background:#000;color:#fff;font-family:sans-serif;padding:24px;min-height:100vh}h1{font-size:22px;margin-bottom:8px}p{font-size:13px;color:#aaa;margin-bottom:24px;line-height:1.5}.box{background:#111;border-radius:16px;padding:20px}.btn{background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:none;border-radius:12px;padding:14px 24px;font-size:15px;font-weight:700;cursor:pointer;width:100%;margin-top:12px}.btn:disabled{opacity:.5;cursor:default}#status{margin-top:16px;font-size:14px;color:#aaa;text-align:center;line-height:1.5}.ok{color:#22c55e!important;font-weight:700}.err{color:#ef4444!important;font-weight:700}input[type=file]{width:100%;padding:14px;background:#222;color:#fff;border:2px dashed #444;border-radius:12px;font-size:14px}.info{background:#0a2540;border-left:3px solid #3b82f6;border-radius:8px;padding:12px;font-size:12px;color:#93c5fd;margin-bottom:16px;line-height:1.5}</style></head><body><h1>📤 APK Upload</h1><p>Lade deine schon signierte APK (aus Bubblewrap) direkt hoch — der Server speichert sie und alle App-User sehen sofort den Update-Banner.</p><div class="info">Nimm die Datei <code style="background:#000;padding:2px 6px;border-radius:4px">app-release-signed.apk</code> aus deinem lokalen Bubblewrap-Ordner.</div><div class="box"><input type="file" id="f" accept=".apk"><button class="btn" id="btn" onclick="up()">📦 APK auf Server hochladen</button><div id="status"></div></div><script>async function up(){const f=document.getElementById('f').files[0];if(!f){alert('Bitte APK auswählen');return}const btn=document.getElementById('btn');const st=document.getElementById('status');btn.disabled=true;st.textContent='APK wird gelesen ('+(f.size/1024/1024).toFixed(1)+' MB)...';st.className='';const buf=await f.arrayBuffer();st.textContent='Upload läuft...';try{const res=await fetch('/api/upload-apk?key=${query.key}',{method:'POST',headers:{'Content-Type':'application/octet-stream'},body:buf});if(!res.ok){const t=await res.text();st.textContent='❌ '+t;st.className='err';btn.disabled=false;return}const j=await res.json();st.innerHTML='✅ Hochgeladen! ('+(j.size/1024/1024).toFixed(1)+' MB)<br>Alle User sehen jetzt den Update-Banner beim nächsten App-Open.';st.className='ok';}catch(e){st.textContent='❌ '+e.message;st.className='err';btn.disabled=false}}</script></body></html>`);
+        return res.end(`<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>APK Upload</title><style>*{box-sizing:border-box;margin:0;padding:0}body{background:#000;color:#fff;font-family:sans-serif;padding:var(--space-6);min-height:100vh}h1{font-size:22px;margin-bottom:var(--space-2)}p{font-size:13px;color:#aaa;margin-bottom:var(--space-6);line-height:1.5}.box{background:#111;border-radius:16px;padding:var(--space-5)}.btn{background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:none;border-radius:12px;padding:14px 24px;font-size:15px;font-weight:700;cursor:pointer;width:100%;margin-top:var(--space-3)}.btn:disabled{opacity:.5;cursor:default}#status{margin-top:var(--space-4);font-size:14px;color:#aaa;text-align:center;line-height:1.5}.ok{color:#22c55e!important;font-weight:700}.err{color:#ef4444!important;font-weight:700}input[type=file]{width:100%;padding:14px;background:#222;color:#fff;border:2px dashed #444;border-radius:12px;font-size:14px}.info{background:#0a2540;border-left:3px solid #3b82f6;border-radius:8px;padding:var(--space-3);font-size:12px;color:#93c5fd;margin-bottom:var(--space-4);line-height:1.5}</style></head><body><h1>📤 APK Upload</h1><p>Lade deine schon signierte APK (aus Bubblewrap) direkt hoch — der Server speichert sie und alle App-User sehen sofort den Update-Banner.</p><div class="info">Nimm die Datei <code style="background:#000;padding:2px 6px;border-radius:4px">app-release-signed.apk</code> aus deinem lokalen Bubblewrap-Ordner.</div><div class="box"><input type="file" id="f" accept=".apk"><button class="btn" id="btn" onclick="up()">📦 APK auf Server hochladen</button><div id="status"></div></div><script>async function up(){const f=document.getElementById('f').files[0];if(!f){alert('Bitte APK auswählen');return}const btn=document.getElementById('btn');const st=document.getElementById('status');btn.disabled=true;st.textContent='APK wird gelesen ('+(f.size/1024/1024).toFixed(1)+' MB)...';st.className='';const buf=await f.arrayBuffer();st.textContent='Upload läuft...';try{const res=await fetch('/api/upload-apk?key=${query.key}',{method:'POST',headers:{'Content-Type':'application/octet-stream'},body:buf});if(!res.ok){const t=await res.text();st.textContent='❌ '+t;st.className='err';btn.disabled=false;return}const j=await res.json();st.innerHTML='✅ Hochgeladen! ('+(j.size/1024/1024).toFixed(1)+' MB)<br>Alle User sehen jetzt den Update-Banner beim nächsten App-Open.';st.className='ok';}catch(e){st.textContent='❌ '+e.message;st.className='err';btn.disabled=false}}</script></body></html>`);
     }
     if (path === '/api/upload-apk' && req.method === 'POST') {
         if ((query.key || '') !== BRIDGE_SECRET) { res.writeHead(403); return res.end('Kein Zugriff'); }
@@ -7653,7 +7653,7 @@ ${spaceScale.map(s=>`<div class="grow"><span class="gmeta">--space-${s}</span><d
     if (path === '/apk-auto') {
         if ((query.key || '') !== BRIDGE_SECRET) { res.writeHead(403); return res.end('Kein Zugriff'); }
         res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});
-        return res.end(`<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>APK Auto-Build</title><style>*{box-sizing:border-box;margin:0;padding:0}body{background:#000;color:#fff;font-family:sans-serif;padding:24px;min-height:100vh}h1{font-size:22px;margin-bottom:8px}p{font-size:13px;color:#aaa;margin-bottom:18px;line-height:1.5}.box{background:#111;border-radius:16px;padding:20px;margin-bottom:14px}.btn{background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:none;border-radius:14px;padding:18px;font-size:16px;font-weight:800;cursor:pointer;width:100%;margin-top:8px}.btn:disabled{opacity:.5}#status{margin-top:18px;font-size:13px;color:#aaa;text-align:left;line-height:1.7;white-space:pre-wrap;background:#0a0a0a;border-radius:10px;padding:14px;border-left:3px solid #444;display:none;font-family:monospace;max-height:60vh;overflow-y:auto}#status.visible{display:block}.ok{color:#22c55e}.err{color:#ef4444}.info{background:#0a2540;border-left:3px solid #3b82f6;border-radius:8px;padding:12px;font-size:12px;color:#93c5fd;margin-bottom:14px;line-height:1.5}</style></head><body><h1>🚀 APK Auto-Build</h1><p>Ein Klick. Server holt sich das Build-Package selbst, signiert es und legt's an die richtige Stelle. Du musst nichts machen.</p><div class="info">Dauert 60-180 Sekunden. Bei Erfolg sehen alle App-User automatisch den Update-Banner.</div><div class="box"><button class="btn" id="btn" onclick="go()">🔧 APK jetzt bauen</button><div id="status"></div></div><script>async function go(){const btn=document.getElementById('btn');const st=document.getElementById('status');btn.disabled=true;st.classList.add('visible');st.textContent='⏳ Build läuft… kann 1-3 Min dauern, Seite NICHT schließen.';try{const res=await fetch('/api/build-auto?key=${query.key}',{method:'POST'});const t=await res.text();st.textContent=t;if(!res.ok){btn.disabled=false}}catch(e){st.textContent='❌ Netzwerk-Fehler: '+e.message;btn.disabled=false}}</script></body></html>`);
+        return res.end(`<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>APK Auto-Build</title><style>*{box-sizing:border-box;margin:0;padding:0}body{background:#000;color:#fff;font-family:sans-serif;padding:var(--space-6);min-height:100vh}h1{font-size:22px;margin-bottom:var(--space-2)}p{font-size:13px;color:#aaa;margin-bottom:18px;line-height:1.5}.box{background:#111;border-radius:16px;padding:var(--space-5);margin-bottom:14px}.btn{background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:none;border-radius:14px;padding:18px;font-size:16px;font-weight:800;cursor:pointer;width:100%;margin-top:var(--space-2)}.btn:disabled{opacity:.5}#status{margin-top:18px;font-size:13px;color:#aaa;text-align:left;line-height:1.7;white-space:pre-wrap;background:#0a0a0a;border-radius:10px;padding:14px;border-left:3px solid #444;display:none;font-family:monospace;max-height:60vh;overflow-y:auto}#status.visible{display:block}.ok{color:#22c55e}.err{color:#ef4444}.info{background:#0a2540;border-left:3px solid #3b82f6;border-radius:8px;padding:var(--space-3);font-size:12px;color:#93c5fd;margin-bottom:14px;line-height:1.5}</style></head><body><h1>🚀 APK Auto-Build</h1><p>Ein Klick. Server holt sich das Build-Package selbst, signiert es und legt's an die richtige Stelle. Du musst nichts machen.</p><div class="info">Dauert 60-180 Sekunden. Bei Erfolg sehen alle App-User automatisch den Update-Banner.</div><div class="box"><button class="btn" id="btn" onclick="go()">🔧 APK jetzt bauen</button><div id="status"></div></div><script>async function go(){const btn=document.getElementById('btn');const st=document.getElementById('status');btn.disabled=true;st.classList.add('visible');st.textContent='⏳ Build läuft… kann 1-3 Min dauern, Seite NICHT schließen.';try{const res=await fetch('/api/build-auto?key=${query.key}',{method:'POST'});const t=await res.text();st.textContent=t;if(!res.ok){btn.disabled=false}}catch(e){st.textContent='❌ Netzwerk-Fehler: '+e.message;btn.disabled=false}}</script></body></html>`);
     }
     if (path === '/api/build-auto' && req.method === 'POST') {
         if ((query.key || '') !== BRIDGE_SECRET) { res.writeHead(403); return res.end('Kein Zugriff'); }
@@ -7782,7 +7782,7 @@ ${spaceScale.map(s=>`<div class="grow"><span class="gmeta">--space-${s}</span><d
     if (path === '/apk-build') {
         if ((query.key || '') !== BRIDGE_SECRET) { res.writeHead(403); return res.end('Kein Zugriff'); }
         res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});
-        return res.end(`<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>APK Build</title><style>*{box-sizing:border-box;margin:0;padding:0}body{background:#000;color:#fff;font-family:sans-serif;padding:24px;min-height:100vh}h1{font-size:22px;margin-bottom:8px}p{font-size:13px;color:#aaa;margin-bottom:18px;line-height:1.5}.box{background:#111;border-radius:16px;padding:20px;margin-bottom:14px}.btn{background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:none;border-radius:12px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;width:100%;margin-top:12px}.btn:disabled{opacity:.5}.info{background:#0a2540;border-left:3px solid #3b82f6;border-radius:8px;padding:12px;font-size:12px;color:#93c5fd;margin-bottom:14px;line-height:1.5}#status{margin-top:14px;font-size:14px;color:#aaa;text-align:center;line-height:1.6;white-space:pre-wrap}.ok{color:#22c55e!important;font-weight:700}.err{color:#ef4444!important;font-weight:700}input[type=file]{width:100%;padding:14px;background:#222;color:#fff;border:2px dashed #444;border-radius:12px;font-size:13px}</style></head><body><h1>📦 APK Build</h1><p>Lädt jede Datei aus PWABuilder hoch — egal ob ZIP, .aab oder .apk. Der Server konvertiert + signiert automatisch.</p><div class="info"><b>Workflow:</b><br>1. PWABuilder.com auf Mobile → Google Play Package generieren<br>2. ZIP runterladen (kann der mobile Browser)<br>3. ZIP komplett hier hochladen — kein entpacken nötig</div><div class="box"><input type="file" id="f" accept=".zip,.aab,.apk"><button class="btn" id="btn" onclick="up()">🔧 Bauen + Signieren + Speichern</button><div id="status"></div></div><script>async function up(){const f=document.getElementById('f').files[0];if(!f){alert('Bitte Datei auswählen');return}const btn=document.getElementById('btn');const st=document.getElementById('status');btn.disabled=true;st.className='';st.textContent='Lese Datei ('+(f.size/1024/1024).toFixed(1)+' MB)…';const buf=await f.arrayBuffer();st.textContent='Upload + Build läuft… kann 30-90 Sek dauern (bundletool Download beim ersten Mal).';try{const res=await fetch('/api/build-from-upload?key=${query.key}&name='+encodeURIComponent(f.name),{method:'POST',headers:{'Content-Type':'application/octet-stream'},body:buf});const t=await res.text();if(!res.ok){st.textContent='❌ '+t;st.className='err';btn.disabled=false;return}st.textContent='✅ '+t;st.className='ok';}catch(e){st.textContent='❌ '+e.message;st.className='err';btn.disabled=false}}</script></body></html>`);
+        return res.end(`<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>APK Build</title><style>*{box-sizing:border-box;margin:0;padding:0}body{background:#000;color:#fff;font-family:sans-serif;padding:var(--space-6);min-height:100vh}h1{font-size:22px;margin-bottom:var(--space-2)}p{font-size:13px;color:#aaa;margin-bottom:18px;line-height:1.5}.box{background:#111;border-radius:16px;padding:var(--space-5);margin-bottom:14px}.btn{background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:none;border-radius:12px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;width:100%;margin-top:var(--space-3)}.btn:disabled{opacity:.5}.info{background:#0a2540;border-left:3px solid #3b82f6;border-radius:8px;padding:var(--space-3);font-size:12px;color:#93c5fd;margin-bottom:14px;line-height:1.5}#status{margin-top:14px;font-size:14px;color:#aaa;text-align:center;line-height:1.6;white-space:pre-wrap}.ok{color:#22c55e!important;font-weight:700}.err{color:#ef4444!important;font-weight:700}input[type=file]{width:100%;padding:14px;background:#222;color:#fff;border:2px dashed #444;border-radius:12px;font-size:13px}</style></head><body><h1>📦 APK Build</h1><p>Lädt jede Datei aus PWABuilder hoch — egal ob ZIP, .aab oder .apk. Der Server konvertiert + signiert automatisch.</p><div class="info"><b>Workflow:</b><br>1. PWABuilder.com auf Mobile → Google Play Package generieren<br>2. ZIP runterladen (kann der mobile Browser)<br>3. ZIP komplett hier hochladen — kein entpacken nötig</div><div class="box"><input type="file" id="f" accept=".zip,.aab,.apk"><button class="btn" id="btn" onclick="up()">🔧 Bauen + Signieren + Speichern</button><div id="status"></div></div><script>async function up(){const f=document.getElementById('f').files[0];if(!f){alert('Bitte Datei auswählen');return}const btn=document.getElementById('btn');const st=document.getElementById('status');btn.disabled=true;st.className='';st.textContent='Lese Datei ('+(f.size/1024/1024).toFixed(1)+' MB)…';const buf=await f.arrayBuffer();st.textContent='Upload + Build läuft… kann 30-90 Sek dauern (bundletool Download beim ersten Mal).';try{const res=await fetch('/api/build-from-upload?key=${query.key}&name='+encodeURIComponent(f.name),{method:'POST',headers:{'Content-Type':'application/octet-stream'},body:buf});const t=await res.text();if(!res.ok){st.textContent='❌ '+t;st.className='err';btn.disabled=false;return}st.textContent='✅ '+t;st.className='ok';}catch(e){st.textContent='❌ '+e.message;st.className='err';btn.disabled=false}}</script></body></html>`);
     }
     if (path === '/api/build-from-upload' && req.method === 'POST') {
         if ((query.key || '') !== BRIDGE_SECRET) { res.writeHead(403); return res.end('Kein Zugriff'); }
@@ -7879,7 +7879,7 @@ ${spaceScale.map(s=>`<div class="grow"><span class="gmeta">--space-${s}</span><d
     if (path === '/apk-sign') {
         if ((query.key || '') !== BRIDGE_SECRET) { res.writeHead(403); return res.end('Kein Zugriff'); }
         res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});
-        return res.end(`<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>APK Signieren</title><style>*{box-sizing:border-box;margin:0;padding:0}body{background:#000;color:#fff;font-family:sans-serif;padding:24px;min-height:100vh}h1{font-size:20px;margin-bottom:8px}p{font-size:13px;color:#aaa;margin-bottom:24px}.box{background:#111;border-radius:16px;padding:20px;margin-bottom:16px}.btn{background:linear-gradient(135deg,#ff6b6b,#cc5de8);color:#fff;border:none;border-radius:12px;padding:14px 24px;font-size:15px;font-weight:700;cursor:pointer;width:100%}.btn:disabled{opacity:.5;cursor:default}#status{margin-top:16px;font-size:14px;color:#aaa;text-align:center}a.dl{display:block;background:#22c55e;color:#fff;text-align:center;border-radius:12px;padding:14px;font-weight:700;font-size:15px;text-decoration:none;margin-top:16px}</style></head><body><h1>✍️ APK Signieren</h1><p>Lade das unsigned APK von PWABuilder hoch — der Server signiert es automatisch.</p><div class="box"><input type="file" id="f" accept=".apk" style="width:100%;padding:10px;background:#222;color:#fff;border:none;border-radius:8px;margin-bottom:12px"><button class="btn" id="btn" onclick="sign()">APK Signieren 🔏</button><div id="status"></div><a class="dl" id="dl" style="display:none" href="#" download="CreatorX-signed.apk">⬇️ Signiertes APK herunterladen</a></div><script>async function sign(){const f=document.getElementById('f').files[0];if(!f){alert('Bitte APK auswählen');return;}const btn=document.getElementById('btn');const st=document.getElementById('status');btn.disabled=true;st.textContent='APK wird gelesen...';const b64=await new Promise(r=>{const fr=new FileReader();fr.onload=e=>r(e.target.result.split(',')[1]);fr.readAsDataURL(f);});st.textContent='APK wird signiert... (kann 10-30 Sek dauern)';try{const res=await fetch('/api/sign-apk',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({apk:b64,key:'${query.key || ''}'})});if(!res.ok){const t=await res.text();st.textContent='Fehler: '+t;btn.disabled=false;return;}const blob=await res.blob();const url=URL.createObjectURL(blob);const dl=document.getElementById('dl');dl.href=url;dl.style.display='block';st.textContent='✅ Fertig! APK signiert und bereit zum Download.';}catch(e){st.textContent='Fehler: '+e.message;btn.disabled=false;}}</script></body></html>`);
+        return res.end(`<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>APK Signieren</title><style>*{box-sizing:border-box;margin:0;padding:0}body{background:#000;color:#fff;font-family:sans-serif;padding:var(--space-6);min-height:100vh}h1{font-size:20px;margin-bottom:var(--space-2)}p{font-size:13px;color:#aaa;margin-bottom:var(--space-6)}.box{background:#111;border-radius:16px;padding:var(--space-5);margin-bottom:var(--space-4)}.btn{background:linear-gradient(135deg,#ff6b6b,#cc5de8);color:#fff;border:none;border-radius:12px;padding:14px 24px;font-size:15px;font-weight:700;cursor:pointer;width:100%}.btn:disabled{opacity:.5;cursor:default}#status{margin-top:var(--space-4);font-size:14px;color:#aaa;text-align:center}a.dl{display:block;background:#22c55e;color:#fff;text-align:center;border-radius:12px;padding:14px;font-weight:700;font-size:15px;text-decoration:none;margin-top:var(--space-4)}</style></head><body><h1>✍️ APK Signieren</h1><p>Lade das unsigned APK von PWABuilder hoch — der Server signiert es automatisch.</p><div class="box"><input type="file" id="f" accept=".apk" style="width:100%;padding:10px;background:#222;color:#fff;border:none;border-radius:8px;margin-bottom:var(--space-3)"><button class="btn" id="btn" onclick="sign()">APK Signieren 🔏</button><div id="status"></div><a class="dl" id="dl" style="display:none" href="#" download="CreatorX-signed.apk">⬇️ Signiertes APK herunterladen</a></div><script>async function sign(){const f=document.getElementById('f').files[0];if(!f){alert('Bitte APK auswählen');return;}const btn=document.getElementById('btn');const st=document.getElementById('status');btn.disabled=true;st.textContent='APK wird gelesen...';const b64=await new Promise(r=>{const fr=new FileReader();fr.onload=e=>r(e.target.result.split(',')[1]);fr.readAsDataURL(f);});st.textContent='APK wird signiert... (kann 10-30 Sek dauern)';try{const res=await fetch('/api/sign-apk',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({apk:b64,key:'${query.key || ''}'})});if(!res.ok){const t=await res.text();st.textContent='Fehler: '+t;btn.disabled=false;return;}const blob=await res.blob();const url=URL.createObjectURL(blob);const dl=document.getElementById('dl');dl.href=url;dl.style.display='block';st.textContent='✅ Fertig! APK signiert und bereit zum Download.';}catch(e){st.textContent='Fehler: '+e.message;btn.disabled=false;}}</script></body></html>`);
     }
 
     // ── APK SIGN API ──
@@ -7916,7 +7916,7 @@ ${spaceScale.map(s=>`<div class="grow"><span class="gmeta">--space-${s}</span><d
     if (path === '/aab-sign') {
         if ((query.key || '') !== BRIDGE_SECRET) { res.writeHead(403); return res.end('Kein Zugriff'); }
         res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});
-        return res.end(`<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AAB Signieren</title><style>*{box-sizing:border-box;margin:0;padding:0}body{background:#000;color:#fff;font-family:sans-serif;padding:24px;min-height:100vh}h1{font-size:20px;margin-bottom:8px}p{font-size:13px;color:#aaa;margin-bottom:16px;line-height:1.5}.box{background:#111;border-radius:16px;padding:20px;margin-bottom:16px}.btn{background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:none;border-radius:12px;padding:14px 24px;font-size:15px;font-weight:700;cursor:pointer;width:100%}.btn:disabled{opacity:.5;cursor:default}#status{margin-top:16px;font-size:13px;color:#aaa;text-align:left;line-height:1.6;white-space:pre-wrap;background:#0a0a0a;border-radius:10px;padding:14px;display:none}#status.visible{display:block}a.dl{display:block;background:#22c55e;color:#fff;text-align:center;border-radius:12px;padding:14px;font-weight:700;font-size:15px;text-decoration:none;margin-top:16px}.info{background:#0a2540;border-left:3px solid #3b82f6;border-radius:8px;padding:12px;font-size:12px;color:#93c5fd;margin-bottom:14px;line-height:1.5}</style></head><body><h1>📦 AAB Signieren (für Play Store)</h1><p>Lade die <b>unsigned AAB</b> von PWA Builder hoch (CreatorX-unsigned.aab). Server signiert mit dem gleichen Server-Keystore wie alle APKs.</p><div class="info">✓ Gleiche Signatur wie alte APK → User müssen nicht deinstallieren<br>✓ Beim Play Console Upload: "Eigenen Signaturschlüssel nutzen" wählen (NICHT Play App Signing)</div><div class="box"><input type="file" id="f" accept=".aab" style="width:100%;padding:10px;background:#222;color:#fff;border:none;border-radius:8px;margin-bottom:12px"><button class="btn" id="btn" onclick="sign()">📦 AAB Signieren</button><div id="status"></div><a class="dl" id="dl" style="display:none" href="#" download="CreatorX-signed.aab">⬇️ Signierte AAB herunterladen</a></div><script>async function sign(){const f=document.getElementById('f').files[0];if(!f){alert('Bitte AAB auswählen');return;}const btn=document.getElementById('btn');const st=document.getElementById('status');btn.disabled=true;st.classList.add('visible');st.textContent='AAB wird gelesen ('+(f.size/1024/1024).toFixed(2)+' MB)...';const b64=await new Promise(r=>{const fr=new FileReader();fr.onload=e=>r(e.target.result.split(',')[1]);fr.readAsDataURL(f);});st.textContent='AAB wird signiert mit jarsigner... (10-30 Sek)';try{const res=await fetch('/api/sign-aab',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({aab:b64,key:'${query.key || ''}'})});if(!res.ok){const t=await res.text();st.textContent='❌ Fehler: '+t;btn.disabled=false;return;}const blob=await res.blob();const url=URL.createObjectURL(blob);const dl=document.getElementById('dl');dl.href=url;dl.style.display='block';st.textContent='✅ Fertig! AAB signiert mit Server-Keystore (creatorx-alias).\\nLade sie jetzt in Play Console hoch.';}catch(e){st.textContent='❌ '+e.message;btn.disabled=false;}}</script></body></html>`);
+        return res.end(`<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AAB Signieren</title><style>*{box-sizing:border-box;margin:0;padding:0}body{background:#000;color:#fff;font-family:sans-serif;padding:var(--space-6);min-height:100vh}h1{font-size:20px;margin-bottom:var(--space-2)}p{font-size:13px;color:#aaa;margin-bottom:var(--space-4);line-height:1.5}.box{background:#111;border-radius:16px;padding:var(--space-5);margin-bottom:var(--space-4)}.btn{background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:none;border-radius:12px;padding:14px 24px;font-size:15px;font-weight:700;cursor:pointer;width:100%}.btn:disabled{opacity:.5;cursor:default}#status{margin-top:var(--space-4);font-size:13px;color:#aaa;text-align:left;line-height:1.6;white-space:pre-wrap;background:#0a0a0a;border-radius:10px;padding:14px;display:none}#status.visible{display:block}a.dl{display:block;background:#22c55e;color:#fff;text-align:center;border-radius:12px;padding:14px;font-weight:700;font-size:15px;text-decoration:none;margin-top:var(--space-4)}.info{background:#0a2540;border-left:3px solid #3b82f6;border-radius:8px;padding:var(--space-3);font-size:12px;color:#93c5fd;margin-bottom:14px;line-height:1.5}</style></head><body><h1>📦 AAB Signieren (für Play Store)</h1><p>Lade die <b>unsigned AAB</b> von PWA Builder hoch (CreatorX-unsigned.aab). Server signiert mit dem gleichen Server-Keystore wie alle APKs.</p><div class="info">✓ Gleiche Signatur wie alte APK → User müssen nicht deinstallieren<br>✓ Beim Play Console Upload: "Eigenen Signaturschlüssel nutzen" wählen (NICHT Play App Signing)</div><div class="box"><input type="file" id="f" accept=".aab" style="width:100%;padding:10px;background:#222;color:#fff;border:none;border-radius:8px;margin-bottom:var(--space-3)"><button class="btn" id="btn" onclick="sign()">📦 AAB Signieren</button><div id="status"></div><a class="dl" id="dl" style="display:none" href="#" download="CreatorX-signed.aab">⬇️ Signierte AAB herunterladen</a></div><script>async function sign(){const f=document.getElementById('f').files[0];if(!f){alert('Bitte AAB auswählen');return;}const btn=document.getElementById('btn');const st=document.getElementById('status');btn.disabled=true;st.classList.add('visible');st.textContent='AAB wird gelesen ('+(f.size/1024/1024).toFixed(2)+' MB)...';const b64=await new Promise(r=>{const fr=new FileReader();fr.onload=e=>r(e.target.result.split(',')[1]);fr.readAsDataURL(f);});st.textContent='AAB wird signiert mit jarsigner... (10-30 Sek)';try{const res=await fetch('/api/sign-aab',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({aab:b64,key:'${query.key || ''}'})});if(!res.ok){const t=await res.text();st.textContent='❌ Fehler: '+t;btn.disabled=false;return;}const blob=await res.blob();const url=URL.createObjectURL(blob);const dl=document.getElementById('dl');dl.href=url;dl.style.display='block';st.textContent='✅ Fertig! AAB signiert mit Server-Keystore (creatorx-alias).\\nLade sie jetzt in Play Console hoch.';}catch(e){st.textContent='❌ '+e.message;btn.disabled=false;}}</script></body></html>`);
     }
     // ── AAB SIGN API ──
     if (path === '/api/sign-aab' && req.method === 'POST') {
@@ -7970,7 +7970,7 @@ ${spaceScale.map(s=>`<div class="grow"><span class="gmeta">--space-${s}</span><d
         if ((query.key || '') !== BRIDGE_SECRET) { res.writeHead(403); return res.end('Kein Zugriff'); }
         const k = encodeURIComponent(query.key);
         res.writeHead(200, {'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});
-        return res.end(`<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Keystore Info</title><style>*{box-sizing:border-box;margin:0;padding:0}body{background:#000;color:#fff;font-family:sans-serif;padding:24px;min-height:100vh}h1{font-size:20px;margin-bottom:8px}p{font-size:13px;color:#aaa;margin-bottom:14px;line-height:1.5}.box{background:#111;border-radius:14px;padding:18px;margin-bottom:14px;border:1px solid #222}.row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #1a1a1a;font-size:13px}.row:last-child{border-bottom:0}.k{color:#888;font-size:12px;text-transform:uppercase;letter-spacing:.5px;font-weight:700}.v{color:#22c55e;font-weight:700;font-family:monospace;font-size:14px;background:#0a0a0a;padding:4px 10px;border-radius:6px}.btn{display:block;background:#22c55e;color:#fff;text-align:center;border-radius:12px;padding:14px;font-weight:800;font-size:15px;text-decoration:none;margin-top:6px}.warn{background:rgba(251,191,36,.10);border:1px solid rgba(251,191,36,.3);border-radius:10px;padding:14px;font-size:12.5px;color:#fbbf24;line-height:1.6;margin-bottom:14px}</style></head><body>
+        return res.end(`<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Keystore Info</title><style>*{box-sizing:border-box;margin:0;padding:0}body{background:#000;color:#fff;font-family:sans-serif;padding:var(--space-6);min-height:100vh}h1{font-size:20px;margin-bottom:var(--space-2)}p{font-size:13px;color:#aaa;margin-bottom:14px;line-height:1.5}.box{background:#111;border-radius:14px;padding:18px;margin-bottom:14px;border:1px solid #222}.row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #1a1a1a;font-size:13px}.row:last-child{border-bottom:0}.k{color:#888;font-size:12px;text-transform:uppercase;letter-spacing:.5px;font-weight:700}.v{color:#22c55e;font-weight:700;font-family:monospace;font-size:14px;background:#0a0a0a;padding:4px 10px;border-radius:6px}.btn{display:block;background:#22c55e;color:#fff;text-align:center;border-radius:12px;padding:14px;font-weight:800;font-size:15px;text-decoration:none;margin-top:6px}.warn{background:rgba(251,191,36,.10);border:1px solid rgba(251,191,36,.3);border-radius:10px;padding:14px;font-size:12.5px;color:#fbbf24;line-height:1.6;margin-bottom:14px}</style></head><body>
 <h1>🔑 CreatorX Keystore</h1>
 <p>Diese Daten brauchst du fuer PWA Builder "Use mine"-Option oder andere AAB-Build-Tools.</p>
 <div class="warn">⚠️ <b>SICHERHEITS-HINWEIS:</b> Diese Daten sind sensibel. Lade nur die .keystore-Datei runter wenn du sie wirklich brauchst, und nicht oeffentlich teilen!</div>
@@ -7982,7 +7982,7 @@ ${spaceScale.map(s=>`<div class="grow"><span class="gmeta">--space-${s}</span><d
   <div class="row"><span class="k">Algorithm</span><span class="v">SHA256withRSA</span></div>
 </div>
 <a class="btn" href="/download-keystore?key=${k}" download="creatorx.keystore">⬇️ creatorx.keystore herunterladen</a>
-<p style="margin-top:20px;font-size:12px;color:#666">Echte Passwoerter aus Railway-ENV: <code style="color:#aaa">KEYSTORE_PASS</code> und <code style="color:#aaa">KEYSTORE_ALIAS</code>. Nie im Browser sichtbar.</p>
+<p style="margin-top:var(--space-5);font-size:12px;color:#666">Echte Passwoerter aus Railway-ENV: <code style="color:#aaa">KEYSTORE_PASS</code> und <code style="color:#aaa">KEYSTORE_ALIAS</code>. Nie im Browser sichtbar.</p>
 </body></html>`);
     }
 
@@ -7991,7 +7991,7 @@ ${spaceScale.map(s=>`<div class="grow"><span class="gmeta">--space-${s}</span><d
         const apkPath = DATA_DIR + '/CreatorX-signed.apk';
         if (!fs.existsSync(apkPath)) {
             res.writeHead(200,{'Content-Type':'text/html; charset=utf-8'});
-            return res.end('<html><body style="font-family:sans-serif;background:#000;color:#fff;text-align:center;padding:40px"><div style="font-size:48px;margin-bottom:16px">📱</div><div style="font-size:18px;font-weight:700">App-Download nicht verfügbar</div><div style="font-size:14px;color:#aaa;margin-top:8px">Bitte später versuchen</div></body></html>');
+            return res.end('<html><body style="font-family:sans-serif;background:#000;color:#fff;text-align:center;padding:var(--space-10)"><div style="font-size:48px;margin-bottom:var(--space-4)">📱</div><div style="font-size:18px;font-weight:700">App-Download nicht verfügbar</div><div style="font-size:14px;color:#aaa;margin-top:var(--space-2)">Bitte später versuchen</div></body></html>');
         }
         const apkBuf = fs.readFileSync(apkPath);
         res.writeHead(200,{'Content-Type':'application/vnd.android.package-archive','Content-Disposition':'attachment; filename="CreatorX.apk"','Content-Length':apkBuf.length,'Cache-Control':'public, max-age=3600'});
@@ -8856,43 +8856,43 @@ ${spaceScale.map(s=>`<div class="grow"><span class="gmeta">--space-${s}</span><d
 <div class="topbar"><a href="/newsletter" class="icon-btn" style="font-size:22px">‹</a><div style="font-size:15px;font-weight:600">Diamanten</div><div style="width:36px"></div></div>
 <div style="padding:20px 16px 80px">
   <div style="background:linear-gradient(135deg,#4dabf7,#a78bfa);border-radius:18px;padding:22px;text-align:center;margin-bottom:18px;box-shadow:0 6px 22px rgba(167,139,250,0.3)">
-    <div style="font-size:11px;font-weight:700;letter-spacing:2px;color:rgba(255,255,255,0.7);text-transform:uppercase;margin-bottom:8px">Dein Diamant-Stand</div>
+    <div style="font-size:11px;font-weight:700;letter-spacing:2px;color:rgba(255,255,255,0.7);text-transform:uppercase;margin-bottom:var(--space-2)">Dein Diamant-Stand</div>
     <div style="font-size:48px;font-weight:800;color:#fff;font-family:var(--font-display)">💎 ${stand}</div>
   </div>
-  <div style="font-size:13.5px;line-height:1.55;color:var(--muted);margin-bottom:16px">Diamanten sind die Währung im Shop (App + Telegram). Aktuell zu kaufen: <b style="color:var(--text)">Extralinks</b> + <b style="color:var(--text)">Superlinks</b>. Mehr folgt.</div>
+  <div style="font-size:13.5px;line-height:1.55;color:var(--muted);margin-bottom:var(--space-4)">Diamanten sind die Währung im Shop (App + Telegram). Aktuell zu kaufen: <b style="color:var(--text)">Extralinks</b> + <b style="color:var(--text)">Superlinks</b>. Mehr folgt.</div>
   <div style="font-size:11px;font-weight:700;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin:8px 4px">Wie verdiene ich Diamanten?</div>
-  <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:14px;overflow:hidden;margin-bottom:12px">
-    <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--border2)">
+  <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:14px;overflow:hidden;margin-bottom:var(--space-3)">
+    <div style="display:flex;align-items:center;gap:var(--space-3);padding:12px 14px;border-bottom:1px solid var(--border2)">
       <div style="font-size:20px">${profileDone}</div>
       <div style="flex:1"><div style="font-size:13.5px;font-weight:700">Profil vervollständigen</div><div style="font-size:11.5px;color:var(--muted);margin-top:2px">Bild, Bio, Nische, Banner</div></div>
       <div style="font-size:13px;font-weight:700;color:#a78bfa">+1 💎</div>
     </div>
-    <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--border2)">
+    <div style="display:flex;align-items:center;gap:var(--space-3);padding:12px 14px;border-bottom:1px solid var(--border2)">
       <div style="display:flex;align-items:center;justify-content:center"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
       <div style="flex:1"><div style="font-size:13.5px;font-weight:700">Tagesmission M3</div><div style="font-size:11.5px;color:var(--muted);margin-top:2px">Alle Links des Tages liken</div></div>
       <div style="font-size:13px;font-weight:700;color:#a78bfa">+1 💎</div>
     </div>
-    <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--border2)">
+    <div style="display:flex;align-items:center;gap:var(--space-3);padding:12px 14px;border-bottom:1px solid var(--border2)">
       <div style="display:flex;align-items:center;justify-content:center"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg></div>
       <div style="flex:1"><div style="font-size:13.5px;font-weight:700">Wochenmission M2</div><div style="font-size:11.5px;color:var(--muted);margin-top:2px">7 Tage je 80% liken</div></div>
       <div style="font-size:13px;font-weight:700;color:#a78bfa">+1 💎</div>
     </div>
-    <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--border2)">
+    <div style="display:flex;align-items:center;gap:var(--space-3);padding:12px 14px;border-bottom:1px solid var(--border2)">
       <div style="display:flex;align-items:center;justify-content:center"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h12v4a6 6 0 0 1-12 0z"/><path d="M6 6H3.5a2.5 2.5 0 0 0 4 2"/><path d="M18 6h2.5a2.5 2.5 0 0 1-4 2"/><line x1="12" y1="14" x2="12" y2="18"/><path d="M8.5 21h7"/><path d="M9 18h6"/></svg></div>
       <div style="flex:1"><div style="font-size:13.5px;font-weight:700">Wochenmission M3</div><div style="font-size:11.5px;color:var(--muted);margin-top:2px">7 Tage in Folge alle liken</div></div>
       <div style="font-size:13px;font-weight:700;color:#a78bfa">+2 💎</div>
     </div>
-    <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--border2)">
+    <div style="display:flex;align-items:center;gap:var(--space-3);padding:12px 14px;border-bottom:1px solid var(--border2)">
       <div style="display:flex;align-items:center;justify-content:center"><svg width="21" height="21" viewBox="0 0 24 24" fill="#a78bfa" stroke="#a78bfa" stroke-width="0" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
       <div style="flex:1"><div style="font-size:13.5px;font-weight:700">Alle Superlinks der Woche engagieren</div><div style="font-size:11.5px;color:var(--muted);margin-top:2px">Liken, Kommentieren, Teilen, Speichern</div></div>
       <div style="font-size:13px;font-weight:700;color:#a78bfa">+1 💎</div>
     </div>
-    <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--border2)">
+    <div style="display:flex;align-items:center;gap:var(--space-3);padding:12px 14px;border-bottom:1px solid var(--border2)">
       <div style="display:flex;align-items:center;justify-content:center"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2.5"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg></div>
       <div style="flex:1"><div style="font-size:13.5px;font-weight:700">100 Likes via App</div><div style="font-size:11.5px;color:var(--muted);margin-top:2px">Aktuell: ${appLikes}/${Math.ceil((appLikes+1)/100)*100}</div></div>
       <div style="font-size:13px;font-weight:700;color:#a78bfa">+1 💎</div>
     </div>
-    <div style="display:flex;align-items:center;gap:12px;padding:12px 14px">
+    <div style="display:flex;align-items:center;gap:var(--space-3);padding:12px 14px">
       <div style="display:flex;align-items:center;justify-content:center"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
       <div style="flex:1"><div style="font-size:13.5px;font-weight:700">Pinned Post engagieren</div><div style="font-size:11.5px;color:var(--muted);margin-top:2px">Du bekommst 1 💎 wenn du einen angepinnten Link likest (1× pro Owner)</div></div>
       <div style="font-size:13px;font-weight:700;color:#a78bfa">+1 💎</div>
@@ -8901,7 +8901,7 @@ ${spaceScale.map(s=>`<div class="grow"><span class="gmeta">--space-${s}</span><d
   <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);border-radius:12px;padding:14px;font-size:12.5px;line-height:1.55;color:var(--text)">
     <b style="display:inline-flex;align-items:center;gap:5px;vertical-align:-2px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 4 2 18.3A1.6 1.6 0 0 0 3.4 20.7h17.2A1.6 1.6 0 0 0 22 18.3L13.7 4a1.6 1.6 0 0 0-3.4 0z"/><line x1="12" y1="9.5" x2="12" y2="13.5"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Wichtig:</b> Es gelten weiterhin die Standard-Regeln (1 Post = 5 Likes + Kommentar). Niemand muss alles machen — wer aber mehr engagiert, wird belohnt 🙏
   </div>
-  <div style="margin-top:18px;text-align:center"><a href="/explore?tab=shop" style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;padding:12px 22px;border-radius:14px;font-size:13px;font-weight:700;text-decoration:none;box-shadow:0 4px 14px rgba(167,139,250,0.4)">💎 Zum Shop</a></div>
+  <div style="margin-top:18px;text-align:center"><a href="/explore?tab=shop" style="display:inline-flex;align-items:center;gap:var(--space-2);background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;padding:12px 22px;border-radius:14px;font-size:13px;font-weight:700;text-decoration:none;box-shadow:0 4px 14px rgba(167,139,250,0.4)">💎 Zum Shop</a></div>
 </div>`, 'diamanten');
     }
 
@@ -8939,7 +8939,7 @@ p{line-height:1.65;color:var(--muted)}
 /* ── HERO ── */
 .hero{padding:72px 32px 64px;text-align:center;position:relative;overflow:hidden}
 .hero-glow{position:absolute;width:500px;height:500px;border-radius:50%;background:radial-gradient(circle,rgba(255,107,107,.18) 0%,transparent 70%);top:50%;left:50%;transform:translate(-50%,-60%);pointer-events:none}
-.hero-logo{display:inline-flex;align-items:center;gap:10px;margin-bottom:32px}
+.hero-logo{display:inline-flex;align-items:center;gap:10px;margin-bottom:var(--space-8)}
 .hero-logo-icon{width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,var(--red),var(--orange));display:flex;align-items:center;justify-content:center;font-size:26px;box-shadow:0 0 30px rgba(255,107,107,.4)}
 .hero-logo-text{font-family:'Syne',sans-serif;font-size:26px;font-weight:900}
 .hero h1{font-size:clamp(36px,8vw,58px);margin-bottom:18px;line-height:1.05}
@@ -8949,33 +8949,33 @@ p{line-height:1.65;color:var(--muted)}
 
 /* ── SECTION ── */
 .section{padding:60px 32px}
-.section-label{font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;margin-bottom:12px;opacity:.5}
+.section-label{font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;margin-bottom:var(--space-3);opacity:.5}
 .section h2{font-size:clamp(26px,5vw,38px);margin-bottom:14px}
-.section p.lead{font-size:15px;color:rgba(255,255,255,.55);margin-bottom:32px;max-width:500px}
+.section p.lead{font-size:15px;color:rgba(255,255,255,.55);margin-bottom:var(--space-8);max-width:500px}
 
 /* ── FEATURE GRID ── */
-.feat-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.feat-card{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:20px;position:relative;overflow:hidden}
+.feat-grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-3)}
+.feat-card{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:var(--space-5);position:relative;overflow:hidden}
 .feat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--card-grad,linear-gradient(135deg,var(--red),var(--orange)))}
 .feat-icon{font-size:28px;margin-bottom:10px}
 .feat-card h3{font-size:14px;font-weight:700;margin-bottom:6px}
 .feat-card p{font-size:12px;color:var(--muted);line-height:1.5}
 
 /* ── XP BAR ── */
-.xp-demo{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:20px;margin-bottom:12px}
+.xp-demo{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:var(--space-5);margin-bottom:var(--space-3)}
 .xp-bar-wrap{background:rgba(255,255,255,.07);border-radius:6px;height:8px;overflow:hidden;margin:10px 0 6px}
 .xp-bar-fill{height:100%;border-radius:6px;background:linear-gradient(135deg,var(--red),var(--orange))}
 
 /* ── STEP CARDS ── */
-.steps{display:flex;flex-direction:column;gap:12px}
-.step{display:flex;gap:16px;background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:20px;align-items:flex-start}
+.steps{display:flex;flex-direction:column;gap:var(--space-3)}
+.step{display:flex;gap:var(--space-4);background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:var(--space-5);align-items:flex-start}
 .step-num{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--red),var(--orange));display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;flex-shrink:0;box-shadow:0 0 16px rgba(255,107,107,.35)}
-.step-body h3{font-size:14px;font-weight:700;margin-bottom:4px}
+.step-body h3{font-size:14px;font-weight:700;margin-bottom:var(--space-1)}
 .step-body p{font-size:12px;color:var(--muted);line-height:1.5}
 
 /* ── RANK TABLE ── */
 .rank-table{border-radius:16px;overflow:hidden;border:1px solid var(--border)}
-.rank-row{display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--border)}
+.rank-row{display:flex;align-items:center;gap:var(--space-3);padding:14px 18px;border-bottom:1px solid var(--border)}
 .rank-row:last-child{border-bottom:none}
 .rank-row.highlight{background:rgba(255,107,107,.07);border-left:3px solid var(--red)}
 .rank-pos{font-size:18px;width:28px;flex-shrink:0;text-align:center}
@@ -8988,27 +8988,27 @@ p{line-height:1.65;color:var(--muted)}
 .rank-dia{font-size:11px;color:var(--purple)}
 
 /* ── BADGE ROW ── */
-.badge-row{display:flex;gap:8px;margin-top:20px;flex-wrap:wrap}
+.badge-row{display:flex;gap:var(--space-2);margin-top:var(--space-5);flex-wrap:wrap}
 .badge-item{flex:1;min-width:90px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:12px 10px;text-align:center}
 .badge-emoji{font-size:22px;display:block;margin-bottom:5px}
 .badge-name{font-size:10px;font-weight:700;color:rgba(255,255,255,.7)}
 .badge-xp{font-size:9px;color:var(--muted);margin-top:2px}
 
 /* ── FE CARD ── */
-.fe-header{background:linear-gradient(135deg,rgba(245,158,11,.2),rgba(167,139,250,.1));border:1px solid rgba(245,158,11,.3);border-radius:16px;padding:20px 22px;margin-bottom:12px;display:flex;align-items:center;gap:14px}
+.fe-header{background:linear-gradient(135deg,rgba(245,158,11,.2),rgba(167,139,250,.1));border:1px solid rgba(245,158,11,.3);border-radius:16px;padding:20px 22px;margin-bottom:var(--space-3);display:flex;align-items:center;gap:14px}
 .fe-icon{font-size:36px;flex-shrink:0}
 .fe-title{font-size:16px;font-weight:800;color:#fbbf24}
 .fe-sub{font-size:12px;color:var(--muted);margin-top:3px}
-.fe-item{background:var(--bg2);border:1px solid rgba(167,139,250,.2);border-radius:12px;padding:12px 16px;margin-bottom:8px;display:flex;align-items:center;gap:12px}
+.fe-item{background:var(--bg2);border:1px solid rgba(167,139,250,.2);border-radius:12px;padding:12px 16px;margin-bottom:var(--space-2);display:flex;align-items:center;gap:var(--space-3)}
 .fe-av{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--purple),#7c3aed);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
 .fe-item-name{font-size:13px;font-weight:700}
 .fe-item-url{font-size:11px;color:var(--purple)}
 .fe-likes{font-size:12px;font-weight:700;color:var(--red);margin-left:auto;flex-shrink:0}
-.fe-warn{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:10px;padding:12px 16px;font-size:12px;color:rgba(239,68,68,.9);display:flex;align-items:center;gap:8px}
+.fe-warn{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:10px;padding:12px 16px;font-size:12px;color:rgba(239,68,68,.9);display:flex;align-items:center;gap:var(--space-2)}
 
 /* ── DIAMOND WAYS ── */
 .dia-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.dia-card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px;display:flex;align-items:flex-start;gap:12px}
+.dia-card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:var(--space-4);display:flex;align-items:flex-start;gap:var(--space-3)}
 .dia-icon{font-size:22px;flex-shrink:0;line-height:1}
 .dia-text h4{font-size:13px;font-weight:700;margin-bottom:3px}
 .dia-text p{font-size:11px;color:var(--muted)}
@@ -9018,7 +9018,7 @@ p{line-height:1.65;color:var(--muted)}
 .shop-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
 .shop-item{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px 12px;text-align:center}
 .shop-ring{width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#ff6b6b,#ffa500);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;margin:0 auto 10px}
-.shop-ring-name{font-size:11px;font-weight:700;margin-bottom:4px}
+.shop-ring-name{font-size:11px;font-weight:700;margin-bottom:var(--space-1)}
 .shop-ring-price{font-size:11px;color:var(--purple);font-weight:700}
 
 /* ── PROFILE PREVIEW ── */
@@ -9028,7 +9028,7 @@ p{line-height:1.65;color:var(--muted)}
 .profile-info{padding:26px 18px 18px;display:flex;justify-content:space-between;align-items:flex-end}
 .profile-name{font-size:15px;font-weight:800}
 .profile-handle{font-size:11px;color:var(--muted);margin-top:2px}
-.profile-stats{display:flex;gap:16px;padding:0 18px 18px}
+.profile-stats{display:flex;gap:var(--space-4);padding:0 18px 18px}
 .profile-stat{text-align:center}
 .profile-stat-val{font-size:16px;font-weight:800}
 .profile-stat-lbl{font-size:10px;color:var(--muted);margin-top:1px}
@@ -9038,7 +9038,7 @@ p{line-height:1.65;color:var(--muted)}
 .cta-glow{position:absolute;width:400px;height:400px;border-radius:50%;background:radial-gradient(circle,rgba(255,107,107,.12) 0%,transparent 70%);top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none}
 .cta h2{font-size:clamp(28px,6vw,42px);margin-bottom:14px}
 .cta p{font-size:15px;color:var(--muted);max-width:380px;margin:0 auto 32px}
-.cta-btn{display:inline-flex;align-items:center;gap:8px;padding:16px 36px;border-radius:16px;background:linear-gradient(135deg,var(--red),var(--orange));color:#fff;font-size:16px;font-weight:700;text-decoration:none;font-family:'DM Sans',sans-serif;box-shadow:0 8px 32px rgba(255,107,107,.35)}
+.cta-btn{display:inline-flex;align-items:center;gap:var(--space-2);padding:16px 36px;border-radius:16px;background:linear-gradient(135deg,var(--red),var(--orange));color:#fff;font-size:16px;font-weight:700;text-decoration:none;font-family:'DM Sans',sans-serif;box-shadow:0 8px 32px rgba(255,107,107,.35)}
 
 /* ── ACCENT SECTIONS ── */
 .section-red{background:linear-gradient(180deg,rgba(255,107,107,.05) 0%,transparent 100%)}
@@ -9119,7 +9119,7 @@ p{line-height:1.65;color:var(--muted)}
 
   <!-- XP Demo -->
   <div class="xp-demo">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-1)">
       <span style="font-size:13px;font-weight:700">⬆️ Aufsteiger</span>
       <span style="font-size:12px;color:var(--gold);font-weight:700">650 / 1.000 XP</span>
     </div>
@@ -9154,16 +9154,16 @@ p{line-height:1.65;color:var(--muted)}
     </div>
   </div>
 
-  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:20px">
-    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center">
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:var(--space-5)">
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:var(--space-4);text-align:center">
       <div style="font-size:24px;font-weight:800;color:var(--red)">+5</div>
       <div style="font-size:10px;color:var(--muted);margin-top:3px">XP pro Like</div>
     </div>
-    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center">
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:var(--space-4);text-align:center">
       <div style="font-size:24px;font-weight:800;color:var(--orange)">1×</div>
       <div style="font-size:10px;color:var(--muted);margin-top:3px">Like pro Link</div>
     </div>
-    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center">
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:var(--space-4);text-align:center">
       <div style="font-size:24px;font-weight:800;color:var(--gold)">3</div>
       <div style="font-size:10px;color:var(--muted);margin-top:3px">Tages-Missionen</div>
     </div>
@@ -9177,7 +9177,7 @@ p{line-height:1.65;color:var(--muted)}
   <h2>Deinen Link <span class="grad-text">teilen</span></h2>
   <p class="lead">Einmal täglich postest du deinen Instagram Reel Link in die Community. Der <strong style="color:#ff6b6b">rote + Button</strong> unten in der Mitte ist dein Freund.</p>
 
-  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;overflow:hidden;margin-bottom:20px">
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;overflow:hidden;margin-bottom:var(--space-5)">
     <div style="padding:16px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px">
       <div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--red),var(--orange));display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:300;box-shadow:0 0 16px rgba(255,107,107,.4)">+</div>
       <div>
@@ -9185,14 +9185,14 @@ p{line-height:1.65;color:var(--muted)}
         <div style="font-size:11px;color:var(--muted)">Täglich um Mitternacht erneuert</div>
       </div>
     </div>
-    <div style="padding:16px 18px;display:flex;flex-direction:column;gap:8px">
+    <div style="padding:16px 18px;display:flex;flex-direction:column;gap:var(--space-2)">
       <div style="background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:10px;padding:10px 13px;font-size:12px;color:var(--muted)">https://www.instagram.com/reel/...</div>
       <div style="background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:10px;padding:10px 13px;font-size:12px;color:var(--muted)">Beschreibung (optional)...</div>
-      <div style="background:linear-gradient(135deg,var(--red),var(--orange));border-radius:10px;padding:12px;font-size:13px;font-weight:700;text-align:center">📸 Jetzt teilen</div>
+      <div style="background:linear-gradient(135deg,var(--red),var(--orange));border-radius:10px;padding:var(--space-3);font-size:13px;font-weight:700;text-align:center">📸 Jetzt teilen</div>
     </div>
   </div>
 
-  <div style="display:flex;flex-direction:column;gap:8px">
+  <div style="display:flex;flex-direction:column;gap:var(--space-2)">
     <div style="background:rgba(0,200,81,.08);border:1px solid rgba(0,200,81,.2);border-radius:12px;padding:12px 16px;font-size:13px;display:flex;align-items:center;gap:10px">
       <span style="font-size:18px">🆓</span>
       <div><strong style="color:#fff">1 kostenloser Link</strong> pro Tag — täglich automatisch erneuert</div>
@@ -9248,21 +9248,21 @@ p{line-height:1.65;color:var(--muted)}
     <div class="fe-likes">❤️ 3</div>
   </div>
 
-  <div class="fe-warn" style="margin-top:12px">
+  <div class="fe-warn" style="margin-top:var(--space-3)">
     <span style="font-size:18px">⚠️</span>
     <div>Wer bis <strong style="color:#ef4444">Sonntag nicht engaged</strong>, verliert <strong style="color:#ef4444">−50 XP</strong> Strafe</div>
   </div>
 
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:20px">
-    <div style="background:rgba(167,139,250,.1);border:1px solid rgba(167,139,250,.2);border-radius:12px;padding:16px;text-align:center">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:var(--space-5)">
+    <div style="background:rgba(167,139,250,.1);border:1px solid rgba(167,139,250,.2);border-radius:12px;padding:var(--space-4);text-align:center">
       <div style="font-size:22px;margin-bottom:6px">✅</div>
       <div style="font-size:13px;font-weight:700;color:#a78bfa">Dabei sein</div>
-      <div style="font-size:11px;color:var(--muted);margin-top:4px">XP + Diamanten + Gemeinschaft</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:var(--space-1)">XP + Diamanten + Gemeinschaft</div>
     </div>
-    <div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.15);border-radius:12px;padding:16px;text-align:center">
+    <div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.15);border-radius:12px;padding:var(--space-4);text-align:center">
       <div style="font-size:22px;margin-bottom:6px">❌</div>
       <div style="font-size:13px;font-weight:700;color:#ef4444">Fehlen</div>
-      <div style="font-size:11px;color:var(--muted);margin-top:4px">−50 XP Strafe</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:var(--space-1)">−50 XP Strafe</div>
     </div>
   </div>
 </div>
@@ -9274,7 +9274,7 @@ p{line-height:1.65;color:var(--muted)}
   <h2>XP, Ranking &amp; <span class="grad-text-gold">Badges</span></h2>
   <p class="lead">Deine Aktivität wird gemessen und belohnt. Je mehr XP du sammelst, desto höher steigst du in der Community auf.</p>
 
-  <div class="rank-table" style="margin-bottom:24px">
+  <div class="rank-table" style="margin-bottom:var(--space-6)">
     <div class="rank-row">
       <div class="rank-pos">🥇</div>
       <div class="rank-av" style="background:linear-gradient(135deg,#ffd43b,#f59e0b);color:#000">AK</div>
@@ -9301,7 +9301,7 @@ p{line-height:1.65;color:var(--muted)}
     </div>
   </div>
 
-  <h3 style="font-size:15px;font-weight:700;margin-bottom:4px">Die 6 Badge-Stufen</h3>
+  <h3 style="font-size:15px;font-weight:700;margin-bottom:var(--space-1)">Die 6 Badge-Stufen</h3>
   <p style="font-size:12px;color:var(--muted);margin-bottom:0">Von Einsteiger bis Elite+ — wo stehst du?</p>
   <div class="badge-row">
     <div class="badge-item">
@@ -9395,10 +9395,10 @@ p{line-height:1.65;color:var(--muted)}
     </div>
   </div>
 
-  <div style="background:linear-gradient(135deg,rgba(167,139,250,.12),rgba(124,58,237,.06));border:1px solid rgba(167,139,250,.25);border-radius:16px;padding:20px;margin-top:20px;display:flex;align-items:center;gap:16px">
+  <div style="background:linear-gradient(135deg,rgba(167,139,250,.12),rgba(124,58,237,.06));border:1px solid rgba(167,139,250,.25);border-radius:16px;padding:var(--space-5);margin-top:20px;display:flex;align-items:center;gap:var(--space-4)">
     <div style="font-size:36px">💎</div>
     <div>
-      <div style="font-size:14px;font-weight:700;color:#a78bfa;margin-bottom:4px">Diamanten ausgeben im Shop</div>
+      <div style="font-size:14px;font-weight:700;color:#a78bfa;margin-bottom:var(--space-1)">Diamanten ausgeben im Shop</div>
       <div style="font-size:12px;color:var(--muted);line-height:1.5">Profilrahmen mit Glow-Effekt · Extra-Links (5 💎) · zukünftige Shop-Items</div>
     </div>
   </div>
@@ -9411,7 +9411,7 @@ p{line-height:1.65;color:var(--muted)}
   <h2>Profil &amp; <span class="grad-text-green">Shop</span></h2>
   <p class="lead">Dein Profil ist deine Visitenkarte in der Community. Mach es vollständig — und schmück es mit einem Profilrahmen aus dem Shop.</p>
 
-  <div class="profile-box" style="margin-bottom:20px">
+  <div class="profile-box" style="margin-bottom:var(--space-5)">
     <div class="profile-banner">
       <div class="profile-av-wrap">Du</div>
     </div>
@@ -9487,7 +9487,7 @@ p{line-height:1.65;color:var(--muted)}
   <div class="cta-glow"></div>
   <h2>Bereit zum <span class="grad-text">Starten?</span></h2>
   <p>Logge dich mit deiner Email ein — kein Account nötig, sofort dabei.</p>
-  <div style="display:flex;flex-direction:column;align-items:center;gap:12px;position:relative;z-index:1">
+  <div style="display:flex;flex-direction:column;align-items:center;gap:var(--space-3);position:relative;z-index:1">
     <a href="/" class="cta-btn">
       📧 Mit Email einloggen
     </a>
@@ -9497,7 +9497,7 @@ p{line-height:1.65;color:var(--muted)}
 
 <!-- ════════════════════════════════════════════ FOOTER ════ -->
 <div class="footer">
-  <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:900;background:linear-gradient(135deg,#ff6b6b,#ffa500);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:8px">CreatorX</div>
+  <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:900;background:linear-gradient(135deg,#ff6b6b,#ffa500);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:var(--space-2)">CreatorX</div>
   <p style="font-size:12px;color:rgba(255,255,255,.2)">Die Community für Instagram Creators · Gemeinsam wachsen</p>
 </div>
 
@@ -9737,11 +9737,11 @@ p{line-height:1.65;color:var(--muted)}
                     const userName = _u.spitzname || _u.name || 'CreatorX User';
                     const html = `<!DOCTYPE html><html><body style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#000;color:#fff;padding:0">
 <div style="max-width:560px;margin:0 auto;padding:32px 24px">
-<div style="text-align:center;margin-bottom:24px"><img src="${baseUrl}/cx-logo-256.png" width="80" height="80" style="border-radius:18px" alt="CreatorX"></div>
+<div style="text-align:center;margin-bottom:var(--space-6)"><img src="${baseUrl}/cx-logo-256.png" width="80" height="80" style="border-radius:18px" alt="CreatorX"></div>
 <h1 style="font-size:26px;font-weight:700;margin:0 0 12px;text-align:center;color:#fff">Hi ${userName.replace(/[<>]/g,'')}!</h1>
 <p style="font-size:15px;color:#a8a39a;line-height:1.6;text-align:center;margin:0 0 28px">Bestätige deine Email-Adresse <b style="color:#fff">${updateData.email}</b> für deinen CreatorX-Account. Klick den Button — der Link ist 24 Stunden gültig.</p>
 <div style="text-align:center;margin:32px 0"><a href="${confirmUrl}" style="display:inline-block;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px;letter-spacing:0.3px">✅ Email bestätigen</a></div>
-<p style="font-size:12px;color:#605c54;line-height:1.5;text-align:center;margin:32px 0 0;border-top:1px solid #221f1a;padding-top:20px">Falls du diese Änderung nicht angefragt hast, ignoriere die Email — niemand kann deine Email-Adresse ohne Klick ändern.<br><br>Falls der Button nicht funktioniert, kopier diese URL in deinen Browser:<br><span style="color:#a8a39a;word-break:break-all;font-size:11px">${confirmUrl}</span></p>
+<p style="font-size:12px;color:#605c54;line-height:1.5;text-align:center;margin:32px 0 0;border-top:1px solid #221f1a;padding-top:var(--space-5)">Falls du diese Änderung nicht angefragt hast, ignoriere die Email — niemand kann deine Email-Adresse ohne Klick ändern.<br><br>Falls der Button nicht funktioniert, kopier diese URL in deinen Browser:<br><span style="color:#a8a39a;word-break:break-all;font-size:11px">${confirmUrl}</span></p>
 </div></body></html>`;
                     sendEmail(updateData.email, '✅ Bestätige deine CreatorX-Email', html).catch(()=>{});
                     _emailPending = true;
@@ -10463,16 +10463,16 @@ window.openPinnedStory = function(uid){
       '<button onclick="closePinnedStory()" style="background:var(--bg4);border:none;width:32px;height:32px;border-radius:50%;color:var(--text);font-size:18px;cursor:pointer;flex-shrink:0">×</button>'+
     '</div>'+
     (s.thumb ?
-      '<a href="javascript:void(0)" onclick="onPinVisitStory(\\''+_esc(s.uid)+'\\')" style="display:block;position:relative;width:100%;padding-top:62%;overflow:hidden;background:#000;border-radius:14px;margin-bottom:12px;text-decoration:none">'+
+      '<a href="javascript:void(0)" onclick="onPinVisitStory(\\''+_esc(s.uid)+'\\')" style="display:block;position:relative;width:100%;padding-top:62%;overflow:hidden;background:#000;border-radius:14px;margin-bottom:var(--space-3);text-decoration:none">'+
         '<img src="'+_esc(s.thumb)+'" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.style.display=\\'none\\'" alt="">'+
         '<div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.05),rgba(0,0,0,.4));pointer-events:none"></div>'+
-        '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center"><div style="width:54px;height:54px;border-radius:50%;background:rgba(255,255,255,.92);display:flex;align-items:center;justify-content:center"><div style="width:0;height:0;border-style:solid;border-width:11px 0 11px 20px;border-color:transparent transparent transparent #000;margin-left:4px"></div></div></div>'+
+        '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center"><div style="width:54px;height:54px;border-radius:50%;background:rgba(255,255,255,.92);display:flex;align-items:center;justify-content:center"><div style="width:0;height:0;border-style:solid;border-width:11px 0 11px 20px;border-color:transparent transparent transparent #000;margin-left:var(--space-1)"></div></div></div>'+
       '</a>'
-    : '<div style="margin-bottom:12px;padding:30px;background:linear-gradient(135deg,#1a1a2e,#16213e);border-radius:14px;text-align:center;font-size:14px;color:rgba(255,255,255,.6)">📸 Instagram Reel</div>')+
+    : '<div style="margin-bottom:var(--space-3);padding:30px;background:linear-gradient(135deg,#1a1a2e,#16213e);border-radius:14px;text-align:center;font-size:14px;color:rgba(255,255,255,.6)">📸 Instagram Reel</div>')+
     (s.isOwn ?
       '<div style="padding:12px 14px;background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.25);border-radius:12px;font-size:13px;color:var(--muted);line-height:1.5">👤 Das ist dein eigener Pinned Reel. Andere User können ihn engagen und du bekommst Reichweite.</div>'
     :
-      '<div style="display:flex;gap:8px;margin-bottom:10px">'+
+      '<div style="display:flex;gap:var(--space-2);margin-bottom:10px">'+
         '<a href="javascript:void(0)" onclick="onPinVisitStory(\\''+_esc(s.uid)+'\\')" id="pin-visit-link-story" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:11px 12px;background:linear-gradient(135deg,#ec4899,#a855f7);color:#fff;border-radius:10px;font-size:13px;font-weight:700;text-decoration:none"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17" cy="7" r="1.1" fill="currentColor" stroke="none"/></svg>Auf Instagram öffnen</a>'+
         (s.engaged ?
           '<button disabled style="flex:1;padding:11px 12px;border-radius:10px;border:1px solid #22c55e;background:rgba(34,197,94,.12);color:#22c55e;font-size:13px;font-weight:700;font-family:inherit;cursor:default">✅ Engagiert</button>'
@@ -10481,7 +10481,7 @@ window.openPinnedStory = function(uid){
         )+
       '</div>'+
       '<div style="padding:12px 14px;background:linear-gradient(135deg,rgba(34,197,94,.10),rgba(167,139,250,.06));border:1px solid rgba(34,197,94,.25);border-radius:12px;font-size:12.5px;color:var(--text);line-height:1.55">'+
-        '<div style="font-weight:700;color:#22c55e;margin-bottom:4px">💎 +1 Diamant für Engagement</div>'+
+        '<div style="font-weight:700;color:#22c55e;margin-bottom:var(--space-1)">💎 +1 Diamant für Engagement</div>'+
         '<div style="color:var(--muted)">Auf Instagram <b>LIKEN + KOMMENTIEREN + TEILEN + SPEICHERN</b> → komme zurück → tippe „Engagiert" → +1 💎 für dich.</div>'+
       '</div>'
     );
@@ -10638,13 +10638,13 @@ window.onPinVisitStory = function(uid){
             const allComments = (d.comments&&d.comments[lid1])||(d.comments&&d.comments[msgId])||[];
             const commentCount = allComments.length;
             const commentRows = commentCount===0
-                ? '<div style="padding:12px;font-size:12px;color:var(--muted);text-align:center">Noch keine Kommentare</div>'
+                ? '<div style="padding:var(--space-3);font-size:12px;color:var(--muted);text-align:center">Noch keine Kommentare</div>'
                 : allComments.map(c=>{
                     const cu=d.users[String(c.uid)]||{}; const cg=badgeGradient(cu.role);
                     const cf=ladeBild(String(c.uid),'profilepic'); const ci=cu.instagram;
                     const cimg=cf?'<img src="/appbild/'+c.uid+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" alt="">':ci?'<img src="https://unavatar.io/instagram/'+encodeURIComponent(ci)+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" alt="">':'';
                     const ct=new Date(c.timestamp||0).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
-                    return '<div style="display:flex;gap:8px;padding:8px 12px;border-bottom:1px solid var(--border2)"><div style="position:relative;width:28px;height:28px;flex-shrink:0">'+crownOverlay(c.uid,'xs')+'<div style="position:relative;width:28px;height:28px;border-radius:50%;background:'+cg+';overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff"><span style="position:absolute">'+htmlEsc((cu.name||'?')[0])+'</span>'+cimg+'</div></div><div style="flex:1;min-width:0"><div style="font-size:11px;font-weight:700">'+htmlEsc(cu.spitzname||cu.name||'User')+' <span style="font-size:10px;color:var(--muted);font-weight:400">'+ct+'</span></div><div style="font-size:12px;color:var(--text);margin-top:2px">'+htmlEsc(c.text)+'</div></div></div>';
+                    return '<div style="display:flex;gap:var(--space-2);padding:8px 12px;border-bottom:1px solid var(--border2)"><div style="position:relative;width:28px;height:28px;flex-shrink:0">'+crownOverlay(c.uid,'xs')+'<div style="position:relative;width:28px;height:28px;border-radius:50%;background:'+cg+';overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff"><span style="position:absolute">'+htmlEsc((cu.name||'?')[0])+'</span>'+cimg+'</div></div><div style="flex:1;min-width:0"><div style="font-size:11px;font-weight:700">'+htmlEsc(cu.spitzname||cu.name||'User')+' <span style="font-size:10px;color:var(--muted);font-weight:400">'+ct+'</span></div><div style="font-size:12px;color:var(--text);margin-top:2px">'+htmlEsc(c.text)+'</div></div></div>';
                 }).join('');
 
             // Liker names text ("Gefällt X, Y und Z weiteren")
@@ -10676,7 +10676,7 @@ window.onPinVisitStory = function(uid){
                 '<button onclick="toggleComments(\''+lid1+'\')" style="background:none;border:none;color:var(--muted);font-size:12px;cursor:pointer;padding:0 0 6px 0">'+
                 '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><path d="M21 11.5a8.5 8.5 0 0 1-12.5 7.5L3 20.5l1.5-5.5A8.5 8.5 0 1 1 21 11.5z"/></svg>'+(commentCount>0?commentCount+' ':'')+( commentCount===1?'Kommentar':'Kommentare')+
                 '</button>'+
-                '<div id="comments-box-'+lid1+'" style="display:none;border:1px solid var(--border2);border-radius:12px;overflow:hidden;background:var(--bg3);margin-top:4px">'+
+                '<div id="comments-box-'+lid1+'" style="display:none;border:1px solid var(--border2);border-radius:12px;overflow:hidden;background:var(--bg3);margin-top:var(--space-1)">'+
                 '<div style="padding:8px 12px;border-bottom:1px solid var(--border2);font-size:11px;font-weight:700;color:var(--muted);display:flex;justify-content:space-between">'+
                 '<span style="display:inline-flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-12.5 7.5L3 20.5l1.5-5.5A8.5 8.5 0 1 1 21 11.5z"/></svg>Kommentare</span>'+
                 '<button onclick="toggleComments(\''+lid1+'\')" style="background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer">✕</button>'+
@@ -10696,13 +10696,13 @@ window.onPinVisitStory = function(uid){
 ''+
 // Category badge + timestamp row
 '  <div style="display:flex;align-items:center;justify-content:flex-end;padding:10px 16px 0">\n'+
-'    <div style="display:flex;align-items:center;gap:8px">\n'+
+'    <div style="display:flex;align-items:center;gap:var(--space-2)">\n'+
 '      <span class="post-time">'+new Date(link.timestamp).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})+'</span>\n'+
 (_myIsAdmin ? '      <button onclick=\'adminDelLink("'+msgId+'",this)\' title="Link löschen (Admin)" style="background:none;border:none;color:#ef4444;font-size:15px;cursor:pointer;padding:0 0 0 4px;line-height:1">🗑️</button>\n' : '')+
 '    </div>\n'+
 '  </div>\n'+
 // Post header — Avatar + Name → /profil/{uid}
-'  <div class="post-header" style="padding-top:8px">\n'+
+'  <div class="post-header" style="padding-top:var(--space-2)">\n'+
 '    <a href="/profil/'+link.user_id+'" style="position:relative;width:40px;height:40px;flex-shrink:0;text-decoration:none">\n'+
 '      '+crownOverlay(link.user_id, 'sm')+'\n'+
 '      <div style="position:relative;width:40px;height:40px;border-radius:50%;overflow:hidden;background:'+grad+';display:flex;align-items:center;justify-content:center">\n'+
@@ -10725,14 +10725,14 @@ window.onPinVisitStory = function(uid){
 '      <div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.1) 0%,rgba(0,0,0,.55) 100%)"></div>\n'+
 '      <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none">\n'+
 '        <div style="width:54px;height:54px;border-radius:50%;background:rgba(255,255,255,.92);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 16px rgba(0,0,0,.35)">\n'+
-'          <div style="width:0;height:0;border-style:solid;border-width:11px 0 11px 20px;border-color:transparent transparent transparent #000;margin-left:4px"></div>\n'+
+'          <div style="width:0;height:0;border-style:solid;border-width:11px 0 11px 20px;border-color:transparent transparent transparent #000;margin-left:var(--space-1)"></div>\n'+
 '        </div>\n'+
 '      </div>\n'+
 '      <div style="position:absolute;top:10px;left:12px;background:rgba(0,0,0,.55);border-radius:8px;padding:4px 9px;display:flex;align-items:center;gap:5px;backdrop-filter:blur(4px)">\n'+
 '        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" style="flex-shrink:0"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg><span style="font-size:11px;color:#fff;font-weight:600">Instagram Reel</span>\n'+
 '      </div>\n'+
 '      <div style="position:absolute;bottom:0;left:0;right:0;padding:10px 12px">\n'+
-'        <a href="/profil/'+link.user_id+'" onclick="event.stopPropagation()" style="display:flex;align-items:center;gap:8px;text-decoration:none">\n'+
+'        <a href="/profil/'+link.user_id+'" onclick="event.stopPropagation()" style="display:flex;align-items:center;gap:var(--space-2);text-decoration:none">\n'+
 '          <div style="position:relative;width:32px;height:32px;flex-shrink:0">\n'+
 '            '+crownOverlay(link.user_id, 'xs')+'\n'+
 '            <div style="width:32px;height:32px;border-radius:50%;border:2px solid rgba(255,255,255,.5);overflow:hidden;background:'+grad+';display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff">'+profPic+'</div>\n'+
@@ -10756,7 +10756,7 @@ window.onPinVisitStory = function(uid){
 // Hidden liker rows for modal
 '<div id="liker-rows-'+lid1+'" style="display:none">'+likerRows+'</div>\n'+
 // Action buttons: Like + Wer hat geliked?
-'  <div class="post-actions" style="gap:8px;padding:8px 16px 12px">'+likeBtn+whoLikedBtn+'</div>\n'+
+'  <div class="post-actions" style="gap:var(--space-2);padding:8px 16px 12px">'+likeBtn+whoLikedBtn+'</div>\n'+
 commentsBox+
 '</div>';}
 
@@ -10801,10 +10801,10 @@ commentsBox+
             const dateStr = new Date(sl.timestamp).toLocaleDateString('de-DE',{day:'2-digit',month:'short'});
             return '<div class="post fade-up" id="sl-post-'+sl.id+'">\n'
                 +'<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px 0">\n'
-                +'<span class="post-category-label" style="background:linear-gradient(135deg,#f59e0b,#a78bfa)"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-1px;margin-right:4px"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>SUPERLINK</span>\n'
+                +'<span class="post-category-label" style="background:linear-gradient(135deg,#f59e0b,#a78bfa)"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-1px;margin-right:var(--space-1)"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>SUPERLINK</span>\n'
                 +'<span class="post-time">'+dateStr+' '+time+'</span>\n'
                 +'</div>\n'
-                +'<div class="post-header" style="padding-top:8px">\n'
+                +'<div class="post-header" style="padding-top:var(--space-2)">\n'
                 +'<a href="/profil/'+sl.uid+'" style="position:relative;width:40px;height:40px;flex-shrink:0;text-decoration:none">'+crownOverlay(sl.uid,'sm')+'<div style="position:relative;width:40px;height:40px;border-radius:50%;overflow:hidden;background:'+grad+';display:flex;align-items:center;justify-content:center">\n'
                 +'<span style="color:#fff;font-weight:700;font-size:15px;position:absolute">'+(poster.name||'?')[0]+'</span>\n'
                 +avatarSmall+'\n</div></a>\n'
@@ -10818,12 +10818,12 @@ commentsBox+
                     ? '<a href="'+htmlEsc(cleanInstagramUrl(sl.url||''))+'" target="_blank" rel="noopener noreferrer" onclick="markLinkVisited(\''+sl.id+'\')" style="display:block;position:relative;width:100%;padding-top:62%;overflow:hidden;background:#000"><img src="/insta-thumb?u='+encodeURIComponent(sl.thumbnail)+'" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.parentElement.style.display=\'none\'" alt=""><div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.05),rgba(0,0,0,.55))"></div><div style="position:absolute;top:10px;left:12px;background:rgba(0,0,0,.55);border-radius:8px;padding:4px 9px;font-size:11px;color:#fff;font-weight:600;backdrop-filter:blur(4px)">📸 Instagram</div></a>\n'
                     : '')
                 +'<div style="padding:10px 14px">\n'
-                +(sl.caption?'<div style="font-size:12px;color:var(--muted);line-height:1.4;margin-bottom:8px">'+String(sl.caption).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</div>':'')+'\n'
+                +(sl.caption?'<div style="font-size:12px;color:var(--muted);line-height:1.4;margin-bottom:var(--space-2)">'+String(sl.caption).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</div>':'')+'\n'
                 +'<a href="'+htmlEsc(cleanInstagramUrl(sl.url||''))+'" target="_blank" rel="noopener noreferrer" onclick="markLinkVisited(\''+sl.id+'\')" style="display:inline-flex;align-items:center;gap:5px;padding:7px 14px;background:linear-gradient(135deg,#f59e0b,#a78bfa);color:#fff;border-radius:10px;font-size:12px;font-weight:700;text-decoration:none">→ Öffnen</a>\n'
                 +'</div></div>\n'
                 +'<div class="post-likes-row"><span class="post-like-count"><svg width="20" height="20" viewBox="0 0 24 24" fill="#ef4444"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg><span id="sl-likes-'+sl.id+'">'+likes.length+'</span></span></div>\n'
                 +'<div id="sl-liker-rows-'+sl.id+'" style="display:none">'+likerRows+'</div>\n'
-                +'<div class="post-actions" style="gap:8px;padding:8px 16px 12px">'+likeBtn+whoLikedBtn+'</div>\n'
+                +'<div class="post-actions" style="gap:var(--space-2);padding:8px 16px 12px">'+likeBtn+whoLikedBtn+'</div>\n'
                 +'</div>';
         }
 
@@ -10853,11 +10853,11 @@ commentsBox+
         const _unlikedCountAelter = aelterLinks.filter(([,l]) => _otherUser(l.user_id) && _isUnliked(l.likes, myUid)).length;
         const _unlikedCountSuper = allSuperLinksWeek.filter(sl => _otherUser(sl.uid) && _isUnliked(sl.likes, myUid)).length;
         const tabBadge = (count) => count > 0
-            ? '<span style="display:inline-block;min-width:18px;height:16px;line-height:16px;padding:0 5px;border-radius:99px;background:#ef4444;color:#fff;font-size:9.5px;font-weight:800;vertical-align:middle;margin-left:4px;box-shadow:0 2px 6px rgba(239,68,68,0.45)">'+count+'</span>'
+            ? '<span style="display:inline-block;min-width:18px;height:16px;line-height:16px;padding:0 5px;border-radius:99px;background:#ef4444;color:#fff;font-size:9.5px;font-weight:800;vertical-align:middle;margin-left:var(--space-1);box-shadow:0 2px 6px rgba(239,68,68,0.45)">'+count+'</span>'
             : '';
         const engagementHtml = allSuperLinksWeek.length
             ? '<div style="padding:8px 0 80px">'+allSuperLinksWeek.map(renderSuperLink).join('')+'</div>'
-            : '<div style="text-align:center;padding:48px 24px;padding-bottom:80px"><div style="font-size:56px;margin-bottom:16px">⭐</div><div style="font-size:17px;font-weight:700;margin-bottom:8px">Noch keine Superlinks</div><div style="font-size:13px;color:var(--muted);margin-bottom:24px">Teile deinen Instagram-Link für maximales Engagement mit der Community.</div></div>';
+            : '<div style="text-align:center;padding:48px 24px;padding-bottom:80px"><div style="font-size:56px;margin-bottom:var(--space-4)">⭐</div><div style="font-size:17px;font-weight:700;margin-bottom:var(--space-2)">Noch keine Superlinks</div><div style="font-size:13px;color:var(--muted);margin-bottom:var(--space-6)">Teile deinen Instagram-Link für maximales Engagement mit der Community.</div></div>';
 
         // Pinned-First-Posts: jeder Post bekommt einen 'Star-Frame' mit gold-purple
         // Gradient-Border + Star-Topbar (kein Overlay mehr auf der Post-Card selbst).
@@ -10886,9 +10886,9 @@ commentsBox+
                 '.first-post-star-inner{position:relative;background:linear-gradient(180deg,rgba(245,158,11,0.10),rgba(245,158,11,0));border-radius:20px;margin:3px;padding:10px 8px 6px}'+
                 '[data-theme="dark"] .first-post-star-inner{background:linear-gradient(180deg,rgba(245,158,11,0.18),rgba(0,0,0,0));}' +
                 '.first-post-star-topbar{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:0 6px 8px}'+
-                '.first-post-star-pill{display:inline-flex;align-items:center;gap:4px;background:linear-gradient(135deg,#f59e0b,#a855f7);color:#fff;font-size:10px;font-weight:800;letter-spacing:0.6px;padding:4px 10px;border-radius:99px;box-shadow:0 3px 10px rgba(245,158,11,0.45)}'+
+                '.first-post-star-pill{display:inline-flex;align-items:center;gap:var(--space-1);background:linear-gradient(135deg,#f59e0b,#a855f7);color:#fff;font-size:10px;font-weight:800;letter-spacing:0.6px;padding:4px 10px;border-radius:99px;box-shadow:0 3px 10px rgba(245,158,11,0.45)}'+
                 '.first-post-star-pill.bonus{background:linear-gradient(135deg,#22c55e,#16a34a);box-shadow:0 3px 10px rgba(34,197,94,0.45)}'+
-                '.first-post-star-cd{margin-left:auto;font-size:11px;font-weight:700;color:#f59e0b;font-variant-numeric:tabular-nums;display:inline-flex;align-items:center;gap:4px}'+
+                '.first-post-star-cd{margin-left:auto;font-size:11px;font-weight:700;color:#f59e0b;font-variant-numeric:tabular-nums;display:inline-flex;align-items:center;gap:var(--space-1)}'+
                 '.first-post-star-card{position:relative;border-radius:16px;overflow:hidden}'+
                 '.first-post-star-card .post{margin:0!important;border:0!important;border-radius:16px!important}'+
               '</style>' +
@@ -10897,17 +10897,17 @@ commentsBox+
             : '';
         const regularHeuteHtml = heuteLinksRegular.length ? heuteLinksRegular.map(renderLink).join('') : (pinnedFirstPosts.length ? '' : `
 <div style="text-align:center;padding:48px 24px">
-  <div style="font-size:56px;margin-bottom:16px">📸</div>
-  <div style="font-size:17px;font-weight:700;margin-bottom:8px">Noch keine Links heute</div>
-  <div style="font-size:13px;color:var(--muted);margin-bottom:24px">${genderize(d.users[myUid], 'Sei der Erste!', 'Sei die Erste!', 'Mach den Anfang!')} Teile deinen Instagram Link mit der Community.</div>
-  <button onclick="openPlusSheet()" style="display:inline-flex;align-items:center;gap:8px;background:var(--accent);color:#fff;padding:12px 24px;border-radius:12px;font-size:14px;font-weight:700;border:none;cursor:pointer;font-family:var(--font)">📸 Jetzt Link teilen</button>
+  <div style="font-size:56px;margin-bottom:var(--space-4)">📸</div>
+  <div style="font-size:17px;font-weight:700;margin-bottom:var(--space-2)">Noch keine Links heute</div>
+  <div style="font-size:13px;color:var(--muted);margin-bottom:var(--space-6)">${genderize(d.users[myUid], 'Sei der Erste!', 'Sei die Erste!', 'Mach den Anfang!')} Teile deinen Instagram Link mit der Community.</div>
+  <button onclick="openPlusSheet()" style="display:inline-flex;align-items:center;gap:var(--space-2);background:var(--accent);color:#fff;padding:12px 24px;border-radius:12px;font-size:14px;font-weight:700;border:none;cursor:pointer;font-family:var(--font)">📸 Jetzt Link teilen</button>
 </div>`);
         const heuteHtml = pinnedHtml + regularHeuteHtml;
-        const aelterHtml = aelterLinks2.length ? aelterLinks2.map(renderLink).join('') : '<div class="empty" style="margin-top:40px"><div class="empty-icon"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 1.8"/></svg></div><div class="empty-text">Keine älteren Links</div></div>';
-        const _skCard = '<div style="margin:0 16px 14px;border:1px solid var(--border2);border-radius:18px;padding:14px;background:var(--bg3)"><div style="display:flex;align-items:center;gap:10px;margin-bottom:12px"><div class="sk" style="width:42px;height:42px;border-radius:50%;flex-shrink:0"></div><div style="flex:1"><div class="sk" style="width:42%;height:12px;border-radius:6px;margin-bottom:7px"></div><div class="sk" style="width:26%;height:10px;border-radius:6px"></div></div></div><div class="sk" style="width:100%;height:180px;border-radius:12px;margin-bottom:12px"></div><div class="sk" style="width:100%;height:44px;border-radius:12px"></div></div>';
+        const aelterHtml = aelterLinks2.length ? aelterLinks2.map(renderLink).join('') : '<div class="empty" style="margin-top:var(--space-10)"><div class="empty-icon"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 1.8"/></svg></div><div class="empty-text">Keine älteren Links</div></div>';
+        const _skCard = '<div style="margin:0 16px 14px;border:1px solid var(--border2);border-radius:18px;padding:14px;background:var(--bg3)"><div style="display:flex;align-items:center;gap:10px;margin-bottom:var(--space-3)"><div class="sk" style="width:42px;height:42px;border-radius:50%;flex-shrink:0"></div><div style="flex:1"><div class="sk" style="width:42%;height:12px;border-radius:6px;margin-bottom:7px"></div><div class="sk" style="width:26%;height:10px;border-radius:6px"></div></div></div><div class="sk" style="width:100%;height:180px;border-radius:12px;margin-bottom:var(--space-3)"></div><div class="sk" style="width:100%;height:44px;border-radius:12px"></div></div>';
         const kollabsHtml = '<div id="kollabs-tab-root" style="padding:8px 0 80px">'+_skCard+_skCard+'</div>';
         const diamondHtml = '<div id="diamond-tab-root" style="padding:8px 0 80px">'+_skCard+_skCard+'</div>';
-        const prismaHtml = '<div id="prisma-tab-root" style="padding:8px 0 80px"><div style="padding:60px 24px;text-align:center"><div style="font-size:64px;margin-bottom:16px;background:linear-gradient(135deg,#ef4444,#f59e0b,#22c55e,#06b6d4,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">💠</div><div style="font-size:18px;font-weight:800;background:linear-gradient(135deg,#ef4444,#f59e0b,#22c55e,#06b6d4,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:8px">Prismalink</div><div style="font-size:13px;color:var(--muted);max-width:320px;margin:0 auto;line-height:1.6">Die ultimative Premium-Stufe — 100💎 zum Posten · 7 Tage Feed-Top · 7💎 Reward pro Liker · 1×/Woche.</div><div style="margin-top:24px;display:inline-block;padding:8px 18px;background:linear-gradient(135deg,#94a3b8,#64748b);color:#fff;border-radius:999px;font-size:12px;font-weight:800;letter-spacing:1px">⏳ COMING SOON</div></div></div>';
+        const prismaHtml = '<div id="prisma-tab-root" style="padding:8px 0 80px"><div style="padding:60px 24px;text-align:center"><div style="font-size:64px;margin-bottom:var(--space-4);background:linear-gradient(135deg,#ef4444,#f59e0b,#22c55e,#06b6d4,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">💠</div><div style="font-size:18px;font-weight:800;background:linear-gradient(135deg,#ef4444,#f59e0b,#22c55e,#06b6d4,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:var(--space-2)">Prismalink</div><div style="font-size:13px;color:var(--muted);max-width:320px;margin:0 auto;line-height:1.6">Die ultimative Premium-Stufe — 100💎 zum Posten · 7 Tage Feed-Top · 7💎 Reward pro Liker · 1×/Woche.</div><div style="margin-top:var(--space-6);display:inline-block;padding:8px 18px;background:linear-gradient(135deg,#94a3b8,#64748b);color:#fff;border-radius:999px;font-size:12px;font-weight:800;letter-spacing:1px">⏳ COMING SOON</div></div></div>';
         // Diamantlink-Top-Strip nur im 'heute'-Tab — älteste Diamantlinks ganz oben.
         // Stack-Order Heute-Tab:
         //   1. Diamond-Top-Strip (#diamond-top-strip)
@@ -10923,7 +10923,7 @@ commentsBox+
             || Object.values(d.diamondLinks||{}).some(p => p && String(p.uid) === String(myUid));
         const _dlNudge = (_myDiamonds >= 30 && !_postedDL)
             ? '<div style="margin:8px 16px 12px;padding:14px 16px;background:linear-gradient(135deg,rgba(6,182,212,0.14),rgba(167,139,250,0.10));border:1.5px solid rgba(6,182,212,0.5);border-radius:14px;box-shadow:0 0 16px rgba(6,182,212,0.18)">'
-                + '<div style="display:flex;align-items:center;gap:12px">'
+                + '<div style="display:flex;align-items:center;gap:var(--space-3)">'
                 + '<div style="font-size:30px;flex-shrink:0">💎</div>'
                 + '<div style="flex:1;min-width:0"><div style="font-size:14.5px;font-weight:800;color:#06b6d4;line-height:1.2">Du hast '+_myDiamonds+' Diamanten!</div>'
                 + '<div style="font-size:12px;color:var(--muted);margin-top:3px;line-height:1.45">Poste deinen <b>ersten Diamantlink</b> — 3 Tage ganz oben im Feed, und jeder Liker gibt dir <b>+3 💎</b> zurück.</div></div></div>'
@@ -10974,9 +10974,9 @@ ${(() => {
     </div>
   </div>
   <div class="topbar-actions">
-    <a href="/profil" title="XP" style="display:inline-flex;align-items:center;gap:4px;padding:5px 9px;background:rgba(167,139,250,0.10);border:1px solid rgba(167,139,250,0.30);border-radius:99px;text-decoration:none;color:#a78bfa;font-size:12px;font-weight:700"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>${(d.users[myUid]?.xp||0).toLocaleString('de-DE')}</a>
-    <a href="/diamanten" title="Diamanten" style="display:inline-flex;align-items:center;gap:4px;padding:5px 9px;background:rgba(6,182,212,0.10);border:1px solid rgba(6,182,212,0.30);border-radius:99px;text-decoration:none;color:#06b6d4;font-size:12px;font-weight:700"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0"><path d="M6 2h12l4 6-10 13L2 8z"/></svg>${(d.users[myUid]?.diamonds||0)}</a>
-    ${(d.users[myUid]?.warnings||0) > 0 ? `<a href="/profil" title="Verwarnungen" style="display:inline-flex;align-items:center;gap:4px;padding:5px 9px;background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.35);border-radius:99px;text-decoration:none;color:#ef4444;font-size:12px;font-weight:700"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>${d.users[myUid].warnings}/5</a>` : ''}
+    <a href="/profil" title="XP" style="display:inline-flex;align-items:center;gap:var(--space-1);padding:5px 9px;background:rgba(167,139,250,0.10);border:1px solid rgba(167,139,250,0.30);border-radius:99px;text-decoration:none;color:#a78bfa;font-size:12px;font-weight:700"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>${(d.users[myUid]?.xp||0).toLocaleString('de-DE')}</a>
+    <a href="/diamanten" title="Diamanten" style="display:inline-flex;align-items:center;gap:var(--space-1);padding:5px 9px;background:rgba(6,182,212,0.10);border:1px solid rgba(6,182,212,0.30);border-radius:99px;text-decoration:none;color:#06b6d4;font-size:12px;font-weight:700"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0"><path d="M6 2h12l4 6-10 13L2 8z"/></svg>${(d.users[myUid]?.diamonds||0)}</a>
+    ${(d.users[myUid]?.warnings||0) > 0 ? `<a href="/profil" title="Verwarnungen" style="display:inline-flex;align-items:center;gap:var(--space-1);padding:5px 9px;background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.35);border-radius:99px;text-decoration:none;color:#ef4444;font-size:12px;font-weight:700"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>${d.users[myUid].warnings}/5</a>` : ''}
     <a href="/benachrichtigungen" class="icon-btn" title="Benachrichtigungen" style="position:relative;text-decoration:none;color:inherit">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
       <span id="notif-badge-feed" style="display:none;position:absolute;top:2px;right:2px;background:#ef4444;color:#fff;font-size:9px;font-weight:800;border-radius:50%;min-width:14px;height:14px;line-height:14px;text-align:center;padding:0 3px;box-shadow:0 2px 6px rgba(239,68,68,0.45)"></span>
@@ -11025,8 +11025,8 @@ ${(()=>{
 <!-- Tabs entfernt — sind jetzt im Topbar-Dropdown (.ft-wrap) -->
 ${tab==='engagement' ? `<div style="padding:12px 16px 4px">
   ${slAvailable > 0
-    ? `<button onclick="openSLSheet()" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;background:linear-gradient(135deg,#f59e0b,#a78bfa);color:#fff;border:none;border-radius:14px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font)"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Superlink teilen (${slAvailable} verfügbar)</button>`
-    : `<div style="padding:12px;background:var(--bg3);border:1px solid var(--border2);border-radius:14px;font-size:12px;color:var(--muted);text-align:center">✅ Du hast diese Woche bereits einen Superlink gepostet</div>`
+    ? `<button onclick="openSLSheet()" style="display:flex;align-items:center;justify-content:center;gap:var(--space-2);width:100%;background:linear-gradient(135deg,#f59e0b,#a78bfa);color:#fff;border:none;border-radius:14px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font)"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Superlink teilen (${slAvailable} verfügbar)</button>`
+    : `<div style="padding:var(--space-3);background:var(--bg3);border:1px solid var(--border2);border-radius:14px;font-size:12px;color:var(--muted);text-align:center">✅ Du hast diese Woche bereits einen Superlink gepostet</div>`
   }
 </div>` : ''}
 ${postsHtml}
@@ -11341,7 +11341,7 @@ function showSLLikerModal(slId) {
     const content=document.getElementById('sl-liker-modal-content');
     const rows=document.getElementById('sl-liker-rows-'+slId);
     if(!modal)return;
-    content.innerHTML=rows?(rows.innerHTML||'<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">Noch niemand geliked</div>'):'<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">Noch niemand geliked</div>';
+    content.innerHTML=rows?(rows.innerHTML||'<div style="padding:var(--space-6);text-align:center;color:var(--muted);font-size:13px">Noch niemand geliked</div>'):'<div style="padding:var(--space-6);text-align:center;color:var(--muted);font-size:13px">Noch niemand geliked</div>';
     modal.classList.add('open');document.body.style.overflow='hidden';
 }
 function closeSLLikerModal(){const m=document.getElementById('sl-liker-modal');if(m){m.classList.remove('open');document.body.style.overflow='';}}
@@ -11385,7 +11385,7 @@ async function submitSuperLink(){
     </div>
     <div id="sl-liker-modal-content" style="padding:4px 0"></div>
     <div style="padding:12px 16px 28px">
-      <button onclick="closeSLLikerModal()" style="width:100%;background:var(--bg4);border:none;color:var(--text);border-radius:12px;padding:12px;font-size:14px;font-weight:600;cursor:pointer;font-family:var(--font)">Schließen</button>
+      <button onclick="closeSLLikerModal()" style="width:100%;background:var(--bg4);border:none;color:var(--text);border-radius:12px;padding:var(--space-3);font-size:14px;font-weight:600;cursor:pointer;font-family:var(--font)">Schließen</button>
     </div>
   </div>
 </div>
@@ -11393,24 +11393,24 @@ async function submitSuperLink(){
 <!-- Superlink posting sheet -->
 <div class="plus-sheet" id="sl-sheet" onclick="if(event.target===this)closeSLSheet()">
   <div class="plus-sheet-inner">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-      <div style="font-size:16px;font-weight:700;display:inline-flex;align-items:center;gap:8px"><svg width="17" height="17" viewBox="0 0 24 24" fill="#f59e0b" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Superlink teilen</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-4)">
+      <div style="font-size:16px;font-weight:700;display:inline-flex;align-items:center;gap:var(--space-2)"><svg width="17" height="17" viewBox="0 0 24 24" fill="#f59e0b" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Superlink teilen</div>
       <button onclick="closeSLSheet()" style="background:var(--bg4);border:none;color:var(--muted);width:30px;height:30px;border-radius:50%;font-size:18px;cursor:pointer">✕</button>
     </div>
-    <div id="sl-sheet-note" style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.5;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:10px;padding:10px">⚠️ 1–2 Superlinks pro Woche (Mo–Sa). Du verpflichtest dich, alle anderen Superlinks dieser Woche zu liken, kommentieren, teilen und speichern.</div>
-    <input type="url" id="sl-url-input" class="form-input" placeholder="Instagram-Link einfügen..." style="margin-bottom:8px">
-    <textarea id="sl-caption-input" class="form-input" placeholder="Beschreibung (optional)" rows="2" maxlength="200" style="margin-bottom:12px"></textarea>
-    <button id="sl-submit-btn" class="btn btn-primary btn-full" onclick="submitSuperLink()" style="display:inline-flex;align-items:center;justify-content:center;gap:8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Superlink posten</button>
-    <div id="sl-result" style="font-size:12px;color:var(--accent);margin-top:8px;text-align:center"></div>
+    <div id="sl-sheet-note" style="font-size:12px;color:var(--muted);margin-bottom:var(--space-3);line-height:1.5;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:10px;padding:10px">⚠️ 1–2 Superlinks pro Woche (Mo–Sa). Du verpflichtest dich, alle anderen Superlinks dieser Woche zu liken, kommentieren, teilen und speichern.</div>
+    <input type="url" id="sl-url-input" class="form-input" placeholder="Instagram-Link einfügen..." style="margin-bottom:var(--space-2)">
+    <textarea id="sl-caption-input" class="form-input" placeholder="Beschreibung (optional)" rows="2" maxlength="200" style="margin-bottom:var(--space-3)"></textarea>
+    <button id="sl-submit-btn" class="btn btn-primary btn-full" onclick="submitSuperLink()" style="display:inline-flex;align-items:center;justify-content:center;gap:var(--space-2)"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Superlink posten</button>
+    <div id="sl-result" style="font-size:12px;color:var(--accent);margin-top:var(--space-2);text-align:center"></div>
   </div>
 </div>
 
 <!-- 10-second popup after posting superlink -->
-<div id="sl-popup" style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,.85);align-items:center;justify-content:center;padding:24px">
+<div id="sl-popup" style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,.85);align-items:center;justify-content:center;padding:var(--space-6)">
   <div style="background:var(--bg2);border-radius:20px;padding:28px 24px;max-width:360px;width:100%;text-align:center">
-    <div style="font-size:48px;margin-bottom:12px">⭐</div>
-    <div style="font-size:18px;font-weight:700;margin-bottom:8px">Superlink gepostet!</div>
-    <div style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:20px">Superlinks können 1–2× pro Woche gepostet werden (Elite+ = 2×). Du hast dich damit verpflichtet, <strong style="color:var(--text)">alle anderen Superlinks diese Woche zu liken, kommentieren, teilen und speichern</strong>. Sonst gibt es am Sonntag um 23:59 Uhr −50 XP.</div>
+    <div style="font-size:48px;margin-bottom:var(--space-3)">⭐</div>
+    <div style="font-size:18px;font-weight:700;margin-bottom:var(--space-2)">Superlink gepostet!</div>
+    <div style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:var(--space-5)">Superlinks können 1–2× pro Woche gepostet werden (Elite+ = 2×). Du hast dich damit verpflichtet, <strong style="color:var(--text)">alle anderen Superlinks diese Woche zu liken, kommentieren, teilen und speichern</strong>. Sonst gibt es am Sonntag um 23:59 Uhr −50 XP.</div>
     <div style="font-size:13px;color:var(--muted)">Weiterleitung in <span id="sl-popup-count">10</span> Sekunden...</div>
   </div>
 </div>
@@ -11430,7 +11430,7 @@ async function submitSuperLink(){
     if (!list || list.rulesAccepted === false) { showRulesModal(); return; }
     const fRes = await fetch('/api/collab/feed');
     const f = await fRes.json().catch(()=>({}));
-    if (!f.ok) { root.innerHTML = '<div style="padding:32px;text-align:center;color:#ef4444">Fehler: '+esc(f.error||'unbekannt')+'</div>'; return; }
+    if (!f.ok) { root.innerHTML = '<div style="padding:var(--space-8);text-align:center;color:#ef4444">Fehler: '+esc(f.error||'unbekannt')+'</div>'; return; }
     const posts = f.posts || [];
     let html = '';
     html += pillBox('<b style="color:var(--text)">🤝 Kollab-Posts</b><br>Engagement = Liken + Kommentieren + <b>Speichern</b> + Teilen auf Instagram → dann hier <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M20 6L9 17l-5-5"/></svg> → <b>+1 💎</b>.<br><a href="/explore?tab=regeln#kollabs" style="color:#ec4899;font-weight:700">→ Regeln ansehen</a>');
@@ -11443,22 +11443,22 @@ async function submitSuperLink(){
         const bName = esc(p.authorB?.name||'User');
         html += '<div style="position:relative;margin:0 16px 14px;background:linear-gradient(180deg,var(--bg3),var(--bg2));border:1.5px solid rgba(236,72,153,0.40);border-radius:16px;overflow:hidden;box-shadow:0 4px 20px rgba(236,72,153,0.10)">' +
           '<div style="padding:14px">' +
-          '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">' +
+          '<div style="display:flex;align-items:center;gap:var(--space-2);margin-bottom:10px">' +
             '<span style="font-size:10.5px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#ec4899;background:rgba(236,72,153,0.14);padding:4px 10px;border-radius:99px;border:1px solid rgba(236,72,153,0.35)">🤝 KOLLAB · +1 💎</span>' +
             '<div style="flex:1"></div>' +
             '<div style="font-size:11px;color:var(--muted)">'+new Date(p.createdAt).toLocaleDateString('de-DE',{day:'2-digit',month:'short'})+'</div>' +
           '</div>' +
           '<div style="font-size:14px;font-weight:700;margin-bottom:6px"><a href="/profil/'+esc(p.uid)+'" style="color:var(--text);text-decoration:none">'+aName+'</a> <span style="color:#ec4899">×</span> <a href="/profil/'+esc(p.partnerUid)+'" style="color:var(--text);text-decoration:none">'+bName+'</a></div>' +
           (p.caption ? '<div style="font-size:13px;color:var(--text);line-height:1.5;margin:6px 0 10px">'+esc(p.caption)+'</div>' : '') +
-          '<a href="'+esc(cleanInstagramUrl(p.url))+'" target="_blank" rel="noopener noreferrer" onclick="window._kvisit_'+p.id+'=Date.now()" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:16px;background:linear-gradient(135deg,#ec4899,#a855f7);color:#fff;border-radius:12px;font-size:14.5px;font-weight:800;text-decoration:none;margin-bottom:10px;box-shadow:0 4px 14px rgba(236,72,153,.25);position:relative"><span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900">1</span><span style="color:#fff;font-weight:800;display:inline-flex;align-items:center;gap:7px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17" cy="7" r="1.1" fill="currentColor" stroke="none"/></svg>Auf Instagram öffnen</span><span style="font-size:18px;margin-left:4px">→</span></a>' +
-          '<div style="font-size:11px;color:#f59e0b;background:rgba(245,158,11,0.08);border-left:3px solid #f59e0b;border-radius:6px;padding:8px 10px;margin-bottom:10px;line-height:1.5"><b style="display:inline-flex;align-items:center;gap:4px;vertical-align:-2px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 4 2 18.3A1.6 1.6 0 0 0 3.4 20.7h17.2A1.6 1.6 0 0 0 22 18.3L13.7 4a1.6 1.6 0 0 0-3.4 0z"/><line x1="12" y1="9.5" x2="12" y2="13.5"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Pflicht:</b> LIKEN + KOMMENTIEREN + SPEICHERN + TEILEN auf Instagram.</div>' +
+          '<a href="'+esc(cleanInstagramUrl(p.url))+'" target="_blank" rel="noopener noreferrer" onclick="window._kvisit_'+p.id+'=Date.now()" style="display:flex;align-items:center;justify-content:center;gap:var(--space-2);padding:var(--space-4);background:linear-gradient(135deg,#ec4899,#a855f7);color:#fff;border-radius:12px;font-size:14.5px;font-weight:800;text-decoration:none;margin-bottom:10px;box-shadow:0 4px 14px rgba(236,72,153,.25);position:relative"><span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900">1</span><span style="color:#fff;font-weight:800;display:inline-flex;align-items:center;gap:7px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17" cy="7" r="1.1" fill="currentColor" stroke="none"/></svg>Auf Instagram öffnen</span><span style="font-size:18px;margin-left:var(--space-1)">→</span></a>' +
+          '<div style="font-size:11px;color:#f59e0b;background:rgba(245,158,11,0.08);border-left:3px solid #f59e0b;border-radius:6px;padding:8px 10px;margin-bottom:10px;line-height:1.5"><b style="display:inline-flex;align-items:center;gap:var(--space-1);vertical-align:-2px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 4 2 18.3A1.6 1.6 0 0 0 3.4 20.7h17.2A1.6 1.6 0 0 0 22 18.3L13.7 4a1.6 1.6 0 0 0-3.4 0z"/><line x1="12" y1="9.5" x2="12" y2="13.5"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Pflicht:</b> LIKEN + KOMMENTIEREN + SPEICHERN + TEILEN auf Instagram.</div>' +
           (isMine
             ? '<div style="padding:10px 12px;background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.35);border-radius:10px;font-size:12px;color:#ef4444;font-weight:700;text-align:center">🚫 Kein Self-Like für Kollaboratoren · Dies ist dein Post</div>'
             : liked
             ? '<div style="padding:13px;background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.35);border-radius:12px;font-size:13.5px;color:#22c55e;font-weight:800;text-align:center">✅ Engagiert · +1 💎 in deiner Wallet</div>'
-            : '<button onclick="kollabLike(\\''+p.id+'\\', this)" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;background:linear-gradient(135deg,#ec4899,#a21caf);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 4px 14px rgba(236,72,153,0.22);position:relative"><span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900">2</span><span>❤️ Engagiert · +1 💎</span></button>'
+            : '<button onclick="kollabLike(\\''+p.id+'\\', this)" style="display:flex;align-items:center;justify-content:center;gap:var(--space-2);width:100%;padding:14px;background:linear-gradient(135deg,#ec4899,#a21caf);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 4px 14px rgba(236,72,153,0.22);position:relative"><span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900">2</span><span>❤️ Engagiert · +1 💎</span></button>'
           ) +
-          (function(){var lkrs=Array.isArray(p.likers)?p.likers:[];var cnt=p.likeCount||lkrs.length;if(cnt===0)return '<div style="font-size:11px;color:var(--muted);margin-top:8px;text-align:center">Noch keine Engagements</div>';var top=lkrs.slice(0,3).map(function(u){return '<b style="color:var(--text)">'+esc(u.name||'User')+'</b>';}).join(', ');var rest=cnt>3?' und '+(cnt-3)+' weiteren':'';var rows=lkrs.map(function(u){var initial='<div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#ec4899,#a21caf);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;position:relative;overflow:hidden">'+esc((u.name||'?')[0])+(u.uid?'<img src="/appbild/'+esc(u.uid)+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.remove()" alt="">':'')+'</div>';return '<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--border2)"><a href="/profil/'+esc(u.uid)+'" style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;text-decoration:none">'+initial+'<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:var(--text)">'+esc(u.name||'User')+'</div>'+(u.roleBadgeHtml?'<div style="margin-top:3px">'+u.roleBadgeHtml+'</div>':'')+(u.instagram?'<div style="font-size:11px;color:#ec4899;margin-top:2px">@'+esc(u.instagram)+'</div>':'')+'</div></a>'+(p.isSelf?'<button onclick="reportLiker(\\''+esc(u.uid)+'\\',\\'Kollab '+esc(p.id)+'\\',1)" style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);color:#ef4444;border-radius:8px;padding:6px 11px;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0">Melden</button>':'<div style="font-size:11px;color:var(--accent)">→</div>')+'</div>';}).join('');return '<div id="liker-rows-cl-'+esc(p.id)+'" style="display:none">'+rows+'</div><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px;padding:0 4px"><div style="font-size:12px;color:var(--muted);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Gefällt '+top+rest+'</div><button onclick="showLikerModal(\\'cl-'+esc(p.id)+'\\')" style="background:rgba(236,72,153,0.10);border:1px solid rgba(236,72,153,0.35);color:#ec4899;font-size:11px;font-weight:700;padding:5px 10px;border-radius:8px;cursor:pointer;white-space:nowrap;flex-shrink:0"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Wer hat engagiert? ('+cnt+')</button></div>';})() +
+          (function(){var lkrs=Array.isArray(p.likers)?p.likers:[];var cnt=p.likeCount||lkrs.length;if(cnt===0)return '<div style="font-size:11px;color:var(--muted);margin-top:var(--space-2);text-align:center">Noch keine Engagements</div>';var top=lkrs.slice(0,3).map(function(u){return '<b style="color:var(--text)">'+esc(u.name||'User')+'</b>';}).join(', ');var rest=cnt>3?' und '+(cnt-3)+' weiteren':'';var rows=lkrs.map(function(u){var initial='<div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#ec4899,#a21caf);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;position:relative;overflow:hidden">'+esc((u.name||'?')[0])+(u.uid?'<img src="/appbild/'+esc(u.uid)+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.remove()" alt="">':'')+'</div>';return '<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--border2)"><a href="/profil/'+esc(u.uid)+'" style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;text-decoration:none">'+initial+'<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:var(--text)">'+esc(u.name||'User')+'</div>'+(u.roleBadgeHtml?'<div style="margin-top:3px">'+u.roleBadgeHtml+'</div>':'')+(u.instagram?'<div style="font-size:11px;color:#ec4899;margin-top:2px">@'+esc(u.instagram)+'</div>':'')+'</div></a>'+(p.isSelf?'<button onclick="reportLiker(\\''+esc(u.uid)+'\\',\\'Kollab '+esc(p.id)+'\\',1)" style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);color:#ef4444;border-radius:8px;padding:6px 11px;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0">Melden</button>':'<div style="font-size:11px;color:var(--accent)">→</div>')+'</div>';}).join('');return '<div id="liker-rows-cl-'+esc(p.id)+'" style="display:none">'+rows+'</div><div style="display:flex;align-items:center;justify-content:space-between;gap:var(--space-2);margin-top:10px;padding:0 4px"><div style="font-size:12px;color:var(--muted);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Gefällt '+top+rest+'</div><button onclick="showLikerModal(\\'cl-'+esc(p.id)+'\\')" style="background:rgba(236,72,153,0.10);border:1px solid rgba(236,72,153,0.35);color:#ec4899;font-size:11px;font-weight:700;padding:5px 10px;border-radius:8px;cursor:pointer;white-space:nowrap;flex-shrink:0"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:var(--space-1)"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Wer hat engagiert? ('+cnt+')</button></div>';})() +
           '</div>' +
         '</div>';
       }
@@ -11468,15 +11468,15 @@ async function submitSuperLink(){
     const unliked = (posts||[]).filter(p => !p.liked && !p.isSelf).length;
     const badgeEl = document.getElementById('tab-badge-kollabs');
     if (badgeEl) badgeEl.innerHTML = unliked > 0
-      ? '<span style="display:inline-block;min-width:18px;height:16px;line-height:16px;padding:0 5px;border-radius:99px;background:#ef4444;color:#fff;font-size:9.5px;font-weight:800;vertical-align:middle;margin-left:4px;box-shadow:0 2px 6px rgba(239,68,68,0.45)">'+unliked+'</span>'
+      ? '<span style="display:inline-block;min-width:18px;height:16px;line-height:16px;padding:0 5px;border-radius:99px;background:#ef4444;color:#fff;font-size:9.5px;font-weight:800;vertical-align:middle;margin-left:var(--space-1);box-shadow:0 2px 6px rgba(239,68,68,0.45)">'+unliked+'</span>'
       : '';
   }
   function showRulesModal(){
     const bg = document.createElement('div');
     bg.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(6px);z-index:9000;display:flex;align-items:center;justify-content:center;padding:18px';
     bg.innerHTML =
-      '<div style="background:var(--bg2);border:1px solid var(--border2);border-radius:18px;padding:24px;max-width:520px;width:100%;max-height:90vh;overflow-y:auto">' +
-        '<div style="font-size:36px;margin-bottom:8px;text-align:center">🤝</div>' +
+      '<div style="background:var(--bg2);border:1px solid var(--border2);border-radius:18px;padding:var(--space-6);max-width:520px;width:100%;max-height:90vh;overflow-y:auto">' +
+        '<div style="font-size:36px;margin-bottom:var(--space-2);text-align:center">🤝</div>' +
         '<h2 style="margin:0 0 8px;font-size:20px;font-weight:800;text-align:center">Kollaborations-Bereich</h2>' +
         '<div style="font-size:13.5px;line-height:1.7;color:var(--text)">' +
           '<b>So läufts:</b><br>' +
@@ -11537,7 +11537,7 @@ async function submitSuperLink(){
     return '<div class="diamond-card" data-post-id="'+esc(p.id)+'">' +
       '<div class="diamond-card-glow"></div>' +
       '<div class="diamond-card-body">' +
-        '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;padding:10px 14px;background:linear-gradient(135deg,rgba(6,182,212,0.18),rgba(167,139,250,0.12));border:1.5px solid rgba(6,182,212,0.45);border-radius:14px;box-shadow:0 2px 10px rgba(15,23,42,0.06)">' +
+        '<div style="display:flex;align-items:center;gap:10px;margin-bottom:var(--space-3);padding:10px 14px;background:linear-gradient(135deg,rgba(6,182,212,0.18),rgba(167,139,250,0.12));border:1.5px solid rgba(6,182,212,0.45);border-radius:14px;box-shadow:0 2px 10px rgba(15,23,42,0.06)">' +
           '<span style="font-size:24px;line-height:1;filter:drop-shadow(0 2px 6px rgba(6,182,212,.5))">💎</span>' +
           '<div style="flex:1;min-width:0">' +
             '<div style="font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#06b6d4">DIAMANTLINK · BELOHNUNG</div>' +
@@ -11547,10 +11547,10 @@ async function submitSuperLink(){
         '</div>' +
         '<div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;font-size:13.5px;font-weight:700"><a href="/profil/'+esc(p.uid)+'" style="color:var(--text);text-decoration:none">'+aName+'</a>'+(p.author&&p.author.roleBadgeHtml?p.author.roleBadgeHtml:'')+(aHandle?'<span style="color:#06b6d4;font-weight:500;font-size:12px">'+aHandle+'</span>':'')+'</div>' +
         (p.caption ? '<div style="font-size:13px;color:var(--text);line-height:1.5;margin:6px 0 8px">'+esc(p.caption)+'</div>' : '') +
-        '<a href="'+esc(cleanInstagramUrl(p.url))+'" target="_blank" rel="noopener noreferrer" onclick="window._dvisit_'+p.id+'=Date.now()" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:16px;background:linear-gradient(135deg,#ec4899,#a855f7);color:#fff;border-radius:12px;font-size:14.5px;font-weight:800;text-decoration:none;margin-bottom:10px;box-shadow:0 4px 14px rgba(236,72,153,.25);position:relative"><span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900">1</span><span style="color:#fff;font-weight:800;display:inline-flex;align-items:center;gap:7px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17" cy="7" r="1.1" fill="currentColor" stroke="none"/></svg>Auf Instagram öffnen</span><span style="font-size:18px;margin-left:4px">→</span></a>' +
+        '<a href="'+esc(cleanInstagramUrl(p.url))+'" target="_blank" rel="noopener noreferrer" onclick="window._dvisit_'+p.id+'=Date.now()" style="display:flex;align-items:center;justify-content:center;gap:var(--space-2);padding:var(--space-4);background:linear-gradient(135deg,#ec4899,#a855f7);color:#fff;border-radius:12px;font-size:14.5px;font-weight:800;text-decoration:none;margin-bottom:10px;box-shadow:0 4px 14px rgba(236,72,153,.25);position:relative"><span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900">1</span><span style="color:#fff;font-weight:800;display:inline-flex;align-items:center;gap:7px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17" cy="7" r="1.1" fill="currentColor" stroke="none"/></svg>Auf Instagram öffnen</span><span style="font-size:18px;margin-left:var(--space-1)">→</span></a>' +
         '<div style="margin-bottom:10px;padding:13px 14px;background:rgba(245,158,11,0.13);border:2.5px solid #f59e0b;border-radius:13px;box-shadow:0 0 0 3px rgba(245,158,11,0.18),0 4px 14px rgba(245,158,11,0.20)">' +
           '<div style="font-size:13.5px;font-weight:900;color:#f59e0b;text-transform:uppercase;letter-spacing:0.6px;margin-bottom:7px;display:flex;align-items:center;gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M10.3 4 2 18.3A1.6 1.6 0 0 0 3.4 20.7h17.2A1.6 1.6 0 0 0 22 18.3L13.7 4a1.6 1.6 0 0 0-3.4 0z"/><line x1="12" y1="9.5" x2="12" y2="13.5"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>FULL ENGAGEMENT PFLICHT</div>' +
-          '<div style="font-size:13.5px;font-weight:800;color:var(--text);line-height:1.5;display:flex;flex-wrap:wrap;align-items:center;gap:5px 9px"><span style="display:inline-flex;align-items:center;gap:4px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 5.1a5.4 5.4 0 0 0-7.7 0l-1.1 1.1-1.1-1.1A5.4 5.4 0 1 0 3.2 12.8l1.1 1.1L12 21.5l7.7-7.6 1.1-1.1a5.4 5.4 0 0 0 0-7.7z"/></svg>LIKEN</span><span style="opacity:.35">·</span><span style="display:inline-flex;align-items:center;gap:4px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-12.5 7.5L3 20.5l1.5-5.5A8.5 8.5 0 1 1 21 11.5z"/></svg>KOMMENTIEREN</span><span style="opacity:.35">·</span><span style="display:inline-flex;align-items:center;gap:4px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><polyline points="8 6 12 2 16 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>TEILEN</span><span style="opacity:.35">·</span><span style="display:inline-flex;align-items:center;gap:4px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-4.5L5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>SPEICHERN</span></div>' +
+          '<div style="font-size:13.5px;font-weight:800;color:var(--text);line-height:1.5;display:flex;flex-wrap:wrap;align-items:center;gap:5px 9px"><span style="display:inline-flex;align-items:center;gap:var(--space-1)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 5.1a5.4 5.4 0 0 0-7.7 0l-1.1 1.1-1.1-1.1A5.4 5.4 0 1 0 3.2 12.8l1.1 1.1L12 21.5l7.7-7.6 1.1-1.1a5.4 5.4 0 0 0 0-7.7z"/></svg>LIKEN</span><span style="opacity:.35">·</span><span style="display:inline-flex;align-items:center;gap:var(--space-1)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-12.5 7.5L3 20.5l1.5-5.5A8.5 8.5 0 1 1 21 11.5z"/></svg>KOMMENTIEREN</span><span style="opacity:.35">·</span><span style="display:inline-flex;align-items:center;gap:var(--space-1)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><polyline points="8 6 12 2 16 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>TEILEN</span><span style="opacity:.35">·</span><span style="display:inline-flex;align-items:center;gap:var(--space-1)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-4.5L5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>SPEICHERN</span></div>' +
           '<div style="font-size:11.5px;font-weight:800;color:#ef4444;margin-top:7px;line-height:1.45;display:flex;align-items:flex-start;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px"><path d="M10.3 4 2 18.3A1.6 1.6 0 0 0 3.4 20.7h17.2A1.6 1.6 0 0 0 22 18.3L13.7 4a1.6 1.6 0 0 0-3.4 0z"/><line x1="12" y1="9.5" x2="12" y2="13.5"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><span>Bei Schein-Likes: XP-Abzug + Diamanten-Reset + Bann!</span></div>' +
         '</div>' +
         (isMine
@@ -11559,13 +11559,13 @@ async function submitSuperLink(){
           ? '<div style="padding:11px;background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.35);border-radius:10px;font-size:12.5px;color:#ef4444;font-weight:700;text-align:center">🚫 Family-Account — kein Like möglich</div>'
           : liked
           ? '<div style="padding:11px;background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.35);border-radius:10px;font-size:13px;color:#22c55e;font-weight:700;text-align:center">✅ Engagiert · +'+(p.reward||3)+' 💎</div>'
-          : '<button onclick="diamondLikeClick(\\''+p.id+'\\', this)" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;background:linear-gradient(135deg,#06b6d4,#0e7490);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 4px 14px rgba(6,182,212,0.22);position:relative"><span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900">2</span><span>💎 Engagiert · +'+(p.reward||3)+' 💎</span></button>'
+          : '<button onclick="diamondLikeClick(\\''+p.id+'\\', this)" style="display:flex;align-items:center;justify-content:center;gap:var(--space-2);width:100%;padding:14px;background:linear-gradient(135deg,#06b6d4,#0e7490);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 4px 14px rgba(6,182,212,0.22);position:relative"><span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900">2</span><span>💎 Engagiert · +'+(p.reward||3)+' 💎</span></button>'
         ) +
-        (window.__IS_ADMIN ? '<button onclick="diamondAdminDelete(\\''+p.id+'\\', this)" style="display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:9px;margin-top:8px;background:transparent;color:#ef4444;border:1px dashed rgba(239,68,68,0.50);border-radius:9px;font-size:12px;font-weight:700;cursor:pointer">🛡️ Admin: Löschen</button>' : '') +
+        (window.__IS_ADMIN ? '<button onclick="diamondAdminDelete(\\''+p.id+'\\', this)" style="display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:9px;margin-top:var(--space-2);background:transparent;color:#ef4444;border:1px dashed rgba(239,68,68,0.50);border-radius:9px;font-size:12px;font-weight:700;cursor:pointer">🛡️ Admin: Löschen</button>' : '') +
         (function(){
           const lkrs = Array.isArray(p.likers) ? p.likers : [];
           const cnt = p.likeCount || lkrs.length;
-          if (cnt === 0) return '<div style="font-size:11px;color:var(--muted);margin-top:8px;text-align:center">Noch keine Engagements</div>';
+          if (cnt === 0) return '<div style="font-size:11px;color:var(--muted);margin-top:var(--space-2);text-align:center">Noch keine Engagements</div>';
           const top = lkrs.slice(0,3).map(u => '<b style="color:var(--text)">'+esc(u.name||'User')+'</b>').join(', ');
           const rest = cnt > 3 ? ' und ' + (cnt-3) + ' weiteren' : '';
           const namesTxt = 'Gefällt ' + top + rest;
@@ -11578,9 +11578,9 @@ async function submitSuperLink(){
             return '<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--border2)"><a href="/profil/'+esc(u.uid)+'" style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;text-decoration:none">'+initial+'<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:var(--text)">'+esc(u.name||'User')+'</div>'+(u.roleBadgeHtml?'<div style="margin-top:3px">'+u.roleBadgeHtml+'</div>':'')+(u.instagram?'<div style="font-size:11px;color:#06b6d4;margin-top:2px">@'+esc(u.instagram)+'</div>':'')+'</div></a>'+_dtail+'</div>';
           }).join('');
           return '<div id="liker-rows-dl-'+esc(p.id)+'" style="display:none">'+rows+'</div>' +
-            '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px;padding:0 4px">' +
+            '<div style="display:flex;align-items:center;justify-content:space-between;gap:var(--space-2);margin-top:10px;padding:0 4px">' +
               '<div style="font-size:12px;color:var(--muted);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+namesTxt+'</div>' +
-              '<button onclick="showLikerModal(\\'dl-'+esc(p.id)+'\\')" style="background:rgba(6,182,212,0.10);border:1px solid rgba(6,182,212,0.35);color:#06b6d4;font-size:11px;font-weight:700;padding:5px 10px;border-radius:8px;cursor:pointer;white-space:nowrap;flex-shrink:0"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Wer hat engagiert? ('+cnt+')</button>' +
+              '<button onclick="showLikerModal(\\'dl-'+esc(p.id)+'\\')" style="background:rgba(6,182,212,0.10);border:1px solid rgba(6,182,212,0.35);color:#06b6d4;font-size:11px;font-weight:700;padding:5px 10px;border-radius:8px;cursor:pointer;white-space:nowrap;flex-shrink:0"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:var(--space-1)"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Wer hat engagiert? ('+cnt+')</button>' +
             '</div>';
         })() +
       '</div>' +
@@ -11615,7 +11615,7 @@ async function submitSuperLink(){
       const unliked = posts.filter(p => !p.liked && !p.isSelf && !p.isFamily).length;
       const badgeEl = document.getElementById('tab-badge-diamond');
       if (badgeEl) badgeEl.innerHTML = unliked > 0
-        ? '<span style="display:inline-block;min-width:18px;height:16px;line-height:16px;padding:0 5px;border-radius:99px;background:#ef4444;color:#fff;font-size:9.5px;font-weight:800;vertical-align:middle;margin-left:4px;box-shadow:0 2px 6px rgba(239,68,68,0.45)">'+unliked+'</span>'
+        ? '<span style="display:inline-block;min-width:18px;height:16px;line-height:16px;padding:0 5px;border-radius:99px;background:#ef4444;color:#fff;font-size:9.5px;font-weight:800;vertical-align:middle;margin-left:var(--space-1);box-shadow:0 2px 6px rgba(239,68,68,0.45)">'+unliked+'</span>'
         : '';
       // Top-Strip im Heute-Tab: nur likbare Posts (nicht eigene, nicht family, nicht schon geliked).
       // Eigene/Family-Posts erscheinen im Diamond-Tab selbst, aber nicht im Strip oben.
@@ -11646,8 +11646,8 @@ async function submitSuperLink(){
     const bg = document.createElement('div');
     bg.id='diamond-rules-modal';
     bg.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.78);backdrop-filter:blur(8px);z-index:9100;display:flex;align-items:center;justify-content:center;padding:18px';
-    bg.innerHTML = '<div style="background:var(--bg2);border:1px solid rgba(6,182,212,0.35);border-radius:18px;padding:24px;max-width:520px;width:100%;max-height:92vh;overflow-y:auto;box-shadow:0 24px 60px rgba(6,182,212,0.20)">' +
-      '<div style="font-size:36px;text-align:center;margin-bottom:8px">💎</div>' +
+    bg.innerHTML = '<div style="background:var(--bg2);border:1px solid rgba(6,182,212,0.35);border-radius:18px;padding:var(--space-6);max-width:520px;width:100%;max-height:92vh;overflow-y:auto;box-shadow:0 24px 60px rgba(6,182,212,0.20)">' +
+      '<div style="font-size:36px;text-align:center;margin-bottom:var(--space-2)">💎</div>' +
       '<h2 style="margin:0 0 10px;font-size:20px;font-weight:800;text-align:center;background:linear-gradient(180deg,#fff,#06b6d4);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent">Diamantlinks</h2>' +
       '<div style="font-size:13.5px;line-height:1.7;color:var(--text)">' +
         '<b>Regeln:</b><br>' +
@@ -11769,18 +11769,18 @@ async function submitSuperLink(){
   }).catch(()=>{});
   function renderConfirmPending(email){
     root.innerHTML = '<div style="margin:8px 16px 14px;padding:14px 16px;background:linear-gradient(135deg,rgba(251,146,60,0.16),rgba(251,191,36,0.10));border:1.5px solid rgba(251,146,60,0.55);border-radius:14px;position:relative">'+
-      '<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">'+
+      '<div style="display:flex;align-items:center;gap:var(--space-3);margin-bottom:10px">'+
         '<div style="font-size:28px;flex-shrink:0">📧</div>'+
         '<div style="flex:1;min-width:0">'+
           '<div style="font-size:14px;font-weight:800;color:#fb923c;margin-bottom:3px">Bestätige deine Email!</div>'+
           '<div style="font-size:11.5px;color:var(--muted);line-height:1.5">Wir haben einen Bestätigungs-Link an <b style="color:#e5e5e5">'+escapeHtml(email||'')+'</b> gesendet. Ohne Klick keine Verknüpfung — und du landest nach dem Play-Store-Install auf einem leeren Account.</div>'+
         '</div>'+
       '</div>'+
-      '<div style="display:flex;gap:8px;margin-bottom:8px">'+
+      '<div style="display:flex;gap:var(--space-2);margin-bottom:8px">'+
         '<button onclick="window.__betaResend()" id="betaResendBtn" style="flex:1;padding:10px;background:rgba(251,146,60,0.20);color:#fb923c;border:1px solid rgba(251,146,60,0.45);border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer">📧 Erneut senden</button>'+
         '<button onclick="window.__betaCheckAgain()" style="flex:1;padding:10px;background:rgba(34,197,94,0.20);color:#22c55e;border:1px solid rgba(34,197,94,0.45);border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer">✓ Ich habe geklickt</button>'+
       '</div>'+
-      '<button onclick="window.__betaChangeEmail()" style="width:100%;padding:8px;background:transparent;color:var(--muted);border:1px dashed var(--border2,#333);border-radius:8px;font-size:11.5px;font-weight:700;cursor:pointer">✏️ Tippfehler? Email ändern</button>'+
+      '<button onclick="window.__betaChangeEmail()" style="width:100%;padding:var(--space-2);background:transparent;color:var(--muted);border:1px dashed var(--border2,#333);border-radius:8px;font-size:11.5px;font-weight:700;cursor:pointer">✏️ Tippfehler? Email ändern</button>'+
     '</div>';
     window.__betaResend = async function(){
       const btn = document.getElementById('betaResendBtn');
@@ -11825,9 +11825,9 @@ async function submitSuperLink(){
     };
   }
   function renderOptinReady(link, email){
-    root.innerHTML = '<div style="margin:8px 16px 14px;padding:16px;background:linear-gradient(135deg,rgba(34,197,94,0.14),rgba(168,85,247,0.10));border:1.5px solid rgba(34,197,94,0.50);border-radius:14px;position:relative;animation:betaPulse 2.5s ease-in-out infinite">'+
+    root.innerHTML = '<div style="margin:8px 16px 14px;padding:var(--space-4);background:linear-gradient(135deg,rgba(34,197,94,0.14),rgba(168,85,247,0.10));border:1.5px solid rgba(34,197,94,0.50);border-radius:14px;position:relative;animation:betaPulse 2.5s ease-in-out infinite">'+
       '<button onclick="event.stopPropagation();window.__betaLinkDismiss()" style="position:absolute;top:8px;right:10px;background:transparent;border:none;color:#888;font-size:18px;font-weight:700;cursor:pointer;padding:4px 8px">×</button>'+
-      '<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">'+
+      '<div style="display:flex;align-items:center;gap:var(--space-3);margin-bottom:12px">'+
         '<div style="font-size:32px;flex-shrink:0">🎉</div>'+
         '<div style="flex:1;min-width:0">'+
           '<div style="font-size:14.5px;font-weight:800;color:#22c55e;margin-bottom:3px">Dein Beta-Zugang ist da!</div>'+
@@ -11836,7 +11836,7 @@ async function submitSuperLink(){
       '</div>'+
       '<button onclick="window.__betaShowSteps()" style="width:100%;padding:13px;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:none;border-radius:10px;font-size:13.5px;font-weight:800;cursor:pointer;box-shadow:0 4px 14px rgba(34,197,94,0.35)">📲 Beta-Test öffnen →</button>'+
       '<div style="margin-top:10px;padding:8px 10px;background:rgba(0,0,0,0.25);border-radius:8px;font-size:11px;color:var(--muted);line-height:1.5"><b style="color:#fbbf24">⚠️ Wichtig:</b> Erst Link per Email/Kopie sichern, alte App löschen, dann öffnet der Link den <b>Play Store</b> (extern).</div>'+
-      '<button onclick="window.__betaMarkInstalled()" style="width:100%;margin-top:8px;padding:9px;background:transparent;color:var(--muted);border:1px solid var(--border2,#333);border-radius:9px;font-size:12px;font-weight:700;cursor:pointer">✓ Bin schon im Play Store — Banner ausblenden</button>'+
+      '<button onclick="window.__betaMarkInstalled()" style="width:100%;margin-top:var(--space-2);padding:9px;background:transparent;color:var(--muted);border:1px solid var(--border2,#333);border-radius:9px;font-size:12px;font-weight:700;cursor:pointer">✓ Bin schon im Play Store — Banner ausblenden</button>'+
     '</div><style>@keyframes betaPulse{0%,100%{box-shadow:0 0 0 0 rgba(34,197,94,0.0)}50%{box-shadow:0 0 0 8px rgba(34,197,94,0.10)}}</style>';
     window.__betaMarkInstalled = function(){
       try{ localStorage.setItem('cb_from_play','1'); }catch(e){}
@@ -11850,10 +11850,10 @@ async function submitSuperLink(){
       const escLink = escapeHtml(link);
       bg.innerHTML = '<div style="background:var(--bg2);border:1px solid rgba(34,197,94,0.35);border-radius:18px;padding:22px;max-width:520px;width:100%;max-height:92vh;overflow-y:auto">'+
         '<div style="font-size:38px;text-align:center;margin-bottom:6px">📲</div>'+
-        '<div style="font-size:17px;font-weight:800;text-align:center;margin-bottom:16px;color:var(--text)">So kommst du in den Beta-Test</div>'+
+        '<div style="font-size:17px;font-weight:800;text-align:center;margin-bottom:var(--space-4);color:var(--text)">So kommst du in den Beta-Test</div>'+
         // Link sichern (optional, falls später gebraucht)
         '<div style="background:rgba(52,211,153,0.10);border:1.5px solid rgba(52,211,153,0.40);border-radius:12px;padding:12px 14px;margin-bottom:14px">'+
-          '<div style="font-size:13px;font-weight:800;color:#34d399;margin-bottom:8px">🔒 Link sichern (empfohlen)</div>'+
+          '<div style="font-size:13px;font-weight:800;color:#34d399;margin-bottom:var(--space-2)">🔒 Link sichern (empfohlen)</div>'+
           '<div style="display:grid;gap:6px">'+
             '<button id="betaMailMe" onclick="window.__betaMailLink()" style="padding:10px 12px;background:rgba(52,211,153,0.18);color:#34d399;border:1px solid rgba(52,211,153,0.45);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;text-align:left">📧 Link an '+escapeHtml(email||'')+' senden</button>'+
             '<button id="betaCopy" onclick="window.__betaCopyLink()" style="padding:10px 12px;background:rgba(167,139,250,0.18);color:#a78bfa;border:1px solid rgba(167,139,250,0.45);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;text-align:left">📋 Link kopieren</button>'+
@@ -11874,11 +11874,11 @@ async function submitSuperLink(){
         // Verstanden-Gate: schaltet den Link erst frei
         '<button id="betaUnderstandBtn" onclick="this.style.display=\\'none\\';var o=document.getElementById(\\'betaOpenBtn\\');o.disabled=false;o.style.opacity=\\'1\\';o.style.cursor=\\'pointer\\';var h=document.getElementById(\\'betaOpenHint\\');if(h)h.style.display=\\'none\\';" style="width:100%;padding:13px;margin-bottom:10px;background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer">✅ Verstanden — Link freischalten</button>'+
         '<div style="display:flex;gap:10px">'+
-          '<button onclick="this.closest(\\'.beta-modal-bg\\').remove()" style="flex:1;padding:12px;background:transparent;color:var(--text);border:1px solid var(--border2,#333);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">Später</button>'+
-          '<button id="betaOpenBtn" disabled onclick="window.__betaOpenLink();this.closest(\\'.beta-modal-bg\\').remove()" style="flex:2;padding:12px;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:not-allowed;opacity:0.45">📲 Im Play Store öffnen</button>'+
+          '<button onclick="this.closest(\\'.beta-modal-bg\\').remove()" style="flex:1;padding:var(--space-3);background:transparent;color:var(--text);border:1px solid var(--border2,#333);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">Später</button>'+
+          '<button id="betaOpenBtn" disabled onclick="window.__betaOpenLink();this.closest(\\'.beta-modal-bg\\').remove()" style="flex:2;padding:var(--space-3);background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:not-allowed;opacity:0.45">📲 Im Play Store öffnen</button>'+
         '</div>'+
-        '<div id="betaOpenHint" style="font-size:11px;color:var(--muted);text-align:center;margin-top:8px">⬆️ Erst „Verstanden" drücken, dann wird der Link klickbar.</div>'+
-        '<button onclick="window.__betaMarkInstalled()" style="width:100%;margin-top:12px;padding:9px;background:transparent;color:var(--muted);border:1px solid var(--border2,#333);border-radius:9px;font-size:12px;font-weight:700;cursor:pointer">✓ Bin schon im Play Store — nicht mehr anzeigen</button>'+
+        '<div id="betaOpenHint" style="font-size:11px;color:var(--muted);text-align:center;margin-top:var(--space-2)">⬆️ Erst „Verstanden" drücken, dann wird der Link klickbar.</div>'+
+        '<button onclick="window.__betaMarkInstalled()" style="width:100%;margin-top:var(--space-3);padding:9px;background:transparent;color:var(--muted);border:1px solid var(--border2,#333);border-radius:9px;font-size:12px;font-weight:700;cursor:pointer">✓ Bin schon im Play Store — nicht mehr anzeigen</button>'+
       '</div>';
       document.body.appendChild(bg);
       window.__betaMailLink = async function(){
@@ -11924,7 +11924,7 @@ async function submitSuperLink(){
   function escapeHtml(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
   function renderNonGmail(email){
     root.innerHTML = '<div style="margin:8px 16px 14px;padding:14px 16px;background:linear-gradient(135deg,rgba(251,146,60,0.16),rgba(239,68,68,0.08));border:1.5px solid rgba(251,146,60,0.55);border-radius:14px;position:relative">'+
-      '<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">'+
+      '<div style="display:flex;align-items:center;gap:var(--space-3);margin-bottom:10px">'+
         '<div style="font-size:28px;flex-shrink:0">⚠️</div>'+
         '<div style="flex:1;min-width:0">'+
           '<div style="font-size:14px;font-weight:800;color:#fb923c;margin-bottom:3px">Bitte Gmail nachreichen</div>'+
@@ -11951,7 +11951,7 @@ async function submitSuperLink(){
   function renderReminder(days){
     const daysLeft = Math.max(1, 14 - days);
     root.innerHTML = '<div style="margin:8px 16px 14px;padding:14px 16px;background:linear-gradient(135deg,rgba(251,191,36,0.12),rgba(251,146,60,0.08));border:1.5px solid rgba(251,191,36,0.45);border-radius:14px">'+
-      '<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">'+
+      '<div style="display:flex;align-items:center;gap:var(--space-3);margin-bottom:10px">'+
         '<div style="font-size:30px;flex-shrink:0">⏰</div>'+
         '<div style="flex:1;min-width:0">'+
           '<div style="font-size:14px;font-weight:800;color:#fbbf24;margin-bottom:3px">Halbzeit! Bleib noch '+daysLeft+' Tag'+(daysLeft===1?'':'e')+' drin</div>'+
@@ -11962,9 +11962,9 @@ async function submitSuperLink(){
     '</div>';
   }
   function renderSuccess(days){
-    root.innerHTML = '<div style="margin:8px 16px 14px;padding:16px;background:linear-gradient(135deg,rgba(34,197,94,0.14),rgba(52,211,153,0.08));border:1.5px solid rgba(34,197,94,0.50);border-radius:14px;position:relative">'+
+    root.innerHTML = '<div style="margin:8px 16px 14px;padding:var(--space-4);background:linear-gradient(135deg,rgba(34,197,94,0.14),rgba(52,211,153,0.08));border:1.5px solid rgba(34,197,94,0.50);border-radius:14px;position:relative">'+
       '<button onclick="event.stopPropagation();localStorage.setItem(\\'betaSuccessSeen_\\'+\\''+myUid+'\\',\\'1\\');this.parentElement.remove()" style="position:absolute;top:8px;right:10px;background:transparent;border:none;color:#888;font-size:18px;font-weight:700;cursor:pointer;padding:4px 8px">×</button>'+
-      '<div style="display:flex;align-items:center;gap:12px">'+
+      '<div style="display:flex;align-items:center;gap:var(--space-3)">'+
         '<div style="font-size:34px;flex-shrink:0">🎉</div>'+
         '<div style="flex:1;min-width:0">'+
           '<div style="font-size:14.5px;font-weight:800;color:#22c55e;margin-bottom:3px">Du hast es geschafft!</div>'+
@@ -11983,18 +11983,18 @@ async function submitSuperLink(){
       ? "window.__betaQuickJoin('"+escapeHtml(accountEmail).replace(/'/g,"\\'")+"')"
       : 'window.__betaShow()';
     root.innerHTML = '<div style="margin:8px 16px 14px;padding:14px 16px;background:linear-gradient(135deg,rgba(52,211,153,0.10),rgba(168,85,247,0.10));border:1.5px solid rgba(52,211,153,0.40);border-radius:14px">'+
-      '<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">'+
+      '<div style="display:flex;align-items:center;gap:var(--space-3);margin-bottom:12px">'+
         '<div style="font-size:30px;flex-shrink:0">📱</div>'+
         '<div style="flex:1;min-width:0">'+
           '<div style="font-size:14px;font-weight:800;color:#34d399;margin-bottom:3px">CreatorX kommt in den Play Store!</div>'+
           '<div style="font-size:12px;color:var(--muted);line-height:1.5">'+subText+'</div>'+
         '</div>'+
       '</div>'+
-      '<div style="display:flex;gap:8px">'+
+      '<div style="display:flex;gap:var(--space-2)">'+
         '<button onclick="window.__betaDismiss()" style="flex:1;padding:10px;background:transparent;color:var(--muted);border:1px solid var(--border2,#333);border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer">Nein, danke</button>'+
         '<button onclick="'+onclick+'" style="flex:2;padding:10px;background:linear-gradient(135deg,#34d399,#10b981);color:#fff;border:none;border-radius:8px;font-size:12.5px;font-weight:800;cursor:pointer">'+ctaLabel+'</button>'+
       '</div>'+
-      (hasEmail ? '<div style="margin-top:8px;text-align:center"><a onclick="window.__betaShow()" style="font-size:11px;color:var(--muted);cursor:pointer;text-decoration:underline">Andere Email nutzen</a></div>' : '')+
+      (hasEmail ? '<div style="margin-top:var(--space-2);text-align:center"><a onclick="window.__betaShow()" style="font-size:11px;color:var(--muted);cursor:pointer;text-decoration:underline">Andere Email nutzen</a></div>' : '')+
     '</div>';
   }
   // Quick-Join: User hat schon eine verifizierte Email im Account → direkter Signup
@@ -12011,7 +12011,7 @@ async function submitSuperLink(){
       // Direkter Erfolgs-Screen ohne Confirm-Pending (Email ist ja schon verifiziert)
       const bg = document.createElement('div');
       bg.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.78);backdrop-filter:blur(8px);z-index:9100;display:flex;align-items:center;justify-content:center;padding:18px';
-      bg.innerHTML = '<div style="background:var(--bg2);border:1px solid rgba(34,197,94,0.45);border-radius:18px;padding:32px 24px;max-width:480px;width:100%;text-align:center"><div style="font-size:54px;margin-bottom:12px">🎉</div><div style="font-size:18px;font-weight:800;color:#22c55e;margin-bottom:10px">Du bist dabei!</div><div style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:18px">Wir spielen dir den Opt-in-Link in der App aus, sobald wir 12 Tester zusammen haben.</div><button onclick="this.closest(\\'div[style*=fixed]\\').remove()" style="background:#22c55e;color:#fff;border:none;border-radius:10px;padding:12px 28px;font-size:13px;font-weight:800;cursor:pointer">Verstanden</button></div>';
+      bg.innerHTML = '<div style="background:var(--bg2);border:1px solid rgba(34,197,94,0.45);border-radius:18px;padding:32px 24px;max-width:480px;width:100%;text-align:center"><div style="font-size:54px;margin-bottom:var(--space-3)">🎉</div><div style="font-size:18px;font-weight:800;color:#22c55e;margin-bottom:10px">Du bist dabei!</div><div style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:18px">Wir spielen dir den Opt-in-Link in der App aus, sobald wir 12 Tester zusammen haben.</div><button onclick="this.closest(\\'div[style*=fixed]\\').remove()" style="background:#22c55e;color:#fff;border:none;border-radius:10px;padding:12px 28px;font-size:13px;font-weight:800;cursor:pointer">Verstanden</button></div>';
       document.body.appendChild(bg);
       root.innerHTML = '';
     } catch(e) { alert('Fehler: '+e.message); }
@@ -12025,8 +12025,8 @@ async function submitSuperLink(){
     const bg = document.createElement('div');
     bg.className = 'beta-modal-bg';
     bg.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.78);backdrop-filter:blur(8px);z-index:9100;display:flex;align-items:center;justify-content:center;padding:18px';
-    bg.innerHTML = '<div style="background:var(--bg2);border:1px solid rgba(52,211,153,0.35);border-radius:18px;padding:24px;max-width:480px;width:100%;max-height:92vh;overflow-y:auto;box-shadow:0 24px 60px rgba(52,211,153,0.20)">'+
-      '<div style="font-size:38px;text-align:center;margin-bottom:8px">📱</div>'+
+    bg.innerHTML = '<div style="background:var(--bg2);border:1px solid rgba(52,211,153,0.35);border-radius:18px;padding:var(--space-6);max-width:480px;width:100%;max-height:92vh;overflow-y:auto;box-shadow:0 24px 60px rgba(52,211,153,0.20)">'+
+      '<div style="font-size:38px;text-align:center;margin-bottom:var(--space-2)">📱</div>'+
       '<div style="font-size:18px;font-weight:800;text-align:center;margin-bottom:6px;color:var(--text)">Werde Beta-Tester</div>'+
       '<div style="font-size:12.5px;color:var(--muted);text-align:center;margin-bottom:18px;line-height:1.6">CreatorX kommt in den Google Play Store. Als Beta-Tester nutzt du die App vor allen anderen.</div>'+
       '<div style="background:rgba(34,197,94,0.10);border:1px solid rgba(34,197,94,0.30);border-radius:12px;padding:12px 14px;font-size:12px;line-height:1.7;color:var(--text);margin-bottom:14px">'+
@@ -12039,15 +12039,15 @@ async function submitSuperLink(){
       '<div style="background:rgba(167,139,250,0.10);border:1px solid rgba(167,139,250,0.30);border-radius:12px;padding:10px 14px;font-size:11.5px;line-height:1.6;color:var(--text);margin-bottom:10px">'+
         '<b style="color:#a78bfa">🔗 Account-Verknüpfung:</b> Wir verbinden diese Gmail mit deinem CreatorX-Account. Sobald die App im Play Store ist und du dich mit dieser Gmail einloggst, landest du <b>automatisch hier auf deinem Account</b> (XP, 💎, Posts — alles bleibt).'+
       '</div>'+
-      '<div style="background:rgba(251,146,60,0.08);border:1px solid rgba(251,146,60,0.28);border-radius:12px;padding:10px 14px;font-size:11.5px;line-height:1.6;color:var(--text);margin-bottom:16px">'+
+      '<div style="background:rgba(251,146,60,0.08);border:1px solid rgba(251,146,60,0.28);border-radius:12px;padding:10px 14px;font-size:11.5px;line-height:1.6;color:var(--text);margin-bottom:var(--space-4)">'+
         '<b style="color:#fb923c">📲 Hast du schon eine APK?</b> Falls du CreatorX bereits als APK installiert hast, musst du sie vor dem Beta-Install kurz löschen — wir erklären dir den Schritt sobald der Beta-Zugang da ist.'+
       '</div>'+
       '<label style="display:block;font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Deine Google-Play-Email</label>'+
       '<input id="betaEmailInput" type="email" placeholder="deine.email@gmail.com" autocomplete="email" inputmode="email" style="width:100%;padding:12px 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;font-size:14px;color:var(--text);font-family:inherit;margin-bottom:6px">'+
-      '<div style="font-size:11px;color:var(--muted);line-height:1.5;margin-bottom:16px">⚠️ <b style="color:#fbbf24">Nur Gmail-Adressen</b> — Google Play akzeptiert nur Google-Konten. Andere Anbieter (web.de, gmx.de) funktionieren leider nicht.</div>'+
+      '<div style="font-size:11px;color:var(--muted);line-height:1.5;margin-bottom:var(--space-4)">⚠️ <b style="color:#fbbf24">Nur Gmail-Adressen</b> — Google Play akzeptiert nur Google-Konten. Andere Anbieter (web.de, gmx.de) funktionieren leider nicht.</div>'+
       '<div style="display:flex;gap:10px">'+
-        '<button onclick="window.__betaCancel()" style="flex:1;padding:12px;background:transparent;color:var(--text);border:1px solid var(--border2);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">Später</button>'+
-        '<button id="betaSubmitBtn" onclick="window.__betaSubmit()" style="flex:2;padding:12px;background:linear-gradient(135deg,#34d399,#10b981);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer">📱 Anmelden</button>'+
+        '<button onclick="window.__betaCancel()" style="flex:1;padding:var(--space-3);background:transparent;color:var(--text);border:1px solid var(--border2);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">Später</button>'+
+        '<button id="betaSubmitBtn" onclick="window.__betaSubmit()" style="flex:2;padding:var(--space-3);background:linear-gradient(135deg,#34d399,#10b981);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer">📱 Anmelden</button>'+
       '</div>'+
       '<div id="betaError" style="margin-top:10px;font-size:12px;color:#ef4444;text-align:center;min-height:18px"></div>'+
     '</div>';
@@ -12073,7 +12073,7 @@ async function submitSuperLink(){
             title = '📧 Check deine Email!';
             body = 'Wir haben dir gerade einen Bestätigungs-Link an <b style="color:#e5e5e5">'+email+'</b> gesendet. Klick den Link → deine Gmail wird mit deinem CreatorX-Account verknüpft. <b style="color:#fbbf24">Wichtig:</b> ohne Klick keine Verknüpfung — und kein Beta-Zugang.';
           }
-          bg.innerHTML = '<div style="background:var(--bg2);border:1px solid rgba(34,197,94,0.45);border-radius:18px;padding:32px 24px;max-width:480px;width:100%;text-align:center"><div style="font-size:54px;margin-bottom:12px">'+(j.mode==='already-confirmed'?'🎉':'📧')+'</div><div style="font-size:18px;font-weight:800;color:#22c55e;margin-bottom:10px">'+title+'</div><div style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:18px">'+body+'</div><button onclick="this.closest(\\'.beta-modal-bg\\').remove()" style="background:#22c55e;color:#fff;border:none;border-radius:10px;padding:12px 28px;font-size:13px;font-weight:800;cursor:pointer">Verstanden</button></div>';
+          bg.innerHTML = '<div style="background:var(--bg2);border:1px solid rgba(34,197,94,0.45);border-radius:18px;padding:32px 24px;max-width:480px;width:100%;text-align:center"><div style="font-size:54px;margin-bottom:var(--space-3)">'+(j.mode==='already-confirmed'?'🎉':'📧')+'</div><div style="font-size:18px;font-weight:800;color:#22c55e;margin-bottom:10px">'+title+'</div><div style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:18px">'+body+'</div><button onclick="this.closest(\\'.beta-modal-bg\\').remove()" style="background:#22c55e;color:#fff;border:none;border-radius:10px;padding:12px 28px;font-size:13px;font-weight:800;cursor:pointer">Verstanden</button></div>';
           root.innerHTML = '';
         } else {
           err.textContent = '✗ ' + (j.error || 'Fehler');
@@ -12124,7 +12124,7 @@ async function submitSuperLink(){
     return '<div class="prisma-card" data-post-id="'+esc(p.id)+'">' +
       '<div class="prisma-card-glow"></div>' +
       '<div class="prisma-card-body">' +
-        '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;padding:10px 14px;background:linear-gradient(135deg,rgba(239,68,68,0.10),rgba(245,158,11,0.10),rgba(34,197,94,0.10),rgba(6,182,212,0.10),rgba(168,85,247,0.14));border:1.5px solid rgba(168,85,247,0.45);border-radius:14px;box-shadow:0 4px 14px rgba(168,85,247,0.18)">' +
+        '<div style="display:flex;align-items:center;gap:10px;margin-bottom:var(--space-3);padding:10px 14px;background:linear-gradient(135deg,rgba(239,68,68,0.10),rgba(245,158,11,0.10),rgba(34,197,94,0.10),rgba(6,182,212,0.10),rgba(168,85,247,0.14));border:1.5px solid rgba(168,85,247,0.45);border-radius:14px;box-shadow:0 4px 14px rgba(168,85,247,0.18)">' +
           '<span style="font-size:24px;line-height:1;filter:drop-shadow(0 2px 6px rgba(168,85,247,.5))">💠</span>' +
           '<div style="flex:1;min-width:0">' +
             '<div style="font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;background:linear-gradient(135deg,#ef4444,#f59e0b,#22c55e,#06b6d4,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">PRISMALINK · PREMIUM</div>' +
@@ -12134,10 +12134,10 @@ async function submitSuperLink(){
         '</div>' +
         '<div style="font-size:13.5px;font-weight:700"><a href="/profil/'+esc(p.uid)+'" style="color:var(--text);text-decoration:none">'+aName+'</a> '+(aHandle?'<span style="color:#a855f7;font-weight:500;font-size:12px">'+aHandle+'</span>':'')+'</div>' +
         (p.caption ? '<div style="font-size:13px;color:var(--text);line-height:1.5;margin:6px 0 8px">'+esc(p.caption)+'</div>' : '') +
-        '<a href="'+esc(cleanInstagramUrl(p.url))+'" target="_blank" rel="noopener noreferrer" onclick="window._pvisit_'+p.id+'=Date.now()" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:16px;background:linear-gradient(135deg,#ec4899,#a855f7);color:#fff;border-radius:12px;font-size:14.5px;font-weight:800;text-decoration:none;margin-bottom:10px;box-shadow:0 6px 18px rgba(168,85,247,.45);position:relative"><span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900">1</span><span style="color:#fff;font-weight:800;display:inline-flex;align-items:center;gap:7px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17" cy="7" r="1.1" fill="currentColor" stroke="none"/></svg>Auf Instagram öffnen</span><span style="font-size:18px;margin-left:4px">→</span></a>' +
+        '<a href="'+esc(cleanInstagramUrl(p.url))+'" target="_blank" rel="noopener noreferrer" onclick="window._pvisit_'+p.id+'=Date.now()" style="display:flex;align-items:center;justify-content:center;gap:var(--space-2);padding:var(--space-4);background:linear-gradient(135deg,#ec4899,#a855f7);color:#fff;border-radius:12px;font-size:14.5px;font-weight:800;text-decoration:none;margin-bottom:10px;box-shadow:0 6px 18px rgba(168,85,247,.45);position:relative"><span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900">1</span><span style="color:#fff;font-weight:800;display:inline-flex;align-items:center;gap:7px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17" cy="7" r="1.1" fill="currentColor" stroke="none"/></svg>Auf Instagram öffnen</span><span style="font-size:18px;margin-left:var(--space-1)">→</span></a>' +
         '<div style="margin-bottom:10px;padding:13px 14px;background:rgba(245,158,11,0.13);border:2.5px solid #f59e0b;border-radius:13px;box-shadow:0 0 0 3px rgba(245,158,11,0.18),0 4px 14px rgba(245,158,11,0.20)">' +
           '<div style="font-size:13.5px;font-weight:900;color:#f59e0b;text-transform:uppercase;letter-spacing:0.6px;margin-bottom:7px;display:flex;align-items:center;gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M10.3 4 2 18.3A1.6 1.6 0 0 0 3.4 20.7h17.2A1.6 1.6 0 0 0 22 18.3L13.7 4a1.6 1.6 0 0 0-3.4 0z"/><line x1="12" y1="9.5" x2="12" y2="13.5"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>FULL ENGAGEMENT PFLICHT</div>' +
-          '<div style="font-size:13.5px;font-weight:800;color:var(--text);line-height:1.5;display:flex;flex-wrap:wrap;align-items:center;gap:5px 9px"><span style="display:inline-flex;align-items:center;gap:4px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 5.1a5.4 5.4 0 0 0-7.7 0l-1.1 1.1-1.1-1.1A5.4 5.4 0 1 0 3.2 12.8l1.1 1.1L12 21.5l7.7-7.6 1.1-1.1a5.4 5.4 0 0 0 0-7.7z"/></svg>LIKEN</span><span style="opacity:.35">·</span><span style="display:inline-flex;align-items:center;gap:4px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-12.5 7.5L3 20.5l1.5-5.5A8.5 8.5 0 1 1 21 11.5z"/></svg>KOMMENTIEREN</span><span style="opacity:.35">·</span><span style="display:inline-flex;align-items:center;gap:4px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><polyline points="8 6 12 2 16 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>TEILEN</span><span style="opacity:.35">·</span><span style="display:inline-flex;align-items:center;gap:4px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-4.5L5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>SPEICHERN</span></div>' +
+          '<div style="font-size:13.5px;font-weight:800;color:var(--text);line-height:1.5;display:flex;flex-wrap:wrap;align-items:center;gap:5px 9px"><span style="display:inline-flex;align-items:center;gap:var(--space-1)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 5.1a5.4 5.4 0 0 0-7.7 0l-1.1 1.1-1.1-1.1A5.4 5.4 0 1 0 3.2 12.8l1.1 1.1L12 21.5l7.7-7.6 1.1-1.1a5.4 5.4 0 0 0 0-7.7z"/></svg>LIKEN</span><span style="opacity:.35">·</span><span style="display:inline-flex;align-items:center;gap:var(--space-1)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-12.5 7.5L3 20.5l1.5-5.5A8.5 8.5 0 1 1 21 11.5z"/></svg>KOMMENTIEREN</span><span style="opacity:.35">·</span><span style="display:inline-flex;align-items:center;gap:var(--space-1)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><polyline points="8 6 12 2 16 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>TEILEN</span><span style="opacity:.35">·</span><span style="display:inline-flex;align-items:center;gap:var(--space-1)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-4.5L5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>SPEICHERN</span></div>' +
           '<div style="font-size:11.5px;font-weight:800;color:#ef4444;margin-top:7px;line-height:1.45;display:flex;align-items:flex-start;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px"><path d="M10.3 4 2 18.3A1.6 1.6 0 0 0 3.4 20.7h17.2A1.6 1.6 0 0 0 22 18.3L13.7 4a1.6 1.6 0 0 0-3.4 0z"/><line x1="12" y1="9.5" x2="12" y2="13.5"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><span>Bei Schein-Likes: XP-Abzug + Diamanten-Reset + Bann!</span></div>' +
         '</div>' +
         (isMine
@@ -12146,13 +12146,13 @@ async function submitSuperLink(){
           ? '<div style="padding:11px;background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.35);border-radius:10px;font-size:12.5px;color:#ef4444;font-weight:700;text-align:center">🚫 Family-Account — kein Like möglich</div>'
           : liked
           ? '<div style="padding:11px;background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.35);border-radius:10px;font-size:13px;color:#22c55e;font-weight:700;text-align:center">✅ Engagiert · +'+(p.reward||7)+' 💎</div>'
-          : '<button onclick="prismaLikeClick(\\''+p.id+'\\', this)" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;background:linear-gradient(135deg,#ef4444,#f59e0b,#22c55e,#06b6d4,#a855f7);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 4px 14px rgba(168,85,247,0.22);position:relative"><span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900">2</span><span>💠 Engagiert · +'+(p.reward||7)+' 💎</span></button>'
+          : '<button onclick="prismaLikeClick(\\''+p.id+'\\', this)" style="display:flex;align-items:center;justify-content:center;gap:var(--space-2);width:100%;padding:14px;background:linear-gradient(135deg,#ef4444,#f59e0b,#22c55e,#06b6d4,#a855f7);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 4px 14px rgba(168,85,247,0.22);position:relative"><span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900">2</span><span>💠 Engagiert · +'+(p.reward||7)+' 💎</span></button>'
         ) +
-        (window.__IS_ADMIN ? '<button onclick="prismaAdminDelete(\\''+p.id+'\\', this)" style="display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:9px;margin-top:8px;background:transparent;color:#ef4444;border:1px dashed rgba(239,68,68,0.50);border-radius:9px;font-size:12px;font-weight:700;cursor:pointer">🛡️ Admin: Löschen</button>' : '') +
+        (window.__IS_ADMIN ? '<button onclick="prismaAdminDelete(\\''+p.id+'\\', this)" style="display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:9px;margin-top:var(--space-2);background:transparent;color:#ef4444;border:1px dashed rgba(239,68,68,0.50);border-radius:9px;font-size:12px;font-weight:700;cursor:pointer">🛡️ Admin: Löschen</button>' : '') +
         (function(){
           const lkrs = Array.isArray(p.likers) ? p.likers : [];
           const cnt = p.likeCount || lkrs.length;
-          if (cnt === 0) return '<div style="font-size:11px;color:var(--muted);margin-top:8px;text-align:center">Noch keine Engagements</div>';
+          if (cnt === 0) return '<div style="font-size:11px;color:var(--muted);margin-top:var(--space-2);text-align:center">Noch keine Engagements</div>';
           const top = lkrs.slice(0,3).map(u => '<b style="color:var(--text)">'+esc(u.name||'User')+'</b>').join(', ');
           const rest = cnt > 3 ? ' und ' + (cnt-3) + ' weiteren' : '';
           const namesTxt = 'Gefällt ' + top + rest;
@@ -12163,9 +12163,9 @@ async function submitSuperLink(){
             return '<a href="/profil/'+esc(u.uid)+'" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--border2);text-decoration:none">'+initial+'<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:var(--text)">'+esc(u.name||'User')+'</div>'+(u.instagram?'<div style="font-size:11px;color:#a855f7">@'+esc(u.instagram)+'</div>':'')+'</div><div style="font-size:11px;color:var(--accent)">→</div></a>';
           }).join('');
           return '<div id="liker-rows-pl-'+esc(p.id)+'" style="display:none">'+rows+'</div>' +
-            '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px;padding:0 4px">' +
+            '<div style="display:flex;align-items:center;justify-content:space-between;gap:var(--space-2);margin-top:10px;padding:0 4px">' +
               '<div style="font-size:12px;color:var(--muted);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+namesTxt+'</div>' +
-              '<button onclick="showLikerModal(\\'pl-'+esc(p.id)+'\\')" style="background:rgba(168,85,247,0.10);border:1px solid rgba(168,85,247,0.35);color:#a855f7;font-size:11px;font-weight:700;padding:5px 10px;border-radius:8px;cursor:pointer;white-space:nowrap;flex-shrink:0"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Wer hat engagiert? ('+cnt+')</button>' +
+              '<button onclick="showLikerModal(\\'pl-'+esc(p.id)+'\\')" style="background:rgba(168,85,247,0.10);border:1px solid rgba(168,85,247,0.35);color:#a855f7;font-size:11px;font-weight:700;padding:5px 10px;border-radius:8px;cursor:pointer;white-space:nowrap;flex-shrink:0"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:var(--space-1)"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Wer hat engagiert? ('+cnt+')</button>' +
             '</div>';
         })() +
       '</div>' +
@@ -12236,7 +12236,7 @@ async function submitSuperLink(){
       '.cb-glow{position:absolute;inset:-2px;border-radius:20px;padding:2px;background:conic-gradient(from 0deg,#ec4899,#f59e0b,#a855f7,#ec4899,#f59e0b,#ec4899);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;animation:cb-rot 4s linear infinite;pointer-events:none}'+
       '@keyframes cb-rot{to{transform:rotate(360deg)}}'+
       '.cb-body{position:relative;padding:14px;background:linear-gradient(180deg,rgba(236,72,153,0.06),var(--bg3));border-radius:16px;margin:2px}'+
-      '.cb-boostbar{display:flex;align-items:center;gap:10px;padding:10px 12px;margin-bottom:12px;background:linear-gradient(135deg,rgba(236,72,153,0.18),rgba(168,85,247,0.12));border:1px solid rgba(236,72,153,0.40);border-radius:10px;animation:cb-pulse 2s ease-in-out infinite}'+
+      '.cb-boostbar{display:flex;align-items:center;gap:10px;padding:10px 12px;margin-bottom:var(--space-3);background:linear-gradient(135deg,rgba(236,72,153,0.18),rgba(168,85,247,0.12));border:1px solid rgba(236,72,153,0.40);border-radius:10px;animation:cb-pulse 2s ease-in-out infinite}'+
       '@keyframes cb-pulse{0%,100%{box-shadow:0 0 0 0 rgba(236,72,153,0.45)}50%{box-shadow:0 0 0 8px rgba(236,72,153,0)}}'+
       '.cb-btn{display:block;width:100%;padding:13px;background:linear-gradient(135deg,#ec4899,#a21caf);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 0 20px rgba(236,72,153,0.45);position:relative;overflow:hidden}'+
       '.cb-btn::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.18),transparent);transform:translateX(-100%);animation:cb-shimmer 2.5s ease-in-out infinite}'+
@@ -12268,7 +12268,7 @@ async function submitSuperLink(){
           ? '<div style="padding:13px;background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.40);border-radius:10px;font-size:13.5px;color:#22c55e;font-weight:800;text-align:center;cursor:not-allowed;opacity:.92">✅ Bereits engagiert<div style="font-size:11px;font-weight:600;color:#22c55e;opacity:.85;margin-top:3px">Diamanten erhalten · nicht mehr klickbar</div></div>'
           : '<button class="cb-btn" onclick="collabBoostLike(\\''+p.id+'\\', this)">⚡ Engagiere jetzt · +1(+1) 💎</button>'
         ) +
-        '<div style="font-size:11px;color:var(--muted);margin-top:8px;text-align:center">'+p.likeCount+' Engagements gesamt</div>' +
+        '<div style="font-size:11px;color:var(--muted);margin-top:var(--space-2);text-align:center">'+p.likeCount+' Engagements gesamt</div>' +
       '</div>' +
     '</div>';
   }
@@ -12351,7 +12351,7 @@ async function submitSuperLink(){
         const valueLabel = isDiamond ? ('+' + e.amount + ' 💎 pro Post') : ('+' + (e.bonusPercent || e.amount) + '% XP pro Like');
         const startStr = new Date(e.start).toLocaleString('de-DE', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
         // Dezenter Style fuer geplante Events (weniger auffaellig als aktive)
-        return '<div style="display:flex;align-items:center;gap:12px;padding:9px 14px;background:'+grad+';color:#fff;font-weight:700;opacity:.85">' +
+        return '<div style="display:flex;align-items:center;gap:var(--space-3);padding:9px 14px;background:'+grad+';color:#fff;font-weight:700;opacity:.85">' +
           '<div style="font-size:20px;line-height:1">📅</div>' +
           '<div style="flex:1;min-width:0">' +
             '<div style="font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;opacity:.9">'+emoji+' GEPLANT · ' + startStr + '</div>' +
@@ -12374,7 +12374,7 @@ async function submitSuperLink(){
         : isLegacyMult ? ('XP × ' + e.multiplier)
         : isDiamond ? ('+' + e.amount + ' 💎 pro Post')
         : ('+' + e.amount + ' XP pro Post');
-      return '<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:'+grad+';color:#fff;font-weight:700">' +
+      return '<div style="display:flex;align-items:center;gap:var(--space-3);padding:10px 14px;background:'+grad+';color:#fff;font-weight:700">' +
         '<div style="font-size:24px;line-height:1">'+emoji+'</div>' +
         '<div style="flex:1;min-width:0">' +
           '<div style="font-size:11px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;opacity:.9">EVENT AKTIV</div>' +
@@ -12440,7 +12440,7 @@ async function submitSuperLink(){
 @keyframes cb-helper-slide{from{transform:translateY(100%)}to{transform:translateY(0)}}
 .cb-helper-box{background:var(--bg);border-radius:20px 20px 0 0;width:100%;max-width:520px;max-height:88vh;display:flex;flex-direction:column;animation:cb-helper-slide .3s cubic-bezier(.34,1.56,.64,1);box-shadow:0 -20px 60px rgba(0,0,0,.5)}
 @media(min-width:600px){.cb-helper-box{border-radius:20px;margin:auto;max-height:80vh}}
-.cb-helper-hdr{display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--border2);background:linear-gradient(180deg,var(--bg2),var(--bg))}
+.cb-helper-hdr{display:flex;align-items:center;gap:var(--space-3);padding:14px 18px;border-bottom:1px solid var(--border2);background:linear-gradient(180deg,var(--bg2),var(--bg))}
 .cb-helper-avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#a78bfa,#7c3aed);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;box-shadow:0 0 12px rgba(167,139,250,.4)}
 .cb-helper-hdr-title{flex:1;min-width:0}
 .cb-helper-hdr-title b{font-size:14.5px;color:var(--text);display:block}
@@ -12503,7 +12503,7 @@ async function submitSuperLink(){
     try{
       const r = await fetch('/api/mission-status', {cache:'no-store'});
       const d = await r.json();
-      if(!d || !d.ok){ targetEl.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">Konnte Missionen nicht laden.</div>'; return; }
+      if(!d || !d.ok){ targetEl.innerHTML = '<div style="padding:var(--space-6);text-align:center;color:var(--muted);font-size:13px">Konnte Missionen nicht laden.</div>'; return; }
       const now = new Date();
       const nextSettle = new Date(); nextSettle.setHours(12,0,0,0);
       if(now>=nextSettle) nextSettle.setDate(nextSettle.getDate()+1);
@@ -12511,33 +12511,33 @@ async function submitSuperLink(){
       const hh = Math.floor(diff/3600000), mm = Math.floor((diff%3600000)/60000);
       const settleStr = hh+'h '+mm+'m';
       const {daily, weekly} = d;
-      const bar = (val,max,col)=>'<div style="background:var(--bg4);border-radius:4px;height:5px;overflow:hidden;margin-top:4px"><div style="height:100%;width:'+Math.min(100,Math.round(val/max*100))+'%;background:'+col+';border-radius:4px;transition:width .5s ease"></div></div>';
+      const bar = (val,max,col)=>'<div style="background:var(--bg4);border-radius:4px;height:5px;overflow:hidden;margin-top:var(--space-1)"><div style="height:100%;width:'+Math.min(100,Math.round(val/max*100))+'%;background:'+col+';border-radius:4px;transition:width .5s ease"></div></div>';
       const mChip = (done,label)=>'<div style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:'+(done?'#22c55e':'var(--muted)')+'">'+
         (done?'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="12" cy="12" r="10"/><path d="M8 12l2.5 2.5L16 9"/></svg>':'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;opacity:.45"><circle cx="12" cy="12" r="10"/></svg>')+label+'</div>';
       targetEl.innerHTML =
         '<div style="font-size:11px;color:var(--muted);background:var(--bg4);padding:5px 10px;border-radius:8px;display:inline-block;margin-bottom:14px">⏱ Abrechnung in '+settleStr+'</div>'
-        +'<div style="display:grid;grid-template-columns:1fr;gap:12px">'
+        +'<div style="display:grid;grid-template-columns:1fr;gap:var(--space-3)">'
         +  '<div style="background:var(--bg3);border:1px solid var(--border2);border-radius:12px;padding:12px 14px">'
-        +    '<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Heute</div>'
+        +    '<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:var(--space-2)">Heute</div>'
         +    mChip(daily.m1,'M1: '+daily.likesGegeben+'/5 geliked')
         +    bar(daily.likesGegeben,5,'#a78bfa')
-        +    '<div style="margin-top:8px">'+mChip(daily.m2,'M2: '+daily.prozent+'% (≥80%)')+'</div>'
+        +    '<div style="margin-top:var(--space-2)">'+mChip(daily.m2,'M2: '+daily.prozent+'% (≥80%)')+'</div>'
         +    bar(daily.prozent,100,'#818cf8')
-        +    '<div style="margin-top:8px">'+mChip(daily.m3,'M3: '+(daily.gelikedLinks||0)+'/'+(daily.gesamtLinks||0)+' (max 30)')+'</div>'
+        +    '<div style="margin-top:var(--space-2)">'+mChip(daily.m3,'M3: '+(daily.gelikedLinks||0)+'/'+(daily.gesamtLinks||0)+' (max 30)')+'</div>'
         +    bar(Math.min(daily.gelikedLinks||0, daily.m3Target||(daily.m3Cap||30)), daily.m3Target||(daily.m3Cap||30), '#fbbf24')
         +    (daily.m3?'<div style="font-size:11px;color:#a78bfa;margin-top:6px">+5 XP + 💎 1 bei Abrechnung</div>':'')
         +  '</div>'
         +  '<div style="background:var(--bg3);border:1px solid var(--border2);border-radius:12px;padding:12px 14px">'
-        +    '<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Diese Woche</div>'
+        +    '<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:var(--space-2)">Diese Woche</div>'
         +    mChip(weekly.m1Tage>=7,'W-M1: '+weekly.m1Tage+'/7 Tage')
         +    bar(weekly.m1Tage,7,'#60a5fa')
-        +    '<div style="margin-top:8px">'+mChip(weekly.m2Tage>=7,'W-M2: '+weekly.m2Tage+'/7 → 💎')+'</div>'
+        +    '<div style="margin-top:var(--space-2)">'+mChip(weekly.m2Tage>=7,'W-M2: '+weekly.m2Tage+'/7 → 💎')+'</div>'
         +    bar(weekly.m2Tage,7,'#34d399')
-        +    '<div style="margin-top:8px">'+mChip(weekly.m3Tage>=7,'W-M3: '+weekly.m3Tage+'/7 → 💎💎')+'</div>'
+        +    '<div style="margin-top:var(--space-2)">'+mChip(weekly.m3Tage>=7,'W-M3: '+weekly.m3Tage+'/7 → 💎💎')+'</div>'
         +    bar(weekly.m3Tage,7,'#fbbf24')
         +    (weekly.superlinks ? (
-              '<div style="margin-top:12px;padding-top:10px;border-top:1px dashed var(--border2)">'
-            +   '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px">'
+              '<div style="margin-top:var(--space-3);padding-top:10px;border-top:1px dashed var(--border2)">'
+            +   '<div style="display:flex;align-items:center;justify-content:space-between;gap:var(--space-2);margin-bottom:var(--space-1)">'
             +     '<div style="flex:1;min-width:0">'+mChip(weekly.superlinks.alleGeliked, '🌟 Alle Superlinks: '+weekly.superlinks.geliked+'/'+weekly.superlinks.total+' → +500 XP + 💎💎')+'</div>'
             +     '<a href="/feed?tab=engagement" style="flex-shrink:0;display:inline-flex;align-items:center;gap:3px;padding:5px 9px;background:rgba(236,72,153,0.12);border:1px solid rgba(236,72,153,0.35);border-radius:8px;font-size:11px;font-weight:700;color:#ec4899;text-decoration:none">→ Superlinks</a>'
             +   '</div>'
@@ -12553,7 +12553,7 @@ async function submitSuperLink(){
       const b = document.getElementById('cb-mission-badge');
       if (b) { if (open > 0) { b.textContent = open; b.style.display = 'flex'; } else { b.style.display = 'none'; } }
     } catch(e){
-      targetEl.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">Konnte Missionen nicht laden.</div>';
+      targetEl.innerHTML = '<div style="padding:var(--space-6);text-align:center;color:var(--muted);font-size:13px">Konnte Missionen nicht laden.</div>';
     }
   }
   window.cbMissionOpen = function(){
@@ -12641,7 +12641,7 @@ async function submitSuperLink(){
   </div>
 </div>
 <style>
-.cb-helper-input-row{display:flex;gap:8px;padding:10px 14px;border-top:1px solid var(--border2);background:var(--bg)}
+.cb-helper-input-row{display:flex;gap:var(--space-2);padding:10px 14px;border-top:1px solid var(--border2);background:var(--bg)}
 #cb-helper-input{flex:1;background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:10px 14px;border-radius:99px;font-size:13.5px;font-family:inherit;outline:none}
 #cb-helper-input:focus{border-color:#a78bfa}
 #cb-helper-send{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;border:none;font-size:18px;cursor:pointer;font-weight:800;font-family:inherit;flex-shrink:0}
@@ -12756,7 +12756,7 @@ async function cbHelperLoadHistory(){
       }
       body.dataset.lastTs = String(maxTs);
       const hint = document.createElement('div');
-      hint.style.cssText = 'text-align:center;padding:8px;font-size:11px;color:var(--muted);font-style:italic';
+      hint.style.cssText = 'text-align:center;padding:var(--space-2);font-size:11px;color:var(--muted);font-style:italic';
       hint.textContent = '— Stelle eine Frage oder wähle ein Thema —';
       body.appendChild(hint);
       cbHelperShowMenu();
@@ -12925,7 +12925,7 @@ async function cbHelperAsk(){
     t.remove();
     const node = CB_HELP[topicId];
     const a = document.createElement('div'); a.className='cb-msg bot';
-    const htmlA = '<div style="font-size:11px;color:var(--muted);margin-bottom:4px">📚 Gefunden im Topic <b>'+ (node.q||'') +'</b>:</div>' + node.a;
+    const htmlA = '<div style="font-size:11px;color:var(--muted);margin-bottom:var(--space-1)">📚 Gefunden im Topic <b>'+ (node.q||'') +'</b>:</div>' + node.a;
     a.innerHTML = htmlA;
     body.appendChild(a);
     cbHelperPersist('bot', htmlA);
@@ -12955,7 +12955,7 @@ async function cbHelperAsk(){
       const a = document.createElement('div'); a.className='cb-msg bot';
       // SECURITY: j.answer kommt von der Gemini-AI -> HTML-escape gegen Script-Injection
       const safeAnswer = escapeHtml(String(j.answer));
-      const htmlA = '<div style="font-size:11px;color:var(--muted);margin-bottom:4px">🤖 CreatorBoost (KI):</div>' + safeAnswer;
+      const htmlA = '<div style="font-size:11px;color:var(--muted);margin-bottom:var(--space-1)">🤖 CreatorBoost (KI):</div>' + safeAnswer;
       a.innerHTML = htmlA;
       body.appendChild(a);
       cbHelperPersist('bot', htmlA);
@@ -13002,7 +13002,7 @@ async function cbHelperAsk(){
         t.remove();
         const node = CB_HELP[topicId];
         const a = document.createElement('div'); a.className='cb-msg bot';
-        const htmlA = '<div style="font-size:11px;color:var(--muted);margin-bottom:4px">📚 Vielleicht meinst du <b>'+ (node.q||'') +'</b>:</div>' + node.a;
+        const htmlA = '<div style="font-size:11px;color:var(--muted);margin-bottom:var(--space-1)">📚 Vielleicht meinst du <b>'+ (node.q||'') +'</b>:</div>' + node.a;
         a.innerHTML = htmlA;
         body.appendChild(a);
         cbHelperPersist('bot', htmlA);
@@ -13088,7 +13088,7 @@ try{ if(localStorage.getItem('cb_helper_seen')==='1'){ const b=document.getEleme
 .ac-row { display:flex; gap:11px; padding:0 14px; align-items:flex-end; user-select:none; -webkit-user-select:none; touch-action:pan-y; position:relative; }
 .ac-row.mine { flex-direction:row-reverse; }
 .ac-row.grouped { padding-top:2px; }
-.ac-row + .ac-row:not(.grouped) { margin-top:20px; }
+.ac-row + .ac-row:not(.grouped) { margin-top:var(--space-5); }
 .ac-row-inner { display:flex; gap:11px; align-items:flex-end; flex:1; transition:transform 0.22s cubic-bezier(.34,1.56,.64,1); will-change:transform; min-width:0; }
 .ac-row.mine .ac-row-inner { flex-direction:row-reverse; }
 .ac-row.swiping .ac-row-inner { transition:none; }
@@ -13104,16 +13104,16 @@ try{ if(localStorage.getItem('cb_helper_seen')==='1'){ const b=document.getEleme
 .ac-row.grouped .ac-bubble.other { border-bottom-left-radius:24px; border-top-left-radius:6px; }
 .ac-bubble.mine { background:var(--ac-mine-grad); color:#fff; border-bottom-right-radius:6px; box-shadow:0 4px 18px rgba(124,58,237,0.36); }
 .ac-row.grouped .ac-bubble.mine { border-bottom-right-radius:24px; border-top-right-radius:6px; }
-.ac-bubble img.media { max-width:280px; max-height:340px; border-radius:16px; display:block; margin-top:8px; }
+.ac-bubble img.media { max-width:280px; max-height:340px; border-radius:16px; display:block; margin-top:var(--space-2); }
 .ac-bubble.selected { box-shadow:0 0 0 3px rgba(167,139,250,0.6), 0 12px 32px rgba(124,58,237,0.45); transform:scale(1.03); z-index:101; }
 .ac-time { font-size:12.5px; color:var(--muted); margin:6px 10px 0; font-weight:600; letter-spacing:0.1px; }
 .ac-row.mine .ac-time { color:var(--muted); }
 .ac-empty { padding:100px 28px; text-align:center; }
-.ac-empty-icon { font-size:84px; margin-bottom:24px; opacity:0.55; }
-.ac-empty-title { font-size:24px; font-weight:800; color:var(--text); margin-bottom:12px; letter-spacing:-0.4px; }
+.ac-empty-icon { font-size:84px; margin-bottom:var(--space-6); opacity:0.55; }
+.ac-empty-title { font-size:24px; font-weight:800; color:var(--text); margin-bottom:var(--space-3); letter-spacing:-0.4px; }
 .ac-empty-sub { font-size:15.5px; color:var(--muted); line-height:1.6; max-width:320px; margin:0 auto; }
 /* Reply-Quote in Bubble */
-.ac-quote { background:rgba(0,0,0,0.10); border-left:4px solid var(--ac-purple); border-radius:12px; padding:10px 14px; margin:0 0 10px; font-size:14px; line-height:1.4; cursor:pointer; max-width:100%; overflow:hidden; transition:background .15s, transform .12s; touch-action:manipulation; -webkit-tap-highlight-color:transparent; user-select:none; -webkit-user-select:none; position:relative; padding-right:32px; display:block; text-decoration:none; }
+.ac-quote { background:rgba(0,0,0,0.10); border-left:4px solid var(--ac-purple); border-radius:12px; padding:10px 14px; margin:0 0 10px; font-size:14px; line-height:1.4; cursor:pointer; max-width:100%; overflow:hidden; transition:background .15s, transform .12s; touch-action:manipulation; -webkit-tap-highlight-color:transparent; user-select:none; -webkit-user-select:none; position:relative; padding-right:var(--space-8); display:block; text-decoration:none; }
 .ac-bubble.mine .ac-quote { background:rgba(255,255,255,0.22); border-left-color:#fff; }
 .ac-bubble.other .ac-quote { background:rgba(167,139,250,0.12); border-left-color:var(--ac-purple); }
 .ac-quote:active { transform:scale(0.98); background:rgba(0,0,0,0.18); }
@@ -13146,12 +13146,12 @@ try{ if(localStorage.getItem('cb_helper_seen')==='1'){ const b=document.getEleme
 .ac-sheet { position:fixed; left:0; right:0; bottom:0; background:var(--bg2); border-radius:26px 26px 0 0; padding:16px 14px calc(22px + env(safe-area-inset-bottom)); z-index:101; transform:translateY(100%); transition:transform .26s cubic-bezier(.34,1.56,.64,1); box-shadow:0 -10px 36px rgba(0,0,0,0.34); max-width:480px; margin:0 auto; }
 .ac-sheet.show { transform:translateY(0); }
 .ac-sheet-handle { width:42px; height:5px; background:#7777; border-radius:99px; margin:0 auto 18px; }
-.ac-sheet-row { display:flex; align-items:center; gap:16px; padding:16px 18px; border-radius:16px; cursor:pointer; font-size:17px; font-weight:600; color:var(--text); transition:background .12s; touch-action:manipulation; -webkit-tap-highlight-color:transparent; }
+.ac-sheet-row { display:flex; align-items:center; gap:var(--space-4); padding:16px 18px; border-radius:16px; cursor:pointer; font-size:17px; font-weight:600; color:var(--text); transition:background .12s; touch-action:manipulation; -webkit-tap-highlight-color:transparent; }
 .ac-sheet-row:active { background:rgba(167,139,250,0.12); }
 .ac-sheet-row.danger { color:#ef4444; }
 .ac-sheet-row.danger:active { background:rgba(239,68,68,0.10); }
 .ac-sheet-row .ac-icon { font-size:22px; width:28px; text-align:center; flex-shrink:0; }
-.ac-sheet-cancel { margin-top:8px; padding:16px; border-radius:16px; border:1px solid var(--border); background:transparent; color:var(--muted); font-size:15.5px; font-weight:700; cursor:pointer; width:100%; text-align:center; }
+.ac-sheet-cancel { margin-top:var(--space-2); padding:var(--space-4); border-radius:16px; border:1px solid var(--border); background:transparent; color:var(--muted); font-size:15.5px; font-weight:700; cursor:pointer; width:100%; text-align:center; }
 /* Reactions */
 .ac-reactions { display:flex; flex-wrap:wrap; gap:5px; margin:7px 6px 0; }
 .ac-row.mine .ac-reactions { justify-content:flex-end; }
@@ -13160,7 +13160,7 @@ try{ if(localStorage.getItem('cb_helper_seen')==='1'){ const b=document.getEleme
 .ac-react.mine { background:rgba(167,139,250,0.20); border-color:var(--ac-purple); color:var(--ac-purple); }
 .ac-react .ac-react-count { font-weight:700; font-size:var(--fs-sm); }
 /* Reply-Bar above Input */
-.ac-reply-bar { position:fixed; bottom:calc(140px + env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%); width:calc(100% - 16px); max-width:464px; background:var(--bg2); border:1px solid var(--border); border-left:4px solid var(--ac-purple); border-radius:14px; padding:10px 12px 10px 14px; display:none; align-items:center; gap:12px; z-index:98; box-shadow:0 -4px 18px rgba(15,23,42,0.10); animation:ac-slide-up .22s cubic-bezier(.34,1.56,.64,1); }
+.ac-reply-bar { position:fixed; bottom:calc(140px + env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%); width:calc(100% - 16px); max-width:464px; background:var(--bg2); border:1px solid var(--border); border-left:4px solid var(--ac-purple); border-radius:14px; padding:10px 12px 10px 14px; display:none; align-items:center; gap:var(--space-3); z-index:98; box-shadow:0 -4px 18px rgba(15,23,42,0.10); animation:ac-slide-up .22s cubic-bezier(.34,1.56,.64,1); }
 .ac-reply-bar.show { display:flex; }
 @keyframes ac-slide-up { from { opacity:0; transform:translate(-50%,8px); } to { opacity:1; transform:translate(-50%,0); } }
 .ac-reply-bar .ic { font-size:var(--fs-lg); flex-shrink:0; }
@@ -13183,7 +13183,7 @@ try{ if(localStorage.getItem('cb_helper_seen')==='1'){ const b=document.getEleme
 .ac-failed { background:rgba(239,68,68,0.18) !important; color:#ef4444 !important; box-shadow:0 0 0 1px rgba(239,68,68,0.3) !important; }
 </style>
 <div class="topbar" style="display:flex;align-items:center;gap:10px;padding:12px 12px;background:linear-gradient(135deg,#a78bfa,#7c3aed);position:sticky;top:0;z-index:10;box-shadow:0 4px 18px rgba(124,58,237,0.28)">
-  <a href="/nachrichten" style="padding:8px;color:#fff;display:flex;align-items:center;text-decoration:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="26" height="26"><polyline points="15 18 9 12 15 6"/></svg></a>
+  <a href="/nachrichten" style="padding:var(--space-2);color:#fff;display:flex;align-items:center;text-decoration:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="26" height="26"><polyline points="15 18 9 12 15 6"/></svg></a>
   <div style="width:46px;height:46px;border-radius:50%;background:rgba(255,255,255,0.20);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:inset 0 1px 0 rgba(255,255,255,0.3)"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></div>
   <div style="flex:1;min-width:0">
     <div style="font-weight:800;font-size:18.5px;color:#fff;letter-spacing:-0.3px">App Community</div>
@@ -13667,13 +13667,13 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) acPo
         } catch(e) {
           console.error('[chat-render]', e && e.stack || e);
           const _rDbg = adminIds.includes(Number(myUid))
-            ? '<pre style="text-align:left;max-width:520px;margin:14px auto 0;background:#1c1c1e;color:#ff9b9b;border:1px solid #333;border-radius:10px;padding:12px;font-size:11px;line-height:1.5;overflow:auto;white-space:pre-wrap;word-break:break-word">[render] '+htmlEsc(String(e&&e.message||e))+'\n\n'+htmlEsc(String(e&&e.stack||'').split('\n').slice(0,4).join('\n'))+'</pre>'
+            ? '<pre style="text-align:left;max-width:520px;margin:14px auto 0;background:#1c1c1e;color:#ff9b9b;border:1px solid #333;border-radius:10px;padding:var(--space-3);font-size:11px;line-height:1.5;overflow:auto;white-space:pre-wrap;word-break:break-word">[render] '+htmlEsc(String(e&&e.message||e))+'\n\n'+htmlEsc(String(e&&e.stack||'').split('\n').slice(0,4).join('\n'))+'</pre>'
             : '';
           msgsHtml = '<div style="padding:48px 20px;text-align:center;color:var(--muted);font-size:var(--fs-sm)">Nachrichten konnten gerade nicht geladen werden.'+_rDbg+'</div>';
         }
         return html(`
 ${_nurUser ? '<div style="position:fixed;top:0;left:0;right:0;z-index:200;background:#7c3aed;color:#fff;font-size:11px;font-weight:700;text-align:center;padding:3px 0;letter-spacing:.5px">FILTER: NUR NUTZERNACHRICHTEN</div>' : ''}
-<div class="topbar" style="display:flex;align-items:center;gap:8px;padding:8px 10px${_nurUser ? ';margin-top:22px' : ''}">
+<div class="topbar" style="display:flex;align-items:center;gap:var(--space-2);padding:8px 10px${_nurUser ? ';margin-top:22px' : ''}">
   <a href="/nachrichten" class="icon-btn" style="font-size:26px;color:var(--accent);padding:6px 10px;text-decoration:none;display:flex;align-items:center">‹</a>
   <a href="/profil/${otherUid}" class="chat-header-link" style="display:flex;align-items:center;gap:11px;text-decoration:none;flex:1;min-width:0">
     <div style="position:relative;width:42px;height:42px;border-radius:50%;overflow:hidden;background:linear-gradient(135deg,#a78bfa,#7c3aed);display:flex;align-items:center;justify-content:center;font-size:var(--fs-md);font-weight:800;color:#fff;flex-shrink:0;box-shadow:0 2px 8px rgba(15,23,42,.10)">
@@ -13704,7 +13704,7 @@ ${_nurUser ? '<div style="position:fixed;top:0;left:0;right:0;z-index:200;backgr
   ${msgsHtml || '<div class="empty" style="margin-top:60px"><div class="empty-icon"><svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="opacity:.5"><path d="M21 11.5a8.5 8.5 0 0 1-12.5 7.5L3 20.5l1.5-5.5A8.5 8.5 0 1 1 21 11.5z"/></svg></div><div class="empty-text">Schreib eine Nachricht!</div></div>'}
 </div>
 <div id="img-preview-wrap" style="display:none;position:fixed;bottom:120px;left:16px;right:16px;z-index:101">
-  <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:12px;padding:8px;display:flex;align-items:center;gap:8px">
+  <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:12px;padding:var(--space-2);display:flex;align-items:center;gap:var(--space-2)">
     <img id="img-preview" style="height:60px;border-radius:8px;object-fit:cover" alt="">
     <div style="flex:1;font-size:var(--fs-xs);color:var(--muted)">Bild ausgewählt</div>
     <button onclick="clearImage()" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer">✕</button>
@@ -13944,9 +13944,9 @@ setInterval(async()=>{
         if (_isAdminViewer) {
             const _msg = String(_chatErr && _chatErr.message || _chatErr || 'unbekannt');
             const _stk = String(_chatErr && _chatErr.stack || '').split('\n').slice(0,4).join('\n');
-            _dbg = '<pre style="text-align:left;max-width:520px;margin:18px auto 0;background:#1c1c1e;color:#ff9b9b;border:1px solid #333;border-radius:10px;padding:12px;font-size:11px;line-height:1.5;overflow:auto;white-space:pre-wrap;word-break:break-word">'+htmlEsc(_msg)+'\n\n'+htmlEsc(_stk)+'</pre>';
+            _dbg = '<pre style="text-align:left;max-width:520px;margin:18px auto 0;background:#1c1c1e;color:#ff9b9b;border:1px solid #333;border-radius:10px;padding:var(--space-3);font-size:11px;line-height:1.5;overflow:auto;white-space:pre-wrap;word-break:break-word">'+htmlEsc(_msg)+'\n\n'+htmlEsc(_stk)+'</pre>';
         }
-        if (!res.headersSent) return html('<div style="padding:60px 20px;text-align:center"><div style="font-size:14px;color:var(--muted);margin-bottom:16px">Chat konnte nicht geladen werden.</div><a href="/nachrichten" style="color:var(--accent);font-weight:700">← Zurück</a>'+_dbg+'</div>', 'messages');
+        if (!res.headersSent) return html('<div style="padding:60px 20px;text-align:center"><div style="font-size:14px;color:var(--muted);margin-bottom:var(--space-4)">Chat konnte nicht geladen werden.</div><a href="/nachrichten" style="color:var(--accent);font-weight:700">← Zurück</a>'+_dbg+'</div>', 'messages');
       }
     }
 
@@ -13994,7 +13994,7 @@ setInterval(async()=>{
             const _avImg = it.hasPic
                 ? '<img src="/appbild/' + encodeURIComponent(it.uid) + '/profilepic" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1" alt="">'
                 : (it.insta ? '<img src="https://unavatar.io/instagram/' + htmlEsc(it.insta) + '" loading="lazy" onerror="this.remove()" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1" alt="">' : '');
-            _pfRows += '<a href="/admin/postfach/' + encodeURIComponent(it.uid) + '" style="display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--border2);text-decoration:none;color:var(--text)">'
+            _pfRows += '<a href="/admin/postfach/' + encodeURIComponent(it.uid) + '" style="display:flex;align-items:center;gap:var(--space-3);padding:13px 16px;border-bottom:1px solid var(--border2);text-decoration:none;color:var(--text)">'
                 + '<div style="position:relative;width:50px;height:50px;border-radius:50%;background:linear-gradient(135deg,#a78bfa,#7c3aed);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:18px;flex-shrink:0;overflow:hidden">'
                 + '<span style="position:absolute;z-index:0">' + htmlEsc(it.name.slice(0, 1).toUpperCase()) + '</span>' + _avImg
                 + (it.online ? '<i style="position:absolute;bottom:1px;right:1px;width:12px;height:12px;border-radius:50%;background:#22c55e;border:2.5px solid var(--bg);z-index:2"></i>' : '')
@@ -14006,7 +14006,7 @@ setInterval(async()=>{
                 + '</div></a>';
         }
         if (!_pfRows) _pfRows = '<div style="padding:60px 24px;text-align:center;color:var(--muted);font-size:var(--fs-sm)">Noch keine Nachrichten von Nutzern.</div>';
-        return html('<div class="topbar" style="display:flex;align-items:center;gap:8px;padding:10px 12px">'
+        return html('<div class="topbar" style="display:flex;align-items:center;gap:var(--space-2);padding:10px 12px">'
             + '<a href="/nachrichten" class="icon-btn" style="color:var(--accent);padding:4px 8px;text-decoration:none;display:flex;align-items:center"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></a>'
             + '<div style="font-size:18px;font-weight:800">Admin-Postfach</div></div>'
             + '<div style="font-size:var(--fs-xs);color:var(--muted);padding:11px 16px 4px;line-height:1.4">Nur was Nutzer selbst geschrieben haben. Automatische Bot-Nachrichten sind ausgeblendet.</div>'
@@ -14043,7 +14043,7 @@ setInterval(async()=>{
             ? '<img src="/appbild/' + encodeURIComponent(_pfUid) + '/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1" alt="">'
             : (_pfU.instagram ? '<img src="https://unavatar.io/instagram/' + htmlEsc(_pfU.instagram) + '" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1" onerror="this.remove()" alt="">' : '');
         const _pfStatus = _pfOnline ? '● Online' : (getLastSeen(_pfUid) ? 'zuletzt aktiv vor ' + fmtRelative(getLastSeen(_pfUid)) : 'Offline');
-        return html('<div class="topbar" style="display:flex;align-items:center;gap:8px;padding:8px 10px">'
+        return html('<div class="topbar" style="display:flex;align-items:center;gap:var(--space-2);padding:8px 10px">'
             + '<a href="/admin/postfach" class="icon-btn" style="color:var(--accent);padding:6px 8px;text-decoration:none;display:flex;align-items:center"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></a>'
             + '<a href="/profil/' + encodeURIComponent(_pfUid) + '" class="chat-header-link" style="display:flex;align-items:center;gap:11px;text-decoration:none;flex:1;min-width:0">'
             + '<div style="position:relative;width:42px;height:42px;border-radius:50%;overflow:hidden;background:linear-gradient(135deg,#a78bfa,#7c3aed);display:flex;align-items:center;justify-content:center;font-size:var(--fs-md);font-weight:800;color:#fff;flex-shrink:0;box-shadow:0 2px 8px rgba(15,23,42,.10)">'
@@ -14055,7 +14055,7 @@ setInterval(async()=>{
             + '<span class="chat-header-status" style="font-size:var(--fs-xs);font-weight:600;color:' + (_pfOnline ? '#22c55e' : 'var(--muted)') + ';letter-spacing:0.1px;line-height:1.2;margin-top:2px">' + htmlEsc(_pfStatus) + '</span>'
             + '</div></a></div>'
             + '<div id="chat-msgs" style="padding:12px 0 140px;display:flex;flex-direction:column">' + _pfBubbles + '</div>'
-            + '<div class="cb-chatbar" style="position:fixed;bottom:60px;left:0;right:0;background:var(--bg);border-top:1px solid var(--border2);padding:8px 10px;display:flex;gap:8px;align-items:center;z-index:100">'
+            + '<div class="cb-chatbar" style="position:fixed;bottom:60px;left:0;right:0;background:var(--bg);border-top:1px solid var(--border2);padding:8px 10px;display:flex;gap:var(--space-2);align-items:center;z-index:100">'
             + '<input id="pf-input" type="text" placeholder="Antwort an ' + htmlEsc(_pfName) + '..." style="flex:1;background:var(--bg3,#2a2a2e);border:none;outline:none;color:var(--text);font-size:var(--fs-base);padding:11px 16px;border-radius:22px">'
             + '<button id="pf-send" style="width:42px;height:42px;border-radius:50%;background:#7c3aed;color:#fff;border:none;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button></div>'
             + '<script>(function(){var uid=' + JSON.stringify(String(_pfUid)) + ';var inp=document.getElementById("pf-input");var btn=document.getElementById("pf-send");function go(){window.scrollTo(0,document.body.scrollHeight);}go();window.addEventListener("load",go);function send(){var t=(inp.value||"").trim();if(!t)return;btn.disabled=true;fetch("/api/admin/postfach-reply",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({uid:uid,text:t})}).then(function(r){return r.json();}).then(function(d){if(d&&d.ok){location.reload();}else{btn.disabled=false;alert((d&&d.error)||"Senden fehlgeschlagen");}}).catch(function(){btn.disabled=false;alert("Netzwerkfehler");});}btn.addEventListener("click",send);inp.addEventListener("keypress",function(e){if(e.key==="Enter")send();});inp.focus();})();</script>', 'messages');
@@ -14116,7 +14116,7 @@ setInterval(async()=>{
       <div class="sug-row-sub">${htmlEsc(subline)}</div>
     </div>
   </a>
-  <form method="POST" action="/follow-form" style="margin:0;padding:0 12px 0 0;display:flex;align-items:center;gap:8px">
+  <form method="POST" action="/follow-form" style="margin:0;padding:0 12px 0 0;display:flex;align-items:center;gap:var(--space-2)">
     <input type="hidden" name="uid" value="${uid}">
     <input type="hidden" name="back" value="/suche">
     <button type="submit" class="sug-row-btn js-sug-follow" data-follow-uid="${uid}">Folgen</button>
@@ -14134,8 +14134,8 @@ setInterval(async()=>{
   </div>
 </div>
 <div id="search-empty" style="display:none;padding:60px 24px;text-align:center;color:var(--muted)">
-  <div style="margin-bottom:12px;opacity:0.45;display:flex;justify-content:center"><svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
-  <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px">Keine Treffer</div>
+  <div style="margin-bottom:var(--space-3);opacity:0.45;display:flex;justify-content:center"><svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
+  <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:var(--space-1)">Keine Treffer</div>
   <div style="font-size:var(--fs-xs)">Versuch's mit einem anderen Suchbegriff</div>
 </div>
 <div style="margin:14px 0 22px">
@@ -14255,7 +14255,7 @@ document.getElementById('user-search-input')?.addEventListener('input',filterSea
 .notif-filter:active{transform:scale(0.94)}
 .notif-filter.active{background:var(--text);color:var(--bg);border-color:var(--text)}
 .notif-section{padding:14px 16px 6px;font-size:11px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;color:var(--muted)}
-.notif-row{display:flex;gap:12px;align-items:center;padding:13px 16px;text-decoration:none;color:inherit;transition:background 0.15s;border-bottom:1px solid var(--border2);position:relative;animation:notif-in 0.25s cubic-bezier(0.16,1,0.3,1) backwards}
+.notif-row{display:flex;gap:var(--space-3);align-items:center;padding:13px 16px;text-decoration:none;color:inherit;transition:background 0.15s;border-bottom:1px solid var(--border2);position:relative;animation:notif-in 0.25s cubic-bezier(0.16,1,0.3,1) backwards}
 .notif-row:nth-child(1){animation-delay:0.02s}
 .notif-row:nth-child(2){animation-delay:0.05s}
 .notif-row:nth-child(3){animation-delay:0.08s}
@@ -14291,7 +14291,7 @@ document.getElementById('user-search-input')?.addEventListener('input',filterSea
 .notif-arrow{font-size:18px;color:var(--muted2);flex-shrink:0;opacity:0.4;transition:opacity 0.15s}
 .notif-row:hover .notif-arrow{opacity:1}
 .notif-empty{padding:90px 24px;text-align:center;color:var(--muted)}
-.notif-empty-icon{font-size:56px;margin-bottom:16px;opacity:0.5;animation:bell-wiggle 2.5s ease-in-out infinite}
+.notif-empty-icon{font-size:56px;margin-bottom:var(--space-4);opacity:0.5;animation:bell-wiggle 2.5s ease-in-out infinite}
 @keyframes bell-wiggle{0%,80%,100%{transform:rotate(0)}85%,95%{transform:rotate(-8deg)}90%{transform:rotate(8deg)}}
 .notif-empty-text{font-size:var(--fs-md);font-weight:800;color:var(--text);margin-bottom:6px;letter-spacing:-0.2px}
 .notif-empty-sub{font-size:var(--fs-sm);color:var(--muted);line-height:1.55;max-width:280px;margin:0 auto}
@@ -14323,7 +14323,7 @@ document.getElementById('user-search-input')?.addEventListener('input',filterSea
     if (!inReqs.length) { root.innerHTML = ''; return; }
     const esc = (s) => String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     root.innerHTML = '<div class="notif-section">🤝 Kollab-Anfragen</div>' + inReqs.map(req =>
-      '<div style="padding:14px 16px;border-bottom:1px solid var(--border2);display:flex;align-items:center;gap:12px">' +
+      '<div style="padding:14px 16px;border-bottom:1px solid var(--border2);display:flex;align-items:center;gap:var(--space-3)">' +
         '<div style="width:44px;height:44px;border-radius:14px;background:linear-gradient(135deg,#ec4899,#a21caf);color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🤝</div>' +
         '<div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:700"><a href="/profil/'+esc(req.fromUid)+'" style="color:var(--text);text-decoration:none">'+esc(req.name)+'</a> möchte mit dir kollaborieren</div><div style="font-size:11.5px;color:var(--muted);margin-top:2px">1× pro Woche gemeinsamer Kollab-Post</div></div>' +
         '<button onclick="respondCollab(\\''+esc(req.reqId)+'\\', true, this)" style="background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:none;border-radius:10px;padding:8px 12px;font-size:var(--fs-xs);font-weight:700;cursor:pointer">✅</button>' +
@@ -14499,19 +14499,19 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
     ${healthy?'✅ Sync gesund':'⚠️ Sync degraded — Mainbot evtl. unerreichbar'}
   </div>
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:18px">
-    <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:12px;padding:12px"><div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">User im Cache</div><div style="font-size:22px;font-weight:800">${userCount}</div></div>
-    <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:12px;padding:12px"><div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Links im Cache</div><div style="font-size:22px;font-weight:800">${linkCount}</div></div>
-    <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:12px;padding:12px"><div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Cache-Alter</div><div style="font-size:22px;font-weight:800">${cacheAgeSec===null?'–':cacheAgeSec+'s'}</div></div>
-    <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:12px;padding:12px"><div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Refresh-Failures</div><div style="font-size:22px;font-weight:800;color:${_appDbRefreshFailures>0?'#ef4444':'inherit'}">${_appDbRefreshFailures}</div></div>
+    <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:12px;padding:var(--space-3)"><div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">User im Cache</div><div style="font-size:22px;font-weight:800">${userCount}</div></div>
+    <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:12px;padding:var(--space-3)"><div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Links im Cache</div><div style="font-size:22px;font-weight:800">${linkCount}</div></div>
+    <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:12px;padding:var(--space-3)"><div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Cache-Alter</div><div style="font-size:22px;font-weight:800">${cacheAgeSec===null?'–':cacheAgeSec+'s'}</div></div>
+    <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:12px;padding:var(--space-3)"><div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Refresh-Failures</div><div style="font-size:22px;font-weight:800;color:${_appDbRefreshFailures>0?'#ef4444':'inherit'}">${_appDbRefreshFailures}</div></div>
   </div>
-  <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:16px;margin-bottom:14px">
+  <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:var(--space-4);margin-bottom:14px">
     <div style="font-size:11px;font-weight:700;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-bottom:10px">📥 Mainbot → App-Cache</div>
     <div style="display:grid;gap:6px;font-size:13px;font-family:ui-monospace,monospace">
       <div>Letzter erfolgreicher Pull: <b>${_appDbLastRefreshOk||'noch nie'}</b></div>
       <div>Letzter Versuch: <b>${_appDbLastRefreshTry||'–'}</b></div>
     </div>
   </div>
-  <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:16px">
+  <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:var(--space-4)">
     <div style="font-size:11px;font-weight:700;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-bottom:10px">💾 App-Cache → Platte (app_db.json)</div>
     <div style="display:grid;gap:6px;font-size:13px;font-family:ui-monospace,monospace">
       <div>Datei: <b>${htmlEsc(APP_DB_FILE)}</b></div>
@@ -14594,9 +14594,9 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
             const likeRows = likes.map(lUid => {
                 const ts = likeTsByKey[pUid + '_' + lUid];
                 return `<tr><td style="padding:5px 8px">${userName(lUid)}</td><td style="padding:5px 8px;color:var(--muted);font-size:11px">${fmtTs(ts)}</td></tr>`;
-            }).join('') || '<tr><td colspan="2" style="padding:8px;color:var(--muted);font-style:italic">Noch keine Likes</td></tr>';
-            const missingRows = missingLikers.map(lUid => `<tr><td style="padding:5px 8px;color:#ef4444">${userName(lUid)}</td></tr>`).join('') || '<tr><td style="padding:8px;color:var(--muted);font-style:italic">Alle haben geliked ✓</td></tr>';
-            return `<div style="background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:16px;margin-bottom:14px">
+            }).join('') || '<tr><td colspan="2" style="padding:var(--space-2);color:var(--muted);font-style:italic">Noch keine Likes</td></tr>';
+            const missingRows = missingLikers.map(lUid => `<tr><td style="padding:5px 8px;color:#ef4444">${userName(lUid)}</td></tr>`).join('') || '<tr><td style="padding:var(--space-2);color:var(--muted);font-style:italic">Alle haben geliked ✓</td></tr>';
+            return `<div style="background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:var(--space-4);margin-bottom:14px">
   <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
     <div>
       <div style="font-size:14px;font-weight:800">${userName(pUid)}</div>
@@ -14640,7 +14640,7 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
   </div>
   ${weekSelector}
   ${summary}
-  ${rows || '<div style="padding:32px;text-align:center;color:var(--muted)">Keine Superlinks in dieser Woche</div>'}
+  ${rows || '<div style="padding:var(--space-8);text-align:center;color:var(--muted)">Keine Superlinks in dieser Woche</div>'}
 </div>`, 'explore');
     }
 
@@ -14783,7 +14783,7 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
         const linkSafe = htmlEsc(authLink);
         res.writeHead(200, {'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});
         return res.end(`<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Beta-Zugang · CreatorX</title>
-<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,sans-serif;background:#0a0a0e;color:#e9e9ee;line-height:1.55;padding:20px;min-height:100vh}main{max-width:540px;margin:0 auto}h1{font-size:21px;font-weight:800;margin-bottom:10px}.warn{background:rgba(239,68,68,0.12);border:1.5px solid rgba(239,68,68,0.5);border-radius:16px;padding:18px 18px 16px;margin-bottom:18px}.warn h1{color:#f87171}.warn p{font-size:14px;color:#e9e9ee;margin:8px 0}.warn ol{padding-left:20px;font-size:13.5px;color:#c9c9d2;margin-top:10px}.warn li{margin:6px 0}.note{font-size:12.5px;color:#9a9aa6;margin-top:10px}.btn{display:block;width:100%;padding:15px;border:none;border-radius:14px;font-size:15px;font-weight:800;cursor:pointer;text-align:center;text-decoration:none}.btn-confirm{background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;box-shadow:0 6px 20px rgba(34,197,94,.35)}.btn-confirm:active{transform:scale(.98)}.link-sec{margin-top:20px;animation:fade .3s ease}.btn-open{background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;margin-bottom:10px}.btn-copy{background:rgba(167,139,250,.18);color:#a78bfa;border:1px solid rgba(167,139,250,.45)}.hint{font-size:12.5px;color:#9a9aa6;margin-top:12px;line-height:1.6;background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.25);border-radius:10px;padding:11px 13px}.lbl{font-size:13px;font-weight:700;color:#22c55e;margin-bottom:10px}.back{display:inline-block;margin-top:22px;color:#8a8a96;font-size:13px;text-decoration:none}@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}</style>
+<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,sans-serif;background:#0a0a0e;color:#e9e9ee;line-height:1.55;padding:var(--space-5);min-height:100vh}main{max-width:540px;margin:0 auto}h1{font-size:21px;font-weight:800;margin-bottom:10px}.warn{background:rgba(239,68,68,0.12);border:1.5px solid rgba(239,68,68,0.5);border-radius:16px;padding:18px 18px 16px;margin-bottom:18px}.warn h1{color:#f87171}.warn p{font-size:14px;color:#e9e9ee;margin:8px 0}.warn ol{padding-left:var(--space-5);font-size:13.5px;color:#c9c9d2;margin-top:10px}.warn li{margin:6px 0}.note{font-size:12.5px;color:#9a9aa6;margin-top:10px}.btn{display:block;width:100%;padding:15px;border:none;border-radius:14px;font-size:15px;font-weight:800;cursor:pointer;text-align:center;text-decoration:none}.btn-confirm{background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;box-shadow:0 6px 20px rgba(34,197,94,.35)}.btn-confirm:active{transform:scale(.98)}.link-sec{margin-top:var(--space-5);animation:fade .3s ease}.btn-open{background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;margin-bottom:10px}.btn-copy{background:rgba(167,139,250,.18);color:#a78bfa;border:1px solid rgba(167,139,250,.45)}.hint{font-size:12.5px;color:#9a9aa6;margin-top:var(--space-3);line-height:1.6;background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.25);border-radius:10px;padding:11px 13px}.lbl{font-size:13px;font-weight:700;color:#22c55e;margin-bottom:10px}.back{display:inline-block;margin-top:22px;color:#8a8a96;font-size:13px;text-decoration:none}@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}</style>
 </head><body><main>
   <div class="warn">
     <h1>⚠️ Zuerst lesen!</h1>
@@ -14795,7 +14795,7 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
     </ol>
   </div>
   ${hasLink ? `
-  <div style="background:rgba(34,197,94,0.10);border:1px solid rgba(34,197,94,0.35);border-radius:12px;padding:12px 14px;margin-bottom:16px;font-size:13px;color:#e9e9ee;line-height:1.55">✅ Diese Seite ist jetzt in deinem <b>Browser</b> — du kannst die CreatorX-App jetzt gefahrlos vom Handy löschen, diese Anleitung bleibt offen.</div>
+  <div style="background:rgba(34,197,94,0.10);border:1px solid rgba(34,197,94,0.35);border-radius:12px;padding:12px 14px;margin-bottom:var(--space-4);font-size:13px;color:#e9e9ee;line-height:1.55">✅ Diese Seite ist jetzt in deinem <b>Browser</b> — du kannst die CreatorX-App jetzt gefahrlos vom Handy löschen, diese Anleitung bleibt offen.</div>
   <button class="btn btn-confirm" id="confirmBtn" onclick="document.getElementById('linkSec').style.display='block';this.style.display='none';">✅ Ich habe die App gelöscht — weiter</button>
   <div class="link-sec" id="linkSec" style="display:none">
     ${_bzEmail ? `<div style="background:rgba(245,158,11,0.12);border:1.5px solid rgba(245,158,11,0.45);border-radius:12px;padding:13px 15px;margin-bottom:14px">
@@ -14991,16 +14991,16 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
         const userName = String(entry.email||'').split('@')[0].replace(/[<>]/g,'').slice(0,30);
         const html = '<!DOCTYPE html><html><body style="margin:0;font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#000;color:#fff;padding:0">'+
             '<div style="max-width:560px;margin:0 auto;padding:32px 24px">'+
-            '<div style="text-align:center;margin-bottom:24px"><img src="'+baseUrl+'/cx-logo-256.png" width="80" height="80" style="border-radius:18px" alt="CreatorX"></div>'+
+            '<div style="text-align:center;margin-bottom:var(--space-6)"><img src="'+baseUrl+'/cx-logo-256.png" width="80" height="80" style="border-radius:18px" alt="CreatorX"></div>'+
             '<h1 style="font-size:24px;font-weight:700;margin:0 0 12px;text-align:center;color:#fff">Dein Beta-Zugangslink 🧪</h1>'+
             '<p style="font-size:15px;color:#a8a39a;line-height:1.6;text-align:center;margin:0 0 24px">Hi '+userName+', hier ist dein persönlicher Link um Beta-Tester für CreatorX zu werden:</p>'+
-            '<div style="background:#0f0f0f;border:1px solid #2a2a2a;border-radius:12px;padding:18px;margin:0 0 24px"><div style="font-size:12px;color:#a8a39a;text-transform:uppercase;letter-spacing:.5px;font-weight:700;margin-bottom:8px">📲 Beta-Test öffnen</div><a href="'+link+'" style="color:#34d399;font-size:13px;word-break:break-all;font-weight:600;text-decoration:none">'+link+'</a></div>'+
+            '<div style="background:#0f0f0f;border:1px solid #2a2a2a;border-radius:12px;padding:18px;margin:0 0 24px"><div style="font-size:12px;color:#a8a39a;text-transform:uppercase;letter-spacing:.5px;font-weight:700;margin-bottom:var(--space-2)">📲 Beta-Test öffnen</div><a href="'+link+'" style="color:#34d399;font-size:13px;word-break:break-all;font-weight:600;text-decoration:none">'+link+'</a></div>'+
             '<div style="background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.30);border-radius:10px;padding:14px 16px;margin:0 0 20px">'+
                 '<div style="font-size:13px;font-weight:700;color:#ef4444;margin-bottom:6px">⚠️ Falls du die alte APK hast</div>'+
                 '<div style="font-size:12.5px;color:#cbd5e1;line-height:1.55">Lösche sie zuerst (Apps → CreatorX → Deinstallieren). Sonst kommt eine Fehlermeldung beim Play-Store-Install. Dein Account bleibt — du loggst dich danach mit dieser Email ein.</div>'+
             '</div>'+
             '<div style="font-size:13px;color:#cbd5e1;line-height:1.7;margin:0 0 24px"><b style="color:#fff">So gehts:</b><br>1. APK löschen (falls vorhanden)<br>2. Auf den Link oben tippen<br>3. "Tester werden" klicken<br>4. App über Play Store installieren<br>5. Mit <b style="color:#34d399">'+entry.email+'</b> einloggen → Account ist wieder da!</div>'+
-            '<p style="font-size:11px;color:#605c54;line-height:1.5;text-align:center;margin:32px 0 0;border-top:1px solid #221f1a;padding-top:20px">Diese Email ist nur fuer dich. Bitte nicht teilen — der Link ist persönlich.</p>'+
+            '<p style="font-size:11px;color:#605c54;line-height:1.5;text-align:center;margin:32px 0 0;border-top:1px solid #221f1a;padding-top:var(--space-5)">Diese Email ist nur fuer dich. Bitte nicht teilen — der Link ist persönlich.</p>'+
             '</div></body></html>';
         const ok = await sendEmail(entry.email, '🧪 Dein CreatorX Beta-Zugangslink', html);
         if (!ok) return json({ok:false, error:'Email-Versand fehlgeschlagen'});
@@ -15054,11 +15054,11 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
             const userName = String(t.email).split('@')[0].replace(/[<>]/g,'').slice(0,30);
             const html = '<!DOCTYPE html><html><body style="margin:0;font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#000;color:#fff;padding:0">'+
                 '<div style="max-width:560px;margin:0 auto;padding:32px 24px">'+
-                '<div style="text-align:center;margin-bottom:24px"><img src="'+baseUrl+'/cx-logo-256.png" width="80" height="80" style="border-radius:18px" alt="CreatorX"></div>'+
+                '<div style="text-align:center;margin-bottom:var(--space-6)"><img src="'+baseUrl+'/cx-logo-256.png" width="80" height="80" style="border-radius:18px" alt="CreatorX"></div>'+
                 '<h1 style="font-size:22px;font-weight:700;text-align:center;margin:0 0 12px;color:#fff">Hi '+userName+' 👋</h1>'+
                 '<p style="font-size:15px;color:#a8a39a;line-height:1.6;text-align:center;margin:0 0 22px">Danke dass du Beta-Tester werden möchtest! 🙏</p>'+
                 '<div style="background:rgba(251,146,60,0.10);border:1.5px solid rgba(251,146,60,0.40);border-radius:12px;padding:14px 18px;margin-bottom:22px">'+
-                    '<div style="font-size:14px;font-weight:700;color:#fb923c;margin-bottom:8px">⚠️ Eine Sache noch</div>'+
+                    '<div style="font-size:14px;font-weight:700;color:#fb923c;margin-bottom:var(--space-2)">⚠️ Eine Sache noch</div>'+
                     '<div style="font-size:13.5px;color:#cbd5e1;line-height:1.6">Leider können wir nur <b style="color:#fff">Gmail-Adressen</b> als Tester akzeptieren — Google Play verlangt ein Google-Konto. Deine Email <b style="color:#fff">'+escapeHtml(t.email)+'</b> funktioniert dort leider nicht.</div>'+
                 '</div>'+
                 '<p style="font-size:14px;color:#cbd5e1;line-height:1.7;margin:0 0 24px"><b style="color:#fff">So gehts:</b><br>'+
@@ -15068,7 +15068,7 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
                 '4. Bestätige die neue Email per Klick im Postfach<br>'+
                 '<br>Wir machen den Rest automatisch.</p>'+
                 '<div style="text-align:center;margin:24px 0"><a href="'+baseUrl+'" style="display:inline-block;background:linear-gradient(180deg,#34d399,#10b981 50%,#059669);color:#000;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px">📱 Zur App</a></div>'+
-                '<p style="font-size:12px;color:#605c54;text-align:center;margin:32px 0 0;border-top:1px solid #221f1a;padding-top:20px">Falls du keine Gmail hast: in 2 Min kostenlos erstellen auf <a href="https://gmail.com" style="color:#34d399">gmail.com</a>. Sorry für den Umweg — Google ist da streng!<br><br>Danke 💚<br>CreatorX-Team</p>'+
+                '<p style="font-size:12px;color:#605c54;text-align:center;margin:32px 0 0;border-top:1px solid #221f1a;padding-top:var(--space-5)">Falls du keine Gmail hast: in 2 Min kostenlos erstellen auf <a href="https://gmail.com" style="color:#34d399">gmail.com</a>. Sorry für den Umweg — Google ist da streng!<br><br>Danke 💚<br>CreatorX-Team</p>'+
                 '</div></body></html>';
             try {
                 const ok = await sendEmail(t.email, '⚠️ Gmail benötigt für CreatorX Beta-Test', html);
@@ -15276,10 +15276,10 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
 /* ─── PREMIUM ENTERPRISE DASHBOARD ───────────────────────────── */
 .dash-app{--dgold:var(--accent);--dgold2:var(--purple);--dgold3:var(--accent2);--dink:#0a0a0a;--dink2:#161618;--dink3:#1c1c1f;--dmuted:#6b7280;--dline:rgba(255,255,255,0.06);--dsub:#9ca3af;background:#08080a;min-height:100vh;color:#e7e7ea;font-family:var(--font);-webkit-font-smoothing:antialiased}
 .dash-topbar{position:sticky;top:0;z-index:100;backdrop-filter:saturate(180%) blur(14px);-webkit-backdrop-filter:saturate(180%) blur(14px);background:rgba(8,8,10,0.78);border-bottom:1px solid var(--dline)}
-.dash-topbar-inner{max-width:1280px;margin:0 auto;padding:14px 22px;display:flex;align-items:center;gap:16px}
+.dash-topbar-inner{max-width:1280px;margin:0 auto;padding:14px 22px;display:flex;align-items:center;gap:var(--space-4)}
 .dash-brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:15px;letter-spacing:-0.3px}
 .dash-brand-shield{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#fff8d6 0%,#7c3aed 50%,#6d28d9 100%);display:flex;align-items:center;justify-content:center;font-size:14px;color:#1a0f00;box-shadow:0 4px 14px rgba(124,58,237,0.4),inset 0 1px 0 rgba(255,255,255,0.55)}
-.dash-crumb{font-size:12.5px;color:var(--dsub);display:flex;align-items:center;gap:8px}
+.dash-crumb{font-size:12.5px;color:var(--dsub);display:flex;align-items:center;gap:var(--space-2)}
 .dash-crumb::before{content:'';width:1px;height:14px;background:var(--dline)}
 .dash-crumb b{color:#e7e7ea;font-weight:600}
 .dash-topbar-grow{flex:1}
@@ -15290,11 +15290,11 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
 .dash-back:hover{color:#e7e7ea;background:rgba(255,255,255,0.04)}
 
 .dash-shell{max-width:1280px;margin:0 auto;padding:28px 22px 80px}
-.dash-page-hdr{display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:16px;margin-bottom:24px}
+.dash-page-hdr{display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:var(--space-4);margin-bottom:var(--space-6)}
 .dash-h1{font-size:30px;font-weight:800;letter-spacing:-0.7px;margin:0;line-height:1.1}
 .dash-h1-grad{background:linear-gradient(180deg,#fff 0%,#a8a8b0 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
 .dash-h1-meta{font-size:13px;color:var(--dsub);margin-top:6px;font-weight:500}
-.dash-top-actions{display:flex;gap:8px;flex-wrap:wrap}
+.dash-top-actions{display:flex;gap:var(--space-2);flex-wrap:wrap}
 .dash-btn{display:inline-flex;align-items:center;gap:7px;padding:10px 16px;border-radius:10px;font-size:12.5px;font-weight:700;cursor:pointer;border:1px solid var(--dline);background:var(--dink2);color:#e7e7ea;text-decoration:none;transition:all .15s;letter-spacing:0.1px;font-family:inherit}
 .dash-btn:hover{background:var(--dink3);border-color:rgba(255,255,255,0.12);transform:translateY(-1px)}
 .dash-btn:active{transform:none}
@@ -15312,7 +15312,7 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
 .dash-stat.warn::before{background:linear-gradient(180deg,#f59e0b,#d97706)}
 .dash-stat.danger::before{background:linear-gradient(180deg,#ef4444,#dc2626)}
 .dash-stat.info::before{background:linear-gradient(180deg,#3b82f6,#1d4ed8)}
-.dash-stat-lbl{display:flex;align-items:center;gap:6px;font-size:10.5px;font-weight:700;color:var(--dsub);text-transform:uppercase;letter-spacing:1.4px;margin-bottom:8px}
+.dash-stat-lbl{display:flex;align-items:center;gap:6px;font-size:10.5px;font-weight:700;color:var(--dsub);text-transform:uppercase;letter-spacing:1.4px;margin-bottom:var(--space-2)}
 .dash-stat-val{font-size:30px;font-weight:800;font-family:Inter,system-ui,sans-serif;letter-spacing:-1px;line-height:1;color:#fff}
 .dash-stat-sub{font-size:11px;color:var(--dsub);margin-top:6px;font-weight:500;display:flex;align-items:center;gap:6px}
 .dash-stat-trend{display:inline-flex;align-items:center;gap:3px;padding:2px 6px;border-radius:99px;font-size:10px;font-weight:700}
@@ -15322,8 +15322,8 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
 
 /* Section-Card */
 .dash-section{background:var(--dink2);border:1px solid var(--dline);border-radius:16px;overflow:hidden;margin-bottom:18px}
-.dash-section-hdr{display:flex;align-items:center;gap:12px;padding:16px 18px;border-bottom:1px solid var(--dline);background:rgba(255,255,255,0.015)}
-.dash-section-title{font-size:13px;font-weight:700;color:#fff;display:flex;align-items:center;gap:8px}
+.dash-section-hdr{display:flex;align-items:center;gap:var(--space-3);padding:16px 18px;border-bottom:1px solid var(--dline);background:rgba(255,255,255,0.015)}
+.dash-section-title{font-size:13px;font-weight:700;color:#fff;display:flex;align-items:center;gap:var(--space-2)}
 .dash-section-sub{font-size:11.5px;color:var(--dsub);font-weight:500;margin-left:6px}
 .dash-section-grow{flex:1}
 .dash-section-body{padding:16px 18px}
@@ -15332,7 +15332,7 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
 .dash-search{width:100%;padding:13px 16px 13px 42px;background:var(--dink);border:1px solid var(--dline);border-radius:12px;color:#fff;font-size:13.5px;transition:border .15s;font-family:inherit;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.3-4.3'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:14px center;background-size:16px}
 .dash-search:focus{border-color:rgba(124,58,237,0.4);outline:none}
 .dash-search::placeholder{color:#6b7280}
-.dash-tabs{display:flex;gap:4px;padding:4px;background:var(--dink);border:1px solid var(--dline);border-radius:12px;margin-bottom:14px;overflow-x:auto;scrollbar-width:none}
+.dash-tabs{display:flex;gap:var(--space-1);padding:4px;background:var(--dink);border:1px solid var(--dline);border-radius:12px;margin-bottom:14px;overflow-x:auto;scrollbar-width:none}
 .dash-tabs::-webkit-scrollbar{display:none}
 .dash-tab{padding:9px 14px;border-radius:8px;border:none;background:transparent;color:var(--dsub);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;font-family:inherit;white-space:nowrap;flex-shrink:0}
 .dash-tab:hover{color:#fff;background:rgba(255,255,255,0.04)}
@@ -15347,8 +15347,8 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
 .dash-row-name b{font-size:14px;font-weight:700;color:#fff;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dash-row-sub{font-size:11.5px;color:var(--dsub);display:flex;gap:5px;flex-wrap:wrap;margin-top:3px;align-items:center}
 .dash-row-sub-dot{color:#3a3a3f}
-.dash-row-pills{display:flex;gap:4px;margin-top:6px;flex-wrap:wrap}
-.dash-row-stats{display:flex;gap:18px;text-align:right;flex-shrink:0;padding-left:8px}
+.dash-row-pills{display:flex;gap:var(--space-1);margin-top:6px;flex-wrap:wrap}
+.dash-row-stats{display:flex;gap:18px;text-align:right;flex-shrink:0;padding-left:var(--space-2)}
 .dash-row-stat{display:flex;flex-direction:column;align-items:flex-end}
 .dash-row-stat b{font-size:15px;font-weight:800;color:#fff;line-height:1;letter-spacing:-0.3px}
 .dash-row-stat span{font-size:10px;color:var(--dsub);text-transform:uppercase;letter-spacing:1px;margin-top:3px;font-weight:600}
@@ -15367,19 +15367,19 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
 @keyframes dmodalin{from{opacity:0;transform:translateY(20px) scale(.96)}to{opacity:1;transform:none}}
 .dash-modal-hdr{padding:22px 24px 14px;border-bottom:1px solid var(--dline)}
 .dash-modal-hdr h3{margin:0 0 4px;font-size:20px;font-weight:800;letter-spacing:-0.3px;color:#fff}
-.dash-modal-meta{font-size:12px;color:var(--dsub);margin-top:4px}
+.dash-modal-meta{font-size:12px;color:var(--dsub);margin-top:var(--space-1)}
 .dash-modal-body{padding:20px 24px;overflow-y:auto;flex:1}
-.dash-modal-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px}
+.dash-modal-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--space-2);margin-bottom:var(--space-4)}
 .dash-modal-stat{padding:10px 8px;background:var(--dink);border-radius:10px;border:1px solid var(--dline);text-align:center}
 .dash-modal-stat-v{font-size:18px;font-weight:800;color:#fff;line-height:1}
-.dash-modal-stat-l{font-size:10px;color:var(--dsub);text-transform:uppercase;letter-spacing:0.8px;margin-top:4px;font-weight:600}
+.dash-modal-stat-l{font-size:10px;color:var(--dsub);text-transform:uppercase;letter-spacing:0.8px;margin-top:var(--space-1);font-weight:600}
 
 .dash-act-section-lbl{display:flex;align-items:center;gap:6px;font-size:10.5px;font-weight:700;letter-spacing:1.5px;color:var(--dsub);text-transform:uppercase;margin:16px 0 8px}
 .dash-act-section-lbl.danger{color:#f87171}
 .dash-act-section-lbl::before{content:'';width:3px;height:12px;background:var(--dsub);border-radius:99px}
 .dash-act-section-lbl.danger::before{background:#ef4444}
 
-.dash-action-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.dash-action-grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-2)}
 .dash-act{padding:11px 10px;border-radius:10px;border:1px solid var(--dline);background:var(--dink);color:#e7e7ea;font-size:12.5px;font-weight:600;cursor:pointer;text-align:center;transition:all .12s;font-family:inherit}
 .dash-act:hover{border-color:rgba(124,58,237,0.4);background:rgba(124,58,237,0.06)}
 .dash-act.danger{color:#f87171;border-color:rgba(239,68,68,.25)}
@@ -15389,11 +15389,11 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
 .dash-onb-row{padding:8px 10px;background:var(--dink);border:1px solid var(--dline);border-radius:8px;font-size:11.5px;display:flex;align-items:center;gap:7px;color:var(--dsub)}
 .dash-onb-row.ok{color:#22c55e;border-color:rgba(34,197,94,0.20);background:rgba(34,197,94,0.04)}
 
-.dash-modal-foot{padding:14px 24px 22px;border-top:1px solid var(--dline);display:flex;gap:8px}
+.dash-modal-foot{padding:14px 24px 22px;border-top:1px solid var(--dline);display:flex;gap:var(--space-2)}
 .dash-modal-foot .dash-btn{flex:1;justify-content:center;padding:11px}
 
 /* Toast */
-.dash-toast-wrap{position:fixed;bottom:24px;right:24px;z-index:11000;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.dash-toast-wrap{position:fixed;bottom:24px;right:24px;z-index:11000;display:flex;flex-direction:column;gap:var(--space-2);pointer-events:none}
 .dash-toast{padding:13px 16px;background:var(--dink2);border:1px solid var(--dline);border-radius:12px;font-size:13px;font-weight:600;color:#fff;box-shadow:0 16px 40px rgba(0,0,0,0.55);min-width:240px;max-width:380px;display:flex;align-items:center;gap:10px;animation:dtoastin .25s cubic-bezier(0.16,1,0.3,1);pointer-events:auto}
 @keyframes dtoastin{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:none}}
 .dash-toast.ok{border-color:rgba(34,197,94,0.35);background:linear-gradient(135deg,rgba(34,197,94,0.10),var(--dink2))}
@@ -15406,7 +15406,7 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
 /* Engagement-Log */
 .dash-log-section{margin:0}
 .dash-log-section-hdr{padding:12px 16px;font-size:10.5px;font-weight:700;letter-spacing:1.5px;color:var(--dsub);text-transform:uppercase;background:rgba(255,255,255,0.015);border-bottom:1px solid var(--dline)}
-.dash-log-row{display:flex;gap:12px;padding:12px 16px;border-bottom:1px solid var(--dline);align-items:flex-start}
+.dash-log-row{display:flex;gap:var(--space-3);padding:12px 16px;border-bottom:1px solid var(--dline);align-items:flex-start}
 .dash-log-row:hover{background:rgba(255,255,255,0.02)}
 .dash-log-row:last-child{border-bottom:0}
 .dash-log-icon{width:36px;height:36px;border-radius:10px;background:rgba(167,139,250,0.12);color:#a78bfa;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
@@ -15417,7 +15417,7 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
 .dash-log-title{font-size:13px;color:#e7e7ea;line-height:1.45}
 .dash-log-title a{color:#fff;font-weight:700;text-decoration:none}
 .dash-log-title a:hover{color:#7c3aed}
-.dash-log-meta{font-size:11px;color:var(--dsub);margin-top:4px;word-break:break-all}
+.dash-log-meta{font-size:11px;color:var(--dsub);margin-top:var(--space-1);word-break:break-all}
 
 /* Skeleton-Loader */
 .dash-skel{padding:14px 16px;background:var(--dink2);border:1px solid var(--dline);border-radius:12px;display:flex;align-items:center;gap:14px;margin-bottom:6px}
@@ -15464,7 +15464,7 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
     </div>
 
     <!-- Sync-Health Banner (Phase 2 Smart-Mirror) -->
-    <div id="sync-health-banner" style="display:none;margin-bottom:16px"></div>
+    <div id="sync-health-banner" style="display:none;margin-bottom:var(--space-4)"></div>
 
     <!-- Live Metrics -->
     <div class="dash-stat-grid">
@@ -15598,7 +15598,7 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
         <div class="dash-section-sub">letzte 20 Funnel-Events · Live-Refresh 60s</div>
       </div>
       <div class="dash-section-body">
-        <div id="activity-feed" style="display:flex;flex-direction:column;gap:4px;max-height:280px;overflow-y:auto">
+        <div id="activity-feed" style="display:flex;flex-direction:column;gap:var(--space-1);max-height:280px;overflow-y:auto">
           <div style="padding:18px;text-align:center;color:var(--dsub);font-size:12.5px">Lädt …</div>
         </div>
       </div>
@@ -15625,11 +15625,11 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
       </div>
       <div class="dash-section-body">
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:14px" id="funnel-steps">
-          <div style="padding:14px;background:var(--dink);border:1px solid var(--dline);border-radius:12px"><div style="font-size:10px;font-weight:700;color:var(--dsub);text-transform:uppercase;letter-spacing:1.4px">1️⃣ Landing</div><div style="font-size:24px;font-weight:800;color:#fff;margin-top:4px" id="fn-landing">–</div><div style="font-size:11px;color:var(--dsub);margin-top:2px">Besuche der Startseite</div></div>
-          <div style="padding:14px;background:var(--dink);border:1px solid var(--dline);border-radius:12px"><div style="font-size:10px;font-weight:700;color:var(--dsub);text-transform:uppercase;letter-spacing:1.4px">2️⃣ CTA-Klick</div><div style="font-size:24px;font-weight:800;color:#fff;margin-top:4px" id="fn-cta">–</div><div style="font-size:11px;color:var(--dsub);margin-top:2px"><span id="fn-cta-pct">–</span>% von Landing</div></div>
-          <div style="padding:14px;background:var(--dink);border:1px solid var(--dline);border-radius:12px"><div style="font-size:10px;font-weight:700;color:var(--dsub);text-transform:uppercase;letter-spacing:1.4px">3️⃣ Signup-Seite</div><div style="font-size:24px;font-weight:800;color:#fff;margin-top:4px" id="fn-signup-view">–</div><div style="font-size:11px;color:var(--dsub);margin-top:2px"><span id="fn-signup-view-pct">–</span>% von Landing</div></div>
-          <div style="padding:14px;background:linear-gradient(180deg,rgba(124,58,237,0.12),var(--dink));border:1px solid rgba(124,58,237,0.30);border-radius:12px"><div style="font-size:10px;font-weight:700;color:#7c3aed;text-transform:uppercase;letter-spacing:1.4px">4️⃣ Registriert</div><div style="font-size:24px;font-weight:800;color:#fff;margin-top:4px" id="fn-signup-complete">–</div><div style="font-size:11px;color:var(--dsub);margin-top:2px"><span id="fn-signup-complete-pct">–</span>% von Signup-Seite</div></div>
-          <div style="padding:14px;background:linear-gradient(180deg,rgba(34,197,94,0.10),var(--dink));border:1px solid rgba(34,197,94,0.30);border-radius:12px"><div style="font-size:10px;font-weight:700;color:#22c55e;text-transform:uppercase;letter-spacing:1.4px">5️⃣ Logins</div><div style="font-size:24px;font-weight:800;color:#fff;margin-top:4px" id="fn-login">–</div><div style="font-size:11px;color:var(--dsub);margin-top:2px">erfolgreiche Logins</div></div>
+          <div style="padding:14px;background:var(--dink);border:1px solid var(--dline);border-radius:12px"><div style="font-size:10px;font-weight:700;color:var(--dsub);text-transform:uppercase;letter-spacing:1.4px">1️⃣ Landing</div><div style="font-size:24px;font-weight:800;color:#fff;margin-top:var(--space-1)" id="fn-landing">–</div><div style="font-size:11px;color:var(--dsub);margin-top:2px">Besuche der Startseite</div></div>
+          <div style="padding:14px;background:var(--dink);border:1px solid var(--dline);border-radius:12px"><div style="font-size:10px;font-weight:700;color:var(--dsub);text-transform:uppercase;letter-spacing:1.4px">2️⃣ CTA-Klick</div><div style="font-size:24px;font-weight:800;color:#fff;margin-top:var(--space-1)" id="fn-cta">–</div><div style="font-size:11px;color:var(--dsub);margin-top:2px"><span id="fn-cta-pct">–</span>% von Landing</div></div>
+          <div style="padding:14px;background:var(--dink);border:1px solid var(--dline);border-radius:12px"><div style="font-size:10px;font-weight:700;color:var(--dsub);text-transform:uppercase;letter-spacing:1.4px">3️⃣ Signup-Seite</div><div style="font-size:24px;font-weight:800;color:#fff;margin-top:var(--space-1)" id="fn-signup-view">–</div><div style="font-size:11px;color:var(--dsub);margin-top:2px"><span id="fn-signup-view-pct">–</span>% von Landing</div></div>
+          <div style="padding:14px;background:linear-gradient(180deg,rgba(124,58,237,0.12),var(--dink));border:1px solid rgba(124,58,237,0.30);border-radius:12px"><div style="font-size:10px;font-weight:700;color:#7c3aed;text-transform:uppercase;letter-spacing:1.4px">4️⃣ Registriert</div><div style="font-size:24px;font-weight:800;color:#fff;margin-top:var(--space-1)" id="fn-signup-complete">–</div><div style="font-size:11px;color:var(--dsub);margin-top:2px"><span id="fn-signup-complete-pct">–</span>% von Signup-Seite</div></div>
+          <div style="padding:14px;background:linear-gradient(180deg,rgba(34,197,94,0.10),var(--dink));border:1px solid rgba(34,197,94,0.30);border-radius:12px"><div style="font-size:10px;font-weight:700;color:#22c55e;text-transform:uppercase;letter-spacing:1.4px">5️⃣ Logins</div><div style="font-size:24px;font-weight:800;color:#fff;margin-top:var(--space-1)" id="fn-login">–</div><div style="font-size:11px;color:var(--dsub);margin-top:2px">erfolgreiche Logins</div></div>
         </div>
         <div style="font-size:12px;color:var(--dsub);line-height:1.6">📌 <b style="color:#fff">Tipp:</b> Landing-Drop-Off heute: <span id="fn-dropoff" style="color:#fff;font-weight:700">–</span> · Email-Submits: <span id="fn-email-today" style="color:#fff;font-weight:700">–</span></div>
       </div>
@@ -15669,11 +15669,11 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
           <button class="dash-tab" data-tab="ranking">🏆 Top XP</button>
           <button class="dash-tab" data-tab="subs">👶 Sub-Accounts</button>
           <button class="dash-tab" data-tab="engagement-log">📋 Engagement-Log</button>
-          <button class="dash-tab" data-tab="reports">🚩 Meldungen <span id="dash-reports-badge" style="display:none;margin-left:4px;padding:1px 6px;border-radius:99px;background:#ef4444;color:#fff;font-size:10px;font-weight:800"></span></button>
+          <button class="dash-tab" data-tab="reports">🚩 Meldungen <span id="dash-reports-badge" style="display:none;margin-left:var(--space-1);padding:1px 6px;border-radius:99px;background:#ef4444;color:#fff;font-size:10px;font-weight:800"></span></button>
           <button class="dash-tab" data-tab="compliance">📊 Compliance</button>
           <button class="dash-tab" data-tab="diamond-links">💎 Diamantlinks</button>
           <button class="dash-tab" data-tab="prisma-links">💠 Prismalinks</button>
-          <button class="dash-tab" data-tab="helper-inbox">🎫 Tickets <span id="dash-tickets-badge" style="display:none;margin-left:4px;padding:1px 6px;border-radius:99px;background:#f59e0b;color:#fff;font-size:10px;font-weight:800"></span></button>
+          <button class="dash-tab" data-tab="helper-inbox">🎫 Tickets <span id="dash-tickets-badge" style="display:none;margin-left:var(--space-1);padding:1px 6px;border-radius:99px;background:#f59e0b;color:#fff;font-size:10px;font-weight:800"></span></button>
         </div>
 
         <div id="dash-engagement-log" style="display:none"></div>
@@ -15766,7 +15766,7 @@ function renderList() {
       '</div>' +
     '</div>';
   }).join('');
-  document.getElementById('dash-list').innerHTML = html || '<div style="padding:48px;text-align:center;color:var(--dsub);font-size:13px">Keine User in "<b style="color:#fff">'+(TAB_LABELS[CUR_TAB]||CUR_TAB)+'</b>"</div>';
+  document.getElementById('dash-list').innerHTML = html || '<div style="padding:var(--space-12);text-align:center;color:var(--dsub);font-size:13px">Keine User in "<b style="color:#fff">'+(TAB_LABELS[CUR_TAB]||CUR_TAB)+'</b>"</div>';
   const rc = document.getElementById('dash-result-count');
   if (rc) rc.textContent = list.length + ' Ergebnisse';
 }
@@ -15826,7 +15826,7 @@ function openUser(uid) {
   // Initial skeleton mit Basisdaten, dann Detail-Fetch ergänzt
   bg.innerHTML =
     '<div class="dash-modal" id="user-modal-content">' +
-      '<div style="padding:24px;text-align:center;color:var(--dsub)">' +
+      '<div style="padding:var(--space-6);text-align:center;color:var(--dsub)">' +
         '<div style="font-size:14px;font-weight:700;color:#fff;margin-bottom:6px">'+esc(baseUser.spitzname||baseUser.name||'User')+'</div>' +
         '<div style="font-size:12px">⏳ Lade Insights …</div>' +
       '</div>' +
@@ -15838,7 +15838,7 @@ function openUser(uid) {
     .then(j => {
       if (!j.ok) {
         document.getElementById('user-modal-content').innerHTML =
-          '<div style="padding:24px;text-align:center;color:#ef4444">'+esc(j.error||'Fehler beim Laden')+'</div>' +
+          '<div style="padding:var(--space-6);text-align:center;color:#ef4444">'+esc(j.error||'Fehler beim Laden')+'</div>' +
           '<button class="dash-close" onclick="this.closest(\\'.dash-modal-bg\\').remove()">Schließen</button>';
         return;
       }
@@ -15846,7 +15846,7 @@ function openUser(uid) {
     })
     .catch(e => {
       const c = document.getElementById('user-modal-content');
-      if (c) c.innerHTML = '<div style="padding:24px;text-align:center;color:#ef4444">'+esc(e.message)+'</div>';
+      if (c) c.innerHTML = '<div style="padding:var(--space-6);text-align:center;color:#ef4444">'+esc(e.message)+'</div>';
     });
 }
 
@@ -15895,7 +15895,7 @@ function renderUserDetail(j) {
     '<div style="flex:1;min-width:0">' +
       '<h3 style="margin:0">'+esc(u.spitzname||u.name||'User')+' '+pills.join(' ')+'</h3>' +
       '<div class="dash-modal-meta">'+meta.join(' · ')+'</div>' +
-      '<div style="font-size:11px;color:var(--dsub);margin-top:4px">📅 Joined '+fmtRelative(u.joinDate)+' · 🕒 zuletzt aktiv '+(isOnline?'<b style="color:#22c55e">jetzt online</b>':'vor '+lastSeenStr)+'</div>' +
+      '<div style="font-size:11px;color:var(--dsub);margin-top:var(--space-1)">📅 Joined '+fmtRelative(u.joinDate)+' · 🕒 zuletzt aktiv '+(isOnline?'<b style="color:#22c55e">jetzt online</b>':'vor '+lastSeenStr)+'</div>' +
     '</div>' +
     '<button onclick="this.closest(\\'.dash-modal-bg\\').remove()" style="background:rgba(255,255,255,0.06);border:1px solid var(--dline);color:var(--dsub);width:32px;height:32px;border-radius:10px;cursor:pointer;font-size:16px;flex-shrink:0">✕</button>' +
   '</div>';
@@ -15903,7 +15903,7 @@ function renderUserDetail(j) {
   html += '<div class="dash-modal-body">';
 
   // Top Stats
-  html += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;background:var(--dink);border:1px solid var(--dline);border-radius:12px;padding:8px;margin-bottom:14px">' +
+  html += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;background:var(--dink);border:1px solid var(--dline);border-radius:12px;padding:var(--space-2);margin-bottom:14px">' +
     stat(u.xp, 'XP', '#cc5de8') +
     stat(u.diamonds, '💎 Diamanten', '#06b6d4') +
     stat(u.totalLikes, '❤ Likes', '#ec4899') +
@@ -15913,21 +15913,21 @@ function renderUserDetail(j) {
   // Activity section
   if (act && act.lastSeen) {
     html += sectionLbl('📊 App-Aktivität');
-    html += '<div style="background:var(--dink);border:1px solid var(--dline);border-radius:12px;padding:12px;margin-bottom:14px;font-size:12.5px;line-height:1.6">' +
+    html += '<div style="background:var(--dink);border:1px solid var(--dline);border-radius:12px;padding:var(--space-3);margin-bottom:14px;font-size:12.5px;line-height:1.6">' +
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">' +
         '<div><span style="color:var(--dsub)">Sessions:</span> <b>'+(act.sessions||0)+'</b></div>' +
         '<div><span style="color:var(--dsub)">API-Calls:</span> <b>'+(act.totalCalls||0)+'</b></div>' +
         '<div><span style="color:var(--dsub)">Erst gesehen:</span> <b>'+fmtRelative(act.firstSeen)+'</b></div>' +
         '<div><span style="color:var(--dsub)">Letzter Endpoint:</span> <code style="font-size:11px;color:#a78bfa">'+esc(act.lastEndpoint||'?')+'</code></div>' +
       '</div>' +
-      ((act.topEndpoints||[]).length ? '<div style="margin-top:8px;font-size:11px;color:var(--dsub)"><b>Top:</b> ' +
+      ((act.topEndpoints||[]).length ? '<div style="margin-top:var(--space-2);font-size:11px;color:var(--dsub)"><b>Top:</b> ' +
         act.topEndpoints.map(([k,v])=>'<span style="color:#e7e7ea">'+esc(k)+'</span>·'+v).join(' · ') + '</div>' : '') +
     '</div>';
   }
 
   // Engagement section
   html += sectionLbl('🤝 Engagement');
-  html += '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px;background:var(--dink);border:1px solid var(--dline);border-radius:12px;padding:12px;margin-bottom:14px;font-size:12.5px">' +
+  html += '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px;background:var(--dink);border:1px solid var(--dline);border-radius:12px;padding:var(--space-3);margin-bottom:14px;font-size:12.5px">' +
     '<div><span style="color:var(--dsub)">📌 Pinned engaged:</span> <b>'+eng.pinnedEngaged+'</b></div>' +
     '<div><span style="color:var(--dsub)">📌 Pinned erhalten:</span> <b>'+eng.pinnedReceived+'</b></div>' +
     '<div><span style="color:var(--dsub)">🤝 Kollab engaged:</span> <b>'+eng.collabEngaged+'</b></div>' +
@@ -15940,9 +15940,9 @@ function renderUserDetail(j) {
     html += '<div style="background:var(--dink);border:1px solid var(--dline);border-radius:12px;padding:10px;margin-bottom:14px">';
     if (parent) html += '<div style="font-size:12.5px;margin-bottom:6px"><span style="color:var(--dsub)">Parent:</span> <a href="javascript:openUser(\\''+esc(parent.uid)+'\\')" style="color:#a78bfa;font-weight:700;text-decoration:none">'+esc(parent.name)+'</a></div>';
     if (subs.length) {
-      html += '<div style="font-size:11px;color:var(--dsub);margin-bottom:4px">Sub-Accounts:</div>';
+      html += '<div style="font-size:11px;color:var(--dsub);margin-bottom:var(--space-1)">Sub-Accounts:</div>';
       for (const s of subs) {
-        html += '<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:var(--dink2);border-radius:8px;margin-top:4px;font-size:12.5px">' +
+        html += '<div style="display:flex;align-items:center;gap:var(--space-2);padding:6px 8px;background:var(--dink2);border-radius:8px;margin-top:var(--space-1);font-size:12.5px">' +
           '<a href="javascript:openUser(\\''+esc(s.uid)+'\\')" style="flex:1;color:#fff;text-decoration:none"><b>'+esc(s.name)+'</b></a>' +
           '<span style="color:var(--dsub);font-size:11px">'+s.xp+' XP</span>' +
           (s.banned ? '<span class="dash-pill err">🚫</span>' : '') +
@@ -15985,7 +15985,7 @@ function renderUserDetail(j) {
     html += sectionLbl('🔔 Letzte Notifs (' + notifs.length + ')');
     html += '<details style="background:var(--dink);border:1px solid var(--dline);border-radius:12px;padding:8px 12px;margin-bottom:14px;font-size:11.5px">' +
       '<summary style="cursor:pointer;color:var(--dsub);outline:none">Ausklappen</summary>' +
-      '<div style="margin-top:8px;max-height:200px;overflow-y:auto">';
+      '<div style="margin-top:var(--space-2);max-height:200px;overflow-y:auto">';
     for (const n of notifs.slice(0, 15)) {
       html += '<div style="padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.04)">' +
         (n.icon||'') + ' ' + esc(n.text||'') +
@@ -16076,7 +16076,7 @@ async function openFunnelDebug() {
   const dailyBerlinStr = Object.entries(j.dailyBerlinToday||{}).map(([k,v])=>k+': '+v).join('\\n') || '(leer)';
   const last20Str = (j.last20Events||[]).map(e=>'· '+e.date+' · '+e.event).join('\\n') || '(keine)';
   const errBanner = j.ok ? '' :
-    '<div style="padding:12px 14px;background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.35);border-radius:8px;margin-bottom:12px;color:#f87171;font-weight:700">' +
+    '<div style="padding:12px 14px;background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.35);border-radius:8px;margin-bottom:var(--space-3);color:#f87171;font-weight:700">' +
       '❌ Response NICHT ok · HTTP '+httpStatus+' · error: '+esc(j.error||j._parseError||'unbekannt') +
       (j._raw ? '<br><span style="font-weight:400;color:#fca5a5">Raw: '+esc(j._raw)+'</span>' : '') +
       '<br><br><b style="color:#fff">Bedeutung:</b> Mainbot antwortet nicht (richtig). Prüfe Railway-Deploy + Logs. PR #104 muss deployed sein.' +
@@ -16114,7 +16114,7 @@ async function openKollabBoostPreview() {
       '.kbp-glow{position:absolute;inset:-2px;border-radius:20px;padding:2px;background:conic-gradient(from 0deg,#ec4899,#f59e0b,#a855f7,#ec4899,#f59e0b,#ec4899);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;animation:kbp-rot 4s linear infinite;pointer-events:none}'+
       '@keyframes kbp-rot{to{transform:rotate(360deg)}}'+
       '.kbp-body{position:relative;padding:14px;background:linear-gradient(180deg,rgba(236,72,153,0.08),#161618);border-radius:16px;margin:2px;color:#e7e7ea}'+
-      '.kbp-banner{display:flex;align-items:center;gap:10px;padding:10px 12px;margin-bottom:12px;background:linear-gradient(135deg,rgba(236,72,153,0.20),rgba(168,85,247,0.14));border:1px solid rgba(236,72,153,0.45);border-radius:10px;animation:kbp-pulse 2s ease-in-out infinite}'+
+      '.kbp-banner{display:flex;align-items:center;gap:10px;padding:10px 12px;margin-bottom:var(--space-3);background:linear-gradient(135deg,rgba(236,72,153,0.20),rgba(168,85,247,0.14));border:1px solid rgba(236,72,153,0.45);border-radius:10px;animation:kbp-pulse 2s ease-in-out infinite}'+
       '@keyframes kbp-pulse{0%,100%{box-shadow:0 0 0 0 rgba(236,72,153,0.45)}50%{box-shadow:0 0 0 8px rgba(236,72,153,0)}}'+
       '.kbp-btn{display:block;width:100%;padding:13px;background:linear-gradient(135deg,#ec4899,#a21caf);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 0 20px rgba(236,72,153,0.45);position:relative;overflow:hidden;font-family:inherit}'+
       '.kbp-btn::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.18),transparent);transform:translateX(-100%);animation:kbp-shimmer 2.5s ease-in-out infinite}'+
@@ -16149,8 +16149,8 @@ async function openKollabBoostPreview() {
             '<div style="font-size:11.5px;margin-top:1px;opacity:.95">+1 💎 Base · +1 💎 Extra · noch <b style="color:#ec4899" id="kbp-countdown">'+fmtKbp(secondsRemaining)+'</b></div>'+
           '</div>'+
         '</div>'+
-        '<div style="font-size:13.5px;font-weight:700;margin-bottom:4px">'+fakePost.authorA.name+' × '+fakePost.authorB.name+'</div>'+
-        '<div style="font-size:12px;color:#ec4899;margin-bottom:8px">@'+fakePost.authorA.instagram+' × @'+fakePost.authorB.instagram+'</div>'+
+        '<div style="font-size:13.5px;font-weight:700;margin-bottom:var(--space-1)">'+fakePost.authorA.name+' × '+fakePost.authorB.name+'</div>'+
+        '<div style="font-size:12px;color:#ec4899;margin-bottom:var(--space-2)">@'+fakePost.authorA.instagram+' × @'+fakePost.authorB.instagram+'</div>'+
         '<div style="font-size:13px;line-height:1.5;margin:6px 0 10px;opacity:.95">"'+fakePost.caption+'"</div>'+
         '<a href="#" onclick="return false" style="display:block;padding:11px 13px;background:rgba(236,72,153,0.10);border:1px solid rgba(236,72,153,0.35);border-radius:10px;font-size:12.5px;color:#ec4899;font-weight:700;word-break:break-all;text-decoration:none;margin-bottom:10px">🔗 Auf Instagram öffnen</a>'+
         '<div style="font-size:11px;color:#f59e0b;background:rgba(245,158,11,0.10);border-left:3px solid #f59e0b;border-radius:6px;padding:9px 11px;margin-bottom:10px;line-height:1.55">'+
@@ -16164,7 +16164,7 @@ async function openKollabBoostPreview() {
         (alreadyEngaged
           ? '<div style="padding:13px;background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.40);border-radius:10px;font-size:13.5px;color:#22c55e;font-weight:800;text-align:center;cursor:not-allowed;opacity:.92">✅ Bereits engagiert<div style="font-size:11px;font-weight:600;color:#22c55e;opacity:.85;margin-top:3px">Diamanten erhalten · nicht mehr klickbar</div></div>'
           : '<button class="kbp-btn">⚡ Engagiere jetzt · +1(+1) 💎</button>')+
-        '<div style="font-size:11px;color:var(--dsub);margin-top:8px;text-align:center">'+fakePost.likeCount+' Engagements gesamt</div>'+
+        '<div style="font-size:11px;color:var(--dsub);margin-top:var(--space-2);text-align:center">'+fakePost.likeCount+' Engagements gesamt</div>'+
       '</div>'+
     '</div>';
   }
@@ -16173,7 +16173,7 @@ async function openKollabBoostPreview() {
       ? '<div style="font-size:11px;color:#ec4899;font-weight:800;background:rgba(236,72,153,0.18);border:1px solid rgba(236,72,153,0.40);padding:5px 10px;border-radius:99px">⚡ BOOST AKTIV · +1 💎 Extra</div>'
       : '<div style="font-size:11px;color:var(--dsub)">11. März</div>';
     return '<div style="padding:14px;background:#161618;border:1px solid rgba(255,255,255,0.06);border-radius:14px;color:#e7e7ea">'+
-      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">'+
+      '<div style="display:flex;align-items:center;gap:var(--space-2);margin-bottom:10px">'+
         '<div style="font-size:11px;color:#ec4899;font-weight:800;letter-spacing:1px;text-transform:uppercase">🤝 Kollab-Post</div>'+
         '<div style="flex:1"></div>'+
         banner+
@@ -16181,8 +16181,8 @@ async function openKollabBoostPreview() {
       '<div style="font-size:13px;font-weight:700;margin-bottom:6px">'+fakePost.authorA.name+' × '+fakePost.authorB.name+'</div>'+
       '<div style="font-size:13px;line-height:1.5;margin-bottom:10px;opacity:.9">"'+fakePost.caption+'"</div>'+
       '<a href="#" onclick="return false" style="display:block;padding:11px 13px;background:rgba(236,72,153,0.10);border:1px solid rgba(236,72,153,0.30);border-radius:10px;font-size:12.5px;color:#ec4899;font-weight:700;text-decoration:none;margin-bottom:10px">🔗 Auf Instagram öffnen</a>'+
-      '<button style="display:block;width:100%;padding:12px;background:linear-gradient(135deg,#ec4899,#a21caf);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit">❤️ Engagiert · +'+(boostActive?'2':'1')+' 💎</button>'+
-      '<div style="font-size:11px;color:var(--dsub);margin-top:8px;text-align:center">'+fakePost.likeCount+' Engagements</div>'+
+      '<button style="display:block;width:100%;padding:var(--space-3);background:linear-gradient(135deg,#ec4899,#a21caf);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit">❤️ Engagiert · +'+(boostActive?'2':'1')+' 💎</button>'+
+      '<div style="font-size:11px;color:var(--dsub);margin-top:var(--space-2);text-align:center">'+fakePost.likeCount+' Engagements</div>'+
     '</div>';
   }
   function fmtKbp(s){ const m=Math.floor(s/60), sec=s%60; return m+':'+(sec<10?'0':'')+sec; }
@@ -16247,7 +16247,7 @@ async function openStatsDebug() {
   ];
   const fieldRows = fields.map(([k,v]) => '<tr><td style="padding:4px 8px;color:#9ca3af">'+esc(k)+'</td><td style="padding:4px 8px;color:'+(v===undefined||v===0?'#6b7280':'#22c55e')+';font-weight:700;text-align:right">'+(v===undefined?'<i>undefined</i>':String(v))+'</td></tr>').join('');
   const errBanner = (j.ok && r.ok) ? '' :
-    '<div style="padding:12px 14px;background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.35);border-radius:8px;margin-bottom:12px;color:#f87171;font-weight:700">' +
+    '<div style="padding:12px 14px;background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.35);border-radius:8px;margin-bottom:var(--space-3);color:#f87171;font-weight:700">' +
       '❌ Response NICHT ok · HTTP '+httpStatus+' · error: '+esc(j.error||j._parseError||'unbekannt') +
       '<br><br><b style="color:#fff">Bedeutung:</b> Fehler beim Lesen aus dem lokalen Datastore. App läuft standalone — kein Mainbot mehr beteiligt.' +
     '</div>';
@@ -16259,7 +16259,7 @@ async function openStatsDebug() {
         '<b style="color:#cc5de8">Recent Signups:</b> '+((j.recentSignups||[]).length)+
       '</div>' +
       '<table style="width:100%;border-collapse:collapse;background:var(--dink);border-radius:8px;overflow:hidden">'+fieldRows+'</table>' +
-      '<div style="font-size:10px;color:#9ca3af;margin-top:8px">Grün = Wert > 0 · Grau = 0 oder undefined</div>' +
+      '<div style="font-size:10px;color:#9ca3af;margin-top:var(--space-2)">Grün = Wert > 0 · Grau = 0 oder undefined</div>' +
     '</div>' +
     '<div class="dash-modal-foot"><button class="dash-btn dash-btn-primary" onclick="this.closest(\\'.dash-modal-bg\\').remove()">Schließen</button></div>' +
     '</div>';
@@ -16297,13 +16297,13 @@ async function openEventModal(type) {
       (active
         ? '<div style="padding:14px;background:rgba(34,197,94,0.10);border:1px solid rgba(34,197,94,0.35);border-radius:12px;margin-bottom:14px">' +
             '<div style="font-size:11px;font-weight:700;color:#22c55e;letter-spacing:1px;text-transform:uppercase">⏱ Läuft gerade</div>' +
-            '<div style="font-size:14px;font-weight:700;margin-top:4px">'+activeText+' · noch '+Math.round(active.remainingMs/60000)+' min</div>' +
+            '<div style="font-size:14px;font-weight:700;margin-top:var(--space-1)">'+activeText+' · noch '+Math.round(active.remainingMs/60000)+' min</div>' +
           '</div>'
         : '') +
       '<label style="font-size:11px;font-weight:700;letter-spacing:1.4px;color:var(--dsub);text-transform:uppercase;display:block;margin-bottom:6px">'+labelText+'</label>' +
-      '<input type="number" id="evt-amount" min="1" max="'+maxVal+'" placeholder="'+placeholder+'" style="width:100%;padding:11px 14px;background:var(--dink);border:1px solid var(--dline);border-radius:10px;color:#fff;font-size:14px;margin-bottom:12px;font-family:inherit">' +
+      '<input type="number" id="evt-amount" min="1" max="'+maxVal+'" placeholder="'+placeholder+'" style="width:100%;padding:11px 14px;background:var(--dink);border:1px solid var(--dline);border-radius:10px;color:#fff;font-size:14px;margin-bottom:var(--space-3);font-family:inherit">' +
       '<label style="font-size:11px;font-weight:700;letter-spacing:1.4px;color:var(--dsub);text-transform:uppercase;display:block;margin-bottom:6px">Dauer</label>' +
-      '<select id="evt-duration" style="width:100%;padding:11px 14px;background:var(--dink);border:1px solid var(--dline);border-radius:10px;color:#fff;font-size:14px;margin-bottom:12px;font-family:inherit">' +
+      '<select id="evt-duration" style="width:100%;padding:11px 14px;background:var(--dink);border:1px solid var(--dline);border-radius:10px;color:#fff;font-size:14px;margin-bottom:var(--space-3);font-family:inherit">' +
         '<option value="900000">15 Minuten</option>' +
         '<option value="1800000">30 Minuten</option>' +
         '<option value="3600000" selected>1 Stunde</option>' +
@@ -16319,10 +16319,10 @@ async function openEventModal(type) {
       '</select>' +
       '<label style="font-size:11px;font-weight:700;letter-spacing:1.4px;color:var(--dsub);text-transform:uppercase;display:block;margin-bottom:6px">Start (optional — leer = sofort)</label>' +
       '<input type="datetime-local" id="evt-startat" style="width:100%;padding:11px 14px;background:var(--dink);border:1px solid var(--dline);border-radius:10px;color:#fff;font-size:14px;margin-bottom:6px;font-family:inherit;color-scheme:dark">' +
-      '<div style="font-size:11px;color:var(--dsub);margin-bottom:12px;line-height:1.5">Wenn gesetzt: alle User bekommen JETZT eine Ankuendigungs-DM mit Datum + Uhrzeit, 1h vorher und 30 Min vorher einen Reminder, und beim Start eine Push.</div>' +
+      '<div style="font-size:11px;color:var(--dsub);margin-bottom:var(--space-3);line-height:1.5">Wenn gesetzt: alle User bekommen JETZT eine Ankuendigungs-DM mit Datum + Uhrzeit, 1h vorher und 30 Min vorher einen Reminder, und beim Start eine Push.</div>' +
       '<label style="font-size:11px;font-weight:700;letter-spacing:1.4px;color:var(--dsub);text-transform:uppercase;display:block;margin-bottom:6px">Label (optional)</label>' +
       '<input type="text" id="evt-label" placeholder="z.B. \\'Wochenend-Bonus\\'" maxlength="60" style="width:100%;padding:11px 14px;background:var(--dink);border:1px solid var(--dline);border-radius:10px;color:#fff;font-size:14px;margin-bottom:6px;font-family:inherit">' +
-      '<div style="font-size:11px;color:var(--dsub);margin-top:8px;line-height:1.5">Während des Events erscheint ein Live-Banner im Feed bei jedem User. Bei jedem Post wird der Bonus automatisch gutgeschrieben + In-App-DM gesendet.</div>' +
+      '<div style="font-size:11px;color:var(--dsub);margin-top:var(--space-2);line-height:1.5">Während des Events erscheint ein Live-Banner im Feed bei jedem User. Bei jedem Post wird der Bonus automatisch gutgeschrieben + In-App-DM gesendet.</div>' +
     '</div>' +
     '<div class="dash-modal-foot">' +
       (active ? '<button class="dash-btn" onclick="stopEvent(\\''+type+'\\', this)" style="color:#ef4444;border-color:rgba(239,68,68,0.4)">🛑 Event stoppen</button>' : '') +
@@ -16730,7 +16730,7 @@ function renderActivityFeed(events) {
     const dateStr = ts.toDateString() === new Date().toDateString() ? 'heute' : ts.toLocaleDateString('de-DE', {day:'2-digit', month:'2-digit'});
     return '<div style="display:flex;align-items:center;gap:10px;padding:7px 10px;background:var(--dink);border-radius:8px;font-size:12px">' +
       '<div style="width:24px;height:24px;border-radius:50%;background:'+color+'22;color:'+color+';display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0">'+icon+'</div>' +
-      '<div style="flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis"><b style="color:#fff">'+esc(e.event)+'</b><span style="color:var(--dsub);margin-left:8px">·</span><span style="color:var(--dsub);margin-left:8px">'+esc(e.name||'anonym')+'</span></div>' +
+      '<div style="flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis"><b style="color:#fff">'+esc(e.event)+'</b><span style="color:var(--dsub);margin-left:var(--space-2)">·</span><span style="color:var(--dsub);margin-left:var(--space-2)">'+esc(e.name||'anonym')+'</span></div>' +
       '<div style="font-size:10.5px;color:var(--dsub);font-variant-numeric:tabular-nums;flex-shrink:0">'+dateStr+' '+timeStr+'</div>' +
     '</div>';
   }).join('');
@@ -16799,7 +16799,7 @@ async function loadSyncHealth() {
     const degraded = !!h.mainbotDegraded;
     if (degraded) {
       banner.style.display = 'block';
-      banner.innerHTML = '<div style="padding:14px 16px;background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.40);border-radius:12px;display:flex;align-items:center;gap:12px">' +
+      banner.innerHTML = '<div style="padding:14px 16px;background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.40);border-radius:12px;display:flex;align-items:center;gap:var(--space-3)">' +
         '<div style="font-size:20px">⚠️</div>' +
         '<div style="flex:1;min-width:0">' +
           '<div style="font-size:13px;font-weight:800;color:#ef4444">Mainbot-Sync DEGRADED</div>' +
@@ -16835,7 +16835,7 @@ async function openSyncHealthDetail() {
     : '<tr><td colspan="4" style="padding:14px;text-align:center;color:var(--dsub)">Noch keine Writes</td></tr>';
   bg.innerHTML = '<div class="dash-modal" style="max-width:760px"><div class="dash-modal-hdr"><h3>📋 Sync-Health (Phase 2)</h3><div class="dash-modal-meta">Live-Mirror-Status der App↔Mainbot Bridge</div></div>' +
     '<div class="dash-modal-body" style="font-family:ui-monospace,monospace;font-size:11.5px">' +
-      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:14px">' +
+      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:var(--space-2);margin-bottom:14px">' +
         statCard('Cache-Age', (h.cacheAgeSec??'-')+'s', h.cacheAgeSec > 300 ? '#f59e0b' : '#22c55e') +
         statCard('Bridge-Fails (Reihe)', h.mainbotConsecutiveFails??0, h.mainbotConsecutiveFails > 0 ? '#ef4444' : '#22c55e') +
         statCard('Writes heute', h.writesToday??0, '#3b82f6') +
@@ -16927,16 +16927,16 @@ let HELPER_INBOX_FILTER = 'open';
 async function loadHelperInbox(){
   const root = document.getElementById('dash-helper-inbox');
   if (!root) return;
-  root.innerHTML = '<div style="padding:24px;text-align:center;color:var(--dsub)">Lädt Tickets…</div>';
+  root.innerHTML = '<div style="padding:var(--space-6);text-align:center;color:var(--dsub)">Lädt Tickets…</div>';
   try {
     const r = await fetch('/api/admin/helper-questions?status=' + encodeURIComponent(HELPER_INBOX_FILTER));
     const j = await r.json();
-    if (!j.ok) { root.innerHTML = '<div style="padding:24px;text-align:center;color:#ef4444">Fehler: '+(j.error||'?')+'</div>'; return; }
+    if (!j.ok) { root.innerHTML = '<div style="padding:var(--space-6);text-align:center;color:#ef4444">Fehler: '+(j.error||'?')+'</div>'; return; }
     const total = j.total || 0;
     const openN = j.open || 0;
     const items = j.questions || [];
     const filterBtn = (key, label, count) =>
-      '<button onclick="HELPER_INBOX_FILTER=\\''+key+'\\';loadHelperInbox()" class="dash-tab'+(HELPER_INBOX_FILTER===key?' active':'')+'">'+label+' <b style="margin-left:4px;opacity:.7">'+count+'</b></button>';
+      '<button onclick="HELPER_INBOX_FILTER=\\''+key+'\\';loadHelperInbox()" class="dash-tab'+(HELPER_INBOX_FILTER===key?' active':'')+'">'+label+' <b style="margin-left:var(--space-1);opacity:.7">'+count+'</b></button>';
     let html = '<div style="margin-bottom:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">' +
       '<div style="font-size:13px;color:var(--dsub)">Insgesamt: <b style="color:#fff">'+total+'</b> · Offen: <b style="color:#f59e0b">'+openN+'</b></div>' +
       '<div class="dash-tabs" style="margin-left:auto">' +
@@ -16945,19 +16945,19 @@ async function loadHelperInbox(){
         filterBtn('all', '📋 Alle', total) +
       '</div></div>';
     if (items.length === 0) {
-      html += '<div style="padding:32px;text-align:center;color:var(--dsub);background:var(--dink2);border:1px solid var(--dline);border-radius:14px">📭 Keine Tickets in dieser Ansicht.</div>';
+      html += '<div style="padding:var(--space-8);text-align:center;color:var(--dsub);background:var(--dink2);border:1px solid var(--dline);border-radius:14px">📭 Keine Tickets in dieser Ansicht.</div>';
     } else {
       html += '<div style="display:flex;flex-direction:column;gap:10px">';
       for (const t of items) {
         const isOpen = !t.answeredAt;
         const dt = new Date(t.ts || 0).toLocaleString('de-DE', {hour:'2-digit', minute:'2-digit', day:'2-digit', month:'2-digit'});
         const followUpsN = Array.isArray(t.followUps) ? t.followUps.length : 0;
-        const followsHtml = followUpsN > 0 ? '<div style="margin-top:8px;padding:8px 10px;background:rgba(167,139,250,0.06);border-left:2px solid #a78bfa;border-radius:6px;font-size:11.5px"><b>💬 '+followUpsN+' Follow-up'+(followUpsN===1?'':'s')+':</b><br>' +
+        const followsHtml = followUpsN > 0 ? '<div style="margin-top:var(--space-2);padding:8px 10px;background:rgba(167,139,250,0.06);border-left:2px solid #a78bfa;border-radius:6px;font-size:11.5px"><b>💬 '+followUpsN+' Follow-up'+(followUpsN===1?'':'s')+':</b><br>' +
           t.followUps.map(f => '· ' + escapeHtmlDash(String(f.text||'')).slice(0,200)).join('<br>') + '</div>' : '';
         const answerHtml = !isOpen ? '<div style="margin-top:10px;padding:10px;background:rgba(34,197,94,0.08);border-left:2px solid #22c55e;border-radius:6px;font-size:12px"><b style="color:#22c55e">✅ Antwort:</b><br>'+escapeHtmlDash(String(t.answer||'')).replace(/\\n/g,'<br>')+'</div>' : '';
-        const replyBox = isOpen ? '<div style="margin-top:10px;display:flex;gap:8px"><textarea id="hi-reply-'+t.id+'" placeholder="Antwort an '+escapeHtmlDash(t.name||'User')+'…" style="flex:1;padding:9px 11px;background:var(--dink);border:1px solid var(--dline);border-radius:8px;color:#fff;font-size:12.5px;font-family:inherit;resize:vertical;min-height:60px"></textarea><button onclick="sendHelperReply(\\''+t.id+'\\')" class="dash-btn dash-btn-primary" style="white-space:nowrap;height:fit-content">📨 Senden</button></div>' : '';
+        const replyBox = isOpen ? '<div style="margin-top:10px;display:flex;gap:var(--space-2)"><textarea id="hi-reply-'+t.id+'" placeholder="Antwort an '+escapeHtmlDash(t.name||'User')+'…" style="flex:1;padding:9px 11px;background:var(--dink);border:1px solid var(--dline);border-radius:8px;color:#fff;font-size:12.5px;font-family:inherit;resize:vertical;min-height:60px"></textarea><button onclick="sendHelperReply(\\''+t.id+'\\')" class="dash-btn dash-btn-primary" style="white-space:nowrap;height:fit-content">📨 Senden</button></div>' : '';
         html += '<div style="padding:14px 16px;background:var(--dink2);border:1px solid '+(isOpen?'rgba(245,158,11,0.3)':'var(--dline)')+';border-radius:12px">' +
-          '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">' +
+          '<div style="display:flex;align-items:center;gap:10px;margin-bottom:var(--space-2)">' +
           '<div style="font-size:11px;font-weight:700;padding:3px 8px;border-radius:99px;background:'+(isOpen?'rgba(245,158,11,0.18);color:#f59e0b':'rgba(34,197,94,0.18);color:#22c55e')+'">'+(isOpen?'🎫 OFFEN':'✅ BEANTWORTET')+'</div>' +
           '<div style="font-size:12.5px;font-weight:700">'+escapeHtmlDash(t.name||'User')+' <span style="color:var(--dsub);font-weight:400">· UID '+t.uid+'</span></div>' +
           '<div style="margin-left:auto;font-size:11px;color:var(--dsub)">'+dt+'</div>' +
@@ -16974,7 +16974,7 @@ async function loadHelperInbox(){
     const badge = document.getElementById('dash-tickets-badge');
     if (badge) { badge.textContent = openN; badge.style.display = openN > 0 ? 'inline-block' : 'none'; }
   } catch (e) {
-    root.innerHTML = '<div style="padding:24px;text-align:center;color:#ef4444">Fehler: '+e.message+'</div>';
+    root.innerHTML = '<div style="padding:var(--space-6);text-align:center;color:#ef4444">Fehler: '+e.message+'</div>';
   }
 }
 function escapeHtmlDash(s){ return String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -17023,14 +17023,14 @@ function jumpToHelperInbox(){
 async function loadDiamondLinksAdmin(){
   const root = document.getElementById('dash-diamond-links');
   if (!root) return;
-  root.innerHTML = '<div style="padding:24px;text-align:center;color:var(--dsub)">⏳ Lade Diamantlinks …</div>';
+  root.innerHTML = '<div style="padding:var(--space-6);text-align:center;color:var(--dsub)">⏳ Lade Diamantlinks …</div>';
   try {
     const r = await fetch('/api/admin/diamond-link/list');
     const j = await r.json();
-    if (!j.ok) { root.innerHTML = '<div style="padding:24px;text-align:center;color:#ef4444">'+(j.error||'Fehler')+'</div>'; return; }
+    if (!j.ok) { root.innerHTML = '<div style="padding:var(--space-6);text-align:center;color:#ef4444">'+(j.error||'Fehler')+'</div>'; return; }
     const fmtTs = (ts) => ts ? new Date(ts).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '–';
     const posts = j.posts || [];
-    if (!posts.length) { root.innerHTML = '<div style="padding:32px;text-align:center;color:var(--dsub);font-size:13px">Noch keine Diamantlinks gepostet</div>'; return; }
+    if (!posts.length) { root.innerHTML = '<div style="padding:var(--space-8);text-align:center;color:var(--dsub);font-size:13px">Noch keine Diamantlinks gepostet</div>'; return; }
     let html = '<div style="padding:14px 16px 8px;font-size:11px;color:var(--dsub);text-transform:uppercase;letter-spacing:1.4px;font-weight:700">💎 Alle Diamantlinks · '+posts.length+' insgesamt · '+posts.filter(p=>p.active).length+' aktiv</div>';
     for (const p of posts) {
       const a = p.author||{};
@@ -17038,8 +17038,8 @@ async function loadDiamondLinksAdmin(){
         : p.active ? '<span class="dash-pill ok">🟢 aktiv</span>'
         : '<span class="dash-pill muted">⏱ abgelaufen</span>';
       const engagersHtml = (p.engagers||[]).length
-        ? '<div style="margin-top:8px;display:flex;flex-direction:column;gap:4px">'+p.engagers.map(e =>
-            '<div style="display:flex;align-items:center;gap:8px;padding:5px 10px;background:var(--dink);border-radius:6px;font-size:11.5px">' +
+        ? '<div style="margin-top:var(--space-2);display:flex;flex-direction:column;gap:var(--space-1)">'+p.engagers.map(e =>
+            '<div style="display:flex;align-items:center;gap:var(--space-2);padding:5px 10px;background:var(--dink);border-radius:6px;font-size:11.5px">' +
               '<a href="/profil/'+esc(e.uid)+'" style="color:var(--text);text-decoration:none;font-weight:600">'+esc(e.name)+'</a>'+
               (e.instagram?'<span style="color:#06b6d4">@'+esc(e.instagram)+'</span>':'')+
               '<div style="flex:1"></div>'+
@@ -17048,7 +17048,7 @@ async function loadDiamondLinksAdmin(){
           ).join('')+'</div>'
         : '<div style="font-size:11px;color:var(--dsub);margin-top:6px;font-style:italic">Noch keine Engagements</div>';
       html += '<div style="margin:0 16px 12px;padding:14px;background:var(--dink2);border:1px solid var(--dline);border-radius:12px">' +
-        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">' +
+        '<div style="display:flex;align-items:center;gap:var(--space-2);margin-bottom:8px;flex-wrap:wrap">' +
           status +
           '<span style="font-size:11px;color:var(--dsub)">'+fmtTs(p.createdAt)+' · endet '+fmtTs(p.expiresAt)+'</span>'+
           '<div style="flex:1"></div>'+
@@ -17056,13 +17056,13 @@ async function loadDiamondLinksAdmin(){
         '</div>'+
         '<div style="font-size:13px;font-weight:700;margin-bottom:6px"><a href="/profil/'+esc(p.uid)+'" style="color:var(--text);text-decoration:none">'+esc(a.name||'User')+'</a>'+(a.instagram?'<span style="color:#06b6d4;font-weight:500;font-size:12px;margin-left:6px">@'+esc(a.instagram)+'</span>':'')+'</div>'+
         '<a href="'+esc(cleanInstagramUrl(p.url))+'" target="_blank" style="display:block;font-size:12px;color:#06b6d4;word-break:break-all;text-decoration:none;margin-bottom:6px">🔗 '+esc(p.url)+'</a>'+
-        (p.caption?'<div style="font-size:12px;color:var(--text);margin-bottom:8px">'+esc(p.caption)+'</div>':'')+
-        '<div style="font-size:11px;color:var(--dsub);margin-top:8px">'+p.likeCount+' Engagements:</div>'+
+        (p.caption?'<div style="font-size:12px;color:var(--text);margin-bottom:var(--space-2)">'+esc(p.caption)+'</div>':'')+
+        '<div style="font-size:11px;color:var(--dsub);margin-top:var(--space-2)">'+p.likeCount+' Engagements:</div>'+
         engagersHtml+
       '</div>';
     }
     root.innerHTML = html;
-  } catch(e) { root.innerHTML = '<div style="padding:24px;text-align:center;color:#ef4444">'+e.message+'</div>'; }
+  } catch(e) { root.innerHTML = '<div style="padding:var(--space-6);text-align:center;color:#ef4444">'+e.message+'</div>'; }
 }
 async function deleteDiamondLink(postId, btn){
   if (!confirm('Diamantlink wirklich löschen? Soft-Delete — Post bleibt im Log, wird aber nicht mehr im Feed angezeigt.')) return;
@@ -17076,14 +17076,14 @@ async function deleteDiamondLink(postId, btn){
 async function loadPrismaLinksAdmin(){
   const root = document.getElementById('dash-prisma-links');
   if (!root) return;
-  root.innerHTML = '<div style="padding:24px;text-align:center;color:var(--dsub)">⏳ Lade Prismalinks …</div>';
+  root.innerHTML = '<div style="padding:var(--space-6);text-align:center;color:var(--dsub)">⏳ Lade Prismalinks …</div>';
   try {
     const r = await fetch('/api/admin/prisma-link/list');
     const j = await r.json();
-    if (!j.ok) { root.innerHTML = '<div style="padding:24px;text-align:center;color:#ef4444">'+(j.error||'Fehler')+'</div>'; return; }
+    if (!j.ok) { root.innerHTML = '<div style="padding:var(--space-6);text-align:center;color:#ef4444">'+(j.error||'Fehler')+'</div>'; return; }
     const fmtTs = (ts) => ts ? new Date(ts).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '–';
     const posts = j.posts || [];
-    if (!posts.length) { root.innerHTML = '<div style="padding:32px;text-align:center;color:var(--dsub);font-size:13px">Noch keine Prismalinks gepostet</div>'; return; }
+    if (!posts.length) { root.innerHTML = '<div style="padding:var(--space-8);text-align:center;color:var(--dsub);font-size:13px">Noch keine Prismalinks gepostet</div>'; return; }
     let html = '<div style="padding:14px 16px 8px;font-size:11px;color:var(--dsub);text-transform:uppercase;letter-spacing:1.4px;font-weight:700">💠 Alle Prismalinks · '+posts.length+' insgesamt · '+posts.filter(p=>p.active).length+' aktiv · 100💎 Kosten · 7💎 Reward</div>';
     for (const p of posts) {
       const a = p.author||{};
@@ -17091,8 +17091,8 @@ async function loadPrismaLinksAdmin(){
         : p.active ? '<span class="dash-pill ok" style="background:linear-gradient(135deg,rgba(168,85,247,0.15),rgba(6,182,212,0.15));color:#a855f7;border-color:rgba(168,85,247,0.35)">🟢 aktiv</span>'
         : '<span class="dash-pill muted">⏱ abgelaufen</span>';
       const engagersHtml = (p.engagers||[]).length
-        ? '<div style="margin-top:8px;display:flex;flex-direction:column;gap:4px">'+p.engagers.map(e =>
-            '<div style="display:flex;align-items:center;gap:8px;padding:5px 10px;background:var(--dink);border-radius:6px;font-size:11.5px">' +
+        ? '<div style="margin-top:var(--space-2);display:flex;flex-direction:column;gap:var(--space-1)">'+p.engagers.map(e =>
+            '<div style="display:flex;align-items:center;gap:var(--space-2);padding:5px 10px;background:var(--dink);border-radius:6px;font-size:11.5px">' +
               '<a href="/profil/'+esc(e.uid)+'" style="color:var(--text);text-decoration:none;font-weight:600">'+esc(e.name)+'</a>'+
               (e.instagram?'<a href="https://instagram.com/'+esc(e.instagram)+'" target="_blank" rel="noopener" style="color:#a855f7;text-decoration:none">@'+esc(e.instagram)+'</a>':'')+
               '<span style="background:linear-gradient(135deg,#a855f7,#06b6d4);color:#fff;padding:2px 7px;border-radius:99px;font-size:10px;font-weight:800">+7💎</span>'+
@@ -17103,7 +17103,7 @@ async function loadPrismaLinksAdmin(){
         : '<div style="font-size:11px;color:var(--dsub);margin-top:6px;font-style:italic">Noch keine Engagements</div>';
       html += '<div style="margin:0 16px 12px;padding:14px;background:var(--dink2);border:1px solid rgba(168,85,247,0.30);border-radius:12px;position:relative;overflow:hidden">' +
         '<div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#ef4444,#f59e0b,#22c55e,#06b6d4,#a855f7)"></div>'+
-        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;margin-top:6px">' +
+        '<div style="display:flex;align-items:center;gap:var(--space-2);margin-bottom:8px;flex-wrap:wrap;margin-top:6px">' +
           status +
           '<span style="font-size:11px;color:var(--dsub)">'+fmtTs(p.createdAt)+' · endet '+fmtTs(p.expiresAt)+'</span>'+
           '<div style="flex:1"></div>'+
@@ -17111,13 +17111,13 @@ async function loadPrismaLinksAdmin(){
         '</div>'+
         '<div style="font-size:13px;font-weight:700;margin-bottom:6px"><a href="/profil/'+esc(p.uid)+'" style="color:var(--text);text-decoration:none">'+esc(a.name||'User')+'</a>'+(a.instagram?'<a href="https://instagram.com/'+esc(a.instagram)+'" target="_blank" rel="noopener" style="color:#a855f7;text-decoration:none;font-weight:500;font-size:12px;margin-left:6px">@'+esc(a.instagram)+'</a>':'')+'</div>'+
         '<a href="'+esc(cleanInstagramUrl(p.url))+'" target="_blank" style="display:block;font-size:12px;color:#a855f7;word-break:break-all;text-decoration:none;margin-bottom:6px">🔗 '+esc(p.url)+'</a>'+
-        (p.caption?'<div style="font-size:12px;color:var(--text);margin-bottom:8px">'+esc(p.caption)+'</div>':'')+
-        '<div style="font-size:11px;color:var(--dsub);margin-top:8px"><b>'+p.likeCount+' Engagements</b> · jeder +7💎 erhalten:</div>'+
+        (p.caption?'<div style="font-size:12px;color:var(--text);margin-bottom:var(--space-2)">'+esc(p.caption)+'</div>':'')+
+        '<div style="font-size:11px;color:var(--dsub);margin-top:var(--space-2)"><b>'+p.likeCount+' Engagements</b> · jeder +7💎 erhalten:</div>'+
         engagersHtml+
       '</div>';
     }
     root.innerHTML = html;
-  } catch(e) { root.innerHTML = '<div style="padding:24px;text-align:center;color:#ef4444">'+e.message+'</div>'; }
+  } catch(e) { root.innerHTML = '<div style="padding:var(--space-6);text-align:center;color:#ef4444">'+e.message+'</div>'; }
 }
 async function deletePrismaLink(postId, btn){
   if (!confirm('Prismalink wirklich löschen? Soft-Delete — Post bleibt im Log, wird aber nicht mehr im Feed angezeigt.')) return;
@@ -17130,35 +17130,35 @@ async function deletePrismaLink(postId, btn){
 
 async function loadEngagementLog(){
   const root = document.getElementById('dash-engagement-log');
-  root.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted)">⏳ Lade Engagement-Log…</div>';
+  root.innerHTML = '<div style="padding:var(--space-6);text-align:center;color:var(--muted)">⏳ Lade Engagement-Log…</div>';
   try {
     const r = await fetch('/api/admin/engagement-log');
     const j = await r.json();
-    if (!j.ok) { root.innerHTML = '<div style="padding:24px;text-align:center;color:#ef4444">'+(j.error||'Fehler')+'</div>'; return; }
+    if (!j.ok) { root.innerHTML = '<div style="padding:var(--space-6);text-align:center;color:#ef4444">'+(j.error||'Fehler')+'</div>'; return; }
     const esc = (s) => String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     const fmtTs = (ts) => ts ? new Date(ts).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '–';
     let html = '';
     // Pinned engagements
     html += '<div style="padding:14px 16px 8px;font-size:11px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;color:var(--muted)">📌 Pinned-Engagements (' + (j.pinned||[]).length + ')</div>';
-    if (!j.pinned?.length) html += '<div style="padding:16px;text-align:center;color:var(--muted);font-size:12.5px">Noch keine</div>';
+    if (!j.pinned?.length) html += '<div style="padding:var(--space-4);text-align:center;color:var(--muted);font-size:12.5px">Noch keine</div>';
     else {
       for (const e of j.pinned) {
         html += '<div style="margin:0 16px 8px;padding:10px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;font-size:12.5px;line-height:1.5">' +
           '<div><a href="/profil/'+esc(e.engagerUid)+'" style="color:#ec4899;font-weight:700;text-decoration:none">'+esc(e.engagerName)+'</a>'+(e.engagerInstagram?' · @'+esc(e.engagerInstagram):'')+' → engagierte Pinned von <a href="/profil/'+esc(e.ownerUid)+'" style="color:#a78bfa;font-weight:700;text-decoration:none">'+esc(e.ownerName)+'</a></div>' +
-          (e.pinnedUrl ? '<div style="margin-top:4px"><a href="'+esc(cleanInstagramUrl(e.pinnedUrl))+'" target="_blank" style="color:var(--muted);font-size:11px;word-break:break-all">'+esc(e.pinnedUrl)+'</a></div>' : '') +
-          '<div style="font-size:11px;color:var(--muted);margin-top:4px">'+fmtTs(e.ts)+'</div>' +
+          (e.pinnedUrl ? '<div style="margin-top:var(--space-1)"><a href="'+esc(cleanInstagramUrl(e.pinnedUrl))+'" target="_blank" style="color:var(--muted);font-size:11px;word-break:break-all">'+esc(e.pinnedUrl)+'</a></div>' : '') +
+          '<div style="font-size:11px;color:var(--muted);margin-top:var(--space-1)">'+fmtTs(e.ts)+'</div>' +
         '</div>';
       }
     }
     // Collab likes
     html += '<div style="padding:18px 16px 8px;font-size:11px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;color:var(--muted)">🤝 Kollab-Engagements (' + (j.collabs||[]).length + ')</div>';
-    if (!j.collabs?.length) html += '<div style="padding:16px;text-align:center;color:var(--muted);font-size:12.5px">Noch keine</div>';
+    if (!j.collabs?.length) html += '<div style="padding:var(--space-4);text-align:center;color:var(--muted);font-size:12.5px">Noch keine</div>';
     else {
       for (const e of j.collabs) {
         html += '<div style="margin:0 16px 8px;padding:10px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;font-size:12.5px;line-height:1.5">' +
           '<div><a href="/profil/'+esc(e.engagerUid)+'" style="color:#ec4899;font-weight:700;text-decoration:none">'+esc(e.engagerName)+'</a>'+(e.engagerInstagram?' · @'+esc(e.engagerInstagram):'')+' → engagierte Kollab von <a href="/profil/'+esc(e.authorA.uid)+'" style="color:#a78bfa;font-weight:700;text-decoration:none">'+esc(e.authorA.name)+'</a> × <a href="/profil/'+esc(e.authorB.uid)+'" style="color:#a78bfa;font-weight:700;text-decoration:none">'+esc(e.authorB.name)+'</a></div>' +
-          (e.url ? '<div style="margin-top:4px"><a href="'+esc(cleanInstagramUrl(e.url))+'" target="_blank" style="color:var(--muted);font-size:11px;word-break:break-all">'+esc(e.url)+'</a></div>' : '') +
-          '<div style="font-size:11px;color:var(--muted);margin-top:4px">Woche '+esc(e.week||'?')+'</div>' +
+          (e.url ? '<div style="margin-top:var(--space-1)"><a href="'+esc(cleanInstagramUrl(e.url))+'" target="_blank" style="color:var(--muted);font-size:11px;word-break:break-all">'+esc(e.url)+'</a></div>' : '') +
+          '<div style="font-size:11px;color:var(--muted);margin-top:var(--space-1)">Woche '+esc(e.week||'?')+'</div>' +
         '</div>';
       }
     }
@@ -17169,7 +17169,7 @@ async function loadEngagementLog(){
     }
     root.innerHTML = html;
     updateReportsBadge(j.reports || []);
-  } catch(e) { root.innerHTML = '<div style="padding:24px;text-align:center;color:#ef4444">'+e.message+'</div>'; }
+  } catch(e) { root.innerHTML = '<div style="padding:var(--space-6);text-align:center;color:#ef4444">'+e.message+'</div>'; }
 }
 
 let LAST_REPORTS = [];
@@ -17197,15 +17197,15 @@ function jumpToReports() {
 async function loadReports() {
   const root = document.getElementById('dash-reports');
   if (!root) return;
-  root.innerHTML = '<div style="padding:24px;text-align:center;color:var(--dsub)">⏳ Lade Meldungen…</div>';
+  root.innerHTML = '<div style="padding:var(--space-6);text-align:center;color:var(--dsub)">⏳ Lade Meldungen…</div>';
   try {
     const r = await fetch('/api/admin/engagement-log');
     const j = await r.json();
-    if (!j.ok) { root.innerHTML = '<div style="padding:24px;text-align:center;color:#ef4444">'+(j.error||'Fehler')+'</div>'; return; }
+    if (!j.ok) { root.innerHTML = '<div style="padding:var(--space-6);text-align:center;color:#ef4444">'+(j.error||'Fehler')+'</div>'; return; }
     LAST_REPORTS = j.reports || [];
     updateReportsBadge(LAST_REPORTS);
     renderReports();
-  } catch(e) { root.innerHTML = '<div style="padding:24px;text-align:center;color:#ef4444">'+e.message+'</div>'; }
+  } catch(e) { root.innerHTML = '<div style="padding:var(--space-6);text-align:center;color:#ef4444">'+e.message+'</div>'; }
 }
 
 function renderReports() {
@@ -17221,7 +17221,7 @@ function renderReports() {
   };
   const filtered = CUR_REPORT_FILTER === 'all' ? all : all.filter(r => (r.status||'open') === CUR_REPORT_FILTER);
   const tabBtn = (key, label, count, color) =>
-    '<button onclick="setReportFilter(\\''+key+'\\')" class="dash-tab'+(CUR_REPORT_FILTER===key?' active':'')+'" style="'+(CUR_REPORT_FILTER===key?'':'color:'+color)+'">'+label+' <b style="margin-left:4px;opacity:.7">'+count+'</b></button>';
+    '<button onclick="setReportFilter(\\''+key+'\\')" class="dash-tab'+(CUR_REPORT_FILTER===key?' active':'')+'" style="'+(CUR_REPORT_FILTER===key?'':'color:'+color)+'">'+label+' <b style="margin-left:var(--space-1);opacity:.7">'+count+'</b></button>';
 
   let html = '<div class="dash-tabs" style="margin:8px 0 12px">' +
     tabBtn('open', '🔴 Offen', counts.open, '#f87171') +
@@ -17231,7 +17231,7 @@ function renderReports() {
   '</div>';
 
   if (!filtered.length) {
-    html += '<div style="padding:32px;text-align:center;color:var(--dsub);font-size:13px">' +
+    html += '<div style="padding:var(--space-8);text-align:center;color:var(--dsub);font-size:13px">' +
       (CUR_REPORT_FILTER === 'open' ? '🎉 Keine offenen Meldungen.' : 'Keine Einträge in diesem Filter.') +
     '</div>';
     root.innerHTML = html;
@@ -17248,7 +17248,7 @@ function renderReports() {
     const banPill = r.targetBanned ? '<span class="dash-pill err">🚫 Bereits gebannt</span>' : '';
 
     html += '<div style="margin:0 0 10px;padding:14px 16px;background:'+(isOpen?'rgba(239,68,68,0.06)':'var(--dink2)')+';border:1px solid '+(isOpen?'rgba(239,68,68,0.20)':'var(--dline)')+';border-radius:12px">' +
-      '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px">' +
+      '<div style="display:flex;align-items:center;gap:var(--space-2);flex-wrap:wrap;margin-bottom:var(--space-2)">' +
         statusPill + warnPill + banPill +
         '<div style="flex:1"></div>' +
         '<span style="font-size:11px;color:var(--dsub)">'+fmtTs(r.ts)+'</span>' +
@@ -17260,9 +17260,9 @@ function renderReports() {
         '<a href="/profil/'+esc(r.targetUid)+'" style="color:#f87171;font-weight:700;text-decoration:none">'+esc(r.targetName)+'</a>' +
         (r.targetInstagram?' <span style="color:#06b6d4;font-size:12px">@'+esc(r.targetInstagram)+'</span>':'') +
       '</div>' +
-      (r.reason ? '<div style="font-size:12.5px;color:#e7e7ea;margin-bottom:4px"><b style="color:var(--dsub);font-weight:600">Grund:</b> '+esc(r.reason)+'</div>' : '') +
-      (r.context ? '<div style="font-size:12px;color:var(--dsub);margin-bottom:8px">Kontext: '+esc(r.context)+'</div>' : '') +
-      (r.resolvedAt ? '<div style="font-size:11px;color:var(--dsub);margin-bottom:8px">Bearbeitet '+fmtTs(r.resolvedAt)+(r.resolvedBy?' · von UID '+esc(r.resolvedBy):'')+'</div>' : '') +
+      (r.reason ? '<div style="font-size:12.5px;color:#e7e7ea;margin-bottom:var(--space-1)"><b style="color:var(--dsub);font-weight:600">Grund:</b> '+esc(r.reason)+'</div>' : '') +
+      (r.context ? '<div style="font-size:12px;color:var(--dsub);margin-bottom:var(--space-2)">Kontext: '+esc(r.context)+'</div>' : '') +
+      (r.resolvedAt ? '<div style="font-size:11px;color:var(--dsub);margin-bottom:var(--space-2)">Bearbeitet '+fmtTs(r.resolvedAt)+(r.resolvedBy?' · von UID '+esc(r.resolvedBy):'')+'</div>' : '') +
       (isOpen
         ? '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">' +
             '<button onclick="reportAction(\\''+esc(r.id)+'\\',\\'dismiss\\',this)" class="dash-act">⚪ Verwerfen</button>' +
@@ -17309,15 +17309,15 @@ let CUR_COMP_FILTER = 'failedM1';
 async function loadCompliance(date) {
   const root = document.getElementById('dash-compliance');
   if (!root) return;
-  root.innerHTML = '<div style="padding:24px;text-align:center;color:var(--dsub)">⏳ Lade Mission-Report…</div>';
+  root.innerHTML = '<div style="padding:var(--space-6);text-align:center;color:var(--dsub)">⏳ Lade Mission-Report…</div>';
   const dateParam = date || 'yesterday';
   try {
     const r = await fetch('/api/admin/mission-report?date=' + encodeURIComponent(dateParam));
     const j = await r.json();
-    if (!j.ok) { root.innerHTML = '<div style="padding:24px;text-align:center;color:#ef4444">'+(j.error||'Fehler')+'</div>'; return; }
+    if (!j.ok) { root.innerHTML = '<div style="padding:var(--space-6);text-align:center;color:#ef4444">'+(j.error||'Fehler')+'</div>'; return; }
     LAST_COMPLIANCE = j;
     renderCompliance();
-  } catch(e) { root.innerHTML = '<div style="padding:24px;text-align:center;color:#ef4444">'+e.message+'</div>'; }
+  } catch(e) { root.innerHTML = '<div style="padding:var(--space-6);text-align:center;color:#ef4444">'+e.message+'</div>'; }
 }
 
 function renderCompliance() {
@@ -17344,7 +17344,7 @@ function renderCompliance() {
   const criticalWarnings = all.filter(u => u.warnings >= 3).length;
 
   const tabBtn = (key, label, count, color) =>
-    '<button onclick="setComplianceFilter(\\''+key+'\\')" class="dash-tab'+(CUR_COMP_FILTER===key?' active':'')+'" style="'+(CUR_COMP_FILTER===key?'':'color:'+color+';')+'flex-shrink:0">'+label+' <b style="margin-left:4px;opacity:.7">'+count+'</b></button>';
+    '<button onclick="setComplianceFilter(\\''+key+'\\')" class="dash-tab'+(CUR_COMP_FILTER===key?' active':'')+'" style="'+(CUR_COMP_FILTER===key?'':'color:'+color+';')+'flex-shrink:0">'+label+' <b style="margin-left:var(--space-1);opacity:.7">'+count+'</b></button>';
 
   // ── Header mit Datums-Picker und Hero-Banner ──
   let html =
@@ -17367,10 +17367,10 @@ function renderCompliance() {
   // ── Big Summary-Stats Grid (4 große Cards für Mission-Status) ──
   const bigStat = (lbl, val, sub, color, bg, icon) =>
     '<div style="padding:18px 20px;background:'+bg+';border:1.5px solid '+color+';border-radius:14px">' +
-      '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">' +
+      '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:var(--space-2)">' +
         '<div><div style="font-size:11px;font-weight:800;letter-spacing:1.5px;color:'+color+';text-transform:uppercase">'+lbl+'</div>' +
-        '<div style="font-size:32px;font-weight:900;color:#fff;line-height:1;margin-top:4px;letter-spacing:-0.5px">'+val+'</div>' +
-        '<div style="font-size:11.5px;color:var(--dsub);margin-top:4px;line-height:1.3">'+sub+'</div></div>' +
+        '<div style="font-size:32px;font-weight:900;color:#fff;line-height:1;margin-top:var(--space-1);letter-spacing:-0.5px">'+val+'</div>' +
+        '<div style="font-size:11.5px;color:var(--dsub);margin-top:var(--space-1);line-height:1.3">'+sub+'</div></div>' +
         '<div style="font-size:28px;opacity:.4">'+icon+'</div>' +
       '</div>' +
     '</div>';
@@ -17440,28 +17440,28 @@ function renderCompliance() {
         '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">' +
           '<a href="javascript:openUser(\\''+esc(u.uid)+'\\')" style="font-size:15px;font-weight:800;color:#fff;text-decoration:none">'+esc(u.name)+'</a>' +
           (u.instagram?'<span style="font-size:12.5px;color:#06b6d4">@'+esc(u.instagram)+'</span>':'') +
-          '<div style="display:flex;gap:4px;flex-wrap:wrap">'+missionPills.join('')+'</div>' +
+          '<div style="display:flex;gap:var(--space-1);flex-wrap:wrap">'+missionPills.join('')+'</div>' +
           '<div style="flex:1"></div>' +
           (u.lastSeen ? '<span style="font-size:10.5px;color:var(--dsub)">🕒 '+fmtAgo(u.lastSeen)+'</span>' : '') +
           (u.banned ? '<span class="dash-pill err">🚫 GEBANNT</span>' : '') +
         '</div>' +
         // Row 2: Big stat grid
         '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(80px,1fr));gap:6px;margin-bottom:10px">' +
-          '<div style="padding:8px;background:var(--dink);border-radius:8px;text-align:center"><div style="font-size:9.5px;color:var(--dsub);font-weight:700;text-transform:uppercase;letter-spacing:0.8px">Posts</div><div style="font-size:18px;font-weight:800;color:#4dabf7;margin-top:1px">'+u.postedToday+'</div></div>' +
-          '<div style="padding:8px;background:var(--dink);border-radius:8px;text-align:center"><div style="font-size:9.5px;color:var(--dsub);font-weight:700;text-transform:uppercase;letter-spacing:0.8px">Likes</div><div style="font-size:18px;font-weight:800;color:#f59e0b;margin-top:1px">'+u.likedToday+'</div><div style="font-size:9.5px;color:var(--dsub)">/'+u.othersAvailable+'</div></div>' +
-          '<div style="padding:8px;background:var(--dink);border-radius:8px;text-align:center"><div style="font-size:9.5px;color:var(--dsub);font-weight:700;text-transform:uppercase;letter-spacing:0.8px">XP heute</div><div style="font-size:18px;font-weight:800;color:#a78bfa;margin-top:1px">'+(u.dailyXP||0)+'</div></div>' +
-          '<div style="padding:8px;background:var(--dink);border-radius:8px;text-align:center"><div style="font-size:9.5px;color:var(--dsub);font-weight:700;text-transform:uppercase;letter-spacing:0.8px">XP gesamt</div><div style="font-size:18px;font-weight:800;color:#fff;margin-top:1px">'+(u.xp||0)+'</div></div>' +
-          '<div style="padding:8px;background:var(--dink);border-radius:8px;text-align:center"><div style="font-size:9.5px;color:var(--dsub);font-weight:700;text-transform:uppercase;letter-spacing:0.8px">💎</div><div style="font-size:18px;font-weight:800;color:#06b6d4;margin-top:1px">'+(u.diamonds||0)+'</div></div>' +
-          '<div style="padding:8px;background:var(--dink);border-radius:8px;text-align:center"><div style="font-size:9.5px;color:var(--dsub);font-weight:700;text-transform:uppercase;letter-spacing:0.8px">❤ Total</div><div style="font-size:18px;font-weight:800;color:#ec4899;margin-top:1px">'+(u.totalLikes||0)+'</div></div>' +
+          '<div style="padding:var(--space-2);background:var(--dink);border-radius:8px;text-align:center"><div style="font-size:9.5px;color:var(--dsub);font-weight:700;text-transform:uppercase;letter-spacing:0.8px">Posts</div><div style="font-size:18px;font-weight:800;color:#4dabf7;margin-top:1px">'+u.postedToday+'</div></div>' +
+          '<div style="padding:var(--space-2);background:var(--dink);border-radius:8px;text-align:center"><div style="font-size:9.5px;color:var(--dsub);font-weight:700;text-transform:uppercase;letter-spacing:0.8px">Likes</div><div style="font-size:18px;font-weight:800;color:#f59e0b;margin-top:1px">'+u.likedToday+'</div><div style="font-size:9.5px;color:var(--dsub)">/'+u.othersAvailable+'</div></div>' +
+          '<div style="padding:var(--space-2);background:var(--dink);border-radius:8px;text-align:center"><div style="font-size:9.5px;color:var(--dsub);font-weight:700;text-transform:uppercase;letter-spacing:0.8px">XP heute</div><div style="font-size:18px;font-weight:800;color:#a78bfa;margin-top:1px">'+(u.dailyXP||0)+'</div></div>' +
+          '<div style="padding:var(--space-2);background:var(--dink);border-radius:8px;text-align:center"><div style="font-size:9.5px;color:var(--dsub);font-weight:700;text-transform:uppercase;letter-spacing:0.8px">XP gesamt</div><div style="font-size:18px;font-weight:800;color:#fff;margin-top:1px">'+(u.xp||0)+'</div></div>' +
+          '<div style="padding:var(--space-2);background:var(--dink);border-radius:8px;text-align:center"><div style="font-size:9.5px;color:var(--dsub);font-weight:700;text-transform:uppercase;letter-spacing:0.8px">💎</div><div style="font-size:18px;font-weight:800;color:#06b6d4;margin-top:1px">'+(u.diamonds||0)+'</div></div>' +
+          '<div style="padding:var(--space-2);background:var(--dink);border-radius:8px;text-align:center"><div style="font-size:9.5px;color:var(--dsub);font-weight:700;text-transform:uppercase;letter-spacing:0.8px">❤ Total</div><div style="font-size:18px;font-weight:800;color:#ec4899;margin-top:1px">'+(u.totalLikes||0)+'</div></div>' +
         '</div>' +
         // Row 3: Warnings (BIG VISIBLE)
-        '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:'+warnBg+';border:1px solid '+warnColor+'33;border-radius:10px;margin-bottom:8px">' +
+        '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:'+warnBg+';border:1px solid '+warnColor+'33;border-radius:10px;margin-bottom:var(--space-2)">' +
           '<div style="font-size:12px;font-weight:800;color:'+warnColor+';min-width:100px">⚠️ '+u.warnings+'/5 Warns</div>' +
           warnDots +
           '<div style="flex:1;text-align:right;font-size:11px;color:var(--dsub)">Wochen: M1 <b>'+u.weekM1+'</b>/7 · M2 <b>'+u.weekM2+'</b>/7 · M3 <b>'+u.weekM3+'</b>/7</div>' +
         '</div>' +
         // Row 4: Suspended-Banner falls aktiv
-        (suspended ? '<div style="margin-bottom:8px;padding:8px 12px;background:rgba(220,38,38,0.10);border-left:3px solid #dc2626;border-radius:6px;font-size:11.5px;color:#fca5a5">🚫 <b>Posting gesperrt</b> noch '+daysLeft+'d'+(u.postSuspendReason?' — '+esc(u.postSuspendReason):'')+'</div>' : '') +
+        (suspended ? '<div style="margin-bottom:var(--space-2);padding:8px 12px;background:rgba(220,38,38,0.10);border-left:3px solid #dc2626;border-radius:6px;font-size:11.5px;color:#fca5a5">🚫 <b>Posting gesperrt</b> noch '+daysLeft+'d'+(u.postSuspendReason?' — '+esc(u.postSuspendReason):'')+'</div>' : '') +
         // Row 5: Aktionen
         '<div style="display:flex;gap:6px;flex-wrap:wrap">' +
           '<button onclick="warnUserPrompt(\\''+esc(u.uid)+'\\',\\''+esc(u.name)+'\\')" class="dash-act" style="border-color:rgba(245,158,11,0.4);color:#fbbf24"><b>⚠️ Verwarnen</b></button>' +
@@ -17560,7 +17560,7 @@ fetch('/api/admin/engagement-log').then(r=>r.json()).then(j=>{ if (j.ok) { LAST_
     ${picFile?`<img src="/appbild/${id}/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1" loading="lazy" alt="">`:insta?`<img src="https://unavatar.io/instagram/${insta}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1" loading="lazy" onerror="this.style.display='none'" alt="">`:''}
   </div>
   <div class="creator-card-info">
-    <div class="creator-card-name" style="margin-top:4px">${htmlEsc(u.spitzname||u.name||'User')}</div>
+    <div class="creator-card-name" style="margin-top:var(--space-1)">${htmlEsc(u.spitzname||u.name||'User')}</div>
     ${insta?`<span onclick="event.stopPropagation();window.open('https://instagram.com/'+encodeURIComponent(${JSON.stringify(String(insta))}),'_blank')" style="font-size:10px;color:#4dabf7;margin-top:2px;display:block;cursor:pointer">@${htmlEsc(insta)}</span>`:''}
     <div class="creator-card-xp">⚡ ${u.xp||0} XP</div>
     ${pinnedLink?`<a href="${htmlEsc(safeUrl(pinnedLink))}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" style="display:block;font-size:10px;color:var(--accent);margin-top:5px;padding:3px 8px;background:rgba(255,107,107,.15);border:1px solid rgba(255,107,107,.2);border-radius:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-decoration:none">📌 Reel ansehen</a>`:''}
@@ -17634,7 +17634,7 @@ fetch('/api/admin/engagement-log').then(r=>r.json()).then(j=>{ if (j.ok) { LAST_
         const _yesterdayWinnerHtml = _yesterdayAwards.length
           ? '<div style="margin:0 16px 12px;padding:14px;background:linear-gradient(135deg,rgba(251,191,36,0.18),rgba(245,158,11,0.10));border:1px solid rgba(251,191,36,0.50);border-radius:12px;position:relative;overflow:hidden">' +
               '<div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#fbbf24,#f59e0b,#fbbf24)"></div>' +
-              '<div style="font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#fbbf24;margin-bottom:8px;display:flex;align-items:center;gap:6px"><span>🏆</span><span>SIEGER GESTERN (' + _yesterdayKey + ')</span></div>' +
+              '<div style="font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#fbbf24;margin-bottom:var(--space-2);display:flex;align-items:center;gap:6px"><span>🏆</span><span>SIEGER GESTERN (' + _yesterdayKey + ')</span></div>' +
               _yesterdayAwards.map(a => {
                 const u = d.users[a.uid] || {};
                 const medal = a.place === 1 ? '🥇' : a.place === 2 ? '🥈' : '🥉';
@@ -17657,7 +17657,7 @@ fetch('/api/admin/engagement-log').then(r=>r.json()).then(j=>{ if (j.ok) { LAST_
         const _lastWeekWinnerHtml = _lastWeekTop3.length
           ? '<div style="margin:0 16px 12px;padding:14px;background:linear-gradient(135deg,rgba(167,139,250,0.18),rgba(124,58,237,0.10));border:1px solid rgba(167,139,250,0.50);border-radius:12px;position:relative;overflow:hidden">' +
               '<div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#a78bfa,#7c3aed,#a78bfa)"></div>' +
-              '<div style="font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#a78bfa;margin-bottom:8px;display:flex;align-items:center;gap:6px"><span>🏆</span><span>SIEGER LETZTE WOCHE (' + htmlEsc(_lastWeekKey) + ')</span></div>' +
+              '<div style="font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#a78bfa;margin-bottom:var(--space-2);display:flex;align-items:center;gap:6px"><span>🏆</span><span>SIEGER LETZTE WOCHE (' + htmlEsc(_lastWeekKey) + ')</span></div>' +
               _lastWeekTop3.map(a => {
                 const u = d.users[a.uid] || {};
                 const medal = a.place === 1 ? '🥇' : a.place === 2 ? '🥈' : '🥉';
@@ -17745,7 +17745,7 @@ ${_latestNews ? `<a href="/explore?tab=newsletter" class="highlight-card" style=
   <div style="font-size:var(--fs-md);color:var(--muted)">›</div>
 </a>` : ''}
 <div style="padding:0 16px 14px">
-  <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">Aktuelle Highlights</div>
+  <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:1px;margin-bottom:var(--space-3)">Aktuelle Highlights</div>
   <a href="/feed" class="highlight-card">
     <div class="highlight-icon" style="background:linear-gradient(135deg,rgba(255,107,107,.25),rgba(204,93,232,.15))"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#cc5de8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg></div>
     <div style="flex:1;min-width:0">
@@ -17820,7 +17820,7 @@ function switchRanking(tab, btn) {
                     { icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>', title:'Konsistenter Look', desc:'Gleiche Schrift, gleiche Farben, gleiches Format → User erkennen deine Reels sofort beim Scrollen. Brand-Recognition pusht Loyalität.' },
                     { icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>', title:'Vermeide Music-Copyright', desc:'Reels mit lizenzierter Musik werden in Business-Accounts oft stumm. Nutze nur Insta\'s Built-in Audio Library — sicher + algorithm-friendly.' },
                 ];
-                const tippsHtml = tipps.map(t=>`<div style="background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:14px 16px;margin-bottom:10px;display:flex;align-items:flex-start;gap:13px"><div style="font-size:22px;flex-shrink:0;width:38px;height:38px;display:flex;align-items:center;justify-content:center;border-radius:10px;background:linear-gradient(135deg,rgba(34,197,94,0.18),rgba(21,128,61,0.06))">${t.icon}</div><div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:700;margin-bottom:4px;line-height:1.35">${t.title}</div><div style="font-size:12.5px;color:var(--muted);line-height:1.55">${t.desc}</div></div></div>`).join('');
+                const tippsHtml = tipps.map(t=>`<div style="background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:14px 16px;margin-bottom:10px;display:flex;align-items:flex-start;gap:13px"><div style="font-size:22px;flex-shrink:0;width:38px;height:38px;display:flex;align-items:center;justify-content:center;border-radius:10px;background:linear-gradient(135deg,rgba(34,197,94,0.18),rgba(21,128,61,0.06))">${t.icon}</div><div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:700;margin-bottom:var(--space-1);line-height:1.35">${t.title}</div><div style="font-size:12.5px;color:var(--muted);line-height:1.55">${t.desc}</div></div></div>`).join('');
                 return `<div style="padding:18px 14px 80px"><div style="font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;font-weight:700">${tipps.length} Tipps</div><div style="font-size:18px;font-weight:800;font-family:var(--font-display);margin-bottom:14px">Instagram Reel Tipps</div>${tippsHtml}<div style="margin-top:18px;padding:14px;background:linear-gradient(135deg,rgba(34,197,94,0.10),rgba(21,128,61,0.04));border:1px solid rgba(34,197,94,0.30);border-radius:12px;font-size:var(--fs-xs);color:var(--text);line-height:1.55"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.1V18h6v-1.2c0-.8.4-1.6 1-2.1A7 7 0 0 0 12 2z"/></svg><b>Tipp:</b> Schreib eigene Erfahrungen in den Tipps-Thread — wir erweitern die Liste basierend auf was bei euch funktioniert hat.</div></div>`;
             })(),
             regeln: require('./regeln-tab'),
@@ -17840,8 +17840,8 @@ function switchRanking(tab, btn) {
       <div style="width:52px;height:52px;border-radius:50%;background:#1e1e1e;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:#fff;box-shadow:${item.shadow}">A</div>
       <div style="flex:1;min-width:0">
         <div style="font-size:14px;font-weight:700;margin-bottom:2px">${item.name}</div>
-        <div style="font-size:11px;color:var(--muted);margin-bottom:8px">${item.desc}</div>
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:var(--space-2)">${item.desc}</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:var(--space-2)">
           ${priceHtml}
           ${owned
             ? `<div style="font-size:var(--fs-xs);color:#22c55e;font-weight:700">✓ Besessen</div>`
@@ -17864,31 +17864,31 @@ function switchRanking(tab, btn) {
 <div style="padding:4px 16px 16px;font-size:var(--fs-xs);color:var(--muted)">Tausche Diamanten gegen Vorteile</div>
 <div style="padding:0 16px 100px">
   <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;display:inline-flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg>Links</div>
-  <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:16px;padding:16px;margin-bottom:16px">
+  <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:16px;padding:var(--space-4);margin-bottom:16px">
     <div style="display:flex;align-items:flex-start;gap:14px">
       <div style="flex-shrink:0;width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,rgba(167,139,250,.15),rgba(124,58,237,.06));border:1px solid rgba(167,139,250,.2)"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg></div>
       <div style="flex:1;min-width:0">
-        <div style="font-size:var(--fs-base);font-weight:700;margin-bottom:4px">Extra-Link für heute</div>
+        <div style="font-size:var(--fs-base);font-weight:700;margin-bottom:var(--space-1)">Extra-Link für heute</div>
         <div style="font-size:var(--fs-xs);color:var(--muted);margin-bottom:10px;line-height:1.5">Poste einen zusätzlichen Reel-Link heute — direkt in der App. Bonus-Links: <b style="color:var(--text)">${myBonusLinks}</b></div>
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
           ${extraLinkPriceHtml}
           <button onclick="buyExtraLink()" id="buy-extralink-btn" style="background:${extraLinkCanBuy?'linear-gradient(135deg,#a78bfa,#7c3aed)':'var(--bg4)'};color:${extraLinkCanBuy?'#fff':'var(--muted)'};border:none;border-radius:12px;padding:8px 20px;font-size:var(--fs-sm);font-weight:700;cursor:${extraLinkCanBuy?'pointer':'not-allowed'}" ${extraLinkCanBuy?'':'disabled'}>Kaufen</button>
         </div>
-        ${!extraLinkCanBuy?`<div style="font-size:11px;color:rgba(255,59,48,.8);margin-top:8px">Nicht genug Diamanten (benötigt: 5, vorhanden: ${myDiamonds})</div>`:''}
+        ${!extraLinkCanBuy?`<div style="font-size:11px;color:rgba(255,59,48,.8);margin-top:var(--space-2)">Nicht genug Diamanten (benötigt: 5, vorhanden: ${myDiamonds})</div>`:''}
       </div>
     </div>
   </div>
-  <div style="background:linear-gradient(135deg,rgba(245,158,11,0.12),rgba(167,139,250,0.12));border:1px solid rgba(245,158,11,0.3);border-radius:16px;padding:16px;margin-bottom:20px">
+  <div style="background:linear-gradient(135deg,rgba(245,158,11,0.12),rgba(167,139,250,0.12));border:1px solid rgba(245,158,11,0.3);border-radius:16px;padding:var(--space-4);margin-bottom:var(--space-5)">
     <div style="display:flex;align-items:flex-start;gap:14px">
       <div style="flex-shrink:0;width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,rgba(245,158,11,.15),rgba(245,158,11,.05));border:1px solid rgba(245,158,11,.25)"><svg width="24" height="24" viewBox="0 0 24 24" fill="#f59e0b" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
       <div style="flex:1;min-width:0">
-        <div style="font-size:var(--fs-base);font-weight:700;margin-bottom:4px">Extra-Superlink diese Woche</div>
+        <div style="font-size:var(--fs-base);font-weight:700;margin-bottom:var(--space-1)">Extra-Superlink diese Woche</div>
         <div style="font-size:var(--fs-xs);color:var(--muted);margin-bottom:10px;line-height:1.5">Du hast deinen wöchentlichen Superlink schon verbraucht? Poste einen <b style="color:var(--text)">zweiten Superlink</b> für 10 💎 — direkt beim Posten in der App wird er automatisch abgerechnet.</div>
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
           <div style="font-size:14px;font-weight:800;color:#f59e0b">💎 10 Diamanten / Superlink</div>
           <a href="/feed?tab=engagement" style="background:linear-gradient(135deg,#f59e0b,#a78bfa);color:#fff;border:none;border-radius:12px;padding:8px 18px;font-size:var(--fs-sm);font-weight:700;text-decoration:none">Posten</a>
         </div>
-        ${myDiamonds < 10 ? `<div style="font-size:11px;color:rgba(255,59,48,.8);margin-top:8px">Nicht genug Diamanten (benötigt: 10, vorhanden: ${myDiamonds})</div>` : ''}
+        ${myDiamonds < 10 ? `<div style="font-size:11px;color:rgba(255,59,48,.8);margin-top:var(--space-2)">Nicht genug Diamanten (benötigt: 10, vorhanden: ${myDiamonds})</div>` : ''}
       </div>
     </div>
   </div>
@@ -17897,8 +17897,8 @@ function switchRanking(tab, btn) {
     const tierColor = tier==='Bronze'?'#cd7f32':tier==='Silber'?'#a8a9ad':'#ffd700';
     const tierItems = BANNER_ITEMS.filter(b=>b.tier===tier);
     return `<div style="margin-bottom:14px">
-  <div style="font-size:10px;font-weight:700;color:${tierColor};letter-spacing:1px;margin-bottom:8px">${tier==='Bronze'?'🥉':tier==='Silber'?'🥈':'🥇'} ${tier} — 💎 ${tierItems[0].price}</div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+  <div style="font-size:10px;font-weight:700;color:${tierColor};letter-spacing:1px;margin-bottom:var(--space-2)">${tier==='Bronze'?'🥉':tier==='Silber'?'🥈':'🥇'} ${tier} — 💎 ${tierItems[0].price}</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-2)">
     ${tierItems.map(item => {
       const owned = myInventory.includes(item.id);
       const canAfford = isShopAdmin || myDiamonds >= item.price;
@@ -17906,7 +17906,7 @@ function switchRanking(tab, btn) {
   <div style="height:46px;background:${item.gradient}"></div>
   <div style="padding:7px 10px">
     <div style="font-size:11px;font-weight:700;margin-bottom:5px">${item.emoji} ${item.name}</div>
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:4px">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:var(--space-1)">
       ${owned
         ? `<span style="font-size:10px;color:#22c55e;font-weight:700">✓ Besessen</span><button onclick="applyBanner('${item.gradient}')" style="background:rgba(34,197,94,.15);color:#22c55e;border:1px solid rgba(34,197,94,.3);border-radius:8px;padding:3px 10px;font-size:10px;font-weight:700;cursor:pointer">Nutzen</button>`
         : `${isShopAdmin?`<span style="font-size:10px;color:#22c55e;font-weight:800">Gratis</span>`:`<span style="font-size:10px;color:${tierColor};font-weight:800">💎 ${item.price}</span>`}<button onclick="buyItem('${item.id}')" data-item="${item.id}" style="background:${canAfford?`linear-gradient(135deg,${tierColor},${tier==='Gold'?'#b8860b':tier==='Silber'?'#6b7280':'#7c3aed'})`:'var(--bg4)'};color:${canAfford?'#fff':'var(--muted)'};border:none;border-radius:8px;padding:3px 10px;font-size:10px;font-weight:700;cursor:${canAfford?'pointer':'not-allowed'}" ${canAfford?'':'disabled'}>Kaufen</button>`
@@ -18112,16 +18112,16 @@ window.sugDismiss = function(btn){
                     mindsetUserCard = `<div style="margin:0 16px 16px;padding:18px;background:linear-gradient(135deg,#f59e0b,#ec4899);border-radius:18px;color:#fff;box-shadow:0 6px 22px rgba(245,158,11,0.45)">
   <div style="font-size:11px;font-weight:700;letter-spacing:1.5px;opacity:.85;text-transform:uppercase">🎉 Diese Woche dran</div>
   <div style="font-size:18px;font-weight:800;margin-top:6px;font-family:var(--font-display)">DU bist gepickt!</div>
-  <div style="font-size:var(--fs-sm);line-height:1.5;margin-top:8px;opacity:.95">Du erscheinst Sonntag/Montag auf <b>@mindset.stories_</b>. Check deine DM — ich brauche ein paar Infos von dir!</div>
+  <div style="font-size:var(--fs-sm);line-height:1.5;margin-top:var(--space-2);opacity:.95">Du erscheinst Sonntag/Montag auf <b>@mindset.stories_</b>. Check deine DM — ich brauche ein paar Infos von dir!</div>
 </div>`;
                 } else if (myMsStatus === 'done') {
-                    mindsetUserCard = `<div style="margin:0 16px 16px;padding:16px;background:var(--bg3);border:1px solid var(--border2);border-radius:16px">
+                    mindsetUserCard = `<div style="margin:0 16px 16px;padding:var(--space-4);background:var(--bg3);border:1px solid var(--border2);border-radius:16px">
   <div style="font-size:11px;font-weight:700;letter-spacing:1.5px;color:#22c55e;text-transform:uppercase"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:5px"><path d="M20 6L9 17l-5-5"/></svg>Erledigt</div>
   <div style="font-size:var(--fs-base);font-weight:700;margin-top:6px">Du wurdest vorgestellt</div>
   <div style="font-size:12.5px;color:var(--muted);margin-top:6px;line-height:1.5">Danke fürs Mitmachen 🙏 — Schau dir den Post an: <a href="https://instagram.com/mindset.stories_" target="_blank" style="color:#4dabf7">@mindset.stories_</a></div>
 </div>`;
                 } else if (!myInsta) {
-                    mindsetUserCard = `<div style="margin:0 16px 16px;padding:16px;background:var(--bg3);border:1px solid var(--border2);border-radius:16px">
+                    mindsetUserCard = `<div style="margin:0 16px 16px;padding:var(--space-4);background:var(--bg3);border:1px solid var(--border2);border-radius:16px">
   <div style="font-size:11px;font-weight:700;letter-spacing:1.5px;color:#f59e0b;text-transform:uppercase"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:5px"><path d="M2 4h6a3 3 0 0 1 3 3v13a2.5 2.5 0 0 0-2.5-2.5H2z"/><path d="M22 4h-6a3 3 0 0 0-3 3v13a2.5 2.5 0 0 1 2.5-2.5H22z"/></svg>Mindset Stories</div>
   <div style="font-size:14px;font-weight:700;margin-top:6px">Setz erst deinen Insta-Username</div>
   <div style="font-size:12.5px;color:var(--muted);margin-top:6px;line-height:1.5">Jede Woche stelle ich 1 User auf meinem Profil <b>@mindset.stories_</b> vor. <b>Ziel:</b> die Community pushen und gemeinsam mehr Reichweite generieren. Trag deinen Insta-Username in den <a href="/einstellungen" style="color:#4dabf7">Einstellungen</a> ein, um mitzumachen.</div>
@@ -18138,19 +18138,19 @@ window.sugDismiss = function(btn){
                         ? 'Du stehst auf der Warteliste. Sonntag 20:00 wird zufällig gepickt — Daumen drücken!'
                         : 'Du hast Nein gesagt. Kannst du jederzeit ändern (bis Samstag 23:59).';
                     const buttons = msLocked
-                        ? '<div style="font-size:11.5px;color:var(--muted);margin-top:12px;font-style:italic"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Antworten gefroren bis Pick am Sonntag 20:00</div>'
+                        ? '<div style="font-size:11.5px;color:var(--muted);margin-top:var(--space-3);font-style:italic"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Antworten gefroren bis Pick am Sonntag 20:00</div>'
                         : myMsStatus === 'yes'
-                        ? '<div style="display:flex;gap:8px;margin-top:12px"><button onclick="msSet(\'no\')" style="flex:1;padding:11px;border-radius:12px;border:1px solid var(--border);background:var(--bg4);color:var(--text);font-size:var(--fs-sm);font-weight:700;cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><path d="M18 6L6 18M6 6l12 12"/></svg>Doch nicht</button></div>'
+                        ? '<div style="display:flex;gap:var(--space-2);margin-top:var(--space-3)"><button onclick="msSet(\'no\')" style="flex:1;padding:11px;border-radius:12px;border:1px solid var(--border);background:var(--bg4);color:var(--text);font-size:var(--fs-sm);font-weight:700;cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><path d="M18 6L6 18M6 6l12 12"/></svg>Doch nicht</button></div>'
                         : myMsStatus === 'no'
-                        ? '<div style="display:flex;gap:8px;margin-top:12px"><button onclick="msSet(\'yes\')" style="flex:1;padding:11px;border-radius:12px;border:none;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;font-size:var(--fs-sm);font-weight:700;cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><path d="M20 6L9 17l-5-5"/></svg>Doch dabei</button></div>'
-                        : '<div style="display:flex;gap:8px;margin-top:12px"><button onclick="msSet(\'yes\')" style="flex:1;padding:12px;border-radius:12px;border:none;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;font-size:14px;font-weight:800;cursor:pointer"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><path d="M20 6L9 17l-5-5"/></svg>Ja, ich will</button><button onclick="msSet(\'no\')" style="flex:1;padding:12px;border-radius:12px;border:1px solid var(--border);background:var(--bg4);color:var(--text);font-size:14px;font-weight:700;cursor:pointer"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><path d="M18 6L6 18M6 6l12 12"/></svg>Nein, danke</button></div>';
+                        ? '<div style="display:flex;gap:var(--space-2);margin-top:var(--space-3)"><button onclick="msSet(\'yes\')" style="flex:1;padding:11px;border-radius:12px;border:none;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;font-size:var(--fs-sm);font-weight:700;cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><path d="M20 6L9 17l-5-5"/></svg>Doch dabei</button></div>'
+                        : '<div style="display:flex;gap:var(--space-2);margin-top:var(--space-3)"><button onclick="msSet(\'yes\')" style="flex:1;padding:var(--space-3);border-radius:12px;border:none;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;font-size:14px;font-weight:800;cursor:pointer"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><path d="M20 6L9 17l-5-5"/></svg>Ja, ich will</button><button onclick="msSet(\'no\')" style="flex:1;padding:var(--space-3);border-radius:12px;border:1px solid var(--border);background:var(--bg4);color:var(--text);font-size:14px;font-weight:700;cursor:pointer"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><path d="M18 6L6 18M6 6l12 12"/></svg>Nein, danke</button></div>';
                     mindsetUserCard = `<div style="margin:0 16px 16px;padding:18px;background:var(--bg3);border:1px solid var(--border2);border-radius:16px">
   <div style="font-size:11px;font-weight:700;letter-spacing:1.5px;color:${headerColor};text-transform:uppercase">${headerLabel}</div>
-  <div style="font-size:var(--fs-base);font-weight:800;margin-top:6px;font-family:var(--font-display);display:flex;align-items:center;gap:8px"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h6a3 3 0 0 1 3 3v13a2.5 2.5 0 0 0-2.5-2.5H2z"/><path d="M22 4h-6a3 3 0 0 0-3 3v13a2.5 2.5 0 0 1 2.5-2.5H22z"/></svg>Mindset Stories</div>
-  <div style="font-size:var(--fs-sm);line-height:1.6;color:var(--text);margin-top:8px">${bodyText}</div>
+  <div style="font-size:var(--fs-base);font-weight:800;margin-top:6px;font-family:var(--font-display);display:flex;align-items:center;gap:var(--space-2)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h6a3 3 0 0 1 3 3v13a2.5 2.5 0 0 0-2.5-2.5H2z"/><path d="M22 4h-6a3 3 0 0 0-3 3v13a2.5 2.5 0 0 1 2.5-2.5H22z"/></svg>Mindset Stories</div>
+  <div style="font-size:var(--fs-sm);line-height:1.6;color:var(--text);margin-top:var(--space-2)">${bodyText}</div>
   <div style="font-size:11.5px;color:var(--muted);margin-top:10px">${msCounts.waitlist} auf Liste · ${msCounts.done} bereits vorgestellt</div>
   ${buttons}
-  <div id="ms-result" style="margin-top:8px;font-size:var(--fs-xs);text-align:center"></div>
+  <div id="ms-result" style="margin-top:var(--space-2);font-size:var(--fs-xs);text-align:center"></div>
 </div>`;
                 }
 
@@ -18183,7 +18183,7 @@ window.sugDismiss = function(btn){
                             const u = d.users?.[uid] || {};
                             const name = htmlEsc(u.spitzname || u.name || '?');
                             const insta = u.instagram ? '@'+htmlEsc(u.instagram) : '<span style="color:#ef4444">kein Insta</span>';
-                            return `<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg4);border-radius:10px;margin-bottom:6px">
+                            return `<div style="display:flex;align-items:center;gap:var(--space-2);padding:8px 10px;background:var(--bg4);border-radius:10px;margin-bottom:6px">
   <div style="font-size:11px;color:var(--muted);width:24px">#${i+1}</div>
   <div style="flex:1;font-size:var(--fs-sm)"><b>${name}</b> · <span style="color:#4dabf7">${insta}</span></div>
   <button onclick="msAdminPick('${uid}','${name}')" style="background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;border:none;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer">Picken</button>
@@ -18193,7 +18193,7 @@ window.sugDismiss = function(btn){
                     const doneHtml = doneArr.length
                         ? doneArr.slice(0,20).map(([uid,v])=>{
                             const st = msDmStatus(uid, v.featuredAt);
-                            return `<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--bg4);border-radius:10px;margin-bottom:5px;font-size:var(--fs-xs)">
+                            return `<div style="display:flex;align-items:center;gap:var(--space-2);padding:7px 10px;background:var(--bg4);border-radius:10px;margin-bottom:5px;font-size:var(--fs-xs)">
   <div style="flex:1;min-width:0">
     <div><b>${htmlEsc(v.name||'?')}</b> · <span style="color:var(--muted);font-size:11px">KW ${(v.week||'').slice(5,10)}</span></div>
     <div style="font-size:10.5px;margin-top:2px">${msDmBadge(st)}</div>
@@ -18204,30 +18204,30 @@ window.sugDismiss = function(btn){
                         : '<div style="padding:14px;text-align:center;color:var(--muted);font-size:12.5px">Noch keine vorgestellten User</div>';
                     const _curPickSt = msCurrentPickedUid ? msDmStatus(msCurrentPickedUid, ms.weeklyState?.pickedAt || 0) : null;
                     const currentPickHtml = msCurrentPickedUid
-                        ? `<div style="padding:12px;background:linear-gradient(135deg,rgba(245,158,11,0.15),rgba(236,72,153,0.1));border:1px solid rgba(245,158,11,0.3);border-radius:12px;margin-bottom:10px"><div style="font-size:11px;color:#f59e0b;font-weight:700;letter-spacing:1px;text-transform:uppercase">Diese Woche</div><div style="font-size:14px;font-weight:800;margin-top:4px">${msPickedName}</div><div style="font-size:11px;margin-top:4px">${msDmBadge(_curPickSt)}</div></div>`
+                        ? `<div style="padding:var(--space-3);background:linear-gradient(135deg,rgba(245,158,11,0.15),rgba(236,72,153,0.1));border:1px solid rgba(245,158,11,0.3);border-radius:12px;margin-bottom:10px"><div style="font-size:11px;color:#f59e0b;font-weight:700;letter-spacing:1px;text-transform:uppercase">Diese Woche</div><div style="font-size:14px;font-weight:800;margin-top:var(--space-1)">${msPickedName}</div><div style="font-size:11px;margin-top:var(--space-1)">${msDmBadge(_curPickSt)}</div></div>`
                         : (msStateIsCurrent && ms.weeklyState?.skipped)
                         ? '<div style="padding:10px;background:var(--bg4);border-radius:10px;margin-bottom:10px;font-size:12.5px;color:var(--muted);text-align:center">Diese Woche übersprungen</div>'
                         : '<div style="padding:10px;background:var(--bg4);border-radius:10px;margin-bottom:10px;font-size:12.5px;color:var(--muted);text-align:center">Noch nicht gepickt (Sonntag 20:00)</div>';
                     mindsetAdminCard = `<div style="margin:0 16px 16px;padding:18px;background:var(--bg3);border:1px solid var(--border2);border-radius:16px">
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-3)">
     <div style="font-size:var(--fs-base);font-weight:800;font-family:var(--font-display)">Admin · Mindset Stories</div>
   </div>
   ${currentPickHtml}
-  <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+  <div style="display:flex;gap:var(--space-2);margin-bottom:14px;flex-wrap:wrap">
     <button onclick="msAdminBlast()" style="flex:1;min-width:140px;padding:10px;border-radius:10px;border:none;background:linear-gradient(135deg,#4dabf7,#1d6fa5);color:#fff;font-size:12.5px;font-weight:700;cursor:pointer">📨 Initial-Blast</button>
     <button onclick="msAdminSkip()" style="flex:1;min-width:120px;padding:10px;border-radius:10px;border:1px solid var(--border);background:var(--bg4);color:var(--text);font-size:12.5px;font-weight:700;cursor:pointer">⏭ Woche skippen</button>
   </div>
-  <div style="font-size:11px;font-weight:700;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-bottom:8px">Warteliste (${msCounts.waitlist})</div>
+  <div style="font-size:11px;font-weight:700;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-bottom:var(--space-2)">Warteliste (${msCounts.waitlist})</div>
   <div style="max-height:280px;overflow-y:auto;margin-bottom:14px">${waitlistHtml}</div>
-  <div style="font-size:11px;font-weight:700;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-bottom:8px">✅ Erledigt (${msCounts.done})</div>
+  <div style="font-size:11px;font-weight:700;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-bottom:var(--space-2)">✅ Erledigt (${msCounts.done})</div>
   <div style="max-height:200px;overflow-y:auto">${doneHtml}</div>
   <div id="ms-admin-result" style="margin-top:10px;font-size:var(--fs-xs);text-align:center;color:var(--muted)"></div>
 </div>`;
                 }
                 const entriesHtml = entries.length
                     ? entries.map(e=>`
-<div class="nl-entry" data-id="${htmlEsc(String(e.id||''))}" style="padding:16px;border:1px solid var(--border2);border-radius:14px;background:var(--bg3);margin:0 16px 12px">
-  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px">
+<div class="nl-entry" data-id="${htmlEsc(String(e.id||''))}" style="padding:var(--space-4);border:1px solid var(--border2);border-radius:14px;background:var(--bg3);margin:0 16px 12px">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:var(--space-2);margin-bottom:8px">
     ${e.title?`<div style="font-size:var(--fs-base);font-weight:700;font-family:var(--font-display)">${htmlEsc(String(e.title))}</div>`:'<div></div>'}
     ${isAdminNL?`<div style="display:flex;gap:6px;flex-shrink:0"><button onclick="nlEdit('${htmlEsc(String(e.id||''))}')" style="background:var(--bg4);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:4px 10px;font-size:var(--fs-xs);cursor:pointer">✏️</button><button onclick="nlDelete('${htmlEsc(String(e.id||''))}')" style="background:rgba(255,59,48,.1);border:1px solid rgba(255,59,48,.3);color:#ff3b30;border-radius:8px;padding:4px 10px;font-size:var(--fs-xs);cursor:pointer">🗑️</button></div>`:''}
   </div>
@@ -18236,32 +18236,32 @@ window.sugDismiss = function(btn){
 </div>`).join('')
                     : '<div class="empty" style="padding:48px 24px;text-align:center"><div class="empty-icon"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M3 6l9 7 9-7"/></svg></div><div class="empty-text">Noch keine Newsletter-Einträge</div><div class="empty-sub">Sobald News da sind, erscheinen sie hier.</div></div>';
                 const adminForm = isAdminNL ? `
-<div id="nl-form" style="display:none;margin:0 16px 16px;padding:16px;background:var(--bg3);border:1px solid var(--border2);border-radius:14px">
+<div id="nl-form" style="display:none;margin:0 16px 16px;padding:var(--space-4);background:var(--bg3);border:1px solid var(--border2);border-radius:14px">
   <input type="hidden" id="nl-edit-id">
   <div class="form-label">Titel (optional)</div>
   <input type="text" id="nl-title" class="form-input" placeholder="z.B. Update Mai 2026" style="margin-bottom:10px">
   <div class="form-label">Inhalt *</div>
-  <textarea id="nl-content" class="form-input" rows="5" placeholder="Newsletter-Text..." style="margin-bottom:12px"></textarea>
-  <div style="display:flex;gap:8px">
+  <textarea id="nl-content" class="form-input" rows="5" placeholder="Newsletter-Text..." style="margin-bottom:var(--space-3)"></textarea>
+  <div style="display:flex;gap:var(--space-2)">
     <button onclick="nlSave()" class="btn btn-primary" style="flex:2">💾 Speichern</button>
     <button onclick="nlCancel()" class="btn btn-outline" style="flex:1">Abbrechen</button>
   </div>
-  <div id="nl-result" style="margin-top:8px;font-size:var(--fs-xs);color:var(--muted);text-align:center"></div>
+  <div id="nl-result" style="margin-top:var(--space-2);font-size:var(--fs-xs);color:var(--muted);text-align:center"></div>
 </div>` : '';
-                const adminBtn = isAdminNL ? `<button onclick="nlNew()" style="display:flex;align-items:center;gap:8px;background:var(--accent);color:#fff;border:none;border-radius:12px;padding:10px 18px;font-size:14px;font-weight:700;cursor:pointer;margin:16px 16px 12px">+ Neuer Eintrag</button>` : '';
+                const adminBtn = isAdminNL ? `<button onclick="nlNew()" style="display:flex;align-items:center;gap:var(--space-2);background:var(--accent);color:#fff;border:none;border-radius:12px;padding:10px 18px;font-size:14px;font-weight:700;cursor:pointer;margin:16px 16px 12px">+ Neuer Eintrag</button>` : '';
                 return `
-<div style="padding-top:8px;padding-bottom:80px">
+<div style="padding-top:var(--space-2);padding-bottom:80px">
   <div style="padding:0 16px 12px;display:flex;align-items:center;justify-content:space-between">
     <div style="font-size:18px;font-weight:800;font-family:var(--font-display)">Newsletter</div>
   </div>
   ${mindsetUserCard}
   ${mindsetAdminCard}
-  <a href="/system-info" style="display:flex;align-items:center;gap:12px;margin:0 16px 12px;padding:16px 18px;background:linear-gradient(135deg,#0ea5e9,#4dabf7,#a78bfa);border-radius:16px;text-decoration:none;color:#fff;box-shadow:0 6px 22px rgba(77,171,247,0.40);position:relative;overflow:hidden">
+  <a href="/system-info" style="display:flex;align-items:center;gap:var(--space-3);margin:0 16px 12px;padding:16px 18px;background:linear-gradient(135deg,#0ea5e9,#4dabf7,#a78bfa);border-radius:16px;text-decoration:none;color:#fff;box-shadow:0 6px 22px rgba(77,171,247,0.40);position:relative;overflow:hidden">
     <div style="flex-shrink:0"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h6a3 3 0 0 1 3 3v13a2.5 2.5 0 0 0-2.5-2.5H2z"/><path d="M22 4h-6a3 3 0 0 0-3 3v13a2.5 2.5 0 0 1 2.5-2.5H22z"/></svg></div>
     <div style="flex:1"><div style="font-size:var(--fs-base);font-weight:800;letter-spacing:-0.1px">So funktioniert CreatorX</div><div style="font-size:var(--fs-xs);opacity:0.92;margin-top:3px;line-height:1.4">Komplette Anleitung — App, Levels, Missionen, Diamanten, Superlinks, Grundregeln</div></div>
     <div style="font-size:var(--fs-lg);opacity:0.9">→</div>
   </a>
-  <a href="/diamanten" style="display:flex;align-items:center;gap:12px;margin:0 16px 16px;padding:14px 16px;background:linear-gradient(135deg,#4dabf7,#a78bfa);border-radius:14px;text-decoration:none;color:#fff;box-shadow:0 4px 14px rgba(167,139,250,0.3)">
+  <a href="/diamanten" style="display:flex;align-items:center;gap:var(--space-3);margin:0 16px 16px;padding:14px 16px;background:linear-gradient(135deg,#4dabf7,#a78bfa);border-radius:14px;text-decoration:none;color:#fff;box-shadow:0 4px 14px rgba(167,139,250,0.3)">
     <div style="flex-shrink:0"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12l4 6-10 12L2 9z"/><path d="M2 9h20"/><path d="M9 3 6 9l6 12 6-12-3-6"/></svg></div>
     <div style="flex:1"><div style="font-size:14px;font-weight:700">Diamanten‑System</div><div style="font-size:11.5px;opacity:0.85;margin-top:2px">Wie verdiene ich Diamanten? Was kann ich kaufen?</div></div>
     <div style="font-size:18px;opacity:0.8">→</div>
@@ -18308,9 +18308,9 @@ async function msAdminRestore(uid,name){if(!confirm(name+' zurück auf die Warte
                     const safePrize = String(lw.prize||'').replace(/[<>&"]/g, c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
                     const initials = safeName.split(/\s+/).map(s=>s[0]||'').join('').slice(0,2).toUpperCase() || 'C';
                     return `
-  <div style="background:linear-gradient(135deg,rgba(245,215,110,0.14),rgba(212,169,70,0.04));border:1px solid rgba(245,215,110,0.40);border-radius:18px;padding:16px;margin-bottom:14px;position:relative;overflow:hidden">
+  <div style="background:linear-gradient(135deg,rgba(245,215,110,0.14),rgba(212,169,70,0.04));border:1px solid rgba(245,215,110,0.40);border-radius:18px;padding:var(--space-4);margin-bottom:14px;position:relative;overflow:hidden">
     <div style="position:absolute;inset:0;background:radial-gradient(circle at 90% 0%,rgba(245,215,110,0.18),transparent 50%);pointer-events:none"></div>
-    <div style="position:relative;display:flex;align-items:center;gap:12px">
+    <div style="position:relative;display:flex;align-items:center;gap:var(--space-3)">
       <div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#f5d76e 0%,#d4a946 50%,#8b6914 100%);color:#000;font-weight:800;font-size:17px;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:inset 0 1px 0 rgba(255,255,255,0.4),0 4px 12px rgba(212,169,70,0.3)">${initials}</div>
       <div style="flex:1;min-width:0">
         <div style="font-size:10.5px;color:#d4a946;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:2px">Letzter Gewinner</div>
@@ -18322,14 +18322,14 @@ async function msAdminRestore(uid,name){if(!confirm(name+' zurück auf die Warte
         <div style="font-size:var(--fs-sm);font-weight:700;color:var(--text);background:rgba(255,255,255,0.05);border:1px solid var(--border2);border-radius:8px;padding:4px 9px;white-space:nowrap">${lw.prizeEmoji||'🎁'} ${safePrize}</div>
       </div>
     </div>
-    ${(raffleHist.history||[]).length>1?`<div style="position:relative;margin-top:12px;padding-top:10px;border-top:1px solid rgba(245,215,110,0.18);font-size:11px;color:var(--muted)">Insgesamt <b style="color:var(--text)">${raffleHist.history.length}</b> Ziehungen</div>`:''}
+    ${(raffleHist.history||[]).length>1?`<div style="position:relative;margin-top:var(--space-3);padding-top:10px;border-top:1px solid rgba(245,215,110,0.18);font-size:11px;color:var(--muted)">Insgesamt <b style="color:var(--text)">${raffleHist.history.length}</b> Ziehungen</div>`:''}
   </div>`;
                 })() : '';
                 return `
-<div style="padding:16px">
+<div style="padding:var(--space-4)">
   ${lwHtml}
-  <div style="background:linear-gradient(135deg,rgba(245,158,11,0.1),rgba(239,68,68,0.05));border:1px solid rgba(245,158,11,0.3);border-radius:20px;padding:24px 20px;text-align:center;margin-bottom:16px">
-    <div style="margin-bottom:12px;display:flex;justify-content:center"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="13" rx="1.5"/><path d="M3 12h18"/><line x1="12" y1="8" x2="12" y2="21"/><path d="M12 8S10 3 7 4.5 9 8 12 8z"/><path d="M12 8s2-5 5-3.5S15 8 12 8z"/></svg></div>
+  <div style="background:linear-gradient(135deg,rgba(245,158,11,0.1),rgba(239,68,68,0.05));border:1px solid rgba(245,158,11,0.3);border-radius:20px;padding:24px 20px;text-align:center;margin-bottom:var(--space-4)">
+    <div style="margin-bottom:var(--space-3);display:flex;justify-content:center"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="13" rx="1.5"/><path d="M3 12h18"/><line x1="12" y1="8" x2="12" y2="21"/><path d="M12 8S10 3 7 4.5 9 8 12 8z"/><path d="M12 8s2-5 5-3.5S15 8 12 8z"/></svg></div>
     <h2 style="font-size:var(--fs-lg);font-weight:800;margin:0 0 6px;letter-spacing:-0.3px">Wöchentliches Gewinnspiel</h2>
     <div style="font-size:var(--fs-sm);color:var(--muted);line-height:1.5">Sammle <b style="color:var(--text)">${threshold} XP</b> diese Woche und nimm automatisch teil!</div>
     <div style="margin:16px 0;padding:14px;background:rgba(255,255,255,0.04);border-radius:12px;border:1px solid var(--border2)">
@@ -18338,19 +18338,19 @@ async function msAdminRestore(uid,name){if(!confirm(name+' zurück auf die Warte
       <div style="margin-top:10px;height:8px;background:rgba(255,255,255,0.06);border-radius:99px;overflow:hidden">
         <div style="height:100%;width:${Math.min(100,Math.round(myXpThisWeek/threshold*100))}%;background:${qualified?'linear-gradient(90deg,#22c55e,#4ade80)':'linear-gradient(90deg,#f59e0b,#ef4444)'};border-radius:99px;transition:width 0.5s"></div>
       </div>
-      <div style="font-size:11px;color:var(--muted);margin-top:8px">${qualified?'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><path d="M20 6L9 17l-5-5"/></svg>Du nimmst teil!':'Noch '+(threshold-myXpThisWeek)+' XP bis zur Teilnahme'}</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:var(--space-2)">${qualified?'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><path d="M20 6L9 17l-5-5"/></svg>Du nimmst teil!':'Noch '+(threshold-myXpThisWeek)+' XP bis zur Teilnahme'}</div>
     </div>
     <div style="font-size:var(--fs-xs);color:var(--muted)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg>Ziehung: Sonntag 20:00 Uhr · noch ~${hoursLeft}h</div>
   </div>
   <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:16px;padding:18px">
-    <div style="font-size:var(--fs-sm);font-weight:700;margin-bottom:12px">Mögliche Gewinne</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      ${prizes.map(p=>'<div style="padding:12px;background:rgba(255,255,255,0.03);border:1px solid var(--border2);border-radius:10px;font-size:var(--fs-xs);font-weight:600;text-align:center">'+p+'</div>').join('')}
+    <div style="font-size:var(--fs-sm);font-weight:700;margin-bottom:var(--space-3)">Mögliche Gewinne</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-2)">
+      ${prizes.map(p=>'<div style="padding:var(--space-3);background:rgba(255,255,255,0.03);border:1px solid var(--border2);border-radius:10px;font-size:var(--fs-xs);font-weight:600;text-align:center">'+p+'</div>').join('')}
     </div>
-    <div style="font-size:11px;color:var(--muted);margin-top:12px;text-align:center">Gewinn wird zufällig vom System gewählt. 1 Gewinner pro Woche.</div>
+    <div style="font-size:11px;color:var(--muted);margin-top:var(--space-3);text-align:center">Gewinn wird zufällig vom System gewählt. 1 Gewinner pro Woche.</div>
   </div>
-  <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:16px;padding:18px;margin-top:12px">
-    <div style="font-size:var(--fs-sm);font-weight:700;margin-bottom:8px">So funktioniert's</div>
+  <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:16px;padding:18px;margin-top:var(--space-3)">
+    <div style="font-size:var(--fs-sm);font-weight:700;margin-bottom:var(--space-2)">So funktioniert's</div>
     <div style="font-size:var(--fs-xs);color:var(--muted);line-height:1.7">
       1. Sammle mindestens <b style="color:var(--text)">750 XP</b> in einer Woche<br>
       2. Du nimmst automatisch am Gewinnspiel teil<br>
@@ -18374,9 +18374,9 @@ async function msAdminRestore(uid,name){if(!confirm(name+' zurück auf die Warte
       return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:rgba(255,255,255,0.03);border:1px solid var(--border2);border-radius:8px;font-size:11.5px"><span style="color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0">'+htmlEsc(h.name||'?')+(h.manual?' <span style="color:#f59e0b;font-size:10px">(manuell)</span>':'')+'</span><span style="color:var(--muted);font-size:10.5px;margin:0 8px;white-space:nowrap">'+dStr+'</span><span style="color:var(--text);font-weight:600;white-space:nowrap">'+htmlEsc((h.prizeEmoji||'🎁')+' '+(h.prize||''))+'</span></div>';
     }).join('');
     return `
-  <div style="background:linear-gradient(135deg,rgba(245,158,11,0.08),rgba(245,158,11,0.02));border:1px dashed rgba(245,158,11,0.40);border-radius:16px;padding:16px;margin-top:12px">
-    <div style="font-size:11px;font-weight:800;color:#f59e0b;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px">🛠️ Admin: Gewinner manuell eintragen</div>
-    <div style="display:flex;flex-direction:column;gap:8px">
+  <div style="background:linear-gradient(135deg,rgba(245,158,11,0.08),rgba(245,158,11,0.02));border:1px dashed rgba(245,158,11,0.40);border-radius:16px;padding:var(--space-4);margin-top:var(--space-3)">
+    <div style="font-size:11px;font-weight:800;color:#f59e0b;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:var(--space-3)">🛠️ Admin: Gewinner manuell eintragen</div>
+    <div style="display:flex;flex-direction:column;gap:var(--space-2)">
       <select id="raffle-uid" style="width:100%;padding:10px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text);font-size:var(--fs-sm)">
         <option value="">— User wählen —</option>
         ${userOpts}
@@ -18392,8 +18392,8 @@ async function msAdminRestore(uid,name){if(!confirm(name+' zurück auf die Warte
       <div id="raffle-result" style="font-size:var(--fs-xs);text-align:center;min-height:16px"></div>
     </div>
     ${histRows ? `
-    <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border2)">
-      <div style="font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Letzte Ziehungen</div>
+    <div style="margin-top:var(--space-3);padding-top:12px;border-top:1px solid var(--border2)">
+      <div style="font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:var(--space-2)">Letzte Ziehungen</div>
       <div style="display:flex;flex-direction:column;gap:6px">${histRows}</div>
       <button onclick="raffleUndo()" style="margin-top:10px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.30);color:#ef4444;border-radius:8px;padding:6px 12px;font-size:11.5px;font-weight:600;cursor:pointer;width:100%">↶ Letzten Eintrag entfernen</button>
     </div>` : ''}
@@ -18429,12 +18429,12 @@ async function msAdminRestore(uid,name){if(!confirm(name+' zurück auf die Warte
 .rl-stage{position:relative;padding:18px 16px 28px;background:radial-gradient(ellipse at 50% 0%,rgba(245,158,11,0.10) 0%,rgba(8,4,2,0.0) 60%);overflow:hidden}
 .rl-stage::before{content:'';position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(45deg,rgba(212,175,55,0.025) 0 1px,transparent 1px 14px);opacity:0.6}
 .rl-head{text-align:center;position:relative;z-index:2}
-.rl-eyebrow{display:inline-flex;align-items:center;gap:8px;padding:6px 14px;background:rgba(212,175,55,0.10);border:1px solid rgba(212,175,55,0.30);border-radius:99px;font-size:10.5px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#f5d76e;margin-bottom:10px}
+.rl-eyebrow{display:inline-flex;align-items:center;gap:var(--space-2);padding:6px 14px;background:rgba(212,175,55,0.10);border:1px solid rgba(212,175,55,0.30);border-radius:99px;font-size:10.5px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#f5d76e;margin-bottom:10px}
 .rl-eyebrow::before,.rl-eyebrow::after{content:'';width:14px;height:1px;background:linear-gradient(90deg,transparent,#f5d76e)}
 .rl-eyebrow::after{background:linear-gradient(90deg,#f5d76e,transparent)}
 .rl-title{font-size:var(--fs-xl);font-weight:900;font-family:var(--font-display,Inter,system-ui,sans-serif);background:linear-gradient(180deg,#fff8d6 0%,#f5d76e 30%,#d4af37 55%,#8b6914 85%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-0.5px;line-height:1.05;margin:0 0 8px;text-shadow:0 2px 18px rgba(212,175,55,0.25)}
 .rl-sub{font-size:var(--fs-sm);color:var(--muted);line-height:1.5;max-width:320px;margin:0 auto 18px}
-.rl-meta{display:flex;justify-content:center;gap:10px;margin-bottom:8px;flex-wrap:wrap}
+.rl-meta{display:flex;justify-content:center;gap:10px;margin-bottom:var(--space-2);flex-wrap:wrap}
 .rl-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 11px;background:rgba(255,255,255,0.04);border:1px solid var(--border2);border-radius:99px;font-size:11px;font-weight:700;color:var(--muted)}
 .rl-chip.live{color:#22c55e;border-color:rgba(34,197,94,0.3);background:rgba(34,197,94,0.08)}
 .rl-chip.live::before{content:'';width:6px;height:6px;border-radius:50%;background:#22c55e;box-shadow:0 0 8px #22c55e;animation:rl-pulse 1.5s ease-in-out infinite}
@@ -18447,7 +18447,7 @@ async function msAdminRestore(uid,name){if(!confirm(name+' zurück auf die Warte
   background:
     radial-gradient(ellipse at 50% 35%,rgba(255,255,255,0.18) 0%,transparent 38%),
     conic-gradient(from 0deg,#f5d76e 0deg,#d4af37 15deg,#8b6914 28deg,#d4af37 40deg,#f5d76e 55deg,#8b6914 70deg,#d4af37 85deg,#f5d76e 100deg,#d4af37 115deg,#8b6914 130deg,#d4af37 145deg,#f5d76e 160deg,#8b6914 175deg,#d4af37 190deg,#f5d76e 205deg,#8b6914 220deg,#d4af37 235deg,#f5d76e 250deg,#8b6914 265deg,#d4af37 280deg,#f5d76e 295deg,#8b6914 310deg,#d4af37 325deg,#f5d76e 340deg,#8b6914 355deg,#f5d76e 360deg);
-  padding:8px;
+  padding:var(--space-2);
   box-shadow:
     0 0 0 2px rgba(255,237,170,0.5),
     0 0 28px rgba(212,175,55,0.45),
@@ -18480,10 +18480,10 @@ async function msAdminRestore(uid,name){if(!confirm(name+' zurück auf die Warte
 @keyframes rl-result-in{from{opacity:0;transform:translateY(12px) scale(0.96)}to{opacity:1;transform:none}}
 .rl-result-inner{padding:18px 18px 16px;text-align:center;background:linear-gradient(180deg,rgba(34,197,94,0.10),rgba(34,197,94,0.04));border:1px solid rgba(34,197,94,0.30)}
 .rl-result.jackpot .rl-result-inner{background:linear-gradient(180deg,rgba(245,158,11,0.18),rgba(212,175,55,0.06));border-color:rgba(212,175,55,0.55);box-shadow:0 0 40px rgba(212,175,55,0.4)}
-.rl-result-emoji{font-size:42px;line-height:1;margin-bottom:8px;display:block}
+.rl-result-emoji{font-size:42px;line-height:1;margin-bottom:var(--space-2);display:block}
 .rl-result.jackpot .rl-result-emoji{animation:rl-trophy 1.4s ease-in-out infinite}
 @keyframes rl-trophy{0%,100%{transform:scale(1) rotate(0)}25%{transform:scale(1.08) rotate(-4deg)}75%{transform:scale(1.08) rotate(4deg)}}
-.rl-result-label{font-size:11px;font-weight:800;letter-spacing:2.5px;text-transform:uppercase;color:#22c55e;margin-bottom:4px}
+.rl-result-label{font-size:11px;font-weight:800;letter-spacing:2.5px;text-transform:uppercase;color:#22c55e;margin-bottom:var(--space-1)}
 .rl-result.jackpot .rl-result-label{color:#f5d76e}
 .rl-result-prize{font-size:22px;font-weight:900;font-family:var(--font-display,Inter,system-ui,sans-serif);color:var(--text);letter-spacing:-0.3px}
 .rl-result.jackpot .rl-result-prize{background:linear-gradient(180deg,#fff8d6,#d4af37);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-size:var(--fs-xl)}
@@ -18492,8 +18492,8 @@ async function msAdminRestore(uid,name){if(!confirm(name+' zurück auf die Warte
 .rl-cooldown{text-align:center;font-size:11.5px;color:var(--muted);margin:14px 16px 0;letter-spacing:0.3px}
 .rl-cooldown b{color:var(--text);font-weight:700}
 
-.rl-prizes{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:20px 16px 0;position:relative;z-index:2}
-.rl-prize{padding:10px 12px;background:rgba(255,255,255,0.03);border:1px solid var(--border2);border-radius:12px;display:flex;align-items:center;gap:8px;font-size:var(--fs-xs);color:var(--text)}
+.rl-prizes{display:grid;grid-template-columns:repeat(2,1fr);gap:var(--space-2);margin:20px 16px 0;position:relative;z-index:2}
+.rl-prize{padding:10px 12px;background:rgba(255,255,255,0.03);border:1px solid var(--border2);border-radius:12px;display:flex;align-items:center;gap:var(--space-2);font-size:var(--fs-xs);color:var(--text)}
 .rl-prize-emoji{font-size:18px;line-height:1}
 .rl-prize-name{font-weight:700;flex:1;min-width:0;font-size:var(--fs-xs)}
 .rl-prize-odds{font-size:10px;color:var(--muted);font-weight:600;flex-shrink:0}
@@ -18864,21 +18864,21 @@ function showErr(msg){
         return html(`
 <div class="topbar">
   <div style="display:flex;gap:6px;align-items:center">
-    <a href="/profil" title="XP" style="display:inline-flex;align-items:center;gap:4px;padding:5px 9px;background:rgba(167,139,250,0.10);border:1px solid rgba(167,139,250,0.30);border-radius:99px;text-decoration:none;color:#a78bfa;font-size:var(--fs-xs);font-weight:700"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>${(_me?.xp||0).toLocaleString('de-DE')} XP</a>
-    <a href="/diamanten" title="Diamanten" style="display:inline-flex;align-items:center;gap:4px;padding:5px 9px;background:rgba(6,182,212,0.10);border:1px solid rgba(6,182,212,0.30);border-radius:99px;text-decoration:none;color:#06b6d4;font-size:var(--fs-xs);font-weight:700"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0"><path d="M6 2h12l4 6-10 13L2 8z"/></svg>${(_me?.diamonds||0)}</a>
+    <a href="/profil" title="XP" style="display:inline-flex;align-items:center;gap:var(--space-1);padding:5px 9px;background:rgba(167,139,250,0.10);border:1px solid rgba(167,139,250,0.30);border-radius:99px;text-decoration:none;color:#a78bfa;font-size:var(--fs-xs);font-weight:700"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>${(_me?.xp||0).toLocaleString('de-DE')} XP</a>
+    <a href="/diamanten" title="Diamanten" style="display:inline-flex;align-items:center;gap:var(--space-1);padding:5px 9px;background:rgba(6,182,212,0.10);border:1px solid rgba(6,182,212,0.30);border-radius:99px;text-decoration:none;color:#06b6d4;font-size:var(--fs-xs);font-weight:700"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0"><path d="M6 2h12l4 6-10 13L2 8z"/></svg>${(_me?.diamonds||0)}</a>
   </div>
   <button class="icon-btn" onclick="setTheme(document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark')" title="Theme">🌙</button>
 </div>
 <div style="margin:14px 16px 14px;border-radius:22px;overflow:hidden;position:relative;background:linear-gradient(135deg,#f9a825 0%,#e91e63 55%,#9c27b0 100%)">
   <div style="position:absolute;inset:0;background:radial-gradient(circle at 85% -15%,rgba(255,255,255,0.20),transparent 55%),radial-gradient(circle at 5% 110%,rgba(0,0,0,0.18),transparent 55%);pointer-events:none"></div>
   <div style="position:relative;padding:20px 20px 18px">
-    <div style="display:flex;align-items:center;gap:6px;margin-bottom:12px">
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:var(--space-3)">
       <span style="width:7px;height:7px;border-radius:50%;background:#22ff88;box-shadow:0 0 8px rgba(34,255,136,0.7);display:inline-block"></span>
       <span style="font-size:10px;font-weight:700;letter-spacing:2px;color:rgba(255,255,255,0.7);text-transform:uppercase">Community live</span>
     </div>
     <div style="font-size:var(--fs-sm);color:rgba(255,255,255,0.78);font-weight:500;letter-spacing:0.3px">${_greet},</div>
     <div style="font-size:26px;font-weight:800;color:#fff;font-family:var(--font-display);line-height:1.1;margin-top:2px;letter-spacing:-0.5px">${htmlEsc(_greetName)} 👋</div>
-    <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
+    <div style="display:flex;gap:var(--space-2);margin-top:14px;flex-wrap:wrap">
       <div style="display:inline-flex;align-items:center;gap:5px;padding:6px 11px;background:rgba(255,255,255,0.18);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.22);border-radius:999px;font-size:11.5px;color:#fff;font-weight:600"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>${_me.xp||0} XP</div>
       ${myRank>0?`<div style="display:inline-flex;align-items:center;gap:5px;padding:6px 11px;background:rgba(255,255,255,0.18);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.22);border-radius:999px;font-size:11.5px;color:#fff;font-weight:600"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3"/><path d="M9 21h6M12 16v5"/></svg>Rang #${myRank}</div>`:''}
       <div style="display:inline-flex;align-items:center;gap:5px;padding:6px 11px;background:rgba(255,255,255,0.18);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.22);border-radius:999px;font-size:11.5px;color:#fff;font-weight:600"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0"><path d="M6 2h12l4 6-10 13L2 8z"/></svg>${_me.diamonds||0}</div>
@@ -18908,16 +18908,16 @@ function showErr(msg){
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#fff;color:#1a1a1a;line-height:1.65}
 .tb{position:sticky;top:0;background:#fff;border-bottom:1px solid #e5e5e5;padding:14px 16px;display:flex;align-items:center;font-weight:600;font-size:var(--fs-base);z-index:10}
-.tb a{color:#1a1a1a;text-decoration:none;font-size:22px;margin-right:12px}
-.wrap{padding:16px;max-width:720px;margin:0 auto;font-size:14px}
-.wrap h1{font-size:22px;margin-bottom:12px;font-weight:800}
+.tb a{color:#1a1a1a;text-decoration:none;font-size:22px;margin-right:var(--space-3)}
+.wrap{padding:var(--space-4);max-width:720px;margin:0 auto;font-size:14px}
+.wrap h1{font-size:22px;margin-bottom:var(--space-3);font-weight:800}
 .wrap h2{font-size:var(--fs-md);margin:20px 0 8px;font-weight:700}
 .wrap p,.wrap ul{margin-bottom:10px}
 .wrap ul{padding-left:18px}
 .wrap a{color:#0066cc}
 .wrap code{background:#f4f4f4;padding:2px 5px;border-radius:3px;font-size:var(--fs-sm)}
 .stamp{color:#888;font-size:var(--fs-xs);margin-bottom:18px}
-.foot{margin-top:32px;padding-top:18px;border-top:1px solid #e5e5e5;font-size:11.5px;color:#888;text-align:center}
+.foot{margin-top:var(--space-8);padding-top:18px;border-top:1px solid #e5e5e5;font-size:11.5px;color:#888;text-align:center}
 .foot a{color:#0066cc;text-decoration:none;margin:0 7px}
 @media(prefers-color-scheme:dark){
   body{background:#0b0b0e;color:#e8e8e8}
@@ -19177,13 +19177,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .ins-stat-num{font-size:24px;font-weight:800;letter-spacing:-.3px;line-height:1.1}
 .ins-stat-lbl{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-top:5px}
 .ins-stat-trend{font-size:10.5px;color:#22c55e;margin-top:3px;font-weight:600}
-.ins-section{margin-bottom:22px;padding:16px;background:var(--bg3);border:1px solid var(--border2);border-radius:16px}
-.ins-section-title{font-size:14px;font-weight:800;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.ins-section{margin-bottom:22px;padding:var(--space-4);background:var(--bg3);border:1px solid var(--border2);border-radius:16px}
+.ins-section-title{font-size:14px;font-weight:800;margin-bottom:var(--space-3);display:flex;align-items:center;gap:var(--space-2)}
 .ins-section-sub{font-size:11.5px;color:var(--muted);margin-top:-8px;margin-bottom:14px;font-weight:500}
 .ins-bar-chart{display:flex;align-items:flex-end;gap:2px;height:70px;padding:4px 0;margin-bottom:6px}
 .ins-charts-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:22px}
 .ins-charts-grid .ins-section{margin-bottom:0;padding:11px}
-.ins-charts-grid .ins-section-title{font-size:11.5px;margin-bottom:6px;gap:4px;flex-wrap:wrap}
+.ins-charts-grid .ins-section-title{font-size:11.5px;margin-bottom:6px;gap:var(--space-1);flex-wrap:wrap}
 .ins-charts-grid .ins-section-title span{display:none}
 .ins-charts-grid .ins-section-sub{display:none}
 .ins-charts-grid .ins-bar-labels{font-size:8.5px}
@@ -19192,16 +19192,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .ins-bar:hover{filter:brightness(1.2)}
 .ins-bar.best{background:linear-gradient(180deg,#22c55e,#16a34a);box-shadow:0 0 12px rgba(34,197,94,.4)}
 .ins-bar-labels{display:flex;justify-content:space-between;font-size:9.5px;color:var(--muted);font-weight:600;font-variant-numeric:tabular-nums}
-.ins-engagers{display:flex;flex-direction:column;gap:8px}
-.ins-engager-row{display:flex;align-items:center;gap:11px;padding:8px;background:var(--bg);border-radius:11px;text-decoration:none;color:inherit;transition:transform .12s}
+.ins-engagers{display:flex;flex-direction:column;gap:var(--space-2)}
+.ins-engager-row{display:flex;align-items:center;gap:11px;padding:var(--space-2);background:var(--bg);border-radius:11px;text-decoration:none;color:inherit;transition:transform .12s}
 .ins-engager-row:hover{transform:translateX(2px);background:var(--bg4)}
 .ins-engager-rank{width:24px;font-size:13px;font-weight:800;color:var(--muted);text-align:center;flex-shrink:0}
 .ins-engager-rank.gold{color:#f59e0b}.ins-engager-rank.silver{color:#94a3b8}.ins-engager-rank.bronze{color:#b45309}
 .ins-engager-avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#a78bfa,#7c3aed);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px;overflow:hidden;position:relative;flex-shrink:0}
 .ins-engager-avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .ins-engager-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13.5px;font-weight:600}
-.ins-engager-count{display:flex;align-items:center;gap:4px;font-size:13px;font-weight:800;color:#ec4899;flex-shrink:0}
-.ins-best-post{display:flex;gap:11px;padding:11px;background:var(--bg);border-radius:11px;margin-bottom:8px;text-decoration:none;color:inherit;transition:background .12s}
+.ins-engager-count{display:flex;align-items:center;gap:var(--space-1);font-size:13px;font-weight:800;color:#ec4899;flex-shrink:0}
+.ins-best-post{display:flex;gap:11px;padding:11px;background:var(--bg);border-radius:11px;margin-bottom:var(--space-2);text-decoration:none;color:inherit;transition:background .12s}
 .ins-best-post:hover{background:var(--bg4)}
 .ins-best-post:last-child{margin-bottom:0}
 .ins-best-post-rank{width:22px;font-size:14px;font-weight:800;color:var(--muted);flex-shrink:0;text-align:center}
@@ -19212,7 +19212,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .ins-best-open{padding:6px 10px;background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;border-radius:7px;font-size:11px;font-weight:700;text-decoration:none;flex-shrink:0;white-space:nowrap;align-self:center;display:inline-flex;align-items:center;gap:3px}
 .ins-insight-card{padding:11px 14px;background:linear-gradient(135deg,rgba(34,197,94,.08),rgba(167,139,250,.06));border:1px solid rgba(34,197,94,.25);border-radius:11px;margin-top:10px;font-size:12.5px;line-height:1.5}
 .ins-insight-card b{color:#22c55e}
-.ins-empty{padding:24px;text-align:center;color:var(--muted);font-size:13px}
+.ins-empty{padding:var(--space-6);text-align:center;color:var(--muted);font-size:13px}
 </style>
 <div class="topbar"><a href="/profil" class="icon-btn" style="font-size:22px">‹</a><div style="font-size:15px;font-weight:600">📊 Pro-Insights</div><div style="width:36px"></div></div>
 <div class="ins-wrap">
@@ -19382,8 +19382,8 @@ document.querySelectorAll('.ins-bar').forEach((b, i) => {
         const myPostsHtml = myPosts.length
             ? myPosts.slice().reverse().map((p)=>{
                 let attachHtml = '';
-                if(p.attachment && p.attachmentType==='image') attachHtml = '<img src="'+p.attachment+'" style="width:100%;max-height:300px;object-fit:cover;border-radius:8px;margin-top:8px" alt="">';
-                if(p.attachment && p.attachmentType==='audio') attachHtml = '<audio controls src="'+p.attachment+'" style="width:100%;margin-top:8px"></audio>';
+                if(p.attachment && p.attachmentType==='image') attachHtml = '<img src="'+p.attachment+'" style="width:100%;max-height:300px;object-fit:cover;border-radius:8px;margin-top:var(--space-2)" alt="">';
+                if(p.attachment && p.attachmentType==='audio') attachHtml = '<audio controls src="'+p.attachment+'" style="width:100%;margin-top:var(--space-2)"></audio>';
                 return '<div style="padding:12px 16px;border-top:1px solid var(--border2)">'
                     +'<div style="display:flex;justify-content:space-between;align-items:start">'
                     +'<div style="font-size:var(--fs-sm);line-height:1.6;flex:1">'+p.text+'</div>'
@@ -19465,7 +19465,7 @@ document.querySelectorAll('.ins-bar').forEach((b, i) => {
             ? '<div class="proflink-grid">'+myLinks.map(([msgId, l]) => renderProfileLinkCard(l, msgId, true)).join('')+'</div>'
             : '<div class="empty"><div class="empty-icon"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 17H7A5 5 0 0 1 7 7h2"/><path d="M15 7h2a5 5 0 0 1 0 10h-2"/><path d="M8 12h8"/></svg></div><div class="empty-text">Noch keine Links</div><div class="empty-sub">Poste deinen ersten Reel im Feed!</div></div>';
 
-        const aboutHtml = '<div style="padding:16px;display:flex;flex-direction:column;gap:12px;padding-bottom:100px">'
+        const aboutHtml = '<div style="padding:var(--space-4);display:flex;flex-direction:column;gap:var(--space-3);padding-bottom:100px">'
             +(myUser?.bio?'<div style="background:var(--bg3);border-radius:14px;padding:14px 16px"><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Bio</div><div style="font-size:14px;line-height:1.6">'+htmlEsc(myUser.bio)+'</div></div>':'')
             +(myUser?.nische?'<div style="background:var(--bg3);border-radius:14px;padding:14px 16px"><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Nische</div><div style="font-size:14px;color:var(--accent)">🎯 '+htmlEsc(myUser.nische)+'</div></div>':'')
             +'<div style="background:var(--bg3);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:10px">'
@@ -19474,7 +19474,7 @@ document.querySelectorAll('.ins-bar').forEach((b, i) => {
             +(myUser?.website?'<a href="'+encodeURI(myUser.website)+'" target="_blank" style="display:flex;align-items:center;gap:10px;text-decoration:none"><span style="font-size:var(--fs-lg)">🔗</span><span style="color:var(--blue);font-size:14px">'+htmlEsc(myUser.website.replace('https://','').replace('http://','').slice(0,40))+'</span></a>':'')
             +'</div>'
             +'<div style="background:var(--bg3);border-radius:14px;padding:14px 16px">'
-            +'<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Status</div>'
+            +'<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:var(--space-2)">Status</div>'
             +roleBadge(myUser?.role, myUid, adminIds)
             +(myUser?.trophies&&myUser.trophies.length?'<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px">'+myUser.trophies.map(t=>'<span style="font-size:22px;background:var(--bg4);border-radius:8px;padding:4px 8px">'+t+'</span>').join('')+'</div>':'')
             +'</div>'
@@ -19487,13 +19487,13 @@ document.querySelectorAll('.ins-bar').forEach((b, i) => {
                 const slCount2 = Object.values(d.superlinks||{}).filter(s=>s.uid===myUid&&s.week===wKey2).length;
                 const slLeft2 = Math.max(0, slMax2 - slCount2);
                 const myBonusLinksProf = d.bonusLinks?.[myUid]||0;
-                return '<div style="background:var(--bg3);border-radius:14px;padding:14px 16px"><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Verfügbarkeit</div>'
-                    +'<div style="display:flex;gap:8px;flex-wrap:wrap">'
+                return '<div style="background:var(--bg3);border-radius:14px;padding:14px 16px"><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:var(--space-2)">Verfügbarkeit</div>'
+                    +'<div style="display:flex;gap:var(--space-2);flex-wrap:wrap">'
                     +'<div style="background:var(--bg4);border-radius:10px;padding:8px 12px;font-size:var(--fs-xs);font-weight:600">⭐ Superlink: '+(slLeft2>0?'<span style="color:#22c55e">'+slLeft2+'/'+slMax2+' verfügbar</span>':'<span style="color:var(--muted)">0/'+slMax2+' verfügbar</span>')+'</div>'
                     +'<div style="background:var(--bg4);border-radius:10px;padding:8px 12px;font-size:var(--fs-xs);font-weight:600">🔗 Extra-Links: <span style="color:var(--accent)">'+myBonusLinksProf+'</span></div>'
                     +'</div></div>';
             })()
-            +'<a href="/einstellungen" style="display:flex;align-items:center;justify-content:center;gap:8px;background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:14px;font-size:14px;font-weight:600;color:var(--text);text-decoration:none"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>Profil bearbeiten</a>'
+            +'<a href="/einstellungen" style="display:flex;align-items:center;justify-content:center;gap:var(--space-2);background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:14px;font-size:14px;font-weight:600;color:var(--text);text-decoration:none"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>Profil bearbeiten</a>'
             +'</div>';
 
         const projDataJson = JSON.stringify(myProjects.map(p => ({
@@ -19510,12 +19510,12 @@ document.querySelectorAll('.ins-bar').forEach((b, i) => {
 </div>
 ${profileCard(myUid, myUser, d, true, lang, adminIds, myBannerData, myPicData)}
 <style>@keyframes dxpPulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(.85);opacity:.6}}</style>
-<div id="create-sub-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(8px)">
-  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:18px;padding:20px;width:100%;max-width:340px">
+<div id="create-sub-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;align-items:center;justify-content:center;padding:var(--space-6);backdrop-filter:blur(8px)">
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:18px;padding:var(--space-5);width:100%;max-width:340px">
     <div style="font-size:var(--fs-md);font-weight:700;margin-bottom:6px">Neuen Account erstellen</div>
     <div style="font-size:var(--fs-xs);color:var(--muted);margin-bottom:14px;line-height:1.5">App‑Only Persona mit eigenen XP, Followers und Profil. Du kannst zwischen Haupt‑ und Sub‑Account switchen.</div>
-    <input id="sub-name-input" type="text" placeholder="Name (max 30 Zeichen)" maxlength="30" style="width:100%;background:var(--bg4);border:1.5px solid var(--border);border-radius:12px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;margin-bottom:12px">
-    <div style="display:flex;gap:8px">
+    <input id="sub-name-input" type="text" placeholder="Name (max 30 Zeichen)" maxlength="30" style="width:100%;background:var(--bg4);border:1.5px solid var(--border);border-radius:12px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;margin-bottom:var(--space-3)">
+    <div style="display:flex;gap:var(--space-2)">
       <button onclick="closeCreateSubModal()" style="flex:1;background:var(--bg4);border:1px solid var(--border);border-radius:12px;padding:10px;font-size:var(--fs-sm);font-weight:600;color:var(--text);cursor:pointer">Abbrechen</button>
       <button id="sub-create-btn" onclick="confirmCreateSub()" style="flex:1;background:linear-gradient(135deg,#a78bfa,#7c3aed);border:none;border-radius:12px;padding:10px;font-size:var(--fs-sm);font-weight:700;color:#fff;cursor:pointer">Erstellen</button>
     </div>
@@ -19596,7 +19596,7 @@ ${completionHtml}
 <div id="ptab-posts" style="display:none;padding-bottom:100px">
   <div style="padding:12px 16px">
     <textarea id="new-post" class="form-input" placeholder="Was denkst du gerade? (max 300 Zeichen)" maxlength="300" rows="3"></textarea>
-    <button class="btn btn-primary btn-full" style="margin-top:8px" onclick="submitPost()">📝 Posten</button>
+    <button class="btn btn-primary btn-full" style="margin-top:var(--space-2)" onclick="submitPost()">📝 Posten</button>
   </div>
   ${myPinnedHtml}
   ${myPostsHtml}
@@ -19634,10 +19634,10 @@ ${completionHtml}
       <div id="proj-add-title" style="font-family:var(--font-display);font-size:var(--fs-md);font-weight:700">Projekt hinzufügen</div>
       <button onclick="closeAddProj()" style="background:var(--bg4);border:none;color:var(--muted);width:32px;height:32px;border-radius:50%;font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer">×</button>
     </div>
-    <div style="padding:16px;display:flex;flex-direction:column;gap:14px">
+    <div style="padding:var(--space-4);display:flex;flex-direction:column;gap:14px">
       <div>
         <div class="form-label">Projektbild</div>
-        <label style="display:flex;align-items:center;gap:12px;background:var(--bg4);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;cursor:pointer">
+        <label style="display:flex;align-items:center;gap:var(--space-3);background:var(--bg4);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;cursor:pointer">
           <div id="proj-img-preview" style="width:52px;height:52px;border-radius:10px;overflow:hidden;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">📷</div>
           <div><div style="font-size:var(--fs-sm);font-weight:600">Bild auswählen</div><div style="font-size:11px;color:var(--muted);margin-top:2px">Alle Bildformate · max 4MB</div></div>
           <input type="file" id="proj-img-input" accept="image/*" style="display:none" onchange="previewProjImg(this)">
@@ -19645,7 +19645,7 @@ ${completionHtml}
       </div>
       <div>
         <div class="form-label">Dokument (optional)</div>
-        <label style="display:flex;align-items:center;gap:12px;background:var(--bg4);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;cursor:pointer">
+        <label style="display:flex;align-items:center;gap:var(--space-3);background:var(--bg4);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;cursor:pointer">
           <div id="proj-doc-preview" style="width:52px;height:52px;border-radius:10px;overflow:hidden;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">📎</div>
           <div><div style="font-size:var(--fs-sm);font-weight:600">Word / PowerPoint</div><div id="proj-doc-name" style="font-size:11px;color:var(--muted);margin-top:2px">.docx oder .pptx · max 10MB</div></div>
           <input type="file" id="proj-doc-input" accept=".docx,.pptx" style="display:none" onchange="previewProjDoc(this)">
@@ -19684,7 +19684,7 @@ function openProjDetail(idx){
   document.getElementById('proj-detail-desc').textContent=p.description||'';
   (function(){const w=document.getElementById('proj-detail-link');if(!w)return;w.textContent='';if(p.link&&/^https?:\\/\\//i.test(p.link)){const a=document.createElement('a');a.href=p.link;a.target='_blank';a.rel='noopener noreferrer';a.style.cssText='color:var(--blue);font-size:var(--fs-sm);word-break:break-all';a.textContent='🔗 '+p.link;w.appendChild(a);}})();
   const docEl=document.getElementById('proj-detail-doc');
-  if(p.docName){const icon=p.docName.endsWith('.pptx')?'📊':'📄';docEl.innerHTML='<a href="/api/download-project-doc/'+_SESSION_UID+'/'+p.id+'" style="display:inline-flex;align-items:center;gap:8px;background:var(--bg4);border:1px solid var(--border);border-radius:10px;padding:8px 14px;font-size:var(--fs-sm);font-weight:600;color:var(--text);text-decoration:none">'+icon+' '+p.docName+' herunterladen</a>';}
+  if(p.docName){const icon=p.docName.endsWith('.pptx')?'📊':'📄';docEl.innerHTML='<a href="/api/download-project-doc/'+_SESSION_UID+'/'+p.id+'" style="display:inline-flex;align-items:center;gap:var(--space-2);background:var(--bg4);border:1px solid var(--border);border-radius:10px;padding:8px 14px;font-size:var(--fs-sm);font-weight:600;color:var(--text);text-decoration:none">'+icon+' '+p.docName+' herunterladen</a>';}
   else docEl.innerHTML='';
   document.getElementById('proj-detail-edit').onclick=()=>{closeProjDetail();openEditProj(idx);};
   document.getElementById('proj-detail-delete').onclick=()=>deleteProj(p.id);
@@ -19859,11 +19859,11 @@ async function submitPost(){const _spBtn=document.querySelector('[onclick="submi
             }).join('')
             : '<div style="padding:18px;text-align:center;color:var(--muted);font-size:12.5px">Noch keine Engagements</div>';
         const theirPinnedHtml = theirPinnedLink
-            ? '<div style="padding:14px 16px;border-bottom:2px solid var(--accent);background:linear-gradient(135deg,rgba(255,107,107,.08),rgba(255,165,0,.04));margin-bottom:4px">'
+            ? '<div style="padding:14px 16px;border-bottom:2px solid var(--accent);background:linear-gradient(135deg,rgba(255,107,107,.08),rgba(255,165,0,.04));margin-bottom:var(--space-1)">'
               +'<span style="font-size:11px;font-weight:700;color:var(--accent);background:rgba(255,107,107,.15);padding:3px 10px;border-radius:20px;display:inline-block;margin-bottom:10px">📌 Wichtigster Post</span>'
-              +'<a id="pin-insta-link" href="'+htmlEsc(safeUrl(theirPinnedLink))+'" target="_blank" rel="noopener noreferrer" onclick="onPinVisit()" style="display:flex;align-items:center;justify-content:center;gap:6px;padding:11px 13px;background:rgba(77,171,247,.10);border:1px solid rgba(77,171,247,.30);border-radius:10px;font-size:var(--fs-sm);color:#4dabf7;font-weight:700;text-decoration:none;margin-bottom:8px">🔗 Auf Instagram öffnen</a>'
-              +'<div id="pin-hint" style="font-size:11.5px;color:var(--muted);margin-bottom:12px;line-height:1.5;padding:10px 12px;background:rgba(245,158,11,0.08);border-left:3px solid #f59e0b;border-radius:6px"><b style="color:#f59e0b">Schritt 1:</b> Tippe auf den Link → auf Instagram <b>LIKEN + KOMMENTIEREN + TEILEN + SPEICHERN</b>.<br><b style="color:#f59e0b">Schritt 2:</b> Komme zurück und tippe auf den ✅-Button — du bekommst <b>1 💎</b>.</div>'
-              +'<div style="display:flex;gap:8px;align-items:center">'
+              +'<a id="pin-insta-link" href="'+htmlEsc(safeUrl(theirPinnedLink))+'" target="_blank" rel="noopener noreferrer" onclick="onPinVisit()" style="display:flex;align-items:center;justify-content:center;gap:6px;padding:11px 13px;background:rgba(77,171,247,.10);border:1px solid rgba(77,171,247,.30);border-radius:10px;font-size:var(--fs-sm);color:#4dabf7;font-weight:700;text-decoration:none;margin-bottom:var(--space-2)">🔗 Auf Instagram öffnen</a>'
+              +'<div id="pin-hint" style="font-size:11.5px;color:var(--muted);margin-bottom:var(--space-3);line-height:1.5;padding:10px 12px;background:rgba(245,158,11,0.08);border-left:3px solid #f59e0b;border-radius:6px"><b style="color:#f59e0b">Schritt 1:</b> Tippe auf den Link → auf Instagram <b>LIKEN + KOMMENTIEREN + TEILEN + SPEICHERN</b>.<br><b style="color:#f59e0b">Schritt 2:</b> Komme zurück und tippe auf den ✅-Button — du bekommst <b>1 💎</b>.</div>'
+              +'<div style="display:flex;gap:var(--space-2);align-items:center">'
                 +'<button id="pin-like-btn" onclick="likePinnedPost(\''+uid+'\',this)" '+(_myEngaged?'disabled':'data-locked="1" disabled')+' style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;padding:11px 14px;border-radius:14px;border:1px solid '+(_myEngaged?'#22c55e':'rgba(255,107,107,.35)')+';background:'+(_myEngaged?'rgba(34,197,94,.12)':'rgba(255,107,107,.10)')+';color:'+(_myEngaged?'#22c55e':'#ff6b6b')+';font-size:var(--fs-sm);font-weight:700;cursor:'+(_myEngaged?'default':'not-allowed')+';font-family:var(--font);transition:all .15s;opacity:'+(_myEngaged?'1':'0.55')+'">'+(_myEngaged?'✅ Engagiert':'🔒 Erst Insta öffnen')+(_myEngaged?'':'')+'</button>'
                 +'<button onclick="showPinnedEngagers()" style="display:flex;align-items:center;gap:6px;padding:9px 14px;border-radius:14px;border:1px solid rgba(77,171,247,.30);background:rgba(77,171,247,.08);color:var(--text);font-size:12.5px;font-weight:700;cursor:pointer;font-family:var(--font)">👥 <span id="pin-eng-count">'+_engagerCount+'</span></button>'
               +'</div>'
@@ -19871,7 +19871,7 @@ async function submitPost(){const _spBtn=document.querySelector('[onclick="submi
                 +'<div style="background:var(--bg2);border-radius:24px 24px 0 0;width:100%;max-width:480px;padding:18px 0 24px;max-height:75vh;overflow-y:auto" onclick="event.stopPropagation()">'
                   +'<div style="width:36px;height:4px;background:#666;border-radius:4px;margin:0 auto 14px"></div>'
                   +'<div style="font-size:14px;font-weight:800;text-align:center;color:var(--text);margin-bottom:6px">👥 Engagements</div>'
-                  +'<div style="font-size:11px;color:var(--muted);text-align:center;margin-bottom:8px">Wer hat den Pinned-Post geliked? · 🚩 = Schein-Engagement melden</div>'
+                  +'<div style="font-size:11px;color:var(--muted);text-align:center;margin-bottom:var(--space-2)">Wer hat den Pinned-Post geliked? · 🚩 = Schein-Engagement melden</div>'
                   +'<div id="pin-engagers-list">'+_engagerCardsHtmlWithReport+'</div>'
                 +'</div>'
               +'</div>'
@@ -19887,8 +19887,8 @@ async function submitPost(){const _spBtn=document.querySelector('[onclick="submi
         const theirPostsHtml = theirPosts.length
             ? theirPosts.slice().reverse().map(p=>{
                 let attachHtml='';
-                if(p.attachment&&p.attachmentType==='image') attachHtml='<img src="'+p.attachment+'" style="width:100%;max-height:300px;object-fit:cover;border-radius:8px;margin-top:8px" alt="">';
-                if(p.attachment&&p.attachmentType==='audio') attachHtml='<audio controls src="'+p.attachment+'" style="width:100%;margin-top:8px"></audio>';
+                if(p.attachment&&p.attachmentType==='image') attachHtml='<img src="'+p.attachment+'" style="width:100%;max-height:300px;object-fit:cover;border-radius:8px;margin-top:var(--space-2)" alt="">';
+                if(p.attachment&&p.attachmentType==='audio') attachHtml='<audio controls src="'+p.attachment+'" style="width:100%;margin-top:var(--space-2)"></audio>';
                 return '<div style="padding:12px 16px;border-top:1px solid var(--border2)">'
                     +'<div style="font-size:var(--fs-sm);line-height:1.6">'+p.text+'</div>'
                     +attachHtml
@@ -19932,7 +19932,7 @@ async function submitPost(){const _spBtn=document.querySelector('[onclick="submi
             ? '<div class="proflink-grid">'+theirLinkEntries.map(([msgId, l]) => renderTheirLinkCard(l, msgId)).join('')+'</div>'
             : '<div class="empty"><div class="empty-icon"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 17H7A5 5 0 0 1 7 7h2"/><path d="M15 7h2a5 5 0 0 1 0 10h-2"/><path d="M8 12h8"/></svg></div><div class="empty-text">Noch keine Links</div><div class="empty-sub">Hat noch nichts geteilt.</div></div>';
 
-        const theirAboutHtml = '<div style="padding:16px;display:flex;flex-direction:column;gap:12px;padding-bottom:100px">'
+        const theirAboutHtml = '<div style="padding:var(--space-4);display:flex;flex-direction:column;gap:var(--space-3);padding-bottom:100px">'
             +(u?.bio?'<div style="background:var(--bg3);border-radius:14px;padding:14px 16px"><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Bio</div><div style="font-size:14px;line-height:1.6">'+htmlEsc(u.bio)+'</div></div>':'')
             +(u?.nische?'<div style="background:var(--bg3);border-radius:14px;padding:14px 16px"><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Nische</div><div style="font-size:14px;color:var(--accent)">🎯 '+htmlEsc(u.nische)+'</div></div>':'')
             +'<div style="background:var(--bg3);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:10px">'
@@ -19941,7 +19941,7 @@ async function submitPost(){const _spBtn=document.querySelector('[onclick="submi
             +(u?.website?'<a href="'+encodeURI(u.website)+'" target="_blank" style="display:flex;align-items:center;gap:10px;text-decoration:none"><span style="font-size:var(--fs-lg)">🔗</span><span style="color:var(--blue);font-size:14px">'+htmlEsc(u.website.replace('https://','').replace('http://','').slice(0,40))+'</span></a>':'')
             +'</div>'
             +'<div style="background:var(--bg3);border-radius:14px;padding:14px 16px">'
-            +'<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Status</div>'
+            +'<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:var(--space-2)">Status</div>'
             +roleBadge(u?.role)
             +(u?.trophies&&u.trophies.length?'<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px">'+u.trophies.map(t=>'<span style="font-size:22px;background:var(--bg4);border-radius:8px;padding:4px 8px">'+t+'</span>').join('')+'</div>':'')
             +'</div></div>';
@@ -19955,14 +19955,14 @@ async function submitPost(){const _spBtn=document.querySelector('[onclick="submi
 <div class="topbar">
   <a href="javascript:history.back()" class="icon-btn" style="font-size:22px">‹</a>
   <div style="font-size:var(--fs-base);font-weight:600">${htmlEsc(u.spitzname||u.name||'User')}</div>
-  <div style="display:flex;gap:8px">
+  <div style="display:flex;gap:var(--space-2)">
     <button onclick="toggleFollow('${uid}',this)" style="background:${isFollowing?'var(--bg4)':'var(--accent)'};color:${isFollowing?'var(--muted)':'#fff'};border:1px solid var(--border);border-radius:20px;padding:6px 16px;font-size:var(--fs-sm);font-weight:600;cursor:pointer">${isFollowing?'Gefolgt':'Folgen'}</button>
     ${(()=>{
       // Markiere Kollab-Symbol mit ✓ wenn bereits eine aktive Kollaboration zwischen
       // mir und diesem User existiert.
       const myCollabs = Array.isArray(myUser?.collaborations) ? myUser.collaborations : [];
       const isCollabActive = myCollabs.some(c => String(c.partnerUid) === String(uid));
-      if (isCollabActive) return `<button id="collab-btn" disabled title="Kollab-Partner aktiv" style="background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:none;border-radius:20px;padding:6px 14px;font-size:var(--fs-sm);font-weight:700;cursor:default;display:inline-flex;align-items:center;gap:4px">🤝 ✓</button>`;
+      if (isCollabActive) return `<button id="collab-btn" disabled title="Kollab-Partner aktiv" style="background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:none;border-radius:20px;padding:6px 14px;font-size:var(--fs-sm);font-weight:700;cursor:default;display:inline-flex;align-items:center;gap:var(--space-1)">🤝 ✓</button>`;
       return `<button id="collab-btn" onclick="collabRequest('${uid}',this)" title="Kollaboration anfragen" style="background:linear-gradient(135deg,#ec4899,#a21caf);color:#fff;border:none;border-radius:20px;padding:6px 14px;font-size:var(--fs-sm);font-weight:700;cursor:pointer">🤝</button>`;
     })()}
     <a href="/nachrichten/${uid}" title="Nachricht" style="background:var(--bg4);border:1px solid var(--border);border-radius:20px;padding:6px 13px;color:var(--text);text-decoration:none;display:inline-flex;align-items:center;justify-content:center"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></a>
@@ -20019,7 +20019,7 @@ function openTProjDetail(idx){
   document.getElementById('tproj-desc').textContent=p.description||'';
   (function(){const w=document.getElementById('tproj-link');if(!w)return;w.textContent='';if(p.link&&/^https?:\\/\\//i.test(p.link)){const a=document.createElement('a');a.href=p.link;a.target='_blank';a.rel='noopener noreferrer';a.style.cssText='color:var(--blue);font-size:var(--fs-sm);word-break:break-all';a.textContent='🔗 '+p.link;w.appendChild(a);}})();
   const docEl=document.getElementById('tproj-doc');
-  if(p.docName){const icon=p.docName.endsWith('.pptx')?'📊':'📄';docEl.innerHTML='<a href="/api/download-project-doc/'+_TUID+'/'+p.id+'" style="display:inline-flex;align-items:center;gap:8px;background:var(--bg4);border:1px solid var(--border);border-radius:10px;padding:8px 14px;font-size:var(--fs-sm);font-weight:600;color:var(--text);text-decoration:none">'+icon+' '+p.docName+' herunterladen</a>';}
+  if(p.docName){const icon=p.docName.endsWith('.pptx')?'📊':'📄';docEl.innerHTML='<a href="/api/download-project-doc/'+_TUID+'/'+p.id+'" style="display:inline-flex;align-items:center;gap:var(--space-2);background:var(--bg4);border:1px solid var(--border);border-radius:10px;padding:8px 14px;font-size:var(--fs-sm);font-weight:600;color:var(--text);text-decoration:none">'+icon+' '+p.docName+' herunterladen</a>';}
   else docEl.innerHTML='';
   document.getElementById('tproj-detail-modal').classList.add('open');
 }
@@ -20089,7 +20089,7 @@ async function collabRequest(targetUid, btn){
     }
     const fRes = await fetch('/api/collab/feed');
     const f = await fRes.json().catch(()=>({}));
-    if (!f.ok) { root.innerHTML = '<div style="padding:32px;text-align:center;color:#ef4444">Fehler: '+esc(f.error||'unbekannt')+'</div>'; return; }
+    if (!f.ok) { root.innerHTML = '<div style="padding:var(--space-8);text-align:center;color:#ef4444">Fehler: '+esc(f.error||'unbekannt')+'</div>'; return; }
     const posts = f.posts || [];
     let html = '';
     html += pillBox('<b style="color:var(--text)">🤝 Kollab-Posts</b><br>Engagement = Liken + Kommentieren + <b>Speichern</b> + Teilen auf Instagram → dann hier <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M20 6L9 17l-5-5"/></svg> → <b>+1 💎</b>.<br><a href="/explore?tab=regeln#kollabs" style="color:#ec4899;font-weight:700">→ Regeln ansehen</a>');
@@ -20101,7 +20101,7 @@ async function collabRequest(targetUid, btn){
         const aName = esc(p.authorA?.name||'User');
         const bName = esc(p.authorB?.name||'User');
         html += '<div style="margin:0 16px 14px;padding:14px;background:var(--bg3);border:1px solid var(--border2);border-radius:14px">' +
-          '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">' +
+          '<div style="display:flex;align-items:center;gap:var(--space-2);margin-bottom:10px">' +
             '<div style="font-size:11px;color:#ec4899;font-weight:800;letter-spacing:1px;text-transform:uppercase">🤝 Kollab-Post</div>' +
             '<div style="flex:1"></div>' +
             '<div style="font-size:11px;color:var(--muted)">'+new Date(p.createdAt).toLocaleDateString('de-DE',{day:'2-digit',month:'short'})+'</div>' +
@@ -20113,9 +20113,9 @@ async function collabRequest(targetUid, btn){
             ? '<div style="padding:10px 12px;background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.35);border-radius:10px;font-size:var(--fs-xs);color:#ef4444;font-weight:700;text-align:center">🚫 Kein Self-Like für Kollaboratoren · Dies ist dein Post mit '+(p.uid===window._myUid?bName:aName)+'</div>'
             : liked
             ? '<div style="padding:11px;background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.35);border-radius:10px;font-size:var(--fs-sm);color:#22c55e;font-weight:700;text-align:center">✅ Engagiert · +1 💎</div>'
-            : '<button onclick="kollabLike(\\''+p.id+'\\', this)" style="display:block;width:100%;padding:12px;background:linear-gradient(135deg,#ec4899,#a21caf);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer">❤️ Engagiert · +1 💎</button>'
+            : '<button onclick="kollabLike(\\''+p.id+'\\', this)" style="display:block;width:100%;padding:var(--space-3);background:linear-gradient(135deg,#ec4899,#a21caf);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer">❤️ Engagiert · +1 💎</button>'
           ) +
-          (function(){var lkrs=Array.isArray(p.likers)?p.likers:[];var cnt=p.likeCount||lkrs.length;if(cnt===0)return '<div style="font-size:11px;color:var(--muted);margin-top:8px;text-align:center">Noch keine Engagements</div>';var top=lkrs.slice(0,3).map(function(u){return '<b style="color:var(--text)">'+esc(u.name||'User')+'</b>';}).join(', ');var rest=cnt>3?' und '+(cnt-3)+' weiteren':'';var rows=lkrs.map(function(u){var initial='<div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#ec4899,#a21caf);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:var(--fs-sm);position:relative;overflow:hidden">'+esc((u.name||'?')[0])+(u.uid?'<img src="/appbild/'+esc(u.uid)+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.remove()" alt="">':'')+'</div>';return '<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--border2)"><a href="/profil/'+esc(u.uid)+'" style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;text-decoration:none">'+initial+'<div style="flex:1;min-width:0"><div style="font-size:var(--fs-sm);font-weight:600;color:var(--text)">'+esc(u.name||'User')+'</div>'+(u.roleBadgeHtml?'<div style="margin-top:3px">'+u.roleBadgeHtml+'</div>':'')+(u.instagram?'<div style="font-size:11px;color:#ec4899;margin-top:2px">@'+esc(u.instagram)+'</div>':'')+'</div></a>'+(p.isSelf?'<button onclick="reportLiker(\\''+esc(u.uid)+'\\',\\'Kollab '+esc(p.id)+'\\',1)" style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);color:#ef4444;border-radius:8px;padding:6px 11px;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0">Melden</button>':'<div style="font-size:11px;color:var(--accent)">→</div>')+'</div>';}).join('');return '<div id="liker-rows-cl-'+esc(p.id)+'" style="display:none">'+rows+'</div><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px;padding:0 4px"><div style="font-size:var(--fs-xs);color:var(--muted);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Gefällt '+top+rest+'</div><button onclick="showLikerModal(\\'cl-'+esc(p.id)+'\\')" style="background:rgba(236,72,153,0.10);border:1px solid rgba(236,72,153,0.35);color:#ec4899;font-size:11px;font-weight:700;padding:5px 10px;border-radius:8px;cursor:pointer;white-space:nowrap;flex-shrink:0"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Wer hat engagiert? ('+cnt+')</button></div>';})() +
+          (function(){var lkrs=Array.isArray(p.likers)?p.likers:[];var cnt=p.likeCount||lkrs.length;if(cnt===0)return '<div style="font-size:11px;color:var(--muted);margin-top:var(--space-2);text-align:center">Noch keine Engagements</div>';var top=lkrs.slice(0,3).map(function(u){return '<b style="color:var(--text)">'+esc(u.name||'User')+'</b>';}).join(', ');var rest=cnt>3?' und '+(cnt-3)+' weiteren':'';var rows=lkrs.map(function(u){var initial='<div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#ec4899,#a21caf);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:var(--fs-sm);position:relative;overflow:hidden">'+esc((u.name||'?')[0])+(u.uid?'<img src="/appbild/'+esc(u.uid)+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.remove()" alt="">':'')+'</div>';return '<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--border2)"><a href="/profil/'+esc(u.uid)+'" style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;text-decoration:none">'+initial+'<div style="flex:1;min-width:0"><div style="font-size:var(--fs-sm);font-weight:600;color:var(--text)">'+esc(u.name||'User')+'</div>'+(u.roleBadgeHtml?'<div style="margin-top:3px">'+u.roleBadgeHtml+'</div>':'')+(u.instagram?'<div style="font-size:11px;color:#ec4899;margin-top:2px">@'+esc(u.instagram)+'</div>':'')+'</div></a>'+(p.isSelf?'<button onclick="reportLiker(\\''+esc(u.uid)+'\\',\\'Kollab '+esc(p.id)+'\\',1)" style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);color:#ef4444;border-radius:8px;padding:6px 11px;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0">Melden</button>':'<div style="font-size:11px;color:var(--accent)">→</div>')+'</div>';}).join('');return '<div id="liker-rows-cl-'+esc(p.id)+'" style="display:none">'+rows+'</div><div style="display:flex;align-items:center;justify-content:space-between;gap:var(--space-2);margin-top:10px;padding:0 4px"><div style="font-size:var(--fs-xs);color:var(--muted);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Gefällt '+top+rest+'</div><button onclick="showLikerModal(\\'cl-'+esc(p.id)+'\\')" style="background:rgba(236,72,153,0.10);border:1px solid rgba(236,72,153,0.35);color:#ec4899;font-size:11px;font-weight:700;padding:5px 10px;border-radius:8px;cursor:pointer;white-space:nowrap;flex-shrink:0"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:var(--space-1)"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Wer hat engagiert? ('+cnt+')</button></div>';})() +
         '</div>';
       }
     }
@@ -20124,15 +20124,15 @@ async function collabRequest(targetUid, btn){
     const unliked = (posts||[]).filter(p => !p.liked && !p.isSelf).length;
     const badgeEl = document.getElementById('tab-badge-kollabs');
     if (badgeEl) badgeEl.innerHTML = unliked > 0
-      ? '<span style="display:inline-block;min-width:18px;height:16px;line-height:16px;padding:0 5px;border-radius:99px;background:#ef4444;color:#fff;font-size:9.5px;font-weight:800;vertical-align:middle;margin-left:4px;box-shadow:0 2px 6px rgba(239,68,68,0.45)">'+unliked+'</span>'
+      ? '<span style="display:inline-block;min-width:18px;height:16px;line-height:16px;padding:0 5px;border-radius:99px;background:#ef4444;color:#fff;font-size:9.5px;font-weight:800;vertical-align:middle;margin-left:var(--space-1);box-shadow:0 2px 6px rgba(239,68,68,0.45)">'+unliked+'</span>'
       : '';
   }
   function showRulesModal(){
     const bg = document.createElement('div');
     bg.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(6px);z-index:9000;display:flex;align-items:center;justify-content:center;padding:18px';
     bg.innerHTML =
-      '<div style="background:var(--bg2);border:1px solid var(--border2);border-radius:18px;padding:24px;max-width:520px;width:100%;max-height:90vh;overflow-y:auto">' +
-        '<div style="font-size:36px;margin-bottom:8px;text-align:center">🤝</div>' +
+      '<div style="background:var(--bg2);border:1px solid var(--border2);border-radius:18px;padding:var(--space-6);max-width:520px;width:100%;max-height:90vh;overflow-y:auto">' +
+        '<div style="font-size:36px;margin-bottom:var(--space-2);text-align:center">🤝</div>' +
         '<h2 style="margin:0 0 8px;font-size:var(--fs-lg);font-weight:800;text-align:center">Kollaborations-Bereich</h2>' +
         '<div style="font-size:13.5px;line-height:1.7;color:var(--text)">' +
           '<b>So läuft\\'s:</b><br>' +
@@ -20179,9 +20179,9 @@ async function collabRequest(targetUid, btn){
     const _setSubHead = (title, sub) => `
 <style>
 .subset-page{min-height:100vh;background:var(--bg)}
-.subset-section{padding:16px;border-bottom:1px solid var(--border2)}
+.subset-section{padding:var(--space-4);border-bottom:1px solid var(--border2)}
 .subset-section-title{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:10px}
-.subset-row{display:flex;align-items:center;gap:14px;padding:12px 16px;background:var(--bg3);border:1px solid var(--border2);border-radius:12px;margin-bottom:8px}
+.subset-row{display:flex;align-items:center;gap:14px;padding:12px 16px;background:var(--bg3);border:1px solid var(--border2);border-radius:12px;margin-bottom:var(--space-2)}
 .subset-row-icon{width:36px;height:36px;border-radius:10px;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
 .subset-row-body{flex:1;min-width:0}
 .subset-row-title{font-size:14px;font-weight:700}
@@ -20214,24 +20214,24 @@ ${_setSubHead('<span style="display:inline-flex;align-items:center;gap:7px"><svg
   <div class="subset-section-title">Account-Login (Email + Passwort)</div>
   ${isLocked ? `
     <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:14px;margin-top:6px">
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px"><div style="font-size:0;line-height:0"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:0px;margin-right:0px"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div><div><div style="font-weight:800;font-size:14px;color:var(--text)">Account-Login gesperrt</div><div style="font-size:var(--fs-xs);color:var(--muted);margin-top:2px">Email + Passwort sind gesetzt. Änderungen brauchen eine Bestätigung per Mail.</div></div></div>
-      <div style="display:flex;flex-direction:column;gap:6px;font-size:var(--fs-sm);margin-bottom:12px">
-        <div style="display:flex;align-items:center;gap:8px;color:var(--text)"><span style="color:var(--muted);font-weight:600;min-width:90px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 6-10 7L2 6"/></svg>Email:</span><span style="font-family:JetBrains Mono,monospace;font-size:12.5px">${htmlEsc(u.email)}</span><span style="color:#22c55e;font-size:11px;margin-left:auto">✓ bestätigt</span></div>
-        <div style="display:flex;align-items:center;gap:8px;color:var(--text)"><span style="color:var(--muted);font-weight:600;min-width:90px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Passwort:</span><span style="font-family:JetBrains Mono,monospace;font-size:12.5px">••••••••</span><span style="color:#22c55e;font-size:11px;margin-left:auto">✓ gesetzt</span></div>
+      <div style="display:flex;align-items:center;gap:var(--space-3);margin-bottom:12px"><div style="font-size:0;line-height:0"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:0px;margin-right:0px"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div><div><div style="font-weight:800;font-size:14px;color:var(--text)">Account-Login gesperrt</div><div style="font-size:var(--fs-xs);color:var(--muted);margin-top:2px">Email + Passwort sind gesetzt. Änderungen brauchen eine Bestätigung per Mail.</div></div></div>
+      <div style="display:flex;flex-direction:column;gap:6px;font-size:var(--fs-sm);margin-bottom:var(--space-3)">
+        <div style="display:flex;align-items:center;gap:var(--space-2);color:var(--text)"><span style="color:var(--muted);font-weight:600;min-width:90px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 6-10 7L2 6"/></svg>Email:</span><span style="font-family:JetBrains Mono,monospace;font-size:12.5px">${htmlEsc(u.email)}</span><span style="color:#22c55e;font-size:11px;margin-left:auto">✓ bestätigt</span></div>
+        <div style="display:flex;align-items:center;gap:var(--space-2);color:var(--text)"><span style="color:var(--muted);font-weight:600;min-width:90px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Passwort:</span><span style="font-family:JetBrains Mono,monospace;font-size:12.5px">••••••••</span><span style="color:#22c55e;font-size:11px;margin-left:auto">✓ gesetzt</span></div>
       </div>
       <button class="btn btn-outline btn-full" id="ep-request-change-btn" onclick="requestAccountChange()" style="font-size:var(--fs-sm);display:flex;align-items:center;justify-content:center"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 6-10 7L2 6"/></svg>Änderung anfragen</button>
-      <div id="ep-request-msg" style="font-size:11.5px;color:var(--muted);margin-top:8px;line-height:1.4">Klick → wir senden einen Bestätigungs-Link an deine Email. 30 Min nach Klick kannst du Email/Passwort ändern.</div>
+      <div id="ep-request-msg" style="font-size:11.5px;color:var(--muted);margin-top:var(--space-2);line-height:1.4">Klick → wir senden einen Bestätigungs-Link an deine Email. 30 Min nach Klick kannst du Email/Passwort ändern.</div>
     </div>
   ` : `
     <div style="display:flex;flex-direction:column;gap:14px">
       <div>
         <div style="font-size:11.5px;color:var(--muted);font-weight:700;margin-bottom:6px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 6-10 7L2 6"/></svg>EMAIL</div>
         <input type="email" class="form-input" id="inp-email" placeholder="deine@email.de" maxlength="200" value="${htmlEsc(u.email||u.pendingEmail||'')}" autocapitalize="none" spellcheck="false">
-        ${hasPending ? `<div style="margin-top:8px;padding:9px 11px;background:rgba(245,158,11,0.10);border:1px solid rgba(245,158,11,0.30);border-radius:10px;font-size:11.5px;color:#f59e0b;line-height:1.45"><b><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg>Bestätigung ausstehend.</b> Bestätigungs-Link an <b>${htmlEsc(u.pendingEmail)}</b> gesendet — schau ins Postfach.</div>` : ''}
-        ${hasEmail ? `<div style="margin-top:8px;padding:9px 11px;background:rgba(34,197,94,0.10);border:1px solid rgba(34,197,94,0.25);border-radius:10px;font-size:11.5px;color:#22c55e;line-height:1.45"><b>✓ Email bestätigt.</b></div>` : ''}
+        ${hasPending ? `<div style="margin-top:var(--space-2);padding:9px 11px;background:rgba(245,158,11,0.10);border:1px solid rgba(245,158,11,0.30);border-radius:10px;font-size:11.5px;color:#f59e0b;line-height:1.45"><b><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg>Bestätigung ausstehend.</b> Bestätigungs-Link an <b>${htmlEsc(u.pendingEmail)}</b> gesendet — schau ins Postfach.</div>` : ''}
+        ${hasEmail ? `<div style="margin-top:var(--space-2);padding:9px 11px;background:rgba(34,197,94,0.10);border:1px solid rgba(34,197,94,0.25);border-radius:10px;font-size:11.5px;color:#22c55e;line-height:1.45"><b>✓ Email bestätigt.</b></div>` : ''}
       </div>
       <div>
-        <div style="font-size:11.5px;color:var(--muted);font-weight:700;margin-bottom:6px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>PASSWORT ${hasPw ? '<span style="color:#22c55e;font-weight:600;margin-left:4px">(gesetzt)</span>' : '<span style="color:var(--muted-2);font-weight:500;margin-left:4px">(optional)</span>'}</div>
+        <div style="font-size:11.5px;color:var(--muted);font-weight:700;margin-bottom:6px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>PASSWORT ${hasPw ? '<span style="color:#22c55e;font-weight:600;margin-left:var(--space-1)">(gesetzt)</span>' : '<span style="color:var(--muted-2);font-weight:500;margin-left:var(--space-1)">(optional)</span>'}</div>
         <input type="password" class="form-input" id="inp-password" placeholder="${hasPw ? 'Neues Passwort (leer = unverändert)' : 'Min. 6 Zeichen'}" minlength="6" maxlength="200" autocomplete="new-password">
         <div style="font-size:11.5px;color:var(--muted);margin-top:6px;line-height:1.45">Mit Passwort kannst du dich direkt einloggen — ohne Magic-Link. Min. 6 Zeichen.</div>
       </div>
@@ -20535,7 +20535,7 @@ ${_setSubHead('<span style="display:inline-flex;align-items:center;gap:7px"><svg
     </div>
   </div>
   <form method="POST" action="/api/logout-all-others" onsubmit="return confirm('Alle anderen Sessions abmelden? Du bleibst auf diesem Gerät eingeloggt.')">
-    <button type="submit" class="btn btn-outline btn-full" style="margin-top:8px;border-color:rgba(245,158,11,.35);color:#fbbf24;display:flex;align-items:center;justify-content:center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Alle anderen Geräte abmelden</button>
+    <button type="submit" class="btn btn-outline btn-full" style="margin-top:var(--space-2);border-color:rgba(245,158,11,.35);color:#fbbf24;display:flex;align-items:center;justify-content:center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Alle anderen Geräte abmelden</button>
   </form>
 </div>
 <div class="subset-section">
@@ -20560,20 +20560,20 @@ ${_setSubHead('<span style="display:inline-flex;align-items:center;gap:7px"><svg
 ${_setSubHead('<span style="display:inline-flex;align-items:center;gap:7px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Admin-Tools</span>', 'Live-Tour, Page-Vorschauen und FE-Thread-Tools — nur für Admins sichtbar.')}
 <div class="subset-section">
   <div class="subset-section-title" style="display:inline-flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:0px"><rect x="2" y="2" width="20" height="20" rx="2.5"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/><line x1="17" y1="17" x2="22" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/></svg>Live-Tour</div>
-  <button onclick="if(window.ftStart)window.ftStart();else alert('Tour-Script nicht geladen — Page reload bitte');" class="btn btn-primary btn-full" style="margin-bottom:8px;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;box-shadow:0 6px 18px rgba(212,175,55,0.4);font-weight:800;display:flex;align-items:center;justify-content:center;gap:8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:0px"><rect x="2" y="2" width="20" height="20" rx="2.5"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/><line x1="17" y1="17" x2="22" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/></svg>Komplette User-Journey-Tour starten</button>
+  <button onclick="if(window.ftStart)window.ftStart();else alert('Tour-Script nicht geladen — Page reload bitte');" class="btn btn-primary btn-full" style="margin-bottom:var(--space-2);background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;box-shadow:0 6px 18px rgba(212,175,55,0.4);font-weight:800;display:flex;align-items:center;justify-content:center;gap:var(--space-2)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:0px"><rect x="2" y="2" width="20" height="20" rx="2.5"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/><line x1="17" y1="17" x2="22" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/></svg>Komplette User-Journey-Tour starten</button>
   <div style="font-size:11.5px;color:var(--muted);line-height:1.4;margin-top:6px">10-Step Walkthrough: Landing → Telegram → Email → Login → Insta → Password → Feed → Einstellungen → Profil. Highlighted-Spot + Beschreibung pro Stage.</div>
 </div>
 <div class="subset-section">
   <div class="subset-section-title" style="display:inline-flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:0px"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>Vorschauen</div>
-  <a href="/?preview=1" target="_blank" class="btn btn-outline btn-full" style="margin-bottom:8px;display:flex">🔐 Login-Page (App)</a>
-  <a href="/willkommen" target="_blank" class="btn btn-outline btn-full" style="margin-bottom:8px;display:flex">🌐 Public Landing-Page</a>
-  <a href="/onboarding-instagram?preview=1" target="_blank" class="btn btn-outline btn-full" style="margin-bottom:8px;display:flex">🚀 Email-Onboarding (3-Step Wizard)</a>
-  <a href="/feed?tour=1" target="_blank" class="btn btn-outline btn-full" style="margin-bottom:8px;display:flex">🎯 In-App Tour (Pfeile)</a>
-  <a href="/preview/email-login" target="_blank" class="btn btn-outline btn-full" style="margin-bottom:8px;display:flex">📧 Magic-Link Email</a>
+  <a href="/?preview=1" target="_blank" class="btn btn-outline btn-full" style="margin-bottom:var(--space-2);display:flex">🔐 Login-Page (App)</a>
+  <a href="/willkommen" target="_blank" class="btn btn-outline btn-full" style="margin-bottom:var(--space-2);display:flex">🌐 Public Landing-Page</a>
+  <a href="/onboarding-instagram?preview=1" target="_blank" class="btn btn-outline btn-full" style="margin-bottom:var(--space-2);display:flex">🚀 Email-Onboarding (3-Step Wizard)</a>
+  <a href="/feed?tour=1" target="_blank" class="btn btn-outline btn-full" style="margin-bottom:var(--space-2);display:flex">🎯 In-App Tour (Pfeile)</a>
+  <a href="/preview/email-login" target="_blank" class="btn btn-outline btn-full" style="margin-bottom:var(--space-2);display:flex">📧 Magic-Link Email</a>
 </div>
 <div class="subset-section">
   <div class="subset-section-title" style="display:inline-flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:0px"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Dashboard</div>
-  <a href="/dashboard" class="btn btn-primary btn-full" style="background:linear-gradient(135deg,#f5d76e,#d4a946 55%,#8b6914);color:#000;font-weight:800;display:flex;align-items:center;justify-content:center;gap:8px">🛡️ Admin-Dashboard öffnen</a>
+  <a href="/dashboard" class="btn btn-primary btn-full" style="background:linear-gradient(135deg,#f5d76e,#d4a946 55%,#8b6914);color:#000;font-weight:800;display:flex;align-items:center;justify-content:center;gap:var(--space-2)">🛡️ Admin-Dashboard öffnen</a>
   <div style="font-size:11.5px;color:var(--muted);line-height:1.4;margin-top:6px">User-Verwaltung, Moderation-Queue, Stats, Engagement-Log und mehr.</div>
 </div>
 </div>
@@ -20681,14 +20681,14 @@ ${_setSubHead('<span style="display:inline-flex;align-items:center;gap:7px"><svg
 .pf-stat{cursor:default}
 .pf-stat-num{font-size:18px;font-weight:700;color:var(--text);line-height:1.1}
 .pf-stat-lbl{font-size:11px;color:var(--muted);margin-top:2px;font-weight:500}
-.pf-name-row{margin-bottom:8px}
+.pf-name-row{margin-bottom:var(--space-2)}
 .pf-name{font-size:var(--fs-md);font-weight:700;color:var(--text);line-height:1.2}
 .pf-handle{font-size:var(--fs-sm);color:var(--muted);margin-top:2px;font-weight:500}
 .pf-bio{font-size:13.5px;color:var(--text);line-height:1.5;margin-bottom:10px;white-space:pre-wrap}
 .pf-bio:empty::before{content:"Keine Bio gesetzt";color:var(--muted2);font-style:italic}
 .pf-link-row{display:flex;align-items:center;gap:6px;font-size:var(--fs-sm);color:#4dabf7;margin-bottom:14px;font-weight:600}
 .pf-link-row a{color:inherit;text-decoration:none}
-.pf-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.pf-actions{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-2)}
 .pf-action-btn{padding:9px 14px;background:var(--bg);border:1px solid var(--border2);color:var(--text);border-radius:9px;font-size:var(--fs-sm);font-weight:600;cursor:pointer;font-family:inherit;transition:all .12s;text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:6px}
 .pf-action-btn:hover{background:var(--bg4);border-color:var(--accent)}
 .pf-action-btn.primary{background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;border-color:transparent;box-shadow:0 2px 8px rgba(124,58,237,.25)}
@@ -20702,7 +20702,7 @@ ${_setSubHead('<span style="display:inline-flex;align-items:center;gap:7px"><svg
 .pf-sheet-title{font-size:var(--fs-md);font-weight:700;color:var(--text)}
 .pf-sheet-close{width:32px;height:32px;border-radius:50%;background:var(--bg3);border:none;color:var(--text);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center}
 .pf-sheet-body{padding:18px}
-.pf-field{margin-bottom:16px}
+.pf-field{margin-bottom:var(--space-4)}
 .pf-field:last-child{margin-bottom:0}
 .pf-field-label{display:block;font-size:11.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px}
 .pf-input{width:100%;padding:12px 14px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:11px;color:var(--text);font-size:14.5px;font-family:inherit;outline:none;transition:border-color .15s;font-weight:500;box-sizing:border-box}
@@ -20710,9 +20710,9 @@ ${_setSubHead('<span style="display:inline-flex;align-items:center;gap:7px"><svg
 .pf-input::placeholder{color:var(--muted2)}
 .pf-textarea{min-height:80px;resize:vertical;line-height:1.5}
 .pf-input-with-icon{position:relative}
-.pf-input-with-icon .pf-input{padding-left:32px}
+.pf-input-with-icon .pf-input{padding-left:var(--space-8)}
 .pf-input-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:14px;font-weight:600;pointer-events:none}
-.pf-counter{font-size:10.5px;color:var(--muted);text-align:right;margin-top:4px}
+.pf-counter{font-size:10.5px;color:var(--muted);text-align:right;margin-top:var(--space-1)}
 .pf-counter.warn{color:#f59e0b}
 .pf-counter.over{color:#ef4444}
 .pf-sheet-actions{padding:14px 18px;border-top:1px solid var(--border2);background:var(--bg);position:sticky;bottom:0;display:flex;gap:10px}
@@ -20722,7 +20722,7 @@ ${_setSubHead('<span style="display:inline-flex;align-items:center;gap:7px"><svg
 .pf-toast{position:fixed;top:60px;left:50%;transform:translateX(-50%) translateY(-20px);background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;padding:10px 18px;border-radius:11px;font-size:var(--fs-sm);font-weight:700;opacity:0;pointer-events:none;transition:all .25s;z-index:9999;box-shadow:0 8px 24px rgba(34,197,94,.4)}
 .pf-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .pf-toast.err{background:linear-gradient(135deg,#ef4444,#dc2626);box-shadow:0 8px 24px rgba(239,68,68,.4)}
-.set-hub-grid{display:grid;grid-template-columns:1fr;gap:8px;padding:14px 16px;border-bottom:1px solid var(--border2)}
+.set-hub-grid{display:grid;grid-template-columns:1fr;gap:var(--space-2);padding:14px 16px;border-bottom:1px solid var(--border2)}
 .set-hub-card{display:flex;align-items:center;gap:14px;padding:14px;background:var(--bg3);border:1px solid var(--border2);border-radius:14px;text-decoration:none;color:var(--text);transition:all .15s}
 .set-hub-card:hover{background:var(--bg4);border-color:var(--accent)}
 .set-hub-card:active{transform:scale(.98)}
@@ -20825,8 +20825,8 @@ ${(function(){
         </div>
         ${(() => {
             const ownedBanners = BANNER_ITEMS.filter(b => myInventory.includes(b.id));
-            if (!ownedBanners.length) return `<div style="font-size:11px;color:var(--muted);margin-top:10px"><span style="display:inline-flex;vertical-align:-2px;margin-right:4px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg></span>Premium-Banner im Shop kaufen — je 💎 1 Diamant</div>`;
-            return `<div style="margin-top:12px"><div style="font-size:11px;color:var(--muted);margin-bottom:6px"><span style="display:inline-flex;vertical-align:-2px;margin-right:4px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg></span>Gekaufte Premium-Banner</div><div class="gradient-grid">${ownedBanners.map(b=>`<div class="gradient-opt ${(u.banner||'')===b.gradient?'selected':''}" style="background:${b.gradient}" title="${b.name}" onclick="selectBanner('${b.gradient}',this)"></div>`).join('')}</div></div>`;
+            if (!ownedBanners.length) return `<div style="font-size:11px;color:var(--muted);margin-top:10px"><span style="display:inline-flex;vertical-align:-2px;margin-right:var(--space-1)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg></span>Premium-Banner im Shop kaufen — je 💎 1 Diamant</div>`;
+            return `<div style="margin-top:var(--space-3)"><div style="font-size:11px;color:var(--muted);margin-bottom:6px"><span style="display:inline-flex;vertical-align:-2px;margin-right:var(--space-1)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg></span>Gekaufte Premium-Banner</div><div class="gradient-grid">${ownedBanners.map(b=>`<div class="gradient-opt ${(u.banner||'')===b.gradient?'selected':''}" style="background:${b.gradient}" title="${b.name}" onclick="selectBanner('${b.gradient}',this)"></div>`).join('')}</div></div>`;
         })()}
       </div>
       <div class="pf-field">
@@ -20970,13 +20970,13 @@ async function pfHandleAvatarFile(input){
   </a>
   <a href="/einstellungen/pro" class="set-hub-card">
     <div class="set-hub-icon" style="background:linear-gradient(135deg,#f5d76e,#d4af37 50%,#8b6914);color:#000"><svg width="21" height="21" viewBox="0 0 24 24" fill="#000" stroke="none"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg></div>
-    <div class="set-hub-content"><div class="set-hub-title">Pro-Features <span style="font-size:9.5px;background:linear-gradient(135deg,#f5d76e,#d4af37);color:#000;padding:2px 6px;border-radius:6px;font-weight:800;letter-spacing:0.5px;margin-left:4px">SOON</span></div><div class="set-hub-sub">Analytics · Scheduler · API · mehr</div></div>
+    <div class="set-hub-content"><div class="set-hub-title">Pro-Features <span style="font-size:9.5px;background:linear-gradient(135deg,#f5d76e,#d4af37);color:#000;padding:2px 6px;border-radius:6px;font-weight:800;letter-spacing:0.5px;margin-left:var(--space-1)">SOON</span></div><div class="set-hub-sub">Analytics · Scheduler · API · mehr</div></div>
     <div class="set-hub-arrow">›</div>
   </a>
   ${adminIds.includes(Number(myUid)) ? `
   <a href="/einstellungen/admin" class="set-hub-card" style="background:linear-gradient(135deg,rgba(245,215,110,0.10),rgba(212,175,55,0.04));border-color:rgba(212,175,55,0.40)">
     <div class="set-hub-icon" style="background:linear-gradient(135deg,#d4af37,#8b6914);color:#000"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg></div>
-    <div class="set-hub-content"><div class="set-hub-title">Admin-Tools <span style="font-size:9.5px;background:rgba(212,175,55,0.20);color:#d4af37;padding:2px 6px;border-radius:6px;font-weight:800;letter-spacing:0.5px;margin-left:4px;border:1px solid rgba(212,175,55,0.30)">ADMIN</span></div><div class="set-hub-sub">Live-Tour · Vorschauen · FE-Thread · Dashboard</div></div>
+    <div class="set-hub-content"><div class="set-hub-title">Admin-Tools <span style="font-size:9.5px;background:rgba(212,175,55,0.20);color:#d4af37;padding:2px 6px;border-radius:6px;font-weight:800;letter-spacing:0.5px;margin-left:var(--space-1);border:1px solid rgba(212,175,55,0.30)">ADMIN</span></div><div class="set-hub-sub">Live-Tour · Vorschauen · FE-Thread · Dashboard</div></div>
     <div class="set-hub-arrow">›</div>
   </a>` : ''}
 </div>
@@ -20985,12 +20985,12 @@ async function pfHandleAvatarFile(input){
 <!-- Pinned-Reel-Link → Hero-Edit-Sheet (pfPinnedLink) -->
 
 ${myInventory.length > 0 ? `
-<div style="padding:16px;border-bottom:1px solid var(--border2)">
-  <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;display:inline-flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>Meine Items</div>
+<div style="padding:var(--space-4);border-bottom:1px solid var(--border2)">
+  <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:1px;margin-bottom:var(--space-3);display:inline-flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>Meine Items</div>
   <div style="display:flex;flex-direction:column;gap:10px">
     ${RING_ITEMS.filter(r=>myInventory.includes(r.id)).map(item=>{
         const isActive = myActiveRing === item.id;
-        return `<div style="background:var(--bg3);border:1px solid ${isActive?'rgba(167,139,250,.5)':'var(--border2)'};border-radius:14px;padding:12px;display:flex;align-items:center;gap:12px">
+        return `<div style="background:var(--bg3);border:1px solid ${isActive?'rgba(167,139,250,.5)':'var(--border2)'};border-radius:14px;padding:var(--space-3);display:flex;align-items:center;gap:var(--space-3)">
       <div style="width:44px;height:44px;border-radius:50%;background:${item.gradient};flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:var(--fs-lg)">${item.emoji}</div>
       <div style="flex:1">
         <div style="font-size:var(--fs-sm);font-weight:700">${item.name} ${isActive?'<span style="font-size:10px;color:#a78bfa;font-weight:600">● Aktiv</span>':''}</div>
@@ -21002,14 +21002,14 @@ ${myInventory.length > 0 ? `
   </div>
 </div>` : ''}
 <!-- Admin-Sections wurden nach /einstellungen/admin verschoben (siehe Admin-Card oben im Hub) -->
-<div style="padding:16px;border-bottom:1px solid var(--border2)">
+<div style="padding:var(--space-4);border-bottom:1px solid var(--border2)">
   <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;display:inline-flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>App-Tour</div>
   <div style="font-size:var(--fs-xs);color:var(--muted);margin-bottom:10px">${u.appBriefingSeenV2 ? 'Du hast die Tour schon einmal gesehen.' : 'Du hast die Tour noch nicht gesehen — sie startet beim nächsten Feed-Open automatisch.'}</div>
-  <a href="/feed?tour=1" class="btn btn-outline btn-full" style="display:flex;align-items:center;justify-content:center;gap:8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>Tour erneut anschauen</a>
+  <a href="/feed?tour=1" class="btn btn-outline btn-full" style="display:flex;align-items:center;justify-content:center;gap:var(--space-2)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>Tour erneut anschauen</a>
 </div>
 <!-- Passwort-Section entfernt — Duplikat. Email/Passwort sind jetzt in /einstellungen/account -->
-<div style="padding:16px">
-  <a href="/logout" class="btn btn-outline btn-full" style="color:var(--accent);display:flex;align-items:center;justify-content:center;gap:8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Ausloggen</a>
+<div style="padding:var(--space-4)">
+  <a href="/logout" class="btn btn-outline btn-full" style="color:var(--accent);display:flex;align-items:center;justify-content:center;gap:var(--space-2)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Ausloggen</a>
 </div>
 <div style="padding:0 16px 14px;display:flex;flex-direction:column;gap:6px;font-size:var(--fs-xs)">
   <div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin:14px 0 4px">Rechtliches</div>
@@ -21018,23 +21018,23 @@ ${myInventory.length > 0 ? `
   <a href="/impressum" style="color:var(--muted);text-decoration:none;padding:8px 0;border-bottom:1px solid var(--border2)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:7px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="11"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>Impressum</a>
   <a href="/api/datenexport" style="color:var(--muted);text-decoration:none;padding:8px 0;border-bottom:1px solid var(--border2)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:7px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Meine Daten exportieren (DSGVO)</a>
   <button onclick="loadBlockedUsers()" id="show-blocked-btn" style="background:none;border:none;color:var(--muted);text-align:left;padding:8px 0;font-size:var(--fs-xs);cursor:pointer;font-family:inherit;border-bottom:1px solid var(--border2)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:7px"><circle cx="12" cy="12" r="10"/><line x1="4.9" y1="4.9" x2="19.1" y2="19.1"/></svg>Blockierte Nutzer verwalten</button>
-  <div id="blocked-users-list" style="display:none;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;margin:6px 0;padding:8px;font-size:12.5px"></div>
+  <div id="blocked-users-list" style="display:none;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;margin:6px 0;padding:var(--space-2);font-size:12.5px"></div>
   <button onclick="deleteAccountDsgvo()" id="delete-account" style="background:none;border:none;color:#ef4444;text-align:left;padding:8px 0;font-size:var(--fs-xs);cursor:pointer;font-family:inherit"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:7px"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Account dauerhaft löschen</button>
 </div>
 <script>
 async function loadBlockedUsers(){
   const box=document.getElementById('blocked-users-list');
   if(box.style.display==='block'){box.style.display='none';return;}
-  box.style.display='block';box.innerHTML='<div style="padding:8px;color:var(--muted)">Lädt…</div>';
+  box.style.display='block';box.innerHTML='<div style="padding:var(--space-2);color:var(--muted)">Lädt…</div>';
   try{
     const r=await fetch('/api/blocked-users');
     const j=await r.json();
-    if(!j||!j.ok){box.innerHTML='<div style="padding:8px;color:#ef4444">❌ '+(j&&j.error||'Fehler beim Laden')+'</div>';return;}
-    if(!j.blocked||!j.blocked.length){box.innerHTML='<div style="padding:8px;color:var(--muted)">Du hast aktuell niemanden blockiert.</div>';return;}
+    if(!j||!j.ok){box.innerHTML='<div style="padding:var(--space-2);color:#ef4444">❌ '+(j&&j.error||'Fehler beim Laden')+'</div>';return;}
+    if(!j.blocked||!j.blocked.length){box.innerHTML='<div style="padding:var(--space-2);color:var(--muted)">Du hast aktuell niemanden blockiert.</div>';return;}
     box.innerHTML=j.blocked.map(function(uid){
-      return '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 4px;border-top:1px solid var(--border2)"><a href="/profil/'+uid+'" style="color:var(--text);text-decoration:none;font-weight:600">User #'+uid+'</a><button onclick="unblockUser(\\''+uid+'\\',this)" style="background:rgba(34,197,94,0.10);border:1px solid rgba(34,197,94,0.35);color:#22c55e;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer">Aufheben</button></div>';
+      return '<div style="display:flex;align-items:center;justify-content:space-between;gap:var(--space-2);padding:8px 4px;border-top:1px solid var(--border2)"><a href="/profil/'+uid+'" style="color:var(--text);text-decoration:none;font-weight:600">User #'+uid+'</a><button onclick="unblockUser(\\''+uid+'\\',this)" style="background:rgba(34,197,94,0.10);border:1px solid rgba(34,197,94,0.35);color:#22c55e;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer">Aufheben</button></div>';
     }).join('');
-  }catch(e){box.innerHTML='<div style="padding:8px;color:#ef4444">❌ Netzwerk-Fehler</div>';}
+  }catch(e){box.innerHTML='<div style="padding:var(--space-2);color:#ef4444">❌ Netzwerk-Fehler</div>';}
 }
 async function unblockUser(uid,btn){
   btn.disabled=true;btn.textContent='…';

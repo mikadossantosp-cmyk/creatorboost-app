@@ -358,15 +358,15 @@ module.exports = function renderChatList(opts) {
                   '"<button onclick=\\"closePinnedStory()\\" style=\\"background:var(--bg4);border:none;width:32px;height:32px;border-radius:50%;color:var(--text);font-size:18px;cursor:pointer;flex-shrink:0\\">×</button>"+' +
                 '"</div>"+' +
                 '(s.thumb?' +
-                  '"<a href=\\"javascript:void(0)\\" onclick=\\"onPinVisitStory(\'"+_esc(s.uid)+"\')\\" style=\\"display:block;position:relative;width:100%;padding-top:62%;overflow:hidden;background:#000;border-radius:14px;margin-bottom:12px;text-decoration:none\\">"+' +
+                  '"<a href=\\"javascript:void(0)\\" onclick=\\"onPinVisitStory(\'"+_esc(s.uid)+"\')\\" style=\\"display:block;position:relative;width:100%;padding-top:62%;overflow:hidden;background:#000;border-radius:14px;margin-bottom:var(--space-3);text-decoration:none\\">"+' +
                     '"<img src=\\""+_esc(s.thumb)+"\\" referrerpolicy=\\"no-referrer\\" style=\\"position:absolute;inset:0;width:100%;height:100%;object-fit:cover\\" loading=\\"lazy\\" onerror=\\"this.style.display=\'none\'\\" alt=\\"\\">"+' +
                     '"<div style=\\"position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.05),rgba(0,0,0,.4));pointer-events:none\\"></div>"+' +
                     '"<div style=\\"position:absolute;inset:0;display:flex;align-items:center;justify-content:center\\"><div style=\\"width:54px;height:54px;border-radius:50%;background:rgba(255,255,255,.92);display:flex;align-items:center;justify-content:center\\"><div style=\\"width:0;height:0;border-style:solid;border-width:11px 0 11px 20px;border-color:transparent transparent transparent #000;margin-left:4px\\"></div></div></div>"+' +
                   '"</a>"' +
-                ':"<div style=\\"margin-bottom:12px;padding:30px;background:linear-gradient(135deg,#1a1a2e,#16213e);border-radius:14px;text-align:center;font-size:14px;color:rgba(255,255,255,.6)\\">📸 Instagram Reel</div>")+' +
+                ':"<div style=\\"margin-bottom:var(--space-3);padding:30px;background:linear-gradient(135deg,#1a1a2e,#16213e);border-radius:14px;text-align:center;font-size:14px;color:rgba(255,255,255,.6)\\">📸 Instagram Reel</div>")+' +
                 '(s.isOwn?' +
                   '"<div style=\\"padding:12px 14px;background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.25);border-radius:12px;font-size:var(--fs-sm);color:var(--muted);line-height:1.5\\">👤 Das ist dein eigener Pinned Reel.</div>"' +
-                ':"<div style=\\"display:flex;gap:8px;margin-bottom:10px\\"><a href=\\"javascript:void(0)\\" onclick=\\"onPinVisitStory(\'"+_esc(s.uid)+"\')\\" id=\\"pin-visit-link-story\\" style=\\"flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:11px 12px;background:linear-gradient(135deg,#ec4899,#a855f7);color:#fff;border-radius:10px;font-size:var(--fs-sm);font-weight:700;text-decoration:none\\">📸 Auf Instagram öffnen</a>"+' +
+                ':"<div style=\\"display:flex;gap:var(--space-2);margin-bottom:10px\\"><a href=\\"javascript:void(0)\\" onclick=\\"onPinVisitStory(\'"+_esc(s.uid)+"\')\\" id=\\"pin-visit-link-story\\" style=\\"flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:11px 12px;background:linear-gradient(135deg,#ec4899,#a855f7);color:#fff;border-radius:10px;font-size:var(--fs-sm);font-weight:700;text-decoration:none\\">📸 Auf Instagram öffnen</a>"+' +
                   '(s.engaged?"<button disabled style=\\"flex:1;padding:11px 12px;border-radius:10px;border:1px solid #22c55e;background:rgba(34,197,94,.12);color:#22c55e;font-size:var(--fs-sm);font-weight:700;font-family:inherit;cursor:default\\">✅ Engagiert</button>":"<button onclick=\\"pinnedEngageClick(\'"+_esc(s.uid)+"\',this)\\" id=\\"pin-engage-btn-story\\" disabled data-locked=\\"1\\" style=\\"flex:1;padding:11px 12px;border-radius:10px;border:1px solid rgba(255,107,107,.35);background:rgba(255,107,107,.10);color:#ff6b6b;font-size:var(--fs-sm);font-weight:700;font-family:inherit;cursor:not-allowed;opacity:0.55\\">🔒 Erst Insta öffnen</button>")+' +
                   '"</div><div style=\\"padding:12px 14px;background:linear-gradient(135deg,rgba(34,197,94,.10),rgba(167,139,250,.06));border:1px solid rgba(34,197,94,.25);border-radius:12px;font-size:12.5px;color:var(--text);line-height:1.55\\"><div style=\\"font-weight:700;color:#22c55e;margin-bottom:4px\\">💎 +1 Diamant für Engagement</div><div style=\\"color:var(--muted)\\">Auf Instagram <b>LIKEN + KOMMENTIEREN + TEILEN + SPEICHERN</b> → komme zurück → tippe „Engagiert\\" → +1 💎 für dich.</div></div>");' +
               'm.style.display="flex";' +
@@ -535,7 +535,7 @@ module.exports = function renderChatList(opts) {
               document.getElementById("thr-cust-name").value=currentName||"";
               document.getElementById("thr-cust-emoji").value=currentEmoji||"";
               const pal=document.getElementById("thr-cust-palette");
-              palette.forEach(e=>{const b=document.createElement("button");b.type="button";b.textContent=e;b.style.cssText="background:var(--bg2);border:1px solid var(--border2);border-radius:10px;font-size:22px;padding:8px;cursor:pointer";b.onclick=()=>{document.getElementById("thr-cust-emoji").value=e;};pal.appendChild(b);});
+              palette.forEach(e=>{const b=document.createElement("button");b.type="button";b.textContent=e;b.style.cssText="background:var(--bg2);border:1px solid var(--border2);border-radius:10px;font-size:22px;padding:var(--space-2);cursor:pointer";b.onclick=()=>{document.getElementById("thr-cust-emoji").value=e;};pal.appendChild(b);});
               document.getElementById("thr-cust-cancel").onclick=()=>m.remove();
               document.getElementById("thr-cust-save").onclick=()=>saveThreadCustom(tid);
             }
@@ -548,7 +548,7 @@ module.exports = function renderChatList(opts) {
               const inner=document.createElement("div");
               inner.style.cssText="background:var(--bg2);border-radius:24px 24px 0 0;padding:18px 16px 30px;width:100%;max-width:480px";
               const titleDiv=document.createElement("div");
-              titleDiv.style.cssText="font-size:14px;font-weight:700;text-align:center;color:var(--muted);margin-bottom:12px;text-transform:uppercase;letter-spacing:0.5px";
+              titleDiv.style.cssText="font-size:14px;font-weight:700;text-align:center;color:var(--muted);margin-bottom:var(--space-3);text-transform:uppercase;letter-spacing:0.5px";
               titleDiv.textContent=(currentEmoji||"")+" "+(currentName||"");
               const grip=document.createElement("div");
               grip.style.cssText="width:36px;height:4px;background:#666;border-radius:4px;margin:0 auto 14px";
@@ -556,7 +556,7 @@ module.exports = function renderChatList(opts) {
               inner.appendChild(titleDiv);
               const mkBtn=(label,bg,color,fontWeight,handler)=>{
                 const b=document.createElement("button");
-                b.style.cssText="width:100%;padding:16px;border-radius:14px;border:none;background:"+bg+";color:"+color+";font-size:var(--fs-base);font-weight:"+fontWeight+";cursor:pointer;margin-bottom:8px;text-align:left;display:flex;align-items:center;gap:14px";
+                b.style.cssText="width:100%;padding:var(--space-4);border-radius:14px;border:none;background:"+bg+";color:"+color+";font-size:var(--fs-base);font-weight:"+fontWeight+";cursor:pointer;margin-bottom:var(--space-2);text-align:left;display:flex;align-items:center;gap:14px";
                 b.innerHTML=label;
                 b.onclick=()=>{m.remove();handler();};
                 return b;
