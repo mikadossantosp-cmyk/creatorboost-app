@@ -19386,8 +19386,8 @@ document.querySelectorAll('.ins-bar').forEach((b, i) => {
                 if(p.attachment && p.attachmentType==='audio') attachHtml = '<audio controls src="'+p.attachment+'" style="width:100%;margin-top:8px"></audio>';
                 return '<div style="padding:12px 16px;border-top:1px solid var(--border2)">'
                     +'<div style="display:flex;justify-content:space-between;align-items:start">'
-                    +'<div style="font-size:13px;line-height:1.6;flex:1">'+p.text+'</div>'
-                    +'<button onclick="deletePost('+p.timestamp+')" style="background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;flex-shrink:0;padding:0 0 0 8px">🗑️</button>'
+                    +'<div style="font-size:var(--fs-sm);line-height:1.6;flex:1">'+p.text+'</div>'
+                    +'<button onclick="deletePost('+p.timestamp+')" style="background:none;border:none;color:var(--muted);font-size:var(--fs-md);cursor:pointer;flex-shrink:0;padding:0 0 0 8px">🗑️</button>'
                     +'</div>'
                     +attachHtml
                     +'<div style="font-size:11px;color:var(--muted);margin-top:6px">'+new Date(p.timestamp).toLocaleDateString('de-DE',{day:'2-digit',month:'short'})+'</div>'
@@ -19407,7 +19407,7 @@ document.querySelectorAll('.ins-bar').forEach((b, i) => {
                 +'</div></div>';
         }).join('');
         const addCardHtml = canAddProject
-            ? '<div class="proj-add-card" onclick="openAddProj()"><div style="font-size:28px;line-height:1">+</div><div style="font-size:12px;font-weight:600">Projekt hinzufügen</div></div>'
+            ? '<div class="proj-add-card" onclick="openAddProj()"><div style="font-size:var(--fs-xl);line-height:1">+</div><div style="font-size:var(--fs-xs);font-weight:600">Projekt hinzufügen</div></div>'
             : '';
 
         const hasPic = !!(myPicData||ladeBild(myUid,'profilepic'));
@@ -19425,14 +19425,14 @@ document.querySelectorAll('.ins-bar').forEach((b, i) => {
             const next = completionChecks.find(c=>!c[0]);
             return '<div style="margin:12px 16px;padding:12px 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:14px">'
                 +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">'
-                +'<div style="font-size:13px;font-weight:700">Profil vervollständigen</div>'
-                +'<div style="font-size:12px;font-weight:700;color:var(--accent)">'+completionPct+'%</div></div>'
+                +'<div style="font-size:var(--fs-sm);font-weight:700">Profil vervollständigen</div>'
+                +'<div style="font-size:var(--fs-xs);font-weight:700;color:var(--accent)">'+completionPct+'%</div></div>'
                 +'<div style="background:var(--bg4);border-radius:4px;height:6px;overflow:hidden;margin-bottom:10px">'
                 +'<div style="height:100%;width:'+completionPct+'%;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:4px;transition:width .6s ease"></div></div>'
                 +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 8px;margin-bottom:10px">'
                 +completionChecks.map(([isDone,label,href])=>'<a href="'+(href||'#')+'" style="display:flex;align-items:center;gap:6px;font-size:11px;color:'+(isDone?'var(--green)':'var(--muted)')+';text-decoration:none">'+(isDone?'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="12" cy="12" r="10"/><path d="M8 12l2.5 2.5L16 9"/></svg>':'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;opacity:.45"><circle cx="12" cy="12" r="10"/></svg>')+label+'</a>').join('')
                 +'</div>'
-                +(next&&next[2]?'<a href="'+next[2]+'" style="display:inline-flex;align-items:center;gap:6px;background:var(--accent);color:#fff;padding:7px 14px;border-radius:10px;font-size:12px;font-weight:700;text-decoration:none">✏️ '+next[1]+' hinzufügen</a>':'')
+                +(next&&next[2]?'<a href="'+next[2]+'" style="display:inline-flex;align-items:center;gap:6px;background:var(--accent);color:#fff;padding:7px 14px;border-radius:10px;font-size:var(--fs-xs);font-weight:700;text-decoration:none">✏️ '+next[1]+' hinzufügen</a>':'')
                 +'</div>';
         })();
 
@@ -19470,8 +19470,8 @@ document.querySelectorAll('.ins-bar').forEach((b, i) => {
             +(myUser?.nische?'<div style="background:var(--bg3);border-radius:14px;padding:14px 16px"><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Nische</div><div style="font-size:14px;color:var(--accent)">🎯 '+htmlEsc(myUser.nische)+'</div></div>':'')
             +'<div style="background:var(--bg3);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:10px">'
             +'<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:2px">Social &amp; Links</div>'
-            +(myUser?.instagram?'<a href="https://instagram.com/'+encodeURIComponent(myUser.instagram)+'" target="_blank" style="display:flex;align-items:center;gap:10px;text-decoration:none"><span style="font-size:20px">📸</span><span style="color:var(--blue);font-size:14px">@'+htmlEsc(myUser.instagram)+'</span></a>':'<div style="font-size:13px;color:var(--muted)">Noch kein Instagram verknüpft</div>')
-            +(myUser?.website?'<a href="'+encodeURI(myUser.website)+'" target="_blank" style="display:flex;align-items:center;gap:10px;text-decoration:none"><span style="font-size:20px">🔗</span><span style="color:var(--blue);font-size:14px">'+htmlEsc(myUser.website.replace('https://','').replace('http://','').slice(0,40))+'</span></a>':'')
+            +(myUser?.instagram?'<a href="https://instagram.com/'+encodeURIComponent(myUser.instagram)+'" target="_blank" style="display:flex;align-items:center;gap:10px;text-decoration:none"><span style="font-size:var(--fs-lg)">📸</span><span style="color:var(--blue);font-size:14px">@'+htmlEsc(myUser.instagram)+'</span></a>':'<div style="font-size:var(--fs-sm);color:var(--muted)">Noch kein Instagram verknüpft</div>')
+            +(myUser?.website?'<a href="'+encodeURI(myUser.website)+'" target="_blank" style="display:flex;align-items:center;gap:10px;text-decoration:none"><span style="font-size:var(--fs-lg)">🔗</span><span style="color:var(--blue);font-size:14px">'+htmlEsc(myUser.website.replace('https://','').replace('http://','').slice(0,40))+'</span></a>':'')
             +'</div>'
             +'<div style="background:var(--bg3);border-radius:14px;padding:14px 16px">'
             +'<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Status</div>'
@@ -19489,8 +19489,8 @@ document.querySelectorAll('.ins-bar').forEach((b, i) => {
                 const myBonusLinksProf = d.bonusLinks?.[myUid]||0;
                 return '<div style="background:var(--bg3);border-radius:14px;padding:14px 16px"><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Verfügbarkeit</div>'
                     +'<div style="display:flex;gap:8px;flex-wrap:wrap">'
-                    +'<div style="background:var(--bg4);border-radius:10px;padding:8px 12px;font-size:12px;font-weight:600">⭐ Superlink: '+(slLeft2>0?'<span style="color:#22c55e">'+slLeft2+'/'+slMax2+' verfügbar</span>':'<span style="color:var(--muted)">0/'+slMax2+' verfügbar</span>')+'</div>'
-                    +'<div style="background:var(--bg4);border-radius:10px;padding:8px 12px;font-size:12px;font-weight:600">🔗 Extra-Links: <span style="color:var(--accent)">'+myBonusLinksProf+'</span></div>'
+                    +'<div style="background:var(--bg4);border-radius:10px;padding:8px 12px;font-size:var(--fs-xs);font-weight:600">⭐ Superlink: '+(slLeft2>0?'<span style="color:#22c55e">'+slLeft2+'/'+slMax2+' verfügbar</span>':'<span style="color:var(--muted)">0/'+slMax2+' verfügbar</span>')+'</div>'
+                    +'<div style="background:var(--bg4);border-radius:10px;padding:8px 12px;font-size:var(--fs-xs);font-weight:600">🔗 Extra-Links: <span style="color:var(--accent)">'+myBonusLinksProf+'</span></div>'
                     +'</div></div>';
             })()
             +'<a href="/einstellungen" style="display:flex;align-items:center;justify-content:center;gap:8px;background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:14px;font-size:14px;font-weight:600;color:var(--text);text-decoration:none"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>Profil bearbeiten</a>'
@@ -19512,12 +19512,12 @@ ${profileCard(myUid, myUser, d, true, lang, adminIds, myBannerData, myPicData)}
 <style>@keyframes dxpPulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(.85);opacity:.6}}</style>
 <div id="create-sub-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(8px)">
   <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:18px;padding:20px;width:100%;max-width:340px">
-    <div style="font-size:16px;font-weight:700;margin-bottom:6px">Neuen Account erstellen</div>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.5">App‑Only Persona mit eigenen XP, Followers und Profil. Du kannst zwischen Haupt‑ und Sub‑Account switchen.</div>
+    <div style="font-size:var(--fs-md);font-weight:700;margin-bottom:6px">Neuen Account erstellen</div>
+    <div style="font-size:var(--fs-xs);color:var(--muted);margin-bottom:14px;line-height:1.5">App‑Only Persona mit eigenen XP, Followers und Profil. Du kannst zwischen Haupt‑ und Sub‑Account switchen.</div>
     <input id="sub-name-input" type="text" placeholder="Name (max 30 Zeichen)" maxlength="30" style="width:100%;background:var(--bg4);border:1.5px solid var(--border);border-radius:12px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;margin-bottom:12px">
     <div style="display:flex;gap:8px">
-      <button onclick="closeCreateSubModal()" style="flex:1;background:var(--bg4);border:1px solid var(--border);border-radius:12px;padding:10px;font-size:13px;font-weight:600;color:var(--text);cursor:pointer">Abbrechen</button>
-      <button id="sub-create-btn" onclick="confirmCreateSub()" style="flex:1;background:linear-gradient(135deg,#a78bfa,#7c3aed);border:none;border-radius:12px;padding:10px;font-size:13px;font-weight:700;color:#fff;cursor:pointer">Erstellen</button>
+      <button onclick="closeCreateSubModal()" style="flex:1;background:var(--bg4);border:1px solid var(--border);border-radius:12px;padding:10px;font-size:var(--fs-sm);font-weight:600;color:var(--text);cursor:pointer">Abbrechen</button>
+      <button id="sub-create-btn" onclick="confirmCreateSub()" style="flex:1;background:linear-gradient(135deg,#a78bfa,#7c3aed);border:none;border-radius:12px;padding:10px;font-size:var(--fs-sm);font-weight:700;color:#fff;cursor:pointer">Erstellen</button>
     </div>
   </div>
 </div>
@@ -19603,7 +19603,7 @@ ${completionHtml}
 </div>
 <div id="ptab-projekte" style="display:none;padding-bottom:100px">
   <div class="proj-grid">${projCardsHtml}${addCardHtml}</div>
-  ${myProjects.length===0?'<div style="padding:4px 16px 32px;text-align:center;font-size:12px;color:var(--muted)">Zeig der Community, woran du arbeitest</div>':''}
+  ${myProjects.length===0?'<div style="padding:4px 16px 32px;text-align:center;font-size:var(--fs-xs);color:var(--muted)">Zeig der Community, woran du arbeitest</div>':''}
 </div>
 <div id="ptab-about" style="display:none">
   ${aboutHtml}
@@ -19622,8 +19622,8 @@ ${completionHtml}
       <div id="proj-detail-doc" style="margin-top:10px"></div>
     </div>
     <div style="padding:12px 20px 40px;display:flex;gap:10px">
-      <button id="proj-detail-edit" style="flex:1;background:var(--bg4);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:11px;font-size:13px;font-weight:600;cursor:pointer">✏️ Bearbeiten</button>
-      <button id="proj-detail-delete" style="flex:1;background:rgba(255,59,48,.1);border:1px solid rgba(255,59,48,.3);color:#ff3b30;border-radius:var(--radius-sm);padding:11px;font-size:13px;font-weight:600;cursor:pointer">🗑️ Löschen</button>
+      <button id="proj-detail-edit" style="flex:1;background:var(--bg4);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:11px;font-size:var(--fs-sm);font-weight:600;cursor:pointer">✏️ Bearbeiten</button>
+      <button id="proj-detail-delete" style="flex:1;background:rgba(255,59,48,.1);border:1px solid rgba(255,59,48,.3);color:#ff3b30;border-radius:var(--radius-sm);padding:11px;font-size:var(--fs-sm);font-weight:600;cursor:pointer">🗑️ Löschen</button>
     </div>
   </div>
 </div>
@@ -19631,7 +19631,7 @@ ${completionHtml}
 <div id="proj-add-overlay" class="proj-add-overlay" onclick="if(event.target===this)closeAddProj()">
   <div class="proj-add-sheet">
     <div style="padding:20px 20px 8px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border2)">
-      <div id="proj-add-title" style="font-family:var(--font-display);font-size:16px;font-weight:700">Projekt hinzufügen</div>
+      <div id="proj-add-title" style="font-family:var(--font-display);font-size:var(--fs-md);font-weight:700">Projekt hinzufügen</div>
       <button onclick="closeAddProj()" style="background:var(--bg4);border:none;color:var(--muted);width:32px;height:32px;border-radius:50%;font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer">×</button>
     </div>
     <div style="padding:16px;display:flex;flex-direction:column;gap:14px">
@@ -19639,7 +19639,7 @@ ${completionHtml}
         <div class="form-label">Projektbild</div>
         <label style="display:flex;align-items:center;gap:12px;background:var(--bg4);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;cursor:pointer">
           <div id="proj-img-preview" style="width:52px;height:52px;border-radius:10px;overflow:hidden;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">📷</div>
-          <div><div style="font-size:13px;font-weight:600">Bild auswählen</div><div style="font-size:11px;color:var(--muted);margin-top:2px">Alle Bildformate · max 4MB</div></div>
+          <div><div style="font-size:var(--fs-sm);font-weight:600">Bild auswählen</div><div style="font-size:11px;color:var(--muted);margin-top:2px">Alle Bildformate · max 4MB</div></div>
           <input type="file" id="proj-img-input" accept="image/*" style="display:none" onchange="previewProjImg(this)">
         </label>
       </div>
@@ -19647,7 +19647,7 @@ ${completionHtml}
         <div class="form-label">Dokument (optional)</div>
         <label style="display:flex;align-items:center;gap:12px;background:var(--bg4);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;cursor:pointer">
           <div id="proj-doc-preview" style="width:52px;height:52px;border-radius:10px;overflow:hidden;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">📎</div>
-          <div><div style="font-size:13px;font-weight:600">Word / PowerPoint</div><div id="proj-doc-name" style="font-size:11px;color:var(--muted);margin-top:2px">.docx oder .pptx · max 10MB</div></div>
+          <div><div style="font-size:var(--fs-sm);font-weight:600">Word / PowerPoint</div><div id="proj-doc-name" style="font-size:11px;color:var(--muted);margin-top:2px">.docx oder .pptx · max 10MB</div></div>
           <input type="file" id="proj-doc-input" accept=".docx,.pptx" style="display:none" onchange="previewProjDoc(this)">
         </label>
       </div>
@@ -19682,9 +19682,9 @@ function openProjDetail(idx){
   document.getElementById('proj-detail-title').textContent=p.title;
   (function(){const w=document.getElementById('proj-detail-img-wrap');if(!w)return;w.textContent='';if(p.img&&/^(data:image|https?:\\/\\/)/.test(p.img)){const im=document.createElement('img');im.src=p.img;im.alt='';im.style.cssText='width:100%;object-fit:contain;display:block;background:#0a0a0a';w.appendChild(im);}})();
   document.getElementById('proj-detail-desc').textContent=p.description||'';
-  (function(){const w=document.getElementById('proj-detail-link');if(!w)return;w.textContent='';if(p.link&&/^https?:\\/\\//i.test(p.link)){const a=document.createElement('a');a.href=p.link;a.target='_blank';a.rel='noopener noreferrer';a.style.cssText='color:var(--blue);font-size:13px;word-break:break-all';a.textContent='🔗 '+p.link;w.appendChild(a);}})();
+  (function(){const w=document.getElementById('proj-detail-link');if(!w)return;w.textContent='';if(p.link&&/^https?:\\/\\//i.test(p.link)){const a=document.createElement('a');a.href=p.link;a.target='_blank';a.rel='noopener noreferrer';a.style.cssText='color:var(--blue);font-size:var(--fs-sm);word-break:break-all';a.textContent='🔗 '+p.link;w.appendChild(a);}})();
   const docEl=document.getElementById('proj-detail-doc');
-  if(p.docName){const icon=p.docName.endsWith('.pptx')?'📊':'📄';docEl.innerHTML='<a href="/api/download-project-doc/'+_SESSION_UID+'/'+p.id+'" style="display:inline-flex;align-items:center;gap:8px;background:var(--bg4);border:1px solid var(--border);border-radius:10px;padding:8px 14px;font-size:13px;font-weight:600;color:var(--text);text-decoration:none">'+icon+' '+p.docName+' herunterladen</a>';}
+  if(p.docName){const icon=p.docName.endsWith('.pptx')?'📊':'📄';docEl.innerHTML='<a href="/api/download-project-doc/'+_SESSION_UID+'/'+p.id+'" style="display:inline-flex;align-items:center;gap:8px;background:var(--bg4);border:1px solid var(--border);border-radius:10px;padding:8px 14px;font-size:var(--fs-sm);font-weight:600;color:var(--text);text-decoration:none">'+icon+' '+p.docName+' herunterladen</a>';}
   else docEl.innerHTML='';
   document.getElementById('proj-detail-edit').onclick=()=>{closeProjDetail();openEditProj(idx);};
   document.getElementById('proj-detail-delete').onclick=()=>deleteProj(p.id);
@@ -19824,11 +19824,11 @@ async function submitPost(){const _spBtn=document.querySelector('[onclick="submi
                     ? '<img src="/appbild/'+eUid+'/profilepic" loading="lazy" style="width:100%;height:100%;object-fit:cover">'
                     : (eu.instagram ? '<img src="https://unavatar.io/instagram/'+eu.instagram+'" loading="lazy" style="width:100%;height:100%;object-fit:cover" onerror="this.remove()">' : '');
                 return '<a href="/profil/'+eUid+'" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--border2);text-decoration:none">'
-                    +'<div style="position:relative;width:34px;height:34px;border-radius:50%;background:'+eg+';overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0">'
+                    +'<div style="position:relative;width:34px;height:34px;border-radius:50%;background:'+eg+';overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:var(--fs-xs);font-weight:700;color:#fff;flex-shrink:0">'
                         +'<span style="position:absolute">'+(eu.name||'?')[0]+'</span>'+eImgHtml
                     +'</div>'
                     +'<div style="flex:1;min-width:0">'
-                        +'<div style="font-size:13px;font-weight:600;color:var(--text)">'+(eu.spitzname||eu.name||'User')+'</div>'
+                        +'<div style="font-size:var(--fs-sm);font-weight:600;color:var(--text)">'+(eu.spitzname||eu.name||'User')+'</div>'
                         +'<div style="margin-top:3px">'+roleBadge(eu.role)+'</div>'
                     +'</div>'
                 +'</a>';
@@ -19846,11 +19846,11 @@ async function submitPost(){const _spBtn=document.querySelector('[onclick="submi
                 const canReport = String(eUid) !== String(myUid);
                 return '<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--border2)">'
                     +'<a href="/profil/'+eUid+'" style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;text-decoration:none">'
-                        +'<div style="position:relative;width:34px;height:34px;border-radius:50%;background:'+eg+';overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0">'
+                        +'<div style="position:relative;width:34px;height:34px;border-radius:50%;background:'+eg+';overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:var(--fs-xs);font-weight:700;color:#fff;flex-shrink:0">'
                             +'<span style="position:absolute">'+(eu.name||'?')[0]+'</span>'+eImgHtml
                         +'</div>'
                         +'<div style="flex:1;min-width:0">'
-                            +'<div style="font-size:13px;font-weight:600;color:var(--text)">'+(eu.spitzname||eu.name||'User')+'</div>'
+                            +'<div style="font-size:var(--fs-sm);font-weight:600;color:var(--text)">'+(eu.spitzname||eu.name||'User')+'</div>'
                             +'<div style="margin-top:3px">'+roleBadge(eu.role)+'</div>'
                         +'</div>'
                     +'</a>'
@@ -19861,10 +19861,10 @@ async function submitPost(){const _spBtn=document.querySelector('[onclick="submi
         const theirPinnedHtml = theirPinnedLink
             ? '<div style="padding:14px 16px;border-bottom:2px solid var(--accent);background:linear-gradient(135deg,rgba(255,107,107,.08),rgba(255,165,0,.04));margin-bottom:4px">'
               +'<span style="font-size:11px;font-weight:700;color:var(--accent);background:rgba(255,107,107,.15);padding:3px 10px;border-radius:20px;display:inline-block;margin-bottom:10px">📌 Wichtigster Post</span>'
-              +'<a id="pin-insta-link" href="'+htmlEsc(safeUrl(theirPinnedLink))+'" target="_blank" rel="noopener noreferrer" onclick="onPinVisit()" style="display:flex;align-items:center;justify-content:center;gap:6px;padding:11px 13px;background:rgba(77,171,247,.10);border:1px solid rgba(77,171,247,.30);border-radius:10px;font-size:13px;color:#4dabf7;font-weight:700;text-decoration:none;margin-bottom:8px">🔗 Auf Instagram öffnen</a>'
+              +'<a id="pin-insta-link" href="'+htmlEsc(safeUrl(theirPinnedLink))+'" target="_blank" rel="noopener noreferrer" onclick="onPinVisit()" style="display:flex;align-items:center;justify-content:center;gap:6px;padding:11px 13px;background:rgba(77,171,247,.10);border:1px solid rgba(77,171,247,.30);border-radius:10px;font-size:var(--fs-sm);color:#4dabf7;font-weight:700;text-decoration:none;margin-bottom:8px">🔗 Auf Instagram öffnen</a>'
               +'<div id="pin-hint" style="font-size:11.5px;color:var(--muted);margin-bottom:12px;line-height:1.5;padding:10px 12px;background:rgba(245,158,11,0.08);border-left:3px solid #f59e0b;border-radius:6px"><b style="color:#f59e0b">Schritt 1:</b> Tippe auf den Link → auf Instagram <b>LIKEN + KOMMENTIEREN + TEILEN + SPEICHERN</b>.<br><b style="color:#f59e0b">Schritt 2:</b> Komme zurück und tippe auf den ✅-Button — du bekommst <b>1 💎</b>.</div>'
               +'<div style="display:flex;gap:8px;align-items:center">'
-                +'<button id="pin-like-btn" onclick="likePinnedPost(\''+uid+'\',this)" '+(_myEngaged?'disabled':'data-locked="1" disabled')+' style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;padding:11px 14px;border-radius:14px;border:1px solid '+(_myEngaged?'#22c55e':'rgba(255,107,107,.35)')+';background:'+(_myEngaged?'rgba(34,197,94,.12)':'rgba(255,107,107,.10)')+';color:'+(_myEngaged?'#22c55e':'#ff6b6b')+';font-size:13px;font-weight:700;cursor:'+(_myEngaged?'default':'not-allowed')+';font-family:var(--font);transition:all .15s;opacity:'+(_myEngaged?'1':'0.55')+'">'+(_myEngaged?'✅ Engagiert':'🔒 Erst Insta öffnen')+(_myEngaged?'':'')+'</button>'
+                +'<button id="pin-like-btn" onclick="likePinnedPost(\''+uid+'\',this)" '+(_myEngaged?'disabled':'data-locked="1" disabled')+' style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;padding:11px 14px;border-radius:14px;border:1px solid '+(_myEngaged?'#22c55e':'rgba(255,107,107,.35)')+';background:'+(_myEngaged?'rgba(34,197,94,.12)':'rgba(255,107,107,.10)')+';color:'+(_myEngaged?'#22c55e':'#ff6b6b')+';font-size:var(--fs-sm);font-weight:700;cursor:'+(_myEngaged?'default':'not-allowed')+';font-family:var(--font);transition:all .15s;opacity:'+(_myEngaged?'1':'0.55')+'">'+(_myEngaged?'✅ Engagiert':'🔒 Erst Insta öffnen')+(_myEngaged?'':'')+'</button>'
                 +'<button onclick="showPinnedEngagers()" style="display:flex;align-items:center;gap:6px;padding:9px 14px;border-radius:14px;border:1px solid rgba(77,171,247,.30);background:rgba(77,171,247,.08);color:var(--text);font-size:12.5px;font-weight:700;cursor:pointer;font-family:var(--font)">👥 <span id="pin-eng-count">'+_engagerCount+'</span></button>'
               +'</div>'
               +'<div id="pin-engagers-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(6px);z-index:9999;align-items:flex-end;justify-content:center" onclick="if(event.target===this)this.style.display=\'none\'">'
@@ -19890,7 +19890,7 @@ async function submitPost(){const _spBtn=document.querySelector('[onclick="submi
                 if(p.attachment&&p.attachmentType==='image') attachHtml='<img src="'+p.attachment+'" style="width:100%;max-height:300px;object-fit:cover;border-radius:8px;margin-top:8px" alt="">';
                 if(p.attachment&&p.attachmentType==='audio') attachHtml='<audio controls src="'+p.attachment+'" style="width:100%;margin-top:8px"></audio>';
                 return '<div style="padding:12px 16px;border-top:1px solid var(--border2)">'
-                    +'<div style="font-size:13px;line-height:1.6">'+p.text+'</div>'
+                    +'<div style="font-size:var(--fs-sm);line-height:1.6">'+p.text+'</div>'
                     +attachHtml
                     +'<div style="font-size:11px;color:var(--muted);margin-top:6px">'+new Date(p.timestamp).toLocaleDateString('de-DE',{day:'2-digit',month:'short'})+'</div>'
                     +'</div>';
@@ -19937,8 +19937,8 @@ async function submitPost(){const _spBtn=document.querySelector('[onclick="submi
             +(u?.nische?'<div style="background:var(--bg3);border-radius:14px;padding:14px 16px"><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Nische</div><div style="font-size:14px;color:var(--accent)">🎯 '+htmlEsc(u.nische)+'</div></div>':'')
             +'<div style="background:var(--bg3);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:10px">'
             +'<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:2px">Social &amp; Links</div>'
-            +(u?.instagram?'<a href="https://instagram.com/'+encodeURIComponent(u.instagram)+'" target="_blank" style="display:flex;align-items:center;gap:10px;text-decoration:none"><span style="font-size:20px">📸</span><span style="color:var(--blue);font-size:14px">@'+htmlEsc(u.instagram)+'</span></a>':'<div style="font-size:13px;color:var(--muted)">Kein Instagram verknüpft</div>')
-            +(u?.website?'<a href="'+encodeURI(u.website)+'" target="_blank" style="display:flex;align-items:center;gap:10px;text-decoration:none"><span style="font-size:20px">🔗</span><span style="color:var(--blue);font-size:14px">'+htmlEsc(u.website.replace('https://','').replace('http://','').slice(0,40))+'</span></a>':'')
+            +(u?.instagram?'<a href="https://instagram.com/'+encodeURIComponent(u.instagram)+'" target="_blank" style="display:flex;align-items:center;gap:10px;text-decoration:none"><span style="font-size:var(--fs-lg)">📸</span><span style="color:var(--blue);font-size:14px">@'+htmlEsc(u.instagram)+'</span></a>':'<div style="font-size:var(--fs-sm);color:var(--muted)">Kein Instagram verknüpft</div>')
+            +(u?.website?'<a href="'+encodeURI(u.website)+'" target="_blank" style="display:flex;align-items:center;gap:10px;text-decoration:none"><span style="font-size:var(--fs-lg)">🔗</span><span style="color:var(--blue);font-size:14px">'+htmlEsc(u.website.replace('https://','').replace('http://','').slice(0,40))+'</span></a>':'')
             +'</div>'
             +'<div style="background:var(--bg3);border-radius:14px;padding:14px 16px">'
             +'<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Status</div>'
@@ -19954,16 +19954,16 @@ async function submitPost(){const _spBtn=document.querySelector('[onclick="submi
         return html(`
 <div class="topbar">
   <a href="javascript:history.back()" class="icon-btn" style="font-size:22px">‹</a>
-  <div style="font-size:15px;font-weight:600">${htmlEsc(u.spitzname||u.name||'User')}</div>
+  <div style="font-size:var(--fs-base);font-weight:600">${htmlEsc(u.spitzname||u.name||'User')}</div>
   <div style="display:flex;gap:8px">
-    <button onclick="toggleFollow('${uid}',this)" style="background:${isFollowing?'var(--bg4)':'var(--accent)'};color:${isFollowing?'var(--muted)':'#fff'};border:1px solid var(--border);border-radius:20px;padding:6px 16px;font-size:13px;font-weight:600;cursor:pointer">${isFollowing?'Gefolgt':'Folgen'}</button>
+    <button onclick="toggleFollow('${uid}',this)" style="background:${isFollowing?'var(--bg4)':'var(--accent)'};color:${isFollowing?'var(--muted)':'#fff'};border:1px solid var(--border);border-radius:20px;padding:6px 16px;font-size:var(--fs-sm);font-weight:600;cursor:pointer">${isFollowing?'Gefolgt':'Folgen'}</button>
     ${(()=>{
       // Markiere Kollab-Symbol mit ✓ wenn bereits eine aktive Kollaboration zwischen
       // mir und diesem User existiert.
       const myCollabs = Array.isArray(myUser?.collaborations) ? myUser.collaborations : [];
       const isCollabActive = myCollabs.some(c => String(c.partnerUid) === String(uid));
-      if (isCollabActive) return `<button id="collab-btn" disabled title="Kollab-Partner aktiv" style="background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:none;border-radius:20px;padding:6px 14px;font-size:13px;font-weight:700;cursor:default;display:inline-flex;align-items:center;gap:4px">🤝 ✓</button>`;
-      return `<button id="collab-btn" onclick="collabRequest('${uid}',this)" title="Kollaboration anfragen" style="background:linear-gradient(135deg,#ec4899,#a21caf);color:#fff;border:none;border-radius:20px;padding:6px 14px;font-size:13px;font-weight:700;cursor:pointer">🤝</button>`;
+      if (isCollabActive) return `<button id="collab-btn" disabled title="Kollab-Partner aktiv" style="background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:none;border-radius:20px;padding:6px 14px;font-size:var(--fs-sm);font-weight:700;cursor:default;display:inline-flex;align-items:center;gap:4px">🤝 ✓</button>`;
+      return `<button id="collab-btn" onclick="collabRequest('${uid}',this)" title="Kollaboration anfragen" style="background:linear-gradient(135deg,#ec4899,#a21caf);color:#fff;border:none;border-radius:20px;padding:6px 14px;font-size:var(--fs-sm);font-weight:700;cursor:pointer">🤝</button>`;
     })()}
     <a href="/nachrichten/${uid}" title="Nachricht" style="background:var(--bg4);border:1px solid var(--border);border-radius:20px;padding:6px 13px;color:var(--text);text-decoration:none;display:inline-flex;align-items:center;justify-content:center"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></a>
     ${String(uid) !== String(myUid) ? `<button id="profile-more-btn" onclick="toggleProfileMore()" title="Mehr Optionen" style="background:var(--bg4);border:1px solid var(--border);border-radius:20px;width:32px;height:32px;font-size:18px;color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;line-height:1">⋮</button>` : ''}
@@ -20017,9 +20017,9 @@ function openTProjDetail(idx){
   document.getElementById('tproj-title').textContent=p.title;
   (function(){const w=document.getElementById('tproj-img-wrap');if(!w)return;w.textContent='';if(p.img&&/^(data:image|https?:\\/\\/)/.test(p.img)){const im=document.createElement('img');im.src=p.img;im.alt='';im.style.cssText='width:100%;object-fit:contain;display:block;background:#0a0a0a';w.appendChild(im);}})();
   document.getElementById('tproj-desc').textContent=p.description||'';
-  (function(){const w=document.getElementById('tproj-link');if(!w)return;w.textContent='';if(p.link&&/^https?:\\/\\//i.test(p.link)){const a=document.createElement('a');a.href=p.link;a.target='_blank';a.rel='noopener noreferrer';a.style.cssText='color:var(--blue);font-size:13px;word-break:break-all';a.textContent='🔗 '+p.link;w.appendChild(a);}})();
+  (function(){const w=document.getElementById('tproj-link');if(!w)return;w.textContent='';if(p.link&&/^https?:\\/\\//i.test(p.link)){const a=document.createElement('a');a.href=p.link;a.target='_blank';a.rel='noopener noreferrer';a.style.cssText='color:var(--blue);font-size:var(--fs-sm);word-break:break-all';a.textContent='🔗 '+p.link;w.appendChild(a);}})();
   const docEl=document.getElementById('tproj-doc');
-  if(p.docName){const icon=p.docName.endsWith('.pptx')?'📊':'📄';docEl.innerHTML='<a href="/api/download-project-doc/'+_TUID+'/'+p.id+'" style="display:inline-flex;align-items:center;gap:8px;background:var(--bg4);border:1px solid var(--border);border-radius:10px;padding:8px 14px;font-size:13px;font-weight:600;color:var(--text);text-decoration:none">'+icon+' '+p.docName+' herunterladen</a>';}
+  if(p.docName){const icon=p.docName.endsWith('.pptx')?'📊':'📄';docEl.innerHTML='<a href="/api/download-project-doc/'+_TUID+'/'+p.id+'" style="display:inline-flex;align-items:center;gap:8px;background:var(--bg4);border:1px solid var(--border);border-radius:10px;padding:8px 14px;font-size:var(--fs-sm);font-weight:600;color:var(--text);text-decoration:none">'+icon+' '+p.docName+' herunterladen</a>';}
   else docEl.innerHTML='';
   document.getElementById('tproj-detail-modal').classList.add('open');
 }
@@ -20106,16 +20106,16 @@ async function collabRequest(targetUid, btn){
             '<div style="flex:1"></div>' +
             '<div style="font-size:11px;color:var(--muted)">'+new Date(p.createdAt).toLocaleDateString('de-DE',{day:'2-digit',month:'short'})+'</div>' +
           '</div>' +
-          '<div style="font-size:13px;font-weight:700;margin-bottom:6px"><a href="/profil/'+esc(p.uid)+'" style="color:var(--text);text-decoration:none">'+aName+'</a> × <a href="/profil/'+esc(p.partnerUid)+'" style="color:var(--text);text-decoration:none">'+bName+'</a></div>' +
-          (p.caption ? '<div style="font-size:13px;color:var(--text);line-height:1.5;margin:6px 0 10px">'+esc(p.caption)+'</div>' : '') +
+          '<div style="font-size:var(--fs-sm);font-weight:700;margin-bottom:6px"><a href="/profil/'+esc(p.uid)+'" style="color:var(--text);text-decoration:none">'+aName+'</a> × <a href="/profil/'+esc(p.partnerUid)+'" style="color:var(--text);text-decoration:none">'+bName+'</a></div>' +
+          (p.caption ? '<div style="font-size:var(--fs-sm);color:var(--text);line-height:1.5;margin:6px 0 10px">'+esc(p.caption)+'</div>' : '') +
           '<a href="'+esc(cleanInstagramUrl(p.url))+'" target="_blank" rel="noopener noreferrer" onclick="window._kvisit_'+p.id+'=Date.now()" style="display:block;padding:11px 13px;background:rgba(236,72,153,0.10);border:1px solid rgba(236,72,153,0.30);border-radius:10px;font-size:12.5px;color:#ec4899;font-weight:700;word-break:break-all;text-decoration:none;margin-bottom:10px">🔗 Auf Instagram öffnen</a>' +
           (isMine
-            ? '<div style="padding:10px 12px;background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.35);border-radius:10px;font-size:12px;color:#ef4444;font-weight:700;text-align:center">🚫 Kein Self-Like für Kollaboratoren · Dies ist dein Post mit '+(p.uid===window._myUid?bName:aName)+'</div>'
+            ? '<div style="padding:10px 12px;background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.35);border-radius:10px;font-size:var(--fs-xs);color:#ef4444;font-weight:700;text-align:center">🚫 Kein Self-Like für Kollaboratoren · Dies ist dein Post mit '+(p.uid===window._myUid?bName:aName)+'</div>'
             : liked
-            ? '<div style="padding:11px;background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.35);border-radius:10px;font-size:13px;color:#22c55e;font-weight:700;text-align:center">✅ Engagiert · +1 💎</div>'
+            ? '<div style="padding:11px;background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.35);border-radius:10px;font-size:var(--fs-sm);color:#22c55e;font-weight:700;text-align:center">✅ Engagiert · +1 💎</div>'
             : '<button onclick="kollabLike(\\''+p.id+'\\', this)" style="display:block;width:100%;padding:12px;background:linear-gradient(135deg,#ec4899,#a21caf);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer">❤️ Engagiert · +1 💎</button>'
           ) +
-          (function(){var lkrs=Array.isArray(p.likers)?p.likers:[];var cnt=p.likeCount||lkrs.length;if(cnt===0)return '<div style="font-size:11px;color:var(--muted);margin-top:8px;text-align:center">Noch keine Engagements</div>';var top=lkrs.slice(0,3).map(function(u){return '<b style="color:var(--text)">'+esc(u.name||'User')+'</b>';}).join(', ');var rest=cnt>3?' und '+(cnt-3)+' weiteren':'';var rows=lkrs.map(function(u){var initial='<div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#ec4899,#a21caf);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;position:relative;overflow:hidden">'+esc((u.name||'?')[0])+(u.uid?'<img src="/appbild/'+esc(u.uid)+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.remove()" alt="">':'')+'</div>';return '<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--border2)"><a href="/profil/'+esc(u.uid)+'" style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;text-decoration:none">'+initial+'<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:var(--text)">'+esc(u.name||'User')+'</div>'+(u.roleBadgeHtml?'<div style="margin-top:3px">'+u.roleBadgeHtml+'</div>':'')+(u.instagram?'<div style="font-size:11px;color:#ec4899;margin-top:2px">@'+esc(u.instagram)+'</div>':'')+'</div></a>'+(p.isSelf?'<button onclick="reportLiker(\\''+esc(u.uid)+'\\',\\'Kollab '+esc(p.id)+'\\',1)" style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);color:#ef4444;border-radius:8px;padding:6px 11px;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0">Melden</button>':'<div style="font-size:11px;color:var(--accent)">→</div>')+'</div>';}).join('');return '<div id="liker-rows-cl-'+esc(p.id)+'" style="display:none">'+rows+'</div><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px;padding:0 4px"><div style="font-size:12px;color:var(--muted);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Gefällt '+top+rest+'</div><button onclick="showLikerModal(\\'cl-'+esc(p.id)+'\\')" style="background:rgba(236,72,153,0.10);border:1px solid rgba(236,72,153,0.35);color:#ec4899;font-size:11px;font-weight:700;padding:5px 10px;border-radius:8px;cursor:pointer;white-space:nowrap;flex-shrink:0"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Wer hat engagiert? ('+cnt+')</button></div>';})() +
+          (function(){var lkrs=Array.isArray(p.likers)?p.likers:[];var cnt=p.likeCount||lkrs.length;if(cnt===0)return '<div style="font-size:11px;color:var(--muted);margin-top:8px;text-align:center">Noch keine Engagements</div>';var top=lkrs.slice(0,3).map(function(u){return '<b style="color:var(--text)">'+esc(u.name||'User')+'</b>';}).join(', ');var rest=cnt>3?' und '+(cnt-3)+' weiteren':'';var rows=lkrs.map(function(u){var initial='<div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#ec4899,#a21caf);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:var(--fs-sm);position:relative;overflow:hidden">'+esc((u.name||'?')[0])+(u.uid?'<img src="/appbild/'+esc(u.uid)+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.remove()" alt="">':'')+'</div>';return '<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--border2)"><a href="/profil/'+esc(u.uid)+'" style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;text-decoration:none">'+initial+'<div style="flex:1;min-width:0"><div style="font-size:var(--fs-sm);font-weight:600;color:var(--text)">'+esc(u.name||'User')+'</div>'+(u.roleBadgeHtml?'<div style="margin-top:3px">'+u.roleBadgeHtml+'</div>':'')+(u.instagram?'<div style="font-size:11px;color:#ec4899;margin-top:2px">@'+esc(u.instagram)+'</div>':'')+'</div></a>'+(p.isSelf?'<button onclick="reportLiker(\\''+esc(u.uid)+'\\',\\'Kollab '+esc(p.id)+'\\',1)" style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);color:#ef4444;border-radius:8px;padding:6px 11px;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0">Melden</button>':'<div style="font-size:11px;color:var(--accent)">→</div>')+'</div>';}).join('');return '<div id="liker-rows-cl-'+esc(p.id)+'" style="display:none">'+rows+'</div><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px;padding:0 4px"><div style="font-size:var(--fs-xs);color:var(--muted);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Gefällt '+top+rest+'</div><button onclick="showLikerModal(\\'cl-'+esc(p.id)+'\\')" style="background:rgba(236,72,153,0.10);border:1px solid rgba(236,72,153,0.35);color:#ec4899;font-size:11px;font-weight:700;padding:5px 10px;border-radius:8px;cursor:pointer;white-space:nowrap;flex-shrink:0"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Wer hat engagiert? ('+cnt+')</button></div>';})() +
         '</div>';
       }
     }
@@ -20133,7 +20133,7 @@ async function collabRequest(targetUid, btn){
     bg.innerHTML =
       '<div style="background:var(--bg2);border:1px solid var(--border2);border-radius:18px;padding:24px;max-width:520px;width:100%;max-height:90vh;overflow-y:auto">' +
         '<div style="font-size:36px;margin-bottom:8px;text-align:center">🤝</div>' +
-        '<h2 style="margin:0 0 8px;font-size:20px;font-weight:800;text-align:center">Kollaborations-Bereich</h2>' +
+        '<h2 style="margin:0 0 8px;font-size:var(--fs-lg);font-weight:800;text-align:center">Kollaborations-Bereich</h2>' +
         '<div style="font-size:13.5px;line-height:1.7;color:var(--text)">' +
           '<b>So läuft\\'s:</b><br>' +
           '• Verbinde dich mit einem Partner über sein Profil (Button "🤝 Kollaboration anfragen")<br>' +
@@ -20190,11 +20190,11 @@ async function collabRequest(targetUid, btn){
 .subset-toggle::after{content:'';position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.3)}
 .subset-toggle.on{background:#22c55e;border-color:#16a34a}
 .subset-toggle.on::after{transform:translateX(18px)}
-.subset-empty{padding:32px 16px;text-align:center;color:var(--muted);font-size:13px}
+.subset-empty{padding:32px 16px;text-align:center;color:var(--muted);font-size:var(--fs-sm)}
 </style>
 <div class="topbar">
   <a href="/einstellungen" class="icon-btn" style="font-size:22px">‹</a>
-  <div style="font-size:15px;font-weight:600">${title}</div>
+  <div style="font-size:var(--fs-base);font-weight:600">${title}</div>
   <div style="width:36px"></div>
 </div>
 ${sub ? `<div style="padding:12px 16px;font-size:12.5px;color:var(--muted);line-height:1.5;border-bottom:1px solid var(--border2)">${sub}</div>` : ''}`;
@@ -20214,12 +20214,12 @@ ${_setSubHead('<span style="display:inline-flex;align-items:center;gap:7px"><svg
   <div class="subset-section-title">Account-Login (Email + Passwort)</div>
   ${isLocked ? `
     <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:14px;margin-top:6px">
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px"><div style="font-size:0;line-height:0"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:0px;margin-right:0px"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div><div><div style="font-weight:800;font-size:14px;color:var(--text)">Account-Login gesperrt</div><div style="font-size:12px;color:var(--muted);margin-top:2px">Email + Passwort sind gesetzt. Änderungen brauchen eine Bestätigung per Mail.</div></div></div>
-      <div style="display:flex;flex-direction:column;gap:6px;font-size:13px;margin-bottom:12px">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px"><div style="font-size:0;line-height:0"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:0px;margin-right:0px"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div><div><div style="font-weight:800;font-size:14px;color:var(--text)">Account-Login gesperrt</div><div style="font-size:var(--fs-xs);color:var(--muted);margin-top:2px">Email + Passwort sind gesetzt. Änderungen brauchen eine Bestätigung per Mail.</div></div></div>
+      <div style="display:flex;flex-direction:column;gap:6px;font-size:var(--fs-sm);margin-bottom:12px">
         <div style="display:flex;align-items:center;gap:8px;color:var(--text)"><span style="color:var(--muted);font-weight:600;min-width:90px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 6-10 7L2 6"/></svg>Email:</span><span style="font-family:JetBrains Mono,monospace;font-size:12.5px">${htmlEsc(u.email)}</span><span style="color:#22c55e;font-size:11px;margin-left:auto">✓ bestätigt</span></div>
         <div style="display:flex;align-items:center;gap:8px;color:var(--text)"><span style="color:var(--muted);font-weight:600;min-width:90px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Passwort:</span><span style="font-family:JetBrains Mono,monospace;font-size:12.5px">••••••••</span><span style="color:#22c55e;font-size:11px;margin-left:auto">✓ gesetzt</span></div>
       </div>
-      <button class="btn btn-outline btn-full" id="ep-request-change-btn" onclick="requestAccountChange()" style="font-size:13px;display:flex;align-items:center;justify-content:center"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 6-10 7L2 6"/></svg>Änderung anfragen</button>
+      <button class="btn btn-outline btn-full" id="ep-request-change-btn" onclick="requestAccountChange()" style="font-size:var(--fs-sm);display:flex;align-items:center;justify-content:center"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 6-10 7L2 6"/></svg>Änderung anfragen</button>
       <div id="ep-request-msg" style="font-size:11.5px;color:var(--muted);margin-top:8px;line-height:1.4">Klick → wir senden einen Bestätigungs-Link an deine Email. 30 Min nach Klick kannst du Email/Passwort ändern.</div>
     </div>
   ` : `
@@ -20236,7 +20236,7 @@ ${_setSubHead('<span style="display:inline-flex;align-items:center;gap:7px"><svg
         <div style="font-size:11.5px;color:var(--muted);margin-top:6px;line-height:1.45">Mit Passwort kannst du dich direkt einloggen — ohne Magic-Link. Min. 6 Zeichen.</div>
       </div>
       <button class="btn btn-primary btn-full" onclick="saveAccount()" style="font-size:14px;display:flex;align-items:center;justify-content:center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>Email &amp; Passwort speichern</button>
-      <div id="account-save-msg" style="font-size:12px;text-align:center;color:var(--muted)"></div>
+      <div id="account-save-msg" style="font-size:var(--fs-xs);text-align:center;color:var(--muted)"></div>
       ${hasPw ? '<button onclick="removePwAcct()" class="btn btn-outline btn-full" style="color:#ef4444;display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Passwort entfernen</button>' : ''}
     </div>
   `}
@@ -20246,7 +20246,7 @@ ${_setSubHead('<span style="display:inline-flex;align-items:center;gap:7px"><svg
   <div class="subset-section-title">Eigener App-Code <span style="font-size:11px;color:var(--muted);font-weight:500">(für /mycode &amp; Login-Link)</span></div>
   <input type="text" class="form-input" id="inp-app-code" placeholder="z.B. dein-name" maxlength="30" value="${htmlEsc(u.appCode||'')}" autocapitalize="none" spellcheck="false" style="font-family:JetBrains Mono,monospace;letter-spacing:0.5px">
   <div style="font-size:11.5px;color:var(--muted);margin-top:6px;line-height:1.45">4–30 Zeichen, nur a–z, 0–9, _ oder -. Eindeutig.</div>
-  <button class="btn btn-outline btn-full" style="margin-top:10px;font-size:13px" onclick="saveAppCode()" style="display:flex;align-items:center;justify-content:center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><circle cx="7.5" cy="15.5" r="4.5"/><path d="m10.5 12.5 8-8"/><path d="m16 5 3 3"/><path d="m13 8 3 3"/></svg>Code speichern</button>
+  <button class="btn btn-outline btn-full" style="margin-top:10px;font-size:var(--fs-sm)" onclick="saveAppCode()" style="display:flex;align-items:center;justify-content:center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><circle cx="7.5" cy="15.5" r="4.5"/><path d="m10.5 12.5 8-8"/><path d="m16 5 3 3"/><path d="m13 8 3 3"/></svg>Code speichern</button>
   <div id="app-code-msg" style="margin-top:6px;font-size:11.5px;line-height:1.4"></div>
 </div>
 
@@ -20352,7 +20352,7 @@ async function deleteAccountDsgvo(){
     <div class="subset-row-title">${htmlEsc(name)}</div>
     <div class="subset-row-sub">${insta ? '@'+htmlEsc(insta)+' · ' : ''}UID ${htmlEsc(bUid)}</div>
   </div>
-  <button onclick="unblockSub('${htmlEsc(bUid)}', this)" class="btn btn-outline" style="font-size:12px;padding:7px 12px">Entsperren</button>
+  <button onclick="unblockSub('${htmlEsc(bUid)}', this)" class="btn btn-outline" style="font-size:var(--fs-xs);padding:7px 12px">Entsperren</button>
 </div>`;
         }).join('');
         return html(`
@@ -20621,7 +20621,7 @@ ${_setSubHead('<span style="display:inline-flex;align-items:center;gap:7px"><svg
       <div class="subset-row-sub">Eigene Stats abrufen, Webhooks, Zapier-Integration</div>
     </div>
   </div>
-  <div style="font-size:12px;color:var(--muted);padding:14px 4px 0;text-align:center;line-height:1.5">
+  <div style="font-size:var(--fs-xs);color:var(--muted);padding:14px 4px 0;text-align:center;line-height:1.5">
     Interesse? <a href="/nachrichten" style="color:var(--accent);font-weight:700">DM an CreatorBoost</a> — Early-Access-Liste verfügbar.
   </div>
 </div>
@@ -20666,7 +20666,7 @@ ${_setSubHead('<span style="display:inline-flex;align-items:center;gap:7px"><svg
         return html(`
 <div class="topbar">
   <a href="/profil" class="icon-btn" style="font-size:22px">‹</a>
-  <div style="font-size:15px;font-weight:600">Einstellungen</div>
+  <div style="font-size:var(--fs-base);font-weight:600">Einstellungen</div>
   <div style="width:36px"></div>
 </div>
 <style>
@@ -20674,7 +20674,7 @@ ${_setSubHead('<span style="display:inline-flex;align-items:center;gap:7px"><svg
 .pf-hero{margin:14px 16px 12px;padding:18px 16px;background:var(--bg3);border:1px solid var(--border2);border-radius:16px;box-shadow:0 4px 14px rgba(0,0,0,.05)}
 .pf-top{display:flex;align-items:center;gap:18px;margin-bottom:14px}
 .pf-avatar-wrap{position:relative;width:78px;height:78px;flex-shrink:0}
-.pf-avatar{width:100%;height:100%;border-radius:50%;background:var(--avatar-fallback-bg);background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;color:var(--avatar-fallback-color);font-weight:700;font-size:28px;overflow:hidden;cursor:pointer;position:relative;border:2.5px solid var(--bg3);box-shadow:0 2px 8px rgba(0,0,0,.1)}
+.pf-avatar{width:100%;height:100%;border-radius:50%;background:var(--avatar-fallback-bg);background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;color:var(--avatar-fallback-color);font-weight:700;font-size:var(--fs-xl);overflow:hidden;cursor:pointer;position:relative;border:2.5px solid var(--bg3);box-shadow:0 2px 8px rgba(0,0,0,.1)}
 .pf-avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .pf-avatar-edit{position:absolute;bottom:0;right:0;width:26px;height:26px;border-radius:50%;background:#a78bfa;border:2px solid var(--bg3);display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;cursor:pointer;z-index:2;box-shadow:0 1px 4px rgba(0,0,0,.15)}
 .pf-stats{flex:1;display:grid;grid-template-columns:repeat(3,1fr);gap:6px;text-align:center}
@@ -20682,14 +20682,14 @@ ${_setSubHead('<span style="display:inline-flex;align-items:center;gap:7px"><svg
 .pf-stat-num{font-size:18px;font-weight:700;color:var(--text);line-height:1.1}
 .pf-stat-lbl{font-size:11px;color:var(--muted);margin-top:2px;font-weight:500}
 .pf-name-row{margin-bottom:8px}
-.pf-name{font-size:16px;font-weight:700;color:var(--text);line-height:1.2}
-.pf-handle{font-size:13px;color:var(--muted);margin-top:2px;font-weight:500}
+.pf-name{font-size:var(--fs-md);font-weight:700;color:var(--text);line-height:1.2}
+.pf-handle{font-size:var(--fs-sm);color:var(--muted);margin-top:2px;font-weight:500}
 .pf-bio{font-size:13.5px;color:var(--text);line-height:1.5;margin-bottom:10px;white-space:pre-wrap}
 .pf-bio:empty::before{content:"Keine Bio gesetzt";color:var(--muted2);font-style:italic}
-.pf-link-row{display:flex;align-items:center;gap:6px;font-size:13px;color:#4dabf7;margin-bottom:14px;font-weight:600}
+.pf-link-row{display:flex;align-items:center;gap:6px;font-size:var(--fs-sm);color:#4dabf7;margin-bottom:14px;font-weight:600}
 .pf-link-row a{color:inherit;text-decoration:none}
 .pf-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.pf-action-btn{padding:9px 14px;background:var(--bg);border:1px solid var(--border2);color:var(--text);border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .12s;text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:6px}
+.pf-action-btn{padding:9px 14px;background:var(--bg);border:1px solid var(--border2);color:var(--text);border-radius:9px;font-size:var(--fs-sm);font-weight:600;cursor:pointer;font-family:inherit;transition:all .12s;text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:6px}
 .pf-action-btn:hover{background:var(--bg4);border-color:var(--accent)}
 .pf-action-btn.primary{background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;border-color:transparent;box-shadow:0 2px 8px rgba(124,58,237,.25)}
 /* ── Edit-Modal (slide-up sheet wie Insta) ── */
@@ -20699,7 +20699,7 @@ ${_setSubHead('<span style="display:inline-flex;align-items:center;gap:7px"><svg
 @keyframes pfFade{from{opacity:0}to{opacity:1}}
 @keyframes pfSlide{from{transform:translateY(100%)}to{transform:translateY(0)}}
 .pf-sheet-hdr{position:sticky;top:0;padding:16px 18px;background:var(--bg);border-bottom:1px solid var(--border2);display:flex;align-items:center;justify-content:space-between;z-index:2}
-.pf-sheet-title{font-size:16px;font-weight:700;color:var(--text)}
+.pf-sheet-title{font-size:var(--fs-md);font-weight:700;color:var(--text)}
 .pf-sheet-close{width:32px;height:32px;border-radius:50%;background:var(--bg3);border:none;color:var(--text);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center}
 .pf-sheet-body{padding:18px}
 .pf-field{margin-bottom:16px}
@@ -20719,14 +20719,14 @@ ${_setSubHead('<span style="display:inline-flex;align-items:center;gap:7px"><svg
 .pf-save-btn{flex:1;padding:13px;background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;border:none;border-radius:11px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(124,58,237,.3);font-family:inherit}
 .pf-save-btn:disabled{opacity:.5;cursor:not-allowed}
 .pf-cancel-btn{padding:13px 18px;background:var(--bg3);border:1.5px solid var(--border2);color:var(--text);border-radius:11px;font-size:13.5px;font-weight:600;cursor:pointer;font-family:inherit}
-.pf-toast{position:fixed;top:60px;left:50%;transform:translateX(-50%) translateY(-20px);background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;padding:10px 18px;border-radius:11px;font-size:13px;font-weight:700;opacity:0;pointer-events:none;transition:all .25s;z-index:9999;box-shadow:0 8px 24px rgba(34,197,94,.4)}
+.pf-toast{position:fixed;top:60px;left:50%;transform:translateX(-50%) translateY(-20px);background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;padding:10px 18px;border-radius:11px;font-size:var(--fs-sm);font-weight:700;opacity:0;pointer-events:none;transition:all .25s;z-index:9999;box-shadow:0 8px 24px rgba(34,197,94,.4)}
 .pf-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .pf-toast.err{background:linear-gradient(135deg,#ef4444,#dc2626);box-shadow:0 8px 24px rgba(239,68,68,.4)}
 .set-hub-grid{display:grid;grid-template-columns:1fr;gap:8px;padding:14px 16px;border-bottom:1px solid var(--border2)}
 .set-hub-card{display:flex;align-items:center;gap:14px;padding:14px;background:var(--bg3);border:1px solid var(--border2);border-radius:14px;text-decoration:none;color:var(--text);transition:all .15s}
 .set-hub-card:hover{background:var(--bg4);border-color:var(--accent)}
 .set-hub-card:active{transform:scale(.98)}
-.set-hub-icon{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.set-hub-icon{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:var(--fs-lg);flex-shrink:0}
 .set-hub-content{flex:1;min-width:0}
 .set-hub-title{font-size:14.5px;font-weight:700;margin-bottom:2px}
 .set-hub-sub{font-size:11.5px;color:var(--muted);line-height:1.4}
@@ -20816,7 +20816,7 @@ ${(function(){
       </div>
       <div class="pf-field">
         <label class="pf-field-label" style="display:inline-flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2.5"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>Banner</label>
-        <label style="display:flex;align-items:center;gap:10px;background:var(--bg4);border:1px dashed var(--border);border-radius:10px;padding:11px;cursor:pointer;font-size:13px;font-weight:500;margin-bottom:10px">
+        <label style="display:flex;align-items:center;gap:10px;background:var(--bg4);border:1px dashed var(--border);border-radius:10px;padding:11px;cursor:pointer;font-size:var(--fs-sm);font-weight:500;margin-bottom:10px">
           <span style="display:flex"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></span><span>Eigenes Foto hochladen</span>
           <input type="file" accept="image/*" style="display:none" onchange="uploadBanner(this)">
         </label>
@@ -20991,12 +20991,12 @@ ${myInventory.length > 0 ? `
     ${RING_ITEMS.filter(r=>myInventory.includes(r.id)).map(item=>{
         const isActive = myActiveRing === item.id;
         return `<div style="background:var(--bg3);border:1px solid ${isActive?'rgba(167,139,250,.5)':'var(--border2)'};border-radius:14px;padding:12px;display:flex;align-items:center;gap:12px">
-      <div style="width:44px;height:44px;border-radius:50%;background:${item.gradient};flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:20px">${item.emoji}</div>
+      <div style="width:44px;height:44px;border-radius:50%;background:${item.gradient};flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:var(--fs-lg)">${item.emoji}</div>
       <div style="flex:1">
-        <div style="font-size:13px;font-weight:700">${item.name} ${isActive?'<span style="font-size:10px;color:#a78bfa;font-weight:600">● Aktiv</span>':''}</div>
+        <div style="font-size:var(--fs-sm);font-weight:700">${item.name} ${isActive?'<span style="font-size:10px;color:#a78bfa;font-weight:600">● Aktiv</span>':''}</div>
         <div style="font-size:11px;color:var(--muted)">${item.desc}</div>
       </div>
-      <button onclick="setRing('${isActive?'':item.id}')" style="background:${isActive?'rgba(167,139,250,.2)':'var(--bg4)'};border:1px solid ${isActive?'rgba(167,139,250,.4)':'var(--border)'};color:${isActive?'#a78bfa':'var(--text)'};border-radius:10px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer">${isActive?'Deaktivieren':'Aktivieren'}</button>
+      <button onclick="setRing('${isActive?'':item.id}')" style="background:${isActive?'rgba(167,139,250,.2)':'var(--bg4)'};border:1px solid ${isActive?'rgba(167,139,250,.4)':'var(--border)'};color:${isActive?'#a78bfa':'var(--text)'};border-radius:10px;padding:6px 12px;font-size:var(--fs-xs);font-weight:600;cursor:pointer">${isActive?'Deaktivieren':'Aktivieren'}</button>
     </div>`;
     }).join('')}
   </div>
@@ -21004,22 +21004,22 @@ ${myInventory.length > 0 ? `
 <!-- Admin-Sections wurden nach /einstellungen/admin verschoben (siehe Admin-Card oben im Hub) -->
 <div style="padding:16px;border-bottom:1px solid var(--border2)">
   <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;display:inline-flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>App-Tour</div>
-  <div style="font-size:12px;color:var(--muted);margin-bottom:10px">${u.appBriefingSeenV2 ? 'Du hast die Tour schon einmal gesehen.' : 'Du hast die Tour noch nicht gesehen — sie startet beim nächsten Feed-Open automatisch.'}</div>
+  <div style="font-size:var(--fs-xs);color:var(--muted);margin-bottom:10px">${u.appBriefingSeenV2 ? 'Du hast die Tour schon einmal gesehen.' : 'Du hast die Tour noch nicht gesehen — sie startet beim nächsten Feed-Open automatisch.'}</div>
   <a href="/feed?tour=1" class="btn btn-outline btn-full" style="display:flex;align-items:center;justify-content:center;gap:8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>Tour erneut anschauen</a>
 </div>
 <!-- Passwort-Section entfernt — Duplikat. Email/Passwort sind jetzt in /einstellungen/account -->
 <div style="padding:16px">
   <a href="/logout" class="btn btn-outline btn-full" style="color:var(--accent);display:flex;align-items:center;justify-content:center;gap:8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Ausloggen</a>
 </div>
-<div style="padding:0 16px 14px;display:flex;flex-direction:column;gap:6px;font-size:12px">
+<div style="padding:0 16px 14px;display:flex;flex-direction:column;gap:6px;font-size:var(--fs-xs)">
   <div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin:14px 0 4px">Rechtliches</div>
   <a href="/datenschutz" style="color:var(--muted);text-decoration:none;padding:8px 0;border-bottom:1px solid var(--border2)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:7px"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Datenschutzerklärung</a>
   <a href="/agb" style="color:var(--muted);text-decoration:none;padding:8px 0;border-bottom:1px solid var(--border2)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:7px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h8"/></svg>Nutzungsbedingungen (AGB)</a>
   <a href="/impressum" style="color:var(--muted);text-decoration:none;padding:8px 0;border-bottom:1px solid var(--border2)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:7px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="11"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>Impressum</a>
   <a href="/api/datenexport" style="color:var(--muted);text-decoration:none;padding:8px 0;border-bottom:1px solid var(--border2)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:7px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Meine Daten exportieren (DSGVO)</a>
-  <button onclick="loadBlockedUsers()" id="show-blocked-btn" style="background:none;border:none;color:var(--muted);text-align:left;padding:8px 0;font-size:12px;cursor:pointer;font-family:inherit;border-bottom:1px solid var(--border2)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:7px"><circle cx="12" cy="12" r="10"/><line x1="4.9" y1="4.9" x2="19.1" y2="19.1"/></svg>Blockierte Nutzer verwalten</button>
+  <button onclick="loadBlockedUsers()" id="show-blocked-btn" style="background:none;border:none;color:var(--muted);text-align:left;padding:8px 0;font-size:var(--fs-xs);cursor:pointer;font-family:inherit;border-bottom:1px solid var(--border2)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:7px"><circle cx="12" cy="12" r="10"/><line x1="4.9" y1="4.9" x2="19.1" y2="19.1"/></svg>Blockierte Nutzer verwalten</button>
   <div id="blocked-users-list" style="display:none;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;margin:6px 0;padding:8px;font-size:12.5px"></div>
-  <button onclick="deleteAccountDsgvo()" id="delete-account" style="background:none;border:none;color:#ef4444;text-align:left;padding:8px 0;font-size:12px;cursor:pointer;font-family:inherit"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:7px"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Account dauerhaft löschen</button>
+  <button onclick="deleteAccountDsgvo()" id="delete-account" style="background:none;border:none;color:#ef4444;text-align:left;padding:8px 0;font-size:var(--fs-xs);cursor:pointer;font-family:inherit"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:7px"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Account dauerhaft löschen</button>
 </div>
 <script>
 async function loadBlockedUsers(){
