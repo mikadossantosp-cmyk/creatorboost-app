@@ -12,3 +12,5 @@ email_confirm_pending.json
 email_login_tokens.json
 account_unlock_tokens.json
 beta_testers.json
+lifetime-stats.json
+raffle-winners.json
