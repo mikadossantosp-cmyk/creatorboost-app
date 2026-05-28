@@ -47,19 +47,19 @@ module.exports = `
   </div>
 
   <nav class="regeln-tabnav" id="regeln-tabs">
-    <button data-target="r-mission" class="active">🎯 Mission</button>
+    <button data-target="r-mission" class="active">Mission</button>
     <button data-target="r-start">🚀 Start</button>
-    <button data-target="r-links">🔗 Links</button>
-    <button data-target="r-respekt">🤝 Respekt</button>
-    <button data-target="r-missionen">🎯 Missionen</button>
+    <button data-target="r-links">Links</button>
+    <button data-target="r-respekt">Respekt</button>
+    <button data-target="r-missionen">Missionen</button>
     <button data-target="r-superlinks">🌟 Superlinks</button>
-    <button data-target="r-kollabs">🤝 Kollabs</button>
-    <button data-target="r-diamond">💎 Diamantlinks</button>
-    <button data-target="r-prisma">💠 Prismalinks</button>
-    <button data-target="r-warns">⚠️ Warns</button>
+    <button data-target="r-kollabs">Kollabs</button>
+    <button data-target="r-diamond">Diamantlinks</button>
+    <button data-target="r-prisma">Prismalinks</button>
+    <button data-target="r-warns">Warns</button>
     <button data-target="r-xp">📈 XP</button>
-    <button data-target="r-badges">🏆 Badges</button>
-    <button data-target="r-shop">💎 Shop</button>
+    <button data-target="r-badges">Badges</button>
+    <button data-target="r-shop">Shop</button>
   </nav>
 
   <section id="r-mission" class="regeln-section active">
@@ -90,11 +90,11 @@ module.exports = `
 
   <section id="r-links" class="regeln-section">
     <div class="regeln-card">
-      <h2>🔗 Link-Regeln</h2>
+      <h2>Link-Regeln</h2>
       <div class="regeln-row"><span>1. Nur 1 Link pro Tag</span><span class="konsequenz k-block">❌ blockiert</span></div>
       <div class="regeln-row"><span>2. Nur Instagram-Links</span><span class="konsequenz k-block">❌ blockiert</span></div>
-      <div class="regeln-row"><span>3. Keine Duplikate</span><span class="konsequenz k-warn">⚠️ Warnung</span></div>
-      <div class="regeln-row"><span>4. Kein Self-Like</span><span class="konsequenz k-warn">⚠️ Warnung</span></div>
+      <div class="regeln-row"><span>3. Keine Duplikate</span><span class="konsequenz k-warn">Warnung</span></div>
+      <div class="regeln-row"><span>4. Kein Self-Like</span><span class="konsequenz k-warn">Warnung</span></div>
       <div class="regeln-row"><span>5. Sperrzeit So 20 — Mo 06</span><span class="konsequenz k-block">❌ blockiert</span></div>
       <div class="regeln-row"><span>6. Links älter als 48h</span><span class="konsequenz k-trash">🗑️ Auto-Löschung</span></div>
 
@@ -118,7 +118,7 @@ module.exports = `
 
   <section id="r-respekt" class="regeln-section">
     <div class="regeln-card">
-      <h2>🤝 Respekt & Umgang</h2>
+      <h2>Respekt & Umgang</h2>
       <ul>
         <li>1. Sei respektvoll zu jedem</li>
         <li>2. Kein Hate, keine Beleidigungen</li>
@@ -138,7 +138,7 @@ module.exports = `
 
   <section id="r-missionen" class="regeln-section">
     <div class="regeln-card">
-      <h2>🎯 Missionen</h2>
+      <h2>Missionen</h2>
 
       <h3>📅 Daily — Auswertung 12:00 Uhr</h3>
       <div class="regeln-row"><span>M1 — 5 Links liken &amp; kommentieren</span><span class="konsequenz k-xp">+5 XP</span></div>
@@ -177,7 +177,7 @@ module.exports = `
 
   <section id="r-kollabs" class="regeln-section">
     <div class="regeln-card">
-      <h2>🤝 Kollaborations-Posts</h2>
+      <h2>Kollaborations-Posts</h2>
       <p style="background:rgba(236,72,153,0.08);border-left:3px solid #ec4899;padding:10px 12px;border-radius:6px;margin-bottom:14px">Tretet einer Kollaboration bei. 1× wöchentlich erlaubt. 1 💎 wird an den User vergeben, der den Post engagiert. Kollaborations-Posts werden gründlich kontrolliert.</p>
 
       <h3>📋 Regeln</h3>
@@ -194,19 +194,19 @@ module.exports = `
       <h3>🚀 So gehst du eine Kollaboration ein</h3>
       <ul>
         <li>1. Gehe auf das Profil deines Wunsch-Partners</li>
-        <li>2. Klicke auf <b>🤝 Kollaboration anfragen</b></li>
+        <li>2. Klicke auf <b>Kollaboration anfragen</b></li>
         <li>3. Dein Partner muss in seinen Benachrichtigungen <b>akzeptieren</b></li>
         <li>4. Fertig — ihr seid offiziell Kollab-Partner und könnt im +Menü "🤝 Kollab-Link" auswählen</li>
       </ul>
 
-      <h3>🎯 Ziel</h3>
+      <h3>Ziel</h3>
       <p>Gemeinsame Zusammenarbeit. Mehr Reichweite, Mehrwert und Sichtbarkeit für beide Partner und die Community.</p>
     </div>
   </section>
 
   <section id="r-diamond" class="regeln-section">
     <div class="regeln-card">
-      <h2>💎 Diamantlinks</h2>
+      <h2>Diamantlinks</h2>
       <p style="background:rgba(6,182,212,0.08);border-left:3px solid #06b6d4;padding:10px 12px;border-radius:6px;margin-bottom:14px">Premium-Posts mit Vollengagement. <b>30 💎 Kosten</b> · <b>3 Tage</b> im Feed an erster Stelle · jeder Liker bekommt <b>+3 💎</b>.</p>
 
       <h3>📋 Regeln</h3>
@@ -237,7 +237,7 @@ module.exports = `
         <li>5. Bestätige im Popup, dass du alle 4 Aktionen ausgeführt hast → +3 💎</li>
       </ul>
 
-      <h3>🎯 Ziel</h3>
+      <h3>Ziel</h3>
       <p>Premium-Reichweite für wichtige Posts. Wer 30 💎 investiert bekommt 3 Tage echte Sichtbarkeit + Full-Engagement von der Community.</p>
     </div>
   </section>
@@ -276,7 +276,7 @@ module.exports = `
         <li>5. Bestätige im Popup, dass du alle 4 Aktionen ausgeführt hast → +7 💎</li>
       </ul>
 
-      <h3>🎯 Ziel</h3>
+      <h3>Ziel</h3>
       <p>Die ultimative Premium-Reichweite. Wer 100 💎 investiert bekommt eine ganze Woche echte Sichtbarkeit + Full-Engagement von der Community + extra-Glow im Feed.</p>
     </div>
   </section>
@@ -305,7 +305,7 @@ module.exports = `
       <div class="regeln-row"><span>Weekly Streaks</span><span class="konsequenz k-xp">+15 / +20 XP</span></div>
       <p style="font-size:12px;color:var(--muted);margin-top:10px">Level = XP / 100 + 1</p>
 
-      <p style="font-size:12px;color:var(--muted);margin-top:10px">→ Detail-Übersicht aller Stufen &amp; Belohnungen im <b style="color:#a78bfa">🏆 Badges</b>-Tab.</p>
+      <p style="font-size:12px;color:var(--muted);margin-top:10px">→ Detail-Übersicht aller Stufen &amp; Belohnungen im <b style="color:#a78bfa">Badges</b>-Tab.</p>
     </div>
   </section>
 
@@ -317,7 +317,7 @@ module.exports = `
 
     <div class="badge-detail" style="background:linear-gradient(135deg,rgba(148,163,184,0.10),rgba(71,85,105,0.05));border:1px solid rgba(148,163,184,0.30);border-radius:18px;padding:16px;margin-bottom:12px">
       <div style="display:flex;align-items:center;gap:14px;margin-bottom:10px">
-        <div style="font-size:38px;line-height:1">🆕</div>
+        <div style="font-size:38px;line-height:1;display:flex;align-items:center"><svg width="34" height="34" viewBox="0 0 24 24" fill="#94a3b8"><path d="M12 2l1.8 5.4L19 8l-4 3.6 1.3 5.4L12 14.5 7.7 17l1.3-5.4L5 8l5.2-.6z"/></svg></div>
         <div style="flex:1">
           <div style="font-size:17px;font-weight:800;color:var(--text)">New</div>
           <div style="font-size:11.5px;color:var(--muted);font-weight:600">0 – 49 XP · Startphase</div>
@@ -331,7 +331,7 @@ module.exports = `
 
     <div class="badge-detail" style="background:linear-gradient(135deg,rgba(77,171,247,0.10),rgba(29,111,165,0.05));border:1px solid rgba(77,171,247,0.30);border-radius:18px;padding:16px;margin-bottom:12px">
       <div style="display:flex;align-items:center;gap:14px;margin-bottom:10px">
-        <div style="font-size:38px;line-height:1">📘</div>
+        <div style="font-size:38px;line-height:1;display:flex;align-items:center"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 5v14"/></svg></div>
         <div style="flex:1">
           <div style="font-size:17px;font-weight:800;color:var(--text)">Anfänger</div>
           <div style="font-size:11.5px;color:var(--muted);font-weight:600">50 – 499 XP</div>
@@ -345,7 +345,7 @@ module.exports = `
 
     <div class="badge-detail" style="background:linear-gradient(135deg,rgba(34,197,94,0.10),rgba(21,128,61,0.05));border:1px solid rgba(34,197,94,0.30);border-radius:18px;padding:16px;margin-bottom:12px">
       <div style="display:flex;align-items:center;gap:14px;margin-bottom:10px">
-        <div style="font-size:38px;line-height:1">⬆️</div>
+        <div style="font-size:38px;line-height:1;display:flex;align-items:center"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="15 7 21 7 21 13"/></svg></div>
         <div style="flex:1">
           <div style="font-size:17px;font-weight:800;color:var(--text)">Aufsteiger</div>
           <div style="font-size:11.5px;color:var(--muted);font-weight:600">500 – 999 XP</div>
@@ -359,7 +359,7 @@ module.exports = `
 
     <div class="badge-detail" style="background:linear-gradient(135deg,rgba(245,158,11,0.10),rgba(217,119,6,0.05));border:1px solid rgba(245,158,11,0.30);border-radius:18px;padding:16px;margin-bottom:12px">
       <div style="display:flex;align-items:center;gap:14px;margin-bottom:10px">
-        <div style="font-size:38px;line-height:1">🏅</div>
+        <div style="font-size:38px;line-height:1;display:flex;align-items:center"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="9" r="6"/><path d="M8.5 14L7 22l5-3 5 3-1.5-8"/></svg></div>
         <div style="flex:1">
           <div style="font-size:17px;font-weight:800;color:var(--text)">Erfahrener</div>
           <div style="font-size:11.5px;color:var(--muted);font-weight:600">1.000 – 4.999 XP</div>
@@ -373,7 +373,7 @@ module.exports = `
 
     <div class="badge-detail" style="background:linear-gradient(135deg,rgba(212,175,55,0.15),rgba(180,134,30,0.08));border:1px solid rgba(212,175,55,0.45);border-radius:18px;padding:16px;margin-bottom:12px;box-shadow:0 4px 16px rgba(212,175,55,0.10)">
       <div style="display:flex;align-items:center;gap:14px;margin-bottom:10px">
-        <div style="font-size:38px;line-height:1">👑</div>
+        <div style="font-size:38px;line-height:1;display:flex;align-items:center"><svg width="34" height="34" viewBox="0 0 24 24" fill="#d4af37"><path d="M5 19h14l1.6-11-5 4-3.6-7-3.6 7-5-4z"/></svg></div>
         <div style="flex:1">
           <div style="font-size:17px;font-weight:800;color:var(--text)">Elite</div>
           <div style="font-size:11.5px;color:#d4af37;font-weight:700">5.000 – 9.999 XP</div>
@@ -388,7 +388,7 @@ module.exports = `
 
     <div class="badge-detail" style="background:linear-gradient(135deg,rgba(236,72,153,0.12),rgba(162,28,175,0.06));border:1px solid rgba(236,72,153,0.40);border-radius:18px;padding:16px;margin-bottom:12px;box-shadow:0 4px 20px rgba(236,72,153,0.15)">
       <div style="display:flex;align-items:center;gap:14px;margin-bottom:10px">
-        <div style="font-size:38px;line-height:1">🌟</div>
+        <div style="font-size:38px;line-height:1;display:flex;align-items:center"><svg width="34" height="34" viewBox="0 0 24 24" fill="#ec4899"><path d="M12 2l2.9 6.3 6.6.6-5 4.4 1.5 6.5L12 16.9 5.5 20.3 7 13.8l-5-4.4 6.6-.6z"/></svg></div>
         <div style="flex:1">
           <div style="font-size:17px;font-weight:800;background:linear-gradient(135deg,#ec4899,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Elite+</div>
           <div style="font-size:11.5px;color:#ec4899;font-weight:700">10.000 – 24.999 XP</div>
@@ -404,7 +404,7 @@ module.exports = `
     <div class="badge-detail" style="background:linear-gradient(135deg,rgba(6,182,212,0.14),rgba(8,145,178,0.07));border:1px solid rgba(6,182,212,0.45);border-radius:18px;padding:16px;margin-bottom:12px;box-shadow:0 4px 24px rgba(6,182,212,0.20);position:relative;overflow:hidden">
       <div style="position:absolute;top:-10px;right:-10px;width:80px;height:80px;background:radial-gradient(circle,rgba(103,232,249,0.30),transparent 70%);pointer-events:none"></div>
       <div style="display:flex;align-items:center;gap:14px;margin-bottom:10px;position:relative">
-        <div style="font-size:38px;line-height:1">💎</div>
+        <div style="font-size:38px;line-height:1;display:flex;align-items:center"><svg width="34" height="34" viewBox="0 0 24 24" fill="#06b6d4"><path d="M6 2h12l4 6-10 13L2 8z"/></svg></div>
         <div style="flex:1">
           <div style="font-size:17px;font-weight:800;background:linear-gradient(135deg,#06b6d4,#0891b2,#67e8f9);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Legende</div>
           <div style="font-size:11.5px;color:#06b6d4;font-weight:700">ab 25.000 XP · MYTHISCH</div>
@@ -433,7 +433,7 @@ module.exports = `
 
   <section id="r-shop" class="regeln-section">
     <div class="regeln-card">
-      <h2>💎 Shop</h2>
+      <h2>Shop</h2>
       <ul>
         <li>• Extra-Links mit 💎 kaufbar</li>
         <li>• 💎 verdienen über Mission-Streaks (M2 / M3)</li>
