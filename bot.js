@@ -15301,6 +15301,7 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
 .dash-section-chevron{margin-left:auto;font-size:13px;color:var(--dsub);transition:transform .25s ease;line-height:1;flex-shrink:0}
 .dash-section.collapsed .dash-section-chevron{transform:rotate(-90deg)}
 .dash-section.collapsed .dash-section-body{display:none}
+.dash-section-hdr:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;border-radius:8px}
 
 /* Search + Tabs */
 .dash-search{width:100%;padding:13px 16px 13px 42px;background:var(--dink);border:1px solid var(--dline);border-radius:12px;color:var(--text);font-size:13.5px;transition:border .15s;font-family:inherit;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.3-4.3'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:14px center;background-size:16px}
@@ -17207,16 +17208,38 @@ document.getElementById('dash-q').addEventListener('input', e => { CUR_Q = e.tar
 
 refreshUsers();
 setInterval(refreshUsers, 60000);
-// Dashboard-Sektionen ein-/ausklappbar machen (idempotent — kein Doppel-Chevron bei Re-Render)
+// Dashboard-Sektionen ein-/ausklappbar — a11y-konform (Keyboard + ARIA) & Zustand persistent (idempotent)
 (function makeSectionsCollapsible(){
+  var STORE_KEY = 'cb_dash_collapsed';
+  var collapsedSet;
+  try { collapsedSet = new Set(JSON.parse(localStorage.getItem(STORE_KEY) || '[]')); } catch(e) { collapsedSet = new Set(); }
+  function persist(){ try { localStorage.setItem(STORE_KEY, JSON.stringify(Array.from(collapsedSet))); } catch(e){} }
   document.querySelectorAll('.dash-section').forEach(function(sec){
     var hdr = sec.querySelector('.dash-section-hdr');
     if (!hdr || hdr.querySelector('.dash-section-chevron')) return;
+    var titleEl = hdr.querySelector('.dash-section-title');
+    var key = titleEl ? titleEl.textContent.trim() : '';
     var chev = document.createElement('span');
     chev.className = 'dash-section-chevron';
     chev.textContent = '⌄';
+    chev.setAttribute('aria-hidden', 'true');
     hdr.appendChild(chev);
-    hdr.addEventListener('click', function(){ sec.classList.toggle('collapsed'); });
+    // Semantik + Tastaturbedienbarkeit (Header ist ein div → als Button auszeichnen)
+    hdr.setAttribute('role', 'button');
+    hdr.setAttribute('tabindex', '0');
+    // gespeicherten Zustand wiederherstellen (überlebt den 60s-Auto-Refresh)
+    var startCollapsed = !!key && collapsedSet.has(key);
+    sec.classList.toggle('collapsed', startCollapsed);
+    hdr.setAttribute('aria-expanded', String(!startCollapsed));
+    function toggle(){
+      var collapsed = sec.classList.toggle('collapsed');
+      hdr.setAttribute('aria-expanded', String(!collapsed));
+      if (key) { if (collapsed) collapsedSet.add(key); else collapsedSet.delete(key); persist(); }
+    }
+    hdr.addEventListener('click', toggle);
+    hdr.addEventListener('keydown', function(e){
+      if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') { e.preventDefault(); toggle(); }
+    });
   });
 })();
 // Initial-Badge für offene Meldungen (lazy, ohne UI zu blockieren)
