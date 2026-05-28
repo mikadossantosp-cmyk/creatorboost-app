@@ -4810,7 +4810,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v259-messages-premium';
+const SW_VERSION='v260-groupchat-search-icons';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
@@ -13077,7 +13077,7 @@ try{ if(localStorage.getItem('cb_helper_seen')==='1'){ const b=document.getEleme
 </style>
 <div class="topbar" style="display:flex;align-items:center;gap:10px;padding:12px 12px;background:linear-gradient(135deg,#a78bfa,#7c3aed);position:sticky;top:0;z-index:10;box-shadow:0 4px 18px rgba(124,58,237,0.28)">
   <a href="/nachrichten" style="padding:8px;color:#fff;display:flex;align-items:center;text-decoration:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="26" height="26"><polyline points="15 18 9 12 15 6"/></svg></a>
-  <div style="width:46px;height:46px;border-radius:50%;background:rgba(255,255,255,0.20);display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;box-shadow:inset 0 1px 0 rgba(255,255,255,0.3)">🌍</div>
+  <div style="width:46px;height:46px;border-radius:50%;background:rgba(255,255,255,0.20);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:inset 0 1px 0 rgba(255,255,255,0.3)"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></div>
   <div style="flex:1;min-width:0">
     <div style="font-weight:800;font-size:18.5px;color:#fff;letter-spacing:-0.3px">App Community</div>
     <div id="ac-status" style="font-size:13px;color:rgba(255,255,255,0.92);font-weight:600;margin-top:1px">${memberCount} Mitglieder · <span style="color:#86efac">● Live</span></div>
@@ -13098,15 +13098,15 @@ try{ if(localStorage.getItem('cb_helper_seen')==='1'){ const b=document.getEleme
 <div id="ac-backdrop" class="ac-backdrop" onclick="acHideMenu()"></div>
 <div id="ac-sheet" class="ac-sheet">
   <div class="ac-sheet-handle"></div>
-  <div class="ac-sheet-row" onclick="acDoReply()"><span class="ac-icon">↩️</span><span>Antworten</span></div>
-  <div class="ac-sheet-row" onclick="acDoCopy()"><span class="ac-icon">📋</span><span>Text kopieren</span></div>
-  <div class="ac-sheet-row" id="ac-sheet-react" onclick="acOpenReactPicker()"><span class="ac-icon">😀</span><span>Reagieren</span></div>
-  <div class="ac-sheet-row danger" id="ac-sheet-del" onclick="acDoDelete()"><span class="ac-icon">🗑️</span><span>Nachricht löschen</span></div>
+  <div class="ac-sheet-row" onclick="acDoReply()"><span class="ac-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg></span><span>Antworten</span></div>
+  <div class="ac-sheet-row" onclick="acDoCopy()"><span class="ac-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></span><span>Text kopieren</span></div>
+  <div class="ac-sheet-row" id="ac-sheet-react" onclick="acOpenReactPicker()"><span class="ac-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg></span><span>Reagieren</span></div>
+  <div class="ac-sheet-row danger" id="ac-sheet-del" onclick="acDoDelete()"><span class="ac-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></span><span>Nachricht löschen</span></div>
   <button class="ac-sheet-cancel" onclick="acHideMenu()">Abbrechen</button>
 </div>
 <!-- Reply-Bar (above input) -->
 <div id="ac-reply-bar" class="ac-reply-bar">
-  <div class="ic">↩️</div>
+  <div class="ic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg></div>
   <div class="body">
     <span class="name" id="ac-reply-name"></span>
     <span class="txt" id="ac-reply-text"></span>
@@ -13178,7 +13178,7 @@ function acRenderRow(m, prev){
       +'<div class="ac-time">'+acTime(m.ts)+'</div>'
     +'</div>'
     +'</div>'
-    +'<div class="ac-swipe-icon" aria-hidden="true">↩️</div>'
+    +'<div class="ac-swipe-icon" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg></div>'
   +'</div>';
 }
 function acRenderAll(){
@@ -13892,7 +13892,7 @@ setInterval(async()=>{
   </div>
 </div>
 <div id="search-empty" style="display:none;padding:60px 24px;text-align:center;color:var(--muted)">
-  <div style="font-size:48px;margin-bottom:12px;opacity:0.5">🔍</div>
+  <div style="margin-bottom:12px;opacity:0.45;display:flex;justify-content:center"><svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
   <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px">Keine Treffer</div>
   <div style="font-size:12px">Versuch's mit einem anderen Suchbegriff</div>
 </div>
