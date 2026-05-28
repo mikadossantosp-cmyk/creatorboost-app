@@ -1830,7 +1830,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible,
 .icon-btn{width:36px;height:36px;border-radius:50%;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--text)}
 /* Feed-Tab-Dropdown im Topbar (gleiche Optik wie /profil Account-Switcher .tb-switcher) */
 .ft-wrap{position:relative;display:inline-flex}
-.ft-trigger{display:inline-flex;align-items:center;gap:9px;background:var(--surface-tint);border:1.5px solid var(--border2);color:var(--text);padding:9px 18px 9px 16px;border-radius:99px;font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;max-width:220px;transition:background .15s,border-color .15s,box-shadow .15s;position:relative;line-height:1.1}
+.ft-trigger{display:inline-flex;align-items:center;gap:9px;background:var(--surface-tint);border:1.5px solid var(--border2);color:var(--text);padding:9px 18px 9px 16px;border-radius:99px;font-family:inherit;font-size:var(--fs-base);font-weight:700;cursor:pointer;max-width:220px;transition:background .15s,border-color .15s,box-shadow .15s;position:relative;line-height:1.1}
 .ft-trigger:hover{background:var(--bg4);border-color:rgba(124,58,237,.35)}
 .ft-trigger-label{display:inline-flex;align-items:center;gap:7px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:.1px}
 .ft-trigger-arrow{font-size:11px;color:var(--muted);transition:transform .2s;flex-shrink:0}
