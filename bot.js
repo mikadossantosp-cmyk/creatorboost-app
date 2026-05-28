@@ -8090,6 +8090,7 @@ ${spaceScale.map(s=>`<div class="grow"><span class="gmeta">--space-${s}</span><d
                 if (!u || adminIds.includes(Number(uid))) continue;
                 if (u.isSystem || uid === 'creatorboost' || u.parent_uid) continue;
                 if (u.banned || !isAppVisible(u)) continue;
+                if (!(u.privacy && u.privacy.showOnLanding === true)) continue; // DSGVO: nur Opt-in
                 // Hochgeladenes Profilbild zuerst (App nutzt das), Instagram nur als Fallback.
                 if (ladeBild(uid, 'profilepic')) { avatars.push('/appbild/' + encodeURIComponent(uid) + '/profilepic'); continue; }
                 const ig = String(u.instagram || '').trim().replace(/^@/, '');
@@ -20326,6 +20327,18 @@ async function deleteAccountDsgvo(){
 `, 'settings-account');
     }
 
+    if (path === '/api/settings/landing-visibility' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        const _uid = getMyUid(session);
+        const body = await parseBody(req);
+        const show = !!body.show;
+        let ok = false;
+        if (LOCAL_STORE) {
+            await localWrite(() => { const u = datastore.getData().users[String(_uid)]; if (u) { u.privacy = u.privacy || {}; u.privacy.showOnLanding = show; ok = true; } });
+        }
+        return json({ ok, showOnLanding: show });
+    }
+
     if (path === '/einstellungen/privacy') {
         const u = myUser || {};
         const blocked = Array.isArray(u.blockedUsers) ? u.blockedUsers : [];
@@ -20368,6 +20381,14 @@ ${_setSubHead('<span style="display:inline-flex;align-items:center;gap:7px"><svg
     </div>
     <div class="subset-toggle on" style="opacity:.5;cursor:not-allowed" title="Coming soon"></div>
   </div>
+  <div class="subset-row">
+    <div class="subset-row-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
+    <div class="subset-row-body">
+      <div class="subset-row-title">Profilbild auf Startseite zeigen</div>
+      <div class="subset-row-sub">Erlaube, dass dein Profilbild im Aktiv-Bereich der öffentlichen Startseite erscheinen darf. Standard: aus.</div>
+    </div>
+    <div class="subset-toggle${(u.privacy && u.privacy.showOnLanding) ? ' on' : ''}" id="landing-toggle" role="switch" tabindex="0" aria-checked="${(u.privacy && u.privacy.showOnLanding) ? 'true' : 'false'}" onclick="toggleLanding(this)"></div>
+  </div>
 </div>
 <script>
 async function unblockSub(uid, btn){
@@ -20377,6 +20398,15 @@ async function unblockSub(uid, btn){
   const j=await r.json().catch(()=>({}));
   if(j.ok){ document.getElementById('blocked-row-'+uid).remove(); }
   else { btn.disabled=false; btn.textContent='Entsperren'; alert('❌ '+(j.error||'Fehler')); }
+}
+async function toggleLanding(el){
+  const on=!el.classList.contains('on');
+  el.classList.toggle('on',on); el.setAttribute('aria-checked',on?'true':'false');
+  try{
+    const r=await fetch('/api/settings/landing-visibility',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({show:on})});
+    const j=await r.json().catch(()=>({}));
+    if(!j.ok) throw 0;
+  }catch(e){ el.classList.toggle('on',!on); el.setAttribute('aria-checked',!on?'true':'false'); alert('❌ Konnte nicht speichern'); }
 }
 </script>
 </div>
