@@ -15452,7 +15452,6 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
         <button class="dash-btn" onclick="window.open('/admin/emails','_blank')" style="border-color:rgba(167,139,250,0.40);color:#a78bfa">📧 Email Dashboard</button>
         <button class="dash-btn" onclick="window.open('/admin/play-listing','_blank')" style="border-color:rgba(52,211,153,0.40);color:#34d399">📲 Play Store Listing</button>
         <button class="dash-btn" onclick="window.open('/admin/beta-testers','_blank')" style="border-color:rgba(52,211,153,0.40);color:#34d399">🧪 Beta-Tester</button>
-        <button class="dash-btn" onclick="adminCreateNewSub()" style="border-color:rgba(167,139,250,0.45);color:#a78bfa">🆕 Neuen Sub erstellen</button>
         <button class="dash-btn" onclick="openEventModal('xp')" style="border-color:rgba(245,158,11,0.40);color:#fbbf24">✨ XP-Event starten</button>
         <button class="dash-btn" onclick="openEventModal('diamond')" style="border-color:rgba(6,182,212,0.40);color:#06b6d4">💎 Diamond-Event starten</button>
         <button class="dash-btn dash-btn-primary" onclick="openBroadcastModal()">📢 Broadcast DM</button>
