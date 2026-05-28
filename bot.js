@@ -13472,9 +13472,11 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) acPo
     // ── CHAT ──
     if (path.startsWith('/nachrichten/') && !path.startsWith('/nachrichten/gruppe') && !path.startsWith('/nachrichten/app-chat')) {
         const otherUid = path.replace('/nachrichten/', '');
-        // Frisch laden (kein 60s-Cache) — sonst fehlt eine gerade eingetroffene DM beim Öffnen.
-        await refreshDataCache().catch(()=>{});
-        const botData = _dataCache;
+        // Unter LOCAL_STORE direkt aus den lokalen Daten lesen (kein Mainbot/_dataCache —
+        // das wäre null → Redirect, plus bis zu 13s Hang). Im Proxy-Modus wie gehabt.
+        let botData;
+        if (LOCAL_STORE) { botData = await fetchBot('/data'); }
+        else { await refreshDataCache().catch(()=>{}); botData = _dataCache; }
         if (!botData) return redirect('/nachrichten');
         const otherUser = botData.users?.[otherUid] || {};
         const otherName = otherUser.spitzname || otherUser.name || 'User';
