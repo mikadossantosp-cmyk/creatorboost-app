@@ -1821,6 +1821,11 @@ h1,h2,h3,h4,h5{letter-spacing:var(--track-tight);line-height:1.2}
 a{color:inherit;text-decoration:none}
 img{display:block;max-width:100%}
 button{cursor:pointer;border:none;outline:none;font-family:var(--font)}
+@media (prefers-reduced-motion:no-preference){
+button{transition:transform .13s cubic-bezier(.2,.8,.2,1),background .15s ease,box-shadow .18s ease,border-color .15s ease,opacity .15s ease}
+button:active:not(:disabled){transform:scale(.96)}
+.btn:active:not(:disabled),a.pf-action-btn:active,a.ipf-btn:active,.set-hub-card:active,.ps-card:active:not(:disabled),.subset-row:active{transform:scale(.98)}
+}
 .topbar{position:sticky;top:0;z-index:100;background:var(--glass-bg);border-bottom:1px solid var(--border2);padding:14px 16px;display:flex;align-items:center;justify-content:space-between;backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%)}
 .topbar-logo{font-family:var(--font-display);font-size:22px;font-weight:800;letter-spacing:-0.5px;color:var(--text)}
 .topbar-actions{display:flex;gap:6px;align-items:center}
@@ -4799,7 +4804,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v254-fix-notif-loading';
+const SW_VERSION='v255-microinteractions';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
