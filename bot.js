@@ -3374,6 +3374,13 @@ if(typeof window!=='undefined' && !window.__cxAlertPatched){
     if(_cxNativeAlert)_cxNativeAlert(s);
   };
 }
+// Globaler Bild-Fehler-Handler: jedes fehlgeschlagene <img> (Avatar/Reel-Thumb) ausblenden,
+// damit kein haessliches "kaputtes-Bild"-Symbol erscheint — der Fallback (farbiger Kreis +
+// Initiale dahinter) wird sichtbar. Capture-Phase, da error-Events nicht bubbeln.
+if(typeof document!=='undefined' && !window.__cxImgErr){
+  window.__cxImgErr=true;
+  document.addEventListener('error',function(e){ var t=e&&e.target; if(t&&t.tagName==='IMG'){ t.style.display='none'; } },true);
+}
 // Browser-side cleanInstagramUrl: gleiche Logik wie server-side, fuer Inline-JS
 // das im Browser laeuft (IIFEs wie initDiamondLinks/initPrismaLinks/initKollabs).
 // WICHTIG: Dieser Code steht innerhalb eines Template-Literals (\`...\`) — Backslashes
@@ -4773,7 +4780,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v235-collab-report';
+const SW_VERSION='v236-avatar-fallback';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
@@ -10461,8 +10468,8 @@ window.onPinVisitStory = function(uid){
             // Profile pic (small, in header)
             const picFile = ladeBild(String(link.user_id),'profilepic');
             const avatarSmall = picFile
-                ? '<img src="/appbild/'+String(link.user_id)+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" alt="">'
-                : insta ? '<img src="https://unavatar.io/instagram/'+insta+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" alt="">' : '';
+                ? '<img src="/appbild/'+String(link.user_id)+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.remove()" alt="">'
+                : insta ? '<img src="https://unavatar.io/instagram/'+insta+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.remove()" alt="">' : '';
 
             // Profile pic (large, on banner)
             const profPic = picFile
@@ -10561,8 +10568,8 @@ window.onPinVisitStory = function(uid){
 '  <div class="post-header" style="padding-top:8px">\n'+
 '    <a href="/profil/'+link.user_id+'" style="position:relative;width:40px;height:40px;flex-shrink:0;text-decoration:none">\n'+
 '      '+crownOverlay(link.user_id, 'sm')+'\n'+
-'      <div style="position:relative;width:40px;height:40px;border-radius:50%;overflow:hidden;background:var(--avatar-fallback-bg);border:1px solid var(--avatar-fallback-border);display:flex;align-items:center;justify-content:center">\n'+
-'        <span style="color:var(--avatar-fallback-color);font-weight:700;font-size:15px;position:absolute">'+(poster.name||'?').slice(0,1)+'</span>\n'+
+'      <div style="position:relative;width:40px;height:40px;border-radius:50%;overflow:hidden;background:'+grad+';display:flex;align-items:center;justify-content:center">\n'+
+'        <span style="color:#fff;font-weight:700;font-size:15px;position:absolute">'+(poster.name||'?').slice(0,1)+'</span>\n'+
 '        '+avatarSmall+'\n'+
 '      </div>\n'+
 '    </a>\n'+
@@ -10639,8 +10646,8 @@ commentsBox+
             const grad = badgeGradient(poster.role);
             const picFile = ladeBild(String(sl.uid),'profilepic');
             const avatarSmall = picFile
-                ? '<img src="/appbild/'+String(sl.uid)+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" alt="">'
-                : insta ? '<img src="https://unavatar.io/instagram/'+insta+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" alt="">' : '';
+                ? '<img src="/appbild/'+String(sl.uid)+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.remove()" alt="">'
+                : insta ? '<img src="https://unavatar.io/instagram/'+insta+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.remove()" alt="">' : '';
             const likerRows = likes.map(lid=>{
                 const lu=d.users[String(lid)]; const lg=badgeGradient(lu&&lu.role);
                 const lf=ladeBild(String(lid),'profilepic'); const li=lu&&lu.instagram;
@@ -10661,8 +10668,8 @@ commentsBox+
                 +'<span class="post-time">'+dateStr+' '+time+'</span>\n'
                 +'</div>\n'
                 +'<div class="post-header" style="padding-top:8px">\n'
-                +'<a href="/profil/'+sl.uid+'" style="position:relative;width:40px;height:40px;flex-shrink:0;text-decoration:none">'+crownOverlay(sl.uid,'sm')+'<div style="position:relative;width:40px;height:40px;border-radius:50%;overflow:hidden;background:var(--avatar-fallback-bg);border:1px solid var(--avatar-fallback-border);display:flex;align-items:center;justify-content:center">\n'
-                +'<span style="color:var(--avatar-fallback-color);font-weight:700;font-size:15px;position:absolute">'+(poster.name||'?')[0]+'</span>\n'
+                +'<a href="/profil/'+sl.uid+'" style="position:relative;width:40px;height:40px;flex-shrink:0;text-decoration:none">'+crownOverlay(sl.uid,'sm')+'<div style="position:relative;width:40px;height:40px;border-radius:50%;overflow:hidden;background:'+grad+';display:flex;align-items:center;justify-content:center">\n'
+                +'<span style="color:#fff;font-weight:700;font-size:15px;position:absolute">'+(poster.name||'?')[0]+'</span>\n'
                 +avatarSmall+'\n</div></a>\n'
                 +'<a href="/profil/'+sl.uid+'" class="post-user-info" style="text-decoration:none;color:inherit">\n'
                 +'<div class="post-name">'+htmlEsc(poster.spitzname||poster.name||'User')+'</div>\n'
