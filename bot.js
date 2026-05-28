@@ -4810,7 +4810,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v262-chat-linkpreview-icons';
+const SW_VERSION='v263-chat-input-fix';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
@@ -13601,7 +13601,7 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) acPo
 <style>@keyframes pulse-red{0%,100%{opacity:1}50%{opacity:.3}}</style>
 <div style="position:fixed;bottom:60px;left:0;right:0;background:var(--bg);border-top:1px solid rgba(255,255,255,0.06);padding:8px 10px;display:flex;gap:6px;align-items:center;z-index:100">
   <label style="width:38px;height:38px;border-radius:50%;background:transparent;color:#0866FF;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0" title="Kamera">
-    <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M9.4 10.5l4.77-8.26C13.47 2.09 12.75 2 12 2 9.53 2 7.29 2.99 5.64 4.59l3.74 5.91zm9.83-1.5c-.86-2.3-2.55-4.18-4.74-5.27L11.32 9h7.91zm.34 2H12v9.96c4.42-.32 8-3.99 8-8.46 0-.52-.05-1.02-.13-1.5zM4.41 4.59C2.93 6.16 2 8.27 2 10.6c0 .8.13 1.59.4 2.34l4-7.04L4.41 4.59zM2.81 12.59C3.97 16.5 7.65 19.5 12 19.96V12.59H2.81z"/></svg>
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M9 2 7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/><circle cx="12" cy="12" r="3.2"/></svg>
     <input type="file" accept="image/*" capture="environment" style="display:none" onchange="selectImage(this)">
   </label>
   <label style="width:38px;height:38px;border-radius:50%;background:transparent;color:#0866FF;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0" title="Galerie">
@@ -13611,9 +13611,8 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) acPo
   <button id="mic-btn" onclick="toggleRecording()" style="width:38px;height:38px;border-radius:50%;background:transparent;color:#0866FF;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0" title="Aufnehmen">
     <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5-3c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
   </button>
-  <div style="flex:1;background:#3a3b3c;border-radius:22px;display:flex;align-items:center;padding:4px 4px 4px 14px;gap:6px;min-width:0">
+  <div style="flex:1;background:#3a3b3c;border-radius:22px;display:flex;align-items:center;padding:4px 16px;min-width:0">
     <input type="text" id="msg-input" placeholder="Nachricht senden..." style="flex:1;background:transparent;border:none;outline:none;color:#e4e6eb;font-size:15px;padding:8px 0;margin:0;min-width:0" onkeypress="if(event.key==='Enter')sendMsg()">
-    <button onclick="document.getElementById('msg-input').focus()" style="background:none;border:none;color:#e4e6eb;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0" title="Emoji"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg></button>
   </div>
   <button id="send-btn" onclick="sendMsg()" style="width:38px;height:38px;border-radius:50%;background:transparent;color:#0866FF;border:none;font-size:22px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center" title="Senden"><svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></button>
 </div>
