@@ -15297,6 +15297,10 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
 .dash-section-sub{font-size:11.5px;color:var(--dsub);font-weight:500;margin-left:6px}
 .dash-section-grow{flex:1}
 .dash-section-body{padding:16px 18px}
+.dash-section-hdr{cursor:pointer;user-select:none}
+.dash-section-chevron{margin-left:auto;font-size:13px;color:var(--dsub);transition:transform .25s ease;line-height:1;flex-shrink:0}
+.dash-section.collapsed .dash-section-chevron{transform:rotate(-90deg)}
+.dash-section.collapsed .dash-section-body{display:none}
 
 /* Search + Tabs */
 .dash-search{width:100%;padding:13px 16px 13px 42px;background:var(--dink);border:1px solid var(--dline);border-radius:12px;color:var(--text);font-size:13.5px;transition:border .15s;font-family:inherit;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.3-4.3'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:14px center;background-size:16px}
@@ -15541,17 +15545,6 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
         <div class="dash-section-body">
           <div id="top-creators-list" style="display:flex;flex-direction:column;gap:6px">
             <div style="padding:18px;text-align:center;color:var(--dsub);font-size:12.5px">Lädt …</div>
-          </div>
-        </div>
-      </section>
-      <section class="dash-section" style="margin:0">
-        <div class="dash-section-hdr">
-          <div class="dash-section-title">📱 Source-Vergleich</div>
-          <div class="dash-section-sub">letzte 7 Tage · Signups → 7d-Aktiv</div>
-        </div>
-        <div class="dash-section-body">
-          <div id="source-funnel-content" style="display:flex;flex-direction:column;gap:14px">
-            <div style="padding:14px;text-align:center;color:var(--dsub);font-size:12.5px">Lädt …</div>
           </div>
         </div>
       </section>
@@ -16380,8 +16373,6 @@ async function loadStatsOverview() {
     drawTrendChart(s.last30Days || []);
     // Top Creators heute
     renderTopCreators(s.topXpToday || []);
-    // Source-Vergleich
-    renderSourceFunnel(s.sourceFunnel || {});
     // Live Activity Feed
     renderActivityFeed(s.recentActivity || []);
   } catch(e) {
@@ -17216,6 +17207,18 @@ document.getElementById('dash-q').addEventListener('input', e => { CUR_Q = e.tar
 
 refreshUsers();
 setInterval(refreshUsers, 60000);
+// Dashboard-Sektionen ein-/ausklappbar machen (idempotent — kein Doppel-Chevron bei Re-Render)
+(function makeSectionsCollapsible(){
+  document.querySelectorAll('.dash-section').forEach(function(sec){
+    var hdr = sec.querySelector('.dash-section-hdr');
+    if (!hdr || hdr.querySelector('.dash-section-chevron')) return;
+    var chev = document.createElement('span');
+    chev.className = 'dash-section-chevron';
+    chev.textContent = '⌄';
+    hdr.appendChild(chev);
+    hdr.addEventListener('click', function(){ sec.classList.toggle('collapsed'); });
+  });
+})();
 // Initial-Badge für offene Meldungen (lazy, ohne UI zu blockieren)
 fetch('/api/admin/engagement-log').then(r=>r.json()).then(j=>{ if (j.ok) { LAST_REPORTS = j.reports||[]; updateReportsBadge(LAST_REPORTS); } }).catch(()=>{});
 </script>
