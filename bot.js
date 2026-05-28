@@ -4817,7 +4817,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v269-tg-chat-fix';
+const SW_VERSION='v270-numeric-name-fix';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
@@ -13134,7 +13134,7 @@ function acEsc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;
 function acTime(ts){const d=new Date(ts);return d.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});}
 function acDayLabel(ts){const d=new Date(ts);const today=new Date();const yest=new Date();yest.setDate(yest.getDate()-1);if(d.toDateString()===today.toDateString())return 'Heute';if(d.toDateString()===yest.toDateString())return 'Gestern';return d.toLocaleDateString('de-DE',{day:'numeric',month:'long'});}
 function acAvatar(m){
-  const initial=acEsc((m.name||'?').slice(0,1).toUpperCase());
+  const initial=acEsc(String(m.name||'?').slice(0,1).toUpperCase());
   return '<div class="ac-avatar"><img src="/appbild/'+m.uid+'/profilepic" onerror="this.style.display=\\'none\\';this.parentElement.textContent=\\''+initial+'\\'" alt=""></div>';
 }
 function acRenderReactions(m){
@@ -13543,7 +13543,7 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) acPo
         const otherUid = path.replace('/nachrichten/', '');
         // d ist bereits oben gefetcht (Zeile 9429) — kein zweiter Fetch nötig.
         const otherUser = d.users?.[otherUid] || {};
-        const otherName = otherUser.spitzname || otherUser.name || 'User';
+        const otherName = String(otherUser.spitzname || otherUser.name || 'User');
         // Admin operiert als CreatorBoost: ein Chat mit einem normalen User = der creatorboost↔user
         // Support-Chat (alle User-Nachrichten an Support landen hier). So sieht der Admin jede
         // User-Nachricht als Chat mit diesem User + antwortet als CreatorBoost.

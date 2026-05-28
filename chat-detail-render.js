@@ -42,7 +42,7 @@ module.exports = function renderChatBubbles(opts) {
 
     const otherPic = ladeBild(otherUid, 'profilepic');
     const otherInsta = otherUser.instagram;
-    const otherName = otherUser.spitzname || otherUser.name || 'User';
+    const otherName = String(otherUser.spitzname || otherUser.name || 'User');
     const otherAvatarSrc = otherPic ? '/appbild/' + otherUid + '/profilepic' :
         (otherInsta ? 'https://unavatar.io/instagram/' + otherInsta : '');
 

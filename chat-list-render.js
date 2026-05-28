@@ -38,7 +38,7 @@ module.exports = function renderChatList(opts) {
 
     const storiesHtml = storiesArr.map((item) => {
         const id = item.uid;
-        const name = item.name || '?';
+        const name = String(item.name || '?');
         const isOnline = onlineSet.has(String(id));
         const ringExtraClass = item.engaged ? ' pinned-engaged' : ' pinned-glow';
         // Render Fallback-Letter immer; Img nur wenn ECHTES Profilbild (lokal). Img liegt darüber, onerror=this.remove() → Letter zeigt sich wieder.
@@ -103,7 +103,7 @@ module.exports = function renderChatList(opts) {
         const isOnline = onlineSet.has(String(c.otherUid));
 
         // Fallback-Letter immer; Img nur wenn echtes lokales Profilbild vorhanden — kein unavatar.io mehr (broken-image vermeiden).
-        let avatarInner = '<span class="dm-avatar-fb">' + esc((c.otherName || '?').slice(0, 1)) + '</span>';
+        let avatarInner = '<span class="dm-avatar-fb">' + esc(String(c.otherName || '?').slice(0, 1)) + '</span>';
         if (pic) avatarInner += '<img src="/appbild/' + c.otherUid + '/profilepic" alt="" loading="lazy" onerror="this.remove()" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:50%">';
 
         const unreadClass = (c.unread > 0 ? ' unread' : '');
