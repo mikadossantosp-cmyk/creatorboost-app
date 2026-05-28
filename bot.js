@@ -17242,6 +17242,51 @@ setInterval(refreshUsers, 60000);
     });
   });
 })();
+// A11y: Dashboard-Modals (.dash-modal-bg) tastaturbedienbar — Escape + Backdrop-Klick
+// schließen, role="dialog"/aria-modal, Fokus rein beim Öffnen + zurück zum Auslöser beim
+// Schließen. Progressive Enhancement: einmal drübergelegt, greift auch für dynamisch
+// erzeugte Modals (Observer), ohne die Modal-Erzeugung selbst anzufassen.
+(function dashModalA11y(){
+  function topModal(){ var all = document.querySelectorAll('.dash-modal-bg'); return all.length ? all[all.length-1] : null; }
+  // Escape schließt das oberste offene Modal
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'Escape' || e.key === 'Esc') { var m = topModal(); if (m) { e.preventDefault(); m.remove(); } }
+  });
+  // Klick auf den Backdrop (nicht aufs Modal-Inhalts-Panel) schließt
+  document.addEventListener('click', function(e){
+    if (e.target && e.target.classList && e.target.classList.contains('dash-modal-bg')) e.target.remove();
+  });
+  function enhance(bg){
+    if (bg.dataset.a11y === '1') return;
+    bg.dataset.a11y = '1';
+    bg._a11yTrigger = document.activeElement; // Auslöser merken, um Fokus zurückzugeben
+    var modal = bg.querySelector('.dash-modal') || bg;
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    if (!modal.hasAttribute('tabindex')) modal.setAttribute('tabindex', '-1');
+    // Fokus ins Modal (erstes fokussierbares Element, sonst der Container)
+    var f = modal.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+    try { (f || modal).focus(); } catch(e) {}
+  }
+  function restore(bg){
+    var t = bg._a11yTrigger;
+    if (t && document.contains(t) && typeof t.focus === 'function') { try { t.focus(); } catch(e) {} }
+  }
+  document.querySelectorAll('.dash-modal-bg').forEach(enhance);
+  var obs = new MutationObserver(function(muts){
+    muts.forEach(function(m){
+      m.addedNodes && m.addedNodes.forEach(function(n){
+        if (n.nodeType !== 1) return;
+        if (n.classList && n.classList.contains('dash-modal-bg')) enhance(n);
+        else if (n.querySelector) { var inner = n.querySelector('.dash-modal-bg'); if (inner) enhance(inner); }
+      });
+      m.removedNodes && m.removedNodes.forEach(function(n){
+        if (n.nodeType === 1 && n.classList && n.classList.contains('dash-modal-bg')) restore(n);
+      });
+    });
+  });
+  if (document.body) obs.observe(document.body, { childList: true });
+})();
 // Initial-Badge für offene Meldungen (lazy, ohne UI zu blockieren)
 fetch('/api/admin/engagement-log').then(r=>r.json()).then(j=>{ if (j.ok) { LAST_REPORTS = j.reports||[]; updateReportsBadge(LAST_REPORTS); } }).catch(()=>{});
 </script>
