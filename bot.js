@@ -4796,7 +4796,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v242-explore-headers';
+const SW_VERSION='v243-explore-buttons';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
@@ -17501,14 +17501,14 @@ ${_latestNews ? `<a href="/explore?tab=newsletter" class="highlight-card" style=
   <div style="font-size:12px;color:var(--muted)">Rang: ${myRank>0?'#'+myRank:adminIds.includes(Number(myUid))?'👑 Admin':'–'}</div>
 </div>
 <div style="display:flex;gap:6px;padding:0 16px 12px">
-  <button onclick="switchRanking('gesamt',this)" id="rtab-gesamt" style="flex:1;background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;border:none;border-radius:10px;padding:7px;font-size:12px;font-weight:700;cursor:pointer">🏆 Gesamt</button>
-  <button onclick="switchRanking('daily',this)" id="rtab-daily" style="flex:1;background:var(--bg3);color:var(--muted);border:1px solid var(--border2);border-radius:10px;padding:7px;font-size:12px;font-weight:700;cursor:pointer">📅 Daily</button>
-  <button onclick="switchRanking('weekly',this)" id="rtab-weekly" style="flex:1;background:var(--bg3);color:var(--muted);border:1px solid var(--border2);border-radius:10px;padding:7px;font-size:12px;font-weight:700;cursor:pointer">📆 Woche</button>
+  <button onclick="switchRanking('gesamt',this)" id="rtab-gesamt" style="flex:1;background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;border:none;border-radius:10px;padding:7px;font-size:12px;font-weight:700;cursor:pointer">Gesamt</button>
+  <button onclick="switchRanking('daily',this)" id="rtab-daily" style="flex:1;background:var(--bg3);color:var(--muted);border:1px solid var(--border2);border-radius:10px;padding:7px;font-size:12px;font-weight:700;cursor:pointer">Daily</button>
+  <button onclick="switchRanking('weekly',this)" id="rtab-weekly" style="flex:1;background:var(--bg3);color:var(--muted);border:1px solid var(--border2);border-radius:10px;padding:7px;font-size:12px;font-weight:700;cursor:pointer">Woche</button>
 </div>
 <div id="rlist-gesamt" style="padding-bottom:100px">${rankingRows}</div>
 <div id="rlist-daily" style="display:none;padding-bottom:100px">
   <div style="margin:0 16px 12px;padding:12px 14px;background:linear-gradient(135deg,rgba(245,158,11,0.12),rgba(167,139,250,0.08));border:1px solid rgba(245,158,11,0.30);border-radius:12px;font-size:12.5px;line-height:1.55">
-    <div style="font-weight:800;color:#f59e0b;margin-bottom:6px">🏆 Tages-Preise (Reset 00:00)</div>
+    <div style="font-weight:800;color:#f59e0b;margin-bottom:6px">Tages-Preise (Reset 00:00)</div>
     <div>🥇 <b>+10 XP · +2 💎 · 1 Extra-Link</b></div>
     <div>🥈 <b>+5 XP · +2 💎</b></div>
     <div>🥉 <b>+2 XP · +1 💎</b></div>
@@ -17518,7 +17518,7 @@ ${_latestNews ? `<a href="/explore?tab=newsletter" class="highlight-card" style=
 </div>
 <div id="rlist-weekly" style="display:none;padding-bottom:100px">
   <div style="margin:0 16px 12px;padding:12px 14px;background:linear-gradient(135deg,rgba(167,139,250,0.14),rgba(245,158,11,0.10));border:1px solid rgba(167,139,250,0.35);border-radius:12px;font-size:12.5px;line-height:1.55">
-    <div style="font-weight:800;color:#a78bfa;margin-bottom:6px">🏆 Wochen-Preise (Mo–So, Reset Montag)</div>
+    <div style="font-weight:800;color:#a78bfa;margin-bottom:6px">Wochen-Preise (Mo–So, Reset Montag)</div>
     <div>🥇 <b>+50 XP · +3 💎 · 2 Extra-Links</b></div>
     <div>🥈 <b>+30 XP · +2 💎 · 1 Extra-Link</b></div>
     <div>🥉 <b>+15 XP · +1 💎 · 1 Extra-Link</b></div>
