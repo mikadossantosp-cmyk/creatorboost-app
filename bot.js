@@ -6,7 +6,6 @@ console.log('   PORT env: ' + (process.env.PORT || '(unset — Default 3000)'));
 console.log('   BRIDGE_SECRET: ' + (process.env.BRIDGE_SECRET ? 'set' : 'MISSING'));
 console.log('   VAPID_PUBLIC: ' + (process.env.VAPID_PUBLIC ? 'set' : 'MISSING'));
 console.log('   VAPID_PRIVATE: ' + (process.env.VAPID_PRIVATE ? 'set' : 'MISSING'));
-console.log('   MAINBOT_URL: ' + (process.env.MAINBOT_URL || '(unset)'));
 console.log('   REVIEWER_EMAIL: ' + (process.env.REVIEWER_EMAIL || 'reviewer@creatorboostx.de (default)'));
 console.log('───────────────────────────────────────────');
 
@@ -27,7 +26,6 @@ const { genderize } = require('./gender-helper');
 const datastore = require('./datastore');
 const botLogic = require('./bot-logic');
 
-const MAINBOT_URL   = process.env.MAINBOT_URL   || '';
 const BRIDGE_SECRET = process.env.BRIDGE_SECRET || '';
 if (!BRIDGE_SECRET) {
     console.error('FATAL: BRIDGE_SECRET env-var nicht gesetzt. Server startet nicht.');
@@ -4531,7 +4529,7 @@ async function handleRequest(req, res) {
                 isBootFallback: !!(_dataCache && _dataCache._bootEmptyFallback),
             },
             mainbot: {
-                configured: !!MAINBOT_URL,
+                configured: false,
                 healthy: mainbotHealthy,
                 consecutiveFails: _mainbotConsecutiveFails,
                 lastSuccess: _lastMainbotSuccessAt ? new Date(_lastMainbotSuccessAt).toISOString() : null,
@@ -4654,8 +4652,8 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
             ok: true,
             ts: new Date().toISOString(),
             totalMs: Date.now() - t0,
-            mainbotConfigured: !!MAINBOT_URL,
-            mainbotUrl: MAINBOT_URL ? MAINBOT_URL.replace(/^https?:\/\//,'').slice(0,30) + '...' : null,
+            mainbotConfigured: false,
+            mainbotUrl: null,
             tests: {
                 dataFetch: { ok: !!bd, ms: dataMs, userCount: bd?.users ? Object.keys(bd.users).length : null },
                 postAlive: { ok: mainbotPostAlive, ms: postMs, expectedResponse: mainbotPostExpected400, response: postTest },
@@ -4682,7 +4680,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
             now: new Date().toISOString(),
             uptime: Math.round(process.uptime()),
             cacheAge: _dataCacheTime ? Math.round((Date.now()-_dataCacheTime)/1000) : null,
-            mainbotConfigured: !!MAINBOT_URL,
+            mainbotConfigured: false,
             sessions: sessions.size,
             backup: {
                 lastRunAgoSec: _bkAge,
@@ -5009,33 +5007,7 @@ self.addEventListener('notificationclick',e=>{
             res.writeHead(200, {'Content-Type': mime, 'Cache-Control': 'public, no-cache', 'ETag': etag, 'Content-Length': buf.length});
             return res.end(buf);
         } catch(e) {}
-        // Proxy to telegram-bot (separate Railway volume)
-        if (MAINBOT_URL) {
-            const botUrl = MAINBOT_URL + '/bild/' + buid + '/' + btype;
-            return new Promise(resolve => {
-                const lib = botUrl.startsWith('https') ? https : http;
-                lib.get(botUrl, { headers: {'x-bridge-secret': BRIDGE_SECRET} }, (bres) => {
-                    if (bres.statusCode === 200) {
-                        // Stream + buffer für Cache
-                        const chunks = [];
-                        bres.on('data', c => chunks.push(c));
-                        bres.on('end', () => {
-                            const buf = Buffer.concat(chunks);
-                            const mime = bres.headers['content-type'] || 'image/jpeg';
-                            const etag = '"proxy-' + buid + '-' + btype + '-' + buf.length + '"';
-                            _appbildLRUSet(cacheKey, { buf, mime, etag, ts: Date.now() });
-                            if (reqEtag === etag) { res.writeHead(304, {'ETag': etag}); return res.end(); }
-                            res.writeHead(200, { 'Content-Type': mime, 'Cache-Control': 'public, no-cache', 'ETag': etag, 'Content-Length': buf.length });
-                            res.end(buf);
-                            resolve();
-                        });
-                    } else {
-                        res.writeHead(404); res.end('not found');
-                        resolve();
-                    }
-                }).on('error', () => { res.writeHead(404); res.end('not found'); resolve(); });
-            });
-        }
+        // Mainbot stillgelegt: kein Bild-Proxy mehr. Bilder liegen lokal; fehlt eins -> 404.
         res.writeHead(404); return res.end('not found');
     }
 
@@ -7407,10 +7379,10 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
     if (path === '/debug/test') {
         if ((query.key || '') !== BRIDGE_SECRET) { res.writeHead(403); return res.end('Kein Zugriff'); }
         const botData = await fetchBot('/data');
-        if (!botData) return json({error:'Main Bot nicht erreichbar', mainbotUrl: MAINBOT_URL});
+        if (!botData) return json({error:'Datastore nicht erreichbar'});
         const userCount = Object.keys(botData.users||{}).length;
         const withCode = Object.values(botData.users||{}).filter(u=>u.appCode).length;
-        return json({ok:true, users: userCount, withCode, mainbotUrl: MAINBOT_URL});
+        return json({ok:true, users: userCount, withCode});
     }
 
     // ── LIKE API ──
@@ -16122,7 +16094,7 @@ async function openStatsDebug() {
   const errBanner = (j.ok && r.ok) ? '' :
     '<div style="padding:12px 14px;background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.35);border-radius:8px;margin-bottom:12px;color:#f87171;font-weight:700">' +
       '❌ Response NICHT ok · HTTP '+httpStatus+' · error: '+esc(j.error||j._parseError||'unbekannt') +
-      '<br><br><b style="color:#fff">Bedeutung:</b> Wenn "Mainbot offline" → Bridge zwischen App und Telegram-Bot ist kaputt. Prüfe BRIDGE_SECRET/MAINBOT_URL env-vars + Mainbot-Health.' +
+      '<br><br><b style="color:#fff">Bedeutung:</b> Fehler beim Lesen aus dem lokalen Datastore. App läuft standalone — kein Mainbot mehr beteiligt.' +
     '</div>';
   bg.innerHTML = '<div class="dash-modal" style="max-width:560px"><div class="dash-modal-hdr"><h3>📊 Stats-Debug</h3><div class="dash-modal-meta">Roh-Antwort von /api/admin/stats (Mainbot-Bridge)</div></div>' +
     '<div class="dash-modal-body" style="font-family:ui-monospace,monospace;font-size:11.5px">' +
