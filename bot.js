@@ -4817,7 +4817,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v267-chat-nohang';
+const SW_VERSION='v268-admin-filter';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
@@ -13539,14 +13539,10 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) acPo
 
     // ── CHAT ──
     if (path.startsWith('/nachrichten/') && !path.startsWith('/nachrichten/gruppe') && !path.startsWith('/nachrichten/app-chat')) {
+      try {
         const otherUid = path.replace('/nachrichten/', '');
-        // Unter LOCAL_STORE direkt aus den lokalen Daten lesen (kein Mainbot/_dataCache —
-        // das wäre null → Redirect, plus bis zu 13s Hang). Im Proxy-Modus wie gehabt.
-        let botData;
-        if (LOCAL_STORE) { botData = await fetchBot('/data'); }
-        else { await refreshDataCache().catch(()=>{}); botData = _dataCache; }
-        if (!botData) return redirect('/nachrichten');
-        const otherUser = botData.users?.[otherUid] || {};
+        // d ist bereits oben gefetcht (Zeile 9429) — kein zweiter Fetch nötig.
+        const otherUser = d.users?.[otherUid] || {};
         const otherName = otherUser.spitzname || otherUser.name || 'User';
         // Admin operiert als CreatorBoost: ein Chat mit einem normalen User = der creatorboost↔user
         // Support-Chat (alle User-Nachrichten an Support landen hier). So sieht der Admin jede
@@ -13555,7 +13551,14 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) acPo
         const _asCB = _viewerIsAdmin && otherUid !== 'creatorboost' && !adminIds.includes(Number(otherUid));
         const _selfUid = _asCB ? 'creatorboost' : myUid;
         const chatKey = _asCB ? ['creatorboost', otherUid].sort().join('_') : [myUid, otherUid].sort().join('_');
-        const msgs = (botData.messages?.[chatKey] || []);
+        // Admin-Filter: ?nur-user=1 zeigt nur vom User selbst getippte Nachrichten (keine System-DMs)
+        const _nurUser = _viewerIsAdmin && query['nur-user'] === '1';
+        let msgs = (d.messages?.[chatKey] || []);
+        if (_nurUser) {
+            msgs = msgs.filter(m => String(m.from) === String(otherUid) && !m.system
+                && !String(m.text||'').startsWith('🤖 Helper-Frage:')
+                && !String(m.text||'').startsWith('💬 Follow-up:'));
+        }
         if (LOCAL_STORE) { try { Promise.resolve(localWrite(() => botLogic.markMessagesRead({ uid: _selfUid, chatKey }))).catch(()=>{}); } catch(_) {} }
         else postBot('/mark-messages-read', { uid: _selfUid, chatKey }).catch(()=>{});
         let msgsHtml = '';
@@ -13563,7 +13566,8 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) acPo
           msgsHtml = require('./chat-detail-render')({ msgs, myUid: _selfUid, otherUid, otherUser, ladeBild, otherOnline: isUidOnline(otherUid) });
         } catch(e) { console.error('[chat-render]', e && e.stack || e); msgsHtml = '<div style="padding:48px 20px;text-align:center;color:var(--muted);font-size:13px">Nachrichten konnten gerade nicht geladen werden.</div>'; }
         return html(`
-<div class="topbar" style="display:flex;align-items:center;gap:8px;padding:8px 10px">
+${_nurUser ? '<div style="position:fixed;top:0;left:0;right:0;z-index:200;background:#7c3aed;color:#fff;font-size:11px;font-weight:700;text-align:center;padding:3px 0;letter-spacing:.5px">FILTER: NUR NUTZERNACHRICHTEN</div>' : ''}
+<div class="topbar" style="display:flex;align-items:center;gap:8px;padding:8px 10px${_nurUser ? ';margin-top:22px' : ''}">
   <a href="/nachrichten" class="icon-btn" style="font-size:26px;color:var(--accent);padding:6px 10px;text-decoration:none;display:flex;align-items:center">‹</a>
   <a href="/profil/${otherUid}" class="chat-header-link" style="display:flex;align-items:center;gap:11px;text-decoration:none;flex:1;min-width:0">
     <div style="position:relative;width:42px;height:42px;border-radius:50%;overflow:hidden;background:linear-gradient(135deg,#a78bfa,#7c3aed);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:#fff;flex-shrink:0;box-shadow:0 2px 8px rgba(15,23,42,.10)">
@@ -13580,11 +13584,11 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) acPo
       <span class="chat-header-status" style="font-size:12px;font-weight:600;color:${isUidOnline(otherUid)?'#22c55e':'var(--muted)'};letter-spacing:0.1px;line-height:1.2;margin-top:2px">${isUidOnline(otherUid)?'● Online':(getLastSeen(otherUid)?'zuletzt aktiv vor '+fmtRelative(getLastSeen(otherUid)):'Offline')}</span>
     </div>
   </a>
-  <button onclick="alert('Sprachanruf folgt bald 📞')" style="background:none;border:none;color:#0866FF;width:40px;height:40px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0" title="Anrufen">
+  ${_viewerIsAdmin ? `<a href="/nachrichten/${otherUid}${_nurUser ? '' : '?nur-user=1'}" style="background:${_nurUser ? '#7c3aed' : 'rgba(124,58,237,.12)'};border:none;color:${_nurUser ? '#fff' : '#a78bfa'};width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;text-decoration:none" title="${_nurUser ? 'Alle Nachrichten' : 'Nur Nutzernachrichten'}">
+    <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+  </a>` : ''}
+  <button onclick="alert('Sprachanruf folgt bald')" style="background:none;border:none;color:#0866FF;width:40px;height:40px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0" title="Anrufen">
     <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M20 15.5c-1.25 0-2.45-.2-3.57-.57-.35-.11-.74-.03-1.02.24l-2.2 2.2c-2.83-1.44-5.15-3.75-6.59-6.58l2.2-2.21c.28-.27.36-.66.25-1.01C8.7 6.45 8.5 5.25 8.5 4c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1 0 9.39 7.61 17 17 17 .55 0 1-.45 1-1v-3.5c0-.55-.45-1-1-1z"/></svg>
-  </button>
-  <button onclick="alert('Videoanruf folgt bald 🎥')" style="background:none;border:none;color:#0866FF;width:40px;height:40px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0" title="Video">
-    <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg>
   </button>
   <a href="/profil/${otherUid}" style="background:none;border:none;color:#0866FF;width:40px;height:40px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;text-decoration:none" title="Info">
     <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
@@ -13818,13 +13822,17 @@ function toggleAudio(btn) {
     else { audio.pause(); btn.textContent='▶'; }
 }
 
-let chatKnownCount=${msgs.length};
+let chatKnownCount=${(d.messages?.[chatKey]||[]).length};
 setInterval(async()=>{
     if(document.querySelector('[data-optimistic]'))return;
     if(document.hidden)return;
     try{const r=await fetch('/api/messages/${otherUid}');const data=await r.json();if(data.count>chatKnownCount){chatKnownCount=data.count;location.reload();}}catch(e){}
 },3000);
 </script>`, 'messages');
+      } catch(_chatErr) {
+        console.error('[chat-route] Unerwarteter Fehler:', _chatErr && _chatErr.stack || _chatErr);
+        if (!res.headersSent) return html('<div style="padding:60px 20px;text-align:center"><div style="font-size:14px;color:var(--muted);margin-bottom:16px">Chat konnte nicht geladen werden.</div><a href="/nachrichten" style="color:var(--accent);font-weight:700">← Zurück</a></div>', 'messages');
+      }
     }
 
 
