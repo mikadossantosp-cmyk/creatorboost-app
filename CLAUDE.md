@@ -73,12 +73,14 @@ Prioritäten **immer in dieser Reihenfolge**:
 - **Feed-Migration:** Post-Karte (`bot.js:1883–1901`) — doppelte `.post-time`-Regel entfernt, Abstände auf `--space`-Skala, `font-size` auf `--fs`-Tokens. Tab-Trigger auf `--fs-base`. Feed war bereits ~90 % klassenbasiert; Rest-Inline-Styles sind legitim dynamisch → abgeschlossen.
 - **Dashboard an App-Stil angeglichen** (`/dashboard`, `bot.js:15271–17532`): Gold **komplett** auf Lila-Akzent (`#d4af37→#7c3aed`, `#f5d76e→#cc5de8`, `#8b6914→#6d28d9`, dazu `rgba(212,175,55,*)`/`rgba(245,215,110,*)` und die `--dgold*`-Tokens), Font auf `var(--font)`. **Bewusst dunkle Fläche beibehalten** — Dashboard ist dark-only designt; `background:var(--bg)` würde Light-Mode brechen. Alle Ersetzungen **scoped** auf den Block (andere Gold-Seiten unberührt).
 - **Explore (`/explore`, `bot.js:17533–18942`):** Nur **Token-Hygiene** — 75 exakte `font-size`-Werte (12/13/15/16/20/28px) auf `--fs-*`-Tokens. **Gold bewusst behalten** (Shop/Glücksrad/Gewinnspiel/Tiers Bronze-Silber-Gold = gewollter Belohnungs-/Premium-Look — *nicht* entgolden). Offen: Duplikat-Selektoren `.foot/.rl-*/.tb` über mehrere Tab-Style-Blöcke (evtl. bewusst scoped — nicht blind mergen).
+- **Profil + Einstellungen (`bot.js:19348–21246`):** Token-Hygiene — 74 exakte `font-size`-Werte auf `--fs-*`. `.pf-input`-„Duplikat" war False Positive (`.pf-input-with-icon .pf-input`). Kein Defekt.
+- **Microcopy (Leerzustände):** Profil-Leerzustände mit Hinweis ergänzt (eigenes Profil motivierend, fremde Profile neutral „Hat noch nichts geteilt."/„…Projekte erstellt."), Newsletter-Leerzustand, konkreterer Notif-Fehlertext („Versuch es gleich nochmal." statt „Bitte später erneut versuchen."). **Begriffe bewusst unverändert** (Links/Posts/Projekte). Feed-Leerzustand war schon gut → nicht angefasst. Lade-/Filter-/CTA-/dynamische Leerzustände sind korrekt so → fertig.
 
 ## 8. Nächste sinnvolle Schritte
 
-1. Nach Traffic weiter: `/profil` + `/einstellungen` (Vertrauens-Flächen).
-2. **Optional/riskant:** Dashboard volle Light-Mode-Fähigkeit (jede Light-on-Dark-Annahme prüfen) — nur mit visuellem QA.
-3. Microcopy der High-Traffic-Strings (Onboarding, Empty-States, primäre CTAs) schärfen.
+1. **Optional/riskant:** Dashboard volle Light-Mode-Fähigkeit (jede Light-on-Dark-Annahme prüfen) — nur mit visuellem QA.
+2. Auf Wunsch: CTA-Labels app-weit vereinheitlichen (z. B. `Anmelden` vs `Anmelden · CreatorX`, Pfeil-Stile), Onboarding-Flow-Texte.
+3. Rest-Screens (Nachrichten, Suche, Benachrichtigungen) `font-size`-Token-Hygiene, falls gewünscht.
 
 ## 9. Hinweise / Fallen
 
