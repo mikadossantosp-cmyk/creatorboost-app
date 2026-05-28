@@ -117,6 +117,31 @@ function _trackFunnel(event, meta, uid) {
 const REVIEWER_EMAIL    = String(process.env.REVIEWER_EMAIL    || 'reviewer@creatorboostx.de').toLowerCase();
 const REVIEWER_PASSWORD = String(process.env.REVIEWER_PASSWORD || 'ReviewerCreatorX2026!');
 
+// ── Google Sign-In (OAuth 2.0) — env-gated: nur aktiv, wenn beide Schlüssel gesetzt sind.
+// Anlegen in der Google Cloud Console (OAuth-Client-ID, Typ Webanwendung), Redirect-URI:
+// https://creatorboostx.de/auth/google/callback (+ www). Ohne Keys bleibt der Button/Flow aus.
+const GOOGLE_CLIENT_ID     = String(process.env.GOOGLE_CLIENT_ID     || '');
+const GOOGLE_CLIENT_SECRET = String(process.env.GOOGLE_CLIENT_SECRET || '');
+const GOOGLE_OAUTH_ON = !!(GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET);
+const _googleOAuthStates = new Map(); // state(csrf) -> ts; TTL 10min, beim Start des Flows gesetzt
+// Tausch des Authorization-Code gegen Tokens am Google-Token-Endpoint (server-seitig, TLS).
+function _googleExchangeCode(code, redirectUri) {
+  return new Promise((resolve) => {
+    const form = new URLSearchParams({ code, client_id: GOOGLE_CLIENT_ID, client_secret: GOOGLE_CLIENT_SECRET, redirect_uri: redirectUri, grant_type: 'authorization_code' }).toString();
+    const r = https.request({ hostname: 'oauth2.googleapis.com', path: '/token', method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': Buffer.byteLength(form) } }, res => {
+      let body = ''; res.on('data', c => body += c); res.on('end', () => { try { resolve(JSON.parse(body)); } catch (e) { resolve(null); } });
+    });
+    r.on('error', () => resolve(null));
+    r.setTimeout(10000, () => { try { r.destroy(); } catch (e) {} resolve(null); });
+    r.write(form); r.end();
+  });
+}
+// id_token (JWT) Payload dekodieren — kommt direkt vom Google-Token-Endpoint über TLS, daher
+// vertrauenswürdig ohne erneute Signaturprüfung (Google-Empfehlung für diesen Flow).
+function _decodeJwtPayload(jwt) {
+  try { const p = String(jwt).split('.')[1]; return JSON.parse(Buffer.from(p.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8')); } catch (e) { return null; }
+}
+
 // ── ANDROID KEYSTORE für APK/AAB-Signing ──
 // SECURITY: Keystore + Passwort werden aus ENV-Variable oder /data/keystore.{b64,pass} gelesen.
 // NIE im Source-Code committen. Wenn beides fehlt, sind die Sign-Routes deaktiviert.
@@ -5878,6 +5903,54 @@ function submitSignup(ev){
     // ── PROFESSIONAL LOGIN PAGE (/login) ──
     // Fokussierte Login-Page für returning Users. Standalone HTML (kein layout(),
     // kein Tour-JS), damit nichts redirecten kann. Eigene Route /login, von der
+    // ── Google Sign-In: Flow starten → Weiterleitung zum Google-Consent ──
+    if (path === '/auth/google' && req.method === 'GET') {
+        if (!GOOGLE_OAUTH_ON) { res.writeHead(302, {'Location':'/login?err=google'}); return res.end(); }
+        const _now = Date.now();
+        for (const [k, ts] of _googleOAuthStates) if (_now - ts > 600000) _googleOAuthStates.delete(k); // TTL-Cleanup
+        const state = crypto.randomBytes(16).toString('hex');
+        _googleOAuthStates.set(state, _now);
+        const host = String(req.headers['x-forwarded-host'] || req.headers.host || 'creatorboostx.de').split(',')[0].trim();
+        const redirectUri = 'https://' + host + '/auth/google/callback';
+        const params = new URLSearchParams({ client_id: GOOGLE_CLIENT_ID, redirect_uri: redirectUri, response_type: 'code', scope: 'openid email profile', state, access_type: 'online', prompt: 'select_account' });
+        res.writeHead(302, {'Location': 'https://accounts.google.com/o/oauth2/v2/auth?' + params.toString(), 'Cache-Control':'no-store'});
+        return res.end();
+    }
+    // ── Google Sign-In: Callback → Code tauschen, User finden/anlegen, Session minten ──
+    if (path === '/auth/google/callback' && req.method === 'GET') {
+        if (!GOOGLE_OAUTH_ON) { res.writeHead(302, {'Location':'/login?err=google'}); return res.end(); }
+        const state = String(query.state || '');
+        if (!state || !_googleOAuthStates.has(state)) { res.writeHead(302, {'Location':'/login?err=google'}); return res.end(); } // CSRF/abgelaufen
+        _googleOAuthStates.delete(state);
+        const code = String(query.code || '');
+        if (!code) { res.writeHead(302, {'Location':'/login?err=google'}); return res.end(); }
+        const host = String(req.headers['x-forwarded-host'] || req.headers.host || 'creatorboostx.de').split(',')[0].trim();
+        const redirectUri = 'https://' + host + '/auth/google/callback';
+        const tok = await _googleExchangeCode(code, redirectUri);
+        const claims = tok && tok.id_token ? _decodeJwtPayload(tok.id_token) : null;
+        const email = claims ? String(claims.email || '').toLowerCase().trim() : '';
+        if (!email || claims.email_verified === false) { res.writeHead(302, {'Location':'/login?err=google'}); return res.end(); }
+        const _ip = String(req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '').split(',')[0].trim().slice(0, 64);
+        const _ua = String(req.headers['user-agent'] || '').slice(0, 200);
+        // Mit der Anmeldung gilt Alters-/AGB-Zustimmung als erteilt (DSGVO/Play — implizit, Timestamp festgehalten).
+        const _cep = { email, ageConfirmedAt: Date.now(), termsAcceptedAt: Date.now(), termsVersion: '2026-05' };
+        const created = LOCAL_STORE ? await localWriteNow(() => botLogic.createEmailUserApi(_cep)) : await postBot('/create-email-user-api', _cep);
+        if (!created || !created.ok || !created.uid) { res.writeHead(302, {'Location':'/login?err=google'}); return res.end(); }
+        const uid = String(created.uid);
+        const isNew = !created.existed;
+        // googleId + (bei neu) signupSource/Name markieren — best effort, blockt Login nicht.
+        if (LOCAL_STORE) { try { await localWrite(() => { const u = datastore.getData().users[uid]; if (u) { if (claims.sub) u.googleId = String(claims.sub); if (isNew) { u.signupSource = 'google'; if (claims.name && (!u.name || u.name === email.split('@')[0])) u.name = String(claims.name).slice(0, 30); } } }); } catch (e) {} }
+        await refreshDataCache();
+        const fresh = LOCAL_STORE ? datastore.getData() : await fetchBotRaw('/data');
+        if (fresh) { _dataCache = fresh; _dataCacheTime = Date.now(); }
+        const u = fresh?.users?.[uid];
+        const sid = genSid();
+        sessions.set(sid, { uid, name: (u && u.name) || email.split('@')[0].slice(0, 30), username: (u && u.username) || null, theme: 'light', lang: 'de', createdAt: Date.now(), subUid: null, activeUid: uid, loginVia: 'google' });
+        saveSessions();
+        postBot('/log-email-login', { email, success: true, method: 'google', uid, ip: _ip, ua: _ua }).catch(()=>{});
+        res.writeHead(302, {'Set-Cookie':`cbsid=${sid}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=157680000`, 'Location': isNew ? '/onboarding-instagram?first=1' : '/feed', 'Cache-Control':'no-store'});
+        return res.end();
+    }
     // Marketing-Landing (/) verlinkt via 'Einloggen →'.
     if (path === '/login' && req.method === 'GET') {
         if (session && (query.preview !== '1')) return redirect('/feed');
@@ -5986,6 +6059,7 @@ h1{font-family:'Cormorant Garamond',serif;font-size:40px;font-weight:600;line-he
     ${query.error==='nocode' ? '<div class="msg show err">⚠️ Kein Login-Code übergeben.</div>' : ''}
     ${query.error==='503' ? '<div class="msg show err">⚠️ Server nicht erreichbar. Bitte später nochmal versuchen.</div>' : ''}
     ${query.logout==='1' ? '<div class="msg show ok">✅ Erfolgreich ausgeloggt.</div>' : ''}
+    ${query.err==='google' ? '<div class="msg show err">⚠️ Google-Anmeldung fehlgeschlagen. Bitte nochmal versuchen oder per Email einloggen.</div>' : ''}
 
     <div class="msg" id="login-msg"></div>
 
@@ -6005,6 +6079,14 @@ h1{font-family:'Cormorant Garamond',serif;font-size:40px;font-weight:600;line-he
       <div class="row-link"><button type="button" class="link-btn" id="pw-reset-btn" onclick="resetPassword()">Passwort vergessen?</button></div>
       <button type="submit" class="btn" id="login-btn"><span class="spin"></span><span>Anmelden</span></button>
     </form>
+    ${GOOGLE_OAUTH_ON ? `
+    <div style="display:flex;align-items:center;gap:12px;margin:18px 0;color:var(--muted,#888);font-size:12.5px">
+      <span style="flex:1;height:1px;background:currentColor;opacity:.2"></span>oder<span style="flex:1;height:1px;background:currentColor;opacity:.2"></span>
+    </div>
+    <a href="/auth/google" style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;box-sizing:border-box;padding:13px;border:1px solid rgba(0,0,0,.14);border-radius:12px;background:#fff;color:#1f1f1f;font-weight:600;font-size:14.5px;text-decoration:none">
+      <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+      Mit Google anmelden
+    </a>` : ''}
 
     <div class="bottom">
       <div class="bottom-lbl">Noch keinen Account?</div>
