@@ -1789,6 +1789,8 @@ forced-color-adjust:none;
 --avatar-fallback-bg:#ffffff;--avatar-fallback-color:rgba(15,23,42,.30);--avatar-fallback-border:rgba(15,23,42,.10);
 --radius:16px;--radius-sm:10px;--radius-xs:6px;
 --font:'DM Sans',sans-serif;--font-display:'Syne',sans-serif;
+--fs-xs:12px;--fs-sm:13px;--fs-base:15px;--fs-md:16px;--fs-lg:20px;--fs-xl:28px;
+--track-tight:-0.02em;--track-snug:-0.011em;
 --shadow:0 8px 32px rgba(15,23,42,.06);
 --glass-bg:rgba(255,255,255,0.72);--surface-tint:rgba(15,23,42,0.03);--hover-tint:rgba(15,23,42,0.05);
 --safe-bottom:env(safe-area-inset-bottom,0px);
@@ -1812,7 +1814,8 @@ color-scheme:dark;
 }
 html{scroll-behavior:smooth;-webkit-tap-highlight-color:transparent}
 html{background:var(--bg) !important}
-body{font-family:var(--font);background:var(--bg) !important;color:var(--text);min-height:100vh;margin:0 auto;padding-bottom:calc(70px + var(--safe-bottom));overflow-x:hidden;overscroll-behavior-y:contain;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+body{font-family:var(--font);background:var(--bg) !important;color:var(--text);min-height:100vh;margin:0 auto;padding-bottom:calc(70px + var(--safe-bottom));overflow-x:hidden;overscroll-behavior-y:contain;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;font-variant-numeric:tabular-nums;text-rendering:optimizeLegibility}
+h1,h2,h3,h4,h5{letter-spacing:var(--track-tight);line-height:1.2}
 [data-theme=light] html, [data-theme=light] body{background:#e8eaf0 !important;background-image:none !important}
 [data-theme=dark] html, [data-theme=dark] body{background:#000000 !important;background-image:none !important}
 a{color:inherit;text-decoration:none}
@@ -4796,7 +4799,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v244-regeln-premium';
+const SW_VERSION='v245-type-system';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
@@ -6581,7 +6584,7 @@ if(_bio&&_cnt){_bio.addEventListener('input',function(){_cnt.textContent=(_bio.v
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100vh;padding:24px;display:flex;flex-direction:column}
+body{font-family:'DM Sans',sans-serif;background:#000;color:#fff;min-height:100vh;padding:24px;display:flex;flex-direction:column;font-variant-numeric:tabular-nums;text-rendering:optimizeLegibility}
 .wrap{max-width:420px;margin:0 auto;width:100%;flex:1;display:flex;flex-direction:column;justify-content:center}
 .icon{font-size:48px;text-align:center;margin-bottom:14px}
 h1{font-size:24px;font-weight:700;text-align:center;margin-bottom:8px}
@@ -8806,7 +8809,7 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
   --border:rgba(255,255,255,.08);--muted:rgba(255,255,255,.45);
 }
 html{scroll-behavior:smooth}
-body{font-family:'DM Sans',sans-serif;background:var(--bg);color:#fff;max-width:680px;margin:0 auto;overflow-x:hidden}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:#fff;max-width:680px;margin:0 auto;overflow-x:hidden;font-variant-numeric:tabular-nums;text-rendering:optimizeLegibility}
 
 /* ── TYPOGRAPHY ── */
 h1,h2,h3{font-family:'Syne',sans-serif;font-weight:900;line-height:1.1}
