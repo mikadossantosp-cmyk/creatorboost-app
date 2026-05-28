@@ -1826,6 +1826,10 @@ button{transition:transform .13s cubic-bezier(.2,.8,.2,1),background .15s ease,b
 button:active:not(:disabled){transform:scale(.96)}
 .btn:active:not(:disabled),a.pf-action-btn:active,a.ipf-btn:active,.set-hub-card:active,.ps-card:active:not(:disabled),.subset-row:active{transform:scale(.98)}
 }
+.sk{position:relative;overflow:hidden;background:var(--surface-tint)}
+.sk::after{content:"";position:absolute;inset:0;transform:translateX(-100%);background:linear-gradient(90deg,transparent,var(--hover-tint),transparent);animation:sk-shimmer 1.3s ease-in-out infinite}
+@keyframes sk-shimmer{100%{transform:translateX(100%)}}
+@media (prefers-reduced-motion:reduce){.sk::after{animation:none}}
 .topbar{position:sticky;top:0;z-index:100;background:var(--glass-bg);border-bottom:1px solid var(--border2);padding:14px 16px;display:flex;align-items:center;justify-content:space-between;backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%)}
 .topbar-logo{font-family:var(--font-display);font-size:22px;font-weight:800;letter-spacing:-0.5px;color:var(--text)}
 .topbar-actions{display:flex;gap:6px;align-items:center}
@@ -4804,7 +4808,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v255-microinteractions';
+const SW_VERSION='v256-skeleton-loaders';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
@@ -10791,8 +10795,9 @@ commentsBox+
 </div>`);
         const heuteHtml = pinnedHtml + regularHeuteHtml;
         const aelterHtml = aelterLinks2.length ? aelterLinks2.map(renderLink).join('') : '<div class="empty" style="margin-top:40px"><div class="empty-icon"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 1.8"/></svg></div><div class="empty-text">Keine älteren Links</div></div>';
-        const kollabsHtml = '<div id="kollabs-tab-root" style="padding:8px 0 80px"><div style="padding:48px 24px;text-align:center;color:var(--muted);font-size:13px">⏳ Lade Kollab-Posts…</div></div>';
-        const diamondHtml = '<div id="diamond-tab-root" style="padding:8px 0 80px"><div style="padding:48px 24px;text-align:center;color:var(--muted);font-size:13px">⏳ Lade Diamantlinks…</div></div>';
+        const _skCard = '<div style="margin:0 16px 14px;border:1px solid var(--border2);border-radius:18px;padding:14px;background:var(--bg3)"><div style="display:flex;align-items:center;gap:10px;margin-bottom:12px"><div class="sk" style="width:42px;height:42px;border-radius:50%;flex-shrink:0"></div><div style="flex:1"><div class="sk" style="width:42%;height:12px;border-radius:6px;margin-bottom:7px"></div><div class="sk" style="width:26%;height:10px;border-radius:6px"></div></div></div><div class="sk" style="width:100%;height:180px;border-radius:12px;margin-bottom:12px"></div><div class="sk" style="width:100%;height:44px;border-radius:12px"></div></div>';
+        const kollabsHtml = '<div id="kollabs-tab-root" style="padding:8px 0 80px">'+_skCard+_skCard+'</div>';
+        const diamondHtml = '<div id="diamond-tab-root" style="padding:8px 0 80px">'+_skCard+_skCard+'</div>';
         const prismaHtml = '<div id="prisma-tab-root" style="padding:8px 0 80px"><div style="padding:60px 24px;text-align:center"><div style="font-size:64px;margin-bottom:16px;background:linear-gradient(135deg,#ef4444,#f59e0b,#22c55e,#06b6d4,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">💠</div><div style="font-size:18px;font-weight:800;background:linear-gradient(135deg,#ef4444,#f59e0b,#22c55e,#06b6d4,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:8px">Prismalink</div><div style="font-size:13px;color:var(--muted);max-width:320px;margin:0 auto;line-height:1.6">Die ultimative Premium-Stufe — 100💎 zum Posten · 7 Tage Feed-Top · 7💎 Reward pro Liker · 1×/Woche.</div><div style="margin-top:24px;display:inline-block;padding:8px 18px;background:linear-gradient(135deg,#94a3b8,#64748b);color:#fff;border-radius:999px;font-size:12px;font-weight:800;letter-spacing:1px">⏳ COMING SOON</div></div></div>';
         // Diamantlink-Top-Strip nur im 'heute'-Tab — älteste Diamantlinks ganz oben.
         // Stack-Order Heute-Tab:
