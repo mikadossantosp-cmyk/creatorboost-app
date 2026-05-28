@@ -2093,6 +2093,23 @@ function unbanUserApi({ uid }) {
     try { dmUser(uid, `✅ *Bann aufgehoben*\n\nDu bist wieder Teil der Community. Willkommen zurück!`); } catch (e) {}
     return { ok: true };
 }
+// Pause (soft): blendet den Account aus Ranking/Explore/Suche/Stories aus, bis er sich
+// wieder einloggt (Auto-Unpause beim nächsten echten App-Request). KEIN Datenverlust.
+function pauseUserApi({ uid }) {
+    uid = String(uid || '');
+    const u = d.users[uid];
+    if (!u) return { ok: false, error: 'User nicht gefunden (UID: ' + uid + ')' };
+    if (Array.isArray(d._adminIds) && d._adminIds.map(Number).includes(Number(uid))) return { ok: false, error: 'Admins können nicht pausiert werden' };
+    u.paused = true; u.pausedAt = Date.now();
+    return { ok: true };
+}
+function unpauseUserApi({ uid }) {
+    uid = String(uid || '');
+    const u = d.users[uid];
+    if (!u) return { ok: false, error: 'User nicht gefunden (UID: ' + uid + ')' };
+    u.paused = false; delete u.pausedAt;
+    return { ok: true };
+}
 function adminSuspendPostingApi({ uid, days, reason }) {
     uid = String(uid || '');
     days = Number(days || 0);
@@ -3641,7 +3658,7 @@ module.exports = {
     updateProfileApi, addProjectApi, updateProjectApi, deleteProjectApi, completeProfileApi, engagePinnedPostApi,
     followApi,
     addWarn, removeWarn, resetUser, removeXp, startXpEvent, startDiamondEvent, stopEvent,
-    banUserApi, unbanUserApi, adminSuspendPostingApi,
+    banUserApi, unbanUserApi, pauseUserApi, unpauseUserApi, adminSuspendPostingApi,
     mergeUsers, deleteUser, userDeleteSelfApi,
     sendMessageApi, sendDmSingleApi, adminPostfachReply, markMessagesRead, editMessageApi, deleteDmApi, reactDmMsgApi,
     appChatSend, appChatMarkRead, appChatDelete, appChatReact, getAppChat,

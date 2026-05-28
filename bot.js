@@ -809,6 +809,7 @@ function htmlEsc(s) { return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'
 function isAppVisible(u) {
     if (!u) return false;
     if (u.banned) return false;  // Gebannte User komplett aus Ranking/Suche/Listen raus
+    if (u.paused) return false;  // Pausiert: ausgeblendet aus Ranking/Explore/Suche/Listen bis zum nächsten App-Login
     // Sub-Accounts: immer sichtbar — sie haben keinen eigenen Telegram-Start (started
     // bleibt false bei manchen Subs aus Legacy-Daten) und sie sind per Definition aktiv
     // weil sie an einem aktiven Parent-Account hängen.
@@ -5071,7 +5072,14 @@ self.addEventListener('notificationclick',e=>{
     // lastSeen nur bei echten Aktionen erneuern, nicht bei Hintergrund-Polling — sonst gilt User
     // ewig als online, weil eigene Polls die eigene Session ständig refreshen.
     const isPolling = /^\/api\/(notifications\/count|messages-count|likes-update|messages\/|push-broadcast|push-notify)/.test(path);
-    if (session && !isPolling) { session.lastSeen = Date.now(); }
+    if (session && !isPolling) {
+        session.lastSeen = Date.now();
+        // Auto-Unpause: ein pausierter Account wird beim nächsten echten App-Request (= wieder aktiv/eingeloggt) automatisch wieder sichtbar.
+        try {
+            const _pu = (d && d.users) ? d.users[String(session.uid)] : null;
+            if (_pu && _pu.paused) { localWrite(() => botLogic.unpauseUserApi({ uid: String(session.uid) })); }
+        } catch (e) {}
+    }
     // Presence-Ping an Bot (debounced 10 min/session): jeder echte Page-Load
     // markiert User als App-aktiv → zählt sofort als App-Chat-Member.
     if (session && !isPolling) {
@@ -10119,6 +10127,15 @@ p{line-height:1.65;color:var(--muted)}
         return json({ok:true});
     }
 
+    if (path === '/api/admin/pause' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
+        const body = await parseBody(req);
+        const r = LOCAL_STORE
+            ? await localWrite(() => body.unpause ? botLogic.unpauseUserApi({ uid: String(body.uid||'') }) : botLogic.pauseUserApi({ uid: String(body.uid||'') }))
+            : await postBot(body.unpause ? '/unpause-user-api' : '/pause-user-api', { uid: String(body.uid||'') });
+        return json(r || {ok:false, error:'Mainbot offline'});
+    }
     if (path === '/api/admin/ban' && req.method === 'POST') {
         if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
         if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
@@ -10380,7 +10397,7 @@ p{line-height:1.65;color:var(--muted)}
             } catch(e) { return true; }
         };
         const pinnedStories = Object.entries(d.users||{})
-            .filter(([id,u])=>!_isFamily(id,u)&&!adminIds.includes(Number(id))&&u&&!u.banned)
+            .filter(([id,u])=>!_isFamily(id,u)&&!adminIds.includes(Number(id))&&u&&!u.banned&&!u.paused)
             .map(([id,u])=>({id, u, pinnedUrl: ladePinnedLink(id)}))
             .filter(x => !!x.pinnedUrl && _pinIsRecent(x.id))
             .map(x => ({
@@ -15380,9 +15397,11 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
 .dash-act-section-lbl.danger::before{background:#ef4444}
 
 .dash-action-grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-2)}
-.dash-act{padding:11px 10px;border-radius:10px;border:1px solid var(--dline);background:var(--dink);color:var(--text);font-size:12.5px;font-weight:600;cursor:pointer;text-align:center;transition:all .12s;font-family:inherit}
-.dash-act:hover{border-color:rgba(124,58,237,0.4);background:rgba(124,58,237,0.06)}
-.dash-act.danger{color:#f87171;border-color:rgba(239,68,68,.25)}
+.dash-act{display:flex;align-items:center;justify-content:center;gap:6px;min-height:46px;padding:12px 14px;border-radius:12px;border:1px solid var(--dline);background:var(--dink);color:var(--text);font-size:13px;font-weight:700;letter-spacing:-0.1px;cursor:pointer;text-align:center;transition:transform .12s ease,border-color .15s ease,background .15s ease,box-shadow .15s ease;font-family:inherit;box-shadow:0 1px 2px rgba(15,23,42,0.04)}
+.dash-act:hover{border-color:rgba(124,58,237,0.45);background:rgba(124,58,237,0.07);box-shadow:0 4px 14px rgba(124,58,237,0.10)}
+.dash-act:active{transform:scale(0.97)}
+.dash-act.danger{color:#ef4444;border-color:rgba(239,68,68,.28)}
+.dash-act.danger:hover{border-color:rgba(239,68,68,.5);background:rgba(239,68,68,0.07);box-shadow:0 4px 14px rgba(239,68,68,0.10)}
 .dash-act.danger:hover{border-color:#ef4444;background:rgba(239,68,68,.06)}
 
 .dash-onboarding{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px}
@@ -15450,7 +15469,6 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
       <div class="dash-top-actions">
         <button class="dash-btn dash-btn-ghost" onclick="runMissionBackfill()">🔁 Backfill</button>
         <button class="dash-btn" onclick="window.open('/admin/emails','_blank')" style="border-color:rgba(167,139,250,0.40);color:#a78bfa">📧 Email Dashboard</button>
-        <button class="dash-btn" onclick="window.open('/admin/play-listing','_blank')" style="border-color:rgba(52,211,153,0.40);color:#34d399">📲 Play Store Listing</button>
         <button class="dash-btn" onclick="window.open('/admin/beta-testers','_blank')" style="border-color:rgba(52,211,153,0.40);color:#34d399">🧪 Beta-Tester</button>
         <button class="dash-btn" onclick="openEventModal('xp')" style="border-color:rgba(245,158,11,0.40);color:#fbbf24">✨ XP-Event starten</button>
         <button class="dash-btn" onclick="openEventModal('diamond')" style="border-color:rgba(6,182,212,0.40);color:#06b6d4">💎 Diamond-Event starten</button>
@@ -16022,6 +16040,8 @@ function renderUserDetail(j) {
     '<button class="dash-act danger" onclick="resetUserConfirm(\\''+esc(u.uid)+'\\',\\''+esc(u.spitzname||u.name||'User')+'\\')">♻️ XP-Reset</button>' +
     (u.banned ? '<button class="dash-act" onclick="banUser(\\''+esc(u.uid)+'\\',false)">✅ Entbannen</button>'
               : '<button class="dash-act danger" onclick="banUser(\\''+esc(u.uid)+'\\',true)">🚫 Bannen</button>') +
+    (u.paused ? '<button class="dash-act" onclick="pauseUser(\\''+esc(u.uid)+'\\',false)">▶️ Fortsetzen</button>'
+              : '<button class="dash-act danger" onclick="pauseUser(\\''+esc(u.uid)+'\\',true)">⏸️ Pausieren</button>') +
   '</div>';
 
   html += '<a href="/profil/'+esc(u.uid)+'" target="_blank" class="dash-act" style="display:block;margin:14px 0 0;text-decoration:none;text-align:center">→ Public Profil ansehen</a>';
@@ -16048,6 +16068,14 @@ async function resetUserConfirm(uid, name) {
   const r = await fetch('/api/admin/reset-user', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ uid }) });
   const j = await r.json().catch(()=>({}));
   if (j.ok) { alert('✅ XP zurückgesetzt'); refreshUsers(); document.querySelectorAll('.dash-modal-bg').forEach(m=>m.remove()); }
+  else alert('❌ '+(j.error||'Fehler'));
+}
+async function pauseUser(uid, pause) {
+  const verb = pause ? 'PAUSIEREN' : 'fortsetzen';
+  if (!confirm('User wirklich '+verb+'?'+(pause?' (verschwindet aus Ranking/Explore bis zum nächsten App-Login)':''))) return;
+  const r = await fetch('/api/admin/pause', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ uid, unpause: !pause }) });
+  const j = await r.json().catch(()=>({}));
+  if (j.ok) { alert(pause?'⏸️ Pausiert':'▶️ Fortgesetzt'); refreshUsers(); document.querySelectorAll('.dash-modal-bg').forEach(m=>m.remove()); }
   else alert('❌ '+(j.error||'Fehler'));
 }
 async function banUser(uid, ban) {
