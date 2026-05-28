@@ -8087,6 +8087,8 @@ ${spaceScale.map(s=>`<div class="grow"><span class="gmeta">--space-${s}</span><d
                 if (!u || adminIds.includes(Number(uid))) continue;
                 if (u.isSystem || uid === 'creatorboost' || u.parent_uid) continue;
                 if (u.banned || !isAppVisible(u)) continue;
+                // Hochgeladenes Profilbild zuerst (App nutzt das), Instagram nur als Fallback.
+                if (ladeBild(uid, 'profilepic')) { avatars.push('/appbild/' + encodeURIComponent(uid) + '/profilepic'); continue; }
                 const ig = String(u.instagram || '').trim().replace(/^@/, '');
                 if (ig && /^[A-Za-z0-9._]{1,40}$/.test(ig)) avatars.push('https://unavatar.io/instagram/' + encodeURIComponent(ig));
             }
