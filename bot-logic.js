@@ -2496,7 +2496,7 @@ function diamondLinkFeedApi(callerUid) {
             const likers = likes.map(lid => { const u = d.users[lid] || {}; return { uid: lid, name: u.spitzname || u.name || 'User', instagram: u.instagram || '', role: u.role || '' }; });
             const isSelf = !!(callerUid && String(p.uid) === callerUid);
             const isFamily = !!(callerRoot && !isSelf && getRootUid(p.uid) === callerRoot);
-            return { id: p.id, uid: p.uid, url: p.url, caption: p.caption, createdAt: p.createdAt, expiresAt: p.expiresAt, remainingMs: Math.max(0, p.expiresAt - now), likeCount: likes.length, likers, liked: callerUid ? likes.includes(callerUid) : false, isSelf, isFamily, author: { uid: p.uid, name: author.spitzname || author.name || 'User', instagram: author.instagram || '' }, reward: DIAMOND_LINK_REWARD };
+            return { id: p.id, uid: p.uid, url: p.url, caption: p.caption, createdAt: p.createdAt, expiresAt: p.expiresAt, remainingMs: Math.max(0, p.expiresAt - now), likeCount: likes.length, likers, liked: callerUid ? likes.includes(callerUid) : false, isSelf, isFamily, author: { uid: p.uid, name: author.spitzname || author.name || 'User', instagram: author.instagram || '', role: author.role || '' }, reward: DIAMOND_LINK_REWARD };
         });
     return { ok: true, posts, rulesAccepted: !!caller.diamondRulesAcceptedAt, cost: DIAMOND_LINK_COST, reward: DIAMOND_LINK_REWARD };
 }
