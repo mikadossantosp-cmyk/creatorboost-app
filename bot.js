@@ -937,6 +937,25 @@ function cleanRole(r, uid, adminIds) {
   s = s.replace(/^[\?\u{FFFD}]{1,4}\s*/u,'🛡️ ');
   return s;
 }
+// Stufen-Farbe pro Rolle (Solid-Farbe für das Rang-Badge). Erkennung am bereinigten Text.
+function roleColor(roleText) {
+  const s = String(roleText || '');
+  if (/admin/i.test(s)) return '#d4a946';
+  if (s.includes('Legende')) return '#06b6d4';
+  if (s.includes('Elite+')) return '#a855f7';
+  if (s.includes('Elite')) return '#f59e0b';
+  if (s.includes('Erfahrener')) return '#8b5cf6';
+  if (s.includes('Aufsteiger')) return '#3b82f6';
+  if (s.includes('Anfänger')) return '#10b981';
+  return '#64748b';
+}
+// Einheitliches Stufen-Badge: dezent getönte Pille in der Stufenfarbe (überall gleich).
+// Reine Darstellung — Rollen/Stufen selbst bleiben unverändert.
+function roleBadge(role, uid, adminIds) {
+  const txt = cleanRole(role, uid, adminIds);
+  const c = roleColor(txt);
+  return '<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:99px;background:'+c+'1f;color:'+c+';border:1px solid '+c+'40;font-size:11px;font-weight:700;letter-spacing:.1px;white-space:nowrap;line-height:1.5">'+txt+'</span>';
+}
 // Sicherer URL-Check: nur http(s)-Links erlaubt, kein javascript:/data:/vbscript:.
 function safeUrl(u) { const s = String(u||'').trim(); return /^https?:\/\//i.test(s) ? s : ''; }
 // cleanInstagramUrl: extrahiert die Reel/Post/TV/Profile-ID aus einer Instagram-URL
@@ -1849,7 +1868,7 @@ button{cursor:pointer;border:none;outline:none;font-family:var(--font)}
 .post-user-info{flex:1;min-width:0}
 .post-name{font-size:14px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:-0.1px}
 .post-time{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
-.post-badge{font-size:11px;color:var(--muted)}
+.post-badge{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:7px;flex-wrap:wrap}
 .post-time{font-size:11px;color:var(--muted2)}
 .post-actions{display:flex;align-items:center;gap:4px;padding:8px 12px}
 .post-action-btn{display:flex;align-items:center;justify-content:center;gap:7px;padding:9px 16px;border-radius:14px;background:transparent;font-size:13.5px;font-weight:700;color:var(--muted);transition:all .15s;border:1px solid var(--border)!important;letter-spacing:0.1px;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
@@ -4754,7 +4773,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v227-profile-icons';
+const SW_VERSION='v228-role-badges';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
@@ -10552,7 +10571,7 @@ window.onPinVisitStory = function(uid){
 '        '+htmlEsc(poster.spitzname||poster.name||'User')+'\n'+
 '        '+(isOnline?'<span style="width:7px;height:7px;border-radius:50%;background:#00c851;display:inline-block;flex-shrink:0"></span>':'')+'\n'+
 '      </div>\n'+
-'      <div class="post-badge">'+cleanRole(poster.role)+(insta?'<span style="color:var(--muted2)"> · @'+htmlEsc(poster.instagram)+'</span>':'')+'</div>\n'+
+'      <div class="post-badge">'+roleBadge(poster.role)+(insta?'<span style="color:var(--muted2)">@'+htmlEsc(poster.instagram)+'</span>':'')+'</div>\n'+
 '    </a>\n'+
 '  </div>\n'+
 // Reel video preview card — cleanInstagramUrl entfernt Tracking-Params, jsEsc verhindert JS-Break bei Sonderzeichen
@@ -10647,7 +10666,7 @@ commentsBox+
                 +avatarSmall+'\n</div></a>\n'
                 +'<a href="/profil/'+sl.uid+'" class="post-user-info" style="text-decoration:none;color:inherit">\n'
                 +'<div class="post-name">'+htmlEsc(poster.spitzname||poster.name||'User')+'</div>\n'
-                +'<div class="post-badge">'+cleanRole(poster.role)+(insta?'<span style="color:var(--muted2)"> · @'+insta+'</span>':'')+'</div>\n'
+                +'<div class="post-badge">'+roleBadge(poster.role)+(insta?'<span style="color:var(--muted2)">@'+insta+'</span>':'')+'</div>\n'
                 +'</a>\n</div>\n'
                 +'<div style="margin:8px 16px;padding:8px 12px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:10px;font-size:11px;color:rgba(245,158,11,.9);font-weight:600">🔄 Bitte Liken, Kommentieren, Teilen und Speichern</div>\n'
                 +'<div style="margin:0 16px 8px;border-radius:14px;overflow:hidden;background:var(--bg3);border:1px solid rgba(255,255,255,.08)">\n'
@@ -19165,7 +19184,7 @@ document.querySelectorAll('.ins-bar').forEach((b, i) => {
             +'</div>'
             +'<div style="background:var(--bg3);border-radius:14px;padding:14px 16px">'
             +'<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Status</div>'
-            +'<div style="display:inline-flex;align-items:center;padding:4px 12px;border-radius:20px;background:'+badgeGradient(myUser?.role || (_myIsAdmin?'Admin':''))+';color:#fff;font-size:12px;font-weight:700">'+(myUser?.role || (_myIsAdmin?'👑 Admin':'🆕 New'))+'</div>'
+            +roleBadge(myUser?.role, myUid, adminIds)
             +(myUser?.trophies&&myUser.trophies.length?'<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px">'+myUser.trophies.map(t=>'<span style="font-size:22px;background:var(--bg4);border-radius:8px;padding:4px 8px">'+t+'</span>').join('')+'</div>':'')
             +'</div>'
             +(()=>{
@@ -19635,7 +19654,7 @@ async function submitPost(){const _spBtn=document.querySelector('[onclick="submi
             +'</div>'
             +'<div style="background:var(--bg3);border-radius:14px;padding:14px 16px">'
             +'<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Status</div>'
-            +'<div style="display:inline-flex;align-items:center;padding:4px 12px;border-radius:20px;background:'+badgeGradient(u?.role)+';color:#fff;font-size:12px;font-weight:700">'+(u?.role||'🆕 New')+'</div>'
+            +roleBadge(u?.role)
             +(u?.trophies&&u.trophies.length?'<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px">'+u.trophies.map(t=>'<span style="font-size:22px;background:var(--bg4);border-radius:8px;padding:4px 8px">'+t+'</span>').join('')+'</div>':'')
             +'</div></div>';
 
