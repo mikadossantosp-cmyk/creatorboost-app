@@ -4833,7 +4833,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v272-admin-postfach';
+const SW_VERSION='v273-inbox-split';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
@@ -14087,13 +14087,8 @@ document.getElementById('user-search-input')?.addEventListener('input',filterSea
                 const [a,b] = key.split('_');
                 if (a === myUid && b === myUid) return false; // Self-Chat (stray push) nicht anzeigen
                 if (a === myUid || b === myUid) return true;
-                // Admin-Support-Postfach: nur creatorboost↔user-Chats, in denen der USER WIRKLICH
-                // geschrieben hat (from === user). "!== creatorboost" war zu lose und matchte auch
-                // System-/Auto-Nachrichten ohne sauberes from → Inbox mit echten Support-Chats only.
-                if (_inboxIsAdmin && (a === 'creatorboost' || b === 'creatorboost')) {
-                    const uOther = a === 'creatorboost' ? b : a;
-                    return Array.isArray(msgs) && msgs.some(m => m && String(m.from) === String(uOther));
-                }
+                // Admin-Support-Chats (creatorboost↔user) erscheinen NICHT mehr in der normalen
+                // Inbox — sie leben jetzt ausschließlich im Admin-Postfach (/admin/postfach).
                 return false;
             })
             .map(([key, msgs]) => {

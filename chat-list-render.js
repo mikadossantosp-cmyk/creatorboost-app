@@ -439,9 +439,12 @@ module.exports = function renderChatList(opts) {
                 'const list = document.getElementById("dm-list-chats"); if (!list) return;' +
                 'document.querySelectorAll("#dm-list-chats .dm-row[data-uid]").forEach(r => {' +
                     'const uid = r.dataset.uid;' +
+                    // Geschlossene Chats ausblenden — kommt eine neue (ungelesene) Nachricht, wieder einblenden.
+                    'if (s[uid] && s[uid].closed) { if (r.classList.contains("unread")) { s[uid].closed = false; r.style.display = ""; } else { r.style.display = "none"; return; } } else { r.style.display = ""; }' +
                     'r.classList.toggle("is-pinned", !!s[uid]?.pinned);' +
                     'r.classList.toggle("is-muted", !!s[uid]?.muted);' +
                 '});' +
+                'dmSaveSettings(s);' +
                 // Sortierung: Pinned nach oben (nach dem Telegram-Pinned)
                 'const pinned = [...list.querySelectorAll(".dm-row.is-pinned[data-uid]")];' +
                 'pinned.forEach(p => { list.insertBefore(p, list.firstChild); });' +
@@ -465,7 +468,7 @@ module.exports = function renderChatList(opts) {
                     '"<div class=\\"ctx-item\\" onclick=\\"dmTogglePin(\\\""+uid+"\\\")\\"><span class=\\"ctx-icon\\">"+(cur.pinned?"📍":"📌")+"</span>"+(cur.pinned?"Pin entfernen":"Pin oben")+"</div>" +' +
                     '"<div class=\\"ctx-item\\" onclick=\\"dmToggleMute(\\\""+uid+"\\\")\\"><span class=\\"ctx-icon\\">"+(cur.muted?"🔔":"🔕")+"</span>"+(cur.muted?"Stummschalten aufheben":"Stummschalten")+"</div>" +' +
                     '"<div class=\\"ctx-item\\" onclick=\\"window.location=\\\"/profil/"+uid+"\\\"\\"><span class=\\"ctx-icon\\">👤</span>Profil ansehen</div>" +' +
-                    '"<div class=\\"ctx-item\\" style=\\"color:#ef4444\\" onclick=\\"dmCtxClose()\\"><span class=\\"ctx-icon\\">✖</span>Schließen</div>";' +
+                    '"<div class=\\"ctx-item\\" style=\\"color:#ef4444\\" onclick=\\"dmCloseChat(\\\""+uid+"\\\")\\"><span class=\\"ctx-icon\\">✖</span>Aus Liste entfernen</div>";' +
                 'menu.classList.add("show");' +
                 'const W = window.innerWidth, H = window.innerHeight;' +
                 'const mw = menu.offsetWidth || 220, mh = menu.offsetHeight || 200;' +
@@ -476,6 +479,7 @@ module.exports = function renderChatList(opts) {
             'document.addEventListener("click", e => { const m = document.getElementById("dm-ctx-menu"); if (m && !m.contains(e.target)) dmCtxClose(); });' +
             'function dmTogglePin(uid){ const s = dmGetSettings(); s[uid] = s[uid] || {}; s[uid].pinned = !s[uid].pinned; dmSaveSettings(s); dmCtxClose(); dmApplySettings(); }' +
             'function dmToggleMute(uid){ const s = dmGetSettings(); s[uid] = s[uid] || {}; s[uid].muted = !s[uid].muted; dmSaveSettings(s); dmCtxClose(); dmApplySettings(); }' +
+            'function dmCloseChat(uid){ const s = dmGetSettings(); s[uid] = s[uid] || {}; s[uid].closed = true; dmSaveSettings(s); dmCtxClose(); const r = document.querySelector("#dm-list-chats .dm-row[data-uid=\\""+uid+"\\"]"); if (r) r.style.display = "none"; }' +
             // ── Thread-Row Navigation + Long-Press + Admin Menu ──
             '(function(){' +
               'let _trPress=null, _trDidLong=false, _trCard=null;' +
