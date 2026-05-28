@@ -1063,6 +1063,13 @@ function getOnlineUids() {
     }
     return out;
 }
+function getLastSeen(uid) {
+    const u = String(uid); let m = 0;
+    for (const s of sessions.values()) {
+        if (String(s.uid) === u && (s.lastSeen||0) > m) m = s.lastSeen;
+    }
+    return m;
+}
 
 let _dataCache = null;
 let _dataCacheTime = 0;
@@ -4810,7 +4817,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v263-chat-input-fix';
+const SW_VERSION='v264-chat-lastseen';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
@@ -13567,7 +13574,7 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) acPo
     </div>
     <div style="display:flex;flex-direction:column;min-width:0;flex:1">
       <span class="chat-header-name" style="font-size:18px;font-weight:800;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:-0.3px;line-height:1.15">${htmlEsc(otherName)}</span>
-      <span class="chat-header-status" style="font-size:12px;font-weight:600;color:${isUidOnline(otherUid)?'#22c55e':'var(--muted)'};letter-spacing:0.1px;line-height:1.2;margin-top:2px">${isUidOnline(otherUid)?'● Online':'Offline'}</span>
+      <span class="chat-header-status" style="font-size:12px;font-weight:600;color:${isUidOnline(otherUid)?'#22c55e':'var(--muted)'};letter-spacing:0.1px;line-height:1.2;margin-top:2px">${isUidOnline(otherUid)?'● Online':(getLastSeen(otherUid)?'zuletzt aktiv vor '+fmtRelative(getLastSeen(otherUid)):'Offline')}</span>
     </div>
   </a>
   <button onclick="alert('Sprachanruf folgt bald 📞')" style="background:none;border:none;color:#0866FF;width:40px;height:40px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0" title="Anrufen">
