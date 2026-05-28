@@ -13122,7 +13122,7 @@ try{ if(localStorage.getItem('cb_helper_seen')==='1'){ const b=document.getEleme
 .ac-bubble.mine .ac-quote-name { color:#fff; opacity:0.95; }
 .ac-quote-text { font-size:14px; color:var(--text); opacity:0.88; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
 .ac-bubble.mine .ac-quote-text { color:rgba(255,255,255,0.92); }
-.ac-quote-arrow { position:absolute; right:10px; top:50%; transform:translateY(-50%); font-size:13px; color:var(--ac-purple); opacity:0.7; font-weight:800; }
+.ac-quote-arrow { position:absolute; right:10px; top:50%; transform:translateY(-50%); font-size:var(--fs-sm); color:var(--ac-purple); opacity:0.7; font-weight:800; }
 .ac-bubble.mine .ac-quote-arrow { color:#fff; }
 .ac-quote.gone { cursor:default; opacity:0.7; padding-right:14px; }
 .ac-quote.gone .ac-quote-arrow { display:none; }
@@ -13158,12 +13158,12 @@ try{ if(localStorage.getItem('cb_helper_seen')==='1'){ const b=document.getEleme
 .ac-react { background:var(--bg3); border:1.5px solid var(--border2); border-radius:99px; padding:4px 11px; font-size:14px; cursor:pointer; display:inline-flex; align-items:center; gap:5px; transition:transform .12s, background .12s; line-height:1.3; }
 .ac-react:active { transform:scale(.94); }
 .ac-react.mine { background:rgba(167,139,250,0.20); border-color:var(--ac-purple); color:var(--ac-purple); }
-.ac-react .ac-react-count { font-weight:700; font-size:13px; }
+.ac-react .ac-react-count { font-weight:700; font-size:var(--fs-sm); }
 /* Reply-Bar above Input */
 .ac-reply-bar { position:fixed; bottom:calc(140px + env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%); width:calc(100% - 16px); max-width:464px; background:var(--bg2); border:1px solid var(--border); border-left:4px solid var(--ac-purple); border-radius:14px; padding:10px 12px 10px 14px; display:none; align-items:center; gap:12px; z-index:98; box-shadow:0 -4px 18px rgba(15,23,42,0.10); animation:ac-slide-up .22s cubic-bezier(.34,1.56,.64,1); }
 .ac-reply-bar.show { display:flex; }
 @keyframes ac-slide-up { from { opacity:0; transform:translate(-50%,8px); } to { opacity:1; transform:translate(-50%,0); } }
-.ac-reply-bar .ic { font-size:20px; flex-shrink:0; }
+.ac-reply-bar .ic { font-size:var(--fs-lg); flex-shrink:0; }
 .ac-reply-bar .body { flex:1; min-width:0; }
 .ac-reply-bar .name { font-size:13.5px; font-weight:800; color:var(--ac-purple); display:block; line-height:1.2; margin-bottom:1px; }
 .ac-reply-bar .txt { font-size:14px; color:var(--text); opacity:0.85; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:calc(100vw - 110px); }
@@ -13179,7 +13179,7 @@ try{ if(localStorage.getItem('cb_helper_seen')==='1'){ const b=document.getEleme
 .ac-bubble-anim { animation: ac-pop .25s cubic-bezier(.34,1.56,.64,1); }
 @keyframes ac-pop { from { opacity:0; transform:translateY(8px) scale(0.94); } to { opacity:1; transform:translateY(0) scale(1); } }
 .ac-pending { opacity:0.65; }
-.ac-pending::after { content:" ⏳"; font-size:12px; }
+.ac-pending::after { content:" ⏳"; font-size:var(--fs-xs); }
 .ac-failed { background:rgba(239,68,68,0.18) !important; color:#ef4444 !important; box-shadow:0 0 0 1px rgba(239,68,68,0.3) !important; }
 </style>
 <div class="topbar" style="display:flex;align-items:center;gap:10px;padding:12px 12px;background:linear-gradient(135deg,#a78bfa,#7c3aed);position:sticky;top:0;z-index:10;box-shadow:0 4px 18px rgba(124,58,237,0.28)">
@@ -13187,7 +13187,7 @@ try{ if(localStorage.getItem('cb_helper_seen')==='1'){ const b=document.getEleme
   <div style="width:46px;height:46px;border-radius:50%;background:rgba(255,255,255,0.20);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:inset 0 1px 0 rgba(255,255,255,0.3)"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></div>
   <div style="flex:1;min-width:0">
     <div style="font-weight:800;font-size:18.5px;color:#fff;letter-spacing:-0.3px">App Community</div>
-    <div id="ac-status" style="font-size:13px;color:rgba(255,255,255,0.92);font-weight:600;margin-top:1px">${memberCount} Mitglieder · <span style="color:#86efac">● Live</span></div>
+    <div id="ac-status" style="font-size:var(--fs-sm);color:rgba(255,255,255,0.92);font-weight:600;margin-top:1px">${memberCount} Mitglieder · <span style="color:#86efac">● Live</span></div>
   </div>
   <div style="width:38px"></div>
 </div>
@@ -13348,7 +13348,7 @@ function acScrollToMsg(ts){
     // Ansonsten: Toast-Hinweis
     const t = document.createElement('div');
     t.textContent = '⚠️ Original-Nachricht nicht mehr verfügbar';
-    t.style.cssText = 'position:fixed;bottom:160px;left:50%;transform:translateX(-50%);background:#000d;color:#fff;padding:10px 18px;border-radius:99px;font-size:13px;font-weight:700;z-index:200;box-shadow:0 6px 24px rgba(0,0,0,.4)';
+    t.style.cssText = 'position:fixed;bottom:160px;left:50%;transform:translateX(-50%);background:#000d;color:#fff;padding:10px 18px;border-radius:99px;font-size:var(--fs-sm);font-weight:700;z-index:200;box-shadow:0 6px 24px rgba(0,0,0,.4)';
     document.body.appendChild(t);
     setTimeout(() => t.remove(), 2000);
     return;
@@ -13507,7 +13507,7 @@ function acDoCopy(){
   navigator.clipboard?.writeText(txt).then(() => {
     const t = document.createElement('div');
     t.textContent = '📋 Kopiert';
-    t.style.cssText = 'position:fixed;bottom:140px;left:50%;transform:translateX(-50%);background:#000d;color:#fff;padding:10px 18px;border-radius:99px;font-size:13px;font-weight:700;z-index:200;box-shadow:0 6px 24px rgba(0,0,0,.4)';
+    t.style.cssText = 'position:fixed;bottom:140px;left:50%;transform:translateX(-50%);background:#000d;color:#fff;padding:10px 18px;border-radius:99px;font-size:var(--fs-sm);font-weight:700;z-index:200;box-shadow:0 6px 24px rgba(0,0,0,.4)';
     document.body.appendChild(t);
     setTimeout(() => t.remove(), 1500);
   }).catch(() => alert('Kopieren fehlgeschlagen'));
@@ -13669,14 +13669,14 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) acPo
           const _rDbg = adminIds.includes(Number(myUid))
             ? '<pre style="text-align:left;max-width:520px;margin:14px auto 0;background:#1c1c1e;color:#ff9b9b;border:1px solid #333;border-radius:10px;padding:12px;font-size:11px;line-height:1.5;overflow:auto;white-space:pre-wrap;word-break:break-word">[render] '+htmlEsc(String(e&&e.message||e))+'\n\n'+htmlEsc(String(e&&e.stack||'').split('\n').slice(0,4).join('\n'))+'</pre>'
             : '';
-          msgsHtml = '<div style="padding:48px 20px;text-align:center;color:var(--muted);font-size:13px">Nachrichten konnten gerade nicht geladen werden.'+_rDbg+'</div>';
+          msgsHtml = '<div style="padding:48px 20px;text-align:center;color:var(--muted);font-size:var(--fs-sm)">Nachrichten konnten gerade nicht geladen werden.'+_rDbg+'</div>';
         }
         return html(`
 ${_nurUser ? '<div style="position:fixed;top:0;left:0;right:0;z-index:200;background:#7c3aed;color:#fff;font-size:11px;font-weight:700;text-align:center;padding:3px 0;letter-spacing:.5px">FILTER: NUR NUTZERNACHRICHTEN</div>' : ''}
 <div class="topbar" style="display:flex;align-items:center;gap:8px;padding:8px 10px${_nurUser ? ';margin-top:22px' : ''}">
   <a href="/nachrichten" class="icon-btn" style="font-size:26px;color:var(--accent);padding:6px 10px;text-decoration:none;display:flex;align-items:center">‹</a>
   <a href="/profil/${otherUid}" class="chat-header-link" style="display:flex;align-items:center;gap:11px;text-decoration:none;flex:1;min-width:0">
-    <div style="position:relative;width:42px;height:42px;border-radius:50%;overflow:hidden;background:linear-gradient(135deg,#a78bfa,#7c3aed);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:#fff;flex-shrink:0;box-shadow:0 2px 8px rgba(15,23,42,.10)">
+    <div style="position:relative;width:42px;height:42px;border-radius:50%;overflow:hidden;background:linear-gradient(135deg,#a78bfa,#7c3aed);display:flex;align-items:center;justify-content:center;font-size:var(--fs-md);font-weight:800;color:#fff;flex-shrink:0;box-shadow:0 2px 8px rgba(15,23,42,.10)">
       <span style="position:absolute;z-index:0">${htmlEsc(otherName.slice(0,1).toUpperCase())}</span>
       ${ladeBild(otherUid,'profilepic')
         ? `<img src="/appbild/${otherUid}/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1" alt="">`
@@ -13687,7 +13687,7 @@ ${_nurUser ? '<div style="position:fixed;top:0;left:0;right:0;z-index:200;backgr
     </div>
     <div style="display:flex;flex-direction:column;min-width:0;flex:1">
       <span class="chat-header-name" style="font-size:18px;font-weight:800;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:-0.3px;line-height:1.15">${htmlEsc(otherName)}</span>
-      <span class="chat-header-status" style="font-size:12px;font-weight:600;color:${isUidOnline(otherUid)?'#22c55e':'var(--muted)'};letter-spacing:0.1px;line-height:1.2;margin-top:2px">${isUidOnline(otherUid)?'● Online':(getLastSeen(otherUid)?'zuletzt aktiv vor '+fmtRelative(getLastSeen(otherUid)):'Offline')}</span>
+      <span class="chat-header-status" style="font-size:var(--fs-xs);font-weight:600;color:${isUidOnline(otherUid)?'#22c55e':'var(--muted)'};letter-spacing:0.1px;line-height:1.2;margin-top:2px">${isUidOnline(otherUid)?'● Online':(getLastSeen(otherUid)?'zuletzt aktiv vor '+fmtRelative(getLastSeen(otherUid)):'Offline')}</span>
     </div>
   </a>
   ${_viewerIsAdmin ? `<a href="/nachrichten/${otherUid}${_nurUser ? '' : '?nur-user=1'}" style="background:${_nurUser ? '#7c3aed' : 'rgba(124,58,237,.12)'};border:none;color:${_nurUser ? '#fff' : '#a78bfa'};width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;text-decoration:none" title="${_nurUser ? 'Alle Nachrichten' : 'Nur Nutzernachrichten'}">
@@ -13706,16 +13706,16 @@ ${_nurUser ? '<div style="position:fixed;top:0;left:0;right:0;z-index:200;backgr
 <div id="img-preview-wrap" style="display:none;position:fixed;bottom:120px;left:16px;right:16px;z-index:101">
   <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:12px;padding:8px;display:flex;align-items:center;gap:8px">
     <img id="img-preview" style="height:60px;border-radius:8px;object-fit:cover" alt="">
-    <div style="flex:1;font-size:12px;color:var(--muted)">Bild ausgewählt</div>
+    <div style="flex:1;font-size:var(--fs-xs);color:var(--muted)">Bild ausgewählt</div>
     <button onclick="clearImage()" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer">✕</button>
   </div>
 </div>
 <div id="recording-bar" style="display:none;position:fixed;bottom:120px;left:16px;right:16px;z-index:101">
   <div style="background:rgba(255,107,107,.15);border:1px solid rgba(255,107,107,.4);border-radius:12px;padding:10px 14px;display:flex;align-items:center;gap:10px">
     <div style="width:10px;height:10px;border-radius:50%;background:#ff6b6b;animation:pulse-red 1s ease infinite;flex-shrink:0"></div>
-    <div style="flex:1;font-size:13px;font-weight:600">Aufnahme läuft... <span id="rec-timer">0:00</span></div>
+    <div style="flex:1;font-size:var(--fs-sm);font-weight:600">Aufnahme läuft... <span id="rec-timer">0:00</span></div>
     <button onclick="cancelRecording()" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer">✕</button>
-    <button onclick="stopRecording()" style="background:#ff6b6b;border:none;color:#fff;border-radius:20px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer">Senden ✓</button>
+    <button onclick="stopRecording()" style="background:#ff6b6b;border:none;color:#fff;border-radius:20px;padding:6px 14px;font-size:var(--fs-xs);font-weight:700;cursor:pointer">Senden ✓</button>
   </div>
 </div>
 <style>@keyframes pulse-red{0%,100%{opacity:1}50%{opacity:.3}}</style>
@@ -13732,7 +13732,7 @@ ${_nurUser ? '<div style="position:fixed;top:0;left:0;right:0;z-index:200;backgr
     <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5-3c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
   </button>
   <div style="flex:1;background:#3a3b3c;border-radius:22px;display:flex;align-items:center;padding:4px 16px;min-width:0">
-    <input type="text" id="msg-input" placeholder="Nachricht senden..." style="flex:1;background:transparent;border:none;outline:none;color:#e4e6eb;font-size:15px;padding:8px 0;margin:0;min-width:0" onkeypress="if(event.key==='Enter')sendMsg()">
+    <input type="text" id="msg-input" placeholder="Nachricht senden..." style="flex:1;background:transparent;border:none;outline:none;color:#e4e6eb;font-size:var(--fs-base);padding:8px 0;margin:0;min-width:0" onkeypress="if(event.key==='Enter')sendMsg()">
   </div>
   <button id="send-btn" onclick="sendMsg()" style="width:38px;height:38px;border-radius:50%;background:transparent;color:#0866FF;border:none;font-size:22px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center" title="Senden"><svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></button>
 </div>
@@ -13999,17 +13999,17 @@ setInterval(async()=>{
                 + '<span style="position:absolute;z-index:0">' + htmlEsc(it.name.slice(0, 1).toUpperCase()) + '</span>' + _avImg
                 + (it.online ? '<i style="position:absolute;bottom:1px;right:1px;width:12px;height:12px;border-radius:50%;background:#22c55e;border:2.5px solid var(--bg);z-index:2"></i>' : '')
                 + '</div>'
-                + '<div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + htmlEsc(it.name) + '</div>'
-                + '<div style="font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px">' + htmlEsc(it.prev || '(kein Text)') + '</div></div>'
+                + '<div style="flex:1;min-width:0"><div style="font-size:var(--fs-base);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + htmlEsc(it.name) + '</div>'
+                + '<div style="font-size:var(--fs-sm);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px">' + htmlEsc(it.prev || '(kein Text)') + '</div></div>'
                 + '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0"><div style="font-size:11px;color:var(--muted)">' + htmlEsc(fmtRelative(it.ts)) + '</div>'
                 + (it.unread > 0 ? '<div style="background:#7c3aed;color:#fff;font-size:11px;font-weight:800;min-width:20px;height:20px;border-radius:10px;display:flex;align-items:center;justify-content:center;padding:0 6px">' + (it.unread > 99 ? '99+' : it.unread) + '</div>' : '')
                 + '</div></a>';
         }
-        if (!_pfRows) _pfRows = '<div style="padding:60px 24px;text-align:center;color:var(--muted);font-size:13px">Noch keine Nachrichten von Nutzern.</div>';
+        if (!_pfRows) _pfRows = '<div style="padding:60px 24px;text-align:center;color:var(--muted);font-size:var(--fs-sm)">Noch keine Nachrichten von Nutzern.</div>';
         return html('<div class="topbar" style="display:flex;align-items:center;gap:8px;padding:10px 12px">'
             + '<a href="/nachrichten" class="icon-btn" style="color:var(--accent);padding:4px 8px;text-decoration:none;display:flex;align-items:center"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></a>'
             + '<div style="font-size:18px;font-weight:800">Admin-Postfach</div></div>'
-            + '<div style="font-size:12px;color:var(--muted);padding:11px 16px 4px;line-height:1.4">Nur was Nutzer selbst geschrieben haben. Automatische Bot-Nachrichten sind ausgeblendet.</div>'
+            + '<div style="font-size:var(--fs-xs);color:var(--muted);padding:11px 16px 4px;line-height:1.4">Nur was Nutzer selbst geschrieben haben. Automatische Bot-Nachrichten sind ausgeblendet.</div>'
             + '<div style="padding-bottom:90px">' + _pfRows + '</div>', 'messages');
     }
 
@@ -14035,7 +14035,7 @@ setInterval(async()=>{
             _pfBubbles = require('./chat-detail-render')({ msgs: _pfMsgs, myUid: 'creatorboost', otherUid: _pfUid, otherUser: _pfU, ladeBild, otherOnline: isUidOnline(_pfUid) });
         } catch(e) {
             console.error('[postfach-render]', e && e.stack || e);
-            _pfBubbles = '<div style="padding:48px 20px;text-align:center;color:var(--muted);font-size:13px">Nachrichten konnten gerade nicht geladen werden.</div>';
+            _pfBubbles = '<div style="padding:48px 20px;text-align:center;color:var(--muted);font-size:var(--fs-sm)">Nachrichten konnten gerade nicht geladen werden.</div>';
         }
         const _pfOnline = isUidOnline(_pfUid);
         const _pfHasPic = !!ladeBild(_pfUid, 'profilepic');
@@ -14046,17 +14046,17 @@ setInterval(async()=>{
         return html('<div class="topbar" style="display:flex;align-items:center;gap:8px;padding:8px 10px">'
             + '<a href="/admin/postfach" class="icon-btn" style="color:var(--accent);padding:6px 8px;text-decoration:none;display:flex;align-items:center"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></a>'
             + '<a href="/profil/' + encodeURIComponent(_pfUid) + '" class="chat-header-link" style="display:flex;align-items:center;gap:11px;text-decoration:none;flex:1;min-width:0">'
-            + '<div style="position:relative;width:42px;height:42px;border-radius:50%;overflow:hidden;background:linear-gradient(135deg,#a78bfa,#7c3aed);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:#fff;flex-shrink:0;box-shadow:0 2px 8px rgba(15,23,42,.10)">'
+            + '<div style="position:relative;width:42px;height:42px;border-radius:50%;overflow:hidden;background:linear-gradient(135deg,#a78bfa,#7c3aed);display:flex;align-items:center;justify-content:center;font-size:var(--fs-md);font-weight:800;color:#fff;flex-shrink:0;box-shadow:0 2px 8px rgba(15,23,42,.10)">'
             + '<span style="position:absolute;z-index:0">' + htmlEsc(_pfName.slice(0, 1).toUpperCase()) + '</span>' + _pfAvImg
             + (_pfOnline ? '<i style="position:absolute;bottom:-1px;right:-1px;width:12px;height:12px;border-radius:50%;background:#22c55e;border:2.5px solid var(--bg);z-index:2"></i>' : '')
             + '</div>'
             + '<div style="display:flex;flex-direction:column;min-width:0;flex:1">'
             + '<span class="chat-header-name" style="font-size:18px;font-weight:800;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:-0.3px;line-height:1.15">' + htmlEsc(_pfName) + '</span>'
-            + '<span class="chat-header-status" style="font-size:12px;font-weight:600;color:' + (_pfOnline ? '#22c55e' : 'var(--muted)') + ';letter-spacing:0.1px;line-height:1.2;margin-top:2px">' + htmlEsc(_pfStatus) + '</span>'
+            + '<span class="chat-header-status" style="font-size:var(--fs-xs);font-weight:600;color:' + (_pfOnline ? '#22c55e' : 'var(--muted)') + ';letter-spacing:0.1px;line-height:1.2;margin-top:2px">' + htmlEsc(_pfStatus) + '</span>'
             + '</div></a></div>'
             + '<div id="chat-msgs" style="padding:12px 0 140px;display:flex;flex-direction:column">' + _pfBubbles + '</div>'
             + '<div class="cb-chatbar" style="position:fixed;bottom:60px;left:0;right:0;background:var(--bg);border-top:1px solid var(--border2);padding:8px 10px;display:flex;gap:8px;align-items:center;z-index:100">'
-            + '<input id="pf-input" type="text" placeholder="Antwort an ' + htmlEsc(_pfName) + '..." style="flex:1;background:var(--bg3,#2a2a2e);border:none;outline:none;color:var(--text);font-size:15px;padding:11px 16px;border-radius:22px">'
+            + '<input id="pf-input" type="text" placeholder="Antwort an ' + htmlEsc(_pfName) + '..." style="flex:1;background:var(--bg3,#2a2a2e);border:none;outline:none;color:var(--text);font-size:var(--fs-base);padding:11px 16px;border-radius:22px">'
             + '<button id="pf-send" style="width:42px;height:42px;border-radius:50%;background:#7c3aed;color:#fff;border:none;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button></div>'
             + '<script>(function(){var uid=' + JSON.stringify(String(_pfUid)) + ';var inp=document.getElementById("pf-input");var btn=document.getElementById("pf-send");function go(){window.scrollTo(0,document.body.scrollHeight);}go();window.addEventListener("load",go);function send(){var t=(inp.value||"").trim();if(!t)return;btn.disabled=true;fetch("/api/admin/postfach-reply",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({uid:uid,text:t})}).then(function(r){return r.json();}).then(function(d){if(d&&d.ok){location.reload();}else{btn.disabled=false;alert((d&&d.error)||"Senden fehlgeschlagen");}}).catch(function(){btn.disabled=false;alert("Netzwerkfehler");});}btn.addEventListener("click",send);inp.addEventListener("keypress",function(e){if(e.key==="Enter")send();});inp.focus();})();</script>', 'messages');
     }
@@ -14125,7 +14125,7 @@ setInterval(async()=>{
 </div>`;
         }).join('');
         return html(`
-<div class="topbar"><a href="/nachrichten" class="icon-btn" style="font-size:22px;text-decoration:none">‹</a><div style="font-size:15px;font-weight:700;flex:1;text-align:center">User suchen</div><div style="width:38px"></div></div>
+<div class="topbar"><a href="/nachrichten" class="icon-btn" style="font-size:22px;text-decoration:none">‹</a><div style="font-size:var(--fs-base);font-weight:700;flex:1;text-align:center">User suchen</div><div style="width:38px"></div></div>
 <div style="padding:14px 16px 8px">
   <div style="position:relative">
     <svg style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -14136,7 +14136,7 @@ setInterval(async()=>{
 <div id="search-empty" style="display:none;padding:60px 24px;text-align:center;color:var(--muted)">
   <div style="margin-bottom:12px;opacity:0.45;display:flex;justify-content:center"><svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
   <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px">Keine Treffer</div>
-  <div style="font-size:12px">Versuch's mit einem anderen Suchbegriff</div>
+  <div style="font-size:var(--fs-xs)">Versuch's mit einem anderen Suchbegriff</div>
 </div>
 <div style="margin:14px 0 22px">
   <div style="padding:0 16px 8px"><h3 style="font-size:17px;font-weight:800;margin:0;color:var(--text);letter-spacing:-0.3px">Weitere Vorschläge</h3></div>
@@ -14238,7 +14238,7 @@ document.getElementById('user-search-input')?.addEventListener('input',filterSea
             convHtml = require('./chat-list-render')({ myConvos, botData, myUid, ladeBild, adminIds, onlineUids: getOnlineUids(), crown, appChatPreview: lastAppChat ? { name: lastAppChat.name, text: lastAppChat.text, image: lastAppChat.image, timestamp: lastAppChat.ts } : null, appChatUnread: appChatData?.unread || 0, appChatMembers: appChatData?.memberCount || 0, pinnedStories: _pinnedStoriesDM });
         } catch (_dmErr) {
             console.error('[/nachrichten] render failed:', _dmErr && _dmErr.stack || _dmErr);
-            return html('<div class="topbar"><div class="topbar-logo">Nachrichten</div></div><div style="padding:48px 24px;text-align:center;color:var(--muted);font-size:13px;line-height:1.5">Nachrichten konnten gerade nicht geladen werden.<br>Bitte lade die Seite neu oder versuch es gleich nochmal.</div>', 'messages');
+            return html('<div class="topbar"><div class="topbar-logo">Nachrichten</div></div><div style="padding:48px 24px;text-align:center;color:var(--muted);font-size:var(--fs-sm);line-height:1.5">Nachrichten konnten gerade nicht geladen werden.<br>Bitte lade die Seite neu oder versuch es gleich nochmal.</div>', 'messages');
         }
         const _adminPostfachBtn = _inboxIsAdmin ? '<a href="/admin/postfach" class="icon-btn" title="Admin-Postfach (nur Nutzernachrichten)" style="text-decoration:none;color:#a78bfa"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><polyline points="22 6 12 13 2 6"/></svg></a>' : '';
         return html(`<div class="topbar"><div class="topbar-logo">Nachrichten</div><div class="topbar-actions">${_adminPostfachBtn}<a href="/suche" class="icon-btn" title="User suchen" style="text-decoration:none"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></a></div></div><div style="padding-bottom:80px">${convHtml}</div>`, 'messages');
@@ -14265,7 +14265,7 @@ document.getElementById('user-search-input')?.addEventListener('input',filterSea
 .notif-row:hover{background:var(--surface-tint)}
 .notif-row.unread{background:linear-gradient(90deg,rgba(255,107,107,0.05),transparent 70%)}
 .notif-row.unread::before{content:"";position:absolute;left:7px;top:50%;transform:translateY(-50%);width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px rgba(255,107,107,0.5)}
-.notif-icon{flex-shrink:0;width:44px;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:20px;background:var(--bg2);border:1px solid var(--border2);font-weight:700}
+.notif-icon{flex-shrink:0;width:44px;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:var(--fs-lg);background:var(--bg2);border:1px solid var(--border2);font-weight:700}
 .notif-actor{position:relative;flex-shrink:0;width:48px;height:48px}
 .notif-actor-avatar{width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#a78bfa,#7c3aed);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:#fff;overflow:hidden;position:relative;box-shadow:0 4px 12px rgba(15,23,42,0.1)}
 .notif-stack-avatar{position:absolute;top:8px;border:2px solid var(--bg);border-radius:50%;background:var(--bg);width:32px;height:32px}
@@ -14293,8 +14293,8 @@ document.getElementById('user-search-input')?.addEventListener('input',filterSea
 .notif-empty{padding:90px 24px;text-align:center;color:var(--muted)}
 .notif-empty-icon{font-size:56px;margin-bottom:16px;opacity:0.5;animation:bell-wiggle 2.5s ease-in-out infinite}
 @keyframes bell-wiggle{0%,80%,100%{transform:rotate(0)}85%,95%{transform:rotate(-8deg)}90%{transform:rotate(8deg)}}
-.notif-empty-text{font-size:16px;font-weight:800;color:var(--text);margin-bottom:6px;letter-spacing:-0.2px}
-.notif-empty-sub{font-size:13px;color:var(--muted);line-height:1.55;max-width:280px;margin:0 auto}
+.notif-empty-text{font-size:var(--fs-md);font-weight:800;color:var(--text);margin-bottom:6px;letter-spacing:-0.2px}
+.notif-empty-sub{font-size:var(--fs-sm);color:var(--muted);line-height:1.55;max-width:280px;margin:0 auto}
 .notif-spin{width:30px;height:30px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 14px}
 @keyframes spin{to{transform:rotate(360deg)}}
 </style>
@@ -14326,8 +14326,8 @@ document.getElementById('user-search-input')?.addEventListener('input',filterSea
       '<div style="padding:14px 16px;border-bottom:1px solid var(--border2);display:flex;align-items:center;gap:12px">' +
         '<div style="width:44px;height:44px;border-radius:14px;background:linear-gradient(135deg,#ec4899,#a21caf);color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🤝</div>' +
         '<div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:700"><a href="/profil/'+esc(req.fromUid)+'" style="color:var(--text);text-decoration:none">'+esc(req.name)+'</a> möchte mit dir kollaborieren</div><div style="font-size:11.5px;color:var(--muted);margin-top:2px">1× pro Woche gemeinsamer Kollab-Post</div></div>' +
-        '<button onclick="respondCollab(\\''+esc(req.reqId)+'\\', true, this)" style="background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:none;border-radius:10px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer">✅</button>' +
-        '<button onclick="respondCollab(\\''+esc(req.reqId)+'\\', false, this)" style="background:var(--bg4);border:1px solid var(--border);color:var(--muted);border-radius:10px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer;margin-left:6px">❌</button>' +
+        '<button onclick="respondCollab(\\''+esc(req.reqId)+'\\', true, this)" style="background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:none;border-radius:10px;padding:8px 12px;font-size:var(--fs-xs);font-weight:700;cursor:pointer">✅</button>' +
+        '<button onclick="respondCollab(\\''+esc(req.reqId)+'\\', false, this)" style="background:var(--bg4);border:1px solid var(--border);color:var(--muted);border-radius:10px;padding:8px 12px;font-size:var(--fs-xs);font-weight:700;cursor:pointer;margin-left:6px">❌</button>' +
       '</div>'
     ).join('');
   } catch(e) {}
