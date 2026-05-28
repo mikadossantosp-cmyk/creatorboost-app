@@ -20334,7 +20334,7 @@ async function deleteAccountDsgvo(){
         const show = !!body.show;
         let ok = false;
         if (LOCAL_STORE) {
-            await localWrite(() => { const u = datastore.getData().users[String(_uid)]; if (u) { u.privacy = u.privacy || {}; u.privacy.showOnLanding = show; ok = true; } });
+            await localWrite(() => { const u = datastore.getData().users[String(_uid)]; if (u) { u.privacy = u.privacy || {}; u.privacy.showOnLanding = show; u.privacy.landingPromptSeen = true; u.privacy.landingConsentAt = Date.now(); ok = true; } });
         }
         return json({ ok, showOnLanding: show });
     }
