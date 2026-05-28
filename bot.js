@@ -1880,16 +1880,15 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible,
 [data-theme=light] .liker-avatar,
 [data-theme=light] .profile-pic-img{box-shadow:0 0 0 1px rgba(15,23,42,0.10)}
 .story-name{font-size:11.5px;color:var(--text);max-width:74px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;letter-spacing:0.1px}
-.post{margin:0 12px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;overflow:hidden;transition:border-color 0.2s,box-shadow 0.2s;box-shadow:0 1px 2px rgba(15,23,42,0.04),0 8px 24px rgba(15,23,42,0.06)}
+.post{margin:0 var(--space-3) var(--space-4);background:var(--bg3);border:1px solid var(--border);border-radius:20px;overflow:hidden;transition:border-color 0.2s,box-shadow 0.2s;box-shadow:0 1px 2px rgba(15,23,42,0.04),0 8px 24px rgba(15,23,42,0.06)}
 [data-theme=dark] .post{background:#121316;box-shadow:0 1px 2px rgba(0,0,0,0.5),0 8px 24px rgba(0,0,0,0.32);border-color:var(--border2)}
 .post:hover{border-color:var(--border);box-shadow:0 4px 14px rgba(15,23,42,0.06)}
-.post-header{display:flex;align-items:center;gap:11px;padding:14px 16px 10px}
+.post-header{display:flex;align-items:center;gap:var(--space-3);padding:var(--space-4) var(--space-4) var(--space-3)}
 .post-user-info{flex:1;min-width:0}
 .post-name{font-size:14px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:-0.1px}
-.post-time{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.post-time{font-size:11px;color:var(--muted2);font-variant-numeric:tabular-nums}
 .post-badge{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:7px;flex-wrap:wrap}
-.post-time{font-size:11px;color:var(--muted2)}
-.post-actions{display:flex;align-items:center;gap:4px;padding:8px 12px}
+.post-actions{display:flex;align-items:center;gap:var(--space-1);padding:var(--space-2) var(--space-3)}
 .post-action-btn{display:flex;align-items:center;justify-content:center;gap:7px;padding:9px 16px;border-radius:14px;background:transparent;font-size:13.5px;font-weight:700;color:var(--muted);transition:all .15s;border:1px solid var(--border)!important;letter-spacing:0.1px;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
 .post-action-btn:active{transform:scale(0.95)}
 .post-action-btn:hover{background:var(--surface-tint);color:var(--text)}
@@ -1898,7 +1897,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible,
 .post-action-btn[onclick*="showLikerModal"]{background:var(--surface-tint);border-color:var(--border)!important;color:var(--muted)}
 .post-action-btn[onclick*="showLikerModal"]:active{background:var(--hover-tint)}
 .post-action-btn svg{width:18px;height:18px;transition:fill 0.15s,stroke 0.15s}
-.post-likers{padding:0 16px 4px;font-size:12px;color:var(--muted)}
+.post-likers{padding:0 var(--space-4) var(--space-1);font-size:var(--fs-xs);color:var(--muted)}
 .post-likers span{color:var(--text);font-weight:600}
 .profile-banner{width:100%;aspect-ratio:3/1;position:relative;overflow:hidden}
 .profile-banner-overlay{position:absolute;inset:0;background:linear-gradient(to bottom,transparent 30%,rgba(0,0,0,0.18) 70%,var(--bg) 100%);pointer-events:none}
