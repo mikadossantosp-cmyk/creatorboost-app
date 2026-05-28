@@ -352,7 +352,7 @@ module.exports = function renderChatList(opts) {
                 '"<div style=\\"display:flex;align-items:center;gap:10px;margin-bottom:14px\\">"+' +
                   '"<a href=\\"/profil/"+_esc(s.uid)+"\\" style=\\"width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#a78bfa,#7c3aed);overflow:hidden;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:18px;flex-shrink:0;text-decoration:none\\">"+(s.avatar?"<img src=\\""+_esc(s.avatar)+"\\" style=\\"width:100%;height:100%;object-fit:cover\\" alt=\\"\\">":_esc((s.name||"?").slice(0,1)))+"</a>"+' +
                   '"<div style=\\"flex:1;min-width:0\\">"+' +
-                    '"<a href=\\"/profil/"+_esc(s.uid)+"\\" style=\\"font-size:15px;font-weight:700;color:var(--text);text-decoration:none;display:block\\">"+_esc(s.name)+"</a>"+' +
+                    '"<a href=\\"/profil/"+_esc(s.uid)+"\\" style=\\"font-size:var(--fs-base);font-weight:700;color:var(--text);text-decoration:none;display:block\\">"+_esc(s.name)+"</a>"+' +
                     '"<div style=\\"font-size:11px;color:#ec4899;text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-top:1px\\">📌 Pinned Reel"+(s.engaged?" · Engagiert ✓":"")+"</div>"+' +
                   '"</div>"+' +
                   '"<button onclick=\\"closePinnedStory()\\" style=\\"background:var(--bg4);border:none;width:32px;height:32px;border-radius:50%;color:var(--text);font-size:18px;cursor:pointer;flex-shrink:0\\">×</button>"+' +
@@ -365,9 +365,9 @@ module.exports = function renderChatList(opts) {
                   '"</a>"' +
                 ':"<div style=\\"margin-bottom:12px;padding:30px;background:linear-gradient(135deg,#1a1a2e,#16213e);border-radius:14px;text-align:center;font-size:14px;color:rgba(255,255,255,.6)\\">📸 Instagram Reel</div>")+' +
                 '(s.isOwn?' +
-                  '"<div style=\\"padding:12px 14px;background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.25);border-radius:12px;font-size:13px;color:var(--muted);line-height:1.5\\">👤 Das ist dein eigener Pinned Reel.</div>"' +
-                ':"<div style=\\"display:flex;gap:8px;margin-bottom:10px\\"><a href=\\"javascript:void(0)\\" onclick=\\"onPinVisitStory(\'"+_esc(s.uid)+"\')\\" id=\\"pin-visit-link-story\\" style=\\"flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:11px 12px;background:linear-gradient(135deg,#ec4899,#a855f7);color:#fff;border-radius:10px;font-size:13px;font-weight:700;text-decoration:none\\">📸 Auf Instagram öffnen</a>"+' +
-                  '(s.engaged?"<button disabled style=\\"flex:1;padding:11px 12px;border-radius:10px;border:1px solid #22c55e;background:rgba(34,197,94,.12);color:#22c55e;font-size:13px;font-weight:700;font-family:inherit;cursor:default\\">✅ Engagiert</button>":"<button onclick=\\"pinnedEngageClick(\'"+_esc(s.uid)+"\',this)\\" id=\\"pin-engage-btn-story\\" disabled data-locked=\\"1\\" style=\\"flex:1;padding:11px 12px;border-radius:10px;border:1px solid rgba(255,107,107,.35);background:rgba(255,107,107,.10);color:#ff6b6b;font-size:13px;font-weight:700;font-family:inherit;cursor:not-allowed;opacity:0.55\\">🔒 Erst Insta öffnen</button>")+' +
+                  '"<div style=\\"padding:12px 14px;background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.25);border-radius:12px;font-size:var(--fs-sm);color:var(--muted);line-height:1.5\\">👤 Das ist dein eigener Pinned Reel.</div>"' +
+                ':"<div style=\\"display:flex;gap:8px;margin-bottom:10px\\"><a href=\\"javascript:void(0)\\" onclick=\\"onPinVisitStory(\'"+_esc(s.uid)+"\')\\" id=\\"pin-visit-link-story\\" style=\\"flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:11px 12px;background:linear-gradient(135deg,#ec4899,#a855f7);color:#fff;border-radius:10px;font-size:var(--fs-sm);font-weight:700;text-decoration:none\\">📸 Auf Instagram öffnen</a>"+' +
+                  '(s.engaged?"<button disabled style=\\"flex:1;padding:11px 12px;border-radius:10px;border:1px solid #22c55e;background:rgba(34,197,94,.12);color:#22c55e;font-size:var(--fs-sm);font-weight:700;font-family:inherit;cursor:default\\">✅ Engagiert</button>":"<button onclick=\\"pinnedEngageClick(\'"+_esc(s.uid)+"\',this)\\" id=\\"pin-engage-btn-story\\" disabled data-locked=\\"1\\" style=\\"flex:1;padding:11px 12px;border-radius:10px;border:1px solid rgba(255,107,107,.35);background:rgba(255,107,107,.10);color:#ff6b6b;font-size:var(--fs-sm);font-weight:700;font-family:inherit;cursor:not-allowed;opacity:0.55\\">🔒 Erst Insta öffnen</button>")+' +
                   '"</div><div style=\\"padding:12px 14px;background:linear-gradient(135deg,rgba(34,197,94,.10),rgba(167,139,250,.06));border:1px solid rgba(34,197,94,.25);border-radius:12px;font-size:12.5px;color:var(--text);line-height:1.55\\"><div style=\\"font-weight:700;color:#22c55e;margin-bottom:4px\\">💎 +1 Diamant für Engagement</div><div style=\\"color:var(--muted)\\">Auf Instagram <b>LIKEN + KOMMENTIEREN + TEILEN + SPEICHERN</b> → komme zurück → tippe „Engagiert\\" → +1 💎 für dich.</div></div>");' +
               'm.style.display="flex";' +
             '};' +
@@ -391,14 +391,14 @@ module.exports = function renderChatList(opts) {
                 '}' +
                 'main.style.display = "none";' +
                 'if (stories) stories.style.display = "none";' +
-                'results.innerHTML = "<div style=\\"padding:40px 16px;text-align:center;color:var(--muted);font-size:13px\\">Suche...</div>";' +
+                'results.innerHTML = "<div style=\\"padding:40px 16px;text-align:center;color:var(--muted);font-size:var(--fs-sm)\\">Suche...</div>";' +
                 'dmSearchTimer = setTimeout(async () => {' +
                     'try {' +
                         'const r = await fetch("/api/search?q=" + encodeURIComponent(q));' +
                         'const data = await r.json();' +
                         'const users = (data.users || []).slice(0, 20);' +
                         'if (!users.length) {' +
-                            'results.innerHTML = "<div style=\\"padding:40px 16px;text-align:center;color:var(--muted);font-size:13px\\">Niemand gefunden 😔</div>";' +
+                            'results.innerHTML = "<div style=\\"padding:40px 16px;text-align:center;color:var(--muted);font-size:var(--fs-sm)\\">Niemand gefunden 😔</div>";' +
                             'return;' +
                         '}' +
                         'results.innerHTML = users.map(u => {' +
@@ -414,7 +414,7 @@ module.exports = function renderChatList(opts) {
                             '"</a>";' +
                         '}).join("");' +
                     '} catch(e) {' +
-                        'results.innerHTML = "<div style=\\"padding:40px 16px;text-align:center;color:var(--muted);font-size:13px\\">Fehler bei der Suche</div>";' +
+                        'results.innerHTML = "<div style=\\"padding:40px 16px;text-align:center;color:var(--muted);font-size:var(--fs-sm)\\">Fehler bei der Suche</div>";' +
                     '}' +
                 '}, 250);' +
             '}' +
@@ -528,7 +528,7 @@ module.exports = function renderChatList(opts) {
               const palette=["💬","💡","❓","🗣️","📣","📈","📋","🛡️","📤","🎨","📢","🛍️","🏆","📸","🎥","🎵","🗳️","👋","🌟","🔥","⚡","🎯","🚀","📝","🎭","🧠","💎","🌈","🎮","🛠️","🎬","📱","📚","⭐","✨","👀","💼","🪄","📊","🎉"];
               const inner=document.createElement("div");
               inner.style.cssText="background:var(--bg2);border-radius:24px 24px 0 0;padding:22px 20px 30px;width:100%;max-width:480px;border-top:3px solid #0088cc";
-              let html='<div style="width:36px;height:4px;background:#666;border-radius:4px;margin:0 auto 18px"></div><div style="font-size:16px;font-weight:800;text-align:center;margin-bottom:6px">Thread anpassen</div><div style="font-size:12px;color:var(--muted);text-align:center;margin-bottom:18px">Icon + Name</div><label style="font-size:12px;color:var(--muted);font-weight:600;display:block;margin-bottom:6px">Name</label><input type="text" id="thr-cust-name" style="width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:12px;padding:11px 14px;font-size:14px;outline:none;margin-bottom:14px;box-sizing:border-box"><label style="font-size:12px;color:var(--muted);font-weight:600;display:block;margin-bottom:6px">Icon</label><input type="text" id="thr-cust-emoji" maxlength="6" style="width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:12px;padding:11px 14px;font-size:18px;outline:none;margin-bottom:14px;text-align:center;box-sizing:border-box"><div id="thr-cust-palette" style="display:grid;grid-template-columns:repeat(8,1fr);gap:6px;max-height:180px;overflow-y:auto;background:var(--bg3);border-radius:12px;padding:10px;margin-bottom:18px"></div><div style="display:flex;gap:10px"><button id="thr-cust-cancel" style="flex:1;padding:13px;border-radius:12px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:14px;font-weight:600;cursor:pointer">Abbrechen</button><button id="thr-cust-save" style="flex:1;padding:13px;border-radius:12px;border:none;background:linear-gradient(135deg,#0088cc,#00c6ff);color:#fff;font-size:14px;font-weight:800;cursor:pointer">Speichern</button></div>';
+              let html='<div style="width:36px;height:4px;background:#666;border-radius:4px;margin:0 auto 18px"></div><div style="font-size:var(--fs-md);font-weight:800;text-align:center;margin-bottom:6px">Thread anpassen</div><div style="font-size:var(--fs-xs);color:var(--muted);text-align:center;margin-bottom:18px">Icon + Name</div><label style="font-size:var(--fs-xs);color:var(--muted);font-weight:600;display:block;margin-bottom:6px">Name</label><input type="text" id="thr-cust-name" style="width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:12px;padding:11px 14px;font-size:14px;outline:none;margin-bottom:14px;box-sizing:border-box"><label style="font-size:var(--fs-xs);color:var(--muted);font-weight:600;display:block;margin-bottom:6px">Icon</label><input type="text" id="thr-cust-emoji" maxlength="6" style="width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:12px;padding:11px 14px;font-size:18px;outline:none;margin-bottom:14px;text-align:center;box-sizing:border-box"><div id="thr-cust-palette" style="display:grid;grid-template-columns:repeat(8,1fr);gap:6px;max-height:180px;overflow-y:auto;background:var(--bg3);border-radius:12px;padding:10px;margin-bottom:18px"></div><div style="display:flex;gap:10px"><button id="thr-cust-cancel" style="flex:1;padding:13px;border-radius:12px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:14px;font-weight:600;cursor:pointer">Abbrechen</button><button id="thr-cust-save" style="flex:1;padding:13px;border-radius:12px;border:none;background:linear-gradient(135deg,#0088cc,#00c6ff);color:#fff;font-size:14px;font-weight:800;cursor:pointer">Speichern</button></div>';
               inner.innerHTML=html;
               m.appendChild(inner);
               document.body.appendChild(m);
@@ -556,7 +556,7 @@ module.exports = function renderChatList(opts) {
               inner.appendChild(titleDiv);
               const mkBtn=(label,bg,color,fontWeight,handler)=>{
                 const b=document.createElement("button");
-                b.style.cssText="width:100%;padding:16px;border-radius:14px;border:none;background:"+bg+";color:"+color+";font-size:15px;font-weight:"+fontWeight+";cursor:pointer;margin-bottom:8px;text-align:left;display:flex;align-items:center;gap:14px";
+                b.style.cssText="width:100%;padding:16px;border-radius:14px;border:none;background:"+bg+";color:"+color+";font-size:var(--fs-base);font-weight:"+fontWeight+";cursor:pointer;margin-bottom:8px;text-align:left;display:flex;align-items:center;gap:14px";
                 b.innerHTML=label;
                 b.onclick=()=>{m.remove();handler();};
                 return b;

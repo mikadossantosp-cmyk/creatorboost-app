@@ -645,14 +645,14 @@ function getScripts(myUid, otherUid) {
             'const pk = document.getElementById("chat-react-picker"); if (!pk) return;' +
             'if (!pk.querySelector(".chat-react-edit")) {' +
                 'const eb = document.createElement("button"); eb.className = "chat-react-edit chat-react-mineonly";' +
-                'eb.style.cssText = "background:rgba(255,255,255,0.1);color:var(--text);border:none;border-radius:18px;padding:6px 12px;font-size:12px;font-weight:600;margin-left:4px;cursor:pointer;display:none";' +
+                'eb.style.cssText = "background:rgba(255,255,255,0.1);color:var(--text);border:none;border-radius:18px;padding:6px 12px;font-size:var(--fs-xs);font-weight:600;margin-left:4px;cursor:pointer;display:none";' +
                 'eb.textContent = "✏️ Bearbeiten";' +
                 'eb.onclick = function(){ chatHidePicker(); chatEditMsg(chatActiveTs); };' +
                 'pk.appendChild(eb);' +
             '}' +
             'if (!pk.querySelector(".chat-react-copy")) {' +
                 'const cb = document.createElement("button"); cb.className = "chat-react-copy";' +
-                'cb.style.cssText = "background:rgba(255,255,255,0.08);color:var(--text);border:none;border-radius:18px;padding:6px 12px;font-size:12px;font-weight:600;margin-left:4px;cursor:pointer";' +
+                'cb.style.cssText = "background:rgba(255,255,255,0.08);color:var(--text);border:none;border-radius:18px;padding:6px 12px;font-size:var(--fs-xs);font-weight:600;margin-left:4px;cursor:pointer";' +
                 'cb.textContent = "📋 Kopieren";' +
                 'cb.onclick = function(){' +
                     'const row = document.querySelector(".chat-row[data-ts=\\\""+chatActiveTs+"\\\"]");' +
