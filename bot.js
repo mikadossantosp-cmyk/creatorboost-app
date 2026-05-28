@@ -4796,7 +4796,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v241-profile-badges-complete';
+const SW_VERSION='v242-explore-headers';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
@@ -17484,7 +17484,7 @@ ${_latestNews ? `<a href="/explore?tab=newsletter" class="highlight-card" style=
   <div style="font-size:16px;color:var(--muted)">›</div>
 </a>` : ''}
 <div style="padding:0 16px 14px">
-  <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">⚡ Aktuelle Highlights</div>
+  <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">Aktuelle Highlights</div>
   <a href="/feed" class="highlight-card">
     <div class="highlight-icon" style="background:linear-gradient(135deg,rgba(255,107,107,.25),rgba(204,93,232,.15))"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#cc5de8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg></div>
     <div style="flex:1;min-width:0">
@@ -17497,7 +17497,7 @@ ${_latestNews ? `<a href="/explore?tab=newsletter" class="highlight-card" style=
 `,
             ranking: `
 <div style="padding:12px 16px 8px;display:flex;align-items:center;justify-content:space-between">
-  <div style="font-size:13px;font-weight:700">⭐ Rangliste</div>
+  <div style="font-size:13px;font-weight:700">Rangliste</div>
   <div style="font-size:12px;color:var(--muted)">Rang: ${myRank>0?'#'+myRank:adminIds.includes(Number(myUid))?'👑 Admin':'–'}</div>
 </div>
 <div style="display:flex;gap:6px;padding:0 16px 12px">
@@ -17559,7 +17559,7 @@ function switchRanking(tab, btn) {
                     { icon:'⚠️', title:'Vermeide Music-Copyright', desc:'Reels mit lizenzierter Musik werden in Business-Accounts oft stumm. Nutze nur Insta\'s Built-in Audio Library — sicher + algorithm-friendly.' },
                 ];
                 const tippsHtml = tipps.map(t=>`<div style="background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:14px 16px;margin-bottom:10px;display:flex;align-items:flex-start;gap:13px"><div style="font-size:22px;flex-shrink:0;width:38px;height:38px;display:flex;align-items:center;justify-content:center;border-radius:10px;background:linear-gradient(135deg,rgba(34,197,94,0.18),rgba(21,128,61,0.06))">${t.icon}</div><div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:700;margin-bottom:4px;line-height:1.35">${t.title}</div><div style="font-size:12.5px;color:var(--muted);line-height:1.55">${t.desc}</div></div></div>`).join('');
-                return `<div style="padding:18px 14px 80px"><div style="font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;font-weight:700">💡 ${tipps.length} Tipps</div><div style="font-size:18px;font-weight:800;font-family:var(--font-display);margin-bottom:14px">Instagram Reel Tipps</div>${tippsHtml}<div style="margin-top:18px;padding:14px;background:linear-gradient(135deg,rgba(34,197,94,0.10),rgba(21,128,61,0.04));border:1px solid rgba(34,197,94,0.30);border-radius:12px;font-size:12px;color:var(--text);line-height:1.55">💡 <b>Tipp:</b> Schreib eigene Erfahrungen in den Tipps-Thread — wir erweitern die Liste basierend auf was bei euch funktioniert hat.</div></div>`;
+                return `<div style="padding:18px 14px 80px"><div style="font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;font-weight:700">${tipps.length} Tipps</div><div style="font-size:18px;font-weight:800;font-family:var(--font-display);margin-bottom:14px">Instagram Reel Tipps</div>${tippsHtml}<div style="margin-top:18px;padding:14px;background:linear-gradient(135deg,rgba(34,197,94,0.10),rgba(21,128,61,0.04));border:1px solid rgba(34,197,94,0.30);border-radius:12px;font-size:12px;color:var(--text);line-height:1.55">💡 <b>Tipp:</b> Schreib eigene Erfahrungen in den Tipps-Thread — wir erweitern die Liste basierend auf was bei euch funktioniert hat.</div></div>`;
             })(),
             regeln: require('./regeln-tab'),
             shop: (()=>{
@@ -17939,20 +17939,20 @@ window.sugDismiss = function(btn){
                         : '<div style="padding:14px;text-align:center;color:var(--muted);font-size:12.5px">Noch keine vorgestellten User</div>';
                     const _curPickSt = msCurrentPickedUid ? msDmStatus(msCurrentPickedUid, ms.weeklyState?.pickedAt || 0) : null;
                     const currentPickHtml = msCurrentPickedUid
-                        ? `<div style="padding:12px;background:linear-gradient(135deg,rgba(245,158,11,0.15),rgba(236,72,153,0.1));border:1px solid rgba(245,158,11,0.3);border-radius:12px;margin-bottom:10px"><div style="font-size:11px;color:#f59e0b;font-weight:700;letter-spacing:1px;text-transform:uppercase">⭐ Diese Woche</div><div style="font-size:14px;font-weight:800;margin-top:4px">${msPickedName}</div><div style="font-size:11px;margin-top:4px">${msDmBadge(_curPickSt)}</div></div>`
+                        ? `<div style="padding:12px;background:linear-gradient(135deg,rgba(245,158,11,0.15),rgba(236,72,153,0.1));border:1px solid rgba(245,158,11,0.3);border-radius:12px;margin-bottom:10px"><div style="font-size:11px;color:#f59e0b;font-weight:700;letter-spacing:1px;text-transform:uppercase">Diese Woche</div><div style="font-size:14px;font-weight:800;margin-top:4px">${msPickedName}</div><div style="font-size:11px;margin-top:4px">${msDmBadge(_curPickSt)}</div></div>`
                         : (msStateIsCurrent && ms.weeklyState?.skipped)
                         ? '<div style="padding:10px;background:var(--bg4);border-radius:10px;margin-bottom:10px;font-size:12.5px;color:var(--muted);text-align:center">Diese Woche übersprungen</div>'
                         : '<div style="padding:10px;background:var(--bg4);border-radius:10px;margin-bottom:10px;font-size:12.5px;color:var(--muted);text-align:center">Noch nicht gepickt (Sonntag 20:00)</div>';
                     mindsetAdminCard = `<div style="margin:0 16px 16px;padding:18px;background:var(--bg3);border:1px solid var(--border2);border-radius:16px">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-    <div style="font-size:15px;font-weight:800;font-family:var(--font-display)">📊 Admin · Mindset Stories</div>
+    <div style="font-size:15px;font-weight:800;font-family:var(--font-display)">Admin · Mindset Stories</div>
   </div>
   ${currentPickHtml}
   <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
     <button onclick="msAdminBlast()" style="flex:1;min-width:140px;padding:10px;border-radius:10px;border:none;background:linear-gradient(135deg,#4dabf7,#1d6fa5);color:#fff;font-size:12.5px;font-weight:700;cursor:pointer">📨 Initial-Blast</button>
     <button onclick="msAdminSkip()" style="flex:1;min-width:120px;padding:10px;border-radius:10px;border:1px solid var(--border);background:var(--bg4);color:var(--text);font-size:12.5px;font-weight:700;cursor:pointer">⏭ Woche skippen</button>
   </div>
-  <div style="font-size:11px;font-weight:700;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-bottom:8px">📋 Warteliste (${msCounts.waitlist})</div>
+  <div style="font-size:11px;font-weight:700;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-bottom:8px">Warteliste (${msCounts.waitlist})</div>
   <div style="max-height:280px;overflow-y:auto;margin-bottom:14px">${waitlistHtml}</div>
   <div style="font-size:11px;font-weight:700;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-bottom:8px">✅ Erledigt (${msCounts.done})</div>
   <div style="max-height:200px;overflow-y:auto">${doneHtml}</div>
@@ -17987,7 +17987,7 @@ window.sugDismiss = function(btn){
                 return `
 <div style="padding-top:8px;padding-bottom:80px">
   <div style="padding:0 16px 12px;display:flex;align-items:center;justify-content:space-between">
-    <div style="font-size:18px;font-weight:800;font-family:var(--font-display)">📩 Newsletter</div>
+    <div style="font-size:18px;font-weight:800;font-family:var(--font-display)">Newsletter</div>
   </div>
   ${mindsetUserCard}
   ${mindsetAdminCard}
@@ -18048,7 +18048,7 @@ async function msAdminRestore(uid,name){if(!confirm(name+' zurück auf die Warte
     <div style="position:relative;display:flex;align-items:center;gap:12px">
       <div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#f5d76e 0%,#d4a946 50%,#8b6914 100%);color:#000;font-weight:800;font-size:17px;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:inset 0 1px 0 rgba(255,255,255,0.4),0 4px 12px rgba(212,169,70,0.3)">${initials}</div>
       <div style="flex:1;min-width:0">
-        <div style="font-size:10.5px;color:#d4a946;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:2px">🏆 Letzter Gewinner</div>
+        <div style="font-size:10.5px;color:#d4a946;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:2px">Letzter Gewinner</div>
         <div style="font-size:15px;font-weight:700;color:var(--text);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${safeName}</div>
         ${safeHandle?`<div style="font-size:11.5px;color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${safeHandle}</div>`:''}
       </div>
@@ -18078,14 +18078,14 @@ async function msAdminRestore(uid,name){if(!confirm(name+' zurück auf die Warte
     <div style="font-size:12px;color:var(--muted)">⏰ Ziehung: Sonntag 20:00 Uhr · noch ~${hoursLeft}h</div>
   </div>
   <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:16px;padding:18px">
-    <div style="font-size:13px;font-weight:700;margin-bottom:12px">🎁 Mögliche Gewinne</div>
+    <div style="font-size:13px;font-weight:700;margin-bottom:12px">Mögliche Gewinne</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
       ${prizes.map(p=>'<div style="padding:12px;background:rgba(255,255,255,0.03);border:1px solid var(--border2);border-radius:10px;font-size:12px;font-weight:600;text-align:center">'+p+'</div>').join('')}
     </div>
     <div style="font-size:11px;color:var(--muted);margin-top:12px;text-align:center">Gewinn wird zufällig vom System gewählt. 1 Gewinner pro Woche.</div>
   </div>
   <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:16px;padding:18px;margin-top:12px">
-    <div style="font-size:13px;font-weight:700;margin-bottom:8px">📋 So funktioniert's</div>
+    <div style="font-size:13px;font-weight:700;margin-bottom:8px">So funktioniert's</div>
     <div style="font-size:12px;color:var(--muted);line-height:1.7">
       1. Sammle mindestens <b style="color:var(--text)">750 XP</b> in einer Woche<br>
       2. Du nimmst automatisch am Gewinnspiel teil<br>
