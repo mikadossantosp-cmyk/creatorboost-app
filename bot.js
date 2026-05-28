@@ -4799,7 +4799,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v253-profile-meta-icons';
+const SW_VERSION='v254-fix-notif-loading';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
@@ -14044,6 +14044,8 @@ document.getElementById('user-search-input')?.addEventListener('input',filterSea
 @keyframes bell-wiggle{0%,80%,100%{transform:rotate(0)}85%,95%{transform:rotate(-8deg)}90%{transform:rotate(8deg)}}
 .notif-empty-text{font-size:16px;font-weight:800;color:var(--text);margin-bottom:6px;letter-spacing:-0.2px}
 .notif-empty-sub{font-size:13px;color:var(--muted);line-height:1.55;max-width:280px;margin:0 auto}
+.notif-spin{width:30px;height:30px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 14px}
+@keyframes spin{to{transform:rotate(360deg)}}
 </style>
 <div class="notif-filters">
   <button class="notif-filter active" data-f="all">Alle</button>
@@ -14056,7 +14058,7 @@ document.getElementById('user-search-input')?.addEventListener('input',filterSea
 </div>
 <div id="collab-pending" style="padding:0"></div>
 <div id="notif-list" style="padding:0 0 80px">
-  <div class="notif-empty"><div class="notif-empty-icon">⏳</div><div class="notif-empty-text">Lädt...</div></div>
+  <div class="notif-empty"><div class="notif-spin"></div><div class="notif-empty-text">Lädt…</div></div>
 </div>
 <script>
 // Kollab-Pending-Section: zeigt offene eingegangene Anfragen mit Accept/Decline
@@ -14172,7 +14174,7 @@ function renderList(){
   let items=_allNotifs;
   if(_currentFilter!=='all') items=items.filter(n=>classify(n)===_currentFilter);
   if(!items.length){
-    const map={all:['<svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="opacity:.4"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>,'Alles ruhig','Hier erscheinen Likes, Follower,<br>News und Diamant-Belohnungen'],like:['<svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="opacity:.4"><path d="M20.8 5.1a5.4 5.4 0 0 0-7.7 0l-1.1 1.1-1.1-1.1A5.4 5.4 0 1 0 3.2 12.8l1.1 1.1L12 21.5l7.7-7.6 1.1-1.1a5.4 5.4 0 0 0 0-7.7z"/></svg>,'Keine Likes bisher','Wenn dich jemand liked,<br>steht es hier'],follow:['<svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="opacity:.4"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,'Keine neuen Follower','Sobald dir jemand folgt,<br>wirst du hier benachrichtigt'],news:['<svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="opacity:.4"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 6-10 7L2 6"/></svg>,'Keine News','Newsletter-Einträge erscheinen hier'],diamond:['<svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="opacity:.4"><path d="M6 3h12l4 6-10 12L2 9z"/><path d="M2 9h20"/><path d="M9 3 6 9l6 12 6-12-3-6"/></svg>,'Keine Belohnungen','Verdiene Diamanten durch Engagement'],message:['<svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="opacity:.4"><path d="M21 11.5a8.5 8.5 0 0 1-12.5 7.5L3 20.5l1.5-5.5A8.5 8.5 0 1 1 21 11.5z"/></svg>,'Keine Nachrichten','Kommentare und DMs erscheinen hier'],warn:['<svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="opacity:.4"><path d="M10.3 4 2 18.3A1.6 1.6 0 0 0 3.4 20.7h17.2A1.6 1.6 0 0 0 22 18.3L13.7 4a1.6 1.6 0 0 0-3.4 0z"/><line x1="12" y1="9.5" x2="12" y2="13.5"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,'Alles im grünen Bereich','Keine System-Hinweise']};
+    const map={all:['<svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="opacity:.4"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>','Alles ruhig','Hier erscheinen Likes, Follower,<br>News und Diamant-Belohnungen'],like:['<svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="opacity:.4"><path d="M20.8 5.1a5.4 5.4 0 0 0-7.7 0l-1.1 1.1-1.1-1.1A5.4 5.4 0 1 0 3.2 12.8l1.1 1.1L12 21.5l7.7-7.6 1.1-1.1a5.4 5.4 0 0 0 0-7.7z"/></svg>','Keine Likes bisher','Wenn dich jemand liked,<br>steht es hier'],follow:['<svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="opacity:.4"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>','Keine neuen Follower','Sobald dir jemand folgt,<br>wirst du hier benachrichtigt'],news:['<svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="opacity:.4"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 6-10 7L2 6"/></svg>','Keine News','Newsletter-Einträge erscheinen hier'],diamond:['<svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="opacity:.4"><path d="M6 3h12l4 6-10 12L2 9z"/><path d="M2 9h20"/><path d="M9 3 6 9l6 12 6-12-3-6"/></svg>','Keine Belohnungen','Verdiene Diamanten durch Engagement'],message:['<svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="opacity:.4"><path d="M21 11.5a8.5 8.5 0 0 1-12.5 7.5L3 20.5l1.5-5.5A8.5 8.5 0 1 1 21 11.5z"/></svg>','Keine Nachrichten','Kommentare und DMs erscheinen hier'],warn:['<svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="opacity:.4"><path d="M10.3 4 2 18.3A1.6 1.6 0 0 0 3.4 20.7h17.2A1.6 1.6 0 0 0 22 18.3L13.7 4a1.6 1.6 0 0 0-3.4 0z"/><line x1="12" y1="9.5" x2="12" y2="13.5"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>','Alles im grünen Bereich','Keine System-Hinweise']};
     const e=map[_currentFilter]||map.all;
     list.innerHTML='<div class="notif-empty"><div class="notif-empty-icon">'+e[0]+'</div><div class="notif-empty-text">'+e[1]+'</div><div class="notif-empty-sub">'+e[2]+'</div></div>';
     return;
@@ -14197,6 +14199,9 @@ document.querySelectorAll('.notif-filter').forEach(btn=>{
 fetch('/api/notifications').then(r=>r.json()).then(data=>{
   _allNotifs=(data.notifications||[]).slice().sort((a,b)=>(b.timestamp||0)-(a.timestamp||0));
   renderList();
+}).catch(()=>{
+  const list=document.getElementById('notif-list');
+  if(list)list.innerHTML='<div class="notif-empty"><div class="notif-empty-text">Konnte nicht laden</div><div class="notif-empty-sub">Bitte später erneut versuchen.</div></div>';
 });
 </script>`, 'notif');
     }
