@@ -1207,6 +1207,12 @@ if (!_bootHadDisk && !_dataCache) {
     _dataCacheTime = 0;  // sofort als stale markiert, erster Mainbot-Refresh überschreibt
     console.log('⚠️  Boot ohne app_db.json + ohne Mainbot-Connect — leeres Skelett initialisiert.');
 }
+// Standalone: _dataCache aus dem lokalen Datastore seeden (autoritativ, statt evtl.
+// veraltetem app_db.json-Snapshot). Danach hält der 45s-Refresh ihn aktuell.
+if (LOCAL_STORE) {
+    try { _dataCache = datastore.projectDataLikeBot(datastore.getData()); _dataCacheTime = Date.now(); }
+    catch(e) { console.error('[LOCAL_STORE] _dataCache seed fehlgeschlagen:', e.message); }
+}
 
 async function fetchBotRawOnce(path, timeoutMs) {
     return new Promise(resolve => {
@@ -1260,6 +1266,16 @@ function fetchRawExport() {
 
 let _refreshInFlight = null;
 function refreshDataCache() {
+    if (LOCAL_STORE) {
+        // Standalone: _dataCache spiegelt den lokalen Datastore (kein Bot-Fetch mehr).
+        try {
+            _dataCache = datastore.projectDataLikeBot(datastore.getData());
+            _dataCacheTime = Date.now();
+            _appDbLastRefreshOk = new Date().toISOString();
+            _appDbRefreshFailures = 0;
+        } catch(e) { _appDbRefreshFailures++; }
+        return Promise.resolve();
+    }
     if (_refreshInFlight) return _refreshInFlight;
     _refreshInFlight = (async () => {
         _appDbLastRefreshTry = new Date().toISOString();
