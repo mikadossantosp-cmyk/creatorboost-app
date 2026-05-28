@@ -15274,20 +15274,20 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
         return html(`
 <style>
 /* ─── PREMIUM ENTERPRISE DASHBOARD ───────────────────────────── */
-.dash-app{--dgold:var(--accent);--dgold2:var(--purple);--dgold3:var(--accent2);--dink:#0a0a0a;--dink2:#161618;--dink3:#1c1c1f;--dmuted:#6b7280;--dline:rgba(255,255,255,0.06);--dsub:#9ca3af;background:#08080a;min-height:100vh;color:#e7e7ea;font-family:var(--font);-webkit-font-smoothing:antialiased}
+.dash-app{--dgold:var(--accent);--dgold2:var(--purple);--dgold3:var(--accent2);--dink:var(--bg2);--dink2:var(--bg3);--dink3:var(--bg4);--dmuted:var(--muted2);--dline:var(--border);--dsub:var(--muted);background:var(--bg);min-height:100vh;color:var(--text);font-family:var(--font);-webkit-font-smoothing:antialiased}
 .dash-topbar{position:sticky;top:0;z-index:100;backdrop-filter:saturate(180%) blur(14px);-webkit-backdrop-filter:saturate(180%) blur(14px);background:rgba(8,8,10,0.78);border-bottom:1px solid var(--dline)}
 .dash-topbar-inner{max-width:1280px;margin:0 auto;padding:14px 22px;display:flex;align-items:center;gap:var(--space-4)}
 .dash-brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:15px;letter-spacing:-0.3px}
 .dash-brand-shield{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#fff8d6 0%,#7c3aed 50%,#6d28d9 100%);display:flex;align-items:center;justify-content:center;font-size:14px;color:#1a0f00;box-shadow:0 4px 14px rgba(124,58,237,0.4),inset 0 1px 0 rgba(255,255,255,0.55)}
 .dash-crumb{font-size:12.5px;color:var(--dsub);display:flex;align-items:center;gap:var(--space-2)}
 .dash-crumb::before{content:'';width:1px;height:14px;background:var(--dline)}
-.dash-crumb b{color:#e7e7ea;font-weight:600}
+.dash-crumb b{color:var(--text);font-weight:600}
 .dash-topbar-grow{flex:1}
 .dash-pill-live{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:99px;background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.30);font-size:11px;font-weight:700;color:#22c55e}
 .dash-pill-live::before{content:'';width:6px;height:6px;border-radius:50%;background:#22c55e;box-shadow:0 0 6px #22c55e;animation:dpulse 1.6s ease-in-out infinite}
 @keyframes dpulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(.85)}}
 .dash-back{color:var(--dsub);text-decoration:none;font-size:13px;font-weight:500;padding:6px 10px;border-radius:8px;transition:all .15s}
-.dash-back:hover{color:#e7e7ea;background:rgba(255,255,255,0.04)}
+.dash-back:hover{color:var(--text);background:rgba(255,255,255,0.04)}
 
 .dash-shell{max-width:1280px;margin:0 auto;padding:28px 22px 80px}
 .dash-page-hdr{display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:var(--space-4);margin-bottom:var(--space-6)}
@@ -15295,7 +15295,7 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
 .dash-h1-grad{background:linear-gradient(180deg,#fff 0%,#a8a8b0 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
 .dash-h1-meta{font-size:13px;color:var(--dsub);margin-top:6px;font-weight:500}
 .dash-top-actions{display:flex;gap:var(--space-2);flex-wrap:wrap}
-.dash-btn{display:inline-flex;align-items:center;gap:7px;padding:10px 16px;border-radius:10px;font-size:12.5px;font-weight:700;cursor:pointer;border:1px solid var(--dline);background:var(--dink2);color:#e7e7ea;text-decoration:none;transition:all .15s;letter-spacing:0.1px;font-family:inherit}
+.dash-btn{display:inline-flex;align-items:center;gap:7px;padding:10px 16px;border-radius:10px;font-size:12.5px;font-weight:700;cursor:pointer;border:1px solid var(--dline);background:var(--dink2);color:var(--text);text-decoration:none;transition:all .15s;letter-spacing:0.1px;font-family:inherit}
 .dash-btn:hover{background:var(--dink3);border-color:rgba(255,255,255,0.12);transform:translateY(-1px)}
 .dash-btn:active{transform:none}
 .dash-btn-primary{background:linear-gradient(180deg,#f8e7a0 0%,#7c3aed 50%,#a07a1c 100%);color:#1a0f00;border-color:transparent;box-shadow:0 4px 14px rgba(124,58,237,0.35),inset 0 1px 0 rgba(255,255,255,0.6)}
@@ -15313,7 +15313,7 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
 .dash-stat.danger::before{background:linear-gradient(180deg,#ef4444,#dc2626)}
 .dash-stat.info::before{background:linear-gradient(180deg,#3b82f6,#1d4ed8)}
 .dash-stat-lbl{display:flex;align-items:center;gap:6px;font-size:10.5px;font-weight:700;color:var(--dsub);text-transform:uppercase;letter-spacing:1.4px;margin-bottom:var(--space-2)}
-.dash-stat-val{font-size:30px;font-weight:800;font-family:Inter,system-ui,sans-serif;letter-spacing:-1px;line-height:1;color:#fff}
+.dash-stat-val{font-size:30px;font-weight:800;font-family:Inter,system-ui,sans-serif;letter-spacing:-1px;line-height:1;color:var(--text)}
 .dash-stat-sub{font-size:11px;color:var(--dsub);margin-top:6px;font-weight:500;display:flex;align-items:center;gap:6px}
 .dash-stat-trend{display:inline-flex;align-items:center;gap:3px;padding:2px 6px;border-radius:99px;font-size:10px;font-weight:700}
 .dash-stat-trend.up{color:#22c55e;background:rgba(34,197,94,0.12)}
@@ -15323,34 +15323,34 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
 /* Section-Card */
 .dash-section{background:var(--dink2);border:1px solid var(--dline);border-radius:16px;overflow:hidden;margin-bottom:18px}
 .dash-section-hdr{display:flex;align-items:center;gap:var(--space-3);padding:16px 18px;border-bottom:1px solid var(--dline);background:rgba(255,255,255,0.015)}
-.dash-section-title{font-size:13px;font-weight:700;color:#fff;display:flex;align-items:center;gap:var(--space-2)}
+.dash-section-title{font-size:13px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:var(--space-2)}
 .dash-section-sub{font-size:11.5px;color:var(--dsub);font-weight:500;margin-left:6px}
 .dash-section-grow{flex:1}
 .dash-section-body{padding:16px 18px}
 
 /* Search + Tabs */
-.dash-search{width:100%;padding:13px 16px 13px 42px;background:var(--dink);border:1px solid var(--dline);border-radius:12px;color:#fff;font-size:13.5px;transition:border .15s;font-family:inherit;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.3-4.3'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:14px center;background-size:16px}
+.dash-search{width:100%;padding:13px 16px 13px 42px;background:var(--dink);border:1px solid var(--dline);border-radius:12px;color:var(--text);font-size:13.5px;transition:border .15s;font-family:inherit;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.3-4.3'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:14px center;background-size:16px}
 .dash-search:focus{border-color:rgba(124,58,237,0.4);outline:none}
 .dash-search::placeholder{color:#6b7280}
 .dash-tabs{display:flex;gap:var(--space-1);padding:4px;background:var(--dink);border:1px solid var(--dline);border-radius:12px;margin-bottom:14px;overflow-x:auto;scrollbar-width:none}
 .dash-tabs::-webkit-scrollbar{display:none}
 .dash-tab{padding:9px 14px;border-radius:8px;border:none;background:transparent;color:var(--dsub);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;font-family:inherit;white-space:nowrap;flex-shrink:0}
-.dash-tab:hover{color:#fff;background:rgba(255,255,255,0.04)}
+.dash-tab:hover{color:var(--text);background:rgba(255,255,255,0.04)}
 .dash-tab.active{background:linear-gradient(180deg,#f8e7a0 0%,#7c3aed 50%,#a07a1c 100%);color:#1a0f00;font-weight:700;box-shadow:inset 0 1px 0 rgba(255,255,255,0.5)}
 
 /* List */
 .dash-list{display:flex;flex-direction:column;gap:6px}
 .dash-row{display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--dink2);border:1px solid var(--dline);border-radius:12px;cursor:pointer;transition:all .15s}
 .dash-row:hover{transform:translateY(-1px);border-color:rgba(124,58,237,0.30);box-shadow:0 6px 20px rgba(0,0,0,0.3),0 0 0 1px rgba(124,58,237,0.05)}
-.dash-row-avatar{width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,#a78bfa,#7c3aed);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:#fff;flex-shrink:0;letter-spacing:-0.5px;box-shadow:0 4px 12px rgba(0,0,0,0.3)}
+.dash-row-avatar{width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,#a78bfa,#7c3aed);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:var(--text);flex-shrink:0;letter-spacing:-0.5px;box-shadow:0 4px 12px rgba(0,0,0,0.3)}
 .dash-row-name{flex:1;min-width:0}
-.dash-row-name b{font-size:14px;font-weight:700;color:#fff;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dash-row-name b{font-size:14px;font-weight:700;color:var(--text);display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dash-row-sub{font-size:11.5px;color:var(--dsub);display:flex;gap:5px;flex-wrap:wrap;margin-top:3px;align-items:center}
 .dash-row-sub-dot{color:#3a3a3f}
 .dash-row-pills{display:flex;gap:var(--space-1);margin-top:6px;flex-wrap:wrap}
 .dash-row-stats{display:flex;gap:18px;text-align:right;flex-shrink:0;padding-left:var(--space-2)}
 .dash-row-stat{display:flex;flex-direction:column;align-items:flex-end}
-.dash-row-stat b{font-size:15px;font-weight:800;color:#fff;line-height:1;letter-spacing:-0.3px}
+.dash-row-stat b{font-size:15px;font-weight:800;color:var(--text);line-height:1;letter-spacing:-0.3px}
 .dash-row-stat span{font-size:10px;color:var(--dsub);text-transform:uppercase;letter-spacing:1px;margin-top:3px;font-weight:600}
 
 .dash-pill{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:99px;font-size:10px;font-weight:700;letter-spacing:0.1px}
@@ -15366,12 +15366,12 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
 .dash-modal{background:var(--dink2);border:1px solid var(--dline);border-radius:18px;padding:0;max-width:540px;width:100%;max-height:92vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 32px 80px rgba(0,0,0,0.6),0 0 0 1px rgba(124,58,237,0.06);animation:dmodalin .22s cubic-bezier(0.16,1,0.3,1)}
 @keyframes dmodalin{from{opacity:0;transform:translateY(20px) scale(.96)}to{opacity:1;transform:none}}
 .dash-modal-hdr{padding:22px 24px 14px;border-bottom:1px solid var(--dline)}
-.dash-modal-hdr h3{margin:0 0 4px;font-size:20px;font-weight:800;letter-spacing:-0.3px;color:#fff}
+.dash-modal-hdr h3{margin:0 0 4px;font-size:20px;font-weight:800;letter-spacing:-0.3px;color:var(--text)}
 .dash-modal-meta{font-size:12px;color:var(--dsub);margin-top:var(--space-1)}
 .dash-modal-body{padding:20px 24px;overflow-y:auto;flex:1}
 .dash-modal-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--space-2);margin-bottom:var(--space-4)}
 .dash-modal-stat{padding:10px 8px;background:var(--dink);border-radius:10px;border:1px solid var(--dline);text-align:center}
-.dash-modal-stat-v{font-size:18px;font-weight:800;color:#fff;line-height:1}
+.dash-modal-stat-v{font-size:18px;font-weight:800;color:var(--text);line-height:1}
 .dash-modal-stat-l{font-size:10px;color:var(--dsub);text-transform:uppercase;letter-spacing:0.8px;margin-top:var(--space-1);font-weight:600}
 
 .dash-act-section-lbl{display:flex;align-items:center;gap:6px;font-size:10.5px;font-weight:700;letter-spacing:1.5px;color:var(--dsub);text-transform:uppercase;margin:16px 0 8px}
@@ -15380,7 +15380,7 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
 .dash-act-section-lbl.danger::before{background:#ef4444}
 
 .dash-action-grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-2)}
-.dash-act{padding:11px 10px;border-radius:10px;border:1px solid var(--dline);background:var(--dink);color:#e7e7ea;font-size:12.5px;font-weight:600;cursor:pointer;text-align:center;transition:all .12s;font-family:inherit}
+.dash-act{padding:11px 10px;border-radius:10px;border:1px solid var(--dline);background:var(--dink);color:var(--text);font-size:12.5px;font-weight:600;cursor:pointer;text-align:center;transition:all .12s;font-family:inherit}
 .dash-act:hover{border-color:rgba(124,58,237,0.4);background:rgba(124,58,237,0.06)}
 .dash-act.danger{color:#f87171;border-color:rgba(239,68,68,.25)}
 .dash-act.danger:hover{border-color:#ef4444;background:rgba(239,68,68,.06)}
@@ -15394,7 +15394,7 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
 
 /* Toast */
 .dash-toast-wrap{position:fixed;bottom:24px;right:24px;z-index:11000;display:flex;flex-direction:column;gap:var(--space-2);pointer-events:none}
-.dash-toast{padding:13px 16px;background:var(--dink2);border:1px solid var(--dline);border-radius:12px;font-size:13px;font-weight:600;color:#fff;box-shadow:0 16px 40px rgba(0,0,0,0.55);min-width:240px;max-width:380px;display:flex;align-items:center;gap:10px;animation:dtoastin .25s cubic-bezier(0.16,1,0.3,1);pointer-events:auto}
+.dash-toast{padding:13px 16px;background:var(--dink2);border:1px solid var(--dline);border-radius:12px;font-size:13px;font-weight:600;color:var(--text);box-shadow:0 16px 40px rgba(0,0,0,0.55);min-width:240px;max-width:380px;display:flex;align-items:center;gap:10px;animation:dtoastin .25s cubic-bezier(0.16,1,0.3,1);pointer-events:auto}
 @keyframes dtoastin{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:none}}
 .dash-toast.ok{border-color:rgba(34,197,94,0.35);background:linear-gradient(135deg,rgba(34,197,94,0.10),var(--dink2))}
 .dash-toast.err{border-color:rgba(239,68,68,0.35);background:linear-gradient(135deg,rgba(239,68,68,0.10),var(--dink2))}
@@ -15414,15 +15414,15 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
 .dash-log-icon.collab{background:rgba(236,72,153,0.12);color:#f472b6}
 .dash-log-icon.report{background:rgba(239,68,68,0.12);color:#f87171}
 .dash-log-body{flex:1;min-width:0}
-.dash-log-title{font-size:13px;color:#e7e7ea;line-height:1.45}
-.dash-log-title a{color:#fff;font-weight:700;text-decoration:none}
+.dash-log-title{font-size:13px;color:var(--text);line-height:1.45}
+.dash-log-title a{color:var(--text);font-weight:700;text-decoration:none}
 .dash-log-title a:hover{color:#7c3aed}
 .dash-log-meta{font-size:11px;color:var(--dsub);margin-top:var(--space-1);word-break:break-all}
 
 /* Skeleton-Loader */
 .dash-skel{padding:14px 16px;background:var(--dink2);border:1px solid var(--dline);border-radius:12px;display:flex;align-items:center;gap:14px;margin-bottom:6px}
-.dash-skel-avatar{width:42px;height:42px;border-radius:12px;background:linear-gradient(90deg,#1c1c1f,#252529,#1c1c1f);background-size:200% 100%;animation:dshim 1.4s linear infinite}
-.dash-skel-line{height:12px;border-radius:6px;background:linear-gradient(90deg,#1c1c1f,#252529,#1c1c1f);background-size:200% 100%;animation:dshim 1.4s linear infinite}
+.dash-skel-avatar{width:42px;height:42px;border-radius:12px;background:linear-gradient(90deg,var(--bg3),#252529,var(--bg3));background-size:200% 100%;animation:dshim 1.4s linear infinite}
+.dash-skel-line{height:12px;border-radius:6px;background:linear-gradient(90deg,var(--bg3),#252529,var(--bg3));background-size:200% 100%;animation:dshim 1.4s linear infinite}
 @keyframes dshim{to{background-position:-200% 0}}
 </style>
 <div class="dash-app">
@@ -15625,13 +15625,13 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
       </div>
       <div class="dash-section-body">
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:14px" id="funnel-steps">
-          <div style="padding:14px;background:var(--dink);border:1px solid var(--dline);border-radius:12px"><div style="font-size:10px;font-weight:700;color:var(--dsub);text-transform:uppercase;letter-spacing:1.4px">1️⃣ Landing</div><div style="font-size:24px;font-weight:800;color:#fff;margin-top:var(--space-1)" id="fn-landing">–</div><div style="font-size:11px;color:var(--dsub);margin-top:2px">Besuche der Startseite</div></div>
-          <div style="padding:14px;background:var(--dink);border:1px solid var(--dline);border-radius:12px"><div style="font-size:10px;font-weight:700;color:var(--dsub);text-transform:uppercase;letter-spacing:1.4px">2️⃣ CTA-Klick</div><div style="font-size:24px;font-weight:800;color:#fff;margin-top:var(--space-1)" id="fn-cta">–</div><div style="font-size:11px;color:var(--dsub);margin-top:2px"><span id="fn-cta-pct">–</span>% von Landing</div></div>
-          <div style="padding:14px;background:var(--dink);border:1px solid var(--dline);border-radius:12px"><div style="font-size:10px;font-weight:700;color:var(--dsub);text-transform:uppercase;letter-spacing:1.4px">3️⃣ Signup-Seite</div><div style="font-size:24px;font-weight:800;color:#fff;margin-top:var(--space-1)" id="fn-signup-view">–</div><div style="font-size:11px;color:var(--dsub);margin-top:2px"><span id="fn-signup-view-pct">–</span>% von Landing</div></div>
-          <div style="padding:14px;background:linear-gradient(180deg,rgba(124,58,237,0.12),var(--dink));border:1px solid rgba(124,58,237,0.30);border-radius:12px"><div style="font-size:10px;font-weight:700;color:#7c3aed;text-transform:uppercase;letter-spacing:1.4px">4️⃣ Registriert</div><div style="font-size:24px;font-weight:800;color:#fff;margin-top:var(--space-1)" id="fn-signup-complete">–</div><div style="font-size:11px;color:var(--dsub);margin-top:2px"><span id="fn-signup-complete-pct">–</span>% von Signup-Seite</div></div>
-          <div style="padding:14px;background:linear-gradient(180deg,rgba(34,197,94,0.10),var(--dink));border:1px solid rgba(34,197,94,0.30);border-radius:12px"><div style="font-size:10px;font-weight:700;color:#22c55e;text-transform:uppercase;letter-spacing:1.4px">5️⃣ Logins</div><div style="font-size:24px;font-weight:800;color:#fff;margin-top:var(--space-1)" id="fn-login">–</div><div style="font-size:11px;color:var(--dsub);margin-top:2px">erfolgreiche Logins</div></div>
+          <div style="padding:14px;background:var(--dink);border:1px solid var(--dline);border-radius:12px"><div style="font-size:10px;font-weight:700;color:var(--dsub);text-transform:uppercase;letter-spacing:1.4px">1️⃣ Landing</div><div style="font-size:24px;font-weight:800;color:var(--text);margin-top:var(--space-1)" id="fn-landing">–</div><div style="font-size:11px;color:var(--dsub);margin-top:2px">Besuche der Startseite</div></div>
+          <div style="padding:14px;background:var(--dink);border:1px solid var(--dline);border-radius:12px"><div style="font-size:10px;font-weight:700;color:var(--dsub);text-transform:uppercase;letter-spacing:1.4px">2️⃣ CTA-Klick</div><div style="font-size:24px;font-weight:800;color:var(--text);margin-top:var(--space-1)" id="fn-cta">–</div><div style="font-size:11px;color:var(--dsub);margin-top:2px"><span id="fn-cta-pct">–</span>% von Landing</div></div>
+          <div style="padding:14px;background:var(--dink);border:1px solid var(--dline);border-radius:12px"><div style="font-size:10px;font-weight:700;color:var(--dsub);text-transform:uppercase;letter-spacing:1.4px">3️⃣ Signup-Seite</div><div style="font-size:24px;font-weight:800;color:var(--text);margin-top:var(--space-1)" id="fn-signup-view">–</div><div style="font-size:11px;color:var(--dsub);margin-top:2px"><span id="fn-signup-view-pct">–</span>% von Landing</div></div>
+          <div style="padding:14px;background:linear-gradient(180deg,rgba(124,58,237,0.12),var(--dink));border:1px solid rgba(124,58,237,0.30);border-radius:12px"><div style="font-size:10px;font-weight:700;color:#7c3aed;text-transform:uppercase;letter-spacing:1.4px">4️⃣ Registriert</div><div style="font-size:24px;font-weight:800;color:var(--text);margin-top:var(--space-1)" id="fn-signup-complete">–</div><div style="font-size:11px;color:var(--dsub);margin-top:2px"><span id="fn-signup-complete-pct">–</span>% von Signup-Seite</div></div>
+          <div style="padding:14px;background:linear-gradient(180deg,rgba(34,197,94,0.10),var(--dink));border:1px solid rgba(34,197,94,0.30);border-radius:12px"><div style="font-size:10px;font-weight:700;color:#22c55e;text-transform:uppercase;letter-spacing:1.4px">5️⃣ Logins</div><div style="font-size:24px;font-weight:800;color:var(--text);margin-top:var(--space-1)" id="fn-login">–</div><div style="font-size:11px;color:var(--dsub);margin-top:2px">erfolgreiche Logins</div></div>
         </div>
-        <div style="font-size:12px;color:var(--dsub);line-height:1.6">📌 <b style="color:#fff">Tipp:</b> Landing-Drop-Off heute: <span id="fn-dropoff" style="color:#fff;font-weight:700">–</span> · Email-Submits: <span id="fn-email-today" style="color:#fff;font-weight:700">–</span></div>
+        <div style="font-size:12px;color:var(--dsub);line-height:1.6">📌 <b style="color:var(--text)">Tipp:</b> Landing-Drop-Off heute: <span id="fn-dropoff" style="color:var(--text);font-weight:700">–</span> · Email-Submits: <span id="fn-email-today" style="color:var(--text);font-weight:700">–</span></div>
       </div>
     </section>
 
@@ -15669,11 +15669,11 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
           <button class="dash-tab" data-tab="ranking">🏆 Top XP</button>
           <button class="dash-tab" data-tab="subs">👶 Sub-Accounts</button>
           <button class="dash-tab" data-tab="engagement-log">📋 Engagement-Log</button>
-          <button class="dash-tab" data-tab="reports">🚩 Meldungen <span id="dash-reports-badge" style="display:none;margin-left:var(--space-1);padding:1px 6px;border-radius:99px;background:#ef4444;color:#fff;font-size:10px;font-weight:800"></span></button>
+          <button class="dash-tab" data-tab="reports">🚩 Meldungen <span id="dash-reports-badge" style="display:none;margin-left:var(--space-1);padding:1px 6px;border-radius:99px;background:#ef4444;color:var(--text);font-size:10px;font-weight:800"></span></button>
           <button class="dash-tab" data-tab="compliance">📊 Compliance</button>
           <button class="dash-tab" data-tab="diamond-links">💎 Diamantlinks</button>
           <button class="dash-tab" data-tab="prisma-links">💠 Prismalinks</button>
-          <button class="dash-tab" data-tab="helper-inbox">🎫 Tickets <span id="dash-tickets-badge" style="display:none;margin-left:var(--space-1);padding:1px 6px;border-radius:99px;background:#f59e0b;color:#fff;font-size:10px;font-weight:800"></span></button>
+          <button class="dash-tab" data-tab="helper-inbox">🎫 Tickets <span id="dash-tickets-badge" style="display:none;margin-left:var(--space-1);padding:1px 6px;border-radius:99px;background:#f59e0b;color:var(--text);font-size:10px;font-weight:800"></span></button>
         </div>
 
         <div id="dash-engagement-log" style="display:none"></div>
@@ -15766,7 +15766,7 @@ function renderList() {
       '</div>' +
     '</div>';
   }).join('');
-  document.getElementById('dash-list').innerHTML = html || '<div style="padding:var(--space-12);text-align:center;color:var(--dsub);font-size:13px">Keine User in "<b style="color:#fff">'+(TAB_LABELS[CUR_TAB]||CUR_TAB)+'</b>"</div>';
+  document.getElementById('dash-list').innerHTML = html || '<div style="padding:var(--space-12);text-align:center;color:var(--dsub);font-size:13px">Keine User in "<b style="color:var(--text)">'+(TAB_LABELS[CUR_TAB]||CUR_TAB)+'</b>"</div>';
   const rc = document.getElementById('dash-result-count');
   if (rc) rc.textContent = list.length + ' Ergebnisse';
 }
@@ -15827,7 +15827,7 @@ function openUser(uid) {
   bg.innerHTML =
     '<div class="dash-modal" id="user-modal-content">' +
       '<div style="padding:var(--space-6);text-align:center;color:var(--dsub)">' +
-        '<div style="font-size:14px;font-weight:700;color:#fff;margin-bottom:6px">'+esc(baseUser.spitzname||baseUser.name||'User')+'</div>' +
+        '<div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:6px">'+esc(baseUser.spitzname||baseUser.name||'User')+'</div>' +
         '<div style="font-size:12px">⏳ Lade Insights …</div>' +
       '</div>' +
     '</div>';
@@ -15887,7 +15887,7 @@ function renderUserDetail(j) {
     '<div class="dash-act-section-lbl'+(danger?' danger':'')+'">'+text+'</div>';
 
   let html = '<div class="dash-modal-hdr" style="display:flex;align-items:center;gap:14px">' +
-    '<div style="width:54px;height:54px;border-radius:16px;background:'+avatarColorFor(u.uid)+';display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;color:#fff;flex-shrink:0;overflow:hidden;position:relative">' +
+    '<div style="width:54px;height:54px;border-radius:16px;background:'+avatarColorFor(u.uid)+';display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;color:var(--text);flex-shrink:0;overflow:hidden;position:relative">' +
       '<img src="/appbild/'+esc(u.uid)+'/profilepic" onerror="this.style.display=\\'none\\'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" alt="">' +
       '<span style="position:relative;z-index:0">'+esc((u.spitzname||u.name||'?').slice(0,1).toUpperCase())+'</span>' +
       (isOnline ? '<span style="position:absolute;bottom:-2px;right:-2px;width:14px;height:14px;border-radius:50%;background:#22c55e;border:2px solid var(--dink2);z-index:2"></span>' : '') +
@@ -15921,7 +15921,7 @@ function renderUserDetail(j) {
         '<div><span style="color:var(--dsub)">Letzter Endpoint:</span> <code style="font-size:11px;color:#a78bfa">'+esc(act.lastEndpoint||'?')+'</code></div>' +
       '</div>' +
       ((act.topEndpoints||[]).length ? '<div style="margin-top:var(--space-2);font-size:11px;color:var(--dsub)"><b>Top:</b> ' +
-        act.topEndpoints.map(([k,v])=>'<span style="color:#e7e7ea">'+esc(k)+'</span>·'+v).join(' · ') + '</div>' : '') +
+        act.topEndpoints.map(([k,v])=>'<span style="color:var(--text)">'+esc(k)+'</span>·'+v).join(' · ') + '</div>' : '') +
     '</div>';
   }
 
@@ -15943,7 +15943,7 @@ function renderUserDetail(j) {
       html += '<div style="font-size:11px;color:var(--dsub);margin-bottom:var(--space-1)">Sub-Accounts:</div>';
       for (const s of subs) {
         html += '<div style="display:flex;align-items:center;gap:var(--space-2);padding:6px 8px;background:var(--dink2);border-radius:8px;margin-top:var(--space-1);font-size:12.5px">' +
-          '<a href="javascript:openUser(\\''+esc(s.uid)+'\\')" style="flex:1;color:#fff;text-decoration:none"><b>'+esc(s.name)+'</b></a>' +
+          '<a href="javascript:openUser(\\''+esc(s.uid)+'\\')" style="flex:1;color:var(--text);text-decoration:none"><b>'+esc(s.name)+'</b></a>' +
           '<span style="color:var(--dsub);font-size:11px">'+s.xp+' XP</span>' +
           (s.banned ? '<span class="dash-pill err">🚫</span>' : '') +
         '</div>';
@@ -16011,7 +16011,7 @@ function renderUserDetail(j) {
     '<button class="dash-act" onclick="grantNoAmount(\\''+esc(u.uid)+'\\',\\'remove-warn\\')">− ⚠️ Warn</button>' +
     '<button class="dash-act" onclick="grantNoAmount(\\''+esc(u.uid)+'\\',\\'add-extra-link\\')">+ 🔗 Extra-Link</button>' +
     '<button class="dash-act" onclick="grantNoAmount(\\''+esc(u.uid)+'\\',\\'add-superlink\\')">+ ⚡ Superlink-Slot</button>' +
-    '<button class="dash-act" onclick="linkAsSub(\\''+esc(u.uid)+'\\',\\''+esc(u.spitzname||u.name||u.uid)+'\\')" style="background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;border-color:transparent">🔗 Als mein Sub linken</button>' +
+    '<button class="dash-act" onclick="linkAsSub(\\''+esc(u.uid)+'\\',\\''+esc(u.spitzname||u.name||u.uid)+'\\')" style="background:linear-gradient(135deg,#a78bfa,#7c3aed);color:var(--text);border-color:transparent">🔗 Als mein Sub linken</button>' +
   '</div>';
 
   html += sectionLbl('📨 Kommunikation');
@@ -16079,7 +16079,7 @@ async function openFunnelDebug() {
     '<div style="padding:12px 14px;background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.35);border-radius:8px;margin-bottom:var(--space-3);color:#f87171;font-weight:700">' +
       '❌ Response NICHT ok · HTTP '+httpStatus+' · error: '+esc(j.error||j._parseError||'unbekannt') +
       (j._raw ? '<br><span style="font-weight:400;color:#fca5a5">Raw: '+esc(j._raw)+'</span>' : '') +
-      '<br><br><b style="color:#fff">Bedeutung:</b> Mainbot antwortet nicht (richtig). Prüfe Railway-Deploy + Logs. PR #104 muss deployed sein.' +
+      '<br><br><b style="color:var(--text)">Bedeutung:</b> Mainbot antwortet nicht (richtig). Prüfe Railway-Deploy + Logs. PR #104 muss deployed sein.' +
     '</div>';
   bg.innerHTML = '<div class="dash-modal" style="max-width:680px"><div class="dash-modal-hdr"><h3>🔬 Funnel-Debug</h3><div class="dash-modal-meta">Roh-Daten aus d.funnel — verifiziert ob Tracking läuft</div></div>' +
     '<div class="dash-modal-body" style="font-family:ui-monospace,monospace;font-size:11.5px">' +
@@ -16110,13 +16110,13 @@ async function openKollabBoostPreview() {
   if (!document.getElementById('kbp-css')) {
     const s = document.createElement('style'); s.id='kbp-css';
     s.textContent =
-      '.kbp-card{position:relative;margin:0;border-radius:18px;overflow:hidden;background:#0a0a0a;isolation:isolate}'+
+      '.kbp-card{position:relative;margin:0;border-radius:18px;overflow:hidden;background:var(--bg);isolation:isolate}'+
       '.kbp-glow{position:absolute;inset:-2px;border-radius:20px;padding:2px;background:conic-gradient(from 0deg,#ec4899,#f59e0b,#a855f7,#ec4899,#f59e0b,#ec4899);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;animation:kbp-rot 4s linear infinite;pointer-events:none}'+
       '@keyframes kbp-rot{to{transform:rotate(360deg)}}'+
-      '.kbp-body{position:relative;padding:14px;background:linear-gradient(180deg,rgba(236,72,153,0.08),#161618);border-radius:16px;margin:2px;color:#e7e7ea}'+
+      '.kbp-body{position:relative;padding:14px;background:linear-gradient(180deg,rgba(236,72,153,0.08),var(--bg2));border-radius:16px;margin:2px;color:var(--text)}'+
       '.kbp-banner{display:flex;align-items:center;gap:10px;padding:10px 12px;margin-bottom:var(--space-3);background:linear-gradient(135deg,rgba(236,72,153,0.20),rgba(168,85,247,0.14));border:1px solid rgba(236,72,153,0.45);border-radius:10px;animation:kbp-pulse 2s ease-in-out infinite}'+
       '@keyframes kbp-pulse{0%,100%{box-shadow:0 0 0 0 rgba(236,72,153,0.45)}50%{box-shadow:0 0 0 8px rgba(236,72,153,0)}}'+
-      '.kbp-btn{display:block;width:100%;padding:13px;background:linear-gradient(135deg,#ec4899,#a21caf);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 0 20px rgba(236,72,153,0.45);position:relative;overflow:hidden;font-family:inherit}'+
+      '.kbp-btn{display:block;width:100%;padding:13px;background:linear-gradient(135deg,#ec4899,#a21caf);color:var(--text);border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 0 20px rgba(236,72,153,0.45);position:relative;overflow:hidden;font-family:inherit}'+
       '.kbp-btn::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.18),transparent);transform:translateX(-100%);animation:kbp-shimmer 2.5s ease-in-out infinite}'+
       '@keyframes kbp-shimmer{50%{transform:translateX(100%)}}'+
       '.kbp-rule{display:flex;align-items:center;gap:6px;font-size:11.5px;color:#fcd34d;margin:3px 0}'+
@@ -16172,7 +16172,7 @@ async function openKollabBoostPreview() {
     const banner = boostActive
       ? '<div style="font-size:11px;color:#ec4899;font-weight:800;background:rgba(236,72,153,0.18);border:1px solid rgba(236,72,153,0.40);padding:5px 10px;border-radius:99px">⚡ BOOST AKTIV · +1 💎 Extra</div>'
       : '<div style="font-size:11px;color:var(--dsub)">11. März</div>';
-    return '<div style="padding:14px;background:#161618;border:1px solid rgba(255,255,255,0.06);border-radius:14px;color:#e7e7ea">'+
+    return '<div style="padding:14px;background:var(--bg2);border:1px solid rgba(255,255,255,0.06);border-radius:14px;color:var(--text)">'+
       '<div style="display:flex;align-items:center;gap:var(--space-2);margin-bottom:10px">'+
         '<div style="font-size:11px;color:#ec4899;font-weight:800;letter-spacing:1px;text-transform:uppercase">🤝 Kollab-Post</div>'+
         '<div style="flex:1"></div>'+
@@ -16181,7 +16181,7 @@ async function openKollabBoostPreview() {
       '<div style="font-size:13px;font-weight:700;margin-bottom:6px">'+fakePost.authorA.name+' × '+fakePost.authorB.name+'</div>'+
       '<div style="font-size:13px;line-height:1.5;margin-bottom:10px;opacity:.9">"'+fakePost.caption+'"</div>'+
       '<a href="#" onclick="return false" style="display:block;padding:11px 13px;background:rgba(236,72,153,0.10);border:1px solid rgba(236,72,153,0.30);border-radius:10px;font-size:12.5px;color:#ec4899;font-weight:700;text-decoration:none;margin-bottom:10px">🔗 Auf Instagram öffnen</a>'+
-      '<button style="display:block;width:100%;padding:var(--space-3);background:linear-gradient(135deg,#ec4899,#a21caf);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit">❤️ Engagiert · +'+(boostActive?'2':'1')+' 💎</button>'+
+      '<button style="display:block;width:100%;padding:var(--space-3);background:linear-gradient(135deg,#ec4899,#a21caf);color:var(--text);border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit">❤️ Engagiert · +'+(boostActive?'2':'1')+' 💎</button>'+
       '<div style="font-size:11px;color:var(--dsub);margin-top:var(--space-2);text-align:center">'+fakePost.likeCount+' Engagements</div>'+
     '</div>';
   }
@@ -16249,7 +16249,7 @@ async function openStatsDebug() {
   const errBanner = (j.ok && r.ok) ? '' :
     '<div style="padding:12px 14px;background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.35);border-radius:8px;margin-bottom:var(--space-3);color:#f87171;font-weight:700">' +
       '❌ Response NICHT ok · HTTP '+httpStatus+' · error: '+esc(j.error||j._parseError||'unbekannt') +
-      '<br><br><b style="color:#fff">Bedeutung:</b> Fehler beim Lesen aus dem lokalen Datastore. App läuft standalone — kein Mainbot mehr beteiligt.' +
+      '<br><br><b style="color:var(--text)">Bedeutung:</b> Fehler beim Lesen aus dem lokalen Datastore. App läuft standalone — kein Mainbot mehr beteiligt.' +
     '</div>';
   bg.innerHTML = '<div class="dash-modal" style="max-width:560px"><div class="dash-modal-hdr"><h3>📊 Stats-Debug</h3><div class="dash-modal-meta">Roh-Antwort von /api/admin/stats (Mainbot-Bridge)</div></div>' +
     '<div class="dash-modal-body" style="font-family:ui-monospace,monospace;font-size:11.5px">' +
@@ -16301,9 +16301,9 @@ async function openEventModal(type) {
           '</div>'
         : '') +
       '<label style="font-size:11px;font-weight:700;letter-spacing:1.4px;color:var(--dsub);text-transform:uppercase;display:block;margin-bottom:6px">'+labelText+'</label>' +
-      '<input type="number" id="evt-amount" min="1" max="'+maxVal+'" placeholder="'+placeholder+'" style="width:100%;padding:11px 14px;background:var(--dink);border:1px solid var(--dline);border-radius:10px;color:#fff;font-size:14px;margin-bottom:var(--space-3);font-family:inherit">' +
+      '<input type="number" id="evt-amount" min="1" max="'+maxVal+'" placeholder="'+placeholder+'" style="width:100%;padding:11px 14px;background:var(--dink);border:1px solid var(--dline);border-radius:10px;color:var(--text);font-size:14px;margin-bottom:var(--space-3);font-family:inherit">' +
       '<label style="font-size:11px;font-weight:700;letter-spacing:1.4px;color:var(--dsub);text-transform:uppercase;display:block;margin-bottom:6px">Dauer</label>' +
-      '<select id="evt-duration" style="width:100%;padding:11px 14px;background:var(--dink);border:1px solid var(--dline);border-radius:10px;color:#fff;font-size:14px;margin-bottom:var(--space-3);font-family:inherit">' +
+      '<select id="evt-duration" style="width:100%;padding:11px 14px;background:var(--dink);border:1px solid var(--dline);border-radius:10px;color:var(--text);font-size:14px;margin-bottom:var(--space-3);font-family:inherit">' +
         '<option value="900000">15 Minuten</option>' +
         '<option value="1800000">30 Minuten</option>' +
         '<option value="3600000" selected>1 Stunde</option>' +
@@ -16318,10 +16318,10 @@ async function openEventModal(type) {
         '<option value="604800000">7 Tage</option>' +
       '</select>' +
       '<label style="font-size:11px;font-weight:700;letter-spacing:1.4px;color:var(--dsub);text-transform:uppercase;display:block;margin-bottom:6px">Start (optional — leer = sofort)</label>' +
-      '<input type="datetime-local" id="evt-startat" style="width:100%;padding:11px 14px;background:var(--dink);border:1px solid var(--dline);border-radius:10px;color:#fff;font-size:14px;margin-bottom:6px;font-family:inherit;color-scheme:dark">' +
+      '<input type="datetime-local" id="evt-startat" style="width:100%;padding:11px 14px;background:var(--dink);border:1px solid var(--dline);border-radius:10px;color:var(--text);font-size:14px;margin-bottom:6px;font-family:inherit;color-scheme:dark">' +
       '<div style="font-size:11px;color:var(--dsub);margin-bottom:var(--space-3);line-height:1.5">Wenn gesetzt: alle User bekommen JETZT eine Ankuendigungs-DM mit Datum + Uhrzeit, 1h vorher und 30 Min vorher einen Reminder, und beim Start eine Push.</div>' +
       '<label style="font-size:11px;font-weight:700;letter-spacing:1.4px;color:var(--dsub);text-transform:uppercase;display:block;margin-bottom:6px">Label (optional)</label>' +
-      '<input type="text" id="evt-label" placeholder="z.B. \\'Wochenend-Bonus\\'" maxlength="60" style="width:100%;padding:11px 14px;background:var(--dink);border:1px solid var(--dline);border-radius:10px;color:#fff;font-size:14px;margin-bottom:6px;font-family:inherit">' +
+      '<input type="text" id="evt-label" placeholder="z.B. \\'Wochenend-Bonus\\'" maxlength="60" style="width:100%;padding:11px 14px;background:var(--dink);border:1px solid var(--dline);border-radius:10px;color:var(--text);font-size:14px;margin-bottom:6px;font-family:inherit">' +
       '<div style="font-size:11px;color:var(--dsub);margin-top:var(--space-2);line-height:1.5">Während des Events erscheint ein Live-Banner im Feed bei jedem User. Bei jedem Post wird der Bonus automatisch gutgeschrieben + In-App-DM gesendet.</div>' +
     '</div>' +
     '<div class="dash-modal-foot">' +
@@ -16730,7 +16730,7 @@ function renderActivityFeed(events) {
     const dateStr = ts.toDateString() === new Date().toDateString() ? 'heute' : ts.toLocaleDateString('de-DE', {day:'2-digit', month:'2-digit'});
     return '<div style="display:flex;align-items:center;gap:10px;padding:7px 10px;background:var(--dink);border-radius:8px;font-size:12px">' +
       '<div style="width:24px;height:24px;border-radius:50%;background:'+color+'22;color:'+color+';display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0">'+icon+'</div>' +
-      '<div style="flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis"><b style="color:#fff">'+esc(e.event)+'</b><span style="color:var(--dsub);margin-left:var(--space-2)">·</span><span style="color:var(--dsub);margin-left:var(--space-2)">'+esc(e.name||'anonym')+'</span></div>' +
+      '<div style="flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis"><b style="color:var(--text)">'+esc(e.event)+'</b><span style="color:var(--dsub);margin-left:var(--space-2)">·</span><span style="color:var(--dsub);margin-left:var(--space-2)">'+esc(e.name||'anonym')+'</span></div>' +
       '<div style="font-size:10.5px;color:var(--dsub);font-variant-numeric:tabular-nums;flex-shrink:0">'+dateStr+' '+timeStr+'</div>' +
     '</div>';
   }).join('');
@@ -16769,7 +16769,7 @@ async function loadOnlineUsers() {
       return '<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--dink);border:1px solid var(--dline);border-radius:9px">'
         + dot
         + '<div style="flex:1;min-width:0;overflow:hidden">'
-        +   '<div style="font-size:13px;color:#fff;font-weight:600;display:flex;align-items:center;flex-wrap:wrap;gap:2px">'
+        +   '<div style="font-size:13px;color:var(--text);font-weight:600;display:flex;align-items:center;flex-wrap:wrap;gap:2px">'
         +     '<span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:240px">'+esc(u.name||'–')+'</span>'
         +     viaTag + subTag + sessTag
         +   '</div>'
@@ -16812,7 +16812,7 @@ async function loadSyncHealth() {
       banner.style.display = 'block';
       banner.innerHTML = '<div style="padding:8px 14px;background:rgba(34,197,94,0.06);border:1px solid rgba(34,197,94,0.20);border-radius:10px;display:flex;align-items:center;gap:10px;font-size:11.5px">' +
         '<span style="color:#22c55e;font-weight:800">●</span>' +
-        '<span style="color:var(--dsub)">Bridge-Sync OK · Cache-Age <b style="color:#fff">'+cacheAge+'s</b> · '+writesT+' Writes heute · '+successRate+'% Success-Rate</span>' +
+        '<span style="color:var(--dsub)">Bridge-Sync OK · Cache-Age <b style="color:var(--text)">'+cacheAge+'s</b> · '+writesT+' Writes heute · '+successRate+'% Success-Rate</span>' +
         '<div style="flex:1"></div>' +
         '<button class="dash-btn" style="padding:4px 10px;font-size:11px" onclick="openSyncHealthDetail()">📋 Details</button>' +
       '</div>';
@@ -16830,7 +16830,7 @@ async function openSyncHealthDetail() {
     ? writes.map(w => {
         const color = w.success ? '#22c55e' : '#ef4444';
         const ts = new Date(w.ts).toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
-        return '<tr><td style="padding:4px 8px;color:var(--dsub)">'+ts+'</td><td style="padding:4px 8px;color:#fff">'+esc(w.endpoint)+'</td><td style="padding:4px 8px;color:var(--dsub);font-size:10.5px">'+esc(w.uid||'-')+'</td><td style="padding:4px 8px;color:'+color+';font-weight:700;text-align:right">'+(w.success?'✓':'✗')+' '+w.ms+'ms</td></tr>';
+        return '<tr><td style="padding:4px 8px;color:var(--dsub)">'+ts+'</td><td style="padding:4px 8px;color:var(--text)">'+esc(w.endpoint)+'</td><td style="padding:4px 8px;color:var(--dsub);font-size:10.5px">'+esc(w.uid||'-')+'</td><td style="padding:4px 8px;color:'+color+';font-weight:700;text-align:right">'+(w.success?'✓':'✗')+' '+w.ms+'ms</td></tr>';
       }).join('')
     : '<tr><td colspan="4" style="padding:14px;text-align:center;color:var(--dsub)">Noch keine Writes</td></tr>';
   bg.innerHTML = '<div class="dash-modal" style="max-width:760px"><div class="dash-modal-hdr"><h3>📋 Sync-Health (Phase 2)</h3><div class="dash-modal-meta">Live-Mirror-Status der App↔Mainbot Bridge</div></div>' +
@@ -16938,7 +16938,7 @@ async function loadHelperInbox(){
     const filterBtn = (key, label, count) =>
       '<button onclick="HELPER_INBOX_FILTER=\\''+key+'\\';loadHelperInbox()" class="dash-tab'+(HELPER_INBOX_FILTER===key?' active':'')+'">'+label+' <b style="margin-left:var(--space-1);opacity:.7">'+count+'</b></button>';
     let html = '<div style="margin-bottom:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">' +
-      '<div style="font-size:13px;color:var(--dsub)">Insgesamt: <b style="color:#fff">'+total+'</b> · Offen: <b style="color:#f59e0b">'+openN+'</b></div>' +
+      '<div style="font-size:13px;color:var(--dsub)">Insgesamt: <b style="color:var(--text)">'+total+'</b> · Offen: <b style="color:#f59e0b">'+openN+'</b></div>' +
       '<div class="dash-tabs" style="margin-left:auto">' +
         filterBtn('open', '🎫 Offen', openN) +
         filterBtn('answered', '✅ Beantwortet', total - openN) +
@@ -16955,14 +16955,14 @@ async function loadHelperInbox(){
         const followsHtml = followUpsN > 0 ? '<div style="margin-top:var(--space-2);padding:8px 10px;background:rgba(167,139,250,0.06);border-left:2px solid #a78bfa;border-radius:6px;font-size:11.5px"><b>💬 '+followUpsN+' Follow-up'+(followUpsN===1?'':'s')+':</b><br>' +
           t.followUps.map(f => '· ' + escapeHtmlDash(String(f.text||'')).slice(0,200)).join('<br>') + '</div>' : '';
         const answerHtml = !isOpen ? '<div style="margin-top:10px;padding:10px;background:rgba(34,197,94,0.08);border-left:2px solid #22c55e;border-radius:6px;font-size:12px"><b style="color:#22c55e">✅ Antwort:</b><br>'+escapeHtmlDash(String(t.answer||'')).replace(/\\n/g,'<br>')+'</div>' : '';
-        const replyBox = isOpen ? '<div style="margin-top:10px;display:flex;gap:var(--space-2)"><textarea id="hi-reply-'+t.id+'" placeholder="Antwort an '+escapeHtmlDash(t.name||'User')+'…" style="flex:1;padding:9px 11px;background:var(--dink);border:1px solid var(--dline);border-radius:8px;color:#fff;font-size:12.5px;font-family:inherit;resize:vertical;min-height:60px"></textarea><button onclick="sendHelperReply(\\''+t.id+'\\')" class="dash-btn dash-btn-primary" style="white-space:nowrap;height:fit-content">📨 Senden</button></div>' : '';
+        const replyBox = isOpen ? '<div style="margin-top:10px;display:flex;gap:var(--space-2)"><textarea id="hi-reply-'+t.id+'" placeholder="Antwort an '+escapeHtmlDash(t.name||'User')+'…" style="flex:1;padding:9px 11px;background:var(--dink);border:1px solid var(--dline);border-radius:8px;color:var(--text);font-size:12.5px;font-family:inherit;resize:vertical;min-height:60px"></textarea><button onclick="sendHelperReply(\\''+t.id+'\\')" class="dash-btn dash-btn-primary" style="white-space:nowrap;height:fit-content">📨 Senden</button></div>' : '';
         html += '<div style="padding:14px 16px;background:var(--dink2);border:1px solid '+(isOpen?'rgba(245,158,11,0.3)':'var(--dline)')+';border-radius:12px">' +
           '<div style="display:flex;align-items:center;gap:10px;margin-bottom:var(--space-2)">' +
           '<div style="font-size:11px;font-weight:700;padding:3px 8px;border-radius:99px;background:'+(isOpen?'rgba(245,158,11,0.18);color:#f59e0b':'rgba(34,197,94,0.18);color:#22c55e')+'">'+(isOpen?'🎫 OFFEN':'✅ BEANTWORTET')+'</div>' +
           '<div style="font-size:12.5px;font-weight:700">'+escapeHtmlDash(t.name||'User')+' <span style="color:var(--dsub);font-weight:400">· UID '+t.uid+'</span></div>' +
           '<div style="margin-left:auto;font-size:11px;color:var(--dsub)">'+dt+'</div>' +
           '</div>' +
-          '<div style="font-size:13px;line-height:1.5;color:#e7e7ea">'+escapeHtmlDash(String(t.question||''))+'</div>' +
+          '<div style="font-size:13px;line-height:1.5;color:var(--text)">'+escapeHtmlDash(String(t.question||''))+'</div>' +
           followsHtml + answerHtml + replyBox +
           '<div style="margin-top:6px;font-size:10.5px;color:var(--dsub);font-family:monospace">' + t.id + '</div>' +
           '</div>';
@@ -17095,7 +17095,7 @@ async function loadPrismaLinksAdmin(){
             '<div style="display:flex;align-items:center;gap:var(--space-2);padding:5px 10px;background:var(--dink);border-radius:6px;font-size:11.5px">' +
               '<a href="/profil/'+esc(e.uid)+'" style="color:var(--text);text-decoration:none;font-weight:600">'+esc(e.name)+'</a>'+
               (e.instagram?'<a href="https://instagram.com/'+esc(e.instagram)+'" target="_blank" rel="noopener" style="color:#a855f7;text-decoration:none">@'+esc(e.instagram)+'</a>':'')+
-              '<span style="background:linear-gradient(135deg,#a855f7,#06b6d4);color:#fff;padding:2px 7px;border-radius:99px;font-size:10px;font-weight:800">+7💎</span>'+
+              '<span style="background:linear-gradient(135deg,#a855f7,#06b6d4);color:var(--text);padding:2px 7px;border-radius:99px;font-size:10px;font-weight:800">+7💎</span>'+
               '<div style="flex:1"></div>'+
               '<span style="color:var(--dsub);font-size:10.5px">'+fmtTs(e.engagedAt)+'</span>'+
             '</div>'
@@ -17227,7 +17227,7 @@ function renderReports() {
     tabBtn('open', '🔴 Offen', counts.open, '#f87171') +
     tabBtn('resolved', '✅ Erledigt', counts.resolved, '#4ade80') +
     tabBtn('dismissed', '⚪ Verworfen', counts.dismissed, '#9ca3af') +
-    tabBtn('all', '📋 Alle', counts.all, '#e7e7ea') +
+    tabBtn('all', '📋 Alle', counts.all, 'var(--text)') +
   '</div>';
 
   if (!filtered.length) {
@@ -17260,7 +17260,7 @@ function renderReports() {
         '<a href="/profil/'+esc(r.targetUid)+'" style="color:#f87171;font-weight:700;text-decoration:none">'+esc(r.targetName)+'</a>' +
         (r.targetInstagram?' <span style="color:#06b6d4;font-size:12px">@'+esc(r.targetInstagram)+'</span>':'') +
       '</div>' +
-      (r.reason ? '<div style="font-size:12.5px;color:#e7e7ea;margin-bottom:var(--space-1)"><b style="color:var(--dsub);font-weight:600">Grund:</b> '+esc(r.reason)+'</div>' : '') +
+      (r.reason ? '<div style="font-size:12.5px;color:var(--text);margin-bottom:var(--space-1)"><b style="color:var(--dsub);font-weight:600">Grund:</b> '+esc(r.reason)+'</div>' : '') +
       (r.context ? '<div style="font-size:12px;color:var(--dsub);margin-bottom:var(--space-2)">Kontext: '+esc(r.context)+'</div>' : '') +
       (r.resolvedAt ? '<div style="font-size:11px;color:var(--dsub);margin-bottom:var(--space-2)">Bearbeitet '+fmtTs(r.resolvedAt)+(r.resolvedBy?' · von UID '+esc(r.resolvedBy):'')+'</div>' : '') +
       (isOpen
@@ -17352,11 +17352,11 @@ function renderCompliance() {
       '<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">' +
         '<div style="font-size:32px">📊</div>' +
         '<div style="flex:1;min-width:200px">' +
-          '<div style="font-size:18px;font-weight:800;color:#fff">Compliance-Report</div>' +
+          '<div style="font-size:18px;font-weight:800;color:var(--text)">Compliance-Report</div>' +
           '<div style="font-size:12.5px;color:var(--dsub);margin-top:2px">Mission-Auswertung, Posting/Liking-Verhältnis, Verwarnungen — '+esc(j.summary.date)+'</div>' +
         '</div>' +
         '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">' +
-          '<input type="date" id="comp-date-input" style="background:var(--dink);border:1px solid var(--dline);color:#fff;padding:8px 12px;border-radius:8px;font-family:inherit;font-size:13px" value="'+(j.summary.date ? new Date(j.summary.date).toISOString().slice(0,10) : '')+'">' +
+          '<input type="date" id="comp-date-input" style="background:var(--dink);border:1px solid var(--dline);color:var(--text);padding:8px 12px;border-radius:8px;font-family:inherit;font-size:13px" value="'+(j.summary.date ? new Date(j.summary.date).toISOString().slice(0,10) : '')+'">' +
           '<button onclick="loadCompliance(document.getElementById(\\'comp-date-input\\').value)" class="dash-btn">→ Laden</button>' +
           '<button onclick="loadCompliance(\\'yesterday\\')" class="dash-btn">Gestern</button>' +
           '<button onclick="loadCompliance(\\'today\\')" class="dash-btn">Heute</button>' +
@@ -17369,7 +17369,7 @@ function renderCompliance() {
     '<div style="padding:18px 20px;background:'+bg+';border:1.5px solid '+color+';border-radius:14px">' +
       '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:var(--space-2)">' +
         '<div><div style="font-size:11px;font-weight:800;letter-spacing:1.5px;color:'+color+';text-transform:uppercase">'+lbl+'</div>' +
-        '<div style="font-size:32px;font-weight:900;color:#fff;line-height:1;margin-top:var(--space-1);letter-spacing:-0.5px">'+val+'</div>' +
+        '<div style="font-size:32px;font-weight:900;color:var(--text);line-height:1;margin-top:var(--space-1);letter-spacing:-0.5px">'+val+'</div>' +
         '<div style="font-size:11.5px;color:var(--dsub);margin-top:var(--space-1);line-height:1.3">'+sub+'</div></div>' +
         '<div style="font-size:28px;opacity:.4">'+icon+'</div>' +
       '</div>' +
@@ -17404,7 +17404,7 @@ function renderCompliance() {
     tabBtn('m1', '✅ M1', groups.m1.length, '#4ade80') +
     tabBtn('m2', '✅ M2', groups.m2.length, '#22c55e') +
     tabBtn('m3', '✅ M3', groups.m3.length, '#06b6d4') +
-    tabBtn('all', '📋 Alle', groups.all.length, '#e7e7ea') +
+    tabBtn('all', '📋 Alle', groups.all.length, 'var(--text)') +
   '</div>';
 
   const list = groups[CUR_COMP_FILTER] || [];
@@ -17438,7 +17438,7 @@ function renderCompliance() {
       html += '<div style="margin:0 0 10px;padding:14px 16px;background:var(--dink2);border:1px solid '+(u.warnings>=3?'rgba(239,68,68,0.30)':'var(--dline)')+';border-radius:14px">' +
         // Row 1: Name + Insta + Mission-Pills + Last Seen
         '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">' +
-          '<a href="javascript:openUser(\\''+esc(u.uid)+'\\')" style="font-size:15px;font-weight:800;color:#fff;text-decoration:none">'+esc(u.name)+'</a>' +
+          '<a href="javascript:openUser(\\''+esc(u.uid)+'\\')" style="font-size:15px;font-weight:800;color:var(--text);text-decoration:none">'+esc(u.name)+'</a>' +
           (u.instagram?'<span style="font-size:12.5px;color:#06b6d4">@'+esc(u.instagram)+'</span>':'') +
           '<div style="display:flex;gap:var(--space-1);flex-wrap:wrap">'+missionPills.join('')+'</div>' +
           '<div style="flex:1"></div>' +
@@ -17450,7 +17450,7 @@ function renderCompliance() {
           '<div style="padding:var(--space-2);background:var(--dink);border-radius:8px;text-align:center"><div style="font-size:9.5px;color:var(--dsub);font-weight:700;text-transform:uppercase;letter-spacing:0.8px">Posts</div><div style="font-size:18px;font-weight:800;color:#4dabf7;margin-top:1px">'+u.postedToday+'</div></div>' +
           '<div style="padding:var(--space-2);background:var(--dink);border-radius:8px;text-align:center"><div style="font-size:9.5px;color:var(--dsub);font-weight:700;text-transform:uppercase;letter-spacing:0.8px">Likes</div><div style="font-size:18px;font-weight:800;color:#f59e0b;margin-top:1px">'+u.likedToday+'</div><div style="font-size:9.5px;color:var(--dsub)">/'+u.othersAvailable+'</div></div>' +
           '<div style="padding:var(--space-2);background:var(--dink);border-radius:8px;text-align:center"><div style="font-size:9.5px;color:var(--dsub);font-weight:700;text-transform:uppercase;letter-spacing:0.8px">XP heute</div><div style="font-size:18px;font-weight:800;color:#a78bfa;margin-top:1px">'+(u.dailyXP||0)+'</div></div>' +
-          '<div style="padding:var(--space-2);background:var(--dink);border-radius:8px;text-align:center"><div style="font-size:9.5px;color:var(--dsub);font-weight:700;text-transform:uppercase;letter-spacing:0.8px">XP gesamt</div><div style="font-size:18px;font-weight:800;color:#fff;margin-top:1px">'+(u.xp||0)+'</div></div>' +
+          '<div style="padding:var(--space-2);background:var(--dink);border-radius:8px;text-align:center"><div style="font-size:9.5px;color:var(--dsub);font-weight:700;text-transform:uppercase;letter-spacing:0.8px">XP gesamt</div><div style="font-size:18px;font-weight:800;color:var(--text);margin-top:1px">'+(u.xp||0)+'</div></div>' +
           '<div style="padding:var(--space-2);background:var(--dink);border-radius:8px;text-align:center"><div style="font-size:9.5px;color:var(--dsub);font-weight:700;text-transform:uppercase;letter-spacing:0.8px">💎</div><div style="font-size:18px;font-weight:800;color:#06b6d4;margin-top:1px">'+(u.diamonds||0)+'</div></div>' +
           '<div style="padding:var(--space-2);background:var(--dink);border-radius:8px;text-align:center"><div style="font-size:9.5px;color:var(--dsub);font-weight:700;text-transform:uppercase;letter-spacing:0.8px">❤ Total</div><div style="font-size:18px;font-weight:800;color:#ec4899;margin-top:1px">'+(u.totalLikes||0)+'</div></div>' +
         '</div>' +
