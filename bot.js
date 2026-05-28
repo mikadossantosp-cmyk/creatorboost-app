@@ -4185,7 +4185,7 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
 .tb-switcher-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100px}
 .tb-switcher-arrow{font-size:10px;color:var(--muted);transition:transform .2s;flex-shrink:0}
 .tb-switcher.open .tb-switcher-arrow{transform:rotate(180deg)}
-.tb-switcher-wrap .ipf-switcher-menu{position:absolute;top:calc(100% + 6px);right:0;left:auto;min-width:220px}
+.tb-switcher-wrap .ipf-switcher-menu{position:absolute;top:calc(100% + 6px);left:0;right:auto;min-width:220px}
 </style>
 
 <div class="ipf-banner">
@@ -4773,7 +4773,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v232-headers-profilebtns';
+const SW_VERSION='v233-settings-icons-switcher-fix';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
@@ -20631,33 +20631,33 @@ async function pfHandleAvatarFile(input){
 <div class="set-hub-grid">
   <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);padding:4px 0 6px">Schnellzugriff</div>
   <a href="/einstellungen/account" class="set-hub-card">
-    <div class="set-hub-icon" style="background:linear-gradient(135deg,#4dabf7,#1971c2)">🔐</div>
+    <div class="set-hub-icon" style="background:linear-gradient(135deg,#4dabf7,#1971c2)"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="4.5"/><path d="M10.7 12.3 21 2"/><path d="m16 7 3 3"/></svg></div>
     <div class="set-hub-content"><div class="set-hub-title">Account</div><div class="set-hub-sub">Email · Passwort · Telefon</div></div>
     <div class="set-hub-arrow">›</div>
   </a>
   <a href="/einstellungen/privacy" class="set-hub-card">
-    <div class="set-hub-icon" style="background:linear-gradient(135deg,#9775fa,#6741d9)">🔒</div>
+    <div class="set-hub-icon" style="background:linear-gradient(135deg,#9775fa,#6741d9)"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
     <div class="set-hub-content"><div class="set-hub-title">Privatsphäre</div><div class="set-hub-sub">Blockierte Nutzer · Sichtbarkeit</div></div>
     <div class="set-hub-arrow">›</div>
   </a>
   <a href="/einstellungen/notifications" class="set-hub-card">
-    <div class="set-hub-icon" style="background:linear-gradient(135deg,#ff8787,#e03131)">🔔</div>
+    <div class="set-hub-icon" style="background:linear-gradient(135deg,#ff8787,#e03131)"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
     <div class="set-hub-content"><div class="set-hub-title">Benachrichtigungen</div><div class="set-hub-sub">Push · In-App · Email</div></div>
     <div class="set-hub-arrow">›</div>
   </a>
   <a href="/einstellungen/sicherheit" class="set-hub-card">
-    <div class="set-hub-icon" style="background:linear-gradient(135deg,#51cf66,#2f9e44)">🛡️</div>
+    <div class="set-hub-icon" style="background:linear-gradient(135deg,#51cf66,#2f9e44)"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10.5" width="16" height="10.5" rx="2"/><path d="M8 10.5V7a4 4 0 0 1 8 0v3.5"/></svg></div>
     <div class="set-hub-content"><div class="set-hub-title">Sicherheit & Sessions</div><div class="set-hub-sub">Aktive Geräte · Logout</div></div>
     <div class="set-hub-arrow">›</div>
   </a>
   <a href="/einstellungen/pro" class="set-hub-card">
-    <div class="set-hub-icon" style="background:linear-gradient(135deg,#f5d76e,#d4af37 50%,#8b6914);color:#000">⭐</div>
+    <div class="set-hub-icon" style="background:linear-gradient(135deg,#f5d76e,#d4af37 50%,#8b6914);color:#000"><svg width="21" height="21" viewBox="0 0 24 24" fill="#000" stroke="none"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg></div>
     <div class="set-hub-content"><div class="set-hub-title">Pro-Features <span style="font-size:9.5px;background:linear-gradient(135deg,#f5d76e,#d4af37);color:#000;padding:2px 6px;border-radius:6px;font-weight:800;letter-spacing:0.5px;margin-left:4px">SOON</span></div><div class="set-hub-sub">Analytics · Scheduler · API · mehr</div></div>
     <div class="set-hub-arrow">›</div>
   </a>
   ${adminIds.includes(Number(myUid)) ? `
   <a href="/einstellungen/admin" class="set-hub-card" style="background:linear-gradient(135deg,rgba(245,215,110,0.10),rgba(212,175,55,0.04));border-color:rgba(212,175,55,0.40)">
-    <div class="set-hub-icon" style="background:linear-gradient(135deg,#d4af37,#8b6914);color:#000">🛡️</div>
+    <div class="set-hub-icon" style="background:linear-gradient(135deg,#d4af37,#8b6914);color:#000"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg></div>
     <div class="set-hub-content"><div class="set-hub-title">Admin-Tools <span style="font-size:9.5px;background:rgba(212,175,55,0.20);color:#d4af37;padding:2px 6px;border-radius:6px;font-weight:800;letter-spacing:0.5px;margin-left:4px;border:1px solid rgba(212,175,55,0.30)">ADMIN</span></div><div class="set-hub-sub">Live-Tour · Vorschauen · FE-Thread · Dashboard</div></div>
     <div class="set-hub-arrow">›</div>
   </a>` : ''}
@@ -20687,21 +20687,21 @@ ${myInventory.length > 0 ? `
 <div style="padding:16px;border-bottom:1px solid var(--border2)">
   <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">🎯 App-Tour</div>
   <div style="font-size:12px;color:var(--muted);margin-bottom:10px">${u.appBriefingSeenV2 ? 'Du hast die Tour schon einmal gesehen.' : 'Du hast die Tour noch nicht gesehen — sie startet beim nächsten Feed-Open automatisch.'}</div>
-  <a href="/feed?tour=1" class="btn btn-outline btn-full" style="display:flex;align-items:center;justify-content:center;gap:8px">🎯 Tour erneut anschauen</a>
+  <a href="/feed?tour=1" class="btn btn-outline btn-full" style="display:flex;align-items:center;justify-content:center;gap:8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>Tour erneut anschauen</a>
 </div>
 <!-- Passwort-Section entfernt — Duplikat. Email/Passwort sind jetzt in /einstellungen/account -->
 <div style="padding:16px">
-  <a href="/logout" class="btn btn-outline btn-full" style="color:var(--accent)">🚪 Ausloggen</a>
+  <a href="/logout" class="btn btn-outline btn-full" style="color:var(--accent);display:flex;align-items:center;justify-content:center;gap:8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Ausloggen</a>
 </div>
 <div style="padding:0 16px 14px;display:flex;flex-direction:column;gap:6px;font-size:12px">
   <div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin:14px 0 4px">Rechtliches</div>
-  <a href="/datenschutz" style="color:var(--muted);text-decoration:none;padding:8px 0;border-bottom:1px solid var(--border2)">🔒 Datenschutzerklärung</a>
-  <a href="/agb" style="color:var(--muted);text-decoration:none;padding:8px 0;border-bottom:1px solid var(--border2)">📜 Nutzungsbedingungen (AGB)</a>
-  <a href="/impressum" style="color:var(--muted);text-decoration:none;padding:8px 0;border-bottom:1px solid var(--border2)">ℹ️ Impressum</a>
-  <a href="/api/datenexport" style="color:var(--muted);text-decoration:none;padding:8px 0;border-bottom:1px solid var(--border2)">📦 Meine Daten exportieren (DSGVO)</a>
-  <button onclick="loadBlockedUsers()" id="show-blocked-btn" style="background:none;border:none;color:var(--muted);text-align:left;padding:8px 0;font-size:12px;cursor:pointer;font-family:inherit;border-bottom:1px solid var(--border2)">🚫 Blockierte Nutzer verwalten</button>
+  <a href="/datenschutz" style="color:var(--muted);text-decoration:none;padding:8px 0;border-bottom:1px solid var(--border2)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:7px"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Datenschutzerklärung</a>
+  <a href="/agb" style="color:var(--muted);text-decoration:none;padding:8px 0;border-bottom:1px solid var(--border2)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:7px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h8"/></svg>Nutzungsbedingungen (AGB)</a>
+  <a href="/impressum" style="color:var(--muted);text-decoration:none;padding:8px 0;border-bottom:1px solid var(--border2)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:7px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="11"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>Impressum</a>
+  <a href="/api/datenexport" style="color:var(--muted);text-decoration:none;padding:8px 0;border-bottom:1px solid var(--border2)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:7px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Meine Daten exportieren (DSGVO)</a>
+  <button onclick="loadBlockedUsers()" id="show-blocked-btn" style="background:none;border:none;color:var(--muted);text-align:left;padding:8px 0;font-size:12px;cursor:pointer;font-family:inherit;border-bottom:1px solid var(--border2)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:7px"><circle cx="12" cy="12" r="10"/><line x1="4.9" y1="4.9" x2="19.1" y2="19.1"/></svg>Blockierte Nutzer verwalten</button>
   <div id="blocked-users-list" style="display:none;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;margin:6px 0;padding:8px;font-size:12.5px"></div>
-  <button onclick="deleteAccountDsgvo()" id="delete-account" style="background:none;border:none;color:#ef4444;text-align:left;padding:8px 0;font-size:12px;cursor:pointer;font-family:inherit">🗑️ Account dauerhaft löschen</button>
+  <button onclick="deleteAccountDsgvo()" id="delete-account" style="background:none;border:none;color:#ef4444;text-align:left;padding:8px 0;font-size:12px;cursor:pointer;font-family:inherit"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:7px"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Account dauerhaft löschen</button>
 </div>
 <script>
 async function loadBlockedUsers(){
