@@ -4817,7 +4817,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v266-msg-btn-icon';
+const SW_VERSION='v267-chat-nohang';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
@@ -13556,9 +13556,12 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) acPo
         const _selfUid = _asCB ? 'creatorboost' : myUid;
         const chatKey = _asCB ? ['creatorboost', otherUid].sort().join('_') : [myUid, otherUid].sort().join('_');
         const msgs = (botData.messages?.[chatKey] || []);
-        if (LOCAL_STORE) await localWrite(() => botLogic.markMessagesRead({ uid: _selfUid, chatKey }));
+        if (LOCAL_STORE) { try { Promise.resolve(localWrite(() => botLogic.markMessagesRead({ uid: _selfUid, chatKey }))).catch(()=>{}); } catch(_) {} }
         else postBot('/mark-messages-read', { uid: _selfUid, chatKey }).catch(()=>{});
-        const msgsHtml = require('./chat-detail-render')({ msgs, myUid: _selfUid, otherUid, otherUser, ladeBild, otherOnline: isUidOnline(otherUid) });
+        let msgsHtml = '';
+        try {
+          msgsHtml = require('./chat-detail-render')({ msgs, myUid: _selfUid, otherUid, otherUser, ladeBild, otherOnline: isUidOnline(otherUid) });
+        } catch(e) { console.error('[chat-render]', e && e.stack || e); msgsHtml = '<div style="padding:48px 20px;text-align:center;color:var(--muted);font-size:13px">Nachrichten konnten gerade nicht geladen werden.</div>'; }
         return html(`
 <div class="topbar" style="display:flex;align-items:center;gap:8px;padding:8px 10px">
   <a href="/nachrichten" class="icon-btn" style="font-size:26px;color:var(--accent);padding:6px 10px;text-decoration:none;display:flex;align-items:center">‹</a>
