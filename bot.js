@@ -5733,7 +5733,7 @@ self.addEventListener('notificationclick',e=>{
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Sign Up · CreatorX</title>
 <link rel="icon" type="image/png" href="/cx-logo-256.png">
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Cormorant+Garamond:wght@500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{--gold:#d4af37;--text:#fff;--muted:rgba(255,255,255,0.55);--muted2:rgba(255,255,255,0.38);--border:rgba(255,255,255,0.08);--border-gold:rgba(212,175,55,0.25)}
@@ -5746,7 +5746,7 @@ html,body{background:#000;color:#fff;font-family:'Inter',-apple-system,sans-seri
 .brand{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:28px}
 .brand-logo{width:36px;height:36px;border-radius:10px;background:url('/cx-logo-256.png') center/cover,#0a0a0a;box-shadow:0 4px 14px rgba(212,175,55,0.3)}
 .brand-name{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;letter-spacing:-0.3px}
-h1{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;line-height:1.1;letter-spacing:-0.8px;margin-bottom:8px;text-align:center;background:linear-gradient(180deg,#fff,#d4af37);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+h1{font-family:'Cormorant Garamond',serif;font-size:40px;font-weight:600;line-height:1.05;letter-spacing:-0.5px;margin-bottom:8px;text-align:center;color:#fff}
 .sub{font-size:14px;color:var(--muted);line-height:1.6;margin-bottom:24px;text-align:center}
 .in{width:100%;background:rgba(255,255,255,0.04);border:1.5px solid var(--border);color:#fff;border-radius:12px;padding:14px 16px;font-size:15px;outline:none;margin-bottom:12px;font-family:inherit;transition:.18s;font-weight:500}
 .in:focus{border-color:var(--gold);background:rgba(212,175,55,0.04);box-shadow:0 0 0 3px rgba(212,175,55,0.12)}
@@ -5767,7 +5767,7 @@ h1{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;line-height:1.1;
 .bottom-lbl{font-size:12px;color:var(--muted);margin-bottom:6px}
 .bottom a{color:var(--gold);font-weight:700;text-decoration:none;font-size:14px;transition:opacity .15s}
 .bottom a:hover{opacity:.8}
-@media(min-width:768px){.card{padding:44px 36px 40px}h1{font-size:32px}.sub{font-size:15px}}
+@media(min-width:768px){.card{padding:44px 36px 40px}h1{font-size:48px}.sub{font-size:15px}}
 @media(min-width:1024px){.card{max-width:460px;padding:48px 40px 44px}}
 </style></head><body>
 <div class="mesh"></div>
@@ -5852,7 +5852,7 @@ function submitSignup(ev){
 <title>Anmelden · CreatorX</title>
 <meta name="description" content="Melde dich bei CreatorX an — der Creator-Engagement-Community.">
 <link rel="icon" type="image/png" href="/cx-logo-256.png">
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Cormorant+Garamond:wght@500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -5875,7 +5875,7 @@ html,body{background:#000;color:#fff;font-family:'Inter',-apple-system,BlinkMacS
 .brand-logo{width:40px;height:40px;border-radius:11px;background:url('/cx-logo-256.png') center/cover,#0a0a0a;box-shadow:0 6px 20px rgba(212,175,55,0.35),inset 0 0 0 1px rgba(212,175,55,0.3)}
 .brand-name{font-family:'Syne',sans-serif;font-size:19px;font-weight:800;letter-spacing:-0.4px;background:linear-gradient(180deg,#fff,#d4af37);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
 
-h1{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;line-height:1.1;letter-spacing:-0.7px;margin-bottom:6px;text-align:center;color:#fff}
+h1{font-family:'Cormorant Garamond',serif;font-size:40px;font-weight:600;line-height:1.05;letter-spacing:-0.5px;margin-bottom:6px;text-align:center;color:#fff}
 .sub{font-size:13.5px;color:var(--muted);line-height:1.55;margin-bottom:22px;text-align:center}
 
 .trust{display:flex;align-items:center;justify-content:center;gap:8px;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.20);border-radius:99px;padding:6px 14px;margin:0 auto 20px;font-size:11.5px;color:rgba(34,197,94,0.95);font-weight:600;width:fit-content}
@@ -5930,7 +5930,7 @@ h1{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;line-height:1.1;
 
 @media(min-width:768px){
   .card{padding:42px 36px 32px;max-width:440px}
-  h1{font-size:29px}
+  h1{font-size:48px}
   .sub{font-size:14.5px}
 }
 </style></head><body>
