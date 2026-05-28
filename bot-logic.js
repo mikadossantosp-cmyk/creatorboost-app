@@ -2095,19 +2095,21 @@ function unbanUserApi({ uid }) {
 }
 // Pause (soft): blendet den Account aus Ranking/Explore/Suche/Stories aus, bis er sich
 // wieder einloggt (Auto-Unpause beim nächsten echten App-Request). KEIN Datenverlust.
-function pauseUserApi({ uid }) {
+function pauseUserApi({ uid, reason, auto }) {
     uid = String(uid || '');
     const u = d.users[uid];
     if (!u) return { ok: false, error: 'User nicht gefunden (UID: ' + uid + ')' };
     if (Array.isArray(d._adminIds) && d._adminIds.map(Number).includes(Number(uid))) return { ok: false, error: 'Admins können nicht pausiert werden' };
     u.paused = true; u.pausedAt = Date.now();
+    if (reason) u.pauseReason = String(reason).slice(0, 60); else delete u.pauseReason;
+    if (auto) u.autoPaused = true; else delete u.autoPaused;
     return { ok: true };
 }
 function unpauseUserApi({ uid }) {
     uid = String(uid || '');
     const u = d.users[uid];
     if (!u) return { ok: false, error: 'User nicht gefunden (UID: ' + uid + ')' };
-    u.paused = false; delete u.pausedAt;
+    u.paused = false; delete u.pausedAt; delete u.pauseReason; delete u.autoPaused;
     return { ok: true };
 }
 function adminSuspendPostingApi({ uid, days, reason }) {

@@ -1494,6 +1494,31 @@ async function appCronTick() {
         if (h === 3 && m <= 5) {
             einmalig('dailyBackup_' + tagStr, () => runDailyBackup().catch(e => console.error('[backup] Fehler:', e.message)));
         }
+        // Auto-Pause: User, die >15 Tage nicht mehr in der App aktiv waren, automatisch (soft)
+        // pausieren → raus aus Ranking/Explore/Suche/Stories. KEIN Datenverlust; Auto-Unpause
+        // beim nächsten echten Request greift bereits (siehe ~5080). Window 04:00-04:05, 1×/Tag.
+        if (h === 4 && m <= 5) {
+            einmalig('autoPauseInactive_' + tagStr, () => {
+                if (!LOCAL_STORE) return; // Schreiben nur im Standalone-Modus
+                try {
+                    const cutoff = Date.now() - 15 * 86400000;
+                    const _d = datastore.getData();
+                    const _adminIds = Array.isArray(_d._adminIds) ? _d._adminIds.map(Number) : [];
+                    const toPause = [];
+                    for (const [uid, u] of Object.entries(_d.users || {})) {
+                        if (!u || u.paused || u.banned || u.parent_uid) continue; // schon pausiert/gebannt/Sub übersprungen
+                        if (_adminIds.includes(Number(uid))) continue;            // Admins nie pausieren (pauseUserApi blockt zusätzlich)
+                        const lastActive = Math.max(u.appLastSeen || 0, getLastSeen(uid) || 0);
+                        if (!lastActive) continue;                                 // kein Aktivitäts-Signal → nicht anfassen
+                        if (lastActive < cutoff) toPause.push(String(uid));
+                    }
+                    if (toPause.length) {
+                        localWrite(() => { for (const uid of toPause) botLogic.pauseUserApi({ uid, reason: '15 Tage inaktiv', auto: true }); });
+                        console.log('⏸️ [Cron] Auto-Pause: ' + toPause.length + ' inaktive User (>15 Tage) pausiert');
+                    }
+                } catch (e) { console.error('[auto-pause] Fehler:', e.message); }
+            });
+        }
         // Tageswechsel: alte einmalig-Keys aufräumen, damit der Speicher nicht wächst.
         for (const key of Object.keys(_appCronSeen)) { if (!key.endsWith(tagStr)) delete _appCronSeen[key]; }
     } catch (e) { console.log('appCronTick Fehler:', e.message); }
@@ -15982,6 +16007,12 @@ function renderUserDetail(j) {
   '</div>';
 
   html += sectionLbl('⚠️ Gefährliche Aktionen', true);
+  if (u.paused) {
+    html += '<div style="font-size:12px;color:var(--dsub);margin-bottom:10px;padding:8px 12px;background:rgba(124,58,237,0.08);border:1px solid var(--dline);border-radius:10px">⏸️ Pausiert'
+      + (u.pausedAt ? ' seit '+fmtRelative(u.pausedAt) : '')
+      + ' · ' + (u.autoPaused ? 'automatisch ('+esc(u.pauseReason||'15 Tage inaktiv')+')' : (u.pauseReason ? esc(u.pauseReason) : 'manuell'))
+      + '<br>Wird beim nächsten App-Login automatisch fortgesetzt.</div>';
+  }
   html += '<div class="dash-action-grid">' +
     '<button class="dash-act danger" onclick="resetUserConfirm(\\''+esc(u.uid)+'\\',\\''+esc(u.spitzname||u.name||'User')+'\\')">♻️ XP-Reset</button>' +
     (u.banned ? '<button class="dash-act" onclick="banUser(\\''+esc(u.uid)+'\\',false)">✅ Entbannen</button>'
