@@ -4796,7 +4796,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v239-role-tier-icons';
+const SW_VERSION='v240-explore-highlight-icons';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
@@ -17476,7 +17476,7 @@ fetch('/api/admin/engagement-log').then(r=>r.json()).then(j=>{ if (j.ok) { LAST_
         const tabContent = {
             allgemein: `
 ${_latestNews ? `<a href="/explore?tab=newsletter" class="highlight-card" style="margin:0 16px 12px;background:linear-gradient(135deg,rgba(77,171,247,.10),rgba(29,111,165,.05));border:1px solid rgba(77,171,247,.30)">
-  <div class="highlight-icon" style="background:linear-gradient(135deg,#4dabf7,#1d6fa5);color:#fff">📩</div>
+  <div class="highlight-icon" style="background:linear-gradient(135deg,#4dabf7,#1d6fa5);color:#fff"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M3 6l9 7 9-7"/></svg></div>
   <div style="flex:1;min-width:0">
     <div style="display:flex;align-items:center;gap:6px;font-size:10px;font-weight:700;letter-spacing:1.2px;color:var(--muted);text-transform:uppercase">Neuste News${_newsAgeStr?' · '+_newsAgeStr:''}</div>
     <div style="font-size:13px;font-weight:700;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${htmlEsc(_latestNews.title || _latestNews.content || '').slice(0,60)}</div>
@@ -17486,7 +17486,7 @@ ${_latestNews ? `<a href="/explore?tab=newsletter" class="highlight-card" style=
 <div style="padding:0 16px 14px">
   <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">⚡ Aktuelle Highlights</div>
   <a href="/feed" class="highlight-card">
-    <div class="highlight-icon" style="background:linear-gradient(135deg,rgba(255,107,107,.25),rgba(204,93,232,.15))">📸</div>
+    <div class="highlight-icon" style="background:linear-gradient(135deg,rgba(255,107,107,.25),rgba(204,93,232,.15))"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#cc5de8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg></div>
     <div style="flex:1;min-width:0">
       <div style="font-size:13px;font-weight:700">Community Feed</div>
       <div style="font-size:11px;color:var(--muted);margin-top:3px">Entdecke neue Reels der Community</div>
