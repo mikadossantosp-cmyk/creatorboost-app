@@ -1752,6 +1752,14 @@ forced-color-adjust:none;
 --shadow:0 8px 32px rgba(15,23,42,.06);
 --glass-bg:rgba(255,255,255,0.72);--surface-tint:rgba(15,23,42,0.03);--hover-tint:rgba(15,23,42,0.05);
 --safe-bottom:env(safe-area-inset-bottom,0px);
+/* ── Foundation v1 (additiv): Spacing-Skala (4px-Basis), Line-Heights, Font-Weights, Display-Sizes, Focus-Ring, Shadows ── */
+--space-0:0;--space-1:4px;--space-2:8px;--space-3:12px;--space-4:16px;--space-5:20px;--space-6:24px;--space-8:32px;--space-10:40px;--space-12:48px;--space-16:64px;
+--lh-tight:1.2;--lh-snug:1.35;--lh-normal:1.5;--lh-relaxed:1.65;
+--fw-normal:400;--fw-medium:500;--fw-semibold:600;--fw-bold:700;--fw-extra:800;
+--fs-2xl:34px;--fs-3xl:44px;
+--ring:var(--accent);
+--shadow-sm:0 1px 2px rgba(15,23,42,.06),0 1px 3px rgba(15,23,42,.10);
+--shadow-lg:0 12px 40px rgba(15,23,42,.12);
 }
 [data-theme=light]{
 color-scheme:light;
@@ -1768,6 +1776,7 @@ color-scheme:dark;
 --text:#fff;--muted:#a3a8b3;--muted2:#6e7280;
 --avatar-fallback-bg:#ffffff;--avatar-fallback-color:rgba(15,23,42,.35);--avatar-fallback-border:rgba(255,255,255,.20);
 --shadow:0 8px 32px rgba(0,0,0,.4);
+--shadow-sm:0 1px 2px rgba(0,0,0,.4);--shadow-lg:0 16px 48px rgba(0,0,0,.6);
 --glass-bg:#000000;--surface-tint:rgba(255,255,255,0.04);--hover-tint:rgba(255,255,255,0.08);
 }
 html{scroll-behavior:smooth;-webkit-tap-highlight-color:transparent}
@@ -1788,6 +1797,30 @@ button:active:not(:disabled){transform:scale(.96)}
 .sk::after{content:"";position:absolute;inset:0;transform:translateX(-100%);background:linear-gradient(90deg,transparent,var(--hover-tint),transparent);animation:sk-shimmer 1.3s ease-in-out infinite}
 @keyframes sk-shimmer{100%{transform:translateX(100%)}}
 @media (prefers-reduced-motion:reduce){.sk::after{animation:none}}
+/* ── Foundation v1: Accessibility — sichtbarer Tastatur-Fokus (button{outline:none} entfernte ihn) ── */
+a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--ring);outline-offset:2px;border-radius:var(--radius-xs)}
+/* ── Foundation v1: kanonische, token-basierte Komponenten (ui-*; kollisionsfrei, fuer schrittweise Migration) ── */
+.ui-input{width:100%;padding:var(--space-3) var(--space-4);background:var(--surface-tint);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:var(--font);font-size:var(--fs-md);line-height:var(--lh-normal);transition:border-color .15s ease,box-shadow .15s ease;box-sizing:border-box}
+.ui-input::placeholder{color:var(--muted2)}
+.ui-input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(124,58,237,.18)}
+.ui-input:disabled{opacity:.55;cursor:not-allowed}
+.ui-field{display:flex;flex-direction:column;gap:var(--space-2)}
+.ui-label{font-size:var(--fs-sm);font-weight:var(--fw-semibold);color:var(--text)}
+.ui-hint{font-size:var(--fs-xs);color:var(--muted);line-height:var(--lh-normal)}
+.ui-btn{display:inline-flex;align-items:center;justify-content:center;gap:var(--space-2);padding:var(--space-3) var(--space-5);border-radius:var(--radius-sm);font-family:var(--font);font-size:var(--fs-base);font-weight:var(--fw-semibold);line-height:1;cursor:pointer;border:1px solid transparent;background:var(--accent);color:#fff;transition:filter .15s ease,transform .12s ease}
+.ui-btn:hover{filter:brightness(1.06)}
+.ui-btn:disabled{opacity:.5;cursor:not-allowed}
+.ui-btn--secondary{background:var(--surface-tint);color:var(--text);border-color:var(--border)}
+.ui-btn--ghost{background:transparent;color:var(--text);border-color:transparent}
+.ui-btn--sm{padding:var(--space-2) var(--space-3);font-size:var(--fs-sm)}
+.ui-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-sm);padding:var(--space-5)}
+.ui-modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,.45);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:var(--space-4);z-index:1000}
+.ui-modal{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-lg);width:100%;max-width:440px;max-height:90vh;overflow-y:auto;padding:var(--space-6)}
+.ui-modal-title{font-family:var(--font-display);font-size:var(--fs-lg);font-weight:var(--fw-bold);letter-spacing:var(--track-tight);margin:0 0 var(--space-2)}
+.ui-modal-sub{font-size:var(--fs-sm);color:var(--muted);line-height:var(--lh-normal);margin:0 0 var(--space-5)}
+.ui-empty{display:flex;flex-direction:column;align-items:center;text-align:center;gap:var(--space-2);padding:var(--space-12) var(--space-6);color:var(--muted)}
+.ui-empty-title{font-size:var(--fs-md);font-weight:var(--fw-semibold);color:var(--text)}
+.ui-empty-sub{font-size:var(--fs-sm);color:var(--muted);line-height:var(--lh-normal);max-width:320px}
 .topbar{position:sticky;top:0;z-index:100;background:var(--glass-bg);border-bottom:1px solid var(--border2);padding:14px 16px;display:flex;align-items:center;justify-content:space-between;backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%)}
 .topbar-logo{font-family:var(--font-display);font-size:22px;font-weight:800;letter-spacing:-0.5px;color:var(--text)}
 .topbar-actions{display:flex;gap:6px;align-items:center}
@@ -7373,6 +7406,108 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
             saveBetaTesters();
         }
         return json({ok:true, email: emailToMove, fromUid, toUid});
+    }
+
+    // ── STYLEGUIDE (Design-Fundament v1, admin-only) — Living Reference der Tokens + ui-* Komponenten ──
+    if (path === '/styleguide') {
+        if (!(await _isAdminRequest(req, query))) { res.writeHead(403); return res.end('Kein Zugriff'); }
+        const typeScale = [['--fs-xs','12px'],['--fs-sm','13px'],['--fs-base','15px'],['--fs-md','16px'],['--fs-lg','20px'],['--fs-xl','28px'],['--fs-2xl','34px'],['--fs-3xl','44px']];
+        const spaceScale = ['1','2','3','4','5','6','8','10','12','16'];
+        const colors = [['--bg','Background'],['--bg3','Surface'],['--text','Text'],['--muted','Muted'],['--muted2','Muted 2'],['--border','Border'],['--accent','Accent'],['--accent2','Accent 2'],['--green','Green'],['--blue','Blue'],['--gold','Gold']];
+        const sg = `
+<div id="sg-root">
+<style>
+#sg-root{max-width:760px;margin:0 auto;padding:var(--space-6) var(--space-4) var(--space-16)}
+#sg-root .gsec{margin-top:var(--space-10)}
+#sg-root .gh{font-family:var(--font-display);font-size:var(--fs-2xl);font-weight:var(--fw-extra);letter-spacing:var(--track-tight);margin:0}
+#sg-root .gsub{font-size:var(--fs-sm);color:var(--muted);margin:var(--space-1) 0 0;line-height:var(--lh-normal)}
+#sg-root .gsech{font-size:var(--fs-xs);font-weight:var(--fw-bold);text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0 0 var(--space-4)}
+#sg-root .grow{display:flex;align-items:center;gap:var(--space-4);padding:var(--space-2) 0;border-bottom:1px solid var(--border2)}
+#sg-root .gmeta{font-size:var(--fs-xs);color:var(--muted);font-family:ui-monospace,monospace;min-width:92px}
+#sg-root .gbar{height:14px;background:var(--accent);border-radius:var(--radius-xs)}
+#sg-root .gswatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:var(--space-3)}
+#sg-root .gsw{border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden}
+#sg-root .gsw .c{height:54px}
+#sg-root .gsw .l{padding:var(--space-2) var(--space-3);font-size:var(--fs-xs)}
+#sg-root .gsw .l b{display:block;color:var(--text);font-weight:var(--fw-semibold)}
+#sg-root .gsw .l span{color:var(--muted);font-family:ui-monospace,monospace}
+#sg-root .gwrap{display:flex;flex-wrap:wrap;gap:var(--space-3);align-items:center}
+</style>
+<h1 class="gh">Styleguide</h1>
+<p class="gsub">Design-Fundament v1 — Tokens & kanonische Komponenten. Einzige Quelle der Wahrheit; neue und migrierte Flächen ziehen hieraus.</p>
+<div class="gsec"><div class="gsech">Typografie</div>
+${typeScale.map(([v,px])=>`<div class="grow"><span class="gmeta">${v}</span><span style="font-size:var(${v});font-weight:var(--fw-semibold)">Premium Creator UI</span><span class="gmeta" style="margin-left:auto">${px}</span></div>`).join('')}
+</div>
+<div class="gsec"><div class="gsech">Spacing — 4px-Basis</div>
+${spaceScale.map(s=>`<div class="grow"><span class="gmeta">--space-${s}</span><div class="gbar" style="width:var(--space-${s})"></div></div>`).join('')}
+</div>
+<div class="gsec"><div class="gsech">Farben</div>
+<div class="gswatches">${colors.map(([v,name])=>`<div class="gsw"><div class="c" style="background:var(${v})"></div><div class="l"><b>${name}</b><span>${v}</span></div></div>`).join('')}</div>
+</div>
+<div class="gsec"><div class="gsech">Radius & Schatten</div>
+<div class="gwrap">
+<div class="ui-card" style="border-radius:var(--radius-xs)">radius-xs</div>
+<div class="ui-card" style="border-radius:var(--radius-sm)">radius-sm</div>
+<div class="ui-card" style="border-radius:var(--radius)">radius</div>
+</div>
+<div class="gwrap" style="margin-top:var(--space-4)">
+<div class="ui-card" style="box-shadow:var(--shadow-sm)">shadow-sm</div>
+<div class="ui-card" style="box-shadow:var(--shadow)">shadow</div>
+<div class="ui-card" style="box-shadow:var(--shadow-lg)">shadow-lg</div>
+</div>
+</div>
+<div class="gsec"><div class="gsech">Buttons — .ui-btn</div>
+<div class="gwrap">
+<button class="ui-btn">Primär</button>
+<button class="ui-btn ui-btn--secondary">Sekundär</button>
+<button class="ui-btn ui-btn--ghost">Ghost</button>
+<button class="ui-btn ui-btn--sm">Klein</button>
+<button class="ui-btn" disabled>Disabled</button>
+</div>
+</div>
+<div class="gsec"><div class="gsech">Formular — .ui-field / .ui-input</div>
+<div class="ui-field" style="max-width:380px">
+<label class="ui-label">Instagram-Handle</label>
+<input class="ui-input" placeholder="@creator">
+<span class="ui-hint">Öffentlich auf deinem Profil sichtbar.</span>
+</div>
+</div>
+<div class="gsec"><div class="gsech">Card — .ui-card</div>
+<div class="ui-card" style="max-width:380px">
+<div style="font-weight:var(--fw-bold);font-size:var(--fs-md)">Wöchentliches Wachstum</div>
+<div style="color:var(--muted);font-size:var(--fs-sm);margin-top:var(--space-1)">+1.240 Aufrufe diese Woche</div>
+</div>
+</div>
+<div class="gsec"><div class="gsech">Empty State — .ui-empty</div>
+<div class="ui-card" style="padding:0"><div class="ui-empty">
+<div class="ui-empty-title">Noch keine Posts</div>
+<div class="ui-empty-sub">Teile deinen ersten Link, um Reichweite aufzubauen.</div>
+<button class="ui-btn ui-btn--sm" style="margin-top:var(--space-3)">Post erstellen</button>
+</div></div>
+</div>
+<div class="gsec"><div class="gsech">Loading — .sk Skeleton</div>
+<div class="ui-card" style="display:flex;flex-direction:column;gap:var(--space-3)">
+<div class="sk" style="height:16px;width:60%;border-radius:var(--radius-xs)"></div>
+<div class="sk" style="height:12px;width:90%;border-radius:var(--radius-xs)"></div>
+<div class="sk" style="height:12px;width:80%;border-radius:var(--radius-xs)"></div>
+</div>
+</div>
+<div class="gsec"><div class="gsech">Modal — .ui-modal (statische Vorschau)</div>
+<div class="ui-modal" style="margin:0 auto">
+<div class="ui-modal-title">Account löschen?</div>
+<div class="ui-modal-sub">Das entfernt dein Profil und alle Daten dauerhaft. Diese Aktion lässt sich nicht rückgängig machen.</div>
+<div class="gwrap" style="justify-content:flex-end">
+<button class="ui-btn ui-btn--secondary">Abbrechen</button>
+<button class="ui-btn" style="background:#ef4444">Endgültig löschen</button>
+</div>
+</div>
+</div>
+<div class="gsec"><div class="gsech">Accessibility</div>
+<p class="gsub" style="margin-bottom:var(--space-3)">Drücke <b>Tab</b> für den sichtbaren Tastatur-Fokus-Ring (vorher durch <code>button{outline:none}</code> entfernt):</p>
+<a href="#" class="ui-btn ui-btn--sm ui-btn--secondary">Fokussierbarer Link</a>
+</div>
+</div>`;
+        return html(sg, 'feed');
     }
 
     // ── DEBUG ──
