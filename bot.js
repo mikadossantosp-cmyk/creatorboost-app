@@ -2468,7 +2468,7 @@ async function cbResendConfirm(btn){
     <div class="ps-divider"></div>
     <div class="ps-eyebrow ps-section-eyebrow">Erweiterte Engagement-Optionen</div>
     <button class="ps-card" onclick="closePlusSheet();setTimeout(()=>{if(typeof openSLSheet==='function')openSLSheet();else location.href='/feed?tab=engagement&opensl=1';},200)">
-      <div class="ps-card-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff">⭐</div>
+      <div class="ps-card-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
       <div class="ps-card-body">
         <div class="ps-card-title">Superlink posten</div>
         <div class="ps-card-sub">Alle Mitglieder liken, kommentieren &amp; teilen deinen Link</div>
@@ -2476,7 +2476,7 @@ async function cbResendConfirm(btn){
       <svg class="ps-card-arrow" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"><polyline points="9 6 15 12 9 18"/></svg>
     </button>
     <button class="ps-card" onclick="closePlusSheet();setTimeout(openKollabSheet,200)">
-      <div class="ps-card-icon" style="background:linear-gradient(135deg,#ec4899,#a21caf);color:#fff">🤝</div>
+      <div class="ps-card-icon" style="background:linear-gradient(135deg,#ec4899,#a21caf);color:#fff"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m11 17 2 2a1 1 0 1 0 3-3"/><path d="m14 14 2.5 2.5a1 1 0 1 0 3-3l-3.88-3.88a3 3 0 0 0-4.24 0l-.88.88a1 1 0 1 1-3-3l2.81-2.81a5.79 5.79 0 0 1 7.06-.87l.47.28a2 2 0 0 0 1.42.25L21 4"/><path d="m21 3 1 11h-2"/><path d="M3 3 2 14l6.5 6.5a1 1 0 1 0 3-3"/><path d="M3 4h8"/></svg></div>
       <div class="ps-card-body">
         <div class="ps-card-title">Kollab-Link posten</div>
         <div class="ps-card-sub">Mit deinem Kollab-Partner · 1× pro Woche</div>
@@ -2484,7 +2484,7 @@ async function cbResendConfirm(btn){
       <svg class="ps-card-arrow" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"><polyline points="9 6 15 12 9 18"/></svg>
     </button>
     <button class="ps-card" onclick="closePlusSheet();setTimeout(openDiamondSheet,200)">
-      <div class="ps-card-icon" style="background:linear-gradient(135deg,#06b6d4,#0e7490);color:#fff">💎</div>
+      <div class="ps-card-icon" style="background:linear-gradient(135deg,#06b6d4,#0e7490);color:#fff"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12l4 6-10 12L2 9z"/><path d="M2 9h20"/><path d="M9 3 6 9l6 12 6-12-3-6"/></svg></div>
       <div class="ps-card-body">
         <div class="ps-card-title">Diamantlink posten <span class="ps-card-badge">−30 💎</span></div>
         <div class="ps-card-sub">3 Tage Feed-Top · Liker erhalten +3 💎</div>
@@ -2492,7 +2492,7 @@ async function cbResendConfirm(btn){
       <svg class="ps-card-arrow" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"><polyline points="9 6 15 12 9 18"/></svg>
     </button>
     <button class="ps-card" disabled style="position:relative;overflow:hidden;opacity:0.55;cursor:not-allowed" onclick="alert('💠 Prismalink ist noch in Bearbeitung — bald verfügbar!')">
-      <div class="ps-card-icon" style="background:linear-gradient(135deg,#ef4444,#f59e0b 25%,#22c55e 50%,#06b6d4 75%,#a855f7);color:#fff">💠</div>
+      <div class="ps-card-icon" style="background:linear-gradient(135deg,#ef4444,#f59e0b 25%,#22c55e 50%,#06b6d4 75%,#a855f7);color:#fff"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 4 12l8 10 8-10z"/><path d="M4 12h16"/><path d="M12 2v20"/></svg></div>
       <div class="ps-card-body">
         <div class="ps-card-title">Prismalink posten <span class="ps-card-badge" style="background:linear-gradient(135deg,#94a3b8,#64748b);color:#fff;font-size:11px">COMING SOON</span></div>
         <div class="ps-card-sub">7 Tage Feed-Top · Liker erhalten +7 💎 · 1×/Woche · -100 💎</div>
@@ -2507,7 +2507,7 @@ async function cbResendConfirm(btn){
     <div class="ps-head">
       <div class="ps-head-text">
         <div class="ps-eyebrow">Premium Boost</div>
-        <div class="ps-title">💎 Diamantlink</div>
+        <div class="ps-title" style="display:inline-flex;align-items:center;gap:8px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#06b6d4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12l4 6-10 12L2 9z"/><path d="M2 9h20"/><path d="M9 3 6 9l6 12 6-12-3-6"/></svg>Diamantlink</div>
         <div class="ps-sub">3 Tage ganz oben im Feed</div>
       </div>
       <button class="ps-close" onclick="closeDiamondSheet()" aria-label="Schließen">
@@ -2567,7 +2567,7 @@ async function cbResendConfirm(btn){
     <div class="ps-head">
       <div class="ps-head-text">
         <div class="ps-eyebrow">Gemeinsam posten</div>
-        <div class="ps-title">🤝 Kollab-Link</div>
+        <div class="ps-title" style="display:inline-flex;align-items:center;gap:8px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ec4899" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m11 17 2 2a1 1 0 1 0 3-3"/><path d="m14 14 2.5 2.5a1 1 0 1 0 3-3l-3.88-3.88a3 3 0 0 0-4.24 0l-.88.88a1 1 0 1 1-3-3l2.81-2.81a5.79 5.79 0 0 1 7.06-.87l.47.28a2 2 0 0 0 1.42.25L21 4"/><path d="m21 3 1 11h-2"/><path d="M3 3 2 14l6.5 6.5a1 1 0 1 0 3-3"/><path d="M3 4h8"/></svg>Kollab-Link</div>
         <div class="ps-sub">1× pro Woche mit deinem Kollab-Partner</div>
       </div>
       <button class="ps-close" onclick="closeKollabSheet()" aria-label="Schließen">
@@ -4799,7 +4799,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v248-explore-content-icons';
+const SW_VERSION='v249-plus-sheet-icons';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
@@ -11251,8 +11251,8 @@ async function submitSuperLink(){
             if(countEl)countEl.textContent=secs;
             const iv=setInterval(()=>{secs--;if(countEl)countEl.textContent=secs;if(secs<=0)clearInterval(iv);},1000);
             setTimeout(()=>{document.getElementById('sl-popup').style.display='none';location.href='/feed?tab=engagement';},10000);
-        } else { result.textContent='❌ '+(data.error||'Fehler');btn.disabled=false;btn.textContent='⭐ Superlink posten'; }
-    }catch(e){result.textContent='❌ Netzwerkfehler';btn.disabled=false;btn.textContent='⭐ Superlink posten';}
+        } else { result.textContent=(data.error||'Fehler');btn.disabled=false;btn.textContent='Superlink posten'; }
+    }catch(e){result.textContent='Netzwerkfehler';btn.disabled=false;btn.textContent='Superlink posten';}
 }
 </script>
 
@@ -11274,13 +11274,13 @@ async function submitSuperLink(){
 <div class="plus-sheet" id="sl-sheet" onclick="if(event.target===this)closeSLSheet()">
   <div class="plus-sheet-inner">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-      <div style="font-size:16px;font-weight:700">⭐ Superlink teilen</div>
+      <div style="font-size:16px;font-weight:700;display:inline-flex;align-items:center;gap:8px"><svg width="17" height="17" viewBox="0 0 24 24" fill="#f59e0b" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Superlink teilen</div>
       <button onclick="closeSLSheet()" style="background:var(--bg4);border:none;color:var(--muted);width:30px;height:30px;border-radius:50%;font-size:18px;cursor:pointer">✕</button>
     </div>
     <div id="sl-sheet-note" style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.5;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:10px;padding:10px">⚠️ 1–2 Superlinks pro Woche (Mo–Sa). Du verpflichtest dich, alle anderen Superlinks dieser Woche zu liken, kommentieren, teilen und speichern.</div>
     <input type="url" id="sl-url-input" class="form-input" placeholder="Instagram-Link einfügen..." style="margin-bottom:8px">
     <textarea id="sl-caption-input" class="form-input" placeholder="Beschreibung (optional)" rows="2" maxlength="200" style="margin-bottom:12px"></textarea>
-    <button id="sl-submit-btn" class="btn btn-primary btn-full" onclick="submitSuperLink()">⭐ Superlink posten</button>
+    <button id="sl-submit-btn" class="btn btn-primary btn-full" onclick="submitSuperLink()" style="display:inline-flex;align-items:center;justify-content:center;gap:8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Superlink posten</button>
     <div id="sl-result" style="font-size:12px;color:var(--accent);margin-top:8px;text-align:center"></div>
   </div>
 </div>
