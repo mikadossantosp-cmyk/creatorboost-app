@@ -8078,6 +8078,20 @@ ${spaceScale.map(s=>`<div class="grow"><span class="gmeta">--space-${s}</span><d
             onlineNow = seenUids.size;
         } catch(e) {}
 
+        // Avatar-Stack fuer die Landing — nur OEFFENTLICHE Instagram-Avatare (unavatar),
+        // keine Namen/Handles. Nur sichtbare, aktive Nicht-Admin-Member.
+        const avatars = [];
+        try {
+            for (const [uid, u] of Object.entries(d.users || {})) {
+                if (avatars.length >= 8) break;
+                if (!u || adminIds.includes(Number(uid))) continue;
+                if (u.isSystem || uid === 'creatorboost' || u.parent_uid) continue;
+                if (u.banned || !isAppVisible(u)) continue;
+                const ig = String(u.instagram || '').trim().replace(/^@/, '');
+                if (ig && /^[A-Za-z0-9._]{1,40}$/.test(ig)) avatars.push('https://unavatar.io/instagram/' + encodeURIComponent(ig));
+            }
+        } catch(e) {}
+
         res.writeHead(200, {
             'Content-Type': 'application/json',
             'Access-Control-Allow-Origin': '*',
@@ -8090,7 +8104,8 @@ ${spaceScale.map(s=>`<div class="grow"><span class="gmeta">--space-${s}</span><d
             // Fallbacks für Landing-Page (zeigt was wenn lifetime noch 0)
             currentPosts,
             currentLikes: totalLikes,
-            onlineNow
+            onlineNow,
+            avatars
         }));
     }
 

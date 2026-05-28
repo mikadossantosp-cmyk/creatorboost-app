@@ -153,7 +153,11 @@ h1 .accent{font-style:italic;font-weight:600;background:linear-gradient(180deg,#
 
 /* ── TRUST STRIP ── */
 .trust{padding:64px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--bg-2),var(--bg))}
-.trust-label{text-align:center;font-size:11px;font-weight:600;color:var(--gold);text-transform:uppercase;letter-spacing:3px;margin-bottom:48px}
+.trust-label{text-align:center;font-size:11px;font-weight:600;color:var(--gold);text-transform:uppercase;letter-spacing:3px;margin-bottom:28px}
+.face-pile{display:flex;justify-content:center;align-items:center;margin:0 0 44px;min-height:44px}
+.face-pile.empty{display:none}
+.face-pile img{width:44px;height:44px;border-radius:50%;object-fit:cover;border:2px solid #000;box-shadow:0 0 0 1.5px rgba(212,169,70,0.45),0 2px 8px rgba(0,0,0,0.55);margin-left:-12px;background:#1a1a1a}
+.face-pile img:first-child{margin-left:0}
 .trust-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);max-width:920px;margin:0 auto;border:1px solid var(--line)}
 .trust-cell{background:var(--bg);padding:36px 24px;text-align:center;position:relative}
 .trust-num{font-family:'Cormorant Garamond',serif;font-size:clamp(38px,5.5vw,56px);font-weight:500;font-variant-numeric:tabular-nums;line-height:1.05;letter-spacing:-1px;margin-bottom:12px;background:linear-gradient(180deg,#fff5d4 0%,#f5d76e 30%,#d4a946 65%,#8b6914 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
@@ -368,6 +372,7 @@ footer{border-top:1px solid var(--line);padding:48px 0 56px;background:var(--bg)
 <section class="trust">
   <div class="wrap">
     <div class="trust-label">— Aktivität seit Tag Eins —</div>
+    <div class="face-pile empty" id="face-pile" aria-hidden="true"></div>
     <div class="trust-grid">
       <div class="trust-cell">
         <div class="trust-num" id="stat-members">—</div>
@@ -575,6 +580,12 @@ footer{border-top:1px solid var(--line);padding:48px 0 56px;background:var(--bg)
     setStat('stat-members', d.members || 0, false);
     setStat('stat-likes', d.totalLikes || 0, true);
     setStat('stat-posts', d.totalPosts || 0, true);
+    const pile = document.getElementById('face-pile');
+    const avs = Array.isArray(d.avatars) ? d.avatars.slice(0, 8) : [];
+    if (pile && avs.length) {
+      avs.forEach(function(src){ var img=document.createElement('img'); img.src=src; img.alt=''; img.loading='lazy'; img.onerror=function(){img.remove();}; pile.appendChild(img); });
+      pile.classList.remove('empty');
+    }
   } catch(e) {}
 })();
 
