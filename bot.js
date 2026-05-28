@@ -14452,7 +14452,7 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
   renderList();
 }).catch(()=>{
   const list=document.getElementById('notif-list');
-  if(list)list.innerHTML='<div class="notif-empty"><div class="notif-empty-text">Konnte nicht laden</div><div class="notif-empty-sub">Bitte später erneut versuchen.</div></div>';
+  if(list)list.innerHTML='<div class="notif-empty"><div class="notif-empty-text">Konnte nicht laden</div><div class="notif-empty-sub">Versuch es gleich nochmal.</div></div>';
 });
 </script>`, 'notif');
     }
@@ -19393,7 +19393,7 @@ document.querySelectorAll('.ins-bar').forEach((b, i) => {
                     +'<div style="font-size:11px;color:var(--muted);margin-top:6px">'+new Date(p.timestamp).toLocaleDateString('de-DE',{day:'2-digit',month:'short'})+'</div>'
                     +'</div>';
             }).join('')
-            : '<div class="empty"><div class="empty-icon"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></div><div class="empty-text">Noch keine Posts</div></div>';
+            : '<div class="empty"><div class="empty-icon"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></div><div class="empty-text">Noch keine Posts</div><div class="empty-sub">Teile deinen ersten Link, um Reichweite aufzubauen.</div></div>';
 
         const canAddProject = myProjects.length < 2;
         const projCardsHtml = myProjects.map((proj, i) => {
@@ -19895,7 +19895,7 @@ async function submitPost(){const _spBtn=document.querySelector('[onclick="submi
                     +'<div style="font-size:11px;color:var(--muted);margin-top:6px">'+new Date(p.timestamp).toLocaleDateString('de-DE',{day:'2-digit',month:'short'})+'</div>'
                     +'</div>';
             }).join('')
-            : '<div class="empty"><div class="empty-icon"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></div><div class="empty-text">Noch keine Posts</div></div>';
+            : '<div class="empty"><div class="empty-icon"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></div><div class="empty-text">Noch keine Posts</div><div class="empty-sub">Hat noch nichts geteilt.</div></div>';
 
         const theirProjCardsHtml = theirProjects.map((proj, i) => {
             const projImg = ladeProjectBild(uid, proj.id);
@@ -19930,7 +19930,7 @@ async function submitPost(){const _spBtn=document.querySelector('[onclick="submi
         const theirLinkEntries = Object.entries(d.links||{}).filter(([,l])=>String(l.user_id)===String(uid)).sort((a,b)=>(b[1].timestamp||0)-(a[1].timestamp||0));
         const theirLinksHtml = theirLinkEntries.length
             ? '<div class="proflink-grid">'+theirLinkEntries.map(([msgId, l]) => renderTheirLinkCard(l, msgId)).join('')+'</div>'
-            : '<div class="empty"><div class="empty-icon"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 17H7A5 5 0 0 1 7 7h2"/><path d="M15 7h2a5 5 0 0 1 0 10h-2"/><path d="M8 12h8"/></svg></div><div class="empty-text">Noch keine Links</div></div>';
+            : '<div class="empty"><div class="empty-icon"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 17H7A5 5 0 0 1 7 7h2"/><path d="M15 7h2a5 5 0 0 1 0 10h-2"/><path d="M8 12h8"/></svg></div><div class="empty-text">Noch keine Links</div><div class="empty-sub">Hat noch nichts geteilt.</div></div>';
 
         const theirAboutHtml = '<div style="padding:16px;display:flex;flex-direction:column;gap:12px;padding-bottom:100px">'
             +(u?.bio?'<div style="background:var(--bg3);border-radius:14px;padding:14px 16px"><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Bio</div><div style="font-size:14px;line-height:1.6">'+htmlEsc(u.bio)+'</div></div>':'')
