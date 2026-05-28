@@ -15361,7 +15361,7 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
 .dash-pill.gold{background:linear-gradient(135deg,rgba(204,93,232,0.18),rgba(124,58,237,0.08));color:#cc5de8;border:1px solid rgba(124,58,237,0.30)}
 
 /* Modal */
-.dash-modal-bg{position:fixed;inset:0;background:rgba(5,5,7,0.78);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);z-index:9000;display:flex;align-items:center;justify-content:center;padding:18px;animation:dfade .18s ease-out}
+.dash-modal-bg{--dgold:var(--accent);--dgold2:var(--purple);--dgold3:var(--accent2);--dink:var(--bg2);--dink2:var(--bg3);--dink3:var(--bg4);--dmuted:var(--muted2);--dline:var(--border);--dsub:var(--muted);color:var(--text);position:fixed;inset:0;background:rgba(5,5,7,0.78);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);z-index:9000;display:flex;align-items:center;justify-content:center;padding:18px;animation:dfade .18s ease-out}
 @keyframes dfade{from{opacity:0}to{opacity:1}}
 .dash-modal{background:var(--dink2);border:1px solid var(--dline);border-radius:18px;padding:0;max-width:540px;width:100%;max-height:92vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 32px 80px rgba(0,0,0,0.6),0 0 0 1px rgba(124,58,237,0.06);animation:dmodalin .22s cubic-bezier(0.16,1,0.3,1)}
 @keyframes dmodalin{from{opacity:0;transform:translateY(20px) scale(.96)}to{opacity:1;transform:none}}
@@ -15452,9 +15452,6 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
         <button class="dash-btn" onclick="window.open('/admin/emails','_blank')" style="border-color:rgba(167,139,250,0.40);color:#a78bfa">📧 Email Dashboard</button>
         <button class="dash-btn" onclick="window.open('/admin/play-listing','_blank')" style="border-color:rgba(52,211,153,0.40);color:#34d399">📲 Play Store Listing</button>
         <button class="dash-btn" onclick="window.open('/admin/beta-testers','_blank')" style="border-color:rgba(52,211,153,0.40);color:#34d399">🧪 Beta-Tester</button>
-        <button class="dash-btn" onclick="openFunnelDebug()">🔬 Funnel Debug</button>
-        <button class="dash-btn" onclick="openStatsDebug()">📊 Stats Debug</button>
-        <button class="dash-btn" onclick="openKollabBoostPreview()" style="border-color:rgba(236,72,153,0.40);color:#ec4899">🎨 Kollab-Boost Preview</button>
         <button class="dash-btn" onclick="adminCreateNewSub()" style="border-color:rgba(167,139,250,0.45);color:#a78bfa">🆕 Neuen Sub erstellen</button>
         <button class="dash-btn" onclick="openEventModal('xp')" style="border-color:rgba(245,158,11,0.40);color:#fbbf24">✨ XP-Event starten</button>
         <button class="dash-btn" onclick="openEventModal('diamond')" style="border-color:rgba(6,182,212,0.40);color:#06b6d4">💎 Diamond-Event starten</button>
@@ -16011,7 +16008,7 @@ function renderUserDetail(j) {
     '<button class="dash-act" onclick="grantNoAmount(\\''+esc(u.uid)+'\\',\\'remove-warn\\')">− ⚠️ Warn</button>' +
     '<button class="dash-act" onclick="grantNoAmount(\\''+esc(u.uid)+'\\',\\'add-extra-link\\')">+ 🔗 Extra-Link</button>' +
     '<button class="dash-act" onclick="grantNoAmount(\\''+esc(u.uid)+'\\',\\'add-superlink\\')">+ ⚡ Superlink-Slot</button>' +
-    '<button class="dash-act" onclick="linkAsSub(\\''+esc(u.uid)+'\\',\\''+esc(u.spitzname||u.name||u.uid)+'\\')" style="background:linear-gradient(135deg,#a78bfa,#7c3aed);color:var(--text);border-color:transparent">🔗 Als mein Sub linken</button>' +
+    '<button class="dash-act" onclick="linkAsSub(\\''+esc(u.uid)+'\\',\\''+esc(u.spitzname||u.name||u.uid)+'\\')" style="background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;border-color:transparent">🔗 Als mein Sub linken</button>' +
   '</div>';
 
   html += sectionLbl('📨 Kommunikation');
