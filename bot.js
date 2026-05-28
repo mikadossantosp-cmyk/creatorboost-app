@@ -4817,7 +4817,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v268-admin-filter';
+const SW_VERSION='v269-tg-chat-fix';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
@@ -19742,7 +19742,7 @@ async function submitPost(){const _spBtn=document.querySelector('[onclick="submi
       if (isCollabActive) return `<button id="collab-btn" disabled title="Kollab-Partner aktiv" style="background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:none;border-radius:20px;padding:6px 14px;font-size:13px;font-weight:700;cursor:default;display:inline-flex;align-items:center;gap:4px">🤝 ✓</button>`;
       return `<button id="collab-btn" onclick="collabRequest('${uid}',this)" title="Kollaboration anfragen" style="background:linear-gradient(135deg,#ec4899,#a21caf);color:#fff;border:none;border-radius:20px;padding:6px 14px;font-size:13px;font-weight:700;cursor:pointer">🤝</button>`;
     })()}
-    <a href="/nachrichten/${uid}" style="background:var(--bg4);border:1px solid var(--border);border-radius:20px;padding:6px 14px;font-size:13px;font-weight:600;color:var(--text);text-decoration:none">💬</a>
+    <a href="/nachrichten/${uid}" title="Nachricht" style="background:var(--bg4);border:1px solid var(--border);border-radius:20px;padding:6px 13px;color:var(--text);text-decoration:none;display:inline-flex;align-items:center;justify-content:center"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></a>
     ${String(uid) !== String(myUid) ? `<button id="profile-more-btn" onclick="toggleProfileMore()" title="Mehr Optionen" style="background:var(--bg4);border:1px solid var(--border);border-radius:20px;width:32px;height:32px;font-size:18px;color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;line-height:1">⋮</button>` : ''}
   </div>
 </div>

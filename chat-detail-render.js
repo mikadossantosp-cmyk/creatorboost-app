@@ -112,7 +112,15 @@ module.exports = function renderChatBubbles(opts) {
 
         const editedTag = '';
         let bubbleContent = '';
-        if (m.image) {
+        // Schutz: Alt-Bilder (z.B. aus dem Telegram-Verlauf) sind oft riesige unkomprimierte
+        // base64-DataURLs. Mehrere davon inline aufgeblasen → HTML im zweistelligen MB-Bereich
+        // → Render/Transfer haengt → SW zeigt "Server offline". Ab ~1,2 MB DataURL deshalb nicht
+        // inline einbetten, sondern als Platzhalter mit Klick-zum-Laden zeigen.
+        const _imgIsHugeDataUrl = typeof m.image === 'string' && m.image.lastIndexOf('data:', 0) === 0 && m.image.length > 1200000;
+        if (m.image && _imgIsHugeDataUrl) {
+            bubbleContent = replyHtml + '<div class="chat-img-wrap chat-img-heavy"><div style="padding:18px 16px;text-align:center;color:var(--muted,#8a8a8a);font-size:12.5px;line-height:1.5"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="opacity:.6;display:block;margin:0 auto 8px"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.6-3.6a2 2 0 0 0-2.8 0L6 21"/></svg>Großes Bild aus dem Verlauf</div></div>' +
+                (m.text ? '<div class="chat-img-caption">' + esc(m.text) + '</div>' : '');
+        } else if (m.image) {
             // XSS-Schutz: URL NICHT in den onclick-JS-String einbetten (ein ' bricht trotz esc()
             // aus, weil der HTML-Parser &#39; vorher zurückdecodiert). Stattdessen die bereits
             // aufgelöste img.src zur Laufzeit lesen; das src-Attribut wird ge-esc()-t.
@@ -120,6 +128,8 @@ module.exports = function renderChatBubbles(opts) {
                 '<img src="' + esc(m.image) + '" alt="" loading="lazy">' +
                 (m.text ? '<div class="chat-img-caption">' + esc(m.text) + '</div>' : '') +
                 '</div>';
+        } else if (m.audio && typeof m.audio === 'string' && m.audio.lastIndexOf('data:', 0) === 0 && m.audio.length > 1200000) {
+            bubbleContent = replyHtml + '<div class="chat-audio"><div class="chat-audio-info"><div class="audio-dur" style="color:var(--muted,#8a8a8a);font-size:12.5px">Große Sprachnachricht aus dem Verlauf</div></div></div>';
         } else if (m.audio) {
             bubbleContent = replyHtml + '<div class="chat-audio">' +
                 '<button class="chat-audio-btn" onclick="toggleAudio(this)" data-src="' + esc(m.audio) + '">▶</button>' +
