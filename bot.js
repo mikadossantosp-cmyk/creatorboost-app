@@ -4225,8 +4225,8 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
   </div>
   <div class="ipf-actions">
     ${isOwn ? `
-      <a href="/einstellungen" class="ipf-btn ipf-btn-primary">✏️ Profil bearbeiten</a>
-      <button class="ipf-btn" onclick="ipfShare()">📤 Profil teilen</button>
+      <a href="/einstellungen" class="ipf-btn ipf-btn-primary"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>Profil bearbeiten</a>
+      <button class="ipf-btn" onclick="ipfShare()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"/><line x1="15.4" y1="6.5" x2="8.6" y2="10.5"/></svg>Profil teilen</button>
     ` : `
       <a href="/nachrichten/${uid}" class="ipf-btn ipf-btn-primary">💬 Nachricht</a>
       <button class="ipf-btn" onclick="ipfFollow(this,'${uid}')" id="ipf-follow-btn">${_isFollowing ? '✓ Folge ich' : '➕ Folgen'}</button>
@@ -4773,7 +4773,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v231-liker-badges';
+const SW_VERSION='v232-headers-profilebtns';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
@@ -18574,10 +18574,11 @@ function showErr(msg){
 
         return html(`
 <div class="topbar">
-  <div class="topbar-logo">CreatorX</div>
-  <div class="topbar-actions">
-    <button class="icon-btn" onclick="setTheme(document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark')" title="Theme">🌙</button>
+  <div style="display:flex;gap:6px;align-items:center">
+    <a href="/profil" title="XP" style="display:inline-flex;align-items:center;gap:4px;padding:5px 9px;background:rgba(167,139,250,0.10);border:1px solid rgba(167,139,250,0.30);border-radius:99px;text-decoration:none;color:#a78bfa;font-size:12px;font-weight:700"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>${(_me?.xp||0).toLocaleString('de-DE')} XP</a>
+    <a href="/diamanten" title="Diamanten" style="display:inline-flex;align-items:center;gap:4px;padding:5px 9px;background:rgba(6,182,212,0.10);border:1px solid rgba(6,182,212,0.30);border-radius:99px;text-decoration:none;color:#06b6d4;font-size:12px;font-weight:700"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0"><path d="M6 2h12l4 6-10 13L2 8z"/></svg>${(_me?.diamonds||0)}</a>
   </div>
+  <button class="icon-btn" onclick="setTheme(document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark')" title="Theme">🌙</button>
 </div>
 <div style="margin:14px 16px 14px;border-radius:22px;overflow:hidden;position:relative;background:linear-gradient(135deg,#f9a825 0%,#e91e63 55%,#9c27b0 100%)">
   <div style="position:absolute;inset:0;background:radial-gradient(circle at 85% -15%,rgba(255,255,255,0.20),transparent 55%),radial-gradient(circle at 5% 110%,rgba(0,0,0,0.18),transparent 55%);pointer-events:none"></div>
@@ -19203,7 +19204,7 @@ document.querySelectorAll('.ins-bar').forEach((b, i) => {
                     +'<div style="background:var(--bg4);border-radius:10px;padding:8px 12px;font-size:12px;font-weight:600">🔗 Extra-Links: <span style="color:var(--accent)">'+myBonusLinksProf+'</span></div>'
                     +'</div></div>';
             })()
-            +'<a href="/einstellungen" style="display:flex;align-items:center;justify-content:center;gap:8px;background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:14px;font-size:14px;font-weight:600;color:var(--text);text-decoration:none">✏️ Profil bearbeiten</a>'
+            +'<a href="/einstellungen" style="display:flex;align-items:center;justify-content:center;gap:8px;background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:14px;font-size:14px;font-weight:600;color:var(--text);text-decoration:none"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>Profil bearbeiten</a>'
             +'</div>';
 
         const projDataJson = JSON.stringify(myProjects.map(p => ({
@@ -19213,13 +19214,10 @@ document.querySelectorAll('.ins-bar').forEach((b, i) => {
 
         return html(`
 <div class="topbar">
-  <div class="topbar-logo">Creator Hub</div>
-  <div style="display:flex;gap:8px;align-items:center">
-    ${buildTopbarSwitcher(myUid, d)}
-    <a href="/einstellungen" class="icon-btn" title="Einstellungen" aria-label="Menü">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" width="20" height="20"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
-    </a>
-  </div>
+  ${buildTopbarSwitcher(myUid, d)}
+  <a href="/einstellungen" class="icon-btn" title="Einstellungen" aria-label="Menü">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" width="20" height="20"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
+  </a>
 </div>
 ${profileCard(myUid, myUser, d, true, lang, adminIds, myBannerData, myPicData)}
 <style>@keyframes dxpPulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(.85);opacity:.6}}</style>
@@ -20454,8 +20452,8 @@ ${(function(){
     '<div class="pf-bio">' + _bio + '</div>' +
     (_website ? '<div class="pf-link-row">🔗 <a href="' + safeUrl(_website) + '" target="_blank" rel="noopener noreferrer">' + _website.replace(/^https?:\/\//,'') + '</a></div>' : '') +
     '<div class="pf-actions">' +
-      '<button class="pf-action-btn primary" onclick="pfOpenEditProfile();return false">✏️ Profil bearbeiten</button>' +
-      '<a class="pf-action-btn" href="/profil/' + myUid + '">👤 Profil ansehen</a>' +
+      '<button class="pf-action-btn primary" onclick="pfOpenEditProfile();return false"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>Profil bearbeiten</button>' +
+      '<a class="pf-action-btn" href="/profil/' + myUid + '"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>Profil ansehen</a>' +
     '</div>' +
   '</div>';
 })()}
