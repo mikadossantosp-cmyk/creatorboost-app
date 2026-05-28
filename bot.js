@@ -105,6 +105,13 @@ function _localGrantAction(action, payload) {
         default:                return null;
     }
 }
+// Funnel-Event aufzeichnen: lokal in den Datastore (LOCAL_STORE) statt zum toten Bot.
+function _trackFunnel(event, meta, uid) {
+    try {
+        if (LOCAL_STORE) { botLogic.trackFunnelApi({ event, meta: meta || {}, uid: uid || '' }); datastore.saveDebounced(); }
+        else postBot('/track-funnel', { event, meta: meta || {}, uid: uid || '' }).catch(()=>{});
+    } catch(e) {}
+}
 
 // Google Play Store Reviewer-Account: bypass Email-Verification + Instagram-Linking.
 // Reviewer loggt sich mit diesen Credentials ein → wird einmalig im Mainbot angelegt
@@ -5230,7 +5237,7 @@ self.addEventListener('notificationclick',e=>{
         try {
             const ref = String(req.headers['referer'] || '').slice(0, 300);
             const ua = String(req.headers['user-agent'] || '').slice(0, 200);
-            postBot('/track-funnel', { event: 'landing-view', meta: { ref, ua } }).catch(()=>{});
+            _trackFunnel('landing-view', { ref, ua }, '');
         } catch(e) {}
         // Landing-Page wird aus landing.html geliefert (Single-Source-of-Truth, statt
         // zwei parallele Inline-Versionen wie früher).
@@ -5546,7 +5553,7 @@ self.addEventListener('notificationclick',e=>{
         sessions.set(sid, { uid: String(result.uid), name: u.name, username: u.username||null, theme: 'light', lang: 'de', createdAt: Date.now(), subUid: validSubUid, activeUid: String(result.uid), loginVia: 'email' });
         saveSessions();
         // Funnel: Login erfolgreich
-        postBot('/track-funnel', { event: 'login-success', uid: String(result.uid), meta: { method: didSetupPassword ? 'first-pw' : 'email-pw' } }).catch(()=>{});
+        _trackFunnel('login-success', { method: didSetupPassword ? 'first-pw' : 'email-pw' }, String(result.uid));
         // Email-User Redirect-Chain (mit /feed?tour=1 als finales Ziel damit Tour autostartet)
         let redirect;
         if (!u.instagram) redirect = '/onboarding-instagram?first=1';
@@ -6174,7 +6181,7 @@ try { fetch('/api/track-funnel',{method:'POST',headers:{'Content-Type':'applicat
         }
         postBot('/log-email-login', { email, success: true, method: 'signup', uid: String(created.uid), ip: _ip, ua: _ua }).catch(()=>{});
         // Funnel-Event: Signup abgeschlossen
-        postBot('/track-funnel', { event: 'signup-complete', uid: String(created.uid), meta: { method: 'email' } }).catch(()=>{});
+        _trackFunnel('signup-complete', { method: 'email' }, String(created.uid));
         // Session erstellen — DIREKT (uncached) /data holen: der _dataCache ist nach dem
         // frischen Create u.U. noch stale (stale-while-revalidate) und enthält den gerade
         // angelegten User NICHT → früher "Lookup fehlgeschlagen" = User ausgesperrt obwohl
@@ -7983,7 +7990,7 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
             const utmMedium = String(query.utm_medium || '').slice(0, 50);
             const utmContent = String(query.utm_content || '').slice(0, 100);
             const fbclid = String(query.fbclid || '').slice(0, 200);
-            postBot('/track-funnel', { event: 'landing-view', meta: { ref, ua, page: 'willkommen', utmSource, utmMedium, utmContent, fbclid: fbclid ? 'yes' : '' } }).catch(()=>{});
+            _trackFunnel('landing-view', { ref, ua, page: 'willkommen', utmSource, utmMedium, utmContent, fbclid: fbclid ? 'yes' : '' }, '');
         } catch(e) {}
         try {
             // Cache: landing.html wird einmal geladen + Inject einmalig kombiniert.
@@ -8781,7 +8788,7 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
         meta.ua = String(req.headers['user-agent'] || '').slice(0, 200);
         meta.ref = String(req.headers['referer'] || body.ref || '').slice(0, 300);
         const uid = session ? getMyUid(session) : '';
-        postBot('/track-funnel', { event, meta, uid }).catch(()=>{});
+        _trackFunnel(event, meta, uid);
         return json({ok:true});
     }
 
@@ -10018,7 +10025,10 @@ p{line-height:1.65;color:var(--muted)}
         if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
         if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
         const body = await parseBody(req);
-        const result = await postBot('/admin-funnel-test-api', { event: String(body.event||'admin-test') });
+        const _evt = String(body.event||'admin-test');
+        let result;
+        if (LOCAL_STORE) { _trackFunnel(_evt, { admin: true }, getMyUid(session)); result = { ok: true, event: _evt }; }
+        else result = await postBot('/admin-funnel-test-api', { event: _evt });
         return json(result || {ok:false, error:'Mainbot offline'});
     }
 

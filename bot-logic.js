@@ -3294,6 +3294,26 @@ function adminUserDetailApi(uid) {
 }
 
 // Debug: rohe Funnel-Daten (welche Events wann gespeichert wurden)
+// Funnel-Event lokal aufzeichnen (ersetzt den frueheren Mainbot-/track-funnel-Pfad).
+// Struktur identisch zu dem, was die Funnel-Reads erwarten:
+//   d.funnel = { events: [{ event, ts, meta:{uid,...} }], daily: { 'YYYY-MM-DD': { event: count } } }
+function trackFunnelApi({ event, meta, uid }) {
+    event = String(event || '').slice(0, 40);
+    if (!event) return { ok: false, error: 'event erforderlich' };
+    if (!d.funnel || typeof d.funnel !== 'object') d.funnel = { events: [], daily: {} };
+    if (!Array.isArray(d.funnel.events)) d.funnel.events = [];
+    if (!d.funnel.daily || typeof d.funnel.daily !== 'object') d.funnel.daily = {};
+    const m = (meta && typeof meta === 'object') ? Object.assign({}, meta) : {};
+    if (uid) m.uid = String(uid);
+    d.funnel.events.push({ event, ts: Date.now(), meta: m });
+    if (d.funnel.events.length > 5000) d.funnel.events = d.funnel.events.slice(-5000);
+    const dayKey = new Date().toISOString().slice(0, 10);
+    if (!d.funnel.daily[dayKey]) d.funnel.daily[dayKey] = {};
+    d.funnel.daily[dayKey][event] = (d.funnel.daily[dayKey][event] || 0) + 1;
+    const keys = Object.keys(d.funnel.daily);
+    if (keys.length > 60) { keys.sort(); for (const k of keys.slice(0, keys.length - 60)) delete d.funnel.daily[k]; }
+    return { ok: true };
+}
 function adminFunnelDebugApi() {
     const funnel = d.funnel || { events: [], daily: {} };
     const allEvents = funnel.events || [];
@@ -3654,7 +3674,7 @@ module.exports = {
     sendDmAllApi, createSubaccountApi, adminLinkAsSubApi, deleteSubaccountApi,
     reportUserApi, adminReportActionApi, adminScheduleEventApi,
     superlinksApi, helperChatHistoryApi, eventsStatusApi, userDataExportApi,
-    adminStatsApi, adminUserlistApi, adminUserDetailApi, adminFunnelDebugApi, adminEngagementLogApi,
+    adminStatsApi, adminUserlistApi, adminUserDetailApi, adminFunnelDebugApi, trackFunnelApi, adminEngagementLogApi,
     adminMissionReportApi, adminHelperQuestionsApi, diamondLinkAdminListApi, prismaLinkAdminListApi,
     runWochenGewinnspielApi,
 };

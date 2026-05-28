@@ -23,6 +23,7 @@ function defaults() {
     return {
         users: {}, chats: {}, links: {},
         tracker: {}, counter: {},
+        funnel: { events: [], daily: {} },
         gepostet: [], seasonStart: Date.now(), seasonGewinner: [],
         communityFeed: [],
         threadMessages: {}, threads: [],
