@@ -17553,10 +17553,10 @@ fetch('/api/admin/engagement-log').then(r=>r.json()).then(j=>{ if (j.ok) { LAST_
   <div class="creator-card-banner" style="background:${bannerIsGrad?grad:'#000'}">
     ${bannerFile?`<img src="/appbild/${id}/banner" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" alt="">`:''}
     <div style="position:absolute;inset:0;background:linear-gradient(to bottom,transparent 40%,rgba(0,0,0,.5))"></div>
-    ${i<3?`<div style="position:absolute;top:6px;left:8px;font-size:15px;filter:drop-shadow(0 1px 3px rgba(0,0,0,.5))">${medals[i]}</div>`:''}
+    ${i<3?`<div style="position:absolute;top:6px;left:8px;font-size:var(--fs-base);filter:drop-shadow(0 1px 3px rgba(0,0,0,.5))">${medals[i]}</div>`:''}
   </div>
   <div class="creator-card-avatar" style="background:${grad}${getRingBoxShadow(u)}">
-    <span style="position:absolute;z-index:0;font-size:16px;font-weight:800">${(u.name||'?').slice(0,1)}</span>
+    <span style="position:absolute;z-index:0;font-size:var(--fs-md);font-weight:800">${(u.name||'?').slice(0,1)}</span>
     ${picFile?`<img src="/appbild/${id}/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1" loading="lazy" alt="">`:insta?`<img src="https://unavatar.io/instagram/${insta}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1" loading="lazy" onerror="this.style.display='none'" alt="">`:''}
   </div>
   <div class="creator-card-info">
@@ -17640,7 +17640,7 @@ fetch('/api/admin/engagement-log').then(r=>r.json()).then(j=>{ if (j.ok) { LAST_
                 const medal = a.place === 1 ? '🥇' : a.place === 2 ? '🥈' : '🥉';
                 const name = htmlEsc(u.spitzname || u.name || a.name || 'User');
                 const reward = '+' + a.xp + ' XP · +' + a.dia + ' 💎' + (a.links ? ' · 🔗' : '');
-                return '<a href="/profil/' + htmlEsc(a.uid) + '" style="display:flex;align-items:center;gap:10px;padding:7px 0;text-decoration:none;color:var(--text);font-size:13px">' +
+                return '<a href="/profil/' + htmlEsc(a.uid) + '" style="display:flex;align-items:center;gap:10px;padding:7px 0;text-decoration:none;color:var(--text);font-size:var(--fs-sm)">' +
                   '<span style="font-size:18px;flex-shrink:0">' + medal + '</span>' +
                   '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700">' + name + '</span>' +
                   '<span style="font-size:11px;color:#fbbf24;font-weight:700;flex-shrink:0">' + reward + '</span>' +
@@ -17663,7 +17663,7 @@ fetch('/api/admin/engagement-log').then(r=>r.json()).then(j=>{ if (j.ok) { LAST_
                 const medal = a.place === 1 ? '🥇' : a.place === 2 ? '🥈' : '🥉';
                 const name = htmlEsc(u.spitzname || u.name || a.name || 'User');
                 const reward = '+' + a.xp + ' XP · +' + a.dia + ' 💎' + (a.links ? ' · 🔗×' + a.links : '');
-                return '<a href="/profil/' + htmlEsc(a.uid) + '" style="display:flex;align-items:center;gap:10px;padding:7px 0;text-decoration:none;color:var(--text);font-size:13px">' +
+                return '<a href="/profil/' + htmlEsc(a.uid) + '" style="display:flex;align-items:center;gap:10px;padding:7px 0;text-decoration:none;color:var(--text);font-size:var(--fs-sm)">' +
                   '<span style="font-size:18px;flex-shrink:0">' + medal + '</span>' +
                   '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700">' + name + '</span>' +
                   '<span style="font-size:11px;color:#a78bfa;font-weight:700;flex-shrink:0">' + reward + '</span>' +
@@ -17740,31 +17740,31 @@ ${_latestNews ? `<a href="/explore?tab=newsletter" class="highlight-card" style=
   <div class="highlight-icon" style="background:linear-gradient(135deg,#4dabf7,#1d6fa5);color:#fff"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M3 6l9 7 9-7"/></svg></div>
   <div style="flex:1;min-width:0">
     <div style="display:flex;align-items:center;gap:6px;font-size:10px;font-weight:700;letter-spacing:1.2px;color:var(--muted);text-transform:uppercase">Neuste News${_newsAgeStr?' · '+_newsAgeStr:''}</div>
-    <div style="font-size:13px;font-weight:700;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${htmlEsc(_latestNews.title || _latestNews.content || '').slice(0,60)}</div>
+    <div style="font-size:var(--fs-sm);font-weight:700;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${htmlEsc(_latestNews.title || _latestNews.content || '').slice(0,60)}</div>
   </div>
-  <div style="font-size:16px;color:var(--muted)">›</div>
+  <div style="font-size:var(--fs-md);color:var(--muted)">›</div>
 </a>` : ''}
 <div style="padding:0 16px 14px">
   <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">Aktuelle Highlights</div>
   <a href="/feed" class="highlight-card">
     <div class="highlight-icon" style="background:linear-gradient(135deg,rgba(255,107,107,.25),rgba(204,93,232,.15))"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#cc5de8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg></div>
     <div style="flex:1;min-width:0">
-      <div style="font-size:13px;font-weight:700">Community Feed</div>
+      <div style="font-size:var(--fs-sm);font-weight:700">Community Feed</div>
       <div style="font-size:11px;color:var(--muted);margin-top:3px">Entdecke neue Reels der Community</div>
     </div>
-    <div style="font-size:16px;color:rgba(255,255,255,.2)">›</div>
+    <div style="font-size:var(--fs-md);color:rgba(255,255,255,.2)">›</div>
   </a>
 </div>
 `,
             ranking: `
 <div style="padding:12px 16px 8px;display:flex;align-items:center;justify-content:space-between">
-  <div style="font-size:13px;font-weight:700">Rangliste</div>
-  <div style="font-size:12px;color:var(--muted)">Rang: ${myRank>0?'#'+myRank:adminIds.includes(Number(myUid))?'👑 Admin':'–'}</div>
+  <div style="font-size:var(--fs-sm);font-weight:700">Rangliste</div>
+  <div style="font-size:var(--fs-xs);color:var(--muted)">Rang: ${myRank>0?'#'+myRank:adminIds.includes(Number(myUid))?'👑 Admin':'–'}</div>
 </div>
 <div style="display:flex;gap:6px;padding:0 16px 12px">
-  <button onclick="switchRanking('gesamt',this)" id="rtab-gesamt" style="flex:1;background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;border:none;border-radius:10px;padding:7px;font-size:12px;font-weight:700;cursor:pointer">Gesamt</button>
-  <button onclick="switchRanking('daily',this)" id="rtab-daily" style="flex:1;background:var(--bg3);color:var(--muted);border:1px solid var(--border2);border-radius:10px;padding:7px;font-size:12px;font-weight:700;cursor:pointer">Daily</button>
-  <button onclick="switchRanking('weekly',this)" id="rtab-weekly" style="flex:1;background:var(--bg3);color:var(--muted);border:1px solid var(--border2);border-radius:10px;padding:7px;font-size:12px;font-weight:700;cursor:pointer">Woche</button>
+  <button onclick="switchRanking('gesamt',this)" id="rtab-gesamt" style="flex:1;background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;border:none;border-radius:10px;padding:7px;font-size:var(--fs-xs);font-weight:700;cursor:pointer">Gesamt</button>
+  <button onclick="switchRanking('daily',this)" id="rtab-daily" style="flex:1;background:var(--bg3);color:var(--muted);border:1px solid var(--border2);border-radius:10px;padding:7px;font-size:var(--fs-xs);font-weight:700;cursor:pointer">Daily</button>
+  <button onclick="switchRanking('weekly',this)" id="rtab-weekly" style="flex:1;background:var(--bg3);color:var(--muted);border:1px solid var(--border2);border-radius:10px;padding:7px;font-size:var(--fs-xs);font-weight:700;cursor:pointer">Woche</button>
 </div>
 <div id="rlist-gesamt" style="padding-bottom:100px">${rankingRows}</div>
 <div id="rlist-daily" style="display:none;padding-bottom:100px">
@@ -17821,7 +17821,7 @@ function switchRanking(tab, btn) {
                     { icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>', title:'Vermeide Music-Copyright', desc:'Reels mit lizenzierter Musik werden in Business-Accounts oft stumm. Nutze nur Insta\'s Built-in Audio Library — sicher + algorithm-friendly.' },
                 ];
                 const tippsHtml = tipps.map(t=>`<div style="background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:14px 16px;margin-bottom:10px;display:flex;align-items:flex-start;gap:13px"><div style="font-size:22px;flex-shrink:0;width:38px;height:38px;display:flex;align-items:center;justify-content:center;border-radius:10px;background:linear-gradient(135deg,rgba(34,197,94,0.18),rgba(21,128,61,0.06))">${t.icon}</div><div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:700;margin-bottom:4px;line-height:1.35">${t.title}</div><div style="font-size:12.5px;color:var(--muted);line-height:1.55">${t.desc}</div></div></div>`).join('');
-                return `<div style="padding:18px 14px 80px"><div style="font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;font-weight:700">${tipps.length} Tipps</div><div style="font-size:18px;font-weight:800;font-family:var(--font-display);margin-bottom:14px">Instagram Reel Tipps</div>${tippsHtml}<div style="margin-top:18px;padding:14px;background:linear-gradient(135deg,rgba(34,197,94,0.10),rgba(21,128,61,0.04));border:1px solid rgba(34,197,94,0.30);border-radius:12px;font-size:12px;color:var(--text);line-height:1.55"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.1V18h6v-1.2c0-.8.4-1.6 1-2.1A7 7 0 0 0 12 2z"/></svg><b>Tipp:</b> Schreib eigene Erfahrungen in den Tipps-Thread — wir erweitern die Liste basierend auf was bei euch funktioniert hat.</div></div>`;
+                return `<div style="padding:18px 14px 80px"><div style="font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;font-weight:700">${tipps.length} Tipps</div><div style="font-size:18px;font-weight:800;font-family:var(--font-display);margin-bottom:14px">Instagram Reel Tipps</div>${tippsHtml}<div style="margin-top:18px;padding:14px;background:linear-gradient(135deg,rgba(34,197,94,0.10),rgba(21,128,61,0.04));border:1px solid rgba(34,197,94,0.30);border-radius:12px;font-size:var(--fs-xs);color:var(--text);line-height:1.55"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.1V18h6v-1.2c0-.8.4-1.6 1-2.1A7 7 0 0 0 12 2z"/></svg><b>Tipp:</b> Schreib eigene Erfahrungen in den Tipps-Thread — wir erweitern die Liste basierend auf was bei euch funktioniert hat.</div></div>`;
             })(),
             regeln: require('./regeln-tab'),
             shop: (()=>{
@@ -17833,8 +17833,8 @@ function switchRanking(tab, btn) {
                     const owned = myInventory.includes(item.id);
                     const canAfford = isShopAdmin || myDiamonds >= item.price;
                     const priceHtml = isShopAdmin
-                        ? `<div style="display:flex;align-items:center;gap:6px"><span style="font-size:13px;color:var(--muted);text-decoration:line-through">💎 ${item.price}</span><span style="font-size:12px;font-weight:800;color:#22c55e">Gratis</span></div>`
-                        : `<div style="font-size:13px;font-weight:800;color:#a78bfa">💎 ${item.price}</div>`;
+                        ? `<div style="display:flex;align-items:center;gap:6px"><span style="font-size:var(--fs-sm);color:var(--muted);text-decoration:line-through">💎 ${item.price}</span><span style="font-size:var(--fs-xs);font-weight:800;color:#22c55e">Gratis</span></div>`
+                        : `<div style="font-size:var(--fs-sm);font-weight:800;color:#a78bfa">💎 ${item.price}</div>`;
                     return `<div style="background:var(--bg3);border:1px solid var(--border2);border-radius:16px;padding:14px;margin-bottom:10px">
     <div style="display:flex;align-items:center;gap:14px">
       <div style="width:52px;height:52px;border-radius:50%;background:#1e1e1e;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:#fff;box-shadow:${item.shadow}">A</div>
@@ -17844,8 +17844,8 @@ function switchRanking(tab, btn) {
         <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
           ${priceHtml}
           ${owned
-            ? `<div style="font-size:12px;color:#22c55e;font-weight:700">✓ Besessen</div>`
-            : `<button onclick="buyItem('${item.id}')" data-item="${item.id}" style="background:${canAfford?'linear-gradient(135deg,#a78bfa,#7c3aed)':'var(--bg4)'};color:${canAfford?'#fff':'var(--muted)'};border:none;border-radius:10px;padding:6px 16px;font-size:12px;font-weight:700;cursor:${canAfford?'pointer':'not-allowed'}" ${canAfford?'':'disabled'}>Kaufen</button>`
+            ? `<div style="font-size:var(--fs-xs);color:#22c55e;font-weight:700">✓ Besessen</div>`
+            : `<button onclick="buyItem('${item.id}')" data-item="${item.id}" style="background:${canAfford?'linear-gradient(135deg,#a78bfa,#7c3aed)':'var(--bg4)'};color:${canAfford?'#fff':'var(--muted)'};border:none;border-radius:10px;padding:6px 16px;font-size:var(--fs-xs);font-weight:700;cursor:${canAfford?'pointer':'not-allowed'}" ${canAfford?'':'disabled'}>Kaufen</button>`
           }
         </div>
       </div>
@@ -17853,26 +17853,26 @@ function switchRanking(tab, btn) {
   </div>`;
                 }).join('');
                 const extraLinkPriceHtml = isShopAdmin
-                    ? `<div style="display:flex;align-items:center;gap:6px"><span style="font-size:14px;color:var(--muted);text-decoration:line-through">💎 5 Diamanten</span><span style="font-size:13px;font-weight:800;color:#22c55e">Gratis</span></div>`
+                    ? `<div style="display:flex;align-items:center;gap:6px"><span style="font-size:14px;color:var(--muted);text-decoration:line-through">💎 5 Diamanten</span><span style="font-size:var(--fs-sm);font-weight:800;color:#22c55e">Gratis</span></div>`
                     : `<div style="font-size:14px;font-weight:800;color:#a78bfa">💎 5 Diamanten</div>`;
                 const extraLinkCanBuy = isShopAdmin || myDiamonds >= 5;
                 return `
 <div style="padding:16px 16px 4px;display:flex;align-items:center;justify-content:space-between">
-  <div style="font-size:13px;font-weight:700">💎 Diamant Shop</div>
-  <div style="font-size:13px;font-weight:700;color:#a78bfa">💎 ${myDiamonds} Diamanten</div>
+  <div style="font-size:var(--fs-sm);font-weight:700">💎 Diamant Shop</div>
+  <div style="font-size:var(--fs-sm);font-weight:700;color:#a78bfa">💎 ${myDiamonds} Diamanten</div>
 </div>
-<div style="padding:4px 16px 16px;font-size:12px;color:var(--muted)">Tausche Diamanten gegen Vorteile</div>
+<div style="padding:4px 16px 16px;font-size:var(--fs-xs);color:var(--muted)">Tausche Diamanten gegen Vorteile</div>
 <div style="padding:0 16px 100px">
   <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;display:inline-flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg>Links</div>
   <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:16px;padding:16px;margin-bottom:16px">
     <div style="display:flex;align-items:flex-start;gap:14px">
       <div style="flex-shrink:0;width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,rgba(167,139,250,.15),rgba(124,58,237,.06));border:1px solid rgba(167,139,250,.2)"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg></div>
       <div style="flex:1;min-width:0">
-        <div style="font-size:15px;font-weight:700;margin-bottom:4px">Extra-Link für heute</div>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.5">Poste einen zusätzlichen Reel-Link heute — direkt in der App. Bonus-Links: <b style="color:var(--text)">${myBonusLinks}</b></div>
+        <div style="font-size:var(--fs-base);font-weight:700;margin-bottom:4px">Extra-Link für heute</div>
+        <div style="font-size:var(--fs-xs);color:var(--muted);margin-bottom:10px;line-height:1.5">Poste einen zusätzlichen Reel-Link heute — direkt in der App. Bonus-Links: <b style="color:var(--text)">${myBonusLinks}</b></div>
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
           ${extraLinkPriceHtml}
-          <button onclick="buyExtraLink()" id="buy-extralink-btn" style="background:${extraLinkCanBuy?'linear-gradient(135deg,#a78bfa,#7c3aed)':'var(--bg4)'};color:${extraLinkCanBuy?'#fff':'var(--muted)'};border:none;border-radius:12px;padding:8px 20px;font-size:13px;font-weight:700;cursor:${extraLinkCanBuy?'pointer':'not-allowed'}" ${extraLinkCanBuy?'':'disabled'}>Kaufen</button>
+          <button onclick="buyExtraLink()" id="buy-extralink-btn" style="background:${extraLinkCanBuy?'linear-gradient(135deg,#a78bfa,#7c3aed)':'var(--bg4)'};color:${extraLinkCanBuy?'#fff':'var(--muted)'};border:none;border-radius:12px;padding:8px 20px;font-size:var(--fs-sm);font-weight:700;cursor:${extraLinkCanBuy?'pointer':'not-allowed'}" ${extraLinkCanBuy?'':'disabled'}>Kaufen</button>
         </div>
         ${!extraLinkCanBuy?`<div style="font-size:11px;color:rgba(255,59,48,.8);margin-top:8px">Nicht genug Diamanten (benötigt: 5, vorhanden: ${myDiamonds})</div>`:''}
       </div>
@@ -17882,11 +17882,11 @@ function switchRanking(tab, btn) {
     <div style="display:flex;align-items:flex-start;gap:14px">
       <div style="flex-shrink:0;width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,rgba(245,158,11,.15),rgba(245,158,11,.05));border:1px solid rgba(245,158,11,.25)"><svg width="24" height="24" viewBox="0 0 24 24" fill="#f59e0b" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
       <div style="flex:1;min-width:0">
-        <div style="font-size:15px;font-weight:700;margin-bottom:4px">Extra-Superlink diese Woche</div>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.5">Du hast deinen wöchentlichen Superlink schon verbraucht? Poste einen <b style="color:var(--text)">zweiten Superlink</b> für 10 💎 — direkt beim Posten in der App wird er automatisch abgerechnet.</div>
+        <div style="font-size:var(--fs-base);font-weight:700;margin-bottom:4px">Extra-Superlink diese Woche</div>
+        <div style="font-size:var(--fs-xs);color:var(--muted);margin-bottom:10px;line-height:1.5">Du hast deinen wöchentlichen Superlink schon verbraucht? Poste einen <b style="color:var(--text)">zweiten Superlink</b> für 10 💎 — direkt beim Posten in der App wird er automatisch abgerechnet.</div>
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
           <div style="font-size:14px;font-weight:800;color:#f59e0b">💎 10 Diamanten / Superlink</div>
-          <a href="/feed?tab=engagement" style="background:linear-gradient(135deg,#f59e0b,#a78bfa);color:#fff;border:none;border-radius:12px;padding:8px 18px;font-size:13px;font-weight:700;text-decoration:none">Posten</a>
+          <a href="/feed?tab=engagement" style="background:linear-gradient(135deg,#f59e0b,#a78bfa);color:#fff;border:none;border-radius:12px;padding:8px 18px;font-size:var(--fs-sm);font-weight:700;text-decoration:none">Posten</a>
         </div>
         ${myDiamonds < 10 ? `<div style="font-size:11px;color:rgba(255,59,48,.8);margin-top:8px">Nicht genug Diamanten (benötigt: 10, vorhanden: ${myDiamonds})</div>` : ''}
       </div>
@@ -18112,12 +18112,12 @@ window.sugDismiss = function(btn){
                     mindsetUserCard = `<div style="margin:0 16px 16px;padding:18px;background:linear-gradient(135deg,#f59e0b,#ec4899);border-radius:18px;color:#fff;box-shadow:0 6px 22px rgba(245,158,11,0.45)">
   <div style="font-size:11px;font-weight:700;letter-spacing:1.5px;opacity:.85;text-transform:uppercase">🎉 Diese Woche dran</div>
   <div style="font-size:18px;font-weight:800;margin-top:6px;font-family:var(--font-display)">DU bist gepickt!</div>
-  <div style="font-size:13px;line-height:1.5;margin-top:8px;opacity:.95">Du erscheinst Sonntag/Montag auf <b>@mindset.stories_</b>. Check deine DM — ich brauche ein paar Infos von dir!</div>
+  <div style="font-size:var(--fs-sm);line-height:1.5;margin-top:8px;opacity:.95">Du erscheinst Sonntag/Montag auf <b>@mindset.stories_</b>. Check deine DM — ich brauche ein paar Infos von dir!</div>
 </div>`;
                 } else if (myMsStatus === 'done') {
                     mindsetUserCard = `<div style="margin:0 16px 16px;padding:16px;background:var(--bg3);border:1px solid var(--border2);border-radius:16px">
   <div style="font-size:11px;font-weight:700;letter-spacing:1.5px;color:#22c55e;text-transform:uppercase"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:5px"><path d="M20 6L9 17l-5-5"/></svg>Erledigt</div>
-  <div style="font-size:15px;font-weight:700;margin-top:6px">Du wurdest vorgestellt</div>
+  <div style="font-size:var(--fs-base);font-weight:700;margin-top:6px">Du wurdest vorgestellt</div>
   <div style="font-size:12.5px;color:var(--muted);margin-top:6px;line-height:1.5">Danke fürs Mitmachen 🙏 — Schau dir den Post an: <a href="https://instagram.com/mindset.stories_" target="_blank" style="color:#4dabf7">@mindset.stories_</a></div>
 </div>`;
                 } else if (!myInsta) {
@@ -18140,17 +18140,17 @@ window.sugDismiss = function(btn){
                     const buttons = msLocked
                         ? '<div style="font-size:11.5px;color:var(--muted);margin-top:12px;font-style:italic"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Antworten gefroren bis Pick am Sonntag 20:00</div>'
                         : myMsStatus === 'yes'
-                        ? '<div style="display:flex;gap:8px;margin-top:12px"><button onclick="msSet(\'no\')" style="flex:1;padding:11px;border-radius:12px;border:1px solid var(--border);background:var(--bg4);color:var(--text);font-size:13px;font-weight:700;cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><path d="M18 6L6 18M6 6l12 12"/></svg>Doch nicht</button></div>'
+                        ? '<div style="display:flex;gap:8px;margin-top:12px"><button onclick="msSet(\'no\')" style="flex:1;padding:11px;border-radius:12px;border:1px solid var(--border);background:var(--bg4);color:var(--text);font-size:var(--fs-sm);font-weight:700;cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><path d="M18 6L6 18M6 6l12 12"/></svg>Doch nicht</button></div>'
                         : myMsStatus === 'no'
-                        ? '<div style="display:flex;gap:8px;margin-top:12px"><button onclick="msSet(\'yes\')" style="flex:1;padding:11px;border-radius:12px;border:none;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;font-size:13px;font-weight:700;cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><path d="M20 6L9 17l-5-5"/></svg>Doch dabei</button></div>'
+                        ? '<div style="display:flex;gap:8px;margin-top:12px"><button onclick="msSet(\'yes\')" style="flex:1;padding:11px;border-radius:12px;border:none;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;font-size:var(--fs-sm);font-weight:700;cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><path d="M20 6L9 17l-5-5"/></svg>Doch dabei</button></div>'
                         : '<div style="display:flex;gap:8px;margin-top:12px"><button onclick="msSet(\'yes\')" style="flex:1;padding:12px;border-radius:12px;border:none;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;font-size:14px;font-weight:800;cursor:pointer"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><path d="M20 6L9 17l-5-5"/></svg>Ja, ich will</button><button onclick="msSet(\'no\')" style="flex:1;padding:12px;border-radius:12px;border:1px solid var(--border);background:var(--bg4);color:var(--text);font-size:14px;font-weight:700;cursor:pointer"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><path d="M18 6L6 18M6 6l12 12"/></svg>Nein, danke</button></div>';
                     mindsetUserCard = `<div style="margin:0 16px 16px;padding:18px;background:var(--bg3);border:1px solid var(--border2);border-radius:16px">
   <div style="font-size:11px;font-weight:700;letter-spacing:1.5px;color:${headerColor};text-transform:uppercase">${headerLabel}</div>
-  <div style="font-size:15px;font-weight:800;margin-top:6px;font-family:var(--font-display);display:flex;align-items:center;gap:8px"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h6a3 3 0 0 1 3 3v13a2.5 2.5 0 0 0-2.5-2.5H2z"/><path d="M22 4h-6a3 3 0 0 0-3 3v13a2.5 2.5 0 0 1 2.5-2.5H22z"/></svg>Mindset Stories</div>
-  <div style="font-size:13px;line-height:1.6;color:var(--text);margin-top:8px">${bodyText}</div>
+  <div style="font-size:var(--fs-base);font-weight:800;margin-top:6px;font-family:var(--font-display);display:flex;align-items:center;gap:8px"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h6a3 3 0 0 1 3 3v13a2.5 2.5 0 0 0-2.5-2.5H2z"/><path d="M22 4h-6a3 3 0 0 0-3 3v13a2.5 2.5 0 0 1 2.5-2.5H22z"/></svg>Mindset Stories</div>
+  <div style="font-size:var(--fs-sm);line-height:1.6;color:var(--text);margin-top:8px">${bodyText}</div>
   <div style="font-size:11.5px;color:var(--muted);margin-top:10px">${msCounts.waitlist} auf Liste · ${msCounts.done} bereits vorgestellt</div>
   ${buttons}
-  <div id="ms-result" style="margin-top:8px;font-size:12px;text-align:center"></div>
+  <div id="ms-result" style="margin-top:8px;font-size:var(--fs-xs);text-align:center"></div>
 </div>`;
                 }
 
@@ -18185,7 +18185,7 @@ window.sugDismiss = function(btn){
                             const insta = u.instagram ? '@'+htmlEsc(u.instagram) : '<span style="color:#ef4444">kein Insta</span>';
                             return `<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg4);border-radius:10px;margin-bottom:6px">
   <div style="font-size:11px;color:var(--muted);width:24px">#${i+1}</div>
-  <div style="flex:1;font-size:13px"><b>${name}</b> · <span style="color:#4dabf7">${insta}</span></div>
+  <div style="flex:1;font-size:var(--fs-sm)"><b>${name}</b> · <span style="color:#4dabf7">${insta}</span></div>
   <button onclick="msAdminPick('${uid}','${name}')" style="background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;border:none;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer">Picken</button>
 </div>`;
                         }).join('')
@@ -18193,7 +18193,7 @@ window.sugDismiss = function(btn){
                     const doneHtml = doneArr.length
                         ? doneArr.slice(0,20).map(([uid,v])=>{
                             const st = msDmStatus(uid, v.featuredAt);
-                            return `<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--bg4);border-radius:10px;margin-bottom:5px;font-size:12px">
+                            return `<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--bg4);border-radius:10px;margin-bottom:5px;font-size:var(--fs-xs)">
   <div style="flex:1;min-width:0">
     <div><b>${htmlEsc(v.name||'?')}</b> · <span style="color:var(--muted);font-size:11px">KW ${(v.week||'').slice(5,10)}</span></div>
     <div style="font-size:10.5px;margin-top:2px">${msDmBadge(st)}</div>
@@ -18210,7 +18210,7 @@ window.sugDismiss = function(btn){
                         : '<div style="padding:10px;background:var(--bg4);border-radius:10px;margin-bottom:10px;font-size:12.5px;color:var(--muted);text-align:center">Noch nicht gepickt (Sonntag 20:00)</div>';
                     mindsetAdminCard = `<div style="margin:0 16px 16px;padding:18px;background:var(--bg3);border:1px solid var(--border2);border-radius:16px">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-    <div style="font-size:15px;font-weight:800;font-family:var(--font-display)">Admin · Mindset Stories</div>
+    <div style="font-size:var(--fs-base);font-weight:800;font-family:var(--font-display)">Admin · Mindset Stories</div>
   </div>
   ${currentPickHtml}
   <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
@@ -18221,17 +18221,17 @@ window.sugDismiss = function(btn){
   <div style="max-height:280px;overflow-y:auto;margin-bottom:14px">${waitlistHtml}</div>
   <div style="font-size:11px;font-weight:700;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-bottom:8px">✅ Erledigt (${msCounts.done})</div>
   <div style="max-height:200px;overflow-y:auto">${doneHtml}</div>
-  <div id="ms-admin-result" style="margin-top:10px;font-size:12px;text-align:center;color:var(--muted)"></div>
+  <div id="ms-admin-result" style="margin-top:10px;font-size:var(--fs-xs);text-align:center;color:var(--muted)"></div>
 </div>`;
                 }
                 const entriesHtml = entries.length
                     ? entries.map(e=>`
 <div class="nl-entry" data-id="${htmlEsc(String(e.id||''))}" style="padding:16px;border:1px solid var(--border2);border-radius:14px;background:var(--bg3);margin:0 16px 12px">
   <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px">
-    ${e.title?`<div style="font-size:15px;font-weight:700;font-family:var(--font-display)">${htmlEsc(String(e.title))}</div>`:'<div></div>'}
-    ${isAdminNL?`<div style="display:flex;gap:6px;flex-shrink:0"><button onclick="nlEdit('${htmlEsc(String(e.id||''))}')" style="background:var(--bg4);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:4px 10px;font-size:12px;cursor:pointer">✏️</button><button onclick="nlDelete('${htmlEsc(String(e.id||''))}')" style="background:rgba(255,59,48,.1);border:1px solid rgba(255,59,48,.3);color:#ff3b30;border-radius:8px;padding:4px 10px;font-size:12px;cursor:pointer">🗑️</button></div>`:''}
+    ${e.title?`<div style="font-size:var(--fs-base);font-weight:700;font-family:var(--font-display)">${htmlEsc(String(e.title))}</div>`:'<div></div>'}
+    ${isAdminNL?`<div style="display:flex;gap:6px;flex-shrink:0"><button onclick="nlEdit('${htmlEsc(String(e.id||''))}')" style="background:var(--bg4);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:4px 10px;font-size:var(--fs-xs);cursor:pointer">✏️</button><button onclick="nlDelete('${htmlEsc(String(e.id||''))}')" style="background:rgba(255,59,48,.1);border:1px solid rgba(255,59,48,.3);color:#ff3b30;border-radius:8px;padding:4px 10px;font-size:var(--fs-xs);cursor:pointer">🗑️</button></div>`:''}
   </div>
-  <div style="font-size:13px;line-height:1.65;color:var(--text);white-space:pre-wrap">${htmlEsc(String(e.content||''))}</div>
+  <div style="font-size:var(--fs-sm);line-height:1.65;color:var(--text);white-space:pre-wrap">${htmlEsc(String(e.content||''))}</div>
   <div style="font-size:11px;color:var(--muted);margin-top:10px">${new Date(e.timestamp).toLocaleDateString('de-DE',{day:'2-digit',month:'short',year:'numeric'})}</div>
 </div>`).join('')
                     : '<div class="empty" style="padding:48px 24px;text-align:center"><div class="empty-icon"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M3 6l9 7 9-7"/></svg></div><div class="empty-text">Noch keine Newsletter-Einträge</div></div>';
@@ -18246,7 +18246,7 @@ window.sugDismiss = function(btn){
     <button onclick="nlSave()" class="btn btn-primary" style="flex:2">💾 Speichern</button>
     <button onclick="nlCancel()" class="btn btn-outline" style="flex:1">Abbrechen</button>
   </div>
-  <div id="nl-result" style="margin-top:8px;font-size:12px;color:var(--muted);text-align:center"></div>
+  <div id="nl-result" style="margin-top:8px;font-size:var(--fs-xs);color:var(--muted);text-align:center"></div>
 </div>` : '';
                 const adminBtn = isAdminNL ? `<button onclick="nlNew()" style="display:flex;align-items:center;gap:8px;background:var(--accent);color:#fff;border:none;border-radius:12px;padding:10px 18px;font-size:14px;font-weight:700;cursor:pointer;margin:16px 16px 12px">+ Neuer Eintrag</button>` : '';
                 return `
@@ -18258,8 +18258,8 @@ window.sugDismiss = function(btn){
   ${mindsetAdminCard}
   <a href="/system-info" style="display:flex;align-items:center;gap:12px;margin:0 16px 12px;padding:16px 18px;background:linear-gradient(135deg,#0ea5e9,#4dabf7,#a78bfa);border-radius:16px;text-decoration:none;color:#fff;box-shadow:0 6px 22px rgba(77,171,247,0.40);position:relative;overflow:hidden">
     <div style="flex-shrink:0"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h6a3 3 0 0 1 3 3v13a2.5 2.5 0 0 0-2.5-2.5H2z"/><path d="M22 4h-6a3 3 0 0 0-3 3v13a2.5 2.5 0 0 1 2.5-2.5H22z"/></svg></div>
-    <div style="flex:1"><div style="font-size:15px;font-weight:800;letter-spacing:-0.1px">So funktioniert CreatorX</div><div style="font-size:12px;opacity:0.92;margin-top:3px;line-height:1.4">Komplette Anleitung — App, Levels, Missionen, Diamanten, Superlinks, Grundregeln</div></div>
-    <div style="font-size:20px;opacity:0.9">→</div>
+    <div style="flex:1"><div style="font-size:var(--fs-base);font-weight:800;letter-spacing:-0.1px">So funktioniert CreatorX</div><div style="font-size:var(--fs-xs);opacity:0.92;margin-top:3px;line-height:1.4">Komplette Anleitung — App, Levels, Missionen, Diamanten, Superlinks, Grundregeln</div></div>
+    <div style="font-size:var(--fs-lg);opacity:0.9">→</div>
   </a>
   <a href="/diamanten" style="display:flex;align-items:center;gap:12px;margin:0 16px 16px;padding:14px 16px;background:linear-gradient(135deg,#4dabf7,#a78bfa);border-radius:14px;text-decoration:none;color:#fff;box-shadow:0 4px 14px rgba(167,139,250,0.3)">
     <div style="flex-shrink:0"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12l4 6-10 12L2 9z"/><path d="M2 9h20"/><path d="M9 3 6 9l6 12 6-12-3-6"/></svg></div>
@@ -18314,12 +18314,12 @@ async function msAdminRestore(uid,name){if(!confirm(name+' zurück auf die Warte
       <div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#f5d76e 0%,#d4a946 50%,#8b6914 100%);color:#000;font-weight:800;font-size:17px;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:inset 0 1px 0 rgba(255,255,255,0.4),0 4px 12px rgba(212,169,70,0.3)">${initials}</div>
       <div style="flex:1;min-width:0">
         <div style="font-size:10.5px;color:#d4a946;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:2px">Letzter Gewinner</div>
-        <div style="font-size:15px;font-weight:700;color:var(--text);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${safeName}</div>
+        <div style="font-size:var(--fs-base);font-weight:700;color:var(--text);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${safeName}</div>
         ${safeHandle?`<div style="font-size:11.5px;color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${safeHandle}</div>`:''}
       </div>
       <div style="text-align:right;flex-shrink:0">
         <div style="font-size:11px;color:var(--muted);margin-bottom:2px">${dateStr}</div>
-        <div style="font-size:13px;font-weight:700;color:var(--text);background:rgba(255,255,255,0.05);border:1px solid var(--border2);border-radius:8px;padding:4px 9px;white-space:nowrap">${lw.prizeEmoji||'🎁'} ${safePrize}</div>
+        <div style="font-size:var(--fs-sm);font-weight:700;color:var(--text);background:rgba(255,255,255,0.05);border:1px solid var(--border2);border-radius:8px;padding:4px 9px;white-space:nowrap">${lw.prizeEmoji||'🎁'} ${safePrize}</div>
       </div>
     </div>
     ${(raffleHist.history||[]).length>1?`<div style="position:relative;margin-top:12px;padding-top:10px;border-top:1px solid rgba(245,215,110,0.18);font-size:11px;color:var(--muted)">Insgesamt <b style="color:var(--text)">${raffleHist.history.length}</b> Ziehungen</div>`:''}
@@ -18330,28 +18330,28 @@ async function msAdminRestore(uid,name){if(!confirm(name+' zurück auf die Warte
   ${lwHtml}
   <div style="background:linear-gradient(135deg,rgba(245,158,11,0.1),rgba(239,68,68,0.05));border:1px solid rgba(245,158,11,0.3);border-radius:20px;padding:24px 20px;text-align:center;margin-bottom:16px">
     <div style="margin-bottom:12px;display:flex;justify-content:center"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="13" rx="1.5"/><path d="M3 12h18"/><line x1="12" y1="8" x2="12" y2="21"/><path d="M12 8S10 3 7 4.5 9 8 12 8z"/><path d="M12 8s2-5 5-3.5S15 8 12 8z"/></svg></div>
-    <h2 style="font-size:20px;font-weight:800;margin:0 0 6px;letter-spacing:-0.3px">Wöchentliches Gewinnspiel</h2>
-    <div style="font-size:13px;color:var(--muted);line-height:1.5">Sammle <b style="color:var(--text)">${threshold} XP</b> diese Woche und nimm automatisch teil!</div>
+    <h2 style="font-size:var(--fs-lg);font-weight:800;margin:0 0 6px;letter-spacing:-0.3px">Wöchentliches Gewinnspiel</h2>
+    <div style="font-size:var(--fs-sm);color:var(--muted);line-height:1.5">Sammle <b style="color:var(--text)">${threshold} XP</b> diese Woche und nimm automatisch teil!</div>
     <div style="margin:16px 0;padding:14px;background:rgba(255,255,255,0.04);border-radius:12px;border:1px solid var(--border2)">
       <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Dein Fortschritt</div>
-      <div style="font-size:28px;font-weight:800;color:${qualified?'#22c55e':'var(--text)'}">${myXpThisWeek} <span style="font-size:14px;color:var(--muted)">/ ${threshold} XP</span></div>
+      <div style="font-size:var(--fs-xl);font-weight:800;color:${qualified?'#22c55e':'var(--text)'}">${myXpThisWeek} <span style="font-size:14px;color:var(--muted)">/ ${threshold} XP</span></div>
       <div style="margin-top:10px;height:8px;background:rgba(255,255,255,0.06);border-radius:99px;overflow:hidden">
         <div style="height:100%;width:${Math.min(100,Math.round(myXpThisWeek/threshold*100))}%;background:${qualified?'linear-gradient(90deg,#22c55e,#4ade80)':'linear-gradient(90deg,#f59e0b,#ef4444)'};border-radius:99px;transition:width 0.5s"></div>
       </div>
       <div style="font-size:11px;color:var(--muted);margin-top:8px">${qualified?'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><path d="M20 6L9 17l-5-5"/></svg>Du nimmst teil!':'Noch '+(threshold-myXpThisWeek)+' XP bis zur Teilnahme'}</div>
     </div>
-    <div style="font-size:12px;color:var(--muted)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg>Ziehung: Sonntag 20:00 Uhr · noch ~${hoursLeft}h</div>
+    <div style="font-size:var(--fs-xs);color:var(--muted)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg>Ziehung: Sonntag 20:00 Uhr · noch ~${hoursLeft}h</div>
   </div>
   <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:16px;padding:18px">
-    <div style="font-size:13px;font-weight:700;margin-bottom:12px">Mögliche Gewinne</div>
+    <div style="font-size:var(--fs-sm);font-weight:700;margin-bottom:12px">Mögliche Gewinne</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      ${prizes.map(p=>'<div style="padding:12px;background:rgba(255,255,255,0.03);border:1px solid var(--border2);border-radius:10px;font-size:12px;font-weight:600;text-align:center">'+p+'</div>').join('')}
+      ${prizes.map(p=>'<div style="padding:12px;background:rgba(255,255,255,0.03);border:1px solid var(--border2);border-radius:10px;font-size:var(--fs-xs);font-weight:600;text-align:center">'+p+'</div>').join('')}
     </div>
     <div style="font-size:11px;color:var(--muted);margin-top:12px;text-align:center">Gewinn wird zufällig vom System gewählt. 1 Gewinner pro Woche.</div>
   </div>
   <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:16px;padding:18px;margin-top:12px">
-    <div style="font-size:13px;font-weight:700;margin-bottom:8px">So funktioniert's</div>
-    <div style="font-size:12px;color:var(--muted);line-height:1.7">
+    <div style="font-size:var(--fs-sm);font-weight:700;margin-bottom:8px">So funktioniert's</div>
+    <div style="font-size:var(--fs-xs);color:var(--muted);line-height:1.7">
       1. Sammle mindestens <b style="color:var(--text)">750 XP</b> in einer Woche<br>
       2. Du nimmst automatisch am Gewinnspiel teil<br>
       3. Jeden <b style="color:var(--text)">Sonntag um 20:00 Uhr</b> wird gezogen<br>
@@ -18377,19 +18377,19 @@ async function msAdminRestore(uid,name){if(!confirm(name+' zurück auf die Warte
   <div style="background:linear-gradient(135deg,rgba(245,158,11,0.08),rgba(245,158,11,0.02));border:1px dashed rgba(245,158,11,0.40);border-radius:16px;padding:16px;margin-top:12px">
     <div style="font-size:11px;font-weight:800;color:#f59e0b;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px">🛠️ Admin: Gewinner manuell eintragen</div>
     <div style="display:flex;flex-direction:column;gap:8px">
-      <select id="raffle-uid" style="width:100%;padding:10px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text);font-size:13px">
+      <select id="raffle-uid" style="width:100%;padding:10px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text);font-size:var(--fs-sm)">
         <option value="">— User wählen —</option>
         ${userOpts}
       </select>
-      <select id="raffle-prize" style="width:100%;padding:10px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text);font-size:13px">
+      <select id="raffle-prize" style="width:100%;padding:10px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text);font-size:var(--fs-sm)">
         <option value="">— Preis wählen —</option>
         <option value="🔗|1 Extra-Link">🔗 1 Extra-Link</option>
         <option value="⚡|1 Superlink">⚡ 1 Superlink</option>
         <option value="✨|500 XP">✨ 500 XP</option>
         <option value="💎|5 Diamanten">💎 5 Diamanten</option>
       </select>
-      <button onclick="raffleSet()" style="background:linear-gradient(180deg,#f59e0b,#d97706);color:#000;border:none;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer">📌 Als Gewinner eintragen</button>
-      <div id="raffle-result" style="font-size:12px;text-align:center;min-height:16px"></div>
+      <button onclick="raffleSet()" style="background:linear-gradient(180deg,#f59e0b,#d97706);color:#000;border:none;border-radius:10px;padding:10px 16px;font-size:var(--fs-sm);font-weight:700;cursor:pointer">📌 Als Gewinner eintragen</button>
+      <div id="raffle-result" style="font-size:var(--fs-xs);text-align:center;min-height:16px"></div>
     </div>
     ${histRows ? `
     <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border2)">
@@ -18432,8 +18432,8 @@ async function msAdminRestore(uid,name){if(!confirm(name+' zurück auf die Warte
 .rl-eyebrow{display:inline-flex;align-items:center;gap:8px;padding:6px 14px;background:rgba(212,175,55,0.10);border:1px solid rgba(212,175,55,0.30);border-radius:99px;font-size:10.5px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#f5d76e;margin-bottom:10px}
 .rl-eyebrow::before,.rl-eyebrow::after{content:'';width:14px;height:1px;background:linear-gradient(90deg,transparent,#f5d76e)}
 .rl-eyebrow::after{background:linear-gradient(90deg,#f5d76e,transparent)}
-.rl-title{font-size:28px;font-weight:900;font-family:var(--font-display,Inter,system-ui,sans-serif);background:linear-gradient(180deg,#fff8d6 0%,#f5d76e 30%,#d4af37 55%,#8b6914 85%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-0.5px;line-height:1.05;margin:0 0 8px;text-shadow:0 2px 18px rgba(212,175,55,0.25)}
-.rl-sub{font-size:13px;color:var(--muted);line-height:1.5;max-width:320px;margin:0 auto 18px}
+.rl-title{font-size:var(--fs-xl);font-weight:900;font-family:var(--font-display,Inter,system-ui,sans-serif);background:linear-gradient(180deg,#fff8d6 0%,#f5d76e 30%,#d4af37 55%,#8b6914 85%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-0.5px;line-height:1.05;margin:0 0 8px;text-shadow:0 2px 18px rgba(212,175,55,0.25)}
+.rl-sub{font-size:var(--fs-sm);color:var(--muted);line-height:1.5;max-width:320px;margin:0 auto 18px}
 .rl-meta{display:flex;justify-content:center;gap:10px;margin-bottom:8px;flex-wrap:wrap}
 .rl-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 11px;background:rgba(255,255,255,0.04);border:1px solid var(--border2);border-radius:99px;font-size:11px;font-weight:700;color:var(--muted)}
 .rl-chip.live{color:#22c55e;border-color:rgba(34,197,94,0.3);background:rgba(34,197,94,0.08)}
@@ -18460,7 +18460,7 @@ async function msAdminRestore(uid,name){if(!confirm(name+' zurück auf die Warte
 .rl-stand{position:absolute;left:50%;bottom:-2px;transform:translateX(-50%);width:140px;height:24px;background:linear-gradient(180deg,#d4af37 0%,#8b6914 60%,#3d2c0a 100%);border-radius:50%;filter:blur(2px);opacity:0.75;z-index:0}
 
 .rl-btn-wrap{position:relative;text-align:center;margin-top:18px;z-index:2}
-.rl-btn{position:relative;display:inline-flex;align-items:center;gap:10px;padding:15px 38px;background:linear-gradient(180deg,#f8e7a0 0%,#d4af37 40%,#a07a1c 85%);color:#1a0f00;border:none;border-radius:16px;font-size:15px;font-weight:900;letter-spacing:0.4px;text-transform:uppercase;cursor:pointer;font-family:inherit;
+.rl-btn{position:relative;display:inline-flex;align-items:center;gap:10px;padding:15px 38px;background:linear-gradient(180deg,#f8e7a0 0%,#d4af37 40%,#a07a1c 85%);color:#1a0f00;border:none;border-radius:16px;font-size:var(--fs-base);font-weight:900;letter-spacing:0.4px;text-transform:uppercase;cursor:pointer;font-family:inherit;
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,0.7),
     inset 0 -2px 0 rgba(0,0,0,0.25),
@@ -18486,16 +18486,16 @@ async function msAdminRestore(uid,name){if(!confirm(name+' zurück auf die Warte
 .rl-result-label{font-size:11px;font-weight:800;letter-spacing:2.5px;text-transform:uppercase;color:#22c55e;margin-bottom:4px}
 .rl-result.jackpot .rl-result-label{color:#f5d76e}
 .rl-result-prize{font-size:22px;font-weight:900;font-family:var(--font-display,Inter,system-ui,sans-serif);color:var(--text);letter-spacing:-0.3px}
-.rl-result.jackpot .rl-result-prize{background:linear-gradient(180deg,#fff8d6,#d4af37);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-size:28px}
+.rl-result.jackpot .rl-result-prize{background:linear-gradient(180deg,#fff8d6,#d4af37);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-size:var(--fs-xl)}
 .rl-result-sub{font-size:11.5px;color:var(--muted);margin-top:6px;letter-spacing:0.1px}
 
 .rl-cooldown{text-align:center;font-size:11.5px;color:var(--muted);margin:14px 16px 0;letter-spacing:0.3px}
 .rl-cooldown b{color:var(--text);font-weight:700}
 
 .rl-prizes{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:20px 16px 0;position:relative;z-index:2}
-.rl-prize{padding:10px 12px;background:rgba(255,255,255,0.03);border:1px solid var(--border2);border-radius:12px;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text)}
+.rl-prize{padding:10px 12px;background:rgba(255,255,255,0.03);border:1px solid var(--border2);border-radius:12px;display:flex;align-items:center;gap:8px;font-size:var(--fs-xs);color:var(--text)}
 .rl-prize-emoji{font-size:18px;line-height:1}
-.rl-prize-name{font-weight:700;flex:1;min-width:0;font-size:12px}
+.rl-prize-name{font-weight:700;flex:1;min-width:0;font-size:var(--fs-xs)}
 .rl-prize-odds{font-size:10px;color:var(--muted);font-weight:600;flex-shrink:0}
 
 .rl-confetti-wrap{position:fixed;inset:0;pointer-events:none;z-index:9999;overflow:hidden}
@@ -18864,8 +18864,8 @@ function showErr(msg){
         return html(`
 <div class="topbar">
   <div style="display:flex;gap:6px;align-items:center">
-    <a href="/profil" title="XP" style="display:inline-flex;align-items:center;gap:4px;padding:5px 9px;background:rgba(167,139,250,0.10);border:1px solid rgba(167,139,250,0.30);border-radius:99px;text-decoration:none;color:#a78bfa;font-size:12px;font-weight:700"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>${(_me?.xp||0).toLocaleString('de-DE')} XP</a>
-    <a href="/diamanten" title="Diamanten" style="display:inline-flex;align-items:center;gap:4px;padding:5px 9px;background:rgba(6,182,212,0.10);border:1px solid rgba(6,182,212,0.30);border-radius:99px;text-decoration:none;color:#06b6d4;font-size:12px;font-weight:700"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0"><path d="M6 2h12l4 6-10 13L2 8z"/></svg>${(_me?.diamonds||0)}</a>
+    <a href="/profil" title="XP" style="display:inline-flex;align-items:center;gap:4px;padding:5px 9px;background:rgba(167,139,250,0.10);border:1px solid rgba(167,139,250,0.30);border-radius:99px;text-decoration:none;color:#a78bfa;font-size:var(--fs-xs);font-weight:700"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>${(_me?.xp||0).toLocaleString('de-DE')} XP</a>
+    <a href="/diamanten" title="Diamanten" style="display:inline-flex;align-items:center;gap:4px;padding:5px 9px;background:rgba(6,182,212,0.10);border:1px solid rgba(6,182,212,0.30);border-radius:99px;text-decoration:none;color:#06b6d4;font-size:var(--fs-xs);font-weight:700"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0"><path d="M6 2h12l4 6-10 13L2 8z"/></svg>${(_me?.diamonds||0)}</a>
   </div>
   <button class="icon-btn" onclick="setTheme(document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark')" title="Theme">🌙</button>
 </div>
@@ -18876,7 +18876,7 @@ function showErr(msg){
       <span style="width:7px;height:7px;border-radius:50%;background:#22ff88;box-shadow:0 0 8px rgba(34,255,136,0.7);display:inline-block"></span>
       <span style="font-size:10px;font-weight:700;letter-spacing:2px;color:rgba(255,255,255,0.7);text-transform:uppercase">Community live</span>
     </div>
-    <div style="font-size:13px;color:rgba(255,255,255,0.78);font-weight:500;letter-spacing:0.3px">${_greet},</div>
+    <div style="font-size:var(--fs-sm);color:rgba(255,255,255,0.78);font-weight:500;letter-spacing:0.3px">${_greet},</div>
     <div style="font-size:26px;font-weight:800;color:#fff;font-family:var(--font-display);line-height:1.1;margin-top:2px;letter-spacing:-0.5px">${htmlEsc(_greetName)} 👋</div>
     <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
       <div style="display:inline-flex;align-items:center;gap:5px;padding:6px 11px;background:rgba(255,255,255,0.18);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.22);border-radius:999px;font-size:11.5px;color:#fff;font-weight:600"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>${_me.xp||0} XP</div>
@@ -18907,16 +18907,16 @@ function showErr(msg){
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#fff;color:#1a1a1a;line-height:1.65}
-.tb{position:sticky;top:0;background:#fff;border-bottom:1px solid #e5e5e5;padding:14px 16px;display:flex;align-items:center;font-weight:600;font-size:15px;z-index:10}
+.tb{position:sticky;top:0;background:#fff;border-bottom:1px solid #e5e5e5;padding:14px 16px;display:flex;align-items:center;font-weight:600;font-size:var(--fs-base);z-index:10}
 .tb a{color:#1a1a1a;text-decoration:none;font-size:22px;margin-right:12px}
 .wrap{padding:16px;max-width:720px;margin:0 auto;font-size:14px}
 .wrap h1{font-size:22px;margin-bottom:12px;font-weight:800}
-.wrap h2{font-size:16px;margin:20px 0 8px;font-weight:700}
+.wrap h2{font-size:var(--fs-md);margin:20px 0 8px;font-weight:700}
 .wrap p,.wrap ul{margin-bottom:10px}
 .wrap ul{padding-left:18px}
 .wrap a{color:#0066cc}
-.wrap code{background:#f4f4f4;padding:2px 5px;border-radius:3px;font-size:13px}
-.stamp{color:#888;font-size:12px;margin-bottom:18px}
+.wrap code{background:#f4f4f4;padding:2px 5px;border-radius:3px;font-size:var(--fs-sm)}
+.stamp{color:#888;font-size:var(--fs-xs);margin-bottom:18px}
 .foot{margin-top:32px;padding-top:18px;border-top:1px solid #e5e5e5;font-size:11.5px;color:#888;text-align:center}
 .foot a{color:#0066cc;text-decoration:none;margin:0 7px}
 @media(prefers-color-scheme:dark){
