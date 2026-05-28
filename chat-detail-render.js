@@ -87,12 +87,13 @@ module.exports = function renderChatBubbles(opts) {
         const buildPreview = (url, customLabel) => {
             try {
                 const u = new URL(url);
-                let icon = '🔗';
-                if (/instagram\.com/.test(u.hostname)) icon = '📸';
-                else if (/youtube\.com|youtu\.be/.test(u.hostname)) icon = '▶️';
-                else if (/tiktok\.com/.test(u.hostname)) icon = '🎵';
-                else if (/twitter\.com|x\.com/.test(u.hostname)) icon = '🐦';
-                else if (/facebook\.com/.test(u.hostname)) icon = '👥';
+                const _ic = (inner,fill) => '<svg width="22" height="22" viewBox="0 0 24 24" fill="'+(fill||'none')+'" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+inner+'</svg>';
+                let icon = _ic('<path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/>');
+                if (/instagram\.com/.test(u.hostname)) icon = _ic('<rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17" cy="7" r="1.1" fill="currentColor" stroke="none"/>');
+                else if (/youtube\.com|youtu\.be/.test(u.hostname)) icon = _ic('<rect x="2" y="5" width="20" height="14" rx="4"/><polygon points="10 9 16 12 10 15 10 9" fill="currentColor" stroke="none"/>');
+                else if (/tiktok\.com/.test(u.hostname)) icon = _ic('<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>');
+                else if (/twitter\.com|x\.com/.test(u.hostname)) icon = _ic('<path d="M22 4s-.7 2-2 3.4c1.6 10-9.4 17.3-18 11.6 2.2.1 4.4-.6 6-2C3 15.5.5 9.6 3 5c2.2 2.6 5.6 4.1 9 4-.9-4.2 4-6.6 7-3.8 1.1 0 3-1.2 3-1.2z"/>');
+                else if (/facebook\.com/.test(u.hostname)) icon = _ic('<path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/>');
                 const headLine = customLabel || u.hostname.replace(/^www\./,'');
                 const subLine = customLabel ? u.hostname.replace(/^www\./,'') : (u.pathname||'/').slice(0,40);
                 return '<a href="' + esc(url) + '" target="_blank" rel="noopener" class="chat-link-preview" onclick="event.stopPropagation()">' +
