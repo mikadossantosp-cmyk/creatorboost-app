@@ -5751,8 +5751,8 @@ h1{font-family:'Cormorant Garamond',serif;font-size:40px;font-weight:600;line-he
 .in{width:100%;background:rgba(255,255,255,0.04);border:1.5px solid var(--border);color:#fff;border-radius:12px;padding:14px 16px;font-size:15px;outline:none;margin-bottom:12px;font-family:inherit;transition:.18s;font-weight:500}
 .in:focus{border-color:var(--gold);background:rgba(212,175,55,0.04);box-shadow:0 0 0 3px rgba(212,175,55,0.12)}
 .in::placeholder{color:var(--muted2)}
-.btn{margin-top:8px;width:100%;padding:15px;font-size:15px;font-weight:700;border-radius:12px;border:none;cursor:pointer;font-family:inherit;letter-spacing:0.2px;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;box-shadow:0 8px 24px -8px rgba(212,175,55,0.6),inset 0 1px 0 rgba(255,255,255,0.5);transition:all .15s}
-.btn:hover{transform:translateY(-1px);box-shadow:0 12px 30px -8px rgba(212,175,55,0.7)}
+.btn{margin-top:8px;width:100%;padding:15px;font-size:15px;font-weight:700;border-radius:12px;border:none;cursor:pointer;font-family:inherit;letter-spacing:0.2px;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;box-shadow:0 1px 2px rgba(0,0,0,0.20),0 6px 18px -6px rgba(212,175,55,0.40),inset 0 1px 0 rgba(255,255,255,0.5);transition:all .15s}
+.btn:hover{transform:translateY(-1px);box-shadow:0 2px 4px rgba(0,0,0,0.22),0 8px 22px -8px rgba(212,175,55,0.50)}
 .btn:active{transform:translateY(0)}
 .btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
 .msg{font-size:13px;padding:10px 14px;border-radius:10px;margin-bottom:12px;display:none;line-height:1.5;font-weight:500}
@@ -5761,7 +5761,8 @@ h1{font-family:'Cormorant Garamond',serif;font-size:40px;font-weight:600;line-he
 .msg.err{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);color:#f87171}
 .perks{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:24px}
 .perk{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);font-weight:500}
-.perk-icon{font-size:16px}
+.perk-icon{font-size:16px;display:inline-flex;align-items:center;flex-shrink:0;color:var(--gold)}
+.fld-label{display:block;font-size:12.5px;font-weight:600;color:var(--text);margin:0 2px 7px;text-align:left}
 .hint{font-size:11px;color:var(--muted2);margin-top:10px;text-align:center;line-height:1.55}
 .bottom{text-align:center;margin-top:20px;padding-top:20px;border-top:1px solid var(--border)}
 .bottom-lbl{font-size:12px;color:var(--muted);margin-bottom:6px}
@@ -5777,15 +5778,17 @@ h1{font-family:'Cormorant Garamond',serif;font-size:40px;font-weight:600;line-he
   <h1>Account erstellen</h1>
   <div class="sub">Werde Teil der Creator-Community. Kostenlos.</div>
   <div class="perks">
-    <div class="perk"><span class="perk-icon">🚀</span>Echtes Engagement</div>
-    <div class="perk"><span class="perk-icon">❤️</span>Täglich Likes</div>
-    <div class="perk"><span class="perk-icon">🏆</span>Ranking &amp; XP</div>
-    <div class="perk"><span class="perk-icon">📊</span>Creator-Profil</div>
+    <div class="perk"><svg class="perk-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>Echtes Engagement</div>
+    <div class="perk"><svg class="perk-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>Täglich Likes</div>
+    <div class="perk"><svg class="perk-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>Ranking &amp; XP</div>
+    <div class="perk"><svg class="perk-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>Creator-Profil</div>
   </div>
   <div class="msg" id="signup-msg"></div>
   <form id="signup-form" onsubmit="return submitSignup(event)">
-    <input type="email" id="signup-email" class="in" placeholder="Email-Adresse" autocomplete="email" autocapitalize="none" spellcheck="false" required maxlength="200">
-    <input type="password" id="signup-pw" class="in" placeholder="Passwort (min. 6 Zeichen)" autocomplete="new-password" minlength="6" maxlength="200" required>
+    <label class="fld-label" for="signup-email">Email-Adresse</label>
+    <input type="email" id="signup-email" class="in" placeholder="deine@email.de" autocomplete="email" autocapitalize="none" spellcheck="false" required maxlength="200">
+    <label class="fld-label" for="signup-pw">Passwort</label>
+    <input type="password" id="signup-pw" class="in" placeholder="Mindestens 6 Zeichen" autocomplete="new-password" minlength="6" maxlength="200" required>
     <label style="display:flex;align-items:flex-start;gap:10px;margin:6px 2px 4px;cursor:pointer;font-size:12.5px;color:var(--muted);line-height:1.5">
       <input type="checkbox" id="signup-age" required style="margin-top:3px;flex-shrink:0;width:16px;height:16px;accent-color:#d4a946;cursor:pointer">
       <span>Ich bestätige, dass ich <b style="color:#fff">mindestens 18 Jahre alt</b> bin und die <a href="/datenschutz" target="_blank" style="color:#d4a946;text-decoration:underline">Datenschutzerklärung</a> sowie die <a href="/agb" target="_blank" style="color:#d4a946;text-decoration:underline">AGB</a> akzeptiere.</span>
@@ -5893,8 +5896,8 @@ h1{font-family:'Cormorant Garamond',serif;font-size:40px;font-weight:600;line-he
 .pw-toggle:hover{color:var(--gold);background:rgba(212,175,55,0.06)}
 .pw-toggle svg{width:18px;height:18px}
 
-.btn{margin-top:6px;width:100%;padding:14px;font-size:15px;font-weight:700;border-radius:12px;border:none;cursor:pointer;font-family:inherit;letter-spacing:0.2px;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;box-shadow:0 8px 24px -8px rgba(212,175,55,0.6),inset 0 1px 0 rgba(255,255,255,0.5);transition:all .15s;display:flex;align-items:center;justify-content:center;gap:8px;position:relative}
-.btn:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 12px 30px -8px rgba(212,175,55,0.7)}
+.btn{margin-top:6px;width:100%;padding:14px;font-size:15px;font-weight:700;border-radius:12px;border:none;cursor:pointer;font-family:inherit;letter-spacing:0.2px;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;box-shadow:0 1px 2px rgba(0,0,0,0.20),0 6px 18px -6px rgba(212,175,55,0.40),inset 0 1px 0 rgba(255,255,255,0.5);transition:all .15s;display:flex;align-items:center;justify-content:center;gap:8px;position:relative}
+.btn:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 2px 4px rgba(0,0,0,0.22),0 8px 22px -8px rgba(212,175,55,0.50)}
 .btn:active:not(:disabled){transform:translateY(0)}
 .btn:disabled{opacity:.6;cursor:not-allowed;transform:none}
 .btn .spin{width:16px;height:16px;border:2px solid rgba(0,0,0,0.3);border-top-color:#000;border-radius:50%;animation:spin 0.7s linear infinite;display:none}
