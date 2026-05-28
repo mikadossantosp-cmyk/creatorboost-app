@@ -4751,7 +4751,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v224-mission-checks';
+const SW_VERSION='v225-explore-tab-icons';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
@@ -18537,15 +18537,16 @@ function showErr(msg){
 <\/script>`
         };
 
+        const _eic = (p)=>'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+p+'</svg>';
         const tabs = [
-            {id:'allgemein', emoji:'✨', label:'Übersicht', c1:'#a78bfa', c2:'#7c3aed', shadow:'rgba(167,139,250,0.45)'},
-            {id:'newsletter',emoji:'📩', label:'News',      c1:'#4dabf7', c2:'#1d6fa5', shadow:'rgba(77,171,247,0.45)'},
-            {id:'ranking',   emoji:'🏆', label:'Ranking',   c1:'#f59e0b', c2:'#d97706', shadow:'rgba(245,158,11,0.45)'},
-            {id:'tipps',     emoji:'💡', label:'Tipps',     c1:'#22c55e', c2:'#15803d', shadow:'rgba(34,197,94,0.45)'},
-            {id:'regeln',    emoji:'📋', label:'Regeln',    c1:'#94a3b8', c2:'#475569', shadow:'rgba(148,163,184,0.45)'},
-            {id:'shop',      emoji:'💎', label:'Shop',      c1:'#ec4899', c2:'#a21caf', shadow:'rgba(236,72,153,0.45)'},
-            {id:'gewinnspiel',emoji:'🎰',label:'Gewinn',    c1:'#f59e0b', c2:'#ef4444', shadow:'rgba(245,158,11,0.45)'},
-            {id:'roulette',  emoji:'🎡', label:'Roulette',  c1:'#ef4444', c2:'#dc2626', shadow:'rgba(239,68,68,0.45)'},
+            {id:'allgemein', emoji:_eic('<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>'), label:'Übersicht', c1:'#a78bfa', c2:'#7c3aed', shadow:'rgba(167,139,250,0.45)'},
+            {id:'newsletter',emoji:_eic('<rect x="2" y="4" width="20" height="16" rx="2"/><path d="M3 6l9 7 9-7"/>'), label:'News',      c1:'#4dabf7', c2:'#1d6fa5', shadow:'rgba(77,171,247,0.45)'},
+            {id:'ranking',   emoji:_eic('<path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3"/><path d="M9 21h6M12 16v5"/>'), label:'Ranking',   c1:'#f59e0b', c2:'#d97706', shadow:'rgba(245,158,11,0.45)'},
+            {id:'tipps',     emoji:_eic('<path d="M9 18h6M10 21h4"/><path d="M12 2a6 6 0 0 0-4 10.5c.6.6 1 1.4 1 2.5h6c0-1.1.4-1.9 1-2.5A6 6 0 0 0 12 2z"/>'), label:'Tipps',     c1:'#22c55e', c2:'#15803d', shadow:'rgba(34,197,94,0.45)'},
+            {id:'regeln',    emoji:_eic('<path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/>'), label:'Regeln',    c1:'#94a3b8', c2:'#475569', shadow:'rgba(148,163,184,0.45)'},
+            {id:'shop',      emoji:_eic('<path d="M5 7h14l-1 14H6z"/><path d="M9 7V5a3 3 0 0 1 6 0v2"/>'), label:'Shop',      c1:'#ec4899', c2:'#a21caf', shadow:'rgba(236,72,153,0.45)'},
+            {id:'gewinnspiel',emoji:_eic('<rect x="3" y="9" width="18" height="4" rx="1"/><path d="M5 13v8h14v-8M12 9v12"/><path d="M12 9S11 3 8.5 3a2 2 0 0 0 0 6zM12 9s1-6 3.5-6a2 2 0 0 1 0 6z"/>'),label:'Gewinn',    c1:'#f59e0b', c2:'#ef4444', shadow:'rgba(245,158,11,0.45)'},
+            {id:'roulette',  emoji:_eic('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/>'), label:'Roulette',  c1:'#ef4444', c2:'#dc2626', shadow:'rgba(239,68,68,0.45)'},
         ];
 
         return html(`
