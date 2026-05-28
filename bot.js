@@ -2050,6 +2050,7 @@ textarea.form-input{resize:none;min-height:80px}
 @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
 @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
 @keyframes like-pop{0%{transform:scale(1)}40%{transform:scale(1.13)}70%{transform:scale(.97)}100%{transform:scale(1)}}
+@keyframes tabFade{from{opacity:0}to{opacity:1}}
 .fade-up{animation:fadeUp .4s ease forwards}
 .setting-row{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border2)}
 .setting-label{font-size:14px;font-weight:500}
@@ -4809,7 +4810,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v257-like-pop';
+const SW_VERSION='v258-tab-fade';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
@@ -17550,7 +17551,8 @@ ${_latestNews ? `<a href="/explore?tab=newsletter" class="highlight-card" style=
 <script>
 function switchRanking(tab, btn) {
   ['gesamt','daily','weekly'].forEach(t=>{
-    document.getElementById('rlist-'+t).style.display=t===tab?'block':'none';
+    const rl=document.getElementById('rlist-'+t);
+    if(t===tab){rl.style.display='block';rl.style.animation='none';void rl.offsetWidth;rl.style.animation='tabFade .26s ease';}else rl.style.display='none';
     const b=document.getElementById('rtab-'+t);
     if(t===tab){b.style.background='linear-gradient(135deg,#a78bfa,#7c3aed)';b.style.color='#fff';b.style.border='none';}
     else{b.style.background='var(--bg3)';b.style.color='var(--muted)';b.style.border='1px solid var(--border2)';}
@@ -19433,7 +19435,7 @@ let _curProjIdx=-1, _editMode=false, _editProjId=null;
 function showPTab(tab,el){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   el.classList.add('active');
-  ['posts','projekte','links','about'].forEach(t=>{const e=document.getElementById('ptab-'+t);if(e)e.style.display=t===tab?'block':'none';});
+  ['posts','projekte','links','about'].forEach(t=>{const e=document.getElementById('ptab-'+t);if(e){if(t===tab){e.style.display='block';e.style.animation='none';void e.offsetWidth;e.style.animation='tabFade .26s ease';}else e.style.display='none';}});
 }
 function openProjDetail(idx){
   const p=PROJECTS[idx]; if(!p) return; _curProjIdx=idx;
@@ -19768,7 +19770,7 @@ const _TUID='${uid}';
 function showTPTab(tab,el){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   el.classList.add('active');
-  ['posts','projekte','links','about'].forEach(t=>{const e=document.getElementById('tptab-'+t);if(e)e.style.display=t===tab?'block':'none';});
+  ['posts','projekte','links','about'].forEach(t=>{const e=document.getElementById('tptab-'+t);if(e){if(t===tab){e.style.display='block';e.style.animation='none';void e.offsetWidth;e.style.animation='tabFade .26s ease';}else e.style.display='none';}});
 }
 function openTProjDetail(idx){
   const p=TPROJECTS[idx]; if(!p) return;
