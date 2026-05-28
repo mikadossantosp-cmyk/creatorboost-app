@@ -91,6 +91,20 @@ function _localCreditAction(action, payload) {
     if (action === '/add-superlink') return botLogic.addSuperlink(payload);
     return null;
 }
+// Mappt die Admin-Grant-Actions (Dashboard) auf die lokalen bot-logic-Mutationen.
+function _localGrantAction(action, payload) {
+    switch (action) {
+        case 'add-xp':          return botLogic.addXp(payload);
+        case 'remove-xp':       return botLogic.removeXp(payload);
+        case 'add-diamonds':    return botLogic.addDiamonds(payload);
+        case 'remove-diamonds': return botLogic.removeDiamonds(payload);
+        case 'add-extra-link':  return botLogic.addExtraLink(payload);
+        case 'add-superlink':   return botLogic.addSuperlink(payload);
+        case 'add-warn':        return botLogic.addWarn(payload);
+        case 'remove-warn':     return botLogic.removeWarn(payload);
+        default:                return null;
+    }
+}
 
 // Google Play Store Reviewer-Account: bypass Email-Verification + Instagram-Linking.
 // Reviewer loggt sich mit diesen Credentials ein → wird einmalig im Mainbot angelegt
@@ -5431,7 +5445,7 @@ self.addEventListener('notificationclick',e=>{
         if (email === REVIEWER_EMAIL && password === REVIEWER_PASSWORD) {
             // Cache umgehen — fetchBot('/data') liefert sonst stale data und neu erstellter
             // User taucht nicht auf. fetchBotRaw geht direkt zum Mainbot.
-            let bd = await fetchBotRaw('/data');
+            let bd = LOCAL_STORE ? datastore.getData() : await fetchBotRaw('/data');
             let reviewerEntry = Object.entries(bd?.users || {}).find(([, u]) => String(u.email||'').toLowerCase() === REVIEWER_EMAIL);
             let reviewerUid;
             if (reviewerEntry) {
@@ -6165,7 +6179,7 @@ try { fetch('/api/track-funnel',{method:'POST',headers:{'Content-Type':'applicat
         // frischen Create u.U. noch stale (stale-while-revalidate) und enthält den gerade
         // angelegten User NICHT → früher "Lookup fehlgeschlagen" = User ausgesperrt obwohl
         // Account existiert. Direkt-Fetch umgeht das + aktualisiert den Cache.
-        const fresh = await fetchBotRaw('/data');
+        const fresh = LOCAL_STORE ? datastore.getData() : await fetchBotRaw('/data');
         if (fresh) { _dataCache = fresh; _dataCacheTime = Date.now(); }
         const u = fresh?.users?.[created.uid];
         // WICHTIG: Account ist angelegt (created.ok). Niemals aussperren, selbst wenn der
@@ -9656,7 +9670,7 @@ p{line-height:1.65;color:var(--muted)}
             // DIREKT (uncached) lesen — der gerade via update-profile-api geschriebene
             // pendingEmail ist im stale _dataCache noch nicht drin → sonst falsche
             // „Email bereits vergeben"-Meldung bzw. Bestätigungsmail wird nie verschickt.
-            const _bd = await fetchBotRaw('/data');
+            const _bd = LOCAL_STORE ? datastore.getData() : await fetchBotRaw('/data');
             const _u = _bd?.users?.[myUid] || {};
             // Eindeutigkeit-Konflikt? (Bot hat es nicht gespeichert AND auch nicht als pending)
             if (String(_u.email||'').toLowerCase() !== updateData.email && String(_u.pendingEmail||'').toLowerCase() !== updateData.email) {
@@ -10056,7 +10070,9 @@ p{line-height:1.65;color:var(--muted)}
         if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
         if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
         const body = await parseBody(req);
-        const r = await postBot(body.unban ? '/unban-user-api' : '/ban-user-api', { uid: String(body.uid||'') });
+        const r = LOCAL_STORE
+            ? await localWrite(() => body.unban ? botLogic.unbanUserApi({ uid: String(body.uid||'') }) : botLogic.banUserApi({ uid: String(body.uid||'') }))
+            : await postBot(body.unban ? '/unban-user-api' : '/ban-user-api', { uid: String(body.uid||'') });
         return json(r || {ok:false, error:'Mainbot offline'});
     }
 
@@ -14620,7 +14636,7 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
         if (!allowedActions.includes(action)) return json({ok:false, error:'unbekannte Aktion'}, 400);
         const payload = { uid: targetUid, reason: 'admin' };
         if (isPositiveActionWithAmount.includes(action)) payload.amount = amount;
-        const r = await postBot('/' + action, payload);
+        const r = LOCAL_STORE ? await localWrite(() => _localGrantAction(action, payload)) : await postBot('/' + action, payload);
         if (!r) return json({ok:false, error:'Mainbot offline / kein Endpoint'}, 502);
         if (r.ok === false) return json({ok:false, error: r.error || 'Mainbot lehnte ab'}, 400);
         return json({ ok:true, result: r });
@@ -14636,7 +14652,7 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
         let targetUid = String(body.uid || '');
         let email = String(body.email || '').toLowerCase().trim();
         if (!targetUid && !email) return json({ok:false, error:'uid oder email erforderlich'}, 400);
-        const bd = await fetchBotRaw('/data');
+        const bd = LOCAL_STORE ? datastore.getData() : await fetchBotRaw('/data');
         let u = targetUid ? bd?.users?.[targetUid] : null;
         if (!u && email) {
             const found = Object.entries(bd?.users || {}).find(([, x]) => String(x.email||'').toLowerCase() === email);
@@ -15186,7 +15202,9 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
         if (!Number.isFinite(amount) || amount<=0) return json({ok:false,error:'amount muss > 0 sein'},400);
         if (!Number.isFinite(durationMs) || durationMs<=0) return json({ok:false,error:'durationMs muss > 0 sein'},400);
         const ep = type === 'xp' ? '/admin-start-xp-event-api' : '/admin-start-diamond-event-api';
-        const r = await postBot(ep, { amount, durationMs, label });
+        const r = LOCAL_STORE
+            ? await localWrite(() => type === 'xp' ? botLogic.startXpEvent({ amount, durationMs, label }) : botLogic.startDiamondEvent({ amount, durationMs, label }))
+            : await postBot(ep, { amount, durationMs, label });
         return json(r || {ok:false,error:'Mainbot offline'});
     }
     if (path === '/api/admin/event-stop' && req.method === 'POST') {
