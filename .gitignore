@@ -4,6 +4,7 @@ cb_sessions.json
 *.session
 .keystore_value_DO_NOT_COMMIT.txt
 # Runtime-Datendateien (werden zur Laufzeit / im /data-Volume erzeugt — nie ins Repo)
+daten.json
 app_db.json
 app_writes_log.json
 write_queue.json
