@@ -4799,7 +4799,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v247-ui-controls-icons';
+const SW_VERSION='v248-explore-content-icons';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
@@ -17542,27 +17542,27 @@ function switchRanking(tab, btn) {
 </script>`,
             tipps: (()=>{
                 const tipps = [
-                    { icon:'🔁', title:'Eigene Reels nach 2h teilen', desc:'2 Stunden nach Posting deinen eigenen Reel als Story reposten + selbst liken. Boost-Trick den viele vergessen — der Algorithmus merkt: „Engagement geht weiter".' },
-                    { icon:'🎬', title:'Hook in 3 Sekunden', desc:'Wenn dein Reel in den ersten 3 Sek nicht packt, ist der Rest egal. Visuelle Spannung, klare Frage, oder unerwarteter Cut — wähl einen Hook und teste ihn.' },
-                    { icon:'💾', title:'Saves > Likes für Algorithmus', desc:'Speichern signalisiert „Will ich später nochmal sehen" und ist ein STARKES Signal. Mach Content der Save-würdig ist (Tutorials, Tipps, Inspiration).' },
-                    { icon:'💬', title:'Kommentare mit ≥2 Wörtern', desc:'„🔥🔥" oder „nice" werden vom Algorithmus oft als Bot-Verhalten eingestuft. Echte Sätze pushen viel mehr — auch wenn du selbst kommentierst.' },
-                    { icon:'❓', title:'Frage am Ende der Caption', desc:'„Was meinst du?" am Caption-Ende = +30% Comments. User antworten gerne wenn sie gefragt werden. Algorithmus liebt Diskussionen.' },
-                    { icon:'⏰', title:'Deine beste Posting-Zeit', desc:'Insta-Insights → schau wann DEINE Audience aktiv ist. „Allgemein beste Zeit" ist Quatsch — deine Stunde zählt. 30 Min vor Peak-Aktivität posten.' },
-                    { icon:'🖼️', title:'Carousels für Watch Time', desc:'Karussell-Posts halten User länger auf deinem Profil → mehr Watch Time. Ab und zu zwischen Reels einbauen — pusht das Profil-Engagement.' },
-                    { icon:'🎯', title:'Trends NICHT 1:1 kopieren', desc:'Adapt sie auf deine Nische statt blind nachzumachen. Die ersten paar Variationen pushen, danach wird\'s zu spät. Eigene Note schlägt Kopie.' },
-                    { icon:'🔊', title:'Trending Audio nutzen', desc:'Reels mit Trending-Sounds (kleines ↗ Pfeil-Icon im Audio-Picker) bekommen Algorithmus-Boost. Check täglich neue Trends, schnell drauf reagieren.' },
-                    { icon:'📝', title:'Caption: erste 125 Zeichen', desc:'Nur die ersten ~125 Zeichen sind sichtbar bevor „Mehr". Dort muss der Hook stehen. Wichtigste Info zuerst, Hashtags ans Ende.' },
-                    { icon:'#️⃣', title:'Hashtag-Mix: 3 Größen', desc:'Mix aus großen (1M+), mittleren (100k–1M) und kleinen (<100k) Hashtags. Nur große = unsichtbar. 5–10 zielgerichtete Hashtags > 30 generische.' },
-                    { icon:'📌', title:'Pinned Posts strategisch', desc:'Pin deine 3 besten Reels oben aufs Profil — neue Besucher sehen die zuerst. Wechsel sie alle 1–2 Wochen, behalt nur die Top-Performer.' },
-                    { icon:'🎬', title:'9:16 Vertical, immer', desc:'Reels in 16:9 oder 1:1 werden gestaucht/zugeschnitten. Immer 9:16 (1080x1920). Wichtige Elemente nicht in den Rändern — Insta UI überlagert.' },
-                    { icon:'⚡', title:'Erste 5 Min nach Posting', desc:'Sofort nach Posting: in deine Story teilen + auf alle Kommentare antworten. Die ersten 5 Min entscheiden über die initiale Reichweite.' },
-                    { icon:'🔁', title:'Cross-Posting auf TikTok/YT', desc:'Gleichen Reel auch auf TikTok + YT Shorts → 3× Reichweite mit 1× Aufwand. Nur Wasserzeichen entfernen (z.B. via SnapTik) bevor du auf andere Plattformen postest.' },
-                    { icon:'👥', title:'Collab-Posts', desc:'Insta erlaubt Co-Author auf Reels — beide Profile haben den Post auf ihrer Seite. Doppelte Reichweite, doppelte Engagement. Mit anderen Creatorn aus der Community absprechen!' },
-                    { icon:'🎨', title:'Konsistenter Look', desc:'Gleiche Schrift, gleiche Farben, gleiches Format → User erkennen deine Reels sofort beim Scrollen. Brand-Recognition pusht Loyalität.' },
-                    { icon:'⚠️', title:'Vermeide Music-Copyright', desc:'Reels mit lizenzierter Musik werden in Business-Accounts oft stumm. Nutze nur Insta\'s Built-in Audio Library — sicher + algorithm-friendly.' },
+                    { icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>', title:'Eigene Reels nach 2h teilen', desc:'2 Stunden nach Posting deinen eigenen Reel als Story reposten + selbst liken. Boost-Trick den viele vergessen — der Algorithmus merkt: „Engagement geht weiter".' },
+                    { icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2.5"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/><line x1="17" y1="17" x2="22" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/></svg>', title:'Hook in 3 Sekunden', desc:'Wenn dein Reel in den ersten 3 Sek nicht packt, ist der Rest egal. Visuelle Spannung, klare Frage, oder unerwarteter Cut — wähl einen Hook und teste ihn.' },
+                    { icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-4.5L5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>', title:'Saves > Likes für Algorithmus', desc:'Speichern signalisiert „Will ich später nochmal sehen" und ist ein STARKES Signal. Mach Content der Save-würdig ist (Tutorials, Tipps, Inspiration).' },
+                    { icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-12.5 7.5L3 20.5l1.5-5.5A8.5 8.5 0 1 1 21 11.5z"/></svg>', title:'Kommentare mit ≥2 Wörtern', desc:'„🔥🔥" oder „nice" werden vom Algorithmus oft als Bot-Verhalten eingestuft. Echte Sätze pushen viel mehr — auch wenn du selbst kommentierst.' },
+                    { icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>', title:'Frage am Ende der Caption', desc:'„Was meinst du?" am Caption-Ende = +30% Comments. User antworten gerne wenn sie gefragt werden. Algorithmus liebt Diskussionen.' },
+                    { icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg>', title:'Deine beste Posting-Zeit', desc:'Insta-Insights → schau wann DEINE Audience aktiv ist. „Allgemein beste Zeit" ist Quatsch — deine Stunde zählt. 30 Min vor Peak-Aktivität posten.' },
+                    { icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>', title:'Carousels für Watch Time', desc:'Karussell-Posts halten User länger auf deinem Profil → mehr Watch Time. Ab und zu zwischen Reels einbauen — pusht das Profil-Engagement.' },
+                    { icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg>', title:'Trends NICHT 1:1 kopieren', desc:'Adapt sie auf deine Nische statt blind nachzumachen. Die ersten paar Variationen pushen, danach wird\'s zu spät. Eigene Note schlägt Kopie.' },
+                    { icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>', title:'Trending Audio nutzen', desc:'Reels mit Trending-Sounds (kleines ↗ Pfeil-Icon im Audio-Picker) bekommen Algorithmus-Boost. Check täglich neue Trends, schnell drauf reagieren.' },
+                    { icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z"/></svg>', title:'Caption: erste 125 Zeichen', desc:'Nur die ersten ~125 Zeichen sind sichtbar bevor „Mehr". Dort muss der Hook stehen. Wichtigste Info zuerst, Hashtags ans Ende.' },
+                    { icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/></svg>', title:'Hashtag-Mix: 3 Größen', desc:'Mix aus großen (1M+), mittleren (100k–1M) und kleinen (<100k) Hashtags. Nur große = unsichtbar. 5–10 zielgerichtete Hashtags > 30 generische.' },
+                    { icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>', title:'Pinned Posts strategisch', desc:'Pin deine 3 besten Reels oben aufs Profil — neue Besucher sehen die zuerst. Wechsel sie alle 1–2 Wochen, behalt nur die Top-Performer.' },
+                    { icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2.5"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>', title:'9:16 Vertical, immer', desc:'Reels in 16:9 oder 1:1 werden gestaucht/zugeschnitten. Immer 9:16 (1080x1920). Wichtige Elemente nicht in den Rändern — Insta UI überlagert.' },
+                    { icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>', title:'Erste 5 Min nach Posting', desc:'Sofort nach Posting: in deine Story teilen + auf alle Kommentare antworten. Die ersten 5 Min entscheiden über die initiale Reichweite.' },
+                    { icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>', title:'Cross-Posting auf TikTok/YT', desc:'Gleichen Reel auch auf TikTok + YT Shorts → 3× Reichweite mit 1× Aufwand. Nur Wasserzeichen entfernen (z.B. via SnapTik) bevor du auf andere Plattformen postest.' },
+                    { icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>', title:'Collab-Posts', desc:'Insta erlaubt Co-Author auf Reels — beide Profile haben den Post auf ihrer Seite. Doppelte Reichweite, doppelte Engagement. Mit anderen Creatorn aus der Community absprechen!' },
+                    { icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>', title:'Konsistenter Look', desc:'Gleiche Schrift, gleiche Farben, gleiches Format → User erkennen deine Reels sofort beim Scrollen. Brand-Recognition pusht Loyalität.' },
+                    { icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>', title:'Vermeide Music-Copyright', desc:'Reels mit lizenzierter Musik werden in Business-Accounts oft stumm. Nutze nur Insta\'s Built-in Audio Library — sicher + algorithm-friendly.' },
                 ];
                 const tippsHtml = tipps.map(t=>`<div style="background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:14px 16px;margin-bottom:10px;display:flex;align-items:flex-start;gap:13px"><div style="font-size:22px;flex-shrink:0;width:38px;height:38px;display:flex;align-items:center;justify-content:center;border-radius:10px;background:linear-gradient(135deg,rgba(34,197,94,0.18),rgba(21,128,61,0.06))">${t.icon}</div><div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:700;margin-bottom:4px;line-height:1.35">${t.title}</div><div style="font-size:12.5px;color:var(--muted);line-height:1.55">${t.desc}</div></div></div>`).join('');
-                return `<div style="padding:18px 14px 80px"><div style="font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;font-weight:700">${tipps.length} Tipps</div><div style="font-size:18px;font-weight:800;font-family:var(--font-display);margin-bottom:14px">Instagram Reel Tipps</div>${tippsHtml}<div style="margin-top:18px;padding:14px;background:linear-gradient(135deg,rgba(34,197,94,0.10),rgba(21,128,61,0.04));border:1px solid rgba(34,197,94,0.30);border-radius:12px;font-size:12px;color:var(--text);line-height:1.55">💡 <b>Tipp:</b> Schreib eigene Erfahrungen in den Tipps-Thread — wir erweitern die Liste basierend auf was bei euch funktioniert hat.</div></div>`;
+                return `<div style="padding:18px 14px 80px"><div style="font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;font-weight:700">${tipps.length} Tipps</div><div style="font-size:18px;font-weight:800;font-family:var(--font-display);margin-bottom:14px">Instagram Reel Tipps</div>${tippsHtml}<div style="margin-top:18px;padding:14px;background:linear-gradient(135deg,rgba(34,197,94,0.10),rgba(21,128,61,0.04));border:1px solid rgba(34,197,94,0.30);border-radius:12px;font-size:12px;color:var(--text);line-height:1.55"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.1V18h6v-1.2c0-.8.4-1.6 1-2.1A7 7 0 0 0 12 2z"/></svg><b>Tipp:</b> Schreib eigene Erfahrungen in den Tipps-Thread — wir erweitern die Liste basierend auf was bei euch funktioniert hat.</div></div>`;
             })(),
             regeln: require('./regeln-tab'),
             shop: (()=>{
@@ -17604,10 +17604,10 @@ function switchRanking(tab, btn) {
 </div>
 <div style="padding:4px 16px 16px;font-size:12px;color:var(--muted)">Tausche Diamanten gegen Vorteile</div>
 <div style="padding:0 16px 100px">
-  <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">🔗 Links</div>
+  <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;display:inline-flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg>Links</div>
   <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:16px;padding:16px;margin-bottom:16px">
     <div style="display:flex;align-items:flex-start;gap:14px">
-      <div style="font-size:36px;flex-shrink:0">🔗</div>
+      <div style="flex-shrink:0;width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,rgba(167,139,250,.15),rgba(124,58,237,.06));border:1px solid rgba(167,139,250,.2)"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg></div>
       <div style="flex:1;min-width:0">
         <div style="font-size:15px;font-weight:700;margin-bottom:4px">Extra-Link für heute</div>
         <div style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.5">Poste einen zusätzlichen Reel-Link heute — direkt in der App. Bonus-Links: <b style="color:var(--text)">${myBonusLinks}</b></div>
@@ -17621,7 +17621,7 @@ function switchRanking(tab, btn) {
   </div>
   <div style="background:linear-gradient(135deg,rgba(245,158,11,0.12),rgba(167,139,250,0.12));border:1px solid rgba(245,158,11,0.3);border-radius:16px;padding:16px;margin-bottom:20px">
     <div style="display:flex;align-items:flex-start;gap:14px">
-      <div style="font-size:36px;flex-shrink:0">⭐</div>
+      <div style="flex-shrink:0;width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,rgba(245,158,11,.15),rgba(245,158,11,.05));border:1px solid rgba(245,158,11,.25)"><svg width="24" height="24" viewBox="0 0 24 24" fill="#f59e0b" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
       <div style="flex:1;min-width:0">
         <div style="font-size:15px;font-weight:700;margin-bottom:4px">Extra-Superlink diese Woche</div>
         <div style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.5">Du hast deinen wöchentlichen Superlink schon verbraucht? Poste einen <b style="color:var(--text)">zweiten Superlink</b> für 10 💎 — direkt beim Posten in der App wird er automatisch abgerechnet.</div>
@@ -17633,7 +17633,7 @@ function switchRanking(tab, btn) {
       </div>
     </div>
   </div>
-  <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">🖼️ Profilbanner</div>
+  <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;display:inline-flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2.5"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>Profilbanner</div>
   ${['Bronze','Silber','Gold'].map(tier => {
     const tierColor = tier==='Bronze'?'#cd7f32':tier==='Silber'?'#a8a9ad':'#ffd700';
     const tierItems = BANNER_ITEMS.filter(b=>b.tier===tier);
@@ -17659,7 +17659,7 @@ function switchRanking(tab, btn) {
   </div>
 </div>`;
   }).join('')}
-  <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">🪄 Profilring</div>
+  <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;display:inline-flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></svg>Profilring</div>
   ${ringsHtml}
 </div>
 <script>
@@ -17857,18 +17857,21 @@ window.sugDismiss = function(btn){
 </div>`;
                 } else if (myMsStatus === 'done') {
                     mindsetUserCard = `<div style="margin:0 16px 16px;padding:16px;background:var(--bg3);border:1px solid var(--border2);border-radius:16px">
-  <div style="font-size:11px;font-weight:700;letter-spacing:1.5px;color:#22c55e;text-transform:uppercase">✅ Erledigt</div>
+  <div style="font-size:11px;font-weight:700;letter-spacing:1.5px;color:#22c55e;text-transform:uppercase"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:5px"><path d="M20 6L9 17l-5-5"/></svg>Erledigt</div>
   <div style="font-size:15px;font-weight:700;margin-top:6px">Du wurdest vorgestellt</div>
   <div style="font-size:12.5px;color:var(--muted);margin-top:6px;line-height:1.5">Danke fürs Mitmachen 🙏 — Schau dir den Post an: <a href="https://instagram.com/mindset.stories_" target="_blank" style="color:#4dabf7">@mindset.stories_</a></div>
 </div>`;
                 } else if (!myInsta) {
                     mindsetUserCard = `<div style="margin:0 16px 16px;padding:16px;background:var(--bg3);border:1px solid var(--border2);border-radius:16px">
-  <div style="font-size:11px;font-weight:700;letter-spacing:1.5px;color:#f59e0b;text-transform:uppercase">📖 Mindset Stories</div>
+  <div style="font-size:11px;font-weight:700;letter-spacing:1.5px;color:#f59e0b;text-transform:uppercase"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:5px"><path d="M2 4h6a3 3 0 0 1 3 3v13a2.5 2.5 0 0 0-2.5-2.5H2z"/><path d="M22 4h-6a3 3 0 0 0-3 3v13a2.5 2.5 0 0 1 2.5-2.5H22z"/></svg>Mindset Stories</div>
   <div style="font-size:14px;font-weight:700;margin-top:6px">Setz erst deinen Insta-Username</div>
   <div style="font-size:12.5px;color:var(--muted);margin-top:6px;line-height:1.5">Jede Woche stelle ich 1 User auf meinem Profil <b>@mindset.stories_</b> vor. <b>Ziel:</b> die Community pushen und gemeinsam mehr Reichweite generieren. Trag deinen Insta-Username in den <a href="/einstellungen" style="color:#4dabf7">Einstellungen</a> ein, um mitzumachen.</div>
 </div>`;
                 } else {
-                    const headerLabel = myMsStatus === 'yes' ? '✅ Du bist auf der Liste' : myMsStatus === 'no' ? '❌ Du bist nicht dabei' : '📖 Mindset Stories';
+                    const _msLblCheck = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:5px"><path d="M20 6L9 17l-5-5"/></svg>';
+                    const _msLblX = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:5px"><path d="M18 6L6 18M6 6l12 12"/></svg>';
+                    const _msLblBook = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:5px"><path d="M2 4h6a3 3 0 0 1 3 3v13a2.5 2.5 0 0 0-2.5-2.5H2z"/><path d="M22 4h-6a3 3 0 0 0-3 3v13a2.5 2.5 0 0 1 2.5-2.5H22z"/></svg>';
+                    const headerLabel = myMsStatus === 'yes' ? _msLblCheck+'Du bist auf der Liste' : myMsStatus === 'no' ? _msLblX+'Du bist nicht dabei' : _msLblBook+'Mindset Stories';
                     const headerColor = myMsStatus === 'yes' ? '#22c55e' : myMsStatus === 'no' ? '#94a3b8' : '#a78bfa';
                     const bodyText = myMsStatus === 'none'
                         ? 'Jede Woche stelle ich <b>1 User</b> auf meinem Profil <b>@mindset.stories_</b> in den Mindset Stories vor. <b>Ziel:</b> die Community pushen und gemeinsam mehr Reichweite generieren. Lust dabei zu sein? Trag dich ein, ich pick zufällig.'
@@ -17876,15 +17879,15 @@ window.sugDismiss = function(btn){
                         ? 'Du stehst auf der Warteliste. Sonntag 20:00 wird zufällig gepickt — Daumen drücken!'
                         : 'Du hast Nein gesagt. Kannst du jederzeit ändern (bis Samstag 23:59).';
                     const buttons = msLocked
-                        ? '<div style="font-size:11.5px;color:var(--muted);margin-top:12px;font-style:italic">🔒 Antworten gefroren bis Pick am Sonntag 20:00</div>'
+                        ? '<div style="font-size:11.5px;color:var(--muted);margin-top:12px;font-style:italic"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Antworten gefroren bis Pick am Sonntag 20:00</div>'
                         : myMsStatus === 'yes'
-                        ? '<div style="display:flex;gap:8px;margin-top:12px"><button onclick="msSet(\'no\')" style="flex:1;padding:11px;border-radius:12px;border:1px solid var(--border);background:var(--bg4);color:var(--text);font-size:13px;font-weight:700;cursor:pointer">❌ Doch nicht</button></div>'
+                        ? '<div style="display:flex;gap:8px;margin-top:12px"><button onclick="msSet(\'no\')" style="flex:1;padding:11px;border-radius:12px;border:1px solid var(--border);background:var(--bg4);color:var(--text);font-size:13px;font-weight:700;cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><path d="M18 6L6 18M6 6l12 12"/></svg>Doch nicht</button></div>'
                         : myMsStatus === 'no'
-                        ? '<div style="display:flex;gap:8px;margin-top:12px"><button onclick="msSet(\'yes\')" style="flex:1;padding:11px;border-radius:12px;border:none;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;font-size:13px;font-weight:700;cursor:pointer">✅ Doch dabei</button></div>'
+                        ? '<div style="display:flex;gap:8px;margin-top:12px"><button onclick="msSet(\'yes\')" style="flex:1;padding:11px;border-radius:12px;border:none;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;font-size:13px;font-weight:700;cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><path d="M20 6L9 17l-5-5"/></svg>Doch dabei</button></div>'
                         : '<div style="display:flex;gap:8px;margin-top:12px"><button onclick="msSet(\'yes\')" style="flex:1;padding:12px;border-radius:12px;border:none;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;font-size:14px;font-weight:800;cursor:pointer"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><path d="M20 6L9 17l-5-5"/></svg>Ja, ich will</button><button onclick="msSet(\'no\')" style="flex:1;padding:12px;border-radius:12px;border:1px solid var(--border);background:var(--bg4);color:var(--text);font-size:14px;font-weight:700;cursor:pointer"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><path d="M18 6L6 18M6 6l12 12"/></svg>Nein, danke</button></div>';
                     mindsetUserCard = `<div style="margin:0 16px 16px;padding:18px;background:var(--bg3);border:1px solid var(--border2);border-radius:16px">
   <div style="font-size:11px;font-weight:700;letter-spacing:1.5px;color:${headerColor};text-transform:uppercase">${headerLabel}</div>
-  <div style="font-size:15px;font-weight:800;margin-top:6px;font-family:var(--font-display)">📖 Mindset Stories</div>
+  <div style="font-size:15px;font-weight:800;margin-top:6px;font-family:var(--font-display);display:flex;align-items:center;gap:8px"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h6a3 3 0 0 1 3 3v13a2.5 2.5 0 0 0-2.5-2.5H2z"/><path d="M22 4h-6a3 3 0 0 0-3 3v13a2.5 2.5 0 0 1 2.5-2.5H22z"/></svg>Mindset Stories</div>
   <div style="font-size:13px;line-height:1.6;color:var(--text);margin-top:8px">${bodyText}</div>
   <div style="font-size:11.5px;color:var(--muted);margin-top:10px">${msCounts.waitlist} auf Liste · ${msCounts.done} bereits vorgestellt</div>
   ${buttons}
@@ -17995,12 +17998,12 @@ window.sugDismiss = function(btn){
   ${mindsetUserCard}
   ${mindsetAdminCard}
   <a href="/system-info" style="display:flex;align-items:center;gap:12px;margin:0 16px 12px;padding:16px 18px;background:linear-gradient(135deg,#0ea5e9,#4dabf7,#a78bfa);border-radius:16px;text-decoration:none;color:#fff;box-shadow:0 6px 22px rgba(77,171,247,0.40);position:relative;overflow:hidden">
-    <div style="font-size:32px">📖</div>
+    <div style="flex-shrink:0"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h6a3 3 0 0 1 3 3v13a2.5 2.5 0 0 0-2.5-2.5H2z"/><path d="M22 4h-6a3 3 0 0 0-3 3v13a2.5 2.5 0 0 1 2.5-2.5H22z"/></svg></div>
     <div style="flex:1"><div style="font-size:15px;font-weight:800;letter-spacing:-0.1px">So funktioniert CreatorX</div><div style="font-size:12px;opacity:0.92;margin-top:3px;line-height:1.4">Komplette Anleitung — App, Levels, Missionen, Diamanten, Superlinks, Grundregeln</div></div>
     <div style="font-size:20px;opacity:0.9">→</div>
   </a>
   <a href="/diamanten" style="display:flex;align-items:center;gap:12px;margin:0 16px 16px;padding:14px 16px;background:linear-gradient(135deg,#4dabf7,#a78bfa);border-radius:14px;text-decoration:none;color:#fff;box-shadow:0 4px 14px rgba(167,139,250,0.3)">
-    <div style="font-size:28px">💎</div>
+    <div style="flex-shrink:0"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12l4 6-10 12L2 9z"/><path d="M2 9h20"/><path d="M9 3 6 9l6 12 6-12-3-6"/></svg></div>
     <div style="flex:1"><div style="font-size:14px;font-weight:700">Diamanten‑System</div><div style="font-size:11.5px;opacity:0.85;margin-top:2px">Wie verdiene ich Diamanten? Was kann ich kaufen?</div></div>
     <div style="font-size:18px;opacity:0.8">→</div>
   </a>
@@ -18032,7 +18035,7 @@ async function msAdminRestore(uid,name){if(!confirm(name+' zurück auf die Warte
                 const nextSunday = (()=>{ const n=new Date(); const d=n.getDay(); const diff=d===0?0:7-d; const s=new Date(n); s.setDate(n.getDate()+diff); s.setHours(20,0,0,0); return s; })();
                 const timeLeft = Math.max(0, nextSunday.getTime() - Date.now());
                 const hoursLeft = Math.floor(timeLeft / 3600000);
-                const prizes = ['🔗 1 Extra-Link','⚡ 1 Superlink','✨ 500 XP','💎 5 Diamanten'];
+                const prizes = ['<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg> 1 Extra-Link','<svg width="14" height="14" viewBox="0 0 24 24" fill="#f59e0b" stroke="#f59e0b" stroke-width="0" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> 1 Superlink','<svg width="14" height="14" viewBox="0 0 24 24" fill="#a78bfa" stroke="#a78bfa" stroke-width="0" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z"/></svg> 500 XP','<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#06b6d4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><path d="M6 3h12l4 6-10 12L2 9z"/><path d="M2 9h20"/><path d="M9 3 6 9l6 12 6-12-3-6"/></svg> 5 Diamanten'];
                 const isAdmin = adminIds.includes(Number(myUid));
                 // Letzter Gewinner — wird Sonntag 20:00 vom Cron in raffle-winners.json geschrieben
                 const raffleHist = (()=>{ try { return JSON.parse(fs.readFileSync(RAFFLE_FILE,'utf8')); } catch(e) { return { lastWinner:null, history:[] }; } })();
@@ -18067,7 +18070,7 @@ async function msAdminRestore(uid,name){if(!confirm(name+' zurück auf die Warte
 <div style="padding:16px">
   ${lwHtml}
   <div style="background:linear-gradient(135deg,rgba(245,158,11,0.1),rgba(239,68,68,0.05));border:1px solid rgba(245,158,11,0.3);border-radius:20px;padding:24px 20px;text-align:center;margin-bottom:16px">
-    <div style="font-size:42px;margin-bottom:12px">🎰</div>
+    <div style="margin-bottom:12px;display:flex;justify-content:center"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="13" rx="1.5"/><path d="M3 12h18"/><line x1="12" y1="8" x2="12" y2="21"/><path d="M12 8S10 3 7 4.5 9 8 12 8z"/><path d="M12 8s2-5 5-3.5S15 8 12 8z"/></svg></div>
     <h2 style="font-size:20px;font-weight:800;margin:0 0 6px;letter-spacing:-0.3px">Wöchentliches Gewinnspiel</h2>
     <div style="font-size:13px;color:var(--muted);line-height:1.5">Sammle <b style="color:var(--text)">${threshold} XP</b> diese Woche und nimm automatisch teil!</div>
     <div style="margin:16px 0;padding:14px;background:rgba(255,255,255,0.04);border-radius:12px;border:1px solid var(--border2)">
@@ -18076,9 +18079,9 @@ async function msAdminRestore(uid,name){if(!confirm(name+' zurück auf die Warte
       <div style="margin-top:10px;height:8px;background:rgba(255,255,255,0.06);border-radius:99px;overflow:hidden">
         <div style="height:100%;width:${Math.min(100,Math.round(myXpThisWeek/threshold*100))}%;background:${qualified?'linear-gradient(90deg,#22c55e,#4ade80)':'linear-gradient(90deg,#f59e0b,#ef4444)'};border-radius:99px;transition:width 0.5s"></div>
       </div>
-      <div style="font-size:11px;color:var(--muted);margin-top:8px">${qualified?'✅ Du nimmst teil!':'Noch '+(threshold-myXpThisWeek)+' XP bis zur Teilnahme'}</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:8px">${qualified?'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><path d="M20 6L9 17l-5-5"/></svg>Du nimmst teil!':'Noch '+(threshold-myXpThisWeek)+' XP bis zur Teilnahme'}</div>
     </div>
-    <div style="font-size:12px;color:var(--muted)">⏰ Ziehung: Sonntag 20:00 Uhr · noch ~${hoursLeft}h</div>
+    <div style="font-size:12px;color:var(--muted)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg>Ziehung: Sonntag 20:00 Uhr · noch ~${hoursLeft}h</div>
   </div>
   <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:16px;padding:18px">
     <div style="font-size:13px;font-weight:700;margin-bottom:12px">Mögliche Gewinne</div>
@@ -18248,8 +18251,8 @@ async function msAdminRestore(uid,name){if(!confirm(name+' zurück auf die Warte
     <div class="rl-sub">Drehe einmal pro Tag und gewinne XP, Diamanten, Extra-Links oder Superlink-Slots.</div>
     <div class="rl-meta">
       <span class="rl-chip live">Heute spielbar</span>
-      <span class="rl-chip">⏱ 1×/Tag</span>
-      <span class="rl-chip">🔄 Reset 00:00</span>
+      <span class="rl-chip"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg>1×/Tag</span>
+      <span class="rl-chip"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>Reset 00:00</span>
     </div>
   </div>
 
@@ -18274,7 +18277,7 @@ async function msAdminRestore(uid,name){if(!confirm(name+' zurück auf die Warte
   </div>
 
   <div class="rl-btn-wrap">
-    <button class="rl-btn" id="rl-spin-btn" onclick="spinRoulette()"><span class="rl-btn-icon">🎰</span> <span id="rl-btn-label">Jetzt drehen</span></button>
+    <button class="rl-btn" id="rl-spin-btn" onclick="spinRoulette()"><span class="rl-btn-icon" style="display:inline-flex;vertical-align:-3px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></span> <span id="rl-btn-label">Jetzt drehen</span></button>
   </div>
 
   <div class="rl-result" id="rl-result">
@@ -18289,13 +18292,13 @@ async function msAdminRestore(uid,name){if(!confirm(name+' zurück auf die Warte
   <div class="rl-cooldown" id="rl-cooldown"></div>
 
   <div class="rl-prizes">
-    <div class="rl-prize"><span class="rl-prize-emoji">✨</span><span class="rl-prize-name">20 XP</span><span class="rl-prize-odds">häufig</span></div>
-    <div class="rl-prize"><span class="rl-prize-emoji">🔗</span><span class="rl-prize-name">1 Extra-Link</span><span class="rl-prize-odds">häufig</span></div>
-    <div class="rl-prize"><span class="rl-prize-emoji">⚡</span><span class="rl-prize-name">1 Superlink</span><span class="rl-prize-odds">häufig</span></div>
-    <div class="rl-prize"><span class="rl-prize-emoji">💎</span><span class="rl-prize-name">1 Diamant</span><span class="rl-prize-odds">selten</span></div>
-    <div class="rl-prize"><span class="rl-prize-emoji">🔥</span><span class="rl-prize-name">100 XP</span><span class="rl-prize-odds">selten</span></div>
-    <div class="rl-prize"><span class="rl-prize-emoji">💎</span><span class="rl-prize-name">5 Diamanten</span><span class="rl-prize-odds">selten</span></div>
-    <div class="rl-prize" style="grid-column:span 2;background:linear-gradient(135deg,rgba(212,175,55,0.10),rgba(245,158,11,0.04));border-color:rgba(212,175,55,0.4)"><span class="rl-prize-emoji">👑</span><span class="rl-prize-name">JACKPOT · 10 Diamanten</span><span class="rl-prize-odds" style="color:#f5d76e">ultra-rar</span></div>
+    <div class="rl-prize"><span class="rl-prize-emoji" style="display:inline-flex"><svg width="17" height="17" viewBox="0 0 24 24" fill="#a78bfa" stroke="#a78bfa" stroke-width="0" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z"/></svg></span><span class="rl-prize-name">20 XP</span><span class="rl-prize-odds">häufig</span></div>
+    <div class="rl-prize"><span class="rl-prize-emoji" style="display:inline-flex"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg></span><span class="rl-prize-name">1 Extra-Link</span><span class="rl-prize-odds">häufig</span></div>
+    <div class="rl-prize"><span class="rl-prize-emoji" style="display:inline-flex"><svg width="17" height="17" viewBox="0 0 24 24" fill="#f59e0b" stroke="#f59e0b" stroke-width="0" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></span><span class="rl-prize-name">1 Superlink</span><span class="rl-prize-odds">häufig</span></div>
+    <div class="rl-prize"><span class="rl-prize-emoji" style="display:inline-flex"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#06b6d4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12l4 6-10 12L2 9z"/><path d="M2 9h20"/><path d="M9 3 6 9l6 12 6-12-3-6"/></svg></span><span class="rl-prize-name">1 Diamant</span><span class="rl-prize-odds">selten</span></div>
+    <div class="rl-prize"><span class="rl-prize-emoji" style="display:inline-flex"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2C9 6 7 8 7 13a5 5 0 0 0 10 0c0-2-1-3.5-2-5-.5 1-1 1.5-2 1.5C13 8 13 5 12 2z"/></svg></span><span class="rl-prize-name">100 XP</span><span class="rl-prize-odds">selten</span></div>
+    <div class="rl-prize"><span class="rl-prize-emoji" style="display:inline-flex"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#06b6d4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12l4 6-10 12L2 9z"/><path d="M2 9h20"/><path d="M9 3 6 9l6 12 6-12-3-6"/></svg></span><span class="rl-prize-name">5 Diamanten</span><span class="rl-prize-odds">selten</span></div>
+    <div class="rl-prize" style="grid-column:span 2;background:linear-gradient(135deg,rgba(212,175,55,0.10),rgba(245,158,11,0.04));border-color:rgba(212,175,55,0.4)"><span class="rl-prize-emoji" style="display:inline-flex"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#f5d76e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l4 4 5-6 5 6 4-4-2 12H5z"/></svg></span><span class="rl-prize-name">JACKPOT · 10 Diamanten</span><span class="rl-prize-odds" style="color:#f5d76e">ultra-rar</span></div>
   </div>
 </div>
 <script>
