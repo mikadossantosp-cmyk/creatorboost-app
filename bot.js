@@ -4773,7 +4773,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v230-diamond-role-badge';
+const SW_VERSION='v231-liker-badges';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
@@ -8485,7 +8485,7 @@ async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)
             const _tail = _isOwn
               ? '<button onclick="reportLiker(\''+lid+'\',\'Link '+reqMsgId+'\',0)" style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);color:#ef4444;border-radius:8px;padding:6px 11px;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0">Melden</button>'
               : '<div style="font-size:11px;color:var(--accent)">→</div>';
-            return '<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--border2);background:'+(i%2===0?'transparent':'rgba(255,255,255,.02)')+'"><a href="/profil/'+lid+'" style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;text-decoration:none"><div style="position:relative;width:34px;height:34px;flex-shrink:0">'+crownOverlay(lid,'xs')+'<div style="position:relative;width:34px;height:34px;border-radius:50%;background:'+lg+';overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff"><span style="position:absolute">'+(lu&&lu.name||'?')[0]+'</span>'+limg+'</div></div><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:var(--text)">'+htmlEsc(lu&&(lu.spitzname||lu.name)||'User')+'</div><div style="font-size:10px;color:var(--muted)">'+cleanRole(lu&&lu.role)+'</div></div></a>'+_tail+'</div>';
+            return '<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--border2);background:'+(i%2===0?'transparent':'rgba(255,255,255,.02)')+'"><a href="/profil/'+lid+'" style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;text-decoration:none"><div style="position:relative;width:34px;height:34px;flex-shrink:0">'+crownOverlay(lid,'xs')+'<div style="position:relative;width:34px;height:34px;border-radius:50%;background:'+lg+';overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff"><span style="position:absolute">'+(lu&&lu.name||'?')[0]+'</span>'+limg+'</div></div><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:var(--text)">'+htmlEsc(lu&&(lu.spitzname||lu.name)||'User')+'</div><div style="margin-top:3px">'+roleBadge(lu&&lu.role)+'</div></div></a>'+_tail+'</div>';
         }).join('');
         return json({html: rows, count: likes.length});
     }
@@ -10487,7 +10487,7 @@ window.onPinVisitStory = function(uid){
                 const _tail = (String(link.user_id)===String(myUid))
                   ? '<button onclick="reportLiker(\''+lid+'\',\'Link '+lid1+'\',0)" style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);color:#ef4444;border-radius:8px;padding:6px 11px;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0">Melden</button>'
                   : '<div style="font-size:11px;color:var(--accent)">→</div>';
-                return '<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--border2);background:'+(i%2===0?'transparent':'rgba(255,255,255,.02)')+'"><a href="/profil/'+lid+'" style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;text-decoration:none"><div style="position:relative;width:34px;height:34px;flex-shrink:0">'+crownOverlay(lid,'xs')+'<div style="position:relative;width:34px;height:34px;border-radius:50%;background:'+lg+';overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff"><span style="position:absolute">'+(lu&&lu.name||'?')[0]+'</span>'+limg+'</div></div><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:var(--text)">'+htmlEsc(lu&&(lu.spitzname||lu.name)||'User')+'</div><div style="font-size:10px;color:var(--muted)">'+cleanRole(lu&&lu.role)+'</div></div></a>'+_tail+'</div>';
+                return '<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--border2);background:'+(i%2===0?'transparent':'rgba(255,255,255,.02)')+'"><a href="/profil/'+lid+'" style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;text-decoration:none"><div style="position:relative;width:34px;height:34px;flex-shrink:0">'+crownOverlay(lid,'xs')+'<div style="position:relative;width:34px;height:34px;border-radius:50%;background:'+lg+';overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff"><span style="position:absolute">'+(lu&&lu.name||'?')[0]+'</span>'+limg+'</div></div><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:var(--text)">'+htmlEsc(lu&&(lu.spitzname||lu.name)||'User')+'</div><div style="margin-top:3px">'+roleBadge(lu&&lu.role)+'</div></div></a>'+_tail+'</div>';
             }).join('');
 
             // Comments
@@ -10647,7 +10647,7 @@ commentsBox+
                 const limg=lf?'<img src="/appbild/'+lid+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" alt="">':li?'<img src="https://unavatar.io/instagram/'+li+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" alt="">':'';
                 const rName = ((lu&&(lu.spitzname||lu.name))||'User').replace(/'/g,'&#39;');
                 const reportBtn = isOwnPost ? '<button onclick="reportLiker(\''+lid+'\',\'Superlink '+sl.id+'\',1)" style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);color:#ef4444;border-radius:8px;padding:6px 11px;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0">Melden</button>' : '';
-                return '<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--border2)"><div style="position:relative;width:34px;height:34px;flex-shrink:0">'+crownOverlay(lid,'xs')+'<div style="position:relative;width:34px;height:34px;border-radius:50%;background:'+lg+';overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff"><span style="position:absolute">'+(lu&&lu.name||'?')[0]+'</span>'+limg+'</div></div><div style="flex:1;min-width:0;font-size:13px;font-weight:600;color:var(--text)">'+htmlEsc(lu&&(lu.spitzname||lu.name)||'User')+'</div>'+reportBtn+'</div>';
+                return '<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--border2)"><div style="position:relative;width:34px;height:34px;flex-shrink:0">'+crownOverlay(lid,'xs')+'<div style="position:relative;width:34px;height:34px;border-radius:50%;background:'+lg+';overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff"><span style="position:absolute">'+(lu&&lu.name||'?')[0]+'</span>'+limg+'</div></div><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:var(--text)">'+htmlEsc(lu&&(lu.spitzname||lu.name)||'User')+'</div><div style="margin-top:3px">'+roleBadge(lu&&lu.role)+'</div></div>'+reportBtn+'</div>';
             }).join('');
             const likeBtn = isOwnPost
                 ? '<div style="font-size:12px;color:var(--muted);padding:7px 0">👤 Dein Superlink</div>'
@@ -11429,7 +11429,7 @@ async function submitSuperLink(){
               (u.uid ? '<img src="/appbild/'+esc(u.uid)+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.remove()" alt="">' : '')+
               '</div>';
             const _dtail = isMine ? '<button onclick="reportLiker(\\''+esc(u.uid)+'\\',\\'Diamantlink '+esc(p.id)+'\\',1)" style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);color:#ef4444;border-radius:8px;padding:6px 11px;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0">Melden</button>' : '<div style="font-size:11px;color:var(--accent)">→</div>';
-            return '<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--border2)"><a href="/profil/'+esc(u.uid)+'" style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;text-decoration:none">'+initial+'<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:var(--text)">'+esc(u.name||'User')+'</div>'+(u.instagram?'<div style="font-size:11px;color:#06b6d4">@'+esc(u.instagram)+'</div>':'')+'</div></a>'+_dtail+'</div>';
+            return '<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--border2)"><a href="/profil/'+esc(u.uid)+'" style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;text-decoration:none">'+initial+'<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:var(--text)">'+esc(u.name||'User')+'</div>'+(u.roleBadgeHtml?'<div style="margin-top:3px">'+u.roleBadgeHtml+'</div>':'')+(u.instagram?'<div style="font-size:11px;color:#06b6d4;margin-top:2px">@'+esc(u.instagram)+'</div>':'')+'</div></a>'+_dtail+'</div>';
           }).join('');
           return '<div id="liker-rows-dl-'+esc(p.id)+'" style="display:none">'+rows+'</div>' +
             '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px;padding:0 4px">' +
@@ -14455,7 +14455,7 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
     if (path === '/api/diamond-link/feed' && req.method === 'GET') {
         if (!session) return json({error:'Nicht eingeloggt'}, 401);
         const r = LOCAL_STORE ? botLogic.diamondLinkFeedApi(myUid) : await fetchBotRaw('/diamond-link-feed-api?uid=' + encodeURIComponent(myUid));
-        if (r && Array.isArray(r.posts)) r.posts.forEach(p => { if (p && p.author) p.author.roleBadgeHtml = roleBadge(p.author.role); });
+        if (r && Array.isArray(r.posts)) r.posts.forEach(p => { if (!p) return; if (p.author) p.author.roleBadgeHtml = roleBadge(p.author.role); if (Array.isArray(p.likers)) p.likers.forEach(l => { if (l) l.roleBadgeHtml = roleBadge(l.role); }); });
         return json(r || {ok:false, error:'Mainbot offline'});
     }
     if (path === '/api/diamond-link/create' && req.method === 'POST') {
