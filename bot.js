@@ -5659,7 +5659,7 @@ self.addEventListener('notificationclick',e=>{
         accountUnlockTokens.delete(token);
         if (!session || getMyUid(session) !== entry.uid) {
             res.writeHead(403, {'Content-Type':'text/html'});
-            return res.end(baseHtml('🔒','Anmeldung erforderlich','Bitte melde dich erst auf dem gleichen Gerät an mit dem du die Änderung anfrägst.','#ef4444','<a href="/" class="btn">→ Login</a>'));
+            return res.end(baseHtml('🔒','Anmeldung erforderlich','Bitte melde dich erst auf dem gleichen Gerät an mit dem du die Änderung anfrägst.','#ef4444','<a href="/" class="btn">→ Zum Login</a>'));
         }
         // Setze Unlock-Window in Session
         session.accountUnlockUntil = Date.now() + ACCOUNT_UNLOCK_TTL;
