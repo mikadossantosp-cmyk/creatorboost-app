@@ -2049,6 +2049,7 @@ textarea.form-input{resize:none;min-height:80px}
 @media (max-width:540px){.cb-banner{padding:16px 18px;gap:11px}.cb-banner-icon{font-size:28px}.cb-banner-title{font-size:15.5px}.cb-banner-sub{font-size:12.5px}}
 @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
 @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+@keyframes like-pop{0%{transform:scale(1)}40%{transform:scale(1.13)}70%{transform:scale(.97)}100%{transform:scale(1)}}
 .fade-up{animation:fadeUp .4s ease forwards}
 .setting-row{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border2)}
 .setting-label{font-size:14px;font-weight:500}
@@ -4808,7 +4809,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v256-skeleton-loaders';
+const SW_VERSION='v257-like-pop';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
@@ -11032,9 +11033,9 @@ async function likePost(msgId, btn) {
     btn.classList.add('liked');
     btn.querySelector('svg').setAttribute('fill', 'currentColor');
     if (countEl && window.cbSetCount) window.cbSetCount('likes-'+msgId, Number(countEl.textContent||0) + 1);
-    btn.style.animation='pulse .3s ease';
+    btn.style.animation='like-pop .35s ease';
     btn.disabled = true;
-    setTimeout(()=>btn.style.animation='',300);
+    setTimeout(()=>btn.style.animation='',350);
     try {
         const ctrl = new AbortController();
         const tmo = setTimeout(()=>ctrl.abort(), 8000);
@@ -11203,6 +11204,7 @@ async function likeSuperLink(slId, btn) {
     btn.classList.add('liked');
     btn.querySelector('svg')?.setAttribute('fill','currentColor');
     btn.style.borderColor='var(--accent)';
+    btn.style.animation='like-pop .35s ease';setTimeout(()=>{btn.style.animation='';},350);
     try {
         const ctrl = new AbortController();
         const tmo = setTimeout(()=>ctrl.abort(), 8000);
