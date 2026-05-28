@@ -62,7 +62,7 @@ Prioritäten **immer in dieser Reihenfolge**:
 ## 6. Konventionen & Verifikation
 
 - **Keine Tests, kein Runtime-Linter-Gate.** Verifikation: **`node --check bot.js`** (Syntax). Optional Server starten + Endpoints curlen + Seite im Browser prüfen.
-- **Branch:** `claude/creatorboostx-system-prompt-b3F27`. Nur hierhin pushen. **Keine PRs ohne explizite Aufforderung.**
+- **Branch/Push (User-Wunsch, dauerhaft):** **Immer auf `main` pushen** — committen, dann als **Fast-Forward** auf `main` (`git push origin <feature>:main`). **Keine PRs.** Aktueller Arbeits-Branch: `claude/chat-performance-issue-ZtaCk`.
 - Commit-Messages: kurz, beschreibend, deutsch.
 - `bot.js` ist riesig → Änderungen gezielt, additiv, kollisionssicher (es gibt bereits `.btn`, `.card`, `.post*` etc. — Klassennamen prüfen, nicht überschreiben).
 
@@ -102,4 +102,4 @@ Prioritäten **immer in dieser Reihenfolge**:
 - **Gold-Premium-Seiten** (`bot.js:5862, 6216, 6302` u. a.) sind **weiterhin gold** — das ist gewollt, nicht anfassen ohne Auftrag.
 - Scoped-Ersetzungen in `bot.js` per `sed -i 'START,END s/…/…/g'` (Zeilenbereich!), nie global — sonst werden andere Seiten getroffen.
 - Vor Hex→`var()`: Kontext prüfen (CSS vs. SVG-`fill=`/JS-String). In JS-Strings nur Hex→Hex ersetzen.
-- **Git-Workflow (Stand: User-Wunsch):** Arbeit auf `claude/creatorboostx-system-prompt-b3F27`, dann als **Fast-Forward** auf `main` pushen (`git push origin <feature>:main`). **Echtes Remote-`main` = Basis `e88636b`** (per `git ls-remote` prüfen). **Achtung:** lokaler `main`-Ref kann **stale** sein (`b78b842`, divergierte Alt-Lineage aus früherem Container) — *nicht* verwenden, nie `--force`. `main` = Produktion (Deploy via Procfile/Dockerfile), nur FF.
+- **Git-Workflow (User-Wunsch, dauerhaft): IMMER auf `main` pushen.** Nach jedem Commit auf dem Arbeits-Branch direkt als **Fast-Forward** auf `main` (`git push origin <feature>:main`) — ohne Rückfrage, keine PRs. `main` = Produktion (Deploy via Procfile/Dockerfile). **Nur FF, nie `--force`;** echtes Remote-`main` per `git ls-remote origin main` prüfen, lokaler `main`-Ref kann stale sein. Wenn nicht FF-bar: erst rebasen, nicht forcen.
