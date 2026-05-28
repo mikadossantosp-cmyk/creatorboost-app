@@ -2107,12 +2107,27 @@ textarea.form-input{resize:none;min-height:80px}
 =========================*/
 
 @media (min-width: 768px) {
+  /* Backdrop hinter der zentrierten App-Spalte (wie große Mobile-Apps im Browser) */
+  html { background: var(--bg3); }
   body {
     max-width: 860px;
     padding-bottom: 80px;
+    border-left: 1px solid var(--border2);
+    border-right: 1px solid var(--border2);
+    box-shadow: 0 0 80px rgba(0,0,0,.15);
+    min-height: 100vh;
   }
 
   .bottom-nav {
+    max-width: 860px;
+  }
+
+  /* Fixierte Chat-Eingabe an die zentrierte Spalte ausrichten (statt volle Fensterbreite) */
+  .cb-chatbar {
+    left: 50% !important;
+    right: auto !important;
+    transform: translateX(-50%);
+    width: 100%;
     max-width: 860px;
   }
 
@@ -13635,7 +13650,7 @@ ${_nurUser ? '<div style="position:fixed;top:0;left:0;right:0;z-index:200;backgr
   </div>
 </div>
 <style>@keyframes pulse-red{0%,100%{opacity:1}50%{opacity:.3}}</style>
-<div style="position:fixed;bottom:60px;left:0;right:0;background:var(--bg);border-top:1px solid rgba(255,255,255,0.06);padding:8px 10px;display:flex;gap:6px;align-items:center;z-index:100">
+<div class="cb-chatbar" style="position:fixed;bottom:60px;left:0;right:0;background:var(--bg);border-top:1px solid rgba(255,255,255,0.06);padding:8px 10px;display:flex;gap:6px;align-items:center;z-index:100">
   <label style="width:38px;height:38px;border-radius:50%;background:transparent;color:#0866FF;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0" title="Kamera">
     <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M9 2 7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/><circle cx="12" cy="12" r="3.2"/></svg>
     <input type="file" accept="image/*" capture="environment" style="display:none" onchange="selectImage(this)">
@@ -13902,13 +13917,19 @@ setInterval(async()=>{
             const _uu = (d.users && d.users[_uid]) || {};
             const _prev = String((_last && _last.text) || (_last && _last.image ? '[Foto]' : _last && _last.audio ? '[Sprachnachricht]' : ''))
                 .replace(/^[^A-Za-z0-9]*\s*(Helper-Frage|Follow-up):\s*/, '').slice(0, 64);
-            _pfItems.push({ uid: String(_uid), name: String(_uu.spitzname || _uu.name || ('User ' + _uid)), prev: _prev, unread: _unread, ts: (_last && _last.timestamp) || 0 });
+            _pfItems.push({ uid: String(_uid), name: String(_uu.spitzname || _uu.name || ('User ' + _uid)), insta: _uu.instagram || '', hasPic: !!ladeBild(_uid, 'profilepic'), online: isUidOnline(_uid), prev: _prev, unread: _unread, ts: (_last && _last.timestamp) || 0 });
         }
         _pfItems.sort((x, y) => (y.ts || 0) - (x.ts || 0));
         let _pfRows = '';
         for (const it of _pfItems) {
+            const _avImg = it.hasPic
+                ? '<img src="/appbild/' + encodeURIComponent(it.uid) + '/profilepic" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1" alt="">'
+                : (it.insta ? '<img src="https://unavatar.io/instagram/' + htmlEsc(it.insta) + '" loading="lazy" onerror="this.remove()" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1" alt="">' : '');
             _pfRows += '<a href="/admin/postfach/' + encodeURIComponent(it.uid) + '" style="display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--border2);text-decoration:none;color:var(--text)">'
-                + '<div style="width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,#a78bfa,#7c3aed);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:17px;flex-shrink:0">' + htmlEsc(it.name.slice(0, 1).toUpperCase()) + '</div>'
+                + '<div style="position:relative;width:50px;height:50px;border-radius:50%;background:linear-gradient(135deg,#a78bfa,#7c3aed);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:18px;flex-shrink:0;overflow:hidden">'
+                + '<span style="position:absolute;z-index:0">' + htmlEsc(it.name.slice(0, 1).toUpperCase()) + '</span>' + _avImg
+                + (it.online ? '<i style="position:absolute;bottom:1px;right:1px;width:12px;height:12px;border-radius:50%;background:#22c55e;border:2.5px solid var(--bg);z-index:2"></i>' : '')
+                + '</div>'
                 + '<div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + htmlEsc(it.name) + '</div>'
                 + '<div style="font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px">' + htmlEsc(it.prev || '(kein Text)') + '</div></div>'
                 + '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0"><div style="font-size:11px;color:var(--muted)">' + htmlEsc(fmtRelative(it.ts)) + '</div>'
@@ -13934,27 +13955,41 @@ setInterval(async()=>{
         const _pfShown = _pfAll.filter(m => m && (String(m.from) === String(_pfUid) || m.adminReply === true));
         if (LOCAL_STORE) { try { Promise.resolve(localWrite(() => botLogic.markMessagesRead({ uid: 'creatorboost', chatKey: _pfKey }))).catch(()=>{}); } catch(_) {} }
         else postBot('/mark-messages-read', { uid: 'creatorboost', chatKey: _pfKey }).catch(()=>{});
+        // Helper-/Follow-up-Präfixe entfernen, damit nur der echte User-Text steht.
+        const _pfMsgs = _pfShown.map(m => Object.assign({}, m, {
+            text: String(m.text || '').replace(/^[^A-Za-z0-9]*\s*(Helper-Frage|Follow-up):\s*/, '')
+        }));
+        // Gleiche Premium-Darstellung wie der normale Chat (Bubbles + Avatare) via chat-detail-render.
+        // myUid='creatorboost' → Admin-Antworten rechts, User-Nachrichten links mit User-Avatar.
         let _pfBubbles = '';
-        for (const m of _pfShown) {
-            const _isUser = String(m.from) === String(_pfUid);
-            let _txt = String(m.text || (m.image ? '[Foto]' : m.audio ? '[Sprachnachricht]' : ''))
-                .replace(/^[^A-Za-z0-9]*\s*(Helper-Frage|Follow-up):\s*/, '').slice(0, 2000);
-            _pfBubbles += '<div style="display:flex;' + (_isUser ? 'justify-content:flex-start' : 'justify-content:flex-end') + ';margin:6px 12px">'
-                + '<div style="max-width:80%;background:' + (_isUser ? 'var(--bg3,#2a2a2e)' : 'linear-gradient(135deg,#a78bfa,#7c3aed)') + ';color:' + (_isUser ? 'var(--text)' : '#fff') + ';padding:9px 13px;border-radius:16px;font-size:14px;line-height:1.45;word-break:break-word;white-space:pre-wrap">'
-                + htmlEsc(_txt)
-                + '<div style="font-size:10px;opacity:.65;margin-top:4px;text-align:right">' + htmlEsc(fmtRelative(m.timestamp || 0)) + '</div></div></div>';
+        try {
+            _pfBubbles = require('./chat-detail-render')({ msgs: _pfMsgs, myUid: 'creatorboost', otherUid: _pfUid, otherUser: _pfU, ladeBild, otherOnline: isUidOnline(_pfUid) });
+        } catch(e) {
+            console.error('[postfach-render]', e && e.stack || e);
+            _pfBubbles = '<div style="padding:48px 20px;text-align:center;color:var(--muted);font-size:13px">Nachrichten konnten gerade nicht geladen werden.</div>';
         }
-        if (!_pfBubbles) _pfBubbles = '<div style="padding:50px 24px;text-align:center;color:var(--muted);font-size:13px">Dieser Nutzer hat noch nichts geschrieben.</div>';
-        return html('<div class="topbar" style="display:flex;align-items:center;gap:10px;padding:10px 12px">'
-            + '<a href="/admin/postfach" class="icon-btn" style="color:var(--accent);padding:4px 8px;text-decoration:none;display:flex;align-items:center"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></a>'
-            + '<a href="/profil/' + encodeURIComponent(_pfUid) + '" style="text-decoration:none;color:var(--text);display:flex;align-items:center;gap:10px;flex:1;min-width:0">'
-            + '<div style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#a78bfa,#7c3aed);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:15px;flex-shrink:0">' + htmlEsc(_pfName.slice(0, 1).toUpperCase()) + '</div>'
-            + '<div style="min-width:0"><div style="font-size:16px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + htmlEsc(_pfName) + '</div><div style="font-size:11px;color:var(--muted)">Nur Nutzernachrichten</div></div></a></div>'
-            + '<div id="pf-msgs" style="padding:10px 0 150px">' + _pfBubbles + '</div>'
-            + '<div style="position:fixed;bottom:60px;left:0;right:0;background:var(--bg);border-top:1px solid var(--border2);padding:8px 10px;display:flex;gap:8px;align-items:center;z-index:100">'
+        const _pfOnline = isUidOnline(_pfUid);
+        const _pfHasPic = !!ladeBild(_pfUid, 'profilepic');
+        const _pfAvImg = _pfHasPic
+            ? '<img src="/appbild/' + encodeURIComponent(_pfUid) + '/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1" alt="">'
+            : (_pfU.instagram ? '<img src="https://unavatar.io/instagram/' + htmlEsc(_pfU.instagram) + '" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1" onerror="this.remove()" alt="">' : '');
+        const _pfStatus = _pfOnline ? '● Online' : (getLastSeen(_pfUid) ? 'zuletzt aktiv vor ' + fmtRelative(getLastSeen(_pfUid)) : 'Offline');
+        return html('<div class="topbar" style="display:flex;align-items:center;gap:8px;padding:8px 10px">'
+            + '<a href="/admin/postfach" class="icon-btn" style="color:var(--accent);padding:6px 8px;text-decoration:none;display:flex;align-items:center"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></a>'
+            + '<a href="/profil/' + encodeURIComponent(_pfUid) + '" class="chat-header-link" style="display:flex;align-items:center;gap:11px;text-decoration:none;flex:1;min-width:0">'
+            + '<div style="position:relative;width:42px;height:42px;border-radius:50%;overflow:hidden;background:linear-gradient(135deg,#a78bfa,#7c3aed);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:#fff;flex-shrink:0;box-shadow:0 2px 8px rgba(15,23,42,.10)">'
+            + '<span style="position:absolute;z-index:0">' + htmlEsc(_pfName.slice(0, 1).toUpperCase()) + '</span>' + _pfAvImg
+            + (_pfOnline ? '<i style="position:absolute;bottom:-1px;right:-1px;width:12px;height:12px;border-radius:50%;background:#22c55e;border:2.5px solid var(--bg);z-index:2"></i>' : '')
+            + '</div>'
+            + '<div style="display:flex;flex-direction:column;min-width:0;flex:1">'
+            + '<span class="chat-header-name" style="font-size:18px;font-weight:800;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:-0.3px;line-height:1.15">' + htmlEsc(_pfName) + '</span>'
+            + '<span class="chat-header-status" style="font-size:12px;font-weight:600;color:' + (_pfOnline ? '#22c55e' : 'var(--muted)') + ';letter-spacing:0.1px;line-height:1.2;margin-top:2px">' + htmlEsc(_pfStatus) + '</span>'
+            + '</div></a></div>'
+            + '<div id="chat-msgs" style="padding:12px 0 140px;display:flex;flex-direction:column">' + _pfBubbles + '</div>'
+            + '<div class="cb-chatbar" style="position:fixed;bottom:60px;left:0;right:0;background:var(--bg);border-top:1px solid var(--border2);padding:8px 10px;display:flex;gap:8px;align-items:center;z-index:100">'
             + '<input id="pf-input" type="text" placeholder="Antwort an ' + htmlEsc(_pfName) + '..." style="flex:1;background:var(--bg3,#2a2a2e);border:none;outline:none;color:var(--text);font-size:15px;padding:11px 16px;border-radius:22px">'
             + '<button id="pf-send" style="width:42px;height:42px;border-radius:50%;background:#7c3aed;color:#fff;border:none;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button></div>'
-            + '<script>(function(){var uid=' + JSON.stringify(String(_pfUid)) + ';var inp=document.getElementById("pf-input");var btn=document.getElementById("pf-send");function go(){window.scrollTo(0,document.body.scrollHeight);}go();function send(){var t=(inp.value||"").trim();if(!t)return;btn.disabled=true;fetch("/api/admin/postfach-reply",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({uid:uid,text:t})}).then(function(r){return r.json();}).then(function(d){if(d&&d.ok){location.reload();}else{btn.disabled=false;alert((d&&d.error)||"Senden fehlgeschlagen");}}).catch(function(){btn.disabled=false;alert("Netzwerkfehler");});}btn.addEventListener("click",send);inp.addEventListener("keypress",function(e){if(e.key==="Enter")send();});inp.focus();})();</script>', 'messages');
+            + '<script>(function(){var uid=' + JSON.stringify(String(_pfUid)) + ';var inp=document.getElementById("pf-input");var btn=document.getElementById("pf-send");function go(){window.scrollTo(0,document.body.scrollHeight);}go();window.addEventListener("load",go);function send(){var t=(inp.value||"").trim();if(!t)return;btn.disabled=true;fetch("/api/admin/postfach-reply",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({uid:uid,text:t})}).then(function(r){return r.json();}).then(function(d){if(d&&d.ok){location.reload();}else{btn.disabled=false;alert((d&&d.error)||"Senden fehlgeschlagen");}}).catch(function(){btn.disabled=false;alert("Netzwerkfehler");});}btn.addEventListener("click",send);inp.addEventListener("keypress",function(e){if(e.key==="Enter")send();});inp.focus();})();</script>', 'messages');
     }
 
     // ── NEUER THREAD (ADMIN) ──
