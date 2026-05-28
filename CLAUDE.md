@@ -72,11 +72,12 @@ Prioritäten **immer in dieser Reihenfolge**:
 - **Prompt 2 „Ultimate UI/UX Transformation":** Audit ergab → Foundation existiert schon; echte Arbeit = **Adoption/Migration**, nicht Redesign. Stack ist SSR-HTML, **nicht** React/Tailwind (kein Framework-Rewrite ohne separate Entscheidung).
 - **Feed-Migration:** Post-Karte (`bot.js:1883–1901`) — doppelte `.post-time`-Regel entfernt, Abstände auf `--space`-Skala, `font-size` auf `--fs`-Tokens. Tab-Trigger auf `--fs-base`. Feed war bereits ~90 % klassenbasiert; Rest-Inline-Styles sind legitim dynamisch → abgeschlossen.
 - **Dashboard an App-Stil angeglichen** (`/dashboard`, `bot.js:15271–17532`): Gold **komplett** auf Lila-Akzent (`#d4af37→#7c3aed`, `#f5d76e→#cc5de8`, `#8b6914→#6d28d9`, dazu `rgba(212,175,55,*)`/`rgba(245,215,110,*)` und die `--dgold*`-Tokens), Font auf `var(--font)`. **Bewusst dunkle Fläche beibehalten** — Dashboard ist dark-only designt; `background:var(--bg)` würde Light-Mode brechen. Alle Ersetzungen **scoped** auf den Block (andere Gold-Seiten unberührt).
+- **Explore (`/explore`, `bot.js:17533–18942`):** Nur **Token-Hygiene** — 75 exakte `font-size`-Werte (12/13/15/16/20/28px) auf `--fs-*`-Tokens. **Gold bewusst behalten** (Shop/Glücksrad/Gewinnspiel/Tiers Bronze-Silber-Gold = gewollter Belohnungs-/Premium-Look — *nicht* entgolden). Offen: Duplikat-Selektoren `.foot/.rl-*/.tb` über mehrere Tab-Style-Blöcke (evtl. bewusst scoped — nicht blind mergen).
 
 ## 8. Nächste sinnvolle Schritte
 
-1. **Optional/riskant:** Dashboard volle Light-Mode-Fähigkeit (jede Light-on-Dark-Annahme prüfen) — nur mit visuellem QA.
-2. Nach Traffic weiter: `/explore` (Shop/Roulette/Ranking), `/profil`+`/einstellungen`.
+1. Nach Traffic weiter: `/profil` + `/einstellungen` (Vertrauens-Flächen).
+2. **Optional/riskant:** Dashboard volle Light-Mode-Fähigkeit (jede Light-on-Dark-Annahme prüfen) — nur mit visuellem QA.
 3. Microcopy der High-Traffic-Strings (Onboarding, Empty-States, primäre CTAs) schärfen.
 
 ## 9. Hinweise / Fallen
@@ -84,3 +85,4 @@ Prioritäten **immer in dieser Reihenfolge**:
 - **Gold-Premium-Seiten** (`bot.js:5862, 6216, 6302` u. a.) sind **weiterhin gold** — das ist gewollt, nicht anfassen ohne Auftrag.
 - Scoped-Ersetzungen in `bot.js` per `sed -i 'START,END s/…/…/g'` (Zeilenbereich!), nie global — sonst werden andere Seiten getroffen.
 - Vor Hex→`var()`: Kontext prüfen (CSS vs. SVG-`fill=`/JS-String). In JS-Strings nur Hex→Hex ersetzen.
+- **Git-Workflow (Stand: User-Wunsch):** Arbeit auf `claude/creatorboostx-system-prompt-b3F27`, dann als **Fast-Forward** auf `main` pushen (`git push origin <feature>:main`). **Echtes Remote-`main` = Basis `e88636b`** (per `git ls-remote` prüfen). **Achtung:** lokaler `main`-Ref kann **stale** sein (`b78b842`, divergierte Alt-Lineage aus früherem Container) — *nicht* verwenden, nie `--force`. `main` = Produktion (Deploy via Procfile/Dockerfile), nur FF.
