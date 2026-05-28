@@ -15478,7 +15478,6 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
     </div>
 
     <!-- Sync-Health Banner (Phase 2 Smart-Mirror) -->
-    <div id="sync-health-banner" style="display:none;margin-bottom:var(--space-4)"></div>
 
     <!-- Live Metrics -->
     <div class="dash-stat-grid">
@@ -16643,8 +16642,6 @@ async function loadStatsOverview() {
     renderSourceFunnel(s.sourceFunnel || {});
     // Live Activity Feed
     renderActivityFeed(s.recentActivity || []);
-    // Phase 2: Sync-Health
-    loadSyncHealth();
   } catch(e) {
     console.warn('[dashboard stats] error at stage '+_stage+':', e);
     _dashStatsFallback('exception at '+_stage);
