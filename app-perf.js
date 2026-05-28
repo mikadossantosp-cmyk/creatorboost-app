@@ -167,6 +167,9 @@ module.exports = `
     if (!topbar) return;
     const profileLink = topbar.querySelector('a[href^="/profil/"]');
     if (!profileLink) return;
+    // Neuer Chat-Header (chat-header-name/-status) rendert Name + Status + Online-Punkt bereits
+    // selbst — fixTopbarLayout würde das duplizieren (3x "Offline"). Daher hier abbrechen.
+    if (profileLink.querySelector('.chat-header-name')) return;
     if (profileLink.dataset.fixed !== '1') {
       profileLink.dataset.fixed = '1';
       profileLink.style.cssText = 'display:flex !important;align-items:center !important;gap:10px !important;text-decoration:none !important;flex:1 !important;justify-content:flex-start !important;padding-left:6px !important;';
