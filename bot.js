@@ -1070,6 +1070,22 @@ function getLastSeen(uid) {
     }
     return m;
 }
+// Server-seitiges Relativ-Zeit-Format (es gibt nur eine gleichnamige CLIENT-Funktion in
+// einem <script>-String → die ist serverseitig NICHT verfügbar). Wird im Chat-Header
+// ("zuletzt aktiv vor X") + Admin-Postfach genutzt.
+function fmtRelative(ts) {
+    if (!ts) return '';
+    const diff = Date.now() - Number(ts);
+    if (diff < 0) return 'gerade eben';
+    if (diff < 60000) return 'gerade eben';
+    if (diff < 3600000) return Math.floor(diff/60000) + ' Min';
+    if (diff < 86400000) return Math.floor(diff/3600000) + ' Std';
+    const days = Math.floor(diff/86400000);
+    if (days < 30) return days + ' Tag' + (days !== 1 ? 'en' : '');
+    const months = Math.floor(days/30);
+    if (months < 12) return months + ' Mon';
+    return Math.floor(months/12) + ' J';
+}
 
 let _dataCache = null;
 let _dataCacheTime = 0;
@@ -4817,7 +4833,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v270-numeric-name-fix';
+const SW_VERSION='v272-admin-postfach';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
@@ -13564,7 +13580,13 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) acPo
         let msgsHtml = '';
         try {
           msgsHtml = require('./chat-detail-render')({ msgs, myUid: _selfUid, otherUid, otherUser, ladeBild, otherOnline: isUidOnline(otherUid) });
-        } catch(e) { console.error('[chat-render]', e && e.stack || e); msgsHtml = '<div style="padding:48px 20px;text-align:center;color:var(--muted);font-size:13px">Nachrichten konnten gerade nicht geladen werden.</div>'; }
+        } catch(e) {
+          console.error('[chat-render]', e && e.stack || e);
+          const _rDbg = adminIds.includes(Number(myUid))
+            ? '<pre style="text-align:left;max-width:520px;margin:14px auto 0;background:#1c1c1e;color:#ff9b9b;border:1px solid #333;border-radius:10px;padding:12px;font-size:11px;line-height:1.5;overflow:auto;white-space:pre-wrap;word-break:break-word">[render] '+htmlEsc(String(e&&e.message||e))+'\n\n'+htmlEsc(String(e&&e.stack||'').split('\n').slice(0,4).join('\n'))+'</pre>'
+            : '';
+          msgsHtml = '<div style="padding:48px 20px;text-align:center;color:var(--muted);font-size:13px">Nachrichten konnten gerade nicht geladen werden.'+_rDbg+'</div>';
+        }
         return html(`
 ${_nurUser ? '<div style="position:fixed;top:0;left:0;right:0;z-index:200;background:#7c3aed;color:#fff;font-size:11px;font-weight:700;text-align:center;padding:3px 0;letter-spacing:.5px">FILTER: NUR NUTZERNACHRICHTEN</div>' : ''}
 <div class="topbar" style="display:flex;align-items:center;gap:8px;padding:8px 10px${_nurUser ? ';margin-top:22px' : ''}">
@@ -13831,10 +13853,109 @@ setInterval(async()=>{
 </script>`, 'messages');
       } catch(_chatErr) {
         console.error('[chat-route] Unerwarteter Fehler:', _chatErr && _chatErr.stack || _chatErr);
-        if (!res.headersSent) return html('<div style="padding:60px 20px;text-align:center"><div style="font-size:14px;color:var(--muted);margin-bottom:16px">Chat konnte nicht geladen werden.</div><a href="/nachrichten" style="color:var(--accent);font-weight:700">← Zurück</a></div>', 'messages');
+        const _isAdminViewer = adminIds.includes(Number(myUid));
+        // Diagnose: Admin sieht den echten Fehler (Message + erste Stack-Zeile) inline,
+        // damit wir die Ursache eingrenzen können. Normale User sehen nur den Fallback.
+        let _dbg = '';
+        if (_isAdminViewer) {
+            const _msg = String(_chatErr && _chatErr.message || _chatErr || 'unbekannt');
+            const _stk = String(_chatErr && _chatErr.stack || '').split('\n').slice(0,4).join('\n');
+            _dbg = '<pre style="text-align:left;max-width:520px;margin:18px auto 0;background:#1c1c1e;color:#ff9b9b;border:1px solid #333;border-radius:10px;padding:12px;font-size:11px;line-height:1.5;overflow:auto;white-space:pre-wrap;word-break:break-word">'+htmlEsc(_msg)+'\n\n'+htmlEsc(_stk)+'</pre>';
+        }
+        if (!res.headersSent) return html('<div style="padding:60px 20px;text-align:center"><div style="font-size:14px;color:var(--muted);margin-bottom:16px">Chat konnte nicht geladen werden.</div><a href="/nachrichten" style="color:var(--accent);font-weight:700">← Zurück</a>'+_dbg+'</div>', 'messages');
       }
     }
 
+
+    // ── ADMIN-POSTFACH: Antwort senden (getaggt als adminReply) ──
+    if (path === '/api/admin/postfach-reply' && req.method === 'POST') {
+        if (!session) return json({ ok:false, error:'Nicht eingeloggt' }, 401);
+        if (!adminIds.includes(Number(myUid))) return json({ ok:false, error:'Kein Zugriff' }, 403);
+        let _pfBody;
+        try { _pfBody = JSON.parse(await readBody(req, 100000)); } catch(e) { return json({ ok:false, error:'Ungültig' }, 400); }
+        const _pfUid = String(_pfBody.uid || '');
+        const _pfText = String(_pfBody.text || '').trim();
+        if (!_pfUid || !_pfText) return json({ ok:false, error:'Leer' }, 400);
+        const _pfRes = LOCAL_STORE
+            ? await localWrite(() => botLogic.adminPostfachReply({ uid: _pfUid, text: _pfText }))
+            : await postBot('/admin-postfach-reply', { uid: _pfUid, text: _pfText });
+        return json(_pfRes || { ok:false });
+    }
+
+    // ── ADMIN-POSTFACH: Liste aller Nutzer, die dem Bot geschrieben haben ──
+    // Zeigt NUR vom Nutzer selbst verfasste Nachrichten (keine automatischen Bot-DMs).
+    if (path === '/admin/postfach') {
+        if (!adminIds.includes(Number(myUid))) return redirect('/feed');
+        const _pfConvos = (d && d.messages) || {};
+        const _pfItems = [];
+        for (const _k of Object.keys(_pfConvos)) {
+            const _ms = _pfConvos[_k];
+            if (!Array.isArray(_ms)) continue;
+            const _parts = String(_k).split('_');
+            if (_parts.indexOf('creatorboost') === -1) continue;
+            const _uid = _parts[0] === 'creatorboost' ? _parts[1] : _parts[0];
+            if (!_uid || _uid === 'creatorboost' || adminIds.includes(Number(_uid))) continue;
+            const _userMsgs = _ms.filter(m => m && String(m.from) === String(_uid));
+            if (!_userMsgs.length) continue;
+            const _last = _userMsgs[_userMsgs.length - 1];
+            const _unread = _userMsgs.filter(m => m && m.read === false).length;
+            const _uu = (d.users && d.users[_uid]) || {};
+            const _prev = String((_last && _last.text) || (_last && _last.image ? '[Foto]' : _last && _last.audio ? '[Sprachnachricht]' : ''))
+                .replace(/^[^A-Za-z0-9]*\s*(Helper-Frage|Follow-up):\s*/, '').slice(0, 64);
+            _pfItems.push({ uid: String(_uid), name: String(_uu.spitzname || _uu.name || ('User ' + _uid)), prev: _prev, unread: _unread, ts: (_last && _last.timestamp) || 0 });
+        }
+        _pfItems.sort((x, y) => (y.ts || 0) - (x.ts || 0));
+        let _pfRows = '';
+        for (const it of _pfItems) {
+            _pfRows += '<a href="/admin/postfach/' + encodeURIComponent(it.uid) + '" style="display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--border2);text-decoration:none;color:var(--text)">'
+                + '<div style="width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,#a78bfa,#7c3aed);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:17px;flex-shrink:0">' + htmlEsc(it.name.slice(0, 1).toUpperCase()) + '</div>'
+                + '<div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + htmlEsc(it.name) + '</div>'
+                + '<div style="font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px">' + htmlEsc(it.prev || '(kein Text)') + '</div></div>'
+                + '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0"><div style="font-size:11px;color:var(--muted)">' + htmlEsc(fmtRelative(it.ts)) + '</div>'
+                + (it.unread > 0 ? '<div style="background:#7c3aed;color:#fff;font-size:11px;font-weight:800;min-width:20px;height:20px;border-radius:10px;display:flex;align-items:center;justify-content:center;padding:0 6px">' + (it.unread > 99 ? '99+' : it.unread) + '</div>' : '')
+                + '</div></a>';
+        }
+        if (!_pfRows) _pfRows = '<div style="padding:60px 24px;text-align:center;color:var(--muted);font-size:13px">Noch keine Nachrichten von Nutzern.</div>';
+        return html('<div class="topbar" style="display:flex;align-items:center;gap:8px;padding:10px 12px">'
+            + '<a href="/nachrichten" class="icon-btn" style="color:var(--accent);padding:4px 8px;text-decoration:none;display:flex;align-items:center"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></a>'
+            + '<div style="font-size:18px;font-weight:800">Admin-Postfach</div></div>'
+            + '<div style="font-size:12px;color:var(--muted);padding:11px 16px 4px;line-height:1.4">Nur was Nutzer selbst geschrieben haben. Automatische Bot-Nachrichten sind ausgeblendet.</div>'
+            + '<div style="padding-bottom:90px">' + _pfRows + '</div>', 'messages');
+    }
+
+    // ── ADMIN-POSTFACH: Detail eines Nutzers (nur Nutzer-Nachrichten + Admin-Antworten) ──
+    if (path.startsWith('/admin/postfach/')) {
+        if (!adminIds.includes(Number(myUid))) return redirect('/feed');
+        const _pfUid = decodeURIComponent(path.replace('/admin/postfach/', ''));
+        const _pfU = (d.users && d.users[_pfUid]) || {};
+        const _pfName = String(_pfU.spitzname || _pfU.name || ('User ' + _pfUid));
+        const _pfKey = ['creatorboost', _pfUid].sort().join('_');
+        const _pfAll = (d.messages && Array.isArray(d.messages[_pfKey])) ? d.messages[_pfKey] : [];
+        const _pfShown = _pfAll.filter(m => m && (String(m.from) === String(_pfUid) || m.adminReply === true));
+        if (LOCAL_STORE) { try { Promise.resolve(localWrite(() => botLogic.markMessagesRead({ uid: 'creatorboost', chatKey: _pfKey }))).catch(()=>{}); } catch(_) {} }
+        else postBot('/mark-messages-read', { uid: 'creatorboost', chatKey: _pfKey }).catch(()=>{});
+        let _pfBubbles = '';
+        for (const m of _pfShown) {
+            const _isUser = String(m.from) === String(_pfUid);
+            let _txt = String(m.text || (m.image ? '[Foto]' : m.audio ? '[Sprachnachricht]' : ''))
+                .replace(/^[^A-Za-z0-9]*\s*(Helper-Frage|Follow-up):\s*/, '').slice(0, 2000);
+            _pfBubbles += '<div style="display:flex;' + (_isUser ? 'justify-content:flex-start' : 'justify-content:flex-end') + ';margin:6px 12px">'
+                + '<div style="max-width:80%;background:' + (_isUser ? 'var(--bg3,#2a2a2e)' : 'linear-gradient(135deg,#a78bfa,#7c3aed)') + ';color:' + (_isUser ? 'var(--text)' : '#fff') + ';padding:9px 13px;border-radius:16px;font-size:14px;line-height:1.45;word-break:break-word;white-space:pre-wrap">'
+                + htmlEsc(_txt)
+                + '<div style="font-size:10px;opacity:.65;margin-top:4px;text-align:right">' + htmlEsc(fmtRelative(m.timestamp || 0)) + '</div></div></div>';
+        }
+        if (!_pfBubbles) _pfBubbles = '<div style="padding:50px 24px;text-align:center;color:var(--muted);font-size:13px">Dieser Nutzer hat noch nichts geschrieben.</div>';
+        return html('<div class="topbar" style="display:flex;align-items:center;gap:10px;padding:10px 12px">'
+            + '<a href="/admin/postfach" class="icon-btn" style="color:var(--accent);padding:4px 8px;text-decoration:none;display:flex;align-items:center"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></a>'
+            + '<a href="/profil/' + encodeURIComponent(_pfUid) + '" style="text-decoration:none;color:var(--text);display:flex;align-items:center;gap:10px;flex:1;min-width:0">'
+            + '<div style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#a78bfa,#7c3aed);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:15px;flex-shrink:0">' + htmlEsc(_pfName.slice(0, 1).toUpperCase()) + '</div>'
+            + '<div style="min-width:0"><div style="font-size:16px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + htmlEsc(_pfName) + '</div><div style="font-size:11px;color:var(--muted)">Nur Nutzernachrichten</div></div></a></div>'
+            + '<div id="pf-msgs" style="padding:10px 0 150px">' + _pfBubbles + '</div>'
+            + '<div style="position:fixed;bottom:60px;left:0;right:0;background:var(--bg);border-top:1px solid var(--border2);padding:8px 10px;display:flex;gap:8px;align-items:center;z-index:100">'
+            + '<input id="pf-input" type="text" placeholder="Antwort an ' + htmlEsc(_pfName) + '..." style="flex:1;background:var(--bg3,#2a2a2e);border:none;outline:none;color:var(--text);font-size:15px;padding:11px 16px;border-radius:22px">'
+            + '<button id="pf-send" style="width:42px;height:42px;border-radius:50%;background:#7c3aed;color:#fff;border:none;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button></div>'
+            + '<script>(function(){var uid=' + JSON.stringify(String(_pfUid)) + ';var inp=document.getElementById("pf-input");var btn=document.getElementById("pf-send");function go(){window.scrollTo(0,document.body.scrollHeight);}go();function send(){var t=(inp.value||"").trim();if(!t)return;btn.disabled=true;fetch("/api/admin/postfach-reply",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({uid:uid,text:t})}).then(function(r){return r.json();}).then(function(d){if(d&&d.ok){location.reload();}else{btn.disabled=false;alert((d&&d.error)||"Senden fehlgeschlagen");}}).catch(function(){btn.disabled=false;alert("Netzwerkfehler");});}btn.addEventListener("click",send);inp.addEventListener("keypress",function(e){if(e.key==="Enter")send();});inp.focus();})();</script>', 'messages');
+    }
 
     // ── NEUER THREAD (ADMIN) ──
     // Telegram-Threads sind aus der App entfernt — alle /nachrichten/gruppe* → /nachrichten
@@ -14020,7 +14141,8 @@ document.getElementById('user-search-input')?.addEventListener('input',filterSea
             console.error('[/nachrichten] render failed:', _dmErr && _dmErr.stack || _dmErr);
             return html('<div class="topbar"><div class="topbar-logo">Nachrichten</div></div><div style="padding:48px 24px;text-align:center;color:var(--muted);font-size:13px;line-height:1.5">Nachrichten konnten gerade nicht geladen werden.<br>Bitte lade die Seite neu oder versuch es gleich nochmal.</div>', 'messages');
         }
-        return html(`<div class="topbar"><div class="topbar-logo">Nachrichten</div><div class="topbar-actions"><a href="/suche" class="icon-btn" title="User suchen" style="text-decoration:none"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></a></div></div><div style="padding-bottom:80px">${convHtml}</div>`, 'messages');
+        const _adminPostfachBtn = _inboxIsAdmin ? '<a href="/admin/postfach" class="icon-btn" title="Admin-Postfach (nur Nutzernachrichten)" style="text-decoration:none;color:#a78bfa"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><polyline points="22 6 12 13 2 6"/></svg></a>' : '';
+        return html(`<div class="topbar"><div class="topbar-logo">Nachrichten</div><div class="topbar-actions">${_adminPostfachBtn}<a href="/suche" class="icon-btn" title="User suchen" style="text-decoration:none"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></a></div></div><div style="padding-bottom:80px">${convHtml}</div>`, 'messages');
     }
 
     // ── BENACHRICHTIGUNGEN ──

@@ -1296,6 +1296,26 @@ function sendDmSingleApi({ uid, text }) {
     try { dmUser(uid, text); } catch (e) {}
     return { ok: true };
 }
+// Admin-Postfach-Antwort: schreibt eine vom Admin manuell verfasste Antwort in den
+// creatorboost↔user-Chat — getaggt mit adminReply:true, damit das Postfach sie von den
+// automatischen Bot-DMs (Belohnungen, System) unterscheiden kann.
+function adminPostfachReply({ uid, text }) {
+    uid = String(uid || '');
+    text = String(text || '').trim().slice(0, 1500);
+    if (!uid || !text) return { ok: false, error: 'Leer' };
+    if (!d.users[uid]) return { ok: false, error: 'User nicht gefunden' };
+    if (!d.messages) d.messages = {};
+    const chatKey = [CREATORBOOST_UID, uid].sort().join('_');
+    if (!d.messages[chatKey]) d.messages[chatKey] = [];
+    d.messages[chatKey].push({
+        from: CREATORBOOST_UID, to: uid, text,
+        image: null, audio: null, timestamp: Date.now(),
+        read: false, system: true, adminReply: true,
+    });
+    if (d.messages[chatKey].length > 200) d.messages[chatKey].shift();
+    try { addNotification(uid, '💬', 'CreatorBoost: ' + text.slice(0, 40), CREATORBOOST_UID); } catch (e) {}
+    return { ok: true };
+}
 // User→User DM (1:1 aus /send-message-api). Telegram-Weiterleitung entfernt;
 // Helper-Ticket-Auto-Forward (Admin→creatorboost) + Notifications bleiben.
 function sendMessageApi({ from, to, text, image, audio, replyTo }) {
@@ -3603,7 +3623,7 @@ module.exports = {
     addWarn, removeWarn, resetUser, removeXp, startXpEvent, startDiamondEvent, stopEvent,
     banUserApi, unbanUserApi, adminSuspendPostingApi,
     mergeUsers, deleteUser, userDeleteSelfApi,
-    sendMessageApi, sendDmSingleApi, markMessagesRead, editMessageApi, deleteDmApi, reactDmMsgApi,
+    sendMessageApi, sendDmSingleApi, adminPostfachReply, markMessagesRead, editMessageApi, deleteDmApi, reactDmMsgApi,
     appChatSend, appChatMarkRead, appChatDelete, appChatReact, getAppChat,
     mindsetSetAnswerApi, runMindsetPickApi, mindsetAdminPickApi, mindsetAdminSkipApi, mindsetAdminBlastApi, mindsetAdminRestoreApi, isMindsetLocked,
     helperChatAppendApi, helperQuestionApi, adminHelperAnswerApi,
