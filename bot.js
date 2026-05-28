@@ -4799,7 +4799,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v250-surfaces-icons';
+const SW_VERSION='v251-settings-subpages-icons';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
@@ -19949,36 +19949,36 @@ ${sub ? `<div style="padding:12px 16px;font-size:12.5px;color:var(--muted);line-
         const isLocked = hasEmail && hasPw && (!session || !session.accountUnlockUntil || Number(session.accountUnlockUntil) < Date.now());
         return html(`
 <div class="subset-page">
-${_setSubHead('🔐 Account', 'Email, Passwort, App-Code und Login-Methoden')}
+${_setSubHead('<span style="display:inline-flex;align-items:center;gap:7px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Account</span>', 'Email, Passwort, App-Code und Login-Methoden')}
 
 <div class="subset-section">
   <div class="subset-section-title">Account-Login (Email + Passwort)</div>
   ${isLocked ? `
     <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:14px;margin-top:6px">
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px"><div style="font-size:24px">🔒</div><div><div style="font-weight:800;font-size:14px;color:var(--text)">Account-Login gesperrt</div><div style="font-size:12px;color:var(--muted);margin-top:2px">Email + Passwort sind gesetzt. Änderungen brauchen eine Bestätigung per Mail.</div></div></div>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px"><div style="font-size:0;line-height:0"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:0px;margin-right:0px"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div><div><div style="font-weight:800;font-size:14px;color:var(--text)">Account-Login gesperrt</div><div style="font-size:12px;color:var(--muted);margin-top:2px">Email + Passwort sind gesetzt. Änderungen brauchen eine Bestätigung per Mail.</div></div></div>
       <div style="display:flex;flex-direction:column;gap:6px;font-size:13px;margin-bottom:12px">
-        <div style="display:flex;align-items:center;gap:8px;color:var(--text)"><span style="color:var(--muted);font-weight:600;min-width:90px">📧 Email:</span><span style="font-family:JetBrains Mono,monospace;font-size:12.5px">${htmlEsc(u.email)}</span><span style="color:#22c55e;font-size:11px;margin-left:auto">✓ bestätigt</span></div>
-        <div style="display:flex;align-items:center;gap:8px;color:var(--text)"><span style="color:var(--muted);font-weight:600;min-width:90px">🔐 Passwort:</span><span style="font-family:JetBrains Mono,monospace;font-size:12.5px">••••••••</span><span style="color:#22c55e;font-size:11px;margin-left:auto">✓ gesetzt</span></div>
+        <div style="display:flex;align-items:center;gap:8px;color:var(--text)"><span style="color:var(--muted);font-weight:600;min-width:90px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 6-10 7L2 6"/></svg>Email:</span><span style="font-family:JetBrains Mono,monospace;font-size:12.5px">${htmlEsc(u.email)}</span><span style="color:#22c55e;font-size:11px;margin-left:auto">✓ bestätigt</span></div>
+        <div style="display:flex;align-items:center;gap:8px;color:var(--text)"><span style="color:var(--muted);font-weight:600;min-width:90px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Passwort:</span><span style="font-family:JetBrains Mono,monospace;font-size:12.5px">••••••••</span><span style="color:#22c55e;font-size:11px;margin-left:auto">✓ gesetzt</span></div>
       </div>
-      <button class="btn btn-outline btn-full" id="ep-request-change-btn" onclick="requestAccountChange()" style="font-size:13px;display:flex">📨 Änderung anfragen</button>
+      <button class="btn btn-outline btn-full" id="ep-request-change-btn" onclick="requestAccountChange()" style="font-size:13px;display:flex;align-items:center;justify-content:center"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 6-10 7L2 6"/></svg>Änderung anfragen</button>
       <div id="ep-request-msg" style="font-size:11.5px;color:var(--muted);margin-top:8px;line-height:1.4">Klick → wir senden einen Bestätigungs-Link an deine Email. 30 Min nach Klick kannst du Email/Passwort ändern.</div>
     </div>
   ` : `
     <div style="display:flex;flex-direction:column;gap:14px">
       <div>
-        <div style="font-size:11.5px;color:var(--muted);font-weight:700;margin-bottom:6px">📧 EMAIL</div>
+        <div style="font-size:11.5px;color:var(--muted);font-weight:700;margin-bottom:6px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 6-10 7L2 6"/></svg>EMAIL</div>
         <input type="email" class="form-input" id="inp-email" placeholder="deine@email.de" maxlength="200" value="${htmlEsc(u.email||u.pendingEmail||'')}" autocapitalize="none" spellcheck="false">
-        ${hasPending ? `<div style="margin-top:8px;padding:9px 11px;background:rgba(245,158,11,0.10);border:1px solid rgba(245,158,11,0.30);border-radius:10px;font-size:11.5px;color:#f59e0b;line-height:1.45"><b>⏳ Bestätigung ausstehend.</b> Bestätigungs-Link an <b>${htmlEsc(u.pendingEmail)}</b> gesendet — schau ins Postfach.</div>` : ''}
+        ${hasPending ? `<div style="margin-top:8px;padding:9px 11px;background:rgba(245,158,11,0.10);border:1px solid rgba(245,158,11,0.30);border-radius:10px;font-size:11.5px;color:#f59e0b;line-height:1.45"><b><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg>Bestätigung ausstehend.</b> Bestätigungs-Link an <b>${htmlEsc(u.pendingEmail)}</b> gesendet — schau ins Postfach.</div>` : ''}
         ${hasEmail ? `<div style="margin-top:8px;padding:9px 11px;background:rgba(34,197,94,0.10);border:1px solid rgba(34,197,94,0.25);border-radius:10px;font-size:11.5px;color:#22c55e;line-height:1.45"><b>✓ Email bestätigt.</b></div>` : ''}
       </div>
       <div>
-        <div style="font-size:11.5px;color:var(--muted);font-weight:700;margin-bottom:6px">🔐 PASSWORT ${hasPw ? '<span style="color:#22c55e;font-weight:600;margin-left:4px">(gesetzt)</span>' : '<span style="color:var(--muted-2);font-weight:500;margin-left:4px">(optional)</span>'}</div>
+        <div style="font-size:11.5px;color:var(--muted);font-weight:700;margin-bottom:6px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>PASSWORT ${hasPw ? '<span style="color:#22c55e;font-weight:600;margin-left:4px">(gesetzt)</span>' : '<span style="color:var(--muted-2);font-weight:500;margin-left:4px">(optional)</span>'}</div>
         <input type="password" class="form-input" id="inp-password" placeholder="${hasPw ? 'Neues Passwort (leer = unverändert)' : 'Min. 6 Zeichen'}" minlength="6" maxlength="200" autocomplete="new-password">
         <div style="font-size:11.5px;color:var(--muted);margin-top:6px;line-height:1.45">Mit Passwort kannst du dich direkt einloggen — ohne Magic-Link. Min. 6 Zeichen.</div>
       </div>
-      <button class="btn btn-primary btn-full" onclick="saveAccount()" style="font-size:14px">💾 Email & Passwort speichern</button>
+      <button class="btn btn-primary btn-full" onclick="saveAccount()" style="font-size:14px;display:flex;align-items:center;justify-content:center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>Email &amp; Passwort speichern</button>
       <div id="account-save-msg" style="font-size:12px;text-align:center;color:var(--muted)"></div>
-      ${hasPw ? '<button onclick="removePwAcct()" class="btn btn-outline btn-full" style="color:#ef4444">🗑️ Passwort entfernen</button>' : ''}
+      ${hasPw ? '<button onclick="removePwAcct()" class="btn btn-outline btn-full" style="color:#ef4444;display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Passwort entfernen</button>' : ''}
     </div>
   `}
 </div>
@@ -19987,14 +19987,14 @@ ${_setSubHead('🔐 Account', 'Email, Passwort, App-Code und Login-Methoden')}
   <div class="subset-section-title">Eigener App-Code <span style="font-size:11px;color:var(--muted);font-weight:500">(für /mycode &amp; Login-Link)</span></div>
   <input type="text" class="form-input" id="inp-app-code" placeholder="z.B. dein-name" maxlength="30" value="${htmlEsc(u.appCode||'')}" autocapitalize="none" spellcheck="false" style="font-family:JetBrains Mono,monospace;letter-spacing:0.5px">
   <div style="font-size:11.5px;color:var(--muted);margin-top:6px;line-height:1.45">4–30 Zeichen, nur a–z, 0–9, _ oder -. Eindeutig.</div>
-  <button class="btn btn-outline btn-full" style="margin-top:10px;font-size:13px" onclick="saveAppCode()">🔑 Code speichern</button>
+  <button class="btn btn-outline btn-full" style="margin-top:10px;font-size:13px" onclick="saveAppCode()" style="display:flex;align-items:center;justify-content:center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><circle cx="7.5" cy="15.5" r="4.5"/><path d="m10.5 12.5 8-8"/><path d="m16 5 3 3"/><path d="m13 8 3 3"/></svg>Code speichern</button>
   <div id="app-code-msg" style="margin-top:6px;font-size:11.5px;line-height:1.4"></div>
 </div>
 
 <div class="subset-section">
   <div class="subset-section-title">Telegram-Verknüpfung</div>
   <div class="subset-row">
-    <div class="subset-row-icon">📲</div>
+    <div class="subset-row-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></div>
     <div class="subset-row-body">
       <div class="subset-row-title">${u.username ? '@'+htmlEsc(u.username) : 'UID '+htmlEsc(myUid)}</div>
       <div class="subset-row-sub">Telegram ist deine Master-Verknüpfung. UID kann nicht geändert werden.</div>
@@ -20003,8 +20003,8 @@ ${_setSubHead('🔐 Account', 'Email, Passwort, App-Code und Login-Methoden')}
 </div>
 
 <div class="subset-section">
-  <div class="subset-section-title" style="color:#ef4444">⚠️ Gefahrenzone</div>
-  <button onclick="deleteAccountDsgvo()" class="btn btn-outline btn-full" style="border-color:rgba(239,68,68,.35);color:#ef4444">🗑️ Account dauerhaft löschen</button>
+  <div class="subset-section-title" style="color:#ef4444;display:inline-flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 4 2 18.3A1.6 1.6 0 0 0 3.4 20.7h17.2A1.6 1.6 0 0 0 22 18.3L13.7 4a1.6 1.6 0 0 0-3.4 0z"/><line x1="12" y1="9.5" x2="12" y2="13.5"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Gefahrenzone</div>
+  <button onclick="deleteAccountDsgvo()" class="btn btn-outline btn-full" style="border-color:rgba(239,68,68,.35);color:#ef4444;display:flex;align-items:center;justify-content:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Account dauerhaft löschen</button>
 </div>
 </div>
 <script>
@@ -20076,7 +20076,7 @@ async function deleteAccountDsgvo(){
             const insta = bU.instagram || '';
             return `
 <div class="subset-row" id="blocked-row-${htmlEsc(bUid)}">
-  <div class="subset-row-icon">🚫</div>
+  <div class="subset-row-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg></div>
   <div class="subset-row-body">
     <div class="subset-row-title">${htmlEsc(name)}</div>
     <div class="subset-row-sub">${insta ? '@'+htmlEsc(insta)+' · ' : ''}UID ${htmlEsc(bUid)}</div>
@@ -20086,7 +20086,7 @@ async function deleteAccountDsgvo(){
         }).join('');
         return html(`
 <div class="subset-page">
-${_setSubHead('🔒 Privatsphäre', 'Wer kann was über dich sehen und mit dir interagieren.')}
+${_setSubHead('<span style="display:inline-flex;align-items:center;gap:7px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Privatsphäre</span>', 'Wer kann was über dich sehen und mit dir interagieren.')}
 <div class="subset-section">
   <div class="subset-section-title">Blockierte Nutzer (${blocked.length})</div>
   ${blocked.length ? blockedRows : '<div class="subset-empty">Du hast niemanden blockiert.<br><span style="font-size:11px;color:var(--muted)">Block-Button auf Profilen oder in Chats nutzen.</span></div>'}
@@ -20094,7 +20094,7 @@ ${_setSubHead('🔒 Privatsphäre', 'Wer kann was über dich sehen und mit dir i
 <div class="subset-section">
   <div class="subset-section-title">Profilsichtbarkeit</div>
   <div class="subset-row">
-    <div class="subset-row-icon">👁️</div>
+    <div class="subset-row-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></div>
     <div class="subset-row-body">
       <div class="subset-row-title">Profil öffentlich</div>
       <div class="subset-row-sub">Jeder eingeloggte User sieht dein Profil. (Bald: Privat-Modus toggle)</div>
@@ -20102,7 +20102,7 @@ ${_setSubHead('🔒 Privatsphäre', 'Wer kann was über dich sehen und mit dir i
     <div class="subset-toggle on" style="opacity:.5;cursor:not-allowed" title="Coming soon"></div>
   </div>
   <div class="subset-row">
-    <div class="subset-row-icon">💬</div>
+    <div class="subset-row-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-12.5 7.5L3 20.5l1.5-5.5A8.5 8.5 0 1 1 21 11.5z"/></svg></div>
     <div class="subset-row-body">
       <div class="subset-row-title">DMs von allen</div>
       <div class="subset-row-sub">Jeder kann dir Nachrichten schicken. (Bald: nur Follower)</div>
@@ -20127,11 +20127,11 @@ async function unblockSub(uid, btn){
     if (path === '/einstellungen/notifications') {
         return html(`
 <div class="subset-page">
-${_setSubHead('🔔 Benachrichtigungen', 'Push-Benachrichtigungen, In-App-Notifs und Email-Newsletter.')}
+${_setSubHead('<span style="display:inline-flex;align-items:center;gap:7px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>Benachrichtigungen</span>', 'Push-Benachrichtigungen, In-App-Notifs und Email-Newsletter.')}
 <div class="subset-section">
   <div class="subset-section-title">Push-Benachrichtigungen</div>
   <div class="subset-row">
-    <div class="subset-row-icon">📱</div>
+    <div class="subset-row-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2.5"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg></div>
     <div class="subset-row-body">
       <div class="subset-row-title">Push aktiv</div>
       <div class="subset-row-sub" id="push-status-sub">Wird geprüft …</div>
@@ -20145,22 +20145,22 @@ ${_setSubHead('🔔 Benachrichtigungen', 'Push-Benachrichtigungen, In-App-Notifs
 <div class="subset-section">
   <div class="subset-section-title">Per-Event (bald)</div>
   <div class="subset-row" style="opacity:.55">
-    <div class="subset-row-icon">❤️</div>
+    <div class="subset-row-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 5.1a5.4 5.4 0 0 0-7.7 0l-1.1 1.1-1.1-1.1A5.4 5.4 0 1 0 3.2 12.8l1.1 1.1L12 21.5l7.7-7.6 1.1-1.1a5.4 5.4 0 0 0 0-7.7z"/></svg></div>
     <div class="subset-row-body"><div class="subset-row-title">Likes</div><div class="subset-row-sub">Wenn jemand deinen Post liked</div></div>
     <div class="subset-toggle on" style="cursor:not-allowed"></div>
   </div>
   <div class="subset-row" style="opacity:.55">
-    <div class="subset-row-icon">💬</div>
+    <div class="subset-row-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-12.5 7.5L3 20.5l1.5-5.5A8.5 8.5 0 1 1 21 11.5z"/></svg></div>
     <div class="subset-row-body"><div class="subset-row-title">Kommentare & Replies</div><div class="subset-row-sub">Wenn jemand auf deinen Post antwortet</div></div>
     <div class="subset-toggle on" style="cursor:not-allowed"></div>
   </div>
   <div class="subset-row" style="opacity:.55">
-    <div class="subset-row-icon">📌</div>
+    <div class="subset-row-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
     <div class="subset-row-body"><div class="subset-row-title">Pinned-Engagement</div><div class="subset-row-sub">Wenn jemand deinen Pinned-Post engagiert</div></div>
     <div class="subset-toggle on" style="cursor:not-allowed"></div>
   </div>
   <div class="subset-row" style="opacity:.55">
-    <div class="subset-row-icon">📩</div>
+    <div class="subset-row-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 6-10 7L2 6"/></svg></div>
     <div class="subset-row-body"><div class="subset-row-title">Newsletter & Updates</div><div class="subset-row-sub">App-Updates und Newsletter</div></div>
     <div class="subset-toggle on" style="cursor:not-allowed"></div>
   </div>
@@ -20226,7 +20226,7 @@ async function togglePush(t){
             : '🖥️ Unbekannt';
         return html(`
 <div class="subset-page">
-${_setSubHead('🛡️ Sicherheit & Sessions', 'Aktive Geräte und Logout-Optionen.')}
+${_setSubHead('<span style="display:inline-flex;align-items:center;gap:7px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Sicherheit &amp; Sessions</span>', 'Aktive Geräte und Logout-Optionen.')}
 <div class="subset-section">
   <div class="subset-section-title">Dieses Gerät</div>
   <div class="subset-row">
@@ -20240,24 +20240,24 @@ ${_setSubHead('🛡️ Sicherheit & Sessions', 'Aktive Geräte und Logout-Option
 <div class="subset-section">
   <div class="subset-section-title">Alle Sessions</div>
   <div class="subset-row">
-    <div class="subset-row-icon">🔢</div>
+    <div class="subset-row-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/></svg></div>
     <div class="subset-row-body">
       <div class="subset-row-title">${mySessions} aktive Session${mySessions===1?'':'s'}</div>
       <div class="subset-row-sub">Inklusive Sub-Accounts. Detaillierte Liste pro Device kommt.</div>
     </div>
   </div>
   <form method="POST" action="/api/logout-all-others" onsubmit="return confirm('Alle anderen Sessions abmelden? Du bleibst auf diesem Gerät eingeloggt.')">
-    <button type="submit" class="btn btn-outline btn-full" style="margin-top:8px;border-color:rgba(245,158,11,.35);color:#fbbf24">🚪 Alle anderen Geräte abmelden</button>
+    <button type="submit" class="btn btn-outline btn-full" style="margin-top:8px;border-color:rgba(245,158,11,.35);color:#fbbf24;display:flex;align-items:center;justify-content:center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Alle anderen Geräte abmelden</button>
   </form>
 </div>
 <div class="subset-section">
   <div class="subset-section-title">Login-Historie</div>
-  <div class="subset-empty" style="padding:18px;font-size:12.5px">📜 Login-Log kommt in einer der nächsten Versionen.<br><span style="font-size:11px">Aktivität jetzt nur Admin-seitig im Dashboard sichtbar.</span></div>
+  <div class="subset-empty" style="padding:18px;font-size:12.5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>Login-Log kommt in einer der nächsten Versionen.<br><span style="font-size:11px">Aktivität jetzt nur Admin-seitig im Dashboard sichtbar.</span></div>
 </div>
 <div class="subset-section">
   <div class="subset-section-title">Ausloggen</div>
   <form method="POST" action="/logout">
-    <button type="submit" class="btn btn-outline btn-full" style="border-color:rgba(239,68,68,.35);color:#ef4444">🚪 Von diesem Gerät abmelden</button>
+    <button type="submit" class="btn btn-outline btn-full" style="border-color:rgba(239,68,68,.35);color:#ef4444;display:flex;align-items:center;justify-content:center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Von diesem Gerät abmelden</button>
   </form>
 </div>
 </div>
@@ -20269,14 +20269,14 @@ ${_setSubHead('🛡️ Sicherheit & Sessions', 'Aktive Geräte und Logout-Option
         if (!isAdmin) return text('🛡️ Nur Admins.', 403);
         return html(`
 <div class="subset-page">
-${_setSubHead('🛡️ Admin-Tools', 'Live-Tour, Page-Vorschauen und FE-Thread-Tools — nur für Admins sichtbar.')}
+${_setSubHead('<span style="display:inline-flex;align-items:center;gap:7px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Admin-Tools</span>', 'Live-Tour, Page-Vorschauen und FE-Thread-Tools — nur für Admins sichtbar.')}
 <div class="subset-section">
-  <div class="subset-section-title">🎬 Live-Tour</div>
-  <button onclick="if(window.ftStart)window.ftStart();else alert('Tour-Script nicht geladen — Page reload bitte');" class="btn btn-primary btn-full" style="margin-bottom:8px;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;box-shadow:0 6px 18px rgba(212,175,55,0.4);font-weight:800;display:flex;align-items:center;justify-content:center;gap:8px">🎬 Komplette User-Journey-Tour starten</button>
+  <div class="subset-section-title" style="display:inline-flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:0px"><rect x="2" y="2" width="20" height="20" rx="2.5"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/><line x1="17" y1="17" x2="22" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/></svg>Live-Tour</div>
+  <button onclick="if(window.ftStart)window.ftStart();else alert('Tour-Script nicht geladen — Page reload bitte');" class="btn btn-primary btn-full" style="margin-bottom:8px;background:linear-gradient(180deg,#f5d76e,#d4a946 50%,#8b6914);color:#000;box-shadow:0 6px 18px rgba(212,175,55,0.4);font-weight:800;display:flex;align-items:center;justify-content:center;gap:8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:0px"><rect x="2" y="2" width="20" height="20" rx="2.5"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/><line x1="17" y1="17" x2="22" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/></svg>Komplette User-Journey-Tour starten</button>
   <div style="font-size:11.5px;color:var(--muted);line-height:1.4;margin-top:6px">10-Step Walkthrough: Landing → Telegram → Email → Login → Insta → Password → Feed → Einstellungen → Profil. Highlighted-Spot + Beschreibung pro Stage.</div>
 </div>
 <div class="subset-section">
-  <div class="subset-section-title">👀 Vorschauen</div>
+  <div class="subset-section-title" style="display:inline-flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:0px"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>Vorschauen</div>
   <a href="/?preview=1" target="_blank" class="btn btn-outline btn-full" style="margin-bottom:8px;display:flex">🔐 Login-Page (App)</a>
   <a href="/willkommen" target="_blank" class="btn btn-outline btn-full" style="margin-bottom:8px;display:flex">🌐 Public Landing-Page</a>
   <a href="/onboarding-instagram?preview=1" target="_blank" class="btn btn-outline btn-full" style="margin-bottom:8px;display:flex">🚀 Email-Onboarding (3-Step Wizard)</a>
@@ -20284,7 +20284,7 @@ ${_setSubHead('🛡️ Admin-Tools', 'Live-Tour, Page-Vorschauen und FE-Thread-T
   <a href="/preview/email-login" target="_blank" class="btn btn-outline btn-full" style="margin-bottom:8px;display:flex">📧 Magic-Link Email</a>
 </div>
 <div class="subset-section">
-  <div class="subset-section-title">🛡️ Dashboard</div>
+  <div class="subset-section-title" style="display:inline-flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:0px"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Dashboard</div>
   <a href="/dashboard" class="btn btn-primary btn-full" style="background:linear-gradient(135deg,#f5d76e,#d4a946 55%,#8b6914);color:#000;font-weight:800;display:flex;align-items:center;justify-content:center;gap:8px">🛡️ Admin-Dashboard öffnen</a>
   <div style="font-size:11.5px;color:var(--muted);line-height:1.4;margin-top:6px">User-Verwaltung, Moderation-Queue, Stats, Engagement-Log und mehr.</div>
 </div>
@@ -20295,39 +20295,39 @@ ${_setSubHead('🛡️ Admin-Tools', 'Live-Tour, Page-Vorschauen und FE-Thread-T
     if (path === '/einstellungen/pro') {
         return html(`
 <div class="subset-page">
-${_setSubHead('⭐ Pro-Features', 'Premium-Tools für ernsthafte Creator. <b style="color:#f5d76e">In Entwicklung.</b>')}
+${_setSubHead('<span style="display:inline-flex;align-items:center;gap:7px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Pro-Features</span>', 'Premium-Tools für ernsthafte Creator. <b style="color:#f5d76e">In Entwicklung.</b>')}
 <div class="subset-section">
   <div class="subset-section-title">Kommt bald</div>
   <div class="subset-row" style="background:linear-gradient(135deg,rgba(245,215,110,.08),rgba(212,175,55,.04));border-color:rgba(212,175,55,.30)">
-    <div class="subset-row-icon" style="background:linear-gradient(135deg,#f5d76e,#d4af37);color:#000">📊</div>
+    <div class="subset-row-icon" style="background:linear-gradient(135deg,#f5d76e,#d4af37);color:#000"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="20" x2="6" y2="13"/><line x1="12" y1="20" x2="12" y2="7"/><line x1="18" y1="20" x2="18" y2="11"/></svg></div>
     <div class="subset-row-body">
       <div class="subset-row-title">Deep-Analytics</div>
       <div class="subset-row-sub">Engagement-Rate pro Post · Cohort-Curves · Audience-Demographics · Heatmaps</div>
     </div>
   </div>
   <div class="subset-row" style="background:linear-gradient(135deg,rgba(245,215,110,.08),rgba(212,175,55,.04));border-color:rgba(212,175,55,.30)">
-    <div class="subset-row-icon" style="background:linear-gradient(135deg,#f5d76e,#d4af37);color:#000">📅</div>
+    <div class="subset-row-icon" style="background:linear-gradient(135deg,#f5d76e,#d4af37);color:#000"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
     <div class="subset-row-body">
       <div class="subset-row-title">Post-Scheduler</div>
       <div class="subset-row-sub">Pinned-Reel und Diamantlinks zeitlich planen</div>
     </div>
   </div>
   <div class="subset-row" style="background:linear-gradient(135deg,rgba(245,215,110,.08),rgba(212,175,55,.04));border-color:rgba(212,175,55,.30)">
-    <div class="subset-row-icon" style="background:linear-gradient(135deg,#f5d76e,#d4af37);color:#000">🤝</div>
+    <div class="subset-row-icon" style="background:linear-gradient(135deg,#f5d76e,#d4af37);color:#000"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m11 17 2 2a1 1 0 1 0 3-3"/><path d="m14 14 2.5 2.5a1 1 0 1 0 3-3l-3.88-3.88a3 3 0 0 0-4.24 0l-.88.88a1 1 0 1 1-3-3l2.81-2.81a5.79 5.79 0 0 1 7.06-.87l.47.28a2 2 0 0 0 1.42.25L21 4"/><path d="m21 3 1 11h-2"/><path d="M3 3 2 14l6.5 6.5a1 1 0 1 0 3-3"/><path d="M3 4h8"/></svg></div>
     <div class="subset-row-body">
       <div class="subset-row-title">Kollab-Manager</div>
       <div class="subset-row-sub">Mehrere Kollabs gleichzeitig tracken + auto-Reminder</div>
     </div>
   </div>
   <div class="subset-row" style="background:linear-gradient(135deg,rgba(245,215,110,.08),rgba(212,175,55,.04));border-color:rgba(212,175,55,.30)">
-    <div class="subset-row-icon" style="background:linear-gradient(135deg,#f5d76e,#d4af37);color:#000">🎨</div>
+    <div class="subset-row-icon" style="background:linear-gradient(135deg,#f5d76e,#d4af37);color:#000"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.7 6.3 9a8 8 0 1 0 11.4 0z"/></svg></div>
     <div class="subset-row-body">
       <div class="subset-row-title">Custom-Branding</div>
       <div class="subset-row-sub">Profil-Theme, Banner-Animationen, Pro-Badge</div>
     </div>
   </div>
   <div class="subset-row" style="background:linear-gradient(135deg,rgba(245,215,110,.08),rgba(212,175,55,.04));border-color:rgba(212,175,55,.30)">
-    <div class="subset-row-icon" style="background:linear-gradient(135deg,#f5d76e,#d4af37);color:#000">🔌</div>
+    <div class="subset-row-icon" style="background:linear-gradient(135deg,#f5d76e,#d4af37);color:#000"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2v6"/><path d="M15 2v6"/><path d="M6 8h12v3a6 6 0 0 1-12 0z"/><path d="M12 17v5"/></svg></div>
     <div class="subset-row-body">
       <div class="subset-row-title">API-Zugang</div>
       <div class="subset-row-sub">Eigene Stats abrufen, Webhooks, Zapier-Integration</div>
