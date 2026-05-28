@@ -2539,8 +2539,9 @@ function collabFeedApi(callerUid) {
         .map(p => {
             const likes = Array.isArray(p.likes) ? p.likes.map(String) : [];
             const a = d.users[p.uid] || {}, b = d.users[p.partnerUid] || {};
+            const likers = likes.map(lid => { const lu = d.users[lid] || {}; return { uid: lid, name: lu.spitzname || lu.name || 'User', instagram: lu.instagram || '', role: lu.role || '' }; });
             const boost = collabBoostState(p, _nowB);
-            return { id: p.id, uid: p.uid, partnerUid: p.partnerUid, url: p.url, caption: p.caption, likeCount: likes.length, liked: callerUid ? likes.includes(callerUid) : false, isSelf: callerUid && (callerUid === String(p.uid) || callerUid === String(p.partnerUid)), createdAt: p.createdAt, week: p.week, authorA: { uid: p.uid, name: a.spitzname || a.name || 'User', instagram: a.instagram || '' }, authorB: { uid: p.partnerUid, name: b.spitzname || b.name || 'User', instagram: b.instagram || '' }, boostActive: boost.active, boostEndsAt: boost.endsAt, boostNextStartAt: boost.nextStartAt, boostExpired: boost.expired };
+            return { id: p.id, uid: p.uid, partnerUid: p.partnerUid, url: p.url, caption: p.caption, likeCount: likes.length, likers, liked: callerUid ? likes.includes(callerUid) : false, isSelf: callerUid && (callerUid === String(p.uid) || callerUid === String(p.partnerUid)), createdAt: p.createdAt, week: p.week, authorA: { uid: p.uid, name: a.spitzname || a.name || 'User', instagram: a.instagram || '' }, authorB: { uid: p.partnerUid, name: b.spitzname || b.name || 'User', instagram: b.instagram || '' }, boostActive: boost.active, boostEndsAt: boost.endsAt, boostNextStartAt: boost.nextStartAt, boostExpired: boost.expired };
         });
     return { ok: true, posts: out, currentWeek: week, boostWindowMs: COLLAB_BOOST_WINDOW_MS, boostCycleMs: COLLAB_BOOST_CYCLE_MS };
 }

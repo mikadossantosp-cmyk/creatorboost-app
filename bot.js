@@ -3652,7 +3652,7 @@ async function plusPostLink(){
 function showLikerModal(msgId){const modal=document.getElementById('liker-modal');const content=document.getElementById('liker-modal-content');if(!modal||!content)return;const cached=document.getElementById('liker-rows-'+msgId);content.innerHTML=(cached&&cached.innerHTML)||'<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">Lädt…</div>';modal.classList.add('open');document.body.style.overflow='hidden';
   // Diamant-/Prismalinks rendern ihre Liker clientseitig in den Cache (liker-rows-dl-/pl-);
   // der generische Live-Fetch findet diese IDs nicht und wuerde den Cache faelschlich leeren.
-  if(String(msgId).indexOf('dl-')===0||String(msgId).indexOf('pl-')===0)return;
+  if(String(msgId).indexOf('dl-')===0||String(msgId).indexOf('pl-')===0||String(msgId).indexOf('cl-')===0)return;
   // Live nachladen, damit die Liste auch ohne Page-Reload aktuell ist.
   fetch('/api/link-likers?msgId='+encodeURIComponent(msgId)).then(r=>r.json()).then(j=>{if(j&&typeof j.html==='string'){content.innerHTML=j.html||'<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">Noch niemand geliked</div>';}}).catch(()=>{});}
 function closeLikerModal(){const modal=document.getElementById('liker-modal');if(modal){modal.classList.remove('open');document.body.style.overflow='';} }
@@ -4773,7 +4773,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v233-settings-icons-switcher-fix';
+const SW_VERSION='v234-collab-engagiert';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
@@ -11312,7 +11312,7 @@ async function submitSuperLink(){
             ? '<div style="padding:13px;background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.35);border-radius:12px;font-size:13.5px;color:#22c55e;font-weight:800;text-align:center">✅ Engagiert · +1 💎 in deiner Wallet</div>'
             : '<button onclick="kollabLike(\\''+p.id+'\\', this)" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;background:linear-gradient(135deg,#ec4899,#a21caf);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 0 18px rgba(236,72,153,0.35);position:relative"><span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900">2</span><span>❤️ Engagiert · +1 💎</span></button>'
           ) +
-          '<div style="font-size:11px;color:var(--muted);margin-top:8px;text-align:center">'+p.likeCount+' Engagements</div>' +
+          (function(){var lkrs=Array.isArray(p.likers)?p.likers:[];var cnt=p.likeCount||lkrs.length;if(cnt===0)return '<div style="font-size:11px;color:var(--muted);margin-top:8px;text-align:center">Noch keine Engagements</div>';var top=lkrs.slice(0,3).map(function(u){return '<b style="color:var(--text)">'+esc(u.name||'User')+'</b>';}).join(', ');var rest=cnt>3?' und '+(cnt-3)+' weiteren':'';var rows=lkrs.map(function(u){var initial='<div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#ec4899,#a21caf);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;position:relative;overflow:hidden">'+esc((u.name||'?')[0])+(u.uid?'<img src="/appbild/'+esc(u.uid)+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.remove()" alt="">':'')+'</div>';return '<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--border2)"><a href="/profil/'+esc(u.uid)+'" style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;text-decoration:none">'+initial+'<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:var(--text)">'+esc(u.name||'User')+'</div>'+(u.roleBadgeHtml?'<div style="margin-top:3px">'+u.roleBadgeHtml+'</div>':'')+(u.instagram?'<div style="font-size:11px;color:#ec4899;margin-top:2px">@'+esc(u.instagram)+'</div>':'')+'</div></a><div style="font-size:11px;color:var(--accent)">→</div></div>';}).join('');return '<div id="liker-rows-cl-'+esc(p.id)+'" style="display:none">'+rows+'</div><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px;padding:0 4px"><div style="font-size:12px;color:var(--muted);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Gefällt '+top+rest+'</div><button onclick="showLikerModal(\\'cl-'+esc(p.id)+'\\')" style="background:rgba(236,72,153,0.10);border:1px solid rgba(236,72,153,0.35);color:#ec4899;font-size:11px;font-weight:700;padding:5px 10px;border-radius:8px;cursor:pointer;white-space:nowrap;flex-shrink:0">👥 Wer hat engagiert? ('+cnt+')</button></div>';})() +
           '</div>' +
         '</div>';
       }
@@ -14448,6 +14448,7 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
         if (!session) return json({error:'Nicht eingeloggt'}, 401);
         const r = LOCAL_STORE ? botLogic.collabFeedApi(myUid) : await fetchBotRaw('/collab-feed-api?uid=' + encodeURIComponent(myUid));
         if (!r) return json({ok:false, error:'Mainbot offline'}, 502);
+        if (Array.isArray(r.posts)) r.posts.forEach(p => { if (p && Array.isArray(p.likers)) p.likers.forEach(l => { if (l) l.roleBadgeHtml = roleBadge(l.role); }); });
         return json(r);
     }
 
@@ -19826,7 +19827,7 @@ async function collabRequest(targetUid, btn){
             ? '<div style="padding:11px;background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.35);border-radius:10px;font-size:13px;color:#22c55e;font-weight:700;text-align:center">✅ Engagiert · +1 💎</div>'
             : '<button onclick="kollabLike(\\''+p.id+'\\', this)" style="display:block;width:100%;padding:12px;background:linear-gradient(135deg,#ec4899,#a21caf);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer">❤️ Engagiert · +1 💎</button>'
           ) +
-          '<div style="font-size:11px;color:var(--muted);margin-top:8px;text-align:center">'+p.likeCount+' Engagements</div>' +
+          (function(){var lkrs=Array.isArray(p.likers)?p.likers:[];var cnt=p.likeCount||lkrs.length;if(cnt===0)return '<div style="font-size:11px;color:var(--muted);margin-top:8px;text-align:center">Noch keine Engagements</div>';var top=lkrs.slice(0,3).map(function(u){return '<b style="color:var(--text)">'+esc(u.name||'User')+'</b>';}).join(', ');var rest=cnt>3?' und '+(cnt-3)+' weiteren':'';var rows=lkrs.map(function(u){var initial='<div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#ec4899,#a21caf);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;position:relative;overflow:hidden">'+esc((u.name||'?')[0])+(u.uid?'<img src="/appbild/'+esc(u.uid)+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.remove()" alt="">':'')+'</div>';return '<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--border2)"><a href="/profil/'+esc(u.uid)+'" style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;text-decoration:none">'+initial+'<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:var(--text)">'+esc(u.name||'User')+'</div>'+(u.roleBadgeHtml?'<div style="margin-top:3px">'+u.roleBadgeHtml+'</div>':'')+(u.instagram?'<div style="font-size:11px;color:#ec4899;margin-top:2px">@'+esc(u.instagram)+'</div>':'')+'</div></a><div style="font-size:11px;color:var(--accent)">→</div></div>';}).join('');return '<div id="liker-rows-cl-'+esc(p.id)+'" style="display:none">'+rows+'</div><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px;padding:0 4px"><div style="font-size:12px;color:var(--muted);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Gefällt '+top+rest+'</div><button onclick="showLikerModal(\\'cl-'+esc(p.id)+'\\')" style="background:rgba(236,72,153,0.10);border:1px solid rgba(236,72,153,0.35);color:#ec4899;font-size:11px;font-weight:700;padding:5px 10px;border-radius:8px;cursor:pointer;white-space:nowrap;flex-shrink:0">👥 Wer hat engagiert? ('+cnt+')</button></div>';})() +
         '</div>';
       }
     }
