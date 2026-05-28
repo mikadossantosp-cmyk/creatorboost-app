@@ -3519,6 +3519,7 @@ function diamondLinkAdminListApi() {
     _diamondEnsure();
     const now = Date.now();
     const out = Object.values(d.diamondLinks)
+        .filter(p => p && !p.deletedAt)
         .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
         .map(p => {
             const author = d.users[p.uid] || {};

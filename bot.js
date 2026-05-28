@@ -16749,7 +16749,7 @@ async function loadDiamondLinksAdmin(){
   } catch(e) { root.innerHTML = '<div style="padding:var(--space-6);text-align:center;color:#ef4444">'+e.message+'</div>'; }
 }
 async function deleteDiamondLink(postId, btn){
-  if (!confirm('Diamantlink wirklich löschen? Soft-Delete — Post bleibt im Log, wird aber nicht mehr im Feed angezeigt.')) return;
+  if (!confirm('Diamantlink wirklich löschen? Verschwindet sofort aus Feed UND aus dieser Liste.')) return;
   btn.disabled = true; btn.textContent = '⏳';
   const r = await fetch('/api/admin/diamond-link/delete', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ postId }) });
   const j = await r.json().catch(()=>({}));
