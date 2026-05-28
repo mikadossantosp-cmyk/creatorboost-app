@@ -4139,7 +4139,7 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
     const _picUrl = (picData||ladeBild(uid,'profilepic')) ? (appbildSrc(String(uid),'profilepic') || `/appbild/${uid}/profilepic`) : (u.instagram ? `https://unavatar.io/instagram/${u.instagram}` : '');
     const _initial = htmlEsc((u.spitzname||u.name||'?').slice(0,1).toUpperCase());
     const _isFollowing = false;
-    const _roleBadge = htmlEsc(cleanRole(u.role, uid, adminIds));
+    const _roleBadge = roleBadge(u.role, uid, adminIds);
 
     return `
 <style>
@@ -4234,7 +4234,7 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
     </div>
   </div>
   <div class="ipf-name-row">
-    <span class="nm">${htmlEsc(u.spitzname||u.name||'User')}${_roleBadge?`<span class="badge" style="background:${grad};color:#fff">${_roleBadge}</span>`:''}${isOwn?(()=>{
+    <span class="nm">${htmlEsc(u.spitzname||u.name||'User')} ${_roleBadge}${isOwn?(()=>{
       const _claimedToday = hasClaimed('dailyxp', uid);
       return '<button id="daily-xp-fab" onclick="claimDailyXP()" title="'+(_claimedToday?'Heute schon abgeholt':'Täglicher XP-Bonus abholen')+'"'+(_claimedToday?' disabled':'')+' style="position:relative;display:inline-flex;align-items:center;justify-content:center;margin-left:8px;width:30px;height:30px;border-radius:50%;background:'+(_claimedToday?'var(--bg4)':'linear-gradient(135deg,#22c55e,#16a34a)')+';color:'+(_claimedToday?'var(--muted)':'#fff')+';border:1.5px solid '+(_claimedToday?'var(--border)':'rgba(34,197,94,0.5)')+';font-size:15px;cursor:'+(_claimedToday?'default':'pointer')+';font-family:inherit;vertical-align:middle;opacity:'+(_claimedToday?'0.55':'1')+'">'+(_claimedToday?'✓':'🎁')+(_claimedToday?'':'<span id="daily-xp-fab-dot" style="position:absolute;top:-3px;right:-3px;width:9px;height:9px;border-radius:50%;background:#ef4444;border:2px solid var(--bg);animation:dxpPulse 2s ease-in-out infinite"></span>')+'</button>';
     })():''}</span>
@@ -4796,7 +4796,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v240-explore-highlight-icons';
+const SW_VERSION='v241-profile-badges-complete';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
@@ -19564,7 +19564,7 @@ async function submitPost(){const _spBtn=document.querySelector('[onclick="submi
                     +'</div>'
                     +'<div style="flex:1;min-width:0">'
                         +'<div style="font-size:13px;font-weight:600;color:var(--text)">'+(eu.spitzname||eu.name||'User')+'</div>'
-                        +'<div style="font-size:10px;color:var(--muted)">'+cleanRole(eu.role)+'</div>'
+                        +'<div style="margin-top:3px">'+roleBadge(eu.role)+'</div>'
                     +'</div>'
                 +'</a>';
             }).join('')
@@ -19586,7 +19586,7 @@ async function submitPost(){const _spBtn=document.querySelector('[onclick="submi
                         +'</div>'
                         +'<div style="flex:1;min-width:0">'
                             +'<div style="font-size:13px;font-weight:600;color:var(--text)">'+(eu.spitzname||eu.name||'User')+'</div>'
-                            +'<div style="font-size:10px;color:var(--muted)">'+cleanRole(eu.role)+'</div>'
+                            +'<div style="margin-top:3px">'+roleBadge(eu.role)+'</div>'
                         +'</div>'
                     +'</a>'
                     +(canReport ? '<button onclick="reportPinnedEngager(\''+eUid+'\', \''+uid+'\', this)" title="Schein-Engagement melden" style="background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.35);color:#ef4444;border-radius:8px;padding:6px 10px;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0">🚩 Melden</button>' : '')
