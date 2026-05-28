@@ -77,12 +77,13 @@ Prioritäten **immer in dieser Reihenfolge**:
 - **Microcopy (Leerzustände):** Profil-Leerzustände mit Hinweis ergänzt (eigenes Profil motivierend, fremde Profile neutral „Hat noch nichts geteilt."/„…Projekte erstellt."), Newsletter-Leerzustand, konkreterer Notif-Fehlertext („Versuch es gleich nochmal." statt „Bitte später erneut versuchen."). **Begriffe bewusst unverändert** (Links/Posts/Projekte). Feed-Leerzustand war schon gut → nicht angefasst. Lade-/Filter-/CTA-/dynamische Leerzustände sind korrekt so → fertig.
 - **Rest-Screens (`bot.js:13075–14460`) + Chat-Dateien:** `font-size`-Token-Hygiene für Nachrichten/Suche/Benachrichtigungen (30 Werte) sowie `chat-list-render.js`/`chat-detail-render.js` (15 Werte; gleicher Token-Scope, nutzen schon `var(--…)`). JS-berechnete `font-size:'+(size*0.38)+'` bewusst nicht angefasst. → `font-size`-Token-Hygiene damit **app-weit durch** (Rest sind Nicht-Skala-Größen 11/14/18px oder JS-berechnet).
 - **CTA-Konsistenz:** Login-Link `→ Login` (`bot.js:5662`) auf `→ Zum Login` vereinheitlicht (an bestehende Variante). Sonst waren CTAs bereits konsistent; vermeintliche Treffer waren `<h1>`/`<title>`/Sub-Account (keine echten CTAs).
+- **Spacing-Hygiene (app-weit):** ~785 **Einzelwert**-Deklarationen `padding/margin/gap` (+ Richtungs-Varianten) auf `--space-*`-Tokens (bot.js ~776, Chat-Dateien 9). Nur Einzelwerte (Trennzeichen-Constraint `[;}"']`), **keine Shorthands** → kein Token/Literal-Mix, wertgleich. Methode: temporäres `sed -E -f`-Skript (single-value-Regex), danach gelöscht. Negative Werte/`!important`/JS-berechnete bewusst ausgelassen.
 
 ## 8. Nächste sinnvolle Schritte
 
-1. **Optional/riskant:** Dashboard volle Light-Mode-Fähigkeit (jede Light-on-Dark-Annahme prüfen) — nur mit visuellem QA.
-2. Auf Wunsch: Spacing-Token-Hygiene (Abstände → `--space-*`), Onboarding-Flow-Texte, oder die offenen Explore-Duplikat-Selektoren prüfen.
-3. Rest-Screens (Nachrichten, Suche, Benachrichtigungen) `font-size`-Token-Hygiene, falls gewünscht.
+1. **Optional/riskant (visuelles QA nötig):** Dashboard volle Light-Mode-Fähigkeit; `tipps`/`newsletter`-Tab von `@media(prefers-color-scheme:dark)`+Hardcoded-Farben auf `[data-theme]`-Tokens.
+2. Restliche Spacing-Shorthands (`padding:12px 16px` etc.) tokenisieren — nur sinnvoll mit per-Wert-Tokenisierung, mehr Aufwand/Risiko.
+3. Onboarding-Flow-Texte / weitere Microcopy auf Wunsch.
 
 ## 9. Hinweise / Fallen
 
