@@ -448,7 +448,8 @@ async function likeFromApp(uid, msgId) {
     if (istHeutigerLinkApp && istInstagramLink(lnk.text)) mission.likesGegeben++;
     await checkMissionen(uid, u?.name || 'User');
 
-    return { ok: true, liked: true, likes: lnk.likes.size };
+    // ownerUid + likerName zurück → Route kann Reziprozitäts-Push senden (Push lebt in bot.js).
+    return { ok: true, liked: true, likes: lnk.likes.size, ownerUid: String(lnk.user_id || ''), likerName: (u?.spitzname || u?.name || 'Jemand') };
 }
 
 // ── Link-Posten: 1:1 aus POST /post-link-from-app (ohne Telegram-Teile). ──

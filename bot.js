@@ -282,6 +282,7 @@ function _appbildLRUSet(key, val) {
 // wird _appbildBufCache.delete(uid + '/' + type) gesetzt (separate Edit).
 const signupIpRateLimit = new Map();   // ip → { ts, n } — gegen Fake-Account-Spam + Email-Enumeration
 const _helperAiRate = new Map();       // uid → { ts, n } — gegen Gemini-Spam (jeder Call kostet Geld), max 8/min/User
+const _reciprocityRate = new Map();    // ownerUid → ts — Reziprozitäts-Push max 1×/Stunde (kein Spam bei vielen Likes)
 // Signup-Email-Confirmation: tracking unconfirmed Users LOCAL (Mainbot wird NICHT angefasst).
 // uid → { token, email, exp }. Persisted to disk via savePendingEmailConfirms.
 const pendingEmailConfirms = new Map();
@@ -330,6 +331,7 @@ setInterval(() => {
     }
     for (const [ip, v] of signupIpRateLimit.entries()) if (now - v.ts > SIGNUP_RATE_LIMIT_WINDOW) signupIpRateLimit.delete(ip);
     for (const [uid, v] of _helperAiRate.entries()) if (now - v.ts > 120000) _helperAiRate.delete(uid);
+    for (const [uid, ts] of _reciprocityRate.entries()) if (now - ts > 3600000) _reciprocityRate.delete(uid);
     // Wenn Email-Confirm-Tokens gelöscht wurden: sofort auf Disk persistieren
     // (sonst werden expired tokens nach Restart aus alter Datei wiedergeladen — würde aber unten gefiltert, also nur Inkonsistenz)
     if (confirmsRemoved > 0) { try { savePendingEmailConfirms(); } catch(e) {} }
@@ -7893,7 +7895,22 @@ ${spaceScale.map(s=>`<div class="grow"><span class="gmeta">--space-${s}</span><d
         // Erfolgreicher Like → Cache SOFORT lokal patchen (instant, kein Refetch-Wait), damit
         // der 30s-Poll (/api/likes-update) und ein Reload den Like ohne Verzögerung zeigen.
         // Voller Refresh läuft im Hintergrund nach (gleicht die Wahrheit vom Mainbot ab).
-        if (result.ok !== false) { _patchCacheLike(msgId, _likeUid); sseBroadcastLike(msgId); refreshDataCache().catch(()=>{}); }
+        if (result.ok !== false) {
+            _patchCacheLike(msgId, _likeUid); sseBroadcastLike(msgId); refreshDataCache().catch(()=>{});
+            // #8 Reziprozitäts-Nudge: Post-Owner kriegt Push „X hat deinen Reel engagiert — schau
+            // zurück". Gedrosselt 1×/Stunde pro Owner (kein Spam bei vielen Likes), nicht an sich selbst.
+            try {
+                const _ownerUid = String(result.ownerUid || '');
+                if (_ownerUid && _ownerUid !== String(_likeUid) && !result.already) {
+                    const _rNow = Date.now();
+                    const _rRec = _reciprocityRate.get(_ownerUid) || 0;
+                    if (_rNow - _rRec > 3600000) {
+                        _reciprocityRate.set(_ownerUid, _rNow);
+                        pushToUid(_ownerUid, '❤️ Engagement erhalten', String(result.likerName || 'Jemand') + ' hat deinen Reel engagiert — schau dir seinen an und gib zurück.', '/feed');
+                    }
+                }
+            } catch (e) {}
+        }
         return json({ok: result.ok !== false, liked: result.liked, likes: result.likes, error: result.error});
     }
 
@@ -11127,7 +11144,7 @@ commentsBox+
             : '';
         const engagementHtml = allSuperLinksWeek.length
             ? '<div style="padding:8px 0 80px">'+allSuperLinksWeek.map(renderSuperLink).join('')+'</div>'
-            : '<div style="text-align:center;padding:48px 24px;padding-bottom:80px"><div style="font-size:56px;margin-bottom:var(--space-4)">⭐</div><div style="font-size:17px;font-weight:700;margin-bottom:var(--space-2)">Noch keine Superlinks</div><div style="font-size:13px;color:var(--muted);margin-bottom:var(--space-6)">Teile deinen Instagram-Link für maximales Engagement mit der Community.</div></div>';
+            : '<div style="text-align:center;padding:48px 24px;padding-bottom:80px"><div style="font-size:56px;margin-bottom:var(--space-4)">⭐</div><div style="font-size:17px;font-weight:700;margin-bottom:var(--space-2)">Noch keine Superlinks</div><div style="font-size:13px;color:var(--muted);margin-bottom:var(--space-6)">Teile deinen Instagram-Link für maximales Engagement mit der Community.</div><button onclick="openPlusSheet()" style="display:inline-flex;align-items:center;gap:var(--space-2);background:var(--accent);color:#fff;padding:12px 24px;border-radius:12px;font-size:14px;font-weight:700;border:none;cursor:pointer;font-family:var(--font)">⭐ Superlink posten</button></div>';
 
         // Pinned-First-Posts: jeder Post bekommt einen 'Star-Frame' mit gold-purple
         // Gradient-Border + Star-Topbar (kein Overlay mehr auf der Post-Card selbst).
