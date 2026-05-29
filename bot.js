@@ -3964,6 +3964,9 @@ function confirmCrop(){
       const pad=raw+'='.repeat((4-raw.length%4)%4);
       const bytes=Uint8Array.from(atob(pad),c=>c.charCodeAt(0));
       const existing=await reg.pushManager.getSubscription();
+      // Nicht ungefragt beim Laden prompten: nur (re)subscriben wenn Permission schon erteilt
+      // ist. Neue User aktivieren Push bewusst via Einstellungen → Push-Toggle.
+      if(!existing && Notification.permission!=='granted') return;
       const sub=existing||await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:bytes});
       await fetch('/api/push-subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sub:sub.toJSON()})});
     }catch(e){}
@@ -20451,7 +20454,7 @@ async function togglePush(t){
     if(p !== 'granted'){ alert('Berechtigung verweigert. In Browser-Settings erlauben.'); return; }
     try{
       const reg = await navigator.serviceWorker.ready;
-      const vk = await fetch('/push-vapid-key').then(r=>r.text());
+      const vk = await fetch('/api/vapid-public-key').then(r=>r.json()).then(j=>j.key);
       const bytes = Uint8Array.from(atob(vk.replace(/-/g,'+').replace(/_/g,'/')), c=>c.charCodeAt(0));
       const sub = await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:bytes});
       await fetch('/api/push-subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sub:sub.toJSON()})});
