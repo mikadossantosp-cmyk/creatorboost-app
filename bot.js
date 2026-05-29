@@ -9704,6 +9704,7 @@ p{line-height:1.65;color:var(--muted)}
 
     // ── API ENDPOINTS ──
     if (path === '/api/push-subscribe' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
         const body = await parseBody(req);
         const { sub } = body;
         if (!sub?.endpoint) return json({ok:false});
@@ -10044,15 +10045,18 @@ p{line-height:1.65;color:var(--muted)}
             // Vorher: savePushSubs() lief synchron VOR den .catch der Sends — abgelaufene Subs (410/404)
             // wurden nie persistiert. Jetzt: Promise.allSettled, dann erst persistieren.
             const targets = Object.entries(pushSubs).filter(([,v]) => v.uid !== myUid);
-            const results = await Promise.allSettled(targets.map(([,v]) => webpush.sendNotification(v.sub, payload)));
-            let dirty = false;
-            results.forEach((r,i) => {
-                if (r.status === 'rejected') {
-                    const sc = r.reason?.statusCode;
-                    if (sc === 410 || sc === 404) { delete pushSubs[targets[i][0]]; dirty = true; }
-                }
-            });
-            if (dirty) savePushSubs();
+            // Fire-and-forget: NICHT auf die Push-Zustellung an alle Subs warten — sonst blockiert
+            // das die Antwort an den Poster. Expired-Sub-Cleanup (410/404) passiert im .then.
+            Promise.allSettled(targets.map(([,v]) => webpush.sendNotification(v.sub, payload))).then(results => {
+                let dirty = false;
+                results.forEach((r,i) => {
+                    if (r.status === 'rejected') {
+                        const sc = r.reason?.statusCode;
+                        if (sc === 410 || sc === 404) { delete pushSubs[targets[i][0]]; dirty = true; }
+                    }
+                });
+                if (dirty) savePushSubs();
+            }).catch(()=>{});
         }
         return json({ok:true});
     }
