@@ -3748,6 +3748,29 @@ if(typeof window.likePost==='undefined'){
 function setTheme(t){document.documentElement.setAttribute('data-theme',t);try{localStorage.setItem('cbTheme4',t);}catch(e){}document.querySelectorAll('[title="Theme"]').forEach(b=>b.textContent=t==='dark'?'☀️':'🌙');fetch('/api/theme',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({theme:t})}).catch(()=>{});}
 try{const t=localStorage.getItem('cbTheme4');if(t){document.documentElement.setAttribute('data-theme',t);}}catch(e){}
 function setLang(l){fetch('/api/lang',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lang:l})}).then(()=>location.reload()).catch(()=>{try{document.cookie='cbLang='+l+';path=/;max-age=31536000';}catch(e){}location.reload();});}
+async function pastePlusLink(){
+  try {
+    const txt = await navigator.clipboard.readText();
+    const m = String(txt||'').match(/https?:\/\/(www\.)?instagram\.com\/[^\s]+/i);
+    const input = document.getElementById('plus-link-input');
+    if (m && input) { input.value = m[0]; validatePlusLink(); }
+    else if (window.showBanner) showBanner({type:'warn',title:'Kein Instagram-Link in der Zwischenablage'});
+  } catch(e) { if(window.showBanner) showBanner({type:'info',title:'Zwischenablage nicht verfügbar — Link manuell einfügen'}); }
+}
+function validatePlusLink(){
+  const input = document.getElementById('plus-link-input');
+  const hint = document.getElementById('plus-link-hint');
+  if (!input || !hint) return;
+  const v = (input.value||'').trim();
+  if (!v) { hint.textContent=''; return; }
+  if (/https?:\/\/(www\.)?instagram\.com\/(reel|reels|p|tv)\//i.test(v)) {
+    hint.textContent = '✓ Gültiger Instagram-Link'; hint.style.color = '#22c55e';
+  } else if (/instagram\.com/i.test(v)) {
+    hint.textContent = 'Tipp: Reel-/Post-Link verwenden (instagram.com/reel/…)'; hint.style.color = 'var(--muted)';
+  } else {
+    hint.textContent = 'Das sieht nicht nach einem Instagram-Link aus'; hint.style.color = '#f59e0b';
+  }
+}
 async function openPlusSheet(){
   const s=document.getElementById('plus-sheet');
   if(!s)return;
