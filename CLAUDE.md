@@ -99,6 +99,12 @@ Prioritäten **immer in dieser Reihenfolge**:
 
 - **a11y: Screenreader-Namen für Icon-only-Controls.** Idempotenter Layer `__cbAriaLabels` im Shell-Script von `layout()` (direkt nach `__cbModalA11y`). Setzt `aria-label` NUR wo kein Name existiert (kein sichtbarer Text, kein `aria-label`/`-labelledby`) — abgeleitet aus `title`-Attribut, sonst aus bekannten Glyphen (`CBA_GLYPH`: ‹/←/< → „Zurück", ×/✕/✖ → „Schließen", ⋯/… → „Mehr", ☰ → „Menü"). **Kein Override, keine visuelle Änderung.** Läuft 1× bei `DOMContentLoaded`/`pageshow` über `button, a[href], [role=button]` (bewusst KEIN Mutation-Observer → kein Polling-Overhead). Glyph-Check ohne Regex (Template-Literal-Backslash-Falle vermieden). Logik unit-getestet, Layer in `/feed` verifiziert.
 
+- **a11y: `:focus-visible` um `[role="button"]` ergänzt** (Zeile ~1852) — deckt die neu fokussierbaren Custom-Buttons (Modals/Dashboard-Header) mit dem globalen Fokus-Ring ab. Globaler Ring existierte schon für a/button/input/textarea/select/[tabindex].
+- **Bewertung Rest-Roadmap (bewusst NICHT blind gegrindet — Anti-„zu weit gedacht"):**
+  - **border-radius → Tokens: VERWORFEN.** `--radius`-Skala hat nur 3 Werte (xs6/sm10/16), real genutzt ~15 distinkte Radien (12px 146×, 14px 92×, 8px 80×…). Teil-Tokenisierung erzeugt Token/px-Mix = inkonsistenter als jetzt, null Nutzen.
+  - **Loading-States vereinheitlichen: ÜBERSPRUNGEN.** Primitive (`.skeleton` 2359, `.sk` 1848, Spinner) existieren + werden genutzt. ~46 ad-hoc „Lädt…"-Spots alle umzubauen = viel Streuung, wenig Wert, Risiko.
+  - **Light-Mode tipps/newsletter + spacing-Shorthands + Microcopy:** offen, aber brauchen visuelles QA (User) bzw. Produkt-Stimme → nicht „blind" abarbeitbar.
+
 ## 8. Nächste sinnvolle Schritte
 
 0. **a11y-Pass app-weit fortsetzen** (Dashboard-Modals sind erledigt): weitere `<div onclick>` → echte `<button>`/`role`, fehlende `aria-label` an Icon-Buttons, restliche Modals (App-Chat/DM/Helper) mit `role="dialog"` + Escape/Backdrop nach dem `dashModalA11y()`-Muster. Gezielt pro Screen statt blind app-weit (viele Dateien).

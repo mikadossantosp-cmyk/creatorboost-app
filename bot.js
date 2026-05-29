@@ -1849,7 +1849,7 @@ button:active:not(:disabled){transform:scale(.96)}
 @keyframes sk-shimmer{100%{transform:translateX(100%)}}
 @media (prefers-reduced-motion:reduce){.sk::after{animation:none}}
 /* ── Foundation v1: Accessibility — sichtbarer Tastatur-Fokus (button{outline:none} entfernte ihn) ── */
-a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--ring);outline-offset:2px;border-radius:var(--radius-xs)}
+a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible,[tabindex]:focus-visible,[role="button"]:focus-visible{outline:2px solid var(--ring);outline-offset:2px;border-radius:var(--radius-xs)}
 /* ── Foundation v1: kanonische, token-basierte Komponenten (ui-*; kollisionsfrei, fuer schrittweise Migration) ── */
 .ui-input{width:100%;padding:var(--space-3) var(--space-4);background:var(--surface-tint);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:var(--font);font-size:var(--fs-md);line-height:var(--lh-normal);transition:border-color .15s ease,box-shadow .15s ease;box-sizing:border-box}
 .ui-input::placeholder{color:var(--muted2)}
