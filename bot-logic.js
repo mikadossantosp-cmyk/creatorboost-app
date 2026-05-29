@@ -1261,7 +1261,14 @@ async function auswertenForUserDay(uid, dayKey, opts) {
         if (d.m1Streak[uid].letzterTag !== dayKey) {
             d.m1Streak[uid].count++;
             d.m1Streak[uid].letzterTag = dayKey;
-            if (d.m1Streak[uid].count >= 5 && d.users[uid]?.warnings > 0) {
+            // Posting-Sperre-Entsperrung: bei 5/5 Verwarnungen reicht 2 Tage M1 in Folge,
+            // um EINE Verwarnung loszuwerden (5/5 → 4/5) → Posten wieder frei. count reset.
+            if (Number(d.users[uid]?.warnings || 0) >= 5 && d.m1Streak[uid].count >= 2) {
+                d.users[uid].warnings = 4;
+                d.m1Streak[uid].count = 0;
+                if (!opts.silent) { try { await dmUser(uid, '🎉 *Posten wieder frei!*\n2 Tage M1 in Folge geschafft.\n\n⚠️ Warns: 4/5 — du kannst wieder posten!'); } catch (e) {} }
+            }
+            else if (d.m1Streak[uid].count >= 5 && d.users[uid]?.warnings > 0) {
                 d.users[uid].warnings--;
                 d.m1Streak[uid].count = 0;
                 if (!opts.silent) { try { await dmUser(uid, '🎉 *Warn entfernt!*\n5 Tage M1 in Folge!\n\n⚠️ Warns: ' + d.users[uid].warnings + '/5'); } catch (e) {} }
