@@ -5292,14 +5292,14 @@ self.addEventListener('notificationclick',e=>{
             const _pu = (d && d.users) ? d.users[String(session.uid)] : null;
             if (_pu && _pu.paused) { localWrite(() => botLogic.unpauseUserApi({ uid: String(session.uid) })); }
         } catch (e) {}
-        // Daily-Streak hochzählen — einmal pro Tag/User (LOCAL_STORE), günstig debounced via Session.
+        // Daily-Streak hochzählen — einmal pro Tag/User, günstig debounced via Session.
+        // Nicht an LOCAL_STORE gekoppelt: getStreakApi liest immer aus dem lokalen Datastore,
+        // also muss der Write auch ohne LOCAL_STORE laufen, sonst bliebe der Streak 0.
         try {
-            if (LOCAL_STORE) {
-                const _today = new Date().toDateString();
-                if (session._streakDay !== _today) {
-                    session._streakDay = _today;
-                    localWrite(() => botLogic.touchStreakApi({ uid: String(getMyUid(session)) }));
-                }
+            const _today = new Date().toDateString();
+            if (session._streakDay !== _today) {
+                session._streakDay = _today;
+                localWrite(() => botLogic.touchStreakApi({ uid: String(getMyUid(session)) }));
             }
         } catch (e) {}
     }
@@ -11271,7 +11271,6 @@ ${(()=>{
 })()}
 ${(()=>{
   try {
-    if (!LOCAL_STORE) return '';
     const _st = botLogic.getStreakApi(String(myUid));
     if (!_st || (_st.streak || 0) < 1) return '';
     const _flame = _st.streak >= 3 ? '🔥' : '✨';
