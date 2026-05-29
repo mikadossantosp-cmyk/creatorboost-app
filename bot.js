@@ -539,6 +539,50 @@ const PUSH_SUBS_FILE = DATA_DIR + '/push_subscriptions.json';
 let pushSubs = {};
 try { if (fs.existsSync(PUSH_SUBS_FILE)) pushSubs = JSON.parse(fs.readFileSync(PUSH_SUBS_FILE, 'utf8')); } catch(e) { console.error('Push subs load failed:', e.message); }
 function savePushSubs() { fs.writeFile(PUSH_SUBS_FILE, JSON.stringify(pushSubs), (e) => { if (e) console.error('Push subs save failed:', e.message); }); }
+
+// ── Push-Bündelung für neue Reel-Links ──────────────────────────────────────
+// Statt bei JEDEM Link-Post sofort an alle zu pushen (Notification-Müdigkeit),
+// sammeln wir Posts in einem Zeitfenster und senden EINE gebündelte Notification
+// (z.B. „🔥 3 neue Reel-Links!"). Fenster startet beim ersten ungesendeten Post.
+const _LINK_PUSH_WINDOW_MS = 10 * 60 * 1000;
+let _linkPushBuf = null;     // { count, names:[], posters:Set }
+let _linkPushTimer = null;
+function _queueLinkPush(posterUid, posterName) {
+    if (!webpush) return;
+    if (!_linkPushBuf) _linkPushBuf = { count: 0, names: [], posters: new Set() };
+    _linkPushBuf.count++;
+    _linkPushBuf.posters.add(String(posterUid));
+    const nm = String(posterName || '').trim();
+    if (nm && _linkPushBuf.names.length < 3 && !_linkPushBuf.names.includes(nm)) _linkPushBuf.names.push(nm);
+    if (_linkPushTimer) return; // Fenster läuft bereits
+    _linkPushTimer = setTimeout(_flushLinkPush, _LINK_PUSH_WINDOW_MS);
+}
+function _flushLinkPush() {
+    _linkPushTimer = null;
+    const buf = _linkPushBuf; _linkPushBuf = null;
+    if (!buf || !webpush) return;
+    let title, body;
+    if (buf.count === 1) {
+        title = '🔥 Neuer Reel-Link!';
+        body = (buf.names[0] || 'Jemand') + ' hat einen Link in CreatorX geteilt';
+    } else {
+        title = '🔥 ' + buf.count + ' neue Reel-Links!';
+        const namePart = buf.names.length
+            ? buf.names.slice(0, 2).join(', ') + (buf.count > buf.names.slice(0, 2).length ? ' u.a.' : '')
+            : 'Mehrere Creator';
+        body = namePart + ' haben Links in CreatorX geteilt';
+    }
+    const payload = JSON.stringify({ title, body, url: '/feed' });
+    // Poster der Bündelung nicht über ihre eigenen Links benachrichtigen.
+    const targets = Object.entries(pushSubs).filter(([, v]) => !buf.posters.has(String(v.uid)));
+    Promise.allSettled(targets.map(([, v]) => webpush.sendNotification(v.sub, payload))).then(results => {
+        let dirty = false;
+        results.forEach((r, i) => {
+            if (r.status === 'rejected') { const sc = r.reason?.statusCode; if (sc === 410 || sc === 404) { delete pushSubs[targets[i][0]]; dirty = true; } }
+        });
+        if (dirty) savePushSubs();
+    }).catch(() => {});
+}
 if (webpush) webpush.setVapidDetails('mailto:admin@creatorx.app', VAPID_PUBLIC, VAPID_PRIVATE);
 
 // ── Google Gemini API (Helper-Bot AI, kostenloser Tier) ──
@@ -10039,25 +10083,7 @@ p{line-height:1.65;color:var(--muted)}
         // BUGFIX: Bot-Fehler korrekt forwarden statt fake-{ok:true} zu retournieren.
         // Auch Web-Push nur bei explizitem ok:true (nicht bei undefined ok).
         if (result.ok === false) return json({ok:false, error: result.error || 'Posten fehlgeschlagen'});
-        if (result.ok === true && webpush) {
-            const posterName = session.name || 'Jemand';
-            const payload = JSON.stringify({title:'🔥 Neuer Reel-Link!',body:posterName+' hat einen Link in CreatorX geteilt',url:'/feed'});
-            // Vorher: savePushSubs() lief synchron VOR den .catch der Sends — abgelaufene Subs (410/404)
-            // wurden nie persistiert. Jetzt: Promise.allSettled, dann erst persistieren.
-            const targets = Object.entries(pushSubs).filter(([,v]) => v.uid !== myUid);
-            // Fire-and-forget: NICHT auf die Push-Zustellung an alle Subs warten — sonst blockiert
-            // das die Antwort an den Poster. Expired-Sub-Cleanup (410/404) passiert im .then.
-            Promise.allSettled(targets.map(([,v]) => webpush.sendNotification(v.sub, payload))).then(results => {
-                let dirty = false;
-                results.forEach((r,i) => {
-                    if (r.status === 'rejected') {
-                        const sc = r.reason?.statusCode;
-                        if (sc === 410 || sc === 404) { delete pushSubs[targets[i][0]]; dirty = true; }
-                    }
-                });
-                if (dirty) savePushSubs();
-            }).catch(()=>{});
-        }
+        if (result.ok === true) _queueLinkPush(myUid, session.name);
         return json({ok:true});
     }
 
