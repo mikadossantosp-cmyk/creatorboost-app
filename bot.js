@@ -3495,6 +3495,25 @@ if(typeof document!=='undefined' && !window.__cbModalA11y){
   });
   if(document.body) cbmObs.observe(document.body,{childList:true});
 }
+// A11y: Icon-only-Buttons/Links einen Screenreader-Namen geben. Viele Controls haben nur ein
+// SVG/Glyph ohne Text → unbenannt fuer Screenreader. Wir setzen aria-label NUR wo KEIN Name
+// existiert (kein Text, kein aria-label/-labelledby), abgeleitet aus title bzw. bekannten
+// Glyphen. Kein Override, keine visuelle Aenderung. Einmal beim Laden (kein Mutation-Overhead).
+if(typeof document!=='undefined' && !window.__cbAriaLabels){
+  window.__cbAriaLabels=true;
+  var CBA_GLYPH={'‹':'Zurück','←':'Zurück','<':'Zurück','×':'Schließen','✕':'Schließen','✖':'Schließen','⋯':'Mehr','…':'Mehr','☰':'Menü'};
+  function cbaLabel(el){
+    if(el.getAttribute('aria-label')||el.getAttribute('aria-labelledby')) return;
+    var txt=(el.textContent||'').trim();
+    var stripped=txt; for(var g in CBA_GLYPH){ stripped=stripped.split(g).join(''); } stripped=stripped.trim();
+    if(stripped.length>0) return; // hat schon sichtbaren Text → Screenreader liest den
+    var label=el.getAttribute('title')||(txt&&CBA_GLYPH[txt])||'';
+    if(label) el.setAttribute('aria-label',label);
+  }
+  function cbaRun(){ try{ document.querySelectorAll('button, a[href], [role="button"]').forEach(cbaLabel); }catch(_){} }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',cbaRun); else cbaRun();
+  window.addEventListener('pageshow',cbaRun);
+}
 // Browser-side cleanInstagramUrl: gleiche Logik wie server-side, fuer Inline-JS
 // das im Browser laeuft (IIFEs wie initDiamondLinks/initPrismaLinks/initKollabs).
 // WICHTIG: Dieser Code steht innerhalb eines Template-Literals (\`...\`) — Backslashes
