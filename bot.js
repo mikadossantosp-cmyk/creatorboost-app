@@ -281,6 +281,7 @@ function _appbildLRUSet(key, val) {
 // Bei Profilbild/Banner-Upload invalidate: in /api/upload-profilepic und /api/upload-banner
 // wird _appbildBufCache.delete(uid + '/' + type) gesetzt (separate Edit).
 const signupIpRateLimit = new Map();   // ip → { ts, n } — gegen Fake-Account-Spam + Email-Enumeration
+const _helperAiRate = new Map();       // uid → { ts, n } — gegen Gemini-Spam (jeder Call kostet Geld), max 8/min/User
 // Signup-Email-Confirmation: tracking unconfirmed Users LOCAL (Mainbot wird NICHT angefasst).
 // uid → { token, email, exp }. Persisted to disk via savePendingEmailConfirms.
 const pendingEmailConfirms = new Map();
@@ -328,6 +329,7 @@ setInterval(() => {
         }
     }
     for (const [ip, v] of signupIpRateLimit.entries()) if (now - v.ts > SIGNUP_RATE_LIMIT_WINDOW) signupIpRateLimit.delete(ip);
+    for (const [uid, v] of _helperAiRate.entries()) if (now - v.ts > 120000) _helperAiRate.delete(uid);
     // Wenn Email-Confirm-Tokens gelöscht wurden: sofort auf Disk persistieren
     // (sonst werden expired tokens nach Restart aus alter Datei wiedergeladen — würde aber unten gefiltert, also nur Inkonsistenz)
     if (confirmsRemoved > 0) { try { savePendingEmailConfirms(); } catch(e) {} }
@@ -10349,6 +10351,16 @@ p{line-height:1.65;color:var(--muted)}
     if (path === '/api/helper-ai' && req.method === 'POST') {
         if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
         if (!GEMINI_API_KEY) return json({ok:false, fallback:true, error:'AI nicht konfiguriert'});
+        // Per-User-Rate-Limit: jeder Gemini-Call kostet Geld. Der globale 300/min-IP-Limiter
+        // reicht hier nicht (ein eingeloggter User könnte teure AI-Calls spammen). Max 8/min/User.
+        {
+            const _aiUid = String(getMyUid(session) || session.uid || '');
+            const _aiNow = Date.now();
+            const _aiRec = _helperAiRate.get(_aiUid);
+            if (!_aiRec || _aiNow - _aiRec.ts > 60000) { _helperAiRate.set(_aiUid, { ts: _aiNow, n: 1 }); }
+            else if (_aiRec.n >= 8) { return json({ok:false, fallback:true, error:'Zu viele Anfragen — bitte kurz warten.'}, 429); }
+            else { _aiRec.n++; }
+        }
         const body = await parseBody(req);
         const question = String(body.question || '').trim();
         if (!question) return json({ok:false, error:'Frage fehlt'}, 400);
