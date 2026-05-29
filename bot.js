@@ -13801,6 +13801,15 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) acPo
         }
         if (LOCAL_STORE) { try { Promise.resolve(localWrite(() => botLogic.markMessagesRead({ uid: _selfUid, chatKey }))).catch(()=>{}); } catch(_) {} }
         else postBot('/mark-messages-read', { uid: _selfUid, chatKey }).catch(()=>{});
+        // Perf: nur die letzten N Nachrichten initial rendern. Lange Verläufe erzeugten sonst
+        // riesiges HTML — und der 3s-Poll macht bei neuen Nachrichten location.reload(), d.h. das
+        // ganze (große) HTML wird jedes Mal neu gebaut. Ältere via ?full=1 nachladbar.
+        const CHAT_RENDER_LIMIT = 60;
+        const _olderCount = (query.full !== '1' && msgs.length > CHAT_RENDER_LIMIT) ? msgs.length - CHAT_RENDER_LIMIT : 0;
+        if (_olderCount > 0) msgs = msgs.slice(-CHAT_RENDER_LIMIT);
+        const _olderLink = _olderCount > 0
+          ? `<a href="/nachrichten/${otherUid}?full=1${_nurUser ? '&nur-user=1' : ''}" style="display:block;text-align:center;margin:4px auto 10px;padding:8px 14px;color:var(--accent);font-size:var(--fs-sm);font-weight:700;text-decoration:none">⬆️ ${_olderCount} ältere Nachricht${_olderCount === 1 ? '' : 'en'} anzeigen</a>`
+          : '';
         let msgsHtml = '';
         try {
           msgsHtml = require('./chat-detail-render')({ msgs, myUid: _selfUid, otherUid, otherUser, ladeBild, otherOnline: isUidOnline(otherUid) });
@@ -13841,7 +13850,7 @@ ${_nurUser ? '<div style="position:fixed;top:0;left:0;right:0;z-index:200;backgr
   </a>
 </div>
 <div id="chat-msgs" style="padding:12px 0 140px;display:flex;flex-direction:column">
-  ${msgsHtml || '<div class="empty" style="margin-top:60px"><div class="empty-icon"><svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="opacity:.5"><path d="M21 11.5a8.5 8.5 0 0 1-12.5 7.5L3 20.5l1.5-5.5A8.5 8.5 0 1 1 21 11.5z"/></svg></div><div class="empty-text">Schreib eine Nachricht!</div></div>'}
+  ${_olderLink}${msgsHtml || '<div class="empty" style="margin-top:60px"><div class="empty-icon"><svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="opacity:.5"><path d="M21 11.5a8.5 8.5 0 0 1-12.5 7.5L3 20.5l1.5-5.5A8.5 8.5 0 1 1 21 11.5z"/></svg></div><div class="empty-text">Schreib eine Nachricht!</div></div>'}
 </div>
 <div id="img-preview-wrap" style="display:none;position:fixed;bottom:120px;left:16px;right:16px;z-index:101">
   <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:12px;padding:var(--space-2);display:flex;align-items:center;gap:var(--space-2)">
