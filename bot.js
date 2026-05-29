@@ -12825,7 +12825,7 @@ async function submitSuperLink(){
         +    bar(daily.prozent,100,'#818cf8')
         +    '<div style="margin-top:var(--space-2)">'+mChip(daily.m3,'M3: '+(daily.gelikedLinks||0)+'/'+(daily.gesamtLinks||0)+' (max 30)'+rew('+5 XP +💎',daily.m3))+'</div>'
         +    bar(Math.min(daily.gelikedLinks||0, daily.m3Target||(daily.m3Cap||30)), daily.m3Target||(daily.m3Cap||30), '#fbbf24')
-        +    hint(daily.m3, Math.max(0,(daily.m3Target||0)-(daily.gelikedLinks||0)), 'Like', '+5 XP +💎')
+        +    (!daily.m3 ? '<div style="font-size:11px;color:var(--muted);margin-top:5px">Like alle heutigen Reels → +5 XP +💎</div>' : '')
         +  '</div>'
         +  '<div style="background:var(--bg3);border:1px solid var(--border2);border-radius:12px;padding:12px 14px">'
         +    '<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:var(--space-2)">Diese Woche</div>'
