@@ -2250,6 +2250,23 @@ textarea.form-input{resize:none;min-height:80px}
     font-size: 12px;
   }
 }
+
+/* ── Desktop/iPad Quick-Wins (additiv, mobile unberührt) ── */
+/* Etwas breitere App-Spalte auf großen Screens — nutzt Platz ohne zu strecken. */
+@media (min-width: 1100px) {
+  body, .bottom-nav, .cb-chatbar { max-width: 900px; }
+}
+/* Hover-Feedback NUR auf echten Zeigergeräten (kein sticky-hover auf Touch). */
+@media (hover: hover) and (pointer: fine) {
+  .nav-item, .post-action-btn, .icon-btn, .dm-row, .dash-row, [role="button"] { cursor: pointer; }
+  .nav-item { transition: opacity .15s ease; }
+  .nav-item:hover { opacity: .82; }
+  .dm-row:hover { background: var(--hover-tint, rgba(124,58,237,.05)); }
+}
+/* Größere Touch-Targets auf Tablet (iPad: feiner Zeiger + grober Touch). */
+@media (min-width: 768px) and (pointer: coarse) {
+  .nav-item { padding-top: 10px; padding-bottom: 10px; }
+}
 .post-category-label{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;padding:5px 11px;border-radius:999px;color:#fff;box-shadow:0 4px 12px rgba(255,107,107,0.25),inset 0 1px 0 rgba(255,255,255,0.15)}
 .post-likes-row{display:flex;align-items:center;gap:14px;padding:10px 16px 4px}
 .post-like-count{font-size:22px;font-weight:800;display:flex;align-items:center;gap:var(--space-1);color:var(--text)}
