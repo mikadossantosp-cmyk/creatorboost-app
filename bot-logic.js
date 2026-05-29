@@ -551,7 +551,8 @@ async function postLinkFromApp({ uid, name, url, caption }) {
     if (istInstagramLink(url)) mission.linksGepostet++;
     await checkMissionen(uid, u.name || name);
 
-    return { ok: true, msgId: linkId };
+    // isFirstPostEver an die Route zurückgeben → dort First-Win-Begrüßungs-Push (Push lebt in bot.js).
+    return { ok: true, msgId: linkId, firstPost: !!isFirstPostEver, posterName: (u.spitzname || u.name || 'Ein neuer Creator') };
 }
 
 // ── Community-Post: 1:1 aus POST /create-post-api ──
@@ -3656,8 +3657,44 @@ async function runWochenGewinnspielRankingDM() {
     }
 }
 
+// ── Daily-Streak: zählt aufeinanderfolgende aktive Tage (Retention-Anker). ──
+// Wird beim ersten echten App-Request pro Tag aufgerufen. Liefert Streak-Stand zurück.
+// dayKey = lokaler Tag (Server-TZ, wie restliche toDateString-Logik der App).
+function touchStreakApi({ uid }) {
+    uid = String(uid || '');
+    const u = d.users[uid];
+    if (!u) return { ok: false, streak: 0 };
+    const today = new Date().toDateString();
+    if (u.streakLastDay === today) {
+        return { ok: true, streak: u.streakDays || 1, alreadyToday: true };
+    }
+    const yesterday = new Date(Date.now() - 86400000).toDateString();
+    if (u.streakLastDay === yesterday) {
+        u.streakDays = (u.streakDays || 0) + 1;       // Tag in Folge → +1
+    } else {
+        u.streakDays = 1;                              // Lücke (oder erster Tag) → Neustart
+    }
+    u.streakLastDay = today;
+    if ((u.streakDays || 0) > (u.streakBest || 0)) u.streakBest = u.streakDays;
+    return { ok: true, streak: u.streakDays, best: u.streakBest || u.streakDays, isNew: true };
+}
+// Reines Lesen des aktuellen Streak-Stands (für Feed-Anzeige), ohne zu mutieren.
+// Berücksichtigt: wenn letzter aktiver Tag älter als gestern → Streak ist faktisch 0.
+function getStreakApi(uid) {
+    uid = String(uid || '');
+    const u = d.users[uid];
+    if (!u || !u.streakLastDay) return { streak: 0, best: u?.streakBest || 0 };
+    const today = new Date().toDateString();
+    const yesterday = new Date(Date.now() - 86400000).toDateString();
+    if (u.streakLastDay === today || u.streakLastDay === yesterday) {
+        return { streak: u.streakDays || 0, best: u.streakBest || 0, activeToday: u.streakLastDay === today };
+    }
+    return { streak: 0, best: u.streakBest || 0 };
+}
+
 module.exports = {
     init, setThumbnailFetcher, setBildSaver,
+    touchStreakApi, getStreakApi,
     updateProfileApi, addProjectApi, updateProjectApi, deleteProjectApi, completeProfileApi, engagePinnedPostApi,
     followApi,
     addWarn, removeWarn, resetUser, removeXp, startXpEvent, startDiamondEvent, stopEvent,

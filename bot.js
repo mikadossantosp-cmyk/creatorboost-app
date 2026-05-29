@@ -585,6 +585,24 @@ function _flushLinkPush() {
         if (dirty) savePushSubs();
     }).catch(() => {});
 }
+
+// Gezielter Push an EINEN User (alle seine Geräte). Fire-and-forget, Expired-Cleanup im .then.
+// Für personalisierte Trigger (Win-back, Streak-Gefahr, First-Win) — schlägt Broadcasts klar.
+function pushToUid(targetUid, title, body, url) {
+    if (!webpush) return;
+    const _t = String(title || 'CreatorX').slice(0, 80);
+    const _b = String(body || '').slice(0, 180);
+    const _u = String(url || '/feed').slice(0, 200);
+    if (!_b) return;
+    const payload = JSON.stringify({ title: _t, body: _b, url: _u });
+    const targets = Object.entries(pushSubs).filter(([, v]) => String(v.uid) === String(targetUid));
+    if (!targets.length) return;
+    Promise.allSettled(targets.map(([, v]) => webpush.sendNotification(v.sub, payload))).then(results => {
+        let dirty = false;
+        results.forEach((r, i) => { if (r.status === 'rejected') { const sc = r.reason?.statusCode; if (sc === 410 || sc === 404) { delete pushSubs[targets[i][0]]; dirty = true; } } });
+        if (dirty) savePushSubs();
+    }).catch(() => {});
+}
 if (webpush) webpush.setVapidDetails('mailto:admin@creatorx.app', VAPID_PUBLIC, VAPID_PRIVATE);
 
 // ── Google Gemini API (Helper-Bot AI, kostenloser Tier) ──
@@ -1588,6 +1606,35 @@ async function appCronTick() {
                         console.log('⏸️ [Cron] Auto-Pause: ' + toPause.length + ' inaktive User (>15 Tage) pausiert');
                     }
                 } catch (e) { console.error('[auto-pause] Fehler:', e.message); }
+            });
+            // Win-back-Push BEVOR der User pausiert wird: Tag 7 + Tag 12 inaktiv → 1 persönlicher
+            // Reminder (Flag _winbackStage gegen Doppel; reset bei Rückkehr im touchStreak/lastSeen-Hook
+            // ist nicht nötig — wir prüfen lastActive-Fenster + Stage zusammen). Reaktiviert vor Verlust.
+            einmalig('winbackInactive_' + tagStr, () => {
+                if (!LOCAL_STORE) return;
+                try {
+                    const now = Date.now(), DAY = 86400000;
+                    const _d = datastore.getData();
+                    const _adminIds = Array.isArray(_d._adminIds) ? _d._adminIds.map(Number) : [];
+                    let sent = 0;
+                    for (const [uid, u] of Object.entries(_d.users || {})) {
+                        if (!u || u.paused || u.banned || u.parent_uid || _adminIds.includes(Number(uid))) continue;
+                        const lastActive = Math.max(u.appLastSeen || 0, getLastSeen(uid) || 0);
+                        if (!lastActive) continue;
+                        const days = Math.floor((now - lastActive) / DAY);
+                        let stage = 0;
+                        if (days >= 12 && days < 15) stage = 12;
+                        else if (days >= 7 && days < 12) stage = 7;
+                        if (!stage || u._winbackStage === stage) continue; // kein Treffer oder schon gesendet
+                        const name = (u.spitzname || u.name || '').split(' ')[0] || '';
+                        const msg = stage === 12
+                            ? 'Dein Account wird bald pausiert. Schau kurz rein — deine Reels & dein Rang warten' + (name ? ', ' + name : '') + '.'
+                            : 'Wir vermissen dich' + (name ? ', ' + name : '') + '! Neue Reels warten auf dein Engagement — und dein Rang fällt.';
+                        pushToUid(uid, stage === 12 ? '⏳ Komm zurück' : '👋 Lange nicht gesehen', msg, '/feed');
+                        u._winbackStage = stage; sent++;
+                    }
+                    if (sent) { datastore.saveDebounced(); console.log('👋 [Cron] Win-back-Push an ' + sent + ' inaktive User'); }
+                } catch (e) { console.error('[winback] Fehler:', e.message); }
             });
         }
         // Tageswechsel: alte einmalig-Keys aufräumen, damit der Speicher nicht wächst.
@@ -5244,6 +5291,16 @@ self.addEventListener('notificationclick',e=>{
         try {
             const _pu = (d && d.users) ? d.users[String(session.uid)] : null;
             if (_pu && _pu.paused) { localWrite(() => botLogic.unpauseUserApi({ uid: String(session.uid) })); }
+        } catch (e) {}
+        // Daily-Streak hochzählen — einmal pro Tag/User (LOCAL_STORE), günstig debounced via Session.
+        try {
+            if (LOCAL_STORE) {
+                const _today = new Date().toDateString();
+                if (session._streakDay !== _today) {
+                    session._streakDay = _today;
+                    localWrite(() => botLogic.touchStreakApi({ uid: String(getMyUid(session)) }));
+                }
+            }
         } catch (e) {}
     }
     // Presence-Ping an Bot (debounced 10 min/session): jeder echte Page-Load
@@ -10116,7 +10173,23 @@ p{line-height:1.65;color:var(--muted)}
         // BUGFIX: Bot-Fehler korrekt forwarden statt fake-{ok:true} zu retournieren.
         // Auch Web-Push nur bei explizitem ok:true (nicht bei undefined ok).
         if (result.ok === false) return json({ok:false, error: result.error || 'Posten fehlgeschlagen'});
-        if (result.ok === true) _queueLinkPush(myUid, session.name);
+        if (result.ok === true) {
+            // First-Win: der allererste Post eines Neulings → SOFORT gezielter Begrüßungs-Push an
+            // aktive User (nicht gebündelt), damit der/die Neue schnell erste Reaktionen bekommt.
+            // Das erste erhaltene Like ist der stärkste Retention-Moment. Sonst normale Bündelung.
+            if (result.firstPost) {
+                const _pName = String(result.posterName || 'Ein neuer Creator');
+                const _online = getOnlineUids();
+                let _n = 0;
+                for (const ouid of _online) {
+                    if (String(ouid) === String(myUid)) continue;
+                    pushToUid(ouid, '👋 Neu dabei!', _pName + ' hat den ersten Reel gepostet — sei die/der Erste mit einem Like.', '/feed');
+                    if (++_n >= 25) break; // sanfter Cap gegen Push-Flut
+                }
+            } else {
+                _queueLinkPush(myUid, session.name);
+            }
+        }
         return json({ok:true});
     }
 
@@ -11185,6 +11258,21 @@ ${(() => {
 <script>(async()=>{try{const r=await fetch('/api/notifications/count');const j=await r.json();const b=document.getElementById('notif-badge-feed');if(b&&j.count>0){b.textContent=j.count>9?'9+':j.count;b.style.display='block';}}catch(e){}})();</script>
 <!-- Event-Banner: aktive XP/Diamond-Events mit Countdown -->
 <div id="event-banner" style="display:none"></div>
+${(()=>{
+  try {
+    if (!LOCAL_STORE) return '';
+    const _st = botLogic.getStreakApi(String(myUid));
+    if (!_st || (_st.streak || 0) < 1) return '';
+    const _flame = _st.streak >= 3 ? '🔥' : '✨';
+    const _sub = _st.activeToday
+      ? (_st.best > _st.streak ? 'Bestwert: ' + _st.best + ' Tage' : 'Weiter so!')
+      : 'Heute aktiv werden, damit er nicht reißt';
+    return '<div style="margin:10px 16px 2px;padding:11px 14px;background:linear-gradient(135deg,rgba(245,158,11,0.13),rgba(239,68,68,0.06));border:1px solid rgba(245,158,11,0.28);border-radius:14px;display:flex;align-items:center;gap:11px">'
+      + '<div style="font-size:22px;line-height:1">' + _flame + '</div>'
+      + '<div style="flex:1;min-width:0"><div style="font-size:var(--fs-sm);font-weight:800;color:var(--text);line-height:1.2">' + _st.streak + ' Tage Streak</div>'
+      + '<div style="font-size:var(--fs-xs);color:var(--muted);margin-top:1px">' + _sub + '</div></div></div>';
+  } catch(e) { return ''; }
+})()}
 <div style="width:100%">${storiesHtml}</div>
 ${(()=>{
   // Perf: einmaliger Pass durch d.links statt 2x Object.values().some()+.filter()
@@ -17560,6 +17648,17 @@ fetch('/api/admin/engagement-log').then(r=>r.json()).then(j=>{ if (j.ok) { LAST_
         const medals = ['🥇','🥈','🥉'];
         const myRank = adminIds.includes(Number(myUid)) ? 0 : sorted.findIndex(([id])=>id===myUid)+1;
 
+        // Near-Miss-Framing: greifbare Nähe zum nächsthöheren Rang motiviert mehr als die nackte Zahl.
+        let _nearMissHtml = '';
+        if (myRank > 1) {
+            const _myXp = Number(sorted[myRank-1]?.[1]?.xp || 0);
+            const _aheadXp = Number(sorted[myRank-2]?.[1]?.xp || 0);
+            const _diff = Math.max(0, _aheadXp - _myXp);
+            if (_diff > 0 && _diff <= 500) {
+                _nearMissHtml = '<div style="margin:0 16px 12px;padding:11px 14px;background:linear-gradient(135deg,rgba(124,58,237,0.14),rgba(167,139,250,0.06));border:1px solid rgba(167,139,250,0.32);border-radius:12px;font-size:var(--fs-sm);color:var(--text);line-height:1.5">🔥 Du bist <b>#'+myRank+'</b> — nur <b>'+_diff+' XP</b> hinter Rang #'+(myRank-1)+'. Ein paar Likes und du ziehst vorbei.</div>';
+            }
+        }
+
         const webUserUids = new Set([...sessions.values()].map(s => String(s.uid)));
 
         // Top 8 creators for Allgemein tab
@@ -17788,7 +17887,7 @@ ${_latestNews ? `<a href="/explore?tab=newsletter" class="highlight-card" style=
   <button onclick="switchRanking('daily',this)" id="rtab-daily" style="flex:1;background:var(--bg3);color:var(--muted);border:1px solid var(--border2);border-radius:10px;padding:7px;font-size:var(--fs-xs);font-weight:700;cursor:pointer">Daily</button>
   <button onclick="switchRanking('weekly',this)" id="rtab-weekly" style="flex:1;background:var(--bg3);color:var(--muted);border:1px solid var(--border2);border-radius:10px;padding:7px;font-size:var(--fs-xs);font-weight:700;cursor:pointer">Woche</button>
 </div>
-<div id="rlist-gesamt" style="padding-bottom:100px">${rankingRows}</div>
+<div id="rlist-gesamt" style="padding-bottom:100px">${_nearMissHtml}${rankingRows}</div>
 <div id="rlist-daily" style="display:none;padding-bottom:100px">
   <div style="margin:0 16px 12px;padding:12px 14px;background:linear-gradient(135deg,rgba(245,158,11,0.12),rgba(167,139,250,0.08));border:1px solid rgba(245,158,11,0.30);border-radius:12px;font-size:12.5px;line-height:1.55">
     <div style="font-weight:800;color:#f59e0b;margin-bottom:6px">Tages-Preise (Reset 00:00)</div>
