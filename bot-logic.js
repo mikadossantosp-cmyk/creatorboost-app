@@ -1108,6 +1108,27 @@ function wochenResetUndAuszahlung(jetzt) {
         } catch (e) { continue; }
         try { sendInAppDM(uid, `🏆 *${p.medal} Wochen-Ranking gewonnen!*\n\nDu hast diese Woche *${xp} XP* erreicht.\n\n*Deine Preise:*\n💎 +${p.dia} Diamanten\n⭐ +${p.xp} XP\n${p.links ? `🔗 +${p.links} Extra-Link${p.links > 1 ? 's' : ''}\n` : ''}\nGratulation! 🎉`); } catch (e) {}
     }
+    // #7 Wochen-Recap: VOR dem Reset eine persönliche Zusammenfassung an aktive User (DM).
+    // Gibt Sinn + Stolz und bringt am Wochenstart zurück. Nur an in den letzten 7 Tagen Aktive,
+    // nicht an die Top-3 (die kriegen schon die Gewinner-DM oben), nicht an Admins/Gebannte.
+    try {
+        const _recapWinners = new Set(wTop.map(([uid]) => String(uid)));
+        const _recapCut = Date.now() - 7 * 86400000;
+        const _wxAll = d.weeklyXP || {};
+        const _ranked = Object.entries(_wxAll).filter(([uid]) => d.users[uid] && !istAdminId(uid) && !d.users[uid].banned).sort((a,b)=>b[1]-a[1]);
+        const _rankPos = new Map(_ranked.map(([uid], i) => [String(uid), i + 1]));
+        for (const [uid, u] of Object.entries(d.users || {})) {
+            if (!u || istAdminId(uid) || u.banned || u.parent_uid) continue;
+            if (_recapWinners.has(String(uid))) continue;
+            const lastActive = Math.max(u.appLastSeen || 0, 0);
+            if (lastActive < _recapCut) continue;          // nur kürzlich Aktive
+            const wxp = Number(_wxAll[uid] || 0);
+            if (wxp <= 0) continue;                         // nichts Nennenswertes → nicht spammen
+            const pos = _rankPos.get(String(uid));
+            const posLine = pos ? `\n🏅 Wochen-Rang: #${pos}` : '';
+            try { sendInAppDM(uid, `📊 *Deine Woche bei CreatorX*\n\n⭐ +${wxp} XP diese Woche${posLine}\n💎 Aktuell: ${u.diamonds || 0} Diamanten\n\nNeue Woche, neue Chance — leg gleich los und sammle XP! 🚀`); } catch (e) {}
+        }
+    } catch (e) {}
     archiveWeeklyXP('monday-reset');
     d.weeklyXP = {};
     d.weeklyReset = Date.now();

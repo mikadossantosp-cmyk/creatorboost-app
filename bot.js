@@ -11259,6 +11259,17 @@ ${(() => {
 <!-- Event-Banner: aktive XP/Diamond-Events mit Countdown -->
 <div id="event-banner" style="display:none"></div>
 ${(()=>{
+  // #6 Level-up-Celebration: aktuelle Rolle server-gerendert; Client vergleicht mit localStorage
+  // und feiert einen Aufstieg einmalig mit Overlay. Kein State-Server nötig.
+  try {
+    const _role = String((d.users?.[myUid]?.role) || '').replace(/"/g,'');
+    if (!_role) return '';
+    return '<script>(function(){try{var cur='+JSON.stringify(_role)+';var prev=localStorage.getItem("cb_role_seen");localStorage.setItem("cb_role_seen",cur);'
+      + 'if(prev&&prev!==cur&&typeof showBanner==="function"){setTimeout(function(){showBanner({type:"success",title:"🎉 Aufstieg: "+cur,subtitle:"Neue Stufe erreicht — weiter so!",dur:6000});if(navigator.vibrate)try{navigator.vibrate([30,40,30]);}catch(e){}},900);}'
+      + '}catch(e){}})();<\/script>';
+  } catch(e) { return ''; }
+})()}
+${(()=>{
   try {
     if (!LOCAL_STORE) return '';
     const _st = botLogic.getStreakApi(String(myUid));
@@ -12799,18 +12810,22 @@ async function submitSuperLink(){
       const bar = (val,max,col)=>'<div style="background:var(--bg4);border-radius:4px;height:5px;overflow:hidden;margin-top:var(--space-1)"><div style="height:100%;width:'+Math.min(100,Math.round(val/max*100))+'%;background:'+col+';border-radius:4px;transition:width .5s ease"></div></div>';
       const mChip = (done,label)=>'<div style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:'+(done?'#22c55e':'var(--muted)')+'">'+
         (done?'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="12" cy="12" r="10"/><path d="M8 12l2.5 2.5L16 9"/></svg>':'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;opacity:.45"><circle cx="12" cy="12" r="10"/></svg>')+label+'</div>';
+      // Reward-Badge hinter dem Mission-Label (sichtbarer Anreiz) + "noch X"-Hinweis darunter.
+      const rew = (txt,done)=>' <span style="font-size:10.5px;font-weight:700;color:'+(done?'#22c55e':'#f59e0b')+';background:'+(done?'rgba(34,197,94,0.12)':'rgba(245,158,11,0.12)')+';padding:1px 7px;border-radius:99px;margin-left:4px">'+txt+'</span>';
+      const hint = (done,remaining,verb,reward)=>(!done && remaining>0)?'<div style="font-size:11px;color:var(--muted);margin-top:5px">Noch <b style="color:var(--text)">'+remaining+'</b> '+verb+(remaining===1?'':'s')+' → '+reward+'</div>':'';
       targetEl.innerHTML =
         '<div style="font-size:11px;color:var(--muted);background:var(--bg4);padding:5px 10px;border-radius:8px;display:inline-block;margin-bottom:14px">⏱ Abrechnung in '+settleStr+'</div>'
         +'<div style="display:grid;grid-template-columns:1fr;gap:var(--space-3)">'
         +  '<div style="background:var(--bg3);border:1px solid var(--border2);border-radius:12px;padding:12px 14px">'
         +    '<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:var(--space-2)">Heute</div>'
-        +    mChip(daily.m1,'M1: '+daily.likesGegeben+'/5 geliked')
+        +    mChip(daily.m1,'M1: '+daily.likesGegeben+'/5 geliked'+rew('+5 XP',daily.m1))
         +    bar(daily.likesGegeben,5,'#a78bfa')
-        +    '<div style="margin-top:var(--space-2)">'+mChip(daily.m2,'M2: '+daily.prozent+'% (≥80%)')+'</div>'
+        +    hint(daily.m1, Math.max(0,5-(daily.likesGegeben||0)), 'Like', '+5 XP')
+        +    '<div style="margin-top:var(--space-2)">'+mChip(daily.m2,'M2: '+daily.prozent+'% (≥80%)'+rew('+5 XP',daily.m2))+'</div>'
         +    bar(daily.prozent,100,'#818cf8')
-        +    '<div style="margin-top:var(--space-2)">'+mChip(daily.m3,'M3: '+(daily.gelikedLinks||0)+'/'+(daily.gesamtLinks||0)+' (max 30)')+'</div>'
+        +    '<div style="margin-top:var(--space-2)">'+mChip(daily.m3,'M3: '+(daily.gelikedLinks||0)+'/'+(daily.gesamtLinks||0)+' (max 30)'+rew('+5 XP +💎',daily.m3))+'</div>'
         +    bar(Math.min(daily.gelikedLinks||0, daily.m3Target||(daily.m3Cap||30)), daily.m3Target||(daily.m3Cap||30), '#fbbf24')
-        +    (daily.m3?'<div style="font-size:11px;color:#a78bfa;margin-top:6px">+5 XP + 💎 1 bei Abrechnung</div>':'')
+        +    hint(daily.m3, Math.max(0,(daily.m3Target||0)-(daily.gelikedLinks||0)), 'Like', '+5 XP +💎')
         +  '</div>'
         +  '<div style="background:var(--bg3);border:1px solid var(--border2);border-radius:12px;padding:12px 14px">'
         +    '<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:var(--space-2)">Diese Woche</div>'
