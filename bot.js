@@ -3761,7 +3761,7 @@ async function pastePlusLink(){
       // Vom Domain-Start (http.. davor falls vorhanden) bis zum ersten Whitespace
       let start = low.lastIndexOf('http', idx); if (start < 0) start = idx;
       let end = raw.length;
-      for (let i = idx; i < raw.length; i++) { const c = raw.charAt(i); if (c === ' ' || c === '\n' || c === '\t') { end = i; break; } }
+      for (let i = idx; i < raw.length; i++) { const cc = raw.charCodeAt(i); if (cc === 32 || cc === 10 || cc === 9 || cc === 13) { end = i; break; } }
       input.value = raw.slice(start, end);
       validatePlusLink();
     }
