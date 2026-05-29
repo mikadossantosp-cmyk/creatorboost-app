@@ -2419,6 +2419,7 @@ textarea.form-input{resize:none;min-height:80px}
 .ps-close:hover{background:var(--bg4);color:var(--text)}
 .ps-status{display:inline-flex;align-items:center;gap:7px;padding:6px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:99px;font-size:11.5px;color:var(--muted);font-weight:600;margin-bottom:18px}
 .ps-status-admin{background:linear-gradient(135deg,rgba(245,158,11,.08),rgba(245,158,11,.02));border-color:rgba(245,158,11,.30);color:#f59e0b}
+.ps-status-locked{background:linear-gradient(135deg,rgba(239,68,68,.10),rgba(239,68,68,.03));border-color:rgba(239,68,68,.35);color:#ef4444}
 .ps-field{margin-bottom:var(--space-4)}
 .ps-field-label{display:block;font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:var(--space-2)}
 .ps-optional{font-weight:500;text-transform:none;letter-spacing:0;color:var(--muted2);font-size:11px;margin-left:6px}
@@ -3798,7 +3799,12 @@ async function openPlusSheet(){
     const wrap=document.getElementById('plus-link-status');
     const btn=document.getElementById('plus-post-btn');
     if(wrap)wrap.className='ps-status';
-    if(st.isAdmin){
+    if(st.warningsLocked){
+      icon.textContent='🚫';
+      txt.innerHTML='<b>5/5 Verwarnungen — Posten gesperrt.</b><br>Erfülle 2 Tage in Folge M1 (5 Likes/Tag) zum Entsperren. Aktuell: '+(st.m1Days||0)+'/2 Tagen.';
+      if(wrap)wrap.classList.add('ps-status-locked');
+      if(btn){btn.disabled=true;btn.style.opacity='.45';}
+    } else if(st.isAdmin){
       icon.textContent='👑';txt.textContent='Admin · unbegrenzt';if(wrap)wrap.classList.add('ps-status-admin');
       if(btn)btn.disabled=false;
     } else if(st.canPost && st.todayCount===0){

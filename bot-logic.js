@@ -464,6 +464,16 @@ async function postLinkFromApp({ uid, name, url, caption }) {
         return { ok: false, error: '🚫 Posten gesperrt für noch ' + daysLeft + ' Tag' + (daysLeft === 1 ? '' : 'e') + reason };
     }
 
+    // Verwarnungs-Gate: bei 5/5 Verwarnungen ist Posten gesperrt, bis der User an 2 Tagen
+    // in Folge M1 (5 Likes/Tag) erfüllt hat. m1Streak.count zählt die M1-Tage in Folge
+    // (wird in checkMissionen hochgezählt, bei verpasstem Tag auf 0 zurückgesetzt).
+    if (!istAdminId(uid) && Number(u.warnings || 0) >= 5) {
+        const _m1Count = (d.m1Streak && d.m1Streak[uid] && d.m1Streak[uid].count) || 0;
+        if (_m1Count < 2) {
+            return { ok: false, error: '🚫 5/5 Verwarnungen — Posten gesperrt.\n\nErfülle 2 Tage in Folge Mission M1 (5 Links liken/Tag), um wieder posten zu können.\n\nAktuell: ' + _m1Count + '/2 Tagen.', warningsLocked: true, m1Days: _m1Count };
+        }
+    }
+
     const heute = new Date().toDateString();
     const norm = (t) => t.toLowerCase().replace(/\?.*$/, '').replace(/\/$/, '').trim();
     const isDuplicate = Object.values(d.links).some(l => norm(l.text) === norm(url));
@@ -801,9 +811,13 @@ function linkStatusApi(uid) {
     const u = d.users[uid];
     const badgeBonus = !isAdmin && badgeBonusLinks(u?.xp || 0) > 0 && (!d.badgeTracker?.[uid] || d.badgeTracker[uid] !== heute) ? 1 : 0;
     const standardUsed = todayCount > 0;
-    const canPost = isAdmin || !standardUsed || bonusLinks > 0 || badgeBonus > 0;
+    // Verwarnungs-Lock: 5/5 Verwarnungen → Posten gesperrt bis 2 Tage M1 in Folge.
+    const _warns = Number(u?.warnings || 0);
+    const _m1Count = (d.m1Streak && d.m1Streak[uid] && d.m1Streak[uid].count) || 0;
+    const warningsLocked = !isAdmin && _warns >= 5 && _m1Count < 2;
+    const canPost = !warningsLocked && (isAdmin || !standardUsed || bonusLinks > 0 || badgeBonus > 0);
     const maxLinks = isAdmin ? 999 : todayCount + (standardUsed ? 0 : 1) + bonusLinks + badgeBonus;
-    return { ok: true, todayCount, bonusLinks, badgeBonus, maxLinks, canPost, isAdmin };
+    return { ok: true, todayCount, bonusLinks, badgeBonus, maxLinks, canPost, isAdmin, warnings: _warns, warningsLocked, m1Days: _m1Count };
 }
 
 // Bild-Speicher: in der App schreiben die dedizierten Upload-Routen lokal.
