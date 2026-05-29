@@ -3964,6 +3964,9 @@ function confirmCrop(){
       const pad=raw+'='.repeat((4-raw.length%4)%4);
       const bytes=Uint8Array.from(atob(pad),c=>c.charCodeAt(0));
       const existing=await reg.pushManager.getSubscription();
+      // User hat Push in den Einstellungen bewusst deaktiviert → NICHT automatisch re-subscriben
+      // (OS-Permission bleibt nach unsubscribe granted, sonst käme der Toggle-Aus nie durch).
+      try{ if(localStorage.getItem('cb_push_optout')==='1'){ if(existing){ await existing.unsubscribe().catch(()=>{}); } return; } }catch(_e){}
       // Nicht ungefragt beim Laden prompten: nur (re)subscriben wenn Permission schon erteilt
       // ist. Neue User aktivieren Push bewusst via Einstellungen → Push-Toggle.
       if(!existing && Notification.permission!=='granted') return;
@@ -20446,6 +20449,7 @@ async function togglePush(t){
       const sub = await reg.pushManager.getSubscription();
       if(sub) await sub.unsubscribe();
       await fetch('/api/push-unsubscribe',{method:'POST'}).catch(()=>{});
+      try{ localStorage.setItem('cb_push_optout','1'); }catch(_e){}
       t.classList.remove('on');
       document.getElementById('push-status-sub').textContent='Aus';
     } catch(e){ alert('Fehler: '+e.message); }
@@ -20458,6 +20462,7 @@ async function togglePush(t){
       const bytes = Uint8Array.from(atob(vk.replace(/-/g,'+').replace(/_/g,'/')), c=>c.charCodeAt(0));
       const sub = await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:bytes});
       await fetch('/api/push-subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sub:sub.toJSON()})});
+      try{ localStorage.removeItem('cb_push_optout'); }catch(_e){}
       t.classList.add('on');
       document.getElementById('push-status-sub').textContent='Aktiv auf diesem Gerät';
     } catch(e){ alert('Fehler: '+e.message); }
@@ -20468,7 +20473,8 @@ async function togglePush(t){
   try {
     const reg = await navigator.serviceWorker.ready;
     const sub = await reg.pushManager.getSubscription();
-    if(sub && Notification.permission === 'granted'){
+    let optout=false; try{ optout = localStorage.getItem('cb_push_optout')==='1'; }catch(_e){}
+    if(sub && Notification.permission === 'granted' && !optout){
       document.getElementById('push-toggle').classList.add('on');
       document.getElementById('push-status-sub').textContent='Aktiv auf diesem Gerät';
     } else {
