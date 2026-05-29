@@ -3467,6 +3467,34 @@ if(typeof document!=='undefined' && !window.__cxImgErr){
   window.__cxImgErr=true;
   document.addEventListener('error',function(e){ var t=e&&e.target; if(t&&t.tagName==='IMG'){ t.style.display='none'; } },true);
 }
+// A11y: App-Modals tastaturbedienbar — Escape + Backdrop-Klick schliessen, role=dialog/aria-modal,
+// Fokus rein beim Oeffnen (erster Button/Link, keine Text-Inputs → kein Keyboard-Popup) + zurueck
+// zum Ausloeser beim Schliessen. Progressive Enhancement: einmal idempotent drueber, greift fuer
+// dynamisch erzeugte/entfernte Modals (Observer), ohne die Modal-Erzeugung anzufassen.
+if(typeof document!=='undefined' && !window.__cbModalA11y){
+  window.__cbModalA11y=true;
+  var CBM_SEL='.beta-modal-bg, #install-guide-modal, #thr-cust-modal, #thr-actions-modal';
+  function cbmTop(){ var a=document.querySelectorAll(CBM_SEL); return a.length?a[a.length-1]:null; }
+  document.addEventListener('keydown',function(e){ if(e.key==='Escape'||e.key==='Esc'){ var m=cbmTop(); if(m){ e.preventDefault(); m.remove(); } } });
+  function cbmEnhance(el){
+    if(el.dataset.cbA11y==='1') return; el.dataset.cbA11y='1';
+    el._cbTrigger=document.activeElement;
+    el.setAttribute('role','dialog'); el.setAttribute('aria-modal','true');
+    if(!el.hasAttribute('tabindex')) el.setAttribute('tabindex','-1');
+    el.addEventListener('click',function(ev){ if(ev.target===el) el.remove(); }); // Backdrop-Klick (idempotent)
+    try{ var f=el.querySelector('button, [href]'); (f||el).focus(); }catch(_){}
+  }
+  function cbmRestore(el){ var t=el._cbTrigger; if(t&&document.contains(t)&&typeof t.focus==='function'){ try{ t.focus(); }catch(_){} } }
+  function cbmMatch(n){ return n.nodeType===1&&n.matches&&n.matches(CBM_SEL); }
+  document.querySelectorAll(CBM_SEL).forEach(cbmEnhance);
+  var cbmObs=new MutationObserver(function(muts){
+    muts.forEach(function(m){
+      m.addedNodes&&m.addedNodes.forEach(function(n){ if(cbmMatch(n)) cbmEnhance(n); else if(n.nodeType===1&&n.querySelector){ var inner=n.querySelector(CBM_SEL); if(inner) cbmEnhance(inner); } });
+      m.removedNodes&&m.removedNodes.forEach(function(n){ if(cbmMatch(n)) cbmRestore(n); });
+    });
+  });
+  if(document.body) cbmObs.observe(document.body,{childList:true});
+}
 // Browser-side cleanInstagramUrl: gleiche Logik wie server-side, fuer Inline-JS
 // das im Browser laeuft (IIFEs wie initDiamondLinks/initPrismaLinks/initKollabs).
 // WICHTIG: Dieser Code steht innerhalb eines Template-Literals (\`...\`) — Backslashes
