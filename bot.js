@@ -9907,6 +9907,22 @@ p{line-height:1.65;color:var(--muted)}
         return json({ok:true});
     }
 
+    // Diagnose: Test-Push an den eingeloggten User selbst (Settings → "Test-Push").
+    // Liefert sent/failed + bei Fehler den web-push-statusCode → zeigt ob Senden klappt.
+    if (path === '/api/push-self-test' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        if (!webpush) return json({ok:false, error:'web-push nicht verfügbar'});
+        const _uid = String(getMyUid(session));
+        const targets = Object.entries(pushSubs).filter(([,v]) => String(v.uid) === _uid);
+        if (!targets.length) return json({ok:true, sent:0, failed:0, note:'keine Subscription gespeichert'});
+        const payload = JSON.stringify({title:'🔔 Test-Push', body:'Push funktioniert! Wenn du das siehst, ist alles korrekt eingerichtet.', url:'/feed'});
+        const results = await Promise.allSettled(targets.map(([,v]) => webpush.sendNotification(v.sub, payload)));
+        let sent=0, failed=0, dirty=false; const errs=[];
+        results.forEach((r,i)=>{ if(r.status==='fulfilled') sent++; else { failed++; const sc=r.reason?.statusCode; errs.push(sc||r.reason?.message||'err'); if(sc===410||sc===404){ delete pushSubs[targets[i][0]]; dirty=true; } } });
+        if (dirty) savePushSubs();
+        return json({ok:true, sent, failed, errors: errs.slice(0,3)});
+    }
+
     // Push-Subscription für aktuellen Parent-User aufheben (alle Geräte dieses Users).
     // Falls Client den endpoint kennt → nur diese eine Sub löschen. Sonst alle.
     if (path === '/api/push-unsubscribe' && req.method === 'POST') {
@@ -20647,6 +20663,8 @@ ${_setSubHead('<span style="display:inline-flex;align-items:center;gap:7px"><svg
   <div style="font-size:11px;color:var(--muted);padding:6px 4px 0;line-height:1.5">
     Du bekommst Benachrichtigungen bei Likes, Kommentaren, Followern und neuen Pinned-Engagements.
   </div>
+  <button onclick="sendTestPush(this)" style="margin-top:10px;width:100%;padding:11px;background:var(--bg3);border:1px solid var(--border2);color:var(--accent);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font)">🔔 Test-Push an mich senden</button>
+  <div id="test-push-result" style="font-size:11px;margin-top:6px;padding:0 4px;line-height:1.5;min-height:14px"></div>
 </div>
 <div class="subset-section">
   <div class="subset-section-title">Per-Event (bald)</div>
@@ -20715,6 +20733,25 @@ async function togglePush(t){
     }
   } catch(e){ document.getElementById('push-status-sub').textContent='Status unbekannt'; }
 })();
+async function sendTestPush(btn){
+  const out = document.getElementById('test-push-result');
+  out.textContent=''; out.style.color='var(--muted)';
+  // Diagnose-Schritte sichtbar machen
+  if (!('Notification' in window)) { out.textContent='❌ Browser unterstützt keine Notifications.'; out.style.color='#ef4444'; return; }
+  if (Notification.permission !== 'granted') { out.textContent='❌ Keine Berechtigung — erst Push-Toggle oben aktivieren.'; out.style.color='#ef4444'; return; }
+  let hasSub=false;
+  try { const reg=await navigator.serviceWorker.ready; const sub=await reg.pushManager.getSubscription(); hasSub=!!sub; } catch(e){}
+  if (!hasSub) { out.textContent='❌ Keine aktive Subscription — Push-Toggle aus- und wieder einschalten.'; out.style.color='#ef4444'; return; }
+  if(btn){btn.disabled=true;btn.textContent='⏳ Sende …';}
+  try {
+    const r = await fetch('/api/push-self-test', {method:'POST'});
+    const j = await r.json();
+    if (j.ok && j.sent>0) { out.textContent='✅ Gesendet an '+j.sent+' Gerät(e). Kommt der Push in 1–2 Sek nicht an, liegt es am Gerät (Android-Benachrichtigungen für die App erlauben).'; out.style.color='#22c55e'; }
+    else if (j.ok && j.sent===0) { out.textContent='⚠️ Server hat keine gespeicherte Subscription für dich gefunden. Toggle aus/ein.'; out.style.color='#f59e0b'; }
+    else { out.textContent='❌ Server-Fehler: '+(j.error||'unbekannt'); out.style.color='#ef4444'; }
+  } catch(e){ out.textContent='❌ Netzwerk-Fehler: '+e.message; out.style.color='#ef4444'; }
+  if(btn){btn.disabled=false;btn.textContent='🔔 Test-Push an mich senden';}
+}
 </script>
 </div>
 `, 'settings-notifications');
