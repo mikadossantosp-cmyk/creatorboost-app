@@ -149,6 +149,8 @@ Prioritäten **immer in dieser Reihenfolge**:
 
 - **Retention-Hebel #12 + #16.** (12) **Live-Aktiv-Pill** im Feed (über Stories, nach Streak-Pill): „● N Creator gerade aktiv — jetzt ist Engagement am stärksten" via `getOnlineUids()` (Admins rausgefiltert), nur ab ≥2 Online (sonst versteckt). Echtes Social-Proof. (16) **Fairness sichtbar:** dezenter Trust-Footer am Feed-Ende (nach `postsHtml`): „Echtes Engagement von echten Creatorn — keine Bots, keine gekauften Likes. Self-Likes & Fake-Engagement werden erkannt und sanktioniert." Macht die starke (unsichtbare) Anti-Cheat-Logik zum Vertrauens-Feature. Verifiziert: Feed rendert Footer, Live-Pill korrekt gegated. ROI-Hebel #1–8, #10, #12, #16 live.
 
+- **Retention-Hebel #11 (Posting-Friktion).** Plus-Sheet-Link-Feld: "Einfügen"-Button (pastePlusLink → liest Clipboard, extrahiert Instagram-URL per Regex) + Live-Validierung (validatePlusLink via oninput → grüner Haken bei gültigem reel/p/tv-Link, Tipp bei Nicht-Reel, Warnung bei Nicht-IG). Senkt Hürde zum Posten = mehr Content. Verifiziert: rendert im Feed, Boot ok. **#20 Feedback-Kanal:** bereits vorhanden — Helper-Chat-Chip "💬 Direkter Support" leitet User-Fragen/Feedback an den Admin weiter (DM-Antwort). Kein neuer Code nötig. ROI-Hebel #1-8,#10,#11,#12,#16 live (+#20 vorhanden).
+
 ## 8. Nächste sinnvolle Schritte
 
 0. **a11y-Pass app-weit fortsetzen** (Dashboard-Modals sind erledigt): weitere `<div onclick>` → echte `<button>`/`role`, fehlende `aria-label` an Icon-Buttons, restliche Modals (App-Chat/DM/Helper) mit `role="dialog"` + Escape/Backdrop nach dem `dashModalA11y()`-Muster. Gezielt pro Screen statt blind app-weit (viele Dateien).

@@ -2625,7 +2625,11 @@ async function cbResendConfirm(btn){
     </div>
     <div class="ps-field">
       <label class="ps-field-label">Instagram-URL</label>
-      <input type="url" id="plus-link-input" class="ps-input" placeholder="https://www.instagram.com/reel/…">
+      <div style="position:relative">
+        <input type="url" id="plus-link-input" class="ps-input" placeholder="https://www.instagram.com/reel/…" oninput="validatePlusLink()" style="padding-right:84px">
+        <button type="button" id="plus-paste-btn" onclick="pastePlusLink()" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);background:var(--bg4);border:1px solid var(--border2);color:var(--accent);font-size:12px;font-weight:700;padding:6px 11px;border-radius:8px;cursor:pointer;font-family:var(--font)">Einfügen</button>
+      </div>
+      <div id="plus-link-hint" style="font-size:var(--fs-xs);margin-top:5px;min-height:14px;line-height:1.3"></div>
     </div>
     <div class="ps-field">
       <label class="ps-field-label">Beschreibung <span class="ps-optional">optional</span></label>
