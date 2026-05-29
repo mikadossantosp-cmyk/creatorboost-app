@@ -2230,12 +2230,12 @@ textarea.form-input{resize:none;min-height:80px}
 @keyframes pulse-dot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.85)}}
 /* ── EXPLORE TABS — Premium Cards ── */
 .explore-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;padding:12px 14px 18px}
-.explore-tab{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:var(--space-2);padding:14px 6px 12px;border-radius:16px;background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.06);cursor:pointer;transition:transform 0.2s cubic-bezier(0.34,1.56,0.64,1),background 0.2s,border-color 0.2s;font-family:var(--font);text-align:center;overflow:hidden;min-height:84px;-webkit-tap-highlight-color:transparent}
+.explore-tab{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:var(--space-2);padding:14px 6px 12px;border-radius:16px;background:var(--bg3);border:1px solid var(--border);cursor:pointer;transition:transform 0.2s cubic-bezier(0.34,1.56,0.64,1),background 0.2s,border-color 0.2s;font-family:var(--font);text-align:center;overflow:hidden;min-height:84px;-webkit-tap-highlight-color:transparent}
 .explore-tab::before{content:"";position:absolute;inset:0;border-radius:16px;background:linear-gradient(135deg,var(--et-c1,#a78bfa),var(--et-c2,#7c3aed));opacity:0;transition:opacity 0.25s;pointer-events:none}
 .explore-tab .et-icon{position:relative;z-index:1;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;background:linear-gradient(135deg,var(--et-c1,#a78bfa)33,var(--et-c2,#7c3aed)1a);transition:transform 0.25s cubic-bezier(0.34,1.56,0.64,1),background 0.2s;line-height:1}
 .explore-tab .et-label{position:relative;z-index:1;font-size:11.5px;font-weight:700;color:var(--text);letter-spacing:0.2px;line-height:1;opacity:0.9}
 .explore-tab:active{transform:scale(0.94)}
-.explore-tab:hover:not(.active){background:rgba(255,255,255,0.045);border-color:rgba(255,255,255,0.1)}
+.explore-tab:hover:not(.active){background:var(--bg4);border-color:var(--border)}
 .explore-tab:hover:not(.active) .et-icon{transform:scale(1.08)}
 .explore-tab.active{border-color:transparent}
 .explore-tab.active::before{opacity:1}
@@ -12901,8 +12901,24 @@ function cbHelperShowMenu(){
     chips.appendChild(c);
   });
 }
+// Bot-Antworten enthalten HTML (<br>, <a>). Der Server stuft client-gepostete 'bot'-Rolle
+// aus Sicherheit auf 'user' herunter → beim History-Laden wird der Text escaped → rohes HTML
+// sichtbar. Daher Bot-Text vor dem Speichern zu lesbarem Klartext wandeln (ohne Regex wegen
+// Template-Literal-Backslash-Falle). Live-Render bleibt unveraendert HTML.
+function cbHelperStripHtml(s){
+  s = String(s||'');
+  s = s.split('<br>').join(' ').split('<br/>').join(' ').split('<br />').join(' ').split('<BR>').join(' ');
+  var out='', inTag=false;
+  for (var i=0;i<s.length;i++){ var c=s.charAt(i); if(c==='<'){inTag=true;continue;} if(c==='>'){inTag=false;continue;} if(!inTag) out+=c; }
+  out = out.split('&amp;').join('&').split('&nbsp;').join(' ');
+  while (out.indexOf('  ')>=0) out = out.split('  ').join(' ');
+  return out.trim();
+}
 async function cbHelperPersist(role, text){
-  try { await fetch('/api/helper-append', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({role, text})}); } catch(e) {}
+  try {
+    var t = (role === 'bot') ? cbHelperStripHtml(text) : text;
+    await fetch('/api/helper-append', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({role, text: t})});
+  } catch(e) {}
 }
 function cbHelperClose(){
   document.getElementById('cb-helper-modal').classList.remove('open');

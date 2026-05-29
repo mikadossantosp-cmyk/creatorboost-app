@@ -106,6 +106,11 @@ Prioritäten **immer in dieser Reihenfolge**:
   - **Light-Mode tipps/newsletter: ERLEDIGT/HINFÄLLIG** — nachgeprüft, Tabs sind schon theme-aware (s.o.), kein Defekt.
   - **spacing-Shorthands + Microcopy:** offen, aber brauchen Risiko-Abwägung bzw. Produkt-Stimme → nicht „blind" abarbeitbar.
 
+- **Screenshot-Runde (Light-Mode QA vom User) — 2 echte Bugs gefixt:**
+  - **Helper-Chat zeigte rohes HTML** (`<br>`, `<a>`) bei Standard-Antworten. Ursache: Server stuft client-gepostete `bot`-Rolle aus Sicherheit auf `user` (`bot.js:10293`, XSS-Schutz, bleibt!) → History-Render escaped `user`-Text (`12877`) → HTML als Klartext sichtbar. Fix: `cbHelperPersist` strippt bei `role==='bot'` das HTML zu lesbarem Klartext via `cbHelperStripHtml` (ohne Regex — Template-Literal-Falle). Live-Render bleibt HTML. Alt-persistierte Messages bleiben roh (regenerieren sich bei Nutzung).
+  - **Explore-Tab-Kacheln „Geisterkarten" im Light-Mode** (`/explore`): `.explore-tab` (inaktiv) nutzte `background:rgba(255,255,255,0.025)` + `border:rgba(255,255,255,0.06)` (Dark-Mode-Design, weiß-auf-hell unsichtbar). Fix: `var(--bg3)`/`var(--border)` (+ hover `var(--bg4)`) → theme-aware, sichtbar in beiden Modi (wie die Tipps-Karten). Aktiv-State (Gradient) unberührt.
+  - **Bewusst gelassen:** Mission-FAB (`#cb-mission-fab`, `left:10px;top:24%`) — überlappt leicht den Feed-Rand, ist aber gewolltes Floating-Element; nur auf Wunsch verschieben. tipps/ranking/regeln/newsletter Light-Mode = ok bestätigt.
+
 ## 8. Nächste sinnvolle Schritte
 
 0. **a11y-Pass app-weit fortsetzen** (Dashboard-Modals sind erledigt): weitere `<div onclick>` → echte `<button>`/`role`, fehlende `aria-label` an Icon-Buttons, restliche Modals (App-Chat/DM/Helper) mit `role="dialog"` + Escape/Backdrop nach dem `dashModalA11y()`-Muster. Gezielt pro Screen statt blind app-weit (viele Dateien).
