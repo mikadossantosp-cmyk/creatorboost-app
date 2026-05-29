@@ -93,6 +93,11 @@ h1 .accent{font-style:italic;font-weight:600;background:linear-gradient(180deg,#
 .subhead{font-size:clamp(16px,1.8vw,19px);color:var(--text-2);font-weight:400;max-width:560px;margin:0 auto 44px;letter-spacing:0;line-height:1.7}
 .subhead b{color:var(--silver-bright);font-weight:500}
 .hero-ctas{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.hero-trust{display:inline-flex;align-items:center;gap:8px;margin-top:26px;font-size:13px;color:var(--text-2);font-weight:500;letter-spacing:0.2px}
+.hero-trust b{color:var(--silver-bright);font-weight:600}
+.hero-trust-dot{width:7px;height:7px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 0 rgba(34,197,94,0.5);animation:pulse-dot 2.2s ease-out infinite;flex-shrink:0}
+@keyframes pulse-dot{0%{box-shadow:0 0 0 0 rgba(34,197,94,0.45)}70%{box-shadow:0 0 0 7px rgba(34,197,94,0)}100%{box-shadow:0 0 0 0 rgba(34,197,94,0)}}
+@media(prefers-reduced-motion:reduce){.hero-trust-dot{animation:none}}
 .btn{display:inline-flex;align-items:center;gap:9px;padding:13px 26px;border-radius:8px;font-size:14px;font-weight:600;text-decoration:none;transition:all 0.2s;border:none;cursor:pointer;font-family:inherit;letter-spacing:0.3px}
 .btn-primary{background:linear-gradient(180deg,#f5d76e 0%,#d4a946 50%,#8b6914 100%);color:#000;box-shadow:0 1px 2px rgba(0,0,0,0.18),0 4px 14px rgba(212,169,70,0.18),inset 0 1px 0 rgba(255,255,255,0.45),inset 0 -1px 0 rgba(0,0,0,0.18)}
 .btn-primary:hover{transform:translateY(-1px);box-shadow:0 2px 4px rgba(0,0,0,0.20),0 6px 18px rgba(212,169,70,0.26),inset 0 1px 0 rgba(255,255,255,0.45)}
@@ -206,7 +211,7 @@ section.s{padding:120px 0;position:relative}
 .faq-q::after{content:'+';font-family:'Inter',sans-serif;font-size:24px;font-weight:300;color:var(--gold);transition:transform 0.25s}
 .faq-item.open .faq-q::after{transform:rotate(45deg)}
 .faq-a{font-size:15px;color:var(--text-2);line-height:1.7;max-height:0;overflow:hidden;transition:max-height 0.3s ease,margin 0.3s ease}
-.faq-item.open .faq-a{max-height:300px;margin-top:8px}
+.faq-item.open .faq-a{max-height:420px;margin-top:8px}
 
 /* ── FINAL CTA ── */
 .final{padding:140px 0;text-align:center;border-top:1px solid var(--line);position:relative;overflow:hidden}
@@ -291,19 +296,20 @@ footer{border-top:1px solid var(--line);padding:48px 0 56px;background:var(--bg)
   <div class="wrap">
     <div class="hero-inner">
       <div class="hero-mark"><span class="glow"></span></div>
-      <div class="hero-tag">Free · Für Instagram Creators</div>
+      <div class="hero-tag">Kostenlos · Für Instagram Creators</div>
       <h1>
         Wachsen ist<br>
         <span class="accent serif">kein Solosport.</span>
       </h1>
-      <p class="subhead">CreatorX ist eine kuratierte Community von <b>Instagram Creators</b>, die sich gegenseitig stärken — strukturiert, transparent und ohne versteckte Kosten.</p>
+      <p class="subhead">Echte Creators liken, kommentieren und teilen deine Reels — und du ihre. <b>Strukturiertes, gegenseitiges Engagement</b> statt gekaufter Reichweite. Kostenlos, transparent, ohne Bots.</p>
       <div class="hero-ctas">
-        <a href="/signup" class="btn btn-primary" target="_blank" rel="noopener">
+        <a href="/signup" class="btn btn-primary">
           Kostenlos beitreten
           <svg class="btn-arrow" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
         </a>
         <a href="/login" class="btn btn-secondary">Schon dabei? Login</a>
       </div>
+      <div class="hero-trust" id="hero-trust" hidden><span class="hero-trust-dot"></span><span id="hero-trust-text"></span></div>
     </div>
   </div>
 </section>
@@ -359,7 +365,7 @@ footer{border-top:1px solid var(--line);padding:48px 0 56px;background:var(--bg)
             <div class="feature-desc">Missionen, XP, Badges, Diamanten.</div>
           </div>
         </div>
-        <a href="/signup" class="preview-cta" target="_blank" rel="noopener">
+        <a href="/signup" class="preview-cta">
           Kostenlos beitreten
           <svg class="btn-arrow" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
         </a>
@@ -534,6 +540,18 @@ footer{border-top:1px solid var(--line);padding:48px 0 56px;background:var(--bg)
         <div class="faq-q">Was passiert, wenn ich nicht mitmache?</div>
         <div class="faq-a">Wer langfristig nichts beiträgt, fliegt aus der aktiven Liste. Fairness ist die Grundlage — wer profitiert, gibt auch.</div>
       </div>
+      <div class="faq-item">
+        <div class="faq-q">Verstößt das gegen die Instagram-Richtlinien?</div>
+        <div class="faq-a">Nein. Es geht um echtes Engagement von echten Menschen — keine Bots, keine Automatisierung, keine gekauften Likes. Du entscheidest selbst, was du likst und kommentierst. Genau das, was Instagram belohnt.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">Brauche ich die App aus dem Play Store?</div>
+        <div class="faq-a">Nein — CreatorX läuft direkt im Browser. Du kannst die Seite mit einem Tipp zum Startbildschirm hinzufügen und sie verhält sich wie eine native App. Eine Android-App ist zusätzlich verfügbar.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">Was passiert mit meinen Daten?</div>
+        <div class="faq-a">Du behältst die Kontrolle. Wir speichern nur, was die App braucht — kein Verkauf, kein Tracking durch Dritte. Du kannst deine Daten jederzeit exportieren oder deinen Account mit einem Klick vollständig löschen (DSGVO Art. 17).</div>
+      </div>
     </div>
   </div>
 </section>
@@ -545,7 +563,7 @@ footer{border-top:1px solid var(--line);padding:48px 0 56px;background:var(--bg)
     <h2>Werde Teil <span class="em serif">der Bewegung</span>.</h2>
     <p>Tritt bei und finde heraus, wie weit du mit der richtigen Community kommst.</p>
     <div class="hero-ctas">
-      <a href="/signup" class="btn btn-primary" target="_blank" rel="noopener">
+      <a href="/signup" class="btn btn-primary">
         Kostenlos beitreten
         <svg class="btn-arrow" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
       </a>
@@ -566,8 +584,11 @@ footer{border-top:1px solid var(--line);padding:48px 0 56px;background:var(--bg)
       <a href="#faq">FAQ</a>
       <a href="/login">Login</a>
       <a href="/signup">Beitreten</a>
+      <a href="/datenschutz">Datenschutz</a>
+      <a href="/impressum">Impressum</a>
+      <a href="/agb">AGB</a>
     </div>
-    <div class="footer-meta">© MMXXVI · CreatorX · v7.2</div>
+    <div class="footer-meta">© MMXXVI · CreatorX · Made in Luxembourg</div>
   </div>
 </footer>
 
@@ -585,6 +606,13 @@ footer{border-top:1px solid var(--line);padding:48px 0 56px;background:var(--bg)
     if (pile && avs.length) {
       avs.forEach(function(src){ var img=document.createElement('img'); img.src=src; img.alt=''; img.loading='lazy'; img.onerror=function(){img.remove();}; pile.appendChild(img); });
       pile.classList.remove('empty');
+    }
+    // Hero-Trust-Zeile: bevorzugt Live-Online, sonst Mitglieder-Zahl — nur zeigen wenn echte Zahl da.
+    var ht = document.getElementById('hero-trust'), htt = document.getElementById('hero-trust-text');
+    if (ht && htt) {
+      var on = Number(d.onlineNow || 0), mem = Number(d.members || 0);
+      if (on >= 3) { htt.innerHTML = '<b>' + on + ' Creators</b> gerade aktiv'; ht.hidden = false; }
+      else if (mem >= 10) { htt.innerHTML = '<b>' + mem.toLocaleString('de-DE') + ' Creators</b> sind dabei'; ht.hidden = false; }
     }
   } catch(e) {}
 })();
