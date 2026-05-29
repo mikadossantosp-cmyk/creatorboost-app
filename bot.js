@@ -3751,9 +3751,20 @@ function setLang(l){fetch('/api/lang',{method:'POST',headers:{'Content-Type':'ap
 async function pastePlusLink(){
   try {
     const txt = await navigator.clipboard.readText();
-    const m = String(txt||'').match(/https?:\/\/(www\.)?instagram\.com\/[^\s]+/i);
+    // Regex hier vermieden: in diesem Template-Literal werden Backslashes geschluckt
+    // (\\/ \\. \\s) → kaputter Regex. Stattdessen String-Suche nach dem instagram.com-Link.
+    const raw = String(txt||'').trim();
+    const low = raw.toLowerCase();
+    const idx = low.indexOf('instagram.com');
     const input = document.getElementById('plus-link-input');
-    if (m && input) { input.value = m[0]; validatePlusLink(); }
+    if (idx >= 0 && input) {
+      // Vom Domain-Start (http.. davor falls vorhanden) bis zum ersten Whitespace
+      let start = low.lastIndexOf('http', idx); if (start < 0) start = idx;
+      let end = raw.length;
+      for (let i = idx; i < raw.length; i++) { const c = raw.charAt(i); if (c === ' ' || c === '\n' || c === '\t') { end = i; break; } }
+      input.value = raw.slice(start, end);
+      validatePlusLink();
+    }
     else if (window.showBanner) showBanner({type:'warn',title:'Kein Instagram-Link in der Zwischenablage'});
   } catch(e) { if(window.showBanner) showBanner({type:'info',title:'Zwischenablage nicht verfügbar — Link manuell einfügen'}); }
 }
@@ -3761,11 +3772,13 @@ function validatePlusLink(){
   const input = document.getElementById('plus-link-input');
   const hint = document.getElementById('plus-link-hint');
   if (!input || !hint) return;
-  const v = (input.value||'').trim();
+  const v = (input.value||'').trim().toLowerCase();
   if (!v) { hint.textContent=''; return; }
-  if (/https?:\/\/(www\.)?instagram\.com\/(reel|reels|p|tv)\//i.test(v)) {
+  const isIg = v.indexOf('instagram.com') >= 0;
+  const isReel = isIg && (v.indexOf('/reel/')>=0 || v.indexOf('/reels/')>=0 || v.indexOf('/p/')>=0 || v.indexOf('/tv/')>=0);
+  if (isReel) {
     hint.textContent = '✓ Gültiger Instagram-Link'; hint.style.color = '#22c55e';
-  } else if (/instagram\.com/i.test(v)) {
+  } else if (isIg) {
     hint.textContent = 'Tipp: Reel-/Post-Link verwenden (instagram.com/reel/…)'; hint.style.color = 'var(--muted)';
   } else {
     hint.textContent = 'Das sieht nicht nach einem Instagram-Link aus'; hint.style.color = '#f59e0b';
