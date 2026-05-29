@@ -5379,6 +5379,14 @@ self.addEventListener('notificationclick',e=>{
         if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
         const result = LOCAL_STORE ? await localWrite(() => botLogic.userDeleteSelfApi({ uid: String(session.uid) })) : await postBot('/user-delete-self-api', { uid: String(session.uid) });
         if (result && result.ok) {
+            // DSGVO: Push-Subscriptions des gelöschten Users entfernen (liegen in bot.js, nicht im
+            // Datastore → von userDeleteSelfApi nicht erfasst). Sonst bekäme das gelöschte Konto
+            // weiter Pushes + der Push-Endpoint bliebe gespeichert.
+            try {
+                let _psDirty = false;
+                for (const [k, v] of Object.entries(pushSubs)) { if (String(v.uid) === String(session.uid)) { delete pushSubs[k]; _psDirty = true; } }
+                if (_psDirty) savePushSubs();
+            } catch(e) {}
             // Session aus dem In-Memory-Store + Disk entfernen
             try {
                 if (typeof sessions !== 'undefined' && sessions instanceof Map) {
