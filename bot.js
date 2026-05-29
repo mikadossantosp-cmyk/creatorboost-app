@@ -11300,6 +11300,20 @@ ${(()=>{
       + '<div style="font-size:var(--fs-xs);color:var(--muted);margin-top:1px">' + _sub + '</div></div></div>';
   } catch(e) { return ''; }
 })()}
+${(()=>{
+  // #12 Live-Aktiv-Pill: zeigt gerade aktive Creator (echtes Social-Proof, motiviert mitzumachen).
+  // Nur ab 2 Online (sonst wirkt es leer); Admins zählen nicht mit.
+  try {
+    const _on = getOnlineUids();
+    let _cnt = 0;
+    const _admins = Array.isArray(d._adminIds) ? d._adminIds.map(String) : [];
+    for (const u of _on) { if (!_admins.includes(String(u))) _cnt++; }
+    if (_cnt < 2) return '';
+    return '<div style="margin:8px 16px 2px;display:flex;align-items:center;gap:7px;font-size:var(--fs-xs);color:var(--muted)">'
+      + '<span style="width:7px;height:7px;border-radius:50%;background:#22c55e;box-shadow:0 0 6px rgba(34,197,94,.7);flex-shrink:0"></span>'
+      + '<span><b style="color:var(--text)">' + _cnt + ' Creator</b> gerade aktiv — jetzt ist Engagement am stärksten.</span></div>';
+  } catch(e) { return ''; }
+})()}
 <div style="width:100%">${storiesHtml}</div>
 ${(()=>{
   // Perf: einmaliger Pass durch d.links statt 2x Object.values().some()+.filter()
@@ -11342,6 +11356,10 @@ ${tab==='engagement' ? `<div style="padding:12px 16px 4px">
   }
 </div>` : ''}
 ${postsHtml}
+<div style="margin:18px 16px 90px;padding:13px 16px;background:var(--bg3);border:1px solid var(--border2);border-radius:14px;display:flex;align-items:center;gap:11px">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
+  <div style="font-size:var(--fs-xs);color:var(--muted);line-height:1.45">Echtes Engagement von echten Creatorn — <b style="color:var(--text)">keine Bots, keine gekauften Likes</b>. Self-Likes &amp; Fake-Engagement werden automatisch erkannt und sanktioniert.</div>
+</div>
 <script>
 async function adminDelLink(linkId, btn){
     if(!confirm('Diesen Link wirklich für ALLE löschen? Wird auch aus Telegram-Gruppe + Kommentaren entfernt.')) return;
