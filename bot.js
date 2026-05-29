@@ -2670,13 +2670,13 @@ async function cbResendConfirm(btn){
       </div>
       <svg class="ps-card-arrow" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"><polyline points="9 6 15 12 9 18"/></svg>
     </button>
-    <button class="ps-card" disabled style="position:relative;overflow:hidden;opacity:0.55;cursor:not-allowed" onclick="alert('💠 Prismalink ist noch in Bearbeitung — bald verfügbar!')">
+    <button class="ps-card" onclick="closePlusSheet();setTimeout(openPrismaSheet,200)">
       <div class="ps-card-icon" style="background:linear-gradient(135deg,#ef4444,#f59e0b 25%,#22c55e 50%,#06b6d4 75%,#a855f7);color:#fff"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 4 12l8 10 8-10z"/><path d="M4 12h16"/><path d="M12 2v20"/></svg></div>
       <div class="ps-card-body">
-        <div class="ps-card-title">Prismalink posten <span class="ps-card-badge" style="background:linear-gradient(135deg,#94a3b8,#64748b);color:#fff;font-size:11px">COMING SOON</span></div>
-        <div class="ps-card-sub">7 Tage Feed-Top · Liker erhalten +7 💎 · 1×/Woche · -100 💎</div>
+        <div class="ps-card-title">Prismalink posten <span class="ps-card-badge">−100 💎</span></div>
+        <div class="ps-card-sub">7 Tage Feed-Top · Liker erhalten +7 💎 · 1×/Woche</div>
       </div>
-      <svg class="ps-card-arrow" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" style="opacity:0.4"><polyline points="9 6 15 12 9 18"/></svg>
+      <svg class="ps-card-arrow" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"><polyline points="9 6 15 12 9 18"/></svg>
     </button>
   </div>
 </div>
@@ -11194,7 +11194,7 @@ commentsBox+
         const _skCard = '<div style="margin:0 16px 14px;border:1px solid var(--border2);border-radius:18px;padding:14px;background:var(--bg3)"><div style="display:flex;align-items:center;gap:10px;margin-bottom:var(--space-3)"><div class="sk" style="width:42px;height:42px;border-radius:50%;flex-shrink:0"></div><div style="flex:1"><div class="sk" style="width:42%;height:12px;border-radius:6px;margin-bottom:7px"></div><div class="sk" style="width:26%;height:10px;border-radius:6px"></div></div></div><div class="sk" style="width:100%;height:180px;border-radius:12px;margin-bottom:var(--space-3)"></div><div class="sk" style="width:100%;height:44px;border-radius:12px"></div></div>';
         const kollabsHtml = '<div id="kollabs-tab-root" style="padding:8px 0 80px">'+_skCard+_skCard+'</div>';
         const diamondHtml = '<div id="diamond-tab-root" style="padding:8px 0 80px">'+_skCard+_skCard+'</div>';
-        const prismaHtml = '<div id="prisma-tab-root" style="padding:8px 0 80px"><div style="padding:60px 24px;text-align:center"><div style="font-size:64px;margin-bottom:var(--space-4);background:linear-gradient(135deg,#ef4444,#f59e0b,#22c55e,#06b6d4,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">💠</div><div style="font-size:18px;font-weight:800;background:linear-gradient(135deg,#ef4444,#f59e0b,#22c55e,#06b6d4,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:var(--space-2)">Prismalink</div><div style="font-size:13px;color:var(--muted);max-width:320px;margin:0 auto;line-height:1.6">Die ultimative Premium-Stufe — 100💎 zum Posten · 7 Tage Feed-Top · 7💎 Reward pro Liker · 1×/Woche.</div><div style="margin-top:var(--space-6);display:inline-block;padding:8px 18px;background:linear-gradient(135deg,#94a3b8,#64748b);color:#fff;border-radius:999px;font-size:12px;font-weight:800;letter-spacing:1px">⏳ COMING SOON</div></div></div>';
+        const prismaHtml = '<div id="prisma-tab-root" style="padding:8px 0 80px">'+_skCard+_skCard+'</div>';
         // Diamantlink-Top-Strip nur im 'heute'-Tab — älteste Diamantlinks ganz oben.
         // Stack-Order Heute-Tab:
         //   1. Diamond-Top-Strip (#diamond-top-strip)
@@ -11245,7 +11245,7 @@ ${(() => {
     {id:'engagement', emoji:_ic('<path d="M12 3l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9 6.8 19.2l1-5.8L3.5 9.2l5.9-.9z"/>'), label:'Engagement', count:_unlikedCountSuper},
     {id:'kollabs', emoji:_ic('<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>'), label:'Kollabs', count:0},
     {id:'diamond', emoji:_ic('<path d="M6 3h12l3.5 5.5L12 21 2.5 8.5z"/><path d="M2.5 8.5h19"/>'), label:'Diamond', count:0},
-    {id:'prisma', emoji:'💠', label:'Prisma', count:0, comingSoon:true},
+    {id:'prisma', emoji:'💠', label:'Prisma', count:0},
   ];
   const _curTab = _tabsMeta.find(t=>t.id===tab) || _tabsMeta[0];
   const _totalAllCount = _tabsMeta.reduce((s,t)=>s+(t.count||0),0);
@@ -12406,9 +12406,6 @@ async function submitSuperLink(){
   const stripEl = document.getElementById('prisma-top-strip');
   const tabEl = document.getElementById('prisma-tab-root');
   if (!stripEl && !tabEl) return;
-  // Wenn Prisma-Tab-Root da ist, NICHT laden — der Tab zeigt nur Coming-Soon Placeholder.
-  // Nur Top-Strip rendern (= Heute-Feed Anzeige).
-  if (!stripEl) return;
   function esc(s){ return String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
   function fmtRemaining(ms){
     if (ms <= 0) return 'abgelaufen';
@@ -12496,7 +12493,18 @@ async function submitSuperLink(){
         if (stripPosts.length) stripEl.innerHTML = stripPosts.map(p => renderCard(p)).join('');
         else stripEl.innerHTML = '';
       }
-    } catch(e) { console.warn('[prisma] load error', e); }
+      // Prisma-Tab: kompletter Feed (eigene + fremde) wie der Diamond-Tab.
+      if (tabEl) {
+        const header = '<div style="margin:0 16px 14px;padding:14px;background:rgba(168,85,247,0.06);border:1px solid rgba(168,85,247,0.25);border-radius:14px;font-size:12.5px;line-height:1.6"><b style="background:linear-gradient(135deg,#ef4444,#f59e0b,#22c55e,#06b6d4,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">💠 Prismalinks</b> · 100 💎 zum Posten, 7 Tage Feed-Top, jeder Liker bekommt 7 💎. Engagement-Pflicht: LIKEN + KOMMENTIEREN + TEILEN + SPEICHERN. <a href="/explore?tab=regeln#prisma" style="color:#a855f7;font-weight:700">→ Regeln</a></div>';
+        tabEl.innerHTML = header + (posts.length ? posts.map(p => renderCard(p)).join('') : '<div style="padding:48px 24px;text-align:center;color:var(--muted)">Noch keine Prismalinks. Werde der erste — + Menü → 💠 Prismalink posten.</div>');
+      }
+    } catch(e) {
+      console.warn('[prisma] load error', e);
+      if (tabEl) {
+        const msg = (e && e.name === 'AbortError') ? 'Server antwortet nicht (Timeout)' : (e && e.message) || 'Verbindungsfehler';
+        tabEl.innerHTML = '<div style="padding:48px 24px;text-align:center;color:var(--muted);font-size:13px"><div style="font-size:36px;margin-bottom:10px">⚠️</div><div>Prismalinks konnten nicht geladen werden.<br><span style="font-size:11px;opacity:0.7">'+esc(msg)+'</span></div></div>';
+      }
+    }
   }
   window.prismaLikeClick = async function(postId, btn){
     const visitTs = window['_pvisit_'+postId];
@@ -12978,7 +12986,7 @@ const CB_HELP = {
   '_data_events': { q:'🚀 Laufende Events?', a:'<i>(Lade…)</i>', next:['data','_back'], lookup:'events' },
   'm': { q:'🎯 Missionen (M1/M2/M3)', a:'Auswertung täglich 12:00 (Berlin):<br><br><b>M1 — Daily Engagement</b><br>5 Links liken (+ auf Insta kommentieren) → <b>+5 XP</b><br><br><b>M2 — Solidarisch</b><br>80%+ aller heute geposteten Links liken → <b>+5 XP</b><br><br><b>M3 — Champion</b><br>ALLE heute geposteten Links liken (max 30) → <b>+5 XP + 💎 1 Diamant</b><br><br><b>Wochen-Bonus</b> bei 7 Tagen in Folge:<br>• W-M1: <b>+10 XP</b><br>• W-M2: <b>+15 XP + 💎 1</b><br>• W-M3: <b>+20 XP + 💎 2</b><br><br>📌 <b>Visit-before-Like:</b> erst Insta-Reel öffnen, dort liken + 2-Wort-Kommentar — DANN in App liken.', next:['xp','warn','_back'] },
   'xp': { q:'⚡ XP-System', a:'<b>Quellen (echte Werte):</b><br><ul><li>👍 <b>Like:</b> +5 XP pro Like (Mission-Pflicht: 5 Links/Tag)</li><li>📌 <b>Post:</b> +5 XP (1 Link/Tag, Bonus-Links optional)</li><li>🎯 <b>Daily Missionen M1+M2+M3:</b> max +15 XP + 1💎</li><li>🏆 <b>Wochen-Missionen:</b> max +45 XP + 3💎</li><li>🎁 <b>Daily Bonus</b> (Button auf <a href="/profil" style="color:#a78bfa;font-weight:700">/profil</a>): 10–20 XP zufällig</li><li>🌟 <b>First-Post Newcomer:</b> +20 XP</li><li>⭐ <b>Event-Multiplier</b> wenn aktiv (z.B. +100%)</li></ul><b>Badges/Rollen (XP-Schwellen):</b><br>🆕 New: 0-49 · 📘 Anfänger: 50-499 · ⬆️ Aufsteiger: 500-999 · 🏅 Erfahrener: 1000-4999 · 👑 Elite: 5000-9999 (+1 Bonus-Link/Woche) · 🌟 Elite+: 10000-24999 (2 Superlinks + 1 Bonus-Link/Woche) · 💎 Legende: 25000+ (alles wie Elite+ + 30 💎/Monat)', next:['m','diamond','_back'] },
-  'diamond': { q:'💎 Diamanten', a:'<b>Earn:</b><br><ul><li>🎯 <b>M3 daily:</b> +1💎</li><li>🏆 <b>Wochen-M2:</b> +1💎  ·  <b>Wochen-M3:</b> +2💎</li><li>📌 <b>Pinned-Post engagieren:</b> +1💎 (1× pro Owner)</li><li>💎 <b>Diamantlink liken:</b> +3💎</li><li>💠 <b>Prismalink liken:</b> +7💎 (Premium, Coming Soon)</li><li>🎰 <b>Glücksrad</b> in <a href="/explore?tab=roulette" style="color:#a78bfa;font-weight:700">/explore?tab=roulette</a> (1×/Tag)</li><li>🎁 <b>Wochen-Gewinnspiel</b> in <a href="/explore?tab=gewinnspiel" style="color:#a78bfa;font-weight:700">/explore?tab=gewinnspiel</a></li><li>📅 <b>Diamond-Events</b> (Live-Multiplier)</li></ul><b>Ausgeben:</b><br><ul><li>💎 <b>Diamantlink posten:</b> 30💎 → 3 Tage Top im Feed</li><li>💠 <b>Prismalink posten:</b> 100💎 → 7 Tage Feed-Top · 1×/Woche</li><li>⭐ <b>Superlink-Slot:</b> 10💎 (Extra-Slot kaufen)</li><li>🛍 <b>Shop-Items</b> in <a href="/explore?tab=shop" style="color:#a78bfa;font-weight:700">/explore?tab=shop</a> oder <a href="/diamanten" style="color:#a78bfa;font-weight:700">/diamanten</a></li></ul>', next:['superlink','shop','_back'] },
+  'diamond': { q:'💎 Diamanten', a:'<b>Earn:</b><br><ul><li>🎯 <b>M3 daily:</b> +1💎</li><li>🏆 <b>Wochen-M2:</b> +1💎  ·  <b>Wochen-M3:</b> +2💎</li><li>📌 <b>Pinned-Post engagieren:</b> +1💎 (1× pro Owner)</li><li>💎 <b>Diamantlink liken:</b> +3💎</li><li>💠 <b>Prismalink liken:</b> +7💎 (Premium)</li><li>🎰 <b>Glücksrad</b> in <a href="/explore?tab=roulette" style="color:#a78bfa;font-weight:700">/explore?tab=roulette</a> (1×/Tag)</li><li>🎁 <b>Wochen-Gewinnspiel</b> in <a href="/explore?tab=gewinnspiel" style="color:#a78bfa;font-weight:700">/explore?tab=gewinnspiel</a></li><li>📅 <b>Diamond-Events</b> (Live-Multiplier)</li></ul><b>Ausgeben:</b><br><ul><li>💎 <b>Diamantlink posten:</b> 30💎 → 3 Tage Top im Feed</li><li>💠 <b>Prismalink posten:</b> 100💎 → 7 Tage Feed-Top · 1×/Woche</li><li>⭐ <b>Superlink-Slot:</b> 10💎 (Extra-Slot kaufen)</li><li>🛍 <b>Shop-Items</b> in <a href="/explore?tab=shop" style="color:#a78bfa;font-weight:700">/explore?tab=shop</a> oder <a href="/diamanten" style="color:#a78bfa;font-weight:700">/diamanten</a></li></ul>', next:['superlink','shop','_back'] },
   'superlink': { q:'⚡ Superlinks', a:'Premium-Post für die ganze Woche besonders sichtbar in der Telegram-Gruppe.<br><br><b>Limit:</b> 1×/Woche (Mo-Sa) — <b>🌟 Elite+</b> darf 2×<br><b>Pflicht-Engagement aller Member:</b> LIKEN + KOMMENT + TEILEN + SPEICHERN auf Instagram<br><b>Wer nicht engaged:</b> Sonntag 23:59 Uhr <b>−50 XP + Verwarnung</b><br><br>Posten: Feed → <b>+</b> → <b>⚡ Superlink</b> → URL + Caption<br><br>Auch käuflich: 10💎 = 1 Extra-Slot.', next:['diamond','m','_back'] },
   'kollab': { q:'🤝 Kollab-Posts', a:'<b>Doppel-Posts mit Partner:</b><br><ol><li>Auf Partner-Profil "🤝 Kollab anfragen"</li><li>Partner bestätigt</li><li>Einer postet → Feed → <b>+</b> → <b>🤝 Kollab</b></li></ol><b>Regeln:</b><br>• 1× pro Woche pro Paar<br>• Sichtbare Zusammenarbeit Pflicht im Reel (beide Logos/Handles)<br>• Engagement Pflicht: LIKEN + KOMMENT + SPEICHERN + TEILEN auf Insta<br><br>Jeder Liker bekommt <b>+1💎</b>.', next:['diamond','_back'] },
   'pinned': { q:'📌 Pinned Reel', a:'Dein Lieblings-Reel auf deiner Creator-Karte in Explore.<br><br><b>Setzen:</b> /einstellungen → 📌 Pinned Reel Link → Insta-URL → speichern<br><br>⚠️ Nur 1× pro 30 Tage änderbar (Admins jederzeit).<br><br>Liker deines Pinned-Posts bekommen <b>+1💎</b> (1× pro Owner-Paar).', next:['superlink','_back'] },

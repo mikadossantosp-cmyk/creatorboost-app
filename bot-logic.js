@@ -2843,8 +2843,16 @@ function createSubaccountApi({ parent_uid, name }) {
     if (!d.users[parent_uid]) return { ok: false, error: 'Parent-User nicht gefunden' };
     if (d.users[parent_uid].parent_uid) return { ok: false, error: 'Sub-Account kann keinen Sub-Account erstellen' };
     const isAdm = istAdminId(parent_uid);
-    if (!isAdm && d.users[parent_uid].subUid && d.users[d.users[parent_uid].subUid]) {
-        return { ok: false, error: 'Du hast schon einen Sub-Account', sub_uid: String(d.users[parent_uid].subUid) };
+    // Limit: normale User dürfen bis zu 3 Sub-Accounts haben (Admins unbegrenzt).
+    // Zählt nur existierende Subs (subUids + Legacy-subUid), Verwaiste werden ignoriert.
+    const MAX_SUBS = 3;
+    if (!isAdm) {
+        const _existing = new Set();
+        if (Array.isArray(d.users[parent_uid].subUids)) d.users[parent_uid].subUids.forEach(s => { if (d.users[String(s)]) _existing.add(String(s)); });
+        if (d.users[parent_uid].subUid && d.users[String(d.users[parent_uid].subUid)]) _existing.add(String(d.users[parent_uid].subUid));
+        if (_existing.size >= MAX_SUBS) {
+            return { ok: false, error: 'Maximal ' + MAX_SUBS + ' Sub-Accounts erreicht.' };
+        }
     }
     let sub_uid = String(Date.now());
     let attempts = 0;
