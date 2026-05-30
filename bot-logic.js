@@ -76,10 +76,53 @@ function _tidyStoredCreatorBoostDMs() {
     d._dmTidyV1 = true;
     return { ok: true, changed };
 }
+// V2: hebt bereits gespeicherte Ranking-/Link-Regeln-DMs auf den neuen, übersichtlichen
+// Wortlaut (z.B. fehlende Platz-Nummer im Tages-/Wochen-Ranking ergänzen). Eigener Flag
+// (_dmTidyV2), damit es auch auf Daten läuft, auf denen V1 schon durchlief.
+function _tidyStoredCreatorBoostDMsV2() {
+    if (!d || d._dmTidyV2) return { ok: true, skipped: true };
+    if (!d.messages) { d._dmTidyV2 = true; return { ok: true, changed: 0 }; }
+    const medalPlace = { '🥇': 1, '🥈': 2, '🥉': 3 };
+    const upgradeOne = (raw) => {
+        let t = String(raw || '');
+        // Alte Tagesranking-DM: "🎉 🥈 im Tagesranking!\n\nDeine Preise:\n..." → mit Platz-Nummer.
+        let m = t.match(/^🎉\s*(🥇|🥈|🥉)\s*im Tagesranking!?/);
+        if (m) {
+            const place = medalPlace[m[1]];
+            const rest = t.replace(/^🎉\s*(🥇|🥈|🥉)\s*im Tagesranking!?\s*\n*/, '').replace(/^Deine Preise:\s*\n*/i, '');
+            t = `${m[1]} ${place}. Platz im Tagesranking\n\nStark — du bist heute unter den Top 3! 🎉\n\nDeine Belohnung:\n${rest}`.trim();
+            return t;
+        }
+        // Alte Wochenranking-DM: "🏆 🥇 Wochen-Ranking gewonnen!\n\n..." → mit Platz-Nummer.
+        m = t.match(/^🏆\s*(🥇|🥈|🥉)\s*Wochen-Ranking gewonnen!?/);
+        if (m) {
+            const place = medalPlace[m[1]];
+            let rest = t.replace(/^🏆\s*(🥇|🥈|🥉)\s*Wochen-Ranking gewonnen!?\s*\n*/, '').replace(/^Deine Preise:\s*\n*/i, '');
+            rest = rest.replace(/\n*\s*Glückwunsch! 🎉\s*$/, '').trim(); // altes Schluss-Glückwunsch raus (Dublette)
+            t = `${m[1]} ${place}. Platz im Wochen-Ranking\n\nGlückwunsch! 🎉\n\n${rest}`.trim();
+            return t;
+        }
+        return t;
+    };
+    let changed = 0;
+    for (const chatKey of Object.keys(d.messages)) {
+        if (!String(chatKey).split('_').includes(CREATORBOOST_UID)) continue;
+        const arr = d.messages[chatKey];
+        if (!Array.isArray(arr)) continue;
+        for (const msg of arr) {
+            if (!msg || String(msg.from) !== CREATORBOOST_UID || !msg.text) continue;
+            const up = upgradeOne(msg.text);
+            if (up !== msg.text) { msg.text = up; changed++; }
+        }
+    }
+    d._dmTidyV2 = true;
+    return { ok: true, changed };
+}
 // Sammel-Hook für idempotente Daten-Migrationen beim Server-Start. Gibt die Gesamtzahl
 // geänderter Einträge zurück, damit der Aufrufer bei Bedarf persistieren kann.
 function migrateDataOnBoot() {
     let changed = 0;
+    try { const r2 = _tidyStoredCreatorBoostDMsV2(); if (r2 && r2.changed) changed += r2.changed; } catch (e) {}
     try { const r = _tidyStoredCreatorBoostDMs(); if (r && r.changed) changed += r.changed; } catch (e) {}
     return { ok: true, changed };
 }
@@ -567,12 +610,11 @@ async function postLinkFromApp({ uid, name, url, caption }) {
     try {
         const rulesUrl = ((process.env.APP_URL || 'https://web-production-7981d.up.railway.app').replace(/\/$/, '')) + '/explore?tab=regeln#r-links';
         const linkRules = '✅ Dein Link ist gepostet\n\n' +
-            'Kurz die wichtigsten Link-Regeln:\n\n' +
-            '• 1 Link pro Tag (Bonus-Links optional)\n' +
-            '• Andere Links bitte liken (Mission M1: 5 Likes pro Tag)\n' +
-            '• Erst das Insta-Reel öffnen, dann liken\n' +
-            '• 2-Wort-Kommentar ist Pflicht (Missionen M2 und M3)\n' +
-            '• Auswertung um 12:00 Uhr — sonst gibt es eine Verwarnung';
+            'Damit dein Reel zählt, denk an diese 3 Dinge:\n\n' +
+            '1. Like heute 5 andere Reels (Mission 1)\n' +
+            '2. Öffne jedes Reel erst auf Instagram, like & kommentiere dort — dann hier bestätigen\n' +
+            '3. Auswertung ist täglich um 12:00 Uhr\n\n' +
+            'Schaffst du die 5 Likes nicht, gibt es eine Verwarnung. Alle Details findest du in den Regeln.';
         sendCreatorBoostDM(uid, linkRules, { link: { url: rulesUrl, label: '📖 Alle Link-Regeln' } });
     } catch (e) {}
 
@@ -1123,7 +1165,7 @@ async function dailyRankingAbschluss() {
             d.dailyAwardsLog.push({ dayKey, place: ii + 1, uid, name: u.name, xp: b.xp, dia: b.dia, links: b.links || 0, at: Date.now() });
             while (d.dailyAwardsLog.length > 500) d.dailyAwardsLog.shift();
         } catch (e) { continue; }
-        try { sendInAppDM(uid, `🎉 ${b.text} im Tagesranking\n\nGlückwunsch zu deinem Platz heute.\n\n⭐ +${b.xp} XP\n💎 +${b.dia} Diamanten${b.links ? '\n🔗 +1 Extra-Link für morgen' : ''}`); } catch (e) {}
+        try { sendInAppDM(uid, `${b.text} ${ii + 1}. Platz im Tagesranking\n\nStark — du bist heute unter den Top 3! 🎉\n\nDeine Belohnung:\n⭐ +${b.xp} XP\n💎 +${b.dia} Diamanten${b.links ? '\n🔗 +1 Extra-Link für morgen' : ''}`); } catch (e) {}
     }
     d.gesternDailyXP = Object.assign({}, d.dailyXP);
     d.dailyXP = {}; d.tracker = {}; d.counter = {}; d.badgeTracker = {};
@@ -1176,7 +1218,7 @@ function wochenResetUndAuszahlung(jetzt) {
             d.weeklyAwardsLog.push({ weekKey, place: i + 1, uid, name, xp: paidXP, dia: paidDia, links: p.links || 0, at: Date.now() });
             while (d.weeklyAwardsLog.length > 200) d.weeklyAwardsLog.shift();
         } catch (e) { continue; }
-        try { sendInAppDM(uid, `🏆 ${p.medal} Platz im Wochen-Ranking\n\nDu hast diese Woche ${xp} XP erreicht.\n\n💎 +${p.dia} Diamanten\n⭐ +${p.xp} XP\n${p.links ? `🔗 +${p.links} Extra-Link${p.links > 1 ? 's' : ''}\n` : ''}\nGlückwunsch! 🎉`); } catch (e) {}
+        try { sendInAppDM(uid, `${p.medal} ${i + 1}. Platz im Wochen-Ranking\n\nDu hast diese Woche ${xp} XP erreicht — Glückwunsch! 🎉\n\nDeine Belohnung:\n⭐ +${p.xp} XP\n💎 +${p.dia} Diamanten${p.links ? `\n🔗 +${p.links} Extra-Link${p.links > 1 ? 's' : ''}` : ''}`); } catch (e) {}
     }
     // #7 Wochen-Recap: VOR dem Reset eine persönliche Zusammenfassung an aktive User (DM).
     // Gibt Sinn + Stolz und bringt am Wochenstart zurück. Nur an in den letzten 7 Tagen Aktive,
