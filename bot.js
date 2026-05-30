@@ -1640,6 +1640,16 @@ async function appCronTick() {
                     if (sent) { datastore.saveDebounced(); console.log('👋 [Cron] Win-back-Push an ' + sent + ' inaktive User'); }
                 } catch (e) { console.error('[winback] Fehler:', e.message); }
             });
+            // Community-Builder-Tagesbelohnung: jeder User mit Builder-Rang erhält 1×/Tag
+            // seine rangabhängigen Diamanten (5/15/50/100 💎). cbDailyLastDay schützt vor Doppelzahlung.
+            einmalig('cbDaily_' + tagStr, () => {
+                if (!LOCAL_STORE || !botLogic.payCommunityBuilderDaily) return;
+                try {
+                    let res;
+                    localWrite(() => { res = botLogic.payCommunityBuilderDaily(tagStr); });
+                    if (res && res.paidUsers) console.log('💎 [Cron] Community-Builder-Tagesbelohnung: ' + res.paidUsers + ' User, ' + res.paidDiamonds + ' 💎');
+                } catch (e) { console.error('[cb-daily] Fehler:', e.message); }
+            });
         }
         // Tageswechsel: alte einmalig-Keys aufräumen, damit der Speicher nicht wächst.
         for (const key of Object.keys(_appCronSeen)) { if (!key.endsWith(tagStr)) delete _appCronSeen[key]; }
@@ -17961,7 +17971,7 @@ fetch('/api/admin/engagement-log').then(r=>r.json()).then(j=>{ if (j.ok) { LAST_
         const weeklyRows = makeRankSection(weeklySorted, (id)=>d.weeklyXP[id]||0, 'Diese Woche noch keine XP');
         // Community-Builder-Ranking: Top-Einlader nach aktiven Einladungen (Referral-System).
         const _cbRanking = (LOCAL_STORE && botLogic.communityBuilderRanking) ? botLogic.communityBuilderRanking(50) : [];
-        const _cbBadgeShort = (n)=>{ if(n>=50)return '🏛️ Elite'; if(n>=25)return '🏗️ III'; if(n>=10)return '🤝 II'; if(n>=3)return '🌱 I'; return ''; };
+        const _cbBadgeShort = (n)=>{ if(n>=25)return '🏛️ Elite'; if(n>=10)return '🏗️ III'; if(n>=5)return '🤝 II'; if(n>=1)return '🌱 I'; return ''; };
         const _cbRows = _cbRanking.length ? _cbRanking.map((r,i)=>{
             const medal = i===0?'🥇':i===1?'🥈':i===2?'🥉':'<span style="display:inline-block;width:24px;text-align:center;color:var(--muted);font-weight:700">'+(i+1)+'</span>';
             const me = String(r.uid)===String(myUid);
@@ -21638,6 +21648,8 @@ async function setRing(ringId) {
         const _M = botLogic.REFERRAL_MILESTONES || {};
         const _milestoneList = ['signup','firstPost','likes50','likes200','active7','active15','active30']
             .filter(k => _M[k]).map(k => [_M[k].label, _M[k].dia + ' 💎']);
+        // Community-Builder-Ränge direkt aus communityBuilderBadge (keine Drift) — Schwellen 1/5/10/25.
+        const _cbTiers = [1,5,10,25].map(n => { const b = botLogic.communityBuilderBadge(n); return [b.emoji, b.label, n + (n===1?' aktiver':' aktive'), '+' + b.dailyDiamonds + ' 💎/Tag']; });
         const _rankRows = _ranking.length ? _ranking.map((r, i) => {
             const _medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '<span style="display:inline-block;width:22px;text-align:center;color:var(--muted);font-weight:700">' + (i + 1) + '</span>';
             const _me = String(r.uid) === String(myUid);
@@ -21666,7 +21678,7 @@ async function setRing(ringId) {
     <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:14px 8px;text-align:center"><div style="font-size:22px;font-weight:800;color:#06b6d4">${_rstats.diamonds||0}</div><div style="font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-top:2px">💎 verdient</div></div>
   </div>
 
-  ${_badge ? `<div style="display:flex;align-items:center;gap:11px;background:linear-gradient(135deg,rgba(34,197,94,0.10),rgba(6,182,212,0.05));border:1px solid rgba(34,197,94,0.30);border-radius:14px;padding:13px 15px;margin-bottom:16px"><div style="font-size:26px">${_badge.emoji}</div><div><div style="font-size:var(--fs-sm);font-weight:800;color:var(--text)">${_badge.label}</div><div style="font-size:11px;color:var(--muted)">Dein Community-Builder-Rang</div></div></div>` : ''}
+  ${_badge ? `<div style="display:flex;align-items:center;gap:11px;background:linear-gradient(135deg,rgba(34,197,94,0.10),rgba(6,182,212,0.05));border:1px solid rgba(34,197,94,0.30);border-radius:14px;padding:13px 15px;margin-bottom:16px"><div style="font-size:26px">${_badge.emoji}</div><div style="flex:1"><div style="font-size:var(--fs-sm);font-weight:800;color:var(--text)">${_badge.label}</div><div style="font-size:11px;color:var(--muted)">Dein Community-Builder-Rang</div></div><div style="text-align:right;flex-shrink:0"><div style="font-size:var(--fs-base);font-weight:800;color:#06b6d4">+${_badge.dailyDiamonds} 💎</div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px">pro Tag</div></div></div>` : ''}
 
   <!-- Einladungslink -->
   <div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Dein Einladungslink</div>
@@ -21680,6 +21692,13 @@ async function setRing(ringId) {
   <div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Belohnungen pro eingeladenem Creator</div>
   <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:14px;overflow:hidden;margin-bottom:24px">
     ${_milestoneList.map((m,i)=>'<div style="display:flex;align-items:center;justify-content:space-between;padding:11px 15px'+(i>0?';border-top:1px solid var(--border2)':'')+'"><span style="font-size:var(--fs-sm);color:var(--text)">'+m[0]+'</span><span style="font-size:var(--fs-sm);font-weight:800;color:#06b6d4">'+m[1]+'</span></div>').join('')}
+  </div>
+
+  <!-- Community Builder Ränge -->
+  <div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">🏅 Community Builder Ränge</div>
+  <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:14px;overflow:hidden;margin-bottom:24px">
+    <div style="padding:10px 15px;font-size:11px;color:var(--muted)">Jeder Rang zahlt <b style="color:#06b6d4">täglich</b> Diamanten aus — solange du ihn hältst.</div>
+    ${_cbTiers.map(t=>'<div style="display:flex;align-items:center;gap:11px;padding:11px 15px;border-top:1px solid var(--border2)"><div style="font-size:20px;flex-shrink:0">'+t[0]+'</div><div style="flex:1;min-width:0"><div style="font-size:var(--fs-sm);font-weight:700;color:var(--text)">'+t[1]+'</div><div style="font-size:11px;color:var(--muted)">'+t[2]+'</div></div><div style="font-size:var(--fs-sm);font-weight:800;color:#06b6d4;flex-shrink:0">'+t[3]+'</div></div>').join('')}
   </div>
 
   <!-- Community Builder Ranking -->

@@ -3963,10 +3963,10 @@ function referralStatsApi(uid) {
 }
 // Community-Builder-Badge nach Anzahl AKTIVER Einladungen.
 function communityBuilderBadge(activeCount) {
-    if (activeCount >= 50) return { tier: 4, label: 'Community Builder Elite', emoji: '🏛️' };
-    if (activeCount >= 25) return { tier: 3, label: 'Community Builder III', emoji: '🏗️' };
-    if (activeCount >= 10) return { tier: 2, label: 'Community Builder II', emoji: '🤝' };
-    if (activeCount >= 3)  return { tier: 1, label: 'Community Builder I', emoji: '🌱' };
+    if (activeCount >= 25) return { tier: 4, label: 'Community Builder Elite', emoji: '🏛️', dailyDiamonds: 100 };
+    if (activeCount >= 10) return { tier: 3, label: 'Community Builder III', emoji: '🏗️', dailyDiamonds: 50 };
+    if (activeCount >= 5)  return { tier: 2, label: 'Community Builder II', emoji: '🤝', dailyDiamonds: 15 };
+    if (activeCount >= 1)  return { tier: 1, label: 'Community Builder I', emoji: '🌱', dailyDiamonds: 5 };
     return null;
 }
 // Community-Builder-Ranking: User sortiert nach Anzahl aktiver Einladungen.
@@ -3984,12 +3984,35 @@ function communityBuilderRanking(limit) {
     rows.sort((a, b) => b.active - a.active);
     return rows.slice(0, Number(limit) || 50);
 }
+// Tägliche Community-Builder-Belohnung: zahlt jedem User mit Builder-Rang die
+// rangabhängige Diamanten-Belohnung (5/15/50/100 💎) genau 1× pro Tag aus.
+// dayKey = z.B. '2026-05-30'. cbDailyLastDay verhindert Doppelzahlung; Admins,
+// gebannte, pausierte und Sub-Accounts werden übersprungen.
+function payCommunityBuilderDaily(dayKey) {
+    const day = String(dayKey || new Date().toISOString().slice(0, 10));
+    let paidUsers = 0, paidDiamonds = 0;
+    for (const [uid, u] of Object.entries(d.users || {})) {
+        if (!u || u.parent_uid || u.banned || u.paused || istAdminId(uid)) continue;
+        if (u.cbDailyLastDay === day) continue; // heute schon ausgezahlt
+        const ids = Array.isArray(u.referrals) ? u.referrals : [];
+        if (!ids.length) continue;
+        let active = 0;
+        for (const iid of ids) { if (_referralInviteeIsActive(d.users[String(iid)])) active++; }
+        const badge = communityBuilderBadge(active);
+        if (!badge || !badge.dailyDiamonds) continue;
+        addDiamond(uid, badge.dailyDiamonds);
+        u.cbDailyLastDay = day;
+        u.cbDailyTotal = Number(u.cbDailyTotal || 0) + badge.dailyDiamonds;
+        paidUsers++; paidDiamonds += badge.dailyDiamonds;
+    }
+    return { ok: true, paidUsers, paidDiamonds, day };
+}
 
 module.exports = {
     init, setThumbnailFetcher, setBildSaver,
     REFERRAL_MILESTONES,
     ensureReferralCode, linkReferral, grantReferralMilestone, checkReferralProgress,
-    touchReferralActiveDay, referralStatsApi, communityBuilderBadge, communityBuilderRanking, clawbackReferral,
+    touchReferralActiveDay, referralStatsApi, communityBuilderBadge, communityBuilderRanking, payCommunityBuilderDaily, clawbackReferral,
     requestReferralVerification, approveReferral, rejectReferral, referralPendingListApi,
     touchStreakApi, getStreakApi,
     updateProfileApi, addProjectApi, updateProjectApi, deleteProjectApi, completeProfileApi, engagePinnedPostApi,

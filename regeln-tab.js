@@ -468,11 +468,11 @@ module.exports = `
       <div class="why-box">💎 Insgesamt bis zu <b>610 💎</b> pro aktivem Creator.</div>
 
       <h3>Community Builder Rang</h3>
-      <p>Je mehr <b>aktive</b> Creator du bringst, desto höher dein Rang — sichtbar in der <b>Rangliste → 🤝 Builder</b>:</p>
-      <div class="badge-row"><span style="font-size:18px">🌱</span><span class="b-name">Community Builder I</span><span class="b-xp">3 aktive</span></div>
-      <div class="badge-row"><span style="font-size:18px">🤝</span><span class="b-name">Community Builder II</span><span class="b-xp">10 aktive</span></div>
-      <div class="badge-row"><span style="font-size:18px">🏗️</span><span class="b-name">Community Builder III</span><span class="b-xp">25 aktive</span></div>
-      <div class="badge-row"><span style="font-size:18px">🏛️</span><span class="b-name">Community Builder Elite</span><span class="b-xp">50 aktive</span></div>
+      <p>Je mehr <b>aktive</b> Creator du bringst, desto höher dein Rang — sichtbar in der <b>Rangliste → 🤝 Builder</b>. Jeder Rang bringt eine <b>tägliche</b> Diamanten-Belohnung, solange du den Rang hältst:</p>
+      <div class="badge-row"><span style="font-size:18px">🌱</span><span class="b-name">Community Builder I</span><span class="b-xp">1 aktiver</span><span class="b-perk">+5 💎 / Tag</span></div>
+      <div class="badge-row"><span style="font-size:18px">🤝</span><span class="b-name">Community Builder II</span><span class="b-xp">5 aktive</span><span class="b-perk">+15 💎 / Tag</span></div>
+      <div class="badge-row"><span style="font-size:18px">🏗️</span><span class="b-name">Community Builder III</span><span class="b-xp">10 aktive</span><span class="b-perk">+50 💎 / Tag</span></div>
+      <div class="badge-row"><span style="font-size:18px">🏛️</span><span class="b-name">Community Builder Elite</span><span class="b-xp">25 aktive</span><span class="b-perk">+100 💎 / Tag</span></div>
 
       <h3>Wichtig</h3>
       <ul>
