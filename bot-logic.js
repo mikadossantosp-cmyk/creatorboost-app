@@ -3743,8 +3743,143 @@ function getStreakApi(uid) {
     return { streak: 0, best: u.streakBest || 0 };
 }
 
+// ════════════════════════════════════════════════════════════════════════════
+// REFERRAL-SYSTEM — belohnt langfristige Aktivität eingeladener Creator, nicht
+// nur Registrierungen. Jeder Meilenstein zahlt EINMALIG an den Einlader.
+// ════════════════════════════════════════════════════════════════════════════
+const REFERRAL_MILESTONES = {
+    signup:    { dia: 50,  label: 'Registrierung' },
+    firstPost: { dia: 30,  label: 'Erster Beitrag' },
+    likes50:   { dia: 30,  label: '50 Likes vergeben' },
+    likes200:  { dia: 50,  label: '200 Likes vergeben' },
+    active7:   { dia: 50,  label: '7 Tage aktiv' },
+    active15:  { dia: 100, label: '15 Tage aktiv' },
+    active30:  { dia: 250, label: '30 Tage aktiv' },
+};
+// Eingeladener gilt als "aktiv" (Ranking/Badges), sobald er Engagement zeigte: 1 Post ODER 7-Tage-Meilenstein.
+function _referralInviteeIsActive(inv) {
+    if (!inv) return false;
+    if (inv.banned || inv.parent_uid) return false;
+    return !!(inv.refMilestones && (inv.refMilestones.firstPost || inv.refMilestones.active7));
+}
+// Einen eindeutigen Referral-Code für einen User sicherstellen (kurz, URL-tauglich).
+function ensureReferralCode(uid) {
+    uid = String(uid || '');
+    const u = d.users[uid];
+    if (!u) return null;
+    if (u.refCode) return u.refCode;
+    if (!d.refCodeIndex) d.refCodeIndex = {}; // code → uid
+    let code;
+    let attempts = 0;
+    do {
+        code = 'cb' + Math.random().toString(36).slice(2, 8); // z.B. cb7f3k9a
+        attempts++;
+    } while (d.refCodeIndex[code] && attempts < 50);
+    u.refCode = code;
+    d.refCodeIndex[code] = uid;
+    return code;
+}
+// Beim Signup: Verknüpfung Einlader↔Eingeladener dauerhaft speichern + Signup-Meilenstein.
+// refCode = Code des Einladers. inviteeUid = neuer User. Robust gegen Selbst-/Doppel-Referral.
+function linkReferral(refCode, inviteeUid) {
+    refCode = String(refCode || '').trim().toLowerCase();
+    inviteeUid = String(inviteeUid || '');
+    if (!refCode || !inviteeUid) return { ok: false };
+    if (!d.refCodeIndex) d.refCodeIndex = {};
+    const inviterUid = d.refCodeIndex[refCode];
+    const invitee = d.users[inviteeUid];
+    if (!inviterUid || !invitee) return { ok: false };
+    if (String(inviterUid) === inviteeUid) return { ok: false }; // kein Selbst-Referral
+    if (invitee.referredBy) return { ok: false };                // schon verknüpft (dauerhaft)
+    if (getRootUid(inviterUid) === getRootUid(inviteeUid)) return { ok: false }; // keine eigene Familie
+    invitee.referredBy = String(inviterUid);
+    invitee.refMilestones = {};                                  // pro-Invitee Meilenstein-Tracking
+    const inviter = d.users[inviterUid];
+    if (inviter) { if (!Array.isArray(inviter.referrals)) inviter.referrals = []; if (!inviter.referrals.includes(inviteeUid)) inviter.referrals.push(inviteeUid); }
+    grantReferralMilestone(inviteeUid, 'signup');
+    return { ok: true, inviterUid };
+}
+// Zentraler Meilenstein-Trigger: zahlt EINMALIG an den Einlader des inviteeUid.
+// Idempotent über invitee.refMilestones[key]. Gesperrte Einlader bekommen nichts.
+function grantReferralMilestone(inviteeUid, key) {
+    inviteeUid = String(inviteeUid || '');
+    const invitee = d.users[inviteeUid];
+    const ms = REFERRAL_MILESTONES[key];
+    if (!invitee || !ms || !invitee.referredBy) return false;
+    if (!invitee.refMilestones) invitee.refMilestones = {};
+    if (invitee.refMilestones[key]) return false;                // schon vergeben
+    const inviter = d.users[String(invitee.referredBy)];
+    if (!inviter || inviter.banned) return false;                // Einlader gesperrt → kein Reward
+    invitee.refMilestones[key] = Date.now();
+    inviter.refDiamondsEarned = (inviter.refDiamondsEarned || 0) + ms.dia;
+    addDiamond(String(invitee.referredBy), ms.dia);
+    const invName = invitee.spitzname || invitee.name || 'Dein eingeladener Creator';
+    try { sendInAppDM(String(invitee.referredBy), '💎 *Referral-Belohnung!*\n\n' + invName + ' hat einen Meilenstein erreicht: *' + ms.label + '*\n\n+' + ms.dia + ' 💎 für dich!'); } catch (e) {}
+    return true;
+}
+// Prüft die aktivitätsbasierten Meilensteine eines eingeladenen Users (Likes + aktive Tage).
+// Wird nach Like / Post / Login-Tag aufgerufen. Günstig: nur wenn referredBy gesetzt.
+function checkReferralProgress(inviteeUid) {
+    inviteeUid = String(inviteeUid || '');
+    const invitee = d.users[inviteeUid];
+    if (!invitee || !invitee.referredBy) return;
+    const likes = Number(invitee.appLikeCount || 0);
+    if (likes >= 50)  grantReferralMilestone(inviteeUid, 'likes50');
+    if (likes >= 200) grantReferralMilestone(inviteeUid, 'likes200');
+    const days = Number(invitee.refActiveDays || 0);
+    if (days >= 7)  grantReferralMilestone(inviteeUid, 'active7');
+    if (days >= 15) grantReferralMilestone(inviteeUid, 'active15');
+    if (days >= 30) grantReferralMilestone(inviteeUid, 'active30');
+}
+// Aktiven Tag für einen eingeladenen User zählen (gesammelt, mit Lücken). 1×/Tag.
+function touchReferralActiveDay(inviteeUid) {
+    inviteeUid = String(inviteeUid || '');
+    const invitee = d.users[inviteeUid];
+    if (!invitee || !invitee.referredBy) return;
+    const today = new Date().toDateString();
+    if (invitee.refActiveLastDay === today) return;
+    invitee.refActiveLastDay = today;
+    invitee.refActiveDays = (Number(invitee.refActiveDays || 0)) + 1;
+    checkReferralProgress(inviteeUid);
+}
+// Referral-Statistik für den Profilbereich des Einladers.
+function referralStatsApi(uid) {
+    uid = String(uid || '');
+    const u = d.users[uid];
+    if (!u) return { ok: false };
+    const ids = Array.isArray(u.referrals) ? u.referrals : [];
+    let active = 0;
+    for (const iid of ids) { if (_referralInviteeIsActive(d.users[String(iid)])) active++; }
+    return { ok: true, code: u.refCode || ensureReferralCode(uid), invited: ids.length, active, diamonds: Number(u.refDiamondsEarned || 0) };
+}
+// Community-Builder-Badge nach Anzahl AKTIVER Einladungen.
+function communityBuilderBadge(activeCount) {
+    if (activeCount >= 50) return { tier: 4, label: 'Community Builder Elite', emoji: '🏛️' };
+    if (activeCount >= 25) return { tier: 3, label: 'Community Builder III', emoji: '🏗️' };
+    if (activeCount >= 10) return { tier: 2, label: 'Community Builder II', emoji: '🤝' };
+    if (activeCount >= 3)  return { tier: 1, label: 'Community Builder I', emoji: '🌱' };
+    return null;
+}
+// Community-Builder-Ranking: User sortiert nach Anzahl aktiver Einladungen.
+function communityBuilderRanking(limit) {
+    const rows = [];
+    for (const [uid, u] of Object.entries(d.users || {})) {
+        if (!u || u.parent_uid || istAdminId(uid)) continue;
+        const ids = Array.isArray(u.referrals) ? u.referrals : [];
+        if (!ids.length) continue;
+        let active = 0;
+        for (const iid of ids) { if (_referralInviteeIsActive(d.users[String(iid)])) active++; }
+        if (active <= 0) continue;
+        rows.push({ uid: String(uid), name: u.spitzname || u.name || 'Creator', instagram: u.instagram || '', active, invited: ids.length });
+    }
+    rows.sort((a, b) => b.active - a.active);
+    return rows.slice(0, Number(limit) || 50);
+}
+
 module.exports = {
     init, setThumbnailFetcher, setBildSaver,
+    ensureReferralCode, linkReferral, grantReferralMilestone, checkReferralProgress,
+    touchReferralActiveDay, referralStatsApi, communityBuilderBadge, communityBuilderRanking,
     touchStreakApi, getStreakApi,
     updateProfileApi, addProjectApi, updateProjectApi, deleteProjectApi, completeProfileApi, engagePinnedPostApi,
     followApi,
