@@ -17959,6 +17959,19 @@ fetch('/api/admin/engagement-log').then(r=>r.json()).then(j=>{ if (j.ok) { LAST_
             .sort((a,b)=>(d.weeklyXP[b[0]]||0)-(d.weeklyXP[a[0]]||0));
         const dailyRows = makeRankSection(dailySorted, (id)=>d.dailyXP[id]||0, 'Heute noch keine XP');
         const weeklyRows = makeRankSection(weeklySorted, (id)=>d.weeklyXP[id]||0, 'Diese Woche noch keine XP');
+        // Community-Builder-Ranking: Top-Einlader nach aktiven Einladungen (Referral-System).
+        const _cbRanking = (LOCAL_STORE && botLogic.communityBuilderRanking) ? botLogic.communityBuilderRanking(50) : [];
+        const _cbBadgeShort = (n)=>{ if(n>=50)return '🏛️ Elite'; if(n>=25)return '🏗️ III'; if(n>=10)return '🤝 II'; if(n>=3)return '🌱 I'; return ''; };
+        const _cbRows = _cbRanking.length ? _cbRanking.map((r,i)=>{
+            const medal = i===0?'🥇':i===1?'🥈':i===2?'🥉':'<span style="display:inline-block;width:24px;text-align:center;color:var(--muted);font-weight:700">'+(i+1)+'</span>';
+            const me = String(r.uid)===String(myUid);
+            const bdg = _cbBadgeShort(r.active);
+            return '<div style="display:flex;align-items:center;gap:11px;padding:11px 16px;border-bottom:1px solid var(--border2)'+(me?';background:rgba(34,197,94,0.06)':'')+'">'
+                + '<div style="width:26px;font-size:16px;text-align:center;flex-shrink:0">'+medal+'</div>'
+                + '<div style="flex:1;min-width:0"><div style="font-size:var(--fs-sm);font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+htmlEsc(r.name)+(me?' <span style="color:#22c55e;font-size:11px">· du</span>':'')+'</div>'
+                + (bdg?'<div style="font-size:11px;color:#22c55e;font-weight:600;margin-top:1px">'+bdg+'</div>':(r.instagram?'<div style="font-size:11px;color:var(--muted)">@'+htmlEsc(r.instagram)+'</div>':''))+'</div>'
+                + '<div style="text-align:right;flex-shrink:0"><div style="font-size:var(--fs-base);font-weight:800;color:#22c55e">'+r.active+'</div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px">aktiv</div></div></div>';
+        }).join('') : '<div style="padding:32px 16px;text-align:center;color:var(--muted);font-size:var(--fs-sm)">Noch keine Community Builder.<br>Lade aktive Creator ein → <a href="/einladen" style="color:#22c55e;font-weight:700">Einladungslink holen</a></div>';
         // Sieger Gestern: aus dailyAwardsLog (idempotent persistiert in dailyRankingAbschluss).
         // Zeige Top-3 von gestern als Highlight-Banner ueber dem Daily-Ranking.
         const _yesterday = new Date(Date.now() - 86400000);
@@ -18098,6 +18111,7 @@ ${_latestNews ? `<a href="/explore?tab=newsletter" class="highlight-card" style=
   <button onclick="switchRanking('gesamt',this)" id="rtab-gesamt" style="flex:1;background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;border:none;border-radius:10px;padding:7px;font-size:var(--fs-xs);font-weight:700;cursor:pointer">Gesamt</button>
   <button onclick="switchRanking('daily',this)" id="rtab-daily" style="flex:1;background:var(--bg3);color:var(--muted);border:1px solid var(--border2);border-radius:10px;padding:7px;font-size:var(--fs-xs);font-weight:700;cursor:pointer">Daily</button>
   <button onclick="switchRanking('weekly',this)" id="rtab-weekly" style="flex:1;background:var(--bg3);color:var(--muted);border:1px solid var(--border2);border-radius:10px;padding:7px;font-size:var(--fs-xs);font-weight:700;cursor:pointer">Woche</button>
+  <button onclick="switchRanking('builder',this)" id="rtab-builder" style="flex:1;background:var(--bg3);color:var(--muted);border:1px solid var(--border2);border-radius:10px;padding:7px;font-size:var(--fs-xs);font-weight:700;cursor:pointer">🤝 Builder</button>
 </div>
 <div id="rlist-gesamt" style="padding-bottom:100px">${_nearMissHtml}${rankingRows}</div>
 <div id="rlist-daily" style="display:none;padding-bottom:100px">
@@ -18121,9 +18135,16 @@ ${_latestNews ? `<a href="/explore?tab=newsletter" class="highlight-card" style=
   ${_lastWeekWinnerHtml}
   ${weeklyRows}
 </div>
+<div id="rlist-builder" style="display:none;padding-bottom:100px">
+  <div style="margin:0 16px 12px;padding:12px 14px;background:linear-gradient(135deg,rgba(34,197,94,0.12),rgba(6,182,212,0.06));border:1px solid rgba(34,197,94,0.30);border-radius:12px;font-size:12.5px;line-height:1.55">
+    <div style="font-weight:800;color:#22c55e;margin-bottom:4px">🤝 Community Builder</div>
+    <div style="color:var(--muted)">Wer die meisten <b>aktiven</b> Creator in die Community gebracht hat. Lade selbst ein → <a href="/einladen" style="color:#22c55e;font-weight:700">Einladungslink holen</a></div>
+  </div>
+  ${_cbRows}
+</div>
 <script>
 function switchRanking(tab, btn) {
-  ['gesamt','daily','weekly'].forEach(t=>{
+  ['gesamt','daily','weekly','builder'].forEach(t=>{
     const rl=document.getElementById('rlist-'+t);
     if(t===tab){rl.style.display='block';rl.style.animation='none';void rl.offsetWidth;rl.style.animation='tabFade .26s ease';}else rl.style.display='none';
     const b=document.getElementById('rtab-'+t);

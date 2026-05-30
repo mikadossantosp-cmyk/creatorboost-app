@@ -60,6 +60,7 @@ module.exports = `
     <button data-target="r-xp">XP</button>
     <button data-target="r-badges">Badges</button>
     <button data-target="r-shop">Shop</button>
+    <button data-target="r-einladen">🤝 Einladen</button>
   </nav>
 
   <section id="r-mission" class="regeln-section active">
@@ -440,6 +441,48 @@ module.exports = `
         <li>• Bonus-Links umgehen das Tageslimit einmalig</li>
       </ul>
       <p style="font-size:12px;color:var(--muted);margin-top:10px">Alle Banner & Ringe findest du im 💎 Diamant Shop.</p>
+    </div>
+  </section>
+
+  <section id="r-einladen" class="regeln-section">
+    <div class="regeln-card">
+      <h2>🤝 Creator einladen</h2>
+      <p>Lade aktive Creator in die Community ein und verdiene <b>Diamanten</b> — belohnt wird <b>echte, langfristige Aktivität</b> deiner Eingeladenen, nicht das bloße Anmelden.</p>
+      <p>Deinen persönlichen Einladungslink findest du unter <b>Profil → Creator einladen</b>.</p>
+
+      <h3>So funktioniert's</h3>
+      <ul>
+        <li>1️⃣ Teile deinen Einladungslink</li>
+        <li>2️⃣ Dein Creator registriert sich &amp; wird aktiv</li>
+        <li>3️⃣ Du bekommst Diamanten bei jedem Meilenstein 💎</li>
+      </ul>
+
+      <h3>Belohnungen pro Creator</h3>
+      <div class="regeln-row"><span>Registrierung <span style="font-size:11px;color:var(--muted)">(nach Insta + Prüfung)</span></span><span class="konsequenz k-xp">100 💎</span></div>
+      <div class="regeln-row"><span>Erster Beitrag</span><span class="konsequenz k-xp">30 💎</span></div>
+      <div class="regeln-row"><span>50 Likes vergeben</span><span class="konsequenz k-xp">30 💎</span></div>
+      <div class="regeln-row"><span>200 Likes vergeben</span><span class="konsequenz k-xp">50 💎</span></div>
+      <div class="regeln-row"><span>7 Tage aktiv</span><span class="konsequenz k-xp">50 💎</span></div>
+      <div class="regeln-row"><span>15 Tage aktiv</span><span class="konsequenz k-xp">100 💎</span></div>
+      <div class="regeln-row"><span>30 Tage aktiv</span><span class="konsequenz k-xp">250 💎</span></div>
+      <div class="why-box">💎 Insgesamt bis zu <b>610 💎</b> pro aktivem Creator.</div>
+
+      <h3>Community Builder Rang</h3>
+      <p>Je mehr <b>aktive</b> Creator du bringst, desto höher dein Rang — sichtbar in der <b>Rangliste → 🤝 Builder</b>:</p>
+      <div class="badge-row"><span style="font-size:18px">🌱</span><span class="b-name">Community Builder I</span><span class="b-xp">3 aktive</span></div>
+      <div class="badge-row"><span style="font-size:18px">🤝</span><span class="b-name">Community Builder II</span><span class="b-xp">10 aktive</span></div>
+      <div class="badge-row"><span style="font-size:18px">🏗️</span><span class="b-name">Community Builder III</span><span class="b-xp">25 aktive</span></div>
+      <div class="badge-row"><span style="font-size:18px">🏛️</span><span class="b-name">Community Builder Elite</span><span class="b-xp">50 aktive</span></div>
+
+      <h3>Wichtig</h3>
+      <ul>
+        <li>• „Aktiv" = der Eingeladene hat echtes Engagement gezeigt (1 Post oder 7 Tage aktiv)</li>
+        <li>• Jeder Meilenstein wird nur <b>einmal</b> belohnt</li>
+        <li>• Belohnung fließt erst nach <b>Insta-Username + Admin-Prüfung</b></li>
+        <li>• <b>Kein Self-Referral</b>, keine eigenen Sub-Accounts</li>
+        <li>• Bei gesperrten Fake-Accounts werden Belohnungen <b>zurückgezogen</b></li>
+      </ul>
+      <div class="bad-card" style="margin-top:10px">🚫 Ziel ist echte Community — nicht das Sammeln von Karteileichen. Fake-Einladungen werden sanktioniert.</div>
     </div>
   </section>
 
