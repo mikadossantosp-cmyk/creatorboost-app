@@ -248,7 +248,7 @@ function _badgeUpDM(uid, u, alteBadge) {
         if (!u.trophies) u.trophies = [];
         const trophy = _trophyMap[u.role];
         if (trophy && !u.trophies.includes(trophy)) u.trophies.push(trophy);
-        dmUser(uid, '🎉 Neuer Rang erreicht\n\n' + alteBadge + '  →  ' + u.role + '\n\n⭐ ' + u.xp + ' XP gesamt\n\nWeiter so, du wächst! 💪' + _levelUpExtra(u.role)).catch(() => {});
+        dmUser(uid, '🎉 Neuer Rang erreicht\n\n' + alteBadge + '  →  ' + u.role + '\n\n⭐ Gesamt: ' + u.xp + ' XP\n\nWeiter so, du wächst! 💪' + _levelUpExtra(u.role)).catch(() => {});
     }
 }
 
@@ -538,7 +538,7 @@ async function likeFromApp(uid, msgId) {
     if (!istAdminId(uid) && u) {
         const _evtBonusL = applyPostBonus(uid, u.name || 'User');
         if (_evtBonusL.events.length) {
-            const parts = _evtBonusL.events.map(e => e.type === 'diamond' ? ('+' + e.amount + ' 💎') : e.type === 'xp' ? ('+' + e.amount + ' XP') : '').filter(Boolean);
+            const parts = _evtBonusL.events.map(e => e.type === 'diamond' ? ('💎 +' + e.amount + ' Diamant' + (e.amount !== 1 ? 'en' : '')) : e.type === 'xp' ? ('⭐ +' + e.amount + ' XP') : '').filter(Boolean);
             if (parts.length) { try { sendInAppDM(uid, '🎉 Event-Bonus für deinen Like\n\n' + parts.join('\n') + '\n\nDas Event läuft noch — like weiter!'); } catch (e) {} }
         }
     }
@@ -654,7 +654,7 @@ async function postLinkFromApp({ uid, name, url, caption }) {
 
     const _evtBonus = applyPostBonus(uid, u.name || name);
     if (_evtBonus.events.length) {
-        const parts = _evtBonus.events.map(e => e.type === 'diamond' ? ('+' + e.amount + ' 💎') : e.type === 'xp' ? ('+' + e.amount + ' XP') : '').filter(Boolean);
+        const parts = _evtBonus.events.map(e => e.type === 'diamond' ? ('💎 +' + e.amount + ' Diamant' + (e.amount !== 1 ? 'en' : '')) : e.type === 'xp' ? ('⭐ +' + e.amount + ' XP') : '').filter(Boolean);
         if (parts.length) { try { sendInAppDM(uid, '🎉 Event-Bonus für deinen Post\n\n' + parts.join('\n') + '\n\nDas Event läuft noch — bleib dran!'); } catch (e) {} }
     }
 
@@ -3767,7 +3767,7 @@ async function runWochenGewinnspielApi() {
             if (!Array.isArray(d.wochenGewinnspiel.gewinner)) d.wochenGewinnspiel.gewinner = [];
             d.wochenGewinnspiel.gewinner.push({ name: winnerName, uid: winnerId, datum: new Date().toLocaleDateString() });
             d.wochenGewinnspiel.letzteAuslosung = Date.now();
-            try { await dmUser(winnerId, '🎉 Du hast das Wochen-Gewinnspiel gewonnen\n\n🎁 1 Extra-Link für nächste Woche\n\nGlückwunsch!'); } catch (e) {}
+            try { await dmUser(winnerId, '🎉 Du hast das Wochen-Gewinnspiel gewonnen\n\n🔗 +1 Extra-Link für nächste Woche\n\nGlückwunsch!'); } catch (e) {}
         } else {
             console.log('❌ Wochen-Gewinnspiel: keine Teilnehmer');
         }
