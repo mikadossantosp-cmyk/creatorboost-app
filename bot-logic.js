@@ -139,6 +139,68 @@ function migrateDataOnBoot() {
     try { const r = _tidyStoredCreatorBoostDMs(); if (r && r.changed) changed += r.changed; } catch (e) {}
     return { ok: true, changed };
 }
+
+// ── Community-Activity-Ticker (Social-Proof im Feed) ─────────────────────────
+function logActivity(type, name, detail) {
+    try {
+        if (!d) return;
+        name = String(name == null ? '' : name).trim();
+        if (!name) return;
+        if (!Array.isArray(d.communityActivity)) d.communityActivity = [];
+        const at = Date.now();
+        const last = d.communityActivity[d.communityActivity.length - 1];
+        if (last && last.type === type && last.name === name && last.detail === String(detail || '') && (at - last.at) < 60000) return;
+        d.communityActivity.push({ type, name: name.slice(0, 40), detail: String(detail || '').slice(0, 60), at });
+        while (d.communityActivity.length > 50) d.communityActivity.shift();
+    } catch (e) {}
+}
+function getCommunityActivity(limit) {
+    limit = Math.max(1, Math.min(20, Number(limit) || 12));
+    const now = Date.now();
+    const items = [];
+    const adminIds = Array.isArray(d._adminIds) ? d._adminIds.map(Number) : [];
+    const isAdm = (uid) => adminIds.includes(Number(uid)) || istAdminId(uid);
+    const nameOf = (uid, fallback) => (d.users[uid] && (d.users[uid].spitzname || d.users[uid].name)) || fallback || '';
+    if (Array.isArray(d.communityActivity)) {
+        for (const a of d.communityActivity) {
+            if (!a || !a.name) continue;
+            if (a.type === 'rank') items.push({ at: a.at, emoji: '🚀', name: a.name, txt: 'ist jetzt ' + (a.detail || 'aufgestiegen') });
+            else if (a.type === 'newmember') items.push({ at: a.at, emoji: '🌟', name: a.name, txt: 'ist neu dabei' });
+            else if (a.type === 'milestone') items.push({ at: a.at, emoji: '💎', name: a.name, txt: a.detail || 'hat einen Meilenstein erreicht' });
+        }
+    }
+    const medal = { 1: '🥇', 2: '🥈', 3: '🥉' };
+    if (Array.isArray(d.dailyAwardsLog)) {
+        for (const a of d.dailyAwardsLog) {
+            if (!a || !a.at || (now - a.at) > 36 * 3600 * 1000 || isAdm(a.uid)) continue;
+            const nm = nameOf(a.uid, a.name);
+            if (nm) items.push({ at: a.at, emoji: medal[a.place] || '🏅', name: nm, txt: 'holte Platz ' + a.place + ' im Tagesranking' });
+        }
+    }
+    if (Array.isArray(d.weeklyAwardsLog)) {
+        for (const a of d.weeklyAwardsLog) {
+            if (!a || !a.at || (now - a.at) > 4 * 24 * 3600 * 1000 || isAdm(a.uid)) continue;
+            const nm = nameOf(a.uid, a.name);
+            if (nm) items.push({ at: a.at, emoji: medal[a.place] || '🏅', name: nm, txt: 'holte Platz ' + a.place + ' im Wochen-Ranking' });
+        }
+    }
+    let newToday = 0;
+    for (const u of Object.values(d.users || {})) {
+        if (u && u.joinDate && (now - u.joinDate) <= 24 * 3600 * 1000 && !u.parent_uid && !u.banned) newToday++;
+    }
+    if (newToday >= 2) items.push({ at: now - 1, emoji: '👥', name: '', txt: newToday + ' neue Creator heute' });
+    items.sort((a, b) => b.at - a.at);
+    const seen = new Set();
+    const out = [];
+    for (const it of items) {
+        const key = it.emoji + '|' + it.name + '|' + it.txt;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        out.push({ emoji: it.emoji, name: it.name, txt: it.txt });
+        if (out.length >= limit) break;
+    }
+    return out;
+}
 // Web-Push entfällt im Logik-Modul (kein Zustand) — Verdrahtung übernimmt der Server.
 // Zentraler DM-Normalizer: jede ausgehende CreatorBoost-DM läuft hier durch, damit der
 // Stil app-weit konsistent ist (reiner Plaintext, keine Markdown-Reste, keine Trennbalken,
@@ -261,6 +323,7 @@ function _badgeUpDM(uid, u, alteBadge) {
         if (!u.trophies) u.trophies = [];
         const trophy = _trophyMap[u.role];
         if (trophy && !u.trophies.includes(trophy)) u.trophies.push(trophy);
+        if (!istAdminId(uid)) { try { logActivity('rank', (u.spitzname || u.name), u.role); } catch (e) {} }
         dmUser(uid, '🎉 Neuer Rang erreicht\n\n' + alteBadge + '  →  ' + u.role + '\n\n⭐ Gesamt: ' + u.xp + ' XP\n\nWeiter so, du wächst! 💪' + _levelUpExtra(u.role)).catch(() => {});
     }
 }
@@ -661,6 +724,7 @@ async function postLinkFromApp({ uid, name, url, caption }) {
         linkData.firstPostBonusUntil = Date.now() + 8 * 3600 * 1000;
         xpAdd(uid, 20, u.name || name);
         try { sendInAppDM(uid, '🌟 Willkommen — dein erster Post ist live\n\n⭐ +20 XP Willkommens-Bonus\n\nDein Post steht 8 Stunden ganz oben im Heute-Feed. Wer ihn liked, bekommt +20 XP extra.'); } catch (e) {}
+        try { logActivity('newmember', (u.spitzname || u.name || name), ''); } catch (e) {}
         // Referral: erster Beitrag des eingeladenen Creators → +30 💎 für den Einlader.
         try { grantReferralMilestone(String(uid), 'firstPost'); } catch (e) {}
     }
@@ -4152,6 +4216,7 @@ module.exports = {
     getMission, updateMissionProgress, checkMissionen, missionStatusApi, familyUids,
     istInstagramLink, addDiamond, applyPostBonus,
     sendInAppDM, addNotification, dmUser, sendCreatorBoostDM, ensureCreatorBoostUser, _tidyStoredCreatorBoostDMs, migrateDataOnBoot,
+    logActivity, getCommunityActivity,
     badgeBonusLinks, generateSyntheticLinkId, tryFetchThumbnail,
     M3_CAP, CREATORBOOST_UID,
     authEmailPassword, setUserPasswordApi, setAppCodeApi, createEmailUserApi,

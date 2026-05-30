@@ -11414,6 +11414,25 @@ ${(()=>{
       + '<span><b style="color:var(--text)">' + _cnt + ' Creator</b> gerade aktiv — jetzt ist Engagement am stärksten.</span></div>';
   } catch(e) { return ''; }
 })()}
+${(()=>{
+  // Community-Activity-Ticker: rotierender Social-Proof aus echten Ereignissen
+  // (Ranking-Sieger, Rang-Aufstiege, neue Mitglieder). Alle Daten real, Namen escaped.
+  try {
+    const _acts = (botLogic.getCommunityActivity ? botLogic.getCommunityActivity(12) : []) || [];
+    if (_acts.length < 2) return '';
+    const _esc = s => String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    const _data = _esc(JSON.stringify(_acts.map(a=>({e:a.emoji,n:a.name,t:a.txt}))));
+    const _f = _acts[0];
+    return '<div id="cb-activity-ticker" data-acts="'+_data+'" style="margin:8px 16px 2px;padding:10px 13px;background:linear-gradient(135deg,rgba(124,58,237,0.10),rgba(167,139,250,0.04));border:1px solid rgba(124,58,237,0.22);border-radius:14px;display:flex;align-items:center;gap:9px;overflow:hidden">'
+      + '<span style="font-size:9.5px;font-weight:800;letter-spacing:.6px;color:#7c3aed;text-transform:uppercase;flex-shrink:0">Community</span>'
+      + '<div class="cbt-slot" style="flex:1;min-width:0;display:flex;align-items:center;gap:6px;font-size:var(--fs-sm);color:var(--muted);white-space:nowrap;overflow:hidden;transition:opacity .35s ease">'
+        + '<span class="cbt-e" style="flex-shrink:0">'+_esc(_f.emoji)+'</span>'
+        + '<span class="cbt-n" style="font-weight:800;color:var(--text);flex-shrink:0">'+(_f.name?_esc(_f.name)+' ':'')+'</span>'
+        + '<span class="cbt-t" style="overflow:hidden;text-overflow:ellipsis">'+_esc(_f.txt)+'</span>'
+      + '</div></div>'
+      + '<script>(function(){var el=document.getElementById("cb-activity-ticker");if(!el||el._i)return;el._i=1;var a;try{a=JSON.parse(el.getAttribute("data-acts"));}catch(e){return;}if(!a||a.length<2)return;var slot=el.querySelector(".cbt-slot"),se=el.querySelector(".cbt-e"),sn=el.querySelector(".cbt-n"),st=el.querySelector(".cbt-t"),k=0;setInterval(function(){k=(k+1)%a.length;slot.style.opacity="0";setTimeout(function(){var o=a[k];se.textContent=o.e||"";sn.textContent=o.n?o.n+" ":"";st.textContent=o.t||"";slot.style.opacity="1";},350);},3800);})();</script>';
+  } catch(e){ return ''; }
+})()}
 <div style="width:100%">${storiesHtml}</div>
 ${(()=>{
   // Perf: einmaliger Pass durch d.links statt 2x Object.values().some()+.filter()
