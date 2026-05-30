@@ -83,8 +83,21 @@ function _tidyStoredCreatorBoostDMsV2() {
     if (!d || d._dmTidyV2) return { ok: true, skipped: true };
     if (!d.messages) { d._dmTidyV2 = true; return { ok: true, changed: 0 }; }
     const medalPlace = { '🥇': 1, '🥈': 2, '🥉': 3 };
+    // Kanonischer Link-Regeln-Text (identisch zu postLinkFromApp) — ersetzt alte Versionen
+    // im Verlauf, u.a. die sachlich falsche Zeile "2-Wort-Kommentar = Pflicht (M2/M3)".
+    const LINK_RULES_CANON = '✅ Dein Link ist gepostet\n\n' +
+        'Damit dein Reel zählt, denk an diese 3 Dinge:\n\n' +
+        '1. Like heute 5 andere Reels (Mission 1)\n' +
+        '2. Öffne jedes Reel erst auf Instagram, like & kommentiere dort — dann hier bestätigen\n' +
+        '3. Auswertung ist täglich um 12:00 Uhr\n\n' +
+        'Schaffst du die 5 Likes nicht, gibt es eine Verwarnung. Alle Details findest du in den Regeln.';
     const upgradeOne = (raw) => {
         let t = String(raw || '');
+        // Alte Link-Regeln-DM (egal welche Variante): beginnt mit "✅ Dein Link ist gepostet".
+        // Ältere Fassungen hatten eine falsche M2/M3-Kommentarpflicht → komplett ersetzen.
+        if (/^✅\s*Dein Link ist gepostet/.test(t)) {
+            return t === LINK_RULES_CANON ? t : LINK_RULES_CANON;
+        }
         // Alte Tagesranking-DM: "🎉 🥈 im Tagesranking!\n\nDeine Preise:\n..." → mit Platz-Nummer.
         let m = t.match(/^🎉\s*(🥇|🥈|🥉)\s*im Tagesranking!?/);
         if (m) {
