@@ -435,6 +435,8 @@ async function likeFromApp(uid, msgId) {
             addDiamond(uid, 1);
             dmUser(uid, `💎 *${u.appLikeCount} Likes via App!*\n\nDu hast +1 Diamant verdient. Aktuell: ${u.diamonds || 0} 💎`).catch(() => {});
         }
+        // Referral: Likes-Meilensteine des Einladers prüfen (50/200 vergebene Likes).
+        try { checkReferralProgress(uid); } catch (e) {}
     }
     if (!istAdminId(uid) && u) {
         const _evtBonusL = applyPostBonus(uid, u.name || 'User');
@@ -550,6 +552,8 @@ async function postLinkFromApp({ uid, name, url, caption }) {
         linkData.firstPostBonusUntil = Date.now() + 8 * 3600 * 1000;
         xpAdd(uid, 20, u.name || name);
         try { sendInAppDM(uid, '🌟 Willkommen — dein erster Post ist live!\n\n+20 XP Welcome-Bonus erhalten.\nDein Post wird 8h lang ganz oben im Heute-Feed gepinned. Liker bekommen +20 XP extra.'); } catch (e) {}
+        // Referral: erster Beitrag des eingeladenen Creators → +30 💎 für den Einlader.
+        try { grantReferralMilestone(String(uid), 'firstPost'); } catch (e) {}
     }
 
     const _evtBonus = applyPostBonus(uid, u.name || name);

@@ -986,6 +986,8 @@ let _cachedLandingHtml = null;
 // Landing-Tracking + Admin-Fulltour-Hook (für /willkommen via injection)
 const LANDING_TRACK_SCRIPT = `<script>
 (function(){
+  // Referral-Code aus ?ref= merken, falls der Besucher erst später signt.
+  try{var _r=new URLSearchParams(location.search).get('ref');if(_r)localStorage.setItem('cb_ref',_r.slice(0,40));}catch(e){}
   function trk(ev,m){try{const body=JSON.stringify({event:ev,meta:m||{}});if(navigator.sendBeacon){const b=new Blob([body],{type:'application/json'});navigator.sendBeacon('/api/track-funnel',b);}else{fetch('/api/track-funnel',{method:'POST',headers:{'Content-Type':'application/json'},body:body,keepalive:true});}}catch(e){}}
   function bind(){
     document.querySelectorAll('a[href*="t.me/"]').forEach(function(a){a.addEventListener('click',function(){trk('telegram-click',{href:a.getAttribute('href')||''});});});
@@ -5347,7 +5349,7 @@ self.addEventListener('notificationclick',e=>{
             const _today = new Date().toDateString();
             if (session._streakDay !== _today) {
                 session._streakDay = _today;
-                localWrite(() => botLogic.touchStreakApi({ uid: String(getMyUid(session)) }));
+                localWrite(() => { botLogic.touchStreakApi({ uid: String(getMyUid(session)) }); botLogic.touchReferralActiveDay(String(getMyUid(session))); });
             }
         } catch (e) {}
     }
@@ -6101,7 +6103,7 @@ function submitSignup(ev){
   if(!em || pw.length<6){msg.textContent='Email + Passwort (min. 6 Zeichen) erforderlich';msg.classList.add('show','err');return false;}
   if(!ageOk){msg.textContent='Bitte bestätige dein Alter und akzeptiere Datenschutz + AGB';msg.classList.add('show','err');return false;}
   btn.disabled=true;btn.textContent='⏳ Account wird erstellt...';
-  fetch('/api/auth/email-signup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:em,password:pw,ageConfirmed:true,termsAccepted:true})})
+  fetch('/api/auth/email-signup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:em,password:pw,ageConfirmed:true,termsAccepted:true,ref:(new URLSearchParams(location.search).get('ref')||(function(){try{return localStorage.getItem('cb_ref')||'';}catch(e){return '';}})())})})
     .then(function(r){return r.json().then(function(j){return{s:r.status,j:j};});})
     .then(function(o){
       if(o.j&&o.j.ok&&o.j.redirect){
@@ -6449,6 +6451,12 @@ try { fetch('/api/track-funnel',{method:'POST',headers:{'Content-Type':'applicat
         postBot('/log-email-login', { email, success: true, method: 'signup', uid: String(created.uid), ip: _ip, ua: _ua }).catch(()=>{});
         // Funnel-Event: Signup abgeschlossen
         _trackFunnel('signup-complete', { method: 'email' }, String(created.uid));
+        // Referral: wenn ein Einladungscode mitkam, Einlader↔Eingeladener dauerhaft verknüpfen
+        // + Signup-Meilenstein (+50 💎). Robust gegen Selbst-/Familie-/Doppel-Referral (in linkReferral).
+        try {
+            const _refCode = String(body.ref || '').trim();
+            if (_refCode && LOCAL_STORE) { await localWrite(() => botLogic.linkReferral(_refCode, String(created.uid))); }
+        } catch (e) {}
         // Session erstellen — DIREKT (uncached) /data holen: der _dataCache ist nach dem
         // frischen Create u.U. noch stale (stale-while-revalidate) und enthält den gerade
         // angelegten User NICHT → früher "Lookup fehlgeschlagen" = User ausgesperrt obwohl
