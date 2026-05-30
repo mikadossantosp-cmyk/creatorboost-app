@@ -12535,10 +12535,17 @@ async function submitSuperLink(){
   function prismaCss(){
     if (document.getElementById('prisma-css')) return;
     const s = document.createElement('style'); s.id='prisma-css';
-    s.textContent = '.prisma-card{position:relative;margin:0 16px 14px;border-radius:18px;overflow:hidden;background:linear-gradient(180deg,var(--bg3),var(--bg2));isolation:isolate}'+
-      '.prisma-card-glow{position:absolute;inset:-2px;border-radius:20px;padding:2px;background:conic-gradient(from 0deg,#ef4444,#f59e0b,#22c55e,#06b6d4,#a855f7,#ef4444);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;animation:pl-glow 5s linear infinite;pointer-events:none}'+
+    s.textContent = '.prisma-card{position:relative;margin:0 16px 16px;border-radius:20px;overflow:hidden;isolation:isolate}'+
+      '.prisma-card-glow{position:absolute;inset:-2px;border-radius:22px;padding:2.5px;background:conic-gradient(from 0deg,#ef4444,#f59e0b,#22c55e,#06b6d4,#a855f7,#ef4444);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;animation:pl-glow 4s linear infinite;pointer-events:none;filter:saturate(1.3)}'+
       '@keyframes pl-glow{to{transform:rotate(360deg)}}'+
-      '.prisma-card-body{position:relative;padding:14px;background:var(--bg3);border-radius:16px;margin:2px}';
+      // Premium-Body: tiefes dunkles Holo-Panel (immer dunkel, hebt sich klar vom Feed ab) +
+      // subtiler diagonaler Shimmer-Sheen, der langsam über die Karte gleitet.
+      '.prisma-card-body{position:relative;padding:16px;border-radius:17px;margin:2.5px;background:radial-gradient(120% 80% at 0% 0%,rgba(168,85,247,0.18),transparent 55%),radial-gradient(120% 80% at 100% 100%,rgba(6,182,212,0.16),transparent 55%),linear-gradient(160deg,#15131f 0%,#0d0c14 55%,#100b18 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,0.07),inset 0 -20px 40px rgba(0,0,0,0.45);overflow:hidden}'+
+      '.prisma-card-body::before{content:"";position:absolute;top:0;left:-60%;width:50%;height:100%;background:linear-gradient(105deg,transparent,rgba(255,255,255,0.10),transparent);transform:skewX(-18deg);animation:pl-sheen 6s ease-in-out infinite;pointer-events:none}'+
+      '@keyframes pl-sheen{0%,75%{left:-60%}90%,100%{left:140%}}'+
+      // Body ist immer dunkel → Liker-Namen-Zeile hell erzwingen (var(--text)/--muted wären
+      // im Light-Mode dunkel = unsichtbar). Eigene Klasse, greift nur hier.
+      '.prisma-names{color:rgba(255,255,255,0.62) !important}.prisma-names b{color:#fff !important}';
     document.head.appendChild(s);
   }
   function renderCard(p){
@@ -12559,8 +12566,8 @@ async function submitSuperLink(){
           '</div>' +
           '<div style="font-size:11px;color:#a855f7;font-weight:700;text-align:right;flex-shrink:0">⏱<br>'+fmtRemaining(remaining)+'</div>' +
         '</div>' +
-        '<div style="font-size:13.5px;font-weight:700"><a href="/profil/'+esc(p.uid)+'" style="color:var(--text);text-decoration:none">'+aName+'</a> '+(aHandle?'<span style="color:#a855f7;font-weight:500;font-size:12px">'+aHandle+'</span>':'')+'</div>' +
-        (p.caption ? '<div style="font-size:13px;color:var(--text);line-height:1.5;margin:6px 0 8px">'+esc(p.caption)+'</div>' : '') +
+        '<div style="font-size:13.5px;font-weight:700"><a href="/profil/'+esc(p.uid)+'" style="color:#fff;text-decoration:none">'+aName+'</a> '+(aHandle?'<span style="color:#c9a8ff;font-weight:500;font-size:12px">'+aHandle+'</span>':'')+'</div>' +
+        (p.caption ? '<div style="font-size:13px;color:rgba(255,255,255,0.82);line-height:1.5;margin:6px 0 8px">'+esc(p.caption)+'</div>' : '') +
         '<a href="'+esc(cleanInstagramUrl(p.url))+'" target="_blank" rel="noopener noreferrer" onclick="window._pvisit_'+p.id+'=Date.now()" style="display:flex;align-items:center;justify-content:center;gap:var(--space-2);padding:var(--space-4);background:linear-gradient(135deg,#ec4899,#a855f7);color:#fff;border-radius:12px;font-size:14.5px;font-weight:800;text-decoration:none;margin-bottom:10px;box-shadow:0 6px 18px rgba(168,85,247,.45);position:relative"><span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900">1</span><span style="color:#fff;font-weight:800;display:inline-flex;align-items:center;gap:7px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17" cy="7" r="1.1" fill="currentColor" stroke="none"/></svg>Auf Instagram öffnen</span><span style="font-size:18px;margin-left:var(--space-1)">→</span></a>' +
         '<div style="margin-bottom:10px;padding:13px 14px;background:rgba(245,158,11,0.13);border:2.5px solid #f59e0b;border-radius:13px;box-shadow:0 0 0 3px rgba(245,158,11,0.18),0 4px 14px rgba(245,158,11,0.20)">' +
           '<div style="font-size:13.5px;font-weight:900;color:#f59e0b;text-transform:uppercase;letter-spacing:0.6px;margin-bottom:7px;display:flex;align-items:center;gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M10.3 4 2 18.3A1.6 1.6 0 0 0 3.4 20.7h17.2A1.6 1.6 0 0 0 22 18.3L13.7 4a1.6 1.6 0 0 0-3.4 0z"/><line x1="12" y1="9.5" x2="12" y2="13.5"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>FULL ENGAGEMENT PFLICHT</div>' +
@@ -12591,7 +12598,7 @@ async function submitSuperLink(){
           }).join('');
           return '<div id="liker-rows-pl-'+esc(p.id)+'" style="display:none">'+rows+'</div>' +
             '<div style="display:flex;align-items:center;justify-content:space-between;gap:var(--space-2);margin-top:10px;padding:0 4px">' +
-              '<div style="font-size:12px;color:var(--muted);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+namesTxt+'</div>' +
+              '<div class="prisma-names" style="font-size:12px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+namesTxt+'</div>' +
               '<button onclick="showLikerModal(\\'pl-'+esc(p.id)+'\\')" style="background:rgba(168,85,247,0.10);border:1px solid rgba(168,85,247,0.35);color:#a855f7;font-size:11px;font-weight:700;padding:5px 10px;border-radius:8px;cursor:pointer;white-space:nowrap;flex-shrink:0"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:var(--space-1)"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Wer hat engagiert? ('+cnt+')</button>' +
             '</div>';
         })() +
