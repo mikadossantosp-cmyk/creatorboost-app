@@ -11444,7 +11444,19 @@ ${tab==='engagement' ? `<div style="padding:12px 16px 4px">
   }
 </div>` : ''}
 ${postsHtml}
-<div style="margin:18px 16px 90px;padding:13px 16px;background:var(--bg3);border:1px solid var(--border2);border-radius:14px;display:flex;align-items:center;gap:11px">
+<div id="ref-promo" style="margin:18px 16px 12px;padding:16px;background:linear-gradient(135deg,rgba(34,197,94,0.12),rgba(6,182,212,0.06));border:1px solid rgba(34,197,94,0.30);border-radius:16px;position:relative">
+  <button onclick="try{localStorage.setItem('cb_ref_promo_hidden','1')}catch(e){};document.getElementById('ref-promo').remove()" aria-label="Ausblenden" style="position:absolute;top:8px;right:8px;background:transparent;border:none;color:var(--muted);font-size:18px;cursor:pointer;width:28px;height:28px;line-height:1">×</button>
+  <div style="display:flex;align-items:center;gap:12px">
+    <div style="font-size:30px;line-height:1;flex-shrink:0">💎🤝</div>
+    <div style="flex:1;min-width:0">
+      <div style="font-size:var(--fs-base);font-weight:800;color:var(--text);line-height:1.2">Lade Creator ein — verdiene Diamanten</div>
+      <div style="font-size:var(--fs-xs);color:var(--muted);margin-top:2px;line-height:1.4">Bis zu 610 💎 pro aktivem Creator, den du bringst.</div>
+    </div>
+  </div>
+  <a href="/einladen" style="display:block;text-align:center;margin-top:12px;background:linear-gradient(135deg,#22c55e,#06b6d4);color:#fff;border-radius:11px;padding:11px;font-size:13.5px;font-weight:800;text-decoration:none">Meinen Einladungslink holen →</a>
+</div>
+<script>try{if(localStorage.getItem('cb_ref_promo_hidden')==='1'){var _rp=document.getElementById('ref-promo');if(_rp)_rp.remove();}}catch(e){}</script>
+<div style="margin:0 16px 90px;padding:13px 16px;background:var(--bg3);border:1px solid var(--border2);border-radius:14px;display:flex;align-items:center;gap:11px">
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
   <div style="font-size:var(--fs-xs);color:var(--muted);line-height:1.45">Echtes Engagement von echten Creatorn — <b style="color:var(--text)">keine Bots, keine gekauften Likes</b>. Self-Likes &amp; Fake-Engagement werden automatisch erkannt und sanktioniert.</div>
 </div>
