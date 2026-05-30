@@ -10467,6 +10467,23 @@ p{line-height:1.65;color:var(--muted)}
             : await postBot(body.unpause ? '/unpause-user-api' : '/pause-user-api', { uid: String(body.uid||'') });
         return json(r || {ok:false, error:'Mainbot offline'});
     }
+    // ── REFERRAL-VERIFIZIERUNG (Admin): Liste offener Prüfungen + bestätigen/ablehnen ──
+    if (path === '/api/admin/referral-pending' && req.method === 'GET') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
+        if (!LOCAL_STORE) return json({ok:true, pending:[]});
+        return json(botLogic.referralPendingListApi());
+    }
+    if (path === '/api/admin/referral-decide' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
+        if (!LOCAL_STORE) return json({ok:false, error:'Nicht verfügbar'});
+        const body = await parseBody(req);
+        const _iid = String(body.inviteeUid || '');
+        const _approve = body.approve === true || body.approve === 'true';
+        const r = await localWrite(() => _approve ? botLogic.approveReferral(_iid) : botLogic.rejectReferral(_iid));
+        return json(r || {ok:false});
+    }
     if (path === '/api/admin/ban' && req.method === 'POST') {
         if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
         if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
@@ -16032,6 +16049,19 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
       </div>
     </section>
 
+    <!-- Referral-Prüfungen -->
+    <section class="dash-section">
+      <div class="dash-section-hdr">
+        <div class="dash-section-title">🔎 Referral-Prüfungen <span id="ref-pending-badge" style="display:none;background:#ef4444;color:#fff;font-size:11px;font-weight:800;padding:1px 8px;border-radius:99px;margin-left:6px"></span></div>
+        <div class="dash-section-sub">Eingeladene Creator bestätigen → Einlader bekommt Belohnung</div>
+      </div>
+      <div class="dash-section-body">
+        <div id="ref-pending-list" style="display:flex;flex-direction:column;gap:8px;max-height:360px;overflow-y:auto">
+          <div style="padding:18px;text-align:center;color:var(--dsub);font-size:12.5px">Lädt …</div>
+        </div>
+      </div>
+    </section>
+
     <!-- Aktuell eingeloggte User -->
     <section class="dash-section">
       <div class="dash-section-hdr">
@@ -16697,6 +16727,39 @@ async function runMissionBackfill() {
   } catch(e) { out.textContent = '❌ '+e.message; out.style.color = '#ef4444'; }
 }
 
+async function loadReferralPending(){
+  const box = document.getElementById('ref-pending-list');
+  const badge = document.getElementById('ref-pending-badge');
+  if(!box) return;
+  try{
+    const r = await fetch('/api/admin/referral-pending');
+    const j = await r.json();
+    const list = (j && j.pending) || [];
+    if(badge){ if(list.length){ badge.textContent = list.length; badge.style.display='inline-block'; } else badge.style.display='none'; }
+    if(!list.length){ box.innerHTML = '<div style="padding:18px;text-align:center;color:var(--dsub);font-size:12.5px">Keine offenen Prüfungen ✓</div>'; return; }
+    box.innerHTML = list.map(function(p){
+      var ig = (p.instagram||'').replace(/[^a-zA-Z0-9._]/g,'');
+      var igLink = ig ? '<a href="https://instagram.com/'+ig+'" target="_blank" rel="noopener" style="color:#06b6d4;font-weight:700;text-decoration:none">@'+ig+' ↗</a>' : '<span style="color:var(--dsub)">kein Insta</span>';
+      return '<div style="background:var(--dink);border:1px solid var(--dline);border-radius:12px;padding:12px 14px">'
+        + '<div style="font-size:13px;font-weight:700;color:var(--text)">'+(p.inviteeName||'User')+'</div>'
+        + '<div style="font-size:12px;margin-top:3px">Instagram: '+igLink+'</div>'
+        + '<div style="font-size:11px;color:var(--dsub);margin-top:3px">eingeladen von <b>'+(p.inviterName||'?')+'</b></div>'
+        + '<div style="display:flex;gap:8px;margin-top:10px">'
+        + '<button onclick="decideReferral(\''+p.inviteeUid+'\',true,this)" style="flex:1;background:#22c55e;color:#fff;border:none;border-radius:8px;padding:9px;font-size:12px;font-weight:700;cursor:pointer">✓ Bestätigen</button>'
+        + '<button onclick="decideReferral(\''+p.inviteeUid+'\',false,this)" style="flex:1;background:rgba(239,68,68,0.12);color:#ef4444;border:1px solid rgba(239,68,68,0.35);border-radius:8px;padding:9px;font-size:12px;font-weight:700;cursor:pointer">✕ Ablehnen</button>'
+        + '</div></div>';
+    }).join('');
+  }catch(e){ box.innerHTML = '<div style="padding:18px;text-align:center;color:var(--dsub);font-size:12.5px">Fehler beim Laden</div>'; }
+}
+async function decideReferral(inviteeUid, approve, btn){
+  if(btn){ btn.disabled=true; btn.textContent='⏳'; }
+  try{
+    const r = await fetch('/api/admin/referral-decide',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({inviteeUid:inviteeUid,approve:approve})});
+    const j = await r.json();
+    if(j.ok){ loadReferralPending(); }
+    else { alert('❌ '+(j.error||'Fehler')); if(btn){btn.disabled=false;btn.textContent=approve?'✓ Bestätigen':'✕ Ablehnen';} }
+  }catch(e){ alert('❌ '+e.message); if(btn){btn.disabled=false;} }
+}
 async function refreshUsers() {
   const errBox = document.getElementById('dash-err') || (function(){
     const e = document.createElement('div');
@@ -17682,6 +17745,8 @@ document.getElementById('dash-q').addEventListener('input', e => { CUR_Q = e.tar
 
 refreshUsers();
 setInterval(refreshUsers, 60000);
+loadReferralPending();
+setInterval(loadReferralPending, 60000);
 // Dashboard-Sektionen ein-/ausklappbar — a11y-konform (Keyboard + ARIA) & Zustand persistent (idempotent)
 (function makeSectionsCollapsible(){
   var STORE_KEY = 'cb_dash_collapsed';
