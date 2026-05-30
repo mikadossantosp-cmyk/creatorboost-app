@@ -844,9 +844,11 @@ function updateProfileApi(body) {
     if (body.youtube !== undefined) u.youtube = String(body.youtube).replace('@', '').slice(0, 50);
     if (body.twitter !== undefined) u.twitter = String(body.twitter).replace('@', '').slice(0, 50);
     if (body.instagram !== undefined) {
+        const _wasEmpty = !u.instagram;
         u.instagram = String(body.instagram || '').replace(/^@/, '').replace(/[^a-zA-Z0-9._]/g, '').slice(0, 50);
-        // Anti-Trick Referral: signup-Belohnung (100💎) erst jetzt, wo ein echter Insta-Handle steht.
-        if (u.instagram && u.referredBy) { try { grantReferralMilestone(String(uid), 'signup'); } catch (e) {} }
+        // Anti-Trick Referral: bei Insta-Set eines eingeladenen Users eine VERIFIZIERUNGS-Anfrage
+        // anlegen (Admin bestätigt → erst dann signup-Belohnung). Nicht erneut, wenn schon offen/bestätigt.
+        if (u.instagram && u.referredBy) { try { requestReferralVerification(String(uid)); } catch (e) {} }
     }
     if (body.email !== undefined) {
         const newEmail = String(body.email || '').toLowerCase().trim();
@@ -3820,6 +3822,11 @@ function grantReferralMilestone(inviteeUid, key) {
     const invitee = d.users[inviteeUid];
     const ms = REFERRAL_MILESTONES[key];
     if (!invitee || !ms || !invitee.referredBy) return false;
+    if (invitee.refRejected) return false;                        // Admin hat abgelehnt → nie belohnen
+    // Verifizierungs-Pflicht: keine Belohnung bevor der Admin die Einladung bestätigt hat.
+    // (referralPending[uid].status === 'approved'). Vor Bestätigung kein einziger Meilenstein.
+    const _pend = d.referralPending && d.referralPending[inviteeUid];
+    if (!_pend || _pend.status !== 'approved') return false;
     if (!invitee.refMilestones) invitee.refMilestones = {};
     if (invitee.refMilestones[key]) return false;                // schon vergeben
     const inviter = d.users[String(invitee.referredBy)];
@@ -3875,6 +3882,75 @@ function clawbackReferral(inviteeUid) {
     }
     invitee.refClawedBack = true;
 }
+// ── Referral-Verifizierung: Admin bestätigt eine eingeladene Registrierung, bevor die
+// signup-Belohnung fließt. Anfrage entsteht, sobald der Eingeladene seinen Insta-Handle setzt.
+// d.referralPending[inviteeUid] = { inviterUid, instagram, createdAt, status }
+function requestReferralVerification(inviteeUid) {
+    inviteeUid = String(inviteeUid || '');
+    const invitee = d.users[inviteeUid];
+    if (!invitee || !invitee.referredBy || !invitee.instagram) return;
+    if (invitee.refMilestones && invitee.refMilestones.signup) return; // schon belohnt
+    if (!d.referralPending) d.referralPending = {};
+    const ex = d.referralPending[inviteeUid];
+    if (ex && (ex.status === 'pending' || ex.status === 'approved')) {
+        // nur Insta aktualisieren, falls geändert
+        if (ex.status === 'pending') ex.instagram = invitee.instagram;
+        return;
+    }
+    d.referralPending[inviteeUid] = {
+        inviterUid: String(invitee.referredBy),
+        instagram: invitee.instagram,
+        inviteeName: invitee.spitzname || invitee.name || 'User',
+        createdAt: Date.now(),
+        status: 'pending',
+    };
+    // Admin-DM an alle Admins
+    const admins = Array.isArray(d._adminIds) ? d._adminIds.map(String) : [];
+    const inviterName = (d.users[String(invitee.referredBy)] || {}).spitzname || (d.users[String(invitee.referredBy)] || {}).name || 'Einlader';
+    for (const aid of admins) {
+        try { sendInAppDM(aid, '🔎 *Referral-Prüfung nötig*\n\n' + inviterName + ' hat *' + (invitee.spitzname || invitee.name || 'einen User') + '* eingeladen.\nInstagram: @' + invitee.instagram + '\n\nPrüfe & bestätige im Dashboard → Referral-Prüfungen.'); } catch (e) {}
+    }
+}
+// Admin bestätigt → signup-Belohnung wird vergeben. Setzt Status auf approved.
+function approveReferral(inviteeUid) {
+    inviteeUid = String(inviteeUid || '');
+    if (!d.referralPending || !d.referralPending[inviteeUid]) return { ok: false, error: 'Keine offene Prüfung' };
+    const p = d.referralPending[inviteeUid];
+    if (p.status === 'approved') return { ok: false, error: 'Bereits bestätigt' };
+    p.status = 'approved'; p.decidedAt = Date.now();
+    const granted = grantReferralMilestone(inviteeUid, 'signup');
+    // Auch nachgelagerte Meilensteine prüfen, falls der User schon Likes/Tage gesammelt hat.
+    try { checkReferralProgress(inviteeUid); } catch (e) {}
+    return { ok: true, granted };
+}
+// Admin lehnt ab → keine Belohnung, Verknüpfung wird gelöst (kein weiterer Reward).
+function rejectReferral(inviteeUid) {
+    inviteeUid = String(inviteeUid || '');
+    if (!d.referralPending || !d.referralPending[inviteeUid]) return { ok: false, error: 'Keine offene Prüfung' };
+    d.referralPending[inviteeUid].status = 'rejected';
+    d.referralPending[inviteeUid].decidedAt = Date.now();
+    const invitee = d.users[inviteeUid];
+    if (invitee) { invitee.refRejected = true; } // blockt künftige Belohnungen (grant prüft das)
+    return { ok: true };
+}
+// Liste offener Prüfungen fürs Admin-Dashboard.
+function referralPendingListApi() {
+    const out = [];
+    const all = d.referralPending || {};
+    for (const [iid, p] of Object.entries(all)) {
+        if (!p || p.status !== 'pending') continue;
+        const inv = d.users[iid] || {};
+        const inviter = d.users[String(p.inviterUid)] || {};
+        out.push({
+            inviteeUid: String(iid), inviteeName: p.inviteeName || inv.spitzname || inv.name || 'User',
+            instagram: p.instagram || inv.instagram || '',
+            inviterUid: String(p.inviterUid), inviterName: inviter.spitzname || inviter.name || 'Einlader',
+            createdAt: p.createdAt || 0,
+        });
+    }
+    out.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    return { ok: true, pending: out };
+}
 // Referral-Statistik für den Profilbereich des Einladers.
 function referralStatsApi(uid) {
     uid = String(uid || '');
@@ -3914,6 +3990,7 @@ module.exports = {
     REFERRAL_MILESTONES,
     ensureReferralCode, linkReferral, grantReferralMilestone, checkReferralProgress,
     touchReferralActiveDay, referralStatsApi, communityBuilderBadge, communityBuilderRanking, clawbackReferral,
+    requestReferralVerification, approveReferral, rejectReferral, referralPendingListApi,
     touchStreakApi, getStreakApi,
     updateProfileApi, addProjectApi, updateProjectApi, deleteProjectApi, completeProfileApi, engagePinnedPostApi,
     followApi,
