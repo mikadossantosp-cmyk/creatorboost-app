@@ -16757,8 +16757,8 @@ async function loadReferralPending(){
         + '<div style="font-size:12px;margin-top:3px">Instagram: '+igLink+'</div>'
         + '<div style="font-size:11px;color:var(--dsub);margin-top:3px">eingeladen von <b>'+(p.inviterName||'?')+'</b></div>'
         + '<div style="display:flex;gap:8px;margin-top:10px">'
-        + '<button onclick="decideReferral(\''+p.inviteeUid+'\',true,this)" style="flex:1;background:#22c55e;color:#fff;border:none;border-radius:8px;padding:9px;font-size:12px;font-weight:700;cursor:pointer">✓ Bestätigen</button>'
-        + '<button onclick="decideReferral(\''+p.inviteeUid+'\',false,this)" style="flex:1;background:rgba(239,68,68,0.12);color:#ef4444;border:1px solid rgba(239,68,68,0.35);border-radius:8px;padding:9px;font-size:12px;font-weight:700;cursor:pointer">✕ Ablehnen</button>'
+        + '<button onclick="decideReferral(\\''+p.inviteeUid+'\\',true,this)" style="flex:1;background:#22c55e;color:#fff;border:none;border-radius:8px;padding:9px;font-size:12px;font-weight:700;cursor:pointer">✓ Bestätigen</button>'
+        + '<button onclick="decideReferral(\\''+p.inviteeUid+'\\',false,this)" style="flex:1;background:rgba(239,68,68,0.12);color:#ef4444;border:1px solid rgba(239,68,68,0.35);border-radius:8px;padding:9px;font-size:12px;font-weight:700;cursor:pointer">✕ Ablehnen</button>'
         + '</div></div>';
     }).join('');
   }catch(e){ box.innerHTML = '<div style="padding:18px;text-align:center;color:var(--dsub);font-size:12.5px">Fehler beim Laden</div>'; }
