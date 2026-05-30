@@ -41,6 +41,8 @@ if (LOCAL_STORE) {
     try {
         datastore.load();
         botLogic.init(datastore.getData());
+        // Einmalige Daten-Migration (u.a. alten CreatorBoost-DM-Verlauf modernisieren).
+        try { if (botLogic.migrateDataOnBoot) { const _mig = botLogic.migrateDataOnBoot(); if (_mig && _mig.changed) { datastore.saveDebounced(); console.log('🧹 [Migration] ' + _mig.changed + ' alte CreatorBoost-DMs modernisiert'); } } } catch (e) { console.error('[migration] Fehler:', e.message); }
         console.log('[LOCAL_STORE] aktiv — /data + Schreibpfade + Cron laufen lokal aus ' + datastore.DATA_FILE);
     }
     catch (e) { console.error('[LOCAL_STORE] load/init fehlgeschlagen:', e.message); }
