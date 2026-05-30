@@ -4,47 +4,55 @@
 module.exports = `
 <style>
   .regeln-wrap { padding:0 0 100px; }
-  .regeln-header { padding:16px 16px 8px; }
-  .regeln-title { font-size:18px; font-weight:800; margin-bottom:2px; }
-  .regeln-meta { font-size:11px; color:var(--muted); }
-  .regeln-tabnav { position:sticky; top:0; z-index:5; background:var(--bg); display:grid; grid-template-columns:repeat(3,1fr); gap:6px; padding:10px 12px; border-bottom:1px solid var(--border2); }
-  .regeln-tabnav button { padding:9px 6px; border-radius:12px; background:var(--bg3); color:var(--muted); font-size:11.5px; font-weight:700; border:1px solid var(--border2); white-space:nowrap; cursor:pointer; transition:all .2s; font-family:inherit; text-align:center; line-height:1.2; }
+  .regeln-header { padding:22px 18px 14px; position:relative; overflow:hidden; }
+  .regeln-header::before { content:''; position:absolute; top:-40px; right:-30px; width:160px; height:160px; background:radial-gradient(circle, rgba(167,139,250,.18), transparent 70%); pointer-events:none; }
+  .regeln-eyebrow { font-size:11px; font-weight:800; letter-spacing:1.5px; text-transform:uppercase; background:linear-gradient(135deg,#c4b5fd,#a78bfa,#7c3aed); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; margin-bottom:4px; }
+  .regeln-title { font-size:26px; font-weight:800; margin-bottom:5px; letter-spacing:-.5px; line-height:1.1; }
+  .regeln-sub { font-size:14px; color:var(--text); line-height:1.6; opacity:.9; max-width:520px; }
+  .regeln-meta { font-size:11.5px; color:var(--muted); margin-top:8px; }
+  .regeln-tabnav { position:sticky; top:0; z-index:5; background:var(--bg); display:grid; grid-template-columns:repeat(3,1fr); gap:7px; padding:12px; border-bottom:1px solid var(--border2); }
+  .regeln-tabnav button { padding:11px 6px; border-radius:13px; background:var(--bg3); color:var(--muted); font-size:12.5px; font-weight:700; border:1px solid var(--border2); white-space:nowrap; cursor:pointer; transition:all .2s; font-family:inherit; text-align:center; line-height:1.2; }
   .regeln-tabnav button:hover { background:var(--bg4); color:var(--text); }
-  .regeln-tabnav button.active { background:linear-gradient(135deg,#a78bfa,#7c3aed); color:#fff; border-color:transparent; }
-  .regeln-section { display:none; padding:18px 16px; animation:fadeIn .25s ease; }
+  .regeln-tabnav button.active { background:linear-gradient(135deg,#a78bfa,#7c3aed); color:#fff; border-color:transparent; box-shadow:0 4px 14px rgba(124,58,237,.35); }
+  .regeln-section { display:none; padding:20px 16px; animation:fadeIn .25s ease; }
   .regeln-section.active { display:block; }
   @keyframes fadeIn { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:translateY(0); } }
-  .regeln-card { background:var(--bg3); border:1px solid var(--border2); border-radius:16px; padding:18px; margin-bottom:14px; }
-  .regeln-card h2 { font-size:15px; font-weight:800; margin:0 0 12px; display:flex; align-items:center; gap:8px; }
-  .regeln-card h3 { font-size:13px; font-weight:700; color:#a78bfa; margin:14px 0 8px; text-transform:uppercase; letter-spacing:.5px; }
-  .regeln-card p { font-size:13px; color:var(--text); line-height:1.6; margin:0 0 10px; }
-  .regeln-card ul { padding-left:0; margin:6px 0 10px; list-style:none; }
-  .regeln-card li { font-size:13px; line-height:1.7; padding-left:6px; }
-  .regeln-row { display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-bottom:1px dashed var(--border2); font-size:13px; gap:10px; }
+  .regeln-card { background:linear-gradient(180deg, var(--bg3), color-mix(in srgb, var(--bg3) 88%, #000)); border:1px solid var(--border2); border-radius:20px; padding:22px; margin-bottom:16px; box-shadow:0 2px 14px rgba(0,0,0,.18); }
+  .regeln-card h2 { font-size:19px; font-weight:800; margin:0 0 14px; display:flex; align-items:center; gap:9px; letter-spacing:-.3px; }
+  .regeln-card h3 { font-size:14px; font-weight:800; color:#a78bfa; margin:20px 0 10px; text-transform:uppercase; letter-spacing:.6px; }
+  .regeln-card p { font-size:14.5px; color:var(--text); line-height:1.72; margin:0 0 12px; }
+  .regeln-card ul { padding-left:0; margin:8px 0 12px; list-style:none; }
+  .regeln-card li { font-size:14.5px; line-height:1.8; padding-left:6px; margin-bottom:3px; }
+  .regeln-card .lead { font-size:15.5px; line-height:1.7; color:var(--text); }
+  .regeln-row { display:flex; align-items:center; justify-content:space-between; padding:12px 0; border-bottom:1px dashed var(--border2); font-size:14.5px; gap:10px; }
   .regeln-row:last-child { border-bottom:0; }
-  .regeln-row .konsequenz { font-size:11px; padding:3px 9px; border-radius:999px; font-weight:700; flex-shrink:0; }
+  .regeln-row .konsequenz { font-size:12px; padding:4px 11px; border-radius:999px; font-weight:700; flex-shrink:0; }
   .k-block { background:rgba(239,68,68,.15); color:#ef4444; }
   .k-warn { background:rgba(245,158,11,.15); color:#f59e0b; }
   .k-trash { background:rgba(148,163,184,.15); color:#94a3b8; }
   .k-xp { background:rgba(168,85,247,.15); color:#a78bfa; }
-  .badge-row { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px dashed var(--border2); }
+  .badge-row { display:flex; align-items:center; gap:12px; padding:13px 0; border-bottom:1px dashed var(--border2); }
   .badge-row:last-child { border-bottom:0; }
-  .badge-row .b-name { flex:1; font-size:13px; font-weight:700; }
-  .badge-row .b-xp { font-size:11px; color:var(--muted); }
-  .badge-row .b-perk { font-size:11px; color:#a78bfa; font-weight:700; margin-left:8px; }
-  .cb-medal { display:inline-flex; align-items:center; justify-content:center; width:34px; height:34px; border-radius:50%; font-size:17px; line-height:1; flex-shrink:0; box-shadow:0 2px 9px rgba(0,0,0,.32), inset 0 1.5px 2px rgba(255,255,255,.55), inset 0 -1.5px 3px rgba(0,0,0,.20); }
-  .why-box { background:rgba(168,85,247,.08); border-left:3px solid #a78bfa; border-radius:8px; padding:10px 12px; margin-top:10px; font-size:12px; color:var(--muted); line-height:1.6; }
-  .ok-card, .bad-card { padding:10px 12px; border-radius:10px; font-size:12px; line-height:1.7; }
+  .badge-row .b-name { flex:1; font-size:14.5px; font-weight:700; }
+  .badge-row .b-xp { font-size:12px; color:var(--muted); }
+  .badge-row .b-perk { font-size:12.5px; color:#a78bfa; font-weight:800; margin-left:8px; }
+  .cb-medal { display:inline-flex; align-items:center; justify-content:center; width:38px; height:38px; border-radius:50%; font-size:19px; line-height:1; flex-shrink:0; box-shadow:0 2px 9px rgba(0,0,0,.32), inset 0 1.5px 2px rgba(255,255,255,.55), inset 0 -1.5px 3px rgba(0,0,0,.20); }
+  .why-box { background:rgba(168,85,247,.08); border-left:3px solid #a78bfa; border-radius:9px; padding:13px 15px; margin-top:12px; font-size:13.5px; color:var(--text); opacity:.92; line-height:1.7; }
+  .ok-card, .bad-card { padding:13px 15px; border-radius:12px; font-size:13.5px; line-height:1.8; }
   .ok-card { background:rgba(34,197,94,.1); border:1px solid rgba(34,197,94,.25); }
   .bad-card { background:rgba(239,68,68,.1); border:1px solid rgba(239,68,68,.25); }
-  .warn-bar { display:flex; align-items:center; gap:8px; padding:8px 12px; border-radius:10px; font-size:12px; margin-bottom:6px; }
+  .warn-bar { display:flex; align-items:center; gap:9px; padding:11px 14px; border-radius:11px; font-size:13.5px; font-weight:600; margin-bottom:7px; }
+  .step-num { display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:50%; background:linear-gradient(135deg,#a78bfa,#7c3aed); color:#fff; font-size:12.5px; font-weight:800; flex-shrink:0; margin-right:9px; vertical-align:-5px; }
+  .info-pill { display:inline-block; background:rgba(167,139,250,.12); color:#a78bfa; font-size:12.5px; font-weight:700; padding:3px 10px; border-radius:999px; margin:2px 4px 2px 0; }
 </style>
 
 <div class="regeln-wrap">
 
   <div class="regeln-header">
-    <div class="regeln-title">Regeln</div>
-    <div class="regeln-meta">Stand 02.05.2026 · v1.1</div>
+    <div class="regeln-eyebrow">CreatorBoostX · Community-Regelwerk</div>
+    <div class="regeln-title">Regeln &amp; Belohnungen</div>
+    <div class="regeln-sub">Alles, was du wissen musst: faires Engagement, XP &amp; Level, Diamanten, Premium-Links und wie du als Community Builder täglich verdienst. Lies dich einmal durch — danach läuft alles wie von selbst.</div>
+    <div class="regeln-meta">Stand 30.05.2026 · v1.2</div>
   </div>
 
   <nav class="regeln-tabnav" id="regeln-tabs">
@@ -66,33 +74,40 @@ module.exports = `
 
   <section id="r-mission" class="regeln-section active">
     <div class="regeln-card">
-      <h2>Unsere Mission</h2>
-      <p>Wir sind eine Community, die sich gegenseitig auf Instagram pusht. Echte Likes, echte Kommentare, echtes Wachstum.</p>
+      <h2>🚀 Unsere Mission</h2>
+      <p class="lead">CreatorBoostX ist eine Community von Instagram-Creatorn, die sich <b>gegenseitig echt unterstützen</b>. Keine Bots, keine gekauften Likes, keine leeren Zahlen — sondern echte Menschen, die deine Reels liken, kommentieren und teilen. Im Gegenzug machst du dasselbe. So wächst jeder von uns <b>natürlich und nachhaltig</b>, genau so, wie der Instagram-Algorithmus es belohnt.</p>
+      <h3>Wofür wir stehen</h3>
       <ul>
-        <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px;flex-shrink:0"><path d="M20 6L9 17l-5-5"/></svg>Wir helfen uns gegenseitig</li>
-        <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px;flex-shrink:0"><path d="M20 6L9 17l-5-5"/></svg>Wir handeln natürlich — kein Bot-Verhalten</li>
-        <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px;flex-shrink:0"><path d="M20 6L9 17l-5-5"/></svg>Wir wachsen nachhaltig — nicht künstlich</li>
+        <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:7px;flex-shrink:0"><path d="M20 6L9 17l-5-5"/></svg><b>Gegenseitigkeit:</b> Wer Support gibt, bekommt Support zurück. Engagement ist keine Einbahnstraße.</li>
+        <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:7px;flex-shrink:0"><path d="M20 6L9 17l-5-5"/></svg><b>Echtheit:</b> Wir handeln wie echte Nutzer — erst auf Instagram liken &amp; kommentieren, dann hier bestätigen. Kein Bot-Verhalten.</li>
+        <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:7px;flex-shrink:0"><path d="M20 6L9 17l-5-5"/></svg><b>Nachhaltigkeit:</b> Wir bauen echtes Wachstum auf — keine kurzfristigen Tricks, die deinen Account gefährden.</li>
+        <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:7px;flex-shrink:0"><path d="M20 6L9 17l-5-5"/></svg><b>Respekt:</b> Wir behandeln jeden fair — vom ersten Tag an.</li>
       </ul>
-      <p style="font-size:12px;color:var(--muted)">Das ist der Grund warum es Regeln gibt.</p>
+      <h3>Wie du belohnt wirst</h3>
+      <p>Für dein Engagement sammelst du <b>XP</b> (steigt im Level &amp; Badge) und <b>Diamanten 💎</b> (die Währung für Premium-Links &amp; Extras). Tägliche Missionen, Streaks, Ranglisten und das Community-Builder-System sorgen dafür, dass sich dranbleiben wirklich lohnt.</p>
+      <div class="why-box">📜 <b>Darum gibt es Regeln:</b> Sie sorgen dafür, dass das Geben &amp; Nehmen fair bleibt und niemand das System ausnutzt. Lies dich einmal durch alle Tabs oben — danach kennst du jeden Mechanismus der App.</div>
     </div>
   </section>
 
   <section id="r-start" class="regeln-section">
     <div class="regeln-card">
-      <h2>Neu? Deine ersten 24h</h2>
+      <h2>🌟 Neu hier? Deine ersten 24 Stunden</h2>
+      <p class="lead">Willkommen! Mit diesen vier Schritten bist du startklar und sammelst direkt am ersten Tag deine ersten XP &amp; Diamanten. Plane dir dafür nur ein paar Minuten ein.</p>
       <ul>
-        <li><b>1️⃣ Profilbild &amp; Spitzname</b> setzen → <a href="/einstellungen" style="color:#a78bfa">Einstellungen</a></li>
-        <li><b>2️⃣ Instagram-Handle</b> setzen → <a href="/einstellungen" style="color:#a78bfa">Einstellungen</a></li>
-        <li><b>3️⃣ Ersten Reel-Link posten</b> → <a href="/post" style="color:#a78bfa">+ Posten</a></li>
-        <li><b>4️⃣ 5 andere Links liken UND kommentieren</b> (Mission 1)<br><span style="font-size:12px;color:var(--muted);padding-left:22px;display:inline-block;margin-top:4px">Insta-Reel öffnen → dort liken &amp; kommentieren → dann hier in der App liken</span></li>
+        <li><span class="step-num">1</span><b>Profilbild &amp; Spitzname setzen.</b> Damit dich andere Creator wiedererkennen. → <a href="/einstellungen" style="color:#a78bfa;font-weight:700">Einstellungen</a></li>
+        <li><span class="step-num">2</span><b>Instagram-Handle hinterlegen.</b> Pflicht, damit andere dich auf Instagram finden und supporten können — und Voraussetzung für Superlinks &amp; viele Belohnungen. → <a href="/einstellungen" style="color:#a78bfa;font-weight:700">Einstellungen</a></li>
+        <li><span class="step-num">3</span><b>Ersten Reel-Link posten.</b> Teile deinen besten aktuellen Reel mit der Community. → <a href="/post" style="color:#a78bfa;font-weight:700">+ Posten</a></li>
+        <li><span class="step-num">4</span><b>5 andere Links liken &amp; kommentieren</b> (das ist Mission 1).<br><span style="font-size:13px;color:var(--muted);padding-left:33px;display:inline-block;margin-top:5px">Wichtig &amp; goldene Regel: erst das Insta-Reel öffnen → dort <b>liken &amp; kommentieren</b> → dann hier in der App bestätigen. So bleibt alles echt.</span></li>
       </ul>
-      <div class="why-box">🎉 Damit hast du am ersten Tag schon ~25 XP + Daily Bonus.</div>
+      <div class="why-box">🎉 Damit hast du am ersten Tag schon rund <b>~25 XP + deinen Daily Bonus</b> gesammelt — ein perfekter Start. Bleib dran: Wer täglich Mission 1 schafft, steigt schnell im Level und baut Streaks auf, die extra Diamanten bringen.</div>
+      <div class="why-box" style="border-left-color:#22c55e;background:rgba(34,197,94,.08)">👉 <b>Tipp:</b> Schau dir als Nächstes die Tabs <b>Missionen</b>, <b>XP</b> und <b>Einladen</b> an — dort steckt der größte Belohnungs-Hebel.</div>
     </div>
   </section>
 
   <section id="r-links" class="regeln-section">
     <div class="regeln-card">
-      <h2>Link-Regeln</h2>
+      <h2>🔗 Link-Regeln</h2>
+      <p class="lead">Ein „Link" ist der Instagram-Reel oder -Post, den du mit der Community teilst, damit andere ihn liken &amp; kommentieren. Damit alle fair zum Zug kommen und der Feed sauber bleibt, gelten ein paar klare Regeln:</p>
       <div class="regeln-row"><span>1. Nur 1 Link pro Tag</span><span class="konsequenz k-block"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px;flex-shrink:0"><path d="M18 6L6 18M6 6l12 12"/></svg>blockiert</span></div>
       <div class="regeln-row"><span>2. Nur Instagram-Links</span><span class="konsequenz k-block"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px;flex-shrink:0"><path d="M18 6L6 18M6 6l12 12"/></svg>blockiert</span></div>
       <div class="regeln-row"><span>3. Keine Duplikate</span><span class="konsequenz k-warn">Warnung</span></div>
@@ -140,7 +155,8 @@ module.exports = `
 
   <section id="r-missionen" class="regeln-section">
     <div class="regeln-card">
-      <h2>Missionen</h2>
+      <h2>🎯 Missionen</h2>
+      <p class="lead">Missionen sind dein täglicher &amp; wöchentlicher Belohnungs-Motor. Sie sind schnell erledigt, geben dir XP und Diamanten und bauen <b>Streaks</b> auf — und genau die Streaks bringen die richtig fetten Belohnungen. Tipp: Mach dir Mission 1 zur täglichen Gewohnheit.</p>
 
       <h3>Daily — Auswertung 12:00 Uhr</h3>
       <div class="regeln-row"><span>M1 — 5 Links liken &amp; kommentieren</span><span class="konsequenz k-xp">+5 XP</span></div>
@@ -435,55 +451,77 @@ module.exports = `
 
   <section id="r-shop" class="regeln-section">
     <div class="regeln-card">
-      <h2>Shop</h2>
+      <h2>🛍️ Diamant-Shop</h2>
+      <p class="lead">Deine gesammelten Diamanten 💎 sind echte Kaufkraft in der App. Im Shop tauschst du sie gegen mehr Reichweite und coole Profil-Extras ein.</p>
+      <h3>Womit du Diamanten verdienst</h3>
       <ul>
-        <li>• Extra-Links mit 💎 kaufbar</li>
-        <li>• 💎 verdienen über Mission-Streaks (M2 / M3)</li>
-        <li>• Bonus-Links umgehen das Tageslimit einmalig</li>
+        <li>💎 <b>Mission-Streaks</b> (M2 / M3) — die zuverlässigste tägliche Quelle.</li>
+        <li>💎 <b>Premium-Links engagieren</b> — Diamantlinks bringen +3 💎, Prismalinks +7 💎 pro Engagement.</li>
+        <li>💎 <b>Creator einladen</b> — Meilenstein-Belohnungen + tägliche Community-Builder-Belohnung (siehe Tab <b>Einladen</b>).</li>
+        <li>💎 <b>Ranglisten-Plätze</b> &amp; als <b>Legende</b> automatisch +30 💎 jeden Monat.</li>
       </ul>
-      <p style="font-size:12px;color:var(--muted);margin-top:10px">Alle Banner & Ringe findest du im 💎 Diamant Shop.</p>
+      <h3>Wofür du Diamanten ausgibst</h3>
+      <ul>
+        <li>🔗 <b>Extra-Links</b> kaufen — umgehen dein Tageslimit, damit du öfter posten kannst.</li>
+        <li>💎 <b>Diamantlinks</b> (30 💎) &amp; <b>💠 Prismalinks</b> (100 💎) — Premium-Reichweite für deine wichtigsten Posts.</li>
+        <li>🎨 <b>Banner &amp; Profil-Ringe</b> — mach dein Profil einzigartig.</li>
+      </ul>
+      <div class="why-box">🛍️ Alle kaufbaren Banner, Ringe &amp; Extras findest du im <b>💎 Diamant-Shop</b>. Bonus-Links, die du dort bekommst, laufen <b>nie ab</b> — heb sie dir für deinen wichtigsten Post auf.</div>
     </div>
   </section>
 
   <section id="r-einladen" class="regeln-section">
     <div class="regeln-card">
-      <h2>🤝 Creator einladen</h2>
-      <p>Lade aktive Creator in die Community ein und verdiene <b>Diamanten</b> — belohnt wird <b>echte, langfristige Aktivität</b> deiner Eingeladenen, nicht das bloße Anmelden.</p>
-      <p>Deinen persönlichen Einladungslink findest du unter <b>Profil → Creator einladen</b>.</p>
+      <h2>🤝 Creator einladen &amp; Community Builder</h2>
+      <p class="lead">Bring andere echte Creator in die Community — und werde dafür belohnt. Anders als bei klassischen „Werbe-Links" zählt bei uns nicht das bloße Anmelden, sondern <b>echte, langfristige Aktivität</b> deiner Eingeladenen. Wer aktive Creator bringt, baut die Community wirklich auf — und genau das belohnen wir doppelt: mit <b>einmaligen Meilenstein-Diamanten</b> <i>und</i> einer <b>täglichen</b> Diamanten-Belohnung über deinen Community-Builder-Rang.</p>
+      <div class="why-box" style="border-left-color:#22c55e;background:rgba(34,197,94,.08)">📍 <b>Wo finde ich meinen Link?</b> Öffne <b>Profil → Creator einladen</b> (oder Einstellungen → Creator einladen). Dort siehst du deinen persönlichen Einladungslink, deine Statistik (eingeladen / aktiv / verdiente 💎), deinen aktuellen Rang und das Community-Builder-Ranking.</p>
 
-      <h3>So funktioniert's</h3>
+      <h3>So funktioniert's — Schritt für Schritt</h3>
       <ul>
-        <li>1️⃣ Teile deinen Einladungslink</li>
-        <li>2️⃣ Dein Creator registriert sich &amp; wird aktiv</li>
-        <li>3️⃣ Du bekommst Diamanten bei jedem Meilenstein 💎</li>
+        <li><span class="step-num">1</span><b>Link holen &amp; teilen.</b> Kopiere deinen Einladungslink oder teile ihn direkt per WhatsApp, Instagram-DM, Story oder als Beitrag. Jeder Link ist eindeutig dir zugeordnet.</li>
+        <li><span class="step-num">2</span><b>Dein Creator registriert sich.</b> Wer über deinen Link kommt, wird dauerhaft mit dir verknüpft — auch wenn er sich erst später anmeldet.</li>
+        <li><span class="step-num">3</span><b>Insta-Username + Prüfung.</b> Sobald dein Creator seinen Instagram-Namen hinterlegt, prüfen wir, ob der Account echt ist. Erst danach werden Belohnungen freigeschaltet (Schutz vor Fake-Accounts).</li>
+        <li><span class="step-num">4</span><b>Dein Creator wird aktiv.</b> Bei jedem erreichten Meilenstein (erster Post, Likes, aktive Tage) bekommst <b>du</b> automatisch Diamanten gutgeschrieben.</li>
+        <li><span class="step-num">5</span><b>Rang steigt &amp; zahlt täglich.</b> Je mehr aktive Creator du gebracht hast, desto höher dein Community-Builder-Rang — und desto mehr Diamanten bekommst du <b>jeden Tag</b> automatisch.</li>
       </ul>
 
-      <h3>Belohnungen pro Creator</h3>
-      <div class="regeln-row"><span>Registrierung <span style="font-size:11px;color:var(--muted)">(nach Insta + Prüfung)</span></span><span class="konsequenz k-xp">100 💎</span></div>
-      <div class="regeln-row"><span>Erster Beitrag</span><span class="konsequenz k-xp">30 💎</span></div>
-      <div class="regeln-row"><span>50 Likes vergeben</span><span class="konsequenz k-xp">30 💎</span></div>
-      <div class="regeln-row"><span>200 Likes vergeben</span><span class="konsequenz k-xp">50 💎</span></div>
-      <div class="regeln-row"><span>7 Tage aktiv</span><span class="konsequenz k-xp">50 💎</span></div>
-      <div class="regeln-row"><span>15 Tage aktiv</span><span class="konsequenz k-xp">100 💎</span></div>
-      <div class="regeln-row"><span>30 Tage aktiv</span><span class="konsequenz k-xp">250 💎</span></div>
-      <div class="why-box">💎 Insgesamt bis zu <b>610 💎</b> pro aktivem Creator.</div>
+      <h3>Einmal-Belohnungen pro Creator</h3>
+      <p>Diese Diamanten bekommst du <b>einmalig</b>, sobald dein eingeladener Creator den jeweiligen Meilenstein erreicht:</p>
+      <div class="regeln-row"><span>✅ Registrierung <span style="font-size:12px;color:var(--muted)">(nach Insta-Name + Prüfung)</span></span><span class="konsequenz k-xp">100 💎</span></div>
+      <div class="regeln-row"><span>📸 Erster Beitrag gepostet</span><span class="konsequenz k-xp">30 💎</span></div>
+      <div class="regeln-row"><span>❤️ 50 Likes vergeben</span><span class="konsequenz k-xp">30 💎</span></div>
+      <div class="regeln-row"><span>❤️ 200 Likes vergeben</span><span class="konsequenz k-xp">50 💎</span></div>
+      <div class="regeln-row"><span>🔥 7 Tage aktiv</span><span class="konsequenz k-xp">50 💎</span></div>
+      <div class="regeln-row"><span>🔥 15 Tage aktiv</span><span class="konsequenz k-xp">100 💎</span></div>
+      <div class="regeln-row"><span>🔥 30 Tage aktiv</span><span class="konsequenz k-xp">250 💎</span></div>
+      <div class="why-box">💎 Macht <b>bis zu 610 💎</b> pro einzelnem aktivem Creator — zusätzlich zur täglichen Rang-Belohnung unten. „Aktive Tage" werden gesammelt gezählt (Lücken erlaubt) — dein Creator muss also nicht am Stück online sein.</div>
 
-      <h3>Community Builder Rang</h3>
-      <p>Je mehr <b>aktive</b> Creator du bringst, desto höher dein Rang — sichtbar in der <b>Rangliste → 🤝 Builder</b>. Jeder Rang bringt eine <b>tägliche</b> Diamanten-Belohnung, solange du den Rang hältst:</p>
-      <div class="badge-row"><span class="cb-medal" style="background:linear-gradient(135deg,#6ee7b7,#10b981 55%,#047857)">🌱</span><span class="b-name">Community Builder I</span><span class="b-xp">1 aktiver</span><span class="b-perk">+5 💎 / Tag</span></div>
-      <div class="badge-row"><span class="cb-medal" style="background:linear-gradient(135deg,#f4f6f9,#cbd5e1 55%,#8b97a8)">🤝</span><span class="b-name">Community Builder II</span><span class="b-xp">5 aktive</span><span class="b-perk">+15 💎 / Tag</span></div>
-      <div class="badge-row"><span class="cb-medal" style="background:linear-gradient(135deg,#f9e08a,#d4a946 55%,#8b6914)">🏗️</span><span class="b-name">Community Builder III</span><span class="b-xp">10 aktive</span><span class="b-perk">+50 💎 / Tag</span></div>
-      <div class="badge-row"><span class="cb-medal" style="background:linear-gradient(135deg,#c4b5fd,#a78bfa 45%,#6d28d9)">🏛️</span><span class="b-name">Community Builder Elite</span><span class="b-xp">25 aktive</span><span class="b-perk">+100 💎 / Tag</span></div>
+      <h3>Community Builder Rang — täglich verdienen</h3>
+      <p>Dein Rang richtet sich danach, wie viele deiner Eingeladenen <b>aktiv</b> sind. Für jeden Rang bekommst du <b>jeden Tag automatisch</b> Diamanten gutgeschrieben — solange du den Rang hältst. Dein Rang ist öffentlich sichtbar in der <b>Rangliste → 🤝 Builder</b>.</p>
+      <div class="badge-row"><span class="cb-medal" style="background:linear-gradient(135deg,#6ee7b7,#10b981 55%,#047857)">🌱</span><span class="b-name">Community Builder I</span><span class="b-xp">ab 1 aktiver</span><span class="b-perk">+5 💎 / Tag</span></div>
+      <div class="badge-row"><span class="cb-medal" style="background:linear-gradient(135deg,#f4f6f9,#cbd5e1 55%,#8b97a8)">🤝</span><span class="b-name">Community Builder II</span><span class="b-xp">ab 5 aktive</span><span class="b-perk">+15 💎 / Tag</span></div>
+      <div class="badge-row"><span class="cb-medal" style="background:linear-gradient(135deg,#f9e08a,#d4a946 55%,#8b6914)">🏗️</span><span class="b-name">Community Builder III</span><span class="b-xp">ab 10 aktive</span><span class="b-perk">+50 💎 / Tag</span></div>
+      <div class="badge-row"><span class="cb-medal" style="background:linear-gradient(135deg,#c4b5fd,#a78bfa 45%,#6d28d9)">🏛️</span><span class="b-name">Community Builder Elite</span><span class="b-xp">ab 25 aktive</span><span class="b-perk">+100 💎 / Tag</span></div>
+      <div class="why-box" style="border-left-color:#06b6d4;background:rgba(6,182,212,.07)">🧮 <b>Beispiel:</b> Du hast 12 aktive Creator gebracht → Rang <b>🏗️ Community Builder III</b> → du bekommst <b>+50 💎 jeden Tag</b>, also rund <b>1.500 💎 im Monat</b> — allein fürs Halten des Rangs. Steigt ein Creator aus der Aktivität aus, kann dein Rang wieder sinken; bring frische aktive Creator nach, um oben zu bleiben.</div>
 
-      <h3>Wichtig</h3>
+      <h3>Was bedeutet „aktiv"?</h3>
       <ul>
-        <li>• „Aktiv" = der Eingeladene hat echtes Engagement gezeigt (1 Post oder 7 Tage aktiv)</li>
-        <li>• Jeder Meilenstein wird nur <b>einmal</b> belohnt</li>
-        <li>• Belohnung fließt erst nach <b>Insta-Username + Admin-Prüfung</b></li>
-        <li>• <b>Kein Self-Referral</b>, keine eigenen Sub-Accounts</li>
-        <li>• Bei gesperrten Fake-Accounts werden Belohnungen <b>zurückgezogen</b></li>
+        <li>• Ein eingeladener Creator gilt als <b>aktiv</b>, sobald er <b>echtes Engagement</b> zeigt: mindestens <b>1 eigenen Beitrag</b> gepostet <b>oder 7 aktive Tage</b> erreicht.</li>
+        <li>• Reine Anmeldungen ohne Aktivität zählen <b>nicht</b> als aktiv und bringen keine tägliche Belohnung.</li>
+        <li>• Nur aktive Creator zählen für deinen Rang — Qualität schlägt Quantität.</li>
       </ul>
-      <div class="bad-card" style="margin-top:10px">🚫 Ziel ist echte Community — nicht das Sammeln von Karteileichen. Fake-Einladungen werden sanktioniert.</div>
+
+      <h3>Faire Spielregeln</h3>
+      <ul>
+        <li>• Jeder Meilenstein wird <b>nur einmal</b> pro Creator ausgezahlt.</li>
+        <li>• Belohnungen fließen <b>erst nach Insta-Username + Admin-Prüfung</b> des Eingeladenen.</li>
+        <li>• <b>Kein Self-Referral</b> — du kannst dich nicht selbst oder deine eigenen Sub-Accounts einladen.</li>
+        <li>• Keine Familien-/Doppel-Accounts: erkannte Verknüpfungen werden nicht belohnt.</li>
+        <li>• Wird ein eingeladener Account als Fake <b>gesperrt</b>, werden die dafür gezahlten Diamanten <b>zurückgezogen</b> (Clawback).</li>
+        <li>• Die tägliche Rang-Belohnung wird <b>1× pro Tag</b> automatisch gutgeschrieben — pausierte &amp; gesperrte Accounts erhalten nichts.</li>
+      </ul>
+      <div class="bad-card" style="margin-top:12px">🚫 <b>Ziel ist echte Community — keine Karteileichen.</b> Fake-Einladungen, gekaufte Accounts oder Manipulation führen zu Diamond-Rückzug und können einen Bann nach sich ziehen.</div>
+      <div class="why-box" style="border-left-color:#22c55e;background:rgba(34,197,94,.08)">💡 <b>Tipp für maximalen Verdienst:</b> Lade Creator ein, die wirklich Lust auf gegenseitiges Engagement haben — sie bleiben aktiv, du steigst im Rang und verdienst Tag für Tag. So gewinnt ihr beide: dein Creator bekommt echtes Wachstum, du eine dauerhafte Diamanten-Quelle.</div>
     </div>
   </section>
 
