@@ -38,6 +38,51 @@ function ensureCreatorBoostUser() {
         };
     }
 }
+// Einmalige Aufräum-Migration: modernisiert BEREITS gespeicherte CreatorBoost-DMs im
+// Chat-Verlauf (Sternchen-Emphase + ━-Balken raus, markante alte Titel → neuer Wortlaut),
+// damit auch der bestehende Verlauf zum neuen, dezent-premiumen Stil passt. Läuft genau 1×
+// (Flag d._dmTidyV1) und fasst nur Nachrichten an, die VON CreatorBoost stammen.
+function _tidyStoredCreatorBoostDMs() {
+    if (!d || d._dmTidyV1) return { ok: true, skipped: true };
+    if (!d.messages) { d._dmTidyV1 = true; return { ok: true, changed: 0 }; }
+    const phraseMap = [
+        ['🎉 Badge Aufstieg!', '🎉 Neuer Rang erreicht'],
+        ['Badge Aufstieg!', 'Neuer Rang erreicht'],
+        ['🎯 Mission 1 erreicht!', '🎯 Mission 1 geschafft'],
+        ['Mission 1 erreicht!', 'Mission 1 geschafft'],
+        ['✅ 5 Links geliked!', '✅ 5 Links geliked & kommentiert'],
+        ['⏳ XP gibt es um 12:00 Uhr', '⏳ Deine XP kommen um 12:00 Uhr'],
+    ];
+    const tidyOne = (raw) => {
+        let t = String(raw || '');
+        t = t.replace(/\*\*([^*]+)\*\*/g, '$1').replace(/\*([^*\n]+)\*/g, '$1');
+        t = t.replace(/\*/g, '');
+        t = t.split('\n').filter(line => !/^[\s━]*━[\s━]*$/.test(line)).join('\n');
+        for (const [from, to] of phraseMap) { if (t.includes(from)) t = t.split(from).join(to); }
+        t = t.replace(/\n{3,}/g, '\n\n').replace(/[ \t]+\n/g, '\n').trim();
+        return t;
+    };
+    let changed = 0;
+    for (const chatKey of Object.keys(d.messages)) {
+        if (!String(chatKey).split('_').includes(CREATORBOOST_UID)) continue; // nur CreatorBoost-Chats
+        const arr = d.messages[chatKey];
+        if (!Array.isArray(arr)) continue;
+        for (const m of arr) {
+            if (!m || String(m.from) !== CREATORBOOST_UID || !m.text) continue;
+            const cleaned = tidyOne(m.text);
+            if (cleaned !== m.text) { m.text = cleaned; changed++; }
+        }
+    }
+    d._dmTidyV1 = true;
+    return { ok: true, changed };
+}
+// Sammel-Hook für idempotente Daten-Migrationen beim Server-Start. Gibt die Gesamtzahl
+// geänderter Einträge zurück, damit der Aufrufer bei Bedarf persistieren kann.
+function migrateDataOnBoot() {
+    let changed = 0;
+    try { const r = _tidyStoredCreatorBoostDMs(); if (r && r.changed) changed += r.changed; } catch (e) {}
+    return { ok: true, changed };
+}
 // Web-Push entfällt im Logik-Modul (kein Zustand) — Verdrahtung übernimmt der Server.
 function sendCreatorBoostDM(toUid, text, options = {}) {
     ensureCreatorBoostUser();
@@ -4042,7 +4087,7 @@ module.exports = {
     istAdminId, getRootUid, isSubAccount, weekStart,
     getMission, updateMissionProgress, checkMissionen, missionStatusApi, familyUids,
     istInstagramLink, addDiamond, applyPostBonus,
-    sendInAppDM, addNotification, dmUser, sendCreatorBoostDM, ensureCreatorBoostUser,
+    sendInAppDM, addNotification, dmUser, sendCreatorBoostDM, ensureCreatorBoostUser, _tidyStoredCreatorBoostDMs, migrateDataOnBoot,
     badgeBonusLinks, generateSyntheticLinkId, tryFetchThumbnail,
     M3_CAP, CREATORBOOST_UID,
     authEmailPassword, setUserPasswordApi, setAppCodeApi, createEmailUserApi,
