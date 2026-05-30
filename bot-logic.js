@@ -141,9 +141,9 @@ function weekStart(now = Date.now()) {
 
 const _trophyMap = { '📘 Anfänger': '📘', '⬆️ Aufsteiger': '⬆️', '🏅 Erfahrener': '🏅', '👑 Elite': '👑', '🌟 Elite+': '🌟', '💎 Legende': '💎' };
 function _levelUpExtra(role) {
-    if (role === '💎 Legende') return '\n\n💎 *Legenden-Bonus:* Du bekommst alles von Elite+ *PLUS* +30 Diamanten jeden Monat, einen Legenden-Glow ums Profilbild und den LEGENDE-Title!';
-    if (role === '🌟 Elite+') return '\n\n🌟 *Elite+ Bonus:* Du erhältst jetzt 2 Superlinks pro Woche + 1 Bonus-Link/Woche!';
-    if (role === '👑 Elite') return '\n\n👑 *Elite Bonus:* Du erhältst jetzt 1 Bonus-Link pro Woche extra!';
+    if (role === '💎 Legende') return '\n\n💎 Legenden-Bonus\n\nDu bekommst alles von Elite+ und zusätzlich +30 Diamanten jeden Monat, einen Legenden-Glow ums Profilbild und den Legende-Title.';
+    if (role === '🌟 Elite+') return '\n\n🌟 Elite+ Bonus\n\nAb jetzt: 2 Superlinks pro Woche und 1 Bonus-Link pro Woche.';
+    if (role === '👑 Elite') return '\n\n👑 Elite Bonus\n\nAb jetzt bekommst du 1 Bonus-Link pro Woche extra.';
     return '';
 }
 function _badgeUpDM(uid, u, alteBadge) {
@@ -151,7 +151,7 @@ function _badgeUpDM(uid, u, alteBadge) {
         if (!u.trophies) u.trophies = [];
         const trophy = _trophyMap[u.role];
         if (trophy && !u.trophies.includes(trophy)) u.trophies.push(trophy);
-        dmUser(uid, '🎉 *Badge Aufstieg!*\n\n' + alteBadge + ' → ' + u.role + '\n\n━━━━━━━━━━━━━━\n⭐ ' + u.xp + ' XP\n━━━━━━━━━━━━━━\n\nWeiter so! 💪' + _levelUpExtra(u.role)).catch(() => {});
+        dmUser(uid, '🎉 Neuer Rang erreicht\n\n' + alteBadge + '  →  ' + u.role + '\n\n⭐ ' + u.xp + ' XP gesamt\n\nWeiter so, du wächst! 💪' + _levelUpExtra(u.role)).catch(() => {});
     }
 }
 
@@ -275,7 +275,7 @@ async function checkMissionen(uid, name) {
     if (!mission.m1 && mission.likesGegeben >= 5) {
         mission.m1 = true;
         d.missionQueue[uid].m1Pending = true;
-        try { await dmUser(uid, '🎯 *Mission 1 erreicht!*\n\n✅ 5 Links geliked!\n\n━━━━━━━━━━━━━━\n⏳ XP gibt es um 12:00 Uhr'); } catch (e) {}
+        try { await dmUser(uid, '🎯 Mission 1 geschafft\n\n✅ 5 Links geliked & kommentiert\n\n⏳ Deine XP kommen um 12:00 Uhr'); } catch (e) {}
     }
     speichernDebounced();
 }
@@ -426,14 +426,14 @@ async function likeFromApp(uid, msgId) {
     }
     if (!istAdminId(uid) && u && lnk.firstPostBonus && lnk.firstPostBonusUntil && Date.now() < lnk.firstPostBonusUntil) {
         xpAdd(uid, 20, u.name || 'User');
-        try { sendInAppDM(uid, '🌟 +20 XP First-Post-Bonus!\n\nDu hast den allerersten Post eines neuen Members geliked — vielen Dank fürs Support! +20 XP extra.'); } catch (e) {}
+        try { sendInAppDM(uid, '🌟 First-Post-Bonus\n\nDu hast den allerersten Post eines neuen Members geliked.\n\n⭐ +20 XP\n\nDanke für deinen Support!'); } catch (e) {}
     }
     if (!istAdminId(uid) && u) {
         u.totalLikes = (u.totalLikes || 0) + 1;
         u.appLikeCount = (u.appLikeCount || 0) + 1;
         if (u.appLikeCount % 100 === 0) {
             addDiamond(uid, 1);
-            dmUser(uid, `💎 *${u.appLikeCount} Likes via App!*\n\nDu hast +1 Diamant verdient. Aktuell: ${u.diamonds || 0} 💎`).catch(() => {});
+            dmUser(uid, `💎 ${u.appLikeCount} Likes erreicht\n\nDanke fürs fleißige Engagement.\n\n💎 +1 Diamant\n\nGuthaben: ${u.diamonds || 0} 💎`).catch(() => {});
         }
         // Referral: Likes-Meilensteine des Einladers prüfen (50/200 vergebene Likes).
         try { checkReferralProgress(uid); } catch (e) {}
@@ -442,7 +442,7 @@ async function likeFromApp(uid, msgId) {
         const _evtBonusL = applyPostBonus(uid, u.name || 'User');
         if (_evtBonusL.events.length) {
             const parts = _evtBonusL.events.map(e => e.type === 'diamond' ? ('+' + e.amount + ' 💎') : e.type === 'xp' ? ('+' + e.amount + ' XP') : '').filter(Boolean);
-            if (parts.length) { try { sendInAppDM(uid, '🎉 Event-Bonus für deinen Like!\n\n' + parts.join(' · ') + '\n\nLäuft noch — like weiter!'); } catch (e) {} }
+            if (parts.length) { try { sendInAppDM(uid, '🎉 Event-Bonus für deinen Like\n\n' + parts.join('\n') + '\n\nDas Event läuft noch — like weiter!'); } catch (e) {} }
         }
     }
     const mission = getMission(uid);
@@ -521,13 +521,13 @@ async function postLinkFromApp({ uid, name, url, caption }) {
 
     try {
         const rulesUrl = ((process.env.APP_URL || 'https://web-production-7981d.up.railway.app').replace(/\/$/, '')) + '/explore?tab=regeln#r-links';
-        const linkRules = '✅ Dein Link ist gepostet!\n\n' +
-            '📋 *Link-Regeln (kurz):*\n' +
+        const linkRules = '✅ Dein Link ist gepostet\n\n' +
+            'Kurz die wichtigsten Link-Regeln:\n\n' +
             '• 1 Link pro Tag (Bonus-Links optional)\n' +
-            '• Andere Links musst du liken (Mission M1: 5 Likes/Tag)\n' +
-            '• Erst Insta-Reel öffnen, dann liken (Visit-before-Like)\n' +
-            '• 2-Wort-Kommentar = Pflicht (M2/M3 Missionen)\n' +
-            '• Mission-Auswertung 12:00 — sonst Verwarnung';
+            '• Andere Links bitte liken (Mission M1: 5 Likes pro Tag)\n' +
+            '• Erst das Insta-Reel öffnen, dann liken\n' +
+            '• 2-Wort-Kommentar ist Pflicht (Missionen M2 und M3)\n' +
+            '• Auswertung um 12:00 Uhr — sonst gibt es eine Verwarnung';
         sendCreatorBoostDM(uid, linkRules, { link: { url: rulesUrl, label: '📖 Alle Link-Regeln' } });
     } catch (e) {}
 
@@ -551,7 +551,7 @@ async function postLinkFromApp({ uid, name, url, caption }) {
         linkData.firstPostBonus = true;
         linkData.firstPostBonusUntil = Date.now() + 8 * 3600 * 1000;
         xpAdd(uid, 20, u.name || name);
-        try { sendInAppDM(uid, '🌟 Willkommen — dein erster Post ist live!\n\n+20 XP Welcome-Bonus erhalten.\nDein Post wird 8h lang ganz oben im Heute-Feed gepinned. Liker bekommen +20 XP extra.'); } catch (e) {}
+        try { sendInAppDM(uid, '🌟 Willkommen — dein erster Post ist live\n\n⭐ +20 XP Willkommens-Bonus\n\nDein Post steht 8 Stunden ganz oben im Heute-Feed. Wer ihn liked, bekommt +20 XP extra.'); } catch (e) {}
         // Referral: erster Beitrag des eingeladenen Creators → +30 💎 für den Einlader.
         try { grantReferralMilestone(String(uid), 'firstPost'); } catch (e) {}
     }
@@ -559,7 +559,7 @@ async function postLinkFromApp({ uid, name, url, caption }) {
     const _evtBonus = applyPostBonus(uid, u.name || name);
     if (_evtBonus.events.length) {
         const parts = _evtBonus.events.map(e => e.type === 'diamond' ? ('+' + e.amount + ' 💎') : e.type === 'xp' ? ('+' + e.amount + ' XP') : '').filter(Boolean);
-        if (parts.length) { try { sendInAppDM(uid, '🎉 Event-Bonus für deinen Post!\n\n' + parts.join(' · ') + '\n\nLäuft noch — postet weiter!'); } catch (e) {} }
+        if (parts.length) { try { sendInAppDM(uid, '🎉 Event-Bonus für deinen Post\n\n' + parts.join('\n') + '\n\nDas Event läuft noch — bleib dran!'); } catch (e) {} }
     }
 
     const mission = getMission(uid);
@@ -709,7 +709,7 @@ function addXp({ uid, amount, noRanking, reason }) {
         d.weeklyXP[uid] = Math.max(0, (d.weeklyXP[uid] || 0) + amount);
     }
     if (amount > 0) {
-        try { dmUser(uid, `✨ *+${amount} XP*\n\n${_reasonLabel(reason)}\n⭐ Aktuell: ${u.xp} XP`); } catch (e) {}
+        try { dmUser(uid, `✨ +${amount} XP\n\n${_reasonLabel(reason)}\n\n⭐ Gesamt: ${u.xp} XP`); } catch (e) {}
     }
     return { ok: true, newXp: u.xp };
 }
@@ -720,7 +720,7 @@ function addExtraLink({ uid, reason }) {
     if (!uid || !d.users[uid]) return { ok: false, error: 'User nicht gefunden' };
     if (!d.bonusLinks) d.bonusLinks = {};
     d.bonusLinks[uid] = (d.bonusLinks[uid] || 0) + 1;
-    try { dmUser(uid, `🔗 *+1 Extra-Link*\n\n${_reasonLabel(reason)}\nVerfügbar: ${d.bonusLinks[uid]} Extra-Links`); } catch (e) {}
+    try { dmUser(uid, `🔗 +1 Extra-Link\n\n${_reasonLabel(reason)}\n\nVerfügbar: ${d.bonusLinks[uid]} Extra-Links`); } catch (e) {}
     return { ok: true };
 }
 function addSuperlink({ uid, reason }) {
@@ -728,7 +728,7 @@ function addSuperlink({ uid, reason }) {
     const u = d.users[uid];
     if (!uid || !u) return { ok: false, error: 'User nicht gefunden' };
     u.superlinkCredits = (u.superlinkCredits || 0) + 1;
-    try { dmUser(uid, `⚡ *+1 Superlink-Slot*\n\n${_reasonLabel(reason)}\nVerfügbar: ${u.superlinkCredits} Extra-Superlinks`); } catch (e) {}
+    try { dmUser(uid, `⚡ +1 Superlink-Slot\n\n${_reasonLabel(reason)}\n\nVerfügbar: ${u.superlinkCredits} Extra-Superlinks`); } catch (e) {}
     return { ok: true, superlinkCredits: u.superlinkCredits };
 }
 function addDiamonds({ uid, amount, reason }) {
@@ -740,7 +740,7 @@ function addDiamonds({ uid, amount, reason }) {
     u.diamonds = (u.diamonds || 0) + amount;
     if (u.diamonds < 0) u.diamonds = 0;
     if (amount > 0) {
-        try { dmUser(uid, `💎 *+${amount} Diamant${amount !== 1 ? 'en' : ''}*\n\n${_reasonLabel(reason)}\nAktuell: ${u.diamonds} 💎`); } catch (e) {}
+        try { dmUser(uid, `💎 +${amount} Diamant${amount !== 1 ? 'en' : ''}\n\n${_reasonLabel(reason)}\n\nGuthaben: ${u.diamonds} 💎`); } catch (e) {}
     }
     return { ok: true, newDiamonds: u.diamonds };
 }
@@ -752,7 +752,7 @@ function removeDiamonds({ uid, amount, reason }) {
     if (!Number.isFinite(raw)) return { ok: false, error: 'amount erforderlich' };
     const amt = Math.abs(raw);
     u.diamonds = Math.max(0, (u.diamonds || 0) - amt);
-    try { dmUser(uid, `💎 *−${amt} Diamant${amt !== 1 ? 'en' : ''}*\n\n${_reasonLabel(reason)}\nAktuell: ${u.diamonds} 💎`); } catch (e) {}
+    try { dmUser(uid, `💎 −${amt} Diamant${amt !== 1 ? 'en' : ''}\n\n${_reasonLabel(reason)}\n\nGuthaben: ${u.diamonds} 💎`); } catch (e) {}
     return { ok: true, newDiamonds: u.diamonds };
 }
 const ITEM_PRICES = {
@@ -929,7 +929,7 @@ function engagePinnedPostApi({ engagerUid, ownerUid }) {
     d.pinnedEngages[engagerUid].push(String(ownerUid));
     addDiamond(engagerUid, 1);
     addNotification(engagerUid, '💎', 'Du hast einen Pinned-Post engagiert! +1 Diamant');
-    sendInAppDM(engagerUid, '📌 Pinned-Post engagiert\n\nDu hast einen pinned Link engagiert und 1 💎 Diamant erhalten.\n\nDu bestätigst hiermit den Post geliked, kommentiert, geteilt und gespeichert zu haben. Dies wird kontrolliert. Bei Schein-Engagement folgen Sanktionen.\n\nMehr im Explore → Regeln.');
+    sendInAppDM(engagerUid, '📌 Pinned-Post engagiert\n\nDu hast einen gepinnten Link engagiert.\n\n💎 +1 Diamant\n\nMit dem Engagement bestätigst du, den Post geliked, kommentiert, geteilt und gespeichert zu haben. Das wird stichprobenartig geprüft — bei Schein-Engagement folgen Sanktionen.\n\nMehr dazu im Explore unter Regeln.');
     if (!d.pinnedEngageLog) d.pinnedEngageLog = [];
     d.pinnedEngageLog.push({ engagerUid: String(engagerUid), ownerUid: String(ownerUid), ts: Date.now() });
     if (d.pinnedEngageLog.length > 2000) d.pinnedEngageLog = d.pinnedEngageLog.slice(-2000);
@@ -1052,8 +1052,8 @@ async function dailyRankingAbschluss() {
                 const othersStr = otherNames.length === 1 ? otherNames[0] : otherNames.slice(0, -1).join(', ') + ' und ' + otherNames[otherNames.length - 1];
                 const rankRange = `Platz ${i + 1}–${j}`;
                 const msg = myRank <= 3
-                    ? `🎲 *Gleichstand & Verlosung!*\n\nDu und ${othersStr} hattet alle *${xp} XP* und wärt auf ${rankRange} gleichauf.\n\nEine automatische Verlosung nach Aktivität hat stattgefunden — du hast gewonnen! 🎉\n\n🏆 *Dein aktueller Rang: Platz ${myRank}*\nTop ${myRank} Bonus folgt!`
-                    : `🎲 *Gleichstand & Verlosung!*\n\nDu und ${othersStr} hattet alle *${xp} XP* und wärt auf ${rankRange} gleichauf.\n\nEine automatische Verlosung nach Aktivität hat stattgefunden — diesmal war ${tiedGroup[0] && tiedGroup[0].uid !== uid ? (d.users[tiedGroup[0].uid]?.spitzname || d.users[tiedGroup[0].uid]?.name || 'ein anderer User') : othersStr} vorne.\n\n📊 *Dein aktueller Rang: Platz ${myRank}*\nMehr Aktivität morgen für einen besseren Platz! 💪`;
+                    ? `🎲 Gleichstand entschieden\n\nDu und ${othersStr} hattet alle ${xp} XP und lagt auf ${rankRange} gleichauf.\n\nEine automatische Verlosung nach Aktivität hat entschieden — und du hast gewonnen!\n\n🏆 Dein Rang: Platz ${myRank}\n\nDein Top-${myRank}-Bonus folgt gleich.`
+                    : `🎲 Gleichstand entschieden\n\nDu und ${othersStr} hattet alle ${xp} XP und lagt auf ${rankRange} gleichauf.\n\nEine automatische Verlosung nach Aktivität hat entschieden — diesmal lag ${tiedGroup[0] && tiedGroup[0].uid !== uid ? (d.users[tiedGroup[0].uid]?.spitzname || d.users[tiedGroup[0].uid]?.name || 'ein anderer User') : othersStr} vorne.\n\n📊 Dein Rang: Platz ${myRank}\n\nMit etwas mehr Aktivität bist du morgen weiter vorne. 💪`;
                 try { await dmUser(uid, msg); } catch (e) {}
             }
         }
@@ -1078,7 +1078,7 @@ async function dailyRankingAbschluss() {
             d.dailyAwardsLog.push({ dayKey, place: ii + 1, uid, name: u.name, xp: b.xp, dia: b.dia, links: b.links || 0, at: Date.now() });
             while (d.dailyAwardsLog.length > 500) d.dailyAwardsLog.shift();
         } catch (e) { continue; }
-        try { sendInAppDM(uid, `🎉 *${b.text} im Tagesranking!*\n\nDeine Preise:\n⭐ +${b.xp} XP\n💎 +${b.dia} Diamanten${b.links ? '\n🔗 +1 Extra-Link für morgen' : ''}`); } catch (e) {}
+        try { sendInAppDM(uid, `🎉 ${b.text} im Tagesranking\n\nGlückwunsch zu deinem Platz heute.\n\n⭐ +${b.xp} XP\n💎 +${b.dia} Diamanten${b.links ? '\n🔗 +1 Extra-Link für morgen' : ''}`); } catch (e) {}
     }
     d.gesternDailyXP = Object.assign({}, d.dailyXP);
     d.dailyXP = {}; d.tracker = {}; d.counter = {}; d.badgeTracker = {};
@@ -1094,7 +1094,7 @@ function legendenBonus() {
         if ((u.xp || 0) < 25000) continue;
         u.diamonds = (Number(u.diamonds) || 0) + 30;
         granted++;
-        try { dmUser(uid, '💎 *Legenden-Bonus*\n\n+30 Diamanten gutgeschrieben!\n\n━━━━━━━━━━━━━━\n💎 Guthaben: ' + u.diamonds + '\n━━━━━━━━━━━━━━\n\nDanke dass du Teil der Legenden-Elite bist! 🌟').catch(() => {}); } catch (e) {}
+        try { dmUser(uid, '💎 Legenden-Bonus\n\nDeine monatlichen +30 Diamanten sind da.\n\n💎 Guthaben: ' + u.diamonds + '\n\nSchön, dass du Teil der Legenden-Elite bist. 🌟').catch(() => {}); } catch (e) {}
     }
     return granted;
 }
@@ -1131,7 +1131,7 @@ function wochenResetUndAuszahlung(jetzt) {
             d.weeklyAwardsLog.push({ weekKey, place: i + 1, uid, name, xp: paidXP, dia: paidDia, links: p.links || 0, at: Date.now() });
             while (d.weeklyAwardsLog.length > 200) d.weeklyAwardsLog.shift();
         } catch (e) { continue; }
-        try { sendInAppDM(uid, `🏆 *${p.medal} Wochen-Ranking gewonnen!*\n\nDu hast diese Woche *${xp} XP* erreicht.\n\n*Deine Preise:*\n💎 +${p.dia} Diamanten\n⭐ +${p.xp} XP\n${p.links ? `🔗 +${p.links} Extra-Link${p.links > 1 ? 's' : ''}\n` : ''}\nGratulation! 🎉`); } catch (e) {}
+        try { sendInAppDM(uid, `🏆 ${p.medal} Platz im Wochen-Ranking\n\nDu hast diese Woche ${xp} XP erreicht.\n\n💎 +${p.dia} Diamanten\n⭐ +${p.xp} XP\n${p.links ? `🔗 +${p.links} Extra-Link${p.links > 1 ? 's' : ''}\n` : ''}\nGlückwunsch! 🎉`); } catch (e) {}
     }
     // #7 Wochen-Recap: VOR dem Reset eine persönliche Zusammenfassung an aktive User (DM).
     // Gibt Sinn + Stolz und bringt am Wochenstart zurück. Nur an in den letzten 7 Tagen Aktive,
@@ -1151,7 +1151,7 @@ function wochenResetUndAuszahlung(jetzt) {
             if (wxp <= 0) continue;                         // nichts Nennenswertes → nicht spammen
             const pos = _rankPos.get(String(uid));
             const posLine = pos ? `\n🏅 Wochen-Rang: #${pos}` : '';
-            try { sendInAppDM(uid, `📊 *Deine Woche bei CreatorX*\n\n⭐ +${wxp} XP diese Woche${posLine}\n💎 Aktuell: ${u.diamonds || 0} Diamanten\n\nNeue Woche, neue Chance — leg gleich los und sammle XP! 🚀`); } catch (e) {}
+            try { sendInAppDM(uid, `📊 Deine Woche bei CreatorX\n\n⭐ +${wxp} XP diese Woche${posLine}\n💎 Guthaben: ${u.diamonds || 0} Diamanten\n\nNeue Woche, neue Chance — leg gleich los und sammle XP. 🚀`); } catch (e) {}
         }
     } catch (e) {}
     archiveWeeklyXP('monday-reset');
@@ -1187,11 +1187,11 @@ async function applyWarningEscalation(uid, reason, opts = {}) {
     u.warnings = (Number(u.warnings || 0)) + 1;
     const n = u.warnings;
     let mainText;
-    const reasonText = reason ? '\n\n*Grund:* ' + reason : '';
-    if (n === 1 || n === 2) mainText = '⚠️ *Verwarnung ' + n + '/5*' + reasonText + '\n\nDu hast eine Verwarnung erhalten. Schau dass es nicht wieder passiert.';
-    else if (n === 3) mainText = '⚠️🚨 *3. VERWARNUNG (' + n + '/5)*' + reasonText + '\n\n*Wichtige Aufklärung:*\n• Bei der **5. Verwarnung** wirst du **automatisch gebannt** — kein manuelles Review.\n• Du kannst Verwarnungen abbauen: **5 Tage in Folge M1 erfüllen** → 1 Warnung weg.\n• Aktive Verwarnungen blocken Belohnungen nicht direkt, aber gefährden deinen Account.\n\nNimm das ernst.';
-    else if (n === 4) mainText = '⚠️🚨 *4. VERWARNUNG (' + n + '/5)*' + reasonText + '\n\n*LETZTE Warnung vor dem Bann!*\n• Eine weitere Verwarnung → **automatischer permanenter Bann**.\n• Du kannst 1 Warn abbauen: **5 Tage in Folge M1 erfüllen** → 1 Warnung weg.\n• Lies die Regeln gründlich.\n\nLetzte Chance — nutze sie.';
-    else if (n >= 5) mainText = '🚫 *Account permanent gebannt (' + n + '/5 Verwarnungen erreicht)*' + reasonText + '\n\nDu hast die maximale Anzahl an Verwarnungen erreicht und wurdest automatisch aus der Community entfernt.';
+    const reasonText = reason ? '\n\nGrund: ' + reason : '';
+    if (n === 1 || n === 2) mainText = '⚠️ Verwarnung ' + n + '/5' + reasonText + '\n\nDu hast eine Verwarnung erhalten. Bitte achte darauf, dass es nicht wieder passiert.';
+    else if (n === 3) mainText = '⚠️ Verwarnung 3/5' + reasonText + '\n\nKurz zur Einordnung:\n\n• Bei der 5. Verwarnung wirst du automatisch gebannt — ohne weiteres Review.\n• Du kannst Verwarnungen wieder abbauen: 5 Tage in Folge Mission M1 erfüllen entfernt 1 Warnung.\n• Verwarnungen blockieren deine Belohnungen nicht direkt, gefährden aber deinen Account.\n\nBitte nimm das ernst.';
+    else if (n === 4) mainText = '⚠️ Verwarnung 4/5' + reasonText + '\n\nLetzte Warnung vor dem Bann.\n\n• Eine weitere Verwarnung führt zum automatischen, dauerhaften Bann.\n• Du kannst 1 Warnung abbauen: 5 Tage in Folge Mission M1 erfüllen.\n• Bitte lies die Regeln in Ruhe durch.\n\nDas ist deine letzte Chance — nutze sie.';
+    else if (n >= 5) mainText = '🚫 Account dauerhaft gebannt\n\n' + n + '/5 Verwarnungen erreicht' + reasonText + '\n\nDu hast die maximale Anzahl an Verwarnungen erreicht und wurdest automatisch aus der Community entfernt.';
     try { await dmUser(uid, mainText); } catch (e) {}
     const notifIcon = n >= 5 ? '🚫' : (n >= 3 ? '🚨' : '⚠️');
     addNotification(uid, notifIcon, (n >= 5 ? 'Account gebannt' : 'Verwarnung ' + n + '/5') + (reason ? ' (' + reason.slice(0, 40) + ')' : ''));
@@ -1247,22 +1247,22 @@ async function auswertenForUserDay(uid, dayKey, opts) {
     let meldungen = [];
     let xpEarned = 0;
     let diamondsEarned = 0;
-    if (m1Done) { xpAdd(uid, 5, name); xpEarned += 5; meldungen.push('✅ *Mission 1!*\n5 Links geliked → +5 XP'); }
+    if (m1Done) { xpAdd(uid, 5, name); xpEarned += 5; meldungen.push('✅ Mission 1 geschafft\n5 Links geliked → +5 XP'); }
     if (anyDailyMissionDone && addWeeklyMissionDay(wMission, 'm1Tage', dayKey)) {
-        if (wMission.m1Tage >= 7) { xpAdd(uid, 10, name); xpEarned += 10; meldungen.push('🏆 *Wochen-M1!* +10 XP'); wMission.m1Tage = 0; }
+        if (wMission.m1Tage >= 7) { xpAdd(uid, 10, name); xpEarned += 10; meldungen.push('🏆 Wochen-M1 geschafft → +10 XP'); wMission.m1Tage = 0; }
     }
     if (m2Done) {
         xpAdd(uid, 5, name); xpEarned += 5;
-        meldungen.push('✅ *Mission 2!*\n' + Math.round(prozentTag * 100) + '% geliked → +5 XP');
+        meldungen.push('✅ Mission 2 geschafft\n' + Math.round(prozentTag * 100) + '% geliked → +5 XP');
         if (addWeeklyMissionDay(wMission, 'm2Tage', dayKey)) {
-            if (wMission.m2Tage >= 7) { xpAdd(uid, 15, name); xpEarned += 15; addDiamond(uid, 1); diamondsEarned += 1; meldungen.push('🏆 *Wochen-M2!* +15 XP + 💎 1 Diamant'); wMission.m2Tage = 0; }
+            if (wMission.m2Tage >= 7) { xpAdd(uid, 15, name); xpEarned += 15; addDiamond(uid, 1); diamondsEarned += 1; meldungen.push('🏆 Wochen-M2 geschafft → +15 XP + 💎 1 Diamant'); wMission.m2Tage = 0; }
         }
     }
     if (m3Done) {
         xpAdd(uid, 5, name); xpEarned += 5; addDiamond(uid, 1); diamondsEarned += 1;
-        meldungen.push('✅ *Mission 3!*\nAlle Links geliked → +5 XP + 💎 1 Diamant');
+        meldungen.push('✅ Mission 3 geschafft\nAlle Links geliked → +5 XP + 💎 1 Diamant');
         if (addWeeklyMissionDay(wMission, 'm3Tage', dayKey)) {
-            if (wMission.m3Tage >= 7) { xpAdd(uid, 20, name); xpEarned += 20; addDiamond(uid, 2); diamondsEarned += 2; meldungen.push('🏆 *Wochen-M3!* +20 XP + 💎 2 Diamanten'); wMission.m3Tage = 0; }
+            if (wMission.m3Tage >= 7) { xpAdd(uid, 20, name); xpEarned += 20; addDiamond(uid, 2); diamondsEarned += 2; meldungen.push('🏆 Wochen-M3 geschafft → +20 XP + 💎 2 Diamanten'); wMission.m3Tage = 0; }
         }
     }
     const hatTagLink = Object.values(d.links).some(l => istInstagramLink(l.text) && String(l.user_id) === String(uid) && new Date(l.timestamp).toDateString() === dayKey);
@@ -1276,12 +1276,12 @@ async function auswertenForUserDay(uid, dayKey, opts) {
             if (Number(d.users[uid]?.warnings || 0) >= 5 && d.m1Streak[uid].count >= 2) {
                 d.users[uid].warnings = 4;
                 d.m1Streak[uid].count = 0;
-                if (!opts.silent) { try { await dmUser(uid, '🎉 *Posten wieder frei!*\n2 Tage M1 in Folge geschafft.\n\n⚠️ Warns: 4/5 — du kannst wieder posten!'); } catch (e) {} }
+                if (!opts.silent) { try { await dmUser(uid, '🎉 Posten wieder freigeschaltet\n\nDu hast 2 Tage Mission M1 in Folge geschafft.\n\n⚠️ Verwarnungen: 4/5\n\nDu kannst wieder posten — schön, dass du dranbleibst!'); } catch (e) {} }
             }
             else if (d.m1Streak[uid].count >= 5 && d.users[uid]?.warnings > 0) {
                 d.users[uid].warnings--;
                 d.m1Streak[uid].count = 0;
-                if (!opts.silent) { try { await dmUser(uid, '🎉 *Warn entfernt!*\n5 Tage M1 in Folge!\n\n⚠️ Warns: ' + d.users[uid].warnings + '/5'); } catch (e) {} }
+                if (!opts.silent) { try { await dmUser(uid, '🎉 Verwarnung entfernt\n\nDu hast 5 Tage Mission M1 in Folge geschafft.\n\n⚠️ Verwarnungen: ' + d.users[uid].warnings + '/5\n\nWeiter so!'); } catch (e) {} }
             }
         }
     } else if (!opts.skipStreakReset) { d.m1Streak[uid].count = 0; }
@@ -1292,9 +1292,9 @@ async function auswertenForUserDay(uid, dayKey, opts) {
         if (meldungen.length > 0 && d.users[uid]) {
             const u2 = d.users[uid];
             const nb = xpBisNaechstesBadge(u2.xp);
-            try { await dmUser(uid, '🎯 *Missions Auswertung*\n━━━━━━━━━━━━━━\n\n' + meldungen.join('\n\n') + '\n\n━━━━━━━━━━━━━━\n⭐ Gesamt: ' + u2.xp + ' XP' + (nb ? '  ·  ⬆️ Noch ' + nb.fehlend + ' bis ' + nb.ziel : '')); } catch (e) {}
+            try { await dmUser(uid, '🎯 Missions-Auswertung\n\n' + meldungen.join('\n\n') + '\n\n⭐ Gesamt: ' + u2.xp + ' XP' + (nb ? '\n⬆️ Noch ' + nb.fehlend + ' bis ' + nb.ziel : '')); } catch (e) {}
         } else if (hatTagLink && d.users[uid]?.started) {
-            try { await dmUser(uid, '📊 *Missions Auswertung*\n\n❌ Keine Mission erfüllt\n\nHeute neue Chance! 💪'); } catch (e) {}
+            try { await dmUser(uid, '📊 Missions-Auswertung\n\nHeute war keine Mission erfüllt.\n\nMacht nichts — heute hast du eine neue Chance! 💪'); } catch (e) {}
         }
     }
     if (d.missionQueue[uid] && d.missionQueue[uid].date === dayKey) delete d.missionQueue[uid];
@@ -1392,7 +1392,7 @@ function sendMessageApi({ from, to, text, image, audio, replyTo }) {
             targetTicket.answeredBy = String(from);
             const userObj = d.users[targetTicket.uid];
             const userName = userObj?.spitzname || userObj?.name || ('User ' + targetTicket.uid);
-            try { sendInAppDM(targetTicket.uid, '📨 *Antwort vom Admin auf deine Frage*\n\n_' + (targetTicket.question || '').slice(0, 140) + '_\n\n' + answerText); } catch (e) {}
+            try { sendInAppDM(targetTicket.uid, '📨 Antwort auf deine Frage\n\nDeine Frage: ' + (targetTicket.question || '').slice(0, 140) + '\n\n' + answerText); } catch (e) {}
             if (!d.helperChats) d.helperChats = {};
             if (!Array.isArray(d.helperChats[targetTicket.uid])) d.helperChats[targetTicket.uid] = [];
             const _esc = s => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
@@ -1717,7 +1717,7 @@ function helperQuestionApi({ fromUid, question }) {
         if (openTicket.followUps.length >= 10) return { ok: false, error: 'Schon 10 Follow-up-Fragen in diesem Ticket — bitte auf Admin-Antwort warten.' };
         openTicket.followUps.push({ text: question, ts: Date.now() });
         const adminIds = Array.isArray(d._adminIds) ? d._adminIds : [];
-        const followText = '💬 *Follow-up* zu Ticket `' + openTicket.id + '` von *' + userName + '*' + userHandle + '\n\n❓ _' + question + '_\n\n_Antworte hier im Chat — geht an ' + userName + '._';
+        const followText = '💬 Follow-up zu Ticket ' + openTicket.id + ' von ' + userName + userHandle + '\n\nFrage: ' + question + '\n\nAntworte einfach hier im Chat — geht an ' + userName + '.';
         for (const aId of adminIds) { addNotification(String(aId), '💬', userName + ' (Follow-up): ' + question.slice(0, 40), fromUid); try { sendInAppDM(String(aId), followText); } catch (e) {} }
         if (!d.messages) d.messages = {};
         const chatKey = [CREATORBOOST_UID, fromUid].sort().join('_');
@@ -1734,9 +1734,9 @@ function helperQuestionApi({ fromUid, question }) {
     if (!d.messages[chatKey]) d.messages[chatKey] = [];
     d.messages[chatKey].push({ from: fromUid, to: CREATORBOOST_UID, text: '🤖 Helper-Frage: ' + question, image: null, audio: null, timestamp: Date.now(), read: false, system: false });
     if (d.messages[chatKey].length > 200) d.messages[chatKey].shift();
-    sendInAppDM(fromUid, 'Frage erhalten — ich frag kurz nach und melde mich hier zurück. (Antwort kommt meistens in <1h)');
+    sendInAppDM(fromUid, '✅ Frage erhalten\n\nIch kümmere mich darum und melde mich hier zurück. Eine Antwort kommt meistens innerhalb von 1 Stunde.');
     const adminIds = Array.isArray(d._adminIds) ? d._adminIds : [];
-    const adminAppDmText = '🎫 *NEUES TICKET* `' + qId + '`\n─────────────────────\n👤 Von: *' + userName + '*' + userHandle + ' (UID `' + fromUid + '`)\n\n❓ Frage:\n_' + question + '_\n─────────────────────\n💬 *Antworte einfach hier in diesem Chat* — geht direkt an den User.\n_Weitere Fragen vom User landen in DIESEM Ticket bis du antwortest._';
+    const adminAppDmText = '🎫 Neues Ticket ' + qId + '\n\n👤 Von: ' + userName + userHandle + ' (UID ' + fromUid + ')\n\nFrage:\n' + question + '\n\nAntworte einfach hier in diesem Chat — geht direkt an den User. Weitere Fragen landen in diesem Ticket, bis du antwortest.';
     for (const aId of adminIds) { addNotification(String(aId), '🎫', 'Ticket ' + userName + ': ' + question.slice(0, 40), fromUid); try { sendInAppDM(String(aId), adminAppDmText); } catch (e) {} }
     return { ok: true, qId };
 }
@@ -1749,7 +1749,7 @@ function adminHelperAnswerApi({ qId, answer }) {
     if (!q) return { ok: false, error: 'Frage nicht gefunden' };
     q.answeredAt = Date.now();
     q.answer = answer;
-    sendInAppDM(q.uid, '🤖 *Antwort vom Admin auf deine Frage*\n\n_' + (q.question || '').slice(0, 100) + '_\n\n' + answer);
+    sendInAppDM(q.uid, '📨 Antwort auf deine Frage\n\nDeine Frage: ' + (q.question || '').slice(0, 100) + '\n\n' + answer);
     if (!d.helperChats) d.helperChats = {};
     if (!Array.isArray(d.helperChats[q.uid])) d.helperChats[q.uid] = [];
     d.helperChats[q.uid].push({ role: 'bot', text: '📨 Admin-Antwort:\n\n' + answer, ts: Date.now(), fromAdmin: true });
@@ -2045,7 +2045,7 @@ function addWarn({ uid, reason }) {
     const u = d.users[uid];
     if (!u) return { ok: false, error: 'User nicht gefunden' };
     u.warnings = (u.warnings || 0) + 1;
-    try { dmUser(uid, `⚠️ *Verwarnung!*\n\nWarn: ${u.warnings}/5${reason ? '\n\nGrund: ' + reason : ''}`); } catch (e) {}
+    try { dmUser(uid, `⚠️ Verwarnung\n\nVerwarnungen: ${u.warnings}/5${reason ? '\n\nGrund: ' + reason : ''}`); } catch (e) {}
     return { ok: true, warnings: u.warnings };
 }
 function removeWarn({ uid }) {
@@ -2053,7 +2053,7 @@ function removeWarn({ uid }) {
     const u = d.users[uid];
     if (!u) return { ok: false, error: 'User nicht gefunden' };
     u.warnings = Math.max(0, (u.warnings || 0) - 1);
-    try { dmUser(uid, `✅ *Verwarnung entfernt*\n\nWarn: ${u.warnings}/5`); } catch (e) {}
+    try { dmUser(uid, `✅ Verwarnung entfernt\n\nVerwarnungen: ${u.warnings}/5`); } catch (e) {}
     return { ok: true, warnings: u.warnings };
 }
 function resetUser({ uid }) {
@@ -2063,7 +2063,7 @@ function resetUser({ uid }) {
     u.xp = 0; u.level = 1; u.role = badge(0);
     if (d.dailyXP) delete d.dailyXP[uid];
     if (d.weeklyXP) delete d.weeklyXP[uid];
-    try { dmUser(uid, `♻️ *XP zurückgesetzt*\n\nEin Admin hat deinen XP-Stand auf 0 zurückgesetzt.`); } catch (e) {}
+    try { dmUser(uid, `♻️ XP zurückgesetzt\n\nEin Admin hat deinen XP-Stand auf 0 gesetzt.`); } catch (e) {}
     return { ok: true, xp: 0 };
 }
 function removeXp({ uid, amount, reason }) {
@@ -2078,7 +2078,7 @@ function removeXp({ uid, amount, reason }) {
     u.role = badge(u.xp);
     if (!d.weeklyXP) d.weeklyXP = {};
     d.weeklyXP[uid] = Math.max(0, (d.weeklyXP[uid] || 0) - amt);
-    try { dmUser(uid, `📉 *−${amt} XP*\n\n${_reasonLabel(reason)}\n⭐ Aktuell: ${u.xp} XP`); } catch (e) {}
+    try { dmUser(uid, `📉 −${amt} XP\n\n${_reasonLabel(reason)}\n\n⭐ Gesamt: ${u.xp} XP`); } catch (e) {}
     return { ok: true, newXp: u.xp };
 }
 function startXpEvent({ amount, durationMs, label }) {
@@ -2133,7 +2133,7 @@ function banUserApi({ uid }) {
     }
     // Anti-Trick: Referral-Diamanten für diesen (und seine Sub-)Accounts zurückziehen.
     try { clawbackReferral(uid); for (const [oid, other] of Object.entries(d.users || {})) { if (other && String(other.parent_uid||'') === uid) clawbackReferral(oid); } } catch (e) {}
-    try { dmUser(uid, `🚫 *Du wurdest gebannt*\n\nEin Admin hat dich aus der Community entfernt.`); } catch (e) {}
+    try { dmUser(uid, `🚫 Du wurdest gebannt\n\nEin Admin hat dich aus der Community entfernt.`); } catch (e) {}
     return { ok: true };
 }
 function unbanUserApi({ uid }) {
@@ -2146,7 +2146,7 @@ function unbanUserApi({ uid }) {
             other.banned = false; delete other.bannedAt; other.inGruppe = true; other.started = true;
         }
     }
-    try { dmUser(uid, `✅ *Bann aufgehoben*\n\nDu bist wieder Teil der Community. Willkommen zurück!`); } catch (e) {}
+    try { dmUser(uid, `✅ Bann aufgehoben\n\nDu bist wieder Teil der Community. Willkommen zurück!`); } catch (e) {}
     return { ok: true };
 }
 // Pause (soft): blendet den Account aus Ranking/Explore/Suche/Stories aus, bis er sich
@@ -2178,14 +2178,14 @@ function adminSuspendPostingApi({ uid, days, reason }) {
     if (Array.isArray(d._adminIds) && d._adminIds.map(Number).includes(Number(uid))) return { ok: false, error: 'Admins können nicht gesperrt werden' };
     if (days <= 0) {
         delete u.postSuspendedUntil; delete u.postSuspendReason;
-        try { dmUser(uid, '✅ *Posting-Sperre aufgehoben*\n\nDu kannst wieder posten.'); } catch (e) {}
+        try { dmUser(uid, '✅ Posting-Sperre aufgehoben\n\nDu kannst wieder posten.'); } catch (e) {}
         return { ok: true, suspended: false };
     }
     if (days > 365) return { ok: false, error: 'Max 365 Tage' };
     u.postSuspendedUntil = Date.now() + days * 86400000;
     u.postSuspendReason = reason || null;
     try {
-        dmUser(uid, '🚫 *Posten gesperrt für ' + days + ' Tag' + (days === 1 ? '' : 'e') + '*\n\n' + (reason ? 'Grund: ' + reason + '\n\n' : '') + 'Liken geht weiter — Likes zählen für deinen XP/Mission-Status. Sperre endet ' + new Date(u.postSuspendedUntil).toLocaleString('de-DE', { timeZone: 'Europe/Berlin' }) + '.');
+        dmUser(uid, '🚫 Posten gesperrt für ' + days + ' Tag' + (days === 1 ? '' : 'e') + '\n\n' + (reason ? 'Grund: ' + reason + '\n\n' : '') + 'Liken geht weiterhin — deine Likes zählen für XP und Missionen. Die Sperre endet am ' + new Date(u.postSuspendedUntil).toLocaleString('de-DE', { timeZone: 'Europe/Berlin' }) + '.');
     } catch (e) {}
     return { ok: true, suspended: true, until: u.postSuspendedUntil };
 }
@@ -2267,7 +2267,7 @@ function postSuperlinkApp({ uid, url, caption }) {
     if (usesSlCredit) u.superlinkCredits = Math.max(0, Number(u.superlinkCredits || 0) - 1);
     try {
         const rulesUrl = ((process.env.APP_URL || 'https://web-production-7981d.up.railway.app').replace(/\/$/, '')) + '/explore?tab=regeln#r-superlinks';
-        sendCreatorBoostDM(uid, '⭐ Dein Superlink wurde gepostet!\n\nDu hast heute einen Superlink gepostet — vergiss nicht: Du musst alle Superlinks dieser Woche engagieren (Liken, Kommentieren, Teilen, Speichern) bis Sonntag 23:59 Uhr.', { link: { url: rulesUrl, label: '📖 Superlink-Regeln' } });
+        sendCreatorBoostDM(uid, '⭐ Dein Superlink ist live\n\nNicht vergessen: Du engagierst bis Sonntag 23:59 Uhr alle Superlinks dieser Woche — liken, kommentieren, teilen und speichern.', { link: { url: rulesUrl, label: '📖 Superlink-Regeln' } });
     } catch (e) {}
     return { ok: true, slId };
 }
@@ -2309,7 +2309,7 @@ function diamondLinkCreate({ uid, url, caption }) {
     const now = Date.now();
     d.diamondLinks[id] = { id, uid, url, caption, createdAt: now, expiresAt: now + DIAMOND_LINK_LIFETIME_MS, likes: [], adminFree: wasAdmin || undefined };
     u.diamondLinksPosted = (u.diamondLinksPosted || 0) + 1;
-    sendInAppDM(uid, '💎 Diamantlink veröffentlicht!\n\nDein Post ist 3 Tage im Feed an erster Stelle.\n' + (wasAdmin ? '⚙️ Admin: gratis (keine Kosten)\n' : 'Kosten: −' + DIAMOND_LINK_COST + ' 💎 (Aktuell: ' + u.diamonds + ' 💎)\n') + '\nJeder Liker bekommt +' + DIAMOND_LINK_REWARD + ' 💎. Der Post muss FULL ENGAGED werden (Like + Kommentar + Teilen + Speichern). Schein-Engagement wird hart sanktioniert.');
+    sendInAppDM(uid, '💎 Diamantlink veröffentlicht\n\nDein Post steht 3 Tage lang ganz oben im Feed.\n' + (wasAdmin ? '⚙️ Admin: kostenlos\n' : 'Kosten: −' + DIAMOND_LINK_COST + ' 💎 (Guthaben: ' + u.diamonds + ' 💎)\n') + '\nJeder Liker bekommt +' + DIAMOND_LINK_REWARD + ' 💎. Der Post muss voll engagiert werden: liken, kommentieren, teilen und speichern. Schein-Engagement wird streng sanktioniert.');
     return { ok: true, id, adminFree: wasAdmin };
 }
 function diamondLinkLike({ uid, postId }) {
@@ -2330,7 +2330,7 @@ function diamondLinkLike({ uid, postId }) {
     p.engagedAt[uid] = Date.now();
     addDiamond(uid, DIAMOND_LINK_REWARD);
     addNotification(p.uid, '💎', (u.spitzname || u.name || 'User') + ' hat deinen Diamantlink engagiert', uid);
-    sendInAppDM(uid, '💎 Diamantlink engagiert\n\nDu hast einen Diamantlink engagiert und +' + DIAMOND_LINK_REWARD + ' 💎 erhalten.\n\nDu bestätigst hiermit den Post:\n✓ geliked\n✓ kommentiert\n✓ geteilt\n✓ gespeichert\n\nDies wird kontrolliert. Bei Schein-Engagement: XP-Abzug + Diamonds-Reset + Bann.\n\nMehr im Explore → Regeln → 💎 Diamantlinks.');
+    sendInAppDM(uid, '💎 Diamantlink engagiert\n\nDu hast einen Diamantlink engagiert.\n\n💎 +' + DIAMOND_LINK_REWARD + ' Diamanten\n\nMit dem Engagement bestätigst du, den Post geliked, kommentiert, geteilt und gespeichert zu haben. Das wird geprüft — bei Schein-Engagement folgen XP-Abzug, Diamanten-Reset und Bann.\n\nMehr dazu im Explore unter Regeln, Diamantlinks.');
     return { ok: true, liked: true, likeCount: p.likes.length, diamondsTotal: u.diamonds || 0 };
 }
 function diamondLinkAcceptRules({ uid }) {
@@ -2371,7 +2371,7 @@ function prismaLinkCreate({ uid, url, caption }) {
     const id = 'pl_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
     const now = Date.now();
     d.prismaLinks[id] = { id, uid, url, caption, createdAt: now, expiresAt: now + PRISMA_LINK_LIFETIME_MS, likes: [], adminFree: wasAdmin || undefined };
-    sendInAppDM(uid, '💠 Prismalink veröffentlicht!\n\nDein Post ist 7 Tage im Feed an erster Stelle mit Holographic-Glow.\n' + (wasAdmin ? '⚙️ Admin: gratis (keine Kosten)\n' : 'Kosten: −' + PRISMA_LINK_COST + ' 💎 (Aktuell: ' + u.diamonds + ' 💎)\n') + '\nJeder Liker bekommt +' + PRISMA_LINK_REWARD + ' 💎. Der Post muss FULL ENGAGED werden (Like + Kommentar + Teilen + Speichern). Schein-Engagement wird hart sanktioniert.');
+    sendInAppDM(uid, '💠 Prismalink veröffentlicht\n\nDein Post steht 7 Tage lang ganz oben im Feed mit Holographic-Glow.\n' + (wasAdmin ? '⚙️ Admin: kostenlos\n' : 'Kosten: −' + PRISMA_LINK_COST + ' 💎 (Guthaben: ' + u.diamonds + ' 💎)\n') + '\nJeder Liker bekommt +' + PRISMA_LINK_REWARD + ' 💎. Der Post muss voll engagiert werden: liken, kommentieren, teilen und speichern. Schein-Engagement wird streng sanktioniert.');
     return { ok: true, id, adminFree: wasAdmin };
 }
 function prismaLinkLike({ uid, postId }) {
@@ -2392,7 +2392,7 @@ function prismaLinkLike({ uid, postId }) {
     p.engagedAt[uid] = Date.now();
     addDiamond(uid, PRISMA_LINK_REWARD);
     addNotification(p.uid, '💠', (u.spitzname || u.name || 'User') + ' hat deinen Prismalink engagiert', uid);
-    sendInAppDM(uid, '💠 Prismalink engagiert\n\nDu hast einen Prismalink engagiert und +' + PRISMA_LINK_REWARD + ' 💎 erhalten.\n\nDu bestätigst hiermit den Post:\n✓ geliked\n✓ kommentiert\n✓ geteilt\n✓ gespeichert\n\nDies wird kontrolliert. Bei Schein-Engagement: XP-Abzug + Diamonds-Reset + Bann.\n\nMehr im Explore → Regeln → 💠 Prismalinks.');
+    sendInAppDM(uid, '💠 Prismalink engagiert\n\nDu hast einen Prismalink engagiert.\n\n💎 +' + PRISMA_LINK_REWARD + ' Diamanten\n\nMit dem Engagement bestätigst du, den Post geliked, kommentiert, geteilt und gespeichert zu haben. Das wird geprüft — bei Schein-Engagement folgen XP-Abzug, Diamanten-Reset und Bann.\n\nMehr dazu im Explore unter Regeln, Prismalinks.');
     return { ok: true, liked: true, likeCount: p.likes.length, diamondsTotal: u.diamonds || 0 };
 }
 function prismaLinkAcceptRules({ uid }) {
@@ -2448,7 +2448,7 @@ function collabCreatePost({ uid, partnerUid, url, caption }) {
     p.collabPostThisWeek = week;
     const fromName = u.spitzname || u.name || 'Dein Partner';
     addNotification(partnerUid, '🤝', fromName + ' hat euren Kollab-Post veröffentlicht', uid);
-    sendInAppDM(partnerUid, '🤝 Kollab-Post live!\n\n' + fromName + ' hat euren gemeinsamen Kollab-Post veröffentlicht.\nUser können ihn jetzt im Feed → 🤝 Kollabs engagieren.');
+    sendInAppDM(partnerUid, '🤝 Kollab-Post ist live\n\n' + fromName + ' hat euren gemeinsamen Kollab-Post veröffentlicht.\n\nAlle können ihn jetzt im Feed unter Kollabs engagieren.');
     return { ok: true, postId };
 }
 function collabLikePost({ uid, postId }) {
@@ -2473,12 +2473,12 @@ function collabLikePost({ uid, postId }) {
     addNotification(p.partnerUid, '🤝❤️', (u.spitzname || u.name || 'User') + ' hat euren Kollab-Post geliked' + (boost.active ? ' (Boost-Slot!)' : ''), uid);
     let dmSentNow = false;
     if (!u.collabRulesDMSent) {
-        sendInAppDM(uid, '🤝 Kollab-Post engagiert\n\nDu hast deinen ersten Kollab-Post engagiert! Die Regeln nochmal kurz:\n\n• Zuerst auf Instagram öffnen → LIKEN, KOMMENTIEREN, SPEICHERN und TEILEN\n• Dann hier in der App ✅ tippen\n• Pro engagiertem Kollab-Post bekommst du 1 💎 Diamant\n• Im Reel muss sichtbar sein, dass beide Parteien zusammenarbeiten (z.B. Logos beider Creator, gemeinsamer Branding-Frame oder beide @-Handles)\n• Reine Schein-Likes und Posts ohne sichtbare Zusammenarbeit werden sanktioniert\n\nMehr im Explore → Regeln → 🤝 Kollabs. Viel Erfolg!');
+        sendInAppDM(uid, '🤝 Kollab-Post engagiert\n\nDu hast deinen ersten Kollab-Post engagiert. Kurz die wichtigsten Regeln:\n\n• Erst auf Instagram öffnen — liken, kommentieren, speichern und teilen\n• Dann hier in der App auf ✅ tippen\n• Pro engagiertem Kollab-Post bekommst du 1 💎 Diamant\n• Im Reel muss sichtbar sein, dass beide zusammenarbeiten (z. B. Logos beider Creator, gemeinsamer Branding-Frame oder beide @-Handles)\n• Schein-Likes und Posts ohne sichtbare Zusammenarbeit werden sanktioniert\n\nMehr dazu im Explore unter Regeln, Kollabs. Viel Erfolg!');
         u.collabRulesDMSent = Date.now();
         dmSentNow = true;
     }
     if (boost.active) {
-        sendInAppDM(uid, '🤝⚡ Kollab-Boost-Slot!\n\nDu hast den Kollab-Post während eines Boost-Slots engagiert → +1 💎 Extra-Diamant (' + diamondsGiven + ' total).\n\nKollab-Posts erscheinen 7 Tage lang alle 4h für 20 Minuten im Feed mit Boost-Bonus.');
+        sendInAppDM(uid, '🤝 Kollab-Boost erwischt\n\nDu hast den Kollab-Post während eines Boost-Slots engagiert.\n\n💎 +1 Extra-Diamant (gesamt: ' + diamondsGiven + ')\n\nKollab-Posts erscheinen 7 Tage lang alle 4 Stunden für 20 Minuten mit Boost-Bonus im Feed.');
     }
     return { ok: true, liked: true, likeCount: p.likes.length, diamondsTotal: u.diamonds || 0, rulesDmSent: dmSentNow, diamondsGiven, boostActive: boost.active };
 }
@@ -2775,11 +2775,11 @@ async function adminReportActionApi({ reportId, action, adminUid }) {
         if (!u) return { ok: false, error: 'Target-User nicht gefunden' };
         u.warnings = (u.warnings || 0) + 1;
         rep.status = 'resolved'; rep.resolvedAt = Date.now(); rep.resolvedBy = adminUid; rep.action = 'warn';
-        try { dmUser(rep.targetUid, `⚠️ *Verwarnung!*
+        try { dmUser(rep.targetUid, `⚠️ Verwarnung
 
-Ein Admin hat dich verwarnt nach einer Meldung.
+Ein Admin hat dich nach einer Meldung verwarnt.
 
-⚠️ Warns: ${u.warnings}/5`); } catch (e) {}
+⚠️ Verwarnungen: ${u.warnings}/5`); } catch (e) {}
         addNotification(rep.targetUid, '⚠️', 'Du wurdest verwarnt nach einer Meldung. Warns: ' + u.warnings + '/5');
         return { ok: true, warnings: u.warnings };
     }
@@ -2793,7 +2793,7 @@ Ein Admin hat dich verwarnt nach einer Meldung.
             if (other && other.parent_uid && String(other.parent_uid) === rep.targetUid) { other.banned = true; other.bannedAt = Date.now(); other.inGruppe = false; other.started = false; }
         }
         rep.status = 'resolved'; rep.resolvedAt = Date.now(); rep.resolvedBy = adminUid; rep.action = 'ban';
-        try { dmUser(rep.targetUid, `🚫 *Du wurdest gebannt*
+        try { dmUser(rep.targetUid, `🚫 Du wurdest gebannt
 
 Ein Admin hat dich nach einer Meldung aus der Community entfernt.`); } catch (e) {}
         return { ok: true };
@@ -2823,14 +2823,14 @@ async function adminScheduleEventApi({ type, amount, durationMs, startAt, label 
     const startStr = new Date(startAt).toLocaleString('de-DE', { timeZone: 'Europe/Berlin', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
     const icon = type === 'xp' ? '🚀' : '💎';
     const evtTitle = type === 'xp' ? 'XP-Event geplant!' : 'Diamond-Event geplant!';
-    const msg = `${icon} *${evtTitle}*
+    const msg = `${icon} ${evtTitle}
 
 ${eventLabel}
 
-📅 Start: *${startStr}* (Berlin-Zeit)
+📅 Start: ${startStr} (Berlin-Zeit)
 ⏱ Dauer: ${Math.round(durationMs / 60000)} Minuten
 
-Du kriegst 1h vorher eine Erinnerung + Push wenn das Event startet.`;
+Du bekommst 1 Stunde vorher eine Erinnerung und einen Push, sobald das Event startet.`;
     try { await announceEventToAllUsers(icon + ' ' + evtTitle, eventLabel + ' · Start ' + startStr, '/feed'); } catch (e) {}
     for (const [uid, u] of Object.entries(d.users || {})) {
         if (!u || u.parent_uid || u.banned || !u.started) continue;
@@ -3007,10 +3007,11 @@ function collabRequestApi({ fromUid, toUid }) {
     addNotification(toUid, '🤝', fromName + ' möchte mit dir eine Kollaboration eingehen', fromUid);
     sendInAppDM(toUid, `🤝 Kollab-Anfrage
 
-${fromName} möchte mit dir eine Kollaboration eingehen.
-Wenn du akzeptierst, dürft ihr gemeinsam 1× pro Woche einen Kollab-Post veröffentlichen.
+${fromName} möchte mit dir zusammenarbeiten.
 
-→ Öffne deine Benachrichtigungen um zu antworten.`);
+Wenn du annimmst, dürft ihr gemeinsam 1× pro Woche einen Kollab-Post veröffentlichen.
+
+Öffne deine Benachrichtigungen, um zu antworten.`);
     return { ok: true, reqId };
 }
 function collabRespondApi({ reqId, accept, callerUid }) {
@@ -3034,14 +3035,16 @@ function collabRespondApi({ reqId, accept, callerUid }) {
         const fromName = fromU.spitzname || fromU.name || 'Partner';
         const toName = toU.spitzname || toU.name || 'Partner';
         addNotification(r.fromUid, '🎉', toName + ' hat deine Kollab-Anfrage angenommen', r.toUid);
-        sendInAppDM(r.fromUid, `🎉 Kollaboration aktiv!
+        sendInAppDM(r.fromUid, `🎉 Kollaboration aktiv
 
 Du bist jetzt Kollab-Partner mit ${toName}.
-Ihr könnt im + Menü "🤝 Kollab-Link" auswählen — 1× pro Woche.`);
-        sendInAppDM(r.toUid, `🎉 Kollaboration aktiv!
+
+Im Plus-Menü könnt ihr "Kollab-Link" wählen — 1× pro Woche.`);
+        sendInAppDM(r.toUid, `🎉 Kollaboration aktiv
 
 Du bist jetzt Kollab-Partner mit ${fromName}.
-Ihr könnt im + Menü "🤝 Kollab-Link" auswählen — 1× pro Woche.`);
+
+Im Plus-Menü könnt ihr "Kollab-Link" wählen — 1× pro Woche.`);
     } else if (!accept && fromU) {
         const toName = toU?.spitzname || toU?.name || 'Der User';
         addNotification(r.fromUid, '❌', toName + ' hat deine Kollab-Anfrage abgelehnt', r.toUid);
@@ -3668,7 +3671,7 @@ async function runWochenGewinnspielApi() {
             if (!Array.isArray(d.wochenGewinnspiel.gewinner)) d.wochenGewinnspiel.gewinner = [];
             d.wochenGewinnspiel.gewinner.push({ name: winnerName, uid: winnerId, datum: new Date().toLocaleDateString() });
             d.wochenGewinnspiel.letzteAuslosung = Date.now();
-            try { await dmUser(winnerId, '🎉 *Du hast das Wochen-Gewinnspiel gewonnen!*\n\n🎁 1 Extra Link nächste Woche!'); } catch (e) {}
+            try { await dmUser(winnerId, '🎉 Du hast das Wochen-Gewinnspiel gewonnen\n\n🎁 1 Extra-Link für nächste Woche\n\nGlückwunsch!'); } catch (e) {}
         } else {
             console.log('❌ Wochen-Gewinnspiel: keine Teilnehmer');
         }
@@ -3685,7 +3688,7 @@ async function runWochenGewinnspielApi() {
                     const allEngaged = slLikersPerSl.every(set => set.has(String(uid)));
                     if (allEngaged) {
                         addDiamond(uid, 1);
-                        try { await dmUser(uid, '💎 *Wochenengagement-Bonus!*\n\nDu hast diese Woche ALLE Superlinks engagiert. +1 Diamant 🙏\nAktuell: ' + (d.users[uid].diamonds || 0) + ' 💎'); } catch (e) {}
+                        try { await dmUser(uid, '💎 Wochen-Engagement-Bonus\n\nDu hast diese Woche alle Superlinks engagiert. Danke dafür!\n\n💎 +1 Diamant\n\nGuthaben: ' + (d.users[uid].diamonds || 0) + ' 💎'); } catch (e) {}
                     }
                 }
             }
@@ -3711,9 +3714,9 @@ async function runWochenGewinnspielRankingDM() {
         if (rank === -1) continue;
         const xp = d.weeklyXP[uid] || 0;
         const u = d.users[uid];
-        let text = '📆 *Weekly Ranking*\n━━━━━━━━━━━━━━\n\n';
+        let text = '📆 Wochen-Ranking\n\n';
         text += (rank < 3 ? badges[rank] : '#' + (rank + 1)) + ' Platz ' + (rank + 1) + ' von ' + sorted.length + '\n';
-        text += '⭐ ' + xp + ' XP diese Woche\n\n━━━━━━━━━━━━━━\n🏆 *Top 3:*\n';
+        text += '⭐ ' + xp + ' XP diese Woche\n\n🏆 Top 3:\n';
         sorted.slice(0, 3).forEach(([tid, txp], i) => { text += badges[i] + ' ' + d.users[tid].name + '  ·  ' + txp + ' XP\n'; });
         text += '\n🔥 Weiter so, ' + u.name + '!';
         try { await dmUser(uid, text); } catch (e) {}
@@ -3835,7 +3838,7 @@ function grantReferralMilestone(inviteeUid, key) {
     inviter.refDiamondsEarned = (inviter.refDiamondsEarned || 0) + ms.dia;
     addDiamond(String(invitee.referredBy), ms.dia);
     const invName = invitee.spitzname || invitee.name || 'Dein eingeladener Creator';
-    try { sendInAppDM(String(invitee.referredBy), '💎 *Referral-Belohnung!*\n\n' + invName + ' hat einen Meilenstein erreicht: *' + ms.label + '*\n\n+' + ms.dia + ' 💎 für dich!'); } catch (e) {}
+    try { sendInAppDM(String(invitee.referredBy), '💎 Referral-Belohnung\n\n' + invName + ' hat einen Meilenstein erreicht: ' + ms.label + '\n\n💎 +' + ms.dia + ' Diamanten für dich\n\nDanke fürs Einladen!'); } catch (e) {}
     return true;
 }
 // Prüft die aktivitätsbasierten Meilensteine eines eingeladenen Users (Likes + aktive Tage).
@@ -3878,7 +3881,7 @@ function clawbackReferral(inviteeUid) {
     if (total > 0) {
         inviter.diamonds = Math.max(0, Number(inviter.diamonds || 0) - total);
         inviter.refDiamondsEarned = Math.max(0, Number(inviter.refDiamondsEarned || 0) - total);
-        try { sendInAppDM(String(invitee.referredBy), '⚠️ *Referral-Korrektur*\n\nEin von dir eingeladener Account wurde gesperrt. −' + total + ' 💎 (Belohnungen zurückgezogen).'); } catch (e) {}
+        try { sendInAppDM(String(invitee.referredBy), '⚠️ Referral-Korrektur\n\nEin von dir eingeladener Account wurde gesperrt.\n\n💎 −' + total + ' Diamanten (Belohnungen zurückgezogen)'); } catch (e) {}
     }
     invitee.refClawedBack = true;
 }
@@ -3908,7 +3911,7 @@ function requestReferralVerification(inviteeUid) {
     const admins = Array.isArray(d._adminIds) ? d._adminIds.map(String) : [];
     const inviterName = (d.users[String(invitee.referredBy)] || {}).spitzname || (d.users[String(invitee.referredBy)] || {}).name || 'Einlader';
     for (const aid of admins) {
-        try { sendInAppDM(aid, '🔎 *Referral-Prüfung nötig*\n\n' + inviterName + ' hat *' + (invitee.spitzname || invitee.name || 'einen User') + '* eingeladen.\nInstagram: @' + invitee.instagram + '\n\nPrüfe & bestätige im Dashboard → Referral-Prüfungen.'); } catch (e) {}
+        try { sendInAppDM(aid, '🔎 Referral-Prüfung nötig\n\n' + inviterName + ' hat ' + (invitee.spitzname || invitee.name || 'einen User') + ' eingeladen.\nInstagram: @' + invitee.instagram + '\n\nPrüfen und bestätigen im Dashboard unter Referral-Prüfungen.'); } catch (e) {}
     }
 }
 // Admin bestätigt → signup-Belohnung wird vergeben. Setzt Status auf approved.

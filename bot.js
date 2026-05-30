@@ -567,14 +567,14 @@ function _flushLinkPush() {
     if (!buf || !webpush) return;
     let title, body;
     if (buf.count === 1) {
-        title = '🔥 Neuer Reel-Link!';
-        body = (buf.names[0] || 'Jemand') + ' hat einen Link in CreatorX geteilt';
+        title = '🔥 Neuer Reel-Link';
+        body = (buf.names[0] || 'Jemand') + ' hat ein neues Reel geteilt — schau vorbei und like es.';
     } else {
-        title = '🔥 ' + buf.count + ' neue Reel-Links!';
+        title = '🔥 ' + buf.count + ' neue Reel-Links';
         const namePart = buf.names.length
-            ? buf.names.slice(0, 2).join(', ') + (buf.count > buf.names.slice(0, 2).length ? ' u.a.' : '')
+            ? buf.names.slice(0, 2).join(', ') + (buf.count > buf.names.slice(0, 2).length ? ' und weitere' : '')
             : 'Mehrere Creator';
-        body = namePart + ' haben Links in CreatorX geteilt';
+        body = namePart + ' haben neue Reels geteilt — schau vorbei und like sie.';
     }
     const payload = JSON.stringify({ title, body, url: '/feed' });
     // Poster der Bündelung nicht über ihre eigenen Links benachrichtigen.
@@ -1632,8 +1632,8 @@ async function appCronTick() {
                         if (!stage || u._winbackStage === stage) continue; // kein Treffer oder schon gesendet
                         const name = (u.spitzname || u.name || '').split(' ')[0] || '';
                         const msg = stage === 12
-                            ? 'Dein Account wird bald pausiert. Schau kurz rein — deine Reels & dein Rang warten' + (name ? ', ' + name : '') + '.'
-                            : 'Wir vermissen dich' + (name ? ', ' + name : '') + '! Neue Reels warten auf dein Engagement — und dein Rang fällt.';
+                            ? 'Dein Account wird bald pausiert. Schau kurz vorbei — deine Reels und dein Rang warten auf dich' + (name ? ', ' + name : '') + '.'
+                            : 'Wir vermissen dich' + (name ? ', ' + name : '') + '. Neue Reels warten auf dein Engagement — bleib dran und halte deinen Rang.';
                         pushToUid(uid, stage === 12 ? '⏳ Komm zurück' : '👋 Lange nicht gesehen', msg, '/feed');
                         u._winbackStage = stage; sent++;
                     }
@@ -5147,7 +5147,7 @@ self.addEventListener('fetch',e=>{
   e.respondWith(fetch(req).catch(()=>new Response('',{status:503})));
 });
 self.addEventListener('push',e=>{
-  const data=e.data?.json()||{title:'CreatorX',body:'Neue Aktivität!'};
+  const data=e.data?.json()||{title:'CreatorX',body:'Es gibt Neues in der Community.'};
   e.waitUntil(self.registration.showNotification(data.title,{
     body:data.body,icon:'/icon.jpg',badge:'/icon.jpg',
     data:{url:data.url||'/feed'},vibrate:[200,100,200],
@@ -7971,7 +7971,7 @@ ${spaceScale.map(s=>`<div class="grow"><span class="gmeta">--space-${s}</span><d
                     const _rRec = _reciprocityRate.get(_ownerUid) || 0;
                     if (_rNow - _rRec > 3600000) {
                         _reciprocityRate.set(_ownerUid, _rNow);
-                        pushToUid(_ownerUid, '❤️ Engagement erhalten', String(result.likerName || 'Jemand') + ' hat deinen Reel engagiert — schau dir seinen an und gib zurück.', '/feed');
+                        pushToUid(_ownerUid, '❤️ Engagement erhalten', String(result.likerName || 'Jemand') + ' hat deinen Reel engagiert — schau gerne vorbei und gib zurück.', '/feed');
                     }
                 }
             } catch (e) {}
@@ -10281,7 +10281,7 @@ p{line-height:1.65;color:var(--muted)}
                 let _n = 0;
                 for (const ouid of _online) {
                     if (String(ouid) === String(myUid)) continue;
-                    pushToUid(ouid, '👋 Neu dabei!', _pName + ' hat den ersten Reel gepostet — sei die/der Erste mit einem Like.', '/feed');
+                    pushToUid(ouid, '👋 Neu dabei', _pName + ' hat den ersten Reel geteilt — sei unter den Ersten mit einem Like.', '/feed');
                     if (++_n >= 25) break; // sanfter Cap gegen Push-Flut
                 }
             } else {
@@ -11380,7 +11380,7 @@ ${(()=>{
     const _role = String((d.users?.[myUid]?.role) || '').replace(/"/g,'');
     if (!_role) return '';
     return '<script>(function(){try{var cur='+JSON.stringify(_role)+';var prev=localStorage.getItem("cb_role_seen");localStorage.setItem("cb_role_seen",cur);'
-      + 'if(prev&&prev!==cur&&typeof showBanner==="function"){setTimeout(function(){showBanner({type:"success",title:"🎉 Aufstieg: "+cur,subtitle:"Neue Stufe erreicht — weiter so!",dur:6000});if(navigator.vibrate)try{navigator.vibrate([30,40,30]);}catch(e){}},900);}'
+      + 'if(prev&&prev!==cur&&typeof showBanner==="function"){setTimeout(function(){showBanner({type:"success",title:"🎉 Neuer Rang: "+cur,subtitle:"Du bist aufgestiegen — weiter so!",dur:6000});if(navigator.vibrate)try{navigator.vibrate([30,40,30]);}catch(e){}},900);}'
       + '}catch(e){}})();<\/script>';
   } catch(e) { return ''; }
 })()}
