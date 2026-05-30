@@ -843,7 +843,11 @@ function updateProfileApi(body) {
     if (body.tiktok !== undefined) u.tiktok = String(body.tiktok).replace('@', '').slice(0, 50);
     if (body.youtube !== undefined) u.youtube = String(body.youtube).replace('@', '').slice(0, 50);
     if (body.twitter !== undefined) u.twitter = String(body.twitter).replace('@', '').slice(0, 50);
-    if (body.instagram !== undefined) u.instagram = String(body.instagram || '').replace(/^@/, '').replace(/[^a-zA-Z0-9._]/g, '').slice(0, 50);
+    if (body.instagram !== undefined) {
+        u.instagram = String(body.instagram || '').replace(/^@/, '').replace(/[^a-zA-Z0-9._]/g, '').slice(0, 50);
+        // Anti-Trick Referral: signup-Belohnung (100💎) erst jetzt, wo ein echter Insta-Handle steht.
+        if (u.instagram && u.referredBy) { try { grantReferralMilestone(String(uid), 'signup'); } catch (e) {} }
+    }
     if (body.email !== undefined) {
         const newEmail = String(body.email || '').toLowerCase().trim();
         if (newEmail === '') {
@@ -2125,6 +2129,8 @@ function banUserApi({ uid }) {
             other.banned = true; other.bannedAt = Date.now(); other.inGruppe = false; other.started = false;
         }
     }
+    // Anti-Trick: Referral-Diamanten für diesen (und seine Sub-)Accounts zurückziehen.
+    try { clawbackReferral(uid); for (const [oid, other] of Object.entries(d.users || {})) { if (other && String(other.parent_uid||'') === uid) clawbackReferral(oid); } } catch (e) {}
     try { dmUser(uid, `🚫 *Du wurdest gebannt*\n\nEin Admin hat dich aus der Community entfernt.`); } catch (e) {}
     return { ok: true };
 }
@@ -3800,7 +3806,11 @@ function linkReferral(refCode, inviteeUid) {
     invitee.refMilestones = {};                                  // pro-Invitee Meilenstein-Tracking
     const inviter = d.users[inviterUid];
     if (inviter) { if (!Array.isArray(inviter.referrals)) inviter.referrals = []; if (!inviter.referrals.includes(inviteeUid)) inviter.referrals.push(inviteeUid); }
-    grantReferralMilestone(inviteeUid, 'signup');
+    // Anti-Trick: signup-Belohnung NICHT sofort — erst wenn der Eingeladene einen
+    // Instagram-Username setzt (= echter Creator, kein leerer Fake-Account). Trigger in
+    // updateProfileApi via checkReferralSignup. Falls der Insta-Handle schon gesetzt ist
+    // (Race/Reviewer), gleich vergeben.
+    if (invitee.instagram) grantReferralMilestone(inviteeUid, 'signup');
     return { ok: true, inviterUid };
 }
 // Zentraler Meilenstein-Trigger: zahlt EINMALIG an den Einlader des inviteeUid.
@@ -3846,6 +3856,25 @@ function touchReferralActiveDay(inviteeUid) {
     invitee.refActiveDays = (Number(invitee.refActiveDays || 0)) + 1;
     checkReferralProgress(inviteeUid);
 }
+// Anti-Trick Clawback: wird ein eingeladener User gebannt, werden die für ihn an den
+// Einlader gezahlten Referral-Diamanten zurückgezogen (so weit vorhanden, nie negativ).
+// Idempotent über invitee.refClawedBack. Schreckt Fake-Account-Betrug ab.
+function clawbackReferral(inviteeUid) {
+    inviteeUid = String(inviteeUid || '');
+    const invitee = d.users[inviteeUid];
+    if (!invitee || !invitee.referredBy || invitee.refClawedBack) return;
+    const inviter = d.users[String(invitee.referredBy)];
+    if (!inviter) { invitee.refClawedBack = true; return; }
+    let total = 0;
+    const ms = invitee.refMilestones || {};
+    for (const key of Object.keys(ms)) { if (ms[key] && REFERRAL_MILESTONES[key]) total += REFERRAL_MILESTONES[key].dia; }
+    if (total > 0) {
+        inviter.diamonds = Math.max(0, Number(inviter.diamonds || 0) - total);
+        inviter.refDiamondsEarned = Math.max(0, Number(inviter.refDiamondsEarned || 0) - total);
+        try { sendInAppDM(String(invitee.referredBy), '⚠️ *Referral-Korrektur*\n\nEin von dir eingeladener Account wurde gesperrt. −' + total + ' 💎 (Belohnungen zurückgezogen).'); } catch (e) {}
+    }
+    invitee.refClawedBack = true;
+}
 // Referral-Statistik für den Profilbereich des Einladers.
 function referralStatsApi(uid) {
     uid = String(uid || '');
@@ -3884,7 +3913,7 @@ module.exports = {
     init, setThumbnailFetcher, setBildSaver,
     REFERRAL_MILESTONES,
     ensureReferralCode, linkReferral, grantReferralMilestone, checkReferralProgress,
-    touchReferralActiveDay, referralStatsApi, communityBuilderBadge, communityBuilderRanking,
+    touchReferralActiveDay, referralStatsApi, communityBuilderBadge, communityBuilderRanking, clawbackReferral,
     touchStreakApi, getStreakApi,
     updateProfileApi, addProjectApi, updateProjectApi, deleteProjectApi, completeProfileApi, engagePinnedPostApi,
     followApi,
