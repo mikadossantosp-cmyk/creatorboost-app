@@ -3752,7 +3752,7 @@ function getStreakApi(uid) {
 // nur Registrierungen. Jeder Meilenstein zahlt EINMALIG an den Einlader.
 // ════════════════════════════════════════════════════════════════════════════
 const REFERRAL_MILESTONES = {
-    signup:    { dia: 50,  label: 'Registrierung' },
+    signup:    { dia: 100, label: 'Registrierung' },
     firstPost: { dia: 30,  label: 'Erster Beitrag' },
     likes50:   { dia: 30,  label: '50 Likes vergeben' },
     likes200:  { dia: 50,  label: '200 Likes vergeben' },
@@ -3882,6 +3882,7 @@ function communityBuilderRanking(limit) {
 
 module.exports = {
     init, setThumbnailFetcher, setBildSaver,
+    REFERRAL_MILESTONES,
     ensureReferralCode, linkReferral, grantReferralMilestone, checkReferralProgress,
     touchReferralActiveDay, referralStatsApi, communityBuilderBadge, communityBuilderRanking,
     touchStreakApi, getStreakApi,

@@ -4539,6 +4539,7 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
     `}
   </div>
   ${isOwn ? `<a href="/insights" class="ipf-btn" style="display:flex;align-items:center;justify-content:center;gap:var(--space-2);width:100%;padding:11px;background:linear-gradient(135deg,rgba(34,197,94,.10),rgba(167,139,250,.08));border:1px solid rgba(34,197,94,.30);color:#22c55e;border-radius:9px;font-size:13.5px;font-weight:700;text-decoration:none;margin-bottom:10px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="20" x2="6" y2="13"/><line x1="12" y1="20" x2="12" y2="7"/><line x1="18" y1="20" x2="18" y2="11"/></svg> Professional Insights · Top Engagers · Best Times <span style="margin-left:auto;color:#22c55e;font-size:14px">→</span></a>` : ''}
+  ${isOwn ? `<a href="/einladen" class="ipf-btn" style="display:flex;align-items:center;justify-content:center;gap:var(--space-2);width:100%;padding:11px;background:linear-gradient(135deg,rgba(34,197,94,.12),rgba(6,182,212,.08));border:1px solid rgba(34,197,94,.35);color:#22c55e;border-radius:9px;font-size:13.5px;font-weight:700;text-decoration:none;margin-bottom:10px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg> Creator einladen · Diamanten verdienen <span style="margin-left:auto;color:#22c55e;font-size:14px">→</span></a>` : ''}
   ${u.trophies&&u.trophies.length?`<div class="ipf-trophy-row"><span style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-weight:800;width:100%;margin-bottom:2px;display:inline-flex;align-items:center;gap:5px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h12v4a6 6 0 0 1-12 0z"/><path d="M6 6H3.5a2.5 2.5 0 0 0 4 2"/><path d="M18 6h2.5a2.5 2.5 0 0 1-4 2"/><line x1="12" y1="14" x2="12" y2="18"/><path d="M8.5 21h7"/><path d="M9 18h6"/></svg>Trophäen</span>${u.trophies.map(t=>`<span class="ipf-trophy">${t}</span>`).join('')}</div>`:''}
   ${isOwn && isAdmin ? '<div style="margin-top:6px"><a href="/dashboard" class="ipf-btn" style="background:linear-gradient(135deg,#f5d76e,#d4a946 55%,#8b6914);color:#000;border-color:rgba(212,175,55,.55);font-weight:700;display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Admin Dashboard</a></div>' : ''}
 </div>
@@ -21528,10 +21529,10 @@ async function setRing(ringId) {
         const _ranking = botLogic.communityBuilderRanking(20);
         const _base = (req.headers['x-forwarded-host'] ? 'https://' + String(req.headers['x-forwarded-host']).split(',')[0].trim() : AUTH_BASE_URL);
         const _inviteUrl = _base + '/signup?ref=' + encodeURIComponent(_rstats.code || '');
-        const _milestoneList = [
-            ['Registrierung', '50 💎'], ['Erster Beitrag', '30 💎'], ['50 Likes vergeben', '30 💎'],
-            ['200 Likes vergeben', '50 💎'], ['7 Tage aktiv', '50 💎'], ['15 Tage aktiv', '100 💎'], ['30 Tage aktiv', '250 💎'],
-        ];
+        // Belohnungs-Tabelle direkt aus der Quelle (REFERRAL_MILESTONES) — keine Duplikate/Drift.
+        const _M = botLogic.REFERRAL_MILESTONES || {};
+        const _milestoneList = ['signup','firstPost','likes50','likes200','active7','active15','active30']
+            .filter(k => _M[k]).map(k => [_M[k].label, _M[k].dia + ' 💎']);
         const _rankRows = _ranking.length ? _ranking.map((r, i) => {
             const _medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '<span style="display:inline-block;width:22px;text-align:center;color:var(--muted);font-weight:700">' + (i + 1) + '</span>';
             const _me = String(r.uid) === String(myUid);
