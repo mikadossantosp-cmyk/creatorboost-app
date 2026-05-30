@@ -18148,7 +18148,7 @@ ${_latestNews ? `<a href="/explore?tab=newsletter" class="highlight-card" style=
 <div id="rlist-builder" style="display:none;padding-bottom:100px">
   <div style="margin:0 16px 12px;padding:12px 14px;background:linear-gradient(135deg,rgba(34,197,94,0.12),rgba(6,182,212,0.06));border:1px solid rgba(34,197,94,0.30);border-radius:12px;font-size:12.5px;line-height:1.55">
     <div style="font-weight:800;color:#22c55e;margin-bottom:4px">🤝 Community Builder</div>
-    <div style="color:var(--muted)">Wer die meisten <b>aktiven</b> Creator in die Community gebracht hat. Lade selbst ein → <a href="/einladen" style="color:#22c55e;font-weight:700">Einladungslink holen</a></div>
+    <div style="color:var(--muted)">Wer die meisten <b>aktiven</b> Creator in die Community gebracht hat. Jeder Rang zahlt <b style="color:#06b6d4">täglich</b> Diamanten. Lade selbst ein → <a href="/einladen" style="color:#22c55e;font-weight:700">Einladungslink holen</a> · <a href="/explore?tab=regeln#r-einladen" style="color:#a78bfa;font-weight:700">Regeln & Ränge</a></div>
   </div>
   ${_cbRows}
 </div>
@@ -21649,7 +21649,10 @@ async function setRing(ringId) {
         const _milestoneList = ['signup','firstPost','likes50','likes200','active7','active15','active30']
             .filter(k => _M[k]).map(k => [_M[k].label, _M[k].dia + ' 💎']);
         // Community-Builder-Ränge direkt aus communityBuilderBadge (keine Drift) — Schwellen 1/5/10/25.
-        const _cbTiers = [1,5,10,25].map(n => { const b = botLogic.communityBuilderBadge(n); return [b.emoji, b.label, n + (n===1?' aktiver':' aktive'), '+' + b.dailyDiamonds + ' 💎/Tag']; });
+        const _cbTiers = [1,5,10,25].map(n => { const b = botLogic.communityBuilderBadge(n); return [b.emoji, b.label, n + (n===1?' aktiver':' aktive'), '+' + b.dailyDiamonds + ' 💎/Tag', b.tier]; });
+        // Premium-Medaille: jeder Rang bekommt einen metallischen Farbring (Bronze/Smaragd→Silber→Gold→Platin).
+        const _tierRing = (t)=> t>=4 ? 'linear-gradient(135deg,#c4b5fd,#a78bfa 45%,#6d28d9)' : t>=3 ? 'linear-gradient(135deg,#f9e08a,#d4a946 55%,#8b6914)' : t>=2 ? 'linear-gradient(135deg,#f4f6f9,#cbd5e1 55%,#8b97a8)' : 'linear-gradient(135deg,#6ee7b7,#10b981 55%,#047857)';
+        const _cbMedal = (emoji,t,size)=>'<span style="display:inline-flex;align-items:center;justify-content:center;width:'+size+'px;height:'+size+'px;border-radius:50%;background:'+_tierRing(t)+';box-shadow:0 2px 9px rgba(0,0,0,0.32),inset 0 1.5px 2px rgba(255,255,255,0.55),inset 0 -1.5px 3px rgba(0,0,0,0.20);font-size:'+Math.round(size*0.5)+'px;line-height:1;flex-shrink:0">'+emoji+'</span>';
         const _rankRows = _ranking.length ? _ranking.map((r, i) => {
             const _medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '<span style="display:inline-block;width:22px;text-align:center;color:var(--muted);font-weight:700">' + (i + 1) + '</span>';
             const _me = String(r.uid) === String(myUid);
@@ -21678,7 +21681,7 @@ async function setRing(ringId) {
     <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:14px 8px;text-align:center"><div style="font-size:22px;font-weight:800;color:#06b6d4">${_rstats.diamonds||0}</div><div style="font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-top:2px">💎 verdient</div></div>
   </div>
 
-  ${_badge ? `<div style="display:flex;align-items:center;gap:11px;background:linear-gradient(135deg,rgba(34,197,94,0.10),rgba(6,182,212,0.05));border:1px solid rgba(34,197,94,0.30);border-radius:14px;padding:13px 15px;margin-bottom:16px"><div style="font-size:26px">${_badge.emoji}</div><div style="flex:1"><div style="font-size:var(--fs-sm);font-weight:800;color:var(--text)">${_badge.label}</div><div style="font-size:11px;color:var(--muted)">Dein Community-Builder-Rang</div></div><div style="text-align:right;flex-shrink:0"><div style="font-size:var(--fs-base);font-weight:800;color:#06b6d4">+${_badge.dailyDiamonds} 💎</div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px">pro Tag</div></div></div>` : ''}
+  ${_badge ? `<div style="display:flex;align-items:center;gap:13px;background:linear-gradient(135deg,rgba(34,197,94,0.10),rgba(6,182,212,0.05));border:1px solid rgba(34,197,94,0.30);border-radius:14px;padding:13px 15px;margin-bottom:16px">${_cbMedal(_badge.emoji,_badge.tier,46)}<div style="flex:1"><div style="font-size:var(--fs-sm);font-weight:800;color:var(--text)">${_badge.label}</div><div style="font-size:11px;color:var(--muted)">Dein Community-Builder-Rang</div></div><div style="text-align:right;flex-shrink:0"><div style="font-size:var(--fs-base);font-weight:800;color:#06b6d4">+${_badge.dailyDiamonds} 💎</div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px">pro Tag</div></div></div>` : ''}
 
   <!-- Einladungslink -->
   <div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Dein Einladungslink</div>
@@ -21698,7 +21701,7 @@ async function setRing(ringId) {
   <div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">🏅 Community Builder Ränge</div>
   <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:14px;overflow:hidden;margin-bottom:24px">
     <div style="padding:10px 15px;font-size:11px;color:var(--muted)">Jeder Rang zahlt <b style="color:#06b6d4">täglich</b> Diamanten aus — solange du ihn hältst.</div>
-    ${_cbTiers.map(t=>'<div style="display:flex;align-items:center;gap:11px;padding:11px 15px;border-top:1px solid var(--border2)"><div style="font-size:20px;flex-shrink:0">'+t[0]+'</div><div style="flex:1;min-width:0"><div style="font-size:var(--fs-sm);font-weight:700;color:var(--text)">'+t[1]+'</div><div style="font-size:11px;color:var(--muted)">'+t[2]+'</div></div><div style="font-size:var(--fs-sm);font-weight:800;color:#06b6d4;flex-shrink:0">'+t[3]+'</div></div>').join('')}
+    ${_cbTiers.map(t=>'<div style="display:flex;align-items:center;gap:12px;padding:11px 15px;border-top:1px solid var(--border2)">'+_cbMedal(t[0],t[4],36)+'<div style="flex:1;min-width:0"><div style="font-size:var(--fs-sm);font-weight:700;color:var(--text)">'+t[1]+'</div><div style="font-size:11px;color:var(--muted)">'+t[2]+'</div></div><div style="font-size:var(--fs-sm);font-weight:800;color:#06b6d4;flex-shrink:0">'+t[3]+'</div></div>').join('')}
   </div>
 
   <!-- Community Builder Ranking -->

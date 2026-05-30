@@ -32,6 +32,7 @@ module.exports = `
   .badge-row .b-name { flex:1; font-size:13px; font-weight:700; }
   .badge-row .b-xp { font-size:11px; color:var(--muted); }
   .badge-row .b-perk { font-size:11px; color:#a78bfa; font-weight:700; margin-left:8px; }
+  .cb-medal { display:inline-flex; align-items:center; justify-content:center; width:34px; height:34px; border-radius:50%; font-size:17px; line-height:1; flex-shrink:0; box-shadow:0 2px 9px rgba(0,0,0,.32), inset 0 1.5px 2px rgba(255,255,255,.55), inset 0 -1.5px 3px rgba(0,0,0,.20); }
   .why-box { background:rgba(168,85,247,.08); border-left:3px solid #a78bfa; border-radius:8px; padding:10px 12px; margin-top:10px; font-size:12px; color:var(--muted); line-height:1.6; }
   .ok-card, .bad-card { padding:10px 12px; border-radius:10px; font-size:12px; line-height:1.7; }
   .ok-card { background:rgba(34,197,94,.1); border:1px solid rgba(34,197,94,.25); }
@@ -469,10 +470,10 @@ module.exports = `
 
       <h3>Community Builder Rang</h3>
       <p>Je mehr <b>aktive</b> Creator du bringst, desto höher dein Rang — sichtbar in der <b>Rangliste → 🤝 Builder</b>. Jeder Rang bringt eine <b>tägliche</b> Diamanten-Belohnung, solange du den Rang hältst:</p>
-      <div class="badge-row"><span style="font-size:18px">🌱</span><span class="b-name">Community Builder I</span><span class="b-xp">1 aktiver</span><span class="b-perk">+5 💎 / Tag</span></div>
-      <div class="badge-row"><span style="font-size:18px">🤝</span><span class="b-name">Community Builder II</span><span class="b-xp">5 aktive</span><span class="b-perk">+15 💎 / Tag</span></div>
-      <div class="badge-row"><span style="font-size:18px">🏗️</span><span class="b-name">Community Builder III</span><span class="b-xp">10 aktive</span><span class="b-perk">+50 💎 / Tag</span></div>
-      <div class="badge-row"><span style="font-size:18px">🏛️</span><span class="b-name">Community Builder Elite</span><span class="b-xp">25 aktive</span><span class="b-perk">+100 💎 / Tag</span></div>
+      <div class="badge-row"><span class="cb-medal" style="background:linear-gradient(135deg,#6ee7b7,#10b981 55%,#047857)">🌱</span><span class="b-name">Community Builder I</span><span class="b-xp">1 aktiver</span><span class="b-perk">+5 💎 / Tag</span></div>
+      <div class="badge-row"><span class="cb-medal" style="background:linear-gradient(135deg,#f4f6f9,#cbd5e1 55%,#8b97a8)">🤝</span><span class="b-name">Community Builder II</span><span class="b-xp">5 aktive</span><span class="b-perk">+15 💎 / Tag</span></div>
+      <div class="badge-row"><span class="cb-medal" style="background:linear-gradient(135deg,#f9e08a,#d4a946 55%,#8b6914)">🏗️</span><span class="b-name">Community Builder III</span><span class="b-xp">10 aktive</span><span class="b-perk">+50 💎 / Tag</span></div>
+      <div class="badge-row"><span class="cb-medal" style="background:linear-gradient(135deg,#c4b5fd,#a78bfa 45%,#6d28d9)">🏛️</span><span class="b-name">Community Builder Elite</span><span class="b-xp">25 aktive</span><span class="b-perk">+100 💎 / Tag</span></div>
 
       <h3>Wichtig</h3>
       <ul>
