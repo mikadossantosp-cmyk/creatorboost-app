@@ -21235,6 +21235,11 @@ async function pfHandleAvatarFile(input){
     <div class="set-hub-content"><div class="set-hub-title">Benachrichtigungen</div><div class="set-hub-sub">Push · In-App · Email</div></div>
     <div class="set-hub-arrow">›</div>
   </a>
+  <a href="/einladen" class="set-hub-card" style="background:linear-gradient(135deg,rgba(34,197,94,0.10),rgba(6,182,212,0.04));border-color:rgba(34,197,94,0.30)">
+    <div class="set-hub-icon" style="background:linear-gradient(135deg,#22c55e,#06b6d4)"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg></div>
+    <div class="set-hub-content"><div class="set-hub-title">Creator einladen 💎</div><div class="set-hub-sub">Lade aktive Creator ein &amp; verdiene Diamanten</div></div>
+    <div class="set-hub-arrow">›</div>
+  </a>
   <a href="/einstellungen/sicherheit" class="set-hub-card">
     <div class="set-hub-icon" style="background:linear-gradient(135deg,#51cf66,#2f9e44)"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10.5" width="16" height="10.5" rx="2"/><path d="M8 10.5V7a4 4 0 0 1 8 0v3.5"/></svg></div>
     <div class="set-hub-content"><div class="set-hub-title">Sicherheit & Sessions</div><div class="set-hub-sub">Aktive Geräte · Logout</div></div>
@@ -21514,6 +21519,86 @@ async function setRing(ringId) {
 </script>`, 'settings');
     }
 
+    // ── REFERRAL: Einladen-Seite (Link, Stats, Community-Builder-Ranking) ──
+    if (path === '/einladen') {
+        if (!session) return redirect('/login');
+        if (!LOCAL_STORE) return html('<div class="empty" style="margin-top:30vh"><div class="empty-text">Einladen ist gerade nicht verfügbar.</div></div>', 'settings');
+        const _rstats = await localWrite(() => botLogic.referralStatsApi(String(myUid)));
+        const _badge = botLogic.communityBuilderBadge(_rstats.active || 0);
+        const _ranking = botLogic.communityBuilderRanking(20);
+        const _base = (req.headers['x-forwarded-host'] ? 'https://' + String(req.headers['x-forwarded-host']).split(',')[0].trim() : AUTH_BASE_URL);
+        const _inviteUrl = _base + '/signup?ref=' + encodeURIComponent(_rstats.code || '');
+        const _milestoneList = [
+            ['Registrierung', '50 💎'], ['Erster Beitrag', '30 💎'], ['50 Likes vergeben', '30 💎'],
+            ['200 Likes vergeben', '50 💎'], ['7 Tage aktiv', '50 💎'], ['15 Tage aktiv', '100 💎'], ['30 Tage aktiv', '250 💎'],
+        ];
+        const _rankRows = _ranking.length ? _ranking.map((r, i) => {
+            const _medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '<span style="display:inline-block;width:22px;text-align:center;color:var(--muted);font-weight:700">' + (i + 1) + '</span>';
+            const _me = String(r.uid) === String(myUid);
+            return '<div style="display:flex;align-items:center;gap:11px;padding:11px 14px;border-top:1px solid var(--border2)' + (_me ? ';background:rgba(34,197,94,0.06)' : '') + '">'
+                + '<div style="width:24px;font-size:16px;text-align:center;flex-shrink:0">' + _medal + '</div>'
+                + '<div style="flex:1;min-width:0"><div style="font-size:var(--fs-sm);font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + htmlEsc(r.name) + (_me ? ' <span style="color:#22c55e;font-size:11px">· du</span>' : '') + '</div>'
+                + (r.instagram ? '<div style="font-size:11px;color:var(--muted)">@' + htmlEsc(r.instagram) + '</div>' : '') + '</div>'
+                + '<div style="text-align:right;flex-shrink:0"><div style="font-size:var(--fs-base);font-weight:800;color:#22c55e">' + r.active + '</div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px">aktiv</div></div></div>';
+        }).join('') : '<div style="padding:32px 16px;text-align:center;color:var(--muted);font-size:var(--fs-sm)">Noch keine Community Builder — sei der Erste!</div>';
+        return html(`
+<div class="topbar" style="display:flex;align-items:center;gap:var(--space-2);padding:10px 12px">
+  <a href="/einstellungen" class="icon-btn" style="font-size:24px;color:var(--accent);padding:4px 8px;text-decoration:none">‹</a>
+  <div style="font-size:var(--fs-base);font-weight:800;flex:1">Creator einladen</div>
+</div>
+<div style="padding:8px 16px 90px;max-width:560px;margin:0 auto">
+  <div style="text-align:center;padding:14px 0 18px">
+    <div style="font-size:46px;line-height:1">💎🤝</div>
+    <div style="font-size:18px;font-weight:800;margin-top:8px;color:var(--text)">Lade aktive Creator ein</div>
+    <div style="font-size:var(--fs-sm);color:var(--muted);margin-top:4px;line-height:1.5">Du wirst belohnt, wenn deine Eingeladenen aktiv sind — nicht nur fürs Registrieren.</div>
+  </div>
+
+  <!-- Stats -->
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px">
+    <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:14px 8px;text-align:center"><div style="font-size:22px;font-weight:800;color:var(--text)">${_rstats.invited||0}</div><div style="font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-top:2px">Eingeladen</div></div>
+    <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:14px 8px;text-align:center"><div style="font-size:22px;font-weight:800;color:#22c55e">${_rstats.active||0}</div><div style="font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-top:2px">Aktiv</div></div>
+    <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:14px 8px;text-align:center"><div style="font-size:22px;font-weight:800;color:#06b6d4">${_rstats.diamonds||0}</div><div style="font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-top:2px">💎 verdient</div></div>
+  </div>
+
+  ${_badge ? `<div style="display:flex;align-items:center;gap:11px;background:linear-gradient(135deg,rgba(34,197,94,0.10),rgba(6,182,212,0.05));border:1px solid rgba(34,197,94,0.30);border-radius:14px;padding:13px 15px;margin-bottom:16px"><div style="font-size:26px">${_badge.emoji}</div><div><div style="font-size:var(--fs-sm);font-weight:800;color:var(--text)">${_badge.label}</div><div style="font-size:11px;color:var(--muted)">Dein Community-Builder-Rang</div></div></div>` : ''}
+
+  <!-- Einladungslink -->
+  <div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Dein Einladungslink</div>
+  <div style="display:flex;gap:8px;margin-bottom:18px">
+    <input id="ref-link" type="text" readonly value="${htmlEsc(_inviteUrl)}" style="flex:1;min-width:0;background:var(--bg3);border:1px solid var(--border2);color:var(--text);border-radius:11px;padding:12px 14px;font-size:13px;font-family:var(--font)">
+    <button onclick="copyRefLink(this)" style="flex-shrink:0;background:var(--accent);color:#fff;border:none;border-radius:11px;padding:0 18px;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font)">Kopieren</button>
+  </div>
+  <button onclick="shareRefLink()" style="width:100%;background:linear-gradient(135deg,#22c55e,#06b6d4);color:#fff;border:none;border-radius:12px;padding:14px;font-size:14px;font-weight:800;cursor:pointer;font-family:var(--font);margin-bottom:24px">🔗 Link teilen</button>
+
+  <!-- Belohnungen -->
+  <div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Belohnungen pro eingeladenem Creator</div>
+  <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:14px;overflow:hidden;margin-bottom:24px">
+    ${_milestoneList.map((m,i)=>'<div style="display:flex;align-items:center;justify-content:space-between;padding:11px 15px'+(i>0?';border-top:1px solid var(--border2)':'')+'"><span style="font-size:var(--fs-sm);color:var(--text)">'+m[0]+'</span><span style="font-size:var(--fs-sm);font-weight:800;color:#06b6d4">'+m[1]+'</span></div>').join('')}
+  </div>
+
+  <!-- Community Builder Ranking -->
+  <div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">🏆 Community Builder Ranking</div>
+  <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:14px;overflow:hidden">
+    <div style="padding:10px 15px;font-size:11px;color:var(--muted)">Wer die meisten aktiven Creator gebracht hat.</div>
+    ${_rankRows}
+  </div>
+</div>
+<script>
+function copyRefLink(btn){
+  const inp=document.getElementById('ref-link');
+  try{ navigator.clipboard.writeText(inp.value); }catch(e){ inp.select(); document.execCommand('copy'); }
+  const o=btn.textContent; btn.textContent='✓ Kopiert'; setTimeout(()=>btn.textContent=o,1500);
+}
+async function shareRefLink(){
+  const url=document.getElementById('ref-link').value;
+  const text='Komm in die CreatorBoostX Community — echtes Engagement für Instagram-Creator. Mein Einladungslink:';
+  if(navigator.share){ try{ await navigator.share({title:'CreatorBoostX',text:text,url:url}); }catch(e){} }
+  else { copyRefLink({textContent:'',setTimeout:0}); if(window.showBanner)showBanner({type:'success',title:'Link kopiert — teile ihn mit Creatorn!'}); }
+}
+</script>
+`, 'settings');
+    }
+
     // (Forum/Thread- + Telegram-Feed-Routen entfernt — Telegram-Feature stillgelegt.)
     // DM-Reaktionen — frontend (chat-detail-render) ruft das, vorher fehlte der Endpoint komplett.
     if (path === '/api/react-message' && req.method === 'POST') {
@@ -21539,6 +21624,20 @@ async function setRing(ringId) {
         if (!session) return json({ok:false, error:'Nicht eingeloggt'},401);
         const result = LOCAL_STORE ? botLogic.linkStatusApi(myUid) : await fetchBot('/link-status-api?uid=' + myUid);
         return json(result || {ok:false, canPost:false, todayCount:0, bonusLinks:0});
+    }
+
+    // ── REFERRAL: eigene Statistik (Einladungslink, eingeladen/aktiv/Diamanten) ──
+    if (path === '/api/referral/stats' && req.method === 'GET') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        if (!LOCAL_STORE) return json({ok:false, error:'Nicht verfügbar'});
+        const r = await localWrite(() => botLogic.referralStatsApi(String(myUid))); // ensureReferralCode mutiert ggf.
+        return json(r || {ok:false});
+    }
+    // ── REFERRAL: Community-Builder-Ranking (Top-Einlader nach aktiven Einladungen) ──
+    if (path === '/api/referral/ranking' && req.method === 'GET') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        if (!LOCAL_STORE) return json({ok:true, rows:[]});
+        return json({ok:true, rows: botLogic.communityBuilderRanking(50)});
     }
 
     if (path === '/api/mission-status' && req.method === 'GET') {
