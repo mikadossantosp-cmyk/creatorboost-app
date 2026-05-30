@@ -127,18 +127,31 @@ function migrateDataOnBoot() {
     return { ok: true, changed };
 }
 // Web-Push entfällt im Logik-Modul (kein Zustand) — Verdrahtung übernimmt der Server.
+// Zentraler DM-Normalizer: jede ausgehende CreatorBoost-DM läuft hier durch, damit der
+// Stil app-weit konsistent ist (reiner Plaintext, keine Markdown-Reste, keine Trennbalken,
+// saubere Leerzeilen). Bewusst KEIN Strippen von Unterstrichen — die kommen in Insta-Handles
+// und Codes literal vor.
+function _polishDM(text) {
+    let t = String(text == null ? '' : text);
+    t = t.replace(/\*\*([^*]+)\*\*/g, '$1').replace(/\*([^*\n]+)\*/g, '$1').replace(/\*/g, '');
+    t = t.replace(/`([^`]+)`/g, '$1');
+    t = t.split('\n').filter(line => { const s = line.trim(); return !(s.length >= 2 && /^[─-╿‐-―=~_-]+$/.test(s)); }).join('\n');
+    t = t.replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+    return t;
+}
 function sendCreatorBoostDM(toUid, text, options = {}) {
     ensureCreatorBoostUser();
     if (!d.messages) d.messages = {};
     const chatKey = [CREATORBOOST_UID, String(toUid)].sort().join('_');
     if (!d.messages[chatKey]) d.messages[chatKey] = [];
-    const msg = { from: CREATORBOOST_UID, to: String(toUid), text: String(text || '').slice(0, 1000), timestamp: Date.now(), read: false };
+    const clean = _polishDM(text);
+    const msg = { from: CREATORBOOST_UID, to: String(toUid), text: clean.slice(0, 1000), timestamp: Date.now(), read: false };
     if (options.link?.url) {
         msg.link = { url: String(options.link.url).slice(0, 500), label: String(options.link.label || 'Öffnen').slice(0, 60) };
     }
     d.messages[chatKey].push(msg);
     if (d.messages[chatKey].length > 200) d.messages[chatKey].shift();
-    addNotification(String(toUid), '💬', 'CreatorBoost: ' + String(text || '').slice(0, 40), CREATORBOOST_UID);
+    addNotification(String(toUid), '💬', 'CreatorBoost: ' + clean.slice(0, 40), CREATORBOOST_UID);
     speichernDebounced();
 }
 // Thumbnail-Fetch ist async/netzabhängig → optionaler Hook, default No-op.
@@ -197,25 +210,21 @@ function sendInAppDM(toUid, text) {
     if (!d.messages) d.messages = {};
     const chatKey = [CREATORBOOST_UID, String(toUid)].sort().join('_');
     if (!d.messages[chatKey]) d.messages[chatKey] = [];
+    const clean = _polishDM(text);
     d.messages[chatKey].push({
         from: CREATORBOOST_UID, to: String(toUid),
-        text: String(text || '').slice(0, 2000),
+        text: clean.slice(0, 2000),
         image: null, audio: null,
         timestamp: Date.now(), read: false, system: true,
     });
     if (d.messages[chatKey].length > 200) d.messages[chatKey].shift();
-    addNotification(String(toUid), '💬', 'CreatorX: ' + String(text || '').slice(0, 40), CREATORBOOST_UID);
+    addNotification(String(toUid), '💬', 'CreatorX: ' + clean.slice(0, 40), CREATORBOOST_UID);
     return true;
 }
 async function dmUser(uid, text) {
     if (isSubAccount(uid)) return;
-    const plain = String(text || '')
-        .replace(/\*\*([^*]+)\*\*/g, '$1')
-        .replace(/\*([^*]+)\*/g, '$1')
-        .replace(/__([^_]+)__/g, '$1')
-        .replace(/_([^_]+)_/g, '$1')
-        .replace(/`([^`]+)`/g, '$1');
-    sendInAppDM(uid, plain);
+    // Normalisierung passiert zentral in sendInAppDM/_polishDM.
+    sendInAppDM(uid, text);
 }
 
 function weekStart(now = Date.now()) {
@@ -521,7 +530,7 @@ async function likeFromApp(uid, msgId) {
         u.appLikeCount = (u.appLikeCount || 0) + 1;
         if (u.appLikeCount % 100 === 0) {
             addDiamond(uid, 1);
-            dmUser(uid, `💎 ${u.appLikeCount} Likes erreicht\n\nDanke fürs fleißige Engagement.\n\n💎 +1 Diamant\n\nGuthaben: ${u.diamonds || 0} 💎`).catch(() => {});
+            dmUser(uid, `💎 ${u.appLikeCount} Likes erreicht\n\nDanke fürs fleißige Engagement.\n\n💎 +1 Diamant\n\n💎 Guthaben: ${u.diamonds || 0}`).catch(() => {});
         }
         // Referral: Likes-Meilensteine des Einladers prüfen (50/200 vergebene Likes).
         try { checkReferralProgress(uid); } catch (e) {}
@@ -827,7 +836,7 @@ function addDiamonds({ uid, amount, reason }) {
     u.diamonds = (u.diamonds || 0) + amount;
     if (u.diamonds < 0) u.diamonds = 0;
     if (amount > 0) {
-        try { dmUser(uid, `💎 +${amount} Diamant${amount !== 1 ? 'en' : ''}\n\n${_reasonLabel(reason)}\n\nGuthaben: ${u.diamonds} 💎`); } catch (e) {}
+        try { dmUser(uid, `💎 +${amount} Diamant${amount !== 1 ? 'en' : ''}\n\n${_reasonLabel(reason)}\n\n💎 Guthaben: ${u.diamonds}`); } catch (e) {}
     }
     return { ok: true, newDiamonds: u.diamonds };
 }
@@ -839,7 +848,7 @@ function removeDiamonds({ uid, amount, reason }) {
     if (!Number.isFinite(raw)) return { ok: false, error: 'amount erforderlich' };
     const amt = Math.abs(raw);
     u.diamonds = Math.max(0, (u.diamonds || 0) - amt);
-    try { dmUser(uid, `💎 −${amt} Diamant${amt !== 1 ? 'en' : ''}\n\n${_reasonLabel(reason)}\n\nGuthaben: ${u.diamonds} 💎`); } catch (e) {}
+    try { dmUser(uid, `💎 −${amt} Diamant${amt !== 1 ? 'en' : ''}\n\n${_reasonLabel(reason)}\n\n💎 Guthaben: ${u.diamonds}`); } catch (e) {}
     return { ok: true, newDiamonds: u.diamonds };
 }
 const ITEM_PRICES = {
@@ -1238,7 +1247,7 @@ function wochenResetUndAuszahlung(jetzt) {
             if (wxp <= 0) continue;                         // nichts Nennenswertes → nicht spammen
             const pos = _rankPos.get(String(uid));
             const posLine = pos ? `\n🏅 Wochen-Rang: #${pos}` : '';
-            try { sendInAppDM(uid, `📊 Deine Woche bei CreatorX\n\n⭐ +${wxp} XP diese Woche${posLine}\n💎 Guthaben: ${u.diamonds || 0} Diamanten\n\nNeue Woche, neue Chance — leg gleich los und sammle XP. 🚀`); } catch (e) {}
+            try { sendInAppDM(uid, `📊 Deine Woche bei CreatorX\n\n⭐ +${wxp} XP diese Woche${posLine}\n💎 Guthaben: ${u.diamonds || 0}\n\nNeue Woche, neue Chance — leg gleich los und sammle XP. 🚀`); } catch (e) {}
         }
     } catch (e) {}
     archiveWeeklyXP('monday-reset');
@@ -3775,7 +3784,7 @@ async function runWochenGewinnspielApi() {
                     const allEngaged = slLikersPerSl.every(set => set.has(String(uid)));
                     if (allEngaged) {
                         addDiamond(uid, 1);
-                        try { await dmUser(uid, '💎 Wochen-Engagement-Bonus\n\nDu hast diese Woche alle Superlinks engagiert. Danke dafür!\n\n💎 +1 Diamant\n\nGuthaben: ' + (d.users[uid].diamonds || 0) + ' 💎'); } catch (e) {}
+                        try { await dmUser(uid, '💎 Wochen-Engagement-Bonus\n\nDu hast diese Woche alle Superlinks engagiert. Danke dafür!\n\n💎 +1 Diamant\n\n💎 Guthaben: ' + (d.users[uid].diamonds || 0)); } catch (e) {}
                     }
                 }
             }
