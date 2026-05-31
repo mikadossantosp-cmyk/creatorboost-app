@@ -900,12 +900,19 @@ function getRingBoxShadow(userData) {
 // Vorschau-Ring für Shop/Tasche: echtes farbiges Ring-Band (Gradient) um einen dunklen Avatar
 // + Glow — sieht nach einem echten Rahmen aus (nicht nur Schatten). size in px, inner=Inhalt.
 function ringPreview(item, size, inner) {
-    const grad = item.gradient || 'linear-gradient(135deg,#a78bfa,#7c3aed)';
+    const r1 = item.r1, r2 = item.r2;
     const glow = item.rg || 'rgba(167,139,250,0.55)';
-    const inset = Math.max(3, Math.round(size * 0.075));
-    const fs = Math.round(size * 0.36);
-    return '<div style="width:' + size + 'px;height:' + size + 'px;border-radius:50%;background:' + grad + ';padding:' + inset + 'px;flex-shrink:0;box-shadow:0 0 16px 1px ' + glow + '">'
-        + '<div style="width:100%;height:100%;border-radius:50%;background:#15151a;display:flex;align-items:center;justify-content:center;font-size:' + fs + 'px;font-weight:700;color:#fff">' + (inner || '') + '</div></div>';
+    // Glänzendes „3D"-Ring-Band: Conic-Gradient mit weißem Glanzlicht-Sweep (metallischer Look).
+    const band = (r1 && r2)
+        ? 'conic-gradient(from 215deg,' + r2 + ',' + r1 + ',#ffffff,' + r1 + ',' + r2 + ',' + r1 + ')'
+        : (item.gradient || 'linear-gradient(135deg,#a78bfa,#7c3aed)');
+    const inset = Math.max(3, Math.round(size * 0.085));
+    const fs = Math.round(size * 0.34);
+    const hlT = Math.round(size * 0.10), hlL = Math.round(size * 0.17), hlW = Math.round(size * 0.30), hlH = Math.round(size * 0.17);
+    return '<div style="position:relative;width:' + size + 'px;height:' + size + 'px;border-radius:50%;flex-shrink:0;background:' + band + ';padding:' + inset + 'px;box-shadow:0 0 18px 1px ' + glow + ',inset 0 1px 3px rgba(255,255,255,.55),inset 0 -2px 5px rgba(0,0,0,.4)">'
+        + '<div style="width:100%;height:100%;border-radius:50%;background:#15151a;display:flex;align-items:center;justify-content:center;font-size:' + fs + 'px;font-weight:700;color:#fff;box-shadow:inset 0 0 7px rgba(0,0,0,.65)">' + (inner || '') + '</div>'
+        + '<div style="position:absolute;top:' + hlT + 'px;left:' + hlL + 'px;width:' + hlW + 'px;height:' + hlH + 'px;border-radius:50%;background:radial-gradient(ellipse at center,rgba(255,255,255,.85),rgba(255,255,255,0));pointer-events:none"></div>'
+        + '</div>';
 }
 
 function genSid() { return crypto.randomBytes(32).toString('hex'); }
