@@ -4182,6 +4182,11 @@ function checkReferralProgress(inviteeUid) {
     const invitee = d.users[inviteeUid];
     if (!invitee || !invitee.referredBy) return;
     const likes = Number(invitee.appLikeCount || 0);
+    // Retroaktiv: firstPost/m1 nachholen, falls der Eingeladene schon gepostet/engagiert hat
+    // BEVOR der Admin die Einladung freigab (sonst geht der Kredit verloren — grantReferralMilestone
+    // greift vor Freigabe nicht, und früher wurde hier nur likes/active7 nachgezogen). Idempotent.
+    if ((invitee.links || 0) >= 1) grantReferralMilestone(inviteeUid, 'firstPost');
+    if (likes >= 5) grantReferralMilestone(inviteeUid, 'm1');
     if (likes >= 50)  grantReferralMilestone(inviteeUid, 'likes50');
     if (likes >= 200) grantReferralMilestone(inviteeUid, 'likes200');
     const days = Number(invitee.refActiveDays || 0);
@@ -4288,15 +4293,28 @@ function referralPendingListApi() {
     out.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
     return { ok: true, pending: out };
 }
-// Referral-Statistik für den Profilbereich des Einladers.
+// Alle Einladungen der gesamten Account-Familie (Haupt + alle Subs) sammeln + dedupen.
+// Wichtig: Einladungen, die mit einem Sub-Account gemacht wurden, zählen für die Familie
+// (= dieselbe Person) — sonst „verschwindet" der Builder-Fortschritt eines Sub-Einladers.
+function _familyReferralIds(uid) {
+    const ids = new Set();
+    for (const fid of familyUids(uid)) {
+        const fu = d.users[String(fid)];
+        if (fu && Array.isArray(fu.referrals)) fu.referrals.forEach(x => ids.add(String(x)));
+    }
+    return [...ids];
+}
+// Referral-Statistik für den Profilbereich des Einladers (Familie aggregiert).
 function referralStatsApi(uid) {
     uid = String(uid || '');
     const u = d.users[uid];
     if (!u) return { ok: false };
-    const ids = Array.isArray(u.referrals) ? u.referrals : [];
+    const ids = _familyReferralIds(uid);
     let active = 0;
     for (const iid of ids) { if (_referralInviteeIsActive(d.users[String(iid)])) active++; }
-    return { ok: true, code: u.refCode || ensureReferralCode(uid), invited: ids.length, active, diamonds: Number(u.refDiamondsEarned || 0) };
+    let dia = 0;
+    for (const fid of familyUids(uid)) dia += Number((d.users[String(fid)] || {}).refDiamondsEarned || 0);
+    return { ok: true, code: u.refCode || ensureReferralCode(uid), invited: ids.length, active, diamonds: dia };
 }
 // Community-Builder-Badge nach Anzahl AKTIVER Einladungen.
 function communityBuilderBadge(activeCount) {
@@ -4310,8 +4328,8 @@ function communityBuilderBadge(activeCount) {
 function communityBuilderRanking(limit) {
     const rows = [];
     for (const [uid, u] of Object.entries(d.users || {})) {
-        if (!u || u.parent_uid || istAdminId(uid)) continue;
-        const ids = Array.isArray(u.referrals) ? u.referrals : [];
+        if (!u || u.parent_uid || istAdminId(uid)) continue; // nur Root-Accounts; Sub-Einladungen rollen hier hoch
+        const ids = _familyReferralIds(uid); // Haupt + Subs aggregiert
         if (!ids.length) continue;
         let active = 0;
         for (const iid of ids) { if (_referralInviteeIsActive(d.users[String(iid)])) active++; }
@@ -4329,9 +4347,9 @@ function payCommunityBuilderDaily(dayKey) {
     const day = String(dayKey || new Date().toISOString().slice(0, 10));
     let paidUsers = 0, paidDiamonds = 0;
     for (const [uid, u] of Object.entries(d.users || {})) {
-        if (!u || u.parent_uid || u.banned || u.paused || istAdminId(uid)) continue;
+        if (!u || u.parent_uid || u.banned || u.paused || istAdminId(uid)) continue; // nur Root-Accounts
         if (u.cbDailyLastDay === day) continue; // heute schon ausgezahlt
-        const ids = Array.isArray(u.referrals) ? u.referrals : [];
+        const ids = _familyReferralIds(uid); // Haupt + Subs aggregiert
         if (!ids.length) continue;
         let active = 0;
         for (const iid of ids) { if (_referralInviteeIsActive(d.users[String(iid)])) active++; }
