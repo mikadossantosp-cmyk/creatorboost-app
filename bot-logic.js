@@ -997,12 +997,17 @@ const ITEM_PRICES = {
     banner_sunset: 5, banner_peach: 5, banner_mint: 5, banner_forest: 5,
     banner_ocean: 7, banner_sky: 7, banner_lavender: 7, banner_rose: 7,
     banner_gold: 10, banner_candy: 10, banner_coral: 10, banner_aurora: 10,
+    // Premium-Kollektion „50 Diamanten Rahmen" (alle 50💎)
+    pring_fire: 50, pring_ember: 50, pring_lava: 50, pring_gold: 50, pring_crystal: 50,
+    pring_ice: 50, pring_snow: 50, pring_rainbow: 50, pring_prism: 50, pring_bubble: 50,
 };
 const ITEM_NAMES = {
     ring_flame: '🔥 Flame Ring', ring_ocean: '🌊 Ocean Ring', ring_gold: '✨ Gold Ring', ring_purple: '🔮 Cosmic Ring', ring_rainbow: '🌈 Rainbow Ring', ring_diamond: '💎 Diamond Ring',
     banner_sunset: '🌅 Sunset Banner', banner_ocean: '🌊 Ocean Banner', banner_forest: '🌿 Forest Banner', banner_candy: '🍭 Candy Banner',
     banner_sky: '☁️ Sky Blue Banner', banner_lavender: '💜 Lavender Banner', banner_mint: '🌱 Mint Banner', banner_peach: '🍑 Peach Banner',
     banner_gold: '✨ Golden Hour Banner', banner_coral: '🪸 Coral Banner', banner_aurora: '🌌 Aurora Banner', banner_rose: '🌹 Rose Gold Banner',
+    pring_fire: '🔥 Fire Ring', pring_ember: '🟠 Ember Ring', pring_lava: '🌋 Lava Ring', pring_gold: '👑 Gold Rush', pring_crystal: '🔷 Crystal Ring',
+    pring_ice: '🧊 Ice Ring', pring_snow: '❄️ Snow Ring', pring_rainbow: '🌈 Rainbow Ring', pring_prism: '💠 Prism Ring', pring_bubble: '🫧 Bubble Ring',
 };
 function buyItemApi({ uid, itemId }) {
     if (!uid || !itemId) return { ok: false, error: 'Fehlende Parameter' };

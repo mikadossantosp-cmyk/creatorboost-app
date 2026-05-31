@@ -849,6 +849,17 @@ const RING_ITEMS = [
     { id: 'ring_purple',  name: 'Cosmic Ring',  emoji: '🔮', price: 12, shadow: '0 0 0 3px #e040fb, 0 0 0 6px #9c27b0',   gradient: 'linear-gradient(135deg,#9c27b0,#e040fb)', desc: 'Mystisches Kosmosleuchten' },
     { id: 'ring_rainbow', name: 'Rainbow Ring', emoji: '🌈', price: 15, shadow: '0 0 0 3px #ff9900, 0 0 0 6px #cc5de8',   gradient: 'linear-gradient(135deg,#ff0000,#ff9900,#00cc00,#0000ff,#cc5de8)', desc: 'Buntes Regenbogenleuchten' },
     { id: 'ring_diamond', name: 'Diamond Ring', emoji: '💎', price: 20, shadow: '0 0 0 3px #b9f2ff, 0 0 0 6px #a78bfa',   gradient: 'linear-gradient(135deg,#a78bfa,#b9f2ff,#ffffff)', desc: 'Funkelnder Diamantglanz' },
+    // ── Premium-Kollektion „50 Diamanten Rahmen" — edle mehrschichtige Glow-Rahmen ──
+    { id: 'pring_fire',    name: 'Fire Ring',    emoji: '🔥', price: 50, premium: true, shadow: '0 0 0 3px #ff6b00, 0 0 0 6px #ff2200, 0 0 22px 3px rgba(255,80,0,0.8)',                          gradient: 'linear-gradient(135deg,#ff2200,#ff9a3c)',                  desc: 'Lodernde Feuer-Aura' },
+    { id: 'pring_ember',   name: 'Ember Ring',   emoji: '🟠', price: 50, premium: true, shadow: '0 0 0 3px #ffb627, 0 0 0 6px #ff7b00, 0 0 22px 3px rgba(255,150,30,0.78)',                       gradient: 'linear-gradient(135deg,#ff7b00,#ffd166)',                 desc: 'Glühende Glut-Funken' },
+    { id: 'pring_lava',    name: 'Lava Ring',    emoji: '🌋', price: 50, premium: true, shadow: '0 0 0 3px #ff4500, 0 0 0 6px #8b0000, 0 0 24px 3px rgba(255,69,0,0.78)',                         gradient: 'linear-gradient(135deg,#8b0000,#ff4500,#ffae42)',         desc: 'Geschmolzene Lava' },
+    { id: 'pring_gold',    name: 'Gold Rush',    emoji: '👑', price: 50, premium: true, shadow: '0 0 0 3px #ffd700, 0 0 0 6px #b8860b, 0 0 26px 3px rgba(255,215,0,0.85)',                        gradient: 'linear-gradient(135deg,#b8860b,#ffd700,#fff3b0)',         desc: 'Strahlendes Goldfieber' },
+    { id: 'pring_crystal', name: 'Crystal Ring', emoji: '🔷', price: 50, premium: true, shadow: '0 0 0 3px #5ec8ff, 0 0 0 6px #2a7fff, 0 0 24px 3px rgba(90,200,255,0.82)',                       gradient: 'linear-gradient(135deg,#2a7fff,#5ec8ff,#b9f2ff)',         desc: 'Klarer Kristallglanz' },
+    { id: 'pring_ice',     name: 'Ice Ring',     emoji: '🧊', price: 50, premium: true, shadow: '0 0 0 3px #b9f2ff, 0 0 0 6px #5ec8ff, 0 0 24px 3px rgba(185,242,255,0.85)',                      gradient: 'linear-gradient(135deg,#5ec8ff,#b9f2ff,#ffffff)',         desc: 'Eiskaltes Frostleuchten' },
+    { id: 'pring_snow',    name: 'Snow Ring',    emoji: '❄️', price: 50, premium: true, shadow: '0 0 0 3px #ffffff, 0 0 0 6px #c8d6e5, 0 0 24px 3px rgba(255,255,255,0.9)',                        gradient: 'linear-gradient(135deg,#c8d6e5,#ffffff)',                 desc: 'Reiner Schnee-Schimmer' },
+    { id: 'pring_rainbow', name: 'Rainbow Ring', emoji: '🌈', price: 50, premium: true, shadow: '0 0 0 3px #ff0040, 0 0 0 5px #ff9900, 0 0 0 7px #2ecc40, 0 0 0 9px #3399ff, 0 0 26px 3px rgba(150,90,255,0.7)', gradient: 'linear-gradient(135deg,#ff0040,#ff9900,#2ecc40,#3399ff,#9b5cff)', desc: 'Voller Regenbogen-Glow' },
+    { id: 'pring_prism',   name: 'Prism Ring',   emoji: '💠', price: 50, premium: true, shadow: '0 0 0 3px #e040fb, 0 0 0 6px #7c3aed, 0 0 26px 3px rgba(224,64,251,0.82)',                       gradient: 'linear-gradient(135deg,#7c3aed,#e040fb,#ff8cc8)',         desc: 'Schillerndes Prisma' },
+    { id: 'pring_bubble',  name: 'Bubble Ring',  emoji: '🫧', price: 50, premium: true, shadow: '0 0 0 3px #7fdbff, 0 0 0 6px #39c0ed, 0 0 22px 3px rgba(127,219,255,0.78)',                      gradient: 'linear-gradient(135deg,#39c0ed,#7fdbff,#cdf5ff)',         desc: 'Perlende Blasen-Aura' },
 ];
 
 const BANNER_ITEMS = [
@@ -4623,6 +4634,10 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
 .ipf-switcher-divider{height:1px;background:var(--border2)}
 .ipf-switcher-add{display:flex;align-items:center;gap:11px;padding:11px 14px;color:#a78bfa;cursor:pointer;border:none;background:none;width:100%;font-family:inherit;font-size:13.5px;font-weight:600;text-align:left}
 .ipf-switcher-add:hover{background:var(--bg4)}
+.ipf-switcher-row{position:relative;display:flex;align-items:center}
+.ipf-switcher-row .ipf-switcher-item{flex:1;padding-right:42px}
+.ipf-sub-del{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:rgba(239,68,68,.10);border:1px solid rgba(239,68,68,.28);color:#ef4444;width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:14px;cursor:pointer;line-height:1;z-index:2;transition:background .12s}
+.ipf-sub-del:hover{background:rgba(239,68,68,.20)}
 /* Topbar-Switcher (kompakt) */
 .tb-switcher-wrap{position:relative;display:inline-block}
 .tb-switcher{display:inline-flex;align-items:center;gap:7px;background:var(--surface-tint);border:1px solid var(--border2);color:var(--text);padding:4px 10px 4px 4px;border-radius:99px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;max-width:200px}
@@ -4722,6 +4737,19 @@ async function ipfSwitchAcc(targetUid){
     if (j.ok) location.reload();
     else alert('Wechsel fehlgeschlagen: ' + (j.error || ''));
   } catch(e) { alert('Netzwerk-Fehler'); }
+}
+// Löscht GEZIELT EINEN Sub-Account (nicht den Hauptaccount). Klare Abgrenzung,
+// damit niemand mehr versehentlich den ganzen Account löscht (s. Lösch-Unfall).
+async function deleteSubAccById(uid, name){
+  if (!uid) return;
+  const _n = name ? ('„' + name + '"') : 'diesen Sub-Account';
+  if (!(await cbConfirm('🗑 Sub-Account ' + _n + ' löschen?\\n\\nNUR dieser Sub-Account wird entfernt — dein Hauptaccount und alle anderen Accounts bleiben bestehen.\\n\\nXP, Posts, Follower & Diamanten dieses Subs gehen verloren. Nicht umkehrbar.'))) return;
+  try {
+    const r = await fetch('/api/delete-subaccount', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({sub_uid: String(uid)})});
+    const j = await r.json();
+    if (j.ok) { try{ cbToast && cbToast('Sub-Account gelöscht'); }catch(e){} location.href = '/profil'; }
+    else alert('Fehler: ' + (j.error || 'unbekannt'));
+  } catch(e) { alert('Netzwerk-Fehler: ' + e.message); }
 }
 async function pinnedEngageClick(ownerUid, btn){
   const visitTs = window['_pvisit_' + ownerUid] || cbVisitTs('pin-' + ownerUid);
@@ -4885,11 +4913,15 @@ function buildTopbarSwitcher(myUid, d) {
         const aInit = htmlEsc((au.spitzname || au.name || '?').slice(0,1).toUpperCase());
         const aPic = ladeBild(a.uid, 'profilepic') ? '/appbild/' + a.uid + '/profilepic' : (au.instagram ? 'https://unavatar.io/instagram/' + encodeURIComponent(au.instagram) : '');
         const isActive = a.uid === _curSessUid;
-        return '<button class="ipf-switcher-item' + (isActive?' active':'') + '" onclick="ipfSwitchAcc(\''+htmlEsc(a.uid)+'\')">' +
-          '<div class="ipf-switcher-item-avatar">' + (aPic ? '<img src="'+aPic+'" alt="">' : aInit) + '</div>' +
-          '<div class="ipf-switcher-item-name">' + aName + (a.isParent?'':' <span style="font-size:11px;color:var(--muted);font-weight:500"> · Sub</span>') + '</div>' +
-          (isActive ? '<span class="ipf-switcher-item-check">✓</span>' : '') +
-        '</button>';
+        const _nameArg = (au.spitzname || au.name || 'Sub').replace(/[\\'"]/g, '');
+        return '<div class="ipf-switcher-row">' +
+          '<button class="ipf-switcher-item' + (isActive?' active':'') + '" onclick="ipfSwitchAcc(\''+htmlEsc(a.uid)+'\')">' +
+            '<div class="ipf-switcher-item-avatar">' + (aPic ? '<img src="'+aPic+'" alt="">' : aInit) + '</div>' +
+            '<div class="ipf-switcher-item-name">' + aName + (a.isParent?'':' <span style="font-size:11px;color:var(--muted);font-weight:500"> · Sub</span>') + '</div>' +
+            (isActive ? '<span class="ipf-switcher-item-check">✓</span>' : '') +
+          '</button>' +
+          (a.isParent ? '' : '<button class="ipf-sub-del" title="Sub-Account löschen" aria-label="Sub-Account löschen" onclick="event.stopPropagation();deleteSubAccById(\''+htmlEsc(a.uid)+'\',\''+_nameArg+'\')">🗑</button>') +
+        '</div>';
       }).join('') +
       '<div class="ipf-switcher-divider"></div>' +
       '<button class="ipf-switcher-add" onclick="ipfAddSub()">➕ Neuen Sub-Account erstellen</button>' +
@@ -5686,18 +5718,21 @@ self.addEventListener('notificationclick',e=>{
     // Sub komplett löschen (nur vom Parent aus). Switcht zurück auf Parent.
     if (path === '/api/delete-subaccount' && req.method === 'POST') {
         if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
-        if (session.activeUid && String(session.activeUid) !== String(session.uid)) return json({ok:false, error:'Vorher zurück zum Hauptaccount switchen'}, 400);
-        if (!session.subUid) return json({ok:false, error:'Kein Sub vorhanden'}, 400);
-        const subUidToDelete = String(session.subUid);
+        // session.uid ist IMMER der Hauptaccount (Switch setzt nur activeUid) → ein eigener Sub
+        // kann sicher von überall gelöscht werden; activeUid wird unten zurückgesetzt falls nötig.
+        // sub_uid aus dem Body bevorzugen (gezieltes Löschen EINES bestimmten Subs, auch bei mehreren).
+        // Fallback auf session.subUid (Legacy). deleteSubaccountApi validiert Ownership (parent_uid).
+        const _delBody = await parseBody(req);
+        const subUidToDelete = String((_delBody && _delBody.sub_uid) || session.subUid || '');
+        if (!subUidToDelete) return json({ok:false, error:'Kein Sub angegeben'}, 400);
+        if (String(subUidToDelete) === String(session.uid)) return json({ok:false, error:'Das ist dein Hauptaccount, kein Sub'}, 400);
         const result = LOCAL_STORE ? await localWrite(() => botLogic.deleteSubaccountApi({ parent_uid: String(session.uid), sub_uid: subUidToDelete })) : await postBot('/delete-subaccount-api', { parent_uid: String(session.uid), sub_uid: subUidToDelete });
         if (!result || !result.ok) return json({ok:false, error: (result && result.error) || 'Löschen fehlgeschlagen'}, 500);
         // Auch andere Sessions desselben Parents aufräumen, sonst zeigen die noch den Sub
         for (const s of sessions.values()) {
             if (String(s.uid) === String(session.uid)) {
-                delete s.subUid;
-                if (String(s.activeUid) === subUidToDelete) s.activeUid = String(s.uid);
-                delete s.profilePicData;
-                delete s.bannerData;
+                if (String(s.subUid) === subUidToDelete) delete s.subUid;
+                if (String(s.activeUid) === subUidToDelete) { s.activeUid = String(s.uid); delete s.profilePicData; delete s.bannerData; }
             }
         }
         saveSessions();
@@ -18685,17 +18720,17 @@ function switchRanking(tab, btn) {
                 const myBonusLinks = d.bonusLinks?.[myUid] || 0;
                 const myInventory = d.users[myUid]?.inventory || [];
                 const isShopAdmin = String(d.users[myUid]?.role||'').includes('Admin');
-                const ringsHtml = RING_ITEMS.map(item => {
+                const _ringCard = item => {
                     const owned = myInventory.includes(item.id);
                     const canAfford = isShopAdmin || myDiamonds >= item.price;
                     const priceHtml = isShopAdmin
                         ? `<div style="display:flex;align-items:center;gap:6px"><span style="font-size:var(--fs-sm);color:var(--muted);text-decoration:line-through">💎 ${item.price}</span><span style="font-size:var(--fs-xs);font-weight:800;color:#22c55e">Gratis</span></div>`
                         : `<div style="font-size:var(--fs-sm);font-weight:800;color:#a78bfa">💎 ${item.price}</div>`;
-                    return `<div style="background:var(--bg3);border:1px solid var(--border2);border-radius:16px;padding:14px;margin-bottom:10px">
+                    return `<div style="background:var(--bg3);border:1px solid ${item.premium?'rgba(212,175,55,0.28)':'var(--border2)'};border-radius:16px;padding:14px;margin-bottom:10px">
     <div style="display:flex;align-items:center;gap:14px">
       <div style="width:52px;height:52px;border-radius:50%;background:#1e1e1e;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:#fff;box-shadow:${item.shadow}">A</div>
       <div style="flex:1;min-width:0">
-        <div style="font-size:14px;font-weight:700;margin-bottom:2px">${item.name}</div>
+        <div style="font-size:14px;font-weight:700;margin-bottom:2px">${item.emoji} ${item.name}</div>
         <div style="font-size:11px;color:var(--muted);margin-bottom:var(--space-2)">${item.desc}</div>
         <div style="display:flex;align-items:center;justify-content:space-between;gap:var(--space-2)">
           ${priceHtml}
@@ -18707,7 +18742,9 @@ function switchRanking(tab, btn) {
       </div>
     </div>
   </div>`;
-                }).join('');
+                };
+                const ringsHtml = RING_ITEMS.filter(r=>!r.premium).map(_ringCard).join('');
+                const premiumRingsHtml = RING_ITEMS.filter(r=>r.premium).map(_ringCard).join('');
                 const extraLinkPriceHtml = isShopAdmin
                     ? `<div style="display:flex;align-items:center;gap:6px"><span style="font-size:14px;color:var(--muted);text-decoration:line-through">💎 5 Diamanten</span><span style="font-size:var(--fs-sm);font-weight:800;color:#22c55e">Gratis</span></div>`
                     : `<div style="font-size:14px;font-weight:800;color:#a78bfa">💎 5 Diamanten</div>`;
@@ -18776,6 +18813,16 @@ function switchRanking(tab, btn) {
   }).join('')}
   <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;display:inline-flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></svg>Profilring</div>
   ${ringsHtml}
+  <div style="margin:22px 0 14px;border-radius:16px;overflow:hidden;background:linear-gradient(135deg,#0b1020,#1a1030);border:1px solid rgba(212,175,55,0.3)">
+    <div style="padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;background:linear-gradient(135deg,rgba(124,58,237,0.18),rgba(212,175,55,0.12))">
+      <div>
+        <div style="font-size:var(--fs-base);font-weight:800;color:#fff;letter-spacing:0.3px">💎 50 Diamanten Rahmen</div>
+        <div style="font-size:11px;color:rgba(255,255,255,0.7);margin-top:2px">Premium-Kollektion · 10 edle Avatar-Rahmen · überall sichtbar</div>
+      </div>
+      <span style="font-size:10px;font-weight:800;color:#ffd700;background:rgba(255,215,0,0.14);border:1px solid rgba(255,215,0,0.35);padding:3px 9px;border-radius:99px;white-space:nowrap">PREMIUM</span>
+    </div>
+  </div>
+  ${premiumRingsHtml}
 </div>
 <script>
 async function buyExtraLink(){
@@ -21167,10 +21214,9 @@ async function requestAccountChange(){
   }catch(e){btn.disabled=false;btn.textContent='📨 Änderung anfragen';msg.textContent='❌ Netzwerkfehler';msg.style.color='#ef4444';}
 }
 async function deleteAccountDsgvo(){
-  if(!(await cbConfirm('⚠️ Account dauerhaft löschen?\\n\\nDies entfernt:\\n• Dein Profil + alle Sub-Accounts\\n• Alle deine Posts + Likes + Kommentare\\n• Alle XP, Diamanten, Items\\n\\nDie Löschung kann NICHT rückgängig gemacht werden.')))return;
-  if(!(await cbConfirm('Wirklich? Alle Daten gehen für immer verloren.')))return;
-  const code=(await cbPrompt('Tippe LÖSCHEN um zu bestätigen:'));
-  if(code!=='LÖSCHEN'){alert('Abgebrochen.');return;}
+  if(!(await cbConfirm('⚠️ HAUPTACCOUNT dauerhaft löschen?\\n\\nDies löscht deinen GESAMTEN Account INKL. ALLER Sub-Accounts:\\n• Profil + alle Sub-Accounts\\n• Alle Posts + Likes + Kommentare\\n• Alle XP, Diamanten, Items\\n\\n👉 Nur EINEN Sub-Account löschen? Hier abbrechen und im Profil oben auf den Account-Switcher tippen → 🗑 beim Sub.\\n\\nNicht umkehrbar.')))return;
+  const code=(await cbPrompt('Das löscht ALLES unwiderruflich. Tippe LÖSCHEN um deinen gesamten Account zu bestätigen:'));
+  if(String(code||'').trim().toUpperCase()!=='LÖSCHEN'){alert('Abgebrochen — dein Account bleibt bestehen.');return;}
   try{
     const r=await fetch('/api/delete-my-account',{method:'POST'});
     const j=await r.json();
@@ -21932,10 +21978,9 @@ async function unblockUser(uid,btn){
   }catch(e){btn.disabled=false;btn.textContent='Aufheben';alert('❌ Netzwerk-Fehler');}
 }
 async function deleteAccountDsgvo(){
-  if(!(await cbConfirm('⚠️ Account dauerhaft löschen?\\n\\nDies entfernt:\\n• Dein Profil + alle Sub-Accounts\\n• Alle deine Posts + Likes + Kommentare\\n• Alle XP, Diamanten, Items\\n• Notifications + Chats\\n\\nDie Löschung kann NICHT rückgängig gemacht werden. Sie erfolgt innerhalb von 30 Tagen (DSGVO Art. 17).'))) return;
-  if(!(await cbConfirm('Wirklich? Alle Daten gehen für immer verloren.'))) return;
-  const code = (await cbPrompt('Tippe LÖSCHEN um zu bestätigen:'));
-  if(code !== 'LÖSCHEN'){ alert('Abgebrochen.'); return; }
+  if(!(await cbConfirm('⚠️ HAUPTACCOUNT dauerhaft löschen?\\n\\nDies löscht deinen GESAMTEN Account INKL. ALLER Sub-Accounts:\\n• Profil + alle Sub-Accounts\\n• Alle Posts + Likes + Kommentare\\n• Alle XP, Diamanten, Items\\n• Notifications + Chats\\n\\n👉 Nur EINEN Sub-Account löschen? Hier abbrechen und im Profil oben auf den Account-Switcher tippen → 🗑 beim Sub.\\n\\nNicht umkehrbar (DSGVO Art. 17).'))) return;
+  const code = (await cbPrompt('Das löscht ALLES unwiderruflich. Tippe LÖSCHEN um deinen gesamten Account zu bestätigen:'));
+  if(String(code||'').trim().toUpperCase() !== 'LÖSCHEN'){ alert('Abgebrochen — dein Account bleibt bestehen.'); return; }
   try{
     const r = await fetch('/api/delete-my-account', {method:'POST'});
     const j = await r.json();
