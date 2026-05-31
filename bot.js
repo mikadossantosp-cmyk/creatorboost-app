@@ -11433,6 +11433,33 @@ ${(()=>{
       + '<script>(function(){var el=document.getElementById("cb-activity-ticker");if(!el||el._i)return;el._i=1;var a;try{a=JSON.parse(el.getAttribute("data-acts"));}catch(e){return;}if(!a||a.length<2)return;var slot=el.querySelector(".cbt-slot"),se=el.querySelector(".cbt-e"),sn=el.querySelector(".cbt-n"),st=el.querySelector(".cbt-t"),k=0;setInterval(function(){k=(k+1)%a.length;slot.style.opacity="0";setTimeout(function(){var o=a[k];se.textContent=o.e||"";sn.textContent=o.n?o.n+" ":"";st.textContent=o.t||"";slot.style.opacity="1";},350);},3800);})();</script>';
   } catch(e){ return ''; }
 })()}
+${(()=>{
+  // Creator des Tages: tägliche Auszeichnung (keine Zufallsanzeige) für den aktivsten
+  // Creator des Vortags. Stats sind real (aktive Tage, Beiträge, vergebene Likes).
+  try {
+    const _cs = botLogic.getCreatorSpotlight ? botLogic.getCreatorSpotlight() : null;
+    if (!_cs || !_cs.uid) return '';
+    const _n = htmlEsc(_cs.name);
+    const _ig = _cs.instagram ? '@'+htmlEsc(String(_cs.instagram).replace(/^@/,'')) : '';
+    const _initial = (_cs.name||'?').trim()[0] || '?';
+    const _stat = (val, label) => '<div style="flex:1;text-align:center"><div style="font-size:var(--fs-lg);font-weight:800;color:var(--text);line-height:1.1">'+val+'</div><div style="font-size:var(--fs-xs);color:var(--muted);margin-top:2px">'+label+'</div></div>';
+    return '<div style="margin:10px 16px 2px;padding:16px;background:linear-gradient(135deg,rgba(245,158,11,0.12),rgba(124,58,237,0.06));border:1px solid rgba(245,158,11,0.30);border-radius:16px">'
+      + '<div style="display:flex;align-items:center;gap:7px;margin-bottom:12px"><span style="font-size:16px;line-height:1">🏆</span><span style="font-size:10px;font-weight:800;letter-spacing:.8px;color:#b45309;text-transform:uppercase">Creator des Tages</span></div>'
+      + '<a href="/profil/'+htmlEsc(_cs.uid)+'" style="display:flex;align-items:center;gap:12px;text-decoration:none;margin-bottom:13px">'
+        + '<div style="width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#f59e0b,#a78bfa);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:21px;flex-shrink:0;box-shadow:0 3px 10px rgba(245,158,11,.3)">'+htmlEsc(_initial)+'</div>'
+        + '<div style="flex:1;min-width:0"><div style="font-size:var(--fs-lg);font-weight:800;color:var(--text);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+_n+'</div>'
+        + (_ig?'<div style="font-size:var(--fs-sm);color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+_ig+'</div>':'')+'</div></a>'
+      + '<div style="display:flex;align-items:center;gap:6px;padding:11px 0;border-top:1px solid rgba(245,158,11,.18);border-bottom:1px solid rgba(245,158,11,.18);margin-bottom:13px">'
+        + _stat(_cs.days, _cs.days===1?'Tag aktiv':'Tage aktiv')
+        + '<div style="width:1px;height:26px;background:rgba(245,158,11,.2)"></div>'
+        + _stat(_cs.posts, _cs.posts===1?'Beitrag':'Beiträge')
+        + '<div style="width:1px;height:26px;background:rgba(245,158,11,.2)"></div>'
+        + _stat(_cs.likes, 'Likes vergeben')
+      + '</div>'
+      + '<a href="/profil/'+htmlEsc(_cs.uid)+'" style="display:block;text-align:center;padding:11px;border-radius:11px;background:linear-gradient(135deg,#f59e0b,#a78bfa);color:#fff;font-weight:800;font-size:var(--fs-sm);text-decoration:none">Profil ansehen</a>'
+      + '</div>';
+  } catch(e){ return ''; }
+})()}
 <div style="width:100%">${storiesHtml}</div>
 ${(()=>{
   // Perf: einmaliger Pass durch d.links statt 2x Object.values().some()+.filter()

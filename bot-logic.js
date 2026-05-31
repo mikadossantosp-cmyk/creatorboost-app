@@ -201,6 +201,27 @@ function getCommunityActivity(limit) {
     }
     return out;
 }
+// Creator des Tages (täglich in dailyRankingAbschluss gekürt). Liefert nur, wenn frisch
+// (heute oder gestern) — verhindert eine veraltete Karte nach inaktiven Tagen.
+function getCreatorSpotlight() {
+    try {
+        const s = d.creatorSpotlight;
+        if (!s || !s.uid) return null;
+        const u = d.users[s.uid];
+        if (!u || u.banned) return null;
+        const today = new Date().toISOString().slice(0, 10);
+        const yest = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+        if (s.dayKey !== today && s.dayKey !== yest) return null;
+        return {
+            uid: s.uid,
+            name: u.spitzname || u.name || s.name || 'Creator',
+            instagram: u.instagram || s.instagram || null,
+            days: Number(s.days || 0),
+            posts: Number(s.posts || 0),
+            likes: Number(s.likes || 0),
+        };
+    } catch (e) { return null; }
+}
 // Web-Push entfällt im Logik-Modul (kein Zustand) — Verdrahtung übernimmt der Server.
 // Zentraler DM-Normalizer: jede ausgehende CreatorBoost-DM läuft hier durch, damit der
 // Stil app-weit konsistent ist (reiner Plaintext, keine Markdown-Reste, keine Trennbalken,
@@ -1254,6 +1275,23 @@ async function dailyRankingAbschluss() {
         try { sendInAppDM(uid, `${b.text} ${ii + 1}. Platz im Tagesranking\n\nStark — du bist heute unter den Top 3! 🎉\n\nDeine Belohnung:\n⭐ +${b.xp} XP\n💎 +${b.dia} Diamanten${b.links ? '\n🔗 +1 Extra-Link für morgen' : ''}`); } catch (e) {}
     }
     d.gesternDailyXP = Object.assign({}, d.dailyXP);
+    // Creator des Tages küren: aktivster Creator (withScore[0]) mit echter Mindesthürde
+    // (≥1 Beitrag ODER ≥5 vergebene Likes insgesamt). Stats sind real, kein neues Tracking.
+    try {
+        const top = withScore[0] && d.users[withScore[0].uid];
+        if (top && !top.banned && !top.parent_uid && ((top.links || 0) >= 1 || (top.appLikeCount || 0) >= 5)) {
+            const _stk = getStreakApi(withScore[0].uid);
+            d.creatorSpotlight = {
+                uid: String(withScore[0].uid),
+                name: top.spitzname || top.name || 'Creator',
+                instagram: top.instagram || null,
+                days: Math.max(Number(_stk.streak || 0), Number(top.streakBest || 0)),
+                posts: Number(top.links || 0),
+                likes: Number(top.appLikeCount || 0),
+                dayKey, at: Date.now(),
+            };
+        }
+    } catch (e) {}
     d.dailyXP = {}; d.tracker = {}; d.counter = {}; d.badgeTracker = {};
     d.dailyLogins = {}; d.dailyGroupMsgs = {};
     d.dailyReset = Date.now();
@@ -4216,7 +4254,7 @@ module.exports = {
     getMission, updateMissionProgress, checkMissionen, missionStatusApi, familyUids,
     istInstagramLink, addDiamond, applyPostBonus,
     sendInAppDM, addNotification, dmUser, sendCreatorBoostDM, ensureCreatorBoostUser, _tidyStoredCreatorBoostDMs, migrateDataOnBoot,
-    logActivity, getCommunityActivity,
+    logActivity, getCommunityActivity, getCreatorSpotlight,
     badgeBonusLinks, generateSyntheticLinkId, tryFetchThumbnail,
     M3_CAP, CREATORBOOST_UID,
     authEmailPassword, setUserPasswordApi, setAppCodeApi, createEmailUserApi,
