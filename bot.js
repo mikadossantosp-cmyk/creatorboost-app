@@ -11346,7 +11346,37 @@ commentsBox+
               pinnedFirstPosts.map(_firstPostWrapper).join('') +
               '<script>(function(){function tick(){const now=Date.now();document.querySelectorAll(".first-post-star").forEach(card=>{const ts=Number(card.dataset.firstPostEnd)||0;const r=ts-now;const cd=card.querySelector("[data-first-post-cd]");if(!cd)return;if(r<=0){cd.textContent="beendet";return;}const h=Math.floor(r/3600000);const m=Math.floor((r%3600000)/60000);const s=Math.floor((r%60000)/1000);cd.textContent=h+":"+(m<10?"0":"")+m+":"+(s<10?"0":"")+s;});}tick();setInterval(tick,1000);})();</script>'
             : '';
-        const regularHeuteHtml = heuteLinksRegular.length ? heuteLinksRegular.map(renderLink).join('') : (pinnedFirstPosts.length ? '' : `
+        // Creator des Tages — wird ZWISCHEN die Posts gestreut (declutter), nur im Heute-Tab.
+        // Echtes Profilbild (Overlay über Initiale), kompakte Premium-Karte.
+        const _spotlightHtml = (tab === 'heute' && botLogic.getCreatorSpotlight) ? (() => {
+          try {
+            const _cs = botLogic.getCreatorSpotlight();
+            if (!_cs || !_cs.uid) return '';
+            const _n = htmlEsc(_cs.name);
+            const _ig = _cs.instagram ? '@'+htmlEsc(String(_cs.instagram).replace(/^@/,'')) : '';
+            const _initial = (_cs.name||'?').trim()[0] || '?';
+            const _pic = '<img src="/appbild/'+htmlEsc(_cs.uid)+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.remove()" alt="">';
+            const _stat = (val, label) => '<div style="flex:1;text-align:center"><div style="font-size:var(--fs-lg);font-weight:800;color:var(--text);line-height:1.1">'+val+'</div><div style="font-size:var(--fs-xs);color:var(--muted);margin-top:2px">'+label+'</div></div>';
+            return '<div style="margin:4px 16px 16px;padding:16px;background:linear-gradient(135deg,rgba(245,158,11,0.12),rgba(124,58,237,0.06));border:1px solid rgba(245,158,11,0.30);border-radius:16px">'
+              + '<div style="display:flex;align-items:center;gap:7px;margin-bottom:12px"><span style="font-size:16px;line-height:1">🏆</span><span style="font-size:10px;font-weight:800;letter-spacing:.8px;color:#b45309;text-transform:uppercase">Creator des Tages</span></div>'
+              + '<a href="/profil/'+htmlEsc(_cs.uid)+'" style="display:flex;align-items:center;gap:12px;text-decoration:none;margin-bottom:13px">'
+                + '<div style="position:relative;width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#f59e0b,#a78bfa);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:21px;flex-shrink:0;overflow:hidden;box-shadow:0 3px 10px rgba(245,158,11,.3)">'+htmlEsc(_initial)+_pic+'</div>'
+                + '<div style="flex:1;min-width:0"><div style="font-size:var(--fs-lg);font-weight:800;color:var(--text);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+_n+'</div>'
+                + (_ig?'<div style="font-size:var(--fs-sm);color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+_ig+'</div>':'')+'</div></a>'
+              + '<div style="display:flex;align-items:center;gap:6px;padding:11px 0;border-top:1px solid rgba(245,158,11,.18);border-bottom:1px solid rgba(245,158,11,.18);margin-bottom:13px">'
+                + _stat(_cs.days, _cs.days===1?'Tag aktiv':'Tage aktiv')
+                + '<div style="width:1px;height:26px;background:rgba(245,158,11,.2)"></div>'
+                + _stat(_cs.posts, _cs.posts===1?'Beitrag':'Beiträge')
+                + '<div style="width:1px;height:26px;background:rgba(245,158,11,.2)"></div>'
+                + _stat(_cs.likes, 'Likes vergeben')
+              + '</div>'
+              + '<a href="/profil/'+htmlEsc(_cs.uid)+'" style="display:block;text-align:center;padding:11px;border-radius:11px;background:linear-gradient(135deg,#f59e0b,#a78bfa);color:#fff;font-weight:800;font-size:var(--fs-sm);text-decoration:none">Profil ansehen</a>'
+              + '</div>';
+          } catch(e){ return ''; }
+        })() : '';
+        // Spotlight nach dem 3. Post einstreuen (bei weniger Posts nach dem letzten).
+        const _spotInject = heuteLinksRegular.length ? Math.min(2, heuteLinksRegular.length - 1) : -1;
+        const regularHeuteHtml = heuteLinksRegular.length ? heuteLinksRegular.map((x,i)=>renderLink(x)+(i===_spotInject?_spotlightHtml:'')).join('') : (pinnedFirstPosts.length ? _spotlightHtml : _spotlightHtml + `
 <div style="text-align:center;padding:48px 24px">
   <div style="font-size:56px;margin-bottom:var(--space-4)">📸</div>
   <div style="font-size:17px;font-weight:700;margin-bottom:var(--space-2)">Noch keine Links heute</div>
@@ -11482,7 +11512,7 @@ ${(()=>{
       + '<span><b style="color:var(--text)">' + _cnt + ' Creator</b> gerade aktiv — jetzt ist Engagement am stärksten.</span></div>';
   } catch(e) { return ''; }
 })()}
-${(()=>{
+${tab==='heute' ? (()=>{
   // Community-Activity-Ticker: rotierender Social-Proof aus echten Ereignissen
   // (Ranking-Sieger, Rang-Aufstiege, neue Mitglieder). Alle Daten real, Namen escaped.
   try {
@@ -11500,35 +11530,8 @@ ${(()=>{
       + '</div></div>'
       + '<script>(function(){var el=document.getElementById("cb-activity-ticker");if(!el||el._i)return;el._i=1;var a;try{a=JSON.parse(el.getAttribute("data-acts"));}catch(e){return;}if(!a||a.length<2)return;var slot=el.querySelector(".cbt-slot"),se=el.querySelector(".cbt-e"),sn=el.querySelector(".cbt-n"),st=el.querySelector(".cbt-t"),k=0;setInterval(function(){k=(k+1)%a.length;slot.style.opacity="0";setTimeout(function(){var o=a[k];se.textContent=o.e||"";sn.textContent=o.n?o.n+" ":"";st.textContent=o.t||"";slot.style.opacity="1";},350);},3800);})();</script>';
   } catch(e){ return ''; }
-})()}
-<div id="admin-link-card-root"></div>
-${(()=>{
-  // Creator des Tages: tägliche Auszeichnung (keine Zufallsanzeige) für den aktivsten
-  // Creator des Vortags. Stats sind real (aktive Tage, Beiträge, vergebene Likes).
-  try {
-    const _cs = botLogic.getCreatorSpotlight ? botLogic.getCreatorSpotlight() : null;
-    if (!_cs || !_cs.uid) return '';
-    const _n = htmlEsc(_cs.name);
-    const _ig = _cs.instagram ? '@'+htmlEsc(String(_cs.instagram).replace(/^@/,'')) : '';
-    const _initial = (_cs.name||'?').trim()[0] || '?';
-    const _stat = (val, label) => '<div style="flex:1;text-align:center"><div style="font-size:var(--fs-lg);font-weight:800;color:var(--text);line-height:1.1">'+val+'</div><div style="font-size:var(--fs-xs);color:var(--muted);margin-top:2px">'+label+'</div></div>';
-    return '<div style="margin:10px 16px 2px;padding:16px;background:linear-gradient(135deg,rgba(245,158,11,0.12),rgba(124,58,237,0.06));border:1px solid rgba(245,158,11,0.30);border-radius:16px">'
-      + '<div style="display:flex;align-items:center;gap:7px;margin-bottom:12px"><span style="font-size:16px;line-height:1">🏆</span><span style="font-size:10px;font-weight:800;letter-spacing:.8px;color:#b45309;text-transform:uppercase">Creator des Tages</span></div>'
-      + '<a href="/profil/'+htmlEsc(_cs.uid)+'" style="display:flex;align-items:center;gap:12px;text-decoration:none;margin-bottom:13px">'
-        + '<div style="width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#f59e0b,#a78bfa);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:21px;flex-shrink:0;box-shadow:0 3px 10px rgba(245,158,11,.3)">'+htmlEsc(_initial)+'</div>'
-        + '<div style="flex:1;min-width:0"><div style="font-size:var(--fs-lg);font-weight:800;color:var(--text);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+_n+'</div>'
-        + (_ig?'<div style="font-size:var(--fs-sm);color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+_ig+'</div>':'')+'</div></a>'
-      + '<div style="display:flex;align-items:center;gap:6px;padding:11px 0;border-top:1px solid rgba(245,158,11,.18);border-bottom:1px solid rgba(245,158,11,.18);margin-bottom:13px">'
-        + _stat(_cs.days, _cs.days===1?'Tag aktiv':'Tage aktiv')
-        + '<div style="width:1px;height:26px;background:rgba(245,158,11,.2)"></div>'
-        + _stat(_cs.posts, _cs.posts===1?'Beitrag':'Beiträge')
-        + '<div style="width:1px;height:26px;background:rgba(245,158,11,.2)"></div>'
-        + _stat(_cs.likes, 'Likes vergeben')
-      + '</div>'
-      + '<a href="/profil/'+htmlEsc(_cs.uid)+'" style="display:block;text-align:center;padding:11px;border-radius:11px;background:linear-gradient(135deg,#f59e0b,#a78bfa);color:#fff;font-weight:800;font-size:var(--fs-sm);text-decoration:none">Profil ansehen</a>'
-      + '</div>';
-  } catch(e){ return ''; }
-})()}
+})() : ''}
+${tab==='heute' ? '<div id="admin-link-card-root"></div>' : ''}
 <div style="width:100%">${storiesHtml}</div>
 ${(()=>{
   // Perf: einmaliger Pass durch d.links statt 2x Object.values().some()+.filter()
@@ -12807,7 +12810,7 @@ function _alCss(){
   document.head.appendChild(s);
 }
 // Engager-Block: Avatar-Stack + „Wer? (N)" → showLikerModal('al-<id>'). Auf der dunklen Karte.
-function _alEngagers(id, engagers, count){
+function _alEngagers(key, engagers, count){
   var esc=_alEsc; engagers=engagers||[];
   if(!count){ return '<div style="font-size:12px;color:rgba(255,255,255,.5);text-align:center;margin-top:12px;padding-top:11px;border-top:1px solid rgba(255,255,255,.10)">Noch kein Engagement — sei die oder der Erste! 🚀</div>'; }
   var rows = engagers.map(function(u){
@@ -12817,12 +12820,41 @@ function _alEngagers(id, engagers, count){
   var stack = engagers.slice(0,4).map(function(u,i){ return '<div style="width:27px;height:27px;border-radius:50%;background:linear-gradient(135deg,#f59e0b,#a855f7);border:2px solid #120d22;margin-left:'+(i?'-9px':'0')+';display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700;overflow:hidden;position:relative;flex-shrink:0">'+esc((u.name||'?')[0])+(u.uid?'<img src="/appbild/'+esc(u.uid)+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.remove()" alt="">':'')+'</div>'; }).join('');
   var top = engagers.slice(0,2).map(function(u){return '<b>'+esc(u.name||'User')+'</b>';}).join(', ');
   var rest = count>2 ? ' und '+(count-2)+' weitere' : '';
-  return '<div id="liker-rows-al-'+esc(id)+'" style="display:none">'+rows+'</div>'+
+  return '<div id="liker-rows-'+esc(key)+'" style="display:none">'+rows+'</div>'+
     '<div style="display:flex;align-items:center;gap:9px;margin-top:13px;padding-top:12px;border-top:1px solid rgba(255,255,255,.10)">'+
       '<div style="display:flex;flex-shrink:0">'+stack+'</div>'+
       '<div class="al-names" style="flex:1;min-width:0;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">❤️ '+top+rest+' engagiert</div>'+
-      '<button onclick="showLikerModal(\\'al-'+esc(id)+'\\')" style="background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.42);color:#fbbf24;font-size:11px;font-weight:800;padding:6px 11px;border-radius:9px;cursor:pointer;white-space:nowrap;flex-shrink:0">Wer? ('+count+')</button>'+
+      '<button onclick="showLikerModal(\\''+esc(key)+'\\')" style="background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.42);color:#fbbf24;font-size:11px;font-weight:800;padding:6px 11px;border-radius:9px;cursor:pointer;white-space:nowrap;flex-shrink:0">Wer? ('+count+')</button>'+
     '</div>';
+}
+// Premium User-Karte (Heute-Feed + Admin-Vorschau). isPreview=true → Engage-Button zeigt
+// Vorschau-Hinweis statt zu engagieren (Ersteller kann eigenen Link nicht engagieren).
+function _alUserCard(c, isPreview){
+  var esc=_alEsc;
+  var key = (isPreview?'alp-':'al-')+c.id;
+  var msg = c.message ? '<div style="font-size:15px;color:#fff;line-height:1.5;margin:10px 0 4px;font-weight:700">'+esc(c.message)+'</div>' : '';
+  var author = c.author ? '<div style="font-size:12px;color:rgba(255,255,255,.55);margin-bottom:12px">von <b style="color:#fbbf24">'+esc(c.author.name||'Admin')+'</b>'+(c.author.instagram?' · @'+esc(c.author.instagram):'')+'</div>' : '';
+  var openUrl = (typeof cleanInstagramUrl==='function') ? cleanInstagramUrl(c.url) : c.url;
+  var tag = isPreview ? '<div style="position:absolute;top:9px;right:9px;z-index:3;background:rgba(0,0,0,.55);color:#fbbf24;font-size:9px;font-weight:800;letter-spacing:1px;padding:4px 8px;border-radius:7px;text-transform:uppercase">👁 Vorschau</div>' : '';
+  var engageBtn = isPreview
+    ? '<button onclick="alert(\\'👁 Vorschau — genau so sehen deine User die Karte im Heute-Feed. Sie tippen hier auf Engagiert und bekommen +'+(c.reward||5)+' Diamanten. Du als Ersteller kannst deinen eigenen Link nicht engagieren.\\')" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:15px;background:linear-gradient(135deg,#f59e0b,#fbbf24,#a855f7);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:900;cursor:pointer;box-shadow:0 6px 18px rgba(245,158,11,.35)"><span style="width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.28);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px">2</span><svg width="18" height="18" viewBox="0 0 24 24" fill="#fff" stroke="#fff" stroke-width="1.5"><path d="M20.8 5.1a5.4 5.4 0 0 0-7.7 0l-1.1 1.1-1.1-1.1A5.4 5.4 0 1 0 3.2 12.8l1.1 1.1L12 21.5l7.7-7.6 1.1-1.1a5.4 5.4 0 0 0 0-7.7z"/></svg>Engagiert · +'+(c.reward||5)+' 💎</button>'
+    : '<button onclick="adminLinkEngageClick(\\''+esc(c.id)+'\\', this)" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:15px;background:linear-gradient(135deg,#f59e0b,#fbbf24,#a855f7);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:900;cursor:pointer;box-shadow:0 6px 18px rgba(245,158,11,.35)"><span style="width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.28);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px">2</span><svg width="18" height="18" viewBox="0 0 24 24" fill="#fff" stroke="#fff" stroke-width="1.5"><path d="M20.8 5.1a5.4 5.4 0 0 0-7.7 0l-1.1 1.1-1.1-1.1A5.4 5.4 0 1 0 3.2 12.8l1.1 1.1L12 21.5l7.7-7.6 1.1-1.1a5.4 5.4 0 0 0 0-7.7z"/></svg>Engagiert · +'+(c.reward||5)+' 💎</button>';
+  return '<div class="al-card"'+(isPreview?' style="margin:0"':'')+'>'+
+    '<div class="al-card-glow"></div>'+
+    '<div class="al-body">'+ tag +
+      '<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;padding:9px 13px;background:linear-gradient(135deg,rgba(245,158,11,.16),rgba(168,85,247,.16));border:1.5px solid rgba(245,158,11,.45);border-radius:13px;box-shadow:0 4px 14px rgba(245,158,11,.18)">'+
+        '<span style="font-size:23px;line-height:1;filter:drop-shadow(0 2px 6px rgba(245,158,11,.5))">🛡️</span>'+
+        '<div style="flex:1;min-width:0"><div style="font-size:10px;font-weight:900;letter-spacing:1.4px;text-transform:uppercase;background:linear-gradient(135deg,#fbbf24,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Admin-Link · Community-Push</div>'+
+        '<div style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-.5px;line-height:1.15;margin-top:1px">+'+(c.reward||5)+' 💎 <span style="font-size:11px;color:rgba(255,255,255,.6);font-weight:600;letter-spacing:0">fürs Engagement</span></div></div>'+
+        '<div style="font-size:11px;color:#fbbf24;font-weight:800;text-align:right;flex-shrink:0">⏱<br>'+_alFmtRemaining(c.remainingMs)+'</div>'+
+      '</div>'+
+      msg+author+
+      '<a href="'+esc(openUrl)+'" target="_blank" rel="noopener noreferrer" onclick="window._alvisit=Date.now()" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:14px;background:linear-gradient(135deg,#ec4899,#a855f7);color:#fff;border-radius:12px;font-size:14.5px;font-weight:800;text-decoration:none;margin-bottom:10px;box-shadow:0 6px 18px rgba(168,85,247,.4)"><span style="width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px">1</span><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17" cy="7" r="1.1" fill="currentColor" stroke="none"/></svg>Auf Instagram öffnen →</a>'+
+      engageBtn+
+      '<div style="font-size:10.5px;color:rgba(255,255,255,.45);text-align:center;margin-top:8px;line-height:1.4">Liken · Kommentieren · Teilen · Speichern — dann bestätigen. Schein-Engagement wird sanktioniert.</div>'+
+      _alEngagers(key, c.engagers, c.engagedCount||0)+
+    '</div>'+
+  '</div>';
 }
 (function initAdminLinkCard(){
   var root = document.getElementById('admin-link-card-root');
@@ -12831,26 +12863,7 @@ function _alEngagers(id, engagers, count){
   function render(c){
     if(!c){ root.innerHTML=''; return; }
     _alCss();
-    var msg = c.message ? '<div style="font-size:15px;color:#fff;line-height:1.5;margin:10px 0 4px;font-weight:700">'+esc(c.message)+'</div>' : '';
-    var author = c.author ? '<div style="font-size:12px;color:rgba(255,255,255,.55);margin-bottom:12px">von <b style="color:#fbbf24">'+esc(c.author.name||'Admin')+'</b>'+(c.author.instagram?' · @'+esc(c.author.instagram):'')+'</div>' : '';
-    var openUrl = (typeof cleanInstagramUrl==='function') ? cleanInstagramUrl(c.url) : c.url;
-    root.innerHTML =
-      '<div class="al-card">'+
-        '<div class="al-card-glow"></div>'+
-        '<div class="al-body">'+
-          '<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;padding:9px 13px;background:linear-gradient(135deg,rgba(245,158,11,.16),rgba(168,85,247,.16));border:1.5px solid rgba(245,158,11,.45);border-radius:13px;box-shadow:0 4px 14px rgba(245,158,11,.18)">'+
-            '<span style="font-size:23px;line-height:1;filter:drop-shadow(0 2px 6px rgba(245,158,11,.5))">🛡️</span>'+
-            '<div style="flex:1;min-width:0"><div style="font-size:10px;font-weight:900;letter-spacing:1.4px;text-transform:uppercase;background:linear-gradient(135deg,#fbbf24,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Admin-Link · Community-Push</div>'+
-            '<div style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-.5px;line-height:1.15;margin-top:1px">+'+(c.reward||5)+' 💎 <span style="font-size:11px;color:rgba(255,255,255,.6);font-weight:600;letter-spacing:0">fürs Engagement</span></div></div>'+
-            '<div style="font-size:11px;color:#fbbf24;font-weight:800;text-align:right;flex-shrink:0">⏱<br>'+_alFmtRemaining(c.remainingMs)+'</div>'+
-          '</div>'+
-          msg+author+
-          '<a href="'+esc(openUrl)+'" target="_blank" rel="noopener noreferrer" onclick="window._alvisit=Date.now()" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:14px;background:linear-gradient(135deg,#ec4899,#a855f7);color:#fff;border-radius:12px;font-size:14.5px;font-weight:800;text-decoration:none;margin-bottom:10px;box-shadow:0 6px 18px rgba(168,85,247,.4)"><span style="width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px">1</span><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17" cy="7" r="1.1" fill="currentColor" stroke="none"/></svg>Auf Instagram öffnen →</a>'+
-          '<button onclick="adminLinkEngageClick(\\''+esc(c.id)+'\\', this)" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:15px;background:linear-gradient(135deg,#f59e0b,#fbbf24,#a855f7);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:900;cursor:pointer;box-shadow:0 6px 18px rgba(245,158,11,.35)"><span style="width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.28);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px">2</span><svg width="18" height="18" viewBox="0 0 24 24" fill="#fff" stroke="#fff" stroke-width="1.5"><path d="M20.8 5.1a5.4 5.4 0 0 0-7.7 0l-1.1 1.1-1.1-1.1A5.4 5.4 0 1 0 3.2 12.8l1.1 1.1L12 21.5l7.7-7.6 1.1-1.1a5.4 5.4 0 0 0 0-7.7z"/></svg>Engagiert · +'+(c.reward||5)+' 💎</button>'+
-          '<div style="font-size:10.5px;color:rgba(255,255,255,.45);text-align:center;margin-top:8px;line-height:1.4">Liken · Kommentieren · Teilen · Speichern — dann bestätigen. Schein-Engagement wird sanktioniert.</div>'+
-          _alEngagers(c.id, c.engagers, c.engagedCount||0)+
-        '</div>'+
-      '</div>';
+    root.innerHTML = _alUserCard(c, false);
   }
   function load(){
     fetch('/api/admin-link/card').then(function(r){return r.json();}).then(function(j){ render(j&&j.card); }).catch(function(){ root.innerHTML=''; });
@@ -12884,11 +12897,21 @@ function _alEngagers(id, engagers, count){
           '<div style="width:1px;height:34px;background:rgba(245,158,11,.3)"></div>'+
           '<div style="text-align:center;flex:1"><div style="font-size:24px;font-weight:900;color:#fbbf24;line-height:1">'+dist+' 💎</div><div style="font-size:10px;color:rgba(255,255,255,.6);font-weight:700;text-transform:uppercase;letter-spacing:.5px">verteilt</div></div>'+
         '</div>'+
-        _alEngagers(p.id, p.engagers, p.engagedCount||0)+
-        '<button onclick="adminLinkDelete(\\''+esc(p.id)+'\\', this)" style="display:flex;align-items:center;justify-content:center;gap:6px;width:100%;margin-top:11px;padding:10px;background:transparent;color:#fca5a5;border:1px dashed rgba(239,68,68,.5);border-radius:10px;font-size:12.5px;font-weight:700;cursor:pointer">🗑 Admin-Link löschen</button>'+
+        _alEngagers('al-'+p.id, p.engagers, p.engagedCount||0)+
+        '<button onclick="alTogglePreview(\\''+esc(p.id)+'\\', this)" style="display:flex;align-items:center;justify-content:center;gap:6px;width:100%;margin-top:11px;padding:11px;background:rgba(245,158,11,.14);color:#fbbf24;border:1px solid rgba(245,158,11,.4);border-radius:10px;font-size:12.5px;font-weight:800;cursor:pointer">👁 So sehen es User im Feed</button>'+
+        '<div id="al-preview-'+esc(p.id)+'" style="display:none;margin-top:12px"></div>'+
+        '<button onclick="adminLinkDelete(\\''+esc(p.id)+'\\', this)" style="display:flex;align-items:center;justify-content:center;gap:6px;width:100%;margin-top:9px;padding:10px;background:transparent;color:#fca5a5;border:1px dashed rgba(239,68,68,.5);border-radius:10px;font-size:12.5px;font-weight:700;cursor:pointer">🗑 Admin-Link löschen</button>'+
       '</div>'+
     '</div>';
   }
+  // Vorschau ein-/ausblenden: rendert die echte User-Karte (mit Engage-Button) lazy.
+  window.alTogglePreview = function(id, btn){
+    var el=document.getElementById('al-preview-'+id); if(!el) return;
+    if(el.style.display==='none'){
+      if(!el.getAttribute('data-rendered')){ var p=(window._alLinks||{})[id]; if(p){ el.innerHTML=_alUserCard(p, true); el.setAttribute('data-rendered','1'); } }
+      el.style.display='block'; btn.innerHTML='▲ Vorschau ausblenden';
+    } else { el.style.display='none'; btn.innerHTML='👁 So sehen es User im Feed'; }
+  };
   function load(){
     _alCss();
     fetch('/api/admin-link/list').then(function(r){return r.json();}).then(function(j){
@@ -12902,6 +12925,7 @@ function _alEngagers(id, engagers, count){
         '<button onclick="adminLinkCreateSubmit(this)" style="width:100%;padding:13px;background:linear-gradient(135deg,#f59e0b,#a855f7);color:#fff;border:none;border-radius:12px;font-size:13.5px;font-weight:800;cursor:pointer;box-shadow:0 4px 14px rgba(245,158,11,.3)">+ Admin-Link veröffentlichen</button>'+
         '<div id="al-create-result" style="font-size:12px;margin-top:8px;text-align:center"></div>'+
       '</div>';
+      window._alLinks = {}; (j.links||[]).forEach(function(p){ window._alLinks[p.id]=p; });
       var list = j.links.length ? j.links.map(renderLink).join('') : '<div style="padding:40px 24px;text-align:center;color:var(--muted);font-size:13px">Noch keine aktiven Admin-Links. Erstelle oben deinen ersten.</div>';
       tabEl.innerHTML = form + list;
     }).catch(function(e){ tabEl.innerHTML='<div style="padding:48px 24px;text-align:center;color:var(--muted)">Fehler: '+esc(e.message)+'</div>'; });

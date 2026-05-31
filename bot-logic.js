@@ -2734,7 +2734,7 @@ function adminLinkListApi(callerUid) {
             const eng = Array.isArray(p.engagedBy) ? p.engagedBy.map(String) : [];
             const engagers = eng.slice(0, 50).map(eid => { const eu = d.users[eid] || {}; return { uid: eid, name: eu.spitzname || eu.name || 'User', instagram: eu.instagram || '' }; });
             const author = d.users[p.uid] || {};
-            return { id: p.id, url: p.url, message: p.message || '', createdAt: p.createdAt, expiresAt: p.expiresAt, remainingMs: Math.max(0, p.expiresAt - now), engagedCount: eng.length, engagers, author: { uid: p.uid, name: author.spitzname || author.name || 'Admin' } };
+            return { id: p.id, url: p.url, message: p.message || '', reward: ADMIN_LINK_REWARD, createdAt: p.createdAt, expiresAt: p.expiresAt, remainingMs: Math.max(0, p.expiresAt - now), engagedCount: eng.length, engagers, author: { uid: p.uid, name: author.spitzname || author.name || 'Admin', instagram: author.instagram || '' } };
         });
     return { ok: true, links, reward: ADMIN_LINK_REWARD, lifetimeDays: 14 };
 }
