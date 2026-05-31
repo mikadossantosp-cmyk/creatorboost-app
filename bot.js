@@ -9213,10 +9213,22 @@ ${spaceScale.map(s=>`<div class="grow"><span class="gmeta">--space-${s}</span><d
         const audio = _safeMediaUrl(body.audio, 'audio');
         if ((body.image && !image) || (body.audio && !audio)) return json({ok:false, error:'Ungültiges Medien-Format'}, 400);
         if (!to || (!text?.trim() && !image && !audio)) return json({ok:false, error:'Ungültig'}, 400);
-        // Admin-Support: Antwort eines Admins an einen normalen User geht als CreatorBoost zurück
-        // (landet im creatorboost↔user-Chat, den der Admin sieht, + beim User als CreatorBoost-DM).
+        // Admin-Antwort an einen normalen User: dorthin routen, wo der User ZULETZT geschrieben hat.
+        //  • User schrieb zuletzt persönlich (an den Admin-Account) → Antwort persönlich (von dir).
+        //  • Sonst (Support/„CreatorBoost"-Chat oder Admin initiiert) → als CreatorBoost zurück.
         const _sendAdmins = Array.isArray(_dataCache?._adminIds) ? _dataCache._adminIds.map(String) : [];
         if (_sendAdmins.includes(String(myUid)) && String(to) !== 'creatorboost' && !_sendAdmins.includes(String(to)) && text?.trim() && !image && !audio) {
+            const _cbKey = ['creatorboost', String(to)].sort().join('_');
+            const _perKey = [String(myUid), String(to)].sort().join('_');
+            const _lastFromUser = (key) => { const arr = _dataCache?.messages?.[key] || []; for (let i = arr.length - 1; i >= 0; i--) { if (String(arr[i].from) === String(to)) return Number(arr[i].timestamp) || 0; } return 0; };
+            const _replyPersonal = _lastFromUser(_perKey) > _lastFromUser(_cbKey);
+            if (_replyPersonal) {
+                // Persönliche Antwort (from = Admin-Account) → User sieht sie dort, wo er geschrieben hat.
+                const _pmArgs = { from: myUid, to: String(to), text: text.trim().slice(0, 1500), image: null, audio: null, replyTo: replyTo || null };
+                const pr = LOCAL_STORE ? await localWrite(() => botLogic.sendMessageApi(_pmArgs)) : await postBot('/send-message-api', { ..._pmArgs, timestamp: Date.now() });
+                if (pr?.ok === true) { _dataCacheTime = 0; refreshDataCache().catch(()=>{}); }
+                return json({ ok: pr?.ok === true, error: pr?.error || null });
+            }
             const rcb = LOCAL_STORE
                 ? await localWrite(() => botLogic.sendDmSingleApi({ uid: String(to), text: text.trim().slice(0, 1500) }))
                 : await postBot('/send-dm-single-api', { uid: String(to), text: text.trim().slice(0, 1500) });
