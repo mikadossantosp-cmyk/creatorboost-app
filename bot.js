@@ -4065,6 +4065,38 @@ function cbConfirm(message, opts){
     document.body.appendChild(ov); document.body.style.overflow='hidden';
   });
 }
+// In-App-Eingabe statt native prompt() (in der TWA/WebView verschluckt → liefert null). Promise<string|null>.
+function cbPrompt(message, defaultVal, opts){
+  opts = opts || {};
+  return new Promise(function(resolve){
+    var prior = document.body.style.overflow;
+    var ov = document.createElement('div');
+    ov.style.cssText = 'position:fixed;inset:0;z-index:100002;background:rgba(0,0,0,.62);display:flex;align-items:flex-end;justify-content:center';
+    var safe = String(message==null?'':message).replace(/[&<>]/g,function(c){return ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]);});
+    var card = document.createElement('div');
+    card.style.cssText = 'background:var(--bg2,#16131f);color:var(--text,#fff);width:100%;max-width:480px;border-radius:20px 20px 0 0;padding:22px 20px;padding-bottom:calc(20px + env(safe-area-inset-bottom,0px));box-shadow:0 -12px 40px rgba(0,0,0,.55)';
+    card.innerHTML = '<div style="font-size:14.5px;line-height:1.55;white-space:pre-line;margin-bottom:14px;color:var(--text,#fff)">'+safe+'</div>';
+    var inp = document.createElement(opts.multiline?'textarea':'input');
+    inp.value = defaultVal==null?'':String(defaultVal);
+    if (opts.placeholder) inp.placeholder = opts.placeholder;
+    if (opts.multiline) inp.rows = 3;
+    inp.style.cssText = 'width:100%;box-sizing:border-box;padding:13px;border-radius:12px;border:1px solid var(--border2,rgba(255,255,255,.18));background:var(--bg,#0e0c16);color:var(--text,#fff);font-size:14px;font-family:inherit;margin-bottom:16px'+(opts.multiline?';resize:vertical':'');
+    var row = document.createElement('div'); row.style.cssText='display:flex;gap:10px';
+    var no = document.createElement('button'); no.type='button'; no.textContent=opts.cancel||'Abbrechen';
+    no.style.cssText='flex:1;padding:13px;border-radius:12px;border:1px solid var(--border2,rgba(255,255,255,.18));background:transparent;color:var(--text,#fff);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit';
+    var yes = document.createElement('button'); yes.type='button'; yes.textContent=opts.ok||'OK';
+    yes.style.cssText='flex:1.3;padding:13px;border-radius:12px;border:none;background:linear-gradient(135deg,#06b6d4,#0e7490);color:#fff;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit';
+    function done(v){ try{ document.removeEventListener('keydown',onKey); ov.remove(); document.body.style.overflow=prior; }catch(e){} resolve(v); }
+    no.onclick=function(){done(null);};
+    yes.onclick=function(){done(inp.value);};
+    ov.addEventListener('click',function(e){ if(e.target===ov) done(null); });
+    function onKey(e){ if(e.key==='Escape'){done(null);} else if(e.key==='Enter'&&!opts.multiline){done(inp.value);} }
+    document.addEventListener('keydown',onKey);
+    row.appendChild(no); row.appendChild(yes); card.appendChild(inp); card.appendChild(row); ov.appendChild(card);
+    document.body.appendChild(ov); document.body.style.overflow='hidden';
+    setTimeout(function(){ try{ inp.focus(); }catch(e){} }, 50);
+  });
+}
 function closeReportModal(){var m=document.getElementById('report-modal');if(m)m.style.display='none';}
 function reportLiker(likerUid,contextLabel,special){
   var m=document.getElementById('report-modal');
@@ -4713,10 +4745,10 @@ async function pinnedEngageClick(ownerUid, btn){
     }
   } catch(e) { btn.disabled = false; btn.innerHTML = '❤️ Engagiert · +1💎'; alert('❌ Netzwerk-Fehler'); }
 }
-function ipfAddSub(){
+async function ipfAddSub(){
   // Wenn das existierende modal vorhanden ist (auf /profil), nutze das
   if (typeof openCreateSubModal === 'function') { openCreateSubModal(); return; }
-  const name = prompt('Name für neuen Sub-Account:');
+  const name = (await cbPrompt('Name für neuen Sub-Account:'));
   if (!name) return;
   fetch('/api/sub-account-new', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({name})})
     .then(r=>r.json()).then(j=>{
@@ -7582,11 +7614,11 @@ ${list.length === 0 ? '<div style="text-align:center;padding:var(--space-5);colo
 <script>
 function copyText(id){const el=document.getElementById(id);const text=el.textContent;if(navigator.clipboard){navigator.clipboard.writeText(text).then(()=>showToast());}else{const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();showToast();}}
 function showToast(){const t=document.getElementById('toast');t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1500);}
-async function removeTester(uid){if(!confirm('Tester wirklich entfernen?'))return;try{const r=await fetch('/api/admin/beta-testers/remove',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({uid})});const j=await r.json();if(j.ok)location.reload();else alert('Fehler: '+(j.error||'?'));}catch(e){alert('Fehler: '+e.message);}}
+async function removeTester(uid){if(!(await cbConfirm('Tester wirklich entfernen?')))return;try{const r=await fetch('/api/admin/beta-testers/remove',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({uid})});const j=await r.json();if(j.ok)location.reload();else alert('Fehler: '+(j.error||'?'));}catch(e){alert('Fehler: '+e.message);}}
 async function saveLink(){const link=document.getElementById('optinLink').value.trim();try{const r=await fetch('/api/admin/beta-testers/save-link',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({link})});const j=await r.json();if(j.ok){const t=document.getElementById('toast');t.textContent='💾 Link gespeichert';t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1500);}else alert('Fehler: '+(j.error||'?'));}catch(e){alert('Fehler: '+e.message);}}
-async function publishOptin(){const link=document.getElementById('optinLink').value.trim();if(!link){alert('Bitte erst den Opt-in-Link eintragen');return;}if(!/^https?:\\/\\//i.test(link)){alert('Ungültiger Link (muss mit https:// beginnen)');return;}if(!confirm('Opt-in-Link wirklich an ALLE angemeldeten Tester in-app ausspielen?\\n\\nSie sehen beim nächsten Öffnen der App ein grünes Banner mit dem Link.'))return;try{const r=await fetch('/api/admin/beta-testers/send-optin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({link})});const j=await r.json();if(j.ok){alert('✅ Banner wird '+j.notified+' Testern ausgespielt');location.reload();}else alert('Fehler: '+(j.error||'?'));}catch(e){alert('Fehler: '+e.message);}}
-async function markTestStart(clear){const msg=clear?'Closed-Test-Start-Datum wirklich zurücksetzen?':'Hast du den Closed Test in der Play Console wirklich heute gestartet?\\n\\n(Wird hier zur Übersicht angezeigt — die echten 14 Tage zählt Google selbst.)';if(!confirm(msg))return;try{const r=await fetch('/api/admin/beta-testers/mark-test-started',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({clear:!!clear})});const j=await r.json();if(j.ok)location.reload();else alert('Fehler');}catch(e){alert('Fehler: '+e.message);}}
-async function notifyNonGmail(onlyUnnotified){const target=onlyUnnotified?'nur unbenachrichtigte':'ALLE';if(!confirm('Email an '+target+' Non-Gmail-Tester senden?\\n\\nText: \"Leider können wir nur Gmail annehmen. Trag deine Gmail hier ein und bestätige.\"'))return;try{const r=await fetch('/api/admin/beta-testers/notify-non-gmail',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({onlyUnnotified:!!onlyUnnotified})});const j=await r.json();if(j.ok){alert('✅ Versendet: '+j.sent+' Emails ('+j.failed+' fehlgeschlagen, von '+j.total+' Total)');location.reload();}else alert('Fehler: '+(j.error||'?'));}catch(e){alert('Fehler: '+e.message);}}
+async function publishOptin(){const link=document.getElementById('optinLink').value.trim();if(!link){alert('Bitte erst den Opt-in-Link eintragen');return;}if(!/^https?:\\/\\//i.test(link)){alert('Ungültiger Link (muss mit https:// beginnen)');return;}if(!(await cbConfirm('Opt-in-Link wirklich an ALLE angemeldeten Tester in-app ausspielen?\\n\\nSie sehen beim nächsten Öffnen der App ein grünes Banner mit dem Link.')))return;try{const r=await fetch('/api/admin/beta-testers/send-optin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({link})});const j=await r.json();if(j.ok){alert('✅ Banner wird '+j.notified+' Testern ausgespielt');location.reload();}else alert('Fehler: '+(j.error||'?'));}catch(e){alert('Fehler: '+e.message);}}
+async function markTestStart(clear){const msg=clear?'Closed-Test-Start-Datum wirklich zurücksetzen?':'Hast du den Closed Test in der Play Console wirklich heute gestartet?\\n\\n(Wird hier zur Übersicht angezeigt — die echten 14 Tage zählt Google selbst.)';if(!(await cbConfirm(msg)))return;try{const r=await fetch('/api/admin/beta-testers/mark-test-started',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({clear:!!clear})});const j=await r.json();if(j.ok)location.reload();else alert('Fehler');}catch(e){alert('Fehler: '+e.message);}}
+async function notifyNonGmail(onlyUnnotified){const target=onlyUnnotified?'nur unbenachrichtigte':'ALLE';if(!(await cbConfirm('Email an '+target+' Non-Gmail-Tester senden?\\n\\nText: \"Leider können wir nur Gmail annehmen. Trag deine Gmail hier ein und bestätige.\"')))return;try{const r=await fetch('/api/admin/beta-testers/notify-non-gmail',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({onlyUnnotified:!!onlyUnnotified})});const j=await r.json();if(j.ok){alert('✅ Versendet: '+j.sent+' Emails ('+j.failed+' fehlgeschlagen, von '+j.total+' Total)');location.reload();}else alert('Fehler: '+(j.error||'?'));}catch(e){alert('Fehler: '+e.message);}}
 </script>
 </body></html>`);
     }
@@ -7738,10 +7770,10 @@ ${pagination}
 const K='${esc(query.key)}';
 function toast(msg,ok){const d=document.createElement('div');d.className='toast';d.style.background=ok?'#22c55e':'#ef4444';d.textContent=msg;document.body.appendChild(d);setTimeout(()=>d.remove(),3500);}
 async function sendOne(btn,uid){btn.disabled=true;btn.textContent='\u2026';try{const r=await fetch('/api/admin/send-confirmation',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:K,uid})});const d=await r.json();if(d.ok)toast('\u2705 Gesendet an '+d.to,true);else toast('\u274c '+(d.error||'Fehler'),false);}catch(e){toast('\u274c '+e.message,false);}finally{btn.disabled=false;btn.textContent='Senden';}}
-async function delEmail(uid,email){if(!confirm('Email "'+email+'" wirklich komplett l\u00f6schen?\\n\\nUser UID: '+uid+'\\n\\nDer User kann sich danach nicht mehr per Email einloggen.\\nFalls Beta-Tester: auch dort entfernt.'))return;try{const r=await fetch('/api/admin/email-delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:K,uid})});const d=await r.json();if(d.ok){toast('\ud83d\uddd1\ufe0f Email gel\u00f6scht: '+d.deleted,true);setTimeout(()=>location.reload(),800);}else toast('\u274c '+(d.error||'Fehler'),false);}catch(e){toast('\u274c '+e.message,false);}}
-async function moveEmail(fromUid,email){const toUid=prompt('Email "'+email+'" auf welchen User verschieben?\\n\\nGib die Ziel-UID ein:');if(!toUid||!toUid.trim())return;const targetUid=toUid.trim();if(targetUid===fromUid){alert('Ziel-UID ist identisch mit Quell-UID');return;}try{let r=await fetch('/api/admin/email-move',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:K,fromUid,toUid:targetUid})});let d=await r.json();if(d.needOverride){if(!confirm('\u26a0\ufe0f Ziel-User hat bereits eine Email: '+d.targetCurrentEmail+'\\n\\nDiese wird \u00dcBERSCHRIEBEN. Trotzdem fortfahren?'))return;r=await fetch('/api/admin/email-move',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:K,fromUid,toUid:targetUid,override:true})});d=await r.json();}if(d.ok){toast('\u279c Email verschoben: '+d.email+' \u2192 '+d.toUid,true);setTimeout(()=>location.reload(),800);}else toast('\u274c '+(d.error||'Fehler'),false);}catch(e){toast('\u274c '+e.message,false);}}
-async function sendAllUnverified(){if(!confirm('Allen unbestaetigten Usern Bestaetigungsmail senden?'))return;const el=document.getElementById('bulk-status');el.style.display='block';el.textContent='Starte Sammelversand...';try{const r=await fetch('/api/admin/send-all-unverified',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:K})});const d=await r.json();el.textContent='Fertig: '+d.sent+' gesendet, '+d.failed+' fehlgeschlagen, '+d.skipped+' uebersprungen';toast('Sammelversand abgeschlossen',d.failed===0);}catch(e){el.textContent='Fehler: '+e.message;toast('\u274c '+e.message,false);}}
-async function sendTest(){const to=prompt('Testmail an welche Adresse?');if(!to)return;try{const r=await fetch('/api/admin/send-test',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:K,to})});const d=await r.json();toast(d.ok?'\u2705 Testmail gesendet':'\u274c '+(d.error||'Fehler'),d.ok);}catch(e){toast('\u274c '+e.message,false);}}
+async function delEmail(uid,email){if(!(await cbConfirm('Email "'+email+'" wirklich komplett l\u00f6schen?\\n\\nUser UID: '+uid+'\\n\\nDer User kann sich danach nicht mehr per Email einloggen.\\nFalls Beta-Tester: auch dort entfernt.')))return;try{const r=await fetch('/api/admin/email-delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:K,uid})});const d=await r.json();if(d.ok){toast('\ud83d\uddd1\ufe0f Email gel\u00f6scht: '+d.deleted,true);setTimeout(()=>location.reload(),800);}else toast('\u274c '+(d.error||'Fehler'),false);}catch(e){toast('\u274c '+e.message,false);}}
+async function moveEmail(fromUid,email){const toUid=(await cbPrompt('Email "'+email+'" auf welchen User verschieben?\\n\\nGib die Ziel-UID ein:'));if(!toUid||!toUid.trim())return;const targetUid=toUid.trim();if(targetUid===fromUid){alert('Ziel-UID ist identisch mit Quell-UID');return;}try{let r=await fetch('/api/admin/email-move',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:K,fromUid,toUid:targetUid})});let d=await r.json();if(d.needOverride){if(!(await cbConfirm('\u26a0\ufe0f Ziel-User hat bereits eine Email: '+d.targetCurrentEmail+'\\n\\nDiese wird \u00dcBERSCHRIEBEN. Trotzdem fortfahren?')))return;r=await fetch('/api/admin/email-move',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:K,fromUid,toUid:targetUid,override:true})});d=await r.json();}if(d.ok){toast('\u279c Email verschoben: '+d.email+' \u2192 '+d.toUid,true);setTimeout(()=>location.reload(),800);}else toast('\u274c '+(d.error||'Fehler'),false);}catch(e){toast('\u274c '+e.message,false);}}
+async function sendAllUnverified(){if(!(await cbConfirm('Allen unbestaetigten Usern Bestaetigungsmail senden?')))return;const el=document.getElementById('bulk-status');el.style.display='block';el.textContent='Starte Sammelversand...';try{const r=await fetch('/api/admin/send-all-unverified',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:K})});const d=await r.json();el.textContent='Fertig: '+d.sent+' gesendet, '+d.failed+' fehlgeschlagen, '+d.skipped+' uebersprungen';toast('Sammelversand abgeschlossen',d.failed===0);}catch(e){el.textContent='Fehler: '+e.message;toast('\u274c '+e.message,false);}}
+async function sendTest(){const to=(await cbPrompt('Testmail an welche Adresse?'));if(!to)return;try{const r=await fetch('/api/admin/send-test',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:K,to})});const d=await r.json();toast(d.ok?'\u2705 Testmail gesendet':'\u274c '+(d.error||'Fehler'),d.ok);}catch(e){toast('\u274c '+e.message,false);}}
 </script></body></html>`);
     }
     // Admin-Auth Helper: erlaubt key=BRIDGE_SECRET ODER Admin-Session via cbsid Cookie
@@ -11618,7 +11650,7 @@ ${postsHtml}
 </div>
 <script>
 async function adminDelLink(linkId, btn){
-    if(!confirm('Diesen Link wirklich für ALLE löschen? Wird auch aus Telegram-Gruppe + Kommentaren entfernt.')) return;
+    if(!(await cbConfirm('Diesen Link wirklich für ALLE löschen? Wird auch aus Telegram-Gruppe + Kommentaren entfernt.'))) return;
     if(btn){ btn.disabled=true; btn.textContent='⏳'; }
     try{
         const r = await fetch('/api/delete-link',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({linkId})});
@@ -11932,7 +11964,7 @@ function showSLLikerModal(slId) {
 }
 function closeSLLikerModal(){const m=document.getElementById('sl-liker-modal');if(m){m.classList.remove('open');document.body.style.overflow='';}}
 async function reportNonEngager(slId,likerUid,likerName){
-    if(!confirm('Möchtest du '+likerName+' wegen mangelndem Engagement melden?'))return;
+    if(!(await cbConfirm('Möchtest du '+likerName+' wegen mangelndem Engagement melden?')))return;
     const res=await fetch('/api/report-nonengager',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({slId,likerUid})});
     const data=await res.json();
     toast(data.ok?'✅ Gemeldet!':'❌ '+(data.error||'Fehler'));
@@ -12271,7 +12303,7 @@ async function submitSuperLink(){
   };
   window.diamondAdminDelete = async function(postId, btn){
     if (!window.__IS_ADMIN) return;
-    if (!confirm('🛡️ Admin: Diamantlink löschen?\\n\\nDer Post verschwindet sofort aus allen Feeds.')) return;
+    if (!(await cbConfirm('🛡️ Admin: Diamantlink löschen?\\n\\nDer Post verschwindet sofort aus allen Feeds.'))) return;
     btn.disabled = true; btn.textContent = '⏳ Lösche …';
     try {
       const r = await fetch('/api/admin/diamond-link/delete', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ postId }) });
@@ -12395,8 +12427,8 @@ async function submitSuperLink(){
         setTimeout(()=>t.remove(), 4000);
       } catch(e) { location.reload(); }
     };
-    window.__betaChangeEmail = function(){
-      const newEmail = prompt('Tippfehler korrigieren — neue Email eingeben:', email || '');
+    window.__betaChangeEmail = async function(){
+      const newEmail = (await cbPrompt('Tippfehler korrigieren — neue Email eingeben:', email || ''));
       if (!newEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail.trim())) {
         if (newEmail !== null) alert('Bitte gib eine gültige Email ein');
         return;
@@ -12519,8 +12551,8 @@ async function submitSuperLink(){
       '</div>'+
       '<button onclick="window.__betaSwitchToGmail()" style="width:100%;padding:11px;background:linear-gradient(135deg,#34d399,#10b981);color:#fff;border:none;border-radius:8px;font-size:12.5px;font-weight:800;cursor:pointer">✉️ Gmail-Adresse eintragen</button>'+
     '</div>';
-    window.__betaSwitchToGmail = function(){
-      const newEmail = prompt('Trag deine Gmail-Adresse ein (muss auf @gmail.com enden):', '');
+    window.__betaSwitchToGmail = async function(){
+      const newEmail = (await cbPrompt('Trag deine Gmail-Adresse ein (muss auf @gmail.com enden):', ''));
       if (!newEmail) return;
       const v = newEmail.trim().toLowerCase();
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) { alert('Bitte gib eine gültige Email ein'); return; }
@@ -12804,7 +12836,7 @@ async function submitSuperLink(){
   };
   window.prismaAdminDelete = async function(postId, btn){
     if (!window.__IS_ADMIN) return;
-    if (!confirm('🛡️ Admin: Prismalink löschen?\\n\\nDer Post verschwindet sofort aus allen Feeds.')) return;
+    if (!(await cbConfirm('🛡️ Admin: Prismalink löschen?\\n\\nDer Post verschwindet sofort aus allen Feeds.'))) return;
     btn.disabled = true; btn.textContent = '⏳ Lösche …';
     try {
       const r = await fetch('/api/admin/prisma-link/delete', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ postId }) });
@@ -12977,8 +13009,8 @@ function _alUserCard(c, isPreview){
       else if(res){ res.style.color='#ef4444'; res.textContent='❌ '+(j.message||j.error||'Fehler'); }
     }).catch(function(e){ btn.disabled=false; btn.textContent='+ Admin-Link veröffentlichen'; if(res){res.style.color='#ef4444';res.textContent='❌ '+e.message;} });
   };
-  window.adminLinkDelete = function(id, btn){
-    if(!confirm('🛡️ Admin-Link löschen?\\n\\nVerschwindet sofort aus allen Feeds.')) return;
+  window.adminLinkDelete = async function(id, btn){
+    if(!(await cbConfirm('🛡️ Admin-Link löschen?\\n\\nVerschwindet sofort aus allen Feeds.'))) return;
     btn.disabled=true; btn.textContent='⏳ …';
     fetch('/api/admin/admin-link/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({postId:id})}).then(function(r){return r.json();}).then(function(j){
       if(j.ok){ load(); } else { btn.disabled=false; btn.textContent='🗑 Löschen'; alert('❌ '+(j.message||j.error||'Fehler')); }
@@ -14303,9 +14335,9 @@ function acDoCopy(){
     setTimeout(() => t.remove(), 1500);
   }).catch(() => alert('Kopieren fehlgeschlagen'));
 }
-function acDoDelete(){
+async function acDoDelete(){
   if (!_acActiveRow) return;
-  if (!confirm('Nachricht löschen?')) return;
+  if (!(await cbConfirm('Nachricht löschen?'))) return;
   const ts = Number(_acActiveRow.dataset.ts);
   acHideMenu();
   if (ts) acDelete(ts);
@@ -16883,20 +16915,20 @@ function renderUserDetail(j) {
 }
 
 async function sendDmTo(uid, name) {
-  const text = prompt('Nachricht an '+name+' senden:');
+  const text = (await cbPrompt('Nachricht an '+name+' senden:'));
   if (!text || !text.trim()) return;
   const r = await fetch('/api/admin/send-dm-single', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ uid, text }) });
   const j = await r.json().catch(()=>({}));
   if (j.ok) alert('✅ DM an '+name+' gesendet'); else alert('❌ '+(j.error||'Fehler'));
 }
 async function resendConfirm(uid, name) {
-  if (!confirm('Willkommens-/Bestätigungsmail erneut an '+name+' senden?')) return;
+  if (!(await cbConfirm('Willkommens-/Bestätigungsmail erneut an '+name+' senden?'))) return;
   const r = await fetch('/api/admin/resend-confirmation', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ uid }) });
   const j = await r.json().catch(()=>({}));
   if (j.ok) alert('✅ Bestätigungsmail an '+(j.email||name)+' gesendet'); else alert('❌ '+(j.error||'Fehler'));
 }
 async function resetUserConfirm(uid, name) {
-  if (!confirm('XP von '+name+' wirklich auf 0 setzen? Das kann nicht rückgängig gemacht werden.')) return;
+  if (!(await cbConfirm('XP von '+name+' wirklich auf 0 setzen? Das kann nicht rückgängig gemacht werden.'))) return;
   const r = await fetch('/api/admin/reset-user', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ uid }) });
   const j = await r.json().catch(()=>({}));
   if (j.ok) { alert('✅ XP zurückgesetzt'); refreshUsers(); document.querySelectorAll('.dash-modal-bg').forEach(m=>m.remove()); }
@@ -16904,7 +16936,7 @@ async function resetUserConfirm(uid, name) {
 }
 async function pauseUser(uid, pause) {
   const verb = pause ? 'PAUSIEREN' : 'fortsetzen';
-  if (!confirm('User wirklich '+verb+'?'+(pause?' (verschwindet aus Ranking/Explore bis zum nächsten App-Login)':''))) return;
+  if (!(await cbConfirm('User wirklich '+verb+'?'+(pause?' (verschwindet aus Ranking/Explore bis zum nächsten App-Login)':'')))) return;
   const r = await fetch('/api/admin/pause', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ uid, unpause: !pause }) });
   const j = await r.json().catch(()=>({}));
   if (j.ok) { alert(pause?'⏸️ Pausiert':'▶️ Fortgesetzt'); refreshUsers(); document.querySelectorAll('.dash-modal-bg').forEach(m=>m.remove()); }
@@ -16912,7 +16944,7 @@ async function pauseUser(uid, pause) {
 }
 async function banUser(uid, ban) {
   const verb = ban ? 'BANNEN' : 'entbannen';
-  if (!confirm('User wirklich '+verb+'?'+(ban?' (Account wird deaktiviert)':''))) return;
+  if (!(await cbConfirm('User wirklich '+verb+'?'+(ban?' (Account wird deaktiviert)':'')))) return;
   const r = await fetch('/api/admin/ban', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ uid, unban: !ban }) });
   const j = await r.json().catch(()=>({}));
   if (j.ok) { alert(ban?'🚫 Gebannt':'✅ Entbannt'); refreshUsers(); document.querySelectorAll('.dash-modal-bg').forEach(m=>m.remove()); }
@@ -17016,7 +17048,7 @@ async function startEvent(type, btn) {
   }
 }
 async function stopEvent(type, btn) {
-  if (!confirm('Event sofort beenden?')) return;
+  if (!(await cbConfirm('Event sofort beenden?'))) return;
   btn.disabled = true; btn.textContent = '⏳';
   try {
     const r = await fetch('/api/admin/event-stop', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ type }) });
@@ -17031,10 +17063,10 @@ async function stopEvent(type, btn) {
 }
 
 async function openBroadcastModal() {
-  const text = prompt('📢 DM an ALLE aktiven User senden (max 1500 Zeichen):\\n\\nMarkdown unterstützt (*bold*, _italic_).\\nBanned User + Admins werden übersprungen.');
+  const text = (await cbPrompt('📢 DM an ALLE aktiven User senden (max 1500 Zeichen):\\n\\nMarkdown unterstützt (*bold*, _italic_).\\nBanned User + Admins werden übersprungen.'));
   if (!text || !text.trim()) return;
   if (text.length > 1500) { alert('Max 1500 Zeichen'); return; }
-  if (!confirm('Wirklich an ALLE aktiven User senden? Diese Aktion ist nicht widerrufbar.')) return;
+  if (!(await cbConfirm('Wirklich an ALLE aktiven User senden? Diese Aktion ist nicht widerrufbar.'))) return;
   const r = await fetch('/api/admin/send-dm-all', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ text }) });
   const j = await r.json().catch(()=>({}));
   if (j.ok) alert('✅ DM an '+j.sent+' User gesendet'); else alert('❌ '+(j.error||'Fehler'));
@@ -17047,7 +17079,7 @@ async function grant(uid, action) {
     'add-diamonds':'Diamanten vergeben',
     'remove-diamonds':'Diamanten abziehen',
   };
-  const amountStr = prompt(labelMap[action]+' — Betrag:');
+  const amountStr = (await cbPrompt(labelMap[action]+' — Betrag:'));
   if (!amountStr) return;
   const amount = parseInt(amountStr, 10);
   if (!Number.isFinite(amount) || amount <= 0) { alert('Ungültiger Betrag'); return; }
@@ -17057,7 +17089,7 @@ async function grant(uid, action) {
   else alert('❌ '+ (j.error||'Fehler'));
 }
 async function adminCreateNewSub() {
-  const name = prompt('🆕 Neuen Sub-Account erstellen\\n\\nName des neuen Sub-Accounts (z.B. "Elitedrop"):');
+  const name = (await cbPrompt('🆕 Neuen Sub-Account erstellen\\n\\nName des neuen Sub-Accounts (z.B. "Elitedrop"):'));
   if (!name || !name.trim()) return;
   try {
     const r = await fetch('/api/create-subaccount', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name: name.trim() }) });
@@ -17073,7 +17105,7 @@ async function adminCreateNewSub() {
 }
 
 async function linkAsSub(targetUid, targetName) {
-  if (!confirm('User "' + targetName + '" (UID ' + targetUid + ') als deinen Sub-Account verknüpfen?\\n\\nDieser User wird Teil deiner Account-Familie. Alle Posts/XP bleiben erhalten — aber er gilt fortan als dein Sub.')) return;
+  if (!(await cbConfirm('User "' + targetName + '" (UID ' + targetUid + ') als deinen Sub-Account verknüpfen?\\n\\nDieser User wird Teil deiner Account-Familie. Alle Posts/XP bleiben erhalten — aber er gilt fortan als dein Sub.'))) return;
   try {
     const r = await fetch('/api/admin/link-as-sub', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ target_uid: targetUid }) });
     const j = await r.json().catch(()=>({}));
@@ -17087,7 +17119,7 @@ async function linkAsSub(targetUid, targetName) {
 }
 
 async function grantNoAmount(uid, action) {
-  if (!confirm('Aktion ausführen: '+action+'?')) return;
+  if (!(await cbConfirm('Aktion ausführen: '+action+'?'))) return;
   const res = await fetch('/api/admin/grant', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ uid, action }) });
   const j = await res.json().catch(()=>({ok:false, error:'kein JSON'}));
   if (j.ok) { alert('✅ erledigt'); refreshUsers(); document.querySelectorAll('.dash-modal-bg').forEach(m => m.remove()); }
@@ -17095,7 +17127,7 @@ async function grantNoAmount(uid, action) {
 }
 
 async function runMissionBackfill() {
-  if (!confirm('Wochen-Missionen für alle User seit Montag rückwirkend auswerten? Idempotent und silent.')) return;
+  if (!(await cbConfirm('Wochen-Missionen für alle User seit Montag rückwirkend auswerten? Idempotent und silent.'))) return;
   const out = document.getElementById('backfill-result');
   out.textContent = '⏳ Läuft …';
   try {
@@ -17669,7 +17701,7 @@ async function loadDiamondLinksAdmin(){
   } catch(e) { root.innerHTML = '<div style="padding:var(--space-6);text-align:center;color:#ef4444">'+e.message+'</div>'; }
 }
 async function deleteDiamondLink(postId, btn){
-  if (!confirm('Diamantlink wirklich löschen? Verschwindet sofort aus Feed UND aus dieser Liste.')) return;
+  if (!(await cbConfirm('Diamantlink wirklich löschen? Verschwindet sofort aus Feed UND aus dieser Liste.'))) return;
   btn.disabled = true; btn.textContent = '⏳';
   const r = await fetch('/api/admin/diamond-link/delete', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ postId }) });
   const j = await r.json().catch(()=>({}));
@@ -17724,7 +17756,7 @@ async function loadPrismaLinksAdmin(){
   } catch(e) { root.innerHTML = '<div style="padding:var(--space-6);text-align:center;color:#ef4444">'+e.message+'</div>'; }
 }
 async function deletePrismaLink(postId, btn){
-  if (!confirm('Prismalink wirklich löschen? Soft-Delete — Post bleibt im Log, wird aber nicht mehr im Feed angezeigt.')) return;
+  if (!(await cbConfirm('Prismalink wirklich löschen? Soft-Delete — Post bleibt im Log, wird aber nicht mehr im Feed angezeigt.'))) return;
   btn.disabled = true; btn.textContent = '⏳';
   const r = await fetch('/api/admin/prisma-link/delete', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ postId }) });
   const j = await r.json().catch(()=>({}));
@@ -17889,7 +17921,7 @@ function setReportFilter(key) { CUR_REPORT_FILTER = key; renderReports(); }
 async function reportAction(reportId, action, btn) {
   const labels = { dismiss:'Verwerfen', resolve:'Erledigen', warn:'Verwarnen', ban:'Bannen', delete:'Löschen' };
   if (action === 'ban' || action === 'delete') {
-    if (!confirm(labels[action] + '? Diese Aktion ist nicht rückgängig zu machen.')) return;
+    if (!(await cbConfirm(labels[action] + '? Diese Aktion ist nicht rückgängig zu machen.'))) return;
   }
   btn.disabled = true;
   const oldText = btn.textContent;
@@ -18084,7 +18116,7 @@ function renderCompliance() {
 function setComplianceFilter(key) { CUR_COMP_FILTER = key; renderCompliance(); }
 
 async function warnUserPrompt(uid, name) {
-  const reason = prompt('Verwarnung an ' + name + ' — Grund (optional):');
+  const reason = (await cbPrompt('Verwarnung an ' + name + ' — Grund (optional):'));
   if (reason === null) return;
   try {
     const r = await fetch('/api/admin/warn-user', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({uid, reason}) });
@@ -18100,17 +18132,17 @@ async function warnUserPrompt(uid, name) {
 async function suspendPostingPrompt(uid, name, defaultDays) {
   let days;
   if (defaultDays === 0) {
-    if (!confirm('Sperre für ' + name + ' aufheben?')) return;
+    if (!(await cbConfirm('Sperre für ' + name + ' aufheben?'))) return;
     days = 0;
   } else {
-    const inp = prompt('Posten sperren für ' + name + ' — Tage (1-365):', String(defaultDays));
+    const inp = (await cbPrompt('Posten sperren für ' + name + ' — Tage (1-365):', String(defaultDays)));
     if (inp === null) return;
     days = parseInt(inp, 10);
     if (!days || days < 1 || days > 365) { alert('❌ Ungültige Tage-Anzahl'); return; }
   }
   let reason = '';
   if (days > 0) {
-    reason = prompt('Grund (wird User per DM mitgeteilt):') || '';
+    reason = (await cbPrompt('Grund (wird User per DM mitgeteilt):')) || '';
   }
   try {
     const r = await fetch('/api/admin/suspend-posting', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({uid, days, reason}) });
@@ -18994,11 +19026,11 @@ function nlNew(){document.getElementById('nl-form').style.display='block';docume
 function nlCancel(){document.getElementById('nl-form').style.display='none';}
 function nlEdit(id){const el=document.querySelector('[data-id="'+id+'"]');if(!el)return;document.getElementById('nl-edit-id').value=id;document.getElementById('nl-title').value=el.querySelector('[style*="font-display"]')?.textContent||'';document.getElementById('nl-content').value=el.querySelector('[style*="pre-wrap"]')?.textContent||'';document.getElementById('nl-form').style.display='block';window.scrollTo({top:0,behavior:'smooth'});}
 async function nlSave(){const id=document.getElementById('nl-edit-id').value;const title=document.getElementById('nl-title').value.trim();const content=document.getElementById('nl-content').value.trim();if(!content)return;const ep=id?'/api/newsletter-edit':'/api/newsletter-add';const body=id?{id,title,content}:{title,content};const r=await fetch(ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const d=await r.json();if(d.ok){toast('✅ Gespeichert!');setTimeout(()=>location.reload(),200);}else document.getElementById('nl-result').textContent='❌ '+(d.error||'Fehler');}
-async function nlDelete(id){if(!confirm('Eintrag löschen?'))return;const r=await fetch('/api/newsletter-delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id})});const d=await r.json();if(d.ok){toast('✅ Gelöscht');setTimeout(()=>location.reload(),150);}else toast('❌ Fehler');}
-async function msAdminPick(uid,name){if(!confirm(name+' diese Woche picken? (Der bisherige Pick wird zurück auf die Liste verschoben)'))return;const el=document.getElementById('ms-admin-result');if(el){el.textContent='Picke…';el.style.color='var(--muted)';}const r=await fetch('/api/mindset-admin/pick',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({targetUid:uid})});const d=await r.json();if(d.ok){if(el){el.textContent='✅ Gepickt + DM verschickt';el.style.color='#22c55e';}setTimeout(()=>location.reload(),600);}else{if(el){el.textContent='❌ '+(d.error||'Fehler');el.style.color='#ef4444';}}}
-async function msAdminSkip(){if(!confirm('Diese Woche überspringen? Es wird niemand gepickt.'))return;const el=document.getElementById('ms-admin-result');if(el){el.textContent='Skippen…';el.style.color='var(--muted)';}const r=await fetch('/api/mindset-admin/skip',{method:'POST',headers:{'Content-Type':'application/json'}});const d=await r.json();if(d.ok){if(el){el.textContent='⏭ Übersprungen';el.style.color='#94a3b8';}setTimeout(()=>location.reload(),600);}else{if(el){el.textContent='❌ '+(d.error||'Fehler');el.style.color='#ef4444';}}}
-async function msAdminBlast(){if(!confirm('Initial-DM an alle Insta-User die noch nicht geantwortet haben? Das geht nicht rückgängig.'))return;const el=document.getElementById('ms-admin-result');if(el){el.textContent='Sende DMs…';el.style.color='var(--muted)';}const r=await fetch('/api/mindset-admin/blast',{method:'POST',headers:{'Content-Type':'application/json'}});const d=await r.json();if(d.ok){if(el){el.textContent='✅ '+d.queued+' DMs versendet';el.style.color='#22c55e';}}else{if(el){el.textContent='❌ '+(d.error||'Fehler');el.style.color='#ef4444';}}}
-async function msAdminRestore(uid,name){if(!confirm(name+' zurück auf die Warteliste verschieben?'))return;const el=document.getElementById('ms-admin-result');if(el){el.textContent='…';el.style.color='var(--muted)';}const r=await fetch('/api/mindset-admin/restore',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({targetUid:uid})});const d=await r.json();if(d.ok){if(el){el.textContent='↩ Zurück auf Liste';el.style.color='#22c55e';}setTimeout(()=>location.reload(),500);}else{if(el){el.textContent='❌ '+(d.error||'Fehler');el.style.color='#ef4444';}}}
+async function nlDelete(id){if(!(await cbConfirm('Eintrag löschen?')))return;const r=await fetch('/api/newsletter-delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id})});const d=await r.json();if(d.ok){toast('✅ Gelöscht');setTimeout(()=>location.reload(),150);}else toast('❌ Fehler');}
+async function msAdminPick(uid,name){if(!(await cbConfirm(name+' diese Woche picken? (Der bisherige Pick wird zurück auf die Liste verschoben)')))return;const el=document.getElementById('ms-admin-result');if(el){el.textContent='Picke…';el.style.color='var(--muted)';}const r=await fetch('/api/mindset-admin/pick',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({targetUid:uid})});const d=await r.json();if(d.ok){if(el){el.textContent='✅ Gepickt + DM verschickt';el.style.color='#22c55e';}setTimeout(()=>location.reload(),600);}else{if(el){el.textContent='❌ '+(d.error||'Fehler');el.style.color='#ef4444';}}}
+async function msAdminSkip(){if(!(await cbConfirm('Diese Woche überspringen? Es wird niemand gepickt.')))return;const el=document.getElementById('ms-admin-result');if(el){el.textContent='Skippen…';el.style.color='var(--muted)';}const r=await fetch('/api/mindset-admin/skip',{method:'POST',headers:{'Content-Type':'application/json'}});const d=await r.json();if(d.ok){if(el){el.textContent='⏭ Übersprungen';el.style.color='#94a3b8';}setTimeout(()=>location.reload(),600);}else{if(el){el.textContent='❌ '+(d.error||'Fehler');el.style.color='#ef4444';}}}
+async function msAdminBlast(){if(!(await cbConfirm('Initial-DM an alle Insta-User die noch nicht geantwortet haben? Das geht nicht rückgängig.')))return;const el=document.getElementById('ms-admin-result');if(el){el.textContent='Sende DMs…';el.style.color='var(--muted)';}const r=await fetch('/api/mindset-admin/blast',{method:'POST',headers:{'Content-Type':'application/json'}});const d=await r.json();if(d.ok){if(el){el.textContent='✅ '+d.queued+' DMs versendet';el.style.color='#22c55e';}}else{if(el){el.textContent='❌ '+(d.error||'Fehler');el.style.color='#ef4444';}}}
+async function msAdminRestore(uid,name){if(!(await cbConfirm(name+' zurück auf die Warteliste verschieben?')))return;const el=document.getElementById('ms-admin-result');if(el){el.textContent='…';el.style.color='var(--muted)';}const r=await fetch('/api/mindset-admin/restore',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({targetUid:uid})});const d=await r.json();if(d.ok){if(el){el.textContent='↩ Zurück auf Liste';el.style.color='#22c55e';}setTimeout(()=>location.reload(),500);}else{if(el){el.textContent='❌ '+(d.error||'Fehler');el.style.color='#ef4444';}}}
 `:''}
 </script>`;
             })(),
@@ -19131,7 +19163,7 @@ async function msAdminRestore(uid,name){if(!confirm(name+' zurück auf die Warte
     } catch(e) { r.textContent='❌ Netzwerk'; r.style.color='#ef4444'; }
   }
   async function raffleUndo(){
-    if (!confirm('Letzten Gewinner-Eintrag wirklich löschen?')) return;
+    if (!(await cbConfirm('Letzten Gewinner-Eintrag wirklich löschen?'))) return;
     const res = await fetch('/api/admin/raffle-winner-undo',{method:'POST'});
     const d = await res.json();
     if (d.ok) location.reload();
@@ -20291,7 +20323,7 @@ async function confirmCreateSub(){
   } catch(e){ if (btn) { btn.disabled=false; btn.textContent='Erstellen'; } alert('Netzwerkfehler: '+e.message); }
 }
 async function deleteSubAcc(){
-  if (!confirm('Sub-Account wirklich löschen? Alle XP, Posts und Follower gehen verloren.')) return;
+  if (!(await cbConfirm('Sub-Account wirklich löschen? Alle XP, Posts und Follower gehen verloren.'))) return;
   try {
     const r = await fetch('/api/delete-subaccount',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})});
     const d = await r.json();
@@ -20487,7 +20519,7 @@ async function submitAddProj(){
   }catch(e){toast('❌ Fehler');btn.disabled=false;btn.textContent=_editMode?'💾 Aktualisieren':'✅ Projekt speichern';}
 }
 async function deleteProj(projectId){
-  if(!confirm('Projekt löschen?')) return;
+  if(!(await cbConfirm('Projekt löschen?'))) return;
   closeProjDetail();
   const res=await fetch('/api/delete-project',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({projectId})});
   const data=await res.json();
@@ -20496,7 +20528,7 @@ async function deleteProj(projectId){
 }
 (async()=>{try{const r=await fetch('/api/notifications/count');const d=await r.json();const b=document.getElementById('notif-badge-profil');if(b&&d.count>0){b.textContent=d.count>9?'9+':d.count;b.style.display='flex';}}catch(e){}})();
 async function deletePost(timestamp){
-  if(!confirm('Post löschen?')) return;
+  if(!(await cbConfirm('Post löschen?'))) return;
   const res=await fetch('/api/delete-post',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({timestamp})});
   const data=await res.json();
   if(data.ok){toast('✅ Gelöscht');setTimeout(()=>location.reload(),150);}
@@ -20597,7 +20629,7 @@ async function submitPost(){const _spBtn=document.querySelector('[onclick="submi
               +'async function likePinnedPost(ownerUid, btn){if(btn.disabled||btn.dataset.engaged)return;'
               +'if(!window._pinVisit){alert(\'Bitte erst auf den Instagram-Link tippen und dort LIKEN + KOMMENTIEREN + TEILEN + SPEICHERN.\');return;}'
               +'btn.disabled=true;btn.textContent=\'…\';try{const r=await fetch(\'/api/engage-pinned-post\',{method:\'POST\',headers:{\'Content-Type\':\'application/json\'},body:JSON.stringify({ownerUid})});const data=await r.json();if(data.ok){btn.style.background=\'rgba(34,197,94,.12)\';btn.style.borderColor=\'#22c55e\';btn.style.color=\'#22c55e\';btn.textContent=\'✅ Engagiert\';const c=document.getElementById(\'pin-eng-count\');if(c)c.textContent=parseInt(c.textContent||0)+1;if(window.showBanner)showBanner({type:\'success\',icon:\'❤️\',title:\'Pinned-Post engagiert!\',subtitle:\'+1 💎 in deiner Wallet · DM mit Bestätigung erhalten.\',dur:4500});}else if(data.alreadyDone){btn.style.background=\'rgba(34,197,94,.12)\';btn.style.borderColor=\'#22c55e\';btn.style.color=\'#22c55e\';btn.textContent=\'✅ Engagiert\';}else{btn.disabled=false;btn.textContent=\'❤️ Engagiert · +1 💎\';if(window.showBanner)showBanner({type:\'warn\',icon:\'❌\',title:\'Like fehlgeschlagen\',subtitle:data.error||\'Versuch es gleich nochmal.\',dur:4500});}}catch(e){btn.disabled=false;btn.textContent=\'❤️ Engagiert · +1 💎\';}}'
-              +'async function reportPinnedEngager(targetUid, ownerUid, btn){const reason=prompt(\'Warum meldest du diesen User? (z.B. "Hat nicht wirklich geliked/kommentiert")\');if(!reason)return;btn.disabled=true;btn.textContent=\'…\';const r=await fetch(\'/api/report-user\',{method:\'POST\',headers:{\'Content-Type\':\'application/json\'},body:JSON.stringify({targetUid,reason,context:\'pinned-engagement:\'+ownerUid})});const j=await r.json().catch(()=>({}));if(j.ok){btn.textContent=\'✅ Gemeldet\';btn.style.background=\'rgba(34,197,94,.12)\';btn.style.borderColor=\'#22c55e\';btn.style.color=\'#22c55e\';}else{btn.disabled=false;btn.textContent=\'🚩 Melden\';alert(\'❌ \'+(j.error||\'Fehler\'));}}<\/script>'
+              +'async function reportPinnedEngager(targetUid, ownerUid, btn){const reason=await cbPrompt(\'Warum meldest du diesen User? (z.B. "Hat nicht wirklich geliked/kommentiert")\');if(!reason)return;btn.disabled=true;btn.textContent=\'…\';const r=await fetch(\'/api/report-user\',{method:\'POST\',headers:{\'Content-Type\':\'application/json\'},body:JSON.stringify({targetUid,reason,context:\'pinned-engagement:\'+ownerUid})});const j=await r.json().catch(()=>({}));if(j.ok){btn.textContent=\'✅ Gemeldet\';btn.style.background=\'rgba(34,197,94,.12)\';btn.style.borderColor=\'#22c55e\';btn.style.color=\'#22c55e\';}else{btn.disabled=false;btn.textContent=\'🚩 Melden\';alert(\'❌ \'+(j.error||\'Fehler\'));}}<\/script>'
               +'</div>'
             : '';
 
@@ -20751,7 +20783,7 @@ function toggleProfileMore(){
 }
 async function reportThisUser(uid){
   toggleProfileMore();
-  const reason=prompt('Warum meldest du diesen Nutzer? (Spam, Belästigung, Fake-Account, illegale Inhalte, …)');
+  const reason=(await cbPrompt('Warum meldest du diesen Nutzer? (Spam, Belästigung, Fake-Account, illegale Inhalte, …)'));
   if(!reason||!reason.trim())return;
   try{
     const r=await fetch('/api/report-user',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({targetUid:uid,reason:reason.trim(),context:'profile'})});
@@ -20762,7 +20794,7 @@ async function reportThisUser(uid){
 }
 async function blockThisUser(uid){
   toggleProfileMore();
-  if(!confirm('Diesen Nutzer blockieren?\\n\\n• Du siehst seine Posts und Kommentare nicht mehr\\n• Er kann dir keine Nachrichten mehr schicken\\n• Du kannst die Blockierung jederzeit in den Einstellungen aufheben'))return;
+  if(!(await cbConfirm('Diesen Nutzer blockieren?\\n\\n• Du siehst seine Posts und Kommentare nicht mehr\\n• Er kann dir keine Nachrichten mehr schicken\\n• Du kannst die Blockierung jederzeit in den Einstellungen aufheben')))return;
   try{
     const r=await fetch('/api/block-user',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({targetUid:uid})});
     const j=await r.json().catch(()=>({}));
@@ -20779,7 +20811,7 @@ async function toggleFollow(uid,btn){
   toast(isFollowing?'Nicht mehr gefolgt':'✅ Gefolgt!');
 }
 async function collabRequest(targetUid, btn){
-  if (!confirm('Kollaboration mit diesem User anfragen? Wenn er akzeptiert, dürft ihr 1× pro Woche einen Kollab-Post veröffentlichen.')) return;
+  if (!(await cbConfirm('Kollaboration mit diesem User anfragen? Wenn er akzeptiert, dürft ihr 1× pro Woche einen Kollab-Post veröffentlichen.'))) return;
   btn.disabled = true;
   const r = await fetch('/api/collab/request', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ targetUid }) });
   const j = await r.json().catch(()=>({}));
@@ -21008,7 +21040,7 @@ async function saveAppCode(){
   }catch(e){msg.textContent='❌ Netzwerkfehler';msg.style.color='#ef4444';}
 }
 async function removePwAcct(){
-  if(!confirm('Passwort wirklich entfernen? Du kannst dich danach nur noch über Magic-Link einloggen.'))return;
+  if(!(await cbConfirm('Passwort wirklich entfernen? Du kannst dich danach nur noch über Magic-Link einloggen.')))return;
   try{
     const r=await fetch('/api/auth/set-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:''})});
     const j=await r.json();
@@ -21028,9 +21060,9 @@ async function requestAccountChange(){
   }catch(e){btn.disabled=false;btn.textContent='📨 Änderung anfragen';msg.textContent='❌ Netzwerkfehler';msg.style.color='#ef4444';}
 }
 async function deleteAccountDsgvo(){
-  if(!confirm('⚠️ Account dauerhaft löschen?\\n\\nDies entfernt:\\n• Dein Profil + alle Sub-Accounts\\n• Alle deine Posts + Likes + Kommentare\\n• Alle XP, Diamanten, Items\\n\\nDie Löschung kann NICHT rückgängig gemacht werden.'))return;
-  if(!confirm('Wirklich? Alle Daten gehen für immer verloren.'))return;
-  const code=prompt('Tippe LÖSCHEN um zu bestätigen:');
+  if(!(await cbConfirm('⚠️ Account dauerhaft löschen?\\n\\nDies entfernt:\\n• Dein Profil + alle Sub-Accounts\\n• Alle deine Posts + Likes + Kommentare\\n• Alle XP, Diamanten, Items\\n\\nDie Löschung kann NICHT rückgängig gemacht werden.')))return;
+  if(!(await cbConfirm('Wirklich? Alle Daten gehen für immer verloren.')))return;
+  const code=(await cbPrompt('Tippe LÖSCHEN um zu bestätigen:'));
   if(code!=='LÖSCHEN'){alert('Abgebrochen.');return;}
   try{
     const r=await fetch('/api/delete-my-account',{method:'POST'});
@@ -21108,7 +21140,7 @@ ${_setSubHead('<span style="display:inline-flex;align-items:center;gap:7px"><svg
 </div>
 <script>
 async function unblockSub(uid, btn){
-  if(!confirm('Wirklich entsperren?')) return;
+  if(!(await cbConfirm('Wirklich entsperren?'))) return;
   btn.disabled=true; btn.textContent='⏳';
   const r=await fetch('/api/unblock-user',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({targetUid:uid})});
   const j=await r.json().catch(()=>({}));
@@ -21177,7 +21209,7 @@ async function togglePush(t){
   if(!('Notification' in window) || !('serviceWorker' in navigator)){ alert('Browser unterstützt keine Push-Notifications.'); return; }
   const isOn = t.classList.contains('on');
   if(isOn){
-    if(!confirm('Push-Benachrichtigungen wirklich abschalten?')) return;
+    if(!(await cbConfirm('Push-Benachrichtigungen wirklich abschalten?'))) return;
     try{
       const reg = await navigator.serviceWorker.ready;
       const sub = await reg.pushManager.getSubscription();
@@ -21275,7 +21307,7 @@ ${_setSubHead('<span style="display:inline-flex;align-items:center;gap:7px"><svg
       <div class="subset-row-sub">Inklusive Sub-Accounts. Detaillierte Liste pro Device kommt.</div>
     </div>
   </div>
-  <form method="POST" action="/api/logout-all-others" onsubmit="return confirm('Alle anderen Sessions abmelden? Du bleibst auf diesem Gerät eingeloggt.')">
+  <form method="POST" action="/api/logout-all-others" onsubmit="var f=this;cbConfirm('Alle anderen Sessions abmelden? Du bleibst auf diesem Gerät eingeloggt.').then(function(ok){if(ok)f.submit();});return false">
     <button type="submit" class="btn btn-outline btn-full" style="margin-top:var(--space-2);border-color:rgba(245,158,11,.35);color:#fbbf24;display:flex;align-items:center;justify-content:center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Alle anderen Geräte abmelden</button>
   </form>
 </div>
@@ -21792,9 +21824,9 @@ async function unblockUser(uid,btn){
   }catch(e){btn.disabled=false;btn.textContent='Aufheben';alert('❌ Netzwerk-Fehler');}
 }
 async function deleteAccountDsgvo(){
-  if(!confirm('⚠️ Account dauerhaft löschen?\\n\\nDies entfernt:\\n• Dein Profil + alle Sub-Accounts\\n• Alle deine Posts + Likes + Kommentare\\n• Alle XP, Diamanten, Items\\n• Notifications + Chats\\n\\nDie Löschung kann NICHT rückgängig gemacht werden. Sie erfolgt innerhalb von 30 Tagen (DSGVO Art. 17).')) return;
-  if(!confirm('Wirklich? Alle Daten gehen für immer verloren.')) return;
-  const code = prompt('Tippe LÖSCHEN um zu bestätigen:');
+  if(!(await cbConfirm('⚠️ Account dauerhaft löschen?\\n\\nDies entfernt:\\n• Dein Profil + alle Sub-Accounts\\n• Alle deine Posts + Likes + Kommentare\\n• Alle XP, Diamanten, Items\\n• Notifications + Chats\\n\\nDie Löschung kann NICHT rückgängig gemacht werden. Sie erfolgt innerhalb von 30 Tagen (DSGVO Art. 17).'))) return;
+  if(!(await cbConfirm('Wirklich? Alle Daten gehen für immer verloren.'))) return;
+  const code = (await cbPrompt('Tippe LÖSCHEN um zu bestätigen:'));
   if(code !== 'LÖSCHEN'){ alert('Abgebrochen.'); return; }
   try{
     const r = await fetch('/api/delete-my-account', {method:'POST'});
@@ -21806,7 +21838,7 @@ async function deleteAccountDsgvo(){
 </script>
 <script>
 async function removePw(){
-  if(!confirm('Passwort wirklich entfernen? Du kannst dich danach nur noch über Magic-Link einloggen.'))return;
+  if(!(await cbConfirm('Passwort wirklich entfernen? Du kannst dich danach nur noch über Magic-Link einloggen.')))return;
   try{
     const res=await fetch('/api/auth/set-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:''})});
     const j=await res.json();
