@@ -460,7 +460,13 @@ function istInstagramLink(text) {
 
 function getWochenMission(uid) {
     if (!d.wochenMissionen[uid]) d.wochenMissionen[uid] = { m1Tage: 0, m2Tage: 0, m3Tage: 0, letzterTag: null };
-    return d.wochenMissionen[uid];
+    const wm = d.wochenMissionen[uid];
+    // Invariante: M1 (5 Likes, einfachste Mission) ist an einem Tag erfüllt, sobald M2 (≥80%
+    // geliked) oder M3 (alle geliked) erfüllt ist → m1Tage darf nie unter m2Tage/m3Tage liegen.
+    // Korrigiert zugleich Alt-Daten, die der frühere „Reset auf 0"-Bug verfälscht hat.
+    const _floor = Math.max(Number(wm.m2Tage) || 0, Number(wm.m3Tage) || 0);
+    if ((Number(wm.m1Tage) || 0) < _floor) wm.m1Tage = _floor;
+    return wm;
 }
 function addWeeklyMissionDay(wMission, counterKey, dayKey) {
     const lastKey = counterKey + 'LetzterTag';
