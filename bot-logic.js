@@ -4294,27 +4294,16 @@ function referralPendingListApi() {
     return { ok: true, pending: out };
 }
 // Alle Einladungen der gesamten Account-Familie (Haupt + alle Subs) sammeln + dedupen.
-// Wichtig: Einladungen, die mit einem Sub-Account gemacht wurden, zählen für die Familie
-// (= dieselbe Person) — sonst „verschwindet" der Builder-Fortschritt eines Sub-Einladers.
-function _familyReferralIds(uid) {
-    const ids = new Set();
-    for (const fid of familyUids(uid)) {
-        const fu = d.users[String(fid)];
-        if (fu && Array.isArray(fu.referrals)) fu.referrals.forEach(x => ids.add(String(x)));
-    }
-    return [...ids];
-}
-// Referral-Statistik für den Profilbereich des Einladers (Familie aggregiert).
+// Referral-Statistik für den Profilbereich des Einladers — PRO ACCOUNT (jeder Sub ist ein
+// eigenständiger Builder; Sub-Einladungen rollen NICHT auf den Hauptaccount hoch).
 function referralStatsApi(uid) {
     uid = String(uid || '');
     const u = d.users[uid];
     if (!u) return { ok: false };
-    const ids = _familyReferralIds(uid);
+    const ids = Array.isArray(u.referrals) ? u.referrals : [];
     let active = 0;
     for (const iid of ids) { if (_referralInviteeIsActive(d.users[String(iid)])) active++; }
-    let dia = 0;
-    for (const fid of familyUids(uid)) dia += Number((d.users[String(fid)] || {}).refDiamondsEarned || 0);
-    return { ok: true, code: u.refCode || ensureReferralCode(uid), invited: ids.length, active, diamonds: dia };
+    return { ok: true, code: u.refCode || ensureReferralCode(uid), invited: ids.length, active, diamonds: Number(u.refDiamondsEarned || 0) };
 }
 // Community-Builder-Badge nach Anzahl AKTIVER Einladungen.
 function communityBuilderBadge(activeCount) {
@@ -4328,8 +4317,8 @@ function communityBuilderBadge(activeCount) {
 function communityBuilderRanking(limit) {
     const rows = [];
     for (const [uid, u] of Object.entries(d.users || {})) {
-        if (!u || u.parent_uid || istAdminId(uid)) continue; // nur Root-Accounts; Sub-Einladungen rollen hier hoch
-        const ids = _familyReferralIds(uid); // Haupt + Subs aggregiert
+        if (!u || istAdminId(uid)) continue; // Subs ZÄHLEN als eigene Builder (kein parent_uid-Skip)
+        const ids = Array.isArray(u.referrals) ? u.referrals : [];
         if (!ids.length) continue;
         let active = 0;
         for (const iid of ids) { if (_referralInviteeIsActive(d.users[String(iid)])) active++; }
@@ -4347,9 +4336,9 @@ function payCommunityBuilderDaily(dayKey) {
     const day = String(dayKey || new Date().toISOString().slice(0, 10));
     let paidUsers = 0, paidDiamonds = 0;
     for (const [uid, u] of Object.entries(d.users || {})) {
-        if (!u || u.parent_uid || u.banned || u.paused || istAdminId(uid)) continue; // nur Root-Accounts
+        if (!u || u.banned || u.paused || istAdminId(uid)) continue; // Subs ZÄHLEN als eigene Builder
         if (u.cbDailyLastDay === day) continue; // heute schon ausgezahlt
-        const ids = _familyReferralIds(uid); // Haupt + Subs aggregiert
+        const ids = Array.isArray(u.referrals) ? u.referrals : [];
         if (!ids.length) continue;
         let active = 0;
         for (const iid of ids) { if (_referralInviteeIsActive(d.users[String(iid)])) active++; }
