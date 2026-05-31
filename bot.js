@@ -11104,6 +11104,7 @@ window.onPinVisitStory = function(uid){
 
         function renderLink([msgId, link]){
             const poster = d.users[String(link.user_id)]||{};
+            const _posterBld = (()=>{ try{ const b = botLogic.builderBadgeFor(String(link.user_id)); return b ? ' <span title="'+htmlEsc(b.label)+'" style="display:inline-flex;align-items:center;font-size:11px;font-weight:800;padding:1px 6px;border-radius:99px;background:rgba(34,197,94,0.14);color:#16a34a;vertical-align:middle">'+b.emoji+'</span>' : ''; }catch(e){ return ''; } })();
             const _agg = _linksByText.get(link.text);
             const likes = _agg ? [..._agg.likes] : [];
             const hasLiked = _agg ? _agg.likes.has(String(myUid)) : false;
@@ -11233,7 +11234,7 @@ window.onPinVisitStory = function(uid){
 '    </a>\n'+
 '    <a href="/profil/'+link.user_id+'" class="post-user-info" style="text-decoration:none;color:inherit">\n'+
 '      <div class="post-name" style="display:flex;align-items:center;gap:5px">\n'+
-'        '+htmlEsc(poster.spitzname||poster.name||'User')+'\n'+
+'        '+htmlEsc(poster.spitzname||poster.name||'User')+_posterBld+'\n'+
 '        '+(isOnline?'<span style="width:7px;height:7px;border-radius:50%;background:#00c851;display:inline-block;flex-shrink:0"></span>':'')+'\n'+
 '      </div>\n'+
 '      <div class="post-badge">'+roleBadge(poster.role)+(insta?'<span style="color:var(--muted2)">@'+htmlEsc(poster.instagram)+'</span>':'')+'</div>\n'+
@@ -11258,7 +11259,7 @@ window.onPinVisitStory = function(uid){
 '            '+crownOverlay(link.user_id, 'xs')+'\n'+
 '            <div style="width:32px;height:32px;border-radius:50%;border:2px solid rgba(255,255,255,.5);overflow:hidden;background:'+grad+';display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff">'+profPic+'</div>\n'+
 '          </div>\n'+
-'          <div style="font-size:12px;font-weight:700;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.6)">'+htmlEsc(poster.spitzname||poster.name||'User')+'</div>\n'+
+'          <div style="font-size:12px;font-weight:700;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.6)">'+htmlEsc(poster.spitzname||poster.name||'User')+_posterBld+'</div>\n'+
 '        </a>\n'+
 '      </div>\n'+
 '    </div>\n'+
@@ -11330,7 +11331,7 @@ commentsBox+
                 +'<span style="color:#fff;font-weight:700;font-size:15px;position:absolute">'+(poster.name||'?')[0]+'</span>\n'
                 +avatarSmall+'\n</div></a>\n'
                 +'<a href="/profil/'+sl.uid+'" class="post-user-info" style="text-decoration:none;color:inherit">\n'
-                +'<div class="post-name">'+htmlEsc(poster.spitzname||poster.name||'User')+'</div>\n'
+                +'<div class="post-name">'+htmlEsc(poster.spitzname||poster.name||'User')+_posterBld+'</div>\n'
                 +'<div class="post-badge">'+roleBadge(poster.role)+(insta?'<span style="color:var(--muted2)">@'+insta+'</span>':'')+'</div>\n'
                 +'</a>\n</div>\n'
                 +'<div style="margin:8px 16px;padding:8px 12px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:10px;font-size:11px;color:rgba(245,158,11,.9);font-weight:600;display:flex;align-items:center;gap:6px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Bitte Liken, Kommentieren, Teilen und Speichern</div>\n'
