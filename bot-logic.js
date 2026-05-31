@@ -2621,6 +2621,87 @@ function prismaLinkAdminDelete({ postId }) {
     return { ok: true };
 }
 
+// ════════ ADMIN LINKS (Admin-only · 14 Tage · 5💎 Reward · Community-Push) ════════
+// Spezial-Karte, die NUR Admins erstellen (Feed-Tab „Admin Link"). Erscheint bei jedem
+// User ganz oben im Feed, bis er voll engagiert hat (Bestätigungs-Button wie Prisma) —
+// danach verschwindet sie aus seinem Feed. +5💎 pro Engagement (einmalig je User).
+const ADMIN_LINK_REWARD = 5;
+const ADMIN_LINK_LIFETIME_MS = 14 * 24 * 3600 * 1000;
+function _adminLinkEnsure() { if (!d.adminLinks) d.adminLinks = {}; }
+function _adminLinkActive(p) { return p && !p.deletedAt && p.expiresAt > Date.now(); }
+function adminLinkCreate({ uid, url, message }) {
+    _adminLinkEnsure();
+    uid = String(uid || '');
+    url = String(url || '').trim();
+    message = String(message || '').slice(0, 280);
+    const u = d.users[uid];
+    if (!u) return { ok: false, error: 'User nicht gefunden' };
+    if (!istAdminId(uid)) return { ok: false, error: 'Nur Admins können Admin-Links erstellen' };
+    if (!/https?:\/\/(www\.)?instagram\.com\//i.test(url) || url.length > 500) return { ok: false, error: 'Ungültige Instagram-URL' };
+    const id = 'al_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+    const now = Date.now();
+    d.adminLinks[id] = { id, uid, url, message, createdAt: now, expiresAt: now + ADMIN_LINK_LIFETIME_MS, engagedBy: [], engagedAt: {} };
+    return { ok: true, id };
+}
+function adminLinkEngage({ uid, postId }) {
+    _adminLinkEnsure();
+    uid = String(uid || '');
+    postId = String(postId || '');
+    const u = d.users[uid];
+    const p = d.adminLinks[postId];
+    if (!u) return { ok: false, error: 'User nicht gefunden' };
+    if (!p) return { ok: false, error: 'Admin-Link nicht gefunden' };
+    if (!_adminLinkActive(p)) return { ok: false, error: 'Admin-Link abgelaufen oder gelöscht' };
+    if (String(p.uid) === uid) return { ok: false, error: 'self', message: 'Das ist dein eigener Admin-Link' };
+    if (!Array.isArray(p.engagedBy)) p.engagedBy = [];
+    if (p.engagedBy.map(String).includes(uid)) return { ok: true, already: true, reward: ADMIN_LINK_REWARD };
+    p.engagedBy.push(uid);
+    if (!p.engagedAt) p.engagedAt = {};
+    p.engagedAt[uid] = Date.now();
+    addDiamond(uid, ADMIN_LINK_REWARD);
+    sendInAppDM(uid, '🛡️ Admin-Link engagiert\n\nDanke, dass du die Community pushst!\n\n💎 +' + ADMIN_LINK_REWARD + ' Diamanten\n\nMit dem Engagement bestätigst du, den Beitrag geliked, kommentiert, geteilt und gespeichert zu haben. Schein-Engagement wird sanktioniert.');
+    return { ok: true, engaged: true, reward: ADMIN_LINK_REWARD, diamondsTotal: u.diamonds || 0 };
+}
+function adminLinkAdminDelete({ postId }) {
+    _adminLinkEnsure();
+    const p = d.adminLinks[String(postId || '')];
+    if (!p) return { ok: false, error: 'Admin-Link nicht gefunden' };
+    p.deletedAt = Date.now();
+    return { ok: true };
+}
+// Feed-Karte: ältester aktiver Admin-Link, den der Caller noch NICHT engagiert und NICHT
+// selbst erstellt hat. Genau einer (nicht spammen). null = keine Karte zeigen.
+function adminLinkFeedCard(callerUid) {
+    _adminLinkEnsure();
+    callerUid = String(callerUid || '');
+    if (!callerUid) return null;
+    const p = Object.values(d.adminLinks)
+        .filter(_adminLinkActive)
+        .filter(x => String(x.uid) !== callerUid)
+        .filter(x => !(Array.isArray(x.engagedBy) && x.engagedBy.map(String).includes(callerUid)))
+        .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0))[0];
+    if (!p) return null;
+    const author = d.users[p.uid] || {};
+    return { id: p.id, url: p.url, message: p.message || '', reward: ADMIN_LINK_REWARD, remainingMs: Math.max(0, p.expiresAt - Date.now()), author: { uid: p.uid, name: author.spitzname || author.name || 'Admin', instagram: author.instagram || '' } };
+}
+// Admin-Tab: alle aktiven Admin-Links (laufen 2 Wochen) mit Engagement-Statistik.
+function adminLinkListApi(callerUid) {
+    _adminLinkEnsure();
+    callerUid = String(callerUid || '');
+    if (!istAdminId(callerUid)) return { ok: false, error: 'Nur Admins' };
+    const now = Date.now();
+    const links = Object.values(d.adminLinks)
+        .filter(_adminLinkActive)
+        .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+        .map(p => {
+            const eng = Array.isArray(p.engagedBy) ? p.engagedBy.map(String) : [];
+            const engagers = eng.slice(0, 50).map(eid => { const eu = d.users[eid] || {}; return { uid: eid, name: eu.spitzname || eu.name || 'User', instagram: eu.instagram || '' }; });
+            const author = d.users[p.uid] || {};
+            return { id: p.id, url: p.url, message: p.message || '', createdAt: p.createdAt, expiresAt: p.expiresAt, remainingMs: Math.max(0, p.expiresAt - now), engagedCount: eng.length, engagers, author: { uid: p.uid, name: author.spitzname || author.name || 'Admin' } };
+        });
+    return { ok: true, links, reward: ADMIN_LINK_REWARD, lifetimeDays: 14 };
+}
+
 // ════════ KOLLAB-POSTS (Partner-basiert · Boost-Slots) ════════
 const COLLAB_BOOST_TOTAL_MS = 7 * 24 * 3600 * 1000;
 const COLLAB_BOOST_CYCLE_MS = 4 * 3600 * 1000;
@@ -4244,6 +4325,7 @@ module.exports = {
     postLinkFromApp, createPostApi, deletePostApi, deleteLinkApi, commentApi, deleteCommentApi,
     diamondLinkCreate, diamondLinkLike, diamondLinkAcceptRules, diamondLinkAdminDelete,
     prismaLinkCreate, prismaLinkLike, prismaLinkAcceptRules, prismaLinkAdminDelete,
+    adminLinkCreate, adminLinkEngage, adminLinkAdminDelete, adminLinkFeedCard, adminLinkListApi,
     collabCreatePost, collabLikePost, getBerlinWeekKey,
     postSuperlinkApp, likeSuperlinkApi, isSuperLinkPostingAllowed,
     addXp, addExtraLink, addSuperlink, addDiamonds, removeDiamonds,

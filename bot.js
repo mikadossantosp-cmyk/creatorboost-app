@@ -11295,6 +11295,7 @@ commentsBox+
         const kollabsHtml = '<div id="kollabs-tab-root" style="padding:8px 0 80px">'+_skCard+_skCard+'</div>';
         const diamondHtml = '<div id="diamond-tab-root" style="padding:8px 0 80px">'+_skCard+_skCard+'</div>';
         const prismaHtml = '<div id="prisma-tab-root" style="padding:8px 0 80px">'+_skCard+_skCard+'</div>';
+        const adminLinkHtml = '<div id="adminlink-tab-root" style="padding:8px 0 80px">'+_skCard+'</div>';
         // Diamantlink-Top-Strip nur im 'heute'-Tab — älteste Diamantlinks ganz oben.
         // Stack-Order Heute-Tab:
         //   1. Diamond-Top-Strip (#diamond-top-strip)
@@ -11325,6 +11326,7 @@ commentsBox+
             : tab === 'kollabs' ? kollabsHtml
             : tab === 'diamond' ? diamondHtml
             : tab === 'prisma' ? prismaHtml
+            : tab === 'adminlink' ? adminLinkHtml
             : heuteWithDiamondTop;
 
         return html(`
@@ -11347,6 +11349,8 @@ ${(() => {
     {id:'diamond', emoji:_ic('<path d="M6 3h12l3.5 5.5L12 21 2.5 8.5z"/><path d="M2.5 8.5h19"/>'), label:'Diamond', count:0},
     {id:'prisma', emoji:'💠', label:'Prisma', count:0},
   ];
+  // Admin-Link: exklusiver Tab nur für Admins (Karten erstellen + Engagement-Statistik).
+  if (_dashIsAdmin) _tabsMeta.push({id:'adminlink', emoji:'🛡️', label:'Admin Link', count:0});
   const _curTab = _tabsMeta.find(t=>t.id===tab) || _tabsMeta[0];
   const _totalAllCount = _tabsMeta.reduce((s,t)=>s+(t.count||0),0);
   return `<div class="topbar">
@@ -11433,6 +11437,7 @@ ${(()=>{
       + '<script>(function(){var el=document.getElementById("cb-activity-ticker");if(!el||el._i)return;el._i=1;var a;try{a=JSON.parse(el.getAttribute("data-acts"));}catch(e){return;}if(!a||a.length<2)return;var slot=el.querySelector(".cbt-slot"),se=el.querySelector(".cbt-e"),sn=el.querySelector(".cbt-n"),st=el.querySelector(".cbt-t"),k=0;setInterval(function(){k=(k+1)%a.length;slot.style.opacity="0";setTimeout(function(){var o=a[k];se.textContent=o.e||"";sn.textContent=o.n?o.n+" ":"";st.textContent=o.t||"";slot.style.opacity="1";},350);},3800);})();</script>';
   } catch(e){ return ''; }
 })()}
+<div id="admin-link-card-root"></div>
 ${(()=>{
   // Creator des Tages: tägliche Auszeichnung (keine Zufallsanzeige) für den aktivsten
   // Creator des Vortags. Stats sind real (aktive Tage, Beiträge, vergebene Likes).
@@ -12717,6 +12722,100 @@ async function submitSuperLink(){
   };
   load();
   setInterval(load, 60000);
+})();
+
+// ── ADMIN-LINK MODULE (Community-Push-Karte oben im Feed + Admin-Tab) ──
+// Admin-exklusiv: Karte erscheint bei jedem User ganz oben, bis er voll engagiert hat
+// (Bestätigungs-Button wie Prisma), dann verschwindet sie aus seinem Feed. +5💎/Engagement.
+(function initAdminLinkCard(){
+  var root = document.getElementById('admin-link-card-root');
+  if (!root) return;
+  function esc(s){ return String(s||'').replace(/[&<>"']/g, function(c){return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]);}); }
+  function fmtRemaining(ms){ if(ms<=0)return 'abgelaufen'; var s=Math.floor(ms/1000),dd=Math.floor(s/86400),h=Math.floor((s%86400)/3600),m=Math.floor((s%3600)/60); if(dd>0)return dd+'d '+h+'h'; return h>0?h+'h '+m+'m':m+'m'; }
+  function render(c){
+    if(!c){ root.innerHTML=''; return; }
+    var msg = c.message ? '<div style="font-size:14px;color:#fff;line-height:1.5;margin:8px 0 12px;font-weight:600">'+esc(c.message)+'</div>' : '';
+    var openUrl = (typeof cleanInstagramUrl==='function') ? cleanInstagramUrl(c.url) : c.url;
+    root.innerHTML =
+      '<div style="margin:10px 16px 2px;border-radius:18px;overflow:hidden;border:1.5px solid rgba(245,158,11,.5);background:linear-gradient(160deg,#1a1530,#120d22);box-shadow:0 6px 20px rgba(245,158,11,.18)">'+
+      '<div style="padding:16px">'+
+        '<div style="display:flex;align-items:center;gap:9px;margin-bottom:10px">'+
+          '<span style="font-size:22px;line-height:1">🛡️</span>'+
+          '<div style="flex:1;min-width:0"><div style="font-size:10px;font-weight:800;letter-spacing:1.3px;text-transform:uppercase;color:#fbbf24">Admin-Link · Community-Push</div>'+
+          '<div style="font-size:18px;font-weight:900;color:#fff;line-height:1.15;margin-top:2px">+'+(c.reward||5)+' 💎 <span style="font-size:11px;color:rgba(255,255,255,.6);font-weight:600">fürs Engagement</span></div></div>'+
+          '<div style="font-size:11px;color:#fbbf24;font-weight:700;text-align:right;flex-shrink:0">⏱<br>'+fmtRemaining(c.remainingMs)+'</div>'+
+        '</div>'+
+        msg+
+        '<a href="'+esc(openUrl)+'" target="_blank" rel="noopener noreferrer" onclick="window._alvisit=Date.now()" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:13px;background:linear-gradient(135deg,#ec4899,#a855f7);color:#fff;border-radius:12px;font-size:14px;font-weight:800;text-decoration:none;margin-bottom:10px"><span style="width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px">1</span>📸 Auf Instagram öffnen →</a>'+
+        '<button onclick="adminLinkEngageClick(\\''+esc(c.id)+'\\', this)" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;background:linear-gradient(135deg,#f59e0b,#a855f7);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer"><span style="width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px">2</span>🛡️ Engagiert · +'+(c.reward||5)+' 💎</button>'+
+        '<div style="font-size:10.5px;color:rgba(255,255,255,.45);text-align:center;margin-top:8px;line-height:1.4">Liken · Kommentieren · Teilen · Speichern — dann bestätigen. Schein-Engagement wird sanktioniert.</div>'+
+      '</div></div>';
+  }
+  function load(){
+    fetch('/api/admin-link/card').then(function(r){return r.json();}).then(function(j){ render(j&&j.card); }).catch(function(){ root.innerHTML=''; });
+  }
+  window.adminLinkEngageClick = function(id, btn){
+    if(!window._alvisit || (Date.now()-window._alvisit)<1500){ alert('Bitte erst auf den Instagram-Link tippen und LIKEN + KOMMENTIEREN + TEILEN + SPEICHERN.'); return; }
+    if(!confirm('🛡️ Admin-Link engagieren\\n\\nDu bestätigst:\\n✓ GELIKT\\n✓ KOMMENTIERT\\n✓ GETEILT\\n✓ GESPEICHERT\\n\\n→ Belohnung: +5 💎\\n\\nFortfahren?')) return;
+    btn.disabled=true; btn.textContent='⏳ Bestätige …';
+    fetch('/api/admin-link/engage',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({postId:id})}).then(function(r){return r.json();}).then(function(j){
+      if(j.ok){ load(); } else { btn.disabled=false; btn.innerHTML='🛡️ Engagiert · +5 💎'; alert('❌ '+(j.message||j.error||'Fehler')); }
+    }).catch(function(e){ btn.disabled=false; btn.innerHTML='🛡️ Engagiert · +5 💎'; alert('❌ '+e.message); });
+  };
+  load();
+  setInterval(load, 90000);
+})();
+// Admin-Tab: Admin-Links erstellen (+) und Engagement-Statistik sehen (2 Wochen aktiv).
+(function initAdminLinkTab(){
+  var tabEl = document.getElementById('adminlink-tab-root');
+  if (!tabEl) return;
+  function esc(s){ return String(s||'').replace(/[&<>"']/g, function(c){return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]);}); }
+  function fmtRemaining(ms){ if(ms<=0)return 'abgelaufen'; var s=Math.floor(ms/1000),dd=Math.floor(s/86400),h=Math.floor((s%86400)/3600); return dd>0?dd+'d '+h+'h':h+'h'; }
+  function renderLink(p){
+    return '<div style="margin:0 16px 12px;padding:14px;border:1px solid var(--border2);border-radius:14px;background:var(--bg3)">'+
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span style="font-size:16px">🛡️</span><span style="font-size:10px;font-weight:800;letter-spacing:1px;color:#f59e0b;text-transform:uppercase">Admin-Link</span><span style="margin-left:auto;font-size:11px;color:var(--muted)">⏱ '+fmtRemaining(p.remainingMs)+'</span></div>'+
+      (p.message?'<div style="font-size:13px;color:var(--text);line-height:1.45;margin-bottom:6px;font-weight:600">'+esc(p.message)+'</div>':'')+
+      '<a href="'+esc(p.url)+'" target="_blank" rel="noopener noreferrer" style="font-size:12px;color:#a855f7;word-break:break-all;text-decoration:none">'+esc(p.url)+'</a>'+
+      '<div style="display:flex;align-items:center;gap:10px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border2)">'+
+        '<div style="flex:1"><span style="font-size:18px;font-weight:800;color:var(--text)">'+(p.engagedCount||0)+'</span> <span style="font-size:12px;color:var(--muted)">Engagements · '+((p.engagedCount||0)*(p.reward||5))+' 💎 verteilt</span></div>'+
+        '<button onclick="adminLinkDelete(\\''+esc(p.id)+'\\', this)" style="background:transparent;color:#ef4444;border:1px dashed rgba(239,68,68,.5);border-radius:9px;font-size:12px;font-weight:700;padding:7px 12px;cursor:pointer">🗑 Löschen</button>'+
+      '</div></div>';
+  }
+  function load(){
+    fetch('/api/admin-link/list').then(function(r){return r.json();}).then(function(j){
+      if(!j||!j.ok){ tabEl.innerHTML='<div style="padding:48px 24px;text-align:center;color:var(--muted)">'+esc((j&&j.error)||'Nur für Admins')+'</div>'; return; }
+      var reward = j.reward||5;
+      var form = '<div style="margin:0 16px 14px;padding:16px;border:1.5px solid rgba(245,158,11,.4);border-radius:16px;background:linear-gradient(135deg,rgba(245,158,11,.08),rgba(168,85,247,.06))">'+
+        '<div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:4px">🛡️ Neuen Admin-Link erstellen</div>'+
+        '<div style="font-size:11.5px;color:var(--muted);line-height:1.45;margin-bottom:11px">Erscheint bei allen Usern oben im Feed, bis sie voll engagiert haben. +'+reward+' 💎 pro Engagement · läuft 14 Tage.</div>'+
+        '<input id="al-url" type="url" placeholder="https://www.instagram.com/p/…" style="width:100%;box-sizing:border-box;padding:11px;border:1px solid var(--border2);border-radius:10px;background:var(--bg2);color:var(--text);font-size:13px;margin-bottom:9px">'+
+        '<textarea id="al-msg" rows="2" maxlength="280" placeholder="Kurze Aussage, z.B. „Pusht unseren Community-Reel! 🚀“" style="width:100%;box-sizing:border-box;padding:11px;border:1px solid var(--border2);border-radius:10px;background:var(--bg2);color:var(--text);font-size:13px;font-family:inherit;resize:vertical;margin-bottom:10px"></textarea>'+
+        '<button onclick="adminLinkCreateSubmit(this)" style="width:100%;padding:12px;background:linear-gradient(135deg,#f59e0b,#a855f7);color:#fff;border:none;border-radius:11px;font-size:13.5px;font-weight:800;cursor:pointer">+ Admin-Link veröffentlichen</button>'+
+        '<div id="al-create-result" style="font-size:12px;margin-top:8px;text-align:center"></div>'+
+      '</div>';
+      var list = j.links.length ? j.links.map(renderLink).join('') : '<div style="padding:40px 24px;text-align:center;color:var(--muted);font-size:13px">Noch keine aktiven Admin-Links. Erstelle oben deinen ersten.</div>';
+      tabEl.innerHTML = form + list;
+    }).catch(function(e){ tabEl.innerHTML='<div style="padding:48px 24px;text-align:center;color:var(--muted)">Fehler: '+esc(e.message)+'</div>'; });
+  }
+  window.adminLinkCreateSubmit = function(btn){
+    var url=(document.getElementById('al-url')||{}).value||''; var msg=(document.getElementById('al-msg')||{}).value||'';
+    var res=document.getElementById('al-create-result');
+    if(!/instagram\\.com\\//i.test(url)){ if(res){res.style.color='#ef4444';res.textContent='Bitte gültige Instagram-URL eingeben.';} return; }
+    btn.disabled=true; btn.textContent='⏳ Veröffentliche …';
+    fetch('/api/admin-link/create',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:url,message:msg})}).then(function(r){return r.json();}).then(function(j){
+      btn.disabled=false; btn.textContent='+ Admin-Link veröffentlichen';
+      if(j.ok){ if(res){res.style.color='#22c55e';res.textContent='✅ Admin-Link ist live!';} load(); }
+      else if(res){ res.style.color='#ef4444'; res.textContent='❌ '+(j.message||j.error||'Fehler'); }
+    }).catch(function(e){ btn.disabled=false; btn.textContent='+ Admin-Link veröffentlichen'; if(res){res.style.color='#ef4444';res.textContent='❌ '+e.message;} });
+  };
+  window.adminLinkDelete = function(id, btn){
+    if(!confirm('🛡️ Admin-Link löschen?\\n\\nVerschwindet sofort aus allen Feeds.')) return;
+    btn.disabled=true; btn.textContent='⏳ …';
+    fetch('/api/admin/admin-link/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({postId:id})}).then(function(r){return r.json();}).then(function(j){
+      if(j.ok){ load(); } else { btn.disabled=false; btn.textContent='🗑 Löschen'; alert('❌ '+(j.message||j.error||'Fehler')); }
+    }).catch(function(e){ btn.disabled=false; btn.textContent='🗑 Löschen'; alert('❌ '+e.message); });
+  };
+  load();
 })();
 
 // ── KOLLAB-BOOST-STRIP (Heute-Feed, alle 4h 20min) ──
@@ -15713,6 +15812,43 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
         if (!_dashIsAdmin) return json({error:'Nur Admins'}, 403);
         const body = await parseBody(req);
         const r = LOCAL_STORE ? await localWrite(() => botLogic.prismaLinkAdminDelete({ postId: String(body.postId||'') })) : await postBot('/prisma-link-admin-delete-api', { postId: String(body.postId||'') });
+        return json(r || {ok:false, error:'Mainbot offline'});
+    }
+
+    // ── ADMIN-LINK API (Admin-only Community-Push · 14 Tage · 5💎 Reward) ──
+    if (path === '/api/admin-link/card' && req.method === 'GET') {
+        if (!session) return json({error:'Nicht eingeloggt'}, 401);
+        const card = LOCAL_STORE ? botLogic.adminLinkFeedCard(myUid) : (await fetchBotRaw('/admin-link-card-api?uid=' + encodeURIComponent(myUid)))?.card;
+        return json({ ok: true, card: card || null });
+    }
+    if (path === '/api/admin-link/engage' && req.method === 'POST') {
+        if (!session) return json({error:'Nicht eingeloggt'}, 401);
+        const body = await parseBody(req);
+        const r = LOCAL_STORE
+            ? await localWrite(() => botLogic.adminLinkEngage({ uid: myUid, postId: String(body.postId||'') }))
+            : await postBot('/admin-link-engage-api', { uid: myUid, postId: String(body.postId||'') });
+        return json(r || {ok:false, error:'Mainbot offline'});
+    }
+    if (path === '/api/admin-link/create' && req.method === 'POST') {
+        if (!session) return json({error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
+        const body = await parseBody(req);
+        const r = LOCAL_STORE
+            ? await localWrite(() => botLogic.adminLinkCreate({ uid: myUid, url: String(body.url||''), message: String(body.message||'') }))
+            : await postBot('/admin-link-create-api', { uid: myUid, url: String(body.url||''), message: String(body.message||'') });
+        return json(r || {ok:false, error:'Mainbot offline'});
+    }
+    if (path === '/api/admin-link/list' && req.method === 'GET') {
+        if (!session) return json({error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
+        const r = LOCAL_STORE ? botLogic.adminLinkListApi(myUid) : await fetchBotRaw('/admin-link-list-api?uid=' + encodeURIComponent(myUid));
+        return json(r || {ok:false, error:'Mainbot offline'});
+    }
+    if (path === '/api/admin/admin-link/delete' && req.method === 'POST') {
+        if (!session) return json({error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
+        const body = await parseBody(req);
+        const r = LOCAL_STORE ? await localWrite(() => botLogic.adminLinkAdminDelete({ postId: String(body.postId||'') })) : await postBot('/admin-link-admin-delete-api', { postId: String(body.postId||'') });
         return json(r || {ok:false, error:'Mainbot offline'});
     }
 
