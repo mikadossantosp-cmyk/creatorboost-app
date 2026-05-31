@@ -5309,7 +5309,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v273-inbox-split';
+const SW_VERSION='v274-rings-png';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
@@ -5460,6 +5460,15 @@ self.addEventListener('notificationclick',e=>{
         return json(info);
     }
 
+    // ── RING-RAHMEN PNG ENDPOINT (öffentlich) — assets/rings/<id>.png ──
+    if (path.startsWith('/ringframe/')) {
+        const rfid = path.slice('/ringframe/'.length).replace(/[^a-z0-9_]/gi, '').slice(0, 40);
+        try {
+            const buf = fs.readFileSync(__dirname + '/assets/rings/' + rfid + '.png');
+            res.writeHead(200, { 'Content-Type': 'image/png', 'Cache-Control': 'public, max-age=604800' });
+            return res.end(buf);
+        } catch (e) { res.writeHead(404); return res.end('Not found'); }
+    }
     // ── APP BILD ENDPOINT ──
     if (path.startsWith('/appbild/')) {
         const parts = path.split('/');
