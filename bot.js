@@ -885,9 +885,26 @@ const BANNER_ITEMS = [
     { id: 'banner_aurora',   name: 'Aurora',        emoji: '🌌', price: 10, tier: 'Gold',   gradient: 'linear-gradient(135deg,#00c6ff,#0072ff,#a18cd1)', desc: 'Nordlicht-Effekt' },
 ];
 
+// Welche Ringe haben ein echtes PNG (assets/rings/<id>.png)? — 1x eingelesen, beim Boot/Deploy frisch.
+let _ringFrameSet = null;
+function ringFrameExists(id) {
+    if (_ringFrameSet === null) {
+        try { _ringFrameSet = new Set(fs.readdirSync(__dirname + '/assets/rings').filter(f => f.endsWith('.png')).map(f => f.slice(0, -4))); }
+        catch (e) { _ringFrameSet = new Set(); }
+    }
+    return !!id && _ringFrameSet.has(String(id));
+}
+// Overlay-<img> für einen aktiven Bild-Rahmen über einem Avatar (Container muss position:relative sein).
+function ringFrameOverlay(userData) {
+    const id = userData?.activeRing;
+    if (!ringFrameExists(id)) return '';
+    return '<img src="/ringframe/' + id + '" class="cb-ring-frame" alt="" loading="lazy">';
+}
 function getRingBoxShadow(userData) {
     const ring = userData?.activeRing;
     if (!ring) return '';
+    // Echtes PNG aktiv → KEIN CSS-Glow (sonst Doppel-Ring); das Overlay-<img> übernimmt.
+    if (ringFrameExists(ring)) return '';
     const item = RING_ITEMS.find(r=>r.id===ring);
     if (!item) return '';
     // Premium/Spezial-Rahmen: animierter „atmender" Doppelring-Glow via CSS-Vars + @keyframes cbRingAlive
@@ -900,6 +917,14 @@ function getRingBoxShadow(userData) {
 // Vorschau-Ring für Shop/Tasche: echtes farbiges Ring-Band (Gradient) um einen dunklen Avatar
 // + Glow — sieht nach einem echten Rahmen aus (nicht nur Schatten). size in px, inner=Inhalt.
 function ringPreview(item, size, inner) {
+    // Echtes PNG vorhanden → 1:1 Bild-Rahmen über einem dunklen Avatar (transparenter Ring-Mittelpunkt).
+    if (ringFrameExists(item.id)) {
+        const c = Math.round(size * 0.30);
+        return '<div style="position:relative;width:' + size + 'px;height:' + size + 'px;flex-shrink:0">'
+            + '<div style="position:absolute;left:18%;top:18%;width:64%;height:64%;border-radius:50%;background:#15151a;display:flex;align-items:center;justify-content:center;font-size:' + c + 'px;font-weight:700;color:#fff">' + (inner || '') + '</div>'
+            + '<img src="/ringframe/' + item.id + '" style="position:absolute;inset:-6%;width:112%;height:112%;object-fit:contain;pointer-events:none" alt="">'
+            + '</div>';
+    }
     const r1 = item.r1, r2 = item.r2;
     const glow = item.rg || 'rgba(167,139,250,0.55)';
     // Glänzendes „3D"-Ring-Band: Conic-Gradient mit weißem Glanzlicht-Sweep (metallischer Look).
@@ -2993,6 +3018,8 @@ ${session ? `
 /* Premium-/Spezial-Avatar-Rahmen: sanft „atmender" Glow (kein Movement → reduced-motion-freundlich) */
 @keyframes cbRingAlive{0%,100%{box-shadow:0 0 0 3px var(--r1),0 0 0 6px var(--r2),0 0 16px 2px var(--rg)}50%{box-shadow:0 0 0 3px var(--r1),0 0 0 8px var(--r2),0 0 32px 8px var(--rg)}}
 @media (prefers-reduced-motion:reduce){[style*="cbRingAlive"]{animation:none!important}}
+/* Echter Bild-Rahmen (PNG) über dem Avatar — ragt leicht über den Rand (Container=position:relative) */
+.cb-ring-frame{position:absolute;left:-16%;top:-16%;width:132%;height:132%;object-fit:contain;pointer-events:none;z-index:4}
 </style>
 <div class="tour-overlay" id="tour-ov" aria-hidden="true">
   <div class="tour-spotlight" id="tour-spotlight"></div>
