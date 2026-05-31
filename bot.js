@@ -13322,41 +13322,54 @@ function _alUserCard(c, isPreview){
       // Reward-Badge hinter dem Mission-Label (sichtbarer Anreiz) + "noch X"-Hinweis darunter.
       const rew = (txt,done)=>' <span style="font-size:10.5px;font-weight:700;color:'+(done?'#22c55e':'#f59e0b')+';background:'+(done?'rgba(34,197,94,0.12)':'rgba(245,158,11,0.12)')+';padding:1px 7px;border-radius:99px;margin-left:4px">'+txt+'</span>';
       const hint = (done,remaining,verb,reward)=>(!done && remaining>0)?'<div style="font-size:11px;color:var(--muted);margin-top:5px">Noch <b style="color:var(--text)">'+remaining+'</b> '+verb+(remaining===1?'':'s')+' → '+reward+'</div>':'';
+      const mCard = (badge,bcol,title,desc,cur,max,done,countLbl,reward)=>{
+        const pct = Math.min(100, Math.round((cur/Math.max(1,max))*100));
+        return '<div style="position:relative;display:flex;gap:11px;align-items:center;padding:12px 13px;border-radius:14px;margin-bottom:10px;background:'+(done?'rgba(34,197,94,0.08)':'var(--bg3)')+';border:1.5px solid '+(done?'rgba(34,197,94,0.5)':'var(--border2)')+(done?';box-shadow:0 0 16px rgba(34,197,94,0.13)':'')+'">'
+          +'<div style="flex-shrink:0;width:36px;height:36px;border-radius:9px;background:'+bcol+';display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:13px">'+badge+'</div>'
+          +'<div style="flex:1;min-width:0">'
+            +'<div style="font-size:13.5px;font-weight:800;color:var(--text);line-height:1.2">'+title+' <span style="font-size:10px;font-weight:800;color:'+(done?"#22c55e":"#f59e0b")+';background:'+(done?"rgba(34,197,94,0.14)":"rgba(245,158,11,0.14)")+';padding:1px 7px;border-radius:99px;vertical-align:middle;white-space:nowrap">'+reward+'</span></div>'
+            +'<div style="font-size:11.5px;color:var(--muted);margin:3px 0 8px;line-height:1.3">'+desc+'</div>'
+            +'<div style="display:flex;align-items:center;gap:8px">'
+              +'<div style="flex:1;background:var(--bg4);border-radius:5px;height:7px;overflow:hidden"><div style="height:100%;width:'+pct+'%;background:'+(done?"#22c55e":bcol)+';border-radius:5px;transition:width .5s ease"></div></div>'
+              +'<div style="font-size:11.5px;font-weight:800;color:'+(done?"#22c55e":"var(--text)")+';flex-shrink:0;min-width:36px;text-align:right">'+countLbl+'</div>'
+            +'</div>'
+          +'</div>'
+          +(done?'<div style="flex-shrink:0;width:26px;height:26px;border-radius:50%;background:#22c55e;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(34,197,94,0.4)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4 4L19 7"/></svg></div>':'')
+        +'</div>';
+      };
+      const _wSL = weekly.superlinks;
       targetEl.innerHTML =
-        '<div style="font-size:11px;color:var(--muted);background:var(--bg4);padding:5px 10px;border-radius:8px;display:inline-block;margin-bottom:14px">⏱ Abrechnung in '+settleStr+'</div>'
-        +'<div style="display:grid;grid-template-columns:1fr;gap:var(--space-3)">'
-        +  '<div style="background:var(--bg3);border:1px solid var(--border2);border-radius:12px;padding:12px 14px">'
-        +    '<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:var(--space-2)">Heute</div>'
-        +    mChip(daily.m1,'M1: '+daily.likesGegeben+'/5 geliked'+rew('+5 XP',daily.m1))
-        +    bar(daily.likesGegeben,5,'#a78bfa')
-        +    hint(daily.m1, Math.max(0,5-(daily.likesGegeben||0)), 'Like', '+5 XP')
-        +    '<div style="margin-top:var(--space-2)">'+mChip(daily.m2,'M2: '+daily.prozent+'% (≥80%)'+rew('+5 XP',daily.m2))+'</div>'
-        +    bar(daily.prozent,100,'#818cf8')
-        +    '<div style="margin-top:var(--space-2)">'+mChip(daily.m3,'M3: '+(daily.gelikedLinks||0)+'/'+(daily.gesamtLinks||0)+' (max 30)'+rew('+5 XP +💎',daily.m3))+'</div>'
-        +    bar(Math.min(daily.gelikedLinks||0, daily.m3Target||(daily.m3Cap||30)), daily.m3Target||(daily.m3Cap||30), '#fbbf24')
-        +    (!daily.m3 ? '<div style="font-size:11px;color:var(--muted);margin-top:5px">Like alle heutigen Reels → +5 XP +💎</div>' : '')
-        +  '</div>'
-        +  '<div style="background:var(--bg3);border:1px solid var(--border2);border-radius:12px;padding:12px 14px">'
-        +    '<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:var(--space-2)">Diese Woche</div>'
-        +    mChip(weekly.m1Tage>=7,'W-M1: '+weekly.m1Tage+'/7 Tage')
-        +    bar(weekly.m1Tage,7,'#60a5fa')
-        +    '<div style="margin-top:var(--space-2)">'+mChip(weekly.m2Tage>=7,'W-M2: '+weekly.m2Tage+'/7 → 💎')+'</div>'
-        +    bar(weekly.m2Tage,7,'#34d399')
-        +    '<div style="margin-top:var(--space-2)">'+mChip(weekly.m3Tage>=7,'W-M3: '+weekly.m3Tage+'/7 → 💎💎')+'</div>'
-        +    bar(weekly.m3Tage,7,'#fbbf24')
-        +    (weekly.superlinks ? (
-              '<div style="margin-top:var(--space-3);padding-top:10px;border-top:1px dashed var(--border2)">'
-            +   '<div style="display:flex;align-items:center;justify-content:space-between;gap:var(--space-2);margin-bottom:var(--space-1)">'
-            +     '<div style="flex:1;min-width:0">'+mChip(weekly.superlinks.alleGeliked, '🌟 Alle Superlinks: '+weekly.superlinks.geliked+'/'+weekly.superlinks.total+' → +500 XP + 💎💎')+'</div>'
-            +     '<a href="/feed?tab=engagement" style="flex-shrink:0;display:inline-flex;align-items:center;gap:3px;padding:5px 9px;background:rgba(236,72,153,0.12);border:1px solid rgba(236,72,153,0.35);border-radius:8px;font-size:11px;font-weight:700;color:#ec4899;text-decoration:none">→ Superlinks</a>'
-            +   '</div>'
-            +   bar(weekly.superlinks.geliked, Math.max(1, weekly.superlinks.total), '#ec4899')
-            +   (weekly.superlinks.granted ? '<div style="font-size:11px;color:#22c55e;margin-top:6px;font-weight:700">✅ Belohnung erhalten</div>' : '<div style="font-size:11px;color:var(--muted);margin-top:6px">⏱ Auswertung Sonntag 23:59</div>')
-            + '</div>'
-            ) : '')
-        +  '</div>'
+        '<div style="display:flex;gap:6px;margin-bottom:16px;background:var(--bg4);padding:4px;border-radius:12px">'
+        +  '<button id="mtab-d" type="button" style="flex:1;padding:9px;border:none;border-radius:9px;font-size:13px;font-weight:800;cursor:pointer;background:var(--accent);color:#fff">📅 Täglich</button>'
+        +  '<button id="mtab-w" type="button" style="flex:1;padding:9px;border:none;border-radius:9px;font-size:13px;font-weight:800;cursor:pointer;background:transparent;color:var(--muted)">🗓️ Wöchentlich</button>'
+        +'</div>'
+        +'<div id="mtab-daily">'
+        +  '<div style="font-size:12px;color:var(--muted);margin-bottom:12px">⏱ Neue Missionen in <b style="color:var(--text)">'+settleStr+'</b></div>'
+        +  mCard('M1','#a78bfa','5 Reels liken','Like 5 normale Creator-Links', daily.likesGegeben||0, 5, daily.m1, (daily.likesGegeben||0)+'/5', '+5 XP')
+        +  mCard('M2','#818cf8','Mind. 80% engagiert','Like ≥80% der heutigen Reels', daily.prozent||0, 100, daily.m2, (daily.prozent||0)+'%', '+5 XP')
+        +  mCard('M3','#fbbf24','Alle Reels liken','Like alle heutigen Reels (max '+(daily.m3Cap||30)+')', Math.min(daily.gelikedLinks||0, daily.m3Target||30), daily.m3Target||(daily.m3Cap||30), daily.m3, (daily.gelikedLinks||0)+'/'+(daily.gesamtLinks||0), '+5 XP +💎')
+        +'</div>'
+        +'<div id="mtab-weekly" style="display:none">'
+        +  '<div style="font-size:12px;color:var(--muted);margin-bottom:12px">7 Tage in Folge erfüllen → wöchentliche Belohnung</div>'
+        +  mCard('W1','#60a5fa','Mission 1 · 7 Tage','M1 an 7 Tagen schaffen', weekly.m1Tage||0, 7, (weekly.m1Tage||0)>=7, (weekly.m1Tage||0)+'/7', '+XP')
+        +  mCard('W2','#34d399','Mission 2 · 7 Tage','M2 an 7 Tagen schaffen', weekly.m2Tage||0, 7, (weekly.m2Tage||0)>=7, (weekly.m2Tage||0)+'/7', '+💎')
+        +  mCard('W3','#fbbf24','Mission 3 · 7 Tage','M3 an 7 Tagen schaffen', weekly.m3Tage||0, 7, (weekly.m3Tage||0)>=7, (weekly.m3Tage||0)+'/7', '+💎💎')
+        +  (_wSL ? mCard('🌟','#ec4899','Alle Superlinks','Engagiere alle Superlinks der Woche', _wSL.geliked||0, Math.max(1,_wSL.total||0), !!_wSL.alleGeliked, (_wSL.geliked||0)+'/'+(_wSL.total||0), '+500 XP') : '')
+        +  (_wSL && _wSL.total>0 ? '<a href="/feed?tab=engagement" style="display:block;text-align:center;margin-top:2px;padding:9px;background:rgba(236,72,153,0.12);border:1px solid rgba(236,72,153,0.3);border-radius:10px;font-size:12px;font-weight:700;color:#ec4899;text-decoration:none">→ Zu den Superlinks</a>' : '')
         +'</div>'
         +'<a href="/explore?tab=ranking" style="display:block;margin-top:14px;text-align:center;color:#a78bfa;font-size:12.5px;font-weight:700;text-decoration:none">→ Ranking + Preise ansehen</a>';
+      (function(){
+        const td=targetEl.querySelector('#mtab-daily'), tw=targetEl.querySelector('#mtab-weekly');
+        const bd=targetEl.querySelector('#mtab-d'), bw=targetEl.querySelector('#mtab-w');
+        function set(isDaily){
+          if(td) td.style.display=isDaily?'block':'none';
+          if(tw) tw.style.display=isDaily?'none':'block';
+          if(bd){ bd.style.background=isDaily?'var(--accent)':'transparent'; bd.style.color=isDaily?'#fff':'var(--muted)'; }
+          if(bw){ bw.style.background=isDaily?'transparent':'var(--accent)'; bw.style.color=isDaily?'var(--muted)':'#fff'; }
+        }
+        if(bd) bd.onclick=function(){set(true);};
+        if(bw) bw.onclick=function(){set(false);};
+      })();
       // Badge: offene Missionen zaehlen
       const open = [daily.m1, daily.m2, daily.m3].filter(x => !x).length;
       const b = document.getElementById('cb-mission-badge');
