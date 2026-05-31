@@ -1610,7 +1610,7 @@ function adminPostfachReply({ uid, text }) {
     const chatKey = [CREATORBOOST_UID, uid].sort().join('_');
     if (!d.messages[chatKey]) d.messages[chatKey] = [];
     d.messages[chatKey].push({
-        from: CREATORBOOST_UID, to: uid, text,
+        from: CREATORBOOST_UID, to: String(uid), text,
         image: null, audio: null, timestamp: Date.now(),
         read: false, system: true, adminReply: true,
     });
@@ -1678,7 +1678,7 @@ function sendMessageApi({ from, to, text, image, audio, replyTo }) {
 }
 function markMessagesRead({ uid, chatKey }) {
     if (!uid || !chatKey || !d.messages?.[chatKey]) return { ok: false };
-    d.messages[chatKey].forEach(m => { if (m.to === String(uid)) m.read = true; });
+    d.messages[chatKey].forEach(m => { if (String(m.to) === String(uid)) m.read = true; });
     return { ok: true };
 }
 function editMessageApi({ uid, chatKey, timestamp, newText }) {

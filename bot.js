@@ -9187,7 +9187,7 @@ ${spaceScale.map(s=>`<div class="grow"><span class="gmeta">--space-${s}</span><d
             if (!Array.isArray(msgs)) continue;
             for (let i = 0; i < msgs.length; i++) {
                 const m = msgs[i];
-                if (m && m.to === myUid && !m.read) unreadDMs++;
+                if (m && String(m.to) === myUid && !m.read) unreadDMs++;
             }
         }
         const unreadAppChat = ac?.unread || 0;
