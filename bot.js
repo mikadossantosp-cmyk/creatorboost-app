@@ -17172,7 +17172,7 @@ async function loadReferralPending(){
       return '<div style="background:var(--dink);border:1px solid var(--dline);border-radius:12px;padding:12px 14px">'
         + '<div style="font-size:13px;font-weight:700;color:var(--text)">'+(p.inviteeName||'User')+'</div>'
         + '<div style="font-size:12px;margin-top:3px">Instagram: '+igLink+'</div>'
-        + '<div style="font-size:11px;color:var(--dsub);margin-top:3px">eingeladen von <b>'+(p.inviterName||'?')+'</b></div>'
+        + '<div style="font-size:11.5px;color:var(--dsub);margin-top:7px;padding-top:7px;border-top:1px solid var(--dline)">👤 <b style="color:var(--text)">Einlader:</b> '+(p.inviterName||'?')+((p.inviterInstagram||'')?' · <a href="https://instagram.com/'+(p.inviterInstagram||'').replace(/[^a-zA-Z0-9._]/g,'')+'" target="_blank" rel="noopener" style="color:#06b6d4;font-weight:700;text-decoration:none">@'+(p.inviterInstagram||'').replace(/[^a-zA-Z0-9._]/g,'')+'</a>':'')+' <span style="opacity:.55">· ID '+(p.inviterUid||'?')+'</span></div>'
         + '<div style="display:flex;gap:8px;margin-top:10px">'
         + '<button onclick="decideReferral(\\''+p.inviteeUid+'\\',true,this)" style="flex:1;background:#22c55e;color:#fff;border:none;border-radius:8px;padding:9px;font-size:12px;font-weight:700;cursor:pointer">✓ Bestätigen</button>'
         + '<button onclick="decideReferral(\\''+p.inviteeUid+'\\',false,this)" style="flex:1;background:rgba(239,68,68,0.12);color:#ef4444;border:1px solid rgba(239,68,68,0.35);border-radius:8px;padding:9px;font-size:12px;font-weight:700;cursor:pointer">✕ Ablehnen</button>'

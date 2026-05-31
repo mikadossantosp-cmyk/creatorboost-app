@@ -4249,18 +4249,27 @@ function requestReferralVerification(inviteeUid) {
         if (ex.status === 'pending') ex.instagram = invitee.instagram;
         return;
     }
+    const _inviter = d.users[String(invitee.referredBy)] || {};
+    const _inviterName = _inviter.spitzname || _inviter.name || '(kein Name)';
+    const _inviterInsta = _inviter.instagram || '';
     d.referralPending[inviteeUid] = {
         inviterUid: String(invitee.referredBy),
+        inviterName: _inviterName,
+        inviterInstagram: _inviterInsta,
         instagram: invitee.instagram,
         inviteeName: invitee.spitzname || invitee.name || 'User',
         createdAt: Date.now(),
         status: 'pending',
     };
-    // Admin-DM an alle Admins
+    // Admin-DM an alle Admins — Einlader UND Eingeladenen klar benennen (Name + Handle + ID),
+    // damit der Admin sofort sieht, WER eingeladen hat (nicht nur das Wort „Einlader").
     const admins = Array.isArray(d._adminIds) ? d._adminIds.map(String) : [];
-    const inviterName = (d.users[String(invitee.referredBy)] || {}).spitzname || (d.users[String(invitee.referredBy)] || {}).name || 'Einlader';
+    const _dm = '🔎 Referral-Prüfung nötig\n\n'
+        + '👤 Einlader: ' + _inviterName + (_inviterInsta ? ' · @' + _inviterInsta : '') + '\n   ID: ' + String(invitee.referredBy) + '\n\n'
+        + '🎯 Eingeladen: ' + (invitee.spitzname || invitee.name || 'User') + (invitee.instagram ? ' · @' + invitee.instagram : '') + '\n\n'
+        + 'Prüfen + bestätigen im Dashboard → Referral-Prüfungen.';
     for (const aid of admins) {
-        try { sendInAppDM(aid, '🔎 Referral-Prüfung nötig\n\n' + inviterName + ' hat ' + (invitee.spitzname || invitee.name || 'einen User') + ' eingeladen.\nInstagram: @' + invitee.instagram + '\n\nPrüfen und bestätigen im Dashboard unter Referral-Prüfungen.'); } catch (e) {}
+        try { sendInAppDM(aid, _dm); } catch (e) {}
     }
 }
 // Admin bestätigt → signup-Belohnung wird vergeben. Setzt Status auf approved.
@@ -4296,7 +4305,9 @@ function referralPendingListApi() {
         out.push({
             inviteeUid: String(iid), inviteeName: p.inviteeName || inv.spitzname || inv.name || 'User',
             instagram: p.instagram || inv.instagram || '',
-            inviterUid: String(p.inviterUid), inviterName: inviter.spitzname || inviter.name || 'Einlader',
+            inviterUid: String(p.inviterUid),
+            inviterName: inviter.spitzname || inviter.name || p.inviterName || ('User ' + p.inviterUid),
+            inviterInstagram: inviter.instagram || p.inviterInstagram || '',
             createdAt: p.createdAt || 0,
         });
     }
