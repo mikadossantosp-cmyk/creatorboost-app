@@ -2716,7 +2716,10 @@ function adminLinkFeedCard(callerUid) {
         .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0))[0];
     if (!p) return null;
     const author = d.users[p.uid] || {};
-    return { id: p.id, url: p.url, message: p.message || '', reward: ADMIN_LINK_REWARD, remainingMs: Math.max(0, p.expiresAt - Date.now()), author: { uid: p.uid, name: author.spitzname || author.name || 'Admin', instagram: author.instagram || '' } };
+    const eng = Array.isArray(p.engagedBy) ? p.engagedBy.map(String) : [];
+    // Neueste zuerst (Social Proof). Avatare/Namen für „Wer hat engagiert?".
+    const engagers = eng.slice().reverse().slice(0, 60).map(eid => { const eu = d.users[eid] || {}; return { uid: eid, name: eu.spitzname || eu.name || 'User', instagram: eu.instagram || '' }; });
+    return { id: p.id, url: p.url, message: p.message || '', reward: ADMIN_LINK_REWARD, remainingMs: Math.max(0, p.expiresAt - Date.now()), engagedCount: eng.length, engagers, author: { uid: p.uid, name: author.spitzname || author.name || 'Admin', instagram: author.instagram || '' } };
 }
 // Admin-Tab: alle aktiven Admin-Links (laufen 2 Wochen) mit Engagement-Statistik.
 function adminLinkListApi(callerUid) {
