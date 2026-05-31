@@ -897,6 +897,16 @@ function getRingBoxShadow(userData) {
     }
     return item.shadow ? `;box-shadow:${item.shadow}` : '';
 }
+// Vorschau-Ring für Shop/Tasche: echtes farbiges Ring-Band (Gradient) um einen dunklen Avatar
+// + Glow — sieht nach einem echten Rahmen aus (nicht nur Schatten). size in px, inner=Inhalt.
+function ringPreview(item, size, inner) {
+    const grad = item.gradient || 'linear-gradient(135deg,#a78bfa,#7c3aed)';
+    const glow = item.rg || 'rgba(167,139,250,0.55)';
+    const inset = Math.max(3, Math.round(size * 0.075));
+    const fs = Math.round(size * 0.36);
+    return '<div style="width:' + size + 'px;height:' + size + 'px;border-radius:50%;background:' + grad + ';padding:' + inset + 'px;flex-shrink:0;box-shadow:0 0 16px 1px ' + glow + '">'
+        + '<div style="width:100%;height:100%;border-radius:50%;background:#15151a;display:flex;align-items:center;justify-content:center;font-size:' + fs + 'px;font-weight:700;color:#fff">' + (inner || '') + '</div></div>';
+}
 
 function genSid() { return crypto.randomBytes(32).toString('hex'); }
 
@@ -10714,6 +10724,31 @@ p{line-height:1.65;color:var(--muted)}
         if (r && r.ok) { _dataCacheTime = 0; refreshDataCache().catch(()=>{}); }
         return json(r || {ok:false});
     }
+    // Admin: einem User ein Passwort setzen (z.B. nach Wiederherstellung, damit er sich wieder einloggen kann)
+    if (path === '/api/admin/set-user-password' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
+        if (!LOCAL_STORE) return json({ok:false, error:'Nicht verfügbar'});
+        const _pb = await parseBody(req);
+        const _puid = String((_pb && _pb.uid) || '');
+        const _ppw = String((_pb && _pb.password) || '');
+        const pr = await localWriteNow(() => botLogic.setUserPasswordApi({ uid: _puid, password: _ppw }));
+        if (pr && pr.ok) { _dataCacheTime = 0; refreshDataCache().catch(()=>{}); }
+        return json(pr || {ok:false});
+    }
+    // Admin: Login-Link (/i/<appCode>) eines Users holen — loggt ohne Passwort automatisch ein
+    if (path === '/api/admin/user-loginlink' && req.method === 'GET') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
+        const _luid = String(query.uid || '');
+        const _bd = await fetchBot('/data');
+        const _lu = _bd?.users?.[_luid];
+        if (!_lu) return json({ok:false, error:'User nicht gefunden'});
+        const _code = String(_lu.appCode || '').trim();
+        if (!_code) return json({ok:false, error:'Dieser User hat keinen App-Code — nutze stattdessen „Passwort setzen".'});
+        const _host = String(req.headers['x-forwarded-host'] || req.headers.host || 'creatorboostx.de').split(',')[0].trim();
+        return json({ok:true, link: 'https://' + _host + '/i/' + _code, code: _code, hasEmail: !!_lu.email, email: _lu.email || ''});
+    }
     if (path === '/api/admin/referral-decide' && req.method === 'POST') {
         if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
         if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
@@ -17035,6 +17070,12 @@ function renderUserDetail(j) {
     (u.email ? '<button class="dash-act" onclick="resendConfirm(\\''+esc(u.uid)+'\\',\\''+esc(u.spitzname||u.name||'User')+'\\')">📧 Bestätigungsmail senden</button>' : '') +
   '</div>';
 
+  html += sectionLbl('🔑 Login-Hilfe');
+  html += '<div class="dash-action-grid">' +
+    '<button class="dash-act" onclick="setUserPw(\\''+esc(u.uid)+'\\',\\''+esc(u.spitzname||u.name||'User')+'\\')">🔑 Passwort setzen</button>' +
+    '<button class="dash-act" onclick="userLoginLink(\\''+esc(u.uid)+'\\',\\''+esc(u.spitzname||u.name||'User')+'\\')">🔗 Login-Link</button>' +
+  '</div>';
+
   html += sectionLbl('⚠️ Gefährliche Aktionen', true);
   if (u.paused) {
     html += '<div style="font-size:12px;color:var(--dsub);margin-bottom:10px;padding:8px 12px;background:rgba(124,58,237,0.08);border:1px solid var(--dline);border-radius:10px">⏸️ Pausiert'
@@ -17062,6 +17103,22 @@ async function sendDmTo(uid, name) {
   const r = await fetch('/api/admin/send-dm-single', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ uid, text }) });
   const j = await r.json().catch(()=>({}));
   if (j.ok) alert('✅ DM an '+name+' gesendet'); else alert('❌ '+(j.error||'Fehler'));
+}
+async function setUserPw(uid, name){
+  const pw = (await cbPrompt('Neues Passwort für '+name+' (min. 6 Zeichen).\\nDanach kann sich '+name+' mit seiner Email + diesem Passwort einloggen:'));
+  if(pw===null) return;
+  if(String(pw).length<6){ alert('Passwort muss mindestens 6 Zeichen haben.'); return; }
+  const r = await fetch('/api/admin/set-user-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({uid:uid,password:pw})});
+  const j = await r.json().catch(()=>({}));
+  if(j.ok) alert('✅ Passwort gesetzt für '+name+'.\\n\\nSag '+name+': mit der Email + diesem Passwort einloggen — und danach in den Einstellungen selbst ein neues Passwort wählen.');
+  else alert('❌ '+(j.error||'Fehler'));
+}
+async function userLoginLink(uid, name){
+  const r = await fetch('/api/admin/user-loginlink?uid='+encodeURIComponent(uid));
+  const j = await r.json().catch(()=>({}));
+  if(!j.ok){ alert('❌ '+(j.error||'Fehler')); return; }
+  try{ await navigator.clipboard.writeText(j.link); alert('🔗 Login-Link kopiert!\\n\\n'+j.link+'\\n\\nSchick ihn '+name+' — beim Öffnen ist er/sie SOFORT eingeloggt (kein Passwort nötig).'); }
+  catch(e){ prompt('Login-Link für '+name+' (markieren + kopieren):', j.link); }
 }
 async function resendConfirm(uid, name) {
   if (!(await cbConfirm('Willkommens-/Bestätigungsmail erneut an '+name+' senden?'))) return;
@@ -18813,7 +18870,7 @@ function switchRanking(tab, btn) {
                         : `<div style="font-size:var(--fs-sm);font-weight:800;color:#a78bfa">💎 ${item.price}</div>`;
                     return `<div style="background:var(--bg3);border:1px solid ${item.premium?'rgba(212,175,55,0.28)':'var(--border2)'};border-radius:16px;padding:14px;margin-bottom:10px">
     <div style="display:flex;align-items:center;gap:14px">
-      <div style="width:52px;height:52px;border-radius:50%;background:#1e1e1e;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:#fff;box-shadow:${item.shadow}">A</div>
+      ${ringPreview(item, 56, 'A')}
       <div style="flex:1;min-width:0">
         <div style="font-size:14px;font-weight:700;margin-bottom:2px">${item.emoji} ${item.name}</div>
         <div style="font-size:11px;color:var(--muted);margin-bottom:var(--space-2)">${item.desc}</div>
@@ -22026,7 +22083,7 @@ ${(myInventory.length > 0 || _specialFrames.length > 0) ? `
     ${_specialFrames.map(item=>{
         const isActive = myActiveRing === item.id;
         return `<div style="background:linear-gradient(135deg,rgba(255,215,0,0.06),rgba(124,58,237,0.05));border:1px solid ${isActive?'rgba(255,215,0,.55)':'rgba(255,215,0,.22)'};border-radius:14px;padding:var(--space-3);display:flex;align-items:center;gap:var(--space-3)">
-      <div style="width:46px;height:46px;border-radius:50%;background:#1e1e1e;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:var(--fs-lg);color:#fff;box-shadow:${item.shadow}">${item.emoji}</div>
+      ${ringPreview(item, 50, item.emoji)}
       <div style="flex:1;min-width:0">
         <div style="font-size:var(--fs-sm);font-weight:700">${item.name} ${isActive?'<span style="font-size:10px;color:#ffd700;font-weight:700">● Aktiv</span>':''}</div>
         <div style="font-size:11px;color:var(--muted)">${item.desc}</div>
