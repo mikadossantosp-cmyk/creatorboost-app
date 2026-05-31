@@ -849,24 +849,25 @@ const RING_ITEMS = [
     { id: 'ring_purple',  name: 'Cosmic Ring',  emoji: '🔮', price: 12, shadow: '0 0 0 3px #e040fb, 0 0 0 6px #9c27b0',   gradient: 'linear-gradient(135deg,#9c27b0,#e040fb)', desc: 'Mystisches Kosmosleuchten' },
     { id: 'ring_rainbow', name: 'Rainbow Ring', emoji: '🌈', price: 15, shadow: '0 0 0 3px #ff9900, 0 0 0 6px #cc5de8',   gradient: 'linear-gradient(135deg,#ff0000,#ff9900,#00cc00,#0000ff,#cc5de8)', desc: 'Buntes Regenbogenleuchten' },
     { id: 'ring_diamond', name: 'Diamond Ring', emoji: '💎', price: 20, shadow: '0 0 0 3px #b9f2ff, 0 0 0 6px #a78bfa',   gradient: 'linear-gradient(135deg,#a78bfa,#b9f2ff,#ffffff)', desc: 'Funkelnder Diamantglanz' },
-    // ── Premium-Kollektion „50 Diamanten Rahmen" — edle mehrschichtige Glow-Rahmen ──
-    { id: 'pring_fire',    name: 'Fire Ring',    emoji: '🔥', price: 50, premium: true, shadow: '0 0 0 3px #ff6b00, 0 0 0 6px #ff2200, 0 0 22px 3px rgba(255,80,0,0.8)',                          gradient: 'linear-gradient(135deg,#ff2200,#ff9a3c)',                  desc: 'Lodernde Feuer-Aura' },
-    { id: 'pring_ember',   name: 'Ember Ring',   emoji: '🟠', price: 50, premium: true, shadow: '0 0 0 3px #ffb627, 0 0 0 6px #ff7b00, 0 0 22px 3px rgba(255,150,30,0.78)',                       gradient: 'linear-gradient(135deg,#ff7b00,#ffd166)',                 desc: 'Glühende Glut-Funken' },
-    { id: 'pring_lava',    name: 'Lava Ring',    emoji: '🌋', price: 50, premium: true, shadow: '0 0 0 3px #ff4500, 0 0 0 6px #8b0000, 0 0 24px 3px rgba(255,69,0,0.78)',                         gradient: 'linear-gradient(135deg,#8b0000,#ff4500,#ffae42)',         desc: 'Geschmolzene Lava' },
-    { id: 'pring_gold',    name: 'Gold Rush',    emoji: '👑', price: 50, premium: true, shadow: '0 0 0 3px #ffd700, 0 0 0 6px #b8860b, 0 0 26px 3px rgba(255,215,0,0.85)',                        gradient: 'linear-gradient(135deg,#b8860b,#ffd700,#fff3b0)',         desc: 'Strahlendes Goldfieber' },
-    { id: 'pring_crystal', name: 'Crystal Ring', emoji: '🔷', price: 50, premium: true, shadow: '0 0 0 3px #5ec8ff, 0 0 0 6px #2a7fff, 0 0 24px 3px rgba(90,200,255,0.82)',                       gradient: 'linear-gradient(135deg,#2a7fff,#5ec8ff,#b9f2ff)',         desc: 'Klarer Kristallglanz' },
-    { id: 'pring_ice',     name: 'Ice Ring',     emoji: '🧊', price: 50, premium: true, shadow: '0 0 0 3px #b9f2ff, 0 0 0 6px #5ec8ff, 0 0 24px 3px rgba(185,242,255,0.85)',                      gradient: 'linear-gradient(135deg,#5ec8ff,#b9f2ff,#ffffff)',         desc: 'Eiskaltes Frostleuchten' },
-    { id: 'pring_snow',    name: 'Snow Ring',    emoji: '❄️', price: 50, premium: true, shadow: '0 0 0 3px #ffffff, 0 0 0 6px #c8d6e5, 0 0 24px 3px rgba(255,255,255,0.9)',                        gradient: 'linear-gradient(135deg,#c8d6e5,#ffffff)',                 desc: 'Reiner Schnee-Schimmer' },
-    { id: 'pring_rainbow', name: 'Rainbow Ring', emoji: '🌈', price: 50, premium: true, shadow: '0 0 0 3px #ff0040, 0 0 0 5px #ff9900, 0 0 0 7px #2ecc40, 0 0 0 9px #3399ff, 0 0 26px 3px rgba(150,90,255,0.7)', gradient: 'linear-gradient(135deg,#ff0040,#ff9900,#2ecc40,#3399ff,#9b5cff)', desc: 'Voller Regenbogen-Glow' },
-    { id: 'pring_prism',   name: 'Prism Ring',   emoji: '💠', price: 50, premium: true, shadow: '0 0 0 3px #e040fb, 0 0 0 6px #7c3aed, 0 0 26px 3px rgba(224,64,251,0.82)',                       gradient: 'linear-gradient(135deg,#7c3aed,#e040fb,#ff8cc8)',         desc: 'Schillerndes Prisma' },
-    { id: 'pring_bubble',  name: 'Bubble Ring',  emoji: '🫧', price: 50, premium: true, shadow: '0 0 0 3px #7fdbff, 0 0 0 6px #39c0ed, 0 0 22px 3px rgba(127,219,255,0.78)',                      gradient: 'linear-gradient(135deg,#39c0ed,#7fdbff,#cdf5ff)',         desc: 'Perlende Blasen-Aura' },
+    // ── Premium-Kollektion „50 Diamanten Rahmen" — animierte „atmende" Doppelring-Glows.
+    //    r1=innerer Ring, r2=äußerer Ring, rg=Glow-Farbe (von getRingBoxShadow + @keyframes cbRingAlive genutzt). ──
+    { id: 'pring_fire',    name: 'Fire Ring',    emoji: '🔥', price: 50, premium: true, r1:'#ff8a00', r2:'#ff2200', rg:'rgba(255,80,0,0.9)',     gradient: 'linear-gradient(135deg,#ff2200,#ff9a3c)',         desc: 'Lodernde Feuer-Aura' },
+    { id: 'pring_ember',   name: 'Ember Ring',   emoji: '🟠', price: 50, premium: true, r1:'#ffcf4d', r2:'#ff7b00', rg:'rgba(255,150,30,0.88)',  gradient: 'linear-gradient(135deg,#ff7b00,#ffd166)',         desc: 'Glühende Glut-Funken' },
+    { id: 'pring_lava',    name: 'Lava Ring',    emoji: '🌋', price: 50, premium: true, r1:'#ff6a00', r2:'#8b0000', rg:'rgba(255,69,0,0.88)',    gradient: 'linear-gradient(135deg,#8b0000,#ff4500,#ffae42)', desc: 'Geschmolzene Lava' },
+    { id: 'pring_gold',    name: 'Gold Rush',    emoji: '👑', price: 50, premium: true, r1:'#fff3b0', r2:'#d4af37', rg:'rgba(255,215,0,0.95)',   gradient: 'linear-gradient(135deg,#b8860b,#ffd700,#fff3b0)', desc: 'Strahlendes Goldfieber' },
+    { id: 'pring_crystal', name: 'Crystal Ring', emoji: '🔷', price: 50, premium: true, r1:'#9bdcff', r2:'#2a7fff', rg:'rgba(90,200,255,0.9)',   gradient: 'linear-gradient(135deg,#2a7fff,#5ec8ff,#b9f2ff)', desc: 'Klarer Kristallglanz' },
+    { id: 'pring_ice',     name: 'Ice Ring',     emoji: '🧊', price: 50, premium: true, r1:'#e3faff', r2:'#5ec8ff', rg:'rgba(185,242,255,0.95)', gradient: 'linear-gradient(135deg,#5ec8ff,#b9f2ff,#ffffff)', desc: 'Eiskaltes Frostleuchten' },
+    { id: 'pring_snow',    name: 'Snow Ring',    emoji: '❄️', price: 50, premium: true, r1:'#ffffff', r2:'#b8c6d8', rg:'rgba(255,255,255,0.98)', gradient: 'linear-gradient(135deg,#c8d6e5,#ffffff)',         desc: 'Reiner Schnee-Schimmer' },
+    { id: 'pring_rainbow', name: 'Rainbow Ring', emoji: '🌈', price: 50, premium: true, r1:'#ff4d6d', r2:'#3399ff', rg:'rgba(155,92,255,0.85)',  gradient: 'linear-gradient(135deg,#ff0040,#ff9900,#2ecc40,#3399ff,#9b5cff)', desc: 'Voller Regenbogen-Glow', spin: true },
+    { id: 'pring_prism',   name: 'Prism Ring',   emoji: '💠', price: 50, premium: true, r1:'#f48fff', r2:'#7c3aed', rg:'rgba(224,64,251,0.9)',   gradient: 'linear-gradient(135deg,#7c3aed,#e040fb,#ff8cc8)', desc: 'Schillerndes Prisma', spin: true },
+    { id: 'pring_bubble',  name: 'Bubble Ring',  emoji: '🫧', price: 50, premium: true, r1:'#bdeeff', r2:'#39c0ed', rg:'rgba(127,219,255,0.88)', gradient: 'linear-gradient(135deg,#39c0ed,#7fdbff,#cdf5ff)', desc: 'Perlende Blasen-Aura' },
     // ── Spezial-Rahmen — NICHT kaufbar (special:true → nicht im Shop). Verdient/rollenbasiert,
     //    auswählbar in der Profil-„Tasche" wenn berechtigt (Builder-Rang bzw. Admin). ──
-    { id: 'frame_builder_1', name: 'Builder I Rahmen',     emoji: '🌱', special: true, tier: 1, shadow: '0 0 0 3px #34d399, 0 0 0 6px #059669, 0 0 22px 3px rgba(52,211,153,0.8)',   gradient: 'linear-gradient(135deg,#059669,#34d399)',         desc: 'Community Builder I — Rang-Rahmen' },
-    { id: 'frame_builder_2', name: 'Builder II Rahmen',    emoji: '🤝', special: true, tier: 2, shadow: '0 0 0 3px #fbbf24, 0 0 0 6px #d97706, 0 0 22px 3px rgba(251,191,36,0.8)',   gradient: 'linear-gradient(135deg,#d97706,#fbbf24)',         desc: 'Community Builder II — Rang-Rahmen' },
-    { id: 'frame_builder_3', name: 'Builder III Rahmen',   emoji: '🏗️', special: true, tier: 3, shadow: '0 0 0 3px #22d3ee, 0 0 0 6px #0891b2, 0 0 24px 3px rgba(34,211,238,0.82)',  gradient: 'linear-gradient(135deg,#0891b2,#22d3ee)',         desc: 'Community Builder III — Rang-Rahmen' },
-    { id: 'frame_builder_4', name: 'Builder Elite Rahmen', emoji: '🏛️', special: true, tier: 4, shadow: '0 0 0 3px #c4b5fd, 0 0 0 6px #7c3aed, 0 0 26px 4px rgba(167,139,250,0.85)', gradient: 'linear-gradient(135deg,#7c3aed,#c4b5fd,#e9d5ff)',  desc: 'Community Builder Elite — Rang-Rahmen' },
-    { id: 'frame_admin',     name: 'Admin Rahmen',         emoji: '🛡️', special: true, admin: true, shadow: '0 0 0 3px #ffd700, 0 0 0 6px #1e3a8a, 0 0 10px 1px #38bdf8, 0 0 28px 4px rgba(255,215,0,0.7)', gradient: 'linear-gradient(135deg,#1e3a8a,#ffd700,#38bdf8)', desc: 'Exklusiver Admin-Rahmen (Gold & Blau)' },
+    { id: 'frame_builder_1', name: 'Builder I Rahmen',     emoji: '🌱', special: true, tier: 1, r1:'#6ee7b7', r2:'#059669', rg:'rgba(52,211,153,0.9)',  gradient: 'linear-gradient(135deg,#059669,#34d399)',        desc: 'Community Builder I — Rang-Rahmen' },
+    { id: 'frame_builder_2', name: 'Builder II Rahmen',    emoji: '🤝', special: true, tier: 2, r1:'#fcd34d', r2:'#d97706', rg:'rgba(251,191,36,0.9)',  gradient: 'linear-gradient(135deg,#d97706,#fbbf24)',        desc: 'Community Builder II — Rang-Rahmen' },
+    { id: 'frame_builder_3', name: 'Builder III Rahmen',   emoji: '🏗️', special: true, tier: 3, r1:'#67e8f9', r2:'#0891b2', rg:'rgba(34,211,238,0.9)',  gradient: 'linear-gradient(135deg,#0891b2,#22d3ee)',        desc: 'Community Builder III — Rang-Rahmen' },
+    { id: 'frame_builder_4', name: 'Builder Elite Rahmen', emoji: '🏛️', special: true, tier: 4, r1:'#ddd6fe', r2:'#7c3aed', rg:'rgba(167,139,250,0.95)', gradient: 'linear-gradient(135deg,#7c3aed,#c4b5fd,#e9d5ff)', desc: 'Community Builder Elite — Rang-Rahmen', spin: true },
+    { id: 'frame_admin',     name: 'Admin Rahmen',         emoji: '🛡️', special: true, admin: true, r1:'#ffd700', r2:'#1e40af', rg:'rgba(56,189,248,0.85)', gradient: 'linear-gradient(135deg,#1e3a8a,#ffd700,#38bdf8)', desc: 'Exklusiver Admin-Rahmen (Gold & Blau)', spin: true },
 ];
 
 const BANNER_ITEMS = [
@@ -888,7 +889,13 @@ function getRingBoxShadow(userData) {
     const ring = userData?.activeRing;
     if (!ring) return '';
     const item = RING_ITEMS.find(r=>r.id===ring);
-    return item ? `;box-shadow:${item.shadow}` : '';
+    if (!item) return '';
+    // Premium/Spezial-Rahmen: animierter „atmender" Doppelring-Glow via CSS-Vars + @keyframes cbRingAlive
+    // (funktioniert überall via Inline-Style, ohne Änderung an den Avatar-Render-Stellen).
+    if (item.r1) {
+        return `;--r1:${item.r1};--r2:${item.r2};--rg:${item.rg};box-shadow:0 0 0 3px ${item.r1},0 0 0 6px ${item.r2},0 0 18px 3px ${item.rg};animation:cbRingAlive 2.8s ease-in-out infinite`;
+    }
+    return item.shadow ? `;box-shadow:${item.shadow}` : '';
 }
 
 function genSid() { return crypto.randomBytes(32).toString('hex'); }
@@ -2966,6 +2973,9 @@ ${session ? `
 .tour-pagewipe-text{font-size:13px;font-weight:600;color:rgba(255,255,255,0.85);letter-spacing:0.3px}
 @keyframes wipe-in{from{opacity:0}to{opacity:1}}
 @keyframes spin{to{transform:rotate(360deg)}}
+/* Premium-/Spezial-Avatar-Rahmen: sanft „atmender" Glow (kein Movement → reduced-motion-freundlich) */
+@keyframes cbRingAlive{0%,100%{box-shadow:0 0 0 3px var(--r1),0 0 0 6px var(--r2),0 0 16px 2px var(--rg)}50%{box-shadow:0 0 0 3px var(--r1),0 0 0 8px var(--r2),0 0 32px 8px var(--rg)}}
+@media (prefers-reduced-motion:reduce){[style*="cbRingAlive"]{animation:none!important}}
 </style>
 <div class="tour-overlay" id="tour-ov" aria-hidden="true">
   <div class="tour-spotlight" id="tour-spotlight"></div>
@@ -4642,9 +4652,9 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
 .ipf-switcher-add{display:flex;align-items:center;gap:11px;padding:11px 14px;color:#a78bfa;cursor:pointer;border:none;background:none;width:100%;font-family:inherit;font-size:13.5px;font-weight:600;text-align:left}
 .ipf-switcher-add:hover{background:var(--bg4)}
 .ipf-switcher-row{position:relative;display:flex;align-items:center}
-.ipf-switcher-row .ipf-switcher-item{flex:1;padding-right:42px}
-.ipf-sub-del{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:rgba(239,68,68,.10);border:1px solid rgba(239,68,68,.28);color:#ef4444;width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:14px;cursor:pointer;line-height:1;z-index:2;transition:background .12s}
-.ipf-sub-del:hover{background:rgba(239,68,68,.20)}
+.ipf-switcher-row .ipf-switcher-item{flex:1;padding-right:40px}
+.ipf-sub-del{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:var(--muted);width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:2;opacity:.5;transition:opacity .12s,background .12s,color .12s}
+.ipf-sub-del:hover{opacity:1;color:#ef4444;background:rgba(239,68,68,.12)}
 /* Topbar-Switcher (kompakt) */
 .tb-switcher-wrap{position:relative;display:inline-block}
 .tb-switcher{display:inline-flex;align-items:center;gap:7px;background:var(--surface-tint);border:1px solid var(--border2);color:var(--text);padding:4px 10px 4px 4px;border-radius:99px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;max-width:200px}
@@ -4927,7 +4937,7 @@ function buildTopbarSwitcher(myUid, d) {
             '<div class="ipf-switcher-item-name">' + aName + (a.isParent?'':' <span style="font-size:11px;color:var(--muted);font-weight:500"> · Sub</span>') + '</div>' +
             (isActive ? '<span class="ipf-switcher-item-check">✓</span>' : '') +
           '</button>' +
-          (a.isParent ? '' : '<button class="ipf-sub-del" title="Sub-Account löschen" aria-label="Sub-Account löschen" onclick="event.stopPropagation();deleteSubAccById(\''+htmlEsc(a.uid)+'\',\''+_nameArg+'\')">🗑</button>') +
+          (a.isParent ? '' : '<button class="ipf-sub-del" title="Sub-Account löschen" aria-label="Sub-Account löschen" onclick="event.stopPropagation();deleteSubAccById(\''+htmlEsc(a.uid)+'\',\''+_nameArg+'\')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>') +
         '</div>';
       }).join('') +
       '<div class="ipf-switcher-divider"></div>' +
