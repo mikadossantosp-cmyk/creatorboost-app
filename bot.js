@@ -10638,6 +10638,13 @@ p{line-height:1.65;color:var(--muted)}
         if (!LOCAL_STORE) return json({ok:true, pending:[]});
         return json(botLogic.referralPendingListApi());
     }
+    // Komplette „Wer hat wen eingeladen"-Übersicht (alle Einlader + Eingeladene + Status)
+    if (path === '/api/admin/referral-overview' && req.method === 'GET') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
+        if (!LOCAL_STORE) return json({ok:true, inviters:[], totalInviters:0, totalInvites:0, totalActive:0});
+        return json(botLogic.referralOverviewApi());
+    }
     if (path === '/api/admin/referral-decide' && req.method === 'POST') {
         if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
         if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
@@ -16516,6 +16523,19 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
       </div>
     </section>
 
+    <!-- Wer hat wen eingeladen (komplette Referral-Übersicht) -->
+    <section class="dash-section">
+      <div class="dash-section-hdr">
+        <div class="dash-section-title">🌐 Wer hat wen eingeladen</div>
+        <div class="dash-section-sub"><span id="ref-ov-stats">–</span> · Refresh 60s</div>
+      </div>
+      <div class="dash-section-body">
+        <div id="ref-overview-list" style="display:flex;flex-direction:column;gap:10px;max-height:520px;overflow-y:auto">
+          <div style="padding:18px;text-align:center;color:var(--dsub);font-size:12.5px">Lädt …</div>
+        </div>
+      </div>
+    </section>
+
     <!-- Aktuell eingeloggte User -->
     <section class="dash-section">
       <div class="dash-section-hdr">
@@ -17210,9 +17230,43 @@ async function decideReferral(inviteeUid, approve, btn){
   try{
     const r = await fetch('/api/admin/referral-decide',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({inviteeUid:inviteeUid,approve:approve})});
     const j = await r.json();
-    if(j.ok){ loadReferralPending(); }
+    if(j.ok){ loadReferralPending(); loadReferralOverview(); }
     else { alert('❌ '+(j.error||'Fehler')); if(btn){btn.disabled=false;btn.textContent=approve?'✓ Bestätigen':'✕ Ablehnen';} }
   }catch(e){ alert('❌ '+e.message); if(btn){btn.disabled=false;} }
+}
+async function loadReferralOverview(){
+  const box = document.getElementById('ref-overview-list');
+  const stats = document.getElementById('ref-ov-stats');
+  if(!box) return;
+  function igLink(ig){ var c=(ig||'').replace(/[^a-zA-Z0-9._]/g,''); return c ? '<a href="https://instagram.com/'+c+'" target="_blank" rel="noopener" style="color:#06b6d4;font-weight:700;text-decoration:none">@'+c+'</a>' : '<span style="color:var(--dsub)">kein Insta</span>'; }
+  function statusChip(s){
+    var m={approved:['#22c55e','rgba(34,197,94,.14)','✓ bestätigt'],pending:['#f59e0b','rgba(245,158,11,.14)','⏳ Prüfung offen'],rejected:['#ef4444','rgba(239,68,68,.14)','✕ abgelehnt'],linked:['#9aa','rgba(150,160,170,.14)','🔗 verknüpft']};
+    var c=m[s]||m.linked;
+    return '<span style="font-size:10.5px;font-weight:800;color:'+c[0]+';background:'+c[1]+';padding:2px 8px;border-radius:99px;white-space:nowrap">'+c[2]+'</span>';
+  }
+  try{
+    const r = await fetch('/api/admin/referral-overview');
+    const j = await r.json();
+    const list = (j && j.inviters) || [];
+    if(stats) stats.textContent = (j.totalInviters||0)+' Einlader · '+(j.totalInvites||0)+' Einladungen · '+(j.totalActive||0)+' aktiv';
+    if(!list.length){ box.innerHTML = '<div style="padding:18px;text-align:center;color:var(--dsub);font-size:12.5px">Noch keine Einladungen</div>'; return; }
+    box.innerHTML = list.map(function(p){
+      var head = '<summary style="list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;padding:11px 13px">'
+        + '<span style="font-size:13.5px;font-weight:800;color:var(--text)">'+(p.builderEmoji?p.builderEmoji+' ':'')+(p.name||'User')+'</span>'
+        + (p.isSub?'<span style="font-size:9.5px;font-weight:800;color:#a78bfa;background:rgba(167,139,250,.15);padding:1px 6px;border-radius:99px">SUB</span>':'')
+        + '<span style="margin-left:auto;font-size:11.5px;color:var(--dsub)">'+p.invited+' eingeladen · <b style="color:#22c55e">'+p.active+' aktiv</b>'+(p.diamonds?' · 💎 '+p.diamonds:'')+'</span>'
+        + '</summary>';
+      var rows = (p.invitees||[]).map(function(v){
+        return '<div style="display:flex;align-items:center;gap:8px;padding:8px 13px;border-top:1px solid var(--dline)">'
+          + '<span style="width:7px;height:7px;border-radius:99px;flex:0 0 auto;background:'+(v.active?'#22c55e':'#555')+'" title="'+(v.active?'aktiv':'noch nicht aktiv')+'"></span>'
+          + '<span style="font-size:12.5px;font-weight:700;color:'+(v.banned?'#ef4444':'var(--text)')+'">'+(v.name||'User')+(v.banned?' 🚫':'')+'</span>'
+          + '<span style="font-size:11.5px">'+igLink(v.instagram)+'</span>'
+          + '<span style="margin-left:auto;display:flex;align-items:center;gap:6px">'+statusChip(v.status)+'</span>'
+          + '</div>';
+      }).join('');
+      return '<details style="background:var(--dink);border:1px solid var(--dline);border-radius:12px;overflow:hidden">'+head+rows+'</details>';
+    }).join('');
+  }catch(e){ box.innerHTML = '<div style="padding:18px;text-align:center;color:var(--dsub);font-size:12.5px">Fehler beim Laden</div>'; }
 }
 async function refreshUsers() {
   const errBox = document.getElementById('dash-err') || (function(){
@@ -18201,6 +18255,8 @@ refreshUsers();
 setInterval(refreshUsers, 60000);
 loadReferralPending();
 setInterval(loadReferralPending, 60000);
+loadReferralOverview();
+setInterval(loadReferralOverview, 60000);
 // Dashboard-Sektionen ein-/ausklappbar — a11y-konform (Keyboard + ARIA) & Zustand persistent (idempotent)
 (function makeSectionsCollapsible(){
   var STORE_KEY = 'cb_dash_collapsed';

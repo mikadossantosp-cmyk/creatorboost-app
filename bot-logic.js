@@ -4314,6 +4314,61 @@ function referralPendingListApi() {
     out.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
     return { ok: true, pending: out };
 }
+// Komplette „Wer hat wen eingeladen"-Übersicht fürs Dashboard.
+// Listet JEDEN Einlader (auch Sub-Accounts — eigenständige Builder) mit allen
+// von ihm Eingeladenen + Status (bestätigt/offen/abgelehnt/verknüpft) + aktiv?.
+function referralOverviewApi() {
+    const _status = (inv, iid) => {
+        if (!inv) return 'unbekannt';
+        if (inv.refRejected) return 'rejected';
+        const p = d.referralPending && d.referralPending[String(iid)];
+        if (p && p.status === 'approved') return 'approved';
+        if (p && p.status === 'pending') return 'pending';
+        if (p && p.status === 'rejected') return 'rejected';
+        return 'linked'; // verknüpft, aber (noch) keine Insta-Prüfung angefordert
+    };
+    const inviters = [];
+    let totalInvites = 0, totalActive = 0;
+    for (const [uid, u] of Object.entries(d.users || {})) {
+        const ids = Array.isArray(u.referrals) ? u.referrals : [];
+        if (!ids.length) continue;
+        const invitees = [];
+        let activeCount = 0;
+        for (const iid of ids) {
+            const inv = d.users[String(iid)];
+            const active = _referralInviteeIsActive(inv);
+            if (active) activeCount++;
+            const ms = (inv && inv.refMilestones) ? Object.keys(inv.refMilestones).length : 0;
+            invitees.push({
+                uid: String(iid),
+                name: (inv && (inv.spitzname || inv.name)) || ('User ' + iid),
+                instagram: (inv && inv.instagram) || '',
+                status: _status(inv, iid),
+                active,
+                milestones: ms,
+                banned: !!(inv && inv.banned),
+                joinedAt: (inv && (inv.joinDate || inv.joined)) || 0,
+            });
+        }
+        invitees.sort((a, b) => (b.joinedAt || 0) - (a.joinedAt || 0));
+        const badge = communityBuilderBadge(activeCount);
+        totalInvites += ids.length; totalActive += activeCount;
+        inviters.push({
+            uid: String(uid),
+            name: u.spitzname || u.name || ('User ' + uid),
+            instagram: u.instagram || '',
+            isSub: !!u.parent_uid,
+            invited: ids.length,
+            active: activeCount,
+            diamonds: Number(u.refDiamondsEarned || 0),
+            builderEmoji: badge ? badge.emoji : '',
+            builderLabel: badge ? badge.label : '',
+            invitees,
+        });
+    }
+    inviters.sort((a, b) => (b.active - a.active) || (b.invited - a.invited));
+    return { ok: true, inviters, totalInviters: inviters.length, totalInvites, totalActive };
+}
 // Alle Einladungen der gesamten Account-Familie (Haupt + alle Subs) sammeln + dedupen.
 // Referral-Statistik für den Profilbereich des Einladers — PRO ACCOUNT (jeder Sub ist ein
 // eigenständiger Builder; Sub-Einladungen rollen NICHT auf den Hauptaccount hoch).
@@ -4411,7 +4466,7 @@ module.exports = {
     REFERRAL_MILESTONES,
     ensureReferralCode, linkReferral, grantReferralMilestone, checkReferralProgress,
     touchReferralActiveDay, referralStatsApi, communityBuilderBadge, communityBuilderRanking, payCommunityBuilderDaily, clawbackReferral, builderBadgeFor,
-    requestReferralVerification, approveReferral, rejectReferral, referralPendingListApi,
+    requestReferralVerification, approveReferral, rejectReferral, referralPendingListApi, referralOverviewApi,
     touchStreakApi, getStreakApi,
     updateProfileApi, addProjectApi, updateProjectApi, deleteProjectApi, completeProfileApi, engagePinnedPostApi,
     followApi,
