@@ -201,10 +201,44 @@ function getCommunityActivity(limit) {
     }
     return out;
 }
+// Backfill: falls noch keine frische Kürung existiert (z.B. nach Feature-Deploy, bevor der
+// nächtliche dailyRankingAbschluss erstmals lief), den „Creator des Tages von gestern" aus
+// den vorhandenen Aktivitätsdaten küren — gleiche Mindesthürde wie die reguläre Kürung.
+// dayKey=gestern → Karte erscheint sofort und wird heute Nacht regulär überschrieben.
+function _backfillCreatorSpotlightIfNeeded() {
+    try {
+        const today = new Date().toISOString().slice(0, 10);
+        const yest = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+        const s = d.creatorSpotlight;
+        if (s && s.uid && (s.dayKey === today || s.dayKey === yest)) return; // schon frisch
+        // Quelle: Gestern-XP bevorzugt, sonst heutige Tages-XP.
+        const src = (d.gesternDailyXP && Object.keys(d.gesternDailyXP).length) ? d.gesternDailyXP : (d.dailyXP || {});
+        const ranked = Object.entries(src)
+            .filter(([uid, xp]) => Number(xp) > 0 && d.users[uid] && !istAdminId(uid))
+            .sort((a, b) => Number(b[1]) - Number(a[1]));
+        for (const [uid] of ranked) {
+            const u = d.users[uid];
+            if (!u || u.banned || u.parent_uid) continue;
+            if (!((u.links || 0) >= 1 || (u.appLikeCount || 0) >= 5)) continue;
+            const _stk = getStreakApi(uid);
+            d.creatorSpotlight = {
+                uid: String(uid),
+                name: u.spitzname || u.name || 'Creator',
+                instagram: u.instagram || null,
+                days: Math.max(Number(_stk.streak || 0), Number(u.streakBest || 0)),
+                posts: Number(u.links || 0),
+                likes: Number(u.appLikeCount || 0),
+                dayKey: yest, at: Date.now(), backfilled: true,
+            };
+            return;
+        }
+    } catch (e) {}
+}
 // Creator des Tages (täglich in dailyRankingAbschluss gekürt). Liefert nur, wenn frisch
 // (heute oder gestern) — verhindert eine veraltete Karte nach inaktiven Tagen.
 function getCreatorSpotlight() {
     try {
+        _backfillCreatorSpotlightIfNeeded();
         const s = d.creatorSpotlight;
         if (!s || !s.uid) return null;
         const u = d.users[s.uid];

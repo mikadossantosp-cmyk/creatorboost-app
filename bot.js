@@ -2697,6 +2697,14 @@ async function cbResendConfirm(btn){
       </div>
       <svg class="ps-card-arrow" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"><polyline points="9 6 15 12 9 18"/></svg>
     </button>
+    ${_isAdmin ? `<button class="ps-card" onclick="closePlusSheet();setTimeout(openAdminLinkSheet,200)">
+      <div class="ps-card-icon" style="background:linear-gradient(135deg,#f59e0b,#a855f7);color:#fff"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+      <div class="ps-card-body">
+        <div class="ps-card-title">Admin-Link posten <span class="ps-card-badge" style="background:linear-gradient(135deg,#f59e0b,#a855f7);color:#fff">ADMIN</span></div>
+        <div class="ps-card-sub">Community-Push · oben bei allen Usern · Liker erhalten +5 💎 · 14 Tage</div>
+      </div>
+      <svg class="ps-card-arrow" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"><polyline points="9 6 15 12 9 18"/></svg>
+    </button>` : ''}
   </div>
 </div>
 <div class="plus-sheet" id="diamond-sheet" onclick="if(event.target===this)closeDiamondSheet()">
@@ -2759,6 +2767,36 @@ async function cbResendConfirm(btn){
     <div id="prisma-result" class="ps-result"></div>
   </div>
 </div>
+${_isAdmin ? `<div class="plus-sheet" id="adminlink-sheet" onclick="if(event.target===this)closeAdminLinkSheet()">
+  <div class="plus-sheet-inner">
+    <div class="ps-grabber"></div>
+    <div class="ps-head">
+      <div class="ps-head-text">
+        <div class="ps-eyebrow" style="color:#f59e0b;font-weight:800">Admin · Community-Push</div>
+        <div class="ps-title" style="display:inline-flex;align-items:center;gap:var(--space-2)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Admin-Link</div>
+        <div class="ps-sub">Erscheint bei allen Usern oben im Feed, bis sie engagiert haben</div>
+      </div>
+      <button class="ps-close" onclick="closeAdminLinkSheet()" aria-label="Schließen">
+        <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+      </button>
+    </div>
+    <div id="adminlink-info" class="ps-info" style="background:linear-gradient(135deg,rgba(245,158,11,0.10),rgba(168,85,247,0.08));border:1px solid rgba(245,158,11,0.35);color:var(--text)">
+      <b>Kostenlos (Admin)</b> · läuft <b>14 Tage</b> · erscheint bei jedem User ganz oben, bis er voll engagiert hat.<br>
+      Jeder, der engagiert, bekommt <b style="color:#f59e0b">+5 💎</b>.<br>
+      <b style="color:#f59e0b">Pflicht: FULL ENGAGED</b> — Schein-Likes werden hart sanktioniert.
+    </div>
+    <div class="ps-field">
+      <label class="ps-field-label">Instagram-URL</label>
+      <input type="url" id="adminlink-url" class="ps-input" placeholder="https://www.instagram.com/reel/…">
+    </div>
+    <div class="ps-field">
+      <label class="ps-field-label">Aussage <span class="ps-optional">kurz, pusht die Community</span></label>
+      <textarea id="adminlink-message" class="ps-input ps-textarea" placeholder="z.B. Pusht unseren Community-Reel! 🚀" maxlength="280" rows="2"></textarea>
+    </div>
+    <button class="ps-cta" id="adminlink-post-btn" onclick="postAdminLink()" style="background:linear-gradient(135deg,#f59e0b,#a855f7);color:#fff">🛡️ Veröffentlichen</button>
+    <div id="adminlink-result" class="ps-result"></div>
+  </div>
+</div>` : ''}
 <div class="plus-sheet" id="kollab-sheet" onclick="if(event.target===this)closeKollabSheet()">
   <div class="plus-sheet-inner">
     <div class="ps-grabber"></div>
@@ -3889,6 +3927,32 @@ async function postPrismaLink(){
     if(j.ok){ result.style.color='#a855f7'; result.textContent='✅ Prismalink live!'; setTimeout(()=>{ closePrismaSheet(); location.href='/feed?tab=prisma'; },800); }
     else { result.style.color='#ef4444'; result.textContent='❌ '+(j.error||'Fehler'); btn.disabled=false; btn.innerHTML='💠 Veröffentlichen <span style="opacity:.85;font-weight:600">· −100 💎</span>'; }
   } catch(e){ result.style.color='#ef4444'; result.textContent='❌ '+e.message; btn.disabled=false; btn.innerHTML='💠 Veröffentlichen <span style="opacity:.85;font-weight:600">· −100 💎</span>'; }
+}
+
+// Admin-Link (nur Admins) — Erstellen direkt aus dem +-Menü, analog Prisma/Diamant.
+function openAdminLinkSheet(){
+  const s=document.getElementById('adminlink-sheet'); if(!s) return;
+  s.classList.add('open'); document.body.style.overflow='hidden';
+  const u=document.getElementById('adminlink-url'); if(u) u.value='';
+  const m=document.getElementById('adminlink-message'); if(m) m.value='';
+  const r=document.getElementById('adminlink-result'); if(r) r.textContent='';
+  const btn=document.getElementById('adminlink-post-btn'); if(btn){ btn.disabled=false; btn.innerHTML='🛡️ Veröffentlichen'; }
+}
+function closeAdminLinkSheet(){const s=document.getElementById('adminlink-sheet');if(s){s.classList.remove('open');document.body.style.overflow='';}}
+async function postAdminLink(){
+  const url=(document.getElementById('adminlink-url').value||'').trim();
+  const message=(document.getElementById('adminlink-message').value||'').trim();
+  const result=document.getElementById('adminlink-result');
+  if(!url){result.style.color='#ef4444';result.textContent='❌ Bitte Instagram-Link eingeben';return;}
+  if(!url.includes('instagram.com')){result.style.color='#ef4444';result.textContent='❌ Nur Instagram-Links erlaubt';return;}
+  if(!confirm('🛡️ Admin-Link veröffentlichen?\\n\\nErscheint bei allen Usern oben im Feed, bis sie voll engagiert haben. Jeder, der engagiert, bekommt +5 💎. Läuft 14 Tage.')) return;
+  const btn=document.getElementById('adminlink-post-btn'); btn.disabled=true; btn.textContent='⏳ Wird veröffentlicht …';
+  try {
+    const r=await fetch('/api/admin-link/create',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url,message})});
+    const j=await r.json();
+    if(j.ok){ result.style.color='#22c55e'; result.textContent='✅ Admin-Link live!'; setTimeout(()=>{ closeAdminLinkSheet(); location.href='/feed?tab=adminlink'; },800); }
+    else { result.style.color='#ef4444'; result.textContent='❌ '+(j.error||'Fehler'); btn.disabled=false; btn.innerHTML='🛡️ Veröffentlichen'; }
+  } catch(e){ result.style.color='#ef4444'; result.textContent='❌ '+e.message; btn.disabled=false; btn.innerHTML='🛡️ Veröffentlichen'; }
 }
 
 async function openKollabSheet(){
