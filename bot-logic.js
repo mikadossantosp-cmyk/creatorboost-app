@@ -2721,8 +2721,8 @@ function adminLinkFeedCard(callerUid) {
     const author = d.users[p.uid] || {};
     const eng = Array.isArray(p.engagedBy) ? p.engagedBy.map(String) : [];
     // Neueste zuerst (Social Proof). Avatare/Namen für „Wer hat engagiert?".
-    const engagers = eng.slice().reverse().slice(0, 60).map(eid => { const eu = d.users[eid] || {}; return { uid: eid, name: eu.spitzname || eu.name || 'User', instagram: eu.instagram || '' }; });
-    return { id: p.id, url: p.url, message: p.message || '', reward: ADMIN_LINK_REWARD, remainingMs: Math.max(0, p.expiresAt - Date.now()), engagedCount: eng.length, engagers, author: { uid: p.uid, name: author.spitzname || author.name || 'Admin', instagram: author.instagram || '' } };
+    const engagers = eng.slice().reverse().slice(0, 60).map(eid => { const eu = d.users[eid] || {}; return { uid: eid, name: eu.spitzname || eu.name || 'User', instagram: eu.instagram || '', builderEmoji: _bldEmoji(eid) }; });
+    return { id: p.id, url: p.url, message: p.message || '', reward: ADMIN_LINK_REWARD, remainingMs: Math.max(0, p.expiresAt - Date.now()), engagedCount: eng.length, engagers, author: { uid: p.uid, name: author.spitzname || author.name || 'Admin', instagram: author.instagram || '', builderEmoji: _bldEmoji(p.uid) } };
 }
 // Admin-Tab: alle aktiven Admin-Links (laufen 2 Wochen) mit Engagement-Statistik.
 function adminLinkListApi(callerUid) {
@@ -2735,9 +2735,9 @@ function adminLinkListApi(callerUid) {
         .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
         .map(p => {
             const eng = Array.isArray(p.engagedBy) ? p.engagedBy.map(String) : [];
-            const engagers = eng.slice(0, 50).map(eid => { const eu = d.users[eid] || {}; return { uid: eid, name: eu.spitzname || eu.name || 'User', instagram: eu.instagram || '' }; });
+            const engagers = eng.slice(0, 50).map(eid => { const eu = d.users[eid] || {}; return { uid: eid, name: eu.spitzname || eu.name || 'User', instagram: eu.instagram || '', builderEmoji: _bldEmoji(eid) }; });
             const author = d.users[p.uid] || {};
-            return { id: p.id, url: p.url, message: p.message || '', reward: ADMIN_LINK_REWARD, createdAt: p.createdAt, expiresAt: p.expiresAt, remainingMs: Math.max(0, p.expiresAt - now), engagedCount: eng.length, engagers, author: { uid: p.uid, name: author.spitzname || author.name || 'Admin', instagram: author.instagram || '' } };
+            return { id: p.id, url: p.url, message: p.message || '', reward: ADMIN_LINK_REWARD, createdAt: p.createdAt, expiresAt: p.expiresAt, remainingMs: Math.max(0, p.expiresAt - now), engagedCount: eng.length, engagers, author: { uid: p.uid, name: author.spitzname || author.name || 'Admin', instagram: author.instagram || '', builderEmoji: _bldEmoji(p.uid) } };
         });
     return { ok: true, links, reward: ADMIN_LINK_REWARD, lifetimeDays: 14 };
 }
@@ -2920,10 +2920,10 @@ function diamondLinkFeedApi(callerUid) {
         .map(p => {
             const author = d.users[p.uid] || {};
             const likes = Array.isArray(p.likes) ? p.likes.map(String) : [];
-            const likers = likes.map(lid => { const u = d.users[lid] || {}; return { uid: lid, name: u.spitzname || u.name || 'User', instagram: u.instagram || '', role: u.role || '' }; });
+            const likers = likes.map(lid => { const u = d.users[lid] || {}; return { uid: lid, name: u.spitzname || u.name || 'User', instagram: u.instagram || '', role: u.role || '', builderEmoji: _bldEmoji(lid) }; });
             const isSelf = !!(callerUid && String(p.uid) === callerUid);
             const isFamily = !!(callerRoot && !isSelf && getRootUid(p.uid) === callerRoot);
-            return { id: p.id, uid: p.uid, url: p.url, caption: p.caption, createdAt: p.createdAt, expiresAt: p.expiresAt, remainingMs: Math.max(0, p.expiresAt - now), likeCount: likes.length, likers, liked: callerUid ? likes.includes(callerUid) : false, isSelf, isFamily, author: { uid: p.uid, name: author.spitzname || author.name || 'User', instagram: author.instagram || '', role: author.role || '' }, reward: DIAMOND_LINK_REWARD };
+            return { id: p.id, uid: p.uid, url: p.url, caption: p.caption, createdAt: p.createdAt, expiresAt: p.expiresAt, remainingMs: Math.max(0, p.expiresAt - now), likeCount: likes.length, likers, liked: callerUid ? likes.includes(callerUid) : false, isSelf, isFamily, author: { uid: p.uid, name: author.spitzname || author.name || 'User', instagram: author.instagram || '', role: author.role || '', builderEmoji: _bldEmoji(p.uid) }, reward: DIAMOND_LINK_REWARD };
         });
     return { ok: true, posts, rulesAccepted: !!caller.diamondRulesAcceptedAt, cost: DIAMOND_LINK_COST, reward: DIAMOND_LINK_REWARD };
 }
@@ -2948,10 +2948,10 @@ function prismaLinkFeedApi(callerUid, hideEngaged) {
         .map(p => {
             const author = d.users[p.uid] || {};
             const likes = Array.isArray(p.likes) ? p.likes.map(String) : [];
-            const likers = likes.map(lid => { const u = d.users[lid] || {}; return { uid: lid, name: u.spitzname || u.name || 'User', instagram: u.instagram || '', role: u.role || '' }; });
+            const likers = likes.map(lid => { const u = d.users[lid] || {}; return { uid: lid, name: u.spitzname || u.name || 'User', instagram: u.instagram || '', role: u.role || '', builderEmoji: _bldEmoji(lid) }; });
             const isSelf = !!(callerUid && String(p.uid) === callerUid);
             const isFamily = !!(callerRoot && !isSelf && getRootUid(p.uid) === callerRoot);
-            return { id: p.id, uid: p.uid, url: p.url, caption: p.caption, createdAt: p.createdAt, expiresAt: p.expiresAt, remainingMs: Math.max(0, p.expiresAt - now), likeCount: likes.length, likers, liked: callerUid ? likes.includes(callerUid) : false, isSelf, isFamily, author: { uid: p.uid, name: author.spitzname || author.name || 'User', instagram: author.instagram || '' }, reward: PRISMA_LINK_REWARD };
+            return { id: p.id, uid: p.uid, url: p.url, caption: p.caption, createdAt: p.createdAt, expiresAt: p.expiresAt, remainingMs: Math.max(0, p.expiresAt - now), likeCount: likes.length, likers, liked: callerUid ? likes.includes(callerUid) : false, isSelf, isFamily, author: { uid: p.uid, name: author.spitzname || author.name || 'User', instagram: author.instagram || '', builderEmoji: _bldEmoji(p.uid) }, reward: PRISMA_LINK_REWARD };
         });
     return { ok: true, posts, rulesAccepted: !!caller.prismaRulesAcceptedAt, cost: PRISMA_LINK_COST, reward: PRISMA_LINK_REWARD, postedThisWeek: caller.prismaPostThisWeek === week };
 }
@@ -2966,9 +2966,9 @@ function collabFeedApi(callerUid) {
         .map(p => {
             const likes = Array.isArray(p.likes) ? p.likes.map(String) : [];
             const a = d.users[p.uid] || {}, b = d.users[p.partnerUid] || {};
-            const likers = likes.map(lid => { const lu = d.users[lid] || {}; return { uid: lid, name: lu.spitzname || lu.name || 'User', instagram: lu.instagram || '', role: lu.role || '' }; });
+            const likers = likes.map(lid => { const lu = d.users[lid] || {}; return { uid: lid, name: lu.spitzname || lu.name || 'User', instagram: lu.instagram || '', role: lu.role || '', builderEmoji: _bldEmoji(lid) }; });
             const boost = collabBoostState(p, _nowB);
-            return { id: p.id, uid: p.uid, partnerUid: p.partnerUid, url: p.url, caption: p.caption, likeCount: likes.length, likers, liked: callerUid ? likes.includes(callerUid) : false, isSelf: callerUid && (callerUid === String(p.uid) || callerUid === String(p.partnerUid)), createdAt: p.createdAt, week: p.week, authorA: { uid: p.uid, name: a.spitzname || a.name || 'User', instagram: a.instagram || '' }, authorB: { uid: p.partnerUid, name: b.spitzname || b.name || 'User', instagram: b.instagram || '' }, boostActive: boost.active, boostEndsAt: boost.endsAt, boostNextStartAt: boost.nextStartAt, boostExpired: boost.expired };
+            return { id: p.id, uid: p.uid, partnerUid: p.partnerUid, url: p.url, caption: p.caption, likeCount: likes.length, likers, liked: callerUid ? likes.includes(callerUid) : false, isSelf: callerUid && (callerUid === String(p.uid) || callerUid === String(p.partnerUid)), createdAt: p.createdAt, week: p.week, authorA: { uid: p.uid, name: a.spitzname || a.name || 'User', instagram: a.instagram || '', builderEmoji: _bldEmoji(p.uid) }, authorB: { uid: p.partnerUid, name: b.spitzname || b.name || 'User', instagram: b.instagram || '', builderEmoji: _bldEmoji(p.partnerUid) }, boostActive: boost.active, boostEndsAt: boost.endsAt, boostNextStartAt: boost.nextStartAt, boostExpired: boost.expired };
         });
     return { ok: true, posts: out, currentWeek: week, boostWindowMs: COLLAB_BOOST_WINDOW_MS, boostCycleMs: COLLAB_BOOST_CYCLE_MS };
 }
@@ -3782,8 +3782,8 @@ function adminEngagementLogApi() {
             const lu = d.users[lUid] || {};
             collabs.push({
                 postId: p.id, url: p.url, caption: (p.caption || '').slice(0, 100),
-                authorA: { uid: p.uid, name: a.spitzname || a.name || 'User', instagram: a.instagram || '' },
-                authorB: { uid: p.partnerUid, name: b.spitzname || b.name || 'User', instagram: b.instagram || '' },
+                authorA: { uid: p.uid, name: a.spitzname || a.name || 'User', instagram: a.instagram || '', builderEmoji: _bldEmoji(p.uid) },
+                authorB: { uid: p.partnerUid, name: b.spitzname || b.name || 'User', instagram: b.instagram || '', builderEmoji: _bldEmoji(p.partnerUid) },
                 engagerUid: String(lUid),
                 engagerName: lu.spitzname || lu.name || 'User ' + lUid,
                 engagerInstagram: lu.instagram || '',
@@ -3939,7 +3939,7 @@ function diamondLinkAdminListApi() {
                 createdAt: p.createdAt, expiresAt: p.expiresAt, deletedAt: p.deletedAt || null,
                 active: !p.deletedAt && p.expiresAt > now,
                 likeCount: likes.length,
-                author: { uid: p.uid, name: author.spitzname || author.name || 'User', instagram: author.instagram || '' },
+                author: { uid: p.uid, name: author.spitzname || author.name || 'User', instagram: author.instagram || '', builderEmoji: _bldEmoji(p.uid) },
                 engagers,
             };
         });
@@ -3969,7 +3969,7 @@ function prismaLinkAdminListApi() {
                 createdAt: p.createdAt, expiresAt: p.expiresAt, deletedAt: p.deletedAt || null,
                 active: !p.deletedAt && p.expiresAt > now,
                 likeCount: likes.length,
-                author: { uid: p.uid, name: author.spitzname || author.name || 'User', instagram: author.instagram || '' },
+                author: { uid: p.uid, name: author.spitzname || author.name || 'User', instagram: author.instagram || '', builderEmoji: _bldEmoji(p.uid) },
                 engagers,
             };
         });
@@ -4173,6 +4173,7 @@ function grantReferralMilestone(inviteeUid, key) {
     addDiamond(String(invitee.referredBy), ms.dia);
     const invName = invitee.spitzname || invitee.name || 'Dein eingeladener Creator';
     try { sendInAppDM(String(invitee.referredBy), '💎 Referral-Belohnung\n\n' + invName + ' hat einen Meilenstein erreicht: ' + ms.label + '\n\n💎 +' + ms.dia + ' Diamanten für dich\n\nDanke fürs Einladen!'); } catch (e) {}
+    try { _checkBuilderRankUp(String(invitee.referredBy)); } catch (e) {}
     return true;
 }
 // Prüft die aktivitätsbasierten Meilensteine eines eingeladenen Users (Likes + aktive Tage).
@@ -4313,6 +4314,39 @@ function communityBuilderBadge(activeCount) {
     if (activeCount >= 1)  return { tier: 1, label: 'Community Builder I', emoji: '🌱', dailyDiamonds: 5 };
     return null;
 }
+// Aktive Einladungszahl eines EINZELNEN Accounts (pro Account, Subs eigenständig).
+function _builderActiveCount(uid) {
+    const u = d.users[String(uid || '')];
+    if (!u || !Array.isArray(u.referrals)) return 0;
+    let n = 0;
+    for (const iid of u.referrals) { if (_referralInviteeIsActive(d.users[String(iid)])) n++; }
+    return n;
+}
+// Builder-Badge eines Accounts (für Anzeige überall: Profil, Karten, Liker-Listen). null = keiner.
+function builderBadgeFor(uid) {
+    return communityBuilderBadge(_builderActiveCount(uid));
+}
+// Kompaktes Emoji für Inline-Anzeige (oder '' wenn kein Rang).
+function _bldEmoji(uid) {
+    const b = builderBadgeFor(uid);
+    return b ? b.emoji : '';
+}
+// Rang-Aufstieg erkennen → Notification (Glocke) + DM, einmalig pro erreichter Stufe.
+function _checkBuilderRankUp(uid) {
+    uid = String(uid || '');
+    const u = d.users[uid];
+    if (!u) return;
+    const badge = builderBadgeFor(uid);
+    const newTier = badge ? badge.tier : 0;
+    const oldTier = Number(u.cbTier || 0);
+    if (newTier > oldTier) {
+        u.cbTier = newTier;
+        try { addNotification(uid, '🏆', 'Neuer Rang: ' + badge.emoji + ' ' + badge.label + ' — du bekommst jetzt +' + badge.dailyDiamonds + ' 💎 pro Tag!'); } catch (e) {}
+        try { sendInAppDM(uid, '🏆 Rang aufgestiegen!\n\nDu bist jetzt ' + badge.emoji + ' ' + badge.label + '.\n\n💎 +' + badge.dailyDiamonds + ' Diamanten pro Tag (solange du diesen Rang hältst)\n\nWeiter so — lade aktive Creator ein und steig noch höher!'); } catch (e) {}
+    } else if (newTier !== oldTier) {
+        u.cbTier = newTier; // Abstieg still mitführen (kein Spam)
+    }
+}
 // Community-Builder-Ranking: User sortiert nach Anzahl aktiver Einladungen.
 function communityBuilderRanking(limit) {
     const rows = [];
@@ -4356,7 +4390,7 @@ module.exports = {
     init, setThumbnailFetcher, setBildSaver,
     REFERRAL_MILESTONES,
     ensureReferralCode, linkReferral, grantReferralMilestone, checkReferralProgress,
-    touchReferralActiveDay, referralStatsApi, communityBuilderBadge, communityBuilderRanking, payCommunityBuilderDaily, clawbackReferral,
+    touchReferralActiveDay, referralStatsApi, communityBuilderBadge, communityBuilderRanking, payCommunityBuilderDaily, clawbackReferral, builderBadgeFor,
     requestReferralVerification, approveReferral, rejectReferral, referralPendingListApi,
     touchStreakApi, getStreakApi,
     updateProfileApi, addProjectApi, updateProjectApi, deleteProjectApi, completeProfileApi, engagePinnedPostApi,
