@@ -13915,7 +13915,7 @@ try{ if(localStorage.getItem('cb_helper_seen')==='1'){ const b=document.getEleme
         const allMsgs = (data?.messages || []).filter(m => !m.deleted);
         const memberCount = data?.memberCount || 0;
         const lastTs = allMsgs.length ? allMsgs[allMsgs.length - 1].ts : 0;
-        postBot('/app-chat-mark-read', { uid: myUid }).catch(()=>{});
+        if (LOCAL_STORE) { botLogic.appChatMarkRead({ uid: myUid }); datastore.saveDebounced(); } else postBot('/app-chat-mark-read', { uid: myUid }).catch(()=>{});
         const isAdminUid = adminIds.map(Number).includes(Number(myUid));
         const seedJson = JSON.stringify(allMsgs).replace(/</g,'\\u003c');
         return html(`
