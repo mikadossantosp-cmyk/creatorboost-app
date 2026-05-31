@@ -12850,8 +12850,17 @@ function _alUserCard(c, isPreview){
       '</div>'+
       msg+author+
       '<a href="'+esc(openUrl)+'" target="_blank" rel="noopener noreferrer" onclick="window._alvisit=Date.now()" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:14px;background:linear-gradient(135deg,#ec4899,#a855f7);color:#fff;border-radius:12px;font-size:14.5px;font-weight:800;text-decoration:none;margin-bottom:10px;box-shadow:0 6px 18px rgba(168,85,247,.4)"><span style="width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px">1</span><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17" cy="7" r="1.1" fill="currentColor" stroke="none"/></svg>Auf Instagram öffnen →</a>'+
+      '<div style="margin-bottom:10px;padding:13px 14px;background:rgba(245,158,11,.2);border:2px solid #f59e0b;border-radius:13px;box-shadow:0 0 0 2px rgba(245,158,11,.13),0 4px 14px rgba(245,158,11,.2)">'+
+        '<div style="font-size:13px;font-weight:900;color:#fbbf24;text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px;display:flex;align-items:center;gap:7px"><span style="font-size:16px">⚠️</span>Pflicht: Voll engagieren</div>'+
+        '<div style="display:flex;flex-wrap:wrap;gap:8px">'+
+          '<span style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.14);color:#fff;font-size:12.5px;font-weight:800;padding:8px 12px;border-radius:10px">❤️ LIKEN</span>'+
+          '<span style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.14);color:#fff;font-size:12.5px;font-weight:800;padding:8px 12px;border-radius:10px">💬 KOMMENTIEREN</span>'+
+          '<span style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.14);color:#fff;font-size:12.5px;font-weight:800;padding:8px 12px;border-radius:10px">🔁 TEILEN</span>'+
+          '<span style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.14);color:#fff;font-size:12.5px;font-weight:800;padding:8px 12px;border-radius:10px">🔖 SPEICHERN</span>'+
+        '</div>'+
+        '<div style="font-size:11.5px;font-weight:700;color:#fca5a5;margin-top:10px;line-height:1.45;display:flex;align-items:flex-start;gap:6px"><span style="flex-shrink:0">⚠️</span><span>Erst auf Instagram alles erledigen, dann unten bestätigen. Schein-Engagement → XP-Abzug, Diamanten-Reset &amp; Bann.</span></div>'+
+      '</div>'+
       engageBtn+
-      '<div style="font-size:10.5px;color:rgba(255,255,255,.45);text-align:center;margin-top:8px;line-height:1.4">Liken · Kommentieren · Teilen · Speichern — dann bestätigen. Schein-Engagement wird sanktioniert.</div>'+
       _alEngagers(key, c.engagers, c.engagedCount||0)+
     '</div>'+
   '</div>';
