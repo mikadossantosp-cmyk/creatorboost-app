@@ -4028,7 +4028,7 @@ async function plusPostLink(){
 function showLikerModal(msgId){const modal=document.getElementById('liker-modal');const content=document.getElementById('liker-modal-content');if(!modal||!content)return;const cached=document.getElementById('liker-rows-'+msgId);content.innerHTML=(cached&&cached.innerHTML)||'<div style="padding:var(--space-6);text-align:center;color:var(--muted);font-size:13px">Lädt…</div>';modal.classList.add('open');document.body.style.overflow='hidden';
   // Diamant-/Prismalinks rendern ihre Liker clientseitig in den Cache (liker-rows-dl-/pl-);
   // der generische Live-Fetch findet diese IDs nicht und wuerde den Cache faelschlich leeren.
-  if(String(msgId).indexOf('dl-')===0||String(msgId).indexOf('pl-')===0||String(msgId).indexOf('cl-')===0)return;
+  if(String(msgId).indexOf('dl-')===0||String(msgId).indexOf('pl-')===0||String(msgId).indexOf('cl-')===0||String(msgId).indexOf('al-')===0||String(msgId).indexOf('alp-')===0)return;
   // Live nachladen, damit die Liste auch ohne Page-Reload aktuell ist.
   fetch('/api/link-likers?msgId='+encodeURIComponent(msgId)).then(r=>r.json()).then(j=>{if(j&&typeof j.html==='string'){content.innerHTML=j.html||'<div style="padding:var(--space-6);text-align:center;color:var(--muted);font-size:13px">Noch niemand geliked</div>';}}).catch(()=>{});}
 function closeLikerModal(){const modal=document.getElementById('liker-modal');if(modal){modal.classList.remove('open');document.body.style.overflow='';} }
@@ -11484,51 +11484,39 @@ ${(()=>{
       + '}catch(e){}})();<\/script>';
   } catch(e) { return ''; }
 })()}
-${(()=>{
-  try {
-    const _st = botLogic.getStreakApi(String(myUid));
-    if (!_st || (_st.streak || 0) < 1) return '';
-    const _flame = _st.streak >= 3 ? '🔥' : '✨';
-    const _sub = _st.activeToday
-      ? (_st.best > _st.streak ? 'Bestwert: ' + _st.best + ' Tage' : 'Weiter so!')
-      : 'Heute aktiv werden, damit er nicht reißt';
-    return '<div style="margin:10px 16px 2px;padding:11px 14px;background:linear-gradient(135deg,rgba(245,158,11,0.13),rgba(239,68,68,0.06));border:1px solid rgba(245,158,11,0.28);border-radius:14px;display:flex;align-items:center;gap:11px">'
-      + '<div style="font-size:22px;line-height:1">' + _flame + '</div>'
-      + '<div style="flex:1;min-width:0"><div style="font-size:var(--fs-sm);font-weight:800;color:var(--text);line-height:1.2">' + _st.streak + ' Tage Streak</div>'
-      + '<div style="font-size:var(--fs-xs);color:var(--muted);margin-top:1px">' + _sub + '</div></div></div>';
-  } catch(e) { return ''; }
-})()}
-${(()=>{
-  // #12 Live-Aktiv-Pill: zeigt gerade aktive Creator (echtes Social-Proof, motiviert mitzumachen).
-  // Nur ab 2 Online (sonst wirkt es leer); Admins zählen nicht mit.
-  try {
-    const _on = getOnlineUids();
-    let _cnt = 0;
-    const _admins = Array.isArray(d._adminIds) ? d._adminIds.map(String) : [];
-    for (const u of _on) { if (!_admins.includes(String(u))) _cnt++; }
-    if (_cnt < 2) return '';
-    return '<div style="margin:8px 16px 2px;display:flex;align-items:center;gap:7px;font-size:var(--fs-xs);color:var(--muted)">'
-      + '<span style="width:7px;height:7px;border-radius:50%;background:#22c55e;box-shadow:0 0 6px rgba(34,197,94,.7);flex-shrink:0"></span>'
-      + '<span><b style="color:var(--text)">' + _cnt + ' Creator</b> gerade aktiv — jetzt ist Engagement am stärksten.</span></div>';
-  } catch(e) { return ''; }
-})()}
 ${tab==='heute' ? (()=>{
-  // Community-Activity-Ticker: rotierender Social-Proof aus echten Ereignissen
-  // (Ranking-Sieger, Rang-Aufstiege, neue Mitglieder). Alle Daten real, Namen escaped.
+  // Live-Leiste (eine schlanke Zeile ganz oben): aktive Creator + Streak + rotierender
+  // Community-Ticker zusammengefasst — ersetzt 3 gestapelte Blöcke (declutter).
   try {
-    const _acts = (botLogic.getCommunityActivity ? botLogic.getCommunityActivity(12) : []) || [];
-    if (_acts.length < 2) return '';
     const _esc = s => String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-    const _data = _esc(JSON.stringify(_acts.map(a=>({e:a.emoji,n:a.name,t:a.txt}))));
-    const _f = _acts[0];
-    return '<div id="cb-activity-ticker" data-acts="'+_data+'" style="margin:8px 16px 2px;padding:10px 13px;background:linear-gradient(135deg,rgba(124,58,237,0.10),rgba(167,139,250,0.04));border:1px solid rgba(124,58,237,0.22);border-radius:14px;display:flex;align-items:center;gap:9px;overflow:hidden">'
-      + '<span style="font-size:9.5px;font-weight:800;letter-spacing:.6px;color:#7c3aed;text-transform:uppercase;flex-shrink:0">Community</span>'
-      + '<div class="cbt-slot" style="flex:1;min-width:0;display:flex;align-items:center;gap:6px;font-size:var(--fs-sm);color:var(--muted);white-space:nowrap;overflow:hidden;transition:opacity .35s ease">'
+    // aktive Creator (Admins zählen nicht)
+    let _cnt = 0;
+    try { const _on = getOnlineUids(); const _admins = Array.isArray(d._adminIds) ? d._adminIds.map(String) : []; for (const u of _on) { if (!_admins.includes(String(u))) _cnt++; } } catch(e){}
+    // Streak
+    let _streakN = 0; try { const _st = botLogic.getStreakApi(String(myUid)); _streakN = (_st && _st.streak) || 0; } catch(e){}
+    // Community-Aktivität
+    const _acts = (botLogic.getCommunityActivity ? botLogic.getCommunityActivity(12) : []) || [];
+    if (_cnt < 2 && _streakN < 1 && _acts.length < 1) return '';
+    const _divider = '<span style="width:1px;height:14px;background:var(--border2);flex-shrink:0"></span>';
+    const _activeChip = _cnt >= 2 ? '<span style="display:inline-flex;align-items:center;gap:5px;flex-shrink:0;font-size:12px;font-weight:800;color:var(--text)"><span style="width:7px;height:7px;border-radius:50%;background:#22c55e;box-shadow:0 0 6px rgba(34,197,94,.7)"></span>'+_cnt+' aktiv</span>' : '';
+    const _streakChip = _streakN >= 1 ? '<span style="display:inline-flex;align-items:center;gap:4px;flex-shrink:0;font-size:12px;font-weight:800;color:#f59e0b">'+(_streakN>=3?'🔥':'✨')+' '+_streakN+(_streakN===1?' Tag':' Tage')+'</span>' : '';
+    let _ticker = '', _script = '';
+    if (_acts.length >= 1) {
+      const _data = _esc(JSON.stringify(_acts.map(a=>({e:a.emoji,n:a.name,t:a.txt}))));
+      const _f = _acts[0];
+      _ticker = '<div id="cb-activity-ticker" data-acts="'+_data+'" style="flex:1;min-width:0;overflow:hidden">'
+        + '<div class="cbt-slot" style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;transition:opacity .35s ease">'
         + '<span class="cbt-e" style="flex-shrink:0">'+_esc(_f.emoji)+'</span>'
         + '<span class="cbt-n" style="font-weight:800;color:var(--text);flex-shrink:0">'+(_f.name?_esc(_f.name)+' ':'')+'</span>'
         + '<span class="cbt-t" style="overflow:hidden;text-overflow:ellipsis">'+_esc(_f.txt)+'</span>'
-      + '</div></div>'
-      + '<script>(function(){var el=document.getElementById("cb-activity-ticker");if(!el||el._i)return;el._i=1;var a;try{a=JSON.parse(el.getAttribute("data-acts"));}catch(e){return;}if(!a||a.length<2)return;var slot=el.querySelector(".cbt-slot"),se=el.querySelector(".cbt-e"),sn=el.querySelector(".cbt-n"),st=el.querySelector(".cbt-t"),k=0;setInterval(function(){k=(k+1)%a.length;slot.style.opacity="0";setTimeout(function(){var o=a[k];se.textContent=o.e||"";sn.textContent=o.n?o.n+" ":"";st.textContent=o.t||"";slot.style.opacity="1";},350);},3800);})();</script>';
+        + '</div></div>';
+      if (_acts.length >= 2) _script = '<script>(function(){var el=document.getElementById("cb-activity-ticker");if(!el||el._i)return;el._i=1;var a;try{a=JSON.parse(el.getAttribute("data-acts"));}catch(e){return;}if(!a||a.length<2)return;var slot=el.querySelector(".cbt-slot"),se=el.querySelector(".cbt-e"),sn=el.querySelector(".cbt-n"),st=el.querySelector(".cbt-t"),k=0;setInterval(function(){k=(k+1)%a.length;slot.style.opacity="0";setTimeout(function(){var o=a[k];se.textContent=o.e||"";sn.textContent=o.n?o.n+" ":"";st.textContent=o.t||"";slot.style.opacity="1";},350);},3800);})();<\/script>';
+    }
+    // schlanke Zeile zusammensetzen, Trenner nur zwischen vorhandenen Teilen
+    let _inner = '';
+    const _add = (html) => { if (!html) return; if (_inner) _inner += _divider; _inner += html; };
+    _add(_activeChip); _add(_streakChip); _add(_ticker);
+    return '<div style="margin:8px 16px 2px;padding:9px 13px;display:flex;align-items:center;gap:10px;background:linear-gradient(135deg,rgba(124,58,237,0.08),rgba(245,158,11,0.05));border:1px solid rgba(124,58,237,0.18);border-radius:13px;overflow:hidden">'+_inner+'</div>'+_script;
   } catch(e){ return ''; }
 })() : ''}
 ${tab==='heute' ? '<div id="admin-link-card-root"></div>' : ''}
