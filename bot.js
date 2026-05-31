@@ -2862,11 +2862,11 @@ ${_isAdmin ? `<div class="plus-sheet" id="adminlink-sheet" onclick="if(event.tar
 // Werden spaeter (im Hauptscript ~Zeile 2700+) mit der echten Implementierung ueberschrieben.
 if(typeof window.markLinkVisited!=='function'){
   window.markLinkVisited=function(lid){
-    try{const v=JSON.parse(localStorage.getItem('cb_visited_links')||'{}');v[String(lid)]=Date.now();localStorage.setItem('cb_visited_links',JSON.stringify(v));}catch(e){}
+    try{const v=JSON.parse(localStorage.getItem('cb_visited_links_'+(window.MY_UID||'anon'))||'{}');v[String(lid)]=Date.now();localStorage.setItem('cb_visited_links_'+(window.MY_UID||'anon'),JSON.stringify(v));}catch(e){}
   };
 }
 if(typeof window.hasLinkVisited!=='function'){
-  window.hasLinkVisited=function(lid){try{const v=JSON.parse(localStorage.getItem('cb_visited_links')||'{}');return !!v[String(lid)];}catch(e){return false;}};
+  window.hasLinkVisited=function(lid){try{const v=JSON.parse(localStorage.getItem('cb_visited_links_'+(window.MY_UID||'anon'))||'{}');return !!v[String(lid)];}catch(e){return false;}};
 }
 </script>
 ${content}
@@ -3704,14 +3704,14 @@ function cleanInstagramUrl(u){
 // Engagement-Quality-Control: User muss erst Link besuchen, bevor er liken darf.
 // Status pro Link wird in localStorage gespeichert (cb_visited_links: { lid: timestamp }).
 function markLinkVisited(lid){
-  try{const v=JSON.parse(localStorage.getItem('cb_visited_links')||'{}');v[String(lid)]=Date.now();localStorage.setItem('cb_visited_links',JSON.stringify(v));}catch(e){}
+  try{const v=JSON.parse(localStorage.getItem('cb_visited_links_'+(window.MY_UID||'anon'))||'{}');v[String(lid)]=Date.now();localStorage.setItem('cb_visited_links_'+(window.MY_UID||'anon'),JSON.stringify(v));}catch(e){}
   // Sofortiges UI-Feedback: alle Like-Buttons für diesen Link freischalten
   try{document.querySelectorAll('.proflink-like[data-msgid="'+lid+'"], .post-action-btn[data-msgid="'+lid+'"]').forEach(b=>{b.classList.add('visited');});}catch(e){}
 }
-function hasLinkVisited(lid){try{const v=JSON.parse(localStorage.getItem('cb_visited_links')||'{}');return !!v[String(lid)];}catch(e){return false;}}
+function hasLinkVisited(lid){try{const v=JSON.parse(localStorage.getItem('cb_visited_links_'+(window.MY_UID||'anon'))||'{}');return !!v[String(lid)];}catch(e){return false;}}
 // Besuchs-Zeitstempel aus localStorage (übersteht Page-Reload beim Zurückkehren aus Instagram
 // in der TWA — window-Globals wie _dvisit_/_pvisit_/_alvisit gehen dabei verloren).
-function cbVisitTs(lid){try{const v=JSON.parse(localStorage.getItem('cb_visited_links')||'{}');return Number(v[String(lid)])||0;}catch(e){return 0;}}
+function cbVisitTs(lid){try{const v=JSON.parse(localStorage.getItem('cb_visited_links_'+(window.MY_UID||'anon'))||'{}');return Number(v[String(lid)])||0;}catch(e){return 0;}}
 // Sichtbarer In-App-Toast (ersetzt native alert(), das in der App-WebView verschluckt wird).
 function cbToast(msg, ok){try{var t=document.createElement('div');t.textContent=String(msg==null?'':msg);t.style.cssText='position:fixed;top:60px;left:50%;transform:translateX(-50%);z-index:100003;max-width:88%;box-sizing:border-box;background:'+(ok?'#16a34a':'#1f2430')+';color:#fff;padding:12px 18px;border-radius:12px;font-size:13px;font-weight:700;box-shadow:0 8px 24px rgba(0,0,0,.45);text-align:center;line-height:1.45';document.body.appendChild(t);setTimeout(function(){try{t.remove();}catch(e){}},3400);}catch(e){}}
 // Feed-Tab-Dropdown im Topbar (öffnet/schließt das ft-menu).
@@ -3730,7 +3730,7 @@ function ftToggle(btn){
 if(typeof window.pinnedEngageClick==='undefined'){
   window.pinnedEngageClick=async function(ownerUid, btn){
     const visitTs=window['_pvisit_'+ownerUid]||cbVisitTs('pin-'+ownerUid);
-    if(!visitTs||(Date.now()-visitTs)<1500){
+    if(!visitTs||(Date.now()-visitTs)<1500||(Date.now()-visitTs)>1800000){
       cbToast('Bitte erst oben auf „Auf Instagram öffnen" tippen, dort liken/kommentieren/teilen/speichern — dann hier bestätigen.');
       return;
     }
@@ -3753,7 +3753,7 @@ if(typeof window.pinnedEngageClick==='undefined'){
 (function _hydrateVisitedLikes(){
   function run(){
     try{
-      const v=JSON.parse(localStorage.getItem('cb_visited_links')||'{}');
+      const v=JSON.parse(localStorage.getItem('cb_visited_links_'+(window.MY_UID||'anon'))||'{}');
       document.querySelectorAll('.proflink-like[data-msgid], .post-action-btn[data-msgid]').forEach(b=>{
         const mid=b.getAttribute('data-msgid');
         if(mid && v[String(mid)])b.classList.add('visited');
@@ -4725,7 +4725,7 @@ async function ipfSwitchAcc(targetUid){
 }
 async function pinnedEngageClick(ownerUid, btn){
   const visitTs = window['_pvisit_' + ownerUid] || cbVisitTs('pin-' + ownerUid);
-  if (!visitTs || (Date.now() - visitTs) < 1500) {
+  if (!visitTs || (Date.now()-visitTs)<1500||(Date.now()-visitTs)>1800000) {
     cbToast('Bitte erst oben auf „Auf Instagram öffnen" tippen, dort liken/kommentieren/teilen/speichern — dann hier bestätigen.');
     return;
   }
@@ -12119,7 +12119,7 @@ async function submitSuperLink(){
   window.kollabLike = async function(postId, btn){
     btn.disabled = true; btn.textContent = '⏳ Bestätige…';
     const visitTs = window['_kvisit_'+postId];
-    if (!visitTs || (Date.now() - visitTs) < 1500) {
+    if (!visitTs || (Date.now()-visitTs)<1500||(Date.now()-visitTs)>1800000) {
       btn.disabled = false; btn.innerHTML = '❤️ Engagiert · +1 💎';
       alert('Bitte zuerst auf Instagram öffnen, liken/kommentieren/speichern/teilen — dann hier bestätigen.');
       return;
@@ -12287,7 +12287,7 @@ async function submitSuperLink(){
   }
   window.diamondLikeClick = async function(postId, btn){
     const visitTs = window['_dvisit_'+postId] || cbVisitTs(postId);
-    if (!visitTs || (Date.now() - visitTs) < 1500) {
+    if (!visitTs || (Date.now()-visitTs)<1500||(Date.now()-visitTs)>1800000) {
       cbToast('Bitte erst oben auf „Auf Instagram öffnen" tippen, dort liken/kommentieren/teilen/speichern — dann hier bestätigen.');
       return;
     }
@@ -12821,7 +12821,7 @@ async function submitSuperLink(){
   }
   window.prismaLikeClick = async function(postId, btn){
     const visitTs = window['_pvisit_'+postId] || cbVisitTs(postId);
-    if (!visitTs || (Date.now() - visitTs) < 1500) {
+    if (!visitTs || (Date.now()-visitTs)<1500||(Date.now()-visitTs)>1800000) {
       cbToast('Bitte erst oben auf „Auf Instagram öffnen" tippen, dort liken/kommentieren/teilen/speichern — dann hier bestätigen.');
       return;
     }
@@ -12937,7 +12937,7 @@ function _alUserCard(c, isPreview){
   }
   window.adminLinkEngageClick = async function(id, btn){
     var _alv = window._alvisit || cbVisitTs(id);
-    if(!_alv || (Date.now()-_alv)<1500){ cbToast('Bitte erst oben auf „Auf Instagram öffnen" tippen, dort liken/kommentieren/teilen/speichern — dann hier bestätigen.'); return; }
+    if(!_alv || (Date.now()-_alv)<1500||(Date.now()-_alv)>1800000){ cbToast('Bitte erst oben auf „Auf Instagram öffnen" tippen, dort liken/kommentieren/teilen/speichern — dann hier bestätigen.'); return; }
     if(!(await cbConfirm('🛡️ Admin-Link engagieren\\n\\nDu bestätigst:\\n✓ GELIKT\\n✓ KOMMENTIERT\\n✓ GETEILT\\n✓ GESPEICHERT\\n\\n→ Belohnung: +5 💎\\n\\nFortfahren?'))) return;
     btn.disabled=true; btn.textContent='⏳ Bestätige …';
     fetch('/api/admin-link/engage',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({postId:id})}).then(function(r){return r.json();}).then(function(j){
@@ -13105,7 +13105,7 @@ function _alUserCard(c, isPreview){
   }
   window.collabBoostLike = async function(postId, btn){
     const visitTs = window['_cbvisit_'+postId] || cbVisitTs('cb-'+postId);
-    if (!visitTs || (Date.now() - visitTs) < 1500) {
+    if (!visitTs || (Date.now()-visitTs)<1500||(Date.now()-visitTs)>1800000) {
       cbToast('Bitte erst oben auf „Auf Instagram öffnen" tippen, dort liken/kommentieren/teilen/speichern — dann hier bestätigen.');
       return;
     }
@@ -20906,7 +20906,7 @@ async function collabRequest(targetUid, btn){
   window.kollabLike = async function(postId, btn){
     btn.disabled = true; btn.textContent = '⏳ Bestätige…';
     const visitTs = window['_kvisit_'+postId];
-    if (!visitTs || (Date.now() - visitTs) < 1500) {
+    if (!visitTs || (Date.now()-visitTs)<1500||(Date.now()-visitTs)>1800000) {
       btn.disabled = false; btn.innerHTML = '❤️ Engagiert · +1 💎';
       alert('Bitte zuerst auf Instagram öffnen, liken/kommentieren/speichern/teilen — dann hier bestätigen.');
       return;
