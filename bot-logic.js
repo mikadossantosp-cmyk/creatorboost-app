@@ -3116,14 +3116,23 @@ function authEmailPassword({ email, password }) {
     email = String(email || '').toLowerCase().trim();
     password = String(password || '');
     if (!email || !password) return { ok: false, error: 'Email und Passwort erforderlich' };
-    const found = Object.entries(d.users || {}).find(([, u]) => String(u.email || '').toLowerCase() === email);
-    if (!found) return { ok: false, error: 'Email oder Passwort falsch', notRegistered: true };
-    const [uid, u] = found;
-    if (!u.password_hash) return { ok: false, error: 'noch kein Passwort gesetzt', noPassword: true };
-    if (!verifyPasswordPBKDF2(password, u.password_hash)) return { ok: false, error: 'Email oder Passwort falsch' };
-    u.appLastSeen = Date.now();
-    u.appUser = true;
-    return { ok: true, uid: String(uid), hasPassword: true };
+    // Robust gegen DUPLIKAT-Emails (z.B. nach Wiederherstellung + Neu-Registrierung mit gleicher
+    // Email): unter allen Accounts mit dieser Email in den einloggen, dessen Passwort passt —
+    // statt blind den ersten Treffer zu nehmen (sonst „Passwort falsch" obwohl es einen Account gibt).
+    const matches = Object.entries(d.users || {}).filter(([, u]) => String(u.email || '').toLowerCase() === email);
+    if (!matches.length) return { ok: false, error: 'Email oder Passwort falsch', notRegistered: true };
+    let anyWithPw = false;
+    for (const [uid, u] of matches) {
+        if (!u.password_hash) continue;
+        anyWithPw = true;
+        if (verifyPasswordPBKDF2(password, u.password_hash)) {
+            u.appLastSeen = Date.now();
+            u.appUser = true;
+            return { ok: true, uid: String(uid), hasPassword: true };
+        }
+    }
+    if (!anyWithPw) return { ok: false, error: 'noch kein Passwort gesetzt', noPassword: true };
+    return { ok: false, error: 'Email oder Passwort falsch' };
 }
 function setUserPasswordApi({ uid, password }) {
     uid = String(uid || '');

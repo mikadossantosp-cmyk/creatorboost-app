@@ -10736,6 +10736,33 @@ p{line-height:1.65;color:var(--muted)}
         if (pr && pr.ok) { _dataCacheTime = 0; refreshDataCache().catch(()=>{}); }
         return json(pr || {ok:false});
     }
+    // Admin: einen Account löschen (z.B. Duplikat mit gleicher Email). Backup landet in _deleteLog
+    // → über den Papierkorb wiederherstellbar. Admins sind in deleteUser geschützt.
+    if (path === '/api/admin/delete-user' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
+        if (!LOCAL_STORE) return json({ok:false, error:'Nicht verfügbar'});
+        const _db = await parseBody(req);
+        const _duid = String((_db && _db.uid) || '');
+        if (_duid === String(myUid)) return json({ok:false, error:'Du kannst dich nicht selbst hier löschen'});
+        const dr = await localWriteNow(() => botLogic.deleteUser({ uid: _duid }));
+        if (dr && dr.ok) { _dataCacheTime = 0; refreshDataCache().catch(()=>{}); }
+        return json(dr || {ok:false});
+    }
+    // Admin: Accounts mit derselben Email finden (Duplikat-Erkennung)
+    if (path === '/api/admin/email-duplicates' && req.method === 'GET') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
+        const _bd = await fetchBot('/data');
+        const byEmail = {};
+        for (const [uid, u] of Object.entries(_bd?.users || {})) {
+            const em = String(u.email || '').toLowerCase().trim();
+            if (!em) continue;
+            (byEmail[em] = byEmail[em] || []).push({ uid, name: u.spitzname || u.name || ('User '+uid), instagram: u.instagram || '', appCode: u.appCode || '', hasPw: !!u.password_hash, xp: Number(u.xp||0), diamonds: Number(u.diamonds||0), isSub: !!u.parent_uid });
+        }
+        const dups = Object.entries(byEmail).filter(([,arr]) => arr.length > 1).map(([email, accounts]) => ({ email, accounts }));
+        return json({ ok: true, duplicates: dups, total: dups.length });
+    }
     // Admin: Login-Link (/i/<appCode>) eines Users holen — loggt ohne Passwort automatisch ein
     if (path === '/api/admin/user-loginlink' && req.method === 'GET') {
         if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
@@ -17089,6 +17116,7 @@ function renderUserDetail(j) {
               : '<button class="dash-act danger" onclick="banUser(\\''+esc(u.uid)+'\\',true)">🚫 Bannen</button>') +
     (u.paused ? '<button class="dash-act" onclick="pauseUser(\\''+esc(u.uid)+'\\',false)">▶️ Fortsetzen</button>'
               : '<button class="dash-act danger" onclick="pauseUser(\\''+esc(u.uid)+'\\',true)">⏸️ Pausieren</button>') +
+    '<button class="dash-act danger" onclick="adminDeleteUser(\\''+esc(u.uid)+'\\',\\''+esc(u.spitzname||u.name||'User')+'\\')">🗑 Account löschen</button>' +
   '</div>';
 
   html += '<a href="/profil/'+esc(u.uid)+'" target="_blank" class="dash-act" style="display:block;margin:14px 0 0;text-decoration:none;text-align:center">→ Public Profil ansehen</a>';
@@ -17103,6 +17131,13 @@ async function sendDmTo(uid, name) {
   const r = await fetch('/api/admin/send-dm-single', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ uid, text }) });
   const j = await r.json().catch(()=>({}));
   if (j.ok) alert('✅ DM an '+name+' gesendet'); else alert('❌ '+(j.error||'Fehler'));
+}
+async function adminDeleteUser(uid, name){
+  if(!confirm('Account von '+name+' (ID '+uid+') löschen?\\n\\nNützlich z.B. um ein DUPLIKAT mit gleicher Email zu entfernen.\\nDer Account landet im Papierkorb und ist wiederherstellbar.')) return;
+  const r = await fetch('/api/admin/delete-user',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({uid:uid})});
+  const j = await r.json().catch(()=>({}));
+  if(j.ok){ alert('✅ '+name+' gelöscht (im Papierkorb wiederherstellbar).'); var m=document.querySelector('.dash-modal-bg'); if(m) m.remove(); if(typeof loadDeletedUsers==='function') loadDeletedUsers(); if(typeof refreshUsers==='function') refreshUsers(); }
+  else alert('❌ '+(j.error||'Fehler'));
 }
 async function setUserPw(uid, name){
   const pw = (await cbPrompt('Neues Passwort für '+name+' (min. 6 Zeichen).\\nDanach kann sich '+name+' mit seiner Email + diesem Passwort einloggen:'));
