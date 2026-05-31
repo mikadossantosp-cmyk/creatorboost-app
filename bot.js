@@ -3729,7 +3729,7 @@ if(typeof window.pinnedEngageClick==='undefined'){
       alert('Bitte erst auf „📸 Auf Instagram öffnen" tippen und auf Instagram LIKEN + KOMMENTIEREN + SPEICHERN + TEILEN.');
       return;
     }
-    if(!confirm('📌 Pinned-Post engagieren\\n\\nDu bestätigst:\\n✓ Auf Instagram GELIKT\\n✓ KOMMENTIERT\\n✓ GETEILT\\n✓ GESPEICHERT\\n\\n→ Belohnung: +1 💎\\n→ Schein-Engagement: Sanktionen\\n\\nFortfahren?'))return;
+    if(!(await cbConfirm('📌 Pinned-Post engagieren\\n\\nDu bestätigst:\\n✓ Auf Instagram GELIKT\\n✓ KOMMENTIERT\\n✓ GETEILT\\n✓ GESPEICHERT\\n\\n→ Belohnung: +1 💎\\n→ Schein-Engagement: Sanktionen\\n\\nFortfahren?')))return;
     btn.disabled=true;btn.dataset.engaged='1';btn.innerHTML='⏳ Bestätige …';
     try{
       const r=await fetch('/api/engage-pinned-post',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ownerUid})});
@@ -3894,7 +3894,7 @@ async function postDiamondLink(){
   const result=document.getElementById('diamond-result');
   if(!url){result.textContent='❌ Bitte Instagram-Link eingeben';return;}
   if(!url.includes('instagram.com')){result.textContent='❌ Nur Instagram-Links erlaubt';return;}
-  if(!confirm('💎 Diamantlink veröffentlichen?\\n\\nKostet 30 💎. 3 Tage Feed-Top, jeder Liker bekommt +3 💎. Bei Schein-Engagement folgen harte Strafen.')) return;
+  if(!(await cbConfirm('💎 Diamantlink veröffentlichen?\\n\\nKostet 30 💎. 3 Tage Feed-Top, jeder Liker bekommt +3 💎. Bei Schein-Engagement folgen harte Strafen.'))) return;
   const btn=document.getElementById('diamond-post-btn'); btn.disabled=true; btn.textContent='⏳ Wird veröffentlicht …';
   try {
     const r=await fetch('/api/diamond-link/create',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url,caption})});
@@ -3919,7 +3919,7 @@ async function postPrismaLink(){
   const result=document.getElementById('prisma-result');
   if(!url){result.textContent='❌ Bitte Instagram-Link eingeben';return;}
   if(!url.includes('instagram.com')){result.textContent='❌ Nur Instagram-Links erlaubt';return;}
-  if(!confirm('💠 Prismalink veröffentlichen?\\n\\nKostet 100 💎. 7 Tage Feed-Top mit Holographic-Glow, jeder Liker bekommt +7 💎. Nur 1× pro Woche. Bei Schein-Engagement folgen harte Strafen.')) return;
+  if(!(await cbConfirm('💠 Prismalink veröffentlichen?\\n\\nKostet 100 💎. 7 Tage Feed-Top mit Holographic-Glow, jeder Liker bekommt +7 💎. Nur 1× pro Woche. Bei Schein-Engagement folgen harte Strafen.'))) return;
   const btn=document.getElementById('prisma-post-btn'); btn.disabled=true; btn.textContent='⏳ Wird veröffentlicht …';
   try {
     const r=await fetch('/api/prisma-link/create',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url,caption})});
@@ -3945,7 +3945,7 @@ async function postAdminLink(){
   const result=document.getElementById('adminlink-result');
   if(!url){result.style.color='#ef4444';result.textContent='❌ Bitte Instagram-Link eingeben';return;}
   if(!url.includes('instagram.com')){result.style.color='#ef4444';result.textContent='❌ Nur Instagram-Links erlaubt';return;}
-  if(!confirm('🛡️ Admin-Link veröffentlichen?\\n\\nErscheint bei allen Usern oben im Feed, bis sie voll engagiert haben. Jeder, der engagiert, bekommt +5 💎. Läuft 14 Tage.')) return;
+  if(!(await cbConfirm('🛡️ Admin-Link veröffentlichen?\\n\\nErscheint bei allen Usern oben im Feed, bis sie voll engagiert haben. Jeder, der engagiert, bekommt +5 💎. Läuft 14 Tage.'))) return;
   const btn=document.getElementById('adminlink-post-btn'); btn.disabled=true; btn.textContent='⏳ Wird veröffentlicht …';
   try {
     const r=await fetch('/api/admin-link/create',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url,message})});
@@ -4032,6 +4032,34 @@ function showLikerModal(msgId){const modal=document.getElementById('liker-modal'
   // Live nachladen, damit die Liste auch ohne Page-Reload aktuell ist.
   fetch('/api/link-likers?msgId='+encodeURIComponent(msgId)).then(r=>r.json()).then(j=>{if(j&&typeof j.html==='string'){content.innerHTML=j.html||'<div style="padding:var(--space-6);text-align:center;color:var(--muted);font-size:13px">Noch niemand geliked</div>';}}).catch(()=>{});}
 function closeLikerModal(){const modal=document.getElementById('liker-modal');if(modal){modal.classList.remove('open');document.body.style.overflow='';} }
+// In-App-Bestätigung statt native confirm() — letztere wird in der TWA/App-WebView teils
+// verschluckt (gibt false zurück) → Aktionen (Diamant-/Prisma-/Admin-Link posten + engagieren)
+// brachen lautlos ab. cbConfirm ist ein echtes DOM-Modal und funktioniert überall. Promise<bool>.
+function cbConfirm(message, opts){
+  opts = opts || {};
+  return new Promise(function(resolve){
+    var prior = document.body.style.overflow;
+    var ov = document.createElement('div');
+    ov.style.cssText = 'position:fixed;inset:0;z-index:100002;background:rgba(0,0,0,.62);display:flex;align-items:flex-end;justify-content:center';
+    var safe = String(message==null?'':message).replace(/[&<>]/g,function(c){return ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]);});
+    var card = document.createElement('div');
+    card.style.cssText = 'background:var(--bg2,#16131f);color:var(--text,#fff);width:100%;max-width:480px;border-radius:20px 20px 0 0;padding:22px 20px;padding-bottom:calc(20px + env(safe-area-inset-bottom,0px));box-shadow:0 -12px 40px rgba(0,0,0,.55)';
+    card.innerHTML = '<div style="font-size:14.5px;line-height:1.55;white-space:pre-line;margin-bottom:18px;color:var(--text,#fff)">'+safe+'</div>';
+    var row = document.createElement('div'); row.style.cssText='display:flex;gap:10px';
+    var no = document.createElement('button'); no.type='button'; no.textContent=opts.cancel||'Abbrechen';
+    no.style.cssText='flex:1;padding:13px;border-radius:12px;border:1px solid var(--border2,rgba(255,255,255,.18));background:transparent;color:var(--text,#fff);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit';
+    var yes = document.createElement('button'); yes.type='button'; yes.textContent=opts.ok||'Bestätigen';
+    yes.style.cssText='flex:1.3;padding:13px;border-radius:12px;border:none;background:'+(opts.danger?'linear-gradient(135deg,#ef4444,#b91c1c)':'linear-gradient(135deg,#06b6d4,#0e7490)')+';color:#fff;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit';
+    function done(v){ try{ document.removeEventListener('keydown',onKey); ov.remove(); document.body.style.overflow=prior; }catch(e){} resolve(v); }
+    no.onclick=function(){done(false);};
+    yes.onclick=function(){done(true);};
+    ov.addEventListener('click',function(e){ if(e.target===ov) done(false); });
+    function onKey(e){ if(e.key==='Escape'){done(false);} else if(e.key==='Enter'){done(true);} }
+    document.addEventListener('keydown',onKey);
+    row.appendChild(no); row.appendChild(yes); card.appendChild(row); ov.appendChild(card);
+    document.body.appendChild(ov); document.body.style.overflow='hidden';
+  });
+}
 function closeReportModal(){var m=document.getElementById('report-modal');if(m)m.style.display='none';}
 function reportLiker(likerUid,contextLabel,special){
   var m=document.getElementById('report-modal');
@@ -4664,7 +4692,7 @@ async function pinnedEngageClick(ownerUid, btn){
     alert('Bitte erst auf "📸 Auf Instagram öffnen" tippen + auf Insta LIKEN, KOMMENTIEREN, SPEICHERN, TEILEN.');
     return;
   }
-  if (!confirm('📌 Pinned-Post engagieren\\n\\nDu bestätigst:\\n✓ Du hast auf Instagram GELIKT\\n✓ Du hast KOMMENTIERT\\n✓ Du hast GETEILT\\n✓ Du hast GESPEICHERT\\n\\n→ Belohnung: +1 💎\\n→ Bei Schein-Engagement: Sanktionen\\n\\nFortfahren?')) return;
+  if (!(await cbConfirm('📌 Pinned-Post engagieren\\n\\nDu bestätigst:\\n✓ Du hast auf Instagram GELIKT\\n✓ Du hast KOMMENTIERT\\n✓ Du hast GETEILT\\n✓ Du hast GESPEICHERT\\n\\n→ Belohnung: +1 💎\\n→ Bei Schein-Engagement: Sanktionen\\n\\nFortfahren?'))) return;
   btn.disabled = true; btn.textContent = '⏳ Bestätige …';
   try {
     const r = await fetch('/api/engage-pinned-post', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ownerUid})});
@@ -12226,7 +12254,7 @@ async function submitSuperLink(){
       return;
     }
     // Confirm-Popup mit Regeln
-    if (!confirm('💎 Diamantlink engagieren\\n\\nDu bestätigst mit deinem Like:\\n✓ Du hast den Post auf Instagram GELIKT\\n✓ Du hast KOMMENTIERT\\n✓ Du hast den Post GETEILT\\n✓ Du hast den Post GESPEICHERT\\n\\n→ Belohnung: +3 💎\\n→ Strafe bei Betrug: XP-Abzug + Diamonds-Reset + Bann\\n\\nFortfahren?')) return;
+    if (!(await cbConfirm('💎 Diamantlink engagieren\\n\\nDu bestätigst mit deinem Like:\\n✓ Du hast den Post auf Instagram GELIKT\\n✓ Du hast KOMMENTIERT\\n✓ Du hast den Post GETEILT\\n✓ Du hast den Post GESPEICHERT\\n\\n→ Belohnung: +3 💎\\n→ Strafe bei Betrug: XP-Abzug + Diamonds-Reset + Bann\\n\\nFortfahren?'))) return;
     btn.disabled = true; btn.textContent = '⏳ Bestätige …';
     try {
       const r = await fetch('/api/diamond-link/like', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ postId }) });
@@ -12759,7 +12787,7 @@ async function submitSuperLink(){
       alert('Bitte erst auf den Instagram-Link tippen und LIKEN + KOMMENTIEREN + TEILEN + SPEICHERN.');
       return;
     }
-    if (!confirm('💠 Prismalink engagieren\\n\\nDu bestätigst mit deinem Like:\\n✓ Du hast den Post auf Instagram GELIKT\\n✓ Du hast KOMMENTIERT\\n✓ Du hast den Post GETEILT\\n✓ Du hast den Post GESPEICHERT\\n\\n→ Belohnung: +7 💎\\n→ Strafe bei Betrug: XP-Abzug + Diamonds-Reset + Bann\\n\\nFortfahren?')) return;
+    if (!(await cbConfirm('💠 Prismalink engagieren\\n\\nDu bestätigst mit deinem Like:\\n✓ Du hast den Post auf Instagram GELIKT\\n✓ Du hast KOMMENTIERT\\n✓ Du hast den Post GETEILT\\n✓ Du hast den Post GESPEICHERT\\n\\n→ Belohnung: +7 💎\\n→ Strafe bei Betrug: XP-Abzug + Diamonds-Reset + Bann\\n\\nFortfahren?'))) return;
     btn.disabled = true; btn.textContent = '⏳ Bestätige …';
     try {
       const r = await fetch('/api/prisma-link/like', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ postId }) });
@@ -12869,9 +12897,9 @@ function _alUserCard(c, isPreview){
   function load(){
     fetch('/api/admin-link/card').then(function(r){return r.json();}).then(function(j){ render(j&&j.card); }).catch(function(){ root.innerHTML=''; });
   }
-  window.adminLinkEngageClick = function(id, btn){
+  window.adminLinkEngageClick = async function(id, btn){
     if(!window._alvisit || (Date.now()-window._alvisit)<1500){ alert('Bitte erst auf den Instagram-Link tippen und LIKEN + KOMMENTIEREN + TEILEN + SPEICHERN.'); return; }
-    if(!confirm('🛡️ Admin-Link engagieren\\n\\nDu bestätigst:\\n✓ GELIKT\\n✓ KOMMENTIERT\\n✓ GETEILT\\n✓ GESPEICHERT\\n\\n→ Belohnung: +5 💎\\n\\nFortfahren?')) return;
+    if(!(await cbConfirm('🛡️ Admin-Link engagieren\\n\\nDu bestätigst:\\n✓ GELIKT\\n✓ KOMMENTIERT\\n✓ GETEILT\\n✓ GESPEICHERT\\n\\n→ Belohnung: +5 💎\\n\\nFortfahren?'))) return;
     btn.disabled=true; btn.textContent='⏳ Bestätige …';
     fetch('/api/admin-link/engage',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({postId:id})}).then(function(r){return r.json();}).then(function(j){
       if(j.ok){ load(); } else { btn.disabled=false; btn.innerHTML='🛡️ Engagiert · +5 💎'; alert('❌ '+(j.message||j.error||'Fehler')); }
