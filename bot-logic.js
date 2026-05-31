@@ -997,13 +997,15 @@ const ITEM_PRICES = {
     banner_sunset: 5, banner_peach: 5, banner_mint: 5, banner_forest: 5,
     banner_ocean: 7, banner_sky: 7, banner_lavender: 7, banner_rose: 7,
     banner_gold: 10, banner_candy: 10, banner_coral: 10, banner_aurora: 10,
-    // Premium-„50 Diamanten Rahmen" (PNG) — werden ergänzt, sobald die Bilder vorliegen.
+    // Premium-„50 Diamanten Rahmen" (PNG)
+    pframe_fire: 50, pframe_gold: 50, pframe_ice: 50, pframe_crystal: 50, pframe_bubble: 50,
 };
 const ITEM_NAMES = {
     ring_flame: '🔥 Flame Ring', ring_ocean: '🌊 Ocean Ring', ring_gold: '✨ Gold Ring', ring_purple: '🔮 Cosmic Ring', ring_rainbow: '🌈 Rainbow Ring', ring_diamond: '💎 Diamond Ring',
     banner_sunset: '🌅 Sunset Banner', banner_ocean: '🌊 Ocean Banner', banner_forest: '🌿 Forest Banner', banner_candy: '🍭 Candy Banner',
     banner_sky: '☁️ Sky Blue Banner', banner_lavender: '💜 Lavender Banner', banner_mint: '🌱 Mint Banner', banner_peach: '🍑 Peach Banner',
     banner_gold: '✨ Golden Hour Banner', banner_coral: '🪸 Coral Banner', banner_aurora: '🌌 Aurora Banner', banner_rose: '🌹 Rose Gold Banner',
+    pframe_fire: '🔥 Fire Ring', pframe_gold: '👑 Gold Ring', pframe_ice: '🧊 Ice Ring', pframe_crystal: '🔷 Crystal Ring', pframe_bubble: '🫧 Bubble Ring',
 };
 function buyItemApi({ uid, itemId }) {
     if (!uid || !itemId) return { ok: false, error: 'Fehlende Parameter' };

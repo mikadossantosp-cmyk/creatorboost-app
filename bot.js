@@ -849,17 +849,19 @@ const RING_ITEMS = [
     { id: 'ring_purple',  name: 'Cosmic Ring',  emoji: '🔮', price: 12, shadow: '0 0 0 3px #e040fb, 0 0 0 6px #9c27b0',   gradient: 'linear-gradient(135deg,#9c27b0,#e040fb)', desc: 'Mystisches Kosmosleuchten' },
     { id: 'ring_rainbow', name: 'Rainbow Ring', emoji: '🌈', price: 15, shadow: '0 0 0 3px #ff9900, 0 0 0 6px #cc5de8',   gradient: 'linear-gradient(135deg,#ff0000,#ff9900,#00cc00,#0000ff,#cc5de8)', desc: 'Buntes Regenbogenleuchten' },
     { id: 'ring_diamond', name: 'Diamond Ring', emoji: '💎', price: 20, shadow: '0 0 0 3px #b9f2ff, 0 0 0 6px #a78bfa',   gradient: 'linear-gradient(135deg,#a78bfa,#b9f2ff,#ffffff)', desc: 'Funkelnder Diamantglanz' },
-    // ── Premium-„50 Diamanten Rahmen" (PNG-basiert) — werden aus echten Bild-Dateien in
-    //    assets/rings/<id>.png gerendert (img:true). Pro Ring: Eintrag hier + ITEM_PRICES/ITEM_NAMES
-    //    (bot-logic.js) + die PNG-Datei. (Alte CSS-Glow-Ringe wurden auf Wunsch entfernt.)
-    // (noch keine PNG-Ringe definiert — werden ergänzt, sobald die Bilder vorliegen)
+    // ── Premium-„50 Diamanten Rahmen" (PNG-basiert) — gerendert aus assets/rings/<id>.png (img:true). ──
+    { id: 'pframe_fire',    name: 'Fire Ring',    emoji: '🔥', price: 50, premium: true, img: true, desc: 'Lodernder Feuerkranz' },
+    { id: 'pframe_gold',    name: 'Gold Ring',    emoji: '👑', price: 50, premium: true, img: true, desc: 'Goldener Prachtrahmen' },
+    { id: 'pframe_ice',     name: 'Ice Ring',     emoji: '🧊', price: 50, premium: true, img: true, desc: 'Eiskristall-Kranz' },
+    { id: 'pframe_crystal', name: 'Crystal Ring', emoji: '🔷', price: 50, premium: true, img: true, desc: 'Funkelnder Kristallrahmen' },
+    { id: 'pframe_bubble',  name: 'Bubble Ring',  emoji: '🫧', price: 50, premium: true, img: true, desc: 'Schillernder Perlenkranz' },
     // ── Spezial-Rahmen — NICHT kaufbar (special:true → nicht im Shop). Verdient/rollenbasiert,
     //    auswählbar in der Profil-„Tasche" wenn berechtigt (Builder-Rang bzw. Admin). ──
     { id: 'frame_builder_1', name: 'Builder I Rahmen',     emoji: '🌱', special: true, tier: 1, r1:'#6ee7b7', r2:'#059669', rg:'rgba(52,211,153,0.9)',  gradient: 'linear-gradient(135deg,#059669,#34d399)',        desc: 'Community Builder I — Rang-Rahmen' },
     { id: 'frame_builder_2', name: 'Builder II Rahmen',    emoji: '🤝', special: true, tier: 2, r1:'#fcd34d', r2:'#d97706', rg:'rgba(251,191,36,0.9)',  gradient: 'linear-gradient(135deg,#d97706,#fbbf24)',        desc: 'Community Builder II — Rang-Rahmen' },
     { id: 'frame_builder_3', name: 'Builder III Rahmen',   emoji: '🏗️', special: true, tier: 3, r1:'#67e8f9', r2:'#0891b2', rg:'rgba(34,211,238,0.9)',  gradient: 'linear-gradient(135deg,#0891b2,#22d3ee)',        desc: 'Community Builder III — Rang-Rahmen' },
     { id: 'frame_builder_4', name: 'Builder Elite Rahmen', emoji: '🏛️', special: true, tier: 4, r1:'#ddd6fe', r2:'#7c3aed', rg:'rgba(167,139,250,0.95)', gradient: 'linear-gradient(135deg,#7c3aed,#c4b5fd,#e9d5ff)', desc: 'Community Builder Elite — Rang-Rahmen', spin: true },
-    { id: 'frame_admin',     name: 'Admin Rahmen',         emoji: '🛡️', special: true, admin: true, r1:'#ffd700', r2:'#1e40af', rg:'rgba(56,189,248,0.85)', gradient: 'linear-gradient(135deg,#1e3a8a,#ffd700,#38bdf8)', desc: 'Exklusiver Admin-Rahmen (Gold & Blau)', spin: true },
+    { id: 'frame_admin',     name: 'Admin Rahmen',         emoji: '🛡️', special: true, admin: true, img: true, desc: 'Exklusiver Admin-Rahmen (Gold & Blau)' },
 ];
 
 const BANNER_ITEMS = [
