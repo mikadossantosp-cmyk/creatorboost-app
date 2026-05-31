@@ -10687,6 +10687,23 @@ p{line-height:1.65;color:var(--muted)}
         if (!LOCAL_STORE) return json({ok:true, inviters:[], totalInviters:0, totalInvites:0, totalActive:0});
         return json(botLogic.referralOverviewApi());
     }
+    // ── Papierkorb: gelöschte Accounts auflisten + wiederherstellen (Admin) ──
+    if (path === '/api/admin/deleted-users' && req.method === 'GET') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
+        if (!LOCAL_STORE) return json({ok:true, deleted:[], total:0});
+        return json(botLogic.deletedUsersListApi());
+    }
+    if (path === '/api/admin/restore-user' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
+        if (!LOCAL_STORE) return json({ok:false, error:'Nicht verfügbar'});
+        const _rb = await parseBody(req);
+        const _ruid = String((_rb && _rb.uid) || '');
+        const r = await localWrite(() => botLogic.restoreDeletedUserApi({ uid: _ruid }));
+        if (r && r.ok) { _dataCacheTime = 0; refreshDataCache().catch(()=>{}); }
+        return json(r || {ok:false});
+    }
     if (path === '/api/admin/referral-decide' && req.method === 'POST') {
         if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
         if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
@@ -16565,6 +16582,19 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
       </div>
     </section>
 
+    <!-- Papierkorb: gelöschte Accounts wiederherstellen -->
+    <section class="dash-section">
+      <div class="dash-section-hdr">
+        <div class="dash-section-title">🗑 Papierkorb — gelöschte Accounts <span id="trash-badge" style="display:none;background:#f59e0b;color:#000;font-size:11px;font-weight:800;padding:1px 8px;border-radius:99px;margin-left:6px"></span></div>
+        <div class="dash-section-sub">Letzte 50 Löschungen · Profil/XP/💎/Badges/Items wiederherstellbar (Posts/Likes/Kommentare/Follows nicht)</div>
+      </div>
+      <div class="dash-section-body">
+        <div id="trash-list" style="display:flex;flex-direction:column;gap:8px;max-height:420px;overflow-y:auto">
+          <div style="padding:18px;text-align:center;color:var(--dsub);font-size:12.5px">Lädt …</div>
+        </div>
+      </div>
+    </section>
+
     <!-- Wer hat wen eingeladen (komplette Referral-Übersicht) -->
     <section class="dash-section">
       <div class="dash-section-hdr">
@@ -17275,6 +17305,42 @@ async function decideReferral(inviteeUid, approve, btn){
     if(j.ok){ loadReferralPending(); loadReferralOverview(); }
     else { alert('❌ '+(j.error||'Fehler')); if(btn){btn.disabled=false;btn.textContent=approve?'✓ Bestätigen':'✕ Ablehnen';} }
   }catch(e){ alert('❌ '+e.message); if(btn){btn.disabled=false;} }
+}
+async function loadDeletedUsers(){
+  const box = document.getElementById('trash-list');
+  const badge = document.getElementById('trash-badge');
+  if(!box) return;
+  try{
+    const r = await fetch('/api/admin/deleted-users');
+    const j = await r.json();
+    const list = (j && j.deleted) || [];
+    if(badge){ if(list.length){ badge.textContent = list.length; badge.style.display='inline-block'; } else badge.style.display='none'; }
+    if(!list.length){ box.innerHTML = '<div style="padding:18px;text-align:center;color:var(--dsub);font-size:12.5px">Keine gelöschten Accounts im Backup ✓</div>'; return; }
+    box.innerHTML = list.map(function(u){
+      var ig = (u.instagram||'').replace(/[^a-zA-Z0-9._]/g,'');
+      var when = u.deletedAt ? new Date(u.deletedAt).toLocaleString('de-DE') : '?';
+      return '<div style="background:var(--dink);border:1px solid var(--dline);border-radius:12px;padding:12px 14px">'
+        + '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
+        + '<span style="font-size:13.5px;font-weight:800;color:var(--text)">'+(u.name||'User')+'</span>'
+        + (u.isSub?'<span style="font-size:9.5px;font-weight:800;color:#a78bfa;background:rgba(167,139,250,.15);padding:1px 6px;border-radius:99px">SUB</span>':'')
+        + (ig?'<a href="https://instagram.com/'+ig+'" target="_blank" rel="noopener" style="font-size:11.5px;color:#06b6d4;font-weight:700;text-decoration:none">@'+ig+'</a>':'')
+        + '</div>'
+        + '<div style="font-size:11px;color:var(--dsub);margin-top:4px">ID '+u.uid+(u.email?' · '+u.email:'')+' · ⭐ '+u.xp+' XP · 💎 '+u.diamonds+'</div>'
+        + '<div style="font-size:11px;color:var(--dsub);margin-top:2px">Gelöscht: '+when+'</div>'
+        + '<button onclick="restoreUser(\\''+u.uid+'\\',this)" style="margin-top:9px;width:100%;background:#22c55e;color:#fff;border:none;border-radius:8px;padding:9px;font-size:12px;font-weight:700;cursor:pointer">♻️ Wiederherstellen</button>'
+        + '</div>';
+    }).join('');
+  }catch(e){ box.innerHTML = '<div style="padding:18px;text-align:center;color:var(--dsub);font-size:12.5px">Fehler beim Laden</div>'; }
+}
+async function restoreUser(uid, btn){
+  if(!confirm('Account '+uid+' wiederherstellen?\\n\\nProfil, XP, Diamanten, Badges & Items kommen zurück.\\nPosts, Likes, Kommentare & Follows sind NICHT im Backup und bleiben verloren.')) return;
+  if(btn){ btn.disabled=true; btn.textContent='⏳ …'; }
+  try{
+    const r = await fetch('/api/admin/restore-user',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({uid:uid})});
+    const j = await r.json();
+    if(j.ok){ alert('✅ Wiederhergestellt: '+(j.name||uid)+(j.hasEmail?'\\n\\nDer User kann sich wieder mit seiner Email einloggen.':'')); loadDeletedUsers(); }
+    else { alert('❌ '+(j.error||'Fehler')); if(btn){btn.disabled=false;btn.textContent='♻️ Wiederherstellen';} }
+  }catch(e){ alert('❌ '+e.message); if(btn){btn.disabled=false;btn.textContent='♻️ Wiederherstellen';} }
 }
 async function loadReferralOverview(){
   const box = document.getElementById('ref-overview-list');
@@ -18299,6 +18365,8 @@ loadReferralPending();
 setInterval(loadReferralPending, 60000);
 loadReferralOverview();
 setInterval(loadReferralOverview, 60000);
+loadDeletedUsers();
+setInterval(loadDeletedUsers, 60000);
 // Dashboard-Sektionen ein-/ausklappbar — a11y-konform (Keyboard + ARIA) & Zustand persistent (idempotent)
 (function makeSectionsCollapsible(){
   var STORE_KEY = 'cb_dash_collapsed';

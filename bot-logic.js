@@ -2318,6 +2318,62 @@ function userDeleteSelfApi({ uid }) {
     if (!result || !result.ok) return { ok: false, error: (result && result.error) || 'Löschung fehlgeschlagen' };
     return { ok: true, name: result.name, deletedSubs };
 }
+// ── Papierkorb: gelöschte Accounts auflisten + wiederherstellen ──
+// _deleteUser legt vor jeder Löschung ein vollständiges Backup des User-Objekts in
+// d._deleteLog ab (letzte 50). Profil/XP/Diamanten/Badges/Items/Email+Login sind damit
+// wiederherstellbar. NICHT im Backup (aus geteilten Collections gepurgt): Posts/Links,
+// vergebene Likes, Kommentare, Follow-Beziehungen, Chatverläufe → bleiben verloren.
+function deletedUsersListApi() {
+    const log = Array.isArray(d._deleteLog) ? d._deleteLog : [];
+    const out = [];
+    // neueste zuerst; nur Einträge, deren uid aktuell NICHT (wieder) existiert
+    for (let i = log.length - 1; i >= 0; i--) {
+        const e = log[i];
+        if (!e || !e.backup) continue;
+        const uid = String(e.uid);
+        if (d.users[uid]) continue; // schon (wieder) aktiv
+        const b = e.backup;
+        out.push({
+            uid,
+            name: b.spitzname || b.name || ('User ' + uid),
+            instagram: b.instagram || '',
+            email: b.email || '',
+            xp: Number(b.xp || 0),
+            diamonds: Number(b.diamonds || 0),
+            isSub: !!b.parent_uid,
+            parentUid: b.parent_uid ? String(b.parent_uid) : '',
+            deletedAt: e.timestamp || 0,
+        });
+    }
+    return { ok: true, deleted: out, total: out.length };
+}
+function restoreDeletedUserApi({ uid }) {
+    uid = String(uid || '');
+    if (!uid) return { ok: false, error: 'uid fehlt' };
+    if (d.users[uid]) return { ok: false, error: 'Account existiert bereits — nichts wiederherzustellen' };
+    const log = Array.isArray(d._deleteLog) ? d._deleteLog : [];
+    let idx = -1;
+    for (let i = log.length - 1; i >= 0; i--) { if (log[i] && String(log[i].uid) === uid && log[i].backup) { idx = i; break; } }
+    if (idx < 0) return { ok: false, error: 'Kein Backup für diese ID gefunden (evtl. älter als die letzten 50 Löschungen)' };
+    const entry = log[idx];
+    const restored = JSON.parse(JSON.stringify(entry.backup));
+    if (!d.users) d.users = {};
+    d.users[uid] = restored;
+    // Eltern-/Sub-Verknüpfung soweit möglich heilen, damit der Account-Switcher den Sub wieder zeigt
+    if (restored.parent_uid && d.users[String(restored.parent_uid)]) {
+        const par = d.users[String(restored.parent_uid)];
+        if (Array.isArray(par.subUids)) { if (!par.subUids.map(String).includes(uid)) par.subUids.push(uid); }
+        else if (!par.subUid) par.subUid = uid;
+    }
+    // Backup-Eintrag entfernen, damit nicht doppelt wiederhergestellt wird
+    d._deleteLog.splice(idx, 1);
+    return {
+        ok: true, uid,
+        name: restored.spitzname || restored.name || ('User ' + uid),
+        hasEmail: !!restored.email,
+        note: 'Profil, XP, Diamanten, Badges & Items wiederhergestellt. Posts/Links, vergebene Likes, Kommentare & Follows waren NICHT im Backup und bleiben verloren.',
+    };
+}
 
 // ════════ ADMIN-AKTIONEN (clean: nur Daten + In-App-DM) ════════
 function addWarn({ uid, reason }) {
@@ -4495,7 +4551,7 @@ module.exports = {
     followApi,
     addWarn, removeWarn, resetUser, removeXp, startXpEvent, startDiamondEvent, stopEvent,
     banUserApi, unbanUserApi, pauseUserApi, unpauseUserApi, adminSuspendPostingApi,
-    mergeUsers, deleteUser, userDeleteSelfApi,
+    mergeUsers, deleteUser, userDeleteSelfApi, deletedUsersListApi, restoreDeletedUserApi,
     sendMessageApi, sendDmSingleApi, adminPostfachReply, markMessagesRead, editMessageApi, deleteDmApi, reactDmMsgApi,
     appChatSend, appChatMarkRead, appChatDelete, appChatReact, getAppChat,
     mindsetSetAnswerApi, runMindsetPickApi, mindsetAdminPickApi, mindsetAdminSkipApi, mindsetAdminBlastApi, mindsetAdminRestoreApi, isMindsetLocked,
