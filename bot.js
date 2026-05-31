@@ -3709,6 +3709,11 @@ function markLinkVisited(lid){
   try{document.querySelectorAll('.proflink-like[data-msgid="'+lid+'"], .post-action-btn[data-msgid="'+lid+'"]').forEach(b=>{b.classList.add('visited');});}catch(e){}
 }
 function hasLinkVisited(lid){try{const v=JSON.parse(localStorage.getItem('cb_visited_links')||'{}');return !!v[String(lid)];}catch(e){return false;}}
+// Besuchs-Zeitstempel aus localStorage (übersteht Page-Reload beim Zurückkehren aus Instagram
+// in der TWA — window-Globals wie _dvisit_/_pvisit_/_alvisit gehen dabei verloren).
+function cbVisitTs(lid){try{const v=JSON.parse(localStorage.getItem('cb_visited_links')||'{}');return Number(v[String(lid)])||0;}catch(e){return 0;}}
+// Sichtbarer In-App-Toast (ersetzt native alert(), das in der App-WebView verschluckt wird).
+function cbToast(msg, ok){try{var t=document.createElement('div');t.textContent=String(msg==null?'':msg);t.style.cssText='position:fixed;top:60px;left:50%;transform:translateX(-50%);z-index:100003;max-width:88%;box-sizing:border-box;background:'+(ok?'#16a34a':'#1f2430')+';color:#fff;padding:12px 18px;border-radius:12px;font-size:13px;font-weight:700;box-shadow:0 8px 24px rgba(0,0,0,.45);text-align:center;line-height:1.45';document.body.appendChild(t);setTimeout(function(){try{t.remove();}catch(e){}},3400);}catch(e){}}
 // Feed-Tab-Dropdown im Topbar (öffnet/schließt das ft-menu).
 function ftToggle(btn){
   const wrap = btn.closest('.ft-wrap');
@@ -3724,9 +3729,9 @@ function ftToggle(btn){
 // Shared pinnedEngageClick — wird im /feed Pinned-Story-Modal und auf /profil/{uid} genutzt.
 if(typeof window.pinnedEngageClick==='undefined'){
   window.pinnedEngageClick=async function(ownerUid, btn){
-    const visitTs=window['_pvisit_'+ownerUid];
+    const visitTs=window['_pvisit_'+ownerUid]||cbVisitTs('pin-'+ownerUid);
     if(!visitTs||(Date.now()-visitTs)<1500){
-      alert('Bitte erst auf „📸 Auf Instagram öffnen" tippen und auf Instagram LIKEN + KOMMENTIEREN + SPEICHERN + TEILEN.');
+      cbToast('Bitte erst oben auf „Auf Instagram öffnen" tippen, dort liken/kommentieren/teilen/speichern — dann hier bestätigen.');
       return;
     }
     if(!(await cbConfirm('📌 Pinned-Post engagieren\\n\\nDu bestätigst:\\n✓ Auf Instagram GELIKT\\n✓ KOMMENTIERT\\n✓ GETEILT\\n✓ GESPEICHERT\\n\\n→ Belohnung: +1 💎\\n→ Schein-Engagement: Sanktionen\\n\\nFortfahren?')))return;
@@ -4687,9 +4692,9 @@ async function ipfSwitchAcc(targetUid){
   } catch(e) { alert('Netzwerk-Fehler'); }
 }
 async function pinnedEngageClick(ownerUid, btn){
-  const visitTs = window['_pvisit_' + ownerUid];
+  const visitTs = window['_pvisit_' + ownerUid] || cbVisitTs('pin-' + ownerUid);
   if (!visitTs || (Date.now() - visitTs) < 1500) {
-    alert('Bitte erst auf "📸 Auf Instagram öffnen" tippen + auf Insta LIKEN, KOMMENTIEREN, SPEICHERN, TEILEN.');
+    cbToast('Bitte erst oben auf „Auf Instagram öffnen" tippen, dort liken/kommentieren/teilen/speichern — dann hier bestätigen.');
     return;
   }
   if (!(await cbConfirm('📌 Pinned-Post engagieren\\n\\nDu bestätigst:\\n✓ Du hast auf Instagram GELIKT\\n✓ Du hast KOMMENTIERT\\n✓ Du hast GETEILT\\n✓ Du hast GESPEICHERT\\n\\n→ Belohnung: +1 💎\\n→ Bei Schein-Engagement: Sanktionen\\n\\nFortfahren?'))) return;
@@ -4784,7 +4789,7 @@ ${(()=>{
     </div>
     ${isOwn ? `<a href="${htmlEsc(safeUrl(pl))}" target="_blank" rel="noopener noreferrer" style="display:block;text-align:center;padding:9px;background:linear-gradient(135deg,#ec4899,#a855f7);color:#fff;border-radius:9px;font-size:12.5px;font-weight:700;text-decoration:none">→ Reel öffnen</a>` : `
     <div style="display:flex;gap:var(--space-2)">
-      <a href="${htmlEsc(safeUrl(pl))}" target="_blank" rel="noopener noreferrer" id="pinned-visit-${uid}" onclick="window._pvisit_${uid}=Date.now()" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:10px;background:linear-gradient(135deg,#ec4899,#a855f7);color:#fff;border-radius:9px;font-size:12.5px;font-weight:700;text-decoration:none;position:relative">
+      <a href="${htmlEsc(safeUrl(pl))}" target="_blank" rel="noopener noreferrer" id="pinned-visit-${uid}" onclick="window._pvisit_${uid}=Date.now();markLinkVisited('pin-${uid}')" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:10px;background:linear-gradient(135deg,#ec4899,#a855f7);color:#fff;border-radius:9px;font-size:12.5px;font-weight:700;text-decoration:none;position:relative">
         <span style="position:absolute;left:8px;top:50%;transform:translateY(-50%);width:18px;height:18px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900">1</span>
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17" cy="7" r="1.1" fill="currentColor" stroke="none"/></svg>Auf Instagram öffnen
       </a>
@@ -10975,8 +10980,9 @@ window.closePinnedStory = function(){
   if(m)m.style.display = 'none';
 };
 window.onPinVisitStory = function(uid){
-  // Mark visit-timestamp, then open Instagram URL in new tab
+  // Mark visit-timestamp (window + localStorage, übersteht Reload beim Zurückkehren), then open
   window['_pvisit_'+uid] = Date.now();
+  try{ markLinkVisited('pin-'+uid); }catch(e){}
   const s = (window._pinnedStoriesData||[]).find(x=>String(x.uid)===String(uid));
   if(!s)return;
   // Get pinned URL from server-rendered data — already in JSON? No, we stripped it for privacy.
@@ -12127,7 +12133,7 @@ async function submitSuperLink(){
         '</div>' +
         '<div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;font-size:13.5px;font-weight:700"><a href="/profil/'+esc(p.uid)+'" style="color:var(--text);text-decoration:none">'+aName+'</a>'+(p.author&&p.author.roleBadgeHtml?p.author.roleBadgeHtml:'')+(aHandle?'<span style="color:#06b6d4;font-weight:500;font-size:12px">'+aHandle+'</span>':'')+'</div>' +
         (p.caption ? '<div style="font-size:13px;color:var(--text);line-height:1.5;margin:6px 0 8px">'+esc(p.caption)+'</div>' : '') +
-        '<a href="'+esc(cleanInstagramUrl(p.url))+'" target="_blank" rel="noopener noreferrer" onclick="window._dvisit_'+p.id+'=Date.now()" style="display:flex;align-items:center;justify-content:center;gap:var(--space-2);padding:var(--space-4);background:linear-gradient(135deg,#ec4899,#a855f7);color:#fff;border-radius:12px;font-size:14.5px;font-weight:800;text-decoration:none;margin-bottom:10px;box-shadow:0 4px 14px rgba(236,72,153,.25);position:relative"><span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900">1</span><span style="color:#fff;font-weight:800;display:inline-flex;align-items:center;gap:7px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17" cy="7" r="1.1" fill="currentColor" stroke="none"/></svg>Auf Instagram öffnen</span><span style="font-size:18px;margin-left:var(--space-1)">→</span></a>' +
+        '<a href="'+esc(cleanInstagramUrl(p.url))+'" target="_blank" rel="noopener noreferrer" onclick="window._dvisit_'+p.id+'=Date.now();markLinkVisited(\\''+p.id+'\\')" style="display:flex;align-items:center;justify-content:center;gap:var(--space-2);padding:var(--space-4);background:linear-gradient(135deg,#ec4899,#a855f7);color:#fff;border-radius:12px;font-size:14.5px;font-weight:800;text-decoration:none;margin-bottom:10px;box-shadow:0 4px 14px rgba(236,72,153,.25);position:relative"><span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900">1</span><span style="color:#fff;font-weight:800;display:inline-flex;align-items:center;gap:7px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17" cy="7" r="1.1" fill="currentColor" stroke="none"/></svg>Auf Instagram öffnen</span><span style="font-size:18px;margin-left:var(--space-1)">→</span></a>' +
         '<div style="margin-bottom:10px;padding:13px 14px;background:rgba(245,158,11,0.13);border:2.5px solid #f59e0b;border-radius:13px;box-shadow:0 0 0 3px rgba(245,158,11,0.18),0 4px 14px rgba(245,158,11,0.20)">' +
           '<div style="font-size:13.5px;font-weight:900;color:#f59e0b;text-transform:uppercase;letter-spacing:0.6px;margin-bottom:7px;display:flex;align-items:center;gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M10.3 4 2 18.3A1.6 1.6 0 0 0 3.4 20.7h17.2A1.6 1.6 0 0 0 22 18.3L13.7 4a1.6 1.6 0 0 0-3.4 0z"/><line x1="12" y1="9.5" x2="12" y2="13.5"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>FULL ENGAGEMENT PFLICHT</div>' +
           '<div style="font-size:13.5px;font-weight:800;color:var(--text);line-height:1.5;display:flex;flex-wrap:wrap;align-items:center;gap:5px 9px"><span style="display:inline-flex;align-items:center;gap:var(--space-1)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 5.1a5.4 5.4 0 0 0-7.7 0l-1.1 1.1-1.1-1.1A5.4 5.4 0 1 0 3.2 12.8l1.1 1.1L12 21.5l7.7-7.6 1.1-1.1a5.4 5.4 0 0 0 0-7.7z"/></svg>LIKEN</span><span style="opacity:.35">·</span><span style="display:inline-flex;align-items:center;gap:var(--space-1)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-12.5 7.5L3 20.5l1.5-5.5A8.5 8.5 0 1 1 21 11.5z"/></svg>KOMMENTIEREN</span><span style="opacity:.35">·</span><span style="display:inline-flex;align-items:center;gap:var(--space-1)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><polyline points="8 6 12 2 16 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>TEILEN</span><span style="opacity:.35">·</span><span style="display:inline-flex;align-items:center;gap:var(--space-1)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-4.5L5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>SPEICHERN</span></div>' +
@@ -12248,9 +12254,9 @@ async function submitSuperLink(){
     };
   }
   window.diamondLikeClick = async function(postId, btn){
-    const visitTs = window['_dvisit_'+postId];
+    const visitTs = window['_dvisit_'+postId] || cbVisitTs(postId);
     if (!visitTs || (Date.now() - visitTs) < 1500) {
-      alert('Bitte erst auf den Instagram-Link tippen und LIKEN + KOMMENTIEREN + TEILEN + SPEICHERN.');
+      cbToast('Bitte erst oben auf „Auf Instagram öffnen" tippen, dort liken/kommentieren/teilen/speichern — dann hier bestätigen.');
       return;
     }
     // Confirm-Popup mit Regeln
@@ -12718,7 +12724,7 @@ async function submitSuperLink(){
         '</div>' +
         '<div style="font-size:13.5px;font-weight:700"><a href="/profil/'+esc(p.uid)+'" style="color:#fff;text-decoration:none">'+aName+'</a> '+(aHandle?'<span style="color:#c9a8ff;font-weight:500;font-size:12px">'+aHandle+'</span>':'')+'</div>' +
         (p.caption ? '<div style="font-size:13px;color:rgba(255,255,255,0.82);line-height:1.5;margin:6px 0 8px">'+esc(p.caption)+'</div>' : '') +
-        '<a href="'+esc(cleanInstagramUrl(p.url))+'" target="_blank" rel="noopener noreferrer" onclick="window._pvisit_'+p.id+'=Date.now()" style="display:flex;align-items:center;justify-content:center;gap:var(--space-2);padding:var(--space-4);background:linear-gradient(135deg,#ec4899,#a855f7);color:#fff;border-radius:12px;font-size:14.5px;font-weight:800;text-decoration:none;margin-bottom:10px;box-shadow:0 6px 18px rgba(168,85,247,.45);position:relative"><span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900">1</span><span style="color:#fff;font-weight:800;display:inline-flex;align-items:center;gap:7px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17" cy="7" r="1.1" fill="currentColor" stroke="none"/></svg>Auf Instagram öffnen</span><span style="font-size:18px;margin-left:var(--space-1)">→</span></a>' +
+        '<a href="'+esc(cleanInstagramUrl(p.url))+'" target="_blank" rel="noopener noreferrer" onclick="window._pvisit_'+p.id+'=Date.now();markLinkVisited(\\''+p.id+'\\')" style="display:flex;align-items:center;justify-content:center;gap:var(--space-2);padding:var(--space-4);background:linear-gradient(135deg,#ec4899,#a855f7);color:#fff;border-radius:12px;font-size:14.5px;font-weight:800;text-decoration:none;margin-bottom:10px;box-shadow:0 6px 18px rgba(168,85,247,.45);position:relative"><span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900">1</span><span style="color:#fff;font-weight:800;display:inline-flex;align-items:center;gap:7px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17" cy="7" r="1.1" fill="currentColor" stroke="none"/></svg>Auf Instagram öffnen</span><span style="font-size:18px;margin-left:var(--space-1)">→</span></a>' +
         '<div style="margin-bottom:10px;padding:13px 14px;background:rgba(245,158,11,0.18);border:2px solid #f59e0b;border-radius:13px;box-shadow:0 0 0 2px rgba(245,158,11,0.15),0 4px 14px rgba(245,158,11,0.20)">' +
           '<div style="font-size:13.5px;font-weight:900;color:#fbbf24;text-transform:uppercase;letter-spacing:0.6px;margin-bottom:7px;display:flex;align-items:center;gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M10.3 4 2 18.3A1.6 1.6 0 0 0 3.4 20.7h17.2A1.6 1.6 0 0 0 22 18.3L13.7 4a1.6 1.6 0 0 0-3.4 0z"/><line x1="12" y1="9.5" x2="12" y2="13.5"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>FULL ENGAGEMENT PFLICHT</div>' +
           '<div style="font-size:13.5px;font-weight:800;color:#fff;line-height:1.5;display:flex;flex-wrap:wrap;align-items:center;gap:5px 9px"><span style="display:inline-flex;align-items:center;gap:var(--space-1)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 5.1a5.4 5.4 0 0 0-7.7 0l-1.1 1.1-1.1-1.1A5.4 5.4 0 1 0 3.2 12.8l1.1 1.1L12 21.5l7.7-7.6 1.1-1.1a5.4 5.4 0 0 0 0-7.7z"/></svg>LIKEN</span><span style="opacity:.45">·</span><span style="display:inline-flex;align-items:center;gap:var(--space-1)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-12.5 7.5L3 20.5l1.5-5.5A8.5 8.5 0 1 1 21 11.5z"/></svg>KOMMENTIEREN</span><span style="opacity:.45">·</span><span style="display:inline-flex;align-items:center;gap:var(--space-1)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><polyline points="8 6 12 2 16 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>TEILEN</span><span style="opacity:.45">·</span><span style="display:inline-flex;align-items:center;gap:var(--space-1)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-4.5L5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>SPEICHERN</span></div>' +
@@ -12782,9 +12788,9 @@ async function submitSuperLink(){
     }
   }
   window.prismaLikeClick = async function(postId, btn){
-    const visitTs = window['_pvisit_'+postId];
+    const visitTs = window['_pvisit_'+postId] || cbVisitTs(postId);
     if (!visitTs || (Date.now() - visitTs) < 1500) {
-      alert('Bitte erst auf den Instagram-Link tippen und LIKEN + KOMMENTIEREN + TEILEN + SPEICHERN.');
+      cbToast('Bitte erst oben auf „Auf Instagram öffnen" tippen, dort liken/kommentieren/teilen/speichern — dann hier bestätigen.');
       return;
     }
     if (!(await cbConfirm('💠 Prismalink engagieren\\n\\nDu bestätigst mit deinem Like:\\n✓ Du hast den Post auf Instagram GELIKT\\n✓ Du hast KOMMENTIERT\\n✓ Du hast den Post GETEILT\\n✓ Du hast den Post GESPEICHERT\\n\\n→ Belohnung: +7 💎\\n→ Strafe bei Betrug: XP-Abzug + Diamonds-Reset + Bann\\n\\nFortfahren?'))) return;
@@ -12869,7 +12875,7 @@ function _alUserCard(c, isPreview){
         '<div style="font-size:11px;color:#fbbf24;font-weight:800;text-align:right;flex-shrink:0">⏱<br>'+_alFmtRemaining(c.remainingMs)+'</div>'+
       '</div>'+
       msg+author+
-      '<a href="'+esc(openUrl)+'" target="_blank" rel="noopener noreferrer" onclick="window._alvisit=Date.now()" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:14px;background:linear-gradient(135deg,#ec4899,#a855f7);color:#fff;border-radius:12px;font-size:14.5px;font-weight:800;text-decoration:none;margin-bottom:10px;box-shadow:0 6px 18px rgba(168,85,247,.4)"><span style="width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px">1</span><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17" cy="7" r="1.1" fill="currentColor" stroke="none"/></svg>Auf Instagram öffnen →</a>'+
+      '<a href="'+esc(openUrl)+'" target="_blank" rel="noopener noreferrer" onclick="window._alvisit=Date.now();markLinkVisited(\\''+c.id+'\\')" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:14px;background:linear-gradient(135deg,#ec4899,#a855f7);color:#fff;border-radius:12px;font-size:14.5px;font-weight:800;text-decoration:none;margin-bottom:10px;box-shadow:0 6px 18px rgba(168,85,247,.4)"><span style="width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px">1</span><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17" cy="7" r="1.1" fill="currentColor" stroke="none"/></svg>Auf Instagram öffnen →</a>'+
       '<div style="margin-bottom:10px;padding:13px 14px;background:rgba(245,158,11,.2);border:2px solid #f59e0b;border-radius:13px;box-shadow:0 0 0 2px rgba(245,158,11,.13),0 4px 14px rgba(245,158,11,.2)">'+
         '<div style="font-size:13px;font-weight:900;color:#fbbf24;text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px;display:flex;align-items:center;gap:7px"><span style="font-size:16px">⚠️</span>Pflicht: Voll engagieren</div>'+
         '<div style="display:flex;flex-wrap:wrap;gap:8px">'+
@@ -12898,7 +12904,8 @@ function _alUserCard(c, isPreview){
     fetch('/api/admin-link/card').then(function(r){return r.json();}).then(function(j){ render(j&&j.card); }).catch(function(){ root.innerHTML=''; });
   }
   window.adminLinkEngageClick = async function(id, btn){
-    if(!window._alvisit || (Date.now()-window._alvisit)<1500){ alert('Bitte erst auf den Instagram-Link tippen und LIKEN + KOMMENTIEREN + TEILEN + SPEICHERN.'); return; }
+    var _alv = window._alvisit || cbVisitTs(id);
+    if(!_alv || (Date.now()-_alv)<1500){ cbToast('Bitte erst oben auf „Auf Instagram öffnen" tippen, dort liken/kommentieren/teilen/speichern — dann hier bestätigen.'); return; }
     if(!(await cbConfirm('🛡️ Admin-Link engagieren\\n\\nDu bestätigst:\\n✓ GELIKT\\n✓ KOMMENTIERT\\n✓ GETEILT\\n✓ GESPEICHERT\\n\\n→ Belohnung: +5 💎\\n\\nFortfahren?'))) return;
     btn.disabled=true; btn.textContent='⏳ Bestätige …';
     fetch('/api/admin-link/engage',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({postId:id})}).then(function(r){return r.json();}).then(function(j){
@@ -13025,7 +13032,7 @@ function _alUserCard(c, isPreview){
         '</div>' +
         '<div style="font-size:13.5px;font-weight:700;margin-bottom:6px"><a href="/profil/'+esc(p.uid)+'" style="color:var(--text);text-decoration:none">'+aName+'</a> '+(aHandle?'<span style="color:#ec4899;font-weight:500;font-size:12px">'+aHandle+'</span>':'')+' × <a href="/profil/'+esc(p.partnerUid)+'" style="color:var(--text);text-decoration:none">'+bName+'</a> '+(bHandle?'<span style="color:#ec4899;font-weight:500;font-size:12px">'+bHandle+'</span>':'')+'</div>' +
         (p.caption ? '<div style="font-size:13px;color:var(--text);line-height:1.5;margin:6px 0 10px">'+esc(p.caption)+'</div>' : '') +
-        '<a href="'+esc(cleanInstagramUrl(p.url))+'" target="_blank" rel="noopener noreferrer" onclick="window._cbvisit_'+p.id+'=Date.now()" style="display:block;padding:11px 13px;background:rgba(236,72,153,0.08);border:1px solid rgba(236,72,153,0.30);border-radius:10px;font-size:12.5px;color:#ec4899;font-weight:700;word-break:break-all;text-decoration:none;margin-bottom:10px">🔗 Auf Instagram öffnen</a>' +
+        '<a href="'+esc(cleanInstagramUrl(p.url))+'" target="_blank" rel="noopener noreferrer" onclick="window._cbvisit_'+p.id+'=Date.now();markLinkVisited(\\'cb-'+p.id+'\\')" style="display:block;padding:11px 13px;background:rgba(236,72,153,0.08);border:1px solid rgba(236,72,153,0.30);border-radius:10px;font-size:12.5px;color:#ec4899;font-weight:700;word-break:break-all;text-decoration:none;margin-bottom:10px">🔗 Auf Instagram öffnen</a>' +
         (isMine
           ? '<div style="padding:11px;background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.35);border-radius:10px;font-size:12.5px;color:#ef4444;font-weight:700;text-align:center">🚫 Kein Self-Like — Dein Kollab-Post</div>'
           : liked
@@ -13065,9 +13072,9 @@ function _alUserCard(c, isPreview){
     if (anyExpired) { setTimeout(load, 200); return; }
   }
   window.collabBoostLike = async function(postId, btn){
-    const visitTs = window['_cbvisit_'+postId];
+    const visitTs = window['_cbvisit_'+postId] || cbVisitTs('cb-'+postId);
     if (!visitTs || (Date.now() - visitTs) < 1500) {
-      alert('Bitte erst auf den Instagram-Link tippen und LIKEN + KOMMENTIEREN + TEILEN + SPEICHERN.');
+      cbToast('Bitte erst oben auf „Auf Instagram öffnen" tippen, dort liken/kommentieren/teilen/speichern — dann hier bestätigen.');
       return;
     }
     btn.disabled = true; btn.textContent = '⏳ Bestätige …';
