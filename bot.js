@@ -911,12 +911,10 @@ function getRingBoxShadow(userData) {
 // Vorschau-Ring für Shop/Tasche: echtes farbiges Ring-Band (Gradient) um einen dunklen Avatar
 // + Glow — sieht nach einem echten Rahmen aus (nicht nur Schatten). size in px, inner=Inhalt.
 function ringPreview(item, size, inner) {
-    // Echtes PNG vorhanden → 1:1 Bild-Rahmen über einem dunklen Avatar (transparenter Ring-Mittelpunkt).
+    // Echtes PNG vorhanden → nur das Bild zeigen (transparenter Hintergrund, kein dunkler Kreis).
     if (ringFrameExists(item.id)) {
-        const c = Math.round(size * 0.30);
-        return '<div style="position:relative;width:' + size + 'px;height:' + size + 'px;flex-shrink:0">'
-            + '<div style="position:absolute;left:18%;top:18%;width:64%;height:64%;border-radius:50%;background:#15151a;display:flex;align-items:center;justify-content:center;font-size:' + c + 'px;font-weight:700;color:#fff">' + (inner || '') + '</div>'
-            + '<img src="/ringframe/' + item.id + '" style="position:absolute;inset:-6%;width:112%;height:112%;object-fit:contain;pointer-events:none" alt="">'
+        return '<div style="width:' + size + 'px;height:' + size + 'px;flex-shrink:0;display:flex;align-items:center;justify-content:center">'
+            + '<img src="/ringframe/' + item.id + '" style="width:100%;height:100%;object-fit:contain;pointer-events:none" alt="">'
             + '</div>';
     }
     const r1 = item.r1, r2 = item.r2;
@@ -22169,7 +22167,7 @@ ${(myInventory.length > 0 || _specialFrames.length > 0) ? `
     ${RING_ITEMS.filter(r=>myInventory.includes(r.id)).map(item=>{
         const isActive = myActiveRing === item.id;
         return `<div style="background:var(--bg3);border:1px solid ${isActive?'rgba(167,139,250,.5)':'var(--border2)'};border-radius:14px;padding:var(--space-3);display:flex;align-items:center;gap:var(--space-3)">
-      <div style="width:44px;height:44px;border-radius:50%;background:${item.gradient};flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:var(--fs-lg)">${item.emoji}</div>
+      ${ringFrameExists(item.id) ? ringPreview(item, 48, '') : `<div style="width:44px;height:44px;border-radius:50%;background:${item.gradient};flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:var(--fs-lg)">${item.emoji}</div>`}
       <div style="flex:1">
         <div style="font-size:var(--fs-sm);font-weight:700">${item.name} ${isActive?'<span style="font-size:10px;color:#a78bfa;font-weight:600">● Aktiv</span>':''}</div>
         <div style="font-size:11px;color:var(--muted)">${item.desc}</div>
