@@ -9242,7 +9242,14 @@ ${spaceScale.map(s=>`<div class="grow"><span class="gmeta">--space-${s}</span><d
         const _msgAdmins = Array.isArray(botData?._adminIds) ? botData._adminIds.map(String) : [];
         const _asCB = _msgAdmins.includes(String(myUid)) && otherUid !== 'creatorboost' && !_msgAdmins.includes(String(otherUid));
         const chatKey = _asCB ? ['creatorboost', otherUid].sort().join('_') : [myUid, otherUid].sort().join('_');
-        const msgs = botData?.messages?.[chatKey] || [];
+        let msgs = botData?.messages?.[chatKey] || [];
+        if (_asCB) {
+            // Admin sieht zusätzlich seine PERSÖNLICHEN DMs mit dem User (sonst unsichtbar, weil die
+            // Admin-Ansicht den creatorboost-Thread lädt). Eigene Msgs als 'creatorboost' darstellen.
+            const _persKey = [myUid, otherUid].sort().join('_');
+            const _pers = (botData?.messages?.[_persKey] || []).map(m => String(m.from) === String(myUid) ? Object.assign({}, m, { from: 'creatorboost' }) : m);
+            if (_pers.length) msgs = msgs.concat(_pers).sort((a,b)=>(a.timestamp||0)-(b.timestamp||0));
+        }
         return json({count: msgs.length, messages: msgs});
     }
 
@@ -14492,13 +14499,19 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) acPo
         // Admin-Filter: ?nur-user=1 zeigt nur vom User selbst getippte Nachrichten (keine System-DMs)
         const _nurUser = _viewerIsAdmin && query['nur-user'] === '1';
         let msgs = (d.messages?.[chatKey] || []);
+        const _persKey = _asCB ? [myUid, otherUid].sort().join('_') : null;
+        if (_asCB) {
+            // Persönliche DMs des Admins mit dem User mit reinmergen (eigene als 'creatorboost').
+            const _pers = (d.messages?.[_persKey] || []).map(m => String(m.from) === String(myUid) ? Object.assign({}, m, { from: 'creatorboost' }) : m);
+            if (_pers.length) msgs = msgs.concat(_pers).sort((a,b)=>(a.timestamp||0)-(b.timestamp||0));
+        }
         if (_nurUser) {
             msgs = msgs.filter(m => String(m.from) === String(otherUid) && !m.system
                 && !String(m.text||'').startsWith('🤖 Helper-Frage:')
                 && !String(m.text||'').startsWith('💬 Follow-up:'));
         }
-        if (LOCAL_STORE) { try { Promise.resolve(localWrite(() => botLogic.markMessagesRead({ uid: _selfUid, chatKey }))).catch(()=>{}); } catch(_) {} }
-        else postBot('/mark-messages-read', { uid: _selfUid, chatKey }).catch(()=>{});
+        if (LOCAL_STORE) { try { Promise.resolve(localWrite(() => { botLogic.markMessagesRead({ uid: _selfUid, chatKey }); if (_persKey) botLogic.markMessagesRead({ uid: myUid, chatKey: _persKey }); })).catch(()=>{}); } catch(_) {} }
+        else { postBot('/mark-messages-read', { uid: _selfUid, chatKey }).catch(()=>{}); if (_persKey) postBot('/mark-messages-read', { uid: myUid, chatKey: _persKey }).catch(()=>{}); }
         // Perf: nur die letzten N Nachrichten initial rendern. Lange Verläufe erzeugten sonst
         // riesiges HTML — und der 3s-Poll macht bei neuen Nachrichten location.reload(), d.h. das
         // ganze (große) HTML wird jedes Mal neu gebaut. Ältere via ?full=1 nachladbar.
