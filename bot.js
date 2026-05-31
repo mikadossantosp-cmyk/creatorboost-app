@@ -13688,8 +13688,8 @@ function cbHelperLev(a, b){
 function cbHelperKwScore(q, kw){
   if (q.includes(kw)) return kw.length * 2; // exakt = doppelter Score
   // Wort-für-Wort fuzzy
-  const tokens = q.split(/[\s,.!?;:]+/).filter(t => t.length >= 3);
-  const kwTokens = kw.split(/\s+/);
+  const tokens = q.split(/[\\s,.!?;:]+/).filter(t => t.length >= 3);
+  const kwTokens = kw.split(/\\s+/);
   let total = 0;
   for (const kwT of kwTokens) {
     if (kwT.length < 3) continue;
@@ -19055,7 +19055,7 @@ async function msAdminRestore(uid,name){if(!(await cbConfirm(name+' zurück auf 
                     const safeName = String(lw.name||'Creator').replace(/[<>&"]/g, c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
                     const safeHandle = handleStr.replace(/[<>&"]/g, c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
                     const safePrize = String(lw.prize||'').replace(/[<>&"]/g, c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
-                    const initials = safeName.split(/\s+/).map(s=>s[0]||'').join('').slice(0,2).toUpperCase() || 'C';
+                    const initials = safeName.split(/\\s+/).map(s=>s[0]||'').join('').slice(0,2).toUpperCase() || 'C';
                     return `
   <div style="background:linear-gradient(135deg,rgba(245,215,110,0.14),rgba(212,169,70,0.04));border:1px solid rgba(245,215,110,0.40);border-radius:18px;padding:var(--space-4);margin-bottom:14px;position:relative;overflow:hidden">
     <div style="position:absolute;inset:0;background:radial-gradient(circle at 90% 0%,rgba(245,215,110,0.18),transparent 50%);pointer-events:none"></div>
@@ -20285,9 +20285,9 @@ async function claimDailyXP(){
       btn.style.fontSize='12px';btn.style.fontWeight='800';
       btn.title='+'+d.xp+' XP erhalten';
       var xpEls=document.querySelectorAll('[data-xp-value]');
-      xpEls.forEach(function(el){var cur=parseInt(el.textContent.replace(/\D/g,''))||0;el.textContent=(cur+d.xp).toLocaleString('de-DE');});
+      xpEls.forEach(function(el){var cur=parseInt(el.textContent.replace(/\\D/g,''))||0;el.textContent=(cur+d.xp).toLocaleString('de-DE');});
       var statEls=document.querySelectorAll('.stat-value, .xp-num, .profile-xp');
-      statEls.forEach(function(el){if(el.textContent.includes('XP')){var m=el.textContent.match(/[\d.]+/);if(m){var cur=parseInt(m[0].replace(/\./g,''))||0;el.textContent=el.textContent.replace(m[0],(cur+d.xp).toLocaleString('de-DE'));}}});
+      statEls.forEach(function(el){if(el.textContent.includes('XP')){var m=el.textContent.match(/[\\d.]+/);if(m){var cur=parseInt(m[0].replace(/\\./g,''))||0;el.textContent=el.textContent.replace(m[0],(cur+d.xp).toLocaleString('de-DE'));}}});
       setTimeout(function(){btn.innerHTML='✓';btn.style.fontSize='18px';btn.style.background='var(--bg4)';btn.style.color='var(--muted)';btn.style.opacity='0.55';btn.style.boxShadow='none';},1800);
     }
     else{btn.innerHTML='⚠️';btn.title=d.error||'Fehler';setTimeout(function(){btn.innerHTML='🎁';btn.disabled=false;btn.style.cursor='pointer';if(dot)dot.style.display='';},2500);}
