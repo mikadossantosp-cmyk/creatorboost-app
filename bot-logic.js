@@ -504,6 +504,9 @@ async function checkMissionen(uid, name) {
         mission.m1 = true;
         d.missionQueue[uid].m1Pending = true;
         try { await dmUser(uid, '🎯 Mission 1 geschafft\n\n✅ 5 Links geliked & kommentiert\n\n⏳ Deine XP kommen um 12:00 Uhr'); } catch (e) {}
+        // Referral: Eingeladener hat erstmals Mission 1 geschafft → Einlader bekommt +1 beim
+        // Community-Builder (einmalig, idempotent; nur nach Admin-Freigabe der Einladung).
+        try { grantReferralMilestone(String(uid), 'm1'); } catch (e) {}
     }
     speichernDebounced();
 }
@@ -4093,6 +4096,7 @@ function getStreakApi(uid) {
 // ════════════════════════════════════════════════════════════════════════════
 const REFERRAL_MILESTONES = {
     signup:    { dia: 100, label: 'Registrierung' },
+    m1:        { dia: 15,  label: 'Mission 1 (5 Reels engagiert)' },
     firstPost: { dia: 30,  label: 'Erster Beitrag' },
     likes50:   { dia: 30,  label: '50 Likes vergeben' },
     likes200:  { dia: 50,  label: '200 Likes vergeben' },
@@ -4100,11 +4104,12 @@ const REFERRAL_MILESTONES = {
     active15:  { dia: 100, label: '15 Tage aktiv' },
     active30:  { dia: 250, label: '30 Tage aktiv' },
 };
-// Eingeladener gilt als "aktiv" (Ranking/Badges), sobald er Engagement zeigte: 1 Post ODER 7-Tage-Meilenstein.
+// Eingeladener gilt als "aktiv" (Ranking/Badges), sobald er Engagement zeigte:
+// Mission 1 (5 Reels engagiert) ODER 1 Post ODER 7-Tage-Meilenstein → +1 beim Builder.
 function _referralInviteeIsActive(inv) {
     if (!inv) return false;
     if (inv.banned || inv.parent_uid) return false;
-    return !!(inv.refMilestones && (inv.refMilestones.firstPost || inv.refMilestones.active7));
+    return !!(inv.refMilestones && (inv.refMilestones.m1 || inv.refMilestones.firstPost || inv.refMilestones.active7));
 }
 // Einen eindeutigen Referral-Code für einen User sicherstellen (kurz, URL-tauglich).
 function ensureReferralCode(uid) {
