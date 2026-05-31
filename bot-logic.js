@@ -1496,21 +1496,24 @@ async function auswertenForUserDay(uid, dayKey, opts) {
     let xpEarned = 0;
     let diamondsEarned = 0;
     if (m1Done) { xpAdd(uid, 5, name); xpEarned += 5; meldungen.push('✅ Mission 1 geschafft\n5 Links geliked → +5 XP'); }
-    if (anyDailyMissionDone && addWeeklyMissionDay(wMission, 'm1Tage', dayKey)) {
-        if (wMission.m1Tage >= 7) { xpAdd(uid, 10, name); xpEarned += 10; meldungen.push('🏆 Wochen-M1 geschafft → +10 XP'); wMission.m1Tage = 0; }
+    if (m1Done && addWeeklyMissionDay(wMission, 'm1Tage', dayKey)) {
+        if (wMission.m1Tage > 7) wMission.m1Tage = 7;
+        if (wMission.m1Tage >= 7 && !wMission.m1granted) { xpAdd(uid, 10, name); xpEarned += 10; meldungen.push('🏆 Wochen-M1 geschafft → +10 XP'); wMission.m1granted = true; }
     }
     if (m2Done) {
         xpAdd(uid, 5, name); xpEarned += 5;
         meldungen.push('✅ Mission 2 geschafft\n' + Math.round(prozentTag * 100) + '% geliked → +5 XP');
         if (addWeeklyMissionDay(wMission, 'm2Tage', dayKey)) {
-            if (wMission.m2Tage >= 7) { xpAdd(uid, 15, name); xpEarned += 15; addDiamond(uid, 1); diamondsEarned += 1; meldungen.push('🏆 Wochen-M2 geschafft → +15 XP + 💎 1 Diamant'); wMission.m2Tage = 0; }
+            if (wMission.m2Tage > 7) wMission.m2Tage = 7;
+            if (wMission.m2Tage >= 7 && !wMission.m2granted) { xpAdd(uid, 15, name); xpEarned += 15; addDiamond(uid, 1); diamondsEarned += 1; meldungen.push('🏆 Wochen-M2 geschafft → +15 XP + 💎 1 Diamant'); wMission.m2granted = true; }
         }
     }
     if (m3Done) {
         xpAdd(uid, 5, name); xpEarned += 5; addDiamond(uid, 1); diamondsEarned += 1;
         meldungen.push('✅ Mission 3 geschafft\nAlle Links geliked → +5 XP + 💎 1 Diamant');
         if (addWeeklyMissionDay(wMission, 'm3Tage', dayKey)) {
-            if (wMission.m3Tage >= 7) { xpAdd(uid, 20, name); xpEarned += 20; addDiamond(uid, 2); diamondsEarned += 2; meldungen.push('🏆 Wochen-M3 geschafft → +20 XP + 💎 2 Diamanten'); wMission.m3Tage = 0; }
+            if (wMission.m3Tage > 7) wMission.m3Tage = 7;
+            if (wMission.m3Tage >= 7 && !wMission.m3granted) { xpAdd(uid, 20, name); xpEarned += 20; addDiamond(uid, 2); diamondsEarned += 2; meldungen.push('🏆 Wochen-M3 geschafft → +20 XP + 💎 2 Diamanten'); wMission.m3granted = true; }
         }
     }
     const hatTagLink = Object.values(d.links).some(l => istInstagramLink(l.text) && String(l.user_id) === String(uid) && new Date(l.timestamp).toDateString() === dayKey);
