@@ -863,6 +863,9 @@ const RING_ITEMS = [
     { id: 'frame_builder_4', name: 'Builder Elite Rahmen', emoji: '🏛️', special: true, tier: 4, r1:'#ddd6fe', r2:'#7c3aed', rg:'rgba(167,139,250,0.95)', gradient: 'linear-gradient(135deg,#7c3aed,#c4b5fd,#e9d5ff)', desc: 'Community Builder Elite — Rang-Rahmen', spin: true },
     { id: 'frame_admin',     name: 'Admin Rahmen',         emoji: '🛡️', special: true, admin: true, img: true, desc: 'Exklusiver Admin-Rahmen (Gold & Blau)' },
 ];
+// TEMPORÄR AUS: Premium-/Spezial-Rahmen (PNG-Ringe) sind deaktiviert, bis Darstellung passt.
+// Auf true setzen, um sie wieder im Shop/Profil/Tasche anzuzeigen.
+const PNG_RINGS_ON = false;
 
 const BANNER_ITEMS = [
     { id: 'banner_sunset',   name: 'Sunset',       emoji: '🌅', price: 5,  tier: 'Bronze', gradient: 'linear-gradient(135deg,#ff6b6b,#ffa500,#ffd43b)', desc: 'Warmes Sonnenuntergangs-Glühen' },
@@ -890,6 +893,7 @@ function ringFrameExists(id) {
 }
 // Overlay-<img> für einen aktiven Bild-Rahmen über einem Avatar (Container muss position:relative sein).
 function ringFrameOverlay(userData) {
+    if (!PNG_RINGS_ON) return '';
     const id = userData?.activeRing;
     if (!ringFrameExists(id)) return '';
     return '<img src="/ringframe/' + id + '" class="cb-ring-frame" alt="" loading="lazy">';
@@ -18957,7 +18961,7 @@ function switchRanking(tab, btn) {
   </div>`;
                 };
                 const ringsHtml = RING_ITEMS.filter(r=>!r.premium && !r.special).map(_ringCard).join('');
-                const premiumRingsHtml = RING_ITEMS.filter(r=>r.premium && !r.special).map(_ringCard).join('');
+                const premiumRingsHtml = PNG_RINGS_ON ? RING_ITEMS.filter(r=>r.premium && !r.special).map(_ringCard).join('') : '';
                 const extraLinkPriceHtml = isShopAdmin
                     ? `<div style="display:flex;align-items:center;gap:6px"><span style="font-size:14px;color:var(--muted);text-decoration:line-through">💎 5 Diamanten</span><span style="font-size:var(--fs-sm);font-weight:800;color:#22c55e">Gratis</span></div>`
                     : `<div style="font-size:14px;font-weight:800;color:#a78bfa">💎 5 Diamanten</div>`;
@@ -21789,7 +21793,7 @@ ${_setSubHead('<span style="display:inline-flex;align-items:center;gap:7px"><svg
         // Builder-Rang-Rahmen bis zum erreichten Tier + Admin-Rahmen für Admins.
         const _myBldTier = ((botLogic.builderBadgeFor && botLogic.builderBadgeFor(String(myUid))) || {}).tier || 0;
         const _myIsAdminFrame = adminIds.includes(Number(myUid));
-        const _specialFrames = RING_ITEMS.filter(r => r.special && ((r.admin && _myIsAdminFrame) || (r.tier && _myBldTier >= r.tier)));
+        const _specialFrames = PNG_RINGS_ON ? RING_ITEMS.filter(r => r.special && ((r.admin && _myIsAdminFrame) || (r.tier && _myBldTier >= r.tier))) : [];
         const currentPinnedLink = ladePinnedLink(myUid) || '';
         // Pinned-Link rate-limit info: wann darf user wieder ändern?
         let _pinDaysLeft = 0;
