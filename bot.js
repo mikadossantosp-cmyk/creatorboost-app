@@ -849,18 +849,10 @@ const RING_ITEMS = [
     { id: 'ring_purple',  name: 'Cosmic Ring',  emoji: '🔮', price: 12, shadow: '0 0 0 3px #e040fb, 0 0 0 6px #9c27b0',   gradient: 'linear-gradient(135deg,#9c27b0,#e040fb)', desc: 'Mystisches Kosmosleuchten' },
     { id: 'ring_rainbow', name: 'Rainbow Ring', emoji: '🌈', price: 15, shadow: '0 0 0 3px #ff9900, 0 0 0 6px #cc5de8',   gradient: 'linear-gradient(135deg,#ff0000,#ff9900,#00cc00,#0000ff,#cc5de8)', desc: 'Buntes Regenbogenleuchten' },
     { id: 'ring_diamond', name: 'Diamond Ring', emoji: '💎', price: 20, shadow: '0 0 0 3px #b9f2ff, 0 0 0 6px #a78bfa',   gradient: 'linear-gradient(135deg,#a78bfa,#b9f2ff,#ffffff)', desc: 'Funkelnder Diamantglanz' },
-    // ── Premium-Kollektion „50 Diamanten Rahmen" — animierte „atmende" Doppelring-Glows.
-    //    r1=innerer Ring, r2=äußerer Ring, rg=Glow-Farbe (von getRingBoxShadow + @keyframes cbRingAlive genutzt). ──
-    { id: 'pring_fire',    name: 'Fire Ring',    emoji: '🔥', price: 50, premium: true, r1:'#ff8a00', r2:'#ff2200', rg:'rgba(255,80,0,0.9)',     gradient: 'linear-gradient(135deg,#ff2200,#ff9a3c)',         desc: 'Lodernde Feuer-Aura' },
-    { id: 'pring_ember',   name: 'Ember Ring',   emoji: '🟠', price: 50, premium: true, r1:'#ffcf4d', r2:'#ff7b00', rg:'rgba(255,150,30,0.88)',  gradient: 'linear-gradient(135deg,#ff7b00,#ffd166)',         desc: 'Glühende Glut-Funken' },
-    { id: 'pring_lava',    name: 'Lava Ring',    emoji: '🌋', price: 50, premium: true, r1:'#ff6a00', r2:'#8b0000', rg:'rgba(255,69,0,0.88)',    gradient: 'linear-gradient(135deg,#8b0000,#ff4500,#ffae42)', desc: 'Geschmolzene Lava' },
-    { id: 'pring_gold',    name: 'Gold Rush',    emoji: '👑', price: 50, premium: true, r1:'#fff3b0', r2:'#d4af37', rg:'rgba(255,215,0,0.95)',   gradient: 'linear-gradient(135deg,#b8860b,#ffd700,#fff3b0)', desc: 'Strahlendes Goldfieber' },
-    { id: 'pring_crystal', name: 'Crystal Ring', emoji: '🔷', price: 50, premium: true, r1:'#9bdcff', r2:'#2a7fff', rg:'rgba(90,200,255,0.9)',   gradient: 'linear-gradient(135deg,#2a7fff,#5ec8ff,#b9f2ff)', desc: 'Klarer Kristallglanz' },
-    { id: 'pring_ice',     name: 'Ice Ring',     emoji: '🧊', price: 50, premium: true, r1:'#e3faff', r2:'#5ec8ff', rg:'rgba(185,242,255,0.95)', gradient: 'linear-gradient(135deg,#5ec8ff,#b9f2ff,#ffffff)', desc: 'Eiskaltes Frostleuchten' },
-    { id: 'pring_snow',    name: 'Snow Ring',    emoji: '❄️', price: 50, premium: true, r1:'#ffffff', r2:'#b8c6d8', rg:'rgba(255,255,255,0.98)', gradient: 'linear-gradient(135deg,#c8d6e5,#ffffff)',         desc: 'Reiner Schnee-Schimmer' },
-    { id: 'pring_rainbow', name: 'Rainbow Ring', emoji: '🌈', price: 50, premium: true, r1:'#ff4d6d', r2:'#3399ff', rg:'rgba(155,92,255,0.85)',  gradient: 'linear-gradient(135deg,#ff0040,#ff9900,#2ecc40,#3399ff,#9b5cff)', desc: 'Voller Regenbogen-Glow', spin: true },
-    { id: 'pring_prism',   name: 'Prism Ring',   emoji: '💠', price: 50, premium: true, r1:'#f48fff', r2:'#7c3aed', rg:'rgba(224,64,251,0.9)',   gradient: 'linear-gradient(135deg,#7c3aed,#e040fb,#ff8cc8)', desc: 'Schillerndes Prisma', spin: true },
-    { id: 'pring_bubble',  name: 'Bubble Ring',  emoji: '🫧', price: 50, premium: true, r1:'#bdeeff', r2:'#39c0ed', rg:'rgba(127,219,255,0.88)', gradient: 'linear-gradient(135deg,#39c0ed,#7fdbff,#cdf5ff)', desc: 'Perlende Blasen-Aura' },
+    // ── Premium-„50 Diamanten Rahmen" (PNG-basiert) — werden aus echten Bild-Dateien in
+    //    assets/rings/<id>.png gerendert (img:true). Pro Ring: Eintrag hier + ITEM_PRICES/ITEM_NAMES
+    //    (bot-logic.js) + die PNG-Datei. (Alte CSS-Glow-Ringe wurden auf Wunsch entfernt.)
+    // (noch keine PNG-Ringe definiert — werden ergänzt, sobald die Bilder vorliegen)
     // ── Spezial-Rahmen — NICHT kaufbar (special:true → nicht im Shop). Verdient/rollenbasiert,
     //    auswählbar in der Profil-„Tasche" wenn berechtigt (Builder-Rang bzw. Admin). ──
     { id: 'frame_builder_1', name: 'Builder I Rahmen',     emoji: '🌱', special: true, tier: 1, r1:'#6ee7b7', r2:'#059669', rg:'rgba(52,211,153,0.9)',  gradient: 'linear-gradient(135deg,#059669,#34d399)',        desc: 'Community Builder I — Rang-Rahmen' },
@@ -19036,16 +19028,16 @@ function switchRanking(tab, btn) {
   }).join('')}
   <div id="dept-rings" style="scroll-margin-top:70px;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;display:inline-flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></svg>Profilring</div>
   ${ringsHtml}
-  <div id="dept-premium" style="scroll-margin-top:70px;margin:22px 0 14px;border-radius:16px;overflow:hidden;background:linear-gradient(135deg,#0b1020,#1a1030);border:1px solid rgba(212,175,55,0.3)">
+  ${premiumRingsHtml ? `<div id="dept-premium" style="scroll-margin-top:70px;margin:22px 0 14px;border-radius:16px;overflow:hidden;background:linear-gradient(135deg,#0b1020,#1a1030);border:1px solid rgba(212,175,55,0.3)">
     <div style="padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;background:linear-gradient(135deg,rgba(124,58,237,0.18),rgba(212,175,55,0.12))">
       <div>
-        <div style="font-size:var(--fs-base);font-weight:800;color:#fff;letter-spacing:0.3px">💎 50 Diamanten Rahmen</div>
-        <div style="font-size:11px;color:rgba(255,255,255,0.7);margin-top:2px">Premium-Kollektion · 10 edle Avatar-Rahmen · überall sichtbar</div>
+        <div style="font-size:var(--fs-base);font-weight:800;color:#fff;letter-spacing:0.3px">💎 Premium-Rahmen</div>
+        <div style="font-size:11px;color:rgba(255,255,255,0.7);margin-top:2px">Exklusive Avatar-Rahmen · überall sichtbar</div>
       </div>
       <span style="font-size:10px;font-weight:800;color:#ffd700;background:rgba(255,215,0,0.14);border:1px solid rgba(255,215,0,0.35);padding:3px 9px;border-radius:99px;white-space:nowrap">PREMIUM</span>
     </div>
   </div>
-  ${premiumRingsHtml}
+  ${premiumRingsHtml}` : ''}
 </div>
 <script>
 async function buyExtraLink(){
