@@ -860,6 +860,13 @@ const RING_ITEMS = [
     { id: 'pring_rainbow', name: 'Rainbow Ring', emoji: '🌈', price: 50, premium: true, shadow: '0 0 0 3px #ff0040, 0 0 0 5px #ff9900, 0 0 0 7px #2ecc40, 0 0 0 9px #3399ff, 0 0 26px 3px rgba(150,90,255,0.7)', gradient: 'linear-gradient(135deg,#ff0040,#ff9900,#2ecc40,#3399ff,#9b5cff)', desc: 'Voller Regenbogen-Glow' },
     { id: 'pring_prism',   name: 'Prism Ring',   emoji: '💠', price: 50, premium: true, shadow: '0 0 0 3px #e040fb, 0 0 0 6px #7c3aed, 0 0 26px 3px rgba(224,64,251,0.82)',                       gradient: 'linear-gradient(135deg,#7c3aed,#e040fb,#ff8cc8)',         desc: 'Schillerndes Prisma' },
     { id: 'pring_bubble',  name: 'Bubble Ring',  emoji: '🫧', price: 50, premium: true, shadow: '0 0 0 3px #7fdbff, 0 0 0 6px #39c0ed, 0 0 22px 3px rgba(127,219,255,0.78)',                      gradient: 'linear-gradient(135deg,#39c0ed,#7fdbff,#cdf5ff)',         desc: 'Perlende Blasen-Aura' },
+    // ── Spezial-Rahmen — NICHT kaufbar (special:true → nicht im Shop). Verdient/rollenbasiert,
+    //    auswählbar in der Profil-„Tasche" wenn berechtigt (Builder-Rang bzw. Admin). ──
+    { id: 'frame_builder_1', name: 'Builder I Rahmen',     emoji: '🌱', special: true, tier: 1, shadow: '0 0 0 3px #34d399, 0 0 0 6px #059669, 0 0 22px 3px rgba(52,211,153,0.8)',   gradient: 'linear-gradient(135deg,#059669,#34d399)',         desc: 'Community Builder I — Rang-Rahmen' },
+    { id: 'frame_builder_2', name: 'Builder II Rahmen',    emoji: '🤝', special: true, tier: 2, shadow: '0 0 0 3px #fbbf24, 0 0 0 6px #d97706, 0 0 22px 3px rgba(251,191,36,0.8)',   gradient: 'linear-gradient(135deg,#d97706,#fbbf24)',         desc: 'Community Builder II — Rang-Rahmen' },
+    { id: 'frame_builder_3', name: 'Builder III Rahmen',   emoji: '🏗️', special: true, tier: 3, shadow: '0 0 0 3px #22d3ee, 0 0 0 6px #0891b2, 0 0 24px 3px rgba(34,211,238,0.82)',  gradient: 'linear-gradient(135deg,#0891b2,#22d3ee)',         desc: 'Community Builder III — Rang-Rahmen' },
+    { id: 'frame_builder_4', name: 'Builder Elite Rahmen', emoji: '🏛️', special: true, tier: 4, shadow: '0 0 0 3px #c4b5fd, 0 0 0 6px #7c3aed, 0 0 26px 4px rgba(167,139,250,0.85)', gradient: 'linear-gradient(135deg,#7c3aed,#c4b5fd,#e9d5ff)',  desc: 'Community Builder Elite — Rang-Rahmen' },
+    { id: 'frame_admin',     name: 'Admin Rahmen',         emoji: '🛡️', special: true, admin: true, shadow: '0 0 0 3px #ffd700, 0 0 0 6px #1e3a8a, 0 0 10px 1px #38bdf8, 0 0 28px 4px rgba(255,215,0,0.7)', gradient: 'linear-gradient(135deg,#1e3a8a,#ffd700,#38bdf8)', desc: 'Exklusiver Admin-Rahmen (Gold & Blau)' },
 ];
 
 const BANNER_ITEMS = [
@@ -18743,20 +18750,32 @@ function switchRanking(tab, btn) {
     </div>
   </div>`;
                 };
-                const ringsHtml = RING_ITEMS.filter(r=>!r.premium).map(_ringCard).join('');
-                const premiumRingsHtml = RING_ITEMS.filter(r=>r.premium).map(_ringCard).join('');
+                const ringsHtml = RING_ITEMS.filter(r=>!r.premium && !r.special).map(_ringCard).join('');
+                const premiumRingsHtml = RING_ITEMS.filter(r=>r.premium && !r.special).map(_ringCard).join('');
                 const extraLinkPriceHtml = isShopAdmin
                     ? `<div style="display:flex;align-items:center;gap:6px"><span style="font-size:14px;color:var(--muted);text-decoration:line-through">💎 5 Diamanten</span><span style="font-size:var(--fs-sm);font-weight:800;color:#22c55e">Gratis</span></div>`
                     : `<div style="font-size:14px;font-weight:800;color:#a78bfa">💎 5 Diamanten</div>`;
                 const extraLinkCanBuy = isShopAdmin || myDiamonds >= 5;
                 return `
-<div style="padding:16px 16px 4px;display:flex;align-items:center;justify-content:space-between">
-  <div style="font-size:var(--fs-sm);font-weight:700">💎 Diamant Shop</div>
-  <div style="font-size:var(--fs-sm);font-weight:700;color:#a78bfa">💎 ${myDiamonds} Diamanten</div>
+<div style="padding:16px 16px 10px">
+  <div style="position:relative;overflow:hidden;border-radius:18px;background:linear-gradient(135deg,#1a1030,#0b1020);border:1px solid rgba(167,139,250,.25);padding:18px">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+      <div style="min-width:0">
+        <div style="font-size:var(--fs-lg);font-weight:800;color:#fff;letter-spacing:.3px">🛍️ CreatorX Shop</div>
+        <div style="font-size:11.5px;color:rgba(255,255,255,.65);margin-top:3px">Dein Diamanten-Kaufhaus — wähle eine Abteilung</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;background:rgba(167,139,250,.16);border:1px solid rgba(167,139,250,.4);padding:7px 13px;border-radius:99px;white-space:nowrap"><span style="font-size:15px">💎</span><span style="font-size:var(--fs-sm);font-weight:800;color:#fff">${myDiamonds}</span></div>
+    </div>
+  </div>
+  <div style="display:flex;gap:8px;overflow-x:auto;margin-top:12px;padding-bottom:2px;-webkit-overflow-scrolling:touch">
+    <button onclick="var e=document.getElementById('dept-boosts');if(e)e.scrollIntoView({behavior:'smooth',block:'start'})" style="flex:0 0 auto;background:var(--bg3);border:1px solid var(--border2);color:var(--text);border-radius:99px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">⚡ Boosts</button>
+    <button onclick="var e=document.getElementById('dept-banner');if(e)e.scrollIntoView({behavior:'smooth',block:'start'})" style="flex:0 0 auto;background:var(--bg3);border:1px solid var(--border2);color:var(--text);border-radius:99px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">🎨 Banner</button>
+    <button onclick="var e=document.getElementById('dept-rings');if(e)e.scrollIntoView({behavior:'smooth',block:'start'})" style="flex:0 0 auto;background:var(--bg3);border:1px solid var(--border2);color:var(--text);border-radius:99px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">💍 Rahmen</button>
+    <button onclick="var e=document.getElementById('dept-premium');if(e)e.scrollIntoView({behavior:'smooth',block:'start'})" style="flex:0 0 auto;background:linear-gradient(135deg,rgba(255,215,0,.16),rgba(124,58,237,.16));border:1px solid rgba(255,215,0,.4);color:#ffd700;border-radius:99px;padding:8px 14px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap">💎 Premium</button>
+  </div>
 </div>
-<div style="padding:4px 16px 16px;font-size:var(--fs-xs);color:var(--muted)">Tausche Diamanten gegen Vorteile</div>
 <div style="padding:0 16px 100px">
-  <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;display:inline-flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg>Links</div>
+  <div id="dept-boosts" style="scroll-margin-top:70px;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;display:inline-flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9z"/></svg>Boosts</div>
   <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:16px;padding:var(--space-4);margin-bottom:16px">
     <div style="display:flex;align-items:flex-start;gap:14px">
       <div style="flex-shrink:0;width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,rgba(167,139,250,.15),rgba(124,58,237,.06));border:1px solid rgba(167,139,250,.2)"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg></div>
@@ -18785,7 +18804,7 @@ function switchRanking(tab, btn) {
       </div>
     </div>
   </div>
-  <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;display:inline-flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2.5"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>Profilbanner</div>
+  <div id="dept-banner" style="scroll-margin-top:70px;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;display:inline-flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2.5"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>Profilbanner</div>
   ${['Bronze','Silber','Gold'].map(tier => {
     const tierColor = tier==='Bronze'?'#cd7f32':tier==='Silber'?'#a8a9ad':'#ffd700';
     const tierItems = BANNER_ITEMS.filter(b=>b.tier===tier);
@@ -18811,9 +18830,9 @@ function switchRanking(tab, btn) {
   </div>
 </div>`;
   }).join('')}
-  <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;display:inline-flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></svg>Profilring</div>
+  <div id="dept-rings" style="scroll-margin-top:70px;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;display:inline-flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></svg>Profilring</div>
   ${ringsHtml}
-  <div style="margin:22px 0 14px;border-radius:16px;overflow:hidden;background:linear-gradient(135deg,#0b1020,#1a1030);border:1px solid rgba(212,175,55,0.3)">
+  <div id="dept-premium" style="scroll-margin-top:70px;margin:22px 0 14px;border-radius:16px;overflow:hidden;background:linear-gradient(135deg,#0b1020,#1a1030);border:1px solid rgba(212,175,55,0.3)">
     <div style="padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;background:linear-gradient(135deg,rgba(124,58,237,0.18),rgba(212,175,55,0.12))">
       <div>
         <div style="font-size:var(--fs-base);font-weight:800;color:#fff;letter-spacing:0.3px">💎 50 Diamanten Rahmen</div>
@@ -21560,6 +21579,11 @@ ${_setSubHead('<span style="display:inline-flex;align-items:center;gap:7px"><svg
         const u = myUser || {};
         const myInventory = u.inventory || [];
         const myActiveRing = u.activeRing || null;
+        // Spezial-Rahmen (nicht kaufbar) — in der „Tasche" sichtbar, wenn berechtigt:
+        // Builder-Rang-Rahmen bis zum erreichten Tier + Admin-Rahmen für Admins.
+        const _myBldTier = ((botLogic.builderBadgeFor && botLogic.builderBadgeFor(String(myUid))) || {}).tier || 0;
+        const _myIsAdminFrame = adminIds.includes(Number(myUid));
+        const _specialFrames = RING_ITEMS.filter(r => r.special && ((r.admin && _myIsAdminFrame) || (r.tier && _myBldTier >= r.tier)));
         const currentPinnedLink = ladePinnedLink(myUid) || '';
         // Pinned-Link rate-limit info: wann darf user wieder ändern?
         let _pinDaysLeft = 0;
@@ -21916,10 +21940,24 @@ async function pfHandleAvatarFile(input){
 <!-- Email / Passwort / App-Code → /einstellungen/account -->
 <!-- Pinned-Reel-Link → Hero-Edit-Sheet (pfPinnedLink) -->
 
-${myInventory.length > 0 ? `
+${(myInventory.length > 0 || _specialFrames.length > 0) ? `
 <div style="padding:var(--space-4);border-bottom:1px solid var(--border2)">
-  <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:var(--space-3);display:inline-flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>Meine Items</div>
-  <div style="display:flex;flex-direction:column;gap:10px">
+  <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:var(--space-3);display:inline-flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>Meine Tasche</div>
+  ${_specialFrames.length > 0 ? `<div style="font-size:10px;font-weight:800;color:#ffd700;letter-spacing:.5px;margin-bottom:8px">✦ SPEZIAL-RAHMEN ${'—'} freigeschaltet durch deinen Rang</div>
+  <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px">
+    ${_specialFrames.map(item=>{
+        const isActive = myActiveRing === item.id;
+        return `<div style="background:linear-gradient(135deg,rgba(255,215,0,0.06),rgba(124,58,237,0.05));border:1px solid ${isActive?'rgba(255,215,0,.55)':'rgba(255,215,0,.22)'};border-radius:14px;padding:var(--space-3);display:flex;align-items:center;gap:var(--space-3)">
+      <div style="width:46px;height:46px;border-radius:50%;background:#1e1e1e;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:var(--fs-lg);color:#fff;box-shadow:${item.shadow}">${item.emoji}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:var(--fs-sm);font-weight:700">${item.name} ${isActive?'<span style="font-size:10px;color:#ffd700;font-weight:700">● Aktiv</span>':''}</div>
+        <div style="font-size:11px;color:var(--muted)">${item.desc}</div>
+      </div>
+      <button onclick="setRing('${isActive?'':item.id}')" style="background:${isActive?'rgba(255,215,0,.18)':'var(--bg4)'};border:1px solid ${isActive?'rgba(255,215,0,.45)':'var(--border)'};color:${isActive?'#ffd700':'var(--text)'};border-radius:10px;padding:6px 12px;font-size:var(--fs-xs);font-weight:600;cursor:pointer;white-space:nowrap">${isActive?'Deaktivieren':'Aktivieren'}</button>
+    </div>`;
+    }).join('')}
+  </div>` : ''}
+  ${myInventory.length > 0 ? `<div style="display:flex;flex-direction:column;gap:10px">
     ${RING_ITEMS.filter(r=>myInventory.includes(r.id)).map(item=>{
         const isActive = myActiveRing === item.id;
         return `<div style="background:var(--bg3);border:1px solid ${isActive?'rgba(167,139,250,.5)':'var(--border2)'};border-radius:14px;padding:var(--space-3);display:flex;align-items:center;gap:var(--space-3)">
@@ -21931,7 +21969,7 @@ ${myInventory.length > 0 ? `
       <button onclick="setRing('${isActive?'':item.id}')" style="background:${isActive?'rgba(167,139,250,.2)':'var(--bg4)'};border:1px solid ${isActive?'rgba(167,139,250,.4)':'var(--border)'};color:${isActive?'#a78bfa':'var(--text)'};border-radius:10px;padding:6px 12px;font-size:var(--fs-xs);font-weight:600;cursor:pointer">${isActive?'Deaktivieren':'Aktivieren'}</button>
     </div>`;
     }).join('')}
-  </div>
+  </div>` : ''}
 </div>` : ''}
 <!-- Admin-Sections wurden nach /einstellungen/admin verschoben (siehe Admin-Card oben im Hub) -->
 <div style="padding:var(--space-4);border-bottom:1px solid var(--border2)">

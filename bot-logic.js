@@ -1024,11 +1024,29 @@ function buyItemApi({ uid, itemId }) {
     addNotification(String(uid), '🎁', `${ITEM_NAMES[itemId] || itemId} gekauft! Wähle es in deinem Profil unter "Items" aus.${isAdmin ? ' (Admin – kostenlos)' : ` 💎 -${price} Diamanten.`}`);
     return { ok: true, diamonds: u.diamonds, inventory: u.inventory };
 }
+// Spezial-Rahmen (nicht kaufbar — verdient/rollenbasiert): Builder-Rang-Rahmen + Admin-Rahmen.
+// Werden NICHT im Shop verkauft, sondern in der Profil-„Tasche" anzeigt/aktivierbar, wenn berechtigt.
+function _frameEntitled(uid, ringId) {
+    if (!ringId) return true; // Deaktivieren immer erlaubt
+    if (ringId === 'frame_admin') return istAdminId(uid);
+    const m = String(ringId).match(/^frame_builder_([1-4])$/);
+    if (m) {
+        const need = Number(m[1]);
+        const b = builderBadgeFor(uid);
+        return !!(b && b.tier >= need); // höherer Rang darf auch niedrigere Rahmen tragen
+    }
+    return false; // unbekannter Spezial-Rahmen
+}
 function setActiveRingApi({ uid, ringId }) {
     if (!uid) return { ok: false };
     const u = d.users[String(uid)];
     if (!u) return { ok: false };
-    if (ringId && !(u.inventory || []).includes(ringId)) return { ok: false, error: 'Item nicht im Inventar' };
+    const isSpecial = ringId && (ringId === 'frame_admin' || /^frame_builder_[1-4]$/.test(String(ringId)));
+    if (isSpecial) {
+        if (!_frameEntitled(String(uid), ringId)) return { ok: false, error: 'Dieser Rahmen ist für dich nicht freigeschaltet' };
+    } else if (ringId && !(u.inventory || []).includes(ringId)) {
+        return { ok: false, error: 'Item nicht im Inventar' };
+    }
     u.activeRing = ringId || null;
     return { ok: true, activeRing: u.activeRing };
 }
