@@ -2579,7 +2579,7 @@ document.addEventListener('error', function(e) {
 window.cbSetCount = function(fullId, val, force){
   if (val === undefined || val === null || fullId == null) return;
   var n = Number(val); if (!isFinite(n)) return;
-  var sel = '[id="' + String(fullId).replace(/["\\]/g, '\\$&') + '"]';
+  var sel = '[id="' + String(fullId).replace(/["\\\\]/g, '\\$&') + '"]';
   try { document.querySelectorAll(sel).forEach(function(el){
     var cur = Number(el.textContent);
     if (force || !isFinite(cur) || n >= cur) { if (el.textContent !== String(n)) el.textContent = String(n); }
