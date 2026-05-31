@@ -6634,6 +6634,10 @@ try { fetch('/api/track-funnel',{method:'POST',headers:{'Content-Type':'applicat
         }
         const _hello = (_u.spitzname || _u.name || '').replace(/[<>"]/g,'');
         const _suggested = (_u.name || _u.email?.split('@')[0] || 'creator').toLowerCase().replace(/[^a-z0-9_-]/g,'').slice(0,20) || 'creator';
+        // Login-Link-Domain dynamisch aus der aktuellen (funktionierenden) Domain — NICHT
+        // creatorx.app hardcoden (zeigt auf IONOS-Parkseite). Fällt auf AUTH_BASE_URL zurück.
+        const _codeBase = (req.headers['x-forwarded-host'] ? 'https://' + String(req.headers['x-forwarded-host']).split(',')[0].trim() : AUTH_BASE_URL).replace(/\/$/, '');
+        const _codeHost = _codeBase.replace(/^https?:\/\//, '');
         res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});
         return res.end(`<!DOCTYPE html><html lang="de" data-theme="dark"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -6679,7 +6683,7 @@ input:focus{border-color:var(--gold);background:rgba(212,175,55,0.04);box-shadow
     <input type="text" id="code-inp" placeholder="dein-name" value="${_suggested}" maxlength="30" autocapitalize="none" spellcheck="false" autocomplete="off">
   </div>
   <div class="msg" id="code-msg"></div>
-  <div class="hint">Dein Login-Link wird:<br><span style="color:var(--gold);font-weight:700">https://creatorx.app/i/<span id="prev">${_suggested}</span></span></div>
+  <div class="hint">Dein Login-Link wird:<br><span style="color:var(--gold);font-weight:700">${_codeHost}/i/<span id="prev">${_suggested}</span></span></div>
   <button class="btn" id="save-btn" onclick="saveCode()">Code speichern → Weiter</button>
 </div>
 <script>
