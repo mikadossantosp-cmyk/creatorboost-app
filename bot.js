@@ -4714,9 +4714,10 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
   <div class="ipf-top">
     <div class="ipf-avatar-wrap">
       ${_myRankCrown ? `<div class="ipf-avatar-crown" style="filter:${_myRankCrown===1?'drop-shadow(0 3px 8px rgba(245,158,11,0.5))':_myRankCrown===2?'grayscale(100%) brightness(1.45) contrast(0.9) drop-shadow(0 3px 8px rgba(148,163,184,0.55))':'sepia(100%) saturate(700%) hue-rotate(-22deg) brightness(0.55) contrast(1.15) drop-shadow(0 3px 8px rgba(180,83,9,0.6))'}">👑</div>` : ''}
-      <div class="ipf-avatar">
+      <div class="ipf-avatar"${(() => { const s = getRingBoxShadow(u); return s ? ` style="${s.replace(/^;/,'')}"` : ''; })()}>
         ${_picUrl ? `<img src="${htmlEsc(_picUrl)}" alt="" loading="eager" onerror="this.style.display='none'">` : _initial}
       </div>
+      ${ringFrameOverlay(u)}
       ${isUidOnline(uid) ? '<div class="ipf-avatar-dot" title="Online"></div>' : ''}
     </div>
     <div class="ipf-stats">
