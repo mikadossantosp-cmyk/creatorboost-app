@@ -851,7 +851,7 @@ const RING_ITEMS = [
     { id: 'ring_diamond', name: 'Diamond Ring', emoji: '💎', price: 20, shadow: '0 0 0 3px #b9f2ff, 0 0 0 6px #a78bfa',   gradient: 'linear-gradient(135deg,#a78bfa,#b9f2ff,#ffffff)', desc: 'Funkelnder Diamantglanz' },
     // ── Premium-„50 Diamanten Rahmen" — CSS-Ringe: Basis (rotierendes conic-Farbband) + Dekoration (deco-Typ).
     //    conic = Basis-Farben · deco = Stil (flames/gems/frost/sparkle/bubbles) · glow = Außen-Schein. ──
-    { id: 'pframe_fire',    name: 'Lava-Ring',     emoji: '🌋', price: 50, premium: true, conic: '#2a0a00,#7a1500,#ff2200,#ff6b00,#ffd166,#ff8c1a,#ff2200,#7a1500,#2a0a00', deco:'flames',  glow:'rgba(255,80,0,.85)', inferno:true, desc: 'Aus Lava & Vulkankristall geschmiedet' },
+    { id: 'pframe_fire',    name: 'Lava-Ring',     emoji: '🌋', price: 50, premium: true, glow:'rgba(255,80,0,.85)', svg:{c1:'#ff4500',c2:'#ffd166',c3:'#7a1500',spikeCount:16,spikeLen:18}, desc: 'Aus Lava & Vulkankristall geschmiedet' },
     { id: 'pframe_gold',    name: 'Gold-Ring',     emoji: '👑', price: 50, premium: true, conic: '#6b4e07,#b8860b,#ffd700,#fff7cc,#ffd700,#b8860b,#6b4e07', deco:'gems',    glow:'rgba(255,215,0,.65)',  gem:'radial-gradient(circle at 35% 30%,#fff,#ffe680 35%,#b8860b 78%)',  desc: 'Goldener Prachtkranz' },
     { id: 'pframe_ice',     name: 'Eis-Ring',      emoji: '🧊', price: 50, premium: true, conic: '#1e4e8c,#3b82f6,#7dd3fc,#ffffff,#bae6fd,#3b82f6,#1e4e8c', deco:'frost',   glow:'rgba(125,211,252,.7)', gem:'radial-gradient(circle at 35% 30%,#fff,#bae6fd 40%,#3b82f6 80%)', desc: 'Eiskristall-Schimmer' },
     { id: 'pframe_crystal', name: 'Kristall-Ring', emoji: '🔷', price: 50, premium: true, conic: '#1e3a8a,#2a7fff,#7c3aed,#e040fb,#5ec8ff,#2a7fff,#1e3a8a', deco:'sparkle', glow:'rgba(168,85,247,.7)',  gem:'radial-gradient(circle at 35% 30%,#fff,#d8b4fe 38%,#7c3aed 80%)',  desc: 'Funkelnder Kristall' },
@@ -911,11 +911,61 @@ function ringGems(item) {
     }
     return s + '</div>';
 }
+// ── SVG-Ring: Deko VERSCHMILZT mit dem Ring (gemeinsamer Goo-Glow-Filter). ──
+// Ring-Band + Spitzen/Kristalle sind EINE Gruppe unter einem feGaussianBlur+feColorMatrix-Filter →
+// die Übergänge fließen weich ineinander, die Deko wächst aus dem Ring (kein aufgesetztes Element).
+let _svgRingSeq = 0;
+function ringSvg(item) {
+    if (!item || !item.svg) return '';
+    const c = item.svg; // {c1,c2,c3 Farben, spikes:[len,...]-Stil, gem:Edelstein-Farbe}
+    const uid = 'rg' + (_svgRingSeq++);
+    const cx = 100, cy = 100;
+    const rOut = 78, rIn = 62;      // Ring-Band (Loch innen frei fürs Foto)
+    const N = c.spikeCount || 16;
+    // Spitzen (Flammen/Kristall-Zacken), die aus dem Ring nach AUSSEN wachsen — als ein Polygon-Pfad.
+    let spikes = '';
+    for (let i = 0; i < N; i++) {
+        const a = (Math.PI * 2 / N) * i;
+        const a1 = a - (Math.PI / N) * 0.55, a2 = a + (Math.PI / N) * 0.55;
+        const tip = rOut + (c.spikeLen || 16) * (i % 2 ? 0.65 : 1); // abwechselnd lang/kurz = natürlicher
+        const bx = cx + Math.cos(a1) * (rOut - 2), by = cy + Math.sin(a1) * (rOut - 2);
+        const tx = cx + Math.cos(a) * tip,        ty = cy + Math.sin(a) * tip;
+        const ex = cx + Math.cos(a2) * (rOut - 2), ey = cy + Math.sin(a2) * (rOut - 2);
+        spikes += '<path d="M' + bx.toFixed(1) + ' ' + by.toFixed(1) + ' Q' + (cx + Math.cos(a) * (rOut + 3)).toFixed(1) + ' ' + (cy + Math.sin(a) * (rOut + 3)).toFixed(1) + ' ' + tx.toFixed(1) + ' ' + ty.toFixed(1) + ' Q' + (cx + Math.cos(a) * (rOut + 3)).toFixed(1) + ' ' + (cy + Math.sin(a) * (rOut + 3)).toFixed(1) + ' ' + ex.toFixed(1) + ' ' + ey.toFixed(1) + ' Z"/>';
+    }
+    // 4 große Kristall-Rauten an 12/3/6/9 Uhr — sitzen AUF dem Band, verschmelzen via Filter.
+    let gems = '';
+    for (let i = 0; i < 4; i++) {
+        const a = (Math.PI / 2) * i - Math.PI / 2;
+        const gx = cx + Math.cos(a) * rOut, gy = cy + Math.sin(a) * rOut, gs = 11;
+        gems += '<path transform="rotate(' + (90 * i) + ' ' + gx.toFixed(1) + ' ' + gy.toFixed(1) + ')" d="M' + gx.toFixed(1) + ' ' + (gy - gs).toFixed(1) + ' L' + (gx + gs * 0.7).toFixed(1) + ' ' + gy.toFixed(1) + ' L' + gx.toFixed(1) + ' ' + (gy + gs).toFixed(1) + ' L' + (gx - gs * 0.7).toFixed(1) + ' ' + gy.toFixed(1) + ' Z" fill="url(#gem' + uid + ')"/>';
+    }
+    return '<svg class="cb-svg-ring" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">'
+      + '<defs>'
+        + '<radialGradient id="band' + uid + '" cx="50%" cy="42%" r="60%"><stop offset="0%" stop-color="' + c.c2 + '"/><stop offset="55%" stop-color="' + c.c1 + '"/><stop offset="100%" stop-color="' + c.c3 + '"/></radialGradient>'
+        + '<linearGradient id="spk' + uid + '" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="' + c.c2 + '"/><stop offset="100%" stop-color="' + c.c1 + '"/></linearGradient>'
+        + '<radialGradient id="gem' + uid + '" cx="38%" cy="30%" r="70%"><stop offset="0%" stop-color="#fff"/><stop offset="40%" stop-color="' + c.c2 + '"/><stop offset="100%" stop-color="' + c.c3 + '"/></radialGradient>'
+        // GOO-FILTER: blur + Kontrast-ColorMatrix → benachbarte Formen verschmelzen zu einer; danach Glow.
+        + '<filter id="goo' + uid + '" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur in="SourceGraphic" stdDeviation="2.4" result="b"/><feColorMatrix in="b" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 20 -9" result="goo"/><feGaussianBlur in="goo" stdDeviation="2.5" result="gl"/><feMerge><feMergeNode in="gl"/><feMergeNode in="goo"/></feMerge></filter>'
+      + '</defs>'
+      // ALLE Teile in EINER Gruppe unter dem Goo-Filter → Ring + Spitzen + Gems verschmelzen.
+      + '<g filter="url(#goo' + uid + ')">'
+        + '<g fill="url(#spk' + uid + ')" class="cb-svg-flick">' + spikes + '</g>'
+        + '<path fill="url(#band' + uid + ')" fill-rule="evenodd" d="M' + cx + ' ' + (cy - rOut) + ' A' + rOut + ' ' + rOut + ' 0 1 0 ' + (cx + 0.01) + ' ' + (cy - rOut) + ' Z M' + cx + ' ' + (cy - rIn) + ' A' + rIn + ' ' + rIn + ' 0 1 1 ' + (cx - 0.01) + ' ' + (cy - rIn) + ' Z"/>'
+      + '</g>'
+      // Kristalle + heller Innen-/Außenrand OBEN drauf (scharf, nicht verschmolzen) für Tiefe.
+      + '<g>' + gems + '</g>'
+      + '<circle cx="' + cx + '" cy="' + cy + '" r="' + rIn + '" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="1.5"/>'
+      + '<circle cx="' + cx + '" cy="' + cy + '" r="' + rOut + '" fill="none" stroke="rgba(0,0,0,.3)" stroke-width="1.5"/>'
+      + '</svg>';
+}
 function ringConicHtml(item, withGlow) {
-    if (!item || !item.conic) return '';
+    if (!item) return '';
+    // Neue SVG-Ringe (verschmolzene Deko) bevorzugen.
+    if (item.svg) return ringSvg(item);
+    if (!item.conic) return '';
     const glow = withGlow && item.glow ? ';box-shadow:0 0 14px 2px ' + item.glow + ',0 0 4px 1px ' + item.glow : '';
     const deco = item.deco ? '<div class="cb-ring-deco cb-deco-' + item.deco + '"></div>' : '';
-    // inferno-Ringe: Feuer ist IN den Ring integriert (Flammen-Zacken als eine Form), KEINE angehefteten Gems.
     if (item.inferno) {
         const flames = '<div class="cb-ring-inferno"></div>';
         return flames + '<div class="cb-ring-base cb-base-inferno" style="background:conic-gradient(from 0deg,' + item.conic + ')' + glow + '"></div>' + deco;
@@ -925,7 +975,7 @@ function ringConicHtml(item, withGlow) {
 function ringFrameOverlay(userData, ownerUid) {
     if (!_ringsVisibleFor(ownerUid != null ? ownerUid : userData?.id)) return '';
     const item = RING_ITEMS.find(r => r.id === userData?.activeRing);
-    if (!item || !item.conic) return '';
+    if (!item || (!item.conic && !item.svg)) return '';
     return ringConicHtml(item, true);
 }
 function getRingBoxShadow(userData) {
@@ -941,7 +991,7 @@ function getRingBoxShadow(userData) {
 function ringPreview(item, size, inner) {
     const fs = Math.round(size * 0.34);
     const inner2 = Math.round(size * 0.80); // Avatar-Kern füllt das Ring-Loch (Ring liegt als Band außen)
-    if (item.conic) {
+    if (item.svg || item.conic) {
         return '<div class="cb-ring-wrap" style="position:relative;width:' + size + 'px;height:' + size + 'px;flex-shrink:0;border-radius:50%;display:flex;align-items:center;justify-content:center">'
             + ringConicHtml(item, false)
             + '<div style="width:' + inner2 + 'px;height:' + inner2 + 'px;border-radius:50%;background:#15151a;display:flex;align-items:center;justify-content:center;font-size:' + fs + 'px;font-weight:700;color:#fff;position:relative;z-index:1">' + (inner || '') + '</div>'
@@ -3032,6 +3082,11 @@ ${session ? `
 /* ═══ PREMIUM-RING (reines CSS, kein PNG, keine Emojis) ═══
    Edler Metall-/Edelstein-Ring: dickes Farbband mit 3D-Bevel + Schliff-Facetten + wandernder Glanz + Außen-Glow.
    Loch = 100% des Containers → Ring liegt eng als Rahmen ums volle Profilbild. Alle Layer 132% + gleiche Maske. */
+/* SVG-Ring mit verschmolzener Deko: liegt zentriert, ragt mit Spitzen über den Rand */
+.cb-svg-ring{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:158%;height:158%;pointer-events:none;z-index:6;overflow:visible}
+.cb-svg-flick{animation:cbSvgFlick 1.2s ease-in-out infinite alternate;transform-origin:center}
+@keyframes cbSvgFlick{0%{opacity:.85;transform:scale(.985)}100%{opacity:1;transform:scale(1.025)}}
+@media (prefers-reduced-motion:reduce){.cb-svg-flick{animation:none}}
 .cb-ring-base,.cb-ring-deco{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:132%;height:132%;border-radius:50%;pointer-events:none;
   -webkit-mask:radial-gradient(farthest-side,#0000 calc(76% - 0.5px),#000 76%);mask:radial-gradient(farthest-side,#0000 calc(76% - 0.5px),#000 76%)}
 /* BASIS: STILLES Farbband (KEINE Rotation) + 3D-Bevel (innen hell, außen dunkel) für metallische Tiefe */
@@ -5381,7 +5436,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v289-inferno';
+const SW_VERSION='v290-svg-merge';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
