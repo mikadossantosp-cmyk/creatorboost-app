@@ -39,7 +39,7 @@ const PORT          = process.env.PORT          || 3000;
 const LOCAL_STORE = process.env.LOCAL_STORE === '1';
 // Zentrale Asset-/App-Version (Node-Scope): bricht CSS-Cache (?v=) + Service-Worker-Cache mit jedem Deploy.
 // EINE Quelle — wird in den CSS-<link> und in den SW-Script-Text (SW_VERSION) interpoliert.
-const APP_VERSION = 'v318-csscachebust';
+const APP_VERSION = 'v319-legendthemes';
 if (LOCAL_STORE) {
     try {
         datastore.load();
@@ -906,28 +906,48 @@ const CARD_THEME_ITEMS = [
     { id:'theme_aurora', name:'Aurora', emoji:'🌌', price:150, desc:'Animierter Neon-Schein (Premium)', anim:true,
       bg3:'#0e1020', bg4:'#161a30', border:'rgba(124,58,237,.30)', border2:'rgba(124,58,237,.16)', text:'#e9e6ff', muted:'#aaa1da', muted2:'#8a82bd', accent:'#a78bfa',
       card:'linear-gradient(160deg,#15123a,#0a0a18)', frame:'rgba(124,58,237,.5)', glow:'rgba(124,58,237,.30)' },
+    // ── LEGENDÄR-TIER: höchste Stufe. Pulsierender Glow (Theme-Farbe) + funkelnde Partikel + „✦ LEGENDÄR"-Badge auf der Karte. ──
+    { id:'theme_legend_phoenix', name:'Phönix', emoji:'🔥', price:250, legendary:true, desc:'Legendär — glühende Asche & Gold',
+      bg3:'#1a0f08', bg4:'#26160c', border:'rgba(255,140,50,.34)', border2:'rgba(255,140,50,.18)', text:'#ffe9d2', muted:'#e0a878', muted2:'#c08a5c', accent:'#ff8c32',
+      card:'linear-gradient(160deg,#2a1409,#120a06)', frame:'rgba(255,150,60,.6)', glow:'rgba(255,110,30,.4)', glowc:'rgba(255,130,40,.85)', spark:'#ffd9a0' },
+    { id:'theme_legend_prism', name:'Prisma', emoji:'💠', price:300, legendary:true, desc:'Legendär — holografischer Schimmer',
+      bg3:'#0c1024', bg4:'#141a36', border:'rgba(120,180,255,.32)', border2:'rgba(120,180,255,.17)', text:'#eaf0ff', muted:'#a9b6e6', muted2:'#8694c8', accent:'#7cc4ff',
+      card:'linear-gradient(160deg,#141436,#0a0a1c)', frame:'rgba(140,180,255,.6)', glow:'rgba(120,120,255,.4)', glowc:'rgba(150,170,255,.85)', spark:'#cfe4ff' },
 ];
 function _ctSfx(id){ return String(id||'').replace(/^theme_/,''); }
 // Liefert die Theme-Klasse für eine .post-Karte (oder '' wenn kein/ungültiges Theme aktiv).
-function cardThemeClass(themeId){ const t = CARD_THEME_ITEMS.find(x=>x.id===themeId); return t ? ' cb-ct cb-ct-'+_ctSfx(t.id) : ''; }
+function cardThemeClass(themeId){ const t = CARD_THEME_ITEMS.find(x=>x.id===themeId); return t ? ' cb-ct cb-ct-'+_ctSfx(t.id)+(t.legendary?' cb-ct-legend':'') : ''; }
 // Generiert alle Theme-CSS-Regeln. Höhere Spezifität als '.post' und '[data-theme=dark] .post' → gewinnt in beiden Modi.
 function cardThemeCss(){
     const rules = CARD_THEME_ITEMS.map(function(t){
         const k = _ctSfx(t.id);
-        const vars = '--bg3:'+t.bg3+';--bg4:'+t.bg4+';--border:'+t.border+';--border2:'+t.border2+';--text:'+t.text+';--muted:'+t.muted+';--muted2:'+t.muted2+';--accent:'+t.accent+';';
+        const extra = t.legendary ? ('--ct-spark:'+(t.spark||'#fff')+';--ct-glowc:'+(t.glowc||t.glow)+';') : '';
+        const vars = '--bg3:'+t.bg3+';--bg4:'+t.bg4+';--border:'+t.border+';--border2:'+t.border2+';--text:'+t.text+';--muted:'+t.muted+';--muted2:'+t.muted2+';--accent:'+t.accent+';'+extra;
         const box = 'background:'+t.card+';border:1.5px solid '+t.frame+';box-shadow:0 10px 30px '+t.glow+',0 2px 8px rgba(0,0,0,.18),inset 0 1px 0 rgba(255,255,255,.06)';
+        // Legendär nutzt eigene Pulse-Animation (cbLegendPulse, s.u.) statt cbCtAurora.
+        const anim = (t.anim && !t.legendary) ? ';animation:cbCtAurora 7s ease-in-out infinite' : '';
         // Eigene Regel + dark-Override (beide mit .cb-ct-<k> = höhere Spezifität als die Basis-.post-Regeln).
-        return '.post.cb-ct-'+k+'{'+vars+box+(t.anim?';animation:cbCtAurora 7s ease-in-out infinite':'')+'}'
-             + '[data-theme=dark] .post.cb-ct-'+k+'{'+vars+box+(t.anim?';animation:cbCtAurora 7s ease-in-out infinite':'')+'}';
+        return '.post.cb-ct-'+k+'{'+vars+box+anim+'}'
+             + '[data-theme=dark] .post.cb-ct-'+k+'{'+vars+box+anim+'}';
     }).join('');
     return rules
       + '@keyframes cbCtAurora{0%,100%{box-shadow:0 0 22px -3px rgba(124,58,237,.55),0 10px 30px rgba(0,0,0,.4)}33%{box-shadow:0 0 22px -3px rgba(14,165,233,.55),0 10px 30px rgba(0,0,0,.4)}66%{box-shadow:0 0 22px -3px rgba(236,72,153,.55),0 10px 30px rgba(0,0,0,.4)}}'
-      + '@media(prefers-reduced-motion:reduce){.post[class*=cb-ct-]{animation:none!important}}';
+      // ── Legendär-Tier: pulsierender Glow (Theme-Farbe via --ct-glowc) + Funkel-Partikel (::after) + Badge (::before) ──
+      + '.post.cb-ct-legend{animation:cbLegendPulse 3.2s ease-in-out infinite}'
+      + '.post.cb-ct-legend::before{content:"✦ LEGENDÄR";position:absolute;top:10px;left:14px;z-index:9;font-size:8px;font-weight:800;letter-spacing:.6px;color:#231803;background:linear-gradient(135deg,#fff0bf,#e7c14e);padding:3px 9px;border-radius:99px;box-shadow:0 2px 10px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.6);pointer-events:none}'
+      + '.post.cb-ct-legend::after{content:"";position:absolute;inset:0;z-index:7;pointer-events:none;mix-blend-mode:screen;background-image:radial-gradient(2px 2px at 18% 22%,var(--ct-spark,#fff),transparent 60%),radial-gradient(1.5px 1.5px at 72% 28%,var(--ct-spark,#fff),transparent 60%),radial-gradient(2px 2px at 41% 66%,var(--ct-spark,#fff),transparent 60%),radial-gradient(1.5px 1.5px at 86% 58%,var(--ct-spark,#fff),transparent 60%),radial-gradient(1.5px 1.5px at 30% 86%,var(--ct-spark,#fff),transparent 60%),radial-gradient(2px 2px at 62% 12%,var(--ct-spark,#fff),transparent 60%),radial-gradient(1.5px 1.5px at 52% 40%,var(--ct-spark,#fff),transparent 60%);animation:cbLegendSpark 3.4s ease-in-out infinite}'
+      + '@keyframes cbLegendPulse{0%,100%{box-shadow:0 0 16px -7px var(--ct-glowc,#fff),0 10px 30px rgba(0,0,0,.45)}50%{box-shadow:0 0 34px -2px var(--ct-glowc,#fff),0 10px 30px rgba(0,0,0,.45)}}'
+      + '@keyframes cbLegendSpark{0%,100%{opacity:.3}50%{opacity:1}}'
+      + '@media(prefers-reduced-motion:reduce){.post[class*=cb-ct-]{animation:none!important}.post.cb-ct-legend::after{animation:none}}';
 }
 // Mini-Vorschau einer Karte mit dem Theme (für Shop/Tasche). size=Breite in px.
 function cardThemePreview(t, size){
     const k = _ctSfx(t.id);
-    return '<div class="cb-ct cb-ct-'+k+'" style="width:'+size+'px;border-radius:14px;overflow:hidden;border:1.5px solid '+t.frame+';background:'+t.card+';flex-shrink:0'+(t.anim?';animation:cbCtAurora 7s ease-in-out infinite':'')+'">'
+    const animCss = (t.anim && !t.legendary) ? ';animation:cbCtAurora 7s ease-in-out infinite' : '';
+    const legGlow = t.legendary ? (';box-shadow:0 0 16px -4px '+(t.glowc||t.glow)) : '';
+    const legBadge = t.legendary ? '<span style="position:absolute;top:6px;left:8px;z-index:3;font-size:7px;font-weight:800;letter-spacing:.4px;color:#231803;background:linear-gradient(135deg,#fff0bf,#e7c14e);padding:2px 6px;border-radius:99px">✦ LEGENDÄR</span>' : '';
+    return '<div class="cb-ct cb-ct-'+k+'" style="position:relative;width:'+size+'px;border-radius:14px;overflow:hidden;border:1.5px solid '+t.frame+';background:'+t.card+';flex-shrink:0'+animCss+legGlow+'">'
+      + legBadge
       + '<div style="height:'+Math.round(size*0.42)+'px;background:linear-gradient(135deg,#1e2230,#0c0e16);display:flex;align-items:center;justify-content:center"><div style="width:0;height:0;border-style:solid;border-width:8px 0 8px 14px;border-color:transparent transparent transparent rgba(255,255,255,.85)"></div></div>'
       + '<div style="padding:8px 10px 10px">'
         + '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px"><div style="width:18px;height:18px;border-radius:50%;background:'+t.accent+'"></div><div style="height:7px;width:46%;border-radius:4px;background:'+t.text+';opacity:.85"></div></div>'
@@ -19290,9 +19310,9 @@ function switchRanking(tab, btn) {
                     return '<div style="background:var(--bg3);border:1px solid var(--border2);border-radius:16px;padding:14px;margin-bottom:10px;display:flex;align-items:center;gap:14px">'
                       + cardThemePreview(t, 92)
                       + '<div style="flex:1;min-width:0">'
-                        + '<div style="font-size:var(--fs-sm);font-weight:800;display:flex;align-items:center;gap:6px">'+t.emoji+' '+t.name+(t.anim?' <span style="font-size:9px;font-weight:800;color:#ffd700;background:rgba(255,215,0,.14);border:1px solid rgba(255,215,0,.35);padding:1px 6px;border-radius:99px">PREMIUM</span>':'')+'</div>'
+                        + '<div style="font-size:var(--fs-sm);font-weight:800;display:flex;align-items:center;gap:6px">'+t.emoji+' '+t.name+(t.legendary?' <span style="font-size:9px;font-weight:800;color:#231803;background:linear-gradient(135deg,#fff0bf,#e7c14e);padding:1px 7px;border-radius:99px">✦ LEGENDÄR</span>':(t.anim?' <span style="font-size:9px;font-weight:800;color:#ffd700;background:rgba(255,215,0,.14);border:1px solid rgba(255,215,0,.35);padding:1px 6px;border-radius:99px">PREMIUM</span>':''))+'</div>'
                         + '<div style="font-size:11px;color:var(--muted);margin:4px 0 10px">'+t.desc+'</div>'
-                        + '<div style="display:flex;align-items:center;justify-content:space-between;gap:var(--space-2)">'+priceTxt+btn+'</div>'
+                        + '<div style="display:flex;align-items:center;justify-content:space-between;gap:var(--space-2)">'+priceTxt+'<div style="display:flex;gap:8px;align-items:center">'+'<button onclick="previewTheme(\''+t.id+'\')" style="background:var(--bg4);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:6px 12px;font-size:var(--fs-xs);font-weight:700;cursor:pointer">👁 Vorschau</button>'+btn+'</div></div>'
                       + '</div>'
                       + '</div>';
                 }).join('');
@@ -19396,6 +19416,53 @@ function switchRanking(tab, btn) {
   </div>
   ${titlesHtml}
 </div>
+<div id="theme-preview-modal" onclick="if(event.target===this)closeThemePreview()" style="display:none;position:fixed;inset:0;z-index:100000;background:rgba(0,0,0,.62);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:20px">
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:20px;max-width:380px;width:100%;padding:18px;box-shadow:0 30px 80px rgba(0,0,0,.5)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+      <div id="tpv-title" style="font-size:16px;font-weight:800;color:var(--text)"></div>
+      <button onclick="closeThemePreview()" aria-label="Schließen" style="background:none;border:none;color:var(--muted);font-size:24px;cursor:pointer;line-height:1;padding:0 4px">×</button>
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:14px">So sehen deine Feed-Posts mit diesem Theme aus — für alle sichtbar.</div>
+    <div id="tpv-card"></div>
+    <div id="tpv-foot" style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:16px">
+      <div id="tpv-price" style="font-size:15px;font-weight:800;color:#a78bfa"></div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <div id="tpv-owned" style="display:none;color:#22c55e;font-weight:700;font-size:13px">✓ Besessen</div>
+        <button id="tpv-buy" onclick="buyItem(window._tpvId)" style="background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;border:none;border-radius:10px;padding:9px 22px;font-size:13px;font-weight:700;cursor:pointer">Kaufen</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+window.CB_SHOP_THEMES = ${JSON.stringify((function(){var o={};CARD_THEME_ITEMS.forEach(function(t){o[t.id]={sfx:_ctSfx(t.id),name:t.name,emoji:t.emoji,price:t.price,legendary:!!t.legendary,owned:myInventory.includes(t.id),canAfford:(isShopAdmin||(myDiamonds>=t.price))};});return o;})())};
+function closeThemePreview(){var m=document.getElementById('theme-preview-modal');if(m)m.style.display='none';}
+function previewTheme(id){
+  var t=(window.CB_SHOP_THEMES||{})[id]; if(!t)return; window._tpvId=id;
+  document.getElementById('tpv-title').textContent=t.emoji+' '+t.name;
+  var card='<div class="post cb-ct cb-ct-'+t.sfx+(t.legendary?' cb-ct-legend':'')+'" style="margin:0;position:relative">'
+    +'<div style="display:flex;align-items:center;gap:10px;padding:14px 14px 8px">'
+      +'<div style="width:42px;height:42px;border-radius:50%;background:var(--accent);flex-shrink:0"></div>'
+      +'<div><div style="font-weight:700;color:var(--text);font-size:14px">Dein Name</div><div style="font-size:12px;color:var(--muted2)">@dein.handle</div></div>'
+    +'</div>'
+    +'<div style="position:relative;margin:0 14px;height:158px;border-radius:14px;background:linear-gradient(135deg,#1e2230,#0c0e16);display:flex;align-items:center;justify-content:center">'
+      +'<div style="width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,.92)"></div>'
+      +'<span style="position:absolute;top:10px;left:10px;font-size:11px;color:#fff;background:rgba(0,0,0,.5);padding:3px 8px;border-radius:8px">▶ Instagram Reel</span>'
+    +'</div>'
+    +'<div style="padding:10px 14px;color:var(--muted);font-size:13px;line-height:1.4">Wie ich diese Woche meine Reichweite verdoppelt habe 🚀</div>'
+    +'<div style="padding:10px 14px;display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--border2)">'
+      +'<span style="color:var(--text);font-size:13px;font-weight:600">❤ 142 · 18 XP</span>'
+      +'<span style="background:#7c3aed;color:#fff;padding:8px 18px;border-radius:10px;font-size:12px;font-weight:700">→ Öffnen</span>'
+    +'</div>'
+  +'</div>';
+  document.getElementById('tpv-card').innerHTML=card;
+  var buy=document.getElementById('tpv-buy'),owned=document.getElementById('tpv-owned'),price=document.getElementById('tpv-price');
+  if(t.owned){buy.style.display='none';owned.style.display='block';price.textContent='Aktiv im Shop besessen';price.style.color='var(--muted)';}
+  else{owned.style.display='none';buy.style.display='block';price.textContent='💎 '+t.price;price.style.color='#a78bfa';
+    buy.disabled=!t.canAfford;buy.style.background=t.canAfford?'linear-gradient(135deg,#a78bfa,#7c3aed)':'var(--bg4)';buy.style.color=t.canAfford?'#fff':'var(--muted)';buy.style.cursor=t.canAfford?'pointer':'not-allowed';}
+  document.getElementById('theme-preview-modal').style.display='flex';
+}
+document.addEventListener('keydown',function(e){if(e.key==='Escape')closeThemePreview();});
+</script>
 <script>
 async function buyExtraLink(){
   const btn=document.getElementById('buy-extralink-btn');

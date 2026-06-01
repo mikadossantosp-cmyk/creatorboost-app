@@ -1033,6 +1033,7 @@ const ITEM_PRICES = {
     title_pro: 50, title_star: 100, title_vip: 150, title_feuer: 200, title_eis: 200, title_legende: 300, title_elite: 400, title_royal: 500,
     // Karten-Themes (Komplett-Designs für Feed-/Post-Karten)
     theme_obsidian: 80, theme_frost: 80, theme_sunset: 90, theme_rose: 90, theme_emerald: 100, theme_aurora: 150,
+    theme_legend_phoenix: 250, theme_legend_prism: 300,
 };
 const ITEM_NAMES = {
     ring_flame: '🔥 Flame Ring', ring_ocean: '🌊 Ocean Ring', ring_gold: '✨ Gold Ring', ring_purple: '🔮 Cosmic Ring', ring_rainbow: '🌈 Rainbow Ring', ring_diamond: '💎 Diamond Ring',
@@ -1042,6 +1043,7 @@ const ITEM_NAMES = {
     pframe_fire: '🌋 Lava-Ring', pframe_gold: '👑 Gold-Ring', pframe_ice: '🧊 Eis-Ring', pframe_crystal: '🔷 Kristall-Ring', pframe_bubble: '🫧 Perlen-Ring',
     title_legende: '🏆 Legende', title_vip: '💎 VIP', title_pro: '⭐ Pro', title_star: '🌟 Superstar', title_elite: '👑 Elite', title_feuer: '🔥 Feuer-Titel', title_eis: '❄️ Eis-Titel', title_royal: '👑 Royal',
     theme_obsidian: '👑 Obsidian Gold', theme_frost: '🧊 Frost', theme_sunset: '🌇 Sunset', theme_rose: '🌹 Rosé', theme_emerald: '💚 Emerald', theme_aurora: '🌌 Aurora',
+    theme_legend_phoenix: '🔥 Phönix (Legendär)', theme_legend_prism: '💠 Prisma (Legendär)',
 };
 function buyItemApi({ uid, itemId }) {
     if (!uid || !itemId) return { ok: false, error: 'Fehlende Parameter' };
