@@ -866,15 +866,16 @@ const RING_ITEMS = [
 ];
 // ── Titelschilder (Banner unter dem Profil, mit gestyltem Titel-Text). id-Prefix: title_ ──
 // bg = Banner-Hintergrund (gradient), tcol = Text-Farbe/-Verlauf, glow = Außenschein.
+// frame = Metallrahmen-Paar (innen hell / außen dunkel) für den layered Premium-Look.
 const TITLE_ITEMS = [
-    { id:'title_pro',     label:'PRO',        emoji:'⭐', price:50, bg:'linear-gradient(135deg,#334155,#0f172a)', tcol:'#e2e8f0', glow:'rgba(148,163,184,.5)', desc:'Schlichtes Pro-Schild' },
-    { id:'title_star',    label:'SUPERSTAR',  emoji:'🌟', price:100, bg:'linear-gradient(135deg,#7c3aed,#4c1d95)', tcol:'#fde68a', glow:'rgba(167,139,250,.6)', desc:'Glänzendes Star-Schild' },
-    { id:'title_vip',     label:'VIP',        emoji:'💎', price:150, bg:'linear-gradient(135deg,#0ea5e9,#075985)', tcol:'#ffffff', glow:'rgba(14,165,233,.6)', desc:'Edles VIP-Schild' },
-    { id:'title_feuer',   label:'FEUER',      emoji:'🔥', price:200, bg:'linear-gradient(135deg,#7a1500,#ff4500,#ffb347)', tcol:'#fff7d6', glow:'rgba(255,90,0,.7)', desc:'Loderndes Feuer-Schild' },
-    { id:'title_eis',     label:'EIS',        emoji:'❄️', price:200, bg:'linear-gradient(135deg,#1e4e8c,#3b82f6,#bae6fd)', tcol:'#ffffff', glow:'rgba(125,211,252,.7)', desc:'Frostiges Eis-Schild' },
-    { id:'title_legende', label:'LEGENDE',    emoji:'🏆', price:300, bg:'linear-gradient(135deg,#b8860b,#ffd700,#fff7cc)', tcol:'#5b3a00', glow:'rgba(255,215,0,.65)', desc:'Legendäres Gold-Schild' },
-    { id:'title_elite',   label:'ELITE',      emoji:'👑', price:400, bg:'linear-gradient(135deg,#1a1030,#7c3aed,#e040fb)', tcol:'#fde68a', glow:'rgba(224,64,251,.6)', desc:'Exklusives Elite-Schild' },
-    { id:'title_royal',   label:'ROYAL',      emoji:'', price:500, bg:'linear-gradient(135deg,#3b0764 0%,#6d28d9 38%,#b8860b 74%,#ffd700 100%)', tcol:'#fff7d6', glow:'rgba(255,215,0,.65)', desc:'Königliches Royal-Schild mit Krone', crown:true },
+    { id:'title_pro',     label:'PRO',        emoji:'⭐', price:50, bg:'linear-gradient(135deg,#3a4150,#11161f)', tcol:'#e8eef6', glow:'rgba(148,163,184,.5)', frame:'silver', desc:'Schlichtes Pro-Schild' },
+    { id:'title_star',    label:'SUPERSTAR',  emoji:'🌟', price:100, bg:'linear-gradient(135deg,#8b5cf6,#4c1d95)', tcol:'#fde68a', glow:'rgba(167,139,250,.6)', frame:'violet', desc:'Glänzendes Star-Schild' },
+    { id:'title_vip',     label:'VIP',        emoji:'💎', price:150, bg:'linear-gradient(135deg,#22b8ef,#075985)', tcol:'#ffffff', glow:'rgba(14,165,233,.6)', frame:'silver', desc:'Edles VIP-Schild' },
+    { id:'title_feuer',   label:'FEUER',      emoji:'🔥', price:200, bg:'linear-gradient(135deg,#ff8a3d,#b3300a)', tcol:'#fff7e6', glow:'rgba(255,90,0,.7)', frame:'bronze', desc:'Loderndes Feuer-Schild' },
+    { id:'title_eis',     label:'EIS',        emoji:'❄️', price:200, bg:'linear-gradient(135deg,#9fd8fb,#1e5a96)', tcol:'#ffffff', glow:'rgba(125,211,252,.7)', frame:'frost', desc:'Frostiges Eis-Schild' },
+    { id:'title_legende', label:'LEGENDE',    emoji:'🏆', price:300, bg:'linear-gradient(135deg,#ffe487,#c9971f)', tcol:'#5b3a00', glow:'rgba(255,215,0,.65)', frame:'gold', desc:'Legendäres Gold-Schild' },
+    { id:'title_elite',   label:'ELITE',      emoji:'👑', price:400, bg:'linear-gradient(135deg,#1a1030,#7c3aed,#e040fb)', tcol:'#fde68a', glow:'rgba(224,64,251,.6)', frame:'violet', desc:'Exklusives Elite-Schild' },
+    { id:'title_royal',   label:'ROYAL',      emoji:'', price:500, bg:'linear-gradient(110deg,#4c1d95 0%,#7c3aed 38%,#b8860b 72%,#ffd700 100%)', tcol:'#fff7d6', glow:'rgba(255,215,0,.65)', frame:'gold', desc:'Königliches Royal-Schild mit Krone', crown:true },
 ];
 // Premium-Krone (SVG) als Deko über dem Royal-Banner. h = Höhe in px.
 function royalCrownSvg(h) {
@@ -892,27 +893,52 @@ function royalCrownSvg(h) {
 // Krone sitzt sauber auf der oberen rechten Ecke: Basis überlappt die Kante leicht (sitzt auf, schwebt nicht),
 // Drehpunkt an der Ecke, dezente Neigung nach außen.
 function royalCrownDeco(h) {
-    return '<span style="position:absolute;right:' + (h * 0.10).toFixed(0) + 'px;top:-' + (h * 0.62).toFixed(0) + 'px;transform:rotate(12deg);transform-origin:bottom right;filter:drop-shadow(0 2px 3px rgba(0,0,0,.45));line-height:0;pointer-events:none">' + royalCrownSvg(h) + '</span>';
+    // Krone sitzt SEATED auf der oberen rechten Ecke: Basis überlappt die Kante leicht (kein Schweben),
+    // Drehpunkt an der Ecke, dezente Neigung nach außen.
+    return '<span style="position:absolute;right:6px;top:-' + (h * 0.80).toFixed(0) + 'px;transform:rotate(10deg);transform-origin:bottom right;filter:drop-shadow(0 2px 3px rgba(0,0,0,.5));line-height:0;pointer-events:none;z-index:2">' + royalCrownSvg(h) + '</span>';
+}
+// Metallrahmen-Paare (innen hell / außen dunkel) für den layered Premium-Look.
+const TITLE_FRAMES = {
+    gold:   ['#fff3c0', '#9a7212'],
+    silver: ['#f4f7fb', '#7e8696'],
+    violet: ['#efd9ff', '#7c3aed'],
+    bronze: ['#ffd9a8', '#9a3412'],
+    frost:  ['#ffffff', '#7db8e8'],
+};
+// ── Zentraler Premium-Titelschild-Renderer (layered collectible badge). ──
+// size: 'banner' (Profil) | 'shop' | 'tasche' | 'inline' (Feed-Reihe). Ein zusammenhängendes Objekt:
+// Metallrahmen (2-tönig), glossy Top-Sheen, Tiefe (inset Licht/Schatten), gravierter Text, weicher Glow.
+function titlePlateHtml(titleId, size) {
+    const t = (titleId && typeof titleId === 'object') ? titleId : TITLE_ITEMS.find(x => x.id === titleId);
+    if (!t) return '';
+    const FR = TITLE_FRAMES[t.frame] || TITLE_FRAMES.silver;
+    const D = ({
+        banner: { pad:'9px 22px',  fs:'13px',   ls:'2px',   em:'15px', br:'13px', minw:'auto', crown:22 },
+        shop:   { pad:'9px 22px',  fs:'13px',   ls:'2px',   em:'15px', br:'13px', minw:'auto', crown:22 },
+        tasche: { pad:'7px 16px',  fs:'12px',   ls:'1.5px', em:'13px', br:'11px', minw:'auto', crown:18 },
+        inline: { pad:'4px 12px',  fs:'10.5px', ls:'1.2px', em:'12px', br:'9px',  minw:'auto', crown:16 },
+    })[size || 'banner'];
+    const crown = t.crown ? royalCrownDeco(D.crown) : '';
+    const gem = t.emoji ? '<span style="font-size:' + D.em + ';line-height:1;filter:drop-shadow(0 1px 1px rgba(0,0,0,.5))">' + t.emoji + '</span>' : '';
+    return '<span class="cb-tplate" style="position:relative;display:inline-flex;align-items:center;justify-content:center;gap:8px;vertical-align:middle;'
+        + 'padding:' + D.pad + ';border-radius:' + D.br + ';min-width:' + D.minw + ';'
+        + 'background:linear-gradient(180deg,rgba(255,255,255,.32),rgba(255,255,255,0) 46%),' + t.bg + ';'
+        + 'box-shadow:inset 0 1px 1px rgba(255,255,255,.6),inset 0 -2px 5px rgba(0,0,0,.3),'
+        + '0 0 0 1.5px ' + FR[0] + ',0 0 0 3px ' + FR[1] + ',0 7px 20px -5px ' + t.glow + ',0 2px 6px rgba(0,0,0,.32)">'
+        + crown + gem
+        + '<span style="font-size:' + D.fs + ';font-weight:800;letter-spacing:' + D.ls + ';color:' + t.tcol + ';white-space:nowrap;'
+        + 'text-shadow:0 1px 0 rgba(255,255,255,.3),0 -1px 1px rgba(0,0,0,.45)">' + t.label + '</span>'
+        + '</span>';
 }
 // Banner-HTML für ein Titelschild (unter dem Profil). Gibt '' wenn kein/ungültiger Titel.
 function titleBannerHtml(titleId) {
     const t = TITLE_ITEMS.find(x => x.id === titleId);
     if (!t) return '';
-    return '<div class="cb-titleplate" style="position:relative;min-width:150px;background:' + t.bg + ';box-shadow:0 2px 10px ' + t.glow + ',inset 0 1px 0 rgba(255,255,255,.25)">'
-        + (t.crown ? royalCrownDeco(22) : '')
-        + (t.emoji ? '<span class="cb-titleplate-em">' + t.emoji + '</span>' : '')
-        + '<span class="cb-titleplate-tx" style="color:' + t.tcol + '">' + t.label + '</span>'
-        + '</div>';
+    return '<div style="margin:8px 0 2px">' + titlePlateHtml(t, 'banner') + '</div>';
 }
-// Kompaktes Titelschild für Reihen (z.B. Feed-Link neben "Öffnen"). Kein Außenabstand, kleiner.
+// Kompaktes Titelschild für Reihen (z.B. Feed-Link neben "Öffnen").
 function titlePlateInlineHtml(titleId) {
-    const t = TITLE_ITEMS.find(x => x.id === titleId);
-    if (!t) return '';
-    return '<div class="cb-titleplate" style="position:relative;margin:0;padding:4px 11px;background:' + t.bg + ';box-shadow:0 2px 8px ' + t.glow + ',inset 0 1px 0 rgba(255,255,255,.25)">'
-        + (t.crown ? royalCrownDeco(18) : '')
-        + (t.emoji ? '<span class="cb-titleplate-em" style="font-size:13px">' + t.emoji + '</span>' : '')
-        + '<span class="cb-titleplate-tx" style="font-size:11px;letter-spacing:1.2px;color:' + t.tcol + '">' + t.label + '</span>'
-        + '</div>';
+    return titlePlateHtml(titleId, 'inline');
 }
 // PNG-Ringe (Premium-/Spezial-Rahmen): global an/aus. Auf false → für normale User ausgeblendet,
 // ABER Admins sehen/tragen sie immer (zum Testen, auch wenn noch nicht für alle freigegeben).
@@ -4846,9 +4872,7 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
 .ipf-name-row .nm{font-size:16px;font-weight:700;color:var(--text);line-height:1.2;display:inline-flex;align-items:center;gap:6px}
 .ipf-name-row .badge{display:inline-flex;align-items:center;gap:var(--space-1);padding:3px 9px;border-radius:99px;font-size:10.5px;font-weight:800;letter-spacing:.4px;margin-left:6px;vertical-align:middle}
 .ipf-handle{font-size:13px;color:var(--muted);margin-top:2px;font-weight:500}
-.cb-titleplate{display:inline-flex;align-items:center;justify-content:center;gap:7px;margin:8px 0 2px;padding:6px 16px;border-radius:10px;border:1px solid rgba(255,255,255,.18)}
-.cb-titleplate-em{font-size:14px;line-height:1}
-.cb-titleplate-tx{font-size:12.5px;font-weight:800;letter-spacing:1.5px;text-shadow:0 1px 2px rgba(0,0,0,.35)}
+/* Titelschilder werden inline gerendert (titlePlateHtml). Klassen-CSS entfernt. */
 .ipf-bio{font-size:13.5px;color:var(--text);line-height:1.5;margin:10px 0;white-space:pre-wrap;word-break:break-word}
 .ipf-meta{display:flex;flex-wrap:wrap;gap:var(--space-2);margin:8px 0 4px;align-items:center}
 .ipf-link{display:inline-flex;align-items:center;gap:5px;font-size:13px;color:#4dabf7;text-decoration:none;font-weight:600}
@@ -5527,7 +5551,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v308-superlinkxp';
+const SW_VERSION='v309-premiumbadges';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
@@ -19190,12 +19214,9 @@ function switchRanking(tab, btn) {
                     const btn = owned
                       ? '<div style="font-size:var(--fs-xs);color:#22c55e;font-weight:700">✓ Besessen</div>'
                       : '<button onclick="buyItem(\''+t.id+'\')" data-item="'+t.id+'" style="background:'+(canAfford?'linear-gradient(135deg,#a78bfa,#7c3aed)':'var(--bg4)')+';color:'+(canAfford?'#fff':'var(--muted)')+';border:none;border-radius:10px;padding:6px 16px;font-size:var(--fs-xs);font-weight:700;cursor:'+(canAfford?'pointer':'not-allowed')+'" '+(canAfford?'':'disabled')+'>Kaufen</button>';
-                    return '<div style="background:var(--bg3);border:1px solid var(--border2);border-radius:16px;padding:'+(t.crown?'20px':'12px')+' 14px 12px;margin-bottom:10px">'
-                      + '<div style="position:relative;display:flex;align-items:center;justify-content:center;gap:7px;width:170px;padding:7px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.18);background:'+t.bg+';box-shadow:0 2px 10px '+t.glow+',inset 0 1px 0 rgba(255,255,255,.25);margin-bottom:9px">'
-                        + (t.crown ? royalCrownDeco(22) : '')
-                        + (t.emoji ? '<span style="font-size:14px;line-height:1">'+t.emoji+'</span>' : '')+'<span style="font-size:12.5px;font-weight:800;letter-spacing:1.5px;color:'+t.tcol+';text-shadow:0 1px 2px rgba(0,0,0,.35)">'+t.label+'</span>'
-                      + '</div>'
-                      + '<div style="font-size:11px;color:var(--muted);margin-bottom:8px">'+t.desc+'</div>'
+                    return '<div style="background:var(--bg3);border:1px solid var(--border2);border-radius:16px;padding:'+(t.crown?'22px':'14px')+' 14px 12px;margin-bottom:10px;text-align:center">'
+                      + '<div style="margin-bottom:11px">' + titlePlateHtml(t, 'shop') + '</div>'
+                      + '<div style="font-size:11px;color:var(--muted);margin-bottom:8px;text-align:left">'+t.desc+'</div>'
                       + '<div style="display:flex;align-items:center;justify-content:space-between;gap:var(--space-2)">'+priceTxt+btn+'</div>'
                       + '</div>';
                 }).join('');
@@ -22431,7 +22452,7 @@ ${(()=>{ const _myTitles = TITLE_ITEMS.filter(t=>myInventory.includes(t.id)); re
   ${(()=>{ const _t = TITLE_ITEMS.filter(t=>myInventory.includes(t.id)); if(!_t.length) return ''; return '<div style="font-size:10px;font-weight:800;color:#a78bfa;letter-spacing:.5px;margin:14px 0 8px">🏷️ TITELSCHILDER</div><div style="display:flex;flex-direction:column;gap:10px">' + _t.map(function(t){
       const isA = (u.activeTitle === t.id);
       return '<div style="background:var(--bg3);border:1px solid '+(isA?'rgba(167,139,250,.5)':'var(--border2)')+';border-radius:14px;padding:var(--space-3);display:flex;align-items:center;gap:var(--space-3)">'
-        + '<div style="position:relative;display:flex;align-items:center;justify-content:center;gap:6px;width:128px;padding:6px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.18);background:'+t.bg+';box-shadow:0 2px 8px '+t.glow+';flex-shrink:0">'+(t.crown?royalCrownDeco(18):'')+(t.emoji?'<span style="font-size:13px">'+t.emoji+'</span>':'')+'<span style="font-size:11.5px;font-weight:800;letter-spacing:1px;color:'+t.tcol+'">'+t.label+'</span></div>'
+        + '<span style="flex-shrink:0">'+titlePlateHtml(t,'tasche')+'</span>'
         + '<div style="flex:1;min-width:0"><div style="font-size:var(--fs-sm);font-weight:700">'+t.label+(isA?' <span style="font-size:10px;color:#a78bfa;font-weight:600">● Aktiv</span>':'')+'</div><div style="font-size:11px;color:var(--muted)">'+t.desc+'</div></div>'
         + '<button onclick="setTitle(\''+(isA?'':t.id)+'\')" style="background:'+(isA?'rgba(167,139,250,.2)':'var(--bg4)')+';border:1px solid '+(isA?'rgba(167,139,250,.4)':'var(--border)')+';color:'+(isA?'#a78bfa':'var(--text)')+';border-radius:10px;padding:6px 12px;font-size:var(--fs-xs);font-weight:600;cursor:pointer;white-space:nowrap">'+(isA?'Deaktivieren':'Aktivieren')+'</button>'
         + '</div>';
