@@ -3026,11 +3026,11 @@ ${session ? `
   animation:cbRingSpin 5s linear infinite;pointer-events:none;z-index:6;filter:saturate(1.2) drop-shadow(0 0 6px rgba(0,0,0,.25))}
 @keyframes cbRingSpin{to{transform:translate(-50%,-50%) rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){.cb-ring-conic{animation:none}}
-/* Premium-PNG-Rahmen über dem Avatar. Bilder normalisiert: Loch = 60% zentriert → PNG 167% groß,
-   zentriert → das 60%-Loch deckt exakt das Profilbild. Sitzt jetzt bei ALLEN Ringen gleich. */
-.cb-ring-png{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:167%;height:167%;object-fit:contain;pointer-events:none;z-index:6;filter:drop-shadow(0 1px 5px rgba(0,0,0,.35))}
-/* Avatar mit aktivem PNG-Ring: weißen Rand + Schatten entfernen (sonst Doppelrand neben dem Ring) */
-.ipf-avatar-wrap.has-ring-png .ipf-avatar{border-color:transparent!important;box-shadow:none!important}
+/* PNG-Ring füllt den Avatar-Container EXAKT (100%, kein Überstand → wird nie von Eltern beschnitten).
+   Bilder normalisiert (Loch 60% zentriert) → Profilbild wird ins Loch verkleinert (60%), Ring liegt sauber außen. */
+.cb-ring-png{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none;z-index:6;filter:drop-shadow(0 1px 5px rgba(0,0,0,.35))}
+.ipf-avatar-wrap.has-ring-png{overflow:visible}
+.ipf-avatar-wrap.has-ring-png .ipf-avatar{transform:scale(0.60);border-color:transparent!important;box-shadow:none!important}
 </style>
 <div class="tour-overlay" id="tour-ov" aria-hidden="true">
   <div class="tour-spotlight" id="tour-spotlight"></div>
@@ -5327,7 +5327,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v279-rings-normalized';
+const SW_VERSION='v280-ring-fit';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
