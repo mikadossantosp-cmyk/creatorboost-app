@@ -682,7 +682,7 @@ NIEMALS sagen "DM an CreatorBoost", "/nachrichten/creatorboost öffnen" oder äh
 - Post: +5 XP (1 Link/Tag Standard)
 - Daily-Missionen M1+M2+M3: je +5 XP, M3 zusätzlich +1💎 — max +15 XP + 1💎/Tag
 - Wochen-Missionen (7 Tage Folge): W-M1 +10 XP, W-M2 +15 XP + 1💎, W-M3 +20 XP + 2💎
-- Wochen-Bonus: Alle Superlinks der Woche liken (Sonntag 23:59 Auswertung) → +500 XP + 2💎
+- Wochen-Bonus: Alle Superlinks der Woche liken (Sonntag-Auswertung) → +500 XP + 1💎
 - Daily-Bonus (Button auf /profil): zufällig 10–20 XP, 1×/Tag
 - First-Post-Newcomer-Bonus: +20 XP einmalig
 - Event-Multiplier während Events
@@ -5527,7 +5527,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v307-platefill';
+const SW_VERSION='v308-superlinkxp';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());

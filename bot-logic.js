@@ -635,6 +635,40 @@ function missionStatusApi(uid) {
     };
 }
 
+// ── Wochen-Superlink-Mission: +500 XP für wer ALLE Superlinks der Woche engagiert hat. ──
+// Eligibility 1:1 wie die Missions-Karte (getWochenMissionen.weekly.superlinks): es muss ≥1 fremder
+// Superlink der Woche existieren und die Familie muss jeden davon geliked haben. Idempotent über
+// d.wochenSuperlinkMissionGranted[weekKey+':'+uid]. Vergabe bei der Sonntags-Auswertung + einmaligem Backfill.
+function _superlinkAlleGeliked(uid, weekKey) {
+    const weekSL = Object.values(d.superlinks || {}).filter(s => s && s.week === weekKey);
+    if (!weekSL.length) return false;
+    const fam = new Set(familyUids(uid).map(String));
+    const otherLinks = weekSL.filter(s => !fam.has(String(s.uid)));
+    if (!otherLinks.length) return false;
+    for (const s of otherLinks) {
+        const likes = (Array.isArray(s.likes) ? s.likes : Array.from(s.likes || [])).map(String);
+        let liked = false;
+        for (const f of fam) { if (likes.includes(String(f))) { liked = true; break; } }
+        if (!liked) return false;
+    }
+    return true;
+}
+function grantWeeklySuperlinkMission(weekKey) {
+    weekKey = weekKey || getBerlinWeekKey();
+    if (!d.wochenSuperlinkMissionGranted) d.wochenSuperlinkMissionGranted = {};
+    let granted = 0; const uids = [];
+    for (const [uid, u] of Object.entries(d.users || {})) {
+        if (!u || istAdminId(uid) || u.parent_uid) continue;           // nur Hauptaccounts, kein Admin
+        const key = weekKey + ':' + uid;
+        if (d.wochenSuperlinkMissionGranted[key]) continue;            // schon vergeben
+        if (!_superlinkAlleGeliked(uid, weekKey)) continue;
+        d.wochenSuperlinkMissionGranted[key] = Date.now();
+        addXp({ uid, amount: 500, reason: 'superlink-mission' });      // DMt automatisch "✨ +500 XP"
+        granted++; uids.push(uid);
+    }
+    return { ok: true, granted, weekKey, uids };
+}
+
 // ── Like-Operation: 1:1 aus GET /like-from-app (ohne Telegram-Teile). ──
 async function likeFromApp(uid, msgId) {
     let lnk = d.links[msgId] || d.links['B_' + msgId] || d.links['C_' + msgId]
@@ -922,6 +956,7 @@ function _reasonLabel(r) {
     if (r === 'roulette') return '🎡 Roulette';
     if (r === 'daily-bonus') return '🎁 Daily Bonus';
     if (r === 'gewinnspiel') return '🏆 Gewinnspiel';
+    if (r === 'superlink-mission') return '🌟 Wochen-Mission: Alle Superlinks engagiert';
     if (r === 'admin') return '⚙️ Admin';
     return '🎁';
 }
@@ -1274,6 +1309,9 @@ async function zeitCheck(nowArg) {
         if (jetzt.getDate() === 1 && h === 0 && m < 10 && taeglich('legendenBonus')) legendenBonus();
         if (h === 12 && m < 5 && taeglich('missionen')) await missionenAuswerten();
         if (h === 23 && m >= 55 && taeglich('dailyRanking')) await dailyRankingAbschluss();
+        // Einmaliger Backfill: Wochen-Superlink-Mission +500 XP für bereits Berechtigte DIESER Woche
+        // (Bug-Nachzahlung — die Belohnung war nie verdrahtet). Läuft genau einmal, danach Sonntags-Auswertung.
+        if (!d._slMissionBackfillV1) { d._slMissionBackfillV1 = true; try { const r = grantWeeklySuperlinkMission(); console.log('Superlink-Mission Backfill: +500 XP an', r.granted, 'User'); } catch (e) { console.log('Superlink-Mission Backfill Fehler:', e.message); } }
         eventAutoTick();
         linkCleanup();
         for (const key of Object.keys(d._lastEvents)) { if (!key.endsWith(tagStr)) delete d._lastEvents[key]; }
@@ -4133,6 +4171,9 @@ async function runWochenGewinnspielApi() {
             }
         } catch (e) { console.log('Wochen-Engagement-Diamant Fehler:', e.message); }
 
+        // Wochen-Mission "Alle Superlinks engagiert" → +500 XP (separat vom +1💎-Bonus oben).
+        try { const r = grantWeeklySuperlinkMission(); console.log('Superlink-Mission XP vergeben an', r.granted, 'User'); } catch (e) { console.log('Superlink-Mission XP Fehler:', e.message); }
+
         // weeklyXP wird hier NICHT resettet — Reset läuft Montag 00:05 (wochenReset).
         try { await runWochenGewinnspielRankingDM(); } catch (e) {}
         return { ok: true, winnerId, winnerName, teilnehmer: teilnehmer.length };
@@ -4584,6 +4625,7 @@ module.exports = {
     adminLinkCreate, adminLinkEngage, adminLinkAdminDelete, adminLinkFeedCard, adminLinkListApi,
     collabCreatePost, collabLikePost, getBerlinWeekKey,
     postSuperlinkApp, likeSuperlinkApi, isSuperLinkPostingAllowed,
+    grantWeeklySuperlinkMission,
     addXp, addExtraLink, addSuperlink, addDiamonds, removeDiamonds,
     buyItemApi, setActiveRingApi, setActiveTitleApi, buyExtralinkApi, linkStatusApi,
     // Like-Flow + Kern (verbatim portiert):
