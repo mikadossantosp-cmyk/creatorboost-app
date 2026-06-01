@@ -903,11 +903,12 @@ const _DECO_GLYPH = { flames:'🔥', gems:'💎', frost:'❄️', sparkle:'✨',
 function ringParticles(item) {
     const g = _DECO_GLYPH[item.deco];
     if (!g) return '';
-    const N = 12; // gleichmäßig verteilt
+    const N = 16; // viele Symbole, dichter Kranz außen um den Ring
     let s = '<div class="cb-ring-particles cb-parts-' + item.deco + '">';
     for (let i = 0; i < N; i++) {
         const ang = (360 / N) * i;
-        s += '<span class="cb-part" style="transform:translate(-50%,-50%) rotate(' + ang + 'deg) translateY(-50%);animation-delay:' + (i * 0.12).toFixed(2) + 's"><span class="cb-part-g">' + g + '</span></span>';
+        // Arm aus der Mitte (transform-origin = Mitte unten), dreht das Symbol an den äußeren Rand.
+        s += '<span class="cb-part" style="transform:rotate(' + ang + 'deg)"><span class="cb-part-g" style="animation-delay:' + (i * 0.08).toFixed(2) + 's">' + g + '</span></span>';
     }
     return s + '</div>';
 }
@@ -3048,16 +3049,19 @@ ${session ? `
 .cb-deco-frost::before{background:repeating-conic-gradient(from 0deg,rgba(255,255,255,0) 0deg,rgba(255,255,255,.8) 4deg,rgba(200,235,255,.3) 9deg,rgba(255,255,255,0) 15deg)}
 .cb-deco-sparkle::before{background:repeating-conic-gradient(from 0deg,rgba(255,255,255,0) 0deg,rgba(255,255,255,.75) 3deg,rgba(255,255,255,0) 8deg);animation-duration:7s}
 .cb-deco-bubbles::before{background:repeating-conic-gradient(from 0deg,rgba(255,255,255,0) 0deg,rgba(255,255,255,.7) 6deg,rgba(255,255,255,0) 14deg)}
-/* DEKO-PARTIKEL: echte Symbole (🔥💎❄️✨🫧) rund um den Ring, ragen über den Rand, animiert. */
-.cb-ring-particles{position:absolute;left:50%;top:50%;width:100%;height:100%;transform:translate(-50%,-50%);pointer-events:none;z-index:7}
-.cb-part{position:absolute;left:50%;top:50%;transform-origin:0 0}
-.cb-part-g{display:block;font-size:13px;line-height:1;transform:translate(-50%,-50%);filter:drop-shadow(0 0 2px rgba(0,0,0,.4));animation:cbPartPulse 1.4s ease-in-out infinite;animation-delay:inherit}
-@keyframes cbPartPulse{0%,100%{opacity:.85;transform:translate(-50%,-50%) scale(.9)}50%{opacity:1;transform:translate(-50%,-50%) scale(1.25)}}
-.cb-parts-flames .cb-part-g{animation:cbPartFlick .5s ease-in-out infinite alternate;font-size:15px}
-@keyframes cbPartFlick{0%{opacity:.8;transform:translate(-50%,-50%) scale(.9) rotate(-6deg)}100%{opacity:1;transform:translate(-50%,-55%) scale(1.2) rotate(6deg)}}
-.cb-parts-frost .cb-part-g{animation:cbPartSpin 6s linear infinite}
-@keyframes cbPartSpin{to{transform:translate(-50%,-50%) rotate(360deg)}}
-@media (prefers-reduced-motion:reduce){.cb-ring-base,.cb-ring-deco::before,.cb-ring-deco::after,.cb-part-g{animation:none}}
+/* DEKO-PARTIKEL: 16 große Symbole AUSSEN um den Ring, der ganze Kranz ROTIERT MIT dem Ring. */
+.cb-ring-particles{position:absolute;left:50%;top:50%;width:100%;height:100%;transform:translate(-50%,-50%);pointer-events:none;z-index:7;animation:cbRingSpin3 6s linear infinite}
+@keyframes cbRingSpin3{to{transform:translate(-50%,-50%) rotate(360deg)}}
+/* Jeder .cb-part ist ein Arm vom Zentrum: rotate(angle) dreht ihn, das Symbol sitzt am ARM-ENDE = außen am Ring.
+   Arm-Höhe = halber Container (50%) + etwas → Symbol landet knapp außerhalb des Ring-Rands. */
+.cb-part{position:absolute;left:50%;top:50%;width:0;height:54%;transform-origin:top center}
+.cb-part-g{position:absolute;left:50%;bottom:-8px;font-size:16px;line-height:1;transform:translateX(-50%);filter:drop-shadow(0 0 3px rgba(0,0,0,.5));animation:cbPartPulse 1.6s ease-in-out infinite;animation-delay:inherit}
+@keyframes cbPartPulse{0%,100%{opacity:.9;filter:drop-shadow(0 0 2px rgba(0,0,0,.5))}50%{opacity:1;filter:drop-shadow(0 0 6px rgba(255,255,255,.6))}}
+.cb-parts-flames .cb-part-g{font-size:19px;animation:cbPartFlick .45s ease-in-out infinite alternate}
+@keyframes cbPartFlick{0%{opacity:.85;transform:translateX(-50%) scale(.95)}100%{opacity:1;transform:translateX(-50%) translateY(-3px) scale(1.25)}}
+.cb-parts-gems .cb-part-g{font-size:15px}
+.cb-parts-sparkle .cb-part-g{font-size:15px}
+@media (prefers-reduced-motion:reduce){.cb-ring-base,.cb-ring-deco::before,.cb-ring-deco::after,.cb-ring-particles,.cb-part-g{animation:none}}
 /* Avatar mit aktivem Ring: Ring darf nach außen ragen, weißen Avatar-Rand entfernen (Ring ersetzt ihn) */
 .ipf-avatar-wrap.has-ring{overflow:visible}
 .ipf-avatar-wrap.has-ring .ipf-avatar{border-color:transparent!important;box-shadow:none!important}
@@ -5357,7 +5361,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v284-ring-particles';
+const SW_VERSION='v285-deco-outer';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
