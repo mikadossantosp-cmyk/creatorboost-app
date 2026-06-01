@@ -849,23 +849,24 @@ const RING_ITEMS = [
     { id: 'ring_purple',  name: 'Cosmic Ring',  emoji: '🔮', price: 12, shadow: '0 0 0 3px #e040fb, 0 0 0 6px #9c27b0',   gradient: 'linear-gradient(135deg,#9c27b0,#e040fb)', desc: 'Mystisches Kosmosleuchten' },
     { id: 'ring_rainbow', name: 'Rainbow Ring', emoji: '🌈', price: 15, shadow: '0 0 0 3px #ff9900, 0 0 0 6px #cc5de8',   gradient: 'linear-gradient(135deg,#ff0000,#ff9900,#00cc00,#0000ff,#cc5de8)', desc: 'Buntes Regenbogenleuchten' },
     { id: 'ring_diamond', name: 'Diamond Ring', emoji: '💎', price: 20, shadow: '0 0 0 3px #b9f2ff, 0 0 0 6px #a78bfa',   gradient: 'linear-gradient(135deg,#a78bfa,#b9f2ff,#ffffff)', desc: 'Funkelnder Diamantglanz' },
-    // ── Premium-„50 Diamanten Rahmen" (PNG-basiert) — gerendert aus assets/rings/<id>.png (img:true). ──
-    { id: 'pframe_fire',    name: 'Fire Ring',    emoji: '🔥', price: 50, premium: true, img: true, desc: 'Lodernder Feuerkranz' },
-    { id: 'pframe_gold',    name: 'Gold Ring',    emoji: '👑', price: 50, premium: true, img: true, desc: 'Goldener Prachtrahmen' },
-    { id: 'pframe_ice',     name: 'Ice Ring',     emoji: '🧊', price: 50, premium: true, img: true, desc: 'Eiskristall-Kranz' },
-    { id: 'pframe_crystal', name: 'Crystal Ring', emoji: '🔷', price: 50, premium: true, img: true, desc: 'Funkelnder Kristallrahmen' },
-    { id: 'pframe_bubble',  name: 'Bubble Ring',  emoji: '🫧', price: 50, premium: true, img: true, desc: 'Schillernder Perlenkranz' },
+    // ── Premium-„50 Diamanten Rahmen" — ANIMIERTE CSS-Ringe (rotierender conic-gradient, wie Roulette/
+    //    Diamant-Karten). Immer perfekt rund ums Profilbild, kein PNG/Größen-Problem. `conic` = Farbstops. ──
+    { id: 'pframe_fire',    name: 'Flammen-Ring',  emoji: '🔥', price: 50, premium: true, conic: '#ff2200,#ff9a3c,#ffd166,#ff6b00,#ff2200',           desc: 'Lodernder Feuerkranz, rotierend' },
+    { id: 'pframe_gold',    name: 'Gold-Ring',     emoji: '👑', price: 50, premium: true, conic: '#8b6914,#ffd700,#fff3b0,#d4af37,#8b6914',          desc: 'Goldener Prachtkranz' },
+    { id: 'pframe_ice',     name: 'Eis-Ring',      emoji: '🧊', price: 50, premium: true, conic: '#3b82f6,#7dd3fc,#ffffff,#bae6fd,#3b82f6',          desc: 'Eiskristall-Schimmer' },
+    { id: 'pframe_crystal', name: 'Kristall-Ring', emoji: '🔷', price: 50, premium: true, conic: '#2a7fff,#7c3aed,#e040fb,#5ec8ff,#2a7fff',          desc: 'Funkelnder Kristall' },
+    { id: 'pframe_bubble',  name: 'Perlen-Ring',   emoji: '🫧', price: 50, premium: true, conic: '#b794f6,#7fdbff,#f48fff,#cdf5ff,#b794f6',          desc: 'Schillernde Perlen' },
     // ── Spezial-Rahmen — NICHT kaufbar (special:true → nicht im Shop). Verdient/rollenbasiert,
     //    auswählbar in der Profil-„Tasche" wenn berechtigt (Builder-Rang bzw. Admin). ──
-    { id: 'frame_builder_1', name: 'Builder I Rahmen',     emoji: '🌱', special: true, tier: 1, r1:'#6ee7b7', r2:'#059669', rg:'rgba(52,211,153,0.9)',  gradient: 'linear-gradient(135deg,#059669,#34d399)',        desc: 'Community Builder I — Rang-Rahmen' },
-    { id: 'frame_builder_2', name: 'Builder II Rahmen',    emoji: '🤝', special: true, tier: 2, r1:'#fcd34d', r2:'#d97706', rg:'rgba(251,191,36,0.9)',  gradient: 'linear-gradient(135deg,#d97706,#fbbf24)',        desc: 'Community Builder II — Rang-Rahmen' },
-    { id: 'frame_builder_3', name: 'Builder III Rahmen',   emoji: '🏗️', special: true, tier: 3, r1:'#67e8f9', r2:'#0891b2', rg:'rgba(34,211,238,0.9)',  gradient: 'linear-gradient(135deg,#0891b2,#22d3ee)',        desc: 'Community Builder III — Rang-Rahmen' },
-    { id: 'frame_builder_4', name: 'Builder Elite Rahmen', emoji: '🏛️', special: true, tier: 4, r1:'#ddd6fe', r2:'#7c3aed', rg:'rgba(167,139,250,0.95)', gradient: 'linear-gradient(135deg,#7c3aed,#c4b5fd,#e9d5ff)', desc: 'Community Builder Elite — Rang-Rahmen', spin: true },
-    { id: 'frame_admin',     name: 'Admin Rahmen',         emoji: '🛡️', special: true, admin: true, img: true, desc: 'Exklusiver Admin-Rahmen (Gold & Blau)' },
+    { id: 'frame_builder_1', name: 'Builder I Rahmen',     emoji: '🌱', special: true, tier: 1, conic: '#059669,#6ee7b7,#34d399,#10b981,#059669',     desc: 'Community Builder I — Rang-Rahmen' },
+    { id: 'frame_builder_2', name: 'Builder II Rahmen',    emoji: '🤝', special: true, tier: 2, conic: '#d97706,#fcd34d,#fbbf24,#f59e0b,#d97706',     desc: 'Community Builder II — Rang-Rahmen' },
+    { id: 'frame_builder_3', name: 'Builder III Rahmen',   emoji: '🏗️', special: true, tier: 3, conic: '#0891b2,#67e8f9,#22d3ee,#06b6d4,#0891b2',     desc: 'Community Builder III — Rang-Rahmen' },
+    { id: 'frame_builder_4', name: 'Builder Elite Rahmen', emoji: '🏛️', special: true, tier: 4, conic: '#7c3aed,#c4b5fd,#e9d5ff,#a855f7,#7c3aed',     desc: 'Community Builder Elite — Rang-Rahmen' },
+    { id: 'frame_admin',     name: 'Admin Rahmen',         emoji: '🛡️', special: true, admin: true, conic: '#1e3a8a,#ffd700,#38bdf8,#ffd700,#1e3a8a',  desc: 'Exklusiver Admin-Rahmen (Gold & Blau)' },
 ];
 // PNG-Ringe (Premium-/Spezial-Rahmen): global an/aus. Auf false → für normale User ausgeblendet,
 // ABER Admins sehen/tragen sie immer (zum Testen, auch wenn noch nicht für alle freigegeben).
-const PNG_RINGS_ON = false;
+const PNG_RINGS_ON = true;
 function _ringsVisibleFor(uid) {
     if (PNG_RINGS_ON) return true;
     try { return !!botLogic.istAdminId(uid); } catch (e) { return false; }
@@ -886,57 +887,43 @@ const BANNER_ITEMS = [
     { id: 'banner_aurora',   name: 'Aurora',        emoji: '🌌', price: 10, tier: 'Gold',   gradient: 'linear-gradient(135deg,#00c6ff,#0072ff,#a18cd1)', desc: 'Nordlicht-Effekt' },
 ];
 
-// Welche Ringe haben ein echtes PNG (assets/rings/<id>.png)? — 1x eingelesen, beim Boot/Deploy frisch.
-let _ringFrameSet = null;
-function ringFrameExists(id) {
-    if (_ringFrameSet === null) {
-        try { _ringFrameSet = new Set(fs.readdirSync(__dirname + '/assets/rings').filter(f => f.endsWith('.png')).map(f => f.slice(0, -4))); }
-        catch (e) { _ringFrameSet = new Set(); }
-    }
-    return !!id && _ringFrameSet.has(String(id));
+// Ein „echter" Ring = animierter CSS-Conic-Ring (Premium/Spezial mit .conic-Feld) — KEIN PNG mehr.
+function ringHasConic(id) {
+    const item = RING_ITEMS.find(r => r.id === id);
+    return !!(item && item.conic);
 }
-// Overlay-<img> für einen aktiven Bild-Rahmen über einem Avatar (Container muss position:relative sein).
+// Overlay-Ring über einem Avatar: rotierendes conic-gradient-Band via ring-mask (wie Diamant-Karten-Glow).
+// Container muss position:relative sein. Sitzt IMMER perfekt rund — unabhängig vom Profilbild.
 function ringFrameOverlay(userData, ownerUid) {
     if (!_ringsVisibleFor(ownerUid != null ? ownerUid : userData?.id)) return '';
-    const id = userData?.activeRing;
-    if (!ringFrameExists(id)) return '';
-    return '<img src="/ringframe/' + id + '" class="cb-ring-frame" alt="" loading="lazy">';
+    const item = RING_ITEMS.find(r => r.id === userData?.activeRing);
+    if (!item || !item.conic) return '';
+    return '<div class="cb-ring-conic" style="background:conic-gradient(from 0deg,' + item.conic + ')"></div>';
 }
 function getRingBoxShadow(userData) {
     const ring = userData?.activeRing;
     if (!ring) return '';
-    // Echtes PNG aktiv → KEIN CSS-Glow (sonst Doppel-Ring); das Overlay-<img> übernimmt.
-    if (ringFrameExists(ring)) return '';
+    // Conic-Ring aktiv → KEIN CSS-Glow (das Overlay übernimmt, sonst Doppel-Ring).
+    if (ringHasConic(ring)) return '';
     const item = RING_ITEMS.find(r=>r.id===ring);
     if (!item) return '';
-    // Premium/Spezial-Rahmen: animierter „atmender" Doppelring-Glow via CSS-Vars + @keyframes cbRingAlive
-    // (funktioniert überall via Inline-Style, ohne Änderung an den Avatar-Render-Stellen).
-    if (item.r1) {
-        return `;--r1:${item.r1};--r2:${item.r2};--rg:${item.rg};box-shadow:0 0 0 3px ${item.r1},0 0 0 6px ${item.r2},0 0 18px 3px ${item.rg};animation:cbRingAlive 2.8s ease-in-out infinite`;
-    }
     return item.shadow ? `;box-shadow:${item.shadow}` : '';
 }
-// Vorschau-Ring für Shop/Tasche: echtes farbiges Ring-Band (Gradient) um einen dunklen Avatar
-// + Glow — sieht nach einem echten Rahmen aus (nicht nur Schatten). size in px, inner=Inhalt.
+// Vorschau-Ring für Shop/Tasche: rotierender Conic-Ring um einen dunklen Avatar-Kern (size px, inner=Inhalt).
 function ringPreview(item, size, inner) {
-    // Echtes PNG vorhanden → nur das Bild zeigen (transparenter Hintergrund, kein dunkler Kreis).
-    if (ringFrameExists(item.id)) {
-        return '<div style="width:' + size + 'px;height:' + size + 'px;flex-shrink:0;display:flex;align-items:center;justify-content:center">'
-            + '<img src="/ringframe/' + item.id + '" style="width:100%;height:100%;object-fit:contain;pointer-events:none" alt="">'
+    const fs = Math.round(size * 0.34);
+    const inner2 = Math.round(size * 0.74);
+    if (item.conic) {
+        return '<div style="position:relative;width:' + size + 'px;height:' + size + 'px;flex-shrink:0;border-radius:50%;display:flex;align-items:center;justify-content:center">'
+            + '<div class="cb-ring-conic" style="background:conic-gradient(from 0deg,' + item.conic + ')"></div>'
+            + '<div style="width:' + inner2 + 'px;height:' + inner2 + 'px;border-radius:50%;background:#15151a;display:flex;align-items:center;justify-content:center;font-size:' + fs + 'px;font-weight:700;color:#fff">' + (inner || '') + '</div>'
             + '</div>';
     }
-    const r1 = item.r1, r2 = item.r2;
-    const glow = item.rg || 'rgba(167,139,250,0.55)';
-    // Glänzendes „3D"-Ring-Band: Conic-Gradient mit weißem Glanzlicht-Sweep (metallischer Look).
-    const band = (r1 && r2)
-        ? 'conic-gradient(from 215deg,' + r2 + ',' + r1 + ',#ffffff,' + r1 + ',' + r2 + ',' + r1 + ')'
-        : (item.gradient || 'linear-gradient(135deg,#a78bfa,#7c3aed)');
+    // Fallback (alte Rings mit gradient): einfacher Farbring
+    const band = item.gradient || 'linear-gradient(135deg,#a78bfa,#7c3aed)';
     const inset = Math.max(3, Math.round(size * 0.085));
-    const fs = Math.round(size * 0.34);
-    const hlT = Math.round(size * 0.10), hlL = Math.round(size * 0.17), hlW = Math.round(size * 0.30), hlH = Math.round(size * 0.17);
-    return '<div style="position:relative;width:' + size + 'px;height:' + size + 'px;border-radius:50%;flex-shrink:0;background:' + band + ';padding:' + inset + 'px;box-shadow:0 0 18px 1px ' + glow + ',inset 0 1px 3px rgba(255,255,255,.55),inset 0 -2px 5px rgba(0,0,0,.4)">'
-        + '<div style="width:100%;height:100%;border-radius:50%;background:#15151a;display:flex;align-items:center;justify-content:center;font-size:' + fs + 'px;font-weight:700;color:#fff;box-shadow:inset 0 0 7px rgba(0,0,0,.65)">' + (inner || '') + '</div>'
-        + '<div style="position:absolute;top:' + hlT + 'px;left:' + hlL + 'px;width:' + hlW + 'px;height:' + hlH + 'px;border-radius:50%;background:radial-gradient(ellipse at center,rgba(255,255,255,.85),rgba(255,255,255,0));pointer-events:none"></div>'
+    return '<div style="width:' + size + 'px;height:' + size + 'px;border-radius:50%;flex-shrink:0;background:' + band + ';padding:' + inset + 'px;box-sizing:border-box">'
+        + '<div style="width:100%;height:100%;border-radius:50%;background:#15151a;display:flex;align-items:center;justify-content:center;font-size:' + fs + 'px;font-weight:700;color:#fff">' + (inner || '') + '</div>'
         + '</div>';
 }
 
@@ -3015,13 +3002,14 @@ ${session ? `
 .tour-pagewipe-text{font-size:13px;font-weight:600;color:rgba(255,255,255,0.85);letter-spacing:0.3px}
 @keyframes wipe-in{from{opacity:0}to{opacity:1}}
 @keyframes spin{to{transform:rotate(360deg)}}
-/* Premium-/Spezial-Avatar-Rahmen: sanft „atmender" Glow (kein Movement → reduced-motion-freundlich) */
-@keyframes cbRingAlive{0%,100%{box-shadow:0 0 0 3px var(--r1),0 0 0 6px var(--r2),0 0 16px 2px var(--rg)}50%{box-shadow:0 0 0 3px var(--r1),0 0 0 8px var(--r2),0 0 32px 8px var(--rg)}}
-@media (prefers-reduced-motion:reduce){[style*="cbRingAlive"]{animation:none!important}}
-/* Echter Bild-Rahmen (PNG) über dem Avatar — ragt leicht über den Rand (Container=position:relative) */
-.cb-ring-frame{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:142%;height:142%;object-fit:contain;pointer-events:none;z-index:6}
-/* Bei aktivem PNG-Rahmen: Profilbild kleiner (sitzt in der transparenten Ring-Mitte), kein weißer Rand/Schatten */
-.ipf-avatar--ringpng{transform:scale(0.70);border-color:transparent!important;box-shadow:none!important}
+/* Animierter Conic-Ring um den Avatar (wie Roulette/Diamant-Karten-Glow): rotierendes Farbband als
+   Ring via mask-Ausschnitt. Sitzt IMMER perfekt rund, unabhängig vom Profilbild. Container=position:relative. */
+.cb-ring-conic{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:116%;height:116%;border-radius:50%;
+  -webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 10%),#000 calc(100% - 10%));
+  mask:radial-gradient(farthest-side,transparent calc(100% - 10%),#000 calc(100% - 10%));
+  animation:cbRingSpin 5s linear infinite;pointer-events:none;z-index:6;filter:saturate(1.2) drop-shadow(0 0 6px rgba(0,0,0,.25))}
+@keyframes cbRingSpin{to{transform:translate(-50%,-50%) rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.cb-ring-conic{animation:none}}
 </style>
 <div class="tour-overlay" id="tour-ov" aria-hidden="true">
   <div class="tour-spotlight" id="tour-spotlight"></div>
@@ -4635,7 +4623,6 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
     const _followers = (u.followers||[]).length;
     const _diamonds = u.diamonds || 0;
     const _picUrl = (picData||ladeBild(uid,'profilepic')) ? (appbildSrc(String(uid),'profilepic') || `/appbild/${uid}/profilepic`) : (u.instagram ? `https://unavatar.io/instagram/${u.instagram}` : '');
-    const _pngRing = _ringsVisibleFor(uid) && ringFrameExists(u.activeRing); // echter Bild-Rahmen aktiv?
     const _initial = htmlEsc((u.spitzname||u.name||'?').slice(0,1).toUpperCase());
     const _isFollowing = false;
     const _roleBadge = roleBadge(u.role, uid, adminIds);
@@ -4725,7 +4712,7 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
   <div class="ipf-top">
     <div class="ipf-avatar-wrap">
       ${_myRankCrown ? `<div class="ipf-avatar-crown" style="filter:${_myRankCrown===1?'drop-shadow(0 3px 8px rgba(245,158,11,0.5))':_myRankCrown===2?'grayscale(100%) brightness(1.45) contrast(0.9) drop-shadow(0 3px 8px rgba(148,163,184,0.55))':'sepia(100%) saturate(700%) hue-rotate(-22deg) brightness(0.55) contrast(1.15) drop-shadow(0 3px 8px rgba(180,83,9,0.6))'}">👑</div>` : ''}
-      <div class="ipf-avatar${_pngRing ? ' ipf-avatar--ringpng' : ''}"${_pngRing ? '' : (() => { const s = getRingBoxShadow(u); return s ? ` style="${s.replace(/^;/,'')}"` : ''; })()}>
+      <div class="ipf-avatar"${(() => { const s = getRingBoxShadow(u); return s ? ` style="${s.replace(/^;/,'')}"` : ''; })()}>
         ${_picUrl ? `<img src="${htmlEsc(_picUrl)}" alt="" loading="eager" onerror="this.style.display='none'">` : _initial}
       </div>
       ${ringFrameOverlay(u, uid)}
@@ -5318,7 +5305,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v276-admin-rings';
+const SW_VERSION='v277-conic-rings';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
@@ -22178,7 +22165,7 @@ ${(myInventory.length > 0 || _specialFrames.length > 0) ? `
     ${RING_ITEMS.filter(r=>myInventory.includes(r.id)).map(item=>{
         const isActive = myActiveRing === item.id;
         return `<div style="background:var(--bg3);border:1px solid ${isActive?'rgba(167,139,250,.5)':'var(--border2)'};border-radius:14px;padding:var(--space-3);display:flex;align-items:center;gap:var(--space-3)">
-      ${ringFrameExists(item.id) ? ringPreview(item, 48, '') : `<div style="width:44px;height:44px;border-radius:50%;background:${item.gradient};flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:var(--fs-lg)">${item.emoji}</div>`}
+      ${item.conic ? ringPreview(item, 48, '') : `<div style="width:44px;height:44px;border-radius:50%;background:${item.gradient};flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:var(--fs-lg)">${item.emoji}</div>`}
       <div style="flex:1">
         <div style="font-size:var(--fs-sm);font-weight:700">${item.name} ${isActive?'<span style="font-size:10px;color:#a78bfa;font-weight:600">● Aktiv</span>':''}</div>
         <div style="font-size:11px;color:var(--muted)">${item.desc}</div>
