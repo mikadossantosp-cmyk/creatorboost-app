@@ -3026,8 +3026,11 @@ ${session ? `
   animation:cbRingSpin 5s linear infinite;pointer-events:none;z-index:6;filter:saturate(1.2) drop-shadow(0 0 6px rgba(0,0,0,.25))}
 @keyframes cbRingSpin{to{transform:translate(-50%,-50%) rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){.cb-ring-conic{animation:none}}
-/* Premium-PNG-Rahmen über dem Avatar: 162% Größe, exakt zentriert → transparentes Loch (~62%) sitzt aufs Profilbild */
-.cb-ring-png{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:162%;height:162%;object-fit:contain;pointer-events:none;z-index:6;filter:drop-shadow(0 1px 4px rgba(0,0,0,.3))}
+/* Premium-PNG-Rahmen über dem Avatar. Bilder normalisiert: Loch = 60% zentriert → PNG 167% groß,
+   zentriert → das 60%-Loch deckt exakt das Profilbild. Sitzt jetzt bei ALLEN Ringen gleich. */
+.cb-ring-png{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:167%;height:167%;object-fit:contain;pointer-events:none;z-index:6;filter:drop-shadow(0 1px 5px rgba(0,0,0,.35))}
+/* Avatar mit aktivem PNG-Ring: weißen Rand + Schatten entfernen (sonst Doppelrand neben dem Ring) */
+.ipf-avatar-wrap.has-ring-png .ipf-avatar{border-color:transparent!important;box-shadow:none!important}
 </style>
 <div class="tour-overlay" id="tour-ov" aria-hidden="true">
   <div class="tour-spotlight" id="tour-spotlight"></div>
@@ -4641,6 +4644,7 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
     const _followers = (u.followers||[]).length;
     const _diamonds = u.diamonds || 0;
     const _picUrl = (picData||ladeBild(uid,'profilepic')) ? (appbildSrc(String(uid),'profilepic') || `/appbild/${uid}/profilepic`) : (u.instagram ? `https://unavatar.io/instagram/${u.instagram}` : '');
+    const _ringPngActive = _ringsVisibleFor(uid) && (() => { const it = RING_ITEMS.find(r => r.id === u.activeRing); return !!(it && it.img && ringFrameExists(it.id)); })();
     const _initial = htmlEsc((u.spitzname||u.name||'?').slice(0,1).toUpperCase());
     const _isFollowing = false;
     const _roleBadge = roleBadge(u.role, uid, adminIds);
@@ -4728,7 +4732,7 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
 </div>
 <div class="ipf">
   <div class="ipf-top">
-    <div class="ipf-avatar-wrap">
+    <div class="ipf-avatar-wrap${_ringPngActive ? ' has-ring-png' : ''}">
       ${_myRankCrown ? `<div class="ipf-avatar-crown" style="filter:${_myRankCrown===1?'drop-shadow(0 3px 8px rgba(245,158,11,0.5))':_myRankCrown===2?'grayscale(100%) brightness(1.45) contrast(0.9) drop-shadow(0 3px 8px rgba(148,163,184,0.55))':'sepia(100%) saturate(700%) hue-rotate(-22deg) brightness(0.55) contrast(1.15) drop-shadow(0 3px 8px rgba(180,83,9,0.6))'}">👑</div>` : ''}
       <div class="ipf-avatar"${(() => { const s = getRingBoxShadow(u); return s ? ` style="${s.replace(/^;/,'')}"` : ''; })()}>
         ${_picUrl ? `<img src="${htmlEsc(_picUrl)}" alt="" loading="eager" onerror="this.style.display='none'">` : _initial}
@@ -5323,7 +5327,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v278-png-rings-fix';
+const SW_VERSION='v279-rings-normalized';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
