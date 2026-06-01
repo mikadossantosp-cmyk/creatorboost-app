@@ -12049,7 +12049,7 @@ commentsBox+
                 + '</div>'
             : '';
         const heuteWithDiamondTop = tab === 'heute'
-            ? '<div id="beta-tester-banner"></div>'+_dlNudge+'<div id="prisma-top-strip"></div><div id="diamond-top-strip"></div>'+pinnedHtml+'<div id="collab-boost-strip"></div><div style="padding:8px 0 80px">'+regularHeuteHtml+'</div>'
+            ? '<div id="admin-link-card-root"></div><div id="beta-tester-banner"></div>'+_dlNudge+'<div id="prisma-top-strip"></div><div id="diamond-top-strip"></div>'+pinnedHtml+'<div id="collab-boost-strip"></div><div style="padding:8px 0 80px">'+regularHeuteHtml+'</div>'
             : '<div style="padding:8px 0 80px">'+heuteHtml+'</div>';
         const postsHtml = tab === 'aelter' ? '<div style="padding:8px 0 80px">'+aelterHtml+'</div>'
             : tab === 'engagement' ? engagementHtml
@@ -12180,7 +12180,6 @@ ${tab==='heute' ? (()=>{
     return '<div style="margin:8px 16px 2px;padding:9px 13px;display:flex;align-items:center;gap:10px;background:linear-gradient(135deg,rgba(124,58,237,0.08),rgba(245,158,11,0.05));border:1px solid rgba(124,58,237,0.18);border-radius:13px;overflow:hidden">'+_inner+'</div>'+_script;
   } catch(e){ return ''; }
 })() : ''}
-${tab==='heute' ? '<div id="admin-link-card-root"></div>' : ''}
 <div style="width:100%">${storiesHtml}</div>
 ${(()=>{
   // Perf: einmaliger Pass durch d.links statt 2x Object.values().some()+.filter()
@@ -12754,6 +12753,22 @@ window.cbCardReel = function(p, postId, visitVar){
     (p.caption?'<div style="padding:8px 12px;font-size:12px;color:var(--muted);line-height:1.4;border-top:1px solid rgba(255,255,255,.08)">'+e(p.caption)+'</div>':'')+
   '</div>';
 };
+// CSS-only Aufklapp-Box (Checkbox-Hack): im Heute-Feed nur Kopfzeile sichtbar, Tap klappt die volle Karte auf.
+(function(){ if(document.getElementById('cb-xl-css'))return; var s=document.createElement('style'); s.id='cb-xl-css'; s.textContent='.cb-xlb{display:none}.cb-xlc:checked~.cb-xlb{display:block}.cb-xlc:checked~.cb-xlh{display:none}.cb-xlh{display:block;-webkit-tap-highlight-color:transparent}'; document.head.appendChild(s); })();
+window.cbCompactBar = function(o){
+  return '<div style="display:flex;align-items:center;gap:10px;margin:0 16px 14px;padding:12px 14px;border-radius:14px;background:'+o.bg+';border:1px solid '+o.border+';cursor:pointer;box-shadow:0 2px 10px rgba(15,23,42,0.05)">'
+    + '<span style="font-size:21px;line-height:1;flex-shrink:0">'+o.emoji+'</span>'
+    + '<div style="flex:1;min-width:0"><div style="font-size:10px;font-weight:800;letter-spacing:1.3px;text-transform:uppercase;color:'+o.accent+'">'+o.label+'</div>'
+    + '<div style="font-size:13px;font-weight:800;color:var(--text);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+o.sub+'</div></div>'
+    + '<span style="color:'+o.accent+';font-size:11.5px;font-weight:800;flex-shrink:0;display:inline-flex;align-items:center;gap:4px">Ausklappen ▾</span>'
+    + '</div>';
+};
+window.cbCollapseWrap = function(inner, id, compact){
+  var e = window.cbCardEsc;
+  return '<input type="checkbox" id="xlc-'+e(id)+'" class="cb-xlc" style="display:none">'
+    + '<label for="xlc-'+e(id)+'" class="cb-xlh">'+compact+'</label>'
+    + '<div class="cb-xlb">'+inner+'</div>';
+};
 
 // ── DIAMANTLINKS (Heute-Top-Strip + eigener Tab) ──
 (function initDiamondLinks(){
@@ -12788,7 +12803,6 @@ window.cbCardReel = function(p, postId, visitVar){
         '</div>' +
         window.cbCardAuthorRow(p) +
         window.cbCardReel(p, p.id, '_dvisit_'+p.id) +
-        '<a href="'+esc(cleanInstagramUrl(p.url))+'" target="_blank" rel="noopener noreferrer" onclick="window._dvisit_'+p.id+'=Date.now();markLinkVisited(\\''+p.id+'\\')" style="display:flex;align-items:center;justify-content:center;gap:var(--space-2);padding:var(--space-4);background:linear-gradient(135deg,#ec4899,#a855f7);color:#fff;border-radius:12px;font-size:14.5px;font-weight:800;text-decoration:none;margin-bottom:10px;box-shadow:0 4px 14px rgba(236,72,153,.25);position:relative"><span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900">1</span><span style="color:#fff;font-weight:800;display:inline-flex;align-items:center;gap:7px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17" cy="7" r="1.1" fill="currentColor" stroke="none"/></svg>Auf Instagram öffnen</span><span style="font-size:18px;margin-left:var(--space-1)">→</span></a>' +
         '<div style="margin-bottom:10px;padding:13px 14px;background:rgba(245,158,11,0.13);border:2.5px solid #f59e0b;border-radius:13px;box-shadow:0 0 0 3px rgba(245,158,11,0.18),0 4px 14px rgba(245,158,11,0.20)">' +
           '<div style="font-size:13.5px;font-weight:900;color:#f59e0b;text-transform:uppercase;letter-spacing:0.6px;margin-bottom:7px;display:flex;align-items:center;gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M10.3 4 2 18.3A1.6 1.6 0 0 0 3.4 20.7h17.2A1.6 1.6 0 0 0 22 18.3L13.7 4a1.6 1.6 0 0 0-3.4 0z"/><line x1="12" y1="9.5" x2="12" y2="13.5"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>FULL ENGAGEMENT PFLICHT</div>' +
           '<div style="font-size:13.5px;font-weight:800;color:var(--text);line-height:1.5;display:flex;flex-wrap:wrap;align-items:center;gap:5px 9px"><span style="display:inline-flex;align-items:center;gap:var(--space-1)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 5.1a5.4 5.4 0 0 0-7.7 0l-1.1 1.1-1.1-1.1A5.4 5.4 0 1 0 3.2 12.8l1.1 1.1L12 21.5l7.7-7.6 1.1-1.1a5.4 5.4 0 0 0 0-7.7z"/></svg>LIKEN</span><span style="opacity:.35">·</span><span style="display:inline-flex;align-items:center;gap:var(--space-1)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-12.5 7.5L3 20.5l1.5-5.5A8.5 8.5 0 1 1 21 11.5z"/></svg>KOMMENTIEREN</span><span style="opacity:.35">·</span><span style="display:inline-flex;align-items:center;gap:var(--space-1)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><polyline points="8 6 12 2 16 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>TEILEN</span><span style="opacity:.35">·</span><span style="display:inline-flex;align-items:center;gap:var(--space-1)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-4.5L5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>SPEICHERN</span></div>' +
@@ -12862,7 +12876,7 @@ window.cbCardReel = function(p, postId, visitVar){
       // Eigene/Family-Posts erscheinen im Diamond-Tab selbst, aber nicht im Strip oben.
       if (stripEl) {
         const stripPosts = posts.filter(p => !p.liked && !p.isSelf && !p.isFamily);
-        if (stripPosts.length) stripEl.innerHTML = stripPosts.map(p => renderCard(p)).join('');
+        if (stripPosts.length) stripEl.innerHTML = stripPosts.map(p => window.cbCollapseWrap(renderCard(p), 'dl-'+p.id, window.cbCompactBar({emoji:'💎',label:'Diamantlink · Belohnung',sub:'+'+(p.reward||3)+' 💎 · ⏱ '+fmtRemaining(p.remainingMs),accent:'#06b6d4',bg:'linear-gradient(135deg,rgba(6,182,212,0.12),rgba(167,139,250,0.08))',border:'rgba(6,182,212,0.4)'}))).join('');
         else stripEl.innerHTML = '';
       }
       // Diamond-Tab: zeigt zusätzlich Erst-Visit-Modal wenn !rulesAccepted
@@ -13379,7 +13393,6 @@ window.cbCardReel = function(p, postId, visitVar){
         '</div>' +
         window.cbCardAuthorRow(p, '#fff') +
         window.cbCardReel(p, p.id, '_pvisit_'+p.id) +
-        '<a href="'+esc(cleanInstagramUrl(p.url))+'" target="_blank" rel="noopener noreferrer" onclick="window._pvisit_'+p.id+'=Date.now();markLinkVisited(\\''+p.id+'\\')" style="display:flex;align-items:center;justify-content:center;gap:var(--space-2);padding:var(--space-4);background:linear-gradient(135deg,#ec4899,#a855f7);color:#fff;border-radius:12px;font-size:14.5px;font-weight:800;text-decoration:none;margin-bottom:10px;box-shadow:0 6px 18px rgba(168,85,247,.45);position:relative"><span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900">1</span><span style="color:#fff;font-weight:800;display:inline-flex;align-items:center;gap:7px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17" cy="7" r="1.1" fill="currentColor" stroke="none"/></svg>Auf Instagram öffnen</span><span style="font-size:18px;margin-left:var(--space-1)">→</span></a>' +
         '<div style="margin-bottom:10px;padding:13px 14px;background:rgba(245,158,11,0.18);border:2px solid #f59e0b;border-radius:13px;box-shadow:0 0 0 2px rgba(245,158,11,0.15),0 4px 14px rgba(245,158,11,0.20)">' +
           '<div style="font-size:13.5px;font-weight:900;color:#fbbf24;text-transform:uppercase;letter-spacing:0.6px;margin-bottom:7px;display:flex;align-items:center;gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M10.3 4 2 18.3A1.6 1.6 0 0 0 3.4 20.7h17.2A1.6 1.6 0 0 0 22 18.3L13.7 4a1.6 1.6 0 0 0-3.4 0z"/><line x1="12" y1="9.5" x2="12" y2="13.5"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>FULL ENGAGEMENT PFLICHT</div>' +
           '<div style="font-size:13.5px;font-weight:800;color:#fff;line-height:1.5;display:flex;flex-wrap:wrap;align-items:center;gap:5px 9px"><span style="display:inline-flex;align-items:center;gap:var(--space-1)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 5.1a5.4 5.4 0 0 0-7.7 0l-1.1 1.1-1.1-1.1A5.4 5.4 0 1 0 3.2 12.8l1.1 1.1L12 21.5l7.7-7.6 1.1-1.1a5.4 5.4 0 0 0 0-7.7z"/></svg>LIKEN</span><span style="opacity:.45">·</span><span style="display:inline-flex;align-items:center;gap:var(--space-1)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-12.5 7.5L3 20.5l1.5-5.5A8.5 8.5 0 1 1 21 11.5z"/></svg>KOMMENTIEREN</span><span style="opacity:.45">·</span><span style="display:inline-flex;align-items:center;gap:var(--space-1)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><polyline points="8 6 12 2 16 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>TEILEN</span><span style="opacity:.45">·</span><span style="display:inline-flex;align-items:center;gap:var(--space-1)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-4.5L5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>SPEICHERN</span></div>' +
@@ -13426,7 +13439,7 @@ window.cbCardReel = function(p, postId, visitVar){
       // Heute-Strip: nur likbare Posts (nicht eigene, nicht family)
       if (stripEl) {
         const stripPosts = posts.filter(p => !p.isSelf && !p.isFamily);
-        if (stripPosts.length) stripEl.innerHTML = stripPosts.map(p => renderCard(p)).join('');
+        if (stripPosts.length) stripEl.innerHTML = stripPosts.map(p => window.cbCollapseWrap(renderCard(p), 'pl-'+p.id, window.cbCompactBar({emoji:'💠',label:'Prismalink · Premium',sub:'+'+(p.reward||7)+' 💎 · ⏱ '+fmtRemaining(p.remainingMs),accent:'#a855f7',bg:'linear-gradient(135deg,rgba(168,85,247,0.14),rgba(236,72,153,0.08))',border:'rgba(168,85,247,0.4)'}))).join('');
         else stripEl.innerHTML = '';
       }
       // Prisma-Tab: kompletter Feed (eigene + fremde) wie der Diamond-Tab.
@@ -13531,7 +13544,6 @@ function _alUserCard(c, isPreview){
         '<div style="font-size:11px;color:#fbbf24;font-weight:800;text-align:right;flex-shrink:0">⏱<br>'+_alFmtRemaining(c.remainingMs)+'</div>'+
       '</div>'+
       msg+author+reel+
-      '<a href="'+esc(openUrl)+'" target="_blank" rel="noopener noreferrer" onclick="window._alvisit=Date.now();markLinkVisited(\\''+c.id+'\\')" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:14px;background:linear-gradient(135deg,#ec4899,#a855f7);color:#fff;border-radius:12px;font-size:14.5px;font-weight:800;text-decoration:none;margin-bottom:10px;box-shadow:0 6px 18px rgba(168,85,247,.4)"><span style="width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px">1</span><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17" cy="7" r="1.1" fill="currentColor" stroke="none"/></svg>Auf Instagram öffnen →</a>'+
       '<div style="margin-bottom:10px;padding:13px 14px;background:rgba(245,158,11,.2);border:2px solid #f59e0b;border-radius:13px;box-shadow:0 0 0 2px rgba(245,158,11,.13),0 4px 14px rgba(245,158,11,.2)">'+
         '<div style="font-size:13px;font-weight:900;color:#fbbf24;text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px;display:flex;align-items:center;gap:7px"><span style="font-size:16px">⚠️</span>Pflicht: Voll engagieren</div>'+
         '<div style="display:flex;flex-wrap:wrap;gap:8px">'+
@@ -13554,7 +13566,7 @@ function _alUserCard(c, isPreview){
   function render(c){
     if(!c){ root.innerHTML=''; return; }
     _alCss();
-    root.innerHTML = _alUserCard(c, false);
+    root.innerHTML = window.cbCollapseWrap(_alUserCard(c, false), 'al-'+c.id, window.cbCompactBar({emoji:'🛡️',label:'Admin-Link · Community-Push',sub:'+'+(c.reward||5)+' 💎 · ⏱ '+_alFmtRemaining(c.remainingMs),accent:'#f59e0b',bg:'linear-gradient(135deg,rgba(245,158,11,0.14),rgba(168,85,247,0.10))',border:'rgba(245,158,11,0.4)'}));
   }
   function load(){
     fetch('/api/admin-link/card').then(function(r){return r.json();}).then(function(j){ render(j&&j.card); }).catch(function(){ root.innerHTML=''; });
