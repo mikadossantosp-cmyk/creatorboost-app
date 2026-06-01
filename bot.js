@@ -867,22 +867,50 @@ const RING_ITEMS = [
 // ── Titelschilder (Banner unter dem Profil, mit gestyltem Titel-Text). id-Prefix: title_ ──
 // bg = Banner-Hintergrund (gradient), tcol = Text-Farbe/-Verlauf, glow = Außenschein.
 const TITLE_ITEMS = [
-    { id:'title_pro',     label:'PRO',        emoji:'⭐', price:30, bg:'linear-gradient(135deg,#334155,#0f172a)', tcol:'#e2e8f0', glow:'rgba(148,163,184,.5)', desc:'Schlichtes Pro-Schild' },
-    { id:'title_star',    label:'SUPERSTAR',  emoji:'🌟', price:30, bg:'linear-gradient(135deg,#7c3aed,#4c1d95)', tcol:'#fde68a', glow:'rgba(167,139,250,.6)', desc:'Glänzendes Star-Schild' },
-    { id:'title_vip',     label:'VIP',        emoji:'💎', price:40, bg:'linear-gradient(135deg,#0ea5e9,#075985)', tcol:'#ffffff', glow:'rgba(14,165,233,.6)', desc:'Edles VIP-Schild' },
-    { id:'title_feuer',   label:'FEUER',      emoji:'🔥', price:40, bg:'linear-gradient(135deg,#7a1500,#ff4500,#ffb347)', tcol:'#fff7d6', glow:'rgba(255,90,0,.7)', desc:'Loderndes Feuer-Schild' },
-    { id:'title_eis',     label:'EIS',        emoji:'❄️', price:40, bg:'linear-gradient(135deg,#1e4e8c,#3b82f6,#bae6fd)', tcol:'#ffffff', glow:'rgba(125,211,252,.7)', desc:'Frostiges Eis-Schild' },
-    { id:'title_legende', label:'LEGENDE',    emoji:'🏆', price:40, bg:'linear-gradient(135deg,#b8860b,#ffd700,#fff7cc)', tcol:'#5b3a00', glow:'rgba(255,215,0,.65)', desc:'Legendäres Gold-Schild' },
-    { id:'title_elite',   label:'ELITE',      emoji:'👑', price:50, bg:'linear-gradient(135deg,#1a1030,#7c3aed,#e040fb)', tcol:'#fde68a', glow:'rgba(224,64,251,.6)', desc:'Exklusives Elite-Schild' },
-    { id:'title_royal',   label:'ROYAL',      emoji:'👑', price:50, bg:'linear-gradient(135deg,#4c1d95,#b8860b,#ffd700)', tcol:'#ffffff', glow:'rgba(255,215,0,.6)', desc:'Königliches Royal-Schild' },
+    { id:'title_pro',     label:'PRO',        emoji:'⭐', price:50, bg:'linear-gradient(135deg,#334155,#0f172a)', tcol:'#e2e8f0', glow:'rgba(148,163,184,.5)', desc:'Schlichtes Pro-Schild' },
+    { id:'title_star',    label:'SUPERSTAR',  emoji:'🌟', price:100, bg:'linear-gradient(135deg,#7c3aed,#4c1d95)', tcol:'#fde68a', glow:'rgba(167,139,250,.6)', desc:'Glänzendes Star-Schild' },
+    { id:'title_vip',     label:'VIP',        emoji:'💎', price:150, bg:'linear-gradient(135deg,#0ea5e9,#075985)', tcol:'#ffffff', glow:'rgba(14,165,233,.6)', desc:'Edles VIP-Schild' },
+    { id:'title_feuer',   label:'FEUER',      emoji:'🔥', price:200, bg:'linear-gradient(135deg,#7a1500,#ff4500,#ffb347)', tcol:'#fff7d6', glow:'rgba(255,90,0,.7)', desc:'Loderndes Feuer-Schild' },
+    { id:'title_eis',     label:'EIS',        emoji:'❄️', price:200, bg:'linear-gradient(135deg,#1e4e8c,#3b82f6,#bae6fd)', tcol:'#ffffff', glow:'rgba(125,211,252,.7)', desc:'Frostiges Eis-Schild' },
+    { id:'title_legende', label:'LEGENDE',    emoji:'🏆', price:300, bg:'linear-gradient(135deg,#b8860b,#ffd700,#fff7cc)', tcol:'#5b3a00', glow:'rgba(255,215,0,.65)', desc:'Legendäres Gold-Schild' },
+    { id:'title_elite',   label:'ELITE',      emoji:'👑', price:400, bg:'linear-gradient(135deg,#1a1030,#7c3aed,#e040fb)', tcol:'#fde68a', glow:'rgba(224,64,251,.6)', desc:'Exklusives Elite-Schild' },
+    { id:'title_royal',   label:'ROYAL',      emoji:'', price:500, bg:'linear-gradient(135deg,#3b0764 0%,#6d28d9 38%,#b8860b 74%,#ffd700 100%)', tcol:'#fff7d6', glow:'rgba(255,215,0,.65)', desc:'Königliches Royal-Schild mit Krone', crown:true },
 ];
+// Premium-Krone (SVG) als Deko über dem Royal-Banner. h = Höhe in px.
+function royalCrownSvg(h) {
+    return '<svg width="' + (h * 1.25).toFixed(0) + '" height="' + h + '" viewBox="0 0 30 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">'
+        + '<defs><linearGradient id="cbRoyalCrownG" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#fff6cf"/><stop offset="42%" stop-color="#ffd84d"/><stop offset="100%" stop-color="#b8860b"/></linearGradient></defs>'
+        + '<path d="M2.5 8 L8 14.5 L15 4 L22 14.5 L27.5 8 L25.5 20 L4.5 20 Z" fill="url(#cbRoyalCrownG)" stroke="#7a5200" stroke-width="0.7" stroke-linejoin="round"/>'
+        + '<rect x="4.3" y="19" width="21.4" height="3.4" rx="1.3" fill="#e8c100" stroke="#7a5200" stroke-width="0.6"/>'
+        + '<circle cx="2.5" cy="7" r="2" fill="#fff1b0" stroke="#7a5200" stroke-width="0.5"/>'
+        + '<circle cx="15" cy="3.2" r="2.3" fill="#fff1b0" stroke="#7a5200" stroke-width="0.5"/>'
+        + '<circle cx="27.5" cy="7" r="2" fill="#fff1b0" stroke="#7a5200" stroke-width="0.5"/>'
+        + '<circle cx="15" cy="11" r="1.6" fill="#e0115f"/>'
+        + '<circle cx="9" cy="13" r="1" fill="#3b82f6"/><circle cx="21" cy="13" r="1" fill="#3b82f6"/>'
+        + '</svg>';
+}
+// Schräg sitzende Krone über dem Banner, leicht seitlich versetzt.
+function royalCrownDeco(h) {
+    return '<span style="position:absolute;top:-' + (h * 0.66).toFixed(0) + 'px;right:4px;transform:rotate(20deg);filter:drop-shadow(0 2px 3px rgba(0,0,0,.45));line-height:0;pointer-events:none">' + royalCrownSvg(h) + '</span>';
+}
 // Banner-HTML für ein Titelschild (unter dem Profil). Gibt '' wenn kein/ungültiger Titel.
 function titleBannerHtml(titleId) {
     const t = TITLE_ITEMS.find(x => x.id === titleId);
     if (!t) return '';
-    return '<div class="cb-titleplate" style="background:' + t.bg + ';box-shadow:0 2px 10px ' + t.glow + ',inset 0 1px 0 rgba(255,255,255,.25)">'
-        + '<span class="cb-titleplate-em">' + t.emoji + '</span>'
+    return '<div class="cb-titleplate" style="position:relative;background:' + t.bg + ';box-shadow:0 2px 10px ' + t.glow + ',inset 0 1px 0 rgba(255,255,255,.25)">'
+        + (t.crown ? royalCrownDeco(22) : '')
+        + (t.emoji ? '<span class="cb-titleplate-em">' + t.emoji + '</span>' : '')
         + '<span class="cb-titleplate-tx" style="color:' + t.tcol + '">' + t.label + '</span>'
+        + '</div>';
+}
+// Kompaktes Titelschild für Reihen (z.B. Feed-Link neben "Öffnen"). Kein Außenabstand, kleiner.
+function titlePlateInlineHtml(titleId) {
+    const t = TITLE_ITEMS.find(x => x.id === titleId);
+    if (!t) return '';
+    return '<div class="cb-titleplate" style="position:relative;margin:0;padding:4px 11px;background:' + t.bg + ';box-shadow:0 2px 8px ' + t.glow + ',inset 0 1px 0 rgba(255,255,255,.25)">'
+        + (t.crown ? royalCrownDeco(18) : '')
+        + (t.emoji ? '<span class="cb-titleplate-em" style="font-size:13px">' + t.emoji + '</span>' : '')
+        + '<span class="cb-titleplate-tx" style="font-size:11px;letter-spacing:1.2px;color:' + t.tcol + '">' + t.label + '</span>'
         + '</div>';
 }
 // PNG-Ringe (Premium-/Spezial-Rahmen): global an/aus. Auf false → für normale User ausgeblendet,
@@ -5498,7 +5526,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v302-8h';
+const SW_VERSION='v303-titlefeed';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
@@ -11648,8 +11676,9 @@ window.onPinVisitStory = function(uid){
 '      </div>\n'+
 '    </div>\n'+
 (link.caption?'    <div style="padding:8px 12px;font-size:12px;color:var(--muted);line-height:1.4;border-top:1px solid rgba(255,255,255,.06)">'+String(link.caption).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</div>\n':'')+
-'    <div style="padding:8px 12px 10px;display:flex;align-items:center;justify-content:flex-end">\n'+
-'      <a href="'+htmlEsc(cleanInstagramUrl(link.text||''))+'" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();markLinkVisited(\''+lid1+'\')" style="padding:8px 18px;background:#7c3aed;color:#fff;border-radius:10px;font-size:12px;font-weight:700;text-decoration:none;white-space:nowrap">→ Öffnen</a>\n'+
+'    <div style="padding:8px 12px 10px;display:flex;align-items:center;justify-content:space-between;gap:var(--space-2)">\n'+
+'      <div style="flex-shrink:0">'+titlePlateInlineHtml(poster.activeTitle)+'</div>\n'+
+'      <a href="'+htmlEsc(cleanInstagramUrl(link.text||''))+'" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();markLinkVisited(\''+lid1+'\')" style="padding:8px 18px;background:#7c3aed;color:#fff;border-radius:10px;font-size:12px;font-weight:700;text-decoration:none;white-space:nowrap;flex-shrink:0">→ Öffnen</a>\n'+
 '    </div>\n'+
 '  </div>\n'+
 // Likes counter + XP badge
@@ -11726,7 +11755,10 @@ commentsBox+
                     : '')
                 +'<div style="padding:10px 14px">\n'
                 +(sl.caption?'<div style="font-size:12px;color:var(--muted);line-height:1.4;margin-bottom:var(--space-2)">'+String(sl.caption).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</div>':'')+'\n'
-                +'<a href="'+htmlEsc(cleanInstagramUrl(sl.url||''))+'" target="_blank" rel="noopener noreferrer" onclick="markLinkVisited(\''+sl.id+'\')" style="display:inline-flex;align-items:center;gap:5px;padding:7px 14px;background:linear-gradient(135deg,#f59e0b,#a78bfa);color:#fff;border-radius:10px;font-size:12px;font-weight:700;text-decoration:none">→ Öffnen</a>\n'
+                +'<div style="display:flex;align-items:center;justify-content:space-between;gap:var(--space-2)">'
+                +'<div style="flex-shrink:0">'+titlePlateInlineHtml(poster.activeTitle)+'</div>'
+                +'<a href="'+htmlEsc(cleanInstagramUrl(sl.url||''))+'" target="_blank" rel="noopener noreferrer" onclick="markLinkVisited(\''+sl.id+'\')" style="display:inline-flex;align-items:center;gap:5px;padding:7px 14px;background:linear-gradient(135deg,#f59e0b,#a78bfa);color:#fff;border-radius:10px;font-size:12px;font-weight:700;text-decoration:none;flex-shrink:0">→ Öffnen</a>'
+                +'</div>\n'
                 +'</div></div>\n'
                 +'<div class="post-likes-row"><span class="post-like-count"><svg width="20" height="20" viewBox="0 0 24 24" fill="#ef4444"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg><span id="sl-likes-'+sl.id+'">'+likes.length+'</span></span></div>\n'
                 +'<div id="sl-liker-rows-'+sl.id+'" style="display:none">'+likerRows+'</div>\n'
@@ -19157,9 +19189,10 @@ function switchRanking(tab, btn) {
                     const btn = owned
                       ? '<div style="font-size:var(--fs-xs);color:#22c55e;font-weight:700">✓ Besessen</div>'
                       : '<button onclick="buyItem(\''+t.id+'\')" data-item="'+t.id+'" style="background:'+(canAfford?'linear-gradient(135deg,#a78bfa,#7c3aed)':'var(--bg4)')+';color:'+(canAfford?'#fff':'var(--muted)')+';border:none;border-radius:10px;padding:6px 16px;font-size:var(--fs-xs);font-weight:700;cursor:'+(canAfford?'pointer':'not-allowed')+'" '+(canAfford?'':'disabled')+'>Kaufen</button>';
-                    return '<div style="background:var(--bg3);border:1px solid var(--border2);border-radius:16px;padding:12px 14px;margin-bottom:10px">'
-                      + '<div style="display:inline-flex;align-items:center;gap:7px;padding:5px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.18);background:'+t.bg+';box-shadow:0 2px 10px '+t.glow+',inset 0 1px 0 rgba(255,255,255,.25);margin-bottom:9px">'
-                        + '<span style="font-size:14px;line-height:1">'+t.emoji+'</span><span style="font-size:12.5px;font-weight:800;letter-spacing:1.5px;color:'+t.tcol+';text-shadow:0 1px 2px rgba(0,0,0,.35)">'+t.label+'</span>'
+                    return '<div style="background:var(--bg3);border:1px solid var(--border2);border-radius:16px;padding:'+(t.crown?'20px':'12px')+' 14px 12px;margin-bottom:10px">'
+                      + '<div style="position:relative;display:inline-flex;align-items:center;gap:7px;padding:5px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.18);background:'+t.bg+';box-shadow:0 2px 10px '+t.glow+',inset 0 1px 0 rgba(255,255,255,.25);margin-bottom:9px">'
+                        + (t.crown ? royalCrownDeco(22) : '')
+                        + (t.emoji ? '<span style="font-size:14px;line-height:1">'+t.emoji+'</span>' : '')+'<span style="font-size:12.5px;font-weight:800;letter-spacing:1.5px;color:'+t.tcol+';text-shadow:0 1px 2px rgba(0,0,0,.35)">'+t.label+'</span>'
                       + '</div>'
                       + '<div style="font-size:11px;color:var(--muted);margin-bottom:8px">'+t.desc+'</div>'
                       + '<div style="display:flex;align-items:center;justify-content:space-between;gap:var(--space-2)">'+priceTxt+btn+'</div>'
@@ -22397,7 +22430,7 @@ ${(()=>{ const _myTitles = TITLE_ITEMS.filter(t=>myInventory.includes(t.id)); re
   ${(()=>{ const _t = TITLE_ITEMS.filter(t=>myInventory.includes(t.id)); if(!_t.length) return ''; return '<div style="font-size:10px;font-weight:800;color:#a78bfa;letter-spacing:.5px;margin:14px 0 8px">🏷️ TITELSCHILDER</div><div style="display:flex;flex-direction:column;gap:10px">' + _t.map(function(t){
       const isA = (u.activeTitle === t.id);
       return '<div style="background:var(--bg3);border:1px solid '+(isA?'rgba(167,139,250,.5)':'var(--border2)')+';border-radius:14px;padding:var(--space-3);display:flex;align-items:center;gap:var(--space-3)">'
-        + '<div style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.18);background:'+t.bg+';box-shadow:0 2px 8px '+t.glow+';flex-shrink:0"><span style="font-size:13px">'+t.emoji+'</span><span style="font-size:11.5px;font-weight:800;letter-spacing:1px;color:'+t.tcol+'">'+t.label+'</span></div>'
+        + '<div style="position:relative;display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.18);background:'+t.bg+';box-shadow:0 2px 8px '+t.glow+';flex-shrink:0">'+(t.crown?royalCrownDeco(18):'')+(t.emoji?'<span style="font-size:13px">'+t.emoji+'</span>':'')+'<span style="font-size:11.5px;font-weight:800;letter-spacing:1px;color:'+t.tcol+'">'+t.label+'</span></div>'
         + '<div style="flex:1;min-width:0"><div style="font-size:var(--fs-sm);font-weight:700">'+t.label+(isA?' <span style="font-size:10px;color:#a78bfa;font-weight:600">● Aktiv</span>':'')+'</div><div style="font-size:11px;color:var(--muted)">'+t.desc+'</div></div>'
         + '<button onclick="setTitle(\''+(isA?'':t.id)+'\')" style="background:'+(isA?'rgba(167,139,250,.2)':'var(--bg4)')+';border:1px solid '+(isA?'rgba(167,139,250,.4)':'var(--border)')+';color:'+(isA?'#a78bfa':'var(--text)')+';border-radius:10px;padding:6px 12px;font-size:var(--fs-xs);font-weight:600;cursor:pointer;white-space:nowrap">'+(isA?'Deaktivieren':'Aktivieren')+'</button>'
         + '</div>';

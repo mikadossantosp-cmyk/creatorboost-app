@@ -1000,7 +1000,7 @@ const ITEM_PRICES = {
     // Premium-„50 Diamanten Rahmen" (PNG)
     pframe_fire: 50, pframe_gold: 50, pframe_ice: 50, pframe_crystal: 50, pframe_bubble: 50,
     // Titelschilder (Banner unter dem Profil) — eigener Titel-Text + Design
-    title_legende: 40, title_vip: 40, title_pro: 30, title_star: 30, title_elite: 50, title_feuer: 40, title_eis: 40, title_royal: 50,
+    title_pro: 50, title_star: 100, title_vip: 150, title_feuer: 200, title_eis: 200, title_legende: 300, title_elite: 400, title_royal: 500,
 };
 const ITEM_NAMES = {
     ring_flame: '🔥 Flame Ring', ring_ocean: '🌊 Ocean Ring', ring_gold: '✨ Gold Ring', ring_purple: '🔮 Cosmic Ring', ring_rainbow: '🌈 Rainbow Ring', ring_diamond: '💎 Diamond Ring',
