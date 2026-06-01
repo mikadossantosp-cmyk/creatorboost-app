@@ -998,12 +998,10 @@ function getRingBoxShadow(userData) {
 function ringPreview(item, size, inner) {
     const fs = Math.round(size * 0.34);
     const inner2 = Math.round(size * 0.80); // Avatar-Kern füllt das Ring-Loch (Ring liegt als Band außen)
-    // PNG-Ring: dunkler Avatar-Kern (60% Loch) mittig, PNG 100% drüber (PNG hat eigenes transparentes Loch).
+    // PNG-Ring: NUR das Ring-Bild auf transparentem Grund (kein schwarzer Kern-Platzhalter mehr).
     if (item.img && ringFrameExists(item.id)) {
-        const core = Math.round(size * 0.58);
         return '<div style="position:relative;width:' + size + 'px;height:' + size + 'px;flex-shrink:0;display:flex;align-items:center;justify-content:center">'
-            + '<div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:' + core + 'px;height:' + core + 'px;border-radius:50%;background:#15151a;display:flex;align-items:center;justify-content:center;font-size:' + fs + 'px;font-weight:700;color:#fff">' + (inner || '') + '</div>'
-            + '<img src="/ringframe/' + item.id + '" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none" alt="">'
+            + '<img src="/ringframe/' + item.id + '" style="width:100%;height:100%;object-fit:contain;pointer-events:none" alt="">'
             + '</div>';
     }
     if (item.conic) {
@@ -5455,7 +5453,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v293-ring-fit';
+const SW_VERSION='v294-no-black';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
