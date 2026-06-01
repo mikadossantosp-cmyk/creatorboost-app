@@ -4867,10 +4867,17 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
       ${isUidOnline(uid) ? '<div class="ipf-avatar-dot" title="Online"></div>' : ''}
     </div>
     ${(isOwn && adminIds.includes(Number(uid))) ? `<div style="position:absolute;left:0;top:96px;width:84px;z-index:20">
-      <input type="range" min="120" max="210" value="151" id="ring-scale-slider" oninput="(function(v){document.documentElement.style.setProperty('--ringscale',v+'%');try{localStorage.setItem('cb_ringscale',v);}catch(e){}var l=document.getElementById('ring-scale-lbl');if(l)l.textContent=v+'%';})(this.value)" style="width:84px;accent-color:#a78bfa">
+      <input type="range" min="115" max="230" value="151" id="ring-scale-slider" oninput="cbSetRingScale(this.value)" style="width:84px;accent-color:#a78bfa">
       <div style="font-size:9px;color:var(--muted);text-align:center;margin-top:1px">Ring <span id="ring-scale-lbl">151%</span></div>
     </div>
-    <script>(function(){try{var s=localStorage.getItem('cb_ringscale');if(s){document.documentElement.style.setProperty('--ringscale',s+'%');var el=document.getElementById('ring-scale-slider');if(el)el.value=s;var l=document.getElementById('ring-scale-lbl');if(l)l.textContent=s+'%';}}catch(e){}})();</script>` : ''}
+    <script>
+    function cbSetRingScale(v){
+      document.querySelectorAll('.cb-ring-png').forEach(function(el){ el.style.width=v+'%'; el.style.height=v+'%'; });
+      try{localStorage.setItem('cb_ringscale',v);}catch(e){}
+      var l=document.getElementById('ring-scale-lbl'); if(l) l.textContent=v+'%';
+    }
+    (function(){ try{ var s=localStorage.getItem('cb_ringscale'); if(s){ var el=document.getElementById('ring-scale-slider'); if(el) el.value=s; cbSetRingScale(s); } }catch(e){} })();
+    </script>` : ''}
     <div class="ipf-stats">
       <div class="ipf-stat"><div class="ipf-stat-num" data-count="${_posts}">0</div><div class="ipf-stat-lbl">Posts</div></div>
       <div class="ipf-stat"><div class="ipf-stat-num" data-count="${_followers}">0</div><div class="ipf-stat-lbl">Follower</div></div>
@@ -5458,7 +5465,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v297-ringslider';
+const SW_VERSION='v298-ringslider2';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
