@@ -12683,6 +12683,38 @@ async function submitSuperLink(){
   loadAndRender();
 })();
 
+// ── Gemeinsame Karten-Helfer: Diamant/Prisma/Admin an die normalen Link-Karten angleichen ──
+// (Profilbild-Author-Zeile mit Builder/Titel/Rolle + klickbare Reel-Vorschau wie im Feed)
+window.cbCardEsc = function(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];}); };
+window.cbCardAuthorRow = function(p, accent){
+  var e = window.cbCardEsc; var a = p.author||{}; var uid = e(p.uid||a.uid||'');
+  var ig = a.instagram ? '@'+e(a.instagram) : '';
+  var av = '<div style="position:relative;width:40px;height:40px;flex-shrink:0;border-radius:50%;overflow:hidden;background:linear-gradient(135deg,#06b6d4,#a855f7);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:15px">'+e((a.name||'?').charAt(0))+(uid?'<img src="/appbild/'+uid+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.remove()" alt="">':'')+'</div>';
+  var bld = a.builderEmoji ? '<span style="display:inline-flex;align-items:center;gap:3px;font-size:10.5px;font-weight:800;padding:1px 7px;border-radius:99px;background:rgba(34,197,94,0.16);color:#16a34a">'+e(a.builderEmoji)+(a.builderLabel?' '+e(a.builderLabel):'')+'</span>' : '';
+  var role = a.roleBadgeHtml || '';
+  var title = a.titlePlateHtml || '';
+  return '<a href="/profil/'+uid+'" style="display:flex;align-items:center;gap:10px;text-decoration:none;margin-bottom:10px">'+av+
+    '<div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;font-size:14px;font-weight:800;color:'+(accent||'var(--text)')+'">'+e(a.name||'User')+bld+role+'</div>'+
+    (ig?'<div style="font-size:11.5px;font-weight:600;color:#06b6d4;margin-top:1px">'+ig+'</div>':'')+'</div>'+
+    (title?'<div style="flex-shrink:0">'+title+'</div>':'')+'</a>';
+};
+window.cbCardReel = function(p, postId, visitVar){
+  var e = window.cbCardEsc; var a = p.author||{}; var uid = e(p.uid||a.uid||'');
+  var clean = (typeof cleanInstagramUrl==='function') ? cleanInstagramUrl(p.url||'') : (p.url||'');
+  var setv = visitVar ? ('window.'+visitVar+'=Date.now();') : '';
+  var avatar = '<div style="position:relative;width:30px;height:30px;border-radius:50%;border:2px solid rgba(255,255,255,.5);overflow:hidden;background:linear-gradient(135deg,#06b6d4,#a855f7);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0">'+e((a.name||'?').charAt(0))+(uid?'<img src="/appbild/'+uid+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.remove()" alt="">':'')+'</div>';
+  return '<div onclick="'+setv+'markLinkVisited(\\''+e(postId)+'\\');window.open(\\''+e(clean)+'\\',\\'_blank\\')" style="margin-bottom:10px;border-radius:14px;overflow:hidden;background:#000;border:1px solid var(--border);cursor:pointer;box-shadow:0 2px 10px rgba(15,23,42,0.06)">'+
+    '<div style="position:relative;width:100%;padding-top:60%;background:linear-gradient(135deg,#1a1a2e,#16213e);overflow:hidden">'+
+      (uid?'<img src="/appbild/'+uid+'/banner" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.remove()" alt="">':'')+
+      '<div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.12),rgba(0,0,0,.55))"></div>'+
+      '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none"><div style="width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,.92);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 16px rgba(0,0,0,.35)"><div style="width:0;height:0;border-style:solid;border-width:10px 0 10px 18px;border-color:transparent transparent transparent #000;margin-left:4px"></div></div></div>'+
+      '<div style="position:absolute;top:10px;left:12px;background:rgba(0,0,0,.55);border-radius:8px;padding:4px 9px;display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg><span style="font-size:11px;color:#fff;font-weight:600">Instagram Reel</span></div>'+
+      '<div style="position:absolute;bottom:0;left:0;right:0;padding:10px 12px;display:flex;align-items:center;gap:8px">'+avatar+'<span style="font-size:12px;font-weight:700;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.6)">'+e(a.name||'User')+'</span></div>'+
+    '</div>'+
+    (p.caption?'<div style="padding:8px 12px;font-size:12px;color:var(--muted);line-height:1.4;border-top:1px solid rgba(255,255,255,.08)">'+e(p.caption)+'</div>':'')+
+  '</div>';
+};
+
 // ── DIAMANTLINKS (Heute-Top-Strip + eigener Tab) ──
 (function initDiamondLinks(){
   const stripEl = document.getElementById('diamond-top-strip');
@@ -12714,8 +12746,8 @@ async function submitSuperLink(){
           '</div>' +
           '<div style="font-size:11px;color:#06b6d4;font-weight:700;text-align:right;flex-shrink:0">⏱<br>'+fmtRemaining(remaining)+'</div>' +
         '</div>' +
-        '<div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;font-size:13.5px;font-weight:700"><a href="/profil/'+esc(p.uid)+'" style="color:var(--text);text-decoration:none">'+aName+'</a>'+(p.author&&p.author.roleBadgeHtml?p.author.roleBadgeHtml:'')+(aHandle?'<span style="color:#06b6d4;font-weight:500;font-size:12px">'+aHandle+'</span>':'')+'</div>' +
-        (p.caption ? '<div style="font-size:13px;color:var(--text);line-height:1.5;margin:6px 0 8px">'+esc(p.caption)+'</div>' : '') +
+        window.cbCardAuthorRow(p) +
+        window.cbCardReel(p, p.id, '_dvisit_'+p.id) +
         '<a href="'+esc(cleanInstagramUrl(p.url))+'" target="_blank" rel="noopener noreferrer" onclick="window._dvisit_'+p.id+'=Date.now();markLinkVisited(\\''+p.id+'\\')" style="display:flex;align-items:center;justify-content:center;gap:var(--space-2);padding:var(--space-4);background:linear-gradient(135deg,#ec4899,#a855f7);color:#fff;border-radius:12px;font-size:14.5px;font-weight:800;text-decoration:none;margin-bottom:10px;box-shadow:0 4px 14px rgba(236,72,153,.25);position:relative"><span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900">1</span><span style="color:#fff;font-weight:800;display:inline-flex;align-items:center;gap:7px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17" cy="7" r="1.1" fill="currentColor" stroke="none"/></svg>Auf Instagram öffnen</span><span style="font-size:18px;margin-left:var(--space-1)">→</span></a>' +
         '<div style="margin-bottom:10px;padding:13px 14px;background:rgba(245,158,11,0.13);border:2.5px solid #f59e0b;border-radius:13px;box-shadow:0 0 0 3px rgba(245,158,11,0.18),0 4px 14px rgba(245,158,11,0.20)">' +
           '<div style="font-size:13.5px;font-weight:900;color:#f59e0b;text-transform:uppercase;letter-spacing:0.6px;margin-bottom:7px;display:flex;align-items:center;gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M10.3 4 2 18.3A1.6 1.6 0 0 0 3.4 20.7h17.2A1.6 1.6 0 0 0 22 18.3L13.7 4a1.6 1.6 0 0 0-3.4 0z"/><line x1="12" y1="9.5" x2="12" y2="13.5"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>FULL ENGAGEMENT PFLICHT</div>' +
@@ -13305,8 +13337,8 @@ async function submitSuperLink(){
           '</div>' +
           '<div style="font-size:11px;color:#a855f7;font-weight:700;text-align:right;flex-shrink:0">⏱<br>'+fmtRemaining(remaining)+'</div>' +
         '</div>' +
-        '<div style="font-size:13.5px;font-weight:700"><a href="/profil/'+esc(p.uid)+'" style="color:#fff;text-decoration:none">'+aName+'</a> '+(aHandle?'<span style="color:#c9a8ff;font-weight:500;font-size:12px">'+aHandle+'</span>':'')+'</div>' +
-        (p.caption ? '<div style="font-size:13px;color:rgba(255,255,255,0.82);line-height:1.5;margin:6px 0 8px">'+esc(p.caption)+'</div>' : '') +
+        window.cbCardAuthorRow(p, '#fff') +
+        window.cbCardReel(p, p.id, '_pvisit_'+p.id) +
         '<a href="'+esc(cleanInstagramUrl(p.url))+'" target="_blank" rel="noopener noreferrer" onclick="window._pvisit_'+p.id+'=Date.now();markLinkVisited(\\''+p.id+'\\')" style="display:flex;align-items:center;justify-content:center;gap:var(--space-2);padding:var(--space-4);background:linear-gradient(135deg,#ec4899,#a855f7);color:#fff;border-radius:12px;font-size:14.5px;font-weight:800;text-decoration:none;margin-bottom:10px;box-shadow:0 6px 18px rgba(168,85,247,.45);position:relative"><span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900">1</span><span style="color:#fff;font-weight:800;display:inline-flex;align-items:center;gap:7px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17" cy="7" r="1.1" fill="currentColor" stroke="none"/></svg>Auf Instagram öffnen</span><span style="font-size:18px;margin-left:var(--space-1)">→</span></a>' +
         '<div style="margin-bottom:10px;padding:13px 14px;background:rgba(245,158,11,0.18);border:2px solid #f59e0b;border-radius:13px;box-shadow:0 0 0 2px rgba(245,158,11,0.15),0 4px 14px rgba(245,158,11,0.20)">' +
           '<div style="font-size:13.5px;font-weight:900;color:#fbbf24;text-transform:uppercase;letter-spacing:0.6px;margin-bottom:7px;display:flex;align-items:center;gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M10.3 4 2 18.3A1.6 1.6 0 0 0 3.4 20.7h17.2A1.6 1.6 0 0 0 22 18.3L13.7 4a1.6 1.6 0 0 0-3.4 0z"/><line x1="12" y1="9.5" x2="12" y2="13.5"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>FULL ENGAGEMENT PFLICHT</div>' +
@@ -13442,7 +13474,8 @@ function _alUserCard(c, isPreview){
   var esc=_alEsc;
   var key = (isPreview?'alp-':'al-')+c.id;
   var msg = c.message ? '<div style="font-size:15px;color:#fff;line-height:1.5;margin:10px 0 4px;font-weight:700">'+esc(c.message)+'</div>' : '';
-  var author = c.author ? '<div style="font-size:12px;color:rgba(255,255,255,.55);margin-bottom:12px">von <b style="color:#fbbf24">'+esc(c.author.name||'Admin')+(c.author.builderEmoji?' '+esc(c.author.builderEmoji):'')+'</b>'+(c.author.instagram?' · @'+esc(c.author.instagram):'')+'</div>' : '';
+  var author = c.author ? window.cbCardAuthorRow(c, '#fff') : '';
+  var reel = window.cbCardReel(c, c.id, '_alvisit');
   var openUrl = (typeof cleanInstagramUrl==='function') ? cleanInstagramUrl(c.url) : c.url;
   var tag = isPreview ? '<div style="position:absolute;top:9px;right:9px;z-index:3;background:rgba(0,0,0,.55);color:#fbbf24;font-size:9px;font-weight:800;letter-spacing:1px;padding:4px 8px;border-radius:7px;text-transform:uppercase">👁 Vorschau</div>' : '';
   var engageBtn = isPreview
@@ -13457,7 +13490,7 @@ function _alUserCard(c, isPreview){
         '<div style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-.5px;line-height:1.15;margin-top:1px">+'+(c.reward||5)+' 💎 <span style="font-size:11px;color:rgba(255,255,255,.6);font-weight:600;letter-spacing:0">fürs Engagement</span></div></div>'+
         '<div style="font-size:11px;color:#fbbf24;font-weight:800;text-align:right;flex-shrink:0">⏱<br>'+_alFmtRemaining(c.remainingMs)+'</div>'+
       '</div>'+
-      msg+author+
+      msg+author+reel+
       '<a href="'+esc(openUrl)+'" target="_blank" rel="noopener noreferrer" onclick="window._alvisit=Date.now();markLinkVisited(\\''+c.id+'\\')" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:14px;background:linear-gradient(135deg,#ec4899,#a855f7);color:#fff;border-radius:12px;font-size:14.5px;font-weight:800;text-decoration:none;margin-bottom:10px;box-shadow:0 6px 18px rgba(168,85,247,.4)"><span style="width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px">1</span><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17" cy="7" r="1.1" fill="currentColor" stroke="none"/></svg>Auf Instagram öffnen →</a>'+
       '<div style="margin-bottom:10px;padding:13px 14px;background:rgba(245,158,11,.2);border:2px solid #f59e0b;border-radius:13px;box-shadow:0 0 0 2px rgba(245,158,11,.13),0 4px 14px rgba(245,158,11,.2)">'+
         '<div style="font-size:13px;font-weight:900;color:#fbbf24;text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px;display:flex;align-items:center;gap:7px"><span style="font-size:16px">⚠️</span>Pflicht: Voll engagieren</div>'+
@@ -16136,11 +16169,19 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
         return json(r);
     }
 
+    // Karten-Author anreichern wie bei normalen Feed-Karten: Rolle-Badge + Builder (Emoji+Label) + Titelschild.
+    const _decorateCardAuthor = (a) => {
+        if (!a || !a.uid) return;
+        let _u = {}; try { _u = (datastore.getData().users || {})[String(a.uid)] || {}; } catch (e) {}
+        a.roleBadgeHtml = roleBadge(a.role || _u.role || '');
+        try { const _b = botLogic.builderBadgeFor(String(a.uid)); if (_b) { a.builderEmoji = _b.emoji; a.builderLabel = String(_b.label).replace(/^Community /, ''); } } catch (e) {}
+        try { if (_u.activeTitle) a.titlePlateHtml = titlePlateInlineHtml(_u.activeTitle); } catch (e) {}
+    };
     // ── DIAMANTLINK API ──
     if (path === '/api/diamond-link/feed' && req.method === 'GET') {
         if (!session) return json({error:'Nicht eingeloggt'}, 401);
         const r = LOCAL_STORE ? botLogic.diamondLinkFeedApi(myUid) : await fetchBotRaw('/diamond-link-feed-api?uid=' + encodeURIComponent(myUid));
-        if (r && Array.isArray(r.posts)) r.posts.forEach(p => { if (!p) return; if (p.author) p.author.roleBadgeHtml = roleBadge(p.author.role); if (Array.isArray(p.likers)) p.likers.forEach(l => { if (l) l.roleBadgeHtml = roleBadge(l.role); }); });
+        if (r && Array.isArray(r.posts)) r.posts.forEach(p => { if (!p) return; if (p.author) _decorateCardAuthor(p.author); if (Array.isArray(p.likers)) p.likers.forEach(l => { if (l) l.roleBadgeHtml = roleBadge(l.role); }); });
         return json(r || {ok:false, error:'Mainbot offline'});
     }
     if (path === '/api/diamond-link/create' && req.method === 'POST') {
@@ -16547,6 +16588,7 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
         // User-Feed: hideEngaged=1 → bereits geengaged Posts verschwinden
         const hideEngaged = query.hideEngaged === '1' ? '&hideEngaged=1' : '';
         const r = LOCAL_STORE ? botLogic.prismaLinkFeedApi(myUid, query.hideEngaged === '1') : await fetchBotRaw('/prisma-link-feed-api?uid=' + encodeURIComponent(myUid) + hideEngaged);
+        if (r && Array.isArray(r.posts)) r.posts.forEach(p => { if (p && p.author) _decorateCardAuthor(p.author); });
         return json(r || {ok:false, error:'Mainbot offline'});
     }
     if (path === '/api/prisma-link/create' && req.method === 'POST') {
@@ -16590,6 +16632,7 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
     if (path === '/api/admin-link/card' && req.method === 'GET') {
         if (!session) return json({error:'Nicht eingeloggt'}, 401);
         const card = LOCAL_STORE ? botLogic.adminLinkFeedCard(myUid) : (await fetchBotRaw('/admin-link-card-api?uid=' + encodeURIComponent(myUid)))?.card;
+        if (card && card.author) _decorateCardAuthor(card.author);
         return json({ ok: true, card: card || null });
     }
     if (path === '/api/admin-link/engage' && req.method === 'POST') {
