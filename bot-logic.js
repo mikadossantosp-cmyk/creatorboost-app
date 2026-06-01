@@ -1005,7 +1005,7 @@ const ITEM_NAMES = {
     banner_sunset: '🌅 Sunset Banner', banner_ocean: '🌊 Ocean Banner', banner_forest: '🌿 Forest Banner', banner_candy: '🍭 Candy Banner',
     banner_sky: '☁️ Sky Blue Banner', banner_lavender: '💜 Lavender Banner', banner_mint: '🌱 Mint Banner', banner_peach: '🍑 Peach Banner',
     banner_gold: '✨ Golden Hour Banner', banner_coral: '🪸 Coral Banner', banner_aurora: '🌌 Aurora Banner', banner_rose: '🌹 Rose Gold Banner',
-    pframe_fire: '🔥 Fire Ring', pframe_gold: '👑 Gold Ring', pframe_ice: '🧊 Ice Ring', pframe_crystal: '🔷 Crystal Ring', pframe_bubble: '🫧 Bubble Ring',
+    pframe_fire: '🌋 Lava-Ring', pframe_gold: '👑 Gold-Ring', pframe_ice: '🧊 Eis-Ring', pframe_crystal: '🔷 Kristall-Ring', pframe_bubble: '🫧 Perlen-Ring',
 };
 function buyItemApi({ uid, itemId }) {
     if (!uid || !itemId) return { ok: false, error: 'Fehlende Parameter' };

@@ -851,7 +851,7 @@ const RING_ITEMS = [
     { id: 'ring_diamond', name: 'Diamond Ring', emoji: '💎', price: 20, shadow: '0 0 0 3px #b9f2ff, 0 0 0 6px #a78bfa',   gradient: 'linear-gradient(135deg,#a78bfa,#b9f2ff,#ffffff)', desc: 'Funkelnder Diamantglanz' },
     // ── Premium-„50 Diamanten Rahmen" — CSS-Ringe: Basis (rotierendes conic-Farbband) + Dekoration (deco-Typ).
     //    conic = Basis-Farben · deco = Stil (flames/gems/frost/sparkle/bubbles) · glow = Außen-Schein. ──
-    { id: 'pframe_fire',    name: 'Flammen-Ring',  emoji: '🔥', price: 50, premium: true, conic: '#7a1500,#ff2200,#ff9a3c,#ffd166,#ff6b00,#ff2200,#7a1500', deco:'flames',  glow:'rgba(255,90,0,.7)',    gem:'radial-gradient(circle at 35% 30%,#fff,#ffd166 35%,#ff5a00 75%)',    desc: 'Lodernder Feuerkranz' },
+    { id: 'pframe_fire',    name: 'Lava-Ring',     emoji: '🌋', price: 50, premium: true, conic: '#2a0a00,#7a1500,#ff2200,#ff6b00,#ffd166,#ff8c1a,#ff2200,#7a1500,#2a0a00', deco:'flames',  glow:'rgba(255,80,0,.8)',  gem:'radial-gradient(circle at 35% 28%,#fff6d8,#ffd166 30%,#ff5a00 65%,#7a1500 100%)', desc: 'Aus Lava & Vulkankristall geschmiedet' },
     { id: 'pframe_gold',    name: 'Gold-Ring',     emoji: '👑', price: 50, premium: true, conic: '#6b4e07,#b8860b,#ffd700,#fff7cc,#ffd700,#b8860b,#6b4e07', deco:'gems',    glow:'rgba(255,215,0,.65)',  gem:'radial-gradient(circle at 35% 30%,#fff,#ffe680 35%,#b8860b 78%)',  desc: 'Goldener Prachtkranz' },
     { id: 'pframe_ice',     name: 'Eis-Ring',      emoji: '🧊', price: 50, premium: true, conic: '#1e4e8c,#3b82f6,#7dd3fc,#ffffff,#bae6fd,#3b82f6,#1e4e8c', deco:'frost',   glow:'rgba(125,211,252,.7)', gem:'radial-gradient(circle at 35% 30%,#fff,#bae6fd 40%,#3b82f6 80%)', desc: 'Eiskristall-Schimmer' },
     { id: 'pframe_crystal', name: 'Kristall-Ring', emoji: '🔷', price: 50, premium: true, conic: '#1e3a8a,#2a7fff,#7c3aed,#e040fb,#5ec8ff,#2a7fff,#1e3a8a', deco:'sparkle', glow:'rgba(168,85,247,.7)',  gem:'radial-gradient(circle at 35% 30%,#fff,#d8b4fe 38%,#7c3aed 80%)',  desc: 'Funkelnder Kristall' },
@@ -900,13 +900,14 @@ function ringFrameExists(id) {
 // Container muss position:relative sein; Profilbild bleibt voll & unverdeckt.
 // Professioneller CSS-Ring: STILLES metallisches Farbband (3D-Bevel) + gezeichnete Edelsteine rundherum + Glanz.
 // Kein Emoji, keine Rotation — edler Edelstein-/Metall-Look wie die Diamant-/Prisma-Karten.
-// 12 CSS-Gems (Rauten via clip-path) sitzen außen auf dem Band, in der Themenfarbe, funkeln dezent.
+// 4 GROSSE Kristalle (oben/unten/links/rechts) + 8 KLEINE Gems dazwischen, alle in der Themenfarbe.
 function ringGems(item) {
     if (!item || !item.gem) return '';
     const N = 12;
     let s = '<div class="cb-ring-gems">';
     for (let i = 0; i < N; i++) {
-        s += '<span class="cb-gem" style="transform:rotate(' + (360 / N * i) + 'deg)"><span class="cb-gem-d" style="background:' + item.gem + ';animation-delay:' + (i * 0.13).toFixed(2) + 's"></span></span>';
+        const big = (i % 3 === 0); // Position 0,3,6,9 = die 4 großen Kristalle
+        s += '<span class="cb-gem" style="transform:rotate(' + (360 / N * i) + 'deg)"><span class="cb-gem-d ' + (big ? 'cb-gem-big' : 'cb-gem-sm') + '" style="background:' + item.gem + ';animation-delay:' + (i * 0.13).toFixed(2) + 's"></span></span>';
     }
     return s + '</div>';
 }
@@ -3046,13 +3047,19 @@ ${session ? `
 /* DEKO-EDELSTEINE: 12 gezeichnete Rauten (clip-path) außen auf dem Band, in Themenfarbe, dezentes Funkeln. */
 .cb-ring-gems{position:absolute;left:50%;top:50%;width:132%;height:132%;transform:translate(-50%,-50%);pointer-events:none;z-index:7}
 .cb-gem{position:absolute;left:50%;top:50%;width:0;height:50%;transform-origin:top center}
-.cb-gem-d{position:absolute;left:50%;bottom:-4px;width:11px;height:14px;transform:translateX(-50%);
+.cb-gem-d{position:absolute;left:50%;bottom:-4px;transform:translateX(-50%);
   clip-path:polygon(50% 0,100% 38%,50% 100%,0 38%);
-  box-shadow:0 0 4px rgba(255,255,255,.7);animation:cbGemTwinkle 1.8s ease-in-out infinite;animation-delay:inherit}
-@keyframes cbGemTwinkle{0%,100%{opacity:.8;filter:brightness(.95)}50%{opacity:1;filter:brightness(1.4)}}
-.cb-deco-flames::before{background:repeating-conic-gradient(from 0deg,rgba(255,90,0,0) 0deg,rgba(255,225,110,.6) 3deg,rgba(255,120,0,.3) 8deg,rgba(255,90,0,0) 13deg);mix-blend-mode:screen}
+  animation:cbGemTwinkle 1.8s ease-in-out infinite;animation-delay:inherit}
+/* 4 große Lava-Kristalle (oben/unten/links/rechts) — größer + stärkeres Glühen */
+.cb-gem-big{width:16px;height:21px;bottom:-7px;box-shadow:0 0 7px 1px rgba(255,255,255,.85),0 0 12px rgba(255,120,0,.6)}
+/* 8 kleine Ember-Gems dazwischen */
+.cb-gem-sm{width:10px;height:13px;box-shadow:0 0 4px rgba(255,255,255,.7)}
+@keyframes cbGemTwinkle{0%,100%{opacity:.82;filter:brightness(.95)}50%{opacity:1;filter:brightness(1.45)}}
+/* Lava-Ring: glühende Vulkan-Risse (helle Adern) übers Band, pulsierendes Glühen */
+.cb-deco-flames::before{background:repeating-conic-gradient(from 0deg,rgba(255,90,0,0) 0deg,rgba(255,235,140,.85) 2deg,rgba(255,130,0,.45) 6deg,rgba(120,20,0,.3) 9deg,rgba(255,90,0,0) 13deg);mix-blend-mode:screen;animation:cbLavaPulse 2.2s ease-in-out infinite}
+@keyframes cbLavaPulse{0%,100%{opacity:.75}50%{opacity:1}}
 .cb-deco-frost::before{background:repeating-conic-gradient(from 0deg,rgba(255,255,255,0) 0deg,rgba(255,255,255,.7) 3deg,rgba(200,235,255,.3) 8deg,rgba(255,255,255,0) 13deg);mix-blend-mode:screen}
-@media (prefers-reduced-motion:reduce){.cb-ring-deco::after,.cb-gem-d{animation:none}}
+@media (prefers-reduced-motion:reduce){.cb-ring-deco::after,.cb-gem-d,.cb-deco-flames::before{animation:none}}
 /* Avatar mit aktivem Ring: Ring darf nach außen ragen, weißen Avatar-Rand entfernen (Ring ersetzt ihn) */
 .ipf-avatar-wrap.has-ring{overflow:visible}
 .ipf-avatar-wrap.has-ring .ipf-avatar{border-color:transparent!important;box-shadow:none!important}
@@ -5352,7 +5359,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v287-gems-still';
+const SW_VERSION='v288-lava-ring';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
