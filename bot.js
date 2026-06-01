@@ -4868,24 +4868,24 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
     </div>
     ${(isOwn && adminIds.includes(Number(uid))) ? `<div style="display:flex;align-items:center;gap:8px;margin:10px 0 2px;padding:6px 10px;background:var(--bg3);border:1px solid var(--border2);border-radius:12px;width:fit-content">
       <span style="font-size:11px;font-weight:700;color:var(--muted)">Ring-Größe:</span>
-      <button type="button" onclick="cbRingStep(-3)" style="width:30px;height:30px;border-radius:8px;border:1px solid var(--border);background:var(--bg4);color:var(--text);font-size:18px;font-weight:800;cursor:pointer;line-height:1">−</button>
-      <span id="ring-scale-lbl" style="font-size:13px;font-weight:800;min-width:46px;text-align:center;color:#a78bfa">151%</span>
-      <button type="button" onclick="cbRingStep(3)" style="width:30px;height:30px;border-radius:8px;border:1px solid var(--border);background:var(--bg4);color:var(--text);font-size:18px;font-weight:800;cursor:pointer;line-height:1">+</button>
+      <button type="button" id="cb-ring-minus" style="width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:var(--bg4);color:var(--text);font-size:18px;font-weight:800;cursor:pointer;line-height:1">−</button>
+      <span id="ring-scale-lbl" style="font-size:13px;font-weight:800;min-width:46px;text-align:center;color:#a78bfa">…</span>
+      <button type="button" id="cb-ring-plus" style="width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:var(--bg4);color:var(--text);font-size:18px;font-weight:800;cursor:pointer;line-height:1">+</button>
     </div>
-    <script>
-    window.cbRingVal = parseInt(localStorage.getItem('cb_ringscale')||'151',10);
-    function cbApplyRing(){
-      var els=document.querySelectorAll('.cb-ring-png');
-      els.forEach(function(el){ el.style.setProperty('width', window.cbRingVal+'%','important'); el.style.setProperty('height', window.cbRingVal+'%','important'); });
-      var l=document.getElementById('ring-scale-lbl'); if(l) l.textContent=window.cbRingVal+'%';
-    }
-    function cbRingStep(d){
-      window.cbRingVal=Math.max(110,Math.min(240, window.cbRingVal+d));
-      try{localStorage.setItem('cb_ringscale', window.cbRingVal);}catch(e){}
-      cbApplyRing();
-    }
-    cbApplyRing();
-    </script>` : ''}
+    <script>(function(){
+      var val = parseInt(localStorage.getItem('cb_ringscale')||'151',10);
+      if(!val||isNaN(val)) val=151;
+      function apply(){
+        var els=document.getElementsByClassName('cb-ring-png');
+        for(var i=0;i<els.length;i++){ els[i].style.setProperty('width',val+'%','important'); els[i].style.setProperty('height',val+'%','important'); }
+        var l=document.getElementById('ring-scale-lbl'); if(l) l.textContent=val+'%';
+      }
+      function step(d){ val=Math.max(110,Math.min(240,val+d)); try{localStorage.setItem('cb_ringscale',val);}catch(e){} apply(); }
+      var mi=document.getElementById('cb-ring-minus'), pl=document.getElementById('cb-ring-plus');
+      if(mi) mi.addEventListener('click',function(){step(-3);});
+      if(pl) pl.addEventListener('click',function(){step(3);});
+      apply();
+    })();</script>` : ''}
     <div class="ipf-stats">
       <div class="ipf-stat"><div class="ipf-stat-num" data-count="${_posts}">0</div><div class="ipf-stat-lbl">Posts</div></div>
       <div class="ipf-stat"><div class="ipf-stat-num" data-count="${_followers}">0</div><div class="ipf-stat-lbl">Follower</div></div>
@@ -5473,7 +5473,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v299-ringbtns';
+const SW_VERSION='v300-ringfix';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
