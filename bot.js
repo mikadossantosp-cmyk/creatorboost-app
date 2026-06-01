@@ -875,7 +875,9 @@ const TITLE_ITEMS = [
     { id:'title_eis',     label:'EIS',        emoji:'❄️', price:200, bg:'linear-gradient(135deg,#9fd8fb,#1e5a96)', tcol:'#ffffff', glow:'rgba(125,211,252,.7)', frame:'frost', desc:'Frostiges Eis-Schild' },
     { id:'title_legende', label:'LEGENDE',    emoji:'🏆', price:300, bg:'linear-gradient(135deg,#ffe487,#c9971f)', tcol:'#5b3a00', glow:'rgba(255,215,0,.65)', frame:'gold', desc:'Legendäres Gold-Schild' },
     { id:'title_elite',   label:'ELITE',      emoji:'👑', price:400, bg:'linear-gradient(135deg,#1a1030,#7c3aed,#e040fb)', tcol:'#fde68a', glow:'rgba(224,64,251,.6)', frame:'violet', desc:'Exklusives Elite-Schild' },
-    { id:'title_royal',   label:'ROYAL',      emoji:'', price:500, bg:'linear-gradient(110deg,#4c1d95 0%,#7c3aed 38%,#b8860b 72%,#ffd700 100%)', tcol:'#fff7d6', glow:'rgba(255,215,0,.65)', frame:'gold', desc:'Königliches Royal-Schild mit Krone', crown:true },
+    { id:'title_royal',   label:'ROYAL',      emoji:'', price:500, bg:'linear-gradient(110deg,#4c1d95 0%,#7c3aed 38%,#b8860b 72%,#ffd700 100%)', tcol:'#fff7d6', glow:'rgba(255,215,0,.65)', frame:'gold', emblem:'crown', crown:true, desc:'Königliches Royal-Schild mit Krone' },
+    // Admin-only, NICHT kaufbar (kein ITEM_PRICES-Eintrag, special:true → aus Shop gefiltert). Obsidian + Gold-Schild.
+    { id:'title_admin',   label:'ADMIN',      emoji:'', price:0,   bg:'linear-gradient(135deg,#2a2233,#0a0b12)', tcol:'#ffd86b', glow:'rgba(255,216,107,.5)', frame:'gold', emblem:'shield', special:true, desc:'Einzigartiges Admin-Schild' },
 ];
 // Premium-Krone (SVG) als Deko über dem Royal-Banner. h = Höhe in px.
 function royalCrownSvg(h) {
@@ -896,6 +898,19 @@ function royalCrownDeco(h) {
     // Krone sitzt SEATED auf der oberen rechten Ecke: Basis überlappt die Kante leicht (kein Schweben),
     // Drehpunkt an der Ecke, dezente Neigung nach außen.
     return '<span style="position:absolute;right:6px;top:-' + (h * 0.80).toFixed(0) + 'px;transform:rotate(10deg);transform-origin:bottom right;filter:drop-shadow(0 2px 3px rgba(0,0,0,.5));line-height:0;pointer-events:none;z-index:2">' + royalCrownSvg(h) + '</span>';
+}
+// Admin-Emblem (SVG): goldenes Wappen-Schild mit Stern — Pendant zur Krone, steht für Autorität/Moderation.
+function adminShieldSvg(h) {
+    const w = (h * 0.86).toFixed(0);
+    return '<svg width="' + w + '" height="' + h + '" viewBox="0 0 24 28" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">'
+        + '<defs><linearGradient id="cbAdminShG" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#fff6cf"/><stop offset="45%" stop-color="#ffd84d"/><stop offset="100%" stop-color="#b8860b"/></linearGradient></defs>'
+        + '<path d="M12 1 L22 5 V13.5 C22 20.5 17.3 25.2 12 27 C6.7 25.2 2 20.5 2 13.5 V5 Z" fill="url(#cbAdminShG)" stroke="#7a5200" stroke-width="1" stroke-linejoin="round"/>'
+        + '<path d="M12 1 L22 5 V13.5 C22 20.5 17.3 25.2 12 27 Z" fill="rgba(0,0,0,.10)"/>'
+        + '<path d="M12 7.6 l1.7 3.45 3.8.4 -2.85 2.55 .82 3.75 -3.47 -1.95 -3.47 1.95 .82 -3.75 -2.85 -2.55 3.8 -.4 Z" fill="#fff6d8" stroke="#7a5200" stroke-width="0.4" stroke-linejoin="round"/>'
+        + '</svg>';
+}
+function adminEmblemDeco(h) {
+    return '<span style="position:absolute;right:6px;top:-' + (h * 0.86).toFixed(0) + 'px;transform:rotate(8deg);transform-origin:bottom right;filter:drop-shadow(0 2px 3px rgba(0,0,0,.5));line-height:0;pointer-events:none;z-index:2">' + adminShieldSvg(h) + '</span>';
 }
 // Metallrahmen-Paare (innen hell / außen dunkel) für den layered Premium-Look.
 const TITLE_FRAMES = {
@@ -918,7 +933,7 @@ function titlePlateHtml(titleId, size) {
         tasche: { pad:'7px 16px',  fs:'12px',   ls:'1.5px', em:'13px', br:'11px', minw:'auto', crown:18 },
         inline: { pad:'4px 12px',  fs:'10.5px', ls:'1.2px', em:'12px', br:'9px',  minw:'auto', crown:16 },
     })[size || 'banner'];
-    const crown = t.crown ? royalCrownDeco(D.crown) : '';
+    const crown = t.emblem === 'shield' ? adminEmblemDeco(D.crown) : (t.crown || t.emblem === 'crown') ? royalCrownDeco(D.crown) : '';
     const gem = t.emoji ? '<span style="font-size:' + D.em + ';line-height:1;filter:drop-shadow(0 1px 1px rgba(0,0,0,.5))">' + t.emoji + '</span>' : '';
     return '<span class="cb-tplate" style="position:relative;display:inline-flex;align-items:center;justify-content:center;gap:8px;vertical-align:middle;'
         + 'padding:' + D.pad + ';border-radius:' + D.br + ';min-width:' + D.minw + ';'
@@ -5551,7 +5566,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v309-premiumbadges';
+const SW_VERSION='v310-adminbadge';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
@@ -19207,7 +19222,7 @@ function switchRanking(tab, btn) {
                 };
                 const ringsHtml = RING_ITEMS.filter(r=>!r.premium && !r.special).map(_ringCard).join('');
                 const premiumRingsHtml = _ringsVisibleFor(myUid) ? RING_ITEMS.filter(r=>r.premium && !r.special).map(_ringCard).join('') : '';
-                const titlesHtml = TITLE_ITEMS.map(function(t){
+                const titlesHtml = TITLE_ITEMS.filter(t=>!t.special).map(function(t){
                     const owned = myInventory.includes(t.id);
                     const canAfford = isShopAdmin || myDiamonds >= t.price;
                     const priceTxt = isShopAdmin ? '<span style="font-size:11px;color:#22c55e;font-weight:800">Gratis</span>' : '<span style="font-size:12px;font-weight:800;color:#a78bfa">💎 '+t.price+'</span>';
@@ -22449,7 +22464,7 @@ ${(()=>{ const _myTitles = TITLE_ITEMS.filter(t=>myInventory.includes(t.id)); re
     </div>`;
     }).join('')}
   </div>` : ''}
-  ${(()=>{ const _t = TITLE_ITEMS.filter(t=>myInventory.includes(t.id)); if(!_t.length) return ''; return '<div style="font-size:10px;font-weight:800;color:#a78bfa;letter-spacing:.5px;margin:14px 0 8px">🏷️ TITELSCHILDER</div><div style="display:flex;flex-direction:column;gap:10px">' + _t.map(function(t){
+  ${(()=>{ const _isAdm = String(u.role||'').includes('Admin'); const _t = TITLE_ITEMS.filter(t=> myInventory.includes(t.id) || (t.special && _isAdm)); if(!_t.length) return ''; return '<div style="font-size:10px;font-weight:800;color:#a78bfa;letter-spacing:.5px;margin:14px 0 8px">🏷️ TITELSCHILDER</div><div style="display:flex;flex-direction:column;gap:10px">' + _t.map(function(t){
       const isA = (u.activeTitle === t.id);
       return '<div style="background:var(--bg3);border:1px solid '+(isA?'rgba(167,139,250,.5)':'var(--border2)')+';border-radius:14px;padding:var(--space-3);display:flex;align-items:center;gap:var(--space-3)">'
         + '<span style="flex-shrink:0">'+titlePlateHtml(t,'tasche')+'</span>'

@@ -1091,7 +1091,14 @@ function setActiveTitleApi({ uid, titleId }) {
     if (!uid) return { ok: false };
     const u = d.users[String(uid)];
     if (!u) return { ok: false };
-    if (titleId && !(u.inventory || []).includes(titleId)) return { ok: false, error: 'Titel nicht im Inventar' };
+    if (titleId) {
+        if (titleId === 'title_admin') {
+            // Spezial-Titel: nur Admins, kein Inventar-Eintrag nötig.
+            if (!istAdminId(uid)) return { ok: false, error: 'Nur für Admins' };
+        } else if (!(u.inventory || []).includes(titleId)) {
+            return { ok: false, error: 'Titel nicht im Inventar' };
+        }
+    }
     u.activeTitle = titleId || null;
     return { ok: true, activeTitle: u.activeTitle };
 }
