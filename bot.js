@@ -843,12 +843,12 @@ async function helperAiAnswer(question, history) {
 }
 
 const RING_ITEMS = [
-    { id: 'ring_flame',   name: 'Flame Ring',   emoji: '🔥', price: 8,  shadow: '0 0 0 3px #ff9a3c, 0 0 0 6px #ff3900',   gradient: 'linear-gradient(135deg,#ff3900,#ff9a3c)', desc: 'Heißes Feuer-Glühen' },
-    { id: 'ring_ocean',   name: 'Ocean Ring',   emoji: '🌊', price: 8,  shadow: '0 0 0 3px #00c9ff, 0 0 0 6px #0088cc',   gradient: 'linear-gradient(135deg,#0088cc,#00c9ff)', desc: 'Tiefblaues Meeresleuchten' },
-    { id: 'ring_gold',    name: 'Gold Ring',    emoji: '✨', price: 10, shadow: '0 0 0 3px #FFD700, 0 0 0 6px #B8860B',   gradient: 'linear-gradient(135deg,#B8860B,#FFD700)', desc: 'Goldener Glanz' },
-    { id: 'ring_purple',  name: 'Cosmic Ring',  emoji: '🔮', price: 12, shadow: '0 0 0 3px #e040fb, 0 0 0 6px #9c27b0',   gradient: 'linear-gradient(135deg,#9c27b0,#e040fb)', desc: 'Mystisches Kosmosleuchten' },
-    { id: 'ring_rainbow', name: 'Rainbow Ring', emoji: '🌈', price: 15, shadow: '0 0 0 3px #ff9900, 0 0 0 6px #cc5de8',   gradient: 'linear-gradient(135deg,#ff0000,#ff9900,#00cc00,#0000ff,#cc5de8)', desc: 'Buntes Regenbogenleuchten' },
-    { id: 'ring_diamond', name: 'Diamond Ring', emoji: '💎', price: 20, shadow: '0 0 0 3px #b9f2ff, 0 0 0 6px #a78bfa',   gradient: 'linear-gradient(135deg,#a78bfa,#b9f2ff,#ffffff)', desc: 'Funkelnder Diamantglanz' },
+    { id: 'ring_flame',   name: 'Flame Ring',   emoji: '🔥', price: 8,  conic:'#ff2200,#ff7b00,#ffd166,#ff5a00,#ff2200,#ff8c1a,#ffd166,#ff4500,#ff2200', inferno:true, deco:'flames', glow:'rgba(255,80,0,.7)',  shadow: '0 0 0 3px #ff9a3c, 0 0 0 6px #ff3900',   gradient: 'linear-gradient(135deg,#ff3900,#ff9a3c)', desc: 'Aus Lava geschmiedeter Ring' },
+    { id: 'ring_ocean',   name: 'Ocean Ring',   emoji: '🌊', price: 8,  conic:'#003a5c,#0088cc,#00c9ff,#aef2ff,#00c9ff,#0088cc,#00567f,#00c9ff,#003a5c', deco:'frost', gem:'#aef2ff', glow:'rgba(0,201,255,.6)',  shadow: '0 0 0 3px #00c9ff, 0 0 0 6px #0088cc',   gradient: 'linear-gradient(135deg,#0088cc,#00c9ff)', desc: 'Fließendes Meereswasser' },
+    { id: 'ring_gold',    name: 'Gold Ring',    emoji: '✨', price: 10, conic:'#7a5200,#b8860b,#ffd700,#fff3b0,#ffd700,#b8860b,#8a5e00,#ffd700,#7a5200', gem:'#fff3b0', glow:'rgba(255,215,0,.55)',  shadow: '0 0 0 3px #FFD700, 0 0 0 6px #B8860B',   gradient: 'linear-gradient(135deg,#B8860B,#FFD700)', desc: 'Aus reinem Gold geschmiedet' },
+    { id: 'ring_purple',  name: 'Cosmic Ring',  emoji: '🔮', price: 12, conic:'#2a0a4a,#7c3aed,#e040fb,#c4b5fd,#e040fb,#9c27b0,#4a148c,#e040fb,#2a0a4a', gem:'#e9d5ff', glow:'rgba(224,64,251,.6)',  shadow: '0 0 0 3px #e040fb, 0 0 0 6px #9c27b0',   gradient: 'linear-gradient(135deg,#9c27b0,#e040fb)', desc: 'Wirbelnde Kosmos-Energie' },
+    { id: 'ring_rainbow', name: 'Rainbow Ring', emoji: '🌈', price: 15, conic:'#ff0040,#ff9900,#ffee00,#00cc44,#0099ff,#7c3aed,#e040fb,#ff0040', gem:'#ffffff', glow:'rgba(204,93,232,.55)',  shadow: '0 0 0 3px #ff9900, 0 0 0 6px #cc5de8',   gradient: 'linear-gradient(135deg,#ff0000,#ff9900,#00cc00,#0000ff,#cc5de8)', desc: 'Schillernder Regenbogen' },
+    { id: 'ring_diamond', name: 'Diamond Ring', emoji: '💎', price: 20, conic:'#7fb8e8,#b9f2ff,#ffffff,#e6faff,#ffffff,#b9f2ff,#a78bfa,#ffffff,#7fb8e8', deco:'frost', gem:'#ffffff', glow:'rgba(185,242,255,.65)',  shadow: '0 0 0 3px #b9f2ff, 0 0 0 6px #a78bfa',   gradient: 'linear-gradient(135deg,#a78bfa,#b9f2ff,#ffffff)', desc: 'Facettierter Kristall' },
     // ── Premium-„50 Diamanten Rahmen" — CSS-Ringe: Basis (rotierendes conic-Farbband) + Dekoration (deco-Typ).
     //    conic = Basis-Farben · deco = Stil (flames/gems/frost/sparkle/bubbles) · glow = Außen-Schein. ──
     // ── Premium-Ringe als echte PNG-Grafiken (assets/rings/<id>.png, normalisiert: Loch 60% zentriert). ──
@@ -5566,7 +5566,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v311-slperaccount';
+const SW_VERSION='v312-premiumrings';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
