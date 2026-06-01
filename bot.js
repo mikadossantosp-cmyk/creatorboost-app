@@ -37,6 +37,9 @@ const PORT          = process.env.PORT          || 3000;
 // Datastore statt vom Bot. Default aus → kein Verhalten ändert sich.
 // Schreibpfade laufen in diesem Schritt noch über den Bot (Etappe 3).
 const LOCAL_STORE = process.env.LOCAL_STORE === '1';
+// Zentrale Asset-/App-Version (Node-Scope): bricht CSS-Cache (?v=) + Service-Worker-Cache mit jedem Deploy.
+// EINE Quelle — wird in den CSS-<link> und in den SW-Script-Text (SW_VERSION) interpoliert.
+const APP_VERSION = 'v318-csscachebust';
 if (LOCAL_STORE) {
     try {
         datastore.load();
@@ -2856,7 +2859,7 @@ ${buildErrorHandler(_isAdmin)}
 <link rel="dns-prefetch" href="https://instagram.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" media="print" onload="this.media='all'">
 ${session ? `<link rel="prefetch" href="/feed"><link rel="prefetch" href="/explore"><link rel="prefetch" href="/nachrichten"><link rel="prefetch" href="/profil">` : ''}
-<link rel="stylesheet" href="/static/main.css?v=${SW_VERSION}">
+<link rel="stylesheet" href="/static/main.css?v=${APP_VERSION}">
 <script>
 // Globaler Image-Error-Handler: wenn ein <img> nicht laden kann (404 von /appbild/,
 // blockierter externer Host, etc.) → display:none statt Broken-Image-Icon.
@@ -5610,7 +5613,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v318-csscachebust';
+const SW_VERSION='${APP_VERSION}';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
