@@ -1031,6 +1031,8 @@ const ITEM_PRICES = {
     pframe_fire: 50, pframe_gold: 50, pframe_ice: 50, pframe_crystal: 50, pframe_bubble: 50,
     // Titelschilder (Banner unter dem Profil) — eigener Titel-Text + Design
     title_pro: 50, title_star: 100, title_vip: 150, title_feuer: 200, title_eis: 200, title_legende: 300, title_elite: 400, title_royal: 500,
+    // Karten-Themes (Komplett-Designs für Feed-/Post-Karten)
+    theme_obsidian: 80, theme_frost: 80, theme_sunset: 90, theme_rose: 90, theme_emerald: 100, theme_aurora: 150,
 };
 const ITEM_NAMES = {
     ring_flame: '🔥 Flame Ring', ring_ocean: '🌊 Ocean Ring', ring_gold: '✨ Gold Ring', ring_purple: '🔮 Cosmic Ring', ring_rainbow: '🌈 Rainbow Ring', ring_diamond: '💎 Diamond Ring',
@@ -1039,6 +1041,7 @@ const ITEM_NAMES = {
     banner_gold: '✨ Golden Hour Banner', banner_coral: '🪸 Coral Banner', banner_aurora: '🌌 Aurora Banner', banner_rose: '🌹 Rose Gold Banner',
     pframe_fire: '🌋 Lava-Ring', pframe_gold: '👑 Gold-Ring', pframe_ice: '🧊 Eis-Ring', pframe_crystal: '🔷 Kristall-Ring', pframe_bubble: '🫧 Perlen-Ring',
     title_legende: '🏆 Legende', title_vip: '💎 VIP', title_pro: '⭐ Pro', title_star: '🌟 Superstar', title_elite: '👑 Elite', title_feuer: '🔥 Feuer-Titel', title_eis: '❄️ Eis-Titel', title_royal: '👑 Royal',
+    theme_obsidian: '👑 Obsidian Gold', theme_frost: '🧊 Frost', theme_sunset: '🌇 Sunset', theme_rose: '🌹 Rosé', theme_emerald: '💚 Emerald', theme_aurora: '🌌 Aurora',
 };
 function buyItemApi({ uid, itemId }) {
     if (!uid || !itemId) return { ok: false, error: 'Fehlende Parameter' };
@@ -1096,6 +1099,17 @@ function setActiveTitleApi({ uid, titleId }) {
     }
     u.activeTitle = titleId || null;
     return { ok: true, activeTitle: u.activeTitle };
+}
+// Karten-Theme aktivieren (Design der eigenen Feed-/Post-Karten). null = Standard. Muss im Inventar sein (gekauft).
+function setActiveCardThemeApi({ uid, themeId }) {
+    if (!uid) return { ok: false };
+    const u = d.users[String(uid)];
+    if (!u) return { ok: false };
+    if (themeId && !(u.inventory || []).includes(themeId)) {
+        return { ok: false, error: 'Theme nicht im Inventar' };
+    }
+    u.activeCardTheme = themeId || null;
+    return { ok: true, activeCardTheme: u.activeCardTheme };
 }
 function buyExtralinkApi({ uid }) {
     if (!uid) return { ok: false, error: 'Fehlende UID' };
@@ -4645,7 +4659,7 @@ module.exports = {
     postSuperlinkApp, likeSuperlinkApi, isSuperLinkPostingAllowed,
     grantWeeklySuperlinkMission,
     addXp, addExtraLink, addSuperlink, addDiamonds, removeDiamonds,
-    buyItemApi, setActiveRingApi, setActiveTitleApi, buyExtralinkApi, linkStatusApi,
+    buyItemApi, setActiveRingApi, setActiveTitleApi, setActiveCardThemeApi, buyExtralinkApi, linkStatusApi,
     // Like-Flow + Kern (verbatim portiert):
     likeFromApp, xpAdd, xpAddMitDaily, xpAddNurGesamt, badge, level, user,
     istAdminId, getRootUid, isSubAccount, weekStart,

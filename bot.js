@@ -879,6 +879,60 @@ const TITLE_ITEMS = [
     // Admin-only, NICHT kaufbar (kein ITEM_PRICES-Eintrag, special:true → aus Shop gefiltert). Obsidian + Gold-Schild.
     { id:'title_admin',   label:'ADMIN',      emoji:'', price:0,   bg:'linear-gradient(135deg,#2a2233,#0a0b12)', tcol:'#ffd86b', glow:'rgba(255,216,107,.5)', frame:'gold', emblem:'shield', special:true, desc:'Einzigartiges Admin-Schild' },
 ];
+// ── KARTEN-THEMES: Komplett-Designs für die Feed-/Post-Karten (sichtbar für die ganze Community). ──
+// Ein Theme re-skinnt die ganze .post-Karte, indem es die CSS-Variablen (--bg3/--bg4/--text/--muted/
+// --border/--accent …) NUR auf dieser Karte überschreibt → alle Kind-Elemente passen sich konsistent an,
+// identisch in Hell- & Dunkelmodus. card=Karten-Hintergrund, frame=Rahmenfarbe, glow=Schatten-Schein.
+// anim:true → animierter Neon-Glow (Aurora). Gekauft/aktiviert wie Titel (Inventar → activeCardTheme).
+const CARD_THEME_ITEMS = [
+    { id:'theme_obsidian', name:'Obsidian Gold', emoji:'👑', price:80,  desc:'Schwarzes Gold — dunkel & edel',
+      bg3:'#15120b', bg4:'#211b10', border:'rgba(212,175,55,.30)', border2:'rgba(212,175,55,.16)', text:'#f3ead0', muted:'#cbb274', muted2:'#a08a55', accent:'#e7c14e',
+      card:'linear-gradient(160deg,#1e170c,#0e0c07)', frame:'rgba(212,175,55,.55)', glow:'rgba(212,175,55,.25)' },
+    { id:'theme_frost', name:'Frost', emoji:'🧊', price:80,  desc:'Eisig hell — klar & frisch',
+      bg3:'#f3faff', bg4:'#e6f3fc', border:'rgba(56,148,201,.22)', border2:'rgba(56,148,201,.13)', text:'#10293a', muted:'#4a6b80', muted2:'#6b8597', accent:'#0ea5e9',
+      card:'linear-gradient(160deg,#ffffff,#e7f3fd)', frame:'rgba(125,211,252,.75)', glow:'rgba(56,148,201,.18)' },
+    { id:'theme_sunset', name:'Sunset', emoji:'🌇', price:90,  desc:'Warmes Abendglühen',
+      bg3:'#1f1320', bg4:'#2c1a28', border:'rgba(244,114,87,.28)', border2:'rgba(244,114,87,.16)', text:'#ffe7d8', muted:'#e3a98f', muted2:'#c4886f', accent:'#fb7185',
+      card:'linear-gradient(160deg,#2c1530,#160a18)', frame:'rgba(251,113,133,.55)', glow:'rgba(180,50,90,.30)' },
+    { id:'theme_rose', name:'Rosé', emoji:'🌹', price:90,  desc:'Zartes Rosé — soft & hell',
+      bg3:'#fff5f7', bg4:'#ffe9ee', border:'rgba(225,110,135,.22)', border2:'rgba(225,110,135,.13)', text:'#3f1f29', muted:'#9c6373', muted2:'#b07a89', accent:'#e84d6f',
+      card:'linear-gradient(160deg,#fff7f9,#ffe6ec)', frame:'rgba(244,114,140,.55)', glow:'rgba(225,110,135,.18)' },
+    { id:'theme_emerald', name:'Emerald', emoji:'💚', price:100, desc:'Tiefes Smaragdgrün',
+      bg3:'#0c1712', bg4:'#13241b', border:'rgba(52,211,153,.26)', border2:'rgba(52,211,153,.15)', text:'#d7f5e6', muted:'#82cba8', muted2:'#5fa384', accent:'#10d986',
+      card:'linear-gradient(160deg,#0f2017,#07120d)', frame:'rgba(16,185,129,.5)', glow:'rgba(16,185,129,.22)' },
+    { id:'theme_aurora', name:'Aurora', emoji:'🌌', price:150, desc:'Animierter Neon-Schein (Premium)', anim:true,
+      bg3:'#0e1020', bg4:'#161a30', border:'rgba(124,58,237,.30)', border2:'rgba(124,58,237,.16)', text:'#e9e6ff', muted:'#aaa1da', muted2:'#8a82bd', accent:'#a78bfa',
+      card:'linear-gradient(160deg,#15123a,#0a0a18)', frame:'rgba(124,58,237,.5)', glow:'rgba(124,58,237,.30)' },
+];
+function _ctSfx(id){ return String(id||'').replace(/^theme_/,''); }
+// Liefert die Theme-Klasse für eine .post-Karte (oder '' wenn kein/ungültiges Theme aktiv).
+function cardThemeClass(themeId){ const t = CARD_THEME_ITEMS.find(x=>x.id===themeId); return t ? ' cb-ct cb-ct-'+_ctSfx(t.id) : ''; }
+// Generiert alle Theme-CSS-Regeln. Höhere Spezifität als '.post' und '[data-theme=dark] .post' → gewinnt in beiden Modi.
+function cardThemeCss(){
+    const rules = CARD_THEME_ITEMS.map(function(t){
+        const k = _ctSfx(t.id);
+        const vars = '--bg3:'+t.bg3+';--bg4:'+t.bg4+';--border:'+t.border+';--border2:'+t.border2+';--text:'+t.text+';--muted:'+t.muted+';--muted2:'+t.muted2+';--accent:'+t.accent+';';
+        const box = 'background:'+t.card+';border:1.5px solid '+t.frame+';box-shadow:0 10px 30px '+t.glow+',0 2px 8px rgba(0,0,0,.18),inset 0 1px 0 rgba(255,255,255,.06)';
+        // Eigene Regel + dark-Override (beide mit .cb-ct-<k> = höhere Spezifität als die Basis-.post-Regeln).
+        return '.post.cb-ct-'+k+'{'+vars+box+(t.anim?';animation:cbCtAurora 7s ease-in-out infinite':'')+'}'
+             + '[data-theme=dark] .post.cb-ct-'+k+'{'+vars+box+(t.anim?';animation:cbCtAurora 7s ease-in-out infinite':'')+'}';
+    }).join('');
+    return rules
+      + '@keyframes cbCtAurora{0%,100%{box-shadow:0 0 22px -3px rgba(124,58,237,.55),0 10px 30px rgba(0,0,0,.4)}33%{box-shadow:0 0 22px -3px rgba(14,165,233,.55),0 10px 30px rgba(0,0,0,.4)}66%{box-shadow:0 0 22px -3px rgba(236,72,153,.55),0 10px 30px rgba(0,0,0,.4)}}'
+      + '@media(prefers-reduced-motion:reduce){.post[class*=cb-ct-]{animation:none!important}}';
+}
+// Mini-Vorschau einer Karte mit dem Theme (für Shop/Tasche). size=Breite in px.
+function cardThemePreview(t, size){
+    const k = _ctSfx(t.id);
+    return '<div class="cb-ct cb-ct-'+k+'" style="width:'+size+'px;border-radius:14px;overflow:hidden;border:1.5px solid '+t.frame+';background:'+t.card+';flex-shrink:0'+(t.anim?';animation:cbCtAurora 7s ease-in-out infinite':'')+'">'
+      + '<div style="height:'+Math.round(size*0.42)+'px;background:linear-gradient(135deg,#1e2230,#0c0e16);display:flex;align-items:center;justify-content:center"><div style="width:0;height:0;border-style:solid;border-width:8px 0 8px 14px;border-color:transparent transparent transparent rgba(255,255,255,.85)"></div></div>'
+      + '<div style="padding:8px 10px 10px">'
+        + '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px"><div style="width:18px;height:18px;border-radius:50%;background:'+t.accent+'"></div><div style="height:7px;width:46%;border-radius:4px;background:'+t.text+';opacity:.85"></div></div>'
+        + '<div style="height:6px;width:78%;border-radius:4px;background:'+t.muted+';opacity:.6;margin-bottom:5px"></div>'
+        + '<div style="display:flex;align-items:center;justify-content:space-between"><div style="height:6px;width:30%;border-radius:4px;background:'+t.muted+';opacity:.5"></div><div style="font-size:9px;font-weight:800;color:#fff;background:'+t.accent+';padding:3px 8px;border-radius:7px">→</div></div>'
+      + '</div>'
+      + '</div>';
+}
 // Premium-Krone (SVG) als Deko über dem Royal-Banner. h = Höhe in px.
 function royalCrownSvg(h) {
     return '<svg width="' + (h * 1.25).toFixed(0) + '" height="' + h + '" viewBox="0 0 30 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">'
@@ -2285,6 +2339,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible,
 [data-theme=light] .profile-pic-img{box-shadow:0 0 0 1px rgba(15,23,42,0.10)}
 .story-name{font-size:11.5px;color:var(--text);max-width:74px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;letter-spacing:0.1px}
 .post{margin:0 var(--space-3) var(--space-4);background:var(--bg3);border:1px solid var(--border);border-radius:20px;overflow:hidden;transition:border-color 0.2s,box-shadow 0.2s;box-shadow:0 1px 2px rgba(15,23,42,0.04),0 8px 24px rgba(15,23,42,0.06)}
+${cardThemeCss()}
 [data-theme=dark] .post{background:#121316;box-shadow:0 1px 2px rgba(0,0,0,0.5),0 8px 24px rgba(0,0,0,0.32);border-color:var(--border2)}
 .post:hover{border-color:var(--border);box-shadow:0 4px 14px rgba(15,23,42,0.06)}
 .post-header{display:flex;align-items:center;gap:var(--space-3);padding:var(--space-4) var(--space-4) var(--space-3)}
@@ -5555,7 +5610,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v316-cronpickfix';
+const SW_VERSION='v317-cardthemes';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
@@ -11655,7 +11710,7 @@ window.onPinVisitStory = function(uid){
             // Extract Instagram shortcode for reel embed
             const instaShortcode = (()=>{ const m=(link.text||'').match(/instagram\.com\/(?:reel|p|tv)\/([A-Za-z0-9_-]+)/); return m?m[1]:null; })();
 
-            return '<div class="post fade-up" id="post-'+msgId+'" data-url="'+htmlEsc(cleanInstagramUrl(link.text||''))+'" data-ts="'+(link.timestamp||0)+'" style="position:relative">\n'+
+            return '<div class="post fade-up'+cardThemeClass(poster.activeCardTheme)+'" id="post-'+msgId+'" data-url="'+htmlEsc(cleanInstagramUrl(link.text||''))+'" data-ts="'+(link.timestamp||0)+'" style="position:relative">\n'+
 ''+
 // Category badge + timestamp row
 '  <div style="display:flex;align-items:center;justify-content:flex-end;padding:10px 16px 0">\n'+
@@ -11764,7 +11819,7 @@ commentsBox+
             const whoLikedBtn = '<button class="post-action-btn" onclick="showSLLikerModal(\''+sl.id+'\')" style="border:1px solid var(--border);border-radius:12px;padding:9px 14px;font-size:13px;font-weight:700;gap:5px;display:inline-flex;align-items:center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Wer hat geliked?</button>';
             const time = new Date(sl.timestamp).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
             const dateStr = new Date(sl.timestamp).toLocaleDateString('de-DE',{day:'2-digit',month:'short'});
-            return '<div class="post fade-up" id="sl-post-'+sl.id+'">\n'
+            return '<div class="post fade-up'+cardThemeClass(poster.activeCardTheme)+'" id="sl-post-'+sl.id+'">\n'
                 +'<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px 0">\n'
                 +'<span class="post-category-label" style="background:linear-gradient(135deg,#f59e0b,#a78bfa)"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-1px;margin-right:var(--space-1)"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>SUPERLINK</span>\n'
                 +'<span class="post-time">'+dateStr+' '+time+'</span>\n'
@@ -19222,6 +19277,22 @@ function switchRanking(tab, btn) {
                       + '<div style="display:flex;align-items:center;justify-content:space-between;gap:var(--space-2)">'+priceTxt+btn+'</div>'
                       + '</div>';
                 }).join('');
+                const themesHtml = CARD_THEME_ITEMS.map(function(t){
+                    const owned = myInventory.includes(t.id);
+                    const canAfford = isShopAdmin || myDiamonds >= t.price;
+                    const priceTxt = isShopAdmin ? '<span style="font-size:11px;color:#22c55e;font-weight:800">Gratis</span>' : '<span style="font-size:12px;font-weight:800;color:#a78bfa">💎 '+t.price+'</span>';
+                    const btn = owned
+                      ? '<div style="font-size:var(--fs-xs);color:#22c55e;font-weight:700">✓ Besessen</div>'
+                      : '<button onclick="buyItem(\''+t.id+'\')" data-item="'+t.id+'" style="background:'+(canAfford?'linear-gradient(135deg,#a78bfa,#7c3aed)':'var(--bg4)')+';color:'+(canAfford?'#fff':'var(--muted)')+';border:none;border-radius:10px;padding:6px 16px;font-size:var(--fs-xs);font-weight:700;cursor:'+(canAfford?'pointer':'not-allowed')+'" '+(canAfford?'':'disabled')+'>Kaufen</button>';
+                    return '<div style="background:var(--bg3);border:1px solid var(--border2);border-radius:16px;padding:14px;margin-bottom:10px;display:flex;align-items:center;gap:14px">'
+                      + cardThemePreview(t, 92)
+                      + '<div style="flex:1;min-width:0">'
+                        + '<div style="font-size:var(--fs-sm);font-weight:800;display:flex;align-items:center;gap:6px">'+t.emoji+' '+t.name+(t.anim?' <span style="font-size:9px;font-weight:800;color:#ffd700;background:rgba(255,215,0,.14);border:1px solid rgba(255,215,0,.35);padding:1px 6px;border-radius:99px">PREMIUM</span>':'')+'</div>'
+                        + '<div style="font-size:11px;color:var(--muted);margin:4px 0 10px">'+t.desc+'</div>'
+                        + '<div style="display:flex;align-items:center;justify-content:space-between;gap:var(--space-2)">'+priceTxt+btn+'</div>'
+                      + '</div>'
+                      + '</div>';
+                }).join('');
                 const extraLinkPriceHtml = isShopAdmin
                     ? `<div style="display:flex;align-items:center;gap:6px"><span style="font-size:14px;color:var(--muted);text-decoration:line-through">💎 5 Diamanten</span><span style="font-size:var(--fs-sm);font-weight:800;color:#22c55e">Gratis</span></div>`
                     : `<div style="font-size:14px;font-weight:800;color:#a78bfa">💎 5 Diamanten</div>`;
@@ -19240,6 +19311,7 @@ function switchRanking(tab, btn) {
   <div style="display:flex;gap:8px;overflow-x:auto;margin-top:12px;padding-bottom:2px;-webkit-overflow-scrolling:touch">
     <button onclick="var e=document.getElementById('dept-boosts');if(e)e.scrollIntoView({behavior:'smooth',block:'start'})" style="flex:0 0 auto;background:var(--bg3);border:1px solid var(--border2);color:var(--text);border-radius:99px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">⚡ Boosts</button>
     <button onclick="var e=document.getElementById('dept-banner');if(e)e.scrollIntoView({behavior:'smooth',block:'start'})" style="flex:0 0 auto;background:var(--bg3);border:1px solid var(--border2);color:var(--text);border-radius:99px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">🎨 Banner</button>
+    <button onclick="var e=document.getElementById('dept-themes');if(e)e.scrollIntoView({behavior:'smooth',block:'start'})" style="flex:0 0 auto;background:var(--bg3);border:1px solid var(--border2);color:var(--text);border-radius:99px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">🃏 Karten</button>
     <button onclick="var e=document.getElementById('dept-titles');if(e)e.scrollIntoView({behavior:'smooth',block:'start'})" style="flex:0 0 auto;background:var(--bg3);border:1px solid var(--border2);color:var(--text);border-radius:99px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">🏷️ Titel</button>
   </div>
 </div>
@@ -19300,6 +19372,16 @@ function switchRanking(tab, btn) {
 </div>`;
   }).join('')}
   <!-- Profilringe/Rahmen wurden aus dem Shop entfernt (User-Wunsch). Besessene Ringe bleiben in der Tasche. -->
+  <div id="dept-themes" style="scroll-margin-top:70px;margin:22px 0 14px;border-radius:16px;overflow:hidden;background:linear-gradient(135deg,#0b1020,#1a1030);border:1px solid rgba(167,139,250,0.3)">
+    <div style="padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;background:linear-gradient(135deg,rgba(124,58,237,0.18),rgba(167,139,250,0.12))">
+      <div>
+        <div style="font-size:var(--fs-base);font-weight:800;color:#fff;letter-spacing:0.3px">🃏 Karten-Themes</div>
+        <div style="font-size:11px;color:rgba(255,255,255,0.7);margin-top:2px">Designe deine Feed-Posts · für alle sichtbar</div>
+      </div>
+      <span style="font-size:10px;font-weight:800;color:#a78bfa;background:rgba(167,139,250,0.14);border:1px solid rgba(167,139,250,0.35);padding:3px 9px;border-radius:99px;white-space:nowrap">NEU</span>
+    </div>
+  </div>
+  ${themesHtml}
   <div id="dept-titles" style="scroll-margin-top:70px;margin:22px 0 14px;border-radius:16px;overflow:hidden;background:linear-gradient(135deg,#1a1030,#0b1020);border:1px solid rgba(167,139,250,0.3)">
     <div style="padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;background:linear-gradient(135deg,rgba(167,139,250,0.18),rgba(124,58,237,0.12))">
       <div>
@@ -22408,7 +22490,7 @@ async function pfHandleAvatarFile(input){
 <!-- Email / Passwort / App-Code → /einstellungen/account -->
 <!-- Pinned-Reel-Link → Hero-Edit-Sheet (pfPinnedLink) -->
 
-${(()=>{ const _myTitles = TITLE_ITEMS.filter(t=>myInventory.includes(t.id)); return (myInventory.length > 0 || _specialFrames.length > 0 || _myTitles.length > 0) ? `
+${(()=>{ const _myTitles = TITLE_ITEMS.filter(t=>myInventory.includes(t.id)); const _myThemes = CARD_THEME_ITEMS.filter(t=>myInventory.includes(t.id)); return (myInventory.length > 0 || _specialFrames.length > 0 || _myTitles.length > 0 || _myThemes.length > 0) ? `
 <div style="padding:var(--space-4);border-bottom:1px solid var(--border2)">
   <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:var(--space-3);display:inline-flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>Meine Tasche</div>
   ${_specialFrames.length > 0 ? `<div style="font-size:10px;font-weight:800;color:#ffd700;letter-spacing:.5px;margin-bottom:8px">✦ SPEZIAL-RAHMEN ${'—'} freigeschaltet durch deinen Rang</div>
@@ -22444,6 +22526,14 @@ ${(()=>{ const _myTitles = TITLE_ITEMS.filter(t=>myInventory.includes(t.id)); re
         + '<span style="flex-shrink:0">'+titlePlateHtml(t,'tasche')+'</span>'
         + '<div style="flex:1;min-width:0"><div style="font-size:var(--fs-sm);font-weight:700">'+t.label+(isA?' <span style="font-size:10px;color:#a78bfa;font-weight:600">● Aktiv</span>':'')+'</div><div style="font-size:11px;color:var(--muted)">'+t.desc+'</div></div>'
         + '<button onclick="setTitle(\''+(isA?'':t.id)+'\')" style="background:'+(isA?'rgba(167,139,250,.2)':'var(--bg4)')+';border:1px solid '+(isA?'rgba(167,139,250,.4)':'var(--border)')+';color:'+(isA?'#a78bfa':'var(--text)')+';border-radius:10px;padding:6px 12px;font-size:var(--fs-xs);font-weight:600;cursor:pointer;white-space:nowrap">'+(isA?'Deaktivieren':'Aktivieren')+'</button>'
+        + '</div>';
+    }).join('') + '</div>'; })()}
+  ${(()=>{ const _ct = CARD_THEME_ITEMS.filter(t=> myInventory.includes(t.id)); if(!_ct.length) return ''; return '<div style="font-size:10px;font-weight:800;color:#a78bfa;letter-spacing:.5px;margin:14px 0 8px">🃏 KARTEN-THEMES</div><div style="display:flex;flex-direction:column;gap:10px">' + _ct.map(function(t){
+      const isA = (u.activeCardTheme === t.id);
+      return '<div style="background:var(--bg3);border:1px solid '+(isA?'rgba(167,139,250,.5)':'var(--border2)')+';border-radius:14px;padding:var(--space-3);display:flex;align-items:center;gap:var(--space-3)">'
+        + '<span style="flex-shrink:0">'+cardThemePreview(t,64)+'</span>'
+        + '<div style="flex:1;min-width:0"><div style="font-size:var(--fs-sm);font-weight:700">'+t.emoji+' '+t.name+(isA?' <span style="font-size:10px;color:#a78bfa;font-weight:600">● Aktiv</span>':'')+'</div><div style="font-size:11px;color:var(--muted)">'+t.desc+'</div></div>'
+        + '<button onclick="setCardTheme(\''+(isA?'':t.id)+'\')" style="background:'+(isA?'rgba(167,139,250,.2)':'var(--bg4)')+';border:1px solid '+(isA?'rgba(167,139,250,.4)':'var(--border)')+';color:'+(isA?'#a78bfa':'var(--text)')+';border-radius:10px;padding:6px 12px;font-size:var(--fs-xs);font-weight:600;cursor:pointer;white-space:nowrap">'+(isA?'Deaktivieren':'Aktivieren')+'</button>'
         + '</div>';
     }).join('') + '</div>'; })()}
 </div>` : ''})()}
@@ -22690,6 +22780,12 @@ async function setTitle(titleId) {
     if (data.ok) { toast(titleId ? '🏷️ Titel aktiviert!' : '🔘 Titel deaktiviert'); setTimeout(function(){location.reload();},500); }
     else toast('❌ ' + (data.error||'Fehler'));
 }
+async function setCardTheme(themeId) {
+    const res = await fetch('/api/set-active-cardtheme', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({themeId:themeId||null})});
+    const data = await res.json();
+    if (data.ok) { toast(themeId ? '🃏 Karten-Theme aktiviert!' : '🔘 Theme deaktiviert'); setTimeout(function(){location.reload();},500); }
+    else toast('❌ ' + (data.error||'Fehler'));
+}
 </script>`, 'settings');
     }
 
@@ -22839,7 +22935,7 @@ async function shareRefLink(){
     if (path === '/api/buy-item' && req.method === 'POST') {
         const body = await parseBody(req);
         const { itemId } = body;
-        if (!itemId || (!RING_ITEMS.find(r=>r.id===itemId) && !TITLE_ITEMS.find(t=>t.id===itemId) && !BANNER_ITEMS.find(b=>b.id===itemId))) return json({ok:false, error:'Unbekanntes Item'});
+        if (!itemId || (!RING_ITEMS.find(r=>r.id===itemId) && !TITLE_ITEMS.find(t=>t.id===itemId) && !BANNER_ITEMS.find(b=>b.id===itemId) && !CARD_THEME_ITEMS.find(c=>c.id===itemId))) return json({ok:false, error:'Unbekanntes Item'});
         const result = LOCAL_STORE
             ? await localWrite(() => botLogic.buyItemApi({ uid: myUid, itemId }))
             : await postBot('/buy-item-api', { uid: myUid, itemId });
@@ -22861,6 +22957,15 @@ async function shareRefLink(){
         const result = LOCAL_STORE
             ? await localWrite(() => botLogic.setActiveTitleApi({ uid: myUid, titleId: titleId || null }))
             : await postBot('/set-active-title-api', { uid: myUid, titleId: titleId || null });
+        return json(result || {ok:false, error:'Fehler'});
+    }
+
+    if (path === '/api/set-active-cardtheme' && req.method === 'POST') {
+        const body = await parseBody(req);
+        const { themeId } = body;
+        const result = LOCAL_STORE
+            ? await localWrite(() => botLogic.setActiveCardThemeApi({ uid: myUid, themeId: themeId || null }))
+            : await postBot('/set-active-cardtheme-api', { uid: myUid, themeId: themeId || null });
         return json(result || {ok:false, error:'Fehler'});
     }
 
