@@ -898,10 +898,23 @@ function ringFrameExists(id) {
 // Ring über einem Avatar = BASIS (rotierendes conic-Farbband als Ring) + DEKORATION (deco-Layer drauf).
 // Reines CSS — sitzt IMMER perfekt rund ums volle Profilbild, kein PNG/Cache/Position-Problem.
 // Container muss position:relative sein; Profilbild bleibt voll & unverdeckt.
+// Deko-Symbol je Stil — als echte Partikel rund um den Ring (ragen über den Rand, animiert).
+const _DECO_GLYPH = { flames:'🔥', gems:'💎', frost:'❄️', sparkle:'✨', bubbles:'🫧' };
+function ringParticles(item) {
+    const g = _DECO_GLYPH[item.deco];
+    if (!g) return '';
+    const N = 12; // gleichmäßig verteilt
+    let s = '<div class="cb-ring-particles cb-parts-' + item.deco + '">';
+    for (let i = 0; i < N; i++) {
+        const ang = (360 / N) * i;
+        s += '<span class="cb-part" style="transform:translate(-50%,-50%) rotate(' + ang + 'deg) translateY(-50%);animation-delay:' + (i * 0.12).toFixed(2) + 's"><span class="cb-part-g">' + g + '</span></span>';
+    }
+    return s + '</div>';
+}
 function ringConicHtml(item, withGlow) {
     if (!item || !item.conic) return '';
     const glow = withGlow && item.glow ? ';box-shadow:0 0 12px 1px ' + item.glow : '';
-    const deco = item.deco ? '<div class="cb-ring-deco cb-deco-' + item.deco + '"></div>' : '';
+    const deco = item.deco ? '<div class="cb-ring-deco cb-deco-' + item.deco + '"></div>' + ringParticles(item) : '';
     return '<div class="cb-ring-base" style="background:conic-gradient(from 0deg,' + item.conic + ')' + glow + '"></div>' + deco;
 }
 function ringFrameOverlay(userData, ownerUid) {
@@ -3035,7 +3048,16 @@ ${session ? `
 .cb-deco-frost::before{background:repeating-conic-gradient(from 0deg,rgba(255,255,255,0) 0deg,rgba(255,255,255,.8) 4deg,rgba(200,235,255,.3) 9deg,rgba(255,255,255,0) 15deg)}
 .cb-deco-sparkle::before{background:repeating-conic-gradient(from 0deg,rgba(255,255,255,0) 0deg,rgba(255,255,255,.75) 3deg,rgba(255,255,255,0) 8deg);animation-duration:7s}
 .cb-deco-bubbles::before{background:repeating-conic-gradient(from 0deg,rgba(255,255,255,0) 0deg,rgba(255,255,255,.7) 6deg,rgba(255,255,255,0) 14deg)}
-@media (prefers-reduced-motion:reduce){.cb-ring-base,.cb-ring-deco::before,.cb-ring-deco::after{animation:none}}
+/* DEKO-PARTIKEL: echte Symbole (🔥💎❄️✨🫧) rund um den Ring, ragen über den Rand, animiert. */
+.cb-ring-particles{position:absolute;left:50%;top:50%;width:100%;height:100%;transform:translate(-50%,-50%);pointer-events:none;z-index:7}
+.cb-part{position:absolute;left:50%;top:50%;transform-origin:0 0}
+.cb-part-g{display:block;font-size:13px;line-height:1;transform:translate(-50%,-50%);filter:drop-shadow(0 0 2px rgba(0,0,0,.4));animation:cbPartPulse 1.4s ease-in-out infinite;animation-delay:inherit}
+@keyframes cbPartPulse{0%,100%{opacity:.85;transform:translate(-50%,-50%) scale(.9)}50%{opacity:1;transform:translate(-50%,-50%) scale(1.25)}}
+.cb-parts-flames .cb-part-g{animation:cbPartFlick .5s ease-in-out infinite alternate;font-size:15px}
+@keyframes cbPartFlick{0%{opacity:.8;transform:translate(-50%,-50%) scale(.9) rotate(-6deg)}100%{opacity:1;transform:translate(-50%,-55%) scale(1.2) rotate(6deg)}}
+.cb-parts-frost .cb-part-g{animation:cbPartSpin 6s linear infinite}
+@keyframes cbPartSpin{to{transform:translate(-50%,-50%) rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.cb-ring-base,.cb-ring-deco::before,.cb-ring-deco::after,.cb-part-g{animation:none}}
 /* Avatar mit aktivem Ring: Ring darf nach außen ragen, weißen Avatar-Rand entfernen (Ring ersetzt ihn) */
 .ipf-avatar-wrap.has-ring{overflow:visible}
 .ipf-avatar-wrap.has-ring .ipf-avatar{border-color:transparent!important;box-shadow:none!important}
@@ -5335,7 +5357,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v283-ring-fit2';
+const SW_VERSION='v284-ring-particles';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
