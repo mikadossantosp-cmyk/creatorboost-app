@@ -1539,6 +1539,7 @@ async function applyWarningEscalation(uid, reason, opts = {}) {
     if (!u) return { ok: false, error: 'User nicht gefunden' };
     if (Array.isArray(d._adminIds) && d._adminIds.map(Number).includes(Number(uid))) return { ok: false, error: 'Admin-Accounts können nicht verwarnt werden' };
     u.warnings = (Number(u.warnings || 0)) + 1;
+    u.warnNoticePending = true; // beim nächsten Online-Kommen Hinweis-Modal zeigen
     const n = u.warnings;
     let mainText;
     const reasonText = reason ? '\n\nGrund: ' + reason : '';
@@ -2458,6 +2459,7 @@ function addWarn({ uid, reason }) {
     const u = d.users[uid];
     if (!u) return { ok: false, error: 'User nicht gefunden' };
     u.warnings = (u.warnings || 0) + 1;
+    u.warnNoticePending = true; // beim nächsten Online-Kommen Hinweis-Modal zeigen
     try { dmUser(uid, `⚠️ Verwarnung\n\nVerwarnungen: ${u.warnings}/5${reason ? '\n\nGrund: ' + reason : ''}`); } catch (e) {}
     return { ok: true, warnings: u.warnings };
 }
@@ -3288,6 +3290,7 @@ async function adminReportActionApi({ reportId, action, adminUid }) {
         const u = d.users[rep.targetUid];
         if (!u) return { ok: false, error: 'Target-User nicht gefunden' };
         u.warnings = (u.warnings || 0) + 1;
+        u.warnNoticePending = true; // beim nächsten Online-Kommen Hinweis-Modal zeigen
         rep.status = 'resolved'; rep.resolvedAt = Date.now(); rep.resolvedBy = adminUid; rep.action = 'warn';
         try { dmUser(rep.targetUid, `⚠️ Verwarnung
 

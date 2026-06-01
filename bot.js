@@ -11174,6 +11174,21 @@ p{line-height:1.65;color:var(--muted)}
         const r = await localWrite(() => botLogic.referralForceActiveApi({ inviteeUid: _iid }));
         return json(r || {ok:false});
     }
+    if (path === '/api/admin/warn-guide' && req.method === 'GET') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
+        return json({ ok: true, url: String((LOCAL_STORE ? datastore.getData() : d).warnGuideUrl || '') });
+    }
+    if (path === '/api/admin/warn-guide' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
+        if (!LOCAL_STORE) return json({ok:false, error:'Nicht verfügbar'});
+        const body = await parseBody(req);
+        let _url = String(body.url || '').trim();
+        if (_url && !/^https?:\/\//i.test(_url)) _url = 'https://' + _url;
+        await localWrite(() => { datastore.getData().warnGuideUrl = _url; });
+        return json({ ok: true, url: _url });
+    }
     if (path === '/api/admin/ban' && req.method === 'POST') {
         if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
         if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
@@ -12103,6 +12118,31 @@ ${(()=>{
     return '<script>(function(){try{var cur='+JSON.stringify(_role)+';var prev=localStorage.getItem("cb_role_seen");localStorage.setItem("cb_role_seen",cur);'
       + 'if(prev&&prev!==cur&&typeof showBanner==="function"){setTimeout(function(){showBanner({type:"success",title:"🎉 Neuer Rang: "+cur,subtitle:"Du bist aufgestiegen — weiter so!",dur:6000});if(navigator.vibrate)try{navigator.vibrate([30,40,30]);}catch(e){}},900);}'
       + '}catch(e){}})();<\/script>';
+  } catch(e) { return ''; }
+})()}
+${(()=>{
+  // Verwarnungs-Hinweis: zeigt EINMALIG beim nächsten Online-Kommen ein Modal mit
+  // Rest-Chancen + Button zur Anleitung (konfigurierbarer Instagram-Link d.warnGuideUrl).
+  try {
+    const _wu = d.users?.[myUid];
+    if (!_wu || !_wu.warnNoticePending || _wu.banned) return '';
+    const _warns = Number(_wu.warnings || 0);
+    const _left = Math.max(0, 5 - _warns);
+    const _guide = String(d.warnGuideUrl || '').trim();
+    _wu.warnNoticePending = false; // consume-once
+    try { datastore.saveDebounced(); } catch(e){}
+    const _guideBtn = _guide
+      ? '<a href="'+htmlEsc(_guide)+'" target="_blank" rel="noopener noreferrer" onclick="this.parentNode.parentNode.remove()" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;background:linear-gradient(135deg,#ec4899,#a855f7);color:#fff;border-radius:12px;font-size:15px;font-weight:800;text-decoration:none;box-shadow:0 6px 18px rgba(168,85,247,.4)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17" cy="7" r="1.1" fill="currentColor" stroke="none"/></svg>Anleitung ansehen →</a>'
+      : '';
+    return '<div id="cb-warn-modal" onclick="if(event.target===this)this.remove()" style="position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.62);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:22px">'
+      + '<div style="background:var(--bg2);border-radius:20px;max-width:380px;width:100%;padding:24px 22px;box-shadow:0 24px 70px rgba(0,0,0,.5);border:1px solid var(--border);text-align:center">'
+      + '<div style="font-size:46px;line-height:1;margin-bottom:10px">⚠️</div>'
+      + '<div style="font-size:19px;font-weight:900;color:#ef4444;margin-bottom:8px">Achtung — du wurdest verwarnt!</div>'
+      + '<div style="font-size:14px;color:var(--text);line-height:1.55;margin-bottom:6px">Du hast noch <b style="color:#ef4444">'+_left+' von 5</b> Chancen <span style="color:var(--muted);font-size:12.5px">(Verwarnung '+_warns+'/5)</span>.</div>'
+      + '<div style="font-size:13.5px;color:var(--muted);line-height:1.55;margin-bottom:18px">Damit du keine weiteren Verwarnungen bekommst, schau dir bitte diese kurze Anleitung an:</div>'
+      + _guideBtn
+      + '<button onclick="this.parentNode.parentNode.remove()" style="margin-top:10px;width:100%;padding:12px;background:transparent;border:1px solid var(--border2);color:var(--muted);border-radius:12px;font-size:13.5px;font-weight:700;cursor:pointer">Verstanden</button>'
+      + '</div></div>';
   } catch(e) { return ''; }
 })()}
 ${tab==='heute' ? (()=>{
@@ -17115,6 +17155,21 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
       </div>
     </section>
 
+    <!-- Verwarnungs-Anleitung: Instagram-Link, der verwarnten Usern im Hinweis-Modal gezeigt wird -->
+    <section class="dash-section">
+      <div class="dash-section-hdr">
+        <div class="dash-section-title">⚠️ Verwarnungs-Anleitung</div>
+        <div class="dash-section-sub">Instagram-Link für das Hinweis-Modal verwarnter User</div>
+      </div>
+      <div class="dash-section-body">
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <input id="warn-guide-input" type="url" placeholder="https://www.instagram.com/reel/..." style="flex:1;min-width:200px;padding:11px 13px;border-radius:10px;border:1px solid var(--dline);background:var(--dink);color:var(--text);font-size:13px">
+          <button onclick="saveWarnGuide(this)" style="background:#22c55e;color:#fff;border:none;border-radius:10px;padding:11px 18px;font-size:13px;font-weight:800;cursor:pointer">Speichern</button>
+        </div>
+        <div id="warn-guide-status" style="font-size:12px;color:var(--dsub);margin-top:8px">Leer = kein Button im Hinweis. Wird verwarnten Usern beim nächsten Login als „Anleitung ansehen" angezeigt.</div>
+      </div>
+    </section>
+
     <!-- Aktuell eingeloggte User -->
     <section class="dash-section">
       <div class="dash-section-hdr">
@@ -17915,6 +17970,21 @@ async function loadReferralOverview(){
       return '<details style="background:var(--dink);border:1px solid var(--dline);border-radius:12px;overflow:hidden">'+head+rows+'</details>';
     }).join('');
   }catch(e){ box.innerHTML = '<div style="padding:18px;text-align:center;color:var(--dsub);font-size:12.5px">Fehler beim Laden</div>'; }
+}
+async function loadWarnGuide(){
+  var inp=document.getElementById('warn-guide-input'); if(!inp) return;
+  try{ const r=await fetch('/api/admin/warn-guide'); const j=await r.json(); if(j&&j.ok) inp.value=j.url||''; }catch(e){}
+}
+async function saveWarnGuide(btn){
+  var inp=document.getElementById('warn-guide-input'); var st=document.getElementById('warn-guide-status'); if(!inp) return;
+  if(btn){ btn.disabled=true; }
+  try{
+    const r=await fetch('/api/admin/warn-guide',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:inp.value})});
+    const j=await r.json();
+    if(j&&j.ok){ inp.value=j.url||''; if(st){ st.textContent=j.url?('✓ Gespeichert: '+j.url):'✓ Link entfernt'; st.style.color='#22c55e'; } }
+    else if(st){ st.textContent='❌ '+((j&&j.error)||'Fehler'); st.style.color='#ef4444'; }
+  }catch(e){ if(st){ st.textContent='❌ '+e.message; st.style.color='#ef4444'; } }
+  if(btn){ btn.disabled=false; }
 }
 async function referralForceActive(uid, btn){
   if(btn){ btn.disabled=true; btn.textContent='⏳'; }
@@ -18914,6 +18984,7 @@ loadReferralPending();
 setInterval(loadReferralPending, 60000);
 loadReferralOverview();
 setInterval(loadReferralOverview, 60000);
+loadWarnGuide();
 loadDeletedUsers();
 setInterval(loadDeletedUsers, 60000);
 // Dashboard-Sektionen ein-/ausklappbar — a11y-konform (Keyboard + ARIA) & Zustand persistent (idempotent)
