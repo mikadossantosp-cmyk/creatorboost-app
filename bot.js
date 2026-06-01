@@ -4866,17 +4866,25 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
       ${ringFrameOverlay(u, uid)}
       ${isUidOnline(uid) ? '<div class="ipf-avatar-dot" title="Online"></div>' : ''}
     </div>
-    ${(isOwn && adminIds.includes(Number(uid))) ? `<div style="position:absolute;left:0;top:96px;width:84px;z-index:20">
-      <input type="range" min="115" max="230" value="151" id="ring-scale-slider" oninput="cbSetRingScale(this.value)" style="width:84px;accent-color:#a78bfa">
-      <div style="font-size:9px;color:var(--muted);text-align:center;margin-top:1px">Ring <span id="ring-scale-lbl">151%</span></div>
+    ${(isOwn && adminIds.includes(Number(uid))) ? `<div style="display:flex;align-items:center;gap:8px;margin:10px 0 2px;padding:6px 10px;background:var(--bg3);border:1px solid var(--border2);border-radius:12px;width:fit-content">
+      <span style="font-size:11px;font-weight:700;color:var(--muted)">Ring-Größe:</span>
+      <button type="button" onclick="cbRingStep(-3)" style="width:30px;height:30px;border-radius:8px;border:1px solid var(--border);background:var(--bg4);color:var(--text);font-size:18px;font-weight:800;cursor:pointer;line-height:1">−</button>
+      <span id="ring-scale-lbl" style="font-size:13px;font-weight:800;min-width:46px;text-align:center;color:#a78bfa">151%</span>
+      <button type="button" onclick="cbRingStep(3)" style="width:30px;height:30px;border-radius:8px;border:1px solid var(--border);background:var(--bg4);color:var(--text);font-size:18px;font-weight:800;cursor:pointer;line-height:1">+</button>
     </div>
     <script>
-    function cbSetRingScale(v){
-      document.querySelectorAll('.cb-ring-png').forEach(function(el){ el.style.width=v+'%'; el.style.height=v+'%'; });
-      try{localStorage.setItem('cb_ringscale',v);}catch(e){}
-      var l=document.getElementById('ring-scale-lbl'); if(l) l.textContent=v+'%';
+    window.cbRingVal = parseInt(localStorage.getItem('cb_ringscale')||'151',10);
+    function cbApplyRing(){
+      var els=document.querySelectorAll('.cb-ring-png');
+      els.forEach(function(el){ el.style.setProperty('width', window.cbRingVal+'%','important'); el.style.setProperty('height', window.cbRingVal+'%','important'); });
+      var l=document.getElementById('ring-scale-lbl'); if(l) l.textContent=window.cbRingVal+'%';
     }
-    (function(){ try{ var s=localStorage.getItem('cb_ringscale'); if(s){ var el=document.getElementById('ring-scale-slider'); if(el) el.value=s; cbSetRingScale(s); } }catch(e){} })();
+    function cbRingStep(d){
+      window.cbRingVal=Math.max(110,Math.min(240, window.cbRingVal+d));
+      try{localStorage.setItem('cb_ringscale', window.cbRingVal);}catch(e){}
+      cbApplyRing();
+    }
+    cbApplyRing();
     </script>` : ''}
     <div class="ipf-stats">
       <div class="ipf-stat"><div class="ipf-stat-num" data-count="${_posts}">0</div><div class="ipf-stat-lbl">Posts</div></div>
@@ -5465,7 +5473,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v298-ringslider2';
+const SW_VERSION='v299-ringbtns';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
