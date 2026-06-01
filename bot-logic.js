@@ -821,6 +821,11 @@ async function postLinkFromApp({ uid, name, url, caption }) {
         // Referral: erster Beitrag des eingeladenen Creators → +30 💎 für den Einlader.
         try { grantReferralMilestone(String(uid), 'firstPost'); } catch (e) {}
     }
+    // Referral robust: JEDER Post eines Eingeladenen zieht firstPost/m1 nach — unabhängig vom
+    // 7-Tage-„Neumitglied"-Fenster (isFirstPostEver) und von der Reihenfolge Post↔Admin-Freigabe.
+    // Sonst zählte ein Eingeladener, der erst >7 Tage nach Beitritt (oder vor Freigabe) postete,
+    // nie als „aktiv" → Einlader fehlte im Builder-Ranking. Idempotent + freigabe-gegated.
+    if (u.referredBy) { try { checkReferralProgress(String(uid)); } catch (e) {} }
 
     const _evtBonus = applyPostBonus(uid, u.name || name);
     if (_evtBonus.events.length) {
@@ -1332,6 +1337,10 @@ async function zeitCheck(nowArg) {
         // an bereits Berechtigte. Superlinks werden beim Montag-Reset nicht gelöscht → Vorwoche noch auszahlbar.
         // Läuft genau einmal (idempotent über das granted-Flag), danach übernimmt die Sonntags-Auswertung.
         if (!d._slMissionBackfillV3) { d._slMissionBackfillV3 = true; try { const prev = grantWeeklySuperlinkMission(getPrevBerlinWeekKey()); const cur = grantWeeklySuperlinkMission(); console.log('Superlink-Mission Backfill V3 (pro Account, inkl. Subs): Vorwoche +500 XP an', prev.granted, '· diese Woche an', cur.granted, 'User'); } catch (e) { console.log('Superlink-Mission Backfill Fehler:', e.message); } }
+        // Einmaliger Backfill: heilt eingeladene Creator, die gepostet/engagiert haben, aber durch
+        // das alte isFirstPostEver-7-Tage-Fenster nie firstPost/m1 bekamen → Einlader fehlte im Ranking.
+        // checkReferralProgress ist idempotent + freigabe-gegated (vergibt nur für approved Referrals).
+        if (!d._refProgressBackfillV1) { d._refProgressBackfillV1 = true; try { let n = 0; for (const [iid, iu] of Object.entries(d.users || {})) { if (iu && iu.referredBy) { checkReferralProgress(String(iid)); n++; } } console.log('Referral-Progress Backfill V1: ' + n + ' Eingeladene neu geprüft.'); } catch (e) { console.log('Referral-Progress Backfill Fehler:', e.message); } }
         eventAutoTick();
         linkCleanup();
         for (const key of Object.keys(d._lastEvents)) { if (!key.endsWith(tagStr)) delete d._lastEvents[key]; }
