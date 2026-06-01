@@ -851,7 +851,7 @@ const RING_ITEMS = [
     { id: 'ring_diamond', name: 'Diamond Ring', emoji: '💎', price: 20, shadow: '0 0 0 3px #b9f2ff, 0 0 0 6px #a78bfa',   gradient: 'linear-gradient(135deg,#a78bfa,#b9f2ff,#ffffff)', desc: 'Funkelnder Diamantglanz' },
     // ── Premium-„50 Diamanten Rahmen" — CSS-Ringe: Basis (rotierendes conic-Farbband) + Dekoration (deco-Typ).
     //    conic = Basis-Farben · deco = Stil (flames/gems/frost/sparkle/bubbles) · glow = Außen-Schein. ──
-    { id: 'pframe_fire',    name: 'Lava-Ring',     emoji: '🌋', price: 50, premium: true, conic: '#2a0a00,#7a1500,#ff2200,#ff6b00,#ffd166,#ff8c1a,#ff2200,#7a1500,#2a0a00', deco:'flames',  glow:'rgba(255,80,0,.8)',  gem:'radial-gradient(circle at 35% 28%,#fff6d8,#ffd166 30%,#ff5a00 65%,#7a1500 100%)', desc: 'Aus Lava & Vulkankristall geschmiedet' },
+    { id: 'pframe_fire',    name: 'Lava-Ring',     emoji: '🌋', price: 50, premium: true, conic: '#2a0a00,#7a1500,#ff2200,#ff6b00,#ffd166,#ff8c1a,#ff2200,#7a1500,#2a0a00', deco:'flames',  glow:'rgba(255,80,0,.85)', inferno:true, desc: 'Aus Lava & Vulkankristall geschmiedet' },
     { id: 'pframe_gold',    name: 'Gold-Ring',     emoji: '👑', price: 50, premium: true, conic: '#6b4e07,#b8860b,#ffd700,#fff7cc,#ffd700,#b8860b,#6b4e07', deco:'gems',    glow:'rgba(255,215,0,.65)',  gem:'radial-gradient(circle at 35% 30%,#fff,#ffe680 35%,#b8860b 78%)',  desc: 'Goldener Prachtkranz' },
     { id: 'pframe_ice',     name: 'Eis-Ring',      emoji: '🧊', price: 50, premium: true, conic: '#1e4e8c,#3b82f6,#7dd3fc,#ffffff,#bae6fd,#3b82f6,#1e4e8c', deco:'frost',   glow:'rgba(125,211,252,.7)', gem:'radial-gradient(circle at 35% 30%,#fff,#bae6fd 40%,#3b82f6 80%)', desc: 'Eiskristall-Schimmer' },
     { id: 'pframe_crystal', name: 'Kristall-Ring', emoji: '🔷', price: 50, premium: true, conic: '#1e3a8a,#2a7fff,#7c3aed,#e040fb,#5ec8ff,#2a7fff,#1e3a8a', deco:'sparkle', glow:'rgba(168,85,247,.7)',  gem:'radial-gradient(circle at 35% 30%,#fff,#d8b4fe 38%,#7c3aed 80%)',  desc: 'Funkelnder Kristall' },
@@ -915,6 +915,11 @@ function ringConicHtml(item, withGlow) {
     if (!item || !item.conic) return '';
     const glow = withGlow && item.glow ? ';box-shadow:0 0 14px 2px ' + item.glow + ',0 0 4px 1px ' + item.glow : '';
     const deco = item.deco ? '<div class="cb-ring-deco cb-deco-' + item.deco + '"></div>' : '';
+    // inferno-Ringe: Feuer ist IN den Ring integriert (Flammen-Zacken als eine Form), KEINE angehefteten Gems.
+    if (item.inferno) {
+        const flames = '<div class="cb-ring-inferno"></div>';
+        return flames + '<div class="cb-ring-base cb-base-inferno" style="background:conic-gradient(from 0deg,' + item.conic + ')' + glow + '"></div>' + deco;
+    }
     return '<div class="cb-ring-base" style="background:conic-gradient(from 0deg,' + item.conic + ')' + glow + '"></div>' + deco + ringGems(item);
 }
 function ringFrameOverlay(userData, ownerUid) {
@@ -3059,7 +3064,24 @@ ${session ? `
 .cb-deco-flames::before{background:repeating-conic-gradient(from 0deg,rgba(255,90,0,0) 0deg,rgba(255,235,140,.85) 2deg,rgba(255,130,0,.45) 6deg,rgba(120,20,0,.3) 9deg,rgba(255,90,0,0) 13deg);mix-blend-mode:screen;animation:cbLavaPulse 2.2s ease-in-out infinite}
 @keyframes cbLavaPulse{0%,100%{opacity:.75}50%{opacity:1}}
 .cb-deco-frost::before{background:repeating-conic-gradient(from 0deg,rgba(255,255,255,0) 0deg,rgba(255,255,255,.7) 3deg,rgba(200,235,255,.3) 8deg,rgba(255,255,255,0) 13deg);mix-blend-mode:screen}
-@media (prefers-reduced-motion:reduce){.cb-ring-deco::after,.cb-gem-d,.cb-deco-flames::before{animation:none}}
+/* ═══ INFERNO-RING: Feuer IN den Ring integriert — Flammen-Zacken wachsen aus der Struktur (eine Form) ═══ */
+.cb-ring-inferno{position:absolute;left:50%;top:50%;width:150%;height:150%;transform:translate(-50%,-50%);border-radius:50%;pointer-events:none;z-index:4;
+  /* züngelnde Flammen-Spitzen: conic-Farbband, per wellenförmiger radial-Maske zu Zacken geschnitten */
+  background:conic-gradient(from 0deg,#ff2200,#ff7b00,#ffd166,#ff5a00,#ff2200,#ff8c1a,#ffd166,#ff4500,#ff2200);
+  -webkit-mask:radial-gradient(closest-side,#000 58%,#000 67%,transparent 78%);
+  mask:radial-gradient(closest-side,#000 58%,#000 67%,transparent 78%);
+  filter:blur(.6px) saturate(1.5) brightness(1.15) drop-shadow(0 0 10px rgba(255,90,0,.7));
+  animation:cbInfernoFlick 1.3s ease-in-out infinite alternate}
+/* zweite Flammen-Schicht: schmale Zacken nach außen — eigener Ring (inset) + radiale Strahlen-Maske */
+.cb-ring-inferno::before{content:"";position:absolute;inset:6%;border-radius:50%;background:inherit;
+  -webkit-mask:repeating-conic-gradient(from 6deg,transparent 0deg,#000 4deg,#000 9deg,transparent 14deg,transparent 24deg),radial-gradient(closest-side,transparent 60%,#000 72%);
+  -webkit-mask-composite:source-in;
+  mask:repeating-conic-gradient(from 6deg,transparent 0deg,#000 4deg,#000 9deg,transparent 14deg,transparent 24deg),radial-gradient(closest-side,transparent 60%,#000 72%);mask-composite:intersect;
+  filter:brightness(1.35) saturate(1.4);opacity:.9}
+@keyframes cbInfernoFlick{0%{transform:translate(-50%,-50%) scale(1);filter:blur(.6px) saturate(1.5) brightness(1.1) drop-shadow(0 0 8px rgba(255,90,0,.6))}100%{transform:translate(-50%,-50%) scale(1.04) rotate(2deg);filter:blur(.8px) saturate(1.7) brightness(1.25) drop-shadow(0 0 14px rgba(255,120,0,.85))}}
+/* Lava-Risse direkt aufs Band des inferno-Rings (glühende Adern, kräftiger) */
+.cb-base-inferno{box-shadow:inset 0 0 6px rgba(255,220,120,.7),inset 0 0 16px rgba(120,20,0,.5),0 0 16px 2px rgba(255,80,0,.7)!important}
+@media (prefers-reduced-motion:reduce){.cb-ring-deco::after,.cb-gem-d,.cb-deco-flames::before,.cb-ring-inferno{animation:none}}
 /* Avatar mit aktivem Ring: Ring darf nach außen ragen, weißen Avatar-Rand entfernen (Ring ersetzt ihn) */
 .ipf-avatar-wrap.has-ring{overflow:visible}
 .ipf-avatar-wrap.has-ring .ipf-avatar{border-color:transparent!important;box-shadow:none!important}
@@ -5359,7 +5381,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v288-lava-ring';
+const SW_VERSION='v289-inferno';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
