@@ -889,9 +889,9 @@ function royalCrownSvg(h) {
         + '<circle cx="9" cy="13" r="1" fill="#3b82f6"/><circle cx="21" cy="13" r="1" fill="#3b82f6"/>'
         + '</svg>';
 }
-// Schräg sitzende Krone, thront auf der oberen rechten Ecke des Banners (nur Basis berührt den Rand).
+// Krone sitzt mittig oben auf dem Banner, Basis flach auf der Oberkante, dezent geneigt.
 function royalCrownDeco(h) {
-    return '<span style="position:absolute;top:-' + (h * 0.92).toFixed(0) + 'px;right:-' + (h * 0.18).toFixed(0) + 'px;transform:rotate(16deg);transform-origin:bottom center;filter:drop-shadow(0 2px 3px rgba(0,0,0,.45));line-height:0;pointer-events:none">' + royalCrownSvg(h) + '</span>';
+    return '<span style="position:absolute;left:50%;top:-' + (h * 0.80).toFixed(0) + 'px;transform:translateX(-50%) rotate(8deg);transform-origin:bottom center;filter:drop-shadow(0 2px 3px rgba(0,0,0,.45));line-height:0;pointer-events:none">' + royalCrownSvg(h) + '</span>';
 }
 // Banner-HTML für ein Titelschild (unter dem Profil). Gibt '' wenn kein/ungültiger Titel.
 function titleBannerHtml(titleId) {
@@ -5526,7 +5526,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v304-crownfit';
+const SW_VERSION='v305-crowncenter';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
