@@ -5568,7 +5568,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v313-titlespacing';
+const SW_VERSION='v314-noringsshop';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
@@ -19222,8 +19222,6 @@ function switchRanking(tab, btn) {
     </div>
   </div>`;
                 };
-                const ringsHtml = RING_ITEMS.filter(r=>!r.premium && !r.special).map(_ringCard).join('');
-                const premiumRingsHtml = _ringsVisibleFor(myUid) ? RING_ITEMS.filter(r=>r.premium && !r.special).map(_ringCard).join('') : '';
                 const titlesHtml = TITLE_ITEMS.filter(t=>!t.special).map(function(t){
                     const owned = myInventory.includes(t.id);
                     const canAfford = isShopAdmin || myDiamonds >= t.price;
@@ -19255,8 +19253,6 @@ function switchRanking(tab, btn) {
   <div style="display:flex;gap:8px;overflow-x:auto;margin-top:12px;padding-bottom:2px;-webkit-overflow-scrolling:touch">
     <button onclick="var e=document.getElementById('dept-boosts');if(e)e.scrollIntoView({behavior:'smooth',block:'start'})" style="flex:0 0 auto;background:var(--bg3);border:1px solid var(--border2);color:var(--text);border-radius:99px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">⚡ Boosts</button>
     <button onclick="var e=document.getElementById('dept-banner');if(e)e.scrollIntoView({behavior:'smooth',block:'start'})" style="flex:0 0 auto;background:var(--bg3);border:1px solid var(--border2);color:var(--text);border-radius:99px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">🎨 Banner</button>
-    <button onclick="var e=document.getElementById('dept-rings');if(e)e.scrollIntoView({behavior:'smooth',block:'start'})" style="flex:0 0 auto;background:var(--bg3);border:1px solid var(--border2);color:var(--text);border-radius:99px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">💍 Rahmen</button>
-    <button onclick="var e=document.getElementById('dept-premium');if(e)e.scrollIntoView({behavior:'smooth',block:'start'})" style="flex:0 0 auto;background:linear-gradient(135deg,rgba(255,215,0,.16),rgba(124,58,237,.16));border:1px solid rgba(255,215,0,.4);color:#ffd700;border-radius:99px;padding:8px 14px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap">💎 Premium</button>
     <button onclick="var e=document.getElementById('dept-titles');if(e)e.scrollIntoView({behavior:'smooth',block:'start'})" style="flex:0 0 auto;background:var(--bg3);border:1px solid var(--border2);color:var(--text);border-radius:99px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">🏷️ Titel</button>
   </div>
 </div>
@@ -19316,18 +19312,7 @@ function switchRanking(tab, btn) {
   </div>
 </div>`;
   }).join('')}
-  <div id="dept-rings" style="scroll-margin-top:70px;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;display:inline-flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></svg>Profilring</div>
-  ${ringsHtml}
-  ${premiumRingsHtml ? `<div id="dept-premium" style="scroll-margin-top:70px;margin:22px 0 14px;border-radius:16px;overflow:hidden;background:linear-gradient(135deg,#0b1020,#1a1030);border:1px solid rgba(212,175,55,0.3)">
-    <div style="padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;background:linear-gradient(135deg,rgba(124,58,237,0.18),rgba(212,175,55,0.12))">
-      <div>
-        <div style="font-size:var(--fs-base);font-weight:800;color:#fff;letter-spacing:0.3px">💎 Premium-Rahmen</div>
-        <div style="font-size:11px;color:rgba(255,255,255,0.7);margin-top:2px">Exklusive Avatar-Rahmen · überall sichtbar</div>
-      </div>
-      <span style="font-size:10px;font-weight:800;color:#ffd700;background:rgba(255,215,0,0.14);border:1px solid rgba(255,215,0,0.35);padding:3px 9px;border-radius:99px;white-space:nowrap">PREMIUM</span>
-    </div>
-  </div>
-  ${premiumRingsHtml}` : ''}
+  <!-- Profilringe/Rahmen wurden aus dem Shop entfernt (User-Wunsch). Besessene Ringe bleiben in der Tasche. -->
   <div id="dept-titles" style="scroll-margin-top:70px;margin:22px 0 14px;border-radius:16px;overflow:hidden;background:linear-gradient(135deg,#1a1030,#0b1020);border:1px solid rgba(167,139,250,0.3)">
     <div style="padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;background:linear-gradient(135deg,rgba(167,139,250,0.18),rgba(124,58,237,0.12))">
       <div>
