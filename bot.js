@@ -889,15 +889,16 @@ function royalCrownSvg(h) {
         + '<circle cx="9" cy="13" r="1" fill="#3b82f6"/><circle cx="21" cy="13" r="1" fill="#3b82f6"/>'
         + '</svg>';
 }
-// Krone thront auf der oberen rechten Ecke des Banners, Drehpunkt an der Ecke, leicht nach außen geneigt.
+// Krone sitzt sauber auf der oberen rechten Ecke: Basis überlappt die Kante leicht (sitzt auf, schwebt nicht),
+// Drehpunkt an der Ecke, dezente Neigung nach außen.
 function royalCrownDeco(h) {
-    return '<span style="position:absolute;right:-' + (h * 0.14).toFixed(0) + 'px;top:-' + (h * 0.80).toFixed(0) + 'px;transform:rotate(15deg);transform-origin:bottom right;filter:drop-shadow(0 2px 3px rgba(0,0,0,.45));line-height:0;pointer-events:none">' + royalCrownSvg(h) + '</span>';
+    return '<span style="position:absolute;right:' + (h * 0.10).toFixed(0) + 'px;top:-' + (h * 0.62).toFixed(0) + 'px;transform:rotate(12deg);transform-origin:bottom right;filter:drop-shadow(0 2px 3px rgba(0,0,0,.45));line-height:0;pointer-events:none">' + royalCrownSvg(h) + '</span>';
 }
 // Banner-HTML für ein Titelschild (unter dem Profil). Gibt '' wenn kein/ungültiger Titel.
 function titleBannerHtml(titleId) {
     const t = TITLE_ITEMS.find(x => x.id === titleId);
     if (!t) return '';
-    return '<div class="cb-titleplate" style="position:relative;background:' + t.bg + ';box-shadow:0 2px 10px ' + t.glow + ',inset 0 1px 0 rgba(255,255,255,.25)">'
+    return '<div class="cb-titleplate" style="position:relative;min-width:150px;background:' + t.bg + ';box-shadow:0 2px 10px ' + t.glow + ',inset 0 1px 0 rgba(255,255,255,.25)">'
         + (t.crown ? royalCrownDeco(22) : '')
         + (t.emoji ? '<span class="cb-titleplate-em">' + t.emoji + '</span>' : '')
         + '<span class="cb-titleplate-tx" style="color:' + t.tcol + '">' + t.label + '</span>'
@@ -4845,7 +4846,7 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
 .ipf-name-row .nm{font-size:16px;font-weight:700;color:var(--text);line-height:1.2;display:inline-flex;align-items:center;gap:6px}
 .ipf-name-row .badge{display:inline-flex;align-items:center;gap:var(--space-1);padding:3px 9px;border-radius:99px;font-size:10.5px;font-weight:800;letter-spacing:.4px;margin-left:6px;vertical-align:middle}
 .ipf-handle{font-size:13px;color:var(--muted);margin-top:2px;font-weight:500}
-.cb-titleplate{display:inline-flex;align-items:center;gap:7px;margin:8px 0 2px;padding:5px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.18)}
+.cb-titleplate{display:inline-flex;align-items:center;justify-content:center;gap:7px;margin:8px 0 2px;padding:6px 16px;border-radius:10px;border:1px solid rgba(255,255,255,.18)}
 .cb-titleplate-em{font-size:14px;line-height:1}
 .cb-titleplate-tx{font-size:12.5px;font-weight:800;letter-spacing:1.5px;text-shadow:0 1px 2px rgba(0,0,0,.35)}
 .ipf-bio{font-size:13.5px;color:var(--text);line-height:1.5;margin:10px 0;white-space:pre-wrap;word-break:break-word}
@@ -5526,7 +5527,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v306-crowncorner';
+const SW_VERSION='v307-platefill';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
@@ -19190,7 +19191,7 @@ function switchRanking(tab, btn) {
                       ? '<div style="font-size:var(--fs-xs);color:#22c55e;font-weight:700">✓ Besessen</div>'
                       : '<button onclick="buyItem(\''+t.id+'\')" data-item="'+t.id+'" style="background:'+(canAfford?'linear-gradient(135deg,#a78bfa,#7c3aed)':'var(--bg4)')+';color:'+(canAfford?'#fff':'var(--muted)')+';border:none;border-radius:10px;padding:6px 16px;font-size:var(--fs-xs);font-weight:700;cursor:'+(canAfford?'pointer':'not-allowed')+'" '+(canAfford?'':'disabled')+'>Kaufen</button>';
                     return '<div style="background:var(--bg3);border:1px solid var(--border2);border-radius:16px;padding:'+(t.crown?'20px':'12px')+' 14px 12px;margin-bottom:10px">'
-                      + '<div style="position:relative;display:inline-flex;align-items:center;gap:7px;padding:5px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.18);background:'+t.bg+';box-shadow:0 2px 10px '+t.glow+',inset 0 1px 0 rgba(255,255,255,.25);margin-bottom:9px">'
+                      + '<div style="position:relative;display:flex;align-items:center;justify-content:center;gap:7px;width:170px;padding:7px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.18);background:'+t.bg+';box-shadow:0 2px 10px '+t.glow+',inset 0 1px 0 rgba(255,255,255,.25);margin-bottom:9px">'
                         + (t.crown ? royalCrownDeco(22) : '')
                         + (t.emoji ? '<span style="font-size:14px;line-height:1">'+t.emoji+'</span>' : '')+'<span style="font-size:12.5px;font-weight:800;letter-spacing:1.5px;color:'+t.tcol+';text-shadow:0 1px 2px rgba(0,0,0,.35)">'+t.label+'</span>'
                       + '</div>'
@@ -22430,7 +22431,7 @@ ${(()=>{ const _myTitles = TITLE_ITEMS.filter(t=>myInventory.includes(t.id)); re
   ${(()=>{ const _t = TITLE_ITEMS.filter(t=>myInventory.includes(t.id)); if(!_t.length) return ''; return '<div style="font-size:10px;font-weight:800;color:#a78bfa;letter-spacing:.5px;margin:14px 0 8px">🏷️ TITELSCHILDER</div><div style="display:flex;flex-direction:column;gap:10px">' + _t.map(function(t){
       const isA = (u.activeTitle === t.id);
       return '<div style="background:var(--bg3);border:1px solid '+(isA?'rgba(167,139,250,.5)':'var(--border2)')+';border-radius:14px;padding:var(--space-3);display:flex;align-items:center;gap:var(--space-3)">'
-        + '<div style="position:relative;display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.18);background:'+t.bg+';box-shadow:0 2px 8px '+t.glow+';flex-shrink:0">'+(t.crown?royalCrownDeco(18):'')+(t.emoji?'<span style="font-size:13px">'+t.emoji+'</span>':'')+'<span style="font-size:11.5px;font-weight:800;letter-spacing:1px;color:'+t.tcol+'">'+t.label+'</span></div>'
+        + '<div style="position:relative;display:flex;align-items:center;justify-content:center;gap:6px;width:128px;padding:6px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.18);background:'+t.bg+';box-shadow:0 2px 8px '+t.glow+';flex-shrink:0">'+(t.crown?royalCrownDeco(18):'')+(t.emoji?'<span style="font-size:13px">'+t.emoji+'</span>':'')+'<span style="font-size:11.5px;font-weight:800;letter-spacing:1px;color:'+t.tcol+'">'+t.label+'</span></div>'
         + '<div style="flex:1;min-width:0"><div style="font-size:var(--fs-sm);font-weight:700">'+t.label+(isA?' <span style="font-size:10px;color:#a78bfa;font-weight:600">● Aktiv</span>':'')+'</div><div style="font-size:11px;color:var(--muted)">'+t.desc+'</div></div>'
         + '<button onclick="setTitle(\''+(isA?'':t.id)+'\')" style="background:'+(isA?'rgba(167,139,250,.2)':'var(--bg4)')+';border:1px solid '+(isA?'rgba(167,139,250,.4)':'var(--border)')+';color:'+(isA?'#a78bfa':'var(--text)')+';border-radius:10px;padding:6px 12px;font-size:var(--fs-xs);font-weight:600;cursor:pointer;white-space:nowrap">'+(isA?'Deaktivieren':'Aktivieren')+'</button>'
         + '</div>';
