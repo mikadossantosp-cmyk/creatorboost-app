@@ -12767,7 +12767,10 @@ window.cbCollapseWrap = function(inner, id, compact){
   var e = window.cbCardEsc;
   return '<input type="checkbox" id="xlc-'+e(id)+'" class="cb-xlc" style="display:none">'
     + '<label for="xlc-'+e(id)+'" class="cb-xlh">'+compact+'</label>'
-    + '<div class="cb-xlb">'+inner+'</div>';
+    + '<div class="cb-xlb">'
+      + '<label for="xlc-'+e(id)+'" class="cb-xlclose" style="display:flex;align-items:center;justify-content:center;gap:5px;margin:0 16px 8px;padding:7px;border-radius:10px;background:var(--bg3);border:1px solid var(--border2);color:var(--muted);font-size:11.5px;font-weight:800;cursor:pointer;-webkit-tap-highlight-color:transparent">▴ Einklappen</label>'
+      + inner
+    + '</div>';
 };
 
 // ── DIAMANTLINKS (Heute-Top-Strip + eigener Tab) ──
