@@ -851,13 +851,14 @@ const RING_ITEMS = [
     { id: 'ring_diamond', name: 'Diamond Ring', emoji: '💎', price: 20, shadow: '0 0 0 3px #b9f2ff, 0 0 0 6px #a78bfa',   gradient: 'linear-gradient(135deg,#a78bfa,#b9f2ff,#ffffff)', desc: 'Funkelnder Diamantglanz' },
     // ── Premium-„50 Diamanten Rahmen" — CSS-Ringe: Basis (rotierendes conic-Farbband) + Dekoration (deco-Typ).
     //    conic = Basis-Farben · deco = Stil (flames/gems/frost/sparkle/bubbles) · glow = Außen-Schein. ──
-    { id: 'pframe_fire',    name: 'Lava-Ring',     emoji: '🌋', price: 50, premium: true, glow:'rgba(255,80,0,.85)', svg:{c1:'#ff4500',c2:'#ffd166',c3:'#7a1500',spikeCount:16,spikeLen:18}, desc: 'Aus Lava & Vulkankristall geschmiedet' },
-    { id: 'pframe_gold',    name: 'Gold-Ring',     emoji: '👑', price: 50, premium: true, conic: '#6b4e07,#b8860b,#ffd700,#fff7cc,#ffd700,#b8860b,#6b4e07', deco:'gems',    glow:'rgba(255,215,0,.65)',  gem:'radial-gradient(circle at 35% 30%,#fff,#ffe680 35%,#b8860b 78%)',  desc: 'Goldener Prachtkranz' },
-    { id: 'pframe_ice',     name: 'Eis-Ring',      emoji: '🧊', price: 50, premium: true, conic: '#1e4e8c,#3b82f6,#7dd3fc,#ffffff,#bae6fd,#3b82f6,#1e4e8c', deco:'frost',   glow:'rgba(125,211,252,.7)', gem:'radial-gradient(circle at 35% 30%,#fff,#bae6fd 40%,#3b82f6 80%)', desc: 'Eiskristall-Schimmer' },
-    { id: 'pframe_crystal', name: 'Kristall-Ring', emoji: '🔷', price: 50, premium: true, conic: '#1e3a8a,#2a7fff,#7c3aed,#e040fb,#5ec8ff,#2a7fff,#1e3a8a', deco:'sparkle', glow:'rgba(168,85,247,.7)',  gem:'radial-gradient(circle at 35% 30%,#fff,#d8b4fe 38%,#7c3aed 80%)',  desc: 'Funkelnder Kristall' },
-    { id: 'pframe_bubble',  name: 'Perlen-Ring',   emoji: '🫧', price: 50, premium: true, conic: '#7b5cc9,#b794f6,#7fdbff,#fbe9ff,#f48fff,#b794f6,#7b5cc9', deco:'bubbles', glow:'rgba(180,148,246,.65)',gem:'radial-gradient(circle at 35% 30%,#fff,#f0d9ff 40%,#b794f6 82%)',desc: 'Schillernde Perlen' },
+    // ── Premium-Ringe als echte PNG-Grafiken (assets/rings/<id>.png, normalisiert: Loch 60% zentriert). ──
+    { id: 'pframe_fire',    name: 'Lava-Ring',     emoji: '🌋', price: 50, premium: true, img:true, glow:'rgba(255,80,0,.6)',  desc: 'Aus Lava & Vulkankristall geschmiedet' },
+    { id: 'pframe_gold',    name: 'Gold-Ring',     emoji: '👑', price: 50, premium: true, img:true, glow:'rgba(255,215,0,.5)', desc: 'Goldener Prachtkranz' },
+    { id: 'pframe_ice',     name: 'Eis-Ring',      emoji: '🧊', price: 50, premium: true, img:true, glow:'rgba(125,211,252,.5)',desc: 'Eiskristall-Schimmer' },
+    { id: 'pframe_crystal', name: 'Kristall-Ring', emoji: '🔷', price: 50, premium: true, img:true, glow:'rgba(168,85,247,.5)', desc: 'Funkelnder Kristall' },
+    { id: 'pframe_bubble',  name: 'Perlen-Ring',   emoji: '🫧', price: 50, premium: true, img:true, glow:'rgba(180,148,246,.5)',desc: 'Schillernde Perlen' },
     // ── Spezial-Rahmen — NICHT kaufbar (special:true → nicht im Shop). Verdient/rollenbasiert. ──
-    { id: 'frame_admin',     name: 'Admin Rahmen',         emoji: '🛡️', special: true, admin: true, conic: '#0a1a3f,#1e3a8a,#ffd700,#38bdf8,#ffd700,#1e3a8a,#0a1a3f', deco:'gems', glow:'rgba(56,189,248,.7)', gem:'radial-gradient(circle at 35% 30%,#fff,#7dd3fc 35%,#1e3a8a 82%)', desc: 'Exklusiver Admin-Rahmen (Gold & Blau)' },
+    { id: 'frame_admin',     name: 'Admin Rahmen',         emoji: '🛡️', special: true, admin: true, img:true, glow:'rgba(56,189,248,.5)', desc: 'Exklusiver Admin-Rahmen (Gold & Blau)' },
     { id: 'frame_builder_1', name: 'Builder I Rahmen',     emoji: '🌱', special: true, tier: 1, conic: '#059669,#6ee7b7,#34d399,#10b981,#059669',     desc: 'Community Builder I — Rang-Rahmen' },
     { id: 'frame_builder_2', name: 'Builder II Rahmen',    emoji: '🤝', special: true, tier: 2, conic: '#d97706,#fcd34d,#fbbf24,#f59e0b,#d97706',     desc: 'Community Builder II — Rang-Rahmen' },
     { id: 'frame_builder_3', name: 'Builder III Rahmen',   emoji: '🏗️', special: true, tier: 3, conic: '#0891b2,#67e8f9,#22d3ee,#06b6d4,#0891b2',     desc: 'Community Builder III — Rang-Rahmen' },
@@ -975,23 +976,37 @@ function ringConicHtml(item, withGlow) {
 function ringFrameOverlay(userData, ownerUid) {
     if (!_ringsVisibleFor(ownerUid != null ? ownerUid : userData?.id)) return '';
     const item = RING_ITEMS.find(r => r.id === userData?.activeRing);
-    if (!item || (!item.conic && !item.svg)) return '';
-    return ringConicHtml(item, true);
+    if (!item) return '';
+    // PNG-Ring (normalisiert: Loch 60% zentriert) → 167% zentriert übers volle Foto, Loch deckt es exakt.
+    if (item.img && ringFrameExists(item.id)) {
+        const g = item.glow ? ';filter:drop-shadow(0 0 5px ' + item.glow + ')' : '';
+        return '<img src="/ringframe/' + item.id + '" class="cb-ring-png" style="' + g + '" alt="" loading="lazy">';
+    }
+    if (item.conic) return ringConicHtml(item, true);
+    return '';
 }
 function getRingBoxShadow(userData) {
     const ring = userData?.activeRing;
     if (!ring) return '';
     const item = RING_ITEMS.find(r=>r.id===ring);
     if (!item) return '';
-    // Conic-Ring aktiv → KEIN CSS-Glow (das Overlay übernimmt, sonst Doppel-Ring).
-    if (item.conic) return '';
+    // Conic- oder PNG-Ring aktiv → KEIN CSS-Glow (das Overlay übernimmt, sonst Doppel-Ring).
+    if (item.conic || item.img) return '';
     return item.shadow ? `;box-shadow:${item.shadow}` : '';
 }
 // Vorschau-Ring für Shop/Tasche: Basis-Ring + Deko um einen dunklen Avatar-Kern (size px, inner=Inhalt).
 function ringPreview(item, size, inner) {
     const fs = Math.round(size * 0.34);
     const inner2 = Math.round(size * 0.80); // Avatar-Kern füllt das Ring-Loch (Ring liegt als Band außen)
-    if (item.svg || item.conic) {
+    // PNG-Ring: dunkler Avatar-Kern (60% Loch) mittig, PNG 100% drüber (PNG hat eigenes transparentes Loch).
+    if (item.img && ringFrameExists(item.id)) {
+        const core = Math.round(size * 0.58);
+        return '<div style="position:relative;width:' + size + 'px;height:' + size + 'px;flex-shrink:0;display:flex;align-items:center;justify-content:center">'
+            + '<div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:' + core + 'px;height:' + core + 'px;border-radius:50%;background:#15151a;display:flex;align-items:center;justify-content:center;font-size:' + fs + 'px;font-weight:700;color:#fff">' + (inner || '') + '</div>'
+            + '<img src="/ringframe/' + item.id + '" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none" alt="">'
+            + '</div>';
+    }
+    if (item.conic) {
         return '<div class="cb-ring-wrap" style="position:relative;width:' + size + 'px;height:' + size + 'px;flex-shrink:0;border-radius:50%;display:flex;align-items:center;justify-content:center">'
             + ringConicHtml(item, false)
             + '<div style="width:' + inner2 + 'px;height:' + inner2 + 'px;border-radius:50%;background:#15151a;display:flex;align-items:center;justify-content:center;font-size:' + fs + 'px;font-weight:700;color:#fff;position:relative;z-index:1">' + (inner || '') + '</div>'
@@ -3140,6 +3155,8 @@ ${session ? `
 /* Avatar mit aktivem Ring: Ring darf nach außen ragen, weißen Avatar-Rand entfernen (Ring ersetzt ihn) */
 .ipf-avatar-wrap.has-ring{overflow:visible}
 .ipf-avatar-wrap.has-ring .ipf-avatar{border-color:transparent!important;box-shadow:none!important}
+/* PNG-Ring: normalisierte Bilder (Loch 60% zentriert) → 167% zentriert übers volle Foto, Loch deckt es exakt */
+.cb-ring-png{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:167%;height:167%;object-fit:contain;pointer-events:none;z-index:6}
 </style>
 <div class="tour-overlay" id="tour-ov" aria-hidden="true">
   <div class="tour-spotlight" id="tour-spotlight"></div>
@@ -4753,7 +4770,7 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
     const _followers = (u.followers||[]).length;
     const _diamonds = u.diamonds || 0;
     const _picUrl = (picData||ladeBild(uid,'profilepic')) ? (appbildSrc(String(uid),'profilepic') || `/appbild/${uid}/profilepic`) : (u.instagram ? `https://unavatar.io/instagram/${u.instagram}` : '');
-    const _ringActive = _ringsVisibleFor(uid) && (() => { const it = RING_ITEMS.find(r => r.id === u.activeRing); return !!(it && it.conic); })();
+    const _ringActive = _ringsVisibleFor(uid) && (() => { const it = RING_ITEMS.find(r => r.id === u.activeRing); return !!(it && (it.conic || (it.img && ringFrameExists(it.id)))); })();
     const _initial = htmlEsc((u.spitzname||u.name||'?').slice(0,1).toUpperCase());
     const _isFollowing = false;
     const _roleBadge = roleBadge(u.role, uid, adminIds);
@@ -5436,7 +5453,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v290-svg-merge';
+const SW_VERSION='v291-png-back';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
@@ -22296,7 +22313,7 @@ ${(myInventory.length > 0 || _specialFrames.length > 0) ? `
     ${RING_ITEMS.filter(r=>myInventory.includes(r.id)).map(item=>{
         const isActive = myActiveRing === item.id;
         return `<div style="background:var(--bg3);border:1px solid ${isActive?'rgba(167,139,250,.5)':'var(--border2)'};border-radius:14px;padding:var(--space-3);display:flex;align-items:center;gap:var(--space-3)">
-      ${item.conic ? ringPreview(item, 48, '') : `<div style="width:44px;height:44px;border-radius:50%;background:${item.gradient};flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:var(--fs-lg)">${item.emoji}</div>`}
+      ${(item.conic || item.img) ? ringPreview(item, 48, '') : `<div style="width:44px;height:44px;border-radius:50%;background:${item.gradient};flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:var(--fs-lg)">${item.emoji}</div>`}
       <div style="flex:1">
         <div style="font-size:var(--fs-sm);font-weight:700">${item.name} ${isActive?'<span style="font-size:10px;color:#a78bfa;font-weight:600">● Aktiv</span>':''}</div>
         <div style="font-size:11px;color:var(--muted)">${item.desc}</div>
