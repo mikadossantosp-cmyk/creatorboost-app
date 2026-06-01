@@ -1957,7 +1957,7 @@ function runMindsetPickApi() {
     _mindsetEnsure();
     const ms = d.mindsetStories;
     const week = getBerlinWeekKey();
-    if (ms.weeklyState.week === week && ms.weeklyState.pickedUid) return { ok: true, already: true, pickedUid: ms.weeklyState.pickedUid };
+    if (ms.weeklyState.week === week) return { ok: true, already: true, pickedUid: ms.weeklyState.pickedUid || null };
     const eligible = Object.keys(ms.waitlist).filter(uid => { const u = d.users[uid]; return u && u.instagram && !ms.done[uid]; });
     if (!eligible.length) {
         ms.weeklyState = { week, pickedUid: null, pickedAt: Date.now(), locked: true };
@@ -4138,6 +4138,12 @@ function prismaLinkAdminListApi() {
 // Hinweis: weeklyRankingDM (Top-3-Übersicht an alle gestarteten User) inline via dmUser.
 async function runWochenGewinnspielApi() {
     try {
+        // Idempotenz pro Woche: verhindert Doppel-Auslosung/Doppel-Boni, falls der Cron das Catchup-Fenster
+        // (Sonntag ab 20:00) mehrfach durchläuft oder der Prozess neu startet. Genau 1× pro Woche.
+        if (!d.wochenGewinnspiel) d.wochenGewinnspiel = { gewinner: [] };
+        const _gwWeek = getBerlinWeekKey();
+        if (d.wochenGewinnspiel.lastWeekKey === _gwWeek) return { ok: true, already: true, winnerId: null };
+        d.wochenGewinnspiel.lastWeekKey = _gwWeek;
         const adminIds = Array.isArray(d._adminIds) ? d._adminIds.map(Number) : [];
         const isBot = (u) => !!(u && (u.is_bot === true || (u.username && /bot$/i.test(u.username))));
         const teilnehmer = Object.entries(d.weeklyXP || {})

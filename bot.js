@@ -1787,39 +1787,46 @@ async function appCronTick() {
             _appCronSeen[fullKey] = true;
             return fn();
         };
-        if (wochentag === 0 && h === 20 && m === 0) {
-            einmalig('wochenGewinnspiel', async () => {
-                console.log('🎰 [Cron] Trigger Wochen-Gewinnspiel');
-                const r = LOCAL_STORE ? await localWrite(() => botLogic.runWochenGewinnspielApi()) : await postBot('/run-wochen-gewinnspiel-api', {});
-                console.log('🎰 [Cron] Response:', r ? JSON.stringify(r) : 'null');
-                // "Letzter Gewinner"-Anzeige (raffle-winners.json) mit dem ECHTEN Gewinner fuettern.
-                if (LOCAL_STORE && r && r.ok && r.winnerId) {
-                    try {
-                        const _d = datastore.getData();
-                        const wu = (_d.users || {})[String(r.winnerId)] || {};
-                        const entry = {
-                            uid: String(r.winnerId),
-                            name: r.winnerName || wu.spitzname || wu.name || 'Creator',
-                            handle: wu.ig_handle || wu.instagram || wu.username || '',
-                            rang: wu.rang || '',
-                            prize: '1 Extra-Link', prizeEmoji: '🔗',
-                            xp: (_d.weeklyXP || {})[String(r.winnerId)] || 0,
-                            participants: r.teilnehmer || 0,
-                            timestamp: Date.now(),
-                            week: new Date().toISOString().slice(0, 10)
-                        };
-                        const hist = loadRaffleHistory();
-                        hist.lastWinner = entry;
-                        hist.history = [entry, ...(hist.history || [])].slice(0, 12);
-                        saveRaffleHistory(hist);
-                    } catch(e) { console.error('[Gewinnspiel] Anzeige-Update Fehler:', e.message); }
-                }
-            });
-            einmalig('mindsetPick', async () => {
-                console.log('📖 [Cron] Trigger Mindset-Stories-Pick → Mainbot');
-                const r = LOCAL_STORE ? await localWrite(() => botLogic.runMindsetPickApi()) : await postBot('/run-mindset-pick-api', {});
-                console.log('📖 [Cron] Mainbot Response:', r ? JSON.stringify(r) : 'null');
-            });
+        // Sonntag ab 20:00 Uhr (Berlin): Wochen-Jobs (Gewinnspiel-Auslosung + Mindset-Stories-Pick).
+        // CATCHUP-FENSTER statt exakter Minute (h===20 && m===0): läuft, sobald der Prozess Sonntagabend
+        // lebt — auch wenn der 20:00-Tick durch Deploy/Neustart/Server-Recycle verpasst wurde. Beide APIs
+        // sind pro Woche idempotent (wochenGewinnspiel.lastWeekKey / mindset weeklyState.week), daher genau
+        // 1× pro Woche, selbst wenn das Fenster mehrfach durchlaufen wird. sundayKey dedupliziert je Prozess.
+        if (wochentag === 0 && h >= 20) {
+            const sundayKey = 'sundayJobs_' + tagStr;
+            if (!_appCronSeen[sundayKey]) {
+                _appCronSeen[sundayKey] = true;
+                (async () => {
+                    console.log('🎰 [Cron] Sonntag-Jobs starten (Gewinnspiel + Mindset-Pick)');
+                    const r = LOCAL_STORE ? await localWrite(() => botLogic.runWochenGewinnspielApi()) : await postBot('/run-wochen-gewinnspiel-api', {});
+                    console.log('🎰 [Cron] Gewinnspiel:', r ? JSON.stringify(r) : 'null');
+                    // "Letzter Gewinner"-Anzeige (raffle-winners.json) mit dem ECHTEN Gewinner fuettern.
+                    // Nur beim ERSTEN echten Lauf (winnerId gesetzt); Catchup-Wiederholungen liefern winnerId:null.
+                    if (LOCAL_STORE && r && r.ok && r.winnerId) {
+                        try {
+                            const _d = datastore.getData();
+                            const wu = (_d.users || {})[String(r.winnerId)] || {};
+                            const entry = {
+                                uid: String(r.winnerId),
+                                name: r.winnerName || wu.spitzname || wu.name || 'Creator',
+                                handle: wu.ig_handle || wu.instagram || wu.username || '',
+                                rang: wu.rang || '',
+                                prize: '1 Extra-Link', prizeEmoji: '🔗',
+                                xp: (_d.weeklyXP || {})[String(r.winnerId)] || 0,
+                                participants: r.teilnehmer || 0,
+                                timestamp: Date.now(),
+                                week: new Date().toISOString().slice(0, 10)
+                            };
+                            const hist = loadRaffleHistory();
+                            hist.lastWinner = entry;
+                            hist.history = [entry, ...(hist.history || [])].slice(0, 12);
+                            saveRaffleHistory(hist);
+                        } catch(e) { console.error('[Gewinnspiel] Anzeige-Update Fehler:', e.message); }
+                    }
+                    const rm = LOCAL_STORE ? await localWrite(() => botLogic.runMindsetPickApi()) : await postBot('/run-mindset-pick-api', {});
+                    console.log('📖 [Cron] Mindset-Pick:', rm ? JSON.stringify(rm) : 'null');
+                })().catch(e => console.error('[Cron] Sonntag-Jobs Fehler:', e.message));
+            }
         }
         // Tägliches Backup: Window 03:00-03:05 (falls Server zu xx:00 nicht läuft, fängts in den 5 Min Catchup-Range).
         // Catchup wird in einmalig-Logik dedupliziert via Datum, läuft also pro Tag genau 1×.
@@ -5548,7 +5555,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v315-noringsize';
+const SW_VERSION='v316-cronpickfix';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
