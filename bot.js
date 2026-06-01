@@ -11632,7 +11632,7 @@ window.onPinVisitStory = function(uid){
 
         function renderLink([msgId, link]){
             const poster = d.users[String(link.user_id)]||{};
-            const _posterBld = (()=>{ try{ const b = botLogic.builderBadgeFor(String(link.user_id)); return b ? ' <span title="'+htmlEsc(b.label)+'" style="display:inline-flex;align-items:center;font-size:11px;font-weight:800;padding:1px 6px;border-radius:99px;background:rgba(34,197,94,0.14);color:#16a34a;vertical-align:middle">'+b.emoji+'</span>' : ''; }catch(e){ return ''; } })();
+            const _posterBld = (()=>{ try{ const b = botLogic.builderBadgeFor(String(link.user_id)); return b ? ' <span title="'+htmlEsc(b.label)+'" style="display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:800;padding:1px 7px;border-radius:99px;background:rgba(34,197,94,0.14);color:#16a34a;vertical-align:middle">'+b.emoji+' '+htmlEsc(b.label.replace(/^Community /,''))+'</span>' : ''; }catch(e){ return ''; } })();
             const _agg = _linksByText.get(link.text);
             const likes = _agg ? [..._agg.likes] : [];
             const hasLiked = _agg ? _agg.likes.has(String(myUid)) : false;
@@ -11827,7 +11827,7 @@ commentsBox+
 
         function renderSuperLink(sl) {
             const poster = d.users[String(sl.uid)]||{};
-            const _posterBld = (()=>{ try{ const b = botLogic.builderBadgeFor(String(sl.uid)); return b ? ' <span title="'+htmlEsc(b.label)+'" style="display:inline-flex;align-items:center;font-size:11px;font-weight:800;padding:1px 6px;border-radius:99px;background:rgba(34,197,94,0.14);color:#16a34a;vertical-align:middle">'+b.emoji+'</span>' : ''; }catch(e){ return ''; } })();
+            const _posterBld = (()=>{ try{ const b = botLogic.builderBadgeFor(String(sl.uid)); return b ? ' <span title="'+htmlEsc(b.label)+'" style="display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:800;padding:1px 7px;border-radius:99px;background:rgba(34,197,94,0.14);color:#16a34a;vertical-align:middle">'+b.emoji+' '+htmlEsc(b.label.replace(/^Community /,''))+'</span>' : ''; }catch(e){ return ''; } })();
             const likes = Array.isArray(sl.likes) ? sl.likes : [];
             const hasLiked = likes.map(String).includes(String(myUid));
             const isOwnPost = String(sl.uid) === String(myUid);
