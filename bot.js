@@ -39,7 +39,7 @@ const PORT          = process.env.PORT          || 3000;
 const LOCAL_STORE = process.env.LOCAL_STORE === '1';
 // Zentrale Asset-/App-Version (Node-Scope): bricht CSS-Cache (?v=) + Service-Worker-Cache mit jedem Deploy.
 // EINE Quelle — wird in den CSS-<link> und in den SW-Script-Text (SW_VERSION) interpoliert.
-const APP_VERSION = 'v319-legendthemes';
+const APP_VERSION = 'v320-tasche';
 if (LOCAL_STORE) {
     try {
         datastore.load();
@@ -22195,6 +22195,77 @@ ${_setSubHead('<span style="display:inline-flex;align-items:center;gap:7px"><svg
     }
 
     // ── EINSTELLUNGEN ──
+    if (path === '/einstellungen/tasche') {
+        const u = myUser || {};
+        const myInventory = u.inventory || [];
+        const myActiveRing = u.activeRing || null;
+        const _myBldTier = ((botLogic.builderBadgeFor && botLogic.builderBadgeFor(String(myUid))) || {}).tier || 0;
+        const _myIsAdminFrame = adminIds.includes(Number(myUid));
+        const _specialFrames = _ringsVisibleFor(myUid) ? RING_ITEMS.filter(r => r.special && ((r.admin && _myIsAdminFrame) || (r.tier && _myBldTier >= r.tier))) : [];
+        const _isAdm = String(u.role||'').includes('Admin');
+        const _ownedRings = RING_ITEMS.filter(r => myInventory.includes(r.id));
+        const _ownedTitles = TITLE_ITEMS.filter(t => myInventory.includes(t.id) || (t.special && _isAdm));
+        const _ownedThemes = CARD_THEME_ITEMS.filter(t => myInventory.includes(t.id));
+        const _total = _specialFrames.length + _ownedRings.length + _ownedTitles.length + _ownedThemes.length;
+        const itemRow = (pic, name, desc, isActive, onclick) => `<div class="tasche-item${isActive?' on':''}"><div class="tasche-item-pic">${pic}</div><div class="tasche-item-body"><div class="tasche-item-name">${name}${isActive?' <span class="tasche-active">● getragen</span>':''}</div><div class="tasche-item-desc">${desc}</div></div><button class="tasche-act${isActive?' on':''}" onclick="${onclick}">${isActive?'Ablegen':'Tragen'}</button></div>`;
+        const pocket = (tag, inner) => inner ? `<div class="tasche-pocket"><div class="tasche-tag">${tag}</div><div class="tasche-items">${inner}</div></div>` : '';
+        const specialHtml = _specialFrames.map(item => itemRow(ringPreview(item,46,item.emoji), item.name, item.desc, myActiveRing===item.id, `setRing('${myActiveRing===item.id?'':item.id}')`)).join('');
+        const ringsHtml = _ownedRings.map(item => itemRow((item.conic||item.img)?ringPreview(item,46,''):`<div style="width:44px;height:44px;border-radius:50%;background:${item.gradient};display:flex;align-items:center;justify-content:center;font-size:20px">${item.emoji}</div>`, item.name, item.desc, myActiveRing===item.id, `setRing('${myActiveRing===item.id?'':item.id}')`)).join('');
+        const titlesHtml = _ownedTitles.map(t => itemRow(titlePlateHtml(t,'tasche'), t.label, t.desc, u.activeTitle===t.id, `setTitle('${u.activeTitle===t.id?'':t.id}')`)).join('');
+        const themesHtml = _ownedThemes.map(t => itemRow(cardThemePreview(t,58), t.emoji+' '+t.name, t.desc, u.activeCardTheme===t.id, `setCardTheme('${u.activeCardTheme===t.id?'':t.id}')`)).join('');
+        return html(`
+<style>
+.tasche-stage{background:radial-gradient(135% 90% at 50% -8%,#3c2917,#1b1108 72%);min-height:100vh;padding:14px 14px 100px}
+.tasche-topbar{max-width:540px;margin:0 auto 12px;display:flex;align-items:center;justify-content:space-between}
+.tasche-back{display:inline-flex;align-items:center;gap:4px;color:#e7d4a8;font-weight:700;font-size:14px;text-decoration:none;background:rgba(0,0,0,.25);border:1px solid rgba(212,180,120,.25);padding:7px 13px;border-radius:10px}
+.tasche-htitle{font-size:13px;font-weight:800;letter-spacing:1px;color:#cbb48a;text-transform:uppercase}
+.tasche-zip{max-width:540px;margin:0 auto;height:24px;background:linear-gradient(180deg,#1b1108,#241710);border:1.5px solid #3a2817;border-bottom:none;border-radius:16px 16px 0 0;position:relative;display:flex;align-items:center;justify-content:center}
+.tasche-zip::before{content:"";position:absolute;left:18px;right:18px;top:50%;height:6px;transform:translateY(-50%);background:repeating-linear-gradient(90deg,#caa861 0 3px,#7d6334 3px 6px);border-radius:3px;opacity:.85}
+.tasche-zip-pull{width:16px;height:20px;background:linear-gradient(180deg,#f3dc97,#b8902f);border-radius:4px;box-shadow:0 2px 7px rgba(0,0,0,.55);z-index:2;position:relative}
+.tasche-zip-pull::after{content:"";position:absolute;left:50%;top:-7px;transform:translateX(-50%);width:9px;height:9px;border:2px solid #b8902f;border-radius:50%;background:transparent}
+.tasche-bag{max-width:540px;margin:0 auto;background:linear-gradient(170deg,#412d1a,#241710);border:1.5px solid #160d06;border-radius:0 0 22px 22px;box-shadow:0 26px 64px rgba(0,0,0,.55),inset 0 3px 26px rgba(0,0,0,.5);padding:18px 15px 22px;position:relative}
+.tasche-bag::before{content:"";position:absolute;inset:7px;border:2px dashed rgba(212,180,120,.3);border-radius:15px;pointer-events:none}
+.tasche-brand{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:2px 4px 16px;position:relative}
+.tasche-brand-tag{display:inline-flex;align-items:center;gap:7px;background:linear-gradient(135deg,#d8b873,#8a6f3e);color:#241710;font-weight:800;font-size:13px;letter-spacing:.5px;padding:7px 14px;border-radius:9px;box-shadow:0 2px 9px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.45)}
+.tasche-count{font-size:11px;color:#cbb48a;font-weight:700}
+.tasche-pocket{background:linear-gradient(180deg,#291b0f,#1d130a);border:1px solid rgba(212,180,120,.12);border-radius:15px;padding:13px 12px 15px;margin-bottom:14px;box-shadow:inset 0 4px 14px rgba(0,0,0,.6),0 1px 0 rgba(212,180,120,.06)}
+.tasche-tag{display:inline-block;background:linear-gradient(135deg,#d8b873,#9c7c44);color:#241710;font-size:10px;font-weight:800;letter-spacing:.6px;padding:4px 11px;border-radius:7px;margin-bottom:11px;box-shadow:0 1px 4px rgba(0,0,0,.45)}
+.tasche-items{display:flex;flex-direction:column;gap:10px}
+.tasche-item{display:flex;align-items:center;gap:12px;background:linear-gradient(180deg,#f7eeda,#e8dbbe);border:1px solid #cdb78d;border-radius:13px;padding:10px;box-shadow:0 4px 11px rgba(0,0,0,.4)}
+.tasche-item.on{box-shadow:0 0 0 2px #d4af37,0 4px 13px rgba(212,175,55,.4)}
+.tasche-item-pic{flex-shrink:0;display:flex;align-items:center}
+.tasche-item-body{flex:1;min-width:0}
+.tasche-item-name{font-size:13.5px;font-weight:800;color:#3a2a17}
+.tasche-item-desc{font-size:11px;color:#806c49;margin-top:2px}
+.tasche-active{font-size:10px;color:#9c7c1f;font-weight:800}
+.tasche-act{flex-shrink:0;background:#2a1c10;color:#f3e3c0;border:1px solid #5a4528;border-radius:10px;padding:8px 14px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;font-family:inherit}
+.tasche-act.on{background:linear-gradient(135deg,#e7c14e,#b8902f);color:#241710;border-color:#b8902f}
+.tasche-empty{text-align:center;padding:30px 16px 10px}
+.tasche-empty-ic{font-size:56px;margin-bottom:8px;filter:drop-shadow(0 5px 12px rgba(0,0,0,.55))}
+.tasche-empty .sub{font-size:12px;color:#a89065;margin-top:6px;line-height:1.5}
+.tasche-shop-btn{display:inline-block;margin-top:16px;background:linear-gradient(135deg,#e7c14e,#b8902f);color:#241710;font-weight:800;font-size:13px;padding:11px 24px;border-radius:12px;text-decoration:none;box-shadow:0 4px 14px rgba(0,0,0,.45)}
+</style>
+<div class="tasche-stage">
+  <div class="tasche-topbar"><a href="/einstellungen" class="tasche-back">‹ zurück</a><span class="tasche-htitle">Inventar</span><span style="width:64px"></span></div>
+  <div class="tasche-zip"><span class="tasche-zip-pull"></span></div>
+  <div class="tasche-bag">
+    <div class="tasche-brand"><span class="tasche-brand-tag">👜 Meine Tasche</span><span class="tasche-count">${_total} ${_total===1?'Gegenstand':'Gegenstände'}</span></div>
+    ${_total===0 ? `<div class="tasche-empty"><div class="tasche-empty-ic">👜</div><div style="font-weight:800;font-size:15px;color:#f3e3c0">Deine Tasche ist noch leer</div><div class="sub">Sammle Profil-Rahmen, Titelschilder &amp; Karten-Themes<br>im Shop und trage sie hier.</div><a href="/explore?tab=shop" class="tasche-shop-btn">→ Zum Shop</a></div>` : `
+    ${pocket('✦ Spezial-Rahmen', specialHtml)}
+    ${pocket('🖼️ Profil-Rahmen', ringsHtml)}
+    ${pocket('🏷️ Titelschilder', titlesHtml)}
+    ${pocket('🃏 Karten-Themes', themesHtml)}
+    `}
+  </div>
+</div>
+<script>
+async function setRing(ringId){const r=await fetch('/api/set-active-ring',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ringId:ringId||null})});const d=await r.json();if(d.ok){toast(ringId?'🪄 Getragen!':'Abgelegt');setTimeout(function(){location.reload();},450);}else toast('❌ '+(d.error||'Fehler'));}
+async function setTitle(titleId){const r=await fetch('/api/set-active-title',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({titleId:titleId||null})});const d=await r.json();if(d.ok){toast(titleId?'🏷️ Getragen!':'Abgelegt');setTimeout(function(){location.reload();},450);}else toast('❌ '+(d.error||'Fehler'));}
+async function setCardTheme(themeId){const r=await fetch('/api/set-active-cardtheme',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({themeId:themeId||null})});const d=await r.json();if(d.ok){toast(themeId?'🃏 Getragen!':'Abgelegt');setTimeout(function(){location.reload();},450);}else toast('❌ '+(d.error||'Fehler'));}
+</script>
+`);
+    }
+
     if (path === '/einstellungen') {
         const u = myUser || {};
         const myInventory = u.inventory || [];
@@ -22519,6 +22590,11 @@ async function pfHandleAvatarFile(input){
 
 <div class="set-hub-grid">
   <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);padding:4px 0 6px">Schnellzugriff</div>
+  <a href="/einstellungen/tasche" class="set-hub-card" style="background:linear-gradient(135deg,rgba(212,175,55,0.12),rgba(124,58,237,0.04));border-color:rgba(212,175,55,0.35)">
+    <div class="set-hub-icon" style="background:linear-gradient(135deg,#d4af37,#8a6f1f)"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#241710" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></div>
+    <div class="set-hub-content"><div class="set-hub-title">Meine Tasche 👜</div><div class="set-hub-sub">Rahmen · Titel · Karten-Themes tragen</div></div>
+    <div class="set-hub-arrow">›</div>
+  </a>
   <a href="/einstellungen/account" class="set-hub-card">
     <div class="set-hub-icon" style="background:linear-gradient(135deg,#4dabf7,#1971c2)"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="4.5"/><path d="M10.7 12.3 21 2"/><path d="m16 7 3 3"/></svg></div>
     <div class="set-hub-content"><div class="set-hub-title">Account</div><div class="set-hub-sub">Email · Passwort · Telefon</div></div>
@@ -22560,53 +22636,7 @@ async function pfHandleAvatarFile(input){
 <!-- Email / Passwort / App-Code → /einstellungen/account -->
 <!-- Pinned-Reel-Link → Hero-Edit-Sheet (pfPinnedLink) -->
 
-${(()=>{ const _myTitles = TITLE_ITEMS.filter(t=>myInventory.includes(t.id)); const _myThemes = CARD_THEME_ITEMS.filter(t=>myInventory.includes(t.id)); return (myInventory.length > 0 || _specialFrames.length > 0 || _myTitles.length > 0 || _myThemes.length > 0) ? `
-<div style="padding:var(--space-4);border-bottom:1px solid var(--border2)">
-  <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:var(--space-3);display:inline-flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>Meine Tasche</div>
-  ${_specialFrames.length > 0 ? `<div style="font-size:10px;font-weight:800;color:#ffd700;letter-spacing:.5px;margin-bottom:8px">✦ SPEZIAL-RAHMEN ${'—'} freigeschaltet durch deinen Rang</div>
-  <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px">
-    ${_specialFrames.map(item=>{
-        const isActive = myActiveRing === item.id;
-        return `<div style="background:linear-gradient(135deg,rgba(255,215,0,0.06),rgba(124,58,237,0.05));border:1px solid ${isActive?'rgba(255,215,0,.55)':'rgba(255,215,0,.22)'};border-radius:14px;padding:var(--space-3);display:flex;align-items:center;gap:var(--space-3)">
-      ${ringPreview(item, 50, item.emoji)}
-      <div style="flex:1;min-width:0">
-        <div style="font-size:var(--fs-sm);font-weight:700">${item.name} ${isActive?'<span style="font-size:10px;color:#ffd700;font-weight:700">● Aktiv</span>':''}</div>
-        <div style="font-size:11px;color:var(--muted)">${item.desc}</div>
-      </div>
-      <button onclick="setRing('${isActive?'':item.id}')" style="background:${isActive?'rgba(255,215,0,.18)':'var(--bg4)'};border:1px solid ${isActive?'rgba(255,215,0,.45)':'var(--border)'};color:${isActive?'#ffd700':'var(--text)'};border-radius:10px;padding:6px 12px;font-size:var(--fs-xs);font-weight:600;cursor:pointer;white-space:nowrap">${isActive?'Deaktivieren':'Aktivieren'}</button>
-    </div>`;
-    }).join('')}
-  </div>` : ''}
-  ${myInventory.length > 0 ? `<div style="display:flex;flex-direction:column;gap:10px">
-    ${RING_ITEMS.filter(r=>myInventory.includes(r.id)).map(item=>{
-        const isActive = myActiveRing === item.id;
-        return `<div style="background:var(--bg3);border:1px solid ${isActive?'rgba(167,139,250,.5)':'var(--border2)'};border-radius:14px;padding:var(--space-3);display:flex;align-items:center;gap:var(--space-3)">
-      ${(item.conic || item.img) ? ringPreview(item, 48, '') : `<div style="width:44px;height:44px;border-radius:50%;background:${item.gradient};flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:var(--fs-lg)">${item.emoji}</div>`}
-      <div style="flex:1">
-        <div style="font-size:var(--fs-sm);font-weight:700">${item.name} ${isActive?'<span style="font-size:10px;color:#a78bfa;font-weight:600">● Aktiv</span>':''}</div>
-        <div style="font-size:11px;color:var(--muted)">${item.desc}</div>
-      </div>
-      <button onclick="setRing('${isActive?'':item.id}')" style="background:${isActive?'rgba(167,139,250,.2)':'var(--bg4)'};border:1px solid ${isActive?'rgba(167,139,250,.4)':'var(--border)'};color:${isActive?'#a78bfa':'var(--text)'};border-radius:10px;padding:6px 12px;font-size:var(--fs-xs);font-weight:600;cursor:pointer">${isActive?'Deaktivieren':'Aktivieren'}</button>
-    </div>`;
-    }).join('')}
-  </div>` : ''}
-  ${(()=>{ const _isAdm = String(u.role||'').includes('Admin'); const _t = TITLE_ITEMS.filter(t=> myInventory.includes(t.id) || (t.special && _isAdm)); if(!_t.length) return ''; return '<div style="font-size:10px;font-weight:800;color:#a78bfa;letter-spacing:.5px;margin:14px 0 8px">🏷️ TITELSCHILDER</div><div style="display:flex;flex-direction:column;gap:10px">' + _t.map(function(t){
-      const isA = (u.activeTitle === t.id);
-      return '<div style="background:var(--bg3);border:1px solid '+(isA?'rgba(167,139,250,.5)':'var(--border2)')+';border-radius:14px;padding:var(--space-3);display:flex;align-items:center;gap:var(--space-3)">'
-        + '<span style="flex-shrink:0">'+titlePlateHtml(t,'tasche')+'</span>'
-        + '<div style="flex:1;min-width:0"><div style="font-size:var(--fs-sm);font-weight:700">'+t.label+(isA?' <span style="font-size:10px;color:#a78bfa;font-weight:600">● Aktiv</span>':'')+'</div><div style="font-size:11px;color:var(--muted)">'+t.desc+'</div></div>'
-        + '<button onclick="setTitle(\''+(isA?'':t.id)+'\')" style="background:'+(isA?'rgba(167,139,250,.2)':'var(--bg4)')+';border:1px solid '+(isA?'rgba(167,139,250,.4)':'var(--border)')+';color:'+(isA?'#a78bfa':'var(--text)')+';border-radius:10px;padding:6px 12px;font-size:var(--fs-xs);font-weight:600;cursor:pointer;white-space:nowrap">'+(isA?'Deaktivieren':'Aktivieren')+'</button>'
-        + '</div>';
-    }).join('') + '</div>'; })()}
-  ${(()=>{ const _ct = CARD_THEME_ITEMS.filter(t=> myInventory.includes(t.id)); if(!_ct.length) return ''; return '<div style="font-size:10px;font-weight:800;color:#a78bfa;letter-spacing:.5px;margin:14px 0 8px">🃏 KARTEN-THEMES</div><div style="display:flex;flex-direction:column;gap:10px">' + _ct.map(function(t){
-      const isA = (u.activeCardTheme === t.id);
-      return '<div style="background:var(--bg3);border:1px solid '+(isA?'rgba(167,139,250,.5)':'var(--border2)')+';border-radius:14px;padding:var(--space-3);display:flex;align-items:center;gap:var(--space-3)">'
-        + '<span style="flex-shrink:0">'+cardThemePreview(t,64)+'</span>'
-        + '<div style="flex:1;min-width:0"><div style="font-size:var(--fs-sm);font-weight:700">'+t.emoji+' '+t.name+(isA?' <span style="font-size:10px;color:#a78bfa;font-weight:600">● Aktiv</span>':'')+'</div><div style="font-size:11px;color:var(--muted)">'+t.desc+'</div></div>'
-        + '<button onclick="setCardTheme(\''+(isA?'':t.id)+'\')" style="background:'+(isA?'rgba(167,139,250,.2)':'var(--bg4)')+';border:1px solid '+(isA?'rgba(167,139,250,.4)':'var(--border)')+';color:'+(isA?'#a78bfa':'var(--text)')+';border-radius:10px;padding:6px 12px;font-size:var(--fs-xs);font-weight:600;cursor:pointer;white-space:nowrap">'+(isA?'Deaktivieren':'Aktivieren')+'</button>'
-        + '</div>';
-    }).join('') + '</div>'; })()}
-</div>` : ''})()}
+<!-- Tasche ist jetzt eine eigene immersive Seite: /einstellungen/tasche (verlinkt als Hub-Card oben) -->
 <!-- Admin-Sections wurden nach /einstellungen/admin verschoben (siehe Admin-Card oben im Hub) -->
 <div style="padding:var(--space-4);border-bottom:1px solid var(--border2)">
   <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;display:inline-flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>App-Tour</div>
