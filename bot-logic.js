@@ -1340,7 +1340,7 @@ async function zeitCheck(nowArg) {
         // Einmaliger Backfill: heilt eingeladene Creator, die gepostet/engagiert haben, aber durch
         // das alte isFirstPostEver-7-Tage-Fenster nie firstPost/m1 bekamen → Einlader fehlte im Ranking.
         // checkReferralProgress ist idempotent + freigabe-gegated (vergibt nur für approved Referrals).
-        if (!d._refProgressBackfillV1) { d._refProgressBackfillV1 = true; try { let n = 0; for (const [iid, iu] of Object.entries(d.users || {})) { if (iu && iu.referredBy) { checkReferralProgress(String(iid)); n++; } } console.log('Referral-Progress Backfill V1: ' + n + ' Eingeladene neu geprüft.'); } catch (e) { console.log('Referral-Progress Backfill Fehler:', e.message); } }
+        if (!d._refProgressBackfillV2) { d._refProgressBackfillV2 = true; try { let n = 0; for (const [iid, iu] of Object.entries(d.users || {})) { if (!iu) continue; if (!iu.referredBy) { for (const [pid, pu] of Object.entries(d.users || {})) { if (pu && Array.isArray(pu.referrals) && pu.referrals.map(String).includes(String(iid))) { iu.referredBy = String(pid); break; } } } if (iu.referredBy) { checkReferralProgress(String(iid)); n++; } } console.log('Referral-Progress Backfill V2 (inkl. referredBy-Reparatur): ' + n + ' Eingeladene geprüft.'); } catch (e) { console.log('Referral-Progress Backfill V2 Fehler:', e.message); } }
         eventAutoTick();
         linkCleanup();
         for (const key of Object.keys(d._lastEvents)) { if (!key.endsWith(tagStr)) delete d._lastEvents[key]; }
@@ -4476,6 +4476,35 @@ function rejectReferral(inviteeUid) {
     if (invitee) { invitee.refRejected = true; } // blockt künftige Belohnungen (grant prüft das)
     return { ok: true };
 }
+// Admin-Override: einen Eingeladenen sofort als „aktiv" zählen (firstPost vergeben), auch wenn der
+// automatische Pfad nicht griff (Live-Link weg, referredBy-Verknüpfung inkonsistent, Post vor Freigabe).
+// Repariert referredBy aus den referrals-Arrays, setzt die Prüfung auf approved, vergibt die Meilensteine.
+function referralForceActiveApi({ inviteeUid }) {
+    inviteeUid = String(inviteeUid || '');
+    const invitee = d.users[inviteeUid];
+    if (!invitee) return { ok: false, error: 'User nicht gefunden' };
+    // 1) referredBy reparieren, falls inkonsistent (in einem referrals-Array, aber referredBy fehlt).
+    if (!invitee.referredBy) {
+        for (const [uid, u] of Object.entries(d.users || {})) {
+            if (u && Array.isArray(u.referrals) && u.referrals.map(String).includes(inviteeUid)) { invitee.referredBy = String(uid); break; }
+        }
+    }
+    if (!invitee.referredBy) return { ok: false, error: 'Nicht mit einem Einlader verknüpft' };
+    const inviter = d.users[String(invitee.referredBy)];
+    if (!inviter) return { ok: false, error: 'Einlader nicht gefunden' };
+    if (!Array.isArray(inviter.referrals)) inviter.referrals = [];
+    if (!inviter.referrals.includes(inviteeUid)) inviter.referrals.push(inviteeUid);
+    // 2) Prüfung auf approved setzen (Admin-Override) + Ablehnung aufheben.
+    invitee.refRejected = false;
+    if (!d.referralPending) d.referralPending = {};
+    const p = d.referralPending[inviteeUid] || (d.referralPending[inviteeUid] = { inviterUid: String(invitee.referredBy), instagram: invitee.instagram || '', inviteeName: invitee.spitzname || invitee.name || 'User', createdAt: Date.now() });
+    p.status = 'approved'; p.decidedAt = Date.now();
+    // 3) Meilensteine vergeben: signup (falls offen) + firstPost (macht aktiv) + restliche Fortschritte.
+    grantReferralMilestone(inviteeUid, 'signup');
+    grantReferralMilestone(inviteeUid, 'firstPost');
+    try { checkReferralProgress(inviteeUid); } catch (e) {}
+    return { ok: true, active: _referralInviteeIsActive(invitee), inviterUid: String(invitee.referredBy) };
+}
 // Liste offener Prüfungen fürs Admin-Dashboard.
 function referralPendingListApi() {
     const out = [];
@@ -4648,7 +4677,7 @@ module.exports = {
     REFERRAL_MILESTONES,
     ensureReferralCode, linkReferral, grantReferralMilestone, checkReferralProgress,
     touchReferralActiveDay, referralStatsApi, communityBuilderBadge, communityBuilderRanking, payCommunityBuilderDaily, clawbackReferral, builderBadgeFor,
-    requestReferralVerification, approveReferral, rejectReferral, referralPendingListApi, referralOverviewApi,
+    requestReferralVerification, approveReferral, rejectReferral, referralForceActiveApi, referralPendingListApi, referralOverviewApi,
     touchStreakApi, getStreakApi,
     updateProfileApi, addProjectApi, updateProjectApi, deleteProjectApi, completeProfileApi, engagePinnedPostApi,
     followApi,

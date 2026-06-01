@@ -11157,6 +11157,15 @@ p{line-height:1.65;color:var(--muted)}
         const r = await localWrite(() => _approve ? botLogic.approveReferral(_iid) : botLogic.rejectReferral(_iid));
         return json(r || {ok:false});
     }
+    if (path === '/api/admin/referral-force-active' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
+        if (!LOCAL_STORE) return json({ok:false, error:'Nicht verfügbar'});
+        const body = await parseBody(req);
+        const _iid = String(body.inviteeUid || '');
+        const r = await localWrite(() => botLogic.referralForceActiveApi({ inviteeUid: _iid }));
+        return json(r || {ok:false});
+    }
     if (path === '/api/admin/ban' && req.method === 'POST') {
         if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
         if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
@@ -17847,12 +17856,23 @@ async function loadReferralOverview(){
           + '<span style="width:7px;height:7px;border-radius:99px;flex:0 0 auto;background:'+(v.active?'#22c55e':'#555')+'" title="'+(v.active?'aktiv':'noch nicht aktiv')+'"></span>'
           + '<span style="font-size:12.5px;font-weight:700;color:'+(v.banned?'#ef4444':'var(--text)')+'">'+(v.name||'User')+(v.banned?' 🚫':'')+'</span>'
           + '<span style="font-size:11.5px">'+igLink(v.instagram)+'</span>'
-          + '<span style="margin-left:auto;display:flex;align-items:center;gap:6px">'+statusChip(v.status)+'</span>'
+          + '<span style="margin-left:auto;display:flex;align-items:center;gap:6px">'+statusChip(v.status)
+          + (v.active?'':'<button onclick="referralForceActive(\\''+v.uid+'\\',this)" style="font-size:10px;font-weight:800;color:#fff;background:#22c55e;border:none;padding:4px 9px;border-radius:99px;cursor:pointer;white-space:nowrap">✓ aktiv setzen</button>')
+          + '</span>'
           + '</div>';
       }).join('');
       return '<details style="background:var(--dink);border:1px solid var(--dline);border-radius:12px;overflow:hidden">'+head+rows+'</details>';
     }).join('');
   }catch(e){ box.innerHTML = '<div style="padding:18px;text-align:center;color:var(--dsub);font-size:12.5px">Fehler beim Laden</div>'; }
+}
+async function referralForceActive(uid, btn){
+  if(btn){ btn.disabled=true; btn.textContent='⏳'; }
+  try{
+    const r = await fetch('/api/admin/referral-force-active',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({inviteeUid:uid})});
+    const j = await r.json();
+    if(j.ok){ loadReferralOverview(); if(typeof loadReferralPending==='function') loadReferralPending(); }
+    else { alert('❌ '+(j.error||'Fehler')); if(btn){btn.disabled=false;btn.textContent='✓ aktiv setzen';} }
+  }catch(e){ alert('❌ '+e.message); if(btn){btn.disabled=false;btn.textContent='✓ aktiv setzen';} }
 }
 async function refreshUsers() {
   const errBox = document.getElementById('dash-err') || (function(){
