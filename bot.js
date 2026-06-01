@@ -922,7 +922,7 @@ function getRingBoxShadow(userData) {
 // Vorschau-Ring für Shop/Tasche: Basis-Ring + Deko um einen dunklen Avatar-Kern (size px, inner=Inhalt).
 function ringPreview(item, size, inner) {
     const fs = Math.round(size * 0.34);
-    const inner2 = Math.round(size * 0.74);
+    const inner2 = Math.round(size * 0.88); // Avatar-Kern füllt das Ring-Loch (~92%) → kein Spalt
     if (item.conic) {
         return '<div class="cb-ring-wrap" style="position:relative;width:' + size + 'px;height:' + size + 'px;flex-shrink:0;border-radius:50%;display:flex;align-items:center;justify-content:center">'
             + ringConicHtml(item, false)
@@ -3012,58 +3012,29 @@ ${session ? `
 @keyframes wipe-in{from{opacity:0}to{opacity:1}}
 @keyframes spin{to{transform:rotate(360deg)}}
 /* ═══ RING-SYSTEM: BASIS + DEKORATION (reines CSS, kein PNG) ═══
-   BASIS (.cb-ring-base): rotierendes conic-Farbband als Ring via mask-Ausschnitt — sitzt IMMER perfekt rund.
-   DEKORATION (.cb-ring-deco + .cb-deco-*): Glanz/Edelsteine/Funkeln als Layer drauf. Container=position:relative. */
-.cb-ring-base{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:124%;height:124%;border-radius:50%;
-  -webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 13%),#000 calc(100% - 13%));
-  mask:radial-gradient(farthest-side,transparent calc(100% - 13%),#000 calc(100% - 13%));
-  animation:cbRingSpin 6s linear infinite;pointer-events:none;z-index:5;filter:saturate(1.25)}
+   Loch = 92% des Containers (Ring sitzt eng am Foto, KEIN Spalt). Alle 3 Layer 116% + gleiche Maske. */
+.cb-ring-base,.cb-ring-deco{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:116%;height:116%;border-radius:50%;pointer-events:none;
+  -webkit-mask:radial-gradient(farthest-side,transparent 79%,#000 80%);mask:radial-gradient(farthest-side,transparent 79%,#000 80%)}
+.cb-ring-base{z-index:5;animation:cbRingSpin 6s linear infinite;filter:saturate(1.3) brightness(1.05)}
 @keyframes cbRingSpin{to{transform:translate(-50%,-50%) rotate(360deg)}}
-.cb-ring-deco{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:124%;height:124%;border-radius:50%;pointer-events:none;z-index:6}
-/* Glanz-Sweep (rotiert gegenläufig = lebendiger Metallglanz) — Basis aller Deko-Stile */
+.cb-ring-deco{z-index:6}
+/* Facetten (Edelstein-Schliff) — IMMER sichtbar: helle Keile als repeating-conic direkt aufs Band */
 .cb-ring-deco::before{content:"";position:absolute;inset:0;border-radius:50%;
-  -webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 13%),#000 calc(100% - 13%));
-  mask:radial-gradient(farthest-side,transparent calc(100% - 13%),#000 calc(100% - 13%));
-  background:conic-gradient(from 0deg,transparent 0deg,rgba(255,255,255,.85) 18deg,transparent 52deg,transparent 360deg);
-  animation:cbRingSheen 3.2s linear infinite;mix-blend-mode:screen;opacity:.9}
-@keyframes cbRingSheen{to{transform:rotate(-360deg)}}
-/* Funkel-Punkte (Edelsteine/Sterne) auf dem Ring — als radiale Highlights, langsames Pulsieren */
-.cb-ring-deco::after{content:"";position:absolute;inset:-2%;border-radius:50%;
-  background:
-    radial-gradient(circle at 50% 4%, #fff 0, rgba(255,255,255,.0) 7%),
-    radial-gradient(circle at 96% 50%, #fff 0, rgba(255,255,255,.0) 7%),
-    radial-gradient(circle at 50% 96%, #fff 0, rgba(255,255,255,.0) 7%),
-    radial-gradient(circle at 4% 50%, #fff 0, rgba(255,255,255,.0) 7%);
-  animation:cbRingTwinkle 1.8s ease-in-out infinite;pointer-events:none}
-@keyframes cbRingTwinkle{0%,100%{opacity:.35;transform:scale(.96)}50%{opacity:1;transform:scale(1.02)}}
-/* Deko-Varianten: Anzahl/Stil der Funkel-Edelsteine + Glanz-Charakter */
-.cb-deco-gems::after{background:
-    radial-gradient(circle at 50% 3%, #fff8d0 0,rgba(255,248,208,0) 8%),
-    radial-gradient(circle at 97% 50%, #fff8d0 0,rgba(255,248,208,0) 8%),
-    radial-gradient(circle at 50% 97%, #fff8d0 0,rgba(255,248,208,0) 8%),
-    radial-gradient(circle at 3% 50%, #fff8d0 0,rgba(255,248,208,0) 8%)}
-.cb-deco-sparkle::after{background:
-    radial-gradient(circle at 50% 2%, #fff 0,rgba(255,255,255,0) 6%),
-    radial-gradient(circle at 85% 15%, #fff 0,rgba(255,255,255,0) 5%),
-    radial-gradient(circle at 98% 50%, #fff 0,rgba(255,255,255,0) 6%),
-    radial-gradient(circle at 85% 85%, #fff 0,rgba(255,255,255,0) 5%),
-    radial-gradient(circle at 50% 98%, #fff 0,rgba(255,255,255,0) 6%),
-    radial-gradient(circle at 15% 85%, #fff 0,rgba(255,255,255,0) 5%),
-    radial-gradient(circle at 2% 50%, #fff 0,rgba(255,255,255,0) 6%),
-    radial-gradient(circle at 15% 15%, #fff 0,rgba(255,255,255,0) 5%)}
-.cb-deco-frost::after{background:
-    radial-gradient(circle at 50% 4%, #fff 0,rgba(255,255,255,0) 9%),
-    radial-gradient(circle at 96% 50%, #e0f2ff 0,rgba(224,242,255,0) 9%),
-    radial-gradient(circle at 50% 96%, #fff 0,rgba(255,255,255,0) 9%),
-    radial-gradient(circle at 4% 50%, #e0f2ff 0,rgba(224,242,255,0) 9%)}
-.cb-deco-bubbles::after{background:
-    radial-gradient(circle at 50% 5%, rgba(255,255,255,.9) 0,rgba(255,255,255,0) 6%),
-    radial-gradient(circle at 88% 30%, rgba(255,255,255,.7) 0,rgba(255,255,255,0) 5%),
-    radial-gradient(circle at 95% 65%, rgba(255,255,255,.9) 0,rgba(255,255,255,0) 6%),
-    radial-gradient(circle at 65% 92%, rgba(255,255,255,.7) 0,rgba(255,255,255,0) 5%),
-    radial-gradient(circle at 30% 95%, rgba(255,255,255,.9) 0,rgba(255,255,255,0) 5%),
-    radial-gradient(circle at 8% 60%, rgba(255,255,255,.7) 0,rgba(255,255,255,0) 6%)}
-.cb-deco-flames::before{animation-duration:1.4s;opacity:1;background:conic-gradient(from 0deg,transparent 0deg,rgba(255,230,120,.95) 14deg,rgba(255,90,0,.5) 40deg,transparent 70deg,transparent 360deg)}
+  -webkit-mask:radial-gradient(farthest-side,transparent 79%,#000 80%);mask:radial-gradient(farthest-side,transparent 79%,#000 80%);
+  background:repeating-conic-gradient(from 0deg,rgba(255,255,255,0) 0deg,rgba(255,255,255,.55) 5deg,rgba(255,255,255,0) 11deg,rgba(0,0,0,.18) 16deg,rgba(255,255,255,0) 22deg);
+  animation:cbRingSpin2 9s linear infinite reverse;mix-blend-mode:overlay}
+@keyframes cbRingSpin2{to{transform:rotate(360deg)}}
+/* Glanz-Sweep — heller Lichtreflex der einmal pro Runde durchwandert */
+.cb-ring-deco::after{content:"";position:absolute;inset:0;border-radius:50%;
+  -webkit-mask:radial-gradient(farthest-side,transparent 79%,#000 80%);mask:radial-gradient(farthest-side,transparent 79%,#000 80%);
+  background:conic-gradient(from 0deg,transparent 0deg,rgba(255,255,255,.95) 16deg,rgba(255,255,255,.2) 38deg,transparent 60deg,transparent 360deg);
+  animation:cbRingSheen 2.6s linear infinite;mix-blend-mode:screen}
+@keyframes cbRingSheen{to{transform:rotate(360deg)}}
+/* Stil-Varianten: Facetten-Charakter je Deko-Typ */
+.cb-deco-flames::before{background:repeating-conic-gradient(from 0deg,rgba(255,80,0,0) 0deg,rgba(255,220,90,.85) 4deg,rgba(255,120,0,.4) 9deg,rgba(255,80,0,0) 15deg);animation-duration:2s;mix-blend-mode:screen}
+.cb-deco-frost::before{background:repeating-conic-gradient(from 0deg,rgba(255,255,255,0) 0deg,rgba(255,255,255,.8) 4deg,rgba(200,235,255,.3) 9deg,rgba(255,255,255,0) 15deg)}
+.cb-deco-sparkle::before{background:repeating-conic-gradient(from 0deg,rgba(255,255,255,0) 0deg,rgba(255,255,255,.75) 3deg,rgba(255,255,255,0) 8deg);animation-duration:7s}
+.cb-deco-bubbles::before{background:repeating-conic-gradient(from 0deg,rgba(255,255,255,0) 0deg,rgba(255,255,255,.7) 6deg,rgba(255,255,255,0) 14deg)}
 @media (prefers-reduced-motion:reduce){.cb-ring-base,.cb-ring-deco::before,.cb-ring-deco::after{animation:none}}
 /* Avatar mit aktivem Ring: Ring darf nach außen ragen, weißen Avatar-Rand entfernen (Ring ersetzt ihn) */
 .ipf-avatar-wrap.has-ring{overflow:visible}
@@ -5364,7 +5335,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v282-ring-deco';
+const SW_VERSION='v283-ring-fit2';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
