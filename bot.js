@@ -851,13 +851,13 @@ const RING_ITEMS = [
     { id: 'ring_diamond', name: 'Diamond Ring', emoji: '💎', price: 20, shadow: '0 0 0 3px #b9f2ff, 0 0 0 6px #a78bfa',   gradient: 'linear-gradient(135deg,#a78bfa,#b9f2ff,#ffffff)', desc: 'Funkelnder Diamantglanz' },
     // ── Premium-„50 Diamanten Rahmen" — CSS-Ringe: Basis (rotierendes conic-Farbband) + Dekoration (deco-Typ).
     //    conic = Basis-Farben · deco = Stil (flames/gems/frost/sparkle/bubbles) · glow = Außen-Schein. ──
-    { id: 'pframe_fire',    name: 'Flammen-Ring',  emoji: '🔥', price: 50, premium: true, conic: '#7a1500,#ff2200,#ff9a3c,#ffd166,#ff6b00,#ff2200,#7a1500', deco:'flames',  glow:'rgba(255,90,0,.7)',    desc: 'Lodernder Feuerkranz' },
-    { id: 'pframe_gold',    name: 'Gold-Ring',     emoji: '👑', price: 50, premium: true, conic: '#6b4e07,#b8860b,#ffd700,#fff7cc,#ffd700,#b8860b,#6b4e07', deco:'gems',    glow:'rgba(255,215,0,.65)',  desc: 'Goldener Prachtkranz' },
-    { id: 'pframe_ice',     name: 'Eis-Ring',      emoji: '🧊', price: 50, premium: true, conic: '#1e4e8c,#3b82f6,#7dd3fc,#ffffff,#bae6fd,#3b82f6,#1e4e8c', deco:'frost',   glow:'rgba(125,211,252,.7)', desc: 'Eiskristall-Schimmer' },
-    { id: 'pframe_crystal', name: 'Kristall-Ring', emoji: '🔷', price: 50, premium: true, conic: '#1e3a8a,#2a7fff,#7c3aed,#e040fb,#5ec8ff,#2a7fff,#1e3a8a', deco:'sparkle', glow:'rgba(168,85,247,.7)',  desc: 'Funkelnder Kristall' },
-    { id: 'pframe_bubble',  name: 'Perlen-Ring',   emoji: '🫧', price: 50, premium: true, conic: '#7b5cc9,#b794f6,#7fdbff,#fbe9ff,#f48fff,#b794f6,#7b5cc9', deco:'bubbles', glow:'rgba(180,148,246,.65)',desc: 'Schillernde Perlen' },
+    { id: 'pframe_fire',    name: 'Flammen-Ring',  emoji: '🔥', price: 50, premium: true, conic: '#7a1500,#ff2200,#ff9a3c,#ffd166,#ff6b00,#ff2200,#7a1500', deco:'flames',  glow:'rgba(255,90,0,.7)',    gem:'radial-gradient(circle at 35% 30%,#fff,#ffd166 35%,#ff5a00 75%)',    desc: 'Lodernder Feuerkranz' },
+    { id: 'pframe_gold',    name: 'Gold-Ring',     emoji: '👑', price: 50, premium: true, conic: '#6b4e07,#b8860b,#ffd700,#fff7cc,#ffd700,#b8860b,#6b4e07', deco:'gems',    glow:'rgba(255,215,0,.65)',  gem:'radial-gradient(circle at 35% 30%,#fff,#ffe680 35%,#b8860b 78%)',  desc: 'Goldener Prachtkranz' },
+    { id: 'pframe_ice',     name: 'Eis-Ring',      emoji: '🧊', price: 50, premium: true, conic: '#1e4e8c,#3b82f6,#7dd3fc,#ffffff,#bae6fd,#3b82f6,#1e4e8c', deco:'frost',   glow:'rgba(125,211,252,.7)', gem:'radial-gradient(circle at 35% 30%,#fff,#bae6fd 40%,#3b82f6 80%)', desc: 'Eiskristall-Schimmer' },
+    { id: 'pframe_crystal', name: 'Kristall-Ring', emoji: '🔷', price: 50, premium: true, conic: '#1e3a8a,#2a7fff,#7c3aed,#e040fb,#5ec8ff,#2a7fff,#1e3a8a', deco:'sparkle', glow:'rgba(168,85,247,.7)',  gem:'radial-gradient(circle at 35% 30%,#fff,#d8b4fe 38%,#7c3aed 80%)',  desc: 'Funkelnder Kristall' },
+    { id: 'pframe_bubble',  name: 'Perlen-Ring',   emoji: '🫧', price: 50, premium: true, conic: '#7b5cc9,#b794f6,#7fdbff,#fbe9ff,#f48fff,#b794f6,#7b5cc9', deco:'bubbles', glow:'rgba(180,148,246,.65)',gem:'radial-gradient(circle at 35% 30%,#fff,#f0d9ff 40%,#b794f6 82%)',desc: 'Schillernde Perlen' },
     // ── Spezial-Rahmen — NICHT kaufbar (special:true → nicht im Shop). Verdient/rollenbasiert. ──
-    { id: 'frame_admin',     name: 'Admin Rahmen',         emoji: '🛡️', special: true, admin: true, conic: '#0a1a3f,#1e3a8a,#ffd700,#38bdf8,#ffd700,#1e3a8a,#0a1a3f', deco:'gems', glow:'rgba(56,189,248,.7)', desc: 'Exklusiver Admin-Rahmen (Gold & Blau)' },
+    { id: 'frame_admin',     name: 'Admin Rahmen',         emoji: '🛡️', special: true, admin: true, conic: '#0a1a3f,#1e3a8a,#ffd700,#38bdf8,#ffd700,#1e3a8a,#0a1a3f', deco:'gems', glow:'rgba(56,189,248,.7)', gem:'radial-gradient(circle at 35% 30%,#fff,#7dd3fc 35%,#1e3a8a 82%)', desc: 'Exklusiver Admin-Rahmen (Gold & Blau)' },
     { id: 'frame_builder_1', name: 'Builder I Rahmen',     emoji: '🌱', special: true, tier: 1, conic: '#059669,#6ee7b7,#34d399,#10b981,#059669',     desc: 'Community Builder I — Rang-Rahmen' },
     { id: 'frame_builder_2', name: 'Builder II Rahmen',    emoji: '🤝', special: true, tier: 2, conic: '#d97706,#fcd34d,#fbbf24,#f59e0b,#d97706',     desc: 'Community Builder II — Rang-Rahmen' },
     { id: 'frame_builder_3', name: 'Builder III Rahmen',   emoji: '🏗️', special: true, tier: 3, conic: '#0891b2,#67e8f9,#22d3ee,#06b6d4,#0891b2',     desc: 'Community Builder III — Rang-Rahmen' },
@@ -898,13 +898,23 @@ function ringFrameExists(id) {
 // Ring über einem Avatar = BASIS (rotierendes conic-Farbband als Ring) + DEKORATION (deco-Layer drauf).
 // Reines CSS — sitzt IMMER perfekt rund ums volle Profilbild, kein PNG/Cache/Position-Problem.
 // Container muss position:relative sein; Profilbild bleibt voll & unverdeckt.
-// Professioneller CSS-Ring: dickes metallisches Farbband (3D-Bevel) + Schliff-Facetten + Glanz-Sweep + Außen-Glow.
-// Kein Emoji — edler Edelstein-/Metall-Look wie die Diamant-/Prisma-Karten.
+// Professioneller CSS-Ring: STILLES metallisches Farbband (3D-Bevel) + gezeichnete Edelsteine rundherum + Glanz.
+// Kein Emoji, keine Rotation — edler Edelstein-/Metall-Look wie die Diamant-/Prisma-Karten.
+// 12 CSS-Gems (Rauten via clip-path) sitzen außen auf dem Band, in der Themenfarbe, funkeln dezent.
+function ringGems(item) {
+    if (!item || !item.gem) return '';
+    const N = 12;
+    let s = '<div class="cb-ring-gems">';
+    for (let i = 0; i < N; i++) {
+        s += '<span class="cb-gem" style="transform:rotate(' + (360 / N * i) + 'deg)"><span class="cb-gem-d" style="background:' + item.gem + ';animation-delay:' + (i * 0.13).toFixed(2) + 's"></span></span>';
+    }
+    return s + '</div>';
+}
 function ringConicHtml(item, withGlow) {
     if (!item || !item.conic) return '';
     const glow = withGlow && item.glow ? ';box-shadow:0 0 14px 2px ' + item.glow + ',0 0 4px 1px ' + item.glow : '';
     const deco = item.deco ? '<div class="cb-ring-deco cb-deco-' + item.deco + '"></div>' : '';
-    return '<div class="cb-ring-base" style="background:conic-gradient(from 0deg,' + item.conic + ')' + glow + '"></div>' + deco;
+    return '<div class="cb-ring-base" style="background:conic-gradient(from 0deg,' + item.conic + ')' + glow + '"></div>' + deco + ringGems(item);
 }
 function ringFrameOverlay(userData, ownerUid) {
     if (!_ringsVisibleFor(ownerUid != null ? ownerUid : userData?.id)) return '';
@@ -3018,28 +3028,31 @@ ${session ? `
    Loch = 100% des Containers → Ring liegt eng als Rahmen ums volle Profilbild. Alle Layer 132% + gleiche Maske. */
 .cb-ring-base,.cb-ring-deco{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:132%;height:132%;border-radius:50%;pointer-events:none;
   -webkit-mask:radial-gradient(farthest-side,#0000 calc(76% - 0.5px),#000 76%);mask:radial-gradient(farthest-side,#0000 calc(76% - 0.5px),#000 76%)}
-/* BASIS: rotierendes Farbband + 3D-Bevel (innen heller Rand, außen dunkler) für metallische Tiefe */
-.cb-ring-base{z-index:5;animation:cbRingSpin 7s linear infinite;filter:saturate(1.35) brightness(1.06);
+/* BASIS: STILLES Farbband (KEINE Rotation) + 3D-Bevel (innen hell, außen dunkel) für metallische Tiefe */
+.cb-ring-base{z-index:5;filter:saturate(1.35) brightness(1.06);
   box-shadow:inset 0 0 6px rgba(255,255,255,.55),inset 0 0 14px rgba(0,0,0,.35)}
-@keyframes cbRingSpin{to{transform:translate(-50%,-50%) rotate(360deg)}}
 .cb-ring-deco{z-index:6}
-/* SCHLIFF-FACETTEN: feine helle/dunkle Keile = facettierter Edelstein-/Metall-Look (gegenläufig, subtil) */
+/* SCHLIFF-FACETTEN: feine helle/dunkle Keile = facettierter Edelstein-/Metall-Look (STILL, kein Spin) */
 .cb-ring-deco::before{content:"";position:absolute;inset:0;border-radius:50%;
   -webkit-mask:radial-gradient(farthest-side,#0000 calc(76% - 0.5px),#000 76%);mask:radial-gradient(farthest-side,#0000 calc(76% - 0.5px),#000 76%);
   background:repeating-conic-gradient(from 0deg,rgba(255,255,255,0) 0deg,rgba(255,255,255,.45) 3deg,rgba(255,255,255,0) 7deg,rgba(0,0,0,.22) 11deg,rgba(255,255,255,0) 15deg);
-  animation:cbRingSpin2 14s linear infinite reverse;mix-blend-mode:soft-light;opacity:.9}
-@keyframes cbRingSpin2{to{transform:rotate(360deg)}}
-/* GLANZ-SWEEP: ein heller Lichtreflex wandert einmal pro Runde übers Band (edler Metallglanz) */
+  mix-blend-mode:soft-light;opacity:.9}
+/* GLANZ-SWEEP: einziger bewegter Layer — ein Lichtreflex wandert sanft übers Band (edler Metallglanz) */
 .cb-ring-deco::after{content:"";position:absolute;inset:0;border-radius:50%;
   -webkit-mask:radial-gradient(farthest-side,#0000 calc(76% - 0.5px),#000 76%);mask:radial-gradient(farthest-side,#0000 calc(76% - 0.5px),#000 76%);
   background:conic-gradient(from 0deg,transparent 0deg,rgba(255,255,255,.9) 14deg,rgba(255,255,255,.15) 34deg,transparent 56deg,transparent 360deg);
-  animation:cbRingSheen 3s linear infinite;mix-blend-mode:screen}
+  animation:cbRingSheen 3.5s linear infinite;mix-blend-mode:screen}
 @keyframes cbRingSheen{to{transform:rotate(360deg)}}
-/* Stil-Akzente je Thema (Facetten-Charakter) */
-.cb-deco-flames::before{animation-duration:2.4s;background:repeating-conic-gradient(from 0deg,rgba(255,90,0,0) 0deg,rgba(255,225,110,.7) 3deg,rgba(255,120,0,.35) 8deg,rgba(255,90,0,0) 13deg);mix-blend-mode:screen}
+/* DEKO-EDELSTEINE: 12 gezeichnete Rauten (clip-path) außen auf dem Band, in Themenfarbe, dezentes Funkeln. */
+.cb-ring-gems{position:absolute;left:50%;top:50%;width:132%;height:132%;transform:translate(-50%,-50%);pointer-events:none;z-index:7}
+.cb-gem{position:absolute;left:50%;top:50%;width:0;height:50%;transform-origin:top center}
+.cb-gem-d{position:absolute;left:50%;bottom:-4px;width:11px;height:14px;transform:translateX(-50%);
+  clip-path:polygon(50% 0,100% 38%,50% 100%,0 38%);
+  box-shadow:0 0 4px rgba(255,255,255,.7);animation:cbGemTwinkle 1.8s ease-in-out infinite;animation-delay:inherit}
+@keyframes cbGemTwinkle{0%,100%{opacity:.8;filter:brightness(.95)}50%{opacity:1;filter:brightness(1.4)}}
+.cb-deco-flames::before{background:repeating-conic-gradient(from 0deg,rgba(255,90,0,0) 0deg,rgba(255,225,110,.6) 3deg,rgba(255,120,0,.3) 8deg,rgba(255,90,0,0) 13deg);mix-blend-mode:screen}
 .cb-deco-frost::before{background:repeating-conic-gradient(from 0deg,rgba(255,255,255,0) 0deg,rgba(255,255,255,.7) 3deg,rgba(200,235,255,.3) 8deg,rgba(255,255,255,0) 13deg);mix-blend-mode:screen}
-.cb-deco-sparkle::before{animation-duration:11s;background:repeating-conic-gradient(from 0deg,rgba(255,255,255,0) 0deg,rgba(255,255,255,.65) 2deg,rgba(255,255,255,0) 6deg)}
-@media (prefers-reduced-motion:reduce){.cb-ring-base,.cb-ring-deco::before,.cb-ring-deco::after{animation:none}}
+@media (prefers-reduced-motion:reduce){.cb-ring-deco::after,.cb-gem-d{animation:none}}
 /* Avatar mit aktivem Ring: Ring darf nach außen ragen, weißen Avatar-Rand entfernen (Ring ersetzt ihn) */
 .ipf-avatar-wrap.has-ring{overflow:visible}
 .ipf-avatar-wrap.has-ring .ipf-avatar{border-color:transparent!important;box-shadow:none!important}
@@ -5339,7 +5352,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v286-premium-ring';
+const SW_VERSION='v287-gems-still';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
