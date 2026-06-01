@@ -949,7 +949,9 @@ function titlePlateHtml(titleId, size) {
 function titleBannerHtml(titleId) {
     const t = TITLE_ITEMS.find(x => x.id === titleId);
     if (!t) return '';
-    return '<div style="margin:8px 0 2px">' + titlePlateHtml(t, 'banner') + '</div>';
+    // Krone/Schild-Emblem ragt ~19px über die Plakette → mehr Abstand nach oben, damit es den Handle drüber nicht überdeckt.
+    const mt = (t.emblem || t.crown) ? 24 : 8;
+    return '<div style="margin:' + mt + 'px 0 2px">' + titlePlateHtml(t, 'banner') + '</div>';
 }
 // Kompaktes Titelschild für Reihen (z.B. Feed-Link neben "Öffnen").
 function titlePlateInlineHtml(titleId) {
@@ -5566,7 +5568,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v312-premiumrings';
+const SW_VERSION='v313-titlespacing';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
