@@ -1309,9 +1309,11 @@ async function zeitCheck(nowArg) {
         if (jetzt.getDate() === 1 && h === 0 && m < 10 && taeglich('legendenBonus')) legendenBonus();
         if (h === 12 && m < 5 && taeglich('missionen')) await missionenAuswerten();
         if (h === 23 && m >= 55 && taeglich('dailyRanking')) await dailyRankingAbschluss();
-        // Einmaliger Backfill: Wochen-Superlink-Mission +500 XP für bereits Berechtigte DIESER Woche
-        // (Bug-Nachzahlung — die Belohnung war nie verdrahtet). Läuft genau einmal, danach Sonntags-Auswertung.
-        if (!d._slMissionBackfillV1) { d._slMissionBackfillV1 = true; try { const r = grantWeeklySuperlinkMission(); console.log('Superlink-Mission Backfill: +500 XP an', r.granted, 'User'); } catch (e) { console.log('Superlink-Mission Backfill Fehler:', e.message); } }
+        // Einmaliger Backfill (Bug-Nachzahlung — die +500-XP-Belohnung war nie verdrahtet): zahlt die
+        // Wochen-Superlink-Mission rückwirkend für die VORWOCHE (gestern Sonntag ausgewertet) UND diese Woche
+        // an bereits Berechtigte. Superlinks werden beim Montag-Reset nicht gelöscht → Vorwoche noch auszahlbar.
+        // Läuft genau einmal (idempotent über das granted-Flag), danach übernimmt die Sonntags-Auswertung.
+        if (!d._slMissionBackfillV2) { d._slMissionBackfillV2 = true; try { const prev = grantWeeklySuperlinkMission(getPrevBerlinWeekKey()); const cur = grantWeeklySuperlinkMission(); console.log('Superlink-Mission Backfill V2: Vorwoche +500 XP an', prev.granted, '· diese Woche an', cur.granted, 'User'); } catch (e) { console.log('Superlink-Mission Backfill Fehler:', e.message); } }
         eventAutoTick();
         linkCleanup();
         for (const key of Object.keys(d._lastEvents)) { if (!key.endsWith(tagStr)) delete d._lastEvents[key]; }
@@ -2610,6 +2612,14 @@ function getBerlinWeekKey() {
     const day = now.getDay() || 7;
     const monday = new Date(now);
     monday.setDate(now.getDate() - (day - 1));
+    return monday.getFullYear() + '-' + String(monday.getMonth() + 1).padStart(2, '0') + '-' + String(monday.getDate()).padStart(2, '0');
+}
+// Wochen-Key der Vorwoche (Montag dieser Woche minus 7 Tage) — für die Backfill-Nachzahlung.
+function getPrevBerlinWeekKey() {
+    const now = new Date();
+    const day = now.getDay() || 7;
+    const monday = new Date(now);
+    monday.setDate(now.getDate() - (day - 1) - 7);
     return monday.getFullYear() + '-' + String(monday.getMonth() + 1).padStart(2, '0') + '-' + String(monday.getDate()).padStart(2, '0');
 }
 
