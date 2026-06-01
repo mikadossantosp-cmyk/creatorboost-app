@@ -864,6 +864,27 @@ const RING_ITEMS = [
     { id: 'frame_builder_3', name: 'Builder III Rahmen',   emoji: '🏗️', special: true, tier: 3, conic: '#0891b2,#67e8f9,#22d3ee,#06b6d4,#0891b2',     desc: 'Community Builder III — Rang-Rahmen' },
     { id: 'frame_builder_4', name: 'Builder Elite Rahmen', emoji: '🏛️', special: true, tier: 4, conic: '#7c3aed,#c4b5fd,#e9d5ff,#a855f7,#7c3aed',     desc: 'Community Builder Elite — Rang-Rahmen' },
 ];
+// ── Titelschilder (Banner unter dem Profil, mit gestyltem Titel-Text). id-Prefix: title_ ──
+// bg = Banner-Hintergrund (gradient), tcol = Text-Farbe/-Verlauf, glow = Außenschein.
+const TITLE_ITEMS = [
+    { id:'title_pro',     label:'PRO',        emoji:'⭐', price:30, bg:'linear-gradient(135deg,#334155,#0f172a)', tcol:'#e2e8f0', glow:'rgba(148,163,184,.5)', desc:'Schlichtes Pro-Schild' },
+    { id:'title_star',    label:'SUPERSTAR',  emoji:'🌟', price:30, bg:'linear-gradient(135deg,#7c3aed,#4c1d95)', tcol:'#fde68a', glow:'rgba(167,139,250,.6)', desc:'Glänzendes Star-Schild' },
+    { id:'title_vip',     label:'VIP',        emoji:'💎', price:40, bg:'linear-gradient(135deg,#0ea5e9,#075985)', tcol:'#ffffff', glow:'rgba(14,165,233,.6)', desc:'Edles VIP-Schild' },
+    { id:'title_feuer',   label:'FEUER',      emoji:'🔥', price:40, bg:'linear-gradient(135deg,#7a1500,#ff4500,#ffb347)', tcol:'#fff7d6', glow:'rgba(255,90,0,.7)', desc:'Loderndes Feuer-Schild' },
+    { id:'title_eis',     label:'EIS',        emoji:'❄️', price:40, bg:'linear-gradient(135deg,#1e4e8c,#3b82f6,#bae6fd)', tcol:'#ffffff', glow:'rgba(125,211,252,.7)', desc:'Frostiges Eis-Schild' },
+    { id:'title_legende', label:'LEGENDE',    emoji:'🏆', price:40, bg:'linear-gradient(135deg,#b8860b,#ffd700,#fff7cc)', tcol:'#5b3a00', glow:'rgba(255,215,0,.65)', desc:'Legendäres Gold-Schild' },
+    { id:'title_elite',   label:'ELITE',      emoji:'👑', price:50, bg:'linear-gradient(135deg,#1a1030,#7c3aed,#e040fb)', tcol:'#fde68a', glow:'rgba(224,64,251,.6)', desc:'Exklusives Elite-Schild' },
+    { id:'title_royal',   label:'ROYAL',      emoji:'👑', price:50, bg:'linear-gradient(135deg,#4c1d95,#b8860b,#ffd700)', tcol:'#ffffff', glow:'rgba(255,215,0,.6)', desc:'Königliches Royal-Schild' },
+];
+// Banner-HTML für ein Titelschild (unter dem Profil). Gibt '' wenn kein/ungültiger Titel.
+function titleBannerHtml(titleId) {
+    const t = TITLE_ITEMS.find(x => x.id === titleId);
+    if (!t) return '';
+    return '<div class="cb-titleplate" style="background:' + t.bg + ';box-shadow:0 2px 10px ' + t.glow + ',inset 0 1px 0 rgba(255,255,255,.25)">'
+        + '<span class="cb-titleplate-em">' + t.emoji + '</span>'
+        + '<span class="cb-titleplate-tx" style="color:' + t.tcol + '">' + t.label + '</span>'
+        + '</div>';
+}
 // PNG-Ringe (Premium-/Spezial-Rahmen): global an/aus. Auf false → für normale User ausgeblendet,
 // ABER Admins sehen/tragen sie immer (zum Testen, auch wenn noch nicht für alle freigegeben).
 const PNG_RINGS_ON = true;
@@ -4796,6 +4817,9 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
 .ipf-name-row .nm{font-size:16px;font-weight:700;color:var(--text);line-height:1.2;display:inline-flex;align-items:center;gap:6px}
 .ipf-name-row .badge{display:inline-flex;align-items:center;gap:var(--space-1);padding:3px 9px;border-radius:99px;font-size:10.5px;font-weight:800;letter-spacing:.4px;margin-left:6px;vertical-align:middle}
 .ipf-handle{font-size:13px;color:var(--muted);margin-top:2px;font-weight:500}
+.cb-titleplate{display:inline-flex;align-items:center;gap:7px;margin:8px 0 2px;padding:5px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.18)}
+.cb-titleplate-em{font-size:14px;line-height:1}
+.cb-titleplate-tx{font-size:12.5px;font-weight:800;letter-spacing:1.5px;text-shadow:0 1px 2px rgba(0,0,0,.35)}
 .ipf-bio{font-size:13.5px;color:var(--text);line-height:1.5;margin:10px 0;white-space:pre-wrap;word-break:break-word}
 .ipf-meta{display:flex;flex-wrap:wrap;gap:var(--space-2);margin:8px 0 4px;align-items:center}
 .ipf-link{display:inline-flex;align-items:center;gap:5px;font-size:13px;color:#4dabf7;text-decoration:none;font-weight:600}
@@ -4899,6 +4923,7 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
     })():''}</span>
     <div class="ipf-handle">${u.instagram ? '@'+htmlEsc(u.instagram) : (rank>0?'Rang #'+rank:'')}</div>
   </div>
+  ${titleBannerHtml(u.activeTitle)}
   ${u.bio?`<div class="ipf-bio">${htmlEsc(u.bio)}</div>`:''}
   <div class="ipf-meta">
     ${(()=>{const sw=safeUrl(u.website);return sw?`<a href="${htmlEsc(sw)}" target="_blank" rel="noopener noreferrer" class="ipf-link"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg>${htmlEsc(sw.replace(/^https?:\/\//i,'').replace(/\/$/, '').slice(0,30))}</a>`:'';})()}
@@ -5473,7 +5498,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v300-ringfix';
+const SW_VERSION='v302-8h';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
@@ -17424,6 +17449,7 @@ async function openEventModal(type) {
         '<option value="10800000">3 Stunden</option>' +
         '<option value="14400000">4 Stunden</option>' +
         '<option value="21600000">6 Stunden</option>' +
+        '<option value="28800000">8 Stunden</option>' +
         '<option value="43200000">12 Stunden</option>' +
         '<option value="86400000">1 Tag</option>' +
         '<option value="172800000">2 Tage</option>' +
@@ -19124,6 +19150,21 @@ function switchRanking(tab, btn) {
                 };
                 const ringsHtml = RING_ITEMS.filter(r=>!r.premium && !r.special).map(_ringCard).join('');
                 const premiumRingsHtml = _ringsVisibleFor(myUid) ? RING_ITEMS.filter(r=>r.premium && !r.special).map(_ringCard).join('') : '';
+                const titlesHtml = TITLE_ITEMS.map(function(t){
+                    const owned = myInventory.includes(t.id);
+                    const canAfford = isShopAdmin || myDiamonds >= t.price;
+                    const priceTxt = isShopAdmin ? '<span style="font-size:11px;color:#22c55e;font-weight:800">Gratis</span>' : '<span style="font-size:12px;font-weight:800;color:#a78bfa">💎 '+t.price+'</span>';
+                    const btn = owned
+                      ? '<div style="font-size:var(--fs-xs);color:#22c55e;font-weight:700">✓ Besessen</div>'
+                      : '<button onclick="buyItem(\''+t.id+'\')" data-item="'+t.id+'" style="background:'+(canAfford?'linear-gradient(135deg,#a78bfa,#7c3aed)':'var(--bg4)')+';color:'+(canAfford?'#fff':'var(--muted)')+';border:none;border-radius:10px;padding:6px 16px;font-size:var(--fs-xs);font-weight:700;cursor:'+(canAfford?'pointer':'not-allowed')+'" '+(canAfford?'':'disabled')+'>Kaufen</button>';
+                    return '<div style="background:var(--bg3);border:1px solid var(--border2);border-radius:16px;padding:12px 14px;margin-bottom:10px">'
+                      + '<div style="display:inline-flex;align-items:center;gap:7px;padding:5px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.18);background:'+t.bg+';box-shadow:0 2px 10px '+t.glow+',inset 0 1px 0 rgba(255,255,255,.25);margin-bottom:9px">'
+                        + '<span style="font-size:14px;line-height:1">'+t.emoji+'</span><span style="font-size:12.5px;font-weight:800;letter-spacing:1.5px;color:'+t.tcol+';text-shadow:0 1px 2px rgba(0,0,0,.35)">'+t.label+'</span>'
+                      + '</div>'
+                      + '<div style="font-size:11px;color:var(--muted);margin-bottom:8px">'+t.desc+'</div>'
+                      + '<div style="display:flex;align-items:center;justify-content:space-between;gap:var(--space-2)">'+priceTxt+btn+'</div>'
+                      + '</div>';
+                }).join('');
                 const extraLinkPriceHtml = isShopAdmin
                     ? `<div style="display:flex;align-items:center;gap:6px"><span style="font-size:14px;color:var(--muted);text-decoration:line-through">💎 5 Diamanten</span><span style="font-size:var(--fs-sm);font-weight:800;color:#22c55e">Gratis</span></div>`
                     : `<div style="font-size:14px;font-weight:800;color:#a78bfa">💎 5 Diamanten</div>`;
@@ -19144,6 +19185,7 @@ function switchRanking(tab, btn) {
     <button onclick="var e=document.getElementById('dept-banner');if(e)e.scrollIntoView({behavior:'smooth',block:'start'})" style="flex:0 0 auto;background:var(--bg3);border:1px solid var(--border2);color:var(--text);border-radius:99px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">🎨 Banner</button>
     <button onclick="var e=document.getElementById('dept-rings');if(e)e.scrollIntoView({behavior:'smooth',block:'start'})" style="flex:0 0 auto;background:var(--bg3);border:1px solid var(--border2);color:var(--text);border-radius:99px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">💍 Rahmen</button>
     <button onclick="var e=document.getElementById('dept-premium');if(e)e.scrollIntoView({behavior:'smooth',block:'start'})" style="flex:0 0 auto;background:linear-gradient(135deg,rgba(255,215,0,.16),rgba(124,58,237,.16));border:1px solid rgba(255,215,0,.4);color:#ffd700;border-radius:99px;padding:8px 14px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap">💎 Premium</button>
+    <button onclick="var e=document.getElementById('dept-titles');if(e)e.scrollIntoView({behavior:'smooth',block:'start'})" style="flex:0 0 auto;background:var(--bg3);border:1px solid var(--border2);color:var(--text);border-radius:99px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">🏷️ Titel</button>
   </div>
 </div>
 <div style="padding:0 16px 100px">
@@ -19214,6 +19256,16 @@ function switchRanking(tab, btn) {
     </div>
   </div>
   ${premiumRingsHtml}` : ''}
+  <div id="dept-titles" style="scroll-margin-top:70px;margin:22px 0 14px;border-radius:16px;overflow:hidden;background:linear-gradient(135deg,#1a1030,#0b1020);border:1px solid rgba(167,139,250,0.3)">
+    <div style="padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;background:linear-gradient(135deg,rgba(167,139,250,0.18),rgba(124,58,237,0.12))">
+      <div>
+        <div style="font-size:var(--fs-base);font-weight:800;color:#fff;letter-spacing:0.3px">🏷️ Titelschilder</div>
+        <div style="font-size:11px;color:rgba(255,255,255,0.7);margin-top:2px">Banner mit Titel unter deinem Profil</div>
+      </div>
+      <span style="font-size:10px;font-weight:800;color:#a78bfa;background:rgba(167,139,250,0.14);border:1px solid rgba(167,139,250,0.35);padding:3px 9px;border-radius:99px;white-space:nowrap">NEU</span>
+    </div>
+  </div>
+  ${titlesHtml}
 </div>
 <script>
 async function buyExtraLink(){
@@ -22312,7 +22364,7 @@ async function pfHandleAvatarFile(input){
 <!-- Email / Passwort / App-Code → /einstellungen/account -->
 <!-- Pinned-Reel-Link → Hero-Edit-Sheet (pfPinnedLink) -->
 
-${(myInventory.length > 0 || _specialFrames.length > 0) ? `
+${(()=>{ const _myTitles = TITLE_ITEMS.filter(t=>myInventory.includes(t.id)); return (myInventory.length > 0 || _specialFrames.length > 0 || _myTitles.length > 0) ? `
 <div style="padding:var(--space-4);border-bottom:1px solid var(--border2)">
   <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:var(--space-3);display:inline-flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>Meine Tasche</div>
   ${_specialFrames.length > 0 ? `<div style="font-size:10px;font-weight:800;color:#ffd700;letter-spacing:.5px;margin-bottom:8px">✦ SPEZIAL-RAHMEN ${'—'} freigeschaltet durch deinen Rang</div>
@@ -22342,7 +22394,15 @@ ${(myInventory.length > 0 || _specialFrames.length > 0) ? `
     </div>`;
     }).join('')}
   </div>` : ''}
-</div>` : ''}
+  ${(()=>{ const _t = TITLE_ITEMS.filter(t=>myInventory.includes(t.id)); if(!_t.length) return ''; return '<div style="font-size:10px;font-weight:800;color:#a78bfa;letter-spacing:.5px;margin:14px 0 8px">🏷️ TITELSCHILDER</div><div style="display:flex;flex-direction:column;gap:10px">' + _t.map(function(t){
+      const isA = (u.activeTitle === t.id);
+      return '<div style="background:var(--bg3);border:1px solid '+(isA?'rgba(167,139,250,.5)':'var(--border2)')+';border-radius:14px;padding:var(--space-3);display:flex;align-items:center;gap:var(--space-3)">'
+        + '<div style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.18);background:'+t.bg+';box-shadow:0 2px 8px '+t.glow+';flex-shrink:0"><span style="font-size:13px">'+t.emoji+'</span><span style="font-size:11.5px;font-weight:800;letter-spacing:1px;color:'+t.tcol+'">'+t.label+'</span></div>'
+        + '<div style="flex:1;min-width:0"><div style="font-size:var(--fs-sm);font-weight:700">'+t.label+(isA?' <span style="font-size:10px;color:#a78bfa;font-weight:600">● Aktiv</span>':'')+'</div><div style="font-size:11px;color:var(--muted)">'+t.desc+'</div></div>'
+        + '<button onclick="setTitle(\''+(isA?'':t.id)+'\')" style="background:'+(isA?'rgba(167,139,250,.2)':'var(--bg4)')+';border:1px solid '+(isA?'rgba(167,139,250,.4)':'var(--border)')+';color:'+(isA?'#a78bfa':'var(--text)')+';border-radius:10px;padding:6px 12px;font-size:var(--fs-xs);font-weight:600;cursor:pointer;white-space:nowrap">'+(isA?'Deaktivieren':'Aktivieren')+'</button>'
+        + '</div>';
+    }).join('') + '</div>'; })()}
+</div>` : ''})()}
 <!-- Admin-Sections wurden nach /einstellungen/admin verschoben (siehe Admin-Card oben im Hub) -->
 <div style="padding:var(--space-4);border-bottom:1px solid var(--border2)">
   <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;display:inline-flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>App-Tour</div>
@@ -22577,7 +22637,13 @@ async function removePinnedLink() {
 async function setRing(ringId) {
     const res = await fetch('/api/set-active-ring', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ringId:ringId||null})});
     const data = await res.json();
-    if (data.ok) { toast(ringId ? '🪄 Ring aktiviert!' : '🔘 Ring deaktiviert'); }
+    if (data.ok) { toast(ringId ? '🪄 Ring aktiviert!' : '🔘 Ring deaktiviert'); setTimeout(function(){location.reload();},500); }
+    else toast('❌ ' + (data.error||'Fehler'));
+}
+async function setTitle(titleId) {
+    const res = await fetch('/api/set-active-title', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({titleId:titleId||null})});
+    const data = await res.json();
+    if (data.ok) { toast(titleId ? '🏷️ Titel aktiviert!' : '🔘 Titel deaktiviert'); setTimeout(function(){location.reload();},500); }
     else toast('❌ ' + (data.error||'Fehler'));
 }
 </script>`, 'settings');
@@ -22729,7 +22795,7 @@ async function shareRefLink(){
     if (path === '/api/buy-item' && req.method === 'POST') {
         const body = await parseBody(req);
         const { itemId } = body;
-        if (!itemId || !RING_ITEMS.find(r=>r.id===itemId)) return json({ok:false, error:'Unbekanntes Item'});
+        if (!itemId || (!RING_ITEMS.find(r=>r.id===itemId) && !TITLE_ITEMS.find(t=>t.id===itemId) && !BANNER_ITEMS.find(b=>b.id===itemId))) return json({ok:false, error:'Unbekanntes Item'});
         const result = LOCAL_STORE
             ? await localWrite(() => botLogic.buyItemApi({ uid: myUid, itemId }))
             : await postBot('/buy-item-api', { uid: myUid, itemId });
@@ -22742,6 +22808,15 @@ async function shareRefLink(){
         const result = LOCAL_STORE
             ? await localWrite(() => botLogic.setActiveRingApi({ uid: myUid, ringId: ringId || null }))
             : await postBot('/set-active-ring-api', { uid: myUid, ringId: ringId || null });
+        return json(result || {ok:false, error:'Fehler'});
+    }
+
+    if (path === '/api/set-active-title' && req.method === 'POST') {
+        const body = await parseBody(req);
+        const { titleId } = body;
+        const result = LOCAL_STORE
+            ? await localWrite(() => botLogic.setActiveTitleApi({ uid: myUid, titleId: titleId || null }))
+            : await postBot('/set-active-title-api', { uid: myUid, titleId: titleId || null });
         return json(result || {ok:false, error:'Fehler'});
     }
 

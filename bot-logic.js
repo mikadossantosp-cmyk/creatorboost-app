@@ -999,6 +999,8 @@ const ITEM_PRICES = {
     banner_gold: 10, banner_candy: 10, banner_coral: 10, banner_aurora: 10,
     // Premium-„50 Diamanten Rahmen" (PNG)
     pframe_fire: 50, pframe_gold: 50, pframe_ice: 50, pframe_crystal: 50, pframe_bubble: 50,
+    // Titelschilder (Banner unter dem Profil) — eigener Titel-Text + Design
+    title_legende: 40, title_vip: 40, title_pro: 30, title_star: 30, title_elite: 50, title_feuer: 40, title_eis: 40, title_royal: 50,
 };
 const ITEM_NAMES = {
     ring_flame: '🔥 Flame Ring', ring_ocean: '🌊 Ocean Ring', ring_gold: '✨ Gold Ring', ring_purple: '🔮 Cosmic Ring', ring_rainbow: '🌈 Rainbow Ring', ring_diamond: '💎 Diamond Ring',
@@ -1006,6 +1008,7 @@ const ITEM_NAMES = {
     banner_sky: '☁️ Sky Blue Banner', banner_lavender: '💜 Lavender Banner', banner_mint: '🌱 Mint Banner', banner_peach: '🍑 Peach Banner',
     banner_gold: '✨ Golden Hour Banner', banner_coral: '🪸 Coral Banner', banner_aurora: '🌌 Aurora Banner', banner_rose: '🌹 Rose Gold Banner',
     pframe_fire: '🌋 Lava-Ring', pframe_gold: '👑 Gold-Ring', pframe_ice: '🧊 Eis-Ring', pframe_crystal: '🔷 Kristall-Ring', pframe_bubble: '🫧 Perlen-Ring',
+    title_legende: '🏆 Legende', title_vip: '💎 VIP', title_pro: '⭐ Pro', title_star: '🌟 Superstar', title_elite: '👑 Elite', title_feuer: '🔥 Feuer-Titel', title_eis: '❄️ Eis-Titel', title_royal: '👑 Royal',
 };
 function buyItemApi({ uid, itemId }) {
     if (!uid || !itemId) return { ok: false, error: 'Fehlende Parameter' };
@@ -1047,6 +1050,15 @@ function setActiveRingApi({ uid, ringId }) {
     }
     u.activeRing = ringId || null;
     return { ok: true, activeRing: u.activeRing };
+}
+// Titelschild aktivieren (Banner unter dem Profil). null = keins. Muss im Inventar sein (gekauft).
+function setActiveTitleApi({ uid, titleId }) {
+    if (!uid) return { ok: false };
+    const u = d.users[String(uid)];
+    if (!u) return { ok: false };
+    if (titleId && !(u.inventory || []).includes(titleId)) return { ok: false, error: 'Titel nicht im Inventar' };
+    u.activeTitle = titleId || null;
+    return { ok: true, activeTitle: u.activeTitle };
 }
 function buyExtralinkApi({ uid }) {
     if (!uid) return { ok: false, error: 'Fehlende UID' };
@@ -4573,7 +4585,7 @@ module.exports = {
     collabCreatePost, collabLikePost, getBerlinWeekKey,
     postSuperlinkApp, likeSuperlinkApi, isSuperLinkPostingAllowed,
     addXp, addExtraLink, addSuperlink, addDiamonds, removeDiamonds,
-    buyItemApi, setActiveRingApi, buyExtralinkApi, linkStatusApi,
+    buyItemApi, setActiveRingApi, setActiveTitleApi, buyExtralinkApi, linkStatusApi,
     // Like-Flow + Kern (verbatim portiert):
     likeFromApp, xpAdd, xpAddMitDaily, xpAddNurGesamt, badge, level, user,
     istAdminId, getRootUid, isSubAccount, weekStart,
