@@ -3156,7 +3156,9 @@ ${session ? `
 .ipf-avatar-wrap.has-ring{overflow:visible}
 .ipf-avatar-wrap.has-ring .ipf-avatar{border-color:transparent!important;box-shadow:none!important}
 /* PNG-Ring: normalisierte Bilder (Loch 60% zentriert) → 167% zentriert übers volle Foto, Loch deckt es exakt */
-.cb-ring-png{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:167%;height:167%;object-fit:contain;pointer-events:none;z-index:6}
+/* PNG-Ring liegt AUSSEN ums volle Profilbild (Bild wird NICHT verkleinert). PNGs normalisiert auf Loch 56%
+   → bei 178% Größe ist das Loch = 100% des Fotos, das Ring-Band sitzt außerhalb. Gilt für ALLE Ringe gleich. */
+.cb-ring-png{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:185%;height:185%;object-fit:contain;pointer-events:none;z-index:6}
 </style>
 <div class="tour-overlay" id="tour-ov" aria-hidden="true">
   <div class="tour-spotlight" id="tour-spotlight"></div>
@@ -5453,7 +5455,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v291-png-back';
+const SW_VERSION='v293-ring-fit';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
