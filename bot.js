@@ -865,7 +865,7 @@ const RING_ITEMS = [
 ];
 // TEMPORÄR AUS: Premium-/Spezial-Rahmen (PNG-Ringe) sind deaktiviert, bis Darstellung passt.
 // Auf true setzen, um sie wieder im Shop/Profil/Tasche anzuzeigen.
-const PNG_RINGS_ON = false;
+const PNG_RINGS_ON = true;
 
 const BANNER_ITEMS = [
     { id: 'banner_sunset',   name: 'Sunset',       emoji: '🌅', price: 5,  tier: 'Bronze', gradient: 'linear-gradient(135deg,#ff6b6b,#ffa500,#ffd43b)', desc: 'Warmes Sonnenuntergangs-Glühen' },
@@ -3015,7 +3015,9 @@ ${session ? `
 @keyframes cbRingAlive{0%,100%{box-shadow:0 0 0 3px var(--r1),0 0 0 6px var(--r2),0 0 16px 2px var(--rg)}50%{box-shadow:0 0 0 3px var(--r1),0 0 0 8px var(--r2),0 0 32px 8px var(--rg)}}
 @media (prefers-reduced-motion:reduce){[style*="cbRingAlive"]{animation:none!important}}
 /* Echter Bild-Rahmen (PNG) über dem Avatar — ragt leicht über den Rand (Container=position:relative) */
-.cb-ring-frame{position:absolute;left:-16%;top:-16%;width:132%;height:132%;object-fit:contain;pointer-events:none;z-index:4}
+.cb-ring-frame{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:142%;height:142%;object-fit:contain;pointer-events:none;z-index:6}
+/* Bei aktivem PNG-Rahmen: Profilbild kleiner (sitzt in der transparenten Ring-Mitte), kein weißer Rand/Schatten */
+.ipf-avatar--ringpng{transform:scale(0.70);border-color:transparent!important;box-shadow:none!important}
 </style>
 <div class="tour-overlay" id="tour-ov" aria-hidden="true">
   <div class="tour-spotlight" id="tour-spotlight"></div>
@@ -4629,6 +4631,7 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
     const _followers = (u.followers||[]).length;
     const _diamonds = u.diamonds || 0;
     const _picUrl = (picData||ladeBild(uid,'profilepic')) ? (appbildSrc(String(uid),'profilepic') || `/appbild/${uid}/profilepic`) : (u.instagram ? `https://unavatar.io/instagram/${u.instagram}` : '');
+    const _pngRing = PNG_RINGS_ON && ringFrameExists(u.activeRing); // echter Bild-Rahmen aktiv?
     const _initial = htmlEsc((u.spitzname||u.name||'?').slice(0,1).toUpperCase());
     const _isFollowing = false;
     const _roleBadge = roleBadge(u.role, uid, adminIds);
@@ -4718,7 +4721,7 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
   <div class="ipf-top">
     <div class="ipf-avatar-wrap">
       ${_myRankCrown ? `<div class="ipf-avatar-crown" style="filter:${_myRankCrown===1?'drop-shadow(0 3px 8px rgba(245,158,11,0.5))':_myRankCrown===2?'grayscale(100%) brightness(1.45) contrast(0.9) drop-shadow(0 3px 8px rgba(148,163,184,0.55))':'sepia(100%) saturate(700%) hue-rotate(-22deg) brightness(0.55) contrast(1.15) drop-shadow(0 3px 8px rgba(180,83,9,0.6))'}">👑</div>` : ''}
-      <div class="ipf-avatar"${(() => { const s = getRingBoxShadow(u); return s ? ` style="${s.replace(/^;/,'')}"` : ''; })()}>
+      <div class="ipf-avatar${_pngRing ? ' ipf-avatar--ringpng' : ''}"${_pngRing ? '' : (() => { const s = getRingBoxShadow(u); return s ? ` style="${s.replace(/^;/,'')}"` : ''; })()}>
         ${_picUrl ? `<img src="${htmlEsc(_picUrl)}" alt="" loading="eager" onerror="this.style.display='none'">` : _initial}
       </div>
       ${ringFrameOverlay(u)}
@@ -5311,7 +5314,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v274-rings-png';
+const SW_VERSION='v275-ring-pos';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
