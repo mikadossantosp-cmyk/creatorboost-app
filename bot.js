@@ -39,7 +39,7 @@ const PORT          = process.env.PORT          || 3000;
 const LOCAL_STORE = process.env.LOCAL_STORE === '1';
 // Zentrale Asset-/App-Version (Node-Scope): bricht CSS-Cache (?v=) + Service-Worker-Cache mit jedem Deploy.
 // EINE Quelle — wird in den CSS-<link> und in den SW-Script-Text (SW_VERSION) interpoliert.
-const APP_VERSION = 'v320-tasche';
+const APP_VERSION = 'v321-shopacc-legend';
 if (LOCAL_STORE) {
     try {
         datastore.load();
@@ -917,6 +917,8 @@ const CARD_THEME_ITEMS = [
 function _ctSfx(id){ return String(id||'').replace(/^theme_/,''); }
 // Liefert die Theme-Klasse für eine .post-Karte (oder '' wenn kein/ungültiges Theme aktiv).
 function cardThemeClass(themeId){ const t = CARD_THEME_ITEMS.find(x=>x.id===themeId); return t ? ' cb-ct cb-ct-'+_ctSfx(t.id)+(t.legendary?' cb-ct-legend':'') : ''; }
+// Legendär-Effekt-Overlay (rotierende Aura + Glanz-Sweep) — als Kind in die .post-Karte; nur für Legendär-Themes.
+function legendOverlay(themeId){ const t = CARD_THEME_ITEMS.find(x=>x.id===themeId); return (t && t.legendary) ? '<div class="cb-legend-fx" aria-hidden="true"></div>' : ''; }
 // Generiert alle Theme-CSS-Regeln. Höhere Spezifität als '.post' und '[data-theme=dark] .post' → gewinnt in beiden Modi.
 function cardThemeCss(){
     const rules = CARD_THEME_ITEMS.map(function(t){
@@ -932,13 +934,20 @@ function cardThemeCss(){
     }).join('');
     return rules
       + '@keyframes cbCtAurora{0%,100%{box-shadow:0 0 22px -3px rgba(124,58,237,.55),0 10px 30px rgba(0,0,0,.4)}33%{box-shadow:0 0 22px -3px rgba(14,165,233,.55),0 10px 30px rgba(0,0,0,.4)}66%{box-shadow:0 0 22px -3px rgba(236,72,153,.55),0 10px 30px rgba(0,0,0,.4)}}'
-      // ── Legendär-Tier: pulsierender Glow (Theme-Farbe via --ct-glowc) + Funkel-Partikel (::after) + Badge (::before) ──
-      + '.post.cb-ct-legend{animation:cbLegendPulse 3.2s ease-in-out infinite}'
-      + '.post.cb-ct-legend::before{content:"✦ LEGENDÄR";position:absolute;top:10px;left:14px;z-index:9;font-size:8px;font-weight:800;letter-spacing:.6px;color:#231803;background:linear-gradient(135deg,#fff0bf,#e7c14e);padding:3px 9px;border-radius:99px;box-shadow:0 2px 10px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.6);pointer-events:none}'
+      // ── Legendär-Tier: Glow-Puls + Funkel-Partikel + schimmerndes Badge + rotierende Aura + Glanz-Sweep (cb-legend-fx) ──
+      + '.post.cb-ct-legend{position:relative;animation:cbLegendPulse 3.2s ease-in-out infinite}'
+      + '.post.cb-ct-legend::before{content:"✦ LEGENDÄR";position:absolute;top:10px;left:14px;z-index:9;font-size:8px;font-weight:800;letter-spacing:.6px;color:#2a1c05;background:linear-gradient(110deg,#b8902f 0%,#fff7d6 25%,#e7c14e 50%,#fff7d6 60%,#b8902f 100%);background-size:240% 100%;padding:3px 9px;border-radius:99px;box-shadow:0 2px 10px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.7),0 0 12px var(--ct-glowc,rgba(255,215,120,.6));pointer-events:none;animation:cbLegendBadge 3.6s linear infinite}'
       + '.post.cb-ct-legend::after{content:"";position:absolute;inset:0;z-index:7;pointer-events:none;mix-blend-mode:screen;background-image:radial-gradient(2px 2px at 18% 22%,var(--ct-spark,#fff),transparent 60%),radial-gradient(1.5px 1.5px at 72% 28%,var(--ct-spark,#fff),transparent 60%),radial-gradient(2px 2px at 41% 66%,var(--ct-spark,#fff),transparent 60%),radial-gradient(1.5px 1.5px at 86% 58%,var(--ct-spark,#fff),transparent 60%),radial-gradient(1.5px 1.5px at 30% 86%,var(--ct-spark,#fff),transparent 60%),radial-gradient(2px 2px at 62% 12%,var(--ct-spark,#fff),transparent 60%),radial-gradient(1.5px 1.5px at 52% 40%,var(--ct-spark,#fff),transparent 60%);animation:cbLegendSpark 3.4s ease-in-out infinite}'
+      // Effekt-Overlay: rotierende holografische Aura (::before) + diagonaler Glanz-Sweep (::after), beide screen-blend & dezent.
+      + '.cb-legend-fx{position:absolute;inset:0;z-index:6;pointer-events:none;border-radius:20px;overflow:hidden}'
+      + '.cb-legend-fx::before{content:"";position:absolute;inset:-55%;background:conic-gradient(from 0deg,transparent 0deg,var(--ct-glowc,#fff) 24deg,transparent 70deg,transparent 180deg,var(--ct-spark,#fff) 208deg,transparent 250deg,transparent 360deg);opacity:.22;mix-blend-mode:screen;animation:cbLegendSpin 7s linear infinite}'
+      + '.cb-legend-fx::after{content:"";position:absolute;top:-10%;bottom:-10%;width:38%;left:-50%;background:linear-gradient(105deg,transparent,rgba(255,255,255,.4),transparent);transform:skewX(-18deg);mix-blend-mode:screen;animation:cbLegendSheen 5s ease-in-out infinite}'
       + '@keyframes cbLegendPulse{0%,100%{box-shadow:0 0 16px -7px var(--ct-glowc,#fff),0 10px 30px rgba(0,0,0,.45)}50%{box-shadow:0 0 34px -2px var(--ct-glowc,#fff),0 10px 30px rgba(0,0,0,.45)}}'
       + '@keyframes cbLegendSpark{0%,100%{opacity:.3}50%{opacity:1}}'
-      + '@media(prefers-reduced-motion:reduce){.post[class*=cb-ct-]{animation:none!important}.post.cb-ct-legend::after{animation:none}}';
+      + '@keyframes cbLegendBadge{to{background-position:-240% 0}}'
+      + '@keyframes cbLegendSpin{to{transform:rotate(360deg)}}'
+      + '@keyframes cbLegendSheen{0%{left:-50%}55%,100%{left:130%}}'
+      + '@media(prefers-reduced-motion:reduce){.post[class*=cb-ct-]{animation:none!important}.post.cb-ct-legend::before,.post.cb-ct-legend::after,.cb-legend-fx::before,.cb-legend-fx::after{animation:none}}';
 }
 // Mini-Vorschau einer Karte mit dem Theme (für Shop/Tasche). size=Breite in px.
 function cardThemePreview(t, size){
@@ -11733,7 +11742,7 @@ window.onPinVisitStory = function(uid){
             // Extract Instagram shortcode for reel embed
             const instaShortcode = (()=>{ const m=(link.text||'').match(/instagram\.com\/(?:reel|p|tv)\/([A-Za-z0-9_-]+)/); return m?m[1]:null; })();
 
-            return '<div class="post fade-up'+cardThemeClass(poster.activeCardTheme)+'" id="post-'+msgId+'" data-url="'+htmlEsc(cleanInstagramUrl(link.text||''))+'" data-ts="'+(link.timestamp||0)+'" style="position:relative">\n'+
+            return '<div class="post fade-up'+cardThemeClass(poster.activeCardTheme)+'" id="post-'+msgId+'" data-url="'+htmlEsc(cleanInstagramUrl(link.text||''))+'" data-ts="'+(link.timestamp||0)+'" style="position:relative">\n'+legendOverlay(poster.activeCardTheme)+
 ''+
 // Category badge + timestamp row
 '  <div style="display:flex;align-items:center;justify-content:flex-end;padding:10px 16px 0">\n'+
@@ -11842,7 +11851,7 @@ commentsBox+
             const whoLikedBtn = '<button class="post-action-btn" onclick="showSLLikerModal(\''+sl.id+'\')" style="border:1px solid var(--border);border-radius:12px;padding:9px 14px;font-size:13px;font-weight:700;gap:5px;display:inline-flex;align-items:center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Wer hat geliked?</button>';
             const time = new Date(sl.timestamp).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
             const dateStr = new Date(sl.timestamp).toLocaleDateString('de-DE',{day:'2-digit',month:'short'});
-            return '<div class="post fade-up'+cardThemeClass(poster.activeCardTheme)+'" id="sl-post-'+sl.id+'">\n'
+            return '<div class="post fade-up'+cardThemeClass(poster.activeCardTheme)+'" id="sl-post-'+sl.id+'">\n'+legendOverlay(poster.activeCardTheme)+'\n'
                 +'<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px 0">\n'
                 +'<span class="post-category-label" style="background:linear-gradient(135deg,#f59e0b,#a78bfa)"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-1px;margin-right:var(--space-1)"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>SUPERLINK</span>\n'
                 +'<span class="post-time">'+dateStr+' '+time+'</span>\n'
@@ -19332,14 +19341,27 @@ function switchRanking(tab, btn) {
     </div>
   </div>
   <div style="display:flex;gap:8px;overflow-x:auto;margin-top:12px;padding-bottom:2px;-webkit-overflow-scrolling:touch">
-    <button onclick="var e=document.getElementById('dept-boosts');if(e)e.scrollIntoView({behavior:'smooth',block:'start'})" style="flex:0 0 auto;background:var(--bg3);border:1px solid var(--border2);color:var(--text);border-radius:99px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">⚡ Boosts</button>
-    <button onclick="var e=document.getElementById('dept-banner');if(e)e.scrollIntoView({behavior:'smooth',block:'start'})" style="flex:0 0 auto;background:var(--bg3);border:1px solid var(--border2);color:var(--text);border-radius:99px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">🎨 Banner</button>
-    <button onclick="var e=document.getElementById('dept-themes');if(e)e.scrollIntoView({behavior:'smooth',block:'start'})" style="flex:0 0 auto;background:var(--bg3);border:1px solid var(--border2);color:var(--text);border-radius:99px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">🃏 Karten</button>
-    <button onclick="var e=document.getElementById('dept-titles');if(e)e.scrollIntoView({behavior:'smooth',block:'start'})" style="flex:0 0 auto;background:var(--bg3);border:1px solid var(--border2);color:var(--text);border-radius:99px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">🏷️ Titel</button>
+    <button onclick="var e=document.getElementById('dept-boosts');if(e){e.open=true;e.scrollIntoView({behavior:'smooth',block:'start'});}" style="flex:0 0 auto;background:var(--bg3);border:1px solid var(--border2);color:var(--text);border-radius:99px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">⚡ Boosts</button>
+    <button onclick="var e=document.getElementById('dept-banner');if(e){e.open=true;e.scrollIntoView({behavior:'smooth',block:'start'});}" style="flex:0 0 auto;background:var(--bg3);border:1px solid var(--border2);color:var(--text);border-radius:99px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">🎨 Banner</button>
+    <button onclick="var e=document.getElementById('dept-themes');if(e){e.open=true;e.scrollIntoView({behavior:'smooth',block:'start'});}" style="flex:0 0 auto;background:var(--bg3);border:1px solid var(--border2);color:var(--text);border-radius:99px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">🃏 Karten</button>
+    <button onclick="var e=document.getElementById('dept-titles');if(e){e.open=true;e.scrollIntoView({behavior:'smooth',block:'start'});}" style="flex:0 0 auto;background:var(--bg3);border:1px solid var(--border2);color:var(--text);border-radius:99px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">🏷️ Titel</button>
   </div>
 </div>
 <div style="padding:0 16px 100px">
-  <div id="dept-boosts" style="scroll-margin-top:70px;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;display:inline-flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9z"/></svg>Boosts</div>
+  <style>
+  .shop-acc{background:var(--bg3);border:1px solid var(--border2);border-radius:16px;margin-bottom:12px;overflow:hidden;scroll-margin-top:70px}
+  .shop-acc[open]{border-color:rgba(167,139,250,.45)}
+  .shop-acc-sum{list-style:none;cursor:pointer;display:flex;align-items:center;gap:12px;padding:14px 15px}
+  .shop-acc-sum::-webkit-details-marker{display:none}
+  .shop-acc-ic{font-size:19px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:var(--bg4);border-radius:11px;flex-shrink:0}
+  .shop-acc-tt{display:flex;flex-direction:column;min-width:0;flex:1}
+  .shop-acc-t{font-weight:800;font-size:15px;color:var(--text)}
+  .shop-acc-sub{font-size:11px;color:var(--muted);font-weight:600;margin-top:1px}
+  .shop-acc-arrow{font-size:22px;color:var(--muted);transition:transform .2s;flex-shrink:0;line-height:1}
+  .shop-acc[open] .shop-acc-arrow{transform:rotate(90deg)}
+  .shop-acc-body{padding:2px 14px 14px}
+  </style>
+  <details id="dept-boosts" class="shop-acc" open><summary class="shop-acc-sum"><span class="shop-acc-ic">⚡</span><span class="shop-acc-tt"><span class="shop-acc-t">Boosts</span><span class="shop-acc-sub">Extra-Link & Extra-Superlink</span></span><span class="shop-acc-arrow">›</span></summary><div class="shop-acc-body">
   <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:16px;padding:var(--space-4);margin-bottom:16px">
     <div style="display:flex;align-items:flex-start;gap:14px">
       <div style="flex-shrink:0;width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,rgba(167,139,250,.15),rgba(124,58,237,.06));border:1px solid rgba(167,139,250,.2)"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg></div>
@@ -19368,7 +19390,8 @@ function switchRanking(tab, btn) {
       </div>
     </div>
   </div>
-  <div id="dept-banner" style="scroll-margin-top:70px;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;display:inline-flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2.5"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>Profilbanner</div>
+  </div></details>
+  <details id="dept-banner" class="shop-acc"><summary class="shop-acc-sum"><span class="shop-acc-ic">🎨</span><span class="shop-acc-tt"><span class="shop-acc-t">Profilbanner</span><span class="shop-acc-sub">Hintergrund für dein Profil</span></span><span class="shop-acc-arrow">›</span></summary><div class="shop-acc-body">
   ${['Bronze','Silber','Gold'].map(tier => {
     const tierColor = tier==='Bronze'?'#cd7f32':tier==='Silber'?'#a8a9ad':'#ffd700';
     const tierItems = BANNER_ITEMS.filter(b=>b.tier===tier);
@@ -19394,27 +19417,13 @@ function switchRanking(tab, btn) {
   </div>
 </div>`;
   }).join('')}
-  <!-- Profilringe/Rahmen wurden aus dem Shop entfernt (User-Wunsch). Besessene Ringe bleiben in der Tasche. -->
-  <div id="dept-themes" style="scroll-margin-top:70px;margin:22px 0 14px;border-radius:16px;overflow:hidden;background:linear-gradient(135deg,#0b1020,#1a1030);border:1px solid rgba(167,139,250,0.3)">
-    <div style="padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;background:linear-gradient(135deg,rgba(124,58,237,0.18),rgba(167,139,250,0.12))">
-      <div>
-        <div style="font-size:var(--fs-base);font-weight:800;color:#fff;letter-spacing:0.3px">🃏 Karten-Themes</div>
-        <div style="font-size:11px;color:rgba(255,255,255,0.7);margin-top:2px">Designe deine Feed-Posts · für alle sichtbar</div>
-      </div>
-      <span style="font-size:10px;font-weight:800;color:#a78bfa;background:rgba(167,139,250,0.14);border:1px solid rgba(167,139,250,0.35);padding:3px 9px;border-radius:99px;white-space:nowrap">NEU</span>
-    </div>
-  </div>
+  </div></details>
+  <details id="dept-themes" class="shop-acc"><summary class="shop-acc-sum"><span class="shop-acc-ic">🃏</span><span class="shop-acc-tt"><span class="shop-acc-t">Karten-Themes <span style="font-size:9px;font-weight:800;color:#a78bfa;background:rgba(167,139,250,0.16);border:1px solid rgba(167,139,250,0.35);padding:1px 6px;border-radius:99px;vertical-align:middle">NEU</span></span><span class="shop-acc-sub">Designe deine Feed-Posts · für alle sichtbar</span></span><span class="shop-acc-arrow">›</span></summary><div class="shop-acc-body">
   ${themesHtml}
-  <div id="dept-titles" style="scroll-margin-top:70px;margin:22px 0 14px;border-radius:16px;overflow:hidden;background:linear-gradient(135deg,#1a1030,#0b1020);border:1px solid rgba(167,139,250,0.3)">
-    <div style="padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;background:linear-gradient(135deg,rgba(167,139,250,0.18),rgba(124,58,237,0.12))">
-      <div>
-        <div style="font-size:var(--fs-base);font-weight:800;color:#fff;letter-spacing:0.3px">🏷️ Titelschilder</div>
-        <div style="font-size:11px;color:rgba(255,255,255,0.7);margin-top:2px">Banner mit Titel unter deinem Profil</div>
-      </div>
-      <span style="font-size:10px;font-weight:800;color:#a78bfa;background:rgba(167,139,250,0.14);border:1px solid rgba(167,139,250,0.35);padding:3px 9px;border-radius:99px;white-space:nowrap">NEU</span>
-    </div>
-  </div>
+  </div></details>
+  <details id="dept-titles" class="shop-acc"><summary class="shop-acc-sum"><span class="shop-acc-ic">🏷️</span><span class="shop-acc-tt"><span class="shop-acc-t">Titelschilder</span><span class="shop-acc-sub">Banner mit Titel unter deinem Profil</span></span><span class="shop-acc-arrow">›</span></summary><div class="shop-acc-body">
   ${titlesHtml}
+  </div></details>
 </div>
 <div id="theme-preview-modal" onclick="if(event.target===this)closeThemePreview()" style="display:none;position:fixed;inset:0;z-index:100000;background:rgba(0,0,0,.62);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:20px">
   <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:20px;max-width:380px;width:100%;padding:18px;box-shadow:0 30px 80px rgba(0,0,0,.5)">
@@ -19440,6 +19449,7 @@ function previewTheme(id){
   var t=(window.CB_SHOP_THEMES||{})[id]; if(!t)return; window._tpvId=id;
   document.getElementById('tpv-title').textContent=t.emoji+' '+t.name;
   var card='<div class="post cb-ct cb-ct-'+t.sfx+(t.legendary?' cb-ct-legend':'')+'" style="margin:0;position:relative">'
+    +(t.legendary?'<div class="cb-legend-fx" aria-hidden="true"></div>':'')
     +'<div style="display:flex;align-items:center;gap:10px;padding:14px 14px 8px">'
       +'<div style="width:42px;height:42px;border-radius:50%;background:var(--accent);flex-shrink:0"></div>'
       +'<div><div style="font-weight:700;color:var(--text);font-size:14px">Dein Name</div><div style="font-size:12px;color:var(--muted2)">@dein.handle</div></div>'
