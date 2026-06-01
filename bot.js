@@ -3156,7 +3156,7 @@ ${session ? `
 /* PNG-Ring: normalisierte Bilder (Loch 60% zentriert) → 167% zentriert übers volle Foto, Loch deckt es exakt */
 /* PNG-Ring liegt AUSSEN ums volle Profilbild (Bild wird NICHT verkleinert). PNGs normalisiert auf Loch 56%
    → bei 178% Größe ist das Loch = 100% des Fotos, das Ring-Band sitzt außerhalb. Gilt für ALLE Ringe gleich. */
-.cb-ring-png{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:151%;height:151%;object-fit:contain;pointer-events:none;z-index:6}
+.cb-ring-png{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:var(--ringscale,151%);height:var(--ringscale,151%);object-fit:contain;pointer-events:none;z-index:6}
 </style>
 <div class="tour-overlay" id="tour-ov" aria-hidden="true">
   <div class="tour-spotlight" id="tour-spotlight"></div>
@@ -4866,6 +4866,11 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
       ${ringFrameOverlay(u, uid)}
       ${isUidOnline(uid) ? '<div class="ipf-avatar-dot" title="Online"></div>' : ''}
     </div>
+    ${(isOwn && adminIds.includes(Number(uid))) ? `<div style="position:absolute;left:0;top:96px;width:84px;z-index:20">
+      <input type="range" min="120" max="210" value="151" id="ring-scale-slider" oninput="(function(v){document.documentElement.style.setProperty('--ringscale',v+'%');try{localStorage.setItem('cb_ringscale',v);}catch(e){}var l=document.getElementById('ring-scale-lbl');if(l)l.textContent=v+'%';})(this.value)" style="width:84px;accent-color:#a78bfa">
+      <div style="font-size:9px;color:var(--muted);text-align:center;margin-top:1px">Ring <span id="ring-scale-lbl">151%</span></div>
+    </div>
+    <script>(function(){try{var s=localStorage.getItem('cb_ringscale');if(s){document.documentElement.style.setProperty('--ringscale',s+'%');var el=document.getElementById('ring-scale-slider');if(el)el.value=s;var l=document.getElementById('ring-scale-lbl');if(l)l.textContent=s+'%';}}catch(e){}})();</script>` : ''}
     <div class="ipf-stats">
       <div class="ipf-stat"><div class="ipf-stat-num" data-count="${_posts}">0</div><div class="ipf-stat-lbl">Posts</div></div>
       <div class="ipf-stat"><div class="ipf-stat-num" data-count="${_followers}">0</div><div class="ipf-stat-lbl">Follower</div></div>
@@ -5453,7 +5458,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v296-exact-fit';
+const SW_VERSION='v297-ringslider';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
