@@ -12751,6 +12751,9 @@ window.cbCardReel = function(p, postId, visitVar){
       '<div style="position:absolute;bottom:0;left:0;right:0;padding:10px 12px;display:flex;align-items:center;gap:8px">'+avatar+'<span style="font-size:12px;font-weight:700;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.6)">'+e(a.name||'User')+'</span></div>'+
     '</div>'+
     (p.caption?'<div style="padding:8px 12px;font-size:12px;color:var(--muted);line-height:1.4;border-top:1px solid rgba(255,255,255,.08)">'+e(p.caption)+'</div>':'')+
+    '<div style="padding:8px 12px 10px;display:flex;align-items:center;justify-content:flex-end">'+
+      '<a href="'+e(clean)+'" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();'+setv+'markLinkVisited(\\''+e(postId)+'\\')" style="padding:8px 18px;background:#7c3aed;color:#fff;border-radius:10px;font-size:12px;font-weight:700;text-decoration:none;white-space:nowrap">→ Öffnen</a>'+
+    '</div>'+
   '</div>';
 };
 // CSS-only Aufklapp-Box (Checkbox-Hack): im Heute-Feed nur Kopfzeile sichtbar, Tap klappt die volle Karte auf.
