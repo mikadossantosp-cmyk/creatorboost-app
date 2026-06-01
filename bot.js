@@ -863,9 +863,13 @@ const RING_ITEMS = [
     { id: 'frame_builder_4', name: 'Builder Elite Rahmen', emoji: '🏛️', special: true, tier: 4, r1:'#ddd6fe', r2:'#7c3aed', rg:'rgba(167,139,250,0.95)', gradient: 'linear-gradient(135deg,#7c3aed,#c4b5fd,#e9d5ff)', desc: 'Community Builder Elite — Rang-Rahmen', spin: true },
     { id: 'frame_admin',     name: 'Admin Rahmen',         emoji: '🛡️', special: true, admin: true, img: true, desc: 'Exklusiver Admin-Rahmen (Gold & Blau)' },
 ];
-// TEMPORÄR AUS: Premium-/Spezial-Rahmen (PNG-Ringe) sind deaktiviert, bis Darstellung passt.
-// Auf true setzen, um sie wieder im Shop/Profil/Tasche anzuzeigen.
-const PNG_RINGS_ON = true;
+// PNG-Ringe (Premium-/Spezial-Rahmen): global an/aus. Auf false → für normale User ausgeblendet,
+// ABER Admins sehen/tragen sie immer (zum Testen, auch wenn noch nicht für alle freigegeben).
+const PNG_RINGS_ON = false;
+function _ringsVisibleFor(uid) {
+    if (PNG_RINGS_ON) return true;
+    try { return !!botLogic.istAdminId(uid); } catch (e) { return false; }
+}
 
 const BANNER_ITEMS = [
     { id: 'banner_sunset',   name: 'Sunset',       emoji: '🌅', price: 5,  tier: 'Bronze', gradient: 'linear-gradient(135deg,#ff6b6b,#ffa500,#ffd43b)', desc: 'Warmes Sonnenuntergangs-Glühen' },
@@ -892,8 +896,8 @@ function ringFrameExists(id) {
     return !!id && _ringFrameSet.has(String(id));
 }
 // Overlay-<img> für einen aktiven Bild-Rahmen über einem Avatar (Container muss position:relative sein).
-function ringFrameOverlay(userData) {
-    if (!PNG_RINGS_ON) return '';
+function ringFrameOverlay(userData, ownerUid) {
+    if (!_ringsVisibleFor(ownerUid != null ? ownerUid : userData?.id)) return '';
     const id = userData?.activeRing;
     if (!ringFrameExists(id)) return '';
     return '<img src="/ringframe/' + id + '" class="cb-ring-frame" alt="" loading="lazy">';
@@ -4631,7 +4635,7 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
     const _followers = (u.followers||[]).length;
     const _diamonds = u.diamonds || 0;
     const _picUrl = (picData||ladeBild(uid,'profilepic')) ? (appbildSrc(String(uid),'profilepic') || `/appbild/${uid}/profilepic`) : (u.instagram ? `https://unavatar.io/instagram/${u.instagram}` : '');
-    const _pngRing = PNG_RINGS_ON && ringFrameExists(u.activeRing); // echter Bild-Rahmen aktiv?
+    const _pngRing = _ringsVisibleFor(uid) && ringFrameExists(u.activeRing); // echter Bild-Rahmen aktiv?
     const _initial = htmlEsc((u.spitzname||u.name||'?').slice(0,1).toUpperCase());
     const _isFollowing = false;
     const _roleBadge = roleBadge(u.role, uid, adminIds);
@@ -4724,7 +4728,7 @@ function profileCard(uid, u, d, isOwn=false, lang='de', adminIds=[], bannerData=
       <div class="ipf-avatar${_pngRing ? ' ipf-avatar--ringpng' : ''}"${_pngRing ? '' : (() => { const s = getRingBoxShadow(u); return s ? ` style="${s.replace(/^;/,'')}"` : ''; })()}>
         ${_picUrl ? `<img src="${htmlEsc(_picUrl)}" alt="" loading="eager" onerror="this.style.display='none'">` : _initial}
       </div>
-      ${ringFrameOverlay(u)}
+      ${ringFrameOverlay(u, uid)}
       ${isUidOnline(uid) ? '<div class="ipf-avatar-dot" title="Online"></div>' : ''}
     </div>
     <div class="ipf-stats">
@@ -5314,7 +5318,7 @@ async function run(){var b=document.getElementById('b'),o=document.getElementByI
     if (path === '/sw.js') {
         res.writeHead(200, {'Content-Type':'application/javascript','Service-Worker-Allowed':'/','Cache-Control':'no-cache'});
         return res.end(`
-const SW_VERSION='v275-ring-pos';
+const SW_VERSION='v276-admin-rings';
 const STATIC_CACHE='cb-static-' + SW_VERSION;
 const IMAGE_CACHE='cb-images-' + SW_VERSION;
 self.addEventListener('install',()=>self.skipWaiting());
@@ -18964,7 +18968,7 @@ function switchRanking(tab, btn) {
   </div>`;
                 };
                 const ringsHtml = RING_ITEMS.filter(r=>!r.premium && !r.special).map(_ringCard).join('');
-                const premiumRingsHtml = PNG_RINGS_ON ? RING_ITEMS.filter(r=>r.premium && !r.special).map(_ringCard).join('') : '';
+                const premiumRingsHtml = _ringsVisibleFor(myUid) ? RING_ITEMS.filter(r=>r.premium && !r.special).map(_ringCard).join('') : '';
                 const extraLinkPriceHtml = isShopAdmin
                     ? `<div style="display:flex;align-items:center;gap:6px"><span style="font-size:14px;color:var(--muted);text-decoration:line-through">💎 5 Diamanten</span><span style="font-size:var(--fs-sm);font-weight:800;color:#22c55e">Gratis</span></div>`
                     : `<div style="font-size:14px;font-weight:800;color:#a78bfa">💎 5 Diamanten</div>`;
@@ -21796,7 +21800,7 @@ ${_setSubHead('<span style="display:inline-flex;align-items:center;gap:7px"><svg
         // Builder-Rang-Rahmen bis zum erreichten Tier + Admin-Rahmen für Admins.
         const _myBldTier = ((botLogic.builderBadgeFor && botLogic.builderBadgeFor(String(myUid))) || {}).tier || 0;
         const _myIsAdminFrame = adminIds.includes(Number(myUid));
-        const _specialFrames = PNG_RINGS_ON ? RING_ITEMS.filter(r => r.special && ((r.admin && _myIsAdminFrame) || (r.tier && _myBldTier >= r.tier))) : [];
+        const _specialFrames = _ringsVisibleFor(myUid) ? RING_ITEMS.filter(r => r.special && ((r.admin && _myIsAdminFrame) || (r.tier && _myBldTier >= r.tier))) : [];
         const currentPinnedLink = ladePinnedLink(myUid) || '';
         // Pinned-Link rate-limit info: wann darf user wieder ändern?
         let _pinDaysLeft = 0;
