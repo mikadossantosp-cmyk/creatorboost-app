@@ -623,11 +623,8 @@ function missionStatusApi(uid) {
                 if (!weekSL.length) return { total: 0, geliked: 0, alleGeliked: false, granted: false };
                 const fam = new Set(familyUids(uid));
                 const otherLinks = weekSL.filter(s => !fam.has(String(s.uid)));
-                const gelikedSL = otherLinks.filter(s => {
-                    if (!Array.isArray(s.likes)) return false;
-                    for (const f of fam) if (s.likes.includes(f)) return true;
-                    return false;
-                }).length;
+                // PRO ACCOUNT: dieser Account muss selbst geliked haben (nicht die Familie) → Subs zählen eigenständig.
+                const gelikedSL = otherLinks.filter(s => Array.isArray(s.likes) && s.likes.includes(String(uid))).length;
                 const granted = !!(d.wochenSuperlinkMissionGranted && d.wochenSuperlinkMissionGranted[weekKey + ':' + uid]);
                 return { total: otherLinks.length, geliked: gelikedSL, alleGeliked: otherLinks.length > 0 && gelikedSL === otherLinks.length, granted };
             })()
@@ -643,13 +640,11 @@ function _superlinkAlleGeliked(uid, weekKey) {
     const weekSL = Object.values(d.superlinks || {}).filter(s => s && s.week === weekKey);
     if (!weekSL.length) return false;
     const fam = new Set(familyUids(uid).map(String));
-    const otherLinks = weekSL.filter(s => !fam.has(String(s.uid)));
+    const otherLinks = weekSL.filter(s => !fam.has(String(s.uid)));   // nicht eigene/Familien-Superlinks
     if (!otherLinks.length) return false;
     for (const s of otherLinks) {
         const likes = (Array.isArray(s.likes) ? s.likes : Array.from(s.likes || [])).map(String);
-        let liked = false;
-        for (const f of fam) { if (likes.includes(String(f))) { liked = true; break; } }
-        if (!liked) return false;
+        if (!likes.includes(String(uid))) return false;              // DIESER Account muss selbst geliked haben
     }
     return true;
 }
@@ -658,9 +653,9 @@ function grantWeeklySuperlinkMission(weekKey) {
     if (!d.wochenSuperlinkMissionGranted) d.wochenSuperlinkMissionGranted = {};
     let granted = 0; const uids = [];
     for (const [uid, u] of Object.entries(d.users || {})) {
-        if (!u || istAdminId(uid) || u.parent_uid) continue;           // nur Hauptaccounts, kein Admin
+        if (!u || istAdminId(uid)) continue;                          // kein Admin; Subs verdienen EIGENSTÄNDIG
         const key = weekKey + ':' + uid;
-        if (d.wochenSuperlinkMissionGranted[key]) continue;            // schon vergeben
+        if (d.wochenSuperlinkMissionGranted[key]) continue;            // schon vergeben (idempotent)
         if (!_superlinkAlleGeliked(uid, weekKey)) continue;
         d.wochenSuperlinkMissionGranted[key] = Date.now();
         addXp({ uid, amount: 500, reason: 'superlink-mission' });      // DMt automatisch "✨ +500 XP"
@@ -1320,7 +1315,7 @@ async function zeitCheck(nowArg) {
         // Wochen-Superlink-Mission rückwirkend für die VORWOCHE (gestern Sonntag ausgewertet) UND diese Woche
         // an bereits Berechtigte. Superlinks werden beim Montag-Reset nicht gelöscht → Vorwoche noch auszahlbar.
         // Läuft genau einmal (idempotent über das granted-Flag), danach übernimmt die Sonntags-Auswertung.
-        if (!d._slMissionBackfillV2) { d._slMissionBackfillV2 = true; try { const prev = grantWeeklySuperlinkMission(getPrevBerlinWeekKey()); const cur = grantWeeklySuperlinkMission(); console.log('Superlink-Mission Backfill V2: Vorwoche +500 XP an', prev.granted, '· diese Woche an', cur.granted, 'User'); } catch (e) { console.log('Superlink-Mission Backfill Fehler:', e.message); } }
+        if (!d._slMissionBackfillV3) { d._slMissionBackfillV3 = true; try { const prev = grantWeeklySuperlinkMission(getPrevBerlinWeekKey()); const cur = grantWeeklySuperlinkMission(); console.log('Superlink-Mission Backfill V3 (pro Account, inkl. Subs): Vorwoche +500 XP an', prev.granted, '· diese Woche an', cur.granted, 'User'); } catch (e) { console.log('Superlink-Mission Backfill Fehler:', e.message); } }
         eventAutoTick();
         linkCleanup();
         for (const key of Object.keys(d._lastEvents)) { if (!key.endsWith(tagStr)) delete d._lastEvents[key]; }
