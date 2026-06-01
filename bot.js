@@ -1972,14 +1972,22 @@ async function appCronTick() {
                     if (sent) { datastore.saveDebounced(); console.log('👋 [Cron] Win-back-Push an ' + sent + ' inaktive User'); }
                 } catch (e) { console.error('[winback] Fehler:', e.message); }
             });
-            // Community-Builder-Tagesbelohnung: jeder User mit Builder-Rang erhält 1×/Tag
-            // seine rangabhängigen Diamanten (5/15/50/100 💎). cbDailyLastDay schützt vor Doppelzahlung.
+        }
+        // Community-Builder-Tagesbelohnung: jeder User mit Builder-Rang erhält 1×/Tag seine rangabhängigen
+        // Diamanten (5/15/50/100 💎) — täglich um 07:00 (Europe/Berlin). cbDailyLastDay schützt vor Doppelzahlung.
+        // Jeder ausgezahlte Builder bekommt DM + Glocken-Notification (in payCommunityBuilderDaily) + Push (hier).
+        if (h === 7 && m <= 5) {
             einmalig('cbDaily_' + tagStr, () => {
                 if (!LOCAL_STORE || !botLogic.payCommunityBuilderDaily) return;
                 try {
                     let res;
                     localWrite(() => { res = botLogic.payCommunityBuilderDaily(tagStr); });
                     if (res && res.paidUsers) console.log('💎 [Cron] Community-Builder-Tagesbelohnung: ' + res.paidUsers + ' User, ' + res.paidDiamonds + ' 💎');
+                    if (res && Array.isArray(res.paidList)) {
+                        for (const p of res.paidList) {
+                            try { pushToUid(String(p.uid), '💎 Builder-Tagesbelohnung', p.emoji + ' ' + p.label + ': +' + p.amount + ' 💎 für heute gutgeschrieben!', '/explore?tab=ranking'); } catch (e) {}
+                        }
+                    }
                 } catch (e) { console.error('[cb-daily] Fehler:', e.message); }
             });
         }

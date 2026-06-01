@@ -4655,6 +4655,7 @@ function communityBuilderRanking(limit) {
 function payCommunityBuilderDaily(dayKey) {
     const day = String(dayKey || new Date().toISOString().slice(0, 10));
     let paidUsers = 0, paidDiamonds = 0;
+    const paidList = [];
     for (const [uid, u] of Object.entries(d.users || {})) {
         if (!u || u.banned || u.paused || istAdminId(uid)) continue; // Subs ZÄHLEN als eigene Builder
         if (u.cbDailyLastDay === day) continue; // heute schon ausgezahlt
@@ -4668,8 +4669,12 @@ function payCommunityBuilderDaily(dayKey) {
         u.cbDailyLastDay = day;
         u.cbDailyTotal = Number(u.cbDailyTotal || 0) + badge.dailyDiamonds;
         paidUsers++; paidDiamonds += badge.dailyDiamonds;
+        // DM + Glocken-Notification für den Builder; Push übernimmt der Cron-Hook via paidList.
+        try { addNotification(uid, '💎', badge.emoji + ' ' + badge.label + ': +' + badge.dailyDiamonds + ' 💎 Builder-Tagesbelohnung gutgeschrieben.'); } catch (e) {}
+        try { sendInAppDM(uid, '💎 Builder-Tagesbelohnung\n\nDu bist ' + badge.emoji + ' ' + badge.label + ' — dafür gibt es heute +' + badge.dailyDiamonds + ' 💎.\n\n💎 Guthaben: ' + (u.diamonds || 0) + '\n\nDanke, dass du die Community wachsen lässt!'); } catch (e) {}
+        paidList.push({ uid: String(uid), amount: badge.dailyDiamonds, emoji: badge.emoji, label: badge.label });
     }
-    return { ok: true, paidUsers, paidDiamonds, day };
+    return { ok: true, paidUsers, paidDiamonds, day, paidList };
 }
 
 module.exports = {
