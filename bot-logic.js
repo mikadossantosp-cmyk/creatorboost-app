@@ -938,9 +938,8 @@ function deleteLinkApi({ linkId }) {
             pu.xp = Math.max(0, (pu.xp || 0) - 1);
             pu.level = level(pu.xp); pu.role = badge(pu.xp);
             pu.links = Math.max(0, (pu.links || 0) - 1);
-            if (isToday && d.dailyXP) d.dailyXP[posterUid] = Math.max(0, (d.dailyXP[posterUid] || 0) - 1);
-            if (d.weeklyXP) d.weeklyXP[posterUid] = Math.max(0, (d.weeklyXP[posterUid] || 0) - 1);
-            if (d.monthlyXP) d.monthlyXP[posterUid] = Math.max(0, (d.monthlyXP[posterUid] || 0) - 1);
+            // Posten gibt nur Gesamt-XP (nicht daily/weekly/monthly) → beim Löschen NUR Gesamt zurückziehen,
+            // sonst würde dem Poster fälschlich Like-XP aus den Zeit-Rankings abgezogen.
         }
     } catch (e) {}
     if (d.dmNachrichten) delete d.dmNachrichten[String(link.counter_msg_id)];

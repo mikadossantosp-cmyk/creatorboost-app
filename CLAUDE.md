@@ -282,6 +282,8 @@ Prioritäten **immer in dieser Reihenfolge**:
 
 - **Feed-Extra-Karten: ≤3 ausgeklappt, ab 4 eingeklappt + Belohnungs-Teaser (`bot.js`).** User-Wunsch. Strip-Dispatch (Diamond/Prisma) rendert bei ≤3 Karten direkt `renderCard` (offen), ab 4 `cbCollapseWrap` (eingeklappt) — pro Strip/Typ. Admin-Karte (immer max 1) → immer offen (kein Wrap). `cbCompactBar` als Belohnungs-Teaser umgebaut: Akzent-Icon-Badge + „🎁 Belohnung wartet" + „+X 💎 sichern" + pulsierende „Aufdecken →"-Pille (`@keyframes cbCbarPulse`, reduced-motion respektiert). Verifiziert: Teaser-Text + Klasse emittiert, node --check ok. **Hinweis:** Schwelle ist PRO Typ (3 Diamond / 3 Prisma), nicht total.
 
+- **Bug-Audit + Fix: deleteLinkApi zog Poster Like-XP ab (`bot-logic.js`).** App-weiter Audit (Syntax aller Dateien, require, echter Server-Boot, 120 ausgelieferte Script-Blöcke auf 7 Hauptseiten alle valide). Gefundener Logik-Bug: Seit der nur-Liken-Umstellung gibt Posten nur noch Gesamt-XP — aber deleteLinkApi zog dem Poster beim Löschen weiterhin −1 von daily/weekly/monthly ab → hätte fälschlich Like-XP aus den Zeit-Rankings entfernt. Fix: Poster-Abzug nur noch Gesamt (daily/weekly/monthly-Zeilen entfernt); Liker-Clawback (−5) bleibt (symmetrisch zum Like-Grant). Hinweis: regeln-tab-content.js ist eine tote Snippet-Datei (kein require) → node --check-Fehler dort irrelevant.
+
 ## 8. Nächste sinnvolle Schritte
 
 0. **a11y-Pass app-weit fortsetzen** (Dashboard-Modals sind erledigt): weitere `<div onclick>` → echte `<button>`/`role`, fehlende `aria-label` an Icon-Buttons, restliche Modals (App-Chat/DM/Helper) mit `role="dialog"` + Escape/Backdrop nach dem `dashModalA11y()`-Muster. Gezielt pro Screen statt blind app-weit (viele Dateien).
