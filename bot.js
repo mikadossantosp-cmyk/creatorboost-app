@@ -22201,7 +22201,7 @@ async function saveAccount(){
   const msg=document.getElementById('account-save-msg');
   msg.textContent='⏳ Speichere…';msg.style.color='var(--muted)';
   try{
-    const r=await fetch('/api/profile-update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:em,password:pw||undefined})});
+    const r=await fetch('/api/save-profile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:em,password:pw||undefined})});
     const j=await r.json();
     if(j&&j.ok){msg.textContent='✅ Gespeichert';msg.style.color='#22c55e';setTimeout(()=>location.reload(),900);}
     else{msg.textContent='❌ '+(j&&j.error||'Fehler');msg.style.color='#ef4444';}
