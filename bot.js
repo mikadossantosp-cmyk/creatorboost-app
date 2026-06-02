@@ -11785,7 +11785,8 @@ window.onPinVisitStory = function(uid){
             return '<div class="post fade-up'+cardThemeClass(poster.activeCardTheme)+'" id="post-'+msgId+'" data-url="'+htmlEsc(cleanInstagramUrl(link.text||''))+'" data-ts="'+(link.timestamp||0)+'" style="position:relative">\n'+legendOverlay(poster.activeCardTheme)+
 ''+
 // Category badge + timestamp row
-'  <div style="display:flex;align-items:center;justify-content:flex-end;padding:10px 16px 0">\n'+
+'  <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px 0">\n'+
+'    <span style="display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:800;letter-spacing:.3px;color:#16a34a;background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.38);padding:2px 9px;border-radius:99px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Normal</span>\n'+
 '    <div style="display:flex;align-items:center;gap:var(--space-2)">\n'+
 '      <span class="post-time">'+new Date(link.timestamp).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})+'</span>\n'+
 (_myIsAdmin ? '      <button onclick=\'adminDelLink("'+msgId+'",this)\' title="Link löschen (Admin)" style="background:none;border:none;color:#ef4444;font-size:15px;cursor:pointer;padding:0 0 0 4px;line-height:1">🗑️</button>\n' : '')+
