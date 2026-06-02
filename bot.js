@@ -12774,7 +12774,7 @@ window.cbCompactCard = function(p, o){
   var duty = o.dutyLine
     ? '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin-top:11px;padding:9px 12px;background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.40);border-radius:11px;font-size:12px;font-weight:800;color:#d97706"><span style="font-size:13px">⚠️ Pflicht:</span><span>❤ Liken</span><span style="opacity:.4">·</span><span>💬 Kommentieren</span><span style="opacity:.4">·</span><span>↗ Teilen</span><span style="opacity:.4">·</span><span>🔖 Speichern</span></div>'
     : '';
-  var engageWrap = o.engageHtml ? '<div style="margin-top:11px">'+o.engageHtml+'</div>' : '';
+  var engageWrap = o.engageHtml ? (o.werHtml ? '<div style="display:flex;gap:8px;align-items:stretch;margin-top:11px"><div style="flex:1;min-width:0">'+o.engageHtml+'</div>'+o.werHtml+'</div>' : '<div style="margin-top:11px">'+o.engageHtml+'</div>') : '';
   var adminWrap = o.adminHtml ? o.adminHtml : '';
   var likersWrap = o.likersHtml ? o.likersHtml : '';
   // typ-farbige Glow-Kante + adaptiver Theme-Body
@@ -12850,11 +12850,10 @@ window.cbCollapseWrap = function(inner, id, compact){
         return '<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--border2)"><a href="/profil/'+esc(u.uid)+'" style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;text-decoration:none">'+initial+'<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:var(--text)">'+esc(u.name||'User')+(u.builderEmoji?' '+esc(u.builderEmoji):'')+'</div>'+(u.roleBadgeHtml?'<div style="margin-top:3px">'+u.roleBadgeHtml+'</div>':'')+(u.instagram?'<div style="font-size:11px;color:#06b6d4;margin-top:2px">@'+esc(u.instagram)+'</div>':'')+'</div></a>'+_dtail+'</div>';
       }).join('');
       return '<div id="liker-rows-dl-'+esc(p.id)+'" style="display:none">'+rows+'</div>' +
-        '<div style="display:flex;align-items:center;justify-content:space-between;gap:var(--space-2);margin-top:10px;padding:0 4px">' +
-          '<div style="font-size:12px;color:var(--muted);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+namesTxt+'</div>' +
-          '<button onclick="showLikerModal(\\'dl-'+esc(p.id)+'\\')" style="background:rgba(6,182,212,0.10);border:1px solid rgba(6,182,212,0.35);color:#06b6d4;font-size:11px;font-weight:700;padding:5px 10px;border-radius:8px;cursor:pointer;white-space:nowrap;flex-shrink:0"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:var(--space-1)"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Wer hat engagiert? ('+cnt+')</button>' +
-        '</div>';
+        '<div style="font-size:12px;color:var(--muted);margin-top:9px;padding:0 4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+namesTxt+'</div>';
     })();
+    const _dlCnt = p.likeCount || (Array.isArray(p.likers) ? p.likers.length : 0);
+    const werBtn = _dlCnt > 0 ? '<button onclick="showLikerModal(\\'dl-'+esc(p.id)+'\\')" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;background:rgba(6,182,212,0.10);border:1px solid rgba(6,182,212,0.35);color:#06b6d4;font-size:10.5px;font-weight:800;padding:0 14px;border-radius:12px;cursor:pointer;white-space:nowrap;flex-shrink:0"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Wer? ('+_dlCnt+')</button>' : '';
     return window.cbCompactCard(p, {
       typePill: typePill,
       accent: '#06b6d4',
@@ -12862,6 +12861,7 @@ window.cbCollapseWrap = function(inner, id, compact){
       dutyLine: true,
       timerHtml: timerHtml,
       engageHtml: engageHtml,
+      werHtml: werBtn,
       likersHtml: likersHtml,
       themeClass: (p.author && p.author.themeClass) || ''
     });
@@ -13428,11 +13428,10 @@ window.cbCollapseWrap = function(inner, id, compact){
         return '<a href="/profil/'+esc(u.uid)+'" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--border2);text-decoration:none">'+initial+'<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:var(--text)">'+esc(u.name||'User')+(u.builderEmoji?' '+esc(u.builderEmoji):'')+'</div>'+(u.instagram?'<div style="font-size:11px;color:#a855f7">@'+esc(u.instagram)+'</div>':'')+'</div><div style="font-size:11px;color:var(--accent)">→</div></a>';
       }).join('');
       return '<div id="liker-rows-pl-'+esc(p.id)+'" style="display:none">'+rows+'</div>' +
-        '<div style="display:flex;align-items:center;justify-content:space-between;gap:var(--space-2);margin-top:10px;padding:0 4px">' +
-          '<div style="font-size:12px;color:var(--muted);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+namesTxt+'</div>' +
-          '<button onclick="showLikerModal(\\'pl-'+esc(p.id)+'\\')" style="background:rgba(168,85,247,0.10);border:1px solid rgba(168,85,247,0.35);color:#a855f7;font-size:11px;font-weight:700;padding:5px 10px;border-radius:8px;cursor:pointer;white-space:nowrap;flex-shrink:0"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:var(--space-1)"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Wer hat engagiert? ('+cnt+')</button>' +
-        '</div>';
+        '<div style="font-size:12px;color:var(--muted);margin-top:9px;padding:0 4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+namesTxt+'</div>';
     })();
+    const _plCnt = p.likeCount || (Array.isArray(p.likers) ? p.likers.length : 0);
+    const werBtn = _plCnt > 0 ? '<button onclick="showLikerModal(\\'pl-'+esc(p.id)+'\\')" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;background:rgba(168,85,247,0.10);border:1px solid rgba(168,85,247,0.35);color:#a855f7;font-size:10.5px;font-weight:800;padding:0 14px;border-radius:12px;cursor:pointer;white-space:nowrap;flex-shrink:0"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Wer? ('+_plCnt+')</button>' : '';
     return window.cbCompactCard(p, {
       typePill: typePill,
       accent: '#a855f7',
@@ -13440,6 +13439,7 @@ window.cbCollapseWrap = function(inner, id, compact){
       dutyLine: true,
       timerHtml: timerHtml,
       engageHtml: engageHtml,
+      werHtml: werBtn,
       likersHtml: likersHtml,
       themeClass: (p.author && p.author.themeClass) || ''
     });
@@ -13533,7 +13533,6 @@ function _alEngagers(key, engagers, count){
     '<div style="display:flex;align-items:center;gap:9px;margin-top:13px;padding-top:12px;border-top:1px solid var(--border2)">'+
       '<div style="display:flex;flex-shrink:0">'+stack+'</div>'+
       '<div style="flex:1;min-width:0;font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">❤️ '+top+rest+' engagiert</div>'+
-      '<button onclick="showLikerModal(\\''+esc(key)+'\\')" style="background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.42);color:#fbbf24;font-size:11px;font-weight:800;padding:6px 11px;border-radius:9px;cursor:pointer;white-space:nowrap;flex-shrink:0">Wer? ('+count+')</button>'+
     '</div>';
 }
 // Premium User-Karte (Heute-Feed + Admin-Vorschau). isPreview=true → Engage-Button zeigt
@@ -13548,6 +13547,8 @@ function _alUserCard(c, isPreview){
   var engageBtn = isPreview
     ? '<button onclick="alert(\\'👁 Vorschau — genau so sehen deine User die Karte im Heute-Feed. Sie tippen hier auf Engagiert und bekommen +'+(c.reward||5)+' Diamanten. Du als Ersteller kannst deinen eigenen Link nicht engagieren.\\')" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;background:linear-gradient(135deg,#f59e0b,#fbbf24,#a855f7);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:900;cursor:pointer;box-shadow:0 6px 18px rgba(245,158,11,.35)"><span style="width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.28);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px">2</span><svg width="18" height="18" viewBox="0 0 24 24" fill="#fff" stroke="#fff" stroke-width="1.5"><path d="M20.8 5.1a5.4 5.4 0 0 0-7.7 0l-1.1 1.1-1.1-1.1A5.4 5.4 0 1 0 3.2 12.8l1.1 1.1L12 21.5l7.7-7.6 1.1-1.1a5.4 5.4 0 0 0 0-7.7z"/></svg>Engagiert · +'+(c.reward||5)+' 💎</button>'
     : '<button onclick="adminLinkEngageClick(\\''+esc(c.id)+'\\', this)" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;background:linear-gradient(135deg,#f59e0b,#fbbf24,#a855f7);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:900;cursor:pointer;box-shadow:0 6px 18px rgba(245,158,11,.35)"><span style="width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.28);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px">2</span><svg width="18" height="18" viewBox="0 0 24 24" fill="#fff" stroke="#fff" stroke-width="1.5"><path d="M20.8 5.1a5.4 5.4 0 0 0-7.7 0l-1.1 1.1-1.1-1.1A5.4 5.4 0 1 0 3.2 12.8l1.1 1.1L12 21.5l7.7-7.6 1.1-1.1a5.4 5.4 0 0 0 0-7.7z"/></svg>Engagiert · +'+(c.reward||5)+' 💎</button>';
+  var _alCnt = c.engagedCount||0;
+  var werBtn = _alCnt > 0 ? '<button onclick="showLikerModal(\\''+esc(key)+'\\')" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.42);color:#fbbf24;font-size:10.5px;font-weight:800;padding:0 14px;border-radius:12px;cursor:pointer;white-space:nowrap;flex-shrink:0"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Wer? ('+_alCnt+')</button>' : '';
   return window.cbCompactCard(c, {
     typePill: typePill,
     accent: '#f59e0b',
@@ -13557,6 +13558,7 @@ function _alUserCard(c, isPreview){
     cornerHtml: corner,
     captionHtml: caption,
     engageHtml: engageBtn,
+    werHtml: werBtn,
     likersHtml: _alEngagers(key, c.engagers, c.engagedCount||0),
     themeClass: (c.author && c.author.themeClass) || ''
   });
