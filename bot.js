@@ -19201,7 +19201,7 @@ fetch('/api/admin/engagement-log').then(r=>r.json()).then(j=>{ if (j.ok) { LAST_
             if (!entries.length) return `<div class="empty" style="padding:48px 24px;text-align:center"><div class="empty-icon"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3"/><path d="M9 21h6M12 16v5"/></svg></div><div class="empty-text">${emptyHint}</div></div>`;
             return makePodium(entries, xpFn, moveField) + makeRankRows(entries, xpFn, moveField);
         };
-        const rankingRows = makeRankSection(sorted, (_,u)=>u.xp||0, 'Noch keine Daten');
+        const rankingRows = makeRankSection(sorted, (_,u)=>u.xp||0, 'Noch keine Daten', 'lastTotalRank');
         const dailySorted = Object.entries(d.users||{})
             .filter(([id,u])=>!adminIds.includes(Number(id))&&u.started&&(d.dailyXP[id]||0)>0)
             .sort((a,b)=>(d.dailyXP[b[0]]||0)-(d.dailyXP[a[0]]||0));

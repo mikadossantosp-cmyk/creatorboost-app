@@ -1434,6 +1434,10 @@ async function dailyRankingAbschluss() {
         // Monats-Rang-Snapshot (nächtlich) → Bewegungspfeile im Monats-Ranking Tag-zu-Tag.
         const _msorted = Object.entries(d.users || {}).filter(([id, uu]) => uu && !istAdminId(id) && ((d.monthlyXP && d.monthlyXP[id]) || 0) > 0).sort((a, b) => ((d.monthlyXP && d.monthlyXP[b[0]]) || 0) - ((d.monthlyXP && d.monthlyXP[a[0]]) || 0));
         for (let mi = 0; mi < _msorted.length; mi++) { const uu = d.users[_msorted[mi][0]]; if (uu) uu.lastMonthlyRank = mi + 1; }
+        // Gesamt-Rang-Snapshot (nächtlich) → Bewegungspfeile im Gesamt-Ranking. Filter wie isAppVisible.
+        const _visTotal = (uu) => uu && !uu.banned && !uu.paused && (uu.parent_uid ? true : (uu.started && (uu.inGruppe !== false || !!uu.email)));
+        const _tsorted = Object.entries(d.users || {}).filter(([id, uu]) => !istAdminId(id) && _visTotal(uu)).sort((a, b) => (b[1].xp || 0) - (a[1].xp || 0));
+        for (let ti = 0; ti < _tsorted.length; ti++) { const uu = d.users[_tsorted[ti][0]]; if (uu) uu.lastTotalRank = ti + 1; }
         for (let ii = 0; ii < Math.min(10, withScore.length); ii++) {
             const { uid } = withScore[ii];
             const u = d.users[uid];
