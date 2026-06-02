@@ -1350,6 +1350,20 @@ async function zeitCheck(nowArg) {
         // das alte isFirstPostEver-7-Tage-Fenster nie firstPost/m1 bekamen → Einlader fehlte im Ranking.
         // checkReferralProgress ist idempotent + freigabe-gegated (vergibt nur für approved Referrals).
         if (!d._refProgressBackfillV2) { d._refProgressBackfillV2 = true; try { let n = 0; for (const [iid, iu] of Object.entries(d.users || {})) { if (!iu) continue; if (!iu.referredBy) { for (const [pid, pu] of Object.entries(d.users || {})) { if (pu && Array.isArray(pu.referrals) && pu.referrals.map(String).includes(String(iid))) { iu.referredBy = String(pid); break; } } } if (iu.referredBy) { checkReferralProgress(String(iid)); n++; } } console.log('Referral-Progress Backfill V2 (inkl. referredBy-Reparatur): ' + n + ' Eingeladene geprüft.'); } catch (e) { console.log('Referral-Progress Backfill V2 Fehler:', e.message); } }
+        // Einmaliger Monats-Backfill: monthlyXP startete bei null. Seed aus dieser Woche (d.weeklyXP, enthält
+        // gestern, da kumulativ) + diesem Monat archivierte Wochen (d.weeklyHistory). Per max → kein Doppelzählen
+        // mit den seit Deploy bereits live gezählten monthlyXP.
+        if (!d._monthlyBackfillV1) { d._monthlyBackfillV1 = true; try {
+            if (!d.monthlyXP) d.monthlyXP = {};
+            const _mPrefix = getBerlinMonthKey();
+            const _seed = {};
+            const _addSeed = (uid, xp) => { xp = Number(xp) || 0; if (!uid || xp <= 0) return; _seed[uid] = (_seed[uid] || 0) + xp; };
+            for (const h of (d.weeklyHistory || [])) { if (h && h.weekKey && String(h.weekKey).slice(0, 7) === _mPrefix && h.snapshot) { for (const [uid, xp] of Object.entries(h.snapshot)) _addSeed(uid, xp); } }
+            for (const [uid, xp] of Object.entries(d.weeklyXP || {})) _addSeed(uid, xp);
+            let _seeded = 0;
+            for (const [uid, xp] of Object.entries(_seed)) { if (d.users[uid] && !istAdminId(uid)) { const cur = Number(d.monthlyXP[uid] || 0); if (xp > cur) { d.monthlyXP[uid] = xp; _seeded++; } } }
+            console.log('Monthly-Backfill V1: monthlyXP geseedet für ' + _seeded + ' User (Monat ' + _mPrefix + ').');
+        } catch (e) { console.log('Monthly-Backfill V1 Fehler:', e.message); } }
         eventAutoTick();
         linkCleanup();
         for (const key of Object.keys(d._lastEvents)) { if (!key.endsWith(tagStr)) delete d._lastEvents[key]; }

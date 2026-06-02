@@ -266,6 +266,8 @@ Prioritäten **immer in dieser Reihenfolge**:
 
 - **Gesamt-Ranking: Bewegungspfeile (`bot.js`/`bot-logic.js`).** Nächtlicher Gesamt-Rang-Snapshot `u.lastTotalRank` in dailyRankingAbschluss (Filter wie isAppVisible), Gesamt-`makeRankSection` nutzt jetzt moveField `lastTotalRank` → ▲/▼/🆕 auch im Gesamt-Ranking. Verifiziert: Snapshot 1..5, node --check beide.
 
+- **Monats-Ranking: einmaliger Backfill (`bot-logic.js`).** monthlyXP startete bei null → `_monthlyBackfillV1` (in zeitCheck) seedet es aus dieser Woche (`d.weeklyXP`, enthält gestern da kumulativ) + diesem Monat archivierte Wochen (`d.weeklyHistory`, weekKey-Prefix = aktueller Monat). Per **max** pro User → kein Doppelzählen mit den seit Deploy bereits live gezählten monthlyXP. Verifiziert: max(50,500)=500 / max(0,170)=170. Monats-Ranking ist damit sofort gefüllt statt leer.
+
 ## 8. Nächste sinnvolle Schritte
 
 0. **a11y-Pass app-weit fortsetzen** (Dashboard-Modals sind erledigt): weitere `<div onclick>` → echte `<button>`/`role`, fehlende `aria-label` an Icon-Buttons, restliche Modals (App-Chat/DM/Helper) mit `role="dialog"` + Escape/Backdrop nach dem `dashModalA11y()`-Muster. Gezielt pro Screen statt blind app-weit (viele Dateien).
