@@ -11782,74 +11782,42 @@ window.onPinVisitStory = function(uid){
             // Extract Instagram shortcode for reel embed
             const instaShortcode = (()=>{ const m=(link.text||'').match(/instagram\.com\/(?:reel|p|tv)\/([A-Za-z0-9_-]+)/); return m?m[1]:null; })();
 
-            return '<div class="post fade-up'+cardThemeClass(poster.activeCardTheme)+'" id="post-'+msgId+'" data-url="'+htmlEsc(cleanInstagramUrl(link.text||''))+'" data-ts="'+(link.timestamp||0)+'" style="position:relative">\n'+legendOverlay(poster.activeCardTheme)+
-''+
-// Category badge + timestamp row
-'  <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px 0">\n'+
-'    <span style="display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:800;letter-spacing:.3px;color:#16a34a;background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.38);padding:2px 9px;border-radius:99px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Normal</span>\n'+
+            // Ultra-kompaktes Layout: Typ-Pill + Zeit oben, Thumbnail-links + Author-Spalte, dann Like/Kommentare.
+            const _cleanUrl = htmlEsc(cleanInstagramUrl(link.text||''));
+            const _thumbInner = bannerImg
+              ? bannerImg
+              : '<div style="position:absolute;inset:0;background:'+bannerBg+'"></div>';
+            return '<div class="post fade-up cb-cc'+cardThemeClass(poster.activeCardTheme)+'" id="post-'+msgId+'" data-url="'+_cleanUrl+'" data-ts="'+(link.timestamp||0)+'" style="position:relative;margin:0 16px 14px;padding:14px;border-radius:16px;background:var(--bg3);border:1px solid var(--border);box-shadow:0 0 0 1.5px rgba(34,197,94,0.20),0 4px 16px rgba(15,23,42,0.08)">\n'+legendOverlay(poster.activeCardTheme)+
+// Typ-Pill + Zeit (+ Admin-Löschen)
+'  <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px">\n'+
+'    <span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:800;letter-spacing:.2px;color:#16a34a;background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.38);padding:2px 9px;border-radius:99px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Normal</span>\n'+
 '    <div style="display:flex;align-items:center;gap:var(--space-2)">\n'+
 '      <span class="post-time">'+new Date(link.timestamp).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})+'</span>\n'+
 (_myIsAdmin ? '      <button onclick=\'adminDelLink("'+msgId+'",this)\' title="Link löschen (Admin)" style="background:none;border:none;color:#ef4444;font-size:15px;cursor:pointer;padding:0 0 0 4px;line-height:1">🗑️</button>\n' : '')+
 '    </div>\n'+
 '  </div>\n'+
-// Post header — Avatar + Name → /profil/{uid}
-'  <div class="post-header" style="padding-top:var(--space-2)">\n'+
-'    <a href="/profil/'+link.user_id+'" style="position:relative;width:40px;height:40px;flex-shrink:0;text-decoration:none">\n'+
-'      '+crownOverlay(link.user_id, 'sm')+'\n'+
-'      <div style="position:relative;width:40px;height:40px;border-radius:50%;overflow:hidden;background:'+grad+';display:flex;align-items:center;justify-content:center">\n'+
-'        <span style="color:#fff;font-weight:700;font-size:15px;position:absolute">'+(poster.name||'?').slice(0,1)+'</span>\n'+
-'        '+avatarSmall+'\n'+
-'      </div>\n'+
-'    </a>\n'+
-'    <a href="/profil/'+link.user_id+'" class="post-user-info" style="text-decoration:none;color:inherit">\n'+
-'      <div class="post-name" style="display:flex;align-items:center;gap:5px">\n'+
-'        '+htmlEsc(poster.spitzname||poster.name||'User')+_posterBld+'\n'+
-'        '+(isOnline?'<span style="width:7px;height:7px;border-radius:50%;background:#00c851;display:inline-block;flex-shrink:0"></span>':'')+'\n'+
-'      </div>\n'+
-'      <div class="post-badge">'+roleBadge(poster.role)+(insta?'<span style="color:var(--muted2)">@'+htmlEsc(poster.instagram)+'</span>':'')+'</div>\n'+
+// Body-Row: Avatar+Thumbnail links, Author-Spalte rechts
+'  <div style="display:flex;align-items:flex-start;gap:11px">\n'+
+'    <div style="display:flex;flex-direction:column;align-items:center;gap:7px;flex-shrink:0">\n'+
+'      <a href="/profil/'+link.user_id+'" style="position:relative;width:30px;height:30px;flex-shrink:0;text-decoration:none">'+crownOverlay(link.user_id,'xs')+'<div style="position:relative;width:30px;height:30px;border-radius:50%;overflow:hidden;background:'+grad+';display:flex;align-items:center;justify-content:center"><span style="color:#fff;font-weight:700;font-size:12px;position:absolute">'+(poster.name||'?').slice(0,1)+'</span>'+avatarSmall+'</div></a>\n'+
+'      <div onclick="markLinkVisited(\''+lid1+'\');window.open(\''+jsEsc(cleanInstagramUrl(link.text||''))+'\',\'_blank\')" style="position:relative;width:92px;height:92px;flex-shrink:0;border-radius:12px;overflow:hidden;background:'+bannerBg+';cursor:pointer;border:1px solid var(--border)">'+_thumbInner+'<div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.12),rgba(0,0,0,.5))"></div><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none"><div style="width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.92);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 10px rgba(0,0,0,.35)"><div style="width:0;height:0;border-style:solid;border-width:7px 0 7px 12px;border-color:transparent transparent transparent #000;margin-left:3px"></div></div></div></div>\n'+
+'    </div>\n'+
+'    <a href="/profil/'+link.user_id+'" style="flex:1;min-width:0;text-decoration:none;color:inherit">\n'+
+'      <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;min-width:0"><span style="font-size:13.5px;font-weight:800;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px">'+htmlEsc(poster.spitzname||poster.name||'User')+'</span>'+(isOnline?'<span style="width:7px;height:7px;border-radius:50%;background:#00c851;display:inline-block;flex-shrink:0"></span>':'')+_posterBld+roleBadge(poster.role)+'</div>\n'+
+'      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:4px">'+(insta?'<span style="font-size:11px;font-weight:600;color:var(--muted2)">@'+htmlEsc(poster.instagram)+'</span>':'')+'<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:800;padding:1px 7px;border-radius:99px;background:rgba(124,58,237,0.14);color:#7c3aed"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L3 14h7v8l10-12h-7z"/></svg>'+(poster.xp||0)+' XP</span></div>\n'+
+(titlePlateInlineHtml(poster.activeTitle)?'      <div style="margin-top:5px">'+titlePlateInlineHtml(poster.activeTitle)+'</div>\n':'')+
 '    </a>\n'+
 '  </div>\n'+
-// Reel video preview card — cleanInstagramUrl entfernt Tracking-Params, jsEsc verhindert JS-Break bei Sonderzeichen
-'  <div style="margin:0 16px;border-radius:14px;overflow:hidden;background:#000;border:1px solid var(--border);cursor:pointer;box-shadow:0 2px 10px rgba(15,23,42,0.06)" onclick="markLinkVisited(\''+lid1+'\');window.open(\''+jsEsc(cleanInstagramUrl(link.text||''))+'\',\'_blank\')">\n'+
-'    <div style="position:relative;width:100%;padding-top:62%;background:'+bannerBg+';overflow:hidden">\n'+
-'      '+bannerImg.replace('position:absolute;inset:0;','position:absolute;inset:0;')+'\n'+
-'      <div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.1) 0%,rgba(0,0,0,.55) 100%)"></div>\n'+
-'      <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none">\n'+
-'        <div style="width:54px;height:54px;border-radius:50%;background:rgba(255,255,255,.92);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 16px rgba(0,0,0,.35)">\n'+
-'          <div style="width:0;height:0;border-style:solid;border-width:11px 0 11px 20px;border-color:transparent transparent transparent #000;margin-left:var(--space-1)"></div>\n'+
-'        </div>\n'+
-'      </div>\n'+
-'      <div style="position:absolute;top:10px;left:12px;background:rgba(0,0,0,.55);border-radius:8px;padding:4px 9px;display:flex;align-items:center;gap:5px;backdrop-filter:blur(4px)">\n'+
-'        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" style="flex-shrink:0"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg><span style="font-size:11px;color:#fff;font-weight:600">Instagram Reel</span>\n'+
-'      </div>\n'+
-'      <div style="position:absolute;bottom:0;left:0;right:0;padding:10px 12px">\n'+
-'        <a href="/profil/'+link.user_id+'" onclick="event.stopPropagation()" style="display:flex;align-items:center;gap:var(--space-2);text-decoration:none">\n'+
-'          <div style="position:relative;width:32px;height:32px;flex-shrink:0">\n'+
-'            '+crownOverlay(link.user_id, 'xs')+'\n'+
-'            <div style="width:32px;height:32px;border-radius:50%;border:2px solid rgba(255,255,255,.5);overflow:hidden;background:'+grad+';display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff">'+profPic+'</div>\n'+
-'          </div>\n'+
-'          <div style="font-size:12px;font-weight:700;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.6)">'+htmlEsc(poster.spitzname||poster.name||'User')+_posterBld+'</div>\n'+
-'        </a>\n'+
-'      </div>\n'+
-'    </div>\n'+
-(link.caption?'    <div style="padding:8px 12px;font-size:12px;color:var(--muted);line-height:1.4;border-top:1px solid rgba(255,255,255,.06)">'+String(link.caption).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</div>\n':'')+
-'    <div style="padding:8px 12px 10px;display:flex;align-items:center;justify-content:space-between;gap:var(--space-2)">\n'+
-'      <div style="flex-shrink:0">'+titlePlateInlineHtml(poster.activeTitle)+'</div>\n'+
-'      <a href="'+htmlEsc(cleanInstagramUrl(link.text||''))+'" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();markLinkVisited(\''+lid1+'\')" style="padding:8px 18px;background:#7c3aed;color:#fff;border-radius:10px;font-size:12px;font-weight:700;text-decoration:none;white-space:nowrap;flex-shrink:0">→ Öffnen</a>\n'+
-'    </div>\n'+
-'  </div>\n'+
-// Likes counter + XP badge
-'  <div class="post-likes-row">\n'+
+(link.caption?'  <div style="margin-top:10px;font-size:12px;color:var(--muted);line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">'+String(link.caption).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</div>\n':'')+
+// Likes counter + XP + "Gefällt X"
+'  <div class="post-likes-row" style="padding-left:0;padding-right:0">\n'+
 '    <span class="post-like-count"><svg width="20" height="20" viewBox="0 0 24 24" fill="#ef4444"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg><span id="likes-'+lid1+'">'+likes.length+'</span></span>\n'+
-'    <span class="post-xp-pill"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L3 14h7v8l10-12h-7z"/></svg>'+(poster.xp||0)+' XP</span>\n'+
 '  </div>\n'+
-// "Gefällt X und Y" text
-(likersNameText?'  <div class="post-likers">'+likersNameText+'</div>\n':'')+
-// Hidden liker rows for modal
+(likersNameText?'  <div class="post-likers" style="padding-left:0">'+likersNameText+'</div>\n':'')+
 '<div id="liker-rows-'+lid1+'" style="display:none">'+likerRows+'</div>\n'+
-// Action buttons: Like + Wer hat geliked?
-'  <div class="post-actions" style="gap:var(--space-2);padding:8px 16px 12px">'+likeBtn+whoLikedBtn+'</div>\n'+
-commentsBox+
+// Aktion: Like + Wer hat geliked?
+'  <div class="post-actions" style="gap:var(--space-2);padding:8px 0 4px">'+likeBtn+whoLikedBtn+'</div>\n'+
+commentsBox.replace('margin:0 16px 12px','margin:0')+
 '</div>';}
 
         // Superlink week key (Berlin time)
@@ -11892,34 +11860,32 @@ commentsBox+
             const whoLikedBtn = '<button class="post-action-btn" onclick="showSLLikerModal(\''+sl.id+'\')" style="border:1px solid var(--border);border-radius:12px;padding:9px 14px;font-size:13px;font-weight:700;gap:5px;display:inline-flex;align-items:center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Wer hat geliked?</button>';
             const time = new Date(sl.timestamp).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
             const dateStr = new Date(sl.timestamp).toLocaleDateString('de-DE',{day:'2-digit',month:'short'});
-            return '<div class="post fade-up'+cardThemeClass(poster.activeCardTheme)+'" id="sl-post-'+sl.id+'">\n'+legendOverlay(poster.activeCardTheme)+'\n'
-                +'<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px 0">\n'
-                +'<span style="display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:800;letter-spacing:.3px;color:#d97706;background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.40);padding:2px 9px;border-radius:99px"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Super</span>\n'
+            const _slUrl = htmlEsc(cleanInstagramUrl(sl.url||''));
+            const _slThumb = sl.thumbnail
+              ? '<img src="/insta-thumb?u='+encodeURIComponent(sl.thumbnail)+'" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.remove()" alt="">'
+              : (avatarSmall ? avatarSmall : '');
+            const _slIsOnline = isUidOnline(sl.uid);
+            return '<div class="post fade-up cb-cc'+cardThemeClass(poster.activeCardTheme)+'" id="sl-post-'+sl.id+'" style="position:relative;margin:0 16px 14px;padding:14px;border-radius:16px;background:var(--bg3);border:1px solid var(--border);box-shadow:0 0 0 1.5px rgba(245,158,11,0.22),0 4px 16px rgba(15,23,42,0.08)">\n'+legendOverlay(poster.activeCardTheme)+'\n'
+                +'<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px">\n'
+                +'<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:800;letter-spacing:.2px;color:#d97706;background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.40);padding:2px 9px;border-radius:99px"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Superlink</span>\n'
                 +'<span class="post-time">'+dateStr+' '+time+'</span>\n'
                 +'</div>\n'
-                +'<div class="post-header" style="padding-top:var(--space-2)">\n'
-                +'<a href="/profil/'+sl.uid+'" style="position:relative;width:40px;height:40px;flex-shrink:0;text-decoration:none">'+crownOverlay(sl.uid,'sm')+'<div style="position:relative;width:40px;height:40px;border-radius:50%;overflow:hidden;background:'+grad+';display:flex;align-items:center;justify-content:center">\n'
-                +'<span style="color:#fff;font-weight:700;font-size:15px;position:absolute">'+(poster.name||'?')[0]+'</span>\n'
-                +avatarSmall+'\n</div></a>\n'
-                +'<a href="/profil/'+sl.uid+'" class="post-user-info" style="text-decoration:none;color:inherit">\n'
-                +'<div class="post-name">'+htmlEsc(poster.spitzname||poster.name||'User')+_posterBld+'</div>\n'
-                +'<div class="post-badge">'+roleBadge(poster.role)+(insta?'<span style="color:var(--muted2)">@'+insta+'</span>':'')+'</div>\n'
-                +'</a>\n</div>\n'
-                +'<div style="margin:8px 16px;padding:8px 12px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:10px;font-size:11px;color:rgba(245,158,11,.9);font-weight:600;display:flex;align-items:center;gap:6px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Bitte Liken, Kommentieren, Teilen und Speichern</div>\n'
-                +'<div style="margin:0 16px 8px;border-radius:14px;overflow:hidden;background:var(--bg3);border:1px solid rgba(255,255,255,.08)">\n'
-                +(sl.thumbnail
-                    ? '<a href="'+htmlEsc(cleanInstagramUrl(sl.url||''))+'" target="_blank" rel="noopener noreferrer" onclick="markLinkVisited(\''+sl.id+'\')" style="display:block;position:relative;width:100%;padding-top:62%;overflow:hidden;background:#000"><img src="/insta-thumb?u='+encodeURIComponent(sl.thumbnail)+'" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.parentElement.style.display=\'none\'" alt=""><div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.05),rgba(0,0,0,.55))"></div><div style="position:absolute;top:10px;left:12px;background:rgba(0,0,0,.55);border-radius:8px;padding:4px 9px;font-size:11px;color:#fff;font-weight:600;backdrop-filter:blur(4px)">📸 Instagram</div></a>\n'
-                    : '')
-                +'<div style="padding:10px 14px">\n'
-                +(sl.caption?'<div style="font-size:12px;color:var(--muted);line-height:1.4;margin-bottom:var(--space-2)">'+String(sl.caption).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</div>':'')+'\n'
-                +'<div style="display:flex;align-items:center;justify-content:space-between;gap:var(--space-2)">'
-                +'<div style="flex-shrink:0">'+titlePlateInlineHtml(poster.activeTitle)+'</div>'
-                +'<a href="'+htmlEsc(cleanInstagramUrl(sl.url||''))+'" target="_blank" rel="noopener noreferrer" onclick="markLinkVisited(\''+sl.id+'\')" style="display:inline-flex;align-items:center;gap:5px;padding:7px 14px;background:linear-gradient(135deg,#f59e0b,#a78bfa);color:#fff;border-radius:10px;font-size:12px;font-weight:700;text-decoration:none;flex-shrink:0">→ Öffnen</a>'
+                +'<div style="display:flex;align-items:flex-start;gap:11px">\n'
+                +'<div style="display:flex;flex-direction:column;align-items:center;gap:7px;flex-shrink:0">\n'
+                +'<a href="/profil/'+sl.uid+'" style="position:relative;width:30px;height:30px;flex-shrink:0;text-decoration:none">'+crownOverlay(sl.uid,'xs')+'<div style="position:relative;width:30px;height:30px;border-radius:50%;overflow:hidden;background:'+grad+';display:flex;align-items:center;justify-content:center"><span style="color:#fff;font-weight:700;font-size:12px;position:absolute">'+(poster.name||'?')[0]+'</span>'+avatarSmall+'</div></a>\n'
+                +'<div onclick="markLinkVisited(\''+sl.id+'\');window.open(\''+jsEsc(cleanInstagramUrl(sl.url||''))+'\',\'_blank\')" style="position:relative;width:92px;height:92px;flex-shrink:0;border-radius:12px;overflow:hidden;background:#000;cursor:pointer;border:1px solid var(--border)">'+_slThumb+'<div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.12),rgba(0,0,0,.5))"></div><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none"><div style="width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.92);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 10px rgba(0,0,0,.35)"><div style="width:0;height:0;border-style:solid;border-width:7px 0 7px 12px;border-color:transparent transparent transparent #000;margin-left:3px"></div></div></div></div>\n'
                 +'</div>\n'
-                +'</div></div>\n'
-                +'<div class="post-likes-row"><span class="post-like-count"><svg width="20" height="20" viewBox="0 0 24 24" fill="#ef4444"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg><span id="sl-likes-'+sl.id+'">'+likes.length+'</span></span></div>\n'
+                +'<a href="/profil/'+sl.uid+'" style="flex:1;min-width:0;text-decoration:none;color:inherit">\n'
+                +'<div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;min-width:0"><span style="font-size:13.5px;font-weight:800;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px">'+htmlEsc(poster.spitzname||poster.name||'User')+'</span>'+(_slIsOnline?'<span style="width:7px;height:7px;border-radius:50%;background:#00c851;display:inline-block;flex-shrink:0"></span>':'')+_posterBld+roleBadge(poster.role)+'</div>\n'
+                +'<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:4px">'+(insta?'<span style="font-size:11px;font-weight:600;color:var(--muted2)">@'+htmlEsc(insta)+'</span>':'')+'<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:800;padding:1px 7px;border-radius:99px;background:rgba(124,58,237,0.14);color:#7c3aed"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L3 14h7v8l10-12h-7z"/></svg>'+(poster.xp||0)+' XP</span></div>\n'
+                +(titlePlateInlineHtml(poster.activeTitle)?'<div style="margin-top:5px">'+titlePlateInlineHtml(poster.activeTitle)+'</div>\n':'')
+                +'</a>\n'
+                +'</div>\n'
+                +(sl.caption?'<div style="margin-top:10px;font-size:12px;color:var(--muted);line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">'+String(sl.caption).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</div>\n':'')
+                +'<div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin-top:11px;padding:9px 12px;background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.40);border-radius:11px;font-size:12px;font-weight:800;color:#d97706"><span style="font-size:13px">⚠️ Pflicht:</span><span>❤ Liken</span><span style="opacity:.4">·</span><span>💬 Kommentieren</span><span style="opacity:.4">·</span><span>↗ Teilen</span><span style="opacity:.4">·</span><span>🔖 Speichern</span></div>\n'
+                +'<div class="post-likes-row" style="padding-left:0;padding-right:0"><span class="post-like-count"><svg width="20" height="20" viewBox="0 0 24 24" fill="#ef4444"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg><span id="sl-likes-'+sl.id+'">'+likes.length+'</span></span></div>\n'
                 +'<div id="sl-liker-rows-'+sl.id+'" style="display:none">'+likerRows+'</div>\n'
-                +'<div class="post-actions" style="gap:var(--space-2);padding:8px 16px 12px">'+likeBtn+whoLikedBtn+'</div>\n'
+                +'<div class="post-actions" style="gap:var(--space-2);padding:8px 0 4px">'+likeBtn+whoLikedBtn+'</div>\n'
                 +'</div>';
         }
 
@@ -12765,6 +12731,48 @@ window.cbCardReel = function(p, postId, visitVar){
     '</div>'+
   '</div>';
 };
+// ── Ultra-kompakte Karte (Thumbnail-links) für ALLE Bonus-Link-Typen ──
+// o: { typePill, accent, visitVar, dutyLine(bool), engageHtml, likersHtml, adminHtml, timerHtml, themeClass }
+window.cbCompactCard = function(p, o){
+  o = o || {}; var e = window.cbCardEsc; var a = p.author||{}; var uid = e(p.uid||a.uid||'');
+  var accent = o.accent || 'var(--accent)';
+  var clean = (typeof cleanInstagramUrl==='function') ? cleanInstagramUrl(p.url||'') : (p.url||'');
+  var setv = o.visitVar ? ('window.'+o.visitVar+'=Date.now();') : '';
+  var pid = e(p.id||'');
+  // kleines klickbares Reel-Thumbnail (öffnet Instagram + setzt Visit)
+  var thumb = '<div onclick="'+setv+'markLinkVisited(\\''+pid+'\\');window.open(\\''+e(clean)+'\\',\\'_blank\\')" style="position:relative;width:92px;height:92px;flex-shrink:0;border-radius:12px;overflow:hidden;background:linear-gradient(135deg,#1a1a2e,#16213e);cursor:pointer;border:1px solid rgba(255,255,255,.10)">'+
+    (uid?'<img src="/appbild/'+uid+'/banner" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.remove()" alt="">':'')+
+    '<div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.12),rgba(0,0,0,.5))"></div>'+
+    '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none"><div style="width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.92);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 10px rgba(0,0,0,.35)"><div style="width:0;height:0;border-style:solid;border-width:7px 0 7px 12px;border-color:transparent transparent transparent #000;margin-left:3px"></div></div></div>'+
+  '</div>';
+  // Avatar 30px + Krone-Overlay
+  var crown = a.crownHtml || '';
+  var avatar = '<div style="position:relative;width:30px;height:30px;flex-shrink:0">'+crown+'<div style="position:relative;width:30px;height:30px;border-radius:50%;overflow:hidden;background:linear-gradient(135deg,#06b6d4,#a855f7);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:12px">'+e((a.name||'?').charAt(0))+(uid?'<img src="/appbild/'+uid+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.remove()" alt="">':'')+'</div></div>';
+  var bld = a.builderEmoji ? '<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:800;padding:1px 6px;border-radius:99px;background:rgba(34,197,94,0.16);color:#16a34a">'+e(a.builderEmoji)+(a.builderLabel?' '+e(a.builderLabel):'')+'</span>' : '';
+  var role = a.roleBadgeHtml || '';
+  var online = a.online ? '<span style="width:7px;height:7px;border-radius:50%;background:#00c851;display:inline-block;flex-shrink:0"></span>' : '';
+  var title = a.titlePlateHtml || '';
+  var ig = a.instagram ? '<span style="font-size:11px;font-weight:600;color:'+accent+'">@'+e(a.instagram)+'</span>' : '';
+  var xp = '<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:800;padding:1px 7px;border-radius:99px;background:rgba(124,58,237,0.14);color:#7c3aed"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L3 14h7v8l10-12h-7z"/></svg>'+(a.xp||0)+' XP</span>';
+  var authorCol = '<a href="/profil/'+uid+'" style="flex:1;min-width:0;text-decoration:none;color:inherit">'+
+    '<div style="display:flex;align-items:center;gap:6px"><div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;min-width:0"><span style="font-size:13.5px;font-weight:800;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px">'+e(a.name||'User')+'</span>'+online+bld+role+'</div></div>'+
+    '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:4px">'+ig+xp+'</div>'+
+    (title?'<div style="margin-top:5px">'+title+'</div>':'')+'</a>';
+  var head = '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px">'+(o.typePill||'')+(o.timerHtml||'')+'</div>';
+  var bodyRow = '<div style="display:flex;align-items:flex-start;gap:11px">'+
+    '<div style="display:flex;flex-direction:column;align-items:center;gap:7px;flex-shrink:0">'+avatar+thumb+'</div>'+authorCol+'</div>';
+  var duty = o.dutyLine
+    ? '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin-top:11px;padding:9px 12px;background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.40);border-radius:11px;font-size:12px;font-weight:800;color:#d97706"><span style="font-size:13px">⚠️ Pflicht:</span><span>❤ Liken</span><span style="opacity:.4">·</span><span>💬 Kommentieren</span><span style="opacity:.4">·</span><span>↗ Teilen</span><span style="opacity:.4">·</span><span>🔖 Speichern</span></div>'
+    : '';
+  var engageWrap = o.engageHtml ? '<div style="margin-top:11px">'+o.engageHtml+'</div>' : '';
+  var adminWrap = o.adminHtml ? o.adminHtml : '';
+  var likersWrap = o.likersHtml ? o.likersHtml : '';
+  // typ-farbige Glow-Kante + adaptiver Theme-Body
+  var themeCls = o.themeClass ? (' '+o.themeClass) : '';
+  return '<div class="post fade-up cb-cc'+themeCls+'" style="position:relative;margin:0 16px 14px;padding:14px;border-radius:16px;background:var(--bg3);border:1px solid var(--border);box-shadow:0 0 0 1.5px '+accent+'33,0 4px 16px rgba(15,23,42,0.08)">'+
+    (o.cornerHtml||'')+(o.adminHeaderHtml||'')+
+    head+bodyRow+(o.captionHtml||'')+duty+engageWrap+adminWrap+likersWrap+'</div>';
+};
 // CSS-only Aufklapp-Box (Checkbox-Hack): im Heute-Feed nur Kopfzeile sichtbar, Tap klappt die volle Karte auf.
 (function(){ if(document.getElementById('cb-xl-css'))return; var s=document.createElement('style'); s.id='cb-xl-css'; s.textContent='.cb-xlb{display:none}.cb-xlc:checked~.cb-xlb{display:block}.cb-xlc:checked~.cb-xlh{display:none}.cb-xlh{display:block;-webkit-tap-highlight-color:transparent}@keyframes cbCbarPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}.cb-cbar-cta{animation:cbCbarPulse 1.5s ease-in-out infinite}@media(prefers-reduced-motion:reduce){.cb-cbar-cta{animation:none}}'; document.head.appendChild(s); })();
 window.cbCompactBar = function(o){
@@ -12804,55 +12812,49 @@ window.cbCollapseWrap = function(inner, id, compact){
     const isMine = !!p.isSelf;
     const isFamily = !!p.isFamily;
     const liked = !!p.liked;
-    const aName = esc(p.author?.name||'User') + ((p.author&&p.author.builderEmoji)?' '+esc(p.author.builderEmoji):'');
-    const aHandle = p.author?.instagram ? '@'+esc(p.author.instagram) : '';
     const remaining = p.remainingMs;
-    return '<div class="diamond-card" data-post-id="'+esc(p.id)+'">' +
-      '<div class="diamond-card-glow"></div>' +
-      '<div class="diamond-card-body">' +
-        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-2)">' +
-          '<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:800;letter-spacing:.2px;color:#22d3ee;background:rgba(6,182,212,0.12);border:1px solid rgba(6,182,212,0.4);padding:2px 9px;border-radius:99px">💎 Diamantlink · +'+(p.reward||3)+'</span>' +
-          '<span style="font-size:10.5px;color:var(--muted);font-weight:600">⏱ '+fmtRemaining(remaining)+'</span>' +
-        '</div>' +
-        window.cbCardAuthorRow(p) +
-        window.cbCardReel(p, p.id, '_dvisit_'+p.id) +
-        '<div style="margin-bottom:10px;padding:13px 14px;background:rgba(245,158,11,0.13);border:2.5px solid #f59e0b;border-radius:13px;box-shadow:0 0 0 3px rgba(245,158,11,0.18),0 4px 14px rgba(245,158,11,0.20)">' +
-          '<div style="font-size:13.5px;font-weight:900;color:#f59e0b;text-transform:uppercase;letter-spacing:0.6px;margin-bottom:7px;display:flex;align-items:center;gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M10.3 4 2 18.3A1.6 1.6 0 0 0 3.4 20.7h17.2A1.6 1.6 0 0 0 22 18.3L13.7 4a1.6 1.6 0 0 0-3.4 0z"/><line x1="12" y1="9.5" x2="12" y2="13.5"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>FULL ENGAGEMENT PFLICHT</div>' +
-          '<div style="font-size:13.5px;font-weight:800;color:var(--text);line-height:1.5;display:flex;flex-wrap:wrap;align-items:center;gap:5px 9px"><span style="display:inline-flex;align-items:center;gap:var(--space-1)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 5.1a5.4 5.4 0 0 0-7.7 0l-1.1 1.1-1.1-1.1A5.4 5.4 0 1 0 3.2 12.8l1.1 1.1L12 21.5l7.7-7.6 1.1-1.1a5.4 5.4 0 0 0 0-7.7z"/></svg>LIKEN</span><span style="opacity:.35">·</span><span style="display:inline-flex;align-items:center;gap:var(--space-1)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-12.5 7.5L3 20.5l1.5-5.5A8.5 8.5 0 1 1 21 11.5z"/></svg>KOMMENTIEREN</span><span style="opacity:.35">·</span><span style="display:inline-flex;align-items:center;gap:var(--space-1)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><polyline points="8 6 12 2 16 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>TEILEN</span><span style="opacity:.35">·</span><span style="display:inline-flex;align-items:center;gap:var(--space-1)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-4.5L5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>SPEICHERN</span></div>' +
-          '<div style="font-size:11.5px;font-weight:800;color:#ef4444;margin-top:7px;line-height:1.45;display:flex;align-items:flex-start;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px"><path d="M10.3 4 2 18.3A1.6 1.6 0 0 0 3.4 20.7h17.2A1.6 1.6 0 0 0 22 18.3L13.7 4a1.6 1.6 0 0 0-3.4 0z"/><line x1="12" y1="9.5" x2="12" y2="13.5"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><span>Bei Schein-Likes: XP-Abzug + Diamanten-Reset + Bann!</span></div>' +
-        '</div>' +
-        (isMine
-          ? '<div style="padding:11px;background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.35);border-radius:10px;font-size:12.5px;color:#ef4444;font-weight:700;text-align:center">🚫 Kein Self-Like — dein eigener Post</div>'
-          : isFamily
-          ? '<div style="padding:11px;background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.35);border-radius:10px;font-size:12.5px;color:#ef4444;font-weight:700;text-align:center">🚫 Family-Account — kein Like möglich</div>'
-          : liked
-          ? '<div style="padding:11px;background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.35);border-radius:10px;font-size:13px;color:#22c55e;font-weight:700;text-align:center">✅ Engagiert · +'+(p.reward||3)+' 💎</div>'
-          : '<button onclick="diamondLikeClick(\\''+p.id+'\\', this)" style="display:flex;align-items:center;justify-content:center;gap:var(--space-2);width:100%;padding:14px;background:linear-gradient(135deg,#06b6d4,#0e7490);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 4px 14px rgba(6,182,212,0.22);position:relative"><span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900">2</span><span>💎 Engagiert · +'+(p.reward||3)+' 💎</span></button>'
-        ) +
-        (window.__IS_ADMIN ? '<button onclick="diamondAdminDelete(\\''+p.id+'\\', this)" style="display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:9px;margin-top:var(--space-2);background:transparent;color:#ef4444;border:1px dashed rgba(239,68,68,0.50);border-radius:9px;font-size:12px;font-weight:700;cursor:pointer">🛡️ Admin: Löschen</button>' : '') +
-        (function(){
-          const lkrs = Array.isArray(p.likers) ? p.likers : [];
-          const cnt = p.likeCount || lkrs.length;
-          if (cnt === 0) return '<div style="font-size:11px;color:var(--muted);margin-top:var(--space-2);text-align:center">Noch keine Engagements</div>';
-          const top = lkrs.slice(0,3).map(u => '<b style="color:var(--text)">'+esc(u.name||'User')+'</b>').join(', ');
-          const rest = cnt > 3 ? ' und ' + (cnt-3) + ' weiteren' : '';
-          const namesTxt = 'Gefällt ' + top + rest;
-          const rows = lkrs.map(u => {
-            // Avatar: in-App-Profilbild zuerst (mit onerror-Fallback), dann Insta-Avatar, dann Initial-Bubble
-            const initial = '<div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#06b6d4,#0e7490);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;position:relative;overflow:hidden">'+esc((u.name||'?')[0])+
-              (u.uid ? '<img src="/appbild/'+esc(u.uid)+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.remove()" alt="">' : '')+
-              '</div>';
-            const _dtail = isMine ? '<button onclick="reportLiker(\\''+esc(u.uid)+'\\',\\'Diamantlink '+esc(p.id)+'\\',1)" style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);color:#ef4444;border-radius:8px;padding:6px 11px;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0">Melden</button>' : '<div style="font-size:11px;color:var(--accent)">→</div>';
-            return '<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--border2)"><a href="/profil/'+esc(u.uid)+'" style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;text-decoration:none">'+initial+'<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:var(--text)">'+esc(u.name||'User')+(u.builderEmoji?' '+esc(u.builderEmoji):'')+'</div>'+(u.roleBadgeHtml?'<div style="margin-top:3px">'+u.roleBadgeHtml+'</div>':'')+(u.instagram?'<div style="font-size:11px;color:#06b6d4;margin-top:2px">@'+esc(u.instagram)+'</div>':'')+'</div></a>'+_dtail+'</div>';
-          }).join('');
-          return '<div id="liker-rows-dl-'+esc(p.id)+'" style="display:none">'+rows+'</div>' +
-            '<div style="display:flex;align-items:center;justify-content:space-between;gap:var(--space-2);margin-top:10px;padding:0 4px">' +
-              '<div style="font-size:12px;color:var(--muted);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+namesTxt+'</div>' +
-              '<button onclick="showLikerModal(\\'dl-'+esc(p.id)+'\\')" style="background:rgba(6,182,212,0.10);border:1px solid rgba(6,182,212,0.35);color:#06b6d4;font-size:11px;font-weight:700;padding:5px 10px;border-radius:8px;cursor:pointer;white-space:nowrap;flex-shrink:0"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:var(--space-1)"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Wer hat engagiert? ('+cnt+')</button>' +
-            '</div>';
-        })() +
-      '</div>' +
-    '</div>';
+    const typePill = '<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:800;letter-spacing:.2px;color:#22d3ee;background:rgba(6,182,212,0.12);border:1px solid rgba(6,182,212,0.4);padding:2px 9px;border-radius:99px">💎 Diamantlink · +'+(p.reward||3)+'</span>';
+    const timerHtml = '<span style="font-size:10.5px;color:var(--muted);font-weight:600">⏱ '+fmtRemaining(remaining)+'</span>';
+    const engageHtml = (isMine
+      ? '<div style="padding:11px;background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.35);border-radius:10px;font-size:12.5px;color:#ef4444;font-weight:700;text-align:center">🚫 Kein Self-Like — dein eigener Post</div>'
+      : isFamily
+      ? '<div style="padding:11px;background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.35);border-radius:10px;font-size:12.5px;color:#ef4444;font-weight:700;text-align:center">🚫 Family-Account — kein Like möglich</div>'
+      : liked
+      ? '<div style="padding:11px;background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.35);border-radius:10px;font-size:13px;color:#22c55e;font-weight:700;text-align:center">✅ Engagiert · +'+(p.reward||3)+' 💎</div>'
+      : '<button onclick="diamondLikeClick(\\''+p.id+'\\', this)" style="display:flex;align-items:center;justify-content:center;gap:var(--space-2);width:100%;padding:14px;background:linear-gradient(135deg,#06b6d4,#0e7490);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 4px 14px rgba(6,182,212,0.22);position:relative"><span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900">2</span><span>💎 Engagiert · +'+(p.reward||3)+' 💎</span></button>'
+    ) +
+    (window.__IS_ADMIN ? '<button onclick="diamondAdminDelete(\\''+p.id+'\\', this)" style="display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:9px;margin-top:var(--space-2);background:transparent;color:#ef4444;border:1px dashed rgba(239,68,68,0.50);border-radius:9px;font-size:12px;font-weight:700;cursor:pointer">🛡️ Admin: Löschen</button>' : '');
+    const likersHtml = (function(){
+      const lkrs = Array.isArray(p.likers) ? p.likers : [];
+      const cnt = p.likeCount || lkrs.length;
+      if (cnt === 0) return '<div style="font-size:11px;color:var(--muted);margin-top:var(--space-2);text-align:center">Noch keine Engagements</div>';
+      const top = lkrs.slice(0,3).map(u => '<b style="color:var(--text)">'+esc(u.name||'User')+'</b>').join(', ');
+      const rest = cnt > 3 ? ' und ' + (cnt-3) + ' weiteren' : '';
+      const namesTxt = 'Gefällt ' + top + rest;
+      const rows = lkrs.map(u => {
+        // Avatar: in-App-Profilbild zuerst (mit onerror-Fallback), dann Insta-Avatar, dann Initial-Bubble
+        const initial = '<div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#06b6d4,#0e7490);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;position:relative;overflow:hidden">'+esc((u.name||'?')[0])+
+          (u.uid ? '<img src="/appbild/'+esc(u.uid)+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.remove()" alt="">' : '')+
+          '</div>';
+        const _dtail = isMine ? '<button onclick="reportLiker(\\''+esc(u.uid)+'\\',\\'Diamantlink '+esc(p.id)+'\\',1)" style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);color:#ef4444;border-radius:8px;padding:6px 11px;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0">Melden</button>' : '<div style="font-size:11px;color:var(--accent)">→</div>';
+        return '<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--border2)"><a href="/profil/'+esc(u.uid)+'" style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;text-decoration:none">'+initial+'<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:var(--text)">'+esc(u.name||'User')+(u.builderEmoji?' '+esc(u.builderEmoji):'')+'</div>'+(u.roleBadgeHtml?'<div style="margin-top:3px">'+u.roleBadgeHtml+'</div>':'')+(u.instagram?'<div style="font-size:11px;color:#06b6d4;margin-top:2px">@'+esc(u.instagram)+'</div>':'')+'</div></a>'+_dtail+'</div>';
+      }).join('');
+      return '<div id="liker-rows-dl-'+esc(p.id)+'" style="display:none">'+rows+'</div>' +
+        '<div style="display:flex;align-items:center;justify-content:space-between;gap:var(--space-2);margin-top:10px;padding:0 4px">' +
+          '<div style="font-size:12px;color:var(--muted);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+namesTxt+'</div>' +
+          '<button onclick="showLikerModal(\\'dl-'+esc(p.id)+'\\')" style="background:rgba(6,182,212,0.10);border:1px solid rgba(6,182,212,0.35);color:#06b6d4;font-size:11px;font-weight:700;padding:5px 10px;border-radius:8px;cursor:pointer;white-space:nowrap;flex-shrink:0"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:var(--space-1)"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Wer hat engagiert? ('+cnt+')</button>' +
+        '</div>';
+    })();
+    return window.cbCompactCard(p, {
+      typePill: typePill,
+      accent: '#06b6d4',
+      visitVar: '_dvisit_'+p.id,
+      dutyLine: true,
+      timerHtml: timerHtml,
+      engageHtml: engageHtml,
+      likersHtml: likersHtml,
+      themeClass: (p.author && p.author.themeClass) || ''
+    });
   }
   function diamondCss(){
     if (document.getElementById('diamond-css')) return;
@@ -13390,53 +13392,47 @@ window.cbCollapseWrap = function(inner, id, compact){
     const isMine = !!p.isSelf;
     const isFamily = !!p.isFamily;
     const liked = !!p.liked;
-    const aName = esc(p.author?.name||'User') + ((p.author&&p.author.builderEmoji)?' '+esc(p.author.builderEmoji):'');
-    const aHandle = p.author?.instagram ? '@'+esc(p.author.instagram) : '';
     const remaining = p.remainingMs;
-    return '<div class="prisma-card" data-post-id="'+esc(p.id)+'">' +
-      '<div class="prisma-card-glow"></div>' +
-      '<div class="prisma-card-body">' +
-        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-2)">' +
-          '<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:800;letter-spacing:.2px;color:#c084fc;background:rgba(168,85,247,0.12);border:1px solid rgba(168,85,247,0.4);padding:2px 9px;border-radius:99px">💠 Prismalink · +'+(p.reward||7)+'</span>' +
-          '<span style="font-size:10.5px;color:var(--muted);font-weight:600">⏱ '+fmtRemaining(remaining)+'</span>' +
-        '</div>' +
-        window.cbCardAuthorRow(p, '#fff') +
-        window.cbCardReel(p, p.id, '_pvisit_'+p.id) +
-        '<div style="margin-bottom:10px;padding:13px 14px;background:rgba(245,158,11,0.18);border:2px solid #f59e0b;border-radius:13px;box-shadow:0 0 0 2px rgba(245,158,11,0.15),0 4px 14px rgba(245,158,11,0.20)">' +
-          '<div style="font-size:13.5px;font-weight:900;color:#fbbf24;text-transform:uppercase;letter-spacing:0.6px;margin-bottom:7px;display:flex;align-items:center;gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M10.3 4 2 18.3A1.6 1.6 0 0 0 3.4 20.7h17.2A1.6 1.6 0 0 0 22 18.3L13.7 4a1.6 1.6 0 0 0-3.4 0z"/><line x1="12" y1="9.5" x2="12" y2="13.5"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>FULL ENGAGEMENT PFLICHT</div>' +
-          '<div style="font-size:13.5px;font-weight:800;color:#fff;line-height:1.5;display:flex;flex-wrap:wrap;align-items:center;gap:5px 9px"><span style="display:inline-flex;align-items:center;gap:var(--space-1)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 5.1a5.4 5.4 0 0 0-7.7 0l-1.1 1.1-1.1-1.1A5.4 5.4 0 1 0 3.2 12.8l1.1 1.1L12 21.5l7.7-7.6 1.1-1.1a5.4 5.4 0 0 0 0-7.7z"/></svg>LIKEN</span><span style="opacity:.45">·</span><span style="display:inline-flex;align-items:center;gap:var(--space-1)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-12.5 7.5L3 20.5l1.5-5.5A8.5 8.5 0 1 1 21 11.5z"/></svg>KOMMENTIEREN</span><span style="opacity:.45">·</span><span style="display:inline-flex;align-items:center;gap:var(--space-1)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><polyline points="8 6 12 2 16 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>TEILEN</span><span style="opacity:.45">·</span><span style="display:inline-flex;align-items:center;gap:var(--space-1)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-4.5L5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>SPEICHERN</span></div>' +
-          '<div style="font-size:11.5px;font-weight:800;color:#fca5a5;margin-top:7px;line-height:1.45;display:flex;align-items:flex-start;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px"><path d="M10.3 4 2 18.3A1.6 1.6 0 0 0 3.4 20.7h17.2A1.6 1.6 0 0 0 22 18.3L13.7 4a1.6 1.6 0 0 0-3.4 0z"/><line x1="12" y1="9.5" x2="12" y2="13.5"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><span>Bei Schein-Likes: XP-Abzug + Diamanten-Reset + Bann!</span></div>' +
-        '</div>' +
-        (isMine
-          ? '<div style="padding:11px;background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.35);border-radius:10px;font-size:12.5px;color:#ef4444;font-weight:700;text-align:center">🚫 Kein Self-Like — dein eigener Post</div>'
-          : isFamily
-          ? '<div style="padding:11px;background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.35);border-radius:10px;font-size:12.5px;color:#ef4444;font-weight:700;text-align:center">🚫 Family-Account — kein Like möglich</div>'
-          : liked
-          ? '<div style="padding:11px;background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.35);border-radius:10px;font-size:13px;color:#22c55e;font-weight:700;text-align:center">✅ Engagiert · +'+(p.reward||7)+' 💎</div>'
-          : '<button onclick="prismaLikeClick(\\''+p.id+'\\', this)" style="display:flex;align-items:center;justify-content:center;gap:var(--space-2);width:100%;padding:14px;background:linear-gradient(135deg,#ef4444,#f59e0b,#22c55e,#06b6d4,#a855f7);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 4px 14px rgba(168,85,247,0.22);position:relative"><span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900">2</span><span>💠 Engagiert · +'+(p.reward||7)+' 💎</span></button>'
-        ) +
-        (window.__IS_ADMIN ? '<button onclick="prismaAdminDelete(\\''+p.id+'\\', this)" style="display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:9px;margin-top:var(--space-2);background:transparent;color:#ef4444;border:1px dashed rgba(239,68,68,0.50);border-radius:9px;font-size:12px;font-weight:700;cursor:pointer">🛡️ Admin: Löschen</button>' : '') +
-        (function(){
-          const lkrs = Array.isArray(p.likers) ? p.likers : [];
-          const cnt = p.likeCount || lkrs.length;
-          if (cnt === 0) return '<div style="font-size:11px;color:var(--muted);margin-top:var(--space-2);text-align:center">Noch keine Engagements</div>';
-          const top = lkrs.slice(0,3).map(u => '<b style="color:var(--text)">'+esc(u.name||'User')+'</b>').join(', ');
-          const rest = cnt > 3 ? ' und ' + (cnt-3) + ' weiteren' : '';
-          const namesTxt = 'Gefällt ' + top + rest;
-          const rows = lkrs.map(u => {
-            const initial = '<div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#a855f7,#06b6d4);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;position:relative;overflow:hidden">'+esc((u.name||'?')[0])+
-              (u.uid ? '<img src="/appbild/'+esc(u.uid)+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.remove()" alt="">' : '')+
-              '</div>';
-            return '<a href="/profil/'+esc(u.uid)+'" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--border2);text-decoration:none">'+initial+'<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:var(--text)">'+esc(u.name||'User')+(u.builderEmoji?' '+esc(u.builderEmoji):'')+'</div>'+(u.instagram?'<div style="font-size:11px;color:#a855f7">@'+esc(u.instagram)+'</div>':'')+'</div><div style="font-size:11px;color:var(--accent)">→</div></a>';
-          }).join('');
-          return '<div id="liker-rows-pl-'+esc(p.id)+'" style="display:none">'+rows+'</div>' +
-            '<div style="display:flex;align-items:center;justify-content:space-between;gap:var(--space-2);margin-top:10px;padding:0 4px">' +
-              '<div class="prisma-names" style="font-size:12px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+namesTxt+'</div>' +
-              '<button onclick="showLikerModal(\\'pl-'+esc(p.id)+'\\')" style="background:rgba(168,85,247,0.10);border:1px solid rgba(168,85,247,0.35);color:#a855f7;font-size:11px;font-weight:700;padding:5px 10px;border-radius:8px;cursor:pointer;white-space:nowrap;flex-shrink:0"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:var(--space-1)"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Wer hat engagiert? ('+cnt+')</button>' +
-            '</div>';
-        })() +
-      '</div>' +
-    '</div>';
+    const typePill = '<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:800;letter-spacing:.2px;color:#c084fc;background:rgba(168,85,247,0.12);border:1px solid rgba(168,85,247,0.4);padding:2px 9px;border-radius:99px">💠 Prismalink · +'+(p.reward||7)+'</span>';
+    const timerHtml = '<span style="font-size:10.5px;color:var(--muted);font-weight:600">⏱ '+fmtRemaining(remaining)+'</span>';
+    const engageHtml = (isMine
+      ? '<div style="padding:11px;background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.35);border-radius:10px;font-size:12.5px;color:#ef4444;font-weight:700;text-align:center">🚫 Kein Self-Like — dein eigener Post</div>'
+      : isFamily
+      ? '<div style="padding:11px;background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.35);border-radius:10px;font-size:12.5px;color:#ef4444;font-weight:700;text-align:center">🚫 Family-Account — kein Like möglich</div>'
+      : liked
+      ? '<div style="padding:11px;background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.35);border-radius:10px;font-size:13px;color:#22c55e;font-weight:700;text-align:center">✅ Engagiert · +'+(p.reward||7)+' 💎</div>'
+      : '<button onclick="prismaLikeClick(\\''+p.id+'\\', this)" style="display:flex;align-items:center;justify-content:center;gap:var(--space-2);width:100%;padding:14px;background:linear-gradient(135deg,#ef4444,#f59e0b,#22c55e,#06b6d4,#a855f7);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 4px 14px rgba(168,85,247,0.22);position:relative"><span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900">2</span><span>💠 Engagiert · +'+(p.reward||7)+' 💎</span></button>'
+    ) +
+    (window.__IS_ADMIN ? '<button onclick="prismaAdminDelete(\\''+p.id+'\\', this)" style="display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:9px;margin-top:var(--space-2);background:transparent;color:#ef4444;border:1px dashed rgba(239,68,68,0.50);border-radius:9px;font-size:12px;font-weight:700;cursor:pointer">🛡️ Admin: Löschen</button>' : '');
+    const likersHtml = (function(){
+      const lkrs = Array.isArray(p.likers) ? p.likers : [];
+      const cnt = p.likeCount || lkrs.length;
+      if (cnt === 0) return '<div style="font-size:11px;color:var(--muted);margin-top:var(--space-2);text-align:center">Noch keine Engagements</div>';
+      const top = lkrs.slice(0,3).map(u => '<b style="color:var(--text)">'+esc(u.name||'User')+'</b>').join(', ');
+      const rest = cnt > 3 ? ' und ' + (cnt-3) + ' weiteren' : '';
+      const namesTxt = 'Gefällt ' + top + rest;
+      const rows = lkrs.map(u => {
+        const initial = '<div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#a855f7,#06b6d4);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;position:relative;overflow:hidden">'+esc((u.name||'?')[0])+
+          (u.uid ? '<img src="/appbild/'+esc(u.uid)+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.remove()" alt="">' : '')+
+          '</div>';
+        return '<a href="/profil/'+esc(u.uid)+'" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--border2);text-decoration:none">'+initial+'<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:var(--text)">'+esc(u.name||'User')+(u.builderEmoji?' '+esc(u.builderEmoji):'')+'</div>'+(u.instagram?'<div style="font-size:11px;color:#a855f7">@'+esc(u.instagram)+'</div>':'')+'</div><div style="font-size:11px;color:var(--accent)">→</div></a>';
+      }).join('');
+      return '<div id="liker-rows-pl-'+esc(p.id)+'" style="display:none">'+rows+'</div>' +
+        '<div style="display:flex;align-items:center;justify-content:space-between;gap:var(--space-2);margin-top:10px;padding:0 4px">' +
+          '<div style="font-size:12px;color:var(--muted);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+namesTxt+'</div>' +
+          '<button onclick="showLikerModal(\\'pl-'+esc(p.id)+'\\')" style="background:rgba(168,85,247,0.10);border:1px solid rgba(168,85,247,0.35);color:#a855f7;font-size:11px;font-weight:700;padding:5px 10px;border-radius:8px;cursor:pointer;white-space:nowrap;flex-shrink:0"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:var(--space-1)"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Wer hat engagiert? ('+cnt+')</button>' +
+        '</div>';
+    })();
+    return window.cbCompactCard(p, {
+      typePill: typePill,
+      accent: '#a855f7',
+      visitVar: '_pvisit_'+p.id,
+      dutyLine: true,
+      timerHtml: timerHtml,
+      engageHtml: engageHtml,
+      likersHtml: likersHtml,
+      themeClass: (p.author && p.author.themeClass) || ''
+    });
   }
   async function load(){
     prismaCss();
@@ -13515,18 +13511,18 @@ function _alCss(){
 // Engager-Block: Avatar-Stack + „Wer? (N)" → showLikerModal('al-<id>'). Auf der dunklen Karte.
 function _alEngagers(key, engagers, count){
   var esc=_alEsc; engagers=engagers||[];
-  if(!count){ return '<div style="font-size:12px;color:rgba(255,255,255,.5);text-align:center;margin-top:12px;padding-top:11px;border-top:1px solid rgba(255,255,255,.10)">Noch kein Engagement — sei die oder der Erste! 🚀</div>'; }
+  if(!count){ return '<div style="font-size:12px;color:var(--muted);text-align:center;margin-top:12px;padding-top:11px;border-top:1px solid var(--border2)">Noch kein Engagement — sei die oder der Erste! 🚀</div>'; }
   var rows = engagers.map(function(u){
     var initial='<div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#f59e0b,#a855f7);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;position:relative;overflow:hidden;flex-shrink:0">'+esc((u.name||'?')[0])+(u.uid?'<img src="/appbild/'+esc(u.uid)+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.remove()" alt="">':'')+'</div>';
     return '<a href="/profil/'+esc(u.uid)+'" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--border2);text-decoration:none">'+initial+'<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:var(--text)">'+esc(u.name||'User')+(u.builderEmoji?' '+esc(u.builderEmoji):'')+'</div>'+(u.instagram?'<div style="font-size:11px;color:#a855f7">@'+esc(u.instagram)+'</div>':'')+'</div><div style="font-size:11px;color:var(--accent)">→</div></a>';
   }).join('');
-  var stack = engagers.slice(0,4).map(function(u,i){ return '<div style="width:27px;height:27px;border-radius:50%;background:linear-gradient(135deg,#f59e0b,#a855f7);border:2px solid #120d22;margin-left:'+(i?'-9px':'0')+';display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700;overflow:hidden;position:relative;flex-shrink:0">'+esc((u.name||'?')[0])+(u.uid?'<img src="/appbild/'+esc(u.uid)+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.remove()" alt="">':'')+'</div>'; }).join('');
-  var top = engagers.slice(0,2).map(function(u){return '<b>'+esc(u.name||'User')+'</b>';}).join(', ');
+  var stack = engagers.slice(0,4).map(function(u,i){ return '<div style="width:27px;height:27px;border-radius:50%;background:linear-gradient(135deg,#f59e0b,#a855f7);border:2px solid var(--bg3);margin-left:'+(i?'-9px':'0')+';display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700;overflow:hidden;position:relative;flex-shrink:0">'+esc((u.name||'?')[0])+(u.uid?'<img src="/appbild/'+esc(u.uid)+'/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.remove()" alt="">':'')+'</div>'; }).join('');
+  var top = engagers.slice(0,2).map(function(u){return '<b style="color:var(--text)">'+esc(u.name||'User')+'</b>';}).join(', ');
   var rest = count>2 ? ' und '+(count-2)+' weitere' : '';
   return '<div id="liker-rows-'+esc(key)+'" style="display:none">'+rows+'</div>'+
-    '<div style="display:flex;align-items:center;gap:9px;margin-top:13px;padding-top:12px;border-top:1px solid rgba(255,255,255,.10)">'+
+    '<div style="display:flex;align-items:center;gap:9px;margin-top:13px;padding-top:12px;border-top:1px solid var(--border2)">'+
       '<div style="display:flex;flex-shrink:0">'+stack+'</div>'+
-      '<div class="al-names" style="flex:1;min-width:0;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">❤️ '+top+rest+' engagiert</div>'+
+      '<div style="flex:1;min-width:0;font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">❤️ '+top+rest+' engagiert</div>'+
       '<button onclick="showLikerModal(\\''+esc(key)+'\\')" style="background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.42);color:#fbbf24;font-size:11px;font-weight:800;padding:6px 11px;border-radius:9px;cursor:pointer;white-space:nowrap;flex-shrink:0">Wer? ('+count+')</button>'+
     '</div>';
 }
@@ -13535,38 +13531,25 @@ function _alEngagers(key, engagers, count){
 function _alUserCard(c, isPreview){
   var esc=_alEsc;
   var key = (isPreview?'alp-':'al-')+c.id;
-  var msg = c.message ? '<div style="font-size:15px;color:#fff;line-height:1.5;margin:10px 0 4px;font-weight:700">'+esc(c.message)+'</div>' : '';
-  var author = c.author ? window.cbCardAuthorRow(c, '#fff') : '';
-  var reel = window.cbCardReel(c, c.id, '_alvisit');
-  var openUrl = (typeof cleanInstagramUrl==='function') ? cleanInstagramUrl(c.url) : c.url;
-  var tag = isPreview ? '<div style="position:absolute;top:9px;right:9px;z-index:3;background:rgba(0,0,0,.55);color:#fbbf24;font-size:9px;font-weight:800;letter-spacing:1px;padding:4px 8px;border-radius:7px;text-transform:uppercase">👁 Vorschau</div>' : '';
+  var typePill = '<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:800;letter-spacing:.2px;color:#fbbf24;background:rgba(245,158,11,0.14);border:1px solid rgba(245,158,11,0.45);padding:2px 9px;border-radius:99px">🛡 Admin-Link · +'+(c.reward||5)+'</span>';
+  var timerHtml = '<span style="font-size:10.5px;color:var(--muted);font-weight:600">⏱ '+_alFmtRemaining(c.remainingMs)+'</span>';
+  var caption = c.message ? '<div style="font-size:13.5px;color:var(--text);line-height:1.5;margin-top:11px;font-weight:700;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">'+esc(c.message)+'</div>' : '';
+  var corner = isPreview ? '<div style="position:absolute;top:9px;right:9px;z-index:3;background:rgba(0,0,0,.55);color:#fbbf24;font-size:9px;font-weight:800;letter-spacing:1px;padding:4px 8px;border-radius:7px;text-transform:uppercase">👁 Vorschau</div>' : '';
   var engageBtn = isPreview
-    ? '<button onclick="alert(\\'👁 Vorschau — genau so sehen deine User die Karte im Heute-Feed. Sie tippen hier auf Engagiert und bekommen +'+(c.reward||5)+' Diamanten. Du als Ersteller kannst deinen eigenen Link nicht engagieren.\\')" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:15px;background:linear-gradient(135deg,#f59e0b,#fbbf24,#a855f7);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:900;cursor:pointer;box-shadow:0 6px 18px rgba(245,158,11,.35)"><span style="width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.28);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px">2</span><svg width="18" height="18" viewBox="0 0 24 24" fill="#fff" stroke="#fff" stroke-width="1.5"><path d="M20.8 5.1a5.4 5.4 0 0 0-7.7 0l-1.1 1.1-1.1-1.1A5.4 5.4 0 1 0 3.2 12.8l1.1 1.1L12 21.5l7.7-7.6 1.1-1.1a5.4 5.4 0 0 0 0-7.7z"/></svg>Engagiert · +'+(c.reward||5)+' 💎</button>'
-    : '<button onclick="adminLinkEngageClick(\\''+esc(c.id)+'\\', this)" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:15px;background:linear-gradient(135deg,#f59e0b,#fbbf24,#a855f7);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:900;cursor:pointer;box-shadow:0 6px 18px rgba(245,158,11,.35)"><span style="width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.28);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px">2</span><svg width="18" height="18" viewBox="0 0 24 24" fill="#fff" stroke="#fff" stroke-width="1.5"><path d="M20.8 5.1a5.4 5.4 0 0 0-7.7 0l-1.1 1.1-1.1-1.1A5.4 5.4 0 1 0 3.2 12.8l1.1 1.1L12 21.5l7.7-7.6 1.1-1.1a5.4 5.4 0 0 0 0-7.7z"/></svg>Engagiert · +'+(c.reward||5)+' 💎</button>';
-  return '<div class="al-card"'+(isPreview?' style="margin:0"':'')+'>'+
-    '<div class="al-card-glow"></div>'+
-    '<div class="al-body">'+ tag +
-      '<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;padding:9px 13px;background:linear-gradient(135deg,rgba(245,158,11,.16),rgba(168,85,247,.16));border:1.5px solid rgba(245,158,11,.45);border-radius:13px;box-shadow:0 4px 14px rgba(245,158,11,.18)">'+
-        '<span style="font-size:23px;line-height:1;filter:drop-shadow(0 2px 6px rgba(245,158,11,.5))">🛡️</span>'+
-        '<div style="flex:1;min-width:0"><div style="font-size:10px;font-weight:900;letter-spacing:1.4px;text-transform:uppercase;background:linear-gradient(135deg,#fbbf24,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Admin-Link · Community-Push</div>'+
-        '<div style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-.5px;line-height:1.15;margin-top:1px">+'+(c.reward||5)+' 💎 <span style="font-size:11px;color:rgba(255,255,255,.6);font-weight:600;letter-spacing:0">fürs Engagement</span></div></div>'+
-        '<div style="font-size:11px;color:#fbbf24;font-weight:800;text-align:right;flex-shrink:0">⏱<br>'+_alFmtRemaining(c.remainingMs)+'</div>'+
-      '</div>'+
-      msg+author+reel+
-      '<div style="margin-bottom:10px;padding:13px 14px;background:rgba(245,158,11,.2);border:2px solid #f59e0b;border-radius:13px;box-shadow:0 0 0 2px rgba(245,158,11,.13),0 4px 14px rgba(245,158,11,.2)">'+
-        '<div style="font-size:13px;font-weight:900;color:#fbbf24;text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px;display:flex;align-items:center;gap:7px"><span style="font-size:16px">⚠️</span>Pflicht: Voll engagieren</div>'+
-        '<div style="display:flex;flex-wrap:wrap;gap:8px">'+
-          '<span style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.14);color:#fff;font-size:12.5px;font-weight:800;padding:8px 12px;border-radius:10px">❤️ LIKEN</span>'+
-          '<span style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.14);color:#fff;font-size:12.5px;font-weight:800;padding:8px 12px;border-radius:10px">💬 KOMMENTIEREN</span>'+
-          '<span style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.14);color:#fff;font-size:12.5px;font-weight:800;padding:8px 12px;border-radius:10px">🔁 TEILEN</span>'+
-          '<span style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.14);color:#fff;font-size:12.5px;font-weight:800;padding:8px 12px;border-radius:10px">🔖 SPEICHERN</span>'+
-        '</div>'+
-        '<div style="font-size:11.5px;font-weight:700;color:#fca5a5;margin-top:10px;line-height:1.45;display:flex;align-items:flex-start;gap:6px"><span style="flex-shrink:0">⚠️</span><span>Erst auf Instagram alles erledigen, dann unten bestätigen. Schein-Engagement → XP-Abzug, Diamanten-Reset &amp; Bann.</span></div>'+
-      '</div>'+
-      engageBtn+
-      _alEngagers(key, c.engagers, c.engagedCount||0)+
-    '</div>'+
-  '</div>';
+    ? '<button onclick="alert(\\'👁 Vorschau — genau so sehen deine User die Karte im Heute-Feed. Sie tippen hier auf Engagiert und bekommen +'+(c.reward||5)+' Diamanten. Du als Ersteller kannst deinen eigenen Link nicht engagieren.\\')" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;background:linear-gradient(135deg,#f59e0b,#fbbf24,#a855f7);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:900;cursor:pointer;box-shadow:0 6px 18px rgba(245,158,11,.35)"><span style="width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.28);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px">2</span><svg width="18" height="18" viewBox="0 0 24 24" fill="#fff" stroke="#fff" stroke-width="1.5"><path d="M20.8 5.1a5.4 5.4 0 0 0-7.7 0l-1.1 1.1-1.1-1.1A5.4 5.4 0 1 0 3.2 12.8l1.1 1.1L12 21.5l7.7-7.6 1.1-1.1a5.4 5.4 0 0 0 0-7.7z"/></svg>Engagiert · +'+(c.reward||5)+' 💎</button>'
+    : '<button onclick="adminLinkEngageClick(\\''+esc(c.id)+'\\', this)" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;background:linear-gradient(135deg,#f59e0b,#fbbf24,#a855f7);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:900;cursor:pointer;box-shadow:0 6px 18px rgba(245,158,11,.35)"><span style="width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.28);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px">2</span><svg width="18" height="18" viewBox="0 0 24 24" fill="#fff" stroke="#fff" stroke-width="1.5"><path d="M20.8 5.1a5.4 5.4 0 0 0-7.7 0l-1.1 1.1-1.1-1.1A5.4 5.4 0 1 0 3.2 12.8l1.1 1.1L12 21.5l7.7-7.6 1.1-1.1a5.4 5.4 0 0 0 0-7.7z"/></svg>Engagiert · +'+(c.reward||5)+' 💎</button>';
+  return window.cbCompactCard(c, {
+    typePill: typePill,
+    accent: '#f59e0b',
+    visitVar: '_alvisit',
+    dutyLine: true,
+    timerHtml: timerHtml,
+    cornerHtml: corner,
+    captionHtml: caption,
+    engageHtml: engageBtn,
+    likersHtml: _alEngagers(key, c.engagers, c.engagedCount||0),
+    themeClass: (c.author && c.author.themeClass) || ''
+  });
 }
 (function initAdminLinkCard(){
   var root = document.getElementById('admin-link-card-root');
@@ -16242,7 +16225,7 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
         // Paritäts-Extras für die Bonus-Karten (Client) — wie bei normalen Karten:
         a.xp = _u.xp || 0;
         try { a.online = isUidOnline(a.uid); } catch (e) {}
-        try { if (_u.activeCardTheme) a.cardTheme = _u.activeCardTheme; } catch (e) {}
+        try { if (_u.activeCardTheme) { a.cardTheme = _u.activeCardTheme; a.themeClass = cardThemeClass(_u.activeCardTheme).trim(); } } catch (e) {}
         try { if (!_cardCrownFn) _cardCrownFn = makeCrownOverlay(getTop3Uids(_d2, _d2._adminIds || [])); a.crownHtml = _cardCrownFn(String(a.uid), 'xs') || ''; } catch (e) {}
     };
     // ── DIAMANTLINK API ──
