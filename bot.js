@@ -17097,27 +17097,38 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
       <div class="dash-stat"><div class="dash-stat-lbl">📧 Email bestätigt</div><div class="dash-stat-val" id="stat-email">–</div></div>
     </div>
 
-    <!-- ── Karten-Hub (Apple-like Navigation) ── -->
+    <!-- ── Karten-Hub (Instagram/iOS-Style gruppierte Liste) ── -->
     <style>
-      .dhub{display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:12px;margin:4px 0 8px}
-      .dhub-card{position:relative;display:flex;flex-direction:column;gap:11px;padding:16px;background:var(--dink2);border:1px solid var(--dline);border-radius:18px;cursor:pointer;text-align:left;transition:transform .15s ease,box-shadow .15s ease,border-color .15s ease;-webkit-tap-highlight-color:transparent;font-family:inherit}
-      .dhub-card:hover{transform:translateY(-2px);box-shadow:0 10px 26px rgba(0,0,0,.20);border-color:var(--dsub)}
-      .dhub-card:active{transform:translateY(0)}
-      .dhub-ic{width:44px;height:44px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:22px}
-      .dhub-ttl{font-size:14px;font-weight:800;color:var(--text);line-height:1.2}
-      .dhub-sub{font-size:11px;color:var(--dsub);margin-top:3px;line-height:1.35}
-      .dhub-badge{position:absolute;top:13px;right:13px;min-width:20px;height:20px;padding:0 6px;border-radius:99px;background:#ef4444;color:#fff;font-size:11px;font-weight:800;display:none;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(239,68,68,.4)}
-      .dhub-arrow{margin-top:auto;font-size:18px;color:var(--dsub);line-height:1;align-self:flex-end}
+      .dh-group{font-size:12.5px;font-weight:700;color:var(--dsub);padding:18px 4px 9px;letter-spacing:.3px}
+      .dh-list{background:var(--dink2);border:1px solid var(--dline);border-radius:16px;overflow:hidden;margin-bottom:2px}
+      .dh-row{display:flex;align-items:center;gap:15px;width:100%;padding:15px 16px;cursor:pointer;border-top:1px solid var(--dline);background:none;text-align:left;color:var(--text);font-family:inherit;transition:background .12s;-webkit-tap-highlight-color:transparent}
+      .dh-row:first-child{border-top:none}
+      .dh-row:hover{background:rgba(255,255,255,.03)}
+      .dh-ic{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0}
+      .dh-lbl{flex:1;min-width:0}
+      .dh-t{font-size:15px;font-weight:700;color:var(--text);line-height:1.2}
+      .dh-s{font-size:11.5px;color:var(--dsub);margin-top:2px}
+      .dh-badge{min-width:20px;height:20px;padding:0 6px;border-radius:99px;background:#ef4444;color:#fff;font-size:11px;font-weight:800;display:none;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 2px 8px rgba(239,68,68,.4)}
+      .dh-arr{color:var(--dsub);font-size:19px;flex-shrink:0;line-height:1}
       #dash-back{display:none;align-items:center;gap:6px;margin:0 0 16px;cursor:pointer;color:var(--text);font-size:14px;font-weight:700;background:var(--dink2);border:1px solid var(--dline);border-radius:12px;padding:9px 15px;font-family:inherit}
       #dash-back:hover{border-color:var(--dsub)}
     </style>
-    <div id="dash-hub" class="dhub">
-      <button class="dhub-card" onclick="dashOpen('stats')"><div class="dhub-ic" style="background:rgba(59,130,246,.15);color:#3b82f6">📊</div><div><div class="dhub-ttl">Statistiken</div><div class="dhub-sub">Trends · Live · Funnel · Online</div></div><span class="dhub-badge" id="hub-b-stats"></span><div class="dhub-arrow">›</div></button>
-      <button class="dhub-card" onclick="dashOpen('users')"><div class="dhub-ic" style="background:rgba(124,58,237,.15);color:#a78bfa">👥</div><div><div class="dhub-ttl">User-Verwaltung</div><div class="dhub-sub">Alle · Neu · Subs · Papierkorb</div></div><span class="dhub-badge" id="hub-b-users"></span><div class="dhub-arrow">›</div></button>
-      <button class="dhub-card" onclick="dashOpen('usermgmt','diamond-links')"><div class="dhub-ic" style="background:rgba(6,182,212,.15);color:#06b6d4">💎</div><div><div class="dhub-ttl">Content &amp; Links</div><div class="dhub-sub">Diamant · Prisma · Engagement</div></div><span class="dhub-badge" id="hub-b-content"></span><div class="dhub-arrow">›</div></button>
-      <button class="dhub-card" onclick="dashOpen('usermgmt','reports')"><div class="dhub-ic" style="background:rgba(239,68,68,.15);color:#ef4444">🛡️</div><div><div class="dhub-ttl">Moderation</div><div class="dhub-sub">Meldungen · Compliance · Tickets</div></div><span class="dhub-badge" id="hub-b-mod"></span><div class="dhub-arrow">›</div></button>
-      <button class="dhub-card" onclick="dashOpen('referral')"><div class="dhub-ic" style="background:rgba(34,197,94,.15);color:#22c55e">🤝</div><div><div class="dhub-ttl">Referral &amp; Builder</div><div class="dhub-sub">Prüfungen · Wer lud wen</div></div><span class="dhub-badge" id="hub-b-ref"></span><div class="dhub-arrow">›</div></button>
-      <button class="dhub-card" onclick="dashOpen('tools')"><div class="dhub-ic" style="background:rgba(245,158,11,.15);color:#f59e0b">🔧</div><div><div class="dhub-ttl">Werkzeuge</div><div class="dhub-sub">Link entsperren · Verwarnung</div></div><div class="dhub-arrow">›</div></button>
+    <div id="dash-hub">
+      <div class="dh-group">Übersicht</div>
+      <div class="dh-list">
+        <button class="dh-row" onclick="dashOpen('stats')"><span class="dh-ic" style="background:rgba(59,130,246,.15);color:#3b82f6">📊</span><span class="dh-lbl"><div class="dh-t">Statistiken</div><div class="dh-s">Trends · Live · Funnel · Online</div></span><span class="dh-badge" id="hub-b-stats"></span><span class="dh-arr">›</span></button>
+        <button class="dh-row" onclick="dashOpen('users')"><span class="dh-ic" style="background:rgba(124,58,237,.15);color:#a78bfa">👥</span><span class="dh-lbl"><div class="dh-t">User-Verwaltung</div><div class="dh-s">Alle · Neu · Subs · Papierkorb</div></span><span class="dh-badge" id="hub-b-users"></span><span class="dh-arr">›</span></button>
+      </div>
+      <div class="dh-group">Inhalte &amp; Moderation</div>
+      <div class="dh-list">
+        <button class="dh-row" onclick="dashOpen('usermgmt','diamond-links')"><span class="dh-ic" style="background:rgba(6,182,212,.15);color:#06b6d4">💎</span><span class="dh-lbl"><div class="dh-t">Content &amp; Links</div><div class="dh-s">Diamant · Prisma · Engagement</div></span><span class="dh-badge" id="hub-b-content"></span><span class="dh-arr">›</span></button>
+        <button class="dh-row" onclick="dashOpen('usermgmt','reports')"><span class="dh-ic" style="background:rgba(239,68,68,.15);color:#ef4444">🛡️</span><span class="dh-lbl"><div class="dh-t">Moderation</div><div class="dh-s">Meldungen · Compliance · Tickets</div></span><span class="dh-badge" id="hub-b-mod"></span><span class="dh-arr">›</span></button>
+      </div>
+      <div class="dh-group">Community &amp; Tools</div>
+      <div class="dh-list">
+        <button class="dh-row" onclick="dashOpen('referral')"><span class="dh-ic" style="background:rgba(34,197,94,.15);color:#22c55e">🤝</span><span class="dh-lbl"><div class="dh-t">Referral &amp; Builder</div><div class="dh-s">Prüfungen · Wer lud wen</div></span><span class="dh-badge" id="hub-b-ref"></span><span class="dh-arr">›</span></button>
+        <button class="dh-row" onclick="dashOpen('tools')"><span class="dh-ic" style="background:rgba(245,158,11,.15);color:#f59e0b">🔧</span><span class="dh-lbl"><div class="dh-t">Werkzeuge</div><div class="dh-s">Link entsperren · Verwarnung</div></span><span class="dh-arr">›</span></button>
+      </div>
     </div>
     <button id="dash-back" onclick="dashHubShow()">‹ Übersicht</button>
 
@@ -19078,7 +19089,7 @@ setInterval(loadDeletedUsers, 60000);
 })();
 function dashHubShow(){
   document.querySelectorAll('.dash-section[data-dgroup]').forEach(function(s){s.style.display='none';});
-  var h=document.getElementById('dash-hub'); if(h)h.style.display='grid';
+  var h=document.getElementById('dash-hub'); if(h)h.style.display='';
   var b=document.getElementById('dash-back'); if(b)b.style.display='none';
   try{window.scrollTo({top:0,behavior:'smooth'});}catch(e){window.scrollTo(0,0);}
 }
@@ -22740,6 +22751,16 @@ async function setCardTheme(themeId){const r=await fetch('/api/set-active-cardth
 .set-hub-sub{font-size:11.5px;color:var(--muted);line-height:1.4}
 .set-hub-arrow{color:var(--muted);font-size:18px;flex-shrink:0}
 .set-hub-badge{background:#ef4444;color:#fff;font-size:10px;font-weight:800;padding:2px 7px;border-radius:99px;margin-left:6px}
+/* ── Instagram/iOS-Style gruppierte Liste ── */
+.ig-group{font-size:13px;font-weight:700;color:var(--muted);padding:20px 20px 9px;letter-spacing:.2px}
+.ig-list{margin:0 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:16px;overflow:hidden}
+.ig-row{display:flex;align-items:center;gap:16px;padding:14px 16px;text-decoration:none;color:var(--text);border-top:1px solid var(--border2);transition:background .12s;-webkit-tap-highlight-color:transparent}
+.ig-row:first-child{border-top:none}
+.ig-row:hover,.ig-row:active{background:var(--bg4)}
+.ig-row-ic{width:26px;height:26px;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--text)}
+.ig-row-lbl{flex:1;font-size:15px;font-weight:500;min-width:0;line-height:1.25}
+.ig-row-r{font-size:13px;color:var(--muted);flex-shrink:0;font-weight:500}
+.ig-row-arr{color:var(--muted2);font-size:19px;flex-shrink:0;line-height:1}
 </style>
 
 <!-- ── Profil-Hero-Karte (Instagram-Style) ── -->
@@ -22955,49 +22976,26 @@ async function pfHandleAvatarFile(input){
 }
 </script>
 
-<div class="set-hub-grid">
-  <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);padding:4px 0 6px">Schnellzugriff</div>
-  <a href="/einstellungen/tasche" class="set-hub-card" style="background:linear-gradient(135deg,rgba(212,175,55,0.12),rgba(124,58,237,0.04));border-color:rgba(212,175,55,0.35)">
-    <div class="set-hub-icon" style="background:linear-gradient(135deg,#d4af37,#8a6f1f)"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#241710" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></div>
-    <div class="set-hub-content"><div class="set-hub-title">Meine Tasche 👜</div><div class="set-hub-sub">Rahmen · Titel · Karten-Themes tragen</div></div>
-    <div class="set-hub-arrow">›</div>
-  </a>
-  <a href="/einstellungen/account" class="set-hub-card">
-    <div class="set-hub-icon" style="background:linear-gradient(135deg,#4dabf7,#1971c2)"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="4.5"/><path d="M10.7 12.3 21 2"/><path d="m16 7 3 3"/></svg></div>
-    <div class="set-hub-content"><div class="set-hub-title">Account</div><div class="set-hub-sub">Email · Passwort · Telefon</div></div>
-    <div class="set-hub-arrow">›</div>
-  </a>
-  <a href="/einstellungen/privacy" class="set-hub-card">
-    <div class="set-hub-icon" style="background:linear-gradient(135deg,#9775fa,#6741d9)"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
-    <div class="set-hub-content"><div class="set-hub-title">Privatsphäre</div><div class="set-hub-sub">Blockierte Nutzer · Sichtbarkeit</div></div>
-    <div class="set-hub-arrow">›</div>
-  </a>
-  <a href="/einstellungen/notifications" class="set-hub-card">
-    <div class="set-hub-icon" style="background:linear-gradient(135deg,#ff8787,#e03131)"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
-    <div class="set-hub-content"><div class="set-hub-title">Benachrichtigungen</div><div class="set-hub-sub">Push · In-App · Email</div></div>
-    <div class="set-hub-arrow">›</div>
-  </a>
-  <a href="/einladen" class="set-hub-card" style="background:linear-gradient(135deg,rgba(34,197,94,0.10),rgba(6,182,212,0.04));border-color:rgba(34,197,94,0.30)">
-    <div class="set-hub-icon" style="background:linear-gradient(135deg,#22c55e,#06b6d4)"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg></div>
-    <div class="set-hub-content"><div class="set-hub-title">Creator einladen 💎</div><div class="set-hub-sub">Lade aktive Creator ein &amp; verdiene Diamanten</div></div>
-    <div class="set-hub-arrow">›</div>
-  </a>
-  <a href="/einstellungen/sicherheit" class="set-hub-card">
-    <div class="set-hub-icon" style="background:linear-gradient(135deg,#51cf66,#2f9e44)"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10.5" width="16" height="10.5" rx="2"/><path d="M8 10.5V7a4 4 0 0 1 8 0v3.5"/></svg></div>
-    <div class="set-hub-content"><div class="set-hub-title">Sicherheit & Sessions</div><div class="set-hub-sub">Aktive Geräte · Logout</div></div>
-    <div class="set-hub-arrow">›</div>
-  </a>
-  <a href="/einstellungen/pro" class="set-hub-card">
-    <div class="set-hub-icon" style="background:linear-gradient(135deg,#f5d76e,#d4af37 50%,#8b6914);color:#000"><svg width="21" height="21" viewBox="0 0 24 24" fill="#000" stroke="none"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg></div>
-    <div class="set-hub-content"><div class="set-hub-title">Pro-Features <span style="font-size:9.5px;background:linear-gradient(135deg,#f5d76e,#d4af37);color:#000;padding:2px 6px;border-radius:6px;font-weight:800;letter-spacing:0.5px;margin-left:var(--space-1)">SOON</span></div><div class="set-hub-sub">Analytics · Scheduler · API · mehr</div></div>
-    <div class="set-hub-arrow">›</div>
-  </a>
+<!-- Einstellungen — Instagram/iOS-Style gruppierte Liste -->
+<div class="ig-group">Dein Konto</div>
+<div class="ig-list">
+  <a href="/einstellungen/account" class="ig-row"><span class="ig-row-ic"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/></svg></span><span class="ig-row-lbl">Account</span><span class="ig-row-arr">›</span></a>
+  <a href="/einstellungen/privacy" class="ig-row"><span class="ig-row-ic"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10.5" width="16" height="10.5" rx="2"/><path d="M8 10.5V7a4 4 0 0 1 8 0v3.5"/></svg></span><span class="ig-row-lbl">Privatsphäre</span><span class="ig-row-arr">›</span></a>
+  <a href="/einstellungen/sicherheit" class="ig-row"><span class="ig-row-ic"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span><span class="ig-row-lbl">Sicherheit &amp; Sessions</span><span class="ig-row-arr">›</span></a>
+</div>
+
+<div class="ig-group">Wie du CreatorX nutzt</div>
+<div class="ig-list">
+  <a href="/einstellungen/notifications" class="ig-row"><span class="ig-row-ic"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></span><span class="ig-row-lbl">Benachrichtigungen</span><span class="ig-row-arr">›</span></a>
+  <a href="/einstellungen/tasche" class="ig-row"><span class="ig-row-ic"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></span><span class="ig-row-lbl">Meine Tasche</span><span class="ig-row-arr">›</span></a>
+  <a href="/einladen" class="ig-row"><span class="ig-row-ic"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg></span><span class="ig-row-lbl">Creator einladen</span><span class="ig-row-r">💎 verdienen</span><span class="ig-row-arr">›</span></a>
+</div>
+
+<div class="ig-group">Für Profis</div>
+<div class="ig-list">
+  <a href="/einstellungen/pro" class="ig-row"><span class="ig-row-ic"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg></span><span class="ig-row-lbl">Pro-Features</span><span class="ig-row-r">Bald</span><span class="ig-row-arr">›</span></a>
   ${adminIds.includes(Number(myUid)) ? `
-  <a href="/einstellungen/admin" class="set-hub-card" style="background:linear-gradient(135deg,rgba(245,215,110,0.10),rgba(212,175,55,0.04));border-color:rgba(212,175,55,0.40)">
-    <div class="set-hub-icon" style="background:linear-gradient(135deg,#d4af37,#8b6914);color:#000"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg></div>
-    <div class="set-hub-content"><div class="set-hub-title">Admin-Tools <span style="font-size:9.5px;background:rgba(212,175,55,0.20);color:#d4af37;padding:2px 6px;border-radius:6px;font-weight:800;letter-spacing:0.5px;margin-left:var(--space-1);border:1px solid rgba(212,175,55,0.30)">ADMIN</span></div><div class="set-hub-sub">Live-Tour · Vorschauen · FE-Thread · Dashboard</div></div>
-    <div class="set-hub-arrow">›</div>
-  </a>` : ''}
+  <a href="/einstellungen/admin" class="ig-row"><span class="ig-row-ic" style="color:#d4af37"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg></span><span class="ig-row-lbl">Admin-Tools</span><span class="ig-row-r" style="color:#d4af37">Admin</span><span class="ig-row-arr">›</span></a>` : ''}
 </div>
 <!-- Profilbild / Bio / Spitzname / Banner / Akzentfarbe / Dark Mode → im Hero-Edit-Sheet (Profil bearbeiten) -->
 <!-- Email / Passwort / App-Code → /einstellungen/account -->
