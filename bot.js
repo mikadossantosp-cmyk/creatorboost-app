@@ -19563,6 +19563,45 @@ ${_latestNews ? `<a href="/explore?tab=newsletter" class="highlight-card" style=
   </a>
 </div>
 `,
+            tutorial: `
+<style>
+.tut-hero{margin:4px 16px 16px;padding:20px;border-radius:18px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;position:relative;overflow:hidden}
+.tut-hero::after{content:"";position:absolute;inset:0;background:radial-gradient(circle at 90% -10%,rgba(255,255,255,.22),transparent 55%);pointer-events:none}
+.tut-step{display:flex;gap:14px;margin:0 16px 12px;padding:16px;background:var(--bg3);border:1px solid var(--border2);border-radius:16px}
+.tut-num{flex-shrink:0;width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px}
+.tut-st{font-size:15px;font-weight:800;color:var(--text);margin-bottom:4px}
+.tut-sb{font-size:13.5px;line-height:1.5;color:var(--muted)}
+.tut-sec{font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1.2px;margin:22px 20px 10px}
+.tut-typ{display:flex;align-items:center;gap:11px;margin:0 16px 8px;padding:13px 15px;background:var(--bg3);border:1px solid var(--border2);border-radius:14px}
+.tut-pill{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:800;padding:2px 9px;border-radius:99px;white-space:nowrap;flex-shrink:0}
+.tut-tt{font-size:13px;color:var(--muted);line-height:1.45}
+.tut-tt b{color:var(--text)}
+.tut-note{margin:0 16px 12px;padding:14px 16px;background:rgba(245,158,11,.10);border:1px solid rgba(245,158,11,.35);border-radius:14px;font-size:13px;line-height:1.5;color:var(--text)}
+.tut-cta{display:block;margin:20px 16px 90px;padding:15px;text-align:center;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;border-radius:14px;font-size:15px;font-weight:800;text-decoration:none}
+</style>
+<div class="tut-hero">
+  <div style="font-size:11px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;opacity:.8;position:relative">📖 Tutorial</div>
+  <div style="font-size:22px;font-weight:800;margin-top:4px;line-height:1.2;position:relative">So funktioniert CreatorBoostX</div>
+  <div style="font-size:13.5px;margin-top:7px;opacity:.92;line-height:1.5;position:relative">Creator liken &amp; kommentieren sich gegenseitig auf echten Instagram-Reels. Kein Bot, keine gekauften Likes — echtes Engagement von echten Menschen.</div>
+</div>
+
+<div class="tut-sec">In 4 Schritten loslegen</div>
+<div class="tut-step"><div class="tut-num">1</div><div><div class="tut-st">Deinen Reel posten</div><div class="tut-sb">Tippe unten auf <b>„+"</b> und füge den Link zu deinem Instagram-Reel ein. Dein Reel erscheint dann im Feed der Community.</div></div></div>
+<div class="tut-step"><div class="tut-num">2</div><div><div class="tut-st">5 andere Reels zurück-engagieren</div><div class="tut-sb">Wenn du einen <b>normalen Link</b> postest, lik &amp; kommentier dafür <b>5 andere normale Links</b> aus dem Feed. So bekommt jeder etwas zurück. <i>(Gilt nur für normale Links — die anderen Typen sind freiwillige Bonus-Belohnungen.)</i></div></div></div>
+<div class="tut-step"><div class="tut-num">3</div><div><div class="tut-st">Erst auf Instagram, dann bestätigen</div><div class="tut-sb">Tippe auf der Karte auf <b>„→ Öffnen"</b> → like &amp; kommentiere den Reel <b>direkt auf Instagram</b> (echtes Engagement!). Komm zurück in die App und bestätige mit dem Like-Button.</div></div></div>
+<div class="tut-step"><div class="tut-num">4</div><div><div class="tut-st">Tabs wechseln &amp; sammeln</div><div class="tut-sb">Oben im Feed wechselst du zwischen <b>Heute</b>, <b>Älter</b> und den Bonus-Tabs. Für jedes Engagement gibt's <b>XP &amp; Diamanten</b> — steig im Ranking auf und schalte Belohnungen frei.</div></div></div>
+
+<div class="tut-sec">Die Link-Typen im Feed</div>
+<div class="tut-typ"><span class="tut-pill" style="color:#16a34a;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.4)">✓ Normal</span><div class="tut-tt"><b>Normaler Reel-Link.</b> Hier gilt die 5-zurück-Regel. Das Herzstück der Community.</div></div>
+<div class="tut-typ"><span class="tut-pill" style="color:#fbbf24;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.4)">⭐ Super</span><div class="tut-tt"><b>Superlink (Bonus).</b> Freiwillig — niemand muss ihn liken. Wer mitmacht, sammelt extra Belohnungen.</div></div>
+<div class="tut-typ"><span class="tut-pill" style="color:#22d3ee;background:rgba(6,182,212,.12);border:1px solid rgba(6,182,212,.4)">💎 Diamant</span><div class="tut-tt"><b>Diamantlink.</b> Engagieren bringt dir <b>+3 💎</b> — einmalig pro Link. Freiwilliger Bonus.</div></div>
+<div class="tut-typ"><span class="tut-pill" style="color:#c084fc;background:rgba(168,85,247,.12);border:1px solid rgba(168,85,247,.4)">💠 Prisma</span><div class="tut-tt"><b>Prismalink.</b> Premium-Bonus — engagieren bringt dir <b>+7 💎</b>. Freiwillig.</div></div>
+<div class="tut-typ"><span class="tut-pill" style="color:#f5d76e;background:rgba(245,215,110,.12);border:1px solid rgba(245,215,110,.4)">🛡 Admin</span><div class="tut-tt"><b>Admin-Link.</b> Von der Community-Leitung gepusht — engagieren bringt dir <b>+5 💎</b>.</div></div>
+
+<div class="tut-note">⚠️ <b>Wichtig:</b> Like &amp; kommentiere immer zuerst <b>direkt auf Instagram</b>, bevor du in der App bestätigst. Fake-Engagement &amp; Self-Likes werden erkannt und sanktioniert — echtes Engagement hält die Community stark.</div>
+
+<a href="/feed" class="tut-cta">🚀 Los geht's — zum Feed</a>
+`,
             ranking: `
 <div style="padding:12px 16px 8px;display:flex;align-items:center;justify-content:space-between">
   <div style="font-size:var(--fs-sm);font-weight:700">Rangliste</div>
@@ -20775,6 +20814,7 @@ function showErr(msg){
             {id:'allgemein', emoji:_eic('<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>'), label:'Übersicht', c1:'#a78bfa', c2:'#7c3aed', shadow:'rgba(167,139,250,0.45)'},
             {id:'newsletter',emoji:_eic('<rect x="2" y="4" width="20" height="16" rx="2"/><path d="M3 6l9 7 9-7"/>'), label:'News',      c1:'#4dabf7', c2:'#1d6fa5', shadow:'rgba(77,171,247,0.45)'},
             {id:'ranking',   emoji:_eic('<path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3"/><path d="M9 21h6M12 16v5"/>'), label:'Ranking',   c1:'#f59e0b', c2:'#d97706', shadow:'rgba(245,158,11,0.45)'},
+            {id:'tutorial',  emoji:_eic('<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>'), label:'Tutorial',  c1:'#a78bfa', c2:'#7c3aed', shadow:'rgba(167,139,250,0.45)'},
             {id:'tipps',     emoji:_eic('<path d="M9 18h6M10 21h4"/><path d="M12 2a6 6 0 0 0-4 10.5c.6.6 1 1.4 1 2.5h6c0-1.1.4-1.9 1-2.5A6 6 0 0 0 12 2z"/>'), label:'Tipps',     c1:'#22c55e', c2:'#15803d', shadow:'rgba(34,197,94,0.45)'},
             {id:'regeln',    emoji:_eic('<path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/>'), label:'Regeln',    c1:'#94a3b8', c2:'#475569', shadow:'rgba(148,163,184,0.45)'},
             {id:'shop',      emoji:_eic('<path d="M5 7h14l-1 14H6z"/><path d="M9 7V5a3 3 0 0 1 6 0v2"/>'), label:'Shop',      c1:'#ec4899', c2:'#a21caf', shadow:'rgba(236,72,153,0.45)'},
@@ -20783,7 +20823,7 @@ function showErr(msg){
         ];
 
         // Explore-Menü im Einstellungen-Stil: gruppierte Liste statt Kachel-Grid. Auf Unter-Tabs: Zurück-Link.
-        const _exGroups = [['Community',['newsletter','ranking']],['Lernen',['tipps','regeln']],['Belohnungen',['shop','gewinnspiel','roulette']]];
+        const _exGroups = [['Community',['newsletter','ranking']],['Lernen',['tutorial','tipps','regeln']],['Belohnungen',['shop','gewinnspiel','roulette']]];
         const _exMenuHtml = '<style>.exg{font-size:13px;font-weight:700;color:var(--muted);padding:16px 20px 8px;letter-spacing:.2px}.exl{margin:0 12px 6px;background:var(--bg3);border:1px solid var(--border2);border-radius:16px;overflow:hidden}.exr{display:flex;align-items:center;gap:14px;padding:13px 16px;text-decoration:none;color:var(--text);border-top:1px solid var(--border2);transition:background .12s}.exr:first-child{border-top:none}.exr:active,.exr:hover{background:var(--bg4)}.exr-ic{width:26px;height:26px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--text)}.exr-ic svg{width:23px;height:23px;stroke-width:1.8}.exr-lbl{flex:1;font-size:15px;font-weight:600}.exr-arr{color:var(--muted2);font-size:18px;line-height:1}</style>'
             + _exGroups.map(g => '<div class="exg">'+g[0]+'</div><div class="exl">' + g[1].map(id=>{ const t=tabs.find(x=>x.id===id); return t ? '<a href="/explore?tab='+t.id+'" class="exr"><span class="exr-ic">'+t.emoji+'</span><span class="exr-lbl">'+htmlEsc(t.label)+'</span><span class="exr-arr">›</span></a>' : ''; }).join('') + '</div>').join('');
         const _exBackHtml = '<a href="/explore" style="display:inline-flex;align-items:center;gap:6px;margin:8px 16px 2px;padding:9px 15px;background:var(--bg3);border:1px solid var(--border2);border-radius:12px;color:var(--text);font-size:14px;font-weight:700;text-decoration:none">‹ Übersicht</a>';
