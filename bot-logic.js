@@ -1389,6 +1389,20 @@ async function zeitCheck(nowArg) {
         // aufgebläht → monthlyXP zeigte zu hohe Werte. monthlyXP einmalig leeren; ab jetzt sammelt es rein
         // Like-XP frisch (Quelle der Alt-XP nicht trennbar). Daily/Weekly heilen sich beim nächsten Reset selbst.
         if (!d._monthlyCleanV1) { d._monthlyCleanV1 = true; try { d.monthlyXP = {}; for (const u of Object.values(d.users || {})) { if (u) delete u.lastMonthlyRank; } console.log('Monthly Clean-Reset: monthlyXP geleert, startet sauber ab jetzt (nur Like-XP).'); } catch (e) { console.log('Monthly Clean-Reset Fehler:', e.message); } }
+        // Auf User-Wunsch: XP seit dem 1. zurück ins Monats-Ranking. Da der 1. ein Montag ist, ist weeklyXP
+        // exakt „seit dem 1." (heute + gestern). Nur seeden wenn die Woche IM aktuellen Monat begann (kein
+        // Vormonats-Mix). Per max → überschreibt die seit Clean-Reset live gezählten Like-XP nicht nach unten.
+        if (!d._monthlyRestoreV1) { d._monthlyRestoreV1 = true; try {
+            if (!d.monthlyXP) d.monthlyXP = {};
+            const _mPrefix = getBerlinMonthKey();
+            const _mon = new Date(); _mon.setDate(_mon.getDate() - ((_mon.getDay() || 7) - 1));
+            const _monKey = _mon.getFullYear() + '-' + String(_mon.getMonth() + 1).padStart(2, '0');
+            if (_monKey === _mPrefix) {
+                let n = 0;
+                for (const [uid, xp] of Object.entries(d.weeklyXP || {})) { if (d.users[uid] && !istAdminId(uid)) { const v = Number(xp) || 0; if (v > Number(d.monthlyXP[uid] || 0)) { d.monthlyXP[uid] = v; n++; } } }
+                console.log('Monthly-Restore V1: ' + n + ' User aus weeklyXP (XP seit dem 1.) zurückgeseedet.');
+            } else { console.log('Monthly-Restore V1: Woche straddelt Monatsgrenze → kein Seed.'); }
+        } catch (e) { console.log('Monthly-Restore V1 Fehler:', e.message); } }
         eventAutoTick();
         linkCleanup();
         for (const key of Object.keys(d._lastEvents)) { if (!key.endsWith(tagStr)) delete d._lastEvents[key]; }
