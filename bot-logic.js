@@ -957,6 +957,24 @@ function deleteLinkApi({ linkId }) {
     delete d.links[msgId];
     return { ok: true };
 }
+// Admin: blockierten Link wieder freigeben. Der Post-Dedup (postLinkFromApp) prüft d.links global auf
+// gleiche normalisierte URL. Diese Funktion entfernt ALLE d.links-Einträge mit dieser URL + räumt
+// d.gepostet → danach ist Neu-Posten möglich. (Soft-Delete reicht nicht, da Dedup hart auf URL matcht.)
+function adminUnblockLinkApi({ url }) {
+    const raw = String(url || '').trim();
+    if (!raw) return { ok: false, error: 'Keine URL angegeben' };
+    const norm = (t) => String(t || '').toLowerCase().replace(/\?.*$/, '').replace(/\/$/, '').trim();
+    const target = norm(raw);
+    if (!target) return { ok: false, error: 'Ungültige URL' };
+    let removed = 0;
+    for (const [k, l] of Object.entries(d.links || {})) {
+        if (l && norm(l.text) === target) { delete d.links[k]; removed++; }
+    }
+    if (Array.isArray(d.gepostet)) {
+        for (let i = d.gepostet.length - 1; i >= 0; i--) { if (norm(d.gepostet[i]) === target) d.gepostet.splice(i, 1); }
+    }
+    return { ok: true, removed, normalized: target };
+}
 
 function _reasonLabel(r) {
     if (r === 'roulette') return '🎡 Roulette';
@@ -4817,7 +4835,7 @@ module.exports = {
     dailyRankingAbschluss, aktivitaetsScore, archiveWeeklyXP, legendenBonus, wochenResetUndAuszahlung,
     getBerlinMonthKey, getPrevBerlinMonthKey, monatsResetUndAuszahlung,
     zeitCheck, eventAutoTick, linkCleanup, announceEventToAllUsers,
-    postLinkFromApp, createPostApi, deletePostApi, deleteLinkApi, commentApi, deleteCommentApi,
+    postLinkFromApp, createPostApi, deletePostApi, deleteLinkApi, adminUnblockLinkApi, commentApi, deleteCommentApi,
     diamondLinkCreate, diamondLinkLike, diamondLinkAcceptRules, diamondLinkAdminDelete,
     prismaLinkCreate, prismaLinkLike, prismaLinkAcceptRules, prismaLinkAdminDelete,
     adminLinkCreate, adminLinkEngage, adminLinkAdminDelete, adminLinkFeedCard, adminLinkListApi,
