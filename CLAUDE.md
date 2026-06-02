@@ -260,6 +260,8 @@ Prioritäten **immer in dieser Reihenfolge**:
 
 - **Ranking: Bewegungspfeile pro Creator (Daily + Weekly) (`bot.js`/`bot-logic.js`).** User-Wunsch. Neuer Helfer `_rankArrow(prev,cur)` (▲+n grün / ▼n rot / – grau / 🆕 lila). `makePodium`/`makeRankRows`/`makeRankSection` bekamen Parameter `moveField`: Daily nutzt `u.lastDailyRank`, Weekly `u.lastWeeklyRank` (Gesamt: keiner). Pfeil = aktueller Live-Rang vs. letzter gespeicherter Rang, im Podium (unter XP) + in jeder Listenzeile (unter der Rang-Nummer). **Wochen-Rang-Tracking** ergänzt: `dailyRankingAbschluss` macht nächtlich einen Snapshot (`u.lastWeeklyRank` aus aktueller `weeklyXP`-Sortierung) → Tag-zu-Tag-Bewegung im Wochen-Ranking. Verifiziert: Snapshot setzt lastWeeklyRank korrekt (1..6), `node --check` beide.
 
+- **Wochenranking-Belohnungen aktualisiert (`bot-logic.js`/`bot.js`).** User-Wunsch. `wochenResetUndAuszahlung` zahlt jetzt **Top 10** (vorher Top 3) ohne Extra-Links: P1=50💎+150XP · P2=35💎+100XP · P3=20💎+50XP · P4–5=10💎+25XP · P6–10=5💎+10XP (`_wReward(place)`, getrennte try/catch). `_weeklyPrizeCard` (Anzeige) entsprechend auf 5 Tiers/neue Beträge ohne 🔗. Recap-DM schließt jetzt Top 10 aus (statt Top 3). Verifiziert: 12-User-Test exakte Auszahlung P1–P10 + P11=0, AwardsLog=10; `node --check` beide.
+
 ## 8. Nächste sinnvolle Schritte
 
 0. **a11y-Pass app-weit fortsetzen** (Dashboard-Modals sind erledigt): weitere `<div onclick>` → echte `<button>`/`role`, fehlende `aria-label` an Icon-Buttons, restliche Modals (App-Chat/DM/Helper) mit `role="dialog"` + Escape/Backdrop nach dem `dashModalA11y()`-Muster. Gezielt pro Screen statt blind app-weit (viele Dateien).

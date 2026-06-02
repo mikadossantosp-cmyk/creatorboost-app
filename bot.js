@@ -19257,9 +19257,11 @@ fetch('/api/admin/engagement-log').then(r=>r.json()).then(j=>{ if (j.ok) { LAST_
             + _prizeRow('🏅', _purpBg, 'rgba(167,139,250,.3)', 'Platz 4–5', 5, 2, 0, false)
             + _prizeRow('✨', _cyanBg, 'rgba(34,211,238,.3)', 'Platz 6–10', 0, 1, 0, false));
         const _weeklyPrizeCard = _prizeCard('Wochenranking-Preise', 'Reset Montag', 'linear-gradient(135deg,rgba(167,139,250,0.12),rgba(124,58,237,0.07))',
-            _prizeRow('🥇', _goldBg, 'rgba(245,158,11,.3)', 'Platz 1', 50, 3, '×2', true)
-            + _prizeRow('🥈', _silverBg, 'rgba(156,163,175,.3)', 'Platz 2', 30, 2, '×1', false)
-            + _prizeRow('🥉', _bronzeBg, 'rgba(217,119,6,.3)', 'Platz 3', 15, 1, '×1', false));
+            _prizeRow('🥇', _goldBg, 'rgba(245,158,11,.3)', 'Platz 1', 150, 50, 0, true)
+            + _prizeRow('🥈', _silverBg, 'rgba(156,163,175,.3)', 'Platz 2', 100, 35, 0, false)
+            + _prizeRow('🥉', _bronzeBg, 'rgba(217,119,6,.3)', 'Platz 3', 50, 20, 0, false)
+            + _prizeRow('🏅', _purpBg, 'rgba(167,139,250,.3)', 'Platz 4–5', 25, 10, 0, false)
+            + _prizeRow('✨', _cyanBg, 'rgba(34,211,238,.3)', 'Platz 6–10', 10, 5, 0, false));
         // Community-Builder-Ranking: Top-Einlader nach aktiven Einladungen (Referral-System).
         const _cbRanking = (LOCAL_STORE && botLogic.communityBuilderRanking) ? botLogic.communityBuilderRanking(50) : [];
         const _cbTier = (n)=>{ if(n>=25)return {e:'🏛️',l:'Elite',c:'#a855f7',bg:'rgba(168,85,247,0.14)',d:100}; if(n>=10)return {e:'🏗️',l:'Builder III',c:'#06b6d4',bg:'rgba(6,182,212,0.14)',d:50}; if(n>=5)return {e:'🤝',l:'Builder II',c:'#f59e0b',bg:'rgba(245,158,11,0.14)',d:15}; if(n>=1)return {e:'🌱',l:'Builder I',c:'#22c55e',bg:'rgba(34,197,94,0.14)',d:5}; return null; };

@@ -1489,29 +1489,33 @@ function wochenResetUndAuszahlung(jetzt) {
     const wTop = Object.entries(d.weeklyXP || {})
         .filter(([uid]) => d.users[uid] && !istAdminId(uid) && !d.users[uid].banned)
         .sort((a, b) => b[1] - a[1])
-        .slice(0, 3);
-    const wPrize = [
-        { medal: '🥇', xp: 50, dia: 3, links: 2 },
-        { medal: '🥈', xp: 30, dia: 2, links: 1 },
-        { medal: '🥉', xp: 15, dia: 1, links: 1 },
-    ];
+        .slice(0, 10);
+    // Wochen-Belohnungen (Top 10): P1=50💎+150XP · P2=35💎+100XP · P3=20💎+50XP · P4–5=10💎+25XP · P6–10=5💎+10XP.
+    const _wReward = (place) => {
+        if (place === 1) return { dia: 50, xp: 150, medal: '🥇' };
+        if (place === 2) return { dia: 35, xp: 100, medal: '🥈' };
+        if (place === 3) return { dia: 20, xp: 50, medal: '🥉' };
+        if (place <= 5) return { dia: 10, xp: 25, medal: '🏅' };
+        if (place <= 10) return { dia: 5, xp: 10, medal: '✨' };
+        return null;
+    };
     if (!d.weeklyAwardsLog) d.weeklyAwardsLog = [];
     const weekKey = getBerlinWeekKey();
     const alreadyPaid = d.weeklyAwardsLog.some(a => a.weekKey === weekKey);
     if (!alreadyPaid) for (let i = 0; i < wTop.length; i++) {
         const [uid, xp] = wTop[i];
-        const p = wPrize[i];
+        const place = i + 1;
+        const p = _wReward(place);
+        if (!p) break;
         const u = d.users[uid] || {};
         const name = u.spitzname || u.name || 'User';
-        let paidXP = 0, paidDia = 0;
+        try { if (p.xp > 0) xpAdd(uid, p.xp, name); } catch (e) {}
+        try { if (p.dia > 0) addDiamond(uid, p.dia); } catch (e) {}
         try {
-            paidXP = xpAdd(uid, p.xp, name);
-            addDiamond(uid, p.dia); paidDia = p.dia;
-            if (p.links > 0) { if (!d.bonusLinks[uid]) d.bonusLinks[uid] = 0; d.bonusLinks[uid] += p.links; }
-            d.weeklyAwardsLog.push({ weekKey, place: i + 1, uid, name, xp: paidXP, dia: paidDia, links: p.links || 0, at: Date.now() });
+            d.weeklyAwardsLog.push({ weekKey, place, uid, name, xp: p.xp, dia: p.dia, links: 0, at: Date.now() });
             while (d.weeklyAwardsLog.length > 200) d.weeklyAwardsLog.shift();
-        } catch (e) { continue; }
-        try { sendInAppDM(uid, `${p.medal} ${i + 1}. Platz im Wochen-Ranking\n\nDu hast diese Woche ${xp} XP erreicht — Glückwunsch! 🎉\n\nDeine Belohnung:\n⭐ +${p.xp} XP\n💎 +${p.dia} Diamanten${p.links ? `\n🔗 +${p.links} Extra-Link${p.links > 1 ? 's' : ''}` : ''}`); } catch (e) {}
+        } catch (e) {}
+        try { sendInAppDM(uid, `${p.medal} ${place}. Platz im Wochen-Ranking\n\nDu hast diese Woche ${xp} XP erreicht — Glückwunsch! 🎉\n\nDeine Belohnung:\n⭐ +${p.xp} XP\n💎 +${p.dia} Diamanten`); } catch (e) {}
     }
     // #7 Wochen-Recap: VOR dem Reset eine persönliche Zusammenfassung an aktive User (DM).
     // Gibt Sinn + Stolz und bringt am Wochenstart zurück. Nur an in den letzten 7 Tagen Aktive,
