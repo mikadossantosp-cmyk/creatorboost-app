@@ -300,6 +300,8 @@ Prioritäten **immer in dieser Reihenfolge**:
 
 - **Link-Typ-Badges vereinheitlicht (bot.js).** User-Wunsch: alle Link-Labels im gleichen Pill-Stil wie Normal, je mit eigener Kennzeichnung. Gemeinsamer Stil = kleines Outline-Pill (getoente bg + farbiger Text/Border + Icon): gruen Normal (renderLink) / gold Super (renderSuperLink, ersetzt altes SUPERLINK-Gradient-Label) / cyan Diamond (Diamond-Karten-Eyebrow) / lila Prisma (Prisma-Eyebrow). Diamond/Prisma sind client-gerendert -> served JS aller Feed-Tabs (heute/diamond/prisma/engagement) je 0 Fehler. node --check ok.
 
+- **Diamond/Prisma-Karten: grosser Reward-Header -> dezentes Badge (bot.js).** User: oben nur dezent 💎 +3 (bzw. 💠 +7), nicht der ganze Banner. Der grosse Banner-Block (grosses Emoji + +X 💎 fuer ein echtes Engagement + Timer-Block) ersetzt durch eine schlanke Zeile: kleines Pill 💎 +3 / 💠 +7 links + dezenter Timer rechts. Verifiziert: 0 Reste des alten Headers, served JS aller Feed-Tabs valide, node --check ok.
+
 ## 8. Nächste sinnvolle Schritte
 
 0. **a11y-Pass app-weit fortsetzen** (Dashboard-Modals sind erledigt): weitere `<div onclick>` → echte `<button>`/`role`, fehlende `aria-label` an Icon-Buttons, restliche Modals (App-Chat/DM/Helper) mit `role="dialog"` + Escape/Backdrop nach dem `dashModalA11y()`-Muster. Gezielt pro Screen statt blind app-weit (viele Dateien).

@@ -12810,13 +12810,9 @@ window.cbCollapseWrap = function(inner, id, compact){
     return '<div class="diamond-card" data-post-id="'+esc(p.id)+'">' +
       '<div class="diamond-card-glow"></div>' +
       '<div class="diamond-card-body">' +
-        '<div style="display:flex;align-items:center;gap:10px;margin-bottom:var(--space-3);padding:10px 14px;background:linear-gradient(135deg,rgba(6,182,212,0.18),rgba(167,139,250,0.12));border:1.5px solid rgba(6,182,212,0.45);border-radius:14px;box-shadow:0 2px 10px rgba(15,23,42,0.06)">' +
-          '<span style="font-size:24px;line-height:1;filter:drop-shadow(0 2px 6px rgba(6,182,212,.5))">💎</span>' +
-          '<div style="flex:1;min-width:0">' +
-            '<span style="display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:800;letter-spacing:.3px;color:#22d3ee;background:rgba(6,182,212,0.15);border:1px solid rgba(6,182,212,0.5);padding:1px 8px;border-radius:99px">💎 Diamond</span>' +
-            '<div style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-0.5px;line-height:1.15;margin-top:2px">+'+(p.reward||3)+' 💎 <span style="font-size:11px;color:var(--muted);font-weight:600;letter-spacing:0">für ein echtes Engagement</span></div>' +
-          '</div>' +
-          '<div style="font-size:11px;color:#06b6d4;font-weight:700;text-align:right;flex-shrink:0">⏱<br>'+fmtRemaining(remaining)+'</div>' +
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-2)">' +
+          '<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:800;letter-spacing:.2px;color:#22d3ee;background:rgba(6,182,212,0.12);border:1px solid rgba(6,182,212,0.4);padding:2px 9px;border-radius:99px">💎 +'+(p.reward||3)+'</span>' +
+          '<span style="font-size:10.5px;color:var(--muted);font-weight:600">⏱ '+fmtRemaining(remaining)+'</span>' +
         '</div>' +
         window.cbCardAuthorRow(p) +
         window.cbCardReel(p, p.id, '_dvisit_'+p.id) +
@@ -13400,13 +13396,9 @@ window.cbCollapseWrap = function(inner, id, compact){
     return '<div class="prisma-card" data-post-id="'+esc(p.id)+'">' +
       '<div class="prisma-card-glow"></div>' +
       '<div class="prisma-card-body">' +
-        '<div style="display:flex;align-items:center;gap:10px;margin-bottom:var(--space-3);padding:10px 14px;background:linear-gradient(135deg,rgba(239,68,68,0.10),rgba(245,158,11,0.10),rgba(34,197,94,0.10),rgba(6,182,212,0.10),rgba(168,85,247,0.14));border:1.5px solid rgba(168,85,247,0.45);border-radius:14px;box-shadow:0 4px 14px rgba(168,85,247,0.18)">' +
-          '<span style="font-size:24px;line-height:1;filter:drop-shadow(0 2px 6px rgba(168,85,247,.5))">💠</span>' +
-          '<div style="flex:1;min-width:0">' +
-            '<span style="display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:800;letter-spacing:.3px;color:#c084fc;background:rgba(168,85,247,0.15);border:1px solid rgba(168,85,247,0.5);padding:1px 8px;border-radius:99px">💠 Prisma</span>' +
-            '<div style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-0.5px;line-height:1.15;margin-top:2px">+'+(p.reward||7)+' 💎 <span style="font-size:11px;color:var(--muted);font-weight:600;letter-spacing:0">für ein echtes Engagement</span></div>' +
-          '</div>' +
-          '<div style="font-size:11px;color:#a855f7;font-weight:700;text-align:right;flex-shrink:0">⏱<br>'+fmtRemaining(remaining)+'</div>' +
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-2)">' +
+          '<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:800;letter-spacing:.2px;color:#c084fc;background:rgba(168,85,247,0.12);border:1px solid rgba(168,85,247,0.4);padding:2px 9px;border-radius:99px">💠 +'+(p.reward||7)+'</span>' +
+          '<span style="font-size:10.5px;color:var(--muted);font-weight:600">⏱ '+fmtRemaining(remaining)+'</span>' +
         '</div>' +
         window.cbCardAuthorRow(p, '#fff') +
         window.cbCardReel(p, p.id, '_pvisit_'+p.id) +
