@@ -19197,6 +19197,19 @@ fetch('/api/admin/engagement-log').then(r=>r.json()).then(j=>{ if (j.ok) { LAST_
             .filter(([id,u])=>!adminIds.includes(Number(id))&&u.started&&(d.weeklyXP[id]||0)>0)
             .sort((a,b)=>(d.weeklyXP[b[0]]||0)-(d.weeklyXP[a[0]]||0));
         const dailyRows = makeRankSection(dailySorted, (id)=>d.dailyXP[id]||0, 'Heute noch keine XP');
+        // Rang-Bewegung des eigenen Accounts seit der letzten Auswertung (von welchem Platz auf welchen).
+        const _rankMoveHtml = (()=>{
+          try {
+            const mv = d.users[myUid] && d.users[myUid].lastRankMove;
+            if (!mv || !mv.to) return '';
+            let icon, txt, col, bg;
+            if (mv.dir === 'up')        { icon='⬆️'; col='#22c55e'; bg='rgba(34,197,94,0.12)'; txt='Aufgestiegen von Platz '+mv.from+' auf Platz '+mv.to+'!'; }
+            else if (mv.dir === 'down') { icon='⬇️'; col='#ef4444'; bg='rgba(239,68,68,0.10)'; txt='Gefallen von Platz '+mv.from+' auf Platz '+mv.to+'.'; }
+            else if (mv.dir === 'new')  { icon='🆕'; col='#a855f7'; bg='rgba(168,85,247,0.12)'; txt='Neu im Tagesranking — Platz '+mv.to+'!'; }
+            else                        { icon='➡️'; col='#f59e0b'; bg='rgba(245,158,11,0.10)'; txt='Platz '+mv.to+' gehalten.'; }
+            return '<div style="margin:0 16px 12px;padding:11px 14px;background:'+bg+';border:1px solid '+col+';border-radius:12px;font-size:13px;font-weight:800;color:'+col+';display:flex;align-items:center;gap:8px"><span style="font-size:17px;flex-shrink:0">'+icon+'</span><span>'+txt+' <span style="opacity:.7;font-weight:600">(gestern)</span></span></div>';
+          } catch(e) { return ''; }
+        })();
         const weeklyRows = makeRankSection(weeklySorted, (id)=>d.weeklyXP[id]||0, 'Diese Woche noch keine XP');
         // Community-Builder-Ranking: Top-Einlader nach aktiven Einladungen (Referral-System).
         const _cbRanking = (LOCAL_STORE && botLogic.communityBuilderRanking) ? botLogic.communityBuilderRanking(50) : [];
@@ -19233,9 +19246,9 @@ fetch('/api/admin/engagement-log').then(r=>r.json()).then(j=>{ if (j.ok) { LAST_
               '<div style="font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#fbbf24;margin-bottom:var(--space-2);display:flex;align-items:center;gap:6px"><span>🏆</span><span>SIEGER GESTERN (' + _yesterdayKey + ')</span></div>' +
               _yesterdayAwards.map(a => {
                 const u = d.users[a.uid] || {};
-                const medal = a.place === 1 ? '🥇' : a.place === 2 ? '🥈' : '🥉';
+                const medal = a.place === 1 ? '🥇' : a.place === 2 ? '🥈' : a.place === 3 ? '🥉' : a.place <= 5 ? '🏅' : '✨';
                 const name = htmlEsc(u.spitzname || u.name || a.name || 'User');
-                const reward = '+' + a.xp + ' XP · +' + a.dia + ' 💎' + (a.links ? ' · 🔗' : '');
+                const reward = (a.xp ? '+' + a.xp + ' XP · ' : '') + '+' + a.dia + ' 💎' + (a.links ? ' · 🔗' : '');
                 return '<a href="/profil/' + htmlEsc(a.uid) + '" style="display:flex;align-items:center;gap:10px;padding:7px 0;text-decoration:none;color:var(--text);font-size:var(--fs-sm)">' +
                   '<span style="font-size:18px;flex-shrink:0">' + medal + '</span>' +
                   '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700">' + name + '</span>' +
@@ -19367,10 +19380,13 @@ ${_latestNews ? `<a href="/explore?tab=newsletter" class="highlight-card" style=
 <div id="rlist-daily" style="display:none;padding-bottom:100px">
   <div style="margin:0 16px 12px;padding:12px 14px;background:linear-gradient(135deg,rgba(245,158,11,0.12),rgba(167,139,250,0.08));border:1px solid rgba(245,158,11,0.30);border-radius:12px;font-size:12.5px;line-height:1.55">
     <div style="font-weight:800;color:#f59e0b;margin-bottom:6px">Tages-Preise (Reset 00:00)</div>
-    <div>🥇 <b>+10 XP · +2 💎 · 1 Extra-Link</b></div>
-    <div>🥈 <b>+5 XP · +2 💎</b></div>
-    <div>🥉 <b>+2 XP · +1 💎</b></div>
+    <div>🥇 Platz 1 — <b>+30 XP · +10 💎</b></div>
+    <div>🥈 Platz 2 — <b>+20 XP · +7 💎</b></div>
+    <div>🥉 Platz 3 — <b>+10 XP · +5 💎</b></div>
+    <div>🏅 Platz 4–5 — <b>+5 XP · +2 💎</b></div>
+    <div>✨ Platz 6–10 — <b>+1 💎</b></div>
   </div>
+  ${_rankMoveHtml}
   ${_yesterdayWinnerHtml}
   ${dailyRows}
 </div>

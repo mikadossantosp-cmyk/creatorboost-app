@@ -1396,26 +1396,49 @@ async function dailyRankingAbschluss() {
         }
         i = j;
     }
-    const bel = [
-        { xp: 10, links: 1, dia: 2, text: '🥇' },
-        { xp: 5, links: 0, dia: 2, text: '🥈' },
-        { xp: 2, links: 0, dia: 1, text: '🥉' },
-    ];
     if (!d.dailyAwardsLog) d.dailyAwardsLog = [];
     const dayKey = new Date().toISOString().slice(0, 10);
     const alreadyPaidDaily = d.dailyAwardsLog.some(a => a.dayKey === dayKey);
-    if (!alreadyPaidDaily) for (let ii = 0; ii < Math.min(3, withScore.length); ii++) {
-        const { uid } = withScore[ii];
-        const u = d.users[uid];
-        const b = bel[ii];
-        try {
-            xpAdd(uid, b.xp, u.name);
-            if (b.dia > 0) addDiamond(uid, b.dia);
-            if (b.links > 0) { if (!d.bonusLinks[uid]) d.bonusLinks[uid] = 0; d.bonusLinks[uid] += b.links; }
-            d.dailyAwardsLog.push({ dayKey, place: ii + 1, uid, name: u.name, xp: b.xp, dia: b.dia, links: b.links || 0, at: Date.now() });
-            while (d.dailyAwardsLog.length > 500) d.dailyAwardsLog.shift();
-        } catch (e) { continue; }
-        try { sendInAppDM(uid, `${b.text} ${ii + 1}. Platz im Tagesranking\n\nStark — du bist heute unter den Top 3! 🎉\n\nDeine Belohnung:\n⭐ +${b.xp} XP\n💎 +${b.dia} Diamanten${b.links ? '\n🔗 +1 Extra-Link für morgen' : ''}`); } catch (e) {}
+    // Belohnungen Tagesranking (Top 10): P1=10💎+30XP · P2=7💎+20XP · P3=5💎+10XP ·
+    // P4–5=2💎+5XP · P6–10=1💎. Plus Rang-Bewegung (von welchem Platz auf welchen).
+    const _rankReward = (place) => {
+        if (place === 1) return { dia: 10, xp: 30, medal: '🥇' };
+        if (place === 2) return { dia: 7, xp: 20, medal: '🥈' };
+        if (place === 3) return { dia: 5, xp: 10, medal: '🥉' };
+        if (place <= 5) return { dia: 2, xp: 5, medal: '🏅' };
+        if (place <= 10) return { dia: 1, xp: 0, medal: '✨' };
+        return null;
+    };
+    if (!alreadyPaidDaily) {
+        // Rang-Bewegung: alten Rang lesen, neuen setzen, Bewegung speichern (für DM + Ranking-Banner).
+        for (let ii = 0; ii < withScore.length; ii++) {
+            const u = d.users[withScore[ii].uid];
+            if (!u) continue;
+            const place = ii + 1;
+            const prev = Number(u.lastDailyRank || 0) || null;
+            u.lastDailyRank = place;
+            u.lastRankMove = { from: prev, to: place, dir: (!prev ? 'new' : prev > place ? 'up' : prev < place ? 'down' : 'same'), dayKey };
+        }
+        for (let ii = 0; ii < Math.min(10, withScore.length); ii++) {
+            const { uid } = withScore[ii];
+            const u = d.users[uid];
+            const place = ii + 1;
+            const r = _rankReward(place);
+            if (!r) break;
+            try { if (r.xp > 0) xpAdd(uid, r.xp, u.name); } catch (e) {}
+            try { if (r.dia > 0) addDiamond(uid, r.dia); } catch (e) {}
+            try {
+                d.dailyAwardsLog.push({ dayKey, place, uid, name: u.name, xp: r.xp, dia: r.dia, links: 0, at: Date.now() });
+                while (d.dailyAwardsLog.length > 500) d.dailyAwardsLog.shift();
+            } catch (e) {}
+            const mv = u.lastRankMove || {};
+            let moveLine = '';
+            if (mv.dir === 'up') moveLine = `\n\n⬆️ Aufgestiegen von Platz ${mv.from} auf Platz ${place}!`;
+            else if (mv.dir === 'down') moveLine = `\n\n⬇️ Gefallen von Platz ${mv.from} auf Platz ${place}.`;
+            else if (mv.dir === 'new') moveLine = `\n\n🆕 Neu in den Top 10!`;
+            const rewardLines = (r.xp > 0 ? `⭐ +${r.xp} XP\n` : '') + `💎 +${r.dia} Diamant${r.dia !== 1 ? 'en' : ''}`;
+            try { sendInAppDM(uid, `${r.medal} ${place}. Platz im Tagesranking${moveLine}\n\nDeine Belohnung:\n${rewardLines}`); } catch (e) {}
+        }
     }
     d.gesternDailyXP = Object.assign({}, d.dailyXP);
     // Creator des Tages küren: aktivster Creator (withScore[0]) mit echter Mindesthürde
