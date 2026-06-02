@@ -19211,6 +19211,43 @@ fetch('/api/admin/engagement-log').then(r=>r.json()).then(j=>{ if (j.ok) { LAST_
           } catch(e) { return ''; }
         })();
         const weeklyRows = makeRankSection(weeklySorted, (id)=>d.weeklyXP[id]||0, 'Diese Woche noch keine XP');
+        // „Deine Position"-Karte: zeigt live den eigenen Rang + XP + (Tages-)Bewegung. Leer wenn ungerankt/Admin.
+        const _myDailyRank = adminIds.includes(Number(myUid)) ? 0 : (dailySorted.findIndex(([id])=>id===myUid)+1);
+        const _myWeeklyRank = adminIds.includes(Number(myUid)) ? 0 : (weeklySorted.findIndex(([id])=>id===myUid)+1);
+        const _posCard = (rank, total, xp, xpLabel, move, accent, bg) => {
+            if (rank <= 0) return '';
+            let moveChip = '';
+            if (move && move.to) {
+                if (move.dir === 'up') moveChip = '<span style="font-size:11.5px;font-weight:800;color:#22c55e;background:rgba(34,197,94,0.14);padding:4px 10px;border-radius:99px;flex-shrink:0">⬆️ +' + (move.from - move.to) + '</span>';
+                else if (move.dir === 'down') moveChip = '<span style="font-size:11.5px;font-weight:800;color:#ef4444;background:rgba(239,68,68,0.12);padding:4px 10px;border-radius:99px;flex-shrink:0">⬇️ ' + (move.to - move.from) + '</span>';
+                else if (move.dir === 'new') moveChip = '<span style="font-size:11.5px;font-weight:800;color:#a855f7;background:rgba(168,85,247,0.14);padding:4px 10px;border-radius:99px;flex-shrink:0">🆕 Neu</span>';
+            }
+            return '<div style="margin:0 16px 12px;padding:13px 16px;display:flex;align-items:center;gap:14px;background:' + bg + ';border:1px solid ' + accent + '55;border-radius:14px">'
+                + '<div style="font-size:24px;font-weight:900;color:' + accent + ';min-width:46px;text-align:center;line-height:1">#' + rank + '</div>'
+                + '<div style="flex:1;min-width:0"><div style="font-size:9.5px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--muted)">Deine Position</div><div style="font-size:14px;font-weight:800;color:var(--text)">' + (xp || 0).toLocaleString('de-DE') + ' ' + xpLabel + (total > 0 ? ' · von ' + total : '') + '</div></div>'
+                + moveChip
+                + '</div>';
+        };
+        const _dailyPosCard = _posCard(_myDailyRank, dailySorted.length, d.dailyXP[myUid] || 0, 'XP heute', (d.users[myUid] && d.users[myUid].lastRankMove), '#f59e0b', 'linear-gradient(135deg,rgba(245,158,11,0.10),rgba(167,139,250,0.06))');
+        const _weeklyPosCard = _posCard(_myWeeklyRank, weeklySorted.length, d.weeklyXP[myUid] || 0, 'XP diese Woche', null, '#a855f7', 'linear-gradient(135deg,rgba(168,85,247,0.10),rgba(124,58,237,0.06))');
+        // Premium-Preis-Karten (eine Vorlage für Daily + Weekly).
+        const _prizeRow = (badge, badgeBg, shadow, label, xp, dia, links, top) => '<div style="display:flex;align-items:center;gap:11px;padding:8px 8px' + (top ? '' : ';border-top:1px solid var(--border2)') + '"><div style="width:30px;height:30px;border-radius:9px;background:' + badgeBg + ';display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;box-shadow:0 2px 6px ' + shadow + '">' + badge + '</div><div style="flex:1;font-size:12.5px;font-weight:700;color:var(--text)">' + label + '</div>'
+            + (xp ? '<span style="font-size:11px;font-weight:800;color:#a78bfa;background:rgba(167,139,250,0.14);padding:3px 8px;border-radius:8px">+' + xp + ' XP</span>' : '')
+            + '<span style="font-size:11px;font-weight:800;color:#06b6d4;background:rgba(6,182,212,0.14);padding:3px 8px;border-radius:8px;margin-left:6px">+' + dia + ' 💎</span>'
+            + (links ? '<span style="font-size:11px;font-weight:800;color:#f59e0b;background:rgba(245,158,11,0.16);padding:3px 8px;border-radius:8px;margin-left:6px">🔗 ' + links + '</span>' : '')
+            + '</div>';
+        const _prizeCard = (title, resetTxt, headBg, rows) => '<div style="margin:0 16px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:0 1px 3px rgba(15,23,42,0.05)"><div style="display:flex;align-items:center;justify-content:space-between;padding:13px 15px;background:' + headBg + ';border-bottom:1px solid var(--border)"><div style="display:flex;align-items:center;gap:8px"><span style="font-size:15px">🏆</span><span style="font-size:13px;font-weight:800;color:var(--text);letter-spacing:.2px">' + title + '</span></div><span style="font-size:10px;font-weight:700;color:var(--muted);background:var(--bg3);padding:3px 9px;border-radius:99px;border:1px solid var(--border2)">' + resetTxt + '</span></div><div style="padding:6px 8px">' + rows + '</div></div>';
+        const _goldBg = 'linear-gradient(135deg,#fde68a,#f59e0b)', _silverBg = 'linear-gradient(135deg,#eef2f5,#9ca3af)', _bronzeBg = 'linear-gradient(135deg,#fcd9b6,#d97706)', _purpBg = 'linear-gradient(135deg,#ddd6fe,#a78bfa)', _cyanBg = 'linear-gradient(135deg,#cffafe,#22d3ee)';
+        const _dailyPrizeCard = _prizeCard('Tagesranking-Preise', 'Reset 00:00', 'linear-gradient(135deg,rgba(245,158,11,0.10),rgba(167,139,250,0.07))',
+            _prizeRow('🥇', _goldBg, 'rgba(245,158,11,.3)', 'Platz 1', 30, 10, 0, true)
+            + _prizeRow('🥈', _silverBg, 'rgba(156,163,175,.3)', 'Platz 2', 20, 7, 0, false)
+            + _prizeRow('🥉', _bronzeBg, 'rgba(217,119,6,.3)', 'Platz 3', 10, 5, 0, false)
+            + _prizeRow('🏅', _purpBg, 'rgba(167,139,250,.3)', 'Platz 4–5', 5, 2, 0, false)
+            + _prizeRow('✨', _cyanBg, 'rgba(34,211,238,.3)', 'Platz 6–10', 0, 1, 0, false));
+        const _weeklyPrizeCard = _prizeCard('Wochenranking-Preise', 'Reset Montag', 'linear-gradient(135deg,rgba(167,139,250,0.12),rgba(124,58,237,0.07))',
+            _prizeRow('🥇', _goldBg, 'rgba(245,158,11,.3)', 'Platz 1', 50, 3, '×2', true)
+            + _prizeRow('🥈', _silverBg, 'rgba(156,163,175,.3)', 'Platz 2', 30, 2, '×1', false)
+            + _prizeRow('🥉', _bronzeBg, 'rgba(217,119,6,.3)', 'Platz 3', 15, 1, '×1', false));
         // Community-Builder-Ranking: Top-Einlader nach aktiven Einladungen (Referral-System).
         const _cbRanking = (LOCAL_STORE && botLogic.communityBuilderRanking) ? botLogic.communityBuilderRanking(50) : [];
         const _cbTier = (n)=>{ if(n>=25)return {e:'🏛️',l:'Elite',c:'#a855f7',bg:'rgba(168,85,247,0.14)',d:100}; if(n>=10)return {e:'🏗️',l:'Builder III',c:'#06b6d4',bg:'rgba(6,182,212,0.14)',d:50}; if(n>=5)return {e:'🤝',l:'Builder II',c:'#f59e0b',bg:'rgba(245,158,11,0.14)',d:15}; if(n>=1)return {e:'🌱',l:'Builder I',c:'#22c55e',bg:'rgba(34,197,94,0.14)',d:5}; return null; };
@@ -19273,11 +19310,14 @@ fetch('/api/admin/engagement-log').then(r=>r.json()).then(j=>{ if (j.ok) { LAST_
                 const u = d.users[a.uid] || {};
                 const medal = a.place === 1 ? '🥇' : a.place === 2 ? '🥈' : '🥉';
                 const name = htmlEsc(u.spitzname || u.name || a.name || 'User');
-                const reward = '+' + a.xp + ' XP · +' + a.dia + ' 💎' + (a.links ? ' · 🔗×' + a.links : '');
-                return '<a href="/profil/' + htmlEsc(a.uid) + '" style="display:flex;align-items:center;gap:10px;padding:7px 0;text-decoration:none;color:var(--text);font-size:var(--fs-sm)">' +
-                  '<span style="font-size:18px;flex-shrink:0">' + medal + '</span>' +
-                  '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700">' + name + '</span>' +
-                  '<span style="font-size:11px;color:#a78bfa;font-weight:700;flex-shrink:0">' + reward + '</span>' +
+                const initial = htmlEsc(String(u.spitzname || u.name || a.name || '?').charAt(0));
+                return '<a href="/profil/' + htmlEsc(a.uid) + '" style="display:flex;align-items:center;gap:10px;padding:8px 0;text-decoration:none;color:var(--text)">' +
+                  '<span style="font-size:18px;flex-shrink:0;width:20px;text-align:center">' + medal + '</span>' +
+                  '<div style="position:relative;width:34px;height:34px;border-radius:50%;overflow:hidden;background:linear-gradient(135deg,#a78bfa,#7c3aed);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;flex-shrink:0">' + initial + '<img src="/appbild/' + htmlEsc(a.uid) + '/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.remove()" alt=""></div>' +
+                  '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700;font-size:13px">' + name + '</span>' +
+                  (a.xp ? '<span style="font-size:10.5px;font-weight:800;color:#a78bfa;background:rgba(167,139,250,0.16);padding:2px 7px;border-radius:7px;flex-shrink:0">+' + a.xp + ' XP</span>' : '') +
+                  '<span style="font-size:10.5px;font-weight:800;color:#06b6d4;background:rgba(6,182,212,0.16);padding:2px 7px;border-radius:7px;margin-left:5px;flex-shrink:0">+' + a.dia + ' 💎</span>' +
+                  (a.links ? '<span style="font-size:10.5px;font-weight:800;color:#f59e0b;background:rgba(245,158,11,0.16);padding:2px 7px;border-radius:7px;margin-left:5px;flex-shrink:0">🔗 ' + a.links + '</span>' : '') +
                 '</a>';
               }).join('') +
             '</div>'
@@ -19380,33 +19420,16 @@ ${_latestNews ? `<a href="/explore?tab=newsletter" class="highlight-card" style=
 </div>
 <div id="rlist-gesamt" style="padding-bottom:100px">${_nearMissHtml}${rankingRows}</div>
 <div id="rlist-daily" style="display:none;padding-bottom:100px">
-  <div style="margin:0 16px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:0 1px 3px rgba(15,23,42,0.05)">
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:13px 15px;background:linear-gradient(135deg,rgba(245,158,11,0.10),rgba(167,139,250,0.07));border-bottom:1px solid var(--border)">
-      <div style="display:flex;align-items:center;gap:8px"><span style="font-size:15px">🏆</span><span style="font-size:13px;font-weight:800;color:var(--text);letter-spacing:.2px">Tagesranking-Preise</span></div>
-      <span style="font-size:10px;font-weight:700;color:var(--muted);background:var(--bg3);padding:3px 9px;border-radius:99px;border:1px solid var(--border2)">Reset 00:00</span>
-    </div>
-    <div style="padding:6px 8px">
-      <div style="display:flex;align-items:center;gap:11px;padding:8px 8px"><div style="width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,#fde68a,#f59e0b);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;box-shadow:0 2px 6px rgba(245,158,11,.3)">🥇</div><div style="flex:1;font-size:12.5px;font-weight:700;color:var(--text)">Platz 1</div><span style="font-size:11px;font-weight:800;color:#a78bfa;background:rgba(167,139,250,0.14);padding:3px 8px;border-radius:8px">+30 XP</span><span style="font-size:11px;font-weight:800;color:#06b6d4;background:rgba(6,182,212,0.14);padding:3px 8px;border-radius:8px;margin-left:6px">+10 💎</span></div>
-      <div style="display:flex;align-items:center;gap:11px;padding:8px 8px;border-top:1px solid var(--border2)"><div style="width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,#eef2f5,#9ca3af);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;box-shadow:0 2px 6px rgba(156,163,175,.3)">🥈</div><div style="flex:1;font-size:12.5px;font-weight:700;color:var(--text)">Platz 2</div><span style="font-size:11px;font-weight:800;color:#a78bfa;background:rgba(167,139,250,0.14);padding:3px 8px;border-radius:8px">+20 XP</span><span style="font-size:11px;font-weight:800;color:#06b6d4;background:rgba(6,182,212,0.14);padding:3px 8px;border-radius:8px;margin-left:6px">+7 💎</span></div>
-      <div style="display:flex;align-items:center;gap:11px;padding:8px 8px;border-top:1px solid var(--border2)"><div style="width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,#fcd9b6,#d97706);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;box-shadow:0 2px 6px rgba(217,119,6,.3)">🥉</div><div style="flex:1;font-size:12.5px;font-weight:700;color:var(--text)">Platz 3</div><span style="font-size:11px;font-weight:800;color:#a78bfa;background:rgba(167,139,250,0.14);padding:3px 8px;border-radius:8px">+10 XP</span><span style="font-size:11px;font-weight:800;color:#06b6d4;background:rgba(6,182,212,0.14);padding:3px 8px;border-radius:8px;margin-left:6px">+5 💎</span></div>
-      <div style="display:flex;align-items:center;gap:11px;padding:8px 8px;border-top:1px solid var(--border2)"><div style="width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,#ddd6fe,#a78bfa);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;box-shadow:0 2px 6px rgba(167,139,250,.3)">🏅</div><div style="flex:1;font-size:12.5px;font-weight:700;color:var(--text)">Platz 4–5</div><span style="font-size:11px;font-weight:800;color:#a78bfa;background:rgba(167,139,250,0.14);padding:3px 8px;border-radius:8px">+5 XP</span><span style="font-size:11px;font-weight:800;color:#06b6d4;background:rgba(6,182,212,0.14);padding:3px 8px;border-radius:8px;margin-left:6px">+2 💎</span></div>
-      <div style="display:flex;align-items:center;gap:11px;padding:8px 8px;border-top:1px solid var(--border2)"><div style="width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,#cffafe,#22d3ee);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;box-shadow:0 2px 6px rgba(34,211,238,.3)">✨</div><div style="flex:1;font-size:12.5px;font-weight:700;color:var(--text)">Platz 6–10</div><span style="font-size:11px;font-weight:800;color:#06b6d4;background:rgba(6,182,212,0.14);padding:3px 8px;border-radius:8px">+1 💎</span></div>
-    </div>
-  </div>
-  ${_rankMoveHtml}
+  ${_dailyPosCard}
   ${_yesterdayWinnerHtml}
   ${dailyRows}
+  ${_dailyPrizeCard}
 </div>
 <div id="rlist-weekly" style="display:none;padding-bottom:100px">
-  <div style="margin:0 16px 12px;padding:12px 14px;background:linear-gradient(135deg,rgba(167,139,250,0.14),rgba(245,158,11,0.10));border:1px solid rgba(167,139,250,0.35);border-radius:12px;font-size:12.5px;line-height:1.55">
-    <div style="font-weight:800;color:#a78bfa;margin-bottom:6px">Wochen-Preise (Mo–So, Reset Montag)</div>
-    <div>🥇 <b>+50 XP · +3 💎 · 2 Extra-Links</b></div>
-    <div>🥈 <b>+30 XP · +2 💎 · 1 Extra-Link</b></div>
-    <div>🥉 <b>+15 XP · +1 💎 · 1 Extra-Link</b></div>
-    <div style="margin-top:6px;font-size:11px;color:var(--muted)">Sieger werden automatisch benachrichtigt + Preise gutgeschrieben.</div>
-  </div>
+  ${_weeklyPosCard}
   ${_lastWeekWinnerHtml}
   ${weeklyRows}
+  ${_weeklyPrizeCard}
 </div>
 <div id="rlist-builder" style="display:none;padding-bottom:100px">
   <div style="margin:0 16px 12px;padding:12px 14px;background:linear-gradient(135deg,rgba(34,197,94,0.12),rgba(6,182,212,0.06));border:1px solid rgba(34,197,94,0.30);border-radius:12px;font-size:12.5px;line-height:1.55">
