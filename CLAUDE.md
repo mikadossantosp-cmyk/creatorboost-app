@@ -268,6 +268,8 @@ Prioritäten **immer in dieser Reihenfolge**:
 
 - **Monats-Ranking: einmaliger Backfill (`bot-logic.js`).** monthlyXP startete bei null → `_monthlyBackfillV1` (in zeitCheck) seedet es aus dieser Woche (`d.weeklyXP`, enthält gestern da kumulativ) + diesem Monat archivierte Wochen (`d.weeklyHistory`, weekKey-Prefix = aktueller Monat). Per **max** pro User → kein Doppelzählen mit den seit Deploy bereits live gezählten monthlyXP. Verifiziert: max(50,500)=500 / max(0,170)=170. Monats-Ranking ist damit sofort gefüllt statt leer.
 
+- **Ranking-XP-Regel: Belohnungen zählen nur fürs Gesamt-Ranking (`bot-logic.js`).** User-Wunsch: Daily/Weekly/Monthly-Rankings dürfen NUR Aktivitäts-XP (Liken/Posten auf Links) enthalten, KEINE Belohnungen. Umgestellt auf `xpAddNurGesamt` (nur gesamt): Daily-/Weekly-/Monthly-Ranking-Preise, alle Missions-Belohnungen (M1/2/3 + Wochen-M1/2/3), Event-Bonus pro Post (applyPostBonus), First-Post-Like-Bonus (+20), Willkommens-Bonus (+20). Aktivität bleibt in Rankings: Liken (+5) + Posten (+1, xpAddMitDaily). Verifiziert: Daily-Payout +30 erhöht nur u.xp, weeklyXP/monthlyXP unverändert. Bewusst gelassen: Like-eines-Diese-Woche-Links (Z.694, Aktivität) + admin addXp (eigener noRanking-Schalter). Posten zählt weiter als Aktivität.
+
 ## 8. Nächste sinnvolle Schritte
 
 0. **a11y-Pass app-weit fortsetzen** (Dashboard-Modals sind erledigt): weitere `<div onclick>` → echte `<button>`/`role`, fehlende `aria-label` an Icon-Buttons, restliche Modals (App-Chat/DM/Helper) mit `role="dialog"` + Escape/Backdrop nach dem `dashModalA11y()`-Muster. Gezielt pro Screen statt blind app-weit (viele Dateien).

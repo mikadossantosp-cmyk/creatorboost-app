@@ -440,7 +440,7 @@ function applyPostBonus(uid, userName) {
     if (istAdminId(uid)) return out;
     const now = Date.now();
     if (d.xpEvent?.bonusPerPost && d.xpEvent.bonusPerPost > 0 && d.xpEvent.end && now < d.xpEvent.end) {
-        xpAdd(uid, d.xpEvent.bonusPerPost, userName);
+        xpAddNurGesamt(uid, d.xpEvent.bonusPerPost, userName);
         out.xp = d.xpEvent.bonusPerPost;
         out.events.push({ type: 'xp', amount: d.xpEvent.bonusPerPost, label: d.xpEvent.label || '' });
     } else if (d.xpEvent?.bonusPerPost && d.xpEvent.end && now >= d.xpEvent.end) {
@@ -695,7 +695,7 @@ async function likeFromApp(uid, msgId) {
         else                           xpAddNurGesamt(uid, 5, u?.name || 'User');
     }
     if (!istAdminId(uid) && u && lnk.firstPostBonus && lnk.firstPostBonusUntil && Date.now() < lnk.firstPostBonusUntil) {
-        xpAdd(uid, 20, u.name || 'User');
+        xpAddNurGesamt(uid, 20, u.name || 'User');
         try { sendInAppDM(uid, '🌟 First-Post-Bonus\n\nDu hast den allerersten Post eines neuen Members geliked.\n\n⭐ +20 XP\n\nDanke für deinen Support!'); } catch (e) {}
     }
     if (!istAdminId(uid) && u) {
@@ -819,7 +819,7 @@ async function postLinkFromApp({ uid, name, url, caption }) {
     if (isFirstPostEver) {
         linkData.firstPostBonus = true;
         linkData.firstPostBonusUntil = Date.now() + 8 * 3600 * 1000;
-        xpAdd(uid, 20, u.name || name);
+        xpAddNurGesamt(uid, 20, u.name || name);
         try { sendInAppDM(uid, '🌟 Willkommen — dein erster Post ist live\n\n⭐ +20 XP Willkommens-Bonus\n\nDein Post steht 8 Stunden ganz oben im Heute-Feed. Wer ihn liked, bekommt +20 XP extra.'); } catch (e) {}
         try { logActivity('newmember', (u.spitzname || u.name || name), ''); } catch (e) {}
         // Referral: erster Beitrag des eingeladenen Creators → +30 💎 für den Einlader.
@@ -1458,7 +1458,7 @@ async function dailyRankingAbschluss() {
             const place = ii + 1;
             const r = _rankReward(place);
             if (!r) break;
-            try { if (r.xp > 0) xpAdd(uid, r.xp, u.name); } catch (e) {}
+            try { if (r.xp > 0) xpAddNurGesamt(uid, r.xp, u.name); } catch (e) {}
             try { if (r.dia > 0) addDiamond(uid, r.dia); } catch (e) {}
             try {
                 d.dailyAwardsLog.push({ dayKey, place, uid, name: u.name, xp: r.xp, dia: r.dia, links: 0, at: Date.now() });
@@ -1539,7 +1539,7 @@ function wochenResetUndAuszahlung(jetzt) {
         if (!p) break;
         const u = d.users[uid] || {};
         const name = u.spitzname || u.name || 'User';
-        try { if (p.xp > 0) xpAdd(uid, p.xp, name); } catch (e) {}
+        try { if (p.xp > 0) xpAddNurGesamt(uid, p.xp, name); } catch (e) {}
         try { if (p.dia > 0) addDiamond(uid, p.dia); } catch (e) {}
         try {
             d.weeklyAwardsLog.push({ weekKey, place, uid, name, xp: p.xp, dia: p.dia, links: 0, at: Date.now() });
@@ -1662,25 +1662,25 @@ async function auswertenForUserDay(uid, dayKey, opts) {
     let meldungen = [];
     let xpEarned = 0;
     let diamondsEarned = 0;
-    if (m1Done) { xpAdd(uid, 5, name); xpEarned += 5; meldungen.push('✅ Mission 1 geschafft\n5 Links geliked → +5 XP'); }
+    if (m1Done) { xpAddNurGesamt(uid, 5, name); xpEarned += 5; meldungen.push('✅ Mission 1 geschafft\n5 Links geliked → +5 XP'); }
     if (m1Done && addWeeklyMissionDay(wMission, 'm1Tage', dayKey)) {
         if (wMission.m1Tage > 7) wMission.m1Tage = 7;
-        if (wMission.m1Tage >= 7 && !wMission.m1granted) { xpAdd(uid, 10, name); xpEarned += 10; meldungen.push('🏆 Wochen-M1 geschafft → +10 XP'); wMission.m1granted = true; }
+        if (wMission.m1Tage >= 7 && !wMission.m1granted) { xpAddNurGesamt(uid, 10, name); xpEarned += 10; meldungen.push('🏆 Wochen-M1 geschafft → +10 XP'); wMission.m1granted = true; }
     }
     if (m2Done) {
-        xpAdd(uid, 5, name); xpEarned += 5;
+        xpAddNurGesamt(uid, 5, name); xpEarned += 5;
         meldungen.push('✅ Mission 2 geschafft\n' + Math.round(prozentTag * 100) + '% geliked → +5 XP');
         if (addWeeklyMissionDay(wMission, 'm2Tage', dayKey)) {
             if (wMission.m2Tage > 7) wMission.m2Tage = 7;
-            if (wMission.m2Tage >= 7 && !wMission.m2granted) { xpAdd(uid, 15, name); xpEarned += 15; addDiamond(uid, 1); diamondsEarned += 1; meldungen.push('🏆 Wochen-M2 geschafft → +15 XP + 💎 1 Diamant'); wMission.m2granted = true; }
+            if (wMission.m2Tage >= 7 && !wMission.m2granted) { xpAddNurGesamt(uid, 15, name); xpEarned += 15; addDiamond(uid, 1); diamondsEarned += 1; meldungen.push('🏆 Wochen-M2 geschafft → +15 XP + 💎 1 Diamant'); wMission.m2granted = true; }
         }
     }
     if (m3Done) {
-        xpAdd(uid, 5, name); xpEarned += 5; addDiamond(uid, 1); diamondsEarned += 1;
+        xpAddNurGesamt(uid, 5, name); xpEarned += 5; addDiamond(uid, 1); diamondsEarned += 1;
         meldungen.push('✅ Mission 3 geschafft\nAlle Links geliked → +5 XP + 💎 1 Diamant');
         if (addWeeklyMissionDay(wMission, 'm3Tage', dayKey)) {
             if (wMission.m3Tage > 7) wMission.m3Tage = 7;
-            if (wMission.m3Tage >= 7 && !wMission.m3granted) { xpAdd(uid, 20, name); xpEarned += 20; addDiamond(uid, 2); diamondsEarned += 2; meldungen.push('🏆 Wochen-M3 geschafft → +20 XP + 💎 2 Diamanten'); wMission.m3granted = true; }
+            if (wMission.m3Tage >= 7 && !wMission.m3granted) { xpAddNurGesamt(uid, 20, name); xpEarned += 20; addDiamond(uid, 2); diamondsEarned += 2; meldungen.push('🏆 Wochen-M3 geschafft → +20 XP + 💎 2 Diamanten'); wMission.m3granted = true; }
         }
     }
     const hatTagLink = Object.values(d.links).some(l => istInstagramLink(l.text) && String(l.user_id) === String(uid) && new Date(l.timestamp).toDateString() === dayKey);
@@ -2749,7 +2749,7 @@ function monatsResetUndAuszahlung(jetzt) {
         if (!p) break;
         const u = d.users[uid] || {};
         const name = u.spitzname || u.name || 'User';
-        try { if (p.xp > 0) xpAdd(uid, p.xp, name); } catch (e) {}
+        try { if (p.xp > 0) xpAddNurGesamt(uid, p.xp, name); } catch (e) {}
         try { if (p.dia > 0) addDiamond(uid, p.dia); } catch (e) {}
         try {
             d.monthlyAwardsLog.push({ monthKey, place, uid, name, xp: p.xp, dia: p.dia, at: Date.now() });
