@@ -662,7 +662,7 @@ function grantWeeklySuperlinkMission(weekKey) {
         if (d.wochenSuperlinkMissionGranted[key]) continue;            // schon vergeben (idempotent)
         if (!_superlinkAlleGeliked(uid, weekKey)) continue;
         d.wochenSuperlinkMissionGranted[key] = Date.now();
-        addXp({ uid, amount: 500, reason: 'superlink-mission' });      // DMt automatisch "✨ +500 XP"
+        addXp({ uid, amount: 500, noRanking: true, reason: 'superlink-mission' });      // Belohnung → nur Gesamt-XP (noRanking), DMt automatisch "✨ +500 XP"
         granted++; uids.push(uid);
     }
     return { ok: true, granted, weekKey, uids };
