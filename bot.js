@@ -17097,6 +17097,30 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
       <div class="dash-stat"><div class="dash-stat-lbl">📧 Email bestätigt</div><div class="dash-stat-val" id="stat-email">–</div></div>
     </div>
 
+    <!-- ── Karten-Hub (Apple-like Navigation) ── -->
+    <style>
+      .dhub{display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:12px;margin:4px 0 8px}
+      .dhub-card{position:relative;display:flex;flex-direction:column;gap:11px;padding:16px;background:var(--dink2);border:1px solid var(--dline);border-radius:18px;cursor:pointer;text-align:left;transition:transform .15s ease,box-shadow .15s ease,border-color .15s ease;-webkit-tap-highlight-color:transparent;font-family:inherit}
+      .dhub-card:hover{transform:translateY(-2px);box-shadow:0 10px 26px rgba(0,0,0,.20);border-color:var(--dsub)}
+      .dhub-card:active{transform:translateY(0)}
+      .dhub-ic{width:44px;height:44px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:22px}
+      .dhub-ttl{font-size:14px;font-weight:800;color:var(--text);line-height:1.2}
+      .dhub-sub{font-size:11px;color:var(--dsub);margin-top:3px;line-height:1.35}
+      .dhub-badge{position:absolute;top:13px;right:13px;min-width:20px;height:20px;padding:0 6px;border-radius:99px;background:#ef4444;color:#fff;font-size:11px;font-weight:800;display:none;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(239,68,68,.4)}
+      .dhub-arrow{margin-top:auto;font-size:18px;color:var(--dsub);line-height:1;align-self:flex-end}
+      #dash-back{display:none;align-items:center;gap:6px;margin:0 0 16px;cursor:pointer;color:var(--text);font-size:14px;font-weight:700;background:var(--dink2);border:1px solid var(--dline);border-radius:12px;padding:9px 15px;font-family:inherit}
+      #dash-back:hover{border-color:var(--dsub)}
+    </style>
+    <div id="dash-hub" class="dhub">
+      <button class="dhub-card" onclick="dashOpen('stats')"><div class="dhub-ic" style="background:rgba(59,130,246,.15);color:#3b82f6">📊</div><div><div class="dhub-ttl">Statistiken</div><div class="dhub-sub">Trends · Live · Funnel · Online</div></div><span class="dhub-badge" id="hub-b-stats"></span><div class="dhub-arrow">›</div></button>
+      <button class="dhub-card" onclick="dashOpen('users')"><div class="dhub-ic" style="background:rgba(124,58,237,.15);color:#a78bfa">👥</div><div><div class="dhub-ttl">User-Verwaltung</div><div class="dhub-sub">Alle · Neu · Subs · Papierkorb</div></div><span class="dhub-badge" id="hub-b-users"></span><div class="dhub-arrow">›</div></button>
+      <button class="dhub-card" onclick="dashOpen('usermgmt','diamond-links')"><div class="dhub-ic" style="background:rgba(6,182,212,.15);color:#06b6d4">💎</div><div><div class="dhub-ttl">Content &amp; Links</div><div class="dhub-sub">Diamant · Prisma · Engagement</div></div><span class="dhub-badge" id="hub-b-content"></span><div class="dhub-arrow">›</div></button>
+      <button class="dhub-card" onclick="dashOpen('usermgmt','reports')"><div class="dhub-ic" style="background:rgba(239,68,68,.15);color:#ef4444">🛡️</div><div><div class="dhub-ttl">Moderation</div><div class="dhub-sub">Meldungen · Compliance · Tickets</div></div><span class="dhub-badge" id="hub-b-mod"></span><div class="dhub-arrow">›</div></button>
+      <button class="dhub-card" onclick="dashOpen('referral')"><div class="dhub-ic" style="background:rgba(34,197,94,.15);color:#22c55e">🤝</div><div><div class="dhub-ttl">Referral &amp; Builder</div><div class="dhub-sub">Prüfungen · Wer lud wen</div></div><span class="dhub-badge" id="hub-b-ref"></span><div class="dhub-arrow">›</div></button>
+      <button class="dhub-card" onclick="dashOpen('tools')"><div class="dhub-ic" style="background:rgba(245,158,11,.15);color:#f59e0b">🔧</div><div><div class="dhub-ttl">Werkzeuge</div><div class="dhub-sub">Link entsperren · Verwarnung</div></div><div class="dhub-arrow">›</div></button>
+    </div>
+    <button id="dash-back" onclick="dashHubShow()">‹ Übersicht</button>
+
     <!-- 30-Tage Trend-Chart -->
     <section class="dash-section">
       <div class="dash-section-hdr">
@@ -19042,6 +19066,39 @@ setInterval(loadReferralOverview, 60000);
 loadWarnGuide();
 loadDeletedUsers();
 setInterval(loadDeletedUsers, 60000);
+
+// ── Karten-Hub (Apple-like Navigation): Sektionen per Titel einer Gruppe zuordnen + Hub zeigen ──
+(function(){
+  var MAP=[['30-Tage','stats'],['Top Creator','stats'],['Live Activity','stats'],['Conversion','stats'],['Aktuell eingeloggt','stats'],['Referral-Prüfungen','referral'],['Wer hat wen','referral'],['User-Verwaltung','usermgmt'],['Neu registriert','users'],['Papierkorb','users'],['Verwarnungs','tools'],['Link entsperren','tools']];
+  document.querySelectorAll('.dash-section').forEach(function(sec){
+    var tt=sec.querySelector('.dash-section-title'); var t=tt?tt.textContent:'';
+    for(var i=0;i<MAP.length;i++){ if(t.indexOf(MAP[i][0])>=0){ sec.setAttribute('data-dgroup',MAP[i][1]); if(MAP[i][1]==='usermgmt') sec.id='dgroup-usermgmt'; break; } }
+    if(sec.getAttribute('data-dgroup')) sec.style.display='none';
+  });
+})();
+function dashHubShow(){
+  document.querySelectorAll('.dash-section[data-dgroup]').forEach(function(s){s.style.display='none';});
+  var h=document.getElementById('dash-hub'); if(h)h.style.display='grid';
+  var b=document.getElementById('dash-back'); if(b)b.style.display='none';
+  try{window.scrollTo({top:0,behavior:'smooth'});}catch(e){window.scrollTo(0,0);}
+}
+function dashOpen(group, tabId){
+  var h=document.getElementById('dash-hub'); if(h)h.style.display='none';
+  var b=document.getElementById('dash-back'); if(b)b.style.display='inline-flex';
+  document.querySelectorAll('.dash-section[data-dgroup]').forEach(function(s){
+    var g=s.getAttribute('data-dgroup');
+    var show = tabId ? (g==='usermgmt') : (g===group || (group==='users'&&g==='usermgmt'));
+    s.style.display = show ? '' : 'none';
+    if(show) s.classList.remove('collapsed');
+  });
+  if(tabId){ var tb=document.querySelector('.dash-tab[data-tab="'+tabId+'"]'); if(tb) tb.click(); }
+  try{window.scrollTo({top:0,behavior:'smooth'});}catch(e){window.scrollTo(0,0);}
+}
+function dashHubBadges(){
+  function setb(eid,sid){var e=document.getElementById(eid),s=document.getElementById(sid);if(!e)return;var v=s?(parseInt(s.textContent,10)||0):0;if(v>0){e.textContent=v>99?'99+':v;e.style.display='flex';}else{e.style.display='none';}}
+  setb('hub-b-ref','ref-pending-badge'); setb('hub-b-mod','dash-reports-badge'); setb('hub-b-users','newusers-today');
+}
+setTimeout(dashHubBadges,1500); setInterval(dashHubBadges,4000);
 // Dashboard-Sektionen ein-/ausklappbar — a11y-konform (Keyboard + ARIA) & Zustand persistent (idempotent)
 (function makeSectionsCollapsible(){
   var STORE_KEY = 'cb_dash_collapsed';
