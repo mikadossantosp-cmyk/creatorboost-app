@@ -12811,7 +12811,7 @@ window.cbCollapseWrap = function(inner, id, compact){
       '<div class="diamond-card-glow"></div>' +
       '<div class="diamond-card-body">' +
         '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-2)">' +
-          '<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:800;letter-spacing:.2px;color:#22d3ee;background:rgba(6,182,212,0.12);border:1px solid rgba(6,182,212,0.4);padding:2px 9px;border-radius:99px">💎 +'+(p.reward||3)+'</span>' +
+          '<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:800;letter-spacing:.2px;color:#22d3ee;background:rgba(6,182,212,0.12);border:1px solid rgba(6,182,212,0.4);padding:2px 9px;border-radius:99px">💎 Diamantlink · +'+(p.reward||3)+'</span>' +
           '<span style="font-size:10.5px;color:var(--muted);font-weight:600">⏱ '+fmtRemaining(remaining)+'</span>' +
         '</div>' +
         window.cbCardAuthorRow(p) +
@@ -13397,7 +13397,7 @@ window.cbCollapseWrap = function(inner, id, compact){
       '<div class="prisma-card-glow"></div>' +
       '<div class="prisma-card-body">' +
         '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-2)">' +
-          '<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:800;letter-spacing:.2px;color:#c084fc;background:rgba(168,85,247,0.12);border:1px solid rgba(168,85,247,0.4);padding:2px 9px;border-radius:99px">💠 +'+(p.reward||7)+'</span>' +
+          '<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:800;letter-spacing:.2px;color:#c084fc;background:rgba(168,85,247,0.12);border:1px solid rgba(168,85,247,0.4);padding:2px 9px;border-radius:99px">💠 Prismalink · +'+(p.reward||7)+'</span>' +
           '<span style="font-size:10.5px;color:var(--muted);font-weight:600">⏱ '+fmtRemaining(remaining)+'</span>' +
         '</div>' +
         window.cbCardAuthorRow(p, '#fff') +
