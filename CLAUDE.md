@@ -298,6 +298,8 @@ Prioritäten **immer in dieser Reihenfolge**:
 
 - **Normale Links im Feed gekennzeichnet ().** User-Wunsch (Carousel-Vorlage 7/9): jeder Link-Typ soll ein farbiges Eck-Badge tragen. Normale Reel-Links hatten KEINS (nur Uhrzeit) → grünes „✓ Normal"-Pill (Check-SVG, #16a34a) in der Header-Zeile ( ~11788, justify-content flex-end→space-between). Die anderen Typen waren bereits markiert: Superlinks „SUPERLINK"-Gold-Label (renderSuperLink 11897), Diamant/Prisma via Eyebrows. Verifiziert: node --check, Badge im Quelltext, 23 Feed-Script-Blöcke valide.
 
+- **Link-Typ-Badges vereinheitlicht (bot.js).** User-Wunsch: alle Link-Labels im gleichen Pill-Stil wie Normal, je mit eigener Kennzeichnung. Gemeinsamer Stil = kleines Outline-Pill (getoente bg + farbiger Text/Border + Icon): gruen Normal (renderLink) / gold Super (renderSuperLink, ersetzt altes SUPERLINK-Gradient-Label) / cyan Diamond (Diamond-Karten-Eyebrow) / lila Prisma (Prisma-Eyebrow). Diamond/Prisma sind client-gerendert -> served JS aller Feed-Tabs (heute/diamond/prisma/engagement) je 0 Fehler. node --check ok.
+
 ## 8. Nächste sinnvolle Schritte
 
 0. **a11y-Pass app-weit fortsetzen** (Dashboard-Modals sind erledigt): weitere `<div onclick>` → echte `<button>`/`role`, fehlende `aria-label` an Icon-Buttons, restliche Modals (App-Chat/DM/Helper) mit `role="dialog"` + Escape/Backdrop nach dem `dashModalA11y()`-Muster. Gezielt pro Screen statt blind app-weit (viele Dateien).

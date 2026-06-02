@@ -11894,7 +11894,7 @@ commentsBox+
             const dateStr = new Date(sl.timestamp).toLocaleDateString('de-DE',{day:'2-digit',month:'short'});
             return '<div class="post fade-up'+cardThemeClass(poster.activeCardTheme)+'" id="sl-post-'+sl.id+'">\n'+legendOverlay(poster.activeCardTheme)+'\n'
                 +'<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px 0">\n'
-                +'<span class="post-category-label" style="background:linear-gradient(135deg,#f59e0b,#a78bfa)"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-1px;margin-right:var(--space-1)"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>SUPERLINK</span>\n'
+                +'<span style="display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:800;letter-spacing:.3px;color:#d97706;background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.40);padding:2px 9px;border-radius:99px"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Super</span>\n'
                 +'<span class="post-time">'+dateStr+' '+time+'</span>\n'
                 +'</div>\n'
                 +'<div class="post-header" style="padding-top:var(--space-2)">\n'
@@ -12813,7 +12813,7 @@ window.cbCollapseWrap = function(inner, id, compact){
         '<div style="display:flex;align-items:center;gap:10px;margin-bottom:var(--space-3);padding:10px 14px;background:linear-gradient(135deg,rgba(6,182,212,0.18),rgba(167,139,250,0.12));border:1.5px solid rgba(6,182,212,0.45);border-radius:14px;box-shadow:0 2px 10px rgba(15,23,42,0.06)">' +
           '<span style="font-size:24px;line-height:1;filter:drop-shadow(0 2px 6px rgba(6,182,212,.5))">💎</span>' +
           '<div style="flex:1;min-width:0">' +
-            '<div style="font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#06b6d4">DIAMANTLINK · BELOHNUNG</div>' +
+            '<span style="display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:800;letter-spacing:.3px;color:#22d3ee;background:rgba(6,182,212,0.15);border:1px solid rgba(6,182,212,0.5);padding:1px 8px;border-radius:99px">💎 Diamond</span>' +
             '<div style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-0.5px;line-height:1.15;margin-top:2px">+'+(p.reward||3)+' 💎 <span style="font-size:11px;color:var(--muted);font-weight:600;letter-spacing:0">für ein echtes Engagement</span></div>' +
           '</div>' +
           '<div style="font-size:11px;color:#06b6d4;font-weight:700;text-align:right;flex-shrink:0">⏱<br>'+fmtRemaining(remaining)+'</div>' +
@@ -13403,7 +13403,7 @@ window.cbCollapseWrap = function(inner, id, compact){
         '<div style="display:flex;align-items:center;gap:10px;margin-bottom:var(--space-3);padding:10px 14px;background:linear-gradient(135deg,rgba(239,68,68,0.10),rgba(245,158,11,0.10),rgba(34,197,94,0.10),rgba(6,182,212,0.10),rgba(168,85,247,0.14));border:1.5px solid rgba(168,85,247,0.45);border-radius:14px;box-shadow:0 4px 14px rgba(168,85,247,0.18)">' +
           '<span style="font-size:24px;line-height:1;filter:drop-shadow(0 2px 6px rgba(168,85,247,.5))">💠</span>' +
           '<div style="flex:1;min-width:0">' +
-            '<div style="font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;background:linear-gradient(135deg,#ef4444,#f59e0b,#22c55e,#06b6d4,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">PRISMALINK · PREMIUM</div>' +
+            '<span style="display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:800;letter-spacing:.3px;color:#c084fc;background:rgba(168,85,247,0.15);border:1px solid rgba(168,85,247,0.5);padding:1px 8px;border-radius:99px">💠 Prisma</span>' +
             '<div style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-0.5px;line-height:1.15;margin-top:2px">+'+(p.reward||7)+' 💎 <span style="font-size:11px;color:var(--muted);font-weight:600;letter-spacing:0">für ein echtes Engagement</span></div>' +
           '</div>' +
           '<div style="font-size:11px;color:#a855f7;font-weight:700;text-align:right;flex-shrink:0">⏱<br>'+fmtRemaining(remaining)+'</div>' +
