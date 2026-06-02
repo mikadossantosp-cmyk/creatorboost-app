@@ -274,6 +274,8 @@ Prioritäten **immer in dieser Reihenfolge**:
 
 - **Rankings final: NUR Like-XP (`bot-logic.js`).** Auf User-Bestätigung „nur xp von liken": Posten (+1, Z.812) von xpAddMitDaily → `xpAddNurGesamt` (nur Gesamt). Damit enthalten Daily/Weekly/Monthly **ausschließlich Like-XP** (Z.693 heute→alle Buckets, Z.694 diese-Woche→weekly/monthly). Alles andere (Posten, Belohnungen, Missionen, Events, Boni) → nur Gesamt-Ranking. Verifiziert: Posten gesamt=1/daily=0/weekly=0/monthly=0; Liken alle=5.
 
+- **FIX: Monats-Ranking zeigte zu hohe XP → Clean-Reset (`bot-logic.js`).** User-Report (Screenshot: P1 2820 XP an Tag 2 des Monats). Ursache: der Backfill seedete monthlyXP aus weeklyXP, das aber nach ALTER Zählweise (Posten+Belohnungen, vor der nur-Liken-Umstellung) aufgebläht war. Da Alt-XP nicht nach Quelle trennbar ist: einmaliger `_monthlyCleanV1` leert monthlyXP + lastMonthlyRank → Monats-Ranking startet sauber, sammelt ab jetzt rein Like-XP. Gesamt unberührt. Daily/Weekly heilen sich beim nächsten Reset selbst. Verifiziert: monthlyXP→{}, u.xp unveraendert.
+
 ## 8. Nächste sinnvolle Schritte
 
 0. **a11y-Pass app-weit fortsetzen** (Dashboard-Modals sind erledigt): weitere `<div onclick>` → echte `<button>`/`role`, fehlende `aria-label` an Icon-Buttons, restliche Modals (App-Chat/DM/Helper) mit `role="dialog"` + Escape/Backdrop nach dem `dashModalA11y()`-Muster. Gezielt pro Screen statt blind app-weit (viele Dateien).

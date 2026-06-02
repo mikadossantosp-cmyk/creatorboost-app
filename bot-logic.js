@@ -1367,6 +1367,10 @@ async function zeitCheck(nowArg) {
             for (const [uid, xp] of Object.entries(_seed)) { if (d.users[uid] && !istAdminId(uid)) { const cur = Number(d.monthlyXP[uid] || 0); if (xp > cur) { d.monthlyXP[uid] = xp; _seeded++; } } }
             console.log('Monthly-Backfill V2 (monatsgrenzen-sicher): ' + _seeded + ' User (Monat ' + _mPrefix + ', Wochen-Montag ' + _monKey + ').');
         } catch (e) { console.log('Monthly-Backfill V2 Fehler:', e.message); } }
+        // Einmaliger Clean-Reset: der Backfill-Seed aus weeklyXP war nach alter Zählweise (Posten/Belohnungen)
+        // aufgebläht → monthlyXP zeigte zu hohe Werte. monthlyXP einmalig leeren; ab jetzt sammelt es rein
+        // Like-XP frisch (Quelle der Alt-XP nicht trennbar). Daily/Weekly heilen sich beim nächsten Reset selbst.
+        if (!d._monthlyCleanV1) { d._monthlyCleanV1 = true; try { d.monthlyXP = {}; for (const u of Object.values(d.users || {})) { if (u) delete u.lastMonthlyRank; } console.log('Monthly Clean-Reset: monthlyXP geleert, startet sauber ab jetzt (nur Like-XP).'); } catch (e) { console.log('Monthly Clean-Reset Fehler:', e.message); } }
         eventAutoTick();
         linkCleanup();
         for (const key of Object.keys(d._lastEvents)) { if (!key.endsWith(tagStr)) delete d._lastEvents[key]; }
