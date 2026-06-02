@@ -39,7 +39,7 @@ const PORT          = process.env.PORT          || 3000;
 const LOCAL_STORE = process.env.LOCAL_STORE === '1';
 // Zentrale Asset-/App-Version (Node-Scope): bricht CSS-Cache (?v=) + Service-Worker-Cache mit jedem Deploy.
 // EINE Quelle — wird in den CSS-<link> und in den SW-Script-Text (SW_VERSION) interpoliert.
-const APP_VERSION = 'v322-legend-badge-top';
+const APP_VERSION = 'v323-legend-badge-inside';
 if (LOCAL_STORE) {
     try {
         datastore.load();
@@ -936,7 +936,7 @@ function cardThemeCss(){
       + '@keyframes cbCtAurora{0%,100%{box-shadow:0 0 22px -3px rgba(124,58,237,.55),0 10px 30px rgba(0,0,0,.4)}33%{box-shadow:0 0 22px -3px rgba(14,165,233,.55),0 10px 30px rgba(0,0,0,.4)}66%{box-shadow:0 0 22px -3px rgba(236,72,153,.55),0 10px 30px rgba(0,0,0,.4)}}'
       // ── Legendär-Tier: Glow-Puls + Funkel-Partikel + schimmerndes Badge + rotierende Aura + Glanz-Sweep (cb-legend-fx) ──
       + '.post.cb-ct-legend{position:relative;animation:cbLegendPulse 3.2s ease-in-out infinite}'
-      + '.post.cb-ct-legend::before{content:"✦ LEGENDÄR";position:absolute;top:-9px;left:50%;right:auto;transform:translateX(-50%);z-index:9;font-size:8px;font-weight:800;letter-spacing:.6px;color:#2a1c05;background:linear-gradient(110deg,#b8902f 0%,#fff7d6 25%,#e7c14e 50%,#fff7d6 60%,#b8902f 100%);background-size:240% 100%;padding:3px 9px;border-radius:99px;box-shadow:0 2px 10px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.7),0 0 12px var(--ct-glowc,rgba(255,215,120,.6));pointer-events:none;animation:cbLegendBadge 3.6s linear infinite}'
+      + '.post.cb-ct-legend::before{content:"✦ LEGENDÄR";position:absolute;top:9px;left:50%;right:auto;transform:translateX(-50%);z-index:9;font-size:8px;font-weight:800;letter-spacing:.6px;color:#2a1c05;background:linear-gradient(110deg,#b8902f 0%,#fff7d6 25%,#e7c14e 50%,#fff7d6 60%,#b8902f 100%);background-size:240% 100%;padding:3px 9px;border-radius:99px;box-shadow:0 2px 10px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.7),0 0 12px var(--ct-glowc,rgba(255,215,120,.6));pointer-events:none;animation:cbLegendBadge 3.6s linear infinite}'
       + '.post.cb-ct-legend::after{content:"";position:absolute;inset:0;z-index:7;pointer-events:none;mix-blend-mode:screen;background-image:radial-gradient(2px 2px at 18% 22%,var(--ct-spark,#fff),transparent 60%),radial-gradient(1.5px 1.5px at 72% 28%,var(--ct-spark,#fff),transparent 60%),radial-gradient(2px 2px at 41% 66%,var(--ct-spark,#fff),transparent 60%),radial-gradient(1.5px 1.5px at 86% 58%,var(--ct-spark,#fff),transparent 60%),radial-gradient(1.5px 1.5px at 30% 86%,var(--ct-spark,#fff),transparent 60%),radial-gradient(2px 2px at 62% 12%,var(--ct-spark,#fff),transparent 60%),radial-gradient(1.5px 1.5px at 52% 40%,var(--ct-spark,#fff),transparent 60%);animation:cbLegendSpark 3.4s ease-in-out infinite}'
       // Effekt-Overlay: rotierende holografische Aura (::before) + diagonaler Glanz-Sweep (::after), beide screen-blend & dezent.
       + '.cb-legend-fx{position:absolute;inset:0;z-index:6;pointer-events:none;border-radius:20px;overflow:hidden}'
