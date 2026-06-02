@@ -280,6 +280,8 @@ Prioritäten **immer in dieser Reihenfolge**:
 
 - **Monats-Ranking: XP seit dem 1. zurückgeseedet (`bot-logic.js`).** User-Wunsch (heute+gestern, alles seit 01.06). Da 1. Juni = Montag → weeklyXP == XP seit dem 1. `_monthlyRestoreV1` seedet monthlyXP daraus (max, nur wenn Wochen-Montag im aktuellen Monat → kein Vormonats-Mix). Transparenz: weeklyXP enthält Alt-Zählweise (Posten/Belohnungen bis zur nur-Liken-Umstellung) → Werte = Gesamt-Aktivität seit 1., nicht rein Likes (separate Like-XP für 1.–2.6. nicht gespeichert). Verifiziert: monthlyXP = weeklyXP-Werte (max ggü. live).
 
+- **Feed-Extra-Karten: ≤3 ausgeklappt, ab 4 eingeklappt + Belohnungs-Teaser (`bot.js`).** User-Wunsch. Strip-Dispatch (Diamond/Prisma) rendert bei ≤3 Karten direkt `renderCard` (offen), ab 4 `cbCollapseWrap` (eingeklappt) — pro Strip/Typ. Admin-Karte (immer max 1) → immer offen (kein Wrap). `cbCompactBar` als Belohnungs-Teaser umgebaut: Akzent-Icon-Badge + „🎁 Belohnung wartet" + „+X 💎 sichern" + pulsierende „Aufdecken →"-Pille (`@keyframes cbCbarPulse`, reduced-motion respektiert). Verifiziert: Teaser-Text + Klasse emittiert, node --check ok. **Hinweis:** Schwelle ist PRO Typ (3 Diamond / 3 Prisma), nicht total.
+
 ## 8. Nächste sinnvolle Schritte
 
 0. **a11y-Pass app-weit fortsetzen** (Dashboard-Modals sind erledigt): weitere `<div onclick>` → echte `<button>`/`role`, fehlende `aria-label` an Icon-Buttons, restliche Modals (App-Chat/DM/Helper) mit `role="dialog"` + Escape/Backdrop nach dem `dashModalA11y()`-Muster. Gezielt pro Screen statt blind app-weit (viele Dateien).

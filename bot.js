@@ -12765,13 +12765,15 @@ window.cbCardReel = function(p, postId, visitVar){
   '</div>';
 };
 // CSS-only Aufklapp-Box (Checkbox-Hack): im Heute-Feed nur Kopfzeile sichtbar, Tap klappt die volle Karte auf.
-(function(){ if(document.getElementById('cb-xl-css'))return; var s=document.createElement('style'); s.id='cb-xl-css'; s.textContent='.cb-xlb{display:none}.cb-xlc:checked~.cb-xlb{display:block}.cb-xlc:checked~.cb-xlh{display:none}.cb-xlh{display:block;-webkit-tap-highlight-color:transparent}'; document.head.appendChild(s); })();
+(function(){ if(document.getElementById('cb-xl-css'))return; var s=document.createElement('style'); s.id='cb-xl-css'; s.textContent='.cb-xlb{display:none}.cb-xlc:checked~.cb-xlb{display:block}.cb-xlc:checked~.cb-xlh{display:none}.cb-xlh{display:block;-webkit-tap-highlight-color:transparent}@keyframes cbCbarPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}.cb-cbar-cta{animation:cbCbarPulse 1.5s ease-in-out infinite}@media(prefers-reduced-motion:reduce){.cb-cbar-cta{animation:none}}'; document.head.appendChild(s); })();
 window.cbCompactBar = function(o){
-  return '<div style="display:flex;align-items:center;gap:10px;margin:0 16px 14px;padding:12px 14px;border-radius:14px;background:'+o.bg+';border:1px solid '+o.border+';cursor:pointer;box-shadow:0 2px 10px rgba(15,23,42,0.05)">'
-    + '<span style="font-size:21px;line-height:1;flex-shrink:0">'+o.emoji+'</span>'
-    + '<div style="flex:1;min-width:0"><div style="font-size:10px;font-weight:800;letter-spacing:1.3px;text-transform:uppercase;color:'+o.accent+'">'+o.label+'</div>'
-    + '<div style="font-size:13px;font-weight:800;color:var(--text);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+o.sub+'</div></div>'
-    + '<span style="color:'+o.accent+';font-size:11.5px;font-weight:800;flex-shrink:0;display:inline-flex;align-items:center;gap:4px">Ausklappen ▾</span>'
+  return '<div style="display:flex;align-items:center;gap:11px;margin:0 16px 14px;padding:13px 14px;border-radius:14px;background:'+o.bg+';border:1.5px solid '+o.border+';cursor:pointer;box-shadow:0 4px 16px rgba(15,23,42,0.08)">'
+    + '<div style="width:40px;height:40px;border-radius:11px;background:'+o.accent+';display:flex;align-items:center;justify-content:center;font-size:21px;flex-shrink:0;box-shadow:0 3px 10px '+o.accent+'66">'+o.emoji+'</div>'
+    + '<div style="flex:1;min-width:0">'
+      + '<div style="font-size:10px;font-weight:900;letter-spacing:1px;text-transform:uppercase;color:'+o.accent+'">🎁 Belohnung wartet</div>'
+      + '<div style="font-size:14px;font-weight:900;color:var(--text);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+o.sub+'</div>'
+    + '</div>'
+    + '<span class="cb-cbar-cta" style="flex-shrink:0;background:'+o.accent+';color:#fff;font-size:11.5px;font-weight:900;padding:7px 13px;border-radius:99px;display:inline-flex;align-items:center;gap:4px;box-shadow:0 3px 10px '+o.accent+'66">Aufdecken →</span>'
     + '</div>';
 };
 window.cbCollapseWrap = function(inner, id, compact){
@@ -12890,7 +12892,7 @@ window.cbCollapseWrap = function(inner, id, compact){
       // Eigene/Family-Posts erscheinen im Diamond-Tab selbst, aber nicht im Strip oben.
       if (stripEl) {
         const stripPosts = posts.filter(p => !p.liked && !p.isSelf && !p.isFamily);
-        if (stripPosts.length) stripEl.innerHTML = stripPosts.map(p => window.cbCollapseWrap(renderCard(p), 'dl-'+p.id, window.cbCompactBar({emoji:'💎',label:'Diamantlink · Belohnung',sub:'+'+(p.reward||3)+' 💎 · ⏱ '+fmtRemaining(p.remainingMs),accent:'#06b6d4',bg:'linear-gradient(135deg,rgba(6,182,212,0.12),rgba(167,139,250,0.08))',border:'rgba(6,182,212,0.4)'}))).join('');
+        if (stripPosts.length) stripEl.innerHTML = (stripPosts.length <= 3 ? stripPosts.map(p => renderCard(p)) : stripPosts.map(p => window.cbCollapseWrap(renderCard(p), 'dl-'+p.id, window.cbCompactBar({emoji:'💎',label:'Diamantlink · Belohnung',sub:'+'+(p.reward||3)+' 💎 sichern',accent:'#06b6d4',bg:'linear-gradient(135deg,rgba(6,182,212,0.12),rgba(167,139,250,0.08))',border:'rgba(6,182,212,0.4)'}))) ).join('');
         else stripEl.innerHTML = '';
       }
       // Diamond-Tab: zeigt zusätzlich Erst-Visit-Modal wenn !rulesAccepted
@@ -13453,7 +13455,7 @@ window.cbCollapseWrap = function(inner, id, compact){
       // Heute-Strip: nur likbare Posts (nicht eigene, nicht family)
       if (stripEl) {
         const stripPosts = posts.filter(p => !p.isSelf && !p.isFamily);
-        if (stripPosts.length) stripEl.innerHTML = stripPosts.map(p => window.cbCollapseWrap(renderCard(p), 'pl-'+p.id, window.cbCompactBar({emoji:'💠',label:'Prismalink · Premium',sub:'+'+(p.reward||7)+' 💎 · ⏱ '+fmtRemaining(p.remainingMs),accent:'#a855f7',bg:'linear-gradient(135deg,rgba(168,85,247,0.14),rgba(236,72,153,0.08))',border:'rgba(168,85,247,0.4)'}))).join('');
+        if (stripPosts.length) stripEl.innerHTML = (stripPosts.length <= 3 ? stripPosts.map(p => renderCard(p)) : stripPosts.map(p => window.cbCollapseWrap(renderCard(p), 'pl-'+p.id, window.cbCompactBar({emoji:'💠',label:'Prismalink · Premium',sub:'+'+(p.reward||7)+' 💎 sichern',accent:'#a855f7',bg:'linear-gradient(135deg,rgba(168,85,247,0.14),rgba(236,72,153,0.08))',border:'rgba(168,85,247,0.4)'}))) ).join('');
         else stripEl.innerHTML = '';
       }
       // Prisma-Tab: kompletter Feed (eigene + fremde) wie der Diamond-Tab.
@@ -13580,7 +13582,7 @@ function _alUserCard(c, isPreview){
   function render(c){
     if(!c){ root.innerHTML=''; return; }
     _alCss();
-    root.innerHTML = window.cbCollapseWrap(_alUserCard(c, false), 'al-'+c.id, window.cbCompactBar({emoji:'🛡️',label:'Admin-Link · Community-Push',sub:'+'+(c.reward||5)+' 💎 · ⏱ '+_alFmtRemaining(c.remainingMs),accent:'#f59e0b',bg:'linear-gradient(135deg,rgba(245,158,11,0.14),rgba(168,85,247,0.10))',border:'rgba(245,158,11,0.4)'}));
+    root.innerHTML = _alUserCard(c, false); // Admin-Karte: immer nur 1 → immer ausgeklappt
   }
   function load(){
     fetch('/api/admin-link/card').then(function(r){return r.json();}).then(function(j){ render(j&&j.card); }).catch(function(){ root.innerHTML=''; });
