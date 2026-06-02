@@ -392,6 +392,8 @@ function xpAdd(uid, menge, name) {
     u.xp += finalXP; u.level = level(u.xp); u.role = badge(u.xp);
     if (!d.weeklyXP[uid]) d.weeklyXP[uid] = 0;
     d.weeklyXP[uid] += finalXP;
+    if (!d.monthlyXP) d.monthlyXP = {};
+    d.monthlyXP[uid] = (d.monthlyXP[uid] || 0) + finalXP;
     _badgeUpDM(uid, u, alteBadge);
     return finalXP;
 }
@@ -420,6 +422,8 @@ function xpAddMitDaily(uid, menge, name) {
     d.dailyXP[uid] += finalXP;
     if (!d.weeklyXP[uid]) d.weeklyXP[uid] = 0;
     d.weeklyXP[uid] += finalXP;
+    if (!d.monthlyXP) d.monthlyXP = {};
+    d.monthlyXP[uid] = (d.monthlyXP[uid] || 0) + finalXP;
     _badgeUpDM(uid, u, alteBadge);
     return finalXP;
 }
@@ -926,6 +930,7 @@ function deleteLinkApi({ linkId }) {
                 }
             }
             if (d.weeklyXP) d.weeklyXP[lUid] = Math.max(0, (d.weeklyXP[lUid] || 0) - 5);
+            if (d.monthlyXP) d.monthlyXP[lUid] = Math.max(0, (d.monthlyXP[lUid] || 0) - 5);
         }
         const posterUid = String(link.user_id || '');
         if (posterUid && d.users[posterUid] && !istAdminId(posterUid)) {
@@ -935,6 +940,7 @@ function deleteLinkApi({ linkId }) {
             pu.links = Math.max(0, (pu.links || 0) - 1);
             if (isToday && d.dailyXP) d.dailyXP[posterUid] = Math.max(0, (d.dailyXP[posterUid] || 0) - 1);
             if (d.weeklyXP) d.weeklyXP[posterUid] = Math.max(0, (d.weeklyXP[posterUid] || 0) - 1);
+            if (d.monthlyXP) d.monthlyXP[posterUid] = Math.max(0, (d.monthlyXP[posterUid] || 0) - 1);
         }
     } catch (e) {}
     if (d.dmNachrichten) delete d.dmNachrichten[String(link.counter_msg_id)];
@@ -979,6 +985,8 @@ function addXp({ uid, amount, noRanking, reason }) {
     if (!noRanking) {
         if (!d.weeklyXP) d.weeklyXP = {};
         d.weeklyXP[uid] = Math.max(0, (d.weeklyXP[uid] || 0) + amount);
+        if (!d.monthlyXP) d.monthlyXP = {};
+        d.monthlyXP[uid] = Math.max(0, (d.monthlyXP[uid] || 0) + amount);
     }
     if (amount > 0) {
         try { dmUser(uid, `✨ +${amount} XP\n\n${_reasonLabel(reason)}\n\n⭐ Gesamt: ${u.xp} XP`); } catch (e) {}
@@ -1330,6 +1338,7 @@ async function zeitCheck(nowArg) {
         };
         if (jetzt.getDay() === 1 && h === 0 && m < 10 && taeglich('wochenReset')) wochenResetUndAuszahlung(jetzt);
         if (jetzt.getDate() === 1 && h === 0 && m < 10 && taeglich('legendenBonus')) legendenBonus();
+        if (jetzt.getDate() === 1 && h === 0 && m < 10 && taeglich('monatsReset')) monatsResetUndAuszahlung(jetzt);
         if (h === 12 && m < 5 && taeglich('missionen')) await missionenAuswerten();
         if (h === 23 && m >= 55 && taeglich('dailyRanking')) await dailyRankingAbschluss();
         // Einmaliger Backfill (Bug-Nachzahlung — die +500-XP-Belohnung war nie verdrahtet): zahlt die
@@ -1422,6 +1431,9 @@ async function dailyRankingAbschluss() {
         // Wochen-Rang-Snapshot (nächtlich) → Bewegungspfeile im Wochen-Ranking Tag-zu-Tag.
         const _wsorted = Object.entries(d.users || {}).filter(([id, uu]) => uu && !istAdminId(id) && (d.weeklyXP[id] || 0) > 0).sort((a, b) => (d.weeklyXP[b[0]] || 0) - (d.weeklyXP[a[0]] || 0));
         for (let wi = 0; wi < _wsorted.length; wi++) { const uu = d.users[_wsorted[wi][0]]; if (uu) uu.lastWeeklyRank = wi + 1; }
+        // Monats-Rang-Snapshot (nächtlich) → Bewegungspfeile im Monats-Ranking Tag-zu-Tag.
+        const _msorted = Object.entries(d.users || {}).filter(([id, uu]) => uu && !istAdminId(id) && ((d.monthlyXP && d.monthlyXP[id]) || 0) > 0).sort((a, b) => ((d.monthlyXP && d.monthlyXP[b[0]]) || 0) - ((d.monthlyXP && d.monthlyXP[a[0]]) || 0));
+        for (let mi = 0; mi < _msorted.length; mi++) { const uu = d.users[_msorted[mi][0]]; if (uu) uu.lastMonthlyRank = mi + 1; }
         for (let ii = 0; ii < Math.min(10, withScore.length); ii++) {
             const { uid } = withScore[ii];
             const u = d.users[uid];
@@ -2523,6 +2535,8 @@ function removeXp({ uid, amount, reason }) {
     u.role = badge(u.xp);
     if (!d.weeklyXP) d.weeklyXP = {};
     d.weeklyXP[uid] = Math.max(0, (d.weeklyXP[uid] || 0) - amt);
+    if (!d.monthlyXP) d.monthlyXP = {};
+    d.monthlyXP[uid] = Math.max(0, (d.monthlyXP[uid] || 0) - amt);
     try { dmUser(uid, `📉 −${amt} XP\n\n${_reasonLabel(reason)}\n\n⭐ Gesamt: ${u.xp} XP`); } catch (e) {}
     return { ok: true, newXp: u.xp };
 }
@@ -2680,6 +2694,54 @@ function getPrevBerlinWeekKey() {
     const monday = new Date(now);
     monday.setDate(now.getDate() - (day - 1) - 7);
     return monday.getFullYear() + '-' + String(monday.getMonth() + 1).padStart(2, '0') + '-' + String(monday.getDate()).padStart(2, '0');
+}
+// Monats-Key (Berlin) — 'YYYY-MM'. Vormonat für die Auszahlung (Job läuft am 1.).
+function getBerlinMonthKey() {
+    const now = new Date();
+    return now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+}
+function getPrevBerlinMonthKey() {
+    const now = new Date();
+    const m = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    return m.getFullYear() + '-' + String(m.getMonth() + 1).padStart(2, '0');
+}
+// Monats-Ranking-Auszahlung (am 1. des Monats): Top 10 des abgelaufenen Monats.
+// P1=250💎+1000XP · P2=150💎+500XP · P3=100💎+250XP · P4–5=50💎+125XP · P6–10=25💎+50XP.
+function monatsResetUndAuszahlung(jetzt) {
+    jetzt = jetzt || new Date();
+    const mTop = Object.entries(d.monthlyXP || {})
+        .filter(([uid]) => d.users[uid] && !istAdminId(uid) && !d.users[uid].banned)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10);
+    const _mReward = (place) => {
+        if (place === 1) return { dia: 250, xp: 1000, medal: '🥇' };
+        if (place === 2) return { dia: 150, xp: 500, medal: '🥈' };
+        if (place === 3) return { dia: 100, xp: 250, medal: '🥉' };
+        if (place <= 5) return { dia: 50, xp: 125, medal: '🏅' };
+        if (place <= 10) return { dia: 25, xp: 50, medal: '✨' };
+        return null;
+    };
+    if (!d.monthlyAwardsLog) d.monthlyAwardsLog = [];
+    const monthKey = getPrevBerlinMonthKey();
+    const alreadyPaid = d.monthlyAwardsLog.some(a => a.monthKey === monthKey);
+    if (!alreadyPaid) for (let i = 0; i < mTop.length; i++) {
+        const [uid, xp] = mTop[i];
+        const place = i + 1;
+        const p = _mReward(place);
+        if (!p) break;
+        const u = d.users[uid] || {};
+        const name = u.spitzname || u.name || 'User';
+        try { if (p.xp > 0) xpAdd(uid, p.xp, name); } catch (e) {}
+        try { if (p.dia > 0) addDiamond(uid, p.dia); } catch (e) {}
+        try {
+            d.monthlyAwardsLog.push({ monthKey, place, uid, name, xp: p.xp, dia: p.dia, at: Date.now() });
+            while (d.monthlyAwardsLog.length > 200) d.monthlyAwardsLog.shift();
+        } catch (e) {}
+        try { sendInAppDM(uid, `${p.medal} ${place}. Platz im Monats-Ranking (${monthKey})\n\nDu hast diesen Monat ${xp} XP erreicht — überragend! 🎉\n\nDeine Belohnung:\n⭐ +${p.xp} XP\n💎 +${p.dia} Diamanten`); } catch (e) {}
+    }
+    d.monthlyReset = Date.now();
+    d.monthlyXP = {};
+    return { ok: true, paid: Math.min(10, mTop.length), monthKey };
 }
 
 // ════════ SUPERLINKS (App-only — Telegram-Karte bewusst entfernt) ════════
@@ -4728,6 +4790,7 @@ module.exports = {
     helperChatAppendApi, helperQuestionApi, adminHelperAnswerApi,
     auswertenForUserDay, missionenAuswerten, backfillMissionenSinceMonday, thisWeekBackfillDays, applyWarningEscalation, xpBisNaechstesBadge,
     dailyRankingAbschluss, aktivitaetsScore, archiveWeeklyXP, legendenBonus, wochenResetUndAuszahlung,
+    getBerlinMonthKey, getPrevBerlinMonthKey, monatsResetUndAuszahlung,
     zeitCheck, eventAutoTick, linkCleanup, announceEventToAllUsers,
     postLinkFromApp, createPostApi, deletePostApi, deleteLinkApi, commentApi, deleteCommentApi,
     diamondLinkCreate, diamondLinkLike, diamondLinkAcceptRules, diamondLinkAdminDelete,

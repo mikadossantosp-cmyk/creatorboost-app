@@ -19223,6 +19223,10 @@ fetch('/api/admin/engagement-log').then(r=>r.json()).then(j=>{ if (j.ok) { LAST_
           } catch(e) { return ''; }
         })();
         const weeklyRows = makeRankSection(weeklySorted, (id)=>d.weeklyXP[id]||0, 'Diese Woche noch keine XP', 'lastWeeklyRank');
+        const monthlySorted = Object.entries(d.users||{})
+            .filter(([id,u])=>!adminIds.includes(Number(id))&&u.started&&((d.monthlyXP&&d.monthlyXP[id])||0)>0)
+            .sort((a,b)=>((d.monthlyXP&&d.monthlyXP[b[0]])||0)-((d.monthlyXP&&d.monthlyXP[a[0]])||0));
+        const monthlyRows = makeRankSection(monthlySorted, (id)=>(d.monthlyXP&&d.monthlyXP[id])||0, 'Diesen Monat noch keine XP', 'lastMonthlyRank');
         // „Deine Position"-Karte: zeigt live den eigenen Rang + XP + (Tages-)Bewegung. Leer wenn ungerankt/Admin.
         const _myDailyRank = adminIds.includes(Number(myUid)) ? 0 : (dailySorted.findIndex(([id])=>id===myUid)+1);
         const _myWeeklyRank = adminIds.includes(Number(myUid)) ? 0 : (weeklySorted.findIndex(([id])=>id===myUid)+1);
@@ -19242,6 +19246,8 @@ fetch('/api/admin/engagement-log').then(r=>r.json()).then(j=>{ if (j.ok) { LAST_
         };
         const _dailyPosCard = _posCard(_myDailyRank, dailySorted.length, d.dailyXP[myUid] || 0, 'XP heute', (d.users[myUid] && d.users[myUid].lastRankMove), '#f59e0b', 'linear-gradient(135deg,rgba(245,158,11,0.10),rgba(167,139,250,0.06))');
         const _weeklyPosCard = _posCard(_myWeeklyRank, weeklySorted.length, d.weeklyXP[myUid] || 0, 'XP diese Woche', null, '#a855f7', 'linear-gradient(135deg,rgba(168,85,247,0.10),rgba(124,58,237,0.06))');
+        const _myMonthlyRank = adminIds.includes(Number(myUid)) ? 0 : (monthlySorted.findIndex(([id])=>id===myUid)+1);
+        const _monthlyPosCard = _posCard(_myMonthlyRank, monthlySorted.length, (d.monthlyXP&&d.monthlyXP[myUid]) || 0, 'XP diesen Monat', null, '#ec4899', 'linear-gradient(135deg,rgba(236,72,153,0.10),rgba(168,85,247,0.06))');
         // Premium-Preis-Karten (eine Vorlage für Daily + Weekly).
         const _prizeRow = (badge, badgeBg, shadow, label, xp, dia, links, top) => '<div style="display:flex;align-items:center;gap:11px;padding:8px 8px' + (top ? '' : ';border-top:1px solid var(--border2)') + '"><div style="width:30px;height:30px;border-radius:9px;background:' + badgeBg + ';display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;box-shadow:0 2px 6px ' + shadow + '">' + badge + '</div><div style="flex:1;font-size:12.5px;font-weight:700;color:var(--text)">' + label + '</div>'
             + (xp ? '<span style="font-size:11px;font-weight:800;color:#a78bfa;background:rgba(167,139,250,0.14);padding:3px 8px;border-radius:8px">+' + xp + ' XP</span>' : '')
@@ -19262,6 +19268,12 @@ fetch('/api/admin/engagement-log').then(r=>r.json()).then(j=>{ if (j.ok) { LAST_
             + _prizeRow('🥉', _bronzeBg, 'rgba(217,119,6,.3)', 'Platz 3', 50, 20, 0, false)
             + _prizeRow('🏅', _purpBg, 'rgba(167,139,250,.3)', 'Platz 4–5', 25, 10, 0, false)
             + _prizeRow('✨', _cyanBg, 'rgba(34,211,238,.3)', 'Platz 6–10', 10, 5, 0, false));
+        const _monthlyPrizeCard = _prizeCard('Monatsranking-Preise', 'Reset am 1.', 'linear-gradient(135deg,rgba(236,72,153,0.12),rgba(168,85,247,0.07))',
+            _prizeRow('🥇', _goldBg, 'rgba(245,158,11,.3)', 'Platz 1', 1000, 250, 0, true)
+            + _prizeRow('🥈', _silverBg, 'rgba(156,163,175,.3)', 'Platz 2', 500, 150, 0, false)
+            + _prizeRow('🥉', _bronzeBg, 'rgba(217,119,6,.3)', 'Platz 3', 250, 100, 0, false)
+            + _prizeRow('🏅', _purpBg, 'rgba(167,139,250,.3)', 'Platz 4–5', 125, 50, 0, false)
+            + _prizeRow('✨', _cyanBg, 'rgba(34,211,238,.3)', 'Platz 6–10', 50, 25, 0, false));
         // Community-Builder-Ranking: Top-Einlader nach aktiven Einladungen (Referral-System).
         const _cbRanking = (LOCAL_STORE && botLogic.communityBuilderRanking) ? botLogic.communityBuilderRanking(50) : [];
         const _cbTier = (n)=>{ if(n>=25)return {e:'🏛️',l:'Elite',c:'#a855f7',bg:'rgba(168,85,247,0.14)',d:100}; if(n>=10)return {e:'🏗️',l:'Builder III',c:'#06b6d4',bg:'rgba(6,182,212,0.14)',d:50}; if(n>=5)return {e:'🤝',l:'Builder II',c:'#f59e0b',bg:'rgba(245,158,11,0.14)',d:15}; if(n>=1)return {e:'🌱',l:'Builder I',c:'#22c55e',bg:'rgba(34,197,94,0.14)',d:5}; return null; };
@@ -19332,6 +19344,30 @@ fetch('/api/admin/engagement-log').then(r=>r.json()).then(j=>{ if (j.ok) { LAST_
                   (a.xp ? '<span style="font-size:10.5px;font-weight:800;color:#a78bfa;background:rgba(167,139,250,0.16);padding:2px 7px;border-radius:7px;flex-shrink:0">+' + a.xp + ' XP</span>' : '') +
                   '<span style="font-size:10.5px;font-weight:800;color:#06b6d4;background:rgba(6,182,212,0.16);padding:2px 7px;border-radius:7px;margin-left:5px;flex-shrink:0">+' + a.dia + ' 💎</span>' +
                   (a.links ? '<span style="font-size:10.5px;font-weight:800;color:#f59e0b;background:rgba(245,158,11,0.16);padding:2px 7px;border-radius:7px;margin-left:5px;flex-shrink:0">🔗 ' + a.links + '</span>' : '') +
+                '</a>';
+              }).join('') +
+            '</div>'
+          : '';
+
+        // Sieger letzter Monat (aus monthlyAwardsLog, am 1. ausgezahlt).
+        const _lastMonthAwards = ((d.monthlyAwardsLog||[]).slice().reverse());
+        const _lastMonthKey = _lastMonthAwards.length ? _lastMonthAwards[0].monthKey : null;
+        const _lastMonthTop = _lastMonthKey ? _lastMonthAwards.filter(a => a.monthKey === _lastMonthKey).sort((a,b)=>a.place-b.place) : [];
+        const _lastMonthWinnerHtml = _lastMonthTop.length
+          ? '<div style="margin:0 16px 12px;padding:14px;background:linear-gradient(135deg,rgba(236,72,153,0.16),rgba(168,85,247,0.10));border:1px solid rgba(236,72,153,0.45);border-radius:12px;position:relative;overflow:hidden">' +
+              '<div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#ec4899,#a855f7,#ec4899)"></div>' +
+              '<div style="font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#ec4899;margin-bottom:var(--space-2);display:flex;align-items:center;gap:6px"><span>🏆</span><span>SIEGER LETZTER MONAT (' + htmlEsc(_lastMonthKey) + ')</span></div>' +
+              _lastMonthTop.map(a => {
+                const u = d.users[a.uid] || {};
+                const medal = a.place === 1 ? '🥇' : a.place === 2 ? '🥈' : a.place === 3 ? '🥉' : a.place <= 5 ? '🏅' : '✨';
+                const name = htmlEsc(u.spitzname || u.name || a.name || 'User');
+                const initial = htmlEsc(String(u.spitzname || u.name || a.name || '?').charAt(0));
+                return '<a href="/profil/' + htmlEsc(a.uid) + '" style="display:flex;align-items:center;gap:10px;padding:8px 0;text-decoration:none;color:var(--text)">' +
+                  '<span style="font-size:18px;flex-shrink:0;width:20px;text-align:center">' + medal + '</span>' +
+                  '<div style="position:relative;width:34px;height:34px;border-radius:50%;overflow:hidden;background:linear-gradient(135deg,#ec4899,#a855f7);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;flex-shrink:0">' + initial + '<img src="/appbild/' + htmlEsc(a.uid) + '/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.remove()" alt=""></div>' +
+                  '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700;font-size:13px">' + name + '</span>' +
+                  (a.xp ? '<span style="font-size:10.5px;font-weight:800;color:#a78bfa;background:rgba(167,139,250,0.16);padding:2px 7px;border-radius:7px;flex-shrink:0">+' + a.xp + ' XP</span>' : '') +
+                  '<span style="font-size:10.5px;font-weight:800;color:#06b6d4;background:rgba(6,182,212,0.16);padding:2px 7px;border-radius:7px;margin-left:5px;flex-shrink:0">+' + a.dia + ' 💎</span>' +
                 '</a>';
               }).join('') +
             '</div>'
@@ -19426,11 +19462,12 @@ ${_latestNews ? `<a href="/explore?tab=newsletter" class="highlight-card" style=
   <div style="font-size:var(--fs-sm);font-weight:700">Rangliste</div>
   <div style="font-size:var(--fs-xs);color:var(--muted)">Rang: ${myRank>0?'#'+myRank:adminIds.includes(Number(myUid))?'👑 Admin':'–'}</div>
 </div>
-<div style="display:flex;gap:6px;padding:0 16px 12px">
-  <button onclick="switchRanking('gesamt',this)" id="rtab-gesamt" style="flex:1;background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;border:none;border-radius:10px;padding:7px;font-size:var(--fs-xs);font-weight:700;cursor:pointer">Gesamt</button>
-  <button onclick="switchRanking('daily',this)" id="rtab-daily" style="flex:1;background:var(--bg3);color:var(--muted);border:1px solid var(--border2);border-radius:10px;padding:7px;font-size:var(--fs-xs);font-weight:700;cursor:pointer">Daily</button>
-  <button onclick="switchRanking('weekly',this)" id="rtab-weekly" style="flex:1;background:var(--bg3);color:var(--muted);border:1px solid var(--border2);border-radius:10px;padding:7px;font-size:var(--fs-xs);font-weight:700;cursor:pointer">Woche</button>
-  <button onclick="switchRanking('builder',this)" id="rtab-builder" style="flex:1;background:var(--bg3);color:var(--muted);border:1px solid var(--border2);border-radius:10px;padding:7px;font-size:var(--fs-xs);font-weight:700;cursor:pointer">🤝 Builder</button>
+<div style="display:flex;flex-wrap:wrap;gap:6px;padding:0 16px 12px">
+  <button onclick="switchRanking('gesamt',this)" id="rtab-gesamt" style="flex:1;min-width:60px;background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;border:none;border-radius:10px;padding:7px;font-size:var(--fs-xs);font-weight:700;cursor:pointer">Gesamt</button>
+  <button onclick="switchRanking('daily',this)" id="rtab-daily" style="flex:1;min-width:55px;background:var(--bg3);color:var(--muted);border:1px solid var(--border2);border-radius:10px;padding:7px;font-size:var(--fs-xs);font-weight:700;cursor:pointer">Daily</button>
+  <button onclick="switchRanking('weekly',this)" id="rtab-weekly" style="flex:1;min-width:55px;background:var(--bg3);color:var(--muted);border:1px solid var(--border2);border-radius:10px;padding:7px;font-size:var(--fs-xs);font-weight:700;cursor:pointer">Woche</button>
+  <button onclick="switchRanking('month',this)" id="rtab-month" style="flex:1;min-width:55px;background:var(--bg3);color:var(--muted);border:1px solid var(--border2);border-radius:10px;padding:7px;font-size:var(--fs-xs);font-weight:700;cursor:pointer">Monat</button>
+  <button onclick="switchRanking('builder',this)" id="rtab-builder" style="flex:1;min-width:70px;background:var(--bg3);color:var(--muted);border:1px solid var(--border2);border-radius:10px;padding:7px;font-size:var(--fs-xs);font-weight:700;cursor:pointer">🤝 Builder</button>
 </div>
 <div id="rlist-gesamt" style="padding-bottom:100px">${_nearMissHtml}${rankingRows}</div>
 <div id="rlist-daily" style="display:none;padding-bottom:100px">
@@ -19445,6 +19482,12 @@ ${_latestNews ? `<a href="/explore?tab=newsletter" class="highlight-card" style=
   ${weeklyRows}
   ${_weeklyPrizeCard}
 </div>
+<div id="rlist-month" style="display:none;padding-bottom:100px">
+  ${_monthlyPosCard}
+  ${_lastMonthWinnerHtml}
+  ${monthlyRows}
+  ${_monthlyPrizeCard}
+</div>
 <div id="rlist-builder" style="display:none;padding-bottom:100px">
   <div style="margin:0 16px 12px;padding:12px 14px;background:linear-gradient(135deg,rgba(34,197,94,0.12),rgba(6,182,212,0.06));border:1px solid rgba(34,197,94,0.30);border-radius:12px;font-size:12.5px;line-height:1.55">
     <div style="font-weight:800;color:#22c55e;margin-bottom:4px">🤝 Community Builder</div>
@@ -19454,7 +19497,7 @@ ${_latestNews ? `<a href="/explore?tab=newsletter" class="highlight-card" style=
 </div>
 <script>
 function switchRanking(tab, btn) {
-  ['gesamt','daily','weekly','builder'].forEach(t=>{
+  ['gesamt','daily','weekly','month','builder'].forEach(t=>{
     const rl=document.getElementById('rlist-'+t);
     if(t===tab){rl.style.display='block';rl.style.animation='none';void rl.offsetWidth;rl.style.animation='tabFade .26s ease';}else rl.style.display='none';
     const b=document.getElementById('rtab-'+t);
