@@ -16231,12 +16231,19 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
     }
 
     // Karten-Author anreichern wie bei normalen Feed-Karten: Rolle-Badge + Builder (Emoji+Label) + Titelschild.
+    let _cardCrownFn = null;
     const _decorateCardAuthor = (a) => {
         if (!a || !a.uid) return;
-        let _u = {}; try { _u = (datastore.getData().users || {})[String(a.uid)] || {}; } catch (e) {}
+        let _d2 = {}; try { _d2 = datastore.getData() || {}; } catch (e) {}
+        const _u = (_d2.users || {})[String(a.uid)] || {};
         a.roleBadgeHtml = roleBadge(a.role || _u.role || '');
         try { const _b = botLogic.builderBadgeFor(String(a.uid)); if (_b) { a.builderEmoji = _b.emoji; a.builderLabel = String(_b.label).replace(/^Community /, ''); } } catch (e) {}
         try { if (_u.activeTitle) a.titlePlateHtml = titlePlateInlineHtml(_u.activeTitle); } catch (e) {}
+        // Paritäts-Extras für die Bonus-Karten (Client) — wie bei normalen Karten:
+        a.xp = _u.xp || 0;
+        try { a.online = isUidOnline(a.uid); } catch (e) {}
+        try { if (_u.activeCardTheme) a.cardTheme = _u.activeCardTheme; } catch (e) {}
+        try { if (!_cardCrownFn) _cardCrownFn = makeCrownOverlay(getTop3Uids(_d2, _d2._adminIds || [])); a.crownHtml = _cardCrownFn(String(a.uid), 'xs') || ''; } catch (e) {}
     };
     // ── DIAMANTLINK API ──
     if (path === '/api/diamond-link/feed' && req.method === 'GET') {
