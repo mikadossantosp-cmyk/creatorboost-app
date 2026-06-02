@@ -1419,6 +1419,9 @@ async function dailyRankingAbschluss() {
             u.lastDailyRank = place;
             u.lastRankMove = { from: prev, to: place, dir: (!prev ? 'new' : prev > place ? 'up' : prev < place ? 'down' : 'same'), dayKey };
         }
+        // Wochen-Rang-Snapshot (nächtlich) → Bewegungspfeile im Wochen-Ranking Tag-zu-Tag.
+        const _wsorted = Object.entries(d.users || {}).filter(([id, uu]) => uu && !istAdminId(id) && (d.weeklyXP[id] || 0) > 0).sort((a, b) => (d.weeklyXP[b[0]] || 0) - (d.weeklyXP[a[0]] || 0));
+        for (let wi = 0; wi < _wsorted.length; wi++) { const uu = d.users[_wsorted[wi][0]]; if (uu) uu.lastWeeklyRank = wi + 1; }
         for (let ii = 0; ii < Math.min(10, withScore.length); ii++) {
             const { uid } = withScore[ii];
             const u = d.users[uid];

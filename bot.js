@@ -19140,13 +19140,23 @@ fetch('/api/admin/engagement-log').then(r=>r.json()).then(j=>{ if (j.ok) { LAST_
 </a>`;
         }).join('');
 
+        // Bewegungspfeil pro Creator: aktueller Live-Rang vs. letzter gespeicherter Rang
+        // (lastDailyRank / lastWeeklyRank, nächtlich gesetzt). ▲ hoch · ▼ runter · – gleich · 🆕 neu.
+        const _rankArrow = (prev, cur) => {
+            if (!prev) return '<span title="neu im Ranking" style="font-size:9.5px;font-weight:800;color:#a855f7">🆕</span>';
+            const delta = prev - cur;
+            if (delta > 0) return '<span title="aufgestiegen" style="font-size:10px;font-weight:800;color:#22c55e">▲' + delta + '</span>';
+            if (delta < 0) return '<span title="gefallen" style="font-size:10px;font-weight:800;color:#ef4444">▼' + (-delta) + '</span>';
+            return '<span title="unverändert" style="font-size:10px;font-weight:800;color:var(--muted)">–</span>';
+        };
         // Podium fuer Top-3 + Listrows ab Rang 4
-        const makePodium = (entries, xpFn) => {
+        const makePodium = (entries, xpFn, moveField) => {
             const top3 = entries.slice(0,3);
             if (!top3.length) return '';
             const slot = (entry, place) => {
                 if (!entry) return `<div class="podium-slot p${place}"></div>`;
                 const [id,u] = entry;
+                const mv = moveField ? _rankArrow(u[moveField], place) : '';
                 const grad = badgeGradient(u.role);
                 const insta = u.instagram;
                 const initial = (u.name||'?').slice(0,2).toUpperCase();
@@ -19160,20 +19170,22 @@ fetch('/api/admin/engagement-log').then(r=>r.json()).then(j=>{ if (j.ok) { LAST_
                   <div class="podium-avatar" style="background:${grad}"><span>${initial}</span>${img}</div>
                   <div class="podium-name">${htmlEsc(u.spitzname||u.name||'User')}${id===myUid?' (Du)':''}</div>
                   <div class="podium-xp">${(xpFn(id,u)||0).toLocaleString('de-DE')} XP</div>
+                  ${mv?`<div style="margin-top:3px;line-height:1">${mv}</div>`:''}
                   <div class="podium-block">${place}</div>
                 </a>`;
             };
             return `<div class="podium-wrap"><div class="podium-row">${slot(top3[1],2)}${slot(top3[0],1)}${slot(top3[2],3)}</div></div>`;
         };
         // Ranking rows helper (ab Rang 4 — Podium oben rendert Top-3)
-        const makeRankRows = (entries, xpFn) => entries.slice(3).map(([id,u],idx)=>{
+        const makeRankRows = (entries, xpFn, moveField) => entries.slice(3).map(([id,u],idx)=>{
             const i = idx + 3;
             const isMe = id===myUid;
             const insta = u.instagram;
             const grad = badgeGradient(u.role);
             const xp = xpFn(id,u);
+            const mv = moveField ? _rankArrow(u[moveField], i+1) : '';
             return `<a href="/profil/${id}" class="rank-item ${isMe?'rank-me':''}">
-    <div class="rank-pos"><span class="rank-num">${i+1}</span></div>
+    <div class="rank-pos"><span class="rank-num">${i+1}</span>${mv?`<div style="margin-top:2px;line-height:1">${mv}</div>`:''}</div>
     <div style="position:relative;width:40px;height:40px;border-radius:50%;overflow:hidden;background:${grad};flex-shrink:0;display:flex;align-items:center;justify-content:center${getRingBoxShadow(u)}">
       <span style="color:#fff;font-weight:700;font-size:14px;position:absolute">${(u.name||'?').slice(0,2).toUpperCase()}</span>
       ${ladeBild(id,'profilepic')?`<img src="/appbild/${id}/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" alt="">`:insta?`<img src="https://unavatar.io/instagram/${htmlEsc(insta)}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.remove()" alt="">`:''}
@@ -19185,9 +19197,9 @@ fetch('/api/admin/engagement-log').then(r=>r.json()).then(j=>{ if (j.ok) { LAST_
     <div class="rank-xp">${(xp||0).toLocaleString('de-DE')} XP</div>
   </a>`;
         }).join('');
-        const makeRankSection = (entries, xpFn, emptyHint) => {
+        const makeRankSection = (entries, xpFn, emptyHint, moveField) => {
             if (!entries.length) return `<div class="empty" style="padding:48px 24px;text-align:center"><div class="empty-icon"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3"/><path d="M9 21h6M12 16v5"/></svg></div><div class="empty-text">${emptyHint}</div></div>`;
-            return makePodium(entries, xpFn) + makeRankRows(entries, xpFn);
+            return makePodium(entries, xpFn, moveField) + makeRankRows(entries, xpFn, moveField);
         };
         const rankingRows = makeRankSection(sorted, (_,u)=>u.xp||0, 'Noch keine Daten');
         const dailySorted = Object.entries(d.users||{})
@@ -19196,7 +19208,7 @@ fetch('/api/admin/engagement-log').then(r=>r.json()).then(j=>{ if (j.ok) { LAST_
         const weeklySorted = Object.entries(d.users||{})
             .filter(([id,u])=>!adminIds.includes(Number(id))&&u.started&&(d.weeklyXP[id]||0)>0)
             .sort((a,b)=>(d.weeklyXP[b[0]]||0)-(d.weeklyXP[a[0]]||0));
-        const dailyRows = makeRankSection(dailySorted, (id)=>d.dailyXP[id]||0, 'Heute noch keine XP');
+        const dailyRows = makeRankSection(dailySorted, (id)=>d.dailyXP[id]||0, 'Heute noch keine XP', 'lastDailyRank');
         // Rang-Bewegung des eigenen Accounts seit der letzten Auswertung (von welchem Platz auf welchen).
         const _rankMoveHtml = (()=>{
           try {
@@ -19210,7 +19222,7 @@ fetch('/api/admin/engagement-log').then(r=>r.json()).then(j=>{ if (j.ok) { LAST_
             return '<div style="margin:0 16px 12px;padding:11px 14px;background:'+bg+';border:1px solid '+col+';border-radius:12px;font-size:13px;font-weight:800;color:'+col+';display:flex;align-items:center;gap:8px"><span style="font-size:17px;flex-shrink:0">'+icon+'</span><span>'+txt+' <span style="opacity:.7;font-weight:600">(gestern)</span></span></div>';
           } catch(e) { return ''; }
         })();
-        const weeklyRows = makeRankSection(weeklySorted, (id)=>d.weeklyXP[id]||0, 'Diese Woche noch keine XP');
+        const weeklyRows = makeRankSection(weeklySorted, (id)=>d.weeklyXP[id]||0, 'Diese Woche noch keine XP', 'lastWeeklyRank');
         // „Deine Position"-Karte: zeigt live den eigenen Rang + XP + (Tages-)Bewegung. Leer wenn ungerankt/Admin.
         const _myDailyRank = adminIds.includes(Number(myUid)) ? 0 : (dailySorted.findIndex(([id])=>id===myUid)+1);
         const _myWeeklyRank = adminIds.includes(Number(myUid)) ? 0 : (weeklySorted.findIndex(([id])=>id===myUid)+1);
