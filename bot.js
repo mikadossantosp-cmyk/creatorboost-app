@@ -19248,11 +19248,13 @@ fetch('/api/admin/engagement-log').then(r=>r.json()).then(j=>{ if (j.ok) { LAST_
                 const u = d.users[a.uid] || {};
                 const medal = a.place === 1 ? '🥇' : a.place === 2 ? '🥈' : a.place === 3 ? '🥉' : a.place <= 5 ? '🏅' : '✨';
                 const name = htmlEsc(u.spitzname || u.name || a.name || 'User');
-                const reward = (a.xp ? '+' + a.xp + ' XP · ' : '') + '+' + a.dia + ' 💎' + (a.links ? ' · 🔗' : '');
-                return '<a href="/profil/' + htmlEsc(a.uid) + '" style="display:flex;align-items:center;gap:10px;padding:7px 0;text-decoration:none;color:var(--text);font-size:var(--fs-sm)">' +
-                  '<span style="font-size:18px;flex-shrink:0">' + medal + '</span>' +
-                  '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700">' + name + '</span>' +
-                  '<span style="font-size:11px;color:#fbbf24;font-weight:700;flex-shrink:0">' + reward + '</span>' +
+                const initial = htmlEsc(String(u.spitzname || u.name || a.name || '?').charAt(0));
+                return '<a href="/profil/' + htmlEsc(a.uid) + '" style="display:flex;align-items:center;gap:10px;padding:8px 0;text-decoration:none;color:var(--text)">' +
+                  '<span style="font-size:18px;flex-shrink:0;width:20px;text-align:center">' + medal + '</span>' +
+                  '<div style="position:relative;width:34px;height:34px;border-radius:50%;overflow:hidden;background:linear-gradient(135deg,#fbbf24,#a855f7);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;flex-shrink:0">' + initial + '<img src="/appbild/' + htmlEsc(a.uid) + '/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.remove()" alt=""></div>' +
+                  '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700;font-size:13px">' + name + '</span>' +
+                  (a.xp ? '<span style="font-size:10.5px;font-weight:800;color:#a78bfa;background:rgba(167,139,250,0.16);padding:2px 7px;border-radius:7px;flex-shrink:0">+' + a.xp + ' XP</span>' : '') +
+                  '<span style="font-size:10.5px;font-weight:800;color:#06b6d4;background:rgba(6,182,212,0.16);padding:2px 7px;border-radius:7px;margin-left:5px;flex-shrink:0">+' + a.dia + ' 💎</span>' +
                 '</a>';
               }).join('') +
             '</div>'
@@ -19378,13 +19380,18 @@ ${_latestNews ? `<a href="/explore?tab=newsletter" class="highlight-card" style=
 </div>
 <div id="rlist-gesamt" style="padding-bottom:100px">${_nearMissHtml}${rankingRows}</div>
 <div id="rlist-daily" style="display:none;padding-bottom:100px">
-  <div style="margin:0 16px 12px;padding:12px 14px;background:linear-gradient(135deg,rgba(245,158,11,0.12),rgba(167,139,250,0.08));border:1px solid rgba(245,158,11,0.30);border-radius:12px;font-size:12.5px;line-height:1.55">
-    <div style="font-weight:800;color:#f59e0b;margin-bottom:6px">Tages-Preise (Reset 00:00)</div>
-    <div>🥇 Platz 1 — <b>+30 XP · +10 💎</b></div>
-    <div>🥈 Platz 2 — <b>+20 XP · +7 💎</b></div>
-    <div>🥉 Platz 3 — <b>+10 XP · +5 💎</b></div>
-    <div>🏅 Platz 4–5 — <b>+5 XP · +2 💎</b></div>
-    <div>✨ Platz 6–10 — <b>+1 💎</b></div>
+  <div style="margin:0 16px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:0 1px 3px rgba(15,23,42,0.05)">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:13px 15px;background:linear-gradient(135deg,rgba(245,158,11,0.10),rgba(167,139,250,0.07));border-bottom:1px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:8px"><span style="font-size:15px">🏆</span><span style="font-size:13px;font-weight:800;color:var(--text);letter-spacing:.2px">Tagesranking-Preise</span></div>
+      <span style="font-size:10px;font-weight:700;color:var(--muted);background:var(--bg3);padding:3px 9px;border-radius:99px;border:1px solid var(--border2)">Reset 00:00</span>
+    </div>
+    <div style="padding:6px 8px">
+      <div style="display:flex;align-items:center;gap:11px;padding:8px 8px"><div style="width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,#fde68a,#f59e0b);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;box-shadow:0 2px 6px rgba(245,158,11,.3)">🥇</div><div style="flex:1;font-size:12.5px;font-weight:700;color:var(--text)">Platz 1</div><span style="font-size:11px;font-weight:800;color:#a78bfa;background:rgba(167,139,250,0.14);padding:3px 8px;border-radius:8px">+30 XP</span><span style="font-size:11px;font-weight:800;color:#06b6d4;background:rgba(6,182,212,0.14);padding:3px 8px;border-radius:8px;margin-left:6px">+10 💎</span></div>
+      <div style="display:flex;align-items:center;gap:11px;padding:8px 8px;border-top:1px solid var(--border2)"><div style="width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,#eef2f5,#9ca3af);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;box-shadow:0 2px 6px rgba(156,163,175,.3)">🥈</div><div style="flex:1;font-size:12.5px;font-weight:700;color:var(--text)">Platz 2</div><span style="font-size:11px;font-weight:800;color:#a78bfa;background:rgba(167,139,250,0.14);padding:3px 8px;border-radius:8px">+20 XP</span><span style="font-size:11px;font-weight:800;color:#06b6d4;background:rgba(6,182,212,0.14);padding:3px 8px;border-radius:8px;margin-left:6px">+7 💎</span></div>
+      <div style="display:flex;align-items:center;gap:11px;padding:8px 8px;border-top:1px solid var(--border2)"><div style="width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,#fcd9b6,#d97706);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;box-shadow:0 2px 6px rgba(217,119,6,.3)">🥉</div><div style="flex:1;font-size:12.5px;font-weight:700;color:var(--text)">Platz 3</div><span style="font-size:11px;font-weight:800;color:#a78bfa;background:rgba(167,139,250,0.14);padding:3px 8px;border-radius:8px">+10 XP</span><span style="font-size:11px;font-weight:800;color:#06b6d4;background:rgba(6,182,212,0.14);padding:3px 8px;border-radius:8px;margin-left:6px">+5 💎</span></div>
+      <div style="display:flex;align-items:center;gap:11px;padding:8px 8px;border-top:1px solid var(--border2)"><div style="width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,#ddd6fe,#a78bfa);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;box-shadow:0 2px 6px rgba(167,139,250,.3)">🏅</div><div style="flex:1;font-size:12.5px;font-weight:700;color:var(--text)">Platz 4–5</div><span style="font-size:11px;font-weight:800;color:#a78bfa;background:rgba(167,139,250,0.14);padding:3px 8px;border-radius:8px">+5 XP</span><span style="font-size:11px;font-weight:800;color:#06b6d4;background:rgba(6,182,212,0.14);padding:3px 8px;border-radius:8px;margin-left:6px">+2 💎</span></div>
+      <div style="display:flex;align-items:center;gap:11px;padding:8px 8px;border-top:1px solid var(--border2)"><div style="width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,#cffafe,#22d3ee);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;box-shadow:0 2px 6px rgba(34,211,238,.3)">✨</div><div style="flex:1;font-size:12.5px;font-weight:700;color:var(--text)">Platz 6–10</div><span style="font-size:11px;font-weight:800;color:#06b6d4;background:rgba(6,182,212,0.14);padding:3px 8px;border-radius:8px">+1 💎</span></div>
+    </div>
   </div>
   ${_rankMoveHtml}
   ${_yesterdayWinnerHtml}
