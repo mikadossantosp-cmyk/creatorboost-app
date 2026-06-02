@@ -19086,9 +19086,12 @@ setInterval(loadDeletedUsers, 60000);
     for(var i=0;i<MAP.length;i++){ if(t.indexOf(MAP[i][0])>=0){ sec.setAttribute('data-dgroup',MAP[i][1]); if(MAP[i][1]==='usermgmt') sec.id='dgroup-usermgmt'; break; } }
     if(sec.getAttribute('data-dgroup')) sec.style.display='none';
   });
+  // Übersicht zeigt NUR die Karten: Action-Buttons (→ Werkzeuge) + KPI-Karten (→ Statistiken) ebenfalls verstecken.
+  var ta=document.querySelector('.dash-top-actions'); if(ta){ta.setAttribute('data-dgroup','tools');ta.style.display='none';}
+  document.querySelectorAll('.dash-shell > .dash-stat-grid').forEach(function(g){g.setAttribute('data-dgroup','stats');g.style.display='none';});
 })();
 function dashHubShow(){
-  document.querySelectorAll('.dash-section[data-dgroup]').forEach(function(s){s.style.display='none';});
+  document.querySelectorAll('[data-dgroup]').forEach(function(s){s.style.display='none';});
   var h=document.getElementById('dash-hub'); if(h)h.style.display='';
   var b=document.getElementById('dash-back'); if(b)b.style.display='none';
   try{window.scrollTo({top:0,behavior:'smooth'});}catch(e){window.scrollTo(0,0);}
@@ -19096,7 +19099,7 @@ function dashHubShow(){
 function dashOpen(group, tabId){
   var h=document.getElementById('dash-hub'); if(h)h.style.display='none';
   var b=document.getElementById('dash-back'); if(b)b.style.display='inline-flex';
-  document.querySelectorAll('.dash-section[data-dgroup]').forEach(function(s){
+  document.querySelectorAll('[data-dgroup]').forEach(function(s){
     var g=s.getAttribute('data-dgroup');
     var show = tabId ? (g==='usermgmt') : (g===group || (group==='users'&&g==='usermgmt'));
     s.style.display = show ? '' : 'none';
