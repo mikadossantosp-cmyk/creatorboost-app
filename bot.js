@@ -742,7 +742,7 @@ Verboten: fremde Reels, Affiliate/Spam, Wiederholungen. Self-Like → temporäre
 - Account löschen: /einstellungen → ganz unten 🗑️ Account dauerhaft löschen → "LÖSCHEN" tippen. Nicht umkehrbar (außer Admin-Restore in 50 Tagen). DSGVO Art. 17.
 - User blockieren: User-Profil → 3-Punkte-Menü → 🚫 Blockieren. Verwalten: /einstellungen/privacy.
 - Push-Notifications: /einstellungen/notifications → "Push aktivieren" → Browser-Berechtigung "Erlauben".
-- Sub-Account: Profil → Account-Switcher (oben) → + Sub-Account. Eigene XP/Diamanten, gleicher Telegram-Account.
+- Sub-Account: Profil → Account-Switcher (oben) → + Sub-Account. Eigene XP/Diamanten, gehört zum Hauptaccount.
 - App installieren (PWA): iPhone/Safari: Teilen → "Zum Home-Bildschirm". Android/Chrome: Menü (3 Punkte) → "App installieren". Oder /download-app (APK).
 - Dark Mode: 🌙 Button oben rechts in der Topbar.
 
@@ -7209,7 +7209,7 @@ async function saveCode(){
     var d=await r.json();
     if(d.ok){msg.className='msg show ok';msg.textContent='✅ Code gespeichert!';setTimeout(function(){window.location.href='/set-password?first=1';},700);}
     else{msg.className='msg show err';msg.textContent='❌ '+(d.error||'Fehler');btn.disabled=false;btn.textContent='Code speichern → Weiter';}
-  }catch(e){msg.className='msg show err';msg.textContent='❌ Netzwerkfehler';btn.disabled=false;btn.textContent='Code speichern → Weiter';}
+  }catch(e){msg.className='msg show err';msg.textContent='❌ Verbindung unterbrochen — bitte nochmal tippen';btn.disabled=false;btn.textContent='Code speichern → Weiter';}
 }
 inp.focus();
 </script>
@@ -7564,7 +7564,7 @@ function submitPw(ev){
         btn.disabled=false;btn.textContent='${hasPw ? 'Passwort ändern' : 'Passwort speichern'} →';
       }
     })
-    .catch(function(){msg.textContent='Netzwerkfehler.';msg.classList.add('show','err');btn.disabled=false;btn.textContent='${hasPw ? 'Passwort ändern' : 'Passwort speichern'} →';});
+    .catch(function(){msg.textContent='Verbindung unterbrochen — bitte nochmal auf Speichern tippen.';msg.classList.add('show','err');btn.disabled=false;btn.textContent='${hasPw ? 'Passwort ändern' : 'Passwort speichern'} →';});
   return false;
 }
 </script>
@@ -7709,7 +7709,7 @@ Mit anderen Creators Kollab-Posts machen — 1× pro Woche.
 🔒 PRIVATSPHÄRE
 Wir sammeln nur was nötig ist. Keine Werbung. Keine Tracker. Deine Daten gehören dir.
 
-📲 Direkt von Instagram zu CreatorX: starte mit @creatorx_bot auf Telegram.
+📲 CreatorX läuft direkt im Browser und als App auf deinem Handy — kein Telegram nötig.
 
 Ab 18 Jahren. Datenschutz: creatorboostx.de/datenschutz`;
 
@@ -9832,7 +9832,7 @@ ${spaceScale.map(s=>`<div class="grow"><span class="gmeta">--space-${s}</span><d
     <div style="font-size:11px;font-weight:700;letter-spacing:2px;color:rgba(255,255,255,0.7);text-transform:uppercase;margin-bottom:var(--space-2)">Dein Diamant-Stand</div>
     <div style="font-size:48px;font-weight:800;color:#fff;font-family:var(--font-display)">💎 ${stand}</div>
   </div>
-  <div style="font-size:13.5px;line-height:1.55;color:var(--muted);margin-bottom:var(--space-4)">Diamanten sind die Währung im Shop (App + Telegram). Aktuell zu kaufen: <b style="color:var(--text)">Extralinks</b> + <b style="color:var(--text)">Superlinks</b>. Mehr folgt.</div>
+  <div style="font-size:13.5px;line-height:1.55;color:var(--muted);margin-bottom:var(--space-4)">Diamanten sind die Währung im Shop. Aktuell zu kaufen: <b style="color:var(--text)">Extralinks</b> + <b style="color:var(--text)">Superlinks</b>. Mehr folgt.</div>
   <div style="font-size:11px;font-weight:700;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin:8px 4px">Wie verdiene ich Diamanten?</div>
   <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:14px;overflow:hidden;margin-bottom:var(--space-3)">
     <div style="display:flex;align-items:center;gap:var(--space-3);padding:12px 14px;border-bottom:1px solid var(--border2)">
@@ -12248,7 +12248,7 @@ ${postsHtml}
 </div>
 <script>
 async function adminDelLink(linkId, btn){
-    if(!(await cbConfirm('Diesen Link wirklich für ALLE löschen? Wird auch aus Telegram-Gruppe + Kommentaren entfernt.'))) return;
+    if(!(await cbConfirm('Diesen Link wirklich für ALLE löschen? Wird auch aus dem Feed + Kommentaren entfernt.'))) return;
     if(btn){ btn.disabled=true; btn.textContent='⏳'; }
     try{
         const r = await fetch('/api/delete-link',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({linkId})});
@@ -14135,7 +14135,7 @@ const CB_HELP = {
   'm': { q:'🎯 Missionen (M1/M2/M3)', a:'Auswertung täglich 12:00 (Berlin):<br><br><b>M1 — Daily Engagement</b><br>5 Links liken (+ auf Insta kommentieren) → <b>+5 XP</b><br><br><b>M2 — Solidarisch</b><br>80%+ aller heute geposteten Links liken → <b>+5 XP</b><br><br><b>M3 — Champion</b><br>ALLE heute geposteten Links liken (max 30) → <b>+5 XP + 💎 1 Diamant</b><br><br><b>Wochen-Bonus</b> bei 7 Tagen in Folge:<br>• W-M1: <b>+10 XP</b><br>• W-M2: <b>+15 XP + 💎 1</b><br>• W-M3: <b>+20 XP + 💎 2</b><br><br>📌 <b>Visit-before-Like:</b> erst Insta-Reel öffnen, dort liken + 2-Wort-Kommentar — DANN in App liken.', next:['xp','warn','_back'] },
   'xp': { q:'⚡ XP-System', a:'<b>Quellen (echte Werte):</b><br><ul><li>👍 <b>Like:</b> +5 XP pro Like (Mission-Pflicht: 5 Links/Tag)</li><li>📌 <b>Post:</b> +5 XP (1 Link/Tag, Bonus-Links optional)</li><li>🎯 <b>Daily Missionen M1+M2+M3:</b> max +15 XP + 1💎</li><li>🏆 <b>Wochen-Missionen:</b> max +45 XP + 3💎</li><li>🎁 <b>Daily Bonus</b> (Button auf <a href="/profil" style="color:#a78bfa;font-weight:700">/profil</a>): 10–20 XP zufällig</li><li>🌟 <b>First-Post Newcomer:</b> +20 XP</li><li>⭐ <b>Event-Multiplier</b> wenn aktiv (z.B. +100%)</li></ul><b>Badges/Rollen (XP-Schwellen):</b><br>🆕 New: 0-49 · 📘 Anfänger: 50-499 · ⬆️ Aufsteiger: 500-999 · 🏅 Erfahrener: 1000-4999 · 👑 Elite: 5000-9999 (+1 Bonus-Link/Woche) · 🌟 Elite+: 10000-24999 (2 Superlinks + 1 Bonus-Link/Woche) · 💎 Legende: 25000+ (alles wie Elite+ + 30 💎/Monat)', next:['m','diamond','_back'] },
   'diamond': { q:'💎 Diamanten', a:'<b>Earn:</b><br><ul><li>🎯 <b>M3 daily:</b> +1💎</li><li>🏆 <b>Wochen-M2:</b> +1💎  ·  <b>Wochen-M3:</b> +2💎</li><li>📌 <b>Pinned-Post engagieren:</b> +1💎 (1× pro Owner)</li><li>💎 <b>Diamantlink liken:</b> +3💎</li><li>💠 <b>Prismalink liken:</b> +7💎 (Premium)</li><li>🎰 <b>Glücksrad</b> in <a href="/explore?tab=roulette" style="color:#a78bfa;font-weight:700">/explore?tab=roulette</a> (1×/Tag)</li><li>🎁 <b>Wochen-Gewinnspiel</b> in <a href="/explore?tab=gewinnspiel" style="color:#a78bfa;font-weight:700">/explore?tab=gewinnspiel</a></li><li>📅 <b>Diamond-Events</b> (Live-Multiplier)</li></ul><b>Ausgeben:</b><br><ul><li>💎 <b>Diamantlink posten:</b> 30💎 → 3 Tage Top im Feed</li><li>💠 <b>Prismalink posten:</b> 100💎 → 7 Tage Feed-Top · 1×/Woche</li><li>⭐ <b>Superlink-Slot:</b> 10💎 (Extra-Slot kaufen)</li><li>🛍 <b>Shop-Items</b> in <a href="/explore?tab=shop" style="color:#a78bfa;font-weight:700">/explore?tab=shop</a> oder <a href="/diamanten" style="color:#a78bfa;font-weight:700">/diamanten</a></li></ul>', next:['superlink','shop','_back'] },
-  'superlink': { q:'⚡ Superlinks', a:'Premium-Post für die ganze Woche besonders sichtbar in der Telegram-Gruppe.<br><br><b>Limit:</b> 1×/Woche (Mo-Sa) — <b>🌟 Elite+</b> darf 2×<br><b>Pflicht-Engagement aller Member:</b> LIKEN + KOMMENT + TEILEN + SPEICHERN auf Instagram<br><b>Wer nicht engaged:</b> Sonntag 23:59 Uhr <b>−50 XP + Verwarnung</b><br><br>Posten: Feed → <b>+</b> → <b>⚡ Superlink</b> → URL + Caption<br><br>Auch käuflich: 10💎 = 1 Extra-Slot.', next:['diamond','m','_back'] },
+  'superlink': { q:'⚡ Superlinks', a:'Premium-Post für die ganze Woche besonders sichtbar im Community-Feed.<br><br><b>Limit:</b> 1×/Woche (Mo-Sa) — <b>🌟 Elite+</b> darf 2×<br><b>Pflicht-Engagement aller Member:</b> LIKEN + KOMMENT + TEILEN + SPEICHERN auf Instagram<br><b>Wer nicht engaged:</b> Sonntag 23:59 Uhr <b>−50 XP + Verwarnung</b><br><br>Posten: Feed → <b>+</b> → <b>⚡ Superlink</b> → URL + Caption<br><br>Auch käuflich: 10💎 = 1 Extra-Slot.', next:['diamond','m','_back'] },
   'kollab': { q:'🤝 Kollab-Posts', a:'<b>Doppel-Posts mit Partner:</b><br><ol><li>Auf Partner-Profil "🤝 Kollab anfragen"</li><li>Partner bestätigt</li><li>Einer postet → Feed → <b>+</b> → <b>🤝 Kollab</b></li></ol><b>Regeln:</b><br>• 1× pro Woche pro Paar<br>• Sichtbare Zusammenarbeit Pflicht im Reel (beide Logos/Handles)<br>• Engagement Pflicht: LIKEN + KOMMENT + SPEICHERN + TEILEN auf Insta<br><br>Jeder Liker bekommt <b>+1💎</b>.', next:['diamond','_back'] },
   'pinned': { q:'📌 Pinned Reel', a:'Dein Lieblings-Reel auf deiner Creator-Karte in Explore.<br><br><b>Setzen:</b> /einstellungen → 📌 Pinned Reel Link → Insta-URL → speichern<br><br>⚠️ Nur 1× pro 30 Tage änderbar (Admins jederzeit).<br><br>Liker deines Pinned-Posts bekommen <b>+1💎</b> (1× pro Owner-Paar).', next:['superlink','_back'] },
   'warn': { q:'⚠️ Verwarnungen', a:'<b>Triggers:</b><br><ul><li>Post ohne M1 zu erfüllen</li><li>Schein-Engagement (Like ohne echtes Engagement)</li><li>Manuelle Admin-Verwarnung</li></ul><b>Eskalation:</b><br>• 1+2 → kurze DM<br>• <b>3</b> → ausführliche DM mit Aufklärung<br>• <b>4</b> → "letzte Chance"-DM<br>• <b>5</b> → 🚫 <b>permanenter Auto-Ban</b><br><br><b>Abbauen:</b> 5 Tage M1 in Folge → 1 Warn weg.', next:['m','rules','_back'] },
@@ -14159,7 +14159,7 @@ const CB_HELP = {
   '_h_post_super': { q:'⚡ Superlink posten', a:'Im <a href="/feed" style="color:#a78bfa;font-weight:700">Feed</a> → <b>+</b> → <b>⚡ Superlink</b>. 1/Woche (Mo-Sa), Elite+ 2/Woche.', next:['superlink','_h_post','_back'] },
   '_h_block': { q:'🚫 User blockieren', a:'Auf dem Profil des Users (z.B. <code>/profil/123</code>) → <b>3-Punkte-Menü</b> → <b>🚫 Blockieren</b>.<br><br>Blockierte siehst du in <a href="/einstellungen/privacy" style="color:#a78bfa;font-weight:700">/einstellungen/privacy</a> — dort auch wieder entblocken.', next:['_back'] },
   '_h_notif': { q:'🔔 Push-Notifications einstellen', a:'<a href="/einstellungen/notifications" style="color:#a78bfa;font-weight:700">/einstellungen/notifications</a> → <b>Push aktivieren</b>.<br><br>Browser fragt dich nach Berechtigung — auf "Erlauben" tippen. Danach kriegst du Push wenn jemand liked, kommentiert, oder ein Event startet.', next:['_back'] },
-  '_h_sub': { q:'👶 Sub-Account erstellen', a:'Auf deinem Profil → <b>Account-Switcher</b> oben → <b>+ Sub-Account</b>.<br><br>Ein Sub teilt deinen Telegram-Account aber hat eigene XP/Diamanten. Nützlich wenn du mehrere Insta-Profile bedienst.', next:['_back'] },
+  '_h_sub': { q:'👶 Sub-Account erstellen', a:'Auf deinem Profil → <b>Account-Switcher</b> oben → <b>+ Sub-Account</b>.<br><br>Ein Sub gehört zu deinem Hauptaccount, hat aber eigene XP/Diamanten. Nützlich wenn du mehrere Insta-Profile bedienst.', next:['_back'] },
   '_h_install': { q:'📲 App auf Handy installieren', a:'<b>iPhone/Safari:</b> Teilen-Button → "Zum Home-Bildschirm".<br><br><b>Android/Chrome:</b> Menü (3 Punkte) → "App installieren".<br><br>Oder Direkt-Download: <a href="/download-app" style="color:#a78bfa;font-weight:700">/download-app</a>', next:['_back'] },
   '_h_dark': { q:'🌙 Dark Mode', a:'Klick auf <b>🌙</b> oben rechts in der Topbar → Theme switched zwischen Hell und Dunkel. Wird automatisch gespeichert.', next:['_back'] },
 };
@@ -22170,7 +22170,8 @@ ${_setSubHead('<span style="display:inline-flex;align-items:center;gap:7px"><svg
 </div>
 
 <div class="subset-section">
-  <div class="subset-section-title">Eigener App-Code <span style="font-size:11px;color:var(--muted);font-weight:500">(für /mycode &amp; Login-Link)</span></div>
+  <div class="subset-section-title">Eigener App-Code <span style="font-size:11px;color:var(--muted);font-weight:500">(optional)</span></div>
+  <div style="font-size:11.5px;color:var(--muted);margin-bottom:8px;line-height:1.5">Ein kurzer, persönlicher Code — dient als <b>Login-Link</b> zum schnellen Wieder-Reinkommen und zum Teilen deines Profils. <b>Du brauchst ihn nicht zwingend</b>: zum Einloggen reicht auch einfach Email + Passwort (oben).</div>
   <input type="text" class="form-input" id="inp-app-code" placeholder="z.B. dein-name" maxlength="30" value="${htmlEsc(u.appCode||'')}" autocapitalize="none" spellcheck="false" style="font-family:JetBrains Mono,monospace;letter-spacing:0.5px">
   <div style="font-size:11.5px;color:var(--muted);margin-top:6px;line-height:1.45">4–30 Zeichen, nur a–z, 0–9, _ oder -. Eindeutig.</div>
   <button class="btn btn-outline btn-full" style="margin-top:10px;font-size:var(--fs-sm)" onclick="saveAppCode()" style="display:flex;align-items:center;justify-content:center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><circle cx="7.5" cy="15.5" r="4.5"/><path d="m10.5 12.5 8-8"/><path d="m16 5 3 3"/><path d="m13 8 3 3"/></svg>Code speichern</button>
@@ -22178,12 +22179,12 @@ ${_setSubHead('<span style="display:inline-flex;align-items:center;gap:7px"><svg
 </div>
 
 <div class="subset-section">
-  <div class="subset-section-title">Telegram-Verknüpfung</div>
+  <div class="subset-section-title">Konto-ID</div>
   <div class="subset-row">
-    <div class="subset-row-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></div>
+    <div class="subset-row-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M13 10h4M13 14H7"/></svg></div>
     <div class="subset-row-body">
-      <div class="subset-row-title">${u.username ? '@'+htmlEsc(u.username) : 'UID '+htmlEsc(myUid)}</div>
-      <div class="subset-row-sub">Telegram ist deine Master-Verknüpfung. UID kann nicht geändert werden.</div>
+      <div class="subset-row-title">${u.username ? '@'+htmlEsc(u.username) : 'ID '+htmlEsc(myUid)}</div>
+      <div class="subset-row-sub">Deine eindeutige Konto-Nummer — kann nicht geändert werden.</div>
     </div>
   </div>
 </div>
@@ -22204,7 +22205,7 @@ async function saveAccount(){
     const j=await r.json();
     if(j&&j.ok){msg.textContent='✅ Gespeichert';msg.style.color='#22c55e';setTimeout(()=>location.reload(),900);}
     else{msg.textContent='❌ '+(j&&j.error||'Fehler');msg.style.color='#ef4444';}
-  }catch(e){msg.textContent='❌ Netzwerkfehler';msg.style.color='#ef4444';}
+  }catch(e){msg.textContent='❌ Verbindung unterbrochen — bitte nochmal auf Speichern tippen';msg.style.color='#ef4444';}
 }
 async function saveAppCode(){
   const code=document.getElementById('inp-app-code').value.trim();
