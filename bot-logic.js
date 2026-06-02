@@ -809,7 +809,7 @@ async function postLinkFromApp({ uid, name, url, caption }) {
         d.badgeTracker[uid] = heute;
     }
 
-    xpAddMitDaily(uid, 1, u.name || name);
+    xpAddNurGesamt(uid, 1, u.name || name); // Posten zählt nur fürs Gesamt-Ranking — Daily/Weekly/Monthly = nur Like-XP
     u.links = (u.links || 0) + 1;
 
     const NEW_MEMBER_MAX_AGE_MS = 7 * 24 * 3600 * 1000;

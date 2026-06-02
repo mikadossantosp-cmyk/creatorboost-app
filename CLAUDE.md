@@ -272,6 +272,8 @@ Prioritäten **immer in dieser Reihenfolge**:
 
 - **Monats-Ranking strikt ab dem 1. (`bot-logic.js`).** Reset/Auszahlung am 1. (monatsResetUndAuszahlung) war schon da. Backfill auf **V2 (monatsgrenzen-sicher)**: seedet monthlyXP nur aus Wochen, die IN diesem Monat begonnen haben (weeklyHistory weekKey-Monat == aktueller Monat; aktuelle weeklyXP nur, wenn ihr Montag im aktuellen Monat liegt — sonst weggelassen, kein Vormonats-XP-Mix). Damit zählt das Monats-Ranking ausschließlich ab dem 1.; am 1. startet automatisch ein neues. Verifiziert: Seed = History(diesen Monat)+aktuelle Woche, straddling-Woche wird übersprungen.
 
+- **Rankings final: NUR Like-XP (`bot-logic.js`).** Auf User-Bestätigung „nur xp von liken": Posten (+1, Z.812) von xpAddMitDaily → `xpAddNurGesamt` (nur Gesamt). Damit enthalten Daily/Weekly/Monthly **ausschließlich Like-XP** (Z.693 heute→alle Buckets, Z.694 diese-Woche→weekly/monthly). Alles andere (Posten, Belohnungen, Missionen, Events, Boni) → nur Gesamt-Ranking. Verifiziert: Posten gesamt=1/daily=0/weekly=0/monthly=0; Liken alle=5.
+
 ## 8. Nächste sinnvolle Schritte
 
 0. **a11y-Pass app-weit fortsetzen** (Dashboard-Modals sind erledigt): weitere `<div onclick>` → echte `<button>`/`role`, fehlende `aria-label` an Icon-Buttons, restliche Modals (App-Chat/DM/Helper) mit `role="dialog"` + Escape/Backdrop nach dem `dashModalA11y()`-Muster. Gezielt pro Screen statt blind app-weit (viele Dateien).
