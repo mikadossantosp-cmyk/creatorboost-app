@@ -20784,6 +20784,12 @@ function showErr(msg){
             {id:'roulette',  emoji:_eic('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/>'), label:'Roulette',  c1:'#ef4444', c2:'#dc2626', shadow:'rgba(239,68,68,0.45)'},
         ];
 
+        // Explore-Menü im Einstellungen-Stil: gruppierte Liste statt Kachel-Grid. Auf Unter-Tabs: Zurück-Link.
+        const _exGroups = [['Community',['newsletter','ranking']],['Lernen',['tipps','regeln']],['Belohnungen',['shop','gewinnspiel','roulette']]];
+        const _exMenuHtml = '<style>.exg{font-size:13px;font-weight:700;color:var(--muted);padding:16px 20px 8px;letter-spacing:.2px}.exl{margin:0 12px 6px;background:var(--bg3);border:1px solid var(--border2);border-radius:16px;overflow:hidden}.exr{display:flex;align-items:center;gap:14px;padding:13px 16px;text-decoration:none;color:var(--text);border-top:1px solid var(--border2);transition:background .12s}.exr:first-child{border-top:none}.exr:active,.exr:hover{background:var(--bg4)}.exr-ic{width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#fff}.exr-lbl{flex:1;font-size:15px;font-weight:600}.exr-arr{color:var(--muted2);font-size:18px;line-height:1}</style>'
+            + _exGroups.map(g => '<div class="exg">'+g[0]+'</div><div class="exl">' + g[1].map(id=>{ const t=tabs.find(x=>x.id===id); return t ? '<a href="/explore?tab='+t.id+'" class="exr"><span class="exr-ic" style="background:linear-gradient(135deg,'+t.c1+','+t.c2+')">'+t.emoji+'</span><span class="exr-lbl">'+htmlEsc(t.label)+'</span><span class="exr-arr">›</span></a>' : ''; }).join('') + '</div>').join('');
+        const _exBackHtml = '<a href="/explore" style="display:inline-flex;align-items:center;gap:6px;margin:8px 16px 2px;padding:9px 15px;background:var(--bg3);border:1px solid var(--border2);border-radius:12px;color:var(--text);font-size:14px;font-weight:700;text-decoration:none">‹ Übersicht</a>';
+
         return html(`
 <div class="topbar">
   <div style="display:flex;gap:6px;align-items:center">
@@ -20809,9 +20815,7 @@ function showErr(msg){
   </div>
 </div>
 <!-- Missionen sind jetzt im Floating-Mission-FAB (oben links) verfuegbar — kein separates Widget mehr auf /explore. -->
-<div class="explore-tabs">
-  ${tabs.map(t=>`<button class="explore-tab${tab===t.id?' active':''}" style="--et-c1:${t.c1};--et-c2:${t.c2};--et-shadow:${t.shadow}" onclick="location.href='/explore?tab=${t.id}'"><span class="et-icon">${t.emoji}</span><span class="et-label">${t.label}</span></button>`).join('')}
-</div>
+${tab==='allgemein' ? _exMenuHtml : _exBackHtml}
 <div id="explore-content" style="padding-bottom:${tab==='allgemein'?'0':'80px'}">
   ${tabContent[tab]||tabContent.allgemein}
 </div>

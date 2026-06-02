@@ -290,6 +290,8 @@ Prioritäten **immer in dieser Reihenfolge**:
 
 - **Einstellungen + Dashboard im Instagram/iOS-Listen-Stil (`bot.js`).** User-Vorlage: IG-Settings (gruppierte gerundete Listen, graue Gruppen-Header, monochrome Outline-Icons, Chevron). **Einstellungen:** set-hub-grid (Box-Karten) → 3 gruppierte `.ig-list` (Dein Konto · Wie du CreatorX nutzt · Für Profis) mit `.ig-row` (Icon currentColor + Label + optional rechts + ›). Profil-Hero bleibt. **Dashboard:** Karten-Hub (.dhub Grid) → `.dh-list`/`.dh-row` gruppierte Liste (Übersicht · Inhalte & Moderation · Community & Tools), dashOpen/dashHubShow-Navigation + Badges unverändert (dashHubShow display grid→''). Verifiziert: beide 200, Einstellungen 3 Gruppen/8 Zeilen, Dashboard 3 Gruppen/6 Zeilen, alle Script-Blöcke valide.
 
+- **Explore im Einstellungen-Listen-Stil (`bot.js`).** User-Wunsch: Explore wie die Settings. Kachel-Grid (.explore-tabs) → gruppierte Liste (`.exr`-Zeilen mit Farb-Icon-Badge + Label + Chevron) in 3 Gruppen (Community: News/Ranking · Lernen: Tipps/Regeln · Belohnungen: Shop/Gewinn/Roulette). Menü als String vor return html() gebaut (`_exMenuHtml`/`_exBackHtml`, kein verschachteltes Template-Literal). Übersicht (tab=allgemein) zeigt das Menü; Unter-Tabs zeigen stattdessen „‹ Übersicht"-Back + Tab-Inhalt. Verifiziert: Übersicht 7 Zeilen/3 Gruppen, Unter-Tabs Back statt Menü, 200, Script-Blöcke valide.
+
 ## 8. Nächste sinnvolle Schritte
 
 0. **a11y-Pass app-weit fortsetzen** (Dashboard-Modals sind erledigt): weitere `<div onclick>` → echte `<button>`/`role`, fehlende `aria-label` an Icon-Buttons, restliche Modals (App-Chat/DM/Helper) mit `role="dialog"` + Escape/Backdrop nach dem `dashModalA11y()`-Muster. Gezielt pro Screen statt blind app-weit (viele Dateien).
