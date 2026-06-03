@@ -19603,27 +19603,37 @@ ${_latestNews ? `<a href="/explore?tab=newsletter" class="highlight-card" style=
 `,
             tutorial: `
 <style>
-.tut-card{margin:14px 16px 16px;border-radius:18px;overflow:hidden;background:var(--bg3);border:1px solid var(--border2)}
-.tut-cardhero{padding:22px 20px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;position:relative;overflow:hidden}
-.tut-cardhero::after{content:"";position:absolute;inset:0;background:radial-gradient(circle at 90% -10%,rgba(255,255,255,.22),transparent 55%);pointer-events:none}
-.tut-eye{font-size:11px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;opacity:.85;position:relative}
-.tut-title{font-size:21px;font-weight:800;margin-top:6px;line-height:1.22;position:relative}
-.tut-body{padding:18px 20px 20px}
-.tut-intro{font-size:14px;line-height:1.55;color:var(--text)}
-.tut-intro b{font-weight:800}
-.tut-open{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:18px;padding:14px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;border-radius:13px;font-size:15px;font-weight:800;text-decoration:none}
-.tut-open-off{margin-top:18px;padding:14px;text-align:center;background:var(--bg4);border:1px dashed var(--border2);border-radius:13px;font-size:13px;color:var(--muted)}
+.tut2-wrap{margin:14px 16px 26px}
+.tut2-card{border-radius:24px;overflow:hidden;background:var(--bg3);border:1px solid var(--border2);box-shadow:0 1px 2px rgba(15,23,42,.05),0 16px 40px rgba(15,23,42,.10)}
+.tut2-poster{position:relative;display:flex;align-items:center;justify-content:center;min-height:200px;aspect-ratio:16/10;background:linear-gradient(140deg,#4c1d95 0%,#6d28d9 42%,#9333ea 78%,#a855f7 100%);text-decoration:none;overflow:hidden}
+.tut2-poster::before{content:"";position:absolute;inset:0;background:radial-gradient(120% 90% at 82% 8%,rgba(255,255,255,.30),transparent 46%),radial-gradient(120% 90% at 4% 106%,rgba(0,0,0,.28),transparent 50%);pointer-events:none}
+.tut2-poster::after{content:"";position:absolute;left:-40%;top:-60%;width:60%;height:220%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.10),transparent);transform:skewX(-16deg)}
+.tut2-eyebrow{position:absolute;top:16px;left:16px;z-index:2;display:inline-flex;align-items:center;gap:6px;font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#fff;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.28);padding:6px 12px;border-radius:99px;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.tut2-play{position:relative;z-index:2;width:68px;height:68px;border-radius:50%;background:rgba(255,255,255,.97);display:flex;align-items:center;justify-content:center;box-shadow:0 12px 30px rgba(0,0,0,.32);transition:transform .15s ease}
+.tut2-poster:active .tut2-play{transform:scale(.93)}
+.tut2-play::after{content:"";position:absolute;inset:-10px;border-radius:50%;border:2px solid rgba(255,255,255,.35)}
+.tut2-tag{position:absolute;bottom:15px;right:15px;z-index:2;display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;color:#fff;background:rgba(0,0,0,.42);padding:6px 12px;border-radius:9px;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.tut2-soon{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);z-index:2;font-size:12.5px;font-weight:700;color:#fff;background:rgba(0,0,0,.36);padding:7px 15px;border-radius:99px}
+.tut2-body{padding:20px 20px 22px}
+.tut2-meta{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#7c3aed}
+.tut2-title{margin-top:7px;font-size:21px;font-weight:800;letter-spacing:-.02em;line-height:1.24;color:var(--text)}
+.tut2-intro{margin-top:11px;font-size:14px;line-height:1.62;color:var(--muted)}
+.tut2-intro b{color:var(--text);font-weight:700}
+.tut2-cta{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:20px;padding:15px;background:#7c3aed;color:#fff;border-radius:14px;font-size:15px;font-weight:700;letter-spacing:-.01em;text-decoration:none;box-shadow:0 10px 24px rgba(124,58,237,.30);transition:transform .15s ease}
+.tut2-cta:active{transform:scale(.98)}
+@media(prefers-reduced-motion:reduce){.tut2-play,.tut2-cta{transition:none}}
 </style>
-<div class="tut-card">
-  <div class="tut-cardhero">
-    <div class="tut-eye">📖 Tutorial 1</div>
-    <div class="tut-title">Wie man in CreatorBoostX richtig engagiert</div>
-  </div>
-  <div class="tut-body">
-    <div class="tut-intro">In diesem kurzen Tutorial zeige ich dir, wie du auf CreatorBoostX <b>richtig engagierst</b> — also wie du den Reel zuerst <b>direkt auf Instagram</b> likest, kommentierst &amp; speicherst und ihn danach in der App bestätigst. So zählt dein Engagement wirklich und die ganze Community wächst gemeinsam. Schau's dir an:</div>
+<div class="tut2-wrap">
+  <div class="tut2-card">
     ${_tutLink
-      ? '<a href="'+htmlEsc(_tutLink)+'" target="_blank" rel="noopener" class="tut-open">▶ Öffnen</a>'
-      : '<div class="tut-open-off">🎬 Video folgt in Kürze.</div>'}
+      ? '<a href="'+htmlEsc(_tutLink)+'" target="_blank" rel="noopener" class="tut2-poster"><span class="tut2-eyebrow">📖 Tutorial 1</span><span class="tut2-play"><svg width="27" height="27" viewBox="0 0 24 24" fill="#7c3aed"><path d="M8 5v14l11-7z"/></svg></span><span class="tut2-tag">▶ Ansehen</span></a>'
+      : '<div class="tut2-poster" style="filter:saturate(.9)"><span class="tut2-eyebrow">📖 Tutorial 1</span><span class="tut2-play" style="opacity:.45;box-shadow:none"><svg width="27" height="27" viewBox="0 0 24 24" fill="#7c3aed"><path d="M8 5v14l11-7z"/></svg></span><span class="tut2-soon">🎬 Video folgt in Kürze</span></div>'}
+    <div class="tut2-body">
+      <div class="tut2-meta">Erste Schritte</div>
+      <div class="tut2-title">Wie man in CreatorBoostX richtig engagiert</div>
+      <div class="tut2-intro">In diesem kurzen Tutorial zeige ich dir, wie du <b>richtig engagierst</b>: den Reel zuerst <b>direkt auf Instagram</b> liken, kommentieren &amp; speichern — und ihn danach in der App bestätigen. So zählt dein Engagement wirklich und die ganze Community wächst gemeinsam.</div>
+      ${_tutLink ? '<a href="'+htmlEsc(_tutLink)+'" target="_blank" rel="noopener" class="tut2-cta">▶ Tutorial ansehen</a>' : ''}
+    </div>
   </div>
 </div>
 `,
