@@ -11804,7 +11804,7 @@ window.onPinVisitStory = function(uid){
             const _thumbInner = bannerImg
               ? bannerImg
               : '<div style="position:absolute;inset:0;background:'+bannerBg+'"></div>';
-            return '<div class="post fade-up cb-cc'+cardThemeClass(poster.activeCardTheme)+'" id="post-'+msgId+'" data-url="'+_cleanUrl+'" data-ts="'+(link.timestamp||0)+'" style="position:relative;margin:0 16px 14px;padding:14px;border-radius:16px;background:var(--bg3);border:1px solid var(--border);box-shadow:0 0 0 1.5px rgba(34,197,94,0.20),0 4px 16px rgba(15,23,42,0.08)">\n'+legendOverlay(poster.activeCardTheme)+
+            return '<div class="post fade-up cb-cc'+cardThemeClass(poster.activeCardTheme)+'" id="post-'+msgId+'" data-url="'+_cleanUrl+'" data-ts="'+(link.timestamp||0)+'" style="position:relative;margin:0 16px 14px;padding:14px;border-radius:16px'+(cardThemeClass(poster.activeCardTheme)?'':';background:var(--bg3);border:1px solid var(--border);box-shadow:0 0 0 1.5px rgba(34,197,94,0.20),0 4px 16px rgba(15,23,42,0.08)')+'">\n'+legendOverlay(poster.activeCardTheme)+
 // Typ-Pill + Zeit (+ Admin-Löschen)
 '  <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px">\n'+
 '    <span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:800;letter-spacing:.2px;color:#16a34a;background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.38);padding:2px 9px;border-radius:99px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Normal</span>\n'+
@@ -11886,7 +11886,7 @@ commentsBox.replace('margin:0 16px 12px','margin:0')+
               ? '<img src="/insta-thumb?u='+encodeURIComponent(sl.thumbnail)+'" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.remove()" alt="">'
               : (avatarSmall ? avatarSmall : '');
             const _slIsOnline = isUidOnline(sl.uid);
-            return '<div class="post fade-up cb-cc'+cardThemeClass(poster.activeCardTheme)+'" id="sl-post-'+sl.id+'" style="position:relative;margin:0 16px 14px;padding:14px;border-radius:16px;background:var(--bg3);border:1px solid var(--border);box-shadow:0 0 0 1.5px rgba(245,158,11,0.22),0 4px 16px rgba(15,23,42,0.08)">\n'+legendOverlay(poster.activeCardTheme)+'\n'
+            return '<div class="post fade-up cb-cc'+cardThemeClass(poster.activeCardTheme)+'" id="sl-post-'+sl.id+'" style="position:relative;margin:0 16px 14px;padding:14px;border-radius:16px'+(cardThemeClass(poster.activeCardTheme)?'':';background:var(--bg3);border:1px solid var(--border);box-shadow:0 0 0 1.5px rgba(245,158,11,0.22),0 4px 16px rgba(15,23,42,0.08)')+'">\n'+legendOverlay(poster.activeCardTheme)+'\n'
                 +'<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px">\n'
                 +'<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:800;letter-spacing:.2px;color:#d97706;background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.40);padding:2px 9px;border-radius:99px"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Superlink</span>\n'
                 +'<span class="post-time">'+dateStr+' '+time+'</span>\n'
@@ -12799,7 +12799,7 @@ window.cbCompactCard = function(p, o){
   var likersWrap = o.likersHtml ? o.likersHtml : '';
   // typ-farbige Glow-Kante + adaptiver Theme-Body
   var themeCls = o.themeClass ? (' '+o.themeClass) : '';
-  return '<div class="post fade-up cb-cc'+themeCls+'" style="position:relative;margin:0 16px 14px;padding:14px;border-radius:16px;background:var(--bg3);border:1px solid var(--border);box-shadow:0 0 0 1.5px '+accent+'33,0 4px 16px rgba(15,23,42,0.08)">'+
+  return '<div class="post fade-up cb-cc'+themeCls+'" style="position:relative;margin:0 16px 14px;padding:14px;border-radius:16px'+(themeCls?'':';background:var(--bg3);border:1px solid var(--border);box-shadow:0 0 0 1.5px '+accent+'33,0 4px 16px rgba(15,23,42,0.08)')+'">'+
     (o.cornerHtml||'')+(o.adminHeaderHtml||'')+
     head+bodyRow+(o.captionHtml||'')+duty+engageWrap+adminWrap+likersWrap+'</div>';
 };
