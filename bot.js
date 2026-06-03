@@ -15531,10 +15531,18 @@ setInterval(async()=>{
         const _pfU = (d.users && d.users[_pfUid]) || {};
         const _pfName = String(_pfU.spitzname || _pfU.name || ('User ' + _pfUid));
         const _pfKey = ['creatorboost', _pfUid].sort().join('_');
+        const _pfPersKey = [String(myUid), String(_pfUid)].sort().join('_');
         const _pfAll = (d.messages && Array.isArray(d.messages[_pfKey])) ? d.messages[_pfKey] : [];
-        const _pfShown = _pfAll.filter(m => m && (String(m.from) === String(_pfUid) || m.adminReply === true));
-        if (LOCAL_STORE) { try { Promise.resolve(localWrite(() => botLogic.markMessagesRead({ uid: 'creatorboost', chatKey: _pfKey }))).catch(()=>{}); } catch(_) {} }
-        else postBot('/mark-messages-read', { uid: 'creatorboost', chatKey: _pfKey }).catch(()=>{});
+        let _pfShown = _pfAll.filter(m => m && (String(m.from) === String(_pfUid) || m.adminReply === true));
+        // Persönliche DMs (User ↔ dieser Admin) mit reinmergen → Postfach zeigt die VOLLSTÄNDIGE Konversation,
+        // egal ob der User an CreatorX/Support ODER direkt an den Admin geschrieben hat (sonst fehlen Nachrichten).
+        // Admin-eigene werden als 'creatorboost' markiert → rendern rechts (chat-detail-render läuft mit myUid='creatorboost').
+        if (_pfPersKey !== _pfKey && d.messages && Array.isArray(d.messages[_pfPersKey])) {
+            const _pfPers = d.messages[_pfPersKey].map(m => String(m.from) === String(myUid) ? Object.assign({}, m, { from: 'creatorboost' }) : m);
+            if (_pfPers.length) _pfShown = _pfShown.concat(_pfPers).sort((a,b)=>(a.timestamp||0)-(b.timestamp||0));
+        }
+        if (LOCAL_STORE) { try { Promise.resolve(localWrite(() => { botLogic.markMessagesRead({ uid: 'creatorboost', chatKey: _pfKey }); if (_pfPersKey !== _pfKey) botLogic.markMessagesRead({ uid: String(myUid), chatKey: _pfPersKey }); })).catch(()=>{}); } catch(_) {} }
+        else { postBot('/mark-messages-read', { uid: 'creatorboost', chatKey: _pfKey }).catch(()=>{}); if (_pfPersKey !== _pfKey) postBot('/mark-messages-read', { uid: String(myUid), chatKey: _pfPersKey }).catch(()=>{}); }
         // Helper-/Follow-up-Präfixe entfernen, damit nur der echte User-Text steht.
         const _pfMsgs = _pfShown.map(m => Object.assign({}, m, {
             text: String(m.text || '').replace(/^[^A-Za-z0-9]*\s*(Helper-Frage|Follow-up):\s*/, '')
