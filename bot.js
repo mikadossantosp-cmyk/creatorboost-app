@@ -15910,7 +15910,11 @@ function renderGroup(group){
     avatarHtml = '<div class="notif-icon '+c+'">'+(n.icon||'🔔')+'</div>';
   }
   const txt = groupText(c, sub, actors);
-  const tgt = n.actorUid && actors.length===1 ? '/profil/'+n.actorUid : targetUrl(n);
+  // Support-Nachricht eines Users an CreatorX (💬 „→ CreatorX: …") → für Admins direkt ins Postfach-Gespräch,
+  // statt aufs Profil (sonst erreicht man die Nachricht von der Benachrichtigung aus nie).
+  const _isSupportNotif = n.icon==='💬' && String(n.text||'').indexOf('→ CreatorX:')===0;
+  const tgt = (_isSupportNotif && n.actorUid && window.__IS_ADMIN) ? '/admin/postfach/'+n.actorUid
+            : (n.actorUid && actors.length===1 ? '/profil/'+n.actorUid : targetUrl(n));
   const isUnread = !group.allRead;
   return '<a href="'+tgt+'" class="notif-row '+(isUnread?'unread':'')+'">'+avatarHtml+'<div style="flex:1;min-width:0"><div class="notif-text">'+txt+'</div><div class="notif-time">'+relTime(group.latestTs)+(actors.length>1?' · '+actors.length+'×':'')+'</div></div><div class="notif-arrow">›</div></a>';
 }
