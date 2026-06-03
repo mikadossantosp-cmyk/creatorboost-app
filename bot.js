@@ -39,7 +39,7 @@ const PORT          = process.env.PORT          || 3000;
 const LOCAL_STORE = process.env.LOCAL_STORE === '1';
 // Zentrale Asset-/App-Version (Node-Scope): bricht CSS-Cache (?v=) + Service-Worker-Cache mit jedem Deploy.
 // EINE Quelle — wird in den CSS-<link> und in den SW-Script-Text (SW_VERSION) interpoliert.
-const APP_VERSION = 'v324-winner-collapse';
+const APP_VERSION = 'v325-ig-typescale';
 if (LOCAL_STORE) {
     try {
         datastore.load();
@@ -2245,7 +2245,7 @@ forced-color-adjust:none;
 --avatar-fallback-bg:#ffffff;--avatar-fallback-color:rgba(15,23,42,.30);--avatar-fallback-border:rgba(15,23,42,.10);
 --radius:16px;--radius-sm:10px;--radius-xs:6px;
 --font:'DM Sans',sans-serif;--font-display:'Syne',sans-serif;
---fs-xs:12px;--fs-sm:13px;--fs-base:15px;--fs-md:16px;--fs-lg:20px;--fs-xl:28px;
+--fs-xs:13px;--fs-sm:14px;--fs-base:16px;--fs-md:17px;--fs-lg:22px;--fs-xl:30px;
 --track-tight:-0.02em;--track-snug:-0.011em;
 --shadow:0 8px 32px rgba(15,23,42,.06);
 --glass-bg:rgba(255,255,255,0.72);--surface-tint:rgba(15,23,42,0.03);--hover-tint:rgba(15,23,42,0.05);
@@ -2254,7 +2254,7 @@ forced-color-adjust:none;
 --space-0:0;--space-1:4px;--space-2:8px;--space-3:12px;--space-4:16px;--space-5:20px;--space-6:24px;--space-8:32px;--space-10:40px;--space-12:48px;--space-16:64px;
 --lh-tight:1.2;--lh-snug:1.35;--lh-normal:1.5;--lh-relaxed:1.65;
 --fw-normal:400;--fw-medium:500;--fw-semibold:600;--fw-bold:700;--fw-extra:800;
---fs-2xl:34px;--fs-3xl:44px;
+--fs-2xl:36px;--fs-3xl:46px;
 --ring:var(--accent);
 --shadow-sm:0 1px 2px rgba(15,23,42,.06),0 1px 3px rgba(15,23,42,.10);
 --shadow-lg:0 12px 40px rgba(15,23,42,.12);
@@ -8353,7 +8353,7 @@ async function sendTest(){const to=(await cbPrompt('Testmail an welche Adresse?'
     // ── STYLEGUIDE (Design-Fundament v1, admin-only) — Living Reference der Tokens + ui-* Komponenten ──
     if (path === '/styleguide') {
         if (!(await _isAdminRequest(req, query))) { res.writeHead(403); return res.end('Kein Zugriff'); }
-        const typeScale = [['--fs-xs','12px'],['--fs-sm','13px'],['--fs-base','15px'],['--fs-md','16px'],['--fs-lg','20px'],['--fs-xl','28px'],['--fs-2xl','34px'],['--fs-3xl','44px']];
+        const typeScale = [['--fs-xs','13px'],['--fs-sm','14px'],['--fs-base','16px'],['--fs-md','17px'],['--fs-lg','22px'],['--fs-xl','30px'],['--fs-2xl','36px'],['--fs-3xl','46px']];
         const spaceScale = ['1','2','3','4','5','6','8','10','12','16'];
         const colors = [['--bg','Background'],['--bg3','Surface'],['--text','Text'],['--muted','Muted'],['--muted2','Muted 2'],['--border','Border'],['--accent','Accent'],['--accent2','Accent 2'],['--green','Green'],['--blue','Blue'],['--gold','Gold']];
         const sg = `
@@ -17114,15 +17114,15 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
 
     <!-- ── Karten-Hub (Instagram/iOS-Style gruppierte Liste) ── -->
     <style>
-      .dh-group{font-size:12.5px;font-weight:700;color:var(--dsub);padding:18px 4px 9px;letter-spacing:.3px}
+      .dh-group{font-size:13px;font-weight:700;color:var(--dsub);padding:19px 4px 9px;letter-spacing:.3px}
       .dh-list{background:var(--dink2);border:1px solid var(--dline);border-radius:16px;overflow:hidden;margin-bottom:2px}
       .dh-row{display:flex;align-items:center;gap:15px;width:100%;padding:15px 16px;cursor:pointer;border-top:1px solid var(--dline);background:none;text-align:left;color:var(--text);font-family:inherit;transition:background .12s;-webkit-tap-highlight-color:transparent}
       .dh-row:first-child{border-top:none}
       .dh-row:hover{background:rgba(255,255,255,.03)}
       .dh-ic{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0}
       .dh-lbl{flex:1;min-width:0}
-      .dh-t{font-size:15px;font-weight:700;color:var(--text);line-height:1.2}
-      .dh-s{font-size:11.5px;color:var(--dsub);margin-top:2px}
+      .dh-t{font-size:16px;font-weight:700;color:var(--text);line-height:1.2}
+      .dh-s{font-size:12.5px;color:var(--dsub);margin-top:2px}
       .dh-badge{min-width:20px;height:20px;padding:0 6px;border-radius:99px;background:#ef4444;color:#fff;font-size:11px;font-weight:800;display:none;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 2px 8px rgba(239,68,68,.4)}
       .dh-arr{color:var(--dsub);font-size:19px;flex-shrink:0;line-height:1}
       #dash-back{display:none;align-items:center;gap:6px;margin:0 0 16px;cursor:pointer;color:var(--text);font-size:14px;font-weight:700;background:var(--dink2);border:1px solid var(--dline);border-radius:12px;padding:9px 15px;font-family:inherit}
@@ -20859,7 +20859,7 @@ function showErr(msg){
 
         // Explore-Menü im Einstellungen-Stil: gruppierte Liste statt Kachel-Grid. Auf Unter-Tabs: Zurück-Link.
         const _exGroups = [['Community',['newsletter','ranking']],['Lernen',['tutorial','tipps','regeln']],['Belohnungen',['shop','gewinnspiel','roulette']]];
-        const _exMenuHtml = '<style>.exg{font-size:13px;font-weight:700;color:var(--muted);padding:16px 20px 8px;letter-spacing:.2px}.exl{margin:0 12px 6px;background:var(--bg3);border:1px solid var(--border2);border-radius:16px;overflow:hidden}.exr{display:flex;align-items:center;gap:14px;padding:13px 16px;text-decoration:none;color:var(--text);border-top:1px solid var(--border2);transition:background .12s}.exr:first-child{border-top:none}.exr:active,.exr:hover{background:var(--bg4)}.exr-ic{width:26px;height:26px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--text)}.exr-ic svg{width:23px;height:23px;stroke-width:1.8}.exr-lbl{flex:1;font-size:15px;font-weight:600}.exr-arr{color:var(--muted2);font-size:18px;line-height:1}</style>'
+        const _exMenuHtml = '<style>.exg{font-size:14px;font-weight:700;color:var(--muted);padding:18px 20px 9px;letter-spacing:.2px}.exl{margin:0 12px 6px;background:var(--bg3);border:1px solid var(--border2);border-radius:16px;overflow:hidden}.exr{display:flex;align-items:center;gap:15px;padding:15px 16px;text-decoration:none;color:var(--text);border-top:1px solid var(--border2);transition:background .12s}.exr:first-child{border-top:none}.exr:active,.exr:hover{background:var(--bg4)}.exr-ic{width:27px;height:27px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--text)}.exr-ic svg{width:24px;height:24px;stroke-width:1.8}.exr-lbl{flex:1;font-size:17px;font-weight:600}.exr-arr{color:var(--muted2);font-size:19px;line-height:1}</style>'
             + _exGroups.map(g => '<div class="exg">'+g[0]+'</div><div class="exl">' + g[1].map(id=>{ const t=tabs.find(x=>x.id===id); return t ? '<a href="/explore?tab='+t.id+'" class="exr"><span class="exr-ic">'+t.emoji+'</span><span class="exr-lbl">'+htmlEsc(t.label)+'</span><span class="exr-arr">›</span></a>' : ''; }).join('') + '</div>').join('');
         const _exBackHtml = '<a href="/explore" style="display:inline-flex;align-items:center;gap:6px;margin:8px 16px 2px;padding:9px 15px;background:var(--bg3);border:1px solid var(--border2);border-radius:12px;color:var(--text);font-size:14px;font-weight:700;text-decoration:none">‹ Übersicht</a>';
 
@@ -22833,14 +22833,14 @@ async function setCardTheme(themeId){const r=await fetch('/api/set-active-cardth
 .set-hub-arrow{color:var(--muted);font-size:18px;flex-shrink:0}
 .set-hub-badge{background:#ef4444;color:#fff;font-size:10px;font-weight:800;padding:2px 7px;border-radius:99px;margin-left:6px}
 /* ── Instagram/iOS-Style gruppierte Liste ── */
-.ig-group{font-size:13px;font-weight:700;color:var(--muted);padding:20px 20px 9px;letter-spacing:.2px}
+.ig-group{font-size:14px;font-weight:700;color:var(--muted);padding:22px 20px 10px;letter-spacing:.2px}
 .ig-list{margin:0 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:16px;overflow:hidden}
-.ig-row{display:flex;align-items:center;gap:16px;padding:14px 16px;text-decoration:none;color:var(--text);border-top:1px solid var(--border2);transition:background .12s;-webkit-tap-highlight-color:transparent}
+.ig-row{display:flex;align-items:center;gap:16px;padding:16px;text-decoration:none;color:var(--text);border-top:1px solid var(--border2);transition:background .12s;-webkit-tap-highlight-color:transparent}
 .ig-row:first-child{border-top:none}
 .ig-row:hover,.ig-row:active{background:var(--bg4)}
 .ig-row-ic{width:26px;height:26px;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--text)}
-.ig-row-lbl{flex:1;font-size:15px;font-weight:500;min-width:0;line-height:1.25}
-.ig-row-r{font-size:13px;color:var(--muted);flex-shrink:0;font-weight:500}
+.ig-row-lbl{flex:1;font-size:17px;font-weight:500;min-width:0;line-height:1.25}
+.ig-row-r{font-size:14px;color:var(--muted);flex-shrink:0;font-weight:500}
 .ig-row-arr{color:var(--muted2);font-size:19px;flex-shrink:0;line-height:1}
 </style>
 
