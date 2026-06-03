@@ -39,7 +39,7 @@ const PORT          = process.env.PORT          || 3000;
 const LOCAL_STORE = process.env.LOCAL_STORE === '1';
 // Zentrale Asset-/App-Version (Node-Scope): bricht CSS-Cache (?v=) + Service-Worker-Cache mit jedem Deploy.
 // EINE Quelle — wird in den CSS-<link> und in den SW-Script-Text (SW_VERSION) interpoliert.
-const APP_VERSION = 'v323-legend-badge-inside';
+const APP_VERSION = 'v324-winner-collapse';
 if (LOCAL_STORE) {
     try {
         datastore.load();
@@ -2379,6 +2379,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible,
 [data-theme=light] .profile-pic-img{box-shadow:0 0 0 1px rgba(15,23,42,0.10)}
 .story-name{font-size:11.5px;color:var(--text);max-width:74px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;letter-spacing:0.1px}
 .post{margin:0 var(--space-3) var(--space-4);background:var(--bg3);border:1px solid var(--border);border-radius:20px;overflow:hidden;transition:border-color 0.2s,box-shadow 0.2s;box-shadow:0 1px 2px rgba(15,23,42,0.04),0 8px 24px rgba(15,23,42,0.06)}
+.wcol>summary{list-style:none}.wcol>summary::-webkit-details-marker{display:none}.wcol-arr{display:inline-block;transition:transform .2s}.wcol[open] .wcol-arr{transform:rotate(180deg)}
 ${cardThemeCss()}
 [data-theme=dark] .post{background:#121316;box-shadow:0 1px 2px rgba(0,0,0,0.5),0 8px 24px rgba(0,0,0,0.32);border-color:var(--border2)}
 .post:hover{border-color:var(--border);box-shadow:0 4px 14px rgba(15,23,42,0.06)}
@@ -19404,80 +19405,67 @@ fetch('/api/admin/engagement-log').then(r=>r.json()).then(j=>{ if (j.ok) { LAST_
                 + '</div>'
             + '</a>';
         }).join('') : '<div style="padding:38px 20px;text-align:center;color:var(--muted);font-size:var(--fs-sm)"><div style="font-size:36px;margin-bottom:8px">🤝</div><b style="color:var(--text)">Noch keine Community Builder</b><br>Sei der Erste — lade aktive Creator ein → <a href="/einladen" style="color:#22c55e;font-weight:700">Einladungslink holen</a></div>';
+        // Wiederverwendbare Sieger-Zeile. asLink=false → <div> (für die <summary>, kein nested-interactive-Konflikt); true → klickbarer <a> zum Profil.
+        const _rankWinnerRow = (a, grad, withLinks, asLink) => {
+          const u = d.users[a.uid] || {};
+          const medal = a.place === 1 ? '🥇' : a.place === 2 ? '🥈' : a.place === 3 ? '🥉' : a.place <= 5 ? '🏅' : '✨';
+          const name = htmlEsc(u.spitzname || u.name || a.name || 'User');
+          const initial = htmlEsc(String(u.spitzname || u.name || a.name || '?').charAt(0));
+          const inner = '<span style="font-size:18px;flex-shrink:0;width:20px;text-align:center">' + medal + '</span>' +
+            '<div style="position:relative;width:34px;height:34px;border-radius:50%;overflow:hidden;background:' + grad + ';display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;flex-shrink:0">' + initial + '<img src="/appbild/' + htmlEsc(a.uid) + '/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.remove()" alt=""></div>' +
+            '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700;font-size:13px">' + name + '</span>' +
+            (a.xp ? '<span style="font-size:10.5px;font-weight:800;color:#a78bfa;background:rgba(167,139,250,0.16);padding:2px 7px;border-radius:7px;flex-shrink:0">+' + a.xp + ' XP</span>' : '') +
+            '<span style="font-size:10.5px;font-weight:800;color:#06b6d4;background:rgba(6,182,212,0.16);padding:2px 7px;border-radius:7px;margin-left:5px;flex-shrink:0">+' + a.dia + ' 💎</span>' +
+            (withLinks && a.links ? '<span style="font-size:10.5px;font-weight:800;color:#f59e0b;background:rgba(245,158,11,0.16);padding:2px 7px;border-radius:7px;margin-left:5px;flex-shrink:0">🔗 ' + a.links + '</span>' : '');
+          const st = 'display:flex;align-items:center;gap:10px;padding:8px 0;text-decoration:none;color:var(--text)';
+          return asLink
+            ? '<a href="/profil/' + htmlEsc(a.uid) + '" style="' + st + '">' + inner + '</a>'
+            : '<div style="' + st + '">' + inner + '</div>';
+        };
+        // Aufklappbarer Sieger-Block (<details>, ohne open → IMMER eingeklappt). Eingeklappt: nur Platz 1. Aufgeklappt: restliche Plätze als Links.
+        const _winnerCollapse = (awards, opts) => {
+          if (!awards.length) return '';
+          const head = '<div style="font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:' + opts.accent + ';margin-bottom:var(--space-2);display:flex;align-items:center;gap:6px"><span>🏆</span><span>' + opts.title + '</span></div>';
+          const rest = awards.slice(1);
+          return '<details class="wcol" style="margin:0 16px 12px;padding:14px;background:' + opts.bg + ';border:1px solid ' + opts.border + ';border-radius:12px;position:relative;overflow:hidden">' +
+            '<div style="position:absolute;top:0;left:0;right:0;height:3px;background:' + opts.topbar + '"></div>' +
+            '<summary style="display:block;list-style:none;cursor:pointer;outline:none">' + head +
+              '<div style="display:flex;align-items:center;gap:8px">' +
+                '<div style="flex:1;min-width:0">' + _rankWinnerRow(awards[0], opts.grad, opts.withLinks, false) + '</div>' +
+                (rest.length ? '<span style="flex-shrink:0;font-size:11px;color:' + opts.accent + ';font-weight:800;display:inline-flex;align-items:center;gap:3px;white-space:nowrap">+' + rest.length + ' <span class="wcol-arr">▾</span></span>' : '') +
+              '</div>' +
+            '</summary>' +
+            (rest.length ? '<div style="margin-top:2px">' + rest.map(a => _rankWinnerRow(a, opts.grad, opts.withLinks, true)).join('') + '</div>' : '') +
+          '</details>';
+        };
         // Sieger Gestern: aus dailyAwardsLog (idempotent persistiert in dailyRankingAbschluss).
         // Zeige Top-3 von gestern als Highlight-Banner ueber dem Daily-Ranking.
         const _yesterday = new Date(Date.now() - 86400000);
         const _yesterdayKey = _yesterday.toISOString().slice(0,10);
         const _yesterdayAwards = ((d.dailyAwardsLog||[]).filter(a => a.dayKey === _yesterdayKey)).sort((a,b)=>a.place-b.place);
-        const _yesterdayWinnerHtml = _yesterdayAwards.length
-          ? '<div style="margin:0 16px 12px;padding:14px;background:linear-gradient(135deg,rgba(251,191,36,0.18),rgba(245,158,11,0.10));border:1px solid rgba(251,191,36,0.50);border-radius:12px;position:relative;overflow:hidden">' +
-              '<div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#fbbf24,#f59e0b,#fbbf24)"></div>' +
-              '<div style="font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#fbbf24;margin-bottom:var(--space-2);display:flex;align-items:center;gap:6px"><span>🏆</span><span>SIEGER GESTERN (' + _yesterdayKey + ')</span></div>' +
-              _yesterdayAwards.map(a => {
-                const u = d.users[a.uid] || {};
-                const medal = a.place === 1 ? '🥇' : a.place === 2 ? '🥈' : a.place === 3 ? '🥉' : a.place <= 5 ? '🏅' : '✨';
-                const name = htmlEsc(u.spitzname || u.name || a.name || 'User');
-                const initial = htmlEsc(String(u.spitzname || u.name || a.name || '?').charAt(0));
-                return '<a href="/profil/' + htmlEsc(a.uid) + '" style="display:flex;align-items:center;gap:10px;padding:8px 0;text-decoration:none;color:var(--text)">' +
-                  '<span style="font-size:18px;flex-shrink:0;width:20px;text-align:center">' + medal + '</span>' +
-                  '<div style="position:relative;width:34px;height:34px;border-radius:50%;overflow:hidden;background:linear-gradient(135deg,#fbbf24,#a855f7);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;flex-shrink:0">' + initial + '<img src="/appbild/' + htmlEsc(a.uid) + '/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.remove()" alt=""></div>' +
-                  '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700;font-size:13px">' + name + '</span>' +
-                  (a.xp ? '<span style="font-size:10.5px;font-weight:800;color:#a78bfa;background:rgba(167,139,250,0.16);padding:2px 7px;border-radius:7px;flex-shrink:0">+' + a.xp + ' XP</span>' : '') +
-                  '<span style="font-size:10.5px;font-weight:800;color:#06b6d4;background:rgba(6,182,212,0.16);padding:2px 7px;border-radius:7px;margin-left:5px;flex-shrink:0">+' + a.dia + ' 💎</span>' +
-                '</a>';
-              }).join('') +
-            '</div>'
-          : '';
+        const _yesterdayWinnerHtml = _winnerCollapse(_yesterdayAwards, {
+          title: 'SIEGER GESTERN (' + htmlEsc(_yesterdayKey) + ')', accent: '#fbbf24',
+          bg: 'linear-gradient(135deg,rgba(251,191,36,0.18),rgba(245,158,11,0.10))', border: 'rgba(251,191,36,0.50)',
+          topbar: 'linear-gradient(90deg,#fbbf24,#f59e0b,#fbbf24)', grad: 'linear-gradient(135deg,#fbbf24,#a855f7)', withLinks: false });
 
         // Sieger Letzte Woche: aus weeklyAwardsLog (idempotent persistiert vom Wochen-Reset Mo 00:05)
         // Zeige Top-3 der letzten Woche als Highlight-Banner ueber dem Weekly-Ranking.
         const _lastWeekAwards = ((d.weeklyAwardsLog||[]).slice().reverse());
         const _lastWeekKey = _lastWeekAwards.length ? _lastWeekAwards[0].weekKey : null;
         const _lastWeekTop3 = _lastWeekKey ? _lastWeekAwards.filter(a => a.weekKey === _lastWeekKey).sort((a,b)=>a.place-b.place) : [];
-        const _lastWeekWinnerHtml = _lastWeekTop3.length
-          ? '<div style="margin:0 16px 12px;padding:14px;background:linear-gradient(135deg,rgba(167,139,250,0.18),rgba(124,58,237,0.10));border:1px solid rgba(167,139,250,0.50);border-radius:12px;position:relative;overflow:hidden">' +
-              '<div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#a78bfa,#7c3aed,#a78bfa)"></div>' +
-              '<div style="font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#a78bfa;margin-bottom:var(--space-2);display:flex;align-items:center;gap:6px"><span>🏆</span><span>SIEGER LETZTE WOCHE (' + htmlEsc(_lastWeekKey) + ')</span></div>' +
-              _lastWeekTop3.map(a => {
-                const u = d.users[a.uid] || {};
-                const medal = a.place === 1 ? '🥇' : a.place === 2 ? '🥈' : '🥉';
-                const name = htmlEsc(u.spitzname || u.name || a.name || 'User');
-                const initial = htmlEsc(String(u.spitzname || u.name || a.name || '?').charAt(0));
-                return '<a href="/profil/' + htmlEsc(a.uid) + '" style="display:flex;align-items:center;gap:10px;padding:8px 0;text-decoration:none;color:var(--text)">' +
-                  '<span style="font-size:18px;flex-shrink:0;width:20px;text-align:center">' + medal + '</span>' +
-                  '<div style="position:relative;width:34px;height:34px;border-radius:50%;overflow:hidden;background:linear-gradient(135deg,#a78bfa,#7c3aed);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;flex-shrink:0">' + initial + '<img src="/appbild/' + htmlEsc(a.uid) + '/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.remove()" alt=""></div>' +
-                  '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700;font-size:13px">' + name + '</span>' +
-                  (a.xp ? '<span style="font-size:10.5px;font-weight:800;color:#a78bfa;background:rgba(167,139,250,0.16);padding:2px 7px;border-radius:7px;flex-shrink:0">+' + a.xp + ' XP</span>' : '') +
-                  '<span style="font-size:10.5px;font-weight:800;color:#06b6d4;background:rgba(6,182,212,0.16);padding:2px 7px;border-radius:7px;margin-left:5px;flex-shrink:0">+' + a.dia + ' 💎</span>' +
-                  (a.links ? '<span style="font-size:10.5px;font-weight:800;color:#f59e0b;background:rgba(245,158,11,0.16);padding:2px 7px;border-radius:7px;margin-left:5px;flex-shrink:0">🔗 ' + a.links + '</span>' : '') +
-                '</a>';
-              }).join('') +
-            '</div>'
-          : '';
+        const _lastWeekWinnerHtml = _winnerCollapse(_lastWeekTop3, {
+          title: 'SIEGER LETZTE WOCHE (' + htmlEsc(_lastWeekKey || '') + ')', accent: '#a78bfa',
+          bg: 'linear-gradient(135deg,rgba(167,139,250,0.18),rgba(124,58,237,0.10))', border: 'rgba(167,139,250,0.50)',
+          topbar: 'linear-gradient(90deg,#a78bfa,#7c3aed,#a78bfa)', grad: 'linear-gradient(135deg,#a78bfa,#7c3aed)', withLinks: true });
 
         // Sieger letzter Monat (aus monthlyAwardsLog, am 1. ausgezahlt).
         const _lastMonthAwards = ((d.monthlyAwardsLog||[]).slice().reverse());
         const _lastMonthKey = _lastMonthAwards.length ? _lastMonthAwards[0].monthKey : null;
         const _lastMonthTop = _lastMonthKey ? _lastMonthAwards.filter(a => a.monthKey === _lastMonthKey).sort((a,b)=>a.place-b.place) : [];
-        const _lastMonthWinnerHtml = _lastMonthTop.length
-          ? '<div style="margin:0 16px 12px;padding:14px;background:linear-gradient(135deg,rgba(236,72,153,0.16),rgba(168,85,247,0.10));border:1px solid rgba(236,72,153,0.45);border-radius:12px;position:relative;overflow:hidden">' +
-              '<div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#ec4899,#a855f7,#ec4899)"></div>' +
-              '<div style="font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#ec4899;margin-bottom:var(--space-2);display:flex;align-items:center;gap:6px"><span>🏆</span><span>SIEGER LETZTER MONAT (' + htmlEsc(_lastMonthKey) + ')</span></div>' +
-              _lastMonthTop.map(a => {
-                const u = d.users[a.uid] || {};
-                const medal = a.place === 1 ? '🥇' : a.place === 2 ? '🥈' : a.place === 3 ? '🥉' : a.place <= 5 ? '🏅' : '✨';
-                const name = htmlEsc(u.spitzname || u.name || a.name || 'User');
-                const initial = htmlEsc(String(u.spitzname || u.name || a.name || '?').charAt(0));
-                return '<a href="/profil/' + htmlEsc(a.uid) + '" style="display:flex;align-items:center;gap:10px;padding:8px 0;text-decoration:none;color:var(--text)">' +
-                  '<span style="font-size:18px;flex-shrink:0;width:20px;text-align:center">' + medal + '</span>' +
-                  '<div style="position:relative;width:34px;height:34px;border-radius:50%;overflow:hidden;background:linear-gradient(135deg,#ec4899,#a855f7);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;flex-shrink:0">' + initial + '<img src="/appbild/' + htmlEsc(a.uid) + '/profilepic" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.remove()" alt=""></div>' +
-                  '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700;font-size:13px">' + name + '</span>' +
-                  (a.xp ? '<span style="font-size:10.5px;font-weight:800;color:#a78bfa;background:rgba(167,139,250,0.16);padding:2px 7px;border-radius:7px;flex-shrink:0">+' + a.xp + ' XP</span>' : '') +
-                  '<span style="font-size:10.5px;font-weight:800;color:#06b6d4;background:rgba(6,182,212,0.16);padding:2px 7px;border-radius:7px;margin-left:5px;flex-shrink:0">+' + a.dia + ' 💎</span>' +
-                '</a>';
-              }).join('') +
-            '</div>'
-          : '';
+        const _lastMonthWinnerHtml = _winnerCollapse(_lastMonthTop, {
+          title: 'SIEGER LETZTER MONAT (' + htmlEsc(_lastMonthKey || '') + ')', accent: '#ec4899',
+          bg: 'linear-gradient(135deg,rgba(236,72,153,0.16),rgba(168,85,247,0.10))', border: 'rgba(236,72,153,0.45)',
+          topbar: 'linear-gradient(90deg,#ec4899,#a855f7,#ec4899)', grad: 'linear-gradient(135deg,#ec4899,#a855f7)', withLinks: false });
 
         // ── PERSONEN DIE DU KENNEN KÖNNTEST ──
         const myFollowingSet = new Set((d.users[myUid]?.following||[]).map(String));
