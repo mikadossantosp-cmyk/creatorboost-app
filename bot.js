@@ -11190,6 +11190,22 @@ p{line-height:1.65;color:var(--muted)}
         await localWrite(() => { datastore.getData().warnGuideUrl = _url; });
         return json({ ok: true, url: _url });
     }
+    // Tutorial-1-Link (Explore → Tutorial: „Öffnen"-Button). Admin-konfigurierbar.
+    if (path === '/api/admin/tutorial-link' && req.method === 'GET') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
+        return json({ ok: true, url: String((LOCAL_STORE ? datastore.getData() : d).tutorialLink || '') });
+    }
+    if (path === '/api/admin/tutorial-link' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
+        if (!LOCAL_STORE) return json({ok:false, error:'Nicht verfügbar'});
+        const body = await parseBody(req);
+        let _url = String(body.url || '').trim();
+        if (_url && !/^https?:\/\//i.test(_url)) _url = 'https://' + _url;
+        await localWrite(() => { datastore.getData().tutorialLink = _url; });
+        return json({ ok: true, url: _url });
+    }
     if (path === '/api/admin/unblock-link' && req.method === 'POST') {
         if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
         if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
@@ -17127,6 +17143,7 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
       <div class="dh-list">
         <button class="dh-row" onclick="dashOpen('referral')"><span class="dh-ic" style="background:rgba(34,197,94,.15);color:#22c55e">🤝</span><span class="dh-lbl"><div class="dh-t">Referral &amp; Builder</div><div class="dh-s">Prüfungen · Wer lud wen</div></span><span class="dh-badge" id="hub-b-ref"></span><span class="dh-arr">›</span></button>
         <button class="dh-row" onclick="dashOpen('tools')"><span class="dh-ic" style="background:rgba(245,158,11,.15);color:#f59e0b">🔧</span><span class="dh-lbl"><div class="dh-t">Werkzeuge</div><div class="dh-s">Link entsperren · Verwarnung</div></span><span class="dh-arr">›</span></button>
+        <button class="dh-row" onclick="dashOpen('tutorial')"><span class="dh-ic" style="background:rgba(124,58,237,.15);color:#a78bfa">📖</span><span class="dh-lbl"><div class="dh-t">Tutorial setzen</div><div class="dh-s">Link für „Wie man richtig engagiert"</div></span><span class="dh-arr">›</span></button>
       </div>
     </div>
     <button id="dash-back" onclick="dashHubShow()">‹ Übersicht</button>
@@ -17229,6 +17246,21 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
           <button onclick="saveWarnGuide(this)" style="background:#22c55e;color:#fff;border:none;border-radius:10px;padding:11px 18px;font-size:13px;font-weight:800;cursor:pointer">Speichern</button>
         </div>
         <div id="warn-guide-status" style="font-size:12px;color:var(--dsub);margin-top:8px">Leer = kein Button im Hinweis. Wird verwarnten Usern beim nächsten Login als „Anleitung ansehen" angezeigt.</div>
+      </div>
+    </section>
+
+    <!-- Tutorial-1-Link: „Öffnen"-Button in Explore → Tutorial -->
+    <section class="dash-section">
+      <div class="dash-section-hdr">
+        <div class="dash-section-title">📖 Tutorial 1 — Link</div>
+        <div class="dash-section-sub">„Wie man richtig engagiert" — Link für den „Öffnen"-Button (z. B. dein Reel)</div>
+      </div>
+      <div class="dash-section-body">
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <input id="tut-link-input" type="url" placeholder="https://www.instagram.com/reel/..." style="flex:1;min-width:200px;padding:11px 13px;border-radius:10px;border:1px solid var(--dline);background:var(--dink);color:var(--text);font-size:13px">
+          <button onclick="saveTutLink(this)" style="background:#7c3aed;color:#fff;border:none;border-radius:10px;padding:11px 18px;font-size:13px;font-weight:800;cursor:pointer">Speichern</button>
+        </div>
+        <div id="tut-link-status" style="font-size:12px;color:var(--dsub);margin-top:8px">Leer = „Video folgt in Kürze." im Tutorial. Mit Link erscheint dort der „▶ Öffnen"-Button.</div>
       </div>
     </section>
 
@@ -18059,6 +18091,21 @@ async function saveWarnGuide(btn){
     const r=await fetch('/api/admin/warn-guide',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:inp.value})});
     const j=await r.json();
     if(j&&j.ok){ inp.value=j.url||''; if(st){ st.textContent=j.url?('✓ Gespeichert: '+j.url):'✓ Link entfernt'; st.style.color='#22c55e'; } }
+    else if(st){ st.textContent='❌ '+((j&&j.error)||'Fehler'); st.style.color='#ef4444'; }
+  }catch(e){ if(st){ st.textContent='❌ '+e.message; st.style.color='#ef4444'; } }
+  if(btn){ btn.disabled=false; }
+}
+async function loadTutLink(){
+  var inp=document.getElementById('tut-link-input'); if(!inp) return;
+  try{ const r=await fetch('/api/admin/tutorial-link'); const j=await r.json(); if(j&&j.ok) inp.value=j.url||''; }catch(e){}
+}
+async function saveTutLink(btn){
+  var inp=document.getElementById('tut-link-input'); var st=document.getElementById('tut-link-status'); if(!inp) return;
+  if(btn){ btn.disabled=true; }
+  try{
+    const r=await fetch('/api/admin/tutorial-link',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:inp.value})});
+    const j=await r.json();
+    if(j&&j.ok){ inp.value=j.url||''; if(st){ st.textContent=j.url?('✓ Gespeichert: '+j.url):'✓ Link entfernt — zeigt „Video folgt"'; st.style.color='#22c55e'; } }
     else if(st){ st.textContent='❌ '+((j&&j.error)||'Fehler'); st.style.color='#ef4444'; }
   }catch(e){ if(st){ st.textContent='❌ '+e.message; st.style.color='#ef4444'; } }
   if(btn){ btn.disabled=false; }
@@ -19074,12 +19121,13 @@ setInterval(loadReferralPending, 60000);
 loadReferralOverview();
 setInterval(loadReferralOverview, 60000);
 loadWarnGuide();
+loadTutLink();
 loadDeletedUsers();
 setInterval(loadDeletedUsers, 60000);
 
 // ── Karten-Hub (Apple-like Navigation): Sektionen per Titel einer Gruppe zuordnen + Hub zeigen ──
 (function(){
-  var MAP=[['30-Tage','stats'],['Top Creator','stats'],['Live Activity','stats'],['Conversion','stats'],['Aktuell eingeloggt','stats'],['Referral-Prüfungen','referral'],['Wer hat wen','referral'],['User-Verwaltung','usermgmt'],['Neu registriert','users'],['Papierkorb','users'],['Verwarnungs','tools'],['Link entsperren','tools']];
+  var MAP=[['30-Tage','stats'],['Top Creator','stats'],['Live Activity','stats'],['Conversion','stats'],['Aktuell eingeloggt','stats'],['Referral-Prüfungen','referral'],['Wer hat wen','referral'],['User-Verwaltung','usermgmt'],['Neu registriert','users'],['Papierkorb','users'],['Tutorial 1','tutorial'],['Verwarnungs','tools'],['Link entsperren','tools']];
   document.querySelectorAll('.dash-section').forEach(function(sec){
     var tt=sec.querySelector('.dash-section-title'); var t=tt?tt.textContent:'';
     for(var i=0;i<MAP.length;i++){ if(t.indexOf(MAP[i][0])>=0){ sec.setAttribute('data-dgroup',MAP[i][1]); if(MAP[i][1]==='usermgmt') sec.id='dgroup-usermgmt'; break; } }
@@ -19529,6 +19577,8 @@ fetch('/api/admin/engagement-log').then(r=>r.json()).then(j=>{ if (j.ok) { LAST_
         const _latestNews = _newsArr[0];
         const _newsAge = _latestNews ? (Date.now() - (_latestNews.timestamp||0)) : null;
         const _newsAgeStr = _newsAge==null ? '' : (_newsAge < 86400000 ? 'heute' : _newsAge < 7*86400000 ? Math.floor(_newsAge/86400000)+'d' : new Date(_latestNews.timestamp).toLocaleDateString('de-DE',{day:'2-digit',month:'short'}));
+        // Tutorial-1-Link (Admin setzt ihn im Dashboard → d.tutorialLink). Leer = „Video folgt".
+        const _tutLink = String((LOCAL_STORE ? datastore.getData() : d).tutorialLink || '').trim();
         const tabContent = {
             allgemein: `
 ${_latestNews ? `<a href="/explore?tab=newsletter" class="highlight-card" style="margin:0 16px 12px;background:linear-gradient(135deg,rgba(77,171,247,.10),rgba(29,111,165,.05));border:1px solid rgba(77,171,247,.30)">
@@ -19553,42 +19603,29 @@ ${_latestNews ? `<a href="/explore?tab=newsletter" class="highlight-card" style=
 `,
             tutorial: `
 <style>
-.tut-hero{margin:4px 16px 16px;padding:20px;border-radius:18px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;position:relative;overflow:hidden}
-.tut-hero::after{content:"";position:absolute;inset:0;background:radial-gradient(circle at 90% -10%,rgba(255,255,255,.22),transparent 55%);pointer-events:none}
-.tut-step{display:flex;gap:14px;margin:0 16px 12px;padding:16px;background:var(--bg3);border:1px solid var(--border2);border-radius:16px}
-.tut-num{flex-shrink:0;width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px}
-.tut-st{font-size:15px;font-weight:800;color:var(--text);margin-bottom:4px}
-.tut-sb{font-size:13.5px;line-height:1.5;color:var(--muted)}
-.tut-sec{font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1.2px;margin:22px 20px 10px}
-.tut-typ{display:flex;align-items:center;gap:11px;margin:0 16px 8px;padding:13px 15px;background:var(--bg3);border:1px solid var(--border2);border-radius:14px}
-.tut-pill{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:800;padding:2px 9px;border-radius:99px;white-space:nowrap;flex-shrink:0}
-.tut-tt{font-size:13px;color:var(--muted);line-height:1.45}
-.tut-tt b{color:var(--text)}
-.tut-note{margin:0 16px 12px;padding:14px 16px;background:rgba(245,158,11,.10);border:1px solid rgba(245,158,11,.35);border-radius:14px;font-size:13px;line-height:1.5;color:var(--text)}
-.tut-cta{display:block;margin:20px 16px 90px;padding:15px;text-align:center;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;border-radius:14px;font-size:15px;font-weight:800;text-decoration:none}
+.tut-card{margin:14px 16px 16px;border-radius:18px;overflow:hidden;background:var(--bg3);border:1px solid var(--border2)}
+.tut-cardhero{padding:22px 20px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;position:relative;overflow:hidden}
+.tut-cardhero::after{content:"";position:absolute;inset:0;background:radial-gradient(circle at 90% -10%,rgba(255,255,255,.22),transparent 55%);pointer-events:none}
+.tut-eye{font-size:11px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;opacity:.85;position:relative}
+.tut-title{font-size:21px;font-weight:800;margin-top:6px;line-height:1.22;position:relative}
+.tut-body{padding:18px 20px 20px}
+.tut-intro{font-size:14px;line-height:1.55;color:var(--text)}
+.tut-intro b{font-weight:800}
+.tut-open{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:18px;padding:14px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;border-radius:13px;font-size:15px;font-weight:800;text-decoration:none}
+.tut-open-off{margin-top:18px;padding:14px;text-align:center;background:var(--bg4);border:1px dashed var(--border2);border-radius:13px;font-size:13px;color:var(--muted)}
 </style>
-<div class="tut-hero">
-  <div style="font-size:11px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;opacity:.8;position:relative">📖 Tutorial</div>
-  <div style="font-size:22px;font-weight:800;margin-top:4px;line-height:1.2;position:relative">So funktioniert CreatorBoostX</div>
-  <div style="font-size:13.5px;margin-top:7px;opacity:.92;line-height:1.5;position:relative">Creator liken &amp; kommentieren sich gegenseitig auf echten Instagram-Reels. Kein Bot, keine gekauften Likes — echtes Engagement von echten Menschen.</div>
+<div class="tut-card">
+  <div class="tut-cardhero">
+    <div class="tut-eye">📖 Tutorial 1</div>
+    <div class="tut-title">Wie man in CreatorBoostX richtig engagiert</div>
+  </div>
+  <div class="tut-body">
+    <div class="tut-intro">In diesem kurzen Tutorial zeige ich dir, wie du auf CreatorBoostX <b>richtig engagierst</b> — also wie du den Reel zuerst <b>direkt auf Instagram</b> likest, kommentierst &amp; speicherst und ihn danach in der App bestätigst. So zählt dein Engagement wirklich und die ganze Community wächst gemeinsam. Schau's dir an:</div>
+    ${_tutLink
+      ? '<a href="'+htmlEsc(_tutLink)+'" target="_blank" rel="noopener" class="tut-open">▶ Öffnen</a>'
+      : '<div class="tut-open-off">🎬 Video folgt in Kürze.</div>'}
+  </div>
 </div>
-
-<div class="tut-sec">In 4 Schritten loslegen</div>
-<div class="tut-step"><div class="tut-num">1</div><div><div class="tut-st">Deinen Reel posten</div><div class="tut-sb">Tippe unten auf <b>„+"</b> und füge den Link zu deinem Instagram-Reel ein. Dein Reel erscheint dann im Feed der Community.</div></div></div>
-<div class="tut-step"><div class="tut-num">2</div><div><div class="tut-st">5 andere Reels zurück-engagieren</div><div class="tut-sb">Wenn du einen <b>normalen Link</b> postest, lik &amp; kommentier dafür <b>5 andere normale Links</b> aus dem Feed. So bekommt jeder etwas zurück. <i>(Gilt nur für normale Links — die anderen Typen sind freiwillige Bonus-Belohnungen.)</i></div></div></div>
-<div class="tut-step"><div class="tut-num">3</div><div><div class="tut-st">Erst auf Instagram, dann bestätigen</div><div class="tut-sb">Tippe auf der Karte auf <b>„→ Öffnen"</b> → like &amp; kommentiere den Reel <b>direkt auf Instagram</b> (echtes Engagement!). Komm zurück in die App und bestätige mit dem Like-Button.</div></div></div>
-<div class="tut-step"><div class="tut-num">4</div><div><div class="tut-st">Tabs wechseln &amp; sammeln</div><div class="tut-sb">Oben im Feed wechselst du zwischen <b>Heute</b>, <b>Älter</b> und den Bonus-Tabs. Für jedes Engagement gibt's <b>XP &amp; Diamanten</b> — steig im Ranking auf und schalte Belohnungen frei.</div></div></div>
-
-<div class="tut-sec">Die Link-Typen im Feed</div>
-<div class="tut-typ"><span class="tut-pill" style="color:#16a34a;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.4)">✓ Normal</span><div class="tut-tt"><b>Normaler Reel-Link.</b> Hier gilt die 5-zurück-Regel. Das Herzstück der Community.</div></div>
-<div class="tut-typ"><span class="tut-pill" style="color:#fbbf24;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.4)">⭐ Super</span><div class="tut-tt"><b>Superlink (Bonus).</b> Freiwillig — niemand muss ihn liken. Wer mitmacht, sammelt extra Belohnungen.</div></div>
-<div class="tut-typ"><span class="tut-pill" style="color:#22d3ee;background:rgba(6,182,212,.12);border:1px solid rgba(6,182,212,.4)">💎 Diamant</span><div class="tut-tt"><b>Diamantlink.</b> Engagieren bringt dir <b>+3 💎</b> — einmalig pro Link. Freiwilliger Bonus.</div></div>
-<div class="tut-typ"><span class="tut-pill" style="color:#c084fc;background:rgba(168,85,247,.12);border:1px solid rgba(168,85,247,.4)">💠 Prisma</span><div class="tut-tt"><b>Prismalink.</b> Premium-Bonus — engagieren bringt dir <b>+7 💎</b>. Freiwillig.</div></div>
-<div class="tut-typ"><span class="tut-pill" style="color:#f5d76e;background:rgba(245,215,110,.12);border:1px solid rgba(245,215,110,.4)">🛡 Admin</span><div class="tut-tt"><b>Admin-Link.</b> Von der Community-Leitung gepusht — engagieren bringt dir <b>+5 💎</b>.</div></div>
-
-<div class="tut-note">⚠️ <b>Wichtig:</b> Like &amp; kommentiere immer zuerst <b>direkt auf Instagram</b>, bevor du in der App bestätigst. Fake-Engagement &amp; Self-Likes werden erkannt und sanktioniert — echtes Engagement hält die Community stark.</div>
-
-<a href="/feed" class="tut-cta">🚀 Los geht's — zum Feed</a>
 `,
             ranking: `
 <div style="padding:12px 16px 8px;display:flex;align-items:center;justify-content:space-between">
