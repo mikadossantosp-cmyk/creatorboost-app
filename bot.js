@@ -6061,6 +6061,14 @@ self.addEventListener('notificationclick',e=>{
         // Daten via fetchBot('/data') statt globalem 'd' (existiert in App nicht).
         const _switchData = await fetchBot('/data');
         const _users = (_switchData && _switchData.users) || {};
+        // Self-Heal für Alt-Sessions: ist session.uid versehentlich ein SUB (früherer Login-Bug, bei dem
+        // man sich mit Sub-Zugangsdaten einloggte), auf den Parent normalisieren — sonst scheitert JEDER
+        // Switch, auch der zurück zum Hauptaccount (session.uid=Sub → isOwnParent & isOwnSub beide false).
+        const _meU = _users[String(session.uid)];
+        if (_meU && _meU.parent_uid && _users[String(_meU.parent_uid)]) {
+            session.uid = String(_meU.parent_uid);
+            saveSessions();
+        }
         const targetUser = _users[target];
         const isOwnParent = target === String(session.uid);
         const isOwnSub = targetUser && String(targetUser.parent_uid||'') === String(session.uid);
@@ -6342,16 +6350,23 @@ self.addEventListener('notificationclick',e=>{
         // SECURITY: IMMER neue Session — kein Reuse über Geräte hinweg.
         // Vorher konnte alte Session mit activeUid=Sub übernommen werden.
         const sid = genSid();
-        const validSubUid = u.subUid && botData.users?.[u.subUid] ? String(u.subUid) : null;
-        sessions.set(sid, { uid: String(result.uid), name: u.name, username: u.username||null, theme: 'light', lang: 'de', createdAt: Date.now(), subUid: validSubUid, activeUid: String(result.uid), loginVia: 'email' });
+        // INVARIANT: session.uid ist IMMER der Hauptaccount. Ein SUB-Account kann via update-profile
+        // eine eigene Email+Passwort bekommen — loggt sich jemand damit ein, wäre session.uid sonst der
+        // Sub → User hängt im Sub fest und der Switch ZUM Hauptaccount scheitert (Bug-Report). Daher auf
+        // den Parent normalisieren und auf dem Hauptaccount landen; der Sub bleibt als subUid im Switcher.
+        const _loginIsSub = u.parent_uid && botData.users?.[u.parent_uid];
+        const _sessionUid = _loginIsSub ? String(u.parent_uid) : String(result.uid);
+        const _sessionUser = botData.users?.[_sessionUid] || u;
+        const validSubUid = _loginIsSub ? String(result.uid) : (u.subUid && botData.users?.[u.subUid] ? String(u.subUid) : null);
+        sessions.set(sid, { uid: _sessionUid, name: _sessionUser.name, username: _sessionUser.username||null, theme: 'light', lang: 'de', createdAt: Date.now(), subUid: validSubUid, activeUid: _sessionUid, loginVia: 'email' });
         saveSessions();
         // Funnel: Login erfolgreich
         _trackFunnel('login-success', { method: didSetupPassword ? 'first-pw' : 'email-pw' }, String(result.uid));
         // Email-User Redirect-Chain (mit /feed?tour=1 als finales Ziel damit Tour autostartet)
         let redirect;
-        if (!u.instagram) redirect = '/onboarding-instagram?first=1';
-        else if (!u.appCodeChosenAt) redirect = '/onboarding-code?first=1';
-        else if (!u.appBriefingSeenV2) redirect = '/feed?tour=1';
+        if (!_sessionUser.instagram) redirect = '/onboarding-instagram?first=1';
+        else if (!_sessionUser.appCodeChosenAt) redirect = '/onboarding-code?first=1';
+        else if (!_sessionUser.appBriefingSeenV2) redirect = '/feed?tour=1';
         else redirect = '/feed';
         res.writeHead(200, {'Set-Cookie':`cbsid=${sid}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=157680000`,'Content-Type':'application/json'});
         return res.end(JSON.stringify({ok:true, redirect, didSetupPassword}));
