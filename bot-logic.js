@@ -2856,6 +2856,18 @@ function likeSuperlinkApi({ slId, uid }) {
     const u = d.users[String(uid)];
     sl.likerNames[String(uid)] = u?.spitzname || u?.name || 'User';
     addNotification(String(sl.uid), '❤️', (u?.spitzname || u?.name || 'User') + ' hat deinen Superlink geliked!');
+    // Sofort-Belohnung: hat dieser Account jetzt ALLE fremden Superlinks der Woche geliked → +500 XP
+    // DIREKT gutschreiben (statt erst bei der Sonntags-Auswertung — User erwarten die XP bei Abschluss,
+    // wie bei M1/M2/M3). Idempotent über den Wochen-Flag; Sonntags-Job + Backfill bleiben Sicherheitsnetz.
+    try {
+        const _slWk = sl.week || getBerlinWeekKey();
+        if (!d.wochenSuperlinkMissionGranted) d.wochenSuperlinkMissionGranted = {};
+        const _slMkey = _slWk + ':' + String(uid);
+        if (!istAdminId(uid) && !d.wochenSuperlinkMissionGranted[_slMkey] && _superlinkAlleGeliked(String(uid), _slWk)) {
+            d.wochenSuperlinkMissionGranted[_slMkey] = Date.now();
+            addXp({ uid: String(uid), amount: 500, noRanking: true, reason: 'superlink-mission' });
+        }
+    } catch (e) {}
     return { ok: true, liked: idx < 0, likes: sl.likes.length };
 }
 
