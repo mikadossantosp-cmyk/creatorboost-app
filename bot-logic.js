@@ -667,6 +667,31 @@ function grantWeeklySuperlinkMission(weekKey) {
     }
     return { ok: true, granted, weekKey, uids };
 }
+// Admin-Audit: prüft gegen die GESPEICHERTEN Superlinks+Likes, wer die Wochen-Mission erfüllt hat
+// und ob die +500 XP schon vergeben wurden. weekKey optional → sonst alle Wochen aus d.superlinks.
+function superlinkMissionAuditApi(weekKey) {
+    if (!d.wochenSuperlinkMissionGranted) d.wochenSuperlinkMissionGranted = {};
+    const weeks = weekKey
+        ? [String(weekKey)]
+        : Array.from(new Set(Object.values(d.superlinks || {}).filter(s => s && s.week).map(s => String(s.week)))).sort().reverse();
+    const out = [];
+    for (const wk of weeks) {
+        const weekSL = Object.values(d.superlinks || {}).filter(s => s && s.week === wk);
+        const qualifies = [];
+        for (const [uid, u] of Object.entries(d.users || {})) {
+            if (!u || istAdminId(uid)) continue;
+            if (!_superlinkAlleGeliked(uid, wk)) continue;
+            qualifies.push({
+                uid: String(uid),
+                name: u.spitzname || u.name || ('User ' + uid),
+                instagram: u.instagram || '',
+                granted: !!d.wochenSuperlinkMissionGranted[wk + ':' + uid]
+            });
+        }
+        out.push({ weekKey: wk, superlinkCount: weekSL.length, qualifies, pending: qualifies.filter(q => !q.granted).length });
+    }
+    return { ok: true, weeks: out, currentWeek: getBerlinWeekKey() };
+}
 
 // ── Like-Operation: 1:1 aus GET /like-from-app (ohne Telegram-Teile). ──
 async function likeFromApp(uid, msgId) {
@@ -4867,6 +4892,7 @@ module.exports = {
     collabCreatePost, collabLikePost, getBerlinWeekKey,
     postSuperlinkApp, likeSuperlinkApi, isSuperLinkPostingAllowed,
     grantWeeklySuperlinkMission,
+    superlinkMissionAuditApi,
     addXp, addExtraLink, addSuperlink, addDiamonds, removeDiamonds,
     buyItemApi, setActiveRingApi, setActiveTitleApi, setActiveCardThemeApi, buyExtralinkApi, linkStatusApi,
     // Like-Flow + Kern (verbatim portiert):

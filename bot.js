@@ -11221,6 +11221,34 @@ p{line-height:1.65;color:var(--muted)}
         await localWrite(() => { datastore.getData().tutorialLink = _url; });
         return json({ ok: true, url: _url });
     }
+    // Superlink-Mission-Audit: zeigt gegen die gespeicherten Daten, wer die Wochen-Mission (alle Superlinks
+    // geliked) erfüllt hat + ob die +500 XP schon vergeben wurden.
+    if (path === '/api/admin/superlink-audit' && req.method === 'GET') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
+        const r = LOCAL_STORE ? botLogic.superlinkMissionAuditApi() : await fetchBotRaw('/superlink-mission-audit-api');
+        return json(r || { ok:false, error:'Nicht verfügbar' });
+    }
+    // Superlink-Mission rückwirkend gutschreiben (idempotent) — für eine Woche oder alle.
+    if (path === '/api/admin/superlink-grant' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
+        if (!LOCAL_STORE) return json({ok:false, error:'Nicht verfügbar'});
+        const body = await parseBody(req);
+        const _wk = String(body.weekKey || '').trim();
+        if (_wk && _wk !== 'all') {
+            const r = await localWrite(() => botLogic.grantWeeklySuperlinkMission(_wk));
+            return json(r || { ok:false });
+        }
+        // 'all' / leer → über alle Wochen mit gespeicherten Superlinks
+        const audit = botLogic.superlinkMissionAuditApi();
+        let total = 0; const per = [];
+        for (const w of (audit.weeks || [])) {
+            const r = await localWrite(() => botLogic.grantWeeklySuperlinkMission(w.weekKey));
+            total += (r && r.granted) || 0; per.push({ weekKey: w.weekKey, granted: (r && r.granted) || 0 });
+        }
+        return json({ ok:true, granted: total, per });
+    }
     if (path === '/api/admin/unblock-link' && req.method === 'POST') {
         if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
         if (!_dashIsAdmin) return json({ok:false, error:'Nur Admins'}, 403);
@@ -17291,6 +17319,23 @@ fetch('/api/notifications').then(r=>r.json()).then(data=>{
       </div>
     </section>
 
+    <!-- Superlink-Mission: prüfen & rückwirkend +500 XP nachzahlen (gegen gespeicherte Daten) -->
+    <section class="dash-section">
+      <div class="dash-section-hdr">
+        <div class="dash-section-title">🌟 Superlink-Mission — prüfen & nachzahlen</div>
+        <div class="dash-section-sub">Wer hat alle fremden Superlinks einer Woche geliked? +500 XP rückwirkend gutschreiben (idempotent, kein Doppel).</div>
+      </div>
+      <div class="dash-section-body">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+          <button onclick="loadSuperlinkAudit()" style="background:var(--dink);color:var(--text);border:1px solid var(--dline);border-radius:10px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer">🔄 Prüfen</button>
+          <button onclick="grantSuperlink('all',this)" style="background:#7c3aed;color:#fff;border:none;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:800;cursor:pointer">💸 Alle offenen nachzahlen</button>
+        </div>
+        <div id="sl-audit-list" style="display:flex;flex-direction:column;gap:10px;max-height:480px;overflow-y:auto">
+          <div style="padding:18px;text-align:center;color:var(--dsub);font-size:12.5px">Tippe „Prüfen" um gegen die gespeicherten Daten zu prüfen.</div>
+        </div>
+      </div>
+    </section>
+
     <!-- Link entsperren (Doppel-Block aufheben) -->
     <section class="dash-section">
       <div class="dash-section-hdr">
@@ -18136,6 +18181,46 @@ async function saveTutLink(btn){
     else if(st){ st.textContent='❌ '+((j&&j.error)||'Fehler'); st.style.color='#ef4444'; }
   }catch(e){ if(st){ st.textContent='❌ '+e.message; st.style.color='#ef4444'; } }
   if(btn){ btn.disabled=false; }
+}
+async function loadSuperlinkAudit(){
+  var box=document.getElementById('sl-audit-list'); if(!box) return;
+  box.innerHTML='<div style="padding:18px;text-align:center;color:var(--dsub);font-size:12.5px">Lädt …</div>';
+  try{
+    var r=await fetch('/api/admin/superlink-audit'); var j=await r.json();
+    if(!j||!j.ok){ box.innerHTML='<div style="padding:18px;text-align:center;color:#f87171;font-size:12.5px">Fehler beim Laden</div>'; return; }
+    if(!j.weeks||!j.weeks.length){ box.innerHTML='<div style="padding:18px;text-align:center;color:var(--dsub);font-size:12.5px">Keine Superlinks gespeichert.</div>'; return; }
+    var out='';
+    for(var i=0;i<j.weeks.length;i++){
+      var w=j.weeks[i]; var rows='';
+      for(var k=0;k<w.qualifies.length;k++){
+        var q=w.qualifies[k];
+        rows+='<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--dline)">'
+          +'<span style="width:8px;height:8px;border-radius:50%;flex:0 0 auto;background:'+(q.granted?'#22c55e':'#f59e0b')+'"></span>'
+          +'<span style="flex:1;min-width:0;font-size:12.5px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(q.name)+(q.instagram?' <span style="color:#06b6d4">@'+esc(q.instagram)+'</span>':'')+'</span>'
+          +'<span style="font-size:11px;font-weight:700;color:'+(q.granted?'#22c55e':'#f59e0b')+'">'+(q.granted?'✓ bezahlt':'offen')+'</span>'
+          +'</div>';
+      }
+      if(!w.qualifies.length) rows='<div style="padding:8px 0;font-size:12px;color:var(--dsub)">Niemand hat alle fremden Superlinks geliked.</div>';
+      out+='<div style="border:1px solid var(--dline);border-radius:12px;padding:12px 14px;background:var(--dink2)">'
+        +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><b style="font-size:13px;color:var(--text)">Woche '+esc(w.weekKey)+'</b>'
+        +(w.weekKey===j.currentWeek?'<span style="font-size:10px;font-weight:800;color:#7c3aed;background:rgba(124,58,237,.15);padding:1px 7px;border-radius:99px">AKTUELL</span>':'')
+        +'<span style="flex:1"></span><span style="font-size:11px;color:var(--dsub)">'+w.superlinkCount+' SL · '+w.qualifies.length+' erfüllt · '+w.pending+' offen</span></div>'
+        +rows
+        +(w.pending>0?'<button onclick="grantSuperlinkBtn(this)" data-week="'+esc(w.weekKey)+'" style="margin-top:10px;background:#7c3aed;color:#fff;border:none;border-radius:9px;padding:9px 14px;font-size:12.5px;font-weight:800;cursor:pointer">💸 '+w.pending+' nachzahlen (je +500 XP)</button>':'')
+        +'</div>';
+    }
+    box.innerHTML=out;
+  }catch(e){ box.innerHTML='<div style="padding:18px;text-align:center;color:#f87171;font-size:12.5px">Netzwerkfehler</div>'; }
+}
+function grantSuperlinkBtn(btn){ grantSuperlink(btn.getAttribute('data-week'), btn); }
+async function grantSuperlink(weekKey, btn){
+  if(btn){ btn.disabled=true; btn.textContent='…'; }
+  try{
+    var r=await fetch('/api/admin/superlink-grant',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({weekKey:weekKey})});
+    var j=await r.json();
+    if(j&&j.ok){ alert('✅ '+(j.granted||0)+' User je +500 XP gutgeschrieben'); loadSuperlinkAudit(); }
+    else { alert('Fehler: '+((j&&j.error)||'?')); if(btn){ btn.disabled=false; } }
+  }catch(e){ alert('Netzwerkfehler'); if(btn){ btn.disabled=false; } }
 }
 async function unblockLink(btn){
   var inp=document.getElementById('unblock-link-input'); var st=document.getElementById('unblock-link-status'); if(!inp) return;
@@ -19149,12 +19234,13 @@ loadReferralOverview();
 setInterval(loadReferralOverview, 60000);
 loadWarnGuide();
 loadTutLink();
+loadSuperlinkAudit();
 loadDeletedUsers();
 setInterval(loadDeletedUsers, 60000);
 
 // ── Karten-Hub (Apple-like Navigation): Sektionen per Titel einer Gruppe zuordnen + Hub zeigen ──
 (function(){
-  var MAP=[['30-Tage','stats'],['Top Creator','stats'],['Live Activity','stats'],['Conversion','stats'],['Aktuell eingeloggt','stats'],['Referral-Prüfungen','referral'],['Wer hat wen','referral'],['User-Verwaltung','usermgmt'],['Neu registriert','users'],['Papierkorb','users'],['Tutorial 1','tutorial'],['Verwarnungs','tools'],['Link entsperren','tools']];
+  var MAP=[['30-Tage','stats'],['Top Creator','stats'],['Live Activity','stats'],['Conversion','stats'],['Aktuell eingeloggt','stats'],['Referral-Prüfungen','referral'],['Wer hat wen','referral'],['User-Verwaltung','usermgmt'],['Neu registriert','users'],['Papierkorb','users'],['Tutorial 1','tutorial'],['Verwarnungs','tools'],['Link entsperren','tools'],['Superlink-Mission','tools']];
   document.querySelectorAll('.dash-section').forEach(function(sec){
     var tt=sec.querySelector('.dash-section-title'); var t=tt?tt.textContent:'';
     for(var i=0;i<MAP.length;i++){ if(t.indexOf(MAP[i][0])>=0){ sec.setAttribute('data-dgroup',MAP[i][1]); if(MAP[i][1]==='usermgmt') sec.id='dgroup-usermgmt'; break; } }
