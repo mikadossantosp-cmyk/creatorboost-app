@@ -4041,6 +4041,8 @@ if(typeof document!=='undefined' && !window.__cxImgErr){
   window.__cxImgErr=true;
   document.addEventListener('error',function(e){ var t=e&&e.target; if(t&&t.tagName==='IMG'){ t.style.display='none'; } },true);
 }
+// Verwarnungs-Hinweis als „verstanden" quittieren (persistiert serverseitig → Modal kommt nicht wieder).
+function cbAckWarn(){ try{ fetch('/api/ack-warn-notice',{method:'POST'}).catch(function(){}); }catch(e){} var m=document.getElementById('cb-warn-modal'); if(m) m.remove(); }
 // A11y: App-Modals tastaturbedienbar — Escape + Backdrop-Klick schliessen, role=dialog/aria-modal,
 // Fokus rein beim Oeffnen (erster Button/Link, keine Text-Inputs → kein Keyboard-Popup) + zurueck
 // zum Ausloeser beim Schliessen. Progressive Enhancement: einmal idempotent drueber, greift fuer
@@ -11205,6 +11207,17 @@ p{line-height:1.65;color:var(--muted)}
         await localWrite(() => { datastore.getData().warnGuideUrl = _url; });
         return json({ ok: true, url: _url });
     }
+    // Verwarnungs-Hinweis als „verstanden" quittieren → Flag DAUERHAFT löschen (kanonischer Store +
+    // Cache-Refresh), damit das Modal nach dem Schließen nicht wieder aufploppt.
+    if (path === '/api/ack-warn-notice' && req.method === 'POST') {
+        if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
+        const myUid = getMyUid(session);
+        if (LOCAL_STORE) {
+            await localWriteNow(() => { const _du = datastore.getData().users?.[String(myUid)]; if (_du) _du.warnNoticePending = false; });
+            try { await refreshDataCache(); } catch(e){}
+        } else { try { await postBot('/ack-warn-notice', { uid: myUid }); } catch(e){} }
+        return json({ ok: true });
+    }
     // Tutorial-1-Link (Explore → Tutorial: „Öffnen"-Button). Admin-konfigurierbar.
     if (path === '/api/admin/tutorial-link' && req.method === 'GET') {
         if (!session) return json({ok:false, error:'Nicht eingeloggt'}, 401);
@@ -12172,19 +12185,19 @@ ${(()=>{
     const _warns = Number(_wu.warnings || 0);
     const _left = Math.max(0, 5 - _warns);
     const _guide = String(d.warnGuideUrl || '').trim();
-    _wu.warnNoticePending = false; // consume-once
-    try { datastore.saveDebounced(); } catch(e){}
+    // Kein Render-Clear mehr (mutierte nur die Cache-Kopie → Modal kam wieder). Das Flag wird jetzt
+    // erst durch „Verstanden"/Schließen via /api/ack-warn-notice DAUERHAFT gelöscht (cbAckWarn).
     const _guideBtn = _guide
-      ? '<a href="'+htmlEsc(_guide)+'" target="_blank" rel="noopener noreferrer" onclick="this.parentNode.parentNode.remove()" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;background:linear-gradient(135deg,#ec4899,#a855f7);color:#fff;border-radius:12px;font-size:15px;font-weight:800;text-decoration:none;box-shadow:0 6px 18px rgba(168,85,247,.4)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17" cy="7" r="1.1" fill="currentColor" stroke="none"/></svg>Anleitung ansehen →</a>'
+      ? '<a href="'+htmlEsc(_guide)+'" target="_blank" rel="noopener noreferrer" onclick="cbAckWarn()" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;background:linear-gradient(135deg,#ec4899,#a855f7);color:#fff;border-radius:12px;font-size:15px;font-weight:800;text-decoration:none;box-shadow:0 6px 18px rgba(168,85,247,.4)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17" cy="7" r="1.1" fill="currentColor" stroke="none"/></svg>Anleitung ansehen →</a>'
       : '';
-    return '<div id="cb-warn-modal" onclick="if(event.target===this)this.remove()" style="position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.62);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:22px">'
+    return '<div id="cb-warn-modal" onclick="if(event.target===this)cbAckWarn()" style="position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.62);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:22px">'
       + '<div style="background:var(--bg2);border-radius:20px;max-width:380px;width:100%;padding:24px 22px;box-shadow:0 24px 70px rgba(0,0,0,.5);border:1px solid var(--border);text-align:center">'
       + '<div style="font-size:46px;line-height:1;margin-bottom:10px">⚠️</div>'
       + '<div style="font-size:19px;font-weight:900;color:#ef4444;margin-bottom:8px">Achtung — du wurdest verwarnt!</div>'
       + '<div style="font-size:14px;color:var(--text);line-height:1.55;margin-bottom:6px">Du hast noch <b style="color:#ef4444">'+_left+' von 5</b> Chancen <span style="color:var(--muted);font-size:12.5px">(Verwarnung '+_warns+'/5)</span>.</div>'
       + '<div style="font-size:13.5px;color:var(--muted);line-height:1.55;margin-bottom:18px">Damit du keine weiteren Verwarnungen bekommst, schau dir bitte diese kurze Anleitung an:</div>'
       + _guideBtn
-      + '<button onclick="this.parentNode.parentNode.remove()" style="margin-top:10px;width:100%;padding:12px;background:transparent;border:1px solid var(--border2);color:var(--muted);border-radius:12px;font-size:13.5px;font-weight:700;cursor:pointer">Verstanden</button>'
+      + '<button onclick="cbAckWarn()" style="margin-top:10px;width:100%;padding:12px;background:transparent;border:1px solid var(--border2);color:var(--muted);border-radius:12px;font-size:13.5px;font-weight:700;cursor:pointer">Verstanden</button>'
       + '</div></div>';
   } catch(e) { return ''; }
 })()}
